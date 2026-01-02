@@ -14,33 +14,11 @@
  */
 
 import type { XmlDocument, XmlElement } from "../../../../xml/index";
-
-// Import resolution types for use in this file
 import type {
   ColorScheme as ColorSchemeType,
   ColorMap as ColorMapType,
   FontScheme as FontSchemeType,
 } from "../../../domain/resolution";
-
-// =============================================================================
-// Re-exports from domain/resolution.ts (canonical location)
-// =============================================================================
-
-/**
- * @deprecated Import from "domain/resolution" or "domain" instead.
- */
-export type {
-  ColorScheme,
-  ColorMap,
-  ColorContext,
-  FontSpec,
-  FontScheme,
-} from "../../../domain/resolution";
-
-/**
- * @deprecated Import from "domain/resolution" or "domain" instead.
- */
-export { resolveThemeFont } from "../../../domain/resolution";
 
 // =============================================================================
 // OPC Infrastructure Types (ECMA-376 Part 2)

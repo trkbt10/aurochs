@@ -36,16 +36,3 @@ export function parseBaseSeriesProperties(ser: XmlElement): BaseSeriesProperties
   };
 }
 
-// Re-export commonly used functions
-export {
-  parseSeriesText,
-  parseDataReference,
-  parseChartShapeProperties,
-  parseMarker,
-  parseDataPoints,
-  parseTrendlines,
-  parseErrorBars,
-  getIntAttr,
-  getBoolAttr,
-  getChild,
-};

@@ -35,21 +35,11 @@ export {
 
 // SVG context
 export type { DefsCollector, SvgRenderContext, SvgRenderContextConfig } from "./context";
-export {
-  createDefsCollector,
-  createSvgRenderContext,
-  createEmptySvgRenderContext,
-} from "./context";
+export { createDefsCollector, createSvgRenderContext, createEmptySvgRenderContext } from "./context";
 
 // SVG fill rendering
 export type { FillStyle, LineStyle } from "./fill";
-export {
-  renderFillToStyle,
-  renderLineToStyle,
-  renderLineToBorder,
-  renderFillToSvgStyle,
-  renderFillToSvgDef,
-} from "./fill";
+export { renderFillToStyle, renderLineToStyle, renderFillToSvgStyle, renderFillToSvgDef } from "./fill";
 
 // Geometry rendering
 export {

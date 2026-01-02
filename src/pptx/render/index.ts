@@ -154,7 +154,7 @@ export {
 
 export type { FillStyle, LineStyle } from "./svg/fill";
 
-export { renderFillToStyle, renderLineToBorder, renderLineToStyle } from "./svg/fill";
+export { renderFillToStyle, renderLineToStyle } from "./svg/fill";
 
 // =============================================================================
 // Geometry Rendering

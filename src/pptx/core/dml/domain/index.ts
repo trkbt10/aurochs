@@ -15,19 +15,6 @@ export type {
   PlaceholderTable,
 } from "./types";
 
-// Color types
-export type {
-  ColorScheme,
-  ColorMap,
-  ColorContext,
-} from "./types";
-
-// Font types
-export type {
-  FontSpec,
-  FontScheme,
-} from "./types";
-
 // Theme types
 export type {
   CustomColor,
@@ -41,6 +28,3 @@ export type {
 export type {
   MasterTextStyles,
 } from "./types";
-
-// Functions
-export { resolveThemeFont } from "./types";

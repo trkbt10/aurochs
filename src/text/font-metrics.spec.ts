@@ -2,14 +2,8 @@
  * @file Font metrics tests
  */
 
-import {
-  getFontCategory,
-  getFontMetrics,
-  getCharWidth,
-  getKerningAdjustment,
-  getKerningForText,
-  isMonospace,
-} from "./font-metrics";
+import { getCharWidth, getKerningAdjustment, getKerningForText } from "./font-metrics";
+import { getFontCategory, getFontMetrics, isMonospace } from "./fonts";
 
 describe("getFontCategory", () => {
   it("should return sans-serif for Arial", () => {

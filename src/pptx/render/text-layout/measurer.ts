@@ -10,7 +10,8 @@ import type { Pixels, Points } from "../../domain/types";
 import { px } from "../../domain/types";
 import { PT_TO_PX } from "../../core/units/conversion";
 import { isCjkCodePoint } from "../../../text/cjk";
-import { getCharWidth, getKerningAdjustment, isMonospace } from "../../../text/font-metrics";
+import { getCharWidth, getKerningAdjustment } from "../../../text/font-metrics";
+import { isMonospace } from "../../../text/fonts";
 
 // =============================================================================
 // Character Width Calculation

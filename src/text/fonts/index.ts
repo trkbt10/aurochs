@@ -12,9 +12,6 @@ import type { FontMetrics, FontCategory } from "./types";
 import { DEFAULT_CHAR_WIDTHS, SANS_SERIF_KERNING, SERIF_KERNING, COMMON_KERNING_PAIRS } from "./common";
 import { CALIBRI_METRICS } from "./calibri";
 
-// Re-export types
-export type { FontMetrics, FontCategory, CharWidthMap, KerningPairMap } from "./types";
-
 // =============================================================================
 // Category Fallback Metrics
 // =============================================================================

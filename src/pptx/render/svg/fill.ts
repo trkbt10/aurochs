@@ -74,7 +74,9 @@ function resolvedFillToSvgFill(fill: ResolvedFill, patternIdPrefix?: string): Fi
 
     case "gradient": {
       // Gradient needs to be rendered as defs - return first stop as fallback
-      if (fill.stops.length === 0) {return { fill: "none" };}
+      if (fill.stops.length === 0) {
+        return { fill: "none" };
+      }
       const first = fill.stops[0];
       return {
         fill: `#${first.color.hex}`,
@@ -142,29 +144,6 @@ export function renderLineToStyle(line: Line, colorContext?: ColorContext): Line
   return resolvedLineToSvgStyle(resolved);
 }
 
-/**
- * Render line to CSS border style
- * @deprecated Use lineToBorder from ../html instead
- */
-export function renderLineToBorder(line: Line, colorContext?: ColorContext): string {
-  const resolved = resolveLine(line, colorContext);
-  if (resolved.fill.type === "none" || resolved.fill.type === "unresolved") {
-    return "none";
-  }
-
-  const color = resolveLineColor(resolved);
-
-  const style = resolved.dash === "solid" ? "solid" : "dashed";
-  return `${resolved.width}px ${style} ${color}`;
-}
-
-function resolveLineColor(resolved: ResolvedLine): string {
-  if (resolved.fill.type === "solid") {
-    return formatRgba(resolved.fill.color.hex, resolved.fill.color.alpha);
-  }
-  return "transparent";
-}
-
 // =============================================================================
 // SVG-Specific Rendering
 // =============================================================================
@@ -185,7 +164,9 @@ export function renderFillToSvgStyle(fill: Fill, colorContext?: ColorContext): s
 
     case "gradient":
       // For gradients, return first stop color as fallback
-      if (resolved.stops.length === 0) {return "none";}
+      if (resolved.stops.length === 0) {
+        return "none";
+      }
       return `#${resolved.stops[0].color.hex}`;
 
     default:
@@ -198,11 +179,13 @@ export function renderFillToSvgStyle(fill: Fill, colorContext?: ColorContext): s
  */
 function resolvedGradientToSvgDef(fill: ResolvedGradientFill, gradientId: string): string {
   // Build gradient stops
-  const stops = fill.stops.map((stop) => {
-    const color = `#${stop.color.hex}`;
-    const opacity = stop.color.alpha < 1 ? ` stop-opacity="${stop.color.alpha}"` : "";
-    return `<stop offset="${stop.position}%" stop-color="${color}"${opacity}/>`;
-  }).join("");
+  const stops = fill.stops
+    .map((stop) => {
+      const color = `#${stop.color.hex}`;
+      const opacity = stop.color.alpha < 1 ? ` stop-opacity="${stop.color.alpha}"` : "";
+      return `<stop offset="${stop.position}%" stop-color="${color}"${opacity}/>`;
+    })
+    .join("");
 
   if (fill.isRadial) {
     const cx = fill.radialCenter?.cx ?? 50;
@@ -225,11 +208,7 @@ function resolvedGradientToSvgDef(fill: ResolvedGradientFill, gradientId: string
  * Render gradient fill to SVG gradient definition
  * Returns undefined if fill is not a gradient
  */
-export function renderFillToSvgDef(
-  fill: Fill,
-  gradientId: string,
-  colorContext?: ColorContext,
-): string | undefined {
+export function renderFillToSvgDef(fill: Fill, gradientId: string, colorContext?: ColorContext): string | undefined {
   const resolved = resolveFill(fill, colorContext);
 
   if (resolved.type !== "gradient") {
@@ -259,9 +238,11 @@ export function renderImageFillToSvgDef(
   height: number,
 ): string {
   // Use preserveAspectRatio="xMidYMid slice" to fill the shape while maintaining aspect ratio
-  return `<pattern id="${patternId}" patternUnits="objectBoundingBox" width="1" height="1">` +
+  return (
+    `<pattern id="${patternId}" patternUnits="objectBoundingBox" width="1" height="1">` +
     `<image href="${imageFill.src}" width="${width}" height="${height}" preserveAspectRatio="xMidYMid slice"/>` +
-    `</pattern>`;
+    `</pattern>`
+  );
 }
 
 /**

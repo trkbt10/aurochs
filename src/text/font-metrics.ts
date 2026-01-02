@@ -13,20 +13,6 @@
  * @see https://docs.microsoft.com/en-us/typography/opentype/spec/
  */
 
-// Re-export types and functions from fonts module
-export type {
-  FontMetrics,
-  FontCategory,
-  CharWidthMap,
-  KerningPairMap,
-} from "./fonts";
-
-export {
-  getFontMetrics,
-  getFontCategory,
-  isMonospace,
-} from "./fonts";
-
 import { getFontMetrics } from "./fonts";
 
 /**

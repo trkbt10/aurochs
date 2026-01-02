@@ -2,7 +2,7 @@
  * @file Tests for XML types and utilities
  */
 
-import { getXmlText } from "./types";
+import { getXmlText } from "./index";
 import type { XmlElement, XmlText } from "./ast";
 
 describe("getXmlText", () => {

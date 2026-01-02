@@ -10,7 +10,6 @@
 
 // Types
 export type { GradientFill, FillResult, FillType } from "./types";
-export type { ColorResolveContext } from "./types";
 export type { BackgroundElement, BackgroundParseResult } from "./background";
 
 // Color parsing

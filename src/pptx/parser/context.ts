@@ -139,8 +139,6 @@ export type MasterStylesInfo = {
   readonly defaultTextStyle: XmlElement | undefined;
 };
 
-// FontScheme is re-exported from core/color-types.ts
-
 /**
  * Theme format scheme for style reference resolution
  * @see ECMA-376 Part 1, Section 20.1.4.1.14 (a:fmtScheme)
