@@ -40,7 +40,7 @@ function findTextWidth(png: PNG, row: number): { startX: number; endX: number; w
     const b = png.data[idx + 2];
 
     if (r < 250 || g < 250 || b < 250) {
-      if (startX === -1) startX = x;
+      if (startX === -1) {startX = x;}
       endX = x;
     }
   }
@@ -120,7 +120,7 @@ function analyzeSnapshot(name: string): LineData[] {
 }
 
 function listSnapshots(pattern?: string): string[] {
-  if (!fs.existsSync(SNAPSHOT_DIR)) return [];
+  if (!fs.existsSync(SNAPSHOT_DIR)) {return [];}
 
   const dirs = fs.readdirSync(SNAPSHOT_DIR).filter((f) => {
     const stat = fs.statSync(path.join(SNAPSHOT_DIR, f));

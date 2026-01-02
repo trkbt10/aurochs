@@ -548,7 +548,7 @@ export type ChartTypeKey = (typeof CHART_TYPE_KEYS)[number];
 export function findChartTypeElement(
   plotArea: PlotAreaElement | undefined,
 ): { key: ChartTypeKey; element: OoxmlElement } | undefined {
-  if (plotArea === undefined) return undefined;
+  if (plotArea === undefined) {return undefined;}
 
   for (const key of CHART_TYPE_KEYS) {
     const element = plotArea[key];

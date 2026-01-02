@@ -21,7 +21,7 @@ import { getSolidFill } from "./color";
 /**
  * Background element result from p:bg
  */
-export interface BackgroundElement {
+export type BackgroundElement = {
   bgPr?: XmlElement;
   bgRef?: XmlElement;
 }
@@ -29,7 +29,7 @@ export interface BackgroundElement {
 /**
  * Result of finding background properties.
  */
-export interface BackgroundParseResult {
+export type BackgroundParseResult = {
   fill: FillElements;
   /**
    * Placeholder color resolved from p:bgRef child element.
@@ -142,10 +142,10 @@ export function getBackgroundElement(element: XmlElement | undefined): Backgroun
   }
 
   const cSld = getChild(element, "p:cSld");
-  if (cSld === undefined) return undefined;
+  if (cSld === undefined) {return undefined;}
 
   const bg = getChild(cSld, "p:bg");
-  if (bg === undefined) return undefined;
+  if (bg === undefined) {return undefined;}
 
   const bgPr = getChild(bg, "p:bgPr");
   const bgRef = getChild(bg, "p:bgRef");
@@ -333,10 +333,10 @@ export function hasOwnBackground(ctx: SlideRenderContext): boolean {
   const slideContent = ctx.slide.content;
 
   const cSld = getChild(slideContent, "p:cSld");
-  if (cSld === undefined) return false;
+  if (cSld === undefined) {return false;}
 
   const bg = getChild(cSld, "p:bg");
-  if (bg === undefined) return false;
+  if (bg === undefined) {return false;}
 
   const bgPr = getChild(bg, "p:bgPr");
   const bgRef = getChild(bg, "p:bgRef");

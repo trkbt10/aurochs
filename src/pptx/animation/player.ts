@@ -82,7 +82,7 @@ export function createPlayer(options: PlayerOptions): AnimationPlayerInstance {
    */
   async function processSet(node: Record<string, unknown>): Promise<void> {
     const target = node.target as Record<string, unknown> | undefined;
-    if (!target?.shapeId) return;
+    if (!target?.shapeId) {return;}
 
     const el = findElement(String(target.shapeId));
     if (!el) {
@@ -118,7 +118,7 @@ export function createPlayer(options: PlayerOptions): AnimationPlayerInstance {
    */
   async function processAnimate(node: Record<string, unknown>): Promise<void> {
     const target = node.target as Record<string, unknown> | undefined;
-    if (!target?.shapeId) return;
+    if (!target?.shapeId) {return;}
 
     const el = findElement(String(target.shapeId));
     if (!el) {
@@ -165,7 +165,7 @@ export function createPlayer(options: PlayerOptions): AnimationPlayerInstance {
     node: Record<string, unknown>
   ): Promise<void> {
     const target = node.target as Record<string, unknown> | undefined;
-    if (!target?.shapeId) return;
+    if (!target?.shapeId) {return;}
 
     const el = findElement(String(target.shapeId));
     if (!el) {
@@ -204,7 +204,7 @@ export function createPlayer(options: PlayerOptions): AnimationPlayerInstance {
     node: Record<string, unknown>
   ): Promise<void> {
     const target = node.target as Record<string, unknown> | undefined;
-    if (!target?.shapeId) return;
+    if (!target?.shapeId) {return;}
 
     const el = findElement(String(target.shapeId));
     if (!el) {
@@ -236,10 +236,10 @@ export function createPlayer(options: PlayerOptions): AnimationPlayerInstance {
     node: Record<string, unknown>
   ): Promise<void> {
     const target = node.target as Record<string, unknown> | undefined;
-    if (!target?.shapeId) return;
+    if (!target?.shapeId) {return;}
 
     const el = findElement(String(target.shapeId));
-    if (!el) return;
+    if (!el) {return;}
 
     const by = typeof node.by === "number" ? node.by : 360;
     const duration = typeof node.duration === "number" ? node.duration : 1000;
@@ -260,10 +260,10 @@ export function createPlayer(options: PlayerOptions): AnimationPlayerInstance {
     node: Record<string, unknown>
   ): Promise<void> {
     const target = node.target as Record<string, unknown> | undefined;
-    if (!target?.shapeId) return;
+    if (!target?.shapeId) {return;}
 
     const el = findElement(String(target.shapeId));
-    if (!el) return;
+    if (!el) {return;}
 
     const toX = typeof node.toX === "number" ? node.toX : 1;
     const toY = typeof node.toY === "number" ? node.toY : 1;
@@ -285,10 +285,10 @@ export function createPlayer(options: PlayerOptions): AnimationPlayerInstance {
     node: Record<string, unknown>
   ): Promise<void> {
     const target = node.target as Record<string, unknown> | undefined;
-    if (!target?.shapeId) return;
+    if (!target?.shapeId) {return;}
 
     const el = findElement(String(target.shapeId));
-    if (!el) return;
+    if (!el) {return;}
 
     const duration = typeof node.duration === "number" ? node.duration : 1000;
 
@@ -303,8 +303,8 @@ export function createPlayer(options: PlayerOptions): AnimationPlayerInstance {
    * Process a time node and its children
    */
   async function processNode(node: unknown): Promise<void> {
-    if (!node || typeof node !== "object") return;
-    if (shouldStop()) return;
+    if (!node || typeof node !== "object") {return;}
+    if (shouldStop()) {return;}
 
     const n = node as Record<string, unknown>;
     const nodeType = String(n.type ?? "unknown");
@@ -324,7 +324,7 @@ export function createPlayer(options: PlayerOptions): AnimationPlayerInstance {
 
       case "sequence":
         for (const child of children) {
-          if (shouldStop()) break;
+          if (shouldStop()) {break;}
           await processNode(child);
         }
         break;
@@ -409,7 +409,7 @@ export function createPlayer(options: PlayerOptions): AnimationPlayerInstance {
     },
 
     stop(): void {
-      if (currentState !== "playing") return;
+      if (currentState !== "playing") {return;}
 
       currentState = "stopping";
       abortController?.abort();
@@ -455,7 +455,7 @@ export function extractShapeIds(timing: Timing): string[] {
   const ids = new Set<string>();
 
   function traverse(node: unknown): void {
-    if (!node || typeof node !== "object") return;
+    if (!node || typeof node !== "object") {return;}
     const n = node as Record<string, unknown>;
 
     const target = n.target as Record<string, unknown> | undefined;

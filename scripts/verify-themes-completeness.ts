@@ -15,7 +15,7 @@ import { openPresentation } from "../src/pptx";
 import * as fs from "node:fs";
 import JSZip from "jszip";
 
-interface SlideResult {
+type SlideResult = {
   slide: number;
   hasBackground: boolean;
   backgroundType: "solid" | "linearGradient" | "radialGradient" | "image" | "none";

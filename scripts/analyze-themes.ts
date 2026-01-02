@@ -12,7 +12,7 @@ import * as fs from "node:fs";
 import JSZip from "jszip";
 import { parseXml, getChild, getChildren, getAttr } from "../src/xml";
 
-interface ThemeInfo {
+type ThemeInfo = {
   name: string;
   colorScheme: Record<string, string>;
   fontScheme: {
@@ -26,7 +26,7 @@ interface ThemeInfo {
   };
 }
 
-interface SlideInfo {
+type SlideInfo = {
   slideNumber: number;
   layoutRef: string;
   masterRef: string;
@@ -35,7 +35,7 @@ interface SlideInfo {
   fontRefsUsed: string[];
 }
 
-interface AnalysisResult {
+type AnalysisResult = {
   themes: ThemeInfo[];
   slides: SlideInfo[];
   masterToTheme: Record<string, string>;
@@ -113,9 +113,9 @@ function parseTheme(xml: string, themeName: string): ThemeInfo {
     const fillStyleLst = getChild(fmtScheme, "a:fillStyleLst");
     const lnStyleLst = getChild(fmtScheme, "a:lnStyleLst");
     const effectStyleLst = getChild(fmtScheme, "a:effectStyleLst");
-    if (fillStyleLst) fillStyleCount = getChildren(fillStyleLst).length;
-    if (lnStyleLst) lineStyleCount = getChildren(lnStyleLst).length;
-    if (effectStyleLst) effectStyleCount = getChildren(effectStyleLst).length;
+    if (fillStyleLst) {fillStyleCount = getChildren(fillStyleLst).length;}
+    if (lnStyleLst) {lineStyleCount = getChildren(lnStyleLst).length;}
+    if (effectStyleLst) {effectStyleCount = getChildren(effectStyleLst).length;}
   }
 
   return {
@@ -214,11 +214,11 @@ async function analyzeThemes(pptxPath: string): Promise<AnalysisResult> {
   const slides: SlideInfo[] = [];
   for (let slideNum = 1; slideNum <= 20; slideNum++) {
     const slideXml = cache.get(`ppt/slides/slide${slideNum}.xml`)?.text;
-    if (!slideXml) continue;
+    if (!slideXml) {continue;}
 
     const slideRelsPath = `ppt/slides/_rels/slide${slideNum}.xml.rels`;
     const slideRelsText = cache.get(slideRelsPath)?.text;
-    if (!slideRelsText) continue;
+    if (!slideRelsText) {continue;}
 
     const slideRels = parseRels(slideRelsText);
 

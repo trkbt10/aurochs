@@ -14,7 +14,7 @@ const SNAPSHOT_DIR = path.join(VISUAL_DIR, "snapshots");
 const OUTPUT_DIR = path.join(VISUAL_DIR, "__output__");
 const DIFF_DIR = path.join(VISUAL_DIR, "__diff__");
 
-export interface CompareResult {
+export type CompareResult = {
   match: boolean;
   diffPixels: number;
   diffPercent: number;
@@ -22,7 +22,7 @@ export interface CompareResult {
   diffImagePath: string | null;
 }
 
-export interface CompareOptions {
+export type CompareOptions = {
   /** Threshold for color difference (0-1, default: 0.1) */
   threshold?: number;
   /** Maximum allowed diff percentage (0-100, default: 0.1) */
@@ -220,14 +220,14 @@ export function listSnapshots(snapshotName: string): number[] {
 // PDF Comparison Test Helpers
 // =============================================================================
 
-export interface DetailedCompareResult extends CompareResult {
+export type DetailedCompareResult = {
   snapshotName: string;
   slideNumber: number;
   snapshotPath: string;
   actualPath: string;
   width: number;
   height: number;
-}
+} & CompareResult
 
 /**
  * Compare SVG output against PDF-generated baseline with detailed reporting
@@ -315,13 +315,18 @@ export function compareWithDetails(
 /**
  * Generate a comparison report for a set of slides
  */
-export interface CompareReport {
+export type CompareReport = {
   snapshotName: string;
   results: DetailedCompareResult[];
   passed: number;
   failed: number;
   totalDiffPercent: number;
 }
+
+
+
+
+
 
 export function generateCompareReport(
   results: DetailedCompareResult[]

@@ -27,7 +27,7 @@ export type EasingFn = (t: number) => number;
 /**
  * Animation options
  */
-export interface AnimationOptions {
+export type AnimationOptions = {
   /** Duration in milliseconds */
   duration: number;
   /** Easing function or name */
@@ -43,7 +43,7 @@ export interface AnimationOptions {
 /**
  * Animation controller returned by animate()
  */
-export interface AnimationController {
+export type AnimationController = {
   /** Promise that resolves when animation completes */
   readonly finished: Promise<void>;
   /** Cancel the animation */
@@ -91,8 +91,8 @@ export const easings: Record<EasingName, EasingFn> = {
  * Get easing function by name or return the function if already a function
  */
 export function getEasing(easing: EasingFn | EasingName | undefined): EasingFn {
-  if (typeof easing === "function") return easing;
-  if (typeof easing === "string" && easing in easings) return easings[easing];
+  if (typeof easing === "function") {return easing;}
+  if (typeof easing === "string" && easing in easings) {return easings[easing];}
   return easings["ease-out"]; // Default
 }
 
@@ -103,7 +103,7 @@ export function getEasing(easing: EasingFn | EasingName | undefined): EasingFn {
 /**
  * Time provider interface for testable animations
  */
-export interface TimeProvider {
+export type TimeProvider = {
   now(): number;
   raf(callback: FrameRequestCallback): number;
   cancelRaf(id: number): void;
@@ -247,7 +247,7 @@ export function animate(options: AnimationOptions): AnimationController {
   });
 
   function frame(time: number): void {
-    if (cancelled || paused) return;
+    if (cancelled || paused) {return;}
 
     if (startTime === null) {
       startTime = time;
@@ -275,7 +275,7 @@ export function animate(options: AnimationOptions): AnimationController {
     finished,
 
     cancel(): void {
-      if (cancelled) return;
+      if (cancelled) {return;}
       cancelled = true;
       if (rafId !== null) {
         globalTimeProvider.cancelRaf(rafId);
@@ -285,7 +285,7 @@ export function animate(options: AnimationOptions): AnimationController {
     },
 
     pause(): void {
-      if (paused || cancelled) return;
+      if (paused || cancelled) {return;}
       paused = true;
       pausedProgress = currentProgress;
       if (rafId !== null) {
@@ -294,7 +294,7 @@ export function animate(options: AnimationOptions): AnimationController {
     },
 
     resume(): void {
-      if (!paused || cancelled) return;
+      if (!paused || cancelled) {return;}
       paused = false;
       // Adjust start time to account for paused duration
       startTime = null;
@@ -475,7 +475,7 @@ export function animateParallel(
       animations.forEach((a) => a.resume());
     },
     getProgress() {
-      if (animations.length === 0) return 1;
+      if (animations.length === 0) {return 1;}
       return Math.min(...animations.map((a) => a.getProgress()));
     },
   };

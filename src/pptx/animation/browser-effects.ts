@@ -33,7 +33,7 @@ export type BrowserEffectType =
 
 export type BrowserEffectDirection = string;
 
-export interface ParsedFilter {
+export type ParsedFilter = {
   type: BrowserEffectType;
   direction: string;
 }

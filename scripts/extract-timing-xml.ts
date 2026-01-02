@@ -68,7 +68,7 @@ function formatXml(xml: string): string {
 
   for (const part of parts) {
     const trimmed = part.trim();
-    if (trimmed.length === 0) continue;
+    if (trimmed.length === 0) {continue;}
 
     // Decrease indent for closing tags
     if (trimmed.startsWith("</")) {

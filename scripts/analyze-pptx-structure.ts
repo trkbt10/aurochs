@@ -94,7 +94,7 @@ function extractShapeInfo(xml: string): ShapeInfo[] {
 
 function getShowMasterSp(xml: string): boolean | undefined {
   const match = xml.match(/showMasterSp="(\d)"/);
-  if (match === null) return undefined;
+  if (match === null) {return undefined;}
   return match[1] === "1";
 }
 
@@ -112,7 +112,7 @@ async function main() {
   // Read file content helper
   const readFile = async (path: string): Promise<string | null> => {
     const file = jszip.file(path);
-    if (file === null) return null;
+    if (file === null) {return null;}
     return file.async("text");
   };
 
@@ -135,11 +135,11 @@ async function main() {
     const slideNum = i + 1;
 
     // Skip if specific slide requested and this isn't it
-    if (options.slideNum !== undefined && slideNum !== options.slideNum) continue;
+    if (options.slideNum !== undefined && slideNum !== options.slideNum) {continue;}
 
     const slideFile = slideFiles[i];
     const slideXml = await readFile(slideFile);
-    if (slideXml === null) continue;
+    if (slideXml === null) {continue;}
 
     // Get relationships
     const relsPath = slideFile.replace("slides/", "slides/_rels/") + ".rels";

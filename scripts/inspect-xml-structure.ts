@@ -57,12 +57,12 @@ async function main() {
 
   // Find first shape with text run
   for (const child of spTree.children) {
-    if (!isXmlElement(child) || child.name !== "p:sp") continue;
+    if (!isXmlElement(child) || child.name !== "p:sp") {continue;}
     const txBody = getChild(child, "p:txBody");
-    if (!txBody) continue;
+    if (!txBody) {continue;}
 
     const paragraphs = getChildren(txBody, "a:p");
-    if (paragraphs.length === 0) continue;
+    if (paragraphs.length === 0) {continue;}
 
     for (const p of paragraphs) {
       const runs = getChildren(p, "a:r");

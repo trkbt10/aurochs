@@ -119,10 +119,10 @@ function extractPptxGradients(xml: string, label: string): Array<{ type: string;
         const tintMatch = colorContent.match(/<a:tint val="(\d+)"/);
 
         const transforms: string[] = [];
-        if (lumModMatch) transforms.push(`lumMod:${parseInt(lumModMatch[1], 10) / 1000}%`);
-        if (lumOffMatch) transforms.push(`lumOff:${parseInt(lumOffMatch[1], 10) / 1000}%`);
-        if (shadeMatch) transforms.push(`shade:${parseInt(shadeMatch[1], 10) / 1000}%`);
-        if (tintMatch) transforms.push(`tint:${parseInt(tintMatch[1], 10) / 1000}%`);
+        if (lumModMatch) {transforms.push(`lumMod:${parseInt(lumModMatch[1], 10) / 1000}%`);}
+        if (lumOffMatch) {transforms.push(`lumOff:${parseInt(lumOffMatch[1], 10) / 1000}%`);}
+        if (shadeMatch) {transforms.push(`shade:${parseInt(shadeMatch[1], 10) / 1000}%`);}
+        if (tintMatch) {transforms.push(`tint:${parseInt(tintMatch[1], 10) / 1000}%`);}
 
         if (transforms.length > 0) {
           colorStr += ` [${transforms.join(", ")}]`;

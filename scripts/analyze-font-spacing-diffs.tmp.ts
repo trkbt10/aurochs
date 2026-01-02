@@ -76,7 +76,7 @@ async function main(): Promise<void> {
 
   for (const category of categories) {
     const categoryDir = path.join(BASE_DIR, category);
-    if (!fs.existsSync(categoryDir)) continue;
+    if (!fs.existsSync(categoryDir)) {continue;}
 
     const files = fs.readdirSync(categoryDir).filter(f => f.endsWith(".pptx"));
 

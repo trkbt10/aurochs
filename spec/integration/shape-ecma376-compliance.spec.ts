@@ -296,7 +296,7 @@ describe("shapes.pptx ECMA-376 compliance", () => {
       if (isXmlElement(spTree)) {
         // Find Freeform 6 (custom geometry)
         for (const child of spTree.children) {
-          if (!isXmlElement(child) || child.name !== "p:sp") continue;
+          if (!isXmlElement(child) || child.name !== "p:sp") {continue;}
 
           const nvSpPr = getChild(child, "p:nvSpPr");
           const cNvPr = nvSpPr ? getChild(nvSpPr, "p:cNvPr") : undefined;
@@ -331,13 +331,13 @@ describe("shapes.pptx ECMA-376 compliance", () => {
       const spTree = getByPath(slide.content, ["p:sld", "p:cSld", "p:spTree"]);
 
       expect(isXmlElement(spTree)).toBe(true);
-      if (!isXmlElement(spTree)) return;
+      if (!isXmlElement(spTree)) {return;}
 
       // Find shapes with p:style/a:fillRef (recursively through groups)
       const findFillRefs = (parent: XmlElement): XmlElement[] => {
         const results: XmlElement[] = [];
         for (const child of parent.children) {
-          if (!isXmlElement(child)) continue;
+          if (!isXmlElement(child)) {continue;}
 
           if (child.name === "p:sp") {
             const style = getChild(child, "p:style");
@@ -376,7 +376,7 @@ describe("shapes.pptx ECMA-376 compliance", () => {
       ]);
 
       expect(isXmlElement(fmtScheme)).toBe(true);
-      if (!isXmlElement(fmtScheme)) return;
+      if (!isXmlElement(fmtScheme)) {return;}
 
       const fillStyleLst = getChild(fmtScheme, "a:fillStyleLst");
       expect(fillStyleLst).toBeDefined();

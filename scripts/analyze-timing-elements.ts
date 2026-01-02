@@ -76,7 +76,7 @@ const TIMING_ELEMENTS = {
 
 type TimingElement = keyof typeof TIMING_ELEMENTS;
 
-interface ElementOccurrence {
+type ElementOccurrence = {
   element: string;
   file: string;
   slide: string;
@@ -84,7 +84,7 @@ interface ElementOccurrence {
   attributes: string[];
 }
 
-interface AnalysisResult {
+type AnalysisResult = {
   file: string;
   hasTimingElements: boolean;
   occurrences: ElementOccurrence[];
@@ -150,7 +150,7 @@ async function analyzePptxFile(pptxPath: string): Promise<AnalysisResult> {
 
   for (const slideFile of slideFiles) {
     const file = jszip.file(slideFile);
-    if (file === null) continue;
+    if (file === null) {continue;}
 
     const content = await file.async("text");
     const slideNum = slideFile.match(/slide(\d+)\.xml/)?.[1] ?? "?";
@@ -170,7 +170,7 @@ async function analyzePptxFile(pptxPath: string): Promise<AnalysisResult> {
 
   for (const layoutFile of layoutFiles) {
     const file = jszip.file(layoutFile);
-    if (file === null) continue;
+    if (file === null) {continue;}
 
     const content = await file.async("text");
     const typeName = layoutFile.includes("slideLayout") ? "layout" : "master";

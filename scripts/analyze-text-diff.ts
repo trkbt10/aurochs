@@ -20,7 +20,7 @@ function findTextRows(png: PNG): { row: number; firstPixel: number; lastPixel: n
       const b = png.data[idx + 2];
       // Check if pixel is not white (text pixel)
       if (r < 250 || g < 250 || b < 250) {
-        if (firstPixel === -1) firstPixel = x;
+        if (firstPixel === -1) {firstPixel = x;}
         lastPixel = x;
       }
     }

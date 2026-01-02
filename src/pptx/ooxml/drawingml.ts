@@ -641,7 +641,7 @@ export function getLevelParagraphProps(
   lstStyle: ListStyleElement | undefined,
   level: number,
 ): ParagraphPropertiesElement | undefined {
-  if (lstStyle === undefined) return undefined;
+  if (lstStyle === undefined) {return undefined;}
   const key = `a:lvl${level + 1}pPr` as ListStyleLevelKey;
   return lstStyle[key];
 }

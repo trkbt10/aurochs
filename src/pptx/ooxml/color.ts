@@ -493,7 +493,7 @@ export type ColorElementKey = (typeof COLOR_ELEMENT_KEYS)[number];
 export function findColorElement(
   node: ColorContainerNode | undefined,
 ): { key: ColorElementKey; element: OoxmlElement & ColorTransformChildren } | undefined {
-  if (node === undefined) return undefined;
+  if (node === undefined) {return undefined;}
 
   for (const key of COLOR_ELEMENT_KEYS) {
     const element = node[key];
@@ -522,7 +522,7 @@ export type FillElementKey = (typeof FILL_ELEMENT_KEYS)[number];
 export function findFillElement(
   node: FillElements | undefined,
 ): { key: FillElementKey; element: OoxmlElement } | undefined {
-  if (node === undefined) return undefined;
+  if (node === undefined) {return undefined;}
 
   for (const key of FILL_ELEMENT_KEYS) {
     const element = node[key];

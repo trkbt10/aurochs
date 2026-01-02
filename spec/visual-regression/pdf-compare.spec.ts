@@ -62,7 +62,7 @@ async function loadPptxFile(filePath: string): Promise<PresentationFile> {
  * Text layout test configuration
  * Focus on slides with significant text content
  */
-interface TextLayoutTestCase {
+type TextLayoutTestCase = {
   name: string;
   pptxPath: string;
   slides: number[];

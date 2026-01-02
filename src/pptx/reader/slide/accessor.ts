@@ -120,6 +120,11 @@ export type ParagraphContext = {
   resolveSchemeColor(schemeColor: string): string | undefined;
 };
 
+
+
+
+
+
 export function createParagraphContext(shape: ShapeContext, lvl: number): ParagraphContext {
   const lvlpPr = `a:lvl${lvl}pPr`;
 
@@ -348,6 +353,11 @@ export type SlideRenderContext = {
    */
   toThemeResourceContext(): ResourceContext;
 };
+
+
+
+
+
 
 export function createSlideRenderContext(
   slide: SlideParams,

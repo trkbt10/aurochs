@@ -167,7 +167,7 @@ function extractSchemeColor(element: SchemeColorElement, ctx: ColorExtractContex
  */
 function extractScrgbColor(element: ScrgbColorElement): string {
   const attrs = element.attrs;
-  if (attrs === undefined) return "";
+  if (attrs === undefined) {return "";}
   const red = parsePercentageValue(attrs.r ?? "0");
   const green = parsePercentageValue(attrs.g ?? "0");
   const blue = parsePercentageValue(attrs.b ?? "0");
@@ -180,7 +180,7 @@ function extractScrgbColor(element: ScrgbColorElement): string {
  */
 function extractPrstColor(element: PrstColorElement): string {
   const prstClr = element.attrs?.val;
-  if (prstClr === undefined) return "";
+  if (prstClr === undefined) {return "";}
   return getColorName2Hex(prstClr) ?? "";
 }
 
@@ -190,7 +190,7 @@ function extractPrstColor(element: PrstColorElement): string {
  */
 function extractHslColor(element: HslColorElement): string {
   const attrs = element.attrs;
-  if (attrs === undefined) return "";
+  if (attrs === undefined) {return "";}
   const hue = Number(attrs.hue ?? "0") / OOXML_PERCENT_FACTOR;
   const sat = parsePercentageValue(attrs.sat ?? "0") / 100;
   const lum = parsePercentageValue(attrs.lum ?? "0") / 100;
@@ -328,7 +328,7 @@ function extractScrgbColorXml(element: XmlElement): string {
   const r = getAttr(element, "r");
   const g = getAttr(element, "g");
   const b = getAttr(element, "b");
-  if (r === undefined || g === undefined || b === undefined) return "";
+  if (r === undefined || g === undefined || b === undefined) {return "";}
   const rVal = Math.round((Number(r) / OOXML_PERCENT_FACTOR) * 255);
   const gVal = Math.round((Number(g) / OOXML_PERCENT_FACTOR) * 255);
   const bVal = Math.round((Number(b) / OOXML_PERCENT_FACTOR) * 255);
@@ -337,7 +337,7 @@ function extractScrgbColorXml(element: XmlElement): string {
 
 function extractPrstColorXml(element: XmlElement): string {
   const val = getAttr(element, "val");
-  if (val === undefined) return "";
+  if (val === undefined) {return "";}
   return getColorName2Hex(val) ?? "";
 }
 
@@ -345,7 +345,7 @@ function extractHslColorXml(element: XmlElement): string {
   const h = getAttr(element, "hue");
   const s = getAttr(element, "sat");
   const l = getAttr(element, "lum");
-  if (h === undefined || s === undefined || l === undefined) return "";
+  if (h === undefined || s === undefined || l === undefined) {return "";}
   const hue = Number(h) / 60000;
   const sat = Number(s) / OOXML_PERCENT_FACTOR;
   const lum = Number(l) / OOXML_PERCENT_FACTOR;
@@ -355,9 +355,9 @@ function extractHslColorXml(element: XmlElement): string {
 
 function extractSysColorXml(element: XmlElement): string {
   const lastClr = getAttr(element, "lastClr");
-  if (lastClr !== undefined) return lastClr;
+  if (lastClr !== undefined) {return lastClr;}
   const val = getAttr(element, "val");
-  if (val === undefined) return "";
+  if (val === undefined) {return "";}
   return val === "windowText" ? "000000" : (val === "window" ? "FFFFFF" : "");
 }
 
@@ -510,13 +510,13 @@ function parseTransformValue(
   key: keyof ColorTransformChildren,
 ): number | undefined {
   const child = element[key];
-  if (child === undefined) return undefined;
+  if (child === undefined) {return undefined;}
 
   const rawValue = child.attrs?.val;
-  if (rawValue === undefined) return undefined;
+  if (rawValue === undefined) {return undefined;}
 
   const parsed = parseInt(rawValue, 10) / OOXML_PERCENT_FACTOR;
-  if (isNaN(parsed)) return undefined;
+  if (isNaN(parsed)) {return undefined;}
 
   return parsed;
 }

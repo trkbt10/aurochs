@@ -209,7 +209,7 @@ function buildResourceResolver(ctx: SlideRenderContext): ResourceResolver {
     },
     readFile: (path: string) => {
       const data = ctx.readFile(path);
-      if (data === null) return null;
+      if (data === null) {return null;}
       return new Uint8Array(data);
     },
     getResourceByType: (relType: string) => {

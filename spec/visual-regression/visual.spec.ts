@@ -18,7 +18,7 @@ import { loadPptxFile } from "../../scripts/lib/pptx-loader";
 // Note: loadPptxFile is now imported from scripts/lib/pptx-loader.ts
 // This shared utility avoids duplicating JSZip loading logic across tests
 
-interface TestCase {
+type TestCase = {
   name: string;
   pptxPath: string;
   slides: number[];

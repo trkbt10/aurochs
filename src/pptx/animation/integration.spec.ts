@@ -417,7 +417,7 @@ describe("Animation Integration", () => {
       // Simulate DOM query that animation player uses
       const mockQuerySelector = (html: string, selector: string): HTMLElement | null => {
         const idMatch = selector.match(/data-ooxml-id="(\d+)"/);
-        if (!idMatch) return null;
+        if (!idMatch) {return null;}
         const targetId = idMatch[1];
         if (html.includes(`data-ooxml-id="${targetId}"`)) {
           return createMockElement();

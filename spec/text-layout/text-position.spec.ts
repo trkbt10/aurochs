@@ -15,7 +15,7 @@ import { openPresentation } from "../../src/pptx";
 // Types
 // =============================================================================
 
-interface TextElement {
+type TextElement = {
   /** テキスト内容 */
   text: string;
   /** X座標 (SVG単位) */
@@ -28,7 +28,7 @@ interface TextElement {
   fontSize?: number;
 }
 
-interface ExpectedTextPosition {
+type ExpectedTextPosition = {
   /** テキスト内容（部分一致） */
   textMatch: string;
   /** 期待するX座標 */
@@ -39,7 +39,7 @@ interface ExpectedTextPosition {
   tolerance: number;
 }
 
-interface TextPositionTestCase {
+type TextPositionTestCase = {
   name: string;
   pptxPath: string;
   slideNumber: number;

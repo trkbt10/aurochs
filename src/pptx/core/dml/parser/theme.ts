@@ -83,7 +83,7 @@ export function parseFontScheme(themeContent: XmlDocument | null): FontScheme {
  */
 function collectColorScheme(clrScheme: XmlElement | undefined): ColorScheme {
   const colors: Record<string, string> = {};
-  if (clrScheme === undefined) return colors;
+  if (clrScheme === undefined) {return colors;}
 
   // Color scheme has children like a:dk1, a:lt1, a:accent1, etc.
   for (const child of clrScheme.children) {
@@ -134,7 +134,7 @@ export function parseColorScheme(themeContent: XmlDocument | null): ColorScheme 
  */
 function collectColorMap(clrMap: XmlElement | undefined): ColorMap {
   const mapping: Record<string, string> = {};
-  if (clrMap === undefined) return mapping;
+  if (clrMap === undefined) {return mapping;}
   for (const [key, value] of Object.entries(clrMap.attrs)) {
     mapping[key] = value;
   }
@@ -253,9 +253,9 @@ export function parseCustomColorList(themeContent: XmlDocument | null): readonly
   const customColors: CustomColor[] = [];
 
   for (const child of custClrLst.children) {
-    if (typeof child !== "object" || !("name" in child)) continue;
+    if (typeof child !== "object" || !("name" in child)) {continue;}
     const custClr = child as XmlElement;
-    if (custClr.name !== "a:custClr") continue;
+    if (custClr.name !== "a:custClr") {continue;}
 
     const name = custClr.attrs?.name;
     const srgbClr = getChild(custClr, "a:srgbClr");
@@ -309,7 +309,7 @@ export function parseExtraColorSchemes(themeContent: XmlDocument | null): readon
   for (const extra of getChildren(extraClrSchemeLst, "a:extraClrScheme")) {
     const clrScheme = getChild(extra, "a:clrScheme");
     const clrMap = getChild(extra, "a:clrMap");
-    if (!clrScheme || !clrMap) continue;
+    if (!clrScheme || !clrMap) {continue;}
 
     schemes.push({
       name: getAttr(clrScheme, "name"),

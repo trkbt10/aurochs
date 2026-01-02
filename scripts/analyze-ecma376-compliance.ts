@@ -50,14 +50,14 @@ async function loadPptxFile(filePath: string): Promise<PresentationFile> {
   };
 }
 
-interface AnalysisResult {
+type AnalysisResult = {
   file: string;
   slide: number;
   backgroundAnalysis: BackgroundAnalysis;
   textAnalysis: TextAnalysis;
 }
 
-interface BackgroundAnalysis {
+type BackgroundAnalysis = {
   hasStretch: boolean;
   hasBlipFill: boolean;
   preserveAspectRatio: string | null;
@@ -65,19 +65,19 @@ interface BackgroundAnalysis {
   details: string;
 }
 
-interface TextAnalysis {
+type TextAnalysis = {
   textElements: TextElement[];
   lineSpacing: LineSpacingInfo[];
 }
 
-interface TextElement {
+type TextElement = {
   text: string;
   x: number;
   y: number;
   fontSize: number | null;
 }
 
-interface LineSpacingInfo {
+type LineSpacingInfo = {
   type: "percent" | "points" | "default";
   value: number;
 }

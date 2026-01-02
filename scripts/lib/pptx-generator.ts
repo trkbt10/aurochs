@@ -15,7 +15,7 @@ import * as path from "node:path";
 // Types
 // =============================================================================
 
-export interface SlideContent {
+export type SlideContent = {
   /** Title text */
   title?: string;
   /** Body paragraphs with optional styling */
@@ -24,7 +24,7 @@ export interface SlideContent {
   bodyPr?: BodyProperties;
 }
 
-export interface BodyProperties {
+export type BodyProperties = {
   /** Vertical anchor: top, center, bottom */
   anchor?: "t" | "ctr" | "b";
   /** Horizontal anchor center */
@@ -38,7 +38,7 @@ export interface BodyProperties {
   bIns?: number;
 }
 
-export interface ParagraphContent {
+export type ParagraphContent = {
   /** Paragraph text (simple case) */
   text?: string;
   /** Multiple runs with different formatting */
@@ -49,7 +49,7 @@ export interface ParagraphContent {
   rPr?: RunProperties;
 }
 
-export interface RunContent {
+export type RunContent = {
   /** Run text */
   text: string;
   /** Run properties */
@@ -58,7 +58,7 @@ export interface RunContent {
   isBreak?: boolean;
 }
 
-export interface ParagraphProperties {
+export type ParagraphProperties = {
   /** Line spacing - a:lnSpc */
   lineSpacing?: LineSpacing;
   /** Space before - a:spcBef */
@@ -77,7 +77,7 @@ export interface ParagraphProperties {
   level?: number;
 }
 
-export interface BulletProperties {
+export type BulletProperties = {
   /** Bullet type */
   type: "none" | "char" | "auto";
   /** Bullet character (for type="char") */
@@ -92,7 +92,7 @@ export interface BulletProperties {
   sizePct?: number;
 }
 
-export interface RunProperties {
+export type RunProperties = {
   /** Character spacing in EMU - a:spc (ECMA-376 21.1.2.3.9) */
   charSpacing?: number;
   /** Kerning threshold in 1/100pt - a:kern (ECMA-376 21.1.2.3.9) */
@@ -309,21 +309,21 @@ function generateBulletXml(bullet: BulletProperties): string {
 }
 
 function generateParagraphPropertiesXml(pPr: ParagraphProperties | undefined): string {
-  if (!pPr) return "";
+  if (!pPr) {return "";}
 
   const attrs: string[] = [];
-  if (pPr.align) attrs.push(`algn="${pPr.align}"`);
-  if (pPr.marginLeft !== undefined) attrs.push(`marL="${pPr.marginLeft}"`);
-  if (pPr.indent !== undefined) attrs.push(`indent="${pPr.indent}"`);
-  if (pPr.level !== undefined) attrs.push(`lvl="${pPr.level}"`);
+  if (pPr.align) {attrs.push(`algn="${pPr.align}"`);}
+  if (pPr.marginLeft !== undefined) {attrs.push(`marL="${pPr.marginLeft}"`);}
+  if (pPr.indent !== undefined) {attrs.push(`indent="${pPr.indent}"`);}
+  if (pPr.level !== undefined) {attrs.push(`lvl="${pPr.level}"`);}
 
   const children: string[] = [];
-  if (pPr.lineSpacing) children.push(generateLineSpacingXml(pPr.lineSpacing));
-  if (pPr.spaceBefore) children.push(generateSpacingXml(pPr.spaceBefore, "spcBef"));
-  if (pPr.spaceAfter) children.push(generateSpacingXml(pPr.spaceAfter, "spcAft"));
-  if (pPr.bullet) children.push(generateBulletXml(pPr.bullet));
+  if (pPr.lineSpacing) {children.push(generateLineSpacingXml(pPr.lineSpacing));}
+  if (pPr.spaceBefore) {children.push(generateSpacingXml(pPr.spaceBefore, "spcBef"));}
+  if (pPr.spaceAfter) {children.push(generateSpacingXml(pPr.spaceAfter, "spcAft"));}
+  if (pPr.bullet) {children.push(generateBulletXml(pPr.bullet));}
 
-  if (attrs.length === 0 && children.length === 0) return "";
+  if (attrs.length === 0 && children.length === 0) {return "";}
 
   const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
   if (children.length === 0) {
@@ -333,7 +333,7 @@ function generateParagraphPropertiesXml(pPr: ParagraphProperties | undefined): s
 }
 
 function generateRunPropertiesXml(rPr: RunProperties | undefined): string {
-  if (!rPr) return '<a:rPr lang="en-US"/>';
+  if (!rPr) {return '<a:rPr lang="en-US"/>';}
 
   const attrs: string[] = ['lang="en-US"'];
 
@@ -398,13 +398,13 @@ function generateBodyPropertiesXml(bodyPr?: BodyProperties): string {
   attrs.push('rtlCol="0"');
 
   if (bodyPr) {
-    if (bodyPr.wrap) attrs.push(`wrap="${bodyPr.wrap}"`);
-    if (bodyPr.anchor) attrs.push(`anchor="${bodyPr.anchor}"`);
-    if (bodyPr.anchorCtr) attrs.push(`anchorCtr="1"`);
-    if (bodyPr.lIns !== undefined) attrs.push(`lIns="${bodyPr.lIns}"`);
-    if (bodyPr.rIns !== undefined) attrs.push(`rIns="${bodyPr.rIns}"`);
-    if (bodyPr.tIns !== undefined) attrs.push(`tIns="${bodyPr.tIns}"`);
-    if (bodyPr.bIns !== undefined) attrs.push(`bIns="${bodyPr.bIns}"`);
+    if (bodyPr.wrap) {attrs.push(`wrap="${bodyPr.wrap}"`);}
+    if (bodyPr.anchor) {attrs.push(`anchor="${bodyPr.anchor}"`);}
+    if (bodyPr.anchorCtr) {attrs.push(`anchorCtr="1"`);}
+    if (bodyPr.lIns !== undefined) {attrs.push(`lIns="${bodyPr.lIns}"`);}
+    if (bodyPr.rIns !== undefined) {attrs.push(`rIns="${bodyPr.rIns}"`);}
+    if (bodyPr.tIns !== undefined) {attrs.push(`tIns="${bodyPr.tIns}"`);}
+    if (bodyPr.bIns !== undefined) {attrs.push(`bIns="${bodyPr.bIns}"`);}
   } else {
     attrs.push('wrap="square"');
   }

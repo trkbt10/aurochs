@@ -17,7 +17,7 @@ import { openPresentation, LIBREOFFICE_RENDER_OPTIONS } from "../../src/pptx";
 import { compareSvgToSnapshot, hasSnapshot, listSnapshots } from "./compare";
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
 
-interface EmptyTemplateTestCase {
+type EmptyTemplateTestCase = {
   name: string;
   pptxPath: string;
   description: string;

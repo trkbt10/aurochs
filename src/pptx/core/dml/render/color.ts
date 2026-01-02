@@ -255,7 +255,7 @@ const SYSTEM_COLOR_FALLBACKS: Record<string, string> = {
  * @see ECMA-376 Part 1, Section 20.1.2.3 (Color Types)
  */
 export function resolveColor(color: Color | undefined, context?: ColorContext): string | undefined {
-  if (!color) return undefined;
+  if (!color) {return undefined;}
 
   let baseColor: string | undefined;
 
@@ -289,7 +289,7 @@ export function resolveColor(color: Color | undefined, context?: ColorContext): 
       break;
   }
 
-  if (!baseColor) return undefined;
+  if (!baseColor) {return undefined;}
 
   // Apply transforms
   if (color.transform) {
@@ -368,9 +368,9 @@ function hslToHex(h: number, s: number, l: number): string {
  */
 function applyColorTransforms(hex: string, transform: ColorTransform): string {
   // Parse hex to RGB
-  let r = parseInt(hex.slice(0, 2), 16);
-  let g = parseInt(hex.slice(2, 4), 16);
-  let b = parseInt(hex.slice(4, 6), 16);
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
 
   // Convert to HSL for HSL-based transforms (hue, sat, lum modifications)
   const [h, s, l] = rgbToHsl(r, g, b);
@@ -379,17 +379,17 @@ function applyColorTransforms(hex: string, transform: ColorTransform): string {
     lum = l;
 
   // Apply HSL transforms
-  if (transform.hue !== undefined) hue = transform.hue;
-  if (transform.hueMod !== undefined) hue = (hue * transform.hueMod) / 100;
-  if (transform.hueOff !== undefined) hue = (hue + transform.hueOff) % 360;
+  if (transform.hue !== undefined) {hue = transform.hue;}
+  if (transform.hueMod !== undefined) {hue = (hue * transform.hueMod) / 100;}
+  if (transform.hueOff !== undefined) {hue = (hue + transform.hueOff) % 360;}
 
-  if (transform.sat !== undefined) sat = transform.sat;
-  if (transform.satMod !== undefined) sat = (sat * transform.satMod) / 100;
-  if (transform.satOff !== undefined) sat = Math.max(0, Math.min(100, sat + transform.satOff));
+  if (transform.sat !== undefined) {sat = transform.sat;}
+  if (transform.satMod !== undefined) {sat = (sat * transform.satMod) / 100;}
+  if (transform.satOff !== undefined) {sat = Math.max(0, Math.min(100, sat + transform.satOff));}
 
-  if (transform.lum !== undefined) lum = transform.lum;
-  if (transform.lumMod !== undefined) lum = (lum * transform.lumMod) / 100;
-  if (transform.lumOff !== undefined) lum = Math.max(0, Math.min(100, lum + transform.lumOff));
+  if (transform.lum !== undefined) {lum = transform.lum;}
+  if (transform.lumMod !== undefined) {lum = (lum * transform.lumMod) / 100;}
+  if (transform.lumOff !== undefined) {lum = Math.max(0, Math.min(100, lum + transform.lumOff));}
 
   // Convert back to RGB after HSL transforms
   let result = hslToHex(hue, sat, lum);

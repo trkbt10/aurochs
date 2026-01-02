@@ -42,7 +42,7 @@ async function loadPptxFile(filePath: string): Promise<{ pf: PresentationFile; c
   const zip: ZipFile = {
     file(path: string) {
       const data = cache.get(path);
-      if (!data) return null;
+      if (!data) {return null;}
       return {
         async: async (type: string) => type === "arraybuffer" ? data.buffer : data.text,
       };

@@ -6,7 +6,7 @@
 
 import { compareSlideToSnapshot, printCompareResult } from "./visual-compare";
 
-export interface DiffAnalysisResult {
+export type DiffAnalysisResult = {
   name: string;
   slideNumber: number;
   diffPercent: number;

@@ -24,7 +24,7 @@ async function main() {
 
   const readFile = async (path: string): Promise<string | null> => {
     const file = jszip.file(path);
-    if (file === null) return null;
+    if (file === null) {return null;}
     return file.async("text");
   };
 
@@ -179,8 +179,8 @@ async function main() {
   };
 
   extractLstStyleCaps(slideXml, "Slide");
-  if (layoutXml) extractLstStyleCaps(layoutXml, "Layout");
-  if (masterXml) extractLstStyleCaps(masterXml, "Master");
+  if (layoutXml) {extractLstStyleCaps(layoutXml, "Layout");}
+  if (masterXml) {extractLstStyleCaps(masterXml, "Master");}
 
   // Check bodyPr for title placeholder
   console.log("\n" + "-".repeat(40));

@@ -54,7 +54,7 @@ function findTextLines(png: PNG): TextLine[] {
       const b = png.data[idx + 2];
 
       if (r < 250 || g < 250 || b < 250) {
-        if (firstX === -1) firstX = x;
+        if (firstX === -1) {firstX = x;}
         lastX = x;
       }
     }
@@ -156,7 +156,7 @@ function printAnalysis(analysis: TextAnalysis): void {
 }
 
 function listSnapshots(): string[] {
-  if (!fs.existsSync(SNAPSHOT_DIR)) return [];
+  if (!fs.existsSync(SNAPSHOT_DIR)) {return [];}
   return fs.readdirSync(SNAPSHOT_DIR).filter((f) => {
     const stat = fs.statSync(path.join(SNAPSHOT_DIR, f));
     return stat.isDirectory();
