@@ -17,9 +17,7 @@ export default {
       CallExpression(node) {
         // Check if this is an IIFE (calling a function expression immediately)
         const callee = node.callee;
-        if (
-          !["FunctionExpression", "ArrowFunctionExpression"].includes(callee.type)
-        ) {
+        if (!["FunctionExpression", "ArrowFunctionExpression"].includes(callee.type)) {
           return; // Not an IIFE
         }
 
@@ -27,11 +25,7 @@ export default {
         const findNearestFunction = (startNode) => {
           const searchParent = (current) => {
             if (!current) return null;
-            if (
-              ["FunctionDeclaration", "FunctionExpression", "ArrowFunctionExpression"].includes(
-                current.type,
-              )
-            ) {
+            if (["FunctionDeclaration", "FunctionExpression", "ArrowFunctionExpression"].includes(current.type)) {
               return current;
             }
             return searchParent(current.parent);
@@ -44,7 +38,7 @@ export default {
         // Check if the parent function is anonymous
         if (parentFunc) {
           const isAnonymous =
-            parentFunc.type === "FunctionExpression" && !parentFunc.id ||
+            (parentFunc.type === "FunctionExpression" && !parentFunc.id) ||
             parentFunc.type === "ArrowFunctionExpression";
 
           if (isAnonymous) {

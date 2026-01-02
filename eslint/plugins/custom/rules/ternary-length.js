@@ -28,7 +28,8 @@ export default {
         if (text.length > 120) {
           context.report({
             node,
-            message: "Ternary expression exceeds 120 characters. Extract the logic into a function that returns the appropriate value.",
+            message:
+              "Ternary expression exceeds 120 characters. Extract the logic into a function that returns the appropriate value.",
           });
         }
       },

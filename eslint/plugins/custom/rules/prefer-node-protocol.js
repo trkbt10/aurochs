@@ -7,9 +7,7 @@ import { builtinModules } from "node:module";
 
 // Build a set of bare core module names (without the `node:` prefix)
 const CORE_MODULES = new Set(
-  builtinModules
-    .map((m) => (m.startsWith("node:") ? m.slice(5) : m))
-    .filter((m) => !m.includes("/"))
+  builtinModules.map((m) => (m.startsWith("node:") ? m.slice(5) : m)).filter((m) => !m.includes("/")),
 );
 
 function needsNodePrefix(specifier) {
@@ -102,4 +100,3 @@ export default {
     };
   },
 };
-
