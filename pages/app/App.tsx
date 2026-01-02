@@ -3,12 +3,13 @@ import { usePptx } from "./hooks/usePptx";
 import { FileUpload } from "./components/FileUpload";
 import { SlideViewer } from "./components/SlideViewer";
 import { SlideshowPage } from "./components/SlideshowPage";
+import { EditorTestPage } from "./components/EditorTestPage";
 import "./App.css";
 
 // Demo PPTX URL (will be in the public folder)
 const DEMO_PPTX_URL = import.meta.env.BASE_URL + "demo.pptx";
 
-type AppMode = "upload" | "viewer" | "slideshow";
+type AppMode = "upload" | "viewer" | "slideshow" | "editorTest";
 
 export function App() {
   const [mode, setMode] = useState<AppMode>("upload");
@@ -51,6 +52,19 @@ export function App() {
     setMode("viewer");
   }, []);
 
+  const handleEditorTest = useCallback(() => {
+    setMode("editorTest");
+  }, []);
+
+  const handleExitEditorTest = useCallback(() => {
+    setMode("upload");
+  }, []);
+
+  // Editor test mode
+  if (mode === "editorTest") {
+    return <EditorTestPage onBack={handleExitEditorTest} />;
+  }
+
   // Error state
   if (status === "error") {
     return (
@@ -80,6 +94,7 @@ export function App() {
         onFileSelect={handleFileSelect}
         onDemoLoad={handleDemoLoad}
         isLoading={status === "loading"}
+        onEditorTest={handleEditorTest}
       />
     );
   }
