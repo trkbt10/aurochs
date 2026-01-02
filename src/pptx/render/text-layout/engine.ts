@@ -153,9 +153,7 @@ function layoutParagraph(
   const bulletWidth = getBulletWidth(para.bullet);
 
   // Calculate available widths
-  const firstLineWidth = px(
-    (contentWidth as number) - marginLeft - marginRight - indent - bulletWidth,
-  );
+  const firstLineWidth = px((contentWidth as number) - marginLeft - marginRight - indent - bulletWidth);
   const nextLineWidth = px((contentWidth as number) - marginLeft - marginRight);
 
   // Measure spans
@@ -165,12 +163,7 @@ function layoutParagraph(
   const wrapMode = measuredSpans.length === 0 ? "none" : "wrap";
 
   // Break into lines
-  const { lines: spanLines, lineHeights } = breakIntoLines(
-    measuredSpans,
-    firstLineWidth,
-    nextLineWidth,
-    wrapMode,
-  );
+  const { lines: spanLines, lineHeights } = breakIntoLines(measuredSpans, firstLineWidth, nextLineWidth, wrapMode);
 
   // Add space before
   const layoutState = { currentY: startY + (para.spaceBefore as number) * PT_TO_PX };
@@ -204,7 +197,14 @@ function layoutParagraph(
     const availableWidth = index === 0 ? firstLineWidth : nextLineWidth;
     const lineIndent = index === 0 ? indent : 0;
     const lineBulletWidth = index === 0 ? bulletWidth : 0;
-    const x = calculateLineX(para.alignment, marginLeft, lineWidth as number, availableWidth as number, lineIndent, lineBulletWidth);
+    const x = calculateLineX(
+      para.alignment,
+      marginLeft,
+      lineWidth as number,
+      availableWidth as number,
+      lineIndent,
+      lineBulletWidth,
+    );
 
     // Convert spans to positioned spans
     const positionedSpans = positionSpans(lineSpans);
@@ -221,7 +221,7 @@ function layoutParagraph(
   });
 
   // Add space after
-  currentY += (para.spaceAfter as number) * PT_TO_PX;
+  layoutState.currentY += (para.spaceAfter as number) * PT_TO_PX;
 
   return {
     paragraph: {
@@ -231,7 +231,7 @@ function layoutParagraph(
       bulletWidth: px(bulletWidth),
       fontAlignment: para.fontAlignment,
     },
-    endY: currentY,
+    endY: layoutState.currentY,
   };
 }
 
@@ -308,7 +308,7 @@ function getAnchorYOffset(
   anchor: TextBoxConfig["anchor"],
   insetTop: number,
   contentHeight: number,
-  totalHeight: number
+  totalHeight: number,
 ): number {
   switch (anchor) {
     case "center":
@@ -326,10 +326,7 @@ function getAnchorYOffset(
  *
  * @see ECMA-376 Part 1, Section 21.1.2.1.2 (anchorCtr attribute)
  */
-function calculateXCenterOffset(
-  paragraphs: LayoutParagraphResult[],
-  contentWidth: number,
-): number {
+function calculateXCenterOffset(paragraphs: LayoutParagraphResult[], contentWidth: number): number {
   // Find the maximum line width across all paragraphs
   const maxLineWidth = paragraphs.reduce((maxWidth, para) => {
     return para.lines.reduce((lineMax, line) => {
@@ -395,10 +392,7 @@ function scaleSpanFontSize(span: LayoutSpan, fontScalePercent: number): LayoutSp
  *
  * @see ECMA-376 Part 1, Section 21.1.2.1.2 (a:normAutofit)
  */
-function scaleParagraphFonts(
-  para: LayoutParagraphInput,
-  fontScalePercent: number,
-): LayoutParagraphInput {
+function scaleParagraphFonts(para: LayoutParagraphInput, fontScalePercent: number): LayoutParagraphInput {
   const scaledSpans = para.spans.map((span) => scaleSpanFontSize(span, fontScalePercent));
   return { ...para, spans: scaledSpans, bullet: scaleBullet(para.bullet, fontScalePercent) };
 }
@@ -412,10 +406,7 @@ function scaleParagraphFonts(
  *
  * @see ECMA-376 Part 1, Section 21.1.2.1.2 (a:normAutofit lnSpcReduction)
  */
-function reduceLineSpacing(
-  para: LayoutParagraphInput,
-  lineSpaceReductionPercent: number,
-): LayoutParagraphInput {
+function reduceLineSpacing(para: LayoutParagraphInput, lineSpaceReductionPercent: number): LayoutParagraphInput {
   if (para.lineSpacing === undefined) {
     // No explicit line spacing; apply reduction to default 100%
     // Reduction of X% means result is (100 - X)%
@@ -462,10 +453,7 @@ function reduceLineSpacing(
  *
  * @see ECMA-376 Part 1, Section 21.1.2.1.2 (a:normAutofit)
  */
-function applyAutoFit(
-  paragraphs: readonly LayoutParagraphInput[],
-  autoFit: AutoFitConfig,
-): LayoutParagraphInput[] {
+function applyAutoFit(paragraphs: readonly LayoutParagraphInput[], autoFit: AutoFitConfig): LayoutParagraphInput[] {
   if (autoFit.type !== "normal") {
     // No scaling for 'none' or 'shape' types
     return [...paragraphs];
@@ -530,11 +518,7 @@ export function layoutTextBody(input: LayoutInput): LayoutResult {
   const totalHeight = layoutState.currentY;
 
   // Apply anchor offsets (vertical + horizontal centering)
-  const { paragraphs: finalParagraphs, yOffset } = applyAnchorOffsets(
-    layoutedParagraphs,
-    totalHeight,
-    textBox,
-  );
+  const { paragraphs: finalParagraphs, yOffset } = applyAnchorOffsets(layoutedParagraphs, totalHeight, textBox);
 
   return {
     paragraphs: finalParagraphs,
