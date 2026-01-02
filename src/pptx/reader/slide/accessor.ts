@@ -14,16 +14,10 @@
 
 import type { XmlElement } from "../../../xml/index";
 import { getChild, getByPath } from "../../../xml/index";
-import type { RenderOptions } from "../../render2/render-options";
+import type { RenderOptions } from "../../render/render-options";
 
 // Import domain types from canonical sources
-import type {
-  ZipFile,
-  ResourceMap,
-  PlaceholderTable,
-  Theme,
-  MasterTextStyles,
-} from "../../core/dml/domain/types";
+import type { ZipFile, ResourceMap, PlaceholderTable, Theme, MasterTextStyles } from "../../core/dml/domain/types";
 import type { ColorScheme, ColorMap } from "../../domain/resolution";
 
 // =============================================================================
@@ -126,10 +120,7 @@ export type ParagraphContext = {
   resolveSchemeColor(schemeColor: string): string | undefined;
 };
 
-export function createParagraphContext(
-  shape: ShapeContext,
-  lvl: number,
-): ParagraphContext {
+export function createParagraphContext(shape: ShapeContext, lvl: number): ParagraphContext {
   const lvlpPr = `a:lvl${lvl}pPr`;
 
   return {
@@ -293,11 +284,7 @@ export type ShapeContext = {
  * @param type - Placeholder type (ST_PlaceholderType)
  * @param idx - Placeholder index (xsd:unsignedInt per ECMA-376)
  */
-export function createShapeContext(
-  slide: SlideRenderContext,
-  type: string,
-  idx: number | undefined,
-): ShapeContext {
+export function createShapeContext(slide: SlideRenderContext, type: string, idx: number | undefined): ShapeContext {
   const self: ShapeContext = {
     slide,
     type,

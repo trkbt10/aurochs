@@ -32,12 +32,12 @@ reader/
 core/context/
   └── PPTXSlideRenderContext (唯一の共通コンテキスト)
         ↓
-parser2/
+parser/
   └── slide-parser.ts
         - XML → Slide (完全なドメインオブジェクト)
         - Chart/Diagram/OLEも含めて一括パース
         ↓ Slide
-render2/
+render/
   └── html/slide.ts, svg/renderer.ts
         - PPTXSlideRenderContextから直接ResourceResolverを取得
         - 背景継承もここで解決
@@ -51,11 +51,9 @@ render2/
 #### 1.1 ParseContextの簡素化
 
 ```typescript
-// parser2/context.ts
+// parser/context.ts
 // ParseContextをPPTXSlideRenderContextから派生可能にする
-export function createParseContextFromSlideContext(
-  ctx: PPTXSlideRenderContext
-): ParseContext {
+export function createParseContextFromSlideContext(ctx: PPTXSlideRenderContext): ParseContext {
   // 内部的な変換のみ（外部APIは変更なし）
 }
 ```
@@ -63,11 +61,11 @@ export function createParseContextFromSlideContext(
 #### 1.2 RenderContextの簡素化
 
 ```typescript
-// render2/core/types.ts
+// render/core/types.ts
 // CoreRenderContextをPPTXSlideRenderContextから派生可能にする
 export function createRenderContextFromSlideContext(
   ctx: PPTXSlideRenderContext,
-  slideSize: SlideSize
+  slideSize: SlideSize,
 ): CoreRenderContext {
   // 内部的な変換のみ
 }
@@ -78,19 +76,21 @@ export function createRenderContextFromSlideContext(
 #### 2.1 slide-parser.tsの拡張
 
 現在:
+
 ```typescript
-export function parseSlide(doc: XmlDocument, ctx: ParseContext): Slide
+export function parseSlide(doc: XmlDocument, ctx: ParseContext): Slide;
 ```
 
 変更後:
+
 ```typescript
 export function parseSlide(
   doc: XmlDocument,
   ctx: ParseContext,
   options?: {
-    fileReader?: FileReader;  // Chart/Diagram/OLEのパース用
-  }
-): Slide
+    fileReader?: FileReader; // Chart/Diagram/OLEのパース用
+  },
+): Slide;
 ```
 
 #### 2.2 GraphicFrameのパース拡張
@@ -99,11 +99,8 @@ export function parseSlide(
 変更後: `Chart`, `DiagramContent`も同時にパース
 
 ```typescript
-// parser2/shape/graphic-frame.ts
-function parseChartContent(
-  chartRef: ChartReference,
-  fileReader: FileReader
-): Chart | undefined {
+// parser/shape/graphic-frame.ts
+function parseChartContent(chartRef: ChartReference, fileReader: FileReader): Chart | undefined {
   // content-enricher.tsのロジックを移動
 }
 ```
@@ -113,15 +110,15 @@ function parseChartContent(
 #### 3.1 背景継承解決
 
 現在: `integration/slide-render.ts`の`getBackgroundFillData`呼び出し
-変更後: `render2`内で直接処理
+変更後: `render`内で直接処理
 
 ```typescript
-// render2/html/slide.ts
+// render/html/slide.ts
 export function renderSlide(
   slide: Slide,
   ctx: CoreRenderContext,
-  slideCtx: PPTXSlideRenderContext  // 背景継承解決用
-): RenderResult
+  slideCtx: PPTXSlideRenderContext, // 背景継承解決用
+): RenderResult;
 ```
 
 #### 3.2 DiagramリソースIDの解決
@@ -129,6 +126,7 @@ export function renderSlide(
 問題: Diagram内のblipFillはダイアグラムのリレーションシップで解決が必要
 
 解決策:
+
 1. `DiagramContent`にリレーションシップへの参照を保持
 2. render時にダイアグラム専用のResourceResolverを使用
 
@@ -136,7 +134,7 @@ export function renderSlide(
 // domain/diagram.ts
 export type DiagramContent = {
   readonly shapes: readonly Shape[];
-  readonly resourceResolver?: ResourceResolver;  // 追加
+  readonly resourceResolver?: ResourceResolver; // 追加
 };
 ```
 
@@ -146,8 +144,8 @@ export type DiagramContent = {
 
 ```typescript
 // reader/slide/factory.ts
-import { parseSlide } from "../../parser2/slide/slide-parser";
-import { renderSlide } from "../../render2/html/slide";
+import { parseSlide } from "../../parser/slide/slide-parser";
+import { renderSlide } from "../../render/html/slide";
 
 const renderHTML = (): string => {
   const parseCtx = createParseContextFromSlideContext(slideRenderCtx);
@@ -171,8 +169,8 @@ rm -rf src/pptx/integration/
 1. **Phase 1**: context変換関数をcore層に移動（互換性維持）
 2. **Phase 2**: slide-parserがFileReaderを受け取れるように拡張
 3. **Phase 3**: Chart/Diagramパースをslide-parserに統合
-4. **Phase 4**: render2が背景継承を直接解決
-5. **Phase 5**: factory.tsをparser2/render2を直接呼び出すように変更
+4. **Phase 4**: renderが背景継承を直接解決
+5. **Phase 5**: factory.tsをparser/renderを直接呼び出すように変更
 6. **Phase 6**: integration/を削除
 
 ## リスク

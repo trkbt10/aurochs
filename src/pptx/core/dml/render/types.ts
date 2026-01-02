@@ -6,7 +6,7 @@
  * the raw ECMA-376 structures.
  *
  * Note: These are transitional types used by the legacy renderer.
- * The render2 layer uses ResolvedBackgroundFill instead.
+ * The render layer uses ResolvedBackgroundFill instead.
  */
 
 /**
@@ -61,7 +61,7 @@ export type GradientData = {
  * Background fill result (legacy render output)
  *
  * Note: This type mixes CSS output (css, gradient) with structured data
- * (gradientData). This is a transitional type. The render2 layer uses
+ * (gradientData). This is a transitional type. The render layer uses
  * ResolvedBackgroundFill which properly separates concerns.
  */
 export type BackgroundFill = {

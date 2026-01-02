@@ -12,23 +12,23 @@ This document tracks compliance with ECMA-376 Part 1 Section 19.5 (Animation) an
 
 ### Implementation Status
 
-| Filter | TypeScript | Browser | Subtypes | Status |
-|--------|------------|---------|----------|--------|
-| fade | [x] | [x] | (none) | Complete |
-| slide | [x] | [x] | fromTop, fromBottom, fromLeft, fromRight | Complete |
-| wipe | [x] | [x] | right, left, up, down | Complete |
-| blinds | [x] | [x] | horizontal, vertical | Complete |
-| box | [x] | [x] | in, out | Complete |
-| checkerboard | [x] | [x] | across, down | Complete |
-| circle | [x] | [x] | in, out | Complete |
-| diamond | [x] | [x] | in, out | Complete |
-| dissolve | [x] | [x] | (none) | Complete |
-| strips | [x] | [x] | downLeft, upLeft, downRight, upRight | Complete |
-| wheel | [x] | [x] | 1, 2, 3, 4, 8 (spoke count) | Complete |
-| plus | [x] | [x] | in, out | Complete |
-| barn | [x] | [x] | inVertical, inHorizontal, outVertical, outHorizontal | Complete |
-| randombar | [x] | [x] | horizontal, vertical | Complete |
-| wedge | [x] | [x] | (none) | Complete |
+| Filter       | TypeScript | Browser | Subtypes                                             | Status   |
+| ------------ | ---------- | ------- | ---------------------------------------------------- | -------- |
+| fade         | [x]        | [x]     | (none)                                               | Complete |
+| slide        | [x]        | [x]     | fromTop, fromBottom, fromLeft, fromRight             | Complete |
+| wipe         | [x]        | [x]     | right, left, up, down                                | Complete |
+| blinds       | [x]        | [x]     | horizontal, vertical                                 | Complete |
+| box          | [x]        | [x]     | in, out                                              | Complete |
+| checkerboard | [x]        | [x]     | across, down                                         | Complete |
+| circle       | [x]        | [x]     | in, out                                              | Complete |
+| diamond      | [x]        | [x]     | in, out                                              | Complete |
+| dissolve     | [x]        | [x]     | (none)                                               | Complete |
+| strips       | [x]        | [x]     | downLeft, upLeft, downRight, upRight                 | Complete |
+| wheel        | [x]        | [x]     | 1, 2, 3, 4, 8 (spoke count)                          | Complete |
+| plus         | [x]        | [x]     | in, out                                              | Complete |
+| barn         | [x]        | [x]     | inVertical, inHorizontal, outVertical, outHorizontal | Complete |
+| randombar    | [x]        | [x]     | horizontal, vertical                                 | Complete |
+| wedge        | [x]        | [x]     | (none)                                               | Complete |
 
 ### File Locations
 
@@ -48,22 +48,22 @@ This document tracks compliance with ECMA-376 Part 1 Section 19.5 (Animation) an
 
 ### Behavior Parsing (timing-parser)
 
-| Element | ECMA Section | Parser | Domain | Status |
-|---------|--------------|--------|--------|--------|
-| p:anim | 19.5.1 | [x] | [x] | Complete |
-| p:set | 19.5.66 | [x] | [x] | Complete |
-| p:animEffect | 19.5.3 | [x] | [x] | Complete |
-| p:animMotion | 19.5.4 | [x] | [x] | Complete |
-| p:animRot | 19.5.5 | [x] | [x] | Complete |
-| p:animScale | 19.5.6 | [x] | [x] | Complete |
-| p:animClr | 19.5.2 | [x] | [x] | Complete |
-| p:audio | 19.5.7 | [x] | [x] | Complete |
-| p:video | 19.5.93 | [x] | [x] | Complete |
-| p:cmd | 19.5.17 | [x] | [x] | Complete |
+| Element      | ECMA Section | Parser | Domain | Status   |
+| ------------ | ------------ | ------ | ------ | -------- |
+| p:anim       | 19.5.1       | [x]    | [x]    | Complete |
+| p:set        | 19.5.66      | [x]    | [x]    | Complete |
+| p:animEffect | 19.5.3       | [x]    | [x]    | Complete |
+| p:animMotion | 19.5.4       | [x]    | [x]    | Complete |
+| p:animRot    | 19.5.5       | [x]    | [x]    | Complete |
+| p:animScale  | 19.5.6       | [x]    | [x]    | Complete |
+| p:animClr    | 19.5.2       | [x]    | [x]    | Complete |
+| p:audio      | 19.5.7       | [x]    | [x]    | Complete |
+| p:video      | 19.5.93      | [x]    | [x]    | Complete |
+| p:cmd        | 19.5.17      | [x]    | [x]    | Complete |
 
 ### File Locations
 
-- Parser: `src/pptx/parser2/timing-parser/behavior.ts`
+- Parser: `src/pptx/parser/timing-parser/behavior.ts`
 - Domain types: `src/pptx/domain/animation.ts`
 
 ---
@@ -72,26 +72,26 @@ This document tracks compliance with ECMA-376 Part 1 Section 19.5 (Animation) an
 
 ### Behavior Rendering
 
-| Behavior | Browser Player | Notes |
-|----------|----------------|-------|
-| animate | [ ] | Property animation not rendered |
-| set | [x] | visibility only |
-| animateEffect | [x] | All 15 filters implemented |
-| animateMotion | [~] | Placeholder (hardcoded 50px) |
-| animateRotation | [x] | Basic rotation from/to |
-| animateScale | [x] | Basic scale from/to |
-| animateColor | [ ] | Not fully implemented |
-| audio | [ ] | Not handled |
-| video | [ ] | Not handled |
-| command | [ ] | Not handled |
+| Behavior        | Browser Player | Notes                           |
+| --------------- | -------------- | ------------------------------- |
+| animate         | [ ]            | Property animation not rendered |
+| set             | [x]            | visibility only                 |
+| animateEffect   | [x]            | All 15 filters implemented      |
+| animateMotion   | [~]            | Placeholder (hardcoded 50px)    |
+| animateRotation | [x]            | Basic rotation from/to          |
+| animateScale    | [x]            | Basic scale from/to             |
+| animateColor    | [ ]            | Not fully implemented           |
+| audio           | [ ]            | Not handled                     |
+| video           | [ ]            | Not handled                     |
+| command         | [ ]            | Not handled                     |
 
 ### Time Node Containers
 
-| Type | Element | Browser Player | Notes |
-|------|---------|----------------|-------|
-| parallel | p:par | [x] | Promise.all |
-| sequence | p:seq | [x] | for-await loop |
-| exclusive | p:excl | [ ] | Not implemented |
+| Type      | Element | Browser Player | Notes           |
+| --------- | ------- | -------------- | --------------- |
+| parallel  | p:par   | [x]            | Promise.all     |
+| sequence  | p:seq   | [x]            | for-await loop  |
+| exclusive | p:excl  | [ ]            | Not implemented |
 
 ### File Location
 
@@ -137,23 +137,23 @@ This document tracks compliance with ECMA-376 Part 1 Section 19.5 (Animation) an
 
 ### ECMA-376 Part 1 Section 19.5 Elements
 
-| Element | Section | Description |
-|---------|---------|-------------|
-| p:timing | 19.5.87 | Root timing element |
-| p:tnLst | 19.5.88 | Time node list |
-| p:par | 19.5.53 | Parallel time container |
-| p:seq | 19.5.65 | Sequence time container |
-| p:excl | 19.5.29 | Exclusive time container |
-| p:cTn | 19.5.33 | Common time node properties |
-| p:stCondLst | 19.5.72 | Start condition list |
-| p:endCondLst | 19.5.28 | End condition list |
-| p:cond | 19.5.25 | Condition |
-| p:tgtEl | 19.5.81 | Target element |
-| p:spTgt | 19.5.70 | Shape target |
-| p:cBhvr | 19.5.22 | Common behavior |
-| p:attrNameLst | 19.5.8 | Attribute name list |
-| p:tavLst | 19.5.79 | Time animate value list |
-| p:tav | 19.5.78 | Time animate value |
+| Element       | Section | Description                 |
+| ------------- | ------- | --------------------------- |
+| p:timing      | 19.5.87 | Root timing element         |
+| p:tnLst       | 19.5.88 | Time node list              |
+| p:par         | 19.5.53 | Parallel time container     |
+| p:seq         | 19.5.65 | Sequence time container     |
+| p:excl        | 19.5.29 | Exclusive time container    |
+| p:cTn         | 19.5.33 | Common time node properties |
+| p:stCondLst   | 19.5.72 | Start condition list        |
+| p:endCondLst  | 19.5.28 | End condition list          |
+| p:cond        | 19.5.25 | Condition                   |
+| p:tgtEl       | 19.5.81 | Target element              |
+| p:spTgt       | 19.5.70 | Shape target                |
+| p:cBhvr       | 19.5.22 | Common behavior             |
+| p:attrNameLst | 19.5.8  | Attribute name list         |
+| p:tavLst      | 19.5.79 | Time animate value list     |
+| p:tav         | 19.5.78 | Time animate value          |
 
 ### MS-OE376 Part 4 Section 4.6.3 Filter Syntax
 

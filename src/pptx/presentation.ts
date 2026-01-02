@@ -10,7 +10,7 @@ import type { SlideFileInfo } from "./core/opc";
 import type { SlideSize } from "./domain";
 import type { XmlElement } from "../xml";
 import type { SlideData } from "./reader/types";
-import type { RenderOptions } from "./render2/render-options";
+import type { RenderOptions } from "./render/render-options";
 import { parseContentTypes, buildSlideFileInfoList } from "./core/opc/content-types";
 import { parseSlideSizeFromXml, parseDefaultTextStyle, parseAppVersion } from "./core/presentation-info";
 import { createZipAdapter } from "./reader/zip-adapter";

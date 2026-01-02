@@ -9,19 +9,12 @@ import type { SlideSize } from "../../domain";
 import type { XmlElement } from "../../../xml";
 import { getByPath } from "../../../xml";
 import type { SlideData } from "../types";
-import type { RenderOptions } from "../../render2/render-options";
+import type { RenderOptions } from "../../render/render-options";
 import type { SlideRenderContext } from "./accessor";
 import { createSlideRenderContext } from "./accessor";
-import {
-  createResourceMap,
-  createPlaceholderTable,
-  createColorMap,
-} from "./resource-adapters";
-import {
-  parseTheme,
-  parseMasterTextStyles,
-} from "../../core/dml/parser/theme";
-import { DEFAULT_RENDER_OPTIONS } from "../../render2/render-options";
+import { createResourceMap, createPlaceholderTable, createColorMap } from "./resource-adapters";
+import { parseTheme, parseMasterTextStyles } from "../../core/dml/parser/theme";
+import { DEFAULT_RENDER_OPTIONS } from "../../render/render-options";
 import { renderSlideIntegrated, renderSlideSvgIntegrated } from "./slide-render";
 import type { XmlDocument } from "../../../xml";
 
@@ -39,11 +32,7 @@ function buildSlideRenderContext(
   const masterClrMap = getByPath(data.master, ["p:sldMaster", "p:clrMap"]);
 
   // Extract color map override from slide (if present)
-  const slideClrMapOvr = getByPath(data.content, [
-    "p:sld",
-    "p:clrMapOvr",
-    "a:overrideClrMapping",
-  ]);
+  const slideClrMapOvr = getByPath(data.content, ["p:sld", "p:clrMapOvr", "a:overrideClrMapping"]);
 
   // Get slide content element
   const slideContent = getByPath(data.content, ["p:sld"]);
@@ -51,9 +40,7 @@ function buildSlideRenderContext(
   const slide = {
     content: slideContent as XmlElement,
     resources: createResourceMap(data.relationships),
-    colorMapOverride: slideClrMapOvr !== undefined
-      ? createColorMap(slideClrMapOvr)
-      : undefined,
+    colorMapOverride: slideClrMapOvr !== undefined ? createColorMap(slideClrMapOvr) : undefined,
   };
 
   // Get layout content element for background lookup
@@ -112,7 +99,7 @@ export function createSlide(
   };
 
   const renderSVG = (): string => {
-    // Use render2 for SVG output (text style inheritance now implemented)
+    // Use render for SVG output (text style inheritance now implemented)
     const slideRenderCtx = buildSlideRenderContext(data, zip, defaultTextStyle, renderOptions);
     const result = renderSlideSvgIntegrated(data.content as XmlDocument, slideRenderCtx, slideSize);
     return result.svg;

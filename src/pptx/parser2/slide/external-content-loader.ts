@@ -2,9 +2,9 @@
  * @file Content enricher for pre-parsing chart and diagram content
  *
  * This module enriches Slide domain objects with pre-parsed chart and diagram
- * content, allowing render2 to render without directly calling parser2.
+ * content, allowing render to render without directly calling parser.
  *
- * The enrichment happens in the integration layer, bridging parser2 and render2.
+ * The enrichment happens in the integration layer, bridging parser and render.
  */
 
 import type {
@@ -63,13 +63,8 @@ export type FileReader = {
  * @param fileReader - Interface for reading files from the PPTX archive
  * @returns A new Slide with pre-parsed content attached
  */
-export function enrichSlideContent(
-  slide: Slide,
-  fileReader: FileReader,
-): Slide {
-  const enrichedShapes = slide.shapes.map((shape) =>
-    enrichShape(shape, fileReader)
-  );
+export function enrichSlideContent(slide: Slide, fileReader: FileReader): Slide {
+  const enrichedShapes = slide.shapes.map((shape) => enrichShape(shape, fileReader));
 
   // If no shapes were enriched, return the original slide
   if (enrichedShapes.every((s, i) => s === slide.shapes[i])) {
@@ -110,10 +105,7 @@ function enrichShape(shape: Shape, fileReader: FileReader): Shape {
 /**
  * Enrich a chart GraphicFrame with pre-parsed Chart data.
  */
-function enrichChartFrame(
-  frame: GraphicFrame,
-  fileReader: FileReader,
-): GraphicFrame {
+function enrichChartFrame(frame: GraphicFrame, fileReader: FileReader): GraphicFrame {
   if (frame.content.type !== "chart") {
     return frame;
   }
@@ -172,10 +164,7 @@ function enrichChartFrame(
  *
  * @see ECMA-376 Part 1, Section 21.4 - DrawingML Diagrams
  */
-function enrichDiagramFrame(
-  frame: GraphicFrame,
-  fileReader: FileReader,
-): GraphicFrame {
+function enrichDiagramFrame(frame: GraphicFrame, fileReader: FileReader): GraphicFrame {
   if (frame.content.type !== "diagram") {
     return frame;
   }
@@ -187,19 +176,16 @@ function enrichDiagramFrame(
     return frame;
   }
 
-  const dataModel = diagramRef.dataModel
-    ?? loadDiagramDataModel(diagramRef.dataResourceId, fileReader);
-  const layoutDefinition = diagramRef.layoutDefinition
-    ?? loadDiagramLayoutDefinition(diagramRef.layoutResourceId, fileReader);
-  const styleDefinition = diagramRef.styleDefinition
-    ?? loadDiagramStyleDefinition(diagramRef.styleResourceId, fileReader);
-  const colorsDefinition = diagramRef.colorsDefinition
-    ?? loadDiagramColorsDefinition(diagramRef.colorResourceId, fileReader);
+  const dataModel = diagramRef.dataModel ?? loadDiagramDataModel(diagramRef.dataResourceId, fileReader);
+  const layoutDefinition =
+    diagramRef.layoutDefinition ?? loadDiagramLayoutDefinition(diagramRef.layoutResourceId, fileReader);
+  const styleDefinition =
+    diagramRef.styleDefinition ?? loadDiagramStyleDefinition(diagramRef.styleResourceId, fileReader);
+  const colorsDefinition =
+    diagramRef.colorsDefinition ?? loadDiagramColorsDefinition(diagramRef.colorResourceId, fileReader);
 
   // Find diagram drawing file using relationship type
-  const diagramPath = fileReader.getResourceByType?.(
-    RELATIONSHIP_TYPES.DIAGRAM_DRAWING
-  );
+  const diagramPath = fileReader.getResourceByType?.(RELATIONSHIP_TYPES.DIAGRAM_DRAWING);
   if (diagramPath === undefined) {
     return frame;
   }
@@ -237,7 +223,7 @@ function enrichDiagramFrame(
     parsedContent.shapes,
     diagramResources,
     normalizedDiagramPath,
-    fileReader
+    fileReader,
   );
 
   // Return new frame with parsed diagram attached
@@ -257,7 +243,6 @@ function enrichDiagramFrame(
   };
 }
 
-
 /**
  * Load diagram resources from relationship file.
  */
@@ -276,53 +261,61 @@ function loadDiagramResources(relsData: ArrayBuffer | null): SlideResources {
   return parseRelationships(relsDoc);
 }
 
-function loadDiagramDataModel(
-  resourceId: string | undefined,
-  fileReader: FileReader
-): DiagramDataModel | undefined {
+function loadDiagramDataModel(resourceId: string | undefined, fileReader: FileReader): DiagramDataModel | undefined {
   const doc = loadDiagramResourceXml(resourceId, fileReader);
-  if (!doc) {return undefined;}
+  if (!doc) {
+    return undefined;
+  }
   return parseDiagramDataModel(doc);
 }
 
 function loadDiagramLayoutDefinition(
   resourceId: string | undefined,
-  fileReader: FileReader
+  fileReader: FileReader,
 ): DiagramLayoutDefinition | undefined {
   const doc = loadDiagramResourceXml(resourceId, fileReader);
-  if (!doc) {return undefined;}
+  if (!doc) {
+    return undefined;
+  }
   return parseDiagramLayoutDefinition(doc);
 }
 
 function loadDiagramStyleDefinition(
   resourceId: string | undefined,
-  fileReader: FileReader
+  fileReader: FileReader,
 ): DiagramStyleDefinition | undefined {
   const doc = loadDiagramResourceXml(resourceId, fileReader);
-  if (!doc) {return undefined;}
+  if (!doc) {
+    return undefined;
+  }
   return parseDiagramStyleDefinition(doc);
 }
 
 function loadDiagramColorsDefinition(
   resourceId: string | undefined,
-  fileReader: FileReader
+  fileReader: FileReader,
 ): DiagramColorsDefinition | undefined {
   const doc = loadDiagramResourceXml(resourceId, fileReader);
-  if (!doc) {return undefined;}
+  if (!doc) {
+    return undefined;
+  }
   return parseDiagramColorsDefinition(doc);
 }
 
-function loadDiagramResourceXml(
-  resourceId: string | undefined,
-  fileReader: FileReader
-) {
-  if (!resourceId) {return undefined;}
+function loadDiagramResourceXml(resourceId: string | undefined, fileReader: FileReader) {
+  if (!resourceId) {
+    return undefined;
+  }
 
   const path = fileReader.resolveResource(resourceId);
-  if (!path) {return undefined;}
+  if (!path) {
+    return undefined;
+  }
 
   const data = fileReader.readFile(path);
-  if (data === null) {return undefined;}
+  if (data === null) {
+    return undefined;
+  }
 
   const decoder = new TextDecoder();
   const xmlText = decoder.decode(data);
@@ -340,14 +333,12 @@ function resolveDiagramShapeResources(
   shapes: readonly Shape[],
   diagramResources: SlideResources,
   diagramPath: string,
-  fileReader: FileReader
+  fileReader: FileReader,
 ): readonly Shape[] {
   // Get the base directory for resolving relative paths
   const diagramDir = diagramPath.substring(0, diagramPath.lastIndexOf("/") + 1);
 
-  return shapes.map((shape) =>
-    resolveShapeResources(shape, diagramResources, diagramDir, fileReader)
-  );
+  return shapes.map((shape) => resolveShapeResources(shape, diagramResources, diagramDir, fileReader));
 }
 
 /**
@@ -357,7 +348,7 @@ function resolveShapeResources(
   shape: Shape,
   resources: SlideResources,
   baseDir: string,
-  fileReader: FileReader
+  fileReader: FileReader,
 ): Shape {
   switch (shape.type) {
     case "sp":
@@ -367,9 +358,7 @@ function resolveShapeResources(
     case "grpSp":
       return {
         ...shape,
-        children: shape.children.map((child) =>
-          resolveShapeResources(child, resources, baseDir, fileReader)
-        ),
+        children: shape.children.map((child) => resolveShapeResources(child, resources, baseDir, fileReader)),
       };
     default:
       return shape;
@@ -383,7 +372,7 @@ function resolveSpShapeResources(
   shape: SpShape,
   resources: SlideResources,
   baseDir: string,
-  fileReader: FileReader
+  fileReader: FileReader,
 ): SpShape {
   const fill = shape.properties?.fill;
   if (fill?.type !== "blipFill") {
@@ -411,14 +400,9 @@ function resolvePicShapeResources(
   shape: PicShape,
   resources: SlideResources,
   baseDir: string,
-  fileReader: FileReader
+  fileReader: FileReader,
 ): PicShape {
-  const resolved = resolveBlipFillProperties(
-    shape.blipFill,
-    resources,
-    baseDir,
-    fileReader
-  );
+  const resolved = resolveBlipFillProperties(shape.blipFill, resources, baseDir, fileReader);
   if (resolved === shape.blipFill) {
     return shape;
   }
@@ -432,18 +416,8 @@ function resolvePicShapeResources(
 /**
  * Resolve a BlipFill's resourceId to a data URL.
  */
-function resolveBlipFill(
-  fill: BlipFill,
-  resources: SlideResources,
-  baseDir: string,
-  fileReader: FileReader
-): Fill {
-  const resolved = resolveResourceToDataUrl(
-    fill.resourceId,
-    resources,
-    baseDir,
-    fileReader
-  );
+function resolveBlipFill(fill: BlipFill, resources: SlideResources, baseDir: string, fileReader: FileReader): Fill {
+  const resolved = resolveResourceToDataUrl(fill.resourceId, resources, baseDir, fileReader);
 
   if (resolved === undefined) {
     return fill;
@@ -462,14 +436,9 @@ function resolveBlipFillProperties(
   blipFill: BlipFillProperties,
   resources: SlideResources,
   baseDir: string,
-  fileReader: FileReader
+  fileReader: FileReader,
 ): BlipFillProperties {
-  const resolved = resolveResourceToDataUrl(
-    blipFill.resourceId,
-    resources,
-    baseDir,
-    fileReader
-  );
+  const resolved = resolveResourceToDataUrl(blipFill.resourceId, resources, baseDir, fileReader);
 
   if (resolved === undefined) {
     return blipFill;
@@ -494,7 +463,7 @@ function resolveResourceToDataUrl(
   resourceId: string,
   resources: SlideResources,
   baseDir: string,
-  fileReader: FileReader
+  fileReader: FileReader,
 ): string | undefined {
   // Skip if already a data URL
   if (resourceId.startsWith("data:")) {
@@ -520,7 +489,6 @@ function resolveResourceToDataUrl(
   return createDataUrl(data, targetPath);
 }
 
-
 // =============================================================================
 // OLE Object Enrichment
 // =============================================================================
@@ -533,15 +501,12 @@ function resolveResourceToDataUrl(
  * 2. VML drawing part (legacy format) - needs resolution via spid attribute
  *
  * This function resolves VML-based preview images and attaches them as data URLs
- * to OleReference.previewImageUrl, allowing render2 to render without calling parser2.
+ * to OleReference.previewImageUrl, allowing render to render without calling parser.
  *
  * @see ECMA-376 Part 1, Section 19.3.1.36a (oleObj)
  * @see MS-OE376 Part 4 Section 4.4.2.4
  */
-function enrichOleFrame(
-  frame: GraphicFrame,
-  fileReader: FileReader,
-): GraphicFrame {
+function enrichOleFrame(frame: GraphicFrame, fileReader: FileReader): GraphicFrame {
   if (frame.content.type !== "oleObject") {
     return frame;
   }
@@ -584,10 +549,7 @@ function enrichOleFrame(
  * @param fileReader - File reader for accessing archive content
  * @returns Data URL if resolved, undefined if not found
  */
-function resolveVmlPreviewImage(
-  oleRef: OleReference,
-  fileReader: FileReader,
-): string | undefined {
+function resolveVmlPreviewImage(oleRef: OleReference, fileReader: FileReader): string | undefined {
   if (oleRef.spid === undefined || fileReader.getResourceByType === undefined) {
     return undefined;
   }

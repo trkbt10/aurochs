@@ -6,7 +6,7 @@
  * ## Directory Structure
  *
  * ```
- * render2/
+ * render/
  * ├── core/           # Format-agnostic utilities (transform, fill resolution)
  * ├── html/           # HTML slide rendering (browser display with CSS layout)
  * │   ├── slide.ts    # Main HTML slide renderer
@@ -29,14 +29,14 @@
  *
  * ### HTML Rendering (for browser display)
  * ```typescript
- * import { renderSlide, createRenderContext } from "./render2";
+ * import { renderSlide, createRenderContext } from "./render";
  * const result = renderSlide(slide, ctx);
  * // result.html: HtmlString
  * ```
  *
  * ### SVG Rendering (for image generation)
  * ```typescript
- * import { renderSlideSvg } from "./render2/svg/renderer";
+ * import { renderSlideSvg } from "./render/svg/renderer";
  * const result = renderSlideSvg(slide, ctx);
  * // result.svg: string (SVG document)
  * ```
@@ -84,32 +84,17 @@ export {
 // Context
 // =============================================================================
 
-export type {
-  RenderContext,
-  StyleCollector,
-} from "./context";
+export type { RenderContext, StyleCollector } from "./context";
 
-export {
-  createEmptyRenderContext,
-  createRenderContext,
-  createStyleCollector,
-} from "./context";
+export { createEmptyRenderContext, createRenderContext, createStyleCollector } from "./context";
 
 // =============================================================================
 // HTML Utilities
 // =============================================================================
 
-export type {
-  HtmlString,
-  HtmlRenderContext,
-} from "./html/index";
+export type { HtmlString, HtmlRenderContext } from "./html/index";
 
-export {
-  createHtmlRenderContext,
-  createEmptyHtmlRenderContext,
-  fillToBackground,
-  lineToBorder,
-} from "./html/index";
+export { createHtmlRenderContext, createEmptyHtmlRenderContext, fillToBackground, lineToBorder } from "./html/index";
 
 export {
   a,
@@ -131,16 +116,9 @@ export {
 // SVG Utilities
 // =============================================================================
 
-export type {
-  SvgRenderContext,
-  DefsCollector,
-} from "./svg/index";
+export type { SvgRenderContext, DefsCollector } from "./svg/index";
 
-export {
-  createSvgRenderContext,
-  createEmptySvgRenderContext,
-  createDefsCollector,
-} from "./svg/index";
+export { createSvgRenderContext, createEmptySvgRenderContext, createDefsCollector } from "./svg/index";
 
 export {
   circle,
@@ -176,11 +154,7 @@ export {
 
 export type { FillStyle, LineStyle } from "./svg/fill";
 
-export {
-  renderFillToStyle,
-  renderLineToBorder,
-  renderLineToStyle,
-} from "./svg/fill";
+export { renderFillToStyle, renderLineToBorder, renderLineToStyle } from "./svg/fill";
 
 // =============================================================================
 // Geometry Rendering
@@ -199,11 +173,7 @@ export {
 // Text Rendering
 // =============================================================================
 
-export {
-  renderParagraph,
-  renderTextBody,
-  renderTextRun,
-} from "./html/text";
+export { renderParagraph, renderTextBody, renderTextRun } from "./html/text";
 
 // =============================================================================
 // Shape Rendering
@@ -225,30 +195,19 @@ export {
 
 export type { MediaRenderResult } from "./html/media";
 
-export {
-  hasMedia,
-  renderAudio,
-  renderMedia,
-  renderVideo,
-} from "./html/media";
+export { hasMedia, renderAudio, renderMedia, renderVideo } from "./html/media";
 
 // =============================================================================
 // Diagram Rendering
 // =============================================================================
 
-export {
-  renderDiagram,
-  renderDiagramPlaceholder,
-} from "./components/diagram";
+export { renderDiagram, renderDiagramPlaceholder } from "./components/diagram";
 
 // =============================================================================
 // Table Rendering
 // =============================================================================
 
-export {
-  renderTable,
-  renderTableSvg,
-} from "./components/table";
+export { renderTable, renderTableSvg } from "./components/table";
 
 // =============================================================================
 // Slide Rendering
@@ -256,8 +215,4 @@ export {
 
 export type { SlideRenderResult } from "./html/slide";
 
-export {
-  renderSlide,
-  renderSlides,
-  renderSlideStandalone,
-} from "./html/slide";
+export { renderSlide, renderSlides, renderSlideStandalone } from "./html/slide";

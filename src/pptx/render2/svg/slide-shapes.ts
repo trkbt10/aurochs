@@ -45,11 +45,7 @@ import { px } from "../../domain/types";
 /**
  * Render a single shape to SVG
  */
-export function renderShapeSvg(
-  shape: Shape,
-  ctx: RenderContext,
-  defsCollector: SvgDefsCollector,
-): string {
+export function renderShapeSvg(shape: Shape, ctx: RenderContext, defsCollector: SvgDefsCollector): string {
   if (isShapeHidden(shape)) {
     return "";
   }
@@ -83,11 +79,7 @@ export function renderShapeSvg(
 /**
  * Render all shapes to SVG
  */
-export function renderShapesSvg(
-  shapes: readonly Shape[],
-  ctx: RenderContext,
-  defsCollector: SvgDefsCollector,
-): string {
+export function renderShapesSvg(shapes: readonly Shape[], ctx: RenderContext, defsCollector: SvgDefsCollector): string {
   return shapes
     .map((shape) => renderShapeSvg(shape, ctx, defsCollector))
     .filter((svg) => svg !== "")
@@ -145,10 +137,7 @@ function renderFillAttrs(
 /**
  * Render stroke attributes for SVG
  */
-function renderStrokeAttrs(
-  line: Line | undefined,
-  ctx: RenderContext,
-): string {
+function renderStrokeAttrs(line: Line | undefined, ctx: RenderContext): string {
   if (line === undefined || line.fill.type === "noFill") {
     return "";
   }
@@ -214,7 +203,7 @@ function renderShapeTextSvg(
   ctx: RenderContext,
   w: number,
   h: number,
-  defsCollector: SvgDefsCollector
+  defsCollector: SvgDefsCollector,
 ): string {
   if (shape.textBody !== undefined) {
     return renderTextSvg(shape.textBody, ctx, w, h, defsCollector);
@@ -299,13 +288,7 @@ function calculateCroppedImageLayout(
  *
  * @see ECMA-376 Part 1, Section 19.3.1.37 (p:pic)
  */
-function renderPictureSvg(
-  shape: PicShape,
-  ctx: RenderContext,
-  transformAttr: string,
-  w: number,
-  h: number,
-): string {
+function renderPictureSvg(shape: PicShape, ctx: RenderContext, transformAttr: string, w: number, h: number): string {
   const imagePath = ctx.resources.resolve(shape.blipFill.resourceId);
   if (imagePath === undefined) {
     return "";
@@ -331,12 +314,14 @@ function renderPictureSvg(
     // When stretch is specified, use preserveAspectRatio="none"
     const aspectRatio = shape.blipFill.stretch ? "none" : "xMidYMid meet";
 
-    return `<g${transformAttr}>` +
+    return (
+      `<g${transformAttr}>` +
       `<defs><clipPath id="${clipId}"><rect x="0" y="0" width="${w}" height="${h}"/></clipPath></defs>` +
       `<g clip-path="url(#${clipId})">` +
       `<image href="${imagePath}" x="${layout.x}" y="${layout.y}" ` +
       `width="${layout.width}" height="${layout.height}" preserveAspectRatio="${aspectRatio}"/>` +
-      `</g></g>`;
+      `</g></g>`
+    );
   }
 
   // No cropping - simple image rendering
@@ -444,12 +429,7 @@ function renderConnectorSvg(
   // Per ECMA-376 Part 1, Section 20.1.8.37/57
   const markerAttrs: string[] = [];
   if (line?.headEnd !== undefined || line?.tailEnd !== undefined) {
-    const markers = generateLineMarkers(
-      line?.headEnd,
-      line?.tailEnd,
-      strokeWidth,
-      strokeColor
-    );
+    const markers = generateLineMarkers(line?.headEnd, line?.tailEnd, strokeWidth, strokeColor);
 
     // Add marker definitions to collector
     for (const def of markers.defs) {
@@ -549,12 +529,7 @@ function renderGraphicFrameSvg(
 /**
  * Render a placeholder for unsupported content
  */
-function renderPlaceholder(
-  transformAttr: string,
-  w: number,
-  h: number,
-  label: string,
-): string {
+function renderPlaceholder(transformAttr: string, w: number, h: number, label: string): string {
   return `<g${transformAttr}>
   <rect x="0" y="0" width="${w}" height="${h}" fill="#f0f0f0" stroke="#cccccc"/>
   <text x="${w / 2}" y="${h / 2}" text-anchor="middle" dominant-baseline="middle" fill="#999999">[${label}]</text>
@@ -569,7 +544,7 @@ function renderPlaceholder(
  * Render diagram shapes to SVG
  *
  * Uses pre-parsed diagram content if available (populated by integration layer).
- * This allows render2 to render diagrams without directly calling parser2.
+ * This allows render to render diagrams without directly calling parser.
  *
  * @param diagramRef - Diagram reference with optional pre-parsed content
  * @param w - Diagram frame width
@@ -638,12 +613,7 @@ function renderDiagramShapesSvg(
  * @see ECMA-376 Part 1, Section 19.3.1.36a (oleObj)
  * @see MS-OE376 Part 4 Section 4.4.2.4
  */
-function renderOleObjectImage(
-  data: OleReference,
-  w: number,
-  h: number,
-  ctx: RenderContext,
-): string | undefined {
+function renderOleObjectImage(data: OleReference, w: number, h: number, ctx: RenderContext): string | undefined {
   // 1. Pre-resolved preview image (from integration layer)
   if (data.previewImageUrl !== undefined) {
     return `<image href="${data.previewImageUrl}" x="0" y="0" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet"/>`;
@@ -660,11 +630,7 @@ function renderOleObjectImage(
   return undefined;
 }
 
-function getConnectorPathData(
-  geometry: Geometry | undefined,
-  w: number,
-  h: number
-): string {
+function getConnectorPathData(geometry: Geometry | undefined, w: number, h: number): string {
   if (geometry !== undefined) {
     // Special handling for "line" preset in connectors
     if (geometry.type === "preset" && geometry.preset === "line") {
@@ -686,14 +652,9 @@ function getConnectorPathData(
  * Render chart from ChartReference
  *
  * Uses pre-parsed chart data if available (populated by integration layer).
- * This allows render2 to render charts without directly calling parser2.
+ * This allows render to render charts without directly calling parser.
  */
-function renderChartFromRef(
-  chartRef: ChartReference,
-  w: number,
-  h: number,
-  ctx: RenderContext,
-): string | undefined {
+function renderChartFromRef(chartRef: ChartReference, w: number, h: number, ctx: RenderContext): string | undefined {
   // Use pre-parsed chart data if available
   if (chartRef.parsedChart !== undefined) {
     const chartHtml = renderChart(chartRef.parsedChart, w, h, ctx);

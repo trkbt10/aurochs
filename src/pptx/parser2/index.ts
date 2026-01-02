@@ -38,7 +38,7 @@
  *
  * @example
  * ```typescript
- * import { parseSlide } from "./parser2";
+ * import { parseSlide } from "./parser";
  *
  * const slide = parseSlide(slideXmlDocument, context);
  * // slide: Slide domain object
@@ -50,7 +50,7 @@
 // =============================================================================
 
 // Note: ColorContext, ColorMap, ColorScheme, FontScheme, FontSpec are in core/color-types.ts
-// Import them from there directly, not from parser2
+// Import them from there directly, not from parser
 
 export type {
   MasterStylesInfo,
@@ -61,10 +61,7 @@ export type {
   TextStyleContext,
 } from "./context";
 
-export {
-  createEmptyParseContext,
-  createResourceResolver,
-} from "./context";
+export { createEmptyParseContext, createResourceResolver } from "./context";
 
 // =============================================================================
 // Primitive Parsing
@@ -146,11 +143,7 @@ export {
 // Color Parsing
 // =============================================================================
 
-export {
-  findColorElement,
-  parseColor,
-  parseColorFromParent,
-} from "./graphics/color-parser";
+export { findColorElement, parseColor, parseColorFromParent } from "./graphics/color-parser";
 
 // Note: resolveColor is now in core/color-resolver.ts
 // Import it from there directly
@@ -159,20 +152,13 @@ export {
 // Fill Parsing
 // =============================================================================
 
-export {
-  findFillElement,
-  parseFill,
-  parseFillFromParent,
-} from "./graphics/fill-parser";
+export { findFillElement, parseFill, parseFillFromParent } from "./graphics/fill-parser";
 
 // =============================================================================
 // Line Parsing
 // =============================================================================
 
-export {
-  parseLine,
-  getLineFromProperties,
-} from "./graphics/line-parser";
+export { parseLine, getLineFromProperties } from "./graphics/line-parser";
 
 // =============================================================================
 // Effects Parsing
@@ -202,19 +188,13 @@ export {
 // Shape Parsing
 // =============================================================================
 
-export {
-  parseShapeElement,
-  parseShapeTree,
-} from "./shape-parser";
+export { parseShapeElement, parseShapeTree } from "./shape-parser";
 
 // =============================================================================
 // Diagram Parsing
 // =============================================================================
 
-export {
-  parseDiagramDataModel,
-  parseDiagramDataModelElement,
-} from "./diagram/data-parser";
+export { parseDiagramDataModel, parseDiagramDataModelElement } from "./diagram/data-parser";
 
 export {
   parseDiagramLayoutDefinition,
@@ -266,12 +246,7 @@ export { parseTextStyleLevels } from "./text/text-style-levels";
 // Comments
 // =============================================================================
 
-export {
-  parseComment,
-  parseCommentAuthor,
-  parseCommentAuthorList,
-  parseCommentList,
-} from "./metadata/comment-parser";
+export { parseComment, parseCommentAuthor, parseCommentAuthorList, parseCommentList } from "./metadata/comment-parser";
 
 // =============================================================================
 // Slide Synchronization

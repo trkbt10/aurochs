@@ -15,6 +15,6 @@ export type { SlideResources } from "./core/opc";
 export type { SlideSize } from "./domain";
 
 // Render options for dialect-specific behavior
-export type { RenderOptions, RenderDialect, LineSpacingMode, BaselineMode } from "./render2/render-options";
-export { DEFAULT_RENDER_OPTIONS, LIBREOFFICE_RENDER_OPTIONS, createRenderOptions } from "./render2/render-options";
+export type { RenderOptions, RenderDialect, LineSpacingMode, BaselineMode } from "./render/render-options";
+export { DEFAULT_RENDER_OPTIONS, LIBREOFFICE_RENDER_OPTIONS, createRenderOptions } from "./render/render-options";
 export type { PresentationOptions } from "./types/api";

@@ -395,7 +395,7 @@ describe("Animation Integration", () => {
      * Verifies that the HTML renderer produces data-ooxml-id attributes
      * that match the shape IDs used in timing data.
      *
-     * Flow: OOXML → parser2 → domain (Shape.nonVisual.id) → render2/html (data-ooxml-id)
+     * Flow: OOXML → parser → domain (Shape.nonVisual.id) → render/html (data-ooxml-id)
      *       OOXML → timing-parser → domain (Timing.target.shapeId) → animation player
      */
     it("uses consistent shape ID format across rendering and animation", () => {
@@ -410,7 +410,7 @@ describe("Animation Integration", () => {
 
       // HTML renderer outputs data-ooxml-id="42"
       // Animation player queries: [data-ooxml-id="42"]
-      // This integration is tested in render2/html/shape.spec.ts
+      // This integration is tested in render/html/shape.spec.ts
     });
 
     it("finds element by data-ooxml-id selector", () => {
@@ -425,7 +425,7 @@ describe("Animation Integration", () => {
         return null;
       };
 
-      // Simulated HTML output from render2/html
+      // Simulated HTML output from render/html
       const renderedHtml = '<div class="shape sp" data-ooxml-id="42" data-shape-id="shape-0">';
 
       // Animation player queries for shape 42

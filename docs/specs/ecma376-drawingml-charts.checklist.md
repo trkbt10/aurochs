@@ -9,309 +9,309 @@
 
 ### 21.2.2 Elements
 
-| Item | Status | Implementation | Notes |
-|------|--------|----------------|-------|
-| 21.2.2 Elements | [x] | docs/specs/ecma376-drawingml-charts.checklist.md |  |
-| 21.2.2.1 applyToEnd (Apply to End) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.2 applyToFront (Apply To Front) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.3 applyToSides (Apply To Sides) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.4 area3DChart (3D Area Charts) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/index.ts |  |
-| 21.2.2.5 areaChart (Area Charts) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/index.ts |  |
-| 21.2.2.6 auto (Automatic Category Axis) | [x] | src/css/types.ts, src/pptx/domain/chart.ts |  |
-| 21.2.2.7 autoTitleDeleted (Auto Title Is Deleted) | [x] | src/pptx/domain/chart.ts, src/pptx/render2/components/chart/index.ts |  |
-| 21.2.2.8 autoUpdate (Update Automatically) | [x] | src/pptx/domain/chart.ts |  |
-| 21.2.2.9 axId (Axis ID) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/axis.ts |  |
-| 21.2.2.10 axPos (Axis Position) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/axis.ts |  |
-| 21.2.2.11 backWall (Back Wall) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.12 backward (Backward) | [x] | src/markup/escape.ts, src/pptx/domain/chart.ts |  |
-| 21.2.2.13 bandFmt (Band Format) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/series/surface.ts |  |
-| 21.2.2.14 bandFmts (Band Formats) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/series/surface.ts |  |
-| 21.2.2.15 bar3DChart (3D Bar Charts) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/index.ts |  |
-| 21.2.2.16 barChart (Bar Charts) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/index.ts |  |
-| 21.2.2.17 barDir (Bar Direction) | [x] | src/pptx/parser2/chart-parser/series/series.spec.ts, src/pptx/render2/components/chart/generators/bar.ts |  |
-| 21.2.2.18 baseTimeUnit (Base Time Unit) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/axis.spec.ts |  |
-| 21.2.2.19 bubble3D (3D Bubble) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.spec.ts |  |
-| 21.2.2.20 bubbleChart (Bubble Charts) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/index.ts |  |
-| 21.2.2.21 bubbleScale (Bubble Scale) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/series/series.spec.ts |  |
-| 21.2.2.22 bubbleSize (Bubble Size) | [x] | src/pptx/parser2/chart-parser/series/series.spec.ts, src/pptx/render2/components/chart/data.ts |  |
-| 21.2.2.23 builtInUnit (Built in Display Unit Value) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/axis.spec.ts |  |
-| 21.2.2.24 cat (Category Axis Data) | [x] | src/pptx/domain/chart.ts, src/pptx/ooxml/chart.ts |  |
-| 21.2.2.25 catAx (Category Axis Data) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/axis.spec.ts |  |
-| 21.2.2.26 chart (Reference to Chart Part) | [x] | src/pptx/core/content-types.ts, src/pptx/core/context.ts |  |
-| 21.2.2.27 chart (Chart) | [x] | src/pptx/core/content-types.ts, src/pptx/core/context.ts |  |
-| 21.2.2.28 chartObject (Chart Object) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.29 chartSpace (Chart Space) | [x] | src/pptx/domain/chart.ts, src/pptx/ooxml/ecma376.ts |  |
-| 21.2.2.30 clrMapOvr (Color Map Override) | [x] | src/pptx/domain/slide.ts, src/pptx/parser2/slide-parser.spec.ts |  |
-| 21.2.2.31 crossAx (Crossing Axis ID) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/axis.ts |  |
-| 21.2.2.32 crossBetween (Cross Between) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/axis.spec.ts |  |
-| 21.2.2.33 crosses (Crosses) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/axis.spec.ts |  |
-| 21.2.2.34 crossesAt (Crossing Value) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/axis.spec.ts |  |
-| 21.2.2.35 custSplit (Custom Split) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/series/pie.ts |  |
-| 21.2.2.36 custUnit (Custom Display Unit) | [x] | src/pptx/parser2/chart-parser/axis.ts |  |
-| 21.2.2.37 data (Data Cannot Be Changed) | [x] | src/buffer/data-url.ts, src/color/gradient.ts |  |
-| 21.2.2.38 date1904 (1904 Date System) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/index.ts |  |
-| 21.2.2.39 dateAx (Date Axis) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/axis.spec.ts |  |
-| 21.2.2.40 delete (Delete) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/axis.spec.ts |  |
-| 21.2.2.41 depthPercent (Depth Percent) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.42 dispBlanksAs (Display Blanks As) | [x] | src/pptx/domain/chart.ts |  |
-| 21.2.2.43 dispEq (Display Equation) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.spec.ts |  |
-| 21.2.2.44 dispRSqr (Display R Squared Value) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.spec.ts |  |
-| 21.2.2.45 dispUnits (Display Units) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/axis.spec.ts |  |
-| 21.2.2.46 dispUnitsLbl (Display Units Label) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/axis.spec.ts |  |
-| 21.2.2.47 dLbl (Data Label) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.ts |  |
-| 21.2.2.48 dLblPos (Data Label Position) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.ts |  |
-| 21.2.2.49 dLbls (Data Labels) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.spec.ts |  |
-| 21.2.2.50 doughnutChart (Doughnut Charts) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/index.ts |  |
-| 21.2.2.51 downBars (Down Bars) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.spec.ts |  |
-| 21.2.2.52 dPt (Data Point) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.ts |  |
-| 21.2.2.53 dropLines (Drop Lines) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/shape-properties.ts |  |
-| 21.2.2.54 dTable (Data Table) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.55 errBars (Error Bars) | [x] | src/pptx/domain/chart.ts, src/pptx/ooxml/chart.ts |  |
-| 21.2.2.56 errBarType (Error Bar Type) | [x] | src/pptx/parser2/chart-parser/components.spec.ts, src/pptx/parser2/chart-trendline-errbar.spec.ts |  |
-| 21.2.2.57 errDir (Error Bar Direction) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.spec.ts |  |
-| 21.2.2.58 errValType (Error Bar Value Type) | [x] | src/pptx/parser2/chart-parser/components.spec.ts, src/pptx/parser2/chart-trendline-errbar.spec.ts |  |
-| 21.2.2.59 evenFooter (Even Footer) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.60 evenHeader (Even Header) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.61 explosion (Explosion) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.spec.ts |  |
-| 21.2.2.62 ext (Extension) | [x] | src/pptx/integration/content-enricher.ts, src/pptx/integration/context-adapter.ts |  |
-| 21.2.2.63 externalData (External Data Relationship) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/index.ts |  |
-| 21.2.2.64 extLst (Chart Extensibility) | [x] | src/pptx/parser2/diagram-parser.spec.ts |  |
-| 21.2.2.65 f (Formula) | [x] | src/color/transform.spec.ts, src/pptx/render2/svg/slide-text.ts |  |
-| 21.2.2.66 firstFooter (First Footer) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.67 firstHeader (First Header) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.68 firstSliceAng (First Slice Angle) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/series/series.spec.ts |  |
-| 21.2.2.69 floor (Floor) | [x] | src/pptx/render2/components/chart/axis.ts, src/pptx/utils/auto-number.ts |  |
-| 21.2.2.70 fmtId (Format ID) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.71 formatCode (Format Code) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.ts |  |
-| 21.2.2.72 formatting (Formatting) | [x] | src/pptx/color/fill.ts, src/pptx/core/context.ts |  |
-| 21.2.2.73 forward (Forward) | [x] | src/pptx/domain/chart.ts, src/pptx/ooxml/chart.ts |  |
-| 21.2.2.74 gapDepth (Gap Depth) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/series/bar.ts, src/pptx/parser2/chart-parser/series/area.ts, src/pptx/parser2/chart-parser/series/line.ts |  |
-| 21.2.2.75 gapWidth (Gap Width) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.spec.ts |  |
-| 21.2.2.76 grouping (Grouping) | [x] | src/pptx/domain/animation.ts, src/pptx/domain/chart.ts |  |
-| 21.2.2.77 grouping (Bar Grouping) | [x] | src/pptx/domain/animation.ts, src/pptx/domain/chart.ts |  |
-| 21.2.2.78 h (Height) | [x] | src/color/convert.ts, src/color/transform.ts |  |
-| 21.2.2.79 headerFooter (Header and Footer) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.80 hiLowLines (High Low Lines) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/series/series.spec.ts |  |
-| 21.2.2.81 hMode (Height Mode) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/layout.spec.ts |  |
-| 21.2.2.82 holeSize (Hole Size) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/series/series.spec.ts |  |
-| 21.2.2.83 hPercent (Height Percent) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.84 idx (Index) | [x] | src/pptx/color/fill.ts, src/pptx/core/background.spec.ts |  |
-| 21.2.2.85 intercept (Intercept) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.spec.ts |  |
-| 21.2.2.86 invertIfNegative (Invert if Negative) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.spec.ts |  |
-| 21.2.2.87 lang (Editing Language) | [x] | src/pptx/ooxml/drawingml.ts, src/pptx/ooxml/ecma376.ts |  |
-| 21.2.2.88 layout (Layout) | [x] | src/pptx-cli.ts, src/pptx/core/background.spec.ts |  |
-| 21.2.2.89 layoutTarget (Layout Target) | [x] | src/pptx/core/context.ts, src/pptx/domain/chart.ts |  |
-| 21.2.2.90 lblAlgn (Label Alignment) | [x] | src/pptx/render2/components/chart/axis.ts |  |
-| 21.2.2.91 lblOffset (Label Offset) | [x] | src/pptx/render2/components/chart/axis.ts |  |
-| 21.2.2.92 leaderLines (Leader Lines) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.spec.ts |  |
-| 21.2.2.93 legend (Legend) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/mapping.ts |  |
-| 21.2.2.94 legendEntry (Legend Entry) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/title-legend.ts |  |
-| 21.2.2.95 legendPos (Legend Position) | [x] | src/pptx/render2/components/chart/index.ts, src/pptx/render2/components/chart/layout.ts |  |
-| 21.2.2.96 line3DChart (3D Line Charts) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/index.ts |  |
-| 21.2.2.97 lineChart (Line Charts) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/index.ts |  |
-| 21.2.2.98 logBase (Logarithmic Base) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/axis.spec.ts |  |
-| 21.2.2.99 lvl (Level) | [x] | src/pptx/core/context.ts, src/pptx/domain/chart.ts |  |
-| 21.2.2.100 majorGridlines (Major Gridlines) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/axis.spec.ts |  |
-| 21.2.2.101 majorTickMark (Major Tick Mark) | [x] | src/pptx/parser2/chart-parser/axis.spec.ts, src/pptx/render2/components/chart/axis.ts |  |
-| 21.2.2.102 majorTimeUnit (Major Time Unit) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/axis.spec.ts |  |
-| 21.2.2.103 majorUnit (Major Unit) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/axis.spec.ts |  |
-| 21.2.2.104 manualLayout (Manual Layout) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.spec.ts |  |
-| 21.2.2.105 marker (Show Marker) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.spec.ts |  |
-| 21.2.2.106 marker (Marker) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.spec.ts |  |
-| 21.2.2.107 max (Maximum) | [x] | src/color/convert.ts, src/color/transform.ts |  |
-| 21.2.2.108 min (Minimum) | [x] | src/color/convert.ts, src/color/transform.ts |  |
-| 21.2.2.109 minorGridlines (Minor Gridlines) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/axis.spec.ts |  |
-| 21.2.2.110 minorTickMark (Minor Tick Mark) | [x] | src/pptx/parser2/chart-parser/axis.spec.ts, src/pptx/render2/components/chart/axis.ts |  |
-| 21.2.2.111 minorTimeUnit (Minor Time Unit) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/axis.spec.ts |  |
-| 21.2.2.112 minorUnit (Minor Unit) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/axis.spec.ts |  |
-| 21.2.2.113 minus (Minus) | [x] | src/pptx/domain/chart.ts, src/pptx/ooxml/chart.ts |  |
-| 21.2.2.114 multiLvlStrCache (Multi Level String Cache) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/data-reference.ts |  |
-| 21.2.2.115 multiLvlStrRef (Multi Level String Reference) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/data-reference.spec.ts |  |
-| 21.2.2.116 name (Trendline Name) | [x] | src/color/named-colors.ts, src/html/element.ts |  |
-| 21.2.2.117 name (Pivot Name) | [x] | src/color/named-colors.ts, src/html/element.ts |  |
-| 21.2.2.118 noEndCap (No End Cap) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.spec.ts |  |
-| 21.2.2.119 noMultiLvlLbl (No Multi-level Labels) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/axis.ts |  |
-| 21.2.2.120 numCache (Number Cache) | [x] | src/pptx/parser2/chart-parser/data-reference.spec.ts, src/pptx/parser2/chart-parser/data-reference.ts |  |
-| 21.2.2.121 numFmt (Number Format) | [x] | src/pptx/render2/components/chart/axis.ts, src/pptx/render2/components/chart/labels.ts |  |
-| 21.2.2.122 numLit (Number Literal) | [x] | src/pptx/domain/chart.ts, src/pptx/render2/components/chart/error-bars.spec.ts |  |
-| 21.2.2.123 numRef (Number Reference) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.spec.ts |  |
-| 21.2.2.124 oddFooter (Odd Footer) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.125 oddHeader (Odd Header) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.126 ofPieChart (Pie of Pie or Bar of Pie Charts) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/index.ts |  |
-| 21.2.2.127 ofPieType (Pie of Pie or Bar of Pie Type) | [x] | src/pptx/parser2/chart-parser/series/pie.ts |  |
-| 21.2.2.128 order (Order) | [x] | src/pptx/animation/coverage.spec.ts, src/pptx/animation/integration.spec.ts |  |
-| 21.2.2.129 order (Polynomial Trendline Order) | [x] | src/pptx/animation/coverage.spec.ts, src/pptx/animation/integration.spec.ts |  |
-| 21.2.2.130 orientation (Axis Orientation) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/axis.spec.ts |  |
-| 21.2.2.131 overlap (Overlap) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/series/series.spec.ts |  |
-| 21.2.2.132 overlay (Overlay) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/title-legend.spec.ts |  |
-| 21.2.2.133 pageMargins (Page Margins) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.134 pageSetup (Page Setup) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.135 period (Period) | [x] | src/pptx/domain/chart.ts, src/pptx/ooxml/chart.ts |  |
-| 21.2.2.136 perspective (Perspective) | [x] | src/pptx/ooxml/drawingml.ts, src/pptx/render2/svg/effects3d.spec.ts |  |
-| 21.2.2.137 pictureFormat (Picture Format) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.138 pictureOptions (Picture Options) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.139 pictureStackUnit (Picture Stack Unit) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.140 pie3DChart (3D Pie Charts) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/index.ts |  |
-| 21.2.2.141 pieChart (Pie Charts) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/index.ts |  |
-| 21.2.2.142 pivotFmt (Pivot Format) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.143 pivotFmts (Pivot Formats) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.144 pivotSource (Pivot Source) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.145 plotArea (Plot Area) | [x] | src/pptx/domain/chart.ts, src/pptx/ooxml/chart.ts |  |
-| 21.2.2.146 plotVisOnly (Plot Visible Only) | [x] | src/pptx/domain/chart.ts |  |
-| 21.2.2.147 plus (Plus) | [x] | src/pptx/animation/coverage.spec.ts, src/pptx/animation/effects-visual.spec.ts |  |
-| 21.2.2.148 printSettings (Print Settings) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.149 protection (Protection) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.150 pt (Numeric Point) | [x] | src/css/builder.ts, src/pptx/core/ecma376-defaults.ts |  |
-| 21.2.2.151 pt (String Point) | [x] | src/css/builder.ts, src/pptx/core/ecma376-defaults.ts |  |
-| 21.2.2.152 ptCount (Point Count) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/data-reference.ts |  |
-| 21.2.2.153 radarChart (Radar Charts) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/index.ts |  |
-| 21.2.2.154 radarStyle (Radar Style) | [x] | src/pptx/parser2/chart-parser/series/series.spec.ts, src/pptx/render2/components/chart/generators/radar.ts |  |
-| 21.2.2.155 rAngAx (Right Angle Axes) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.156 rich (Rich Text) | [x] | src/pptx/parser2/chart-parser/title-legend.ts |  |
-| 21.2.2.157 rotX (X Rotation) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.158 rotY (Y Rotation) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.159 roundedCorners (Rounded Corners) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/index.ts |  |
-| 21.2.2.160 scaling (Scaling) | [x] | src/pptx/animation/effects-visual.spec.ts, src/pptx/animation/effects.ts |  |
-| 21.2.2.161 scatterChart (Scatter Charts) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/index.ts |  |
-| 21.2.2.162 scatterStyle (Scatter Style) | [x] | src/pptx/parser2/chart-parser/series/series.spec.ts, src/pptx/render2/components/chart/generators/scatter.ts |  |
-| 21.2.2.163 secondPiePt (Second Pie Point) | [x] | src/pptx/parser2/chart-parser/series/pie.ts |  |
-| 21.2.2.164 secondPieSize (Second Pie Size) | [x] | src/pptx/domain/chart.ts |  |
-| 21.2.2.165 selection (Selection) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.166 separator (Separator) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.spec.ts |  |
-| 21.2.2.167 ser (Scatter Chart Series) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.spec.ts |  |
-| 21.2.2.168 ser (Area Chart Series) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.spec.ts |  |
-| 21.2.2.169 ser (Radar Chart Series) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.spec.ts |  |
-| 21.2.2.170 ser (Bar Chart Series) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.spec.ts |  |
-| 21.2.2.171 ser (Line Chart Series) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.spec.ts |  |
-| 21.2.2.172 ser (Pie Chart Series) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.spec.ts |  |
-| 21.2.2.173 ser (Surface Chart Series) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.spec.ts |  |
-| 21.2.2.174 ser (Bubble Chart Series) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.spec.ts |  |
-| 21.2.2.175 serAx (Series Axis) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/axis.spec.ts |  |
-| 21.2.2.176 serLines (Series Lines) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/series/pie.ts |  |
-| 21.2.2.177 shape (Shape) | [x] | src/pptx/animation/coverage.spec.ts, src/pptx/animation/effects.ts |  |
-| 21.2.2.178 showBubbleSize (Show Bubble Size) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.spec.ts |  |
-| 21.2.2.179 showCatName (Show Category Name) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.spec.ts |  |
-| 21.2.2.180 showDLblsOverMax (Show Data Labels over Maximum) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/index.ts |  |
-| 21.2.2.181 showHorzBorder (Show Horizontal Border) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.182 showKeys (Show Legend Keys) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.183 showLeaderLines (Show Leader Lines) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.spec.ts |  |
-| 21.2.2.184 showLegendKey (Show Legend Key) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.spec.ts |  |
-| 21.2.2.185 showNegBubbles (Show Negative Bubbles) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/series/series.spec.ts |  |
-| 21.2.2.186 showOutline (Show Outline Border) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.187 showPercent (Show Percent) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.spec.ts |  |
-| 21.2.2.188 showSerName (Show Series Name) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.spec.ts |  |
-| 21.2.2.189 showVal (Show Value) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.spec.ts |  |
-| 21.2.2.190 showVertBorder (Show Vertical Border) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.191 sideWall (Side Wall) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.192 size (Size) | [x] | src/pptx-cli.ts, src/pptx/animation/effects.ts |  |
-| 21.2.2.193 sizeRepresents (Size Represents) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/series/series.spec.ts |  |
-| 21.2.2.194 smooth (Smoothing) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/series/series.spec.ts |  |
-| 21.2.2.195 splitPos (Split Position) | [x] | src/pptx/domain/chart.ts |  |
-| 21.2.2.196 splitType (Split Type) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/series/pie.ts |  |
-| 21.2.2.197 spPr (Shape Properties) | [x] | src/pptx/color/fill.ts, src/pptx/domain/chart.ts |  |
-| 21.2.2.198 stockChart (Stock Charts) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/index.ts |  |
-| 21.2.2.199 strCache (String Cache) | [x] | src/pptx/parser2/chart-parser/data-reference.spec.ts, src/pptx/parser2/chart-parser/data-reference.ts |  |
-| 21.2.2.200 strLit (String Literal) | [x] | src/pptx/domain/chart.ts |  |
-| 21.2.2.201 strRef (String Reference) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/data-reference.spec.ts |  |
-| 21.2.2.202 style (Style) | [x] | src/css/builder.ts, src/css/types.ts |  |
-| 21.2.2.203 surface3DChart (3D Surface Charts) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/index.ts |  |
-| 21.2.2.204 surfaceChart (Surface Charts) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/index.ts |  |
-| 21.2.2.205 symbol (Symbol) | [x] | src/pptx/core/types/branded.ts, src/pptx/domain/types.ts |  |
-| 21.2.2.206 thickness (Thickness) | [x] | src/pptx/render2/components/chart/renderer.spec.ts, src/pptx/render2/svg/geometry.ts |  |
-| 21.2.2.207 tickLblPos (Tick Label Position) | [x] | src/pptx/render2/components/chart/axis.ts, src/pptx/render2/components/chart/renderer.spec.ts |  |
-| 21.2.2.208 tickLblSkip (Tick Label Skip) | [x] | src/pptx/render2/components/chart/axis.ts, src/pptx/render2/components/chart/generators/area.ts |  |
-| 21.2.2.209 tickMarkSkip (Tick Mark Skip) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/axis.spec.ts |  |
-| 21.2.2.210 title (Title) | [x] | src/pptx/core/context.ts, src/pptx/core/ecma376-defaults.ts |  |
-| 21.2.2.211 trendline (Trendlines) | [x] | src/pptx/domain/chart.ts, src/pptx/ooxml/chart.ts |  |
-| 21.2.2.212 trendlineLbl (Trendline Label) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.ts |  |
-| 21.2.2.213 trendlineType (Trendline Type) | [x] | src/pptx/parser2/chart-parser/components.spec.ts, src/pptx/parser2/chart-trendline-errbar.spec.ts |  |
-| 21.2.2.214 tx (Chart Text) | [x] | src/pptx/domain/chart.ts, src/pptx/domain/slide.ts |  |
-| 21.2.2.215 tx (Series Text) | [x] | src/pptx/domain/chart.ts, src/pptx/domain/slide.ts |  |
-| 21.2.2.216 txPr (Text Properties) | [x] | src/pptx/parser2/chart-parser/axis.ts, src/pptx/parser2/chart-parser/components.ts |  |
-| 21.2.2.217 upBars (Up Bars) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.spec.ts |  |
-| 21.2.2.218 upDownBars (Up/Down Bars) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/components.spec.ts |  |
-| 21.2.2.219 userInterface (User Interface) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.220 userShapes (User Shapes) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.221 userShapes (Reference to Chart Drawing Part) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.222 v (Numeric Value) | [x] | src/markup/element.ts, src/pptx/core/color-resolver.ts |  |
-| 21.2.2.223 v (Text Value) | [x] | src/markup/element.ts, src/pptx/core/color-resolver.ts |  |
-| 21.2.2.224 val (Values) | [x] | src/pptx/color/solid-fill.ts, src/pptx/core/background.ts |  |
-| 21.2.2.225 val (Error Bar Value) | [x] | src/pptx/color/solid-fill.ts, src/pptx/core/background.ts |  |
-| 21.2.2.226 valAx (Value Axis) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/axis.spec.ts |  |
-| 21.2.2.227 varyColors (Vary Colors by Point) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/series/series.spec.ts |  |
-| 21.2.2.228 view3D (View In 3D) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.2.229 w (Width) | [x] | src/pptx/animation/effects.ts, src/pptx/core/guide-engine.spec.ts |  |
-| 21.2.2.230 wireframe (Wireframe) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/series/series.spec.ts |  |
-| 21.2.2.231 wMode (Width Mode) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/layout.spec.ts |  |
-| 21.2.2.232 x (Left) | [x] | src/markup/escape.ts, src/pptx/animation/player.ts |  |
-| 21.2.2.233 xMode (Left Mode) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/layout.spec.ts |  |
-| 21.2.2.234 xVal (X Values) | [x] | src/pptx/ooxml/chart.ts, src/pptx/render2/components/chart/axis.ts |  |
-| 21.2.2.235 y (Top) | [x] | src/pptx/animation/player.ts, src/pptx/core/connection-site.spec.ts |  |
-| 21.2.2.236 yMode (Top Mode) | [x] | src/pptx/domain/chart.ts, src/pptx/parser2/chart-parser/layout.spec.ts |  |
-| 21.2.2.237 yVal (Y Values) | [x] | src/pptx/ooxml/chart.ts |  |
+| Item                                                        | Status | Implementation                                                                                                                                                 | Notes |
+| ----------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- |
+| 21.2.2 Elements                                             | [x]    | docs/specs/ecma376-drawingml-charts.checklist.md                                                                                                               |       |
+| 21.2.2.1 applyToEnd (Apply to End)                          | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.2 applyToFront (Apply To Front)                      | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.3 applyToSides (Apply To Sides)                      | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.4 area3DChart (3D Area Charts)                       | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/index.ts                                                                                                |       |
+| 21.2.2.5 areaChart (Area Charts)                            | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/index.ts                                                                                                |       |
+| 21.2.2.6 auto (Automatic Category Axis)                     | [x]    | src/css/types.ts, src/pptx/domain/chart.ts                                                                                                                     |       |
+| 21.2.2.7 autoTitleDeleted (Auto Title Is Deleted)           | [x]    | src/pptx/domain/chart.ts, src/pptx/render/components/chart/index.ts                                                                                            |       |
+| 21.2.2.8 autoUpdate (Update Automatically)                  | [x]    | src/pptx/domain/chart.ts                                                                                                                                       |       |
+| 21.2.2.9 axId (Axis ID)                                     | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/axis.ts                                                                                                 |       |
+| 21.2.2.10 axPos (Axis Position)                             | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/axis.ts                                                                                                 |       |
+| 21.2.2.11 backWall (Back Wall)                              | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.12 backward (Backward)                               | [x]    | src/markup/escape.ts, src/pptx/domain/chart.ts                                                                                                                 |       |
+| 21.2.2.13 bandFmt (Band Format)                             | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/series/surface.ts                                                                                       |       |
+| 21.2.2.14 bandFmts (Band Formats)                           | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/series/surface.ts                                                                                       |       |
+| 21.2.2.15 bar3DChart (3D Bar Charts)                        | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/index.ts                                                                                                |       |
+| 21.2.2.16 barChart (Bar Charts)                             | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/index.ts                                                                                                |       |
+| 21.2.2.17 barDir (Bar Direction)                            | [x]    | src/pptx/parser/chart-parser/series/series.spec.ts, src/pptx/render/components/chart/generators/bar.ts                                                         |       |
+| 21.2.2.18 baseTimeUnit (Base Time Unit)                     | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/axis.spec.ts                                                                                            |       |
+| 21.2.2.19 bubble3D (3D Bubble)                              | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.spec.ts                                                                                      |       |
+| 21.2.2.20 bubbleChart (Bubble Charts)                       | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/index.ts                                                                                                |       |
+| 21.2.2.21 bubbleScale (Bubble Scale)                        | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/series/series.spec.ts                                                                                   |       |
+| 21.2.2.22 bubbleSize (Bubble Size)                          | [x]    | src/pptx/parser/chart-parser/series/series.spec.ts, src/pptx/render/components/chart/data.ts                                                                   |       |
+| 21.2.2.23 builtInUnit (Built in Display Unit Value)         | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/axis.spec.ts                                                                                            |       |
+| 21.2.2.24 cat (Category Axis Data)                          | [x]    | src/pptx/domain/chart.ts, src/pptx/ooxml/chart.ts                                                                                                              |       |
+| 21.2.2.25 catAx (Category Axis Data)                        | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/axis.spec.ts                                                                                            |       |
+| 21.2.2.26 chart (Reference to Chart Part)                   | [x]    | src/pptx/core/content-types.ts, src/pptx/core/context.ts                                                                                                       |       |
+| 21.2.2.27 chart (Chart)                                     | [x]    | src/pptx/core/content-types.ts, src/pptx/core/context.ts                                                                                                       |       |
+| 21.2.2.28 chartObject (Chart Object)                        | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.29 chartSpace (Chart Space)                          | [x]    | src/pptx/domain/chart.ts, src/pptx/ooxml/ecma376.ts                                                                                                            |       |
+| 21.2.2.30 clrMapOvr (Color Map Override)                    | [x]    | src/pptx/domain/slide.ts, src/pptx/parser/slide-parser.spec.ts                                                                                                 |       |
+| 21.2.2.31 crossAx (Crossing Axis ID)                        | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/axis.ts                                                                                                 |       |
+| 21.2.2.32 crossBetween (Cross Between)                      | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/axis.spec.ts                                                                                            |       |
+| 21.2.2.33 crosses (Crosses)                                 | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/axis.spec.ts                                                                                            |       |
+| 21.2.2.34 crossesAt (Crossing Value)                        | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/axis.spec.ts                                                                                            |       |
+| 21.2.2.35 custSplit (Custom Split)                          | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/series/pie.ts                                                                                           |       |
+| 21.2.2.36 custUnit (Custom Display Unit)                    | [x]    | src/pptx/parser/chart-parser/axis.ts                                                                                                                           |       |
+| 21.2.2.37 data (Data Cannot Be Changed)                     | [x]    | src/buffer/data-url.ts, src/color/gradient.ts                                                                                                                  |       |
+| 21.2.2.38 date1904 (1904 Date System)                       | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/index.ts                                                                                                |       |
+| 21.2.2.39 dateAx (Date Axis)                                | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/axis.spec.ts                                                                                            |       |
+| 21.2.2.40 delete (Delete)                                   | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/axis.spec.ts                                                                                            |       |
+| 21.2.2.41 depthPercent (Depth Percent)                      | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.42 dispBlanksAs (Display Blanks As)                  | [x]    | src/pptx/domain/chart.ts                                                                                                                                       |       |
+| 21.2.2.43 dispEq (Display Equation)                         | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.spec.ts                                                                                      |       |
+| 21.2.2.44 dispRSqr (Display R Squared Value)                | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.spec.ts                                                                                      |       |
+| 21.2.2.45 dispUnits (Display Units)                         | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/axis.spec.ts                                                                                            |       |
+| 21.2.2.46 dispUnitsLbl (Display Units Label)                | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/axis.spec.ts                                                                                            |       |
+| 21.2.2.47 dLbl (Data Label)                                 | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.ts                                                                                           |       |
+| 21.2.2.48 dLblPos (Data Label Position)                     | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.ts                                                                                           |       |
+| 21.2.2.49 dLbls (Data Labels)                               | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.spec.ts                                                                                      |       |
+| 21.2.2.50 doughnutChart (Doughnut Charts)                   | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/index.ts                                                                                                |       |
+| 21.2.2.51 downBars (Down Bars)                              | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.spec.ts                                                                                      |       |
+| 21.2.2.52 dPt (Data Point)                                  | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.ts                                                                                           |       |
+| 21.2.2.53 dropLines (Drop Lines)                            | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/shape-properties.ts                                                                                     |       |
+| 21.2.2.54 dTable (Data Table)                               | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.55 errBars (Error Bars)                              | [x]    | src/pptx/domain/chart.ts, src/pptx/ooxml/chart.ts                                                                                                              |       |
+| 21.2.2.56 errBarType (Error Bar Type)                       | [x]    | src/pptx/parser/chart-parser/components.spec.ts, src/pptx/parser/chart-trendline-errbar.spec.ts                                                                |       |
+| 21.2.2.57 errDir (Error Bar Direction)                      | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.spec.ts                                                                                      |       |
+| 21.2.2.58 errValType (Error Bar Value Type)                 | [x]    | src/pptx/parser/chart-parser/components.spec.ts, src/pptx/parser/chart-trendline-errbar.spec.ts                                                                |       |
+| 21.2.2.59 evenFooter (Even Footer)                          | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.60 evenHeader (Even Header)                          | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.61 explosion (Explosion)                             | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.spec.ts                                                                                      |       |
+| 21.2.2.62 ext (Extension)                                   | [x]    | src/pptx/integration/content-enricher.ts, src/pptx/integration/context-adapter.ts                                                                              |       |
+| 21.2.2.63 externalData (External Data Relationship)         | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/index.ts                                                                                                |       |
+| 21.2.2.64 extLst (Chart Extensibility)                      | [x]    | src/pptx/parser/diagram-parser.spec.ts                                                                                                                         |       |
+| 21.2.2.65 f (Formula)                                       | [x]    | src/color/transform.spec.ts, src/pptx/render/svg/slide-text.ts                                                                                                 |       |
+| 21.2.2.66 firstFooter (First Footer)                        | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.67 firstHeader (First Header)                        | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.68 firstSliceAng (First Slice Angle)                 | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/series/series.spec.ts                                                                                   |       |
+| 21.2.2.69 floor (Floor)                                     | [x]    | src/pptx/render/components/chart/axis.ts, src/pptx/utils/auto-number.ts                                                                                        |       |
+| 21.2.2.70 fmtId (Format ID)                                 | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.71 formatCode (Format Code)                          | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.ts                                                                                           |       |
+| 21.2.2.72 formatting (Formatting)                           | [x]    | src/pptx/color/fill.ts, src/pptx/core/context.ts                                                                                                               |       |
+| 21.2.2.73 forward (Forward)                                 | [x]    | src/pptx/domain/chart.ts, src/pptx/ooxml/chart.ts                                                                                                              |       |
+| 21.2.2.74 gapDepth (Gap Depth)                              | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/series/bar.ts, src/pptx/parser/chart-parser/series/area.ts, src/pptx/parser/chart-parser/series/line.ts |       |
+| 21.2.2.75 gapWidth (Gap Width)                              | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.spec.ts                                                                                      |       |
+| 21.2.2.76 grouping (Grouping)                               | [x]    | src/pptx/domain/animation.ts, src/pptx/domain/chart.ts                                                                                                         |       |
+| 21.2.2.77 grouping (Bar Grouping)                           | [x]    | src/pptx/domain/animation.ts, src/pptx/domain/chart.ts                                                                                                         |       |
+| 21.2.2.78 h (Height)                                        | [x]    | src/color/convert.ts, src/color/transform.ts                                                                                                                   |       |
+| 21.2.2.79 headerFooter (Header and Footer)                  | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.80 hiLowLines (High Low Lines)                       | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/series/series.spec.ts                                                                                   |       |
+| 21.2.2.81 hMode (Height Mode)                               | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/layout.spec.ts                                                                                          |       |
+| 21.2.2.82 holeSize (Hole Size)                              | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/series/series.spec.ts                                                                                   |       |
+| 21.2.2.83 hPercent (Height Percent)                         | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.84 idx (Index)                                       | [x]    | src/pptx/color/fill.ts, src/pptx/core/background.spec.ts                                                                                                       |       |
+| 21.2.2.85 intercept (Intercept)                             | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.spec.ts                                                                                      |       |
+| 21.2.2.86 invertIfNegative (Invert if Negative)             | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.spec.ts                                                                                      |       |
+| 21.2.2.87 lang (Editing Language)                           | [x]    | src/pptx/ooxml/drawingml.ts, src/pptx/ooxml/ecma376.ts                                                                                                         |       |
+| 21.2.2.88 layout (Layout)                                   | [x]    | src/pptx-cli.ts, src/pptx/core/background.spec.ts                                                                                                              |       |
+| 21.2.2.89 layoutTarget (Layout Target)                      | [x]    | src/pptx/core/context.ts, src/pptx/domain/chart.ts                                                                                                             |       |
+| 21.2.2.90 lblAlgn (Label Alignment)                         | [x]    | src/pptx/render/components/chart/axis.ts                                                                                                                       |       |
+| 21.2.2.91 lblOffset (Label Offset)                          | [x]    | src/pptx/render/components/chart/axis.ts                                                                                                                       |       |
+| 21.2.2.92 leaderLines (Leader Lines)                        | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.spec.ts                                                                                      |       |
+| 21.2.2.93 legend (Legend)                                   | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/mapping.ts                                                                                              |       |
+| 21.2.2.94 legendEntry (Legend Entry)                        | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/title-legend.ts                                                                                         |       |
+| 21.2.2.95 legendPos (Legend Position)                       | [x]    | src/pptx/render/components/chart/index.ts, src/pptx/render/components/chart/layout.ts                                                                          |       |
+| 21.2.2.96 line3DChart (3D Line Charts)                      | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/index.ts                                                                                                |       |
+| 21.2.2.97 lineChart (Line Charts)                           | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/index.ts                                                                                                |       |
+| 21.2.2.98 logBase (Logarithmic Base)                        | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/axis.spec.ts                                                                                            |       |
+| 21.2.2.99 lvl (Level)                                       | [x]    | src/pptx/core/context.ts, src/pptx/domain/chart.ts                                                                                                             |       |
+| 21.2.2.100 majorGridlines (Major Gridlines)                 | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/axis.spec.ts                                                                                            |       |
+| 21.2.2.101 majorTickMark (Major Tick Mark)                  | [x]    | src/pptx/parser/chart-parser/axis.spec.ts, src/pptx/render/components/chart/axis.ts                                                                            |       |
+| 21.2.2.102 majorTimeUnit (Major Time Unit)                  | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/axis.spec.ts                                                                                            |       |
+| 21.2.2.103 majorUnit (Major Unit)                           | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/axis.spec.ts                                                                                            |       |
+| 21.2.2.104 manualLayout (Manual Layout)                     | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.spec.ts                                                                                      |       |
+| 21.2.2.105 marker (Show Marker)                             | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.spec.ts                                                                                      |       |
+| 21.2.2.106 marker (Marker)                                  | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.spec.ts                                                                                      |       |
+| 21.2.2.107 max (Maximum)                                    | [x]    | src/color/convert.ts, src/color/transform.ts                                                                                                                   |       |
+| 21.2.2.108 min (Minimum)                                    | [x]    | src/color/convert.ts, src/color/transform.ts                                                                                                                   |       |
+| 21.2.2.109 minorGridlines (Minor Gridlines)                 | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/axis.spec.ts                                                                                            |       |
+| 21.2.2.110 minorTickMark (Minor Tick Mark)                  | [x]    | src/pptx/parser/chart-parser/axis.spec.ts, src/pptx/render/components/chart/axis.ts                                                                            |       |
+| 21.2.2.111 minorTimeUnit (Minor Time Unit)                  | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/axis.spec.ts                                                                                            |       |
+| 21.2.2.112 minorUnit (Minor Unit)                           | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/axis.spec.ts                                                                                            |       |
+| 21.2.2.113 minus (Minus)                                    | [x]    | src/pptx/domain/chart.ts, src/pptx/ooxml/chart.ts                                                                                                              |       |
+| 21.2.2.114 multiLvlStrCache (Multi Level String Cache)      | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/data-reference.ts                                                                                       |       |
+| 21.2.2.115 multiLvlStrRef (Multi Level String Reference)    | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/data-reference.spec.ts                                                                                  |       |
+| 21.2.2.116 name (Trendline Name)                            | [x]    | src/color/named-colors.ts, src/html/element.ts                                                                                                                 |       |
+| 21.2.2.117 name (Pivot Name)                                | [x]    | src/color/named-colors.ts, src/html/element.ts                                                                                                                 |       |
+| 21.2.2.118 noEndCap (No End Cap)                            | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.spec.ts                                                                                      |       |
+| 21.2.2.119 noMultiLvlLbl (No Multi-level Labels)            | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/axis.ts                                                                                                 |       |
+| 21.2.2.120 numCache (Number Cache)                          | [x]    | src/pptx/parser/chart-parser/data-reference.spec.ts, src/pptx/parser/chart-parser/data-reference.ts                                                            |       |
+| 21.2.2.121 numFmt (Number Format)                           | [x]    | src/pptx/render/components/chart/axis.ts, src/pptx/render/components/chart/labels.ts                                                                           |       |
+| 21.2.2.122 numLit (Number Literal)                          | [x]    | src/pptx/domain/chart.ts, src/pptx/render/components/chart/error-bars.spec.ts                                                                                  |       |
+| 21.2.2.123 numRef (Number Reference)                        | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.spec.ts                                                                                      |       |
+| 21.2.2.124 oddFooter (Odd Footer)                           | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.125 oddHeader (Odd Header)                           | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.126 ofPieChart (Pie of Pie or Bar of Pie Charts)     | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/index.ts                                                                                                |       |
+| 21.2.2.127 ofPieType (Pie of Pie or Bar of Pie Type)        | [x]    | src/pptx/parser/chart-parser/series/pie.ts                                                                                                                     |       |
+| 21.2.2.128 order (Order)                                    | [x]    | src/pptx/animation/coverage.spec.ts, src/pptx/animation/integration.spec.ts                                                                                    |       |
+| 21.2.2.129 order (Polynomial Trendline Order)               | [x]    | src/pptx/animation/coverage.spec.ts, src/pptx/animation/integration.spec.ts                                                                                    |       |
+| 21.2.2.130 orientation (Axis Orientation)                   | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/axis.spec.ts                                                                                            |       |
+| 21.2.2.131 overlap (Overlap)                                | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/series/series.spec.ts                                                                                   |       |
+| 21.2.2.132 overlay (Overlay)                                | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/title-legend.spec.ts                                                                                    |       |
+| 21.2.2.133 pageMargins (Page Margins)                       | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.134 pageSetup (Page Setup)                           | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.135 period (Period)                                  | [x]    | src/pptx/domain/chart.ts, src/pptx/ooxml/chart.ts                                                                                                              |       |
+| 21.2.2.136 perspective (Perspective)                        | [x]    | src/pptx/ooxml/drawingml.ts, src/pptx/render/svg/effects3d.spec.ts                                                                                             |       |
+| 21.2.2.137 pictureFormat (Picture Format)                   | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.138 pictureOptions (Picture Options)                 | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.139 pictureStackUnit (Picture Stack Unit)            | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.140 pie3DChart (3D Pie Charts)                       | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/index.ts                                                                                                |       |
+| 21.2.2.141 pieChart (Pie Charts)                            | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/index.ts                                                                                                |       |
+| 21.2.2.142 pivotFmt (Pivot Format)                          | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.143 pivotFmts (Pivot Formats)                        | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.144 pivotSource (Pivot Source)                       | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.145 plotArea (Plot Area)                             | [x]    | src/pptx/domain/chart.ts, src/pptx/ooxml/chart.ts                                                                                                              |       |
+| 21.2.2.146 plotVisOnly (Plot Visible Only)                  | [x]    | src/pptx/domain/chart.ts                                                                                                                                       |       |
+| 21.2.2.147 plus (Plus)                                      | [x]    | src/pptx/animation/coverage.spec.ts, src/pptx/animation/effects-visual.spec.ts                                                                                 |       |
+| 21.2.2.148 printSettings (Print Settings)                   | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.149 protection (Protection)                          | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.150 pt (Numeric Point)                               | [x]    | src/css/builder.ts, src/pptx/core/ecma376-defaults.ts                                                                                                          |       |
+| 21.2.2.151 pt (String Point)                                | [x]    | src/css/builder.ts, src/pptx/core/ecma376-defaults.ts                                                                                                          |       |
+| 21.2.2.152 ptCount (Point Count)                            | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/data-reference.ts                                                                                       |       |
+| 21.2.2.153 radarChart (Radar Charts)                        | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/index.ts                                                                                                |       |
+| 21.2.2.154 radarStyle (Radar Style)                         | [x]    | src/pptx/parser/chart-parser/series/series.spec.ts, src/pptx/render/components/chart/generators/radar.ts                                                       |       |
+| 21.2.2.155 rAngAx (Right Angle Axes)                        | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.156 rich (Rich Text)                                 | [x]    | src/pptx/parser/chart-parser/title-legend.ts                                                                                                                   |       |
+| 21.2.2.157 rotX (X Rotation)                                | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.158 rotY (Y Rotation)                                | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.159 roundedCorners (Rounded Corners)                 | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/index.ts                                                                                                |       |
+| 21.2.2.160 scaling (Scaling)                                | [x]    | src/pptx/animation/effects-visual.spec.ts, src/pptx/animation/effects.ts                                                                                       |       |
+| 21.2.2.161 scatterChart (Scatter Charts)                    | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/index.ts                                                                                                |       |
+| 21.2.2.162 scatterStyle (Scatter Style)                     | [x]    | src/pptx/parser/chart-parser/series/series.spec.ts, src/pptx/render/components/chart/generators/scatter.ts                                                     |       |
+| 21.2.2.163 secondPiePt (Second Pie Point)                   | [x]    | src/pptx/parser/chart-parser/series/pie.ts                                                                                                                     |       |
+| 21.2.2.164 secondPieSize (Second Pie Size)                  | [x]    | src/pptx/domain/chart.ts                                                                                                                                       |       |
+| 21.2.2.165 selection (Selection)                            | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.166 separator (Separator)                            | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.spec.ts                                                                                      |       |
+| 21.2.2.167 ser (Scatter Chart Series)                       | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.spec.ts                                                                                      |       |
+| 21.2.2.168 ser (Area Chart Series)                          | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.spec.ts                                                                                      |       |
+| 21.2.2.169 ser (Radar Chart Series)                         | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.spec.ts                                                                                      |       |
+| 21.2.2.170 ser (Bar Chart Series)                           | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.spec.ts                                                                                      |       |
+| 21.2.2.171 ser (Line Chart Series)                          | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.spec.ts                                                                                      |       |
+| 21.2.2.172 ser (Pie Chart Series)                           | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.spec.ts                                                                                      |       |
+| 21.2.2.173 ser (Surface Chart Series)                       | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.spec.ts                                                                                      |       |
+| 21.2.2.174 ser (Bubble Chart Series)                        | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.spec.ts                                                                                      |       |
+| 21.2.2.175 serAx (Series Axis)                              | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/axis.spec.ts                                                                                            |       |
+| 21.2.2.176 serLines (Series Lines)                          | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/series/pie.ts                                                                                           |       |
+| 21.2.2.177 shape (Shape)                                    | [x]    | src/pptx/animation/coverage.spec.ts, src/pptx/animation/effects.ts                                                                                             |       |
+| 21.2.2.178 showBubbleSize (Show Bubble Size)                | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.spec.ts                                                                                      |       |
+| 21.2.2.179 showCatName (Show Category Name)                 | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.spec.ts                                                                                      |       |
+| 21.2.2.180 showDLblsOverMax (Show Data Labels over Maximum) | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/index.ts                                                                                                |       |
+| 21.2.2.181 showHorzBorder (Show Horizontal Border)          | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.182 showKeys (Show Legend Keys)                      | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.183 showLeaderLines (Show Leader Lines)              | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.spec.ts                                                                                      |       |
+| 21.2.2.184 showLegendKey (Show Legend Key)                  | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.spec.ts                                                                                      |       |
+| 21.2.2.185 showNegBubbles (Show Negative Bubbles)           | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/series/series.spec.ts                                                                                   |       |
+| 21.2.2.186 showOutline (Show Outline Border)                | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.187 showPercent (Show Percent)                       | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.spec.ts                                                                                      |       |
+| 21.2.2.188 showSerName (Show Series Name)                   | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.spec.ts                                                                                      |       |
+| 21.2.2.189 showVal (Show Value)                             | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.spec.ts                                                                                      |       |
+| 21.2.2.190 showVertBorder (Show Vertical Border)            | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.191 sideWall (Side Wall)                             | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.192 size (Size)                                      | [x]    | src/pptx-cli.ts, src/pptx/animation/effects.ts                                                                                                                 |       |
+| 21.2.2.193 sizeRepresents (Size Represents)                 | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/series/series.spec.ts                                                                                   |       |
+| 21.2.2.194 smooth (Smoothing)                               | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/series/series.spec.ts                                                                                   |       |
+| 21.2.2.195 splitPos (Split Position)                        | [x]    | src/pptx/domain/chart.ts                                                                                                                                       |       |
+| 21.2.2.196 splitType (Split Type)                           | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/series/pie.ts                                                                                           |       |
+| 21.2.2.197 spPr (Shape Properties)                          | [x]    | src/pptx/color/fill.ts, src/pptx/domain/chart.ts                                                                                                               |       |
+| 21.2.2.198 stockChart (Stock Charts)                        | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/index.ts                                                                                                |       |
+| 21.2.2.199 strCache (String Cache)                          | [x]    | src/pptx/parser/chart-parser/data-reference.spec.ts, src/pptx/parser/chart-parser/data-reference.ts                                                            |       |
+| 21.2.2.200 strLit (String Literal)                          | [x]    | src/pptx/domain/chart.ts                                                                                                                                       |       |
+| 21.2.2.201 strRef (String Reference)                        | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/data-reference.spec.ts                                                                                  |       |
+| 21.2.2.202 style (Style)                                    | [x]    | src/css/builder.ts, src/css/types.ts                                                                                                                           |       |
+| 21.2.2.203 surface3DChart (3D Surface Charts)               | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/index.ts                                                                                                |       |
+| 21.2.2.204 surfaceChart (Surface Charts)                    | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/index.ts                                                                                                |       |
+| 21.2.2.205 symbol (Symbol)                                  | [x]    | src/pptx/core/types/branded.ts, src/pptx/domain/types.ts                                                                                                       |       |
+| 21.2.2.206 thickness (Thickness)                            | [x]    | src/pptx/render/components/chart/renderer.spec.ts, src/pptx/render/svg/geometry.ts                                                                             |       |
+| 21.2.2.207 tickLblPos (Tick Label Position)                 | [x]    | src/pptx/render/components/chart/axis.ts, src/pptx/render/components/chart/renderer.spec.ts                                                                    |       |
+| 21.2.2.208 tickLblSkip (Tick Label Skip)                    | [x]    | src/pptx/render/components/chart/axis.ts, src/pptx/render/components/chart/generators/area.ts                                                                  |       |
+| 21.2.2.209 tickMarkSkip (Tick Mark Skip)                    | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/axis.spec.ts                                                                                            |       |
+| 21.2.2.210 title (Title)                                    | [x]    | src/pptx/core/context.ts, src/pptx/core/ecma376-defaults.ts                                                                                                    |       |
+| 21.2.2.211 trendline (Trendlines)                           | [x]    | src/pptx/domain/chart.ts, src/pptx/ooxml/chart.ts                                                                                                              |       |
+| 21.2.2.212 trendlineLbl (Trendline Label)                   | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.ts                                                                                           |       |
+| 21.2.2.213 trendlineType (Trendline Type)                   | [x]    | src/pptx/parser/chart-parser/components.spec.ts, src/pptx/parser/chart-trendline-errbar.spec.ts                                                                |       |
+| 21.2.2.214 tx (Chart Text)                                  | [x]    | src/pptx/domain/chart.ts, src/pptx/domain/slide.ts                                                                                                             |       |
+| 21.2.2.215 tx (Series Text)                                 | [x]    | src/pptx/domain/chart.ts, src/pptx/domain/slide.ts                                                                                                             |       |
+| 21.2.2.216 txPr (Text Properties)                           | [x]    | src/pptx/parser/chart-parser/axis.ts, src/pptx/parser/chart-parser/components.ts                                                                               |       |
+| 21.2.2.217 upBars (Up Bars)                                 | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.spec.ts                                                                                      |       |
+| 21.2.2.218 upDownBars (Up/Down Bars)                        | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/components.spec.ts                                                                                      |       |
+| 21.2.2.219 userInterface (User Interface)                   | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.220 userShapes (User Shapes)                         | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.221 userShapes (Reference to Chart Drawing Part)     | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.222 v (Numeric Value)                                | [x]    | src/markup/element.ts, src/pptx/core/color-resolver.ts                                                                                                         |       |
+| 21.2.2.223 v (Text Value)                                   | [x]    | src/markup/element.ts, src/pptx/core/color-resolver.ts                                                                                                         |       |
+| 21.2.2.224 val (Values)                                     | [x]    | src/pptx/color/solid-fill.ts, src/pptx/core/background.ts                                                                                                      |       |
+| 21.2.2.225 val (Error Bar Value)                            | [x]    | src/pptx/color/solid-fill.ts, src/pptx/core/background.ts                                                                                                      |       |
+| 21.2.2.226 valAx (Value Axis)                               | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/axis.spec.ts                                                                                            |       |
+| 21.2.2.227 varyColors (Vary Colors by Point)                | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/series/series.spec.ts                                                                                   |       |
+| 21.2.2.228 view3D (View In 3D)                              | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.2.229 w (Width)                                        | [x]    | src/pptx/animation/effects.ts, src/pptx/core/guide-engine.spec.ts                                                                                              |       |
+| 21.2.2.230 wireframe (Wireframe)                            | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/series/series.spec.ts                                                                                   |       |
+| 21.2.2.231 wMode (Width Mode)                               | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/layout.spec.ts                                                                                          |       |
+| 21.2.2.232 x (Left)                                         | [x]    | src/markup/escape.ts, src/pptx/animation/player.ts                                                                                                             |       |
+| 21.2.2.233 xMode (Left Mode)                                | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/layout.spec.ts                                                                                          |       |
+| 21.2.2.234 xVal (X Values)                                  | [x]    | src/pptx/ooxml/chart.ts, src/pptx/render/components/chart/axis.ts                                                                                              |       |
+| 21.2.2.235 y (Top)                                          | [x]    | src/pptx/animation/player.ts, src/pptx/core/connection-site.spec.ts                                                                                            |       |
+| 21.2.2.236 yMode (Top Mode)                                 | [x]    | src/pptx/domain/chart.ts, src/pptx/parser/chart-parser/layout.spec.ts                                                                                          |       |
+| 21.2.2.237 yVal (Y Values)                                  | [x]    | src/pptx/ooxml/chart.ts                                                                                                                                        |       |
 
 ### 21.2.3 Simple Types
 
-| Item | Status | Implementation | Notes |
-|------|--------|----------------|-------|
-| 21.2.3 Simple Types | [x] | src/pptx/parser2/chart-parser/percent.ts |  |
-| 21.2.3.1 ST_AxisUnit (Axis Unit) | [x] | src/pptx/parser2/chart-parser/axis.ts |  |
-| 21.2.3.2 ST_AxPos (Axis Position) | [x] | src/pptx/domain/chart.ts |  |
-| 21.2.3.3 ST_BarDir (Bar Direction) | [x] | src/pptx/domain/chart.ts, src/pptx/render2/components/chart/generators/bar.ts |  |
-| 21.2.3.4 ST_BarGrouping (Bar Grouping) | [x] | src/pptx/domain/chart.ts, src/pptx/render2/components/chart/renderer.spec.ts |  |
-| 21.2.3.5 ST_BubbleScale (Bubble Scale) | [x] | src/pptx/parser2/chart-parser/series/bubble.ts |  |
-| 21.2.3.6 ST_BuiltInUnit (Built-In Unit) | [x] | src/pptx/parser2/chart-parser/axis.ts |  |
-| 21.2.3.7 ST_CrossBetween (Cross Between) | [x] | src/pptx/domain/chart.ts |  |
-| 21.2.3.8 ST_Crosses (Crosses) | [x] | src/pptx/domain/chart.ts, src/pptx/render2/components/chart/data.ts |  |
-| 21.2.3.9 ST_DepthPercent (Depth Percent) | [x] | src/pptx/parser2/chart-parser/chart-space.ts, src/pptx/parser2/chart-parser/percent.ts |  |
-| 21.2.3.10 ST_DispBlanksAs (Display Blanks As) | [x] | src/pptx/parser2/chart-parser/index.ts |  |
-| 21.2.3.11 ST_DLblPos (Data Label Position) | [x] | src/pptx/parser2/chart-parser/mapping.spec.ts, src/pptx/parser2/chart-parser/mapping.ts |  |
-| 21.2.3.12 ST_ErrBarType (Error Bar Type) | [x] | src/pptx/domain/chart.ts, src/pptx/ooxml/chart.ts |  |
-| 21.2.3.13 ST_ErrDir (Error Bar Direction) | [x] | src/pptx/domain/chart.ts, src/pptx/ooxml/chart.ts |  |
-| 21.2.3.14 ST_ErrValType (Error Value Type) | [x] | src/pptx/domain/chart.ts, src/pptx/ooxml/chart.ts |  |
-| 21.2.3.15 ST_FirstSliceAng (First Slice Angle) | [x] | src/pptx/parser2/chart-parser/series/pie.ts |  |
-| 21.2.3.16 ST_GapAmount (Gap Amount) | [x] | src/pptx/parser2/chart-parser/series/bar.ts, src/pptx/parser2/chart-parser/series/line.ts, src/pptx/parser2/chart-parser/series/area.ts |  |
-| 21.2.3.17 ST_Grouping (Grouping) | [x] | src/pptx/domain/chart.ts |  |
-| 21.2.3.18 ST_HoleSize (Hole Size) | [x] | src/pptx/parser2/chart-parser/series/pie.ts |  |
-| 21.2.3.19 ST_HPercent (Height Percent) | [x] | src/pptx/parser2/chart-parser/chart-space.ts, src/pptx/parser2/chart-parser/percent.ts |  |
-| 21.2.3.20 ST_LayoutMode (Layout Mode) | [x] | src/pptx/parser2/chart-parser/layout.ts |  |
-| 21.2.3.21 ST_LayoutTarget (Layout Target) | [x] | src/pptx/parser2/chart-parser/layout.ts |  |
-| 21.2.3.22 ST_LblAlgn (Label Alignment) | [x] | src/pptx/parser2/chart-parser/axis.ts |  |
-| 21.2.3.23 ST_LblOffset (Label Offset) | [x] | src/pptx/parser2/chart-parser/axis.ts, src/pptx/parser2/chart-parser/percent.ts |  |
-| 21.2.3.24 ST_LegendPos (Legend Position) | [x] | src/pptx/parser2/chart-parser/mapping.spec.ts, src/pptx/parser2/chart-parser/mapping.ts |  |
-| 21.2.3.25 ST_LogBase (Logarithmic Base) | [x] | src/pptx/parser2/chart-parser/axis.ts |  |
-| 21.2.3.26 ST_MarkerSize (Marker Size) | [x] | src/pptx/parser2/chart-parser/components.ts |  |
-| 21.2.3.27 ST_MarkerStyle (Marker Style) | [x] | src/pptx/parser2/chart-parser/mapping.spec.ts, src/pptx/parser2/chart-parser/mapping.ts |  |
-| 21.2.3.28 ST_OfPieType (Pie of Pie or Bar of Pie Type) | [x] | src/pptx/domain/chart.ts |  |
-| 21.2.3.29 ST_Order (Order) | [x] | src/pptx/parser2/chart-parser/components.ts |  |
-| 21.2.3.30 ST_Orientation (Orientation) | [x] | src/pptx/domain/chart.ts |  |
-| 21.2.3.31 ST_Overlap (Overlap) | [x] | src/pptx/parser2/chart-parser/series/bar.ts |  |
-| 21.2.3.32 ST_PageSetupOrientation (Printed Page Orientation) | [x] | src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.3.33 ST_Period (Period) | [x] | src/pptx/parser2/chart-parser/components.ts |  |
-| 21.2.3.34 ST_Perspective (Perspective) | [x] | src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.3.35 ST_PictureFormat (Picture Format) | [x] | src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.3.36 ST_PictureStackUnit (Picture Stack Unit) | [x] | src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.3.37 ST_RadarStyle (Radar Style) | [x] | src/pptx/domain/chart.ts, src/pptx/render2/components/chart/generators/radar.ts |  |
-| 21.2.3.38 ST_RotX (X Rotation) | [x] | src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.3.39 ST_RotY (Y Rotation) | [x] | src/pptx/parser2/chart-parser/chart-space.ts |  |
-| 21.2.3.40 ST_ScatterStyle (Scatter Style) | [x] | src/pptx/domain/chart.ts, src/pptx/render2/components/chart/generators/scatter.spec.ts |  |
-| 21.2.3.41 ST_SecondPieSize (Second Pie Size) | [x] | src/pptx/parser2/chart-parser/series/pie.ts |  |
-| 21.2.3.42 ST_Shape (Shape) | [x] | src/pptx/parser2/chart-parser/series/bar.ts |  |
-| 21.2.3.43 ST_SizeRepresents (Size Represents) | [x] | src/pptx/parser2/chart-parser/series/bubble.ts |  |
-| 21.2.3.44 ST_Skip (Skip) | [x] | src/pptx/parser2/chart-parser/axis.ts |  |
-| 21.2.3.45 ST_SplitType (Split Type) | [x] | src/pptx/domain/chart.ts |  |
-| 21.2.3.46 ST_Style (Style) | [x] | src/pptx/parser2/chart-parser/index.ts |  |
-| 21.2.3.47 ST_TickLblPos (Tick Label Position) | [x] | src/pptx/domain/chart.ts, src/pptx/render2/components/chart/axis.ts |  |
-| 21.2.3.48 ST_TickMark (Tick Mark) | [x] | src/pptx/domain/chart.ts, src/pptx/render2/components/chart/axis.ts |  |
-| 21.2.3.49 ST_TimeUnit (Time Unit) | [x] | src/pptx/render2/components/chart/axis.ts |  |
-| 21.2.3.50 ST_TrendlineType (Trendline Type) | [x] | src/pptx/domain/chart.ts, src/pptx/ooxml/chart.ts |  |
-| 21.2.3.51 ST_DepthPercentWithSymbol (Depth Percent with Symbol) | [x] | src/pptx/parser2/chart-parser/percent.ts |  |
-| 21.2.3.52 ST_HPercentWithSymbol (Height Percent with Symbol) | [x] | src/pptx/parser2/chart-parser/percent.ts |  |
-| 21.2.3.53 ST_GapAmountPercent (Gap Amount Percentage) | [x] | src/pptx/parser2/chart-parser/percent.ts |  |
-| 21.2.3.54 ST_SecondPieSizePercent (Second Pie Size Percentage) | [x] | src/pptx/parser2/chart-parser/percent.ts |  |
-| 21.2.3.55 ST_HoleSizePercent (Hole Size Percentage) | [x] | src/pptx/parser2/chart-parser/percent.ts |  |
-| 21.2.3.56 ST_LblOffsetPercent (Label Offset Percentage) | [x] | src/pptx/parser2/chart-parser/percent.ts |  |
-| 21.2.3.57 ST_OverlapPercent (Overlap Percentage) | [x] | src/pptx/parser2/chart-parser/percent.ts |  |
-| 21.2.3.58 ST_BubbleScalePercent (Bubble Scale Percentage) | [x] | src/pptx/parser2/chart-parser/percent.ts |  |
-| 21.2.3.59 ST_Thickness (Thickness Percentage) | [x] | src/pptx/parser2/chart-parser/chart-space.ts, src/pptx/parser2/chart-parser/percent.ts |  |
-| 21.2.3.60 ST_ThicknessPercent (Thickness Percentage) | [x] | src/pptx/parser2/chart-parser/percent.ts |  |
+| Item                                                            | Status | Implementation                                                                                                                       | Notes |
+| --------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------ | ----- |
+| 21.2.3 Simple Types                                             | [x]    | src/pptx/parser/chart-parser/percent.ts                                                                                              |       |
+| 21.2.3.1 ST_AxisUnit (Axis Unit)                                | [x]    | src/pptx/parser/chart-parser/axis.ts                                                                                                 |       |
+| 21.2.3.2 ST_AxPos (Axis Position)                               | [x]    | src/pptx/domain/chart.ts                                                                                                             |       |
+| 21.2.3.3 ST_BarDir (Bar Direction)                              | [x]    | src/pptx/domain/chart.ts, src/pptx/render/components/chart/generators/bar.ts                                                         |       |
+| 21.2.3.4 ST_BarGrouping (Bar Grouping)                          | [x]    | src/pptx/domain/chart.ts, src/pptx/render/components/chart/renderer.spec.ts                                                          |       |
+| 21.2.3.5 ST_BubbleScale (Bubble Scale)                          | [x]    | src/pptx/parser/chart-parser/series/bubble.ts                                                                                        |       |
+| 21.2.3.6 ST_BuiltInUnit (Built-In Unit)                         | [x]    | src/pptx/parser/chart-parser/axis.ts                                                                                                 |       |
+| 21.2.3.7 ST_CrossBetween (Cross Between)                        | [x]    | src/pptx/domain/chart.ts                                                                                                             |       |
+| 21.2.3.8 ST_Crosses (Crosses)                                   | [x]    | src/pptx/domain/chart.ts, src/pptx/render/components/chart/data.ts                                                                   |       |
+| 21.2.3.9 ST_DepthPercent (Depth Percent)                        | [x]    | src/pptx/parser/chart-parser/chart-space.ts, src/pptx/parser/chart-parser/percent.ts                                                 |       |
+| 21.2.3.10 ST_DispBlanksAs (Display Blanks As)                   | [x]    | src/pptx/parser/chart-parser/index.ts                                                                                                |       |
+| 21.2.3.11 ST_DLblPos (Data Label Position)                      | [x]    | src/pptx/parser/chart-parser/mapping.spec.ts, src/pptx/parser/chart-parser/mapping.ts                                                |       |
+| 21.2.3.12 ST_ErrBarType (Error Bar Type)                        | [x]    | src/pptx/domain/chart.ts, src/pptx/ooxml/chart.ts                                                                                    |       |
+| 21.2.3.13 ST_ErrDir (Error Bar Direction)                       | [x]    | src/pptx/domain/chart.ts, src/pptx/ooxml/chart.ts                                                                                    |       |
+| 21.2.3.14 ST_ErrValType (Error Value Type)                      | [x]    | src/pptx/domain/chart.ts, src/pptx/ooxml/chart.ts                                                                                    |       |
+| 21.2.3.15 ST_FirstSliceAng (First Slice Angle)                  | [x]    | src/pptx/parser/chart-parser/series/pie.ts                                                                                           |       |
+| 21.2.3.16 ST_GapAmount (Gap Amount)                             | [x]    | src/pptx/parser/chart-parser/series/bar.ts, src/pptx/parser/chart-parser/series/line.ts, src/pptx/parser/chart-parser/series/area.ts |       |
+| 21.2.3.17 ST_Grouping (Grouping)                                | [x]    | src/pptx/domain/chart.ts                                                                                                             |       |
+| 21.2.3.18 ST_HoleSize (Hole Size)                               | [x]    | src/pptx/parser/chart-parser/series/pie.ts                                                                                           |       |
+| 21.2.3.19 ST_HPercent (Height Percent)                          | [x]    | src/pptx/parser/chart-parser/chart-space.ts, src/pptx/parser/chart-parser/percent.ts                                                 |       |
+| 21.2.3.20 ST_LayoutMode (Layout Mode)                           | [x]    | src/pptx/parser/chart-parser/layout.ts                                                                                               |       |
+| 21.2.3.21 ST_LayoutTarget (Layout Target)                       | [x]    | src/pptx/parser/chart-parser/layout.ts                                                                                               |       |
+| 21.2.3.22 ST_LblAlgn (Label Alignment)                          | [x]    | src/pptx/parser/chart-parser/axis.ts                                                                                                 |       |
+| 21.2.3.23 ST_LblOffset (Label Offset)                           | [x]    | src/pptx/parser/chart-parser/axis.ts, src/pptx/parser/chart-parser/percent.ts                                                        |       |
+| 21.2.3.24 ST_LegendPos (Legend Position)                        | [x]    | src/pptx/parser/chart-parser/mapping.spec.ts, src/pptx/parser/chart-parser/mapping.ts                                                |       |
+| 21.2.3.25 ST_LogBase (Logarithmic Base)                         | [x]    | src/pptx/parser/chart-parser/axis.ts                                                                                                 |       |
+| 21.2.3.26 ST_MarkerSize (Marker Size)                           | [x]    | src/pptx/parser/chart-parser/components.ts                                                                                           |       |
+| 21.2.3.27 ST_MarkerStyle (Marker Style)                         | [x]    | src/pptx/parser/chart-parser/mapping.spec.ts, src/pptx/parser/chart-parser/mapping.ts                                                |       |
+| 21.2.3.28 ST_OfPieType (Pie of Pie or Bar of Pie Type)          | [x]    | src/pptx/domain/chart.ts                                                                                                             |       |
+| 21.2.3.29 ST_Order (Order)                                      | [x]    | src/pptx/parser/chart-parser/components.ts                                                                                           |       |
+| 21.2.3.30 ST_Orientation (Orientation)                          | [x]    | src/pptx/domain/chart.ts                                                                                                             |       |
+| 21.2.3.31 ST_Overlap (Overlap)                                  | [x]    | src/pptx/parser/chart-parser/series/bar.ts                                                                                           |       |
+| 21.2.3.32 ST_PageSetupOrientation (Printed Page Orientation)    | [x]    | src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.3.33 ST_Period (Period)                                    | [x]    | src/pptx/parser/chart-parser/components.ts                                                                                           |       |
+| 21.2.3.34 ST_Perspective (Perspective)                          | [x]    | src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.3.35 ST_PictureFormat (Picture Format)                     | [x]    | src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.3.36 ST_PictureStackUnit (Picture Stack Unit)              | [x]    | src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.3.37 ST_RadarStyle (Radar Style)                           | [x]    | src/pptx/domain/chart.ts, src/pptx/render/components/chart/generators/radar.ts                                                       |       |
+| 21.2.3.38 ST_RotX (X Rotation)                                  | [x]    | src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.3.39 ST_RotY (Y Rotation)                                  | [x]    | src/pptx/parser/chart-parser/chart-space.ts                                                                                          |       |
+| 21.2.3.40 ST_ScatterStyle (Scatter Style)                       | [x]    | src/pptx/domain/chart.ts, src/pptx/render/components/chart/generators/scatter.spec.ts                                                |       |
+| 21.2.3.41 ST_SecondPieSize (Second Pie Size)                    | [x]    | src/pptx/parser/chart-parser/series/pie.ts                                                                                           |       |
+| 21.2.3.42 ST_Shape (Shape)                                      | [x]    | src/pptx/parser/chart-parser/series/bar.ts                                                                                           |       |
+| 21.2.3.43 ST_SizeRepresents (Size Represents)                   | [x]    | src/pptx/parser/chart-parser/series/bubble.ts                                                                                        |       |
+| 21.2.3.44 ST_Skip (Skip)                                        | [x]    | src/pptx/parser/chart-parser/axis.ts                                                                                                 |       |
+| 21.2.3.45 ST_SplitType (Split Type)                             | [x]    | src/pptx/domain/chart.ts                                                                                                             |       |
+| 21.2.3.46 ST_Style (Style)                                      | [x]    | src/pptx/parser/chart-parser/index.ts                                                                                                |       |
+| 21.2.3.47 ST_TickLblPos (Tick Label Position)                   | [x]    | src/pptx/domain/chart.ts, src/pptx/render/components/chart/axis.ts                                                                   |       |
+| 21.2.3.48 ST_TickMark (Tick Mark)                               | [x]    | src/pptx/domain/chart.ts, src/pptx/render/components/chart/axis.ts                                                                   |       |
+| 21.2.3.49 ST_TimeUnit (Time Unit)                               | [x]    | src/pptx/render/components/chart/axis.ts                                                                                             |       |
+| 21.2.3.50 ST_TrendlineType (Trendline Type)                     | [x]    | src/pptx/domain/chart.ts, src/pptx/ooxml/chart.ts                                                                                    |       |
+| 21.2.3.51 ST_DepthPercentWithSymbol (Depth Percent with Symbol) | [x]    | src/pptx/parser/chart-parser/percent.ts                                                                                              |       |
+| 21.2.3.52 ST_HPercentWithSymbol (Height Percent with Symbol)    | [x]    | src/pptx/parser/chart-parser/percent.ts                                                                                              |       |
+| 21.2.3.53 ST_GapAmountPercent (Gap Amount Percentage)           | [x]    | src/pptx/parser/chart-parser/percent.ts                                                                                              |       |
+| 21.2.3.54 ST_SecondPieSizePercent (Second Pie Size Percentage)  | [x]    | src/pptx/parser/chart-parser/percent.ts                                                                                              |       |
+| 21.2.3.55 ST_HoleSizePercent (Hole Size Percentage)             | [x]    | src/pptx/parser/chart-parser/percent.ts                                                                                              |       |
+| 21.2.3.56 ST_LblOffsetPercent (Label Offset Percentage)         | [x]    | src/pptx/parser/chart-parser/percent.ts                                                                                              |       |
+| 21.2.3.57 ST_OverlapPercent (Overlap Percentage)                | [x]    | src/pptx/parser/chart-parser/percent.ts                                                                                              |       |
+| 21.2.3.58 ST_BubbleScalePercent (Bubble Scale Percentage)       | [x]    | src/pptx/parser/chart-parser/percent.ts                                                                                              |       |
+| 21.2.3.59 ST_Thickness (Thickness Percentage)                   | [x]    | src/pptx/parser/chart-parser/chart-space.ts, src/pptx/parser/chart-parser/percent.ts                                                 |       |
+| 21.2.3.60 ST_ThicknessPercent (Thickness Percentage)            | [x]    | src/pptx/parser/chart-parser/percent.ts                                                                                              |       |

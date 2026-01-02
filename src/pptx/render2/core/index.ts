@@ -1,5 +1,5 @@
 /**
- * @file Core render2 module
+ * @file Core render module
  *
  * Shared types and utilities for both HTML and SVG renderers.
  */
@@ -55,11 +55,4 @@ export type {
   ResolvedLine,
 } from "./fill";
 
-export {
-  resolveColorWithAlpha,
-  hexToRgb,
-  formatRgba,
-  resolveFill,
-  resolveLine,
-  getDashArrayPattern,
-} from "./fill";
+export { resolveColorWithAlpha, hexToRgb, formatRgba, resolveFill, resolveLine, getDashArrayPattern } from "./fill";

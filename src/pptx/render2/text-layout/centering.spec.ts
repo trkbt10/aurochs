@@ -7,10 +7,10 @@
 import { readFileSync } from "node:fs";
 import JSZip from "jszip";
 import { parseXml, getChild, getByPath } from "../../../xml";
-import { parseSlide } from "../../parser2/slide/slide-parser";
+import { parseSlide } from "../../parser/slide/slide-parser";
 import { openPresentation } from "../../index";
 import type { PresentationFile } from "../../index";
-import type { ParseContext } from "../../parser2/context";
+import type { ParseContext } from "../../parser/context";
 import type { SpShape } from "../../domain";
 import type { FieldRun, RegularRun } from "../../domain/text";
 
@@ -76,7 +76,7 @@ describe("text-centering-and-color", () => {
         for (let i = 0; i < textBody.paragraphs.length; i++) {
           const para = textBody.paragraphs[i];
           const runsWithText = para.runs.filter(
-            (run): run is RegularRun | FieldRun => run.type === "text" || run.type === "field"
+            (run): run is RegularRun | FieldRun => run.type === "text" || run.type === "field",
           );
           const textContent = runsWithText.map((run) => run.text).join("");
 

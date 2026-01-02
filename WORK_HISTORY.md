@@ -12,148 +12,148 @@
 - docs/specs/ecma376-part*.md の実装チェックリスト重複を削除し、チェックリストのソースを ecma376-*.checklist.md に統一するため。
 - docs/specs の統合チェックリスト/レポート/実装チェックリストを削除し、チェックリストのソースを ecma376-\*.checklist.md のみに統一するため。
 - docs/specs/ecma376-drawingml-main.checklist.md を読み、未実装の 20.4.2.6 effectExtent を特定するため。
-- src/pptx/parser2/wp-drawing.ts を読み、WordprocessingML の parser 追加位置を確認するため。
-- src/pptx/parser2/wp-drawing.spec.ts を読み、同 module のテスト追加方針を合わせるため。
+- src/pptx/parser/wp-drawing.ts を読み、WordprocessingML の parser 追加位置を確認するため。
+- src/pptx/parser/wp-drawing.spec.ts を読み、同 module のテスト追加方針を合わせるため。
 - src/pptx/domain/types.ts を読み、domain の共通型の定義場所を確認するため。
 - src/pptx/domain/index.ts を読み、domain 型 export の追加位置を確認するため。
-- src/pptx/parser2/primitive.ts を読み、EMU 変換ロジックの再利用可否を確認するため。
+- src/pptx/parser/primitive.ts を読み、EMU 変換ロジックの再利用可否を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、20.4.2.10/20.4.3.4 の定義を確認するため。
 - src/pptx/domain/types.ts を読み、PositionH/RelFromH 型の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、PositionH/RelFromH 型の export 追加位置を確認するため。
-- src/pptx/parser2/wp-drawing.ts を読み、positionH/positionV の parser 追加位置を確認するため。
-- src/pptx/parser2/wp-drawing.spec.ts を読み、positionH/positionV のテスト追加方針を合わせるため。
-- src/pptx/parser2/wp-drawing.ts を読み、posOffset の parser 追加位置を確認するため。
-- src/pptx/parser2/wp-drawing.spec.ts を読み、posOffset のテスト追加方針を合わせるため。
-- src/pptx/parser2/wp-drawing.ts を読み、simplePos の parser 追加位置を確認するため。
-- src/pptx/parser2/wp-drawing.spec.ts を読み、simplePos のテスト追加方針を合わせるため。
+- src/pptx/parser/wp-drawing.ts を読み、positionH/positionV の parser 追加位置を確認するため。
+- src/pptx/parser/wp-drawing.spec.ts を読み、positionH/positionV のテスト追加方針を合わせるため。
+- src/pptx/parser/wp-drawing.ts を読み、posOffset の parser 追加位置を確認するため。
+- src/pptx/parser/wp-drawing.spec.ts を読み、posOffset のテスト追加方針を合わせるため。
+- src/pptx/parser/wp-drawing.ts を読み、simplePos の parser 追加位置を確認するため。
+- src/pptx/parser/wp-drawing.spec.ts を読み、simplePos のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、wrapNone の定義を確認するため。
-- src/pptx/parser2/wp-drawing.ts を読み、wrapNone の parser 追加位置を確認するため。
-- src/pptx/parser2/wp-drawing.spec.ts を読み、wrapNone のテスト追加方針を合わせるため。
+- src/pptx/parser/wp-drawing.ts を読み、wrapNone の parser 追加位置を確認するため。
+- src/pptx/parser/wp-drawing.spec.ts を読み、wrapNone のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、wrapPolygon の定義を確認するため。
-- src/pptx/parser2/wp-drawing.ts を読み、wrapPolygon の parser 追加位置を確認するため。
-- src/pptx/parser2/wp-drawing.spec.ts を読み、wrapPolygon のテスト追加方針を合わせるため。
+- src/pptx/parser/wp-drawing.ts を読み、wrapPolygon の parser 追加位置を確認するため。
+- src/pptx/parser/wp-drawing.spec.ts を読み、wrapPolygon のテスト追加方針を合わせるため。
 - src/pptx/domain/types.ts を読み、WrapPolygon 型の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、WrapPolygon 型の export 追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、wrapSquare の定義を確認するため。
-- src/pptx/parser2/primitive.ts を読み、wrapText/wrapDistance の追加位置を確認するため。
-- src/pptx/parser2/wp-drawing.ts を読み、wrapSquare の parser 追加位置を確認するため。
-- src/pptx/parser2/wp-drawing.spec.ts を読み、wrapSquare のテスト追加方針を合わせるため。
+- src/pptx/parser/primitive.ts を読み、wrapText/wrapDistance の追加位置を確認するため。
+- src/pptx/parser/wp-drawing.ts を読み、wrapSquare の parser 追加位置を確認するため。
+- src/pptx/parser/wp-drawing.spec.ts を読み、wrapSquare のテスト追加方針を合わせるため。
 - src/pptx/domain/types.ts を読み、WrapSquare/WrapText 型の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、WrapSquare/WrapText 型の export 追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、wrapThrough の定義を確認するため。
-- src/pptx/parser2/wp-drawing.ts を読み、wrapThrough の parser 追加位置を確認するため。
-- src/pptx/parser2/wp-drawing.spec.ts を読み、wrapThrough のテスト追加方針を合わせるため。
+- src/pptx/parser/wp-drawing.ts を読み、wrapThrough の parser 追加位置を確認するため。
+- src/pptx/parser/wp-drawing.spec.ts を読み、wrapThrough のテスト追加方針を合わせるため。
 - src/pptx/domain/types.ts を読み、WrapThrough 型の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、WrapThrough 型の export 追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、wrapTight の定義を確認するため。
-- src/pptx/parser2/wp-drawing.ts を読み、wrapTight の parser 追加位置を確認するため。
-- src/pptx/parser2/wp-drawing.spec.ts を読み、wrapTight のテスト追加方針を合わせるため。
+- src/pptx/parser/wp-drawing.ts を読み、wrapTight の parser 追加位置を確認するため。
+- src/pptx/parser/wp-drawing.spec.ts を読み、wrapTight のテスト追加方針を合わせるため。
 - src/pptx/domain/types.ts を読み、WrapTight 型の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、WrapTight 型の export 追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、wrapTopAndBottom の定義を確認するため。
-- src/pptx/parser2/wp-drawing.ts を読み、wrapTopAndBottom の parser 追加位置を確認するため。
-- src/pptx/parser2/wp-drawing.spec.ts を読み、wrapTopAndBottom のテスト追加方針を合わせるため。
+- src/pptx/parser/wp-drawing.ts を読み、wrapTopAndBottom の parser 追加位置を確認するため。
+- src/pptx/parser/wp-drawing.spec.ts を読み、wrapTopAndBottom のテスト追加方針を合わせるため。
 - src/pptx/domain/types.ts を読み、WrapTopAndBottom 型の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、WrapTopAndBottom 型の export 追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、cNvCnPr の定義を確認するため。
-- src/pptx/parser2/wp-drawing.ts を読み、cNvCnPr の parser 追加位置を確認するため。
-- src/pptx/parser2/wp-drawing.spec.ts を読み、cNvCnPr のテスト追加方針を合わせるため。
+- src/pptx/parser/wp-drawing.ts を読み、cNvCnPr の parser 追加位置を確認するため。
+- src/pptx/parser/wp-drawing.spec.ts を読み、cNvCnPr のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、cNvContentPartPr の定義を確認するため。
-- src/pptx/parser2/wp-drawing.ts を読み、cNvContentPartPr の parser 追加位置を確認するため。
-- src/pptx/parser2/wp-drawing.spec.ts を読み、cNvContentPartPr のテスト追加方針を合わせるため。
+- src/pptx/parser/wp-drawing.ts を読み、cNvContentPartPr の parser 追加位置を確認するため。
+- src/pptx/parser/wp-drawing.spec.ts を読み、cNvContentPartPr のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、cNvFrPr の定義を確認するため。
-- src/pptx/parser2/wp-drawing.ts を読み、cNvFrPr の parser 追加位置を確認するため。
-- src/pptx/parser2/wp-drawing.spec.ts を読み、cNvFrPr のテスト追加方針を合わせるため。
+- src/pptx/parser/wp-drawing.ts を読み、cNvFrPr の parser 追加位置を確認するため。
+- src/pptx/parser/wp-drawing.spec.ts を読み、cNvFrPr のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、cNvGrpSpPr の定義を確認するため。
-- src/pptx/parser2/wp-drawing.ts を読み、cNvGrpSpPr の parser 追加位置を確認するため。
-- src/pptx/parser2/wp-drawing.spec.ts を読み、cNvGrpSpPr のテスト追加方針を合わせるため。
+- src/pptx/parser/wp-drawing.ts を読み、cNvGrpSpPr の parser 追加位置を確認するため。
+- src/pptx/parser/wp-drawing.spec.ts を読み、cNvGrpSpPr のテスト追加方針を合わせるため。
 - src/pptx/domain/types.ts を読み、GroupLocks 型の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、GroupLocks 型の export 追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、cNvSpPr の定義を確認するため。
-- src/pptx/parser2/wp-drawing.ts を読み、cNvSpPr の parser 追加位置を確認するため。
-- src/pptx/parser2/wp-drawing.spec.ts を読み、cNvSpPr のテスト追加方針を合わせるため。
+- src/pptx/parser/wp-drawing.ts を読み、cNvSpPr の parser 追加位置を確認するため。
+- src/pptx/parser/wp-drawing.spec.ts を読み、cNvSpPr のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、contentPart の定義を確認するため。
-- src/pptx/parser2/wp-drawing.ts を読み、contentPart の parser 追加位置を確認するため。
-- src/pptx/parser2/wp-drawing.spec.ts を読み、contentPart のテスト追加方針を合わせるため。
+- src/pptx/parser/wp-drawing.ts を読み、contentPart の parser 追加位置を確認するため。
+- src/pptx/parser/wp-drawing.spec.ts を読み、contentPart のテスト追加方針を合わせるため。
 - src/pptx/domain/types.ts を読み、ContentPart 型の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、ContentPart 型の export 追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、linkedTxbx の定義を確認するため。
-- src/pptx/parser2/wp-drawing.ts を読み、linkedTxbx の parser 追加位置を確認するため。
-- src/pptx/parser2/wp-drawing.spec.ts を読み、linkedTxbx のテスト追加方針を合わせるため。
+- src/pptx/parser/wp-drawing.ts を読み、linkedTxbx の parser 追加位置を確認するため。
+- src/pptx/parser/wp-drawing.spec.ts を読み、linkedTxbx のテスト追加方針を合わせるため。
 - src/pptx/domain/types.ts を読み、LinkedTextbox 型の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、LinkedTextbox 型の export 追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、txbx の定義を確認するため。
-- src/pptx/parser2/wp-drawing.ts を読み、txbx の parser 追加位置を確認するため。
-- src/pptx/parser2/wp-drawing.spec.ts を読み、txbx のテスト追加方針を合わせるため。
+- src/pptx/parser/wp-drawing.ts を読み、txbx の parser 追加位置を確認するため。
+- src/pptx/parser/wp-drawing.spec.ts を読み、txbx のテスト追加方針を合わせるため。
 - src/pptx/domain/types.ts を読み、TextboxInfo 型の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、TextboxInfo 型の export 追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、txbxContent の定義を確認するため。
-- src/pptx/parser2/wp-drawing.ts を読み、txbxContent の parser 追加位置を確認するため。
-- src/pptx/parser2/wp-drawing.spec.ts を読み、txbxContent のテスト追加方針を合わせるため。
+- src/pptx/parser/wp-drawing.ts を読み、txbxContent の parser 追加位置を確認するため。
+- src/pptx/parser/wp-drawing.spec.ts を読み、txbxContent のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、wgp の定義を確認するため。
-- src/pptx/parser2/wp-drawing.ts を読み、wgp の parser 追加位置を確認するため。
-- src/pptx/parser2/wp-drawing.spec.ts を読み、wgp のテスト追加方針を合わせるため。
-- src/pptx/parser2/wp-drawing.ts を読み、wpc の parser 追加位置を確認するため。
-- src/pptx/parser2/wp-drawing.spec.ts を読み、wpc のテスト追加方針を合わせるため。
+- src/pptx/parser/wp-drawing.ts を読み、wgp の parser 追加位置を確認するため。
+- src/pptx/parser/wp-drawing.spec.ts を読み、wgp のテスト追加方針を合わせるため。
+- src/pptx/parser/wp-drawing.ts を読み、wpc の parser 追加位置を確認するため。
+- src/pptx/parser/wp-drawing.spec.ts を読み、wpc のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、wsp の定義を確認するため。
-- src/pptx/parser2/wp-drawing.ts を読み、wsp の parser 追加位置を確認するため。
-- src/pptx/parser2/wp-drawing.spec.ts を読み、wsp のテスト追加方針を合わせるため。
-- src/pptx/parser2/primitive.spec.ts を読み、ST_RelFromH/ST_RelFromV などのテスト追加位置を確認するため。
+- src/pptx/parser/wp-drawing.ts を読み、wsp の parser 追加位置を確認するため。
+- src/pptx/parser/wp-drawing.spec.ts を読み、wsp のテスト追加方針を合わせるため。
+- src/pptx/parser/primitive.spec.ts を読み、ST_RelFromH/ST_RelFromV などのテスト追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、absoluteAnchor の定義を確認するため。
-- src/pptx/parser2/xdr-drawing.ts を読み、absoluteAnchor の parser 追加位置を確認するため。
-- src/pptx/parser2/xdr-drawing.spec.ts を読み、absoluteAnchor のテスト追加方針を合わせるため。
+- src/pptx/parser/xdr-drawing.ts を読み、absoluteAnchor の parser 追加位置を確認するため。
+- src/pptx/parser/xdr-drawing.spec.ts を読み、absoluteAnchor のテスト追加方針を合わせるため。
 - src/pptx/domain/types.ts を読み、AbsoluteAnchor 型の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、AbsoluteAnchor 型の export 追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、clientData の定義を確認するため。
-- src/pptx/parser2/xdr-drawing.ts を読み、clientData の parser 追加位置を確認するため。
-- src/pptx/parser2/xdr-drawing.spec.ts を読み、clientData のテスト追加方針を合わせるため。
+- src/pptx/parser/xdr-drawing.ts を読み、clientData の parser 追加位置を確認するため。
+- src/pptx/parser/xdr-drawing.spec.ts を読み、clientData のテスト追加方針を合わせるため。
 - src/pptx/domain/types.ts を読み、AnchorClientData 型の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、AnchorClientData 型の export 追加位置を確認するため。
-- src/pptx/parser2/xdr-drawing.ts を読み、cNvGraphicFramePr の parser 追加位置を確認するため。
-- src/pptx/parser2/xdr-drawing.spec.ts を読み、cNvGraphicFramePr のテスト追加方針を合わせるため。
-- src/pptx/parser2/xdr-drawing.ts を読み、cNvGrpSpPr の parser 追加位置を確認するため。
-- src/pptx/parser2/xdr-drawing.spec.ts を読み、cNvGrpSpPr のテスト追加方針を合わせるため。
-- src/pptx/parser2/xdr-drawing.ts を読み、colOff の parser 追加位置を確認するため。
-- src/pptx/parser2/xdr-drawing.spec.ts を読み、colOff のテスト追加方針を合わせるため。
-- src/pptx/parser2/xdr-drawing.ts を読み、contentPart の parser 追加位置を確認するため。
-- src/pptx/parser2/xdr-drawing.spec.ts を読み、contentPart のテスト追加方針を合わせるため。
-- src/pptx/parser2/xdr-drawing.ts を読み、oneCellAnchor の parser 追加位置を確認するため。
-- src/pptx/parser2/xdr-drawing.spec.ts を読み、oneCellAnchor のテスト追加方針を合わせるため。
+- src/pptx/parser/xdr-drawing.ts を読み、cNvGraphicFramePr の parser 追加位置を確認するため。
+- src/pptx/parser/xdr-drawing.spec.ts を読み、cNvGraphicFramePr のテスト追加方針を合わせるため。
+- src/pptx/parser/xdr-drawing.ts を読み、cNvGrpSpPr の parser 追加位置を確認するため。
+- src/pptx/parser/xdr-drawing.spec.ts を読み、cNvGrpSpPr のテスト追加方針を合わせるため。
+- src/pptx/parser/xdr-drawing.ts を読み、colOff の parser 追加位置を確認するため。
+- src/pptx/parser/xdr-drawing.spec.ts を読み、colOff のテスト追加方針を合わせるため。
+- src/pptx/parser/xdr-drawing.ts を読み、contentPart の parser 追加位置を確認するため。
+- src/pptx/parser/xdr-drawing.spec.ts を読み、contentPart のテスト追加方針を合わせるため。
+- src/pptx/parser/xdr-drawing.ts を読み、oneCellAnchor の parser 追加位置を確認するため。
+- src/pptx/parser/xdr-drawing.spec.ts を読み、oneCellAnchor のテスト追加方針を合わせるため。
 - src/pptx/domain/types.ts を読み、AnchorMarker/OneCellAnchor 型の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、AnchorMarker/OneCellAnchor 型の export 追加位置を確認するため。
-- src/pptx/parser2/xdr-drawing.ts を読み、rowOff の parser 追加位置を確認するため。
-- src/pptx/parser2/xdr-drawing.spec.ts を読み、rowOff のテスト追加方針を合わせるため。
-- src/pptx/parser2/xdr-drawing.ts を読み、twoCellAnchor の parser 追加位置を確認するため。
-- src/pptx/parser2/xdr-drawing.spec.ts を読み、twoCellAnchor のテスト追加方針を合わせるため。
+- src/pptx/parser/xdr-drawing.ts を読み、rowOff の parser 追加位置を確認するため。
+- src/pptx/parser/xdr-drawing.spec.ts を読み、rowOff のテスト追加方針を合わせるため。
+- src/pptx/parser/xdr-drawing.ts を読み、twoCellAnchor の parser 追加位置を確認するため。
+- src/pptx/parser/xdr-drawing.spec.ts を読み、twoCellAnchor のテスト追加方針を合わせるため。
 - src/pptx/domain/types.ts を読み、TwoCellAnchor 型の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、TwoCellAnchor 型の export 追加位置を確認するため。
-- src/pptx/parser2/xdr-drawing.ts を読み、wsDr の parser 追加位置を確認するため。
-- src/pptx/parser2/xdr-drawing.spec.ts を読み、wsDr のテスト追加方針を合わせるため。
+- src/pptx/parser/xdr-drawing.ts を読み、wsDr の parser 追加位置を確認するため。
+- src/pptx/parser/xdr-drawing.spec.ts を読み、wsDr のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_ColID/ST_RowID/ST_EditAs の定義を確認するため。
-- src/pptx/parser2/primitive.ts を読み、parseEditAs の追加位置を確認するため。
-- src/pptx/parser2/primitive.spec.ts を読み、parseEditAs のテスト追加位置を確認するため。
+- src/pptx/parser/primitive.ts を読み、parseEditAs の追加位置を確認するため。
+- src/pptx/parser/primitive.spec.ts を読み、parseEditAs のテスト追加位置を確認するため。
 - src/pptx/domain/types.ts を読み、EditAs 型の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、EditAs 型の export 追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、bldChart/bldDgm の定義を確認するため。
-- src/pptx/parser2/timing-parser/graphic-build.ts を読み、bldChart/bldDgm の parser 追加位置を確認するため。
-- src/pptx/parser2/timing-parser.spec.ts を読み、bldChart/bldDgm のテスト追加方針を合わせるため。
+- src/pptx/parser/timing-parser/graphic-build.ts を読み、bldChart/bldDgm の parser 追加位置を確認するため。
+- src/pptx/parser/timing-parser.spec.ts を読み、bldChart/bldDgm のテスト追加方針を合わせるため。
 - src/pptx/domain/animation.ts を読み、ChartBuild/DgmBuild 型の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、ChartBuild/DgmBuild 型の export 追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、cxnSpLocks の定義を確認するため。
-- src/pptx/parser2/wp-drawing.ts を読み、cxnSpLocks の parser 追加位置を確認するため。
-- src/pptx/parser2/wp-drawing.spec.ts を読み、cxnSpLocks のテスト追加方針を合わせるため。
-- src/pptx/parser2/xdr-drawing.ts を読み、cxnSpLocks の parser 追加位置を確認するため。
-- src/pptx/parser2/xdr-drawing.spec.ts を読み、cxnSpLocks のテスト追加方針を合わせるため。
+- src/pptx/parser/wp-drawing.ts を読み、cxnSpLocks の parser 追加位置を確認するため。
+- src/pptx/parser/wp-drawing.spec.ts を読み、cxnSpLocks のテスト追加方針を合わせるため。
+- src/pptx/parser/xdr-drawing.ts を読み、cxnSpLocks の parser 追加位置を確認するため。
+- src/pptx/parser/xdr-drawing.spec.ts を読み、cxnSpLocks のテスト追加方針を合わせるため。
 - src/pptx/domain/types.ts を読み、ConnectorLocks 型の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、ConnectorLocks 型の export 追加位置を確認するため.
-- src/pptx/parser2/color-parser.ts と src/pptx/core/color-resolver.ts と src/pptx/domain/color.ts を読み、blueMod の実装方針を確認するため。
-- src/pptx/parser2/color-parser.ts と src/pptx/core/color-resolver.ts と src/pptx/domain/color.ts を読み、blueOff の実装方針を確認するため。
+- src/pptx/parser/color-parser.ts と src/pptx/core/color-resolver.ts と src/pptx/domain/color.ts を読み、blueMod の実装方針を確認するため。
+- src/pptx/parser/color-parser.ts と src/pptx/core/color-resolver.ts と src/pptx/domain/color.ts を読み、blueOff の実装方針を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、gamma/green/invGamma と custClr/custClrLst の定義を確認するため。
-- src/pptx/ooxml/presentationml.ts と src/pptx/parser2/shape-parser/pic.ts と src/pptx/domain/shape.ts を読み、音声/動画の非表示プロパティ実装範囲を確認するため。
+- src/pptx/ooxml/presentationml.ts と src/pptx/parser/shape-parser/pic.ts と src/pptx/domain/shape.ts を読み、音声/動画の非表示プロパティ実装範囲を確認するため。
 - src/pptx/core/context-factory.ts と src/pptx/core/context.ts を読み、custClr/custClrLst の反映先を確認するため。
-- src/pptx/parser2/effects-parser.ts と src/pptx/parser2/shape-parser/sp.ts を読み、effectStyle/effectRef の適用方法を確認するため。
+- src/pptx/parser/effects-parser.ts と src/pptx/parser/shape-parser/sp.ts を読み、effectStyle/effectRef の適用方法を確認するため。
 - src/pptx/core/context-factory.ts と src/pptx/core/context.ts を読み、lnDef/spDef/txDef/objectDefaults の格納先を確認するため。
-- src/pptx/parser2/table-style-parser.ts を読み、tblStyleLst と tcBdr などのテーブルスタイル構造を確認するため。
+- src/pptx/parser/table-style-parser.ts を読み、tblStyleLst と tcBdr などのテーブルスタイル構造を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、flatTx/contourClr/extrusionClr の定義を確認するため。
 - src/pptx/domain/shape.ts と src/pptx/ooxml/drawingml.ts を読み、3D 属性の対応関係を確認するため。
 - src/pptx/core/context.ts と src/pptx/core/context-factory.ts を読み、themeElements/themeManager/extraClrScheme/themeOverride の格納先と生成処理を確認するため。
@@ -180,162 +180,162 @@
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、prstShdw/ST_PresetShadowVal の定義を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、relOff の定義（CT_RelativeOffsetEffect）を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ahLst/ahPolar/ahXY の定義（CT_AdjustHandleList/CT_PolarAdjustHandle/CT_XYAdjustHandle）を確認するため。
-- src/pptx/parser2/geometry-parser.ts を読み、lnTo の実装確認を行うため。
+- src/pptx/parser/geometry-parser.ts を読み、lnTo の実装確認を行うため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_AdjAngle の定義を確認するため。
-- src/pptx/parser2/geometry-parser.ts と src/pptx/domain/shape.ts を読み、ST_AdjAngle を ahPolar の minAng/maxAng へ反映するため。
-- src/pptx/parser2/effects-parser.ts と src/pptx/domain/types.ts を読み、alphaBiLevel の格納先と解析箇所を確認するため。
+- src/pptx/parser/geometry-parser.ts と src/pptx/domain/shape.ts を読み、ST_AdjAngle を ahPolar の minAng/maxAng へ反映するため。
+- src/pptx/parser/effects-parser.ts と src/pptx/domain/types.ts を読み、alphaBiLevel の格納先と解析箇所を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_AnimationChartBuildType/ST_AnimationChartOnlyBuildType の定義を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_AnimationDgmBuildType/ST_AnimationDgmOnlyBuildType の定義を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_BevelPresetType の定義を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_BlackWhiteMode の定義を確認するため。
-- src/pptx/parser2/effects-parser.ts を読み、ST_BlendMode の使用箇所を確認するため。
+- src/pptx/parser/effects-parser.ts を読み、ST_BlendMode の使用箇所を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_BlipCompression の定義と a:blip cstate 属性の関係を確認するため。
-- src/pptx/parser2/fill-parser.ts を読み、a:blip の cstate 取り込み位置を確認するため。
-- src/pptx/parser2/shape-parser/pic.ts を読み、p:pic の blipFill 解析に cstate を追加するため。
+- src/pptx/parser/fill-parser.ts を読み、a:blip の cstate 取り込み位置を確認するため。
+- src/pptx/parser/shape-parser/pic.ts を読み、p:pic の blipFill 解析に cstate を追加するため。
 - src/pptx/domain/color.ts と src/pptx/domain/shape.ts を読み、blipFill のドメイン型へ cstate を反映するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_ChartBuildStep の定義を確認するため。
-- src/pptx/parser2/timing-parser/mapping.ts を読み、ST_ChartBuildStep のマッピング追加箇所を確認するため。
+- src/pptx/parser/timing-parser/mapping.ts を読み、ST_ChartBuildStep のマッピング追加箇所を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_ColorSchemeIndex の定義を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_Coordinate32Unqualified/ST_CoordinateUnqualified の定義を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_DgmBuildStep の定義を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_DrawingElementId の定義を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_FixedAngle の定義を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_FontCollectionIndex の定義を確認するため。
-- src/pptx/parser2/font-reference.spec.ts を読み、ST_FontCollectionIndex の idx=none 動作に合わせてテスト更新するため。
+- src/pptx/parser/font-reference.spec.ts を読み、ST_FontCollectionIndex の idx=none 動作に合わせてテスト更新するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_FOVAngle の定義を確認するため。
-- src/pptx/parser2/geometry-parser.ts を読み、ST_GeomGuideFormula の保管方法を確認するため。
+- src/pptx/parser/geometry-parser.ts を読み、ST_GeomGuideFormula の保管方法を確認するため。
 - src/pptx/domain/shape.ts を読み、ST_GeomGuideName の格納先（GeometryGuide.name）を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_LightRigDirection の定義を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_LightRigType の定義を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_LineWidth の定義を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_OnOffStyleType の定義を確認するため。
-- src/pptx/domain/color.ts と src/pptx/parser2/fill-parser.ts を読み、ST_PathShadeType の反映箇所を確認するため。
+- src/pptx/domain/color.ts と src/pptx/parser/fill-parser.ts を読み、ST_PathShadeType の反映箇所を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_PitchFamily の定義を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_PositiveCoordinate/ST_PositiveCoordinate32 の定義を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_PositiveFixedPercentage の定義を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_PresetCameraType の列挙値を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_PresetMaterialType の列挙値を確認するため。
-- src/pptx/domain/types.ts と src/pptx/parser2/effects-parser.ts を読み、ST_PresetShadowVal の実装を確認するため。
+- src/pptx/domain/types.ts と src/pptx/parser/effects-parser.ts を読み、ST_PresetShadowVal の実装を確認するため。
 - src/pptx/domain/types.ts を読み、ST_EffectContainerType の反映箇所を確認するため。
 - docs/specs/ecma376-drawingml-main.checklist.md を読み、ST_RectAlignment のチェックリスト更新位置を確認するため。
 - src/pptx/domain/types.ts を読み、ST_RectAlignment の型追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、RectAlignment のエクスポート位置を確認するため。
 - src/pptx/domain/color.ts を読み、TileFill.alignment の型更新位置を確認するため。
-- src/pptx/parser2/primitive.ts を読み、ST_RectAlignment のパース関数追加位置を確認するため。
-- src/pptx/parser2/fill-parser.ts を読み、a:tile の algn 解析更新位置を確認するため。
-- src/pptx/parser2/shape-parser/pic.ts を読み、p:pic の tile alignment 解析更新位置を確認するため。
-- src/pptx/parser2/primitive.spec.ts を読み、ST_RectAlignment のテスト追加位置を確認するため。
+- src/pptx/parser/primitive.ts を読み、ST_RectAlignment のパース関数追加位置を確認するため。
+- src/pptx/parser/fill-parser.ts を読み、a:tile の algn 解析更新位置を確認するため。
+- src/pptx/parser/shape-parser/pic.ts を読み、p:pic の tile alignment 解析更新位置を確認するため。
+- src/pptx/parser/primitive.spec.ts を読み、ST_RectAlignment のテスト追加位置を確認するため。
 - src/pptx/domain/types.ts を読み、ST_SchemeColorVal の型追加位置を確認するため。
 - src/pptx/domain/color.ts を読み、SchemeColor.value の型更新位置を確認するため。
 - src/pptx/domain/index.ts を読み、SchemeColorValue のエクスポート追加位置を確認するため。
-- src/pptx/parser2/primitive.ts を読み、ST_SchemeColorVal のパース関数追加位置を確認するため。
-- src/pptx/parser2/color-parser.ts を読み、schemeClr の解析に ST_SchemeColorVal を適用するため。
-- src/pptx/parser2/color-parser.spec.ts を読み、schemeClr のテスト対象値を確認するため。
+- src/pptx/parser/primitive.ts を読み、ST_SchemeColorVal のパース関数追加位置を確認するため。
+- src/pptx/parser/color-parser.ts を読み、schemeClr の解析に ST_SchemeColorVal を適用するため。
+- src/pptx/parser/color-parser.spec.ts を読み、schemeClr のテスト対象値を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_ShapeID の定義（xsd:token）を確認するため。
 - src/pptx/domain/slide.ts を読み、ST_ShapeID を buildList/animation の shapeId 型へ反映するため。
 - src/pptx/domain/animation.ts を読み、ST_ShapeID を Timing/ShapeTarget の shapeId 型へ反映するため。
 - src/pptx/domain/shape.ts を読み、oleObj の spid 型へ ST_ShapeID を反映するため。
-- src/pptx/parser2/timing-parser/build-list.ts を読み、spid の解析更新位置を確認するため。
-- src/pptx/parser2/timing-parser/target.ts を読み、spTgt の spid 解析更新位置を確認するため。
-- src/pptx/parser2/shape-parser/graphic-frame.ts を読み、oleObj の spid 解析更新位置を確認するため。
+- src/pptx/parser/timing-parser/build-list.ts を読み、spid の解析更新位置を確認するため。
+- src/pptx/parser/timing-parser/target.ts を読み、spTgt の spid 解析更新位置を確認するため。
+- src/pptx/parser/shape-parser/graphic-frame.ts を読み、oleObj の spid 解析更新位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_StyleMatrixColumnIndex の定義（xsd:unsignedInt）を確認するため。
 - src/pptx/domain/shape.ts を読み、StyleReference.index の型更新位置を確認するため。
 - src/pptx/domain/table.ts を読み、TablePartStyle.fillReference.index の型更新位置を確認するため。
-- src/pptx/parser2/shape-parser/style.ts を読み、styleRef idx のパース更新位置を確認するため。
+- src/pptx/parser/shape-parser/style.ts を読み、styleRef idx のパース更新位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_TextBulletSizePercent の定義（25%-400%のパターン）を確認するため。
-- src/pptx/parser2/text-parser.ts を読み、buSzPct の解析更新位置を確認するため。
-- src/pptx/parser2/text-style-resolver/bullet.ts を読み、buSzPct の解決ロジック更新位置を確認するため。
-- src/pptx/parser2/primitive.spec.ts を読み、ST_TextBulletSizePercent のテスト追加位置を確認するため。
+- src/pptx/parser/text-parser.ts を読み、buSzPct の解析更新位置を確認するため。
+- src/pptx/parser/text-style-resolver/bullet.ts を読み、buSzPct の解決ロジック更新位置を確認するため。
+- src/pptx/parser/primitive.spec.ts を読み、ST_TextBulletSizePercent のテスト追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_TextBulletStartAtNum の範囲（1-32767）を確認するため。
-- src/pptx/parser2/text-parser.ts を読み、buAutoNum startAt の解析更新位置を確認するため。
-- src/pptx/parser2/text-style-resolver/bullet.ts を読み、buAutoNum startAt の解決ロジック更新位置を確認するため。
-- src/pptx/parser2/primitive.spec.ts を読み、ST_TextBulletStartAtNum のテスト追加位置を確認するため。
+- src/pptx/parser/text-parser.ts を読み、buAutoNum startAt の解析更新位置を確認するため。
+- src/pptx/parser/text-style-resolver/bullet.ts を読み、buAutoNum startAt の解決ロジック更新位置を確認するため。
+- src/pptx/parser/primitive.spec.ts を読み、ST_TextBulletStartAtNum のテスト追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_TextColumnCount の範囲（1-16）を確認するため。
-- src/pptx/parser2/text-parser.ts を読み、numCol の解析更新位置を確認するため。
-- src/pptx/parser2/primitive.spec.ts を読み、ST_TextColumnCount のテスト追加位置を確認するため。
+- src/pptx/parser/text-parser.ts を読み、numCol の解析更新位置を確認するため。
+- src/pptx/parser/primitive.spec.ts を読み、ST_TextColumnCount のテスト追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_TextFontScalePercentOrPercentString の定義（s:ST_Percentage）を確認するため。
-- src/pptx/parser2/text-parser.ts を読み、normAutofit fontScale の解析更新位置を確認するため。
-- src/pptx/parser2/primitive.spec.ts を読み、ST_TextFontScalePercentOrPercentString のテスト追加位置を確認するため。
+- src/pptx/parser/text-parser.ts を読み、normAutofit fontScale の解析更新位置を確認するため。
+- src/pptx/parser/primitive.spec.ts を読み、ST_TextFontScalePercentOrPercentString のテスト追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_TextIndent の範囲（-51206400..51206400）を確認するため。
-- src/pptx/parser2/text-parser.ts を読み、indent の解析更新位置を確認するため。
-- src/pptx/parser2/text-style-resolver/margin.ts を読み、indent の継承解決更新位置を確認するため。
-- src/pptx/parser2/primitive.spec.ts を読み、ST_TextIndent のテスト追加位置を確認するため。
+- src/pptx/parser/text-parser.ts を読み、indent の解析更新位置を確認するため。
+- src/pptx/parser/text-style-resolver/margin.ts を読み、indent の継承解決更新位置を確認するため。
+- src/pptx/parser/primitive.spec.ts を読み、ST_TextIndent のテスト追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_TextIndentLevelType の範囲（0-8）を確認するため。
-- src/pptx/parser2/text-parser.ts を読み、lvl の解析更新位置を確認するため。
-- src/pptx/parser2/primitive.spec.ts を読み、ST_TextIndentLevelType のテスト追加位置を確認するため。
+- src/pptx/parser/text-parser.ts を読み、lvl の解析更新位置を確認するため。
+- src/pptx/parser/primitive.spec.ts を読み、ST_TextIndentLevelType のテスト追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_TextMargin の範囲（0-51206400）を確認するため。
-- src/pptx/parser2/text-parser.ts を読み、marL/marR の解析更新位置を確認するため。
-- src/pptx/parser2/text-style-resolver/margin.ts を読み、marL/marR の継承解決更新位置を確認するため。
-- src/pptx/parser2/primitive.spec.ts を読み、ST_TextMargin のテスト追加位置を確認するため。
+- src/pptx/parser/text-parser.ts を読み、marL/marR の解析更新位置を確認するため。
+- src/pptx/parser/text-style-resolver/margin.ts を読み、marL/marR の継承解決更新位置を確認するため。
+- src/pptx/parser/primitive.spec.ts を読み、ST_TextMargin のテスト追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_TextNonNegativePoint の範囲（0-400000）を確認するため。
-- src/pptx/parser2/text-parser.ts を読み、kern の解析更新位置を確認するため。
-- src/pptx/parser2/primitive.spec.ts を読み、ST_TextNonNegativePoint のテスト追加位置を確認するため。
+- src/pptx/parser/text-parser.ts を読み、kern の解析更新位置を確認するため。
+- src/pptx/parser/primitive.spec.ts を読み、ST_TextNonNegativePoint のテスト追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_TextPoint/ST_TextPointUnqualified の定義（-400000..400000 と ST_UniversalMeasure）を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_UniversalMeasure の単位仕様（mm/cm/in/pt/pc/pi）を確認するため。
-- src/pptx/parser2/text-parser.ts を読み、spc の解析更新位置を確認するため。
-- src/pptx/parser2/primitive.spec.ts を読み、ST_TextPoint/ST_TextPointUnqualified のテスト追加位置を確認するため。
+- src/pptx/parser/text-parser.ts を読み、spc の解析更新位置を確認するため。
+- src/pptx/parser/primitive.spec.ts を読み、ST_TextPoint/ST_TextPointUnqualified のテスト追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_TextShapeType の列挙値を確認するため。
 - src/pptx/domain/text.ts を読み、TextWarp.preset の型更新位置を確認するため。
-- src/pptx/parser2/text-parser.ts を読み、prstTxWarp の解析更新位置を確認するため。
-- src/pptx/parser2/primitive.spec.ts を読み、ST_TextShapeType のテスト追加位置を確認するため。
+- src/pptx/parser/text-parser.ts を読み、prstTxWarp の解析更新位置を確認するため。
+- src/pptx/parser/primitive.spec.ts を読み、ST_TextShapeType のテスト追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_TextSpacingPoint の範囲（0-158400）を確認するため。
-- src/pptx/parser2/text-parser.ts を読み、spcPts の解析更新位置を確認するため。
-- src/pptx/parser2/text-style-resolver/spacing.ts を読み、spcPts の継承解決更新位置を確認するため。
-- src/pptx/parser2/primitive.spec.ts を読み、ST_TextSpacingPoint のテスト追加位置を確認するため。
+- src/pptx/parser/text-parser.ts を読み、spcPts の解析更新位置を確認するため。
+- src/pptx/parser/text-style-resolver/spacing.ts を読み、spcPts の継承解決更新位置を確認するため。
+- src/pptx/parser/primitive.spec.ts を読み、ST_TextSpacingPoint のテスト追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_TextTypeface の定義（xsd:string）を確認するため。
 - src/pptx/domain/types.ts を読み、TextTypeface の型追加位置を確認するため。
 - src/pptx/domain/text.ts を読み、文字書体フィールドの型更新位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_AlignH/ST_AlignV の列挙値を確認するため。
 - src/pptx/domain/types.ts を読み、AlignH/AlignV の型追加位置を確認するため。
-- src/pptx/parser2/primitive.spec.ts を読み、ST_AlignH/ST_AlignV のテスト追加位置を確認するため。
-- src/pptx/parser2/wp-drawing.ts を読み、wp:align 要素の解析追加位置を確認するため。
-- src/pptx/parser2/wp-drawing.spec.ts を読み、wp:align のテスト追加位置を確認するため。
+- src/pptx/parser/primitive.spec.ts を読み、ST_AlignH/ST_AlignV のテスト追加位置を確認するため。
+- src/pptx/parser/wp-drawing.ts を読み、wp:align 要素の解析追加位置を確認するため。
+- src/pptx/parser/wp-drawing.spec.ts を読み、wp:align のテスト追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、CT_NonVisualGraphicFrameProperties/CT_GraphicalObjectFrameLocking の属性を確認するため。
 - src/pptx/domain/shape.ts を読み、GraphicFrameLocks の型追加位置を確認するため。
-- src/pptx/parser2/shape-parser/graphic-frame.ts を読み、cNvGraphicFramePr の解析追加位置を確認するため。
-- src/pptx/parser2/shape-parser.spec.ts を読み、cNvGraphicFramePr のテスト追加位置を確認するため。
+- src/pptx/parser/shape-parser/graphic-frame.ts を読み、cNvGraphicFramePr の解析追加位置を確認するため。
+- src/pptx/parser/shape-parser.spec.ts を読み、cNvGraphicFramePr のテスト追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、wp:docPr が CT_NonVisualDrawingProps を参照することを確認するため。
-- src/pptx/parser2/wp-drawing.ts を読み、docPr の解析追加位置を確認するため。
-- src/pptx/parser2/wp-drawing.spec.ts を読み、docPr のテスト追加位置を確認するため。
+- src/pptx/parser/wp-drawing.ts を読み、docPr の解析追加位置を確認するため。
+- src/pptx/parser/wp-drawing.spec.ts を読み、docPr のテスト追加位置を確認するため。
 - docs/specs/ecma376-drawingml-main.checklist.md を読み、20.2 DrawingML - Picture のチェックリスト更新位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_TextBulletSize が ST_TextBulletSizePercent の union であることを確認するため。
-- src/pptx/parser2/text-parser.ts を読み、buSzPct の解析更新位置を確認するため。
-- src/pptx/parser2/text-style-resolver/bullet.ts を読み、buSzPct の継承解決更新位置を確認するため。
-- src/pptx/parser2/primitive.spec.ts を読み、ST_TextBulletSize のテスト追加位置を確認するため。
+- src/pptx/parser/text-parser.ts を読み、buSzPct の解析更新位置を確認するため。
+- src/pptx/parser/text-style-resolver/bullet.ts を読み、buSzPct の継承解決更新位置を確認するため。
+- src/pptx/parser/primitive.spec.ts を読み、ST_TextBulletSize のテスト追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、lockedCanvas が CT_GvmlGroupShape を参照することを確認するため。
-- src/pptx/parser2/shape-parser/index.ts を読み、lockedCanvas の解析追加位置を確認するため。
-- src/pptx/parser2/shape-parser.spec.ts を読み、lockedCanvas のテスト追加位置を確認するため。
+- src/pptx/parser/shape-parser/index.ts を読み、lockedCanvas の解析追加位置を確認するため。
+- src/pptx/parser/shape-parser.spec.ts を読み、lockedCanvas のテスト追加位置を確認するため。
 - src/pptx/domain/shape.ts を読み、hlinkHover の型追加位置を確認するため。
-- src/pptx/parser2/shape-parser/non-visual.ts を読み、hlinkHover の解析追加位置を確認するため。
-- src/pptx/parser2/shape-parser.spec.ts を読み、hlinkHover のテスト追加位置を確認するため。
+- src/pptx/parser/shape-parser/non-visual.ts を読み、hlinkHover の解析追加位置を確認するため。
+- src/pptx/parser/shape-parser.spec.ts を読み、hlinkHover のテスト追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、CT_PictureLocking の属性（AG_Locking と noCrop）を確認するため。
 - src/pptx/domain/types.ts を読み、PictureLocks の型追加位置を確認するため。
 - src/pptx/domain/shape.ts を読み、picLocks の型反映位置を確認するため。
-- src/pptx/parser2/shape-parser/pic.ts を読み、picLocks の解析追加位置を確認するため。
-- src/pptx/parser2/shape-parser.spec.ts を読み、picLocks のテスト追加位置を確認するため。
+- src/pptx/parser/shape-parser/pic.ts を読み、picLocks の解析追加位置を確認するため。
+- src/pptx/parser/shape-parser.spec.ts を読み、picLocks のテスト追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、snd（Hyperlink Sound）と CT_Hyperlink/CT_EmbeddedWAVAudioFile の属性を確認するため。
 - src/pptx/domain/types.ts を読み、HyperlinkSound の型追加位置を確認するため。
 - src/pptx/domain/text.ts を読み、HyperlinkMouseOver の型更新位置を確認するため。
-- src/pptx/parser2/shape-parser/non-visual.ts を読み、snd の解析追加位置を確認するため。
-- src/pptx/parser2/text-parser.ts を読み、snd の解析追加位置を確認するため。
-- src/pptx/parser2/shape-parser.spec.ts を読み、snd のテスト追加位置を確認するため。
-- src/pptx/parser2/text-parser.spec.ts を読み、snd のテスト追加位置を確認するため。
+- src/pptx/parser/shape-parser/non-visual.ts を読み、snd の解析追加位置を確認するため。
+- src/pptx/parser/text-parser.ts を読み、snd の解析追加位置を確認するため。
+- src/pptx/parser/shape-parser.spec.ts を読み、snd のテスト追加位置を確認するため。
+- src/pptx/parser/text-parser.spec.ts を読み、snd のテスト追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、spLocks（CT_ShapeLocking）の属性一覧を確認するため。
 - src/pptx/domain/types.ts を読み、ShapeLocks の型追加位置を確認するため。
 - src/pptx/domain/shape.ts を読み、shapeLocks の型反映位置を確認するため。
-- src/pptx/parser2/shape-parser/sp.ts を読み、spLocks の解析追加位置を確認するため。
-- src/pptx/parser2/shape-parser.spec.ts を読み、spLocks のテスト追加位置を確認するため。
+- src/pptx/parser/shape-parser/sp.ts を読み、spLocks の解析追加位置を確認するため。
+- src/pptx/parser/shape-parser.spec.ts を読み、spLocks のテスト追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、txSp（Text Shape）の仕様位置を確認するため。
-- src/pptx/parser2/shape-parser/index.ts を読み、a:txSp の解析追加位置を確認するため。
-- src/pptx/parser2/shape-parser.spec.ts を読み、a:txSp のテスト追加位置を確認するため。
+- src/pptx/parser/shape-parser/index.ts を読み、a:txSp の解析追加位置を確認するため。
+- src/pptx/parser/shape-parser.spec.ts を読み、a:txSp のテスト追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、useSpRect（CT_GvmlUseShapeRectangle）の仕様位置を確認するため。
 - src/pptx/domain/shape.ts を読み、useShapeTextRect の型追加位置を確認するため。
-- src/pptx/parser2/shape-parser/index.ts を読み、useSpRect の解析追加位置を確認するため。
-- src/pptx/parser2/shape-parser.spec.ts を読み、useSpRect のテスト追加位置を確認するため。
+- src/pptx/parser/shape-parser/index.ts を読み、useSpRect の解析追加位置を確認するため。
+- src/pptx/parser/shape-parser.spec.ts を読み、useSpRect のテスト追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、cpLocks（CT_ContentPartLocking）の属性を確認するため。
 - src/pptx/domain/types.ts を読み、ContentPartLocks の型追加位置を確認するため。
-- src/pptx/parser2/wp-drawing.ts を読み、cpLocks の解析追加位置を確認するため。
-- src/pptx/parser2/wp-drawing.spec.ts を読み、cpLocks のテスト追加位置を確認するため。
+- src/pptx/parser/wp-drawing.ts を読み、cpLocks の解析追加位置を確認するため。
+- src/pptx/parser/wp-drawing.spec.ts を読み、cpLocks のテスト追加位置を確認するため。
 - docs/specs/ecma376-drawingml-main.checklist.md を読み、20.1.2.3 Colors のチェック更新位置を確認するため。
 - docs/specs/ecma376-drawingml-main.checklist.md を読み、20.1.4 Styles のチェック更新位置を確認するため。
 - docs/specs/ecma376-drawingml-main.checklist.md を読み、20.1.5 3D のチェック更新位置を確認するため。
@@ -349,27 +349,27 @@
 - docs/specs/ecma376-drawingml-charts.checklist.md を読み、DrawingML Charts の未実装項目を更新するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ChartSpace/view3D/Surface/PictureOptions/CT_DLbl などの構造を確認するため。
 - src/pptx/domain/chart.ts を読み、Charts のドメイン型追加位置を確認するため。
-- src/pptx/parser2/chart-parser/index.ts を読み、chartSpace と plotArea の拡張追加位置を確認するため。
-- src/pptx/parser2/chart-parser/components.ts を読み、dLbl/dLbls の解析追加位置を確認するため。
-- src/pptx/parser2/chart-parser/series/surface.ts を読み、bandFmts の解析追加位置を確認するため。
-- src/pptx/parser2/chart-parser/series/bar.ts を読み、gapDepth の解析追加位置を確認するため。
-- src/pptx/parser2/chart-parser/series/area.ts を読み、gapDepth の解析追加位置を確認するため。
-- src/pptx/parser2/chart-parser/series/line.ts を読み、gapDepth の解析追加位置を確認するため。
-- src/pptx/parser2/chart-parser/series/pie.ts を読み、holeSize/secondPieSize などの比率パース確認を行うため。
-- src/pptx/parser2/chart-parser/series/bubble.ts を読み、bubbleScale の比率パース確認を行うため。
-- src/pptx/parser2/chart-parser/axis.ts を読み、lblOffset と skip のパース位置を確認するため。
+- src/pptx/parser/chart-parser/index.ts を読み、chartSpace と plotArea の拡張追加位置を確認するため。
+- src/pptx/parser/chart-parser/components.ts を読み、dLbl/dLbls の解析追加位置を確認するため。
+- src/pptx/parser/chart-parser/series/surface.ts を読み、bandFmts の解析追加位置を確認するため。
+- src/pptx/parser/chart-parser/series/bar.ts を読み、gapDepth の解析追加位置を確認するため。
+- src/pptx/parser/chart-parser/series/area.ts を読み、gapDepth の解析追加位置を確認するため。
+- src/pptx/parser/chart-parser/series/line.ts を読み、gapDepth の解析追加位置を確認するため。
+- src/pptx/parser/chart-parser/series/pie.ts を読み、holeSize/secondPieSize などの比率パース確認を行うため。
+- src/pptx/parser/chart-parser/series/bubble.ts を読み、bubbleScale の比率パース確認を行うため。
+- src/pptx/parser/chart-parser/axis.ts を読み、lblOffset と skip のパース位置を確認するため。
 - docs/specs/ecma376-drawingml-main.checklist.md を読み、未実装項目の更新対象を確認するため。
-- src/pptx/parser2/diagram-parser.ts を読み、diagram 描画パーサの既存仕様を確認するため。
+- src/pptx/parser/diagram-parser.ts を読み、diagram 描画パーサの既存仕様を確認するため。
 - src/pptx/integration/content-enricher.ts を読み、diagram リソース読み込みの統合位置を確認するため。
-- src/pptx/parser2/shape-parser/graphic-frame.ts を読み、dgm:relIds の取り込み位置を確認するため。
+- src/pptx/parser/shape-parser/graphic-frame.ts を読み、dgm:relIds の取り込み位置を確認するため。
 - src/pptx/domain/shape.ts を読み、DiagramReference の拡張位置を確認するため。
 - issues/smartart-implementation-checklist.md を読み、SmartArt の構成ファイルと現状整理を確認するため。
 - fixtures/poi-test-data/test-data/slideshow/SmartArt.pptx の data1.xml/layout1.xml/quickStyle1.xml/colors1.xml を読み、DiagramML 定義の実データ構造を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、DiagramML の更新対象項目を確認するため。
 - src/pptx/presentation.ts を読み、presentation.xml の既存読み込みフローと反映先を確認するため。
 - src/pptx/core/presentation-info.ts を読み、presentation.xml 解析範囲を確認するため。
-- src/pptx/parser2/presentation-parser.ts を読み、embeddedFont/embeddedFontLst/boldItalic の追加位置を確認するため。
-- src/pptx/parser2/presentation-parser.spec.ts を読み、テスト方針を合わせるため。
+- src/pptx/parser/presentation-parser.ts を読み、embeddedFont/embeddedFontLst/boldItalic の追加位置を確認するため。
+- src/pptx/parser/presentation-parser.spec.ts を読み、テスト方針を合わせるため。
 - src/pptx/domain/slide.ts を読み、embedded font のドメイン型追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、追加型の export 位置を確認するため。
 - src/pptx/ooxml/presentationml.ts を読み、embedded font の既存型定義を確認するため。
@@ -381,341 +381,341 @@
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、layoutDefHdr/layoutDefHdrLst の定義を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、colorsDefHdr/colorsDefHdrLst の定義を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、presLayoutVars のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-data-parser.ts を読み、presLayoutVars の実装状況を確認するため。
+- src/pptx/parser/diagram-data-parser.ts を読み、presLayoutVars の実装状況を確認するため。
 - src/pptx/domain/diagram.ts を読み、presLayoutVars のドメイン型定義を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、styleDefHdr/styleDefHdrLst の定義を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、styleDefHdr/styleDefHdrLst のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-style-parser.ts を読み、styleDefHdr/styleDefHdrLst の追加位置を確認するため。
-- src/pptx/parser2/diagram-style-parser.spec.ts を読み、styleDefHdr/styleDefHdrLst のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-style-parser.ts を読み、styleDefHdr/styleDefHdrLst の追加位置を確認するため。
+- src/pptx/parser/diagram-style-parser.spec.ts を読み、styleDefHdr/styleDefHdrLst のテスト追加方針を合わせるため。
 - src/pptx/domain/diagram.ts を読み、styleDefHdr/styleDefHdrLst のドメイン型追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramStyleDefinitionHeader の export 追加位置を確認するため。
-- src/pptx/parser2/index.ts を読み、diagram style parser export の追加位置を確認するため。
+- src/pptx/parser/index.ts を読み、diagram style parser export の追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_AlgorithmType の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_AlgorithmType のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、ST_AlgorithmType の適用位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、ST_AlgorithmType の適用位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramAlgorithmType の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramAlgorithmType の export 追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_AnimLvlStr の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_AnimLvlStr のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、ST_AnimLvlStr の適用位置を確認するため。
-- src/pptx/parser2/diagram-data-parser.ts を読み、presLayoutVars の変数パースと ST_AnimLvlStr の適用位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、ST_AnimLvlStr の適用位置を確認するため。
+- src/pptx/parser/diagram-data-parser.ts を読み、presLayoutVars の変数パースと ST_AnimLvlStr の適用位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramAnimLvlStr の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramAnimLvlStr の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、animLvl 変数のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、animLvl 変数のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_AnimOneStr の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_AnimOneStr のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、ST_AnimOneStr の適用位置を確認するため。
-- src/pptx/parser2/diagram-data-parser.ts を読み、ST_AnimOneStr の適用位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、ST_AnimOneStr の適用位置を確認するため。
+- src/pptx/parser/diagram-data-parser.ts を読み、ST_AnimOneStr の適用位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramAnimOneStr の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramAnimOneStr の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、animOne 変数のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、animOne 変数のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_ArrowheadStyle の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_ArrowheadStyle のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、ST_ArrowheadStyle の適用位置を確認するため。
-- src/pptx/parser2/diagram-data-parser.ts を読み、ST_ArrowheadStyle の適用位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、ST_ArrowheadStyle の適用位置を確認するため。
+- src/pptx/parser/diagram-data-parser.ts を読み、ST_ArrowheadStyle の適用位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramArrowheadStyle の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramArrowheadStyle の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、begSty/endSty のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、begSty/endSty のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_AutoTextRotation の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_AutoTextRotation のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、ST_AutoTextRotation の適用位置を確認するため。
-- src/pptx/parser2/diagram-data-parser.ts を読み、ST_AutoTextRotation の適用位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、ST_AutoTextRotation の適用位置を確認するため。
+- src/pptx/parser/diagram-data-parser.ts を読み、ST_AutoTextRotation の適用位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramAutoTextRotation の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramAutoTextRotation の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、autoTxRot 変数のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、autoTxRot 変数のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_AxisType の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_AxisType のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、ST_AxisType の適用位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、ST_AxisType の適用位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramAxisType の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramAxisType の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、axis 属性のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、axis 属性のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_AxisTypes の定義を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_AxisTypes のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、ST_AxisTypes の適用位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、ST_AxisTypes の適用位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramAxisTypes の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramAxisTypes の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、ST_AxisTypes のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、ST_AxisTypes のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_BendPoint の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_BendPoint のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、ST_BendPoint の適用位置を確認するため。
-- src/pptx/parser2/diagram-data-parser.ts を読み、ST_BendPoint の適用位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、ST_BendPoint の適用位置を確認するため。
+- src/pptx/parser/diagram-data-parser.ts を読み、ST_BendPoint の適用位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramBendPoint の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramBendPoint の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、bendPt のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、bendPt のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_Booleans の定義と hideLastTrans 属性を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_Booleans のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、hideLastTrans の追加位置と ST_Booleans の適用を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、hideLastTrans の追加位置と ST_Booleans の適用を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramBooleans の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramBooleans の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、hideLastTrans のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、hideLastTrans のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_BoolOperator の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_BoolOperator のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、ST_BoolOperator の適用位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、ST_BoolOperator の適用位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramBoolOperator の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramBoolOperator の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、constr の op テスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、constr の op テスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_Breakpoint の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_Breakpoint のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、ST_Breakpoint の適用位置を確認するため。
-- src/pptx/parser2/diagram-data-parser.ts を読み、ST_Breakpoint の適用位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、ST_Breakpoint の適用位置を確認するため。
+- src/pptx/parser/diagram-data-parser.ts を読み、ST_Breakpoint の適用位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramBreakpoint の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramBreakpoint の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、break 変数のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、break 変数のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_CenterShapeMapping の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_CenterShapeMapping のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、ST_CenterShapeMapping の適用位置を確認するため。
-- src/pptx/parser2/diagram-data-parser.ts を読み、ST_CenterShapeMapping の適用位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、ST_CenterShapeMapping の適用位置を確認するため。
+- src/pptx/parser/diagram-data-parser.ts を読み、ST_CenterShapeMapping の適用位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramCenterShapeMapping の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramCenterShapeMapping の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、ctrShpMap のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、ctrShpMap のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_ChildAlignment の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_ChildAlignment のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、ST_ChildAlignment の適用位置を確認するため。
-- src/pptx/parser2/diagram-data-parser.ts を読み、ST_ChildAlignment の適用位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、ST_ChildAlignment の適用位置を確認するため。
+- src/pptx/parser/diagram-data-parser.ts を読み、ST_ChildAlignment の適用位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramChildAlignment の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramChildAlignment の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、chAlign のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、chAlign のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_ChildDirection の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_ChildDirection のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、ST_ChildDirection の適用位置を確認するため。
-- src/pptx/parser2/diagram-data-parser.ts を読み、ST_ChildDirection の適用位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、ST_ChildDirection の適用位置を確認するため。
+- src/pptx/parser/diagram-data-parser.ts を読み、ST_ChildDirection の適用位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramChildDirection の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramChildDirection の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、chDir のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、chDir のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_ChildOrderType の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_ChildOrderType のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、chOrder/moveWith/styleLbl の追加位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、chOrder/moveWith/styleLbl の追加位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramChildOrderType と layout node 属性の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramChildOrderType の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、chOrder のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、chOrder のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_ClrAppMethod の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_ClrAppMethod のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-color-parser.ts を読み、meth の解析位置と追加実装を確認するため。
-- src/pptx/parser2/diagram-color-parser.spec.ts を読み、color list meth のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-color-parser.ts を読み、meth の解析位置と追加実装を確認するため。
+- src/pptx/parser/diagram-color-parser.spec.ts を読み、color list meth のテスト追加方針を合わせるため。
 - src/pptx/domain/diagram.ts を読み、DiagramClrAppMethod の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramClrAppMethod の export 追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_ConnectorDimension の列挙値と dim の定義を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_ConnectorDimension のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、dim の解析位置を確認するため。
-- src/pptx/parser2/diagram-data-parser.ts を読み、dim の解析位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、dim の解析位置を確認するため。
+- src/pptx/parser/diagram-data-parser.ts を読み、dim の解析位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramConnectorDimension の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramConnectorDimension の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、dim のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、dim のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_ConnectorPoint の列挙値と begPts/endPts の定義を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_ConnectorPoint のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、begPts/endPts の解析位置を確認するため。
-- src/pptx/parser2/diagram-data-parser.ts を読み、begPts/endPts の解析位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、begPts/endPts の解析位置を確認するため。
+- src/pptx/parser/diagram-data-parser.ts を読み、begPts/endPts の解析位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramConnectorPoint の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramConnectorPoint の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、begPts/endPts のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、begPts/endPts のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_ConnectorRouting の列挙値と connRout の定義を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_ConnectorRouting のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、connRout の解析位置を確認するため。
-- src/pptx/parser2/diagram-data-parser.ts を読み、connRout の解析位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、connRout の解析位置を確認するため。
+- src/pptx/parser/diagram-data-parser.ts を読み、connRout の解析位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramConnectorRouting の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramConnectorRouting の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、connRout のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、connRout のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_ConstraintRelationship の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_ConstraintRelationship のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、for/refFor の解析位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、for/refFor の解析位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramConstraintRelationship の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramConstraintRelationship の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、constr の for/refFor テスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、constr の for/refFor テスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_ConstraintType の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_ConstraintType のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、constraint type/refType の解析位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、constraint type/refType の解析位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramConstraintType の追加位置と constraint 型の更新を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramConstraintType の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、constraint type テスト更新方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、constraint type テスト更新方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_ContinueDirection の列挙値と contDir の定義を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_ContinueDirection のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、contDir の解析位置を確認するため。
-- src/pptx/parser2/diagram-data-parser.ts を読み、contDir の解析位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、contDir の解析位置を確認するため。
+- src/pptx/parser/diagram-data-parser.ts を読み、contDir の解析位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramContinueDirection の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramContinueDirection の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、contDir のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、contDir のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_CxnType の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_CxnType のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-data-parser.ts を読み、cxn type の解析位置を確認するため。
+- src/pptx/parser/diagram-data-parser.ts を読み、cxn type の解析位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramCxnType の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramCxnType の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-data-parser.spec.ts を読み、cxn type のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-data-parser.spec.ts を読み、cxn type のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_DiagramHorizontalAlignment の列挙値と horzAlign/nodeHorzAlign の定義を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_DiagramHorizontalAlignment のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、horzAlign/nodeHorzAlign の解析位置を確認するため。
-- src/pptx/parser2/diagram-data-parser.ts を読み、horzAlign/nodeHorzAlign の解析位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、horzAlign/nodeHorzAlign の解析位置を確認するため。
+- src/pptx/parser/diagram-data-parser.ts を読み、horzAlign/nodeHorzAlign の解析位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramHorizontalAlignment の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramHorizontalAlignment の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、horzAlign/nodeHorzAlign のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、horzAlign/nodeHorzAlign のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_DiagramTextAlignment の列挙値と alignTx/parTxLTRAlign などの定義を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_DiagramTextAlignment のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、alignTx/parTxLTRAlign などの解析位置を確認するため。
-- src/pptx/parser2/diagram-data-parser.ts を読み、alignTx/parTxLTRAlign などの解析位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、alignTx/parTxLTRAlign などの解析位置を確認するため。
+- src/pptx/parser/diagram-data-parser.ts を読み、alignTx/parTxLTRAlign などの解析位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramTextAlignment の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramTextAlignment の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、alignTx/parTxLTRAlign のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、alignTx/parTxLTRAlign のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_Direction (diagram) の列挙値と dir の定義を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_Direction (diagram) のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、dir の解析位置を確認するため。
-- src/pptx/parser2/diagram-data-parser.ts を読み、dir の解析位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、dir の解析位置を確認するため。
+- src/pptx/parser/diagram-data-parser.ts を読み、dir の解析位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramDirection の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramDirection の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、dir のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、dir のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_ElementType/ST_ElementTypes の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_ElementType/ST_ElementTypes のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、ptType (list) の解析位置を確認するため。
-- src/pptx/parser2/diagram-data-parser.ts を読み、pt/@type の解析位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、ptType (list) の解析位置を確認するため。
+- src/pptx/parser/diagram-data-parser.ts を読み、pt/@type の解析位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramElementType/DiagramElementTypes の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramElementType/DiagramElementTypes の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、ptType のテスト追加方針を合わせるため。
-- src/pptx/parser2/diagram-data-parser.spec.ts を読み、pt type のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、ptType のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-data-parser.spec.ts を読み、pt type のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_FallbackDimension の列挙値と fallback の定義を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_FallbackDimension のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、fallback の解析位置を確認するため。
-- src/pptx/parser2/diagram-data-parser.ts を読み、fallback の解析位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、fallback の解析位置を確認するため。
+- src/pptx/parser/diagram-data-parser.ts を読み、fallback の解析位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramFallbackDimension の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramFallbackDimension の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、fallback のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、fallback のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_FlowDirection の列挙値と flowDir の定義を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_FlowDirection のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、flowDir の解析位置を確認するため。
-- src/pptx/parser2/diagram-data-parser.ts を読み、flowDir の解析位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、flowDir の解析位置を確認するため。
+- src/pptx/parser/diagram-data-parser.ts を読み、flowDir の解析位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramFlowDirection の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramFlowDirection の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、flowDir のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、flowDir のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_FunctionArgument と ST_VariableType の定義を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_FunctionArgument のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、if arg の解析位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、if arg の解析位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramFunctionArgument/DiagramVariableType の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramFunctionArgument/DiagramVariableType の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、if arg のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、if arg のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_FunctionOperator の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_FunctionOperator のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、if op の解析位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、if op の解析位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramFunctionOperator の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramFunctionOperator の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、if op のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、if op のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_FunctionType の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_FunctionType のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、if func の解析位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、if func の解析位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramFunctionType の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramFunctionType の export 追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_FunctionValue と ST_HierBranchStyle/ST_ResizeHandlesStr の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_FunctionValue のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、if val と hierBranch/resizeHandles の解析位置を確認するため。
-- src/pptx/parser2/diagram-data-parser.ts を読み、hierBranch/resizeHandles の解析位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、if val と hierBranch/resizeHandles の解析位置を確認するため。
+- src/pptx/parser/diagram-data-parser.ts を読み、hierBranch/resizeHandles の解析位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramFunctionValue/DiagramHierBranchStyle/DiagramResizeHandlesStr の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramFunctionValue/DiagramHierBranchStyle/DiagramResizeHandlesStr の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、if val のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、if val のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_GrowDirection の列挙値と grDir の定義を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_GrowDirection のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、grDir の解析位置を確認するため。
-- src/pptx/parser2/diagram-data-parser.ts を読み、grDir の解析位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、grDir の解析位置を確認するため。
+- src/pptx/parser/diagram-data-parser.ts を読み、grDir の解析位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramGrowDirection の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramGrowDirection の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、grDir のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、grDir のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_HierarchyAlignment の列挙値と hierAlign の定義を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_HierarchyAlignment のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、hierAlign の解析位置を確認するため。
-- src/pptx/parser2/diagram-data-parser.ts を読み、hierAlign の解析位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、hierAlign の解析位置を確認するため。
+- src/pptx/parser/diagram-data-parser.ts を読み、hierAlign の解析位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramHierarchyAlignment の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramHierarchyAlignment の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、hierAlign のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、hierAlign のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_Index1 の定義を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_Index1 のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、adj idx の解析位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、adj idx の解析位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramIndex1 の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramIndex1 の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、adj idx のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、adj idx のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_Ints の定義と st/step の属性を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_Ints のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、st/step の解析位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、st/step の解析位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramInts と start/step の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramInts の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、st/step のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、st/step のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_HueDir の列挙値と hueDir の定義を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_HueDir のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-color-parser.ts を読み、hueDir の解析位置を確認するため。
+- src/pptx/parser/diagram-color-parser.ts を読み、hueDir の解析位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramHueDir の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramHueDir の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-color-parser.spec.ts を読み、hueDir のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-color-parser.spec.ts を読み、hueDir のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_HierBranchStyle の列挙値と hierBranch の定義を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_HierBranchStyle のチェック更新位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、hierBranch の解析位置を確認するため。
-- src/pptx/parser2/diagram-data-parser.ts を読み、hierBranch の解析位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、hierBranch の解析位置を確認するため。
+- src/pptx/parser/diagram-data-parser.ts を読み、hierBranch の解析位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramHierBranchStyle の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramHierBranchStyle の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、hierBranch のテスト追加方針を合わせるため。
-- src/pptx/parser2/slide-parser.ts を読み、handoutMaster/notesMaster/sldLayoutIdLst の既存解析との整合を確認するため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、hierBranch のテスト追加方針を合わせるため。
+- src/pptx/parser/slide-parser.ts を読み、handoutMaster/notesMaster/sldLayoutIdLst の既存解析との整合を確認するため。
 - src/pptx/domain/slide.ts を読み、HandoutMaster/NotesMaster/SlideLayoutId 型の追加位置を確認するため。
-- src/pptx/parser2/text-parser.ts を読み、notesStyle の defRPr/段落プロパティ解析の再利用方針を確認するため。
+- src/pptx/parser/text-parser.ts を読み、notesStyle の defRPr/段落プロパティ解析の再利用方針を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、tagLst/tag の定義とサンプルを確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、cm/cmAuthor/cmAuthorLst/cmLst の定義とサンプルを確認するため。
-- src/pptx/parser2/timing-parser/behavior.ts を読み、animClr/animMotion/animRot/animScale の既存実装位置を確認するため。
+- src/pptx/parser/timing-parser/behavior.ts を読み、animClr/animMotion/animRot/animScale の既存実装位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、bldAsOne/bldGraphic/bldOleChart/bldSub の定義を確認するため。
-- src/pptx/parser2/timing-parser/keyframe.ts を読み、p:clrVal の既存解析有無を確認するため。
+- src/pptx/parser/timing-parser/keyframe.ts を読み、p:clrVal の既存解析有無を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、endSync/rtn/ST_TLTriggerEvent/ST_TLTriggerRuntimeNode の定義を確認するため。
-- src/pptx/parser2/timing-parser/condition.ts を読み、endSync に適用する time condition 解析方針を確認するため。
-- src/pptx/parser2/timing-parser/common.ts を読み、cTn への endSync 追加位置を確認するため。
+- src/pptx/parser/timing-parser/condition.ts を読み、endSync に適用する time condition 解析方針を確認するため。
+- src/pptx/parser/timing-parser/common.ts を読み、cTn への endSync 追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、graphicEl の定義と例を確認するため。
-- src/pptx/parser2/timing-parser/target.ts を読み、graphicEl の解析追加位置を確認するため。
+- src/pptx/parser/timing-parser/target.ts を読み、graphicEl の解析追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、inkTgt の定義と属性を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、nextCondLst の定義と例を確認するため。
-- src/pptx/parser2/timing-parser/time-node.ts を読み、nextCondLst の解析追加位置を確認するため。
+- src/pptx/parser/timing-parser/time-node.ts を読み、nextCondLst の解析追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、oleChartEl の属性定義を確認するため。
-- src/pptx/parser2/timing-parser/target.ts を読み、oleChartEl の解析追加位置を確認するため。
+- src/pptx/parser/timing-parser/target.ts を読み、oleChartEl の解析追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、prevCondLst の定義と例を確認するため。
-- src/pptx/parser2/timing-parser/time-node.ts を読み、prevCondLst の解析追加位置を確認するため。
+- src/pptx/parser/timing-parser/time-node.ts を読み、prevCondLst の解析追加位置を確認するため。
 - src/pptx/domain/animation.ts を読み、progress の格納先を確認するため。
-- src/pptx/parser2/timing-parser/behavior.ts を読み、p:animEffect への progress 追加位置を確認するため。
-- src/pptx/parser2/timing-parser.spec.ts を読み、animEffect のテスト追加方針を合わせるため。
+- src/pptx/parser/timing-parser/behavior.ts を読み、p:animEffect への progress 追加位置を確認するため。
+- src/pptx/parser/timing-parser.spec.ts を読み、animEffect のテスト追加方針を合わせるため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、progress のチェック更新位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、rCtr の定義と属性 (x/y) を確認するため。
-- src/pptx/parser2/primitive.ts を読み、ST_Percentage の既存パーサーを確認するため。
-- src/pptx/parser2/timing-parser/behavior.ts を読み、rCtr の解析追加位置を確認するため。
+- src/pptx/parser/primitive.ts を読み、ST_Percentage の既存パーサーを確認するため。
+- src/pptx/parser/timing-parser/behavior.ts を読み、rCtr の解析追加位置を確認するため。
 - src/pptx/domain/animation.ts を読み、AnimateMotionBehavior の拡張位置を確認するため。
-- src/pptx/parser2/timing-parser.spec.ts を読み、animMotion のテスト追加方針を合わせるため。
+- src/pptx/parser/timing-parser.spec.ts を読み、animMotion のテスト追加方針を合わせるため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、rCtr のチェック更新位置を確認するため。
-- src/pptx/parser2/timing-parser/condition.ts を読み、rtn の解析有無を確認するため。
-- src/pptx/parser2/timing-parser/mapping.ts を読み、ST_TLTriggerRuntimeNode のマッピング定義を確認するため。
-- src/pptx/parser2/timing-parser.spec.ts を読み、rtn のテスト実装を確認するため。
+- src/pptx/parser/timing-parser/condition.ts を読み、rtn の解析有無を確認するため。
+- src/pptx/parser/timing-parser/mapping.ts を読み、ST_TLTriggerRuntimeNode のマッピング定義を確認するため。
+- src/pptx/parser/timing-parser.spec.ts を読み、rtn のテスト実装を確認するため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、rtn のチェック更新位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、snd/stSnd の定義と属性 (embed/name/loop) を確認するため。
-- src/pptx/parser2/slide-parser.ts を読み、transition sound の解析追加位置を確認するため。
-- src/pptx/parser2/slide-parser.spec.ts を読み、transition sound のテスト追加方針を合わせるため。
+- src/pptx/parser/slide-parser.ts を読み、transition sound の解析追加位置を確認するため。
+- src/pptx/parser/slide-parser.spec.ts を読み、transition sound のテスト追加方針を合わせるため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、snd のチェック更新位置を確認するため。
-- src/pptx/parser2/slide-parser.ts を読み、sndAc の解析位置を確認するため。
+- src/pptx/parser/slide-parser.ts を読み、sndAc の解析位置を確認するため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、sndAc のチェック更新位置を確認するため。
-- src/pptx/parser2/slide-parser.ts を読み、stSnd の解析位置を確認するため。
+- src/pptx/parser/slide-parser.ts を読み、stSnd の解析位置を確認するため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、stSnd のチェック更新位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、subSp の定義と spid 属性を確認するため。
-- src/pptx/parser2/timing-parser/target.ts を読み、subSp の解析追加位置を確認するため。
+- src/pptx/parser/timing-parser/target.ts を読み、subSp の解析追加位置を確認するため。
 - src/pptx/domain/animation.ts を読み、subShapeId の格納先を確認するため。
-- src/pptx/parser2/timing-parser.spec.ts を読み、subSp のテスト追加方針を合わせるため。
+- src/pptx/parser/timing-parser.spec.ts を読み、subSp のテスト追加方針を合わせるため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、subSp のチェック更新位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、subTnLst の定義と例を確認するため。
-- src/pptx/parser2/timing-parser/time-node.ts を読み、subTnLst の解析追加位置を確認するため。
+- src/pptx/parser/timing-parser/time-node.ts を読み、subTnLst の解析追加位置を確認するため。
 - src/pptx/domain/animation.ts を読み、subTimeNodes の格納先を確認するため。
-- src/pptx/parser2/timing-parser.spec.ts を読み、subTnLst のテスト追加方針を合わせるため。
+- src/pptx/parser/timing-parser.spec.ts を読み、subTnLst のテスト追加方針を合わせるため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、subTnLst のチェック更新位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、iterate/tmAbs/tmPct の定義と属性を確認するため。
-- src/pptx/parser2/timing-parser/common.ts を読み、iterate 解析の追加位置を確認するため。
-- src/pptx/parser2/timing-parser/mapping.ts を読み、ST_IterateType のマッピング定義を確認するため。
+- src/pptx/parser/timing-parser/common.ts を読み、iterate 解析の追加位置を確認するため。
+- src/pptx/parser/timing-parser/mapping.ts を読み、ST_IterateType のマッピング定義を確認するため。
 - src/pptx/domain/animation.ts を読み、iterate の格納先を確認するため。
-- src/pptx/parser2/timing-parser.spec.ts を読み、tmAbs/tmPct のテスト追加方針を合わせるため。
+- src/pptx/parser/timing-parser.spec.ts を読み、tmAbs/tmPct のテスト追加方針を合わせるため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、tmAbs/tmPct のチェック更新位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、tmpl/tmplLst の定義と tnLst の構造を確認するため。
-- src/pptx/parser2/timing-parser/build-list.ts を読み、tmplLst の解析追加位置を確認するため。
-- src/pptx/parser2/timing-parser/time-node.ts を読み、tnLst の一覧解析再利用可否を確認するため。
+- src/pptx/parser/timing-parser/build-list.ts を読み、tmplLst の解析追加位置を確認するため。
+- src/pptx/parser/timing-parser/time-node.ts を読み、tnLst の一覧解析再利用可否を確認するため。
 - src/pptx/domain/animation.ts を読み、templateEffects の格納先を確認するため。
-- src/pptx/parser2/timing-parser.spec.ts を読み、tmpl/tmplLst のテスト追加方針を合わせるため。
+- src/pptx/parser/timing-parser.spec.ts を読み、tmpl/tmplLst のテスト追加方針を合わせるため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、tmpl/tmplLst のチェック更新位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、sldSyncPr の属性と slideUpdateInfo リレーションを確認するため。
 - src/pptx/domain/slide.ts を読み、SlideSyncProperties の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、SlideSyncProperties の export 追加位置を確認するため。
-- src/pptx/parser2/presentation-properties.ts を読み、パーサーの構成スタイルを合わせるため。
-- src/pptx/parser2/comment-parser.ts を読み、属性取得の実装パターンを合わせるため。
-- src/pptx/parser2/index.ts を読み、パーサー export 追加位置を確認するため。
+- src/pptx/parser/presentation-properties.ts を読み、パーサーの構成スタイルを合わせるため。
+- src/pptx/parser/comment-parser.ts を読み、属性取得の実装パターンを合わせるため。
+- src/pptx/parser/index.ts を読み、パーサー export 追加位置を確認するため。
 - src/pptx/presentation.ts を読み、Slide Synchronization Data の読み込み導線を確認するため。
 - src/pptx/reader/types.ts を読み、SlideData の拡張要否を確認するため。
 - src/pptx/reader/slide/loader.ts を読み、追加パーツのロード経路を確認するため。
@@ -724,17 +724,17 @@
 - docs/specs/ecma376-presentationml.checklist.md を読み、sldSyncPr のチェック更新位置を確認するため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、ST_BookmarkIdSeed のチェック更新位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_BookmarkIdSeed/ST_Direction/ST_Index の定義を確認するため。
-- src/pptx/parser2/presentation-parser.ts を読み、bookmarkIdSeed の解析有無を確認するため。
+- src/pptx/parser/presentation-parser.ts を読み、bookmarkIdSeed の解析有無を確認するため。
 - src/pptx/core/ecma376-defaults.ts を読み、bookmarkIdSeed の既定値を確認するため。
 - src/pptx/domain/types.ts を読み、ST_Direction の型追加方針を検討するため。
-- src/pptx/parser2/view-properties.ts を読み、ST_Direction の適用箇所を確認するため。
+- src/pptx/parser/view-properties.ts を読み、ST_Direction の適用箇所を確認するため。
 - src/pptx/domain/slide.ts を読み、ST_Direction の型追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、ST_Direction の export 追加位置を確認するため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、ST_Direction のチェック更新位置を確認するため。
-- src/pptx/parser2/primitive.ts を読み、ST_Index のパース追加位置を確認するため。
-- src/pptx/parser2/primitive.spec.ts を読み、ST_Index のテスト追加位置を確認するため。
-- src/pptx/parser2/shape-parser/non-visual.ts を読み、placeholder idx のパース置換位置を確認するため。
-- src/pptx/parser2/index.ts を読み、parseIndex/getIndexAttr の export 追加位置を確認するため。
+- src/pptx/parser/primitive.ts を読み、ST_Index のパース追加位置を確認するため。
+- src/pptx/parser/primitive.spec.ts を読み、ST_Index のテスト追加位置を確認するため。
+- src/pptx/parser/shape-parser/non-visual.ts を読み、placeholder idx のパース置換位置を確認するため。
+- src/pptx/parser/index.ts を読み、parseIndex/getIndexAttr の export 追加位置を確認するため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、ST_Index のチェック更新位置を確認するため。
 - src/pptx/domain/animation.ts を読み、ST_IterateType の実装有無を確認するため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、ST_IterateType のチェック更新位置を確認するため。
@@ -742,188 +742,188 @@
 - docs/specs/ecma376-presentationml.checklist.md を読み、ST_Name のチェック更新位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_OleObjectFollowColorScheme と embed の属性定義を確認するため。
 - src/pptx/domain/shape.ts を読み、OLE 参照型の拡張位置を確認するため。
-- src/pptx/parser2/shape-parser/graphic-frame.ts を読み、oleObj の解析追加位置を確認するため。
-- src/pptx/parser2/mc-alternate-content.spec.ts を読み、oleObj テストの追加方針を合わせるため。
+- src/pptx/parser/shape-parser/graphic-frame.ts を読み、oleObj の解析追加位置を確認するため。
+- src/pptx/parser/mc-alternate-content.spec.ts を読み、oleObj テストの追加方針を合わせるため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、ST_OleObjectFollowColorScheme のチェック更新位置を確認するため。
 - src/pptx/domain/index.ts を読み、OleObjectFollowColorScheme の export 追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_PhotoAlbumFrameShape/ST_PhotoAlbumLayout の列挙値を確認するため。
 - src/pptx/domain/slide.ts を読み、PhotoAlbum の型定義更新位置を確認するため。
-- src/pptx/parser2/presentation-parser.ts を読み、photoAlbum の解析追加位置を確認するため。
-- src/pptx/parser2/presentation-parser.spec.ts を読み、photoAlbum のテスト更新方針を合わせるため。
+- src/pptx/parser/presentation-parser.ts を読み、photoAlbum の解析追加位置を確認するため。
+- src/pptx/parser/presentation-parser.spec.ts を読み、photoAlbum のテスト更新方針を合わせるため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、ST_PhotoAlbumFrameShape/ST_PhotoAlbumLayout のチェック更新位置を確認するため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、ST_PlaceholderSize のチェック更新位置を確認するため。
 - src/pptx/domain/shape.ts を読み、PlaceholderSize の型追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、PlaceholderSize の export 追加位置を確認するため。
-- src/pptx/parser2/shape-parser/non-visual.ts を読み、p:ph の size 属性パース追加位置を確認するため。
-- src/pptx/parser2/shape-parser.spec.ts を読み、p:ph の size 属性テスト追加位置を確認するため。
+- src/pptx/parser/shape-parser/non-visual.ts を読み、p:ph の size 属性パース追加位置を確認するため。
+- src/pptx/parser/shape-parser.spec.ts を読み、p:ph の size 属性テスト追加位置を確認するため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、ST_PrintColorMode のチェック更新位置を確認するため。
 - src/pptx/domain/slide.ts を読み、PrintColorMode の型追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、PrintColorMode の export 追加位置を確認するため。
-- src/pptx/parser2/presentation-properties.ts を読み、print color mode のパース追加位置を確認するため。
-- src/pptx/parser2/presentation-properties.spec.ts を読み、print color mode の既存テスト内容を確認するため。
+- src/pptx/parser/presentation-properties.ts を読み、print color mode のパース追加位置を確認するため。
+- src/pptx/parser/presentation-properties.spec.ts を読み、print color mode の既存テスト内容を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_PrintWhat/ST_PrintColorMode の列挙値を確認するため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、ST_PrintWhat のチェック更新位置を確認するため。
 - src/pptx/domain/slide.ts を読み、PrintWhat の型追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、PrintWhat の export 追加位置を確認するため。
-- src/pptx/parser2/presentation-properties.ts を読み、print what のパース追加位置を確認するため。
-- src/pptx/parser2/presentation-properties.spec.ts を読み、print what の既存テスト内容を確認するため。
+- src/pptx/parser/presentation-properties.ts を読み、print what のパース追加位置を確認するため。
+- src/pptx/parser/presentation-properties.spec.ts を読み、print what の既存テスト内容を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_SlideId の範囲定義を確認するため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、ST_SlideId のチェック更新位置を確認するため。
-- src/pptx/parser2/primitive.ts を読み、parseSlideId の追加位置を確認するため。
-- src/pptx/parser2/primitive.spec.ts を読み、parseSlideId のテスト追加位置を確認するため。
-- src/pptx/parser2/index.ts を読み、parseSlideId の export 追加位置を確認するため。
-- src/pptx/parser2/presentation-parser.ts を読み、sldId の解析追加位置を確認するため。
+- src/pptx/parser/primitive.ts を読み、parseSlideId の追加位置を確認するため。
+- src/pptx/parser/primitive.spec.ts を読み、parseSlideId のテスト追加位置を確認するため。
+- src/pptx/parser/index.ts を読み、parseSlideId の export 追加位置を確認するため。
+- src/pptx/parser/presentation-parser.ts を読み、sldId の解析追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_SlideLayoutId の範囲定義を確認するため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、ST_SlideLayoutId のチェック更新位置を確認するため。
-- src/pptx/parser2/primitive.ts を読み、parseSlideLayoutId の追加位置を確認するため。
-- src/pptx/parser2/primitive.spec.ts を読み、parseSlideLayoutId のテスト追加位置を確認するため。
-- src/pptx/parser2/index.ts を読み、parseSlideLayoutId の export 追加位置を確認するため。
-- src/pptx/parser2/slide-parser.ts を読み、sldLayoutId の解析追加位置を確認するため。
-- src/pptx/parser2/slide-parser.spec.ts を読み、sldLayoutId のテスト更新位置を確認するため。
+- src/pptx/parser/primitive.ts を読み、parseSlideLayoutId の追加位置を確認するため。
+- src/pptx/parser/primitive.spec.ts を読み、parseSlideLayoutId のテスト追加位置を確認するため。
+- src/pptx/parser/index.ts を読み、parseSlideLayoutId の export 追加位置を確認するため。
+- src/pptx/parser/slide-parser.ts を読み、sldLayoutId の解析追加位置を確認するため。
+- src/pptx/parser/slide-parser.spec.ts を読み、sldLayoutId のテスト更新位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_SlideMasterId の範囲定義を確認するため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、ST_SlideMasterId のチェック更新位置を確認するため。
-- src/pptx/parser2/primitive.ts を読み、parseSlideMasterId の追加位置を確認するため。
-- src/pptx/parser2/primitive.spec.ts を読み、parseSlideMasterId のテスト追加位置を確認するため。
-- src/pptx/parser2/index.ts を読み、parseSlideMasterId の export 追加位置を確認するため。
-- src/pptx/parser2/presentation-parser.ts を読み、sldMasterId の解析追加位置を確認するため。
+- src/pptx/parser/primitive.ts を読み、parseSlideMasterId の追加位置を確認するため。
+- src/pptx/parser/primitive.spec.ts を読み、parseSlideMasterId のテスト追加位置を確認するため。
+- src/pptx/parser/index.ts を読み、parseSlideMasterId の export 追加位置を確認するため。
+- src/pptx/parser/presentation-parser.ts を読み、sldMasterId の解析追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_SlideSizeCoordinate の範囲定義を確認するため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、ST_SlideSizeCoordinate のチェック更新位置を確認するため。
-- src/pptx/parser2/primitive.ts を読み、parseSlideSizeCoordinate の追加位置を確認するため。
-- src/pptx/parser2/primitive.spec.ts を読み、parseSlideSizeCoordinate のテスト追加位置を確認するため。
-- src/pptx/parser2/index.ts を読み、parseSlideSizeCoordinate の export 追加位置を確認するため。
-- src/pptx/parser2/presentation-parser.ts を読み、sldSz/notesSz の解析更新位置を確認するため。
+- src/pptx/parser/primitive.ts を読み、parseSlideSizeCoordinate の追加位置を確認するため。
+- src/pptx/parser/primitive.spec.ts を読み、parseSlideSizeCoordinate のテスト追加位置を確認するため。
+- src/pptx/parser/index.ts を読み、parseSlideSizeCoordinate の export 追加位置を確認するため。
+- src/pptx/parser/presentation-parser.ts を読み、sldSz/notesSz の解析更新位置を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、次の未実装項目（ST_LayoutShapeType）の位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、Layout Shape Type の型拡張位置を確認するため。
 - src/pptx/domain/types.ts を読み、ST_ShapeType に対応する PresetShapeType の定義を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramLayoutShapeType の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、Layout Shape Type のパース追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、layout shape のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、Layout Shape Type のパース追加位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、layout shape のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_LinearDirection の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_LinearDirection のチェック更新位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramLinearDirection の型追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramLinearDirection の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、linDir のパース追加位置を確認するため。
-- src/pptx/parser2/diagram-data-parser.ts を読み、linDir のパース追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、linDir のテスト追加方針を合わせるため。
-- src/pptx/parser2/diagram-data-parser.spec.ts を読み、linDir のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、linDir のパース追加位置を確認するため。
+- src/pptx/parser/diagram-data-parser.ts を読み、linDir のパース追加位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、linDir のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-data-parser.spec.ts を読み、linDir のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_ModelId の定義（GUID or int）を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_ModelId のチェック更新位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramModelId の型追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramModelId の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-data-parser.ts を読み、modelId のパース追加位置を確認するため。
-- src/pptx/parser2/diagram-data-parser.spec.ts を読み、modelId のテスト更新方針を合わせるため。
+- src/pptx/parser/diagram-data-parser.ts を読み、modelId のパース追加位置を確認するため。
+- src/pptx/parser/diagram-data-parser.spec.ts を読み、modelId のテスト更新方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_NodeCount の範囲定義を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_NodeCount のチェック更新位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramNodeCount の型追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramNodeCount の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、cnt のパース追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、cnt のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、cnt のパース追加位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、cnt のテスト追加方針を合わせるため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_NodeHorizontalAlignment のチェック更新位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramNodeHorizontalAlignment の型追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramNodeHorizontalAlignment の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、nodeHorzAlign のパース追加位置を確認するため。
-- src/pptx/parser2/diagram-data-parser.ts を読み、nodeHorzAlign のパース追加位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、nodeHorzAlign のパース追加位置を確認するため。
+- src/pptx/parser/diagram-data-parser.ts を読み、nodeHorzAlign のパース追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_NodeVerticalAlignment の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_NodeVerticalAlignment のチェック更新位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramNodeVerticalAlignment の型追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramNodeVerticalAlignment の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、nodeVertAlign のパース追加位置を確認するため。
-- src/pptx/parser2/diagram-data-parser.ts を読み、nodeVertAlign のパース追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、nodeVertAlign のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、nodeVertAlign のパース追加位置を確認するため。
+- src/pptx/parser/diagram-data-parser.ts を読み、nodeVertAlign のパース追加位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、nodeVertAlign のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_Offset の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_Offset のチェック更新位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramOffset の型追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramOffset の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、off のパース追加位置を確認するため。
-- src/pptx/parser2/diagram-data-parser.ts を読み、off のパース追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、off のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、off のパース追加位置を確認するため。
+- src/pptx/parser/diagram-data-parser.ts を読み、off のパース追加位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、off のテスト追加方針を合わせるため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_OutputShapeType のチェック更新位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_ParameterId の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_ParameterId のチェック更新位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramParameterId の型追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramParameterId の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、parameter type のパース追加位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、parameter type のパース追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_ParameterId/ST_ParameterVal の列挙値と型一覧を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_ParameterVal のチェック更新位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramParameterValue の型追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramParameterValue の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、parameter value のパース追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、parameter value のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、parameter value のパース追加位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、parameter value のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_PtType の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_PtType のチェック更新位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_PyramidAccentPosition/ST_PyramidAccentTextMargin の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_PyramidAccentPosition/ST_PyramidAccentTextMargin のチェック更新位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、Pyramid Accent の型追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、Pyramid Accent の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、Pyramid Accent のパース追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、Pyramid Accent のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、Pyramid Accent のパース追加位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、Pyramid Accent のテスト追加方針を合わせるため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_ResizeHandlesStr のチェック更新位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_RotationPath の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_RotationPath のチェック更新位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramRotationPath の型追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramRotationPath の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、rotPath のパース追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、rotPath のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、rotPath のパース追加位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、rotPath のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_SecondaryChildAlignment の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_SecondaryChildAlignment のチェック更新位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramSecondaryChildAlignment の型追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramSecondaryChildAlignment の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、secChAlign のパース追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、secChAlign のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、secChAlign のパース追加位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、secChAlign のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_SecondaryLinearDirection の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_SecondaryLinearDirection のチェック更新位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramSecondaryLinearDirection の型追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramSecondaryLinearDirection の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、secLinDir のパース追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、secLinDir のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、secLinDir のパース追加位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、secLinDir のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_StartingElement の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_StartingElement のチェック更新位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramStartingElement の型追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramStartingElement の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、stElem のパース追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、stElem のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、stElem のパース追加位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、stElem のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_TextAnchorHorizontal の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_TextAnchorHorizontal のチェック更新位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramTextAnchorHorizontal の型追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramTextAnchorHorizontal の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、txAnchorHorz のパース追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、txAnchorHorz のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、txAnchorHorz のパース追加位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、txAnchorHorz のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_TextAnchorVertical の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_TextAnchorVertical のチェック更新位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramTextAnchorVertical の型追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramTextAnchorVertical の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、txAnchorVert のパース追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、txAnchorVert のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、txAnchorVert のパース追加位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、txAnchorVert のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_TextBlockDirection の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_TextBlockDirection のチェック更新位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramTextBlockDirection の型追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramTextBlockDirection の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、txBlDir のパース追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、txBlDir のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、txBlDir のパース追加位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、txBlDir のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_TextDirection の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_TextDirection のチェック更新位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramTextDirection の型追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramTextDirection の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、txDir のパース追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、txDir のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、txDir のパース追加位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、txDir のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_UnsignedInts の用途（cnt 属性）を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_UnsignedInts のチェック更新位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramUnsignedInts の型追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramUnsignedInts の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、cnt/unsigned ints のパース追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、cnt のテスト更新方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、cnt/unsigned ints のパース追加位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、cnt のテスト更新方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_VerticalAlignment の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_VerticalAlignment のチェック更新位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramVerticalAlignment の型追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramVerticalAlignment の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.ts を読み、vertAlign のパース追加位置を確認するため。
-- src/pptx/parser2/diagram-layout-parser.spec.ts を読み、vertAlign のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-layout-parser.ts を読み、vertAlign のパース追加位置を確認するため。
+- src/pptx/parser/diagram-layout-parser.spec.ts を読み、vertAlign のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_PrSetCustVal と prSet の cust\* 属性定義を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_PrSetCustVal のチェック更新位置を確認するため。
 - src/pptx/domain/diagram.ts を読み、DiagramPrSetCustVal と prSet のカスタム属性追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、DiagramPrSetCustVal の export 追加位置を確認するため。
-- src/pptx/parser2/diagram-data-parser.ts を読み、cust\* 属性のパース追加位置を確認するため。
-- src/pptx/parser2/diagram-data-parser.spec.ts を読み、cust\* 属性のテスト追加方針を合わせるため。
+- src/pptx/parser/diagram-data-parser.ts を読み、cust\* 属性のパース追加位置を確認するため。
+- src/pptx/parser/diagram-data-parser.spec.ts を読み、cust\* 属性のテスト追加方針を合わせるため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、章見出し（21.4.2〜21.4.7）の完了チェック更新位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_VariableType の列挙値を確認するため。
 - docs/specs/ecma376-drawingml-diagrams.checklist.md を読み、ST_VariableType のチェック更新位置を確認するため。
@@ -931,182 +931,182 @@
 - docs/specs/ecma376-presentationml.checklist.md を読み、ST_SplitterBarState のチェック更新位置を確認するため。
 - src/pptx/domain/slide.ts を読み、SplitterBarState の型追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、SplitterBarState の export 追加位置を確認するため。
-- src/pptx/parser2/view-properties.ts を読み、horzBarState/vertBarState のパース更新位置を確認するため。
-- src/pptx/parser2/view-properties.spec.ts を読み、normalViewPr のテスト追加方針を合わせるため。
+- src/pptx/parser/view-properties.ts を読み、horzBarState/vertBarState のパース更新位置を確認するため。
+- src/pptx/parser/view-properties.spec.ts を読み、normalViewPr のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_TLAnimateBehaviorCalcMode の列挙値を確認するため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、ST_TLAnimateBehaviorCalcMode のチェック更新位置を確認するため。
 - src/pptx/domain/animation.ts を読み、CalcMode の定義位置を確認するため。
-- src/pptx/parser2/timing-parser/mapping.ts を読み、mapCalcMode の実装位置を確認するため。
-- src/pptx/parser2/timing-parser/behavior.ts を読み、calcmode のパース位置を確認するため。
-- src/pptx/parser2/timing-parser.spec.ts を読み、calcMode のテスト有無を確認するため。
+- src/pptx/parser/timing-parser/mapping.ts を読み、mapCalcMode の実装位置を確認するため。
+- src/pptx/parser/timing-parser/behavior.ts を読み、calcmode のパース位置を確認するため。
+- src/pptx/parser/timing-parser.spec.ts を読み、calcMode のテスト有無を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_TLAnimateBehaviorValueType の列挙値を確認するため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、ST_TLAnimateBehaviorValueType のチェック更新位置を確認するため。
 - src/pptx/domain/animation.ts を読み、ValueType の定義位置を確認するため。
-- src/pptx/parser2/timing-parser/mapping.ts を読み、mapValueType の実装位置を確認するため。
-- src/pptx/parser2/timing-parser/behavior.ts を読み、valueType のパース位置を確認するため。
-- src/pptx/parser2/timing-parser.spec.ts を読み、valueType のテスト有無を確認するため。
+- src/pptx/parser/timing-parser/mapping.ts を読み、mapValueType の実装位置を確認するため。
+- src/pptx/parser/timing-parser/behavior.ts を読み、valueType のパース位置を確認するため。
+- src/pptx/parser/timing-parser.spec.ts を読み、valueType のテスト有無を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_TLAnimateColorDirection の列挙値を確認するため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、ST_TLAnimateColorDirection のチェック更新位置を確認するため。
 - src/pptx/domain/animation.ts を読み、AnimateColorDirection の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、AnimateColorDirection の export 追加位置を確認するため。
-- src/pptx/parser2/timing-parser/behavior.ts を読み、dir 属性のパース追加位置を確認するため。
-- src/pptx/parser2/timing-parser.spec.ts を読み、animClr のテスト追加方針を合わせるため。
+- src/pptx/parser/timing-parser/behavior.ts を読み、dir 属性のパース追加位置を確認するため。
+- src/pptx/parser/timing-parser.spec.ts を読み、animClr のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_TLAnimateColorSpace の列挙値を確認するため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、ST_TLAnimateColorSpace のチェック更新位置を確認するため。
 - src/pptx/domain/animation.ts を読み、AnimateColorSpace の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、AnimateColorSpace の export 追加位置を確認するため。
-- src/pptx/parser2/timing-parser/behavior.ts を読み、clrSpc の型更新位置を確認するため。
+- src/pptx/parser/timing-parser/behavior.ts を読み、clrSpc の型更新位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_TLAnimateMotionBehaviorOrigin の列挙値を確認するため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、ST_TLAnimateMotionBehaviorOrigin のチェック更新位置を確認するため。
 - src/pptx/domain/animation.ts を読み、AnimateMotionOrigin の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、AnimateMotionOrigin の export 追加位置を確認するため。
-- src/pptx/parser2/timing-parser/behavior.ts を読み、origin の型更新位置を確認するため。
-- src/pptx/parser2/timing-parser.spec.ts を読み、animMotion のテスト有無を確認するため。
+- src/pptx/parser/timing-parser/behavior.ts を読み、origin の型更新位置を確認するため。
+- src/pptx/parser/timing-parser.spec.ts を読み、animMotion のテスト有無を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_TLAnimateMotionPathEditMode の列挙値を確認するため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、ST_TLAnimateMotionPathEditMode のチェック更新位置を確認するため。
 - src/pptx/domain/animation.ts を読み、AnimateMotionPathEditMode の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、AnimateMotionPathEditMode の export 追加位置を確認するため。
-- src/pptx/parser2/timing-parser/behavior.ts を読み、pathEditMode のパース追加位置を確認するため。
-- src/pptx/parser2/timing-parser.spec.ts を読み、animMotion のテスト追加方針を合わせるため。
+- src/pptx/parser/timing-parser/behavior.ts を読み、pathEditMode のパース追加位置を確認するため。
+- src/pptx/parser/timing-parser.spec.ts を読み、animMotion のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_TLBehaviorAccumulateType の列挙値を確認するため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、ST_TLBehaviorAccumulateType のチェック更新位置を確認するため。
 - src/pptx/domain/animation.ts を読み、AccumulateMode の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、AccumulateMode の export 追加位置を確認するため。
-- src/pptx/parser2/timing-parser/mapping.ts を読み、mapAccumulateMode の追加位置を確認するため。
-- src/pptx/parser2/timing-parser/common.ts を読み、accumulate のパース追加位置を確認するため。
-- src/pptx/parser2/timing-parser/behavior.ts を読み、accumulate の反映箇所を確認するため。
-- src/pptx/parser2/timing-parser.spec.ts を読み、accumulate のテスト追加方針を合わせるため。
+- src/pptx/parser/timing-parser/mapping.ts を読み、mapAccumulateMode の追加位置を確認するため。
+- src/pptx/parser/timing-parser/common.ts を読み、accumulate のパース追加位置を確認するため。
+- src/pptx/parser/timing-parser/behavior.ts を読み、accumulate の反映箇所を確認するため。
+- src/pptx/parser/timing-parser.spec.ts を読み、accumulate のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_TLBehaviorAdditiveType の列挙値を確認するため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、ST_TLBehaviorAdditiveType のチェック更新位置を確認するため。
 - src/pptx/domain/animation.ts を読み、AdditiveMode の定義位置を確認するため。
-- src/pptx/parser2/timing-parser/mapping.ts を読み、mapAdditiveMode の実装位置を確認するため。
-- src/pptx/parser2/timing-parser/behavior.ts を読み、additive のパース位置を確認するため。
-- src/pptx/parser2/timing-parser.spec.ts を読み、additive のテスト有無を確認するため。
+- src/pptx/parser/timing-parser/mapping.ts を読み、mapAdditiveMode の実装位置を確認するため。
+- src/pptx/parser/timing-parser/behavior.ts を読み、additive のパース位置を確認するため。
+- src/pptx/parser/timing-parser.spec.ts を読み、additive のテスト有無を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_TLBehaviorOverrideType の列挙値を確認するため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、ST_TLBehaviorOverrideType のチェック更新位置を確認するため。
 - src/pptx/domain/animation.ts を読み、OverrideMode の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、OverrideMode の export 追加位置を確認するため。
-- src/pptx/parser2/timing-parser/mapping.ts を読み、mapOverrideMode の追加位置を確認するため。
-- src/pptx/parser2/timing-parser/common.ts を読み、override のパース追加位置を確認するため。
-- src/pptx/parser2/timing-parser/behavior.ts を読み、override の反映箇所を確認するため。
-- src/pptx/parser2/timing-parser.spec.ts を読み、override のテスト追加方針を合わせるため。
+- src/pptx/parser/timing-parser/mapping.ts を読み、mapOverrideMode の追加位置を確認するため。
+- src/pptx/parser/timing-parser/common.ts を読み、override のパース追加位置を確認するため。
+- src/pptx/parser/timing-parser/behavior.ts を読み、override の反映箇所を確認するため。
+- src/pptx/parser/timing-parser.spec.ts を読み、override のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_TLBehaviorTransformType の列挙値を確認するため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、ST_TLBehaviorTransformType のチェック更新位置を確認するため。
 - src/pptx/domain/animation.ts を読み、TransformType の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、TransformType の export 追加位置を確認するため。
-- src/pptx/parser2/timing-parser/mapping.ts を読み、mapTransformType の追加位置を確認するため。
-- src/pptx/parser2/timing-parser/common.ts を読み、xfrmType のパース追加位置を確認するため。
-- src/pptx/parser2/timing-parser/behavior.ts を読み、transformType の反映箇所を確認するため。
-- src/pptx/parser2/timing-parser.spec.ts を読み、xfrmType のテスト追加方針を合わせるため。
+- src/pptx/parser/timing-parser/mapping.ts を読み、mapTransformType の追加位置を確認するため。
+- src/pptx/parser/timing-parser/common.ts を読み、xfrmType のパース追加位置を確認するため。
+- src/pptx/parser/timing-parser/behavior.ts を読み、transformType の反映箇所を確認するため。
+- src/pptx/parser/timing-parser.spec.ts を読み、xfrmType のテスト追加方針を合わせるため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_TLChartSubelementType の列挙値を確認するため。
 - reference/ecma376/ecma-376-1/OfficeOpenXML-XMLSchema-Strict.zip を読み、CT_TLOleChartTargetElement の type 属性型を確認するため。
 - src/pptx/domain/animation.ts を読み、ChartSubelementType と oleChartElement の型変更位置を確認するため。
 - src/pptx/domain/index.ts を読み、ChartSubelementType の export 追加位置を確認するため。
-- src/pptx/parser2/timing-parser/mapping.ts を読み、mapChartSubelementType の追加位置を確認するため。
-- src/pptx/parser2/timing-parser/target.ts を読み、oleChartEl の type パース更新位置を確認するため。
-- src/pptx/parser2/timing-parser.spec.ts を読み、oleChartEl のテスト更新位置を確認するため。
+- src/pptx/parser/timing-parser/mapping.ts を読み、mapChartSubelementType の追加位置を確認するため。
+- src/pptx/parser/timing-parser/target.ts を読み、oleChartEl の type パース更新位置を確認するため。
+- src/pptx/parser/timing-parser.spec.ts を読み、oleChartEl のテスト更新位置を確認するため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、ST_TLChartSubelementType のチェック更新位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_TLCommandType の列挙値を確認するため。
 - src/pptx/domain/animation.ts を読み、CommandType と commandType の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、CommandType の export 追加位置を確認するため。
-- src/pptx/parser2/timing-parser/mapping.ts を読み、mapCommandType の追加位置を確認するため。
-- src/pptx/parser2/timing-parser/behavior.ts を読み、command type のパース更新位置を確認するため。
-- src/pptx/parser2/timing-parser.spec.ts を読み、command type のテスト更新位置を確認するため。
+- src/pptx/parser/timing-parser/mapping.ts を読み、mapCommandType の追加位置を確認するため。
+- src/pptx/parser/timing-parser/behavior.ts を読み、command type のパース更新位置を確認するため。
+- src/pptx/parser/timing-parser.spec.ts を読み、command type のテスト更新位置を確認するため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、ST_TLCommandType のチェック更新位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_TLDiagramBuildType の列挙値を確認するため。
 - reference/ecma376/ecma-376-1/OfficeOpenXML-XMLSchema-Strict.zip を読み、ST_TLDiagramBuildType と CT_TLBuildDiagram の定義を確認するため。
-- src/pptx/parser2/timing-parser/build-list.ts を読み、a:bldDgm のパース経路を確認するため。
-- src/pptx/parser2/timing-parser/graphic-build.ts を読み、bldDgm の build 解析箇所を確認するため。
+- src/pptx/parser/timing-parser/build-list.ts を読み、a:bldDgm のパース経路を確認するため。
+- src/pptx/parser/timing-parser/graphic-build.ts を読み、bldDgm の build 解析箇所を確認するため。
 - src/pptx/domain/animation.ts を読み、AnimationDgmBuildType の更新位置を確認するため。
-- src/pptx/parser2/timing-parser/mapping.ts を読み、mapDgmBuildType の更新位置を確認するため。
-- src/pptx/parser2/timing-parser.spec.ts を読み、bldDgm と mapDgmBuildType のテスト更新位置を確認するため。
+- src/pptx/parser/timing-parser/mapping.ts を読み、mapDgmBuildType の更新位置を確認するため。
+- src/pptx/parser/timing-parser.spec.ts を読み、bldDgm と mapDgmBuildType のテスト更新位置を確認するため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、ST_TLDiagramBuildType のチェック更新位置を確認するため。
 - src/pptx/domain/animation.ts を読み、NextActionType の追加位置を確認するため。
-- src/pptx/parser2/timing-parser/mapping.ts を読み、mapNextAction の型更新位置を確認するため。
-- src/pptx/parser2/timing-parser/time-node.ts を読み、nextAc のパース位置を確認するため。
-- src/pptx/parser2/timing-parser.spec.ts を読み、nextAction のテスト位置を確認するため。
+- src/pptx/parser/timing-parser/mapping.ts を読み、mapNextAction の型更新位置を確認するため。
+- src/pptx/parser/timing-parser/time-node.ts を読み、nextAc のパース位置を確認するため。
+- src/pptx/parser/timing-parser.spec.ts を読み、nextAction のテスト位置を確認するため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、ST_TLNextActionType のチェック更新位置を確認するため。
 - src/pptx/domain/animation.ts を読み、ST_TLOleChartBuildType の既存定義を確認するため。
-- src/pptx/parser2/timing-parser/mapping.ts を読み、mapOleChartBuildType の実装有無を確認するため。
-- src/pptx/parser2/timing-parser/build-list.ts を読み、bldOleChart のマッピング経路を確認するため。
-- src/pptx/parser2/timing-parser.spec.ts を読み、ST_TLOleChartBuildType のテスト有無を確認するため。
+- src/pptx/parser/timing-parser/mapping.ts を読み、mapOleChartBuildType の実装有無を確認するため。
+- src/pptx/parser/timing-parser/build-list.ts を読み、bldOleChart のマッピング経路を確認するため。
+- src/pptx/parser/timing-parser.spec.ts を読み、ST_TLOleChartBuildType のテスト有無を確認するため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、ST_TLOleChartBuildType のチェック更新位置を確認するため。
 - reference/ecma376/ecma-376-1/OfficeOpenXML-XMLSchema-Strict.zip を読み、ST_TLParaBuildType の列挙値を確認するため。
 - src/pptx/domain/animation.ts を読み、ParaBuildType の追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、ParaBuildType の export 追加位置を確認するため。
-- src/pptx/parser2/timing-parser/mapping.ts を読み、mapParaBuildType の追加位置を確認するため。
-- src/pptx/parser2/timing-parser/build-list.ts を読み、build 属性のマッピング更新位置を確認するため。
-- src/pptx/parser2/timing-parser.spec.ts を読み、bldP のテスト更新位置を確認するため。
+- src/pptx/parser/timing-parser/mapping.ts を読み、mapParaBuildType の追加位置を確認するため。
+- src/pptx/parser/timing-parser/build-list.ts を読み、build 属性のマッピング更新位置を確認するため。
+- src/pptx/parser/timing-parser.spec.ts を読み、bldP のテスト更新位置を確認するため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、ST_TLParaBuildType のチェック更新位置を確認するため。
 - src/pptx/domain/animation.ts を読み、PreviousActionType の追加位置を確認するため。
-- src/pptx/parser2/timing-parser/mapping.ts を読み、mapPrevAction の型更新位置を確認するため。
-- src/pptx/parser2/timing-parser/time-node.ts を読み、prevAc のパース位置を確認するため。
+- src/pptx/parser/timing-parser/mapping.ts を読み、mapPrevAction の型更新位置を確認するため。
+- src/pptx/parser/timing-parser/time-node.ts を読み、prevAc のパース位置を確認するため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、ST_TLPreviousActionType のチェック更新位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_TLTime の定義を確認するため。
 - src/pptx/domain/animation.ts を読み、TLTime と build entry への追加位置を確認するため。
 - src/pptx/domain/index.ts を読み、TLTime の export 追加位置を確認するため。
-- src/pptx/parser2/timing-parser/build-list.ts を読み、advAuto のパース追加位置を確認するため。
-- src/pptx/parser2/timing-parser/mapping.ts を読み、parseDuration の再利用可否を確認するため。
-- src/pptx/parser2/timing-parser.spec.ts を読み、advAuto のテスト追加位置を確認するため。
+- src/pptx/parser/timing-parser/build-list.ts を読み、advAuto のパース追加位置を確認するため。
+- src/pptx/parser/timing-parser/mapping.ts を読み、parseDuration の再利用可否を確認するため。
+- src/pptx/parser/timing-parser.spec.ts を読み、advAuto のテスト追加位置を確認するため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、ST_TLTime のチェック更新位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_TLTimeAnimateValueTime の定義を確認するため。
 - src/pptx/domain/animation.ts を読み、TLTimeAnimateValueTime と Keyframe.time の型更新位置を確認するため。
 - src/pptx/domain/index.ts を読み、TLTimeAnimateValueTime の export 追加位置を確認するため。
-- src/pptx/parser2/timing-parser/keyframe.ts を読み、tm の indefinite 判定追加位置を確認するため。
-- src/pptx/parser2/timing-parser.spec.ts を読み、indefinite のテスト追加位置を確認するため。
+- src/pptx/parser/timing-parser/keyframe.ts を読み、tm の indefinite 判定追加位置を確認するため。
+- src/pptx/parser/timing-parser.spec.ts を読み、indefinite のテスト追加位置を確認するため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、ST_TLTimeAnimateValueTime のチェック更新位置を確認するため。
 - src/pptx/domain/animation.ts を読み、TLTimeIndefinite の追加位置と影響範囲を確認するため。
-- src/pptx/domain/animation.ts と src/pptx/parser2/timing-parser/mapping.ts と src/pptx/parser2/timing-parser/common.ts と src/pptx/domain/index.ts を読み、ST_TLTimeNodeFillType の既存実装範囲と export 位置を確認するため。
+- src/pptx/domain/animation.ts と src/pptx/parser/timing-parser/mapping.ts と src/pptx/parser/timing-parser/common.ts と src/pptx/domain/index.ts を読み、ST_TLTimeNodeFillType の既存実装範囲と export 位置を確認するため。
 - src/pptx/domain/animation.ts と src/pptx/domain/index.ts を読み、ST_TLTimeNodeID の型追加と export 位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_TLTimeNodeMasterRelation の列挙値を確認するため。
-- src/pptx/domain/animation.ts と src/pptx/parser2/timing-parser/common.ts と src/pptx/parser2/timing-parser/mapping.ts と src/pptx/parser2/timing-parser.spec.ts と src/pptx/domain/index.ts を読み、masterRel の型・マッピング・テスト追加位置を確認するため。
-- src/pptx/domain/animation.ts と src/pptx/domain/index.ts と src/pptx/parser2/timing-parser/common.ts と src/pptx/parser2/timing-parser/mapping.ts を読み、ST_TLTimeNodePresetClassType の型追加と既存マッピング位置を確認するため。
-- src/pptx/domain/animation.ts と src/pptx/domain/index.ts と src/pptx/parser2/timing-parser/common.ts と src/pptx/parser2/timing-parser/mapping.ts を読み、ST_TLTimeNodeRestartType の型追加と既存マッピング位置を確認するため。
+- src/pptx/domain/animation.ts と src/pptx/parser/timing-parser/common.ts と src/pptx/parser/timing-parser/mapping.ts と src/pptx/parser/timing-parser.spec.ts と src/pptx/domain/index.ts を読み、masterRel の型・マッピング・テスト追加位置を確認するため。
+- src/pptx/domain/animation.ts と src/pptx/domain/index.ts と src/pptx/parser/timing-parser/common.ts と src/pptx/parser/timing-parser/mapping.ts を読み、ST_TLTimeNodePresetClassType の型追加と既存マッピング位置を確認するため。
+- src/pptx/domain/animation.ts と src/pptx/domain/index.ts と src/pptx/parser/timing-parser/common.ts と src/pptx/parser/timing-parser/mapping.ts を読み、ST_TLTimeNodeRestartType の型追加と既存マッピング位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_TLTimeNodeSyncType の列挙値を確認するため。
-- src/pptx/ooxml/presentationml.ts と src/pptx/domain/animation.ts と src/pptx/domain/index.ts と src/pptx/parser2/timing-parser/common.ts と src/pptx/parser2/timing-parser/mapping.ts と src/pptx/parser2/timing-parser.spec.ts を読み、syncBehavior の属性・型・マッピング・テスト追加位置を確認するため。
+- src/pptx/ooxml/presentationml.ts と src/pptx/domain/animation.ts と src/pptx/domain/index.ts と src/pptx/parser/timing-parser/common.ts と src/pptx/parser/timing-parser/mapping.ts と src/pptx/parser/timing-parser.spec.ts を読み、syncBehavior の属性・型・マッピング・テスト追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_TLTimeNodeType の列挙値を確認するため。
-- src/pptx/domain/animation.ts と src/pptx/parser2/timing-parser/mapping.ts と src/pptx/parser2/timing-parser.spec.ts と src/pptx/parser2/timing-parser/common.ts を読み、nodeType の型・マッピング・テスト追加位置を確認するため。
+- src/pptx/domain/animation.ts と src/pptx/parser/timing-parser/mapping.ts と src/pptx/parser/timing-parser.spec.ts と src/pptx/parser/timing-parser/common.ts を読み、nodeType の型・マッピング・テスト追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_TLTriggerEvent/ST_TLTriggerRuntimeNode の列挙値を確認するため。
-- src/pptx/domain/animation.ts と src/pptx/domain/index.ts と src/pptx/parser2/timing-parser/mapping.ts と src/pptx/parser2/timing-parser/condition.ts を読み、TriggerEvent の型追加とマッピング位置を確認するため。
+- src/pptx/domain/animation.ts と src/pptx/domain/index.ts と src/pptx/parser/timing-parser/mapping.ts と src/pptx/parser/timing-parser/condition.ts を読み、TriggerEvent の型追加とマッピング位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_Transition\* の列挙値を確認するため。
 - src/pptx/domain/slide.ts と src/pptx/domain/index.ts を読み、ST_Transition\* の型追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、ST_ViewType の列挙値を確認するため。
-- src/pptx/domain/slide.ts と src/pptx/domain/index.ts と src/pptx/parser2/view-properties.ts と src/pptx/parser2/view-properties.spec.ts を読み、lastView の型付けと既存テスト位置を確認するため。
+- src/pptx/domain/slide.ts と src/pptx/domain/index.ts と src/pptx/parser/view-properties.ts と src/pptx/parser/view-properties.spec.ts を読み、lastView の型付けと既存テスト位置を確認するため。
 - .gitignore を読み、rg が .pptx を見つけられなかった理由（無視設定があるか）を確認するため。
-- src/pptx/parser2/timing-parser/common.ts を読み、lint の ternary-length 指摘を修正するため。
-- src/pptx/parser2/view-properties.ts を読み、ViewType/Direction の型エラー修正位置を確認するため。
+- src/pptx/parser/timing-parser/common.ts を読み、lint の ternary-length 指摘を修正するため。
+- src/pptx/parser/view-properties.ts を読み、ViewType/Direction の型エラー修正位置を確認するため。
 - scripts/lib/pptx-loader.ts を読み、PPTX 読み込みが JSZip 前提かどうかを確認するため。
 - src/pptx/reader/zip-adapter.ts を読み、PresentationFile のアダプタ仕様と復旧後の差し込み位置を確認するため。
 - src/pptx/presentation.ts を読み、PPTX 読み込みの必須ファイルと失敗条件を把握するため。
 - src/pptx/types/file.ts を読み、復旧ローダーが実装すべきインターフェースを確認するため。
 - package.json を読み、利用できる ZIP/圧縮ライブラリの依存関係を確認するため。
 - src/pptx/domain/slide.ts を読み、type import の lint 警告解消のための置き換え箇所を確認するため。
-- src/pptx/parser2/timing-parser/mapping.ts を読み、lint 警告の修正位置（jsdoc/curly）を確認するため。
-- src/pptx/parser2/view-properties.ts を読み、lint 警告の修正位置（curly/let/jsdoc）を確認するため。
-- src/pptx/parser2/timing-parser/keyframe.ts を読み、curly 警告の修正位置を確認するため。
-- src/pptx/parser2/slide-parser.ts と src/pptx/parser2/slide-parser.spec.ts を読み、lint/typecheck 拡張対象の警告・型エラー修正位置を確認するため。
-- src/pptx/parser2/geometry-parser.ts を読み、Degrees の型エラーと lint 警告の対応位置を確認するため。
+- src/pptx/parser/timing-parser/mapping.ts を読み、lint 警告の修正位置（jsdoc/curly）を確認するため。
+- src/pptx/parser/view-properties.ts を読み、lint 警告の修正位置（curly/let/jsdoc）を確認するため。
+- src/pptx/parser/timing-parser/keyframe.ts を読み、curly 警告の修正位置を確認するため。
+- src/pptx/parser/slide-parser.ts と src/pptx/parser/slide-parser.spec.ts を読み、lint/typecheck 拡張対象の警告・型エラー修正位置を確認するため。
+- src/pptx/parser/geometry-parser.ts を読み、Degrees の型エラーと lint 警告の対応位置を確認するため。
 - src/pptx/domain/index.ts と src/pptx/domain/shape.ts を読み、GraphicFrameLocks/BevelPresetType の export 位置を確認するため。
-- src/pptx/parser2/shape-parser/non-visual.ts を読み、readonly 代入と lint 警告の修正位置を確認するため。
-- src/pptx/parser2/shape-parser/three-d.ts を読み、3D 型のパースと lint 警告の修正位置を確認するため。
-- src/pptx/parser2/shape-parser/graphic-frame.ts を読み、lint 警告の修正位置を確認するため。
-- src/pptx/parser2/shape-parser/\*.ts を読み、lint 警告（curly/ternary/let）解消のための修正位置を確認するため。
-- src/pptx/parser2/diagram-_.ts と src/pptx/parser2/diagram-_.spec.ts を読み、lint/typecheck 拡張対象の修正位置（unused/ternary/型エラー）を確認するため。
-- src/pptx/parser2/diagram-parser.spec.ts を読み、txBody 追加のテストヘルパー修正位置を確認するため。
-- src/pptx/render2/components/chart/axis.spec.ts を読み、render2 の lint 警告（unused/||）修正位置を確認するため。
-- src/pptx/render2/components/chart/error-bars.spec.ts を読み、render2 の lint 警告（||）修正位置を確認するため。
-- src/pptx/render2/components/chart/generators/bar.ts を読み、render2 の lint 警告（curly/ternary-length）修正位置を確認するため。
-- src/pptx/render2/components/chart/axis.ts を読み、render2 の lint 警告（unused/curly/let/||）修正位置を確認するため。
-- src/pptx/render2/components/chart/index.ts を読み、renderDisplayUnitsLabel の引数更新位置を確認するため。
-- src/pptx/render2/svg/marker.spec.ts を読み、render2 の lint 警告（no-restricted-imports）修正位置を確認するため。
-- src/pptx/render2/svg/effects.spec.ts を読み、render2 の lint 警告（no-restricted-imports）修正位置を確認するため。
-- src/pptx/render2/svg/renderer.ts を読み、render2 の lint 警告（ternary-length）修正位置を確認するため。
-- src/pptx/render2/svg/slide-shapes.ts を読み、render2 の lint 警告（unused/let/ternary-length）修正位置を確認するため。
+- src/pptx/parser/shape-parser/non-visual.ts を読み、readonly 代入と lint 警告の修正位置を確認するため。
+- src/pptx/parser/shape-parser/three-d.ts を読み、3D 型のパースと lint 警告の修正位置を確認するため。
+- src/pptx/parser/shape-parser/graphic-frame.ts を読み、lint 警告の修正位置を確認するため。
+- src/pptx/parser/shape-parser/\*.ts を読み、lint 警告（curly/ternary/let）解消のための修正位置を確認するため。
+- src/pptx/parser/diagram-_.ts と src/pptx/parser/diagram-_.spec.ts を読み、lint/typecheck 拡張対象の修正位置（unused/ternary/型エラー）を確認するため。
+- src/pptx/parser/diagram-parser.spec.ts を読み、txBody 追加のテストヘルパー修正位置を確認するため。
+- src/pptx/render/components/chart/axis.spec.ts を読み、render の lint 警告（unused/||）修正位置を確認するため。
+- src/pptx/render/components/chart/error-bars.spec.ts を読み、render の lint 警告（||）修正位置を確認するため。
+- src/pptx/render/components/chart/generators/bar.ts を読み、render の lint 警告（curly/ternary-length）修正位置を確認するため。
+- src/pptx/render/components/chart/axis.ts を読み、render の lint 警告（unused/curly/let/||）修正位置を確認するため。
+- src/pptx/render/components/chart/index.ts を読み、renderDisplayUnitsLabel の引数更新位置を確認するため。
+- src/pptx/render/svg/marker.spec.ts を読み、render の lint 警告（no-restricted-imports）修正位置を確認するため。
+- src/pptx/render/svg/effects.spec.ts を読み、render の lint 警告（no-restricted-imports）修正位置を確認するため。
+- src/pptx/render/svg/renderer.ts を読み、render の lint 警告（ternary-length）修正位置を確認するため。
+- src/pptx/render/svg/slide-shapes.ts を読み、render の lint 警告（unused/let/ternary-length）修正位置を確認するため。
 - docs/specs/ecma376-markup-compatibility.checklist.md を読み、Part 3 の実装状況と更新対象を確認するため。
-- src/pptx/parser2/shape-parser/alternate-content.ts を読み、mc:AlternateContent の既存処理範囲を確認するため。
-- src/pptx/parser2/shape-parser/index.ts を読み、mc:AlternateContent が shape 解析でどこに入るかを確認するため。
-- src/pptx/parser2/slide-parser.ts を読み、transition の mc:AlternateContent 追加位置を確認するため。
-- src/pptx/parser2/slide-parser.spec.ts を読み、transition の mc:AlternateContent テスト追加位置を確認するため。
+- src/pptx/parser/shape-parser/alternate-content.ts を読み、mc:AlternateContent の既存処理範囲を確認するため。
+- src/pptx/parser/shape-parser/index.ts を読み、mc:AlternateContent が shape 解析でどこに入るかを確認するため。
+- src/pptx/parser/slide-parser.ts を読み、transition の mc:AlternateContent 追加位置を確認するため。
+- src/pptx/parser/slide-parser.spec.ts を読み、transition の mc:AlternateContent テスト追加位置を確認するため。
 - src/pptx/presentation.ts を読み、readXml の呼び出し経路と API 影響範囲を確認するため。
 - src/pptx/types/api.ts を読み、PresentationOptions と公開 API の影響範囲を確認するため。
 - src/pptx/ooxml/ecma376.ts を読み、既存の namespace 定義を確認するため。
@@ -1114,51 +1114,51 @@
 - src/pptx/reader/xml-reader.ts を読み、XML 読み込みフローの変更位置を確認するため。
 - src/xml/index.ts を読み、XML モジュールの export 追加位置を確認するため。
 - docs/specs/ecma376-drawingml-text.checklist.md を読み、DrawingML Text チェックリストの未記入項目を確認するため。
-- src/pptx/parser2/text-style-levels.ts を読み、lvl4pPr〜lvl8pPr の解析有無を確認するため。
-- src/pptx/parser2/text-parser.ts を読み、Body/Paragraph/Run の各解析対象属性とチェックリスト対応を確認するため。
-- src/pptx/parser2/text-parser.spec.ts を読み、既存テストの網羅範囲を確認するため。
-- src/pptx/parser2/text-style-levels.spec.ts を読み、lvl4pPr〜lvl8pPr のテスト追加位置を確認するため。
+- src/pptx/parser/text-style-levels.ts を読み、lvl4pPr〜lvl8pPr の解析有無を確認するため。
+- src/pptx/parser/text-parser.ts を読み、Body/Paragraph/Run の各解析対象属性とチェックリスト対応を確認するため。
+- src/pptx/parser/text-parser.spec.ts を読み、既存テストの網羅範囲を確認するため。
+- src/pptx/parser/text-style-levels.spec.ts を読み、lvl4pPr〜lvl8pPr のテスト追加位置を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、uFillTx/uLnTx と Font Substitution の定義と参照ページを確認するため。
-- src/pptx/render2/components/chart/error-bars.ts を読み、render2 の lint 警告（unused/curly）修正位置を確認するため。
-- src/pptx/render2/components/chart/generators/bubble.ts を読み、render2 の lint 警告（||）修正位置を確認するため。
-- src/pptx/render2/components/chart/generators/stock.ts を読み、render2 の lint 警告（||）修正位置を確認するため。
-- src/pptx/render2/components/chart/axis.ts を読み、IIFE の関数化と共通化の適用位置を確認するため。
-- src/pptx/render2/components/chart/index.ts を読み、IIFE の関数化と条件分岐の共通化位置を確認するため。
-- src/pptx/render2/svg/renderer.ts を読み、背景描画の関数化位置を確認するため。
-- src/pptx/render2/svg/slide-shapes.ts を読み、IIFE の関数化と補助関数の追加位置を確認するため。
-- src/pptx/render2/text-layout/engine.ts を読み、IIFE の関数化位置を確認するため。
-- src/pptx/render2/text-layout/adapter.ts を読み、IIFE の関数化と共通化の適用位置を確認するため。
+- src/pptx/render/components/chart/error-bars.ts を読み、render の lint 警告（unused/curly）修正位置を確認するため。
+- src/pptx/render/components/chart/generators/bubble.ts を読み、render の lint 警告（||）修正位置を確認するため。
+- src/pptx/render/components/chart/generators/stock.ts を読み、render の lint 警告（||）修正位置を確認するため。
+- src/pptx/render/components/chart/axis.ts を読み、IIFE の関数化と共通化の適用位置を確認するため。
+- src/pptx/render/components/chart/index.ts を読み、IIFE の関数化と条件分岐の共通化位置を確認するため。
+- src/pptx/render/svg/renderer.ts を読み、背景描画の関数化位置を確認するため。
+- src/pptx/render/svg/slide-shapes.ts を読み、IIFE の関数化と補助関数の追加位置を確認するため。
+- src/pptx/render/text-layout/engine.ts を読み、IIFE の関数化位置を確認するため。
+- src/pptx/render/text-layout/adapter.ts を読み、IIFE の関数化と共通化の適用位置を確認するため。
 - package.json を読み、lint/typecheck 実行コマンドの runner を確認するため。
-- src/pptx/render2/components/chart/labels.ts を読み、未使用 import とリーダーライン計算の lint 対応位置を確認するため。
-- src/pptx/render2/components/chart/trendline.ts を読み、トレンドラインラベルの任意オフセット削除と lint 対応位置を確認するため。
-- src/pptx/render2/components/chart/trendline.spec.ts を読み、renderTrendline/renderTrendlines の引数変更に伴う修正箇所を確認するため。
-- src/pptx/render2/svg/fill.ts を読み、switch の return 欠落と no-case-declarations 対応箇所を確認するため。
-- src/pptx/render2/svg/slide-text.ts を読み、マウスオーバーツールチップ生成の lint 対応箇所を確認するため。
-- src/pptx/render2/text-layout/measurer.ts を読み、span 幅算出の ternary lint 対応箇所を確認するため。
-- src/pptx/render2/text-layout/types.ts を読み、未使用 import の lint 対応箇所を確認するため。
+- src/pptx/render/components/chart/labels.ts を読み、未使用 import とリーダーライン計算の lint 対応位置を確認するため。
+- src/pptx/render/components/chart/trendline.ts を読み、トレンドラインラベルの任意オフセット削除と lint 対応位置を確認するため。
+- src/pptx/render/components/chart/trendline.spec.ts を読み、renderTrendline/renderTrendlines の引数変更に伴う修正箇所を確認するため。
+- src/pptx/render/svg/fill.ts を読み、switch の return 欠落と no-case-declarations 対応箇所を確認するため。
+- src/pptx/render/svg/slide-text.ts を読み、マウスオーバーツールチップ生成の lint 対応箇所を確認するため。
+- src/pptx/render/text-layout/measurer.ts を読み、span 幅算出の ternary lint 対応箇所を確認するため。
+- src/pptx/render/text-layout/types.ts を読み、未使用 import の lint 対応箇所を確認するため。
 - src/pptx/animation/engine.ts を読み、RAF フォールバックの型不一致とタイムスタンプ処理を確認するため。
-- src/pptx/parser2/presentation-properties.ts を読み、Color 型の import 修正箇所を確認するため。
-- src/pptx/render2/html/shape.ts を読み、renderShape の網羅的 return 追加位置を確認するため。
-- src/pptx/parser2/wp-drawing.ts を読み、Pixels 型の import と cNvContentPartPr の戻り型整合を確認するため。
-- src/pptx/parser2/wp-drawing.spec.ts を読み、XmlElement の readonly 対応とテストデータ生成の修正箇所を確認するため。
-- src/pptx/parser2/xdr-drawing.spec.ts を読み、XmlElement の readonly 対応とテストデータ生成の修正箇所を確認するため。
-- src/pptx/parser2/placeholder-type-resolver.spec.ts を読み、XmlNode の型ガード適用と placeholder 取得ロジックの修正箇所を確認するため。
-- src/pptx/parser2/mc-alternate-content.spec.ts を読み、XmlText の value フィールドと shape 型の絞り込み修正箇所を確認するため。
-- src/pptx/parser2/geometry-parser.spec.ts を読み、AdjustHandle の型絞り込み修正箇所を確認するため。
-- src/pptx/parser2/font-reference.spec.ts を読み、ColorSpec の型ガードと期待値修正箇所を確認するため。
-- src/pptx/parser2/table-parser.spec.ts を読み、XmlElement 取得の型ガードと graphicFrame 判定の修正箇所を確認するため。
-- src/pptx/parser2/shape-parser.spec.ts を読み、XmlText の value フィールド対応箇所を確認するため。
-- src/pptx/render2/components/chart/axis.spec.ts を読み、TextBody/ParagraphProperties の必須値補完箇所を確認するため。
-- src/pptx/render2/components/chart/legend.spec.ts を読み、TextBody の必須プロパティ補完と fontSize の Points 化を確認するため。
-- src/pptx/render2/components/chart/trendline.spec.ts を読み、TextBody/Fill 型の整合と fontSize の Points 化を確認するため。
-- src/pptx/render2/components/chart/text-props.spec.ts を読み、BodyProperties/Points/TextAnchor の整合修正箇所を確認するため。
-- src/pptx/render2/components/chart/generators/scatter.spec.ts を読み、Marker size の Points 化を確認するため。
-- src/pptx/render2/components/diagram.spec.ts を読み、TextBody の必須プロパティ補完箇所を確認するため。
-- src/pptx/render2/components/diagram-svg.spec.ts を読み、RenderContext/ResourceResolver の型整合修正箇所を確認するため。
-- src/pptx/render2/svg/geometry.spec.ts を読み、Point/CustomGeometry の型整合修正箇所を確認するため。
-- src/pptx/render2/text-layout/adapter.spec.ts を読み、Percent/Fill 型の整合と as any 排除箇所を確認するため。
-- src/pptx/render2/text-layout/centering.spec.ts を読み、TextRun の型ガード適用と node:fs 置換箇所を確認するため。
-- src/pptx/render2/text-layout/engine.spec.ts を読み、Percent/RenderOptions/Span 必須プロパティの整合修正箇所を確認するため。
+- src/pptx/parser/presentation-properties.ts を読み、Color 型の import 修正箇所を確認するため。
+- src/pptx/render/html/shape.ts を読み、renderShape の網羅的 return 追加位置を確認するため。
+- src/pptx/parser/wp-drawing.ts を読み、Pixels 型の import と cNvContentPartPr の戻り型整合を確認するため。
+- src/pptx/parser/wp-drawing.spec.ts を読み、XmlElement の readonly 対応とテストデータ生成の修正箇所を確認するため。
+- src/pptx/parser/xdr-drawing.spec.ts を読み、XmlElement の readonly 対応とテストデータ生成の修正箇所を確認するため。
+- src/pptx/parser/placeholder-type-resolver.spec.ts を読み、XmlNode の型ガード適用と placeholder 取得ロジックの修正箇所を確認するため。
+- src/pptx/parser/mc-alternate-content.spec.ts を読み、XmlText の value フィールドと shape 型の絞り込み修正箇所を確認するため。
+- src/pptx/parser/geometry-parser.spec.ts を読み、AdjustHandle の型絞り込み修正箇所を確認するため。
+- src/pptx/parser/font-reference.spec.ts を読み、ColorSpec の型ガードと期待値修正箇所を確認するため。
+- src/pptx/parser/table-parser.spec.ts を読み、XmlElement 取得の型ガードと graphicFrame 判定の修正箇所を確認するため。
+- src/pptx/parser/shape-parser.spec.ts を読み、XmlText の value フィールド対応箇所を確認するため。
+- src/pptx/render/components/chart/axis.spec.ts を読み、TextBody/ParagraphProperties の必須値補完箇所を確認するため。
+- src/pptx/render/components/chart/legend.spec.ts を読み、TextBody の必須プロパティ補完と fontSize の Points 化を確認するため。
+- src/pptx/render/components/chart/trendline.spec.ts を読み、TextBody/Fill 型の整合と fontSize の Points 化を確認するため。
+- src/pptx/render/components/chart/text-props.spec.ts を読み、BodyProperties/Points/TextAnchor の整合修正箇所を確認するため。
+- src/pptx/render/components/chart/generators/scatter.spec.ts を読み、Marker size の Points 化を確認するため。
+- src/pptx/render/components/diagram.spec.ts を読み、TextBody の必須プロパティ補完箇所を確認するため。
+- src/pptx/render/components/diagram-svg.spec.ts を読み、RenderContext/ResourceResolver の型整合修正箇所を確認するため。
+- src/pptx/render/svg/geometry.spec.ts を読み、Point/CustomGeometry の型整合修正箇所を確認するため。
+- src/pptx/render/text-layout/adapter.spec.ts を読み、Percent/Fill 型の整合と as any 排除箇所を確認するため。
+- src/pptx/render/text-layout/centering.spec.ts を読み、TextRun の型ガード適用と node:fs 置換箇所を確認するため。
+- src/pptx/render/text-layout/engine.spec.ts を読み、Percent/RenderOptions/Span 必須プロパティの整合修正箇所を確認するため。
 - src/pptx/core/connection-site.spec.ts を読み、CustomGeometry の adjustHandles 追加箇所を確認するため。
 - src/pptx/core/text-rect.spec.ts を読み、CustomGeometry の adjustHandles 追加箇所を確認するため。
 - src/pptx/presentation.ts を読み、debug-bg.ts の読み込み手段置換可否を確認するため。
@@ -1166,14 +1166,14 @@
 - src/pptx/domain/shape.ts を読み、CustomGeometry/AdjustHandle の必須項目を確認するため。
 - src/pptx/domain/color.ts を読み、Fill/GradientFill の必須項目を確認するため。
 - src/pptx/domain/types.ts を読み、pt/pct/px の型と補助関数を確認するため。
-- src/pptx/render2/core/types.ts を読み、RenderOptions/LineSpacingMode/BaselineMode の値を確認するため。
-- src/pptx/render2/context.ts と src/pptx/render2/html/context.ts を読み、RenderContext の必須プロパティを確認するため。
+- src/pptx/render/core/types.ts を読み、RenderOptions/LineSpacingMode/BaselineMode の値を確認するため。
+- src/pptx/render/context.ts と src/pptx/render/html/context.ts を読み、RenderContext の必須プロパティを確認するため。
 - tsconfig.json を読み、型チェック対象の範囲を確認するため。
-- src/pptx/render2/svg/geometry.ts を読み、プリセット形状の任意値とフォールバック実装を確認するため。
-- src/pptx/render2/svg/geometry.spec.ts を読み、未知プリセットの期待挙動更新に備えて現状を確認するため。
+- src/pptx/render/svg/geometry.ts を読み、プリセット形状の任意値とフォールバック実装を確認するため。
+- src/pptx/render/svg/geometry.spec.ts を読み、未知プリセットの期待挙動更新に備えて現状を確認するため。
 - src/pptx/core/ecma376-defaults.ts を読み、ECMA-376デフォルト値の既存定義を確認するため。
-- src/pptx/parser2/geometry-parser.ts を読み、プリセットジオメトリの調整値解析の現状を確認するため。
-- src/pptx/parser2/geometry-parser.spec.ts を読み、ジオメトリ解析テストの前提条件を確認するため。
+- src/pptx/parser/geometry-parser.ts を読み、プリセットジオメトリの調整値解析の現状を確認するため。
+- src/pptx/parser/geometry-parser.spec.ts を読み、ジオメトリ解析テストの前提条件を確認するため。
 - src/pptx/ooxml/ecma376.ts を読み、ECMA-376型・ガードの既存設計を確認するため。
 - issues/ecma376-preset-shapes-compliance.md を読み、プリセット形状の実装状況整理を確認するため。
 - reference/ecma376/ecma-376-1/OfficeOpenXML-DrawingMLGeometries.zip を読み、プリセット形状の公式定義を確認するため。
@@ -1186,18 +1186,18 @@
 - src/pptx/core/text-rect.ts を読み、upArrow のテキスト矩形扱いの有無を確認するため。
 - docs/specs/ecma376-drawingml-text.checklist.md を読み、未チェック項目の対象範囲を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、21.1.2.5 Font Substitution の仕様記述を確認するため。
-- src/pptx/render2/svg/slide-text.ts を読み、font-family のフォールバック生成箇所を確認するため。
-- src/pptx/render2/text-layout/adapter.spec.ts を読み、TextBody の最小構成ヘルパーの作り方を確認するため。
+- src/pptx/render/svg/slide-text.ts を読み、font-family のフォールバック生成箇所を確認するため。
+- src/pptx/render/text-layout/adapter.spec.ts を読み、TextBody の最小構成ヘルパーの作り方を確認するため。
 - src/pptx/domain/text.ts を読み、TextBody/Paragraph/RunProperties の必須項目を確認するため。
 - docs/specs/ecma376-presentationml.checklist.md を読み、未チェックの章見出し項目を洗い出すため。
 - docs/specs/ecma376-drawingml-tables.checklist.md を読み、未チェックの table/cell 系項目を確認するため。
 - reference/ecma376/ecma-376-1/Ecma Office Open XML Part 1 - Fundamentals And Markup Language Reference.pdf を読み、21.1.3.1/21.1.3.3/21.1.3.4/21.1.3.11 の仕様記述を確認するため。
 - reference/ecma376/ecma-376-1/OfficeOpenXML-XMLSchema-Strict.zip (dml-main.xsd) を読み、CT_Cell3D/CT_Headers の構造を確認するため。
 - src/pptx/domain/table.ts を読み、TableCellProperties/Cell3d の型追加位置を確認するため。
-- src/pptx/parser2/table-parser.ts を読み、tcPr の cell3D/headers 解析位置を確認するため。
-- src/pptx/parser2/table-style-parser.ts を読み、tblStyle の cell3D 解析位置を確認するため。
-- src/pptx/parser2/table-style-parser.spec.ts を読み、table style のテスト拡張位置を確認するため。
-- src/pptx/parser2/table-parser.spec.ts を読み、table cell の headers/cell3D テスト追加位置を確認するため。
+- src/pptx/parser/table-parser.ts を読み、tcPr の cell3D/headers 解析位置を確認するため。
+- src/pptx/parser/table-style-parser.ts を読み、tblStyle の cell3D 解析位置を確認するため。
+- src/pptx/parser/table-style-parser.spec.ts を読み、table style のテスト拡張位置を確認するため。
+- src/pptx/parser/table-parser.spec.ts を読み、table cell の headers/cell3D テスト追加位置を確認するため。
 - docs/specs/ecma376-drawingml-main.checklist.md を読み、DrawingML Main の未チェック有無を確認するため。
 - docs/specs/ecma376-opc.checklist.md を読み、OPC 範囲の未チェック項目と参照箇所を確認するため。
 - docs/specs/ecma376-transitional-migration.checklist.md を読み、Transitional Migration の未チェック項目を確認するため。
@@ -1206,17 +1206,17 @@
 - src/pptx/core/relationships.ts を読み、OPC Relationships の解析範囲を確認するため。
 - src/pptx/core/content-types.ts を読み、OPC Part names/Media types/relationships path 対応を確認するため。
 - src/xml/string-utils.ts を読み、相対パス正規化の実装範囲を確認するため。
-- src/pptx/parser2/vml-parser.ts を読み、VML Drawing Part の解析範囲を確認するため。
-- src/pptx/render2/svg/slide-shapes.ts を読み、VML Drawing Part の利用箇所を確認するため。
-- src/pptx/parser2/vml-parser.spec.ts を読み、VML Drawing のテスト追加位置を確認するため。
+- src/pptx/parser/vml-parser.ts を読み、VML Drawing Part の解析範囲を確認するため。
+- src/pptx/render/svg/slide-shapes.ts を読み、VML Drawing Part の利用箇所を確認するため。
+- src/pptx/parser/vml-parser.spec.ts を読み、VML Drawing のテスト追加位置を確認するため。
 - docs/specs/ecma376-transitional-migration.checklist.md を読み、14.8〜15.9 の未チェック項目へ仕様参照を追記するため。
 - docs/specs/ecma376-transitional-migration.checklist.md を読み、15.10〜20.4 の未チェック項目へ仕様参照を追記するため。
-- src/pptx/render2/svg/geometry.ts を読み、Annex D に定義のない矢印系プリセットの現状実装を確認するため。
+- src/pptx/render/svg/geometry.ts を読み、Annex D に定義のない矢印系プリセットの現状実装を確認するため。
 - reference/ecma376/ecma-376-1/OfficeOpenXML-DrawingMLGeometries.zip を読み、leftUpArrow などのプリセット形状の Annex D 定義を確認するため。
 - reference/ecma376/ecma-376-1/OfficeOpenXML-DrawingMLGeometries.zip を読み、leftUpArrow/quadArrow/circularArrow などの定義を確認しプリセット実装へ反映するため。
-- src/pptx/render2/svg/geometry.spec.ts を読み、textNoShape テスト削除の影響範囲を確認するため。
-- src/pptx/render2/svg/geometry.ts を読み、Annex D と一致するプリセット一覧を抽出して差分確認するため。
+- src/pptx/render/svg/geometry.spec.ts を読み、textNoShape テスト削除の影響範囲を確認するため。
+- src/pptx/render/svg/geometry.ts を読み、Annex D と一致するプリセット一覧を抽出して差分確認するため。
 - reference/ecma376/ecma-376-2/Ecma Office Open XML Part 2 - Open Packaging Conventions.pdf を読み、6.2.4/6.2.5/6.3/6.4.2 の仕様記述を確認するため。
 - docs/specs/ecma376-opc.checklist.md を読み、OPC 未実装項目の対象範囲を確認するため。
-- src/pptx/render2/svg/effects3d.spec.ts を読み、未使用 import の修正対象を確認するため。
-- src/pptx/render2/svg/geometry.ts を読み、未使用変数の修正対象を確認するため。
+- src/pptx/render/svg/effects3d.spec.ts を読み、未使用 import の修正対象を確認するため。
+- src/pptx/render/svg/geometry.ts を読み、未使用変数の修正対象を確認するため。

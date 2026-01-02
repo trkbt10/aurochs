@@ -1,5 +1,5 @@
 /**
- * @file Tests for mc:AlternateContent handling in parser2
+ * @file Tests for mc:AlternateContent handling in parser
  *
  * Per ECMA-376 Part 3, Section 10.2.1, mc:AlternateContent provides
  * alternative representations for different consumers.

@@ -6,11 +6,16 @@
 import type { PresentationFile } from "../../types/file";
 import type { SlideResources } from "../../core/opc";
 import type { LayoutData, MasterData, ThemeData, DiagramData } from "../types";
-import { findLayoutFilename, findMasterFilename, findThemeFilename, getResourcesByType } from "../../core/opc/relationships";
+import {
+  findLayoutFilename,
+  findMasterFilename,
+  findThemeFilename,
+  getResourcesByType,
+} from "../../core/opc/relationships";
 import { RELATIONSHIP_TYPES } from "../../core/opc/content-types";
 import { getByPath } from "../../../xml";
 import { indexNodes } from "../../core/node-indexer";
-import { transformDiagramNamespace } from "../../parser2/diagram/transform";
+import { transformDiagramNamespace } from "../../parser/diagram/transform";
 import { readXml, getRelationships, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS } from "../xml-reader";
 
 /**
@@ -19,10 +24,7 @@ import { readXml, getRelationships, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS } from 
  * @param relationships - Slide relationships to find layout reference
  * @returns Layout data with parsed XML, index tables, and relationships
  */
-export function loadLayoutData(
-  file: PresentationFile,
-  relationships: SlideResources,
-): LayoutData {
+export function loadLayoutData(file: PresentationFile, relationships: SlideResources): LayoutData {
   const layoutPath = findLayoutFilename(relationships);
   if (layoutPath === undefined) {
     return {
@@ -45,10 +47,7 @@ export function loadLayoutData(
  * @param layoutRelationships - Layout relationships to find master reference
  * @returns Master data with parsed XML, index tables, text styles, and relationships
  */
-export function loadMasterData(
-  file: PresentationFile,
-  layoutRelationships: SlideResources,
-): MasterData {
+export function loadMasterData(file: PresentationFile, layoutRelationships: SlideResources): MasterData {
   const masterPath = findMasterFilename(layoutRelationships);
   if (masterPath === undefined) {
     return {
@@ -73,10 +72,7 @@ export function loadMasterData(
  * @param masterRelationships - Master relationships to find theme reference
  * @returns Theme data with parsed XML and relationships
  */
-export function loadThemeData(
-  file: PresentationFile,
-  masterRelationships: SlideResources,
-): ThemeData {
+export function loadThemeData(file: PresentationFile, masterRelationships: SlideResources): ThemeData {
   const themePath = findThemeFilename(masterRelationships);
   if (themePath === undefined) {
     return {
@@ -103,10 +99,7 @@ export function loadThemeData(
  * @param relationships - Slide relationships to find diagram reference
  * @returns Diagram data with parsed XML and relationships
  */
-export function loadDiagramData(
-  file: PresentationFile,
-  relationships: SlideResources,
-): DiagramData {
+export function loadDiagramData(file: PresentationFile, relationships: SlideResources): DiagramData {
   for (const res of Object.values(relationships)) {
     if (res.type.includes("diagramDrawing")) {
       const diagramPath = res.target;

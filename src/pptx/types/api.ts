@@ -7,7 +7,7 @@ import type { XmlDocument, XmlNode } from "../../xml";
 import type { IndexTables } from "../core/types";
 import type { SlideResources } from "../core/opc";
 import type { SlideSize } from "../domain";
-import type { RenderOptions } from "../render2/render-options";
+import type { RenderOptions } from "../render/render-options";
 
 /**
  * Options for opening a presentation

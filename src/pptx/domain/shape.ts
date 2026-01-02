@@ -133,10 +133,7 @@ export type PlaceholderType =
  * Placeholder size
  * @see ECMA-376 Part 1, Section 19.7.9 (ST_PlaceholderSize)
  */
-export type PlaceholderSize =
-  | "full"
-  | "half"
-  | "quarter";
+export type PlaceholderSize = "full" | "half" | "quarter";
 
 /**
  * Placeholder properties
@@ -156,13 +153,7 @@ export type Placeholder = {
 /**
  * Path command types for custom geometry
  */
-export type PathCommandType =
-  | "moveTo"
-  | "lineTo"
-  | "arcTo"
-  | "quadBezierTo"
-  | "cubicBezierTo"
-  | "close";
+export type PathCommandType = "moveTo" | "lineTo" | "arcTo" | "quadBezierTo" | "cubicBezierTo" | "close";
 
 /**
  * Move to command
@@ -657,7 +648,7 @@ export type TableReference = {
  * Chart reference (actual chart data in chart.ts)
  *
  * The parsedChart field is populated in the integration layer
- * to allow render2 to render without calling parser2 directly.
+ * to allow render to render without calling parser directly.
  */
 export type ChartReference = {
   readonly resourceId: ResourceId;
@@ -681,7 +672,7 @@ export type DiagramContent = {
  * Diagram reference (SmartArt)
  *
  * The parsedContent field is populated in the integration layer
- * to allow render2 to render without calling parser2 directly.
+ * to allow render to render without calling parser directly.
  */
 export type DiagramReference = {
   readonly dataResourceId?: ResourceId;
@@ -737,10 +728,4 @@ export type OleObjectFollowColorScheme = "full" | "none" | "textAndBackground";
 /**
  * Union of all shape types
  */
-export type Shape =
-  | SpShape
-  | PicShape
-  | GrpShape
-  | CxnShape
-  | GraphicFrame
-  | ContentPartShape;
+export type Shape = SpShape | PicShape | GrpShape | CxnShape | GraphicFrame | ContentPartShape;

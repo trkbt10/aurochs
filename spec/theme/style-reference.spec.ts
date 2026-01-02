@@ -10,10 +10,10 @@
 import * as fs from "node:fs";
 import JSZip from "jszip";
 import { openPresentation } from "../../src/pptx";
-import { parseSlide } from "../../src/pptx/parser2/slide/slide-parser";
+import { parseSlide } from "../../src/pptx/parser/slide/slide-parser";
 import { resolveColor } from "../../src/pptx/core/dml/render/color";
 import { parseXml, getByPath } from "../../src/xml";
-import { createParseContext } from "../../src/pptx/parser2/context";
+import { createParseContext } from "../../src/pptx/parser/context";
 import { createSlideRenderContext } from "../../src/pptx/reader/slide/accessor";
 import type { ZipFile } from "../../src/pptx/core/dml/domain/types";
 import {
@@ -21,11 +21,7 @@ import {
   createPlaceholderTable,
   createColorMap,
 } from "../../src/pptx/reader/slide/resource-adapters";
-import {
-  parseTheme,
-  parseColorScheme,
-  parseMasterTextStyles,
-} from "../../src/pptx/core/dml/parser/theme";
+import { parseTheme, parseColorScheme, parseMasterTextStyles } from "../../src/pptx/core/dml/parser/theme";
 import { renderSlideSvgIntegrated } from "../../src/pptx/reader/slide/slide-render";
 import type { SpShape, Color, Pixels } from "../../src/pptx/domain";
 import { createPresentationFile, THEMES_PPTX_PATH } from "./test-utils";
@@ -232,8 +228,12 @@ describe("a:fontRef schemeClr application", () => {
     expect(slide).toBeDefined();
 
     const isSpShapeWithFontRef = (s: { type: string; style?: { fontReference?: unknown } }): s is SpShape => {
-      if (s.type !== "sp") {return false;}
-      if (s.style?.fontReference === undefined) {return false;}
+      if (s.type !== "sp") {
+        return false;
+      }
+      if (s.style?.fontReference === undefined) {
+        return false;
+      }
       return true;
     };
     const shapesWithFontRef = slide!.shapes.filter(isSpShapeWithFontRef);
@@ -242,20 +242,24 @@ describe("a:fontRef schemeClr application", () => {
 
     const hasTargetText = (s: SpShape): boolean => {
       const paragraphs = s.textBody?.paragraphs;
-      if (!paragraphs) {return false;}
+      if (!paragraphs) {
+        return false;
+      }
       return paragraphs.some((p) => {
         return p.runs.some((r) => {
-          if (r.type !== "text") {return false;}
+          if (r.type !== "text") {
+            return false;
+          }
           return r.text?.includes("Fill: RGB") === true;
         });
       });
     };
-    const targetShape = slide!.shapes.find(
-      (s): s is SpShape => {
-        if (s.type !== "sp") {return false;}
-        return hasTargetText(s as SpShape);
+    const targetShape = slide!.shapes.find((s): s is SpShape => {
+      if (s.type !== "sp") {
+        return false;
       }
-    );
+      return hasTargetText(s as SpShape);
+    });
 
     expect(targetShape).toBeDefined();
     expect(targetShape?.style?.fontReference).toBeDefined();

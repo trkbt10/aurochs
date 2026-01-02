@@ -10,7 +10,7 @@ import * as path from "node:path";
 import JSZip from "jszip";
 import type { PresentationFile, SlideSize } from "../src/pptx";
 import { openPresentation } from "../src/pptx";
-import { parseTiming } from "../src/pptx/parser2/timing-parser";
+import { parseTiming } from "../src/pptx/parser/timing-parser";
 import { getChild, isXmlElement, parseXml, type XmlElement } from "../src/xml";
 const app = new Hono();
 
@@ -28,10 +28,14 @@ app.get("/animation-player.js", (c) => {
  */
 function findTimingElement(doc: { children: readonly unknown[] }): XmlElement | undefined {
   for (const child of doc.children) {
-    if (!isXmlElement(child)) {continue;}
+    if (!isXmlElement(child)) {
+      continue;
+    }
     // p:sld > p:timing
     const timing = getChild(child, "p:timing");
-    if (timing) {return timing;}
+    if (timing) {
+      return timing;
+    }
   }
   return undefined;
 }
@@ -655,7 +659,9 @@ app.get("/anim/:filename/:slide", async (c) => {
     <div class="timing-panel">
       <h2>Animation Timeline</h2>
       ${timingTree || '<p class="no-timing">No animations on this slide</p>'}
-      ${timingData ? `
+      ${
+        timingData
+          ? `
       <div class="playback-controls">
         <button class="play-btn" onclick="playAnimations()">Play</button>
         <button class="nav-btn" onclick="player.resetAnimatedShapes();">Reset</button>
@@ -664,7 +670,9 @@ app.get("/anim/:filename/:slide", async (c) => {
           <input type="checkbox" id="autoPlay" onchange="toggleAutoPlay(this.checked)"> Auto
         </label>
       </div>
-      <div id="debugLog" style="margin-top:12px;font-size:11px;color:#8b949e;max-height:200px;overflow-y:auto;"></div>` : ''}
+      <div id="debugLog" style="margin-top:12px;font-size:11px;color:#8b949e;max-height:200px;overflow-y:auto;"></div>`
+          : ""
+      }
     </div>
   </div>
   <script src="/animation-player.js"></script>
@@ -682,7 +690,7 @@ app.get("/anim/:filename/:slide", async (c) => {
     container.style.height = (${slideSize.height} * scale) + 'px';
 
     // Timing data
-    const timingData = ${timingData ? JSON.stringify(timingData) : 'null'};
+    const timingData = ${timingData ? JSON.stringify(timingData) : "null"};
     const debugLog = document.getElementById('debugLog');
 
     function log(msg) {
@@ -785,7 +793,7 @@ function renderTimingTree(timing: ReturnType<typeof parseTiming>): string {
     }
 
     const attrStr = attrs.length > 0 ? ` <span class="node-attr">${attrs.join(" ")}</span>` : "";
-    const childrenHtml = children.map(c => renderNode(c, depth + 1)).join("");
+    const childrenHtml = children.map((c) => renderNode(c, depth + 1)).join("");
 
     return `<div class="tree-node">
       <span class="node-type ${type}">${type}</span>${attrStr} ${targetInfo}

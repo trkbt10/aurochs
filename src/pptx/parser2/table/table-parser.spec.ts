@@ -9,8 +9,8 @@ import type { XmlDocument, XmlElement, XmlText, XmlNode } from "../../../xml/ind
 import { parseTable } from "./table-parser";
 import { parseShapeElement } from "../shape-parser/index";
 import { parseSlide } from "../slide/slide-parser";
-import { renderSlideSvg } from "../../render2/svg/renderer";
-import { createRenderContext } from "../../render2/context";
+import { renderSlideSvg } from "../../render/svg/renderer";
+import { createRenderContext } from "../../render/context";
 import { openPresentation } from "../../index";
 import type { PresentationFile } from "../../index";
 import { px } from "../../domain/types";
@@ -27,7 +27,9 @@ function getRootElement(doc: XmlDocument): XmlElement {
 
 function findChildElement(parent: XmlElement, name: string): XmlElement | undefined {
   return parent.children.find((child): child is XmlElement => {
-    if (!isXmlElement(child)) {return false;}
+    if (!isXmlElement(child)) {
+      return false;
+    }
     return child.name === name;
   });
 }
@@ -48,10 +50,7 @@ describe("table-parser", () => {
         el("a:tc", { id: "HeaderA" }, []),
         el("a:tc", { id: "Data1" }, [
           el("a:tcPr", {}, [
-            el("a:headers", {}, [
-              el("a:header", { val: "HeaderA" }),
-              el("a:header", {}, [text("HeaderB")]),
-            ]),
+            el("a:headers", {}, [el("a:header", { val: "HeaderA" }), el("a:header", {}, [text("HeaderB")])]),
             el("a:cell3D", { prstMaterial: "metal" }, [
               el("a:bevel", { prst: "circle", w: "914400", h: "914400" }),
               el("a:lightRig", { rig: "threePt", dir: "t" }),

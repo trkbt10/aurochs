@@ -5,23 +5,10 @@
  */
 
 import type { XmlElement } from "../xml";
-import type {
-  SlideRenderContext,
-  ColorResolveContext,
-  ResourceContext,
-} from "./reader/slide/accessor";
-import type {
-  ColorMap,
-  ColorScheme,
-} from "./domain/resolution";
-import type {
-  PlaceholderTable,
-  ResourceMap,
-  ZipFile,
-  FormatScheme,
-  MasterTextStyles,
-} from "./core/dml/domain/types";
-import { DEFAULT_RENDER_OPTIONS } from "./render2/render-options";
+import type { SlideRenderContext, ColorResolveContext, ResourceContext } from "./reader/slide/accessor";
+import type { ColorMap, ColorScheme } from "./domain/resolution";
+import type { PlaceholderTable, ResourceMap, ZipFile, FormatScheme, MasterTextStyles } from "./core/dml/domain/types";
+import { DEFAULT_RENDER_OPTIONS } from "./render/render-options";
 
 /**
  * Create an empty XML element for testing

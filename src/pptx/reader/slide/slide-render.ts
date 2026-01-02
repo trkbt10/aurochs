@@ -8,15 +8,15 @@
 import type { XmlDocument } from "../../../xml/index";
 import type { SlideRenderContext } from "./accessor";
 import type { SlideSize } from "../../domain/index";
-import type { ResolvedBackgroundFill } from "../../render2/context";
-import { parseSlide } from "../../parser2/slide/slide-parser";
-import { createParseContext } from "../../parser2/context";
-import { renderSlide } from "../../render2/html/slide";
-import { renderSlideSvg } from "../../render2/svg/renderer";
-import { createRenderContext } from "../../render2/core/context";
-import { createStyleCollector } from "../../render2/context";
+import type { ResolvedBackgroundFill } from "../../render/context";
+import { parseSlide } from "../../parser/slide/slide-parser";
+import { createParseContext } from "../../parser/context";
+import { renderSlide } from "../../render/html/slide";
+import { renderSlideSvg } from "../../render/svg/renderer";
+import { createRenderContext } from "../../render/core/context";
+import { createStyleCollector } from "../../render/context";
 import { getBackgroundFillData } from "../../core/dml/render/background";
-import { enrichSlideContent, type FileReader } from "../../parser2/slide/external-content-loader";
+import { enrichSlideContent, type FileReader } from "../../parser/slide/external-content-loader";
 
 // =============================================================================
 // Types
@@ -51,7 +51,7 @@ export type IntegratedSvgRenderResult = {
 // Parse Context Creation
 // =============================================================================
 
-// Parse context creation is handled by parser2/context.ts (createParseContext)
+// Parse context creation is handled by parser/context.ts (createParseContext)
 
 // =============================================================================
 // Integrated Render Function
@@ -61,9 +61,9 @@ export type IntegratedSvgRenderResult = {
  * Render a slide using the new Parse → Domain → Render architecture.
  *
  * This function:
- * 1. Parses XmlDocument to Slide domain object (parser2)
+ * 1. Parses XmlDocument to Slide domain object (parser)
  * 2. Resolves background from slide/layout/master hierarchy
- * 3. Renders Slide domain object to HTML (render2)
+ * 3. Renders Slide domain object to HTML (render)
  *
  * No `as unknown as` casts are needed because all layers use
  * well-defined types.
@@ -121,7 +121,7 @@ function createEmptySlideHtml(slideSize: SlideSize): string {
  * Convert BackgroundFill from core to ResolvedBackgroundFill.
  *
  * This converts the legacy background resolution result (from getBackgroundFillData)
- * to the render2 ResolvedBackgroundFill type.
+ * to the render ResolvedBackgroundFill type.
  */
 function toResolvedBackgroundFill(
   bgFillData: ReturnType<typeof getBackgroundFillData>,
@@ -175,9 +175,9 @@ function toResolvedBackgroundFill(
  * Render a slide to SVG using the new Parse → Domain → Render architecture.
  *
  * This function:
- * 1. Parses XmlDocument to Slide domain object (parser2)
+ * 1. Parses XmlDocument to Slide domain object (parser)
  * 2. Resolves background from slide/layout/master hierarchy
- * 3. Renders Slide domain object to SVG (render2)
+ * 3. Renders Slide domain object to SVG (render)
  *
  * No `as unknown as` casts are needed because all layers use
  * well-defined types.
@@ -199,7 +199,7 @@ export function renderSlideSvgIntegrated(
   }
 
   // Step 2: Enrich slide with pre-parsed chart/diagram content
-  // This allows render2 to render without directly calling parser2
+  // This allows render to render without directly calling parser
   const fileReader: FileReader = {
     readFile: (path: string) => ctx.readFile(path),
     resolveResource: (id: string) => ctx.resolveResource(id),

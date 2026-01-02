@@ -1,5 +1,5 @@
 /**
- * @file Core types for render2
+ * @file Core types for render
  *
  * Shared types used by both HTML and SVG renderers.
  */

@@ -3,7 +3,7 @@ import * as path from "node:path";
 import JSZip from "jszip";
 import type { PresentationFile } from "../../../src/pptx";
 import { openPresentation } from "../../../src/pptx";
-import { parseTiming } from "../../../src/pptx/parser2/timing-parser";
+import { parseTiming } from "../../../src/pptx/parser/timing-parser";
 import { getChild, isXmlElement, parseXml, type XmlElement } from "../../../src/xml";
 import type { FileInfo, PresentationInfo, SlideInfo, TimingData } from "../../shared/types";
 

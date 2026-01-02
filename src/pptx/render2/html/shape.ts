@@ -4,25 +4,9 @@
  * Converts Shape domain objects to HTML/SVG output.
  */
 
-import type {
-  CxnShape,
-  GraphicFrame,
-  GrpShape,
-  PicShape,
-  Shape,
-  SpShape,
-  Transform,
-} from "../../domain/index";
+import type { CxnShape, GraphicFrame, GrpShape, PicShape, Shape, SpShape, Transform } from "../../domain/index";
 import type { RenderContext } from "../context";
-import {
-  div,
-  EMPTY_HTML,
-  type HtmlString,
-  img,
-  joinHtml,
-  unsafeHtml,
-  buildStyle,
-} from "./index";
+import { div, EMPTY_HTML, type HtmlString, img, joinHtml, unsafeHtml, buildStyle } from "./index";
 import { renderGeometryData } from "../svg/geometry";
 import { path, svg, defs } from "../svg/primitives";
 import { generateLineMarkers } from "../svg/marker";
@@ -67,10 +51,7 @@ type SvgPaintStyle = {
   readonly fillOpacity?: number;
 };
 
-function resolveImageFillFromResources(
-  fill: Fill,
-  ctx: RenderContext
-): ResolvedImageFill | undefined {
+function resolveImageFillFromResources(fill: Fill, ctx: RenderContext): ResolvedImageFill | undefined {
   if (fill.type !== "blipFill") {
     return undefined;
   }
@@ -90,7 +71,7 @@ function buildShapeFill(
   width: number,
   height: number,
   ctx: RenderContext,
-  defsCollector: ReturnType<typeof createDefsCollector>
+  defsCollector: ReturnType<typeof createDefsCollector>,
 ): SvgPaintStyle {
   if (!fill || fill.type === "noFill") {
     return { fill: "none" };
@@ -111,8 +92,7 @@ function buildShapeFill(
     return { fill: `url(#${gradientId})` };
   }
 
-  const resolvedImageFill =
-    getResolvedImageFill(fill, ctx.colorContext) ?? resolveImageFillFromResources(fill, ctx);
+  const resolvedImageFill = getResolvedImageFill(fill, ctx.colorContext) ?? resolveImageFillFromResources(fill, ctx);
   if (resolvedImageFill) {
     const patternId = defsCollector.getNextId("shape-img");
     defsCollector.addDef(renderImageFillToSvgDef(resolvedImageFill, patternId, width, height));
@@ -158,7 +138,7 @@ export function renderSpShape(shape: SpShape, ctx: RenderContext): HtmlString {
       style: buildStyle(positionStyles),
     },
     shapeSvg,
-    textHtml
+    textHtml,
   );
 }
 
@@ -168,13 +148,7 @@ function renderSpShapeSvg(shape: SpShape, transform: Transform, ctx: RenderConte
   }
 
   const defsCollector = createDefsCollector();
-  const fillStyle = buildShapeFill(
-    shape.properties.fill,
-    transform.width,
-    transform.height,
-    ctx,
-    defsCollector
-  );
+  const fillStyle = buildShapeFill(shape.properties.fill, transform.width, transform.height, ctx, defsCollector);
   const lineStyle = resolveLineStyle(shape, ctx);
   const styleAttr = buildFillStyleAttr(fillStyle.fillOpacity, lineStyle?.strokeOpacity);
   const geometry = shape.properties.geometry ?? { type: "preset", preset: "rect", adjustValues: [] };
@@ -204,7 +178,7 @@ function renderSpShapeSvg(shape: SpShape, transform: Transform, ctx: RenderConte
       viewBox: `0 0 ${transform.width} ${transform.height}`,
       style: "position: absolute; top: 0; left: 0;",
     },
-    ...svgChildren
+    ...svgChildren,
   );
 }
 
@@ -270,7 +244,7 @@ export function renderPicShape(shape: PicShape, ctx: RenderContext): HtmlString 
           "justify-content": "center",
         }),
       },
-      unsafeHtml("<span>Image</span>")
+      unsafeHtml("<span>Image</span>"),
     );
   }
 
@@ -292,7 +266,7 @@ export function renderPicShape(shape: PicShape, ctx: RenderContext): HtmlString 
       width: "100%",
       height: "100%",
       style: buildPictureObjectFitStyle(shape),
-    })
+    }),
   );
 }
 
@@ -301,7 +275,7 @@ function renderCroppedPicture(
   transform: Transform,
   positionStyles: Record<string, string>,
   shapeId: string,
-  imageSrc: string
+  imageSrc: string,
 ): HtmlString | undefined {
   const srcRect = shape.blipFill.sourceRect;
   if (!srcRect) {
@@ -339,7 +313,7 @@ function renderCroppedPicture(
         top: `${offsetY}px`,
         "object-fit": resolvePictureObjectFit(shape),
       }),
-    })
+    }),
   );
 }
 
@@ -392,9 +366,7 @@ export function renderGrpShape(shape: GrpShape, ctx: RenderContext): HtmlString 
     childTransformParts.push(`scale(${scaleX}, ${scaleY})`);
   }
   if (transform.childOffsetX !== 0 || transform.childOffsetY !== 0) {
-    childTransformParts.push(
-      `translate(${-transform.childOffsetX}px, ${-transform.childOffsetY}px)`
-    );
+    childTransformParts.push(`translate(${-transform.childOffsetX}px, ${-transform.childOffsetY}px)`);
   }
 
   // Render children
@@ -413,7 +385,7 @@ export function renderGrpShape(shape: GrpShape, ctx: RenderContext): HtmlString 
         overflow: "hidden", // Clip children to group bounds
       }),
     },
-    ...normalizeHtmlChildren(innerContent)
+    ...normalizeHtmlChildren(innerContent),
   );
 }
 
@@ -426,7 +398,7 @@ function computeGroupScale(childExtent: number, extent: number): number {
 
 function renderGroupInnerContent(
   childTransformParts: string[],
-  childrenHtml: readonly HtmlString[]
+  childrenHtml: readonly HtmlString[],
 ): HtmlString | readonly HtmlString[] {
   if (childTransformParts.length === 0) {
     return childrenHtml;
@@ -442,7 +414,7 @@ function renderGroupInnerContent(
         transform: childTransformParts.join(" "),
       }),
     },
-    ...childrenHtml
+    ...childrenHtml,
   );
 }
 
@@ -513,12 +485,7 @@ export function renderCxnShape(shape: CxnShape, ctx: RenderContext): HtmlString 
 
   // Generate markers for line ends (arrows)
   // Per ECMA-376 Part 1, Section 20.1.8.37/57
-  const markers = generateLineMarkers(
-    line?.headEnd,
-    line?.tailEnd,
-    strokeWidth,
-    strokeColor
-  );
+  const markers = generateLineMarkers(line?.headEnd, line?.tailEnd, strokeWidth, strokeColor);
 
   // Build path attributes with marker references
   const pathAttrs: Record<string, string | number | undefined> = {
@@ -558,7 +525,7 @@ export function renderCxnShape(shape: CxnShape, ctx: RenderContext): HtmlString 
       "data-ooxml-id": shape.nonVisual.id,
       style: buildStyle(positionStyles),
     },
-    svgContent
+    svgContent,
   );
 }
 
@@ -575,7 +542,7 @@ function buildConnectorPathData(shape: CxnShape, transform: Transform): string {
 function renderConnectorSvg(
   transform: Transform,
   markers: ReturnType<typeof generateLineMarkers>,
-  pathAttrs: Record<string, string | number | undefined>
+  pathAttrs: Record<string, string | number | undefined>,
 ): HtmlString {
   const svgAttrs = {
     width: transform.width,
@@ -598,14 +565,9 @@ function renderConnectorSvg(
  * Render chart content
  *
  * Uses pre-parsed chart data if available (populated by integration layer).
- * This allows render2 to render charts without directly calling parser2.
+ * This allows render to render charts without directly calling parser.
  */
-function renderChartContent(
-  chartRef: ChartReference,
-  width: number,
-  height: number,
-  ctx: RenderContext
-): HtmlString {
+function renderChartContent(chartRef: ChartReference, width: number, height: number, ctx: RenderContext): HtmlString {
   // Use pre-parsed chart data if available
   if (chartRef.parsedChart !== undefined) {
     return renderChart(chartRef.parsedChart, width, height, ctx);
@@ -617,20 +579,22 @@ function renderChartContent(
     message: `Chart not pre-parsed: ${chartRef.resourceId}`,
     element: "chart",
   });
-  return unsafeHtml(`<svg width="${width}" height="${height}"><text x="50%" y="50%" text-anchor="middle">Chart</text></svg>`);
+  return unsafeHtml(
+    `<svg width="${width}" height="${height}"><text x="50%" y="50%" text-anchor="middle">Chart</text></svg>`,
+  );
 }
 
 /**
  * Render diagram content
  *
  * Uses pre-parsed diagram data if available (populated by integration layer).
- * This allows render2 to render diagrams without directly calling parser2.
+ * This allows render to render diagrams without directly calling parser.
  */
 function renderDiagramContent(
   diagramRef: DiagramReference,
   width: number,
   height: number,
-  ctx: RenderContext
+  ctx: RenderContext,
 ): HtmlString {
   // Use pre-parsed diagram content if available
   if (diagramRef.parsedContent !== undefined && diagramRef.parsedContent.shapes.length > 0) {
@@ -655,12 +619,7 @@ export function renderGraphicFrame(frame: GraphicFrame, ctx: RenderContext): Htm
       return renderTable(frame.content.data.table, frame.transform, ctx);
 
     case "chart": {
-      const chartHtml = renderChartContent(
-        frame.content.data,
-        transform.width,
-        transform.height,
-        ctx
-      );
+      const chartHtml = renderChartContent(frame.content.data, transform.width, transform.height, ctx);
       return div(
         {
           class: "shape graphicFrame chart-frame",
@@ -668,17 +627,12 @@ export function renderGraphicFrame(frame: GraphicFrame, ctx: RenderContext): Htm
           "data-ooxml-id": frame.nonVisual.id,
           style: buildStyle(positionStyles),
         },
-        chartHtml
+        chartHtml,
       );
     }
 
     case "diagram": {
-      const diagramHtml = renderDiagramContent(
-        frame.content.data,
-        transform.width,
-        transform.height,
-        ctx
-      );
+      const diagramHtml = renderDiagramContent(frame.content.data, transform.width, transform.height, ctx);
       return div(
         {
           class: "shape graphicFrame diagram-frame",
@@ -686,7 +640,7 @@ export function renderGraphicFrame(frame: GraphicFrame, ctx: RenderContext): Htm
           "data-ooxml-id": frame.nonVisual.id,
           style: buildStyle(positionStyles),
         },
-        diagramHtml
+        diagramHtml,
       );
     }
 
@@ -698,7 +652,7 @@ export function renderGraphicFrame(frame: GraphicFrame, ctx: RenderContext): Htm
           "data-ooxml-id": frame.nonVisual.id,
           style: buildStyle({ ...positionStyles, background: "#e0e0e0" }),
         },
-        unsafeHtml("<span>OLE Object</span>")
+        unsafeHtml("<span>OLE Object</span>"),
       );
 
     default:
@@ -709,7 +663,7 @@ export function renderGraphicFrame(frame: GraphicFrame, ctx: RenderContext): Htm
           "data-ooxml-id": frame.nonVisual.id,
           style: buildStyle(positionStyles),
         },
-        EMPTY_HTML
+        EMPTY_HTML,
       );
   }
 }

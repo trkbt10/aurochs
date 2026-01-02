@@ -2,7 +2,7 @@
  * @file Color resolution utilities
  *
  * Resolves Color domain objects to CSS-compatible hex strings.
- * Shared by both parser2 and render2 layers.
+ * Shared by both parser and render layers.
  *
  * @see ECMA-376 Part 1, Section 20.1.2.3 - Color Types
  */
@@ -254,10 +254,7 @@ const SYSTEM_COLOR_FALLBACKS: Record<string, string> = {
  *
  * @see ECMA-376 Part 1, Section 20.1.2.3 (Color Types)
  */
-export function resolveColor(
-  color: Color | undefined,
-  context?: ColorContext,
-): string | undefined {
+export function resolveColor(color: Color | undefined, context?: ColorContext): string | undefined {
   if (!color) return undefined;
 
   let baseColor: string | undefined;
@@ -288,11 +285,7 @@ export function resolveColor(
 
     case "hsl":
       // Convert HSL to RGB
-      baseColor = hslToHex(
-        color.spec.hue,
-        color.spec.saturation,
-        color.spec.luminance
-      );
+      baseColor = hslToHex(color.spec.hue, color.spec.saturation, color.spec.luminance);
       break;
   }
 
@@ -323,14 +316,35 @@ function hslToHex(h: number, s: number, l: number): string {
   const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
   const m = l - c / 2;
 
-  let r = 0, g = 0, b = 0;
+  let r = 0,
+    g = 0,
+    b = 0;
 
-  if (h < 60) { r = c; g = x; b = 0; }
-  else if (h < 120) { r = x; g = c; b = 0; }
-  else if (h < 180) { r = 0; g = c; b = x; }
-  else if (h < 240) { r = 0; g = x; b = c; }
-  else if (h < 300) { r = x; g = 0; b = c; }
-  else { r = c; g = 0; b = x; }
+  if (h < 60) {
+    r = c;
+    g = x;
+    b = 0;
+  } else if (h < 120) {
+    r = x;
+    g = c;
+    b = 0;
+  } else if (h < 180) {
+    r = 0;
+    g = c;
+    b = x;
+  } else if (h < 240) {
+    r = 0;
+    g = x;
+    b = c;
+  } else if (h < 300) {
+    r = x;
+    g = 0;
+    b = c;
+  } else {
+    r = c;
+    g = 0;
+    b = x;
+  }
 
   const toHex = (v: number) => {
     const hex = Math.round((v + m) * 255).toString(16);
@@ -360,7 +374,9 @@ function applyColorTransforms(hex: string, transform: ColorTransform): string {
 
   // Convert to HSL for HSL-based transforms (hue, sat, lum modifications)
   const [h, s, l] = rgbToHsl(r, g, b);
-  let hue = h, sat = s, lum = l;
+  let hue = h,
+    sat = s,
+    lum = l;
 
   // Apply HSL transforms
   if (transform.hue !== undefined) hue = transform.hue;
@@ -380,20 +396,12 @@ function applyColorTransforms(hex: string, transform: ColorTransform): string {
 
   if (transform.gamma) {
     const [gr, gg, gb] = hexToRgb(result);
-    result = rgbToHex(
-      applySrgbGamma(gr),
-      applySrgbGamma(gg),
-      applySrgbGamma(gb)
-    );
+    result = rgbToHex(applySrgbGamma(gr), applySrgbGamma(gg), applySrgbGamma(gb));
   }
 
   if (transform.invGamma) {
     const [gr, gg, gb] = hexToRgb(result);
-    result = rgbToHex(
-      applySrgbInvGamma(gr),
-      applySrgbInvGamma(gg),
-      applySrgbInvGamma(gb)
-    );
+    result = rgbToHex(applySrgbInvGamma(gr), applySrgbInvGamma(gg), applySrgbInvGamma(gb));
   }
 
   if (transform.green !== undefined) {
@@ -443,11 +451,7 @@ function applyColorTransforms(hex: string, transform: ColorTransform): string {
   if (transform.shade !== undefined) {
     const shadeVal = transform.shade / 100;
     const [sr, sg, sb] = hexToRgb(result);
-    result = rgbToHex(
-      Math.round(sr * shadeVal),
-      Math.round(sg * shadeVal),
-      Math.round(sb * shadeVal)
-    );
+    result = rgbToHex(Math.round(sr * shadeVal), Math.round(sg * shadeVal), Math.round(sb * shadeVal));
   }
 
   // tint: "A 10% tint is 10% of the input color combined with 90% white"
@@ -457,7 +461,7 @@ function applyColorTransforms(hex: string, transform: ColorTransform): string {
     result = rgbToHex(
       Math.round(tr + (255 - tr) * (1 - tintVal)),
       Math.round(tg + (255 - tg) * (1 - tintVal)),
-      Math.round(tb + (255 - tb) * (1 - tintVal))
+      Math.round(tb + (255 - tb) * (1 - tintVal)),
     );
   }
 
@@ -493,7 +497,8 @@ function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
 
   const max = Math.max(r, g, b);
   const min = Math.min(r, g, b);
-  let h = 0, s = 0;
+  let h = 0,
+    s = 0;
   const l = (max + min) / 2;
 
   if (max !== min) {
@@ -501,9 +506,15 @@ function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
     s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
 
     switch (max) {
-      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
-      case g: h = ((b - r) / d + 2) / 6; break;
-      case b: h = ((r - g) / d + 4) / 6; break;
+      case r:
+        h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
+        break;
+      case g:
+        h = ((b - r) / d + 2) / 6;
+        break;
+      case b:
+        h = ((r - g) / d + 4) / 6;
+        break;
     }
   }
 
@@ -514,11 +525,7 @@ function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
  * Convert hex to RGB
  */
 function hexToRgb(hex: string): [number, number, number] {
-  return [
-    parseInt(hex.slice(0, 2), 16),
-    parseInt(hex.slice(2, 4), 16),
-    parseInt(hex.slice(4, 6), 16),
-  ];
+  return [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16), parseInt(hex.slice(4, 6), 16)];
 }
 
 /**
