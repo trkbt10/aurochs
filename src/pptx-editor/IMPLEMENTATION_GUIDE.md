@@ -181,25 +181,26 @@ Level 4 (トップレベル)
 - [x] ParagraphPropertiesEditor (揃え、行間、インデント、箇条書き)
 - [x] TextBodyEditor (TextBody全体)
 
-#### 🔲 未実装
-
 **Level 3 Editors - Shape系**
-- [ ] GeometryEditor (PresetGeometry / CustomGeometry)
-- [ ] ShapePropertiesEditor (transform + fill + line + effects)
-- [ ] NonVisualPropertiesEditor (name, description, hidden)
-- [ ] EffectsEditor (shadow, glow, reflection, softEdge)
+- [x] GeometryEditor (PresetGeometry / CustomGeometry)
+- [x] ShapePropertiesEditor (transform + fill + line + effects)
+- [x] NonVisualPropertiesEditor (name, description, hidden)
+- [x] EffectsEditor (shadow, glow, reflection, softEdge)
 
 **Level 3 Editors - Table系**
-- [ ] TableCellEditor
-- [ ] CellBordersEditor
-- [ ] TableEditor
+- [x] CellBordersEditor (セル罫線: left, right, top, bottom, insideH, insideV, tlToBr, blToTr)
+- [x] Cell3dEditor (3D効果: preset material, bevel, lightRig)
+- [x] TableCellPropertiesEditor (セルプロパティ: margins, anchor, anchorCenter, horzOverflow, verticalType, fill, borders, cell3d, headers, rowSpan, colSpan, horizontalMerge, verticalMerge)
+- [x] TableCellEditor (セル: id, properties, textBody)
+- [x] TablePropertiesEditor (テーブルプロパティ: rtl, firstRow/Col, lastRow/Col, bandRow/Col, fill, effects, tableStyleId)
+- [x] TableEditor (テーブル全体: properties, grid, rows)
 
 **Level 3 Editors - Chart系**
-- [ ] AxisEditor
-- [ ] DataLabelsEditor
-- [ ] LegendEditor
-- [ ] ChartSeriesEditor
-- [ ] ChartEditor
+- [x] AxisEditor (CategoryAxis, ValueAxis, DateAxis, SeriesAxis)
+- [x] DataLabelsEditor (表示フラグ、位置、セパレータ)
+- [x] LegendEditor (位置、オーバーレイ)
+- [x] ChartSeriesEditor (チャートタイプ固有設定)
+- [x] ChartEditor (トップレベルチャートエディター)
 
 **追加UI**
 - [x] ColorSwatch (カラープレビュー)
@@ -312,9 +313,9 @@ src/pptx-editor/
 ├── editors/
 │   ├── primitives/                 # Level 0 ✅
 │   ├── color/                      # Level 1 ✅
-│   ├── text/                       # Level 2
-│   ├── shape/                      # Level 3
-│   ├── table/                      # Level 3
+│   ├── text/                       # Level 2 ✅
+│   ├── shape/                      # Level 3 ✅
+│   ├── table/                      # Level 3 ✅
 │   ├── chart/                      # Level 3
 │   └── index.ts
 │
@@ -357,12 +358,10 @@ src/pptx-editor/
 
 ## 次のステップ
 
-1. **Level 3: Shape系エディター**
-   - `src/pptx/domain/shape.ts` を確認
-   - GeometryEditor を実装
-   - ShapePropertiesEditor を実装
-   - EffectsEditor を実装
-
-2. **Level 3: Table/Chart系エディター**
+1. **Level 3: Table/Chart系エディター**
    - TableCellEditor, TableEditor を実装
    - ChartSeriesEditor, ChartEditor を実装
+
+2. **Phase 2: スライドエディター**
+   - SlideCanvas, ShapeSelector を実装
+   - PropertyPanel を実装

@@ -5,6 +5,7 @@
  */
 
 import type { Fill, Line } from "./color";
+import type { BevelPresetType } from "./shape";
 import type { TextBody } from "./text";
 import type {
   Effects,
@@ -192,13 +193,15 @@ export type TablePartStyle = {
 
 /**
  * 3D cell effects
+ * @see ECMA-376 Part 1, Section 20.1.4.2.7 (cell3D)
  */
 export type Cell3d = {
   readonly preset?: PresetMaterialType;
   readonly bevel?: {
     readonly width: Pixels;
     readonly height: Pixels;
-    readonly preset: string;
+    /** @see ECMA-376 Part 1, Section 20.1.10.9 (ST_BevelPresetType) */
+    readonly preset: BevelPresetType;
   };
   readonly lightRig?: {
     readonly rig: LightRigType;

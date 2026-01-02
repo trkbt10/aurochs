@@ -6,7 +6,7 @@
 
 import { useCallback, type CSSProperties } from "react";
 import { Select, Toggle } from "../../ui/primitives";
-import { Accordion, FieldGroup, FieldRow, Section } from "../../ui/layout";
+import { Accordion, FieldGroup, FieldRow } from "../../ui/layout";
 import { ColorEditor, createDefaultColor } from "./ColorEditor";
 import { GradientStopsEditor, createDefaultGradientStops } from "./GradientStopsEditor";
 import { DegreesEditor } from "../primitives/DegreesEditor";
@@ -151,22 +151,20 @@ export function FillEditor({
       case "solidFill": {
         const solidFill = value as SolidFill;
         return (
-          <Section>
-            <FieldGroup label="Color">
-              <ColorEditor
-                value={solidFill.color}
-                onChange={(color) => onChange({ ...solidFill, color })}
-                disabled={disabled}
-              />
-            </FieldGroup>
-          </Section>
+          <FieldGroup label="Color">
+            <ColorEditor
+              value={solidFill.color}
+              onChange={(color) => onChange({ ...solidFill, color })}
+              disabled={disabled}
+            />
+          </FieldGroup>
         );
       }
 
       case "gradientFill": {
         const gradientFill = value as GradientFill;
         return (
-          <Section>
+          <>
             <FieldGroup label="Color Stops">
               <GradientStopsEditor
                 value={gradientFill.stops}
@@ -289,7 +287,7 @@ export function FillEditor({
               label="Rotate with shape"
               disabled={disabled}
             />
-          </Section>
+          </>
         );
       }
 
@@ -298,7 +296,7 @@ export function FillEditor({
         const fillMode = blipFill.tile ? "tile" : "stretch";
 
         return (
-          <Section>
+          <>
             <FieldGroup label="Image" hint="Resource ID">
               <div
                 style={{
@@ -448,14 +446,14 @@ export function FillEditor({
               label="Rotate with shape"
               disabled={disabled}
             />
-          </Section>
+          </>
         );
       }
 
       case "patternFill": {
         const patternFill = value as PatternFill;
         return (
-          <Section>
+          <>
             <FieldGroup label="Pattern">
               <Select
                 value={patternFill.preset}
@@ -480,17 +478,15 @@ export function FillEditor({
                 showTransform={false}
               />
             </FieldGroup>
-          </Section>
+          </>
         );
       }
 
       case "groupFill":
         return (
-          <Section>
-            <div style={{ color: "var(--text-tertiary)", fontSize: "12px" }}>
-              Inherits fill from group
-            </div>
-          </Section>
+          <div style={{ color: "var(--text-tertiary)", fontSize: "12px" }}>
+            Inherits fill from group
+          </div>
         );
     }
   };

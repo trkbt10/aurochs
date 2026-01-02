@@ -6,7 +6,7 @@
 
 import { useCallback, type CSSProperties } from "react";
 import { Select } from "../../ui/primitives";
-import { FieldGroup, FieldRow, Section } from "../../ui/layout";
+import { FieldGroup, FieldRow } from "../../ui/layout";
 import { PixelsEditor } from "../primitives";
 import { FillEditor, createDefaultSolidFill } from "./FillEditor";
 import { px } from "../../../pptx/domain/types";
@@ -157,61 +157,57 @@ export function LineEditor({
       </FieldGroup>
 
       {/* Style options */}
-      <Section>
-        <FieldRow>
-          <FieldGroup label="Cap" style={{ flex: 1 }}>
-            <Select
-              value={value.cap}
-              onChange={(v) => updateField("cap", v as Line["cap"])}
-              options={capOptions}
-              disabled={disabled}
-            />
-          </FieldGroup>
-          <FieldGroup label="Join" style={{ flex: 1 }}>
-            <Select
-              value={value.join}
-              onChange={(v) => updateField("join", v as Line["join"])}
-              options={joinOptions}
-              disabled={disabled}
-            />
-          </FieldGroup>
-        </FieldRow>
-
-        <FieldRow>
-          <FieldGroup label="Compound" style={{ flex: 1 }}>
-            <Select
-              value={value.compound}
-              onChange={(v) => updateField("compound", v as Line["compound"])}
-              options={compoundOptions}
-              disabled={disabled}
-            />
-          </FieldGroup>
-          <FieldGroup label="Dash" style={{ flex: 1 }}>
-            <Select
-              value={typeof value.dash === "string" ? value.dash : "custom"}
-              onChange={(v) => updateField("dash", v)}
-              options={dashOptions}
-              disabled={disabled}
-            />
-          </FieldGroup>
-        </FieldRow>
-      </Section>
-
-      {/* Fill */}
-      <Section>
-        <FieldGroup label="Stroke Fill">
-          <FillEditor
-            value={value.fill}
-            onChange={(f) => updateField("fill", f)}
+      <FieldRow>
+        <FieldGroup label="Cap" style={{ flex: 1 }}>
+          <Select
+            value={value.cap}
+            onChange={(v) => updateField("cap", v as Line["cap"])}
+            options={capOptions}
             disabled={disabled}
-            allowedTypes={["noFill", "solidFill", "gradientFill", "patternFill"]}
           />
         </FieldGroup>
-      </Section>
+        <FieldGroup label="Join" style={{ flex: 1 }}>
+          <Select
+            value={value.join}
+            onChange={(v) => updateField("join", v as Line["join"])}
+            options={joinOptions}
+            disabled={disabled}
+          />
+        </FieldGroup>
+      </FieldRow>
+
+      <FieldRow>
+        <FieldGroup label="Compound" style={{ flex: 1 }}>
+          <Select
+            value={value.compound}
+            onChange={(v) => updateField("compound", v as Line["compound"])}
+            options={compoundOptions}
+            disabled={disabled}
+          />
+        </FieldGroup>
+        <FieldGroup label="Dash" style={{ flex: 1 }}>
+          <Select
+            value={typeof value.dash === "string" ? value.dash : "custom"}
+            onChange={(v) => updateField("dash", v)}
+            options={dashOptions}
+            disabled={disabled}
+          />
+        </FieldGroup>
+      </FieldRow>
+
+      {/* Fill */}
+      <FieldGroup label="Stroke Fill">
+        <FillEditor
+          value={value.fill}
+          onChange={(f) => updateField("fill", f)}
+          disabled={disabled}
+          allowedTypes={["noFill", "solidFill", "gradientFill", "patternFill"]}
+        />
+      </FieldGroup>
 
       {/* Line ends */}
       {showEnds && (
-        <Section>
+        <>
           <LineEndEditor
             value={value.headEnd}
             onChange={(e) => updateField("headEnd", e)}
@@ -224,7 +220,7 @@ export function LineEditor({
             label="Tail End"
             disabled={disabled}
           />
-        </Section>
+        </>
       )}
     </div>
   );

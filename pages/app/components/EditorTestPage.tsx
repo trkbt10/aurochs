@@ -11,6 +11,9 @@ import {
   ColorEditorsTest,
   PrimitiveEditorsTest,
   TextEditorsTest,
+  ShapeEditorsTest,
+  TableEditorsTest,
+  ChartEditorsTest,
   UIComponentsTest,
 } from "./editor-tests";
 
@@ -18,7 +21,7 @@ type EditorTestPageProps = {
   readonly onBack: () => void;
 };
 
-type TabId = "primitives" | "colors" | "text" | "ui";
+type TabId = "primitives" | "colors" | "text" | "shapes" | "tables" | "charts" | "ui";
 
 type Tab = {
   readonly id: TabId;
@@ -29,6 +32,9 @@ const tabs: readonly Tab[] = [
   { id: "primitives", label: "Primitives" },
   { id: "colors", label: "Colors" },
   { id: "text", label: "Text" },
+  { id: "shapes", label: "Shapes" },
+  { id: "tables", label: "Tables" },
+  { id: "charts", label: "Charts" },
   { id: "ui", label: "UI Components" },
 ];
 
@@ -115,6 +121,12 @@ function TabContent({ activeTab }: { activeTab: TabId }) {
       return <ColorEditorsTest />;
     case "text":
       return <TextEditorsTest />;
+    case "shapes":
+      return <ShapeEditorsTest />;
+    case "tables":
+      return <TableEditorsTest />;
+    case "charts":
+      return <ChartEditorsTest />;
     case "ui":
       return <UIComponentsTest />;
   }

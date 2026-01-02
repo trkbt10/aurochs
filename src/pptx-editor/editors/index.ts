@@ -73,3 +73,49 @@ export {
   type GeometryEditorProps,
   type ShapePropertiesEditorProps,
 } from "./shape";
+
+// Table editors
+export {
+  TableCellPropertiesEditor,
+  TableCellEditor,
+  TablePropertiesEditor,
+  TableEditor,
+  createDefaultCellBorders,
+  createAllEdgeBorders,
+  createDefaultCell3d,
+  createDefaultBevel,
+  createDefaultLightRig,
+  createDefaultCellMargins,
+  createDefaultTableCellProperties,
+  createDefaultTableCell,
+  createEmptyTableCell,
+  createDefaultTableProperties,
+  createDefaultTable,
+  createTable,
+  type TableCellPropertiesEditorProps,
+  type TableCellEditorProps,
+  type TablePropertiesEditorProps,
+  type TableEditorProps,
+} from "./table";
+
+// Chart editors
+export {
+  DataLabelsEditor,
+  LegendEditor,
+  AxisEditor,
+  ChartSeriesEditor,
+  ChartEditor,
+  createDefaultDataLabels,
+  createDefaultLegend,
+  createDefaultAxis,
+  createDefaultCategoryAxis,
+  createDefaultValueAxis,
+  createDefaultChartSeries,
+  createDefaultBarChartSeries,
+  createDefaultChart,
+  type DataLabelsEditorProps,
+  type LegendEditorProps,
+  type AxisEditorProps,
+  type ChartSeriesEditorProps,
+  type ChartEditorProps,
+} from "./chart";
