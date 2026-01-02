@@ -57,3 +57,19 @@ export {
   type ParagraphPropertiesEditorProps,
   type TextBodyEditorProps,
 } from "./text";
+
+// Shape editors
+export {
+  NonVisualPropertiesEditor,
+  EffectsEditor,
+  GeometryEditor,
+  ShapePropertiesEditor,
+  createDefaultNonVisualProperties,
+  createDefaultEffects,
+  createDefaultGeometry,
+  createDefaultShapeProperties,
+  type NonVisualPropertiesEditorProps,
+  type EffectsEditorProps,
+  type GeometryEditorProps,
+  type ShapePropertiesEditorProps,
+} from "./shape";

@@ -442,15 +442,13 @@ export function FillEditor({
               </div>
             )}
 
-            <div style={{ marginTop: "12px" }}>
-              <Toggle
-                checked={blipFill.rotWithShape}
-                onChange={(rotWithShape) => onChange({ ...blipFill, rotWithShape })}
-                label="Rotate with shape"
-                disabled={disabled}
-              />
-            </div>
-          </div>
+            <Toggle
+              checked={blipFill.rotWithShape}
+              onChange={(rotWithShape) => onChange({ ...blipFill, rotWithShape })}
+              label="Rotate with shape"
+              disabled={disabled}
+            />
+          </Section>
         );
       }
 
@@ -482,7 +480,7 @@ export function FillEditor({
                 showTransform={false}
               />
             </FieldGroup>
-          </div>
+          </Section>
         );
       }
 
@@ -492,7 +490,7 @@ export function FillEditor({
             <div style={{ color: "var(--text-tertiary)", fontSize: "12px" }}>
               Inherits fill from group
             </div>
-          </div>
+          </Section>
         );
     }
   };

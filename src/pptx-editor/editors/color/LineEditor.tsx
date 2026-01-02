@@ -6,7 +6,7 @@
 
 import { useCallback, type CSSProperties } from "react";
 import { Select } from "../../ui/primitives";
-import { FieldGroup, FieldRow } from "../../ui/layout";
+import { FieldGroup, FieldRow, Section } from "../../ui/layout";
 import { PixelsEditor } from "../primitives";
 import { FillEditor, createDefaultSolidFill } from "./FillEditor";
 import { px } from "../../../pptx/domain/types";
@@ -25,12 +25,6 @@ const containerStyle: CSSProperties = {
   gap: "12px",
 };
 
-const sectionStyle: CSSProperties = {
-  padding: "12px",
-  backgroundColor: "var(--bg-tertiary, #111111)",
-  borderRadius: "var(--radius-md, 8px)",
-  border: "1px solid var(--border-subtle, rgba(255, 255, 255, 0.08))",
-};
 
 const capOptions: SelectOption<Line["cap"]>[] = [
   { value: "flat", label: "Flat" },
@@ -163,7 +157,7 @@ export function LineEditor({
       </FieldGroup>
 
       {/* Style options */}
-      <div style={sectionStyle}>
+      <Section>
         <FieldRow>
           <FieldGroup label="Cap" style={{ flex: 1 }}>
             <Select
@@ -183,7 +177,7 @@ export function LineEditor({
           </FieldGroup>
         </FieldRow>
 
-        <FieldRow style={{ marginTop: "8px" }}>
+        <FieldRow>
           <FieldGroup label="Compound" style={{ flex: 1 }}>
             <Select
               value={value.compound}
@@ -201,10 +195,10 @@ export function LineEditor({
             />
           </FieldGroup>
         </FieldRow>
-      </div>
+      </Section>
 
       {/* Fill */}
-      <div style={sectionStyle}>
+      <Section>
         <FieldGroup label="Stroke Fill">
           <FillEditor
             value={value.fill}
@@ -213,26 +207,24 @@ export function LineEditor({
             allowedTypes={["noFill", "solidFill", "gradientFill", "patternFill"]}
           />
         </FieldGroup>
-      </div>
+      </Section>
 
       {/* Line ends */}
       {showEnds && (
-        <div style={sectionStyle}>
+        <Section>
           <LineEndEditor
             value={value.headEnd}
             onChange={(e) => updateField("headEnd", e)}
             label="Head End"
             disabled={disabled}
           />
-          <div style={{ marginTop: "8px" }}>
-            <LineEndEditor
-              value={value.tailEnd}
-              onChange={(e) => updateField("tailEnd", e)}
-              label="Tail End"
-              disabled={disabled}
-            />
-          </div>
-        </div>
+          <LineEndEditor
+            value={value.tailEnd}
+            onChange={(e) => updateField("tailEnd", e)}
+            label="Tail End"
+            disabled={disabled}
+          />
+        </Section>
       )}
     </div>
   );

@@ -14,6 +14,86 @@ ReactベースのPPTXエディター実装。ドメインの依存関係の末�
 
 ---
 
+## コンポーネントレイヤー
+
+### Layer 1: `ui/primitives/` - 純粋UI要素
+**責任**: 原子的、ステートレスなUI要素
+**含む**: Input, Button, Select, Slider, Toggle, Popover, Tabs
+**規則**:
+- ドメイン知識なし（Color, Fill, Gradientを知らない）
+- 自己完結した視覚スタイル（自身のborder, bg, focusを処理）
+
+### Layer 2: `ui/layout/` - 構成ヘルパー
+**責任**: ドメインロジックなしのレイアウトパターン
+**含む**: FieldGroup, FieldRow, Accordion, Section
+**規則**:
+- 必要に応じて視覚的境界を提供（Sectionは背景+border付き）
+- gap基準のスペーシング（marginTopは子で使わない）
+
+### Layer 3: `editors/` - ドメインロジック
+**責任**: ドメイン固有データ構造の編集
+**規則**:
+- **純粋コンテンツ - コンテナスタイルなし**（bg, borderなし）
+- `EditorProps<T>`パターンに従う
+- 消費側が`Section`などでラップ
+
+### コンテナガイドライン
+
+```tsx
+// ❌ BAD: エディター内にコンテナスタイル
+function MyEditor({ value, onChange }) {
+  return (
+    <div style={{ backgroundColor: "...", border: "..." }}>
+      <FieldGroup label="Something">...</FieldGroup>
+    </div>
+  );
+}
+
+// ✅ GOOD: エディターは純粋コンテンツ、親がSectionでラップ
+function MyEditor({ value, onChange }) {
+  return (
+    <>
+      <FieldGroup label="Something">...</FieldGroup>
+    </>
+  );
+}
+
+// 使用側
+<Section>
+  <MyEditor value={v} onChange={handleChange} />
+</Section>
+```
+
+---
+
+## スペーシング規約
+
+| 用途 | 値 | 使用場面 |
+|------|-----|---------|
+| xs | 4px | インライン要素（アイコン＋テキスト） |
+| sm | 6px | ラベル→入力（FieldGroup） |
+| md | 8px | 関連入力間（FieldRow） |
+| lg | 12px | フィールドグループ間 |
+| xl | 16px | セクション間 |
+
+**重要**: `marginTop`は使わない。`gap`基準で統一。
+
+```tsx
+// ❌ BAD: marginTopで間隔調整
+<FieldGroup label="First">...</FieldGroup>
+<div style={{ marginTop: "8px" }}>
+  <FieldGroup label="Second">...</FieldGroup>
+</div>
+
+// ✅ GOOD: 親のgapで自動間隔
+<Section>  {/* gap: 12px */}
+  <FieldGroup label="First">...</FieldGroup>
+  <FieldGroup label="Second">...</FieldGroup>
+</Section>
+```
+
+---
+
 ## 全体フェーズ
 
 ### Phase 1: ドメイン単位エディター ← **現在**
@@ -73,6 +153,8 @@ Level 4 (トップレベル)
 **Layout**
 - [x] FieldGroup
 - [x] FieldRow
+- [x] Accordion
+- [x] Section
 
 **Level 0 Editors**
 - [x] PixelsEditor
@@ -121,9 +203,9 @@ Level 4 (トップレベル)
 
 **追加UI**
 - [x] ColorSwatch (カラープレビュー)
+- [x] GradientStopEditor (単一ストップ編集 - position + color + remove)
 - [x] GradientStopsEditor (グラデーション編集) - インタラクティブプレビュー付き
 - [x] Popover (ポップオーバー)
-- [x] Accordion (折りたたみ)
 - [x] Tabs (タブ切り替え)
 
 ---
@@ -219,12 +301,12 @@ src/pptx-editor/
 │   ├── layout/
 │   │   ├── FieldGroup.tsx
 │   │   ├── FieldRow.tsx
-│   │   ├── Accordion.tsx           # 追加
+│   │   ├── Accordion.tsx
+│   │   ├── Section.tsx             # コンテナ用
 │   │   └── index.ts
 │   │
 │   └── color/
-│       ├── ColorSwatch.tsx         # 追加
-│       ├── GradientStopsEditor.tsx # 追加
+│       ├── ColorSwatch.tsx
 │       └── index.ts
 │
 ├── editors/
