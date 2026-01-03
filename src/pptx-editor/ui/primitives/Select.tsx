@@ -18,21 +18,21 @@ export type SelectProps<T extends string = string> = {
 };
 
 const selectStyle: CSSProperties = {
-  padding: "6px 8px",
-  fontSize: "13px",
+  padding: "5px 8px",
+  fontSize: "12px",
   fontFamily: "inherit",
   color: "var(--text-primary, #fafafa)",
-  backgroundColor: "var(--bg-tertiary, #111111)",
-  border: "1px solid var(--border-subtle, rgba(255, 255, 255, 0.08))",
-  borderRadius: "var(--radius-sm, 6px)",
+  backgroundColor: "var(--bg-tertiary, #1a1a1a)",
+  border: "none",
+  borderRadius: "4px",
   outline: "none",
   cursor: "pointer",
-  transition: "border-color 150ms ease",
   appearance: "none",
-  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23737373' d='M2.5 4.5L6 8l3.5-3.5'/%3E%3C/svg%3E")`,
+  backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23666' d='M2.5 4.5L6 8l3.5-3.5'/%3E%3C/svg%3E")`,
   backgroundRepeat: "no-repeat",
-  backgroundPosition: "right 8px center",
-  paddingRight: "28px",
+  backgroundPosition: "right 6px center",
+  paddingRight: "24px",
+  width: "100%",
 };
 
 

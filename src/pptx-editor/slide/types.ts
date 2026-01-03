@@ -62,16 +62,31 @@ export type DragState =
       readonly handle: ResizeHandlePosition;
       readonly startX: Pixels;
       readonly startY: Pixels;
+      /** All shapes being resized (for multi-selection) */
+      readonly shapeIds: readonly ShapeId[];
+      /** Initial bounds for each shape */
+      readonly initialBoundsMap: ReadonlyMap<ShapeId, Bounds>;
+      /** Combined bounding box (for multi-selection) */
+      readonly combinedBounds: Bounds;
+      readonly aspectLocked: boolean;
+      /** Primary shape ID for backwards compatibility */
       readonly shapeId: ShapeId;
       readonly initialBounds: Bounds;
-      readonly aspectLocked: boolean;
     }
   | {
       readonly type: "rotate";
       readonly startAngle: Degrees;
-      readonly shapeId: ShapeId;
+      /** All shapes being rotated (for multi-selection) */
+      readonly shapeIds: readonly ShapeId[];
+      /** Initial rotation for each shape */
+      readonly initialRotationsMap: ReadonlyMap<ShapeId, Degrees>;
+      /** Initial bounds for each shape (needed for center calculation) */
+      readonly initialBoundsMap: ReadonlyMap<ShapeId, Bounds>;
+      /** Combined center point */
       readonly centerX: Pixels;
       readonly centerY: Pixels;
+      /** Primary shape ID for backwards compatibility */
+      readonly shapeId: ShapeId;
       readonly initialRotation: Degrees;
     };
 

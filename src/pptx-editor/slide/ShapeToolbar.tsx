@@ -2,14 +2,17 @@
  * @file Shape toolbar component
  *
  * Provides quick action buttons for shape operations.
+ * Includes line style picker for shapes with stroke properties.
  */
 
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import type { CSSProperties } from "react";
 import { useSlideEditor } from "../context/SlideEditorContext";
 import { useSlideState } from "./hooks/useSlideState";
 import { useSelection } from "./hooks/useSelection";
 import { Button } from "../ui/primitives/Button";
+import { LinePickerPopover } from "../ui/line";
+import type { Line, Shape } from "../../pptx/domain";
 
 // =============================================================================
 // Types
@@ -107,6 +110,17 @@ function RedoIcon() {
 // =============================================================================
 
 /**
+ * Get line property from a shape if it exists.
+ */
+function getShapeLine(shape: Shape | undefined): Line | undefined {
+  if (!shape) return undefined;
+  if (shape.type === "sp" || shape.type === "cxnSp") {
+    return shape.properties.line;
+  }
+  return undefined;
+}
+
+/**
  * Shape toolbar with quick action buttons.
  */
 export function ShapeToolbar({
@@ -114,9 +128,31 @@ export function ShapeToolbar({
   style,
   direction = "horizontal",
 }: ShapeToolbarProps) {
-  const { canUndo, canRedo } = useSlideEditor();
-  const { deleteSelected, duplicateSelected, reorderShape, undo, redo } = useSlideState();
+  const { canUndo, canRedo, primaryShape } = useSlideEditor();
+  const { deleteSelected, duplicateSelected, reorderShape, undo, redo, updateShape } = useSlideState();
   const { hasSelection, primaryId, isMultiSelect } = useSelection();
+
+  // Get line from primary selected shape
+  const primaryLine = useMemo(() => getShapeLine(primaryShape), [primaryShape]);
+
+  const handleLineChange = useCallback(
+    (line: Line) => {
+      if (!primaryId) return;
+      updateShape(primaryId, (shape) => {
+        if (shape.type === "sp" || shape.type === "cxnSp") {
+          return {
+            ...shape,
+            properties: {
+              ...shape.properties,
+              line,
+            },
+          };
+        }
+        return shape;
+      });
+    },
+    [primaryId, updateShape]
+  );
 
   const handleDelete = useCallback(() => {
     deleteSelected();
@@ -249,6 +285,19 @@ export function ShapeToolbar({
       >
         <SendBackwardIcon />
       </Button>
+
+      {/* Line style picker */}
+      {primaryLine && (
+        <>
+          <div style={separatorStyle} />
+          <LinePickerPopover
+            value={primaryLine}
+            onChange={handleLineChange}
+            size="md"
+            disabled={!hasSelection || isMultiSelect}
+          />
+        </>
+      )}
     </div>
   );
 }

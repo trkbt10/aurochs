@@ -8,6 +8,7 @@ import { useCallback, useEffect } from "react";
 import type { Pixels } from "../../../pptx/domain/types";
 import { px } from "../../../pptx/domain/types";
 import { useSlideEditor } from "../../context/SlideEditorContext";
+import { clientToSlideCoords } from "../../utils";
 import { useSlideState } from "./useSlideState";
 
 // =============================================================================
@@ -51,20 +52,14 @@ export function useDragMove({
 
   const isDragging = drag.type === "move";
 
-  // Convert client coordinates to slide coordinates
+  // Convert client coordinates to slide coordinates using unified utility
   const clientToSlide = useCallback(
     (clientX: number, clientY: number): { x: number; y: number } | null => {
       const container = containerRef.current;
       if (!container) return null;
 
       const rect = container.getBoundingClientRect();
-      const scaleX = (width as number) / rect.width;
-      const scaleY = (height as number) / rect.height;
-
-      return {
-        x: (clientX - rect.left) * scaleX,
-        y: (clientY - rect.top) * scaleY,
-      };
+      return clientToSlideCoords(clientX, clientY, rect, width as number, height as number);
     },
     [width, height, containerRef]
   );

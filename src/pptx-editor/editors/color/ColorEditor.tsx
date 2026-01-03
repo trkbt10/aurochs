@@ -1,40 +1,82 @@
 /**
  * @file ColorEditor - Editor for Color type
  *
- * Pure content editor for Color (spec + optional transforms).
- * Does NOT include any container styling (borders, backgrounds).
- * The parent component is responsible for visual boundaries.
+ * Compact color editor without redundant labels.
+ * Uses ColorPickerPopover for sRGB colors.
+ * Parent provides semantic labels (e.g., "Fill Color", "Text Color").
  */
 
 import { useCallback, useState, type CSSProperties } from "react";
-import { Button } from "../../ui/primitives";
-import { FieldGroup } from "../../ui/layout";
-import { ColorSpecEditor, createDefaultSrgbColor } from "./ColorSpecEditor";
+import { Button, Select } from "../../ui/primitives";
+import { ColorPickerPopover } from "../../ui/color";
 import { ColorTransformEditor } from "./ColorTransformEditor";
-import type { Color, ColorSpec, ColorTransform } from "../../../pptx/domain/color";
-import type { EditorProps } from "../../types";
+import { createDefaultSrgbColor } from "./ColorSpecEditor";
+import type { Color, ColorSpec, ColorTransform, SrgbColor, SchemeColor } from "../../../pptx/domain/color";
+import type { EditorProps, SelectOption } from "../../types";
 
 export type ColorEditorProps = EditorProps<Color> & {
   readonly style?: CSSProperties;
-  /** Show transform editor (default: true) */
+  /** Show transform editor (default: false for compact mode) */
   readonly showTransform?: boolean;
-  /** Compact mode for transforms */
-  readonly compactTransform?: boolean;
+  /** Allow switching between color modes (sRGB, theme, etc.) */
+  readonly showModeSwitch?: boolean;
 };
+
+type ColorSpecType = ColorSpec["type"];
+
+const colorModeOptions: SelectOption<ColorSpecType>[] = [
+  { value: "srgb", label: "Hex" },
+  { value: "scheme", label: "Theme" },
+];
+
+const schemeColorOptions: SelectOption[] = [
+  { value: "dk1", label: "Dark 1" },
+  { value: "lt1", label: "Light 1" },
+  { value: "dk2", label: "Dark 2" },
+  { value: "lt2", label: "Light 2" },
+  { value: "accent1", label: "Accent 1" },
+  { value: "accent2", label: "Accent 2" },
+  { value: "accent3", label: "Accent 3" },
+  { value: "accent4", label: "Accent 4" },
+  { value: "accent5", label: "Accent 5" },
+  { value: "accent6", label: "Accent 6" },
+  { value: "hlink", label: "Hyperlink" },
+  { value: "folHlink", label: "Followed Link" },
+];
 
 const containerStyle: CSSProperties = {
   display: "flex",
-  flexDirection: "column",
-  gap: "12px",
+  alignItems: "center",
+  gap: "6px",
 };
 
-const toggleButtonStyle: CSSProperties = {
-  alignSelf: "flex-start",
+const transformToggleStyle: CSSProperties = {
+  fontSize: "10px",
+  padding: "2px 6px",
 };
+
+function createDefaultColorSpec(type: ColorSpecType): ColorSpec {
+  switch (type) {
+    case "srgb":
+      return { type: "srgb", value: "000000" };
+    case "scheme":
+      return { type: "scheme", value: "accent1" };
+    default:
+      return { type: "srgb", value: "000000" };
+  }
+}
+
+function getHexPreview(spec: ColorSpec): string {
+  if (spec.type === "srgb") {
+    return spec.value;
+  }
+  // Placeholder for non-sRGB colors
+  return "888888";
+}
 
 /**
- * Editor for Color (spec + optional transforms).
- * Renders pure content without any container styling.
+ * Compact color editor.
+ * No redundant "Color" label - parent provides semantic context.
  */
 export function ColorEditor({
   value,
@@ -42,14 +84,28 @@ export function ColorEditor({
   disabled,
   className,
   style,
-  showTransform = true,
-  compactTransform = true,
+  showTransform = false,
+  showModeSwitch = false,
 }: ColorEditorProps) {
   const [transformExpanded, setTransformExpanded] = useState(!!value.transform);
 
   const handleSpecChange = useCallback(
     (spec: ColorSpec) => {
       onChange({ ...value, spec });
+    },
+    [value, onChange]
+  );
+
+  const handleHexChange = useCallback(
+    (hex: string) => {
+      onChange({ ...value, spec: { type: "srgb", value: hex } });
+    },
+    [value, onChange]
+  );
+
+  const handleTypeChange = useCallback(
+    (newType: string) => {
+      onChange({ ...value, spec: createDefaultColorSpec(newType as ColorSpecType) });
     },
     [value, onChange]
   );
@@ -70,37 +126,108 @@ export function ColorEditor({
     }
   }, [transformExpanded, value, onChange]);
 
-  return (
-    <div style={{ ...containerStyle, ...style }} className={className}>
-      <ColorSpecEditor
-        value={value.spec}
-        onChange={handleSpecChange}
-        disabled={disabled}
-      />
-
-      {showTransform && (
-        <>
-          <Button
-            variant="ghost"
-            onClick={toggleTransform}
-            style={toggleButtonStyle}
+  // sRGB: Use ColorPickerPopover
+  if (value.spec.type === "srgb") {
+    const srgbSpec = value.spec as SrgbColor;
+    return (
+      <div className={className} style={style}>
+        <div style={containerStyle}>
+          <ColorPickerPopover
+            value={srgbSpec.value}
+            onChange={handleHexChange}
+            size="md"
             disabled={disabled}
-          >
-            {transformExpanded ? "− Remove Transforms" : "+ Add Transforms"}
-          </Button>
-
-          {transformExpanded && (
-            <FieldGroup label="Color Transforms">
-              <ColorTransformEditor
-                value={value.transform}
-                onChange={handleTransformChange}
-                disabled={disabled}
-                compact={compactTransform}
-              />
-            </FieldGroup>
+          />
+          {showModeSwitch && (
+            <Select
+              value={value.spec.type}
+              onChange={handleTypeChange}
+              options={colorModeOptions}
+              disabled={disabled}
+              style={{ width: "70px" }}
+            />
           )}
-        </>
-      )}
+          {showTransform && (
+            <Button
+              variant="ghost"
+              onClick={toggleTransform}
+              style={transformToggleStyle}
+              disabled={disabled}
+            >
+              {transformExpanded ? "−" : "+"}
+            </Button>
+          )}
+        </div>
+        {showTransform && transformExpanded && (
+          <div style={{ marginTop: "8px" }}>
+            <ColorTransformEditor
+              value={value.transform}
+              onChange={handleTransformChange}
+              disabled={disabled}
+              compact
+            />
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Scheme: Select from theme colors
+  if (value.spec.type === "scheme") {
+    const schemeSpec = value.spec as SchemeColor;
+    return (
+      <div className={className} style={style}>
+        <div style={containerStyle}>
+          <ColorPickerPopover
+            value={getHexPreview(value.spec)}
+            onChange={handleHexChange}
+            size="md"
+            disabled={disabled}
+          />
+          <Select
+            value={schemeSpec.value}
+            onChange={(v) => handleSpecChange({ ...schemeSpec, value: v as SchemeColor["value"] })}
+            options={schemeColorOptions}
+            disabled={disabled}
+            style={{ flex: 1 }}
+          />
+          {showModeSwitch && (
+            <Select
+              value={value.spec.type}
+              onChange={handleTypeChange}
+              options={colorModeOptions}
+              disabled={disabled}
+              style={{ width: "70px" }}
+            />
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Fallback for other types: show hex preview with mode switch
+  return (
+    <div className={className} style={style}>
+      <div style={containerStyle}>
+        <ColorPickerPopover
+          value={getHexPreview(value.spec)}
+          onChange={handleHexChange}
+          size="md"
+          disabled={disabled}
+        />
+        <span style={{ fontSize: "11px", color: "var(--text-tertiary)" }}>
+          {value.spec.type}
+        </span>
+        {showModeSwitch && (
+          <Select
+            value={value.spec.type}
+            onChange={handleTypeChange}
+            options={colorModeOptions}
+            disabled={disabled}
+            style={{ width: "70px" }}
+          />
+        )}
+      </div>
     </div>
   );
 }

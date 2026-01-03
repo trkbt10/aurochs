@@ -6,14 +6,14 @@
  */
 
 import { useState, useMemo, type CSSProperties } from "react";
-import { SlideEditor } from "@lib/pptx-editor";
+import { SlideEditor, getShapeTransform } from "@lib/pptx-editor";
 import type { Slide } from "@lib/pptx/domain/slide";
 import type {
   SpShape,
-  PicShape,
   CxnShape,
   GrpShape,
   GraphicFrame,
+  Shape,
 } from "@lib/pptx/domain/shape";
 import type { Table, TableRow, TableCell } from "@lib/pptx/domain/table";
 import { px, deg } from "@lib/pptx/domain/types";
@@ -77,6 +77,190 @@ const createTestSpShape = (
     },
   },
 });
+
+// =============================================================================
+// TextBox Fixture
+// =============================================================================
+
+const createTestTextBox = (
+  id: string,
+  name: string,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  text: string,
+  fontSize = 14
+): SpShape => ({
+  type: "sp",
+  nonVisual: {
+    id,
+    name,
+    textBox: true,
+  },
+  properties: {
+    transform: {
+      x: px(x),
+      y: px(y),
+      width: px(width),
+      height: px(height),
+      rotation: deg(0),
+      flipH: false,
+      flipV: false,
+    },
+    fill: {
+      type: "solidFill",
+      color: {
+        spec: {
+          type: "srgb",
+          value: "FFFFFF",
+        },
+      },
+    },
+    line: {
+      width: px(1),
+      fill: {
+        type: "solidFill",
+        color: {
+          spec: {
+            type: "srgb",
+            value: "888888",
+          },
+        },
+      },
+    },
+    geometry: {
+      type: "preset",
+      preset: "rect",
+      adjustValues: [],
+    },
+  },
+  textBody: {
+    bodyProperties: {
+      anchor: "t",
+    },
+    paragraphs: [
+      {
+        runs: [
+          {
+            type: "text",
+            text,
+            properties: {
+              fontSize: px(fontSize),
+            },
+          },
+        ],
+        properties: {},
+        endProperties: {},
+      },
+    ],
+  },
+});
+
+// =============================================================================
+// Title/Heading Fixture
+// =============================================================================
+
+const createTestTitle = (
+  id: string,
+  name: string,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  text: string
+): SpShape => ({
+  type: "sp",
+  nonVisual: {
+    id,
+    name,
+  },
+  placeholder: {
+    type: "title",
+    idx: 0,
+  },
+  properties: {
+    transform: {
+      x: px(x),
+      y: px(y),
+      width: px(width),
+      height: px(height),
+      rotation: deg(0),
+      flipH: false,
+      flipV: false,
+    },
+    geometry: {
+      type: "preset",
+      preset: "rect",
+      adjustValues: [],
+    },
+  },
+  textBody: {
+    bodyProperties: {
+      anchor: "ctr",
+    },
+    paragraphs: [
+      {
+        runs: [
+          {
+            type: "text",
+            text,
+            properties: {
+              fontSize: px(28),
+              bold: true,
+            },
+          },
+        ],
+        properties: {},
+        endProperties: {},
+      },
+    ],
+  },
+});
+
+// =============================================================================
+// GrpShape Fixture (Group)
+// =============================================================================
+
+const createTestGroup = (
+  id: string,
+  name: string,
+  x: number,
+  y: number,
+  children: SpShape[]
+): GrpShape => {
+  // Calculate bounds from children
+  const minX = Math.min(...children.map((c) => c.properties.transform?.x as number || 0));
+  const minY = Math.min(...children.map((c) => c.properties.transform?.y as number || 0));
+  const maxX = Math.max(...children.map((c) => (c.properties.transform?.x as number || 0) + (c.properties.transform?.width as number || 0)));
+  const maxY = Math.max(...children.map((c) => (c.properties.transform?.y as number || 0) + (c.properties.transform?.height as number || 0)));
+  const width = maxX - minX;
+  const height = maxY - minY;
+
+  return {
+    type: "grpSp",
+    nonVisual: {
+      id,
+      name,
+    },
+    properties: {
+      transform: {
+        x: px(x),
+        y: px(y),
+        width: px(width),
+        height: px(height),
+        rotation: deg(0),
+        flipH: false,
+        flipV: false,
+        childOffsetX: px(minX),
+        childOffsetY: px(minY),
+        childExtentWidth: px(width),
+        childExtentHeight: px(height),
+      },
+    },
+    children,
+  };
+};
 
 // =============================================================================
 // CxnShape Fixture (Connector)
@@ -199,16 +383,44 @@ const createTestTableFrame = (
 
 const createTestSlide = (): Slide => ({
   shapes: [
+    // Title (placeholder)
+    createTestTitle("title1", "Slide Title", 50, 10, 400, 40, "Slide Editor Test"),
+
     // SpShapes (auto shapes)
-    createTestSpShape("sp1", "Blue Rectangle", 100, 50, 180, 100, "4A90D9"),
-    createTestSpShape("sp2", "Red Rectangle", 320, 50, 150, 120, "D94A4A"),
-    createTestSpShape("sp3", "Green Rectangle", 100, 180, 200, 80, "4AD97A", 15),
+    createTestSpShape("sp1", "Blue Rectangle", 50, 70, 150, 80, "4A90D9"),
+    createTestSpShape("sp2", "Red Rectangle", 220, 70, 120, 90, "D94A4A"),
+    createTestSpShape("sp3", "Rotated Rectangle", 360, 70, 160, 70, "4AD97A", 15),
+
+    // TextBoxes
+    createTestTextBox("txt1", "TextBox 1", 540, 70, 180, 50, "This is a text box with some content.", 12),
+    createTestTextBox("txt2", "TextBox 2", 540, 140, 180, 40, "Another text box here.", 11),
 
     // CxnShape (connector line)
-    createTestCxnShape("cxn1", "Connector", 510, 100, 120),
+    createTestCxnShape("cxn1", "Connector", 740, 90, 100),
 
     // GraphicFrame (table)
-    createTestTableFrame("tbl1", "Sample Table", 320, 200),
+    createTestTableFrame("tbl1", "Sample Table", 50, 200),
+
+    // Group with children
+    createTestGroup(
+      "grp1",
+      "Grouped Shapes",
+      350,
+      200,
+      [
+        createTestSpShape("grp1-child1", "Group Child 1", 0, 0, 80, 60, "9B59B6"),
+        createTestSpShape("grp1-child2", "Group Child 2", 100, 0, 80, 60, "3498DB"),
+        createTestSpShape("grp1-child3", "Group Child 3", 50, 70, 80, 60, "E74C3C"),
+      ]
+    ),
+
+    // Additional shapes for variety
+    createTestSpShape("sp4", "Yellow Shape", 50, 360, 140, 100, "F1C40F"),
+    createTestSpShape("sp5", "Purple Shape", 220, 380, 120, 80, "8E44AD", -10),
+    createTestTextBox("txt3", "Description", 360, 360, 200, 80, "This text box demonstrates multi-line text wrapping for longer content.", 10),
+
+    // Another table
+    createTestTableFrame("tbl2", "Data Table", 600, 340),
   ],
 });
 
@@ -386,11 +598,11 @@ export function SlideEditorTest() {
             {JSON.stringify(
               {
                 shapeCount: slide.shapes.length,
-                shapes: slide.shapes.map((s) => ({
-                  id: s.nonVisual.id,
-                  name: s.nonVisual.name,
+                shapes: slide.shapes.map((s: Shape) => ({
+                  id: "nonVisual" in s ? s.nonVisual.id : undefined,
+                  name: "nonVisual" in s ? s.nonVisual.name : undefined,
                   type: s.type,
-                  transform: "properties" in s ? s.properties.transform : undefined,
+                  transform: getShapeTransform(s),
                 })),
               },
               null,

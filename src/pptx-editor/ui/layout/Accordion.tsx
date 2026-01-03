@@ -26,30 +26,36 @@ export type AccordionProps = {
   readonly style?: CSSProperties;
 };
 
+// =============================================================================
+// Styles
+// =============================================================================
+
+const containerStyle: CSSProperties = {
+  borderBottom: "1px solid var(--border-subtle, rgba(255, 255, 255, 0.06))",
+};
+
 const headerStyle = (disabled: boolean): CSSProperties => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  padding: "10px 12px",
-  backgroundColor: "var(--bg-tertiary, #111111)",
-  border: "1px solid var(--border-subtle, rgba(255, 255, 255, 0.08))",
-  borderRadius: "var(--radius-sm, 6px)",
+  padding: "8px 4px",
   cursor: disabled ? "not-allowed" : "pointer",
-  transition: "background-color 150ms ease",
   userSelect: "none",
   opacity: disabled ? 0.5 : 1,
 });
 
 const titleStyle: CSSProperties = {
-  fontSize: "13px",
-  fontWeight: 500,
-  color: "var(--text-primary, #fafafa)",
+  fontSize: "11px",
+  fontWeight: 600,
+  color: "var(--text-secondary, #a1a1a1)",
+  textTransform: "uppercase",
+  letterSpacing: "0.3px",
 };
 
 const chevronStyle = (expanded: boolean): CSSProperties => ({
-  width: "16px",
-  height: "16px",
-  color: "var(--text-secondary, #a1a1a1)",
+  width: "14px",
+  height: "14px",
+  color: "var(--text-tertiary, #737373)",
   transition: "transform 150ms ease",
   transform: expanded ? "rotate(90deg)" : "rotate(0deg)",
 });
@@ -64,13 +70,8 @@ const contentWrapperStyle = (expanded: boolean): CSSProperties => ({
 const contentStyle: CSSProperties = {
   display: "flex",
   flexDirection: "column",
-  gap: "12px",
-  padding: "12px",
-  borderLeft: "1px solid var(--border-subtle, rgba(255, 255, 255, 0.08))",
-  borderRight: "1px solid var(--border-subtle, rgba(255, 255, 255, 0.08))",
-  borderBottom: "1px solid var(--border-subtle, rgba(255, 255, 255, 0.08))",
-  borderRadius: "0 0 var(--radius-sm, 6px) var(--radius-sm, 6px)",
-  marginTop: "-1px",
+  gap: "8px",
+  padding: "4px 4px 12px",
 };
 
 function ChevronIcon({ style }: { readonly style?: CSSProperties }) {
@@ -118,7 +119,7 @@ export function Accordion({
   }, [disabled, isControlled, expanded, onExpandedChange]);
 
   return (
-    <div style={style} className={className}>
+    <div style={{ ...containerStyle, ...style }} className={className}>
       <div
         style={headerStyle(disabled ?? false)}
         onClick={handleToggle}

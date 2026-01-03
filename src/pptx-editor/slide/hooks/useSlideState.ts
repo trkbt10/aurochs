@@ -6,10 +6,50 @@
 
 import { useCallback, useMemo } from "react";
 import type { Slide, Shape } from "../../../pptx/domain";
-import type { Transform } from "../../../pptx/domain/types";
+import type { Transform, Pixels } from "../../../pptx/domain/types";
 import { px } from "../../../pptx/domain/types";
 import { useSlideEditor } from "../../context/SlideEditorContext";
+import { getShapeTransform, withUpdatedTransform } from "../../utils";
 import type { ShapeId } from "../types";
+
+// =============================================================================
+// Helper Functions
+// =============================================================================
+
+/**
+ * Update a shape by ID in an array of shapes (supports nested groups)
+ */
+function updateShapeInArray(
+  shapes: readonly Shape[],
+  id: ShapeId,
+  updater: (shape: Shape) => Shape
+): readonly Shape[] {
+  return shapes.map((shape) => {
+    if ("nonVisual" in shape && shape.nonVisual.id === id) {
+      return updater(shape);
+    }
+    if (shape.type === "grpSp") {
+      return {
+        ...shape,
+        children: updateShapeInArray(shape.children, id, updater),
+      };
+    }
+    return shape;
+  });
+}
+
+/**
+ * Transform update for multiple shapes
+ */
+export type MultiShapeTransformUpdate = {
+  readonly id: ShapeId;
+  readonly bounds: {
+    readonly x: Pixels;
+    readonly y: Pixels;
+    readonly width: Pixels;
+    readonly height: Pixels;
+  };
+};
 
 /**
  * Result of useSlideState hook
@@ -25,6 +65,10 @@ export type UseSlideStateResult = {
   readonly updateShapeTransform: (
     shapeId: ShapeId,
     transform: Partial<Transform>
+  ) => void;
+  /** Update multiple shapes' transforms (for multi-selection operations) */
+  readonly updateMultipleShapeTransforms: (
+    updates: readonly MultiShapeTransformUpdate[]
   ) => void;
   /** Nudge shapes by delta (relative move) */
   readonly nudgeShapes: (
@@ -82,20 +126,25 @@ export function useSlideState(): UseSlideStateResult {
       dispatch({
         type: "UPDATE_SHAPE",
         shapeId,
-        updater: (shape) => {
-          if (!("properties" in shape)) return shape;
-          const currentTransform = shape.properties.transform;
-          if (!currentTransform) return shape;
-          return {
-            ...shape,
-            properties: {
-              ...shape.properties,
-              transform: {
-                ...currentTransform,
-                ...transformUpdate,
-              },
-            },
-          } as Shape;
+        updater: (shape) => withUpdatedTransform(shape, transformUpdate),
+      });
+    },
+    [dispatch]
+  );
+
+  const updateMultipleShapeTransforms = useCallback(
+    (updates: readonly MultiShapeTransformUpdate[]) => {
+      // Apply all updates in a single slide update to batch them together
+      dispatch({
+        type: "UPDATE_SLIDE",
+        updater: (currentSlide) => {
+          let newShapes = currentSlide.shapes;
+          for (const update of updates) {
+            newShapes = updateShapeInArray(newShapes, update.id, (shape) =>
+              withUpdatedTransform(shape, update.bounds)
+            );
+          }
+          return { ...currentSlide, shapes: newShapes };
         },
       });
     },
@@ -109,20 +158,12 @@ export function useSlideState(): UseSlideStateResult {
           type: "UPDATE_SHAPE",
           shapeId,
           updater: (shape) => {
-            if (!("properties" in shape)) return shape;
-            const currentTransform = shape.properties.transform;
+            const currentTransform = getShapeTransform(shape);
             if (!currentTransform) return shape;
-            return {
-              ...shape,
-              properties: {
-                ...shape.properties,
-                transform: {
-                  ...currentTransform,
-                  x: px((currentTransform.x as number) + dx),
-                  y: px((currentTransform.y as number) + dy),
-                },
-              },
-            } as Shape;
+            return withUpdatedTransform(shape, {
+              x: px((currentTransform.x as number) + dx),
+              y: px((currentTransform.y as number) + dy),
+            });
           },
         });
       }
@@ -176,6 +217,7 @@ export function useSlideState(): UseSlideStateResult {
       updateSlide,
       updateShape,
       updateShapeTransform,
+      updateMultipleShapeTransforms,
       nudgeShapes,
       deleteShapes,
       deleteSelected,
@@ -192,6 +234,7 @@ export function useSlideState(): UseSlideStateResult {
       updateSlide,
       updateShape,
       updateShapeTransform,
+      updateMultipleShapeTransforms,
       nudgeShapes,
       deleteShapes,
       deleteSelected,

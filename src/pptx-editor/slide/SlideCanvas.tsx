@@ -5,12 +5,13 @@
  * Uses an overlay pattern to add interactivity on top of SVG rendering.
  */
 
-import { useCallback, useMemo, type CSSProperties, type MouseEvent } from "react";
-import type { Shape, SpShape, CxnShape } from "../../pptx/domain";
+import { useCallback, useMemo, useRef, type CSSProperties, type MouseEvent } from "react";
+import type { Shape, SpShape, CxnShape, GrpShape } from "../../pptx/domain";
 import type { Pixels } from "../../pptx/domain/types";
 import type { SolidFill } from "../../pptx/domain/color";
-import { getShapeTransform, isShapeHidden } from "../../pptx/render/svg/slide-utils";
+import { isShapeHidden } from "../../pptx/render/svg/slide-utils";
 import { useSlideEditor } from "../context/SlideEditorContext";
+import { getAbsoluteBounds, clientToSlideCoords } from "../utils";
 import { useSelection } from "./hooks/useSelection";
 import type { ShapeId } from "./types";
 
@@ -119,35 +120,33 @@ export function SlideCanvas({
       name: string;
     }> = [];
 
-    const collectShapes = (shapeList: readonly Shape[], parentTransform?: { x: number; y: number }) => {
+    const collectShapes = (shapeList: readonly Shape[], parentGroups: readonly GrpShape[] = []) => {
       for (const shape of shapeList) {
         if (isShapeHidden(shape)) continue;
-
-        const transform = getShapeTransform(shape);
-        if (!transform) continue;
 
         const id = "nonVisual" in shape ? shape.nonVisual.id : undefined;
         if (!id) continue;
 
-        const x = (transform.x as number) + (parentTransform?.x ?? 0);
-        const y = (transform.y as number) + (parentTransform?.y ?? 0);
+        // Use getAbsoluteBounds for proper group transform handling
+        const bounds = getAbsoluteBounds(shape, parentGroups);
+        if (!bounds) continue;
 
         shapes.push({
           id,
-          x,
-          y,
-          width: transform.width as number,
-          height: transform.height as number,
-          rotation: transform.rotation as number,
+          x: bounds.x,
+          y: bounds.y,
+          width: bounds.width,
+          height: bounds.height,
+          rotation: bounds.rotation,
           fill: getFillColor(shape),
           stroke: getStrokeColor(shape),
           strokeWidth: getStrokeWidth(shape),
           name: "nonVisual" in shape ? shape.nonVisual.name ?? "" : "",
         });
 
-        // Handle group children
+        // Handle group children with proper parent chain
         if (shape.type === "grpSp") {
-          collectShapes(shape.children, { x, y });
+          collectShapes(shape.children, [...parentGroups, shape]);
         }
       }
     };
@@ -190,19 +189,16 @@ export function SlideCanvas({
         }
       }
 
-      // Start move drag
+      // Start move drag using unified coordinate conversion
       const rect = (e.target as SVGElement).ownerSVGElement?.getBoundingClientRect();
       if (!rect) return;
 
-      const scaleX = (width as number) / rect.width;
-      const scaleY = (height as number) / rect.height;
-      const startX = (e.clientX - rect.left) * scaleX;
-      const startY = (e.clientY - rect.top) * scaleY;
+      const coords = clientToSlideCoords(e.clientX, e.clientY, rect, width as number, height as number);
 
       dispatch({
         type: "START_MOVE",
-        startX: startX as Pixels,
-        startY: startY as Pixels,
+        startX: coords.x as Pixels,
+        startY: coords.y as Pixels,
       });
     },
     [dispatch, width, height, isSelected, select, toggleSelect]

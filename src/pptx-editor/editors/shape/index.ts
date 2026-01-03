@@ -23,6 +23,21 @@ export {
 } from "./EffectsEditor";
 
 export {
+  EffectsEditorPanel,
+  EffectListPanel,
+  EffectDetailPanel,
+  EFFECT_CONFIGS,
+  EFFECT_CATEGORIES,
+  type EffectsEditorPanelProps,
+  type EffectListPanelProps,
+  type EffectDetailPanelProps,
+  type EffectKey,
+  type EffectCategory,
+  type EffectConfig,
+  type CategoryMeta,
+} from "./effects";
+
+export {
   GeometryEditor,
   type GeometryEditorProps,
   createDefaultGeometry,

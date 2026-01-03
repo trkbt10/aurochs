@@ -12,5 +12,6 @@ export {
   SlideEditorProvider,
   useSlideEditor,
   useSlideEditorOptional,
+  findShapeByIdWithParents,
   type SlideEditorContextValue,
 } from "./SlideEditorContext";

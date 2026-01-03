@@ -202,8 +202,8 @@ function SlideEditorInternal({
         )}
 
         {/* Canvas */}
-        <div ref={containerRef} style={canvasContainerStyle}>
-          <div style={canvasWrapperStyle}>
+        <div style={canvasContainerStyle}>
+          <div ref={containerRef} style={canvasWrapperStyle}>
             <SlideCanvas
               svgContent={renderedSvgContent}
               width={width}

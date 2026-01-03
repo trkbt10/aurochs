@@ -59,4 +59,6 @@ export {
   type ResizeHandleProps,
   RotateHandle,
   type RotateHandleProps,
+  MultiSelectionBox,
+  type MultiSelectionBoxProps,
 } from "./components";

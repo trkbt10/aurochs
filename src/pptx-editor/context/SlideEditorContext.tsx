@@ -11,10 +11,10 @@ import {
   useMemo,
   type ReactNode,
 } from "react";
-import type { Slide, Shape } from "../../pptx/domain";
+import type { Slide, Shape, GrpShape } from "../../pptx/domain";
 import type { Bounds } from "../../pptx/domain/types";
 import { px, deg } from "../../pptx/domain/types";
-import { getShapeTransform } from "../../pptx/render/svg/slide-utils";
+import { getShapeTransform, withUpdatedTransform } from "../utils";
 import {
   type SlideEditorState,
   type SlideEditorAction,
@@ -46,6 +46,26 @@ function findShapeById(shapes: readonly Shape[], id: ShapeId): Shape | undefined
     }
     if (shape.type === "grpSp") {
       const found = findShapeById(shape.children, id);
+      if (found) return found;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Find shape by ID and return with parent groups chain.
+ */
+export function findShapeByIdWithParents(
+  shapes: readonly Shape[],
+  id: ShapeId,
+  parentGroups: readonly GrpShape[] = []
+): { shape: Shape; parentGroups: readonly GrpShape[] } | undefined {
+  for (const shape of shapes) {
+    if ("nonVisual" in shape && shape.nonVisual.id === id) {
+      return { shape, parentGroups };
+    }
+    if (shape.type === "grpSp") {
+      const found = findShapeByIdWithParents(shape.children, id, [...parentGroups, shape]);
       if (found) return found;
     }
   }
@@ -437,10 +457,41 @@ export function slideEditorReducer(
     case "START_RESIZE": {
       const primaryId = state.selection.primaryId;
       if (!primaryId) return state;
-      const shape = findShapeById(currentSlide.shapes, primaryId);
-      if (!shape) return state;
-      const bounds = getShapeBounds(shape);
-      if (!bounds) return state;
+      const primaryShape = findShapeById(currentSlide.shapes, primaryId);
+      if (!primaryShape) return state;
+      const primaryBounds = getShapeBounds(primaryShape);
+      if (!primaryBounds) return state;
+
+      // Collect bounds for all selected shapes
+      const initialBoundsMap = new Map<ShapeId, Bounds>();
+      for (const id of state.selection.selectedIds) {
+        const shape = findShapeById(currentSlide.shapes, id);
+        if (shape) {
+          const bounds = getShapeBounds(shape);
+          if (bounds) {
+            initialBoundsMap.set(id, bounds);
+          }
+        }
+      }
+
+      // Calculate combined bounding box
+      let minX = Infinity;
+      let minY = Infinity;
+      let maxX = -Infinity;
+      let maxY = -Infinity;
+      for (const bounds of initialBoundsMap.values()) {
+        minX = Math.min(minX, bounds.x as number);
+        minY = Math.min(minY, bounds.y as number);
+        maxX = Math.max(maxX, (bounds.x as number) + (bounds.width as number));
+        maxY = Math.max(maxY, (bounds.y as number) + (bounds.height as number));
+      }
+      const combinedBounds: Bounds = {
+        x: px(minX),
+        y: px(minY),
+        width: px(maxX - minX),
+        height: px(maxY - minY),
+      };
+
       return {
         ...state,
         drag: {
@@ -448,9 +499,13 @@ export function slideEditorReducer(
           handle: action.handle,
           startX: action.startX,
           startY: action.startY,
-          shapeId: primaryId,
-          initialBounds: bounds,
+          shapeIds: state.selection.selectedIds,
+          initialBoundsMap,
+          combinedBounds,
           aspectLocked: action.aspectLocked,
+          // Backwards compatibility
+          shapeId: primaryId,
+          initialBounds: primaryBounds,
         },
       };
     }
@@ -458,12 +513,47 @@ export function slideEditorReducer(
     case "START_ROTATE": {
       const primaryId = state.selection.primaryId;
       if (!primaryId) return state;
-      const shape = findShapeById(currentSlide.shapes, primaryId);
-      if (!shape) return state;
-      const transform = getShapeTransform(shape);
-      if (!transform) return state;
-      const centerX = px((transform.x as number) + (transform.width as number) / 2);
-      const centerY = px((transform.y as number) + (transform.height as number) / 2);
+      const primaryShape = findShapeById(currentSlide.shapes, primaryId);
+      if (!primaryShape) return state;
+      const primaryTransform = getShapeTransform(primaryShape);
+      if (!primaryTransform) return state;
+
+      // Collect rotations and bounds for all selected shapes
+      const initialRotationsMap = new Map<ShapeId, typeof primaryTransform.rotation>();
+      const initialBoundsMap = new Map<ShapeId, Bounds>();
+      for (const id of state.selection.selectedIds) {
+        const shape = findShapeById(currentSlide.shapes, id);
+        if (shape) {
+          const transform = getShapeTransform(shape);
+          const bounds = getShapeBounds(shape);
+          if (transform && bounds) {
+            initialRotationsMap.set(id, transform.rotation);
+            initialBoundsMap.set(id, bounds);
+          }
+        }
+      }
+
+      // Calculate combined center point for all selected shapes
+      let totalCenterX = 0;
+      let totalCenterY = 0;
+      let count = 0;
+      for (const bounds of initialBoundsMap.values()) {
+        totalCenterX += (bounds.x as number) + (bounds.width as number) / 2;
+        totalCenterY += (bounds.y as number) + (bounds.height as number) / 2;
+        count++;
+      }
+      const combinedCenterX = px(count > 0 ? totalCenterX / count : 0);
+      const combinedCenterY = px(count > 0 ? totalCenterY / count : 0);
+
+      // For single selection, use shape center
+      const isMultiSelection = state.selection.selectedIds.length > 1;
+      const centerX = isMultiSelection
+        ? combinedCenterX
+        : px((primaryTransform.x as number) + (primaryTransform.width as number) / 2);
+      const centerY = isMultiSelection
+        ? combinedCenterY
+        : px((primaryTransform.y as number) + (primaryTransform.height as number) / 2);
+
       const startAngle = deg(
         Math.atan2(
           (action.startY as number) - (centerY as number),
@@ -471,15 +561,20 @@ export function slideEditorReducer(
         ) *
           (180 / Math.PI)
       );
+
       return {
         ...state,
         drag: {
           type: "rotate",
           startAngle,
-          shapeId: primaryId,
+          shapeIds: state.selection.selectedIds,
+          initialRotationsMap,
+          initialBoundsMap,
           centerX,
           centerY,
-          initialRotation: transform.rotation,
+          // Backwards compatibility
+          shapeId: primaryId,
+          initialRotation: primaryTransform.rotation,
         },
       };
     }
@@ -535,28 +630,30 @@ export function slideEditorReducer(
           ...state.clipboard!.shapes,
         ]);
         // Clone shape with new ID and offset position
-        if ("nonVisual" in shape && "properties" in shape) {
-          const transform = getShapeTransform(shape);
-          if (transform) {
-            return {
-              ...shape,
-              nonVisual: {
-                ...shape.nonVisual,
-                id: newId,
-                name: `${shape.nonVisual.name} (Copy)`,
-              },
-              properties: {
-                ...shape.properties,
-                transform: {
-                  ...transform,
-                  x: px((transform.x as number) + offset),
-                  y: px((transform.y as number) + offset),
-                },
-              },
-            } as Shape;
-          }
+        if (!("nonVisual" in shape)) {
+          return shape;
         }
-        return shape;
+        const transform = getShapeTransform(shape);
+        if (!transform) {
+          return shape;
+        }
+        // Apply position offset using unified utility
+        const shapeWithOffset = withUpdatedTransform(shape, {
+          x: px((transform.x as number) + offset),
+          y: px((transform.y as number) + offset),
+        });
+        // Update nonVisual with new ID (all shapes with nonVisual are handled)
+        if (!("nonVisual" in shapeWithOffset)) {
+          return shapeWithOffset;
+        }
+        return {
+          ...shapeWithOffset,
+          nonVisual: {
+            ...shapeWithOffset.nonVisual,
+            id: newId,
+            name: `${shapeWithOffset.nonVisual.name} (Copy)`,
+          },
+        } as Shape;
       });
       const newShapes = [...currentSlide.shapes, ...pastedShapes];
       const newSlide: Slide = { ...currentSlide, shapes: newShapes };

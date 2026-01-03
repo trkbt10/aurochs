@@ -18,22 +18,20 @@ export type ToggleProps = {
 const containerStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
-  gap: "8px",
+  gap: "6px",
   cursor: "pointer",
 };
 
 const trackStyle = (checked: boolean, disabled: boolean): CSSProperties => ({
   position: "relative",
-  width: "32px",
-  height: "18px",
-  borderRadius: "9px",
-  backgroundColor: checked
-    ? "var(--accent-blue, #0070f3)"
-    : "var(--bg-tertiary, #111111)",
-  border: "1px solid var(--border-subtle, rgba(255, 255, 255, 0.08))",
+  width: "28px",
+  height: "16px",
+  borderRadius: "8px",
+  backgroundColor: checked ? "var(--accent-blue, #0070f3)" : "var(--bg-tertiary, #222)",
   transition: "background-color 150ms ease",
   opacity: disabled ? 0.5 : 1,
   cursor: disabled ? "not-allowed" : "pointer",
+  flexShrink: 0,
 });
 
 const thumbStyle = (checked: boolean): CSSProperties => ({
@@ -45,27 +43,16 @@ const thumbStyle = (checked: boolean): CSSProperties => ({
   borderRadius: "50%",
   backgroundColor: "#ffffff",
   transition: "left 150ms ease",
+  boxShadow: "0 1px 2px rgba(0, 0, 0, 0.2)",
 });
 
 const labelStyle: CSSProperties = {
-  fontSize: "13px",
-  color: "var(--text-primary, #fafafa)",
+  fontSize: "12px",
+  color: "var(--text-secondary, #a1a1a1)",
   userSelect: "none",
 };
 
-
-
-
-
-
-export function Toggle({
-  checked,
-  onChange,
-  label,
-  disabled,
-  className,
-  style,
-}: ToggleProps) {
+export function Toggle({ checked, onChange, label, disabled, className, style }: ToggleProps) {
   const handleClick = useCallback(() => {
     if (!disabled) {
       onChange(!checked);

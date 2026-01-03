@@ -1,7 +1,7 @@
 /**
  * @file UI Components Test
  *
- * Test component for UI primitives (Accordion, ColorSwatch).
+ * Test component for UI primitives (Accordion, ColorSwatch, FieldGroup).
  */
 
 import { useState, type CSSProperties } from "react";
@@ -157,6 +157,56 @@ export function UIComponentsTest() {
         <div style={{ marginTop: "16px" }}>
           <FieldGroup label="Disabled State">
             <ColorSwatch color="0070f3" size="md" disabled />
+          </FieldGroup>
+        </div>
+      </div>
+
+      {/* FieldGroup Test */}
+      <div style={cardStyle}>
+        <h2 style={cardTitleStyle}>FieldGroup</h2>
+
+        <FieldGroup label="Stacked Layout (Default)">
+          <Input type="text" value="Stacked content" onChange={() => {}} />
+        </FieldGroup>
+
+        <div style={{ marginTop: "16px" }}>
+          <FieldGroup label="Inline Layout" inline labelWidth={80}>
+            <Input type="text" value="Single line" onChange={() => {}} />
+          </FieldGroup>
+        </div>
+
+        <div style={{ marginTop: "16px" }}>
+          <FieldGroup label="Figma-style Row Layout">
+            <FieldRow>
+              <FieldGroup label="X" inline labelWidth={20} style={{ flex: 1 }}>
+                <Input type="number" value="100" onChange={() => {}} suffix="px" />
+              </FieldGroup>
+              <FieldGroup label="Y" inline labelWidth={20} style={{ flex: 1 }}>
+                <Input type="number" value="200" onChange={() => {}} suffix="px" />
+              </FieldGroup>
+            </FieldRow>
+          </FieldGroup>
+        </div>
+
+        <div style={{ marginTop: "16px" }}>
+          <FieldGroup label="Nested Groups (Compact)">
+            <FieldRow>
+              <FieldGroup label="W" inline labelWidth={20} style={{ flex: 1 }}>
+                <Input type="number" value="400" onChange={() => {}} suffix="px" />
+              </FieldGroup>
+              <FieldGroup label="H" inline labelWidth={20} style={{ flex: 1 }}>
+                <Input type="number" value="300" onChange={() => {}} suffix="px" />
+              </FieldGroup>
+            </FieldRow>
+            <FieldGroup label="Rotation" inline labelWidth={56} style={{ marginTop: "6px" }}>
+              <Input type="number" value="45" onChange={() => {}} suffix="°" />
+            </FieldGroup>
+          </FieldGroup>
+        </div>
+
+        <div style={{ marginTop: "16px" }}>
+          <FieldGroup label="With Hint" hint="optional">
+            <Input type="text" value="Field with hint" onChange={() => {}} />
           </FieldGroup>
         </div>
       </div>

@@ -262,6 +262,8 @@ export {
   type ResizeHandleProps,
   RotateHandle,
   type RotateHandleProps,
+  MultiSelectionBox,
+  type MultiSelectionBoxProps,
 } from "./slide";
 
 // Context (including Slide Editor Context)
@@ -269,4 +271,17 @@ export {
   SlideEditorProvider,
   useSlideEditor,
   useSlideEditorOptional,
+  findShapeByIdWithParents,
 } from "./context";
+
+// Utilities
+export {
+  getShapeTransform,
+  withUpdatedTransform,
+  hasEditableTransform,
+  clientToSlideCoords,
+  getAbsoluteBounds,
+  getShapeCapabilities,
+  type AbsoluteBounds,
+  type ShapeCapabilities,
+} from "./utils";

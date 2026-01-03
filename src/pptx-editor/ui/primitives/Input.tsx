@@ -45,14 +45,12 @@ function injectStyles() {
 const containerStyle = (width?: number | string): CSSProperties => ({
   display: "flex",
   alignItems: "center",
-  backgroundColor: "var(--bg-tertiary, #111111)",
-  border: "1px solid var(--border-subtle, rgba(255, 255, 255, 0.08))",
-  borderRadius: "var(--radius-sm, 6px)",
-  transition: "border-color 150ms ease",
+  backgroundColor: "var(--bg-tertiary, #1a1a1a)",
+  borderRadius: "4px",
   overflow: "hidden",
   // Use explicit width if provided, otherwise fill container
   width: width ?? "100%",
-  minWidth: "60px",
+  minWidth: "48px",
   maxWidth: width ?? "100%",
 });
 
@@ -60,8 +58,8 @@ const inputInnerStyle = (hasSuffix: boolean): CSSProperties => ({
   flex: 1,
   minWidth: 0,
   width: "100%",
-  padding: hasSuffix ? "6px 4px 6px 8px" : "6px 8px",
-  fontSize: "13px",
+  padding: hasSuffix ? "5px 4px 5px 8px" : "5px 8px",
+  fontSize: "12px",
   fontFamily: "inherit",
   color: "var(--text-primary, #fafafa)",
   backgroundColor: "transparent",
@@ -72,8 +70,8 @@ const inputInnerStyle = (hasSuffix: boolean): CSSProperties => ({
 const suffixInnerStyle: CSSProperties = {
   flexShrink: 0,
   paddingRight: "8px",
-  fontSize: "12px",
-  color: "var(--text-tertiary, #737373)",
+  fontSize: "11px",
+  color: "var(--text-tertiary, #666)",
   userSelect: "none",
   pointerEvents: "none",
 };

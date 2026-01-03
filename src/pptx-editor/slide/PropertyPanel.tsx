@@ -341,13 +341,13 @@ function PicShapePanel({
 
       <Accordion title="Crop (Source Rect)" defaultExpanded={false}>
         <FieldRow>
-          <FieldGroup label="Left">
+          <FieldGroup label="L" inline labelWidth={16} style={{ flex: 1 }}>
             <PercentEditor
               value={(shape.blipFill.sourceRect?.left ?? 0) as import("../../pptx/domain/types").Percent}
               onChange={(v) => handleSourceRectChange("left", v as number)}
             />
           </FieldGroup>
-          <FieldGroup label="Right">
+          <FieldGroup label="R" inline labelWidth={16} style={{ flex: 1 }}>
             <PercentEditor
               value={(shape.blipFill.sourceRect?.right ?? 0) as import("../../pptx/domain/types").Percent}
               onChange={(v) => handleSourceRectChange("right", v as number)}
@@ -355,13 +355,13 @@ function PicShapePanel({
           </FieldGroup>
         </FieldRow>
         <FieldRow>
-          <FieldGroup label="Top">
+          <FieldGroup label="T" inline labelWidth={16} style={{ flex: 1 }}>
             <PercentEditor
               value={(shape.blipFill.sourceRect?.top ?? 0) as import("../../pptx/domain/types").Percent}
               onChange={(v) => handleSourceRectChange("top", v as number)}
             />
           </FieldGroup>
-          <FieldGroup label="Bottom">
+          <FieldGroup label="B" inline labelWidth={16} style={{ flex: 1 }}>
             <PercentEditor
               value={(shape.blipFill.sourceRect?.bottom ?? 0) as import("../../pptx/domain/types").Percent}
               onChange={(v) => handleSourceRectChange("bottom", v as number)}
@@ -369,30 +369,28 @@ function PicShapePanel({
           </FieldGroup>
         </FieldRow>
 
-        <FieldGroup label="Options">
-          <FieldRow>
-            <Toggle
-              checked={shape.blipFill.stretch ?? false}
-              onChange={(stretch) =>
-                onChange({
-                  ...shape,
-                  blipFill: { ...shape.blipFill, stretch },
-                })
-              }
-              label="Stretch"
-            />
-            <Toggle
-              checked={shape.blipFill.rotateWithShape ?? true}
-              onChange={(rotateWithShape) =>
-                onChange({
-                  ...shape,
-                  blipFill: { ...shape.blipFill, rotateWithShape },
-                })
-              }
-              label="Rotate with Shape"
-            />
-          </FieldRow>
-        </FieldGroup>
+        <FieldRow style={{ marginTop: "4px" }}>
+          <Toggle
+            checked={shape.blipFill.stretch ?? false}
+            onChange={(stretch) =>
+              onChange({
+                ...shape,
+                blipFill: { ...shape.blipFill, stretch },
+              })
+            }
+            label="Stretch"
+          />
+          <Toggle
+            checked={shape.blipFill.rotateWithShape ?? true}
+            onChange={(rotateWithShape) =>
+              onChange({
+                ...shape,
+                blipFill: { ...shape.blipFill, rotateWithShape },
+              })
+            }
+            label="Rotate"
+          />
+        </FieldRow>
       </Accordion>
 
       <Accordion title="Effects" defaultExpanded={false}>

@@ -23,11 +23,7 @@ export type TransformEditorProps = EditorProps<Transform> & {
 const containerStyle: CSSProperties = {
   display: "flex",
   flexDirection: "column",
-  gap: "12px",
-};
-
-const fieldStyle: CSSProperties = {
-  flex: 1,
+  gap: "8px",
 };
 
 
@@ -54,50 +50,46 @@ export function TransformEditor({
   return (
     <div style={{ ...containerStyle, ...style }} className={className}>
       {/* Position */}
-      <FieldGroup label="Position">
-        <FieldRow>
-          <FieldGroup label="X" style={fieldStyle}>
-            <PixelsEditor
-              value={value.x}
-              onChange={(v) => updateField("x", v)}
-              disabled={disabled}
-            />
-          </FieldGroup>
-          <FieldGroup label="Y" style={fieldStyle}>
-            <PixelsEditor
-              value={value.y}
-              onChange={(v) => updateField("y", v)}
-              disabled={disabled}
-            />
-          </FieldGroup>
-        </FieldRow>
-      </FieldGroup>
+      <FieldRow>
+        <FieldGroup label="X" inline labelWidth={20} style={{ flex: 1 }}>
+          <PixelsEditor
+            value={value.x}
+            onChange={(v) => updateField("x", v)}
+            disabled={disabled}
+          />
+        </FieldGroup>
+        <FieldGroup label="Y" inline labelWidth={20} style={{ flex: 1 }}>
+          <PixelsEditor
+            value={value.y}
+            onChange={(v) => updateField("y", v)}
+            disabled={disabled}
+          />
+        </FieldGroup>
+      </FieldRow>
 
       {/* Size */}
-      <FieldGroup label="Size">
-        <FieldRow>
-          <FieldGroup label="W" style={fieldStyle}>
-            <PixelsEditor
-              value={value.width}
-              onChange={(v) => updateField("width", v)}
-              disabled={disabled}
-              min={0}
-            />
-          </FieldGroup>
-          <FieldGroup label="H" style={fieldStyle}>
-            <PixelsEditor
-              value={value.height}
-              onChange={(v) => updateField("height", v)}
-              disabled={disabled}
-              min={0}
-            />
-          </FieldGroup>
-        </FieldRow>
-      </FieldGroup>
+      <FieldRow>
+        <FieldGroup label="W" inline labelWidth={20} style={{ flex: 1 }}>
+          <PixelsEditor
+            value={value.width}
+            onChange={(v) => updateField("width", v)}
+            disabled={disabled}
+            min={0}
+          />
+        </FieldGroup>
+        <FieldGroup label="H" inline labelWidth={20} style={{ flex: 1 }}>
+          <PixelsEditor
+            value={value.height}
+            onChange={(v) => updateField("height", v)}
+            disabled={disabled}
+            min={0}
+          />
+        </FieldGroup>
+      </FieldRow>
 
       {/* Rotation */}
       {showRotation && (
-        <FieldGroup label="Rotation">
+        <FieldGroup label="Rotation" inline labelWidth={56}>
           <DegreesEditor
             value={value.rotation}
             onChange={(v) => updateField("rotation", v)}
@@ -108,22 +100,20 @@ export function TransformEditor({
 
       {/* Flip */}
       {showFlip && (
-        <FieldGroup label="Flip">
-          <FieldRow>
-            <Toggle
-              checked={value.flipH}
-              onChange={(v) => updateField("flipH", v)}
-              label="Horizontal"
-              disabled={disabled}
-            />
-            <Toggle
-              checked={value.flipV}
-              onChange={(v) => updateField("flipV", v)}
-              label="Vertical"
-              disabled={disabled}
-            />
-          </FieldRow>
-        </FieldGroup>
+        <FieldRow>
+          <Toggle
+            checked={value.flipH}
+            onChange={(v) => updateField("flipH", v)}
+            label="Flip H"
+            disabled={disabled}
+          />
+          <Toggle
+            checked={value.flipV}
+            onChange={(v) => updateField("flipV", v)}
+            label="Flip V"
+            disabled={disabled}
+          />
+        </FieldRow>
       )}
     </div>
   );
