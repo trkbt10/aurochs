@@ -23,7 +23,8 @@ import { findShapeById } from "./shape/query";
 // Context
 // =============================================================================
 
-const SlideEditorContext = createContext<SlideEditorContextValue | null>(null);
+// Exported for SlideEditorBridge in presentation layer
+export const SlideEditorContext = createContext<SlideEditorContextValue | null>(null);
 
 /**
  * Provider for slide editor context

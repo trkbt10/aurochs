@@ -5,10 +5,17 @@
  */
 
 import { useCallback, useMemo } from "react";
-import { px, type Pixels } from "../../../pptx/domain/types";
+import { px } from "../../../pptx/domain/types";
 import { useSlideEditor } from "../context";
 import { findShapeByIdWithParents } from "../shape/query";
-import { getAbsoluteBounds, type AbsoluteBounds } from "../shape/transform";
+import { getAbsoluteBounds } from "../shape/transform";
+import {
+  alignHorizontal,
+  alignVertical,
+  distributeHorizontal,
+  distributeVertical,
+  type ShapeBoundsWithId,
+} from "../shape/alignment";
 import { useSlideState } from "./useSlideState";
 
 // =============================================================================
@@ -39,15 +46,6 @@ export type AlignmentActions = {
 };
 
 // =============================================================================
-// Internal Types
-// =============================================================================
-
-type ShapeBoundsInfo = {
-  readonly id: string;
-  readonly bounds: AbsoluteBounds;
-};
-
-// =============================================================================
 // Hook Implementation
 // =============================================================================
 
@@ -62,8 +60,8 @@ export function useAlignmentActions(): AlignmentActions {
   const { updateMultipleShapeTransforms } = useSlideState();
 
   // Build bounds info for all selected shapes
-  const boundsInfos = useMemo((): readonly ShapeBoundsInfo[] => {
-    const result: ShapeBoundsInfo[] = [];
+  const boundsInfos = useMemo((): readonly ShapeBoundsWithId[] => {
+    const result: ShapeBoundsWithId[] = [];
 
     for (const shape of selectedShapes) {
       if (!("nonVisual" in shape)) continue;
@@ -72,10 +70,19 @@ export function useAlignmentActions(): AlignmentActions {
       const found = findShapeByIdWithParents(slide.shapes, id);
       if (!found) continue;
 
-      const bounds = getAbsoluteBounds(shape, found.parentGroups);
-      if (!bounds) continue;
+      const absoluteBounds = getAbsoluteBounds(shape, found.parentGroups);
+      if (!absoluteBounds) continue;
 
-      result.push({ id, bounds });
+      // Convert AbsoluteBounds (numbers) to Bounds (Pixels)
+      result.push({
+        id,
+        bounds: {
+          x: px(absoluteBounds.x),
+          y: px(absoluteBounds.y),
+          width: px(absoluteBounds.width),
+          height: px(absoluteBounds.height),
+        },
+      });
     }
 
     return result;
@@ -85,192 +92,52 @@ export function useAlignmentActions(): AlignmentActions {
   const canDistribute = boundsInfos.length >= 3;
 
   // ==========================================================================
-  // Alignment Operations
+  // Alignment Operations (delegated to pure functions)
   // ==========================================================================
 
   const alignLeft = useCallback(() => {
-    if (!canAlign) return;
-
-    const minX = Math.min(...boundsInfos.map((b) => b.bounds.x));
-    const updates = boundsInfos.map(({ id, bounds }) => ({
-      id,
-      bounds: {
-        x: px(minX) as Pixels,
-        y: px(bounds.y) as Pixels,
-        width: px(bounds.width) as Pixels,
-        height: px(bounds.height) as Pixels,
-      },
-    }));
-
-    updateMultipleShapeTransforms(updates);
-  }, [canAlign, boundsInfos, updateMultipleShapeTransforms]);
+    const updates = alignHorizontal(boundsInfos, "left");
+    if (updates.length > 0) updateMultipleShapeTransforms(updates);
+  }, [boundsInfos, updateMultipleShapeTransforms]);
 
   const alignCenter = useCallback(() => {
-    if (!canAlign) return;
-
-    const centers = boundsInfos.map((b) => b.bounds.x + b.bounds.width / 2);
-    const avgCenter = centers.reduce((a, b) => a + b, 0) / centers.length;
-
-    const updates = boundsInfos.map(({ id, bounds }) => ({
-      id,
-      bounds: {
-        x: px(avgCenter - bounds.width / 2) as Pixels,
-        y: px(bounds.y) as Pixels,
-        width: px(bounds.width) as Pixels,
-        height: px(bounds.height) as Pixels,
-      },
-    }));
-
-    updateMultipleShapeTransforms(updates);
-  }, [canAlign, boundsInfos, updateMultipleShapeTransforms]);
+    const updates = alignHorizontal(boundsInfos, "center");
+    if (updates.length > 0) updateMultipleShapeTransforms(updates);
+  }, [boundsInfos, updateMultipleShapeTransforms]);
 
   const alignRight = useCallback(() => {
-    if (!canAlign) return;
-
-    const maxRight = Math.max(...boundsInfos.map((b) => b.bounds.x + b.bounds.width));
-    const updates = boundsInfos.map(({ id, bounds }) => ({
-      id,
-      bounds: {
-        x: px(maxRight - bounds.width) as Pixels,
-        y: px(bounds.y) as Pixels,
-        width: px(bounds.width) as Pixels,
-        height: px(bounds.height) as Pixels,
-      },
-    }));
-
-    updateMultipleShapeTransforms(updates);
-  }, [canAlign, boundsInfos, updateMultipleShapeTransforms]);
+    const updates = alignHorizontal(boundsInfos, "right");
+    if (updates.length > 0) updateMultipleShapeTransforms(updates);
+  }, [boundsInfos, updateMultipleShapeTransforms]);
 
   const alignTop = useCallback(() => {
-    if (!canAlign) return;
-
-    const minY = Math.min(...boundsInfos.map((b) => b.bounds.y));
-    const updates = boundsInfos.map(({ id, bounds }) => ({
-      id,
-      bounds: {
-        x: px(bounds.x) as Pixels,
-        y: px(minY) as Pixels,
-        width: px(bounds.width) as Pixels,
-        height: px(bounds.height) as Pixels,
-      },
-    }));
-
-    updateMultipleShapeTransforms(updates);
-  }, [canAlign, boundsInfos, updateMultipleShapeTransforms]);
+    const updates = alignVertical(boundsInfos, "top");
+    if (updates.length > 0) updateMultipleShapeTransforms(updates);
+  }, [boundsInfos, updateMultipleShapeTransforms]);
 
   const alignMiddle = useCallback(() => {
-    if (!canAlign) return;
-
-    const centers = boundsInfos.map((b) => b.bounds.y + b.bounds.height / 2);
-    const avgCenter = centers.reduce((a, b) => a + b, 0) / centers.length;
-
-    const updates = boundsInfos.map(({ id, bounds }) => ({
-      id,
-      bounds: {
-        x: px(bounds.x) as Pixels,
-        y: px(avgCenter - bounds.height / 2) as Pixels,
-        width: px(bounds.width) as Pixels,
-        height: px(bounds.height) as Pixels,
-      },
-    }));
-
-    updateMultipleShapeTransforms(updates);
-  }, [canAlign, boundsInfos, updateMultipleShapeTransforms]);
+    const updates = alignVertical(boundsInfos, "middle");
+    if (updates.length > 0) updateMultipleShapeTransforms(updates);
+  }, [boundsInfos, updateMultipleShapeTransforms]);
 
   const alignBottom = useCallback(() => {
-    if (!canAlign) return;
-
-    const maxBottom = Math.max(...boundsInfos.map((b) => b.bounds.y + b.bounds.height));
-    const updates = boundsInfos.map(({ id, bounds }) => ({
-      id,
-      bounds: {
-        x: px(bounds.x) as Pixels,
-        y: px(maxBottom - bounds.height) as Pixels,
-        width: px(bounds.width) as Pixels,
-        height: px(bounds.height) as Pixels,
-      },
-    }));
-
-    updateMultipleShapeTransforms(updates);
-  }, [canAlign, boundsInfos, updateMultipleShapeTransforms]);
+    const updates = alignVertical(boundsInfos, "bottom");
+    if (updates.length > 0) updateMultipleShapeTransforms(updates);
+  }, [boundsInfos, updateMultipleShapeTransforms]);
 
   // ==========================================================================
-  // Distribution Operations
+  // Distribution Operations (delegated to pure functions)
   // ==========================================================================
 
-  const distributeHorizontally = useCallback(() => {
-    if (!canDistribute) return;
+  const doDistributeHorizontally = useCallback(() => {
+    const updates = distributeHorizontal(boundsInfos);
+    if (updates.length > 0) updateMultipleShapeTransforms(updates);
+  }, [boundsInfos, updateMultipleShapeTransforms]);
 
-    // Sort by X position
-    const sorted = [...boundsInfos].sort((a, b) => a.bounds.x - b.bounds.x);
-    const leftmost = sorted[0];
-    const rightmost = sorted[sorted.length - 1];
-
-    // Calculate total width of all shapes
-    const totalWidth = sorted.reduce((sum, b) => sum + b.bounds.width, 0);
-
-    // Calculate available space for gaps
-    const startX = leftmost.bounds.x;
-    const endX = rightmost.bounds.x + rightmost.bounds.width;
-    const totalSpace = endX - startX;
-    const gapSpace = totalSpace - totalWidth;
-    const gapSize = gapSpace / (sorted.length - 1);
-
-    // Calculate new positions
-    let currentX = startX;
-    const updates = sorted.map(({ id, bounds }) => {
-      const update = {
-        id,
-        bounds: {
-          x: px(currentX) as Pixels,
-          y: px(bounds.y) as Pixels,
-          width: px(bounds.width) as Pixels,
-          height: px(bounds.height) as Pixels,
-        },
-      };
-      currentX += bounds.width + gapSize;
-      return update;
-    });
-
-    updateMultipleShapeTransforms(updates);
-  }, [canDistribute, boundsInfos, updateMultipleShapeTransforms]);
-
-  const distributeVertically = useCallback(() => {
-    if (!canDistribute) return;
-
-    // Sort by Y position
-    const sorted = [...boundsInfos].sort((a, b) => a.bounds.y - b.bounds.y);
-    const topmost = sorted[0];
-    const bottommost = sorted[sorted.length - 1];
-
-    // Calculate total height of all shapes
-    const totalHeight = sorted.reduce((sum, b) => sum + b.bounds.height, 0);
-
-    // Calculate available space for gaps
-    const startY = topmost.bounds.y;
-    const endY = bottommost.bounds.y + bottommost.bounds.height;
-    const totalSpace = endY - startY;
-    const gapSpace = totalSpace - totalHeight;
-    const gapSize = gapSpace / (sorted.length - 1);
-
-    // Calculate new positions
-    let currentY = startY;
-    const updates = sorted.map(({ id, bounds }) => {
-      const update = {
-        id,
-        bounds: {
-          x: px(bounds.x) as Pixels,
-          y: px(currentY) as Pixels,
-          width: px(bounds.width) as Pixels,
-          height: px(bounds.height) as Pixels,
-        },
-      };
-      currentY += bounds.height + gapSize;
-      return update;
-    });
-
-    updateMultipleShapeTransforms(updates);
-  }, [canDistribute, boundsInfos, updateMultipleShapeTransforms]);
+  const doDistributeVertically = useCallback(() => {
+    const updates = distributeVertical(boundsInfos);
+    if (updates.length > 0) updateMultipleShapeTransforms(updates);
+  }, [boundsInfos, updateMultipleShapeTransforms]);
 
   return useMemo(
     () => ({
@@ -280,8 +147,8 @@ export function useAlignmentActions(): AlignmentActions {
       alignTop,
       alignMiddle,
       alignBottom,
-      distributeHorizontally,
-      distributeVertically,
+      distributeHorizontally: doDistributeHorizontally,
+      distributeVertically: doDistributeVertically,
       canAlign,
       canDistribute,
     }),
@@ -292,8 +159,8 @@ export function useAlignmentActions(): AlignmentActions {
       alignTop,
       alignMiddle,
       alignBottom,
-      distributeHorizontally,
-      distributeVertically,
+      doDistributeHorizontally,
+      doDistributeVertically,
       canAlign,
       canDistribute,
     ]

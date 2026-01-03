@@ -7,36 +7,10 @@
 import { useCallback, useMemo } from "react";
 import type { Slide, Shape } from "../../../pptx/domain";
 import type { Transform, Pixels } from "../../../pptx/domain/types";
-import { px } from "../../../pptx/domain/types";
 import { useSlideEditor } from "../context";
-import { getShapeTransform, withUpdatedTransform } from "../shape/transform";
+import { withUpdatedTransform } from "../shape/transform";
+import { updateShapeById } from "../shape/mutation";
 import type { ShapeId } from "../types";
-
-// =============================================================================
-// Helper Functions
-// =============================================================================
-
-/**
- * Update a shape by ID in an array of shapes (supports nested groups)
- */
-function updateShapeInArray(
-  shapes: readonly Shape[],
-  id: ShapeId,
-  updater: (shape: Shape) => Shape
-): readonly Shape[] {
-  return shapes.map((shape) => {
-    if ("nonVisual" in shape && shape.nonVisual.id === id) {
-      return updater(shape);
-    }
-    if (shape.type === "grpSp") {
-      return {
-        ...shape,
-        children: updateShapeInArray(shape.children, id, updater),
-      };
-    }
-    return shape;
-  });
-}
 
 /**
  * Transform update for multiple shapes
@@ -140,7 +114,7 @@ export function useSlideState(): UseSlideStateResult {
         updater: (currentSlide) => {
           let newShapes = currentSlide.shapes;
           for (const update of updates) {
-            newShapes = updateShapeInArray(newShapes, update.id, (shape) =>
+            newShapes = updateShapeById(newShapes, update.id, (shape) =>
               withUpdatedTransform(shape, update.bounds)
             );
           }
@@ -153,20 +127,28 @@ export function useSlideState(): UseSlideStateResult {
 
   const nudgeShapes = useCallback(
     (shapeIds: readonly ShapeId[], dx: number, dy: number) => {
-      for (const shapeId of shapeIds) {
-        dispatch({
-          type: "UPDATE_SHAPE",
-          shapeId,
-          updater: (shape) => {
-            const currentTransform = getShapeTransform(shape);
-            if (!currentTransform) return shape;
-            return withUpdatedTransform(shape, {
-              x: px((currentTransform.x as number) + dx),
-              y: px((currentTransform.y as number) + dy),
+      if (shapeIds.length === 0) return;
+
+      // Apply all nudges in a single slide update
+      dispatch({
+        type: "UPDATE_SLIDE",
+        updater: (currentSlide) => {
+          let newShapes = currentSlide.shapes;
+          for (const shapeId of shapeIds) {
+            newShapes = updateShapeById(newShapes, shapeId, (shape) => {
+              if (!("properties" in shape)) return shape;
+              const props = shape.properties;
+              if (!props || !("transform" in props) || !props.transform) return shape;
+              const t = props.transform;
+              return withUpdatedTransform(shape, {
+                x: ((t.x as number) + dx) as Pixels,
+                y: ((t.y as number) + dy) as Pixels,
+              });
             });
-          },
-        });
-      }
+          }
+          return { ...currentSlide, shapes: newShapes };
+        },
+      });
     },
     [dispatch]
   );
