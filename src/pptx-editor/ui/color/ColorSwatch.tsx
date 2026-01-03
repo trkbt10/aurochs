@@ -6,6 +6,7 @@
  */
 
 import { useCallback, type CSSProperties } from "react";
+import { hexToRgb as hexToRgbObject } from "../../../color";
 
 export type ColorSwatchSize = "sm" | "md" | "lg";
 
@@ -41,10 +42,8 @@ const checkerboardPattern = [
   "linear-gradient(-45deg, transparent 75%, #808080 75%)",
 ].join(", ");
 
-function hexToRgb(hex: string): string {
-  const r = parseInt(hex.slice(0, 2), 16);
-  const g = parseInt(hex.slice(2, 4), 16);
-  const b = parseInt(hex.slice(4, 6), 16);
+function hexToRgbString(hex: string): string {
+  const { r, g, b } = hexToRgbObject(hex);
   return `${r}, ${g}, ${b}`;
 }
 
@@ -86,7 +85,7 @@ const checkerboardLayerStyle: CSSProperties = {
 const colorLayerStyle = (color: string, alpha: number): CSSProperties => ({
   position: "absolute",
   inset: 0,
-  backgroundColor: `rgba(${hexToRgb(color)}, ${alpha})`,
+  backgroundColor: `rgba(${hexToRgbString(color)}, ${alpha})`,
 });
 
 /**
