@@ -72,9 +72,8 @@ export {
 
 // UI Color
 export {
-  ColorSwatch,
-  type ColorSwatchProps,
-  type ColorSwatchSize,
+  FillPreview,
+  type FillPreviewProps,
 } from "./ui/color";
 
 // Editors
@@ -230,9 +229,7 @@ export { createSlideEditorState } from "./slide/types";
 export { slideEditorReducer } from "./slide/reducer";
 
 // Slide Editor Components
-export { SlideEditor, type SlideEditorProps } from "./slide/SlideEditor";
 export { SlideCanvas, type SlideCanvasProps } from "./slide/SlideCanvas";
-export { ShapeSelector, type ShapeSelectorProps } from "./slide/ShapeSelector";
 export { PropertyPanel, type PropertyPanelProps } from "./slide/PropertyPanel";
 export { ShapeToolbar, type ShapeToolbarProps } from "./slide/ShapeToolbar";
 export { LayerPanel, type LayerPanelProps } from "./slide/LayerPanel";

@@ -173,7 +173,6 @@ export function FillEditor({
       <FillPickerPopover
         value={value}
         onChange={onChange}
-        size="md"
         disabled={disabled}
       />
     );
@@ -212,7 +211,6 @@ export function FillEditor({
           <ColorPickerPopover
             value={hex}
             onChange={(newHex) => onChange({ ...solidFill, color: createDefaultColor(newHex) })}
-            size="md"
             disabled={disabled}
           />
           <Select
@@ -235,7 +233,7 @@ export function FillEditor({
     return (
       <div className={className} style={{ ...containerStyle, ...style }}>
         <div style={rowStyle}>
-          <FillPickerPopover value={value} onChange={onChange} size="md" disabled={disabled} />
+          <FillPickerPopover value={value} onChange={onChange} disabled={disabled} />
           <Select
             value={value.type}
             onChange={handleTypeChange}
@@ -291,13 +289,11 @@ export function FillEditor({
           <ColorPickerPopover
             value={fgHex}
             onChange={(hex) => onChange({ ...patternFill, foregroundColor: createDefaultColor(hex) })}
-            size="sm"
             disabled={disabled}
           />
           <ColorPickerPopover
             value={bgHex}
             onChange={(hex) => onChange({ ...patternFill, backgroundColor: createDefaultColor(hex) })}
-            size="sm"
             disabled={disabled}
           />
           <span style={{ fontSize: "11px", color: "var(--text-tertiary)" }}>FG / BG</span>

@@ -1,20 +1,26 @@
 /**
  * @file Slide canvas component
  *
- * Renders a slide with interactive shape selection.
- * Uses an overlay pattern to add interactivity on top of SVG rendering.
+ * Self-contained canvas for slide editing with:
+ * - SVG rendering
+ * - Shape hit areas for selection
+ * - Selection boxes with resize/rotate handles
+ * - Context menu
  *
- * Props-based component that receives all state and callbacks as props.
+ * This is a pure view component - all state is passed in as props.
  */
 
 import { useCallback, useMemo, useState, type CSSProperties, type MouseEvent } from "react";
 import type { Slide, Shape } from "../../pptx/domain";
 import type { Pixels, ShapeId } from "../../pptx/domain/types";
-import type { DragState, SelectionState } from "../state";
-import type { SlideEditorAction } from "./types";
+import type { DragState, SelectionState, ResizeHandlePosition } from "../state";
 import { clientToSlideCoords } from "../shape/coords";
 import { collectShapeRenderData } from "../shape/traverse";
+import { findShapeByIdWithParents } from "../shape/query";
+import { getAbsoluteBounds } from "../shape/transform";
 import { SlideContextMenu, type ContextMenuActions } from "./context-menu/SlideContextMenu";
+import { SelectionBox } from "./components/SelectionBox";
+import { MultiSelectionBox } from "./components/MultiSelectionBox";
 
 // =============================================================================
 // Types
@@ -27,9 +33,7 @@ export type SlideCanvasProps = {
   readonly selection: SelectionState;
   /** Drag state */
   readonly drag: DragState;
-  /** Dispatch action */
-  readonly dispatch: (action: SlideEditorAction) => void;
-  /** Pre-rendered SVG content (if not using render function) */
+  /** Pre-rendered SVG content */
   readonly svgContent?: string;
   /** Slide dimensions */
   readonly width: Pixels;
@@ -46,6 +50,23 @@ export type SlideCanvasProps = {
   readonly className?: string;
   /** Custom style */
   readonly style?: CSSProperties;
+
+  // Callbacks
+  readonly onSelect: (shapeId: ShapeId, addToSelection: boolean) => void;
+  readonly onClearSelection: () => void;
+  readonly onStartMove: (startX: number, startY: number) => void;
+  readonly onStartResize: (handle: ResizeHandlePosition, startX: number, startY: number, aspectLocked: boolean) => void;
+  readonly onStartRotate: (startX: number, startY: number) => void;
+};
+
+type ShapeBounds = {
+  readonly id: ShapeId;
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+  readonly rotation: number;
+  readonly isPrimary: boolean;
 };
 
 // =============================================================================
@@ -59,10 +80,73 @@ function getRotationTransform(
   width: number,
   height: number
 ): string | undefined {
-  if (rotation === 0) {
-    return undefined;
-  }
+  if (rotation === 0) return undefined;
   return `rotate(${rotation}, ${x + width / 2}, ${y + height / 2})`;
+}
+
+function getRotatedCorners(
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  rotation: number
+): Array<{ x: number; y: number }> {
+  const centerX = x + width / 2;
+  const centerY = y + height / 2;
+  const rad = (rotation * Math.PI) / 180;
+  const cos = Math.cos(rad);
+  const sin = Math.sin(rad);
+
+  const corners = [
+    { x, y },
+    { x: x + width, y },
+    { x: x + width, y: y + height },
+    { x, y: y + height },
+  ];
+
+  return corners.map((corner) => {
+    const dx = corner.x - centerX;
+    const dy = corner.y - centerY;
+    return {
+      x: centerX + dx * cos - dy * sin,
+      y: centerY + dx * sin + dy * cos,
+    };
+  });
+}
+
+function calculateCombinedBounds(
+  bounds: readonly ShapeBounds[]
+): { x: number; y: number; width: number; height: number } | undefined {
+  if (bounds.length === 0) return undefined;
+
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+
+  for (const b of bounds) {
+    if (b.rotation !== 0) {
+      const corners = getRotatedCorners(b.x, b.y, b.width, b.height, b.rotation);
+      for (const corner of corners) {
+        minX = Math.min(minX, corner.x);
+        minY = Math.min(minY, corner.y);
+        maxX = Math.max(maxX, corner.x);
+        maxY = Math.max(maxY, corner.y);
+      }
+    } else {
+      minX = Math.min(minX, b.x);
+      minY = Math.min(minY, b.y);
+      maxX = Math.max(maxX, b.x + b.width);
+      maxY = Math.max(maxY, b.y + b.height);
+    }
+  }
+
+  return {
+    x: minX,
+    y: minY,
+    width: maxX - minX,
+    height: maxY - minY,
+  };
 }
 
 // =============================================================================
@@ -70,15 +154,12 @@ function getRotationTransform(
 // =============================================================================
 
 /**
- * Slide canvas with interactive shape selection.
- *
- * Renders the slide SVG with an overlay for shape interaction.
+ * Self-contained slide canvas with rendering, selection, and interaction.
  */
 export function SlideCanvas({
   slide,
   selection,
   drag,
-  dispatch,
   svgContent,
   width,
   height,
@@ -88,104 +169,147 @@ export function SlideCanvas({
   debugHitAreas = false,
   className,
   style,
+  onSelect,
+  onClearSelection,
+  onStartMove,
+  onStartResize,
+  onStartRotate,
 }: SlideCanvasProps) {
-  // Context menu state
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
 
-  // Extract inner content from SVG string (removes <svg> wrapper)
+  const widthNum = width as number;
+  const heightNum = height as number;
+
+  // Extract inner SVG content
   const svgInnerContent = useMemo(() => {
-    if (!svgContent) {
-      return undefined;
-    }
+    if (!svgContent) return undefined;
     const match = svgContent.match(/<svg[^>]*>([\s\S]*)<\/svg>/i);
     return match?.[1] ?? undefined;
   }, [svgContent]);
 
-  // Collect all shapes with transforms for rendering and hit areas
+  // Collect shape render data for hit areas
   const shapeRenderData = useMemo(
     () => collectShapeRenderData(slide.shapes),
     [slide.shapes]
   );
 
-  // Check if a shape is selected
+  // Get bounds for selected shapes
+  const selectedBounds = useMemo(() => {
+    const bounds: ShapeBounds[] = [];
+
+    for (const id of selection.selectedIds) {
+      const result = findShapeByIdWithParents(slide.shapes, id);
+      if (!result) continue;
+
+      const absoluteBounds = getAbsoluteBounds(result.shape, result.parentGroups);
+      if (!absoluteBounds) continue;
+
+      bounds.push({
+        id,
+        x: absoluteBounds.x,
+        y: absoluteBounds.y,
+        width: absoluteBounds.width,
+        height: absoluteBounds.height,
+        rotation: absoluteBounds.rotation,
+        isPrimary: id === selection.primaryId,
+      });
+    }
+
+    return bounds;
+  }, [slide.shapes, selection.selectedIds, selection.primaryId]);
+
+  const combinedBounds = useMemo(() => {
+    if (selectedBounds.length <= 1) return undefined;
+    return calculateCombinedBounds(selectedBounds);
+  }, [selectedBounds]);
+
+  const isMultiSelection = selectedBounds.length > 1;
+
   const isSelected = useCallback(
     (shapeId: ShapeId) => selection.selectedIds.includes(shapeId),
     [selection.selectedIds]
   );
 
-  // Handle shape click
+  // Handlers
   const handleShapeClick = useCallback(
     (shapeId: ShapeId, e: MouseEvent) => {
       e.stopPropagation();
       const addToSelection = e.shiftKey || e.metaKey || e.ctrlKey;
-      dispatch({ type: "SELECT", shapeId, addToSelection });
+      onSelect(shapeId, addToSelection);
     },
-    [dispatch]
+    [onSelect]
   );
 
-  // Handle background click
   const handleBackgroundClick = useCallback(() => {
-    dispatch({ type: "CLEAR_SELECTION" });
-  }, [dispatch]);
+    onClearSelection();
+  }, [onClearSelection]);
 
-  // Handle pointer down for drag
   const handlePointerDown = useCallback(
     (shapeId: ShapeId, e: React.PointerEvent) => {
-      if (e.button !== 0) {
-        return;
-      }
+      if (e.button !== 0) return;
       e.stopPropagation();
       e.preventDefault();
 
-      // Select if not already selected
       if (!isSelected(shapeId)) {
         const addToSelection = e.shiftKey || e.metaKey || e.ctrlKey;
-        dispatch({ type: "SELECT", shapeId, addToSelection });
+        onSelect(shapeId, addToSelection);
       }
 
-      // Start move drag using unified coordinate conversion
       const rect = (e.target as SVGElement).ownerSVGElement?.getBoundingClientRect();
-      if (!rect) {
-        return;
-      }
+      if (!rect) return;
 
-      const coords = clientToSlideCoords(e.clientX, e.clientY, rect, width as number, height as number);
-
-      dispatch({
-        type: "START_MOVE",
-        startX: coords.x as Pixels,
-        startY: coords.y as Pixels,
-      });
+      const coords = clientToSlideCoords(e.clientX, e.clientY, rect, widthNum, heightNum);
+      onStartMove(coords.x, coords.y);
     },
-    [dispatch, width, height, isSelected]
+    [widthNum, heightNum, isSelected, onSelect, onStartMove]
   );
 
-  // Handle context menu (right-click)
+  const handleResizeStart = useCallback(
+    (handle: ResizeHandlePosition, e: React.PointerEvent) => {
+      const rect = (e.target as SVGElement).ownerSVGElement?.getBoundingClientRect();
+      if (!rect) return;
+
+      const coords = clientToSlideCoords(e.clientX, e.clientY, rect, widthNum, heightNum);
+      onStartResize(handle, coords.x, coords.y, e.shiftKey);
+    },
+    [widthNum, heightNum, onStartResize]
+  );
+
+  const handleRotateStart = useCallback(
+    (e: React.PointerEvent) => {
+      const rect = (e.target as SVGElement).ownerSVGElement?.getBoundingClientRect();
+      if (!rect) return;
+
+      const coords = clientToSlideCoords(e.clientX, e.clientY, rect, widthNum, heightNum);
+      onStartRotate(coords.x, coords.y);
+    },
+    [widthNum, heightNum, onStartRotate]
+  );
+
   const handleContextMenu = useCallback(
     (shapeId: ShapeId, e: MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
 
-      // Select the shape if not already selected
       if (!isSelected(shapeId)) {
-        dispatch({ type: "SELECT", shapeId, addToSelection: false });
+        onSelect(shapeId, false);
       }
 
       setContextMenu({ x: e.clientX, y: e.clientY });
     },
-    [isSelected, dispatch]
+    [isSelected, onSelect]
   );
 
-  // Close context menu
   const handleCloseContextMenu = useCallback(() => {
     setContextMenu(null);
   }, []);
 
+  // Styles
   const containerStyle: CSSProperties = {
     position: "relative",
     width: "100%",
     height: 0,
-    paddingBottom: `${((height as number) / (width as number)) * 100}%`,
+    paddingBottom: `${(heightNum / widthNum) * 100}%`,
     overflow: "hidden",
     ...style,
   };
@@ -208,11 +332,7 @@ export function SlideCanvas({
   };
 
   return (
-    <div
-      className={className}
-      style={containerStyle}
-      onClick={handleBackgroundClick}
-    >
+    <div className={className} style={containerStyle} onClick={handleBackgroundClick}>
       <div style={innerContainerStyle}>
         <svg
           style={svgStyle}
@@ -277,6 +397,36 @@ export function SlideCanvas({
               />
             </g>
           ))}
+
+          {/* Selection boxes */}
+          <g style={{ pointerEvents: "auto" }}>
+            {selectedBounds.map((bounds) => (
+              <SelectionBox
+                key={bounds.id}
+                x={bounds.x}
+                y={bounds.y}
+                width={bounds.width}
+                height={bounds.height}
+                rotation={bounds.rotation}
+                isPrimary={bounds.isPrimary}
+                showResizeHandles={!isMultiSelection && bounds.isPrimary}
+                showRotateHandle={!isMultiSelection && bounds.isPrimary}
+                onResizeStart={handleResizeStart}
+                onRotateStart={handleRotateStart}
+              />
+            ))}
+
+            {isMultiSelection && combinedBounds && (
+              <MultiSelectionBox
+                x={combinedBounds.x}
+                y={combinedBounds.y}
+                width={combinedBounds.width}
+                height={combinedBounds.height}
+                onResizeStart={handleResizeStart}
+                onRotateStart={handleRotateStart}
+              />
+            )}
+          </g>
         </svg>
       </div>
 

@@ -1,24 +1,29 @@
 /**
- * @file Slide Editor Test
+ * @file Slide Canvas Test
  *
- * Test component for the SlideEditor with interactive canvas.
- * Uses the controlled component API with reducer.
+ * Test component for the SlideCanvas with interactive selection.
+ * Uses the pure canvas component with external state management.
  */
 
-import { useReducer, useMemo, useCallback, type CSSProperties } from "react";
+import { useReducer, useMemo, useCallback, useRef, useEffect, type CSSProperties } from "react";
 import {
-  SlideEditor,
+  SlideCanvas,
   slideEditorReducer,
   createSlideEditorState,
-  getShapeTransform,
+  findShapeById,
+  PropertyPanel,
+  clientToSlideCoords,
+  withUpdatedTransform,
+  Panel,
 } from "@lib/pptx-editor";
-import type { SlideEditorState, SlideEditorAction } from "@lib/pptx-editor";
+import type { SlideEditorAction, ResizeHandlePosition, SelectionState, DragState } from "@lib/pptx-editor";
 import type { Slide, Shape } from "@lib/pptx/domain";
 import type { SpShape, GrpShape, GraphicFrame, CxnShape } from "@lib/pptx/domain/shape";
 import type { Table, TableRow, TableCell } from "@lib/pptx/domain/table";
+import type { ShapeId } from "@lib/pptx/domain/types";
 import { px, deg } from "@lib/pptx/domain/types";
 import { createRenderContext } from "@lib/pptx/render/context";
-import { findShapeById } from "@lib/pptx-editor";
+import { renderSlideSvg } from "@lib/pptx/render/svg/renderer";
 
 // =============================================================================
 // Fixture Helpers
@@ -284,7 +289,7 @@ const createTableFrame = (
 
 const createTestSlide = (): Slide => ({
   shapes: [
-    createTitle("title1", 50, 10, 400, 40, "Slide Editor Test"),
+    createTitle("title1", 50, 10, 400, 40, "Slide Canvas Test"),
     createSpShape("sp1", "Blue Rectangle", 50, 70, 150, 80, "4A90D9"),
     createSpShape("sp2", "Red Rectangle", 220, 70, 120, 90, "D94A4A"),
     createSpShape("sp3", "Rotated Rectangle", 360, 70, 160, 70, "4AD97A", 15),
@@ -308,17 +313,6 @@ const createTestSlide = (): Slide => ({
     ]),
     createSpShape("sp4", "Yellow Shape", 50, 360, 140, 100, "F1C40F"),
     createSpShape("sp5", "Purple Shape", 220, 380, 120, 80, "8E44AD", -10),
-    createTextBox(
-      "txt3",
-      "Description",
-      360,
-      360,
-      200,
-      80,
-      "Multi-line text for longer content.",
-      10
-    ),
-    createTableFrame("tbl2", 600, 340),
   ],
 });
 
@@ -352,11 +346,38 @@ const descriptionStyle: CSSProperties = {
 };
 
 const editorContainerStyle: CSSProperties = {
-  height: "600px",
+  display: "flex",
+  gap: "16px",
+  height: "500px",
+};
+
+const canvasWrapperStyle: CSSProperties = {
+  flex: 1,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
   backgroundColor: "var(--bg-secondary)",
   borderRadius: "12px",
   border: "1px solid var(--border-subtle)",
-  padding: "16px",
+  padding: "24px",
+  overflow: "hidden",
+};
+
+const canvasSizeStyle: CSSProperties = {
+  width: "100%",
+  maxWidth: "800px",
+  aspectRatio: "16 / 9",
+  backgroundColor: "white",
+  boxShadow: "0 4px 24px rgba(0, 0, 0, 0.3)",
+};
+
+const propertyPanelStyle: CSSProperties = {
+  width: "280px",
+  flexShrink: 0,
+  backgroundColor: "var(--bg-secondary)",
+  borderRadius: "12px",
+  border: "1px solid var(--border-subtle)",
+  overflow: "auto",
 };
 
 const infoStyle: CSSProperties = {
@@ -435,10 +456,15 @@ function ShortcutItem({
   );
 }
 
+const SLIDE_WIDTH = 960;
+const SLIDE_HEIGHT = 540;
+
 /**
- * Slide editor test component using the controlled API
+ * Slide canvas test component using the pure SlideCanvas with external state
  */
 export function SlideEditorTest() {
+  const containerRef = useRef<HTMLDivElement>(null);
+
   const initialState = useMemo(
     () => createSlideEditorState(createTestSlide()),
     []
@@ -447,10 +473,9 @@ export function SlideEditorTest() {
   const [state, dispatch] = useReducer(slideEditorReducer, initialState);
 
   const slide = state.slideHistory.present;
-  const { selection } = state;
-
-  const canUndo = state.slideHistory.past.length > 0;
-  const canRedo = state.slideHistory.future.length > 0;
+  const { selection, drag } = state;
+  const width = px(SLIDE_WIDTH);
+  const height = px(SLIDE_HEIGHT);
 
   const selectedShapes = useMemo(() => {
     return selection.selectedIds
@@ -463,82 +488,239 @@ export function SlideEditorTest() {
     return findShapeById(slide.shapes, selection.primaryId);
   }, [slide.shapes, selection.primaryId]);
 
+  // Render context for SVG
   const renderContext = useMemo(
-    () =>
-      createRenderContext({
-        slideSize: { width: px(960), height: px(540) },
-      }),
+    () => createRenderContext({ slideSize: { width, height } }),
+    [width, height]
+  );
+
+  // Rendered SVG content
+  const svgContent = useMemo(() => {
+    const result = renderSlideSvg(slide, renderContext);
+    return result.svg;
+  }, [slide, renderContext]);
+
+  // ==========================================================================
+  // Drag handlers
+  // ==========================================================================
+
+  useEffect(() => {
+    if (drag.type === "idle") return;
+
+    const handlePointerMove = (e: PointerEvent) => {
+      const container = containerRef.current;
+      if (!container) return;
+
+      const rect = container.getBoundingClientRect();
+      const coords = clientToSlideCoords(e.clientX, e.clientY, rect, SLIDE_WIDTH, SLIDE_HEIGHT);
+
+      if (drag.type === "move") {
+        const deltaX = coords.x - (drag.startX as number);
+        const deltaY = coords.y - (drag.startY as number);
+
+        for (const shapeId of drag.shapeIds) {
+          const initialBounds = drag.initialBounds.get(shapeId);
+          if (!initialBounds) continue;
+
+          dispatch({
+            type: "UPDATE_SHAPE",
+            shapeId,
+            updater: (shape) =>
+              withUpdatedTransform(shape, {
+                x: px(initialBounds.x + deltaX),
+                y: px(initialBounds.y + deltaY),
+              }),
+          });
+        }
+      }
+    };
+
+    const handlePointerUp = () => {
+      dispatch({ type: "END_DRAG" });
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, [drag]);
+
+  // ==========================================================================
+  // Callbacks
+  // ==========================================================================
+
+  const handleSelect = useCallback(
+    (shapeId: ShapeId, addToSelection: boolean) => {
+      dispatch({ type: "SELECT_SHAPE", shapeId, addToSelection });
+    },
     []
+  );
+
+  const handleClearSelection = useCallback(() => {
+    dispatch({ type: "CLEAR_SELECTION" });
+  }, []);
+
+  const handleStartMove = useCallback(
+    (startX: number, startY: number) => {
+      dispatch({ type: "START_MOVE", startX: px(startX), startY: px(startY) });
+    },
+    []
+  );
+
+  const handleStartResize = useCallback(
+    (handle: ResizeHandlePosition, startX: number, startY: number, aspectLocked: boolean) => {
+      dispatch({ type: "START_RESIZE", handle, startX: px(startX), startY: px(startY), aspectLocked });
+    },
+    []
+  );
+
+  const handleStartRotate = useCallback(
+    (startX: number, startY: number) => {
+      dispatch({ type: "START_ROTATE", startX: px(startX), startY: px(startY) });
+    },
+    []
+  );
+
+  const handleShapeChange = useCallback(
+    (shapeId: ShapeId, updater: (shape: Shape) => Shape) => {
+      dispatch({ type: "UPDATE_SHAPE", shapeId, updater });
+    },
+    []
+  );
+
+  const handleSlideChange = useCallback(
+    (updater: (slide: Slide) => Slide) => {
+      dispatch({ type: "UPDATE_SLIDE", updater });
+    },
+    []
+  );
+
+  const handleUngroup = useCallback(
+    (shapeId: ShapeId) => {
+      dispatch({ type: "UNGROUP", shapeId });
+    },
+    []
+  );
+
+  // Context menu actions (minimal for this test)
+  const contextMenuActions = useMemo(
+    () => ({
+      hasSelection: selection.selectedIds.length > 0,
+      hasClipboard: false,
+      isMultiSelect: selection.selectedIds.length > 1,
+      canGroup: selection.selectedIds.length >= 2,
+      canUngroup: selection.selectedIds.length === 1 && primaryShape?.type === "grpSp",
+      canAlign: selection.selectedIds.length >= 2,
+      canDistribute: selection.selectedIds.length >= 3,
+      copy: () => dispatch({ type: "COPY" }),
+      cut: () => {},
+      paste: () => dispatch({ type: "PASTE" }),
+      duplicateSelected: () => {},
+      deleteSelected: () => dispatch({ type: "DELETE_SHAPES", shapeIds: selection.selectedIds }),
+      bringToFront: () => {},
+      bringForward: () => {},
+      sendBackward: () => {},
+      sendToBack: () => {},
+      group: () => {},
+      ungroup: () => {},
+      alignLeft: () => {},
+      alignCenter: () => {},
+      alignRight: () => {},
+      alignTop: () => {},
+      alignMiddle: () => {},
+      alignBottom: () => {},
+      distributeHorizontally: () => {},
+      distributeVertically: () => {},
+    }),
+    [selection.selectedIds, primaryShape]
   );
 
   return (
     <div style={containerStyle}>
       {/* Header */}
       <div style={headerStyle}>
-        <h2 style={titleStyle}>Slide Editor (Controlled)</h2>
+        <h2 style={titleStyle}>Slide Canvas (Pure Component)</h2>
         <p style={descriptionStyle}>
-          Interactive slide editor with shape selection, drag-to-move, resize,
-          rotate, and property editing. Click shapes to select, drag to move,
-          use handles to resize or rotate.
+          Pure SlideCanvas component with external state management. This demonstrates
+          the controlled component API where all state is managed outside the canvas.
+          Click to select shapes, drag to move them.
         </p>
       </div>
 
       {/* Editor */}
       <div style={editorContainerStyle}>
-        <SlideEditor
-          state={state}
-          dispatch={dispatch}
-          slide={slide}
-          selectedShapes={selectedShapes}
-          primaryShape={primaryShape}
-          canUndo={canUndo}
-          canRedo={canRedo}
-          width={px(960)}
-          height={px(540)}
-          renderContext={renderContext}
-          showPropertyPanel
-          showLayerPanel
-          showToolbar
-          propertyPanelPosition="right"
-        />
+        {/* Canvas */}
+        <div style={canvasWrapperStyle}>
+          <div ref={containerRef} style={canvasSizeStyle}>
+            <SlideCanvas
+              slide={slide}
+              selection={selection}
+              drag={drag}
+              svgContent={svgContent}
+              width={width}
+              height={height}
+              primaryShape={primaryShape}
+              selectedShapes={selectedShapes}
+              contextMenuActions={contextMenuActions}
+              onSelect={handleSelect}
+              onClearSelection={handleClearSelection}
+              onStartMove={handleStartMove}
+              onStartResize={handleStartResize}
+              onStartRotate={handleStartRotate}
+            />
+          </div>
+        </div>
+
+        {/* Property Panel */}
+        <div style={propertyPanelStyle}>
+          <Panel title="Properties">
+            <PropertyPanel
+              slide={slide}
+              selectedShapes={selectedShapes}
+              primaryShape={primaryShape}
+              onShapeChange={handleShapeChange}
+              onSlideChange={handleSlideChange}
+              onUngroup={handleUngroup}
+              onSelect={(id) => handleSelect(id, false)}
+            />
+          </Panel>
+        </div>
       </div>
 
       {/* Info Panels */}
       <div style={infoStyle}>
-        {/* Keyboard Shortcuts */}
+        {/* About */}
         <div style={infoPanelStyle}>
-          <h3 style={infoTitleStyle}>Keyboard Shortcuts</h3>
+          <h3 style={infoTitleStyle}>About SlideCanvas</h3>
           <div style={shortcutListStyle}>
-            <ShortcutItem keys="Delete" description="Delete selected" />
-            <ShortcutItem keys="Ctrl+C" description="Copy" />
-            <ShortcutItem keys="Ctrl+V" description="Paste" />
-            <ShortcutItem keys="Ctrl+X" description="Cut" />
-            <ShortcutItem keys="Ctrl+Z" description="Undo" />
-            <ShortcutItem keys="Ctrl+Y" description="Redo" />
-            <ShortcutItem keys="Ctrl+A" description="Select all" />
-            <ShortcutItem keys="Ctrl+D" description="Duplicate" />
-            <ShortcutItem keys="Ctrl+G" description="Group" />
-            <ShortcutItem keys="Ctrl+Shift+G" description="Ungroup" />
-            <ShortcutItem keys="Escape" description="Clear selection" />
+            <p style={{ color: "var(--text-secondary)", fontSize: "13px", lineHeight: 1.6 }}>
+              SlideCanvas is a pure view component that renders:
+            </p>
+            <ul style={{ color: "var(--text-secondary)", fontSize: "13px", marginLeft: "16px" }}>
+              <li>Pre-rendered SVG content</li>
+              <li>Shape hit areas for selection</li>
+              <li>Selection boxes with handles</li>
+              <li>Context menu support</li>
+            </ul>
+            <p style={{ color: "var(--text-secondary)", fontSize: "13px", lineHeight: 1.6, marginTop: "8px" }}>
+              All state is passed in as props, making it fully controlled and testable.
+            </p>
           </div>
         </div>
 
         {/* Current State */}
         <div style={infoPanelStyle}>
-          <h3 style={infoTitleStyle}>Current Slide State</h3>
+          <h3 style={infoTitleStyle}>Current State</h3>
           <div style={valueDisplayStyle}>
             {JSON.stringify(
               {
                 shapeCount: slide.shapes.length,
                 selectedIds: selection.selectedIds,
                 primaryId: selection.primaryId,
-                canUndo,
-                canRedo,
-                shapes: slide.shapes.map((s: Shape) => ({
-                  id: "nonVisual" in s ? s.nonVisual.id : undefined,
-                  type: s.type,
-                  transform: getShapeTransform(s),
-                })),
+                dragType: drag.type,
               },
               null,
               2

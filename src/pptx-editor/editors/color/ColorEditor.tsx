@@ -135,7 +135,6 @@ export function ColorEditor({
           <ColorPickerPopover
             value={srgbSpec.value}
             onChange={handleHexChange}
-            size="md"
             disabled={disabled}
           />
           {showModeSwitch && (
@@ -181,7 +180,6 @@ export function ColorEditor({
           <ColorPickerPopover
             value={getHexPreview(value.spec)}
             onChange={handleHexChange}
-            size="md"
             disabled={disabled}
           />
           <Select
@@ -212,7 +210,6 @@ export function ColorEditor({
         <ColorPickerPopover
           value={getHexPreview(value.spec)}
           onChange={handleHexChange}
-          size="md"
           disabled={disabled}
         />
         <span style={{ fontSize: "11px", color: "var(--text-tertiary)" }}>

@@ -5,7 +5,7 @@
  * Each stop opens a Popover with complete editing (position + color + remove).
  */
 
-import { useState, useCallback, useRef, useMemo, type CSSProperties, type MouseEvent } from "react";
+import { useState, useCallback, useRef, type CSSProperties, type MouseEvent } from "react";
 import { Button, Popover } from "../../ui/primitives";
 import { FillPreview } from "../../ui/color";
 import { GradientStopEditor } from "./GradientStopEditor";
@@ -77,15 +77,22 @@ const stopSwatchContainerStyle: CSSProperties = {
   marginTop: "-1px",
 };
 
-const swatchPreviewStyle = (isSelected: boolean): CSSProperties => ({
-  width: "16px",
-  height: "16px",
-  borderRadius: "2px",
-  border: isSelected
-    ? "2px solid var(--accent-blue, #0070f3)"
-    : "1px solid var(--border-subtle, rgba(255, 255, 255, 0.08))",
-  overflow: "hidden",
-});
+function getSwatchBorder(isSelected: boolean): string {
+  if (isSelected) {
+    return "2px solid var(--accent-blue, #0070f3)";
+  }
+  return "1px solid var(--border-subtle, rgba(255, 255, 255, 0.08))";
+}
+
+function getSwatchPreviewStyle(isSelected: boolean): CSSProperties {
+  return {
+    width: "16px",
+    height: "16px",
+    borderRadius: "2px",
+    border: getSwatchBorder(isSelected),
+    overflow: "hidden",
+  };
+}
 
 function createFillFromColor(color: Color): SolidFill {
   return { type: "solidFill", color };
@@ -221,38 +228,38 @@ export function GradientStopsEditor({
         />
 
         {/* Stop Markers with Complete Editing Popover */}
-        {value.map((stop, index) => (
-          <div
-            key={index}
-            style={stopMarkerStyle(stop.position, selectedIndex === index)}
-            onClick={(e) => handleStopClick(index, e)}
-            title={`Stop at ${stop.position}%`}
-          >
-            <div style={stopTriangleStyle(selectedIndex === index)} />
-            <div style={stopSwatchContainerStyle}>
-              <Popover
-                trigger={
-                  <ColorSwatch
-                    color={getHexFromColor(stop.color)}
-                    size="sm"
-                    selected={selectedIndex === index}
+        {value.map((stop, index) => {
+          const isSelected = selectedIndex === index;
+          return (
+            <div
+              key={index}
+              style={stopMarkerStyle(stop.position, isSelected)}
+              onClick={(e) => handleStopClick(index, e)}
+              title={`Stop at ${stop.position}%`}
+            >
+              <div style={stopTriangleStyle(isSelected)} />
+              <div style={stopSwatchContainerStyle}>
+                <Popover
+                  trigger={
+                    <div style={{ ...getSwatchPreviewStyle(isSelected), opacity: disabled ? 0.5 : 1 }}>
+                      <FillPreview fill={createFillFromColor(stop.color)} />
+                    </div>
+                  }
+                  side="bottom"
+                  align="center"
+                  disabled={disabled}
+                >
+                  <GradientStopEditor
+                    value={stop}
+                    onChange={(updatedStop) => handleStopChange(index, updatedStop)}
+                    onRemove={canRemoveStop ? () => handleRemoveStop(index) : undefined}
                     disabled={disabled}
                   />
-                }
-                side="bottom"
-                align="center"
-                disabled={disabled}
-              >
-                <GradientStopEditor
-                  value={stop}
-                  onChange={(updatedStop) => handleStopChange(index, updatedStop)}
-                  onRemove={canRemoveStop ? () => handleRemoveStop(index) : undefined}
-                  disabled={disabled}
-                />
-              </Popover>
+                </Popover>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Empty State */}

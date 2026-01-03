@@ -12,8 +12,6 @@ import type { Slide, Presentation } from "@lib/pptx/domain";
 import type { SpShape, GrpShape, GraphicFrame } from "@lib/pptx/domain/shape";
 import type { Table, TableRow, TableCell } from "@lib/pptx/domain/table";
 import { px, deg } from "@lib/pptx/domain/types";
-import { createRenderContext } from "@lib/pptx/render/context";
-import { renderSlideSvg } from "@lib/pptx/render/svg/renderer";
 
 // =============================================================================
 // Fixture Helpers
@@ -520,30 +518,6 @@ function FeatureItem({ text }: { text: string }) {
 export function PresentationEditorTest() {
   const initialDocument = useMemo(createTestDocument, []);
 
-  const renderContext = useMemo(
-    () =>
-      createRenderContext({
-        slideSize: {
-          width: px(SLIDE_WIDTH),
-          height: px(SLIDE_HEIGHT),
-        },
-      }),
-    []
-  );
-
-  const renderSlide = useMemo(
-    () => (slide: Slide) => {
-      const result = renderSlideSvg(slide, renderContext);
-      return (
-        <div
-          style={{ width: "100%", height: "100%" }}
-          dangerouslySetInnerHTML={{ __html: result.svg }}
-        />
-      );
-    },
-    [renderContext]
-  );
-
   return (
     <div style={containerStyle}>
       {/* Header */}
@@ -560,7 +534,6 @@ export function PresentationEditorTest() {
       <div style={editorContainerStyle}>
         <PresentationEditor
           initialDocument={initialDocument}
-          renderSlide={renderSlide}
           showPropertyPanel
           showLayerPanel
           showToolbar

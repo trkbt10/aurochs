@@ -352,7 +352,6 @@ export function LinePickerPopover({
           <FillPickerPopover
             value={value.fill}
             onChange={handleFillChange}
-            size="md"
           />
         </div>
 
