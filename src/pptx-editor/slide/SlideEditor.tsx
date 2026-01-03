@@ -15,6 +15,8 @@ import { SlideCanvas } from "./SlideCanvas";
 import { ShapeSelector } from "./ShapeSelector";
 import { PropertyPanel } from "./PropertyPanel";
 import { ShapeToolbar } from "./ShapeToolbar";
+import { LayerPanel } from "./LayerPanel";
+import { Panel } from "../ui/layout";
 import {
   useDragMove,
   useDragResize,
@@ -41,6 +43,8 @@ export type SlideEditorProps = EditorProps<Slide> & {
   readonly renderContext?: RenderContext;
   /** Show property panel */
   readonly showPropertyPanel?: boolean;
+  /** Show layer panel (shape hierarchy) */
+  readonly showLayerPanel?: boolean;
   /** Show toolbar */
   readonly showToolbar?: boolean;
   /** Property panel position */
@@ -61,6 +65,7 @@ type SlideEditorInternalProps = {
   readonly svgContent?: string;
   readonly renderContext?: RenderContext;
   readonly showPropertyPanel: boolean;
+  readonly showLayerPanel: boolean;
   readonly showToolbar: boolean;
   readonly propertyPanelPosition: "left" | "right";
   readonly onChange: (slide: Slide) => void;
@@ -74,6 +79,7 @@ function SlideEditorInternal({
   svgContent: externalSvgContent,
   renderContext,
   showPropertyPanel,
+  showLayerPanel,
   showToolbar,
   propertyPanelPosition,
   onChange,
@@ -168,15 +174,6 @@ function SlideEditorInternal({
     backgroundColor: "white", // Slide background
   };
 
-  const propertyPanelStyle: CSSProperties = {
-    width: "280px",
-    flexShrink: 0,
-    backgroundColor: "var(--editor-panel-bg, #0a0a0a)",
-    borderRadius: "var(--radius-md, 8px)",
-    border: "1px solid var(--editor-border, #222)",
-    overflow: "auto",
-  };
-
   const toolbarStyle: CSSProperties = {
     backgroundColor: "var(--editor-panel-bg, #0a0a0a)",
     borderRadius: "var(--radius-md, 8px)",
@@ -185,11 +182,18 @@ function SlideEditorInternal({
 
   return (
     <div className={className} style={containerStyle}>
+      {/* Layer Panel (left side) */}
+      {showLayerPanel && propertyPanelPosition === "right" && (
+        <Panel title="Layers" badge={slide.shapes.length}>
+          <LayerPanel />
+        </Panel>
+      )}
+
       {/* Property Panel */}
       {showPropertyPanel && (
-        <div style={propertyPanelStyle}>
+        <Panel title="Properties">
           <PropertyPanel />
-        </div>
+        </Panel>
       )}
 
       {/* Canvas Area */}
@@ -213,6 +217,13 @@ function SlideEditorInternal({
           </div>
         </div>
       </div>
+
+      {/* Layer Panel (right side, after canvas) */}
+      {showLayerPanel && propertyPanelPosition === "left" && (
+        <Panel title="Layers" badge={slide.shapes.length}>
+          <LayerPanel />
+        </Panel>
+      )}
     </div>
   );
 }
@@ -253,6 +264,7 @@ export function SlideEditor({
   svgContent,
   renderContext,
   showPropertyPanel = true,
+  showLayerPanel = true,
   showToolbar = true,
   propertyPanelPosition = "right",
   className,
@@ -266,6 +278,7 @@ export function SlideEditor({
         svgContent={svgContent}
         renderContext={renderContext}
         showPropertyPanel={showPropertyPanel}
+        showLayerPanel={showLayerPanel}
         showToolbar={showToolbar}
         propertyPanelPosition={propertyPanelPosition}
         onChange={onChange}

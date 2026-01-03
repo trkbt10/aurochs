@@ -240,6 +240,12 @@ export type SlideEditorAction =
       readonly direction: "front" | "back" | "forward" | "backward";
     }
   | { readonly type: "UNGROUP_SHAPE"; readonly shapeId: ShapeId }
+  | { readonly type: "GROUP_SHAPES"; readonly shapeIds: readonly ShapeId[] }
+  | {
+      readonly type: "MOVE_SHAPE_TO_INDEX";
+      readonly shapeId: ShapeId;
+      readonly newIndex: number;
+    }
   // Selection
   | {
       readonly type: "SELECT";

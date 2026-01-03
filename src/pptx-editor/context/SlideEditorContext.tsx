@@ -11,7 +11,7 @@ import {
   useMemo,
   type ReactNode,
 } from "react";
-import type { Slide, Shape, GrpShape } from "../../pptx/domain";
+import type { Slide, Shape, GrpShape, GroupTransform } from "../../pptx/domain";
 import type { Bounds } from "../../pptx/domain/types";
 import { px, deg } from "../../pptx/domain/types";
 import { getShapeTransform, withUpdatedTransform } from "../utils";
@@ -19,7 +19,6 @@ import {
   type SlideEditorState,
   type SlideEditorAction,
   type SlideEditorContextValue,
-  type ShapeId,
   createSlideEditorState,
   createEmptySelection,
   createIdleDragState,
@@ -28,175 +27,18 @@ import {
   undoHistory,
   redoHistory,
 } from "../slide/types";
+import {
+  type ShapeId,
+  findShapeById,
+  updateShapeById,
+  deleteShapesById,
+  reorderShape,
+  getShapeBounds,
+  generateShapeId,
+} from "./shape";
 
 // Re-export for convenience
 export type { SlideEditorContextValue } from "../slide/types";
-
-// =============================================================================
-// Helper Functions
-// =============================================================================
-
-/**
- * Find shape by ID in slide shapes (supports nested groups)
- */
-function findShapeById(shapes: readonly Shape[], id: ShapeId): Shape | undefined {
-  for (const shape of shapes) {
-    if ("nonVisual" in shape && shape.nonVisual.id === id) {
-      return shape;
-    }
-    if (shape.type === "grpSp") {
-      const found = findShapeById(shape.children, id);
-      if (found) return found;
-    }
-  }
-  return undefined;
-}
-
-/**
- * Find shape by ID and return with parent groups chain.
- */
-export function findShapeByIdWithParents(
-  shapes: readonly Shape[],
-  id: ShapeId,
-  parentGroups: readonly GrpShape[] = []
-): { shape: Shape; parentGroups: readonly GrpShape[] } | undefined {
-  for (const shape of shapes) {
-    if ("nonVisual" in shape && shape.nonVisual.id === id) {
-      return { shape, parentGroups };
-    }
-    if (shape.type === "grpSp") {
-      const found = findShapeByIdWithParents(shape.children, id, [...parentGroups, shape]);
-      if (found) return found;
-    }
-  }
-  return undefined;
-}
-
-/**
- * Update shape by ID in slide shapes (supports nested groups)
- */
-function updateShapeById(
-  shapes: readonly Shape[],
-  id: ShapeId,
-  updater: (shape: Shape) => Shape
-): readonly Shape[] {
-  return shapes.map((shape) => {
-    if ("nonVisual" in shape && shape.nonVisual.id === id) {
-      return updater(shape);
-    }
-    if (shape.type === "grpSp") {
-      return {
-        ...shape,
-        children: updateShapeById(shape.children, id, updater),
-      };
-    }
-    return shape;
-  });
-}
-
-/**
- * Delete shapes by IDs
- */
-function deleteShapesById(
-  shapes: readonly Shape[],
-  ids: readonly ShapeId[]
-): readonly Shape[] {
-  const idSet = new Set(ids);
-  return shapes
-    .filter((shape) => {
-      if ("nonVisual" in shape) {
-        return !idSet.has(shape.nonVisual.id);
-      }
-      return true;
-    })
-    .map((shape) => {
-      if (shape.type === "grpSp") {
-        return {
-          ...shape,
-          children: deleteShapesById(shape.children, ids),
-        };
-      }
-      return shape;
-    });
-}
-
-/**
- * Reorder shape (bring to front, send to back, etc.)
- */
-function reorderShape(
-  shapes: readonly Shape[],
-  id: ShapeId,
-  direction: "front" | "back" | "forward" | "backward"
-): readonly Shape[] {
-  const index = shapes.findIndex(
-    (s) => "nonVisual" in s && s.nonVisual.id === id
-  );
-  if (index === -1) return shapes;
-
-  const newShapes = [...shapes];
-  const [shape] = newShapes.splice(index, 1);
-
-  switch (direction) {
-    case "front":
-      newShapes.push(shape);
-      break;
-    case "back":
-      newShapes.unshift(shape);
-      break;
-    case "forward":
-      if (index < shapes.length - 1) {
-        newShapes.splice(index + 1, 0, shape);
-      } else {
-        newShapes.push(shape);
-      }
-      break;
-    case "backward":
-      if (index > 0) {
-        newShapes.splice(index - 1, 0, shape);
-      } else {
-        newShapes.unshift(shape);
-      }
-      break;
-  }
-
-  return newShapes;
-}
-
-/**
- * Get bounds from shape transform
- */
-function getShapeBounds(shape: Shape): Bounds | undefined {
-  const transform = getShapeTransform(shape);
-  if (!transform) return undefined;
-  return {
-    x: transform.x,
-    y: transform.y,
-    width: transform.width,
-    height: transform.height,
-  };
-}
-
-/**
- * Generate unique shape ID
- */
-function generateShapeId(shapes: readonly Shape[]): string {
-  let maxId = 0;
-  const collectIds = (s: readonly Shape[]) => {
-    for (const shape of s) {
-      if ("nonVisual" in shape) {
-        const numId = parseInt(shape.nonVisual.id, 10);
-        if (!isNaN(numId) && numId > maxId) {
-          maxId = numId;
-        }
-      }
-      if (shape.type === "grpSp") {
-        collectIds(shape.children);
-      }
-    }
-  };
-  collectIds(shapes);
-  return String(maxId + 1);
-}
 
 // =============================================================================
 // Reducer (exported for testing)
@@ -368,6 +210,115 @@ export function slideEditorReducer(
           selectedIds: childIds,
           primaryId: childIds[0],
         },
+      };
+    }
+
+    case "GROUP_SHAPES": {
+      if (action.shapeIds.length < 2) return state;
+
+      // Find shapes to group (must be at top level for now)
+      const shapesToGroup: Shape[] = [];
+      const shapeIndices: number[] = [];
+      const idSet = new Set(action.shapeIds);
+
+      for (let i = 0; i < currentSlide.shapes.length; i++) {
+        const shape = currentSlide.shapes[i];
+        if ("nonVisual" in shape && idSet.has(shape.nonVisual.id)) {
+          shapesToGroup.push(shape);
+          shapeIndices.push(i);
+        }
+      }
+
+      if (shapesToGroup.length < 2) return state;
+
+      // Calculate combined bounding box for the group
+      let minX = Infinity;
+      let minY = Infinity;
+      let maxX = -Infinity;
+      let maxY = -Infinity;
+
+      for (const shape of shapesToGroup) {
+        const transform = getShapeTransform(shape);
+        if (transform) {
+          const x = transform.x as number;
+          const y = transform.y as number;
+          const w = transform.width as number;
+          const h = transform.height as number;
+          minX = Math.min(minX, x);
+          minY = Math.min(minY, y);
+          maxX = Math.max(maxX, x + w);
+          maxY = Math.max(maxY, y + h);
+        }
+      }
+
+      const groupWidth = maxX - minX;
+      const groupHeight = maxY - minY;
+
+      // Generate new group ID
+      const newGroupId = generateShapeId(currentSlide.shapes);
+
+      // Create group transform with childOffset/Extent matching the group bounds
+      const groupTransform: GroupTransform = {
+        x: px(minX),
+        y: px(minY),
+        width: px(groupWidth),
+        height: px(groupHeight),
+        rotation: deg(0),
+        flipH: false,
+        flipV: false,
+        childOffsetX: px(minX),
+        childOffsetY: px(minY),
+        childExtentWidth: px(groupWidth),
+        childExtentHeight: px(groupHeight),
+      };
+
+      // Create the group shape
+      const groupShape: GrpShape = {
+        type: "grpSp",
+        nonVisual: {
+          id: newGroupId,
+          name: `Group ${newGroupId}`,
+        },
+        properties: {
+          transform: groupTransform,
+        },
+        children: shapesToGroup,
+      };
+
+      // Remove grouped shapes and insert group at first shape's position
+      const insertIndex = Math.min(...shapeIndices);
+      const newShapes = currentSlide.shapes.filter(
+        (s) => !("nonVisual" in s) || !idSet.has(s.nonVisual.id)
+      );
+      newShapes.splice(insertIndex, 0, groupShape);
+
+      const newSlide: Slide = { ...currentSlide, shapes: newShapes };
+
+      return {
+        ...state,
+        slideHistory: pushHistory(state.slideHistory, newSlide),
+        selection: {
+          selectedIds: [newGroupId],
+          primaryId: newGroupId,
+        },
+      };
+    }
+
+    case "MOVE_SHAPE_TO_INDEX": {
+      const currentIndex = currentSlide.shapes.findIndex(
+        (s) => "nonVisual" in s && s.nonVisual.id === action.shapeId
+      );
+      if (currentIndex === -1) return state;
+      if (currentIndex === action.newIndex) return state;
+
+      const newShapes = [...currentSlide.shapes];
+      const [shape] = newShapes.splice(currentIndex, 1);
+      newShapes.splice(action.newIndex, 0, shape);
+
+      const newSlide: Slide = { ...currentSlide, shapes: newShapes };
+      return {
+        ...state,
+        slideHistory: pushHistory(state.slideHistory, newSlide),
       };
     }
 

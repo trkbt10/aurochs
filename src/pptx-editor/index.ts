@@ -72,9 +72,11 @@ export {
   Accordion,
   FieldGroup,
   FieldRow,
+  Panel,
   type AccordionProps,
   type FieldGroupProps,
   type FieldRowProps,
+  type PanelProps,
 } from "./ui/layout";
 
 // UI Color
@@ -255,6 +257,8 @@ export {
   type PropertyPanelProps,
   ShapeToolbar,
   type ShapeToolbarProps,
+  LayerPanel,
+  type LayerPanelProps,
   // Sub-components
   SelectionBox,
   type SelectionBoxProps,

@@ -50,6 +50,7 @@ export { SlideCanvas, type SlideCanvasProps } from "./SlideCanvas";
 export { ShapeSelector, type ShapeSelectorProps } from "./ShapeSelector";
 export { PropertyPanel, type PropertyPanelProps } from "./PropertyPanel";
 export { ShapeToolbar, type ShapeToolbarProps } from "./ShapeToolbar";
+export { LayerPanel, type LayerPanelProps } from "./LayerPanel";
 
 // Sub-components
 export {
