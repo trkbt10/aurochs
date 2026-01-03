@@ -74,8 +74,10 @@ const containerStyle: CSSProperties = {
 
 const thumbnailPanelStyle: CSSProperties = {
   width: "200px",
+  height: "100%",
   flexShrink: 0,
   borderRight: "1px solid var(--border-subtle, #333)",
+  overflow: "hidden",
 };
 
 const mainAreaStyle: CSSProperties = {
@@ -353,9 +355,15 @@ function EditorContent({
   const renderThumbnail = useCallback(
     (slideWithId: SlideWithId) => {
       const svg = getThumbnailSvg(slideWithId);
-      return <SlideThumbnailPreview svg={svg} />;
+      return (
+        <SlideThumbnailPreview
+          svg={svg}
+          slideWidth={width as number}
+          slideHeight={height as number}
+        />
+      );
     },
-    [getThumbnailSvg]
+    [getThumbnailSvg, width, height]
   );
 
   // Render context for SVG rendering
@@ -693,7 +701,11 @@ function EditorContent({
     <div style={containerStyle}>
       {/* Left: Slide Thumbnails */}
       <div style={thumbnailPanelStyle}>
-        <SlideThumbnailPanel renderThumbnail={renderThumbnail} />
+        <SlideThumbnailPanel
+          slideWidth={width as number}
+          slideHeight={height as number}
+          renderThumbnail={renderThumbnail}
+        />
       </div>
 
       {/* Center: Main editing area */}

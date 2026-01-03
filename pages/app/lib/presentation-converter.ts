@@ -13,9 +13,11 @@ import type { ColorContext, FontScheme, ColorScheme, ColorMap } from "@lib/pptx/
 import type { ResourceResolver } from "@lib/pptx/render/core";
 import type { Slide as ApiSlide } from "@lib/pptx/types/api";
 import { parseSlide } from "@lib/pptx/parser/slide/slide-parser";
+import { createParseContext } from "@lib/pptx/parser/context";
 import { parseColorScheme, parseFontScheme, parseColorMap } from "@lib/pptx/core/dml/parser/theme";
 import { getByPath } from "@lib/xml";
 import { getMimeTypeFromPath } from "@lib/pptx/core/opc";
+import { createSlideRenderContextFromApiSlide } from "@lib/pptx-editor/presentation/slide-render-context-builder";
 
 // =============================================================================
 // Color Context Building
@@ -226,8 +228,15 @@ export function convertToPresentationDocument(loaded: LoadedPresentation): Prese
 
   for (let i = 1; i <= slideCount; i++) {
     const apiSlide = presentation.getSlide(i);
-    // Parse the XML content to get the domain Slide
-    const domainSlide = parseSlide(apiSlide.content);
+
+    // Build SlideRenderContext for proper parsing with style inheritance
+    const slideRenderCtx = createSlideRenderContextFromApiSlide(apiSlide, cache);
+
+    // Create ParseContext with placeholder tables, master styles, format scheme
+    const parseCtx = createParseContext(slideRenderCtx);
+
+    // Parse the XML content with full context
+    const domainSlide = parseSlide(apiSlide.content, parseCtx);
 
     if (domainSlide) {
       slides.push({

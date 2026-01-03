@@ -13,6 +13,8 @@ import { useMemo, type CSSProperties } from "react";
 
 export type SlideThumbnailPreviewProps = {
   readonly svg: string;
+  readonly slideWidth: number;
+  readonly slideHeight: number;
 };
 
 // =============================================================================
@@ -41,18 +43,15 @@ const svgStyle: CSSProperties = {
  *
  * Renders an SVG string as a scaled preview within its container.
  */
-export function SlideThumbnailPreview({ svg }: SlideThumbnailPreviewProps) {
+export function SlideThumbnailPreview({ svg, slideWidth, slideHeight }: SlideThumbnailPreviewProps) {
   // Extract inner content from full SVG document
   const innerContent = useMemo(() => {
     const match = svg.match(/<svg[^>]*>([\s\S]*)<\/svg>/i);
     return match?.[1] ?? "";
   }, [svg]);
 
-  // Extract viewBox from the SVG
-  const viewBox = useMemo(() => {
-    const match = svg.match(/viewBox="([^"]*)"/);
-    return match?.[1] ?? "0 0 960 540";
-  }, [svg]);
+  // Use provided dimensions for viewBox (fallback to extraction if needed)
+  const viewBox = `0 0 ${slideWidth} ${slideHeight}`;
 
   return (
     <div style={containerStyle}>

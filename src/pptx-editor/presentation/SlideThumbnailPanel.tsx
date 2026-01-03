@@ -17,6 +17,10 @@ import { colorTokens, radiusTokens, fontTokens, iconTokens } from "../ui/design-
 // =============================================================================
 
 export type SlideThumbnailPanelProps = {
+  /** Slide width for aspect ratio calculation */
+  readonly slideWidth: number;
+  /** Slide height for aspect ratio calculation */
+  readonly slideHeight: number;
   /** Optional render function for slide thumbnail */
   readonly renderThumbnail?: (slide: SlideWithId, index: number) => React.ReactNode;
 };
@@ -85,6 +89,7 @@ const iconButtonDisabledStyle: CSSProperties = {
 
 const listStyle: CSSProperties = {
   flex: 1,
+  minHeight: 0,
   overflowY: "auto",
   padding: "8px",
   display: "flex",
@@ -100,24 +105,29 @@ const thumbnailWrapperStyle: CSSProperties = {
   transition: "transform 0.15s ease",
 };
 
-const thumbnailStyle: CSSProperties = {
-  aspectRatio: "16 / 9",
-  backgroundColor: "#fff",
-  border: "2px solid transparent",
-  borderRadius: "4px",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
-  transition: "border-color 0.15s ease",
-  position: "relative",
-  overflow: "hidden",
-};
+function getThumbnailStyle(aspectRatio: string): CSSProperties {
+  return {
+    width: "100%",
+    aspectRatio,
+    backgroundColor: "#fff",
+    border: "2px solid transparent",
+    borderRadius: "4px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+    transition: "border-color 0.15s ease",
+    position: "relative",
+    overflow: "hidden",
+  };
+}
 
-const thumbnailActiveStyle: CSSProperties = {
-  ...thumbnailStyle,
-  border: `2px solid var(--selection-primary, ${colorTokens.selection.primary})`,
-};
+function getThumbnailActiveStyle(aspectRatio: string): CSSProperties {
+  return {
+    ...getThumbnailStyle(aspectRatio),
+    border: `2px solid var(--selection-primary, ${colorTokens.selection.primary})`,
+  };
+}
 
 const thumbnailNumberStyle: CSSProperties = {
   position: "absolute",
@@ -315,6 +325,7 @@ function ThumbnailItem({
   index,
   isActive,
   totalSlides,
+  aspectRatio,
   renderThumbnail,
   onClick,
   onContextMenu,
@@ -330,6 +341,7 @@ function ThumbnailItem({
   index: number;
   isActive: boolean;
   totalSlides: number;
+  aspectRatio: string;
   renderThumbnail?: (slide: SlideWithId, index: number) => React.ReactNode;
   onClick: () => void;
   onContextMenu: (e: React.MouseEvent) => void;
@@ -342,6 +354,8 @@ function ThumbnailItem({
   itemRef?: React.RefObject<HTMLDivElement | null>;
 }) {
   const [isHovered, setIsHovered] = useState(false);
+  const thumbnailStyle = getThumbnailStyle(aspectRatio);
+  const thumbnailActiveStyle = getThumbnailActiveStyle(aspectRatio);
 
   return (
     <div
@@ -452,10 +466,13 @@ function IconButton({
  * Slide thumbnail panel with full slide management
  */
 export function SlideThumbnailPanel({
+  slideWidth,
+  slideHeight,
   renderThumbnail,
 }: SlideThumbnailPanelProps) {
   const { document, dispatch, activeSlide } = usePresentationEditor();
   const activeItemRef = useRef<HTMLDivElement>(null);
+  const aspectRatio = String(slideWidth / slideHeight);
   const [contextMenu, setContextMenu] = useState<ContextMenuState>({
     visible: false,
     x: 0,
@@ -642,6 +659,7 @@ export function SlideThumbnailPanel({
               index={index}
               isActive={isActive}
               totalSlides={document.slides.length}
+              aspectRatio={aspectRatio}
               renderThumbnail={renderThumbnail}
               onClick={() => handleSlideClick(slideWithId.id)}
               onContextMenu={(e) => handleContextMenu(e, slideWithId.id)}
