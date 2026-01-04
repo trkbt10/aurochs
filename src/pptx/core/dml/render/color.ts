@@ -9,6 +9,14 @@
 
 import type { Color, ColorTransform } from "../../../domain/color";
 import type { ColorContext } from "../../../domain/resolution";
+import {
+  hexToRgb as hexToRgbObj,
+  rgbToHex as rgbToHexBase,
+  rgbToHsl as rgbToHslObj,
+  hslToRgb,
+  applySrgbGamma,
+  applySrgbInvGamma,
+} from "../../../../color/index";
 
 // =============================================================================
 // Preset Colors
@@ -242,6 +250,41 @@ const SYSTEM_COLOR_FALLBACKS: Record<string, string> = {
 };
 
 // =============================================================================
+// Color Conversion Wrappers
+// =============================================================================
+
+/**
+ * Convert hex to RGB tuple (for backward compatibility with existing code)
+ */
+function hexToRgb(hex: string): [number, number, number] {
+  const rgb = hexToRgbObj(hex);
+  return [rgb.r, rgb.g, rgb.b];
+}
+
+/**
+ * Convert RGB to hex (uppercase)
+ */
+function rgbToHex(r: number, g: number, b: number): string {
+  return rgbToHexBase(r, g, b).toUpperCase();
+}
+
+/**
+ * Convert RGB to HSL with s/l in 0-100 scale (for backward compatibility)
+ */
+function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
+  const hsl = rgbToHslObj(r, g, b);
+  return [hsl.h, hsl.s * 100, hsl.l * 100];
+}
+
+/**
+ * Convert HSL (s/l in 0-100 scale) to hex color
+ */
+function hslToHex(h: number, s: number, l: number): string {
+  const rgb = hslToRgb(h, s / 100, l / 100);
+  return rgbToHex(rgb.r, rgb.g, rgb.b);
+}
+
+// =============================================================================
 // Color Resolution
 // =============================================================================
 
@@ -300,59 +343,8 @@ export function resolveColor(color: Color | undefined, context?: ColorContext): 
 }
 
 // =============================================================================
-// Color Conversion Utilities
+// Color Transform Utilities
 // =============================================================================
-
-/**
- * Convert HSL to hex color
- */
-function hslToHex(h: number, s: number, l: number): string {
-  // Normalize values
-  h = h % 360;
-  s = Math.max(0, Math.min(100, s)) / 100;
-  l = Math.max(0, Math.min(100, l)) / 100;
-
-  const c = (1 - Math.abs(2 * l - 1)) * s;
-  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
-  const m = l - c / 2;
-
-  let r = 0,
-    g = 0,
-    b = 0;
-
-  if (h < 60) {
-    r = c;
-    g = x;
-    b = 0;
-  } else if (h < 120) {
-    r = x;
-    g = c;
-    b = 0;
-  } else if (h < 180) {
-    r = 0;
-    g = c;
-    b = x;
-  } else if (h < 240) {
-    r = 0;
-    g = x;
-    b = c;
-  } else if (h < 300) {
-    r = x;
-    g = 0;
-    b = c;
-  } else {
-    r = c;
-    g = 0;
-    b = x;
-  }
-
-  const toHex = (v: number) => {
-    const hex = Math.round((v + m) * 255).toString(16);
-    return hex.length === 1 ? "0" + hex : hex;
-  };
-
-  return (toHex(r) + toHex(g) + toHex(b)).toUpperCase();
-}
 
 /**
  * Apply color transforms to a hex color.
@@ -485,74 +477,4 @@ function applyColorTransforms(hex: string, transform: ColorTransform): string {
   }
 
   return result;
-}
-
-/**
- * Convert RGB to HSL
- */
-function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
-  r /= 255;
-  g /= 255;
-  b /= 255;
-
-  const max = Math.max(r, g, b);
-  const min = Math.min(r, g, b);
-  let h = 0,
-    s = 0;
-  const l = (max + min) / 2;
-
-  if (max !== min) {
-    const d = max - min;
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-
-    switch (max) {
-      case r:
-        h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
-        break;
-      case g:
-        h = ((b - r) / d + 2) / 6;
-        break;
-      case b:
-        h = ((r - g) / d + 4) / 6;
-        break;
-    }
-  }
-
-  return [h * 360, s * 100, l * 100];
-}
-
-/**
- * Convert hex to RGB
- */
-function hexToRgb(hex: string): [number, number, number] {
-  return [parseInt(hex.slice(0, 2), 16), parseInt(hex.slice(2, 4), 16), parseInt(hex.slice(4, 6), 16)];
-}
-
-/**
- * Convert RGB to hex
- */
-function rgbToHex(r: number, g: number, b: number): string {
-  const toHex = (v: number) => {
-    const hex = Math.max(0, Math.min(255, Math.round(v))).toString(16);
-    return hex.length === 1 ? "0" + hex : hex;
-  };
-  return (toHex(r) + toHex(g) + toHex(b)).toUpperCase();
-}
-
-/**
- * Apply sRGB gamma shift to a channel.
- */
-function applySrgbGamma(channel: number): number {
-  const c = Math.max(0, Math.min(255, channel)) / 255;
-  const encoded = c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
-  return Math.round(encoded * 255);
-}
-
-/**
- * Apply inverse sRGB gamma shift to a channel.
- */
-function applySrgbInvGamma(channel: number): number {
-  const c = Math.max(0, Math.min(255, channel)) / 255;
-  const decoded = c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-  return Math.round(decoded * 255);
 }

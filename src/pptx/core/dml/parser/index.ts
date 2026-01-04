@@ -10,7 +10,7 @@
 
 // Types
 export type { GradientFill, FillResult, FillType } from "./types";
-export type { BackgroundElement, BackgroundParseResult } from "./background";
+export type { BackgroundElement, BackgroundParseResult } from "../render/background";
 
 // Color parsing
 export { getSchemeColor, getSolidFill } from "./color";
@@ -24,10 +24,9 @@ export {
   getLinearGradient,
   getFillHandler,
   formatFillResult,
-  getShapeFill,
 } from "./fill";
 
-// Background parsing
+// Background parsing (re-exported from render/background.ts)
 export {
   xmlElementToFillElements,
   xmlElementToBlipFill,
@@ -39,7 +38,7 @@ export {
   parseBackgroundProperties,
   findBackgroundRef,
   hasOwnBackground,
-} from "./background";
+} from "../render/background";
 
 // Theme parsing
 export {

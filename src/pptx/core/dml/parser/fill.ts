@@ -6,17 +6,14 @@
 
 import type { FillType, GradientFill, FillResult } from "./types";
 import type {
-  OoxmlElement,
   FillElements,
   GradientFillElement,
   PatternFillElement,
   BlipFillElement,
   PathGradientElement,
-  ShapeElement,
-  GroupShapeElement,
 } from "../../../ooxml/index";
 import type { ColorResolveContext } from "../../../domain/resolution";
-import type { ResourceContext, SlideRenderContext } from "../../../reader/slide/accessor";
+import type { ResourceContext } from "../../../reader/slide/accessor";
 import { angleToDegrees } from "../../units/conversion";
 import { base64ArrayBuffer } from "../../../../buffer/index";
 import { getMimeType } from "../../../../files/index";
@@ -28,25 +25,14 @@ import { getSolidFill } from "./color";
 // =============================================================================
 
 /**
- * Shape node with fill properties
- */
-type ShapeWithFill = ShapeElement | OoxmlElement;
-
-/**
  * Unified handler for each fill type.
- * Consolidates XML key, extraction, and formatting logic in one place.
+ * Provides XML key identification and formatting logic.
  */
 type FillHandler = {
   /** XML element key (e.g., "a:solidFill") */
   readonly xmlKey: string;
   /** Fill type identifier */
   readonly type: FillType;
-  /** Extract fill data from node */
-  extract: (
-    nodeObj: ShapeWithFill,
-    ctx: SlideRenderContext,
-    source: string,
-  ) => unknown;
   /** Format fill data for CSS or SVG output */
   format: (fillColor: unknown, isSvgMode: boolean) => FillResult;
 };
@@ -351,10 +337,6 @@ export function getLinearGradient(
 const SOLID_FILL_HANDLER: FillHandler = {
   xmlKey: "a:solidFill",
   type: "SOLID_FILL",
-  extract: (nodeObj, ctx) => {
-    const shpFill = (nodeObj as ShapeElement)["p:spPr"]?.["a:solidFill"];
-    return getSolidFill(shpFill, undefined, ctx.toColorContext());
-  },
   format: (fillColor, isSvgMode) => {
     if (isSvgMode) {
       return `#${fillColor}`;
@@ -370,10 +352,6 @@ const SOLID_FILL_HANDLER: FillHandler = {
 const GRADIENT_FILL_HANDLER: FillHandler = {
   xmlKey: "a:gradFill",
   type: "GRADIENT_FILL",
-  extract: (nodeObj, ctx) => {
-    const shpFill = (nodeObj as ShapeElement)["p:spPr"]?.["a:gradFill"];
-    return getGradientFill(shpFill, ctx.toColorContext());
-  },
   format: (fillColor, isSvgMode) => {
     const gradFill = fillColor as GradientFill;
     if (isSvgMode) {
@@ -391,10 +369,6 @@ const GRADIENT_FILL_HANDLER: FillHandler = {
 const PATTERN_FILL_HANDLER: FillHandler = {
   xmlKey: "a:pattFill",
   type: "PATTERN_FILL",
-  extract: (nodeObj, ctx) => {
-    const shpFill = (nodeObj as ShapeElement)["p:spPr"]?.["a:pattFill"];
-    return getPatternFill(shpFill, ctx.toColorContext());
-  },
   format: (fillColor) => {
     const patternFill = fillColor as [string, string?, string?];
     const parts = [`background: ${patternFill[0]}`];
@@ -415,10 +389,6 @@ const PATTERN_FILL_HANDLER: FillHandler = {
 const PIC_FILL_HANDLER: FillHandler = {
   xmlKey: "a:blipFill",
   type: "PIC_FILL",
-  extract: (nodeObj, ctx) => {
-    const shpFill = (nodeObj as ShapeElement)["p:spPr"]?.["a:blipFill"];
-    return getPicFillFromContext(shpFill, ctx.toResourceContext());
-  },
   format: (fillColor, isSvgMode) => {
     if (isSvgMode) {
       return fillColor as string;
@@ -434,7 +404,6 @@ const PIC_FILL_HANDLER: FillHandler = {
 const NO_FILL_HANDLER: FillHandler = {
   xmlKey: "a:noFill",
   type: "NO_FILL",
-  extract: () => undefined,
   format: (_, isSvgMode) => (isSvgMode ? "none" : ""),
 };
 
@@ -445,7 +414,6 @@ const NO_FILL_HANDLER: FillHandler = {
 const GROUP_FILL_HANDLER: FillHandler = {
   xmlKey: "a:grpFill",
   type: "GROUP_FILL",
-  extract: () => undefined,
   format: () => "",
 };
 
@@ -511,125 +479,4 @@ function findHandlerByXmlKey(nodeObj: FillElements): FillHandler | undefined {
     return undefined;
   }
   return FILL_HANDLERS_BY_XML_KEY[foundKey];
-}
-
-function extractFillColor(
-  handler: FillHandler,
-  nodeObj: ShapeWithFill,
-  ctx: SlideRenderContext,
-  source: string,
-): unknown {
-  return handler.extract(nodeObj, ctx, source);
-}
-
-function tryDrawingMLFillRef(
-  nodeObj: ShapeElement,
-  ctx: SlideRenderContext,
-): { color: unknown; isEmpty: boolean } {
-  const fillRef = nodeObj["p:style"]?.["a:fillRef"];
-  const idx = parseInt(fillRef?.attrs?.idx ?? "0", 10);
-
-  if (idx === 0 || idx === 1000) {
-    return { color: undefined, isEmpty: true };
-  }
-
-  return { color: getSolidFill(fillRef, undefined, ctx.toColorContext()), isEmpty: false };
-}
-
-function tryGroupFill(
-  nodeObj: ShapeElement,
-  pNode: unknown,
-  isSvgMode: boolean,
-  ctx: SlideRenderContext,
-  source: string,
-): FillResult | undefined {
-  const spPr = nodeObj["p:spPr"];
-  // Check for group fill - spPr has FillElements which includes a:grpFill
-  const grpFill = (spPr as FillElements | undefined)?.["a:grpFill"];
-  if (grpFill === undefined) {
-    return undefined;
-  }
-  const pNodeTyped = pNode as GroupShapeElement;
-  const grpShpFill = pNodeTyped["p:grpSpPr"];
-  const spShpNode = { "p:spPr": grpShpFill } as ShapeElement;
-  return getShapeFill(spShpNode, nodeObj, isSvgMode, ctx, source);
-}
-
-function getEmptyFillResult(isSvgMode: boolean): FillResult {
-  return NO_FILL_HANDLER.format(undefined, isSvgMode);
-}
-
-function getDefaultFillResult(isSvgMode: boolean): FillResult {
-  if (isSvgMode) {
-    return "none";
-  }
-  return "background-color: inherit;";
-}
-
-/**
- * Get shape fill (main entry point for fill processing)
- */
-export function getShapeFill(
-  node: unknown,
-  pNode: unknown,
-  isSvgMode: boolean,
-  ctx: SlideRenderContext,
-  source: string,
-): FillResult {
-  const nodeObj = node as ShapeElement;
-  const spPr = nodeObj["p:spPr"];
-  const handler = spPr !== undefined ? findHandlerByXmlKey(spPr as FillElements) : undefined;
-
-  if (handler === undefined) {
-    // No explicit fill found, try fallbacks
-    return tryFallbackFills(nodeObj, pNode, isSvgMode, ctx, source);
-  }
-
-  if (handler.type === "NO_FILL") {
-    return getEmptyFillResult(isSvgMode);
-  }
-
-  if (handler.type === "GROUP_FILL") {
-    const groupFillResult = tryGroupFill(nodeObj, pNode, isSvgMode, ctx, source);
-    if (groupFillResult !== undefined) {
-      return groupFillResult;
-    }
-    return getDefaultFillResult(isSvgMode);
-  }
-
-  const fillColor = extractFillColor(handler, nodeObj, ctx, source);
-
-  if (fillColor !== undefined) {
-    return handler.format(fillColor, isSvgMode);
-  }
-
-  return tryFallbackFills(nodeObj, pNode, isSvgMode, ctx, source);
-}
-
-/**
- * Try fallback fill sources (drawingML ref, group fill)
- */
-function tryFallbackFills(
-  nodeObj: ShapeElement,
-  pNode: unknown,
-  isSvgMode: boolean,
-  ctx: SlideRenderContext,
-  source: string,
-): FillResult {
-  // Try drawingML namespace fill reference
-  const drawingMLResult = tryDrawingMLFillRef(nodeObj, ctx);
-  if (drawingMLResult.isEmpty) {
-    return getEmptyFillResult(isSvgMode);
-  }
-  if (drawingMLResult.color !== undefined) {
-    return SOLID_FILL_HANDLER.format(drawingMLResult.color, isSvgMode);
-  }
-
-  // Check for group fill
-  const groupFillResult = tryGroupFill(nodeObj, pNode, isSvgMode, ctx, source);
-  if (groupFillResult !== undefined) {
-    return groupFillResult;
-  }
-
-  return getDefaultFillResult(isSvgMode);
 }

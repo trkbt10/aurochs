@@ -23,7 +23,6 @@ import type {
   PlaceholderTable,
   Theme,
   RawMasterTextStyles,
-  ColorScheme,
   ColorMap,
 } from "../../domain";
 import type { ColorResolveContext } from "../../domain/resolution";

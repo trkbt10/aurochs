@@ -22,6 +22,8 @@ export {
   applyLumMod,
   applyHueMod,
   applySatMod,
+  applySrgbGamma,
+  applySrgbInvGamma,
 } from "./transform";
 
 export { getColorName2Hex } from "./named-colors";

@@ -118,3 +118,27 @@ export function applySatMod(rgbStr: string, multiplier: number, isAlpha: boolean
 
   return hslToHexString({ h: color.h, s: newS, l: color.l, a: color.a }, isAlpha);
 }
+
+/**
+ * Apply sRGB gamma encoding to a channel (0-255).
+ * Converts from linear RGB to sRGB color space.
+ *
+ * @see IEC 61966-2-1:1999 (sRGB specification)
+ */
+export function applySrgbGamma(channel: number): number {
+  const c = Math.max(0, Math.min(255, channel)) / 255;
+  const encoded = c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
+  return Math.round(encoded * 255);
+}
+
+/**
+ * Apply inverse sRGB gamma decoding to a channel (0-255).
+ * Converts from sRGB to linear RGB color space.
+ *
+ * @see IEC 61966-2-1:1999 (sRGB specification)
+ */
+export function applySrgbInvGamma(channel: number): number {
+  const c = Math.max(0, Math.min(255, channel)) / 255;
+  const decoded = c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  return Math.round(decoded * 255);
+}
