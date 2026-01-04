@@ -16,8 +16,8 @@ import { parseSlide } from "@lib/pptx/parser/slide/slide-parser";
 import { createParseContext } from "@lib/pptx/parser/context";
 import { parseColorScheme, parseFontScheme, parseColorMap } from "@lib/pptx/core/dml/parser/theme";
 import { getByPath } from "@lib/xml";
-import { getMimeTypeFromPath } from "@lib/pptx/core/opc";
 import { createSlideRenderContextFromApiSlide } from "@lib/pptx-editor/presentation/slide-render-context-builder";
+import { getMimeTypeFromPath } from "@lib/pptx/opc";
 
 // =============================================================================
 // Color Context Building
@@ -79,10 +79,7 @@ type FileCache = Map<string, { text: string; buffer: ArrayBuffer }>;
  *
  * This allows the editor to resolve image and embedded resource references.
  */
-function createResourceResolverFromCache(
-  cache: FileCache,
-  apiSlide: ApiSlide
-): ResourceResolver {
+function createResourceResolverFromCache(cache: FileCache, apiSlide: ApiSlide): ResourceResolver {
   // Build a relationship lookup from slide/layout/master relationships
   const relationships = new Map<string, string>();
 
@@ -211,9 +208,7 @@ export function convertToPresentationDocument(loaded: LoadedPresentation): Prese
   const firstApiSlide = slideCount > 0 ? presentation.getSlide(1) : null;
 
   // Build color context from first slide's theme/master
-  const colorContext = firstApiSlide
-    ? buildColorContext(firstApiSlide)
-    : { colorScheme: {}, colorMap: {} };
+  const colorContext = firstApiSlide ? buildColorContext(firstApiSlide) : { colorScheme: {}, colorMap: {} };
 
   // Build font scheme from first slide's theme
   const fontScheme = firstApiSlide ? extractFontScheme(firstApiSlide) : undefined;
