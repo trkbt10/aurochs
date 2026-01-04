@@ -28,30 +28,6 @@ function isXmlElement(value: unknown): value is XmlElement {
   return true;
 }
 
-/**
- * Convert XML element to BlipFill-like structure
- */
-function xmlElementToBlipFill(element: XmlElement): Record<string, unknown> {
-  const result: Record<string, unknown> = {
-    attrs: element.attrs,
-  };
-  for (const child of element.children) {
-    if (isXmlElement(child)) {
-      const converted = xmlElementToBlipFill(child);
-      const existing = result[child.name];
-
-      if (existing === undefined) {
-        result[child.name] = converted;
-      } else if (Array.isArray(existing)) {
-        existing.push(converted);
-      } else {
-        result[child.name] = [existing, converted];
-      }
-    }
-  }
-  return result;
-}
-
 describe("Theme bgFillStyleLst - ECMA-376 compliance", () => {
   it("loads bgFillStyles from theme via parseFormatScheme", async () => {
     const file = await createPresentationFile(THEMES_PPTX_PATH);
@@ -124,9 +100,9 @@ describe("Theme bgFillStyleLst - ECMA-376 compliance", () => {
       throw new Error("bgStyle is not an XmlElement");
     }
 
-    const gradFillObj = xmlElementToBlipFill(bgStyle);
+    // Pass XmlElement directly to getGradientFill (no conversion needed)
     const phClr = "EEECE1";
-    const gradResult = getGradientFill(gradFillObj, colorCtx, phClr);
+    const gradResult = getGradientFill(bgStyle, colorCtx, phClr);
 
     expect(gradResult.type).toBe("path");
     expect((gradResult as { pathShadeType?: string }).pathShadeType).toBe("circle");

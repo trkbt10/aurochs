@@ -15,12 +15,12 @@ import { resolveColor } from "../../src/pptx/core/dml/render/color";
 import { parseXml, getByPath } from "../../src/xml";
 import { createParseContext } from "../../src/pptx/parser/context";
 import { createSlideRenderContext } from "../../src/pptx/reader/slide/accessor";
-import type { ZipFile } from "../../src/pptx/core/dml/domain/types";
+import type { ZipFile } from "../../src/pptx/domain";
 import {
-  createResourceMap,
   createPlaceholderTable,
   createColorMap,
 } from "../../src/pptx/reader/slide/resource-adapters";
+import { parseRelationships } from "../../src/pptx/opc";
 import { parseTheme, parseColorScheme, parseMasterTextStyles } from "../../src/pptx/core/dml/parser/theme";
 import { renderSlideSvgIntegrated } from "../../src/pptx/reader/slide/slide-render";
 import type { SpShape, Color, Pixels } from "../../src/pptx/domain";
@@ -103,12 +103,12 @@ describe("a:fontRef schemeClr application", () => {
 
     const slide = {
       content: parseXml("<p:sld></p:sld>"),
-      resources: createResourceMap({}),
+      resources: parseRelationships(null),
       colorMapOverride: undefined,
     };
     const layout = {
       placeholders: createPlaceholderTable({ idTable: {}, idxTable: new Map(), typeTable: {} }),
-      resources: createResourceMap({}),
+      resources: parseRelationships(null),
       content: undefined,
     };
 
@@ -118,7 +118,7 @@ describe("a:fontRef schemeClr application", () => {
       textStyles: { titleStyle: undefined, bodyStyle: undefined, otherStyle: undefined },
       placeholders: createPlaceholderTable({ idTable: {}, idxTable: new Map(), typeTable: {} }),
       colorMap: createColorMap(masterClrMap),
-      resources: createResourceMap({}),
+      resources: parseRelationships(null),
       content: undefined,
     };
 
@@ -174,13 +174,13 @@ describe("a:fontRef schemeClr application", () => {
 
     const slide = {
       content: getByPath(slideDoc, ["p:sld"]),
-      resources: createResourceMap({}),
+      resources: parseRelationships(null),
       colorMapOverride: undefined,
     };
 
     const layout = {
       placeholders: createPlaceholderTable({ idTable: {}, idxTable: new Map(), typeTable: {} }),
-      resources: createResourceMap({}),
+      resources: parseRelationships(null),
       content: getByPath(layoutDoc, ["p:sldLayout"]),
     };
 
@@ -191,7 +191,7 @@ describe("a:fontRef schemeClr application", () => {
       textStyles: parseMasterTextStyles(masterTxStyles),
       placeholders: createPlaceholderTable({ idTable: {}, idxTable: new Map(), typeTable: {} }),
       colorMap: createColorMap(masterClrMap),
-      resources: createResourceMap({}),
+      resources: parseRelationships(null),
       content: getByPath(masterDoc, ["p:sldMaster"]),
     };
 

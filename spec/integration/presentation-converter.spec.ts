@@ -14,7 +14,7 @@ import JSZip from "jszip";
 import { openPresentation } from "../../src/pptx";
 import { parseColorScheme, parseFontScheme, parseColorMap } from "../../src/pptx/core/dml/parser/theme";
 import { getByPath } from "../../src/xml";
-import { getMimeTypeFromPath } from "../../src/pptx/core/opc";
+import { getMimeTypeFromPath } from "../../src/pptx/opc";
 import type { ColorContext, FontScheme, ColorScheme, ColorMap } from "../../src/pptx/domain/resolution";
 import type { ResourceResolver } from "../../src/pptx/render/core";
 

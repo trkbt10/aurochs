@@ -29,8 +29,8 @@ describe("Background integration tests", () => {
 
       // Check that masterRelationships contains rId12 pointing to an image
       expect(slide.masterRelationships).toBeDefined();
-      expect(slide.masterRelationships.rId12).toBeDefined();
-      expect(slide.masterRelationships.rId12.target).toContain("media/image1.jpeg");
+      expect(slide.masterRelationships.getTarget("rId12")).toBeDefined();
+      expect(slide.masterRelationships.getTarget("rId12")).toContain("media/image1.jpeg");
     });
 
     it("should have slideMaster content with blipFill background", () => {
