@@ -25,7 +25,7 @@ export {
   createWarningCollector,
   createCoreRenderContext,
   createEmptyCoreRenderContext,
-  createRenderContext,
+  createRenderContextFromSlideContext,
 } from "./context";
 
 export type { CoreRenderContextConfig, RenderContextFromSlideOptions } from "./context";

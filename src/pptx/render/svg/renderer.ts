@@ -59,9 +59,13 @@ export type SvgSlideContentRenderResult = {
 /**
  * Render a slide to SVG format.
  *
+ * Layout shapes from context are rendered behind slide shapes per ECMA-376.
+ *
  * @param slide - Slide domain object
- * @param ctx - Render context with resources, colors, and options
+ * @param ctx - Render context with resources, colors, options, and layout shapes
  * @returns SVG render result with SVG string and warnings
+ *
+ * @see ECMA-376 Part 1, Section 19.3.1.39 (sldLayout)
  */
 export function renderSlideSvg(slide: Slide, ctx: RenderContext): SvgSlideRenderResult {
   const { width, height } = ctx.slideSize;
@@ -70,7 +74,12 @@ export function renderSlideSvg(slide: Slide, ctx: RenderContext): SvgSlideRender
   // Render background - prefer pre-resolved background if available
   const backgroundSvg = renderSlideBackgroundSvg(slide, ctx, defsCollector);
 
-  // Render shapes
+  // Render layout shapes first (decorative, behind slide content)
+  const layoutShapesSvg = ctx.layoutShapes !== undefined && ctx.layoutShapes.length > 0
+    ? renderShapesSvg(ctx.layoutShapes, ctx, defsCollector)
+    : "";
+
+  // Render slide shapes
   const contentSvg = renderShapesSvg(slide.shapes, ctx, defsCollector);
 
   // Build SVG document
@@ -79,6 +88,7 @@ export function renderSlideSvg(slide: Slide, ctx: RenderContext): SvgSlideRender
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
 ${defs}
 ${backgroundSvg}
+${layoutShapesSvg}
 ${contentSvg}
 </svg>`;
 

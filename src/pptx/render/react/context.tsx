@@ -6,7 +6,7 @@
  */
 
 import { createContext, useContext, useMemo, type ReactNode } from "react";
-import type { SlideSize } from "../../domain";
+import type { SlideSize, Shape } from "../../domain";
 import type { ColorContext, FontScheme } from "../../domain/resolution";
 import type { ShapeId, Pixels } from "../../domain/types";
 import { px } from "../../domain/types";
@@ -60,6 +60,14 @@ export type ReactRenderContext = {
    * Shape ID currently being edited (text should be hidden).
    */
   readonly editingShapeId?: ShapeId;
+
+  /**
+   * Non-placeholder shapes from slide layout.
+   * These are decorative shapes that should be rendered behind slide content.
+   *
+   * @see ECMA-376 Part 1, Section 19.3.1.39 (sldLayout)
+   */
+  readonly layoutShapes?: readonly Shape[];
 };
 
 /**
@@ -74,6 +82,7 @@ export type RenderProviderProps = {
   readonly options?: Partial<RenderOptions>;
   readonly resolvedBackground?: ResolvedBackgroundFill;
   readonly editingShapeId?: ShapeId;
+  readonly layoutShapes?: readonly Shape[];
 };
 
 // =============================================================================
@@ -99,6 +108,7 @@ export function RenderProvider({
   options,
   resolvedBackground,
   editingShapeId,
+  layoutShapes,
 }: RenderProviderProps) {
   const resolvedResources = useMemo(
     () => resources ?? createEmptyResourceResolver(),
@@ -115,8 +125,9 @@ export function RenderProvider({
       resolvedBackground,
       fontScheme,
       editingShapeId,
+      layoutShapes,
     }),
-    [slideSize, colorContext, resolvedResources, fontScheme, options, resolvedBackground, editingShapeId],
+    [slideSize, colorContext, resolvedResources, fontScheme, options, resolvedBackground, editingShapeId, layoutShapes],
   );
 
   return (

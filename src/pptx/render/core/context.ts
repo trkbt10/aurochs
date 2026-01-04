@@ -95,12 +95,15 @@ export function createEmptyCoreRenderContext(): CoreRenderContext {
 // Render Context Builder (from SlideRenderContext)
 // =============================================================================
 
+import type { Shape } from "../../domain";
+
 /**
  * Options for creating render context from SlideRenderContext
  */
 export type RenderContextFromSlideOptions = {
   readonly renderOptions?: Partial<RenderOptions>;
   readonly resolvedBackground?: ResolvedBackgroundFill;
+  readonly layoutShapes?: readonly Shape[];
 };
 
 /**
@@ -112,7 +115,7 @@ export type RenderContextFromSlideOptions = {
  *
  * @see ECMA-376 Part 1 (Fundamentals and Markup Language Reference)
  */
-export function createRenderContext(
+export function createRenderContextFromSlideContext(
   ctx: SlideRenderContext,
   slideSize: SlideSize,
   options?: RenderContextFromSlideOptions,
@@ -128,6 +131,7 @@ export function createRenderContext(
     getNextShapeId: () => `shape-${shapeId++}`,
     resolvedBackground: options?.resolvedBackground,
     fontScheme: buildFontScheme(ctx),
+    layoutShapes: options?.layoutShapes,
   };
 }
 

@@ -11,7 +11,7 @@ import { createSlideRenderContext } from "../../pptx/reader/slide/accessor";
 import { createResourceMap, createPlaceholderTable, createColorMap } from "../../pptx/reader/slide/resource-adapters";
 import { parseTheme, parseMasterTextStyles } from "../../pptx/core/dml/parser/theme";
 import { DEFAULT_RENDER_OPTIONS } from "../../pptx/render/render-options";
-import { createRenderContext as createCoreRenderContext } from "../../pptx/render/core/context";
+import { createRenderContextFromSlideContext } from "../../pptx/render/core/context";
 import { getBackgroundFillData } from "../../pptx/core/dml/render/background";
 import { parseShapeTree } from "../../pptx/parser/shape-parser";
 import type { XmlElement, XmlDocument } from "../../xml";
@@ -196,8 +196,14 @@ export function createRenderContextFromApiSlide(
   const bgFillData = getBackgroundFillData(slideRenderCtx);
   const resolvedBackground = toResolvedBackgroundFill(bgFillData);
 
-  // Create CoreRenderContext
-  const coreCtx = createCoreRenderContext(slideRenderCtx, slideSize, { resolvedBackground });
+  // Extract layout non-placeholder shapes
+  const layoutShapes = getLayoutNonPlaceholderShapes(apiSlide);
+
+  // Create CoreRenderContext with layout shapes
+  const coreCtx = createRenderContextFromSlideContext(slideRenderCtx, slideSize, {
+    resolvedBackground,
+    layoutShapes,
+  });
 
   // Extend to HtmlRenderContext by adding style collector
   return {

@@ -9,7 +9,7 @@ import type { Slide, SlideSize, Shape } from "../../domain";
 import type { ColorContext, FontScheme } from "../../domain/resolution";
 import type { ShapeId } from "../../domain/types";
 import type { RenderOptions, ResolvedBackgroundFill, ResourceResolver } from "../core/types";
-import { RenderProvider } from "./context";
+import { RenderProvider, useRenderContext } from "./context";
 import { SvgDefsProvider } from "./hooks/useSvgDefs";
 import { ResolvedBackgroundRenderer, BackgroundRenderer } from "./Background";
 import { ShapeRenderer } from "./ShapeRenderer";
@@ -54,7 +54,6 @@ type SlideContentProps = {
   readonly slideSize: SlideSize;
   readonly resolvedBackground?: ResolvedBackgroundFill;
   readonly editingShapeId?: ShapeId;
-  readonly layoutShapes?: readonly Shape[];
 };
 
 // =============================================================================
@@ -103,6 +102,7 @@ export function SlideRenderer({
       options={options}
       resolvedBackground={resolvedBackground}
       editingShapeId={editingShapeId}
+      layoutShapes={layoutShapes}
     >
       <SvgDefsProvider>
         <SlideContent
@@ -110,7 +110,6 @@ export function SlideRenderer({
           slideSize={slideSize}
           resolvedBackground={resolvedBackground}
           editingShapeId={editingShapeId}
-          layoutShapes={layoutShapes}
         />
       </SvgDefsProvider>
     </RenderProvider>
@@ -120,14 +119,17 @@ export function SlideRenderer({
 /**
  * Inner component that renders slide content with access to contexts.
  * Each component (background, shapes) renders its own defs inline.
+ * Layout shapes are read from context (per ECMA-376 Part 1, Section 19.3.1.39).
  */
 function SlideContent({
   slide,
   slideSize,
   resolvedBackground,
   editingShapeId,
-  layoutShapes,
 }: SlideContentProps) {
+  const ctx = useRenderContext();
+  const layoutShapes = ctx.layoutShapes;
+
   return (
     <>
       {/* Background (renders its own defs for gradients) */}

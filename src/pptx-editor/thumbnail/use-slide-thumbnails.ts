@@ -86,20 +86,16 @@ export function useSlideThumbnails(
       }
 
       // Build render context with full theme/master/layout context if available
-      let ctx;
-      if (apiSlide && fileCache) {
-        // Use full context from API slide for proper rendering
-        ctx = createRenderContextFromApiSlide(apiSlide, fileCache, slideSize);
-      } else {
-        // Fall back to basic context for newly created slides
-        ctx = createRenderContext({
-          slideSize,
-          colorContext,
-          resources,
-          fontScheme,
-          resolvedBackground: slideWithId.resolvedBackground,
-        });
-      }
+      // Layout shapes are now included in context and rendered by renderSlideSvg
+      const ctx = apiSlide && fileCache
+        ? createRenderContextFromApiSlide(apiSlide, fileCache, slideSize)
+        : createRenderContext({
+            slideSize,
+            colorContext,
+            resources,
+            fontScheme,
+            resolvedBackground: slideWithId.resolvedBackground,
+          });
 
       // Render the edited domain slide and cache
       const result = renderSlideSvg(slide, ctx);

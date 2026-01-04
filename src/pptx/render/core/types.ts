@@ -5,7 +5,7 @@
  */
 
 import type { ColorContext, FontScheme } from "../../domain/resolution";
-import type { SlideSize } from "../../domain";
+import type { SlideSize, Shape } from "../../domain";
 
 // =============================================================================
 // Render Options
@@ -195,4 +195,16 @@ export type CoreRenderContext = {
    * @see ECMA-376 Part 1, Section 20.1.4.1.18 (a:fontScheme)
    */
   readonly fontScheme?: FontScheme;
+
+  /**
+   * Non-placeholder shapes from slide layout.
+   * These are decorative shapes that should be rendered behind slide content.
+   *
+   * Per ECMA-376 Part 1, Section 19.3.1.39 (sldLayout):
+   * Layout shapes provide visual decoration that is inherited by slides.
+   * Only non-placeholder shapes are included here.
+   *
+   * @see ECMA-376 Part 1, Section 19.3.1.39 (sldLayout)
+   */
+  readonly layoutShapes?: readonly Shape[];
 };
