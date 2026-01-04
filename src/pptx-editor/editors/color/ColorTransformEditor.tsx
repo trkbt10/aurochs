@@ -28,11 +28,9 @@ type PercentField = "alpha" | "alphaMod" | "alphaOff" | "sat" | "satMod" | "satO
 type DegreesField = "hue" | "hueOff";
 type BooleanField = "gamma" | "invGamma" | "comp" | "inv" | "gray";
 
-
-
-
-
-
+/**
+ * Editor for color transform settings.
+ */
 export function ColorTransformEditor({
   value,
   onChange,

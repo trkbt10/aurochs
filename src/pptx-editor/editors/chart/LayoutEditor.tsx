@@ -34,6 +34,9 @@ const modeOptions: SelectOption<NonNullable<ManualLayout["xMode"]>>[] = [
   { value: "factor", label: "Factor" },
 ];
 
+/**
+ * Editor for chart layout positioning.
+ */
 export function LayoutEditor({
   value,
   onChange,

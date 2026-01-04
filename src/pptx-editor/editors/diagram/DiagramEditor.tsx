@@ -11,7 +11,7 @@ import type {
   DiagramConnection,
 } from "../../../pptx/domain/diagram";
 import type { EditorProps } from "../../types";
-import { Accordion, FieldGroup } from "../../ui/layout";
+import { Accordion } from "../../ui/layout";
 import { Button } from "../../ui/primitives";
 import { DiagramPointEditor, createDefaultDiagramPoint } from "./DiagramPointEditor";
 import { DiagramConnectionEditor, createDefaultDiagramConnection } from "./DiagramConnectionEditor";
@@ -43,11 +43,6 @@ const itemContainerStyle: CSSProperties = {
   border: "1px solid var(--border-subtle, rgba(255, 255, 255, 0.08))",
 };
 
-const itemSelectedStyle: CSSProperties = {
-  ...itemContainerStyle,
-  borderColor: "var(--accent-blue, #0070f3)",
-};
-
 const pointGridStyle: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
@@ -69,24 +64,6 @@ const pointCardStyle: CSSProperties = {
 const pointCardSelectedStyle: CSSProperties = {
   ...pointCardStyle,
   backgroundColor: "var(--accent-blue, #0070f3)",
-  color: "var(--text-primary, #fafafa)",
-};
-
-const pointCardHoverStyle: CSSProperties = {
-  ...pointCardStyle,
-  borderColor: "var(--border-active, rgba(255, 255, 255, 0.2))",
-};
-
-const headerRowStyle: CSSProperties = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  marginBottom: "12px",
-};
-
-const titleStyle: CSSProperties = {
-  fontSize: "13px",
-  fontWeight: 500,
   color: "var(--text-primary, #fafafa)",
 };
 
@@ -215,7 +192,9 @@ export function DiagramEditor({
 
   const handlePointChange = useCallback(
     (point: DiagramPoint) => {
-      if (selectedPointIndex === null) return;
+      if (selectedPointIndex === null) {
+        return;
+      }
 
       const newPoints = value.points.map((p, i) =>
         i === selectedPointIndex ? point : p
@@ -233,7 +212,9 @@ export function DiagramEditor({
   }, [value, onChange]);
 
   const handleDeletePoint = useCallback(() => {
-    if (selectedPointIndex === null) return;
+    if (selectedPointIndex === null) {
+      return;
+    }
 
     const deletedPoint = value.points[selectedPointIndex];
     const newPoints = value.points.filter((_, i) => i !== selectedPointIndex);
@@ -280,6 +261,25 @@ export function DiagramEditor({
     },
     [value, onChange]
   );
+
+  const renderConnections = () => {
+    if (value.connections.length === 0) {
+      return <div style={emptyStyle}>No connections</div>;
+    }
+
+    return value.connections.map((connection, index) => (
+      <div key={connection.modelId} style={itemContainerStyle}>
+        <DiagramConnectionEditor
+          value={connection}
+          onChange={(c) => handleConnectionChange(index, c)}
+          disabled={disabled}
+          availablePoints={value.points}
+          index={index}
+          onDelete={() => handleDeleteConnection(index)}
+        />
+      </div>
+    ));
+  };
 
   // ==========================================================================
   // Derived state
@@ -332,7 +332,6 @@ export function DiagramEditor({
             value={selectedPoint}
             onChange={handlePointChange}
             disabled={disabled}
-            index={selectedPointIndex ?? undefined}
           />
         </Accordion>
       )}
@@ -340,22 +339,7 @@ export function DiagramEditor({
       {/* Connections Section */}
       <Accordion title={`Connections (${value.connections.length})`} defaultExpanded={false}>
         <div style={listContainerStyle}>
-          {value.connections.length === 0 ? (
-            <div style={emptyStyle}>No connections</div>
-          ) : (
-            value.connections.map((connection, index) => (
-              <div key={connection.modelId} style={itemContainerStyle}>
-                <DiagramConnectionEditor
-                  value={connection}
-                  onChange={(c) => handleConnectionChange(index, c)}
-                  disabled={disabled}
-                  availablePoints={value.points}
-                  index={index}
-                  onDelete={() => handleDeleteConnection(index)}
-                />
-              </div>
-            ))
-          )}
+          {renderConnections()}
 
           <div style={buttonRowStyle}>
             <Button

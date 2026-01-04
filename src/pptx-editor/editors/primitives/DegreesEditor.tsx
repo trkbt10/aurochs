@@ -15,10 +15,9 @@ export type DegreesEditorProps = EditorProps<Degrees> & {
 };
 
 
-
-
-
-
+/**
+ * Editor for Degrees values.
+ */
 export function DegreesEditor({
   value,
   onChange,

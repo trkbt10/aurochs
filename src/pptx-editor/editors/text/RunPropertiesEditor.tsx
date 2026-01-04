@@ -24,8 +24,6 @@ export type RunPropertiesEditorProps = EditorProps<RunProperties> & {
   readonly style?: CSSProperties;
   /** Show spacing section (baseline, spacing, kerning) */
   readonly showSpacing?: boolean;
-  /** Compact mode - reduces vertical space */
-  readonly compact?: boolean;
 };
 
 // =============================================================================
@@ -92,7 +90,6 @@ export function RunPropertiesEditor({
   className,
   style,
   showSpacing = true,
-  compact = false,
 }: RunPropertiesEditorProps) {
   const updateField = useCallback(
     <K extends keyof RunProperties>(field: K, newValue: RunProperties[K]) => {

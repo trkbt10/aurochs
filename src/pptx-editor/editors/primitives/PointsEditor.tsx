@@ -14,11 +14,9 @@ export type PointsEditorProps = EditorProps<Points> & {
   readonly style?: CSSProperties;
 };
 
-
-
-
-
-
+/**
+ * Editor for Points values.
+ */
 export function PointsEditor({
   value,
   onChange,

@@ -5,7 +5,7 @@
  * including edge cases with empty tables or incomplete data.
  */
 
-import type { Table, TableRow, TableCell, TableGrid } from "../../../pptx/domain/table";
+import type { Table, TableRow, TableCell } from "../../../pptx/domain/table";
 import { px } from "../../../pptx/domain/types";
 
 // =============================================================================
@@ -150,11 +150,10 @@ describe("TableEditor: Table data handling", () => {
 
 describe("TableEditor: Edge cases", () => {
   it("handles undefined grid columns gracefully", () => {
-    // Use unknown cast to simulate incomplete runtime data
-    const table = {
+    const table: Partial<Table> = {
       rows: [],
       properties: {},
-    } as unknown as Table;
+    };
 
     // Component should handle missing grid
     const colCount = table.grid?.columns?.length ?? 0;
@@ -162,9 +161,9 @@ describe("TableEditor: Edge cases", () => {
   });
 
   it("handles row with undefined cells gracefully", () => {
-    const row = {
+    const row: Partial<TableRow> = {
       height: px(30),
-    } as TableRow;
+    };
 
     // Component should handle missing cells
     const cellCount = row.cells?.length ?? 0;

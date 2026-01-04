@@ -339,7 +339,9 @@ export function FillEditor({
 
     const handleFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
-      if (!file) return;
+      if (!file) {
+        return;
+      }
 
       const reader = new FileReader();
       reader.onload = () => {
@@ -410,6 +412,9 @@ export function FillEditor({
 // Factory Functions
 // =============================================================================
 
+/**
+ * Create a solid fill with the provided hex color.
+ */
 export function createDefaultSolidFill(hex: string = "000000"): SolidFill {
   return {
     type: "solidFill",
@@ -417,6 +422,9 @@ export function createDefaultSolidFill(hex: string = "000000"): SolidFill {
   };
 }
 
+/**
+ * Create a no-fill definition.
+ */
 export function createNoFill(): NoFill {
   return { type: "noFill" };
 }

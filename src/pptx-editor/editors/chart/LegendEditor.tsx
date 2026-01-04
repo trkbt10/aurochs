@@ -46,6 +46,9 @@ const positionOptions: SelectOption<Legend["position"]>[] = [
   { value: "tr", label: "Top Right" },
 ];
 
+/**
+ * Editor for chart legend settings.
+ */
 export function LegendEditor({
   value,
   onChange,

@@ -98,6 +98,9 @@ const pictureFormatOptions: SelectOption<PictureFormat>[] = [
 // Main Editor
 // ============================================================================
 
+/**
+ * Editor for chart configuration.
+ */
 export function ChartEditor({
   value,
   onChange,

@@ -43,6 +43,9 @@ const positionOptions: SelectOption<NonNullable<DataLabels["position"]>>[] = [
   { value: "bestFit", label: "Best Fit" },
 ];
 
+/**
+ * Editor for chart data labels.
+ */
 export function DataLabelsEditor({
   value,
   onChange,

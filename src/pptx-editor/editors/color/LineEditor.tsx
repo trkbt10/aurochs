@@ -95,6 +95,9 @@ const separatorStyle: CSSProperties = {
 // Component
 // =============================================================================
 
+/**
+ * Editor for line stroke settings.
+ */
 export function LineEditor({
   value,
   onChange,

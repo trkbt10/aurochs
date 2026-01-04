@@ -16,11 +16,9 @@ export type PercentEditorProps = EditorProps<Percent> & {
   readonly slider?: boolean;
 };
 
-
-
-
-
-
+/**
+ * Editor for Percent values.
+ */
 export function PercentEditor({
   value,
   onChange,

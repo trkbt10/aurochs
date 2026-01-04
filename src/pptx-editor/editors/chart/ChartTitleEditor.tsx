@@ -25,6 +25,9 @@ const containerStyle: CSSProperties = {
   gap: "12px",
 };
 
+/**
+ * Editor for chart titles.
+ */
 export function ChartTitleEditor({
   value,
   onChange,

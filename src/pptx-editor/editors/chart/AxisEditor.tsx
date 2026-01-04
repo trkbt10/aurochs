@@ -120,6 +120,9 @@ const builtInUnitOptions: SelectOption<
   { value: "trillions", label: "Trillions" },
 ];
 
+/**
+ * Editor for chart axes.
+ */
 export function AxisEditor({
   value,
   onChange,

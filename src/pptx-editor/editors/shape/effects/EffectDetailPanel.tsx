@@ -106,6 +106,9 @@ function DeleteIcon() {
 // Component
 // =============================================================================
 
+/**
+ * Panel for editing a single effect entry.
+ */
 export function EffectDetailPanel({
   value,
   selectedKey,
@@ -115,7 +118,9 @@ export function EffectDetailPanel({
   disabled,
 }: EffectDetailPanelProps) {
   const selectedConfig = useMemo(() => {
-    if (!selectedKey) return null;
+    if (!selectedKey) {
+      return null;
+    }
     return EFFECT_CONFIGS.find((c) => c.key === selectedKey) ?? null;
   }, [selectedKey]);
 
@@ -124,7 +129,9 @@ export function EffectDetailPanel({
 
   // Handle effect value change
   const handleEffectChange = (newValue: NonNullable<Effects[EffectKey]>) => {
-    if (!selectedKey) return;
+    if (!selectedKey) {
+      return;
+    }
     onChange({ ...value, [selectedKey]: newValue });
   };
 

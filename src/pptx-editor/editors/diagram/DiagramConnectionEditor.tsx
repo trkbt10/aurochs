@@ -182,10 +182,18 @@ function getPointLabel(point: DiagramPoint): string {
   }
 
   // Fallback to modelId
-  const shortId = point.modelId.length > 15
-    ? point.modelId.substring(0, 15) + "..."
-    : point.modelId;
+  const shortId = truncateText(point.modelId, 15);
   return `[${point.type ?? "node"}] ${shortId}`;
+}
+
+/**
+ * Truncate a string and add ellipsis when needed.
+ */
+function truncateText(value: string, maxLength: number): string {
+  if (value.length <= maxLength) {
+    return value;
+  }
+  return value.substring(0, maxLength) + "...";
 }
 
 /**

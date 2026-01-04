@@ -14,11 +14,9 @@ export type PixelsEditorProps = EditorProps<Pixels> & {
   readonly style?: CSSProperties;
 };
 
-
-
-
-
-
+/**
+ * Editor for Pixels values.
+ */
 export function PixelsEditor({
   value,
   onChange,

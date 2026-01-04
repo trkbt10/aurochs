@@ -79,6 +79,9 @@ type GroupedEffects = {
   effects: typeof EFFECT_CONFIGS;
 };
 
+/**
+ * Left panel list of available effects.
+ */
 export function EffectListPanel({
   value,
   selectedKey,

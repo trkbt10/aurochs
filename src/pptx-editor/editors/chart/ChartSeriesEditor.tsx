@@ -145,6 +145,9 @@ const sizeRepresentsOptions: SelectOption<
 // Main Editor
 // ============================================================================
 
+/**
+ * Editor for chart series properties.
+ */
 export function ChartSeriesEditor({
   value,
   onChange,

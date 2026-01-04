@@ -25,6 +25,9 @@ const containerStyle: CSSProperties = {
   gap: "12px",
 };
 
+/**
+ * Editor for chart shape properties.
+ */
 export function ChartShapePropertiesEditor({
   value,
   onChange,

@@ -295,6 +295,14 @@ export function GeometryEditor({
 
   const renderCustomEditor = () => {
     const custom = value as CustomGeometry;
+    const infoParts = [`${custom.paths?.length ?? 0} path(s)`];
+    if (custom.guides?.length) {
+      infoParts.push(`${custom.guides.length} guide(s)`);
+    }
+    if (custom.connectionSites?.length) {
+      infoParts.push(`${custom.connectionSites.length} site(s)`);
+    }
+    const infoSummary = infoParts.join(", ");
 
     const handleTextRectToggle = (enabled: boolean) => {
       if (enabled) {
@@ -310,11 +318,7 @@ export function GeometryEditor({
       <>
         <FieldGroup label="Info">
           <span style={infoStyle}>
-            {custom.paths?.length ?? 0} path(s)
-            {custom.guides?.length ? `, ${custom.guides.length} guide(s)` : ""}
-            {custom.connectionSites?.length
-              ? `, ${custom.connectionSites.length} site(s)`
-              : ""}
+            {infoSummary}
           </span>
         </FieldGroup>
 

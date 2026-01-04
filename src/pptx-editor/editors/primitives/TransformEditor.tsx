@@ -26,11 +26,9 @@ const containerStyle: CSSProperties = {
   gap: "8px",
 };
 
-
-
-
-
-
+/**
+ * Editor for Transform values.
+ */
 export function TransformEditor({
   value,
   onChange,

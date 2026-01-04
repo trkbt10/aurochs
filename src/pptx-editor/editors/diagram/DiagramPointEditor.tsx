@@ -14,8 +14,6 @@ import { TextBodyEditor } from "../text/TextBodyEditor";
 
 export type DiagramPointEditorProps = EditorProps<DiagramPoint> & {
   readonly style?: CSSProperties;
-  /** Index for display purposes */
-  readonly index?: number;
 };
 
 // =============================================================================
@@ -157,7 +155,6 @@ export function DiagramPointEditor({
   disabled,
   className,
   style,
-  index,
 }: DiagramPointEditorProps) {
   const handleTextBodyChange = (textBody: TextBody) => {
     onChange({ ...value, textBody });
@@ -167,7 +164,6 @@ export function DiagramPointEditor({
     onChange({ ...value, propertySet });
   };
 
-  const pointLabel = index !== undefined ? `Point ${index + 1}` : "Point";
   const displayType = value.type ?? "(default)";
 
   return (

@@ -37,6 +37,9 @@ const containerStyle: CSSProperties = {
 // Component
 // =============================================================================
 
+/**
+ * Split-panel editor for effects.
+ */
 export function EffectsEditorPanel({
   value,
   onChange,
