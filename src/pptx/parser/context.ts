@@ -5,7 +5,7 @@
  */
 
 import type { XmlDocument, XmlElement } from "../../xml";
-import type { SlideResources } from "../core/opc";
+import type { ResourceMap } from "../opc";
 import type { Color } from "../domain/color";
 import type {
   ColorContext,
@@ -32,12 +32,12 @@ export type ResourceResolver = {
 };
 
 /**
- * Create a resource resolver from SlideResources
+ * Create a resource resolver from ResourceMap
  */
-export function createResourceResolver(resources: SlideResources): ResourceResolver {
+export function createResourceResolver(resources: ResourceMap): ResourceResolver {
   return {
-    getTarget: (id: string) => resources[id]?.target,
-    getType: (id: string) => resources[id]?.type,
+    getTarget: (id: string) => resources.getTarget(id),
+    getType: (id: string) => resources.getType(id),
   };
 }
 

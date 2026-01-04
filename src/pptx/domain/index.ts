@@ -223,6 +223,7 @@ export type {
   ColorScheme,
   ColorMap,
   ColorContext,
+  ColorResolveContext,
   FontSpec,
   FontScheme,
 } from "./resolution";

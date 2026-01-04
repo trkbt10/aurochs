@@ -26,6 +26,7 @@ import type {
   ColorScheme,
   ColorMap,
 } from "../../domain";
+import type { ColorResolveContext } from "../../domain/resolution";
 
 // =============================================================================
 // Params (immutable data)
@@ -455,25 +456,7 @@ export function createSlideRenderContext(
 // Scoped Context Types
 // =============================================================================
 
-/**
- * Context for resolving scheme colors to actual color values.
- *
- * This provides the minimum data needed to resolve OOXML color references:
- * - Scheme color mapping (tx1 → dk1, bg1 → lt1, etc.)
- * - Color map overrides from slide/layout
- * - Theme color scheme (dk1 → "000000", etc.)
- *
- * @see ECMA-376 Part 1, Section 20.1.2.3.32 (a:schemeClr)
- * @see ECMA-376 Part 1, Section 19.3.1.6 (p:clrMap)
- */
-export type ColorResolveContext = {
-  /** Master color map (maps tx1→dk1, bg1→lt1, etc.) */
-  readonly colorMap: ColorMap;
-  /** Slide color map override (if present) */
-  readonly colorMapOverride?: ColorMap;
-  /** Theme color scheme (maps dk1→"000000", lt1→"FFFFFF", etc.) */
-  readonly colorScheme: ColorScheme;
-};
+// ColorResolveContext is now imported from domain/resolution and re-exported above
 
 /**
  * Context for placeholder resolution.

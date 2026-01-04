@@ -17,7 +17,7 @@ import type {
 } from "./types";
 import { DEFAULT_RENDER_OPTIONS } from "./types";
 import type { SlideRenderContext } from "../../reader/slide/accessor";
-import { getMimeTypeFromPath, createDataUrl } from "../../core/opc";
+import { getMimeTypeFromPath, createDataUrl } from "../../opc";
 
 // =============================================================================
 // Empty Resource Resolver

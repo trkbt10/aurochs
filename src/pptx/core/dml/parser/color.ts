@@ -24,7 +24,7 @@ import type {
 } from "../../../ooxml/index";
 import { findColorElement, COLOR_ELEMENT_KEYS } from "../../../ooxml/index";
 import { OOXML_PERCENT_FACTOR } from "../../ecma376/defaults";
-import type { ColorResolveContext } from "../../../reader/slide/accessor";
+import type { ColorResolveContext } from "../../../domain/resolution";
 import {
   toHex,
   hslToRgb,

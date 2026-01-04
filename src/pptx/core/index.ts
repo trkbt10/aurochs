@@ -18,9 +18,6 @@ export * from "./units";
 // ECMA-376 defaults and constants
 export * from "./ecma376";
 
-// Open Packaging Conventions (ECMA-376 Part 2)
-export * from "./opc";
-
 // Types
 export * from "./types";
 

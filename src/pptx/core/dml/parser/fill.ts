@@ -15,7 +15,8 @@ import type {
   ShapeElement,
   GroupShapeElement,
 } from "../../../ooxml/index";
-import type { ColorResolveContext, ResourceContext, SlideRenderContext } from "../../../reader/slide/accessor";
+import type { ColorResolveContext } from "../../../domain/resolution";
+import type { ResourceContext, SlideRenderContext } from "../../../reader/slide/accessor";
 import { angleToDegrees } from "../../units/conversion";
 import { base64ArrayBuffer } from "../../../../buffer/index";
 import { getMimeType } from "../../../../files/index";

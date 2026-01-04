@@ -5,7 +5,8 @@
  */
 
 import type { XmlElement } from "../xml";
-import type { SlideRenderContext, ColorResolveContext, ResourceContext } from "./reader/slide/accessor";
+import type { ColorResolveContext } from "./domain/resolution";
+import type { SlideRenderContext, ResourceContext } from "./reader/slide/accessor";
 import type {
   ColorMap,
   ColorScheme,

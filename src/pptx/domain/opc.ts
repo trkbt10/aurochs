@@ -48,6 +48,8 @@ export type ResourceMap = {
   getType(rId: string): string | undefined;
   /** Get first target matching a relationship type */
   getTargetByType(relType: string): string | undefined;
+  /** Get all targets matching a relationship type */
+  getAllTargetsByType(relType: string): readonly string[];
 };
 
 // =============================================================================

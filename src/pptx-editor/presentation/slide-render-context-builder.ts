@@ -8,7 +8,7 @@
 import type { Slide as ApiSlide } from "../../pptx/types/api";
 import type { SlideRenderContext } from "../../pptx/reader/slide/accessor";
 import { createSlideRenderContext } from "../../pptx/reader/slide/accessor";
-import { createResourceMap, createPlaceholderTable, createColorMap } from "../../pptx/reader/slide/resource-adapters";
+import { createPlaceholderTable, createColorMap } from "../../pptx/reader/slide/resource-adapters";
 import { parseTheme, parseMasterTextStyles } from "../../pptx/core/dml/parser/theme";
 import { DEFAULT_RENDER_OPTIONS } from "../../pptx/render/render-options";
 import { createRenderContextFromSlideContext } from "../../pptx/render/core/context";
@@ -76,7 +76,7 @@ export function createSlideRenderContextFromApiSlide(
 
   const slide = {
     content: slideContent as XmlElement,
-    resources: createResourceMap(apiSlide.relationships),
+    resources: apiSlide.relationships,
     colorMapOverride: slideClrMapOvr !== undefined ? createColorMap(slideClrMapOvr) : undefined,
   };
 
@@ -88,7 +88,7 @@ export function createSlideRenderContextFromApiSlide(
 
   const layout = {
     placeholders: createPlaceholderTable(apiSlide.layoutTables),
-    resources: createResourceMap(apiSlide.layoutRelationships),
+    resources: apiSlide.layoutRelationships,
     content: layoutContent as XmlElement | undefined,
   };
 
@@ -96,7 +96,7 @@ export function createSlideRenderContextFromApiSlide(
     textStyles: parseMasterTextStyles(apiSlide.masterTextStyles as XmlElement | undefined),
     placeholders: createPlaceholderTable(apiSlide.masterTables),
     colorMap: createColorMap(masterClrMap),
-    resources: createResourceMap(apiSlide.masterRelationships),
+    resources: apiSlide.masterRelationships,
     content: masterContent as XmlElement | undefined,
   };
 
@@ -107,7 +107,7 @@ export function createSlideRenderContextFromApiSlide(
     defaultTextStyle,
     zip,
     renderOptions: DEFAULT_RENDER_OPTIONS,
-    themeResources: createResourceMap(apiSlide.themeRelationships),
+    themeResources: apiSlide.themeRelationships,
   };
 
   return createSlideRenderContext(slide, layout, master, presentation);

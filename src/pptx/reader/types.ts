@@ -5,7 +5,7 @@
 
 import type { XmlDocument, XmlElement } from "../../xml";
 import type { IndexTables } from "../core/types";
-import type { SlideResources } from "../core/opc";
+import type { ResourceMap } from "../opc";
 
 /**
  * Complete slide data for creating Slide objects
@@ -31,19 +31,19 @@ export type SlideData = {
   /** Parsed theme (a:theme) */
   theme: XmlDocument | null;
   /** Slide relationships */
-  relationships: SlideResources;
+  relationships: ResourceMap;
   /** Layout relationships */
-  layoutRelationships: SlideResources;
+  layoutRelationships: ResourceMap;
   /** Master relationships */
-  masterRelationships: SlideResources;
+  masterRelationships: ResourceMap;
   /** Theme relationships */
-  themeRelationships: SlideResources;
+  themeRelationships: ResourceMap;
   /** Theme override documents */
   themeOverrides: XmlDocument[];
   /** Diagram content if present */
   diagram: XmlDocument | null;
   /** Diagram relationships */
-  diagramRelationships: SlideResources;
+  diagramRelationships: ResourceMap;
 };
 
 /**
@@ -52,7 +52,7 @@ export type SlideData = {
 export type LayoutData = {
   layout: XmlDocument | null;
   layoutTables: IndexTables;
-  layoutRelationships: SlideResources;
+  layoutRelationships: ResourceMap;
 };
 
 /**
@@ -62,7 +62,7 @@ export type MasterData = {
   master: XmlDocument | null;
   masterTables: IndexTables;
   masterTextStyles: XmlElement | undefined;
-  masterRelationships: SlideResources;
+  masterRelationships: ResourceMap;
 };
 
 /**
@@ -70,7 +70,7 @@ export type MasterData = {
  */
 export type ThemeData = {
   theme: XmlDocument | null;
-  themeRelationships: SlideResources;
+  themeRelationships: ResourceMap;
   themeOverrides: XmlDocument[];
 };
 
@@ -79,5 +79,5 @@ export type ThemeData = {
  */
 export type DiagramData = {
   diagram: XmlDocument | null;
-  diagramRelationships: SlideResources;
+  diagramRelationships: ResourceMap;
 };

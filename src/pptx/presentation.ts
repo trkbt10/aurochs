@@ -6,12 +6,12 @@
 import type { PresentationFile } from "./types/file";
 import type { Presentation, Slide, SlideInfo, ListOptions, PresentationOptions } from "./types/api";
 import type { ZipFile } from "./core";
-import type { SlideFileInfo } from "./core/opc";
+import type { SlideFileInfo } from "./opc";
 import type { SlideSize } from "./domain";
 import type { XmlElement } from "../xml";
 import type { SlideData } from "./reader/types";
 import type { RenderOptions } from "./render/render-options";
-import { parseContentTypes, buildSlideFileInfoList } from "./core/opc/content-types";
+import { parseContentTypes, buildSlideFileInfoList } from "./opc";
 import { parseSlideSizeFromXml, parseDefaultTextStyle, parseAppVersion } from "./core/presentation-info";
 import { createZipAdapter } from "./reader/zip-adapter";
 import { readXml, getRelationships, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS } from "./reader/xml-reader";

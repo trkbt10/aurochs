@@ -11,7 +11,7 @@ import type { SlideData } from "../types";
 import type { RenderOptions } from "../../render/render-options";
 import type { SlideRenderContext } from "./accessor";
 import { createSlideRenderContext } from "./accessor";
-import { createResourceMap, createPlaceholderTable, createColorMap } from "./resource-adapters";
+import { createPlaceholderTable, createColorMap } from "./resource-adapters";
 import { parseTheme, parseMasterTextStyles } from "../../core/dml/parser/theme";
 import { DEFAULT_RENDER_OPTIONS } from "../../render/render-options";
 import { renderSlideIntegrated, renderSlideSvgIntegrated } from "./slide-render";
@@ -38,7 +38,7 @@ function buildSlideRenderContext(
 
   const slide = {
     content: slideContent as XmlElement,
-    resources: createResourceMap(data.relationships),
+    resources: data.relationships,
     colorMapOverride: slideClrMapOvr !== undefined ? createColorMap(slideClrMapOvr) : undefined,
   };
 
@@ -50,7 +50,7 @@ function buildSlideRenderContext(
 
   const layout = {
     placeholders: createPlaceholderTable(data.layoutTables),
-    resources: createResourceMap(data.layoutRelationships),
+    resources: data.layoutRelationships,
     content: layoutContent as XmlElement | undefined,
   };
 
@@ -58,7 +58,7 @@ function buildSlideRenderContext(
     textStyles: parseMasterTextStyles(data.masterTextStyles),
     placeholders: createPlaceholderTable(data.masterTables),
     colorMap: createColorMap(masterClrMap),
-    resources: createResourceMap(data.masterRelationships),
+    resources: data.masterRelationships,
     content: masterContent as XmlElement | undefined,
   };
 
@@ -69,7 +69,7 @@ function buildSlideRenderContext(
     defaultTextStyle,
     zip,
     renderOptions: renderOptions ?? DEFAULT_RENDER_OPTIONS,
-    themeResources: createResourceMap(data.themeRelationships),
+    themeResources: data.themeRelationships,
   };
 
   return createSlideRenderContext(slide, layout, master, presentation);

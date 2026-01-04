@@ -5,7 +5,7 @@
 
 import type { XmlDocument, XmlNode } from "../../xml";
 import type { IndexTables } from "../core/types";
-import type { SlideResources } from "../core/opc";
+import type { ResourceMap } from "../opc";
 import type { SlideSize } from "../domain";
 import type { RenderOptions } from "../render/render-options";
 
@@ -70,22 +70,22 @@ export type Slide = {
   readonly theme: XmlDocument | null;
 
   /** Slide relationships */
-  readonly relationships: SlideResources;
+  readonly relationships: ResourceMap;
 
   /** Layout relationships */
-  readonly layoutRelationships: SlideResources;
+  readonly layoutRelationships: ResourceMap;
 
   /** Master relationships */
-  readonly masterRelationships: SlideResources;
+  readonly masterRelationships: ResourceMap;
 
   /** Theme relationships */
-  readonly themeRelationships: SlideResources;
+  readonly themeRelationships: ResourceMap;
 
   /** Diagram content if present */
   readonly diagram: XmlDocument | null;
 
   /** Diagram relationships */
-  readonly diagramRelationships: SlideResources;
+  readonly diagramRelationships: ResourceMap;
 
   /**
    * Render slide as HTML string

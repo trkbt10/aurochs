@@ -43,6 +43,24 @@ export type ColorContext = {
   readonly colorMap: ColorMap;
 };
 
+/**
+ * Context for resolving scheme colors with slide-level overrides.
+ *
+ * Extended color resolution context that includes color map overrides
+ * from the slide level. Used by parser modules for color resolution.
+ *
+ * @see ECMA-376 Part 1, Section 20.1.2.3.32 (a:schemeClr)
+ * @see ECMA-376 Part 1, Section 19.3.1.6 (p:clrMap)
+ */
+export type ColorResolveContext = {
+  /** Master color map (maps tx1→dk1, bg1→lt1, etc.) */
+  readonly colorMap: ColorMap;
+  /** Slide color map override (if present) */
+  readonly colorMapOverride?: ColorMap;
+  /** Theme color scheme (maps dk1→"000000", lt1→"FFFFFF", etc.) */
+  readonly colorScheme: ColorScheme;
+};
+
 // =============================================================================
 // Font Resolution Types
 // =============================================================================

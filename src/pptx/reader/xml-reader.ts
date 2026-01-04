@@ -5,10 +5,9 @@
 
 import type { PresentationFile } from "../types/file";
 import type { XmlDocument } from "../../xml";
-import type { SlideResources } from "../core/opc";
+import type { ResourceMap } from "../opc";
 import { stripCdata, parseXml, applyMarkupCompatibility, type MarkupCompatibilityOptions } from "../../xml";
-import { getRelationshipPath } from "../core/opc/content-types";
-import { parseRelationships } from "../core/opc/relationships";
+import { getRelationshipPath, parseRelationships } from "../opc";
 
 export const DEFAULT_MARKUP_COMPATIBILITY_OPTIONS: MarkupCompatibilityOptions = {
   supportedPrefixes: [
@@ -76,17 +75,14 @@ export function readXml(
  * Get relationships for a file by reading its .rels file
  * @param file - The presentation file to read from
  * @param path - Path to the file whose relationships to get
- * @returns Parsed relationships or empty object if not found
+ * @returns ResourceMap for querying relationships
  */
 export function getRelationships(
   file: PresentationFile,
   path: string,
   markupCompatibility: MarkupCompatibilityOptions,
-): SlideResources {
+): ResourceMap {
   const relsPath = getRelationshipPath(path);
   const relsXml = readXml(file, relsPath, 16, false, markupCompatibility);
-  if (relsXml === null) {
-    return {};
-  }
   return parseRelationships(relsXml);
 }

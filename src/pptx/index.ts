@@ -11,7 +11,7 @@ export type { Presentation, Slide, SlideInfo, ListOptions } from "./types/api";
 
 // Core types needed by consumers
 export type { IndexTables } from "./core/types";
-export type { SlideResources } from "./core/opc";
+export type { ResourceMap } from "./opc";
 export type { SlideSize } from "./domain";
 
 // Render options for dialect-specific behavior

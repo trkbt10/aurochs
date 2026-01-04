@@ -1,11 +1,36 @@
 /**
  * @file Content types parsing utilities
+ *
+ * Parsing and processing for [Content_Types].xml and related constants.
+ *
+ * @see ECMA-376 Part 2 (Open Packaging Conventions)
  */
 
-import type { ContentTypes } from "../../types";
-import type { XmlDocument } from "../../../xml/index";
-import type { SlideFileInfo } from "./types";
-import { getBasename, getByPath, getChildren } from "../../../xml/index";
+import type { ContentTypes } from "../types";
+import type { XmlDocument } from "../../xml/index";
+import { getBasename, getByPath, getChildren } from "../../xml/index";
+
+// =============================================================================
+// Types
+// =============================================================================
+
+/**
+ * Slide file info extracted from content types
+ *
+ * @see ECMA-376 Part 2, Section 10.1.2 (Content Types)
+ */
+export type SlideFileInfo = {
+  /** Full path to slide XML (e.g., "ppt/slides/slide1.xml") */
+  path: string;
+  /** Slide number (1-based) */
+  number: number;
+  /** Filename without extension (e.g., "slide1") */
+  filename: string;
+};
+
+// =============================================================================
+// Constants
+// =============================================================================
 
 /**
  * Content type constants for PPTX files
@@ -35,6 +60,10 @@ export const RELATIONSHIP_TYPES = {
   VML_DRAWING: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/vmlDrawing",
   OLE_OBJECT: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/oleObject",
 } as const;
+
+// =============================================================================
+// Functions
+// =============================================================================
 
 /**
  * Parse content types from [Content_Types].xml

@@ -29,8 +29,9 @@ import { parseDiagramColorsDefinition } from "../diagram/color-parser";
 import { parseDiagramDataModel } from "../diagram/data-parser";
 import { parseDiagramLayoutDefinition } from "../diagram/layout-parser";
 import { parseDiagramStyleDefinition } from "../diagram/style-parser";
-import { parseRelationships } from "../../core/opc/relationships";
+import type { ResourceMap } from "../../opc";
 import {
+  parseRelationships,
   getRelationshipPath,
   RELATIONSHIP_TYPES,
   getMimeTypeFromPath,
@@ -38,8 +39,7 @@ import {
   createDataUrl,
   resolveRelativePath,
   normalizePath,
-} from "../../core/opc/index";
-import type { SlideResources } from "../../core/opc/index";
+} from "../../opc";
 import { findVmlShapeImage, getVmlRelsPath, normalizeVmlImagePath } from "../external/vml-parser";
 import { emfToSvg } from "../external/emf-parser";
 
@@ -246,16 +246,16 @@ function enrichDiagramFrame(frame: GraphicFrame, fileReader: FileReader): Graphi
 /**
  * Load diagram resources from relationship file.
  */
-function loadDiagramResources(relsData: ArrayBuffer | null): SlideResources {
+function loadDiagramResources(relsData: ArrayBuffer | null): ResourceMap {
   if (relsData === null) {
-    return {};
+    return parseRelationships(null);
   }
 
   const decoder = new TextDecoder();
   const relsXmlText = decoder.decode(relsData);
   const relsDoc = parseXml(relsXmlText);
   if (relsDoc === undefined) {
-    return {};
+    return parseRelationships(null);
   }
 
   return parseRelationships(relsDoc);
@@ -331,7 +331,7 @@ function loadDiagramResourceXml(resourceId: string | undefined, fileReader: File
  */
 function resolveDiagramShapeResources(
   shapes: readonly Shape[],
-  diagramResources: SlideResources,
+  diagramResources: ResourceMap,
   diagramPath: string,
   fileReader: FileReader,
 ): readonly Shape[] {
@@ -346,7 +346,7 @@ function resolveDiagramShapeResources(
  */
 function resolveShapeResources(
   shape: Shape,
-  resources: SlideResources,
+  resources: ResourceMap,
   baseDir: string,
   fileReader: FileReader,
 ): Shape {
@@ -370,7 +370,7 @@ function resolveShapeResources(
  */
 function resolveSpShapeResources(
   shape: SpShape,
-  resources: SlideResources,
+  resources: ResourceMap,
   baseDir: string,
   fileReader: FileReader,
 ): SpShape {
@@ -398,7 +398,7 @@ function resolveSpShapeResources(
  */
 function resolvePicShapeResources(
   shape: PicShape,
-  resources: SlideResources,
+  resources: ResourceMap,
   baseDir: string,
   fileReader: FileReader,
 ): PicShape {
@@ -416,7 +416,7 @@ function resolvePicShapeResources(
 /**
  * Resolve a BlipFill's resourceId to a data URL.
  */
-function resolveBlipFill(fill: BlipFill, resources: SlideResources, baseDir: string, fileReader: FileReader): Fill {
+function resolveBlipFill(fill: BlipFill, resources: ResourceMap, baseDir: string, fileReader: FileReader): Fill {
   const resolved = resolveResourceToDataUrl(fill.resourceId, resources, baseDir, fileReader);
 
   if (resolved === undefined) {
@@ -434,7 +434,7 @@ function resolveBlipFill(fill: BlipFill, resources: SlideResources, baseDir: str
  */
 function resolveBlipFillProperties(
   blipFill: BlipFillProperties,
-  resources: SlideResources,
+  resources: ResourceMap,
   baseDir: string,
   fileReader: FileReader,
 ): BlipFillProperties {
@@ -461,7 +461,7 @@ function resolveBlipFillProperties(
  */
 function resolveResourceToDataUrl(
   resourceId: string,
-  resources: SlideResources,
+  resources: ResourceMap,
   baseDir: string,
   fileReader: FileReader,
 ): string | undefined {
@@ -471,13 +471,13 @@ function resolveResourceToDataUrl(
   }
 
   // Look up in diagram relationships
-  const resource = resources[resourceId];
-  if (resource === undefined) {
+  const target = resources.getTarget(resourceId);
+  if (target === undefined) {
     return undefined;
   }
 
   // Resolve relative path (e.g., "../media/image1.jpeg")
-  const targetPath = resolveRelativePath(baseDir, resource.target);
+  const targetPath = resolveRelativePath(baseDir, target);
 
   // Read the resource file
   const data = fileReader.readFile(targetPath);
