@@ -23,14 +23,19 @@ const containerStyle: CSSProperties = {
   cursor: "pointer",
 };
 
+function getTrackBackgroundColor(checked: boolean): string {
+  if (checked) {
+    return `var(--accent-secondary, ${colorTokens.accent.secondary})`;
+  }
+  return `var(--bg-tertiary, ${colorTokens.background.tertiary})`;
+}
+
 const trackStyle = (checked: boolean, disabled: boolean): CSSProperties => ({
   position: "relative",
   width: "28px",
   height: "16px",
   borderRadius: "8px",
-  backgroundColor: checked
-    ? `var(--accent-secondary, ${colorTokens.accent.secondary})`
-    : `var(--bg-tertiary, ${colorTokens.background.tertiary})`,
+  backgroundColor: getTrackBackgroundColor(checked),
   transition: "background-color 150ms ease",
   opacity: disabled ? 0.5 : 1,
   cursor: disabled ? "not-allowed" : "pointer",
@@ -55,6 +60,9 @@ const labelStyle: CSSProperties = {
   userSelect: "none",
 };
 
+/**
+ * Toggle switch input.
+ */
 export function Toggle({ checked, onChange, label, disabled, className, style }: ToggleProps) {
   const handleClick = useCallback(() => {
     if (!disabled) {

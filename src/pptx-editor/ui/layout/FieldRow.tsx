@@ -19,11 +19,9 @@ const rowStyle = (gap: number): CSSProperties => ({
   gap: `${gap}px`,
 });
 
-
-
-
-
-
+/**
+ * Horizontal row for grouping fields.
+ */
 export function FieldRow({
   children,
   className,

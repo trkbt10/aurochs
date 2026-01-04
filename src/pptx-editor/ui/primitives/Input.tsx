@@ -25,9 +25,11 @@ export type InputProps = {
 };
 
 // One-time style injection for spinner hiding
-let stylesInjected = false;
+const stylesInjected = { current: false };
 function injectStyles() {
-  if (stylesInjected || typeof document === "undefined") return;
+  if (stylesInjected.current || typeof document === "undefined") {
+    return;
+  }
   const style = document.createElement("style");
   style.textContent = `
     .pptx-editor-input::-webkit-outer-spin-button,
@@ -40,7 +42,7 @@ function injectStyles() {
     }
   `;
   document.head.appendChild(style);
-  stylesInjected = true;
+  stylesInjected.current = true;
 }
 
 const containerStyle = (width?: number | string): CSSProperties => ({
@@ -77,6 +79,9 @@ const suffixInnerStyle: CSSProperties = {
   pointerEvents: "none",
 };
 
+/**
+ * Input field with optional suffix.
+ */
 export function Input({
   value,
   onChange,

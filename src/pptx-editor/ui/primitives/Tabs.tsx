@@ -55,6 +55,13 @@ function getTabTextColor(isActive: boolean, disabled: boolean): string {
   return `var(--text-secondary, ${colorTokens.text.secondary})`;
 }
 
+function getTabBackgroundColor(isActive: boolean): string {
+  if (isActive) {
+    return `var(--bg-secondary, ${colorTokens.background.secondary})`;
+  }
+  return "transparent";
+}
+
 function getTabButtonStyle(isActive: boolean, disabled: boolean, size: "sm" | "md"): CSSProperties {
   const paddingMap = {
     sm: "4px 8px",
@@ -64,9 +71,7 @@ function getTabButtonStyle(isActive: boolean, disabled: boolean, size: "sm" | "m
     sm: fontTokens.size.sm,
     md: fontTokens.size.md,
   };
-  const backgroundColor = isActive
-    ? `var(--bg-secondary, ${colorTokens.background.secondary})`
-    : "transparent";
+  const backgroundColor = getTabBackgroundColor(isActive);
 
   return {
     flex: 1,

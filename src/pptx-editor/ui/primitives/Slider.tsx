@@ -43,11 +43,9 @@ const valueStyle: CSSProperties = {
   textAlign: "right",
 };
 
-
-
-
-
-
+/**
+ * Slider input with optional value display.
+ */
 export function Slider({
   value,
   onChange,

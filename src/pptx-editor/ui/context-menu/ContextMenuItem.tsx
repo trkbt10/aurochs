@@ -39,6 +39,9 @@ const dangerStyle: CSSProperties = {
   color: `var(--danger, ${colorTokens.accent.danger})`,
 };
 
+/**
+ * Render a single context menu item.
+ */
 export function ContextMenuItem({ item, onClick }: ContextMenuItemProps) {
   const [isHovered, setIsHovered] = useState(false);
 

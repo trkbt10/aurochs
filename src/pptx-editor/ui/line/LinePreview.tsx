@@ -45,8 +45,12 @@ function getScaledWidth(width: number): number {
   // 0-2px → as-is
   // 2-10px → logarithmic scale
   // 10px+ → clamp to max 8px
-  if (width <= 2) return Math.max(1, width);
-  if (width <= 10) return 2 + Math.log2(width - 1) * 2;
+  if (width <= 2) {
+    return Math.max(1, width);
+  }
+  if (width <= 10) {
+    return 2 + Math.log2(width - 1) * 2;
+  }
   return 8;
 }
 
@@ -197,7 +201,9 @@ type ArrowMarkerProps = {
 };
 
 function ArrowMarker({ id, end, strokeWidth, color, isHead }: ArrowMarkerProps) {
-  if (end.type === "none") return null;
+  if (end.type === "none") {
+    return null;
+  }
 
   const widthScale = getArrowSize(end.width);
   const lengthScale = getArrowSize(end.length);

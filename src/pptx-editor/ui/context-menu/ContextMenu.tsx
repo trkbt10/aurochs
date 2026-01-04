@@ -58,26 +58,36 @@ function getAdjustedPosition(
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
 
-  let left = x;
-  let top = y;
-
-  // Adjust horizontal position
-  if (x + menuWidth + padding > viewportWidth) {
-    left = x - menuWidth;
-    if (left < padding) {
-      left = padding;
-    }
-  }
-
-  // Adjust vertical position
-  if (y + menuHeight + padding > viewportHeight) {
-    top = y - menuHeight;
-    if (top < padding) {
-      top = padding;
-    }
-  }
+  const left = getAdjustedHorizontalPosition(x, menuWidth, viewportWidth, padding);
+  const top = getAdjustedVerticalPosition(y, menuHeight, viewportHeight, padding);
 
   return { left, top };
+}
+
+function getAdjustedHorizontalPosition(
+  x: number,
+  menuWidth: number,
+  viewportWidth: number,
+  padding: number
+): number {
+  if (x + menuWidth + padding > viewportWidth) {
+    const shifted = x - menuWidth;
+    return shifted < padding ? padding : shifted;
+  }
+  return x;
+}
+
+function getAdjustedVerticalPosition(
+  y: number,
+  menuHeight: number,
+  viewportHeight: number,
+  padding: number
+): number {
+  if (y + menuHeight + padding > viewportHeight) {
+    const shifted = y - menuHeight;
+    return shifted < padding ? padding : shifted;
+  }
+  return y;
 }
 
 /**
@@ -94,7 +104,9 @@ export function ContextMenu({
 
   // Adjust position after mount
   useEffect(() => {
-    if (!menuRef.current) return;
+    if (!menuRef.current) {
+      return;
+    }
 
     const rect = menuRef.current.getBoundingClientRect();
     const { left, top } = getAdjustedPosition(x, y, rect.width, rect.height);

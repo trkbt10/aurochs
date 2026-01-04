@@ -73,8 +73,12 @@ function getScaledWidth(width: number, size: number): number {
   // Scale width to fit nicely in the swatch
   // For small swatches, limit max width
   const maxWidth = size * 0.25;
-  if (width <= 1) return Math.max(1, width);
-  if (width <= 4) return Math.min(width, maxWidth);
+  if (width <= 1) {
+    return Math.max(1, width);
+  }
+  if (width <= 4) {
+    return Math.min(width, maxWidth);
+  }
   return Math.min(2 + Math.log2(width) * 1.5, maxWidth);
 }
 

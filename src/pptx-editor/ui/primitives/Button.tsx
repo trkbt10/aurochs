@@ -55,11 +55,9 @@ const disabledStyle: CSSProperties = {
   cursor: "not-allowed",
 };
 
-
-
-
-
-
+/**
+ * Button primitive with variants.
+ */
 export function Button({
   children,
   onClick,

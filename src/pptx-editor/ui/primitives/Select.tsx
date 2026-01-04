@@ -36,11 +36,9 @@ const selectStyle: CSSProperties = {
   width: "100%",
 };
 
-
-
-
-
-
+/**
+ * Select dropdown for predefined options.
+ */
 export function Select<T extends string = string>({
   value,
   onChange,

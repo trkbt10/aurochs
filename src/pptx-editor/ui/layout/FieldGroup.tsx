@@ -87,6 +87,9 @@ const hintStyle: CSSProperties = {
 // Component
 // =============================================================================
 
+/**
+ * Labeled group of related fields.
+ */
 export function FieldGroup({
   label,
   children,

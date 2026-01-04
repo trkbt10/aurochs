@@ -61,13 +61,18 @@ const chevronStyle: CSSProperties = {
   color: `var(--text-tertiary, ${colorTokens.text.tertiary})`,
 };
 
+/**
+ * Context menu item with nested submenu.
+ */
 export function ContextMenuSubmenu({ item, onAction }: ContextMenuSubmenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleMouseEnter = useCallback(() => {
-    if (item.disabled) return;
+    if (item.disabled) {
+      return;
+    }
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
       timeoutRef.current = null;

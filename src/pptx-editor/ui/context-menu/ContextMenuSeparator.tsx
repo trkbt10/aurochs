@@ -12,6 +12,9 @@ const separatorStyle: CSSProperties = {
   margin: `${spacingTokens.xs} 0`,
 };
 
+/**
+ * Visual separator between context menu items.
+ */
 export function ContextMenuSeparator() {
   return <div style={separatorStyle} />;
 }
