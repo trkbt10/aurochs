@@ -2,7 +2,7 @@
  * @file Slide canvas component
  *
  * Self-contained canvas for slide editing with:
- * - SVG rendering
+ * - SVG rendering via React Renderer
  * - Shape hit areas for selection
  * - Selection boxes with resize/rotate handles
  * - Context menu
@@ -12,9 +12,11 @@
 
 import { useCallback, useMemo, useState, type CSSProperties, type MouseEvent } from "react";
 import type { Slide, Shape } from "../../pptx/domain";
+import type { ColorContext, FontScheme } from "../../pptx/domain/resolution";
 import type { Pixels, ShapeId } from "../../pptx/domain/types";
 import type { DragState, SelectionState, ResizeHandlePosition } from "../state";
 import type { CreationMode } from "../presentation/types";
+import type { ResourceResolver, ResolvedBackgroundFill, RenderOptions } from "../../pptx/render/core/types";
 import { clientToSlideCoords } from "../shape/coords";
 import { collectShapeRenderData } from "../shape/traverse";
 import { findShapeByIdWithParents } from "../shape/query";
@@ -22,6 +24,7 @@ import { getAbsoluteBounds } from "../shape/transform";
 import { SlideContextMenu, type ContextMenuActions } from "./context-menu/SlideContextMenu";
 import { SelectionBox } from "./components/SelectionBox";
 import { MultiSelectionBox } from "./components/MultiSelectionBox";
+import { SlideRenderer } from "../../pptx/render/react";
 
 // =============================================================================
 // Types
@@ -34,7 +37,6 @@ export type SlideCanvasProps = {
   readonly selection: SelectionState;
   /** Drag state */
   readonly drag: DragState;
-  readonly svgContent?: string;
   /** Slide dimensions */
   readonly width: Pixels;
   readonly height: Pixels;
@@ -50,6 +52,20 @@ export type SlideCanvasProps = {
   readonly className?: string;
   /** Custom style */
   readonly style?: CSSProperties;
+
+  // React Renderer props
+  /** Color context for theme color resolution */
+  readonly colorContext?: ColorContext;
+  /** Resource resolver for images */
+  readonly resources?: ResourceResolver;
+  /** Font scheme for theme fonts */
+  readonly fontScheme?: FontScheme;
+  /** Pre-resolved background from inheritance chain */
+  readonly resolvedBackground?: ResolvedBackgroundFill;
+  /** Render options */
+  readonly renderOptions?: Partial<RenderOptions>;
+  /** ID of shape currently being edited (its text will be hidden) */
+  readonly editingShapeId?: ShapeId;
 
   // Callbacks
   readonly onSelect: (shapeId: ShapeId, addToSelection: boolean) => void;
@@ -165,7 +181,6 @@ export function SlideCanvas({
   slide,
   selection,
   drag,
-  svgContent,
   width,
   height,
   primaryShape,
@@ -174,6 +189,12 @@ export function SlideCanvas({
   debugHitAreas = false,
   className,
   style,
+  colorContext,
+  resources,
+  fontScheme,
+  resolvedBackground,
+  renderOptions,
+  editingShapeId,
   onSelect,
   onClearSelection,
   onStartMove,
@@ -188,12 +209,8 @@ export function SlideCanvas({
   const widthNum = width as number;
   const heightNum = height as number;
 
-  // Extract inner SVG content
-  const svgInnerContent = useMemo(() => {
-    if (!svgContent) return undefined;
-    const match = svgContent.match(/<svg[^>]*>([\s\S]*)<\/svg>/i);
-    return match?.[1] ?? undefined;
-  }, [svgContent]);
+  // Slide size for renderer
+  const slideSize = useMemo(() => ({ width, height }), [width, height]);
 
   // Collect shape render data for hit areas
   const shapeRenderData = useMemo(() => collectShapeRenderData(slide.shapes), [slide.shapes]);
@@ -462,40 +479,17 @@ export function SlideCanvas({
             style={{ cursor: creationMode?.type !== "select" ? "crosshair" : "default" }}
           />
 
-          {/* Rendered content layer */}
-          {svgInnerContent && <g dangerouslySetInnerHTML={{ __html: svgInnerContent }} />}
-
-          {/* Fallback renderer (when no svgContent) */}
-          {!svgContent &&
-            shapeRenderData.map((shape) => (
-              <g
-                key={`render-${shape.id}`}
-                transform={getRotationTransform(shape.rotation, shape.x, shape.y, shape.width, shape.height)}
-              >
-                <rect
-                  x={shape.x}
-                  y={shape.y}
-                  width={shape.width}
-                  height={shape.height}
-                  fill={shape.fill ?? "#e0e0e0"}
-                  stroke={shape.stroke ?? "#666"}
-                  strokeWidth={shape.strokeWidth}
-                />
-                {shape.name && (
-                  <text
-                    x={shape.x + shape.width / 2}
-                    y={shape.y + shape.height / 2}
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                    fontSize={Math.min(14, shape.width / 10, shape.height / 3)}
-                    fill="#333"
-                    style={{ pointerEvents: "none" }}
-                  >
-                    {shape.name}
-                  </text>
-                )}
-              </g>
-            ))}
+          {/* React-based slide renderer */}
+          <SlideRenderer
+            slide={slide}
+            slideSize={slideSize}
+            colorContext={colorContext}
+            resources={resources}
+            fontScheme={fontScheme}
+            options={renderOptions}
+            resolvedBackground={resolvedBackground}
+            editingShapeId={editingShapeId}
+          />
 
           {/* Hit areas for each shape */}
           {shapeRenderData.map((shape) => (

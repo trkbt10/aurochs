@@ -10,12 +10,30 @@ import { PresentationEditor } from "@lib/pptx-editor";
 import type { PresentationDocument, SlideWithId } from "@lib/pptx-editor";
 import type { Slide, Presentation } from "@lib/pptx/domain";
 import type { SpShape, GrpShape, GraphicFrame } from "@lib/pptx/domain/shape";
+import type { Line } from "@lib/pptx/domain/color";
 import type { Table, TableRow, TableCell } from "@lib/pptx/domain/table";
-import { px, deg } from "@lib/pptx/domain/types";
+import type { ColorContext } from "@lib/pptx/domain/resolution";
+import type { ResourceResolver } from "@lib/pptx/render/core";
+import { px, deg, pt } from "@lib/pptx/domain/types";
 
 // =============================================================================
 // Fixture Helpers
 // =============================================================================
+
+function createLine(color: string, widthVal = 2): Line {
+  return {
+    width: px(widthVal),
+    cap: "flat",
+    compound: "sng",
+    alignment: "ctr",
+    fill: {
+      type: "solidFill",
+      color: { spec: { type: "srgb", value: color } },
+    },
+    dash: "solid",
+    join: "round",
+  };
+}
 
 const createSpShape = (
   id: string,
@@ -43,13 +61,7 @@ const createSpShape = (
       type: "solidFill",
       color: { spec: { type: "srgb", value: fillColor } },
     },
-    line: {
-      width: px(2),
-      fill: {
-        type: "solidFill",
-        color: { spec: { type: "srgb", value: "333333" } },
-      },
-    },
+    line: createLine("333333", 2),
     geometry: { type: "preset", preset: "rect", adjustValues: [] },
   },
 });
@@ -80,20 +92,14 @@ const createTextBox = (
       type: "solidFill",
       color: { spec: { type: "srgb", value: "FFFFFF" } },
     },
-    line: {
-      width: px(1),
-      fill: {
-        type: "solidFill",
-        color: { spec: { type: "srgb", value: "CCCCCC" } },
-      },
-    },
+    line: createLine("CCCCCC", 1),
     geometry: { type: "preset", preset: "rect", adjustValues: [] },
   },
   textBody: {
-    bodyProperties: { anchor: "t" },
+    bodyProperties: { anchor: "top" },
     paragraphs: [
       {
-        runs: [{ type: "text", text, properties: { fontSize: px(fontSize) } }],
+        runs: [{ type: "text", text, properties: { fontSize: pt(fontSize) } }],
         properties: {},
         endProperties: {},
       },
@@ -125,14 +131,14 @@ const createTitle = (
     geometry: { type: "preset", preset: "rect", adjustValues: [] },
   },
   textBody: {
-    bodyProperties: { anchor: "ctr" },
+    bodyProperties: { anchor: "center" },
     paragraphs: [
       {
         runs: [
           {
             type: "text",
             text,
-            properties: { fontSize: px(32), bold: true },
+            properties: { fontSize: pt(32), bold: true },
           },
         ],
         properties: {},
@@ -370,6 +376,25 @@ const createSlide5 = (): Slide => ({
 const SLIDE_WIDTH = 960;
 const SLIDE_HEIGHT = 540;
 
+/**
+ * Empty resource resolver for test purposes
+ */
+const emptyResourceResolver: ResourceResolver = {
+  resolve: () => undefined,
+  getMimeType: () => undefined,
+  getFilePath: () => undefined,
+  readFile: () => null,
+  getResourceByType: () => undefined,
+};
+
+/**
+ * Default color context for test purposes
+ */
+const defaultColorContext: ColorContext = {
+  colorScheme: {},
+  colorMap: {},
+};
+
 const createTestDocument = (): PresentationDocument => {
   const slides: SlideWithId[] = [
     { id: "slide-1", slide: createSlide1() },
@@ -380,7 +405,6 @@ const createTestDocument = (): PresentationDocument => {
   ];
 
   const presentation: Presentation = {
-    slides: slides.map((s) => s.slide),
     slideSize: {
       width: px(SLIDE_WIDTH),
       height: px(SLIDE_HEIGHT),
@@ -392,6 +416,8 @@ const createTestDocument = (): PresentationDocument => {
     slides,
     slideWidth: px(SLIDE_WIDTH),
     slideHeight: px(SLIDE_HEIGHT),
+    colorContext: defaultColorContext,
+    resources: emptyResourceResolver,
   };
 };
 

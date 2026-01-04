@@ -19,15 +19,31 @@ import {
 import type { SlideEditorAction, ResizeHandlePosition, SelectionState, DragState } from "@lib/pptx-editor";
 import type { Slide, Shape } from "@lib/pptx/domain";
 import type { SpShape, GrpShape, GraphicFrame, CxnShape } from "@lib/pptx/domain/shape";
+import type { Line } from "@lib/pptx/domain/color";
 import type { Table, TableRow, TableCell } from "@lib/pptx/domain/table";
 import type { ShapeId } from "@lib/pptx/domain/types";
-import { px, deg } from "@lib/pptx/domain/types";
+import { px, deg, pt } from "@lib/pptx/domain/types";
 import { createRenderContext } from "@lib/pptx/render/context";
 import { renderSlideSvg } from "@lib/pptx/render/svg/renderer";
 
 // =============================================================================
 // Fixture Helpers
 // =============================================================================
+
+function createLine(color: string, widthVal = 2): Line {
+  return {
+    width: px(widthVal),
+    cap: "flat",
+    compound: "sng",
+    alignment: "ctr",
+    fill: {
+      type: "solidFill",
+      color: { spec: { type: "srgb", value: color } },
+    },
+    dash: "solid",
+    join: "round",
+  };
+}
 
 const createSpShape = (
   id: string,
@@ -55,13 +71,7 @@ const createSpShape = (
       type: "solidFill",
       color: { spec: { type: "srgb", value: fillColor } },
     },
-    line: {
-      width: px(2),
-      fill: {
-        type: "solidFill",
-        color: { spec: { type: "srgb", value: "333333" } },
-      },
-    },
+    line: createLine("333333", 2),
     geometry: { type: "preset", preset: "rect", adjustValues: [] },
   },
 });
@@ -92,20 +102,14 @@ const createTextBox = (
       type: "solidFill",
       color: { spec: { type: "srgb", value: "FFFFFF" } },
     },
-    line: {
-      width: px(1),
-      fill: {
-        type: "solidFill",
-        color: { spec: { type: "srgb", value: "888888" } },
-      },
-    },
+    line: createLine("888888", 1),
     geometry: { type: "preset", preset: "rect", adjustValues: [] },
   },
   textBody: {
-    bodyProperties: { anchor: "t" },
+    bodyProperties: { anchor: "top" },
     paragraphs: [
       {
-        runs: [{ type: "text", text, properties: { fontSize: px(fontSize) } }],
+        runs: [{ type: "text", text, properties: { fontSize: pt(fontSize) } }],
         properties: {},
         endProperties: {},
       },
@@ -137,11 +141,11 @@ const createTitle = (
     geometry: { type: "preset", preset: "rect", adjustValues: [] },
   },
   textBody: {
-    bodyProperties: { anchor: "ctr" },
+    bodyProperties: { anchor: "center" },
     paragraphs: [
       {
         runs: [
-          { type: "text", text, properties: { fontSize: px(28), bold: true } },
+          { type: "text", text, properties: { fontSize: pt(28), bold: true } },
         ],
         properties: {},
         endProperties: {},
@@ -220,13 +224,7 @@ const createCxnShape = (
       flipV: false,
     },
     geometry: { type: "preset", preset: "line", adjustValues: [] },
-    line: {
-      width: px(2),
-      fill: {
-        type: "solidFill",
-        color: { spec: { type: "srgb", value: "000000" } },
-      },
-    },
+    line: createLine("000000", 2),
   },
 });
 
@@ -554,7 +552,7 @@ export function SlideEditorTest() {
 
   const handleSelect = useCallback(
     (shapeId: ShapeId, addToSelection: boolean) => {
-      dispatch({ type: "SELECT_SHAPE", shapeId, addToSelection });
+      dispatch({ type: "SELECT", shapeId, addToSelection });
     },
     []
   );
@@ -600,7 +598,7 @@ export function SlideEditorTest() {
 
   const handleUngroup = useCallback(
     (shapeId: ShapeId) => {
-      dispatch({ type: "UNGROUP", shapeId });
+      dispatch({ type: "UNGROUP_SHAPE", shapeId });
     },
     []
   );

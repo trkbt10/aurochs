@@ -1,0 +1,224 @@
+/**
+ * @file Fill Primitives for React SVG Renderer
+ *
+ * Provides utilities and components for rendering fill styles
+ * including solid colors, gradients, and image patterns.
+ */
+
+import type { ReactNode } from "react";
+import type { Fill } from "../../../domain";
+import type { ColorContext } from "../../../domain/resolution";
+import {
+  resolveFill,
+  type ResolvedFill,
+  type ResolvedGradientFill,
+  type ResolvedImageFill,
+} from "../../core/fill";
+import { useSvgDefs } from "../hooks/useSvgDefs";
+import { useRenderContext } from "../context";
+
+// =============================================================================
+// Types
+// =============================================================================
+
+/**
+ * SVG fill props
+ */
+export type SvgFillProps = {
+  readonly fill: string;
+  readonly fillOpacity?: number;
+};
+
+/**
+ * Result of resolving a fill for React rendering
+ */
+export type FillResult = {
+  /** SVG fill attribute value */
+  readonly props: SvgFillProps;
+  /** Def element to add to <defs> (gradient/pattern) */
+  readonly defElement?: ReactNode;
+  /** Generated ID for gradient/pattern */
+  readonly defId?: string;
+};
+
+// =============================================================================
+// Fill Resolution
+// =============================================================================
+
+/**
+ * Convert resolved fill to SVG fill props and optional def element.
+ */
+function resolvedFillToResult(
+  fill: ResolvedFill,
+  getNextId: (prefix: string) => string,
+  width?: number,
+  height?: number,
+): FillResult {
+  switch (fill.type) {
+    case "none":
+    case "unresolved":
+      return { props: { fill: "none" } };
+
+    case "solid": {
+      const props: SvgFillProps = buildSolidFillProps(fill.color);
+      return { props };
+    }
+
+    case "gradient": {
+      const gradId = getNextId("grad");
+      const defElement = createGradientDef(fill, gradId);
+      return {
+        props: { fill: `url(#${gradId})` },
+        defElement,
+        defId: gradId,
+      };
+    }
+
+    case "image": {
+      if (width === undefined || height === undefined) {
+        return { props: { fill: "none" } };
+      }
+      const patternId = getNextId("img-pattern");
+      const defElement = createImagePatternDef(fill, patternId, width, height);
+      return {
+        props: { fill: `url(#${patternId})` },
+        defElement,
+        defId: patternId,
+      };
+    }
+  }
+}
+
+/**
+ * Build solid fill props based on alpha
+ */
+function buildSolidFillProps(color: { hex: string; alpha: number }): SvgFillProps {
+  if (color.alpha < 1) {
+    return { fill: `#${color.hex}`, fillOpacity: color.alpha };
+  }
+  return { fill: `#${color.hex}` };
+}
+
+/**
+ * Create gradient definition element
+ */
+function createGradientDef(fill: ResolvedGradientFill, id: string): ReactNode {
+  const stops = fill.stops.map((stop, index) => (
+    <stop
+      key={index}
+      offset={`${stop.position}%`}
+      stopColor={`#${stop.color.hex}`}
+      stopOpacity={stop.color.alpha < 1 ? stop.color.alpha : undefined}
+    />
+  ));
+
+  if (fill.isRadial) {
+    const cx = fill.radialCenter?.cx ?? 50;
+    const cy = fill.radialCenter?.cy ?? 50;
+    return (
+      <radialGradient id={id} cx={`${cx}%`} cy={`${cy}%`} r="50%">
+        {stops}
+      </radialGradient>
+    );
+  }
+
+  // Linear gradient
+  // Convert OOXML angle (clockwise from top) to SVG coordinates
+  const rad = ((fill.angle - 90) * Math.PI) / 180;
+  const x1 = 50 - 50 * Math.cos(rad);
+  const y1 = 50 - 50 * Math.sin(rad);
+  const x2 = 50 + 50 * Math.cos(rad);
+  const y2 = 50 + 50 * Math.sin(rad);
+
+  return (
+    <linearGradient
+      id={id}
+      x1={`${x1}%`}
+      y1={`${y1}%`}
+      x2={`${x2}%`}
+      y2={`${y2}%`}
+    >
+      {stops}
+    </linearGradient>
+  );
+}
+
+/**
+ * Create image pattern definition element
+ */
+function createImagePatternDef(
+  fill: ResolvedImageFill,
+  id: string,
+  width: number,
+  height: number,
+): ReactNode {
+  return (
+    <pattern
+      id={id}
+      patternUnits="objectBoundingBox"
+      width="1"
+      height="1"
+    >
+      <image
+        href={fill.src}
+        width={width}
+        height={height}
+        preserveAspectRatio="xMidYMid slice"
+      />
+    </pattern>
+  );
+}
+
+// =============================================================================
+// Hook
+// =============================================================================
+
+/**
+ * Hook to resolve fill and register defs if needed.
+ *
+ * @param fill - Domain fill object
+ * @param width - Shape width (needed for image patterns)
+ * @param height - Shape height (needed for image patterns)
+ * @returns SVG fill props
+ */
+export function useFill(
+  fill: Fill | undefined,
+  width?: number,
+  height?: number,
+): SvgFillProps {
+  const { colorContext } = useRenderContext();
+  const { getNextId, addDef, hasDef } = useSvgDefs();
+
+  if (fill === undefined || fill.type === "noFill") {
+    return { fill: "none" };
+  }
+
+  const resolved = resolveFill(fill, colorContext);
+  const result = resolvedFillToResult(resolved, getNextId, width, height);
+
+  // Register def if present and not already registered
+  if (result.defId && result.defElement && !hasDef(result.defId)) {
+    addDef(result.defId, result.defElement);
+  }
+
+  return result.props;
+}
+
+/**
+ * Resolve fill without registering defs (for external use).
+ * Returns both props and the def element.
+ */
+export function resolveFillForReact(
+  fill: Fill | undefined,
+  colorContext: ColorContext | undefined,
+  getNextId: (prefix: string) => string,
+  width?: number,
+  height?: number,
+): FillResult {
+  if (fill === undefined || fill.type === "noFill") {
+    return { props: { fill: "none" } };
+  }
+
+  const resolved = resolveFill(fill, colorContext);
+  return resolvedFillToResult(resolved, getNextId, width, height);
+}

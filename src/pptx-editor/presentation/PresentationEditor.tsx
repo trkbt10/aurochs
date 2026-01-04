@@ -13,10 +13,10 @@
 
 import { useRef, useEffect, useMemo, useCallback, type CSSProperties } from "react";
 import type { Slide, Shape, TextBody } from "../../pptx/domain";
-import type { Pixels, ShapeId } from "../../pptx/domain/types";
+import type { ShapeId } from "../../pptx/domain/types";
 import { px, deg } from "../../pptx/domain/types";
 import type { ResizeHandlePosition } from "../state";
-import type { PresentationDocument, SlideWithId, PresentationEditorAction } from "./types";
+import type { PresentationDocument, SlideWithId } from "./types";
 import type { ContextMenuActions } from "../slide/context-menu/SlideContextMenu";
 import { PresentationEditorProvider, usePresentationEditor } from "./context";
 import { SlideThumbnailPanel } from "./SlideThumbnailPanel";
@@ -24,7 +24,7 @@ import { useSlideThumbnails } from "./use-slide-thumbnails";
 import { SlideThumbnailPreview } from "./SlideThumbnailPreview";
 import { CreationToolbar } from "../slide/CreationToolbar";
 import type { CreationMode } from "./types";
-import { createShapeFromMode, createBoundsFromDrag, getDefaultBoundsForMode } from "../shape/factory";
+import { createShapeFromMode, getDefaultBoundsForMode } from "../shape/factory";
 import { SlideCanvas } from "../slide/SlideCanvas";
 import { TextEditOverlay } from "../slide/components/TextEditOverlay";
 import { isTextEditActive } from "../state";
@@ -32,13 +32,12 @@ import { PropertyPanel } from "../slide/PropertyPanel";
 import { ShapeToolbar } from "../slide/ShapeToolbar";
 import { LayerPanel } from "../slide/LayerPanel";
 import { Panel } from "../ui/layout";
-import { findShapeById, isTopLevelShape } from "../shape/query";
+import { isTopLevelShape } from "../shape/query";
 import { clientToSlideCoords } from "../shape/coords";
 import { withUpdatedTransform } from "../shape/transform";
 import { calculateAlignedBounds } from "../shape/alignment";
-import { renderSlideSvg, renderSlideWithShapeParts } from "../../pptx/render/svg/renderer";
-import { createRenderContext } from "../../pptx/render/context";
 import { createRenderContextFromApiSlide } from "./slide-render-context-builder";
+import { isTextEditActive as checkTextEditActive } from "../state";
 
 // =============================================================================
 // Types
@@ -213,9 +212,7 @@ function EditorContent({
     [getThumbnailSvg, width, height]
   );
 
-  // Render context for SVG rendering
-  // When apiSlide and fileCache are available, build full context from API slide
-  // This preserves theme/master/layout inheritance for proper rendering after edits
+  // Render context from API slide for proper theme/master/layout inheritance
   const renderContext = useMemo(() => {
     const apiSlide = activeSlide?.apiSlide;
     const fileCache = document.fileCache;
@@ -225,23 +222,11 @@ function EditorContent({
       return createRenderContextFromApiSlide(apiSlide, fileCache, { width, height });
     }
 
-    // Fall back to basic context for newly created slides
-    return createRenderContext({
-      slideSize: { width, height },
-      colorContext: document.colorContext,
-      resources: document.resources,
-      fontScheme: document.fontScheme,
-      resolvedBackground: activeSlide?.resolvedBackground,
-    });
-  }, [width, height, activeSlide?.apiSlide, activeSlide?.resolvedBackground, document.fileCache, document.colorContext, document.resources, document.fontScheme]);
+    return undefined;
+  }, [width, height, activeSlide?.apiSlide, document.fileCache]);
 
-  // Rendered SVG content
-  // Always render the edited domain slide with proper context
-  const svgContent = useMemo(() => {
-    if (!slide) return undefined;
-    const result = renderSlideSvg(slide, renderContext);
-    return result.svg;
-  }, [slide, renderContext]);
+  // Get the editing shape ID when in text edit mode
+  const editingShapeId = checkTextEditActive(textEdit) ? textEdit.shapeId : undefined;
 
   // ==========================================================================
   // Drag handlers
@@ -591,12 +576,16 @@ function EditorContent({
                 slide={slide}
                 selection={selection}
                 drag={drag}
-                svgContent={svgContent}
                 width={width}
                 height={height}
                 primaryShape={primaryShape}
                 selectedShapes={selectedShapes}
                 contextMenuActions={contextMenuActions}
+                colorContext={renderContext?.colorContext ?? document.colorContext}
+                resources={renderContext?.resources ?? document.resources}
+                fontScheme={renderContext?.fontScheme ?? document.fontScheme}
+                resolvedBackground={renderContext?.resolvedBackground ?? activeSlide?.resolvedBackground}
+                editingShapeId={editingShapeId}
                 onSelect={handleSelect}
                 onClearSelection={handleClearSelection}
                 onStartMove={handleStartMove}

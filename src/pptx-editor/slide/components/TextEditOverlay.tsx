@@ -62,7 +62,7 @@ function getOverlayStyle(
     padding: "4px 8px",
     border: `2px solid ${colorTokens.selection.primary}`,
     borderRadius: "2px",
-    backgroundColor: "white",
+    backgroundColor: "transparent",
     outline: "none",
     overflow: "auto",
     zIndex: 1000,
