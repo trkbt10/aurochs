@@ -31,9 +31,36 @@ export type {
   Degrees,
   Percent,
   Points,
+  EMU,
+  RelationshipId,
+  HexColor,
 } from "./types";
 
-export { px, deg, pct, pt } from "./types";
+export { px, deg, pct, pt, emu, rId, hexColor } from "./types";
+
+// =============================================================================
+// OPC Infrastructure Types
+// =============================================================================
+
+export type {
+  ZipFile,
+  ZipEntry,
+  ResourceMap,
+  PlaceholderTable,
+} from "./opc";
+
+// =============================================================================
+// Theme Types (with XmlElement references)
+// =============================================================================
+
+export type {
+  CustomColor,
+  ExtraColorScheme,
+  ObjectDefaults,
+  FormatScheme,
+  Theme,
+  RawMasterTextStyles,
+} from "./theme";
 
 // =============================================================================
 // Geometry Types

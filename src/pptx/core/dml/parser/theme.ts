@@ -13,15 +13,13 @@ import type {
   FontScheme,
   ColorScheme,
   ColorMap,
-} from "../../../domain/resolution";
-import type {
   FormatScheme,
   Theme,
   ObjectDefaults,
   CustomColor,
   ExtraColorScheme,
-  MasterTextStyles,
-} from "../domain/types";
+  RawMasterTextStyles,
+} from "../../../domain";
 
 // =============================================================================
 // Font Scheme Parsing
@@ -358,7 +356,7 @@ export function parseTheme(
  */
 export function parseMasterTextStyles(
   txStyles: XmlElement | undefined,
-): MasterTextStyles {
+): RawMasterTextStyles {
   if (txStyles === undefined) {
     return {
       titleStyle: undefined,

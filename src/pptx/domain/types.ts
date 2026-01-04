@@ -73,6 +73,30 @@ export type Percent = Brand<number, 'Percent'>;
 export type Points = Brand<number, 'Points'>;
 
 // =============================================================================
+// OOXML Base Types (Branded)
+// =============================================================================
+
+/**
+ * EMU (English Metric Units) - the base unit in Office Open XML
+ * 914400 EMU = 1 inch = 96 CSS pixels
+ *
+ * @see ECMA-376 Part 1, Section 20.1.10.16 (ST_Coordinate)
+ */
+export type EMU = Brand<number, 'EMU'>;
+
+/**
+ * Relationship ID (rId1, rId2, etc.) used in .rels files
+ *
+ * @see ECMA-376 Part 2, Section 9.3 (Relationships)
+ */
+export type RelationshipId = Brand<string, 'RelationshipId'>;
+
+/**
+ * Hex color string (#RRGGBB or RRGGBB format)
+ */
+export type HexColor = Brand<string, 'HexColor'>;
+
+// =============================================================================
 // Branded Type Constructors
 // =============================================================================
 
@@ -96,6 +120,21 @@ export const pct = (value: number): Percent => value as Percent;
  * Create a Points value from a number.
  */
 export const pt = (value: number): Points => value as Points;
+
+/**
+ * Create an EMU value from a number.
+ */
+export const emu = (value: number): EMU => value as EMU;
+
+/**
+ * Create a RelationshipId from a string.
+ */
+export const rId = (value: string): RelationshipId => value as RelationshipId;
+
+/**
+ * Create a HexColor from a string.
+ */
+export const hexColor = (value: string): HexColor => value as HexColor;
 
 // =============================================================================
 // Re-exports for backward compatibility

@@ -6,8 +6,15 @@
 
 import type { XmlElement } from "../xml";
 import type { SlideRenderContext, ColorResolveContext, ResourceContext } from "./reader/slide/accessor";
-import type { ColorMap, ColorScheme } from "./domain/resolution";
-import type { PlaceholderTable, ResourceMap, ZipFile, FormatScheme, MasterTextStyles } from "./core/dml/domain/types";
+import type {
+  ColorMap,
+  ColorScheme,
+  PlaceholderTable,
+  ResourceMap,
+  ZipFile,
+  FormatScheme,
+  RawMasterTextStyles,
+} from "./domain";
 import { DEFAULT_RENDER_OPTIONS } from "./render/render-options";
 
 /**
@@ -86,7 +93,7 @@ export function createMockFormatScheme(): FormatScheme {
 /**
  * Create mock master text styles
  */
-export function createMockMasterTextStyles(): MasterTextStyles {
+export function createMockMasterTextStyles(): RawMasterTextStyles {
   return {
     titleStyle: undefined,
     bodyStyle: undefined,

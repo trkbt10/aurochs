@@ -1,76 +1,21 @@
 /**
- * @file PPTX domain types
+ * @file Theme types for PPTX processing
  *
- * Core domain types for PPTX processing. These types represent the
- * domain model and are used by both parser and render layers.
+ * Types representing theme elements from slide masters and templates.
+ * These types retain references to XmlElement for deferred parsing.
  *
- * Organized by ECMA-376 sections:
- * - OPC infrastructure (Part 2)
- * - DrawingML types (Part 1, Section 20.1)
- * - PresentationML types (Part 1, Section 19)
- *
- * @see ECMA-376 Part 1 (PresentationML, DrawingML)
- * @see ECMA-376 Part 2 (Open Packaging Conventions)
+ * @see ECMA-376 Part 1, Section 20.1.6 (Theme)
  */
 
-import type { XmlDocument, XmlElement } from "../../../../xml/index";
+import type { XmlDocument, XmlElement } from "../../xml/index";
 import type {
   ColorScheme as ColorSchemeType,
   ColorMap as ColorMapType,
   FontScheme as FontSchemeType,
-} from "../../../domain/resolution";
+} from "./resolution";
 
 // =============================================================================
-// OPC Infrastructure Types (ECMA-376 Part 2)
-// =============================================================================
-
-/**
- * Zip file interface for OPC package access.
- *
- * @see ECMA-376 Part 2, Section 8 (Physical Package)
- */
-export type ZipFile = {
-  file(path: string): ZipEntry | null;
-  /** Load new zip data. Optional - only needed for initial loading. */
-  load?(data: ArrayBuffer): ZipFile;
-};
-
-/**
- * Zip entry interface for file access.
- */
-export type ZipEntry = {
-  asText(): string;
-  asArrayBuffer(): ArrayBuffer;
-};
-
-/**
- * Resource map for relationship ID resolution.
- *
- * @see ECMA-376 Part 2, Section 9.3 (Relationships)
- */
-export type ResourceMap = {
-  /** Get target path by relationship ID */
-  getTarget(rId: string): string | undefined;
-  /** Get relationship type by ID */
-  getType(rId: string): string | undefined;
-  /** Get first target matching a relationship type */
-  getTargetByType(relType: string): string | undefined;
-};
-
-/**
- * Placeholder lookup table.
- *
- * @see ECMA-376 Part 1, Section 19.3.1.36 (p:ph)
- */
-export type PlaceholderTable = {
-  /** Shapes indexed by p:ph/@idx (xsd:unsignedInt) */
-  readonly byIdx: Map<number, XmlElement>;
-  /** Shapes indexed by p:ph/@type (ST_PlaceholderType) */
-  readonly byType: Record<string, XmlElement>;
-};
-
-// =============================================================================
-// Theme Types (ECMA-376 Part 1, Section 20.1.6)
+// Custom Color Types (ECMA-376 Part 1, Section 20.1.4.1.8)
 // =============================================================================
 
 /**
@@ -85,6 +30,10 @@ export type CustomColor = {
   readonly systemColor?: string;
 };
 
+// =============================================================================
+// Extra Color Scheme Types (ECMA-376 Part 1, Section 20.1.6.4)
+// =============================================================================
+
 /**
  * Extra color scheme from theme.
  *
@@ -96,6 +45,10 @@ export type ExtraColorScheme = {
   readonly colorMap: ColorMapType;
 };
 
+// =============================================================================
+// Object Defaults Types (ECMA-376 Part 1, Section 20.1.6.7)
+// =============================================================================
+
 /**
  * Object defaults from theme.
  *
@@ -106,6 +59,10 @@ export type ObjectDefaults = {
   readonly shapeDefault?: XmlElement;
   readonly textDefault?: XmlElement;
 };
+
+// =============================================================================
+// Format Scheme Types (ECMA-376 Part 1, Section 20.1.4.1.14)
+// =============================================================================
 
 /**
  * Format scheme containing style lists.
@@ -125,6 +82,10 @@ export type FormatScheme = {
   readonly bgFillStyles: readonly XmlElement[];
 };
 
+// =============================================================================
+// Theme Types (ECMA-376 Part 1, Section 20.1.6.9)
+// =============================================================================
+
 /**
  * Complete theme definition.
  *
@@ -143,15 +104,16 @@ export type Theme = {
 };
 
 // =============================================================================
-// Master Text Styles (ECMA-376 Part 1, Section 19.3.1.51)
+// Raw Master Text Styles (ECMA-376 Part 1, Section 19.3.1.51)
 // =============================================================================
 
 /**
- * Master text styles from slide master.
+ * Raw master text styles from slide master (XmlElement references).
+ * This is the raw form before conversion to domain MasterTextStyles.
  *
  * @see ECMA-376 Part 1, Section 19.3.1.51 (p:txStyles)
  */
-export type MasterTextStyles = {
+export type RawMasterTextStyles = {
   readonly titleStyle: XmlElement | undefined;
   readonly bodyStyle: XmlElement | undefined;
   readonly otherStyle: XmlElement | undefined;

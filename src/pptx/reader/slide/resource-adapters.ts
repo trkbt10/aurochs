@@ -9,8 +9,7 @@
  * @see ./accessor.ts for type definitions
  */
 
-import type { ResourceMap, PlaceholderTable } from "../../core/dml/domain/types";
-import type { ColorMap } from "../../domain/resolution";
+import type { ResourceMap, PlaceholderTable, ColorMap } from "../../domain";
 import type { IndexTables } from "../../core/types";
 import type { SlideResources } from "../../core/opc";
 import { parseColorMap } from "../../core/dml/parser/theme";

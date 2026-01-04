@@ -1,14 +1,11 @@
 /**
  * @file DrawingML processing module
  *
- * Provides parser, domain, and render functions for DrawingML elements.
- * Follows the 3-axis architecture: parser → domain → render.
+ * Provides parser and render functions for DrawingML elements.
+ * Domain types are exported from src/pptx/domain.
  *
  * @see ECMA-376 Part 1, Chapter 20 (DrawingML)
  */
-
-// Domain types and functions
-export * from "./domain";
 
 // Parser functions
 export * from "./parser";

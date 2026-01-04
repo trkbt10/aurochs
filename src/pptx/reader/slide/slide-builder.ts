@@ -4,8 +4,7 @@
  */
 
 import type { Slide } from "../../types/api";
-import type { ZipFile } from "../../core/dml/domain/types";
-import type { SlideSize } from "../../domain";
+import type { ZipFile, SlideSize } from "../../domain";
 import type { XmlElement } from "../../../xml";
 import { getByPath } from "../../../xml";
 import type { SlideData } from "../types";

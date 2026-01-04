@@ -17,15 +17,22 @@ import { getChild, getByPath } from "../../../xml/index";
 import type { RenderOptions } from "../../render/render-options";
 
 // Import domain types from canonical sources
-import type { ZipFile, ResourceMap, PlaceholderTable, Theme, MasterTextStyles } from "../../core/dml/domain/types";
-import type { ColorScheme, ColorMap } from "../../domain/resolution";
+import type {
+  ZipFile,
+  ResourceMap,
+  PlaceholderTable,
+  Theme,
+  RawMasterTextStyles,
+  ColorScheme,
+  ColorMap,
+} from "../../domain";
 
 // =============================================================================
 // Params (immutable data)
 // =============================================================================
 
 export type SlideMasterParams = {
-  textStyles: MasterTextStyles;
+  textStyles: RawMasterTextStyles;
   placeholders: PlaceholderTable;
   colorMap: ColorMap;
   resources: ResourceMap;
@@ -79,7 +86,7 @@ export type PresentationContext = {
  * @see ECMA-376 Part 1, Section 19.3.1.36 (p:ph) - Placeholder element
  * @see ECMA-376 Part 1, Section 19.7.10 (ST_PlaceholderType) - All 16 placeholder types
  */
-const TYPE_TO_MASTER_STYLE: Record<string, keyof MasterTextStyles> = {
+const TYPE_TO_MASTER_STYLE: Record<string, keyof RawMasterTextStyles> = {
   // Title placeholders → titleStyle
   ctrTitle: "titleStyle",
   title: "titleStyle",
@@ -538,7 +545,7 @@ export type BackgroundContext = {
  * @see ECMA-376 Part 1, Section 19.2.1.8 (p:defaultTextStyle)
  */
 export type TextStyleContext = {
-  readonly masterTextStyles: MasterTextStyles;
+  readonly masterTextStyles: RawMasterTextStyles;
   readonly defaultTextStyle: XmlElement | null;
   readonly placeholders: PlaceholderContext;
 };
