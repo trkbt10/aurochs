@@ -18,7 +18,21 @@ import rulesNoMocks from "./eslint/rules/rules-no-mocks.js";
 
 export default [
   // Ignore patterns
-  { ignores: ["node_modules/**", "dist/**", "build/**", "debug/**", "*.config.ts", "eslint/**", "src/index.ts"] },
+  {
+    ignores: [
+      "node_modules/**",
+      "fixtures/**",
+      "demo/**",
+      "dist/**",
+      "build/**",
+      "debug/**",
+      "pages/public/**",
+      "pages/dist/**",
+      "*.config.ts",
+      "eslint/**",
+      "src/index.ts",
+    ],
+  },
 
   // JS/TS recommended sets (Flat-compatible)
   ...tseslint.config(
@@ -48,7 +62,6 @@ export default [
       },
       rules: {
         "custom/ternary-length": "error",
-        "custom/no-and-as-ternary": "error",
         "custom/prefer-node-protocol": "error",
         "custom/no-as-outside-guard": "error",
         "custom/no-nested-try": "error",

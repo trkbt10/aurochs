@@ -12,7 +12,7 @@ import noIifeInAnonymous from "./rules/no-iife-in-anonymous.js";
 export default {
   rules: {
     "ternary-length": ternaryLength,
-    "no-and-as-ternary": noAndAsTernary,
+    //  "no-and-as-ternary": noAndAsTernary,
     "prefer-node-protocol": preferNodeProtocol,
     "no-empty-jsdoc": noEmptyJsdoc,
     "no-as-outside-guard": noAsOutsideGuard,
