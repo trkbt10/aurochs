@@ -36,11 +36,14 @@ export {
 } from "./cursor";
 
 // Text edit controller component
-export {
-  TextEditController,
-  type TextEditControllerProps,
-  type CursorState,
-} from "./TextEditController";
+export { TextEditController } from "./TextEditController";
+
+// Text edit types
+export type {
+  TextEditControllerProps,
+  CursorState,
+  CompositionState,
+} from "./types";
 
 // Text geometry utilities (shared between cursor and rendering)
 export {

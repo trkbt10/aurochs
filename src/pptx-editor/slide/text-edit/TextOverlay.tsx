@@ -1,0 +1,232 @@
+/**
+ * @file Text Overlay Component
+ *
+ * Renders text from LayoutResult as SVG elements for visual display.
+ * Handles bullets, spans with styling, and IME composition display.
+ */
+
+import type { ReactNode } from "react";
+import type { Pixels } from "../../../pptx/domain/types";
+import type { LayoutResult, LayoutLine, PositionedSpan } from "../../../pptx/render/text-layout";
+import { fontSizeToPixels, getTextVisualBounds } from "./text-geometry";
+import type { CompositionState } from "./types";
+
+// =============================================================================
+// Types
+// =============================================================================
+
+export type TextOverlayProps = {
+  readonly layoutResult: LayoutResult;
+  readonly composition: CompositionState;
+  readonly cursorOffset: number;
+};
+
+// =============================================================================
+// Text Transform
+// =============================================================================
+
+/**
+ * Apply text transform (uppercase, lowercase) to text content.
+ */
+function applyTextTransform(
+  text: string,
+  transform: "none" | "uppercase" | "lowercase" | undefined,
+): string {
+  if (transform === "uppercase") {
+    return text.toUpperCase();
+  }
+  if (transform === "lowercase") {
+    return text.toLowerCase();
+  }
+  return text;
+}
+
+// =============================================================================
+// Span Rendering
+// =============================================================================
+
+/**
+ * Render a single text span with all its styling.
+ */
+function renderSpan(
+  span: PositionedSpan,
+  x: number,
+  lineY: number,
+  key: number,
+): ReactNode {
+  const fontSizePx = fontSizeToPixels(span.fontSize);
+  const bounds = getTextVisualBounds(lineY as Pixels, span.fontSize);
+  const elements: ReactNode[] = [];
+
+  // Handle highlight background
+  if (span.highlightColor !== undefined) {
+    elements.push(
+      <rect
+        key={`hl-${key}`}
+        x={x}
+        y={bounds.topY as number}
+        width={span.width as number}
+        height={fontSizePx as number}
+        fill={span.highlightColor}
+      />,
+    );
+  }
+
+  // Build text props
+  const textProps: Record<string, string | number | undefined> = {
+    x,
+    y: lineY,
+    fontSize: `${fontSizePx as number}px`,
+    fontFamily: span.fontFamily,
+  };
+
+  // Handle fill
+  if (span.textFill !== undefined) {
+    if (span.textFill.type === "noFill") {
+      textProps.fill = "none";
+    } else if (span.textFill.type === "solid") {
+      textProps.fill = span.textFill.color;
+      if (span.textFill.alpha < 1) {
+        textProps.fillOpacity = span.textFill.alpha;
+      }
+    }
+  } else {
+    textProps.fill = span.color;
+  }
+
+  // Font styling
+  if (span.fontWeight !== 400) {
+    textProps.fontWeight = span.fontWeight;
+  }
+  if (span.fontStyle !== "normal") {
+    textProps.fontStyle = span.fontStyle;
+  }
+  if (span.textDecoration !== undefined) {
+    textProps.textDecoration = span.textDecoration;
+  }
+
+  // Apply text transform
+  const textContent = applyTextTransform(span.text, span.textTransform);
+
+  elements.push(
+    <text key={`text-${key}`} {...textProps}>
+      {textContent}
+    </text>,
+  );
+
+  return <>{elements}</>;
+}
+
+// =============================================================================
+// Line Rendering
+// =============================================================================
+
+/**
+ * Render a line of text with all its spans.
+ */
+function renderLine(line: LayoutLine, startKey: number): ReactNode[] {
+  const elements: ReactNode[] = [];
+  // eslint-disable-next-line no-restricted-syntax -- accumulating position
+  let cursorX = line.x as number;
+  // eslint-disable-next-line no-restricted-syntax -- key generation
+  let key = startKey;
+
+  for (const span of line.spans) {
+    if (span.text.length === 0) {
+      continue;
+    }
+
+    const element = renderSpan(span, cursorX, line.y as number, key++);
+    elements.push(element);
+    cursorX += (span.width as number) + (span.dx as number);
+  }
+
+  return elements;
+}
+
+// =============================================================================
+// Bullet Rendering
+// =============================================================================
+
+/**
+ * Render a bullet (text or image) for a paragraph.
+ */
+function renderBullet(
+  bullet: NonNullable<LayoutResult["paragraphs"][number]["bullet"]>,
+  bulletX: number,
+  bulletY: number,
+  bulletWidth: number,
+  key: number,
+): ReactNode {
+  const bulletFontSizePx = fontSizeToPixels(bullet.fontSize);
+  const bulletBounds = getTextVisualBounds(bulletY as Pixels, bullet.fontSize);
+
+  if (bullet.imageUrl !== undefined) {
+    const imageSize = bulletFontSizePx as number;
+    return (
+      <image
+        key={`bullet-${key}`}
+        href={bullet.imageUrl}
+        x={bulletX}
+        y={bulletBounds.topY as number}
+        width={imageSize}
+        height={imageSize}
+        preserveAspectRatio="xMidYMid meet"
+      />
+    );
+  }
+
+  return (
+    <text
+      key={`bullet-${key}`}
+      x={bulletX}
+      y={bulletY}
+      fontSize={`${bulletFontSizePx as number}px`}
+      fill={bullet.color}
+      fontFamily={bullet.fontFamily}
+    >
+      {bullet.char}
+    </text>
+  );
+}
+
+// =============================================================================
+// Text Overlay Component
+// =============================================================================
+
+/**
+ * Renders text from LayoutResult as SVG elements.
+ */
+export function TextOverlay({ layoutResult, composition }: TextOverlayProps) {
+  const elements: ReactNode[] = [];
+  // eslint-disable-next-line no-restricted-syntax -- key generation
+  let key = 0;
+
+  for (const para of layoutResult.paragraphs) {
+    // Render bullet if present
+    if (para.bullet !== undefined && para.lines.length > 0) {
+      const firstLine = para.lines[0];
+      const bulletX = (firstLine.x as number) - (para.bulletWidth as number);
+      const bulletY = firstLine.y as number;
+
+      elements.push(
+        renderBullet(para.bullet, bulletX, bulletY, para.bulletWidth as number, key++),
+      );
+    }
+
+    // Render lines
+    for (const line of para.lines) {
+      const lineElements = renderLine(line, key);
+      elements.push(...lineElements);
+      key += line.spans.length + 1;
+    }
+  }
+
+  // Render IME composition underline
+  if (composition.isComposing && composition.text) {
+    // TODO: Calculate composition underline position
+    // For now, composition text is included in currentText via textarea
+  }
+
+  return <>{elements}</>;
+}
