@@ -4,18 +4,11 @@
  * SVG-specific render context extending core context.
  */
 
-import type { SlideSize } from "../../domain";
-import type { ColorContext } from "../../domain/resolution";
 import { px } from "../../domain/types";
-import type {
-  CoreRenderContext,
-  RenderOptions,
-  ResourceResolver,
-} from "../core";
+import type { CoreRenderContext } from "../core";
 import {
-  createEmptyResourceResolver,
-  createWarningCollector,
-  DEFAULT_RENDER_OPTIONS,
+  createCoreRenderContext,
+  type CoreRenderContextConfig,
 } from "../core";
 
 // =============================================================================
@@ -76,28 +69,20 @@ export type SvgRenderContext = CoreRenderContext & {
 };
 
 /**
- * Configuration for creating SVG render context
+ * Configuration for creating SVG render context.
+ * Uses the unified CoreRenderContextConfig.
  */
-export type SvgRenderContextConfig = {
-  slideSize: SlideSize;
-  options?: Partial<RenderOptions>;
-  colorContext?: ColorContext;
-  resources?: ResourceResolver;
-};
+export type SvgRenderContextConfig = CoreRenderContextConfig;
 
 /**
- * Create an SVG render context
+ * Create an SVG render context.
+ *
+ * Extends CoreRenderContext with SVG-specific DefsCollector.
  */
 export function createSvgRenderContext(config: SvgRenderContextConfig): SvgRenderContext {
-  const shapeId = { value: 0 };
-
+  const coreCtx = createCoreRenderContext(config);
   return {
-    slideSize: config.slideSize,
-    options: { ...DEFAULT_RENDER_OPTIONS, ...config.options },
-    colorContext: config.colorContext ?? { colorScheme: {}, colorMap: {} },
-    resources: config.resources ?? createEmptyResourceResolver(),
-    warnings: createWarningCollector(),
-    getNextShapeId: () => `shape-${shapeId.value++}`,
+    ...coreCtx,
     defs: createDefsCollector(),
   };
 }

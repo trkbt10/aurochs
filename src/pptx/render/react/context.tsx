@@ -10,17 +10,8 @@ import type { SlideSize, Shape } from "../../domain";
 import type { ColorContext, FontScheme } from "../../domain/resolution";
 import type { ShapeId, Pixels } from "../../domain/types";
 import { px } from "../../domain/types";
-import type {
-  RenderOptions,
-  ResolvedBackgroundFill,
-  ResourceResolver,
-  WarningCollector,
-} from "../core/types";
-import { DEFAULT_RENDER_OPTIONS } from "../core/types";
-import {
-  createEmptyResourceResolver,
-  createWarningCollector,
-} from "../core/context";
+import type { RenderContext, RenderOptions, ResolvedBackgroundFill, ResourceResolver } from "../context";
+import { createEmptyResourceResolver, createWarningCollector, DEFAULT_RENDER_OPTIONS } from "../context";
 
 // =============================================================================
 // Types
@@ -28,46 +19,13 @@ import {
 
 /**
  * React-specific render context.
- * Similar to CoreRenderContext but tailored for React component tree.
+ * Extends RenderContext with React-specific fields.
  */
-export type ReactRenderContext = {
-  /** Slide dimensions */
-  readonly slideSize: SlideSize;
-
-  /** Render options */
-  readonly options: RenderOptions;
-
-  /** Color resolution context */
-  readonly colorContext: ColorContext;
-
-  /** Resource resolver */
-  readonly resources: ResourceResolver;
-
-  /** Warning collector */
-  readonly warnings: WarningCollector;
-
-  /**
-   * Pre-resolved background fill (after slide → layout → master inheritance).
-   */
-  readonly resolvedBackground?: ResolvedBackgroundFill;
-
-  /**
-   * Font scheme for resolving theme font references.
-   */
-  readonly fontScheme?: FontScheme;
-
+export type ReactRenderContext = RenderContext & {
   /**
    * Shape ID currently being edited (text should be hidden).
    */
   readonly editingShapeId?: ShapeId;
-
-  /**
-   * Non-placeholder shapes from slide layout.
-   * These are decorative shapes that should be rendered behind slide content.
-   *
-   * @see ECMA-376 Part 1, Section 19.3.1.39 (sldLayout)
-   */
-  readonly layoutShapes?: readonly Shape[];
 };
 
 /**
@@ -115,6 +73,9 @@ export function RenderProvider({
     [resources],
   );
 
+  // Shape ID counter for unique IDs
+  const shapeIdRef = useMemo(() => ({ value: 0 }), []);
+
   const ctx = useMemo<ReactRenderContext>(
     () => ({
       slideSize,
@@ -122,12 +83,13 @@ export function RenderProvider({
       colorContext: colorContext ?? { colorScheme: {}, colorMap: {} },
       resources: resolvedResources,
       warnings: createWarningCollector(),
+      getNextShapeId: () => `shape-${shapeIdRef.value++}`,
       resolvedBackground,
       fontScheme,
       editingShapeId,
       layoutShapes,
     }),
-    [slideSize, colorContext, resolvedResources, fontScheme, options, resolvedBackground, editingShapeId, layoutShapes],
+    [slideSize, colorContext, resolvedResources, fontScheme, options, resolvedBackground, editingShapeId, layoutShapes, shapeIdRef],
   );
 
   return (
@@ -168,11 +130,13 @@ export function useRenderResources(): ResourceResolver {
  * Create a default render context for testing.
  */
 export function createDefaultReactRenderContext(): ReactRenderContext {
+  let shapeId = 0;
   return {
     slideSize: { width: px(960) as Pixels, height: px(540) as Pixels },
     options: DEFAULT_RENDER_OPTIONS,
     colorContext: { colorScheme: {}, colorMap: {} },
     resources: createEmptyResourceResolver(),
     warnings: createWarningCollector(),
+    getNextShapeId: () => `shape-${shapeId++}`,
   };
 }

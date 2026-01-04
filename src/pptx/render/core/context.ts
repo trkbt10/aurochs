@@ -57,17 +57,26 @@ export function createWarningCollector(): WarningCollector {
 // =============================================================================
 
 /**
- * Configuration for creating a core render context
+ * Configuration for creating a core render context.
+ *
+ * This is the unified configuration type used by all render context factories.
+ * All optional fields have sensible defaults when not provided.
  */
 export type CoreRenderContextConfig = {
-  slideSize: SlideSize;
-  options?: Partial<RenderOptions>;
-  colorContext?: ColorContext;
-  resources?: ResourceResolver;
+  readonly slideSize: SlideSize;
+  readonly options?: Partial<RenderOptions>;
+  readonly colorContext?: ColorContext;
+  readonly resources?: ResourceResolver;
+  readonly fontScheme?: FontScheme;
+  readonly resolvedBackground?: ResolvedBackgroundFill;
+  readonly layoutShapes?: readonly Shape[];
 };
 
 /**
- * Create a core render context (format-agnostic)
+ * Create a core render context (format-agnostic).
+ *
+ * This is the primary factory for creating render contexts.
+ * HTML and SVG contexts extend this with format-specific features.
  */
 export function createCoreRenderContext(config: CoreRenderContextConfig): CoreRenderContext {
   const shapeId = { value: 0 };
@@ -79,6 +88,9 @@ export function createCoreRenderContext(config: CoreRenderContextConfig): CoreRe
     resources: config.resources ?? createEmptyResourceResolver(),
     warnings: createWarningCollector(),
     getNextShapeId: () => `shape-${shapeId.value++}`,
+    fontScheme: config.fontScheme,
+    resolvedBackground: config.resolvedBackground,
+    layoutShapes: config.layoutShapes,
   };
 }
 

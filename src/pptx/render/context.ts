@@ -1,14 +1,10 @@
 /**
  * @file Render context for PPTX processing
  *
- * Aggregates core and html modules for convenient access.
+ * Unified RenderContext used by all renderers (HTML, SVG, React).
  */
 
-import type { SlideSize } from "../domain";
-import type { ColorContext, FontScheme } from "../domain/resolution";
-import type { RenderOptions, ResolvedBackgroundFill, ResourceResolver } from "./core";
-
-// Core types
+// Core types - single source of truth
 export type {
   RenderDialect,
   LineSpacingMode,
@@ -18,51 +14,51 @@ export type {
   RenderWarning,
   WarningCollector,
   ResolvedBackgroundFill,
+  CoreRenderContext,
+  CoreRenderContextConfig,
 } from "./core";
 
 export {
   DEFAULT_RENDER_OPTIONS,
   createEmptyResourceResolver,
   createWarningCollector,
+  createCoreRenderContext,
+  createEmptyCoreRenderContext,
 } from "./core";
 
-// HTML types
-export type { StyleCollector } from "./html/context";
-export { createStyleCollector } from "./html/context";
-
 // =============================================================================
-// Render Context
+// Unified Render Context
 // =============================================================================
 
-import type { HtmlRenderContext } from "./html/context";
+import type { CoreRenderContext, CoreRenderContextConfig } from "./core";
+import { createCoreRenderContext, createEmptyCoreRenderContext } from "./core";
 
 /**
- * Render context for slide rendering (HTML output)
+ * Unified render context used by all renderers.
+ *
+ * This is the single context type for HTML, SVG, and React rendering.
+ * Format-specific utilities (StyleCollector, DefsCollector) are created
+ * internally by each renderer as needed.
  */
-export type RenderContext = HtmlRenderContext;
-
-import {
-  createEmptyHtmlRenderContext,
-  createHtmlRenderContext,
-} from "./html/context";
+export type RenderContext = CoreRenderContext;
 
 /**
- * Create an empty render context for testing
+ * Configuration for creating render context.
  */
-export function createEmptyRenderContext(): RenderContext {
-  return createEmptyHtmlRenderContext();
+export type RenderContextConfig = CoreRenderContextConfig;
+
+/**
+ * Create a render context.
+ *
+ * This is the primary factory for all rendering contexts.
+ */
+export function createRenderContext(config: RenderContextConfig): RenderContext {
+  return createCoreRenderContext(config);
 }
 
 /**
- * Create a render context with options
+ * Create an empty render context for testing.
  */
-export function createRenderContext(config: {
-  slideSize: SlideSize;
-  options?: Partial<RenderOptions>;
-  colorContext?: ColorContext;
-  resources?: ResourceResolver;
-  fontScheme?: FontScheme;
-  resolvedBackground?: ResolvedBackgroundFill;
-}): RenderContext {
-  return createHtmlRenderContext(config);
+export function createEmptyRenderContext(): RenderContext {
+  return createEmptyCoreRenderContext();
 }

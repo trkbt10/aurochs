@@ -16,7 +16,6 @@ import { createParseContext } from "../../parser/context";
 import { renderSlide } from "../../render/html/slide";
 import { renderSlideSvg } from "../../render/svg/renderer";
 import { createRenderContextFromSlideContext } from "../../render/core/context";
-import { createStyleCollector } from "../../render/context";
 import { getBackgroundFillData } from "../../core/dml/render/background";
 import { enrichSlideContent, type FileReader } from "../../parser/slide/external-content-loader";
 
@@ -124,12 +123,10 @@ export function renderSlideIntegrated(
 
   // Step 4: Render Slide domain object → HTML
   // Pass resolved background and layout shapes through render context
-  // Note: HTML rendering requires StyleCollector, so we add it to CoreRenderContext
-  const coreCtx = createRenderContextFromSlideContext(ctx, slideSize, {
+  const renderCtx = createRenderContextFromSlideContext(ctx, slideSize, {
     resolvedBackground,
     layoutShapes,
   });
-  const renderCtx = { ...coreCtx, styles: createStyleCollector() };
   const result = renderSlide(parsedSlide, renderCtx);
 
   return {
@@ -279,12 +276,10 @@ export function renderSlideSvgIntegrated(
 
   // Step 5: Render Slide domain object → SVG
   // Pass resolved background and layout shapes through render context
-  // Note: SVG rendering doesn't use StyleCollector but type requires it
-  const coreCtx = createRenderContextFromSlideContext(ctx, slideSize, {
+  const renderCtx = createRenderContextFromSlideContext(ctx, slideSize, {
     resolvedBackground,
     layoutShapes,
   });
-  const renderCtx = { ...coreCtx, styles: createStyleCollector() };
   const result = renderSlideSvg(enrichedSlide, renderCtx);
 
   return {

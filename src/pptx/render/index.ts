@@ -84,16 +84,20 @@ export {
 // Context
 // =============================================================================
 
-export type { RenderContext, StyleCollector } from "./context";
+export type { RenderContext, RenderContextConfig } from "./context";
 
-export { createEmptyRenderContext, createRenderContext, createStyleCollector } from "./context";
+export { createEmptyRenderContext, createRenderContext } from "./context";
 
 // =============================================================================
-// HTML Utilities
+// HTML Utilities (backward compatibility)
 // =============================================================================
 
-export type { HtmlString, HtmlRenderContext } from "./html/index";
+export type { HtmlString } from "./html/index";
 
+/** @deprecated Use RenderContext */
+export type { HtmlRenderContext } from "./html/index";
+
+/** @deprecated Use createRenderContext */
 export { createHtmlRenderContext, createEmptyHtmlRenderContext, fillToBackground, lineToBorder } from "./html/index";
 
 export {

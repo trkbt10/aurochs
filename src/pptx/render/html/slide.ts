@@ -175,7 +175,7 @@ export function renderSlide(slide: Slide, ctx: RenderContext): SlideRenderResult
 
   return {
     html: slideHtml,
-    styles: ctx.styles.generate(),
+    styles: "", // No dynamic styles currently generated
     warnings: ctx.warnings.getAll(),
   };
 }

@@ -22,14 +22,12 @@ export {
   a,
 } from "./primitives";
 
-// HTML context
+// HTML context (backward compatibility - use RenderContext instead)
 export type {
-  StyleCollector,
   HtmlRenderContext,
   HtmlRenderContextConfig,
 } from "./context";
 export {
-  createStyleCollector,
   createHtmlRenderContext,
   createEmptyHtmlRenderContext,
 } from "./context";
