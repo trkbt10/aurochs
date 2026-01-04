@@ -36,7 +36,7 @@ import { findShapeById, isTopLevelShape } from "../shape/query";
 import { clientToSlideCoords } from "../shape/coords";
 import { withUpdatedTransform } from "../shape/transform";
 import { calculateAlignedBounds } from "../shape/alignment";
-import { renderSlideSvg } from "../../pptx/render/svg/renderer";
+import { renderSlideSvg, renderSlideWithShapeParts } from "../../pptx/render/svg/renderer";
 import { createRenderContext } from "../../pptx/render/context";
 import { createRenderContextFromApiSlide } from "./slide-render-context-builder";
 
@@ -123,159 +123,6 @@ const panelSectionStyle: CSSProperties = {
   flex: 1,
   overflow: "auto",
 };
-
-// =============================================================================
-// Drag Helpers
-// =============================================================================
-
-function applyMoveDelta(
-  drag: { type: "move"; shapeIds: readonly ShapeId[]; initialBounds: Map<ShapeId, { x: number; y: number }> },
-  deltaX: number,
-  deltaY: number,
-  dispatch: (action: PresentationEditorAction) => void
-): void {
-  for (const shapeId of drag.shapeIds) {
-    const initialBounds = drag.initialBounds.get(shapeId);
-    if (!initialBounds) continue;
-
-    dispatch({
-      type: "UPDATE_SHAPE",
-      shapeId,
-      updater: (shape) =>
-        withUpdatedTransform(shape, {
-          x: px(initialBounds.x + deltaX),
-          y: px(initialBounds.y + deltaY),
-        }),
-    });
-  }
-}
-
-function applyResizeDelta(
-  drag: {
-    type: "resize";
-    handle: ResizeHandlePosition;
-    shapeIds: readonly ShapeId[];
-    combinedBounds?: { x: number; y: number; width: number; height: number };
-    initialBoundsMap?: Map<ShapeId, { x: number; y: number; width: number; height: number }>;
-    aspectLocked: boolean;
-  },
-  deltaX: number,
-  deltaY: number,
-  dispatch: (action: PresentationEditorAction) => void
-): void {
-  const { handle, combinedBounds, initialBoundsMap, aspectLocked, shapeIds } = drag;
-  if (!combinedBounds || !initialBoundsMap) return;
-
-  let newBounds = {
-    x: combinedBounds.x as number,
-    y: combinedBounds.y as number,
-    width: combinedBounds.width as number,
-    height: combinedBounds.height as number,
-  };
-  const baseX = combinedBounds.x as number;
-  const baseY = combinedBounds.y as number;
-  const baseW = combinedBounds.width as number;
-  const baseH = combinedBounds.height as number;
-  const aspect = baseW / baseH;
-
-  switch (handle) {
-    case "nw":
-      newBounds = { x: baseX + deltaX, y: baseY + deltaY, width: baseW - deltaX, height: baseH - deltaY };
-      break;
-    case "n":
-      newBounds = { ...newBounds, y: baseY + deltaY, height: baseH - deltaY };
-      break;
-    case "ne":
-      newBounds = { ...newBounds, y: baseY + deltaY, width: baseW + deltaX, height: baseH - deltaY };
-      break;
-    case "e":
-      newBounds = { ...newBounds, width: baseW + deltaX };
-      break;
-    case "se":
-      newBounds = { ...newBounds, width: baseW + deltaX, height: baseH + deltaY };
-      break;
-    case "s":
-      newBounds = { ...newBounds, height: baseH + deltaY };
-      break;
-    case "sw":
-      newBounds = { ...newBounds, x: baseX + deltaX, width: baseW - deltaX, height: baseH + deltaY };
-      break;
-    case "w":
-      newBounds = { ...newBounds, x: baseX + deltaX, width: baseW - deltaX };
-      break;
-  }
-
-  newBounds.width = Math.max(10, newBounds.width);
-  newBounds.height = Math.max(10, newBounds.height);
-
-  if (aspectLocked) {
-    if (handle === "n" || handle === "s") {
-      newBounds.width = newBounds.height * aspect;
-    } else if (handle === "e" || handle === "w") {
-      newBounds.height = newBounds.width / aspect;
-    } else {
-      newBounds.height = newBounds.width / aspect;
-    }
-  }
-
-  const scaleX = newBounds.width / baseW;
-  const scaleY = newBounds.height / baseH;
-
-  for (const shapeId of shapeIds) {
-    const initialBounds = initialBoundsMap.get(shapeId);
-    if (!initialBounds) continue;
-
-    const relX = (initialBounds.x as number) - baseX;
-    const relY = (initialBounds.y as number) - baseY;
-    const newX = newBounds.x + relX * scaleX;
-    const newY = newBounds.y + relY * scaleY;
-    const newWidth = (initialBounds.width as number) * scaleX;
-    const newHeight = (initialBounds.height as number) * scaleY;
-
-    dispatch({
-      type: "UPDATE_SHAPE",
-      shapeId,
-      updater: (shape) =>
-        withUpdatedTransform(shape, {
-          x: px(newX),
-          y: px(newY),
-          width: px(newWidth),
-          height: px(newHeight),
-        }),
-    });
-  }
-}
-
-function applyRotateDelta(
-  drag: {
-    type: "rotate";
-    shapeIds: readonly ShapeId[];
-    startAngle: number;
-    initialRotationsMap?: Map<ShapeId, number>;
-  },
-  currentAngle: number,
-  dispatch: (action: PresentationEditorAction) => void
-): void {
-  const { startAngle, initialRotationsMap, shapeIds } = drag;
-  const angleDelta = currentAngle - startAngle;
-
-  for (const shapeId of shapeIds) {
-    const initialRotation = initialRotationsMap?.get(shapeId);
-    if (initialRotation === undefined) continue;
-
-    let newRotation = (initialRotation + angleDelta) % 360;
-    if (newRotation < 0) newRotation += 360;
-
-    dispatch({
-      type: "UPDATE_SHAPE",
-      shapeId,
-      updater: (shape) =>
-        withUpdatedTransform(shape, {
-          rotation: deg(newRotation),
-        }),
-    });
-  }
-}
 
 // =============================================================================
 // Inner Editor Component
@@ -413,21 +260,21 @@ function EditorContent({
       if (drag.type === "move") {
         const deltaX = coords.x - (drag.startX as number);
         const deltaY = coords.y - (drag.startY as number);
-        applyMoveDelta(drag as any, deltaX, deltaY, dispatch);
+        dispatch({ type: "PREVIEW_MOVE", dx: px(deltaX), dy: px(deltaY) });
       } else if (drag.type === "resize") {
         const deltaX = coords.x - (drag.startX as number);
         const deltaY = coords.y - (drag.startY as number);
-        applyResizeDelta(drag as any, deltaX, deltaY, dispatch);
+        dispatch({ type: "PREVIEW_RESIZE", dx: px(deltaX), dy: px(deltaY) });
       } else if (drag.type === "rotate") {
         const centerX = drag.centerX as number;
         const centerY = drag.centerY as number;
         const currentAngle = Math.atan2(coords.y - centerY, coords.x - centerX) * (180 / Math.PI);
-        applyRotateDelta(drag as any, currentAngle, dispatch);
+        dispatch({ type: "PREVIEW_ROTATE", currentAngle: deg(currentAngle) });
       }
     };
 
     const handlePointerUp = () => {
-      dispatch({ type: "END_DRAG" });
+      dispatch({ type: "COMMIT_DRAG" });
     };
 
     window.addEventListener("pointermove", handlePointerMove);

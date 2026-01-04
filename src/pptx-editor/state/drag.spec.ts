@@ -33,6 +33,7 @@ describe("isDragIdle", () => {
       startY: px(0),
       shapeIds: ["shape1"],
       initialBounds: new Map(),
+      previewDelta: { dx: px(0), dy: px(0) },
     };
     expect(isDragIdle(state)).toBe(false);
   });
@@ -46,6 +47,7 @@ describe("isDragMove", () => {
       startY: px(0),
       shapeIds: ["shape1"],
       initialBounds: new Map(),
+      previewDelta: { dx: px(0), dy: px(0) },
     };
     expect(isDragMove(state)).toBe(true);
   });
@@ -69,6 +71,7 @@ describe("isDragResize", () => {
       aspectLocked: false,
       shapeId: "shape1",
       initialBounds: { x: px(0), y: px(0), width: px(100), height: px(100) },
+      previewDelta: { dx: px(0), dy: px(0) },
     };
     expect(isDragResize(state)).toBe(true);
   });
@@ -80,6 +83,7 @@ describe("isDragResize", () => {
       startY: px(0),
       shapeIds: ["shape1"],
       initialBounds: new Map(),
+      previewDelta: { dx: px(0), dy: px(0) },
     };
     expect(isDragResize(state)).toBe(false);
   });
@@ -97,6 +101,7 @@ describe("isDragRotate", () => {
       centerY: px(50),
       shapeId: "shape1",
       initialRotation: deg(0),
+      previewAngleDelta: deg(0),
     };
     expect(isDragRotate(state)).toBe(true);
   });
@@ -113,6 +118,7 @@ describe("isDragRotate", () => {
       aspectLocked: false,
       shapeId: "shape1",
       initialBounds: { x: px(0), y: px(0), width: px(100), height: px(100) },
+      previewDelta: { dx: px(0), dy: px(0) },
     };
     expect(isDragRotate(state)).toBe(false);
   });
@@ -128,6 +134,7 @@ describe("type guards compose correctly", () => {
         startY: px(0),
         shapeIds: ["shape1"],
         initialBounds: new Map(),
+        previewDelta: { dx: px(0), dy: px(0) },
       },
       {
         type: "resize",
@@ -140,6 +147,7 @@ describe("type guards compose correctly", () => {
         aspectLocked: false,
         shapeId: "shape1",
         initialBounds: { x: px(0), y: px(0), width: px(100), height: px(100) },
+        previewDelta: { dx: px(0), dy: px(0) },
       },
       {
         type: "rotate",
@@ -151,6 +159,7 @@ describe("type guards compose correctly", () => {
         centerY: px(50),
         shapeId: "shape1",
         initialRotation: deg(0),
+        previewAngleDelta: deg(0),
       },
     ];
 

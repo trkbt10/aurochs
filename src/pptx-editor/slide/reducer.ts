@@ -263,6 +263,7 @@ export function slideEditorReducer(
           startY: action.startY,
           shapeIds: state.selection.selectedIds,
           initialBounds,
+          previewDelta: { dx: px(0), dy: px(0) },
         },
       };
     }
@@ -307,6 +308,7 @@ export function slideEditorReducer(
           // Backwards compatibility
           shapeId: primaryId,
           initialBounds: primaryBounds,
+          previewDelta: { dx: px(0), dy: px(0) },
         },
       };
     }
@@ -373,6 +375,7 @@ export function slideEditorReducer(
           // Backwards compatibility
           shapeId: primaryId,
           initialRotation: primaryTransform.rotation,
+          previewAngleDelta: deg(0),
         },
       };
     }

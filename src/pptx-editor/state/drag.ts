@@ -31,6 +31,14 @@ export type IdleDragState = {
 };
 
 /**
+ * Preview delta for move/resize operations
+ */
+export type PreviewDelta = {
+  readonly dx: Pixels;
+  readonly dy: Pixels;
+};
+
+/**
  * Move drag state
  */
 export type MoveDragState = {
@@ -39,6 +47,8 @@ export type MoveDragState = {
   readonly startY: Pixels;
   readonly shapeIds: readonly ShapeId[];
   readonly initialBounds: ReadonlyMap<ShapeId, Bounds>;
+  /** Current preview delta from start position (updated during drag, not committed to history) */
+  readonly previewDelta: PreviewDelta;
 };
 
 /**
@@ -59,6 +69,8 @@ export type ResizeDragState = {
   /** Primary shape ID for backwards compatibility */
   readonly shapeId: ShapeId;
   readonly initialBounds: Bounds;
+  /** Current preview delta from start position (updated during drag, not committed to history) */
+  readonly previewDelta: PreviewDelta;
 };
 
 /**
@@ -79,6 +91,8 @@ export type RotateDragState = {
   /** Primary shape ID for backwards compatibility */
   readonly shapeId: ShapeId;
   readonly initialRotation: Degrees;
+  /** Current preview angle delta from start angle (updated during drag, not committed to history) */
+  readonly previewAngleDelta: Degrees;
 };
 
 /**

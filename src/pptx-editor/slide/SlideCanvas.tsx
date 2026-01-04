@@ -34,7 +34,6 @@ export type SlideCanvasProps = {
   readonly selection: SelectionState;
   /** Drag state */
   readonly drag: DragState;
-  /** Pre-rendered SVG content */
   readonly svgContent?: string;
   /** Slide dimensions */
   readonly width: Pixels;
@@ -84,7 +83,7 @@ function getRotationTransform(
   x: number,
   y: number,
   width: number,
-  height: number
+  height: number,
 ): string | undefined {
   if (rotation === 0) return undefined;
   return `rotate(${rotation}, ${x + width / 2}, ${y + height / 2})`;
@@ -95,7 +94,7 @@ function getRotatedCorners(
   y: number,
   width: number,
   height: number,
-  rotation: number
+  rotation: number,
 ): Array<{ x: number; y: number }> {
   const centerX = x + width / 2;
   const centerY = y + height / 2;
@@ -121,7 +120,7 @@ function getRotatedCorners(
 }
 
 function calculateCombinedBounds(
-  bounds: readonly ShapeBounds[]
+  bounds: readonly ShapeBounds[],
 ): { x: number; y: number; width: number; height: number } | undefined {
   if (bounds.length === 0) return undefined;
 
@@ -197,12 +196,9 @@ export function SlideCanvas({
   }, [svgContent]);
 
   // Collect shape render data for hit areas
-  const shapeRenderData = useMemo(
-    () => collectShapeRenderData(slide.shapes),
-    [slide.shapes]
-  );
+  const shapeRenderData = useMemo(() => collectShapeRenderData(slide.shapes), [slide.shapes]);
 
-  // Get bounds for selected shapes
+  // Get bounds for selected shapes (with preview delta applied during drag)
   const selectedBounds = useMemo(() => {
     const bounds: ShapeBounds[] = [];
 
@@ -213,19 +209,96 @@ export function SlideCanvas({
       const absoluteBounds = getAbsoluteBounds(result.shape, result.parentGroups);
       if (!absoluteBounds) continue;
 
+      let x = absoluteBounds.x;
+      let y = absoluteBounds.y;
+      let width = absoluteBounds.width;
+      let height = absoluteBounds.height;
+      let rotation = absoluteBounds.rotation;
+
+      // Apply preview delta during drag operations
+      if (drag.type === "move" && drag.shapeIds.includes(id)) {
+        const dx = drag.previewDelta.dx as number;
+        const dy = drag.previewDelta.dy as number;
+        const initial = drag.initialBounds.get(id);
+        if (initial) {
+          x = (initial.x as number) + dx;
+          y = (initial.y as number) + dy;
+        }
+      } else if (drag.type === "resize" && drag.shapeIds.includes(id)) {
+        // Calculate preview resize
+        const dx = drag.previewDelta.dx as number;
+        const dy = drag.previewDelta.dy as number;
+        const { handle, combinedBounds: cb, initialBoundsMap, aspectLocked } = drag;
+        const initial = initialBoundsMap.get(id);
+
+        if (initial && cb) {
+          const baseX = cb.x as number;
+          const baseY = cb.y as number;
+          const baseW = cb.width as number;
+          const baseH = cb.height as number;
+
+          let newWidth = baseW;
+          let newHeight = baseH;
+          let newX = baseX;
+          let newY = baseY;
+
+          if (handle.includes("e")) newWidth = baseW + dx;
+          if (handle.includes("w")) {
+            newWidth = baseW - dx;
+            newX = baseX + dx;
+          }
+          if (handle.includes("s")) newHeight = baseH + dy;
+          if (handle.includes("n")) {
+            newHeight = baseH - dy;
+            newY = baseY + dy;
+          }
+
+          newWidth = Math.max(10, newWidth);
+          newHeight = Math.max(10, newHeight);
+
+          if (aspectLocked && baseW > 0 && baseH > 0) {
+            const aspect = baseW / baseH;
+            if (handle === "n" || handle === "s") {
+              newWidth = newHeight * aspect;
+            } else if (handle === "e" || handle === "w") {
+              newHeight = newWidth / aspect;
+            } else {
+              newHeight = newWidth / aspect;
+            }
+          }
+
+          const scaleX = baseW > 0 ? newWidth / baseW : 1;
+          const scaleY = baseH > 0 ? newHeight / baseH : 1;
+
+          const relX = (initial.x as number) - baseX;
+          const relY = (initial.y as number) - baseY;
+          x = newX + relX * scaleX;
+          y = newY + relY * scaleY;
+          width = (initial.width as number) * scaleX;
+          height = (initial.height as number) * scaleY;
+        }
+      } else if (drag.type === "rotate" && drag.shapeIds.includes(id)) {
+        const angleDelta = drag.previewAngleDelta as number;
+        const initialRotation = drag.initialRotationsMap.get(id);
+        if (initialRotation !== undefined) {
+          rotation = ((initialRotation as number) + angleDelta) % 360;
+          if (rotation < 0) rotation += 360;
+        }
+      }
+
       bounds.push({
         id,
-        x: absoluteBounds.x,
-        y: absoluteBounds.y,
-        width: absoluteBounds.width,
-        height: absoluteBounds.height,
-        rotation: absoluteBounds.rotation,
+        x,
+        y,
+        width,
+        height,
+        rotation,
         isPrimary: id === selection.primaryId,
       });
     }
 
     return bounds;
-  }, [slide.shapes, selection.selectedIds, selection.primaryId]);
+  }, [slide.shapes, selection.selectedIds, selection.primaryId, drag]);
 
   const combinedBounds = useMemo(() => {
     if (selectedBounds.length <= 1) return undefined;
@@ -236,7 +309,7 @@ export function SlideCanvas({
 
   const isSelected = useCallback(
     (shapeId: ShapeId) => selection.selectedIds.includes(shapeId),
-    [selection.selectedIds]
+    [selection.selectedIds],
   );
 
   // Handlers
@@ -246,7 +319,7 @@ export function SlideCanvas({
       const addToSelection = e.shiftKey || e.metaKey || e.ctrlKey;
       onSelect(shapeId, addToSelection);
     },
-    [onSelect]
+    [onSelect],
   );
 
   const handleShapeDoubleClick = useCallback(
@@ -257,7 +330,7 @@ export function SlideCanvas({
         onDoubleClick(shapeId);
       }
     },
-    [onDoubleClick]
+    [onDoubleClick],
   );
 
   const handleContainerClick = useCallback(
@@ -267,7 +340,7 @@ export function SlideCanvas({
         onClearSelection();
       }
     },
-    [onClearSelection]
+    [onClearSelection],
   );
 
   const handleSvgBackgroundClick = useCallback(
@@ -284,7 +357,7 @@ export function SlideCanvas({
       }
       onClearSelection();
     },
-    [onClearSelection, creationMode, onCreate, widthNum, heightNum]
+    [onClearSelection, creationMode, onCreate, widthNum, heightNum],
   );
 
   const handlePointerDown = useCallback(
@@ -304,7 +377,7 @@ export function SlideCanvas({
       const coords = clientToSlideCoords(e.clientX, e.clientY, rect, widthNum, heightNum);
       onStartMove(coords.x, coords.y);
     },
-    [widthNum, heightNum, isSelected, onSelect, onStartMove]
+    [widthNum, heightNum, isSelected, onSelect, onStartMove],
   );
 
   const handleResizeStart = useCallback(
@@ -315,7 +388,7 @@ export function SlideCanvas({
       const coords = clientToSlideCoords(e.clientX, e.clientY, rect, widthNum, heightNum);
       onStartResize(handle, coords.x, coords.y, e.shiftKey);
     },
-    [widthNum, heightNum, onStartResize]
+    [widthNum, heightNum, onStartResize],
   );
 
   const handleRotateStart = useCallback(
@@ -326,7 +399,7 @@ export function SlideCanvas({
       const coords = clientToSlideCoords(e.clientX, e.clientY, rect, widthNum, heightNum);
       onStartRotate(coords.x, coords.y);
     },
-    [widthNum, heightNum, onStartRotate]
+    [widthNum, heightNum, onStartRotate],
   );
 
   const handleContextMenu = useCallback(
@@ -340,7 +413,7 @@ export function SlideCanvas({
 
       setContextMenu({ x: e.clientX, y: e.clientY });
     },
-    [isSelected, onSelect]
+    [isSelected, onSelect],
   );
 
   const handleCloseContextMenu = useCallback(() => {
@@ -377,11 +450,7 @@ export function SlideCanvas({
   return (
     <div className={className} style={containerStyle} onClick={handleContainerClick}>
       <div style={innerContainerStyle}>
-        <svg
-          style={svgStyle}
-          viewBox={`0 0 ${width} ${height}`}
-          preserveAspectRatio="xMidYMid meet"
-        >
+        <svg style={svgStyle} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet">
           {/* Background hit area for clicks */}
           <rect
             x={0}
@@ -394,40 +463,39 @@ export function SlideCanvas({
           />
 
           {/* Rendered content layer */}
-          {svgInnerContent && (
-            <g dangerouslySetInnerHTML={{ __html: svgInnerContent }} />
-          )}
+          {svgInnerContent && <g dangerouslySetInnerHTML={{ __html: svgInnerContent }} />}
 
           {/* Fallback renderer (when no svgContent) */}
-          {!svgContent && shapeRenderData.map((shape) => (
-            <g
-              key={`render-${shape.id}`}
-              transform={getRotationTransform(shape.rotation, shape.x, shape.y, shape.width, shape.height)}
-            >
-              <rect
-                x={shape.x}
-                y={shape.y}
-                width={shape.width}
-                height={shape.height}
-                fill={shape.fill ?? "#e0e0e0"}
-                stroke={shape.stroke ?? "#666"}
-                strokeWidth={shape.strokeWidth}
-              />
-              {shape.name && (
-                <text
-                  x={shape.x + shape.width / 2}
-                  y={shape.y + shape.height / 2}
-                  textAnchor="middle"
-                  dominantBaseline="middle"
-                  fontSize={Math.min(14, shape.width / 10, shape.height / 3)}
-                  fill="#333"
-                  style={{ pointerEvents: "none" }}
-                >
-                  {shape.name}
-                </text>
-              )}
-            </g>
-          ))}
+          {!svgContent &&
+            shapeRenderData.map((shape) => (
+              <g
+                key={`render-${shape.id}`}
+                transform={getRotationTransform(shape.rotation, shape.x, shape.y, shape.width, shape.height)}
+              >
+                <rect
+                  x={shape.x}
+                  y={shape.y}
+                  width={shape.width}
+                  height={shape.height}
+                  fill={shape.fill ?? "#e0e0e0"}
+                  stroke={shape.stroke ?? "#666"}
+                  strokeWidth={shape.strokeWidth}
+                />
+                {shape.name && (
+                  <text
+                    x={shape.x + shape.width / 2}
+                    y={shape.y + shape.height / 2}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fontSize={Math.min(14, shape.width / 10, shape.height / 3)}
+                    fill="#333"
+                    style={{ pointerEvents: "none" }}
+                  >
+                    {shape.name}
+                  </text>
+                )}
+              </g>
+            ))}
 
           {/* Hit areas for each shape */}
           {shapeRenderData.map((shape) => (

@@ -99,6 +99,8 @@ const listStyle: CSSProperties = {
 
 const thumbnailWrapperStyle: CSSProperties = {
   position: "relative",
+  width: "100%",
+  flexShrink: 0,
   cursor: "pointer",
   borderRadius: "4px",
   overflow: "hidden",
@@ -108,13 +110,11 @@ const thumbnailWrapperStyle: CSSProperties = {
 function getThumbnailStyle(aspectRatio: string): CSSProperties {
   return {
     width: "100%",
+    height: "auto",
     aspectRatio,
     backgroundColor: "#fff",
     border: "2px solid transparent",
     borderRadius: "4px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
     boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
     transition: "border-color 0.15s ease",
     position: "relative",
@@ -471,6 +471,7 @@ export function SlideThumbnailPanel({
   renderThumbnail,
 }: SlideThumbnailPanelProps) {
   const { document, dispatch, activeSlide } = usePresentationEditor();
+  const listRef = useRef<HTMLDivElement>(null);
   const activeItemRef = useRef<HTMLDivElement>(null);
   const aspectRatio = String(slideWidth / slideHeight);
   const [contextMenu, setContextMenu] = useState<ContextMenuState>({
@@ -487,12 +488,22 @@ export function SlideThumbnailPanel({
 
   // Scroll active slide into view when it changes
   useEffect(() => {
-    if (activeItemRef.current) {
-      activeItemRef.current.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest",
-      });
-    }
+    const item = activeItemRef.current;
+    const list = listRef.current;
+    if (!item || !list) return;
+
+    // Use requestAnimationFrame to ensure DOM is ready
+    requestAnimationFrame(() => {
+      const itemRect = item.getBoundingClientRect();
+      const listRect = list.getBoundingClientRect();
+
+      // Check if item is outside visible area
+      if (itemRect.top < listRect.top) {
+        list.scrollTop -= listRect.top - itemRect.top + 8;
+      } else if (itemRect.bottom > listRect.bottom) {
+        list.scrollTop += itemRect.bottom - listRect.bottom + 8;
+      }
+    });
   }, [activeSlide?.id]);
 
   const handleSlideClick = useCallback(
@@ -649,7 +660,7 @@ export function SlideThumbnailPanel({
       </div>
 
       {/* Slide list */}
-      <div style={listStyle}>
+      <div ref={listRef} style={listStyle}>
         {document.slides.map((slideWithId, index) => {
           const isActive = slideWithId.id === activeSlide?.id;
           return (

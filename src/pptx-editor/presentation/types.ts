@@ -6,7 +6,7 @@
  */
 
 import type { Slide, Shape, Presentation, TextBody } from "../../pptx/domain";
-import type { ShapeId, Pixels } from "../../pptx/domain/types";
+import type { ShapeId, Pixels, Degrees } from "../../pptx/domain/types";
 import type { ColorContext, FontScheme } from "../../pptx/domain/resolution";
 import type { ResourceResolver, ResolvedBackgroundFill } from "../../pptx/render/core";
 import type { Slide as ApiSlide } from "../../pptx/types/api";
@@ -218,6 +218,14 @@ export type PresentationEditorAction =
     }
   | { readonly type: "START_ROTATE"; readonly startX: Pixels; readonly startY: Pixels }
   | { readonly type: "END_DRAG" }
+
+  // Drag preview (updates visual state without adding to history)
+  | { readonly type: "PREVIEW_MOVE"; readonly dx: Pixels; readonly dy: Pixels }
+  | { readonly type: "PREVIEW_RESIZE"; readonly dx: Pixels; readonly dy: Pixels }
+  | { readonly type: "PREVIEW_ROTATE"; readonly currentAngle: Degrees }
+
+  // Drag commit (applies preview delta and adds single history entry)
+  | { readonly type: "COMMIT_DRAG" }
 
   // Undo/Redo (presentation-wide)
   | { readonly type: "UNDO" }

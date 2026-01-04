@@ -478,6 +478,7 @@ export function presentationEditorReducer(
           startY: action.startY,
           shapeIds: state.shapeSelection.selectedIds,
           initialBounds,
+          previewDelta: { dx: px(0), dy: px(0) },
         },
       };
     }
@@ -516,6 +517,7 @@ export function presentationEditorReducer(
           aspectLocked: action.aspectLocked,
           shapeId: primaryId,
           initialBounds: primaryBounds ?? combinedBounds,
+          previewDelta: { dx: px(0), dy: px(0) },
         },
       };
     }
@@ -548,9 +550,9 @@ export function presentationEditorReducer(
       const primaryTransform = primaryShape ? getShapeTransform(primaryShape) : undefined;
 
       // Calculate start angle from mouse position relative to center
-      const dx = (action.startX as number) - centerResult.centerX;
-      const dy = (action.startY as number) - centerResult.centerY;
-      const startAngle = deg(Math.atan2(dy, dx) * (180 / Math.PI));
+      const dxAngle = (action.startX as number) - centerResult.centerX;
+      const dyAngle = (action.startY as number) - centerResult.centerY;
+      const startAngle = deg(Math.atan2(dyAngle, dxAngle) * (180 / Math.PI));
 
       return {
         ...state,
@@ -564,6 +566,7 @@ export function presentationEditorReducer(
           centerY: px(centerResult.centerY),
           shapeId: primaryId,
           initialRotation: primaryTransform?.rotation ?? deg(0),
+          previewAngleDelta: deg(0),
         },
       };
     }
@@ -571,6 +574,222 @@ export function presentationEditorReducer(
     case "END_DRAG": {
       return {
         ...state,
+        drag: createIdleDragState(),
+      };
+    }
+
+    // =========================================================================
+    // Drag preview (updates visual state without adding to history)
+    // =========================================================================
+
+    case "PREVIEW_MOVE": {
+      if (state.drag.type !== "move") {
+        return state;
+      }
+      return {
+        ...state,
+        drag: {
+          ...state.drag,
+          previewDelta: { dx: action.dx, dy: action.dy },
+        },
+      };
+    }
+
+    case "PREVIEW_RESIZE": {
+      if (state.drag.type !== "resize") {
+        return state;
+      }
+      return {
+        ...state,
+        drag: {
+          ...state.drag,
+          previewDelta: { dx: action.dx, dy: action.dy },
+        },
+      };
+    }
+
+    case "PREVIEW_ROTATE": {
+      if (state.drag.type !== "rotate") {
+        return state;
+      }
+      const angleDelta = deg(
+        (action.currentAngle as number) - (state.drag.startAngle as number)
+      );
+      return {
+        ...state,
+        drag: {
+          ...state.drag,
+          previewAngleDelta: angleDelta,
+        },
+      };
+    }
+
+    // =========================================================================
+    // Drag commit (applies preview delta and adds single history entry)
+    // =========================================================================
+
+    case "COMMIT_DRAG": {
+      const { drag } = state;
+      if (drag.type === "idle" || drag.type === "create") {
+        return state;
+      }
+
+      const activeSlide = getActiveSlide(state);
+      if (!activeSlide) {
+        return { ...state, drag: createIdleDragState() };
+      }
+
+      let newShapes = activeSlide.slide.shapes;
+
+      if (drag.type === "move") {
+        const dxVal = drag.previewDelta.dx as number;
+        const dyVal = drag.previewDelta.dy as number;
+
+        // Skip if no actual movement
+        if (dxVal === 0 && dyVal === 0) {
+          return { ...state, drag: createIdleDragState() };
+        }
+
+        for (const shapeId of drag.shapeIds) {
+          const initial = drag.initialBounds.get(shapeId);
+          if (!initial) continue;
+
+          newShapes = updateShapeById(newShapes, shapeId, (shape) =>
+            withUpdatedTransform(shape, {
+              x: px(initial.x + dxVal),
+              y: px(initial.y + dyVal),
+            })
+          );
+        }
+      } else if (drag.type === "resize") {
+        const dxVal = drag.previewDelta.dx as number;
+        const dyVal = drag.previewDelta.dy as number;
+
+        // Skip if no actual resize
+        if (dxVal === 0 && dyVal === 0) {
+          return { ...state, drag: createIdleDragState() };
+        }
+
+        // Apply resize using the same logic as applyResizeDelta
+        const { handle, initialBoundsMap, combinedBounds, aspectLocked, shapeIds } = drag;
+        const baseX = combinedBounds.x as number;
+        const baseY = combinedBounds.y as number;
+        const baseWidth = combinedBounds.width as number;
+        const baseHeight = combinedBounds.height as number;
+
+        let newWidth = baseWidth;
+        let newHeight = baseHeight;
+        let newX = baseX;
+        let newY = baseY;
+
+        // Calculate new bounds based on handle
+        if (handle.includes("e")) {
+          newWidth = baseWidth + dxVal;
+        }
+        if (handle.includes("w")) {
+          newWidth = baseWidth - dxVal;
+          newX = baseX + dxVal;
+        }
+        if (handle.includes("s")) {
+          newHeight = baseHeight + dyVal;
+        }
+        if (handle.includes("n")) {
+          newHeight = baseHeight - dyVal;
+          newY = baseY + dyVal;
+        }
+
+        // Ensure minimum size
+        const minSize = 10;
+        if (newWidth < minSize) {
+          if (handle.includes("w")) {
+            newX = baseX + baseWidth - minSize;
+          }
+          newWidth = minSize;
+        }
+        if (newHeight < minSize) {
+          if (handle.includes("n")) {
+            newY = baseY + baseHeight - minSize;
+          }
+          newHeight = minSize;
+        }
+
+        // Apply aspect ratio lock if needed
+        if (aspectLocked && baseWidth > 0 && baseHeight > 0) {
+          const aspectRatio = baseWidth / baseHeight;
+          if (handle === "n" || handle === "s") {
+            newWidth = newHeight * aspectRatio;
+          } else if (handle === "e" || handle === "w") {
+            newHeight = newWidth / aspectRatio;
+          } else {
+            // Corner handles: use the larger delta
+            const widthRatio = newWidth / baseWidth;
+            const heightRatio = newHeight / baseHeight;
+            if (widthRatio > heightRatio) {
+              newHeight = newWidth / aspectRatio;
+            } else {
+              newWidth = newHeight * aspectRatio;
+            }
+          }
+        }
+
+        // Calculate scale factors
+        const scaleX = baseWidth > 0 ? newWidth / baseWidth : 1;
+        const scaleY = baseHeight > 0 ? newHeight / baseHeight : 1;
+
+        // Apply to each shape
+        for (const shapeId of shapeIds) {
+          const initial = initialBoundsMap.get(shapeId);
+          if (!initial) continue;
+
+          const relX = (initial.x as number) - baseX;
+          const relY = (initial.y as number) - baseY;
+          const shapeNewX = newX + relX * scaleX;
+          const shapeNewY = newY + relY * scaleY;
+          const shapeNewWidth = (initial.width as number) * scaleX;
+          const shapeNewHeight = (initial.height as number) * scaleY;
+
+          newShapes = updateShapeById(newShapes, shapeId, (shape) =>
+            withUpdatedTransform(shape, {
+              x: px(shapeNewX),
+              y: px(shapeNewY),
+              width: px(shapeNewWidth),
+              height: px(shapeNewHeight),
+            })
+          );
+        }
+      } else if (drag.type === "rotate") {
+        const angleDeltaVal = drag.previewAngleDelta as number;
+
+        // Skip if no actual rotation
+        if (angleDeltaVal === 0) {
+          return { ...state, drag: createIdleDragState() };
+        }
+
+        for (const shapeId of drag.shapeIds) {
+          const initialRotation = drag.initialRotationsMap.get(shapeId);
+          if (initialRotation === undefined) continue;
+
+          let newRotation = ((initialRotation as number) + angleDeltaVal) % 360;
+          if (newRotation < 0) newRotation += 360;
+
+          newShapes = updateShapeById(newShapes, shapeId, (shape) =>
+            withUpdatedTransform(shape, {
+              rotation: deg(newRotation),
+            })
+          );
+        }
+      }
+
+      const newSlide: Slide = { ...activeSlide.slide, shapes: newShapes };
+      const newDoc = updateActiveSlideInDocument(
+        state.documentHistory.present,
+        state.activeSlideId,
+        () => newSlide
+      );
+
+      return {
+        ...state,
+        documentHistory: pushHistory(state.documentHistory, newDoc),
         drag: createIdleDragState(),
       };
     }
