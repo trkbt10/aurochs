@@ -6,7 +6,7 @@
  * @see ECMA-376 Part 1, Section 19.6.1 (sldSyncPr)
  */
 
-import type { SlideSyncProperties } from "../../domain/slide";
+import type { SlideSyncProperties } from "../../domain/presentation";
 import { getAttr, type XmlElement } from "../../../xml/index";
 
 /**

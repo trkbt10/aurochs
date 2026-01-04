@@ -5,23 +5,100 @@
  */
 
 import type { Color, Fill, Line } from "./color";
-import type {
-  Degrees,
-  Effects,
-  FontStyle,
-  Hyperlink,
-  HyperlinkSound,
-  Percent,
-  Pixels,
-  Points,
-  TextShapeType,
-  TextAlign,
-  TextAnchor,
-  TextCaps,
-  TextDirection,
-  TextTypeface,
-  VerticalAlign,
-} from "./types";
+import type { Effects } from "./effects";
+import type { Hyperlink, HyperlinkSound } from "./resource";
+import type { Degrees, Percent, Pixels, Points } from "./types";
+
+// =============================================================================
+// Text Alignment Types
+// =============================================================================
+
+/**
+ * Horizontal text alignment
+ * @see ECMA-376 Part 1, Section 21.1.2.1.25 (ST_TextAlignType)
+ */
+export type TextAlign = "left" | "center" | "right" | "justify" | "justifyLow" | "distributed" | "thaiDistributed";
+
+/**
+ * Vertical text anchor
+ * @see ECMA-376 Part 1, Section 21.1.2.1.3 (ST_TextAnchoringType)
+ */
+export type TextAnchor = "top" | "center" | "bottom";
+
+/**
+ * Font style (normal/italic)
+ */
+export type FontStyle = "normal" | "italic";
+
+/**
+ * Text capitalization
+ * @see ECMA-376 Part 1, Section 21.1.2.1.6 (ST_TextCapsType)
+ */
+export type TextCaps = "none" | "small" | "all";
+
+/**
+ * Vertical text alignment (superscript/subscript)
+ * @see ECMA-376 Part 1, Section 21.1.2.3.3 (baseline attribute)
+ */
+export type VerticalAlign = "baseline" | "superscript" | "subscript";
+
+/**
+ * Text direction
+ */
+export type TextDirection = "ltr" | "rtl";
+
+/**
+ * Text typeface
+ * @see ECMA-376 Part 1, Section 20.1.10.81 (ST_TextTypeface)
+ */
+export type TextTypeface = string;
+
+/**
+ * Preset text shape type
+ * @see ECMA-376 Part 1, Section 20.1.10.76 (ST_TextShapeType)
+ */
+export type TextShapeType =
+  | "textNoShape"
+  | "textPlain"
+  | "textStop"
+  | "textTriangle"
+  | "textTriangleInverted"
+  | "textChevron"
+  | "textChevronInverted"
+  | "textRingInside"
+  | "textRingOutside"
+  | "textArchUp"
+  | "textArchDown"
+  | "textCircle"
+  | "textButton"
+  | "textArchUpPour"
+  | "textArchDownPour"
+  | "textCirclePour"
+  | "textButtonPour"
+  | "textCurveUp"
+  | "textCurveDown"
+  | "textCanUp"
+  | "textCanDown"
+  | "textWave1"
+  | "textWave2"
+  | "textDoubleWave1"
+  | "textWave4"
+  | "textInflate"
+  | "textDeflate"
+  | "textInflateBottom"
+  | "textDeflateBottom"
+  | "textInflateTop"
+  | "textDeflateTop"
+  | "textDeflateInflate"
+  | "textDeflateInflateDeflate"
+  | "textFadeRight"
+  | "textFadeLeft"
+  | "textFadeUp"
+  | "textFadeDown"
+  | "textSlantUp"
+  | "textSlantDown"
+  | "textCascadeUp"
+  | "textCascadeDown";
 
 // =============================================================================
 // Text Body Types

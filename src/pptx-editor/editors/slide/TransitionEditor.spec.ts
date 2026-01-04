@@ -4,7 +4,7 @@
  * Tests the TransitionEditor handles slide transitions correctly.
  */
 
-import type { SlideTransition } from "../../../pptx/domain/slide";
+import type { SlideTransition } from "../../../pptx/domain/transition";
 import { createDefaultTransition } from "./TransitionEditor";
 
 describe("TransitionEditor: Transition handling", () => {

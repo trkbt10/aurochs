@@ -5,7 +5,7 @@
  */
 
 import type { CSSProperties } from "react";
-import type { SlideTransition, TransitionType } from "../../../pptx/domain/slide";
+import type { SlideTransition, TransitionType } from "../../../pptx/domain/transition";
 import type { EditorProps } from "../../types";
 import type { SelectOption } from "../../types";
 import { FieldGroup, FieldRow } from "../../ui/layout";

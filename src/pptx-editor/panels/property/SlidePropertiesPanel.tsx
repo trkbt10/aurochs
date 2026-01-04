@@ -4,7 +4,8 @@
  * Displays property editors for slide-level settings when no shape is selected.
  */
 
-import type { Background, SlideTransition } from "../../../pptx/domain/slide";
+import type { Background } from "../../../pptx/domain/slide";
+import type { SlideTransition } from "../../../pptx/domain/transition";
 import { Accordion } from "../../ui/layout/Accordion";
 import { BackgroundEditor, TransitionEditor } from "../../editors/index";
 

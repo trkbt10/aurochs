@@ -12,12 +12,14 @@ import type {
   BrowseShowProperties,
   KioskShowProperties,
   PresentationProperties,
+  ShowProperties,
+  SlideShowRange,
+} from "../../domain/presentation";
+import type {
   PrintColorMode,
   PrintWhat,
   PrintProperties,
-  ShowProperties,
-  SlideShowRange,
-} from "../../domain/slide";
+} from "../../domain/print";
 import type { Color } from "../../domain/color";
 import { parseColor, parseColorFromParent } from "../graphics/color-parser";
 

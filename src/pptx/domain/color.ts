@@ -349,3 +349,34 @@ export type Line = {
   readonly join: "bevel" | "miter" | "round";
   readonly miterLimit?: number;
 };
+
+// =============================================================================
+// Color Mapping Types
+// =============================================================================
+
+/**
+ * Color mapping scheme
+ * @see ECMA-376 Part 1, Section 20.1.6.3 (clrMap)
+ */
+export type ColorMapping = {
+  readonly bg1?: string;
+  readonly tx1?: string;
+  readonly bg2?: string;
+  readonly tx2?: string;
+  readonly accent1?: string;
+  readonly accent2?: string;
+  readonly accent3?: string;
+  readonly accent4?: string;
+  readonly accent5?: string;
+  readonly accent6?: string;
+  readonly hlink?: string;
+  readonly folHlink?: string;
+};
+
+/**
+ * Color map override
+ * @see ECMA-376 Part 1, Section 19.3.1.6 (clrMapOvr)
+ */
+export type ColorMapOverride =
+  | { readonly type: "none" }
+  | { readonly type: "override"; readonly mappings: ColorMapping };

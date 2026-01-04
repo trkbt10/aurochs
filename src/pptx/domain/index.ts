@@ -22,27 +22,73 @@
  */
 
 // =============================================================================
-// Common Types
+// Base Types (Measurement Units)
 // =============================================================================
 
 export type {
-  // Measurement types
+  Brand,
   Pixels,
   Degrees,
   Percent,
   Points,
-  // Geometry types
+} from "./types";
+
+export { px, deg, pct, pt } from "./types";
+
+// =============================================================================
+// Geometry Types
+// =============================================================================
+
+export type {
   Point,
   Size,
   Bounds,
   EffectExtent,
   Transform,
   GroupTransform,
-  // Text alignment types
-  TextAlign,
-  TextAnchor,
-  FontStyle,
-  TextTypeface,
+} from "./geometry";
+
+// =============================================================================
+// Resource Types
+// =============================================================================
+
+export type {
+  ResourceId,
+  ResourcePath,
+  Hyperlink,
+  HyperlinkSound,
+} from "./resource";
+
+// =============================================================================
+// Line Property Types
+// =============================================================================
+
+export type {
+  LineEndType,
+  LineEndSize,
+  LineCap,
+  LineJoin,
+  CompoundLine,
+  DashStyle,
+} from "./line";
+
+// =============================================================================
+// Shape Lock Types
+// =============================================================================
+
+export type {
+  GroupLocks,
+  ConnectorLocks,
+  PictureLocks,
+  ShapeLocks,
+  ContentPartLocks,
+} from "./shape-locks";
+
+// =============================================================================
+// Positioning Types
+// =============================================================================
+
+export type {
   AlignH,
   AlignV,
   RelFromH,
@@ -56,34 +102,64 @@ export type {
   WrapThrough,
   WrapTight,
   WrapTopAndBottom,
-  GroupLocks,
-  ConnectorLocks,
-  PictureLocks,
-  ShapeLocks,
-  ContentPartLocks,
-  ContentPart,
-  LinkedTextbox,
-  TextboxInfo,
+} from "./positioning";
+
+// =============================================================================
+// Anchor Types
+// =============================================================================
+
+export type {
   AbsoluteAnchor,
   AnchorClientData,
   AnchorMarker,
   OneCellAnchor,
   TwoCellAnchor,
   EditAs,
-  TextCaps,
-  VerticalAlign,
-  TextDirection,
-  // Line property types
-  LineEndType,
-  LineEndSize,
-  LineCap,
-  LineJoin,
-  CompoundLine,
-  DashStyle,
-  // Shape geometry types
-  PresetShapeType,
-  AdjustValue,
-  // Effect types
+  ContentPart,
+  LinkedTextbox,
+  TextboxInfo,
+} from "./anchor";
+
+// =============================================================================
+// Appearance Types
+// =============================================================================
+
+export type {
+  BlackWhiteMode,
+  BlipCompression,
+  OnOffStyleType,
+  RectAlignment,
+  FillEffectType,
+} from "./appearance";
+
+// =============================================================================
+// Style Reference Types
+// =============================================================================
+
+export type {
+  ColorSchemeIndex,
+  SchemeColorValue,
+  FontCollectionIndex,
+  StyleMatrixColumnIndex,
+  ShapeId,
+} from "./style-ref";
+
+// =============================================================================
+// 3D Types
+// =============================================================================
+
+export type {
+  LightRigDirection,
+  LightRigType,
+  PresetCameraType,
+  PresetMaterialType,
+} from "./three-d";
+
+// =============================================================================
+// Effect Types
+// =============================================================================
+
+export type {
   ShadowEffect,
   GlowEffect,
   ReflectionEffect,
@@ -100,37 +176,17 @@ export type {
   BlendEffect,
   BlendMode,
   EffectContainerType,
-  BlackWhiteMode,
-  BlipCompression,
-  ColorSchemeIndex,
-  SchemeColorValue,
-  FontCollectionIndex,
-  LightRigDirection,
-  LightRigType,
-  OnOffStyleType,
-  PresetCameraType,
-  PresetMaterialType,
-  RectAlignment,
-  FillEffectType,
-  ShapeId,
-  StyleMatrixColumnIndex,
-  TextShapeType,
+  EffectContainer,
+  ColorChangeEffect,
+  ColorReplaceEffect,
+  DuotoneEffect,
   FillOverlayEffect,
   GrayscaleEffect,
   PresetShadowEffect,
   PresetShadowValue,
   RelativeOffsetEffect,
-  EffectContainer,
-  ColorChangeEffect,
-  ColorReplaceEffect,
-  DuotoneEffect,
   Effects,
-  // Resource types
-  ResourceId,
-  ResourcePath,
-  Hyperlink,
-  HyperlinkSound,
-} from "./types";
+} from "./effects";
 
 // =============================================================================
 // Resolution Context Types (shared between parser and render)
@@ -180,13 +236,27 @@ export type {
   LineEnd,
   CustomDash,
   Line,
+  // Color mapping
+  ColorMapping,
+  ColorMapOverride,
 } from "./color";
+
+export { color, PATTERN_PRESETS } from "./color";
 
 // =============================================================================
 // Text Types
 // =============================================================================
 
 export type {
+  // Text alignment types
+  TextAlign,
+  TextAnchor,
+  FontStyle,
+  TextCaps,
+  VerticalAlign,
+  TextDirection,
+  TextTypeface,
+  TextShapeType,
   // Text body
   TextWrapping,
   TextVerticalType,
@@ -221,10 +291,23 @@ export type {
 } from "./text";
 
 // =============================================================================
+// Text Style Types
+// =============================================================================
+
+export type {
+  MasterTextStyles,
+  TextStyleLevels,
+  TextLevelStyle,
+} from "./text-style";
+
+// =============================================================================
 // Shape Types
 // =============================================================================
 
 export type {
+  // Preset shape types
+  PresetShapeType,
+  AdjustValue,
   // Shape identity
   NonVisualProperties,
   AudioCdTime,
@@ -601,15 +684,10 @@ export type {
 } from "./diagram";
 
 // =============================================================================
-// Slide Types
+// Transition Types
 // =============================================================================
 
 export type {
-  // Slide
-  SlideSize,
-  SlideSizeType,
-  Background,
-  SlideTransition,
   TransitionType,
   TransitionSound,
   TransitionCornerDirectionType,
@@ -617,48 +695,14 @@ export type {
   TransitionEightDirectionType,
   TransitionInOutDirectionType,
   TransitionSpeed,
-  ColorMapOverride,
-  ColorMapping,
-  CustomerData,
-  SlideTiming,
-  BuildEntry,
-  AnimationSequence,
-  Animation,
-  Slide,
-  // Slide layout
-  SlideLayout,
-  SlideLayoutType,
-  SlideLayoutId,
-  // Slide master
-  SlideMaster,
-  HandoutMaster,
-  NotesMaster,
-  MasterTextStyles,
-  TextStyleLevels,
-  TextLevelStyle,
-  CustomShow,
-  SlideShowRange,
-  BrowseShowProperties,
-  KioskShowProperties,
-  PresentShowProperties,
-  ShowProperties,
-  PresentationProperties,
-  SlideSyncProperties,
-  ModifyVerifier,
-  PhotoAlbum,
-  PhotoAlbumFrameShape,
-  PhotoAlbumLayout,
-  SmartTags,
-  ProgrammableTag,
-  ProgrammableTagList,
-  CommentAuthor,
-  CommentAuthorList,
-  CommentPosition,
-  Comment,
-  CommentList,
-  PrintColorMode,
-  PrintWhat,
-  PrintProperties,
+  SlideTransition,
+} from "./transition";
+
+// =============================================================================
+// View Types
+// =============================================================================
+
+export type {
   ViewScaleRatio,
   ViewScale,
   ViewOrigin,
@@ -680,9 +724,91 @@ export type {
   GridSpacing,
   ViewProperties,
   ViewType,
+} from "./view";
+
+// =============================================================================
+// Presentation Types
+// =============================================================================
+
+export type {
+  CustomShow,
+  SlideShowRange,
+  BrowseShowProperties,
+  KioskShowProperties,
+  PresentShowProperties,
+  ShowProperties,
+  PresentationProperties,
+  SlideSyncProperties,
+  ModifyVerifier,
+  PhotoAlbum,
+  PhotoAlbumFrameShape,
+  PhotoAlbumLayout,
+  SmartTags,
+  Presentation,
+} from "./presentation";
+
+// =============================================================================
+// Print Types
+// =============================================================================
+
+export type {
+  PrintColorMode,
+  PrintWhat,
+  PrintProperties,
+} from "./print";
+
+// =============================================================================
+// Comment Types
+// =============================================================================
+
+export type {
+  CommentAuthor,
+  CommentAuthorList,
+  CommentPosition,
+  Comment,
+  CommentList,
+} from "./comment";
+
+// =============================================================================
+// Metadata Types
+// =============================================================================
+
+export type {
+  CustomerData,
+  ProgrammableTag,
+  ProgrammableTagList,
+} from "./metadata";
+
+// =============================================================================
+// Embedded Font Types
+// =============================================================================
+
+export type {
   EmbeddedFontReference,
   EmbeddedFontTypeface,
   EmbeddedFont,
-  // Presentation
-  Presentation,
+} from "./embedded-font";
+
+// =============================================================================
+// Slide Types
+// =============================================================================
+
+export type {
+  // Slide
+  SlideSize,
+  SlideSizeType,
+  Background,
+  SlideTiming,
+  BuildEntry,
+  AnimationSequence,
+  Animation,
+  Slide,
+  // Slide layout
+  SlideLayout,
+  SlideLayoutType,
+  SlideLayoutId,
+  // Slide master
+  SlideMaster,
+  HandoutMaster,
+  NotesMaster,
 } from "./slide";

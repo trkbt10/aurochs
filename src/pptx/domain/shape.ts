@@ -15,31 +15,33 @@ import type {
 } from "./diagram";
 import type { Table } from "./table";
 import type { TextBody } from "./text";
-import type {
-  AdjustValue,
-  BlipCompression,
-  ContentPart,
-  Degrees,
-  Effects,
-  FontCollectionIndex,
-  GroupLocks,
-  LightRigDirection,
-  LightRigType,
-  PresetCameraType,
-  PresetMaterialType,
-  GroupTransform,
-  Hyperlink,
-  Percent,
-  Pixels,
-  PictureLocks,
-  Point,
-  PresetShapeType,
-  ResourceId,
-  ShapeLocks,
-  ShapeId,
-  StyleMatrixColumnIndex,
-  Transform,
-} from "./types";
+import type { Degrees, Percent, Pixels } from "./types";
+import type { Point, Transform, GroupTransform } from "./geometry";
+import type { Effects } from "./effects";
+import type { Hyperlink, ResourceId } from "./resource";
+import type { GroupLocks, PictureLocks, ShapeLocks } from "./shape-locks";
+import type { ContentPart } from "./anchor";
+import type { BlipCompression } from "./appearance";
+import type { FontCollectionIndex, StyleMatrixColumnIndex, ShapeId } from "./style-ref";
+import type { LightRigDirection, LightRigType, PresetCameraType, PresetMaterialType } from "./three-d";
+
+// =============================================================================
+// Shape Geometry Types
+// =============================================================================
+
+/**
+ * Preset shape type
+ * @see ECMA-376 Part 1, Section 20.1.10.55 (ST_ShapeType)
+ */
+export type PresetShapeType = string; // "rect", "ellipse", "roundRect", etc.
+
+/**
+ * Shape adjustment value (guide value for parametric shapes)
+ */
+export type AdjustValue = {
+  readonly name: string;
+  readonly value: number;
+};
 
 // =============================================================================
 // Shape Identity Types

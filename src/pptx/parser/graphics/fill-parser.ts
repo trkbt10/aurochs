@@ -16,6 +16,7 @@ import type {
   NoFill,
   PathGradient,
   PatternFill,
+  PatternType,
   SolidFill,
   StretchFill,
   StyleReference,
@@ -329,7 +330,7 @@ function parsePatternFill(element: XmlElement): PatternFill | undefined {
 
   return {
     type: "patternFill",
-    preset,
+    preset: preset as PatternType,
     foregroundColor,
     backgroundColor,
   };

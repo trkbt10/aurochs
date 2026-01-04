@@ -8,20 +8,21 @@
 
 import type { XmlElement } from "../../../xml/index";
 import { getChild, getChildren } from "../../../xml/index";
+import type { SlideSize, SlideSizeType } from "../../domain/slide";
 import type {
   Presentation,
-  SlideSize,
-  SlideSizeType,
   CustomShow,
   ModifyVerifier,
   PhotoAlbum,
   PhotoAlbumFrameShape,
   PhotoAlbumLayout,
   SmartTags,
+} from "../../domain/presentation";
+import type {
   EmbeddedFont,
   EmbeddedFontReference,
   EmbeddedFontTypeface,
-} from "../../domain/slide";
+} from "../../domain/embedded-font";
 import { px } from "../../domain/types";
 import { SLIDE_FACTOR } from "../../core/units/conversion";
 import { parseTextStyleLevels } from "../text/text-style-levels";

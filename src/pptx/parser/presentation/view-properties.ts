@@ -12,6 +12,7 @@ import { getChild, getChildren } from "../../../xml/index";
 import type {
   CommonSlideViewProperties,
   CommonViewProperties,
+  Direction,
   GridSpacing,
   Guide,
   GuideList,
@@ -30,7 +31,7 @@ import type {
   ViewType,
   ViewScale,
   ViewScaleRatio,
-} from "../../domain/slide";
+} from "../../domain/view";
 
 // =============================================================================
 // Helper Functions

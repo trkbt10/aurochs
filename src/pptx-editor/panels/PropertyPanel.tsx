@@ -7,7 +7,8 @@
 
 import { useCallback, type CSSProperties } from "react";
 import type { Slide, Shape } from "../../pptx/domain/index";
-import type { Background, SlideTransition } from "../../pptx/domain/slide";
+import type { Background } from "../../pptx/domain/slide";
+import type { SlideTransition } from "../../pptx/domain/transition";
 import type { ShapeId } from "../../pptx/domain/types";
 import { SlidePropertiesPanel } from "./property/SlidePropertiesPanel";
 import { MultiSelectState } from "./property/MultiSelectState";
