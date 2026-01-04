@@ -5,7 +5,7 @@
  * and their interaction with text edit state.
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+/* eslint-disable @typescript-eslint/no-explicit-any, custom/no-as-outside-guard, no-restricted-syntax -- Test file uses flexible typing for mock data */
 import { presentationEditorReducer, createPresentationEditorState } from "./reducer";
 import type { PresentationEditorState, CreationMode } from "../types";
 import type { SpShape } from "../../../pptx/domain/shape";

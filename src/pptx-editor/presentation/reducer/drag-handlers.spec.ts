@@ -5,7 +5,7 @@
  * PREVIEW_RESIZE, PREVIEW_ROTATE.
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+/* eslint-disable no-restricted-syntax -- Test file uses let for sequential state updates */
 import { presentationEditorReducer, createPresentationEditorState } from "./reducer";
 import type { PresentationEditorState, CreationMode } from "../types";
 import type { Shape } from "../../../pptx/domain";
