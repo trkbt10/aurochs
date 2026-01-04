@@ -19,7 +19,7 @@ export {
   type RenderProviderProps,
 } from "./context";
 
-// Hooks
+// Hooks - SVG Defs
 export {
   SvgDefsProvider,
   SvgDefsCollector,
@@ -29,6 +29,19 @@ export {
   PatternDef,
   ClipPathDef,
 } from "./hooks/useSvgDefs";
+
+// Hooks - Animation
+export type {
+  UseAnimationPlayerOptions,
+  UseAnimationPlayerResult,
+} from "./hooks/useAnimationPlayer";
+export { useAnimationPlayer } from "./hooks/useAnimationPlayer";
+
+export type {
+  UseSlideAnimationOptions,
+  UseSlideAnimationResult,
+} from "./hooks/useSlideAnimation";
+export { useSlideAnimation } from "./hooks/useSlideAnimation";
 
 // Primitives
 export {

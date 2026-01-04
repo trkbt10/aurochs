@@ -151,6 +151,18 @@
   color: rgba(255, 255, 255, 0.6);
 }
 
+.slide-indicator .animation-indicator {
+  color: #4ade80;
+  font-size: 0.5rem;
+  margin-left: var(--space-2);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
 /* Progress bar */
 .controls-progress {
   position: absolute;

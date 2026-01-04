@@ -22,10 +22,6 @@ import { createEmptyResourceResolver, createWarningCollector, DEFAULT_RENDER_OPT
  * Extends RenderContext with React-specific fields.
  */
 export type ReactRenderContext = RenderContext & {
-  /**
-   * Shape ID currently being edited (text should be hidden).
-   */
-  readonly editingShapeId?: ShapeId;
 };
 
 /**
@@ -65,7 +61,6 @@ export function RenderProvider({
   fontScheme,
   options,
   resolvedBackground,
-  editingShapeId,
   layoutShapes,
 }: RenderProviderProps) {
   const resolvedResources = useMemo(
@@ -109,7 +104,6 @@ export function RenderProvider({
       getNextShapeId: () => `shape-${shapeIdRef.value++}`,
       resolvedBackground,
       fontScheme,
-      editingShapeId,
       layoutShapes,
     }),
     [
@@ -120,7 +114,6 @@ export function RenderProvider({
       warnings,
       fontScheme,
       resolvedBackground,
-      editingShapeId,
       layoutShapes,
       shapeIdRef,
     ],

@@ -213,6 +213,49 @@ export type GraphicBuild =
     };
 
 // =============================================================================
+// Effect Types (MS-OE376 Part 4 Section 4.6.3)
+// =============================================================================
+
+/**
+ * Effect filter type enumeration.
+ *
+ * Defines the visual effect types for animations as specified in MS-OE376.
+ *
+ * @see MS-OE376 Part 4 Section 4.6.3
+ */
+export type EffectType =
+  | "fade"         // Fade transition (no subtype)
+  | "slide"        // Slide from direction: fromTop, fromBottom, fromLeft, fromRight
+  | "wipe"         // Wipe from direction: right, left, up, down
+  | "blinds"       // Horizontal/vertical blinds
+  | "box"          // Box in/out
+  | "checkerboard" // Checkerboard across/down
+  | "circle"       // Circle in/out
+  | "diamond"      // Diamond in/out
+  | "dissolve"     // Dissolve effect (no subtype)
+  | "strips"       // Diagonal strips: downLeft, upLeft, downRight, upRight
+  | "wheel"        // Wheel with spokes: 1, 2, 3, 4, 8
+  | "plus"         // Plus/cross shape in/out
+  | "barn"         // Barn door: inVertical, inHorizontal, outVertical, outHorizontal
+  | "randombar"    // Random bars: horizontal, vertical
+  | "wedge";       // Wedge shape (no subtype)
+
+/**
+ * Effect direction/subtype.
+ *
+ * Specifies the direction or variant for directional effects.
+ *
+ * @see MS-OE376 Part 4 Section 4.6.3
+ */
+export type EffectDirection =
+  | "in" | "out"                                    // box, circle, diamond, plus
+  | "left" | "right" | "up" | "down"                // wipe, slide
+  | "horizontal" | "vertical"                       // blinds, randombar
+  | "across" | "downward"                           // checkerboard
+  | "downLeft" | "upLeft" | "downRight" | "upRight" // strips
+  | "inVertical" | "inHorizontal" | "outVertical" | "outHorizontal"; // barn
+
+// =============================================================================
 // Time Node Types
 // =============================================================================
 

@@ -385,7 +385,8 @@ export function animateStrips(
 export function animateWheel(
   el: HTMLElement | SVGElement,
   duration: number,
-  _direction: string
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- direction reserved for future spoke count variants
+  direction: string
 ): Promise<void> {
   el.style.visibility = "visible";
   el.style.opacity = "1";
@@ -543,7 +544,8 @@ export function animateRandombar(
 export function animateWedge(
   el: HTMLElement | SVGElement,
   duration: number,
-  _direction: string
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- direction reserved for future wedge angle variants
+  direction: string
 ): Promise<void> {
   el.style.visibility = "visible";
   el.style.opacity = "1";

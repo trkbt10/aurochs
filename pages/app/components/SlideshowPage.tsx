@@ -1,6 +1,39 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+/**
+ * @file SlideshowPage
+ *
+ * Full-screen slideshow presentation viewer with animation support.
+ */
+
+import { useState, useEffect, useRef, useCallback, useMemo, useLayoutEffect } from "react";
 import type { LoadedPresentation } from "../lib/pptx-loader";
+import { useSlideAnimation } from "../../../src/pptx/render/react/hooks/useSlideAnimation";
 import "./SlideshowPage.css";
+
+// =============================================================================
+// Icons
+// =============================================================================
+
+function ExitFullscreenIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <polyline points="4 14 4 20 10 20" />
+      <polyline points="20 10 20 4 14 4" />
+      <line x1="14" y1="10" x2="21" y2="3" />
+      <line x1="3" y1="21" x2="10" y2="14" />
+    </svg>
+  );
+}
+
+function EnterFullscreenIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <polyline points="15 3 21 3 21 9" />
+      <polyline points="9 21 3 21 3 15" />
+      <line x1="21" y1="3" x2="14" y2="10" />
+      <line x1="3" y1="21" x2="10" y2="14" />
+    </svg>
+  );
+}
 
 type Props = {
   presentation: LoadedPresentation;
@@ -8,6 +41,16 @@ type Props = {
   onExit: () => void;
 };
 
+/**
+ * Full-screen slideshow presentation viewer.
+ *
+ * Features:
+ * - Keyboard navigation (arrows, space, etc.)
+ * - Mouse click navigation (left-click next, right-click prev)
+ * - Animation playback with skip functionality
+ * - Fullscreen support
+ * - Black/white screen overlays
+ */
 export function SlideshowPage({ presentation, startSlide, onExit }: Props) {
   const { presentation: pres } = presentation;
   const totalSlides = pres.count;
@@ -19,33 +62,43 @@ export function SlideshowPage({ presentation, startSlide, onExit }: Props) {
   const [showControls, setShowControls] = useState(true);
   const [isBlackScreen, setIsBlackScreen] = useState(false);
   const [isWhiteScreen, setIsWhiteScreen] = useState(false);
-  const [isTransitioning, setIsTransitioning] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const slideContentRef = useRef<HTMLDivElement>(null);
   const controlsTimeoutRef = useRef<number | undefined>(undefined);
 
-  // Render slide with transition
-  useEffect(() => {
-    setIsTransitioning(true);
-    const slide = pres.getSlide(currentSlide);
+  // Get current slide (timing is accessed via slide.timing)
+  const slide = useMemo(() => pres.getSlide(currentSlide), [pres, currentSlide]);
+
+  // Use slide animation hook for clean animation control
+  const { isAnimating, skipAnimation, hasAnimations } = useSlideAnimation({
+    slideIndex: currentSlide,
+    timing: slide.timing,
+    containerRef: slideContentRef,
+    autoPlay: true,
+  });
+
+  // Render slide content synchronously with useLayoutEffect
+  // This ensures DOM is ready before animation hook tries to hide shapes
+  useLayoutEffect(() => {
     const svg = slide.renderSVG();
+    setRenderedContent(svg);
+  }, [slide]);
 
-    const timeout = setTimeout(() => {
-      setRenderedContent(svg);
-      setIsTransitioning(false);
-    }, 150);
-
-    return () => clearTimeout(timeout);
-  }, [pres, currentSlide]);
-
-  // Navigation
+  // Navigation with animation awareness
   const goToNext = useCallback(() => {
+    if (isAnimating) {
+      // Skip animation - show all shapes
+      skipAnimation();
+      return;
+    }
+
     if (currentSlide < totalSlides) {
       setCurrentSlide((s) => s + 1);
       setIsBlackScreen(false);
       setIsWhiteScreen(false);
     }
-  }, [currentSlide, totalSlides]);
+  }, [currentSlide, totalSlides, isAnimating, skipAnimation]);
 
   const goToPrev = useCallback(() => {
     if (currentSlide > 1) {
@@ -67,7 +120,9 @@ export function SlideshowPage({ presentation, startSlide, onExit }: Props) {
 
   // Fullscreen toggle
   const toggleFullscreen = useCallback(() => {
-    if (!containerRef.current) return;
+    if (!containerRef.current) {
+      return;
+    }
 
     if (!document.fullscreenElement) {
       containerRef.current.requestFullscreen().then(() => setIsFullscreen(true));
@@ -151,7 +206,9 @@ export function SlideshowPage({ presentation, startSlide, onExit }: Props) {
   const handleClick = useCallback(
     (e: React.MouseEvent) => {
       const target = e.target as HTMLElement;
-      if (target.closest("[data-controls]")) return;
+      if (target.closest("[data-controls]")) {
+        return;
+      }
 
       if (e.button === 0) {
         goToNext();
@@ -212,10 +269,11 @@ export function SlideshowPage({ presentation, startSlide, onExit }: Props) {
       {/* Slide content */}
       <div className="slideshow-stage">
         <div
-          className={`slideshow-slide ${isTransitioning ? "transitioning" : ""}`}
+          className="slideshow-slide"
           style={{ aspectRatio: `${slideSize.width} / ${slideSize.height}` }}
         >
           <div
+            ref={slideContentRef}
             className="slideshow-content"
             dangerouslySetInnerHTML={{ __html: renderedContent }}
           />
@@ -241,24 +299,11 @@ export function SlideshowPage({ presentation, startSlide, onExit }: Props) {
             <span className="current">{currentSlide}</span>
             <span className="separator">/</span>
             <span className="total">{totalSlides}</span>
+            {hasAnimations && <span className="animation-indicator" title="Has animations">●</span>}
           </div>
 
           <button className="control-button fullscreen" onClick={toggleFullscreen}>
-            {isFullscreen ? (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="4 14 4 20 10 20" />
-                <polyline points="20 10 20 4 14 4" />
-                <line x1="14" y1="10" x2="21" y2="3" />
-                <line x1="3" y1="21" x2="10" y2="14" />
-              </svg>
-            ) : (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="15 3 21 3 21 9" />
-                <polyline points="9 21 3 21 3 15" />
-                <line x1="21" y1="3" x2="14" y2="10" />
-                <line x1="3" y1="21" x2="10" y2="14" />
-              </svg>
-            )}
+            {isFullscreen ? <ExitFullscreenIcon /> : <EnterFullscreenIcon />}
             <span className="button-label">{isFullscreen ? "Exit" : "Fullscreen"}</span>
           </button>
         </div>
@@ -290,7 +335,7 @@ export function SlideshowPage({ presentation, startSlide, onExit }: Props) {
             e.stopPropagation();
             goToNext();
           }}
-          disabled={currentSlide === totalSlides}
+          disabled={currentSlide === totalSlides && !isAnimating}
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <polyline points="9 18 15 12 9 6" />

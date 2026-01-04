@@ -7,17 +7,34 @@
  * @see ECMA-376 Part 1, Section 19.5 (Animation)
  */
 
-import type { Timing } from "../domain/animation";
+import type { Timing } from "../../../domain/animation";
 import type { EffectConfig, PlayerOptions, PlayerState } from "./types";
 import {
   applyEffect,
   hideElement,
   parseFilterDirection,
   parseFilterToEffectType,
-  prepareForAnimation,
   resetElementStyles,
   showElement,
 } from "./effects";
+
+/**
+ * Parse duration value from timing node.
+ * Handles "indefinite" string and numeric values.
+ */
+function parseDuration(duration: unknown): number {
+  if (duration === "indefinite") {return 1000;}
+  if (typeof duration === "number") {return duration;}
+  return 1000;
+}
+
+/**
+ * Parse translation coordinate from animation "to" value.
+ */
+function parseTranslationCoord(to: unknown, axis: "x" | "y"): number {
+  if (typeof to === "string" && to.includes(axis)) {return parseFloat(to);}
+  return 0;
+}
 
 /**
  * Animation player instance (returned by createPlayer)
@@ -38,6 +55,15 @@ export type AnimationPlayerInstance = {
 };
 
 /**
+ * Internal state container for player lifecycle management.
+ * Using object wrapper allows const declaration with mutable properties.
+ */
+type PlayerStateContainer = {
+  status: PlayerState;
+  abortController: AbortController | null;
+};
+
+/**
  * Create animation player
  */
 export function createPlayer(options: PlayerOptions): AnimationPlayerInstance {
@@ -46,8 +72,10 @@ export function createPlayer(options: PlayerOptions): AnimationPlayerInstance {
     ...options,
   };
 
-  let currentState: PlayerState = "idle";
-  let abortController: AbortController | null = null;
+  const state: PlayerStateContainer = {
+    status: "idle",
+    abortController: null,
+  };
 
   function log(message: string): void {
     opts.onLog?.(message);
@@ -58,7 +86,7 @@ export function createPlayer(options: PlayerOptions): AnimationPlayerInstance {
   }
 
   function shouldStop(): boolean {
-    return currentState === "stopping" || currentState === "stopped";
+    return state.status === "stopping" || state.status === "stopped";
   }
 
   async function delay(ms: number): Promise<void> {
@@ -66,7 +94,7 @@ export function createPlayer(options: PlayerOptions): AnimationPlayerInstance {
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(resolve, adjustedMs);
 
-      abortController?.signal.addEventListener("abort", () => {
+      state.abortController?.signal.addEventListener("abort", () => {
         clearTimeout(timeoutId);
         reject(new Error("Animation aborted"));
       });
@@ -126,27 +154,15 @@ export function createPlayer(options: PlayerOptions): AnimationPlayerInstance {
       return;
     }
 
-    const duration =
-      node.duration === "indefinite"
-        ? 1000
-        : typeof node.duration === "number"
-          ? node.duration
-          : 1000;
-
+    const duration = parseDuration(node.duration);
     const attrs = node.attributeNames as string[] | undefined;
     log(`Animate: shape ${target.shapeId}, duration: ${duration}ms`);
 
     el.style.transition = `all ${duration}ms ease-out`;
 
     if (attrs?.includes("ppt_x") || attrs?.includes("ppt_y")) {
-      const toX =
-        typeof node.to === "string" && node.to.includes("x")
-          ? parseFloat(node.to)
-          : 0;
-      const toY =
-        typeof node.to === "string" && node.to.includes("y")
-          ? parseFloat(node.to)
-          : 0;
+      const toX = parseTranslationCoord(node.to, "x");
+      const toY = parseTranslationCoord(node.to, "y");
       el.style.transform = `translate(${toX}px, ${toY}px)`;
     }
 
@@ -174,12 +190,7 @@ export function createPlayer(options: PlayerOptions): AnimationPlayerInstance {
     }
 
     const filter = String(node.filter ?? "fade");
-    const duration =
-      node.duration === "indefinite"
-        ? 1000
-        : typeof node.duration === "number"
-          ? node.duration
-          : 1000;
+    const duration = parseDuration(node.duration);
 
     log(
       `AnimateEffect: shape ${target.shapeId}, filter: ${filter}, duration: ${duration}ms`
@@ -373,7 +384,7 @@ export function createPlayer(options: PlayerOptions): AnimationPlayerInstance {
   // Public API
   return {
     getState(): PlayerState {
-      return currentState;
+      return state.status;
     },
 
     async play(timing: Timing): Promise<void> {
@@ -382,13 +393,13 @@ export function createPlayer(options: PlayerOptions): AnimationPlayerInstance {
         return;
       }
 
-      if (currentState === "playing") {
+      if (state.status === "playing") {
         log("Already playing");
         return;
       }
 
-      currentState = "playing";
-      abortController = new AbortController();
+      state.status = "playing";
+      state.abortController = new AbortController();
       opts.onStart?.();
       log("Starting animation playback");
 
@@ -402,17 +413,17 @@ export function createPlayer(options: PlayerOptions): AnimationPlayerInstance {
           throw error;
         }
       } finally {
-        currentState = "idle";
-        abortController = null;
+        state.status = "idle";
+        state.abortController = null;
         opts.onComplete?.();
       }
     },
 
     stop(): void {
-      if (currentState !== "playing") {return;}
+      if (state.status !== "playing") {return;}
 
-      currentState = "stopping";
-      abortController?.abort();
+      state.status = "stopping";
+      state.abortController?.abort();
       log("Stopping animation");
     },
 

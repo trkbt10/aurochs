@@ -41,7 +41,7 @@ export type GraphicFrameRendererProps = {
 /**
  * Renders a graphic frame as React SVG elements.
  */
-export function GraphicFrameRenderer({
+export const GraphicFrameRenderer = memo(function GraphicFrameRenderer({
   shape,
   width,
   height,
@@ -120,7 +120,7 @@ export function GraphicFrameRenderer({
       {frameContent}
     </g>
   );
-}
+});
 
 // =============================================================================
 // Content Rendering

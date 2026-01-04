@@ -23,7 +23,7 @@ import {
   hideElement,
   resetElementStyles,
 } from "./effects";
-import type { Timing } from "../domain/animation";
+import type { Timing } from "../../../domain/animation";
 import type { EffectConfig } from "./types";
 
 // =============================================================================

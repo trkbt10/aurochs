@@ -5,7 +5,7 @@
 
 import type { Slide } from "../../types/api";
 import type { ZipFile, SlideSize } from "../../domain";
-import type { XmlElement } from "../../../xml";
+import type { XmlElement, XmlDocument } from "../../../xml";
 import { getByPath } from "../../../xml";
 import type { SlideData } from "../types";
 import type { RenderOptions } from "../../render/render-options";
@@ -15,7 +15,7 @@ import { createPlaceholderTable, createColorMap } from "./resource-adapters";
 import { parseTheme, parseMasterTextStyles } from "../../core/dml/parser/theme";
 import { DEFAULT_RENDER_OPTIONS } from "../../render/render-options";
 import { renderSlideIntegrated, renderSlideSvgIntegrated } from "./slide-render";
-import type { XmlDocument } from "../../../xml";
+import { parseSlideTimingData } from "../../parser/timing-parser";
 
 /**
  * Build SlideRenderContext directly from SlideData.
@@ -104,6 +104,9 @@ export function createSlide(
     return result.svg;
   };
 
+  // Parse timing data (lazy, cached)
+  const timing = parseSlideTimingData(data.content);
+
   return {
     number: data.number,
     filename: data.filename,
@@ -120,6 +123,7 @@ export function createSlide(
     themeRelationships: data.themeRelationships,
     diagram: data.diagram,
     diagramRelationships: data.diagramRelationships,
+    timing,
     renderHTML,
     renderSVG,
   };

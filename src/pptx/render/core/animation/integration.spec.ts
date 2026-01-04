@@ -6,7 +6,7 @@
  */
 
 import { createPlayer, extractShapeIds } from "./player";
-import type { Timing } from "../domain/animation";
+import type { Timing } from "../../../domain/animation";
 
 describe("Animation Integration", () => {
   function createMockElement(): HTMLElement {

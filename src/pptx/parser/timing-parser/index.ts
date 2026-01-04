@@ -5,7 +5,7 @@
  */
 
 // Main timing parser
-export { parseTiming } from "./parse-timing";
+export { parseTiming, findTimingElement, parseSlideTimingData } from "./parse-timing";
 
 // Submodule exports
 export * from "./mapping";

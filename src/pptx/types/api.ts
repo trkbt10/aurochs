@@ -7,6 +7,7 @@ import type { XmlDocument, XmlNode } from "../../xml";
 import type { IndexTables } from "../core/types";
 import type { ResourceMap } from "../opc";
 import type { SlideSize } from "../domain";
+import type { Timing } from "../domain/animation";
 import type { RenderOptions } from "../render/render-options";
 
 /**
@@ -86,6 +87,13 @@ export type Slide = {
 
   /** Diagram relationships */
   readonly diagramRelationships: ResourceMap;
+
+  /**
+   * Animation timing data for this slide.
+   * Returns undefined if the slide has no animations.
+   * @see ECMA-376 Part 1, Section 19.5 (Animation)
+   */
+  readonly timing: Timing | undefined;
 
   /**
    * Render slide as HTML string

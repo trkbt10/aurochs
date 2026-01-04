@@ -5,7 +5,7 @@
  */
 
 import { createPlayer, extractShapeIds } from "./player";
-import type { Timing } from "../domain/animation";
+import type { Timing } from "../../../domain/animation";
 
 describe("extractShapeIds", () => {
   it("extracts shape IDs from timing tree", () => {

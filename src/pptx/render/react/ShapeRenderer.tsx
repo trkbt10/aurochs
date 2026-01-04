@@ -5,6 +5,7 @@
  * Handles the mapping from Shape domain objects to React components.
  */
 
+import { memo } from "react";
 import type { Shape, Transform } from "../../domain";
 import type { ShapeId } from "../../domain/types";
 import { SpShapeRenderer } from "./shapes/SpShape";
@@ -77,7 +78,10 @@ function getShapeId(shape: Shape): ShapeId | undefined {
  * This is the main dispatch component that determines which
  * specific renderer to use for each shape type.
  */
-export function ShapeRenderer({ shape, editingShapeId }: ShapeRendererProps) {
+export const ShapeRenderer = memo(function ShapeRenderer({
+  shape,
+  editingShapeId,
+}: ShapeRendererProps) {
   // Skip hidden shapes
   if (isShapeHidden(shape)) {
     return null;
@@ -143,4 +147,45 @@ export function ShapeRenderer({ shape, editingShapeId }: ShapeRendererProps) {
     default:
       return null;
   }
+}, areShapeRendererPropsEqual);
+
+// =============================================================================
+// Memo Comparison
+// =============================================================================
+
+/**
+ * Check if a shape or its descendants match the target ID.
+ */
+function shapeContainsId(shape: Shape, targetId?: ShapeId): boolean {
+  if (targetId === undefined) {
+    return false;
+  }
+  const shapeId = getShapeId(shape);
+  if (shapeId !== undefined && shapeId === targetId) {
+    return true;
+  }
+  if (shape.type === "grpSp") {
+    return shape.children.some((child) => shapeContainsId(child, targetId));
+  }
+  return false;
+}
+
+/**
+ * Skip rerender unless the current shape is affected by edit target changes.
+ */
+function areShapeRendererPropsEqual(
+  prev: ShapeRendererProps,
+  next: ShapeRendererProps,
+): boolean {
+  if (prev.shape !== next.shape) {
+    return false;
+  }
+  if (prev.editingShapeId === next.editingShapeId) {
+    return true;
+  }
+  const prevId = prev.editingShapeId;
+  const nextId = next.editingShapeId;
+  const affectsShape =
+    shapeContainsId(prev.shape, prevId) || shapeContainsId(prev.shape, nextId);
+  return !affectsShape;
 }

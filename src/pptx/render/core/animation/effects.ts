@@ -11,12 +11,16 @@
 import type { EffectConfig, EffectDirection, EffectType } from "./types";
 
 /**
- * requestAnimationFrame polyfill for non-browser environments
+ * Get requestAnimationFrame or setTimeout fallback for non-browser environments.
  */
-const raf: (fn: () => void) => void =
-  typeof globalThis.requestAnimationFrame !== "undefined"
-    ? globalThis.requestAnimationFrame.bind(globalThis)
-    : (fn: () => void) => setTimeout(fn, 0);
+function getRaf(): (fn: () => void) => void {
+  if (typeof globalThis.requestAnimationFrame !== "undefined") {
+    return globalThis.requestAnimationFrame.bind(globalThis);
+  }
+  return (fn: () => void) => setTimeout(fn, 0);
+}
+
+const raf = getRaf();
 
 /**
  * CSS transition string builder
