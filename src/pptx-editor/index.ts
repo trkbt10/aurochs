@@ -284,7 +284,7 @@ export {
 export {
   presentationEditorReducer,
   createPresentationEditorState,
-} from "./presentation/reducer";
+} from "./presentation/reducer/reducer";
 
 // Presentation Editor Components
 export { PresentationEditor, type PresentationEditorProps } from "./presentation/PresentationEditor";
