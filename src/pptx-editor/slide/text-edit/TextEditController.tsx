@@ -31,6 +31,7 @@ import {
   cursorPositionToCoordinates,
   selectionToRects,
   mergeTextIntoBody,
+  extractDefaultRunProperties,
   type CursorCoordinates,
   type SelectionRect,
 } from "./cursor";
@@ -166,10 +167,16 @@ export function TextEditController({
   });
   const initialTextRef = useRef(getPlainText(textBody));
 
+  // Extract default run properties from original text body (memoized)
+  const defaultRunProperties = useMemo(
+    () => extractDefaultRunProperties(textBody),
+    [textBody],
+  );
+
   // Compute current TextBody from edited text
   const currentTextBody = useMemo(
-    () => mergeTextIntoBody(textBody, currentText),
-    [textBody, currentText],
+    () => mergeTextIntoBody(textBody, currentText, defaultRunProperties),
+    [textBody, currentText, defaultRunProperties],
   );
 
   // Compute layout result for current text

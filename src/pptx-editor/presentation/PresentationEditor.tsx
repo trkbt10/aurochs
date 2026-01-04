@@ -26,7 +26,7 @@ import { CreationToolbar } from "../panels/CreationToolbar";
 import type { CreationMode } from "./types";
 import { createShapeFromMode, getDefaultBoundsForMode } from "../shape/factory";
 import { SlideCanvas } from "../slide/SlideCanvas";
-import { TextEditController, isTextEditActive, mergeTextIntoBody } from "../slide/text-edit";
+import { TextEditController, isTextEditActive, mergeTextIntoBody, extractDefaultRunProperties } from "../slide/text-edit";
 import { PropertyPanel } from "../panels/PropertyPanel";
 import { ShapeToolbar } from "../panels/ShapeToolbar";
 import { LayerPanel } from "../panels/LayerPanel";
@@ -171,7 +171,8 @@ function EditorContent({
   const handleTextEditComplete = useCallback(
     (newText: string) => {
       if (isTextEditActive(textEdit)) {
-        const newTextBody = mergeTextIntoBody(textEdit.initialTextBody, newText);
+        const defaultRunProperties = extractDefaultRunProperties(textEdit.initialTextBody);
+        const newTextBody = mergeTextIntoBody(textEdit.initialTextBody, newText, defaultRunProperties);
         dispatch({ type: "UPDATE_TEXT_BODY", shapeId: textEdit.shapeId, textBody: newTextBody });
       }
       dispatch({ type: "EXIT_TEXT_EDIT" });

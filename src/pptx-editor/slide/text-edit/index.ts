@@ -32,6 +32,7 @@ export {
   isBefore,
   normalizeSelection,
   mergeTextIntoBody,
+  extractDefaultRunProperties,
 } from "./cursor";
 
 // Text edit controller component

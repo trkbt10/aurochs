@@ -5,7 +5,7 @@
  * Uses LayoutResult from the text-layout engine to compute visual positions.
  */
 
-import type { TextBody } from "../../../pptx/domain";
+import type { TextBody, RunProperties } from "../../../pptx/domain";
 import type { Pixels } from "../../../pptx/domain/types";
 import type { LayoutResult, LayoutLine } from "../../../pptx/render/text-layout";
 import {
@@ -408,11 +408,15 @@ function getParagraphTextLength(
 
 /**
  * Merge edited text into original TextBody, preserving styling.
- * This is a simplified version that only updates text content.
+ *
+ * @param originalBody - Original TextBody to preserve bodyProperties from
+ * @param newText - New plain text content
+ * @param defaultRunProperties - Run properties to apply to all new runs (REQUIRED)
  */
 export function mergeTextIntoBody(
   originalBody: TextBody,
   newText: string,
+  defaultRunProperties: RunProperties,
 ): TextBody {
   const lines = newText.split("\n");
 
@@ -421,17 +425,41 @@ export function mergeTextIntoBody(
     const originalParagraph = originalBody.paragraphs[index];
     return {
       properties: originalParagraph?.properties ?? {},
-      runs: [{ type: "text" as const, text: line }],
+      runs: [{
+        type: "text" as const,
+        text: line,
+        properties: defaultRunProperties,
+      }],
     };
   });
 
   const defaultParagraph: TextBody["paragraphs"][number] = {
     properties: {},
-    runs: [{ type: "text", text: "" }],
+    runs: [{
+      type: "text",
+      text: "",
+      properties: defaultRunProperties,
+    }],
   };
 
   return {
     bodyProperties: originalBody.bodyProperties,
     paragraphs: paragraphs.length > 0 ? paragraphs : [defaultParagraph],
   };
+}
+
+/**
+ * Extract default RunProperties from a TextBody.
+ * Uses the first run's properties, or empty object if none found.
+ */
+export function extractDefaultRunProperties(textBody: TextBody): RunProperties {
+  const firstPara = textBody.paragraphs[0];
+  if (!firstPara) {
+    return {};
+  }
+  const firstRun = firstPara.runs[0];
+  if (!firstRun || firstRun.type !== "text") {
+    return {};
+  }
+  return firstRun.properties ?? {};
 }

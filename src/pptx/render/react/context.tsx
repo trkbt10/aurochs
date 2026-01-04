@@ -81,6 +81,7 @@ export type RenderProviderProps = {
 // =============================================================================
 
 const RenderContext = createContext<ReactRenderContext | null>(null);
+const RenderResourcesContext = createContext<ResourceResolver | null>(null);
 
 // =============================================================================
 // Provider
@@ -99,21 +100,30 @@ export function RenderProvider({
   resolvedBackground,
   editingShapeId,
 }: RenderProviderProps) {
+  const resolvedResources = useMemo(
+    () => resources ?? createEmptyResourceResolver(),
+    [resources],
+  );
+
   const ctx = useMemo<ReactRenderContext>(
     () => ({
       slideSize,
       options: { ...DEFAULT_RENDER_OPTIONS, ...options },
       colorContext: colorContext ?? { colorScheme: {}, colorMap: {} },
-      resources: resources ?? createEmptyResourceResolver(),
+      resources: resolvedResources,
       warnings: createWarningCollector(),
       resolvedBackground,
       fontScheme,
       editingShapeId,
     }),
-    [slideSize, colorContext, resources, fontScheme, options, resolvedBackground, editingShapeId],
+    [slideSize, colorContext, resolvedResources, fontScheme, options, resolvedBackground, editingShapeId],
   );
 
-  return <RenderContext.Provider value={ctx}>{children}</RenderContext.Provider>;
+  return (
+    <RenderResourcesContext.Provider value={resolvedResources}>
+      <RenderContext.Provider value={ctx}>{children}</RenderContext.Provider>
+    </RenderResourcesContext.Provider>
+  );
 }
 
 // =============================================================================
@@ -130,6 +140,17 @@ export function useRenderContext(): ReactRenderContext {
     throw new Error("useRenderContext must be used within a RenderProvider");
   }
   return ctx;
+}
+
+/**
+ * Access resource resolver without subscribing to the full render context.
+ */
+export function useRenderResources(): ResourceResolver {
+  const resources = useContext(RenderResourcesContext);
+  if (resources === null) {
+    throw new Error("useRenderResources must be used within a RenderProvider");
+  }
+  return resources;
 }
 
 /**

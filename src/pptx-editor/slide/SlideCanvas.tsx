@@ -91,6 +91,169 @@ type ShapeBounds = {
   readonly isPrimary: boolean;
 };
 
+type BaseBounds = {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+  readonly rotation: number;
+};
+
+// =============================================================================
+// Drag Preview Helpers
+// =============================================================================
+
+function applyMovePreview(
+  id: ShapeId,
+  baseBounds: BaseBounds,
+  drag: Extract<DragState, { type: "move" }>
+): BaseBounds {
+  if (!drag.shapeIds.includes(id)) {
+    return baseBounds;
+  }
+  const dx = drag.previewDelta.dx as number;
+  const dy = drag.previewDelta.dy as number;
+  const initial = drag.initialBounds.get(id);
+  if (!initial) {
+    return baseBounds;
+  }
+  return {
+    ...baseBounds,
+    x: (initial.x as number) + dx,
+    y: (initial.y as number) + dy,
+  };
+}
+
+function calculateResizedDimensions(
+  handle: ResizeHandlePosition,
+  baseW: number,
+  baseH: number,
+  baseX: number,
+  baseY: number,
+  dx: number,
+  dy: number,
+  aspectLocked: boolean
+): { newWidth: number; newHeight: number; newX: number; newY: number } {
+  const widthDelta = handle.includes("e") ? dx : handle.includes("w") ? -dx : 0;
+  const heightDelta = handle.includes("s") ? dy : handle.includes("n") ? -dy : 0;
+  const xDelta = handle.includes("w") ? dx : 0;
+  const yDelta = handle.includes("n") ? dy : 0;
+
+  const rawWidth = Math.max(10, baseW + widthDelta);
+  const rawHeight = Math.max(10, baseH + heightDelta);
+
+  if (!aspectLocked || baseW <= 0 || baseH <= 0) {
+    return {
+      newWidth: rawWidth,
+      newHeight: rawHeight,
+      newX: baseX + xDelta,
+      newY: baseY + yDelta,
+    };
+  }
+
+  const aspect = baseW / baseH;
+  const isVerticalOnly = handle === "n" || handle === "s";
+  const isHorizontalOnly = handle === "e" || handle === "w";
+
+  const finalWidth = isVerticalOnly ? rawHeight * aspect : rawWidth;
+  const finalHeight = isHorizontalOnly ? rawWidth / aspect : rawWidth / aspect;
+
+  return {
+    newWidth: finalWidth,
+    newHeight: finalHeight,
+    newX: baseX + xDelta,
+    newY: baseY + yDelta,
+  };
+}
+
+function applyResizePreview(
+  id: ShapeId,
+  baseBounds: BaseBounds,
+  drag: Extract<DragState, { type: "resize" }>
+): BaseBounds {
+  if (!drag.shapeIds.includes(id)) {
+    return baseBounds;
+  }
+
+  const dx = drag.previewDelta.dx as number;
+  const dy = drag.previewDelta.dy as number;
+  const { handle, combinedBounds: cb, initialBoundsMap, aspectLocked } = drag;
+  const initial = initialBoundsMap.get(id);
+
+  if (!initial || !cb) {
+    return baseBounds;
+  }
+
+  const baseX = cb.x as number;
+  const baseY = cb.y as number;
+  const baseW = cb.width as number;
+  const baseH = cb.height as number;
+
+  const { newWidth, newHeight, newX, newY } = calculateResizedDimensions(
+    handle,
+    baseW,
+    baseH,
+    baseX,
+    baseY,
+    dx,
+    dy,
+    aspectLocked
+  );
+
+  const scaleX = baseW > 0 ? newWidth / baseW : 1;
+  const scaleY = baseH > 0 ? newHeight / baseH : 1;
+
+  const relX = (initial.x as number) - baseX;
+  const relY = (initial.y as number) - baseY;
+
+  return {
+    x: newX + relX * scaleX,
+    y: newY + relY * scaleY,
+    width: (initial.width as number) * scaleX,
+    height: (initial.height as number) * scaleY,
+    rotation: baseBounds.rotation,
+  };
+}
+
+function applyRotatePreview(
+  id: ShapeId,
+  baseBounds: BaseBounds,
+  drag: Extract<DragState, { type: "rotate" }>
+): BaseBounds {
+  if (!drag.shapeIds.includes(id)) {
+    return baseBounds;
+  }
+
+  const angleDelta = drag.previewAngleDelta as number;
+  const initialRotation = drag.initialRotationsMap.get(id);
+
+  if (initialRotation === undefined) {
+    return baseBounds;
+  }
+
+  return {
+    ...baseBounds,
+    rotation: normalizeAngle((initialRotation as number) + angleDelta),
+  };
+}
+
+function applyDragPreview(
+  id: ShapeId,
+  baseBounds: BaseBounds,
+  drag: DragState
+): BaseBounds {
+  switch (drag.type) {
+    case "move":
+      return applyMovePreview(id, baseBounds, drag);
+    case "resize":
+      return applyResizePreview(id, baseBounds, drag);
+    case "rotate":
+      return applyRotatePreview(id, baseBounds, drag);
+    default:
+      return baseBounds;
+  }
+}
+
 // =============================================================================
 // Component
 // =============================================================================
@@ -138,107 +301,41 @@ export function SlideCanvas({
 
   // Get bounds for selected shapes (with preview delta applied during drag)
   const selectedBounds = useMemo(() => {
-    const bounds: ShapeBounds[] = [];
-
-    for (const id of selection.selectedIds) {
-      const result = findShapeByIdWithParents(slide.shapes, id);
-      if (!result) continue;
-
-      const absoluteBounds = getAbsoluteBounds(result.shape, result.parentGroups);
-      if (!absoluteBounds) continue;
-
-      let x = absoluteBounds.x;
-      let y = absoluteBounds.y;
-      let width = absoluteBounds.width;
-      let height = absoluteBounds.height;
-      let rotation = absoluteBounds.rotation;
-
-      // Apply preview delta during drag operations
-      if (drag.type === "move" && drag.shapeIds.includes(id)) {
-        const dx = drag.previewDelta.dx as number;
-        const dy = drag.previewDelta.dy as number;
-        const initial = drag.initialBounds.get(id);
-        if (initial) {
-          x = (initial.x as number) + dx;
-          y = (initial.y as number) + dy;
+    return selection.selectedIds
+      .map((id) => {
+        const result = findShapeByIdWithParents(slide.shapes, id);
+        if (!result) {
+          return undefined;
         }
-      } else if (drag.type === "resize" && drag.shapeIds.includes(id)) {
-        // Calculate preview resize
-        const dx = drag.previewDelta.dx as number;
-        const dy = drag.previewDelta.dy as number;
-        const { handle, combinedBounds: cb, initialBoundsMap, aspectLocked } = drag;
-        const initial = initialBoundsMap.get(id);
 
-        if (initial && cb) {
-          const baseX = cb.x as number;
-          const baseY = cb.y as number;
-          const baseW = cb.width as number;
-          const baseH = cb.height as number;
-
-          let newWidth = baseW;
-          let newHeight = baseH;
-          let newX = baseX;
-          let newY = baseY;
-
-          if (handle.includes("e")) newWidth = baseW + dx;
-          if (handle.includes("w")) {
-            newWidth = baseW - dx;
-            newX = baseX + dx;
-          }
-          if (handle.includes("s")) newHeight = baseH + dy;
-          if (handle.includes("n")) {
-            newHeight = baseH - dy;
-            newY = baseY + dy;
-          }
-
-          newWidth = Math.max(10, newWidth);
-          newHeight = Math.max(10, newHeight);
-
-          if (aspectLocked && baseW > 0 && baseH > 0) {
-            const aspect = baseW / baseH;
-            if (handle === "n" || handle === "s") {
-              newWidth = newHeight * aspect;
-            } else if (handle === "e" || handle === "w") {
-              newHeight = newWidth / aspect;
-            } else {
-              newHeight = newWidth / aspect;
-            }
-          }
-
-          const scaleX = baseW > 0 ? newWidth / baseW : 1;
-          const scaleY = baseH > 0 ? newHeight / baseH : 1;
-
-          const relX = (initial.x as number) - baseX;
-          const relY = (initial.y as number) - baseY;
-          x = newX + relX * scaleX;
-          y = newY + relY * scaleY;
-          width = (initial.width as number) * scaleX;
-          height = (initial.height as number) * scaleY;
+        const absoluteBounds = getAbsoluteBounds(result.shape, result.parentGroups);
+        if (!absoluteBounds) {
+          return undefined;
         }
-      } else if (drag.type === "rotate" && drag.shapeIds.includes(id)) {
-        const angleDelta = drag.previewAngleDelta as number;
-        const initialRotation = drag.initialRotationsMap.get(id);
-        if (initialRotation !== undefined) {
-          rotation = normalizeAngle((initialRotation as number) + angleDelta);
-        }
-      }
 
-      bounds.push({
-        id,
-        x,
-        y,
-        width,
-        height,
-        rotation,
-        isPrimary: id === selection.primaryId,
-      });
-    }
+        const baseBounds = {
+          x: absoluteBounds.x,
+          y: absoluteBounds.y,
+          width: absoluteBounds.width,
+          height: absoluteBounds.height,
+          rotation: absoluteBounds.rotation,
+        };
 
-    return bounds;
+        const previewBounds = applyDragPreview(id, baseBounds, drag);
+
+        return {
+          id,
+          ...previewBounds,
+          isPrimary: id === selection.primaryId,
+        };
+      })
+      .filter((b): b is ShapeBounds => b !== undefined);
   }, [slide.shapes, selection.selectedIds, selection.primaryId, drag]);
 
   const combinedBounds = useMemo(() => {
-    if (selectedBounds.length <= 1) return undefined;
+    if (selectedBounds.length <= 1) {
+      return undefined;
+    }
     return getCombinedBoundsWithRotation(selectedBounds);
   }, [selectedBounds]);
 
@@ -299,7 +396,9 @@ export function SlideCanvas({
 
   const handlePointerDown = useCallback(
     (shapeId: ShapeId, e: React.PointerEvent) => {
-      if (e.button !== 0) return;
+      if (e.button !== 0) {
+        return;
+      }
       e.stopPropagation();
       e.preventDefault();
 
@@ -309,7 +408,9 @@ export function SlideCanvas({
       }
 
       const rect = (e.target as SVGElement).ownerSVGElement?.getBoundingClientRect();
-      if (!rect) return;
+      if (!rect) {
+        return;
+      }
 
       const coords = clientToSlideCoords(e.clientX, e.clientY, rect, widthNum, heightNum);
       onStartMove(coords.x, coords.y);
@@ -320,7 +421,9 @@ export function SlideCanvas({
   const handleResizeStart = useCallback(
     (handle: ResizeHandlePosition, e: React.PointerEvent) => {
       const rect = (e.target as SVGElement).ownerSVGElement?.getBoundingClientRect();
-      if (!rect) return;
+      if (!rect) {
+        return;
+      }
 
       const coords = clientToSlideCoords(e.clientX, e.clientY, rect, widthNum, heightNum);
       onStartResize(handle, coords.x, coords.y, e.shiftKey);
@@ -331,7 +434,9 @@ export function SlideCanvas({
   const handleRotateStart = useCallback(
     (e: React.PointerEvent) => {
       const rect = (e.target as SVGElement).ownerSVGElement?.getBoundingClientRect();
-      if (!rect) return;
+      if (!rect) {
+        return;
+      }
 
       const coords = clientToSlideCoords(e.clientX, e.clientY, rect, widthNum, heightNum);
       onStartRotate(coords.x, coords.y);

@@ -6,9 +6,10 @@
  * @see ECMA-376 Part 1, Section 19.3.1.37 (p:pic)
  */
 
-import type { PicShape as PicShapeType } from "../../../domain";
+import { memo, useMemo } from "react";
+import type { PicShape as PicShapeType, Transform } from "../../../domain";
 import type { ShapeId } from "../../../domain/types";
-import { useRenderContext } from "../context";
+import { useRenderResources } from "../context";
 import { buildTransformAttr } from "./transform";
 
 // =============================================================================
@@ -67,28 +68,43 @@ function calculateCroppedImageLayout(
 /**
  * Renders a picture (p:pic) as React SVG elements.
  */
-export function PicShapeRenderer({
+function PicShapeRendererBase({
   shape,
   width,
   height,
   shapeId,
 }: PicShapeRendererProps) {
-  const { resources } = useRenderContext();
+  const resources = useRenderResources();
   const { blipFill, properties } = shape;
 
-  const imagePath = resources.resolve(blipFill.resourceId);
+  const imagePath = useMemo(
+    () => resources.resolve(blipFill.resourceId),
+    [resources, blipFill.resourceId],
+  );
   if (imagePath === undefined) {
     return null;
   }
 
   const srcRect = blipFill.sourceRect;
-  const transformValue = buildTransformAttr(properties.transform, width, height);
+  const transformValue = useMemo(
+    () => buildTransformAttr(properties.transform, width, height),
+    [properties.transform, width, height],
+  );
+  const clipId = useMemo(
+    () => `pic-clip-${shapeId ?? "unknown"}`,
+    [shapeId],
+  );
+  const hasCrop = srcRect !== undefined
+    && (srcRect.left !== 0 || srcRect.top !== 0 || srcRect.right !== 0 || srcRect.bottom !== 0);
+  const croppedLayout = useMemo(() => {
+    if (!hasCrop || srcRect === undefined) {
+      return null;
+    }
+    return calculateCroppedImageLayout(width, height, srcRect);
+  }, [hasCrop, width, height, srcRect?.left, srcRect?.top, srcRect?.right, srcRect?.bottom]);
 
   // Check if we have cropping
-  if (srcRect && (srcRect.left !== 0 || srcRect.top !== 0 || srcRect.right !== 0 || srcRect.bottom !== 0)) {
-    const layout = calculateCroppedImageLayout(width, height, srcRect);
-    const clipId = `pic-clip-${shapeId ?? "unknown"}`;
-
+  if (hasCrop && croppedLayout !== null) {
     return (
       <g
         transform={transformValue || undefined}
@@ -103,10 +119,10 @@ export function PicShapeRenderer({
         <g clipPath={`url(#${clipId})`}>
           <image
             href={imagePath}
-            x={layout.x}
-            y={layout.y}
-            width={layout.width}
-            height={layout.height}
+            x={croppedLayout.x}
+            y={croppedLayout.y}
+            width={croppedLayout.width}
+            height={croppedLayout.height}
             preserveAspectRatio="none"
           />
         </g>
@@ -132,3 +148,79 @@ export function PicShapeRenderer({
     </g>
   );
 }
+
+function areTransformsEqual(a: Transform | undefined, b: Transform | undefined): boolean {
+  if (a === b) {
+    return true;
+  }
+  if (a === undefined || b === undefined) {
+    return false;
+  }
+
+  const ax = a.x ?? 0;
+  const ay = a.y ?? 0;
+  const aRotation = a.rotation ?? 0;
+  const aFlipH = a.flipH ?? false;
+  const aFlipV = a.flipV ?? false;
+
+  const bx = b.x ?? 0;
+  const by = b.y ?? 0;
+  const bRotation = b.rotation ?? 0;
+  const bFlipH = b.flipH ?? false;
+  const bFlipV = b.flipV ?? false;
+
+  return ax === bx
+    && ay === by
+    && aRotation === bRotation
+    && aFlipH === bFlipH
+    && aFlipV === bFlipV;
+}
+
+function areSourceRectsEqual(
+  a: PicShapeType["blipFill"]["sourceRect"] | undefined,
+  b: PicShapeType["blipFill"]["sourceRect"] | undefined,
+): boolean {
+  if (a === b) {
+    return true;
+  }
+
+  const aLeft = a?.left ?? 0;
+  const aTop = a?.top ?? 0;
+  const aRight = a?.right ?? 0;
+  const aBottom = a?.bottom ?? 0;
+
+  const bLeft = b?.left ?? 0;
+  const bTop = b?.top ?? 0;
+  const bRight = b?.right ?? 0;
+  const bBottom = b?.bottom ?? 0;
+
+  return aLeft === bLeft
+    && aTop === bTop
+    && aRight === bRight
+    && aBottom === bBottom;
+}
+
+function arePicShapePropsEqual(prev: PicShapeRendererProps, next: PicShapeRendererProps): boolean {
+  if (prev === next) {
+    return true;
+  }
+
+  if (prev.width !== next.width || prev.height !== next.height || prev.shapeId !== next.shapeId) {
+    return false;
+  }
+
+  if (prev.shape.blipFill.resourceId !== next.shape.blipFill.resourceId) {
+    return false;
+  }
+
+  if (!areSourceRectsEqual(prev.shape.blipFill.sourceRect, next.shape.blipFill.sourceRect)) {
+    return false;
+  }
+
+  return areTransformsEqual(prev.shape.properties.transform, next.shape.properties.transform);
+}
+
+/**
+ * Renders a picture (p:pic) as React SVG elements.
+ */
+export const PicShapeRenderer = memo(PicShapeRendererBase, arePicShapePropsEqual);
