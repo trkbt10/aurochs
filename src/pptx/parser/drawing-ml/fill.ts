@@ -4,14 +4,14 @@
  * @see ECMA-376 Part 1, Section 20.1.8 - Fill Properties
  */
 
-import type { XmlElement } from "../../../../xml/index";
-import { isXmlElement, getChild, getChildren, getAttr, escapeXml } from "../../../../xml/index";
-import type { FillType, GradientFill, FillResult } from "./types";
-import type { ColorResolveContext } from "../../../domain/resolution";
-import type { ResourceContext } from "../../../render/core/slide-context";
-import { angleToDegrees } from "../../units/conversion";
-import { base64ArrayBuffer } from "../../../../buffer/index";
-import { getMimeType } from "../../../../files/index";
+import type { XmlElement } from "../../../xml/index";
+import { isXmlElement, getChild, getChildren, getAttr, escapeXml } from "../../../xml/index";
+import type { FillType, GradientFill, FillResult } from "../../domain/drawing-ml";
+import type { ColorResolveContext } from "../../domain/resolution";
+import type { ResourceContext } from "../../render/core/slide-context";
+import { angleToDegrees } from "../../core/units/conversion";
+import { base64ArrayBuffer } from "../../../buffer/index";
+import { getMimeType } from "../../../files/index";
 import { getSolidFill } from "./color";
 
 // =============================================================================

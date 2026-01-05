@@ -3,8 +3,8 @@
  */
 
 import { getSlideBackgroundFill, getBackgroundFillData } from "./background";
-import type { SlideRenderContext } from "../../../render/core/slide-context";
-import type { XmlElement } from "../../../../xml/index";
+import type { SlideRenderContext } from "../core/slide-context";
+import type { XmlElement } from "../../../xml/index";
 
 /**
  * Create XmlElement for tests

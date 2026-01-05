@@ -6,8 +6,8 @@
  * @see ECMA-376 Part 1, Section 20.1.6 (Theme)
  */
 
-import type { XmlElement, XmlDocument } from "../../../../xml/index";
-import { getAttr, getChild, getChildren, getByPath } from "../../../../xml/index";
+import type { XmlElement, XmlDocument } from "../../../xml/index";
+import { getAttr, getChild, getChildren, getByPath } from "../../../xml/index";
 import type {
   FontSpec,
   FontScheme,
@@ -19,7 +19,7 @@ import type {
   CustomColor,
   ExtraColorScheme,
   RawMasterTextStyles,
-} from "../../../domain";
+} from "../../domain";
 
 // =============================================================================
 // Font Scheme Parsing

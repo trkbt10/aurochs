@@ -2,7 +2,7 @@
  * @file Tests for theme parser functions
  */
 
-import { parseXml } from "../../../../xml/index";
+import { parseXml } from "../../../xml/index";
 import { parseCustomColorList, parseExtraColorSchemes, parseObjectDefaults } from "./theme";
 
 describe("parseCustomColorList", () => {

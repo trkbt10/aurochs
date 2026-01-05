@@ -14,7 +14,7 @@ import type { RenderOptions } from "../render/render-options";
 import type { SlideRenderContext } from "../render/core/slide-context";
 import { createSlideRenderContext } from "../render/core/slide-context";
 import { createPlaceholderTable, createColorMap } from "../parser/slide/resource-adapters";
-import { parseTheme, parseMasterTextStyles } from "../core/dml/parser/theme";
+import { parseTheme, parseMasterTextStyles } from "../parser/drawing-ml";
 import { DEFAULT_RENDER_OPTIONS } from "../render/render-options";
 import { renderSlideIntegrated, renderSlideSvgIntegrated } from "./slide-render";
 import { parseSlideTimingData } from "../parser/timing-parser";

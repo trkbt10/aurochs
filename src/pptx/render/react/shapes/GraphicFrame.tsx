@@ -16,6 +16,7 @@ import { buildTransformAttr } from "./transform";
 import { renderChart } from "../../components/chart";
 import { renderTableSvg } from "../../components/table";
 import { renderDiagramShapesSvg } from "../../svg/slide-shapes";
+import { extractSvgContent } from "../../svg/svg-utils";
 
 // =============================================================================
 // Types
@@ -289,17 +290,6 @@ function renderPlaceholder(width: number, height: number, label: string): ReactN
       </text>
     </>
   );
-}
-
-/**
- * Extract SVG content from a complete SVG string
- */
-function extractSvgContent(svg: string): string {
-  const match = svg.match(/<svg[^>]*>([\s\S]*)<\/svg>/);
-  if (match !== null) {
-    return match[1];
-  }
-  return svg;
 }
 
 // =============================================================================

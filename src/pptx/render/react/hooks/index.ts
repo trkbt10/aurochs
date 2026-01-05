@@ -27,3 +27,7 @@ export type {
   UseSlideAnimationResult,
 } from "./useSlideAnimation";
 export { useSlideAnimation } from "./useSlideAnimation";
+
+// Lazy SVG Cache
+export type { UseLazySvgCacheResult } from "./useLazySvgCache";
+export { useLazySvgCache } from "./useLazySvgCache";

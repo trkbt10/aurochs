@@ -1,7 +1,7 @@
 /**
  * @file Background fill conversion utilities
  *
- * Converts legacy BackgroundFill (from core/dml/render) to ResolvedBackgroundFill
+ * Converts BackgroundFill (from domain/drawing-ml) to ResolvedBackgroundFill
  * (used by render layer).
  *
  * @see ECMA-376 Part 1, Section 20.1.8.33 (a:gradFill)
@@ -9,7 +9,7 @@
  */
 
 import type { ResolvedBackgroundFill } from "./types";
-import type { BackgroundFill, GradientData } from "../../core/dml/render/types";
+import type { BackgroundFill, GradientData } from "../../domain/drawing-ml";
 
 /**
  * Calculate radial center from fillToRect.
@@ -30,9 +30,9 @@ function calculateRadialCenter(
 }
 
 /**
- * Convert BackgroundFill from core/dml to ResolvedBackgroundFill.
+ * Convert BackgroundFill to ResolvedBackgroundFill.
  *
- * This converts the legacy background resolution result (from getBackgroundFillData)
+ * This converts the background resolution result (from getBackgroundFillData)
  * to the render-layer ResolvedBackgroundFill type.
  *
  * @param bgFillData - Background fill data from getBackgroundFillData()

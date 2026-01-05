@@ -43,6 +43,17 @@ export type {
 } from "./hooks/useSlideAnimation";
 export { useSlideAnimation } from "./hooks/useSlideAnimation";
 
+// Hooks - Lazy SVG Cache
+export type { UseLazySvgCacheResult } from "./hooks/useLazySvgCache";
+export { useLazySvgCache } from "./hooks/useLazySvgCache";
+
+// SVG Content Renderer
+export {
+  SvgContentRenderer,
+  type SvgContentRendererProps,
+  type SvgRenderMode,
+} from "./SvgContentRenderer";
+
 // Primitives
 export {
   useFill,

@@ -13,7 +13,7 @@ import type {
   Transform,
 } from "../../domain/index";
 import type { RenderContext } from "../context";
-import { resolveColor } from "../../core/dml/render/color";
+import { resolveColor } from "../drawing-ml";
 import {
   a,
   buildStyle,

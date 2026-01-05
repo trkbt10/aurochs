@@ -7,10 +7,10 @@
  * @see ECMA-376 Part 1, Section 20.1.2.3 - Color Types
  */
 
-import type { XmlElement } from "../../../../xml/index";
-import { isXmlElement, getChild, getAttr } from "../../../../xml/index";
-import { OOXML_PERCENT_FACTOR } from "../../ecma376/defaults";
-import type { ColorResolveContext } from "../../../domain/resolution";
+import type { XmlElement } from "../../../xml/index";
+import { isXmlElement, getChild, getAttr } from "../../../xml/index";
+import { OOXML_PERCENT_FACTOR } from "../../core/ecma376/defaults";
+import type { ColorResolveContext } from "../../domain/resolution";
 import {
   toHex,
   hslToRgb,
@@ -23,7 +23,7 @@ import {
   applySatMod,
   parseColorToHsl,
   hslToHexString,
-} from "../../../../color/index";
+} from "../../../color/index";
 
 // =============================================================================
 // Color Element Keys (ECMA-376)

@@ -37,6 +37,7 @@ import { renderTextSvg, getDashArray } from "./slide-text";
 import { renderChart } from "../components/chart";
 import { renderTableSvg } from "../components/table";
 import { px } from "../../domain/types";
+import { extractSvgContent } from "./svg-utils";
 
 // =============================================================================
 // Main Shape Rendering
@@ -686,14 +687,3 @@ function renderChartFromRef(chartRef: ChartReference, w: number, h: number, ctx:
   return undefined;
 }
 
-/**
- * Extract SVG content from a complete SVG string (removes wrapper svg element)
- */
-function extractSvgContent(svg: string): string {
-  // Remove the outer <svg ...> and </svg> tags
-  const match = svg.match(/<svg[^>]*>([\s\S]*)<\/svg>/);
-  if (match !== null) {
-    return match[1];
-  }
-  return svg;
-}

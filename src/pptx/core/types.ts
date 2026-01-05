@@ -1,7 +1,7 @@
 /**
  * @file Core slide processing type definitions
  *
- * Note: ZipFile and ZipEntry are exported from core/dml/domain.
+ * Note: ZipFile and ZipEntry are exported from domain/.
  */
 
 import type { XmlElement } from "../../xml";

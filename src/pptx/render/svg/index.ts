@@ -50,3 +50,6 @@ export {
   renderGeometryData,
   buildTransformAttr,
 } from "./geometry";
+
+// SVG utilities
+export { extractSvgContent } from "./svg-utils";

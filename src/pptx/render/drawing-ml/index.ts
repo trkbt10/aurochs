@@ -1,13 +1,18 @@
 /**
  * @file DrawingML render functions
  *
- * Domain object to output conversion for DrawingML color processing.
+ * Domain object to output conversion for DrawingML color and background processing.
  *
  * @see ECMA-376 Part 1, Section 20.1.2.3 (Color Types)
  */
 
-// Types
-export type { BackgroundFill, GradientData, GradientStop, ImageFillMode } from "./types";
+// Types from domain
+export type {
+  BackgroundFill,
+  GradientData,
+  GradientStop,
+  ImageFillMode,
+} from "../../domain/drawing-ml";
 
 // Color resolution
 export { resolveColor } from "./color";

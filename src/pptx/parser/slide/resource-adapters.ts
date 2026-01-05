@@ -3,7 +3,7 @@
  *
  * Provides adapter functions that wrap IndexTables with consistent interfaces.
  *
- * Theme parsing functions should be imported from core/dml/parser/theme.ts
+ * Theme parsing functions should be imported from parser/drawing-ml
  *
  * @see ./accessor.ts for type definitions
  */
@@ -11,7 +11,7 @@
 import type { PlaceholderTable, ColorMap } from "../../domain";
 import type { IndexTables } from "../../core/types";
 import type { XmlElement } from "../../../xml";
-import { parseColorMap } from "../../core/dml/parser/theme";
+import { parseColorMap } from "../drawing-ml";
 
 // =============================================================================
 // Adapter Functions
