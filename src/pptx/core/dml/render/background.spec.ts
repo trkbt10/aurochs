@@ -27,7 +27,7 @@ describe("getSlideBackgroundFill", () => {
     const emptyResources = {
       getTarget: () => undefined,
       getType: () => undefined,
-      getTargetByType: () => undefined,
+      getTargetByType: () => undefined, getAllTargetsByType: () => [],
     };
 
     return {
@@ -38,7 +38,7 @@ describe("getSlideBackgroundFill", () => {
             ? {
                 getTarget: (id: string) => opts.slideResObj?.[id],
                 getType: () => undefined,
-                getTargetByType: () => undefined,
+                getTargetByType: () => undefined, getAllTargetsByType: () => [],
               }
             : emptyResources,
       },
@@ -50,7 +50,7 @@ describe("getSlideBackgroundFill", () => {
             ? {
                 getTarget: (id: string) => opts.layoutResObj?.[id],
                 getType: () => undefined,
-                getTargetByType: () => undefined,
+                getTargetByType: () => undefined, getAllTargetsByType: () => [],
               }
             : emptyResources,
       },
@@ -64,7 +64,7 @@ describe("getSlideBackgroundFill", () => {
             ? {
                 getTarget: (id: string) => opts.masterResObj?.[id],
                 getType: () => undefined,
-                getTargetByType: () => undefined,
+                getTargetByType: () => undefined, getAllTargetsByType: () => [],
               }
             : emptyResources,
       },
@@ -195,7 +195,7 @@ describe("getSlideBackgroundFill", () => {
       const emptyResources = {
         getTarget: () => undefined,
         getType: () => undefined,
-        getTargetByType: () => undefined,
+        getTargetByType: () => undefined, getAllTargetsByType: () => [],
       };
 
       const ctx: SlideRenderContext = {
@@ -299,7 +299,7 @@ describe("getSlideBackgroundFill", () => {
       const emptyResources = {
         getTarget: () => undefined,
         getType: () => undefined,
-        getTargetByType: () => undefined,
+        getTargetByType: () => undefined, getAllTargetsByType: () => [],
       };
 
       const ctx: SlideRenderContext = {
@@ -476,7 +476,7 @@ describe("getBackgroundFillData", () => {
     const emptyResources = {
       getTarget: () => undefined,
       getType: () => undefined,
-      getTargetByType: () => undefined,
+      getTargetByType: () => undefined, getAllTargetsByType: () => [],
     };
 
     return {
@@ -499,7 +499,7 @@ describe("getBackgroundFillData", () => {
             ? {
                 getTarget: (id: string) => opts.masterResObj?.[id],
                 getType: () => undefined,
-                getTargetByType: () => undefined,
+                getTargetByType: () => undefined, getAllTargetsByType: () => [],
               }
             : emptyResources,
       },

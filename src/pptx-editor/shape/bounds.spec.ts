@@ -2,7 +2,7 @@
  * @file Unit tests for shape/bounds.ts
  */
 
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 import type { SpShape, Shape } from "../../pptx/domain";
 import { px, deg } from "../../pptx/domain/types";
 import {

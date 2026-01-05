@@ -6,7 +6,7 @@
  */
 
 import { useCallback, type CSSProperties } from "react";
-import { Input, Select, Toggle } from "../../ui/primitives";
+import { Input, Select, ToggleButton } from "../../ui/primitives";
 import { FieldGroup, FieldRow } from "../../ui/layout";
 import { PointsEditor, PixelsEditor } from "../primitives";
 import { ColorEditor, createDefaultColor } from "../color";
@@ -172,16 +172,18 @@ export function RunPropertiesEditor({
 
       {/* Style: Bold, Italic, Caps */}
       <div style={rowStyle}>
-        <Toggle
-          checked={value.bold ?? false}
+        <ToggleButton
+          pressed={value.bold ?? false}
           onChange={(v) => updateField("bold", v || undefined)}
           label="B"
+          ariaLabel="Bold"
           disabled={disabled}
         />
-        <Toggle
-          checked={value.italic ?? false}
+        <ToggleButton
+          pressed={value.italic ?? false}
           onChange={(v) => updateField("italic", v || undefined)}
           label="I"
+          ariaLabel="Italic"
           disabled={disabled}
         />
         <FieldGroup label="Caps" inline labelWidth={32} style={{ marginLeft: "auto" }}>

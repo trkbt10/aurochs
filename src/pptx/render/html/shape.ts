@@ -418,11 +418,11 @@ function renderGroupInnerContent(
   );
 }
 
-function normalizeHtmlChildren(content: HtmlString | readonly HtmlString[]): readonly HtmlString[] {
+function normalizeHtmlChildren(content: HtmlString | readonly HtmlString[]): HtmlString[] {
   if (Array.isArray(content)) {
-    return content;
+    return [...content];
   }
-  return [content];
+  return [content as HtmlString];
 }
 
 // =============================================================================

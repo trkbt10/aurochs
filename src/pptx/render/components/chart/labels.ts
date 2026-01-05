@@ -384,11 +384,11 @@ function resolveDataLabelPosition(params: {
   labels: string[];
 }): DataLabelPosition | undefined {
   if (params.chartType === "bar" && params.valueRange) {
-    return resolveBarLabelPosition(params);
+    return resolveBarLabelPosition({ ...params, valueRange: params.valueRange });
   }
 
   if (params.chartType === "line" && params.valueRange) {
-    return resolveLineLabelPosition(params);
+    return resolveLineLabelPosition({ ...params, valueRange: params.valueRange });
   }
 
   if (params.chartType === "pie") {

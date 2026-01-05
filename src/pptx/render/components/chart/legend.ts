@@ -370,7 +370,7 @@ function resolveLegendDimensions(
   manualLayout: Layout["manualLayout"] | undefined,
   chartDimensions: { width: number; height: number } | undefined
 ): { width: number; height: number } {
-  if (hasManualLegendDimensions(manualLayout, chartDimensions)) {
+  if (hasManualLegendDimensions(manualLayout, chartDimensions) && chartDimensions) {
     return {
       width: manualLayout.w * chartDimensions.width,
       height: manualLayout.h * chartDimensions.height,

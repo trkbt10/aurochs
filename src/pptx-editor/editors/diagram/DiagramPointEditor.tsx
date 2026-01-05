@@ -174,9 +174,7 @@ export function DiagramPointEditor({
     if (enabled) {
       onChange({ ...value, shapeProperties: createDefaultShapeProperties() });
     } else {
-      const { shapeProperties: _sp, ...rest } = value;
-      void _sp;
-      onChange(rest);
+      onChange({ ...value, shapeProperties: undefined });
     }
   };
 

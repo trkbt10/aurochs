@@ -8,4 +8,5 @@ export { Popover, type PopoverProps } from "./Popover";
 export { Select, type SelectProps } from "./Select";
 export { Slider, type SliderProps } from "./Slider";
 export { Tabs, type TabsProps, type TabItem } from "./Tabs";
+export { ToggleButton, type ToggleButtonProps } from "./ToggleButton";
 export { Toggle, type ToggleProps } from "./Toggle";

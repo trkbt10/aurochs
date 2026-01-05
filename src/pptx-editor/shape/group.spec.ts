@@ -2,7 +2,7 @@
  * @file Unit tests for shape/group.ts
  */
 
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 import type { SpShape, GrpShape, Shape, GroupTransform, Transform } from "../../pptx/domain";
 import { px, deg } from "../../pptx/domain/types";
 import {

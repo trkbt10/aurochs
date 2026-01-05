@@ -2,7 +2,7 @@
  * @file Unit tests for shape/alignment.ts
  */
 
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 import { px } from "../../pptx/domain/types";
 import {
   alignHorizontal,

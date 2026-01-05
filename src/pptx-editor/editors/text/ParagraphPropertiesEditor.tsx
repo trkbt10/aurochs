@@ -328,7 +328,6 @@ export function ParagraphPropertiesEditor({
                   value={value.defaultRunProperties ?? createDefaultRunProperties()}
                   onChange={handleDefaultRunPropertiesChange}
                   disabled={disabled}
-                  compact
                 />
               </FieldGroup>
             </div>

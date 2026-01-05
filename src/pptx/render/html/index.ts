@@ -23,19 +23,8 @@ export {
 } from "./primitives";
 
 // HTML context (backward compatibility - use RenderContext instead)
-export type {
-  HtmlRenderContext,
-  HtmlRenderContextConfig,
-} from "./context";
-export {
-  createHtmlRenderContext,
-  createEmptyHtmlRenderContext,
-} from "./context";
+export type { HtmlRenderContext, HtmlRenderContextConfig } from "./context";
+export { createHtmlRenderContext, createEmptyHtmlRenderContext } from "./context";
 
 // HTML fill rendering
-export {
-  resolvedFillToBackground,
-  fillToBackground,
-  resolvedLineToBorder,
-  lineToBorder,
-} from "./fill";
+export { resolvedFillToBackground, fillToBackground, resolvedLineToBorder, lineToBorder } from "./fill";

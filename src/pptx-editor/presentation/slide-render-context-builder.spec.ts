@@ -9,10 +9,14 @@
  * - Background resolution
  */
 
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect } from "vitest";
 import { createRenderContextFromApiSlide, createSlideRenderContextFromApiSlide } from "./slide-render-context-builder";
 import type { Slide as ApiSlide } from "../../pptx/types/api";
 import type { FileCache } from "./types";
+import type { XmlElement, XmlDocument } from "../../xml";
+import type { ResourceMap } from "../../pptx/opc";
+import type { IndexTables } from "../../pptx/core/types";
+import { px } from "../../pptx/domain/types";
 
 // =============================================================================
 // Test Fixtures
@@ -28,8 +32,23 @@ import type { FileCache } from "./types";
  * - layout: XmlDocument (root) containing p:sldLayout element
  */
 // Helper to create XmlElement with type: "element"
-const elem = (name: string, attrs: Record<string, string>, children: unknown[]) =>
+const elem = (name: string, attrs: Record<string, string>, children: XmlElement[]): XmlElement =>
   ({ type: "element" as const, name, attrs, children });
+
+// Helper to create mock ResourceMap
+const mockResourceMap = (): ResourceMap => ({
+  getTarget: () => undefined,
+  getType: () => undefined,
+  getTargetByType: () => undefined,
+  getAllTargetsByType: () => [],
+});
+
+// Helper to create mock IndexTables
+const mockIndexTables = (): IndexTables => ({
+  idTable: {},
+  idxTable: new Map(),
+  typeTable: {},
+});
 
 function createMockApiSlide(): ApiSlide {
   // XmlDocument containing a:theme (theme file structure)
@@ -101,17 +120,23 @@ function createMockApiSlide(): ApiSlide {
   };
 
   return {
-    content,
-    master,
-    layout,
-    theme,
-    relationships: {},
-    layoutRelationships: {},
-    masterRelationships: {},
-    themeRelationships: {},
-    layoutTables: [],
-    masterTables: [],
+    number: 1,
+    filename: "slide1",
+    content: content as XmlDocument,
+    master: master as XmlDocument,
+    layout: layout as XmlDocument,
+    theme: theme as XmlDocument,
+    relationships: mockResourceMap(),
+    layoutRelationships: mockResourceMap(),
+    masterRelationships: mockResourceMap(),
+    themeRelationships: mockResourceMap(),
+    layoutTables: mockIndexTables(),
+    masterTables: mockIndexTables(),
     masterTextStyles: undefined,
+    diagram: null,
+    diagramRelationships: mockResourceMap(),
+    timing: undefined,
+    renderHTML: () => "<div></div>",
     renderSVG: () => "<svg></svg>",
   };
 }
@@ -172,7 +197,7 @@ describe("createRenderContextFromApiSlide", () => {
   it("should create HtmlRenderContext with color context", () => {
     const apiSlide = createMockApiSlide();
     const cache = createMockFileCache();
-    const slideSize = { width: 960, height: 540 };
+    const slideSize = { width: px(960), height: px(540) };
 
     const ctx = createRenderContextFromApiSlide(apiSlide, cache, slideSize);
 
@@ -185,7 +210,7 @@ describe("createRenderContextFromApiSlide", () => {
   it("should be usable with renderSlideSvg for domain slide rendering", async () => {
     const apiSlide = createMockApiSlide();
     const cache = createMockFileCache();
-    const slideSize = { width: 960, height: 540 };
+    const slideSize = { width: px(960), height: px(540) };
 
     const ctx = createRenderContextFromApiSlide(apiSlide, cache, slideSize);
 
@@ -207,7 +232,7 @@ describe("createRenderContextFromApiSlide", () => {
   it("should resolve scheme colors via resolveColor", async () => {
     const apiSlide = createMockApiSlide();
     const cache = createMockFileCache();
-    const slideSize = { width: 960, height: 540 };
+    const slideSize = { width: px(960), height: px(540) };
 
     const ctx = createRenderContextFromApiSlide(apiSlide, cache, slideSize);
     const colorContext = ctx.colorContext;
@@ -237,7 +262,7 @@ describe("createRenderContextFromApiSlide", () => {
   it("should include theme colors in colorScheme", () => {
     const apiSlide = createMockApiSlide();
     const cache = createMockFileCache();
-    const slideSize = { width: 960, height: 540 };
+    const slideSize = { width: px(960), height: px(540) };
 
     const ctx = createRenderContextFromApiSlide(apiSlide, cache, slideSize);
     const { colorScheme } = ctx.colorContext;
@@ -252,7 +277,7 @@ describe("createRenderContextFromApiSlide", () => {
   it("should include color map in colorContext", () => {
     const apiSlide = createMockApiSlide();
     const cache = createMockFileCache();
-    const slideSize = { width: 960, height: 540 };
+    const slideSize = { width: px(960), height: px(540) };
 
     const ctx = createRenderContextFromApiSlide(apiSlide, cache, slideSize);
     const { colorMap } = ctx.colorContext;
@@ -266,7 +291,7 @@ describe("createRenderContextFromApiSlide", () => {
   it("should include font scheme", () => {
     const apiSlide = createMockApiSlide();
     const cache = createMockFileCache();
-    const slideSize = { width: 960, height: 540 };
+    const slideSize = { width: px(960), height: px(540) };
 
     const ctx = createRenderContextFromApiSlide(apiSlide, cache, slideSize);
 
@@ -278,7 +303,7 @@ describe("createRenderContextFromApiSlide", () => {
   it("should have resource resolver", () => {
     const apiSlide = createMockApiSlide();
     const cache = createMockFileCache();
-    const slideSize = { width: 960, height: 540 };
+    const slideSize = { width: px(960), height: px(540) };
 
     const ctx = createRenderContextFromApiSlide(apiSlide, cache, slideSize);
 

@@ -5,14 +5,13 @@
  */
 
 import type { XmlElement } from "../../../../xml/index";
-import { isXmlElement, getChild, getChildren, getAttr } from "../../../../xml/index";
+import { isXmlElement, getChild, getChildren, getAttr, escapeXml } from "../../../../xml/index";
 import type { FillType, GradientFill, FillResult } from "./types";
 import type { ColorResolveContext } from "../../../domain/resolution";
 import type { ResourceContext } from "../../../render/core/slide-context";
 import { angleToDegrees } from "../../units/conversion";
 import { base64ArrayBuffer } from "../../../../buffer/index";
 import { getMimeType } from "../../../../files/index";
-import { escapeHtml } from "../../../../html/index";
 import { getSolidFill } from "./color";
 
 // =============================================================================
@@ -73,9 +72,7 @@ export function getFillType(node: unknown): FillType {
 /**
  * Find fill element in XmlElement
  */
-export function findFillElement(
-  node: XmlElement,
-): { key: FillElementKey; element: XmlElement } | undefined {
+export function findFillElement(node: XmlElement): { key: FillElementKey; element: XmlElement } | undefined {
   for (const key of FILL_ELEMENT_KEYS) {
     const element = getChild(node, key);
     if (element !== undefined) {
@@ -94,11 +91,7 @@ export function findFillElement(
  *
  * @see ECMA-376 Part 1, Section 20.1.8.33 (a:gradFill)
  */
-export function getGradientFill(
-  node: unknown,
-  colorCtx: ColorResolveContext,
-  phClr?: string,
-): GradientFill {
+export function getGradientFill(node: unknown, colorCtx: ColorResolveContext, phClr?: string): GradientFill {
   if (!isXmlElement(node)) {
     return { color: [], rot: 0 };
   }
@@ -158,9 +151,7 @@ function parsePathGradient(gradFill: XmlElement): {
   return { pathShadeType, fillToRect };
 }
 
-function parseFillToRect(
-  pathNode: XmlElement,
-): { l: number; t: number; r: number; b: number } | undefined {
+function parseFillToRect(pathNode: XmlElement): { l: number; t: number; r: number; b: number } | undefined {
   const fillToRectNode = getChild(pathNode, "a:fillToRect");
   if (fillToRectNode === undefined) {
     return undefined;
@@ -184,10 +175,7 @@ function getGradientRotation(gradFill: XmlElement): number {
 /**
  * Get picture fill using ResourceContext
  */
-export function getPicFillFromContext(
-  node: unknown,
-  resourceCtx: ResourceContext,
-): string | undefined {
+export function getPicFillFromContext(node: unknown, resourceCtx: ResourceContext): string | undefined {
   if (!isXmlElement(node)) {
     return undefined;
   }
@@ -203,7 +191,7 @@ export function getPicFillFromContext(
     return undefined;
   }
 
-  const imgPath = escapeHtml(rawImgPath);
+  const imgPath = escapeXml(rawImgPath);
   const imgExt = imgPath.split(".").pop() ?? "";
   if (imgExt === "xml") {
     return undefined;
@@ -221,10 +209,7 @@ export function getPicFillFromContext(
 /**
  * Get pattern fill (CSS gradient patterns)
  */
-export function getPatternFill(
-  node: unknown,
-  colorCtx: ColorResolveContext,
-): [string, string?, string?] {
+export function getPatternFill(node: unknown, colorCtx: ColorResolveContext): [string, string?, string?] {
   if (!isXmlElement(node)) {
     return [""];
   }
@@ -280,42 +265,18 @@ const PATTERN_RENDERERS: Record<string, PatternRenderer> = {
       `linear-gradient(to bottom, #${fg} -1px, transparent 1.5px) #${bg};`,
     "8px 8px",
   ],
-  wdUpDiag: (fg, bg) => [
-    `repeating-linear-gradient(-45deg, transparent 1px, transparent 4px, #${fg} 7px) #${bg};`,
-  ],
-  dkUpDiag: (fg, bg) => [
-    `repeating-linear-gradient(-45deg, transparent 1px, #${bg} 5px) #${fg};`,
-  ],
-  ltUpDiag: (fg, bg) => [
-    `repeating-linear-gradient(-45deg, transparent 1px, transparent 2px, #${fg} 4px) #${bg};`,
-  ],
-  wdDnDiag: (fg, bg) => [
-    `repeating-linear-gradient(45deg, transparent 1px, transparent 4px, #${fg} 7px) #${bg};`,
-  ],
-  dkDnDiag: (fg, bg) => [
-    `repeating-linear-gradient(45deg, transparent 1px, #${bg} 5px) #${fg};`,
-  ],
-  ltDnDiag: (fg, bg) => [
-    `repeating-linear-gradient(45deg, transparent 1px, transparent 2px, #${fg} 4px) #${bg};`,
-  ],
-  dkHorz: (fg, bg) => [
-    `repeating-linear-gradient(0deg, transparent 1px, transparent 2px, #${bg} 7px) #${fg};`,
-  ],
-  ltHorz: (fg, bg) => [
-    `repeating-linear-gradient(0deg, transparent 1px, transparent 5px, #${fg} 7px) #${bg};`,
-  ],
-  narHorz: (fg, bg) => [
-    `repeating-linear-gradient(0deg, transparent 1px, transparent 2px, #${fg} 4px) #${bg};`,
-  ],
-  dkVert: (fg, bg) => [
-    `repeating-linear-gradient(90deg, transparent 1px, transparent 2px, #${bg} 7px) #${fg};`,
-  ],
-  ltVert: (fg, bg) => [
-    `repeating-linear-gradient(90deg, transparent 1px, transparent 5px, #${fg} 7px) #${bg};`,
-  ],
-  narVert: (fg, bg) => [
-    `repeating-linear-gradient(90deg, transparent 1px, transparent 2px, #${fg} 4px) #${bg};`,
-  ],
+  wdUpDiag: (fg, bg) => [`repeating-linear-gradient(-45deg, transparent 1px, transparent 4px, #${fg} 7px) #${bg};`],
+  dkUpDiag: (fg, bg) => [`repeating-linear-gradient(-45deg, transparent 1px, #${bg} 5px) #${fg};`],
+  ltUpDiag: (fg, bg) => [`repeating-linear-gradient(-45deg, transparent 1px, transparent 2px, #${fg} 4px) #${bg};`],
+  wdDnDiag: (fg, bg) => [`repeating-linear-gradient(45deg, transparent 1px, transparent 4px, #${fg} 7px) #${bg};`],
+  dkDnDiag: (fg, bg) => [`repeating-linear-gradient(45deg, transparent 1px, #${bg} 5px) #${fg};`],
+  ltDnDiag: (fg, bg) => [`repeating-linear-gradient(45deg, transparent 1px, transparent 2px, #${fg} 4px) #${bg};`],
+  dkHorz: (fg, bg) => [`repeating-linear-gradient(0deg, transparent 1px, transparent 2px, #${bg} 7px) #${fg};`],
+  ltHorz: (fg, bg) => [`repeating-linear-gradient(0deg, transparent 1px, transparent 5px, #${fg} 7px) #${bg};`],
+  narHorz: (fg, bg) => [`repeating-linear-gradient(0deg, transparent 1px, transparent 2px, #${fg} 4px) #${bg};`],
+  dkVert: (fg, bg) => [`repeating-linear-gradient(90deg, transparent 1px, transparent 2px, #${bg} 7px) #${fg};`],
+  ltVert: (fg, bg) => [`repeating-linear-gradient(90deg, transparent 1px, transparent 5px, #${fg} 7px) #${bg};`],
+  narVert: (fg, bg) => [`repeating-linear-gradient(90deg, transparent 1px, transparent 2px, #${fg} 4px) #${bg};`],
   lgCheck: (fg, bg) => [
     `linear-gradient(45deg, #${fg} 25%, transparent 0, transparent 75%, #${fg} 0), ` +
       `linear-gradient(45deg, #${fg} 25%, transparent 0, transparent 75%, #${fg} 0) #${bg};`,
@@ -364,11 +325,7 @@ const PCT_PATTERNS: Record<string, [string, string, string]> = {
 /**
  * Get linear gradient CSS for pattern fills
  */
-export function getLinearGradient(
-  prst: string,
-  bgColor: string,
-  fgColor: string,
-): [string, string?, string?] {
+export function getLinearGradient(prst: string, bgColor: string, fgColor: string): [string, string?, string?] {
   const renderer = PATTERN_RENDERERS[prst];
   if (renderer !== undefined) {
     return renderer(fgColor, bgColor);
@@ -376,10 +333,7 @@ export function getLinearGradient(
 
   const pctPattern = PCT_PATTERNS[prst];
   if (pctPattern !== undefined) {
-    return [
-      `radial-gradient(#${fgColor} ${pctPattern[0]}, transparent ${pctPattern[1]}) #${bgColor};`,
-      pctPattern[2],
-    ];
+    return [`radial-gradient(#${fgColor} ${pctPattern[0]}, transparent ${pctPattern[1]}) #${bgColor};`, pctPattern[2]];
   }
 
   return ["#" + bgColor];
@@ -514,11 +468,7 @@ export function getFillHandler(fillType: FillType): FillHandler | undefined {
 /**
  * Format fill result using the appropriate handler
  */
-export function formatFillResult(
-  fillType: FillType,
-  fillColor: unknown,
-  isSvgMode: boolean,
-): FillResult {
+export function formatFillResult(fillType: FillType, fillColor: unknown, isSvgMode: boolean): FillResult {
   const handler = FILL_HANDLERS_BY_TYPE[fillType];
   if (handler === undefined) {
     return isSvgMode ? "none" : "";

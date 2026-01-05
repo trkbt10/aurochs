@@ -6,7 +6,7 @@
  * @see ECMA-376 Part 1, Section 20.1.7.5 (grpSpPr)
  */
 
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect } from "vitest";
 import { buildGroupTransformAttr, buildTransformAttr, createDefsCollector } from "./slide-utils";
 import type { GroupTransform, Transform } from "../../domain/types";
 import { px, deg } from "../../domain/types";

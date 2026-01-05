@@ -2,7 +2,7 @@
  * @file Clipboard tests
  */
 
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect } from "vitest";
 import { createClipboardContent, incrementPasteCount } from "./clipboard";
 import type { Shape } from "../../pptx/domain";
 import { px, deg } from "../../pptx/domain/types";

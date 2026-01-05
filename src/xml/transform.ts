@@ -5,7 +5,7 @@
 
 import type { XmlNode, XmlElement } from "./ast";
 import { isXmlElement, isXmlText } from "./ast";
-import { escapeAttr, escapeContent } from "../markup";
+import { escapeAttr, escapeContent } from "./escape";
 
 /**
  * Filter elements by predicate function.

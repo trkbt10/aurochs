@@ -2,7 +2,7 @@
  * @file Drag state tests
  */
 
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect } from "vitest";
 import { px, deg } from "../../pptx/domain/types";
 import {
   createIdleDragState,

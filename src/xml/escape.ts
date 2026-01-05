@@ -14,7 +14,7 @@
  * Branded string type for safe XML content.
  * Inherits from MarkupString.
  */
-export type XmlString = MarkupString & { readonly __xmlBrand?: "XmlString" };
+export type XmlString = string & { readonly __xmlBrand?: "XmlString" };
 
 // =============================================================================
 // Escape Functions
@@ -36,16 +36,6 @@ export function unsafeXml(xml: string): XmlString {
 export function emptyXml(): XmlString {
   return emptyMarkup() as XmlString;
 }
-/**
- * @file Markup escaping utilities
- * Generic escaping and decoding for XML-like markup languages
- *
- * This module provides the base escape/decode functions for all markup types:
- * - XML, HTML, SVG use these functions directly or via specialized wrappers
- * - OOXML inherits from XML which inherits from this module
- */
-
-import type { MarkupString } from "./types";
 
 // =============================================================================
 // Escape Maps
@@ -86,8 +76,8 @@ const DECODE_MAP: Record<string, string> = {
  * escapeXml("a & b") // "a &amp; b"
  * escapeXml("<tag>")  // "&lt;tag&gt;"
  */
-export function escapeXml(text: string): MarkupString {
-  return text.replace(/[&<>"']/g, (char) => ENCODE_MAP[char]) as MarkupString;
+export function escapeXml(text: string): XmlString {
+  return text.replace(/[&<>"']/g, (char) => ENCODE_MAP[char]) as XmlString;
 }
 
 /**
@@ -146,13 +136,13 @@ export function decodeXmlEntities(text: string): string {
  * Mark a string as safe markup without escaping.
  * Use only for trusted content that is already properly escaped.
  */
-export function unsafeMarkup(content: string): MarkupString {
-  return content as MarkupString;
+export function unsafeMarkup(content: string): XmlString {
+  return content as XmlString;
 }
 
 /**
  * Create an empty markup string.
  */
-export function emptyMarkup(): MarkupString {
-  return "" as MarkupString;
+export function emptyMarkup(): XmlString {
+  return "" as XmlString;
 }

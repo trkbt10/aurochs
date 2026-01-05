@@ -11,7 +11,7 @@
  * This is the top-level component that manages all editing state.
  */
 
-import { useRef, useEffect, useMemo, useCallback, type CSSProperties } from "react";
+import { useRef, useEffect, useMemo, useCallback, useState, type CSSProperties } from "react";
 import type { Slide, Shape } from "../../pptx/domain";
 import type { ShapeId } from "../../pptx/domain/types";
 import { px, deg } from "../../pptx/domain/types";
@@ -25,8 +25,7 @@ import { SlideThumbnailPreview } from "../thumbnail/SlideThumbnailPreview";
 import { CreationToolbar } from "../panels/CreationToolbar";
 import type { CreationMode } from "./types";
 import { createShapeFromMode, getDefaultBoundsForMode } from "../shape/factory";
-import { SlideCanvas } from "../slide/SlideCanvas";
-import { TextEditController, isTextEditActive, mergeTextIntoBody, extractDefaultRunProperties } from "../slide/text-edit";
+import { isTextEditActive, mergeTextIntoBody, extractDefaultRunProperties } from "../slide/text-edit";
 import { PropertyPanel } from "../panels/PropertyPanel";
 import { ShapeToolbar } from "../panels/ShapeToolbar";
 import { LayerPanel } from "../panels/LayerPanel";
@@ -36,6 +35,9 @@ import { clientToSlideCoords } from "../shape/coords";
 import { withUpdatedTransform } from "../shape/transform";
 import { calculateAlignedBounds } from "../shape/alignment";
 import { createRenderContextFromApiSlide, getLayoutNonPlaceholderShapes } from "./slide-render-context-builder";
+import { CanvasControls } from "./CanvasControls";
+import { CanvasStage } from "./CanvasStage";
+import { snapValue } from "./canvas-controls";
 
 // =============================================================================
 // Types
@@ -100,9 +102,7 @@ const contentAreaStyle: CSSProperties = {
 const canvasContainerStyle: CSSProperties = {
   flex: 1,
   display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  padding: "24px",
+  position: "relative",
   backgroundColor: "var(--bg-tertiary, #111)",
   overflow: "hidden",
 };
@@ -121,6 +121,8 @@ const panelSectionStyle: CSSProperties = {
   overflow: "auto",
 };
 
+const RULER_THICKNESS = 24;
+
 // =============================================================================
 // Inner Editor Component
 // =============================================================================
@@ -136,8 +138,12 @@ function EditorContent({
 }) {
   const { state, dispatch, document, activeSlide, selectedShapes, primaryShape, canUndo, canRedo, creationMode, textEdit } =
     usePresentationEditor();
-  const containerRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLDivElement>(null);
   const { shapeSelection: selection, drag } = state;
+  const [zoom, setZoom] = useState(1);
+  const [showRulers, setShowRulers] = useState(true);
+  const [snapEnabled, setSnapEnabled] = useState(true);
+  const [snapStep, setSnapStep] = useState(10);
 
   // Creation mode handlers
   const handleCreationModeChange = useCallback(
@@ -242,11 +248,63 @@ function EditorContent({
   // Drag handlers
   // ==========================================================================
 
+  const getMoveDelta = useCallback(
+    (dx: number, dy: number) => {
+      if (!snapEnabled || snapStep <= 0 || drag.type !== "move") {
+        return { dx, dy };
+      }
+
+      const primaryId = selection.primaryId ?? drag.shapeIds[0];
+      const initial = drag.initialBounds.get(primaryId);
+      if (!initial) {
+        return { dx, dy };
+      }
+
+      const targetX = (initial.x as number) + dx;
+      const targetY = (initial.y as number) + dy;
+      const snappedX = snapValue(targetX, snapStep);
+      const snappedY = snapValue(targetY, snapStep);
+
+      return { dx: snappedX - (initial.x as number), dy: snappedY - (initial.y as number) };
+    },
+    [drag, selection.primaryId, snapEnabled, snapStep]
+  );
+
+  const getResizeDelta = useCallback(
+    (dx: number, dy: number) => {
+      if (!snapEnabled || snapStep <= 0 || drag.type !== "resize") {
+        return { dx, dy };
+      }
+
+      const bounds = drag.combinedBounds;
+      if (!bounds) {
+        return { dx, dy };
+      }
+
+      const baseX = bounds.x as number;
+      const baseY = bounds.y as number;
+      const baseWidth = bounds.width as number;
+      const baseHeight = bounds.height as number;
+      const handle = drag.handle;
+
+      const eastEdge = handle.includes("e") ? snapValue(baseX + baseWidth + dx, snapStep) : baseX + baseWidth + dx;
+      const westEdge = handle.includes("w") ? snapValue(baseX + dx, snapStep) : baseX + dx;
+      const southEdge = handle.includes("s") ? snapValue(baseY + baseHeight + dy, snapStep) : baseY + baseHeight + dy;
+      const northEdge = handle.includes("n") ? snapValue(baseY + dy, snapStep) : baseY + dy;
+
+      const snappedDx = handle.includes("w") ? westEdge - baseX : handle.includes("e") ? eastEdge - (baseX + baseWidth) : dx;
+      const snappedDy = handle.includes("n") ? northEdge - baseY : handle.includes("s") ? southEdge - (baseY + baseHeight) : dy;
+
+      return { dx: snappedDx, dy: snappedDy };
+    },
+    [drag, snapEnabled, snapStep]
+  );
+
   useEffect(() => {
     if (drag.type === "idle" || !slide) return;
 
     const handlePointerMove = (e: PointerEvent) => {
-      const container = containerRef.current;
+      const container = canvasRef.current;
       if (!container) return;
 
       const rect = container.getBoundingClientRect();
@@ -255,11 +313,13 @@ function EditorContent({
       if (drag.type === "move") {
         const deltaX = coords.x - (drag.startX as number);
         const deltaY = coords.y - (drag.startY as number);
-        dispatch({ type: "PREVIEW_MOVE", dx: px(deltaX), dy: px(deltaY) });
+        const snapped = getMoveDelta(deltaX, deltaY);
+        dispatch({ type: "PREVIEW_MOVE", dx: px(snapped.dx), dy: px(snapped.dy) });
       } else if (drag.type === "resize") {
         const deltaX = coords.x - (drag.startX as number);
         const deltaY = coords.y - (drag.startY as number);
-        dispatch({ type: "PREVIEW_RESIZE", dx: px(deltaX), dy: px(deltaY) });
+        const snapped = getResizeDelta(deltaX, deltaY);
+        dispatch({ type: "PREVIEW_RESIZE", dx: px(snapped.dx), dy: px(snapped.dy) });
       } else if (drag.type === "rotate") {
         const centerX = drag.centerX as number;
         const centerY = drag.centerY as number;
@@ -279,7 +339,7 @@ function EditorContent({
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
     };
-  }, [drag, slide, width, height, dispatch]);
+  }, [drag, slide, width, height, dispatch, getMoveDelta, getResizeDelta]);
 
   // ==========================================================================
   // Keyboard shortcuts
@@ -521,15 +581,7 @@ function EditorContent({
   // Canvas wrapper style
   // ==========================================================================
 
-  const aspectRatio = (width as number) / (height as number);
-  const canvasWrapperStyle: CSSProperties = {
-    position: "relative",
-    width: "100%",
-    maxWidth: `calc((100vh - 200px) * ${aspectRatio})`,
-    aspectRatio: `${width} / ${height}`,
-    boxShadow: "0 4px 24px rgba(0, 0, 0, 0.4)",
-    backgroundColor: "white",
-  };
+  const rulerThickness = showRulers ? RULER_THICKNESS : 0;
 
   if (!activeSlide || !slide) {
     return (
@@ -556,10 +608,7 @@ function EditorContent({
         {showToolbar && (
           <div style={toolbarStyle}>
             <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
-              <CreationToolbar
-                mode={creationMode}
-                onModeChange={handleCreationModeChange}
-              />
+              <CreationToolbar mode={creationMode} onModeChange={handleCreationModeChange} />
               <ShapeToolbar
                 canUndo={canUndo}
                 canRedo={canRedo}
@@ -573,6 +622,16 @@ function EditorContent({
                 onShapeChange={handleShapeChange}
                 direction="horizontal"
               />
+              <CanvasControls
+                zoom={zoom}
+                onZoomChange={setZoom}
+                showRulers={showRulers}
+                onShowRulersChange={setShowRulers}
+                snapEnabled={snapEnabled}
+                onSnapEnabledChange={setSnapEnabled}
+                snapStep={snapStep}
+                onSnapStepChange={setSnapStep}
+              />
             </div>
           </div>
         )}
@@ -581,45 +640,38 @@ function EditorContent({
         <div style={contentAreaStyle}>
           {/* Canvas */}
           <div style={canvasContainerStyle}>
-            <div ref={containerRef} style={canvasWrapperStyle}>
-              <SlideCanvas
-                slide={slide}
-                selection={selection}
-                drag={drag}
-                width={width}
-                height={height}
-                primaryShape={primaryShape}
-                selectedShapes={selectedShapes}
-                contextMenuActions={contextMenuActions}
-                colorContext={renderContext?.colorContext ?? document.colorContext}
-                resources={renderContext?.resources ?? document.resources}
-                fontScheme={renderContext?.fontScheme ?? document.fontScheme}
-                resolvedBackground={renderContext?.resolvedBackground ?? activeSlide?.resolvedBackground}
-                editingShapeId={editingShapeId}
-                layoutShapes={layoutShapes}
-                onSelect={handleSelect}
-                onClearSelection={handleClearSelection}
-                onStartMove={handleStartMove}
-                onStartResize={handleStartResize}
-                onStartRotate={handleStartRotate}
-                onDoubleClick={handleDoubleClick}
-                creationMode={creationMode}
-                onCreate={handleCanvasCreate}
-              />
-              {/* Text edit controller */}
-              {isTextEditActive(textEdit) && (
-                <TextEditController
-                  bounds={textEdit.bounds}
-                  textBody={textEdit.initialTextBody}
-                  colorContext={renderContext?.colorContext ?? document.colorContext}
-                  fontScheme={renderContext?.fontScheme ?? document.fontScheme}
-                  slideWidth={width as number}
-                  slideHeight={height as number}
-                  onComplete={handleTextEditComplete}
-                  onCancel={handleTextEditCancel}
-                />
-              )}
-            </div>
+            <CanvasStage
+              ref={canvasRef}
+              slide={slide}
+              selection={selection}
+              drag={drag}
+              width={width as number}
+              height={height as number}
+              primaryShape={primaryShape}
+              selectedShapes={selectedShapes}
+              contextMenuActions={contextMenuActions}
+              colorContext={renderContext?.colorContext ?? document.colorContext}
+              resources={renderContext?.resources ?? document.resources}
+              fontScheme={renderContext?.fontScheme ?? document.fontScheme}
+              resolvedBackground={renderContext?.resolvedBackground ?? activeSlide?.resolvedBackground}
+              editingShapeId={editingShapeId}
+              layoutShapes={layoutShapes}
+              creationMode={creationMode}
+              textEdit={textEdit}
+              onSelect={handleSelect}
+              onClearSelection={handleClearSelection}
+              onStartMove={handleStartMove}
+              onStartResize={handleStartResize}
+              onStartRotate={handleStartRotate}
+              onDoubleClick={handleDoubleClick}
+              onCreate={handleCanvasCreate}
+              onTextEditComplete={handleTextEditComplete}
+              onTextEditCancel={handleTextEditCancel}
+              zoom={zoom}
+              onZoomChange={setZoom}
+              showRulers={showRulers}
+              rulerThickness={rulerThickness}
+            />
           </div>
 
           {/* Right: Panels */}
