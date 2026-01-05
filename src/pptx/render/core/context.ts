@@ -16,7 +16,7 @@ import type {
   WarningCollector,
 } from "./types";
 import { DEFAULT_RENDER_OPTIONS } from "./types";
-import type { SlideRenderContext } from "../../reader/slide/accessor";
+import type { SlideRenderContext } from "./slide-context";
 import { getMimeTypeFromPath, createDataUrl } from "../../opc";
 
 // =============================================================================

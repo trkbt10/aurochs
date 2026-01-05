@@ -8,7 +8,7 @@
 import type { Slide as ApiSlide } from "../../pptx/types/api";
 import type { SlideRenderContext } from "../../pptx/reader/slide/accessor";
 import { createSlideRenderContext } from "../../pptx/reader/slide/accessor";
-import { createPlaceholderTable, createColorMap } from "../../pptx/reader/slide/resource-adapters";
+import { createPlaceholderTable, createColorMap } from "../../pptx/parser/slide/resource-adapters";
 import { parseTheme, parseMasterTextStyles } from "../../pptx/core/dml/parser/theme";
 import { DEFAULT_RENDER_OPTIONS } from "../../pptx/render/render-options";
 import { createRenderContextFromSlideContext } from "../../pptx/render/core/context";

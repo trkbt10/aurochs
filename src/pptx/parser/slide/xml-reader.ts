@@ -3,11 +3,11 @@
  * Handles reading and parsing XML from PresentationFile
  */
 
-import type { PresentationFile } from "../types/file";
-import type { XmlDocument } from "../../xml";
-import type { ResourceMap } from "../opc";
-import { stripCdata, parseXml, applyMarkupCompatibility, type MarkupCompatibilityOptions } from "../../xml";
-import { getRelationshipPath, parseRelationships } from "../opc";
+import type { PresentationFile } from "../../types/file";
+import type { XmlDocument } from "../../../xml";
+import type { ResourceMap } from "../../opc";
+import { stripCdata, parseXml, applyMarkupCompatibility, type MarkupCompatibilityOptions } from "../../../xml";
+import { getRelationshipPath, parseRelationships } from "../../opc";
 
 export const DEFAULT_MARKUP_COMPATIBILITY_OPTIONS: MarkupCompatibilityOptions = {
   supportedPrefixes: [

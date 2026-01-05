@@ -773,7 +773,14 @@ export type {
   PhotoAlbumLayout,
   SmartTags,
   Presentation,
-} from "./presentation";
+} from "./presentation/types";
+
+// Presentation parsing utilities
+export {
+  parseSlideSizeFromXml,
+  parseDefaultTextStyle,
+  parseAppVersion,
+} from "./presentation/info";
 
 // =============================================================================
 // Print Types

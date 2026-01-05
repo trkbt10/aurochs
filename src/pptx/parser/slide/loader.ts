@@ -5,7 +5,7 @@
 
 import type { PresentationFile } from "../../types/file";
 import type { ResourceMap } from "../../opc";
-import type { LayoutData, MasterData, ThemeData, DiagramData } from "../types";
+import type { LayoutData, MasterData, ThemeData, DiagramData } from "../../domain/slide/data";
 import {
   findLayoutFilename,
   findMasterFilename,
@@ -16,8 +16,8 @@ import {
 } from "../../opc";
 import { getByPath } from "../../../xml";
 import { indexNodes } from "../../core/node-indexer";
-import { transformDiagramNamespace } from "../../parser/diagram/transform";
-import { readXml, getRelationships, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS } from "../xml-reader";
+import { transformDiagramNamespace } from "../diagram/transform";
+import { readXml, getRelationships, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS } from "./xml-reader";
 
 /**
  * Load layout data for a slide

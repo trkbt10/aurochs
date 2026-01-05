@@ -11,7 +11,7 @@ import type { XmlElement } from "../../../../xml";
 import { getChild } from "../../../../xml";
 import type { BackgroundFill } from "./types";
 import type { FillType } from "../parser/types";
-import type { SlideRenderContext } from "../../../reader/slide/accessor";
+import type { SlideRenderContext } from "../../../render/core/slide-context";
 import {
   getFillType,
   getGradientFill,

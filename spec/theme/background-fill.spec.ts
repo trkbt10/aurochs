@@ -8,10 +8,10 @@
 
 import { openPresentation } from "../../src/pptx";
 import { parseXml, type XmlElement } from "../../src/xml";
-import { createColorMap } from "../../src/pptx/reader/slide/resource-adapters";
+import { createColorMap } from "../../src/pptx/parser/slide/resource-adapters";
 import { parseFormatScheme, parseColorScheme } from "../../src/pptx/core/dml/parser/theme";
-import { loadLayoutData, loadMasterData, loadThemeData } from "../../src/pptx/reader/slide/loader";
-import { getRelationships } from "../../src/pptx/reader/xml-reader";
+import { loadLayoutData, loadMasterData, loadThemeData } from "../../src/pptx/parser/slide/loader";
+import { getRelationships, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS } from "../../src/pptx/parser/slide/xml-reader";
 import { getGradientFill } from "../../src/pptx/core/dml/parser/fill";
 import { getSolidFill } from "../../src/pptx/core/dml/parser/color";
 import { createPresentationFile, THEMES_PPTX_PATH } from "./test-utils";
@@ -67,7 +67,7 @@ describe("Theme bgFillStyleLst - ECMA-376 compliance", () => {
 
   it("bgFillStyles available via loadThemeData", async () => {
     const file = await createPresentationFile(THEMES_PPTX_PATH);
-    const slideRelationships = getRelationships(file, "ppt/slides/slide3.xml");
+    const slideRelationships = getRelationships(file, "ppt/slides/slide3.xml", DEFAULT_MARKUP_COMPATIBILITY_OPTIONS);
     const layoutData = loadLayoutData(file, slideRelationships);
     const masterData = loadMasterData(file, layoutData.layoutRelationships);
     const themeData = loadThemeData(file, masterData.masterRelationships);

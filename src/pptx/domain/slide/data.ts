@@ -1,10 +1,10 @@
 /**
- * @file Internal types for PPTX reader
- * Types used within the reader module for slide processing
+ * @file Internal types for slide data processing
+ * Types used for slide loading and processing
  */
 
-import type { XmlDocument, XmlElement } from "../../xml";
-import type { IndexTables } from "../core/types";
+import type { XmlDocument, XmlElement } from "../../../xml";
+import type { IndexTables } from "../../core/types";
 import type { ResourceMap } from "../opc";
 
 /**

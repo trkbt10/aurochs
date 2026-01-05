@@ -8,7 +8,7 @@ import type { XmlElement } from "../../../../xml/index";
 import { isXmlElement, getChild, getChildren, getAttr } from "../../../../xml/index";
 import type { FillType, GradientFill, FillResult } from "./types";
 import type { ColorResolveContext } from "../../../domain/resolution";
-import type { ResourceContext } from "../../../reader/slide/accessor";
+import type { ResourceContext } from "../../../render/core/slide-context";
 import { angleToDegrees } from "../../units/conversion";
 import { base64ArrayBuffer } from "../../../../buffer/index";
 import { getMimeType } from "../../../../files/index";

@@ -234,7 +234,7 @@ export function createEmptyParseContext(): ParseContext {
 // Parse Context Builder (from SlideRenderContext)
 // =============================================================================
 
-import type { SlideRenderContext } from "../reader/slide/accessor";
+import type { SlideRenderContext } from "../render/core/slide-context";
 
 /**
  * Create ParseContext from SlideRenderContext.

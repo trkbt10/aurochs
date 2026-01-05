@@ -19,7 +19,7 @@ import type { ZipFile } from "../../src/pptx/domain";
 import {
   createPlaceholderTable,
   createColorMap,
-} from "../../src/pptx/reader/slide/resource-adapters";
+} from "../../src/pptx/parser/slide/resource-adapters";
 import { parseRelationships } from "../../src/pptx/opc";
 import { parseTheme, parseColorScheme, parseMasterTextStyles } from "../../src/pptx/core/dml/parser/theme";
 import { renderSlideSvgIntegrated } from "../../src/pptx/reader/slide/slide-render";

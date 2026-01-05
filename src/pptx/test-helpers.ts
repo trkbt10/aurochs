@@ -6,7 +6,7 @@
 
 import type { XmlElement } from "../xml";
 import type { ColorResolveContext } from "./domain/resolution";
-import type { SlideRenderContext, ResourceContext } from "./reader/slide/accessor";
+import type { SlideRenderContext, ResourceContext } from "./render/core/slide-context";
 import type {
   ColorMap,
   ColorScheme,
@@ -43,6 +43,7 @@ export function createMockResourceMap(): ResourceMap {
     getTarget: () => undefined,
     getType: () => undefined,
     getTargetByType: () => undefined,
+    getAllTargetsByType: () => [],
   };
 }
 

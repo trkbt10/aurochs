@@ -10,6 +10,7 @@
 
 import type { PlaceholderTable, ColorMap } from "../../domain";
 import type { IndexTables } from "../../core/types";
+import type { XmlElement } from "../../../xml";
 import { parseColorMap } from "../../core/dml/parser/theme";
 
 // =============================================================================
@@ -33,6 +34,6 @@ export function createPlaceholderTable(tables: IndexTables): PlaceholderTable {
  *
  * Convenience wrapper for parseColorMap.
  */
-export function createColorMap(clrMapElement: import("../../../xml").XmlElement | undefined): ColorMap {
+export function createColorMap(clrMapElement: XmlElement | undefined): ColorMap {
   return parseColorMap(clrMapElement);
 }

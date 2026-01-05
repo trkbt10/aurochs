@@ -3,19 +3,22 @@
  * Main entry point for reading PPTX files
  */
 
-import type { PresentationFile } from "./types/file";
-import type { Presentation, Slide, SlideInfo, ListOptions, PresentationOptions } from "./types/api";
-import type { SlideFileInfo, ZipFile } from "./opc";
-import type { SlideSize } from "./domain";
-import type { XmlElement } from "../xml";
-import type { SlideData } from "./domain/slide/data";
-import type { RenderOptions } from "./render/render-options";
-import { parseContentTypes, buildSlideFileInfoList } from "./opc";
-import { parseSlideSizeFromXml, parseDefaultTextStyle, parseAppVersion } from "./domain";
-import { createZipAdapter } from "./reader/zip-adapter";
-import { readXml, getRelationships, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS } from "./parser/slide/xml-reader";
-import { createSlide } from "./reader/slide/slide-builder";
-import { loadLayoutData, loadMasterData, loadThemeData, loadDiagramData } from "./parser/slide/loader";
+import type { PresentationFile } from "../types/file";
+import type { Presentation, Slide, SlideInfo, ListOptions, PresentationOptions } from "./types";
+import type { SlideFileInfo, ZipFile } from "../opc";
+import type { SlideSize } from "../domain";
+import type { XmlElement } from "../../xml";
+import type { SlideData } from "../domain/slide/data";
+import type { RenderOptions } from "../render/render-options";
+import { parseContentTypes, buildSlideFileInfoList } from "../opc";
+import { parseSlideSizeFromXml, parseDefaultTextStyle, parseAppVersion } from "../domain";
+import { createZipAdapter } from "../reader/zip-adapter";
+import { readXml, getRelationships, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS } from "../parser/slide/xml-reader";
+import { createSlide } from "../reader/slide/slide-builder";
+import { loadLayoutData, loadMasterData, loadThemeData, loadDiagramData } from "../parser/slide/loader";
+
+// Re-export types for convenience
+export type { Presentation, Slide, SlideInfo, ListOptions, PresentationOptions };
 
 /**
  * Parse a slide from file

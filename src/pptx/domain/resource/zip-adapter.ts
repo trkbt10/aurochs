@@ -3,8 +3,8 @@
  * Creates a ZipFile interface adapter from PresentationFile
  */
 
-import type { PresentationFile } from "../types/file";
-import type { ZipFile } from "../opc";
+import type { PresentationFile } from "../../types/file";
+import type { ZipFile } from "./types";
 
 /**
  * Create a ZipFile adapter from PresentationFile
