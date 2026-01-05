@@ -235,3 +235,19 @@ export function renderSlides(
 ): readonly SlideRenderResult[] {
   return slides.map((slide) => renderSlide(slide, ctx));
 }
+
+// =============================================================================
+// Empty Slide Generation
+// =============================================================================
+
+/**
+ * Create empty slide HTML for error cases.
+ *
+ * Used when slide parsing fails and we need to return a valid HTML structure.
+ *
+ * @param slideSize - Slide dimensions
+ * @returns HTML string for an empty white slide
+ */
+export function createEmptySlideHtml(slideSize: SlideSize): string {
+  return `<div class="slide" style="width:${slideSize.width}px;height:${slideSize.height}px;background:#fff;"></div>`;
+}

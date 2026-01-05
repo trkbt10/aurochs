@@ -57,6 +57,9 @@ export type {
 
 export { resolveColorWithAlpha, hexToRgb, formatRgba, resolveFill, resolveLine, getDashArrayPattern } from "./fill";
 
+// Background fill conversion
+export { toResolvedBackgroundFill } from "./background-fill";
+
 // Gradient utilities
 export type { LinearGradientCoords, RadialGradientCoords } from "./gradient";
 

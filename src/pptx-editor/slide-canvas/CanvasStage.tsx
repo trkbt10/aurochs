@@ -62,6 +62,8 @@ const canvasAreaStyle: CSSProperties = {
 /**
  * Canvas stage with rulers and scrolling.
  */
+const PAN_MARGIN = 120;
+
 export const CanvasStage = forwardRef<HTMLDivElement, CanvasStageProps>(function CanvasStage(
   {
     slide,
@@ -102,8 +104,19 @@ export const CanvasStage = forwardRef<HTMLDivElement, CanvasStageProps>(function
   const zoomedWidth = width * zoom;
   const zoomedHeight = height * zoom;
   const stageMetrics = useMemo(
-    () => getCanvasStageMetrics(viewport, zoomedWidth, zoomedHeight),
-    [viewport, zoomedWidth, zoomedHeight]
+    () =>
+      getCanvasStageMetrics(
+        {
+          width: viewport.width,
+          height: viewport.height,
+          scrollLeft: viewport.scrollLeft,
+          scrollTop: viewport.scrollTop,
+        },
+        zoomedWidth,
+        zoomedHeight,
+        PAN_MARGIN
+      ),
+    [viewport.width, viewport.height, zoomedWidth, zoomedHeight]
   );
 
   useLayoutEffect(() => {
@@ -126,7 +139,7 @@ export const CanvasStage = forwardRef<HTMLDivElement, CanvasStageProps>(function
     if (needsUpdate) {
       handleScroll();
     }
-  }, [viewport, stageMetrics, scrollRef, handleScroll]);
+  }, [viewport.width, viewport.height, stageMetrics, scrollRef, handleScroll, zoomedWidth, zoomedHeight]);
 
   const handleWheel = useCallback(
     (event: WheelEvent) => {

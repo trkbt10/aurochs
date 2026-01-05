@@ -847,3 +847,9 @@ export type {
   HandoutMaster,
   NotesMaster,
 } from "./slide";
+
+// =============================================================================
+// Shape Utilities
+// =============================================================================
+
+export { isPlaceholder, getNonPlaceholderShapes } from "./shape-utils";

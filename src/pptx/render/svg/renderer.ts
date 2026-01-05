@@ -14,7 +14,7 @@
  * @see ECMA-376 Part 1, Section 19.3 (PresentationML)
  */
 
-import type { Slide } from "../../domain/index";
+import type { Slide, SlideSize } from "../../domain/index";
 import type { RenderContext, RenderWarning } from "../context";
 import { createDefsCollector } from "./slide-utils";
 import { renderResolvedBackgroundSvg, renderBackgroundSvg } from "./slide-background";
@@ -107,4 +107,23 @@ function renderSlideBackgroundSvg(
     return renderResolvedBackgroundSvg(ctx.resolvedBackground, ctx.slideSize, defsCollector);
   }
   return renderBackgroundSvg(slide.background, ctx.slideSize, ctx, defsCollector);
+}
+
+// =============================================================================
+// Empty Slide Generation
+// =============================================================================
+
+/**
+ * Create empty slide SVG for error cases.
+ *
+ * Used when slide parsing fails and we need to return a valid SVG structure.
+ *
+ * @param slideSize - Slide dimensions
+ * @returns Complete SVG document string for an empty white slide
+ */
+export function createEmptySlideSvg(slideSize: SlideSize): string {
+  const { width, height } = slideSize;
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+<rect width="${width}" height="${height}" fill="#ffffff"/>
+</svg>`;
 }

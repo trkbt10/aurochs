@@ -24,10 +24,11 @@ export type CanvasScrollTarget = {
 export function getCanvasStageMetrics(
   viewport: CanvasViewport,
   canvasWidth: number,
-  canvasHeight: number
+  canvasHeight: number,
+  panMargin: number
 ): CanvasStageMetrics {
-  const stageWidth = Math.max(canvasWidth, viewport.width);
-  const stageHeight = Math.max(canvasHeight, viewport.height);
+  const stageWidth = Math.max(canvasWidth, viewport.width) + panMargin * 2;
+  const stageHeight = Math.max(canvasHeight, viewport.height) + panMargin * 2;
   const canvasOffsetX = (stageWidth - canvasWidth) / 2;
   const canvasOffsetY = (stageHeight - canvasHeight) / 2;
 
