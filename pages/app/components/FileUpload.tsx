@@ -1,3 +1,7 @@
+/**
+ * @file Upload screen with file input + demo launch.
+ */
+
 import { useCallback, useRef, useState, useEffect } from "react";
 import "./FileUpload.css";
 
@@ -8,6 +12,9 @@ type Props = {
   onEditorTest?: () => void;
 };
 
+/**
+ * File upload landing screen for the web PPTX viewer.
+ */
 export function FileUpload({ onFileSelect, onDemoLoad, isLoading, onEditorTest }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -53,6 +60,33 @@ export function FileUpload({ onFileSelect, onDemoLoad, isLoading, onEditorTest }
   const handleClick = useCallback(() => {
     fileInputRef.current?.click();
   }, []);
+
+  const renderUploadContent = () => {
+    if (isLoading) {
+      return (
+        <div className="loading-state">
+          <div className="spinner" />
+          <span>Loading presentation...</span>
+        </div>
+      );
+    }
+
+    return (
+      <>
+        <div className="upload-icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
+        </div>
+        <div className="upload-text">
+          <span className="upload-primary">Drop your .pptx file here</span>
+          <span className="upload-secondary">or click to browse</span>
+        </div>
+      </>
+    );
+  };
 
   return (
     <div className="upload-page">
@@ -127,26 +161,7 @@ export function FileUpload({ onFileSelect, onDemoLoad, isLoading, onEditorTest }
 
             <div className="upload-zone-border" />
 
-            {isLoading ? (
-              <div className="loading-state">
-                <div className="spinner" />
-                <span>Loading presentation...</span>
-              </div>
-            ) : (
-              <>
-                <div className="upload-icon">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="17 8 12 3 7 8" />
-                    <line x1="12" y1="3" x2="12" y2="15" />
-                  </svg>
-                </div>
-                <div className="upload-text">
-                  <span className="upload-primary">Drop your .pptx file here</span>
-                  <span className="upload-secondary">or click to browse</span>
-                </div>
-              </>
-            )}
+            {renderUploadContent()}
           </div>
 
           {/* Divider */}

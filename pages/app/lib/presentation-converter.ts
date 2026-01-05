@@ -8,7 +8,7 @@
 
 import type { LoadedPresentation } from "./pptx-loader";
 import type { PresentationDocument, SlideWithId } from "@lib/pptx-editor";
-import type { Slide as DomainSlide, Presentation as DomainPresentation } from "@lib/pptx/domain";
+import type { Presentation as DomainPresentation } from "@lib/pptx/domain";
 import type { ColorContext, FontScheme, ColorScheme, ColorMap } from "@lib/pptx/domain/resolution";
 import type { ResourceResolver } from "@lib/pptx/render/core";
 import type { Slide as ApiSlide } from "@lib/pptx/types/api";
@@ -154,7 +154,8 @@ function createResourceResolverFromCache(cache: FileCache, apiSlide: ApiSlide): 
       return new Uint8Array(entry.buffer);
     },
 
-    getResourceByType: (_relType: string) => {
+    getResourceByType: (relType: string) => {
+      void relType;
       // Not implemented for editor (would need to iterate all relationships)
       return undefined;
     },
@@ -168,13 +169,13 @@ function createResourceResolverFromCache(cache: FileCache, apiSlide: ApiSlide): 
  */
 function normalizePptxPath(path: string): string {
   // Remove leading slashes
-  let normalized = path.replace(/^\/+/, "");
+  const normalized = path.replace(/^\/+/, "");
 
   // Handle relative paths from slide/layout/master directories
   if (normalized.startsWith("../")) {
     // Assume we're coming from ppt/slides/, ppt/slideLayouts/, or ppt/slideMasters/
     // ../media/image.png → ppt/media/image.png
-    normalized = "ppt/" + normalized.replace(/\.\.\//g, "");
+    return `ppt/${normalized.replace(/\.\.\//g, "")}`;
   }
 
   return normalized;
@@ -185,10 +186,7 @@ function normalizePptxPath(path: string): string {
  */
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
-  let binary = "";
-  for (let i = 0; i < bytes.length; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
+  const binary = Array.from(bytes, (byte) => String.fromCharCode(byte)).join("");
   return btoa(binary);
 }
 
@@ -214,9 +212,7 @@ export function convertToPresentationDocument(loaded: LoadedPresentation): Prese
   const fontScheme = firstApiSlide ? extractFontScheme(firstApiSlide) : undefined;
 
   // Build resource resolver from cache
-  const resources = firstApiSlide
-    ? createResourceResolverFromCache(cache, firstApiSlide)
-    : createEmptyResourceResolver();
+  const resources = buildResourceResolver(cache, firstApiSlide);
 
   // Convert each slide from API Slide to domain Slide
   const slides: SlideWithId[] = [];
@@ -258,6 +254,14 @@ export function convertToPresentationDocument(loaded: LoadedPresentation): Prese
     resources,
     fileCache: cache,
   };
+}
+
+function buildResourceResolver(cache: FileCache, firstApiSlide: ApiSlide | null): ResourceResolver {
+  if (!firstApiSlide) {
+    return createEmptyResourceResolver();
+  }
+
+  return createResourceResolverFromCache(cache, firstApiSlide);
 }
 
 /**

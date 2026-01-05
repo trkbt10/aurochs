@@ -1,9 +1,13 @@
+/**
+ * @file Vite environment type definitions for the pages app.
+ */
+
 /// <reference types="vite/client" />
 
-interface ImportMetaEnv {
+type ImportMetaEnv = {
   readonly BASE_URL: string;
-}
+};
 
-interface ImportMeta {
+type ImportMeta = {
   readonly env: ImportMetaEnv;
-}
+};

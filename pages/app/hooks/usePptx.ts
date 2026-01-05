@@ -1,3 +1,7 @@
+/**
+ * @file PPTX loading hook for the pages app.
+ */
+
 import { useState, useCallback } from "react";
 import { loadPptxFromFile, loadPptxFromUrl, type LoadedPresentation } from "../lib/pptx-loader";
 
@@ -8,6 +12,9 @@ export type PptxState = {
   error: string | null;
 };
 
+/**
+ * Manage PPTX loading state and fetch helpers for the pages app.
+ */
 export function usePptx() {
   const [state, setState] = useState<PptxState>({
     status: "idle",

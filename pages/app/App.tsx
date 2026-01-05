@@ -1,3 +1,7 @@
+/**
+ * @file App entry for the pages demo.
+ */
+
 import { useState, useCallback, useMemo } from "react";
 import { usePptx } from "./hooks/usePptx";
 import { FileUpload } from "./components/FileUpload";
@@ -13,6 +17,9 @@ const DEMO_PPTX_URL = import.meta.env.BASE_URL + "demo.pptx";
 
 type AppMode = "upload" | "viewer" | "slideshow" | "editorTest" | "editor";
 
+/**
+ * Top-level application component for the demo pages build.
+ */
 export function App() {
   const [mode, setMode] = useState<AppMode>("upload");
   const [slideshowStartSlide, setSlideshowStartSlide] = useState(1);
@@ -72,7 +79,9 @@ export function App() {
 
   // Convert presentation to editor document
   const editorDocument = useMemo(() => {
-    if (!presentation) return null;
+    if (!presentation) {
+      return null;
+    }
     try {
       return convertToPresentationDocument(presentation);
     } catch (e) {

@@ -1,7 +1,7 @@
 /**
- * Client-side PPTX loader using JSZip
+ * @file Client-side PPTX loader using JSZip.
  *
- * This loads and parses PPTX files directly in the browser without any backend.
+ * Loads and parses PPTX files directly in the browser without any backend.
  */
 
 import JSZip from "jszip";

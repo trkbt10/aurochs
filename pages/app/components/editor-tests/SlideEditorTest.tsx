@@ -16,7 +16,7 @@ import {
   withUpdatedTransform,
   Panel,
 } from "@lib/pptx-editor";
-import type { SlideEditorAction, ResizeHandlePosition, SelectionState, DragState } from "@lib/pptx-editor";
+import type { ResizeHandlePosition } from "@lib/pptx-editor";
 import type { Slide, Shape } from "@lib/pptx/domain";
 import type { SpShape, GrpShape, GraphicFrame, CxnShape } from "@lib/pptx/domain/shape";
 import type { Line } from "@lib/pptx/domain/color";
@@ -407,21 +407,6 @@ const shortcutListStyle: CSSProperties = {
   fontSize: "13px",
 };
 
-const shortcutItemStyle: CSSProperties = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-};
-
-const kbdStyle: CSSProperties = {
-  padding: "2px 6px",
-  backgroundColor: "var(--bg-tertiary)",
-  borderRadius: "4px",
-  fontSize: "12px",
-  fontFamily: "var(--font-mono)",
-  border: "1px solid var(--border-subtle)",
-};
-
 const valueDisplayStyle: CSSProperties = {
   padding: "12px",
   backgroundColor: "var(--bg-tertiary)",
@@ -438,21 +423,6 @@ const valueDisplayStyle: CSSProperties = {
 // =============================================================================
 // Components
 // =============================================================================
-
-function ShortcutItem({
-  keys,
-  description,
-}: {
-  keys: string;
-  description: string;
-}) {
-  return (
-    <div style={shortcutItemStyle}>
-      <span style={{ color: "var(--text-secondary)" }}>{description}</span>
-      <kbd style={kbdStyle}>{keys}</kbd>
-    </div>
-  );
-}
 
 const SLIDE_WIDTH = 960;
 const SLIDE_HEIGHT = 540;
@@ -482,7 +452,9 @@ export function SlideEditorTest() {
   }, [slide.shapes, selection.selectedIds]);
 
   const primaryShape = useMemo(() => {
-    if (!selection.primaryId) return undefined;
+    if (!selection.primaryId) {
+      return undefined;
+    }
     return findShapeById(slide.shapes, selection.primaryId);
   }, [slide.shapes, selection.primaryId]);
 
@@ -503,11 +475,15 @@ export function SlideEditorTest() {
   // ==========================================================================
 
   useEffect(() => {
-    if (drag.type === "idle") return;
+    if (drag.type === "idle") {
+      return;
+    }
 
     const handlePointerMove = (e: PointerEvent) => {
       const container = containerRef.current;
-      if (!container) return;
+      if (!container) {
+        return;
+      }
 
       const rect = container.getBoundingClientRect();
       const coords = clientToSlideCoords(e.clientX, e.clientY, rect, SLIDE_WIDTH, SLIDE_HEIGHT);
@@ -518,7 +494,9 @@ export function SlideEditorTest() {
 
         for (const shapeId of drag.shapeIds) {
           const initialBounds = drag.initialBounds.get(shapeId);
-          if (!initialBounds) continue;
+          if (!initialBounds) {
+            continue;
+          }
 
           dispatch({
             type: "UPDATE_SHAPE",

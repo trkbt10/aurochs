@@ -1,3 +1,7 @@
+/**
+ * @file Main entry for the pages demo app.
+ */
+
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";

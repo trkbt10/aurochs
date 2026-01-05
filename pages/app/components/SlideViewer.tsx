@@ -1,3 +1,7 @@
+/**
+ * @file Slide viewer layout + interactions.
+ */
+
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import type { LoadedPresentation } from "../lib/pptx-loader";
 import "./SlideViewer.css";
@@ -10,6 +14,9 @@ type Props = {
   onStartEditor: () => void;
 };
 
+/**
+ * Presentation viewer with thumbnails and slide navigation.
+ */
 export function SlideViewer({ presentation, fileName, onBack, onStartSlideshow, onStartEditor }: Props) {
   const [currentSlide, setCurrentSlide] = useState(1);
   const [renderedContent, setRenderedContent] = useState<string>("");
@@ -23,19 +30,19 @@ export function SlideViewer({ presentation, fileName, onBack, onStartSlideshow, 
 
   // Render current slide
   useEffect(() => {
-    let cancelled = false;
+    const cancelled = { current: false };
     setIsRendering(true);
 
     const slide = pres.getSlide(currentSlide);
     const svg = slide.renderSVG();
 
-    if (!cancelled) {
+    if (!cancelled.current) {
       setRenderedContent(svg);
       setIsRendering(false);
     }
 
     return () => {
-      cancelled = true;
+      cancelled.current = true;
     };
   }, [pres, currentSlide]);
 
@@ -84,6 +91,23 @@ export function SlideViewer({ presentation, fileName, onBack, onStartSlideshow, 
   const handleNext = useCallback(() => {
     setCurrentSlide((s) => Math.min(totalSlides, s + 1));
   }, [totalSlides]);
+
+  const renderSlideContent = () => {
+    if (isRendering) {
+      return (
+        <div className="slide-loading">
+          <div className="loading-spinner" />
+        </div>
+      );
+    }
+
+    return (
+      <div
+        className="slide-content"
+        dangerouslySetInnerHTML={{ __html: renderedContent }}
+      />
+    );
+  };
 
   return (
     <div className="viewer-container">
@@ -171,16 +195,7 @@ export function SlideViewer({ presentation, fileName, onBack, onStartSlideshow, 
               className="slide-container"
               style={{ aspectRatio: `${slideSize.width} / ${slideSize.height}` }}
             >
-              {isRendering ? (
-                <div className="slide-loading">
-                  <div className="loading-spinner" />
-                </div>
-              ) : (
-                <div
-                  className="slide-content"
-                  dangerouslySetInnerHTML={{ __html: renderedContent }}
-                />
-              )}
+              {renderSlideContent()}
             </div>
           </div>
 
