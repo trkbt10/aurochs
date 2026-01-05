@@ -1,10 +1,10 @@
 /**
- * @file Core slide processing type definitions
+ * @file Slide content indexing types
  *
- * Note: ZipFile and ZipEntry are exported from domain/.
+ * Types for indexing slide XML nodes by id, placeholder idx, and placeholder type.
  */
 
-import type { XmlElement } from "../../xml";
+import type { XmlElement } from "../../../xml";
 
 /**
  * Index tables for slide content.
@@ -25,7 +25,6 @@ export type IndexTables = {
   typeTable: Record<string, XmlElement>;
 };
 
-
 /**
  * Node type in slide
  * @see ECMA-376 Part 1, Section 19.3.1.43 (spTree)
@@ -37,4 +36,3 @@ export type SlideNodeType =
   | "p:cxnSp"
   | "p:grpSp"
   | "mc:AlternateContent";
-

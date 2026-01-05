@@ -10,7 +10,7 @@ import type { XmlElement } from "../../xml";
 import type { SlideData } from "../domain/slide/data";
 import type { RenderOptions } from "../render/render-options";
 import { parseContentTypes, buildSlideFileInfoList } from "../opc";
-import { parseSlideSizeFromXml, parseDefaultTextStyle, parseAppVersion } from "../domain";
+import { parseSlideSizeFromXml, parseDefaultTextStyle, parseAppVersion } from "./presentation-info";
 import { createZipAdapter } from "../domain/zip-adapter";
 import { readXml, getRelationships, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS } from "../parser/slide/xml-reader";
 import { createSlide } from "./slide-builder";

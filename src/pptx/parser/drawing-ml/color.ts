@@ -9,7 +9,7 @@
 
 import type { XmlElement } from "../../../xml/index";
 import { isXmlElement, getChild, getAttr } from "../../../xml/index";
-import { OOXML_PERCENT_FACTOR } from "../../core/ecma376/defaults";
+import { OOXML_PERCENT_FACTOR } from "../../domain/defaults";
 import type { ColorResolveContext } from "../../domain/resolution";
 import {
   toHex,

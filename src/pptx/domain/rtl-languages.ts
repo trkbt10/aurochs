@@ -1,5 +1,5 @@
 /**
- * @file Language utilities
+ * @file RTL language list
  * RTL language detection and related constants
  */
 

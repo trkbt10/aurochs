@@ -10,7 +10,7 @@ export { openPresentation } from "./app";
 export type { Presentation, Slide, SlideInfo, ListOptions, PresentationOptions } from "./app/types";
 
 // Core types needed by consumers
-export type { IndexTables } from "./core/types";
+export type { IndexTables } from "./domain";
 export type { ResourceMap } from "./opc";
 export type { SlideSize } from "./domain";
 

@@ -14,7 +14,7 @@ import { createRenderContext } from "./render-context";
 import type { Slide as ApiSlide } from "./types";
 import type { XmlElement, XmlDocument } from "../../xml";
 import type { ResourceMap } from "../opc";
-import type { IndexTables } from "../core/types";
+import type { IndexTables } from "../domain/slide";
 import { px } from "../domain/types";
 import type { ZipFile } from "../domain";
 import { resolveColor } from "../render/core/drawing-ml";

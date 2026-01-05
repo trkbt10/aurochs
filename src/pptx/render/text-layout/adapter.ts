@@ -13,9 +13,9 @@ import type { Color, Line, Fill } from "../../domain/color";
 
 import { resolveColor as resolveColorRaw } from "../core/drawing-ml";
 import { px, pt, pct } from "../../domain/types";
-import { DEFAULT_FONT_SIZE_PT } from "../../core/ecma376/defaults";
+import { DEFAULT_FONT_SIZE_PT } from "../../domain/defaults";
 import type { AutoFit } from "../../domain/text";
-import { formatAutoNumber } from "../../utils/auto-number";
+import { formatAutoNumber } from "./auto-number";
 
 /** Default font family when none specified */
 const DEFAULT_FONT_FAMILY = "sans-serif";

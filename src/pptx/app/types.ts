@@ -4,7 +4,7 @@
  */
 
 import type { XmlDocument, XmlNode } from "../../xml";
-import type { IndexTables } from "../core/types";
+import type { IndexTables } from "../domain/slide";
 import type { ResourceMap } from "../opc";
 import type { SlideSize, SlideTransition } from "../domain";
 import type { Timing } from "../domain/animation";

@@ -39,7 +39,7 @@ import {
   DEFAULT_SAVE_SUBSET_FONTS,
   DEFAULT_AUTO_COMPRESS_PICTURES,
   DEFAULT_BOOKMARK_ID_SEED,
-} from "../../core/ecma376/defaults";
+} from "../../domain/defaults";
 
 // =============================================================================
 // Types

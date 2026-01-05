@@ -9,7 +9,7 @@ import {
   EMU_PER_INCH,
   STANDARD_DPI,
   POINTS_PER_INCH,
-} from "../ecma376/defaults";
+} from "../../domain/defaults";
 
 /**
  * Slide factor: EMU to pixels conversion at 96 DPI.

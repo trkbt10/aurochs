@@ -13,15 +13,3 @@ export * from "./geometry";
 
 // Unit conversions
 export * from "./units";
-
-// ECMA-376 defaults and constants
-export * from "./ecma376";
-
-// Types
-export * from "./types";
-
-// Parser utilities
-export { indexNodes } from "./node-indexer";
-export { parseSlideSizeFromXml, parseDefaultTextStyle, parseAppVersion } from "./presentation-info";
-
-

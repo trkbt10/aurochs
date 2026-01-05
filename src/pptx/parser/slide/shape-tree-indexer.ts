@@ -1,16 +1,17 @@
 /**
- * @file Node indexing utilities for slide content
- * Indexes nodes by id, idx, and type for lookup
+ * @file Slide shape-tree indexing utilities
+ *
+ * Builds lookup tables for placeholder resolution in slide/layout/master XML.
  */
 
-import type { IndexTables } from "./types";
-import type { XmlDocument, XmlElement } from "../../xml";
-import { getChild, getChildren, getByPath, isXmlElement } from "../../xml";
+import type { IndexTables } from "../../domain/slide";
+import type { XmlDocument, XmlElement } from "../../../xml";
+import { getChild, getChildren, isXmlElement } from "../../../xml";
 
 /**
- * Get the shape tree from any slide document type
+ * Get the shape tree (p:cSld/p:spTree) from slide-related XML.
  */
-function getShapeTree(content: XmlDocument): XmlElement | undefined {
+function getSlideShapeTree(content: XmlDocument): XmlElement | undefined {
   // Try to find the root element
   const root = content.children.find((c): c is XmlElement => isXmlElement(c));
   if (!root) {
@@ -27,13 +28,13 @@ function getShapeTree(content: XmlDocument): XmlElement | undefined {
 }
 
 /**
- * Index nodes in slide content by id, idx, and type.
+ * Index nodes in a slide shape tree by id, idx, and type.
  *
  * @see ECMA-376 Part 1, Section 19.3.1.36 (p:ph)
  * - idx: xsd:unsignedInt - stored as number key in Map
  * - type: ST_PlaceholderType - stored as string key in Record
  */
-export function indexNodes(content: XmlDocument | null): IndexTables {
+export function indexShapeTreeNodes(content: XmlDocument | null): IndexTables {
   const result: IndexTables = {
     idTable: {},
     idxTable: new Map(),
@@ -44,25 +45,18 @@ export function indexNodes(content: XmlDocument | null): IndexTables {
     return result;
   }
 
-  const spTree = getShapeTree(content);
+  const spTree = getSlideShapeTree(content);
   if (spTree === undefined) {
     return result;
   }
 
   // Process each element type in the shape tree
-  const elementTypes = [
-    "p:sp",
-    "p:cxnSp",
-    "p:pic",
-    "p:graphicFrame",
-    "p:grpSp",
-    "mc:AlternateContent",
-  ];
+  const elementTypes = ["p:sp", "p:cxnSp", "p:pic", "p:graphicFrame", "p:grpSp", "mc:AlternateContent"];
 
   for (const elementType of elementTypes) {
     const elements = getChildren(spTree, elementType);
     for (const element of elements) {
-      indexSingleNode(element, result);
+      indexShapeTreeNode(element, result);
     }
   }
 
@@ -72,7 +66,7 @@ export function indexNodes(content: XmlDocument | null): IndexTables {
 /**
  * Index a single node
  */
-function indexSingleNode(node: XmlElement, tables: IndexTables): void {
+function indexShapeTreeNode(node: XmlElement, tables: IndexTables): void {
   // Try p:nvSpPr path (for shapes)
   let nvSpPr = getChild(node, "p:nvSpPr");
 

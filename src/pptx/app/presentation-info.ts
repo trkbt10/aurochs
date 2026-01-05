@@ -3,11 +3,11 @@
  * Parses presentation.xml and app.xml for presentation metadata
  */
 
-import type { XmlDocument, XmlElement } from "../../../xml";
-import { getByPath, getTextByPath } from "../../../xml";
-import { px } from "../types";
-import type { SlideSize } from "./types";
-import { SLIDE_FACTOR } from "../../core/units/conversion";
+import type { XmlDocument, XmlElement } from "../../xml";
+import { getByPath, getTextByPath } from "../../xml";
+import { px } from "../domain/types";
+import type { SlideSize } from "../domain";
+import { SLIDE_FACTOR } from "../core/units/conversion";
 
 /** Default slide size (16:9 aspect ratio at 96 DPI) */
 const DEFAULT_SLIDE_SIZE: SlideSize = { width: px(960), height: px(540) };

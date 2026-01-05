@@ -8,7 +8,7 @@ import type { Pixels, Points } from "../../domain/types";
 import { px, pt } from "../../domain/types";
 import { estimateTextWidth } from "./measurer";
 import { isCjkCodePoint } from "../../../text/cjk";
-import { DEFAULT_FONT_SIZE_PT } from "../../core/ecma376/defaults";
+import { DEFAULT_FONT_SIZE_PT } from "../../domain/defaults";
 
 // =============================================================================
 // Line Break Result

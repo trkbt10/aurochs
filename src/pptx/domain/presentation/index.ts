@@ -24,10 +24,3 @@ export type {
   SmartTags,
   Presentation,
 } from "./types";
-
-// Parsing utilities
-export {
-  parseSlideSizeFromXml,
-  parseDefaultTextStyle,
-  parseAppVersion,
-} from "./info";

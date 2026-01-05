@@ -15,7 +15,7 @@ import {
   RELATIONSHIP_TYPES,
 } from "../../opc";
 import { getByPath } from "../../../xml";
-import { indexNodes } from "../../core/node-indexer";
+import { indexShapeTreeNodes } from "./shape-tree-indexer";
 import { transformDiagramNamespace } from "../diagram/transform";
 import { readXml, getRelationships, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS } from "./xml-reader";
 
@@ -30,14 +30,14 @@ export function loadLayoutData(file: PresentationFile, relationships: ResourceMa
   if (layoutPath === undefined) {
     return {
       layout: null,
-      layoutTables: indexNodes(null),
+      layoutTables: indexShapeTreeNodes(null),
       layoutRelationships: parseRelationships(null),
     };
   }
   const layout = readXml(file, layoutPath, 16, false, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS);
   return {
     layout,
-    layoutTables: indexNodes(layout),
+    layoutTables: indexShapeTreeNodes(layout),
     layoutRelationships: getRelationships(file, layoutPath, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS),
   };
 }
@@ -53,7 +53,7 @@ export function loadMasterData(file: PresentationFile, layoutRelationships: Reso
   if (masterPath === undefined) {
     return {
       master: null,
-      masterTables: indexNodes(null),
+      masterTables: indexShapeTreeNodes(null),
       masterTextStyles: undefined,
       masterRelationships: parseRelationships(null),
     };
@@ -61,7 +61,7 @@ export function loadMasterData(file: PresentationFile, layoutRelationships: Reso
   const master = readXml(file, masterPath, 16, false, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS);
   return {
     master,
-    masterTables: indexNodes(master),
+    masterTables: indexShapeTreeNodes(master),
     masterTextStyles: getByPath(master, ["p:sldMaster", "p:txStyles"]),
     masterRelationships: getRelationships(file, masterPath, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS),
   };

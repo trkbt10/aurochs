@@ -1,11 +1,9 @@
 /**
- * @file ECMA-376 Default Values
+ * @file PPTX default values and constants
  *
- * Centralized constants for default values specified in ECMA-376 Office Open XML.
- * All values include source references to the ECMA-376 specification.
+ * Centralized defaults specified by the Office Open XML specification.
  *
  * @see ECMA-376-1:2016 Office Open XML File Formats — Part 1: Fundamentals and Markup Language Reference
- * @see https://www.ecma-international.org/publications-and-standards/standards/ecma-376/
  */
 
 // =============================================================================

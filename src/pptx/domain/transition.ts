@@ -100,4 +100,28 @@ export type SlideTransition = {
   readonly advanceOnClick?: boolean;
   readonly advanceAfter?: number; // milliseconds
   readonly sound?: TransitionSound;
+
+  /**
+   * Direction for directional transitions (wipe, push, cover, pull, strips).
+   * @see ECMA-376 Part 1, Section 19.7.51 (ST_TransitionEightDirectionType)
+   */
+  readonly direction?: TransitionEightDirectionType;
+
+  /**
+   * Orientation for blinds, checker, comb, randomBar transitions.
+   * "horz" = horizontal, "vert" = vertical
+   */
+  readonly orientation?: "horz" | "vert";
+
+  /**
+   * Number of spokes for wheel transition.
+   * @see ECMA-376 Part 1, Section 19.5.95 (p:wheel)
+   */
+  readonly spokes?: 1 | 2 | 3 | 4 | 8;
+
+  /**
+   * Direction for split/zoom transitions.
+   * @see ECMA-376 Part 1, Section 19.7.52 (ST_TransitionInOutDirectionType)
+   */
+  readonly inOutDirection?: TransitionInOutDirectionType;
 };

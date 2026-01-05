@@ -39,6 +39,39 @@ export type {
 export { px, deg, pct, pt, emu, rId, hexColor } from "./types";
 
 // =============================================================================
+// Defaults and Constants
+// =============================================================================
+
+export {
+  DEFAULT_FONT_SIZE_PT,
+  DEFAULT_FONT_SIZE_CENTIPOINTS,
+  FONT_SIZE_CENTIPOINTS_TO_PT,
+  DEFAULT_LINE_SPACING_PCT,
+  DEFAULT_PARAGRAPH_SPACING_PT,
+  DEFAULT_TEXT_MARGIN_EMU,
+  DEFAULT_MARGIN_LEFT_EMU,
+  DEFAULT_INDENT_EMU,
+  EMU_PER_INCH,
+  STANDARD_DPI,
+  EMU_PER_PIXEL,
+  POINTS_PER_INCH,
+  OOXML_PERCENT_FACTOR,
+  DEFAULT_SERVER_ZOOM,
+  DEFAULT_FIRST_SLIDE_NUM,
+  DEFAULT_SHOW_SPECIAL_PLS_ON_TITLE_SLD,
+  DEFAULT_RTL,
+  DEFAULT_REMOVE_PERSONAL_INFO_ON_SAVE,
+  DEFAULT_COMPAT_MODE,
+  DEFAULT_STRICT_FIRST_AND_LAST_CHARS,
+  DEFAULT_EMBED_TRUETYPE_FONTS,
+  DEFAULT_SAVE_SUBSET_FONTS,
+  DEFAULT_AUTO_COMPRESS_PICTURES,
+  DEFAULT_BOOKMARK_ID_SEED,
+} from "./defaults";
+
+export { RTL_LANGUAGES } from "./rtl-languages";
+
+// =============================================================================
 // OPC Infrastructure Types
 // =============================================================================
 
@@ -778,13 +811,6 @@ export type {
   Presentation,
 } from "./presentation/types";
 
-// Presentation parsing utilities
-export {
-  parseSlideSizeFromXml,
-  parseDefaultTextStyle,
-  parseAppVersion,
-} from "./presentation/info";
-
 // =============================================================================
 // Print Types
 // =============================================================================
@@ -849,6 +875,9 @@ export type {
   SlideMaster,
   HandoutMaster,
   NotesMaster,
+  // Slide indexing
+  IndexTables,
+  SlideNodeType,
 } from "./slide";
 
 // =============================================================================

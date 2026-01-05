@@ -108,10 +108,13 @@ export function parseTransition(element: XmlElement | undefined): SlideTransitio
   }
 
   // Find transition type by checking for various transition elements
-  const type = findTransitionType(element);
+  const { type, element: typeElement } = findTransitionType(element);
 
   const spd = getAttr(element, "spd");
   const duration = spd === "slow" ? 2000 : spd === "med" ? 1000 : 500;
+
+  // Extract direction/orientation/spokes from the type element
+  const { direction, orientation, spokes, inOutDirection } = parseTransitionAttributes(type, typeElement);
 
   return {
     type,
@@ -119,7 +122,91 @@ export function parseTransition(element: XmlElement | undefined): SlideTransitio
     advanceOnClick: getBoolAttrOr(element, "advClick", true),
     advanceAfter: getAdvanceAfter(element),
     sound: parseTransitionSound(element),
+    direction,
+    orientation,
+    spokes,
+    inOutDirection,
   };
+}
+
+/**
+ * Parse direction/orientation/spokes attributes from transition type element.
+ * @see ECMA-376 Part 1, Section 19.5 for transition element definitions
+ */
+function parseTransitionAttributes(
+  type: TransitionType,
+  element: XmlElement | undefined,
+): {
+  direction: SlideTransition["direction"];
+  orientation: SlideTransition["orientation"];
+  spokes: SlideTransition["spokes"];
+  inOutDirection: SlideTransition["inOutDirection"];
+} {
+  if (!element) {
+    return { direction: undefined, orientation: undefined, spokes: undefined, inOutDirection: undefined };
+  }
+
+  // Transitions with 8-direction (l, r, u, d, ld, lu, rd, ru)
+  // p:wipe, p:push, p:cover, p:pull, p:strips
+  if (type === "wipe" || type === "push" || type === "cover" || type === "pull" || type === "strips") {
+    const dir = getAttr(element, "dir");
+    const validDirs = ["l", "r", "u", "d", "ld", "lu", "rd", "ru"];
+    if (dir && validDirs.includes(dir)) {
+      return {
+        direction: dir as SlideTransition["direction"],
+        orientation: undefined,
+        spokes: undefined,
+        inOutDirection: undefined,
+      };
+    }
+  }
+
+  // Transitions with orientation (horz, vert)
+  // p:blinds, p:checker, p:comb, p:randomBar
+  if (type === "blinds" || type === "checker" || type === "comb" || type === "randomBar") {
+    const dir = getAttr(element, "dir");
+    if (dir === "horz" || dir === "vert") {
+      return {
+        direction: undefined,
+        orientation: dir,
+        spokes: undefined,
+        inOutDirection: undefined,
+      };
+    }
+  }
+
+  // Wheel transition - spokes attribute
+  // p:wheel @spkCnt (1, 2, 3, 4, 8)
+  if (type === "wheel") {
+    const spkCnt = getAttr(element, "spkCnt");
+    const count = spkCnt ? parseInt(spkCnt, 10) : 1;
+    const validSpokes: (1 | 2 | 3 | 4 | 8)[] = [1, 2, 3, 4, 8];
+    const spokesVal = validSpokes.includes(count as 1 | 2 | 3 | 4 | 8)
+      ? (count as 1 | 2 | 3 | 4 | 8)
+      : 1;
+    return {
+      direction: undefined,
+      orientation: undefined,
+      spokes: spokesVal,
+      inOutDirection: undefined,
+    };
+  }
+
+  // Split and zoom - in/out direction
+  // p:split @dir (in, out), p:zoom @dir (in, out)
+  if (type === "split" || type === "zoom") {
+    const dir = getAttr(element, "dir");
+    if (dir === "in" || dir === "out") {
+      return {
+        direction: undefined,
+        orientation: undefined,
+        spokes: undefined,
+        inOutDirection: dir,
+      };
+    }
+  }
+
+  return { direction: undefined, orientation: undefined, spokes: undefined, inOutDirection: undefined };
 }
 
 function getTransitionElement(parent: XmlElement | undefined): XmlElement | undefined {
@@ -180,7 +267,12 @@ function isTransitionType(value: string): value is TransitionType {
   return types.includes(value as TransitionType);
 }
 
-function findTransitionType(element: XmlElement): TransitionType {
+type TransitionTypeInfo = {
+  type: TransitionType;
+  element: XmlElement | undefined;
+};
+
+function findTransitionType(element: XmlElement): TransitionTypeInfo {
   for (const child of element.children) {
     if (typeof child !== "object" || !("type" in child)) {
       continue;
@@ -194,11 +286,11 @@ function findTransitionType(element: XmlElement): TransitionType {
     }
     const transType = el.name.substring(2) as TransitionType;
     if (isTransitionType(transType)) {
-      return transType;
+      return { type: transType, element: el };
     }
   }
 
-  return "none";
+  return { type: "none", element: undefined };
 }
 
 /**

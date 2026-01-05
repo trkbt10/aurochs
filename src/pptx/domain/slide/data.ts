@@ -4,7 +4,7 @@
  */
 
 import type { XmlDocument, XmlElement } from "../../../xml";
-import type { IndexTables } from "../../core/types";
+import type { IndexTables } from "./indexing";
 import type { ResourceMap } from "../opc";
 
 /**

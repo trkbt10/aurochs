@@ -27,6 +27,18 @@ export type {
   SlideParams,
 } from "./types";
 
+// Slide content indexing types
+export type { IndexTables, SlideNodeType } from "./indexing";
+
+// Placeholder text style mappings
+export type { MasterTextStyleName } from "./placeholder-styles";
+export {
+  PLACEHOLDER_TO_TEXT_STYLE,
+  TITLE_TYPES,
+  isTitleType,
+  getTextStyleName,
+} from "./placeholder-styles";
+
 // Data types
 export type {
   SlideData,
