@@ -12,10 +12,8 @@ import {
   type ReactNode,
 } from "react";
 import type { Shape } from "../../../pptx/domain";
-import type {
-  PresentationDocument,
-  PresentationEditorContextValue,
-} from "./editor/types";
+import type { PresentationDocument } from "../../../pptx/app";
+import type { PresentationEditorContextValue } from "./editor/types";
 import { presentationEditorReducer, createPresentationEditorState } from "./editor/reducer/reducer";
 import { findSlideById } from "./editor/slide";
 import { findShapeById } from "../../shape/query";

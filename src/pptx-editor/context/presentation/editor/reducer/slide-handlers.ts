@@ -4,7 +4,7 @@
  * Handlers for slide-level operations: add, delete, duplicate, move, select.
  */
 
-import type { SlideId, PresentationDocument } from "../types";
+import type { SlideId, PresentationDocument } from "../../../../../pptx/app";
 import type {
   PresentationEditorState,
   PresentationEditorAction,

@@ -7,19 +7,18 @@
  */
 
 import type { LoadedPresentation } from "./pptx-loader";
-import type { PresentationDocument, SlideWithId } from "@lib/pptx-editor";
-import type { Presentation as DomainPresentation } from "@lib/pptx/domain";
-import type { ColorContext, FontScheme, ColorScheme, ColorMap } from "@lib/pptx/domain/resolution";
-import type { ResourceResolver } from "@lib/pptx/render/core";
-import type { Slide as ApiSlide } from "@lib/pptx/app/types";
-import { parseSlide } from "@lib/pptx/parser/slide/slide-parser";
-import { createParseContext } from "@lib/pptx/parser/context";
-import { parseColorScheme, parseFontScheme, parseColorMap } from "@lib/pptx/parser/drawing-ml";
-import { getByPath } from "@lib/xml";
-import { createSlideRenderContextFromApiSlide } from "@lib/pptx/app";
-import { getMimeTypeFromPath } from "@lib/pptx/opc";
-import type { PresentationFile } from "@lib/pptx/domain";
-import { createZipAdapter } from "@lib/pptx/domain";
+import type { PresentationDocument, SlideWithId } from "./presentation-document";
+import type { Presentation as DomainPresentation, PresentationFile } from "../domain";
+import type { ColorContext, FontScheme, ColorScheme, ColorMap } from "../domain/resolution";
+import type { ResourceResolver } from "../render/core";
+import type { Slide as ApiSlide } from "./types";
+import { parseSlide } from "../parser/slide/slide-parser";
+import { createParseContext } from "../parser/context";
+import { parseColorScheme, parseFontScheme, parseColorMap } from "../parser/drawing-ml";
+import { getByPath } from "../../xml";
+import { createSlideRenderContextFromApiSlide } from "./render-context";
+import { getMimeTypeFromPath } from "../opc";
+import { createZipAdapter } from "../domain";
 
 // =============================================================================
 // Color Context Building
@@ -80,38 +79,21 @@ function extractFontScheme(apiSlide: ApiSlide): FontScheme | undefined {
  * This allows the editor to resolve image and embedded resource references.
  */
 function createResourceResolverFromFile(file: PresentationFile, apiSlide: ApiSlide): ResourceResolver {
-  // Build a relationship lookup from slide/layout/master relationships
-  const relationships = new Map<string, string>();
+  const resolveTarget = (id: string): string | undefined =>
+    apiSlide.relationships.getTarget(id)
+    ?? apiSlide.layoutRelationships.getTarget(id)
+    ?? apiSlide.masterRelationships.getTarget(id)
+    ?? apiSlide.themeRelationships.getTarget(id);
 
-  // Collect relationships from slide
-  for (const [rId, rel] of Object.entries(apiSlide.relationships)) {
-    relationships.set(rId, rel.target);
-  }
-
-  // Collect from layout
-  for (const [rId, rel] of Object.entries(apiSlide.layoutRelationships)) {
-    if (!relationships.has(rId)) {
-      relationships.set(rId, rel.target);
-    }
-  }
-
-  // Collect from master
-  for (const [rId, rel] of Object.entries(apiSlide.masterRelationships)) {
-    if (!relationships.has(rId)) {
-      relationships.set(rId, rel.target);
-    }
-  }
-
-  // Collect from theme
-  for (const [rId, rel] of Object.entries(apiSlide.themeRelationships)) {
-    if (!relationships.has(rId)) {
-      relationships.set(rId, rel.target);
-    }
-  }
+  const resolveTargetByType = (relType: string): string | undefined =>
+    apiSlide.relationships.getTargetByType(relType)
+    ?? apiSlide.layoutRelationships.getTargetByType(relType)
+    ?? apiSlide.masterRelationships.getTargetByType(relType)
+    ?? apiSlide.themeRelationships.getTargetByType(relType);
 
   return {
     resolve: (id: string) => {
-      const target = relationships.get(id);
+      const target = resolveTarget(id);
       if (!target) {
         return undefined;
       }
@@ -134,7 +116,7 @@ function createResourceResolverFromFile(file: PresentationFile, apiSlide: ApiSli
     },
 
     getMimeType: (id: string) => {
-      const target = relationships.get(id);
+      const target = resolveTarget(id);
       if (!target) {
         return undefined;
       }
@@ -142,7 +124,7 @@ function createResourceResolverFromFile(file: PresentationFile, apiSlide: ApiSli
     },
 
     getFilePath: (id: string) => {
-      return relationships.get(id);
+      return resolveTarget(id);
     },
 
     readFile: (path: string) => {
@@ -155,9 +137,7 @@ function createResourceResolverFromFile(file: PresentationFile, apiSlide: ApiSli
     },
 
     getResourceByType: (relType: string) => {
-      void relType;
-      // Not implemented for editor (would need to iterate all relationships)
-      return undefined;
+      return resolveTargetByType(relType);
     },
   };
 }
@@ -241,7 +221,6 @@ export function convertToPresentationDocument(loaded: LoadedPresentation): Prese
 
   // Create domain Presentation
   const domainPresentation: DomainPresentation = {
-    slides: slides.map((s) => s.slide),
     slideSize,
   };
 

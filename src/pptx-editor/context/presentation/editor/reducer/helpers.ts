@@ -6,11 +6,8 @@
 
 import type { Slide } from "../../../../../pptx/domain";
 import type { ShapeId } from "../../../../../pptx/domain/types";
-import type {
-  PresentationDocument,
-  PresentationEditorState,
-  SlideWithId,
-} from "../types";
+import type { PresentationDocument, SlideWithId } from "../../../../../pptx/app";
+import type { PresentationEditorState } from "../types";
 import { findSlideById, updateSlide } from "../slide";
 import {
   createInactiveTextEditState,

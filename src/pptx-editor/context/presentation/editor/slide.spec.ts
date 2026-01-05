@@ -6,7 +6,7 @@
 
 import { px } from "../../../../pptx/domain/types";
 import type { Slide } from "../../../../pptx/domain";
-import type { PresentationDocument, SlideWithId } from "./types";
+import type { PresentationDocument, SlideWithId } from "../../../../pptx/app";
 import {
   generateSlideId,
   findSlideById,

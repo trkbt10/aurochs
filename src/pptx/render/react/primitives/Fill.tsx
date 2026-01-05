@@ -13,7 +13,9 @@ import {
   type ResolvedFill,
   type ResolvedGradientFill,
   type ResolvedImageFill,
+  type ResolvedPatternFill,
 } from "../../core/fill";
+import { PatternDef } from "../drawing-ml/fill";
 import { ooxmlAngleToSvgLinearGradient, getRadialGradientCoords } from "../../core/gradient";
 import { useSvgDefs } from "../hooks/useSvgDefs";
 import { useRenderContext } from "../context";
@@ -81,6 +83,16 @@ function resolvedFillToResult(
       }
       const patternId = getNextId("img-pattern");
       const defElement = createImagePatternDef(fill, patternId, width, height);
+      return {
+        props: { fill: `url(#${patternId})` },
+        defElement,
+        defId: patternId,
+      };
+    }
+
+    case "pattern": {
+      const patternId = getNextId("pattern");
+      const defElement = createPatternDef(fill, patternId);
       return {
         props: { fill: `url(#${patternId})` },
         defElement,
@@ -161,6 +173,21 @@ function createImagePatternDef(
         preserveAspectRatio="xMidYMid slice"
       />
     </pattern>
+  );
+}
+
+/**
+ * Create ECMA-376 pattern definition element
+ * @see ECMA-376 Part 1, Section 20.1.10.50 (ST_PresetPatternVal)
+ */
+function createPatternDef(fill: ResolvedPatternFill, id: string): ReactNode {
+  return (
+    <PatternDef
+      id={id}
+      preset={fill.preset}
+      fgColor={fill.fgColor}
+      bgColor={fill.bgColor}
+    />
   );
 }
 

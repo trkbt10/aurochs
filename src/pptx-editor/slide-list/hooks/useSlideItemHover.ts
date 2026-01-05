@@ -10,7 +10,7 @@
  */
 
 import { useCallback, useState } from "react";
-import type { SlideId } from "../../context/presentation/editor/types";
+import type { SlideId } from "../../../pptx/app";
 
 export type SlideItemHoverState = {
   /** ID of the currently hovered slide, or null if none */

@@ -17,7 +17,7 @@ import {
   createDragStartState,
 } from "./drag-drop";
 import { createIdleDragState } from "./types";
-import type { SlideWithId } from "../context/presentation/editor/types";
+import type { SlideWithId } from "../../pptx/app";
 
 // =============================================================================
 // Test fixtures

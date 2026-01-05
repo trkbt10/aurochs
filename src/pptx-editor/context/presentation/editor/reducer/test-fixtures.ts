@@ -5,7 +5,7 @@
  */
 
 import type { Slide } from "../../../../../pptx/domain";
-import type { PresentationDocument } from "../types";
+import type { PresentationDocument } from "../../../../../pptx/app";
 import { px } from "../../../../../pptx/domain/types";
 
 /**

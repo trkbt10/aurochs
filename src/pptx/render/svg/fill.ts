@@ -95,6 +95,15 @@ function resolvedFillToSvgFill(fill: ResolvedFill, patternIdPrefix?: string): Fi
       };
     }
 
+    case "pattern": {
+      // Pattern fill requires a pattern definition
+      const patternId = patternIdPrefix ? `${patternIdPrefix}-patt` : "patt-fill";
+      return {
+        fill: `url(#${patternId})`,
+        patternId,
+      };
+    }
+
     case "unresolved":
       return { fill: "none" };
   }

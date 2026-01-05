@@ -7,7 +7,7 @@
 
 import { useCallback, type CSSProperties } from "react";
 import type { Slide } from "../../pptx/domain/index";
-import type { SlideId, SlideWithId } from "../context/presentation/editor/types";
+import type { SlideId, SlideWithId } from "../../pptx/app";
 import { usePresentationEditor } from "../context/presentation/PresentationEditorContext";
 import { SlideList } from "../slide-list";
 import { colorTokens } from "../ui/design-tokens/index";

@@ -5,7 +5,7 @@
  */
 
 import { useCallback, useState, useMemo } from "react";
-import type { SlideId, SlideWithId } from "../../context/presentation/editor/types";
+import type { SlideId, SlideWithId } from "../../../pptx/app";
 import type { SlideContextMenuState } from "../types";
 import type { MenuEntry } from "../../ui/context-menu/types";
 

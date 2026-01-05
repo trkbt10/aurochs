@@ -6,7 +6,7 @@
  */
 
 import type { Slide } from "../../pptx/domain/index";
-import type { SlideId } from "../context/presentation/editor/types";
+import type { SlideId } from "../../pptx/app";
 
 // =============================================================================
 // Types

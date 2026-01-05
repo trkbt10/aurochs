@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useState } from "react";
-import type { SlideId, SlideWithId } from "../../context/presentation/editor/types";
+import type { SlideId, SlideWithId } from "../../../pptx/app";
 import type { SlideSelectionState } from "../types";
 import { createEmptySlideSelection } from "../types";
 import {

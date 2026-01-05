@@ -7,7 +7,7 @@
 
 import { useMemo, type CSSProperties } from "react";
 import { PresentationEditor } from "@lib/pptx-editor";
-import type { PresentationDocument, SlideWithId } from "@lib/pptx-editor";
+import type { PresentationDocument, SlideWithId } from "@lib/pptx/app";
 import type { Slide, Presentation } from "@lib/pptx/domain";
 import type { SpShape, GrpShape, GraphicFrame } from "@lib/pptx/domain/shape";
 import type { Line } from "@lib/pptx/domain/color";

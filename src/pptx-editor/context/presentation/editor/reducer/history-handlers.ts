@@ -4,7 +4,7 @@
  * Handlers for undo/redo and document mutations.
  */
 
-import type { SlideId, PresentationDocument } from "../types";
+import type { SlideId, PresentationDocument } from "../../../../../pptx/app";
 import type {
   PresentationEditorState,
   PresentationEditorAction,

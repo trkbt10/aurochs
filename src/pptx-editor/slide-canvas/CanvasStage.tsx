@@ -7,7 +7,7 @@
 import { useMemo, useCallback, useLayoutEffect, useEffect, useState, useRef, forwardRef, type CSSProperties } from "react";
 import type { Slide, Shape } from "../../pptx/domain";
 import type { ShapeId, Pixels } from "../../pptx/domain/types";
-import type { SlideId } from "../context/presentation/editor/types";
+import type { SlideId } from "../../pptx/app";
 import type { DrawingPath } from "../path-tools/types";
 import type { DragState, SelectionState, ResizeHandlePosition, PathEditState } from "../context/slide/state";
 import type { CreationMode } from "../context/presentation/editor/types";

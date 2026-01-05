@@ -5,7 +5,7 @@
  */
 
 import { useCallback, useEffect } from "react";
-import type { SlideId, SlideWithId } from "../../context/presentation/editor/types";
+import type { SlideId, SlideWithId } from "../../../pptx/app";
 import type { SlideListOrientation, SlideSelectionState } from "../types";
 
 export type UseSlideKeyNavigationOptions = {

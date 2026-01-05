@@ -5,8 +5,8 @@
  */
 
 import JSZip from "jszip";
-import { openPresentation } from "@lib/pptx";
-import type { PresentationFile } from "@lib/pptx";
+import { openPresentation } from "./open-presentation";
+import type { PresentationFile } from "../domain";
 
 type FileCache = Map<string, { text: string; buffer: ArrayBuffer }>;
 

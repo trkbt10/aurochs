@@ -4,7 +4,7 @@
  * Format-agnostic fill processing logic.
  */
 
-import type { Color, Fill, Line } from "../../domain";
+import type { Color, Fill, Line, PatternType } from "../../domain";
 import { resolveColor } from "./drawing-ml";
 import type { ColorContext } from "../../domain/resolution";
 
@@ -103,13 +103,32 @@ export type ResolvedImageFill = {
 };
 
 /**
- * Resolved fill (none, solid, gradient, image, or unresolved)
+ * Resolved pattern fill
+ * @see ECMA-376 Part 1, Section 20.1.10.50 (ST_PresetPatternVal)
+ */
+export type ResolvedPatternFill = {
+  readonly type: "pattern";
+  /** Pattern preset type */
+  readonly preset: PatternType;
+  /** Foreground color (hex, no #) */
+  readonly fgColor: string;
+  /** Foreground alpha (0-1) */
+  readonly fgAlpha: number;
+  /** Background color (hex, no #) */
+  readonly bgColor: string;
+  /** Background alpha (0-1) */
+  readonly bgAlpha: number;
+};
+
+/**
+ * Resolved fill (none, solid, gradient, image, pattern, or unresolved)
  */
 export type ResolvedFill =
   | { readonly type: "none" }
   | ResolvedSolidFill
   | ResolvedGradientFill
   | ResolvedImageFill
+  | ResolvedPatternFill
   | { readonly type: "unresolved"; readonly originalType: Fill["type"] };
 
 /**
@@ -166,7 +185,22 @@ export function resolveFill(fill: Fill, colorContext?: ColorContext): ResolvedFi
       return { type: "unresolved", originalType: fill.type };
     }
 
-    case "patternFill":
+    case "patternFill": {
+      const fgResolved = resolveColorWithAlpha(fill.foregroundColor, colorContext);
+      const bgResolved = resolveColorWithAlpha(fill.backgroundColor, colorContext);
+      if (!fgResolved || !bgResolved) {
+        return { type: "unresolved", originalType: fill.type };
+      }
+      return {
+        type: "pattern",
+        preset: fill.preset,
+        fgColor: fgResolved.hex,
+        fgAlpha: fgResolved.alpha,
+        bgColor: bgResolved.hex,
+        bgAlpha: bgResolved.alpha,
+      };
+    }
+
     case "groupFill":
       return { type: "unresolved", originalType: fill.type };
   }

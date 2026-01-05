@@ -16,7 +16,7 @@ import type { Slide, Shape, RunProperties, ParagraphProperties } from "../../ppt
 import type { ShapeId } from "../../pptx/domain/types";
 import { px, deg } from "../../pptx/domain/types";
 import type { ResizeHandlePosition } from "../context/slide/state";
-import type { PresentationDocument, SlideWithId } from "../context/presentation/editor/types";
+import type { PresentationDocument, SlideWithId } from "../../pptx/app";
 import type { ContextMenuActions } from "../slide/context-menu/SlideContextMenu";
 import { PresentationEditorProvider, usePresentationEditor } from "../context/presentation/PresentationEditorContext";
 import { SlideThumbnailPanel } from "../panels";
@@ -38,7 +38,7 @@ import { isTopLevelShape } from "../shape/query";
 import { clientToSlideCoords } from "../shape/coords";
 import { withUpdatedTransform } from "../shape/transform";
 import { calculateAlignedBounds } from "../shape/alignment";
-import { createRenderContextFromApiSlide, getLayoutNonPlaceholderShapes } from "../../pptx/app";
+import { createRenderContext, getLayoutNonPlaceholderShapes } from "../../pptx/app";
 import { createZipAdapter } from "../../pptx/domain";
 import { CanvasControls } from "../slide-canvas/CanvasControls";
 import { CanvasStage } from "../slide-canvas/CanvasStage";
@@ -431,7 +431,7 @@ function EditorContent({
 
     // Use full context from API slide if available
     if (apiSlide && zip) {
-      return createRenderContextFromApiSlide(apiSlide, zip, { width, height });
+      return createRenderContext({ apiSlide, zip, slideSize: { width, height } });
     }
 
     return undefined;

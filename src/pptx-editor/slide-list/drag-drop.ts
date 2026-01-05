@@ -5,7 +5,7 @@
  * Uses gap-based targeting: indicator appears between slides, not on them.
  */
 
-import type { SlideId, SlideWithId } from "../context/presentation/editor/types";
+import type { SlideId, SlideWithId } from "../../pptx/app";
 import type { SlideDragState } from "./types";
 
 /**

@@ -12,6 +12,7 @@ import { createPlaceholderTable, createColorMap } from "../parser/slide/resource
 import { parseTheme, parseMasterTextStyles } from "../parser/drawing-ml";
 import { DEFAULT_RENDER_OPTIONS, type RenderOptions } from "../render/render-options";
 import { createRenderContextFromSlideContext } from "../render/core/context";
+import { createRenderContext as createBaseRenderContext, type RenderContextConfig } from "../render/context";
 import { getBackgroundFillData } from "../render/core/drawing-ml";
 import { parseShapeTree } from "../parser/shape-parser";
 import type { XmlElement, XmlDocument } from "../../xml";
@@ -178,6 +179,36 @@ export function createRenderContextFromApiSlide(
     resolvedBackground,
     layoutShapes,
   });
+}
+
+// =============================================================================
+// Unified Render Context Factory
+// =============================================================================
+
+export type ApiSlideRenderContextOptions = {
+  readonly apiSlide: ApiSlide;
+  readonly zip: ZipFile;
+  readonly slideSize: SlideSize;
+  readonly defaultTextStyle?: XmlElement | null;
+  readonly renderOptions?: RenderOptions;
+};
+
+export function createRenderContext(options: RenderContextConfig): RenderContext;
+export function createRenderContext(options: ApiSlideRenderContextOptions): RenderContext;
+export function createRenderContext(
+  options: RenderContextConfig | ApiSlideRenderContextOptions
+): RenderContext {
+  if ("apiSlide" in options) {
+    return createRenderContextFromApiSlide(
+      options.apiSlide,
+      options.zip,
+      options.slideSize,
+      options.defaultTextStyle ?? null,
+      options.renderOptions
+    );
+  }
+
+  return createBaseRenderContext(options);
 }
 
 // =============================================================================

@@ -5,7 +5,7 @@
  * These can be tested without React.
  */
 
-import type { SlideId, SlideWithId } from "../context/presentation/editor/types";
+import type { SlideId, SlideWithId } from "../../pptx/app";
 import type { SlideSelectionState } from "./types";
 import { createEmptySlideSelection, createSingleSlideSelection } from "./types";
 

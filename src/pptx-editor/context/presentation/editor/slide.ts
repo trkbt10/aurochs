@@ -5,7 +5,7 @@
  */
 
 import type { Slide } from "../../../../pptx/domain";
-import type { PresentationDocument, SlideWithId, SlideId } from "./types";
+import type { PresentationDocument, SlideWithId, SlideId } from "../../../../pptx/app";
 
 // =============================================================================
 // ID Generation

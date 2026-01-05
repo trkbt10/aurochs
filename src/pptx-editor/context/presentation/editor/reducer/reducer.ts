@@ -4,11 +4,8 @@
  * Main reducer that composes all domain handlers.
  */
 
-import type {
-  PresentationDocument,
-  PresentationEditorState,
-  PresentationEditorAction,
-} from "../types";
+import type { PresentationDocument } from "../../../../../pptx/app";
+import type { PresentationEditorState, PresentationEditorAction } from "../types";
 import { createSelectMode } from "../types";
 import type { HandlerMap, ActionHandler } from "./handler-types";
 import {

@@ -265,11 +265,8 @@ export { getShapeCapabilities, type ShapeCapabilities } from "./shape/capabiliti
 
 // Presentation Editor Types
 export type {
-  PresentationDocument,
   PresentationEditorState,
   PresentationEditorAction,
-  SlideWithId,
-  SlideId,
   PresentationEditorContextValue,
 } from "./context/presentation/editor/types";
 

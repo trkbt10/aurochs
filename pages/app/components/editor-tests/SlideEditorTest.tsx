@@ -23,7 +23,7 @@ import type { Line } from "@lib/pptx/domain/color";
 import type { Table, TableRow, TableCell } from "@lib/pptx/domain/table";
 import type { ShapeId } from "@lib/pptx/domain/types";
 import { px, deg, pt } from "@lib/pptx/domain/types";
-import { createRenderContext } from "@lib/pptx/render/context";
+import { createRenderContext } from "@lib/pptx/app";
 import { renderSlideSvg } from "@lib/pptx/render/svg/renderer";
 
 // =============================================================================

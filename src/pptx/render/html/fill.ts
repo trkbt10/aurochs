@@ -37,6 +37,10 @@ export function resolvedFillToBackground(fill: ResolvedFill): string {
       // Image fills rendered separately via <img> or background-image
       return `url("${fill.src}")`;
 
+    case "pattern":
+      // Pattern fills need SVG support - render fallback as foreground color
+      return formatRgba(fill.fgColor, fill.fgAlpha);
+
     case "unresolved":
       return "transparent";
   }

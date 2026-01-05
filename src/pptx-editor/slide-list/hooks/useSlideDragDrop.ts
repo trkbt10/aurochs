@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useState } from "react";
-import type { SlideId, SlideWithId } from "../../context/presentation/editor/types";
+import type { SlideId, SlideWithId } from "../../../pptx/app";
 import type { SlideDragState, SlideListOrientation } from "../types";
 import { createIdleDragState } from "../types";
 import {

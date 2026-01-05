@@ -7,7 +7,7 @@
 import { useMemo, useCallback, useRef, type CSSProperties } from "react";
 import type { LoadedPresentation } from "@lib/pptx/app";
 import { SlideList } from "../../../src/pptx-editor/slide-list";
-import type { SlideWithId } from "../../../src/pptx-editor/context/presentation/editor/types";
+import type { SlideWithId } from "@lib/pptx/app";
 import { useLazySvgCache, SvgContentRenderer } from "../../../src/pptx/render/react";
 import { useSlideNavigation, useViewerKeyboard } from "../hooks";
 import {

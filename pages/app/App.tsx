@@ -8,14 +8,15 @@ import { FileUpload } from "./components/FileUpload";
 import { SlideViewer } from "./components/SlideViewer";
 import { SlideshowPage } from "./components/SlideshowPage";
 import { EditorTestPage } from "./components/EditorTestPage";
+import { DrawingMLTestPage } from "./components/DrawingMLTestPage";
 import { PresentationEditor, EditorConfigProvider } from "@lib/pptx-editor";
-import { convertToPresentationDocument } from "./lib/presentation-converter";
+import { convertToPresentationDocument } from "@lib/pptx/app";
 import "./App.css";
 
 // Demo PPTX URL (will be in the public folder)
 const DEMO_PPTX_URL = import.meta.env.BASE_URL + "demo.pptx";
 
-type AppMode = "upload" | "viewer" | "slideshow" | "editorTest" | "editor";
+type AppMode = "upload" | "viewer" | "slideshow" | "editorTest" | "editor" | "drawingMLTest";
 
 /**
  * Top-level application component for the demo pages build.
@@ -66,6 +67,14 @@ export function App() {
   }, []);
 
   const handleExitEditorTest = useCallback(() => {
+    setMode("upload");
+  }, []);
+
+  const handleDrawingMLTest = useCallback(() => {
+    setMode("drawingMLTest");
+  }, []);
+
+  const handleExitDrawingMLTest = useCallback(() => {
     setMode("upload");
   }, []);
 
@@ -143,6 +152,11 @@ export function App() {
     return <EditorTestPage onBack={handleExitEditorTest} />;
   }
 
+  // DrawingML test mode
+  if (mode === "drawingMLTest") {
+    return <DrawingMLTestPage onBack={handleExitDrawingMLTest} />;
+  }
+
   // Error state
   if (status === "error") {
     return (
@@ -173,6 +187,7 @@ export function App() {
         onDemoLoad={handleDemoLoad}
         isLoading={status === "loading"}
         onEditorTest={handleEditorTest}
+        onDrawingMLTest={handleDrawingMLTest}
       />
     );
   }

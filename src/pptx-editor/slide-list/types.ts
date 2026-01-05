@@ -5,7 +5,7 @@
  * readonly and editable modes with vertical/horizontal orientation.
  */
 
-import type { SlideId, SlideWithId } from "../context/presentation/editor/types";
+import type { SlideId, SlideWithId } from "../../pptx/app";
 
 /**
  * Scroll orientation for the slide list
