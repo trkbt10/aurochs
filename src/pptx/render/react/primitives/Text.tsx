@@ -9,7 +9,7 @@
 
 import type { ReactNode } from "react";
 import type { TextBody } from "../../../domain/text";
-import type { LayoutResult, LayoutLine, PositionedSpan, LayoutParagraphResult } from "../../text-layout";
+import type { LayoutResult, LayoutLine, PositionedSpan, LayoutParagraphResult, TextEffectsConfig, TextPatternFillConfig, TextImageFillConfig } from "../../text-layout";
 import { layoutTextBody, toLayoutInput } from "../../text-layout";
 import { px, deg } from "../../../domain/types";
 import { PT_TO_PX } from "../../../domain/unit-conversion";
@@ -281,19 +281,40 @@ function renderSpan(
 
   // Handle fill
   if (span.textFill !== undefined) {
-    if (span.textFill.type === "gradient") {
-      const gradId = getNextId("text-grad");
-      if (!hasDef(gradId)) {
-        addDef(gradId, createTextGradientDef(span.textFill, gradId));
+    switch (span.textFill.type) {
+      case "gradient": {
+        const gradId = getNextId("text-grad");
+        if (!hasDef(gradId)) {
+          addDef(gradId, createTextGradientDef(span.textFill, gradId));
+        }
+        textProps.fill = `url(#${gradId})`;
+        break;
       }
-      textProps.fill = `url(#${gradId})`;
-    } else if (span.textFill.type === "noFill") {
-      textProps.fill = "none";
-    } else {
-      textProps.fill = span.textFill.color;
-      if (span.textFill.alpha < 1) {
-        textProps.fillOpacity = span.textFill.alpha;
+      case "pattern": {
+        const patternId = getNextId("text-patt");
+        if (!hasDef(patternId)) {
+          addDef(patternId, createTextPatternDef(span.textFill, patternId));
+        }
+        textProps.fill = `url(#${patternId})`;
+        break;
       }
+      case "image": {
+        const imageId = getNextId("text-img");
+        if (!hasDef(imageId)) {
+          addDef(imageId, createTextImageFillDef(span.textFill, imageId));
+        }
+        textProps.fill = `url(#${imageId})`;
+        break;
+      }
+      case "noFill":
+        textProps.fill = "none";
+        break;
+      case "solid":
+        textProps.fill = span.textFill.color;
+        if (span.textFill.alpha < 1) {
+          textProps.fillOpacity = span.textFill.alpha;
+        }
+        break;
     }
   } else {
     textProps.fill = span.color;
@@ -336,12 +357,26 @@ function renderSpan(
     textProps.paintOrder = "stroke fill";
   }
 
+  // Text effects (shadow, glow, soft edge, reflection)
+  let effectsFilterUrl: string | undefined;
+  if (span.effects !== undefined) {
+    const effectsId = getNextId("text-effect");
+    if (!hasDef(effectsId)) {
+      addDef(effectsId, createTextEffectsFilterDef(span.effects, effectsId));
+    }
+    effectsFilterUrl = `url(#${effectsId})`;
+  }
+
   // Apply text transform
   const textContent = applyTextTransform(span.text, span.textTransform);
 
   // Create text element
   const textElement = (
-    <text key={`text-${key}`} {...textProps}>
+    <text
+      key={`text-${key}`}
+      {...textProps}
+      filter={effectsFilterUrl}
+    >
       {textContent}
     </text>
   );
@@ -460,5 +495,327 @@ function createTextGradientDef(fill: TextGradientFill, id: string): ReactNode {
     >
       {stops}
     </linearGradient>
+  );
+}
+
+/**
+ * Create SVG pattern definition for text pattern fill.
+ *
+ * @see ECMA-376 Part 1, Section 20.1.8.47 (a:pattFill)
+ */
+function createTextPatternDef(
+  fill: TextPatternFillConfig,
+  id: string,
+): ReactNode {
+  const { preset, fgColor, bgColor } = fill;
+  const size = getPatternSize(preset);
+
+  return (
+    <pattern
+      id={id}
+      width={size}
+      height={size}
+      patternUnits="userSpaceOnUse"
+    >
+      {/* Background */}
+      <rect width={size} height={size} fill={bgColor} />
+      {/* Pattern content */}
+      {renderPatternContent(preset, fgColor, size)}
+    </pattern>
+  );
+}
+
+/**
+ * Get pattern size based on preset type.
+ */
+function getPatternSize(preset: string): number {
+  // Most patterns use 8x8 or 10x10 tiles
+  if (preset.startsWith("pct")) {
+    return 4; // Percentage patterns use smaller tiles
+  }
+  if (preset.includes("sm") || preset.includes("nar")) {
+    return 4; // Small/narrow patterns
+  }
+  if (preset.includes("lg") || preset.includes("wd")) {
+    return 10; // Large/wide patterns
+  }
+  return 8; // Default size
+}
+
+/**
+ * Render pattern content based on preset type.
+ */
+function renderPatternContent(
+  preset: string,
+  fgColor: string,
+  size: number,
+): ReactNode {
+  // Horizontal patterns
+  if (preset === "horz" || preset === "ltHorz" || preset === "dkHorz" || preset === "narHorz") {
+    const strokeWidth = preset === "dkHorz" ? 2 : preset === "ltHorz" ? 0.5 : 1;
+    return <line x1={0} y1={size / 2} x2={size} y2={size / 2} stroke={fgColor} strokeWidth={strokeWidth} />;
+  }
+
+  // Vertical patterns
+  if (preset === "vert" || preset === "ltVert" || preset === "dkVert" || preset === "narVert") {
+    const strokeWidth = preset === "dkVert" ? 2 : preset === "ltVert" ? 0.5 : 1;
+    return <line x1={size / 2} y1={0} x2={size / 2} y2={size} stroke={fgColor} strokeWidth={strokeWidth} />;
+  }
+
+  // Grid patterns
+  if (preset === "smGrid" || preset === "lgGrid" || preset === "cross") {
+    return (
+      <>
+        <line x1={0} y1={size / 2} x2={size} y2={size / 2} stroke={fgColor} strokeWidth={0.5} />
+        <line x1={size / 2} y1={0} x2={size / 2} y2={size} stroke={fgColor} strokeWidth={0.5} />
+      </>
+    );
+  }
+
+  // Diagonal up patterns
+  if (preset === "upDiag" || preset === "ltUpDiag" || preset === "dkUpDiag" || preset === "wdUpDiag") {
+    const strokeWidth = preset === "dkUpDiag" ? 2 : preset === "wdUpDiag" ? 3 : preset === "ltUpDiag" ? 0.5 : 1;
+    return <line x1={0} y1={size} x2={size} y2={0} stroke={fgColor} strokeWidth={strokeWidth} />;
+  }
+
+  // Diagonal down patterns
+  if (preset === "dnDiag" || preset === "ltDnDiag" || preset === "dkDnDiag" || preset === "wdDnDiag") {
+    const strokeWidth = preset === "dkDnDiag" ? 2 : preset === "wdDnDiag" ? 3 : preset === "ltDnDiag" ? 0.5 : 1;
+    return <line x1={0} y1={0} x2={size} y2={size} stroke={fgColor} strokeWidth={strokeWidth} />;
+  }
+
+  // Diagonal cross
+  if (preset === "diagCross") {
+    return (
+      <>
+        <line x1={0} y1={0} x2={size} y2={size} stroke={fgColor} strokeWidth={0.5} />
+        <line x1={0} y1={size} x2={size} y2={0} stroke={fgColor} strokeWidth={0.5} />
+      </>
+    );
+  }
+
+  // Dot grid
+  if (preset === "dotGrid") {
+    return <circle cx={size / 2} cy={size / 2} r={1} fill={fgColor} />;
+  }
+
+  // Percentage patterns (dots)
+  if (preset.startsWith("pct")) {
+    const pct = parseInt(preset.replace("pct", ""), 10);
+    const dotSize = Math.max(0.5, (pct / 100) * 2);
+    return <circle cx={size / 2} cy={size / 2} r={dotSize} fill={fgColor} />;
+  }
+
+  // Check patterns
+  if (preset === "smCheck" || preset === "lgCheck") {
+    const half = size / 2;
+    return (
+      <>
+        <rect x={0} y={0} width={half} height={half} fill={fgColor} />
+        <rect x={half} y={half} width={half} height={half} fill={fgColor} />
+      </>
+    );
+  }
+
+  // Default: solid fill with foreground
+  return <rect width={size} height={size} fill={fgColor} />;
+}
+
+/**
+ * Create SVG pattern definition for text image fill.
+ *
+ * @see ECMA-376 Part 1, Section 20.1.8.14 (a:blipFill)
+ */
+function createTextImageFillDef(
+  fill: TextImageFillConfig,
+  id: string,
+): ReactNode {
+  if (fill.mode === "tile") {
+    const scaleX = fill.tileScale?.x ?? 1;
+    const scaleY = fill.tileScale?.y ?? 1;
+    const tileSize = 50; // Base tile size
+
+    return (
+      <pattern
+        id={id}
+        width={tileSize * scaleX}
+        height={tileSize * scaleY}
+        patternUnits="userSpaceOnUse"
+      >
+        <image
+          href={fill.imageUrl}
+          width={tileSize * scaleX}
+          height={tileSize * scaleY}
+          preserveAspectRatio="none"
+        />
+      </pattern>
+    );
+  }
+
+  // Stretch mode uses objectBoundingBox
+  return (
+    <pattern
+      id={id}
+      width="100%"
+      height="100%"
+      patternUnits="objectBoundingBox"
+    >
+      <image
+        href={fill.imageUrl}
+        width="100%"
+        height="100%"
+        preserveAspectRatio="none"
+      />
+    </pattern>
+  );
+}
+
+/**
+ * Create SVG filter definition for text effects.
+ *
+ * Supports: shadow, glow, soft edge, and reflection effects.
+ *
+ * @see ECMA-376 Part 1, Section 20.1.8 (Effects)
+ */
+function createTextEffectsFilterDef(
+  effects: TextEffectsConfig,
+  id: string,
+): ReactNode {
+  const hasShadow = effects.shadow !== undefined;
+  const hasGlow = effects.glow !== undefined;
+  const hasSoftEdge = effects.softEdge !== undefined;
+  const hasReflection = effects.reflection !== undefined;
+
+  // Determine filter bounds based on effects
+  // Larger bounds needed for glow and shadow
+  const filterPadding = "-50%";
+  const filterSize = "200%";
+
+  return (
+    <filter
+      id={id}
+      x={filterPadding}
+      y={filterPadding}
+      width={filterSize}
+      height={filterSize}
+    >
+      {/* Glow effect (rendered behind everything) */}
+      {hasGlow && effects.glow && (
+        <>
+          <feGaussianBlur
+            in="SourceAlpha"
+            stdDeviation={effects.glow.radius / 2}
+            result="glowBlur"
+          />
+          <feFlood
+            floodColor={effects.glow.color}
+            floodOpacity={effects.glow.opacity}
+            result="glowColor"
+          />
+          <feComposite
+            in="glowColor"
+            in2="glowBlur"
+            operator="in"
+            result="glow"
+          />
+        </>
+      )}
+
+      {/* Shadow effect */}
+      {hasShadow && effects.shadow && effects.shadow.type === "outer" && (
+        <feDropShadow
+          dx={effects.shadow.dx}
+          dy={effects.shadow.dy}
+          stdDeviation={effects.shadow.blurRadius / 2}
+          floodColor={effects.shadow.color}
+          floodOpacity={effects.shadow.opacity}
+          result="shadow"
+        />
+      )}
+
+      {/* Inner shadow (more complex) */}
+      {hasShadow && effects.shadow && effects.shadow.type === "inner" && (
+        <>
+          <feGaussianBlur
+            in="SourceAlpha"
+            stdDeviation={effects.shadow.blurRadius / 2}
+            result="innerBlur"
+          />
+          <feOffset
+            dx={effects.shadow.dx}
+            dy={effects.shadow.dy}
+            result="innerOffset"
+          />
+          <feFlood
+            floodColor={effects.shadow.color}
+            floodOpacity={effects.shadow.opacity}
+            result="innerColor"
+          />
+          <feComposite
+            in="innerColor"
+            in2="innerOffset"
+            operator="in"
+            result="innerShadow"
+          />
+          <feComposite
+            in="innerShadow"
+            in2="SourceAlpha"
+            operator="in"
+            result="innerClipped"
+          />
+        </>
+      )}
+
+      {/* Soft edge effect */}
+      {hasSoftEdge && effects.softEdge && (
+        <>
+          <feGaussianBlur
+            in="SourceAlpha"
+            stdDeviation={effects.softEdge.radius / 2}
+            result="softBlur"
+          />
+          <feComposite
+            in="SourceGraphic"
+            in2="softBlur"
+            operator="in"
+            result="softEdge"
+          />
+        </>
+      )}
+
+      {/* Reflection effect */}
+      {hasReflection && effects.reflection && (
+        <>
+          {/* Create flipped copy */}
+          <feOffset
+            in="SourceGraphic"
+            dy={effects.reflection.distance}
+            result="reflectOffset"
+          />
+          <feGaussianBlur
+            in="reflectOffset"
+            stdDeviation={effects.reflection.blurRadius / 2}
+            result="reflectBlur"
+          />
+          {/* Apply gradient fade */}
+          <feComponentTransfer in="reflectBlur" result="reflectFade">
+            <feFuncA
+              type="linear"
+              slope={effects.reflection.endOpacity / 100}
+              intercept={0}
+            />
+          </feComponentTransfer>
+        </>
+      )}
+
+      {/* Merge all effects */}
+      <feMerge>
+        {hasGlow && <feMergeNode in="glow" />}
+        {hasShadow && effects.shadow?.type === "outer" && <feMergeNode in="shadow" />}
+        {hasReflection && <feMergeNode in="reflectFade" />}
+        <feMergeNode in={hasSoftEdge ? "softEdge" : (hasShadow && effects.shadow?.type === "inner" ? "innerClipped" : "SourceGraphic")} />
+        {hasShadow && effects.shadow?.type === "inner" && !hasSoftEdge && <feMergeNode in="SourceGraphic" />}
+      </feMerge>
+    </filter>
   );
 }

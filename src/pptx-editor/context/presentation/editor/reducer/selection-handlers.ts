@@ -108,7 +108,7 @@ function handleSelectMultipleShapes(
     textEdit: exitTextEditIfActive(state),
     shapeSelection: {
       selectedIds: action.shapeIds,
-      primaryId: action.shapeIds[0],
+      primaryId: action.primaryId ?? action.shapeIds[0],
     },
   };
 }

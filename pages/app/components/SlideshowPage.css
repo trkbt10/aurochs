@@ -42,6 +42,10 @@
   padding: var(--space-2);
 }
 
+.slideshow-container.fullscreen .slideshow-stage {
+  padding: 0;
+}
+
 @media (min-width: 768px) {
   .slideshow-stage {
     padding: var(--space-3);
@@ -54,6 +58,10 @@
   max-width: 100%;
   max-height: 100%;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+}
+
+.slideshow-container.fullscreen .slideshow-slide-container {
+  box-shadow: none;
 }
 
 .slideshow-slide {

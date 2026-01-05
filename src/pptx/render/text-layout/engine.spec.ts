@@ -58,6 +58,7 @@ describe("layoutTextBody", () => {
     textFill: undefined,
     kerning: undefined,
     underlineColor: undefined,
+    effects: undefined,
   });
 
   const createParagraph = (spans: LayoutSpan[]): LayoutParagraphInput => ({
@@ -165,6 +166,7 @@ describe("layoutTextBody", () => {
       textFill: undefined,
       kerning: undefined,
       underlineColor: undefined,
+      effects: undefined,
     };
 
     const input: LayoutInput = {

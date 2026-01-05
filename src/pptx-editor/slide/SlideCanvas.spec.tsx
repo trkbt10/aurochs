@@ -120,10 +120,12 @@ describe("SlideCanvas creation drag", () => {
       throw new Error("Expected creation bounds to be reported.");
     }
 
-    expect(received.x).toBe(100);
-    expect(received.y).toBe(100);
-    expect(received.width).toBe(200);
-    expect(received.height).toBe(100);
+    expect(received).toEqual({
+      x: 100,
+      y: 100,
+      width: 200,
+      height: 100,
+    });
   });
 
   it("does not start creation drag for pen mode", () => {

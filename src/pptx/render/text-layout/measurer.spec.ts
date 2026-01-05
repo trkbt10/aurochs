@@ -63,6 +63,7 @@ describe("measureSpan", () => {
     textFill: undefined,
     kerning: undefined,
     underlineColor: undefined,
+    effects: undefined,
   });
 
   test("measures regular span", () => {
@@ -108,6 +109,7 @@ describe("measureSpans", () => {
         textFill: undefined,
         kerning: undefined,
         underlineColor: undefined,
+        effects: undefined,
       },
       {
         text: " World",
@@ -135,6 +137,7 @@ describe("measureSpans", () => {
         textFill: undefined,
         kerning: undefined,
         underlineColor: undefined,
+        effects: undefined,
       },
     ];
 

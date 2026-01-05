@@ -7,6 +7,23 @@ import type { Pixels, Points, TextAlign, TextAnchor, Percent } from "../../domai
 import type { LineSpacing, TextWrapping, TextOverflow, TextVerticalOverflow } from "../../domain/text";
 import type { RenderOptions } from "../core/types";
 
+// Re-export text fill and effects types from core/drawing-ml
+// These are shared across all renderers (React, SVG, HTML)
+export type {
+  TextGradientStop,
+  TextGradientFillConfig,
+  TextSolidFillConfig,
+  TextNoFillConfig,
+  TextPatternFillConfig,
+  TextImageFillConfig,
+  TextFillConfig,
+  TextShadowConfig,
+  TextGlowConfig,
+  TextSoftEdgeConfig,
+  TextReflectionConfig,
+  TextEffectsConfig,
+} from "../core/drawing-ml";
+
 // =============================================================================
 // Auto Fit Configuration
 // =============================================================================
@@ -195,11 +212,133 @@ export type TextNoFillConfig = {
 };
 
 /**
- * Text fill configuration (solid, gradient, or noFill).
+ * Pattern fill configuration for text.
+ *
+ * @see ECMA-376 Part 1, Section 20.1.8.47 (a:pattFill)
+ */
+export type TextPatternFillConfig = {
+  readonly type: "pattern";
+  /** Pattern preset name (e.g., "horz", "vert", "smGrid", etc.) */
+  readonly preset: string;
+  /** Foreground color as hex (with #) */
+  readonly fgColor: string;
+  /** Background color as hex (with #) */
+  readonly bgColor: string;
+  /** Foreground alpha (0-1) */
+  readonly fgAlpha: number;
+  /** Background alpha (0-1) */
+  readonly bgAlpha: number;
+};
+
+/**
+ * Image fill configuration for text.
+ *
+ * @see ECMA-376 Part 1, Section 20.1.8.14 (a:blipFill)
+ */
+export type TextImageFillConfig = {
+  readonly type: "image";
+  /** Image URL (data URL or external URL) */
+  readonly imageUrl: string;
+  /** Stretch mode: tile or stretch */
+  readonly mode: "tile" | "stretch";
+  /** Tile scale (for tile mode) */
+  readonly tileScale?: { readonly x: number; readonly y: number };
+};
+
+/**
+ * Text fill configuration (solid, gradient, pattern, image, or noFill).
  *
  * @see ECMA-376 Part 1, Section 20.1.8 (Fill Properties)
  */
-export type TextFillConfig = TextSolidFillConfig | TextGradientFillConfig | TextNoFillConfig;
+export type TextFillConfig = TextSolidFillConfig | TextGradientFillConfig | TextPatternFillConfig | TextImageFillConfig | TextNoFillConfig;
+
+// =============================================================================
+// Text Effects Configuration
+// =============================================================================
+
+/**
+ * Resolved shadow effect for text rendering.
+ *
+ * @see ECMA-376 Part 1, Section 20.1.8.49 (outerShdw)
+ */
+export type TextShadowConfig = {
+  /** Shadow type: outer or inner */
+  readonly type: "outer" | "inner";
+  /** Shadow color as hex (with #) */
+  readonly color: string;
+  /** Shadow opacity (0-1) */
+  readonly opacity: number;
+  /** Blur radius in pixels */
+  readonly blurRadius: number;
+  /** X offset in pixels */
+  readonly dx: number;
+  /** Y offset in pixels */
+  readonly dy: number;
+};
+
+/**
+ * Resolved glow effect for text rendering.
+ *
+ * @see ECMA-376 Part 1, Section 20.1.8.32 (glow)
+ */
+export type TextGlowConfig = {
+  /** Glow color as hex (with #) */
+  readonly color: string;
+  /** Glow opacity (0-1) */
+  readonly opacity: number;
+  /** Glow radius in pixels */
+  readonly radius: number;
+};
+
+/**
+ * Resolved soft edge effect for text rendering.
+ *
+ * @see ECMA-376 Part 1, Section 20.1.8.53 (softEdge)
+ */
+export type TextSoftEdgeConfig = {
+  /** Soft edge radius in pixels */
+  readonly radius: number;
+};
+
+/**
+ * Resolved reflection effect for text rendering.
+ *
+ * @see ECMA-376 Part 1, Section 20.1.8.50 (reflection)
+ */
+export type TextReflectionConfig = {
+  /** Blur radius in pixels */
+  readonly blurRadius: number;
+  /** Start opacity (0-100) */
+  readonly startOpacity: number;
+  /** End opacity (0-100) */
+  readonly endOpacity: number;
+  /** Distance from source in pixels */
+  readonly distance: number;
+  /** Direction angle in degrees */
+  readonly direction: number;
+  /** Fade direction angle in degrees */
+  readonly fadeDirection: number;
+  /** Horizontal scale percentage */
+  readonly scaleX: number;
+  /** Vertical scale percentage */
+  readonly scaleY: number;
+};
+
+/**
+ * Combined text effects configuration.
+ *
+ * @see ECMA-376 Part 1, Section 20.1.8 (Effects)
+ */
+export type TextEffectsConfig = {
+  /** Shadow effect */
+  readonly shadow?: TextShadowConfig;
+  /** Glow effect */
+  readonly glow?: TextGlowConfig;
+  /** Soft edge effect */
+  readonly softEdge?: TextSoftEdgeConfig;
+  /** Reflection effect */
+  readonly reflection?: TextReflectionConfig;
+};
 
 // =============================================================================
 // Text Span Types
@@ -295,6 +434,11 @@ export type LayoutSpan = {
    * @see ECMA-376 Part 1, Section 21.1.2.3.33 (a:uLn)
    */
   readonly underlineColor: string | undefined;
+  /**
+   * Text effects configuration (shadow, glow, soft edge, reflection).
+   * @see ECMA-376 Part 1, Section 20.1.8 (Effects)
+   */
+  readonly effects: TextEffectsConfig | undefined;
 };
 
 /**

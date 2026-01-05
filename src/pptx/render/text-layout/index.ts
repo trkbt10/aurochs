@@ -59,6 +59,13 @@ export type {
   LayoutParagraphResult,
   LayoutResult,
   LayoutInput,
+  TextEffectsConfig,
+  TextShadowConfig,
+  TextGlowConfig,
+  TextSoftEdgeConfig,
+  TextReflectionConfig,
+  TextPatternFillConfig,
+  TextImageFillConfig,
 } from "./types";
 
 // Measurement

@@ -3,6 +3,7 @@
  *
  * Displays shapes in a hierarchical tree view with:
  * - Selection by clicking
+ * - Range selection with Shift+click
  * - Multi-selection with Ctrl/Cmd+click
  * - Context menu for group/ungroup/reorder/delete
  * - Expandable groups
@@ -58,6 +59,8 @@ export type LayerPanelProps = {
   readonly primaryShape: Shape | undefined;
   /** Callback when a shape is selected */
   readonly onSelect: (shapeId: ShapeId, addToSelection: boolean, toggle?: boolean) => void;
+  /** Callback when multiple shapes are selected */
+  readonly onSelectMultiple: (shapeIds: readonly ShapeId[], primaryId?: ShapeId) => void;
   /** Callback to group shapes */
   readonly onGroup: (shapeIds: readonly ShapeId[]) => void;
   /** Callback to ungroup a shape */
@@ -75,7 +78,7 @@ type ShapeItemProps = {
   readonly depth: number;
   readonly isSelected: boolean;
   readonly isExpanded: boolean;
-  readonly onSelect: (shapeId: string, addToSelection: boolean, toggle?: boolean) => void;
+  readonly onSelect: (shapeId: string, modifiers: ShapeItemModifiers) => void;
   readonly onToggleExpand: (shapeId: string) => void;
   readonly expandedGroups: ReadonlySet<string>;
   readonly selectedIds: readonly string[];
@@ -87,6 +90,12 @@ type ShapeItemProps = {
 
 const LAYER_ICON_SIZE = iconTokens.size.sm;
 const LAYER_ICON_STROKE = iconTokens.strokeWidth;
+
+type ShapeItemModifiers = {
+  readonly shiftKey: boolean;
+  readonly metaKey: boolean;
+  readonly ctrlKey: boolean;
+};
 
 /**
  * Get display icon for shape type
@@ -183,6 +192,30 @@ function getShapeName(shape: Shape): string {
   }
 }
 
+function getVisibleShapeIds(
+  shapes: readonly Shape[],
+  expandedGroups: ReadonlySet<string>
+): ShapeId[] {
+  const visibleIds: ShapeId[] = [];
+  const shapesReversed = [...shapes].reverse();
+
+  const walk = (shapeList: readonly Shape[]) => {
+    for (const shape of shapeList) {
+      const shapeId = getShapeId(shape);
+      if (shapeId) {
+        visibleIds.push(shapeId);
+      }
+
+      if (shape.type === "grpSp" && shapeId && expandedGroups.has(shapeId)) {
+        walk((shape as GrpShape).children);
+      }
+    }
+  };
+
+  walk(shapesReversed);
+  return visibleIds;
+}
+
 // =============================================================================
 // Sub-components
 // =============================================================================
@@ -209,9 +242,11 @@ function ShapeItem({
     if (!shapeId) {
       return;
     }
-    const isModifierKey = e.shiftKey || e.metaKey || e.ctrlKey;
-    const isToggle = e.metaKey || e.ctrlKey; // Cmd/Ctrl = toggle
-    onSelect(shapeId, isModifierKey, isToggle);
+    onSelect(shapeId, {
+      shiftKey: e.shiftKey,
+      metaKey: e.metaKey,
+      ctrlKey: e.ctrlKey,
+    });
   };
 
   const handleToggleExpand = (e: MouseEvent) => {
@@ -347,7 +382,7 @@ type ShapeListProps = {
   readonly shapes: readonly Shape[];
   readonly selectedIds: readonly string[];
   readonly expandedGroups: ReadonlySet<string>;
-  readonly onSelect: (shapeId: string, addToSelection: boolean, toggle?: boolean) => void;
+  readonly onSelect: (shapeId: string, modifiers: ShapeItemModifiers) => void;
   readonly onToggleExpand: (shapeId: string) => void;
   readonly onEmptyClick: () => void;
 };
@@ -470,6 +505,7 @@ export function LayerPanel({
   selection,
   primaryShape,
   onSelect,
+  onSelectMultiple,
   onGroup,
   onUngroup,
   onClearSelection,
@@ -494,11 +530,36 @@ export function LayerPanel({
   }, []);
 
   // Handle shape selection
+  const visibleShapeIds = useMemo(
+    () => getVisibleShapeIds(slide.shapes, expandedGroups),
+    [slide.shapes, expandedGroups]
+  );
+
+  const visibleIndexById = useMemo(() => {
+    return new Map(visibleShapeIds.map((id, index) => [id, index]));
+  }, [visibleShapeIds]);
+
   const handleSelect = useCallback(
-    (shapeId: string, addToSelection: boolean, toggle?: boolean) => {
-      onSelect(shapeId as ShapeId, addToSelection, toggle);
+    (shapeId: string, modifiers: ShapeItemModifiers) => {
+      const isToggle = modifiers.metaKey || modifiers.ctrlKey;
+
+      if (modifiers.shiftKey) {
+        const anchorId = selection.primaryId ?? shapeId;
+        const anchorIndex = visibleIndexById.get(anchorId);
+        const targetIndex = visibleIndexById.get(shapeId);
+
+        if (anchorIndex !== undefined && targetIndex !== undefined) {
+          const start = Math.min(anchorIndex, targetIndex);
+          const end = Math.max(anchorIndex, targetIndex);
+          const rangeIds = visibleShapeIds.slice(start, end + 1) as ShapeId[];
+          onSelectMultiple(rangeIds, shapeId as ShapeId);
+          return;
+        }
+      }
+
+      onSelect(shapeId as ShapeId, isToggle, isToggle);
     },
-    [onSelect]
+    [onSelect, onSelectMultiple, selection.primaryId, visibleIndexById, visibleShapeIds]
   );
 
   // Check if can group (2+ top-level shapes selected)

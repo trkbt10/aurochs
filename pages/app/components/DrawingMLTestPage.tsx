@@ -17,6 +17,7 @@ import {
   LineEndTest,
   EffectsTest,
   ShapesTest,
+  TextEffectsTest,
   CombinedTest,
   testSlideSize,
   testColorContext,
@@ -31,7 +32,7 @@ type DrawingMLTestPageProps = {
   readonly onBack: () => void;
 };
 
-type TestSection = "colors" | "fills" | "lines" | "lineEnds" | "effects" | "shapes" | "combined";
+type TestSection = "colors" | "fills" | "lines" | "lineEnds" | "effects" | "shapes" | "text" | "combined";
 
 // =============================================================================
 // Main Component
@@ -50,6 +51,7 @@ export function DrawingMLTestPage({ onBack }: DrawingMLTestPageProps) {
     { id: "lineEnds", label: "Arrows" },
     { id: "effects", label: "Effects" },
     { id: "shapes", label: "Shapes" },
+    { id: "text", label: "WordArt" },
     { id: "combined", label: "Combined" },
   ];
 
@@ -93,6 +95,7 @@ export function DrawingMLTestPage({ onBack }: DrawingMLTestPageProps) {
             {activeSection === "lineEnds" && <LineEndTest />}
             {activeSection === "effects" && <EffectsTest />}
             {activeSection === "shapes" && <ShapesTest />}
+            {activeSection === "text" && <TextEffectsTest />}
             {activeSection === "combined" && <CombinedTest />}
           </main>
         </div>

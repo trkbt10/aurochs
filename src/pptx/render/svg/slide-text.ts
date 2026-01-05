@@ -270,7 +270,7 @@ function renderLineToSvg(
         // No fill - transparent text
         // @see ECMA-376 Part 1, Section 20.1.8.44 (a:noFill)
         styleAttrs.push(`fill="none"`);
-      } else {
+      } else if (span.textFill.type === "solid") {
         // Solid fill with alpha
         if (span.textFill.alpha < 1) {
           styleAttrs.push(`fill="${span.textFill.color}"`);
@@ -278,6 +278,14 @@ function renderLineToSvg(
         } else {
           styleAttrs.push(`fill="${span.textFill.color}"`);
         }
+      } else if (span.textFill.type === "pattern") {
+        // Pattern fill - fall back to foreground color for SVG string output
+        // (Pattern rendering requires React component for proper SVG defs)
+        styleAttrs.push(`fill="${span.textFill.fgColor}"`);
+      } else if (span.textFill.type === "image") {
+        // Image fill - fall back to black for SVG string output
+        // (Image fill rendering requires React component for proper SVG defs)
+        styleAttrs.push(`fill="#000000"`);
       }
     } else {
       // Fall back to span.color for backward compatibility

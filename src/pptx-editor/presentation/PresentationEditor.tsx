@@ -721,8 +721,8 @@ function EditorContent({
   );
 
   const handleSelectMultiple = useCallback(
-    (shapeIds: readonly ShapeId[]) => {
-      dispatch({ type: "SELECT_MULTIPLE_SHAPES", shapeIds });
+    (shapeIds: readonly ShapeId[], primaryId?: ShapeId) => {
+      dispatch({ type: "SELECT_MULTIPLE_SHAPES", shapeIds, primaryId });
     },
     [dispatch]
   );
@@ -925,6 +925,7 @@ function EditorContent({
                     selection={selection}
                     primaryShape={primaryShape}
                     onSelect={handleSelect}
+                    onSelectMultiple={handleSelectMultiple}
                     onGroup={handleGroup}
                     onUngroup={handleUngroup}
                     onClearSelection={handleClearSelection}

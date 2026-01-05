@@ -11,9 +11,16 @@ import type {
   TableCell,
   TableColumn,
   Chart,
+  ChartSeries,
+  CategoryAxis,
+  ValueAxis,
+  DataReference,
+  BarSeries,
+  LineSeries,
+  PieSeries,
 } from "../../pptx/domain";
 import type { ShapeId, ResourceId } from "../../pptx/domain/types";
-import { deg, px } from "../../pptx/domain/types";
+import { deg, pct, px } from "../../pptx/domain/types";
 import type { CreationChartType, CreationDiagramType } from "../context/presentation/editor/types";
 import type { ShapeBounds } from "../shape/creation-bounds";
 
@@ -178,13 +185,15 @@ export function createTableGraphicFrame(id: ShapeId, bounds: ShapeBounds, rows: 
  * Full chart editing will require proper ChartEditor integration.
  */
 function createDefaultChart(chartType: CreationChartType): Chart {
-  const minimalPlotArea = {
-    charts: [],
-    axes: [],
-  };
+  const categories = createDefaultChartCategories();
+  const values = createDefaultChartValues();
+  const defaultSeries = createDefaultChartSeries(chartType, categories, values);
 
   return {
-    plotArea: minimalPlotArea,
+    plotArea: {
+      charts: [defaultSeries],
+      axes: chartType === "pie" ? [] : [createDefaultCategoryAxis(), createDefaultValueAxis()],
+    },
     title: {
       textBody: {
         bodyProperties: {},
@@ -196,6 +205,114 @@ function createDefaultChart(chartType: CreationChartType): Chart {
         ],
       },
     },
+  };
+}
+
+function createDefaultChartCategories(): readonly string[] {
+  return ["A", "B", "C"];
+}
+
+function createDefaultChartValues(): readonly number[] {
+  return [30, 50, 20];
+}
+
+function createDefaultChartSeries(
+  chartType: CreationChartType,
+  categories: readonly string[],
+  values: readonly number[]
+): ChartSeries {
+  const categoriesRef: DataReference = {
+    strRef: {
+      formula: "Sheet1!$A$2:$A$4",
+      cache: {
+        count: categories.length,
+        points: categories.map((value, idx) => ({ idx, value })),
+      },
+    },
+  };
+
+  const valuesRef: DataReference = {
+    numRef: {
+      formula: "Sheet1!$B$2:$B$4",
+      cache: {
+        count: values.length,
+        points: values.map((value, idx) => ({ idx, value })),
+      },
+    },
+  };
+
+  const baseSeries = {
+    idx: 0,
+    order: 0,
+    tx: { value: "Series 1" },
+    categories: categoriesRef,
+    values: valuesRef,
+  };
+
+  if (chartType === "line") {
+    const lineSeries: LineSeries = baseSeries;
+    return {
+      type: "lineChart",
+      index: 0,
+      order: 0,
+      grouping: "standard",
+      marker: true,
+      smooth: false,
+      varyColors: false,
+      series: [lineSeries],
+    };
+  }
+
+  if (chartType === "pie") {
+    const pieSeries: PieSeries = baseSeries;
+    return {
+      type: "pieChart",
+      index: 0,
+      order: 0,
+      varyColors: true,
+      firstSliceAng: deg(0),
+      series: [pieSeries],
+    };
+  }
+
+  const barSeries: BarSeries = baseSeries;
+  return {
+    type: "barChart",
+    index: 0,
+    order: 0,
+    barDir: "col",
+    grouping: "clustered",
+    varyColors: false,
+    gapWidth: pct(150),
+    series: [barSeries],
+  };
+}
+
+function createDefaultCategoryAxis(): CategoryAxis {
+  return {
+    type: "catAx",
+    id: 1,
+    position: "b",
+    orientation: "minMax",
+    majorTickMark: "out",
+    minorTickMark: "none",
+    tickLabelPosition: "nextTo",
+    crossAxisId: 2,
+    crosses: "autoZero",
+  };
+}
+
+function createDefaultValueAxis(): ValueAxis {
+  return {
+    type: "valAx",
+    id: 2,
+    position: "l",
+    orientation: "minMax",
+    majorTickMark: "out",
+    minorTickMark: "none",
+    tickLabelPosition: "nextTo",
+    crossAxisId: 1,
+    crosses: "autoZero",
   };
 }
 

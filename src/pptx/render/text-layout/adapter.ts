@@ -5,11 +5,12 @@
 
 import type { TextBody, Paragraph, TextRun, RunProperties, BulletStyle, AutoNumberBullet } from "../../domain/text";
 import type { Pixels, Points } from "../../domain/types";
-import type { LayoutInput, LayoutParagraphInput, LayoutSpan, TextBoxConfig, BulletConfig, AutoFitConfig, TextOutlineConfig, TextFillConfig, FontAlignment, LayoutTabStop } from "./types";
+import type { LayoutInput, LayoutParagraphInput, LayoutSpan, TextBoxConfig, BulletConfig, AutoFitConfig, TextOutlineConfig, TextFillConfig, FontAlignment, LayoutTabStop, TextEffectsConfig, TextShadowConfig, TextGlowConfig, TextSoftEdgeConfig, TextReflectionConfig, TextPatternFillConfig, TextImageFillConfig } from "./types";
 import type { RenderOptions } from "../core/types";
 import type { ColorContext, FontScheme } from "../../domain/resolution";
 import { resolveThemeFont } from "../../domain/resolution";
 import type { Color, Line, Fill } from "../../domain/color";
+import type { Effects, ShadowEffect, GlowEffect, SoftEdgeEffect, ReflectionEffect } from "../../domain/effects";
 
 import { resolveColor as resolveColorRaw } from "../core/drawing-ml";
 import { px, pt, pct } from "../../domain/types";
@@ -553,6 +554,7 @@ function toTextOutlineConfig(
 function toTextFillConfig(
   fill: Fill | undefined,
   colorContext: ColorContext,
+  resourceResolver?: ResourceResolver,
 ): TextFillConfig | undefined {
   if (fill === undefined) {
     return undefined;
@@ -613,11 +615,200 @@ function toTextFillConfig(
       // @see ECMA-376 Part 1, Section 20.1.8.44 (a:noFill)
       return { type: "noFill" };
 
-    case "blipFill":
-    case "patternFill":
+    case "patternFill": {
+      // Convert pattern fill
+      // @see ECMA-376 Part 1, Section 20.1.8.47 (a:pattFill)
+      const fgHex = resolveColor(fill.foregroundColor, colorContext);
+      const bgHex = resolveColor(fill.backgroundColor, colorContext);
+      if (fgHex === undefined || bgHex === undefined) {
+        return undefined;
+      }
+      const fgAlpha = resolveAlpha(fill.foregroundColor.transform);
+      const bgAlpha = resolveAlpha(fill.backgroundColor.transform);
+
+      return {
+        type: "pattern",
+        preset: fill.preset,
+        fgColor: fgHex,
+        bgColor: bgHex,
+        fgAlpha,
+        bgAlpha,
+      };
+    }
+
+    case "blipFill": {
+      // Convert image fill
+      // @see ECMA-376 Part 1, Section 20.1.8.14 (a:blipFill)
+      if (fill.resourceId === undefined || resourceResolver === undefined) {
+        return undefined;
+      }
+      const imageUrl = resourceResolver(fill.resourceId);
+      if (imageUrl === undefined) {
+        return undefined;
+      }
+
+      const mode = fill.tile !== undefined ? "tile" : "stretch";
+      const tileScale = fill.tile !== undefined
+        ? { x: (fill.tile.sx as number) / 100000, y: (fill.tile.sy as number) / 100000 }
+        : undefined;
+
+      return {
+        type: "image",
+        imageUrl,
+        mode,
+        tileScale,
+      };
+    }
+
     case "groupFill":
       return undefined;
   }
+}
+
+// =============================================================================
+// Text Effects Conversion
+// =============================================================================
+
+/**
+ * Convert shadow direction (60000ths of a degree) and distance to dx/dy offsets.
+ *
+ * @see ECMA-376 Part 1, Section 20.1.8.49 (outerShdw)
+ */
+function shadowToOffset(
+  direction: number,
+  distance: number,
+): { dx: number; dy: number } {
+  // Direction is in 60000ths of a degree
+  const radians = (direction / 60000) * (Math.PI / 180);
+  return {
+    dx: Math.cos(radians) * distance,
+    dy: Math.sin(radians) * distance,
+  };
+}
+
+/**
+ * Convert ShadowEffect to TextShadowConfig.
+ *
+ * @see ECMA-376 Part 1, Section 20.1.8.49 (outerShdw/innerShdw)
+ */
+function toTextShadowConfig(
+  shadow: ShadowEffect,
+  colorContext: ColorContext,
+): TextShadowConfig | undefined {
+  const hex = resolveColor(shadow.color, colorContext);
+  if (hex === undefined) {
+    return undefined;
+  }
+
+  const alpha = resolveAlpha(shadow.color.transform);
+  const { dx, dy } = shadowToOffset(
+    shadow.direction as number,
+    shadow.distance as number,
+  );
+
+  return {
+    type: shadow.type,
+    color: hex,
+    opacity: alpha,
+    blurRadius: shadow.blurRadius as number,
+    dx,
+    dy,
+  };
+}
+
+/**
+ * Convert GlowEffect to TextGlowConfig.
+ *
+ * @see ECMA-376 Part 1, Section 20.1.8.32 (glow)
+ */
+function toTextGlowConfig(
+  glow: GlowEffect,
+  colorContext: ColorContext,
+): TextGlowConfig | undefined {
+  const hex = resolveColor(glow.color, colorContext);
+  if (hex === undefined) {
+    return undefined;
+  }
+
+  const alpha = resolveAlpha(glow.color.transform);
+
+  return {
+    color: hex,
+    opacity: alpha,
+    radius: glow.radius as number,
+  };
+}
+
+/**
+ * Convert SoftEdgeEffect to TextSoftEdgeConfig.
+ *
+ * @see ECMA-376 Part 1, Section 20.1.8.53 (softEdge)
+ */
+function toTextSoftEdgeConfig(
+  softEdge: SoftEdgeEffect,
+): TextSoftEdgeConfig {
+  return {
+    radius: softEdge.radius as number,
+  };
+}
+
+/**
+ * Convert ReflectionEffect to TextReflectionConfig.
+ *
+ * @see ECMA-376 Part 1, Section 20.1.8.50 (reflection)
+ */
+function toTextReflectionConfig(
+  reflection: ReflectionEffect,
+): TextReflectionConfig {
+  return {
+    blurRadius: reflection.blurRadius as number,
+    startOpacity: reflection.startOpacity as number,
+    endOpacity: reflection.endOpacity as number,
+    distance: reflection.distance as number,
+    direction: reflection.direction as number,
+    fadeDirection: reflection.fadeDirection as number,
+    scaleX: reflection.scaleX as number,
+    scaleY: reflection.scaleY as number,
+  };
+}
+
+/**
+ * Convert Effects to TextEffectsConfig for text rendering.
+ *
+ * @see ECMA-376 Part 1, Section 20.1.8 (Effects)
+ */
+function toTextEffectsConfig(
+  effects: Effects | undefined,
+  colorContext: ColorContext,
+): TextEffectsConfig | undefined {
+  if (effects === undefined) {
+    return undefined;
+  }
+
+  const shadow = effects.shadow
+    ? toTextShadowConfig(effects.shadow, colorContext)
+    : undefined;
+  const glow = effects.glow
+    ? toTextGlowConfig(effects.glow, colorContext)
+    : undefined;
+  const softEdge = effects.softEdge
+    ? toTextSoftEdgeConfig(effects.softEdge)
+    : undefined;
+  const reflection = effects.reflection
+    ? toTextReflectionConfig(effects.reflection)
+    : undefined;
+
+  // Only return config if at least one effect is present
+  if (shadow === undefined && glow === undefined && softEdge === undefined && reflection === undefined) {
+    return undefined;
+  }
+
+  return {
+    shadow,
+    glow,
+    softEdge,
+    reflection,
+  };
 }
 
 // =============================================================================
@@ -630,6 +821,7 @@ function toTextFillConfig(
  * @param run - TextRun domain object
  * @param colorContext - Color resolution context
  * @param fontScheme - Font scheme for resolving theme font references
+ * @param resourceResolver - Optional function to resolve resource IDs to data URLs
  *
  * @see ECMA-376 Part 1, Section 21.1.2.3.13 (a:r)
  */
@@ -637,6 +829,7 @@ function textRunToSpan(
   run: TextRun,
   colorContext: ColorContext,
   fontScheme: FontScheme | undefined,
+  resourceResolver?: ResourceResolver,
 ): LayoutSpan {
   const props = resolveRunProperties(run.properties, colorContext, fontScheme);
 
@@ -644,9 +837,13 @@ function textRunToSpan(
   // @see ECMA-376 Part 1, Section 20.1.2.2.24
   const textOutline = toTextOutlineConfig(run.properties?.textOutline, colorContext);
 
-  // Resolve text fill (gradFill, etc. on a:rPr)
+  // Resolve text fill (gradFill, pattern, blip, etc. on a:rPr)
   // @see ECMA-376 Part 1, Section 20.1.8
-  const textFill = toTextFillConfig(run.properties?.fill, colorContext);
+  const textFill = toTextFillConfig(run.properties?.fill, colorContext, resourceResolver);
+
+  // Resolve text effects (shadow, glow, soft edge, reflection)
+  // @see ECMA-376 Part 1, Section 20.1.8 (Effects)
+  const effects = toTextEffectsConfig(run.properties?.effects, colorContext);
 
   // Resolve text direction from rtl attribute
   // @see ECMA-376 Part 1, Section 21.1.2.3.12 (a:rtl)
@@ -660,6 +857,7 @@ function textRunToSpan(
       ...props,
       textOutline,
       textFill,
+      effects,
     };
   }
 
@@ -670,6 +868,7 @@ function textRunToSpan(
     ...props,
     textOutline,
     textFill,
+    effects,
   };
 }
 
@@ -793,7 +992,7 @@ function paragraphToInput(
   const { properties } = para;
 
   // Convert runs to spans
-  const spans = para.runs.map((run) => textRunToSpan(run, colorContext, fontScheme));
+  const spans = para.runs.map((run) => textRunToSpan(run, colorContext, fontScheme, resourceResolver));
 
   // Get default font size from first run
   const defaultFontSize = spans[0]?.fontSize ?? pt(DEFAULT_FONT_SIZE_PT);

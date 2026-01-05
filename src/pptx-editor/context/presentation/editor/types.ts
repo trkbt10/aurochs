@@ -161,7 +161,11 @@ export type PresentationEditorAction =
       /** Toggle selection state - deselect if already selected (Cmd/Ctrl+Click) */
       readonly toggle?: boolean;
     }
-  | { readonly type: "SELECT_MULTIPLE_SHAPES"; readonly shapeIds: readonly ShapeId[] }
+  | {
+      readonly type: "SELECT_MULTIPLE_SHAPES";
+      readonly shapeIds: readonly ShapeId[];
+      readonly primaryId?: ShapeId;
+    }
   | { readonly type: "CLEAR_SHAPE_SELECTION" }
 
   // Drag operations
