@@ -17,6 +17,12 @@ import type {
   PhotoAlbumFrameShape,
   PhotoAlbumLayout,
   SmartTags,
+  SlideSizeEmu,
+  NotesSizeEmu,
+  SlideIdEntry,
+  SlideMasterIdEntry,
+  NotesMasterIdEntry,
+  HandoutMasterIdEntry,
 } from "../../domain/presentation";
 import type {
   EmbeddedFont,
@@ -40,69 +46,6 @@ import {
   DEFAULT_AUTO_COMPRESS_PICTURES,
   DEFAULT_BOOKMARK_ID_SEED,
 } from "../../domain/defaults";
-
-// =============================================================================
-// Types
-// =============================================================================
-
-/**
- * Parsed slide size in EMU units.
- *
- * @see ECMA-376 Part 1, Section 19.2.1.36
- */
-export type ParsedSldSz = {
-  readonly widthEmu: number;
-  readonly heightEmu: number;
-  readonly type?: SlideSizeType;
-};
-
-/**
- * Parsed notes size in EMU units.
- *
- * @see ECMA-376 Part 1, Section 19.2.1.23
- */
-export type ParsedNotesSz = {
-  readonly widthEmu: number;
-  readonly heightEmu: number;
-};
-
-/**
- * Parsed slide ID entry.
- *
- * @see ECMA-376 Part 1, Section 19.2.1.32
- */
-export type ParsedSldId = {
-  readonly id: number;
-  readonly rId: string;
-};
-
-/**
- * Parsed slide master ID entry.
- *
- * @see ECMA-376 Part 1, Section 19.2.1.33
- */
-export type ParsedSldMasterId = {
-  readonly id: number;
-  readonly rId: string;
-};
-
-/**
- * Parsed notes master ID entry.
- *
- * @see ECMA-376 Part 1, Section 19.2.1.21
- */
-export type ParsedNotesMasterId = {
-  readonly rId: string;
-};
-
-/**
- * Parsed handout master ID entry.
- *
- * @see ECMA-376 Part 1, Section 19.2.1.11
- */
-export type ParsedHandoutMasterId = {
-  readonly rId: string;
-};
 
 // =============================================================================
 // Helper Functions
@@ -198,7 +141,7 @@ function parseEmbeddedFontReference(element: XmlElement | undefined): EmbeddedFo
  *
  * @see ECMA-376 Part 1, Section 19.2.1.36
  */
-export function parseSldSz(element: XmlElement): ParsedSldSz {
+export function parseSldSz(element: XmlElement): SlideSizeEmu {
   const cx = parseSlideSizeCoordinate(element.attrs["cx"]) ?? 0;
   const cy = parseSlideSizeCoordinate(element.attrs["cy"]) ?? 0;
   const type = element.attrs["type"] as SlideSizeType | undefined;
@@ -216,7 +159,7 @@ export function parseSldSz(element: XmlElement): ParsedSldSz {
  * @param parsed - Parsed slide size in EMU
  * @returns SlideSize in pixels
  */
-export function sldSzToSlideSize(parsed: ParsedSldSz): SlideSize {
+export function sldSzToSlideSize(parsed: SlideSizeEmu): SlideSize {
   return {
     width: px((parsed.widthEmu * SLIDE_FACTOR) | 0),
     height: px((parsed.heightEmu * SLIDE_FACTOR) | 0),
@@ -239,7 +182,7 @@ export function sldSzToSlideSize(parsed: ParsedSldSz): SlideSize {
  *
  * @see ECMA-376 Part 1, Section 19.2.1.23
  */
-export function parseNotesSz(element: XmlElement): ParsedNotesSz {
+export function parseNotesSz(element: XmlElement): NotesSizeEmu {
   const cx = parseSlideSizeCoordinate(element.attrs["cx"]) ?? 0;
   const cy = parseSlideSizeCoordinate(element.attrs["cy"]) ?? 0;
 
@@ -255,7 +198,7 @@ export function parseNotesSz(element: XmlElement): ParsedNotesSz {
  * @param parsed - Parsed notes size in EMU
  * @returns SlideSize in pixels
  */
-export function notesSzToSlideSize(parsed: ParsedNotesSz): SlideSize {
+export function notesSzToSlideSize(parsed: NotesSizeEmu): SlideSize {
   return {
     width: px((parsed.widthEmu * SLIDE_FACTOR) | 0),
     height: px((parsed.heightEmu * SLIDE_FACTOR) | 0),
@@ -464,7 +407,7 @@ export function parseSmartTags(element: XmlElement): SmartTags {
  *
  * @see ECMA-376 Part 1, Section 19.2.1.34
  */
-export function parseSldIdLst(element: XmlElement): ParsedSldId[] {
+export function parseSldIdLst(element: XmlElement): SlideIdEntry[] {
   const sldIds = getChildren(element, "p:sldId");
   return sldIds.map((sldId) => ({
     id: parseSlideId(sldId.attrs["id"]) ?? 0,
@@ -487,7 +430,7 @@ export function parseSldIdLst(element: XmlElement): ParsedSldId[] {
  *
  * @see ECMA-376 Part 1, Section 19.2.1.35
  */
-export function parseSldMasterIdLst(element: XmlElement): ParsedSldMasterId[] {
+export function parseSldMasterIdLst(element: XmlElement): SlideMasterIdEntry[] {
   const sldMasterIds = getChildren(element, "p:sldMasterId");
   return sldMasterIds.map((sldMasterId) => ({
     id: parseSlideMasterId(sldMasterId.attrs["id"]) ?? 0,
@@ -510,7 +453,7 @@ export function parseSldMasterIdLst(element: XmlElement): ParsedSldMasterId[] {
  *
  * @see ECMA-376 Part 1, Section 19.2.1.22
  */
-export function parseNotesMasterIdLst(element: XmlElement): ParsedNotesMasterId[] {
+export function parseNotesMasterIdLst(element: XmlElement): NotesMasterIdEntry[] {
   const notesMasterIds = getChildren(element, "p:notesMasterId");
   return notesMasterIds.map((notesMasterId) => ({
     rId: notesMasterId.attrs["r:id"] ?? "",
@@ -532,7 +475,7 @@ export function parseNotesMasterIdLst(element: XmlElement): ParsedNotesMasterId[
  *
  * @see ECMA-376 Part 1, Section 19.2.1.12
  */
-export function parseHandoutMasterIdLst(element: XmlElement): ParsedHandoutMasterId[] {
+export function parseHandoutMasterIdLst(element: XmlElement): HandoutMasterIdEntry[] {
   const handoutMasterIds = getChildren(element, "p:handoutMasterId");
   return handoutMasterIds.map((handoutMasterId) => ({
     rId: handoutMasterId.attrs["r:id"] ?? "",
