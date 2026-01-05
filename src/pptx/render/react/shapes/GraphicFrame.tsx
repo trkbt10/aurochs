@@ -15,6 +15,7 @@ import { useRenderContext } from "../context";
 import { buildTransformAttr } from "./transform";
 import { renderChart } from "../../components/chart";
 import { renderTableSvg } from "../../components/table";
+import { renderDiagramShapesSvg } from "../../svg/slide-shapes";
 
 // =============================================================================
 // Types
@@ -79,6 +80,7 @@ export const GraphicFrameRenderer = memo(function GraphicFrameRenderer({
 
   const chartData = content.type === "chart" ? content.data : undefined;
   const tableData = content.type === "table" ? content.data : undefined;
+  const diagramData = content.type === "diagram" ? content.data : undefined;
 
   const chartSvgContent = useMemo(() => {
     if (chartData === undefined) {
@@ -102,6 +104,14 @@ export const GraphicFrameRenderer = memo(function GraphicFrameRenderer({
     return renderTableSvg(tableData.table as never, px(width), px(height), renderCtx as never);
   }, [tableData, width, height, renderCtx]);
 
+  const diagramSvgContent = useMemo(() => {
+    if (diagramData === undefined) {
+      return null;
+    }
+    const svgResult = renderDiagramShapesSvg(diagramData, width, height, renderCtx as never);
+    return svgResult ?? null;
+  }, [diagramData, width, height, renderCtx]);
+
   const frameContent = renderFrameContent(
     content,
     width,
@@ -109,6 +119,7 @@ export const GraphicFrameRenderer = memo(function GraphicFrameRenderer({
     ctx,
     chartSvgContent,
     tableSvgContent,
+    diagramSvgContent,
   );
 
   return (
@@ -139,6 +150,7 @@ function renderFrameContent(
   ctx: RenderContext,
   chartSvgContent: string | null,
   tableSvgContent: string | null,
+  diagramSvgContent: string | null,
 ): ReactNode {
   switch (content.type) {
     case "chart":
@@ -148,7 +160,7 @@ function renderFrameContent(
       return renderTableContent(width, height, tableSvgContent);
 
     case "diagram":
-      return renderDiagramContent(content.data, width, height, ctx);
+      return renderDiagramContent(width, height, diagramSvgContent);
 
     case "oleObject":
       return renderOleObjectContent(content.data, width, height, ctx);
@@ -191,26 +203,13 @@ function renderTableContent(
  * Render diagram content
  */
 function renderDiagramContent(
-  data: DiagramReference,
   width: number,
   height: number,
-  ctx: RenderContext,
+  svgContent: string | null,
 ): ReactNode {
-  if (data.parsedContent !== undefined && data.parsedContent.shapes.length > 0) {
-    // For diagrams, we need to render shapes
-    // This is a placeholder - ideally we'd recursively render shapes
-    // For now, use the string-based renderer and inject
-    ctx.warnings.add({
-      type: "fallback",
-      message: "Diagram React rendering not fully implemented",
-    });
-    return renderPlaceholder(width, height, "Diagram");
+  if (svgContent !== null) {
+    return <SvgInnerHtml html={svgContent} />;
   }
-
-  ctx.warnings.add({
-    type: "fallback",
-    message: "Diagram content not available",
-  });
   return renderPlaceholder(width, height, "Diagram");
 }
 

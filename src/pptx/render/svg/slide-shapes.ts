@@ -569,7 +569,7 @@ function renderPlaceholder(transformAttr: string, w: number, h: number, label: s
  *
  * @see MS-ODRAWXML Section 2.4 - Diagram Drawing Elements
  */
-function renderDiagramShapesSvg(
+export function renderDiagramShapesSvg(
   diagramRef: DiagramReference,
   w: number,
   h: number,

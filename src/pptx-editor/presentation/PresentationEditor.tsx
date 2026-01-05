@@ -19,7 +19,7 @@ import type { ResizeHandlePosition } from "../state";
 import type { PresentationDocument, SlideWithId } from "./types";
 import type { ContextMenuActions } from "../slide/context-menu/SlideContextMenu";
 import { PresentationEditorProvider, usePresentationEditor } from "./context";
-import { SlideThumbnailPanel } from "../panels/SlideThumbnailPanel";
+import { SlideThumbnailPanel } from "../panels";
 import { useSlideThumbnails } from "../thumbnail/use-slide-thumbnails";
 import { SlideThumbnailPreview } from "../thumbnail/SlideThumbnailPreview";
 import { CreationToolbar } from "../panels/CreationToolbar";

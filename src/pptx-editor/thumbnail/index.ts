@@ -1,12 +1,24 @@
 /**
- * @file Thumbnail rendering components
+ * @file Thumbnail module
  *
- * Components for rendering individual slide thumbnails:
+ * Slide thumbnail components and utilities:
+ *
+ * Components:
+ * - ThumbnailItem: Individual slide thumbnail with drag-and-drop
  * - SlideThumbnailPreview: SVG preview component
+ *
+ * Hooks & utilities:
  * - useSlideThumbnails: Hook for cached thumbnail generation
  * - cache utilities: Thumbnail cache management
+ *
+ * Note: SlideThumbnailPanel (the panel container) is in panels/ as it's a consumer.
  */
 
+// Thumbnail item component
+export { ThumbnailItem } from "./ThumbnailItem";
+export type { ThumbnailItemProps, DragState, ContextMenuState } from "./types";
+
+// Rendering components
 export { SlideThumbnailPreview } from "./SlideThumbnailPreview";
 export type { SlideThumbnailPreviewProps } from "./SlideThumbnailPreview";
 

@@ -60,5 +60,5 @@ export {
 // =============================================================================
 export { PresentationEditor } from "./PresentationEditor";
 export type { PresentationEditorProps } from "./PresentationEditor";
-export { SlideThumbnailPanel } from "../panels/SlideThumbnailPanel";
-export type { SlideThumbnailPanelProps } from "../panels/SlideThumbnailPanel";
+export { SlideThumbnailPanel } from "../panels";
+export type { SlideThumbnailPanelProps } from "../panels";

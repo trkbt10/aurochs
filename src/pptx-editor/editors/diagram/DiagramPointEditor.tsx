@@ -6,10 +6,12 @@
 
 import type { CSSProperties } from "react";
 import type { DiagramPoint, DiagramPropertySet } from "../../../pptx/domain/diagram";
+import type { ShapeProperties } from "../../../pptx/domain/shape";
 import type { TextBody } from "../../../pptx/domain/text";
 import type { EditorProps } from "../../types";
 import { Accordion, FieldGroup, FieldRow } from "../../ui/layout";
 import { Input, Toggle } from "../../ui/primitives";
+import { ShapePropertiesEditor, createDefaultShapeProperties } from "../shape/ShapePropertiesEditor";
 import { TextBodyEditor } from "../text/TextBodyEditor";
 
 export type DiagramPointEditorProps = EditorProps<DiagramPoint> & {
@@ -164,6 +166,20 @@ export function DiagramPointEditor({
     onChange({ ...value, propertySet });
   };
 
+  const handleShapePropertiesChange = (shapeProperties: ShapeProperties) => {
+    onChange({ ...value, shapeProperties });
+  };
+
+  const handleShapePropertiesToggle = (enabled: boolean) => {
+    if (enabled) {
+      onChange({ ...value, shapeProperties: createDefaultShapeProperties() });
+    } else {
+      const { shapeProperties: _sp, ...rest } = value;
+      void _sp;
+      onChange(rest);
+    }
+  };
+
   const displayType = value.type ?? "(default)";
 
   return (
@@ -209,6 +225,30 @@ export function DiagramPointEditor({
           onChange={handlePropertySetChange}
           disabled={disabled}
         />
+      </Accordion>
+
+      {/* Shape Properties (Visual) */}
+      <Accordion title="Shape Properties" defaultExpanded={false}>
+        <Toggle
+          checked={!!value.shapeProperties}
+          onChange={handleShapePropertiesToggle}
+          disabled={disabled}
+          label="Enable Shape Properties"
+        />
+        {value.shapeProperties && (
+          <ShapePropertiesEditor
+            value={value.shapeProperties}
+            onChange={handleShapePropertiesChange}
+            disabled={disabled}
+            showTransform={false}
+            showGeometry={true}
+            showFill={true}
+            showLine={true}
+            showEffects={true}
+            showScene3d={false}
+            showShape3d={false}
+          />
+        )}
       </Accordion>
     </div>
   );

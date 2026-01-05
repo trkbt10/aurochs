@@ -288,7 +288,7 @@ export {
 
 // Presentation Editor Components
 export { PresentationEditor, type PresentationEditorProps } from "./presentation/PresentationEditor";
-export { SlideThumbnailPanel } from "./panels/SlideThumbnailPanel";
+export { SlideThumbnailPanel } from "./panels";
 
 // Context Menu Types
 export type { ContextMenuActions } from "./slide/context-menu/SlideContextMenu";
