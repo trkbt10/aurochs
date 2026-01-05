@@ -24,7 +24,7 @@ import { generateLineMarkers, type MarkerCollection } from "./marker";
 import { resolveFill, formatRgba } from "../core";
 import type { Fill, Line } from "../../domain";
 import type { ColorContext } from "../../domain/resolution";
-import { createGuideContext, evaluateGuides } from "../../core/geometry/guide-engine";
+import { createGuideContext, evaluateGuides } from "../../domain/shape-geometry/guide-engine";
 
 // =============================================================================
 // Path Command Rendering

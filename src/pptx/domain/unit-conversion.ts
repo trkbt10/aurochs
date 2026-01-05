@@ -9,7 +9,7 @@ import {
   EMU_PER_INCH,
   STANDARD_DPI,
   POINTS_PER_INCH,
-} from "../../domain/defaults";
+} from "./defaults";
 
 /**
  * Slide factor: EMU to pixels conversion at 96 DPI.

@@ -11,7 +11,7 @@
  * @see ECMA-376 Part 1, Section 19.5 (Transitions)
  */
 
-import { useLayoutEffect, useRef, useCallback, useSyncExternalStore } from "react";
+import { useLayoutEffect, useRef, useCallback, useState } from "react";
 import { flushSync } from "react-dom";
 import type { SlideTransition, TransitionType } from "../../../domain";
 
@@ -136,6 +136,7 @@ function getBaseTransitionClass(type: TransitionType): string {
 
 /**
  * Internal state for synchronous transition tracking.
+ * Using a ref allows us to update state during render without triggering loops.
  */
 type TransitionState = {
   isTransitioning: boolean;
@@ -147,36 +148,16 @@ type TransitionState = {
 };
 
 /**
- * Simple external store for transition state.
- * Allows synchronous updates with proper React integration.
- */
-function createTransitionStore(initial: TransitionState) {
-  let state = initial;
-  const listeners = new Set<() => void>();
-
-  return {
-    getState: () => state,
-    setState: (newState: TransitionState) => {
-      state = newState;
-      listeners.forEach((listener) => listener());
-    },
-    subscribe: (listener: () => void) => {
-      listeners.add(listener);
-      return () => listeners.delete(listener);
-    },
-  };
-}
-
-/**
  * Hook to manage slide transition effects.
  *
- * Key design: Uses synchronous state calculation during render phase
+ * Key design: Uses refs for synchronous state calculation during render phase
  * to ensure transition classes are applied BEFORE the first paint.
  * This prevents the flash of unstyled content that would occur
  * if we used useEffect (which runs after paint).
  *
  * Uses:
- * - useSyncExternalStore for proper React 18 concurrent mode support
+ * - Refs for synchronous state tracking during render
+ * - useState trigger for re-renders when transition ends
  * - animationend event for accurate transition end detection (no setTimeout delay)
  * - flushSync for synchronous state updates when needed
  *
@@ -189,34 +170,26 @@ export function useSlideTransition(
 ): UseSlideTransitionResult {
   const { slideIndex, currentContent, transition, containerRef, onTransitionEnd } = options;
 
-  // Create store once per hook instance
-  const storeRef = useRef<ReturnType<typeof createTransitionStore> | null>(null);
-  if (!storeRef.current) {
-    storeRef.current = createTransitionStore({
-      isTransitioning: false,
-      previousContent: null,
-      transitionClass: "",
-      transitionDuration: 500,
-      previousSlideIndex: slideIndex,
-      previousContentValue: currentContent,
-    });
-  }
-  const store = storeRef.current;
+  // Ref for synchronous state tracking (survives across renders)
+  const stateRef = useRef<TransitionState>({
+    isTransitioning: false,
+    previousContent: null,
+    transitionClass: "",
+    transitionDuration: 500,
+    previousSlideIndex: slideIndex,
+    previousContentValue: currentContent,
+  });
 
-  // Subscribe to store changes
-  const state = useSyncExternalStore(
-    store.subscribe,
-    store.getState,
-    store.getState
-  );
+  // State trigger for re-render when transition ends
+  const [, setRenderTrigger] = useState(0);
 
   // Detect slide change DURING RENDER (synchronously)
   // This ensures transition state is set before first paint
-  const slideChanged = state.previousSlideIndex !== slideIndex;
+  const slideChanged = stateRef.current.previousSlideIndex !== slideIndex;
 
   if (slideChanged) {
     // Store previous content before updating
-    const oldContent = state.previousContentValue;
+    const oldContent = stateRef.current.previousContentValue;
 
     // Check if we should transition
     const shouldTransition =
@@ -226,53 +199,52 @@ export function useSlideTransition(
 
     if (shouldTransition) {
       // Set transition state synchronously - used in this render
-      store.setState({
+      stateRef.current = {
         isTransitioning: true,
         previousContent: oldContent,
         transitionClass: getTransitionClass(transition),
         transitionDuration: transition.duration ?? 500,
         previousSlideIndex: slideIndex,
         previousContentValue: currentContent,
-      });
+      };
     } else {
       // No transition - just update refs
-      store.setState({
+      stateRef.current = {
         isTransitioning: false,
         previousContent: null,
         transitionClass: "",
         transitionDuration: 500,
         previousSlideIndex: slideIndex,
         previousContentValue: currentContent,
-      });
+      };
     }
-  } else if (state.previousContentValue !== currentContent) {
+  } else if (stateRef.current.previousContentValue !== currentContent) {
     // Update content ref if slide hasn't changed (content re-render)
-    store.setState({
-      ...state,
-      previousContentValue: currentContent,
-    });
+    stateRef.current.previousContentValue = currentContent;
   }
 
-  // Re-read state after potential synchronous update
-  const currentState = store.getState();
+  // Extract current values (computed synchronously during render)
+  const { isTransitioning, previousContent, transitionClass, transitionDuration } = stateRef.current;
 
   // Handle transition end via animationend event
   useLayoutEffect(() => {
-    if (!currentState.isTransitioning) {
+    if (!isTransitioning) {
       return;
     }
 
     const container = containerRef?.current;
 
-    // End transition handler
+    // End transition handler - uses flushSync for immediate re-render
     const endTransition = () => {
+      stateRef.current = {
+        ...stateRef.current,
+        isTransitioning: false,
+        previousContent: null,
+        transitionClass: "",
+      };
+      // Use flushSync to ensure synchronous re-render
       flushSync(() => {
-        store.setState({
-          ...store.getState(),
-          isTransitioning: false,
-          previousContent: null,
-          transitionClass: "",
-        });
+        setRenderTrigger((n) => n + 1);
       });
       onTransitionEnd?.();
     };
@@ -295,11 +267,10 @@ export function useSlideTransition(
     // Fallback: use requestAnimationFrame-based timing for accuracy
     // This is more accurate than setTimeout as it's tied to frame timing
     const startTime = performance.now();
-    const duration = currentState.transitionDuration;
     let rafId: number;
 
     const checkEnd = () => {
-      if (performance.now() - startTime >= duration) {
+      if (performance.now() - startTime >= transitionDuration) {
         endTransition();
       } else {
         rafId = requestAnimationFrame(checkEnd);
@@ -311,27 +282,28 @@ export function useSlideTransition(
     return () => {
       cancelAnimationFrame(rafId);
     };
-  }, [slideIndex, currentState.isTransitioning, currentState.transitionDuration, containerRef, onTransitionEnd, store]);
+  }, [isTransitioning, transitionDuration, containerRef, onTransitionEnd]);
 
   // Skip transition callback
   const skipTransition = useCallback(() => {
+    stateRef.current = {
+      ...stateRef.current,
+      isTransitioning: false,
+      previousContent: null,
+      transitionClass: "",
+    };
     flushSync(() => {
-      store.setState({
-        ...store.getState(),
-        isTransitioning: false,
-        previousContent: null,
-        transitionClass: "",
-      });
+      setRenderTrigger((n) => n + 1);
     });
     onTransitionEnd?.();
-  }, [onTransitionEnd, store]);
+  }, [onTransitionEnd]);
 
-  // Return current state
+  // Return current state (computed synchronously during render)
   return {
-    isTransitioning: currentState.isTransitioning,
-    previousContent: currentState.previousContent,
-    transitionClass: currentState.transitionClass,
-    transitionDuration: currentState.transitionDuration,
+    isTransitioning,
+    previousContent,
+    transitionClass,
+    transitionDuration,
     skipTransition,
   };
 }

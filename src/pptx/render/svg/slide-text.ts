@@ -22,7 +22,7 @@ import type { LayoutResult, LayoutLine, LayoutSpan } from "../text-layout";
 import { layoutTextBody, toLayoutInput } from "../text-layout";
 import { escapeXml } from "../../../xml";
 import { px, deg } from "../../domain/types";
-import { PT_TO_PX } from "../../core/units/conversion";
+import { PT_TO_PX } from "../../domain/unit-conversion";
 import { ooxmlAngleToSvgLinearGradient, getRadialGradientCoords } from "../core/gradient";
 
 // =============================================================================

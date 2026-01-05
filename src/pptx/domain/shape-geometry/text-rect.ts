@@ -11,9 +11,9 @@
  * @see ECMA-376 Part 1, Section 20.1.9.22 (rect - Shape Text Rectangle)
  */
 
-import type { Geometry, TextRect } from "../../domain/index";
-import type { Pixels } from "../../domain/types";
-import { px } from "../../domain/types";
+import type { Geometry, TextRect } from "../shape";
+import type { Pixels } from "../types";
+import { px } from "../types";
 import {
   createGuideContext,
   evaluateGuides,

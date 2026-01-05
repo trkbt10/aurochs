@@ -25,7 +25,7 @@ export type ToolbarButtonProps = {
   /** Click handler */
   readonly onClick: () => void;
   /** Button size variant */
-  readonly size?: "sm" | "md" | "lg";
+  readonly size?: "tiny" | "sm" | "md" | "lg";
   /** Additional class name */
   readonly className?: string;
   /** Style overrides */
@@ -37,13 +37,14 @@ export type ToolbarButtonProps = {
 // =============================================================================
 
 const SIZE_MAP = {
+  tiny: { button: 20, icon: 12 },
   sm: { button: 24, icon: iconTokens.size.sm },
   md: { button: 28, icon: iconTokens.size.md },
   lg: { button: 32, icon: iconTokens.size.lg },
 } as const;
 
 function getButtonStyle(
-  size: "sm" | "md" | "lg",
+  size: "tiny" | "sm" | "md" | "lg",
   active: boolean,
   disabled: boolean,
   hovered: boolean

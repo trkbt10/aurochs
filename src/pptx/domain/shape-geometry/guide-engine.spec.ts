@@ -14,7 +14,7 @@ import {
   degreesToAngleUnits,
   normalizeAngle,
 } from "./guide-engine";
-import type { GeometryGuide, AdjustValue } from "../../domain/index";
+import type { GeometryGuide, AdjustValue } from "../shape";
 
 describe("guide-engine - ECMA-376 compliance", () => {
   describe("createGuideContext - built-in variables (ECMA-376 20.1.10.56)", () => {

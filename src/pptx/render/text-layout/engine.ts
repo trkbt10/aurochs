@@ -20,7 +20,7 @@ import type { Pixels, Points, TextAlign } from "../../domain/types";
 import { px, pt, pct } from "../../domain/types";
 import { measureSpans, estimateBulletWidth } from "./measurer";
 import { breakIntoLines, getLineWidth } from "./line-breaker";
-import { PT_TO_PX } from "../../core/units/conversion";
+import { PT_TO_PX } from "../../domain/unit-conversion";
 import { DEFAULT_FONT_SIZE_PT } from "../../domain/defaults";
 import { getAscenderRatio } from "../../../text/font-metrics";
 import type { RenderOptions } from "../core/types";

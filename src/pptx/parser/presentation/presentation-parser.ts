@@ -24,7 +24,7 @@ import type {
   EmbeddedFontTypeface,
 } from "../../domain/embedded-font";
 import { px } from "../../domain/types";
-import { SLIDE_FACTOR } from "../../core/units/conversion";
+import { SLIDE_FACTOR } from "../../domain/unit-conversion";
 import { parseTextStyleLevels } from "../text/text-style-levels";
 import { parseSlideId, parseSlideMasterId, parseSlideSizeCoordinate } from "../primitive";
 import {

@@ -7,9 +7,3 @@
  */
 
 // DrawingML processing is now in parser/drawing-ml, domain/drawing-ml, and render/drawing-ml
-
-// Geometry calculations (shapes, text rectangles, connection sites)
-export * from "./geometry";
-
-// Unit conversions
-export * from "./units";

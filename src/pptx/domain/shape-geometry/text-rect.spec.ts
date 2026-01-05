@@ -5,8 +5,13 @@
  */
 
 import { calculateTextRect, isInsideTextRect, applyTextInsets } from "./text-rect";
-import type { CustomGeometry, PresetGeometry, TextRect } from "../../domain/index";
-import type { GeometryGuide, AdjustValue } from "../../domain/index";
+import type {
+  AdjustValue,
+  CustomGeometry,
+  GeometryGuide,
+  PresetGeometry,
+  TextRect,
+} from "../shape";
 
 describe("text-rect - ECMA-376 compliance", () => {
   describe("calculateTextRect - preset geometry (ECMA-376 20.1.9.18)", () => {

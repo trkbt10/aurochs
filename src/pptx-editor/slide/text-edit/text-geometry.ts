@@ -7,7 +7,7 @@
 
 import type { Pixels, Points } from "../../../pptx/domain/types";
 import type { LayoutLine, PositionedSpan } from "../../../pptx/render/text-layout";
-import { PT_TO_PX } from "../../../pptx/core/units/conversion";
+import { PT_TO_PX } from "../../../pptx/domain/unit-conversion";
 
 // =============================================================================
 // Constants

@@ -1,5 +1,5 @@
 /**
- * @file Geometry calculation utilities
+ * @file Shape geometry calculation utilities
  *
  * Shape geometry, text rectangles, and connection site calculations.
  *

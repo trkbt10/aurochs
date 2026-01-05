@@ -12,9 +12,9 @@
  * @see ECMA-376 Part 1, Section 20.1.9.6 (cxnLst - Connection Site List)
  */
 
-import type { CustomGeometry, Geometry } from "../../domain/index";
-import type { Degrees, Pixels } from "../../domain/types";
-import { deg, px } from "../../domain/types";
+import type { CustomGeometry, Geometry } from "../shape";
+import type { Degrees, Pixels } from "../types";
+import { deg, px } from "../types";
 import {
   createGuideContext,
   evaluateGuides,

@@ -8,7 +8,7 @@
 import type { LayoutSpan, MeasuredSpan } from "./types";
 import type { Pixels, Points } from "../../domain/types";
 import { px } from "../../domain/types";
-import { PT_TO_PX } from "../../core/units/conversion";
+import { PT_TO_PX } from "../../domain/unit-conversion";
 import { isCjkCodePoint } from "../../../text/cjk";
 import { getCharWidth, getKerningAdjustment } from "../../../text/font-metrics";
 import { isMonospace } from "../../../text/fonts";

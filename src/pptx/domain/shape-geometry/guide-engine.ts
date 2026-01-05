@@ -8,7 +8,7 @@
  * @see https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.drawing.shapeguide.formula
  */
 
-import type { AdjustValue, GeometryGuide } from "../../domain/index";
+import type { AdjustValue, GeometryGuide } from "../shape";
 
 // =============================================================================
 // Types

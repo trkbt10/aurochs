@@ -12,7 +12,7 @@ import type { TextBody } from "../../../domain/text";
 import type { LayoutResult, LayoutLine, PositionedSpan, LayoutParagraphResult } from "../../text-layout";
 import { layoutTextBody, toLayoutInput } from "../../text-layout";
 import { px, deg } from "../../../domain/types";
-import { PT_TO_PX } from "../../../core/units/conversion";
+import { PT_TO_PX } from "../../../domain/unit-conversion";
 import { useRenderContext } from "../context";
 import { useSvgDefs } from "../hooks/useSvgDefs";
 

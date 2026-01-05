@@ -9,7 +9,7 @@ import { isXmlElement, getChild, getChildren, getAttr, escapeXml } from "../../.
 import type { FillType, GradientFill, FillResult } from "../../domain/drawing-ml";
 import type { ColorResolveContext } from "../../domain/resolution";
 import type { ResourceContext } from "../../render/core/slide-context";
-import { angleToDegrees } from "../../core/units/conversion";
+import { angleToDegrees } from "../../domain/unit-conversion";
 import { base64ArrayBuffer } from "../../../buffer/index";
 import { getMimeType } from "../../../files/index";
 import { getSolidFill } from "./color";

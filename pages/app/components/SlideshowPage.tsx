@@ -235,6 +235,7 @@ export function SlideshowPage({ presentation, startSlide, onExit }: Props) {
 
           {/* Current slide (on top) - with transition animation */}
           <div
+            ref={transitionContainerRef}
             className={`slideshow-slide slideshow-slide-current ${isTransitioning ? transitionClass : ""}`}
             style={isTransitioning ? {
               "--transition-duration": `${transitionDuration}ms`,

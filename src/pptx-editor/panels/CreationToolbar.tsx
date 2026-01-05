@@ -145,6 +145,7 @@ const popoverButtonStyle: CSSProperties = {
   width: "100%",
 };
 
+
 // =============================================================================
 // Tool Definitions
 // =============================================================================
@@ -402,10 +403,10 @@ export function CreationToolbar({
                       <ToolbarButton
                         icon={ChevronDownIcon}
                         label={`${tool.label} options`}
-                        active={isActive}
+                        active={false}
                         disabled={disabled}
                         onClick={() => undefined}
-                        size="sm"
+                        size="tiny"
                       />
                     }
                   >

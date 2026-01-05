@@ -2,7 +2,7 @@
  * @file Tests for unit-conversion.ts
  */
 
-import { SLIDE_FACTOR, FONT_SIZE_FACTOR, angleToDegrees, degreesToRadians } from "./conversion";
+import { SLIDE_FACTOR, FONT_SIZE_FACTOR, angleToDegrees, degreesToRadians } from "./unit-conversion";
 
 describe("SLIDE_FACTOR", () => {
   it("equals 96/914400 for EMU to pixel conversion at 96 DPI", () => {

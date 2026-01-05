@@ -72,6 +72,18 @@ export {
 export { RTL_LANGUAGES } from "./rtl-languages";
 
 // =============================================================================
+// Unit Conversions
+// =============================================================================
+
+export {
+  SLIDE_FACTOR,
+  FONT_SIZE_FACTOR,
+  PT_TO_PX,
+  angleToDegrees,
+  degreesToRadians,
+} from "./unit-conversion";
+
+// =============================================================================
 // OPC Infrastructure Types
 // =============================================================================
 
@@ -110,6 +122,26 @@ export type {
   Transform,
   GroupTransform,
 } from "./geometry";
+
+// =============================================================================
+// Shape Geometry Calculations
+// =============================================================================
+
+export type { GuideContext, ResolvedTextRect, ResolvedConnectionSite, ConnectionSiteLookup } from "./shape-geometry";
+export {
+  createGuideContext,
+  evaluateGuides,
+  evaluateExpression,
+  angleUnitsToDegrees,
+  degreesToAngleUnits,
+  normalizeAngle,
+  calculateTextRect,
+  isInsideTextRect,
+  applyTextInsets,
+  calculateConnectionSites,
+  getConnectionPoint,
+  transformConnectionPoint,
+} from "./shape-geometry";
 
 // =============================================================================
 // Resource Types
