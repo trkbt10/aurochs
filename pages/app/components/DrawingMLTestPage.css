@@ -41,6 +41,12 @@
   color: var(--text-primary);
 }
 
+.header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .test-title {
   margin: 0;
   font-size: 1.25rem;
@@ -48,24 +54,31 @@
   color: var(--text-primary);
 }
 
-/* Navigation */
+.section-indicator {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+/* Navigation - Tab Style */
 .test-nav {
   display: flex;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-6);
+  gap: 0;
+  padding: 0 var(--space-6);
   background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-subtle);
+  border-bottom: 2px solid var(--border-subtle);
   flex-wrap: wrap;
 }
 
 .nav-button {
-  padding: var(--space-2) var(--space-4);
+  position: relative;
+  padding: var(--space-3) var(--space-5);
   background: transparent;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-sm);
-  font-size: 0.875rem;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  font-size: 0.9375rem;
   font-weight: 500;
-  color: var(--text-secondary);
+  color: var(--text-tertiary);
   cursor: pointer;
   transition: all var(--duration-fast) var(--ease-out);
 }
@@ -76,9 +89,10 @@
 }
 
 .nav-button.active {
-  background: var(--accent-blue);
-  border-color: var(--accent-blue);
-  color: #fff;
+  background: transparent;
+  border-bottom: 2px solid var(--accent-blue);
+  color: var(--accent-blue);
+  font-weight: 600;
 }
 
 /* Content */

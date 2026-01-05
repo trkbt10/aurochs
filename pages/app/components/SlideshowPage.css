@@ -48,17 +48,31 @@
   }
 }
 
-.slideshow-slide {
+/* Slide container - holds both old and new slides during transition */
+.slideshow-slide-container {
+  position: relative;
   max-width: 100%;
   max-height: 100%;
-  background: #fff;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
-  transition: opacity 0.15s var(--ease-out), transform 0.15s var(--ease-out);
 }
 
-.slideshow-slide.transitioning {
-  opacity: 0.8;
-  transform: scale(0.99);
+.slideshow-slide {
+  width: 100%;
+  height: 100%;
+  background: #fff;
+}
+
+/* Previous slide - positioned behind */
+.slideshow-slide-previous {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+/* Current slide - positioned on top */
+.slideshow-slide-current {
+  position: relative;
+  z-index: 2;
 }
 
 .slideshow-content {
@@ -290,72 +304,345 @@
 
 /* =============================================================================
  * Slide Transitions
- * CSS-based animations for slide transitions
+ * CSS-based animations for slide transitions.
+ * New slide is revealed over old slide via clip-path or opacity animation.
+ *
+ * IMPORTANT: We use animation-fill-mode: both (not forwards) to ensure:
+ * - backwards: the 'from' state is applied BEFORE animation starts
+ * - forwards: the 'to' state is retained AFTER animation ends
+ * This prevents flash of unstyled content before animation begins.
+ *
  * @see ECMA-376 Part 1, Section 19.5 (Transitions)
  * ============================================================================= */
 
-/* Base transition setup */
-.slideshow-slide {
-  --transition-duration: 500ms;
+/* Fade transition - opacity crossfade */
+.slide-transition-fade {
+  animation: transition-fade var(--transition-duration) ease-out both;
 }
 
-/* Fade transition */
-.slide-transition-fade.slide-transition-active {
-  animation: slide-fade var(--transition-duration) ease-out forwards;
-}
-
-@keyframes slide-fade {
+@keyframes transition-fade {
   from { opacity: 0; }
   to { opacity: 1; }
 }
 
-/* Push transition (slide in from right) */
-.slide-transition-push.slide-transition-active {
-  animation: slide-push var(--transition-duration) ease-out forwards;
+/* Dissolve transition - fade with subtle blur */
+.slide-transition-dissolve {
+  animation: transition-dissolve var(--transition-duration) ease-out both;
 }
 
-@keyframes slide-push {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
+@keyframes transition-dissolve {
+  from { opacity: 0; filter: blur(2px); }
+  to { opacity: 1; filter: blur(0); }
 }
 
-/* Cover transition (slide in from right, overlapping) */
-.slide-transition-cover.slide-transition-active {
-  animation: slide-cover var(--transition-duration) ease-out forwards;
+/* Wipe transition - reveal from specified direction
+ * @see ECMA-376 Part 1, Section 19.5.96 (p:wipe)
+ * Default direction is "l" (from left to right)
+ */
+.slide-transition-wipe {
+  animation: transition-wipe-l var(--transition-duration) ease-out both;
 }
 
-@keyframes slide-cover {
-  from { transform: translateX(100%); }
-  to { transform: translateX(0); }
+/* Wipe directions */
+.slide-transition-wipe-l {
+  animation: transition-wipe-l var(--transition-duration) ease-out both;
+}
+.slide-transition-wipe-r {
+  animation: transition-wipe-r var(--transition-duration) ease-out both;
+}
+.slide-transition-wipe-u {
+  animation: transition-wipe-u var(--transition-duration) ease-out both;
+}
+.slide-transition-wipe-d {
+  animation: transition-wipe-d var(--transition-duration) ease-out both;
+}
+.slide-transition-wipe-ld {
+  animation: transition-wipe-ld var(--transition-duration) ease-out both;
+}
+.slide-transition-wipe-lu {
+  animation: transition-wipe-lu var(--transition-duration) ease-out both;
+}
+.slide-transition-wipe-rd {
+  animation: transition-wipe-rd var(--transition-duration) ease-out both;
+}
+.slide-transition-wipe-ru {
+  animation: transition-wipe-ru var(--transition-duration) ease-out both;
 }
 
-/* Pull transition (slide in from left) */
-.slide-transition-pull.slide-transition-active {
-  animation: slide-pull var(--transition-duration) ease-out forwards;
-}
-
-@keyframes slide-pull {
-  from { transform: translateX(-100%); }
-  to { transform: translateX(0); }
-}
-
-/* Wipe transition (reveal from left) */
-.slide-transition-wipe.slide-transition-active {
-  animation: slide-wipe var(--transition-duration) ease-out forwards;
-  clip-path: inset(0 100% 0 0);
-}
-
-@keyframes slide-wipe {
+@keyframes transition-wipe-l {
   from { clip-path: inset(0 100% 0 0); }
   to { clip-path: inset(0 0 0 0); }
 }
-
-/* Blinds transition (horizontal stripes reveal) */
-.slide-transition-blinds.slide-transition-active {
-  animation: slide-blinds var(--transition-duration) ease-out forwards;
+@keyframes transition-wipe-r {
+  from { clip-path: inset(0 0 0 100%); }
+  to { clip-path: inset(0 0 0 0); }
+}
+@keyframes transition-wipe-u {
+  from { clip-path: inset(0 0 100% 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+@keyframes transition-wipe-d {
+  from { clip-path: inset(100% 0 0 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+@keyframes transition-wipe-ld {
+  from { clip-path: polygon(0 0, 0 0, 0 0); }
+  to { clip-path: polygon(0 0, 200% 0, 0 200%); }
+}
+@keyframes transition-wipe-lu {
+  from { clip-path: polygon(0 100%, 0 100%, 0 100%); }
+  to { clip-path: polygon(0 100%, 200% 100%, 0 -100%); }
+}
+@keyframes transition-wipe-rd {
+  from { clip-path: polygon(100% 0, 100% 0, 100% 0); }
+  to { clip-path: polygon(100% 0, -100% 0, 100% 200%); }
+}
+@keyframes transition-wipe-ru {
+  from { clip-path: polygon(100% 100%, 100% 100%, 100% 100%); }
+  to { clip-path: polygon(100% 100%, 100% -100%, -100% 100%); }
 }
 
-@keyframes slide-blinds {
+/* Push transition - slide in from specified direction
+ * @see ECMA-376 Part 1, Section 19.5.73 (p:push)
+ * Default direction is "l" (push from left)
+ */
+.slide-transition-push {
+  animation: transition-push-l var(--transition-duration) ease-out both;
+}
+
+.slide-transition-push-l {
+  animation: transition-push-l var(--transition-duration) ease-out both;
+}
+.slide-transition-push-r {
+  animation: transition-push-r var(--transition-duration) ease-out both;
+}
+.slide-transition-push-u {
+  animation: transition-push-u var(--transition-duration) ease-out both;
+}
+.slide-transition-push-d {
+  animation: transition-push-d var(--transition-duration) ease-out both;
+}
+
+@keyframes transition-push-l {
+  from { clip-path: inset(0 100% 0 0); transform: translateX(10%); }
+  to { clip-path: inset(0 0 0 0); transform: translateX(0); }
+}
+@keyframes transition-push-r {
+  from { clip-path: inset(0 0 0 100%); transform: translateX(-10%); }
+  to { clip-path: inset(0 0 0 0); transform: translateX(0); }
+}
+@keyframes transition-push-u {
+  from { clip-path: inset(0 0 100% 0); transform: translateY(10%); }
+  to { clip-path: inset(0 0 0 0); transform: translateY(0); }
+}
+@keyframes transition-push-d {
+  from { clip-path: inset(100% 0 0 0); transform: translateY(-10%); }
+  to { clip-path: inset(0 0 0 0); transform: translateY(0); }
+}
+
+/* Cover transition - slide in from specified direction over previous
+ * @see ECMA-376 Part 1, Section 19.5.23 (p:cover)
+ * Default direction is "l" (cover from left)
+ */
+.slide-transition-cover {
+  animation: transition-cover-l var(--transition-duration) ease-out both;
+}
+
+.slide-transition-cover-l {
+  animation: transition-cover-l var(--transition-duration) ease-out both;
+}
+.slide-transition-cover-r {
+  animation: transition-cover-r var(--transition-duration) ease-out both;
+}
+.slide-transition-cover-u {
+  animation: transition-cover-u var(--transition-duration) ease-out both;
+}
+.slide-transition-cover-d {
+  animation: transition-cover-d var(--transition-duration) ease-out both;
+}
+.slide-transition-cover-ld {
+  animation: transition-cover-ld var(--transition-duration) ease-out both;
+}
+.slide-transition-cover-lu {
+  animation: transition-cover-lu var(--transition-duration) ease-out both;
+}
+.slide-transition-cover-rd {
+  animation: transition-cover-rd var(--transition-duration) ease-out both;
+}
+.slide-transition-cover-ru {
+  animation: transition-cover-ru var(--transition-duration) ease-out both;
+}
+
+@keyframes transition-cover-l {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+@keyframes transition-cover-r {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+@keyframes transition-cover-u {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(0); }
+}
+@keyframes transition-cover-d {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@keyframes transition-cover-ld {
+  from { transform: translate(-100%, 100%); }
+  to { transform: translate(0, 0); }
+}
+@keyframes transition-cover-lu {
+  from { transform: translate(-100%, -100%); }
+  to { transform: translate(0, 0); }
+}
+@keyframes transition-cover-rd {
+  from { transform: translate(100%, 100%); }
+  to { transform: translate(0, 0); }
+}
+@keyframes transition-cover-ru {
+  from { transform: translate(100%, -100%); }
+  to { transform: translate(0, 0); }
+}
+
+/* Pull transition - slide in from specified direction (opposite of cover)
+ * @see ECMA-376 Part 1, Section 19.5.71 (p:pull)
+ * Default direction is "l" (pull from left)
+ */
+.slide-transition-pull {
+  animation: transition-pull-l var(--transition-duration) ease-out both;
+}
+
+.slide-transition-pull-l {
+  animation: transition-pull-l var(--transition-duration) ease-out both;
+}
+.slide-transition-pull-r {
+  animation: transition-pull-r var(--transition-duration) ease-out both;
+}
+.slide-transition-pull-u {
+  animation: transition-pull-u var(--transition-duration) ease-out both;
+}
+.slide-transition-pull-d {
+  animation: transition-pull-d var(--transition-duration) ease-out both;
+}
+.slide-transition-pull-ld {
+  animation: transition-pull-ld var(--transition-duration) ease-out both;
+}
+.slide-transition-pull-lu {
+  animation: transition-pull-lu var(--transition-duration) ease-out both;
+}
+.slide-transition-pull-rd {
+  animation: transition-pull-rd var(--transition-duration) ease-out both;
+}
+.slide-transition-pull-ru {
+  animation: transition-pull-ru var(--transition-duration) ease-out both;
+}
+
+@keyframes transition-pull-l {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+@keyframes transition-pull-r {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+@keyframes transition-pull-u {
+  from { transform: translateY(-100%); }
+  to { transform: translateY(0); }
+}
+@keyframes transition-pull-d {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@keyframes transition-pull-ld {
+  from { transform: translate(-100%, 100%); }
+  to { transform: translate(0, 0); }
+}
+@keyframes transition-pull-lu {
+  from { transform: translate(-100%, -100%); }
+  to { transform: translate(0, 0); }
+}
+@keyframes transition-pull-rd {
+  from { transform: translate(100%, 100%); }
+  to { transform: translate(0, 0); }
+}
+@keyframes transition-pull-ru {
+  from { transform: translate(100%, -100%); }
+  to { transform: translate(0, 0); }
+}
+
+/* Circle transition - expand from center */
+.slide-transition-circle {
+  animation: transition-circle var(--transition-duration) ease-out both;
+}
+
+@keyframes transition-circle {
+  from { clip-path: circle(0% at 50% 50%); }
+  to { clip-path: circle(75% at 50% 50%); }
+}
+
+/* Diamond transition - expand from center */
+.slide-transition-diamond {
+  animation: transition-diamond var(--transition-duration) ease-out both;
+}
+
+@keyframes transition-diamond {
+  from { clip-path: polygon(50% 50%, 50% 50%, 50% 50%, 50% 50%); }
+  to { clip-path: polygon(50% -50%, 150% 50%, 50% 150%, -50% 50%); }
+}
+
+/* Plus transition - expand plus shape from center */
+.slide-transition-plus {
+  animation: transition-plus var(--transition-duration) ease-out both;
+}
+
+@keyframes transition-plus {
+  from { clip-path: polygon(50% 50%, 50% 50%, 50% 50%, 50% 50%, 50% 50%, 50% 50%, 50% 50%, 50% 50%, 50% 50%, 50% 50%, 50% 50%, 50% 50%); }
+  to { clip-path: polygon(35% 0%, 65% 0%, 65% 35%, 100% 35%, 100% 65%, 65% 65%, 65% 100%, 35% 100%, 35% 65%, 0% 65%, 0% 35%, 35% 35%); }
+}
+
+/* Split transition - reveal from center
+ * @see ECMA-376 Part 1, Section 19.5.87 (p:split)
+ * dir: "in" (from edges to center) or "out" (from center to edges)
+ * Default is "out"
+ */
+.slide-transition-split {
+  animation: transition-split-out var(--transition-duration) ease-out both;
+}
+
+.slide-transition-split-in {
+  animation: transition-split-in var(--transition-duration) ease-out both;
+}
+.slide-transition-split-out {
+  animation: transition-split-out var(--transition-duration) ease-out both;
+}
+
+@keyframes transition-split-out {
+  from { clip-path: inset(0 50% 0 50%); }
+  to { clip-path: inset(0 0 0 0); }
+}
+@keyframes transition-split-in {
+  from { clip-path: inset(50% 0 50% 0); }
+  to { clip-path: inset(0 0 0 0); }
+}
+
+/* Blinds transition - stripes reveal
+ * @see ECMA-376 Part 1, Section 19.5.4 (p:blinds)
+ * Default direction is "horz" (horizontal stripes expanding down)
+ */
+.slide-transition-blinds {
+  animation: transition-blinds-horz var(--transition-duration) linear both;
+}
+
+.slide-transition-blinds-horz {
+  animation: transition-blinds-horz var(--transition-duration) linear both;
+}
+.slide-transition-blinds-vert {
+  animation: transition-blinds-vert var(--transition-duration) linear both;
+}
+
+@keyframes transition-blinds-horz {
   from {
     clip-path: polygon(
       0% 0%, 100% 0%, 100% 0%, 0% 0%,
@@ -376,57 +663,378 @@
   }
 }
 
-/* Dissolve transition (fade with noise) */
-.slide-transition-dissolve.slide-transition-active {
-  animation: slide-dissolve var(--transition-duration) ease-out forwards;
+@keyframes transition-blinds-vert {
+  from {
+    clip-path: polygon(
+      0% 0%, 0% 0%, 0% 100%, 0% 100%,
+      20% 0%, 20% 0%, 20% 100%, 20% 100%,
+      40% 0%, 40% 0%, 40% 100%, 40% 100%,
+      60% 0%, 60% 0%, 60% 100%, 60% 100%,
+      80% 0%, 80% 0%, 80% 100%, 80% 100%
+    );
+  }
+  to {
+    clip-path: polygon(
+      0% 0%, 20% 0%, 20% 100%, 0% 100%,
+      20% 0%, 40% 0%, 40% 100%, 20% 100%,
+      40% 0%, 60% 0%, 60% 100%, 40% 100%,
+      60% 0%, 80% 0%, 80% 100%, 60% 100%,
+      80% 0%, 100% 0%, 100% 100%, 80% 100%
+    );
+  }
 }
 
-@keyframes slide-dissolve {
-  from { opacity: 0; filter: blur(4px); }
-  to { opacity: 1; filter: blur(0); }
+/* Checker transition - checkerboard pattern reveal
+ * @see ECMA-376 Part 1, Section 19.5.8 (p:checker)
+ * Note: CSS cannot easily do a true checkerboard, using fade as fallback
+ */
+.slide-transition-checker {
+  animation: transition-fade var(--transition-duration) ease-out both;
+}
+.slide-transition-checker-horz {
+  animation: transition-fade var(--transition-duration) ease-out both;
+}
+.slide-transition-checker-vert {
+  animation: transition-fade var(--transition-duration) ease-out both;
 }
 
-/* Circle transition (expand from center) */
-.slide-transition-circle.slide-transition-active {
-  animation: slide-circle var(--transition-duration) ease-out forwards;
+/* Comb transition - stripes reveal with alternating directions
+ * @see ECMA-376 Part 1, Section 19.5.19 (p:comb)
+ * Default direction is "horz" (horizontal comb)
+ */
+.slide-transition-comb {
+  animation: transition-comb-horz var(--transition-duration) linear both;
 }
 
-@keyframes slide-circle {
-  from { clip-path: circle(0% at 50% 50%); }
-  to { clip-path: circle(75% at 50% 50%); }
+.slide-transition-comb-horz {
+  animation: transition-comb-horz var(--transition-duration) linear both;
+}
+.slide-transition-comb-vert {
+  animation: transition-comb-vert var(--transition-duration) linear both;
 }
 
-/* Diamond transition (expand from center) */
-.slide-transition-diamond.slide-transition-active {
-  animation: slide-diamond var(--transition-duration) ease-out forwards;
+@keyframes transition-comb-horz {
+  from {
+    clip-path: polygon(
+      0% 0%, 0% 0%, 0% 20%, 0% 20%,
+      100% 20%, 100% 20%, 100% 40%, 100% 40%,
+      0% 40%, 0% 40%, 0% 60%, 0% 60%,
+      100% 60%, 100% 60%, 100% 80%, 100% 80%,
+      0% 80%, 0% 80%, 0% 100%, 0% 100%
+    );
+  }
+  to {
+    clip-path: polygon(
+      0% 0%, 100% 0%, 100% 20%, 0% 20%,
+      100% 20%, 0% 20%, 0% 40%, 100% 40%,
+      0% 40%, 100% 40%, 100% 60%, 0% 60%,
+      100% 60%, 0% 60%, 0% 80%, 100% 80%,
+      0% 80%, 100% 80%, 100% 100%, 0% 100%
+    );
+  }
 }
 
-@keyframes slide-diamond {
-  from { clip-path: polygon(50% 50%, 50% 50%, 50% 50%, 50% 50%); }
-  to { clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); }
+@keyframes transition-comb-vert {
+  from {
+    clip-path: polygon(
+      0% 0%, 0% 0%, 0% 100%, 0% 100%,
+      20% 0%, 20% 0%, 20% 100%, 20% 100%,
+      40% 0%, 40% 0%, 40% 100%, 40% 100%,
+      60% 0%, 60% 0%, 60% 100%, 60% 100%,
+      80% 0%, 80% 0%, 80% 100%, 80% 100%
+    );
+  }
+  to {
+    clip-path: polygon(
+      0% 0%, 20% 0%, 20% 100%, 0% 100%,
+      20% 0%, 40% 0%, 40% 100%, 20% 100%,
+      40% 0%, 60% 0%, 60% 100%, 40% 100%,
+      60% 0%, 80% 0%, 80% 100%, 60% 100%,
+      80% 0%, 100% 0%, 100% 100%, 80% 100%
+    );
+  }
 }
 
-/* Split transition (reveal from center horizontally) */
-.slide-transition-split.slide-transition-active {
-  animation: slide-split var(--transition-duration) ease-out forwards;
+/* Wheel transition - clockwise sweep from 12 o'clock
+ * @see ECMA-376 Part 1, Section 19.5.95 (p:wheel)
+ * Spokes attribute can be 1, 2, 3, 4, or 8
+ * Default is 1 spoke
+ */
+.slide-transition-wheel {
+  animation: transition-wheel-1 var(--transition-duration) linear both;
 }
 
-@keyframes slide-split {
-  from { clip-path: inset(0 50% 0 50%); }
-  to { clip-path: inset(0 0 0 0); }
+.slide-transition-wheel-1 {
+  animation: transition-wheel-1 var(--transition-duration) linear both;
+}
+.slide-transition-wheel-2 {
+  animation: transition-wheel-2 var(--transition-duration) linear both;
+}
+.slide-transition-wheel-3 {
+  animation: transition-wheel-3 var(--transition-duration) linear both;
+}
+.slide-transition-wheel-4 {
+  animation: transition-wheel-4 var(--transition-duration) linear both;
+}
+.slide-transition-wheel-8 {
+  animation: transition-wheel-8 var(--transition-duration) linear both;
 }
 
-/* Zoom transition (scale up from center) */
-.slide-transition-zoom.slide-transition-active {
-  animation: slide-zoom var(--transition-duration) ease-out forwards;
+/* 1 spoke - single sweep */
+@keyframes transition-wheel-1 {
+  0% { clip-path: polygon(50% 50%, 50% 0%, 50% 0%); }
+  12.5% { clip-path: polygon(50% 50%, 50% 0%, 100% 0%); }
+  25% { clip-path: polygon(50% 50%, 50% 0%, 100% 0%, 100% 50%); }
+  37.5% { clip-path: polygon(50% 50%, 50% 0%, 100% 0%, 100% 100%); }
+  50% { clip-path: polygon(50% 50%, 50% 0%, 100% 0%, 100% 100%, 50% 100%); }
+  62.5% { clip-path: polygon(50% 50%, 50% 0%, 100% 0%, 100% 100%, 0% 100%); }
+  75% { clip-path: polygon(50% 50%, 50% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 50%); }
+  87.5% { clip-path: polygon(50% 50%, 50% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 0%); }
+  100% { clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%); }
 }
 
-@keyframes slide-zoom {
-  from { transform: scale(0.5); opacity: 0; }
+/* 2 spokes - two opposite sweeps (top and bottom) */
+@keyframes transition-wheel-2 {
+  0% { clip-path: polygon(50% 50%, 50% 0%, 50% 0%, 50% 50%, 50% 100%, 50% 100%); }
+  25% { clip-path: polygon(50% 50%, 50% 0%, 100% 0%, 100% 50%, 50% 50%, 50% 100%, 0% 100%, 0% 50%); }
+  50% { clip-path: polygon(50% 50%, 50% 0%, 100% 0%, 100% 100%, 50% 100%, 50% 50%, 50% 100%, 0% 100%, 0% 0%, 50% 0%); }
+  100% { clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%); }
+}
+
+/* 3 spokes - three 120-degree sections */
+@keyframes transition-wheel-3 {
+  0% { clip-path: polygon(50% 50%, 50% 0%, 50% 0%); }
+  33% { clip-path: polygon(50% 50%, 50% 0%, 100% 50%); }
+  66% { clip-path: polygon(50% 50%, 50% 0%, 100% 50%, 50% 100%, 0% 50%); }
+  100% { clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%); }
+}
+
+/* 4 spokes - four 90-degree sections */
+@keyframes transition-wheel-4 {
+  0% { clip-path: polygon(50% 50%, 50% 0%, 50% 0%, 50% 50%, 100% 50%, 100% 50%, 50% 50%, 50% 100%, 50% 100%, 50% 50%, 0% 50%, 0% 50%); }
+  25% { clip-path: polygon(50% 50%, 50% 0%, 100% 0%, 100% 50%, 50% 50%, 100% 50%, 100% 100%, 50% 100%, 50% 50%, 50% 100%, 0% 100%, 0% 50%, 50% 50%, 0% 50%, 0% 0%, 50% 0%); }
+  100% { clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%); }
+}
+
+/* 8 spokes - eight 45-degree sections (using fade as fallback due to complexity) */
+@keyframes transition-wheel-8 {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Wedge transition - two-way wipe from center */
+.slide-transition-wedge {
+  animation: transition-wedge var(--transition-duration) ease-out both;
+}
+
+@keyframes transition-wedge {
+  from { clip-path: polygon(50% 0%, 50% 0%, 50% 100%, 50% 100%); }
+  to { clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%); }
+}
+
+/* Zoom transition - scale from center with fade
+ * @see ECMA-376 Part 1, Section 19.5.97 (p:zoom)
+ * dir: "in" (zoom in from small) or "out" (zoom out from large)
+ * Default is "in"
+ */
+.slide-transition-zoom {
+  animation: transition-zoom-in var(--transition-duration) ease-out both;
+}
+
+.slide-transition-zoom-in {
+  animation: transition-zoom-in var(--transition-duration) ease-out both;
+}
+.slide-transition-zoom-out {
+  animation: transition-zoom-out var(--transition-duration) ease-out both;
+}
+
+@keyframes transition-zoom-in {
+  from { transform: scale(0.3); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+@keyframes transition-zoom-out {
+  from { transform: scale(1.5); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
 }
 
-/* Cut transition (instant, no animation) */
-.slide-transition-cut.slide-transition-active {
-  animation: none;
+/* Cut transition - instant, no animation */
+.slide-transition-cut {
+  /* No animation needed */
+}
+
+/* Newsflash transition - diagonal wipe with flash */
+.slide-transition-newsflash {
+  animation: transition-newsflash var(--transition-duration) ease-out both;
+}
+
+@keyframes transition-newsflash {
+  0% { clip-path: polygon(50% 50%, 50% 50%, 50% 50%, 50% 50%); opacity: 0; }
+  50% { opacity: 1; }
+  100% { clip-path: polygon(-50% 50%, 50% -50%, 150% 50%, 50% 150%); opacity: 1; }
+}
+
+/* Random transition - picks a random effect (fallback to dissolve) */
+.slide-transition-random {
+  animation: transition-dissolve var(--transition-duration) ease-out both;
+}
+
+/* RandomBar transition - random bars reveal
+ * @see ECMA-376 Part 1, Section 19.5.78 (p:randomBar)
+ * dir: "horz" (horizontal bars) or "vert" (vertical bars)
+ * Default is "horz"
+ */
+.slide-transition-randombar {
+  animation: transition-randombar-horz var(--transition-duration) linear both;
+}
+
+.slide-transition-randombar-horz {
+  animation: transition-randombar-horz var(--transition-duration) linear both;
+}
+.slide-transition-randombar-vert {
+  animation: transition-randombar-vert var(--transition-duration) linear both;
+}
+
+@keyframes transition-randombar-horz {
+  from {
+    clip-path: polygon(
+      0% 0%, 0% 0%, 0% 10%, 0% 10%,
+      0% 20%, 0% 20%, 0% 30%, 0% 30%,
+      0% 40%, 0% 40%, 0% 50%, 0% 50%,
+      0% 60%, 0% 60%, 0% 70%, 0% 70%,
+      0% 80%, 0% 80%, 0% 90%, 0% 90%
+    );
+  }
+  20% {
+    clip-path: polygon(
+      0% 0%, 40% 0%, 40% 10%, 0% 10%,
+      0% 20%, 80% 20%, 80% 30%, 0% 30%,
+      0% 40%, 20% 40%, 20% 50%, 0% 50%,
+      0% 60%, 60% 60%, 60% 70%, 0% 70%,
+      0% 80%, 100% 80%, 100% 90%, 0% 90%
+    );
+  }
+  40% {
+    clip-path: polygon(
+      0% 0%, 80% 0%, 80% 10%, 0% 10%,
+      0% 20%, 100% 20%, 100% 30%, 0% 30%,
+      0% 40%, 60% 40%, 60% 50%, 0% 50%,
+      0% 60%, 100% 60%, 100% 70%, 0% 70%,
+      0% 80%, 100% 80%, 100% 90%, 0% 90%
+    );
+  }
+  to {
+    clip-path: polygon(
+      0% 0%, 100% 0%, 100% 10%, 0% 10%,
+      0% 20%, 100% 20%, 100% 30%, 0% 30%,
+      0% 40%, 100% 40%, 100% 50%, 0% 50%,
+      0% 60%, 100% 60%, 100% 70%, 0% 70%,
+      0% 80%, 100% 80%, 100% 100%, 0% 100%
+    );
+  }
+}
+
+@keyframes transition-randombar-vert {
+  from {
+    clip-path: polygon(
+      0% 0%, 0% 0%, 0% 100%, 0% 100%,
+      10% 0%, 10% 0%, 10% 100%, 10% 100%,
+      20% 0%, 20% 0%, 20% 100%, 20% 100%,
+      30% 0%, 30% 0%, 30% 100%, 30% 100%,
+      40% 0%, 40% 0%, 40% 100%, 40% 100%
+    );
+  }
+  20% {
+    clip-path: polygon(
+      0% 0%, 0% 60%, 0% 100%, 0% 100%,
+      10% 0%, 10% 80%, 10% 100%, 10% 100%,
+      20% 0%, 20% 30%, 20% 100%, 20% 100%,
+      30% 0%, 30% 50%, 30% 100%, 30% 100%,
+      40% 0%, 40% 100%, 40% 100%, 40% 100%
+    );
+  }
+  to {
+    clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
+  }
+}
+
+/* Strips transition - diagonal strips reveal
+ * @see ECMA-376 Part 1, Section 19.5.88 (p:strips)
+ * dir: "ld" (left-down), "lu" (left-up), "rd" (right-down), "ru" (right-up)
+ * Default is "ld"
+ */
+.slide-transition-strips {
+  animation: transition-strips-ld var(--transition-duration) ease-out both;
+}
+
+.slide-transition-strips-ld {
+  animation: transition-strips-ld var(--transition-duration) ease-out both;
+}
+.slide-transition-strips-lu {
+  animation: transition-strips-lu var(--transition-duration) ease-out both;
+}
+.slide-transition-strips-rd {
+  animation: transition-strips-rd var(--transition-duration) ease-out both;
+}
+.slide-transition-strips-ru {
+  animation: transition-strips-ru var(--transition-duration) ease-out both;
+}
+
+@keyframes transition-strips-ld {
+  from {
+    clip-path: polygon(
+      0% 0%, 0% 0%, 20% 20%, 0% 20%,
+      20% 20%, 20% 20%, 40% 40%, 20% 40%,
+      40% 40%, 40% 40%, 60% 60%, 40% 60%,
+      60% 60%, 60% 60%, 80% 80%, 60% 80%,
+      80% 80%, 80% 80%, 100% 100%, 80% 100%
+    );
+  }
+  to {
+    clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
+  }
+}
+
+@keyframes transition-strips-lu {
+  from {
+    clip-path: polygon(
+      0% 100%, 0% 100%, 20% 80%, 0% 80%,
+      20% 80%, 20% 80%, 40% 60%, 20% 60%,
+      40% 60%, 40% 60%, 60% 40%, 40% 40%,
+      60% 40%, 60% 40%, 80% 20%, 60% 20%,
+      80% 20%, 80% 20%, 100% 0%, 80% 0%
+    );
+  }
+  to {
+    clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
+  }
+}
+
+@keyframes transition-strips-rd {
+  from {
+    clip-path: polygon(
+      100% 0%, 100% 0%, 80% 20%, 100% 20%,
+      80% 20%, 80% 20%, 60% 40%, 80% 40%,
+      60% 40%, 60% 40%, 40% 60%, 60% 60%,
+      40% 60%, 40% 60%, 20% 80%, 40% 80%,
+      20% 80%, 20% 80%, 0% 100%, 20% 100%
+    );
+  }
+  to {
+    clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
+  }
+}
+
+@keyframes transition-strips-ru {
+  from {
+    clip-path: polygon(
+      100% 100%, 100% 100%, 80% 80%, 100% 80%,
+      80% 80%, 80% 80%, 60% 60%, 80% 60%,
+      60% 60%, 60% 60%, 40% 40%, 60% 40%,
+      40% 40%, 40% 40%, 20% 20%, 40% 20%,
+      20% 20%, 20% 20%, 0% 0%, 20% 0%
+    );
+  }
+  to {
+    clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%);
+  }
 }

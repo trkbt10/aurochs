@@ -17,12 +17,9 @@ import type { HandlerMap } from "./handler-types";
 import { getActiveSlide, updateActiveSlideInDocument } from "./helpers";
 import { pushHistory, createEmptySelection } from "../../../slide/state";
 import { generateShapeId } from "../../../../shape/mutation";
-import {
-  createPicShape,
-  createChartGraphicFrame,
-  createDiagramGraphicFrame,
-  type ShapeBounds,
-} from "../../../../shape/factory";
+import { createPicShape } from "../../../../shape/factory";
+import type { ShapeBounds } from "../../../../shape/creation-bounds";
+import { createChartGraphicFrame, createDiagramGraphicFrame } from "../../../../graphic-frame/factory";
 
 type SetCreationModeAction = Extract<
   PresentationEditorAction,

@@ -46,7 +46,7 @@ export function SlideshowPage({ presentation, startSlide, onExit }: Props) {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const slideContentRef = useRef<HTMLDivElement>(null);
-  const slideRef = useRef<HTMLDivElement>(null);
+  const transitionContainerRef = useRef<HTMLDivElement>(null);
   const controlsTimeoutRef = useRef<number | undefined>(undefined);
 
   // Get current slide (timing is accessed via slide.timing)
@@ -56,10 +56,17 @@ export function SlideshowPage({ presentation, startSlide, onExit }: Props) {
   const renderedContent = useMemo(() => slide.renderSVG(), [slide]);
 
   // Use slide transition hook for slide change effects
-  const { isTransitioning } = useSlideTransition({
+  // Returns previous content to render behind current during transition
+  const {
+    isTransitioning,
+    previousContent,
+    transitionClass,
+    transitionDuration,
+  } = useSlideTransition({
     slideIndex: currentSlide,
+    currentContent: renderedContent,
     transition: slide.transition,
-    containerRef: slideRef,
+    containerRef: transitionContainerRef,
   });
 
   // Use slide animation hook for clean animation control
@@ -210,18 +217,38 @@ export function SlideshowPage({ presentation, startSlide, onExit }: Props) {
       {/* Slide content */}
       <div className="slideshow-stage">
         <div
-          ref={slideRef}
-          className={`slideshow-slide ${isTransitioning ? "transitioning" : ""}`}
+          className="slideshow-slide-container"
           style={{ aspectRatio: `${slideSize.width} / ${slideSize.height}` }}
         >
-          <SvgContentRenderer
-            ref={slideContentRef}
-            svg={renderedContent}
-            width={slideSize.width}
-            height={slideSize.height}
-            mode="full"
-            className="slideshow-content"
-          />
+          {/* Previous slide (behind) - shown during transition */}
+          {isTransitioning && previousContent && (
+            <div className="slideshow-slide slideshow-slide-previous">
+              <SvgContentRenderer
+                svg={previousContent}
+                width={slideSize.width}
+                height={slideSize.height}
+                mode="full"
+                className="slideshow-content"
+              />
+            </div>
+          )}
+
+          {/* Current slide (on top) - with transition animation */}
+          <div
+            className={`slideshow-slide slideshow-slide-current ${isTransitioning ? transitionClass : ""}`}
+            style={isTransitioning ? {
+              "--transition-duration": `${transitionDuration}ms`,
+            } as React.CSSProperties : undefined}
+          >
+            <SvgContentRenderer
+              ref={slideContentRef}
+              svg={renderedContent}
+              width={slideSize.width}
+              height={slideSize.height}
+              mode="full"
+              className="slideshow-content"
+            />
+          </div>
         </div>
       </div>
 

@@ -25,6 +25,7 @@ import {
   TableIcon,
   ChartIcon,
   DiagramIcon,
+  ChevronDownIcon,
 } from "../ui/icons/index";
 import { colorTokens, radiusTokens } from "../ui/design-tokens/index";
 
@@ -60,6 +61,7 @@ type PopoverToolDefinition = {
   readonly id: string;
   readonly icon: LucideIcon;
   readonly label: string;
+  readonly defaultMode: CreationMode;
   readonly options: readonly PopoverOption[];
 };
 
@@ -102,6 +104,20 @@ const separatorStyle: CSSProperties = {
 const groupStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
+};
+
+const splitGroupStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  borderRadius: radiusTokens.sm,
+  overflow: "hidden",
+  border: `1px solid var(--border-strong, ${colorTokens.border.strong})`,
+};
+
+const splitDividerStyle: CSSProperties = {
+  width: "1px",
+  height: "20px",
+  backgroundColor: `var(--border-strong, ${colorTokens.border.strong})`,
 };
 
 const popoverContentStyle: CSSProperties = {
@@ -215,6 +231,8 @@ const CHART_OPTIONS: readonly PopoverOption[] = [
   { id: "pie", label: "Pie Chart", mode: { type: "chart", chartType: "pie" } },
 ];
 
+const CHART_DEFAULT_MODE: CreationMode = { type: "chart", chartType: "bar" };
+
 const DIAGRAM_OPTIONS: readonly PopoverOption[] = [
   { id: "process", label: "Process", mode: { type: "diagram", diagramType: "process" } },
   { id: "cycle", label: "Cycle", mode: { type: "diagram", diagramType: "cycle" } },
@@ -222,17 +240,21 @@ const DIAGRAM_OPTIONS: readonly PopoverOption[] = [
   { id: "relationship", label: "Relationship", mode: { type: "diagram", diagramType: "relationship" } },
 ];
 
+const DIAGRAM_DEFAULT_MODE: CreationMode = { type: "diagram", diagramType: "process" };
+
 const POPOVER_TOOLS: readonly PopoverToolDefinition[] = [
   {
     id: "chart",
     icon: ChartIcon,
     label: "Chart",
+    defaultMode: CHART_DEFAULT_MODE,
     options: CHART_OPTIONS,
   },
   {
     id: "diagram",
     icon: DiagramIcon,
     label: "Diagram",
+    defaultMode: DIAGRAM_DEFAULT_MODE,
     options: DIAGRAM_OPTIONS,
   },
 ];
@@ -318,6 +340,16 @@ export function CreationToolbar({
     [disabled, onModeChange]
   );
 
+  const handleDefaultSelect = useCallback(
+    (toolMode: CreationMode) => {
+      if (!disabled) {
+        onModeChange(toolMode);
+        setOpenPopoverId(null);
+      }
+    },
+    [disabled, onModeChange]
+  );
+
   const appliedStyle = appearance === "floating" ? floatingToolbarStyle : toolbarStyle;
 
   return (
@@ -352,38 +384,48 @@ export function CreationToolbar({
               const isActive = isPopoverActive(tool.id, mode);
               const isOpen = openPopoverId === tool.id;
               return (
-                <Popover
-                  key={tool.id}
-                  open={isOpen}
-                  onOpenChange={(open) => setOpenPopoverId(open ? tool.id : null)}
-                  disabled={disabled}
-                  trigger={
-                    <ToolbarButton
-                      icon={tool.icon}
-                      label={tool.label}
-                      active={isActive}
-                      disabled={disabled}
-                      onClick={() => setOpenPopoverId(tool.id)}
-                      size="lg"
-                    />
-                  }
-                >
-                  <div style={popoverContentStyle}>
-                    <div style={popoverHeaderStyle}>{tool.label}</div>
-                    <div style={popoverSectionStyle}>
-                      {tool.options.map((option) => (
-                        <Button
-                          key={option.id}
-                          variant="secondary"
-                          style={popoverButtonStyle}
-                          onClick={() => handlePopoverSelect(option.mode)}
-                        >
-                          {option.label}
-                        </Button>
-                      ))}
+                <div key={tool.id} style={splitGroupStyle}>
+                  <ToolbarButton
+                    icon={tool.icon}
+                    label={tool.label}
+                    active={isActive}
+                    disabled={disabled}
+                    onClick={() => handleDefaultSelect(tool.defaultMode)}
+                    size="lg"
+                  />
+                  <div style={splitDividerStyle} />
+                  <Popover
+                    open={isOpen}
+                    onOpenChange={(open) => setOpenPopoverId(open ? tool.id : null)}
+                    disabled={disabled}
+                    trigger={
+                      <ToolbarButton
+                        icon={ChevronDownIcon}
+                        label={`${tool.label} options`}
+                        active={isActive}
+                        disabled={disabled}
+                        onClick={() => undefined}
+                        size="sm"
+                      />
+                    }
+                  >
+                    <div style={popoverContentStyle}>
+                      <div style={popoverHeaderStyle}>{tool.label}</div>
+                      <div style={popoverSectionStyle}>
+                        {tool.options.map((option) => (
+                          <Button
+                            key={option.id}
+                            variant="secondary"
+                            style={popoverButtonStyle}
+                            onClick={() => handlePopoverSelect(option.mode)}
+                          >
+                            {option.label}
+                          </Button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                </Popover>
+                  </Popover>
+                </div>
               );
             })}
           </div>

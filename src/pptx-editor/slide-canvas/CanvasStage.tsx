@@ -16,7 +16,7 @@ import type { ColorContext, FontScheme } from "../../pptx/domain/resolution";
 import { SlideCanvas } from "../slide/SlideCanvas";
 import { TextEditController, isTextEditActive, type TextEditState } from "../slide/text-edit";
 import type { ContextMenuActions } from "../slide/context-menu/SlideContextMenu";
-import type { ShapeBounds as CreationBounds } from "../shape/factory";
+import type { ShapeBounds as CreationBounds } from "../shape/creation-bounds";
 import { CanvasRulers } from "./CanvasRulers";
 import { useCanvasViewport } from "./use-canvas-viewport";
 import { getAutoCenterScroll, getCanvasStageMetrics } from "./canvas-metrics";
