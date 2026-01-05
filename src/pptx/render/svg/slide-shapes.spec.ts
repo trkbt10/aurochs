@@ -6,33 +6,8 @@
  * @see ECMA-376 Part 1, Section 20.1.8.55 (a:srcRect)
  */
 import { openPresentation } from "../../app";
-import { readFileSync, existsSync } from "node:fs";
-import JSZip from "jszip";
-import type { PresentationFile } from "../../domain";
-
-/**
- * Create a PresentationFile interface from a PPTX file path.
- */
-async function loadPptxFile(pptxPath: string): Promise<PresentationFile> {
-  const pptxBuffer = readFileSync(pptxPath);
-  const jszip = await JSZip.loadAsync(pptxBuffer);
-
-  const cache = new Map<string, { text: string; buffer: ArrayBuffer }>();
-  for (const fp of Object.keys(jszip.files)) {
-    const file = jszip.file(fp);
-    if (file !== null && !file.dir) {
-      const buffer = await file.async("arraybuffer");
-      const text = new TextDecoder().decode(buffer);
-      cache.set(fp, { text, buffer });
-    }
-  }
-
-  return {
-    readText: (fp: string) => cache.get(fp)?.text ?? null,
-    readBinary: (fp: string) => cache.get(fp)?.buffer ?? null,
-    exists: (fp: string) => cache.has(fp),
-  };
-}
+import { existsSync } from "node:fs";
+import { loadPptxFile } from "../../../../scripts/lib/pptx-loader";
 
 /**
  * Re-implementation of calculateCroppedImageLayout for testing.

@@ -4,44 +4,25 @@
  * Investigates issues with text alignment and color in 2411-Performance_Up.pptx
  */
 
-import { readFileSync } from "node:fs";
-import JSZip from "jszip";
+import { loadPptxFileBundle } from "../../../../scripts/lib/pptx-loader";
 import { parseXml, getChild, getByPath } from "../../../xml";
 import { parseSlide } from "../../parser/slide/slide-parser";
 import { openPresentation } from "../../index";
-import type { PresentationFile } from "../../index";
 import type { ParseContext } from "../../parser/context";
 import type { SpShape } from "../../domain";
 import type { FieldRun, RegularRun } from "../../domain/text";
 
 async function loadPptx(pptxPath: string) {
-  const data = readFileSync(pptxPath);
-  const zip = await JSZip.loadAsync(data);
-
-  const cache = new Map<string, { text: string; buffer: ArrayBuffer }>();
-  for (const [fp, file] of Object.entries(zip.files)) {
-    if (!file.dir) {
-      const buffer = await file.async("arraybuffer");
-      const text = new TextDecoder().decode(buffer);
-      cache.set(fp, { text, buffer });
-    }
-  }
-
-  const presentationFile: PresentationFile = {
-    readText: (fp: string) => cache.get(fp)?.text ?? null,
-    readBinary: (fp: string) => cache.get(fp)?.buffer ?? null,
-    exists: (fp: string) => cache.has(fp),
-  };
-
-  return { zip, presentationFile };
+  const { cache, presentationFile } = await loadPptxFileBundle(pptxPath);
+  return { cache, presentationFile };
 }
 
 describe("text-centering-and-color", () => {
   it("parses paragraph alignment from 2411-Performance_Up slide1", async () => {
     const pptxPath = "fixtures/poi-test-data/test-data/slideshow/2411-Performance_Up.pptx";
-    const { zip } = await loadPptx(pptxPath);
+    const { cache } = await loadPptx(pptxPath);
 
-    const slideXml = await zip.file("ppt/slides/slide1.xml")?.async("string");
+    const slideXml = cache.get("ppt/slides/slide1.xml")?.text;
     expect(slideXml).toBeDefined();
 
     const doc = parseXml(slideXml!);
@@ -97,11 +78,11 @@ describe("text-centering-and-color", () => {
 
   it("checks parsed alignment with proper context", async () => {
     const pptxPath = "fixtures/poi-test-data/test-data/slideshow/2411-Performance_Up.pptx";
-    const { zip } = await loadPptx(pptxPath);
+    const { cache } = await loadPptx(pptxPath);
 
     // Load XML documents
-    const slideXml = await zip.file("ppt/slides/slide1.xml")?.async("string");
-    const masterXml = await zip.file("ppt/slideMasters/slideMaster1.xml")?.async("string");
+    const slideXml = cache.get("ppt/slides/slide1.xml")?.text;
+    const masterXml = cache.get("ppt/slideMasters/slideMaster1.xml")?.text;
 
     const slideDoc = parseXml(slideXml!);
     const masterDoc = parseXml(masterXml!);
@@ -209,9 +190,9 @@ describe("text-centering-and-color", () => {
 
   it("checks raw XML for alignment attributes", async () => {
     const pptxPath = "fixtures/poi-test-data/test-data/slideshow/2411-Performance_Up.pptx";
-    const { zip } = await loadPptx(pptxPath);
+    const { cache } = await loadPptx(pptxPath);
 
-    const slideXml = await zip.file("ppt/slides/slide1.xml")?.async("string");
+    const slideXml = cache.get("ppt/slides/slide1.xml")?.text;
 
     console.log("\n=== Raw XML Alignment Check ===");
 
@@ -226,32 +207,33 @@ describe("text-centering-and-color", () => {
 
   it("checks layout and master for text style inheritance", async () => {
     const pptxPath = "fixtures/poi-test-data/test-data/slideshow/2411-Performance_Up.pptx";
-    const { zip } = await loadPptx(pptxPath);
+    const { cache } = await loadPptx(pptxPath);
 
     // Find slide1's layout via relationships
-    const slideRels = await zip.file("ppt/slides/_rels/slide1.xml.rels")?.async("string");
+    const slideRels = cache.get("ppt/slides/_rels/slide1.xml.rels")?.text;
     console.log("\n=== Slide1 Relationships ===");
     const layoutMatch = slideRels?.match(/Target="([^"]+slideLayout[^"]+)"/);
     console.log(`Layout: ${layoutMatch?.[1]}`);
 
     // Read layout
     const layoutPath = layoutMatch?.[1]?.replace("../", "ppt/");
-    const layoutXml = await zip.file(layoutPath!)?.async("string");
+    const layoutXml = layoutPath ? cache.get(layoutPath)?.text : undefined;
 
     // Check layout for alignment
     const layoutAlgnMatches = layoutXml?.match(/algn="[^"]+"/g);
     console.log(`\nLayout alignment attributes: ${JSON.stringify(layoutAlgnMatches)}`);
 
     // Find master via layout relationships
-    const layoutRels = await zip
-      .file(layoutPath!.replace(".xml", ".xml.rels").replace("slideLayouts/", "slideLayouts/_rels/"))
-      ?.async("string");
+    const layoutRelsPath = layoutPath
+      ? layoutPath.replace(".xml", ".xml.rels").replace("slideLayouts/", "slideLayouts/_rels/")
+      : undefined;
+    const layoutRels = layoutRelsPath ? cache.get(layoutRelsPath)?.text : undefined;
     const masterMatch = layoutRels?.match(/Target="([^"]+slideMaster[^"]+)"/);
     console.log(`Master: ${masterMatch?.[1]}`);
 
     // Read master
     const masterPath = masterMatch?.[1]?.replace("../", "ppt/");
-    const masterXml = await zip.file(masterPath!)?.async("string");
+    const masterXml = masterPath ? cache.get(masterPath)?.text : undefined;
 
     // Check master for titleStyle alignment
     console.log("\n=== Master titleStyle ===");
@@ -266,7 +248,7 @@ describe("text-centering-and-color", () => {
     }
 
     // Check theme for color scheme
-    const themeXml = await zip.file("ppt/theme/theme1.xml")?.async("string");
+    const themeXml = cache.get("ppt/theme/theme1.xml")?.text;
     console.log("\n=== Theme Color Scheme ===");
     const dk1Match = themeXml?.match(/<a:dk1>[\s\S]*?<\/a:dk1>/);
     const dk2Match = themeXml?.match(/<a:dk2>[\s\S]*?<\/a:dk2>/);
@@ -305,16 +287,16 @@ describe("text-centering-and-color", () => {
     console.log("\n=== Full Layout ctrTitle XML ===");
     if (ctrTitleMatch) {
       // Find all a:rPr (run properties) with colors
-      const rPrMatches = ctrTitleMatch[0].match(/<a:rPr[^>]*>[\s\S]*?<\/a:rPr>/g);
-      console.log(`Run properties found: ${rPrMatches?.length}`);
-      rPrMatches?.forEach((rPr, i) => {
+      const rPrMatches = ctrTitleMatch[0].match(/<a:rPr[^>]*>[\s\S]*?<\/a:rPr>/g) ?? [];
+      console.log(`Run properties found: ${rPrMatches.length}`);
+      rPrMatches.forEach((rPr, i) => {
         console.log(`  rPr ${i}: ${rPr.slice(0, 200)}`);
       });
 
       // Find all a:defRPr (default run properties)
-      const defRPrMatches = ctrTitleMatch[0].match(/<a:defRPr[^>]*>[\s\S]*?<\/a:defRPr>/g);
-      console.log(`\nDefault run properties found: ${defRPrMatches?.length}`);
-      defRPrMatches?.forEach((defRPr, i) => {
+      const defRPrMatches = ctrTitleMatch[0].match(/<a:defRPr[^>]*>[\s\S]*?<\/a:defRPr>/g) ?? [];
+      console.log(`\nDefault run properties found: ${defRPrMatches.length}`);
+      defRPrMatches.forEach((defRPr, i) => {
         console.log(`  defRPr ${i}: ${defRPr.slice(0, 300)}`);
       });
     }
@@ -332,9 +314,9 @@ describe("text-centering-and-color", () => {
     if (masterCtrTitleMatch) {
       console.log("Found master ctrTitle placeholder");
       // Find defRPr with colors
-      const defRPrMatches = masterCtrTitleMatch[0].match(/<a:defRPr[^>]*>[\s\S]*?<\/a:defRPr>/g);
-      console.log(`Default run properties found: ${defRPrMatches?.length}`);
-      defRPrMatches?.forEach((defRPr, i) => {
+      const defRPrMatches = masterCtrTitleMatch[0].match(/<a:defRPr[^>]*>[\s\S]*?<\/a:defRPr>/g) ?? [];
+      console.log(`Default run properties found: ${defRPrMatches.length}`);
+      defRPrMatches.forEach((defRPr, i) => {
         console.log(`  defRPr ${i}: ${defRPr.slice(0, 400)}`);
       });
     } else {

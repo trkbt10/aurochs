@@ -8,32 +8,10 @@
  */
 import { openPresentation } from "../src/pptx";
 import { compareSvgToSnapshot, compareWithDetails, generateCompareReport, printCompareReport } from "../spec/visual-regression/compare";
-import * as fs from "node:fs";
-import JSZip from "jszip";
-
-async function loadPptx(pptxPath: string) {
-  const pptxBuffer = fs.readFileSync(pptxPath);
-  const jszip = await JSZip.loadAsync(pptxBuffer);
-
-  const cache = new Map<string, { text: string; buffer: ArrayBuffer }>();
-  for (const fp of Object.keys(jszip.files)) {
-    const file = jszip.file(fp);
-    if (file !== null && !file.dir) {
-      const buffer = await file.async("arraybuffer");
-      const text = new TextDecoder().decode(buffer);
-      cache.set(fp, { text, buffer });
-    }
-  }
-
-  return {
-    readText: (fp: string) => cache.get(fp)?.text ?? null,
-    readBinary: (fp: string) => cache.get(fp)?.buffer ?? null,
-    exists: (fp: string) => cache.has(fp),
-  };
-}
+import { loadPptxFile } from "./lib/pptx-loader";
 
 async function analyzeVisualRegression(pptxPath: string, snapshotName: string) {
-  const presentationFile = await loadPptx(pptxPath);
+  const presentationFile = await loadPptxFile(pptxPath);
   const presentation = openPresentation(presentationFile);
   const slideCount = presentation.count;
 

@@ -7,40 +7,8 @@
  */
 
 import * as fs from "node:fs";
-import JSZip from "jszip";
-import type { PresentationFile } from "../src/pptx";
 import { openPresentation } from "../src/pptx";
-
-type FileCache = Map<string, { text: string; buffer: ArrayBuffer }>;
-
-async function loadPptxFile(filePath: string): Promise<PresentationFile> {
-  const pptxBuffer = fs.readFileSync(filePath);
-  const jszip = await JSZip.loadAsync(pptxBuffer);
-
-  const cache: FileCache = new Map();
-  const files = Object.keys(jszip.files);
-
-  for (const fp of files) {
-    const file = jszip.file(fp);
-    if (file !== null && !file.dir) {
-      const buffer = await file.async("arraybuffer");
-      const text = new TextDecoder().decode(buffer);
-      cache.set(fp, { text, buffer });
-    }
-  }
-
-  return {
-    readText(fp: string): string | null {
-      return cache.get(fp)?.text ?? null;
-    },
-    readBinary(fp: string): ArrayBuffer | null {
-      return cache.get(fp)?.buffer ?? null;
-    },
-    exists(fp: string): boolean {
-      return cache.has(fp);
-    },
-  };
-}
+import { loadPptxFile } from "../scripts/lib/pptx-loader";
 
 describe("mc:AlternateContent Integration", () => {
   describe("2411-Performance_Up.pptx slide 5 (p:blipFill in mc:AlternateContent)", () => {

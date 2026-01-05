@@ -8,7 +8,7 @@
  * Default: fixtures/poi-test-data/test-data/slideshow/themes.pptx slide 8
  */
 import * as fs from "node:fs";
-import JSZip from "jszip";
+import { loadPptxFileBundle } from "./lib/pptx-loader";
 
 async function main() {
   const pptxPath = process.argv[2] ?? "fixtures/poi-test-data/test-data/slideshow/themes.pptx";
@@ -19,13 +19,10 @@ async function main() {
     process.exit(1);
   }
 
-  const pptxBuffer = fs.readFileSync(pptxPath);
-  const jszip = await JSZip.loadAsync(pptxBuffer);
+  const { cache } = await loadPptxFileBundle(pptxPath);
 
   const readFile = async (path: string): Promise<string | null> => {
-    const file = jszip.file(path);
-    if (file === null) {return null;}
-    return file.async("text");
+    return cache.get(path)?.text ?? null;
   };
 
   console.log("=".repeat(70));

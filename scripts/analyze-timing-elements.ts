@@ -22,7 +22,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import JSZip from "jszip";
+import { loadPptxFileBundle } from "./lib/pptx-loader";
 
 /**
  * ECMA-376 Section 19.5 Animation Elements
@@ -137,22 +137,19 @@ function extractTimingElements(
  * Analyze a single PPTX file
  */
 async function analyzePptxFile(pptxPath: string): Promise<AnalysisResult> {
-  const pptxBuffer = fs.readFileSync(pptxPath);
-  const jszip = await JSZip.loadAsync(pptxBuffer);
+  const { cache, filePaths } = await loadPptxFileBundle(pptxPath);
 
   const allOccurrences: ElementOccurrence[] = [];
   const summary: Record<string, number> = {};
 
   // Analyze all slides
-  const slideFiles = Object.keys(jszip.files).filter((f) =>
+  const slideFiles = filePaths.filter((f) =>
     f.match(/^ppt\/slides\/slide\d+\.xml$/),
   );
 
   for (const slideFile of slideFiles) {
-    const file = jszip.file(slideFile);
-    if (file === null) {continue;}
-
-    const content = await file.async("text");
+    const content = cache.get(slideFile)?.text;
+    if (!content) {continue;}
     const slideNum = slideFile.match(/slide(\d+)\.xml/)?.[1] ?? "?";
     const occurrences = extractTimingElements(content, pptxPath, `slide${slideNum}`);
 
@@ -163,16 +160,14 @@ async function analyzePptxFile(pptxPath: string): Promise<AnalysisResult> {
   }
 
   // Also check slide layouts and masters
-  const layoutFiles = Object.keys(jszip.files).filter((f) =>
+  const layoutFiles = filePaths.filter((f) =>
     f.match(/^ppt\/slideLayouts\/slideLayout\d+\.xml$/) ||
     f.match(/^ppt\/slideMasters\/slideMaster\d+\.xml$/),
   );
 
   for (const layoutFile of layoutFiles) {
-    const file = jszip.file(layoutFile);
-    if (file === null) {continue;}
-
-    const content = await file.async("text");
+    const content = cache.get(layoutFile)?.text;
+    if (!content) {continue;}
     const typeName = layoutFile.includes("slideLayout") ? "layout" : "master";
     const num = layoutFile.match(/(\d+)\.xml/)?.[1] ?? "?";
     const occurrences = extractTimingElements(content, pptxPath, `${typeName}${num}`);

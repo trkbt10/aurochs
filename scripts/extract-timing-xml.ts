@@ -8,7 +8,7 @@
  */
 
 import * as fs from "node:fs";
-import JSZip from "jszip";
+import { loadPptxFileBundle } from "./lib/pptx-loader";
 
 async function main(): Promise<void> {
   const pptxPath = process.argv[2];
@@ -25,23 +25,20 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const pptxBuffer = fs.readFileSync(pptxPath);
-  const jszip = await JSZip.loadAsync(pptxBuffer);
+  const { cache, filePaths } = await loadPptxFileBundle(pptxPath);
 
   const slidePath = `ppt/slides/slide${slideNum}.xml`;
-  const slideFile = jszip.file(slidePath);
+  const slideXml = cache.get(slidePath)?.text;
 
-  if (!slideFile) {
+  if (!slideXml) {
     console.error(`Slide not found: ${slidePath}`);
-    const slides = Object.keys(jszip.files).filter((f) => f.match(/^ppt\/slides\/slide\d+\.xml$/));
+    const slides = filePaths.filter((f) => f.match(/^ppt\/slides\/slide\d+\.xml$/));
     console.log("Available slides:", slides.join(", "));
     process.exit(1);
   }
 
-  const content = await slideFile.async("text");
-
   // Extract p:timing element
-  const timingMatch = content.match(/<p:timing[\s\S]*?<\/p:timing>/);
+  const timingMatch = slideXml.match(/<p:timing[\s\S]*?<\/p:timing>/);
 
   if (!timingMatch) {
     console.log("No p:timing element found in this slide.");

@@ -10,43 +10,12 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import JSZip from "jszip";
 import type { PresentationFile } from "../../src/pptx";
 import { openPresentation } from "../../src/pptx";
+import { loadPptxFile } from "../../scripts/lib/pptx-loader";
 
 // customGeo.pptx has a diagram on slide 7
 const CUSTOM_GEO_PATH = "fixtures/poi-test-data/test-data/slideshow/customGeo.pptx";
-
-type FileCache = Map<string, { text: string; buffer: ArrayBuffer }>;
-
-async function loadPptxFile(filePath: string): Promise<PresentationFile> {
-  const pptxBuffer = fs.readFileSync(filePath);
-  const jszip = await JSZip.loadAsync(pptxBuffer);
-
-  const cache: FileCache = new Map();
-  const files = Object.keys(jszip.files);
-
-  for (const fp of files) {
-    const file = jszip.file(fp);
-    if (file !== null && !file.dir) {
-      const buffer = await file.async("arraybuffer");
-      const text = new TextDecoder().decode(buffer);
-      cache.set(fp, { text, buffer });
-    }
-  }
-
-  return {
-    readText(fp: string): string | null {
-      return cache.get(fp)?.text ?? null;
-    },
-    readBinary(fp: string): ArrayBuffer | null {
-      return cache.get(fp)?.buffer ?? null;
-    },
-    exists(fp: string): boolean {
-      return cache.has(fp);
-    },
-  };
-}
 
 describe("Diagram rendering - customGeo.pptx", () => {
   let presentationFile: PresentationFile;

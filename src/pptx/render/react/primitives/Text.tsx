@@ -9,7 +9,8 @@
 
 import type { ReactNode } from "react";
 import type { TextBody } from "../../../domain/text";
-import type { LayoutResult, LayoutLine, PositionedSpan, LayoutParagraphResult, TextEffectsConfig, TextPatternFillConfig, TextImageFillConfig } from "../../text-layout";
+import type { LayoutResult, LayoutLine, PositionedSpan, LayoutParagraphResult } from "../../text-layout";
+import type { TextEffectsConfig, TextPatternFillConfig, TextImageFillConfig } from "../../../domain/drawing-ml";
 import { layoutTextBody, toLayoutInput } from "../../text-layout";
 import { px, deg } from "../../../domain/types";
 import { PT_TO_PX } from "../../../domain/unit-conversion";

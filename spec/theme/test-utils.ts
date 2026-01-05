@@ -4,37 +4,16 @@
  * @see ECMA-376 Part 1, Section 20.1.6 (Theme)
  */
 
-import * as fs from "node:fs";
-import JSZip from "jszip";
+import { loadPptxFile } from "../../scripts/lib/pptx-loader";
+import type { PresentationFile } from "../../src/pptx";
 
 export const THEMES_PPTX_PATH = "fixtures/poi-test-data/test-data/slideshow/themes.pptx";
 
 /**
  * Helper to create presentation file interface from buffer
  */
-export async function createPresentationFile(pptxPath: string): Promise<{
-  readText: (fp: string) => string | null;
-  readBinary: (fp: string) => ArrayBuffer | null;
-  exists: (fp: string) => boolean;
-}> {
-  const pptxBuffer = fs.readFileSync(pptxPath);
-  const jszip = await JSZip.loadAsync(pptxBuffer);
-
-  const cache = new Map<string, { text: string; buffer: ArrayBuffer }>();
-  for (const fp of Object.keys(jszip.files)) {
-    const file = jszip.file(fp);
-    if (file !== null && !file.dir) {
-      const buffer = await file.async("arraybuffer");
-      const text = new TextDecoder().decode(buffer);
-      cache.set(fp, { text, buffer });
-    }
-  }
-
-  return {
-    readText: (fp: string) => cache.get(fp)?.text ?? null,
-    readBinary: (fp: string) => cache.get(fp)?.buffer ?? null,
-    exists: (fp: string) => cache.has(fp),
-  };
+export async function createPresentationFile(pptxPath: string): Promise<PresentationFile> {
+  return loadPptxFile(pptxPath);
 }
 
 /**

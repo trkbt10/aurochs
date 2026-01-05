@@ -8,18 +8,27 @@ import JSZip from "jszip";
 import { openPresentation } from "./open-presentation";
 import type { PresentationFile } from "../domain";
 
-type FileCache = Map<string, { text: string; buffer: ArrayBuffer }>;
+export type PptxFileCacheEntry = { text: string; buffer: ArrayBuffer };
+export type PptxFileCache = Map<string, PptxFileCacheEntry>;
 
 export type LoadedPresentation = {
   presentation: ReturnType<typeof openPresentation>;
   presentationFile: PresentationFile;
 };
 
+export type PptxFileBundle = {
+  cache: PptxFileCache;
+  filePaths: string[];
+  presentationFile: PresentationFile;
+};
+
+export type PptxBufferInput = ArrayBuffer | Uint8Array;
+
 /**
  * Preload all files from the ZIP into memory
  */
-async function preloadZipFiles(jszip: JSZip): Promise<FileCache> {
-  const cache: FileCache = new Map();
+async function preloadZipFiles(jszip: JSZip): Promise<PptxFileCache> {
+  const cache: PptxFileCache = new Map();
   const files = Object.keys(jszip.files);
 
   for (const filePath of files) {
@@ -37,7 +46,7 @@ async function preloadZipFiles(jszip: JSZip): Promise<FileCache> {
 /**
  * Create a PresentationFile interface from the cached files
  */
-function createPresentationFile(cache: FileCache): PresentationFile {
+export function createPresentationFile(cache: PptxFileCache): PresentationFile {
   return {
     readText(filePath: string): string | null {
       const entry = cache.get(filePath);
@@ -54,12 +63,26 @@ function createPresentationFile(cache: FileCache): PresentationFile {
 }
 
 /**
+ * Load a PPTX file from an ArrayBuffer and return the cached bundle.
+ */
+export async function loadPptxBundleFromBuffer(buffer: PptxBufferInput): Promise<PptxFileBundle> {
+  if (!buffer) {
+    throw new Error("buffer is required");
+  }
+  const jszip = await JSZip.loadAsync(buffer);
+  const cache = await preloadZipFiles(jszip);
+  return {
+    cache,
+    filePaths: Array.from(cache.keys()),
+    presentationFile: createPresentationFile(cache),
+  };
+}
+
+/**
  * Load a PPTX file from an ArrayBuffer
  */
 export async function loadPptxFromBuffer(buffer: ArrayBuffer): Promise<LoadedPresentation> {
-  const jszip = await JSZip.loadAsync(buffer);
-  const cache = await preloadZipFiles(jszip);
-  const presentationFile = createPresentationFile(cache);
+  const { presentationFile } = await loadPptxBundleFromBuffer(buffer);
   const presentation = openPresentation(presentationFile);
 
   return { presentation, presentationFile };

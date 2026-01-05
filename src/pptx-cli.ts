@@ -6,9 +6,8 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import JSZip from "jszip";
-import type { PresentationFile } from "./pptx";
 import { openPresentation } from "./pptx";
+import { loadPptxBundleFromBuffer } from "./pptx/app/pptx-loader";
 
 type CliArgs = {
   input: string;
@@ -56,40 +55,6 @@ Options:
 `);
 }
 
-type FileCache = Map<string, { text: string; buffer: ArrayBuffer }>;
-
-async function preloadZipFiles(jszip: JSZip): Promise<FileCache> {
-  const cache: FileCache = new Map();
-  const files = Object.keys(jszip.files);
-
-  for (const filePath of files) {
-    const file = jszip.file(filePath);
-    if (file !== null && !file.dir) {
-      const buffer = await file.async("arraybuffer");
-      const text = new TextDecoder().decode(buffer);
-      cache.set(filePath, { text, buffer });
-    }
-  }
-
-  return cache;
-}
-
-function createPresentationFile(cache: FileCache): PresentationFile {
-  return {
-    readText(filePath: string): string | null {
-      const entry = cache.get(filePath);
-      return entry?.text ?? null;
-    },
-    readBinary(filePath: string): ArrayBuffer | null {
-      const entry = cache.get(filePath);
-      return entry?.buffer ?? null;
-    },
-    exists(filePath: string): boolean {
-      return cache.has(filePath);
-    },
-  };
-}
-
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
 
@@ -106,9 +71,7 @@ async function main(): Promise<void> {
 
   console.log("Parsing PPTX...");
   const startTime = performance.now();
-  const jszip = await JSZip.loadAsync(pptxBuffer);
-  const cache = await preloadZipFiles(jszip);
-  const presentationFile = createPresentationFile(cache);
+  const { presentationFile } = await loadPptxBundleFromBuffer(pptxBuffer);
 
   console.log("Opening presentation...");
   const presentation = openPresentation(presentationFile);

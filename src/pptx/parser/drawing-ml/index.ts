@@ -56,3 +56,10 @@ export {
   parseTheme,
   parseMasterTextStyles,
 } from "./theme";
+
+// Text fill resolution
+export type { ResourceResolver } from "./text-fill";
+export { resolveTextFill } from "./text-fill";
+
+// Text effects resolution
+export { resolveTextEffects } from "./text-effects";

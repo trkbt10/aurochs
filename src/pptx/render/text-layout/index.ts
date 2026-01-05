@@ -59,13 +59,6 @@ export type {
   LayoutParagraphResult,
   LayoutResult,
   LayoutInput,
-  TextEffectsConfig,
-  TextShadowConfig,
-  TextGlowConfig,
-  TextSoftEdgeConfig,
-  TextReflectionConfig,
-  TextPatternFillConfig,
-  TextImageFillConfig,
 } from "./types";
 
 // Measurement
@@ -88,4 +81,4 @@ export { layoutTextBody } from "./engine";
 
 // Adapter
 export { toLayoutInput, toTextBoxConfig } from "./adapter";
-export type { ResourceResolver, ToLayoutInputOptions, ToTextBoxConfigOptions } from "./adapter";
+export type { ToLayoutInputOptions, ToTextBoxConfigOptions } from "./adapter";

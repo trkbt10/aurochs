@@ -19,7 +19,7 @@
  *   bun run scripts/analyze-pptx-structure.ts themes.pptx --shapes
  */
 import * as fs from "node:fs";
-import JSZip from "jszip";
+import { loadPptxFileBundle } from "./lib/pptx-loader";
 
 type AnalysisOptions = {
   slideNum?: number;
@@ -106,18 +106,15 @@ async function main() {
     process.exit(1);
   }
 
-  const pptxBuffer = fs.readFileSync(pptxPath);
-  const jszip = await JSZip.loadAsync(pptxBuffer);
+  const { cache, filePaths } = await loadPptxFileBundle(pptxPath);
 
   // Read file content helper
   const readFile = async (path: string): Promise<string | null> => {
-    const file = jszip.file(path);
-    if (file === null) {return null;}
-    return file.async("text");
+    return cache.get(path)?.text ?? null;
   };
 
   // Get list of slides
-  const slideFiles = Object.keys(jszip.files)
+  const slideFiles = filePaths
     .filter((f) => f.match(/^ppt\/slides\/slide\d+\.xml$/))
     .sort((a, b) => {
       const numA = parseInt(a.match(/slide(\d+)/)![1], 10);

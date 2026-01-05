@@ -9,8 +9,8 @@
  * @see ECMA-376 Part 1, Section 20.1.6 (Theme)
  */
 import * as fs from "node:fs";
-import JSZip from "jszip";
 import { parseXml, getChild, getChildren, getAttr } from "../src/xml";
+import { loadPptxFileBundle } from "./lib/pptx-loader";
 
 type ThemeInfo = {
   name: string;
@@ -43,18 +43,7 @@ type AnalysisResult = {
 }
 
 async function loadZip(pptxPath: string): Promise<Map<string, { text: string; buffer: ArrayBuffer }>> {
-  const pptxBuffer = fs.readFileSync(pptxPath);
-  const jszip = await JSZip.loadAsync(pptxBuffer);
-
-  const cache = new Map<string, { text: string; buffer: ArrayBuffer }>();
-  for (const fp of Object.keys(jszip.files)) {
-    const file = jszip.file(fp);
-    if (file !== null && !file.dir) {
-      const buffer = await file.async("arraybuffer");
-      const text = new TextDecoder().decode(buffer);
-      cache.set(fp, { text, buffer });
-    }
-  }
+  const { cache } = await loadPptxFileBundle(pptxPath);
   return cache;
 }
 

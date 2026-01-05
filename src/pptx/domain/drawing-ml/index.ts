@@ -23,3 +23,23 @@ export type {
   GradientData,
   BackgroundFill,
 } from "./background";
+
+// Text fill types
+export type {
+  TextGradientStop,
+  TextGradientFillConfig,
+  TextSolidFillConfig,
+  TextNoFillConfig,
+  TextPatternFillConfig,
+  TextImageFillConfig,
+  TextFillConfig,
+} from "./text-fill";
+
+// Text effects types
+export type {
+  TextShadowConfig,
+  TextGlowConfig,
+  TextSoftEdgeConfig,
+  TextReflectionConfig,
+  TextEffectsConfig,
+} from "./text-effects";

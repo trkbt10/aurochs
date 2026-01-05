@@ -6,7 +6,7 @@
  */
 import { openPresentation } from "../src/pptx";
 import * as fs from "node:fs";
-import JSZip from "jszip";
+import { loadPptxFileBundle } from "./lib/pptx-loader";
 
 async function main() {
   const pptxPath = process.argv[2] ?? "fixtures/poi-test-data/test-data/slideshow/themes.pptx";
@@ -17,24 +17,7 @@ async function main() {
     process.exit(1);
   }
 
-  const pptxBuffer = fs.readFileSync(pptxPath);
-  const jszip = await JSZip.loadAsync(pptxBuffer);
-
-  const cache = new Map<string, { text: string; buffer: ArrayBuffer }>();
-  for (const fp of Object.keys(jszip.files)) {
-    const file = jszip.file(fp);
-    if (file !== null && !file.dir) {
-      const buffer = await file.async("arraybuffer");
-      const text = new TextDecoder().decode(buffer);
-      cache.set(fp, { text, buffer });
-    }
-  }
-
-  const presentationFile = {
-    readText: (fp: string) => cache.get(fp)?.text ?? null,
-    readBinary: (fp: string) => cache.get(fp)?.buffer ?? null,
-    exists: (fp: string) => cache.has(fp),
-  };
+  const { presentationFile } = await loadPptxFileBundle(pptxPath);
 
   const presentation = openPresentation(presentationFile);
   const slideCount = presentation.count;

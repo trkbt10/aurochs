@@ -6,23 +6,25 @@
 
 import { parseTiming } from "../src/pptx/parser/timing-parser";
 import { parseXml, isXmlElement, type XmlElement } from "../src/xml";
-import JSZip from "jszip";
 import * as fs from "node:fs";
+import { loadPptxFileBundle } from "./lib/pptx-loader";
 
 const filePath = process.argv[2] ?? "./fixtures/internal/keyframes.pptx";
 
 console.log(`Testing timing parser with: ${filePath}`);
 
 async function main() {
-  const file = fs.readFileSync(filePath);
-  const zip = await JSZip.loadAsync(file);
+  if (!fs.existsSync(filePath)) {
+    throw new Error(`File not found: ${filePath}`);
+  }
+  const { cache, filePaths } = await loadPptxFileBundle(filePath);
 
   // Find all slide files
-  const slideFiles = Object.keys(zip.files).filter((f) => f.match(/ppt\/slides\/slide\d+\.xml$/));
+  const slideFiles = filePaths.filter((f) => f.match(/ppt\/slides\/slide\d+\.xml$/));
   console.log(`Found ${slideFiles.length} slides`);
 
   for (const slideFile of slideFiles) {
-    const xml = await zip.file(slideFile)?.async("string");
+    const xml = cache.get(slideFile)?.text;
     if (!xml) {
       continue;
     }

@@ -2,42 +2,16 @@
  * Debug script for text color resolution
  */
 
-import * as fs from "node:fs";
-import JSZip from "jszip";
 import { openPresentation, type PresentationFile } from "../src/pptx";
 import { parseXml, getByPath, getChild, getChildren, isXmlElement } from "../src/xml";
 import { createSlideRenderContextFromWarp } from "../src/pptx/core/context/factory";
 import type { WarpObject, ZipFile } from "../src/pptx/core/types";
+import { loadPptxFileBundle } from "./lib/pptx-loader";
 
 type FileCache = Map<string, { text: string; buffer: ArrayBuffer }>;
 
 async function loadPptxFile(filePath: string): Promise<{ pf: PresentationFile; cache: FileCache; zip: ZipFile }> {
-  const pptxBuffer = fs.readFileSync(filePath);
-  const jszip = await JSZip.loadAsync(pptxBuffer);
-
-  const cache: FileCache = new Map();
-  const files = Object.keys(jszip.files);
-
-  for (const fp of files) {
-    const file = jszip.file(fp);
-    if (file !== null && !file.dir) {
-      const buffer = await file.async("arraybuffer");
-      const text = new TextDecoder().decode(buffer);
-      cache.set(fp, { text, buffer });
-    }
-  }
-
-  const pf: PresentationFile = {
-    readText(fp: string): string | null {
-      return cache.get(fp)?.text ?? null;
-    },
-    readBinary(fp: string): ArrayBuffer | null {
-      return cache.get(fp)?.buffer ?? null;
-    },
-    exists(fp: string): boolean {
-      return cache.has(fp);
-    },
-  };
+  const { cache, presentationFile } = await loadPptxFileBundle(filePath);
 
   const zip: ZipFile = {
     file(path: string) {
@@ -49,7 +23,7 @@ async function loadPptxFile(filePath: string): Promise<{ pf: PresentationFile; c
     },
   };
 
-  return { pf, cache, zip };
+  return { pf: presentationFile, cache, zip };
 }
 
 async function main() {

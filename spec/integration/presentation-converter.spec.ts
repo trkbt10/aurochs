@@ -6,10 +6,9 @@
  */
 
 import { describe, it, expect, beforeAll } from "vitest";
-import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import JSZip from "jszip";
+import { loadPptxFileBundle } from "../../scripts/lib/pptx-loader";
 
 // Import directly from src instead of using @lib alias
 import { openPresentation } from "../../src/pptx";
@@ -69,33 +68,7 @@ describe("convertToPresentationDocument", () => {
     beforeAll(async () => {
       // Load a PPTX with theme colors
       const fixturePath = path.join(FIXTURE_DIR, "decompressed-pptx/Sample_demo1.pptx");
-      const buffer = fs.readFileSync(fixturePath);
-
-      // Load using JSZip
-      const jszip = await JSZip.loadAsync(buffer);
-
-      // Preload files
-      const cache = new Map<string, { text: string; buffer: ArrayBuffer }>();
-      for (const [filePath, file] of Object.entries(jszip.files)) {
-        if (!file.dir) {
-          const fileBuffer = await file.async("arraybuffer");
-          const text = new TextDecoder().decode(fileBuffer);
-          cache.set(filePath, { text, buffer: fileBuffer });
-        }
-      }
-
-      // Create presentation file adapter
-      const presentationFile = {
-        readText(filePath: string): string | null {
-          return cache.get(filePath)?.text ?? null;
-        },
-        readBinary(filePath: string): ArrayBuffer | null {
-          return cache.get(filePath)?.buffer ?? null;
-        },
-        exists(filePath: string): boolean {
-          return cache.has(filePath);
-        },
-      };
+      const { presentationFile } = await loadPptxFileBundle(fixturePath);
 
       // Use openPresentation
       const presentation = openPresentation(presentationFile);
@@ -156,25 +129,21 @@ describe("convertToPresentationDocument", () => {
     it("extracts image relationships correctly", async () => {
       // Find a PPTX with images
       const fixturePath = path.join(FIXTURE_DIR, "decompressed-pptx/Sample_demo1.pptx");
-      const buffer = fs.readFileSync(fixturePath);
-      const jszip = await JSZip.loadAsync(buffer);
+      const { cache, filePaths } = await loadPptxFileBundle(fixturePath);
 
       // Check for media files
-      const mediaFiles = Object.keys(jszip.files).filter((f) =>
+      const mediaFiles = filePaths.filter((f) =>
         f.startsWith("ppt/media/")
       );
       console.log("Media files found:", mediaFiles);
 
       // Verify media files can be accessed
       for (const mediaFile of mediaFiles.slice(0, 3)) {
-        const file = jszip.files[mediaFile];
-        if (!file.dir) {
-          const buffer = await file.async("arraybuffer");
-          expect(buffer.byteLength).toBeGreaterThan(0);
+        const buffer = cache.get(mediaFile)?.buffer;
+        expect(buffer?.byteLength ?? 0).toBeGreaterThan(0);
 
-          const mimeType = getMimeTypeFromPath(mediaFile);
-          console.log(`${mediaFile}: ${buffer.byteLength} bytes, type: ${mimeType}`);
-        }
+        const mimeType = getMimeTypeFromPath(mediaFile);
+        console.log(`${mediaFile}: ${buffer?.byteLength ?? 0} bytes, type: ${mimeType}`);
       }
     });
   });

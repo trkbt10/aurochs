@@ -5,14 +5,15 @@
 
 import type { TextBody, Paragraph, TextRun, RunProperties, BulletStyle, AutoNumberBullet } from "../../domain/text";
 import type { Pixels, Points } from "../../domain/types";
-import type { LayoutInput, LayoutParagraphInput, LayoutSpan, TextBoxConfig, BulletConfig, AutoFitConfig, TextOutlineConfig, TextFillConfig, FontAlignment, LayoutTabStop, TextEffectsConfig, TextShadowConfig, TextGlowConfig, TextSoftEdgeConfig, TextReflectionConfig, TextPatternFillConfig, TextImageFillConfig } from "./types";
+import type { LayoutInput, LayoutParagraphInput, LayoutSpan, TextBoxConfig, BulletConfig, AutoFitConfig, TextOutlineConfig, FontAlignment, LayoutTabStop } from "./types";
 import type { RenderOptions } from "../core/types";
 import type { ColorContext, FontScheme } from "../../domain/resolution";
 import { resolveThemeFont } from "../../domain/resolution";
 import type { Color, Line, Fill } from "../../domain/color";
-import type { Effects, ShadowEffect, GlowEffect, SoftEdgeEffect, ReflectionEffect } from "../../domain/effects";
 
 import { resolveColor as resolveColorRaw } from "../core/drawing-ml";
+import { resolveTextFill, resolveTextEffects } from "../../parser/drawing-ml";
+import type { ResourceResolver } from "../../parser/drawing-ml";
 import { px, pt, pct } from "../../domain/types";
 import { DEFAULT_FONT_SIZE_PT } from "../../domain/defaults";
 import type { AutoFit } from "../../domain/text";
@@ -543,275 +544,6 @@ function toTextOutlineConfig(
 }
 
 // =============================================================================
-// Text Fill Conversion
-// =============================================================================
-
-/**
- * Convert Fill to TextFillConfig for SVG rendering.
- *
- * @see ECMA-376 Part 1, Section 20.1.8 (Fill Properties)
- */
-function toTextFillConfig(
-  fill: Fill | undefined,
-  colorContext: ColorContext,
-  resourceResolver?: ResourceResolver,
-): TextFillConfig | undefined {
-  if (fill === undefined) {
-    return undefined;
-  }
-
-  switch (fill.type) {
-    case "solidFill": {
-      const hex = resolveColor(fill.color, colorContext);
-      if (hex === undefined) {
-        return undefined;
-      }
-      const alpha = resolveAlpha(fill.color.transform);
-      return {
-        type: "solid",
-        color: hex,
-        alpha,
-      };
-    }
-
-    case "gradientFill": {
-      if (fill.stops.length === 0) {
-        return undefined;
-      }
-
-      const stops = fill.stops
-        .map((stop) => {
-          const hex = resolveColor(stop.color, colorContext);
-          if (hex === undefined) {
-            return undefined;
-          }
-          const alpha = resolveAlpha(stop.color.transform);
-          return {
-            position: stop.position,
-            color: hex,
-            alpha,
-          };
-        })
-        .filter((s): s is NonNullable<typeof s> => s !== undefined);
-
-      if (stops.length === 0) {
-        return undefined;
-      }
-
-      const isRadial = fill.path !== undefined;
-      const radialCenter = resolveRadialCenter(fill, isRadial);
-
-      return {
-        type: "gradient",
-        stops,
-        angle: fill.linear?.angle !== undefined ? (fill.linear.angle as number) : 0,
-        isRadial,
-        radialCenter,
-      };
-    }
-
-    case "noFill":
-      // Return explicit noFill config for transparent text
-      // @see ECMA-376 Part 1, Section 20.1.8.44 (a:noFill)
-      return { type: "noFill" };
-
-    case "patternFill": {
-      // Convert pattern fill
-      // @see ECMA-376 Part 1, Section 20.1.8.47 (a:pattFill)
-      const fgHex = resolveColor(fill.foregroundColor, colorContext);
-      const bgHex = resolveColor(fill.backgroundColor, colorContext);
-      if (fgHex === undefined || bgHex === undefined) {
-        return undefined;
-      }
-      const fgAlpha = resolveAlpha(fill.foregroundColor.transform);
-      const bgAlpha = resolveAlpha(fill.backgroundColor.transform);
-
-      return {
-        type: "pattern",
-        preset: fill.preset,
-        fgColor: fgHex,
-        bgColor: bgHex,
-        fgAlpha,
-        bgAlpha,
-      };
-    }
-
-    case "blipFill": {
-      // Convert image fill
-      // @see ECMA-376 Part 1, Section 20.1.8.14 (a:blipFill)
-      if (fill.resourceId === undefined || resourceResolver === undefined) {
-        return undefined;
-      }
-      const imageUrl = resourceResolver(fill.resourceId);
-      if (imageUrl === undefined) {
-        return undefined;
-      }
-
-      const mode = fill.tile !== undefined ? "tile" : "stretch";
-      const tileScale = fill.tile !== undefined
-        ? { x: (fill.tile.sx as number) / 100000, y: (fill.tile.sy as number) / 100000 }
-        : undefined;
-
-      return {
-        type: "image",
-        imageUrl,
-        mode,
-        tileScale,
-      };
-    }
-
-    case "groupFill":
-      return undefined;
-  }
-}
-
-// =============================================================================
-// Text Effects Conversion
-// =============================================================================
-
-/**
- * Convert shadow direction (60000ths of a degree) and distance to dx/dy offsets.
- *
- * @see ECMA-376 Part 1, Section 20.1.8.49 (outerShdw)
- */
-function shadowToOffset(
-  direction: number,
-  distance: number,
-): { dx: number; dy: number } {
-  // Direction is in 60000ths of a degree
-  const radians = (direction / 60000) * (Math.PI / 180);
-  return {
-    dx: Math.cos(radians) * distance,
-    dy: Math.sin(radians) * distance,
-  };
-}
-
-/**
- * Convert ShadowEffect to TextShadowConfig.
- *
- * @see ECMA-376 Part 1, Section 20.1.8.49 (outerShdw/innerShdw)
- */
-function toTextShadowConfig(
-  shadow: ShadowEffect,
-  colorContext: ColorContext,
-): TextShadowConfig | undefined {
-  const hex = resolveColor(shadow.color, colorContext);
-  if (hex === undefined) {
-    return undefined;
-  }
-
-  const alpha = resolveAlpha(shadow.color.transform);
-  const { dx, dy } = shadowToOffset(
-    shadow.direction as number,
-    shadow.distance as number,
-  );
-
-  return {
-    type: shadow.type,
-    color: hex,
-    opacity: alpha,
-    blurRadius: shadow.blurRadius as number,
-    dx,
-    dy,
-  };
-}
-
-/**
- * Convert GlowEffect to TextGlowConfig.
- *
- * @see ECMA-376 Part 1, Section 20.1.8.32 (glow)
- */
-function toTextGlowConfig(
-  glow: GlowEffect,
-  colorContext: ColorContext,
-): TextGlowConfig | undefined {
-  const hex = resolveColor(glow.color, colorContext);
-  if (hex === undefined) {
-    return undefined;
-  }
-
-  const alpha = resolveAlpha(glow.color.transform);
-
-  return {
-    color: hex,
-    opacity: alpha,
-    radius: glow.radius as number,
-  };
-}
-
-/**
- * Convert SoftEdgeEffect to TextSoftEdgeConfig.
- *
- * @see ECMA-376 Part 1, Section 20.1.8.53 (softEdge)
- */
-function toTextSoftEdgeConfig(
-  softEdge: SoftEdgeEffect,
-): TextSoftEdgeConfig {
-  return {
-    radius: softEdge.radius as number,
-  };
-}
-
-/**
- * Convert ReflectionEffect to TextReflectionConfig.
- *
- * @see ECMA-376 Part 1, Section 20.1.8.50 (reflection)
- */
-function toTextReflectionConfig(
-  reflection: ReflectionEffect,
-): TextReflectionConfig {
-  return {
-    blurRadius: reflection.blurRadius as number,
-    startOpacity: reflection.startOpacity as number,
-    endOpacity: reflection.endOpacity as number,
-    distance: reflection.distance as number,
-    direction: reflection.direction as number,
-    fadeDirection: reflection.fadeDirection as number,
-    scaleX: reflection.scaleX as number,
-    scaleY: reflection.scaleY as number,
-  };
-}
-
-/**
- * Convert Effects to TextEffectsConfig for text rendering.
- *
- * @see ECMA-376 Part 1, Section 20.1.8 (Effects)
- */
-function toTextEffectsConfig(
-  effects: Effects | undefined,
-  colorContext: ColorContext,
-): TextEffectsConfig | undefined {
-  if (effects === undefined) {
-    return undefined;
-  }
-
-  const shadow = effects.shadow
-    ? toTextShadowConfig(effects.shadow, colorContext)
-    : undefined;
-  const glow = effects.glow
-    ? toTextGlowConfig(effects.glow, colorContext)
-    : undefined;
-  const softEdge = effects.softEdge
-    ? toTextSoftEdgeConfig(effects.softEdge)
-    : undefined;
-  const reflection = effects.reflection
-    ? toTextReflectionConfig(effects.reflection)
-    : undefined;
-
-  // Only return config if at least one effect is present
-  if (shadow === undefined && glow === undefined && softEdge === undefined && reflection === undefined) {
-    return undefined;
-  }
-
-  return {
-    shadow,
-    glow,
-    softEdge,
-    reflection,
-  };
-}
-
-// =============================================================================
 // Text Run Conversion
 // =============================================================================
 
@@ -839,11 +571,11 @@ function textRunToSpan(
 
   // Resolve text fill (gradFill, pattern, blip, etc. on a:rPr)
   // @see ECMA-376 Part 1, Section 20.1.8
-  const textFill = toTextFillConfig(run.properties?.fill, colorContext, resourceResolver);
+  const textFill = resolveTextFill(run.properties?.fill, colorContext, resourceResolver);
 
   // Resolve text effects (shadow, glow, soft edge, reflection)
   // @see ECMA-376 Part 1, Section 20.1.8 (Effects)
-  const effects = toTextEffectsConfig(run.properties?.effects, colorContext);
+  const effects = resolveTextEffects(run.properties?.effects, colorContext);
 
   // Resolve text direction from rtl attribute
   // @see ECMA-376 Part 1, Section 21.1.2.3.12 (a:rtl)
@@ -1111,14 +843,6 @@ function hasAutoNumberBullet(para: Paragraph): boolean {
 }
 
 /**
- * Resource resolver function for converting resource IDs to data URLs.
- * Used for resolving picture bullet images.
- *
- * @see ECMA-376 Part 1, Section 21.1.2.4.2 (a:buBlip)
- */
-export type ResourceResolver = (resourceId: string) => string | undefined;
-
-/**
  * Options for converting TextBody to LayoutInput.
  */
 export type ToLayoutInputOptions = {
@@ -1173,21 +897,5 @@ export function toLayoutInput(options: ToLayoutInputOptions): LayoutInput {
     textBox,
     paragraphs,
     renderOptions,
-  };
-}
-
-function resolveRadialCenter(
-  fill: Fill,
-  isRadial: boolean
-): { cx: number; cy: number } | undefined {
-  // path property only exists on GradientFill
-  if (!isRadial || fill.type !== "gradientFill" || !fill.path?.fillToRect) {
-    return undefined;
-  }
-
-  const rect = fill.path.fillToRect;
-  return {
-    cx: ((rect.left as number) + (100 - (rect.right as number))) / 2,
-    cy: ((rect.top as number) + (100 - (rect.bottom as number))) / 2,
   };
 }

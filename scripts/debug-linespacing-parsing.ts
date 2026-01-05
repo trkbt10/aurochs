@@ -1,29 +1,9 @@
 /**
  * Debug: trace line spacing parsing
  */
-import * as fs from "node:fs";
-import JSZip from "jszip";
-import type { PresentationFile } from "../src/pptx";
 import { openPresentation, LIBREOFFICE_RENDER_OPTIONS, DEFAULT_RENDER_OPTIONS } from "../src/pptx";
 import { getEffectiveLineSpacing } from "../src/pptx/render/render-options";
-
-async function loadPptxFile(filePath: string): Promise<PresentationFile> {
-  const pptxBuffer = fs.readFileSync(filePath);
-  const jszip = await JSZip.loadAsync(pptxBuffer);
-  const cache = new Map<string, { text: string; buffer: ArrayBuffer }>();
-  for (const fp of Object.keys(jszip.files)) {
-    const file = jszip.file(fp);
-    if (file !== null && !file.dir) {
-      const buffer = await file.async("arraybuffer");
-      cache.set(fp, { text: new TextDecoder().decode(buffer), buffer });
-    }
-  }
-  return {
-    readText: (fp: string) => cache.get(fp)?.text ?? null,
-    readBinary: (fp: string) => cache.get(fp)?.buffer ?? null,
-    exists: (fp: string) => cache.has(fp),
-  };
-}
+import { loadPptxFile } from "./lib/pptx-loader";
 
 async function main() {
   console.log("=== Testing getEffectiveLineSpacing ===");

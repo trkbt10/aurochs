@@ -10,40 +10,11 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import JSZip from "jszip";
 import type { PresentationFile } from "../src/pptx";
 import { openPresentation } from "../src/pptx";
+import { loadPptxFile } from "../scripts/lib/pptx-loader";
 
 const AASCU_FIXTURE = "fixtures/poi-test-data/test-data/slideshow/aascu.org_workarea_downloadasset.aspx_id=5864.pptx";
-
-async function loadPptxFile(filePath: string): Promise<PresentationFile> {
-  const pptxBuffer = fs.readFileSync(filePath);
-  const jszip = await JSZip.loadAsync(pptxBuffer);
-
-  const cache: Map<string, { text: string; buffer: ArrayBuffer }> = new Map();
-  const files = Object.keys(jszip.files);
-
-  for (const fp of files) {
-    const file = jszip.file(fp);
-    if (file !== null && !file.dir) {
-      const buffer = await file.async("arraybuffer");
-      const text = new TextDecoder().decode(buffer);
-      cache.set(fp, { text, buffer });
-    }
-  }
-
-  return {
-    readText(fp: string): string | null {
-      return cache.get(fp)?.text ?? null;
-    },
-    readBinary(fp: string): ArrayBuffer | null {
-      return cache.get(fp)?.buffer ?? null;
-    },
-    exists(fp: string): boolean {
-      return cache.has(fp);
-    },
-  };
-}
 
 /**
  * Extract text element y-positions from SVG

@@ -7,9 +7,9 @@
 import { Hono } from "hono";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import JSZip from "jszip";
-import type { PresentationFile, SlideSize } from "../src/pptx";
+import type { SlideSize } from "../src/pptx";
 import { openPresentation } from "../src/pptx";
+import { loadPptxBundleFromBuffer, type PptxFileCache } from "../src/pptx/app/pptx-loader";
 import { parseTiming } from "../src/pptx/parser/timing-parser";
 import { getChild, isXmlElement, parseXml, type XmlElement } from "../src/xml";
 const app = new Hono();
@@ -64,39 +64,7 @@ function countAnimations(timing: ReturnType<typeof parseTiming>): { total: numbe
   return { total, types };
 }
 
-type FileCache = Map<string, { text: string; buffer: ArrayBuffer }>;
-
-async function preloadZipFiles(jszip: JSZip): Promise<FileCache> {
-  const cache: FileCache = new Map();
-  const files = Object.keys(jszip.files);
-
-  for (const filePath of files) {
-    const file = jszip.file(filePath);
-    if (file !== null && !file.dir) {
-      const buffer = await file.async("arraybuffer");
-      const text = new TextDecoder().decode(buffer);
-      cache.set(filePath, { text, buffer });
-    }
-  }
-
-  return cache;
-}
-
-function createPresentationFile(cache: FileCache): PresentationFile {
-  return {
-    readText(filePath: string): string | null {
-      const entry = cache.get(filePath);
-      return entry?.text ?? null;
-    },
-    readBinary(filePath: string): ArrayBuffer | null {
-      const entry = cache.get(filePath);
-      return entry?.buffer ?? null;
-    },
-    exists(filePath: string): boolean {
-      return cache.has(filePath);
-    },
-  };
-}
+type FileCache = PptxFileCache;
 
 function findPptxFiles(): Array<{ name: string; path: string; dir: string }> {
   const files: Array<{ name: string; path: string; dir: string }> = [];
@@ -246,9 +214,7 @@ app.get("/view/:filename", async (c) => {
 
     // Read and parse PPTX
     const pptxBuffer = fs.readFileSync(file.path);
-    const jszip = await JSZip.loadAsync(pptxBuffer);
-    const cache = await preloadZipFiles(jszip);
-    const presentationFile = createPresentationFile(cache);
+    const { cache, presentationFile } = await loadPptxBundleFromBuffer(pptxBuffer);
 
     // Open presentation using new API
     const presentation = openPresentation(presentationFile);
@@ -475,9 +441,7 @@ app.get("/anim/:filename/:slide", async (c) => {
 
   try {
     const pptxBuffer = fs.readFileSync(file.path);
-    const jszip = await JSZip.loadAsync(pptxBuffer);
-    const cache = await preloadZipFiles(jszip);
-    const presentationFile = createPresentationFile(cache);
+    const { cache, presentationFile } = await loadPptxBundleFromBuffer(pptxBuffer);
     const presentation = openPresentation(presentationFile);
     const slideSize = presentation.size;
 

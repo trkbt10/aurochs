@@ -2,8 +2,7 @@
  * @file Table parser tests
  */
 
-import { readFileSync } from "node:fs";
-import JSZip from "jszip";
+import { loadPptxFileBundle } from "../../../../scripts/lib/pptx-loader";
 import { parseXml, getChild, isXmlElement } from "../../../xml/index";
 import type { XmlDocument, XmlElement, XmlText, XmlNode } from "../../../xml/index";
 import { parseTable } from "./table-parser";
@@ -12,7 +11,6 @@ import { parseSlide } from "../slide/slide-parser";
 import { renderSlideSvg } from "../../render/svg/renderer";
 import { createRenderContext } from "../../render/context";
 import { openPresentation } from "../../index";
-import type { PresentationFile } from "../../index";
 import { px } from "../../domain/types";
 import type { ParseContext } from "../context";
 
@@ -73,10 +71,8 @@ describe("table-parser", () => {
   });
   it("parses table from table_test.pptx slide1", async () => {
     const pptxPath = "fixtures/poi-test-data/test-data/slideshow/table_test.pptx";
-    const data = readFileSync(pptxPath);
-    const zip = await JSZip.loadAsync(data);
-
-    const slideXml = await zip.file("ppt/slides/slide1.xml")?.async("string");
+    const { cache } = await loadPptxFileBundle(pptxPath);
+    const slideXml = cache.get("ppt/slides/slide1.xml")?.text;
     expect(slideXml).toBeDefined();
 
     const doc = parseXml(slideXml!);
@@ -115,10 +111,8 @@ describe("table-parser", () => {
 
   it("shape-parser returns GraphicFrame with table data", async () => {
     const pptxPath = "fixtures/poi-test-data/test-data/slideshow/table_test.pptx";
-    const data = readFileSync(pptxPath);
-    const zip = await JSZip.loadAsync(data);
-
-    const slideXml = await zip.file("ppt/slides/slide1.xml")?.async("string");
+    const { cache } = await loadPptxFileBundle(pptxPath);
+    const slideXml = cache.get("ppt/slides/slide1.xml")?.text;
     const doc = parseXml(slideXml!);
     const root = getRootElement(doc);
     const cSld = findChildElement(root, "p:cSld");
@@ -148,10 +142,8 @@ describe("table-parser", () => {
 
   it("parseSlide includes table in shapes", async () => {
     const pptxPath = "fixtures/poi-test-data/test-data/slideshow/table_test.pptx";
-    const data = readFileSync(pptxPath);
-    const zip = await JSZip.loadAsync(data);
-
-    const slideXml = await zip.file("ppt/slides/slide1.xml")?.async("string");
+    const { cache } = await loadPptxFileBundle(pptxPath);
+    const slideXml = cache.get("ppt/slides/slide1.xml")?.text;
     const doc = parseXml(slideXml!);
 
     // Minimal parse context
@@ -184,10 +176,8 @@ describe("table-parser", () => {
 
   it("renderSlideSvg renders table as foreignObject", async () => {
     const pptxPath = "fixtures/poi-test-data/test-data/slideshow/table_test.pptx";
-    const data = readFileSync(pptxPath);
-    const zip = await JSZip.loadAsync(data);
-
-    const slideXml = await zip.file("ppt/slides/slide1.xml")?.async("string");
+    const { cache } = await loadPptxFileBundle(pptxPath);
+    const slideXml = cache.get("ppt/slides/slide1.xml")?.text;
     const doc = parseXml(slideXml!);
 
     // Minimal parse context
@@ -225,24 +215,7 @@ describe("table-parser", () => {
 
   it("full integration: openPresentation.getSlide.renderSVG renders table", async () => {
     const pptxPath = "fixtures/poi-test-data/test-data/slideshow/table_test.pptx";
-    const data = readFileSync(pptxPath);
-    const zip = await JSZip.loadAsync(data);
-
-    // Build PresentationFile interface
-    const cache = new Map<string, { text: string; buffer: ArrayBuffer }>();
-    for (const [fp, file] of Object.entries(zip.files)) {
-      if (!file.dir) {
-        const buffer = await file.async("arraybuffer");
-        const text = new TextDecoder().decode(buffer);
-        cache.set(fp, { text, buffer });
-      }
-    }
-
-    const presentationFile: PresentationFile = {
-      readText: (fp: string) => cache.get(fp)?.text ?? null,
-      readBinary: (fp: string) => cache.get(fp)?.buffer ?? null,
-      exists: (fp: string) => cache.has(fp),
-    };
+    const { presentationFile } = await loadPptxFileBundle(pptxPath);
 
     // Open presentation and render
     const presentation = openPresentation(presentationFile);

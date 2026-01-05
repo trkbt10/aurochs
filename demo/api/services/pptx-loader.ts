@@ -1,19 +1,16 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
-import JSZip from "jszip";
-import type { PresentationFile } from "../../../src/pptx";
 import { openPresentation } from "../../../src/pptx";
+import { loadPptxBundleFromBuffer, type PptxFileCache } from "../../../src/pptx/app/pptx-loader";
 import { parseTiming } from "../../../src/pptx/parser/timing-parser";
 import { getChild, isXmlElement, parseXml, type XmlElement } from "../../../src/xml";
 import type { FileInfo, PresentationInfo, SlideInfo, TimingData } from "../../shared/types";
 
 const FIXTURE_DIRS = ["fixtures/poi-test-data/test-data/slideshow", "fixtures/poi-test-data/test-data/xmldsign"];
 
-type FileCache = Map<string, { text: string; buffer: ArrayBuffer }>;
-
 type CachedPresentation = {
   presentation: ReturnType<typeof openPresentation>;
-  cache: FileCache;
+  cache: PptxFileCache;
   loadedAt: number;
 };
 
@@ -48,38 +45,6 @@ export function getFileById(id: string): FileInfo | undefined {
   return files.find((f) => f.id === id);
 }
 
-async function preloadZipFiles(jszip: JSZip): Promise<FileCache> {
-  const cache: FileCache = new Map();
-  const files = Object.keys(jszip.files);
-
-  for (const filePath of files) {
-    const file = jszip.file(filePath);
-    if (file !== null && !file.dir) {
-      const buffer = await file.async("arraybuffer");
-      const text = new TextDecoder().decode(buffer);
-      cache.set(filePath, { text, buffer });
-    }
-  }
-
-  return cache;
-}
-
-function createPresentationFile(cache: FileCache): PresentationFile {
-  return {
-    readText(filePath: string): string | null {
-      const entry = cache.get(filePath);
-      return entry?.text ?? null;
-    },
-    readBinary(filePath: string): ArrayBuffer | null {
-      const entry = cache.get(filePath);
-      return entry?.buffer ?? null;
-    },
-    exists(filePath: string): boolean {
-      return cache.has(filePath);
-    },
-  };
-}
-
 export async function loadPresentation(fileInfo: FileInfo): Promise<CachedPresentation> {
   const cached = presentationCache.get(fileInfo.id);
   if (cached && Date.now() - cached.loadedAt < CACHE_TTL) {
@@ -87,9 +52,7 @@ export async function loadPresentation(fileInfo: FileInfo): Promise<CachedPresen
   }
 
   const pptxBuffer = fs.readFileSync(fileInfo.path);
-  const jszip = await JSZip.loadAsync(pptxBuffer);
-  const cache = await preloadZipFiles(jszip);
-  const presentationFile = createPresentationFile(cache);
+  const { cache, presentationFile } = await loadPptxBundleFromBuffer(pptxBuffer);
   const presentation = openPresentation(presentationFile);
 
   const result: CachedPresentation = {
