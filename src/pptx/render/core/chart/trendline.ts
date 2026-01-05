@@ -13,7 +13,7 @@ import type { SeriesData } from "./types";
 import { extractLineStyle, type ResolvedLineStyle } from "./line-style";
 import { resolveTextStyle, toSvgTextAttributes } from "./text-props";
 import { escapeHtml } from "../../html/index";
-import { resolveColor } from "../../drawing-ml";
+import { resolveColor } from "../drawing-ml";
 
 // =============================================================================
 // Trendline Calculation Functions

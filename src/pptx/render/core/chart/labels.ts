@@ -19,7 +19,7 @@ import { escapeHtml } from "../../html/index";
 import { resolveTextStyle, toSvgTextAttributes } from "./text-props";
 import { formatDataValue } from "./number-format";
 import { extractDropLineStyle, toSvgStrokeAttributes } from "./line-style";
-import { resolveColor } from "../../drawing-ml";
+import { resolveColor } from "../drawing-ml";
 
 // =============================================================================
 // Shape Properties for Data Labels

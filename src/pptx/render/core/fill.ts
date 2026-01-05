@@ -5,7 +5,7 @@
  */
 
 import type { Color, Fill, Line } from "../../domain";
-import { resolveColor } from "../drawing-ml";
+import { resolveColor } from "./drawing-ml";
 import type { ColorContext } from "../../domain/resolution";
 
 // =============================================================================

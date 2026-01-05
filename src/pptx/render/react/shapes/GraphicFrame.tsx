@@ -13,8 +13,8 @@ import type { ShapeId } from "../../../domain/types";
 import { px } from "../../../domain/types";
 import { useRenderContext } from "../context";
 import { buildTransformAttr } from "./transform";
-import { renderChart } from "../../components/chart";
-import { renderTableSvg } from "../../components/table";
+import { renderChart } from "../../core/chart";
+import { renderTableSvg } from "../../core/table";
 import { renderDiagramShapesSvg } from "../../svg/slide-shapes";
 import { extractSvgContent } from "../../svg/svg-utils";
 

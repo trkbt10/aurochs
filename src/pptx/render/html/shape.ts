@@ -19,9 +19,9 @@ import {
 } from "../core/index";
 import type { ResolvedImageFill } from "../core/fill";
 import { renderTextBody } from "./text";
-import { renderChart } from "../components/chart/index";
-import { renderDiagram, renderDiagramPlaceholder } from "../components/diagram";
-import { renderTable } from "../components/table";
+import { renderChart } from "../core/chart/index";
+import { renderDiagram, renderDiagramPlaceholder } from "../core/diagram";
+import { renderTable } from "../core/table";
 import type { ChartReference, DiagramReference, Fill } from "../../domain/index";
 import { createDefsCollector, isShapeHidden } from "../svg/slide-utils";
 import {

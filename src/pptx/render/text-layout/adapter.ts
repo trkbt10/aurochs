@@ -11,7 +11,7 @@ import type { ColorContext, FontScheme } from "../../domain/resolution";
 import { resolveThemeFont } from "../../domain/resolution";
 import type { Color, Line, Fill } from "../../domain/color";
 
-import { resolveColor as resolveColorRaw } from "../drawing-ml";
+import { resolveColor as resolveColorRaw } from "../core/drawing-ml";
 import { px, pt, pct } from "../../domain/types";
 import { DEFAULT_FONT_SIZE_PT } from "../../core/ecma376/defaults";
 import type { AutoFit } from "../../domain/text";

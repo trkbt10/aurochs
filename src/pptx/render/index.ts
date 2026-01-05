@@ -205,13 +205,13 @@ export { hasMedia, renderAudio, renderMedia, renderVideo } from "./html/media";
 // Diagram Rendering
 // =============================================================================
 
-export { renderDiagram, renderDiagramPlaceholder } from "./components/diagram";
+export { renderDiagram, renderDiagramPlaceholder } from "./core/diagram";
 
 // =============================================================================
 // Table Rendering
 // =============================================================================
 
-export { renderTable, renderTableSvg } from "./components/table";
+export { renderTable, renderTableSvg } from "./core/table";
 
 // =============================================================================
 // Slide Rendering

@@ -12,7 +12,7 @@ export type {
   GradientData,
   GradientStop,
   ImageFillMode,
-} from "../../domain/drawing-ml";
+} from "../../../domain/drawing-ml";
 
 // Color resolution
 export { resolveColor } from "./color";

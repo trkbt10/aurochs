@@ -18,7 +18,7 @@ import { createParseContext } from "../parser/context";
 import { renderSlide, createEmptySlideHtml } from "../render/html/slide";
 import { renderSlideSvg, createEmptySlideSvg } from "../render/svg/renderer";
 import { createRenderContextFromSlideContext, toResolvedBackgroundFill } from "../render/core";
-import { getBackgroundFillData } from "../render/drawing-ml";
+import { getBackgroundFillData } from "../render/core/drawing-ml";
 import { enrichSlideContent, type FileReader } from "../parser/slide/external-content-loader";
 
 // =============================================================================

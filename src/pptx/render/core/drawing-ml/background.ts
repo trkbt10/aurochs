@@ -8,10 +8,10 @@
  * @see ECMA-376 Part 1, Section 19.3.1.4 (p:bgRef)
  */
 
-import type { XmlElement } from "../../../xml";
-import { getChild } from "../../../xml";
-import type { BackgroundFill, FillType, GradientFill } from "../../domain/drawing-ml";
-import type { SlideRenderContext } from "../core/slide-context";
+import type { XmlElement } from "../../../../xml";
+import { getChild } from "../../../../xml";
+import type { BackgroundFill, FillType, GradientFill } from "../../../domain/drawing-ml";
+import type { SlideRenderContext } from "../slide-context";
 
 // Import parsing functions from parser layer
 import {
@@ -23,7 +23,7 @@ import {
   formatFillResult,
   detectImageFillMode,
   getSolidFill,
-} from "../../parser/drawing-ml";
+} from "../../../parser/drawing-ml";
 
 // =============================================================================
 // Types

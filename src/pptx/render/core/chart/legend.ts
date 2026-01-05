@@ -14,7 +14,7 @@ import type { SeriesData } from "./types";
 import { escapeHtml } from "../../html/index";
 import { LEGEND_ITEM_HEIGHT, LEGEND_ITEM_PADDING, calculateLegendDimensions } from "./layout";
 import { extractFontSize, extractBold, extractItalic } from "./text-props";
-import { resolveColor } from "../../drawing-ml";
+import { resolveColor } from "../drawing-ml";
 
 // =============================================================================
 // Legend Entry Utilities

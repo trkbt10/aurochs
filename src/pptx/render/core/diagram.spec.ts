@@ -8,7 +8,7 @@
  */
 
 // Uses global describe/it/expect from test runner
-import { renderDiagram, renderDiagramPlaceholder } from "./diagram";
+import { renderDiagram, renderDiagramPlaceholder } from "../core/diagram";
 import type { DiagramContent } from "../../domain";
 import { createEmptyRenderContext } from "../context";
 import type { SpShape } from "../../domain/shape";

@@ -27,7 +27,7 @@ import {
   feMergeNode,
 } from "./primitives";
 import { unsafeHtml } from "../html/primitives";
-import { resolveColor } from "../drawing-ml";
+import { resolveColor } from "../core/drawing-ml";
 import type { ColorContext } from "../../domain/resolution";
 
 // =============================================================================

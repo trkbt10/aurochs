@@ -7,8 +7,8 @@
  * @see ECMA-376 Part 1, Section 20.1.2.3 - Color Types
  */
 
-import type { Color, ColorTransform } from "../../domain/color";
-import type { ColorContext } from "../../domain/resolution";
+import type { Color, ColorTransform } from "../../../domain/color";
+import type { ColorContext } from "../../../domain/resolution";
 import {
   hexToRgb as hexToRgbObj,
   rgbToHex as rgbToHexBase,
@@ -16,7 +16,7 @@ import {
   hslToRgb,
   applySrgbGamma,
   applySrgbInvGamma,
-} from "../../../color/index";
+} from "../../../../color/index";
 
 // =============================================================================
 // Preset Colors

@@ -2,8 +2,8 @@
  * @file Tests for color resolution transforms
  */
 
-import type { Color } from "../../domain/color";
-import { pct } from "../../domain/types";
+import type { Color } from "../../../domain/color";
+import { pct } from "../../../domain/types";
 import { resolveColor } from "./color";
 
 describe("resolveColor", () => {
