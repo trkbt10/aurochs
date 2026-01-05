@@ -27,7 +27,8 @@ import type { CreationMode } from "../context/presentation/editor/types";
 import { createSelectMode } from "../context/presentation/editor/types";
 import type { DrawingPath } from "../path-tools/types";
 import { isCustomGeometry } from "../path-tools/utils/path-commands";
-import { createShapeFromMode, getDefaultBoundsForMode, createCustomPathShape, generateShapeId } from "../shape/factory";
+import { createShapeFromMode, getDefaultBoundsForMode, createCustomGeometryShape, generateShapeId } from "../shape/factory";
+import { drawingPathToCustomGeometry } from "../path-tools/utils/path-commands";
 import { isTextEditActive, mergeTextIntoBody, extractDefaultRunProperties } from "../slide/text-edit";
 import { PropertyPanel } from "../panels/PropertyPanel";
 import { ShapeToolbar } from "../panels/ShapeToolbar";
@@ -37,7 +38,8 @@ import { isTopLevelShape } from "../shape/query";
 import { clientToSlideCoords } from "../shape/coords";
 import { withUpdatedTransform } from "../shape/transform";
 import { calculateAlignedBounds } from "../shape/alignment";
-import { createRenderContextFromApiSlide, getLayoutNonPlaceholderShapes } from "../render-context/slide-render-context-builder";
+import { createRenderContextFromApiSlide, getLayoutNonPlaceholderShapes } from "../../pptx/app";
+import { createZipAdapter } from "../../pptx/domain";
 import { CanvasControls } from "../slide-canvas/CanvasControls";
 import { CanvasStage } from "../slide-canvas/CanvasStage";
 import { snapValue } from "../slide-canvas/canvas-controls";
@@ -221,7 +223,8 @@ function EditorContent({
   const handlePathCommit = useCallback(
     (path: DrawingPath) => {
       // Create shape from the drawing path
-      const shape = createCustomPathShape(generateShapeId(), path);
+      const { geometry, bounds } = drawingPathToCustomGeometry(path);
+      const shape = createCustomGeometryShape(generateShapeId(), geometry, bounds);
       dispatch({ type: "ADD_SHAPE", shape });
       // Reset to select mode
       dispatch({ type: "SET_CREATION_MODE", mode: createSelectMode() });
@@ -391,6 +394,10 @@ function EditorContent({
   const slide = activeSlide?.slide;
   const width = document.slideWidth;
   const height = document.slideHeight;
+  const zipFile = useMemo(
+    () => (document.presentationFile ? createZipAdapter(document.presentationFile) : undefined),
+    [document.presentationFile]
+  );
 
   // Thumbnail rendering hook (with theme context for proper rendering)
   const { getThumbnailSvg } = useSlideThumbnails({
@@ -400,7 +407,7 @@ function EditorContent({
     colorContext: document.colorContext,
     resources: document.resources,
     fontScheme: document.fontScheme,
-    fileCache: document.fileCache,
+    zipFile,
   });
 
   const renderThumbnail = useCallback(
@@ -420,15 +427,15 @@ function EditorContent({
   // Render context from API slide for proper theme/master/layout inheritance
   const renderContext = useMemo(() => {
     const apiSlide = activeSlide?.apiSlide;
-    const fileCache = document.fileCache;
+    const zip = zipFile;
 
     // Use full context from API slide if available
-    if (apiSlide && fileCache) {
-      return createRenderContextFromApiSlide(apiSlide, fileCache, { width, height });
+    if (apiSlide && zip) {
+      return createRenderContextFromApiSlide(apiSlide, zip, { width, height });
     }
 
     return undefined;
-  }, [width, height, activeSlide?.apiSlide, document.fileCache]);
+  }, [width, height, activeSlide?.apiSlide, zipFile]);
 
   // Get non-placeholder shapes from layout for rendering behind slide content
   const layoutShapes = useMemo(() => {

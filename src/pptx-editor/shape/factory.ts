@@ -4,12 +4,22 @@
  * Creates new shapes with default properties for the editor.
  */
 
-import type { SpShape, CxnShape, GraphicFrame, PicShape, Shape, Table, TableRow, TableCell, TableColumn, Chart, CustomGeometry } from "../../pptx/domain";
+import type {
+  SpShape,
+  CxnShape,
+  GraphicFrame,
+  PicShape,
+  Shape,
+  Table,
+  TableRow,
+  TableCell,
+  TableColumn,
+  Chart,
+  CustomGeometry,
+} from "../../pptx/domain";
 import type { ShapeId, Pixels, ResourceId } from "../../pptx/domain/types";
 import { px, deg, pct } from "../../pptx/domain/types";
 import type { CreationPresetShape, CreationMode } from "../context/presentation/editor/types";
-import type { DrawingPath } from "../path-tools/types";
-import { drawingPathToCommands, calculatePathBounds } from "../path-tools/utils/path-commands";
 
 // =============================================================================
 // Chart Type Definitions
@@ -79,11 +89,7 @@ export function resetShapeCounter(): void {
 /**
  * Create a basic shape (SpShape) with preset geometry
  */
-export function createSpShape(
-  id: ShapeId,
-  bounds: ShapeBounds,
-  preset: CreationPresetShape
-): SpShape {
+export function createSpShape(id: ShapeId, bounds: ShapeBounds, preset: CreationPresetShape): SpShape {
   return {
     type: "sp",
     nonVisual: {
@@ -175,40 +181,20 @@ export function createTextBox(id: ShapeId, bounds: ShapeBounds): SpShape {
 }
 
 /**
- * Create a custom path shape from a DrawingPath
+ * Create a custom geometry shape
  *
  * @param id - Shape ID
- * @param drawingPath - The path drawn by the pen tool
+ * @param geometry - Custom geometry definition
+ * @param bounds - Position and size in slide coordinates
  * @returns SpShape with CustomGeometry
  */
-export function createCustomPathShape(
+export function createCustomGeometryShape(
   id: ShapeId,
-  drawingPath: DrawingPath
+  geometry: CustomGeometry,
+  bounds: ShapeBounds
 ): SpShape {
-  // Calculate bounds from the path
-  const bounds = calculatePathBounds(drawingPath);
-
-  // Ensure minimum dimensions
-  const width = Math.max(bounds.width as number, 10);
-  const height = Math.max(bounds.height as number, 10);
-
-  // Convert to path commands
-  const commands = drawingPathToCommands(drawingPath);
-
-  // Create custom geometry
-  const geometry: CustomGeometry = {
-    type: "custom",
-    paths: [
-      {
-        width: px(width),
-        height: px(height),
-        fill: drawingPath.isClosed ? "norm" : "none",
-        stroke: true,
-        extrusionOk: false,
-        commands,
-      },
-    ],
-  };
+  const pathFill = geometry.paths[0]?.fill;
+  const isFillEnabled = pathFill !== "none";
 
   return {
     type: "sp",
@@ -220,14 +206,14 @@ export function createCustomPathShape(
       transform: {
         x: bounds.x,
         y: bounds.y,
-        width: px(width),
-        height: px(height),
+        width: bounds.width,
+        height: bounds.height,
         rotation: deg(0),
         flipH: false,
         flipV: false,
       },
       geometry,
-      fill: drawingPath.isClosed
+      fill: isFillEnabled
         ? {
             type: "solidFill",
             color: {
@@ -413,12 +399,7 @@ export function createTable(rows: number, cols: number): Table {
 /**
  * Create a table graphic frame
  */
-export function createTableGraphicFrame(
-  id: ShapeId,
-  bounds: ShapeBounds,
-  rows: number,
-  cols: number
-): GraphicFrame {
+export function createTableGraphicFrame(id: ShapeId, bounds: ShapeBounds, rows: number, cols: number): GraphicFrame {
   return {
     type: "graphicFrame",
     nonVisual: {
@@ -449,11 +430,7 @@ export function createTableGraphicFrame(
  * For new pictures, resourceId is the dataURL of the image.
  * The rendering layer will handle dataURL resources.
  */
-export function createPicShape(
-  id: ShapeId,
-  bounds: ShapeBounds,
-  dataUrl: string
-): PicShape {
+export function createPicShape(id: ShapeId, bounds: ShapeBounds, dataUrl: string): PicShape {
   return {
     type: "pic",
     nonVisual: {
@@ -518,11 +495,7 @@ function createDefaultChart(chartType: ChartType): Chart {
 /**
  * Create a chart graphic frame
  */
-export function createChartGraphicFrame(
-  id: ShapeId,
-  bounds: ShapeBounds,
-  chartType: ChartType
-): GraphicFrame {
+export function createChartGraphicFrame(id: ShapeId, bounds: ShapeBounds, chartType: ChartType): GraphicFrame {
   const chartResourceId = `chart-${id}` as ResourceId;
 
   return {
@@ -556,11 +529,7 @@ export function createChartGraphicFrame(
  * Note: Diagrams are complex and this creates a placeholder.
  * Full diagram editing requires SmartArt layout engine support.
  */
-export function createDiagramGraphicFrame(
-  id: ShapeId,
-  bounds: ShapeBounds,
-  _diagramType: DiagramType
-): GraphicFrame {
+export function createDiagramGraphicFrame(id: ShapeId, bounds: ShapeBounds, _diagramType: DiagramType): GraphicFrame {
   const diagramResourceId = `diagram-${id}` as ResourceId;
 
   return {
@@ -620,11 +589,7 @@ function getDimensionsForMode(mode: CreationMode): { width: Pixels; height: Pixe
 /**
  * Get default bounds for a creation mode
  */
-export function getDefaultBoundsForMode(
-  mode: CreationMode,
-  centerX: Pixels,
-  centerY: Pixels
-): ShapeBounds {
+export function getDefaultBoundsForMode(mode: CreationMode, centerX: Pixels, centerY: Pixels): ShapeBounds {
   const { width, height } = getDimensionsForMode(mode);
 
   return {
@@ -638,12 +603,7 @@ export function getDefaultBoundsForMode(
 /**
  * Create bounds from drag start/end coordinates
  */
-export function createBoundsFromDrag(
-  startX: Pixels,
-  startY: Pixels,
-  endX: Pixels,
-  endY: Pixels
-): ShapeBounds {
+export function createBoundsFromDrag(startX: Pixels, startY: Pixels, endX: Pixels, endY: Pixels): ShapeBounds {
   const x1 = startX as number;
   const y1 = startY as number;
   const x2 = endX as number;
@@ -669,10 +629,7 @@ export function createBoundsFromDrag(
 /**
  * Create a shape based on the current creation mode
  */
-export function createShapeFromMode(
-  mode: CreationMode,
-  bounds: ShapeBounds
-): Shape | undefined {
+export function createShapeFromMode(mode: CreationMode, bounds: ShapeBounds): Shape | undefined {
   const id = generateShapeId();
 
   switch (mode.type) {

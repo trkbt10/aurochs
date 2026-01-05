@@ -17,7 +17,8 @@ import {
   isPathDrawPencil,
 } from "../../../slide/state/path-draw";
 import type { PathAnchorPoint, AnchorPointType, CapturedPoint } from "../../../../path-tools/types";
-import { createCustomPathShape, generateShapeId } from "../../../../shape/factory";
+import { createCustomGeometryShape, generateShapeId } from "../../../../shape/factory";
+import { drawingPathToCustomGeometry } from "../../../../path-tools/utils/path-commands";
 import { pushHistory } from "../../../slide/state";
 
 // =============================================================================
@@ -29,7 +30,7 @@ import { pushHistory } from "../../../slide/state";
  */
 function addShapeToActiveSlide(
   state: PresentationEditorState,
-  shape: ReturnType<typeof createCustomPathShape>
+  shape: ReturnType<typeof createCustomGeometryShape>
 ): PresentationEditorState {
   const document = state.documentHistory.present;
   const activeSlide = document.slides.find((s) => s.id === state.activeSlideId);
@@ -211,7 +212,8 @@ const handleClosePenPath: ActionHandler<Extract<PresentationEditorAction, { type
   };
 
   // Create shape and add to slide
-  const shape = createCustomPathShape(generateShapeId(), closedPath);
+  const { geometry, bounds } = drawingPathToCustomGeometry(closedPath);
+  const shape = createCustomGeometryShape(generateShapeId(), geometry, bounds);
   const stateWithShape = addShapeToActiveSlide(state, shape);
 
   return {
@@ -240,7 +242,8 @@ const handleCommitPenPath: ActionHandler<Extract<PresentationEditorAction, { typ
   }
 
   // Create shape and add to slide
-  const shape = createCustomPathShape(generateShapeId(), state.pathDraw.path);
+  const { geometry, bounds } = drawingPathToCustomGeometry(state.pathDraw.path);
+  const shape = createCustomGeometryShape(generateShapeId(), geometry, bounds);
   const stateWithShape = addShapeToActiveSlide(state, shape);
 
   return {
@@ -359,7 +362,8 @@ const handleEndPencilDraw: ActionHandler<Extract<PresentationEditorAction, { typ
   };
 
   // Create shape and add to slide
-  const shape = createCustomPathShape(generateShapeId(), drawingPath);
+  const { geometry, bounds } = drawingPathToCustomGeometry(drawingPath);
+  const shape = createCustomGeometryShape(generateShapeId(), geometry, bounds);
   const stateWithShape = addShapeToActiveSlide(state, shape);
 
   return {
