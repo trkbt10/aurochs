@@ -5,12 +5,11 @@
  * Uses state/ module for shared state management primitives.
  */
 
-import type { Slide, Shape, Presentation, TextBody } from "../../../../pptx/domain";
+import type { Slide, Shape, Presentation, TextBody, PresentationFile } from "../../../../pptx/domain";
 import type { ShapeId, Pixels, Degrees } from "../../../../pptx/domain/types";
 import type { ColorContext, FontScheme } from "../../../../pptx/domain/resolution";
 import type { ResourceResolver, ResolvedBackgroundFill } from "../../../../pptx/render/core";
 import type { Slide as ApiSlide } from "../../../../pptx/app/types";
-import type { FileCache } from "../../../render-context/types";
 import type {
   UndoRedoHistory,
   SelectionState,
@@ -56,10 +55,10 @@ export type PresentationDocument = {
   readonly resources: ResourceResolver;
 
   /**
-   * File cache from loaded PPTX.
+   * Presentation file for PPTX resources.
    * Used to build SlideRenderContext for proper rendering after edits.
    */
-  readonly fileCache?: FileCache;
+  readonly presentationFile?: PresentationFile;
 };
 
 /**

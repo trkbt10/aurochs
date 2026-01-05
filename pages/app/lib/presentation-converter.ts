@@ -16,8 +16,10 @@ import { parseSlide } from "@lib/pptx/parser/slide/slide-parser";
 import { createParseContext } from "@lib/pptx/parser/context";
 import { parseColorScheme, parseFontScheme, parseColorMap } from "@lib/pptx/parser/drawing-ml";
 import { getByPath } from "@lib/xml";
-import { createSlideRenderContextFromApiSlide } from "@lib/pptx-editor/render-context/slide-render-context-builder";
+import { createSlideRenderContextFromApiSlide } from "@lib/pptx/app";
 import { getMimeTypeFromPath } from "@lib/pptx/opc";
+import type { PresentationFile } from "@lib/pptx/domain";
+import { createZipAdapter } from "@lib/pptx/domain";
 
 // =============================================================================
 // Color Context Building
@@ -72,14 +74,12 @@ function extractFontScheme(apiSlide: ApiSlide): FontScheme | undefined {
 // Resource Resolver Building
 // =============================================================================
 
-type FileCache = Map<string, { text: string; buffer: ArrayBuffer }>;
-
 /**
- * Create a ResourceResolver from the file cache
+ * Create a ResourceResolver from the presentation file
  *
  * This allows the editor to resolve image and embedded resource references.
  */
-function createResourceResolverFromCache(cache: FileCache, apiSlide: ApiSlide): ResourceResolver {
+function createResourceResolverFromFile(file: PresentationFile, apiSlide: ApiSlide): ResourceResolver {
   // Build a relationship lookup from slide/layout/master relationships
   const relationships = new Map<string, string>();
 
@@ -118,8 +118,8 @@ function createResourceResolverFromCache(cache: FileCache, apiSlide: ApiSlide): 
 
       // Normalize path (remove leading ../ and convert to ppt/ path)
       const normalizedPath = normalizePptxPath(target);
-      const entry = cache.get(normalizedPath);
-      if (!entry) {
+      const buffer = file.readBinary(normalizedPath);
+      if (!buffer) {
         return undefined;
       }
 
@@ -129,7 +129,7 @@ function createResourceResolverFromCache(cache: FileCache, apiSlide: ApiSlide): 
         return undefined;
       }
 
-      const base64 = arrayBufferToBase64(entry.buffer);
+      const base64 = arrayBufferToBase64(buffer);
       return `data:${mimeType};base64,${base64}`;
     },
 
@@ -147,11 +147,11 @@ function createResourceResolverFromCache(cache: FileCache, apiSlide: ApiSlide): 
 
     readFile: (path: string) => {
       const normalizedPath = normalizePptxPath(path);
-      const entry = cache.get(normalizedPath);
-      if (!entry) {
+      const buffer = file.readBinary(normalizedPath);
+      if (!buffer) {
         return null;
       }
-      return new Uint8Array(entry.buffer);
+      return new Uint8Array(buffer);
     },
 
     getResourceByType: (relType: string) => {
@@ -198,9 +198,10 @@ function arrayBufferToBase64(buffer: ArrayBuffer): string {
  * Convert a LoadedPresentation to a PresentationDocument for the editor
  */
 export function convertToPresentationDocument(loaded: LoadedPresentation): PresentationDocument {
-  const { presentation, cache } = loaded;
+  const { presentation, presentationFile } = loaded;
   const slideCount = presentation.count;
   const slideSize = presentation.size;
+  const zipFile = createZipAdapter(presentationFile);
 
   // Get first slide to extract theme/master info (shared across presentation)
   const firstApiSlide = slideCount > 0 ? presentation.getSlide(1) : null;
@@ -211,8 +212,8 @@ export function convertToPresentationDocument(loaded: LoadedPresentation): Prese
   // Build font scheme from first slide's theme
   const fontScheme = firstApiSlide ? extractFontScheme(firstApiSlide) : undefined;
 
-  // Build resource resolver from cache
-  const resources = buildResourceResolver(cache, firstApiSlide);
+  // Build resource resolver from presentation file
+  const resources = buildResourceResolver(presentationFile, firstApiSlide);
 
   // Convert each slide from API Slide to domain Slide
   const slides: SlideWithId[] = [];
@@ -221,7 +222,7 @@ export function convertToPresentationDocument(loaded: LoadedPresentation): Prese
     const apiSlide = presentation.getSlide(i);
 
     // Build SlideRenderContext for proper parsing with style inheritance
-    const slideRenderCtx = createSlideRenderContextFromApiSlide(apiSlide, cache);
+    const slideRenderCtx = createSlideRenderContextFromApiSlide(apiSlide, zipFile);
 
     // Create ParseContext with placeholder tables, master styles, format scheme
     const parseCtx = createParseContext(slideRenderCtx);
@@ -252,16 +253,16 @@ export function convertToPresentationDocument(loaded: LoadedPresentation): Prese
     colorContext,
     fontScheme,
     resources,
-    fileCache: cache,
+    presentationFile,
   };
 }
 
-function buildResourceResolver(cache: FileCache, firstApiSlide: ApiSlide | null): ResourceResolver {
+function buildResourceResolver(file: PresentationFile, firstApiSlide: ApiSlide | null): ResourceResolver {
   if (!firstApiSlide) {
     return createEmptyResourceResolver();
   }
 
-  return createResourceResolverFromCache(cache, firstApiSlide);
+  return createResourceResolverFromFile(file, firstApiSlide);
 }
 
 /**

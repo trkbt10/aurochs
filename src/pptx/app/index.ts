@@ -16,6 +16,7 @@ import { readXml, getRelationships, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS } from 
 import { createSlide } from "./slide-builder";
 import { loadLayoutData, loadMasterData, loadThemeData, loadDiagramData } from "../parser/slide/loader";
 import type { PresentationFile } from "../domain";
+export { createSlideRenderContextFromApiSlide, createRenderContextFromApiSlide, getLayoutNonPlaceholderShapes } from "./render-context";
 
 /**
  * Parse a slide from file

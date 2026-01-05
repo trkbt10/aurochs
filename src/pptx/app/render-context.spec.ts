@@ -1,5 +1,5 @@
 /**
- * @file Tests for slide-render-context-builder
+ * @file Tests for render-context helpers
  *
  * Verifies that render context built from API Slide properly includes:
  * - Theme colors (colorScheme)
@@ -10,14 +10,14 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { createRenderContextFromApiSlide, createSlideRenderContextFromApiSlide } from "./slide-render-context-builder";
-import type { Slide as ApiSlide } from "../../pptx/app/types";
-import type { FileCache } from "./types";
+import { createRenderContextFromApiSlide, createSlideRenderContextFromApiSlide } from "./render-context";
+import type { Slide as ApiSlide } from "./types";
 import type { XmlElement, XmlDocument } from "../../xml";
-import type { ResourceMap } from "../../pptx/opc";
-import type { IndexTables } from "../../pptx/core/types";
-import { px } from "../../pptx/domain/types";
-import { resolveColor } from "../../pptx/render/core/drawing-ml";
+import type { ResourceMap } from "../opc";
+import type { IndexTables } from "../core/types";
+import { px } from "../domain/types";
+import type { ZipFile } from "../domain";
+import { resolveColor } from "../render/core/drawing-ml";
 
 // =============================================================================
 // Test Fixtures
@@ -143,10 +143,12 @@ function createMockApiSlide(): ApiSlide {
 }
 
 /**
- * Create empty file cache for testing
+ * Create empty ZipFile for testing
  */
-function createMockFileCache(): FileCache {
-  return new Map();
+function createMockZip(): ZipFile {
+  return {
+    file: () => null,
+  };
 }
 
 // =============================================================================
@@ -156,9 +158,9 @@ function createMockFileCache(): FileCache {
 describe("createSlideRenderContextFromApiSlide", () => {
   it("should create SlideRenderContext from API slide", () => {
     const apiSlide = createMockApiSlide();
-    const cache = createMockFileCache();
+    const zip = createMockZip();
 
-    const ctx = createSlideRenderContextFromApiSlide(apiSlide, cache);
+    const ctx = createSlideRenderContextFromApiSlide(apiSlide, zip);
 
     expect(ctx).toBeDefined();
     expect(ctx.master).toBeDefined();
@@ -168,9 +170,9 @@ describe("createSlideRenderContextFromApiSlide", () => {
 
   it("should parse theme color scheme correctly", () => {
     const apiSlide = createMockApiSlide();
-    const cache = createMockFileCache();
+    const zip = createMockZip();
 
-    const ctx = createSlideRenderContextFromApiSlide(apiSlide, cache);
+    const ctx = createSlideRenderContextFromApiSlide(apiSlide, zip);
     const colorScheme = ctx.presentation.theme.colorScheme;
 
     // Verify color scheme has expected colors
@@ -182,9 +184,9 @@ describe("createSlideRenderContextFromApiSlide", () => {
 
   it("should parse master color map correctly", () => {
     const apiSlide = createMockApiSlide();
-    const cache = createMockFileCache();
+    const zip = createMockZip();
 
-    const ctx = createSlideRenderContextFromApiSlide(apiSlide, cache);
+    const ctx = createSlideRenderContextFromApiSlide(apiSlide, zip);
     const colorMap = ctx.master.colorMap;
 
     // Verify color map mappings
@@ -197,10 +199,10 @@ describe("createSlideRenderContextFromApiSlide", () => {
 describe("createRenderContextFromApiSlide", () => {
   it("should create HtmlRenderContext with color context", () => {
     const apiSlide = createMockApiSlide();
-    const cache = createMockFileCache();
+    const zip = createMockZip();
     const slideSize = { width: px(960), height: px(540) };
 
-    const ctx = createRenderContextFromApiSlide(apiSlide, cache, slideSize);
+    const ctx = createRenderContextFromApiSlide(apiSlide, zip, slideSize);
 
     expect(ctx).toBeDefined();
     expect(ctx.colorContext).toBeDefined();
@@ -210,13 +212,13 @@ describe("createRenderContextFromApiSlide", () => {
 
   it("should be usable with renderSlideSvg for domain slide rendering", async () => {
     const apiSlide = createMockApiSlide();
-    const cache = createMockFileCache();
+    const zip = createMockZip();
     const slideSize = { width: px(960), height: px(540) };
 
-    const ctx = createRenderContextFromApiSlide(apiSlide, cache, slideSize);
+    const ctx = createRenderContextFromApiSlide(apiSlide, zip, slideSize);
 
     // Import renderSlideSvg dynamically
-    const { renderSlideSvg } = await import("../../pptx/render/svg/renderer");
+    const { renderSlideSvg } = await import("../render/svg/renderer");
 
     // Create a simple domain slide with a shape using scheme color
     const domainSlide = {
@@ -232,10 +234,10 @@ describe("createRenderContextFromApiSlide", () => {
 
   it("should resolve scheme colors via resolveColor", async () => {
     const apiSlide = createMockApiSlide();
-    const cache = createMockFileCache();
+    const zip = createMockZip();
     const slideSize = { width: px(960), height: px(540) };
 
-    const ctx = createRenderContextFromApiSlide(apiSlide, cache, slideSize);
+    const ctx = createRenderContextFromApiSlide(apiSlide, zip, slideSize);
     const colorContext = ctx.colorContext;
 
 
@@ -260,10 +262,10 @@ describe("createRenderContextFromApiSlide", () => {
 
   it("should include theme colors in colorScheme", () => {
     const apiSlide = createMockApiSlide();
-    const cache = createMockFileCache();
+    const zip = createMockZip();
     const slideSize = { width: px(960), height: px(540) };
 
-    const ctx = createRenderContextFromApiSlide(apiSlide, cache, slideSize);
+    const ctx = createRenderContextFromApiSlide(apiSlide, zip, slideSize);
     const { colorScheme } = ctx.colorContext;
 
     // Theme colors should be populated
@@ -275,10 +277,10 @@ describe("createRenderContextFromApiSlide", () => {
 
   it("should include color map in colorContext", () => {
     const apiSlide = createMockApiSlide();
-    const cache = createMockFileCache();
+    const zip = createMockZip();
     const slideSize = { width: px(960), height: px(540) };
 
-    const ctx = createRenderContextFromApiSlide(apiSlide, cache, slideSize);
+    const ctx = createRenderContextFromApiSlide(apiSlide, zip, slideSize);
     const { colorMap } = ctx.colorContext;
 
     // Color map should have proper mappings
@@ -289,10 +291,10 @@ describe("createRenderContextFromApiSlide", () => {
 
   it("should include font scheme", () => {
     const apiSlide = createMockApiSlide();
-    const cache = createMockFileCache();
+    const zip = createMockZip();
     const slideSize = { width: px(960), height: px(540) };
 
-    const ctx = createRenderContextFromApiSlide(apiSlide, cache, slideSize);
+    const ctx = createRenderContextFromApiSlide(apiSlide, zip, slideSize);
 
     expect(ctx.fontScheme).toBeDefined();
     expect(ctx.fontScheme?.majorFont.latin).toBe("Calibri Light");
@@ -301,10 +303,10 @@ describe("createRenderContextFromApiSlide", () => {
 
   it("should have resource resolver", () => {
     const apiSlide = createMockApiSlide();
-    const cache = createMockFileCache();
+    const zip = createMockZip();
     const slideSize = { width: px(960), height: px(540) };
 
-    const ctx = createRenderContextFromApiSlide(apiSlide, cache, slideSize);
+    const ctx = createRenderContextFromApiSlide(apiSlide, zip, slideSize);
 
     expect(ctx.resources).toBeDefined();
     expect(typeof ctx.resources.resolve).toBe("function");

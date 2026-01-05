@@ -12,7 +12,7 @@ type FileCache = Map<string, { text: string; buffer: ArrayBuffer }>;
 
 export type LoadedPresentation = {
   presentation: ReturnType<typeof openPresentation>;
-  cache: FileCache;
+  presentationFile: PresentationFile;
 };
 
 /**
@@ -62,7 +62,7 @@ export async function loadPptxFromBuffer(buffer: ArrayBuffer): Promise<LoadedPre
   const presentationFile = createPresentationFile(cache);
   const presentation = openPresentation(presentationFile);
 
-  return { presentation, cache };
+  return { presentation, presentationFile };
 }
 
 /**

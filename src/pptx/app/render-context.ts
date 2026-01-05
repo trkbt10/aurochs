@@ -1,70 +1,40 @@
 /**
- * @file SlideRenderContext builder for editor
+ * @file SlideRenderContext builder for app usage
  *
- * Creates SlideRenderContext from API Slide and file cache.
- * This enables proper re-rendering of edited slides with full theme/master/layout context.
+ * Creates SlideRenderContext from API Slide and ZipFile.
+ * This enables proper rendering with full theme/master/layout context.
  */
 
-import type { Slide as ApiSlide } from "../../pptx/app/types";
-import type { SlideRenderContext } from "../../pptx/render/core/slide-context";
-import { createSlideRenderContext } from "../../pptx/render/core/slide-context";
-import { createPlaceholderTable, createColorMap } from "../../pptx/parser/slide/resource-adapters";
-import { parseTheme, parseMasterTextStyles } from "../../pptx/parser/drawing-ml";
-import { DEFAULT_RENDER_OPTIONS } from "../../pptx/render/render-options";
-import { createRenderContextFromSlideContext } from "../../pptx/render/core/context";
-import { getBackgroundFillData } from "../../pptx/render/core/drawing-ml";
-import { parseShapeTree } from "../../pptx/parser/shape-parser";
+import type { Slide as ApiSlide } from "./types";
+import type { SlideRenderContext } from "../render/core/slide-context";
+import { createSlideRenderContext } from "../render/core/slide-context";
+import { createPlaceholderTable, createColorMap } from "../parser/slide/resource-adapters";
+import { parseTheme, parseMasterTextStyles } from "../parser/drawing-ml";
+import { DEFAULT_RENDER_OPTIONS, type RenderOptions } from "../render/render-options";
+import { createRenderContextFromSlideContext } from "../render/core/context";
+import { getBackgroundFillData } from "../render/core/drawing-ml";
+import { parseShapeTree } from "../parser/shape-parser";
 import type { XmlElement, XmlDocument } from "../../xml";
 import { getByPath, getChild } from "../../xml";
-import type { FileCache } from "./types";
-import type { SlideSize, Shape, SpShape } from "../../pptx/domain";
-import type { ResolvedBackgroundFill, RenderContext } from "../../pptx/render/context";
-
-// =============================================================================
-// ZipFile Adapter
-// =============================================================================
-
-/**
- * Create a ZipFile adapter from file cache.
- * This allows SlideRenderContext to read resources from the cached PPTX files.
- */
-function createZipFileAdapter(cache: FileCache) {
-  return {
-    file(path: string) {
-      const entry = cache.get(path);
-      if (!entry) {
-        return null;
-      }
-      return {
-        asArrayBuffer(): ArrayBuffer {
-          return entry.buffer;
-        },
-        asText(): string {
-          return entry.text;
-        },
-      };
-    },
-  };
-}
+import type { SlideSize, Shape, SpShape, ZipFile } from "../domain";
+import type { ResolvedBackgroundFill, RenderContext } from "../render/context";
 
 // =============================================================================
 // SlideRenderContext Builder
 // =============================================================================
 
 /**
- * Build SlideRenderContext from API Slide and file cache.
+ * Build SlideRenderContext from API Slide and ZipFile.
  *
  * This replicates the logic in slide-builder.ts's buildSlideRenderContext,
  * but works with API Slide (which has the same structure as SlideData).
  */
 export function createSlideRenderContextFromApiSlide(
   apiSlide: ApiSlide,
-  cache: FileCache,
+  zip: ZipFile,
   defaultTextStyle: XmlElement | null = null,
+  renderOptions?: RenderOptions,
 ): SlideRenderContext {
-  // Create ZipFile adapter from cache
-  const zip = createZipFileAdapter(cache);
-
   // Extract color map from master
   const masterClrMap = getByPath(apiSlide.master, ["p:sldMaster", "p:clrMap"]);
 
@@ -106,7 +76,7 @@ export function createSlideRenderContextFromApiSlide(
     theme,
     defaultTextStyle,
     zip,
-    renderOptions: DEFAULT_RENDER_OPTIONS,
+    renderOptions: renderOptions ?? DEFAULT_RENDER_OPTIONS,
     themeResources: apiSlide.themeRelationships,
   };
 
@@ -183,12 +153,18 @@ function toResolvedBackgroundFill(
  */
 export function createRenderContextFromApiSlide(
   apiSlide: ApiSlide,
-  cache: FileCache,
+  zip: ZipFile,
   slideSize: SlideSize,
   defaultTextStyle: XmlElement | null = null,
+  renderOptions?: RenderOptions,
 ): RenderContext {
   // Build SlideRenderContext
-  const slideRenderCtx = createSlideRenderContextFromApiSlide(apiSlide, cache, defaultTextStyle);
+  const slideRenderCtx = createSlideRenderContextFromApiSlide(
+    apiSlide,
+    zip,
+    defaultTextStyle,
+    renderOptions
+  );
 
   // Resolve background from hierarchy
   const bgFillData = getBackgroundFillData(slideRenderCtx);
