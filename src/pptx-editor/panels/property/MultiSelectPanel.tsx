@@ -14,7 +14,7 @@ import { px, deg, type ShapeId } from "../../../pptx/domain/types";
 import { Accordion } from "../../ui/layout/Accordion";
 import { Input } from "../../ui/primitives/index";
 import { FillEditor } from "../../editors/color/FillEditor";
-import { LineEditor } from "../../editors/color/LineEditor";
+import { LineEditor } from "../../ui/line";
 import {
   analyzeShapeTypes,
   getCommonTransform,

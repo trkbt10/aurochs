@@ -8,7 +8,7 @@
 import { useCallback, type CSSProperties } from "react";
 import { FieldGroup } from "../../ui/layout";
 import { FillEditor, createNoFill } from "../color/FillEditor";
-import { LineEditor, createDefaultLine } from "../color/LineEditor";
+import { LineEditor, createDefaultLine } from "../../ui/line";
 import type { ChartShapeProperties } from "../../../pptx/domain/chart";
 import type { Fill, Line } from "../../../pptx/domain/color";
 import type { EditorProps } from "../../types";

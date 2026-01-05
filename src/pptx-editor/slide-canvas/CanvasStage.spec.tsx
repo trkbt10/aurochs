@@ -9,21 +9,8 @@ import type { Slide } from "../../pptx/domain";
 import { px } from "../../pptx/domain/types";
 import { createIdleDragState, createEmptySelection } from "../state";
 import { createInactiveTextEditState } from "../slide/text-edit/state";
+import { triggerResizeObservers } from "../../../spec/test-utils/resize-observer";
 import { CanvasStage } from "./CanvasStage";
-
-type MockResizeObserverEntry = {
-  readonly callback: ResizeObserverCallback;
-  readonly trigger: () => void;
-};
-
-const observers: MockResizeObserverEntry[] = [];
-const originalResizeObserver = globalThis.ResizeObserver;
-
-function triggerResizeObservers(): void {
-  for (const entry of observers) {
-    entry.trigger();
-  }
-}
 
 function findScrollContainer(root: HTMLElement): HTMLDivElement {
   const elements = Array.from(root.querySelectorAll("div"));
@@ -42,27 +29,7 @@ function setClientSize(element: HTMLElement, width: number, height: number): voi
 }
 
 describe("CanvasStage auto-centering", () => {
-  afterEach(() => {
-    observers.length = 0;
-    globalThis.ResizeObserver = originalResizeObserver;
-  });
-
   it("centers only once after slide selection", async () => {
-    globalThis.ResizeObserver = function ResizeObserver(callback: ResizeObserverCallback): ResizeObserver {
-      const entry: MockResizeObserverEntry = {
-        callback,
-        trigger: () => {
-          callback([], resizeObserver as ResizeObserver);
-        },
-      };
-      observers.push(entry);
-      const resizeObserver: ResizeObserver = {
-        observe: () => undefined,
-        unobserve: () => undefined,
-        disconnect: () => undefined,
-      };
-      return resizeObserver;
-    } as typeof ResizeObserver;
     const slide: Slide = { shapes: [] };
     const selection = createEmptySelection();
     const drag = createIdleDragState();

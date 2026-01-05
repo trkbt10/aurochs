@@ -9,7 +9,7 @@
 import { Toggle } from "../../ui/primitives";
 import { TransformEditor, createDefaultTransform } from "../primitives/TransformEditor";
 import { FillEditor, createNoFill } from "../color/FillEditor";
-import { LineEditor, createDefaultLine } from "../color/LineEditor";
+import { LineEditor, createDefaultLine } from "../../ui/line";
 import { GeometryEditor, createDefaultGeometry } from "./GeometryEditor";
 import { EffectsEditor, createDefaultEffects } from "./EffectsEditor";
 import { Scene3dEditor, createDefaultScene3d } from "./Scene3dEditor";

@@ -10,7 +10,7 @@ import { Select, Toggle, Input, Button } from "../../ui/primitives";
 import { Accordion, FieldGroup, FieldRow } from "../../ui/layout";
 import { PixelsEditor } from "../primitives/PixelsEditor";
 import { FillEditor, createNoFill } from "../color/FillEditor";
-import { LineEditor, createDefaultLine } from "../color/LineEditor";
+import { LineEditor, createDefaultLine } from "../../ui/line";
 import { px } from "../../../pptx/domain/types";
 import type {
   TableCellProperties,

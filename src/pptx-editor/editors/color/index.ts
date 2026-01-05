@@ -16,4 +16,4 @@ export {
   type GradientStopsEditorProps,
   createDefaultGradientStops,
 } from "./GradientStopsEditor";
-export { LineEditor, type LineEditorProps, createDefaultLine } from "./LineEditor";
+export { LineEditor, type LineEditorProps, createDefaultLine } from "../../ui/line/LineEditor";
