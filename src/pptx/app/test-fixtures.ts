@@ -4,7 +4,7 @@
  * Provides minimal PPTX XML structures and helper functions for testing.
  */
 
-import type { PresentationFile } from "../domain/resource";
+import type { PresentationFile } from "../domain";
 
 /**
  * Create a fake PresentationFile for testing

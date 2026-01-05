@@ -3,7 +3,6 @@
  * Main entry point for reading PPTX files
  */
 
-import type { PresentationFile } from "../domain/resource";
 import type { Presentation, Slide, SlideInfo, ListOptions, PresentationOptions } from "./types";
 import type { SlideFileInfo, ZipFile } from "../opc";
 import type { SlideSize } from "../domain";
@@ -12,13 +11,11 @@ import type { SlideData } from "../domain/slide/data";
 import type { RenderOptions } from "../render/render-options";
 import { parseContentTypes, buildSlideFileInfoList } from "../opc";
 import { parseSlideSizeFromXml, parseDefaultTextStyle, parseAppVersion } from "../domain";
-import { createZipAdapter } from "../domain/resource/zip-adapter";
+import { createZipAdapter } from "../domain/zip-adapter";
 import { readXml, getRelationships, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS } from "../parser/slide/xml-reader";
 import { createSlide } from "./slide-builder";
 import { loadLayoutData, loadMasterData, loadThemeData, loadDiagramData } from "../parser/slide/loader";
-
-// Re-export types for convenience
-export type { Presentation, Slide, SlideInfo, ListOptions, PresentationOptions };
+import type { PresentationFile } from "../domain";
 
 /**
  * Parse a slide from file

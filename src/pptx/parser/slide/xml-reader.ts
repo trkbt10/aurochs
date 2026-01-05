@@ -3,7 +3,7 @@
  * Handles reading and parsing XML from PresentationFile
  */
 
-import type { PresentationFile } from "../../domain/resource";
+import type { PresentationFile } from "../../domain";
 import type { XmlDocument } from "../../../xml";
 import type { ResourceMap } from "../../opc";
 import { stripCdata, parseXml, applyMarkupCompatibility, type MarkupCompatibilityOptions } from "../../../xml";

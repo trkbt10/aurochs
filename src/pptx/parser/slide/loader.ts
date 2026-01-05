@@ -3,7 +3,7 @@
  * Loads layout, master, theme, and diagram data for slides
  */
 
-import type { PresentationFile } from "../../domain/resource";
+import type { PresentationFile } from "../../domain";
 import type { ResourceMap } from "../../opc";
 import type { LayoutData, MasterData, ThemeData, DiagramData } from "../../domain/slide/data";
 import {

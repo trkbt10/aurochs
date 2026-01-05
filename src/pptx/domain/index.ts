@@ -43,11 +43,14 @@ export { px, deg, pct, pt, emu, rId, hexColor } from "./types";
 // =============================================================================
 
 export type {
+  PresentationFile,
   ZipFile,
   ZipEntry,
   ResourceMap,
   PlaceholderTable,
 } from "./opc";
+
+export { createZipAdapter } from "./zip-adapter";
 
 // =============================================================================
 // Theme Types (with XmlElement references)
