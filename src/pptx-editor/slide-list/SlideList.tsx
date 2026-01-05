@@ -16,6 +16,7 @@ import {
   useSlideKeyNavigation,
   useSlideDragDrop,
   useSlideGapHover,
+  useSlideItemHover,
   useSlideContextMenu,
 } from "./hooks";
 import { ContextMenu } from "../ui/context-menu";
@@ -93,8 +94,10 @@ export function SlideList({
   const {
     dragState,
     handleDragStart,
+    handleItemDragOver,
     handleGapDragOver,
     handleGapDrop,
+    handleItemDrop,
     handleDragEnd,
     isDragging,
     isGapTarget,
@@ -107,6 +110,21 @@ export function SlideList({
 
   // Gap hover for add button
   const { handleGapEnter, handleGapLeave, isGapHovered } = useSlideGapHover();
+
+  // Slide item hover (list-level management for single hover invariant)
+  const {
+    handleItemEnter,
+    handleItemLeave,
+    clearHover: clearItemHover,
+    isItemHovered,
+  } = useSlideItemHover();
+
+  // Clear item hover when drag starts
+  useEffect(() => {
+    if (dragState.isDragging) {
+      clearItemHover();
+    }
+  }, [dragState.isDragging, clearItemHover]);
 
   // Context menu
   const {
@@ -219,8 +237,8 @@ export function SlideList({
                 orientation={orientation}
                 isHovered={isGapHovered(index) && !dragState.isDragging}
                 isDragTarget={isGapTarget(index)}
-                onMouseEnter={() => handleGapEnter(index)}
-                onMouseLeave={handleGapLeave}
+                onPointerEnter={() => handleGapEnter(index)}
+                onPointerLeave={handleGapLeave}
                 onClick={() => handleAddAtGap(index)}
                 onDragOver={(e) => handleGapDragOver(e, index)}
                 onDrop={(e) => handleGapDrop(e, index)}
@@ -240,11 +258,16 @@ export function SlideList({
               canDelete={canDelete}
               isDragging={isItemDragging}
               isAnyDragging={dragState.isDragging}
+              isHovered={isItemHovered(slideWithId.id)}
               renderThumbnail={renderThumbnail}
               onClick={(e) => handleItemClick(slideWithId.id, index, e)}
               onContextMenu={(e) => handleContextMenu(slideWithId.id, e)}
               onDelete={() => handleDelete(slideWithId.id)}
+              onPointerEnter={() => handleItemEnter(slideWithId.id)}
+              onPointerLeave={() => handleItemLeave(slideWithId.id)}
               onDragStart={(e) => handleDragStart(e, slideWithId.id)}
+              onDragOver={(e) => handleItemDragOver(e, index)}
+              onDrop={(e) => handleItemDrop(e, index)}
               itemRef={isActive ? activeItemRef : undefined}
             />
           </div>
@@ -258,8 +281,8 @@ export function SlideList({
           orientation={orientation}
           isHovered={isGapHovered(slides.length) && !dragState.isDragging}
           isDragTarget={isGapTarget(slides.length)}
-          onMouseEnter={() => handleGapEnter(slides.length)}
-          onMouseLeave={handleGapLeave}
+          onPointerEnter={() => handleGapEnter(slides.length)}
+          onPointerLeave={handleGapLeave}
           onClick={() => handleAddAtGap(slides.length)}
           onDragOver={(e) => handleGapDragOver(e, slides.length)}
           onDrop={(e) => handleGapDrop(e, slides.length)}

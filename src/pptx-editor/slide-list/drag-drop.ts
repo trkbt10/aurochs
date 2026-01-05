@@ -116,6 +116,26 @@ export function isGapDragTarget(
   return dragState.isDragging && dragState.targetGapIndex === gapIndex;
 }
 
+/**
+ * Calculate gap index from cursor position over a slide item.
+ * Uses cursor position relative to item center to determine before/after.
+ */
+export function calculateGapIndexFromItemDragOver(
+  itemIndex: number,
+  orientation: "vertical" | "horizontal",
+  clientX: number,
+  clientY: number,
+  itemRect: DOMRect
+): number {
+  if (orientation === "vertical") {
+    const mid = itemRect.top + itemRect.height / 2;
+    return clientY < mid ? itemIndex : itemIndex + 1;
+  } else {
+    const mid = itemRect.left + itemRect.width / 2;
+    return clientX < mid ? itemIndex : itemIndex + 1;
+  }
+}
+
 // Legacy exports for backwards compatibility with tests
 export function getVerticalDropPosition(
   clientY: number,

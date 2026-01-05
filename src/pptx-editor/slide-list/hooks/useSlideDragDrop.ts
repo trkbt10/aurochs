@@ -16,6 +16,7 @@ import {
   isValidGapDrop,
   calculateTargetIndexFromGap,
   isGapDragTarget,
+  calculateGapIndexFromItemDragOver,
 } from "../drag-drop";
 
 export type UseSlideDragDropOptions = {
@@ -37,10 +38,14 @@ export type UseSlideDragDropResult = {
   readonly dragState: SlideDragState;
   /** Handle drag start for a slide */
   readonly handleDragStart: (e: React.DragEvent, slideId: SlideId) => void;
+  /** Handle drag over a slide item (calculates target gap) */
+  readonly handleItemDragOver: (e: React.DragEvent, itemIndex: number) => void;
   /** Handle drag over a gap */
   readonly handleGapDragOver: (e: React.DragEvent, gapIndex: number) => void;
   /** Handle drop on a gap */
   readonly handleGapDrop: (e: React.DragEvent, gapIndex: number) => void;
+  /** Handle drop on a slide item */
+  readonly handleItemDrop: (e: React.DragEvent, itemIndex: number) => void;
   /** Handle drag end */
   readonly handleDragEnd: () => void;
   /** Check if a slide is being dragged */
@@ -55,7 +60,7 @@ export type UseSlideDragDropResult = {
 export function useSlideDragDrop(
   options: UseSlideDragDropOptions
 ): UseSlideDragDropResult {
-  const { slides, selectedIds, onMoveSlides } = options;
+  const { slides, selectedIds, orientation, onMoveSlides } = options;
 
   const [dragState, setDragState] = useState<SlideDragState>(
     createIdleDragState()
@@ -76,6 +81,26 @@ export function useSlideDragDrop(
     [selectedIds]
   );
 
+  const handleItemDragOver = useCallback(
+    (e: React.DragEvent, itemIndex: number) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+
+      const target = e.currentTarget as HTMLElement;
+      const rect = target.getBoundingClientRect();
+      const gapIndex = calculateGapIndexFromItemDragOver(
+        itemIndex,
+        orientation,
+        e.clientX,
+        e.clientY,
+        rect
+      );
+
+      setDragState((prev) => updateDragOverGap(prev, gapIndex));
+    },
+    [orientation]
+  );
+
   const handleGapDragOver = useCallback(
     (e: React.DragEvent, gapIndex: number) => {
       e.preventDefault();
@@ -83,6 +108,37 @@ export function useSlideDragDrop(
       setDragState((prev) => updateDragOverGap(prev, gapIndex));
     },
     []
+  );
+
+  const handleItemDrop = useCallback(
+    (e: React.DragEvent, itemIndex: number) => {
+      e.preventDefault();
+
+      const target = e.currentTarget as HTMLElement;
+      const rect = target.getBoundingClientRect();
+      const gapIndex = calculateGapIndexFromItemDragOver(
+        itemIndex,
+        orientation,
+        e.clientX,
+        e.clientY,
+        rect
+      );
+
+      if (!isValidGapDrop(dragState, gapIndex, slides)) {
+        setDragState(createIdleDragState());
+        return;
+      }
+
+      const targetIndex = calculateTargetIndexFromGap(
+        slides,
+        dragState.draggingIds,
+        gapIndex
+      );
+
+      onMoveSlides?.(dragState.draggingIds, targetIndex);
+      setDragState(createIdleDragState());
+    },
+    [orientation, dragState, slides, onMoveSlides]
   );
 
   const handleGapDrop = useCallback(
@@ -123,8 +179,10 @@ export function useSlideDragDrop(
   return {
     dragState,
     handleDragStart,
+    handleItemDragOver,
     handleGapDragOver,
     handleGapDrop,
+    handleItemDrop,
     handleDragEnd,
     isDragging,
     isGapTarget,

@@ -17,8 +17,8 @@ export function SlideListGap({
   orientation,
   isHovered,
   isDragTarget,
-  onMouseEnter,
-  onMouseLeave,
+  onPointerEnter,
+  onPointerLeave,
   onClick,
   onDragOver,
   onDrop,
@@ -26,8 +26,8 @@ export function SlideListGap({
   return (
     <div
       style={getGapStyle(orientation, isDragTarget)}
-      onMouseEnter={onMouseEnter}
-      onMouseLeave={onMouseLeave}
+      onPointerEnter={onPointerEnter}
+      onPointerLeave={onPointerLeave}
       onDragOver={onDragOver}
       onDrop={onDrop}
     >

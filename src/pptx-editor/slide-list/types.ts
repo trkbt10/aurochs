@@ -151,8 +151,10 @@ export type SlideListItemProps = {
   readonly canDelete: boolean;
   /** This specific item is being dragged (for opacity) */
   readonly isDragging: boolean;
-  /** Any drag operation is active (for clearing hover) */
+  /** Any drag operation is active (for suppressing hover UI) */
   readonly isAnyDragging: boolean;
+  /** Whether this item is currently hovered (managed at list level) */
+  readonly isHovered: boolean;
   readonly renderThumbnail?: (
     slide: SlideWithId,
     index: number
@@ -162,9 +164,15 @@ export type SlideListItemProps = {
   readonly onClick: (e: React.MouseEvent) => void;
   readonly onContextMenu: (e: React.MouseEvent) => void;
   readonly onDelete: () => void;
+  readonly onPointerEnter: () => void;
+  readonly onPointerLeave: () => void;
 
   // Drag handlers
   readonly onDragStart: (e: React.DragEvent) => void;
+  /** Handle drag over this item (for determining drop gap) */
+  readonly onDragOver: (e: React.DragEvent) => void;
+  /** Handle drop on this item */
+  readonly onDrop: (e: React.DragEvent) => void;
 
   /** Ref for scroll-into-view */
   readonly itemRef?: React.RefObject<HTMLDivElement | null>;
@@ -178,8 +186,8 @@ export type SlideListGapProps = {
   readonly orientation: SlideListOrientation;
   readonly isHovered: boolean;
   readonly isDragTarget: boolean;
-  readonly onMouseEnter: () => void;
-  readonly onMouseLeave: () => void;
+  readonly onPointerEnter: () => void;
+  readonly onPointerLeave: () => void;
   readonly onClick: () => void;
   readonly onDragOver: (e: React.DragEvent) => void;
   readonly onDrop: (e: React.DragEvent) => void;

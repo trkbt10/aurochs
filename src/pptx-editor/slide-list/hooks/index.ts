@@ -23,6 +23,12 @@ export type {
 export { useSlideGapHover } from "./useSlideGapHover";
 export type { UseSlideGapHoverResult } from "./useSlideGapHover";
 
+export { useSlideItemHover } from "./useSlideItemHover";
+export type {
+  SlideItemHoverState,
+  UseSlideItemHoverResult,
+} from "./useSlideItemHover";
+
 export { useSlideContextMenu, SLIDE_LIST_MENU_ACTIONS } from "./useSlideContextMenu";
 export type {
   UseSlideContextMenuOptions,

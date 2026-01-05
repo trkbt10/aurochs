@@ -135,6 +135,21 @@ export const thumbnailContentStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
+  // Ensure SVG children scale properly to fill container
+  overflow: "hidden",
+  // Allow clicks to pass through to parent container (which has onClick)
+  pointerEvents: "none",
+};
+
+/**
+ * Style for thumbnail content wrapper to ensure SVGs fill properly.
+ * Apply to div containing SVG or image content.
+ */
+export const thumbnailInnerStyle: CSSProperties = {
+  width: "100%",
+  height: "100%",
+  display: "block",
+  lineHeight: 0,
 };
 
 /** Style for children of thumbnailContent to fill the container */
