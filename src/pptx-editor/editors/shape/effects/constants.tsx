@@ -121,7 +121,9 @@ function createDefaultReflection(): ReflectionEffect {
   return {
     blurRadius: px(0),
     startOpacity: pct(50),
+    startPosition: pct(0),
     endOpacity: pct(0),
+    endPosition: pct(100),
     distance: px(0),
     direction: deg(90),
     fadeDirection: deg(90),

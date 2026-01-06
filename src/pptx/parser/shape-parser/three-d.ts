@@ -21,6 +21,7 @@ import type {
   PresetMaterialType,
   SolidFill,
 } from "../../domain";
+import { px } from "../../domain/types";
 import { getAngleAttr, getEmuAttr, getPercent100kAttr } from "../primitive";
 import { parseColorFromParent } from "../graphics/color-parser";
 
@@ -64,19 +65,33 @@ function isBevelPresetType(value: string | undefined): value is BevelPresetType 
   }
 }
 
+/**
+ * Default bevel width/height: 76200 EMU = 6pt
+ * @see ECMA-376 Part 1, Section 20.1.5.1 (bevelT/bevelB)
+ */
+const DEFAULT_BEVEL_SIZE_EMU = 76200;
+const DEFAULT_BEVEL_SIZE_PX = DEFAULT_BEVEL_SIZE_EMU / 914400 * 96; // ~8px
+
+/**
+ * Parse bevel element with ECMA-376 defaults applied.
+ *
+ * ECMA-376 defaults:
+ * - w: 76200 EMU (6pt)
+ * - h: 76200 EMU (6pt)
+ * - prst: "circle"
+ *
+ * @see ECMA-376 Part 1, Section 20.1.5.1
+ */
 function parseBevel(element: XmlElement | undefined): Bevel3d | undefined {
   if (!element) {
     return undefined;
   }
-  const width = getEmuAttr(element, "w");
-  const height = getEmuAttr(element, "h");
-  const preset = getAttr(element, "prst");
-  if (width === undefined || height === undefined) {
-    return undefined;
-  }
-  if (!isBevelPresetType(preset)) {
-    return undefined;
-  }
+  // Apply ECMA-376 defaults: w=76200, h=76200, prst="circle"
+  const width = getEmuAttr(element, "w") ?? px(DEFAULT_BEVEL_SIZE_PX);
+  const height = getEmuAttr(element, "h") ?? px(DEFAULT_BEVEL_SIZE_PX);
+  const presetAttr = getAttr(element, "prst");
+  const preset: BevelPresetType = isBevelPresetType(presetAttr) ? presetAttr : "circle";
+
   return { width, height, preset };
 }
 
@@ -283,6 +298,21 @@ export function parseScene3d(spPr: XmlElement | undefined): Scene3d | undefined 
   };
 }
 
+/**
+ * Parse sp3d (3D shape properties) element.
+ *
+ * ECMA-376 defaults:
+ * - z: 0
+ * - extrusionH: 0
+ * - contourW: 0
+ * - prstMaterial: "warmMatte"
+ *
+ * Note: ECMA-376 supports separate bevelT (top) and bevelB (bottom).
+ * Currently we parse only one bevel (preferring bevelT) as Three.js
+ * ExtrudeGeometry doesn't support asymmetric top/bottom bevels.
+ *
+ * @see ECMA-376 Part 1, Section 20.1.5.9 (sp3d)
+ */
 export function parseShape3d(spPr: XmlElement | undefined): Shape3d | undefined {
   if (!spPr) {
     return undefined;
@@ -295,14 +325,18 @@ export function parseShape3d(spPr: XmlElement | undefined): Shape3d | undefined 
   const extrusionColor = toSolidFill(parseColorFromParent(getChild(sp3d, "a:extrusionClr")));
   const contourColor = toSolidFill(parseColorFromParent(getChild(sp3d, "a:contourClr")));
 
+  // Parse bevel - prefer bevelT (top), fallback to bevelB (bottom)
   const bevel = parseBevel(getChild(sp3d, "a:bevelT")) ?? parseBevel(getChild(sp3d, "a:bevelB"));
-  const preset = parsePresetMaterialType(getAttr(sp3d, "prstMaterial"));
+
+  // Apply ECMA-376 default: prstMaterial="warmMatte"
+  const materialAttr = getAttr(sp3d, "prstMaterial");
+  const material: PresetMaterialType = isPresetMaterialType(materialAttr) ? materialAttr : "warmMatte";
 
   return {
     z: getEmuAttr(sp3d, "z"),
     extrusionHeight: getEmuAttr(sp3d, "extrusionH"),
     contourWidth: getEmuAttr(sp3d, "contourW"),
-    preset,
+    preset: material,
     extrusionColor,
     contourColor,
     bevel,

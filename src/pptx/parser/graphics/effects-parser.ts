@@ -88,12 +88,21 @@ function parseOuterShadow(element: XmlElement, overrideColor?: Color): ShadowEff
     blurRadius: getEmuAttr(element, "blurRad") ?? px(0),
     distance: getEmuAttr(element, "dist") ?? px(0),
     direction: getAngleAttr(element, "dir") ?? deg(0),
-    alignment: undefined, // Parsed from algn attribute if needed
+    scaleX: getPercent100kAttr(element, "sx"),
+    scaleY: getPercent100kAttr(element, "sy"),
+    skewX: getAngleAttr(element, "kx"),
+    skewY: getAngleAttr(element, "ky"),
+    alignment: getAttr(element, "algn"),
+    rotateWithShape: getBoolAttrOr(element, "rotWithShape", true),
   };
 }
 
 /**
  * Parse inner shadow effect
+ *
+ * Note: Unlike outerShdw, innerShdw only has blurRad, dist, dir attributes.
+ * It does NOT have sx/sy/kx/ky/algn/rotWithShape per ECMA-376.
+ *
  * @see ECMA-376 Part 1, Section 20.1.8.40
  */
 function parseInnerShadow(element: XmlElement, overrideColor?: Color): ShadowEffect | undefined {
@@ -107,6 +116,7 @@ function parseInnerShadow(element: XmlElement, overrideColor?: Color): ShadowEff
     blurRadius: getEmuAttr(element, "blurRad") ?? px(0),
     distance: getEmuAttr(element, "dist") ?? px(0),
     direction: getAngleAttr(element, "dir") ?? deg(0),
+    // innerShdw does NOT have sx/sy/kx/ky/algn/rotWithShape - those are outerShdw only
   };
 }
 
@@ -135,18 +145,41 @@ function parseGlow(element: XmlElement, overrideColor?: Color): GlowEffect | und
 
 /**
  * Parse reflection effect
+ *
+ * ECMA-376 defaults:
+ * - blurRad: 0
+ * - stA: 100000 (100%)
+ * - stPos: 0
+ * - endA: 0
+ * - endPos: 100000 (100%)
+ * - dist: 0
+ * - dir: 0
+ * - fadeDir: 5400000 (90°)
+ * - sx: 100000 (100%)
+ * - sy: 100000 (100%)
+ * - kx: 0
+ * - ky: 0
+ * - algn: "b" (bottom)
+ * - rotWithShape: true
+ *
  * @see ECMA-376 Part 1, Section 20.1.8.50
  */
 function parseReflection(element: XmlElement): ReflectionEffect | undefined {
   return {
     blurRadius: getEmuAttr(element, "blurRad") ?? px(0),
     startOpacity: getPercent100kAttr(element, "stA") ?? pct(100),
+    startPosition: getPercent100kAttr(element, "stPos") ?? pct(0),
     endOpacity: getPercent100kAttr(element, "endA") ?? pct(0),
+    endPosition: getPercent100kAttr(element, "endPos") ?? pct(100),
     distance: getEmuAttr(element, "dist") ?? px(0),
     direction: getAngleAttr(element, "dir") ?? deg(0),
-    fadeDirection: getAngleAttr(element, "fadeDir") ?? deg(0),
+    fadeDirection: getAngleAttr(element, "fadeDir") ?? deg(90), // ECMA-376 default is 5400000 = 90°
     scaleX: getPercent100kAttr(element, "sx") ?? pct(100),
     scaleY: getPercent100kAttr(element, "sy") ?? pct(100),
+    skewX: getAngleAttr(element, "kx"),
+    skewY: getAngleAttr(element, "ky"),
+    alignment: getAttr(element, "algn"),
+    rotateWithShape: getBoolAttrOr(element, "rotWithShape", true),
   };
 }
 

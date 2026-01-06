@@ -224,24 +224,51 @@ export type Scene3d = {
 
 /**
  * 3D bevel
+ *
+ * ECMA-376 defaults:
+ * - w: 76200 EMU (6pt ≈ 8px)
+ * - h: 76200 EMU (6pt ≈ 8px)
+ * - prst: "circle"
+ *
  * @see ECMA-376 Part 1, Section 20.1.5.1 (bevelT/bevelB)
  */
 export type Bevel3d = {
+  /** Bevel width (ECMA-376 default: 76200 EMU ≈ 8px) */
   readonly width: Pixels;
+  /** Bevel height (ECMA-376 default: 76200 EMU ≈ 8px) */
   readonly height: Pixels;
+  /** Bevel preset type (ECMA-376 default: "circle") */
   readonly preset: BevelPresetType;
 };
 
 /**
  * 3D shape properties
+ *
+ * ECMA-376 defaults:
+ * - z: 0
+ * - extrusionH: 0
+ * - contourW: 0
+ * - prstMaterial: "warmMatte"
+ *
+ * Note: ECMA-376 supports separate bevelT (top) and bevelB (bottom).
+ * Currently we use a single bevel field (preferring bevelT) as Three.js
+ * ExtrudeGeometry doesn't support asymmetric top/bottom bevels.
+ *
  * @see ECMA-376 Part 1, Section 20.1.5.9 (sp3d)
  */
 export type Shape3d = {
+  /** Shape depth (z coordinate) */
   readonly z?: Pixels;
+  /** Extrusion height (extrusionH) */
   readonly extrusionHeight?: Pixels;
+  /** Contour width (contourW) */
   readonly contourWidth?: Pixels;
+  /** Preset material type (prstMaterial) - default "warmMatte" */
   readonly preset?: PresetMaterialType;
+  /** Extrusion color (extrusionClr) */
   readonly extrusionColor?: Fill;
+  /** Contour color (contourClr) */
   readonly contourColor?: Fill;
+  /** Bevel (bevelT preferred, bevelB fallback) */
   readonly bevel?: Bevel3d;
 };

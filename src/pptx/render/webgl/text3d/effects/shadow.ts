@@ -30,6 +30,10 @@ export type ShadowConfig = {
   readonly direction: number;
   /** Shadow opacity (0-1) */
   readonly opacity?: number;
+  /** Horizontal scale factor (0-100+, default 100) @see ECMA-376 sx attribute */
+  readonly scaleX?: number;
+  /** Vertical scale factor (0-100+, default 100) @see ECMA-376 sy attribute */
+  readonly scaleY?: number;
 };
 
 /**
@@ -100,13 +104,24 @@ export function createShadowLight(
 }
 
 /**
+ * Coordinate scale for converting pixel units to scene units.
+ * Must match COORDINATE_SCALE in core.ts.
+ */
+const COORDINATE_SCALE = 1 / 96;
+
+/**
  * Create a drop shadow mesh (2D shadow plane beneath the object).
  *
  * This is a simpler approach than shadow mapping, suitable for
  * stylized shadows.
  *
+ * The shadow scale is determined by:
+ * 1. ECMA-376 scaleX/scaleY attributes (default 100%)
+ * 2. Coordinate system conversion (pixels to scene units)
+ *
  * @param geometry - Source geometry to create shadow for
  * @param config - Shadow configuration
+ * @see ECMA-376 Part 1, Section 20.1.8.49 (outerShdw)
  */
 export function createDropShadowMesh(
   geometry: THREE.BufferGeometry,
@@ -155,18 +170,25 @@ export function createDropShadowMesh(
   const shadowMesh = new THREE.Mesh(shadowGeometry, shadowMaterial);
   shadowMesh.name = "text-shadow";
 
+  // Apply ECMA-376 scale (sx, sy) combined with coordinate conversion
+  // scaleX/scaleY are in percent (100 = 100%), COORDINATE_SCALE converts pixels to scene units
+  const ecmaScaleX = (config.scaleX ?? 100) / 100;
+  const ecmaScaleY = (config.scaleY ?? 100) / 100;
+  shadowMesh.scale.set(
+    ecmaScaleX * COORDINATE_SCALE,
+    ecmaScaleY * COORDINATE_SCALE,
+    COORDINATE_SCALE,
+  );
+
   // Position shadow based on direction and distance
   const angleRad = (config.direction * Math.PI) / 180;
-  const normalizedDist = config.distance / 96; // Convert pixels to scene units
+  const normalizedDist = config.distance * COORDINATE_SCALE;
 
   shadowMesh.position.set(
     Math.cos(angleRad) * normalizedDist,
     -Math.sin(angleRad) * normalizedDist,
     -0.1, // Slightly behind/below
   );
-
-  // Rotate to face camera (flat on XY plane by default)
-  // Adjust based on scene orientation as needed
 
   return shadowMesh;
 }

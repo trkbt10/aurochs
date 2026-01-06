@@ -402,7 +402,7 @@ describe("parseShapeElement - p:sp (ECMA-376 Section 19.3.1.43)", () => {
       }
     });
 
-    it("ignores invalid bevel preset values", () => {
+    it("uses default 'circle' preset for invalid bevel preset values (ECMA-376 compliance)", () => {
       const sp = el("p:sp", {}, [
         el("p:nvSpPr", {}, [el("p:cNvPr", { id: "12", name: "Bad Bevel Shape" }), el("p:cNvSpPr"), el("p:nvPr")]),
         el("p:spPr", {}, [
@@ -415,7 +415,12 @@ describe("parseShapeElement - p:sp (ECMA-376 Section 19.3.1.43)", () => {
       const result = parseShapeElement(sp);
 
       if (result?.type === "sp") {
-        expect(result.properties.shape3d?.bevel).toBeUndefined();
+        // ECMA-376: invalid preset falls back to default "circle"
+        expect(result.properties.shape3d?.bevel).toEqual({
+          width: 96, // 914400 EMU = 1 inch = 96px
+          height: 96,
+          preset: "circle", // ECMA-376 default
+        });
       }
     });
   });
@@ -463,7 +468,11 @@ describe("parseShapeElement - p:sp (ECMA-376 Section 19.3.1.43)", () => {
       const result = parseShapeElement(sp, undefined, undefined, formatScheme);
 
       if (result?.type === "sp") {
-        expect(result.properties.effects?.shadow?.color).toBe("FF0000");
+        // Color is resolved from phClr (placeholder color) to the effectRef color (FF0000)
+        expect(result.properties.effects?.shadow?.color).toEqual({
+          spec: { type: "srgb", value: "FF0000" },
+          transform: undefined,
+        });
       }
     });
   });

@@ -40,6 +40,7 @@ export type BlendMode = "over" | "mult" | "screen" | "darken" | "lighten";
 /**
  * Shadow effect
  * @see ECMA-376 Part 1, Section 20.1.8.49 (outerShdw)
+ * @see ECMA-376 Part 1, Section 20.1.8.40 (innerShdw)
  */
 export type ShadowEffect = {
   readonly type: "outer" | "inner";
@@ -47,7 +48,18 @@ export type ShadowEffect = {
   readonly blurRadius: Pixels;
   readonly distance: Pixels;
   readonly direction: Degrees;
+  /** Horizontal scale factor (default 100%) @see ECMA-376 sx attribute */
+  readonly scaleX?: Percent;
+  /** Vertical scale factor (default 100%) @see ECMA-376 sy attribute */
+  readonly scaleY?: Percent;
+  /** Horizontal skew angle @see ECMA-376 kx attribute */
+  readonly skewX?: Degrees;
+  /** Vertical skew angle @see ECMA-376 ky attribute */
+  readonly skewY?: Degrees;
+  /** Shadow alignment @see ECMA-376 algn attribute */
   readonly alignment?: string;
+  /** Rotate shadow with shape @see ECMA-376 rotWithShape attribute */
+  readonly rotateWithShape?: boolean;
 };
 
 /**
@@ -107,13 +119,28 @@ export type GlowEffect = {
  */
 export type ReflectionEffect = {
   readonly blurRadius: Pixels;
+  /** Start opacity (stA) - default 100% */
   readonly startOpacity: Percent;
+  /** Start position (stPos) - default 0% @see ECMA-376 stPos attribute */
+  readonly startPosition: Percent;
+  /** End opacity (endA) - default 0% */
   readonly endOpacity: Percent;
+  /** End position (endPos) - default 100% @see ECMA-376 endPos attribute */
+  readonly endPosition: Percent;
   readonly distance: Pixels;
   readonly direction: Degrees;
+  /** Fade direction - default 90° (5400000) @see ECMA-376 fadeDir attribute */
   readonly fadeDirection: Degrees;
   readonly scaleX: Percent;
   readonly scaleY: Percent;
+  /** Horizontal skew angle @see ECMA-376 kx attribute */
+  readonly skewX?: Degrees;
+  /** Vertical skew angle @see ECMA-376 ky attribute */
+  readonly skewY?: Degrees;
+  /** Reflection alignment @see ECMA-376 algn attribute */
+  readonly alignment?: string;
+  /** Rotate with shape @see ECMA-376 rotWithShape attribute */
+  readonly rotateWithShape?: boolean;
 };
 
 /**
