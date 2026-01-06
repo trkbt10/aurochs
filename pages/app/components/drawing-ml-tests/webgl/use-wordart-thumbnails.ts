@@ -10,7 +10,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { createText3DRendererAsync, type Text3DRenderConfig } from "@lib/pptx/render/webgl/text3d";
-import { extractText3DRuns } from "@lib/pptx/render/react/primitives/Text";
+import { extractText3DRuns } from "@lib/pptx/render/react/primitives";
 import type { DemoWordArtPreset } from "./wordart-demo-presets";
 import {
   demoColorContext,
@@ -41,12 +41,14 @@ async function generateThumbnail(
   const primaryColor = getPrimaryColor(preset);
   const fill = demoFillToMaterial3DFill(preset.fill);
 
+  const fontFamily = preset.fontFamily ?? "Arial";
   const textBody = createTextBody([
     createParagraph([
       createTextRun("Aa", createRunProperties({
         fontSize: 14,
-        fontFamily: "Arial",
-        bold: true,
+        fontFamily,
+        bold: preset.bold === true,
+        italic: preset.italicAngle !== undefined,
         color: primaryColor,
       })),
     ]),

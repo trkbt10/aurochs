@@ -111,16 +111,31 @@ export function createOutline(
 }
 
 /**
- * Create shadow mesh for text
+ * Create shadow mesh for text.
+ *
+ * The shadow position combines:
+ * 1. The mesh position (where the text is)
+ * 2. The shadow's direction/distance offset (from config)
+ *
+ * The shadow geometry is scaled to match the main text mesh.
  */
 export function createShadow(
   geometry: THREE.BufferGeometry,
   config: ShadowConfig,
   position: THREE.Vector3,
+  scale: THREE.Vector3,
 ): THREE.Mesh {
   const shadowMesh = createDropShadowMesh(geometry, config);
-  shadowMesh.position.x = position.x;
-  shadowMesh.position.y = position.y;
+
+  // Scale shadow to match main mesh (shadow geometry is in pixel units)
+  shadowMesh.scale.copy(scale);
+
+  // Add mesh position to shadow's direction/distance offset
+  // createDropShadowMesh already set the offset, we add the mesh position
+  shadowMesh.position.x += position.x;
+  shadowMesh.position.y += position.y;
+  // Keep z offset from createDropShadowMesh (slightly behind)
+
   return shadowMesh;
 }
 
@@ -202,7 +217,7 @@ export function applyAllEffects(
 
   // Apply shadow
   if (effects.shadow) {
-    const shadowMesh = createShadow(geometry, effects.shadow, mesh.position);
+    const shadowMesh = createShadow(geometry, effects.shadow, mesh.position, mesh.scale);
     group.add(shadowMesh);
     (result as { shadowMesh: THREE.Mesh }).shadowMesh = shadowMesh;
   }

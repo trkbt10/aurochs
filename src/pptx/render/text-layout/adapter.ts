@@ -370,6 +370,7 @@ function resolveRunProperties(
   bookmark: string | undefined;
   textOutline: TextOutlineConfig | undefined;
   kerning: Points | undefined;
+  opticalKerning?: boolean;
   underlineColor: string | undefined;
 } {
   const fontSize = props?.fontSize ?? pt(DEFAULT_FONT_SIZE_PT);
@@ -432,6 +433,7 @@ function resolveRunProperties(
   // Kerning threshold
   // @see ECMA-376 Part 1, Section 21.1.2.3.9 (kern attribute)
   const kerning = props?.kerning;
+  const opticalKerning = props?.wpOpticalKerning;
 
   // Underline color
   // @see ECMA-376 Part 1, Section 21.1.2.3.33 (a:uLn)
@@ -458,6 +460,7 @@ function resolveRunProperties(
     bookmark,
     textOutline,
     kerning,
+    opticalKerning,
     underlineColor,
   };
 }

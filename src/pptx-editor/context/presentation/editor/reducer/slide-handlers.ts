@@ -17,6 +17,7 @@ import {
   duplicateSlide,
   moveSlide,
   updateSlide,
+  updateSlideEntry,
 } from "../slide";
 import { pushHistory, createEmptySelection, createIdleDragState } from "../../../slide/state";
 
@@ -55,6 +56,10 @@ type DuplicateSlideAction = Extract<PresentationEditorAction, { type: "DUPLICATE
 type MoveSlideAction = Extract<PresentationEditorAction, { type: "MOVE_SLIDE" }>;
 type SelectSlideAction = Extract<PresentationEditorAction, { type: "SELECT_SLIDE" }>;
 type UpdateSlideAction = Extract<PresentationEditorAction, { type: "UPDATE_SLIDE" }>;
+type UpdateActiveSlideEntryAction = Extract<
+  PresentationEditorAction,
+  { type: "UPDATE_ACTIVE_SLIDE_ENTRY" }
+>;
 
 function handleAddSlide(
   state: PresentationEditorState,
@@ -166,6 +171,25 @@ function handleUpdateSlide(
   };
 }
 
+function handleUpdateActiveSlideEntry(
+  state: PresentationEditorState,
+  action: UpdateActiveSlideEntryAction
+): PresentationEditorState {
+  const activeSlideId = state.activeSlideId;
+  if (!activeSlideId) {
+    return state;
+  }
+  const newDoc = updateSlideEntry(
+    state.documentHistory.present,
+    activeSlideId,
+    action.updater
+  );
+  return {
+    ...state,
+    documentHistory: pushHistory(state.documentHistory, newDoc),
+  };
+}
+
 /**
  * Slide management handlers
  */
@@ -176,4 +200,5 @@ export const SLIDE_HANDLERS: HandlerMap = {
   MOVE_SLIDE: handleMoveSlide,
   SELECT_SLIDE: handleSelectSlide,
   UPDATE_SLIDE: handleUpdateSlide,
+  UPDATE_ACTIVE_SLIDE_ENTRY: handleUpdateActiveSlideEntry,
 };

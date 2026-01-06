@@ -9,4 +9,6 @@ export { createRenderContext, getLayoutNonPlaceholderShapes } from "./render-con
 export { loadPptxFromBuffer, loadPptxFromFile, loadPptxFromUrl } from "./pptx-loader";
 export type { LoadedPresentation } from "./pptx-loader";
 export { convertToPresentationDocument } from "./presentation-converter";
+export { buildSlideLayoutOptions, loadSlideLayoutBundle } from "./slide-layouts";
+export type { SlideLayoutOption, SlideLayoutBundle } from "./slide-layouts";
 export type { PresentationDocument, SlideWithId, SlideId } from "./presentation-document";

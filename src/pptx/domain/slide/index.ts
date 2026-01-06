@@ -27,6 +27,9 @@ export type {
   SlideParams,
 } from "./types";
 
+export type { SlideLayoutAttributes } from "./layout";
+export { getSlideLayoutAttributes, applySlideLayoutAttributes } from "./layout";
+
 // Slide content indexing types
 export type { IndexTables, SlideNodeType } from "./indexing";
 

@@ -24,6 +24,7 @@ export type TextGeometryConfig = {
   readonly bevel?: Bevel3d;
   readonly letterSpacing?: number;
   readonly enableKerning?: boolean;
+  readonly opticalKerning?: boolean;
 };
 
 // =============================================================================
@@ -51,6 +52,7 @@ export async function createTextGeometryAsync(
     fontStyle: config.fontStyle,
     letterSpacing: config.letterSpacing,
     enableKerning: config.enableKerning,
+    opticalKerning: config.opticalKerning,
   });
 
   if (!layout?.combinedPaths?.length) {

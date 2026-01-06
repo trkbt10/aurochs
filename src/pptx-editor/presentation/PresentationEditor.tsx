@@ -41,7 +41,15 @@ import { withUpdatedTransform } from "../shape/transform";
 import { calculateAlignedBounds } from "../shape/alignment";
 import { updateShapeById } from "../shape/mutation";
 import type { ShapeHierarchyTarget } from "../shape/hierarchy";
-import { createRenderContext, getLayoutNonPlaceholderShapes } from "../../pptx/app";
+import {
+  buildSlideLayoutOptions,
+  createRenderContext,
+  getLayoutNonPlaceholderShapes,
+  loadSlideLayoutBundle,
+} from "../../pptx/app";
+import { applySlideLayoutAttributes, getSlideLayoutAttributes } from "../../pptx/domain/slide";
+import type { SlideLayoutAttributes } from "../../pptx/domain/slide";
+import { RELATIONSHIP_TYPES } from "../../pptx/opc";
 import { createZipAdapter } from "../../pptx/domain";
 import { CanvasControls } from "../slide-canvas/CanvasControls";
 import { CanvasStage } from "../slide-canvas/CanvasStage";
@@ -453,6 +461,32 @@ function EditorContent({
     return undefined;
   }, [width, height, activeSlide?.apiSlide, zipFile]);
 
+  const layoutOptions = useMemo(() => {
+    const presentationFile = document.presentationFile;
+    if (!presentationFile) {
+      return [];
+    }
+    return buildSlideLayoutOptions(presentationFile);
+  }, [document.presentationFile]);
+
+  const layoutAttributes = useMemo(() => {
+    const layoutDoc = activeSlide?.apiSlide?.layout ?? null;
+    if (!layoutDoc) {
+      return undefined;
+    }
+    return getSlideLayoutAttributes(layoutDoc);
+  }, [activeSlide?.apiSlide?.layout]);
+
+  const layoutPath = useMemo(() => {
+    if (!activeSlide) {
+      return undefined;
+    }
+    if (activeSlide.layoutPathOverride) {
+      return activeSlide.layoutPathOverride;
+    }
+    return activeSlide.apiSlide?.relationships.getTargetByType(RELATIONSHIP_TYPES.SLIDE_LAYOUT);
+  }, [activeSlide]);
+
   // Get non-placeholder shapes from layout for rendering behind slide content
   const layoutShapes = useMemo(() => {
     const apiSlide = activeSlide?.apiSlide;
@@ -772,6 +806,63 @@ function EditorContent({
     [dispatch]
   );
 
+  const handleLayoutAttributesChange = useCallback(
+    (attributes: SlideLayoutAttributes) => {
+      dispatch({
+        type: "UPDATE_ACTIVE_SLIDE_ENTRY",
+        updater: (entry) => {
+          if (!entry.apiSlide || !entry.apiSlide.layout) {
+            throw new Error("Layout attributes require slide layout data.");
+          }
+          const updatedLayout = applySlideLayoutAttributes(entry.apiSlide.layout, attributes);
+          return {
+            ...entry,
+            apiSlide: { ...entry.apiSlide, layout: updatedLayout },
+            slide: { ...entry.slide },
+          };
+        },
+      });
+    },
+    [dispatch]
+  );
+
+  const handleLayoutChange = useCallback(
+    (layoutTargetPath: string) => {
+      const presentationFile = document.presentationFile;
+      if (!presentationFile) {
+        throw new Error("Layout selection requires presentation file.");
+      }
+      dispatch({
+        type: "UPDATE_ACTIVE_SLIDE_ENTRY",
+        updater: (entry) => {
+          if (!entry.apiSlide) {
+            throw new Error("Layout selection requires API slide data.");
+          }
+          const bundle = loadSlideLayoutBundle(presentationFile, layoutTargetPath);
+          const updatedApiSlide = {
+            ...entry.apiSlide,
+            layout: bundle.layout,
+            layoutTables: bundle.layoutTables,
+            layoutRelationships: bundle.layoutRelationships,
+            master: bundle.master,
+            masterTables: bundle.masterTables,
+            masterTextStyles: bundle.masterTextStyles,
+            masterRelationships: bundle.masterRelationships,
+            theme: bundle.theme,
+            themeRelationships: bundle.themeRelationships,
+          };
+          return {
+            ...entry,
+            apiSlide: updatedApiSlide,
+            layoutPathOverride: layoutTargetPath,
+            slide: { ...entry.slide },
+          };
+        },
+      });
+    },
+    [dispatch, document.presentationFile]
+  );
+
   const handleGroup = useCallback(
     (shapeIds: readonly ShapeId[]) => {
       dispatch({ type: "GROUP_SHAPES", shapeIds });
@@ -964,12 +1055,17 @@ function EditorContent({
                   <Panel title="Properties">
                     <PropertyPanel
                       slide={slide}
+                      layoutAttributes={layoutAttributes}
+                      layoutPath={layoutPath}
+                      layoutOptions={layoutOptions}
                       selectedShapes={selectedShapes}
                       primaryShape={primaryShape}
                       onShapeChange={handleShapeChange}
                       onSlideChange={handleSlideChange}
                       onUngroup={handleUngroup}
                       onSelect={handleSelect}
+                      onLayoutAttributesChange={handleLayoutAttributesChange}
+                      onLayoutChange={handleLayoutChange}
                     />
                   </Panel>
                 </div>

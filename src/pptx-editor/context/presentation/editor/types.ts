@@ -138,6 +138,7 @@ export type PresentationEditorAction =
 
   // Active slide mutations
   | { readonly type: "UPDATE_ACTIVE_SLIDE"; readonly updater: (slide: Slide) => Slide }
+  | { readonly type: "UPDATE_ACTIVE_SLIDE_ENTRY"; readonly updater: (slide: SlideWithId) => SlideWithId }
   | {
       readonly type: "UPDATE_SHAPE";
       readonly shapeId: ShapeId;

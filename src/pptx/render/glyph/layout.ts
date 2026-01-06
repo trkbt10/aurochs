@@ -18,6 +18,7 @@ import type {
 } from "./types";
 import { getKerningAdjustment } from "./cache";
 import { extractGlyphContour } from "./extractor";
+import { calculateOpticalKerningAdjustment } from "./optical-kerning";
 
 // =============================================================================
 // Main API
@@ -47,7 +48,9 @@ export function layoutText(
   };
 
   const letterSpacing = config.letterSpacing ?? 0;
+  const useOpticalKerning = config.opticalKerning === true;
   const enableKerning = config.enableKerning ?? true;
+  const useFontKerning = enableKerning && !useOpticalKerning;
 
   // Extract all glyphs
   const chars = [...text]; // Properly handle Unicode (emoji, etc.)
@@ -64,8 +67,13 @@ export function layoutText(
 
     // Apply kerning adjustment
     let kerning = 0;
-    if (enableKerning && i > 0) {
-      kerning = getKerningAdjustment(config.fontFamily, chars[i - 1], char);
+    if (i > 0) {
+      if (useOpticalKerning) {
+        const prevGlyph = glyphs[i - 1].glyph;
+        kerning = calculateOpticalKerningAdjustment(prevGlyph, glyph, letterSpacing);
+      } else if (useFontKerning) {
+        kerning = getKerningAdjustment(config.fontFamily, chars[i - 1], char);
+      }
     }
 
     const x = cursorX + kerning;
@@ -147,16 +155,27 @@ export function measureTextWidth(
 
   const chars = [...text];
   let width = 0;
+  const letterSpacing = config.letterSpacing ?? 0;
+  const useOpticalKerning = config.opticalKerning === true;
+  const enableKerning = config.enableKerning ?? true;
+  const useFontKerning = enableKerning && !useOpticalKerning;
+  let prevGlyph: GlyphContour | null = null;
 
   for (let i = 0; i < chars.length; i++) {
     const glyph = extractGlyphContour(chars[i], config.fontFamily, style);
     width += glyph.metrics.advanceWidth;
 
-    if (i > 0 && config.enableKerning !== false) {
-      width += getKerningAdjustment(config.fontFamily, chars[i - 1], chars[i]);
+    if (i > 0) {
+      if (useOpticalKerning && prevGlyph) {
+        width += calculateOpticalKerningAdjustment(prevGlyph, glyph, letterSpacing);
+      } else if (useFontKerning) {
+        width += getKerningAdjustment(config.fontFamily, chars[i - 1], chars[i]);
+      }
     }
+
+    prevGlyph = glyph;
   }
 
-  width += (config.letterSpacing ?? 0) * (chars.length - 1);
+  width += letterSpacing * (chars.length - 1);
   return width;
 }

@@ -1,11 +1,13 @@
 /**
  * WordArt Gallery Styles
+ * Classic Microsoft Office WordArt Gallery (Office 2003 Era) appearance
  */
 
 .wordart-gallery {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+  max-width: 600px;
 }
 
 .wordart-gallery-header {
@@ -13,32 +15,88 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
+  padding: var(--space-2) var(--space-3);
+  background: linear-gradient(180deg, #4a7dc4 0%, #3a6db4 100%);
+  border-radius: var(--radius-sm);
 }
 
 .wordart-gallery-header h4 {
   margin: 0;
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--text-primary);
+  color: #ffffff;
 }
 
-.wordart-text-input {
+/* Background toggle */
+.wordart-bg-toggle {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  font-size: 0.8125rem;
-  color: var(--text-secondary);
+  font-size: 0.75rem;
+  color: #ffffff;
 }
 
-.wordart-text-input input {
-  height: 28px;
-  padding: 0 var(--space-2);
-  background: var(--bg-primary);
-  border: 1px solid var(--border-default);
-  border-radius: 4px;
-  color: var(--text-primary);
+.wordart-bg-toggle input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+
+.wordart-bg-toggle label {
+  cursor: pointer;
+  user-select: none;
+}
+
+/* Controls */
+.wordart-controls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: #e9edf6;
+  border: 1px solid #7f9db9;
+  border-radius: var(--radius-sm);
+}
+
+.wordart-controls-group {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.wordart-controls-title {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #1f2d3d;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.wordart-control {
+  display: grid;
+  grid-template-columns: 88px 1fr;
+  align-items: center;
+  gap: var(--space-2);
   font-size: 0.8125rem;
-  width: 120px;
+  color: #1f2d3d;
+}
+
+.wordart-control input,
+.wordart-control select {
+  height: 24px;
+  padding: 0 var(--space-2);
+  background: #ffffff;
+  border: 1px solid #7f9db9;
+  border-radius: 2px;
+  color: #000000;
+  font-size: 0.8125rem;
+  width: 100%;
+}
+
+.wordart-control input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  justify-self: start;
 }
 
 /* Preview */
@@ -46,20 +104,39 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  padding: var(--space-4);
-  background: var(--bg-tertiary);
-  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  background: #f0f0f0;
+  border: 1px solid #7f9db9;
+  border-radius: var(--radius-sm);
 }
 
 .wordart-preview-canvas {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 400px;
+  width: 100%;
+  max-width: 500px;
   height: 150px;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-  border-radius: var(--radius-sm);
+  border: 1px solid #999999;
+  border-radius: 2px;
   overflow: hidden;
+}
+
+/* Solid dark background (default) */
+.wordart-preview-canvas.bg-solid {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+}
+
+/* Checker pattern for transparency preview */
+.wordart-preview-canvas.bg-checker {
+  background-color: #ffffff;
+  background-image:
+    linear-gradient(45deg, #e0e0e0 25%, transparent 25%),
+    linear-gradient(-45deg, #e0e0e0 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #e0e0e0 75%),
+    linear-gradient(-45deg, transparent 75%, #e0e0e0 75%);
+  background-size: 16px 16px;
+  background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
 }
 
 .wordart-preview-info {
@@ -80,43 +157,60 @@
   font-family: var(--font-mono);
 }
 
-/* Gallery Grid */
+/* Gallery Grid - Classic Office Dialog Style */
 .wordart-gallery-grid {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
+  gap: 1px;
+  padding: var(--space-2);
+  background: #ece9d8; /* Classic Windows XP/Office 2003 background */
+  border: 2px inset #d4d0c8;
+  border-radius: 0;
+}
+
+/* Label above grid */
+.wordart-gallery-label {
+  font-size: 0.8125rem;
+  color: #000000;
+  margin-bottom: var(--space-2);
 }
 
 .wordart-gallery-row {
   display: flex;
-  gap: var(--space-2);
+  gap: 1px;
+  justify-content: flex-start;
 }
 
-/* Thumbnail */
+/* Thumbnail - Classic Office Style */
 .wordart-thumbnail {
-  width: 100px;
-  height: 50px;
-  padding: 0;
-  background: #f5f5f5;
-  border: 2px solid transparent;
-  border-radius: 4px;
+  width: 88px;
+  height: 56px;
+  padding: 2px;
+  background: #ffffff;
+  border: 1px solid #7f9db9;
+  border-radius: 0;
   cursor: pointer;
   overflow: hidden;
-  transition: border-color 0.15s ease, transform 0.15s ease;
+  transition: border-color 0.1s ease, background-color 0.1s ease;
 }
 
 .wordart-thumbnail:hover {
-  border-color: var(--accent-blue);
-  transform: scale(1.02);
+  border-color: #316ac5;
+  background-color: #c1d2ee;
+}
+
+.wordart-thumbnail:focus {
+  outline: 1px dotted #000000;
+  outline-offset: -3px;
 }
 
 .wordart-thumbnail.selected {
-  border-color: var(--accent-blue);
-  box-shadow: 0 0 0 2px rgba(0, 112, 243, 0.3);
+  border-color: #316ac5;
+  background-color: #316ac5;
+}
+
+.wordart-thumbnail.selected:hover {
+  background-color: #4a7dc4;
 }
 
 .wordart-thumbnail-canvas {
@@ -126,6 +220,30 @@
   align-items: center;
   justify-content: center;
   background: #ffffff;
+  border-radius: 0;
+}
+
+.wordart-thumbnail.selected .wordart-thumbnail-canvas {
+  background: transparent;
+}
+
+/* Thumbnail image */
+.wordart-thumbnail img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+/* Loading placeholder */
+.wordart-thumbnail-loading {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  color: #808080;
+  background: #f5f5f5;
 }
 
 /* Responsive */
@@ -145,7 +263,39 @@
   }
 
   .wordart-thumbnail {
-    width: 80px;
-    height: 40px;
+    width: 72px;
+    height: 48px;
+  }
+}
+
+/* Dark mode adjustments */
+@media (prefers-color-scheme: dark) {
+  .wordart-gallery-grid {
+    background: #2d2d30;
+    border-color: #3f3f46;
+  }
+
+  .wordart-thumbnail {
+    background: #1e1e1e;
+    border-color: #3f3f46;
+  }
+
+  .wordart-thumbnail:hover {
+    border-color: #007acc;
+    background-color: #264f78;
+  }
+
+  .wordart-thumbnail.selected {
+    border-color: #007acc;
+    background-color: #094771;
+  }
+
+  .wordart-thumbnail-canvas {
+    background: #1e1e1e;
+  }
+
+  .wordart-preview {
+    background: #2d2d30;
+    border-color: #3f3f46;
   }
 }

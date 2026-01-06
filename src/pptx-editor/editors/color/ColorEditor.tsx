@@ -75,6 +75,7 @@ function getHexPreview(
   transform: ColorTransform | undefined
 ): string {
   const resolved = resolveColor({ spec, transform }, colorContext);
+  // Note: ECMA-376 does not define a fallback display color; this is UI-only.
   return resolved ?? "000000";
 }
 

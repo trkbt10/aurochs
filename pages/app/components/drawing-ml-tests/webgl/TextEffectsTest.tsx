@@ -11,7 +11,7 @@
 import { useState, useMemo } from "react";
 import { type CheckItem, TestSubsection } from "../common";
 import { Text3DRenderer } from "@lib/pptx/render/webgl/text3d";
-import { extractText3DRuns } from "@lib/pptx/render/react/primitives/Text";
+import { extractText3DRuns } from "@lib/pptx/render/react/primitives";
 import { WordArtGallery } from "./WordArtGallery";
 import { allDemoWordArtPresets } from "./wordart-demo-presets";
 import type { PresetCameraType, PresetMaterialType, BevelPresetType } from "@lib/pptx/domain/three-d";

@@ -9,8 +9,9 @@
 
 import { useCallback, type CSSProperties } from "react";
 import type { Slide, Shape } from "../../pptx/domain/index";
-import type { Background } from "../../pptx/domain/slide";
+import type { Background, SlideLayoutAttributes } from "../../pptx/domain/slide";
 import type { ShapeId } from "../../pptx/domain/types";
+import type { SlideLayoutOption } from "../../pptx/app";
 import { SlidePropertiesPanel } from "./property/SlidePropertiesPanel";
 import { MultiSelectPanel } from "./property/MultiSelectPanel";
 import { SpShapePanel } from "./property/SpShapePanel";
@@ -33,6 +34,12 @@ import { isTextEditActive } from "../slide/text-edit";
 export type PropertyPanelProps = {
   /** Current slide */
   readonly slide: Slide;
+  /** Layout attributes for slide layout editor */
+  readonly layoutAttributes?: SlideLayoutAttributes;
+  /** Current layout path */
+  readonly layoutPath?: string;
+  /** Available layout options */
+  readonly layoutOptions: readonly SlideLayoutOption[];
   /** Selected shapes */
   readonly selectedShapes: readonly Shape[];
   /** Primary selected shape */
@@ -45,6 +52,10 @@ export type PropertyPanelProps = {
   readonly onUngroup: (shapeId: ShapeId) => void;
   /** Callback to select a shape */
   readonly onSelect: (shapeId: ShapeId, addToSelection: boolean, toggle?: boolean) => void;
+  /** Callback when layout attributes change */
+  readonly onLayoutAttributesChange: (attrs: SlideLayoutAttributes) => void;
+  /** Callback when layout selection changes */
+  readonly onLayoutChange: (layoutPath: string) => void;
   /** Custom class name */
   readonly className?: string;
   /** Custom style */
@@ -168,12 +179,17 @@ function renderGraphicFramePanel(
  */
 export function PropertyPanel({
   slide,
+  layoutAttributes,
+  layoutPath,
+  layoutOptions,
   selectedShapes,
   primaryShape,
   onShapeChange,
   onSlideChange,
   onUngroup,
   onSelect,
+  onLayoutAttributesChange,
+  onLayoutChange,
   className,
   style,
 }: PropertyPanelProps) {
@@ -228,6 +244,11 @@ export function PropertyPanel({
         <SlidePropertiesPanel
           background={slide.background}
           onBackgroundChange={handleBackgroundChange}
+          layoutAttributes={layoutAttributes}
+          layoutPath={layoutPath}
+          layoutOptions={layoutOptions}
+          onLayoutAttributesChange={onLayoutAttributesChange}
+          onLayoutChange={onLayoutChange}
         />
       </div>
     );
@@ -254,6 +275,11 @@ export function PropertyPanel({
         <SlidePropertiesPanel
           background={slide.background}
           onBackgroundChange={handleBackgroundChange}
+          layoutAttributes={layoutAttributes}
+          layoutPath={layoutPath}
+          layoutOptions={layoutOptions}
+          onLayoutAttributesChange={onLayoutAttributesChange}
+          onLayoutChange={onLayoutChange}
         />
       </div>
     );

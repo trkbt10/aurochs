@@ -101,6 +101,7 @@ function createDuplicatedSlide(
     slide: clonedSlide,
     apiSlide: sourceSlide.apiSlide,
     resolvedBackground: sourceSlide.resolvedBackground,
+    layoutPathOverride: sourceSlide.layoutPathOverride,
   };
 }
 
@@ -162,6 +163,17 @@ export function updateSlide(
 ): PresentationDocument {
   const newSlides = document.slides.map((s) =>
     s.id === slideId ? { ...s, slide: updater(s.slide) } : s
+  );
+  return { ...document, slides: newSlides };
+}
+
+export function updateSlideEntry(
+  document: PresentationDocument,
+  slideId: SlideId,
+  updater: (slide: SlideWithId) => SlideWithId
+): PresentationDocument {
+  const newSlides = document.slides.map((s) =>
+    s.id === slideId ? updater(s) : s
   );
   return { ...document, slides: newSlides };
 }

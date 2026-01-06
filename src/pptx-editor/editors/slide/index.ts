@@ -13,3 +13,8 @@ export {
   createDefaultTransition,
   type TransitionEditorProps,
 } from "./TransitionEditor";
+
+export {
+  SlideLayoutEditor,
+  type SlideLayoutEditorProps,
+} from "./SlideLayoutEditor";

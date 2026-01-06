@@ -16,6 +16,7 @@ import {
   duplicateSlide,
   moveSlide,
   updateSlide,
+  updateSlideEntry,
 } from "./slide";
 
 function createEmptySlide(): Slide {
@@ -261,5 +262,28 @@ describe("updateSlide", () => {
     }));
 
     expect(doc.slides[1].slide.shapes).toHaveLength(0);
+  });
+});
+
+describe("updateSlideEntry", () => {
+  it("should update slide entry metadata", () => {
+    const doc = createTestDocument(2);
+    const result = updateSlideEntry(doc, "1", (slide) => ({
+      ...slide,
+      layoutPathOverride: "ppt/slideLayouts/slideLayout2.xml",
+    }));
+
+    expect(result.slides[0].layoutPathOverride).toBe("ppt/slideLayouts/slideLayout2.xml");
+    expect(result.slides[1].layoutPathOverride).toBeUndefined();
+  });
+
+  it("should leave other slides unchanged", () => {
+    const doc = createTestDocument(2);
+    const result = updateSlideEntry(doc, "2", (slide) => ({
+      ...slide,
+      layoutPathOverride: "ppt/slideLayouts/slideLayout3.xml",
+    }));
+
+    expect(result.slides[0]).toBe(doc.slides[0]);
   });
 });

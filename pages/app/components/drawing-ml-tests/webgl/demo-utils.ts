@@ -9,14 +9,12 @@
  */
 
 import { pt, px } from "@lib/pptx/domain/types";
-import type { Pixels } from "@lib/pptx/domain/types";
 import type { TextBody, Paragraph, RegularRun, RunProperties } from "@lib/pptx/domain/text";
 import type { SolidFill } from "@lib/pptx/domain/color";
 import type { ColorContext } from "@lib/pptx/domain/resolution";
 import type {
   Shape3d,
   Scene3d,
-  Bevel3d,
   LightRigType,
   LightRigDirection,
   PresetCameraType,
@@ -75,6 +73,10 @@ export function createSolidFill(hex: string): SolidFill {
 }
 
 /**
+ * Create a GradientFill from demo gradient stops.
+ * @see ECMA-376 Part 1, Section 20.1.8.33 (gradFill)
+ */
+/**
  * Create RunProperties from simplified parameters.
  * @see ECMA-376 Part 1, Section 21.1.2.3.9 (a:rPr)
  */
@@ -87,11 +89,19 @@ export function createRunProperties(options: {
 }): RunProperties {
   return {
     fontSize: pt(options.fontSize),
-    latin: { typeface: options.fontFamily },
+    fontFamily: buildFontFamilyStack(options.fontFamily),
     bold: options.bold ?? false,
     italic: options.italic ?? false,
     fill: createSolidFill(options.color),
   };
+}
+
+function buildFontFamilyStack(fontFamily: string): string {
+  const fallbacks = ["sans-serif", "serif", "monospace"];
+  if (fallbacks.includes(fontFamily)) {
+    return [fontFamily, ...fallbacks.filter((fallback) => fallback !== fontFamily)].join(", ");
+  }
+  return [fontFamily, ...fallbacks].join(", ");
 }
 
 /**
@@ -142,23 +152,28 @@ type Shape3dParams = {
  * Automatically wraps values with proper branded types (px).
  */
 export function buildShape3d(params: Shape3dParams): Shape3d {
-  const shape3d: Shape3d = {
-    extrusionHeight: params.extrusionHeight !== undefined ? px(params.extrusionHeight) : undefined,
+  const hasContour = params.contourWidth !== undefined && params.contourWidth > 0;
+  const extrusionHeight = params.extrusionHeight !== undefined ? px(params.extrusionHeight) : undefined;
+  const bevel = buildBevelFromParams(params.bevel);
+  const contourWidth = hasContour ? px(params.contourWidth) : undefined;
+  const contourColor = hasContour && params.contourColor ? createSolidFill(params.contourColor) : undefined;
+
+  return {
+    extrusionHeight,
     preset: params.preset,
-    bevel: params.bevel
-      ? {
-          width: px(params.bevel.width),
-          height: px(params.bevel.height),
-          preset: params.bevel.preset,
-        }
-      : undefined,
-    contourWidth: params.contourWidth !== undefined && params.contourWidth > 0 ? px(params.contourWidth) : undefined,
-    contourColor:
-      params.contourWidth !== undefined && params.contourWidth > 0 && params.contourColor
-        ? createSolidFill(params.contourColor)
-        : undefined,
+    bevel,
+    contourWidth,
+    contourColor,
   };
-  return shape3d;
+}
+
+function buildBevelFromParams(bevel: Shape3dParams["bevel"]) {
+  if (!bevel) {return undefined;}
+  return {
+    width: px(bevel.width),
+    height: px(bevel.height),
+    preset: bevel.preset,
+  };
 }
 
 type Scene3dParams = {
@@ -220,20 +235,34 @@ export function buildShape3dFromPreset(
   },
 ): Shape3d {
   const maxExtrusion = options?.maxExtrusion;
-  const maxBevelWidth = options?.maxBevelWidth;
-  const maxBevelHeight = options?.maxBevelHeight;
+  const extrusionHeight = clampValue(preset.extrusion, maxExtrusion);
+
+  const bevel = buildClampedBevel(preset.bevel, options?.maxBevelWidth, options?.maxBevelHeight);
 
   return buildShape3d({
-    extrusionHeight: maxExtrusion !== undefined ? Math.min(preset.extrusion, maxExtrusion) : preset.extrusion,
+    extrusionHeight,
     preset: preset.material,
-    bevel: preset.bevel
-      ? {
-          width: maxBevelWidth !== undefined ? Math.min(preset.bevel.width, maxBevelWidth) : preset.bevel.width,
-          height: maxBevelHeight !== undefined ? Math.min(preset.bevel.height, maxBevelHeight) : preset.bevel.height,
-          preset: preset.bevel.preset,
-        }
-      : undefined,
+    bevel,
+    contourWidth: preset.contour?.width,
+    contourColor: preset.contour?.color,
   });
+}
+
+function clampValue(value: number, max: number | undefined): number {
+  return max !== undefined ? Math.min(value, max) : value;
+}
+
+function buildClampedBevel(
+  bevel: DemoWordArtPreset["bevel"],
+  maxWidth: number | undefined,
+  maxHeight: number | undefined,
+) {
+  if (!bevel) {return undefined;}
+  return {
+    width: clampValue(bevel.width, maxWidth),
+    height: clampValue(bevel.height, maxHeight),
+    preset: bevel.preset,
+  };
 }
 
 /**
@@ -244,4 +273,34 @@ export function buildScene3dFromPreset(preset: DemoWordArtPreset): Scene3d {
     camera: preset.camera,
     lightRig: preset.lightRig,
   });
+}
+
+/**
+ * Shadow configuration type for renderer.
+ * Re-exported for convenience.
+ */
+export type DemoShadowConfig = {
+  readonly type: "outer" | "inner";
+  readonly color: string;
+  readonly blurRadius: number;
+  readonly distance: number;
+  readonly direction: number;
+  readonly opacity?: number;
+};
+
+/**
+ * Convert demo preset shadow to renderer shadow config.
+ */
+export function getShadowConfigFromPreset(preset: DemoWordArtPreset): DemoShadowConfig | undefined {
+  if (!preset.shadow) {
+    return undefined;
+  }
+  return {
+    type: preset.shadow.type,
+    color: preset.shadow.color,
+    blurRadius: preset.shadow.blurRadius,
+    distance: preset.shadow.distance,
+    direction: preset.shadow.direction,
+    opacity: preset.shadow.opacity,
+  };
 }

@@ -33,6 +33,8 @@ export type SlideWithId = {
   readonly apiSlide?: ApiSlide;
   /** Pre-resolved background (from slide -> layout -> master inheritance) */
   readonly resolvedBackground?: ResolvedBackgroundFill;
+  /** Layout path override for editor-driven layout selection */
+  readonly layoutPathOverride?: string;
 };
 
 /**

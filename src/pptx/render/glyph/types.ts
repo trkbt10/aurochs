@@ -121,6 +121,8 @@ export type TextLayoutConfig = {
   readonly letterSpacing?: number;
   /** Enable kerning if kerning table exists */
   readonly enableKerning?: boolean;
+  /** Enable optical kerning using measured glyph contours */
+  readonly opticalKerning?: boolean;
 };
 
 /**

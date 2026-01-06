@@ -229,6 +229,11 @@ export type LayoutSpan = {
    */
   readonly kerning: Points | undefined;
   /**
+   * Custom extension: optical kerning using measured glyph contours.
+   * When true, font kerning tables are ignored in favor of measured spacing.
+   */
+  readonly opticalKerning?: boolean;
+  /**
    * Custom underline color (hex with #).
    * When undefined, uses text color.
    * @see ECMA-376 Part 1, Section 21.1.2.3.33 (a:uLn)

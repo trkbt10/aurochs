@@ -112,6 +112,15 @@ export type Text3DRunConfig = {
    */
   readonly width: PositionedSpan["width"];
   /**
+   * Additional letter spacing (pixels) from a:rPr spacing.
+   * Used for optical kerning and glyph layout spacing.
+   */
+  readonly letterSpacing?: PositionedSpan["letterSpacing"];
+  /**
+   * Custom extension: optical kerning using measured glyph contours.
+   */
+  readonly opticalKerning?: PositionedSpan["opticalKerning"];
+  /**
    * Outline (stroke) configuration for text.
    * @see ECMA-376 Part 1, Section 20.1.2.2.24 (ln)
    */
@@ -531,6 +540,8 @@ function createGeometryForRunAsync(
     fontStyle: run.fontStyle,
     extrusionDepth: buildConfig.extrusionDepth,
     bevel: buildConfig.bevel,
+    letterSpacing: run.letterSpacing as number | undefined,
+    opticalKerning: run.opticalKerning === true,
   });
 }
 

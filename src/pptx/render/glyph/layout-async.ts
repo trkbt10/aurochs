@@ -13,6 +13,7 @@ import type {
 } from "./types";
 import { getKerningAdjustment } from "./cache";
 import { extractGlyphsAsync } from "./worker-manager";
+import { calculateOpticalKerningAdjustment } from "./optical-kerning";
 
 // =============================================================================
 // Main API
@@ -42,7 +43,9 @@ export async function layoutTextAsync(
   };
 
   const letterSpacing = config.letterSpacing ?? 0;
+  const useOpticalKerning = config.opticalKerning === true;
   const enableKerning = config.enableKerning ?? true;
+  const useFontKerning = enableKerning && !useOpticalKerning;
 
   // Extract all glyphs using worker
   const chars = [...text]; // Properly handle Unicode
@@ -61,8 +64,13 @@ export async function layoutTextAsync(
 
     // Apply kerning adjustment
     let kerning = 0;
-    if (enableKerning && i > 0) {
-      kerning = getKerningAdjustment(config.fontFamily, chars[i - 1], chars[i]);
+    if (i > 0) {
+      if (useOpticalKerning) {
+        const prevGlyph = glyphContours[i - 1];
+        kerning = calculateOpticalKerningAdjustment(prevGlyph, glyph, letterSpacing);
+      } else if (useFontKerning) {
+        kerning = getKerningAdjustment(config.fontFamily, chars[i - 1], chars[i]);
+      }
     }
 
     const x = cursorX + kerning;

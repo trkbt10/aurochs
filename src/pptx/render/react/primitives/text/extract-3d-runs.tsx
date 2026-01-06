@@ -83,6 +83,8 @@ export function extractText3DRuns(
             fontFamily: span.fontFamily,
             fontWeight: span.fontWeight,
             fontStyle: span.fontStyle,
+            letterSpacing: span.letterSpacing,
+            opticalKerning: span.opticalKerning,
             x: px(cursorX),
             y: line.y,
             width: span.width,

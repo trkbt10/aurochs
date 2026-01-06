@@ -12,6 +12,7 @@ import { PT_TO_PX } from "../../domain/unit-conversion";
 import { isCjkCodePoint } from "../../../text/cjk";
 import { getCharWidth, getKerningAdjustment } from "../../../text/font-metrics";
 import { isMonospace } from "../../../text/fonts";
+import { measureTextWidth as measureGlyphTextWidth } from "../glyph";
 
 // =============================================================================
 // Character Width Calculation
@@ -103,12 +104,39 @@ export function estimateTextWidth(
  * Uses font-aware metrics and kerning for accurate width estimation.
  */
 export function measureSpan(span: LayoutSpan): MeasuredSpan {
-  const width = span.isBreak ? px(0) : estimateTextWidth(span.text, span.fontSize, span.letterSpacing, span.fontFamily);
+  let width = px(0);
+  if (!span.isBreak) {
+    if (span.opticalKerning === true) {
+      width = measureTextWidthOptical(span);
+    } else {
+      width = estimateTextWidth(span.text, span.fontSize, span.letterSpacing, span.fontFamily);
+    }
+  }
 
   return {
     ...span,
     width,
   };
+}
+
+function measureTextWidthOptical(span: LayoutSpan): Pixels {
+  if (span.text.length === 0) {
+    return px(0);
+  }
+
+  const fontSizePx = (span.fontSize as number) * PT_TO_PX;
+
+  const width = measureGlyphTextWidth(span.text, {
+    fontFamily: span.fontFamily,
+    fontSize: fontSizePx,
+    fontWeight: span.fontWeight,
+    fontStyle: span.fontStyle,
+    letterSpacing: span.letterSpacing as number,
+    opticalKerning: true,
+    enableKerning: false,
+  });
+
+  return px(width);
 }
 
 /**

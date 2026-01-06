@@ -13,6 +13,8 @@ import type { GlyphContour, TextLayoutConfig } from "./types";
 vi.mock("./extractor", () => ({
   extractGlyphContour: vi.fn((char: string, _fontFamily: string, _style: unknown): GlyphContour => {
     const width = char === " " ? 8 : 16;
+    const minX = char === "V" ? 4 : 0;
+    const maxX = minX + width;
     return {
       char,
       paths:
@@ -21,15 +23,15 @@ vi.mock("./extractor", () => ({
           : [
               {
                 points: [
-                  { x: 0, y: 0 },
-                  { x: width, y: 0 },
-                  { x: width, y: 20 },
-                  { x: 0, y: 20 },
+                  { x: minX, y: 0 },
+                  { x: maxX, y: 0 },
+                  { x: maxX, y: 20 },
+                  { x: minX, y: 20 },
                 ],
                 isHole: false,
               },
             ],
-      bounds: { minX: 0, minY: 0, maxX: width, maxY: 20 },
+      bounds: { minX, minY: 0, maxX, maxY: 20 },
       metrics: {
         advanceWidth: width,
         leftBearing: 1,
@@ -113,6 +115,12 @@ describe("text-layout-3d", () => {
       expect(result.glyphs[1].x).toBe(16 - 3); // A width + kerning
     });
 
+    it("should apply optical kerning when enabled", () => {
+      const result = layoutText("AV", { ...defaultConfig, opticalKerning: true });
+
+      expect(result.glyphs[1].x).toBe(12); // A maxX (16) - V minX (4)
+    });
+
     it("should skip kerning when disabled", () => {
       setKerningTable("Arial", {
         pairs: new Map([["AV", -3]]),
@@ -187,6 +195,11 @@ describe("text-layout-3d", () => {
 
       const width = measureTextWidth("AV", { ...defaultConfig, enableKerning: true });
       expect(width).toBe(16 + 16 - 3); // Two chars + kerning
+    });
+
+    it("should include optical kerning", () => {
+      const width = measureTextWidth("AV", { ...defaultConfig, opticalKerning: true });
+      expect(width).toBe(16 + 16 - 4);
     });
   });
 

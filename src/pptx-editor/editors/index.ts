@@ -143,10 +143,12 @@ export {
 export {
   BackgroundEditor,
   TransitionEditor,
+  SlideLayoutEditor,
   createDefaultBackground,
   createDefaultTransition,
   type BackgroundEditorProps,
   type TransitionEditorProps,
+  type SlideLayoutEditorProps,
 } from "./slide";
 
 // OLE object editors

@@ -453,6 +453,11 @@ export type RunProperties = {
   readonly smartTagId?: number;
   /** Run-level RTL @see ECMA-376 21.1.2.3.12 */
   readonly rtl?: boolean;
+  /**
+   * Custom extension: optical kerning using measured glyph contours.
+   * Web-pptx extension (wp:opticalKerning).
+   */
+  readonly wpOpticalKerning?: boolean;
 };
 
 /**
