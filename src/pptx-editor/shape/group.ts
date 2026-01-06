@@ -75,6 +75,141 @@ export function transformChildToSlideCoords(
   };
 }
 
+/**
+ * Transform child coordinates from slide-absolute to group-relative
+ */
+export function transformSlideToChildCoords(
+  slideTransform: Transform,
+  groupTransform: GroupTransform
+): Transform {
+  const childExtX = groupTransform.childExtentWidth ?? groupTransform.width;
+  const childExtY = groupTransform.childExtentHeight ?? groupTransform.height;
+  const childOffX = groupTransform.childOffsetX ?? px(0);
+  const childOffY = groupTransform.childOffsetY ?? px(0);
+
+  const scaleX = getScaleFactor(childExtX as number, groupTransform.width as number);
+  const scaleY = getScaleFactor(childExtY as number, groupTransform.height as number);
+
+  const newX =
+    (childOffX as number) + ((slideTransform.x as number) - (groupTransform.x as number)) / scaleX;
+  const newY =
+    (childOffY as number) + ((slideTransform.y as number) - (groupTransform.y as number)) / scaleY;
+  const newWidth = (slideTransform.width as number) / scaleX;
+  const newHeight = (slideTransform.height as number) / scaleY;
+
+  return {
+    ...slideTransform,
+    x: px(newX),
+    y: px(newY),
+    width: px(newWidth),
+    height: px(newHeight),
+  };
+}
+
+/**
+ * Transform group coordinates from parent group-relative to slide-absolute
+ */
+export function transformGroupToSlideCoords(
+  childGroupTransform: GroupTransform,
+  parentGroupTransform: GroupTransform
+): GroupTransform {
+  const converted = transformChildToSlideCoords(
+    childGroupTransform as Transform,
+    parentGroupTransform
+  );
+
+  const hasChildCoords =
+    childGroupTransform.childOffsetX !== undefined ||
+    childGroupTransform.childOffsetY !== undefined ||
+    childGroupTransform.childExtentWidth !== undefined ||
+    childGroupTransform.childExtentHeight !== undefined;
+
+  if (!hasChildCoords) {
+    return {
+      ...childGroupTransform,
+      x: converted.x,
+      y: converted.y,
+      width: converted.width,
+      height: converted.height,
+    };
+  }
+
+  const offsetTransform: Transform = {
+    x: childGroupTransform.childOffsetX ?? px(0),
+    y: childGroupTransform.childOffsetY ?? px(0),
+    width: childGroupTransform.childExtentWidth ?? childGroupTransform.width,
+    height: childGroupTransform.childExtentHeight ?? childGroupTransform.height,
+    rotation: deg(0),
+    flipH: false,
+    flipV: false,
+  };
+  const convertedOffset = transformChildToSlideCoords(offsetTransform, parentGroupTransform);
+
+  return {
+    ...childGroupTransform,
+    x: converted.x,
+    y: converted.y,
+    width: converted.width,
+    height: converted.height,
+    childOffsetX: convertedOffset.x,
+    childOffsetY: convertedOffset.y,
+    childExtentWidth: convertedOffset.width,
+    childExtentHeight: convertedOffset.height,
+  };
+}
+
+/**
+ * Transform group coordinates from slide-absolute to parent group-relative
+ */
+export function transformGroupToChildCoords(
+  childGroupTransform: GroupTransform,
+  parentGroupTransform: GroupTransform
+): GroupTransform {
+  const converted = transformSlideToChildCoords(
+    childGroupTransform as Transform,
+    parentGroupTransform
+  );
+
+  const hasChildCoords =
+    childGroupTransform.childOffsetX !== undefined ||
+    childGroupTransform.childOffsetY !== undefined ||
+    childGroupTransform.childExtentWidth !== undefined ||
+    childGroupTransform.childExtentHeight !== undefined;
+
+  if (!hasChildCoords) {
+    return {
+      ...childGroupTransform,
+      x: converted.x,
+      y: converted.y,
+      width: converted.width,
+      height: converted.height,
+    };
+  }
+
+  const offsetTransform: Transform = {
+    x: childGroupTransform.childOffsetX ?? px(0),
+    y: childGroupTransform.childOffsetY ?? px(0),
+    width: childGroupTransform.childExtentWidth ?? childGroupTransform.width,
+    height: childGroupTransform.childExtentHeight ?? childGroupTransform.height,
+    rotation: deg(0),
+    flipH: false,
+    flipV: false,
+  };
+  const convertedOffset = transformSlideToChildCoords(offsetTransform, parentGroupTransform);
+
+  return {
+    ...childGroupTransform,
+    x: converted.x,
+    y: converted.y,
+    width: converted.width,
+    height: converted.height,
+    childOffsetX: convertedOffset.x,
+    childOffsetY: convertedOffset.y,
+    childExtentWidth: convertedOffset.width,
+    childExtentHeight: convertedOffset.height,
+  };
+}
+
 // =============================================================================
 // Ungroup Operations
 // =============================================================================

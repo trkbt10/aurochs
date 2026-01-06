@@ -8,6 +8,9 @@ import { px, deg } from "../../pptx/domain/types";
 import {
   getScaleFactor,
   transformChildToSlideCoords,
+  transformSlideToChildCoords,
+  transformGroupToSlideCoords,
+  transformGroupToChildCoords,
   findGroupById,
   getTransformedChildren,
   extractChildIds,
@@ -192,6 +195,123 @@ describe("transformChildToSlideCoords", () => {
     expect(result.rotation).toBe(45);
     expect(result.flipH).toBe(true);
     expect(result.flipV).toBe(false);
+  });
+});
+
+// =============================================================================
+// transformSlideToChildCoords Tests
+// =============================================================================
+
+describe("transformSlideToChildCoords", () => {
+  it("returns original transform when mapping is 1:1", () => {
+    const slideTransform: Transform = {
+      x: px(120),
+      y: px(80),
+      width: px(60),
+      height: px(40),
+      rotation: deg(0),
+      flipH: false,
+      flipV: false,
+    };
+    const groupTransform: GroupTransform = {
+      x: px(0),
+      y: px(0),
+      width: px(200),
+      height: px(200),
+      rotation: deg(0),
+      flipH: false,
+      flipV: false,
+      childOffsetX: px(0),
+      childOffsetY: px(0),
+      childExtentWidth: px(200),
+      childExtentHeight: px(200),
+    };
+
+    const result = transformSlideToChildCoords(slideTransform, groupTransform);
+
+    expect(result.x).toBe(120);
+    expect(result.y).toBe(80);
+    expect(result.width).toBe(60);
+    expect(result.height).toBe(40);
+  });
+
+  it("inverts scale and offset from slide coordinates", () => {
+    const slideTransform: Transform = {
+      x: px(150),
+      y: px(160),
+      width: px(80),
+      height: px(40),
+      rotation: deg(0),
+      flipH: false,
+      flipV: false,
+    };
+    const groupTransform: GroupTransform = {
+      x: px(100),
+      y: px(100),
+      width: px(200),
+      height: px(200),
+      rotation: deg(0),
+      flipH: false,
+      flipV: false,
+      childOffsetX: px(0),
+      childOffsetY: px(0),
+      childExtentWidth: px(200),
+      childExtentHeight: px(200),
+    };
+
+    const result = transformSlideToChildCoords(slideTransform, groupTransform);
+
+    expect(result.x).toBe(50);
+    expect(result.y).toBe(60);
+    expect(result.width).toBe(80);
+    expect(result.height).toBe(40);
+  });
+});
+
+// =============================================================================
+// Group Transform Conversion Tests
+// =============================================================================
+
+describe("group transform conversion", () => {
+  it("round-trips group transforms through slide coordinates", () => {
+    const parentTransform: GroupTransform = {
+      x: px(100),
+      y: px(100),
+      width: px(200),
+      height: px(200),
+      rotation: deg(0),
+      flipH: false,
+      flipV: false,
+      childOffsetX: px(0),
+      childOffsetY: px(0),
+      childExtentWidth: px(200),
+      childExtentHeight: px(200),
+    };
+    const childTransform: GroupTransform = {
+      x: px(120),
+      y: px(140),
+      width: px(80),
+      height: px(60),
+      rotation: deg(0),
+      flipH: false,
+      flipV: false,
+      childOffsetX: px(20),
+      childOffsetY: px(30),
+      childExtentWidth: px(80),
+      childExtentHeight: px(60),
+    };
+
+    const slideTransform = transformGroupToSlideCoords(childTransform, parentTransform);
+    const roundTrip = transformGroupToChildCoords(slideTransform, parentTransform);
+
+    expect(roundTrip.x).toBe(120);
+    expect(roundTrip.y).toBe(140);
+    expect(roundTrip.width).toBe(80);
+    expect(roundTrip.height).toBe(60);
+    expect(roundTrip.childOffsetX).toBe(20);
+    expect(roundTrip.childOffsetY).toBe(30);
+    expect(roundTrip.childExtentWidth).toBe(80);
+    expect(roundTrip.childExtentHeight).toBe(60);
   });
 });
 

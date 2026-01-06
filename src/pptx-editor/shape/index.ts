@@ -67,6 +67,9 @@ export type { ShapeCapabilities } from "./capabilities";
 export {
   getScaleFactor,
   transformChildToSlideCoords,
+  transformSlideToChildCoords,
+  transformGroupToSlideCoords,
+  transformGroupToChildCoords,
   findGroupById,
   getTransformedChildren,
   extractChildIds,
@@ -76,6 +79,12 @@ export {
   createGroupShape,
   groupShapes,
 } from "./group";
+
+// =============================================================================
+// Hierarchy
+// =============================================================================
+export { moveShapeInHierarchy } from "./hierarchy";
+export type { ShapeHierarchyTarget } from "./hierarchy";
 
 // =============================================================================
 // Traverse

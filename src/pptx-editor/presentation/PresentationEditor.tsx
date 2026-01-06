@@ -39,6 +39,8 @@ import { isTopLevelShape } from "../shape/query";
 import { clientToSlideCoords } from "../shape/coords";
 import { withUpdatedTransform } from "../shape/transform";
 import { calculateAlignedBounds } from "../shape/alignment";
+import { updateShapeById } from "../shape/mutation";
+import type { ShapeHierarchyTarget } from "../shape/hierarchy";
 import { createRenderContext, getLayoutNonPlaceholderShapes } from "../../pptx/app";
 import { createZipAdapter } from "../../pptx/domain";
 import { CanvasControls } from "../slide-canvas/CanvasControls";
@@ -784,6 +786,29 @@ function EditorContent({
     [dispatch]
   );
 
+  const handleMoveShape = useCallback(
+    (shapeId: ShapeId, target: ShapeHierarchyTarget) => {
+      dispatch({ type: "MOVE_SHAPE_IN_HIERARCHY", shapeId, target });
+    },
+    [dispatch]
+  );
+
+  const handleUpdateShapes = useCallback(
+    (shapeIds: readonly ShapeId[], updater: (shape: Shape) => Shape) => {
+      dispatch({
+        type: "UPDATE_ACTIVE_SLIDE",
+        updater: (slide) => {
+          let nextShapes = slide.shapes;
+          for (const shapeId of shapeIds) {
+            nextShapes = updateShapeById(nextShapes, shapeId, updater);
+          }
+          return { ...slide, shapes: nextShapes };
+        },
+      });
+    },
+    [dispatch]
+  );
+
   const handleDelete = useCallback(
     (shapeIds: readonly ShapeId[]) => {
       dispatch({ type: "DELETE_SHAPES", shapeIds });
@@ -928,6 +953,8 @@ function EditorContent({
                     onSelectMultiple={handleSelectMultiple}
                     onGroup={handleGroup}
                     onUngroup={handleUngroup}
+                    onMoveShape={handleMoveShape}
+                    onUpdateShapes={handleUpdateShapes}
                     onClearSelection={handleClearSelection}
                   />
                 </Panel>

@@ -17,6 +17,7 @@ import {
   useState,
   useMemo,
   type CSSProperties,
+  type DragEvent,
   type MouseEvent,
   type ReactNode,
 } from "react";
@@ -24,8 +25,9 @@ import type { Slide, Shape, GrpShape } from "../../pptx/domain/index";
 import type { ShapeId } from "../../pptx/domain/types";
 import type { SelectionState } from "../context/slide/state";
 import { getShapeId, hasShapeId } from "../shape/identity";
-import { isTopLevelShape } from "../shape/query";
-import { Button } from "../ui/primitives/index";
+import { findShapeById, findShapeByIdWithParents, isTopLevelShape } from "../shape/query";
+import type { ShapeHierarchyTarget } from "../shape/hierarchy";
+import { ContextMenu, type MenuEntry } from "../ui/context-menu";
 import {
   RectIcon,
   EllipseIcon,
@@ -43,6 +45,10 @@ import {
   OleObjectIcon,
   ChevronRightIcon,
   UnknownShapeIcon,
+  VisibleIcon,
+  HiddenIcon,
+  LockIcon,
+  UnlockIcon,
 } from "../ui/icons/index";
 import { colorTokens, fontTokens, iconTokens } from "../ui/design-tokens/index";
 
@@ -65,6 +71,13 @@ export type LayerPanelProps = {
   readonly onGroup: (shapeIds: readonly ShapeId[]) => void;
   /** Callback to ungroup a shape */
   readonly onUngroup: (shapeId: ShapeId) => void;
+  /** Callback to move a shape in the hierarchy */
+  readonly onMoveShape: (shapeId: ShapeId, target: ShapeHierarchyTarget) => void;
+  /** Callback to update multiple shapes */
+  readonly onUpdateShapes: (
+    shapeIds: readonly ShapeId[],
+    updater: (shape: Shape) => Shape
+  ) => void;
   /** Callback to clear selection */
   readonly onClearSelection: () => void;
   /** Custom class name */
@@ -76,10 +89,28 @@ export type LayerPanelProps = {
 type ShapeItemProps = {
   readonly shape: Shape;
   readonly depth: number;
+  readonly parentId: ShapeId | null;
+  readonly displayIndex: number;
   readonly isSelected: boolean;
   readonly isExpanded: boolean;
+  readonly isHidden: boolean;
+  readonly isLocked: boolean;
+  readonly dropTarget: LayerDropTarget | null;
+  readonly draggingId: ShapeId | null;
   readonly onSelect: (shapeId: string, modifiers: ShapeItemModifiers) => void;
   readonly onToggleExpand: (shapeId: string) => void;
+  readonly onToggleVisibility: (shapeId: ShapeId) => void;
+  readonly onToggleLock: (shapeId: ShapeId) => void;
+  readonly onContextMenu: (shapeId: ShapeId, event: MouseEvent) => void;
+  readonly onDragStart: (shapeId: ShapeId, event: DragEvent) => void;
+  readonly onDragOver: (
+    shape: Shape,
+    parentId: ShapeId | null,
+    displayIndex: number,
+    event: DragEvent
+  ) => void;
+  readonly onDrop: (event: DragEvent) => void;
+  readonly onDragEnd: () => void;
   readonly expandedGroups: ReadonlySet<string>;
   readonly selectedIds: readonly string[];
 };
@@ -95,6 +126,15 @@ type ShapeItemModifiers = {
   readonly shiftKey: boolean;
   readonly metaKey: boolean;
   readonly ctrlKey: boolean;
+};
+
+type DropPosition = "before" | "after" | "inside";
+
+type LayerDropTarget = {
+  readonly targetId: ShapeId | null;
+  readonly parentId: ShapeId | null;
+  readonly index: number;
+  readonly position: DropPosition;
 };
 
 /**
@@ -192,12 +232,16 @@ function getShapeName(shape: Shape): string {
   }
 }
 
+function getDisplayOrder(shapes: readonly Shape[]): readonly Shape[] {
+  return [...shapes].reverse();
+}
+
 function getVisibleShapeIds(
   shapes: readonly Shape[],
   expandedGroups: ReadonlySet<string>
 ): ShapeId[] {
   const visibleIds: ShapeId[] = [];
-  const shapesReversed = [...shapes].reverse();
+  const shapesReversed = getDisplayOrder(shapes);
 
   const walk = (shapeList: readonly Shape[]) => {
     for (const shape of shapeList) {
@@ -207,13 +251,135 @@ function getVisibleShapeIds(
       }
 
       if (shape.type === "grpSp" && shapeId && expandedGroups.has(shapeId)) {
-        walk((shape as GrpShape).children);
+        walk(getDisplayOrder((shape as GrpShape).children));
       }
     }
   };
 
   walk(shapesReversed);
   return visibleIds;
+}
+
+function isShapeHidden(shape: Shape): boolean {
+  if ("nonVisual" in shape) {
+    return shape.nonVisual.hidden === true;
+  }
+  return false;
+}
+
+function setLockFields<T extends Record<string, boolean | undefined>>(
+  locks: T | undefined,
+  fields: readonly (keyof T)[],
+  locked: boolean
+): T | undefined {
+  if (!locks && !locked) {
+    return undefined;
+  }
+  const nextLocks: Record<string, boolean | undefined> = { ...(locks ?? {}) };
+  for (const field of fields) {
+    if (locked) {
+      nextLocks[field as string] = true;
+    } else {
+      delete nextLocks[field as string];
+    }
+  }
+  return Object.keys(nextLocks).length > 0 ? (nextLocks as T) : undefined;
+}
+
+function isShapeLocked(shape: Shape): boolean {
+  switch (shape.type) {
+    case "sp":
+      return (
+        shape.nonVisual.shapeLocks?.noMove === true ||
+        shape.nonVisual.shapeLocks?.noResize === true ||
+        shape.nonVisual.shapeLocks?.noRot === true
+      );
+    case "pic":
+      return (
+        shape.nonVisual.pictureLocks?.noMove === true ||
+        shape.nonVisual.pictureLocks?.noResize === true ||
+        shape.nonVisual.pictureLocks?.noRot === true
+      );
+    case "grpSp":
+      return (
+        shape.nonVisual.groupLocks?.noMove === true ||
+        shape.nonVisual.groupLocks?.noResize === true ||
+        shape.nonVisual.groupLocks?.noRot === true
+      );
+    case "graphicFrame":
+      return (
+        shape.nonVisual.graphicFrameLocks?.noMove === true ||
+        shape.nonVisual.graphicFrameLocks?.noResize === true
+      );
+    default:
+      return false;
+  }
+}
+
+function updateShapeLock(shape: Shape, locked: boolean): Shape {
+  switch (shape.type) {
+    case "sp":
+      return {
+        ...shape,
+        nonVisual: {
+          ...shape.nonVisual,
+          shapeLocks: setLockFields(
+            shape.nonVisual.shapeLocks,
+            ["noMove", "noResize", "noRot"],
+            locked
+          ),
+        },
+      };
+    case "pic":
+      return {
+        ...shape,
+        nonVisual: {
+          ...shape.nonVisual,
+          pictureLocks: setLockFields(
+            shape.nonVisual.pictureLocks,
+            ["noMove", "noResize", "noRot"],
+            locked
+          ),
+        },
+      };
+    case "grpSp":
+      return {
+        ...shape,
+        nonVisual: {
+          ...shape.nonVisual,
+          groupLocks: setLockFields(
+            shape.nonVisual.groupLocks,
+            ["noMove", "noResize", "noRot"],
+            locked
+          ),
+        },
+      };
+    case "graphicFrame":
+      return {
+        ...shape,
+        nonVisual: {
+          ...shape.nonVisual,
+          graphicFrameLocks: setLockFields(
+            shape.nonVisual.graphicFrameLocks,
+            ["noMove", "noResize"],
+            locked
+          ),
+        },
+      };
+    default:
+      return shape;
+  }
+}
+
+function getDropPosition(event: DragEvent, isGroup: boolean): DropPosition {
+  const target = event.currentTarget as HTMLElement;
+  const rect = target.getBoundingClientRect();
+  const ratio = rect.height > 0 ? (event.clientY - rect.top) / rect.height : 0;
+
+  if (isGroup && ratio > 0.25 && ratio < 0.75) {
+    return "inside";
+  }
+  return ratio < 0.5 ? "before" : "after";
 }
 
 // =============================================================================
@@ -226,16 +392,30 @@ function getVisibleShapeIds(
 function ShapeItem({
   shape,
   depth,
+  parentId,
+  displayIndex,
   isSelected,
   isExpanded,
+  isHidden,
+  isLocked,
+  dropTarget,
+  draggingId,
   onSelect,
   onToggleExpand,
+  onToggleVisibility,
+  onToggleLock,
+  onContextMenu,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
   expandedGroups,
   selectedIds,
 }: ShapeItemProps) {
   const shapeId = getShapeId(shape);
   const isGroup = shape.type === "grpSp";
   const hasChildren = isGroup && (shape as GrpShape).children.length > 0;
+  const isDragging = shapeId ? draggingId === shapeId : false;
 
   const handleClick = (e: MouseEvent) => {
     e.stopPropagation();
@@ -249,11 +429,68 @@ function ShapeItem({
     });
   };
 
+  const handleContextMenu = (e: MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (shapeId) {
+      onContextMenu(shapeId, e);
+    }
+  };
+
   const handleToggleExpand = (e: MouseEvent) => {
     e.stopPropagation();
     if (shapeId) {
       onToggleExpand(shapeId);
     }
+  };
+
+  const handleToggleVisibility = (e: MouseEvent) => {
+    e.stopPropagation();
+    if (shapeId) {
+      onToggleVisibility(shapeId);
+    }
+  };
+
+  const handleToggleLock = (e: MouseEvent) => {
+    e.stopPropagation();
+    if (shapeId) {
+      onToggleLock(shapeId);
+    }
+  };
+
+  const handleDragStart = (e: DragEvent) => {
+    if (!shapeId || isLocked) {
+      return;
+    }
+    onDragStart(shapeId, e);
+  };
+
+  const handleDragOver = (e: DragEvent) => {
+    if (!shapeId) {
+      return;
+    }
+    onDragOver(shape, parentId, displayIndex, e);
+  };
+
+  const handleDrop = (e: DragEvent) => {
+    onDrop(e);
+  };
+
+  const getDropIndicatorStyle = (): CSSProperties => {
+    if (!dropTarget || dropTarget.targetId !== shapeId) {
+      return {};
+    }
+    const accent = `var(--accent-primary, ${colorTokens.accent.primary})`;
+    if (dropTarget.position === "inside") {
+      return {
+        outline: `1px solid ${accent}`,
+        outlineOffset: "-1px",
+      };
+    }
+    if (dropTarget.position === "before") {
+      return { boxShadow: `inset 0 2px 0 0 ${accent}` };
+    }
+    return { boxShadow: `inset 0 -2px 0 0 ${accent}` };
   };
 
   const getItemBackground = (): string => {
@@ -282,6 +519,7 @@ function ShapeItem({
     fontSize: "12px",
     userSelect: "none",
     marginBottom: "2px",
+    opacity: isDragging ? 0.6 : 1,
   };
 
   const expandIconStyle: CSSProperties = {
@@ -311,11 +549,37 @@ function ShapeItem({
     whiteSpace: "nowrap",
   };
 
+  const actionButtonStyle: CSSProperties = {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    width: "18px",
+    height: "18px",
+    border: "none",
+    borderRadius: "3px",
+    backgroundColor: "transparent",
+    color: isSelected ? "#ffffff" : `var(--text-tertiary, ${colorTokens.text.tertiary})`,
+    cursor: "pointer",
+  };
+
+  const actionIconProps = {
+    size: 12,
+    strokeWidth: iconTokens.strokeWidth,
+  };
+
+  const itemDropStyle = getDropIndicatorStyle();
+
   return (
     <>
       <div
-        style={itemStyle}
+        style={{ ...itemStyle, ...itemDropStyle }}
         onClick={handleClick}
+        onContextMenu={handleContextMenu}
+        draggable={!!shapeId && !isLocked}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+        onDragEnd={onDragEnd}
         title={getShapeName(shape)}
       >
         {/* Expand/Collapse toggle for groups */}
@@ -331,6 +595,30 @@ function ShapeItem({
 
         {/* Shape name */}
         <span style={nameStyle}>{getShapeName(shape)}</span>
+
+        {/* Visibility toggle */}
+        {"nonVisual" in shape && (
+          <button
+            type="button"
+            style={actionButtonStyle}
+            title={isHidden ? "Show" : "Hide"}
+            onClick={handleToggleVisibility}
+          >
+            {isHidden ? <HiddenIcon {...actionIconProps} /> : <VisibleIcon {...actionIconProps} />}
+          </button>
+        )}
+
+        {/* Lock toggle */}
+        {"nonVisual" in shape && (
+          <button
+            type="button"
+            style={actionButtonStyle}
+            title={isLocked ? "Unlock" : "Lock"}
+            onClick={handleToggleLock}
+          >
+            {isLocked ? <LockIcon {...actionIconProps} /> : <UnlockIcon {...actionIconProps} />}
+          </button>
+        )}
 
         {/* Child count for groups */}
         {isGroup && (
@@ -351,7 +639,7 @@ function ShapeItem({
       {/* Render children if expanded */}
       {isGroup && isExpanded && (
         <div>
-          {(shape as GrpShape).children.map((child, idx) => {
+          {getDisplayOrder((shape as GrpShape).children).map((child, idx) => {
             const childId = getShapeId(child) ?? `${shapeId}-${idx}`;
             const childSelected = selectedIds.includes(childId);
 
@@ -360,10 +648,23 @@ function ShapeItem({
                 key={childId}
                 shape={child}
                 depth={depth + 1}
+                parentId={shapeId ?? null}
+                displayIndex={idx}
                 isSelected={childSelected}
                 isExpanded={expandedGroups.has(childId)}
+                isHidden={isShapeHidden(child)}
+                isLocked={isShapeLocked(child)}
+                dropTarget={dropTarget}
+                draggingId={draggingId}
                 onSelect={onSelect}
                 onToggleExpand={onToggleExpand}
+                onToggleVisibility={onToggleVisibility}
+                onToggleLock={onToggleLock}
+                onContextMenu={onContextMenu}
+                onDragStart={onDragStart}
+                onDragOver={onDragOver}
+                onDrop={onDrop}
+                onDragEnd={onDragEnd}
                 expandedGroups={expandedGroups}
                 selectedIds={selectedIds}
               />
@@ -382,8 +683,24 @@ type ShapeListProps = {
   readonly shapes: readonly Shape[];
   readonly selectedIds: readonly string[];
   readonly expandedGroups: ReadonlySet<string>;
+  readonly dropTarget: LayerDropTarget | null;
+  readonly draggingId: ShapeId | null;
   readonly onSelect: (shapeId: string, modifiers: ShapeItemModifiers) => void;
   readonly onToggleExpand: (shapeId: string) => void;
+  readonly onToggleVisibility: (shapeId: ShapeId) => void;
+  readonly onToggleLock: (shapeId: ShapeId) => void;
+  readonly onContextMenu: (shapeId: ShapeId, event: MouseEvent) => void;
+  readonly onDragStart: (shapeId: ShapeId, event: DragEvent) => void;
+  readonly onDragOver: (
+    shape: Shape,
+    parentId: ShapeId | null,
+    displayIndex: number,
+    event: DragEvent
+  ) => void;
+  readonly onDrop: (event: DragEvent) => void;
+  readonly onDragEnd: () => void;
+  readonly onListDragOver: (event: DragEvent) => void;
+  readonly onListDrop: (event: DragEvent) => void;
   readonly onEmptyClick: () => void;
 };
 
@@ -391,8 +708,19 @@ function ShapeList({
   shapes,
   selectedIds,
   expandedGroups,
+  dropTarget,
+  draggingId,
   onSelect,
   onToggleExpand,
+  onToggleVisibility,
+  onToggleLock,
+  onContextMenu,
+  onDragStart,
+  onDragOver,
+  onDrop,
+  onDragEnd,
+  onListDragOver,
+  onListDrop,
   onEmptyClick,
 }: ShapeListProps) {
   const listStyle: CSSProperties = {
@@ -410,17 +738,27 @@ function ShapeList({
 
   if (shapes.length === 0) {
     return (
-      <div style={listStyle} onClick={onEmptyClick}>
+      <div
+        style={listStyle}
+        onClick={onEmptyClick}
+        onDragOver={onListDragOver}
+        onDrop={onListDrop}
+      >
         <div style={emptyStyle}>No shapes on this slide</div>
       </div>
     );
   }
 
   // Reversed order: bottom layer first in array, but we show top layer first
-  const shapesReversed = [...shapes].reverse();
+  const shapesReversed = getDisplayOrder(shapes);
 
   return (
-    <div style={listStyle} onClick={onEmptyClick}>
+    <div
+      style={listStyle}
+      onClick={onEmptyClick}
+      onDragOver={onListDragOver}
+      onDrop={onListDrop}
+    >
       {shapesReversed.map((shape, idx) => {
         const shapeId = getShapeId(shape) ?? `shape-${shapes.length - 1 - idx}`;
         const isSelected = selectedIds.includes(shapeId);
@@ -431,60 +769,28 @@ function ShapeList({
             key={shapeId}
             shape={shape}
             depth={0}
+            parentId={null}
+            displayIndex={idx}
             isSelected={isSelected}
             isExpanded={isExpanded}
+            isHidden={isShapeHidden(shape)}
+            isLocked={isShapeLocked(shape)}
+            dropTarget={dropTarget}
+            draggingId={draggingId}
             onSelect={onSelect}
             onToggleExpand={onToggleExpand}
+            onToggleVisibility={onToggleVisibility}
+            onToggleLock={onToggleLock}
+            onContextMenu={onContextMenu}
+            onDragStart={onDragStart}
+            onDragOver={onDragOver}
+            onDrop={onDrop}
+            onDragEnd={onDragEnd}
             expandedGroups={expandedGroups}
             selectedIds={selectedIds}
           />
         );
       })}
-    </div>
-  );
-}
-
-/**
- * Toolbar with group/ungroup buttons
- */
-function LayerToolbar({
-  canGroup,
-  canUngroup,
-  onGroup,
-  onUngroup,
-}: {
-  readonly canGroup: boolean;
-  readonly canUngroup: boolean;
-  readonly onGroup: () => void;
-  readonly onUngroup: () => void;
-}) {
-  const toolbarStyle: CSSProperties = {
-    display: "flex",
-    gap: "4px",
-    borderTop: `1px solid var(--border-subtle, ${colorTokens.border.subtle})`,
-    padding: "8px",
-  };
-
-  return (
-    <div style={toolbarStyle}>
-      <Button
-        variant="secondary"
-        title="Group (⌘G)"
-        disabled={!canGroup}
-        onClick={onGroup}
-        style={{ flex: 1, fontSize: fontTokens.size.sm, padding: "6px" }}
-      >
-        Group
-      </Button>
-      <Button
-        variant="secondary"
-        title="Ungroup (⌘⇧G)"
-        disabled={!canUngroup}
-        onClick={onUngroup}
-        style={{ flex: 1, fontSize: fontTokens.size.sm, padding: "6px" }}
-      >
-        Ungroup
-      </Button>
     </div>
   );
 }
@@ -508,6 +814,8 @@ export function LayerPanel({
   onSelectMultiple,
   onGroup,
   onUngroup,
+  onMoveShape,
+  onUpdateShapes,
   onClearSelection,
   className,
   style,
@@ -515,6 +823,9 @@ export function LayerPanel({
   const selectedIds = selection.selectedIds;
 
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [contextMenu, setContextMenu] = useState<{ readonly x: number; readonly y: number } | null>(null);
+  const [draggingId, setDraggingId] = useState<ShapeId | null>(null);
+  const [dropTarget, setDropTarget] = useState<LayerDropTarget | null>(null);
 
   // Toggle group expansion
   const handleToggleExpand = useCallback((shapeId: string) => {
@@ -562,6 +873,34 @@ export function LayerPanel({
     [onSelect, onSelectMultiple, selection.primaryId, visibleIndexById, visibleShapeIds]
   );
 
+  const selectedShapes = useMemo(() => {
+    const result: Shape[] = [];
+    for (const id of selectedIds) {
+      const shape = findShapeById(slide.shapes, id as ShapeId);
+      if (shape) {
+        result.push(shape);
+      }
+    }
+    return result;
+  }, [selectedIds, slide.shapes]);
+
+  const canHide = useMemo(
+    () => selectedShapes.some((shape) => !isShapeHidden(shape)),
+    [selectedShapes]
+  );
+  const canShow = useMemo(
+    () => selectedShapes.some((shape) => isShapeHidden(shape)),
+    [selectedShapes]
+  );
+  const canLock = useMemo(
+    () => selectedShapes.some((shape) => !isShapeLocked(shape)),
+    [selectedShapes]
+  );
+  const canUnlock = useMemo(
+    () => selectedShapes.some((shape) => isShapeLocked(shape)),
+    [selectedShapes]
+  );
+
   // Check if can group (2+ top-level shapes selected)
   const canGroup = useMemo(() => {
     if (selectedIds.length < 2) {
@@ -592,8 +931,255 @@ export function LayerPanel({
     }
   }, [onUngroup, primaryShape, canUngroup]);
 
+  const applyVisibility = useCallback(
+    (shapeIds: readonly ShapeId[], hidden: boolean) => {
+      if (shapeIds.length === 0) {
+        return;
+      }
+      onUpdateShapes(shapeIds, (shape) => {
+        if (!("nonVisual" in shape)) {
+          return shape;
+        }
+        return {
+          ...shape,
+          nonVisual: {
+            ...shape.nonVisual,
+            hidden: hidden ? true : undefined,
+          },
+        };
+      });
+    },
+    [onUpdateShapes]
+  );
+
+  const applyLock = useCallback(
+    (shapeIds: readonly ShapeId[], locked: boolean) => {
+      if (shapeIds.length === 0) {
+        return;
+      }
+      onUpdateShapes(shapeIds, (shape) => updateShapeLock(shape, locked));
+    },
+    [onUpdateShapes]
+  );
+
+  const getToggleTargetIds = useCallback(
+    (shapeId: ShapeId) =>
+      selectedIds.includes(shapeId) ? selectedIds : [shapeId],
+    [selectedIds]
+  );
+
+  const handleToggleVisibility = useCallback(
+    (shapeId: ShapeId) => {
+      const shape = findShapeById(slide.shapes, shapeId);
+      if (!shape) {
+        return;
+      }
+      const targetIds = getToggleTargetIds(shapeId);
+      applyVisibility(targetIds, !isShapeHidden(shape));
+    },
+    [applyVisibility, getToggleTargetIds, slide.shapes]
+  );
+
+  const handleToggleLock = useCallback(
+    (shapeId: ShapeId) => {
+      const shape = findShapeById(slide.shapes, shapeId);
+      if (!shape) {
+        return;
+      }
+      const targetIds = getToggleTargetIds(shapeId);
+      applyLock(targetIds, !isShapeLocked(shape));
+    },
+    [applyLock, getToggleTargetIds, slide.shapes]
+  );
+
+  const handleContextMenu = useCallback(
+    (shapeId: ShapeId, event: MouseEvent) => {
+      if (!selectedIds.includes(shapeId)) {
+        onSelect(shapeId, false);
+      }
+      setContextMenu({ x: event.clientX, y: event.clientY });
+    },
+    [onSelect, selectedIds]
+  );
+
+  const handleCloseContextMenu = useCallback(() => {
+    setContextMenu(null);
+  }, []);
+
+  const menuItems = useMemo<readonly MenuEntry[]>(() => {
+    return [
+      {
+        id: "group",
+        label: "Group",
+        shortcut: "⌘G",
+        disabled: !canGroup,
+      },
+      {
+        id: "ungroup",
+        label: "Ungroup",
+        shortcut: "⌘⇧G",
+        disabled: !canUngroup,
+      },
+      { type: "separator" },
+      {
+        id: "show",
+        label: "Show",
+        disabled: !canShow,
+      },
+      {
+        id: "hide",
+        label: "Hide",
+        disabled: !canHide,
+      },
+      { type: "separator" },
+      {
+        id: "lock",
+        label: "Lock",
+        disabled: !canLock,
+      },
+      {
+        id: "unlock",
+        label: "Unlock",
+        disabled: !canUnlock,
+      },
+    ];
+  }, [canGroup, canUngroup, canShow, canHide, canLock, canUnlock]);
+
+  const handleMenuAction = useCallback(
+    (actionId: string) => {
+      switch (actionId) {
+        case "group":
+          handleGroup();
+          break;
+        case "ungroup":
+          handleUngroup();
+          break;
+        case "show":
+          applyVisibility(selectedIds, false);
+          break;
+        case "hide":
+          applyVisibility(selectedIds, true);
+          break;
+        case "lock":
+          applyLock(selectedIds, true);
+          break;
+        case "unlock":
+          applyLock(selectedIds, false);
+          break;
+      }
+    },
+    [applyLock, applyVisibility, handleGroup, handleUngroup, selectedIds]
+  );
+
+  const isDropForbidden = useCallback(
+    (targetParentId: ShapeId | null) => {
+      if (!draggingId) {
+        return true;
+      }
+      if (!targetParentId) {
+        return false;
+      }
+      if (targetParentId === draggingId) {
+        return true;
+      }
+      const targetInfo = findShapeByIdWithParents(slide.shapes, targetParentId);
+      if (!targetInfo) {
+        return true;
+      }
+      return targetInfo.parentGroups.some((group) => group.nonVisual.id === draggingId);
+    },
+    [draggingId, slide.shapes]
+  );
+
+  const handleDragStart = useCallback(
+    (shapeId: ShapeId, event: DragEvent) => {
+      event.dataTransfer.effectAllowed = "move";
+      event.dataTransfer.setData("application/shape-id", shapeId);
+      setDraggingId(shapeId);
+    },
+    []
+  );
+
+  const handleDragOver = useCallback(
+    (shape: Shape, parentId: ShapeId | null, displayIndex: number, event: DragEvent) => {
+      event.stopPropagation();
+      event.preventDefault();
+      if (!draggingId) {
+        return;
+      }
+
+      const shapeId = getShapeId(shape);
+      if (!shapeId) {
+        return;
+      }
+
+      const position = getDropPosition(event, shape.type === "grpSp");
+      let targetParentId = parentId;
+      let targetIndex = displayIndex;
+
+      if (position === "inside" && shape.type === "grpSp") {
+        targetParentId = shapeId;
+        targetIndex = getDisplayOrder(shape.children).length;
+      } else if (position === "after") {
+        targetIndex = displayIndex + 1;
+      }
+
+      if (isDropForbidden(targetParentId)) {
+        setDropTarget(null);
+        return;
+      }
+
+      event.dataTransfer.dropEffect = "move";
+      setDropTarget({
+        targetId: shapeId,
+        parentId: targetParentId,
+        index: targetIndex,
+        position,
+      });
+    },
+    [draggingId, isDropForbidden]
+  );
+
+  const handleListDragOver = useCallback(
+    (event: DragEvent) => {
+      event.preventDefault();
+      if (!draggingId) {
+        return;
+      }
+      const length = getDisplayOrder(slide.shapes).length;
+      event.dataTransfer.dropEffect = "move";
+      setDropTarget({
+        targetId: null,
+        parentId: null,
+        index: length,
+        position: "after",
+      });
+    },
+    [draggingId, slide.shapes]
+  );
+
+  const handleDrop = useCallback(
+    (event: DragEvent) => {
+      event.stopPropagation();
+      event.preventDefault();
+      if (!draggingId || !dropTarget) {
+        return;
+      }
+      onMoveShape(draggingId, { parentId: dropTarget.parentId, index: dropTarget.index });
+      setDraggingId(null);
+      setDropTarget(null);
+    },
+    [draggingId, dropTarget, onMoveShape]
+  );
+
+  const handleDragEnd = useCallback(() => {
+    setDraggingId(null);
+    setDropTarget(null);
+  }, []);
+
   // Clear selection when clicking empty area
   const handlePanelClick = useCallback(() => {
+    setContextMenu(null);
     onClearSelection();
   }, [onClearSelection]);
 
@@ -611,18 +1197,31 @@ export function LayerPanel({
         shapes={slide.shapes}
         selectedIds={selectedIds}
         expandedGroups={expandedGroups}
+        dropTarget={dropTarget}
+        draggingId={draggingId}
         onSelect={handleSelect}
         onToggleExpand={handleToggleExpand}
+        onToggleVisibility={handleToggleVisibility}
+        onToggleLock={handleToggleLock}
+        onContextMenu={handleContextMenu}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+        onDragEnd={handleDragEnd}
+        onListDragOver={handleListDragOver}
+        onListDrop={handleDrop}
         onEmptyClick={handlePanelClick}
       />
 
-      {/* Toolbar */}
-      <LayerToolbar
-        canGroup={canGroup}
-        canUngroup={canUngroup}
-        onGroup={handleGroup}
-        onUngroup={handleUngroup}
-      />
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={menuItems}
+          onAction={handleMenuAction}
+          onClose={handleCloseContextMenu}
+        />
+      )}
     </div>
   );
 }

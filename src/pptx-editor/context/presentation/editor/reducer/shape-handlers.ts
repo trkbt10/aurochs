@@ -24,6 +24,7 @@ import {
   reorderShape,
 } from "../../../../shape/mutation";
 import { ungroupShape, groupShapes } from "../../../../shape/group";
+import { moveShapeInHierarchy } from "../../../../shape/hierarchy";
 
 type UpdateActiveSlideAction = Extract<
   PresentationEditorAction,
@@ -53,6 +54,10 @@ type GroupShapesAction = Extract<
 type MoveShapeToIndexAction = Extract<
   PresentationEditorAction,
   { type: "MOVE_SHAPE_TO_INDEX" }
+>;
+type MoveShapeInHierarchyAction = Extract<
+  PresentationEditorAction,
+  { type: "MOVE_SHAPE_IN_HIERARCHY" }
 >;
 
 /**
@@ -285,6 +290,39 @@ function handleMoveShapeToIndex(
   };
 }
 
+function handleMoveShapeInHierarchy(
+  state: PresentationEditorState,
+  action: MoveShapeInHierarchyAction
+): PresentationEditorState {
+  const activeSlide = getActiveSlide(state);
+  if (!activeSlide) {
+    return state;
+  }
+
+  const nextShapes = moveShapeInHierarchy(
+    activeSlide.slide.shapes,
+    action.shapeId,
+    action.target
+  );
+  if (!nextShapes) {
+    return state;
+  }
+
+  const newDoc = updateActiveSlideInDocument(
+    state.documentHistory.present,
+    state.activeSlideId,
+    (slide) => ({
+      ...slide,
+      shapes: nextShapes,
+    })
+  );
+
+  return {
+    ...state,
+    documentHistory: pushHistory(state.documentHistory, newDoc),
+  };
+}
+
 /**
  * Shape mutation handlers
  */
@@ -297,4 +335,5 @@ export const SHAPE_HANDLERS: HandlerMap = {
   UNGROUP_SHAPE: handleUngroupShape,
   GROUP_SHAPES: handleGroupShapes,
   MOVE_SHAPE_TO_INDEX: handleMoveShapeToIndex,
+  MOVE_SHAPE_IN_HIERARCHY: handleMoveShapeInHierarchy,
 };

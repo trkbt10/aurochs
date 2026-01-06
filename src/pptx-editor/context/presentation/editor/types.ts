@@ -8,6 +8,7 @@
 import type { Slide, Shape, TextBody } from "../../../../pptx/domain";
 import type { ShapeId, Pixels, Degrees } from "../../../../pptx/domain/types";
 import type { PresentationDocument, SlideWithId, SlideId } from "../../../../pptx/app";
+import type { ShapeHierarchyTarget } from "../../../shape";
 import type {
   UndoRedoHistory,
   SelectionState,
@@ -150,6 +151,11 @@ export type PresentationEditorAction =
       readonly type: "MOVE_SHAPE_TO_INDEX";
       readonly shapeId: ShapeId;
       readonly newIndex: number;
+    }
+  | {
+      readonly type: "MOVE_SHAPE_IN_HIERARCHY";
+      readonly shapeId: ShapeId;
+      readonly target: ShapeHierarchyTarget;
     }
 
   // Shape selection
