@@ -7,7 +7,6 @@
 
 import { useCallback, useRef, useEffect } from "react";
 import type { SlideListProps } from "./types";
-import { createSingleSlideSelection } from "./types";
 import { SlideListItem } from "./SlideListItem";
 import { SlideListGap } from "./SlideListGap";
 import { getContainerStyle } from "./styles";
@@ -20,6 +19,28 @@ import {
   useSlideContextMenu,
 } from "./hooks";
 import { ContextMenu } from "../ui/context-menu";
+import type { SlideTransition } from "../../pptx/domain/transition";
+import type { SlideSelectionState } from "./types";
+
+function buildControlledSelection(
+  selectedIds: readonly string[],
+  slides: readonly { readonly id: string }[]
+): SlideSelectionState {
+  if (selectedIds.length === 0) {
+    return {
+      selectedIds,
+      primaryId: undefined,
+      anchorIndex: undefined,
+    };
+  }
+  const primaryId = selectedIds[selectedIds.length - 1];
+  const anchorIndex = slides.findIndex((slide) => slide.id === primaryId);
+  return {
+    selectedIds,
+    primaryId,
+    anchorIndex: anchorIndex === -1 ? undefined : anchorIndex,
+  };
+}
 
 /**
  * Unified slide list component
@@ -40,6 +61,7 @@ export function SlideList({
   onDeleteSlides,
   onDuplicateSlides,
   onMoveSlides,
+  onSlideTransitionChange,
 }: SlideListProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const activeItemRef = useRef<HTMLDivElement>(null);
@@ -62,17 +84,7 @@ export function SlideList({
   // Sync with controlled selectedIds
   useEffect(() => {
     if (controlledSelectedIds) {
-      const primaryId =
-        controlledSelectedIds.length > 0
-          ? controlledSelectedIds[controlledSelectedIds.length - 1]
-          : undefined;
-      setSelection({
-        selectedIds: controlledSelectedIds,
-        primaryId,
-        anchorIndex: primaryId
-          ? slides.findIndex((s) => s.id === primaryId)
-          : undefined,
-      });
+      setSelection(buildControlledSelection(controlledSelectedIds, slides));
     }
   }, [controlledSelectedIds, slides, setSelection]);
 
@@ -85,7 +97,7 @@ export function SlideList({
     containerRef,
     onNavigate: (slideId, index) => {
       selectSingle(slideId, index);
-      onSlideClick?.(slideId, {} as React.MouseEvent);
+      onSlideClick?.(slideId);
     },
     onExtendSelection: selectRange,
   });
@@ -145,7 +157,9 @@ export function SlideList({
   useEffect(() => {
     const item = activeItemRef.current;
     const container = containerRef.current;
-    if (!item || !container) return;
+    if (!item || !container) {
+      return;
+    }
 
     requestAnimationFrame(() => {
       const itemRect = item.getBoundingClientRect();
@@ -169,7 +183,7 @@ export function SlideList({
 
   // Handle item click
   const handleItemClick = useCallback(
-    (slideId: string, index: number, event: React.MouseEvent) => {
+    (slideId: string, index: number, event: React.MouseEvent | React.KeyboardEvent) => {
       if (isEditable) {
         handleSelectionClick(slideId, index, event);
       } else {
@@ -178,6 +192,23 @@ export function SlideList({
       onSlideClick?.(slideId, event);
     },
     [isEditable, handleSelectionClick, selectSingle, onSlideClick]
+  );
+
+  const handleFxOpen = useCallback(
+    (slideId: string, index: number, event: React.MouseEvent) => {
+      if (isEditable) {
+        selectSingle(slideId, index);
+      }
+      onSlideClick?.(slideId, event);
+    },
+    [isEditable, selectSingle, onSlideClick]
+  );
+
+  const handleTransitionChange = useCallback(
+    (slideId: string, transition: SlideTransition | undefined) => {
+      onSlideTransitionChange?.(slideId, transition);
+    },
+    [onSlideTransitionChange]
   );
 
   // Handle context menu
@@ -193,10 +224,11 @@ export function SlideList({
   const handleDelete = useCallback(
     (slideId: string) => {
       // Delete selected items if the deleted slide is selected, otherwise just this one
-      const idsToDelete = selection.selectedIds.includes(slideId)
-        ? selection.selectedIds
-        : [slideId];
-      onDeleteSlides?.(idsToDelete);
+      if (selection.selectedIds.includes(slideId)) {
+        onDeleteSlides?.(selection.selectedIds);
+        return;
+      }
+      onDeleteSlides?.([slideId]);
     },
     [selection.selectedIds, onDeleteSlides]
   );
@@ -265,6 +297,8 @@ export function SlideList({
               onItemDelete={handleDelete}
               onItemPointerEnter={handleItemEnter}
               onItemPointerLeave={handleItemLeave}
+              onItemTransitionChange={handleTransitionChange}
+              onItemFxOpen={handleFxOpen}
               onItemDragStart={handleDragStart}
               onItemDragOver={handleItemDragOver}
               onItemDrop={handleItemDrop}

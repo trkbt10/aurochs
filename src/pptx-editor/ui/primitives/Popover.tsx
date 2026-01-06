@@ -15,6 +15,11 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { colorTokens, radiusTokens, spacingTokens } from "../design-tokens";
+import {
+  calculatePopoverPosition,
+  type PopoverAlign,
+  type PopoverSide,
+} from "./popover-position";
 
 export type PopoverProps = {
   /** Trigger element that opens the popover */
@@ -26,9 +31,11 @@ export type PopoverProps = {
   /** Callback when open state changes */
   readonly onOpenChange?: (open: boolean) => void;
   /** Preferred alignment of the popover */
-  readonly align?: "start" | "center" | "end";
+  readonly align?: PopoverAlign;
   /** Preferred side of the popover */
-  readonly side?: "top" | "bottom" | "left" | "right";
+  readonly side?: PopoverSide;
+  /** Show an arrow pointing to the trigger */
+  readonly showArrow?: boolean;
   /** Disable the popover */
   readonly disabled?: boolean;
   /** Additional CSS class */
@@ -54,55 +61,109 @@ const contentStyle: CSSProperties = {
   overflow: "auto",
 };
 
+const arrowBorderSize = 8;
+const arrowFillSize = 7;
+
+type ArrowStyles = {
+  readonly border: CSSProperties;
+  readonly fill: CSSProperties;
+};
+
+type ArrowConfig = {
+  readonly offsetProp: "top" | "left";
+  readonly positionProp: "left" | "right" | "top" | "bottom";
+  readonly edgeProp: "borderLeft" | "borderRight" | "borderTop" | "borderBottom";
+  readonly crossProps: readonly ["borderTop" | "borderBottom" | "borderLeft" | "borderRight", "borderTop" | "borderBottom" | "borderLeft" | "borderRight"];
+  readonly transform: "translateX(-50%)" | "translateY(-50%)";
+};
+
+const arrowConfigs: Record<PopoverSide, ArrowConfig> = {
+  right: {
+    offsetProp: "top",
+    positionProp: "left",
+    edgeProp: "borderRight",
+    crossProps: ["borderTop", "borderBottom"],
+    transform: "translateY(-50%)",
+  },
+  left: {
+    offsetProp: "top",
+    positionProp: "right",
+    edgeProp: "borderLeft",
+    crossProps: ["borderTop", "borderBottom"],
+    transform: "translateY(-50%)",
+  },
+  top: {
+    offsetProp: "left",
+    positionProp: "bottom",
+    edgeProp: "borderBottom",
+    crossProps: ["borderLeft", "borderRight"],
+    transform: "translateX(-50%)",
+  },
+  bottom: {
+    offsetProp: "left",
+    positionProp: "top",
+    edgeProp: "borderTop",
+    crossProps: ["borderLeft", "borderRight"],
+    transform: "translateX(-50%)",
+  },
+};
+
+function buildArrowStyle(
+  side: PopoverSide,
+  offset: number,
+  size: number,
+  color: string
+): CSSProperties {
+  const config = arrowConfigs[side];
+  const style: Record<string, string | number> = {
+    position: "absolute",
+    width: 0,
+    height: 0,
+    pointerEvents: "none",
+    transform: config.transform,
+  };
+  style[config.offsetProp] = offset;
+  style[config.positionProp] = -size;
+  style[config.edgeProp] = `${size}px solid ${color}`;
+  style[config.crossProps[0]] = `${size}px solid transparent`;
+  style[config.crossProps[1]] = `${size}px solid transparent`;
+  return style as CSSProperties;
+}
+
+function getArrowStyles(side: PopoverSide, offset: number): ArrowStyles {
+  return {
+    border: buildArrowStyle(
+      side,
+      offset,
+      arrowBorderSize,
+      `var(--border-primary, ${colorTokens.border.primary})`
+    ),
+    fill: buildArrowStyle(
+      side,
+      offset,
+      arrowFillSize,
+      `var(--bg-secondary, ${colorTokens.background.secondary})`
+    ),
+  };
+}
+
+function buildArrowStyles(
+  showArrow: boolean,
+  side: PopoverSide,
+  offset: number
+): ArrowStyles | null {
+  if (!showArrow) {
+    return null;
+  }
+  return getArrowStyles(side, offset);
+}
+
 type Position = {
   readonly top: number;
   readonly left: number;
+  readonly side: PopoverSide;
+  readonly arrowOffset: number;
 };
-
-function calculatePosition(
-  triggerRect: DOMRect,
-  contentRect: DOMRect,
-  side: "top" | "bottom" | "left" | "right",
-  align: "start" | "center" | "end"
-): Position {
-  const gap = 8;
-  const padding = 8;
-
-  const result = { top: 0, left: 0 };
-
-  if (side === "bottom") {
-    result.top = triggerRect.bottom + gap;
-  } else if (side === "top") {
-    result.top = triggerRect.top - contentRect.height - gap;
-  } else if (side === "left") {
-    result.left = triggerRect.left - contentRect.width - gap;
-  } else {
-    result.left = triggerRect.right + gap;
-  }
-
-  if (side === "top" || side === "bottom") {
-    if (align === "start") {
-      result.left = triggerRect.left;
-    } else if (align === "center") {
-      result.left = triggerRect.left + (triggerRect.width - contentRect.width) / 2;
-    } else {
-      result.left = triggerRect.right - contentRect.width;
-    }
-  } else {
-    if (align === "start") {
-      result.top = triggerRect.top;
-    } else if (align === "center") {
-      result.top = triggerRect.top + (triggerRect.height - contentRect.height) / 2;
-    } else {
-      result.top = triggerRect.bottom - contentRect.height;
-    }
-  }
-
-  result.left = Math.max(padding, Math.min(result.left, window.innerWidth - contentRect.width - padding));
-  result.top = Math.max(padding, Math.min(result.top, window.innerHeight - contentRect.height - padding));
-
-  return result;
-}
 
 /**
  * A popover component that displays content relative to a trigger element.
@@ -114,6 +175,7 @@ export function Popover({
   onOpenChange,
   align = "center",
   side = "bottom",
+  showArrow = false,
   disabled,
   className,
 }: PopoverProps) {
@@ -123,7 +185,14 @@ export function Popover({
 
   const triggerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState<Position>({ top: 0, left: 0 });
+  const [position, setPosition] = useState<Position>({
+    top: 0,
+    left: 0,
+    side,
+    arrowOffset: 0,
+  });
+
+  const arrowStyles = buildArrowStyles(showArrow, position.side, position.arrowOffset);
 
   const handleOpen = useCallback(() => {
     if (disabled) {
@@ -157,7 +226,18 @@ export function Popover({
       }
       const triggerRect = triggerRef.current.getBoundingClientRect();
       const contentRect = contentRef.current.getBoundingClientRect();
-      setPosition(calculatePosition(triggerRect, contentRect, side, align));
+      setPosition(
+        calculatePopoverPosition({
+          triggerRect,
+          contentSize: { width: contentRect.width, height: contentRect.height },
+          viewport: { width: window.innerWidth, height: window.innerHeight },
+          preferredSide: side,
+          align,
+          gap: 8,
+          padding: 8,
+          arrowInset: 8,
+        })
+      );
     };
 
     updatePosition();
@@ -187,9 +267,20 @@ export function Popover({
             <div style={overlayStyle} onClick={handleClose} />
             <div
               ref={contentRef}
-              style={{ ...contentStyle, top: position.top, left: position.left }}
+              style={{
+                ...contentStyle,
+                top: position.top,
+                left: position.left,
+              }}
               onClick={(e) => e.stopPropagation()}
+              data-side={position.side}
             >
+              {arrowStyles && (
+                <>
+                  <div style={arrowStyles.border} />
+                  <div style={arrowStyles.fill} />
+                </>
+              )}
               {children}
             </div>
           </>,

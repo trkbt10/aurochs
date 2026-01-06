@@ -6,15 +6,19 @@
  * item is hovered at any time.
  */
 
-import { memo } from "react";
+import { memo, useState } from "react";
 import type { SlideListItemProps } from "./types";
 import { SlideNumberBadge } from "./SlideNumberBadge";
+import { TransitionEditor } from "../editors";
+import { FxIcon } from "../ui/icons";
+import { Popover } from "../ui/primitives";
 import {
   getItemWrapperStyle,
   getThumbnailContainerStyle,
   thumbnailContentStyle,
   thumbnailFallbackStyle,
   getDeleteButtonStyle,
+  getFxButtonStyle,
 } from "./styles";
 
 /**
@@ -42,6 +46,8 @@ export const SlideListItem = memo(function SlideListItem({
   onItemDelete,
   onItemPointerEnter,
   onItemPointerLeave,
+  onItemTransitionChange,
+  onItemFxOpen,
   onItemDragStart,
   onItemDragOver,
   onItemDrop,
@@ -49,13 +55,28 @@ export const SlideListItem = memo(function SlideListItem({
 }: SlideListItemProps) {
   const isEditable = mode === "editable";
   const slideId = slideWithId.id;
+  const [isFxOpen, setIsFxOpen] = useState(false);
 
   // Show delete button when hovered and not dragging
   const showDeleteButton = isEditable && canDelete && isHovered && !isAnyDragging;
+  const hasTransition =
+    slideWithId.slide.transition !== undefined &&
+    slideWithId.slide.transition.type !== "none";
+  const showFxButton =
+    isEditable &&
+    !isAnyDragging &&
+    (hasTransition || isHovered);
 
   // Create item-specific handlers (closures are fine since component is memoized)
-  const handleClick = (e: React.MouseEvent) => {
+  const handleClick = (e: React.MouseEvent | React.KeyboardEvent) => {
     onItemClick(slideId, index, e);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onItemClick(slideId, index, e);
+    }
   };
 
   const handleContextMenu = (e: React.MouseEvent) => {
@@ -86,6 +107,33 @@ export const SlideListItem = memo(function SlideListItem({
   const handleDrop = (e: React.DragEvent) => {
     onItemDrop(e, index);
   };
+
+  const handleFxClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onItemFxOpen?.(slideId, index, e);
+    setIsFxOpen((prev) => !prev);
+  };
+
+const handleFxOpenChange = (open: boolean) => {
+  setIsFxOpen(open);
+};
+
+  const popoverContainerStyle: React.CSSProperties = {
+    minWidth: "260px",
+  };
+
+  function renderThumbnailContent(): React.ReactNode {
+    if (renderThumbnail !== undefined) {
+      return renderThumbnail(slideWithId, index);
+    }
+    return (
+      <span style={thumbnailFallbackStyle}>
+        {slideWithId.slide.shapes.length} shapes
+      </span>
+    );
+  }
+
+  const thumbnailContent = renderThumbnailContent();
 
   return (
     <div ref={itemRef} style={getItemWrapperStyle(orientation)}>
@@ -121,24 +169,11 @@ export const SlideListItem = memo(function SlideListItem({
           onContextMenu={isEditable ? handleContextMenu : undefined}
           role="button"
           tabIndex={0}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              handleClick(e as unknown as React.MouseEvent);
-            }
-          }}
+          onKeyDown={handleKeyDown}
           aria-label={`Slide ${index + 1}`}
           aria-selected={isSelected || isActive}
         >
-          <div style={thumbnailContentStyle}>
-            {renderThumbnail !== undefined ? (
-              renderThumbnail(slideWithId, index)
-            ) : (
-              <span style={thumbnailFallbackStyle}>
-                {slideWithId.slide.shapes.length} shapes
-              </span>
-            )}
-          </div>
+          <div style={thumbnailContentStyle}>{thumbnailContent}</div>
 
           {/* Delete button (inside thumbnail, shown on hover) */}
           {isEditable && canDelete && (
@@ -151,6 +186,45 @@ export const SlideListItem = memo(function SlideListItem({
             >
               ×
             </button>
+          )}
+
+          {showFxButton && onItemTransitionChange && (
+            <Popover
+              open={isFxOpen}
+              onOpenChange={handleFxOpenChange}
+              align="center"
+              side="right"
+              showArrow
+              trigger={(
+                <button
+                  type="button"
+                  style={getFxButtonStyle(showFxButton)}
+                  onClick={handleFxClick}
+                  aria-label="Scene effects"
+                >
+                  <FxIcon size={12} strokeWidth={2} />
+                </button>
+              )}
+            >
+              <div style={popoverContainerStyle}>
+                <div
+                  style={{
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    marginBottom: "8px",
+                    color: "var(--text-primary, #e5e5e5)",
+                  }}
+                >
+                  Scene Effects
+                </div>
+                <TransitionEditor
+                  value={slideWithId.slide.transition}
+                  onChange={(transition) =>
+                    onItemTransitionChange(slideId, transition)
+                  }
+                />
+              </div>
+            </Popover>
           )}
         </div>
       </div>

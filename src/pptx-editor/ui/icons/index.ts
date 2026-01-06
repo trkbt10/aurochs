@@ -71,6 +71,7 @@ export {
   Check as CheckIcon,
   MoreHorizontal as MoreIcon,
   Settings as SettingsIcon,
+  Sparkles as FxIcon,
   Eye as VisibleIcon,
   EyeOff as HiddenIcon,
   Lock as LockIcon,

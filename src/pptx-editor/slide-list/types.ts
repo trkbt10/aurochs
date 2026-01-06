@@ -6,6 +6,7 @@
  */
 
 import type { SlideId, SlideWithId } from "../../pptx/app";
+import type { SlideTransition } from "../../pptx/domain/transition";
 
 /**
  * Scroll orientation for the slide list
@@ -123,7 +124,7 @@ export type SlideListProps = {
 
   // Event handlers
   /** Called when a slide is clicked */
-  readonly onSlideClick?: (slideId: SlideId, event: React.MouseEvent) => void;
+  readonly onSlideClick?: (slideId: SlideId, event?: React.SyntheticEvent) => void;
   /** Called when selection changes (editable mode) */
   readonly onSelectionChange?: (selection: SlideSelectionState) => void;
   /** Called to add a new slide after the specified index */
@@ -134,6 +135,8 @@ export type SlideListProps = {
   readonly onDuplicateSlides?: (slideIds: readonly SlideId[]) => void;
   /** Called to move slides to a new position */
   readonly onMoveSlides?: (slideIds: readonly SlideId[], toIndex: number) => void;
+  /** Called when slide transition changes */
+  readonly onSlideTransitionChange?: (slideId: SlideId, transition: SlideTransition | undefined) => void;
 };
 
 /**
@@ -164,11 +167,22 @@ export type SlideListItemProps = {
   ) => React.ReactNode;
 
   // Event handlers (stable callbacks - item creates its own closures)
-  readonly onItemClick: (slideId: SlideId, index: number, e: React.MouseEvent) => void;
+  readonly onItemClick: (
+    slideId: SlideId,
+    index: number,
+    e: React.MouseEvent | React.KeyboardEvent
+  ) => void;
   readonly onItemContextMenu: (slideId: SlideId, e: React.MouseEvent) => void;
   readonly onItemDelete: (slideId: SlideId) => void;
   readonly onItemPointerEnter: (slideId: SlideId) => void;
   readonly onItemPointerLeave: (slideId: SlideId) => void;
+  /** Called when the slide transition changes */
+  readonly onItemTransitionChange?: (
+    slideId: SlideId,
+    transition: SlideTransition | undefined
+  ) => void;
+  /** Called when the Fx popover opens */
+  readonly onItemFxOpen?: (slideId: SlideId, index: number, event: React.MouseEvent) => void;
 
   // Drag handlers (stable callbacks)
   readonly onItemDragStart: (e: React.DragEvent, slideId: SlideId) => void;

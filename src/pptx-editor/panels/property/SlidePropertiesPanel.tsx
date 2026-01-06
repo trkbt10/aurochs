@@ -5,9 +5,8 @@
  */
 
 import type { Background } from "../../../pptx/domain/slide";
-import type { SlideTransition } from "../../../pptx/domain/transition";
 import { Accordion } from "../../ui/layout/Accordion";
-import { BackgroundEditor, TransitionEditor } from "../../editors/index";
+import { BackgroundEditor } from "../../editors/index";
 
 // =============================================================================
 // Types
@@ -15,9 +14,7 @@ import { BackgroundEditor, TransitionEditor } from "../../editors/index";
 
 export type SlidePropertiesPanelProps = {
   readonly background?: Background;
-  readonly transition?: SlideTransition;
   readonly onBackgroundChange: (bg: Background | undefined) => void;
-  readonly onTransitionChange: (tr: SlideTransition | undefined) => void;
 };
 
 // =============================================================================
@@ -33,9 +30,7 @@ export type SlidePropertiesPanelProps = {
  */
 export function SlidePropertiesPanel({
   background,
-  transition,
   onBackgroundChange,
-  onTransitionChange,
 }: SlidePropertiesPanelProps) {
   return (
     <>
@@ -54,10 +49,6 @@ export function SlidePropertiesPanel({
             No background set
           </div>
         )}
-      </Accordion>
-
-      <Accordion title="Slide Transition" defaultExpanded={false}>
-        <TransitionEditor value={transition} onChange={onTransitionChange} />
       </Accordion>
     </>
   );

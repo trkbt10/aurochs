@@ -199,6 +199,34 @@ export function getDeleteButtonStyle(visible: boolean): CSSProperties {
 }
 
 // =============================================================================
+// Fx button styles
+// =============================================================================
+
+export function getFxButtonStyle(visible: boolean): CSSProperties {
+  return {
+    position: "absolute",
+    bottom: spacingTokens.xs,
+    right: spacingTokens.xs,
+    width: "22px",
+    height: "22px",
+    padding: 0,
+    borderRadius: "999px",
+    backgroundColor: "rgba(0, 0, 0, 0.72)",
+    color: colorTokens.text.primary,
+    border: "1px solid rgba(255, 255, 255, 0.12)",
+    cursor: "pointer",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    lineHeight: 1,
+    opacity: visible ? 1 : 0,
+    pointerEvents: visible ? "auto" : "none",
+    transition: "opacity 0.12s ease, background-color 0.12s ease",
+    zIndex: 10,
+  };
+}
+
+// =============================================================================
 // Gap styles (for add button and drop indicator)
 // =============================================================================
 

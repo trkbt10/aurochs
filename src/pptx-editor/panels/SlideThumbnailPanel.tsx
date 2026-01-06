@@ -7,6 +7,7 @@
 
 import { useCallback, type CSSProperties } from "react";
 import type { Slide } from "../../pptx/domain/index";
+import type { SlideTransition } from "../../pptx/domain/transition";
 import type { SlideId, SlideWithId } from "../../pptx/app";
 import { usePresentationEditor } from "../context/presentation/PresentationEditorContext";
 import { SlideList } from "../slide-list";
@@ -121,6 +122,17 @@ export function SlideThumbnailPanel({
     [dispatch]
   );
 
+  const handleSlideTransitionChange = useCallback(
+    (slideId: SlideId, transition: SlideTransition | undefined) => {
+      dispatch({
+        type: "UPDATE_SLIDE",
+        slideId,
+        updater: (slide) => ({ ...slide, transition }),
+      });
+    },
+    [dispatch]
+  );
+
   return (
     <div style={panelStyle}>
       <SlideList
@@ -136,6 +148,7 @@ export function SlideThumbnailPanel({
         onDeleteSlides={handleDeleteSlides}
         onDuplicateSlides={handleDuplicateSlides}
         onMoveSlides={handleMoveSlides}
+        onSlideTransitionChange={handleSlideTransitionChange}
       />
     </div>
   );

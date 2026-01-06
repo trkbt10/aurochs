@@ -130,6 +130,11 @@ export type PresentationEditorAction =
   | { readonly type: "DUPLICATE_SLIDE"; readonly slideId: SlideId }
   | { readonly type: "MOVE_SLIDE"; readonly slideId: SlideId; readonly toIndex: number }
   | { readonly type: "SELECT_SLIDE"; readonly slideId: SlideId }
+  | {
+      readonly type: "UPDATE_SLIDE";
+      readonly slideId: SlideId;
+      readonly updater: (slide: Slide) => Slide;
+    }
 
   // Active slide mutations
   | { readonly type: "UPDATE_ACTIVE_SLIDE"; readonly updater: (slide: Slide) => Slide }

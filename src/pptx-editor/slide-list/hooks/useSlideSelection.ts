@@ -34,7 +34,7 @@ export type UseSlideSelectionResult = {
   readonly handleClick: (
     slideId: SlideId,
     index: number,
-    event: React.MouseEvent
+    event: React.MouseEvent | React.KeyboardEvent
   ) => void;
   /** Select a single slide */
   readonly selectSingle: (slideId: SlideId, index: number) => void;
@@ -102,7 +102,7 @@ export function useSlideSelection(
   }, [slides, setSelection]);
 
   const handleClick = useCallback(
-    (slideId: SlideId, index: number, event: React.MouseEvent) => {
+    (slideId: SlideId, index: number, event: React.MouseEvent | React.KeyboardEvent) => {
       const isMetaOrCtrl = event.metaKey || event.ctrlKey;
       const newSelection = handleSelectionClick(
         slides,
