@@ -340,6 +340,20 @@ export function SearchableSelect<T extends string = string>({
     setSearchQuery("");
   }, []);
 
+  const handleDropdownPointerDown = useCallback(
+    (event: React.PointerEvent) => {
+      event.stopPropagation();
+    },
+    []
+  );
+
+  const handleDropdownClick = useCallback(
+    (event: React.MouseEvent) => {
+      event.stopPropagation();
+    },
+    []
+  );
+
   // Handle select
   const handleSelect = useCallback(
     (optionValue: T) => {
@@ -456,7 +470,8 @@ export function SearchableSelect<T extends string = string>({
                 top: position.top,
                 left: position.left,
               }}
-              onClick={(e) => e.stopPropagation()}
+              onClick={handleDropdownClick}
+              onPointerDown={handleDropdownPointerDown}
             >
               {/* Search input */}
               <div style={searchContainerStyle}>

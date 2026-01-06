@@ -127,4 +127,41 @@ describe("calculatePopoverPosition", () => {
     expect(result.left).toBe(padding);
     expect(result.arrowOffset).toBe(arrowInset);
   });
+
+  it("honors end alignment on vertical placement", () => {
+    const trigger = createRect({ left: 40, top: 40, width: 60, height: 20 });
+    const content = { width: 100, height: 40 };
+    const result = calculatePopoverPosition({
+      triggerRect: trigger,
+      contentSize: content,
+      viewport,
+      preferredSide: "bottom",
+      align: "end",
+      gap,
+      padding,
+      arrowInset,
+    });
+
+    expect(result.side).toBe("bottom");
+    expect(result.left).toBe(padding);
+  });
+
+  it("clamps arrow offset within content bounds", () => {
+    const trigger = createRect({ left: 280, top: 120, width: 20, height: 20 });
+    const content = { width: 120, height: 80 };
+    const result = calculatePopoverPosition({
+      triggerRect: trigger,
+      contentSize: content,
+      viewport,
+      preferredSide: "left",
+      align: "center",
+      gap,
+      padding,
+      arrowInset,
+    });
+
+    expect(result.side).toBe("left");
+    expect(result.arrowOffset).toBeGreaterThanOrEqual(arrowInset);
+    expect(result.arrowOffset).toBeLessThanOrEqual(content.height - arrowInset);
+  });
 });

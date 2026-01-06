@@ -8,7 +8,7 @@
 import {
   useState,
   useRef,
-  useEffect,
+  useLayoutEffect,
   useCallback,
   type ReactNode,
   type CSSProperties,
@@ -185,14 +185,19 @@ export function Popover({
 
   const triggerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const [position, setPosition] = useState<Position>({
+  const [position, setPosition] = useState<Position | null>(null);
+  const positionUpdateIdRef = useRef(0);
+  const resolvedPosition = position ?? {
     top: 0,
     left: 0,
     side,
     arrowOffset: 0,
-  });
-
-  const arrowStyles = buildArrowStyles(showArrow, position.side, position.arrowOffset);
+  };
+  const arrowStyles = buildArrowStyles(
+    showArrow && position !== null,
+    resolvedPosition.side,
+    resolvedPosition.arrowOffset
+  );
 
   const handleOpen = useCallback(() => {
     if (disabled) {
@@ -215,10 +220,31 @@ export function Popover({
     }
   }, [isControlled, onOpenChange]);
 
-  useEffect(() => {
-    if (!open || !triggerRef.current || !contentRef.current) {
+  const handleContentPointerDownCapture = useCallback(
+    (event: React.PointerEvent) => {
+      event.stopPropagation();
+    },
+    []
+  );
+
+  const handleContentClickCapture = useCallback(
+    (event: React.MouseEvent) => {
+      event.stopPropagation();
+    },
+    []
+  );
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setPosition(null);
       return;
     }
+    if (!triggerRef.current || !contentRef.current) {
+      return;
+    }
+
+    positionUpdateIdRef.current += 1;
+    const updateId = positionUpdateIdRef.current;
 
     const updatePosition = () => {
       if (!triggerRef.current || !contentRef.current) {
@@ -226,18 +252,20 @@ export function Popover({
       }
       const triggerRect = triggerRef.current.getBoundingClientRect();
       const contentRect = contentRef.current.getBoundingClientRect();
-      setPosition(
-        calculatePopoverPosition({
-          triggerRect,
-          contentSize: { width: contentRect.width, height: contentRect.height },
-          viewport: { width: window.innerWidth, height: window.innerHeight },
-          preferredSide: side,
-          align,
-          gap: 8,
-          padding: 8,
-          arrowInset: 8,
-        })
-      );
+      if (positionUpdateIdRef.current === updateId) {
+        setPosition(
+          calculatePopoverPosition({
+            triggerRect,
+            contentSize: { width: contentRect.width, height: contentRect.height },
+            viewport: { width: window.innerWidth, height: window.innerHeight },
+            preferredSide: side,
+            align,
+            gap: 8,
+            padding: 8,
+            arrowInset: 8,
+          })
+        );
+      }
     };
 
     updatePosition();
@@ -245,6 +273,7 @@ export function Popover({
     window.addEventListener("scroll", updatePosition, true);
 
     return () => {
+      positionUpdateIdRef.current += 1;
       window.removeEventListener("resize", updatePosition);
       window.removeEventListener("scroll", updatePosition, true);
     };
@@ -269,11 +298,14 @@ export function Popover({
               ref={contentRef}
               style={{
                 ...contentStyle,
-                top: position.top,
-                left: position.left,
+                top: resolvedPosition.top,
+                left: resolvedPosition.left,
+                visibility: position ? "visible" : "hidden",
               }}
               onClick={(e) => e.stopPropagation()}
-              data-side={position.side}
+              onPointerDownCapture={handleContentPointerDownCapture}
+              onClickCapture={handleContentClickCapture}
+              data-side={resolvedPosition.side}
             >
               {arrowStyles && (
                 <>

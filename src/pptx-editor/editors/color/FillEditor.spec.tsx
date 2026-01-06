@@ -4,8 +4,12 @@
  * Tests the FillEditor handles all fill types correctly.
  */
 
+// @vitest-environment jsdom
+
 import type { Fill, SolidFill, GradientFill, NoFill, GradientStop } from "../../../pptx/domain/color";
 import { pct, deg } from "../../../pptx/domain/types";
+import { render, fireEvent } from "@testing-library/react";
+import { FillEditor } from "./FillEditor";
 
 describe("FillEditor: Fill type handling", () => {
   describe("SolidFill", () => {
@@ -111,6 +115,26 @@ describe("FillEditor: Fill type handling", () => {
       };
 
       expect(fill.type).toBe("noFill");
+    });
+  });
+
+  describe("FillEditor interactions", () => {
+    it("updates fill type from the selector", () => {
+      const state: { lastFill: Fill | null } = { lastFill: null };
+      const handleChange = (fill: Fill) => {
+        state.lastFill = fill;
+      };
+
+      const { getByRole } = render(
+        <FillEditor value={{ type: "noFill" }} onChange={handleChange} />
+      );
+
+      fireEvent.change(getByRole("combobox"), { target: { value: "solidFill" } });
+
+      if (!state.lastFill) {
+        throw new Error("Fill change not captured");
+      }
+      expect(state.lastFill.type).toBe("solidFill");
     });
   });
 });
