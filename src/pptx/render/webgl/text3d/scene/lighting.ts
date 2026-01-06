@@ -8,7 +8,7 @@
  */
 
 import * as THREE from "three";
-import type { LightRigType, LightRigDirection, LightRig, Rotation3d } from "../../../domain";
+import type { LightRigType, LightRigDirection, LightRig, Rotation3d } from "../../../../domain/index";
 
 // =============================================================================
 // Lighting Configuration Types

@@ -7,7 +7,7 @@
  */
 
 import * as THREE from "three";
-import type { PresetCameraType, Degrees, Percent } from "../../../domain";
+import type { PresetCameraType, Degrees, Percent } from "../../../../domain/index";
 
 // =============================================================================
 // Camera Configuration Types

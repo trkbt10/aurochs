@@ -6,32 +6,28 @@
  * @see ECMA-376 Part 1, Section 20.1.5 (3D Properties)
  */
 
-import { useEffect, useRef, useCallback, type CSSProperties } from "react";
-import type { Scene3d, Shape3d } from "../../../domain";
+import { useEffect, useRef, type CSSProperties } from "react";
+import type { Scene3d, Shape3d } from "../../../../domain/index";
 import {
-  createText3DRenderer,
+  createText3DRendererAsync,
   shouldUseWebGL3D,
   type Text3DRenderer as IText3DRenderer,
   type Text3DRenderConfig,
-} from "./renderer";
+  type Text3DRunConfig,
+} from "./core";
 
 // =============================================================================
 // Component Props
 // =============================================================================
 
+/**
+ * Configuration for a single text run (re-export for convenience)
+ */
+export type { Text3DRunConfig };
+
 export type Text3DRendererProps = {
-  /** Text content to render */
-  readonly text: string;
-  /** Text color (hex string with #) */
-  readonly color: string;
-  /** Font size in pixels */
-  readonly fontSize: number;
-  /** Font family */
-  readonly fontFamily: string;
-  /** Font weight */
-  readonly fontWeight?: number;
-  /** Font style */
-  readonly fontStyle?: "normal" | "italic";
+  /** Text runs to render - supports mixed styles */
+  readonly runs: readonly Text3DRunConfig[];
   /** 3D scene configuration */
   readonly scene3d?: Scene3d;
   /** 3D shape configuration */
@@ -54,15 +50,11 @@ export type Text3DRendererProps = {
  * WebGL 3D text renderer component
  *
  * Renders text with 3D effects using Three.js WebGL renderer.
+ * Supports mixed styles - each run can have different font properties and colors.
  * Falls back to display nothing if WebGL is not available.
  */
 export function Text3DRenderer({
-  text,
-  color,
-  fontSize,
-  fontFamily,
-  fontWeight = 400,
-  fontStyle = "normal",
+  runs,
   scene3d,
   shape3d,
   width,
@@ -74,7 +66,7 @@ export function Text3DRenderer({
   const rendererRef = useRef<IText3DRenderer | null>(null);
   const animationFrameRef = useRef<number | null>(null);
 
-  // Initialize renderer
+  // Initialize renderer (async - uses Web Worker for glyph extraction)
   useEffect(() => {
     if (!containerRef.current) {return;}
 
@@ -90,12 +82,7 @@ export function Text3DRenderer({
     }
 
     const config: Text3DRenderConfig = {
-      text,
-      color,
-      fontSize,
-      fontFamily,
-      fontWeight,
-      fontStyle,
+      runs,
       scene3d,
       shape3d,
       width,
@@ -103,32 +90,53 @@ export function Text3DRenderer({
       pixelRatio: window.devicePixelRatio || 1,
     };
 
-    try {
-      rendererRef.current = createText3DRenderer(config);
-      const canvas = rendererRef.current.getCanvas();
+    // Track if component is still mounted
+    let isMounted = true;
+    let animationId: number | null = null;
 
-      // Style canvas
-      canvas.style.width = "100%";
-      canvas.style.height = "100%";
-      canvas.style.display = "block";
+    // Async initialization
+    const initRenderer = async () => {
+      try {
+        const renderer = await createText3DRendererAsync(config);
 
-      // Add to container
-      containerRef.current.appendChild(canvas);
-
-      // Render loop
-      function animate() {
-        if (rendererRef.current) {
-          rendererRef.current.render();
+        // Check if still mounted after async operation
+        if (!isMounted || !containerRef.current) {
+          renderer.dispose();
+          return;
         }
-        animationFrameRef.current = requestAnimationFrame(animate);
+
+        rendererRef.current = renderer;
+        const canvas = renderer.getCanvas();
+
+        // Style canvas
+        canvas.style.width = "100%";
+        canvas.style.height = "100%";
+        canvas.style.display = "block";
+
+        // Add to container
+        containerRef.current.appendChild(canvas);
+
+        // Render loop
+        function animate() {
+          if (rendererRef.current && isMounted) {
+            rendererRef.current.render();
+            animationId = requestAnimationFrame(animate);
+          }
+        }
+        animate();
+      } catch (error) {
+        console.error("Failed to create 3D text renderer:", error);
       }
-      animate();
-    } catch (error) {
-      console.error("Failed to create 3D text renderer:", error);
-    }
+    };
+
+    initRenderer();
 
     return () => {
       // Cleanup
+      isMounted = false;
+      if (animationId !== null) {
+        cancelAnimationFrame(animationId);
+      }
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current);
       }
@@ -147,12 +155,7 @@ export function Text3DRenderer({
   useEffect(() => {
     if (rendererRef.current) {
       rendererRef.current.update({
-        text,
-        color,
-        fontSize,
-        fontFamily,
-        fontWeight,
-        fontStyle,
+        runs,
         scene3d,
         shape3d,
         width,
@@ -160,7 +163,7 @@ export function Text3DRenderer({
         pixelRatio: window.devicePixelRatio || 1,
       });
     }
-  }, [text, color, fontSize, fontFamily, fontWeight, fontStyle, scene3d, shape3d, width, height]);
+  }, [runs, scene3d, shape3d, width, height]);
 
   return (
     <div

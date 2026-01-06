@@ -6,7 +6,10 @@
  * @see ECMA-376 Part 1, Section 21.1.2.1.28 (prstTxWarp)
  */
 
+import { useState } from "react";
 import { type CheckItem, TestSubsection } from "./common";
+import { Text3DRenderer } from "@lib/pptx/render/webgl/text3d";
+import type { PresetCameraType, PresetMaterialType, BevelPresetType } from "@lib/pptx/domain/three-d";
 
 // =============================================================================
 // Text Shape Types (40+ preset text warps)
@@ -182,6 +185,121 @@ function TextWarpPreview({
   );
 }
 
+// Camera presets for selection
+const cameraPresets: PresetCameraType[] = [
+  "orthographicFront",
+  "isometricTopUp",
+  "isometricTopDown",
+  "obliqueTop",
+  "obliqueTopLeft",
+  "perspectiveAbove",
+  "perspectiveFront",
+  "perspectiveLeft",
+];
+
+// Material presets for selection
+const materialPresets: PresetMaterialType[] = [
+  "flat",
+  "matte",
+  "plastic",
+  "metal",
+  "softEdge",
+  "warmMatte",
+  "clear",
+];
+
+// Bevel presets for selection
+const bevelPresets: BevelPresetType[] = [
+  "relaxedInset",
+  "circle",
+  "slope",
+  "cross",
+  "angle",
+  "softRound",
+  "convex",
+];
+
+/**
+ * Interactive 3D text preview component
+ */
+function Text3DPreview() {
+  const [camera, setCamera] = useState<PresetCameraType>("isometricTopUp");
+  const [material, setMaterial] = useState<PresetMaterialType>("plastic");
+  const [bevelPreset, setBevelPreset] = useState<BevelPresetType>("relaxedInset");
+  const [extrusion, setExtrusion] = useState(20);
+  const [text, setText] = useState("3D");
+
+  return (
+    <div className="text3d-preview-container">
+      <div className="text3d-controls">
+        <label>
+          Text:
+          <input
+            type="text"
+            value={text}
+            onChange={(e) => setText(e.target.value || "3D")}
+            maxLength={10}
+          />
+        </label>
+        <label>
+          Camera:
+          <select value={camera} onChange={(e) => setCamera(e.target.value as PresetCameraType)}>
+            {cameraPresets.map((p) => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Material:
+          <select value={material} onChange={(e) => setMaterial(e.target.value as PresetMaterialType)}>
+            {materialPresets.map((p) => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Bevel:
+          <select value={bevelPreset} onChange={(e) => setBevelPreset(e.target.value as BevelPresetType)}>
+            {bevelPresets.map((p) => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
+        </label>
+        <label>
+          Extrusion: {extrusion}px
+          <input
+            type="range"
+            min={0}
+            max={50}
+            value={extrusion}
+            onChange={(e) => setExtrusion(Number(e.target.value))}
+          />
+        </label>
+      </div>
+      <div className="text3d-canvas" style={{ width: 400, height: 200, background: "#1a1a2e", borderRadius: 8 }}>
+        <Text3DRenderer
+          text={text}
+          color="#4F81BD"
+          fontSize={48}
+          fontFamily="Arial"
+          fontWeight={700}
+          width={400}
+          height={200}
+          scene3d={{
+            camera: { preset: camera },
+            lightRig: { rig: "threePt", direction: "tl" },
+          }}
+          shape3d={{
+            extrusionHeight: extrusion,
+            preset: material,
+            bevel: { width: 8, height: 8, preset: bevelPreset },
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
 /**
  * Text effects test section component
  */
@@ -218,10 +336,10 @@ export function TextEffectsTest() {
   ];
 
   const text3dItems: CheckItem[] = [
-    { label: "3D scene (scene3d)", status: "partial", notes: "camera transform supported" },
-    { label: "3D shape (sp3d)", status: "partial", notes: "extrusion, bevel via SVG" },
-    { label: "Flat text (flatTx)", status: "partial", notes: "parsed, Z-value support" },
-    { label: "Bevel effects", status: "pass", notes: "SVG filter simulation" },
+    { label: "3D scene (scene3d)", status: "pass", notes: "WebGL Three.js camera presets" },
+    { label: "3D shape (sp3d)", status: "pass", notes: "WebGL extrusion, bevel, materials" },
+    { label: "Flat text (flatTx)", status: "pass", notes: "Z-offset in WebGL scene" },
+    { label: "Bevel effects", status: "pass", notes: "WebGL + SVG fallback" },
   ];
 
   return (
@@ -336,8 +454,9 @@ export function TextEffectsTest() {
       </TestSubsection>
 
       <TestSubsection title="3D Text" items={text3dItems}>
+        <Text3DPreview />
         <p className="pattern-info">
-          3D text effects are approximated using SVG transforms and filters. Camera presets apply 2D skew/scale transforms, bevel effects use highlight/shadow filters, and extrusion creates layered depth illusions. Full 3D rendering would require WebGL.
+          3D text effects use WebGL/Three.js for true 3D rendering. Camera presets (isometric, perspective, oblique), light rigs (threePt, balanced, harsh, etc.), materials (plastic, metal, matte), and bevel presets are fully supported. Falls back to SVG approximation when WebGL is unavailable.
         </p>
       </TestSubsection>
     </div>

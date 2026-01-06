@@ -8,7 +8,8 @@
  */
 
 import type { ReactNode } from "react";
-import type { TextBody } from "../../../domain/text";
+import type { TextBody, TextRun, RunProperties, Paragraph } from "../../../domain/text";
+import type { FontScheme } from "../../../domain/theme";
 import type { Scene3d, Shape3d } from "../../../domain/three-d";
 import type { LayoutResult, LayoutLine, PositionedSpan, LayoutParagraphResult } from "../../text-layout";
 import type { TextEffectsConfig, TextPatternFillConfig, TextImageFillConfig } from "../../../domain/drawing-ml";
@@ -21,7 +22,7 @@ import { PT_TO_PX } from "../../../domain/unit-conversion";
 import { useRenderContext } from "../context";
 import { useSvgDefs } from "../hooks/useSvgDefs";
 import { calculateCameraTransform, has3dEffects } from "../../svg/effects3d";
-import { Text3DRenderer, shouldRender3DText } from "../../webgl/text3d";
+import { Text3DRenderer, shouldRender3DText, type Text3DRunConfig } from "../../webgl/text3d";
 
 // =============================================================================
 // Types
@@ -64,31 +65,13 @@ export function TextRenderer({ textBody, width, height }: TextRendererProps) {
 
   if (useWebGL3D) {
     // Use WebGL 3D renderer for complex 3D text
-    const firstParagraph = textBody.paragraphs[0];
-    const firstRun = firstParagraph?.runs[0];
-    const text = textBody.paragraphs
-      .flatMap((p) => p.runs.map((r) => ("text" in r ? r.text : "")))
-      .join("");
-
-    // Get text styling from first run
-    const runProps = firstRun && "properties" in firstRun ? firstRun.properties : undefined;
-    const fontSize = runProps?.fontSize ? (runProps.fontSize as number) * PT_TO_PX : 24;
-    const fontFamily = runProps?.fontFamily ?? fontScheme?.majorFont?.latin ?? "Arial";
-    const fontWeight = runProps?.bold === true ? 700 : 400;
-    const fontStyle = runProps?.italic === true ? "italic" : "normal";
-    const color = runProps?.color
-      ? resolveColorForWebGL(runProps.color, colorContext)
-      : "#000000";
+    // Convert all text runs to 3D run configurations
+    const runs = extractText3DRuns(textBody, colorContext, fontScheme);
 
     return (
       <foreignObject x={0} y={0} width={width} height={height}>
         <Text3DRenderer
-          text={text}
-          color={color}
-          fontSize={fontSize}
-          fontFamily={fontFamily}
-          fontWeight={fontWeight}
-          fontStyle={fontStyle}
+          runs={runs}
           scene3d={scene3d}
           shape3d={shape3d}
           width={width}
@@ -131,9 +114,7 @@ export function TextRenderer({ textBody, width, height }: TextRendererProps) {
     );
   }
 
-  // Apply 3D transforms (scene3d/shape3d)
-  const scene3d = textBody.bodyProperties.scene3d;
-  const shape3d = textBody.bodyProperties.shape3d;
+  // Apply 3D transforms (scene3d/shape3d) - uses SVG fallback if WebGL not used
   if (has3dEffects(scene3d, shape3d)) {
     const text3dContent = render3dTextEffects(
       wrappedContent,
@@ -1011,6 +992,63 @@ function resolveColorForWebGL(color: Color | undefined, context: ColorContext): 
   }
   const resolved = resolveColor(color, context);
   return resolved ? `#${resolved}` : "#000000";
+}
+
+/**
+ * Extract Text3DRunConfig array from TextBody.
+ *
+ * Converts each text run to a 3D run configuration with its own styling.
+ * This enables proper 3D rendering of text with mixed styles.
+ */
+function extractText3DRuns(
+  textBody: TextBody,
+  colorContext: ColorContext,
+  fontScheme: FontScheme | undefined,
+): Text3DRunConfig[] {
+  const runs: Text3DRunConfig[] = [];
+  const defaultFontFamily = fontScheme?.majorFont?.latin ?? "Arial";
+
+  for (const paragraph of textBody.paragraphs) {
+    const defaultRunProps = paragraph.properties.defaultRunProperties;
+
+    for (const run of paragraph.runs) {
+      // Skip line breaks for 3D rendering (TODO: handle multiline properly)
+      if (run.type === "break") {
+        continue;
+      }
+
+      // Get text content
+      const text = run.type === "text" || run.type === "field" ? run.text : "";
+      if (text.length === 0) {
+        continue;
+      }
+
+      // Get run properties, falling back to paragraph defaults
+      const runProps = run.properties ?? defaultRunProps;
+
+      // Extract styling with fallbacks
+      const fontSize = runProps?.fontSize
+        ? (runProps.fontSize as number) * PT_TO_PX
+        : 24;
+      const fontFamily = runProps?.fontFamily ?? defaultFontFamily;
+      const fontWeight = runProps?.bold === true ? 700 : 400;
+      const fontStyle = runProps?.italic === true ? "italic" : "normal";
+      const color = runProps?.color
+        ? resolveColorForWebGL(runProps.color, colorContext)
+        : "#000000";
+
+      runs.push({
+        text,
+        color,
+        fontSize,
+        fontFamily,
+        fontWeight,
+        fontStyle,
+      });
+    }
+  }
+
+  return runs;
 }
 
 function createTextEffectsFilterDef(

@@ -296,6 +296,54 @@
   word-break: break-word;
 }
 
+/* 3D Text Preview */
+.text3d-preview-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: var(--space-4) 0;
+}
+
+.text3d-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md);
+}
+
+.text3d-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.text3d-controls input[type="text"],
+.text3d-controls select {
+  padding: var(--space-2);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--font-sm);
+  min-width: 120px;
+}
+
+.text3d-controls input[type="range"] {
+  width: 120px;
+  accent-color: var(--accent-color);
+}
+
+.text3d-canvas {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .test-content {
@@ -309,5 +357,14 @@
   .check-list {
     flex-direction: column;
     gap: var(--space-2);
+  }
+
+  .text3d-controls {
+    flex-direction: column;
+  }
+
+  .text3d-canvas {
+    width: 100% !important;
+    height: 150px !important;
   }
 }

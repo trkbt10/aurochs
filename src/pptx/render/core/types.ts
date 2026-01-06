@@ -48,6 +48,12 @@ export type RenderOptions = {
   readonly libreofficeLineSpacingFactor: number;
   readonly libreofficeAscenderOverride?: number;
   readonly tableScalingMode: TableScalingMode;
+  /**
+   * Enable WebGL 3D text rendering.
+   * When true, text with complex 3D effects uses WebGL/Three.js instead of SVG.
+   * @default true
+   */
+  readonly enable3DText?: boolean;
 };
 
 /**

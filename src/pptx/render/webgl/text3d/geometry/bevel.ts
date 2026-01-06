@@ -7,7 +7,7 @@
  */
 
 import * as THREE from "three";
-import type { Shape3d, Bevel3d, BevelPresetType, Pixels } from "../../../domain";
+import type { Shape3d, Bevel3d, BevelPresetType, Pixels } from "../../../../domain/index";
 
 // =============================================================================
 // Geometry Configuration Types

@@ -7,7 +7,7 @@
  */
 
 import * as THREE from "three";
-import type { PresetMaterialType } from "../../../domain";
+import type { PresetMaterialType } from "../../../../domain/index";
 
 // =============================================================================
 // Material Configuration Types

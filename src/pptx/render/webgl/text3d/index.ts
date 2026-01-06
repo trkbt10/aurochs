@@ -3,34 +3,42 @@
  *
  * Provides true 3D text rendering using Three.js WebGL.
  *
- * ## Features
+ * ## Structure
  *
- * - Camera presets (isometric, perspective, oblique)
- * - Light rigs (3-point, balanced, harsh, etc.)
- * - Materials (plastic, metal, matte, etc.)
- * - Bevel effects (angle, circle, convex, etc.)
- * - Extrusion depth
+ * - scene/    - Three.js scene setup (camera, lighting, materials)
+ * - geometry/ - 3D geometry construction from glyphs
+ * - renderer/ - Integration layer and React component
+ *
+ * Glyph extraction is in the separate `render/glyph` module (general-purpose).
  *
  * @see ECMA-376 Part 1, Section 20.1.5 (3D Properties)
  */
 
 // React component
-export { Text3DRenderer, shouldRender3DText } from "./Text3DRenderer";
-export type { Text3DRendererProps } from "./Text3DRenderer";
+export { Text3DRenderer, shouldRender3DText } from "./renderer/Text3DRenderer";
+export type { Text3DRendererProps, Text3DRunConfig } from "./renderer/Text3DRenderer";
 
-// Renderer
-export { createText3DRenderer, shouldUseWebGL3D } from "./renderer";
-export type { Text3DRenderer as IText3DRenderer, Text3DRenderConfig } from "./renderer";
+// Renderer core
+export {
+  createText3DRenderer,
+  createText3DRendererAsync,
+  shouldUseWebGL3D,
+} from "./renderer/core";
+export type {
+  Text3DRenderer as IText3DRenderer,
+  Text3DRenderConfig,
+  Text3DRunConfig as Text3DRunConfigCore,
+} from "./renderer/core";
 
-// Camera
-export { createCameraConfig, createCamera } from "./camera";
-export type { CameraConfig } from "./camera";
+// Scene - Camera
+export { createCameraConfig, createCamera } from "./scene/camera";
+export type { CameraConfig } from "./scene/camera";
 
-// Lighting
-export { createLightingConfig, addLightsToScene } from "./lighting";
-export type { LightConfig } from "./lighting";
+// Scene - Lighting
+export { createLightingConfig, addLightsToScene } from "./scene/lighting";
+export type { LightConfig } from "./scene/lighting";
 
-// Materials
+// Scene - Materials
 export {
   createMaterialConfig,
   createMaterial,
@@ -38,15 +46,25 @@ export {
   createBevelMaterial,
   parseColor,
   rgbToHex,
-} from "./materials";
-export type { MaterialConfig } from "./materials";
+} from "./scene/materials";
+export type { MaterialConfig } from "./scene/materials";
 
-// Geometry
-export {
-  textToShapes,
-  getBevelConfig,
-  createExtrudedGeometry,
-  centerGeometry,
-  scaleGeometryToFit,
-} from "./geometry";
-export type { TextGeometryConfig, BevelConfig } from "./geometry";
+// Geometry - Bevel config
+export { getBevelConfig } from "./geometry/bevel";
+export type { BevelConfig } from "./geometry/bevel";
+
+// Geometry - From contours
+export { createTextGeometryFromCanvas, scaleGeometryToFit } from "./geometry/from-contours";
+export { createTextGeometryAsync } from "./geometry/from-contours-async";
+export type { TextGeometryConfig } from "./geometry/from-contours";
+
+// Re-export glyph module types for convenience
+export type {
+  ContourPath,
+  GlyphContour,
+  GlyphMetrics,
+  GlyphStyleKey,
+  PositionedGlyph,
+  TextLayoutConfig,
+  TextLayoutResult,
+} from "../../glyph";
