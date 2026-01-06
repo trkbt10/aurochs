@@ -12,7 +12,7 @@
  */
 
 import { useRef, useMemo, useCallback, useState, useEffect, type CSSProperties } from "react";
-import type { Slide, Shape, RunProperties, ParagraphProperties } from "../../pptx/domain";
+import type { Slide, Shape, RunProperties, ParagraphProperties, ZipFile } from "../../pptx/domain";
 import type { ShapeId } from "../../pptx/domain/types";
 import { px, deg } from "../../pptx/domain/types";
 import type { ResizeHandlePosition } from "../context/slide/state";
@@ -27,7 +27,12 @@ import type { CreationMode } from "../context/presentation/editor/types";
 import { createSelectMode } from "../context/presentation/editor/types";
 import type { DrawingPath } from "../path-tools/types";
 import { isCustomGeometry } from "../path-tools/utils/path-commands";
-import { createShapeFromMode, getDefaultBoundsForMode, createCustomGeometryShape, generateShapeId } from "../shape/factory";
+import {
+  createShapeFromMode,
+  getDefaultBoundsForMode,
+  createCustomGeometryShape,
+  generateShapeId,
+} from "../shape/factory";
 import type { ShapeBounds } from "../shape/creation-bounds";
 import { drawingPathToCustomGeometry } from "../path-tools/utils/path-commands";
 import { isTextEditActive, mergeTextIntoBody, extractDefaultRunProperties } from "../slide/text-edit";
@@ -163,8 +168,19 @@ function EditorContent({
   showLayerPanel: boolean;
   showToolbar: boolean;
 }) {
-  const { state, dispatch, document, activeSlide, selectedShapes, primaryShape, canUndo, canRedo, creationMode, textEdit, pathEdit } =
-    usePresentationEditor();
+  const {
+    state,
+    dispatch,
+    document,
+    activeSlide,
+    selectedShapes,
+    primaryShape,
+    canUndo,
+    canRedo,
+    creationMode,
+    textEdit,
+    pathEdit,
+  } = usePresentationEditor();
   const canvasRef = useRef<HTMLDivElement>(null);
   const { shapeSelection: selection, drag } = state;
   const [zoom, setZoom] = useState(1);
@@ -177,7 +193,7 @@ function EditorContent({
     (mode: CreationMode) => {
       dispatch({ type: "SET_CREATION_MODE", mode });
     },
-    [dispatch]
+    [dispatch],
   );
 
   const handleCanvasCreate = useCallback(
@@ -190,7 +206,7 @@ function EditorContent({
         dispatch({ type: "CREATE_SHAPE", shape });
       }
     },
-    [creationMode, dispatch]
+    [creationMode, dispatch],
   );
 
   const handleCanvasCreateFromDrag = useCallback(
@@ -202,7 +218,7 @@ function EditorContent({
         dispatch({ type: "CREATE_SHAPE", shape });
       }
     },
-    [creationMode, dispatch]
+    [creationMode, dispatch],
   );
 
   // Double-click handlers - enters text edit for text shapes, path edit for custom geometry
@@ -223,7 +239,7 @@ function EditorContent({
       // Default: enter text edit mode
       dispatch({ type: "ENTER_TEXT_EDIT", shapeId });
     },
-    [dispatch, activeSlide]
+    [dispatch, activeSlide],
   );
 
   const handleTextEditComplete = useCallback(
@@ -235,7 +251,7 @@ function EditorContent({
       }
       dispatch({ type: "EXIT_TEXT_EDIT" });
     },
-    [dispatch, textEdit]
+    [dispatch, textEdit],
   );
 
   const handleTextEditCancel = useCallback(() => {
@@ -252,7 +268,7 @@ function EditorContent({
       // Reset to select mode
       dispatch({ type: "SET_CREATION_MODE", mode: createSelectMode() });
     },
-    [dispatch]
+    [dispatch],
   );
 
   const handlePathCancel = useCallback(() => {
@@ -270,43 +286,40 @@ function EditorContent({
       });
 
       if (originalShape?.type === "sp") {
-        // Import drawingPathToCustomGeometry here to convert the edited path
-        import("../path-tools/utils/path-commands").then(({ drawingPathToCustomGeometry }) => {
-          // Convert the edited path back to custom geometry
-          // The path coordinates are already in shape-local space
-          const { geometry, bounds } = drawingPathToCustomGeometry(editedPath);
+        // Convert the edited path back to custom geometry
+        // The path coordinates are already in shape-local space
+        const { geometry, bounds } = drawingPathToCustomGeometry(editedPath);
 
-          // Update the shape with new geometry and potentially new bounds
-          dispatch({
-            type: "UPDATE_SHAPE",
-            shapeId,
-            updater: (shape): Shape => {
-              if (shape.type !== "sp" || !shape.properties.transform) return shape;
-              const currentTransform = shape.properties.transform;
-              return {
-                ...shape,
-                properties: {
-                  ...shape.properties,
-                  geometry,
-                  transform: {
-                    x: bounds.x,
-                    y: bounds.y,
-                    width: bounds.width,
-                    height: bounds.height,
-                    rotation: currentTransform.rotation,
-                    flipH: currentTransform.flipH,
-                    flipV: currentTransform.flipV,
-                  },
+        // Update the shape with new geometry and potentially new bounds
+        dispatch({
+          type: "UPDATE_SHAPE",
+          shapeId,
+          updater: (shape): Shape => {
+            if (shape.type !== "sp" || !shape.properties.transform) return shape;
+            const currentTransform = shape.properties.transform;
+            return {
+              ...shape,
+              properties: {
+                ...shape.properties,
+                geometry,
+                transform: {
+                  x: bounds.x,
+                  y: bounds.y,
+                  width: bounds.width,
+                  height: bounds.height,
+                  rotation: currentTransform.rotation,
+                  flipH: currentTransform.flipH,
+                  flipV: currentTransform.flipV,
                 },
-              };
-            },
-          });
+              },
+            };
+          },
         });
       }
 
       dispatch({ type: "EXIT_PATH_EDIT", commit: true });
     },
-    [dispatch, activeSlide]
+    [dispatch, activeSlide],
   );
 
   const handlePathEditCancel = useCallback(() => {
@@ -343,11 +356,14 @@ function EditorContent({
           start: { paragraphIndex: 0, charOffset: 0 },
           end: {
             paragraphIndex: textEdit.initialTextBody.paragraphs.length - 1,
-            charOffset: textEdit.initialTextBody.paragraphs[textEdit.initialTextBody.paragraphs.length - 1]?.runs
-              .reduce((acc, run) => acc + (run.type === "text" ? run.text.length : run.type === "break" ? 1 : 0), 0) ?? 0,
+            charOffset:
+              textEdit.initialTextBody.paragraphs[textEdit.initialTextBody.paragraphs.length - 1]?.runs.reduce(
+                (acc, run) => acc + (run.type === "text" ? run.text.length : run.type === "break" ? 1 : 0),
+                0,
+              ) ?? 0,
           },
         },
-        props
+        props,
       );
 
       dispatch({
@@ -356,7 +372,7 @@ function EditorContent({
         textBody: updatedTextBody,
       });
     },
-    [dispatch, textEdit]
+    [dispatch, textEdit],
   );
 
   // Apply paragraph properties to selected paragraphs
@@ -367,11 +383,7 @@ function EditorContent({
       // For now, apply to all paragraphs since we don't track selection
       // Create an array of all paragraph indices
       const paragraphIndices = textEdit.initialTextBody.paragraphs.map((_, i) => i);
-      const updatedTextBody = applyParagraphPropertiesToSelection(
-        textEdit.initialTextBody,
-        paragraphIndices,
-        props
-      );
+      const updatedTextBody = applyParagraphPropertiesToSelection(textEdit.initialTextBody, paragraphIndices, props);
 
       dispatch({
         type: "APPLY_PARAGRAPH_FORMAT",
@@ -379,7 +391,7 @@ function EditorContent({
         textBody: updatedTextBody,
       });
     },
-    [dispatch, textEdit]
+    [dispatch, textEdit],
   );
 
   // Toggle a boolean run property
@@ -388,7 +400,7 @@ function EditorContent({
       const newValue = !currentValue;
       handleApplyRunProperties({ [propertyKey]: newValue ? true : undefined } as Partial<RunProperties>);
     },
-    [handleApplyRunProperties]
+    [handleApplyRunProperties],
   );
 
   // Sticky formatting (not implemented yet)
@@ -417,15 +429,15 @@ function EditorContent({
   const slide = activeSlide?.slide;
   const width = document.slideWidth;
   const height = document.slideHeight;
-  const zipFile = useMemo(
-    () => (document.presentationFile ? createZipAdapter(document.presentationFile) : undefined),
-    [document.presentationFile]
-  );
+  const zipFile = useMemo<ZipFile>(() => {
+    const presentationFile = document.presentationFile;
+    if (presentationFile) {
+      return createZipAdapter(presentationFile);
+    }
+    return { file: () => null };
+  }, [document.presentationFile]);
 
   // Thumbnail rendering hook (with theme context for proper rendering)
-  if (!zipFile) {
-    throw new Error("PresentationEditor requires document.presentationFile");
-  }
 
   const { getThumbnailSvg } = useSlideThumbnails({
     slideWidth: width,
@@ -437,15 +449,9 @@ function EditorContent({
   const renderThumbnail = useCallback(
     (slideWithId: SlideWithId) => {
       const svg = getThumbnailSvg(slideWithId);
-      return (
-        <SlideThumbnailPreview
-          svg={svg}
-          slideWidth={width as number}
-          slideHeight={height as number}
-        />
-      );
+      return <SlideThumbnailPreview svg={svg} slideWidth={width as number} slideHeight={height as number} />;
     },
-    [getThumbnailSvg, width, height]
+    [getThumbnailSvg, width, height],
   );
 
   // Render context from API slide for proper theme/master/layout inheritance
@@ -522,7 +528,7 @@ function EditorContent({
 
       return { dx: snappedX - (initial.x as number), dy: snappedY - (initial.y as number) };
     },
-    [drag, selection.primaryId, snapEnabled, snapStep]
+    [drag, selection.primaryId, snapEnabled, snapStep],
   );
 
   const getResizeDelta = useCallback(
@@ -547,12 +553,20 @@ function EditorContent({
       const southEdge = handle.includes("s") ? snapValue(baseY + baseHeight + dy, snapStep) : baseY + baseHeight + dy;
       const northEdge = handle.includes("n") ? snapValue(baseY + dy, snapStep) : baseY + dy;
 
-      const snappedDx = handle.includes("w") ? westEdge - baseX : handle.includes("e") ? eastEdge - (baseX + baseWidth) : dx;
-      const snappedDy = handle.includes("n") ? northEdge - baseY : handle.includes("s") ? southEdge - (baseY + baseHeight) : dy;
+      const snappedDx = handle.includes("w")
+        ? westEdge - baseX
+        : handle.includes("e")
+          ? eastEdge - (baseX + baseWidth)
+          : dx;
+      const snappedDy = handle.includes("n")
+        ? northEdge - baseY
+        : handle.includes("s")
+          ? southEdge - (baseY + baseHeight)
+          : dy;
 
       return { dx: snappedDx, dy: snappedDy };
     },
-    [drag, snapEnabled, snapStep]
+    [drag, snapEnabled, snapStep],
   );
 
   useEffect(() => {
@@ -704,7 +718,7 @@ function EditorContent({
         });
       }
     },
-    [dispatch, selection.selectedIds, slide]
+    [dispatch, selection.selectedIds, slide],
   );
 
   const contextMenuActions: ContextMenuActions = useMemo(
@@ -727,12 +741,17 @@ function EditorContent({
         dispatch({ type: "PASTE" });
       },
       deleteSelected: () => dispatch({ type: "DELETE_SHAPES", shapeIds: selection.selectedIds }),
-      bringToFront: () => selection.primaryId && dispatch({ type: "REORDER_SHAPE", shapeId: selection.primaryId, direction: "front" }),
-      bringForward: () => selection.primaryId && dispatch({ type: "REORDER_SHAPE", shapeId: selection.primaryId, direction: "forward" }),
-      sendBackward: () => selection.primaryId && dispatch({ type: "REORDER_SHAPE", shapeId: selection.primaryId, direction: "backward" }),
-      sendToBack: () => selection.primaryId && dispatch({ type: "REORDER_SHAPE", shapeId: selection.primaryId, direction: "back" }),
+      bringToFront: () =>
+        selection.primaryId && dispatch({ type: "REORDER_SHAPE", shapeId: selection.primaryId, direction: "front" }),
+      bringForward: () =>
+        selection.primaryId && dispatch({ type: "REORDER_SHAPE", shapeId: selection.primaryId, direction: "forward" }),
+      sendBackward: () =>
+        selection.primaryId && dispatch({ type: "REORDER_SHAPE", shapeId: selection.primaryId, direction: "backward" }),
+      sendToBack: () =>
+        selection.primaryId && dispatch({ type: "REORDER_SHAPE", shapeId: selection.primaryId, direction: "back" }),
       group: () => canGroup && dispatch({ type: "GROUP_SHAPES", shapeIds: selection.selectedIds }),
-      ungroup: () => canUngroup && selection.primaryId && dispatch({ type: "UNGROUP_SHAPE", shapeId: selection.primaryId }),
+      ungroup: () =>
+        canUngroup && selection.primaryId && dispatch({ type: "UNGROUP_SHAPE", shapeId: selection.primaryId }),
       alignLeft: () => applyAlignment("left"),
       alignCenter: () => applyAlignment("center"),
       alignRight: () => applyAlignment("right"),
@@ -742,7 +761,18 @@ function EditorContent({
       distributeHorizontally: () => applyAlignment("distributeH"),
       distributeVertically: () => applyAlignment("distributeV"),
     }),
-    [dispatch, selection, canGroup, canUngroup, hasSelection, hasClipboard, isMultiSelect, canAlign, canDistribute, applyAlignment]
+    [
+      dispatch,
+      selection,
+      canGroup,
+      canUngroup,
+      hasSelection,
+      hasClipboard,
+      isMultiSelect,
+      canAlign,
+      canDistribute,
+      applyAlignment,
+    ],
   );
 
   // ==========================================================================
@@ -753,14 +783,14 @@ function EditorContent({
     (shapeId: ShapeId, addToSelection: boolean, toggle?: boolean) => {
       dispatch({ type: "SELECT_SHAPE", shapeId, addToSelection, toggle });
     },
-    [dispatch]
+    [dispatch],
   );
 
   const handleSelectMultiple = useCallback(
     (shapeIds: readonly ShapeId[], primaryId?: ShapeId) => {
       dispatch({ type: "SELECT_MULTIPLE_SHAPES", shapeIds, primaryId });
     },
-    [dispatch]
+    [dispatch],
   );
 
   const handleClearSelection = useCallback(() => {
@@ -771,21 +801,21 @@ function EditorContent({
     (startX: number, startY: number) => {
       dispatch({ type: "START_MOVE", startX: px(startX), startY: px(startY) });
     },
-    [dispatch]
+    [dispatch],
   );
 
   const handleStartResize = useCallback(
     (handle: ResizeHandlePosition, startX: number, startY: number, aspectLocked: boolean) => {
       dispatch({ type: "START_RESIZE", handle, startX: px(startX), startY: px(startY), aspectLocked });
     },
-    [dispatch]
+    [dispatch],
   );
 
   const handleStartRotate = useCallback(
     (startX: number, startY: number) => {
       dispatch({ type: "START_ROTATE", startX: px(startX), startY: px(startY) });
     },
-    [dispatch]
+    [dispatch],
   );
 
   // ==========================================================================
@@ -796,14 +826,14 @@ function EditorContent({
     (shapeId: ShapeId, updater: (shape: Shape) => Shape) => {
       dispatch({ type: "UPDATE_SHAPE", shapeId, updater });
     },
-    [dispatch]
+    [dispatch],
   );
 
   const handleSlideChange = useCallback(
     (updater: (slide: Slide) => Slide) => {
       dispatch({ type: "UPDATE_ACTIVE_SLIDE", updater });
     },
-    [dispatch]
+    [dispatch],
   );
 
   const handleLayoutAttributesChange = useCallback(
@@ -823,7 +853,7 @@ function EditorContent({
         },
       });
     },
-    [dispatch]
+    [dispatch],
   );
 
   const handleLayoutChange = useCallback(
@@ -860,28 +890,28 @@ function EditorContent({
         },
       });
     },
-    [dispatch, document.presentationFile]
+    [dispatch, document.presentationFile],
   );
 
   const handleGroup = useCallback(
     (shapeIds: readonly ShapeId[]) => {
       dispatch({ type: "GROUP_SHAPES", shapeIds });
     },
-    [dispatch]
+    [dispatch],
   );
 
   const handleUngroup = useCallback(
     (shapeId: ShapeId) => {
       dispatch({ type: "UNGROUP_SHAPE", shapeId });
     },
-    [dispatch]
+    [dispatch],
   );
 
   const handleMoveShape = useCallback(
     (shapeId: ShapeId, target: ShapeHierarchyTarget) => {
       dispatch({ type: "MOVE_SHAPE_IN_HIERARCHY", shapeId, target });
     },
-    [dispatch]
+    [dispatch],
   );
 
   const handleUpdateShapes = useCallback(
@@ -897,14 +927,14 @@ function EditorContent({
         },
       });
     },
-    [dispatch]
+    [dispatch],
   );
 
   const handleDelete = useCallback(
     (shapeIds: readonly ShapeId[]) => {
       dispatch({ type: "DELETE_SHAPES", shapeIds });
     },
-    [dispatch]
+    [dispatch],
   );
 
   const handleDuplicate = useCallback(() => {
@@ -916,7 +946,7 @@ function EditorContent({
     (shapeId: ShapeId, direction: "front" | "back" | "forward" | "backward") => {
       dispatch({ type: "REORDER_SHAPE", shapeId, direction });
     },
-    [dispatch]
+    [dispatch],
   );
 
   // ==========================================================================
@@ -938,142 +968,142 @@ function EditorContent({
   return (
     <TextEditContextProvider value={textEditContextValue}>
       <div style={containerStyle}>
-      {/* Left: Slide Thumbnails */}
-      <div style={thumbnailPanelStyle}>
-        <SlideThumbnailPanel
-          slideWidth={width as number}
-          slideHeight={height as number}
-          renderThumbnail={renderThumbnail}
-        />
-      </div>
+        {/* Left: Slide Thumbnails */}
+        <div style={thumbnailPanelStyle}>
+          <SlideThumbnailPanel
+            slideWidth={width as number}
+            slideHeight={height as number}
+            renderThumbnail={renderThumbnail}
+          />
+        </div>
 
-      {/* Center: Main editing area */}
-      <div style={mainAreaStyle}>
-        {/* Toolbar */}
-        {showToolbar && (
-          <div style={toolbarStyle}>
-            <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
-              <ShapeToolbar
-                canUndo={canUndo}
-                canRedo={canRedo}
-                selectedIds={selection.selectedIds}
+        {/* Center: Main editing area */}
+        <div style={mainAreaStyle}>
+          {/* Toolbar */}
+          {showToolbar && (
+            <div style={toolbarStyle}>
+              <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+                <ShapeToolbar
+                  canUndo={canUndo}
+                  canRedo={canRedo}
+                  selectedIds={selection.selectedIds}
+                  primaryShape={primaryShape}
+                  onUndo={() => dispatch({ type: "UNDO" })}
+                  onRedo={() => dispatch({ type: "REDO" })}
+                  onDelete={handleDelete}
+                  onDuplicate={handleDuplicate}
+                  onReorder={handleReorder}
+                  onShapeChange={handleShapeChange}
+                  direction="horizontal"
+                />
+                <CanvasControls
+                  zoom={zoom}
+                  onZoomChange={setZoom}
+                  showRulers={showRulers}
+                  onShowRulersChange={setShowRulers}
+                  snapEnabled={snapEnabled}
+                  onSnapEnabledChange={setSnapEnabled}
+                  snapStep={snapStep}
+                  onSnapStepChange={setSnapStep}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Content area */}
+          <div style={contentAreaStyle}>
+            {/* Canvas */}
+            <div style={canvasContainerStyle}>
+              {showToolbar && (
+                <div style={floatingToolbarStyle}>
+                  <CreationToolbar mode={creationMode} onModeChange={handleCreationModeChange} appearance="floating" />
+                </div>
+              )}
+              <CanvasStage
+                ref={canvasRef}
+                slide={slide}
+                slideId={activeSlide.id}
+                selection={selection}
+                drag={drag}
+                width={width}
+                height={height}
                 primaryShape={primaryShape}
-                onUndo={() => dispatch({ type: "UNDO" })}
-                onRedo={() => dispatch({ type: "REDO" })}
-                onDelete={handleDelete}
-                onDuplicate={handleDuplicate}
-                onReorder={handleReorder}
-                onShapeChange={handleShapeChange}
-                direction="horizontal"
-              />
-              <CanvasControls
+                selectedShapes={selectedShapes}
+                contextMenuActions={contextMenuActions}
+                colorContext={renderContext?.colorContext ?? document.colorContext}
+                resources={renderContext?.resources ?? document.resources}
+                fontScheme={renderContext?.fontScheme ?? document.fontScheme}
+                resolvedBackground={renderContext?.resolvedBackground ?? activeSlide?.resolvedBackground}
+                editingShapeId={editingShapeId}
+                layoutShapes={layoutShapes}
+                creationMode={creationMode}
+                textEdit={textEdit}
+                onSelect={handleSelect}
+                onSelectMultiple={handleSelectMultiple}
+                onClearSelection={handleClearSelection}
+                onStartMove={handleStartMove}
+                onStartResize={handleStartResize}
+                onStartRotate={handleStartRotate}
+                onDoubleClick={handleDoubleClick}
+                onCreate={handleCanvasCreate}
+                onCreateFromDrag={handleCanvasCreateFromDrag}
+                onTextEditComplete={handleTextEditComplete}
+                onTextEditCancel={handleTextEditCancel}
+                onPathCommit={handlePathCommit}
+                onPathCancel={handlePathCancel}
+                pathEdit={pathEdit}
+                onPathEditCommit={handlePathEditCommit}
+                onPathEditCancel={handlePathEditCancel}
                 zoom={zoom}
                 onZoomChange={setZoom}
                 showRulers={showRulers}
-                onShowRulersChange={setShowRulers}
-                snapEnabled={snapEnabled}
-                onSnapEnabledChange={setSnapEnabled}
-                snapStep={snapStep}
-                onSnapStepChange={setSnapStep}
+                rulerThickness={rulerThickness}
               />
             </div>
-          </div>
-        )}
 
-        {/* Content area */}
-        <div style={contentAreaStyle}>
-          {/* Canvas */}
-          <div style={canvasContainerStyle}>
-            {showToolbar && (
-              <div style={floatingToolbarStyle}>
-                <CreationToolbar mode={creationMode} onModeChange={handleCreationModeChange} appearance="floating" />
-              </div>
-            )}
-            <CanvasStage
-              ref={canvasRef}
-              slide={slide}
-              slideId={activeSlide.id}
-              selection={selection}
-              drag={drag}
-              width={width}
-              height={height}
-              primaryShape={primaryShape}
-              selectedShapes={selectedShapes}
-              contextMenuActions={contextMenuActions}
-              colorContext={renderContext?.colorContext ?? document.colorContext}
-              resources={renderContext?.resources ?? document.resources}
-              fontScheme={renderContext?.fontScheme ?? document.fontScheme}
-              resolvedBackground={renderContext?.resolvedBackground ?? activeSlide?.resolvedBackground}
-              editingShapeId={editingShapeId}
-              layoutShapes={layoutShapes}
-              creationMode={creationMode}
-              textEdit={textEdit}
-              onSelect={handleSelect}
-              onSelectMultiple={handleSelectMultiple}
-              onClearSelection={handleClearSelection}
-              onStartMove={handleStartMove}
-              onStartResize={handleStartResize}
-              onStartRotate={handleStartRotate}
-              onDoubleClick={handleDoubleClick}
-              onCreate={handleCanvasCreate}
-              onCreateFromDrag={handleCanvasCreateFromDrag}
-              onTextEditComplete={handleTextEditComplete}
-              onTextEditCancel={handleTextEditCancel}
-              onPathCommit={handlePathCommit}
-              onPathCancel={handlePathCancel}
-              pathEdit={pathEdit}
-              onPathEditCommit={handlePathEditCommit}
-              onPathEditCancel={handlePathEditCancel}
-              zoom={zoom}
-              onZoomChange={setZoom}
-              showRulers={showRulers}
-              rulerThickness={rulerThickness}
-            />
-          </div>
-
-          {/* Right: Panels */}
-          {(showPropertyPanel || showLayerPanel) && (
-            <div style={sidePanelStyle}>
-              {showLayerPanel && (
-                <Panel title="Layers" badge={slide.shapes.length}>
-                  <LayerPanel
-                    slide={slide}
-                    selection={selection}
-                    primaryShape={primaryShape}
-                    onSelect={handleSelect}
-                    onSelectMultiple={handleSelectMultiple}
-                    onGroup={handleGroup}
-                    onUngroup={handleUngroup}
-                    onMoveShape={handleMoveShape}
-                    onUpdateShapes={handleUpdateShapes}
-                    onClearSelection={handleClearSelection}
-                  />
-                </Panel>
-              )}
-              {showPropertyPanel && (
-                <div style={panelSectionStyle}>
-                  <Panel title="Properties">
-                    <PropertyPanel
+            {/* Right: Panels */}
+            {(showPropertyPanel || showLayerPanel) && (
+              <div style={sidePanelStyle}>
+                {showLayerPanel && (
+                  <Panel title="Layers" badge={slide.shapes.length}>
+                    <LayerPanel
                       slide={slide}
-                      layoutAttributes={layoutAttributes}
-                      layoutPath={layoutPath}
-                      layoutOptions={layoutOptions}
-                      selectedShapes={selectedShapes}
+                      selection={selection}
                       primaryShape={primaryShape}
-                      onShapeChange={handleShapeChange}
-                      onSlideChange={handleSlideChange}
-                      onUngroup={handleUngroup}
                       onSelect={handleSelect}
-                      onLayoutAttributesChange={handleLayoutAttributesChange}
-                      onLayoutChange={handleLayoutChange}
+                      onSelectMultiple={handleSelectMultiple}
+                      onGroup={handleGroup}
+                      onUngroup={handleUngroup}
+                      onMoveShape={handleMoveShape}
+                      onUpdateShapes={handleUpdateShapes}
+                      onClearSelection={handleClearSelection}
                     />
                   </Panel>
-                </div>
-              )}
-            </div>
-          )}
+                )}
+                {showPropertyPanel && (
+                  <div style={panelSectionStyle}>
+                    <Panel title="Properties">
+                      <PropertyPanel
+                        slide={slide}
+                        layoutAttributes={layoutAttributes}
+                        layoutPath={layoutPath}
+                        layoutOptions={layoutOptions}
+                        selectedShapes={selectedShapes}
+                        primaryShape={primaryShape}
+                        onShapeChange={handleShapeChange}
+                        onSlideChange={handleSlideChange}
+                        onUngroup={handleUngroup}
+                        onSelect={handleSelect}
+                        onLayoutAttributesChange={handleLayoutAttributesChange}
+                        onLayoutChange={handleLayoutChange}
+                      />
+                    </Panel>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
       </div>
     </TextEditContextProvider>
   );
@@ -1100,7 +1130,7 @@ export function PresentationEditor({
       height: "100%",
       ...style,
     }),
-    [style]
+    [style],
   );
 
   return (

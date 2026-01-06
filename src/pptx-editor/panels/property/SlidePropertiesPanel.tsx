@@ -19,7 +19,7 @@ export type SlidePropertiesPanelProps = {
   readonly onBackgroundChange: (bg: Background | undefined) => void;
   readonly layoutAttributes?: SlideLayoutAttributes;
   readonly layoutPath?: string;
-  readonly layoutOptions: readonly SlideLayoutOption[];
+  readonly layoutOptions?: readonly SlideLayoutOption[];
   readonly onLayoutAttributesChange: (attrs: SlideLayoutAttributes) => void;
   readonly onLayoutChange: (layoutPath: string) => void;
 };
@@ -40,7 +40,7 @@ export function SlidePropertiesPanel({
   onBackgroundChange,
   layoutAttributes,
   layoutPath,
-  layoutOptions,
+  layoutOptions = [],
   onLayoutAttributesChange,
   onLayoutChange,
 }: SlidePropertiesPanelProps) {
