@@ -7,27 +7,30 @@
  */
 
 import * as THREE from "three";
-import type { Scene3d, Shape3d, LightRig, PresetCameraType } from "../../../../domain/index";
+import type { Scene3d, Shape3d, PresetCameraType } from "../../../../domain/index";
 import type { Pixels } from "../../../../domain/types";
 import type { PositionedSpan } from "../../../text-layout/types";
 import { createCameraConfig, createCamera, type CameraConfig } from "../scene/camera";
-import { createLightingConfig, addLightsToScene, type LightConfig } from "../scene/lighting";
+import { createLightingConfig, addLightsToScene } from "../scene/lighting";
+import { createMaterialFromFill, type Material3DFill } from "../scene/materials";
+import { createTextGeometryFromCanvas } from "../geometry/from-contours";
+import { createTextGeometryAsync } from "../geometry/from-contours-async";
+import { applyTextWarp } from "../geometry/text-warp";
+import type { TextWarp } from "../../../../domain/text";
+// Effects imports
 import {
-  createMaterialConfig,
-  createMaterial,
-  createExtrusionMaterial,
-  createBevelMaterial,
-  parseColor,
-} from "../scene/materials";
-import { getBevelConfig } from "../geometry/bevel";
-import {
-  createTextGeometryFromCanvas,
-  scaleGeometryToFit,
-} from "../geometry/from-contours";
-import {
-  createTextGeometryAsync,
-  scaleGeometryToFit as scaleGeometryToFitAsync,
-} from "../geometry/from-contours-async";
+  applyAllEffects,
+  needsShadowMapping,
+  type ContourConfig,
+  type OutlineConfig,
+  type ShadowConfig,
+  type GlowConfig,
+  type ReflectionConfig,
+  type SoftEdgeConfig,
+} from "./apply-effects";
+import { enableShadowMapping } from "../effects/shadow";
+// WebGL context management
+import { acquireRenderer, releaseRenderer } from "../utils/webgl-context";
 
 // =============================================================================
 // Renderer Types
@@ -46,7 +49,7 @@ import {
  * @see ECMA-376 Part 1, Section 21.1.2.3.9 (a:r - text run)
  * @see ECMA-376 Part 1, Section 21.1.2.3.9 (sz - font size in 100ths of point)
  * @see ECMA-376 Part 1, Section 21.1.2.3.7 (a:latin - Latin font)
- * @see ECMA-376 Part 1, Section 20.1.2.3.32 (srgbClr - color)
+ * @see ECMA-376 Part 1, Section 20.1.8 (Fill Properties)
  */
 export type Text3DRunConfig = {
   /**
@@ -58,8 +61,17 @@ export type Text3DRunConfig = {
    * Resolved text color (hex string with #).
    * Derived from a:solidFill in a:rPr, resolved via ColorContext.
    * @see ECMA-376 Part 1, Section 20.1.2.3.32 (srgbClr)
+   * @deprecated Use `fill` property for full ECMA-376 support
    */
   readonly color: PositionedSpan["color"];
+  /**
+   * Fill specification for the text run.
+   * Supports solid colors and gradients per ECMA-376.
+   * If not provided, `color` is used as solid fill.
+   * @see ECMA-376 Part 1, Section 20.1.8.33 (gradFill)
+   * @see ECMA-376 Part 1, Section 20.1.8.54 (solidFill)
+   */
+  readonly fill?: Material3DFill;
   /**
    * Font size in pixels.
    * Converted from Points (ECMA-376 sz attribute in 100ths of point) via PT_TO_PX.
@@ -100,6 +112,31 @@ export type Text3DRunConfig = {
    * Measured by text measurement engine.
    */
   readonly width: PositionedSpan["width"];
+  /**
+   * Outline (stroke) configuration for text.
+   * @see ECMA-376 Part 1, Section 20.1.2.2.24 (ln)
+   */
+  readonly outline?: OutlineConfig;
+  /**
+   * Shadow effect configuration.
+   * @see ECMA-376 Part 1, Section 20.1.8.49 (outerShdw)
+   */
+  readonly shadow?: ShadowConfig;
+  /**
+   * Glow effect configuration.
+   * @see ECMA-376 Part 1, Section 20.1.8.32 (glow)
+   */
+  readonly glow?: GlowConfig;
+  /**
+   * Reflection effect configuration.
+   * @see ECMA-376 Part 1, Section 20.1.8.50 (reflection)
+   */
+  readonly reflection?: ReflectionConfig;
+  /**
+   * Soft edge effect configuration.
+   * @see ECMA-376 Part 1, Section 20.1.8.53 (softEdge)
+   */
+  readonly softEdge?: SoftEdgeConfig;
 };
 
 export type Text3DRenderConfig = {
@@ -109,6 +146,11 @@ export type Text3DRenderConfig = {
   readonly scene3d?: Scene3d;
   /** 3D shape configuration */
   readonly shape3d?: Shape3d;
+  /**
+   * Text warp configuration for curved/shaped text.
+   * @see ECMA-376 Part 1, Section 21.1.2.1.28 (prstTxWarp)
+   */
+  readonly textWarp?: TextWarp;
   /** Render width in pixels */
   readonly width: number;
   /** Render height in pixels */
@@ -129,26 +171,48 @@ export type Text3DRenderer = {
 };
 
 // =============================================================================
-// Renderer Implementation
+// Renderer State (Internal)
 // =============================================================================
 
 /**
- * Create a WebGL 3D text renderer
+ * Internal state for Text3DRenderer instance.
+ * Encapsulates all mutable state needed by the renderer.
  */
-export function createText3DRenderer(config: Text3DRenderConfig): Text3DRenderer {
+type RendererState = {
+  scene: THREE.Scene;
+  renderer: THREE.WebGLRenderer;
+  poolId: string;
+  camera: THREE.Camera;
+  cameraConfig: CameraConfig;
+  textMesh: THREE.Group;
+  config: Text3DRenderConfig;
+};
+
+/**
+ * Initialize renderer state (scene, WebGL renderer, camera, lighting).
+ * This is the common setup shared by both sync and async versions.
+ */
+function initializeRendererState(
+  config: Text3DRenderConfig,
+): Omit<RendererState, "textMesh"> {
   // Create Three.js scene
   const scene = new THREE.Scene();
-  scene.background = null; // Transparent background
+  scene.background = null;
 
-  // Create renderer
-  const renderer = new THREE.WebGLRenderer({
+  // Acquire renderer from pool (prevents "Too many active WebGL contexts" warnings)
+  const { renderer, poolId } = acquireRenderer({
+    width: config.width,
+    height: config.height,
+    pixelRatio: config.pixelRatio,
     antialias: true,
     alpha: true,
     preserveDrawingBuffer: true,
   });
-  renderer.setSize(config.width, config.height);
-  renderer.setPixelRatio(config.pixelRatio);
-  renderer.setClearColor(0x000000, 0);
+
+  // Enable shadow mapping if any run has shadow effect
+  if (needsShadowMapping(config.runs)) {
+    enableShadowMapping(renderer);
+  }
 
   // Create camera
   const cameraPreset: PresetCameraType = config.scene3d?.camera?.preset ?? "orthographicFront";
@@ -157,25 +221,27 @@ export function createText3DRenderer(config: Text3DRenderConfig): Text3DRenderer
     config.scene3d?.camera?.fov,
     config.scene3d?.camera?.zoom,
   );
-  let camera = createCamera(cameraConfig, config.width, config.height);
+  const camera = createCamera(cameraConfig, config.width, config.height);
 
   // Setup lighting
   const lightingConfig = createLightingConfig(config.scene3d?.lightRig);
   addLightsToScene(scene, lightingConfig);
 
-  // Create 3D text mesh
-  let textMesh = createTextMesh(config);
-  scene.add(textMesh);
+  return { scene, renderer, poolId, camera, cameraConfig, config };
+}
 
-  // Position camera to fit text
-  fitCameraToObject(camera, textMesh, cameraConfig);
+/**
+ * Build Text3DRenderer from initialized state.
+ * Provides render/update/dispose methods.
+ */
+function buildRendererFromState(state: RendererState): Text3DRenderer {
+  const { scene, renderer, poolId, config } = state;
+  let { camera, cameraConfig, textMesh } = state;
 
-  // Render function
   function render() {
     renderer.render(scene, camera);
   }
 
-  // Update function
   function update(newConfig: Partial<Text3DRenderConfig>) {
     const mergedConfig = { ...config, ...newConfig };
 
@@ -188,13 +254,13 @@ export function createText3DRenderer(config: Text3DRenderConfig): Text3DRenderer
       renderer.setSize(mergedConfig.width, mergedConfig.height);
       renderer.setPixelRatio(mergedConfig.pixelRatio);
 
-      // Update camera aspect
       const newCameraConfig = createCameraConfig(
         mergedConfig.scene3d?.camera?.preset ?? "orthographicFront",
         mergedConfig.scene3d?.camera?.fov,
         mergedConfig.scene3d?.camera?.zoom,
       );
       camera = createCamera(newCameraConfig, mergedConfig.width, mergedConfig.height);
+      cameraConfig = newCameraConfig;
       fitCameraToObject(camera, textMesh, newCameraConfig);
     }
 
@@ -210,12 +276,10 @@ export function createText3DRenderer(config: Text3DRenderConfig): Text3DRenderer
 
     // Update lighting if changed
     if (newConfig.scene3d?.lightRig !== undefined) {
-      // Remove existing lights
       scene.children
         .filter((child) => child instanceof THREE.Light)
         .forEach((light) => scene.remove(light));
 
-      // Add new lights
       const newLightingConfig = createLightingConfig(mergedConfig.scene3d?.lightRig);
       addLightsToScene(scene, newLightingConfig);
     }
@@ -228,17 +292,17 @@ export function createText3DRenderer(config: Text3DRenderConfig): Text3DRenderer
         mergedConfig.scene3d?.camera?.zoom,
       );
       camera = createCamera(newCameraConfig, mergedConfig.width, mergedConfig.height);
+      cameraConfig = newCameraConfig;
       fitCameraToObject(camera, textMesh, newCameraConfig);
     }
 
     Object.assign(config, newConfig);
   }
 
-  // Dispose function
   function dispose() {
     scene.remove(textMesh);
     disposeGroup(textMesh);
-    renderer.dispose();
+    releaseRenderer(poolId, true);
   }
 
   return {
@@ -249,8 +313,26 @@ export function createText3DRenderer(config: Text3DRenderConfig): Text3DRenderer
   };
 }
 
+// =============================================================================
+// Renderer Factory Functions
+// =============================================================================
+
 /**
- * Create a WebGL 3D text renderer (async - uses Web Worker for glyph extraction)
+ * Create a WebGL 3D text renderer (synchronous).
+ */
+export function createText3DRenderer(config: Text3DRenderConfig): Text3DRenderer {
+  const state = initializeRendererState(config);
+
+  // Create 3D text mesh (sync)
+  const textMesh = createTextMesh(config);
+  state.scene.add(textMesh);
+  fitCameraToObject(state.camera, textMesh, state.cameraConfig);
+
+  return buildRendererFromState({ ...state, textMesh });
+}
+
+/**
+ * Create a WebGL 3D text renderer (async - uses Web Worker for glyph extraction).
  *
  * This version offloads heavy canvas processing to a Web Worker to avoid
  * blocking the main thread.
@@ -258,78 +340,14 @@ export function createText3DRenderer(config: Text3DRenderConfig): Text3DRenderer
 export async function createText3DRendererAsync(
   config: Text3DRenderConfig,
 ): Promise<Text3DRenderer> {
-  // Create Three.js scene
-  const scene = new THREE.Scene();
-  scene.background = null;
+  const state = initializeRendererState(config);
 
-  // Create renderer
-  const renderer = new THREE.WebGLRenderer({
-    antialias: true,
-    alpha: true,
-    preserveDrawingBuffer: true,
-  });
-  renderer.setSize(config.width, config.height);
-  renderer.setPixelRatio(config.pixelRatio);
-  renderer.setClearColor(0x000000, 0);
+  // Create 3D text mesh (async with parallel geometry creation)
+  const textMesh = await createTextMeshAsync(config);
+  state.scene.add(textMesh);
+  fitCameraToObject(state.camera, textMesh, state.cameraConfig);
 
-  // Create camera
-  const cameraPreset: PresetCameraType = config.scene3d?.camera?.preset ?? "orthographicFront";
-  const cameraConfig = createCameraConfig(
-    cameraPreset,
-    config.scene3d?.camera?.fov,
-    config.scene3d?.camera?.zoom,
-  );
-  let camera = createCamera(cameraConfig, config.width, config.height);
-
-  // Setup lighting
-  const lightingConfig = createLightingConfig(config.scene3d?.lightRig);
-  addLightsToScene(scene, lightingConfig);
-
-  // Create 3D text mesh (async)
-  let textMesh = await createTextMeshAsync(config);
-  scene.add(textMesh);
-
-  // Position camera to fit text
-  fitCameraToObject(camera, textMesh, cameraConfig);
-
-  function render() {
-    renderer.render(scene, camera);
-  }
-
-  function update(newConfig: Partial<Text3DRenderConfig>) {
-    // Note: update is sync for now, may need async version for text changes
-    const mergedConfig = { ...config, ...newConfig };
-
-    if (
-      newConfig.width !== undefined ||
-      newConfig.height !== undefined ||
-      newConfig.pixelRatio !== undefined
-    ) {
-      renderer.setSize(mergedConfig.width, mergedConfig.height);
-      renderer.setPixelRatio(mergedConfig.pixelRatio);
-
-      const newCameraConfig = createCameraConfig(
-        mergedConfig.scene3d?.camera?.preset ?? "orthographicFront",
-        mergedConfig.scene3d?.camera?.fov,
-        mergedConfig.scene3d?.camera?.zoom,
-      );
-      camera = createCamera(newCameraConfig, mergedConfig.width, mergedConfig.height);
-      fitCameraToObject(camera, textMesh, newCameraConfig);
-    }
-  }
-
-  function dispose() {
-    scene.remove(textMesh);
-    disposeGroup(textMesh);
-    renderer.dispose();
-  }
-
-  return {
-    render,
-    update,
-    dispose,
-    getCanvas: () => renderer.domElement,
-  };
+  return buildRendererFromState({ ...state, textMesh });
 }
 
 // =============================================================================
@@ -352,62 +370,116 @@ function disposeGroup(group: THREE.Group): void {
   });
 }
 
+// =============================================================================
+// Text Mesh Building (Shared Logic)
+// =============================================================================
+
 /**
- * Create 3D text mesh from configuration
- *
- * Creates a group containing meshes for each text run.
- * Each run is rendered with its own styling (font, color, size).
- * Runs are positioned using layout engine coordinates.
- *
- * Uses canvas-based contour extraction for universal font support.
- * Contours are cached by font namespace for performance.
+ * Configuration derived from Text3DRenderConfig for mesh building.
  */
-function createTextMesh(config: Text3DRenderConfig): THREE.Group {
-  const group = new THREE.Group();
+type MeshBuildConfig = {
+  readonly extrusionDepth: number;
+  readonly isWireframe: boolean;
+  readonly bevel?: Shape3d["bevel"];
+  readonly textWarp?: TextWarp;
+  readonly preset?: Shape3d["preset"];
+  /** Contour configuration from sp3d contourW/contourClr */
+  readonly contour?: ContourConfig;
+};
 
-  if (config.runs.length === 0) {
-    return group;
+/**
+ * Calculate extrusion depth from config or use default based on font size.
+ */
+function getExtrusionDepth(config: Text3DRenderConfig): number {
+  if (config.shape3d?.extrusionHeight) {
+    const depth = config.shape3d.extrusionHeight as number;
+    console.log("[3D Text] getExtrusionDepth - using provided:", depth);
+    return depth;
   }
-
-  // Get base font size for extrusion depth calculation
   const baseFontSize = config.runs[0]?.fontSize ?? 24;
-  const extrusionDepth = config.shape3d?.extrusionHeight
-    ? (config.shape3d.extrusionHeight as number)
-    : baseFontSize * 0.2;
+  const defaultDepth = baseFontSize * 0.2;
+  console.log("[3D Text] getExtrusionDepth - using default:", defaultDepth);
+  return defaultDepth;
+}
 
-  const isWireframe = config.shape3d?.preset === "legacyWireframe";
-
-  // Create mesh for each run using position from layout engine
-  for (const run of config.runs) {
-    if (run.text.length === 0) {
-      continue;
-    }
-
-    // Create geometry for this run
-    const geometry = createTextGeometryFromCanvas({
-      text: run.text,
-      fontFamily: run.fontFamily,
-      fontSize: run.fontSize,
-      fontWeight: run.fontWeight,
-      fontStyle: run.fontStyle,
-      extrusionDepth,
-      bevel: config.shape3d?.bevel,
-    });
-
-    // Create material with run's color
-    const baseColor = parseColor(run.color);
-    const materialConfig = createMaterialConfig(config.shape3d?.preset, baseColor);
-    const material = createMaterial(materialConfig, isWireframe);
-
-    // Create mesh and position it using layout coordinates
-    // Note: Y is inverted (SVG Y grows down, Three.js Y grows up)
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.position.x = run.x / 96; // Convert pixels to scene units
-    mesh.position.y = -run.y / 96; // Invert Y axis
-
-    group.add(mesh);
+/**
+ * Extract contour configuration from shape3d if available.
+ */
+function getContourConfig(shape3d: Shape3d | undefined): ContourConfig | undefined {
+  if (!shape3d?.contourWidth || shape3d.contourWidth <= 0) {
+    return undefined;
   }
 
+  // Extract color from contourColor (which is a SolidFill)
+  // Default to black if no color specified
+  let color = "#000000";
+  if (shape3d.contourColor?.type === "solidFill" && shape3d.contourColor.color) {
+    const colorSpec = shape3d.contourColor.color.spec;
+    // Handle srgb color type
+    if (colorSpec.type === "srgb") {
+      color = `#${colorSpec.value}`;
+    }
+  }
+
+  return {
+    width: shape3d.contourWidth,
+    color,
+  };
+}
+
+/**
+ * Derive mesh build configuration from render config.
+ */
+function getMeshBuildConfig(config: Text3DRenderConfig): MeshBuildConfig {
+  return {
+    extrusionDepth: getExtrusionDepth(config),
+    isWireframe: config.shape3d?.preset === "legacyWireframe",
+    bevel: config.shape3d?.bevel,
+    textWarp: config.textWarp,
+    preset: config.shape3d?.preset,
+    contour: getContourConfig(config.shape3d),
+  };
+}
+
+/**
+ * Process a single run with its geometry, adding mesh to group.
+ */
+function processRunWithGeometry(
+  group: THREE.Group,
+  run: Text3DRunConfig,
+  geometry: THREE.BufferGeometry,
+  buildConfig: MeshBuildConfig,
+): void {
+  // Apply text warp if configured
+  if (buildConfig.textWarp) {
+    applyTextWarp(geometry, buildConfig.textWarp);
+  }
+
+  // Create material (fill or solid color fallback)
+  const fill: Material3DFill = run.fill ?? { type: "solid", color: run.color };
+  const material = createMaterialFromFill(fill, buildConfig.preset, buildConfig.isWireframe);
+
+  // Create mesh and position it (Y inverted: SVG Y grows down, Three.js Y grows up)
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.position.x = run.x / 96;
+  mesh.position.y = -run.y / 96;
+
+  // Apply all effects to mesh
+  // Contour comes from shape3d (shape-level), other effects from run (run-level)
+  applyAllEffects(group, mesh, geometry, material, {
+    contour: buildConfig.contour,
+    outline: run.outline,
+    shadow: run.shadow,
+    glow: run.glow,
+    reflection: run.reflection,
+    softEdge: run.softEdge,
+  });
+}
+
+/**
+ * Finalize text mesh group (scale and position).
+ */
+function finalizeTextMeshGroup(group: THREE.Group, config: Text3DRenderConfig): void {
   // Scale entire group to fit within bounds
   const maxDimension = (Math.min(config.width, config.height) * 0.8) / 96;
   scaleGroupToFit(group, maxDimension * 2, maxDimension);
@@ -417,44 +489,98 @@ function createTextMesh(config: Text3DRenderConfig): THREE.Group {
     const zOffset = (config.scene3d.flatTextZ as number) / 96;
     group.position.z = zOffset;
   }
-
-  return group;
 }
 
 /**
  * Scale a THREE.Group to fit within bounds
  */
 function scaleGroupToFit(group: THREE.Group, maxWidth: number, maxHeight: number): void {
-  // Compute bounding box of entire group
   const box = new THREE.Box3().setFromObject(group);
   const size = new THREE.Vector3();
   box.getSize(size);
+
+  console.log("[3D Text] scaleGroupToFit - original size:", size.toArray());
 
   if (size.x === 0 || size.y === 0) {
     return;
   }
 
-  // Calculate scale factor
   const scaleX = maxWidth / size.x;
   const scaleY = maxHeight / size.y;
   const scale = Math.min(scaleX, scaleY);
 
-  // Apply uniform scale
+  console.log("[3D Text] scaleGroupToFit - scale factor:", scale, "scaled Z:", size.z * scale);
+
   group.scale.set(scale, scale, scale);
 
-  // Center the group
   const center = new THREE.Vector3();
   box.getCenter(center);
   group.position.sub(center.multiplyScalar(scale));
 }
 
+// =============================================================================
+// Text Mesh Factory Functions
+// =============================================================================
+
 /**
- * Create 3D text mesh from configuration (async - uses Web Worker)
- *
- * Creates a group containing meshes for each text run.
- * Each run is rendered with its own styling (font, color, size).
- * Runs are positioned using layout engine coordinates.
- * Uses Web Worker for parallel glyph extraction.
+ * Create 3D text mesh from configuration (synchronous).
+ * Creates geometries sequentially using canvas-based contour extraction.
+ */
+function createTextMesh(config: Text3DRenderConfig): THREE.Group {
+  const group = new THREE.Group();
+
+  if (config.runs.length === 0) {
+    return group;
+  }
+
+  const buildConfig = getMeshBuildConfig(config);
+
+  for (const run of config.runs) {
+    if (run.text.length === 0) {
+      continue;
+    }
+
+    const geometry = createTextGeometryFromCanvas({
+      text: run.text,
+      fontFamily: run.fontFamily,
+      fontSize: run.fontSize,
+      fontWeight: run.fontWeight,
+      fontStyle: run.fontStyle,
+      extrusionDepth: buildConfig.extrusionDepth,
+      bevel: buildConfig.bevel,
+    });
+
+    processRunWithGeometry(group, run, geometry, buildConfig);
+  }
+
+  finalizeTextMeshGroup(group, config);
+  return group;
+}
+
+/**
+ * Create geometry for a run asynchronously, returns null for empty text.
+ */
+function createGeometryForRunAsync(
+  run: Text3DRunConfig,
+  buildConfig: MeshBuildConfig,
+): Promise<THREE.BufferGeometry | null> {
+  if (run.text.length === 0) {
+    return Promise.resolve(null);
+  }
+  return createTextGeometryAsync({
+    text: run.text,
+    fontFamily: run.fontFamily,
+    fontSize: run.fontSize,
+    fontWeight: run.fontWeight,
+    fontStyle: run.fontStyle,
+    extrusionDepth: buildConfig.extrusionDepth,
+    bevel: buildConfig.bevel,
+  });
+}
+
+/**
+ * Create 3D text mesh from configuration (async - uses Web Worker).
+ * Creates geometries in parallel for better performance.
  */
 async function createTextMeshAsync(config: Text3DRenderConfig): Promise<THREE.Group> {
   const group = new THREE.Group();
@@ -463,64 +589,26 @@ async function createTextMeshAsync(config: Text3DRenderConfig): Promise<THREE.Gr
     return group;
   }
 
-  // Get base font size for extrusion depth calculation
-  const baseFontSize = config.runs[0]?.fontSize ?? 24;
-  const extrusionDepth = config.shape3d?.extrusionHeight
-    ? (config.shape3d.extrusionHeight as number)
-    : baseFontSize * 0.2;
-
-  const isWireframe = config.shape3d?.preset === "legacyWireframe";
+  const buildConfig = getMeshBuildConfig(config);
 
   // Create geometry for all runs in parallel
-  const geometryPromises = config.runs.map((run) =>
-    run.text.length > 0
-      ? createTextGeometryAsync({
-          text: run.text,
-          fontFamily: run.fontFamily,
-          fontSize: run.fontSize,
-          fontWeight: run.fontWeight,
-          fontStyle: run.fontStyle,
-          extrusionDepth,
-          bevel: config.shape3d?.bevel,
-        })
-      : Promise.resolve(null),
+  const geometries = await Promise.all(
+    config.runs.map((run) => createGeometryForRunAsync(run, buildConfig)),
   );
 
-  const geometries = await Promise.all(geometryPromises);
-
-  // Create mesh for each run using position from layout engine
+  // Process runs with pre-created geometries
   for (let i = 0; i < config.runs.length; i++) {
     const run = config.runs[i];
     const geometry = geometries[i];
 
-    if (!geometry || run.text.length === 0) {
+    if (!geometry) {
       continue;
     }
 
-    // Create material with run's color
-    const baseColor = parseColor(run.color);
-    const materialConfig = createMaterialConfig(config.shape3d?.preset, baseColor);
-    const material = createMaterial(materialConfig, isWireframe);
-
-    // Create mesh and position it using layout coordinates
-    // Note: Y is inverted (SVG Y grows down, Three.js Y grows up)
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.position.x = run.x / 96; // Convert pixels to scene units
-    mesh.position.y = -run.y / 96; // Invert Y axis
-
-    group.add(mesh);
+    processRunWithGeometry(group, run, geometry, buildConfig);
   }
 
-  // Scale entire group to fit within bounds
-  const maxDimension = (Math.min(config.width, config.height) * 0.8) / 96;
-  scaleGroupToFit(group, maxDimension * 2, maxDimension);
-
-  // Apply flatTextZ offset
-  if (config.scene3d?.flatTextZ !== undefined) {
-    const zOffset = (config.scene3d.flatTextZ as number) / 96;
-    group.position.z = zOffset;
-  }
-
+  finalizeTextMeshGroup(group, config);
   return group;
 }
 

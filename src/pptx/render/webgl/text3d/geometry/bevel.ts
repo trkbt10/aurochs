@@ -53,7 +53,9 @@ export function getBevelConfig(bevel: Bevel3d | undefined): BevelConfig | undefi
 
   const width = bevel.width as number;
   const height = bevel.height as number;
-  const baseSize = Math.min(width, height) / 96; // Convert to reasonable 3D scale
+  // Keep bevel in same pixel units as shape paths and extrusion depth
+  // The scaleGroupToFit in core.ts handles final sizing
+  const baseSize = Math.min(width, height);
 
   switch (bevel.preset) {
     case "angle":
@@ -382,7 +384,8 @@ export function createExtrudedGeometry(
   bevel: BevelConfig | undefined,
 ): THREE.BufferGeometry {
   const extrudeSettings: THREE.ExtrudeGeometryOptions = {
-    depth: extrusionDepth / 96, // Convert pixels to 3D units
+    // Keep in pixel units - scaleGroupToFit handles final sizing
+    depth: extrusionDepth,
     bevelEnabled: bevel !== undefined,
     bevelThickness: bevel?.thickness ?? 0,
     bevelSize: bevel?.size ?? 0,

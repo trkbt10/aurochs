@@ -6,13 +6,16 @@
  * Parent provides semantic labels (e.g., "Fill Color", "Text Color").
  */
 
-import { useCallback, useState, type CSSProperties } from "react";
+import { useCallback, useMemo, useState, type CSSProperties } from "react";
 import { Button, Select } from "../../ui/primitives";
 import { ColorPickerPopover } from "../../ui/color";
 import { ColorTransformEditor } from "./ColorTransformEditor";
 import { createDefaultSrgbColor } from "./ColorSpecEditor";
 import type { Color, ColorSpec, ColorTransform, SrgbColor, SchemeColor } from "../../../pptx/domain/color";
 import type { EditorProps, SelectOption } from "../../types";
+import type { ColorContext } from "../../../pptx/domain/resolution";
+import { resolveColor } from "../../../pptx/render/core/drawing-ml";
+import { useEditorConfig } from "../../context/editor/EditorConfigContext";
 
 export type ColorEditorProps = EditorProps<Color> & {
   readonly style?: CSSProperties;
@@ -66,12 +69,13 @@ function createDefaultColorSpec(type: ColorSpecType): ColorSpec {
   }
 }
 
-function getHexPreview(spec: ColorSpec): string {
-  if (spec.type === "srgb") {
-    return spec.value;
-  }
-  // Placeholder for non-sRGB colors
-  return "888888";
+function getHexPreview(
+  spec: ColorSpec,
+  colorContext: ColorContext | undefined,
+  transform: ColorTransform | undefined
+): string {
+  const resolved = resolveColor({ spec, transform }, colorContext);
+  return resolved ?? "000000";
 }
 
 /**
@@ -87,6 +91,14 @@ export function ColorEditor({
   showTransform = false,
   showModeSwitch = false,
 }: ColorEditorProps) {
+  const { colorScheme, colorMap } = useEditorConfig();
+  const colorContext = useMemo<ColorContext>(
+    () => ({
+      colorScheme: colorScheme ?? {},
+      colorMap: colorMap ?? {},
+    }),
+    [colorScheme, colorMap]
+  );
   const [transformExpanded, setTransformExpanded] = useState(!!value.transform);
 
   const handleSpecChange = useCallback(
@@ -178,7 +190,7 @@ export function ColorEditor({
       <div className={className} style={style}>
         <div style={containerStyle}>
           <ColorPickerPopover
-            value={getHexPreview(value.spec)}
+            value={getHexPreview(value.spec, colorContext, value.transform)}
             onChange={handleHexChange}
             disabled={disabled}
           />
@@ -208,7 +220,7 @@ export function ColorEditor({
     <div className={className} style={style}>
       <div style={containerStyle}>
         <ColorPickerPopover
-          value={getHexPreview(value.spec)}
+          value={getHexPreview(value.spec, colorContext, value.transform)}
           onChange={handleHexChange}
           disabled={disabled}
         />

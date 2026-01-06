@@ -1,0 +1,247 @@
+/**
+ * @file Demo Utilities for WebGL Test Pages
+ *
+ * Shared utilities for constructing ECMA-376 domain objects from demo parameters.
+ * These are test utilities only - not for production use.
+ *
+ * The actual domain types and processing should remain in the library.
+ * This file provides convenience wrappers for demo/preview purposes.
+ */
+
+import { pt, px } from "@lib/pptx/domain/types";
+import type { Pixels } from "@lib/pptx/domain/types";
+import type { TextBody, Paragraph, RegularRun, RunProperties } from "@lib/pptx/domain/text";
+import type { SolidFill } from "@lib/pptx/domain/color";
+import type { ColorContext } from "@lib/pptx/domain/resolution";
+import type {
+  Shape3d,
+  Scene3d,
+  Bevel3d,
+  LightRigType,
+  LightRigDirection,
+  PresetCameraType,
+  PresetMaterialType,
+  BevelPresetType,
+} from "@lib/pptx/domain/three-d";
+import type { Material3DFill } from "@lib/pptx/render/webgl/text3d";
+import type { DemoWordArtPreset, DemoFill } from "./wordart-demo-presets";
+
+// =============================================================================
+// Color Context (Demo)
+// =============================================================================
+
+/**
+ * Demo color context with standard Office color scheme.
+ * For testing purposes only.
+ */
+export const demoColorContext: ColorContext = {
+  colorScheme: {
+    dk1: "000000",
+    lt1: "FFFFFF",
+    dk2: "1F497D",
+    lt2: "EEECE1",
+    accent1: "4F81BD",
+    accent2: "C0504D",
+    accent3: "9BBB59",
+    accent4: "8064A2",
+    accent5: "4BACC6",
+    accent6: "F79646",
+    hlink: "0000FF",
+    folHlink: "800080",
+  },
+  colorMap: {
+    tx1: "dk1",
+    tx2: "dk2",
+    bg1: "lt1",
+    bg2: "lt2",
+  },
+};
+
+// =============================================================================
+// TextBody Construction Helpers
+// =============================================================================
+
+/**
+ * Create a SolidFill from hex color string.
+ * @see ECMA-376 Part 1, Section 20.1.8.54 (solidFill)
+ */
+export function createSolidFill(hex: string): SolidFill {
+  return {
+    type: "solidFill",
+    color: {
+      spec: { type: "srgb", value: hex.replace("#", "") },
+    },
+  };
+}
+
+/**
+ * Create RunProperties from simplified parameters.
+ * @see ECMA-376 Part 1, Section 21.1.2.3.9 (a:rPr)
+ */
+export function createRunProperties(options: {
+  fontSize: number;
+  fontFamily: string;
+  bold?: boolean;
+  italic?: boolean;
+  color: string;
+}): RunProperties {
+  return {
+    fontSize: pt(options.fontSize),
+    latin: { typeface: options.fontFamily },
+    bold: options.bold ?? false,
+    italic: options.italic ?? false,
+    fill: createSolidFill(options.color),
+  };
+}
+
+/**
+ * Create a RegularRun (a:r element).
+ * @see ECMA-376 Part 1, Section 21.1.2.3.8 (a:r)
+ */
+export function createTextRun(text: string, properties: RunProperties): RegularRun {
+  return { type: "text", text, properties };
+}
+
+/**
+ * Create a Paragraph (a:p element).
+ * @see ECMA-376 Part 1, Section 21.1.2.2.6 (a:p)
+ */
+export function createParagraph(runs: RegularRun[]): Paragraph {
+  return { runs, properties: {} };
+}
+
+/**
+ * Create a TextBody (a:txBody element).
+ * @see ECMA-376 Part 1, Section 21.1.2.1.2 (a:txBody)
+ */
+export function createTextBody(paragraphs: Paragraph[]): TextBody {
+  return {
+    bodyProperties: { wrap: "square", anchor: "t" },
+    paragraphs,
+  };
+}
+
+// =============================================================================
+// Shape3d Construction Helpers
+// =============================================================================
+
+type Shape3dParams = {
+  extrusionHeight?: number;
+  preset?: PresetMaterialType;
+  bevel?: {
+    width: number;
+    height: number;
+    preset: BevelPresetType;
+  };
+  contourWidth?: number;
+  contourColor?: string;
+};
+
+/**
+ * Build a Shape3d domain object from plain number parameters.
+ * Automatically wraps values with proper branded types (px).
+ */
+export function buildShape3d(params: Shape3dParams): Shape3d {
+  const shape3d: Shape3d = {
+    extrusionHeight: params.extrusionHeight !== undefined ? px(params.extrusionHeight) : undefined,
+    preset: params.preset,
+    bevel: params.bevel
+      ? {
+          width: px(params.bevel.width),
+          height: px(params.bevel.height),
+          preset: params.bevel.preset,
+        }
+      : undefined,
+    contourWidth: params.contourWidth !== undefined && params.contourWidth > 0 ? px(params.contourWidth) : undefined,
+    contourColor:
+      params.contourWidth !== undefined && params.contourWidth > 0 && params.contourColor
+        ? createSolidFill(params.contourColor)
+        : undefined,
+  };
+  return shape3d;
+}
+
+type Scene3dParams = {
+  camera: PresetCameraType;
+  lightRig: {
+    rig: LightRigType;
+    direction: LightRigDirection;
+  };
+};
+
+/**
+ * Build a Scene3d domain object.
+ */
+export function buildScene3d(params: Scene3dParams): Scene3d {
+  return {
+    camera: { preset: params.camera },
+    lightRig: { rig: params.lightRig.rig, direction: params.lightRig.direction },
+  };
+}
+
+// =============================================================================
+// Demo Preset Converters
+// =============================================================================
+
+/**
+ * Get primary color from demo fill.
+ */
+export function getPrimaryColor(preset: DemoWordArtPreset): string {
+  if (preset.fill.type === "solid") {
+    return preset.fill.color;
+  }
+  return preset.fill.stops[0]?.color ?? "#4F81BD";
+}
+
+/**
+ * Convert demo fill to Material3DFill (render type).
+ */
+export function demoFillToMaterial3DFill(fill: DemoFill): Material3DFill {
+  if (fill.type === "solid") {
+    return { type: "solid", color: fill.color };
+  }
+  return {
+    type: "gradient",
+    angle: fill.angle,
+    stops: fill.stops.map((s) => ({ position: s.position, color: s.color })),
+  };
+}
+
+/**
+ * Build Shape3d from DemoWordArtPreset.
+ * Applies optional scaling limits for thumbnails.
+ */
+export function buildShape3dFromPreset(
+  preset: DemoWordArtPreset,
+  options?: {
+    maxExtrusion?: number;
+    maxBevelWidth?: number;
+    maxBevelHeight?: number;
+  },
+): Shape3d {
+  const maxExtrusion = options?.maxExtrusion;
+  const maxBevelWidth = options?.maxBevelWidth;
+  const maxBevelHeight = options?.maxBevelHeight;
+
+  return buildShape3d({
+    extrusionHeight: maxExtrusion !== undefined ? Math.min(preset.extrusion, maxExtrusion) : preset.extrusion,
+    preset: preset.material,
+    bevel: preset.bevel
+      ? {
+          width: maxBevelWidth !== undefined ? Math.min(preset.bevel.width, maxBevelWidth) : preset.bevel.width,
+          height: maxBevelHeight !== undefined ? Math.min(preset.bevel.height, maxBevelHeight) : preset.bevel.height,
+          preset: preset.bevel.preset,
+        }
+      : undefined,
+  });
+}
+
+/**
+ * Build Scene3d from DemoWordArtPreset.
+ */
+export function buildScene3dFromPreset(preset: DemoWordArtPreset): Scene3d {
+  return buildScene3d({
+    camera: preset.camera,
+    lightRig: preset.lightRig,
+  });
+}

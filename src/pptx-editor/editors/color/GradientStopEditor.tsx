@@ -101,7 +101,7 @@ export function GradientStopEditor({
 /**
  * Create a default gradient stop.
  */
-export function createDefaultGradientStop(position: number = 50, hex: string = "808080"): GradientStop {
+export function createDefaultGradientStop(position: number = 50, hex: string = "b3b3b3"): GradientStop {
   return {
     position: pct(position),
     color: {

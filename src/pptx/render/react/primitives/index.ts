@@ -13,4 +13,4 @@ export {
   getGeometryPathData,
   type PathElementProps,
 } from "./Geometry";
-export { TextRenderer, type TextRendererProps } from "./Text";
+export { TextRenderer, extractText3DRuns, type TextRendererProps } from "./text";

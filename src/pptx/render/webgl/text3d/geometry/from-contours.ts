@@ -61,20 +61,32 @@ export function createTextGeometryFromCanvas(
 
     const layout = layoutText(config.text, layoutConfig);
 
+    console.log("[3D Text] Layout result:", {
+      text: config.text,
+      pathCount: layout?.combinedPaths?.length ?? 0,
+      extrusionDepth: config.extrusionDepth,
+    });
+
     if (!layout?.combinedPaths?.length) {
       // Return empty geometry for whitespace-only text
+      console.warn("[3D Text] No paths extracted for text:", config.text);
       return createEmptyGeometry();
     }
 
     // Convert paths to THREE.Shape
     const shapes = pathsToShapes(layout.combinedPaths);
 
+    console.log("[3D Text] Shapes created:", shapes.length);
+
     // Filter out any invalid shapes
     const validShapes = shapes.filter(
       (s): s is THREE.Shape => s != null && s instanceof THREE.Shape,
     );
 
+    console.log("[3D Text] Valid shapes:", validShapes.length);
+
     if (validShapes.length === 0) {
+      console.warn("[3D Text] No valid shapes created");
       return createEmptyGeometry();
     }
 
@@ -82,8 +94,12 @@ export function createTextGeometryFromCanvas(
     const bevelConfig = getBevelConfig(config.bevel);
 
     // Create extrude settings
+    // extrusionDepth is in pixels, keep same scale as shape paths (also in pixels)
+    // The scaleGroupToFit in core.ts handles final sizing
+    const depth = Math.max(config.extrusionDepth, 1);
+
     const extrudeSettings: THREE.ExtrudeGeometryOptions = {
-      depth: config.extrusionDepth / 96, // Convert pixels to 3D units
+      depth,
       bevelEnabled: bevelConfig !== undefined,
       bevelThickness: bevelConfig?.thickness ?? 0,
       bevelSize: bevelConfig?.size ?? 0,
@@ -91,17 +107,20 @@ export function createTextGeometryFromCanvas(
       curveSegments: 8,
     };
 
-    // Create geometry - process one shape at a time to avoid iteration issues
+    console.log("[3D Text] Extrude settings:", extrudeSettings);
+
+    // Create geometry - use Three.js built-in array support (safer than manual merge)
     let geometry: THREE.ExtrudeGeometry;
-    if (validShapes.length === 1) {
-      geometry = new THREE.ExtrudeGeometry(validShapes[0], extrudeSettings);
-    } else {
-      // Create geometries for each shape and merge manually
-      geometry = new THREE.ExtrudeGeometry(validShapes[0], extrudeSettings);
-      for (let i = 1; i < validShapes.length; i++) {
-        const shapeGeom = new THREE.ExtrudeGeometry(validShapes[i], extrudeSettings);
-        geometry = mergeExtrudeGeometries(geometry, shapeGeom);
-      }
+    try {
+      // Three.js ExtrudeGeometry accepts an array of shapes
+      geometry = new THREE.ExtrudeGeometry(validShapes, extrudeSettings);
+      console.log("[3D Text] Geometry created:", {
+        vertices: geometry.attributes.position?.count ?? 0,
+        hasIndex: !!geometry.index,
+      });
+    } catch (e) {
+      console.error("[3D Text] ExtrudeGeometry failed:", e);
+      return createEmptyGeometry();
     }
 
     // Center geometry
@@ -257,6 +276,8 @@ function mergeExtrudeGeometries(
   const posB = geomB.attributes.position;
   const normalA = geomA.attributes.normal;
   const normalB = geomB.attributes.normal;
+  const uvA = geomA.attributes.uv;
+  const uvB = geomB.attributes.uv;
 
   // Merge positions
   const mergedPositions = new Float32Array(posA.count * 3 + posB.count * 3);
@@ -267,6 +288,14 @@ function mergeExtrudeGeometries(
   const mergedNormals = new Float32Array(normalA.count * 3 + normalB.count * 3);
   mergedNormals.set(normalA.array as Float32Array, 0);
   mergedNormals.set(normalB.array as Float32Array, normalA.count * 3);
+
+  // Merge UVs (required for texture/gradient materials)
+  let mergedUvs: Float32Array | undefined;
+  if (uvA && uvB) {
+    mergedUvs = new Float32Array(uvA.count * 2 + uvB.count * 2);
+    mergedUvs.set(uvA.array as Float32Array, 0);
+    mergedUvs.set(uvB.array as Float32Array, uvA.count * 2);
+  }
 
   // Merge indices
   const indexA = geomA.index;
@@ -284,6 +313,9 @@ function mergeExtrudeGeometries(
   const merged = new THREE.ExtrudeGeometry();
   merged.setAttribute("position", new THREE.BufferAttribute(mergedPositions, 3));
   merged.setAttribute("normal", new THREE.BufferAttribute(mergedNormals, 3));
+  if (mergedUvs) {
+    merged.setAttribute("uv", new THREE.BufferAttribute(mergedUvs, 2));
+  }
   if (mergedIndices.length > 0) {
     merged.setIndex(mergedIndices);
   }

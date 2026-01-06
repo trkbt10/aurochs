@@ -46,17 +46,106 @@ export {
   createBevelMaterial,
   parseColor,
   rgbToHex,
+  createGradientMaterial,
+  createPatternMaterial,
+  createImageMaterial,
+  createMaterialFromFill,
 } from "./scene/materials";
-export type { MaterialConfig } from "./scene/materials";
+export type { MaterialConfig, Material3DFill, Material3DPatternFill, Material3DImageFill, ResolvedMaterialGradientStop } from "./scene/materials";
+
+// Scene - Pattern Textures
+export {
+  createPatternTextureFromResolved,
+  clearPatternTextureCache,
+} from "./scene/pattern-texture";
+export type { PatternPreset } from "./scene/pattern-texture";
+
+// Scene - Image Textures
+export {
+  createImageTextureFromUrl,
+  createImageTextureFromImageData,
+  createImageTextureFromElement,
+  clearImageTextureCache,
+  getCachedImageTexture,
+} from "./scene/image-texture";
+export type { ImageFillMode, SourceRect } from "./scene/image-texture";
+
+// Scene - Gradient Textures (internal resolved types)
+export {
+  createLinearGradientTextureFromResolved,
+  createRadialGradientTextureFromResolved,
+  clearGradientTextureCache,
+} from "./scene/gradient-texture";
 
 // Geometry - Bevel config
 export { getBevelConfig } from "./geometry/bevel";
 export type { BevelConfig } from "./geometry/bevel";
 
+// Geometry - Text Warp
+export {
+  applyTextWarp,
+  isTextWarpSupported,
+  getSupportedTextWarps,
+} from "./geometry/text-warp";
+
 // Geometry - From contours
 export { createTextGeometryFromCanvas, scaleGeometryToFit } from "./geometry/from-contours";
 export { createTextGeometryAsync } from "./geometry/from-contours-async";
 export type { TextGeometryConfig } from "./geometry/from-contours";
+
+// Effects
+export {
+  // Outline
+  createOutlineMesh,
+  createBackFaceOutline,
+  createShaderOutline,
+  addOutlineToGroup,
+  updateOutlineColor,
+  updateOutlineVisibility,
+  disposeOutline,
+  // Shadow
+  enableShadowMapping,
+  createShadowLight,
+  createDropShadowMesh,
+  createInnerShadowMesh,
+  enableMeshShadows,
+  enableGroupShadows,
+  createShadowPlane,
+  disposeShadow,
+  // Glow
+  createGlowMesh,
+  createLayeredGlow,
+  createGlowSprite,
+  addGlowToGroup,
+  updateGlowColor,
+  updateGlowIntensity,
+  disposeGlow,
+  // Reflection
+  createReflectionMesh,
+  createGradientReflection,
+  createReflectiveFloor,
+  addReflectionToGroup,
+  updateReflectionOpacity,
+  disposeReflection,
+  // Soft Edge
+  createSoftEdgeMesh,
+  createLayeredSoftEdge,
+  applySoftEdgeToMesh,
+  createBlurPassConfig,
+  addSoftEdgeToGroup,
+  updateSoftEdgeRadius,
+  removeSoftEdge,
+  disposeSoftEdge,
+} from "./effects";
+export type {
+  OutlineConfig,
+  ShadowConfig,
+  ShadowState,
+  GlowConfig,
+  ReflectionConfig,
+  SoftEdgeConfig,
+  BlurPassConfig,
+} from "./effects";
 
 // Re-export glyph module types for convenience
 export type {

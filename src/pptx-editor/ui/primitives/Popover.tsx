@@ -220,14 +220,14 @@ export function Popover({
     }
   }, [isControlled, onOpenChange]);
 
-  const handleContentPointerDownCapture = useCallback(
+  const handleContentPointerDown = useCallback(
     (event: React.PointerEvent) => {
       event.stopPropagation();
     },
     []
   );
 
-  const handleContentClickCapture = useCallback(
+  const handleContentClick = useCallback(
     (event: React.MouseEvent) => {
       event.stopPropagation();
     },
@@ -302,9 +302,8 @@ export function Popover({
                 left: resolvedPosition.left,
                 visibility: position ? "visible" : "hidden",
               }}
-              onClick={(e) => e.stopPropagation()}
-              onPointerDownCapture={handleContentPointerDownCapture}
-              onClickCapture={handleContentClickCapture}
+              onPointerDown={handleContentPointerDown}
+              onClick={handleContentClick}
               data-side={resolvedPosition.side}
             >
               {arrowStyles && (

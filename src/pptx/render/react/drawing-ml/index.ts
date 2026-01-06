@@ -69,3 +69,26 @@ export {
   type ShapeSvgProps,
   type ShapeType,
 } from "./shape";
+
+// Text Fill module (ECMA-376 20.1.8 - Text Fill)
+export {
+  createTextGradientDef,
+  createTextPatternDef,
+  createTextImageFillDef,
+  getTextPatternSize,
+  renderTextPatternContent,
+  type TextGradientDefProps,
+} from "./text-fill";
+
+// Text Effects module (ECMA-376 20.1.8 - Text Effects)
+export { createTextEffectsFilterDef } from "./text-effects";
+
+// Text 3D module (ECMA-376 20.1.5 - 3D Properties)
+export {
+  render3dTextEffects,
+  renderTextExtrusion,
+  getExtrusionOffset,
+  createTextBevelFilterDef,
+  getBevelOffsets,
+  type BevelConfig,
+} from "./text-3d";

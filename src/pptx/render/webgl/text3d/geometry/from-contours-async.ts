@@ -241,6 +241,8 @@ function mergeExtrudeGeometries(
   const posB = geomB.attributes.position;
   const normalA = geomA.attributes.normal;
   const normalB = geomB.attributes.normal;
+  const uvA = geomA.attributes.uv;
+  const uvB = geomB.attributes.uv;
 
   const mergedPositions = new Float32Array(posA.count * 3 + posB.count * 3);
   mergedPositions.set(posA.array as Float32Array, 0);
@@ -249,6 +251,15 @@ function mergeExtrudeGeometries(
   const mergedNormals = new Float32Array(normalA.count * 3 + normalB.count * 3);
   mergedNormals.set(normalA.array as Float32Array, 0);
   mergedNormals.set(normalB.array as Float32Array, normalA.count * 3);
+
+  const mergedUvs = uvA && uvB
+    ? new Float32Array(uvA.count * 2 + uvB.count * 2)
+    : null;
+
+  if (mergedUvs && uvA && uvB) {
+    mergedUvs.set(uvA.array as Float32Array, 0);
+    mergedUvs.set(uvB.array as Float32Array, uvA.count * 2);
+  }
 
   const indexA = geomA.index;
   const indexB = geomB.index;
@@ -264,6 +275,11 @@ function mergeExtrudeGeometries(
   const merged = new THREE.ExtrudeGeometry();
   merged.setAttribute("position", new THREE.BufferAttribute(mergedPositions, 3));
   merged.setAttribute("normal", new THREE.BufferAttribute(mergedNormals, 3));
+  if (mergedUvs) {
+    merged.setAttribute("uv", new THREE.BufferAttribute(mergedUvs, 2));
+  } else {
+    merged.deleteAttribute("uv");
+  }
   if (mergedIndices.length > 0) {
     merged.setIndex(mergedIndices);
   }

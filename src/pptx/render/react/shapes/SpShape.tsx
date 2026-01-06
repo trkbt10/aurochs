@@ -9,8 +9,7 @@
 
 import type { SpShape as SpShapeType } from "../../../domain";
 import type { ShapeId } from "../../../domain/types";
-import { GeometryPath } from "../primitives/Geometry";
-import { TextRenderer } from "../primitives/Text";
+import { GeometryPath, TextRenderer } from "../primitives";
 import { buildTransformAttr } from "./transform";
 
 // =============================================================================

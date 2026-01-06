@@ -10,163 +10,25 @@
 
 import { useState, useMemo } from "react";
 import { type CheckItem, TestSubsection } from "../common";
-import { Text3DRenderer, type Text3DRunConfig } from "@lib/pptx/render/webgl/text3d";
+import { Text3DRenderer } from "@lib/pptx/render/webgl/text3d";
+import { extractText3DRuns } from "@lib/pptx/render/react/primitives/Text";
+import { WordArtGallery } from "./WordArtGallery";
+import { allDemoWordArtPresets } from "./wordart-demo-presets";
 import type { PresetCameraType, PresetMaterialType, BevelPresetType } from "@lib/pptx/domain/three-d";
-import { px, pt } from "@lib/pptx/domain/types";
-import type { TextBody, Paragraph, RegularRun, RunProperties, ParagraphProperties } from "@lib/pptx/domain/text";
-import type { SolidFill } from "@lib/pptx/domain/color";
-import type { ColorContext } from "@lib/pptx/domain/resolution";
-import { toLayoutInput, layoutTextBody } from "@lib/pptx/render/text-layout";
-import { PT_TO_PX } from "@lib/pptx/domain/unit-conversion";
+import type { TextBody } from "@lib/pptx/domain/text";
+import {
+  demoColorContext,
+  createTextBody,
+  createParagraph,
+  createTextRun,
+  createRunProperties,
+  buildShape3d,
+  buildScene3d,
+} from "./demo-utils";
+
 
 // =============================================================================
-// TextBody Construction Helpers (ECMA-376 compliant)
-// =============================================================================
-
-/**
- * Create a SolidFill from hex color string.
- * @see ECMA-376 Part 1, Section 20.1.8.38 (solidFill)
- */
-function createSolidFill(hex: string): SolidFill {
-  return {
-    type: "solid",
-    color: { type: "srgb", value: hex.replace("#", "") },
-  };
-}
-
-/**
- * Create RunProperties from simplified parameters.
- * @see ECMA-376 Part 1, Section 21.1.2.3.9 (a:rPr)
- */
-function createRunProperties(options: {
-  fontSize: number;
-  fontFamily: string;
-  bold?: boolean;
-  italic?: boolean;
-  color: string;
-}): RunProperties {
-  return {
-    fontSize: pt(options.fontSize),
-    latin: { typeface: options.fontFamily },
-    bold: options.bold ?? false,
-    italic: options.italic ?? false,
-    fill: createSolidFill(options.color),
-  };
-}
-
-/**
- * Create a RegularRun (a:r element).
- * @see ECMA-376 Part 1, Section 21.1.2.3.8 (a:r)
- */
-function createTextRun(text: string, properties: RunProperties): RegularRun {
-  return {
-    type: "text",
-    text,
-    properties,
-  };
-}
-
-/**
- * Create a Paragraph (a:p element).
- *
- * Per ECMA-376, a:pPr is optional. When omitted, defaults apply.
- * The domain type requires `properties` but all fields within are optional.
- *
- * @see ECMA-376 Part 1, Section 21.1.2.2.6 (a:p)
- * @see ECMA-376 Part 1, Section 21.1.2.2.7 (a:pPr) - "This element is optional"
- */
-function createParagraph(runs: RegularRun[], properties?: ParagraphProperties): Paragraph {
-  return {
-    runs,
-    properties: properties ?? {},
-  };
-}
-
-/**
- * Create a TextBody (a:txBody element).
- * @see ECMA-376 Part 1, Section 21.1.2.1.2 (a:txBody)
- */
-function createTextBody(paragraphs: Paragraph[]): TextBody {
-  return {
-    bodyProperties: {
-      wrap: "square",
-      anchor: "t",
-    },
-    paragraphs,
-  };
-}
-
-/**
- * Minimal ColorContext for demo (no theme colors).
- */
-const demoColorContext: ColorContext = {
-  theme: {
-    dk1: "000000",
-    lt1: "FFFFFF",
-    dk2: "1F497D",
-    lt2: "EEECE1",
-    accent1: "4F81BD",
-    accent2: "C0504D",
-    accent3: "9BBB59",
-    accent4: "8064A2",
-    accent5: "4BACC6",
-    accent6: "F79646",
-    hlink: "0000FF",
-    folHlink: "800080",
-  },
-};
-
-/**
- * Convert layout result to Text3DRunConfig array.
- * This is the proper ECMA-376 compliant flow.
- */
-function layoutToText3DRuns(textBody: TextBody, width: number, height: number): Text3DRunConfig[] {
-  const layoutInput = toLayoutInput({
-    body: textBody,
-    width: px(width),
-    height: px(height),
-    colorContext: demoColorContext,
-    fontScheme: undefined,
-    renderOptions: undefined,
-    resourceResolver: () => undefined,
-  });
-
-  const layoutResult = layoutTextBody(layoutInput);
-  const runs: Text3DRunConfig[] = [];
-
-  for (const para of layoutResult.paragraphs) {
-    for (const line of para.lines) {
-      let cursorX = line.x as number;
-
-      for (const span of line.spans) {
-        if (span.text.length === 0 || span.isBreak) {
-          continue;
-        }
-
-        const fontSizePx = px((span.fontSize as number) * PT_TO_PX);
-
-        runs.push({
-          text: span.text,
-          color: span.color,
-          fontSize: fontSizePx,
-          fontFamily: span.fontFamily,
-          fontWeight: span.fontWeight,
-          fontStyle: span.fontStyle,
-          x: px(cursorX),
-          y: line.y,
-          width: span.width,
-        });
-
-        cursorX += (span.width as number) + (span.dx as number);
-      }
-    }
-  }
-
-  return runs;
-}
-
-// =============================================================================
-// Preset Lists
+// Preset Lists (for UI controls)
 // =============================================================================
 
 const cameraPresets: PresetCameraType[] = [
@@ -217,6 +79,8 @@ function Text3DPreview() {
   const [material, setMaterial] = useState<PresetMaterialType>("plastic");
   const [bevelPreset, setBevelPreset] = useState<BevelPresetType>("relaxedInset");
   const [extrusion, setExtrusion] = useState(20);
+  const [contourWidth, setContourWidth] = useState(0);
+  const [contourColor, setContourColor] = useState("#FF5500");
   const [text, setText] = useState("3D");
   const [showMixedStyles, setShowMixedStyles] = useState(false);
 
@@ -263,10 +127,18 @@ function Text3DPreview() {
     ]),
   ]), []);
 
-  // Run layout engine (ECMA-376 compliant)
+  // Run layout engine using library function (ECMA-376 compliant)
   const runs = useMemo(() => {
     const textBody = showMixedStyles ? mixedStylesTextBody : singleRunTextBody;
-    return layoutToText3DRuns(textBody, 400, 200);
+    return extractText3DRuns(
+      textBody,
+      400,
+      200,
+      demoColorContext,
+      undefined, // fontScheme
+      undefined, // options
+      () => undefined, // resourceResolver
+    );
   }, [showMixedStyles, singleRunTextBody, mixedStylesTextBody]);
 
   return (
@@ -325,21 +197,41 @@ function Text3DPreview() {
             onChange={(e) => setExtrusion(Number(e.target.value))}
           />
         </label>
+        <label>
+          Contour Width: {contourWidth}px
+          <input
+            type="range"
+            min={0}
+            max={20}
+            value={contourWidth}
+            onChange={(e) => setContourWidth(Number(e.target.value))}
+          />
+        </label>
+        <label>
+          Contour Color:
+          <input
+            type="color"
+            value={contourColor}
+            onChange={(e) => setContourColor(e.target.value)}
+          />
+        </label>
       </div>
       <div className="text3d-canvas" style={{ width: 400, height: 200, background: "#1a1a2e", borderRadius: 8 }}>
         <Text3DRenderer
           runs={runs}
           width={400}
           height={200}
-          scene3d={{
-            camera: { preset: camera },
+          scene3d={buildScene3d({
+            camera,
             lightRig: { rig: "threePt", direction: "tl" },
-          }}
-          shape3d={{
+          })}
+          shape3d={buildShape3d({
             extrusionHeight: extrusion,
             preset: material,
             bevel: { width: 8, height: 8, preset: bevelPreset },
-          }}
+            contourWidth: contourWidth > 0 ? contourWidth : undefined,
+            contourColor: contourWidth > 0 ? contourColor : undefined,
+          })}
         />
       </div>
       {showMixedStyles && (
@@ -371,24 +263,24 @@ export function WebglTextEffectsTest() {
   // Text Fill items
   const textFillItems: CheckItem[] = [
     { label: "Solid fill (solidFill)", status: "pass", notes: "Three.js material color" },
-    { label: "Gradient fill (gradFill)", status: "pending", notes: "Not yet implemented" },
-    { label: "Pattern fill (pattFill)", status: "pending", notes: "Not yet implemented" },
-    { label: "Image fill (blipFill)", status: "pending", notes: "Not yet implemented" },
+    { label: "Gradient fill (gradFill)", status: "pass", notes: "Canvas-based gradient texture" },
+    { label: "Pattern fill (pattFill)", status: "pass", notes: "40+ ECMA-376 pattern presets" },
+    { label: "Image fill (blipFill)", status: "pass", notes: "Pre-loaded texture support" },
   ];
 
   // Text Outline items
   const textOutlineItems: CheckItem[] = [
-    { label: "Solid outline (ln)", status: "pending", notes: "Edge detection needed" },
-    { label: "Outline width (w)", status: "pending", notes: "Not yet implemented" },
-    { label: "Outline color", status: "pending", notes: "Not yet implemented" },
+    { label: "Solid outline (ln)", status: "pass", notes: "BackFace outline geometry" },
+    { label: "Outline width (w)", status: "pass", notes: "Scale-based width" },
+    { label: "Outline color", status: "pass", notes: "MeshBasicMaterial color" },
   ];
 
   // Text Effects items
   const textEffectItems: CheckItem[] = [
-    { label: "Shadow (outerShdw)", status: "pending", notes: "Shadow map needed" },
-    { label: "Glow (glow)", status: "pending", notes: "Post-processing needed" },
-    { label: "Reflection (reflection)", status: "pending", notes: "Environment map needed" },
-    { label: "Soft edge (softEdge)", status: "pending", notes: "Post-processing needed" },
+    { label: "Shadow (outerShdw)", status: "pass", notes: "Drop shadow mesh + PCFSoftShadowMap" },
+    { label: "Glow (glow)", status: "pass", notes: "Layered emissive mesh" },
+    { label: "Reflection (reflection)", status: "pass", notes: "Mirrored geometry with fade" },
+    { label: "Soft edge (softEdge)", status: "pass", notes: "Material opacity-based" },
   ];
 
   // 3D Properties items
@@ -398,6 +290,7 @@ export function WebglTextEffectsTest() {
     { label: "Flat text (flatTx)", status: "pass", notes: "Z-offset positioning" },
     { label: "Bevel effects (bevel)", status: "pass", notes: "ExtrudeGeometry bevelEnabled" },
     { label: "Extrusion (extrusionH)", status: "pass", notes: "ExtrudeGeometry depth" },
+    { label: "Contour (contourW/contourClr)", status: "pass", notes: "Scaled shell mesh behind main" },
     { label: "Material presets", status: "pass", notes: "MeshStandardMaterial variants" },
     { label: "Light rig (lightRig)", status: "pass", notes: "Three.js light presets" },
     { label: "Camera presets", status: "pass", notes: "Orthographic/Perspective cameras" },
@@ -415,19 +308,24 @@ export function WebglTextEffectsTest() {
 
       <TestSubsection title="Text Fill" items={textFillItems}>
         <p className="pattern-info">
-          Material color from solidFill. Gradient/pattern/image fills not yet implemented in 3D materials.
+          All fill types supported: solidFill (material color), gradFill (canvas gradient texture),
+          pattFill (40+ ECMA-376 presets), blipFill (pre-loaded THREE.Texture).
+          Pass <code>fill</code> property on Text3DRunConfig.
         </p>
       </TestSubsection>
 
       <TestSubsection title="Text Outline" items={textOutlineItems}>
         <p className="pattern-info">
-          3D outline requires edge detection or separate outline geometry. Not yet implemented.
+          Outline implemented via BackFace geometry technique (scaled clone with BackSide material).
+          Pass <code>outline</code> property on Text3DRunConfig with color and width.
         </p>
       </TestSubsection>
 
       <TestSubsection title="Text Effects" items={textEffectItems}>
         <p className="pattern-info">
-          3D effects require post-processing passes (bloom, shadow maps, etc.). Not yet implemented.
+          All ECMA-376 text effects supported: shadow (drop shadow mesh), glow (layered emissive),
+          reflection (mirrored geometry), softEdge (material opacity).
+          Pass corresponding effect property on Text3DRunConfig.
         </p>
       </TestSubsection>
 
@@ -436,6 +334,23 @@ export function WebglTextEffectsTest() {
         <p className="pattern-info">
           True 3D rendering with Three.js ExtrudeGeometry.
           Supports ECMA-376 scene3d (camera, lightRig) and sp3d (extrusion, bevel, material presets).
+        </p>
+      </TestSubsection>
+
+      <TestSubsection
+        title={`WordArt Presets (${allDemoWordArtPresets.length} styles)`}
+        items={[
+          { label: "Classic 2D styles", status: "pass" },
+          { label: "Gradient fills", status: "pass", notes: "Canvas-based gradient textures" },
+          { label: "3D extrusion styles", status: "pass" },
+          { label: "Material variations", status: "pass" },
+          { label: "Camera/lighting presets", status: "pass" },
+        ]}
+      >
+        <WordArtGallery />
+        <p className="pattern-info">
+          Classic WordArt-style presets combining fill, material, extrusion, bevel, camera, and lighting settings.
+          Select a style from the gallery to preview.
         </p>
       </TestSubsection>
     </div>

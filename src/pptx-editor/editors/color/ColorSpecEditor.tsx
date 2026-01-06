@@ -21,6 +21,9 @@ import type {
   SolidFill,
 } from "../../../pptx/domain/color";
 import type { EditorProps, SelectOption } from "../../types";
+import type { ColorContext } from "../../../pptx/domain/resolution";
+import { resolveColor } from "../../../pptx/render/core/drawing-ml";
+import { useEditorConfig } from "../../context/editor/EditorConfigContext";
 
 export type ColorSpecEditorProps = EditorProps<ColorSpec> & {
   readonly style?: CSSProperties;
@@ -103,12 +106,9 @@ function createDefaultColorSpec(type: ColorSpecType): ColorSpec {
   }
 }
 
-function getHexPreview(spec: ColorSpec): string {
-  if (spec.type === "srgb") {
-    return spec.value;
-  }
-  // For non-sRGB, show a placeholder
-  return "888888";
+function getHexPreview(spec: ColorSpec, colorContext: ColorContext | undefined): string {
+  const resolved = resolveColor({ spec }, colorContext);
+  return resolved ?? "000000";
 }
 
 function createSolidFillFromHex(hex: string): SolidFill {
@@ -137,6 +137,14 @@ export function ColorSpecEditor({
   style,
   hideModeSwitch = false,
 }: ColorSpecEditorProps) {
+  const { colorScheme, colorMap } = useEditorConfig();
+  const colorContext = useMemo<ColorContext>(
+    () => ({
+      colorScheme: colorScheme ?? {},
+      colorMap: colorMap ?? {},
+    }),
+    [colorScheme, colorMap]
+  );
   const handleTypeChange = useCallback(
     (newType: string) => {
       onChange(createDefaultColorSpec(newType as ColorSpecType));
@@ -145,8 +153,8 @@ export function ColorSpecEditor({
   );
 
   const previewFill = useMemo(
-    () => createSolidFillFromHex(getHexPreview(value)),
-    [value]
+    () => createSolidFillFromHex(getHexPreview(value, colorContext)),
+    [value, colorContext]
   );
 
   const renderEditor = () => {

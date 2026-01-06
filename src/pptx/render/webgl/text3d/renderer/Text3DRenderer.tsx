@@ -187,16 +187,38 @@ export function Text3DRenderer({
 // =============================================================================
 
 /**
- * Check if WebGL is available
+ * Cached WebGL availability check result.
+ * Prevents creating multiple WebGL contexts just for checking availability.
+ */
+let webGLAvailableCache: boolean | null = null;
+
+/**
+ * Check if WebGL is available (cached)
  */
 function isWebGLAvailable(): boolean {
+  if (webGLAvailableCache !== null) {
+    return webGLAvailableCache;
+  }
+
   try {
     const canvas = document.createElement("canvas");
     const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
-    return gl instanceof WebGLRenderingContext;
+
+    if (gl instanceof WebGLRenderingContext) {
+      webGLAvailableCache = true;
+      // Explicitly lose context to free resources
+      const ext = gl.getExtension("WEBGL_lose_context");
+      if (ext) {
+        ext.loseContext();
+      }
+    } else {
+      webGLAvailableCache = false;
+    }
   } catch {
-    return false;
+    webGLAvailableCache = false;
   }
+
+  return webGLAvailableCache;
 }
 
 /**

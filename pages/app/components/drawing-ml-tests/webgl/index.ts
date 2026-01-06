@@ -6,3 +6,4 @@
  */
 
 export { WebglTextEffectsTest } from "./TextEffectsTest";
+export { WordArtGallery } from "./WordArtGallery";
