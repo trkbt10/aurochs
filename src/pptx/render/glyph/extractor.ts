@@ -146,19 +146,21 @@ function renderAndExtractGlyph(
 // Contour extraction is shared in contour-extraction.ts
 
 function calculateBounds(paths: readonly ContourPath[]): GlyphContour["bounds"] {
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  const allPoints = paths.flatMap((path) => path.points);
 
-  for (const path of paths) {
-    for (const p of path.points) {
-      minX = Math.min(minX, p.x);
-      minY = Math.min(minY, p.y);
-      maxX = Math.max(maxX, p.x);
-      maxY = Math.max(maxY, p.y);
-    }
-  }
-
-  if (minX === Infinity) {
+  if (allPoints.length === 0) {
     return { minX: 0, minY: 0, maxX: 0, maxY: 0 };
   }
-  return { minX, minY, maxX, maxY };
+
+  const bounds = allPoints.reduce(
+    (acc, p) => ({
+      minX: Math.min(acc.minX, p.x),
+      minY: Math.min(acc.minY, p.y),
+      maxX: Math.max(acc.maxX, p.x),
+      maxY: Math.max(acc.maxY, p.y),
+    }),
+    { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity },
+  );
+
+  return bounds;
 }

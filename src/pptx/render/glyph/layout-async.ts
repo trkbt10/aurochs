@@ -5,6 +5,7 @@
  */
 
 import type {
+  GlyphContour,
   GlyphStyleKey,
   ContourPath,
   PositionedGlyph,
@@ -55,23 +56,25 @@ export async function layoutTextAsync(
   const glyphs: PositionedGlyph[] = [];
   const combinedPaths: ContourPath[] = [];
 
+  // eslint-disable-next-line no-restricted-syntax -- Performance: accumulator pattern
   let cursorX = 0;
+  // eslint-disable-next-line no-restricted-syntax -- Performance: accumulator pattern
   let maxAscent = 0;
+  // eslint-disable-next-line no-restricted-syntax -- Performance: accumulator pattern
   let maxDescent = 0;
 
-  for (let i = 0; i < chars.length; i++) {
-    const glyph = glyphContours[i];
-
+  for (const [i, glyph] of glyphContours.entries()) {
     // Apply kerning adjustment
-    let kerning = 0;
-    if (i > 0) {
-      if (useOpticalKerning) {
-        const prevGlyph = glyphContours[i - 1];
-        kerning = calculateOpticalKerningAdjustment(prevGlyph, glyph, letterSpacing);
-      } else if (useFontKerning) {
-        kerning = getKerningAdjustment(config.fontFamily, chars[i - 1], chars[i]);
-      }
-    }
+    const kerning = calculateKerningForIndex(
+      i,
+      glyph,
+      glyphContours,
+      chars,
+      config.fontFamily,
+      letterSpacing,
+      useOpticalKerning,
+      useFontKerning,
+    );
 
     const x = cursorX + kerning;
     const y = 0;
@@ -101,4 +104,30 @@ export async function layoutTextAsync(
     descent: maxDescent,
     combinedPaths,
   };
+}
+
+function calculateKerningForIndex(
+  index: number,
+  glyph: GlyphContour,
+  glyphContours: readonly GlyphContour[],
+  chars: readonly string[],
+  fontFamily: string,
+  letterSpacing: number,
+  useOpticalKerning: boolean,
+  useFontKerning: boolean,
+): number {
+  if (index === 0) {
+    return 0;
+  }
+
+  if (useOpticalKerning) {
+    const prevGlyph = glyphContours[index - 1];
+    return calculateOpticalKerningAdjustment(prevGlyph, glyph, letterSpacing);
+  }
+
+  if (useFontKerning) {
+    return getKerningAdjustment(fontFamily, chars[index - 1], chars[index]);
+  }
+
+  return 0;
 }

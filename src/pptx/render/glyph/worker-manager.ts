@@ -45,16 +45,21 @@ type PendingRequest = {
 // Worker Manager
 // =============================================================================
 
+// eslint-disable-next-line no-restricted-syntax -- Module-level singleton state
 let worker: Worker | null = null;
+// eslint-disable-next-line no-restricted-syntax -- Module-level counter for request IDs
 let requestId = 0;
 const pendingRequests = new Map<number, PendingRequest>();
+// eslint-disable-next-line no-restricted-syntax -- Module-level state for worker initialization failure
 let workerFailed = false;
 
 /**
  * Initialize the glyph worker
  */
 function initWorker(): Worker | null {
-  if (workerFailed) return null;
+  if (workerFailed) {
+    return null;
+  }
 
   try {
     // Create worker from blob to avoid bundler issues
@@ -97,8 +102,12 @@ function initWorker(): Worker | null {
  * Get or create the worker
  */
 function getWorker(): Worker | null {
-  if (worker) return worker;
-  if (typeof Worker === "undefined") return null;
+  if (worker) {
+    return worker;
+  }
+  if (typeof Worker === "undefined") {
+    return null;
+  }
   worker = initWorker();
   return worker;
 }

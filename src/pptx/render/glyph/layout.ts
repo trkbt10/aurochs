@@ -17,8 +17,32 @@ import type {
   TextLayoutResult,
 } from "./types";
 import { getKerningAdjustment } from "./cache";
-import { extractGlyphContour } from "./extractor";
+import { extractGlyphContour as defaultExtractGlyphContour } from "./extractor";
 import { calculateOpticalKerningAdjustment } from "./optical-kerning";
+
+// =============================================================================
+// Types
+// =============================================================================
+
+/**
+ * Glyph extractor function type for dependency injection
+ */
+export type GlyphExtractor = (
+  char: string,
+  fontFamily: string,
+  style: GlyphStyleKey,
+) => GlyphContour;
+
+/**
+ * Dependencies for layout functions (for testing)
+ */
+export type LayoutDeps = {
+  readonly extractGlyph: GlyphExtractor;
+};
+
+const defaultDeps: LayoutDeps = {
+  extractGlyph: defaultExtractGlyphContour,
+};
 
 // =============================================================================
 // Main API
@@ -30,6 +54,7 @@ import { calculateOpticalKerningAdjustment } from "./optical-kerning";
 export function layoutText(
   text: string,
   config: TextLayoutConfig,
+  deps: LayoutDeps = defaultDeps,
 ): TextLayoutResult {
   if (text.length === 0) {
     return {
@@ -57,24 +82,27 @@ export function layoutText(
   const glyphs: PositionedGlyph[] = [];
   const combinedPaths: ContourPath[] = [];
 
+  // eslint-disable-next-line no-restricted-syntax -- Performance: accumulator pattern
   let cursorX = 0;
+  // eslint-disable-next-line no-restricted-syntax -- Performance: accumulator pattern
   let maxAscent = 0;
+  // eslint-disable-next-line no-restricted-syntax -- Performance: accumulator pattern
   let maxDescent = 0;
 
-  for (let i = 0; i < chars.length; i++) {
-    const char = chars[i];
-    const glyph = extractGlyphContour(char, config.fontFamily, style);
+  for (const [i, char] of chars.entries()) {
+    const glyph = deps.extractGlyph(char, config.fontFamily, style);
 
     // Apply kerning adjustment
-    let kerning = 0;
-    if (i > 0) {
-      if (useOpticalKerning) {
-        const prevGlyph = glyphs[i - 1].glyph;
-        kerning = calculateOpticalKerningAdjustment(prevGlyph, glyph, letterSpacing);
-      } else if (useFontKerning) {
-        kerning = getKerningAdjustment(config.fontFamily, chars[i - 1], char);
-      }
-    }
+    const kerning = calculateKerningForGlyph(
+      i,
+      glyph,
+      glyphs,
+      chars,
+      config.fontFamily,
+      letterSpacing,
+      useOpticalKerning,
+      useFontKerning,
+    );
 
     const x = cursorX + kerning;
     const y = 0; // Baseline at y=0
@@ -106,14 +134,41 @@ export function layoutText(
   };
 }
 
+function calculateKerningForGlyph(
+  index: number,
+  glyph: GlyphContour,
+  glyphs: readonly PositionedGlyph[],
+  chars: readonly string[],
+  fontFamily: string,
+  letterSpacing: number,
+  useOpticalKerning: boolean,
+  useFontKerning: boolean,
+): number {
+  if (index === 0) {
+    return 0;
+  }
+
+  if (useOpticalKerning) {
+    const prevGlyph = glyphs[index - 1].glyph;
+    return calculateOpticalKerningAdjustment(prevGlyph, glyph, letterSpacing);
+  }
+
+  if (useFontKerning) {
+    return getKerningAdjustment(fontFamily, chars[index - 1], chars[index]);
+  }
+
+  return 0;
+}
+
 /**
  * Layout text and return combined bounds
  */
 export function getTextBounds(
   text: string,
   config: TextLayoutConfig,
+  deps: LayoutDeps = defaultDeps,
 ): { width: number; height: number; ascent: number; descent: number } {
-  const layout = layoutText(text, config);
+  const layout = layoutText(text, config, deps);
   return {
     width: layout.totalWidth,
     height: layout.ascent + layout.descent,
@@ -129,11 +184,7 @@ export function getTextBounds(
 /**
  * Split text into lines (for future multi-line support)
  */
-export function splitTextIntoLines(
-  text: string,
-  maxWidth: number,
-  config: TextLayoutConfig,
-): string[] {
+export function splitTextIntoLines(text: string): string[] {
   // Simple implementation: split on newlines only
   // Future: implement word wrapping
   return text.split("\n");
@@ -146,7 +197,12 @@ export function splitTextIntoLines(
 export function measureTextWidth(
   text: string,
   config: TextLayoutConfig,
+  deps: LayoutDeps = defaultDeps,
 ): number {
+  if (text.length === 0) {
+    return 0;
+  }
+
   const style: GlyphStyleKey = {
     fontSize: config.fontSize,
     fontWeight: config.fontWeight,
@@ -154,28 +210,57 @@ export function measureTextWidth(
   };
 
   const chars = [...text];
-  let width = 0;
   const letterSpacing = config.letterSpacing ?? 0;
   const useOpticalKerning = config.opticalKerning === true;
   const enableKerning = config.enableKerning ?? true;
   const useFontKerning = enableKerning && !useOpticalKerning;
-  let prevGlyph: GlyphContour | null = null;
 
-  for (let i = 0; i < chars.length; i++) {
-    const glyph = extractGlyphContour(chars[i], config.fontFamily, style);
-    width += glyph.metrics.advanceWidth;
+  const result = chars.reduce(
+    (acc, char, i) => {
+      const glyph = deps.extractGlyph(char, config.fontFamily, style);
+      const kerning = calculateMeasureKerning(
+        i,
+        acc.prevGlyph,
+        glyph,
+        chars,
+        config.fontFamily,
+        letterSpacing,
+        useOpticalKerning,
+        useFontKerning,
+      );
 
-    if (i > 0) {
-      if (useOpticalKerning && prevGlyph) {
-        width += calculateOpticalKerningAdjustment(prevGlyph, glyph, letterSpacing);
-      } else if (useFontKerning) {
-        width += getKerningAdjustment(config.fontFamily, chars[i - 1], chars[i]);
-      }
-    }
+      return {
+        width: acc.width + glyph.metrics.advanceWidth + kerning,
+        prevGlyph: glyph,
+      };
+    },
+    { width: 0, prevGlyph: null as GlyphContour | null },
+  );
 
-    prevGlyph = glyph;
+  return result.width + letterSpacing * (chars.length - 1);
+}
+
+function calculateMeasureKerning(
+  index: number,
+  prevGlyph: GlyphContour | null,
+  currentGlyph: GlyphContour,
+  chars: readonly string[],
+  fontFamily: string,
+  letterSpacing: number,
+  useOpticalKerning: boolean,
+  useFontKerning: boolean,
+): number {
+  if (index === 0 || prevGlyph === null) {
+    return 0;
   }
 
-  width += letterSpacing * (chars.length - 1);
-  return width;
+  if (useOpticalKerning) {
+    return calculateOpticalKerningAdjustment(prevGlyph, currentGlyph, letterSpacing);
+  }
+
+  if (useFontKerning) {
+    return getKerningAdjustment(fontFamily, chars[index - 1], chars[index]);
+  }
+
+  return 0;
 }

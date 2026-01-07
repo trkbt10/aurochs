@@ -36,11 +36,12 @@ function getStyleKeyString(key: GlyphStyleKey): string {
  * Get or create font cache
  */
 function getOrCreateFontCache(fontFamily: string): FontGlyphCache {
-  let cache = fontCaches.get(fontFamily);
-  if (!cache) {
-    cache = new Map();
-    fontCaches.set(fontFamily, cache);
+  const existing = fontCaches.get(fontFamily);
+  if (existing) {
+    return existing;
   }
+  const cache = new Map<string, GlyphCacheEntry>();
+  fontCaches.set(fontFamily, cache);
   return cache;
 }
 
@@ -53,10 +54,14 @@ export function getCachedGlyph(
   style: GlyphStyleKey,
 ): GlyphContour | undefined {
   const fontCache = fontCaches.get(fontFamily);
-  if (!fontCache) return undefined;
+  if (!fontCache) {
+    return undefined;
+  }
 
   const charCache = fontCache.get(char);
-  if (!charCache) return undefined;
+  if (!charCache) {
+    return undefined;
+  }
 
   return charCache.get(getStyleKeyString(style));
 }
@@ -71,10 +76,10 @@ export function setCachedGlyph(
   glyph: GlyphContour,
 ): void {
   const fontCache = getOrCreateFontCache(fontFamily);
+  const existingCharCache = fontCache.get(char);
+  const charCache = existingCharCache ?? new Map<string, GlyphContour>();
 
-  let charCache = fontCache.get(char);
-  if (!charCache) {
-    charCache = new Map();
+  if (!existingCharCache) {
     fontCache.set(char, charCache);
   }
 
@@ -115,20 +120,23 @@ export function getGlyphCacheStats(): {
   characters: number;
   totalGlyphs: number;
 } {
-  let characters = 0;
-  let totalGlyphs = 0;
-
-  for (const fontCache of fontCaches.values()) {
-    characters += fontCache.size;
-    for (const charCache of fontCache.values()) {
-      totalGlyphs += charCache.size;
-    }
-  }
+  const stats = [...fontCaches.values()].reduce(
+    (acc, fontCache) => {
+      const glyphCount = [...fontCache.values()].reduce(
+        (sum, charCache) => sum + charCache.size,
+        0,
+      );
+      return {
+        characters: acc.characters + fontCache.size,
+        totalGlyphs: acc.totalGlyphs + glyphCount,
+      };
+    },
+    { characters: 0, totalGlyphs: 0 },
+  );
 
   return {
     fonts: fontCaches.size,
-    characters,
-    totalGlyphs,
+    ...stats,
   };
 }
 
@@ -154,7 +162,9 @@ export function getKerningAdjustment(
   second: string,
 ): number {
   const table = kerningTables.get(fontFamily);
-  if (!table) return 0;
+  if (!table) {
+    return 0;
+  }
 
   return table.pairs.get(first + second) ?? 0;
 }

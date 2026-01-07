@@ -38,12 +38,8 @@ export function processContours(
   padding: number,
 ): { points: readonly { x: number; y: number }[]; isHole: boolean }[] {
   return rawContours.map((raw) => {
-    // Subsample long contours
-    let points = raw;
-    if (raw.length > 300) {
-      const step = Math.ceil(raw.length / 300);
-      points = raw.filter((_, i) => i % step === 0);
-    }
+    // Subsample long contours if needed
+    const points = subsampleIfNeeded(raw, 300);
 
     // Simplify
     const simplified = douglasPeucker(points, SIMPLIFY_TOLERANCE);
@@ -59,6 +55,14 @@ export function processContours(
   });
 }
 
+function subsampleIfNeeded(points: Point[], maxLength: number): Point[] {
+  if (points.length <= maxLength) {
+    return points;
+  }
+  const step = Math.ceil(points.length / maxLength);
+  return points.filter((_, i) => i % step === 0);
+}
+
 export function getContourExtractionWorkerCode(): string {
   return [
     `const THRESHOLD = ${THRESHOLD};`,
@@ -72,7 +76,9 @@ export function getContourExtractionWorkerCode(): string {
     extractContours.toString(),
     isBoundary.toString(),
     traceBoundary.toString(),
+    subsampleIfNeeded.toString(),
     processContours.toString(),
+    findFarthestPoint.toString(),
     douglasPeucker.toString(),
     perpDistance.toString(),
     isClockwise.toString(),
@@ -181,7 +187,9 @@ function fillHoles(binary: Uint8Array, holeMask: Uint8Array): Uint8Array {
 
 function isBoundary(binary: Uint8Array, x: number, y: number, width: number): boolean {
   const idx = y * width + x;
-  if (binary[idx] === 0) return false;
+  if (binary[idx] === 0) {
+    return false;
+  }
   return (
     binary[idx - 1] === 0 ||
     binary[idx + 1] === 0 ||
@@ -202,18 +210,25 @@ function traceBoundary(
   const dx = [1, 1, 0, -1, -1, -1, 0, 1];
   const dy = [0, 1, 1, 1, 0, -1, -1, -1];
 
+  // eslint-disable-next-line no-restricted-syntax -- Performance: boundary tracing algorithm requires mutable state
   let x = startX;
+  // eslint-disable-next-line no-restricted-syntax -- Performance: boundary tracing algorithm requires mutable state
   let y = startY;
+  // eslint-disable-next-line no-restricted-syntax -- Performance: boundary tracing algorithm requires mutable state
   let dir = 0;
+  // eslint-disable-next-line no-restricted-syntax -- Performance: boundary tracing algorithm requires mutable state
   let iterations = 0;
 
   do {
-    if (++iterations > MAX_TRACE_ITERATIONS) break;
+    if (++iterations > MAX_TRACE_ITERATIONS) {
+      break;
+    }
 
     const idx = y * width + x;
     visited[idx] = 1;
     contour.push({ x, y });
 
+    // eslint-disable-next-line no-restricted-syntax -- Performance: boundary tracing algorithm
     let found = false;
     const startDir = (dir + 5) % 8;
 
@@ -233,27 +248,22 @@ function traceBoundary(
       }
     }
 
-    if (!found) break;
+    if (!found) {
+      break;
+    }
   } while (!(x === startX && y === startY) || contour.length < 3);
 
   return contour;
 }
 
 function douglasPeucker(points: Point[], tolerance: number): Point[] {
-  if (points.length <= 2) return points;
+  if (points.length <= 2) {
+    return points;
+  }
 
-  let maxDist = 0;
-  let maxIdx = 0;
   const first = points[0];
   const last = points[points.length - 1];
-
-  for (let i = 1; i < points.length - 1; i++) {
-    const dist = perpDistance(points[i], first, last);
-    if (dist > maxDist) {
-      maxDist = dist;
-      maxIdx = i;
-    }
-  }
+  const { maxDist, maxIdx } = findFarthestPoint(points, first, last);
 
   if (maxDist > tolerance) {
     const left = douglasPeucker(points.slice(0, maxIdx + 1), tolerance);
@@ -264,19 +274,34 @@ function douglasPeucker(points: Point[], tolerance: number): Point[] {
   return [first, last];
 }
 
+function findFarthestPoint(
+  points: Point[],
+  first: Point,
+  last: Point,
+): { maxDist: number; maxIdx: number } {
+  return points.slice(1, -1).reduce(
+    (acc, point, i) => {
+      const dist = perpDistance(point, first, last);
+      return dist > acc.maxDist ? { maxDist: dist, maxIdx: i + 1 } : acc;
+    },
+    { maxDist: 0, maxIdx: 0 },
+  );
+}
+
 function perpDistance(p: Point, a: Point, b: Point): number {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const len = Math.sqrt(dx * dx + dy * dy);
-  if (len === 0) return Math.sqrt((p.x - a.x) ** 2 + (p.y - a.y) ** 2);
+  if (len === 0) {
+    return Math.sqrt((p.x - a.x) ** 2 + (p.y - a.y) ** 2);
+  }
   return Math.abs(dy * p.x - dx * p.y + b.x * a.y - b.y * a.x) / len;
 }
 
 function isClockwise(points: readonly { x: number; y: number }[]): boolean {
-  let area = 0;
-  for (let i = 0; i < points.length; i++) {
+  const area = points.reduce((sum, point, i) => {
     const j = (i + 1) % points.length;
-    area += points[i].x * points[j].y - points[j].x * points[i].y;
-  }
+    return sum + point.x * points[j].y - points[j].x * point.y;
+  }, 0);
   return area > 0;
 }

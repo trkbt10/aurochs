@@ -2,49 +2,78 @@
  * @file Tests for layout.ts
  *
  * Tests text layout with character positioning and kerning.
- * Uses vi.mock with inline factory function to avoid hoisting issues.
+ * Uses dependency injection with simple fakes instead of mocks.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { clearAllGlyphCache, setKerningTable } from "./cache";
 import type { GlyphContour, TextLayoutConfig } from "./types";
-
-// Mock extractor with pure inline factory (no external variable references)
-vi.mock("./extractor", () => ({
-  extractGlyphContour: vi.fn((char: string, _fontFamily: string, _style: unknown): GlyphContour => {
-    const width = char === " " ? 8 : 16;
-    const minX = char === "V" ? 4 : 0;
-    const maxX = minX + width;
-    return {
-      char,
-      paths:
-        char === " "
-          ? []
-          : [
-              {
-                points: [
-                  { x: minX, y: 0 },
-                  { x: maxX, y: 0 },
-                  { x: maxX, y: 20 },
-                  { x: minX, y: 20 },
-                ],
-                isHole: false,
-              },
-            ],
-      bounds: { minX, minY: 0, maxX, maxY: 20 },
-      metrics: {
-        advanceWidth: width,
-        leftBearing: 1,
-        ascent: 18,
-        descent: 4,
-      },
-    };
-  }),
-}));
-
+import type { LayoutDeps } from "./layout";
 import { layoutText, getTextBounds, measureTextWidth, splitTextIntoLines } from "./layout";
 
-describe("text-layout-3d", () => {
+// =============================================================================
+// Simple Fake Implementation
+// =============================================================================
+
+/**
+ * Create a fake glyph for testing
+ */
+function createFakeGlyph(char: string): GlyphContour {
+  const isSpace = char === " ";
+  const isV = char === "V";
+  const width = isSpace ? 8 : 16;
+  const minX = isV ? 4 : 0;
+  const maxX = minX + width;
+
+  return {
+    char,
+    paths: createFakePaths(isSpace, minX, maxX),
+    bounds: { minX, minY: 0, maxX, maxY: 20 },
+    metrics: {
+      advanceWidth: width,
+      leftBearing: 1,
+      ascent: 18,
+      descent: 4,
+    },
+  };
+}
+
+function createFakePaths(
+  isSpace: boolean,
+  minX: number,
+  maxX: number,
+): GlyphContour["paths"] {
+  if (isSpace) {
+    return [];
+  }
+  return [
+    {
+      points: [
+        { x: minX, y: 0 },
+        { x: maxX, y: 0 },
+        { x: maxX, y: 20 },
+        { x: minX, y: 20 },
+      ],
+      isHole: false,
+    },
+  ];
+}
+
+/**
+ * Fake extractor that returns predictable glyphs
+ */
+function fakeExtractGlyph(char: string): GlyphContour {
+  return createFakeGlyph(char);
+}
+
+const fakeDeps: LayoutDeps = {
+  extractGlyph: fakeExtractGlyph,
+};
+
+// =============================================================================
+// Tests
+// =============================================================================
+
+describe("text-layout", () => {
   const defaultConfig: TextLayoutConfig = {
     fontFamily: "Arial",
     fontSize: 24,
@@ -58,7 +87,7 @@ describe("text-layout-3d", () => {
 
   describe("layoutText", () => {
     it("should return empty result for empty text", () => {
-      const result = layoutText("", defaultConfig);
+      const result = layoutText("", defaultConfig, fakeDeps);
 
       expect(result.glyphs).toHaveLength(0);
       expect(result.totalWidth).toBe(0);
@@ -68,17 +97,17 @@ describe("text-layout-3d", () => {
     });
 
     it("should layout single character", () => {
-      const result = layoutText("A", defaultConfig);
+      const result = layoutText("A", defaultConfig, fakeDeps);
 
       expect(result.glyphs).toHaveLength(1);
       expect(result.glyphs[0].glyph.char).toBe("A");
       expect(result.glyphs[0].x).toBe(0);
       expect(result.glyphs[0].y).toBe(0);
-      expect(result.totalWidth).toBe(16); // advanceWidth from mock
+      expect(result.totalWidth).toBe(16); // advanceWidth from fake
     });
 
     it("should layout multiple characters with correct positions", () => {
-      const result = layoutText("AB", defaultConfig);
+      const result = layoutText("AB", defaultConfig, fakeDeps);
 
       expect(result.glyphs).toHaveLength(2);
       expect(result.glyphs[0].x).toBe(0);
@@ -86,7 +115,7 @@ describe("text-layout-3d", () => {
     });
 
     it("should handle whitespace correctly", () => {
-      const result = layoutText("A B", defaultConfig);
+      const result = layoutText("A B", defaultConfig, fakeDeps);
 
       expect(result.glyphs).toHaveLength(3);
       // Space should have no paths but advance cursor
@@ -99,7 +128,7 @@ describe("text-layout-3d", () => {
         ...defaultConfig,
         letterSpacing: 5,
       };
-      const result = layoutText("AB", configWithSpacing);
+      const result = layoutText("AB", configWithSpacing, fakeDeps);
 
       expect(result.glyphs[1].x).toBe(16 + 5); // A width + letter spacing
     });
@@ -109,14 +138,14 @@ describe("text-layout-3d", () => {
         pairs: new Map([["AV", -3]]),
       });
 
-      const result = layoutText("AV", { ...defaultConfig, enableKerning: true });
+      const result = layoutText("AV", { ...defaultConfig, enableKerning: true }, fakeDeps);
 
       // Second glyph should be shifted by kerning
       expect(result.glyphs[1].x).toBe(16 - 3); // A width + kerning
     });
 
     it("should apply optical kerning when enabled", () => {
-      const result = layoutText("AV", { ...defaultConfig, opticalKerning: true });
+      const result = layoutText("AV", { ...defaultConfig, opticalKerning: true }, fakeDeps);
 
       expect(result.glyphs[1].x).toBe(12); // A maxX (16) - V minX (4)
     });
@@ -126,20 +155,20 @@ describe("text-layout-3d", () => {
         pairs: new Map([["AV", -3]]),
       });
 
-      const result = layoutText("AV", { ...defaultConfig, enableKerning: false });
+      const result = layoutText("AV", { ...defaultConfig, enableKerning: false }, fakeDeps);
 
       expect(result.glyphs[1].x).toBe(16); // No kerning applied
     });
 
     it("should track max ascent and descent", () => {
-      const result = layoutText("ABC", defaultConfig);
+      const result = layoutText("ABC", defaultConfig, fakeDeps);
 
       expect(result.ascent).toBe(18);
       expect(result.descent).toBe(4);
     });
 
     it("should generate combined paths with correct offsets", () => {
-      const result = layoutText("AB", defaultConfig);
+      const result = layoutText("AB", defaultConfig, fakeDeps);
 
       // Should have paths from both characters
       expect(result.combinedPaths.length).toBeGreaterThan(0);
@@ -156,14 +185,14 @@ describe("text-layout-3d", () => {
 
   describe("getTextBounds", () => {
     it("should return zero bounds for empty text", () => {
-      const bounds = getTextBounds("", defaultConfig);
+      const bounds = getTextBounds("", defaultConfig, fakeDeps);
 
       expect(bounds.width).toBe(0);
       expect(bounds.height).toBe(0);
     });
 
     it("should return correct bounds", () => {
-      const bounds = getTextBounds("AB", defaultConfig);
+      const bounds = getTextBounds("AB", defaultConfig, fakeDeps);
 
       expect(bounds.width).toBe(32); // 16 + 16
       expect(bounds.height).toBe(22); // ascent 18 + descent 4
@@ -174,17 +203,17 @@ describe("text-layout-3d", () => {
 
   describe("measureTextWidth", () => {
     it("should return zero for empty text", () => {
-      const width = measureTextWidth("", defaultConfig);
+      const width = measureTextWidth("", defaultConfig, fakeDeps);
       expect(width).toBe(0);
     });
 
     it("should measure single character width", () => {
-      const width = measureTextWidth("A", defaultConfig);
+      const width = measureTextWidth("A", defaultConfig, fakeDeps);
       expect(width).toBe(16);
     });
 
     it("should include letter spacing", () => {
-      const width = measureTextWidth("AB", { ...defaultConfig, letterSpacing: 5 });
+      const width = measureTextWidth("AB", { ...defaultConfig, letterSpacing: 5 }, fakeDeps);
       expect(width).toBe(16 + 16 + 5); // Two chars + one spacing
     });
 
@@ -193,29 +222,29 @@ describe("text-layout-3d", () => {
         pairs: new Map([["AV", -3]]),
       });
 
-      const width = measureTextWidth("AV", { ...defaultConfig, enableKerning: true });
+      const width = measureTextWidth("AV", { ...defaultConfig, enableKerning: true }, fakeDeps);
       expect(width).toBe(16 + 16 - 3); // Two chars + kerning
     });
 
     it("should include optical kerning", () => {
-      const width = measureTextWidth("AV", { ...defaultConfig, opticalKerning: true });
+      const width = measureTextWidth("AV", { ...defaultConfig, opticalKerning: true }, fakeDeps);
       expect(width).toBe(16 + 16 - 4);
     });
   });
 
   describe("splitTextIntoLines", () => {
     it("should split on newlines", () => {
-      const lines = splitTextIntoLines("Hello\nWorld", 1000, defaultConfig);
+      const lines = splitTextIntoLines("Hello\nWorld");
       expect(lines).toEqual(["Hello", "World"]);
     });
 
     it("should handle single line", () => {
-      const lines = splitTextIntoLines("Hello", 1000, defaultConfig);
+      const lines = splitTextIntoLines("Hello");
       expect(lines).toEqual(["Hello"]);
     });
 
     it("should handle empty text", () => {
-      const lines = splitTextIntoLines("", 1000, defaultConfig);
+      const lines = splitTextIntoLines("");
       expect(lines).toEqual([""]);
     });
   });

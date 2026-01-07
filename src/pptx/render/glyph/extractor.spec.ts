@@ -69,6 +69,7 @@ function isPointInPolygon(
   point: { x: number; y: number },
   polygon: readonly { x: number; y: number }[],
 ): boolean {
+  // eslint-disable-next-line no-restricted-syntax -- Performance: ray casting algorithm requires mutable state
   let inside = false;
   for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
     const xi = polygon[i].x;
