@@ -233,7 +233,6 @@ export function convertToPresentationDocument(loaded: LoadedPresentation): Prese
     fontScheme,
     resources,
     presentationFile,
-    filePaths: loaded.filePaths,
   };
 }
 

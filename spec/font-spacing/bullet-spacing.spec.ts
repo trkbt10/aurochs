@@ -72,7 +72,7 @@ describe("Bullet Spacing - ECMA-376 21.1.2.4", () => {
           return;
         }
 
-        presentationFile = await loadPptxFile(testCase.pptxPath);
+        ({ presentationFile } = await loadPptxFile(testCase.pptxPath));
       });
 
       it(`${testCase.description}`, () => {

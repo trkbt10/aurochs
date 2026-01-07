@@ -36,7 +36,7 @@ describe("Chart rendering - ECMA-376 compliance", () => {
     if (!fs.existsSync(fullPath)) {
       throw new Error(`Fixture file not found: ${fullPath}`);
     }
-    presentationState.file = await loadPptxFile(fullPath);
+    ({ presentationFile: presentationState.file } = await loadPptxFile(fullPath));
   });
 
   describe("Slide 8 bar chart with negative values", () => {

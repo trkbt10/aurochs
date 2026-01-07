@@ -6,7 +6,7 @@
  */
 import { openPresentation } from "../src/pptx";
 import * as fs from "node:fs";
-import { loadPptxFileBundle } from "./lib/pptx-loader";
+import { loadPptxFile } from "./lib/pptx-loader";
 
 async function main() {
   const pptxPath = process.argv[2] ?? "fixtures/poi-test-data/test-data/slideshow/themes.pptx";
@@ -17,7 +17,7 @@ async function main() {
     process.exit(1);
   }
 
-  const { presentationFile } = await loadPptxFileBundle(pptxPath);
+  const { presentationFile } = await loadPptxFile(pptxPath);
 
   const presentation = openPresentation(presentationFile);
   const slideCount = presentation.count;

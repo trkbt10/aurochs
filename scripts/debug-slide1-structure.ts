@@ -4,11 +4,11 @@
 
 import { openPresentation } from "../src/pptx";
 import { parseXml } from "../src/xml";
-import { loadPptxFileBundle } from "./lib/pptx-loader";
+import { loadPptxFile } from "./lib/pptx-loader";
 
 async function main() {
   const pptxPath = "fixtures/poi-test-data/test-data/slideshow/2411-Performance_Up.pptx";
-  const { presentationFile, cache } = await loadPptxFileBundle(pptxPath);
+  const { presentationFile, cache } = await loadPptxFile(pptxPath);
 
   console.log("=== Files in PPTX ===");
   for (const [path] of cache) {

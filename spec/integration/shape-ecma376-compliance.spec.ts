@@ -25,7 +25,7 @@ describe("shapes.pptx ECMA-376 compliance", () => {
     if (!fs.existsSync(fullPath)) {
       throw new Error(`Fixture file not found: ${fullPath}`);
     }
-    presentationFile = await loadPptxFile(fullPath);
+    ({ presentationFile } = await loadPptxFile(fullPath));
     presentation = openPresentation(presentationFile);
   });
 

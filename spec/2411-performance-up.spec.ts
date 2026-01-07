@@ -23,7 +23,7 @@ describe("2411-Performance_Up.pptx slide 1", () => {
 
   beforeAll(async () => {
     if (fs.existsSync(pptxPath)) {
-      presentationFile = await loadPptxFile(pptxPath);
+      ({ presentationFile } = await loadPptxFile(pptxPath));
       const presentation = openPresentation(presentationFile);
       const slide = presentation.getSlide(1);
       svg = slide.renderSVG();
@@ -152,7 +152,7 @@ describe("2411-Performance_Up.pptx - multiple slides", () => {
 
   beforeAll(async () => {
     if (fs.existsSync(pptxPath)) {
-      presentationFile = await loadPptxFile(pptxPath);
+      ({ presentationFile } = await loadPptxFile(pptxPath));
     }
   });
 

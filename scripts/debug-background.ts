@@ -8,14 +8,14 @@ import { getSlideBackgroundFill, getBackgroundFillData } from "../src/pptx/rende
 import { getTextByPathList, getNode, getString } from "../src/pptx/parser/traverse";
 import { getSolidFill, getSchemeColorFromTheme } from "../src/pptx/parser/drawing-ml";
 import { isXmlElement, getChild, getChildren, getByPath } from "../src/xml";
-import { loadPptxFileBundle } from "./lib/pptx-loader";
+import { loadPptxFile } from "./lib/pptx-loader";
 
 async function main() {
   const pptxPath = process.argv[2] || "fixtures/poi-test-data/test-data/slideshow/60810.pptx";
 
   console.log(`Debugging background in: ${pptxPath}\n`);
 
-  const { presentationFile } = await loadPptxFileBundle(pptxPath);
+  const { presentationFile } = await loadPptxFile(pptxPath);
 
   const presentation = openPresentation(presentationFile);
   const slide = presentation.getSlide(1);

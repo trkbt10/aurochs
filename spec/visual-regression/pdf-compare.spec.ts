@@ -71,7 +71,7 @@ describe("PDF Screenshot Comparison - Text Layout", () => {
           return;
         }
 
-        presentationFile = await loadPptxFile(fullPath);
+        ({ presentationFile } = await loadPptxFile(fullPath));
       });
 
       for (const slideNum of testCase.slides) {
@@ -121,7 +121,7 @@ export async function runFullComparison(
   snapshotName: string,
   options: CompareOptions = {},
 ): Promise<void> {
-  const presentationFile = await loadPptxFile(pptxPath);
+  const { presentationFile } = await loadPptxFile(pptxPath);
   const presentation = openPresentation(presentationFile);
   const slides = listSnapshots(snapshotName);
 
@@ -158,7 +158,7 @@ export async function testSingleSlide(
   svg: string;
   result: DetailedCompareResult;
 }> {
-  const presentationFile = await loadPptxFile(pptxPath);
+  const { presentationFile } = await loadPptxFile(pptxPath);
   const presentation = openPresentation(presentationFile);
   const slide = presentation.getSlide(slideNumber);
   const svg = slide.renderSVG();

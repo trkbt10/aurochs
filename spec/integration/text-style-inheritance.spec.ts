@@ -33,7 +33,7 @@ describe("2411-Performance_Up.pptx Slide 7 - Text Style Inheritance", () => {
 
   beforeAll(async () => {
     if (fs.existsSync(pptxPath)) {
-      presentationFile = await loadPptxFile(pptxPath);
+      ({ presentationFile } = await loadPptxFile(pptxPath));
       const presentation = openPresentation(presentationFile);
       const slide = presentation.getSlide(7);
       svg = slide.renderSVG();

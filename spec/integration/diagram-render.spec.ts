@@ -25,7 +25,7 @@ describe("Diagram rendering - customGeo.pptx", () => {
     if (!fs.existsSync(fullPath)) {
       throw new Error(`Fixture file not found: ${fullPath}`);
     }
-    presentationFile = await loadPptxFile(fullPath);
+    ({ presentationFile } = await loadPptxFile(fullPath));
   });
 
   describe("Slide 7 - Diagram content", () => {
@@ -158,7 +158,7 @@ describe("Diagram rendering - other PPTX files", () => {
       return;
     }
 
-    const presentationFile = await loadPptxFile(fullPath);
+    const { presentationFile } = await loadPptxFile(fullPath);
     const presentation = openPresentation(presentationFile);
 
     // Should render all slides without throwing errors

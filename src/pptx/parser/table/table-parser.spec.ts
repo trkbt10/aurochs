@@ -2,7 +2,7 @@
  * @file Table parser tests
  */
 
-import { loadPptxFileBundle } from "../../../../scripts/lib/pptx-loader";
+import { loadPptxFile } from "../../../../scripts/lib/pptx-loader";
 import { parseXml, getChild, isXmlElement } from "../../../xml/index";
 import type { XmlDocument, XmlElement, XmlText, XmlNode } from "../../../xml/index";
 import { parseTable } from "./table-parser";
@@ -71,7 +71,7 @@ describe("table-parser", () => {
   });
   it("parses table from table_test.pptx slide1", async () => {
     const pptxPath = "fixtures/poi-test-data/test-data/slideshow/table_test.pptx";
-    const { cache } = await loadPptxFileBundle(pptxPath);
+    const { cache } = await loadPptxFile(pptxPath);
     const slideXml = cache.get("ppt/slides/slide1.xml")?.text;
     expect(slideXml).toBeDefined();
 
@@ -111,7 +111,7 @@ describe("table-parser", () => {
 
   it("shape-parser returns GraphicFrame with table data", async () => {
     const pptxPath = "fixtures/poi-test-data/test-data/slideshow/table_test.pptx";
-    const { cache } = await loadPptxFileBundle(pptxPath);
+    const { cache } = await loadPptxFile(pptxPath);
     const slideXml = cache.get("ppt/slides/slide1.xml")?.text;
     const doc = parseXml(slideXml!);
     const root = getRootElement(doc);
@@ -142,7 +142,7 @@ describe("table-parser", () => {
 
   it("parseSlide includes table in shapes", async () => {
     const pptxPath = "fixtures/poi-test-data/test-data/slideshow/table_test.pptx";
-    const { cache } = await loadPptxFileBundle(pptxPath);
+    const { cache } = await loadPptxFile(pptxPath);
     const slideXml = cache.get("ppt/slides/slide1.xml")?.text;
     const doc = parseXml(slideXml!);
 
@@ -176,7 +176,7 @@ describe("table-parser", () => {
 
   it("renderSlideSvg renders table as foreignObject", async () => {
     const pptxPath = "fixtures/poi-test-data/test-data/slideshow/table_test.pptx";
-    const { cache } = await loadPptxFileBundle(pptxPath);
+    const { cache } = await loadPptxFile(pptxPath);
     const slideXml = cache.get("ppt/slides/slide1.xml")?.text;
     const doc = parseXml(slideXml!);
 
@@ -215,7 +215,7 @@ describe("table-parser", () => {
 
   it("full integration: openPresentation.getSlide.renderSVG renders table", async () => {
     const pptxPath = "fixtures/poi-test-data/test-data/slideshow/table_test.pptx";
-    const { presentationFile } = await loadPptxFileBundle(pptxPath);
+    const { presentationFile } = await loadPptxFile(pptxPath);
 
     // Open presentation and render
     const presentation = openPresentation(presentationFile);

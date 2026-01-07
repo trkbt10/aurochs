@@ -79,7 +79,7 @@ describe("Text Box Layout (a:bodyPr) - ECMA-376 21.1.2.1.2", () => {
           return;
         }
 
-        presentationFile = await loadPptxFile(testCase.pptxPath);
+        ({ presentationFile } = await loadPptxFile(testCase.pptxPath));
       });
 
       it(`${testCase.description}`, () => {

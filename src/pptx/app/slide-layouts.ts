@@ -1,5 +1,10 @@
 /**
  * @file Slide layout utilities for editor usage
+ *
+ * Discovers and loads slide layouts via OPC relationships.
+ *
+ * @see ECMA-376 Part 1, Section 19.3.1.39 (p:sldLayout)
+ * @see ECMA-376 Part 2, Section 10.1.2 (Content Types)
  */
 
 import type { PresentationFile } from "../domain";
@@ -66,6 +71,10 @@ function buildLayoutLabel(
 
 /**
  * Build slide layout options from a presentation file.
+ *
+ * Discovers layouts via [Content_Types].xml (OPC compliant).
+ *
+ * @see ECMA-376 Part 2, Section 10.1.2 (Content Types)
  */
 export function buildSlideLayoutOptions(file: PresentationFile): SlideLayoutOption[] {
   if (!file) {
@@ -117,6 +126,10 @@ export function buildSlideLayoutOptions(file: PresentationFile): SlideLayoutOpti
 
 /**
  * Load layout bundle data from a layout path.
+ *
+ * Traverses OPC relationships to load layout, master, and theme data.
+ *
+ * @see ECMA-376 Part 2, Section 9.3 (Relationships)
  */
 export function loadSlideLayoutBundle(
   file: PresentationFile,

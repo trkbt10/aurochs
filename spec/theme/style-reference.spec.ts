@@ -7,7 +7,7 @@
  * @see ECMA-376 Part 1, Section 20.1.4.1.17 (a:fontRef)
  */
 
-import { loadPptxFileBundle } from "../../scripts/lib/pptx-loader";
+import { loadPptxFile } from "../../scripts/lib/pptx-loader";
 import { openPresentation } from "../../src/pptx";
 import { parseSlide } from "../../src/pptx/parser/slide/slide-parser";
 import { resolveColor } from "../../src/pptx/render/core/drawing-ml";
@@ -51,7 +51,7 @@ describe("a:fontRef schemeClr application", () => {
    * Diagnostic test: Verify that the raw XML contains a:fontRef with a:schemeClr
    */
   it("slide 1 XML contains a:fontRef with a:schemeClr lt1", async () => {
-    const { cache } = await loadPptxFileBundle(THEMES_PPTX_PATH);
+    const { cache } = await loadPptxFile(THEMES_PPTX_PATH);
     const slideXml = cache.get("ppt/slides/slide1.xml")?.text;
     expect(slideXml).toBeDefined();
 
@@ -74,7 +74,7 @@ describe("a:fontRef schemeClr application", () => {
    * Verify that parseColorScheme correctly extracts lt1 from theme.
    */
   it("parseColorScheme extracts lt1 from theme", async () => {
-    const { cache } = await loadPptxFileBundle(THEMES_PPTX_PATH);
+    const { cache } = await loadPptxFile(THEMES_PPTX_PATH);
     const themeXmlStr = cache.get("ppt/theme/theme1.xml")?.text;
     expect(themeXmlStr).toBeDefined();
 
@@ -90,7 +90,7 @@ describe("a:fontRef schemeClr application", () => {
    * Verify that createParseContext correctly includes lt1 in colorScheme.
    */
   it("createParseContext includes lt1 in colorScheme", async () => {
-    const { cache } = await loadPptxFileBundle(THEMES_PPTX_PATH);
+    const { cache } = await loadPptxFile(THEMES_PPTX_PATH);
     const themeXmlStr = cache.get("ppt/theme/theme1.xml")?.text;
     const masterXmlStr = cache.get("ppt/slideMasters/slideMaster1.xml")?.text;
     expect(themeXmlStr).toBeDefined();
@@ -152,7 +152,7 @@ describe("a:fontRef schemeClr application", () => {
    * End-to-end test: text color resolves through full render path
    */
   it("end-to-end: text color resolves through full render path", async () => {
-    const { cache } = await loadPptxFileBundle(THEMES_PPTX_PATH);
+    const { cache } = await loadPptxFile(THEMES_PPTX_PATH);
 
     const slideXml = cache.get("ppt/slides/slide1.xml")?.text;
     const themeXml = cache.get("ppt/theme/theme1.xml")?.text;
@@ -218,7 +218,7 @@ describe("a:fontRef schemeClr application", () => {
    * Verify that parseSlide correctly extracts shapeFontReferenceColor
    */
   it("parseSlide extracts fontReference.color from shape style", async () => {
-    const { cache } = await loadPptxFileBundle(THEMES_PPTX_PATH);
+    const { cache } = await loadPptxFile(THEMES_PPTX_PATH);
     const slideXml = cache.get("ppt/slides/slide1.xml")?.text;
     expect(slideXml).toBeDefined();
 

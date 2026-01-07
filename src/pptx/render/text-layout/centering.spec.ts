@@ -4,7 +4,7 @@
  * Investigates issues with text alignment and color in 2411-Performance_Up.pptx
  */
 
-import { loadPptxFileBundle } from "../../../../scripts/lib/pptx-loader";
+import { loadPptxFile } from "../../../../scripts/lib/pptx-loader";
 import { parseXml, getChild, getByPath } from "../../../xml";
 import { parseSlide } from "../../parser/slide/slide-parser";
 import { openPresentation } from "../../index";
@@ -13,7 +13,7 @@ import type { SpShape } from "../../domain";
 import type { FieldRun, RegularRun } from "../../domain/text";
 
 async function loadPptx(pptxPath: string) {
-  const { cache, presentationFile } = await loadPptxFileBundle(pptxPath);
+  const { cache, presentationFile } = await loadPptxFile(pptxPath);
   return { cache, presentationFile };
 }
 

@@ -60,7 +60,7 @@ describe("Compound Spacing - ECMA-376 Combined", () => {
           return;
         }
 
-        presentationFile = await loadPptxFile(testCase.pptxPath);
+        ({ presentationFile } = await loadPptxFile(testCase.pptxPath));
       });
 
       it(`${testCase.description}`, () => {

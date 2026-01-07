@@ -72,7 +72,7 @@ describe("Space Handling - Half-width/Full-width", () => {
           return;
         }
 
-        presentationFile = await loadPptxFile(testCase.pptxPath);
+        ({ presentationFile } = await loadPptxFile(testCase.pptxPath));
       });
 
       it(`${testCase.description}`, () => {

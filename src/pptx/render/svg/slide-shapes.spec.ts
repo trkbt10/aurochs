@@ -241,7 +241,7 @@ describe("data-ooxml-id attribute for animation targeting", () => {
       return;
     }
 
-    const file = await loadPptxFile(testFile);
+    const { presentationFile: file } = await loadPptxFile(testFile);
     const pres = openPresentation(file);
     const slide = pres.getSlide(1);
     const svg = slide.renderSVG();
@@ -260,7 +260,7 @@ describe("data-ooxml-id attribute for animation targeting", () => {
       return;
     }
 
-    const file = await loadPptxFile(testFile);
+    const { presentationFile: file } = await loadPptxFile(testFile);
     const pres = openPresentation(file);
     const slide = pres.getSlide(1);
     const svg = slide.renderSVG();

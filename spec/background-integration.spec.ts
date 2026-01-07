@@ -14,7 +14,7 @@ describe("Background integration tests", () => {
 
     beforeAll(async () => {
       if (fs.existsSync(pptxPath)) {
-        presentationFile = await loadPptxFile(pptxPath);
+        ({ presentationFile } = await loadPptxFile(pptxPath));
       }
     });
 
@@ -122,7 +122,7 @@ describe("Background integration tests", () => {
 
     beforeAll(async () => {
       if (fs.existsSync(pptxPath)) {
-        presentationFile = await loadPptxFile(pptxPath);
+        ({ presentationFile } = await loadPptxFile(pptxPath));
       }
     });
 
@@ -162,7 +162,7 @@ describe("Background integration tests", () => {
 
     beforeAll(async () => {
       if (fs.existsSync(pptxPath)) {
-        presentationFile = await loadPptxFile(pptxPath);
+        ({ presentationFile } = await loadPptxFile(pptxPath));
       }
     });
 
@@ -256,7 +256,7 @@ describe("Background integration tests", () => {
 
     beforeAll(async () => {
       if (fs.existsSync(pptxPath)) {
-        presentationFile = await loadPptxFile(pptxPath);
+        ({ presentationFile } = await loadPptxFile(pptxPath));
       }
     });
 
@@ -305,7 +305,7 @@ describe("Background integration tests", () => {
 
     beforeAll(async () => {
       if (fs.existsSync(pptxPath)) {
-        presentationFile = await loadPptxFile(pptxPath);
+        ({ presentationFile } = await loadPptxFile(pptxPath));
       }
     });
 

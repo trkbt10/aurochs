@@ -40,7 +40,7 @@ export async function compareSlideToSnapshot(
   slideNumber: number,
   options?: CompareOptions,
 ): Promise<CompareResult & { svg: string }> {
-  const presentationFile = await loadPptxFile(pptxPath);
+  const { presentationFile } = await loadPptxFile(pptxPath);
   const presentation = openPresentation(presentationFile, {
     renderOptions: LIBREOFFICE_RENDER_OPTIONS,
   });

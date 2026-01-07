@@ -72,7 +72,7 @@ describe("Line Spacing (a:lnSpc) - ECMA-376 21.1.2.2.5", () => {
           return;
         }
 
-        presentationFile = await loadPptxFile(testCase.pptxPath);
+        ({ presentationFile } = await loadPptxFile(testCase.pptxPath));
       });
 
       it(`${testCase.description}`, () => {

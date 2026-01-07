@@ -58,7 +58,7 @@ describe("Empty Template Visual Regression", () => {
           return;
         }
 
-        const presentationFile = await loadPptxFile(testCase.pptxPath);
+        const { presentationFile } = await loadPptxFile(testCase.pptxPath);
         const presentation = openPresentation(presentationFile, {
           renderOptions: LIBREOFFICE_RENDER_OPTIONS,
         });

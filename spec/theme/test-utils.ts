@@ -13,7 +13,8 @@ export const THEMES_PPTX_PATH = "fixtures/poi-test-data/test-data/slideshow/them
  * Helper to create presentation file interface from buffer
  */
 export async function createPresentationFile(pptxPath: string): Promise<PresentationFile> {
-  return loadPptxFile(pptxPath);
+  const { presentationFile } = await loadPptxFile(pptxPath);
+  return presentationFile;
 }
 
 /**

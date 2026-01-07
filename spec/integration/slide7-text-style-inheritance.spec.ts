@@ -82,7 +82,7 @@ describe("2411-Performance_Up.pptx Slide 7 - Text Style Inheritance (ECMA-376)",
       return;
     }
 
-    const presentationFile = await loadPptxFile(pptxPath);
+    const { presentationFile } = await loadPptxFile(pptxPath);
     const presentation = openPresentation(presentationFile);
     const slide = presentation.getSlide(7);
     svg = slide.renderSVG();

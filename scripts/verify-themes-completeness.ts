@@ -13,7 +13,7 @@
  */
 import { openPresentation } from "../src/pptx";
 import * as fs from "node:fs";
-import { loadPptxFileBundle } from "./lib/pptx-loader";
+import { loadPptxFile } from "./lib/pptx-loader";
 
 type SlideResult = {
   slide: number;
@@ -33,7 +33,7 @@ async function verifyPptxThemes(pptxPath: string): Promise<{ results: SlideResul
     return { results: [], success: false };
   }
 
-  const { presentationFile } = await loadPptxFileBundle(pptxPath);
+  const { presentationFile } = await loadPptxFile(pptxPath);
 
   const presentation = openPresentation(presentationFile);
   const slideCount = presentation.count;

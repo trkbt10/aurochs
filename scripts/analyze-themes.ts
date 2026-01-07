@@ -10,7 +10,7 @@
  */
 import * as fs from "node:fs";
 import { parseXml, getChild, getChildren, getAttr } from "../src/xml";
-import { loadPptxFileBundle } from "./lib/pptx-loader";
+import { loadPptxFile } from "./lib/pptx-loader";
 
 type ThemeInfo = {
   name: string;
@@ -43,7 +43,7 @@ type AnalysisResult = {
 }
 
 async function loadZip(pptxPath: string): Promise<Map<string, { text: string; buffer: ArrayBuffer }>> {
-  const { cache } = await loadPptxFileBundle(pptxPath);
+  const { cache } = await loadPptxFile(pptxPath);
   return cache;
 }
 

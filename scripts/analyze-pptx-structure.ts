@@ -19,7 +19,7 @@
  *   bun run scripts/analyze-pptx-structure.ts themes.pptx --shapes
  */
 import * as fs from "node:fs";
-import { loadPptxFileBundle } from "./lib/pptx-loader";
+import { loadPptxFile } from "./lib/pptx-loader";
 
 type AnalysisOptions = {
   slideNum?: number;
@@ -106,7 +106,8 @@ async function main() {
     process.exit(1);
   }
 
-  const { cache, filePaths } = await loadPptxFileBundle(pptxPath);
+  const { cache } = await loadPptxFile(pptxPath);
+  const filePaths = Array.from(cache.keys());
 
   // Read file content helper
   const readFile = async (path: string): Promise<string | null> => {

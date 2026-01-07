@@ -5,7 +5,7 @@
  */
 import * as fs from "node:fs";
 import { openPresentation } from "../src/pptx";
-import { loadPptxFileBundle } from "./lib/pptx-loader";
+import { loadPptxFile } from "./lib/pptx-loader";
 
 async function main() {
   const pptxPath = process.argv[2] || "fixtures/poi-test-data/test-data/slideshow/60810.pptx";
@@ -13,7 +13,7 @@ async function main() {
 
   console.log(`Debugging fill colors in: ${pptxPath} slide ${slideNum}\n`);
 
-  const { cache, presentationFile } = await loadPptxFileBundle(pptxPath);
+  const { cache, presentationFile } = await loadPptxFile(pptxPath);
 
   const presentation = openPresentation(presentationFile);
   const slide = presentation.getSlide(slideNum);

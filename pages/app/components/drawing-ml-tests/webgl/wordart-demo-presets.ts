@@ -476,7 +476,7 @@ const row4: DemoWordArtPreset[] = [
 // =============================================================================
 
 const row5: DemoWordArtPreset[] = [
-  // 5-1: Gold 3D Left Perspective (Iconic!)
+  // 5-1: Gold 3D Left Perspective with Bevel + Contour (Iconic!)
   {
     id: "classic-5-1",
     name: "Gold 3D",
@@ -495,6 +495,7 @@ const row5: DemoWordArtPreset[] = [
     camera: "perspectiveHeroicLeftFacing",
     lightRig: { rig: "brightRoom", direction: "t" },
     bevelTop: { width: 6, height: 4, preset: "relaxedInset" },
+    contour: { width: 1.5, color: "#8B6914" }, // Dark gold contour
   },
   // 5-2: Dark 3D
   {
@@ -627,7 +628,7 @@ const row6: DemoWordArtPreset[] = [
     lightRig: { rig: "brightRoom", direction: "t" },
     contour: { width: 2, color: "#000000" },
   },
-  // 6-4: Orange Perspective
+  // 6-4: Orange Perspective with Bevel + Contour (demonstrates coexistence)
   {
     id: "classic-6-4",
     name: "Orange Extreme",
@@ -645,6 +646,7 @@ const row6: DemoWordArtPreset[] = [
     camera: "perspectiveHeroicExtremeRightFacing",
     lightRig: { rig: "brightRoom", direction: "t" },
     bevelTop: { width: 6, height: 5, preset: "artDeco" },
+    contour: { width: 2, color: "#8B4500" }, // Dark orange contour
   },
   // 6-5: Rainbow 3D Alt (Beautiful finale!)
   {

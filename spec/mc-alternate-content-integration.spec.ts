@@ -17,7 +17,7 @@ describe("mc:AlternateContent Integration", () => {
 
     beforeAll(async () => {
       if (fs.existsSync(pptxPath)) {
-        const presentationFile = await loadPptxFile(pptxPath);
+        const { presentationFile } = await loadPptxFile(pptxPath);
         const presentation = openPresentation(presentationFile);
         const slide = presentation.getSlide(5);
         svg = slide.renderSVG();
@@ -38,7 +38,7 @@ describe("mc:AlternateContent Integration", () => {
 
     beforeAll(async () => {
       if (fs.existsSync(pptxPath)) {
-        const presentationFile = await loadPptxFile(pptxPath);
+        const { presentationFile } = await loadPptxFile(pptxPath);
         const presentation = openPresentation(presentationFile);
         const slide = presentation.getSlide(1);
         svg = slide.renderSVG();
@@ -58,7 +58,7 @@ describe("mc:AlternateContent Integration", () => {
 
     beforeAll(async () => {
       if (fs.existsSync(pptxPath)) {
-        const presentationFile = await loadPptxFile(pptxPath);
+        const { presentationFile } = await loadPptxFile(pptxPath);
         const presentation = openPresentation(presentationFile);
         const slide = presentation.getSlide(1);
         svg = slide.renderSVG();

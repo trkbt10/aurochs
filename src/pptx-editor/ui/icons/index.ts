@@ -61,6 +61,12 @@ export {
   FileBox as OleObjectIcon,
   Shapes as UnknownShapeIcon,
 
+  // Media types
+  Image as ImageIcon,
+  Music as AudioIcon,
+  Video as VideoIcon,
+  File as FileIcon,
+
   // UI elements
   Plus as AddIcon,
   X as CloseIcon,

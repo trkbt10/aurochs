@@ -7,7 +7,7 @@
 import { parseTiming } from "../src/pptx/parser/timing-parser";
 import { parseXml, isXmlElement, type XmlElement } from "../src/xml";
 import * as fs from "node:fs";
-import { loadPptxFileBundle } from "./lib/pptx-loader";
+import { loadPptxFile } from "./lib/pptx-loader";
 
 const filePath = process.argv[2] ?? "./fixtures/internal/keyframes.pptx";
 
@@ -17,7 +17,8 @@ async function main() {
   if (!fs.existsSync(filePath)) {
     throw new Error(`File not found: ${filePath}`);
   }
-  const { cache, filePaths } = await loadPptxFileBundle(filePath);
+  const { cache } = await loadPptxFile(filePath);
+  const filePaths = Array.from(cache.keys());
 
   // Find all slide files
   const slideFiles = filePaths.filter((f) => f.match(/ppt\/slides\/slide\d+\.xml$/));

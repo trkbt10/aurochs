@@ -1,18 +1,33 @@
 /**
  * @file Slide layout domain helpers
+ *
+ * @see ECMA-376 Part 1, Section 19.3.1.39 (p:sldLayout)
  */
 
 import type { XmlDocument, XmlElement } from "../../../xml";
 import { getByPath } from "../../../xml";
 import type { SlideLayoutType } from "./types";
 
+/**
+ * Slide layout attributes extracted from p:sldLayout element.
+ *
+ * @see ECMA-376 Part 1, Section 19.3.1.39 (p:sldLayout)
+ * @see ECMA-376 Part 1, Section 19.3.1.18 (p:cSld) for name attribute
+ */
 export type SlideLayoutAttributes = {
+  /** Layout type (e.g., "title", "obj", "twoObj") @see ST_SlideLayoutType */
   readonly type?: SlideLayoutType;
+  /** User-defined name from p:cSld@name */
   readonly name?: string;
+  /** Matching name for layout identification */
   readonly matchingName?: string;
+  /** Whether to show master shapes (showMasterSp) */
   readonly showMasterShapes?: boolean;
+  /** Whether to show master placeholder animations (showMasterPhAnim) */
   readonly showMasterPhAnim?: boolean;
+  /** Whether layout is preserved during save */
   readonly preserve?: boolean;
+  /** Whether layout was user-drawn */
   readonly userDrawn?: boolean;
 };
 
@@ -89,6 +104,8 @@ function requireCommonSlideElement(layoutElement: XmlElement): XmlElement {
 
 /**
  * Extract slide layout attributes from layout XML.
+ *
+ * @see ECMA-376 Part 1, Section 19.3.1.39 (p:sldLayout)
  */
 export function getSlideLayoutAttributes(layoutDoc: XmlDocument): SlideLayoutAttributes {
   if (!layoutDoc) {

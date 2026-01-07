@@ -196,7 +196,7 @@ describe("Visual Regression Tests", () => {
           return;
         }
 
-        presentationFile = await loadPptxFile(fullPath);
+        ({ presentationFile } = await loadPptxFile(fullPath));
         visibleSlideNumbers = testCase.mapHiddenSlides ? resolveVisibleSlideNumbers(presentationFile) : null;
       });
 
@@ -256,7 +256,7 @@ export async function testSlide(
   svg: string;
   result: ReturnType<typeof compareSvgToSnapshot>;
 }> {
-  const presentationFile = await loadPptxFile(pptxPath);
+  const { presentationFile } = await loadPptxFile(pptxPath);
   // Use LibreOffice dialect since baselines are generated with LibreOffice
   const presentation = openPresentation(presentationFile, { renderOptions: LIBREOFFICE_RENDER_OPTIONS });
   const slide = presentation.getSlide(slideNumber);

@@ -8,7 +8,7 @@
  */
 
 import * as fs from "node:fs";
-import { loadPptxFileBundle } from "./lib/pptx-loader";
+import { loadPptxFile } from "./lib/pptx-loader";
 
 async function main(): Promise<void> {
   const pptxPath = process.argv[2];
@@ -25,7 +25,8 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const { cache, filePaths } = await loadPptxFileBundle(pptxPath);
+  const { cache } = await loadPptxFile(pptxPath);
+  const filePaths = Array.from(cache.keys());
 
   const slidePath = `ppt/slides/slide${slideNum}.xml`;
   const slideXml = cache.get(slidePath)?.text;

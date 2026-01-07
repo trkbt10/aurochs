@@ -19,7 +19,7 @@ describe("2411-Performance_Up.pptx", () => {
     if (!fs.existsSync(fullPath)) {
       throw new Error(`Fixture file not found: ${fullPath}`);
     }
-    presentationFile = await loadPptxFile(fullPath);
+    ({ presentationFile } = await loadPptxFile(fullPath));
   });
 
   describe("Slide 1 rendering", () => {

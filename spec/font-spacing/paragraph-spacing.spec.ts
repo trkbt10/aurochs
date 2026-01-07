@@ -66,7 +66,7 @@ describe("Paragraph Spacing (a:spcBef, a:spcAft) - ECMA-376 21.1.2.2.18-19", () 
           return;
         }
 
-        presentationFile = await loadPptxFile(testCase.pptxPath);
+        ({ presentationFile } = await loadPptxFile(testCase.pptxPath));
       });
 
       it(`${testCase.description}`, () => {

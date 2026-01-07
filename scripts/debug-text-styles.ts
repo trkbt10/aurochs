@@ -4,11 +4,11 @@
 
 import { openPresentation } from "../src/pptx";
 import { parseXml, getByPath, getChild } from "../src/xml";
-import { loadPptxFileBundle } from "./lib/pptx-loader";
+import { loadPptxFile } from "./lib/pptx-loader";
 
 async function main() {
   const pptxPath = "fixtures/poi-test-data/test-data/slideshow/2411-Performance_Up.pptx";
-  const { presentationFile, cache } = await loadPptxFileBundle(pptxPath);
+  const { presentationFile, cache } = await loadPptxFile(pptxPath);
 
   // Check master text styles XML directly
   const masterXml = cache.get("ppt/slideMasters/slideMaster1.xml")?.text;

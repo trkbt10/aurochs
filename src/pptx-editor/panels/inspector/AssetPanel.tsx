@@ -2,19 +2,23 @@
  * @file Asset panel component
  *
  * Displays a list of embedded assets in the presentation.
- * Shows images, media files, and their metadata.
+ * Uses OPC relationships to discover media files (ECMA-376 compliant).
+ *
+ * @see ECMA-376 Part 2, Section 9.3 (Relationships)
  */
 
 import { useMemo, type CSSProperties } from "react";
 import type { PresentationFile } from "../../../pptx/domain";
+import { discoverMediaPaths } from "../../../pptx/app/media-discovery";
+import { toDataUrl, formatSize } from "../../../buffer";
+import { getMimeTypeFromPath } from "../../../pptx/opc";
 import { InspectorSection, Accordion } from "../../ui/layout";
+import { ImageIcon, AudioIcon, VideoIcon, FileIcon, iconTokens } from "../../ui/icons";
 import { colorTokens, fontTokens, spacingTokens } from "../../ui/design-tokens";
 
 export type AssetPanelProps = {
   /** Presentation file for reading asset content */
   readonly presentationFile?: PresentationFile;
-  /** List of file paths in the presentation (from loader) */
-  readonly filePaths?: readonly string[];
 };
 
 const containerStyle: CSSProperties = {
@@ -112,51 +116,14 @@ function getAssetType(path: string): AssetInfo["type"] {
 }
 
 /**
- * Get icon for asset type.
+ * Get icon component for asset type.
  */
-function getAssetIcon(type: AssetInfo["type"]): string {
-  switch (type) {
-    case "image":
-      return "🖼️";
-    case "audio":
-      return "🎵";
-    case "video":
-      return "🎬";
-    default:
-      return "📄";
-  }
-}
-
-/**
- * Format file size.
- */
-function formatSize(bytes?: number): string {
-  if (bytes === undefined) {
-    return "—";
-  }
-  if (bytes < 1024) {
-    return `${bytes} B`;
-  }
-  if (bytes < 1024 * 1024) {
-    return `${(bytes / 1024).toFixed(1)} KB`;
-  }
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-/**
- * Convert ArrayBuffer to base64 data URL.
- */
-function bufferToDataUrl(buffer: ArrayBuffer, mimeType: string): string {
-  const bytes = new Uint8Array(buffer);
-  // Convert to base64 in chunks to avoid stack overflow for large files
-  const chunks: string[] = [];
-  const chunkSize = 8192;
-  for (let i = 0; i < bytes.length; i += chunkSize) {
-    chunks.push(String.fromCharCode(...bytes.slice(i, i + chunkSize)));
-  }
-  const base64 = btoa(chunks.join(""));
-  return `data:${mimeType};base64,${base64}`;
-}
+const ASSET_TYPE_ICONS = {
+  image: ImageIcon,
+  audio: AudioIcon,
+  video: VideoIcon,
+  other: FileIcon,
+} as const;
 
 /**
  * Read asset data from presentation file.
@@ -165,7 +132,6 @@ function readAssetData(
   presentationFile: PresentationFile,
   path: string,
   type: AssetInfo["type"],
-  extension: string,
 ): { size?: number; dataUrl?: string } {
   try {
     const buffer = presentationFile.readBinary(path);
@@ -173,8 +139,9 @@ function readAssetData(
       return {};
     }
     const size = buffer.byteLength;
+    const mimeType = getMimeTypeFromPath(path);
     const dataUrl =
-      type === "image" ? bufferToDataUrl(buffer, getMimeType(extension)) : undefined;
+      type === "image" && mimeType ? toDataUrl(buffer, mimeType) : undefined;
     return { size, dataUrl };
   } catch {
     return {};
@@ -182,42 +149,17 @@ function readAssetData(
 }
 
 /**
- * Extract assets from presentation file.
+ * Build asset info from discovered media paths.
  */
-function extractAssets(presentationFile: PresentationFile, filePaths: readonly string[]): AssetInfo[] {
-  const mediaPrefix = "ppt/media/";
+function buildAssetInfo(presentationFile: PresentationFile, mediaPaths: readonly string[]): AssetInfo[] {
+  return mediaPaths.map((path) => {
+    const name = path.split("/").pop() ?? path;
+    const extension = name.split(".").pop()?.toLowerCase() ?? "";
+    const type = getAssetType(path);
+    const { size, dataUrl } = readAssetData(presentationFile, path, type);
 
-  const assets = filePaths
-    .filter((path) => path.startsWith(mediaPrefix))
-    .map((path) => {
-      const name = path.slice(mediaPrefix.length);
-      const extension = name.split(".").pop()?.toLowerCase() ?? "";
-      const type = getAssetType(path);
-      const { size, dataUrl } = readAssetData(presentationFile, path, type, extension);
-
-      return { path, name, type, extension, size, dataUrl };
-    });
-
-  return assets.sort((a, b) => a.name.localeCompare(b.name));
-}
-
-/**
- * Get MIME type for file extension.
- */
-function getMimeType(ext: string): string {
-  const mimeTypes: Record<string, string> = {
-    png: "image/png",
-    jpg: "image/jpeg",
-    jpeg: "image/jpeg",
-    gif: "image/gif",
-    bmp: "image/bmp",
-    tiff: "image/tiff",
-    tif: "image/tiff",
-    wmf: "image/x-wmf",
-    emf: "image/x-emf",
-    svg: "image/svg+xml",
-  };
-  return mimeTypes[ext] ?? "application/octet-stream";
+    return { path, name, type, extension, size, dataUrl };
+  });
 }
 
 const thumbnailImageStyle: CSSProperties = {
@@ -233,7 +175,8 @@ function AssetThumbnail({ asset }: { asset: AssetInfo }) {
   if (asset.dataUrl) {
     return <img src={asset.dataUrl} alt={asset.name} style={thumbnailImageStyle} />;
   }
-  return <span>{getAssetIcon(asset.type)}</span>;
+  const IconComponent = ASSET_TYPE_ICONS[asset.type];
+  return <IconComponent size={iconTokens.size.md} color={colorTokens.text.tertiary} />;
 }
 
 /**
@@ -295,14 +238,12 @@ function AssetLists({ assets }: { assets: AssetInfo[] }) {
  */
 function AssetPanelContent({
   presentationFile,
-  filePaths,
   assets,
 }: {
   presentationFile?: PresentationFile;
-  filePaths?: readonly string[];
   assets: AssetInfo[];
 }) {
-  if (!presentationFile || !filePaths) {
+  if (!presentationFile) {
     return <div style={emptyStateStyle}>No presentation file loaded</div>;
   }
   if (assets.length === 0) {
@@ -314,24 +255,27 @@ function AssetPanelContent({
 /**
  * Asset panel component.
  *
- * Displays embedded assets in the presentation:
+ * Displays embedded assets discovered via OPC relationships:
  * - Images (PNG, JPEG, etc.)
  * - Audio files
  * - Video files
  * - Other media
+ *
+ * @see ECMA-376 Part 2, Section 9.3 (Relationships)
  */
-export function AssetPanel({ presentationFile, filePaths }: AssetPanelProps) {
+export function AssetPanel({ presentationFile }: AssetPanelProps) {
   const assets = useMemo(() => {
-    if (!presentationFile || !filePaths) {
+    if (!presentationFile) {
       return [];
     }
-    return extractAssets(presentationFile, filePaths);
-  }, [presentationFile, filePaths]);
+    const mediaPaths = discoverMediaPaths(presentationFile);
+    return buildAssetInfo(presentationFile, mediaPaths);
+  }, [presentationFile]);
 
   return (
     <div style={containerStyle}>
       <InspectorSection title="Assets">
-        <AssetPanelContent presentationFile={presentationFile} filePaths={filePaths} assets={assets} />
+        <AssetPanelContent presentationFile={presentationFile} assets={assets} />
       </InspectorSection>
     </div>
   );

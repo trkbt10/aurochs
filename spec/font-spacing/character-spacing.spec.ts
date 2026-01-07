@@ -72,7 +72,7 @@ describe("Character Spacing (a:spc) - ECMA-376 21.1.2.3.9", () => {
           return;
         }
 
-        presentationFile = await loadPptxFile(testCase.pptxPath);
+        ({ presentationFile } = await loadPptxFile(testCase.pptxPath));
       });
 
       it(`${testCase.description}`, () => {

@@ -6,12 +6,12 @@ import { openPresentation, type PresentationFile } from "../src/pptx";
 import { parseXml, getByPath, getChild, getChildren, isXmlElement } from "../src/xml";
 import { createSlideRenderContextFromWarp } from "../src/pptx/core/context/factory";
 import type { WarpObject, ZipFile } from "../src/pptx/core/types";
-import { loadPptxFileBundle } from "./lib/pptx-loader";
+import { loadPptxFile as loadPptxBundle } from "./lib/pptx-loader";
 
 type FileCache = Map<string, { text: string; buffer: ArrayBuffer }>;
 
 async function loadPptxFile(filePath: string): Promise<{ pf: PresentationFile; cache: FileCache; zip: ZipFile }> {
-  const { cache, presentationFile } = await loadPptxFileBundle(filePath);
+  const { cache, presentationFile } = await loadPptxBundle(filePath);
 
   const zip: ZipFile = {
     file(path: string) {

@@ -14,13 +14,10 @@ export type PptxFileCache = Map<string, PptxFileCacheEntry>;
 export type LoadedPresentation = {
   presentation: ReturnType<typeof openPresentation>;
   presentationFile: PresentationFile;
-  /** List of all file paths in the PPTX archive */
-  filePaths: readonly string[];
 };
 
 export type PptxFileBundle = {
   cache: PptxFileCache;
-  filePaths: string[];
   presentationFile: PresentationFile;
 };
 
@@ -75,7 +72,6 @@ export async function loadPptxBundleFromBuffer(buffer: PptxBufferInput): Promise
   const cache = await preloadZipFiles(jszip);
   return {
     cache,
-    filePaths: Array.from(cache.keys()),
     presentationFile: createPresentationFile(cache),
   };
 }
@@ -84,10 +80,10 @@ export async function loadPptxBundleFromBuffer(buffer: PptxBufferInput): Promise
  * Load a PPTX file from an ArrayBuffer
  */
 export async function loadPptxFromBuffer(buffer: ArrayBuffer): Promise<LoadedPresentation> {
-  const { presentationFile, filePaths } = await loadPptxBundleFromBuffer(buffer);
+  const { presentationFile } = await loadPptxBundleFromBuffer(buffer);
   const presentation = openPresentation(presentationFile);
 
-  return { presentation, presentationFile, filePaths };
+  return { presentation, presentationFile };
 }
 
 /**

@@ -8,7 +8,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadPptxFileBundle } from "../../scripts/lib/pptx-loader";
+import { loadPptxFile } from "../../scripts/lib/pptx-loader";
 
 // Import directly from src instead of using @lib alias
 import { openPresentation } from "../../src/pptx";
@@ -68,7 +68,7 @@ describe("convertToPresentationDocument", () => {
     beforeAll(async () => {
       // Load a PPTX with theme colors
       const fixturePath = path.join(FIXTURE_DIR, "decompressed-pptx/Sample_demo1.pptx");
-      const { presentationFile } = await loadPptxFileBundle(fixturePath);
+      const { presentationFile } = await loadPptxFile(fixturePath);
 
       // Use openPresentation
       const presentation = openPresentation(presentationFile);
@@ -129,7 +129,8 @@ describe("convertToPresentationDocument", () => {
     it("extracts image relationships correctly", async () => {
       // Find a PPTX with images
       const fixturePath = path.join(FIXTURE_DIR, "decompressed-pptx/Sample_demo1.pptx");
-      const { cache, filePaths } = await loadPptxFileBundle(fixturePath);
+      const { cache } = await loadPptxFile(fixturePath);
+      const filePaths = Array.from(cache.keys());
 
       // Check for media files
       const mediaFiles = filePaths.filter((f) =>

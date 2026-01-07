@@ -545,11 +545,11 @@ function EditorContent({
   const resourcesTabContent = useMemo(
     () => (
       <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "auto" }}>
-        <AssetPanel presentationFile={document.presentationFile} filePaths={document.filePaths} />
+        <AssetPanel presentationFile={document.presentationFile} />
         <ThemeViewerPanel colorContext={colorContext} fontScheme={fontScheme} />
       </div>
     ),
-    [document.presentationFile, document.filePaths, colorContext, fontScheme],
+    [document.presentationFile, colorContext, fontScheme],
   );
 
   const tabContents = useMemo<TabContents>(

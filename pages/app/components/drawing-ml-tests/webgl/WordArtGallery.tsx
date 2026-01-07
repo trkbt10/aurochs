@@ -147,10 +147,16 @@ export function WordArtGallery() {
   const [lightRig, setLightRig] = useState<LightRigType>(selectedPreset.lightRig.rig);
   const [lightDirection, setLightDirection] = useState<LightRigDirection>(selectedPreset.lightRig.direction);
   const [extrusion, setExtrusion] = useState(selectedPreset.extrusion);
-  const [bevelEnabled, setBevelEnabled] = useState(selectedPreset.bevelTop !== undefined);
-  const [bevelPreset, setBevelPreset] = useState<BevelPresetType>(selectedPreset.bevelTop?.preset ?? "relaxedInset");
-  const [bevelWidth, setBevelWidth] = useState(selectedPreset.bevelTop?.width ?? 6);
-  const [bevelHeight, setBevelHeight] = useState(selectedPreset.bevelTop?.height ?? 6);
+  // Bevel Top (front face) - ECMA-376 bevelT
+  const [bevelTopEnabled, setBevelTopEnabled] = useState(selectedPreset.bevelTop !== undefined);
+  const [bevelTopPreset, setBevelTopPreset] = useState<BevelPresetType>(selectedPreset.bevelTop?.preset ?? "relaxedInset");
+  const [bevelTopWidth, setBevelTopWidth] = useState(selectedPreset.bevelTop?.width ?? 6);
+  const [bevelTopHeight, setBevelTopHeight] = useState(selectedPreset.bevelTop?.height ?? 6);
+  // Bevel Bottom (back face) - ECMA-376 bevelB
+  const [bevelBottomEnabled, setBevelBottomEnabled] = useState(selectedPreset.bevelBottom !== undefined);
+  const [bevelBottomPreset, setBevelBottomPreset] = useState<BevelPresetType>(selectedPreset.bevelBottom?.preset ?? "relaxedInset");
+  const [bevelBottomWidth, setBevelBottomWidth] = useState(selectedPreset.bevelBottom?.width ?? 6);
+  const [bevelBottomHeight, setBevelBottomHeight] = useState(selectedPreset.bevelBottom?.height ?? 6);
 
   // Disable thumbnail generation for now to debug main preview
   // const thumbnails = useWordArtThumbnails(allDemoWordArtPresets);
@@ -171,10 +177,16 @@ export function WordArtGallery() {
     setLightRig(selectedPreset.lightRig.rig);
     setLightDirection(selectedPreset.lightRig.direction);
     setExtrusion(selectedPreset.extrusion);
-    setBevelEnabled(selectedPreset.bevelTop !== undefined);
-    setBevelPreset(selectedPreset.bevelTop?.preset ?? "relaxedInset");
-    setBevelWidth(selectedPreset.bevelTop?.width ?? 6);
-    setBevelHeight(selectedPreset.bevelTop?.height ?? 6);
+    // Bevel Top
+    setBevelTopEnabled(selectedPreset.bevelTop !== undefined);
+    setBevelTopPreset(selectedPreset.bevelTop?.preset ?? "relaxedInset");
+    setBevelTopWidth(selectedPreset.bevelTop?.width ?? 6);
+    setBevelTopHeight(selectedPreset.bevelTop?.height ?? 6);
+    // Bevel Bottom
+    setBevelBottomEnabled(selectedPreset.bevelBottom !== undefined);
+    setBevelBottomPreset(selectedPreset.bevelBottom?.preset ?? "relaxedInset");
+    setBevelBottomWidth(selectedPreset.bevelBottom?.width ?? 6);
+    setBevelBottomHeight(selectedPreset.bevelBottom?.height ?? 6);
   }, [selectedPreset]);
 
   const scene3d = useMemo(
@@ -191,11 +203,12 @@ export function WordArtGallery() {
       buildShape3d({
         extrusionHeight: extrusion,
         preset: material,
-        bevelTop: bevelEnabled ? { width: bevelWidth, height: bevelHeight, preset: bevelPreset } : undefined,
+        bevelTop: bevelTopEnabled ? { width: bevelTopWidth, height: bevelTopHeight, preset: bevelTopPreset } : undefined,
+        bevelBottom: bevelBottomEnabled ? { width: bevelBottomWidth, height: bevelBottomHeight, preset: bevelBottomPreset } : undefined,
         contourWidth: selectedPreset.contour?.width,
         contourColor: selectedPreset.contour?.color,
       }),
-    [extrusion, material, bevelEnabled, bevelWidth, bevelHeight, bevelPreset, selectedPreset.contour],
+    [extrusion, material, bevelTopEnabled, bevelTopWidth, bevelTopHeight, bevelTopPreset, bevelBottomEnabled, bevelBottomWidth, bevelBottomHeight, bevelBottomPreset, selectedPreset.contour],
   );
 
   return (
@@ -316,16 +329,19 @@ export function WordArtGallery() {
               onChange={(e) => setExtrusion(Number(e.target.value))}
             />
           </label>
+        </div>
+        <div className="wordart-controls-group">
+          <div className="wordart-controls-title">Bevel Top (Front)</div>
           <label className="wordart-control">
-            <span>Bevel</span>
-            <input type="checkbox" checked={bevelEnabled} onChange={(e) => setBevelEnabled(e.target.checked)} />
+            <span>Enabled</span>
+            <input type="checkbox" checked={bevelTopEnabled} onChange={(e) => setBevelTopEnabled(e.target.checked)} />
           </label>
           <label className="wordart-control">
-            <span>Bevel Preset</span>
+            <span>Preset</span>
             <select
-              value={bevelPreset}
-              onChange={(e) => setBevelPreset(e.target.value as BevelPresetType)}
-              disabled={!bevelEnabled}
+              value={bevelTopPreset}
+              onChange={(e) => setBevelTopPreset(e.target.value as BevelPresetType)}
+              disabled={!bevelTopEnabled}
             >
               <option value="relaxedInset">relaxedInset</option>
               <option value="circle">circle</option>
@@ -337,25 +353,70 @@ export function WordArtGallery() {
             </select>
           </label>
           <label className="wordart-control">
-            <span>Bevel W</span>
+            <span>Width</span>
             <input
               type="number"
               min={0}
               max={50}
-              value={bevelWidth}
-              onChange={(e) => setBevelWidth(Number(e.target.value))}
-              disabled={!bevelEnabled}
+              value={bevelTopWidth}
+              onChange={(e) => setBevelTopWidth(Number(e.target.value))}
+              disabled={!bevelTopEnabled}
             />
           </label>
           <label className="wordart-control">
-            <span>Bevel H</span>
+            <span>Height</span>
             <input
               type="number"
               min={0}
               max={50}
-              value={bevelHeight}
-              onChange={(e) => setBevelHeight(Number(e.target.value))}
-              disabled={!bevelEnabled}
+              value={bevelTopHeight}
+              onChange={(e) => setBevelTopHeight(Number(e.target.value))}
+              disabled={!bevelTopEnabled}
+            />
+          </label>
+        </div>
+        <div className="wordart-controls-group">
+          <div className="wordart-controls-title">Bevel Bottom (Back)</div>
+          <label className="wordart-control">
+            <span>Enabled</span>
+            <input type="checkbox" checked={bevelBottomEnabled} onChange={(e) => setBevelBottomEnabled(e.target.checked)} />
+          </label>
+          <label className="wordart-control">
+            <span>Preset</span>
+            <select
+              value={bevelBottomPreset}
+              onChange={(e) => setBevelBottomPreset(e.target.value as BevelPresetType)}
+              disabled={!bevelBottomEnabled}
+            >
+              <option value="relaxedInset">relaxedInset</option>
+              <option value="circle">circle</option>
+              <option value="slope">slope</option>
+              <option value="cross">cross</option>
+              <option value="angle">angle</option>
+              <option value="softRound">softRound</option>
+              <option value="convex">convex</option>
+            </select>
+          </label>
+          <label className="wordart-control">
+            <span>Width</span>
+            <input
+              type="number"
+              min={0}
+              max={50}
+              value={bevelBottomWidth}
+              onChange={(e) => setBevelBottomWidth(Number(e.target.value))}
+              disabled={!bevelBottomEnabled}
+            />
+          </label>
+          <label className="wordart-control">
+            <span>Height</span>
+            <input
+              type="number"
+              min={0}
+              max={50}
+              value={bevelBottomHeight}
+              onChange={(e) => setBevelBottomHeight(Number(e.target.value))}
+              disabled={!bevelBottomEnabled}
             />
           </label>
         </div>

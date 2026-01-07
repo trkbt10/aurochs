@@ -8,7 +8,7 @@
  */
 import { openPresentation } from "../src/pptx";
 import * as fs from "node:fs";
-import { loadPptxFileBundle } from "./lib/pptx-loader";
+import { loadPptxFile } from "./lib/pptx-loader";
 
 type GradientInfo = {
   type: "linear" | "radial" | "path" | "unknown";
@@ -151,7 +151,7 @@ async function main() {
     process.exit(1);
   }
 
-  const { cache, presentationFile } = await loadPptxFileBundle(pptxPath);
+  const { cache, presentationFile } = await loadPptxFile(pptxPath);
 
   const presentation = openPresentation(presentationFile);
   const slideCount = presentation.count;

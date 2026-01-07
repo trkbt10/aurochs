@@ -172,7 +172,7 @@ describe("Text Position Tests", () => {
         return;
       }
 
-      const presentationFile = await loadPptxFile(fullPath);
+      const { presentationFile } = await loadPptxFile(fullPath);
       const presentation = openPresentation(presentationFile);
       const slide = presentation.getSlide(PERFORMANCE_UP_SLIDE1.slideNumber);
       svg = slide.renderSVG();

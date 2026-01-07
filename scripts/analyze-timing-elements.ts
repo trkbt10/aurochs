@@ -22,7 +22,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { loadPptxFileBundle } from "./lib/pptx-loader";
+import { loadPptxFile } from "./lib/pptx-loader";
 
 /**
  * ECMA-376 Section 19.5 Animation Elements
@@ -137,7 +137,8 @@ function extractTimingElements(
  * Analyze a single PPTX file
  */
 async function analyzePptxFile(pptxPath: string): Promise<AnalysisResult> {
-  const { cache, filePaths } = await loadPptxFileBundle(pptxPath);
+  const { cache } = await loadPptxFile(pptxPath);
+  const filePaths = Array.from(cache.keys());
 
   const allOccurrences: ElementOccurrence[] = [];
   const summary: Record<string, number> = {};
