@@ -3,17 +3,21 @@
  */
 
 import { useCallback } from "react";
+import type { SlideSize, PresentationFile } from "../../../pptx/domain";
 import type { SlideLayoutAttributes, SlideLayoutType } from "../../../pptx/domain/slide";
+import type { SlideLayoutOption } from "../../../pptx/app";
 import type { EditorProps, SelectOption } from "../../types";
 import { FieldGroup, FieldRow } from "../../ui/layout";
 import { Input } from "../../ui/primitives/Input";
 import { Select } from "../../ui/primitives/Select";
-import { SearchableSelect, type SearchableSelectOption } from "../../ui/primitives/SearchableSelect";
+import { LayoutSelector } from "../../ui/primitives";
 
 export type SlideLayoutEditorProps = EditorProps<SlideLayoutAttributes> & {
   readonly layoutPath?: string;
-  readonly layoutOptions: readonly SearchableSelectOption<string>[];
+  readonly layoutOptions: readonly SlideLayoutOption[];
   readonly onLayoutChange: (layoutPath: string) => void;
+  readonly slideSize?: SlideSize;
+  readonly presentationFile?: PresentationFile;
 };
 
 type OptionalBooleanValue = "" | "true" | "false";
@@ -100,6 +104,8 @@ export function SlideLayoutEditor({
   layoutPath,
   layoutOptions,
   onLayoutChange,
+  slideSize,
+  presentationFile,
 }: SlideLayoutEditorProps) {
   const attrs = value ?? {};
 
@@ -123,11 +129,12 @@ export function SlideLayoutEditor({
   return (
     <div className={className}>
       <FieldGroup label="Layout">
-        <SearchableSelect
-          value={layoutPath ?? ""}
+        <LayoutSelector
+          value={layoutPath}
           options={layoutOptions}
-          placeholder="Select layout..."
           onChange={handleLayoutSelect}
+          slideSize={slideSize}
+          presentationFile={presentationFile}
           disabled={disabled || layoutOptions.length === 0}
         />
       </FieldGroup>

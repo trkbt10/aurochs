@@ -4,11 +4,13 @@
  * Displays property editors for slide-level settings when no shape is selected.
  */
 
+import { useCallback, type CSSProperties } from "react";
+import type { SlideSize, PresentationFile } from "../../../pptx/domain";
 import type { Background, SlideLayoutAttributes } from "../../../pptx/domain/slide";
 import { Accordion } from "../../ui/layout/Accordion";
 import type { SlideLayoutOption } from "../../../pptx/app";
-import { BackgroundEditor, SlideLayoutEditor } from "../../editors/index";
-import type { SearchableSelectOption } from "../../ui/primitives/SearchableSelect";
+import { BackgroundEditor, SlideLayoutEditor, createDefaultBackground } from "../../editors/index";
+import { Button } from "../../ui/primitives";
 
 // =============================================================================
 // Types
@@ -22,6 +24,26 @@ export type SlidePropertiesPanelProps = {
   readonly layoutOptions?: readonly SlideLayoutOption[];
   readonly onLayoutAttributesChange: (attrs: SlideLayoutAttributes) => void;
   readonly onLayoutChange: (layoutPath: string) => void;
+  readonly slideSize?: SlideSize;
+  readonly presentationFile?: PresentationFile;
+};
+
+// =============================================================================
+// Styles
+// =============================================================================
+
+const emptyBackgroundStyle: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  gap: "12px",
+  padding: "16px",
+};
+
+const emptyTextStyle: CSSProperties = {
+  textAlign: "center",
+  color: "var(--text-tertiary, #737373)",
+  fontSize: "12px",
 };
 
 // =============================================================================
@@ -33,7 +55,7 @@ export type SlidePropertiesPanelProps = {
  *
  * Displays editors for:
  * - Slide background
- * - Slide transition
+ * - Slide layout
  */
 export function SlidePropertiesPanel({
   background,
@@ -43,54 +65,122 @@ export function SlidePropertiesPanel({
   layoutOptions = [],
   onLayoutAttributesChange,
   onLayoutChange,
+  slideSize,
+  presentationFile,
 }: SlidePropertiesPanelProps) {
-  const layoutSelectOptions: SearchableSelectOption<string>[] = layoutOptions.map((option) => ({
-    value: option.value,
-    label: option.label,
-    keywords: option.keywords,
-  }));
+  const handleCreateBackground = useCallback(() => {
+    onBackgroundChange(createDefaultBackground());
+  }, [onBackgroundChange]);
+
+  const handleRemoveBackground = useCallback(() => {
+    onBackgroundChange(undefined);
+  }, [onBackgroundChange]);
 
   return (
     <>
       <Accordion title="Slide Background" defaultExpanded>
-        {background ? (
-          <BackgroundEditor value={background} onChange={onBackgroundChange} />
-        ) : (
-          <div
-            style={{
-              padding: "12px",
-              textAlign: "center",
-              color: "var(--text-tertiary, #737373)",
-              fontSize: "12px",
-            }}
-          >
-            No background set
-          </div>
-        )}
+        <BackgroundContent
+          background={background}
+          onBackgroundChange={onBackgroundChange}
+          onCreateBackground={handleCreateBackground}
+          onRemoveBackground={handleRemoveBackground}
+        />
       </Accordion>
 
       <Accordion title="Slide Layout" defaultExpanded={false}>
-        {layoutAttributes ? (
-          <SlideLayoutEditor
-            value={layoutAttributes}
-            onChange={onLayoutAttributesChange}
-            layoutPath={layoutPath}
-            layoutOptions={layoutSelectOptions}
-            onLayoutChange={onLayoutChange}
-          />
-        ) : (
-          <div
-            style={{
-              padding: "12px",
-              textAlign: "center",
-              color: "var(--text-tertiary, #737373)",
-              fontSize: "12px",
-            }}
-          >
-            No layout data available
-          </div>
-        )}
+        <LayoutContent
+          layoutAttributes={layoutAttributes}
+          layoutPath={layoutPath}
+          layoutOptions={layoutOptions}
+          onLayoutAttributesChange={onLayoutAttributesChange}
+          onLayoutChange={onLayoutChange}
+          slideSize={slideSize}
+          presentationFile={presentationFile}
+        />
       </Accordion>
     </>
   );
+}
+
+// =============================================================================
+// Subcomponents
+// =============================================================================
+
+type BackgroundContentProps = {
+  readonly background?: Background;
+  readonly onBackgroundChange: (bg: Background | undefined) => void;
+  readonly onCreateBackground: () => void;
+  readonly onRemoveBackground: () => void;
+};
+
+function BackgroundContent({
+  background,
+  onBackgroundChange,
+  onCreateBackground,
+  onRemoveBackground,
+}: BackgroundContentProps) {
+  if (background) {
+    return (
+      <>
+        <BackgroundEditor value={background} onChange={onBackgroundChange} />
+        <div style={{ padding: "8px", display: "flex", justifyContent: "flex-end" }}>
+          <Button variant="ghost" size="sm" onClick={onRemoveBackground}>
+            Remove Background
+          </Button>
+        </div>
+      </>
+    );
+  }
+  return (
+    <div style={emptyBackgroundStyle}>
+      <div style={emptyTextStyle}>
+        No background set. The slide will use the layout or master background.
+      </div>
+      <Button variant="secondary" size="sm" onClick={onCreateBackground}>
+        Set Background
+      </Button>
+    </div>
+  );
+}
+
+type LayoutContentProps = {
+  readonly layoutAttributes?: SlideLayoutAttributes;
+  readonly layoutPath?: string;
+  readonly layoutOptions: readonly SlideLayoutOption[];
+  readonly onLayoutAttributesChange: (attrs: SlideLayoutAttributes) => void;
+  readonly onLayoutChange: (layoutPath: string) => void;
+  readonly slideSize?: SlideSize;
+  readonly presentationFile?: PresentationFile;
+};
+
+const noLayoutStyle: CSSProperties = {
+  padding: "12px",
+  textAlign: "center",
+  color: "var(--text-tertiary, #737373)",
+  fontSize: "12px",
+};
+
+function LayoutContent({
+  layoutAttributes,
+  layoutPath,
+  layoutOptions,
+  onLayoutAttributesChange,
+  onLayoutChange,
+  slideSize,
+  presentationFile,
+}: LayoutContentProps) {
+  if (layoutAttributes) {
+    return (
+      <SlideLayoutEditor
+        value={layoutAttributes}
+        onChange={onLayoutAttributesChange}
+        layoutPath={layoutPath}
+        layoutOptions={layoutOptions}
+        onLayoutChange={onLayoutChange}
+        slideSize={slideSize}
+        presentationFile={presentationFile}
+      />
+    );
+  }
+  return <div style={noLayoutStyle}>No layout data available</div>;
 }

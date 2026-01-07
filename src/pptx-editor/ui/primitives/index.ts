@@ -16,3 +16,4 @@ export { Slider, type SliderProps } from "./Slider";
 export { Tabs, type TabsProps, type TabItem } from "./Tabs";
 export { ToggleButton, type ToggleButtonProps } from "./ToggleButton";
 export { Toggle, type ToggleProps } from "./Toggle";
+export { LayoutSelector, type LayoutSelectorProps } from "./LayoutSelector";

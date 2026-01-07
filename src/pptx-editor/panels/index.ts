@@ -7,6 +7,16 @@
  * - SlideThumbnailPanel: Slide navigation (left panel)
  * - CreationToolbar: Shape creation tools (toolbar)
  * - ShapeToolbar: Shape editing tools (toolbar)
+ *
+ * Right panel tabs (for pivot layout):
+ * - SelectedElementTab: Selected shape properties
+ * - SlideInfoTab: Slide background and layout
+ * - LayersTab: Layer hierarchy
+ *
+ * Inspector panels (read-only views):
+ * - AssetPanel: Embedded assets browser
+ * - LayoutInfoPanel: Layout information viewer
+ * - ThemeViewerPanel: Theme colors and fonts viewer
  */
 
 export { PropertyPanel } from "./PropertyPanel";
@@ -23,6 +33,14 @@ export type { CreationToolbarProps } from "./CreationToolbar";
 
 export { ShapeToolbar } from "./ShapeToolbar";
 export type { ShapeToolbarProps } from "./ShapeToolbar";
+
+// Right panel tabs
+export { SelectedElementTab, SlideInfoTab, LayersTab } from "./right-panel";
+export type { SelectedElementTabProps, SlideInfoTabProps, LayersTabProps } from "./right-panel";
+
+// Inspector panels
+export { AssetPanel, LayoutInfoPanel, ThemeViewerPanel } from "./inspector";
+export type { AssetPanelProps, LayoutInfoPanelProps, ThemeViewerPanelProps } from "./inspector";
 
 // Property sub-panels (internal components used by PropertyPanel)
 export { SlidePropertiesPanel } from "./property/SlidePropertiesPanel";

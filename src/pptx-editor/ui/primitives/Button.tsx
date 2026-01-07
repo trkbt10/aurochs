@@ -1,17 +1,20 @@
 /**
  * @file Button primitive component
  *
- * A minimal button component with variant support.
+ * A minimal button component with variant and size support.
  */
 
 import { type ReactNode, type CSSProperties, type MouseEvent } from "react";
 import type { ButtonVariant } from "../../types";
 import { colorTokens, radiusTokens, fontTokens } from "../design-tokens";
 
+export type ButtonSize = "sm" | "md" | "lg";
+
 export type ButtonProps = {
   readonly children: ReactNode;
   readonly onClick?: (e: MouseEvent<HTMLButtonElement>) => void;
   readonly variant?: ButtonVariant;
+  readonly size?: ButtonSize;
   readonly disabled?: boolean;
   readonly className?: string;
   readonly style?: CSSProperties;
@@ -23,8 +26,6 @@ const baseStyle: CSSProperties = {
   display: "inline-flex",
   alignItems: "center",
   justifyContent: "center",
-  padding: "6px 12px",
-  fontSize: fontTokens.size.lg,
   fontWeight: fontTokens.weight.medium,
   fontFamily: "inherit",
   borderRadius: `var(--radius-sm, ${radiusTokens.sm})`,
@@ -32,6 +33,21 @@ const baseStyle: CSSProperties = {
   cursor: "pointer",
   transition: "all 150ms ease",
   outline: "none",
+};
+
+const sizeStyles: Record<ButtonSize, CSSProperties> = {
+  sm: {
+    padding: "4px 8px",
+    fontSize: fontTokens.size.xs,
+  },
+  md: {
+    padding: "6px 12px",
+    fontSize: fontTokens.size.sm,
+  },
+  lg: {
+    padding: "8px 16px",
+    fontSize: fontTokens.size.lg,
+  },
 };
 
 const variantStyles: Record<ButtonVariant, CSSProperties> = {
@@ -56,12 +72,13 @@ const disabledStyle: CSSProperties = {
 };
 
 /**
- * Button primitive with variants.
+ * Button primitive with variants and sizes.
  */
 export function Button({
   children,
   onClick,
   variant = "secondary",
+  size = "md",
   disabled,
   className,
   style,
@@ -70,6 +87,7 @@ export function Button({
 }: ButtonProps) {
   const combinedStyle: CSSProperties = {
     ...baseStyle,
+    ...sizeStyles[size],
     ...variantStyles[variant],
     ...(disabled ? disabledStyle : {}),
     ...style,

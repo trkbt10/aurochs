@@ -25,6 +25,12 @@ export type { SlideThumbnailPreviewProps } from "./SlideThumbnailPreview";
 export { useSlideThumbnails } from "./use-slide-thumbnails";
 export type { UseSlideThumbnailsOptions, SlideThumbnailRenderer } from "./use-slide-thumbnails";
 
+export { useLayoutThumbnails } from "./use-layout-thumbnails";
+export type { UseLayoutThumbnailsOptions, LayoutThumbnailData } from "./use-layout-thumbnails";
+
+export { LayoutThumbnail } from "./LayoutThumbnail";
+export type { LayoutThumbnailProps } from "./LayoutThumbnail";
+
 export {
   createThumbnailCache,
   getCachedThumbnail,
