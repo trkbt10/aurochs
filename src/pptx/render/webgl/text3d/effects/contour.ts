@@ -4,10 +4,33 @@
  * Implements the contour (outline shell) effect for 3D extruded text.
  * Contour creates a 3D offset shell around the extruded geometry.
  *
+ * ## Implementation Approaches
+ *
+ * 1. **Shape Expansion (Correct)**: Expand 2D shape before extrusion.
+ *    Creates proper uniform contour with bevels preserved.
+ *    Use `createContourFromShapes` for this approach.
+ *
+ * 2. **Uniform Scaling (Legacy)**: Scale 3D geometry uniformly.
+ *    Distorts bevels and gives non-uniform contour width.
+ *    Kept for backwards compatibility.
+ *
+ * 3. **Normal Expansion (Approximate)**: Expand along vertex normals.
+ *    Better than scaling but still not uniform for complex geometry.
+ *
  * @see ECMA-376 Part 1, Section 20.1.5.9 (sp3d contourW/contourClr)
  */
 
 import * as THREE from "three";
+// Use Three.js independent shape expansion from bevel module
+import { expandShapesForContour } from "../geometry/bevel/shape-expansion";
+import {
+  threeShapeToShapeInput,
+  shapeInputsToThreeShapes,
+} from "../geometry/bevel/three-adapter";
+import {
+  createAsymmetricExtrudedGeometry,
+  type AsymmetricBevelConfig,
+} from "../geometry/bevel";
 
 // =============================================================================
 // Types
@@ -35,13 +58,18 @@ export type ContourConfig = {
  * We achieve this by creating a scaled copy of the geometry rendered behind
  * the main mesh with the contour color.
  *
+ * Coordinate scale factor used by the main mesh for unit conversion.
+ * Contour mesh must use the same scale to appear correctly.
+ *
  * @param geometry - Source geometry to create contour for
  * @param config - Contour configuration
+ * @param coordinateScale - Scale factor applied to main mesh (default 1/96)
  * @returns Contour mesh positioned behind the main mesh
  */
 export function createContourMesh(
   geometry: THREE.BufferGeometry,
   config: ContourConfig,
+  coordinateScale = 1 / 96,
 ): THREE.Mesh {
   // Clone geometry for contour
   const contourGeometry = geometry.clone();
@@ -67,18 +95,25 @@ export function createContourMesh(
   contourGeometry.scale(scaleFactor, scaleFactor, scaleFactor);
   contourGeometry.translate(center.x, center.y, center.z);
 
+  // Flip normals so lighting works correctly with FrontSide rendering
+  // The expanded geometry faces outward, so normals should point outward
+  contourGeometry.computeVertexNormals();
+
   // Create contour material
   const contourColor = new THREE.Color(config.color);
   const contourMaterial = new THREE.MeshStandardMaterial({
     color: contourColor,
     roughness: 0.5,
     metalness: 0.1,
-    side: THREE.BackSide, // Render back faces so it appears behind main mesh
+    side: THREE.FrontSide, // Use FrontSide for correct lighting on outer shell
   });
 
   // Create contour mesh
   const contourMesh = new THREE.Mesh(contourGeometry, contourMaterial);
   contourMesh.name = "text-contour";
+
+  // Apply same coordinate scale as main mesh
+  contourMesh.scale.set(coordinateScale, coordinateScale, coordinateScale);
 
   // Render order: contour should render before main mesh
   contourMesh.renderOrder = -1;
@@ -94,10 +129,12 @@ export function createContourMesh(
  *
  * @param geometry - Source geometry
  * @param config - Contour configuration
+ * @param coordinateScale - Scale factor applied to main mesh (default 1/96)
  */
 export function createContourMeshExpanded(
   geometry: THREE.BufferGeometry,
   config: ContourConfig,
+  coordinateScale = 1 / 96,
 ): THREE.Mesh {
   // Clone and expand geometry along normals
   const contourGeometry = geometry.clone();
@@ -108,7 +145,7 @@ export function createContourMeshExpanded(
 
   if (!positions || !normals) {
     // Fallback to scale method if normals not available
-    return createContourMesh(geometry, config);
+    return createContourMesh(geometry, config, coordinateScale);
   }
 
   // Compute normals if not present
@@ -116,8 +153,9 @@ export function createContourMeshExpanded(
   const computedNormals = contourGeometry.getAttribute("normal");
 
   // Expand vertices along normals by contour width
+  // Note: contour width is in pixels (same as geometry), no conversion needed here
   const expandedPositions = new Float32Array(positions.count * 3);
-  const contourWidth = config.width / 96; // Convert pixels to scene units
+  const contourWidth = config.width;
 
   for (let i = 0; i < positions.count; i++) {
     const px = positions.getX(i);
@@ -137,7 +175,92 @@ export function createContourMeshExpanded(
     "position",
     new THREE.BufferAttribute(expandedPositions, 3),
   );
+  // Recompute normals for expanded geometry
   contourGeometry.computeVertexNormals();
+
+  // Create contour material with FrontSide for correct lighting
+  const contourColor = new THREE.Color(config.color);
+  const contourMaterial = new THREE.MeshStandardMaterial({
+    color: contourColor,
+    roughness: 0.5,
+    metalness: 0.1,
+    side: THREE.FrontSide,
+  });
+
+  const contourMesh = new THREE.Mesh(contourGeometry, contourMaterial);
+  contourMesh.name = "text-contour-expanded";
+
+  // Apply same coordinate scale as main mesh
+  contourMesh.scale.set(coordinateScale, coordinateScale, coordinateScale);
+
+  contourMesh.renderOrder = -1;
+
+  return contourMesh;
+}
+
+// =============================================================================
+// Shape Expansion Method (Correct)
+// =============================================================================
+
+/**
+ * Configuration for shape-based contour creation.
+ */
+export type ContourFromShapesConfig = {
+  /** Contour width in pixels */
+  readonly width: number;
+  /** Contour color (hex string) */
+  readonly color: string;
+  /** Extrusion depth (must match main geometry) */
+  readonly extrusionDepth: number;
+  /** Bevel configuration (must match main geometry) */
+  readonly bevel?: AsymmetricBevelConfig;
+};
+
+/**
+ * Create contour geometry by expanding 2D shapes before extrusion.
+ *
+ * This is the CORRECT method for creating contours with beveled geometry.
+ * It expands the 2D shape outline by contourWidth, then extrudes with
+ * the same bevel configuration as the main geometry.
+ *
+ * Uses Three.js independent shape expansion from bevel/shape-expansion.ts.
+ *
+ * Result: A shell that uniformly surrounds the original geometry with
+ * consistent contour width on all surfaces including bevels.
+ *
+ * @param shapes - Original shapes (same as used for main geometry)
+ * @param config - Contour configuration
+ * @param coordinateScale - Scale factor for rendering
+ * @returns Contour mesh ready for rendering
+ */
+export function createContourFromShapes(
+  shapes: THREE.Shape[],
+  config: ContourFromShapesConfig,
+  coordinateScale = 1 / 96,
+): THREE.Mesh {
+  // Convert THREE.Shape to Three.js independent ShapeInput
+  const shapeInputs = shapes.map((s) => threeShapeToShapeInput(s));
+
+  // Expand shapes using Three.js independent implementation
+  const expandedInputs = expandShapesForContour(shapeInputs, config.width);
+
+  if (expandedInputs.length === 0) {
+    // Fallback: return empty mesh
+    return new THREE.Mesh(
+      new THREE.BufferGeometry(),
+      new THREE.MeshBasicMaterial(),
+    );
+  }
+
+  // Convert back to THREE.Shape for extrusion
+  const expandedShapes = shapeInputsToThreeShapes(expandedInputs);
+
+  // Create extruded geometry with same bevel as main geometry
+  const contourGeometry = createAsymmetricExtrudedGeometry(
+    expandedShapes,
+    config.extrusionDepth,
+    config.bevel ?? {},
+  );
 
   // Create contour material
   const contourColor = new THREE.Color(config.color);
@@ -145,11 +268,17 @@ export function createContourMeshExpanded(
     color: contourColor,
     roughness: 0.5,
     metalness: 0.1,
-    side: THREE.BackSide,
+    side: THREE.FrontSide,
   });
 
+  // Create contour mesh
   const contourMesh = new THREE.Mesh(contourGeometry, contourMaterial);
-  contourMesh.name = "text-contour-expanded";
+  contourMesh.name = "text-contour-shape-expanded";
+
+  // Apply coordinate scale
+  contourMesh.scale.set(coordinateScale, coordinateScale, coordinateScale);
+
+  // Render order: contour should render before main mesh
   contourMesh.renderOrder = -1;
 
   return contourMesh;

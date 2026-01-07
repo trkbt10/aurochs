@@ -13,9 +13,11 @@ import type { PositionedSpan } from "../../../text-layout/types";
 import { createCameraConfig, createCamera, type CameraConfig } from "../scene/camera";
 import { createLightingConfig, addLightsToScene } from "../scene/lighting";
 import { createMaterialFromFill, type Material3DFill } from "../scene/materials";
-import { createTextGeometryAsync } from "../geometry/from-contours-async";
+import { createTextGeometryWithShapesAsync, type TextGeometryResult } from "../geometry/from-contours-async";
 import { applyTextWarp } from "../geometry/text-warp";
 import type { TextWarp } from "../../../../domain/text";
+// Color resolution (shared with React renderer)
+import { resolveColor } from "../../../core/drawing-ml";
 // Effects imports
 import {
   applyAllEffects,
@@ -385,41 +387,80 @@ type MeshBuildConfig = {
 };
 
 /**
+ * Minimum visible extrusion depth in pixels.
+ *
+ * ECMA-376 default for extrusionH is 0 (flat text).
+ * THREE.js ExtrudeGeometry requires positive depth.
+ */
+const MIN_VISIBLE_EXTRUSION = 1;
+
+/**
  * Calculate extrusion depth from config or use default based on font size.
+ *
+ * ECMA-376 default for extrusionH is 0 (flat text).
+ * When not specified, we derive a visible default from the maximum font size.
+ *
+ * @param config - Render configuration
+ * @returns Extrusion depth in pixels (minimum 1)
  */
 function getExtrusionDepth(config: Text3DRenderConfig): number {
-  if (config.shape3d?.extrusionHeight) {
-    const depth = config.shape3d.extrusionHeight as number;
-    console.log("[3D Text] getExtrusionDepth - using provided:", depth);
-    return depth;
+  // Use provided extrusion height if available
+  if (config.shape3d?.extrusionHeight !== undefined) {
+    const height = config.shape3d.extrusionHeight as number;
+    // ECMA-376 default of 0 means flat - but we need minimum for 3D
+    return Math.max(height, MIN_VISIBLE_EXTRUSION);
   }
-  const baseFontSize = config.runs[0]?.fontSize ?? 24;
-  const defaultDepth = baseFontSize * 0.2;
-  console.log("[3D Text] getExtrusionDepth - using default:", defaultDepth);
-  return defaultDepth;
+
+  // Default: derive from maximum font size across all runs
+  // Using max ensures visibility for mixed-size text
+  const maxFontSize = config.runs.reduce((max, run) => {
+    const fontSize = run.fontSize as number;
+    return Math.max(max, fontSize);
+  }, 0);
+
+  // If no runs or all have 0 font size, use reasonable default
+  if (maxFontSize <= 0) {
+    return MIN_VISIBLE_EXTRUSION;
+  }
+
+  // 20% of max font size provides visible depth without overwhelming
+  return Math.max(maxFontSize * 0.2, MIN_VISIBLE_EXTRUSION);
 }
 
 /**
+ * Default contour color (ECMA-376 default is black).
+ * @see ECMA-376 Part 1, Section 20.1.5.9 (sp3d contourClr)
+ */
+const DEFAULT_CONTOUR_COLOR = "#000000";
+
+/**
  * Extract contour configuration from shape3d if available.
+ *
+ * Uses shared color resolution from render/core/drawing-ml to properly
+ * handle all ECMA-376 color types (srgb, scheme, hsl, etc.).
+ *
+ * @param shape3d - Shape 3D properties
+ * @returns Contour configuration or undefined if not applicable
+ *
+ * @see ECMA-376 Part 1, Section 20.1.5.9 (sp3d contourW/contourClr)
  */
 function getContourConfig(shape3d: Shape3d | undefined): ContourConfig | undefined {
   if (!shape3d?.contourWidth || shape3d.contourWidth <= 0) {
     return undefined;
   }
 
-  // Extract color from contourColor (which is a SolidFill)
-  // Default to black if no color specified
-  let color = "#000000";
+  // Resolve color using shared color resolution
+  // This properly handles all ECMA-376 color types (srgb, scheme, hsl, etc.)
+  let color = DEFAULT_CONTOUR_COLOR;
   if (shape3d.contourColor?.type === "solidFill" && shape3d.contourColor.color) {
-    const colorSpec = shape3d.contourColor.color.spec;
-    // Handle srgb color type
-    if (colorSpec.type === "srgb") {
-      color = `#${colorSpec.value}`;
+    const resolved = resolveColor(shape3d.contourColor.color);
+    if (resolved) {
+      color = `#${resolved}`;
     }
   }
 
   return {
-    width: shape3d.contourWidth,
+    width: shape3d.contourWidth as number,
     color,
   };
 }
@@ -450,14 +491,16 @@ function getMeshBuildConfig(config: Text3DRenderConfig): MeshBuildConfig {
 const COORDINATE_SCALE = 1 / 96;
 
 /**
- * Process a single run with its geometry, adding mesh to group.
+ * Process a single run with its geometry result, adding mesh to group.
  */
 function processRunWithGeometry(
   group: THREE.Group,
   run: Text3DRunConfig,
-  geometry: THREE.BufferGeometry,
+  geometryResult: TextGeometryResult,
   buildConfig: MeshBuildConfig,
 ): void {
+  const { geometry, shapes, bevelConfig, extrusionDepth } = geometryResult;
+
   // Apply text warp if configured
   if (buildConfig.textWarp) {
     applyTextWarp(geometry, buildConfig.textWarp);
@@ -476,6 +519,7 @@ function processRunWithGeometry(
 
   // Apply all effects to mesh
   // Contour comes from shape3d (shape-level), other effects from run (run-level)
+  // Pass shapes for proper shape-based contour generation
   applyAllEffects(group, mesh, geometry, material, {
     contour: buildConfig.contour,
     outline: run.outline,
@@ -483,6 +527,10 @@ function processRunWithGeometry(
     glow: run.glow,
     reflection: run.reflection,
     softEdge: run.softEdge,
+  }, {
+    shapes: shapes as THREE.Shape[],
+    bevelConfig,
+    extrusionDepth,
   });
 }
 
@@ -528,15 +576,16 @@ function centerGroup(group: THREE.Group): void {
 
 /**
  * Create geometry for a run asynchronously, returns null for empty text.
+ * Returns full result including shapes for contour generation.
  */
 function createGeometryForRunAsync(
   run: Text3DRunConfig,
   buildConfig: MeshBuildConfig,
-): Promise<THREE.BufferGeometry | null> {
+): Promise<TextGeometryResult | null> {
   if (run.text.length === 0) {
     return Promise.resolve(null);
   }
-  return createTextGeometryAsync({
+  return createTextGeometryWithShapesAsync({
     text: run.text,
     fontFamily: run.fontFamily,
     fontSize: run.fontSize,

@@ -196,25 +196,160 @@ export function createDropShadowMesh(
 /**
  * Create an inner shadow effect (shadow inside the shape).
  *
- * Inner shadows are more complex in 3D and typically require
- * shader-based approaches.
+ * Inner shadows in 3D are implemented using an inverted geometry approach:
+ * 1. Clone the geometry and flip normals
+ * 2. Create a slightly inset version
+ * 3. Apply gradient-based shadow material
  *
  * @param geometry - Source geometry
  * @param config - Shadow configuration
+ * @see ECMA-376 Part 1, Section 20.1.8.40 (innerShdw)
  */
 export function createInnerShadowMesh(
   geometry: THREE.BufferGeometry,
   config: ShadowConfig,
-): THREE.Mesh | null {
-  // Inner shadows in 3D are complex and typically require:
-  // 1. Inverted normals
-  // 2. Custom shaders
-  // 3. Screen-space effects
+): THREE.Mesh {
+  // Clone geometry
+  const shadowGeometry = geometry.clone();
 
-  // For now, return null - inner shadows would be implemented
-  // as a post-processing effect
-  console.warn("[3D Shadow] Inner shadows not yet implemented for 3D");
-  return null;
+  // Flip normals for inside-facing rendering
+  const normalAttr = shadowGeometry.getAttribute("normal");
+  if (normalAttr) {
+    const normals = normalAttr.array as Float32Array;
+    for (let i = 0; i < normals.length; i++) {
+      normals[i] *= -1;
+    }
+    normalAttr.needsUpdate = true;
+  }
+
+  // Flip face winding
+  const indexAttr = shadowGeometry.getIndex();
+  if (indexAttr) {
+    const indices = indexAttr.array as Uint16Array | Uint32Array;
+    for (let i = 0; i < indices.length; i += 3) {
+      // Swap second and third vertices to flip winding
+      const tmp = indices[i + 1];
+      indices[i + 1] = indices[i + 2];
+      indices[i + 2] = tmp;
+    }
+    indexAttr.needsUpdate = true;
+  }
+
+  // Parse color
+  const color = new THREE.Color(config.color);
+  const opacity = config.opacity ?? 0.5;
+
+  // Create inner shadow material
+  // Uses transparency and back-face rendering to create inner shadow effect
+  const shadowMaterial = new THREE.MeshBasicMaterial({
+    color: color,
+    transparent: true,
+    opacity: opacity,
+    side: THREE.BackSide,
+    depthWrite: false,
+    blending: THREE.MultiplyBlending,
+  });
+
+  // Create mesh
+  const shadowMesh = new THREE.Mesh(shadowGeometry, shadowMaterial);
+  shadowMesh.name = "text-inner-shadow";
+
+  // Position based on direction and distance
+  const angleRad = (config.direction * Math.PI) / 180;
+  const normalizedDist = config.distance * COORDINATE_SCALE * 0.3; // Smaller offset for inner
+
+  shadowMesh.position.set(
+    Math.cos(angleRad) * normalizedDist,
+    -Math.sin(angleRad) * normalizedDist,
+    0,
+  );
+
+  // Slight scale down to create inset effect
+  const insetScale = 1 - config.blurRadius * COORDINATE_SCALE * 0.1;
+  shadowMesh.scale.setScalar(Math.max(0.9, insetScale));
+
+  return shadowMesh;
+}
+
+/**
+ * Create an inner shadow using shader-based approach.
+ *
+ * This provides more accurate inner shadows using custom shaders
+ * that calculate shadow based on depth and normals.
+ *
+ * @param geometry - Source geometry
+ * @param config - Shadow configuration
+ * @see ECMA-376 Part 1, Section 20.1.8.40 (innerShdw)
+ */
+export function createInnerShadowShader(
+  geometry: THREE.BufferGeometry,
+  config: ShadowConfig,
+): THREE.Mesh {
+  const color = new THREE.Color(config.color);
+  const opacity = config.opacity ?? 0.5;
+
+  // Custom shader for inner shadow
+  const innerShadowShader = {
+    uniforms: {
+      shadowColor: { value: color },
+      shadowOpacity: { value: opacity },
+      shadowDirection: {
+        value: new THREE.Vector2(
+          Math.cos((config.direction * Math.PI) / 180),
+          -Math.sin((config.direction * Math.PI) / 180),
+        ),
+      },
+      shadowDistance: { value: config.distance * COORDINATE_SCALE },
+      shadowBlur: { value: config.blurRadius * COORDINATE_SCALE },
+    },
+    vertexShader: `
+      varying vec3 vNormal;
+      varying vec3 vPosition;
+
+      void main() {
+        vNormal = normalize(normalMatrix * normal);
+        vPosition = (modelViewMatrix * vec4(position, 1.0)).xyz;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: `
+      uniform vec3 shadowColor;
+      uniform float shadowOpacity;
+      uniform vec2 shadowDirection;
+      uniform float shadowDistance;
+      uniform float shadowBlur;
+
+      varying vec3 vNormal;
+      varying vec3 vPosition;
+
+      void main() {
+        // Calculate shadow intensity based on normal direction
+        vec3 lightDir = normalize(vec3(shadowDirection, 0.5));
+        float intensity = max(0.0, -dot(vNormal, lightDir));
+
+        // Apply blur falloff
+        float falloff = smoothstep(0.0, shadowBlur, intensity * shadowDistance);
+
+        // Apply shadow
+        float alpha = falloff * shadowOpacity;
+        gl_FragColor = vec4(shadowColor, alpha);
+      }
+    `,
+  };
+
+  const material = new THREE.ShaderMaterial({
+    uniforms: innerShadowShader.uniforms,
+    vertexShader: innerShadowShader.vertexShader,
+    fragmentShader: innerShadowShader.fragmentShader,
+    transparent: true,
+    depthWrite: false,
+    side: THREE.FrontSide,
+  });
+
+  const mesh = new THREE.Mesh(geometry.clone(), material);
+  mesh.name = "text-inner-shadow-shader";
+
+  return mesh;
 }
 
 // =============================================================================

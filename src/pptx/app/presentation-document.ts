@@ -65,4 +65,10 @@ export type PresentationDocument = {
    * Used to build SlideRenderContext for proper rendering after edits.
    */
   readonly presentationFile?: PresentationFile;
+
+  /**
+   * List of all file paths in the PPTX archive.
+   * Used for asset listing and resource enumeration.
+   */
+  readonly filePaths?: readonly string[];
 };

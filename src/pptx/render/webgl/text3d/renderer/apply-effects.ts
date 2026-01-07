@@ -10,8 +10,11 @@
 import * as THREE from "three";
 import {
   createContourMesh,
+  createContourFromShapes,
   type ContourConfig,
+  type ContourFromShapesConfig,
 } from "../effects/contour";
+import type { AsymmetricBevelConfig } from "../geometry/bevel";
 import {
   createBackFaceOutline,
   type OutlineConfig,
@@ -36,6 +39,12 @@ import {
 // =============================================================================
 // Types
 // =============================================================================
+
+/**
+ * Coordinate scale for converting pixels to scene units.
+ * Matches COORDINATE_SCALE in core.ts.
+ */
+const COORDINATE_SCALE = 1 / 96;
 
 /**
  * Effects configuration for a text run
@@ -66,19 +75,54 @@ export type AppliedEffects = {
   readonly reflectionMesh?: THREE.Mesh;
 };
 
+/**
+ * Shape context for shape-based contour generation.
+ * When provided, uses accurate shape expansion method instead of scaling.
+ */
+export type ShapeContext = {
+  /** Original shapes used to create the geometry */
+  readonly shapes: THREE.Shape[];
+  /** Bevel configuration used for the geometry */
+  readonly bevelConfig: AsymmetricBevelConfig;
+  /** Extrusion depth used for the geometry */
+  readonly extrusionDepth: number;
+};
+
 // =============================================================================
 // Effect Application Functions
 // =============================================================================
 
 /**
  * Create contour mesh (3D shell around extruded shape)
+ *
+ * When shapeContext is provided, uses accurate shape expansion method.
+ * Otherwise falls back to scaling method (less accurate but works without shapes).
  */
 export function createContour(
   geometry: THREE.BufferGeometry,
   config: ContourConfig,
   position: THREE.Vector3,
+  shapeContext?: ShapeContext,
 ): THREE.Mesh {
-  const contourMesh = createContourMesh(geometry, config);
+  // Use shape-based contour when shapes are available (more accurate)
+  if (shapeContext && shapeContext.shapes.length > 0) {
+    const shapeConfig: ContourFromShapesConfig = {
+      width: config.width,
+      color: config.color,
+      extrusionDepth: shapeContext.extrusionDepth,
+      bevel: shapeContext.bevelConfig,
+    };
+    const contourMesh = createContourFromShapes(
+      shapeContext.shapes,
+      shapeConfig,
+      COORDINATE_SCALE,
+    );
+    contourMesh.position.copy(position);
+    return contourMesh;
+  }
+
+  // Fallback to scaling method (less accurate but works without shapes)
+  const contourMesh = createContourMesh(geometry, config, COORDINATE_SCALE);
   contourMesh.position.copy(position);
   return contourMesh;
 }
@@ -175,6 +219,7 @@ export function createReflection(
  * @param geometry - Text geometry
  * @param material - Text material
  * @param effects - Effect configurations
+ * @param shapeContext - Optional shape context for accurate contour generation
  * @returns Applied effect objects for later manipulation
  */
 export function applyAllEffects(
@@ -183,6 +228,7 @@ export function applyAllEffects(
   geometry: THREE.BufferGeometry,
   material: THREE.Material,
   effects: TextRunEffects,
+  shapeContext?: ShapeContext,
 ): AppliedEffects {
   const result: AppliedEffects = {};
 
@@ -193,8 +239,9 @@ export function applyAllEffects(
 
   // Apply contour BEFORE main mesh (renders behind)
   // Contour is the 3D shell around the extruded shape (ECMA-376 sp3d contourW)
+  // Use shape-based contour when shapeContext is available (more accurate)
   if (effects.contour && effects.contour.width > 0) {
-    const contourMesh = createContour(geometry, effects.contour, mesh.position);
+    const contourMesh = createContour(geometry, effects.contour, mesh.position, shapeContext);
     group.add(contourMesh);
     (result as { contourMesh: THREE.Mesh }).contourMesh = contourMesh;
   }

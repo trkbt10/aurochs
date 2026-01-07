@@ -8,12 +8,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as THREE from "three";
 import type { TextLayoutResult, ContourPath } from "../../../glyph";
 
+// Mock only the glyph module for layoutTextAsync
+// Note: Do NOT mock ./bevel - it causes test isolation issues
 vi.mock("../../../glyph", () => ({
   layoutTextAsync: vi.fn(),
-}));
-
-vi.mock("./bevel", () => ({
-  getBevelConfig: vi.fn(() => undefined),
 }));
 
 import { layoutTextAsync } from "../../../glyph";

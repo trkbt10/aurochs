@@ -91,7 +91,7 @@ describe("contour", () => {
       expect(material.color.getHexString().toUpperCase()).toBe("FF5500");
     });
 
-    it("should use BackSide rendering", () => {
+    it("should use FrontSide rendering for correct lighting", () => {
       const geometry = createTestGeometry();
       const config: ContourConfig = {
         width: 5,
@@ -101,7 +101,24 @@ describe("contour", () => {
       const contourMesh = createContourMesh(geometry, config);
       const material = contourMesh.material as THREE.MeshStandardMaterial;
 
-      expect(material.side).toBe(THREE.BackSide);
+      // FrontSide ensures proper lighting on the expanded outer shell
+      expect(material.side).toBe(THREE.FrontSide);
+    });
+
+    it("should apply coordinate scale to mesh", () => {
+      const geometry = createTestGeometry();
+      const config: ContourConfig = {
+        width: 5,
+        color: "#FFFFFF",
+      };
+
+      const contourMesh = createContourMesh(geometry, config);
+
+      // Default coordinate scale is 1/96
+      const expectedScale = 1 / 96;
+      expect(contourMesh.scale.x).toBeCloseTo(expectedScale, 6);
+      expect(contourMesh.scale.y).toBeCloseTo(expectedScale, 6);
+      expect(contourMesh.scale.z).toBeCloseTo(expectedScale, 6);
     });
 
     it("should handle zero width (no scaling)", () => {

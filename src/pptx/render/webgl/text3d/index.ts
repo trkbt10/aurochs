@@ -76,9 +76,49 @@ export {
   clearGradientTextureCache,
 } from "./scene/gradient-texture";
 
+// Scene - Backdrop
+export {
+  createBackdropMesh,
+  createDefaultBackdrop,
+  createGradientBackdrop,
+  createBackdropFromDomain,
+  updateBackdropColor,
+  updateBackdropOpacity,
+  updateBackdropPosition,
+  disposeBackdrop,
+  addBackdropToScene,
+} from "./scene/backdrop";
+export type { BackdropConfig, BackdropState } from "./scene/backdrop";
+
 // Geometry - Bevel config
 export { getBevelConfig } from "./geometry/bevel";
 export type { BevelConfig } from "./geometry/bevel";
+
+// Geometry - Custom Bevel (ECMA-376 compliant)
+// High-level Three.js API
+export { createCustomBevelGeometry } from "./geometry/custom-bevel";
+
+// Re-exports from Three.js independent bevel module
+export {
+  getBevelProfile,
+  BEVEL_PROFILES,
+} from "./geometry/custom-bevel";
+export type { BevelProfile, BevelProfilePoint } from "./geometry/custom-bevel";
+
+// Three.js independent bevel types (for advanced usage)
+// Import from bevel/index to get the Three.js independent module
+export type {
+  BevelPath,
+  BevelPathPoint,
+  BevelGeometryData,
+  BevelMeshConfig,
+  ShapeInput,
+} from "./geometry/bevel/index";
+export {
+  extractBevelPathsFromShape,
+  generateBevelMesh,
+  mergeBevelGeometries,
+} from "./geometry/bevel/index";
 
 // Geometry - Text Warp
 export {
@@ -90,6 +130,10 @@ export {
 // Geometry - From contours
 export { createTextGeometryAsync, mergeExtrudeGeometries, scaleGeometryToFit } from "./geometry/from-contours-async";
 export type { TextGeometryConfig } from "./geometry/from-contours-async";
+
+// Geometry - Unified merge (NEW)
+export { mergeBufferGeometries, mergeExtrudeGeometriesLegacy } from "./geometry/merge-geometries";
+export type { MergeGeometriesOptions } from "./geometry/merge-geometries";
 
 // Effects
 export {
@@ -106,6 +150,7 @@ export {
   createShadowLight,
   createDropShadowMesh,
   createInnerShadowMesh,
+  createInnerShadowShader,
   enableMeshShadows,
   enableGroupShadows,
   createShadowPlane,
@@ -134,6 +179,18 @@ export {
   updateSoftEdgeRadius,
   removeSoftEdge,
   disposeSoftEdge,
+  // Soft Edge Post-Processing
+  createSoftEdgeComposer,
+  applySoftEdgePostProcess,
+  updateSoftEdgePostProcessRadius,
+  resizeSoftEdgePostProcess,
+  createMeshSoftEdgeEffect,
+  isSoftEdgePostProcessSupported,
+  // Contour
+  createContourMesh,
+  createContourMeshExpanded,
+  updateContourColor,
+  disposeContour,
 } from "./effects";
 export type {
   OutlineConfig,
@@ -143,6 +200,9 @@ export type {
   ReflectionConfig,
   SoftEdgeConfig,
   BlurPassConfig,
+  SoftEdgePostProcessConfig,
+  SoftEdgeComposerState,
+  ContourConfig,
 } from "./effects";
 
 // Re-export glyph module types for convenience

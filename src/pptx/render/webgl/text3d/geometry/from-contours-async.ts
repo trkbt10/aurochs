@@ -7,8 +7,13 @@
 import * as THREE from "three";
 import type { ContourPath } from "../../../glyph";
 import { layoutTextAsync } from "../../../glyph";
-import { getBevelConfig, createAsymmetricExtrudedGeometry, type AsymmetricBevelConfig } from "./bevel";
+import { getBevelConfig, type AsymmetricBevelConfig } from "./bevel";
+import { mergeExtrudeGeometriesLegacy } from "./merge-geometries";
 import type { Bevel3d } from "../../../../domain/three-d";
+import {
+  createExtrudedGeometryWithBevel,
+  type AsymmetricBevelSpec,
+} from "./bevel/three-adapter";
 
 // =============================================================================
 // Types
@@ -30,6 +35,21 @@ export type TextGeometryConfig = {
   readonly opticalKerning?: boolean;
 };
 
+/**
+ * Result of text geometry creation.
+ * Includes shapes for contour generation.
+ */
+export type TextGeometryResult = {
+  /** The extruded geometry */
+  readonly geometry: THREE.ExtrudeGeometry;
+  /** Original shapes used to create geometry (needed for shape-based contour) */
+  readonly shapes: readonly THREE.Shape[];
+  /** Bevel configuration used */
+  readonly bevelConfig: AsymmetricBevelConfig;
+  /** Extrusion depth used */
+  readonly extrusionDepth: number;
+};
+
 // =============================================================================
 // Main API
 // =============================================================================
@@ -42,11 +62,14 @@ function createEmptyGeometry(): THREE.ExtrudeGeometry {
 }
 
 /**
- * Generate extruded geometry from text (async - uses Web Worker)
+ * Generate extruded geometry from text with full result (async - uses Web Worker).
+ *
+ * Returns geometry along with shapes and configuration needed for contour creation.
+ * Use this when you need shape-based contour generation.
  */
-export async function createTextGeometryAsync(
+export async function createTextGeometryWithShapesAsync(
   config: TextGeometryConfig,
-): Promise<THREE.ExtrudeGeometry> {
+): Promise<TextGeometryResult> {
   // Layout text using worker
   const layout = await layoutTextAsync(config.text, {
     fontFamily: config.fontFamily,
@@ -58,9 +81,20 @@ export async function createTextGeometryAsync(
     opticalKerning: config.opticalKerning,
   });
 
+  const extrusionDepth = Math.max(config.extrusionDepth, 1);
+
   if (!layout?.combinedPaths?.length) {
     if (config.text.trim().length === 0) {
-      return createEmptyGeometry();
+      const bevelConfig: AsymmetricBevelConfig = {
+        top: getBevelConfig(config.bevelTop),
+        bottom: getBevelConfig(config.bevelBottom),
+      };
+      return {
+        geometry: createEmptyGeometry(),
+        shapes: [],
+        bevelConfig,
+        extrusionDepth,
+      };
     }
     throw new Error("No contour paths were generated for non-empty text.");
   }
@@ -78,22 +112,59 @@ export async function createTextGeometryAsync(
   }
 
   // Get asymmetric bevel configuration (ECMA-376 bevelT/bevelB)
+  // Old config type kept for backward compatibility in result
   const bevelConfig: AsymmetricBevelConfig = {
     top: getBevelConfig(config.bevelTop),
     bottom: getBevelConfig(config.bevelBottom),
   };
 
-  // Create geometry with asymmetric bevel support
-  const geometry = createAsymmetricExtrudedGeometry(
+  // Bevel spec for Three.js independent core
+  const bevelSpec: AsymmetricBevelSpec = {
+    top: config.bevelTop
+      ? {
+          width: config.bevelTop.width as number,
+          height: config.bevelTop.height as number,
+          preset: config.bevelTop.preset,
+        }
+      : undefined,
+    bottom: config.bevelBottom
+      ? {
+          width: config.bevelBottom.width as number,
+          height: config.bevelBottom.height as number,
+          preset: config.bevelBottom.preset,
+        }
+      : undefined,
+  };
+
+  // Create geometry using Three.js independent core
+  // Caps are omitted when bevels are present to prevent z-fighting
+  const geometry = createExtrudedGeometryWithBevel(
     validShapes,
-    Math.max(config.extrusionDepth, 1),
-    bevelConfig,
+    extrusionDepth,
+    bevelSpec,
   ) as THREE.ExtrudeGeometry;
 
   // Normalize UV coordinates to 0-1 range for proper texture mapping
   normalizeUVs(geometry);
 
-  return geometry;
+  return {
+    geometry,
+    shapes: validShapes,
+    bevelConfig,
+    extrusionDepth,
+  };
+}
+
+/**
+ * Generate extruded geometry from text (async - uses Web Worker)
+ *
+ * @deprecated Use `createTextGeometryWithShapesAsync` for new code that needs contour support.
+ */
+export async function createTextGeometryAsync(
+  config: TextGeometryConfig,
+): Promise<THREE.ExtrudeGeometry> {
+  const result = await createTextGeometryWithShapesAsync(config);
+  return result.geometry;
 }
 
 /**
@@ -315,59 +386,21 @@ function isPointInPolygon(
 // Geometry Merging
 // =============================================================================
 
+/**
+ * Merge two ExtrudeGeometry instances.
+ *
+ * @deprecated Use `mergeBufferGeometries` from "./merge-geometries" for new code.
+ * This function exists for backward compatibility.
+ *
+ * @param geomA - First geometry (preserved)
+ * @param geomB - Second geometry (will be disposed)
+ * @returns Merged ExtrudeGeometry
+ */
 export function mergeExtrudeGeometries(
   geomA: THREE.ExtrudeGeometry,
   geomB: THREE.ExtrudeGeometry,
 ): THREE.ExtrudeGeometry {
-  const posA = geomA.attributes.position;
-  const posB = geomB.attributes.position;
-  const normalA = geomA.attributes.normal;
-  const normalB = geomB.attributes.normal;
-  const uvA = geomA.attributes.uv;
-  const uvB = geomB.attributes.uv;
-
-  const mergedPositions = new Float32Array(posA.count * 3 + posB.count * 3);
-  mergedPositions.set(posA.array as Float32Array, 0);
-  mergedPositions.set(posB.array as Float32Array, posA.count * 3);
-
-  const mergedNormals = new Float32Array(normalA.count * 3 + normalB.count * 3);
-  mergedNormals.set(normalA.array as Float32Array, 0);
-  mergedNormals.set(normalB.array as Float32Array, normalA.count * 3);
-
-  const mergedUvs = uvA && uvB
-    ? new Float32Array(uvA.count * 2 + uvB.count * 2)
-    : null;
-
-  if (mergedUvs && uvA && uvB) {
-    mergedUvs.set(uvA.array as Float32Array, 0);
-    mergedUvs.set(uvB.array as Float32Array, uvA.count * 2);
-  }
-
-  const indexA = geomA.index;
-  const indexB = geomB.index;
-  let mergedIndices: number[] = [];
-
-  if (indexA && indexB) {
-    mergedIndices = [...(indexA.array as Uint16Array | Uint32Array)];
-    for (let i = 0; i < indexB.count; i++) {
-      mergedIndices.push((indexB.array as Uint16Array | Uint32Array)[i] + posA.count);
-    }
-  }
-
-  const merged = new THREE.ExtrudeGeometry();
-  merged.setAttribute("position", new THREE.BufferAttribute(mergedPositions, 3));
-  merged.setAttribute("normal", new THREE.BufferAttribute(mergedNormals, 3));
-  if (mergedUvs) {
-    merged.setAttribute("uv", new THREE.BufferAttribute(mergedUvs, 2));
-  } else {
-    merged.deleteAttribute("uv");
-  }
-  if (mergedIndices.length > 0) {
-    merged.setIndex(mergedIndices);
-  }
-
-  geomB.dispose();
-  return merged;
+  return mergeExtrudeGeometriesLegacy(geomA, geomB);
 }
 
 // =============================================================================

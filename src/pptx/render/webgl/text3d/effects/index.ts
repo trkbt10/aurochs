@@ -35,6 +35,7 @@ export {
   createShadowLight,
   createDropShadowMesh,
   createInnerShadowMesh,
+  createInnerShadowShader,
   enableMeshShadows,
   enableGroupShadows,
   createShadowPlane,
@@ -86,3 +87,33 @@ export {
   disposeSoftEdge,
 } from "./soft-edge";
 export type { SoftEdgeConfig, BlurPassConfig } from "./soft-edge";
+
+// =============================================================================
+// Soft Edge Post-Processing
+// =============================================================================
+
+export {
+  createSoftEdgeComposer,
+  applySoftEdgePostProcess,
+  updateSoftEdgePostProcessRadius,
+  resizeSoftEdgePostProcess,
+  createMeshSoftEdgeEffect,
+  isSoftEdgePostProcessSupported,
+} from "./soft-edge-postprocess";
+export type {
+  SoftEdgePostProcessConfig,
+  SoftEdgeComposerState,
+} from "./soft-edge-postprocess";
+
+// =============================================================================
+// Contour
+// =============================================================================
+
+export {
+  createContourMesh,
+  createContourMeshExpanded,
+  createContourFromShapes,
+  updateContourColor,
+  disposeContour,
+} from "./contour";
+export type { ContourConfig, ContourFromShapesConfig } from "./contour";
