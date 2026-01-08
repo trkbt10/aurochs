@@ -7,9 +7,10 @@
  * @see ECMA-376 Part 1, Section 20.1.8 (Fill Properties)
  */
 
-import type { Color, Fill, Line, PatternType } from "../color";
+import type { Color, Fill, Line, PatternType, BlipFill } from "../color";
 import { resolveColor } from "./color";
 import type { ColorContext } from "../resolution";
+import type { ResourceResolverFn } from "../resource-resolver";
 
 // =============================================================================
 // Color Utilities
@@ -135,9 +136,57 @@ export type ResolvedFill =
   | { readonly type: "unresolved"; readonly originalType: Fill["type"] };
 
 /**
- * Resolve a domain Fill to format-agnostic representation
+ * Resolve a blipFill to an image fill using the provided resource resolver.
+ *
+ * This function handles the resolution of blipFill (image fill) which can be:
+ * 1. Already a data URL (pre-resolved during parsing)
+ * 2. A relationship ID that needs to be resolved via resourceResolver
+ *
+ * @param fill - BlipFill to resolve
+ * @param resourceResolver - Function to resolve relationship ID to data URL
+ * @returns ResolvedImageFill or undefined if resolution fails
  */
-export function resolveFill(fill: Fill, colorContext?: ColorContext): ResolvedFill {
+export function resolveBlipFill(
+  fill: BlipFill,
+  resourceResolver?: ResourceResolverFn,
+): ResolvedImageFill | undefined {
+  // If resourceId is already a data URL, use it directly
+  if (fill.resourceId.startsWith("data:")) {
+    return {
+      type: "image",
+      src: fill.resourceId,
+      mode: fill.tile ? "tile" : "stretch",
+    };
+  }
+
+  // Try to resolve using the provided resolver
+  if (resourceResolver !== undefined) {
+    const resolvedSrc = resourceResolver(fill.resourceId);
+    if (resolvedSrc !== undefined) {
+      return {
+        type: "image",
+        src: resolvedSrc,
+        mode: fill.tile ? "tile" : "stretch",
+      };
+    }
+  }
+
+  // Cannot resolve
+  return undefined;
+}
+
+/**
+ * Resolve a domain Fill to format-agnostic representation
+ *
+ * @param fill - Fill to resolve
+ * @param colorContext - Color context for theme/scheme color resolution
+ * @param resourceResolver - Optional resource resolver for blipFill resolution
+ */
+export function resolveFill(
+  fill: Fill,
+  colorContext?: ColorContext,
+  resourceResolver?: ResourceResolverFn,
+): ResolvedFill {
   switch (fill.type) {
     case "noFill":
       return { type: "none" };
@@ -176,15 +225,11 @@ export function resolveFill(fill: Fill, colorContext?: ColorContext): ResolvedFi
     }
 
     case "blipFill": {
-      // If resourceId is a data URL, we can render it as an image fill
-      if (fill.resourceId.startsWith("data:")) {
-        return {
-          type: "image",
-          src: fill.resourceId,
-          mode: fill.tile ? "tile" : "stretch",
-        };
+      const resolved = resolveBlipFill(fill, resourceResolver);
+      if (resolved !== undefined) {
+        return resolved;
       }
-      // Otherwise it's unresolved (resourceId is still a relationship ID)
+      // Cannot resolve - return unresolved
       return { type: "unresolved", originalType: fill.type };
     }
 

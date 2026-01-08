@@ -15,10 +15,11 @@ import {
   type ResolvedImageFill,
   type ResolvedPatternFill,
 } from "../../../domain/drawing-ml/fill-resolution";
+import type { ResourceResolverFn } from "../../../domain/resource-resolver";
 import { PatternDef } from "../drawing-ml/fill";
 import { ooxmlAngleToSvgLinearGradient, getRadialGradientCoords } from "../../svg/gradient-utils";
 import { useSvgDefs } from "../hooks/useSvgDefs";
-import { useRenderContext } from "../context";
+import { useRenderContext, useRenderResources } from "../context";
 
 // =============================================================================
 // Types
@@ -220,13 +221,14 @@ export function useFillWithDefs(
   height?: number,
 ): FillWithDefsResult {
   const { colorContext } = useRenderContext();
+  const resources = useRenderResources();
   const { getNextId } = useSvgDefs();
 
   if (fill === undefined || fill.type === "noFill") {
     return { props: { fill: "none" } };
   }
 
-  const resolved = resolveFill(fill, colorContext);
+  const resolved = resolveFill(fill, colorContext, resources.resolve);
   const result = resolvedFillToResult(resolved, getNextId, width, height);
 
   return {
@@ -250,13 +252,14 @@ export function useFill(
   height?: number,
 ): SvgFillProps {
   const { colorContext } = useRenderContext();
+  const resources = useRenderResources();
   const { getNextId, addDef, hasDef } = useSvgDefs();
 
   if (fill === undefined || fill.type === "noFill") {
     return { fill: "none" };
   }
 
-  const resolved = resolveFill(fill, colorContext);
+  const resolved = resolveFill(fill, colorContext, resources.resolve);
   const result = resolvedFillToResult(resolved, getNextId, width, height);
 
   // Register def if present and not already registered
@@ -270,6 +273,13 @@ export function useFill(
 /**
  * Resolve fill without registering defs (for external use).
  * Returns both props and the def element.
+ *
+ * @param fill - Domain fill object
+ * @param colorContext - Color context for theme/scheme color resolution
+ * @param getNextId - Function to generate unique IDs
+ * @param width - Shape width (needed for image patterns)
+ * @param height - Shape height (needed for image patterns)
+ * @param resourceResolver - Optional resource resolver for blipFill resolution
  */
 export function resolveFillForReact(
   fill: Fill | undefined,
@@ -277,11 +287,12 @@ export function resolveFillForReact(
   getNextId: (prefix: string) => string,
   width?: number,
   height?: number,
+  resourceResolver?: ResourceResolverFn,
 ): FillResult {
   if (fill === undefined || fill.type === "noFill") {
     return { props: { fill: "none" } };
   }
 
-  const resolved = resolveFill(fill, colorContext);
+  const resolved = resolveFill(fill, colorContext, resourceResolver);
   return resolvedFillToResult(resolved, getNextId, width, height);
 }

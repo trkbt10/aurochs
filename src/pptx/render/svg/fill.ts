@@ -9,12 +9,14 @@ import type { ColorContext } from "../../domain/resolution";
 import {
   getDashArrayPattern,
   resolveFill,
+  resolveBlipFill,
   resolveLine,
   type ResolvedFill,
   type ResolvedGradientFill,
   type ResolvedLine,
   type ResolvedImageFill,
 } from "../../domain/drawing-ml/fill-resolution";
+import type { ResourceResolverFn } from "../../domain/resource-resolver";
 import { ooxmlAngleToSvgLinearGradient, getRadialGradientCoords } from "./gradient-utils";
 
 // =============================================================================
@@ -251,16 +253,31 @@ export function renderImageFillToSvgDef(
 /**
  * Check if fill is an image fill that needs a pattern definition
  */
-export function isImageFill(fill: Fill, colorContext?: ColorContext): boolean {
-  const resolved = resolveFill(fill, colorContext);
+export function isImageFill(
+  fill: Fill,
+  colorContext?: ColorContext,
+  resourceResolver?: ResourceResolverFn,
+): boolean {
+  const resolved = resolveFill(fill, colorContext, resourceResolver);
   return resolved.type === "image";
 }
 
 /**
  * Get resolved image fill if applicable
+ *
+ * @param fill - Fill to resolve
+ * @param colorContext - Color context for theme/scheme color resolution
+ * @param resourceResolver - Optional resource resolver for blipFill resolution
  */
-export function getResolvedImageFill(fill: Fill, colorContext?: ColorContext): ResolvedImageFill | undefined {
-  const resolved = resolveFill(fill, colorContext);
+export function getResolvedImageFill(
+  fill: Fill,
+  colorContext?: ColorContext,
+  resourceResolver?: ResourceResolverFn,
+): ResolvedImageFill | undefined {
+  if (fill.type === "blipFill") {
+    return resolveBlipFill(fill, resourceResolver);
+  }
+  const resolved = resolveFill(fill, colorContext, resourceResolver);
   if (resolved.type === "image") {
     return resolved;
   }

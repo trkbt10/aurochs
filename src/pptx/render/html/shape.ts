@@ -50,21 +50,6 @@ type SvgPaintStyle = {
   readonly fillOpacity?: number;
 };
 
-function resolveImageFillFromResources(fill: Fill, ctx: CoreRenderContext): ResolvedImageFill | undefined {
-  if (fill.type !== "blipFill") {
-    return undefined;
-  }
-  const resolvedSrc = ctx.resources.resolve(fill.resourceId);
-  if (!resolvedSrc) {
-    return undefined;
-  }
-  return {
-    type: "image",
-    src: resolvedSrc,
-    mode: fill.tile ? "tile" : "stretch",
-  };
-}
-
 function buildShapeFill(
   fill: Fill | undefined,
   width: number,
@@ -76,7 +61,7 @@ function buildShapeFill(
     return { fill: "none" };
   }
 
-  const resolved = resolveFill(fill, ctx.colorContext);
+  const resolved = resolveFill(fill, ctx.colorContext, ctx.resources.resolve);
   if (resolved.type === "solid") {
     return {
       fill: `#${resolved.color.hex}`,
@@ -91,7 +76,8 @@ function buildShapeFill(
     return { fill: `url(#${gradientId})` };
   }
 
-  const resolvedImageFill = getResolvedImageFill(fill, ctx.colorContext) ?? resolveImageFillFromResources(fill, ctx);
+  // Use resolveBlipFill for image fills with resource resolver
+  const resolvedImageFill = getResolvedImageFill(fill, ctx.colorContext, ctx.resources.resolve);
   if (resolvedImageFill) {
     const patternId = defsCollector.getNextId("shape-img");
     defsCollector.addDef(renderImageFillToSvgDef(resolvedImageFill, patternId, width, height));

@@ -139,9 +139,9 @@ function renderFillAttrs(
     }
   }
 
-  // Handle image fill (blipFill with data URL)
+  // Handle image fill (blipFill) using resource resolver
   if (fill.type === "blipFill") {
-    const imageFill = getResolvedImageFill(fill, ctx.colorContext);
+    const imageFill = getResolvedImageFill(fill, ctx.colorContext, ctx.resources.resolve);
     if (imageFill !== undefined && w !== undefined && h !== undefined) {
       const patternId = defsCollector.getNextId("img-pattern");
       const patternDef = renderImageFillToSvgDef(imageFill, patternId, w, h);
