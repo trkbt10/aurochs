@@ -23,7 +23,13 @@ const THRESHOLD = 128;
  */
 const SIMPLIFY_TOLERANCE = 0.3;
 const MIN_CONTOUR_POINTS = 4;
-const MAX_CONTOURS = 30;
+const MAX_CONTOURS = 50;
+/**
+ * Minimum area threshold for contour filtering.
+ * Contours with absolute area below this are considered noise.
+ * Value is in scaled units (after dividing by RENDER_SCALE).
+ */
+const MIN_CONTOUR_AREA = 2.0;
 
 type Point = { x: number; y: number };
 type RawContour = Point[];
@@ -77,7 +83,7 @@ export function extractContours(imageData: ImageDataLike): RawContour[] {
 }
 
 /**
- * Process raw contours: simplify and determine hole status.
+ * Process raw contours: simplify, filter noise, and determine hole status.
  */
 export function processContours(
   rawContours: RawContour[],
@@ -96,10 +102,16 @@ export function processContours(
         y: (p.y - padding) / scale,
       }));
 
+      // Calculate signed area for winding and filtering
+      const signedArea = calculateSignedArea(scaledPoints);
+      const absArea = Math.abs(signedArea);
+
       // Determine winding: CCW = hole, CW = outer (after Y-flip in rendering)
-      const isHole = !isClockwise(scaledPoints);
-      return { points: scaledPoints, isHole };
-    });
+      const isHole = signedArea < 0;
+      return { points: scaledPoints, isHole, area: absArea };
+    })
+    .filter((contour) => contour.area >= MIN_CONTOUR_AREA)
+    .map(({ points, isHole }) => ({ points, isHole }));
 }
 
 // =============================================================================
@@ -468,13 +480,16 @@ function perpDistance(p: Point, a: Point, b: Point): number {
 }
 
 // =============================================================================
-// Winding Direction
+// Area Calculation
 // =============================================================================
 
-function isClockwise(points: readonly Point[]): boolean {
-  const area = points.reduce((sum, point, i) => {
+/**
+ * Calculate signed area using shoelace formula.
+ * Positive = clockwise (outer), Negative = counter-clockwise (hole)
+ */
+function calculateSignedArea(points: readonly Point[]): number {
+  return points.reduce((sum, point, i) => {
     const j = (i + 1) % points.length;
     return sum + point.x * points[j].y - points[j].x * point.y;
-  }, 0);
-  return area > 0;
+  }, 0) / 2;
 }

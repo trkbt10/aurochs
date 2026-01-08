@@ -16,10 +16,11 @@ import type {
   BevelProfile,
 } from "./types";
 import { vec2 } from "./types";
-import { generateExtrusion, mergeExtrusionGeometries } from "./extrusion";
+import { generateExtrusion, mergeExtrusionGeometries, generateCapAtZ } from "./extrusion";
 import { extractBevelPathsFromShape } from "./path-extraction";
 import { generateBevelMesh, mergeBevelGeometries } from "./mesh-generation";
 import { getBevelProfile } from "./profiles";
+import { shrinkShape } from "./shape-expansion";
 
 // =============================================================================
 // THREE.Shape → ShapeInput Conversion
@@ -257,6 +258,18 @@ export function createExtrudedGeometryWithBevel(
 
       const topBevelData = generateBevelMesh(topPaths, topBevelConfig);
       geometryDataList.push(topBevelData);
+
+      // Generate inner cap at recessed position (after bevel inset)
+      // This covers the flat face inside the bevel
+      const shrunkShape = shrinkShape(shapeInput, bevel.top.width);
+      if (shrunkShape && shrunkShape.points.length >= 3) {
+        const innerCapZ = extrusionDepth - topBevelHeight;
+        const innerCapData = generateCapAtZ(shrunkShape, {
+          zPosition: innerCapZ,
+          normalDirection: 1, // Front-facing (+Z)
+        });
+        geometryDataList.push(innerCapData);
+      }
     }
 
     // Generate bottom bevel (back face, at Z=0)
@@ -274,6 +287,18 @@ export function createExtrudedGeometryWithBevel(
 
       const bottomBevelData = generateBevelMesh(bottomPaths, bottomBevelConfig);
       geometryDataList.push(bottomBevelData);
+
+      // Generate inner cap at recessed position (after bevel inset)
+      // This covers the flat face inside the bevel
+      const shrunkShape = shrinkShape(shapeInput, bevel.bottom.width);
+      if (shrunkShape && shrunkShape.points.length >= 3) {
+        const innerCapZ = bottomBevelHeight;
+        const innerCapData = generateCapAtZ(shrunkShape, {
+          zPosition: innerCapZ,
+          normalDirection: -1, // Back-facing (-Z)
+        });
+        geometryDataList.push(innerCapData);
+      }
     }
   }
 

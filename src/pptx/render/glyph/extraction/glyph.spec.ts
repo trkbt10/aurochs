@@ -130,6 +130,131 @@ function expectContourHoles(
 }
 
 describe("extractContours", () => {
+  it("correctly sets isHole flag based on winding direction", () => {
+    // Simple O-shape: outer rectangle with inner hole
+    const oImage = createHoledRectImage(
+      40,
+      40,
+      { x: 5, y: 5, width: 30, height: 30 },
+      [{ x: 12, y: 12, width: 16, height: 16 }],
+    );
+
+    const raw = extractContours(oImage);
+    const paths = processContours(raw, 1, 0);
+
+    // Filter out noise
+    const significantPaths = paths.filter((p) => Math.abs(calculateArea(p.points)) > 10);
+
+    // Should have exactly 2 paths: 1 outer, 1 hole
+    expect(significantPaths.length).toBe(2);
+
+    // Find outer (larger area) and hole (smaller area, contained)
+    const sortedByArea = [...significantPaths].sort(
+      (a, b) => Math.abs(calculateArea(b.points)) - Math.abs(calculateArea(a.points)),
+    );
+    const outer = sortedByArea[0];
+    const hole = sortedByArea[1];
+
+    // Verify geometric containment
+    expect(isPointInPolygon(hole.points[0], outer.points)).toBe(true);
+
+    // Verify isHole flags are correct
+    expect(outer.isHole).toBe(false);
+    expect(hole.isHole).toBe(true);
+
+    // Verify winding directions (signed area)
+    const outerArea = calculateArea(outer.points);
+    const holeArea = calculateArea(hole.points);
+
+    // Outer should be positive (CW), hole should be negative (CCW)
+    expect(outerArea).toBeGreaterThan(0);
+    expect(holeArea).toBeLessThan(0);
+  });
+
+  it("produces opposite winding for outer vs hole contours", () => {
+    // Test with multiple holes (like letter B)
+    const bImage = createHoledRectImage(
+      50,
+      60,
+      { x: 5, y: 5, width: 40, height: 50 },
+      [
+        { x: 15, y: 10, width: 20, height: 15 },
+        { x: 15, y: 30, width: 20, height: 15 },
+      ],
+    );
+
+    const raw = extractContours(bImage);
+    const paths = processContours(raw, 1, 0);
+    const significantPaths = paths.filter((p) => Math.abs(calculateArea(p.points)) > 10);
+
+    // Should have 3 paths: 1 outer + 2 holes
+    expect(significantPaths.length).toBe(3);
+
+    const outers = significantPaths.filter((p) => !p.isHole);
+    const holes = significantPaths.filter((p) => p.isHole);
+
+    expect(outers.length).toBe(1);
+    expect(holes.length).toBe(2);
+
+    // All outers should have positive area
+    for (const outer of outers) {
+      expect(calculateArea(outer.points)).toBeGreaterThan(0);
+    }
+
+    // All holes should have negative area
+    for (const hole of holes) {
+      expect(calculateArea(hole.points)).toBeLessThan(0);
+    }
+  });
+
+  it("maintains correct winding after Y-flip (for THREE.js compatibility)", () => {
+    // Simple O-shape
+    const oImage = createHoledRectImage(
+      40,
+      40,
+      { x: 5, y: 5, width: 30, height: 30 },
+      [{ x: 12, y: 12, width: 16, height: 16 }],
+    );
+
+    const raw = extractContours(oImage);
+    const paths = processContours(raw, 1, 0);
+    const significantPaths = paths.filter((p) => Math.abs(calculateArea(p.points)) > 10);
+
+    // Find outer and hole
+    const outer = significantPaths.find((p) => !p.isHole)!;
+    const hole = significantPaths.find((p) => p.isHole)!;
+
+    expect(outer).toBeDefined();
+    expect(hole).toBeDefined();
+
+    // Log actual values for debugging
+    const outerAreaOriginal = calculateArea(outer.points);
+    const holeAreaOriginal = calculateArea(hole.points);
+    console.log("=== Contour Extraction Winding Check ===");
+    console.log("Outer area (original, screen coords):", outerAreaOriginal, outerAreaOriginal > 0 ? "CW" : "CCW");
+    console.log("Hole area (original, screen coords):", holeAreaOriginal, holeAreaOriginal > 0 ? "CW" : "CCW");
+
+    // Simulate Y-flip that happens in THREE.js conversion
+    const flipY = (pts: readonly { x: number; y: number }[]) =>
+      pts.map((p) => ({ x: p.x, y: -p.y }));
+
+    const outerFlipped = flipY(outer.points);
+    const holeFlipped = flipY(hole.points);
+
+    const outerAreaFlipped = calculateArea(outerFlipped);
+    const holeAreaFlipped = calculateArea(holeFlipped);
+
+    console.log("Outer area (after Y-flip):", outerAreaFlipped, outerAreaFlipped > 0 ? "CW" : "CCW");
+    console.log("Hole area (after Y-flip):", holeAreaFlipped, holeAreaFlipped > 0 ? "CW" : "CCW");
+    console.log("THREE.js expects: outer=CCW (negative), hole=CW (positive)");
+
+    // After Y-flip:
+    // THREE.js expects: outer=CCW (negative area), hole=CW (positive area)
+    // Because Y-flip reverses winding direction
+    expect(outerAreaFlipped).toBeLessThan(0); // CCW after flip
+    expect(holeAreaFlipped).toBeGreaterThan(0); // CW after flip
+  });
+
   it("extracts A/B/D-style holes for regular stroke weights", () => {
     const aImage = createHoledRectImage(
       32,

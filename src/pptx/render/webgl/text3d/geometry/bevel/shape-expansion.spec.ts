@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import { expandShape, expandShapesForContour } from "./shape-expansion";
+import { expandShape, expandShapesForContour, shrinkShape } from "./shape-expansion";
 import type { ShapeInput, Vector2 } from "./types";
 
 function createSquareShape(size: number): ShapeInput {
@@ -194,5 +194,88 @@ describe("contour uniform expansion verification", () => {
     console.log(`Contour width: ${contourWidth}`);
     console.log(`X expansion: ${xExpansion.toFixed(2)}`);
     console.log(`Y expansion: ${yExpansion.toFixed(2)}`);
+  });
+});
+
+describe("shrinkShape", () => {
+  it("returns same shape for zero distance", () => {
+    const shape = createSquareShape(100);
+    const result = shrinkShape(shape, 0);
+
+    expect(result).toBe(shape);
+  });
+
+  it("returns null for insufficient points", () => {
+    const shape: ShapeInput = {
+      points: [{ x: 0, y: 0 }, { x: 10, y: 0 }],
+      holes: [],
+    };
+
+    const result = shrinkShape(shape, 5);
+    expect(result).toBeNull();
+  });
+
+  it("shrinks outer contour by correct amount", () => {
+    const shape = createSquareShape(100);
+    const shrinkDistance = 10;
+
+    const result = shrinkShape(shape, shrinkDistance);
+    expect(result).not.toBeNull();
+
+    const originalBounds = getBounds(shape.points);
+    const shrunkBounds = getBounds(result!.points);
+
+    // Width and height should decrease by 2 * shrinkDistance
+    expect(shrunkBounds.width).toBeCloseTo(originalBounds.width - 2 * shrinkDistance, 1);
+    expect(shrunkBounds.height).toBeCloseTo(originalBounds.height - 2 * shrinkDistance, 1);
+  });
+
+  it("expands holes when shrinking shape", () => {
+    const shape = createSquareWithHole(100, 50);
+    const shrinkDistance = 5;
+
+    const result = shrinkShape(shape, shrinkDistance);
+    expect(result).not.toBeNull();
+    expect(result!.holes).toHaveLength(1);
+
+    const originalHoleBounds = getBounds(shape.holes[0]);
+    const shrunkHoleBounds = getBounds(result!.holes[0]);
+
+    // Hole should expand by 2 * shrinkDistance (opposite of shrink)
+    expect(shrunkHoleBounds.width).toBeCloseTo(originalHoleBounds.width + 2 * shrinkDistance, 1);
+    expect(shrunkHoleBounds.height).toBeCloseTo(originalHoleBounds.height + 2 * shrinkDistance, 1);
+  });
+
+  it("is inverse of expandShape", () => {
+    const shape = createSquareShape(100);
+    const distance = 10;
+
+    // Expand then shrink should give approximately original size
+    const expanded = expandShape(shape, distance);
+    expect(expanded).not.toBeNull();
+
+    const shrunkBack = shrinkShape(expanded!, distance);
+    expect(shrunkBack).not.toBeNull();
+
+    const originalBounds = getBounds(shape.points);
+    const roundTripBounds = getBounds(shrunkBack!.points);
+
+    expect(roundTripBounds.width).toBeCloseTo(originalBounds.width, 1);
+    expect(roundTripBounds.height).toBeCloseTo(originalBounds.height, 1);
+  });
+
+  it("handles extreme shrinking gracefully", () => {
+    const shape = createSquareShape(20);
+    const shrinkDistance = 15; // Shrinking by 15 on each side (30 total) would exceed size
+
+    const result = shrinkShape(shape, shrinkDistance);
+
+    if (result !== null && result.points.length >= 3) {
+      // If a shape is returned, it should be very small or inverted
+      const bounds = getBounds(result.points);
+      // Bounds may be inverted or very small
+      expect(bounds.width).toBeLessThan(shape.points[1].x);
+    }
+    // Either null or a degenerate shape is acceptable
   });
 });

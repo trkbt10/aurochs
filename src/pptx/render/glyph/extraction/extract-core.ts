@@ -33,6 +33,12 @@ export type CanvasFactory = (width: number, height: number) => {
  */
 const RENDER_SCALE = 2;
 
+/**
+ * Maximum canvas dimension.
+ * Larger values support bigger fonts but use more memory.
+ */
+const MAX_CANVAS_SIZE = 512;
+
 // =============================================================================
 // Main API
 // =============================================================================
@@ -55,8 +61,13 @@ export function extractGlyphCore(
 ): GlyphContour {
   const scaledSize = style.fontSize * RENDER_SCALE;
 
+  // Calculate required canvas size based on font size
+  // Use larger canvas for larger fonts to avoid clipping
+  const estimatedSize = Math.ceil(scaledSize * 1.5);
+  const initialSize = Math.min(Math.max(estimatedSize, 256), MAX_CANVAS_SIZE);
+
   // Create initial canvas for measurement
-  const { canvas, ctx } = createCanvas(256, 256);
+  const { canvas, ctx } = createCanvas(initialSize, initialSize);
 
   // Set font and measure
   const fontString = `${style.fontStyle} ${style.fontWeight} ${scaledSize}px ${formatFontFamily(fontFamily, GENERIC_FONT_FAMILIES)}`;
@@ -74,9 +85,9 @@ export function extractGlyphCore(
   const width = Math.ceil(Math.max(textMetrics.width, scaledSize * 0.5) + padding * 2);
   const height = Math.ceil(ascent + descent + padding * 2);
 
-  // Resize canvas
-  canvas.width = Math.min(width, 256);
-  canvas.height = Math.min(height, 256);
+  // Resize canvas (clamp to max size)
+  canvas.width = Math.min(width, MAX_CANVAS_SIZE);
+  canvas.height = Math.min(height, MAX_CANVAS_SIZE);
 
   // Re-apply font after resize
   ctx.font = fontString;

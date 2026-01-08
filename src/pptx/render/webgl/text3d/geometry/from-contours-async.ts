@@ -322,6 +322,23 @@ function calculatePolygonArea(points: readonly { x: number; y: number }[]): numb
   return total / 2;
 }
 
+/**
+ * Apply contour points to a THREE.Path or THREE.Shape.
+ *
+ * Converts from screen coordinates (Y down) to THREE.js coordinates (Y up)
+ * by flipping Y. To maintain correct winding direction after flip, points
+ * are also reversed.
+ *
+ * Without reversal, Y-flip inverts winding:
+ * - CW in screen coords becomes CCW (negative area) after flip
+ * - THREE.js ShapeUtils.isClockWise returns true for negative area
+ * - This causes THREE.js to misinterpret outer shapes as holes!
+ *
+ * With reversal, winding is preserved:
+ * - Outer (CW in screen) → CCW after Y-flip → CW after reversal (positive area)
+ * - Holes (CCW in screen) → CW after Y-flip → CCW after reversal (negative area)
+ * - THREE.js correctly interprets shapes and holes
+ */
 function applyContourPoints(
   target: THREE.Path | THREE.Shape,
   contourPath: ContourPath,
@@ -331,14 +348,18 @@ function applyContourPoints(
     return false;
   }
 
-  const first = points[0];
+  // Reverse points to preserve winding direction after Y-flip
+  // Y-flip alone inverts winding; reversal restores original winding
+  const reversed = [...points].reverse();
+
+  const first = reversed[0];
   if (typeof first?.x !== "number" || typeof first?.y !== "number") {
     return false;
   }
   target.moveTo(first.x, -first.y);
 
-  for (let i = 1; i < points.length; i++) {
-    const pt = points[i];
+  for (let i = 1; i < reversed.length; i++) {
+    const pt = reversed[i];
     if (typeof pt?.x !== "number" || typeof pt?.y !== "number") {
       continue;
     }

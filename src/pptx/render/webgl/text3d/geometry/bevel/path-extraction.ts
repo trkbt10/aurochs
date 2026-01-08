@@ -92,9 +92,25 @@ export function extractPathPointsWithNormals(
   // Compute signed area to determine winding
   const signedArea = computeSignedArea(cleanedPoints);
   // CCW (positive area) for outer, CW (negative) for holes
-  // If winding doesn't match expectation, flip normal direction
   const isCCW = signedArea > 0;
-  // For outer paths we expect CCW, for holes we expect CW
+
+  // Determine if we need to flip the normal direction.
+  //
+  // perpCCW gives the "left" side of the path:
+  // - For CCW path: left = INWARD (toward shape interior)
+  // - For CW path: left = OUTWARD (away from enclosed area)
+  //
+  // For bevel, we want:
+  // - Outer shapes: normals pointing INWARD (toward shape center)
+  // - Holes: normals pointing TOWARD SOLID (away from hole center)
+  //
+  // Expected winding after THREE.js conversion (Y-flip + reversal):
+  // - Outer: CCW (positive area) → perpCCW gives inward → no flip needed
+  // - Hole: CW (negative area) → perpCCW gives outward (toward solid) → no flip needed
+  //
+  // For unexpected winding, we flip to correct:
+  // - CW outer: flip to get inward normals
+  // - CCW hole: flip to get outward normals
   const flipNormal = isHole ? isCCW : !isCCW;
 
   const result: BevelPathPoint[] = [];

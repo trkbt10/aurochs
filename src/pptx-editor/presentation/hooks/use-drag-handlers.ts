@@ -10,7 +10,8 @@ import type { Pixels } from "../../../pptx/domain/types";
 import { px, deg } from "../../../pptx/domain/types";
 import type { DragState, SelectionState } from "../../context/slide/state";
 import type { PresentationEditorAction } from "../../context/presentation/editor/types";
-import { clientToSlideCoords } from "../../shape/coords";
+import type { ViewportTransform } from "../../../pptx/render/svg-viewport";
+import { screenToSlideCoords } from "../../../pptx/render/svg-viewport";
 import { snapValue } from "../../slide-canvas/canvas-controls";
 
 export type UseDragHandlersParams = {
@@ -23,6 +24,10 @@ export type UseDragHandlersParams = {
   readonly snapEnabled: boolean;
   readonly snapStep: number;
   readonly dispatch: (action: PresentationEditorAction) => void;
+  /** Viewport transform for coordinate conversion */
+  readonly viewport?: ViewportTransform;
+  /** Ruler thickness for coordinate offset */
+  readonly rulerThickness?: number;
 };
 
 type Delta = { readonly dx: number; readonly dy: number };
@@ -127,6 +132,8 @@ export function useDragHandlers({
   snapEnabled,
   snapStep,
   dispatch,
+  viewport,
+  rulerThickness = 0,
 }: UseDragHandlersParams): void {
   const getMoveDelta = useCallback(
     (dx: number, dy: number): Delta => calculateMoveDelta(dx, dy, drag, selection, snapEnabled, snapStep),
@@ -150,7 +157,8 @@ export function useDragHandlers({
       }
 
       const rect = container.getBoundingClientRect();
-      const coords = clientToSlideCoords(e.clientX, e.clientY, rect, width as number, height as number);
+      const vp = viewport ?? { translateX: 0, translateY: 0, scale: 1 };
+      const coords = screenToSlideCoords(e.clientX, e.clientY, rect, vp, rulerThickness);
 
       if (drag.type === "move") {
         const deltaX = coords.x - (drag.startX as number);
@@ -181,5 +189,5 @@ export function useDragHandlers({
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
     };
-  }, [drag, slide, width, height, dispatch, getMoveDelta, getResizeDelta, canvasRef]);
+  }, [drag, slide, width, height, dispatch, getMoveDelta, getResizeDelta, canvasRef, viewport, rulerThickness]);
 }

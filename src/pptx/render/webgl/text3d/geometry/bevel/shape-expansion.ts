@@ -63,6 +63,51 @@ export function expandShape(
 }
 
 /**
+ * Shrink a shape inward by a specified distance.
+ *
+ * The opposite of expandShape - moves outer contour inward
+ * and expands holes outward.
+ *
+ * @param shape - The original shape to shrink
+ * @param distance - Distance to shrink inward
+ * @returns Shrunk shape, or null if shrinking fails or shape becomes degenerate
+ */
+export function shrinkShape(
+  shape: ShapeInput,
+  distance: number,
+): ShapeInput | null {
+  if (distance <= 0) {
+    return shape;
+  }
+
+  const { points, holes } = shape;
+
+  if (points.length < 3) {
+    return null;
+  }
+
+  // Shrink outer contour (inward) - use isHole=true to invert normal direction
+  const shrunkPoints = expandContourPoints(points, distance, true);
+  if (!shrunkPoints || shrunkPoints.length < 3) {
+    return null;
+  }
+
+  // Expand holes (outward) - holes get bigger when shape shrinks
+  const expandedHoles: Vector2[][] = [];
+  for (const hole of holes) {
+    const expandedHole = expandContourPoints(hole, distance, false);
+    if (expandedHole && expandedHole.length >= 3) {
+      expandedHoles.push(expandedHole);
+    }
+  }
+
+  return {
+    points: shrunkPoints,
+    holes: expandedHoles,
+  };
+}
+
+/**
  * Expand multiple shapes for contour generation.
  *
  * @param shapes - Original shapes

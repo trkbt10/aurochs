@@ -46,7 +46,8 @@ import { getSlideLayoutAttributes } from "../../pptx/domain/slide";
 import { RELATIONSHIP_TYPES } from "../../pptx/opc";
 import { createZipAdapter } from "../../pptx/domain";
 import { CanvasControls } from "../slide-canvas/CanvasControls";
-import { CanvasStage } from "../slide-canvas/CanvasStage";
+import { SvgEditorCanvas } from "../slide-canvas/SvgEditorCanvas";
+import type { ViewportTransform } from "../../pptx/render/svg-viewport";
 import { TextEditContextProvider, useTextEditContextValue } from "../context/slide/TextEditContext";
 import type { TextSelectionContext } from "../editors/text/text-property-extractor";
 import { applyRunPropertiesToSelection, applyParagraphPropertiesToSelection } from "../slide/text-edit/run-formatting";
@@ -121,6 +122,7 @@ function EditorContent({
   const [snapEnabled, setSnapEnabled] = useState(true);
   const [snapStep, setSnapStep] = useState(10);
   const [stickyFormatting, setStickyFormattingState] = useState<StickyFormattingState>(createInitialStickyFormatting);
+  const [viewport, setViewport] = useState<ViewportTransform | undefined>(undefined);
 
   const slide = activeSlide?.slide;
   const width = document.slideWidth;
@@ -152,6 +154,8 @@ function EditorContent({
     snapEnabled,
     snapStep,
     dispatch,
+    viewport,
+    rulerThickness: showRulers ? RULER_THICKNESS : 0,
   });
 
   // ==========================================================================
@@ -592,7 +596,7 @@ function EditorContent({
 
     return (
       <CanvasArea floatingToolbar={floatingToolbar}>
-        <CanvasStage
+        <SvgEditorCanvas
           ref={canvasRef}
           slide={slide}
           slideId={activeSlide.id}
@@ -631,6 +635,7 @@ function EditorContent({
           onZoomChange={setZoom}
           showRulers={showRulers}
           rulerThickness={rulerThickness}
+          onViewportChange={setViewport}
         />
       </CanvasArea>
     );

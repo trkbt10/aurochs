@@ -615,6 +615,88 @@ function generateSideWalls(
 }
 
 // =============================================================================
+// Cap Generation
+// =============================================================================
+
+/**
+ * Configuration for cap generation
+ */
+export type CapConfig = {
+  /** Z position of the cap */
+  readonly zPosition: number;
+  /** Normal direction: 1 for +Z (front-facing), -1 for -Z (back-facing) */
+  readonly normalDirection: 1 | -1;
+};
+
+/**
+ * Generate a cap (flat face) at a specific Z position.
+ *
+ * This is useful for generating inner caps at recessed positions
+ * when bevels are present.
+ *
+ * @param shape - Shape to generate cap for
+ * @param config - Cap configuration
+ * @returns Geometry data for the cap
+ */
+export function generateCapAtZ(
+  shape: ShapeInput,
+  config: CapConfig,
+): BevelGeometryData {
+  if (shape.points.length < 3) {
+    return emptyGeometryData();
+  }
+
+  const { zPosition, normalDirection } = config;
+
+  // Ensure outer contour is CCW
+  const signedArea = computeSignedArea(shape.points);
+  const outerPoints = signedArea < 0
+    ? [...shape.points].reverse()
+    : [...shape.points];
+
+  // Ensure holes are CW
+  const holes = shape.holes.map((hole) => {
+    const holeArea = computeSignedArea(hole);
+    return holeArea > 0 ? [...hole].reverse() : [...hole];
+  });
+
+  const positions: number[] = [];
+  const normals: number[] = [];
+  const uvs: number[] = [];
+  const indices: number[] = [];
+
+  const { points: capPoints, indices: capIndices } = triangulateShapeWithHoles(
+    outerPoints,
+    holes,
+  );
+
+  for (const pt of capPoints) {
+    positions.push(pt.x, pt.y, zPosition);
+    normals.push(0, 0, normalDirection);
+    uvs.push(pt.x, pt.y);
+  }
+
+  if (normalDirection === 1) {
+    // Front-facing: use indices as-is
+    for (const idx of capIndices) {
+      indices.push(idx);
+    }
+  } else {
+    // Back-facing: reverse winding
+    for (let i = 0; i < capIndices.length; i += 3) {
+      indices.push(capIndices[i], capIndices[i + 2], capIndices[i + 1]);
+    }
+  }
+
+  return {
+    positions: new Float32Array(positions),
+    normals: new Float32Array(normals),
+    uvs: new Float32Array(uvs),
+    indices: new Uint32Array(indices),
+  };
+}
+
+// =============================================================================
 // Utility
 // =============================================================================
 
