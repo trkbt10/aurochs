@@ -22,6 +22,10 @@ import type {
   Slide,
   SpShape,
 } from "../../domain/index";
+import {
+  generateDiagramShapes,
+  type ShapeGenerationConfig,
+} from "../../domain/diagram/layout-engine";
 import { parseXml } from "../../../xml/index";
 import { parseChart } from "../chart-parser/index";
 import { parseDiagramDrawing } from "../diagram/diagram-parser";
@@ -164,6 +168,9 @@ function enrichChartFrame(frame: GraphicFrame, fileReader: FileReader): GraphicF
  * This function also resolves diagram-specific resource references (blipFill)
  * using the diagram's relationship file, not the slide's relationships.
  *
+ * If the diagram drawing file is not available or has no shapes, it falls back
+ * to generating shapes dynamically using the layout engine.
+ *
  * @see ECMA-376 Part 1, Section 21.4 - DrawingML Diagrams
  */
 function enrichDiagramFrame(frame: GraphicFrame, fileReader: FileReader): GraphicFrame {
@@ -186,45 +193,30 @@ function enrichDiagramFrame(frame: GraphicFrame, fileReader: FileReader): Graphi
   const colorsDefinition =
     diagramRef.colorsDefinition ?? loadDiagramColorsDefinition(diagramRef.colorResourceId, fileReader);
 
-  // Find diagram drawing file using relationship type
-  const diagramPath = fileReader.getResourceByType?.(RELATIONSHIP_TYPES.DIAGRAM_DRAWING);
-  if (diagramPath === undefined) {
-    return frame;
+  // Try to get pre-rendered shapes from diagram drawing file
+  let shapes = tryParseDiagramDrawing(frame, fileReader);
+
+  // If no pre-rendered shapes, fall back to dynamic generation using layout engine
+  if (shapes === undefined || shapes.length === 0) {
+    shapes = tryGenerateDiagramShapes(frame, dataModel, layoutDefinition, styleDefinition, colorsDefinition);
   }
 
-  // diagramPath is already normalized by relationship resolution (RFC 3986)
-  // Read diagram drawing XML file
-  const diagramData = fileReader.readFile(diagramPath);
-  if (diagramData === null) {
-    return frame;
+  // If still no shapes, return frame without parsedContent
+  if (shapes === undefined || shapes.length === 0) {
+    return {
+      ...frame,
+      content: {
+        ...frame.content,
+        data: {
+          ...diagramRef,
+          dataModel,
+          layoutDefinition,
+          styleDefinition,
+          colorsDefinition,
+        },
+      },
+    };
   }
-
-  // Parse diagram XML
-  const decoder = new TextDecoder();
-  const diagramXmlText = decoder.decode(diagramData);
-  const diagramDoc = parseXml(diagramXmlText);
-  if (diagramDoc === undefined) {
-    return frame;
-  }
-
-  // Parse to DiagramContent domain object
-  const parsedContent = parseDiagramDrawing(diagramDoc);
-  if (parsedContent.shapes.length === 0) {
-    return frame;
-  }
-
-  // Load diagram-specific relationships for blipFill resolution
-  const diagramRelsPath = getRelationshipPath(diagramPath);
-  const diagramRelsData = fileReader.readFile(diagramRelsPath);
-  const diagramResources = loadDiagramResources(diagramRelsData, diagramPath);
-
-  // Resolve blipFill resourceIds in diagram shapes using diagram relationships
-  const resolvedShapes = resolveDiagramShapeResources(
-    parsedContent.shapes,
-    diagramResources,
-    diagramPath,
-    fileReader,
-  );
 
   // Return new frame with parsed diagram attached
   return {
@@ -233,7 +225,7 @@ function enrichDiagramFrame(frame: GraphicFrame, fileReader: FileReader): Graphi
       ...frame.content,
       data: {
         ...diagramRef,
-        parsedContent: { shapes: resolvedShapes },
+        parsedContent: { shapes },
         dataModel,
         layoutDefinition,
         styleDefinition,
@@ -241,6 +233,103 @@ function enrichDiagramFrame(frame: GraphicFrame, fileReader: FileReader): Graphi
       },
     },
   };
+}
+
+/**
+ * Try to parse pre-rendered shapes from diagram drawing file.
+ */
+function tryParseDiagramDrawing(frame: GraphicFrame, fileReader: FileReader): readonly Shape[] | undefined {
+  // Find diagram drawing file using relationship type
+  const diagramPath = fileReader.getResourceByType?.(RELATIONSHIP_TYPES.DIAGRAM_DRAWING);
+  if (diagramPath === undefined) {
+    return undefined;
+  }
+
+  // diagramPath is already normalized by relationship resolution (RFC 3986)
+  // Read diagram drawing XML file
+  const diagramData = fileReader.readFile(diagramPath);
+  if (diagramData === null) {
+    return undefined;
+  }
+
+  // Parse diagram XML
+  const decoder = new TextDecoder();
+  const diagramXmlText = decoder.decode(diagramData);
+  const diagramDoc = parseXml(diagramXmlText);
+  if (diagramDoc === undefined) {
+    return undefined;
+  }
+
+  // Parse to DiagramContent domain object
+  const parsedContent = parseDiagramDrawing(diagramDoc);
+  if (parsedContent.shapes.length === 0) {
+    return undefined;
+  }
+
+  // Load diagram-specific relationships for blipFill resolution
+  const diagramRelsPath = getRelationshipPath(diagramPath);
+  const diagramRelsData = fileReader.readFile(diagramRelsPath);
+  const diagramResources = loadDiagramResources(diagramRelsData, diagramPath);
+
+  // Resolve blipFill resourceIds in diagram shapes using diagram relationships
+  return resolveDiagramShapeResources(
+    parsedContent.shapes,
+    diagramResources,
+    diagramPath,
+    fileReader,
+  );
+}
+
+/**
+ * Try to generate diagram shapes dynamically using layout engine.
+ *
+ * This is used as a fallback when no pre-rendered diagram drawing is available.
+ */
+function tryGenerateDiagramShapes(
+  frame: GraphicFrame,
+  dataModel: DiagramDataModel | undefined,
+  layoutDefinition: DiagramLayoutDefinition | undefined,
+  styleDefinition: DiagramStyleDefinition | undefined,
+  colorsDefinition: DiagramColorsDefinition | undefined,
+): readonly Shape[] | undefined {
+  // Need at least data model to generate shapes
+  if (dataModel === undefined) {
+    return undefined;
+  }
+
+  // Get frame bounds for layout calculation
+  const transform = frame.transform;
+  const bounds = {
+    x: 0,
+    y: 0,
+    width: transform?.width ?? 500,
+    height: transform?.height ?? 400,
+  };
+
+  const config: ShapeGenerationConfig = {
+    bounds,
+    defaultNodeWidth: 100,
+    defaultNodeHeight: 60,
+    defaultSpacing: 10,
+  };
+
+  try {
+    const result = generateDiagramShapes(
+      dataModel,
+      layoutDefinition,
+      styleDefinition,
+      colorsDefinition,
+      config,
+    );
+    return result.shapes;
+  } catch (error) {
+    // Log error for debugging purposes but continue gracefully
+    console.warn(
+      "Failed to generate diagram shapes dynamically:",
+      error instanceof Error ? error.message : String(error),
+    );
+    return undefined;
+  }
 }
 
 /**
