@@ -8,6 +8,7 @@
 
 import { useMemo } from "react";
 import type { OleReference } from "../../../../../domain";
+import { EMU_PER_PIXEL } from "../../../../../domain/defaults";
 import { useRenderContext, useRenderResources } from "../../../context";
 
 /**
@@ -24,6 +25,10 @@ export type OlePreviewResult = {
   readonly objectName: string | undefined;
   /** Program ID for icon display (e.g., "Excel.Sheet.12") */
   readonly progId: string | undefined;
+  /** Preview image width in pixels (from imgW EMU attribute) */
+  readonly imageWidth: number | undefined;
+  /** Preview image height in pixels (from imgH EMU attribute) */
+  readonly imageHeight: number | undefined;
 };
 
 /**
@@ -48,12 +53,20 @@ export function useOlePreview(oleData: OleReference | undefined): OlePreviewResu
         showAsIcon: false,
         objectName: undefined,
         progId: undefined,
+        imageWidth: undefined,
+        imageHeight: undefined,
       };
     }
 
     const showAsIcon = oleData.showAsIcon ?? false;
     const objectName = oleData.name;
     const progId = oleData.progId;
+
+    // Convert imgW/imgH from EMU to pixels
+    const imageWidth =
+      oleData.imgW !== undefined ? oleData.imgW / EMU_PER_PIXEL : undefined;
+    const imageHeight =
+      oleData.imgH !== undefined ? oleData.imgH / EMU_PER_PIXEL : undefined;
 
     // Try pre-resolved preview image first
     if (oleData.previewImageUrl !== undefined) {
@@ -63,6 +76,8 @@ export function useOlePreview(oleData: OleReference | undefined): OlePreviewResu
         showAsIcon,
         objectName,
         progId,
+        imageWidth,
+        imageHeight,
       };
     }
 
@@ -76,6 +91,8 @@ export function useOlePreview(oleData: OleReference | undefined): OlePreviewResu
           showAsIcon,
           objectName,
           progId,
+          imageWidth,
+          imageHeight,
         };
       }
     }
@@ -92,6 +109,8 @@ export function useOlePreview(oleData: OleReference | undefined): OlePreviewResu
       showAsIcon,
       objectName,
       progId,
+      imageWidth,
+      imageHeight,
     };
   }, [oleData, resources, warnings]);
 }

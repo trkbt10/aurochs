@@ -94,6 +94,9 @@ import {
   renderUnsupportedChartPlaceholder,
 } from "./generators";
 
+// Data table
+import { renderDataTable, calculateDataTableHeight } from "./data-table";
+
 // =============================================================================
 // Color Resolution
 // =============================================================================
@@ -251,6 +254,43 @@ function renderLegendSvg(
     return renderLegendAtPosition(chart.legend, seriesData, colors, legendPos, size);
   }
   return "";
+}
+
+/**
+ * Render data table below the plot area
+ *
+ * @see ECMA-376 Part 1, Section 21.2.2.54 (dTable)
+ */
+function renderDataTableSvg(
+  dataTable: import("../../domain/chart").DataTable | undefined,
+  chartContent: ChartContent,
+  layout: ChartLayout,
+  ctx: CoreRenderContext
+): string {
+  if (!dataTable) {
+    return "";
+  }
+
+  const categoryLabels = chartContent.categoryLabels ?? [];
+  const dataTableHeight = calculateDataTableHeight(dataTable, chartContent.seriesData.length);
+
+  // Position the data table below the plot area (under category axis labels)
+  const dataTableLayout = {
+    width: layout.plotWidth,
+    height: dataTableHeight,
+    x: 0,
+    y: layout.plotHeight + 25, // 25px offset for category axis labels
+  };
+
+  return renderDataTable(
+    dataTable,
+    {
+      seriesData: chartContent.seriesData,
+      categoryLabels,
+      colors: chartContent.colors,
+    },
+    dataTableLayout
+  );
 }
 
 /**
@@ -1005,6 +1045,15 @@ export function renderChart(
     height,
   });
 
+  // Render data table if present
+  // @see ECMA-376 Part 1, Section 21.2.2.54 (dTable)
+  const dataTableSvg = renderDataTableSvg(
+    chart.plotArea.dataTable,
+    chartContent,
+    layout,
+    ctx
+  );
+
   // Build defs section if any gradient definitions were collected
   const defsSvg = defs.hasAny() ? `<defs>${defs.getAll().join("")}</defs>` : "";
 
@@ -1027,6 +1076,7 @@ export function renderChart(
     axisTitlesSvg +
     displayUnitsLabelSvg +
     dataLabelsSvg +
+    dataTableSvg +
     `</g>` +
     legendSvg +
     `</svg>`;

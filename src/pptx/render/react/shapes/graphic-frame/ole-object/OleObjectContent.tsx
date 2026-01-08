@@ -128,13 +128,25 @@ function OleIconView({
  * ensuring correct preview image is displayed.
  *
  * When showAsIcon is true, renders an icon representation instead of preview.
+ * When imgW/imgH are specified, uses those dimensions for the preview image
+ * and centers it within the frame area.
+ *
+ * @see ECMA-376 Part 1, Section 19.3.1.36a (imgW, imgH attributes)
  */
 export const OleObjectContent = memo(function OleObjectContent({
   data,
   width,
   height,
 }: OleObjectContentProps) {
-  const { previewUrl, hasPreview, showAsIcon, objectName, progId } = useOlePreview(data);
+  const {
+    previewUrl,
+    hasPreview,
+    showAsIcon,
+    objectName,
+    progId,
+    imageWidth,
+    imageHeight,
+  } = useOlePreview(data);
 
   // Show as icon mode: render icon representation
   if (showAsIcon) {
@@ -153,13 +165,30 @@ export const OleObjectContent = memo(function OleObjectContent({
     return <Placeholder width={width} height={height} label="OLE Object" />;
   }
 
+  // Use imgW/imgH if specified, otherwise fall back to frame dimensions
+  // When imgW/imgH are specified, they represent the intended preview image dimensions
+  // The image should be centered within the frame area
+  const effectiveWidth = imageWidth ?? width;
+  const effectiveHeight = imageHeight ?? height;
+
+  // Calculate centering offset when using specified image dimensions
+  // that differ from the frame dimensions
+  const offsetX =
+    imageWidth !== undefined && imageWidth < width
+      ? (width - imageWidth) / 2
+      : 0;
+  const offsetY =
+    imageHeight !== undefined && imageHeight < height
+      ? (height - imageHeight) / 2
+      : 0;
+
   return (
     <image
       href={previewUrl}
-      x={0}
-      y={0}
-      width={width}
-      height={height}
+      x={offsetX}
+      y={offsetY}
+      width={effectiveWidth}
+      height={effectiveHeight}
       preserveAspectRatio="xMidYMid meet"
     />
   );
