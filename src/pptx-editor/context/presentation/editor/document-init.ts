@@ -7,7 +7,7 @@
 import type { Slide, Presentation } from "../../../../pptx/domain";
 import type { Pixels } from "../../../../pptx/domain/types";
 import type { ColorContext } from "../../../../pptx/domain/resolution";
-import type { ResourceResolver } from "../../../../pptx/render/core";
+import type { ResourceResolver } from "../../../../pptx/domain/resource-resolver";
 import type { PresentationDocument, SlideWithId } from "../../../../pptx/app";
 
 // =============================================================================

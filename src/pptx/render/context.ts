@@ -1,37 +1,15 @@
 /**
  * @file Render context for PPTX processing
  *
- * Unified RenderContext used by all renderers (HTML, SVG, React).
+ * Provides the unified RenderContext type used by all renderers.
  */
 
-// Core types - single source of truth
-export type {
-  RenderDialect,
-  LineSpacingMode,
-  BaselineMode,
-  RenderOptions,
-  ResourceResolver,
-  RenderWarning,
-  WarningCollector,
-  ResolvedBackgroundFill,
-  CoreRenderContext,
-  CoreRenderContextConfig,
-} from "./core";
-
-export {
-  DEFAULT_RENDER_OPTIONS,
-  createEmptyResourceResolver,
-  createWarningCollector,
-  createCoreRenderContext,
-  createEmptyCoreRenderContext,
-} from "./core";
+import type { CoreRenderContext, CoreRenderContextConfig } from "./render-context";
+import { createCoreRenderContext, createEmptyCoreRenderContext } from "./render-context";
 
 // =============================================================================
 // Unified Render Context
 // =============================================================================
-
-import type { CoreRenderContext, CoreRenderContextConfig } from "./core";
-import { createCoreRenderContext, createEmptyCoreRenderContext } from "./core";
 
 /**
  * Unified render context used by all renderers.

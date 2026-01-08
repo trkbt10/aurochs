@@ -7,7 +7,6 @@
  *
  * ```
  * render/
- * ├── core/           # Format-agnostic utilities (transform, fill resolution)
  * ├── html/           # HTML slide rendering (browser display with CSS layout)
  * │   ├── slide.ts    # Main HTML slide renderer
  * │   ├── shape.ts    # Shape → HTML div/SVG
@@ -18,67 +17,70 @@
  * │   ├── slide-*.ts  # SVG slide components
  * │   ├── geometry.ts # Shape geometry → SVG path
  * │   └── effects*.ts # SVG filters and 3D effects
- * ├── components/     # SVG-only component renderers
- * │   ├── chart/      # Chart rendering
- * │   ├── table.ts    # Table rendering
- * │   └── diagram.ts  # SmartArt diagram rendering
  * └── text-layout/    # Text layout engine (for SVG absolute positioning)
- * ```
- *
- * ## Usage
- *
- * ### HTML Rendering (for browser display)
- * ```typescript
- * import { renderSlide, createRenderContext } from "./render";
- * const result = renderSlide(slide, ctx);
- * // result.html: HtmlString
- * ```
- *
- * ### SVG Rendering (for image generation)
- * ```typescript
- * import { renderSlideSvg } from "./render/svg/renderer";
- * const result = renderSlideSvg(slide, ctx);
- * // result.svg: string (SVG document)
  * ```
  */
 
 // =============================================================================
-// Core (shared utilities)
+// Types from render-context
+// =============================================================================
+
+export type { CoreRenderContext, CoreRenderContextConfig, RenderContextFromSlideOptions } from "./render-context";
+
+export { createCoreRenderContext, createEmptyCoreRenderContext, createRenderContextFromSlideContext } from "./render-context";
+
+// =============================================================================
+// Types from render-options
+// =============================================================================
+
+export type { RenderDialect, LineSpacingMode, BaselineMode, RenderOptions } from "./render-options";
+
+export { DEFAULT_RENDER_OPTIONS } from "./render-options";
+
+// =============================================================================
+// Types from warnings
+// =============================================================================
+
+export type { RenderWarning, WarningCollector } from "./warnings";
+
+export { createWarningCollector } from "./warnings";
+
+// =============================================================================
+// Types from background-fill
+// =============================================================================
+
+export type { ResolvedBackgroundFill } from "./background-fill";
+
+export { toResolvedBackgroundFill } from "./background-fill";
+
+// =============================================================================
+// Types from transform
+// =============================================================================
+
+export type { TransformData } from "./transform";
+
+export { extractTransformData, buildCssTransform, buildCssPositionStyles, buildSvgTransform, buildSvgTransformAttr } from "./transform";
+
+// =============================================================================
+// Types from domain (fill resolution)
 // =============================================================================
 
 export type {
-  CoreRenderContext,
-  RenderDialect,
-  LineSpacingMode,
-  BaselineMode,
-  RenderOptions,
-  RenderWarning,
-  ResourceResolver,
-  WarningCollector,
-  TransformData,
   ResolvedColor,
   ResolvedFill,
   ResolvedLine,
   DashStyle,
-} from "./core";
+} from "../domain/drawing-ml/fill-resolution";
 
-export {
-  DEFAULT_RENDER_OPTIONS,
-  createEmptyResourceResolver,
-  createWarningCollector,
-  createCoreRenderContext,
-  createEmptyCoreRenderContext,
-  extractTransformData,
-  buildCssTransform,
-  buildCssPositionStyles,
-  buildSvgTransform,
-  buildSvgTransformAttr,
-  resolveFill,
-  resolveLine,
-  resolveColorWithAlpha,
-  formatRgba,
-  getDashArrayPattern,
-} from "./core";
+export { resolveFill, resolveLine, resolveColorWithAlpha, formatRgba, getDashArrayPattern } from "../domain/drawing-ml/fill-resolution";
+
+// =============================================================================
+// Types from domain (resource resolver)
+// =============================================================================
+
+export type { ResourceResolver } from "../domain/resource-resolver";
+
+export { createEmptyResourceResolver } from "../domain/resource-resolver";
 
 // =============================================================================
 // Context
@@ -211,7 +213,8 @@ export { renderDiagram, renderDiagramPlaceholder } from "./html/diagram";
 // Table Rendering
 // =============================================================================
 
-export { renderTable, renderTableSvg } from "./core/table";
+export { renderTable } from "./html/table";
+export { renderTableSvg } from "./svg/table";
 
 // =============================================================================
 // Slide Rendering

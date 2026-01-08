@@ -794,8 +794,8 @@ describe("layoutTextBody", () => {
         paragraphs: [createParagraph([createSpan("Test", fontSize)])],
         renderOptions: {
           dialect: "ecma376",
-          lineSpacingMode: "standard",
-          baselineMode: "standard",
+          lineSpacingMode: "fontSizeMultiplier",
+          baselineMode: "svgBaseline",
           libreofficeLineSpacingFactor: 0.75,
           tableScalingMode: "natural",
         },
@@ -807,8 +807,8 @@ describe("layoutTextBody", () => {
         paragraphs: [createParagraph([createSpan("Test", fontSize)])],
         renderOptions: {
           dialect: "libreoffice",
-          lineSpacingMode: "compat",
-          baselineMode: "standard",
+          lineSpacingMode: "libreofficeCompat",
+          baselineMode: "svgBaseline",
           libreofficeLineSpacingFactor: 0.75,
           tableScalingMode: "natural",
         },
@@ -837,8 +837,8 @@ describe("layoutTextBody", () => {
         }],
         renderOptions: {
           dialect: "ecma376",
-          lineSpacingMode: "standard",
-          baselineMode: "standard",
+          lineSpacingMode: "fontSizeMultiplier",
+          baselineMode: "svgBaseline",
           libreofficeLineSpacingFactor: 0.75,
           tableScalingMode: "natural",
         },
@@ -853,8 +853,8 @@ describe("layoutTextBody", () => {
         }],
         renderOptions: {
           dialect: "libreoffice",
-          lineSpacingMode: "compat",
-          baselineMode: "standard",
+          lineSpacingMode: "libreofficeCompat",
+          baselineMode: "svgBaseline",
           libreofficeLineSpacingFactor: 0.75,
           tableScalingMode: "natural",
         },

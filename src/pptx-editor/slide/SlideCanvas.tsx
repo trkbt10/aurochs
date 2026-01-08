@@ -19,7 +19,9 @@ import type { DragState, SelectionState, ResizeHandlePosition, PathEditState } f
 import { isPathEditEditing } from "../context/slide/state";
 import type { CreationMode } from "../context/presentation/editor/types";
 import { isPenMode, isPathMode } from "../context/presentation/editor/types";
-import type { ResourceResolver, ResolvedBackgroundFill, RenderOptions } from "../../pptx/render/core/types";
+import type { ResourceResolver } from "../../pptx/domain/resource-resolver";
+import type { ResolvedBackgroundFill } from "../../pptx/render/background-fill";
+import type { RenderOptions } from "../../pptx/render/render-options";
 import type { DrawingPath } from "../path-tools/types";
 import { PenToolOverlay } from "../path-tools/components/PenToolOverlay";
 import { PathEditOverlay } from "../path-tools/components/PathEditOverlay";

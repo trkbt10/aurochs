@@ -6,7 +6,7 @@
 import type { TextBody, Paragraph, TextRun, RunProperties, BulletStyle, AutoNumberBullet } from "../../domain/text";
 import type { Pixels, Points } from "../../domain/types";
 import type { LayoutInput, LayoutParagraphInput, LayoutSpan, TextBoxConfig, BulletConfig, AutoFitConfig, TextOutlineConfig, FontAlignment, LayoutTabStop } from "./types";
-import type { RenderOptions } from "../core/types";
+import type { RenderOptions } from "../render-options";
 import type { ColorContext, FontScheme } from "../../domain/resolution";
 import { resolveThemeFont } from "../../domain/resolution";
 import type { Color, Line, Fill } from "../../domain/color";

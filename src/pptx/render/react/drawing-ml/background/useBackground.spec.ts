@@ -4,7 +4,7 @@
  * Tests background resolution and SVG element generation.
  */
 
-import type { ResolvedBackgroundFill } from "../../../core/types";
+import type { ResolvedBackgroundFill } from "../../../background-fill";
 import { resolveBackgroundForReact } from "./useBackground.js";
 
 // =============================================================================

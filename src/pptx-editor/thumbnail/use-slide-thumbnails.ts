@@ -8,7 +8,7 @@ import { useRef, useMemo, useCallback } from "react";
 import type { Pixels } from "../../pptx/domain/types";
 import type { ZipFile } from "../../pptx/domain";
 import { renderSlideSvg } from "../../pptx/render/svg/renderer";
-import { createCoreRenderContext } from "../../pptx/render/core";
+import { createCoreRenderContext } from "../../pptx/render/render-context";
 import type { SlideWithId } from "../../pptx/app";
 import { createRenderContext as createApiRenderContext } from "../../pptx/app";
 import {

@@ -10,7 +10,7 @@ import type { LoadedPresentation } from "./pptx-loader";
 import type { PresentationDocument, SlideWithId } from "./presentation-document";
 import type { Presentation as DomainPresentation, PresentationFile } from "../domain";
 import type { ColorContext, FontScheme, ColorScheme, ColorMap } from "../domain/resolution";
-import type { ResourceResolver } from "../render/core";
+import type { ResourceResolver } from "../domain/resource-resolver";
 import type { Slide as ApiSlide } from "./types";
 import { parseSlide } from "../parser/slide/slide-parser";
 import { createParseContext } from "../parser/context";

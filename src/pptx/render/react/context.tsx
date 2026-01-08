@@ -10,8 +10,13 @@ import type { SlideSize, Shape } from "../../domain";
 import type { ColorContext, FontScheme } from "../../domain/resolution";
 import type { ShapeId, Pixels } from "../../domain/types";
 import { px } from "../../domain/types";
-import type { RenderContext, RenderOptions, ResolvedBackgroundFill, ResourceResolver } from "../context";
-import { createEmptyResourceResolver, createWarningCollector, DEFAULT_RENDER_OPTIONS } from "../context";
+import type { RenderContext } from "../context";
+import type { RenderOptions } from "../render-options";
+import { DEFAULT_RENDER_OPTIONS } from "../render-options";
+import type { ResolvedBackgroundFill } from "../background-fill";
+import type { ResourceResolver } from "../../domain/resource-resolver";
+import { createEmptyResourceResolver } from "../../domain/resource-resolver";
+import { createWarningCollector } from "../warnings";
 
 // =============================================================================
 // Types

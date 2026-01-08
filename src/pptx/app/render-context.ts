@@ -11,13 +11,14 @@ import { createSlideRenderContext } from "../render/slide-context";
 import { createPlaceholderTable, createColorMap } from "../parser/slide/resource-adapters";
 import { parseTheme, parseMasterTextStyles } from "../parser/drawing-ml";
 import { DEFAULT_RENDER_OPTIONS, type RenderOptions } from "../render/render-options";
-import { createRenderContextFromSlideContext } from "../render/core/context";
+import { createRenderContextFromSlideContext } from "../render/render-context";
 import { getBackgroundFillData } from "../parser/drawing-ml";
 import { parseShapeTree } from "../parser/shape-parser";
 import type { XmlElement, XmlDocument } from "../../xml";
 import { getByPath, getChild } from "../../xml";
 import type { SlideSize, Shape, SpShape, ZipFile } from "../domain";
-import type { ResolvedBackgroundFill, RenderContext as CoreRenderContext } from "../render/context";
+import type { RenderContext as CoreRenderContext } from "../render/context";
+import type { ResolvedBackgroundFill } from "../render/background-fill";
 
 // =============================================================================
 // SlideRenderContext Builder

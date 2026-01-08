@@ -8,7 +8,9 @@
 import type { Slide, SlideSize, Shape } from "../../domain";
 import type { ColorContext, FontScheme } from "../../domain/resolution";
 import type { ShapeId } from "../../domain/types";
-import type { RenderOptions, ResolvedBackgroundFill, ResourceResolver } from "../core/types";
+import type { RenderOptions } from "../render-options";
+import type { ResolvedBackgroundFill } from "../background-fill";
+import type { ResourceResolver } from "../../domain/resource-resolver";
 import { RenderProvider, useRenderContext } from "./context";
 import { SvgDefsProvider } from "./hooks/useSvgDefs";
 import { ResolvedBackgroundRenderer, BackgroundRenderer } from "./Background";

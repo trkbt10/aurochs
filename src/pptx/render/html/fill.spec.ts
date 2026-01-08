@@ -10,7 +10,7 @@
 
 import { resolvedFillToBackground, fillToBackground, resolvedLineToBorder, lineToBorder } from "./fill";
 import type { Fill, Line } from "../../domain";
-import type { ResolvedFill, ResolvedLine } from "../core";
+import type { ResolvedFill, ResolvedLine } from "../../domain/drawing-ml/fill-resolution";
 import { pct, px } from "../../domain/types";
 
 // =============================================================================

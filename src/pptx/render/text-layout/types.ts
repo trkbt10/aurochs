@@ -5,7 +5,7 @@
 
 import type { Pixels, Points, TextAlign, TextAnchor, Percent } from "../../domain/types";
 import type { LineSpacing, TextWrapping, TextOverflow, TextVerticalOverflow } from "../../domain/text";
-import type { RenderOptions } from "../core/types";
+import type { RenderOptions } from "../render-options";
 import type { TextFillConfig, TextEffectsConfig } from "../../domain/drawing-ml";
 
 // =============================================================================

@@ -10,7 +10,8 @@
  */
 
 import type { Background, SlideSize } from "../../domain";
-import type { RenderContext, ResolvedBackgroundFill } from "../context";
+import type { RenderContext } from "../context";
+import type { ResolvedBackgroundFill } from "../background-fill";
 import type { SvgDefsCollector } from "./slide-utils";
 import { renderFillToSvgDef, renderFillToSvgStyle } from "./fill";
 import { ooxmlAngleToSvgLinearGradient, getRadialGradientCoords } from "./gradient-utils";

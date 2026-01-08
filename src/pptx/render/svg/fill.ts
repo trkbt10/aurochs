@@ -13,10 +13,9 @@ import {
   type ResolvedFill,
   type ResolvedGradientFill,
   type ResolvedLine,
-  ooxmlAngleToSvgLinearGradient,
-  getRadialGradientCoords,
-} from "../core";
-import type { ResolvedImageFill } from "../../domain/drawing-ml/fill-resolution";
+  type ResolvedImageFill,
+} from "../../domain/drawing-ml/fill-resolution";
+import { ooxmlAngleToSvgLinearGradient, getRadialGradientCoords } from "./gradient-utils";
 
 // =============================================================================
 // Fill Style Types

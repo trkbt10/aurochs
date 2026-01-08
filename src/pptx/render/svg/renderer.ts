@@ -15,7 +15,8 @@
  */
 
 import type { Slide, SlideSize } from "../../domain/index";
-import type { RenderContext, RenderWarning } from "../context";
+import type { RenderContext } from "../context";
+import type { RenderWarning } from "../warnings";
 import { createDefsCollector } from "./slide-utils";
 import { renderResolvedBackgroundSvg, renderBackgroundSvg } from "./slide-background";
 import { renderShapesSvg } from "./slide-shapes";

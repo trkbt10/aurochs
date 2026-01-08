@@ -8,7 +8,8 @@
 import type { Slide, Presentation, PresentationFile } from "../domain";
 import type { Pixels } from "../domain/types";
 import type { ColorContext, FontScheme } from "../domain/resolution";
-import type { ResourceResolver, ResolvedBackgroundFill } from "../render/core";
+import type { ResourceResolver } from "../domain/resource-resolver";
+import type { ResolvedBackgroundFill } from "../render/background-fill";
 import type { Slide as ApiSlide } from "./types";
 
 /**

@@ -8,7 +8,7 @@
 
 import type { TextBody } from "../../../../domain/text";
 import type { FontScheme } from "../../../../domain/theme";
-import type { RenderOptions } from "../../../core/types";
+import type { RenderOptions } from "../../../render-options";
 import type { ColorContext } from "../../../../domain/resolution";
 import type { Text3DRunConfig } from "../../../webgl/text3d";
 import { layoutTextBody, toLayoutInput } from "../../../text-layout";

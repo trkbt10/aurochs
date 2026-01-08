@@ -8,7 +8,7 @@ import type { PicShape, Transform } from "../../domain/index";
 import type { HtmlString } from "./primitives";
 import { createElement, unsafeHtml, buildStyle, EMPTY_HTML } from "./primitives";
 import type { HtmlRenderContext } from "./context";
-import { extractTransformData, buildCssPositionStyles } from "../core/index";
+import { extractTransformData, buildCssPositionStyles } from "../transform";
 
 // =============================================================================
 // Types

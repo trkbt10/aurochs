@@ -17,7 +17,8 @@ import { parseShapeTree } from "../parser/shape-parser/index";
 import { createParseContext } from "../parser/context";
 import { renderSlide, createEmptySlideHtml } from "../render/html/slide";
 import { renderSlideSvg, createEmptySlideSvg } from "../render/svg/renderer";
-import { createRenderContextFromSlideContext, toResolvedBackgroundFill } from "../render/core";
+import { createRenderContextFromSlideContext } from "../render/render-context";
+import { toResolvedBackgroundFill } from "../render/background-fill";
 import { getBackgroundFillData } from "../parser/drawing-ml";
 import { enrichSlideContent, type FileReader } from "../parser/slide/external-content-loader";
 

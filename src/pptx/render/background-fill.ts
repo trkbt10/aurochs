@@ -8,8 +8,48 @@
  * @see ECMA-376 Part 1, Section 20.1.8.46 (a:path) for radial/path gradients
  */
 
-import type { ResolvedBackgroundFill } from "./core/types";
 import type { BackgroundFill, GradientData } from "../domain/drawing-ml/index";
+
+// =============================================================================
+// Types
+// =============================================================================
+
+/**
+ * Resolved background fill (after inheritance resolution).
+ *
+ * This is separate from domain types because:
+ * 1. Domain types represent ECMA-376 structure (resourceId references)
+ * 2. This represents the resolved result (data URLs, computed values)
+ *
+ * @see ECMA-376 Part 1, Section 20.1.8.33 (a:gradFill)
+ * @see ECMA-376 Part 1, Section 20.1.8.46 (a:path) for radial/path gradients
+ */
+export type ResolvedBackgroundFill =
+  | { readonly type: "solid"; readonly color: string }
+  | {
+      readonly type: "gradient";
+      readonly angle: number;
+      readonly stops: readonly { readonly position: number; readonly color: string }[];
+      /**
+       * True if this is a radial (path) gradient.
+       * Per ECMA-376 Part 1, Section 20.1.8.46 (a:path):
+       * - path="circle" creates a circular radial gradient
+       * - path="rect" creates a rectangular gradient
+       * - path="shape" follows the shape boundary
+       */
+      readonly isRadial?: boolean;
+      /**
+       * Center position for radial gradients (percentages 0-100).
+       * Derived from a:fillToRect element.
+       * Default is center (50%, 50%) when not specified.
+       */
+      readonly radialCenter?: { readonly cx: number; readonly cy: number };
+    }
+  | { readonly type: "image"; readonly dataUrl: string; readonly mode: "stretch" | "tile" };
+
+// =============================================================================
+// Conversion
+// =============================================================================
 
 /**
  * Calculate radial center from fillToRect.

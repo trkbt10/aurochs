@@ -23,8 +23,8 @@ import { breakIntoLines, getLineWidth } from "./line-breaker";
 import { PT_TO_PX } from "../../domain/unit-conversion";
 import { DEFAULT_FONT_SIZE_PT } from "../../domain/defaults";
 import { getAscenderRatio } from "../../../text/font-metrics";
-import type { RenderOptions } from "../core/types";
-import { DEFAULT_RENDER_OPTIONS } from "../core/types";
+import type { RenderOptions } from "../render-options";
+import { DEFAULT_RENDER_OPTIONS } from "../render-options";
 
 // =============================================================================
 // Text Box Utilities
@@ -125,7 +125,7 @@ function calculateLineHeight(
 }
 
 function getEffectiveLineSpacing(baseMultiplier: number, renderOptions: RenderOptions): number {
-  if (renderOptions.lineSpacingMode === "compat") {
+  if (renderOptions.lineSpacingMode === "libreofficeCompat") {
     return baseMultiplier * renderOptions.libreofficeLineSpacingFactor;
   }
   return baseMultiplier;

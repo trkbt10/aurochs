@@ -32,10 +32,10 @@ import { createDefsCollector, getShapeTransform, isShapeHidden, buildTransformAt
 import { renderFillToSvgDef, renderFillToSvgStyle, getResolvedImageFill, renderImageFillToSvgDef } from "./fill";
 import { renderGeometryData } from "./geometry";
 import { generateLineMarkers } from "./marker";
-import { resolveFill, formatRgba } from "../core";
+import { resolveFill, formatRgba } from "../../domain/drawing-ml/fill-resolution";
 import { renderTextSvg, getDashArray } from "./slide-text";
 import { renderChart } from "../chart";
-import { renderTableSvg } from "../core/table";
+import { renderTableSvg } from "./table";
 import { px } from "../../domain/types";
 import { extractSvgContent } from "./svg-utils";
 
@@ -528,7 +528,7 @@ function renderGraphicFrameSvg(
       // Render at origin, transformAttr handles positioning (like chart)
       // Pass frame dimensions for scaling options (width/height only, not full Transform)
       const { table } = content.data;
-      return `<g${transformAttr}${ooxmlIdAttr}>${renderTableSvg(table, px(w), px(h), ctx)}</g>`;
+      return `<g${transformAttr}${ooxmlIdAttr}>${renderTableSvg(table, px(w), px(h), ctx.colorContext, ctx.options)}</g>`;
     }
 
     case "diagram": {

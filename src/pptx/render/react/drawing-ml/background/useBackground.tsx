@@ -9,7 +9,7 @@
  */
 
 import { useMemo, type ReactNode } from "react";
-import type { ResolvedBackgroundFill } from "../../../core/types";
+import type { ResolvedBackgroundFill } from "../../../background-fill";
 import { useRenderContext } from "../../context";
 import { useSvgDefs } from "../../hooks/useSvgDefs";
 import { ooxmlAngleToSvgLinearGradient, getRadialGradientCoords } from "../../../svg/gradient-utils";

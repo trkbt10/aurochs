@@ -13,15 +13,14 @@ import { generateLineMarkers } from "../svg/marker";
 import {
   resolveFill,
   formatRgba,
-  extractTransformData,
-  buildCssPositionStyles,
   getDashArrayPattern,
-} from "../core/index";
+} from "../../domain/drawing-ml/fill-resolution";
+import { extractTransformData, buildCssPositionStyles } from "../transform";
 import type { ResolvedImageFill } from "../../domain/drawing-ml/fill-resolution";
 import { renderTextBody } from "./text";
 import { renderChart } from "../chart/index";
 import { renderDiagram, renderDiagramPlaceholder } from "./diagram";
-import { renderTable } from "../core/table";
+import { renderTable } from "./table";
 import type { ChartReference, DiagramReference, Fill } from "../../domain/index";
 import { createDefsCollector, isShapeHidden } from "../svg/slide-utils";
 import {

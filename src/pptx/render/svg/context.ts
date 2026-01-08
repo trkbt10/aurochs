@@ -5,11 +5,8 @@
  */
 
 import { px } from "../../domain/types";
-import type { CoreRenderContext } from "../core";
-import {
-  createCoreRenderContext,
-  type CoreRenderContextConfig,
-} from "../core";
+import type { CoreRenderContext, CoreRenderContextConfig } from "../render-context";
+import { createCoreRenderContext } from "../render-context";
 
 // =============================================================================
 // SVG Defs Collection

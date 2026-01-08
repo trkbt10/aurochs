@@ -1,67 +1,82 @@
 /**
- * @file Core context creation utilities
+ * @file Core render context
  *
- * Factory functions for creating render contexts.
+ * Format-agnostic render context shared by HTML and SVG renderers.
  */
 
-import type { SlideSize } from "../../domain";
-import type { ColorContext, FontScheme, ColorScheme, ColorMap } from "../../domain/resolution";
-import { px } from "../../domain/types";
-import type {
-  CoreRenderContext,
-  RenderOptions,
-  RenderWarning,
-  ResolvedBackgroundFill,
-  ResourceResolver,
-  WarningCollector,
-} from "./types";
-import { DEFAULT_RENDER_OPTIONS } from "./types";
-import type { SlideRenderContext } from "../slide-context";
-import { getMimeTypeFromPath, createDataUrl } from "../../opc";
+import type { SlideSize, Shape } from "../domain";
+import type { ColorContext, FontScheme } from "../domain/resolution";
+import type { ResourceResolver } from "../domain/resource-resolver";
+import { createEmptyResourceResolver } from "../domain/resource-resolver";
+import { px } from "../domain/types";
+import type { RenderOptions } from "./render-options";
+import { DEFAULT_RENDER_OPTIONS } from "./render-options";
+import type { ResolvedBackgroundFill } from "./background-fill";
+import type { WarningCollector } from "./warnings";
+import { createWarningCollector } from "./warnings";
+import type { SlideRenderContext } from "./slide-context";
+import { getMimeTypeFromPath, createDataUrl } from "../opc";
 
 // =============================================================================
-// Empty Resource Resolver
+// Types
 // =============================================================================
 
 /**
- * Create an empty resource resolver (for testing)
+ * Core render context shared by both HTML and SVG renderers.
+ * Does NOT include format-specific utilities like StyleCollector.
  */
-export function createEmptyResourceResolver(): ResourceResolver {
-  return {
-    getTarget: () => undefined,
-    getType: () => undefined,
-    resolve: () => undefined,
-    getMimeType: () => undefined,
-    getFilePath: () => undefined,
-    readFile: () => null,
-  };
-}
+export type CoreRenderContext = {
+  /** Slide dimensions */
+  readonly slideSize: SlideSize;
+
+  /** Render options */
+  readonly options: RenderOptions;
+
+  /** Color resolution context */
+  readonly colorContext: ColorContext;
+
+  /** Resource resolver */
+  readonly resources: ResourceResolver;
+
+  /** Warning collector */
+  readonly warnings: WarningCollector;
+
+  /** Current shape ID counter */
+  readonly getNextShapeId: () => string;
+
+  /**
+   * Pre-resolved background fill (after slide → layout → master inheritance).
+   * If provided, this takes precedence over the slide's parsed background.
+   */
+  readonly resolvedBackground?: ResolvedBackgroundFill;
+
+  /**
+   * Font scheme for resolving theme font references (+mj-lt, +mn-lt, etc.).
+   * @see ECMA-376 Part 1, Section 20.1.4.1.18 (a:fontScheme)
+   */
+  readonly fontScheme?: FontScheme;
+
+  /**
+   * Non-placeholder shapes from slide layout.
+   * These are decorative shapes that should be rendered behind slide content.
+   *
+   * Per ECMA-376 Part 1, Section 19.3.1.39 (sldLayout):
+   * Layout shapes provide visual decoration that is inherited by slides.
+   * Only non-placeholder shapes are included here.
+   *
+   * @see ECMA-376 Part 1, Section 19.3.1.39 (sldLayout)
+   */
+  readonly layoutShapes?: readonly Shape[];
+};
 
 // =============================================================================
-// Warning Collector
-// =============================================================================
-
-/**
- * Create a warning collector
- */
-export function createWarningCollector(): WarningCollector {
-  const warnings: RenderWarning[] = [];
-
-  return {
-    add: (warning) => warnings.push(warning),
-    getAll: () => warnings,
-    hasErrors: () => warnings.some((w) => w.type === "error"),
-  };
-}
-
-// =============================================================================
-// Core Context Creation
+// Configuration Types
 // =============================================================================
 
 /**
  * Configuration for creating a core render context.
  *
- * This is the unified configuration type used by all render context factories.
+ * This is the configuration type used by all render context factories.
  * All optional fields have sensible defaults when not provided.
  */
 export type CoreRenderContextConfig = {
@@ -73,6 +88,19 @@ export type CoreRenderContextConfig = {
   readonly resolvedBackground?: ResolvedBackgroundFill;
   readonly layoutShapes?: readonly Shape[];
 };
+
+/**
+ * Options for creating render context from SlideRenderContext
+ */
+export type RenderContextFromSlideOptions = {
+  readonly renderOptions?: Partial<RenderOptions>;
+  readonly resolvedBackground?: ResolvedBackgroundFill;
+  readonly layoutShapes?: readonly Shape[];
+};
+
+// =============================================================================
+// Factory Functions
+// =============================================================================
 
 /**
  * Create a core render context (format-agnostic).
@@ -105,21 +133,6 @@ export function createEmptyCoreRenderContext(): CoreRenderContext {
   });
 }
 
-// =============================================================================
-// Render Context Builder (from SlideRenderContext)
-// =============================================================================
-
-import type { Shape } from "../../domain";
-
-/**
- * Options for creating render context from SlideRenderContext
- */
-export type RenderContextFromSlideOptions = {
-  readonly renderOptions?: Partial<RenderOptions>;
-  readonly resolvedBackground?: ResolvedBackgroundFill;
-  readonly layoutShapes?: readonly Shape[];
-};
-
 /**
  * Create CoreRenderContext from SlideRenderContext.
  *
@@ -134,7 +147,7 @@ export function createRenderContextFromSlideContext(
   slideSize: SlideSize,
   options?: RenderContextFromSlideOptions,
 ): CoreRenderContext {
-  let shapeId = 0;
+  const shapeId = { value: 0 };
 
   return {
     slideSize,
@@ -142,13 +155,16 @@ export function createRenderContextFromSlideContext(
     colorContext: buildColorContext(ctx),
     resources: buildResourceResolver(ctx),
     warnings: createWarningCollector(),
-    getNextShapeId: () => `shape-${shapeId++}`,
+    getNextShapeId: () => `shape-${shapeId.value++}`,
     resolvedBackground: options?.resolvedBackground,
     fontScheme: buildFontScheme(ctx),
     layoutShapes: options?.layoutShapes,
   };
 }
 
+// =============================================================================
+// Internal Helpers
+// =============================================================================
 
 /**
  * Build ColorContext from SlideRenderContext.

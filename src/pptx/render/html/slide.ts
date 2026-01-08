@@ -5,7 +5,9 @@
  */
 
 import type { Background, Slide, SlideSize } from "../../domain/index";
-import type { RenderContext, RenderWarning, ResolvedBackgroundFill } from "../context";
+import type { RenderContext } from "../context";
+import type { RenderWarning } from "../warnings";
+import type { ResolvedBackgroundFill } from "../background-fill";
 import { buildStyle, div, EMPTY_HTML, type HtmlString, unsafeHtml } from "./index";
 import { fillToBackground } from "./fill";
 import { renderShapes } from "./shape";

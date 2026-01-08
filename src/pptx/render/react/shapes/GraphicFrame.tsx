@@ -14,7 +14,7 @@ import { px } from "../../../domain/types";
 import { useRenderContext } from "../context";
 import { buildTransformAttr } from "./transform";
 import { renderChart } from "../../chart";
-import { renderTableSvg } from "../../core/table";
+import { renderTableSvg } from "../../svg/table";
 import { renderDiagramShapesSvg } from "../../svg/slide-shapes";
 import { extractSvgContent } from "../../svg/svg-utils";
 

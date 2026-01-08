@@ -8,7 +8,7 @@
 
 import type { ReactNode } from "react";
 import type { Background as BackgroundType, SlideSize } from "../../domain";
-import type { ResolvedBackgroundFill } from "../context";
+import type { ResolvedBackgroundFill } from "../background-fill";
 import { useRenderContext } from "./context";
 import { useSvgDefs } from "./hooks/useSvgDefs";
 import { resolveFill } from "../../domain/drawing-ml/fill-resolution";
