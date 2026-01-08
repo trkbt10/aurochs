@@ -6,11 +6,13 @@
 import type { Presentation, Slide, SlideInfo, ListOptions, PresentationOptions } from "./types";
 import type { SlideFileInfo, ZipFile } from "../opc";
 import type { SlideSize } from "../domain";
-import type { XmlElement } from "../../xml";
+import { getByPath, type XmlElement } from "../../xml";
 import type { SlideData } from "../domain/slide/data";
 import type { RenderOptions } from "../render/render-options";
+import type { TableStyleList } from "../parser/table/style-parser";
 import { parseContentTypes, buildSlideFileInfoList } from "../opc";
 import { parseSlideSizeFromXml, parseDefaultTextStyle, parseAppVersion } from "./presentation-info";
+import { parseTableStyleList } from "../parser/table/style-parser";
 import { createZipAdapter } from "../domain/zip-adapter";
 import { readXml, getRelationships, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS } from "../parser/slide/xml-reader";
 import { createSlide } from "./slide-builder";
@@ -26,6 +28,7 @@ function parseSlide(
   appVersion: number,
   zipAdapter: ZipFile,
   defaultTextStyle: XmlElement | null,
+  tableStyles: TableStyleList | null,
   slideSize: SlideSize,
   renderOptions?: RenderOptions,
 ): Slide {
@@ -69,7 +72,7 @@ function parseSlide(
     diagramRelationships: diagramData.diagramRelationships,
   };
 
-  return createSlide(data, zipAdapter, defaultTextStyle, slideSize, renderOptions);
+  return createSlide(data, zipAdapter, defaultTextStyle, tableStyles, slideSize, renderOptions);
 }
 
 /**
@@ -127,6 +130,11 @@ export function openPresentation(file: PresentationFile, options?: PresentationO
   const size = parseSlideSizeFromXml(presentationXml);
   const defaultTextStyle = parseDefaultTextStyle(presentationXml);
 
+  // Read table styles from ppt/tableStyles.xml
+  const tableStylesXml = readXml(file, "ppt/tableStyles.xml", 16, false, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS);
+  const tableStylesRoot = tableStylesXml ? getByPath(tableStylesXml, ["a:tblStyleLst"]) : undefined;
+  const tableStyles = tableStylesRoot ? parseTableStyleList(tableStylesRoot) ?? null : null;
+
   // Read thumbnail
   const thumbnail = file.readBinary("docProps/thumbnail.jpeg");
 
@@ -147,13 +155,13 @@ export function openPresentation(file: PresentationFile, options?: PresentationO
     if (slideInfo === undefined) {
       throw new Error(`Slide ${slideNumber} not found`);
     }
-    return parseSlide(file, slideInfo, appVersion ?? 16, zipAdapter, defaultTextStyle, size, renderOptions);
+    return parseSlide(file, slideInfo, appVersion ?? 16, zipAdapter, defaultTextStyle, tableStyles, size, renderOptions);
   };
 
   // Create slides generator function
   function* slidesGenerator(): IterableIterator<Slide> {
     for (const slideInfo of slideFiles) {
-      yield parseSlide(file, slideInfo, appVersion ?? 16, zipAdapter, defaultTextStyle, size, renderOptions);
+      yield parseSlide(file, slideInfo, appVersion ?? 16, zipAdapter, defaultTextStyle, tableStyles, size, renderOptions);
     }
   }
 
@@ -163,6 +171,7 @@ export function openPresentation(file: PresentationFile, options?: PresentationO
     thumbnail,
     appVersion,
     defaultTextStyle,
+    tableStyles,
     list,
     getSlide,
     slides: slidesGenerator,

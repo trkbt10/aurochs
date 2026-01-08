@@ -13,6 +13,7 @@ import type { SlideData } from "../domain/slide/data";
 import type { RenderOptions } from "../render/render-options";
 import type { SlideContext } from "../parser/slide/context";
 import { createSlideContext } from "../parser/slide/context";
+import type { TableStyleList } from "../parser/table/style-parser";
 import { createPlaceholderTable, createColorMap } from "../parser/slide/resource-adapters";
 import { parseTheme, parseMasterTextStyles } from "../parser/drawing-ml";
 import { DEFAULT_RENDER_OPTIONS } from "../render/render-options";
@@ -29,6 +30,7 @@ import { parseSlideTransitionData } from "../parser/slide/transition-parser";
  * @param data - Complete slide data with all parsed XML
  * @param zip - ZipFile adapter for reading resources
  * @param defaultTextStyle - Default text style from presentation.xml
+ * @param tableStyles - Table styles from ppt/tableStyles.xml
  * @param renderOptions - Optional render options for dialect-specific behavior
  * @returns SlideRenderContext for use in rendering
  */
@@ -36,6 +38,7 @@ function buildSlideRenderContext(
   data: SlideData,
   zip: ZipFile,
   defaultTextStyle: XmlElement | null,
+  tableStyles: TableStyleList | null,
   renderOptions?: RenderOptions,
 ): SlideContext {
   // Extract color map from master
@@ -81,6 +84,7 @@ function buildSlideRenderContext(
     zip,
     renderOptions: renderOptions ?? DEFAULT_RENDER_OPTIONS,
     themeResources: data.themeRelationships,
+    tableStyles: tableStyles ?? undefined,
   };
 
   return createSlideContext(slide, layout, master, presentation);
@@ -95,6 +99,7 @@ function buildSlideRenderContext(
  * @param data - Complete slide data with all parsed XML
  * @param zip - ZipFile adapter for reading resources
  * @param defaultTextStyle - Default text style from presentation.xml
+ * @param tableStyles - Table styles from ppt/tableStyles.xml
  * @param slideSize - Slide dimensions
  * @param renderOptions - Optional render options for dialect-specific behavior
  * @returns A Slide object with rendering methods
@@ -103,18 +108,19 @@ export function createSlide(
   data: SlideData,
   zip: ZipFile,
   defaultTextStyle: XmlElement | null,
+  tableStyles: TableStyleList | null,
   slideSize: SlideSize,
   renderOptions?: RenderOptions,
 ): Slide {
   const renderHTML = (): string => {
-    const slideRenderCtx = buildSlideRenderContext(data, zip, defaultTextStyle, renderOptions);
+    const slideRenderCtx = buildSlideRenderContext(data, zip, defaultTextStyle, tableStyles, renderOptions);
     const result = renderSlideIntegrated(data.content as XmlDocument, slideRenderCtx, slideSize);
     return `<style>${result.styles}</style>${result.html}`;
   };
 
   const renderSVG = (): string => {
     // Use render for SVG output (text style inheritance now implemented)
-    const slideRenderCtx = buildSlideRenderContext(data, zip, defaultTextStyle, renderOptions);
+    const slideRenderCtx = buildSlideRenderContext(data, zip, defaultTextStyle, tableStyles, renderOptions);
     const result = renderSlideSvgIntegrated(data.content as XmlDocument, slideRenderCtx, slideSize);
     return result.svg;
   };

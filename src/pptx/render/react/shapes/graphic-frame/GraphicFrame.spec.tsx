@@ -203,6 +203,25 @@ function createOleObjectWithPreviewGraphicFrame(): GraphicFrameType {
 }
 
 /**
+ * Create a test GraphicFrame shape with OLE object in showAsIcon mode
+ */
+function createOleObjectShowAsIconGraphicFrame(): GraphicFrameType {
+  return {
+    type: "graphicFrame",
+    nonVisual: defaultNonVisual,
+    transform: defaultTransform,
+    content: {
+      type: "oleObject",
+      data: {
+        progId: "Excel.Sheet.12",
+        name: "Embedded Spreadsheet",
+        showAsIcon: true,
+      },
+    },
+  };
+}
+
+/**
  * Wrapper component that provides required context
  */
 function TestWrapper({ children }: { readonly children: React.ReactNode }) {
@@ -419,6 +438,31 @@ describe("GraphicFrameRenderer", () => {
       const image = container.querySelector("image");
       expect(image).not.toBeNull();
       expect(image?.getAttribute("href")).toContain("data:image/png");
+    });
+
+    it("renders icon view when showAsIcon is true", () => {
+      const shape = createOleObjectShowAsIconGraphicFrame();
+
+      const { container } = render(
+        <TestWrapper>
+          <GraphicFrameRenderer
+            shape={shape}
+            width={200}
+            height={100}
+            shapeId="test-ole-icon"
+          />
+        </TestWrapper>,
+      );
+
+      // Should render icon view with object name
+      const text = container.querySelector("text");
+      expect(text).not.toBeNull();
+      // Should show the object name "Embedded Spreadsheet"
+      expect(text?.textContent).toContain("Embedded Spreadsheet");
+
+      // Should have background rect for icon view
+      const rects = container.querySelectorAll("rect");
+      expect(rects.length).toBeGreaterThan(0);
     });
   });
 

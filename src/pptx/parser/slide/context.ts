@@ -29,6 +29,7 @@ import type {
   ColorMap,
   ResolvedBlipResource,
 } from "../../domain/index";
+import type { TableStyleList } from "../table/style-parser";
 import type { ColorResolveContext } from "../../domain/resolution";
 import { getMimeType } from "../../../files/mime";
 
@@ -74,6 +75,12 @@ export type PresentationContext = {
    * @see ECMA-376 Part 1, Section 20.1.4.1.7
    */
   themeResources?: ResourceMap;
+  /**
+   * Table styles from ppt/tableStyles.xml.
+   *
+   * @see ECMA-376 Part 1, Section 20.1.4.2 (a:tblStyleLst)
+   */
+  tableStyles?: TableStyleList;
 };
 
 // =============================================================================

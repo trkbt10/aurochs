@@ -17,6 +17,7 @@ import type { ResolvedBackgroundFill } from "../background-fill";
 import type { ResourceResolver } from "../../domain/resource-resolver";
 import { createEmptyResourceResolver } from "../../domain/resource-resolver";
 import { createWarningCollector } from "../warnings";
+import type { TableStyleList } from "../../parser/table/style-parser";
 
 // =============================================================================
 // Types
@@ -42,6 +43,7 @@ export type RenderProviderProps = {
   readonly resolvedBackground?: ResolvedBackgroundFill;
   readonly editingShapeId?: ShapeId;
   readonly layoutShapes?: readonly Shape[];
+  readonly tableStyles?: TableStyleList;
 };
 
 // =============================================================================
@@ -67,6 +69,7 @@ export function RenderProvider({
   options,
   resolvedBackground,
   layoutShapes,
+  tableStyles,
 }: RenderProviderProps) {
   const resolvedResources = useMemo(
     () => resources ?? createEmptyResourceResolver(),
@@ -110,6 +113,7 @@ export function RenderProvider({
       resolvedBackground,
       fontScheme,
       layoutShapes,
+      tableStyles,
     }),
     [
       slideSize,
@@ -120,6 +124,7 @@ export function RenderProvider({
       fontScheme,
       resolvedBackground,
       layoutShapes,
+      tableStyles,
       shapeIdRef,
     ],
   );

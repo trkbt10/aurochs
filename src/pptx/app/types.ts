@@ -9,6 +9,7 @@ import type { ResourceMap } from "../opc";
 import type { SlideSize, SlideTransition } from "../domain";
 import type { Timing } from "../domain/animation";
 import type { RenderOptions } from "../render/render-options";
+import type { TableStyleList } from "../parser/table/style-parser";
 
 /**
  * Options for opening a presentation
@@ -133,6 +134,9 @@ export type Presentation = {
 
   /** Default text style from presentation.xml */
   readonly defaultTextStyle: XmlNode | null;
+
+  /** Table styles from ppt/tableStyles.xml */
+  readonly tableStyles: TableStyleList | null;
 
   /**
    * List slides with pagination support

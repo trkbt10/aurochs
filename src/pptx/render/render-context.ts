@@ -14,6 +14,7 @@ import { DEFAULT_RENDER_OPTIONS } from "./render-options";
 import type { ResolvedBackgroundFill } from "./background-fill";
 import type { WarningCollector } from "./warnings";
 import { createWarningCollector } from "./warnings";
+import type { TableStyleList } from "../parser/table/style-parser";
 
 // =============================================================================
 // Types
@@ -65,6 +66,13 @@ export type CoreRenderContext = {
    * @see ECMA-376 Part 1, Section 19.3.1.39 (sldLayout)
    */
   readonly layoutShapes?: readonly Shape[];
+
+  /**
+   * Table styles from ppt/tableStyles.xml.
+   *
+   * @see ECMA-376 Part 1, Section 20.1.4.2 (a:tblStyleLst)
+   */
+  readonly tableStyles?: TableStyleList;
 };
 
 // =============================================================================
@@ -85,6 +93,7 @@ export type CoreRenderContextConfig = {
   readonly fontScheme?: FontScheme;
   readonly resolvedBackground?: ResolvedBackgroundFill;
   readonly layoutShapes?: readonly Shape[];
+  readonly tableStyles?: TableStyleList;
 };
 
 // =============================================================================
@@ -110,6 +119,7 @@ export function createCoreRenderContext(config: CoreRenderContextConfig): CoreRe
     fontScheme: config.fontScheme,
     resolvedBackground: config.resolvedBackground,
     layoutShapes: config.layoutShapes,
+    tableStyles: config.tableStyles,
   };
 }
 

@@ -18,6 +18,12 @@ export type OlePreviewResult = {
   readonly previewUrl: string | undefined;
   /** Whether preview is available */
   readonly hasPreview: boolean;
+  /** Whether to show as icon (ECMA-376 showAsIcon attribute) */
+  readonly showAsIcon: boolean;
+  /** Object name for icon display */
+  readonly objectName: string | undefined;
+  /** Program ID for icon display (e.g., "Excel.Sheet.12") */
+  readonly progId: string | undefined;
 };
 
 /**
@@ -36,19 +42,41 @@ export function useOlePreview(oleData: OleReference | undefined): OlePreviewResu
 
   return useMemo(() => {
     if (oleData === undefined) {
-      return { previewUrl: undefined, hasPreview: false };
+      return {
+        previewUrl: undefined,
+        hasPreview: false,
+        showAsIcon: false,
+        objectName: undefined,
+        progId: undefined,
+      };
     }
+
+    const showAsIcon = oleData.showAsIcon ?? false;
+    const objectName = oleData.name;
+    const progId = oleData.progId;
 
     // Try pre-resolved preview image first
     if (oleData.previewImageUrl !== undefined) {
-      return { previewUrl: oleData.previewImageUrl, hasPreview: true };
+      return {
+        previewUrl: oleData.previewImageUrl,
+        hasPreview: true,
+        showAsIcon,
+        objectName,
+        progId,
+      };
     }
 
     // Try p:pic child element
     if (oleData.pic?.resourceId !== undefined) {
       const dataUrl = resources.resolve(oleData.pic.resourceId);
       if (dataUrl !== undefined) {
-        return { previewUrl: dataUrl, hasPreview: true };
+        return {
+          previewUrl: dataUrl,
+          hasPreview: true,
+          showAsIcon,
+          objectName,
+          progId,
+        };
       }
     }
 
@@ -58,6 +86,12 @@ export function useOlePreview(oleData: OleReference | undefined): OlePreviewResu
       message: `OLE object preview not available: ${oleData.progId ?? "unknown"}`,
     });
 
-    return { previewUrl: undefined, hasPreview: false };
+    return {
+      previewUrl: undefined,
+      hasPreview: false,
+      showAsIcon,
+      objectName,
+      progId,
+    };
   }, [oleData, resources, warnings]);
 }

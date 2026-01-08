@@ -34,7 +34,7 @@ export function useTableSvg(
 ): SvgResult {
   // Extract only the required context properties
   // This encapsulation prevents bugs where wrong properties are passed
-  const { colorContext, options } = useRenderContext();
+  const { colorContext, options, tableStyles } = useRenderContext();
 
   return useMemo(() => {
     if (table === undefined) {
@@ -47,8 +47,9 @@ export function useTableSvg(
       px(height),
       colorContext,
       options,
+      tableStyles,
     );
 
     return { svg, hasContent: true };
-  }, [table, width, height, colorContext, options]);
+  }, [table, width, height, colorContext, options, tableStyles]);
 }

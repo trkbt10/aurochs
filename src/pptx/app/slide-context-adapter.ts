@@ -61,6 +61,7 @@ export function createRenderContextFromSlideContext(
     resolvedBackground: options?.resolvedBackground,
     fontScheme: buildFontScheme(ctx),
     layoutShapes: options?.layoutShapes,
+    tableStyles: ctx.presentation.tableStyles,
   };
 }
 
