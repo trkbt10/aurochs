@@ -19,7 +19,7 @@ import type {
 } from "../../domain/chart";
 import type { TextBody } from "../../domain/text";
 import { pt } from "../../domain/types";
-import type { RenderContext } from "../context";
+import type { CoreRenderContext } from "../render-context";
 import { type HtmlString, unsafeHtml, escapeHtml } from "../html/index";
 import { resolveFill } from "../../domain/drawing-ml/fill-resolution";
 import { createDefsCollector, type DefsCollector } from "../svg/context";
@@ -135,7 +135,7 @@ function normalizeHexColor(color: string): string {
  */
 function getColorFromShapeProperties(
   spPr: ChartShapeProperties | undefined,
-  ctx: RenderContext
+  ctx: CoreRenderContext
 ): string | undefined {
   if (!spPr?.fill) {return undefined;}
 
@@ -154,7 +154,7 @@ function getColorFromShapeProperties(
  */
 function getSeriesColor(
   index: number,
-  ctx: RenderContext,
+  ctx: CoreRenderContext,
   seriesSpPr?: ChartShapeProperties
 ): string {
   const spPrColor = getColorFromShapeProperties(seriesSpPr, ctx);
@@ -186,7 +186,7 @@ function getBasePieColors(
   varyColors: boolean,
   numDataPoints: number,
   colors: readonly string[],
-  ctx: RenderContext
+  ctx: CoreRenderContext
 ): string[] {
   if (varyColors) {
     return Array.from({ length: numDataPoints }, (_, i) => getSeriesColor(i, ctx));
@@ -265,7 +265,7 @@ function resolveDataPointColors(
   series: { readonly dataPoints?: readonly { readonly idx: number; readonly shapeProperties?: ChartShapeProperties }[] },
   seriesColor: string,
   numPoints: number,
-  ctx: RenderContext
+  ctx: CoreRenderContext
 ): readonly string[] {
   return Array.from({ length: numPoints }, (_, i) => {
     const dPt = series.dataPoints?.find((dp) => dp.idx === i);
@@ -387,7 +387,7 @@ function renderChartTitle(
   plotHeight: number,
   chartWidth: number,
   chartHeight: number,
-  ctx: RenderContext,
+  ctx: CoreRenderContext,
   defs: DefsCollector
 ): string {
   // Check if title should be auto-deleted
@@ -476,7 +476,7 @@ function renderPlotAreaBackground(
   plotArea: Chart["plotArea"],
   plotWidth: number,
   plotHeight: number,
-  ctx: RenderContext,
+  ctx: CoreRenderContext,
   defs: DefsCollector
 ): string {
   const spPr = plotArea.shapeProperties;
@@ -504,7 +504,7 @@ function resolveFillStyle(
   fill: ChartShapeProperties["fill"] | undefined,
   idPrefix: string,
   defs: DefsCollector,
-  ctx: RenderContext
+  ctx: CoreRenderContext
 ): string {
   if (!fill) {
     return "none";
@@ -634,7 +634,7 @@ function renderChartSeries(
   chartWidth: number,
   chartHeight: number,
   axes: Chart["plotArea"]["axes"],
-  ctx: RenderContext
+  ctx: CoreRenderContext
 ): ChartContent {
   const axisConfig = extractValueAxisConfig(axes);
 
@@ -859,7 +859,7 @@ export function renderChart(
   chart: Chart,
   width: number,
   height: number,
-  ctx: RenderContext
+  ctx: CoreRenderContext
 ): HtmlString {
   const firstChart = chart.plotArea.charts[0];
   if (!firstChart) {

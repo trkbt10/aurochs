@@ -10,7 +10,7 @@
 import type { XmlElement } from "../../../xml";
 import { getChild } from "../../../xml";
 import type { BackgroundElement, BackgroundParseResult, BackgroundFill, FillType, GradientFill } from "../../domain/drawing-ml";
-import type { SlideRenderContext } from "../../render/slide-context";
+import type { SlideContext } from "../slide/context";
 import { getSolidFill } from "./color";
 import { getGradientFill, getFillType, formatFillResult, getPicFillFromContext, detectImageFillMode } from "./fill";
 
@@ -73,7 +73,7 @@ export function getBgRefFromElement(element: XmlElement | undefined): XmlElement
  */
 export function resolveBgRefToXmlElement(
   bgRef: XmlElement,
-  ctx: SlideRenderContext,
+  ctx: SlideContext,
 ): XmlElement | undefined {
   const idxAttr = bgRef.attrs?.idx;
   if (idxAttr === undefined) {
@@ -103,7 +103,7 @@ export function resolveBgRefToXmlElement(
  *
  * @see ECMA-376 Part 1, Section 19.3.1.4 (p:bgRef)
  */
-export function extractPhClrFromBgRef(bgRef: XmlElement, ctx: SlideRenderContext): string | undefined {
+export function extractPhClrFromBgRef(bgRef: XmlElement, ctx: SlideContext): string | undefined {
   return getSolidFill(bgRef, undefined, ctx.toColorContext());
 }
 
@@ -113,7 +113,7 @@ export function extractPhClrFromBgRef(bgRef: XmlElement, ctx: SlideRenderContext
  *
  * @see ECMA-376 Part 1, Section 19.3.1.2 (p:bg)
  */
-export function parseBackgroundProperties(ctx: SlideRenderContext): BackgroundParseResult | undefined {
+export function parseBackgroundProperties(ctx: SlideContext): BackgroundParseResult | undefined {
   // Try slide first
   const slideBgPr = getBgPrFromElement(ctx.slide.content);
   if (slideBgPr !== undefined) {
@@ -162,7 +162,7 @@ export function parseBackgroundProperties(ctx: SlideRenderContext): BackgroundPa
 /**
  * Get background reference element from content hierarchy.
  */
-export function findBackgroundRef(ctx: SlideRenderContext): XmlElement | undefined {
+export function findBackgroundRef(ctx: SlideContext): XmlElement | undefined {
   const slideBgRef = getBgRefFromElement(ctx.slide.content);
   if (slideBgRef !== undefined) {
     return slideBgRef;
@@ -179,7 +179,7 @@ export function findBackgroundRef(ctx: SlideRenderContext): XmlElement | undefin
 /**
  * Check if slide has its own background (not inherited)
  */
-export function hasOwnBackground(ctx: SlideRenderContext): boolean {
+export function hasOwnBackground(ctx: SlideContext): boolean {
   const slideContent = ctx.slide.content;
 
   const cSld = getChild(slideContent, "p:cSld");
@@ -208,7 +208,7 @@ type BackgroundFillHandler = {
   /** Fill type identifier */
   readonly type: FillType;
   /** Extract fill data and return structured BackgroundFill */
-  extractData: (fill: XmlElement, ctx: SlideRenderContext, phClr?: string, fromTheme?: boolean) => BackgroundFill | null;
+  extractData: (fill: XmlElement, ctx: SlideContext, phClr?: string, fromTheme?: boolean) => BackgroundFill | null;
 };
 
 /**
@@ -318,7 +318,7 @@ const GRADIENT_FILL_BG_HANDLER: BackgroundFillHandler = {
  * Get resource context for blipFill resolution.
  * Theme fills use theme resources, others use slide resources.
  */
-function getBlipResourceContext(ctx: SlideRenderContext, fromTheme?: boolean) {
+function getBlipResourceContext(ctx: SlideContext, fromTheme?: boolean) {
   if (fromTheme === true) {
     return ctx.toThemeResourceContext();
   }
@@ -332,7 +332,7 @@ function getBlipResourceContext(ctx: SlideRenderContext, fromTheme?: boolean) {
  */
 function tryGetPicFill(
   blipFill: unknown,
-  ctx: SlideRenderContext,
+  ctx: SlideContext,
   fromTheme?: boolean,
 ): string | undefined {
   const resourceContext = getBlipResourceContext(ctx, fromTheme);
@@ -388,7 +388,7 @@ const DEFAULT_BACKGROUND_FILL: BackgroundFill = {
  *
  * @see ECMA-376 Part 1, Section 19.3.1.2 (p:bg)
  */
-export function getBackgroundFillData(ctx: SlideRenderContext): BackgroundFill {
+export function getBackgroundFillData(ctx: SlideContext): BackgroundFill {
   const bgResult = parseBackgroundProperties(ctx);
 
   if (bgResult === undefined) {

@@ -16,7 +16,7 @@
 import type { TextBody } from "../../domain/text";
 import type { Color } from "../../domain/color";
 import type { ColorContext } from "../../domain/resolution";
-import type { RenderContext } from "../context";
+import type { CoreRenderContext } from "../render-context";
 import type { SvgDefsCollector } from "./slide-utils";
 import type { LayoutResult, LayoutLine, LayoutSpan } from "../text-layout";
 import { layoutTextBody, toLayoutInput } from "../text-layout";
@@ -41,7 +41,7 @@ import { ooxmlAngleToSvgLinearGradient, getRadialGradientCoords } from "./gradie
  */
 export function renderTextSvg(
   textBody: TextBody,
-  ctx: RenderContext,
+  ctx: CoreRenderContext,
   boxWidth: number,
   boxHeight: number,
   defsCollector: SvgDefsCollector,

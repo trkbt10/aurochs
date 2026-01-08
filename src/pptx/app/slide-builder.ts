@@ -11,8 +11,8 @@ import type { XmlElement, XmlDocument } from "../../xml";
 import { getByPath } from "../../xml";
 import type { SlideData } from "../domain/slide/data";
 import type { RenderOptions } from "../render/render-options";
-import type { SlideRenderContext } from "../render/slide-context";
-import { createSlideRenderContext } from "../render/slide-context";
+import type { SlideContext } from "../parser/slide/context";
+import { createSlideContext } from "../parser/slide/context";
 import { createPlaceholderTable, createColorMap } from "../parser/slide/resource-adapters";
 import { parseTheme, parseMasterTextStyles } from "../parser/drawing-ml";
 import { DEFAULT_RENDER_OPTIONS } from "../render/render-options";
@@ -37,7 +37,7 @@ function buildSlideRenderContext(
   zip: ZipFile,
   defaultTextStyle: XmlElement | null,
   renderOptions?: RenderOptions,
-): SlideRenderContext {
+): SlideContext {
   // Extract color map from master
   const masterClrMap = getByPath(data.master, ["p:sldMaster", "p:clrMap"]);
 
@@ -83,7 +83,7 @@ function buildSlideRenderContext(
     themeResources: data.themeRelationships,
   };
 
-  return createSlideRenderContext(slide, layout, master, presentation);
+  return createSlideContext(slide, layout, master, presentation);
 }
 
 /**

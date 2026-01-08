@@ -6,7 +6,7 @@
 
 import type { XmlElement } from "../xml";
 import type { ColorResolveContext } from "./domain/resolution";
-import type { SlideRenderContext, ResourceContext } from "./render/slide-context";
+import type { SlideContext, ResourceContext } from "./parser/slide/context";
 import type {
   ColorMap,
   ColorScheme,
@@ -144,7 +144,7 @@ export function createMockSlideRenderContext(
     formatScheme: FormatScheme;
     zip: ZipFile;
   }> = {},
-): SlideRenderContext {
+): SlideContext {
   const colorMap = options.colorMap ?? createMockColorMap();
   const colorScheme = options.colorScheme ?? createMockColorScheme();
   const resources = options.resources ?? createMockResourceMap();
@@ -152,7 +152,7 @@ export function createMockSlideRenderContext(
   const formatScheme = options.formatScheme ?? createMockFormatScheme();
   const zip = options.zip ?? createMockZipFile();
 
-  const ctx: SlideRenderContext = {
+  const ctx: SlideContext = {
     slide: {
       content: el("p:sld"),
       resources,

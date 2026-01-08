@@ -9,7 +9,7 @@
  */
 
 import type { DiagramContent } from "../../domain/index";
-import type { RenderContext } from "../context";
+import type { CoreRenderContext } from "../render-context";
 import { type HtmlString, EMPTY_HTML, div, buildStyle, unsafeHtml } from "./index";
 import { renderShape } from "./shape";
 
@@ -26,7 +26,7 @@ export function renderDiagram(
   diagram: DiagramContent,
   width: number,
   height: number,
-  ctx: RenderContext
+  ctx: CoreRenderContext
 ): HtmlString {
   if (diagram.shapes.length === 0) {
     ctx.warnings.add({

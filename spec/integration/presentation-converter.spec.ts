@@ -16,7 +16,7 @@ import { parseColorScheme, parseFontScheme, parseColorMap } from "../../src/pptx
 import { getByPath } from "../../src/xml";
 import { getMimeTypeFromPath } from "../../src/pptx/opc";
 import type { ColorContext, FontScheme, ColorScheme, ColorMap } from "../../src/pptx/domain/resolution";
-import type { ResourceResolver } from "../../src/pptx/render/core";
+import type { ResourceResolver } from "../../src/pptx/domain/resource-resolver";
 
 // Fixture path
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

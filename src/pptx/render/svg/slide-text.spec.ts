@@ -4,7 +4,7 @@
 
 import type { Paragraph, RunProperties, TextBody } from "../../domain/text";
 import { px, pt } from "../../domain/types";
-import { createEmptyRenderContext } from "../context";
+import { createEmptyCoreRenderContext } from "../render-context";
 import { createDefsCollector } from "./slide-utils";
 import { renderTextSvg } from "./slide-text";
 
@@ -58,7 +58,7 @@ describe("renderTextSvg", () => {
       fontFamilySymbol: "SymbolFont",
     });
     const body = createTextBody({ paragraphs: [paragraph] });
-    const ctx = createEmptyRenderContext();
+    const ctx = createEmptyCoreRenderContext();
     const defsCollector = createDefsCollector();
 
     const svg = renderTextSvg(body, ctx, 400, 200, defsCollector);

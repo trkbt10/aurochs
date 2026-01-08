@@ -10,7 +10,7 @@
 // Uses global describe/it/expect from test runner
 import { renderDiagram, renderDiagramPlaceholder } from "./diagram";
 import type { DiagramContent } from "../../domain/index";
-import { createEmptyRenderContext } from "../context";
+import { createEmptyCoreRenderContext } from "../render-context";
 import type { SpShape } from "../../domain/shape";
 import { px, deg } from "../../domain/types";
 import type { BodyProperties, ParagraphProperties } from "../../domain/text";
@@ -151,7 +151,7 @@ describe("renderDiagram", () => {
   describe("Empty diagram handling", () => {
     it("should add warning and return empty HTML for empty diagram", () => {
       const diagram: DiagramContent = { shapes: [] };
-      const ctx = createEmptyRenderContext();
+      const ctx = createEmptyCoreRenderContext();
 
       const result = renderDiagram(diagram, 500, 300, ctx);
 
@@ -166,7 +166,7 @@ describe("renderDiagram", () => {
     it("should render diagram with shapes", () => {
       const shape = createBasicShape("1", "Shape 1");
       const diagram: DiagramContent = { shapes: [shape] };
-      const ctx = createEmptyRenderContext();
+      const ctx = createEmptyCoreRenderContext();
 
       const result = renderDiagram(diagram, 500, 300, ctx);
 
@@ -181,7 +181,7 @@ describe("renderDiagram", () => {
       const shape1 = createBasicShape("1", "Shape 1");
       const shape2 = createBasicShape("2", "Shape 2");
       const diagram: DiagramContent = { shapes: [shape1, shape2] };
-      const ctx = createEmptyRenderContext();
+      const ctx = createEmptyCoreRenderContext();
 
       const result = renderDiagram(diagram, 600, 400, ctx);
 
@@ -196,7 +196,7 @@ describe("renderDiagram", () => {
     it("should apply position relative", () => {
       const shape = createBasicShape("1", "Shape 1");
       const diagram: DiagramContent = { shapes: [shape] };
-      const ctx = createEmptyRenderContext();
+      const ctx = createEmptyCoreRenderContext();
 
       const result = renderDiagram(diagram, 200, 150, ctx);
 
@@ -206,7 +206,7 @@ describe("renderDiagram", () => {
     it("should use provided dimensions", () => {
       const shape = createBasicShape("1", "Shape 1");
       const diagram: DiagramContent = { shapes: [shape] };
-      const ctx = createEmptyRenderContext();
+      const ctx = createEmptyCoreRenderContext();
 
       const result = renderDiagram(diagram, 800, 600, ctx);
 
@@ -221,7 +221,7 @@ describe("renderDiagram", () => {
         modelId: "{DB1843D3-471D-3D4F-8D9B-C7F506BC5FEE}",
       });
       const diagram: DiagramContent = { shapes: [shape] };
-      const ctx = createEmptyRenderContext();
+      const ctx = createEmptyCoreRenderContext();
 
       const result = renderDiagram(diagram, 500, 300, ctx);
 
@@ -235,7 +235,7 @@ describe("renderDiagram", () => {
         textTransform: { x: 50, y: 50, width: 100, height: 50 },
       });
       const diagram: DiagramContent = { shapes: [shape] };
-      const ctx = createEmptyRenderContext();
+      const ctx = createEmptyCoreRenderContext();
 
       const result = renderDiagram(diagram, 500, 300, ctx);
 
@@ -251,7 +251,7 @@ describe("renderDiagram", () => {
         textTransform: { x: 25, y: 25, width: 150, height: 75 },
       });
       const diagram: DiagramContent = { shapes: [shape] };
-      const ctx = createEmptyRenderContext();
+      const ctx = createEmptyCoreRenderContext();
 
       const result = renderDiagram(diagram, 500, 300, ctx);
 

@@ -10,7 +10,7 @@
  */
 
 import type { Background, SlideSize } from "../../domain";
-import type { RenderContext } from "../context";
+import type { CoreRenderContext } from "../render-context";
 import type { ResolvedBackgroundFill } from "../background-fill";
 import type { SvgDefsCollector } from "./slide-utils";
 import { renderFillToSvgDef, renderFillToSvgStyle } from "./fill";
@@ -90,7 +90,7 @@ export function renderResolvedBackgroundSvg(
 export function renderBackgroundSvg(
   background: Background | undefined,
   slideSize: SlideSize,
-  ctx: RenderContext,
+  ctx: CoreRenderContext,
   defsCollector: SvgDefsCollector,
 ): string {
   const { width, height } = slideSize;

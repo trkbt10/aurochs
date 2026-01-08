@@ -9,7 +9,7 @@
 
 import type { XmlDocument } from "../../xml/index";
 import { getChild } from "../../xml/index";
-import type { SlideRenderContext } from "../render/slide-context";
+import type { SlideContext } from "../parser/slide/context";
 import type { Shape, SlideSize } from "../domain/index";
 import { getNonPlaceholderShapes } from "../domain/shape-utils";
 import { parseSlide } from "../parser/slide/slide-parser";
@@ -17,7 +17,7 @@ import { parseShapeTree } from "../parser/shape-parser/index";
 import { createParseContext } from "../parser/context";
 import { renderSlide, createEmptySlideHtml } from "../render/html/slide";
 import { renderSlideSvg, createEmptySlideSvg } from "../render/svg/renderer";
-import { createRenderContextFromSlideContext } from "../render/render-context";
+import { createRenderContextFromSlideContext } from "./slide-context-adapter";
 import { toResolvedBackgroundFill } from "../render/background-fill";
 import { getBackgroundFillData } from "../parser/drawing-ml";
 import { enrichSlideContent, type FileReader } from "../parser/slide/external-content-loader";
@@ -62,7 +62,7 @@ export type IntegratedSvgRenderResult = {
  * @param ctx - Slide render context containing layout content
  * @returns Array of non-placeholder shapes from layout
  */
-function getLayoutNonPlaceholderShapes(ctx: SlideRenderContext): readonly Shape[] {
+function getLayoutNonPlaceholderShapes(ctx: SlideContext): readonly Shape[] {
   const layoutContent = ctx.layout.content;
   if (layoutContent === undefined) {
     return [];
@@ -107,7 +107,7 @@ function getLayoutNonPlaceholderShapes(ctx: SlideRenderContext): readonly Shape[
  */
 export function renderSlideIntegrated(
   content: XmlDocument,
-  ctx: SlideRenderContext,
+  ctx: SlideContext,
   slideSize: SlideSize,
 ): IntegratedRenderResult {
   // Step 1: Parse XmlDocument → Slide domain object
@@ -169,7 +169,7 @@ export function renderSlideIntegrated(
  */
 export function renderSlideSvgIntegrated(
   content: XmlDocument,
-  ctx: SlideRenderContext,
+  ctx: SlideContext,
   slideSize: SlideSize,
 ): IntegratedSvgRenderResult {
   // Step 1: Parse XmlDocument → Slide domain object

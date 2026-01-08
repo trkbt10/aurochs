@@ -12,7 +12,7 @@ import type {
   TextRun,
   Transform,
 } from "../../domain/index";
-import type { RenderContext } from "../context";
+import type { CoreRenderContext } from "../render-context";
 import { resolveColor } from "../../domain/drawing-ml";
 import {
   a,
@@ -124,7 +124,7 @@ function buildParagraphStyles(paragraph: Paragraph): Record<string, string> {
 /**
  * Render bullet character
  */
-function renderBullet(paragraph: Paragraph, ctx: RenderContext): HtmlString {
+function renderBullet(paragraph: Paragraph, ctx: CoreRenderContext): HtmlString {
   const bulletStyle = paragraph.properties.bulletStyle;
   if (!bulletStyle || bulletStyle.bullet.type === "none") {
     return EMPTY_HTML;
@@ -164,7 +164,7 @@ function renderBullet(paragraph: Paragraph, ctx: RenderContext): HtmlString {
 /**
  * Build run styles from run properties
  */
-function buildRunStyles(props: RunProperties | undefined, ctx: RenderContext): Record<string, string> {
+function buildRunStyles(props: RunProperties | undefined, ctx: CoreRenderContext): Record<string, string> {
   if (!props) {
     return {};
   }
@@ -238,7 +238,7 @@ function buildRunStyles(props: RunProperties | undefined, ctx: RenderContext): R
 /**
  * Render a text run
  */
-export function renderTextRun(run: TextRun, ctx: RenderContext): HtmlString {
+export function renderTextRun(run: TextRun, ctx: CoreRenderContext): HtmlString {
   switch (run.type) {
     case "text": {
       if (!run.text) {
@@ -292,7 +292,7 @@ export function renderTextRun(run: TextRun, ctx: RenderContext): HtmlString {
 /**
  * Render a paragraph
  */
-export function renderParagraph(paragraph: Paragraph, ctx: RenderContext): HtmlString {
+export function renderParagraph(paragraph: Paragraph, ctx: CoreRenderContext): HtmlString {
   const paragraphStyles = buildParagraphStyles(paragraph);
 
   const bulletHtml = renderBullet(paragraph, ctx);
@@ -315,7 +315,7 @@ export function renderParagraph(paragraph: Paragraph, ctx: RenderContext): HtmlS
 export function renderTextBody(
   textBody: TextBody,
   transform: Transform,
-  ctx: RenderContext
+  ctx: CoreRenderContext
 ): HtmlString {
   const width = transform.width as number;
   const height = transform.height as number;

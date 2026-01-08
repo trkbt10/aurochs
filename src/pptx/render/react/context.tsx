@@ -10,7 +10,7 @@ import type { SlideSize, Shape } from "../../domain";
 import type { ColorContext, FontScheme } from "../../domain/resolution";
 import type { ShapeId, Pixels } from "../../domain/types";
 import { px } from "../../domain/types";
-import type { RenderContext } from "../context";
+import type { CoreRenderContext } from "../render-context";
 import type { RenderOptions } from "../render-options";
 import { DEFAULT_RENDER_OPTIONS } from "../render-options";
 import type { ResolvedBackgroundFill } from "../background-fill";
@@ -24,9 +24,9 @@ import { createWarningCollector } from "../warnings";
 
 /**
  * React-specific render context.
- * Extends RenderContext with React-specific fields.
+ * Extends CoreRenderContext with React-specific fields.
  */
-export type ReactRenderContext = RenderContext & {
+export type ReactRenderContext = CoreRenderContext & {
 };
 
 /**

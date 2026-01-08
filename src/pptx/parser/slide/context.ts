@@ -1,20 +1,23 @@
 /**
- * @file Slide render context hierarchy
+ * @file Slide context hierarchy
  *
  * Hierarchical accessor structure for slide data access:
- * - SlideRenderContext: Slide-level (shared data)
+ * - SlideContext: Slide-level (shared data, inheritance chain)
  * - ShapeContext: Shape-level (type, idx determined)
  * - ParagraphContext: Paragraph-level (lvl determined)
  *
  * Each accessor provides methods scoped to its level.
  * All accessors are created via factory functions (no classes).
  *
+ * This module belongs to the parser layer as it handles XML access
+ * and inheritance resolution (slide → layout → master → theme).
+ *
  * @see ECMA-376 Part 1, Section 13 (PresentationML)
  */
 
-import type { XmlElement } from "../../xml/index";
-import { getChild, getByPath } from "../../xml/index";
-import type { RenderOptions } from "./render-options";
+import type { XmlElement } from "../../../xml/index";
+import { getChild, getByPath } from "../../../xml/index";
+import type { RenderOptions } from "../../render/render-options";
 
 // Import domain types from canonical sources
 import type {
@@ -24,8 +27,8 @@ import type {
   Theme,
   RawMasterTextStyles,
   ColorMap,
-} from "../domain/index";
-import type { ColorResolveContext } from "../domain/resolution";
+} from "../../domain/index";
+import type { ColorResolveContext } from "../../domain/resolution";
 
 // =============================================================================
 // Params (immutable data)
@@ -280,7 +283,7 @@ export function createParagraphContext(shape: ShapeContext, lvl: number): Paragr
 // =============================================================================
 
 export type ShapeContext = {
-  readonly slide: SlideRenderContext;
+  readonly slide: SlideContext;
   readonly type: string;
   /** Placeholder index (xsd:unsignedInt per ECMA-376) */
   readonly idx: number | undefined;
@@ -297,7 +300,7 @@ export type ShapeContext = {
  * @param type - Placeholder type (ST_PlaceholderType)
  * @param idx - Placeholder index (xsd:unsignedInt per ECMA-376)
  */
-export function createShapeContext(slide: SlideRenderContext, type: string, idx: number | undefined): ShapeContext {
+export function createShapeContext(slide: SlideContext, type: string, idx: number | undefined): ShapeContext {
   const self: ShapeContext = {
     slide,
     type,
@@ -335,7 +338,7 @@ export function createShapeContext(slide: SlideRenderContext, type: string, idx:
 // SlideRenderContext
 // =============================================================================
 
-export type SlideRenderContext = {
+export type SlideContext = {
   readonly slide: SlideParams;
   readonly layout: SlideLayoutParams;
   readonly master: SlideMasterParams;
@@ -370,13 +373,13 @@ export type SlideRenderContext = {
  * @param master - Master parameters
  * @param presentation - Presentation context
  */
-export function createSlideRenderContext(
+export function createSlideContext(
   slide: SlideParams,
   layout: SlideLayoutParams,
   master: SlideMasterParams,
   presentation: PresentationContext,
-): SlideRenderContext {
-  const self: SlideRenderContext = {
+): SlideContext {
+  const self: SlideContext = {
     slide,
     layout,
     master,
@@ -541,7 +544,7 @@ export type TextStyleContext = {
 /**
  * Derive ColorResolveContext from SlideRenderContext.
  */
-export function toColorResolveContext(ctx: SlideRenderContext): ColorResolveContext {
+export function toColorResolveContext(ctx: SlideContext): ColorResolveContext {
   return {
     colorMap: ctx.master.colorMap,
     colorMapOverride: ctx.slide.colorMapOverride,
@@ -550,9 +553,9 @@ export function toColorResolveContext(ctx: SlideRenderContext): ColorResolveCont
 }
 
 /**
- * Derive PlaceholderContext from SlideRenderContext.
+ * Derive PlaceholderContext from SlideContext.
  */
-export function toPlaceholderContext(ctx: SlideRenderContext): PlaceholderContext {
+export function toPlaceholderContext(ctx: SlideContext): PlaceholderContext {
   return {
     layoutPlaceholders: ctx.layout.placeholders,
     masterPlaceholders: ctx.master.placeholders,
@@ -562,7 +565,7 @@ export function toPlaceholderContext(ctx: SlideRenderContext): PlaceholderContex
 /**
  * Derive ResourceContext from SlideRenderContext.
  */
-export function toResourceContext(ctx: SlideRenderContext): ResourceContext {
+export function toResourceContext(ctx: SlideContext): ResourceContext {
   return {
     resolveResource: ctx.resolveResource.bind(ctx),
     readFile: ctx.readFile.bind(ctx),
@@ -572,7 +575,7 @@ export function toResourceContext(ctx: SlideRenderContext): ResourceContext {
 /**
  * Derive TextStyleContext from SlideRenderContext.
  */
-export function toTextStyleContext(ctx: SlideRenderContext): TextStyleContext {
+export function toTextStyleContext(ctx: SlideContext): TextStyleContext {
   return {
     masterTextStyles: ctx.master.textStyles,
     defaultTextStyle: ctx.presentation.defaultTextStyle,

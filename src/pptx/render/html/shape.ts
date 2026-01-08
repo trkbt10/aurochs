@@ -5,7 +5,7 @@
  */
 
 import type { CxnShape, GraphicFrame, GrpShape, PicShape, Shape, SpShape, Transform } from "../../domain/index";
-import type { RenderContext } from "../context";
+import type { CoreRenderContext } from "../render-context";
 import { div, EMPTY_HTML, type HtmlString, img, joinHtml, unsafeHtml, buildStyle } from "./index";
 import { renderGeometryData } from "../svg/geometry";
 import { path, svg, defs } from "../svg/primitives";
@@ -50,7 +50,7 @@ type SvgPaintStyle = {
   readonly fillOpacity?: number;
 };
 
-function resolveImageFillFromResources(fill: Fill, ctx: RenderContext): ResolvedImageFill | undefined {
+function resolveImageFillFromResources(fill: Fill, ctx: CoreRenderContext): ResolvedImageFill | undefined {
   if (fill.type !== "blipFill") {
     return undefined;
   }
@@ -69,7 +69,7 @@ function buildShapeFill(
   fill: Fill | undefined,
   width: number,
   height: number,
-  ctx: RenderContext,
+  ctx: CoreRenderContext,
   defsCollector: ReturnType<typeof createDefsCollector>,
 ): SvgPaintStyle {
   if (!fill || fill.type === "noFill") {
@@ -116,7 +116,7 @@ function buildFillStyleAttr(fillOpacity?: number, strokeOpacity?: number): strin
 /**
  * Render standard shape (sp)
  */
-export function renderSpShape(shape: SpShape, ctx: RenderContext): HtmlString {
+export function renderSpShape(shape: SpShape, ctx: CoreRenderContext): HtmlString {
   const transform = shape.properties.transform;
   if (!transform) {
     return EMPTY_HTML;
@@ -141,7 +141,7 @@ export function renderSpShape(shape: SpShape, ctx: RenderContext): HtmlString {
   );
 }
 
-function renderSpShapeSvg(shape: SpShape, transform: Transform, ctx: RenderContext): HtmlString {
+function renderSpShapeSvg(shape: SpShape, transform: Transform, ctx: CoreRenderContext): HtmlString {
   if (!shape.properties.geometry && !shape.properties.fill && !shape.properties.line) {
     return EMPTY_HTML;
   }
@@ -181,7 +181,7 @@ function renderSpShapeSvg(shape: SpShape, transform: Transform, ctx: RenderConte
   );
 }
 
-function resolveLineStyle(shape: SpShape, ctx: RenderContext) {
+function resolveLineStyle(shape: SpShape, ctx: CoreRenderContext) {
   if (!shape.properties.line) {
     return undefined;
   }
@@ -195,7 +195,7 @@ function buildDefsElement(defsCollector: ReturnType<typeof createDefsCollector>)
   return defs(...defsCollector.defs.map((def) => unsafeHtml(def)));
 }
 
-function renderShapeText(shape: SpShape, transform: Transform, ctx: RenderContext): HtmlString {
+function renderShapeText(shape: SpShape, transform: Transform, ctx: CoreRenderContext): HtmlString {
   if (!shape.textBody) {
     return EMPTY_HTML;
   }
@@ -210,7 +210,7 @@ function renderShapeText(shape: SpShape, transform: Transform, ctx: RenderContex
 /**
  * Render picture shape (pic)
  */
-export function renderPicShape(shape: PicShape, ctx: RenderContext): HtmlString {
+export function renderPicShape(shape: PicShape, ctx: CoreRenderContext): HtmlString {
   const transform = shape.properties.transform;
   if (!transform) {
     return EMPTY_HTML;
@@ -344,7 +344,7 @@ function buildPictureObjectFitStyle(shape: PicShape): string {
  *
  * @see ECMA-376 Part 1, 19.3.1.22, 20.1.7.6
  */
-export function renderGrpShape(shape: GrpShape, ctx: RenderContext): HtmlString {
+export function renderGrpShape(shape: GrpShape, ctx: CoreRenderContext): HtmlString {
   const transform = shape.properties.transform;
   if (!transform) {
     return EMPTY_HTML;
@@ -436,7 +436,7 @@ function normalizeHtmlChildren(content: HtmlString | readonly HtmlString[]): Htm
  *
  * @see ECMA-376 Part 1, Section 20.1.2.2.24
  */
-function resolveStrokeColor(line: CxnShape["properties"]["line"], ctx: RenderContext): string {
+function resolveStrokeColor(line: CxnShape["properties"]["line"], ctx: CoreRenderContext): string {
   if (!line || !line.fill || line.fill.type !== "solidFill") {
     return "#000000";
   }
@@ -462,7 +462,7 @@ function resolveStrokeColor(line: CxnShape["properties"]["line"], ctx: RenderCon
  * @see ECMA-376 Part 1, 20.1.8.37 (a:headEnd)
  * @see ECMA-376 Part 1, 20.1.8.57 (a:tailEnd)
  */
-export function renderCxnShape(shape: CxnShape, ctx: RenderContext): HtmlString {
+export function renderCxnShape(shape: CxnShape, ctx: CoreRenderContext): HtmlString {
   const transform = shape.properties.transform;
   if (!transform) {
     return EMPTY_HTML;
@@ -566,7 +566,7 @@ function renderConnectorSvg(
  * Uses pre-parsed chart data if available (populated by integration layer).
  * This allows render to render charts without directly calling parser.
  */
-function renderChartContent(chartRef: ChartReference, width: number, height: number, ctx: RenderContext): HtmlString {
+function renderChartContent(chartRef: ChartReference, width: number, height: number, ctx: CoreRenderContext): HtmlString {
   // Use pre-parsed chart data if available
   if (chartRef.parsedChart !== undefined) {
     return renderChart(chartRef.parsedChart, width, height, ctx);
@@ -593,7 +593,7 @@ function renderDiagramContent(
   diagramRef: DiagramReference,
   width: number,
   height: number,
-  ctx: RenderContext,
+  ctx: CoreRenderContext,
 ): HtmlString {
   // Use pre-parsed diagram content if available
   if (diagramRef.parsedContent !== undefined && diagramRef.parsedContent.shapes.length > 0) {
@@ -607,7 +607,7 @@ function renderDiagramContent(
 /**
  * Render graphic frame (graphicFrame)
  */
-export function renderGraphicFrame(frame: GraphicFrame, ctx: RenderContext): HtmlString {
+export function renderGraphicFrame(frame: GraphicFrame, ctx: CoreRenderContext): HtmlString {
   const transform = frame.transform;
   const shapeId = ctx.getNextShapeId();
   const positionStyles = buildPositionStyles(transform);
@@ -674,7 +674,7 @@ export function renderGraphicFrame(frame: GraphicFrame, ctx: RenderContext): Htm
 /**
  * Render a shape to HTML
  */
-export function renderShape(shape: Shape, ctx: RenderContext): HtmlString {
+export function renderShape(shape: Shape, ctx: CoreRenderContext): HtmlString {
   if (isShapeHidden(shape)) {
     return EMPTY_HTML;
   }
@@ -697,7 +697,7 @@ export function renderShape(shape: Shape, ctx: RenderContext): HtmlString {
 /**
  * Render multiple shapes
  */
-export function renderShapes(shapes: readonly Shape[], ctx: RenderContext): HtmlString {
+export function renderShapes(shapes: readonly Shape[], ctx: CoreRenderContext): HtmlString {
   const htmlParts = shapes.map((shape) => renderShape(shape, ctx));
   return joinHtml(htmlParts);
 }

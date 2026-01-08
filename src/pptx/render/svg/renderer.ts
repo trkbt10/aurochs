@@ -15,7 +15,7 @@
  */
 
 import type { Slide, SlideSize } from "../../domain/index";
-import type { RenderContext } from "../context";
+import type { CoreRenderContext } from "../render-context";
 import type { RenderWarning } from "../warnings";
 import { createDefsCollector } from "./slide-utils";
 import { renderResolvedBackgroundSvg, renderBackgroundSvg } from "./slide-background";
@@ -68,7 +68,7 @@ export type SvgSlideContentRenderResult = {
  *
  * @see ECMA-376 Part 1, Section 19.3.1.39 (sldLayout)
  */
-export function renderSlideSvg(slide: Slide, ctx: RenderContext): SvgSlideRenderResult {
+export function renderSlideSvg(slide: Slide, ctx: CoreRenderContext): SvgSlideRenderResult {
   const { width, height } = ctx.slideSize;
   const defsCollector = createDefsCollector();
 
@@ -101,7 +101,7 @@ ${contentSvg}
 
 function renderSlideBackgroundSvg(
   slide: Slide,
-  ctx: RenderContext,
+  ctx: CoreRenderContext,
   defsCollector: ReturnType<typeof createDefsCollector>
 ): string {
   if (ctx.resolvedBackground !== undefined) {

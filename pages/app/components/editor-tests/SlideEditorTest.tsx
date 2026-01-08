@@ -23,7 +23,7 @@ import type { Line } from "@lib/pptx/domain/color";
 import type { Table, TableRow, TableCell } from "@lib/pptx/domain/table";
 import type { ShapeId } from "@lib/pptx/domain/types";
 import { px, deg, pt } from "@lib/pptx/domain/types";
-import { createRenderContext } from "@lib/pptx/render/context";
+import { createCoreRenderContext } from "@lib/pptx/render/render-context";
 import { renderSlideSvg } from "@lib/pptx/render/svg/renderer";
 
 // =============================================================================
@@ -460,7 +460,7 @@ export function SlideEditorTest() {
 
   // Render context for SVG
   const renderContext = useMemo(
-    () => createRenderContext({ slideSize: { width, height } }),
+    () => createCoreRenderContext({ slideSize: { width, height } }),
     [width, height]
   );
 

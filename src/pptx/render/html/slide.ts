@@ -5,7 +5,7 @@
  */
 
 import type { Background, Slide, SlideSize } from "../../domain/index";
-import type { RenderContext } from "../context";
+import type { CoreRenderContext } from "../render-context";
 import type { RenderWarning } from "../warnings";
 import type { ResolvedBackgroundFill } from "../background-fill";
 import { buildStyle, div, EMPTY_HTML, type HtmlString, unsafeHtml } from "./index";
@@ -69,7 +69,7 @@ function resolvedBackgroundToCss(resolved: ResolvedBackgroundFill): string {
  */
 function backgroundFillToCss(
   background: Background | undefined,
-  ctx: RenderContext
+  ctx: CoreRenderContext
 ): string | undefined {
   if (!background?.fill) {
     return undefined;
@@ -101,7 +101,7 @@ function backgroundFillToCss(
 function renderBackground(
   background: Background | undefined,
   slideSize: SlideSize,
-  ctx: RenderContext
+  ctx: CoreRenderContext
 ): HtmlString {
   const bgStyle = resolveBackgroundCss(background, ctx);
 
@@ -125,7 +125,7 @@ function renderBackground(
 
 function resolveBackgroundCss(
   background: Background | undefined,
-  ctx: RenderContext
+  ctx: CoreRenderContext
 ): string | undefined {
   // Prefer pre-resolved background (handles inheritance correctly)
   if (ctx.resolvedBackground !== undefined) {
@@ -156,7 +156,7 @@ function buildSlideStyles(slideSize: SlideSize): Record<string, string> {
 /**
  * Render a slide to HTML
  */
-export function renderSlide(slide: Slide, ctx: RenderContext): SlideRenderResult {
+export function renderSlide(slide: Slide, ctx: CoreRenderContext): SlideRenderResult {
   // Render background
   const backgroundHtml = renderBackground(slide.background, ctx.slideSize, ctx);
 
@@ -185,7 +185,7 @@ export function renderSlide(slide: Slide, ctx: RenderContext): SlideRenderResult
 /**
  * Render a slide with wrapper for standalone display
  */
-export function renderSlideStandalone(slide: Slide, ctx: RenderContext): HtmlString {
+export function renderSlideStandalone(slide: Slide, ctx: CoreRenderContext): HtmlString {
   const result = renderSlide(slide, ctx);
 
   // Add base styles
@@ -233,7 +233,7 @@ ${result.html}
  */
 export function renderSlides(
   slides: readonly Slide[],
-  ctx: RenderContext
+  ctx: CoreRenderContext
 ): readonly SlideRenderResult[] {
   return slides.map((slide) => renderSlide(slide, ctx));
 }

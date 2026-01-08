@@ -23,7 +23,7 @@ import type {
   RadarSeries,
   BubbleSeries,
 } from "../../domain/chart";
-import { createRenderContext } from "../context";
+import { createCoreRenderContext } from "../render-context";
 import { pct, deg, px } from "../../domain/types";
 import { loadPptxFile } from "../../../../scripts/lib/pptx-loader";
 
@@ -301,7 +301,7 @@ function createMockLineSeries(values: number[], name: string = "Series 1"): Line
 }
 
 describe("Chart renderer unit tests", () => {
-  const ctx = createRenderContext({
+  const ctx = createCoreRenderContext({
     slideSize: { width: px(800), height: px(600) },
   });
 

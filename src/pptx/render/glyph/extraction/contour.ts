@@ -1,5 +1,9 @@
 /**
- * @file Shared contour extraction helpers
+ * @file Contour extraction using Marching Squares algorithm
+ *
+ * Provides subpixel-accurate contour extraction from binary images.
+ * Uses linear interpolation at cell edges for smooth contours.
+ * Hole detection via flood fill from image edges.
  */
 
 export type ImageDataLike = {
@@ -8,94 +12,114 @@ export type ImageDataLike = {
   readonly data: Uint8ClampedArray;
 };
 
+// =============================================================================
+// Configuration
+// =============================================================================
+
 const THRESHOLD = 128;
 /**
- * Douglas-Peucker simplification tolerance in pixels (at RENDER_SCALE).
- * Lower values preserve more detail but increase vertex count.
- * With RENDER_SCALE=2, 0.4px ≈ 0.2 font units of tolerance.
+ * Douglas-Peucker simplification tolerance in pixels.
+ * Applied after Marching Squares extraction.
  */
-const SIMPLIFY_TOLERANCE = 0.4;
+const SIMPLIFY_TOLERANCE = 0.3;
 const MIN_CONTOUR_POINTS = 4;
-const MAX_TRACE_ITERATIONS = 5000;
-const MAX_CONTOURS_PER_CHAR = 20;
+const MAX_CONTOURS = 30;
 
 type Point = { x: number; y: number };
 type RawContour = Point[];
 
+// =============================================================================
+// Public API
+// =============================================================================
+
+/**
+ * Extract contours from image data using Marching Squares algorithm.
+ * Returns both outer contours and hole contours with subpixel precision.
+ */
 export function extractContours(imageData: ImageDataLike): RawContour[] {
   const { width, height, data } = imageData;
+
+  // Convert to grayscale values (0-255)
+  const gray = new Float32Array(width * height);
   const binary = new Uint8Array(width * height);
   for (let i = 0; i < width * height; i++) {
-    binary[i] = data[i * 4] >= THRESHOLD ? 1 : 0;
+    gray[i] = data[i * 4]; // Use red channel
+    binary[i] = gray[i] >= THRESHOLD ? 1 : 0;
   }
 
+  // Detect holes via flood fill from edges
   const holeMask = extractHoleMask(binary, width, height);
-  const filledBinary = fillHoles(binary, holeMask);
-  const outerContours = extractContoursFromBinary(filledBinary, width, height);
-  const holeContours = extractContoursFromBinary(holeMask, width, height);
+
+  // Create filled version (holes filled in)
+  const filledGray = new Float32Array(gray);
+  for (let i = 0; i < width * height; i++) {
+    if (holeMask[i] === 1) {
+      filledGray[i] = 255; // Fill holes
+    }
+  }
+
+  // Create hole-only grayscale
+  const holeGray = new Float32Array(width * height);
+  for (let i = 0; i < width * height; i++) {
+    holeGray[i] = holeMask[i] === 1 ? 255 : 0;
+  }
+
+  // Extract outer contours from filled image
+  const outerContours = marchingSquares(filledGray, width, height, THRESHOLD);
+
+  // Extract hole contours from hole mask
+  // Reverse point order so holes wind opposite to outers
+  const holeContours = marchingSquares(holeGray, width, height, THRESHOLD).map((contour) =>
+    contour.slice().reverse(),
+  );
 
   return [...outerContours, ...holeContours];
 }
 
+/**
+ * Process raw contours: simplify and determine hole status.
+ */
 export function processContours(
   rawContours: RawContour[],
   scale: number,
   padding: number,
-): { points: readonly { x: number; y: number }[]; isHole: boolean }[] {
-  return rawContours.map((raw) => {
-    // Subsample long contours if needed
-    const points = subsampleIfNeeded(raw, 300);
+): { points: readonly Point[]; isHole: boolean }[] {
+  return rawContours
+    .filter((raw) => raw.length >= MIN_CONTOUR_POINTS)
+    .map((raw) => {
+      // Simplify using Douglas-Peucker
+      const simplified = douglasPeucker(raw, SIMPLIFY_TOLERANCE);
 
-    // Simplify
-    const simplified = douglasPeucker(points, SIMPLIFY_TOLERANCE);
+      // Scale and offset (remove padding)
+      const scaledPoints = simplified.map((p) => ({
+        x: (p.x - padding) / scale,
+        y: (p.y - padding) / scale,
+      }));
 
-    // Scale and offset (remove padding)
-    const scaledPoints = simplified.map((p) => ({
-      x: (p.x - padding) / scale,
-      y: (p.y - padding) / scale,
-    }));
-
-    const isHole = !isClockwise(scaledPoints);
-    return { points: scaledPoints, isHole };
-  });
+      // Determine winding: CCW = hole, CW = outer (after Y-flip in rendering)
+      const isHole = !isClockwise(scaledPoints);
+      return { points: scaledPoints, isHole };
+    });
 }
 
-function subsampleIfNeeded(points: Point[], maxLength: number): Point[] {
-  if (points.length <= maxLength) {
-    return points;
-  }
-  const step = Math.ceil(points.length / maxLength);
-  return points.filter((_, i) => i % step === 0);
-}
+// =============================================================================
+// Hole Detection (Flood Fill)
+// =============================================================================
 
-function extractContoursFromBinary(
+/**
+ * Extract hole mask using flood fill from image edges.
+ * Pixels that are 0 (background) but not reachable from edges are holes.
+ */
+function extractHoleMask(
   binary: Uint8Array,
   width: number,
   height: number,
-): RawContour[] {
-  const contours: RawContour[] = [];
-  const visited = new Uint8Array(width * height);
-
-  for (let y = 1; y < height - 1 && contours.length < MAX_CONTOURS_PER_CHAR; y++) {
-    for (let x = 1; x < width - 1 && contours.length < MAX_CONTOURS_PER_CHAR; x++) {
-      const idx = y * width + x;
-
-      if (binary[idx] === 1 && visited[idx] === 0 && isBoundary(binary, x, y, width)) {
-        const contour = traceBoundary(binary, visited, x, y, width, height);
-        if (contour.length >= MIN_CONTOUR_POINTS) {
-          contours.push(contour);
-        }
-      }
-    }
-  }
-
-  return contours;
-}
-
-function extractHoleMask(binary: Uint8Array, width: number, height: number): Uint8Array {
+): Uint8Array {
+  // Flood fill from edges to find "outside" regions
   const outside = new Uint8Array(width * height);
   const queue: number[] = [];
 
+  // Seed from all edges
   for (let x = 0; x < width; x++) {
     const topIdx = x;
     const bottomIdx = (height - 1) * width + x;
@@ -122,13 +146,12 @@ function extractHoleMask(binary: Uint8Array, width: number, height: number): Uin
     }
   }
 
+  // BFS flood fill
   while (queue.length > 0) {
-    const idx = queue.shift();
-    if (idx === undefined) {
-      continue;
-    }
+    const idx = queue.shift()!;
     const x = idx % width;
     const y = Math.floor(idx / width);
+
     const neighbors = [
       { x: x - 1, y },
       { x: x + 1, y },
@@ -136,11 +159,9 @@ function extractHoleMask(binary: Uint8Array, width: number, height: number): Uin
       { x, y: y + 1 },
     ];
 
-    for (const neighbor of neighbors) {
-      if (neighbor.x <= 0 || neighbor.x >= width - 1 || neighbor.y <= 0 || neighbor.y >= height - 1) {
-        continue;
-      }
-      const nIdx = neighbor.y * width + neighbor.x;
+    for (const n of neighbors) {
+      if (n.x < 0 || n.x >= width || n.y < 0 || n.y >= height) continue;
+      const nIdx = n.y * width + n.x;
       if (binary[nIdx] === 0 && outside[nIdx] === 0) {
         outside[nIdx] = 1;
         queue.push(nIdx);
@@ -148,6 +169,7 @@ function extractHoleMask(binary: Uint8Array, width: number, height: number): Uin
     }
   }
 
+  // Holes are background pixels not reachable from outside
   const holeMask = new Uint8Array(width * height);
   for (let i = 0; i < width * height; i++) {
     if (binary[i] === 0 && outside[i] === 0) {
@@ -158,91 +180,257 @@ function extractHoleMask(binary: Uint8Array, width: number, height: number): Uin
   return holeMask;
 }
 
-function fillHoles(binary: Uint8Array, holeMask: Uint8Array): Uint8Array {
-  const filled = new Uint8Array(binary);
-  for (let i = 0; i < filled.length; i++) {
-    if (holeMask[i] === 1) {
-      filled[i] = 1;
-    }
-  }
-  return filled;
-}
+// =============================================================================
+// Marching Squares Algorithm
+// =============================================================================
 
-function isBoundary(binary: Uint8Array, x: number, y: number, width: number): boolean {
-  const idx = y * width + x;
-  if (binary[idx] === 0) {
-    return false;
-  }
-  return (
-    binary[idx - 1] === 0 ||
-    binary[idx + 1] === 0 ||
-    binary[idx - width] === 0 ||
-    binary[idx + width] === 0
-  );
-}
+/**
+ * Marching Squares lookup table.
+ * Case = TL | (TR<<1) | (BR<<2) | (BL<<3)
+ * Edges: 0=top (TL-TR), 1=right (TR-BR), 2=bottom (BR-BL), 3=left (BL-TL)
+ * Each segment connects two edges where the contour crosses.
+ * Order matters for consistent CCW winding around filled region.
+ */
+const MARCHING_SQUARES_TABLE: readonly (readonly number[])[] = [
+  [],           // 0: none inside
+  [3, 0],       // 1: TL - left to top
+  [0, 1],       // 2: TR - top to right
+  [3, 1],       // 3: TL+TR - left to right
+  [1, 2],       // 4: BR - right to bottom
+  [3, 2, 0, 1], // 5: TL+BR saddle - left to bottom, top to right
+  [0, 2],       // 6: TR+BR - top to bottom
+  [3, 2],       // 7: TL+TR+BR - left to bottom
+  [2, 3],       // 8: BL - bottom to left
+  [2, 0],       // 9: TL+BL - bottom to top
+  [2, 1, 0, 3], // 10: TR+BL saddle - bottom to right, top to left
+  [2, 1],       // 11: TL+TR+BL - bottom to right
+  [1, 3],       // 12: BR+BL - right to left
+  [1, 0],       // 13: TL+BR+BL - right to top
+  [0, 3],       // 14: TR+BR+BL - top to left
+  [],           // 15: all inside
+];
 
-function traceBoundary(
-  binary: Uint8Array,
-  visited: Uint8Array,
-  startX: number,
-  startY: number,
+/**
+ * Edge interpolation data.
+ * Each edge connects two corners with positions for interpolation.
+ */
+type EdgeInterpolator = {
+  readonly x1: number;
+  readonly y1: number;
+  readonly x2: number;
+  readonly y2: number;
+  readonly corner1: number;
+  readonly corner2: number;
+};
+
+const EDGE_INTERPOLATORS: readonly EdgeInterpolator[] = [
+  { x1: 0, y1: 0, x2: 1, y2: 0, corner1: 0, corner2: 1 }, // top
+  { x1: 1, y1: 0, x2: 1, y2: 1, corner1: 1, corner2: 2 }, // right
+  { x1: 1, y1: 1, x2: 0, y2: 1, corner1: 2, corner2: 3 }, // bottom
+  { x1: 0, y1: 1, x2: 0, y2: 0, corner1: 3, corner2: 0 }, // left
+];
+
+/**
+ * Extract contours using Marching Squares with linear interpolation.
+ */
+function marchingSquares(
+  gray: Float32Array,
   width: number,
   height: number,
-): RawContour {
-  const contour: RawContour = [];
-  const dx = [1, 1, 0, -1, -1, -1, 0, 1];
-  const dy = [0, 1, 1, 1, 0, -1, -1, -1];
+  threshold: number,
+): RawContour[] {
+  const visitedEdges = new Set<string>();
+  const contours: RawContour[] = [];
 
-  // eslint-disable-next-line no-restricted-syntax -- Performance: boundary tracing algorithm requires mutable state
-  let x = startX;
-  // eslint-disable-next-line no-restricted-syntax -- Performance: boundary tracing algorithm requires mutable state
-  let y = startY;
-  // eslint-disable-next-line no-restricted-syntax -- Performance: boundary tracing algorithm requires mutable state
-  let dir = 0;
-  // eslint-disable-next-line no-restricted-syntax -- Performance: boundary tracing algorithm requires mutable state
-  let iterations = 0;
+  for (let cy = 0; cy < height - 1 && contours.length < MAX_CONTOURS; cy++) {
+    for (let cx = 0; cx < width - 1 && contours.length < MAX_CONTOURS; cx++) {
+      const caseIndex = getCellCase(gray, width, cx, cy, threshold);
+      const edges = MARCHING_SQUARES_TABLE[caseIndex];
 
-  do {
-    if (++iterations > MAX_TRACE_ITERATIONS) {
-      break;
-    }
+      if (edges.length === 0) continue;
 
-    const idx = y * width + x;
-    visited[idx] = 1;
-    contour.push({ x, y });
+      for (let i = 0; i < edges.length; i += 2) {
+        // Use canonical edge key for visited tracking
+        const edge1 = edges[i];
+        const edge2 = edges[i + 1];
+        const edgeKey = `${cx},${cy},${Math.min(edge1, edge2)}`;
 
-    // eslint-disable-next-line no-restricted-syntax -- Performance: boundary tracing algorithm
-    let found = false;
-    const startDir = (dir + 5) % 8;
+        if (visitedEdges.has(edgeKey)) continue;
 
-    for (let i = 0; i < 8; i++) {
-      const checkDir = (startDir + i) % 8;
-      const nx = x + dx[checkDir];
-      const ny = y + dy[checkDir];
+        // Start from edge2 to get correct winding direction
+        const startEdge = edge2;
 
-      if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
-        if (binary[ny * width + nx] === 1) {
-          x = nx;
-          y = ny;
-          dir = checkDir;
-          found = true;
-          break;
+        const contour = traceContour(
+          gray,
+          width,
+          height,
+          threshold,
+          cx,
+          cy,
+          startEdge,
+          visitedEdges,
+        );
+
+        if (contour.length >= MIN_CONTOUR_POINTS) {
+          contours.push(contour);
         }
       }
     }
+  }
 
-    if (!found) {
-      break;
-    }
-  } while (!(x === startX && y === startY) || contour.length < 3);
+  return contours;
+}
+
+/**
+ * Get the Marching Squares case index for a cell.
+ * Corners: 0=TL, 1=TR, 2=BR, 3=BL
+ */
+function getCellCase(
+  gray: Float32Array,
+  width: number,
+  cx: number,
+  cy: number,
+  threshold: number,
+): number {
+  const tl = gray[cy * width + cx] >= threshold ? 1 : 0;
+  const tr = gray[cy * width + cx + 1] >= threshold ? 1 : 0;
+  const br = gray[(cy + 1) * width + cx + 1] >= threshold ? 1 : 0;
+  const bl = gray[(cy + 1) * width + cx] >= threshold ? 1 : 0;
+
+  return tl | (tr << 1) | (br << 2) | (bl << 3);
+}
+
+/**
+ * Get corner values for a cell.
+ */
+function getCellCorners(
+  gray: Float32Array,
+  width: number,
+  cx: number,
+  cy: number,
+): [number, number, number, number] {
+  return [
+    gray[cy * width + cx],
+    gray[cy * width + cx + 1],
+    gray[(cy + 1) * width + cx + 1],
+    gray[(cy + 1) * width + cx],
+  ];
+}
+
+/**
+ * Interpolate edge crossing point with subpixel precision.
+ */
+function interpolateEdge(
+  cx: number,
+  cy: number,
+  edge: number,
+  corners: readonly number[],
+  threshold: number,
+): Point {
+  const e = EDGE_INTERPOLATORS[edge];
+  const v1 = corners[e.corner1];
+  const v2 = corners[e.corner2];
+
+  const t = Math.abs(v2 - v1) < 0.001 ? 0.5 : (threshold - v1) / (v2 - v1);
+  const clampedT = Math.max(0, Math.min(1, t));
+
+  return {
+    x: cx + e.x1 + (e.x2 - e.x1) * clampedT,
+    y: cy + e.y1 + (e.y2 - e.y1) * clampedT,
+  };
+}
+
+/**
+ * Get the exit edge for a given entry edge in a cell.
+ */
+function getExitEdge(caseIndex: number, entryEdge: number): number {
+  const edges = MARCHING_SQUARES_TABLE[caseIndex];
+
+  for (let i = 0; i < edges.length; i += 2) {
+    if (edges[i] === entryEdge) return edges[i + 1];
+    if (edges[i + 1] === entryEdge) return edges[i];
+  }
+
+  return -1;
+}
+
+/**
+ * Get the adjacent cell and entry edge when exiting through an edge.
+ */
+function getNextCell(
+  cx: number,
+  cy: number,
+  exitEdge: number,
+): { nx: number; ny: number; entryEdge: number } {
+  const transitions: readonly { dx: number; dy: number; entry: number }[] = [
+    { dx: 0, dy: -1, entry: 2 }, // exit top → enter from bottom
+    { dx: 1, dy: 0, entry: 3 },  // exit right → enter from left
+    { dx: 0, dy: 1, entry: 0 },  // exit bottom → enter from top
+    { dx: -1, dy: 0, entry: 1 }, // exit left → enter from right
+  ];
+
+  const t = transitions[exitEdge];
+  return { nx: cx + t.dx, ny: cy + t.dy, entryEdge: t.entry };
+}
+
+/**
+ * Trace a single contour starting from a given cell and edge.
+ */
+function traceContour(
+  gray: Float32Array,
+  width: number,
+  height: number,
+  threshold: number,
+  startCx: number,
+  startCy: number,
+  startEdge: number,
+  visitedEdges: Set<string>,
+): RawContour {
+  const contour: RawContour = [];
+  const maxIterations = (width + height) * 4;
+
+  // eslint-disable-next-line no-restricted-syntax -- Algorithm state
+  let cx = startCx;
+  // eslint-disable-next-line no-restricted-syntax -- Algorithm state
+  let cy = startCy;
+  // eslint-disable-next-line no-restricted-syntax -- Algorithm state
+  let entryEdge = startEdge;
+  // eslint-disable-next-line no-restricted-syntax -- Algorithm state
+  let iterations = 0;
+
+  do {
+    if (++iterations > maxIterations) break;
+    if (cx < 0 || cx >= width - 1 || cy < 0 || cy >= height - 1) break;
+
+    const caseIndex = getCellCase(gray, width, cx, cy, threshold);
+    if (caseIndex === 0 || caseIndex === 15) break;
+
+    const exitEdge = getExitEdge(caseIndex, entryEdge);
+    if (exitEdge < 0) break;
+
+    const edgeKey = `${cx},${cy},${Math.min(entryEdge, exitEdge)}`;
+    visitedEdges.add(edgeKey);
+
+    const corners = getCellCorners(gray, width, cx, cy);
+    const point = interpolateEdge(cx, cy, entryEdge, corners, threshold);
+    contour.push(point);
+
+    const next = getNextCell(cx, cy, exitEdge);
+    cx = next.nx;
+    cy = next.ny;
+    entryEdge = next.entryEdge;
+
+  } while (!(cx === startCx && cy === startCy && entryEdge === startEdge));
 
   return contour;
 }
 
+// =============================================================================
+// Douglas-Peucker Simplification
+// =============================================================================
+
 function douglasPeucker(points: Point[], tolerance: number): Point[] {
-  if (points.length <= 2) {
-    return points;
-  }
+  if (points.length <= 2) return points;
 
   const first = points[0];
   const last = points[points.length - 1];
@@ -275,13 +463,15 @@ function perpDistance(p: Point, a: Point, b: Point): number {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const len = Math.sqrt(dx * dx + dy * dy);
-  if (len === 0) {
-    return Math.sqrt((p.x - a.x) ** 2 + (p.y - a.y) ** 2);
-  }
+  if (len === 0) return Math.sqrt((p.x - a.x) ** 2 + (p.y - a.y) ** 2);
   return Math.abs(dy * p.x - dx * p.y + b.x * a.y - b.y * a.x) / len;
 }
 
-function isClockwise(points: readonly { x: number; y: number }[]): boolean {
+// =============================================================================
+// Winding Direction
+// =============================================================================
+
+function isClockwise(points: readonly Point[]): boolean {
   const area = points.reduce((sum, point, i) => {
     const j = (i + 1) % points.length;
     return sum + point.x * points[j].y - points[j].x * point.y;

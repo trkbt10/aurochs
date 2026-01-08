@@ -13,7 +13,7 @@ import { parseSlide } from "../../src/pptx/parser/slide/slide-parser";
 import { resolveColor } from "../../src/pptx/domain/drawing-ml";
 import { parseXml, getByPath } from "../../src/xml";
 import { createParseContext } from "../../src/pptx/parser/context";
-import { createSlideRenderContext } from "../../src/pptx/render/slide-context";
+import { createSlideContext } from "../../src/pptx/parser/slide/context";
 import type { ZipFile } from "../../src/pptx/domain";
 import {
   createPlaceholderTable,
@@ -128,11 +128,11 @@ describe("a:fontRef schemeClr application", () => {
       renderOptions: { dialect: "powerpoint" as const },
     };
 
-    const ctx = createSlideRenderContext(
-      slide as Parameters<typeof createSlideRenderContext>[0],
-      layout as Parameters<typeof createSlideRenderContext>[1],
-      master as Parameters<typeof createSlideRenderContext>[2],
-      presentation as Parameters<typeof createSlideRenderContext>[3],
+    const ctx = createSlideContext(
+      slide as Parameters<typeof createSlideContext>[0],
+      layout as Parameters<typeof createSlideContext>[1],
+      master as Parameters<typeof createSlideContext>[2],
+      presentation as Parameters<typeof createSlideContext>[3],
     );
 
     const colorContext = createParseContext(ctx).colorContext;
@@ -201,11 +201,11 @@ describe("a:fontRef schemeClr application", () => {
       renderOptions: { dialect: "powerpoint" as const },
     };
 
-    const slideRenderCtx = createSlideRenderContext(
-      slide as Parameters<typeof createSlideRenderContext>[0],
-      layout as Parameters<typeof createSlideRenderContext>[1],
-      master as Parameters<typeof createSlideRenderContext>[2],
-      presentation as Parameters<typeof createSlideRenderContext>[3],
+    const slideRenderCtx = createSlideContext(
+      slide as Parameters<typeof createSlideContext>[0],
+      layout as Parameters<typeof createSlideContext>[1],
+      master as Parameters<typeof createSlideContext>[2],
+      presentation as Parameters<typeof createSlideContext>[3],
     );
 
     const result = renderSlideSvgIntegrated(slideDoc, slideRenderCtx, { width: 960 as Pixels, height: 540 as Pixels });

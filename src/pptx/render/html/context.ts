@@ -6,33 +6,33 @@
  */
 
 import { px } from "../../domain/types";
-import type { RenderContext, RenderContextConfig } from "../context";
-import { createRenderContext, createEmptyRenderContext } from "../context";
+import type { CoreRenderContext, CoreRenderContextConfig } from "../render-context";
+import { createCoreRenderContext, createEmptyCoreRenderContext } from "../render-context";
 
 // =============================================================================
 // Backward Compatibility Aliases
 // =============================================================================
 
 /**
- * @deprecated Use RenderContext instead
+ * @deprecated Use CoreRenderContext instead
  */
-export type HtmlRenderContext = RenderContext;
+export type HtmlRenderContext = CoreRenderContext;
 
 /**
- * @deprecated Use RenderContextConfig instead
+ * @deprecated Use CoreRenderContextConfig instead
  */
-export type HtmlRenderContextConfig = RenderContextConfig;
+export type HtmlRenderContextConfig = CoreRenderContextConfig;
 
 /**
- * @deprecated Use createRenderContext instead
+ * @deprecated Use createCoreRenderContext instead
  */
 export function createHtmlRenderContext(config: HtmlRenderContextConfig): HtmlRenderContext {
-  return createRenderContext(config);
+  return createCoreRenderContext(config);
 }
 
 /**
- * @deprecated Use createEmptyRenderContext instead
+ * @deprecated Use createEmptyCoreRenderContext instead
  */
 export function createEmptyHtmlRenderContext(): HtmlRenderContext {
-  return createEmptyRenderContext();
+  return createEmptyCoreRenderContext();
 }

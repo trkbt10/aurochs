@@ -226,7 +226,7 @@ export function createEmptyParseContext(): ParseContext {
 // Parse Context Builder (from SlideRenderContext)
 // =============================================================================
 
-import type { SlideRenderContext } from "../render/slide-context";
+import type { SlideContext } from "./slide/context";
 
 /**
  * Create ParseContext from SlideRenderContext.
@@ -237,7 +237,7 @@ import type { SlideRenderContext } from "../render/slide-context";
  *
  * @see ECMA-376 Part 1, Section 19 (PresentationML)
  */
-export function createParseContext(ctx: SlideRenderContext): ParseContext {
+export function createParseContext(ctx: SlideContext): ParseContext {
   const masterTextStyles = ctx.master.textStyles;
   const formatScheme = ctx.presentation.theme.formatScheme;
   const fontScheme = ctx.presentation.theme.fontScheme;
@@ -308,7 +308,7 @@ function toPlaceholderTables(table: {
  *
  * @see ECMA-376 Part 1, Section 20.1.4.1.10 (a:clrScheme)
  */
-function buildColorContext(ctx: SlideRenderContext): ColorContext {
+function buildColorContext(ctx: SlideContext): ColorContext {
   const scheme = ctx.presentation.theme.colorScheme;
   const masterMap = ctx.master.colorMap;
   const overrideMap = ctx.slide.colorMapOverride;

@@ -1,0 +1,278 @@
+/**
+ * Glyph Test Page Styles
+ */
+
+.glyph-test-page {
+  min-height: 100vh;
+  background: #0a0a0a;
+  color: #e5e5e5;
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* Header */
+.glyph-test-page .test-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 24px;
+  background: #111;
+  border-bottom: 1px solid #222;
+}
+
+.glyph-test-page .back-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: #222;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #e5e5e5;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.glyph-test-page .back-button:hover {
+  background: #333;
+}
+
+.glyph-test-page .test-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* Controls */
+.glyph-test-page .controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px;
+  padding: 20px 24px;
+  background: #111;
+  border-bottom: 1px solid #222;
+}
+
+.glyph-test-page .control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.glyph-test-page .control-group label {
+  font-size: 12px;
+  font-weight: 500;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.glyph-test-page .text-input,
+.glyph-test-page .font-select,
+.glyph-test-page .custom-font-input {
+  padding: 8px 12px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #e5e5e5;
+  font-size: 14px;
+}
+
+.glyph-test-page .text-input {
+  width: 300px;
+}
+
+.glyph-test-page .custom-font-input {
+  width: 150px;
+}
+
+.glyph-test-page .size-slider {
+  width: 150px;
+  accent-color: #3b82f6;
+}
+
+/* Stats Bar */
+.glyph-test-page .stats-bar {
+  display: flex;
+  gap: 24px;
+  padding: 12px 24px;
+  background: #0f0f0f;
+  border-bottom: 1px solid #222;
+  font-size: 13px;
+}
+
+.glyph-test-page .stat {
+  color: #888;
+}
+
+.glyph-test-page .stat strong {
+  color: #e5e5e5;
+  margin-right: 4px;
+}
+
+.glyph-test-page .stat.hole strong {
+  color: #ef4444;
+}
+
+/* Glyph Grid */
+.glyph-test-page .glyph-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+  padding: 24px;
+}
+
+.glyph-test-page .glyph-card {
+  background: #151515;
+  border: 1px solid #252525;
+  border-radius: 8px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.glyph-test-page .glyph-card:hover {
+  background: #1a1a1a;
+  border-color: #333;
+}
+
+.glyph-test-page .glyph-card.selected {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.glyph-test-page .glyph-card.error {
+  border-color: #7f1d1d;
+}
+
+/* Glyph Display */
+.glyph-test-page .glyph-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.glyph-test-page .glyph-char {
+  font-size: 24px;
+  font-weight: 600;
+  color: #fff;
+}
+
+.glyph-test-page .glyph-svg {
+  background: #0a0a0a;
+  border-radius: 4px;
+}
+
+.glyph-test-page .glyph-info {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+  font-size: 11px;
+  width: 100%;
+}
+
+.glyph-test-page .info-row {
+  display: flex;
+  justify-content: space-between;
+}
+
+.glyph-test-page .info-label {
+  color: #666;
+}
+
+.glyph-test-page .info-value {
+  color: #999;
+}
+
+.glyph-test-page .info-value.outer {
+  color: #3b82f6;
+}
+
+.glyph-test-page .info-value.hole {
+  color: #ef4444;
+}
+
+/* Glyph Error */
+.glyph-test-page .glyph-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 20px;
+}
+
+.glyph-test-page .error-char {
+  font-size: 32px;
+  color: #666;
+}
+
+.glyph-test-page .error-msg {
+  font-size: 11px;
+  color: #ef4444;
+  text-align: center;
+}
+
+/* Selected Details */
+.glyph-test-page .selected-details {
+  margin: 24px;
+  padding: 20px;
+  background: #151515;
+  border: 1px solid #252525;
+  border-radius: 8px;
+}
+
+.glyph-test-page .path-details h4 {
+  margin: 0 0 16px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.glyph-test-page .path-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.glyph-test-page .path-item {
+  display: flex;
+  gap: 16px;
+  padding: 8px 12px;
+  background: #1a1a1a;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: monospace;
+}
+
+.glyph-test-page .path-item.outer {
+  border-left: 3px solid #3b82f6;
+}
+
+.glyph-test-page .path-item.hole {
+  border-left: 3px solid #ef4444;
+}
+
+.glyph-test-page .path-index {
+  color: #666;
+  width: 30px;
+}
+
+.glyph-test-page .path-type {
+  width: 50px;
+  font-weight: 500;
+}
+
+.glyph-test-page .path-item.outer .path-type {
+  color: #3b82f6;
+}
+
+.glyph-test-page .path-item.hole .path-type {
+  color: #ef4444;
+}
+
+.glyph-test-page .path-points {
+  color: #888;
+}
+
+.glyph-test-page .path-area {
+  color: #666;
+}

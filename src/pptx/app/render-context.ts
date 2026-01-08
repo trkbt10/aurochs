@@ -6,18 +6,18 @@
  */
 
 import type { Slide as ApiSlide } from "./types";
-import type { SlideRenderContext } from "../render/slide-context";
-import { createSlideRenderContext } from "../render/slide-context";
+import type { SlideContext } from "../parser/slide/context";
+import { createSlideContext } from "../parser/slide/context";
 import { createPlaceholderTable, createColorMap } from "../parser/slide/resource-adapters";
 import { parseTheme, parseMasterTextStyles } from "../parser/drawing-ml";
 import { DEFAULT_RENDER_OPTIONS, type RenderOptions } from "../render/render-options";
-import { createRenderContextFromSlideContext } from "../render/render-context";
+import { createRenderContextFromSlideContext } from "./slide-context-adapter";
 import { getBackgroundFillData } from "../parser/drawing-ml";
 import { parseShapeTree } from "../parser/shape-parser";
 import type { XmlElement, XmlDocument } from "../../xml";
 import { getByPath, getChild } from "../../xml";
 import type { SlideSize, Shape, SpShape, ZipFile } from "../domain";
-import type { RenderContext as CoreRenderContext } from "../render/context";
+import type { CoreRenderContext } from "../render/render-context";
 import type { ResolvedBackgroundFill } from "../render/background-fill";
 
 // =============================================================================
@@ -99,7 +99,7 @@ function toResolvedBackgroundFill(
  * - Layout shapes (non-placeholder shapes from layout)
  */
 export type RenderContext = CoreRenderContext & {
-  readonly slideRenderContext: SlideRenderContext;
+  readonly slideRenderContext: SlideContext;
 };
 
 export function createRenderContext(
@@ -156,7 +156,7 @@ export function createRenderContext(
       themeResources: apiSlide.themeRelationships,
     };
 
-    return createSlideRenderContext(slide, layout, master, presentation);
+    return createSlideContext(slide, layout, master, presentation);
   })();
 
   // Resolve background from hierarchy

@@ -9,7 +9,7 @@ import { parseTable } from "./table-parser";
 import { parseShapeElement } from "../shape-parser/index";
 import { parseSlide } from "../slide/slide-parser";
 import { renderSlideSvg } from "../../render/svg/renderer";
-import { createRenderContext } from "../../render/context";
+import { createCoreRenderContext } from "../../render/render-context";
 import { openPresentation } from "../../index";
 import { px } from "../../domain/types";
 import type { ParseContext } from "../context";
@@ -199,7 +199,7 @@ describe("table-parser", () => {
 
     // Render to SVG
     const slideSize = { width: px(960), height: px(540) };
-    const renderCtx = createRenderContext({ slideSize });
+    const renderCtx = createCoreRenderContext({ slideSize });
     const result = renderSlideSvg(slide!, renderCtx);
 
     console.log("SVG length:", result.svg.length);

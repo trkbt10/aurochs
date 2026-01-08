@@ -7,7 +7,7 @@
  */
 
 import type { ChartShapeProperties } from "../../domain/chart";
-import type { RenderContext } from "../context";
+import type { CoreRenderContext } from "../render-context";
 import { resolveFill } from "../../domain/drawing-ml/fill-resolution";
 
 /**
@@ -54,7 +54,7 @@ export const FALLBACK_CHART_COLORS: readonly string[] = [
  */
 export function getSeriesColor(
   index: number,
-  ctx: RenderContext,
+  ctx: CoreRenderContext,
   shapeProperties?: ChartShapeProperties
 ): string {
   // 1. Check for explicit fill in shape properties
@@ -92,7 +92,7 @@ export function getSeriesColor(
  */
 export function getColorFromShapeProperties(
   shapeProperties: ChartShapeProperties | undefined,
-  ctx: RenderContext
+  ctx: CoreRenderContext
 ): string | undefined {
   if (!shapeProperties?.fill) {return undefined;}
 

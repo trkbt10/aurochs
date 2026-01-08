@@ -25,9 +25,9 @@
 // Types from render-context
 // =============================================================================
 
-export type { CoreRenderContext, CoreRenderContextConfig, RenderContextFromSlideOptions } from "./render-context";
+export type { CoreRenderContext, CoreRenderContextConfig } from "./render-context";
 
-export { createCoreRenderContext, createEmptyCoreRenderContext, createRenderContextFromSlideContext } from "./render-context";
+export { createCoreRenderContext, createEmptyCoreRenderContext } from "./render-context";
 
 // =============================================================================
 // Types from render-options
@@ -82,13 +82,6 @@ export type { ResourceResolver } from "../domain/resource-resolver";
 
 export { createEmptyResourceResolver } from "../domain/resource-resolver";
 
-// =============================================================================
-// Context
-// =============================================================================
-
-export type { RenderContext, RenderContextConfig } from "./context";
-
-export { createEmptyRenderContext, createRenderContext } from "./context";
 
 // =============================================================================
 // HTML Utilities (backward compatibility)
