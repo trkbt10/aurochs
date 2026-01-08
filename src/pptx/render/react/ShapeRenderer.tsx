@@ -8,11 +8,13 @@
 import { memo } from "react";
 import type { Shape, Transform } from "../../domain";
 import type { ShapeId } from "../../domain/types";
-import { SpShapeRenderer } from "./shapes/SpShape";
-import { PicShapeRenderer } from "./shapes/PicShape";
-import { CxnShapeRenderer } from "./shapes/CxnShape";
-import { GrpShapeRenderer } from "./shapes/GrpShape";
-import { GraphicFrameRenderer } from "./shapes/GraphicFrame";
+import {
+  SpShapeRenderer,
+  PicShapeRenderer,
+  CxnShapeRenderer,
+  GrpShapeRenderer,
+  GraphicFrameRenderer,
+} from "./shapes";
 
 // =============================================================================
 // Types
