@@ -2,12 +2,12 @@
  * @file DrawingML Test Page
  *
  * Schema-driven test page for DrawingML rendering features.
- * Uses HashRouter for navigation between categories and features.
+ * Uses nested routes for navigation between categories and features.
  *
  * @see ECMA-376 Part 1, Section 20.1 - DrawingML
  */
 
-import { HashRouter, Routes, Route, Navigate, useParams, useNavigate } from "react-router-dom";
+import { Routes, Route, Navigate, useParams, useNavigate } from "react-router-dom";
 import { RenderProvider } from "@lib/pptx/render/react/context";
 import { SvgDefsProvider } from "@lib/pptx/render/react/hooks/useSvgDefs";
 import { testSlideSize, testColorContext } from "./drawing-ml-tests";
@@ -22,6 +22,8 @@ type DrawingMLTestPageProps = {
   readonly onBack: () => void;
 };
 
+const basePath = "/drawing-ml";
+
 // =============================================================================
 // Layout Component
 // =============================================================================
@@ -35,7 +37,7 @@ function TestLayout({ onBack }: { onBack: () => void }) {
 
   if (!category || !feature) {
     const def = getDefaultRoute();
-    return <Navigate to={`/${def.category}/${def.feature}`} replace />;
+    return <Navigate to={`${basePath}/${def.category}/${def.feature}`} replace />;
   }
 
   const FeatureComponent = feature.component;
@@ -63,7 +65,7 @@ function TestLayout({ onBack }: { onBack: () => void }) {
             <button
               key={cat.id}
               className={`category-tab ${cat.id === categoryId ? "active" : ""}`}
-              onClick={() => navigate(`/${cat.id}/${cat.features[0].id}`)}
+              onClick={() => navigate(`${basePath}/${cat.id}/${cat.features[0].id}`)}
             >
               <span className="category-icon">{cat.icon}</span>
               {cat.label}
@@ -77,7 +79,7 @@ function TestLayout({ onBack }: { onBack: () => void }) {
             <button
               key={feat.id}
               className={`feature-tab ${feat.id === featureId ? "active" : ""}`}
-              onClick={() => navigate(`/${categoryId}/${feat.id}`)}
+              onClick={() => navigate(`${basePath}/${categoryId}/${feat.id}`)}
             >
               {feat.label}
             </button>
@@ -103,12 +105,10 @@ export function DrawingMLTestPage({ onBack }: DrawingMLTestPageProps) {
   return (
     <RenderProvider slideSize={testSlideSize} colorContext={testColorContext}>
       <SvgDefsProvider>
-        <HashRouter>
-          <Routes>
-            <Route path="/:category/:feature" element={<TestLayout onBack={onBack} />} />
-            <Route path="*" element={<Navigate to={`/${defaultRoute.category}/${defaultRoute.feature}`} replace />} />
-          </Routes>
-        </HashRouter>
+        <Routes>
+          <Route path=":category/:feature" element={<TestLayout onBack={onBack} />} />
+          <Route path="*" element={<Navigate to={`${basePath}/${defaultRoute.category}/${defaultRoute.feature}`} replace />} />
+        </Routes>
       </SvgDefsProvider>
     </RenderProvider>
   );

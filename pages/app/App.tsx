@@ -2,7 +2,8 @@
  * @file App entry for the pages demo.
  */
 
-import { useState, useCallback, useMemo } from "react";
+import { useCallback, useMemo } from "react";
+import { Routes, Route, Navigate, useNavigate, useParams } from "react-router-dom";
 import { usePptx } from "./hooks/usePptx";
 import { FileUpload } from "./components/FileUpload";
 import { SlideViewer } from "./components/SlideViewer";
@@ -16,14 +17,11 @@ import "./App.css";
 // Demo PPTX URL (will be in the public folder)
 const DEMO_PPTX_URL = import.meta.env.BASE_URL + "demo.pptx";
 
-type AppMode = "upload" | "viewer" | "slideshow" | "editorTest" | "editor" | "drawingMLTest";
-
 /**
  * Top-level application component for the demo pages build.
  */
 export function App() {
-  const [mode, setMode] = useState<AppMode>("upload");
-  const [slideshowStartSlide, setSlideshowStartSlide] = useState(1);
+  const navigate = useNavigate();
 
   const {
     status,
@@ -38,53 +36,48 @@ export function App() {
   const handleFileSelect = useCallback(
     (file: File) => {
       loadFromFile(file);
-      setMode("viewer");
+      navigate("/viewer");
     },
-    [loadFromFile]
+    [loadFromFile, navigate]
   );
 
   const handleDemoLoad = useCallback(() => {
     loadFromUrl(DEMO_PPTX_URL, "demo.pptx");
-    setMode("viewer");
-  }, [loadFromUrl]);
+    navigate("/viewer");
+  }, [loadFromUrl, navigate]);
 
   const handleBack = useCallback(() => {
     reset();
-    setMode("upload");
-  }, [reset]);
+    navigate("/");
+  }, [reset, navigate]);
+
+  const handleGoHome = useCallback(() => {
+    navigate("/");
+  }, [navigate]);
 
   const handleStartSlideshow = useCallback((slideNumber: number) => {
-    setSlideshowStartSlide(slideNumber);
-    setMode("slideshow");
-  }, []);
+    navigate(`/slideshow/${slideNumber}`);
+  }, [navigate]);
 
   const handleExitSlideshow = useCallback(() => {
-    setMode("viewer");
-  }, []);
+    navigate("/viewer");
+  }, [navigate]);
 
   const handleEditorTest = useCallback(() => {
-    setMode("editorTest");
-  }, []);
-
-  const handleExitEditorTest = useCallback(() => {
-    setMode("upload");
-  }, []);
+    navigate("/editor-test");
+  }, [navigate]);
 
   const handleDrawingMLTest = useCallback(() => {
-    setMode("drawingMLTest");
-  }, []);
-
-  const handleExitDrawingMLTest = useCallback(() => {
-    setMode("upload");
-  }, []);
+    navigate("/drawing-ml");
+  }, [navigate]);
 
   const handleStartEditor = useCallback(() => {
-    setMode("editor");
-  }, []);
+    navigate("/editor");
+  }, [navigate]);
 
   const handleExitEditor = useCallback(() => {
-    setMode("viewer");
-  }, []);
+    navigate("/viewer");
+  }, [navigate]);
 
   // Convert presentation to editor document
   const editorDocument = useMemo(() => {
@@ -99,10 +92,82 @@ export function App() {
     }
   }, [presentation]);
 
-  // Editor mode
-  if (mode === "editor") {
+  if (status === "error") {
+    return (
+      <div className="error-page">
+        <div className="error-card">
+          <div className="error-icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+          </div>
+          <h2 className="error-title">Failed to load presentation</h2>
+          <p className="error-message">{error}</p>
+          <button className="error-button" onClick={handleBack}>
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const renderUploadPage = () => (
+    <FileUpload
+      onFileSelect={handleFileSelect}
+      onDemoLoad={handleDemoLoad}
+      isLoading={status === "loading"}
+      onEditorTest={handleEditorTest}
+      onDrawingMLTest={handleDrawingMLTest}
+    />
+  );
+
+  const UploadRoute = () => renderUploadPage();
+
+  const ViewerRoute = () => {
+    if (!presentation) {
+      if (status === "loading") {
+        return renderUploadPage();
+      }
+      return <Navigate to="/" replace />;
+    }
+
+    return (
+      <SlideViewer
+        presentation={presentation}
+        fileName={fileName || "presentation.pptx"}
+        onBack={handleBack}
+        onStartSlideshow={handleStartSlideshow}
+        onStartEditor={handleStartEditor}
+      />
+    );
+  };
+
+  const SlideshowRoute = () => {
+    const { slideNumber } = useParams<{ slideNumber: string }>();
+
+    if (!presentation) {
+      return <Navigate to="/" replace />;
+    }
+
+    const startSlide = Math.max(1, Number.parseInt(slideNumber ?? "1", 10) || 1);
+
+    return (
+      <SlideshowPage
+        presentation={presentation}
+        startSlide={startSlide}
+        onExit={handleExitSlideshow}
+      />
+    );
+  };
+
+  const EditorRoute = () => {
+    if (!presentation) {
+      return <Navigate to="/" replace />;
+    }
+
     if (!editorDocument) {
-      // Conversion failed - show error
       return (
         <div className="error-page">
           <div className="error-card">
@@ -122,6 +187,7 @@ export function App() {
         </div>
       );
     }
+
     return (
       <EditorConfigProvider config={{ locale: "en-US" }}>
         <div className="editor-page">
@@ -145,72 +211,17 @@ export function App() {
         </div>
       </EditorConfigProvider>
     );
-  }
+  };
 
-  // Editor test mode
-  if (mode === "editorTest") {
-    return <EditorTestPage onBack={handleExitEditorTest} />;
-  }
-
-  // DrawingML test mode
-  if (mode === "drawingMLTest") {
-    return <DrawingMLTestPage onBack={handleExitDrawingMLTest} />;
-  }
-
-  // Error state
-  if (status === "error") {
-    return (
-      <div className="error-page">
-        <div className="error-card">
-          <div className="error-icon">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="12" y1="8" x2="12" y2="12" />
-              <line x1="12" y1="16" x2="12.01" y2="16" />
-            </svg>
-          </div>
-          <h2 className="error-title">Failed to load presentation</h2>
-          <p className="error-message">{error}</p>
-          <button className="error-button" onClick={handleBack}>
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Upload page
-  if (mode === "upload" || !presentation) {
-    return (
-      <FileUpload
-        onFileSelect={handleFileSelect}
-        onDemoLoad={handleDemoLoad}
-        isLoading={status === "loading"}
-        onEditorTest={handleEditorTest}
-        onDrawingMLTest={handleDrawingMLTest}
-      />
-    );
-  }
-
-  // Slideshow mode
-  if (mode === "slideshow") {
-    return (
-      <SlideshowPage
-        presentation={presentation}
-        startSlide={slideshowStartSlide}
-        onExit={handleExitSlideshow}
-      />
-    );
-  }
-
-  // Viewer mode
   return (
-    <SlideViewer
-      presentation={presentation}
-      fileName={fileName || "presentation.pptx"}
-      onBack={handleBack}
-      onStartSlideshow={handleStartSlideshow}
-      onStartEditor={handleStartEditor}
-    />
+    <Routes>
+      <Route path="/" element={<UploadRoute />} />
+      <Route path="/viewer" element={<ViewerRoute />} />
+      <Route path="/slideshow/:slideNumber" element={<SlideshowRoute />} />
+      <Route path="/editor" element={<EditorRoute />} />
+      <Route path="/editor-test" element={<EditorTestPage onBack={handleGoHome} />} />
+      <Route path="/drawing-ml/*" element={<DrawingMLTestPage onBack={handleGoHome} />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
