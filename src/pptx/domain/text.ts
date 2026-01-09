@@ -4,7 +4,7 @@
  * @see ECMA-376 Part 1, Section 21.1.2 - Text
  */
 
-import type { Color, Fill, Line } from "./color";
+import type { Color, Fill, Line } from "./color/types";
 import type { Effects } from "./effects";
 import type { Hyperlink, HyperlinkSound } from "./resource";
 import type { Scene3d, Shape3d } from "./three-d";

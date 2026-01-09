@@ -4,7 +4,7 @@
  * @see ECMA-376 Part 1, Section 19.2 - Presentation
  */
 
-import type { Color } from "../color";
+import type { Color } from "../color/types";
 import type { Pixels } from "../types";
 import type { TextStyleLevels } from "../text-style";
 import type { EmbeddedFont } from "../embedded-font";

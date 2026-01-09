@@ -7,8 +7,8 @@
  * @see ECMA-376 Part 1, Section 20.1.2.3 - Color Types
  */
 
-import type { Color, ColorTransform } from "../color";
-import type { ColorContext } from "../resolution";
+import type { Color, ColorTransform } from "./types";
+import type { ColorContext } from "./context";
 import {
   hexToRgb as hexToRgbObj,
   rgbToHex as rgbToHexBase,

@@ -344,9 +344,9 @@ export type {
   // Color mapping
   ColorMapping,
   ColorMapOverride,
-} from "./color";
+} from "./color/types";
 
-export { color, PATTERN_PRESETS } from "./color";
+export { color, PATTERN_PRESETS } from "./color/types";
 
 // =============================================================================
 // Text Types

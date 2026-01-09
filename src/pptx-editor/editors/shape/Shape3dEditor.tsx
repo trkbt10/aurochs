@@ -13,7 +13,7 @@ import { FillEditor, createNoFill } from "../color/FillEditor";
 import { Bevel3dEditor, createDefaultBevel3d } from "./Bevel3dEditor";
 import { px, type PresetMaterialType } from "../../../pptx/domain/types";
 import type { Shape3d } from "../../../pptx/domain";
-import type { Fill } from "../../../pptx/domain/color";
+import type { Fill } from "../../../pptx/domain/color/types";
 import type { EditorProps, SelectOption } from "../../types";
 
 export type Shape3dEditorProps = EditorProps<Shape3d>;

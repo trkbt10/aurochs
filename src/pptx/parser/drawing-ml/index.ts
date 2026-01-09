@@ -8,11 +8,11 @@
  * @see ECMA-376 Part 1, Section 20.1.6 (Theme)
  */
 
-// Types from domain
+// Parser-specific fill types (not domain types)
+export type { FillType, FillResult, GradientFill } from "./fill";
+
+// Background types from domain
 export type {
-  FillType,
-  FillResult,
-  GradientFill,
   BackgroundElement,
   BackgroundParseResult,
 } from "../../domain/drawing-ml";

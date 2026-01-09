@@ -8,7 +8,7 @@
  */
 
 import type { Legend, LegendEntry, ChartShapeProperties, Layout } from "../../domain/chart";
-import type { Fill } from "../../domain/color";
+import type { Fill } from "../../domain/color/types";
 import type { TextBody } from "../../domain/text";
 import type { SeriesData } from "./types";
 import { escapeHtml } from "../html/index";

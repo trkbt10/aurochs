@@ -5,7 +5,7 @@
  */
 
 import { useMemo, type CSSProperties } from "react";
-import type { GradientStop, SolidFill } from "../../../../pptx/domain/color";
+import type { GradientStop, SolidFill } from "../../../../pptx/domain/color/types";
 import { Input } from "../../primitives/Input";
 import { FillPreview } from "../FillPreview";
 import { parseHexInput } from "../color-convert";

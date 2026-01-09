@@ -4,7 +4,7 @@
  * @see ECMA-376 Part 1, Section 20.1.5 - 3D Rendering
  */
 
-import type { Fill } from "./color";
+import type { Fill } from "./color/types";
 import type { Point } from "./geometry";
 import type { Degrees, Percent, Pixels } from "./types";
 

@@ -6,7 +6,7 @@
 
 import type { XmlDocument, XmlElement } from "../../xml";
 import type { ResourceMap } from "../opc";
-import type { Color } from "../domain/color";
+import type { Color } from "../domain/color/types";
 import type {
   ColorContext,
   FontScheme,

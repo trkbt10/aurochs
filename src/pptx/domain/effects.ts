@@ -5,7 +5,7 @@
  */
 
 import type { Degrees, Percent, Pixels } from "./types";
-import type { Color } from "./color";
+import type { Color } from "./color/types";
 import type { FillEffectType } from "./appearance";
 
 // =============================================================================

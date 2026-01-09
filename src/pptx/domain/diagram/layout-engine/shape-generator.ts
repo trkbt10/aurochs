@@ -24,8 +24,8 @@ import type {
 } from "../types";
 import type { PresetShapeType } from "../../types";
 import { px, deg } from "../../types";
-import type { SpShape, ShapeProperties, PresetGeometry } from "../../shape";
-import type { Fill, SolidFill, Line } from "../../color";
+import type { SpShape, ShapeProperties, PresetGeometry, AdjustValue } from "../../shape";
+import type { Fill, Line } from "../../color/types";
 import type { Transform } from "../../geometry";
 import type { TextBody } from "../../text";
 
@@ -46,10 +46,12 @@ import {
 } from "./iteration";
 import {
   resolveNodeStyle,
-  createDefaultStyleContext,
+  createStyleContext,
+  createEmptyColorContext,
   type StyleResolverContext,
   type ResolvedDiagramStyle,
 } from "./style-resolver";
+import type { ColorContext } from "../../resolution";
 
 // =============================================================================
 // Types
@@ -73,8 +75,8 @@ export type ShapeGenerationResult = {
 export type ShapeGenerationConfig = {
   /** Available bounds for the diagram */
   readonly bounds: LayoutBounds;
-  /** Theme colors (scheme name -> CSS color) */
-  readonly themeColors?: Map<string, string>;
+  /** Color context for theme/scheme color resolution */
+  readonly colorContext?: ColorContext;
   /** Default shape type when not specified */
   readonly defaultShapeType?: PresetShapeType;
   /** Default node width */
@@ -112,10 +114,11 @@ export function generateDiagramShapes(
 
   // Create contexts
   const algorithmRegistry = createAlgorithmRegistry();
-  const styleContext = createDefaultStyleContext(
+  const colorContext = config.colorContext ?? createEmptyColorContext();
+  const styleContext = createStyleContext(
+    colorContext,
     styleDefinition,
-    colorDefinition,
-    config.themeColors
+    colorDefinition
   );
 
   // Process layout definition or use default layout
@@ -275,6 +278,10 @@ function generateDefaultLayout(
     defaultSpacing: config.defaultSpacing ?? 10,
     defaultNodeWidth: config.defaultNodeWidth ?? 100,
     defaultNodeHeight: config.defaultNodeHeight ?? 60,
+    // ECMA-376 required fields
+    variables: new Map(),
+    resolvedConstraints: new Map(),
+    namedNodes: new Map(),
   };
 
   // Get content nodes only (exclude transitions and presentation nodes)
@@ -320,6 +327,8 @@ function createLayoutContext(
 
 /**
  * Create an SpShape from layout node
+ *
+ * @see ECMA-376 Part 1, Section 21.4.2.24 (shape element)
  */
 function createSpShapeFromLayoutNode(
   layoutNode: LayoutNode,
@@ -327,12 +336,28 @@ function createSpShapeFromLayoutNode(
   style: ResolvedDiagramStyle,
   config: ShapeGenerationConfig
 ): SpShape {
-  const { treeNode } = layoutNode;
+  const { treeNode, isConnector } = layoutNode;
 
-  // Determine shape type
+  // Determine shape type from layoutDef or defaults
+  const shapeSpec = layoutDef?.shape;
   let shapeType: PresetShapeType = config.defaultShapeType ?? "rect";
-  if (layoutDef?.shape?.type && layoutDef.shape.type !== "none" && layoutDef.shape.type !== "conn") {
-    shapeType = layoutDef.shape.type as PresetShapeType;
+  let isHidden = false;
+
+  if (shapeSpec?.type) {
+    if (shapeSpec.type === "none") {
+      // Shape geometry is hidden but text may still be visible
+      isHidden = true;
+    } else if (shapeSpec.type === "conn") {
+      // Connector shape - use line or straight connector
+      shapeType = "line";
+    } else {
+      shapeType = shapeSpec.type as PresetShapeType;
+    }
+  }
+
+  // If this is a connector from layout algorithm, override shape type
+  if (isConnector) {
+    shapeType = "straightConnector1";
   }
 
   // Create transform with branded types
@@ -346,23 +371,39 @@ function createSpShapeFromLayoutNode(
     flipV: false,
   };
 
-  // Create geometry
+  // Create geometry with adjustments from layoutDef
+  // Note: AdjustValue uses name (e.g., "adj1") not index
+  const adjustValues: AdjustValue[] = [];
+  if (shapeSpec?.adjustments) {
+    for (const adj of shapeSpec.adjustments) {
+      if (adj.index !== undefined && adj.value !== undefined) {
+        // Parse the value (could be percentage or absolute)
+        const numValue = parseFloat(adj.value);
+        if (!isNaN(numValue)) {
+          // Convert index to name format (adj1, adj2, etc.)
+          const name = `adj${adj.index + 1}`;
+          adjustValues.push({ name, value: numValue });
+        }
+      }
+    }
+  }
+
   const geometry: PresetGeometry = {
     type: "preset",
     preset: shapeType,
-    adjustValues: [],
+    adjustValues,
   };
 
-  // Create fill
-  const fill = createFillFromStyle(style);
+  // Create fill (hide if shape type is "none")
+  const fill = isHidden ? undefined : createFillFromStyle(style);
 
-  // Create line
-  const line = createLineFromStyle(style);
+  // Create line (hide if shape type is "none")
+  const line = isHidden ? undefined : createLineFromStyle(style);
 
   // Create shape properties
   const properties: ShapeProperties = {
     transform,
-    geometry,
+    geometry: isHidden ? undefined : geometry,
     fill,
     line,
   };
@@ -384,74 +425,90 @@ function createSpShapeFromLayoutNode(
 
 /**
  * Create Fill from resolved style
+ *
+ * Returns the Fill directly from the resolved style.
+ * The style already contains a proper Fill (SolidFill, GradientFill, etc.).
  */
 function createFillFromStyle(style: ResolvedDiagramStyle): Fill | undefined {
-  if (!style.fillColor) {
-    return undefined;
-  }
-
-  // Parse CSS color to hex value (remove #)
-  const hexValue = style.fillColor.replace(/^#/, "");
-
-  const solidFill: SolidFill = {
-    type: "solidFill",
-    color: {
-      spec: {
-        type: "srgb",
-        value: hexValue,
-      },
-    },
-  };
-
-  return solidFill;
+  return style.fill;
 }
 
 /**
  * Create Line from resolved style
+ *
+ * Returns the Line directly from the resolved style.
  */
 function createLineFromStyle(style: ResolvedDiagramStyle): Line | undefined {
-  if (!style.lineColor) {
-    return undefined;
-  }
-
-  // Parse CSS color to hex value (remove #)
-  const hexValue = style.lineColor.replace(/^#/, "");
-
-  const lineFill: SolidFill = {
-    type: "solidFill",
-    color: {
-      spec: {
-        type: "srgb",
-        value: hexValue,
-      },
-    },
-  };
-
-  return {
-    width: px(1), // Default line width in pixels
-    cap: "flat",
-    compound: "sng",
-    alignment: "ctr",
-    fill: lineFill,
-    dash: "solid",
-    join: "round",
-  };
+  return style.line;
 }
 
 /**
  * Create TextBody from tree node
+ *
+ * Uses the textBody from the diagram point, applying style fills
+ * from the diagram style definition when the run doesn't have its own fill.
+ *
+ * @see ECMA-376 Part 1, Section 21.4.3.5 (text properties in diagram)
  */
 function createTextBodyFromNode(
   node: DiagramTreeNode,
   style: ResolvedDiagramStyle
 ): TextBody | undefined {
-  // If the node already has a textBody, use it
-  if (node.textBody) {
+  if (!node.textBody) {
+    return undefined;
+  }
+
+  // If no style text fill, return as-is
+  if (!style.textFill) {
     return node.textBody;
   }
 
-  // No text body to create
-  return undefined;
+  // Apply style text fill to runs that don't have their own fill
+  return applyStyleFillToTextBody(node.textBody, style.textFill);
+}
+
+/**
+ * Apply diagram style text fill to a TextBody
+ *
+ * Supports all Fill types (solid, gradient, pattern, etc.)
+ * Only applies to runs that don't already have a fill defined.
+ * Preserves the full paragraph/run structure.
+ *
+ * @see ECMA-376 Part 1, Section 20.1.8 (Fill Properties)
+ */
+function applyStyleFillToTextBody(
+  textBody: TextBody,
+  textFill: Fill
+): TextBody {
+  const updatedParagraphs = textBody.paragraphs.map((paragraph) => {
+    if (!paragraph.runs) {
+      return paragraph;
+    }
+
+    const updatedRuns = paragraph.runs.map((run) => {
+      // Only apply style fill if run doesn't have its own fill
+      if (run.type === "text" && !run.properties?.fill) {
+        return {
+          ...run,
+          properties: {
+            ...run.properties,
+            fill: textFill,
+          },
+        };
+      }
+      return run;
+    });
+
+    return {
+      ...paragraph,
+      runs: updatedRuns,
+    };
+  });
+
+  return {
+    ...textBody,
+    paragraphs: updatedParagraphs,
+  };
 }
 
 /**

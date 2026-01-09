@@ -6,7 +6,7 @@
  */
 
 import type { Chart } from "./chart";
-import type { Fill, Line } from "./color";
+import type { Fill, Line } from "./color/types";
 import type {
   DiagramColorsDefinition,
   DiagramDataModel,

@@ -628,7 +628,7 @@ export function createForEachContext(
 /**
  * Create child context for nested iteration
  */
-export function createChildContext(
+export function createForEachChildContext(
   parent: ForEachContext,
   currentNode: DiagramTreeNode,
   position: number,

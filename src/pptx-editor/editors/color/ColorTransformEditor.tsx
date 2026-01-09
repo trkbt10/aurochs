@@ -9,7 +9,7 @@ import { FieldGroup } from "../../ui/layout";
 import { Toggle } from "../../ui/primitives";
 import { PercentEditor, DegreesEditor } from "../primitives";
 import { pct, deg, type Percent, type Degrees } from "../../../pptx/domain/types";
-import type { ColorTransform } from "../../../pptx/domain/color";
+import type { ColorTransform } from "../../../pptx/domain/color/types";
 import type { EditorProps } from "../../types";
 
 export type ColorTransformEditorProps = EditorProps<ColorTransform | undefined> & {

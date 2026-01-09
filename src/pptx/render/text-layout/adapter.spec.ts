@@ -7,7 +7,7 @@
 import { toTextBoxConfig, toLayoutInput } from "./adapter";
 import type { TextBody, Paragraph, RunProperties, BulletStyle } from "../../domain/text";
 import type { ColorContext } from "../../domain/resolution";
-import type { Line, Fill } from "../../domain/color";
+import type { Line, Fill } from "../../domain/color/types";
 import { px, pt, deg, pct } from "../../domain/types";
 
 // =============================================================================

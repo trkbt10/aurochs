@@ -6,7 +6,7 @@
 
 import type { CSSProperties } from "react";
 import type { Background } from "../../../pptx/domain/slide";
-import type { Fill } from "../../../pptx/domain/color";
+import type { Fill } from "../../../pptx/domain/color/types";
 import type { EditorProps } from "../../types";
 import { FieldGroup } from "../../ui/layout";
 import { Toggle } from "../../ui/primitives";

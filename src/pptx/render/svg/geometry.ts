@@ -21,7 +21,7 @@ import type { HtmlString } from "../html/primitives";
 import { path } from "./primitives";
 import { renderFillToStyle, renderLineToStyle } from "./fill";
 import { generateLineMarkers, type MarkerCollection } from "./marker";
-import { resolveFill, formatRgba } from "../../domain/drawing-ml/fill-resolution";
+import { resolveFill, formatRgba } from "../../domain/color/fill";
 import type { Fill, Line } from "../../domain";
 import type { ColorContext } from "../../domain/resolution";
 import { createGuideContext, evaluateGuides } from "../../domain/shape-geometry/guide-engine";

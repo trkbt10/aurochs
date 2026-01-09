@@ -6,7 +6,7 @@
 
 import { render, fireEvent } from "@testing-library/react";
 import { useState } from "react";
-import type { GradientStop } from "../../../pptx/domain/color";
+import type { GradientStop } from "../../../pptx/domain/color/types";
 import { pct } from "../../../pptx/domain/types";
 import { GradientStopsEditor } from "./GradientStopsEditor";
 

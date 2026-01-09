@@ -4,11 +4,18 @@
  * Handles DiagramML constraints (constr elements) that define
  * size, position, and spacing rules for layout nodes.
  *
- * @see ECMA-376 Part 1, Section 21.4.3 (Constraints)
+ * @see ECMA-376 Part 1, Section 21.4.2.4 - constr
+ * @see ECMA-376 Part 1, Section 21.4.7.20 - ST_ConstraintType
+ * @see ECMA-376 Part 1, Section 21.4.7.21 - ST_ConstraintRelationship
  */
 
-import type { DiagramConstraint, DiagramConstraintType } from "../types";
-import type { LayoutNode, LayoutBounds } from "./types";
+import type {
+  DiagramConstraint,
+  DiagramConstraintType,
+  DiagramConstraintRelationship,
+  DiagramRule,
+} from "../types";
+import type { LayoutNode, LayoutBounds, LayoutContext } from "./types";
 
 // =============================================================================
 // Types
@@ -485,4 +492,234 @@ export function getHeightConstraint(
   }
 
   return defaultValue;
+}
+
+// =============================================================================
+// Topological Constraint Resolution
+// =============================================================================
+
+/**
+ * Sort constraints topologically to handle dependencies.
+ * Constraints that reference other constraints must be resolved after their dependencies.
+ *
+ * @see ECMA-376 Part 1, Section 21.4.2.4 - refType attribute
+ */
+export function sortConstraintsByDependency(
+  constraints: readonly DiagramConstraint[]
+): DiagramConstraint[] {
+  // Build adjacency list: key -> set of keys that depend on it
+  // Also track which constraints depend on which
+  const dependsOn = new Map<string, Set<string>>();
+  const constraintMap = new Map<string, DiagramConstraint>();
+
+  for (const constraint of constraints) {
+    if (!constraint.type) continue;
+
+    const key = buildConstraintKey(constraint.type, constraint.forName);
+    constraintMap.set(key, constraint);
+
+    if (!dependsOn.has(key)) {
+      dependsOn.set(key, new Set());
+    }
+
+    // If this constraint references another, it depends on that reference
+    if (constraint.referenceType) {
+      const refKey = buildConstraintKey(constraint.referenceType, constraint.referenceForName);
+      dependsOn.get(key)!.add(refKey);
+    }
+  }
+
+  // Kahn's algorithm: process constraints with no dependencies first
+  const inDegree = new Map<string, number>();
+
+  // Initialize in-degrees
+  for (const key of constraintMap.keys()) {
+    inDegree.set(key, dependsOn.get(key)?.size ?? 0);
+  }
+
+  // Queue starts with nodes that have no dependencies
+  const queue: string[] = [];
+  for (const [key, degree] of inDegree) {
+    if (degree === 0) {
+      queue.push(key);
+    }
+  }
+
+  const sorted: DiagramConstraint[] = [];
+  const visited = new Set<string>();
+
+  while (queue.length > 0) {
+    const key = queue.shift()!;
+    if (visited.has(key)) continue;
+    visited.add(key);
+
+    const constraint = constraintMap.get(key);
+    if (constraint) {
+      sorted.push(constraint);
+    }
+
+    // For each constraint that was waiting on this one, decrement its in-degree
+    for (const [otherKey, deps] of dependsOn) {
+      if (deps.has(key)) {
+        const newDegree = (inDegree.get(otherKey) ?? 1) - 1;
+        inDegree.set(otherKey, newDegree);
+        if (newDegree === 0 && !visited.has(otherKey)) {
+          queue.push(otherKey);
+        }
+      }
+    }
+  }
+
+  // Add any remaining constraints (circular dependencies or isolated)
+  for (const constraint of constraints) {
+    if (!constraint.type) continue;
+    const key = buildConstraintKey(constraint.type, constraint.forName);
+    if (!visited.has(key)) {
+      sorted.push(constraint);
+    }
+  }
+
+  return sorted;
+}
+
+/**
+ * Resolve all constraints for a layout context.
+ * Returns a map of constraint type to resolved value.
+ *
+ * @see ECMA-376 Part 1, Section 21.4.2.4 - constr
+ */
+export function resolveAllConstraints(
+  constraints: readonly DiagramConstraint[],
+  context: ConstraintContext
+): ReadonlyMap<DiagramConstraintType, number> {
+  const sorted = sortConstraintsByDependency(constraints);
+  const resolved = new Map<DiagramConstraintType, number>();
+
+  for (const constraint of sorted) {
+    const result = resolveConstraint(constraint, context);
+    if (result) {
+      resolved.set(result.type, result.value);
+      // Also store in context for reference by subsequent constraints
+      const key = buildConstraintKey(result.type, result.forName);
+      context.resolvedConstraints.set(key, result.value);
+    }
+  }
+
+  return resolved;
+}
+
+/**
+ * Get nodes matching a constraint relationship.
+ *
+ * @see ECMA-376 Part 1, Section 21.4.7.21 - ST_ConstraintRelationship
+ */
+export function getNodesForRelationship(
+  relationship: DiagramConstraintRelationship | undefined,
+  forName: string | undefined,
+  currentNode: LayoutNode,
+  allNodes: readonly LayoutNode[],
+  namedNodes: ReadonlyMap<string, LayoutNode>
+): LayoutNode[] {
+  // If forName is specified, look up by name
+  if (forName) {
+    const namedNode = namedNodes.get(forName);
+    return namedNode ? [namedNode] : [];
+  }
+
+  // Otherwise use relationship
+  switch (relationship) {
+    case "self":
+      return [currentNode];
+
+    case "ch":
+      // Child nodes (not directly available from LayoutNode, need tree structure)
+      return currentNode.children as LayoutNode[];
+
+    case "des":
+      // Descendant nodes
+      const descendants: LayoutNode[] = [];
+      function collectDescendants(node: LayoutNode): void {
+        for (const child of node.children) {
+          descendants.push(child);
+          collectDescendants(child);
+        }
+      }
+      collectDescendants(currentNode);
+      return descendants;
+
+    default:
+      return [currentNode];
+  }
+}
+
+// =============================================================================
+// Rule Processing
+// =============================================================================
+
+/**
+ * Apply rules to resolved constraints.
+ * Rules can set bounds (min/max) on constraint values.
+ */
+export function applyRules(
+  resolved: Map<DiagramConstraintType, number>,
+  rules: readonly DiagramRule[]
+): void {
+  for (const rule of rules) {
+    if (!rule.type) continue;
+
+    const constraintType = rule.type as DiagramConstraintType;
+    const currentValue = resolved.get(constraintType);
+
+    if (currentValue === undefined) continue;
+
+    let newValue = currentValue;
+
+    // Apply factor
+    if (rule.factor) {
+      const factor = parseFloat(rule.factor);
+      if (!isNaN(factor)) {
+        newValue *= factor;
+      }
+    }
+
+    // Apply explicit value
+    if (rule.value) {
+      const value = parseFloat(rule.value);
+      if (!isNaN(value)) {
+        newValue = value;
+      }
+    }
+
+    // Apply min/max bounds
+    if (rule.min) {
+      const min = parseFloat(rule.min);
+      if (!isNaN(min) && newValue < min) {
+        newValue = min;
+      }
+    }
+
+    if (rule.max) {
+      const max = parseFloat(rule.max);
+      if (!isNaN(max) && newValue > max) {
+        newValue = max;
+      }
+    }
+
+    resolved.set(constraintType, newValue);
+  }
+}
+
+/**
+ * Create constraint context from layout context.
+ */
+export function createConstraintContext(
+  layoutContext: LayoutContext,
+  siblings: readonly LayoutNode[] = []
+): ConstraintContext {
+  return {
+    bounds: layoutContext.bounds,
+    siblings,
+    namedNodes: layoutContext.namedNodes,
+    resolvedConstraints: new Map(layoutContext.resolvedConstraints),
+  };
 }

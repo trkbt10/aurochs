@@ -15,7 +15,7 @@ import {
   type ResolvedGradientFill,
   type ResolvedLine,
   type ResolvedImageFill,
-} from "../../domain/drawing-ml/fill-resolution";
+} from "../../domain/color/fill";
 import type { ResourceResolverFn } from "../../domain/resource-resolver";
 import { ooxmlAngleToSvgLinearGradient, getRadialGradientCoords } from "./gradient-utils";
 

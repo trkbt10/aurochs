@@ -25,6 +25,8 @@ import type { ShapeProperties } from "../../shape";
 /**
  * A node in the diagram tree structure.
  * Built from DiagramPoint data with resolved parent-child relationships.
+ *
+ * @see ECMA-376 Part 1, Section 21.4.4 - Diagram Data
  */
 export type DiagramTreeNode = {
   /** Unique identifier from modelId */
@@ -35,7 +37,7 @@ export type DiagramTreeNode = {
   readonly propertySet?: DiagramPropertySet;
   /** Shape properties for rendering */
   readonly shapeProperties?: ShapeProperties;
-  /** Text content for this node */
+  /** Text content for this node (structured with paragraphs and runs) */
   readonly textBody?: TextBody;
   /** Child nodes in the hierarchy */
   readonly children: readonly DiagramTreeNode[];
@@ -45,6 +47,12 @@ export type DiagramTreeNode = {
   readonly siblingIndex: number;
   /** Total number of siblings including self */
   readonly siblingCount: number;
+  /**
+   * Parent node reference (undefined for root nodes).
+   * Used for axis="ancst", axis="par" traversal.
+   * @see ECMA-376 Part 1, Section 21.4.7.6 - ST_AxisType
+   */
+  readonly parent?: DiagramTreeNode;
 };
 
 /**
@@ -144,7 +152,8 @@ export function buildDiagramTree(dataModel: DiagramDataModel): DiagramTreeBuildR
     id: string,
     depth: number,
     siblingIndex: number,
-    siblingCount: number
+    siblingCount: number,
+    parent: DiagramTreeNode | undefined
   ): DiagramTreeNode | undefined {
     const point = pointMap.get(id);
     if (!point) {return undefined;}
@@ -152,40 +161,49 @@ export function buildDiagramTree(dataModel: DiagramDataModel): DiagramTreeBuildR
     // Get children IDs
     const childIds = childrenMap.get(id) ?? [];
 
-    // Build child nodes
-    const children: DiagramTreeNode[] = [];
-    for (let i = 0; i < childIds.length; i++) {
-      const child = buildNode(childIds[i], depth + 1, i, childIds.length);
-      if (child) {
-        children.push(child);
-      }
-    }
-
     // Track max depth
     if (depth > maxDepth) {
       maxDepth = depth;
     }
 
+    // Create node first (without children) to allow parent reference
     const node: DiagramTreeNode = {
       id,
       type: parsePointType(point.type),
       propertySet: point.propertySet,
       shapeProperties: point.shapeProperties,
       textBody: point.textBody,
-      children,
+      children: [], // Will be populated below
       depth,
       siblingIndex,
       siblingCount,
+      parent,
     };
 
-    nodeMap.set(id, node);
-    return node;
+    // Build child nodes with parent reference
+    const children: DiagramTreeNode[] = [];
+    for (let i = 0; i < childIds.length; i++) {
+      const child = buildNode(childIds[i], depth + 1, i, childIds.length, node);
+      if (child) {
+        children.push(child);
+      }
+    }
+
+    // Create final node with children
+    // Note: We use object spread to add children since we declared it readonly
+    const finalNode: DiagramTreeNode = {
+      ...node,
+      children,
+    };
+
+    nodeMap.set(id, finalNode);
+    return finalNode;
   }
 
-  // Build root nodes
+  // Build root nodes (parent is undefined for roots)
   const roots: DiagramTreeNode[] = [];
   for (let i = 0; i < rootIds.length; i++) {
-    const root = buildNode(rootIds[i], 0, i, rootIds.length);
+    const root = buildNode(rootIds[i], 0, i, rootIds.length, undefined);
     if (root) {
       roots.push(root);
     }
@@ -310,4 +328,127 @@ export function getNodeText(node: DiagramTreeNode): string {
       return "";
     }) ?? [])
     .join("");
+}
+
+// =============================================================================
+// Axis Traversal Functions
+// =============================================================================
+
+/**
+ * Get ancestors of a node (from parent to root).
+ * @see ECMA-376 Part 1, Section 21.4.7.6 - ST_AxisType "ancst"
+ */
+export function getAncestors(node: DiagramTreeNode): DiagramTreeNode[] {
+  const ancestors: DiagramTreeNode[] = [];
+  let current = node.parent;
+  while (current) {
+    ancestors.push(current);
+    current = current.parent;
+  }
+  return ancestors;
+}
+
+/**
+ * Get ancestors including self (from self to root).
+ * @see ECMA-376 Part 1, Section 21.4.7.6 - ST_AxisType "ancstOrSelf"
+ */
+export function getAncestorsOrSelf(node: DiagramTreeNode): DiagramTreeNode[] {
+  return [node, ...getAncestors(node)];
+}
+
+/**
+ * Get descendants of a node (depth-first).
+ * @see ECMA-376 Part 1, Section 21.4.7.6 - ST_AxisType "des"
+ */
+export function getDescendants(node: DiagramTreeNode): DiagramTreeNode[] {
+  const descendants: DiagramTreeNode[] = [];
+  function collect(n: DiagramTreeNode): void {
+    for (const child of n.children) {
+      descendants.push(child);
+      collect(child);
+    }
+  }
+  collect(node);
+  return descendants;
+}
+
+/**
+ * Get descendants including self.
+ * @see ECMA-376 Part 1, Section 21.4.7.6 - ST_AxisType "desOrSelf"
+ */
+export function getDescendantsOrSelf(node: DiagramTreeNode): DiagramTreeNode[] {
+  return [node, ...getDescendants(node)];
+}
+
+/**
+ * Get following siblings of a node.
+ * @see ECMA-376 Part 1, Section 21.4.7.6 - ST_AxisType "followSib"
+ */
+export function getFollowingSiblings(node: DiagramTreeNode): DiagramTreeNode[] {
+  if (!node.parent) {
+    return [];
+  }
+  const siblings = node.parent.children;
+  const index = siblings.findIndex(s => s.id === node.id);
+  if (index === -1) {
+    return [];
+  }
+  return siblings.slice(index + 1) as DiagramTreeNode[];
+}
+
+/**
+ * Get preceding siblings of a node.
+ * @see ECMA-376 Part 1, Section 21.4.7.6 - ST_AxisType "precedSib"
+ */
+export function getPrecedingSiblings(node: DiagramTreeNode): DiagramTreeNode[] {
+  if (!node.parent) {
+    return [];
+  }
+  const siblings = node.parent.children;
+  const index = siblings.findIndex(s => s.id === node.id);
+  if (index <= 0) {
+    return [];
+  }
+  return siblings.slice(0, index) as DiagramTreeNode[];
+}
+
+/**
+ * Get all siblings including self.
+ */
+export function getSiblings(node: DiagramTreeNode): readonly DiagramTreeNode[] {
+  if (!node.parent) {
+    return [node];
+  }
+  return node.parent.children;
+}
+
+/**
+ * Find root node from any node.
+ * @see ECMA-376 Part 1, Section 21.4.7.6 - ST_AxisType "root"
+ */
+export function getRoot(node: DiagramTreeNode): DiagramTreeNode {
+  let current = node;
+  while (current.parent) {
+    current = current.parent;
+  }
+  return current;
+}
+
+/**
+ * Calculate max depth of a tree.
+ */
+export function calculateMaxDepth(nodes: readonly DiagramTreeNode[]): number {
+  let max = 0;
+  function traverse(node: DiagramTreeNode): void {
+    if (node.depth > max) {
+      max = node.depth;
+    }
+    for (const child of node.children) {
+      traverse(child);
+    }
+  }
+  for (const node of nodes) {
+    traverse(node);
+  }
+  return max;
 }

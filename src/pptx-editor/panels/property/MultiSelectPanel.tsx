@@ -9,7 +9,7 @@ import { useMemo, useCallback, type CSSProperties } from "react";
 import { colorTokens } from "../../ui/design-tokens/index";
 import type { Shape } from "../../../pptx/domain/index";
 import type { Transform } from "../../../pptx/domain/types";
-import type { Fill, Line } from "../../../pptx/domain/color";
+import type { Fill, Line } from "../../../pptx/domain/color/types";
 import { px, deg, type ShapeId } from "../../../pptx/domain/types";
 import { Accordion } from "../../ui/layout/Accordion";
 import { Input } from "../../ui/primitives/index";

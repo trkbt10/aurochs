@@ -33,7 +33,7 @@ import { renderFillToSvgDef, renderFillToSvgStyle, getResolvedImageFill, renderI
 import { getBlipFillImageSrc } from "../utils/image-conversion";
 import { renderGeometryData } from "./geometry";
 import { generateLineMarkers } from "./marker";
-import { resolveFill, formatRgba } from "../../domain/drawing-ml/fill-resolution";
+import { resolveFill, formatRgba } from "../../domain/color/fill";
 import { renderTextSvg, getDashArray } from "./slide-text";
 import { renderChart } from "../chart";
 import { renderTableSvg } from "./table";

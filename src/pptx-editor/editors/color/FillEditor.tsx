@@ -27,7 +27,7 @@ import {
   type BlipFill,
   type PatternType,
   type LinearGradient,
-} from "../../../pptx/domain/color";
+} from "../../../pptx/domain/color/types";
 import { deg, type ResourceId } from "../../../pptx/domain/types";
 import type { EditorProps, SelectOption } from "../../types";
 

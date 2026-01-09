@@ -13,7 +13,7 @@
  */
 
 import type { DataLabels, ChartShapeProperties } from "../../domain/chart";
-import type { Fill } from "../../domain/color";
+import type { Fill } from "../../domain/color/types";
 import type { SeriesData, ChartContent } from "./types";
 import { escapeHtml } from "../html/index";
 import { resolveTextStyle, toSvgTextAttributes } from "./text-props";

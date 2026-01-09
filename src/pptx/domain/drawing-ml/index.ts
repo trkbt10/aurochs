@@ -7,14 +7,7 @@
  */
 
 // Color resolution (pure domain transformation)
-export { resolveColor } from "./color";
-
-// Fill types
-export type {
-  FillType,
-  FillResult,
-  GradientFill,
-} from "./fill";
+export { resolveColor } from "../color/resolution";
 
 // Background types
 export type {
@@ -56,7 +49,7 @@ export type {
   PresetDashStyle,
   DashStyle,
   ResolvedLine,
-} from "./fill-resolution";
+} from "../color/fill";
 
 export {
   resolveColorWithAlpha,
@@ -65,4 +58,4 @@ export {
   resolveFill,
   resolveLine,
   getDashArrayPattern,
-} from "./fill-resolution";
+} from "../color/fill";

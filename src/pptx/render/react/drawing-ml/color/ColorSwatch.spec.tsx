@@ -7,7 +7,7 @@
 // @vitest-environment jsdom
 
 import { render } from "@testing-library/react";
-import type { Color } from "../../../../domain/color";
+import type { Color } from "../../../../domain/color/types";
 import type { ColorContext } from "../../../../domain/resolution";
 import type { SlideSize } from "../../../../domain";
 import type { Pixels } from "../../../../domain/types";

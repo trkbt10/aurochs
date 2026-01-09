@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useMemo, type CSSProperties } from "react";
-import type { Line } from "../../../pptx/domain/color";
+import type { Line } from "../../../pptx/domain/color/types";
 
 export type LineSwatchSize = "sm" | "md" | "lg";
 

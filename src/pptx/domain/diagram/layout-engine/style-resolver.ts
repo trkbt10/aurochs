@@ -2,9 +2,9 @@
  * @file Style and color resolver for diagrams
  *
  * Resolves styles and colors for diagram nodes based on
- * style labels, color definitions, and theme colors.
+ * style labels, color definitions, and theme context.
  *
- * Uses shared color utilities from src/color and domain/drawing-ml/color.
+ * Uses shared color resolution from domain/drawing-ml/.
  *
  * @see ECMA-376 Part 1, Section 21.4.4.6 (styleLbl)
  * @see ECMA-376 Part 1, Section 21.4.4.7 (fillClrLst)
@@ -18,22 +18,15 @@ import type {
   DiagramColorList,
   DiagramClrAppMethod,
 } from "../types";
-import type { Color } from "../../color";
+import type { Color, Fill, SolidFill, Line } from "../../color/types";
 import type { ShapeStyle } from "../../shape";
+import type { TextBody } from "../../text";
 import type { DiagramTreeNode } from "./tree-builder";
-
-// Use shared color utilities
-import {
-  applyShade,
-  applyTint,
-  applyLumMod,
-  applyLumOff,
-  applySatMod,
-} from "../../../../color";
-
-// Use existing color resolution
-import { resolveColor as resolveDrawingMlColor } from "../../drawing-ml/color";
 import type { ColorContext } from "../../resolution";
+import { px } from "../../types";
+
+// Use existing color resolution utilities
+import { resolveColor as resolveDrawingMlColor } from "../../color/resolution";
 
 // =============================================================================
 // Types
@@ -41,52 +34,56 @@ import type { ColorContext } from "../../resolution";
 
 /**
  * Resolved style for a diagram node
+ *
+ * Uses proper Fill/Line types from domain/color.ts to support
+ * solid fills, gradients, patterns, etc.
+ *
+ * All fill/line properties are optional - undefined means no style was resolved.
+ * The consumer must handle undefined appropriately (e.g., use theme defaults).
+ *
+ * Note: Text styling (font size, bold, etc.) is NOT included here.
+ * Text styling comes from:
+ * 1. DiagramStyleLabel.textProperties (TextBody)
+ * 2. DiagramTreeNode.textBody (from the data model)
+ * These should be merged at render time following TextBody merge rules.
+ *
+ * @see ECMA-376 Part 1, Section 21.4.4.6 (styleLbl)
+ * @see ECMA-376 Part 1, Section 20.1.8 (Fill Properties)
  */
 export type ResolvedDiagramStyle = {
-  /** Fill color (CSS color string) */
-  readonly fillColor?: string;
-  /** Line/stroke color (CSS color string) */
-  readonly lineColor?: string;
-  /** Effect color (CSS color string) */
-  readonly effectColor?: string;
-  /** Text fill color (CSS color string) */
-  readonly textFillColor?: string;
-  /** Text line color (CSS color string) */
-  readonly textLineColor?: string;
-  /** Text effect color (CSS color string) */
-  readonly textEffectColor?: string;
-  /** Line width in pixels */
-  readonly lineWidth?: number;
-  /** Font size in points */
-  readonly fontSize?: number;
-  /** Font weight */
-  readonly fontWeight?: "normal" | "bold";
-  /** Shape style from style definition */
+  /** Shape fill (solid, gradient, pattern, etc.) */
+  readonly fill?: Fill;
+  /** Shape line/stroke */
+  readonly line?: Line;
+  /** Effect fill */
+  readonly effectFill?: Fill;
+  /** Text fill - applied to text runs without their own fill */
+  readonly textFill?: Fill;
+  /** Text line/outline - applied to text runs without their own outline */
+  readonly textLine?: Line;
+  /** Text effect fill */
+  readonly textEffectFill?: Fill;
+  /** Shape style reference from style definition */
   readonly shapeStyle?: ShapeStyle;
+  /** Text properties from style definition (for text styling merge) */
+  readonly textProperties?: TextBody;
+  /** Style label name used */
+  readonly styleLabel?: string;
 };
 
 /**
  * Context for style resolution
+ *
+ * Uses ColorContext from domain/resolution.ts for theme color resolution.
+ * No hardcoded defaults - if colors are not available, they remain undefined.
  */
 export type StyleResolverContext = {
-  /** Style definition */
+  /** Style definition from diagram */
   readonly styleDefinition?: DiagramStyleDefinition;
-  /** Color definition */
+  /** Color definition from diagram */
   readonly colorDefinition?: DiagramColorsDefinition;
-  /** Theme colors (scheme color name -> CSS color) */
-  readonly themeColors: ReadonlyMap<string, string>;
-  /** Default colors for fallback */
-  readonly defaultColors: DefaultColors;
-};
-
-/**
- * Default colors for fallback
- */
-export type DefaultColors = {
-  readonly fill: string;
-  readonly line: string;
-  readonly text: string;
-  readonly background: string;
+  /** Color context for theme/scheme color resolution */
+  readonly colorContext: ColorContext;
 };
 
 // =============================================================================
@@ -95,6 +92,12 @@ export type DefaultColors = {
 
 /**
  * Resolve style for a diagram node
+ *
+ * @param node - The diagram tree node
+ * @param nodeIndex - Index of this node (for color cycling)
+ * @param totalNodes - Total number of nodes (for color cycling)
+ * @param context - Style resolver context with definitions and theme
+ * @returns Resolved style with Fill/Line types (undefined if not resolved)
  */
 export function resolveNodeStyle(
   node: DiagramTreeNode,
@@ -102,7 +105,7 @@ export function resolveNodeStyle(
   totalNodes: number,
   context: StyleResolverContext
 ): ResolvedDiagramStyle {
-  const { styleDefinition, colorDefinition, themeColors, defaultColors } = context;
+  const { styleDefinition, colorDefinition } = context;
 
   // Get style label from node's property set
   const styleLbl = node.propertySet?.presentationStyleLabel;
@@ -117,66 +120,53 @@ export function resolveNodeStyle(
     ? findColorStyleLabel(styleLbl, colorDefinition)
     : undefined;
 
-  // Build color context for resolution
-  const colorContext = buildColorContext(themeColors);
-
-  // Resolve colors
-  const fillColor = resolveColorFromList(
+  // Resolve fills from color lists (undefined if not available)
+  const fill = resolveFillFromList(
     colorStyleLabel?.fillColors,
     nodeIndex,
-    totalNodes,
-    colorContext,
-    defaultColors.fill
+    totalNodes
   );
 
-  const lineColor = resolveColorFromList(
+  const line = resolveLineFromList(
     colorStyleLabel?.lineColors,
     nodeIndex,
-    totalNodes,
-    colorContext,
-    defaultColors.line
+    totalNodes
   );
 
-  const effectColor = resolveColorFromList(
+  const effectFill = resolveFillFromList(
     colorStyleLabel?.effectColors,
     nodeIndex,
-    totalNodes,
-    colorContext,
-    undefined
+    totalNodes
   );
 
-  const textFillColor = resolveColorFromList(
+  const textFill = resolveFillFromList(
     colorStyleLabel?.textFillColors,
     nodeIndex,
-    totalNodes,
-    colorContext,
-    defaultColors.text
+    totalNodes
   );
 
-  const textLineColor = resolveColorFromList(
+  const textLine = resolveLineFromList(
     colorStyleLabel?.textLineColors,
     nodeIndex,
-    totalNodes,
-    colorContext,
-    undefined
+    totalNodes
   );
 
-  const textEffectColor = resolveColorFromList(
+  const textEffectFill = resolveFillFromList(
     colorStyleLabel?.textEffectColors,
     nodeIndex,
-    totalNodes,
-    colorContext,
-    undefined
+    totalNodes
   );
 
   return {
-    fillColor,
-    lineColor,
-    effectColor,
-    textFillColor,
-    textLineColor,
-    textEffectColor,
+    fill,
+    line,
+    effectFill,
+    textFill,
+    textLine,
+    textEffectFill,
     shapeStyle: styleLabel?.style,
+    textProperties: styleLabel?.textProperties,
+    styleLabel: styleLbl,
   };
 }
 
@@ -209,37 +199,27 @@ export function findColorStyleLabel(
 }
 
 // =============================================================================
-// Color Resolution
+// Fill Resolution
 // =============================================================================
 
 /**
- * Build color context from theme colors map
+ * Resolve Fill from a color list
+ *
+ * Creates a SolidFill from the color in the list. The original Color
+ * with its transform is preserved in the Fill structure.
+ *
+ * @param colorList - Color list from diagram color definition
+ * @param nodeIndex - Index of this node (for color cycling)
+ * @param totalNodes - Total number of nodes (for color cycling)
+ * @returns SolidFill if color available, undefined otherwise
  */
-function buildColorContext(themeColors: ReadonlyMap<string, string>): ColorContext {
-  const colorScheme: Record<string, string> = {};
-  for (const [key, value] of themeColors) {
-    // Remove # prefix if present for consistency
-    colorScheme[key] = value.replace(/^#/, "");
-  }
-
-  return {
-    colorScheme,
-    colorMap: {},
-  };
-}
-
-/**
- * Resolve color from a color list
- */
-export function resolveColorFromList(
+export function resolveFillFromList(
   colorList: DiagramColorList | undefined,
   nodeIndex: number,
-  totalNodes: number,
-  colorContext: ColorContext,
-  defaultColor: string | undefined
-): string | undefined {
+  totalNodes: number
+): Fill | undefined {
   if (!colorList || colorList.colors.length === 0) {
-    return defaultColor;
+    return undefined;
   }
 
   const { colors, method } = colorList;
@@ -247,15 +227,56 @@ export function resolveColorFromList(
   const color = colors[colorIndex];
 
   if (!color) {
-    return defaultColor;
+    return undefined;
   }
 
-  const resolved = resolveColor(color, colorContext);
-  return resolved ? `#${resolved}` : defaultColor;
+  // Create a SolidFill that preserves the original Color structure
+  const fill: SolidFill = {
+    type: "solidFill",
+    color,
+  };
+
+  return fill;
+}
+
+/**
+ * Resolve Line from a color list
+ *
+ * Creates a Line with a SolidFill from the color in the list.
+ *
+ * @param colorList - Color list from diagram color definition
+ * @param nodeIndex - Index of this node (for color cycling)
+ * @param totalNodes - Total number of nodes (for color cycling)
+ * @returns Line if color available, undefined otherwise
+ */
+export function resolveLineFromList(
+  colorList: DiagramColorList | undefined,
+  nodeIndex: number,
+  totalNodes: number
+): Line | undefined {
+  const fill = resolveFillFromList(colorList, nodeIndex, totalNodes);
+
+  if (!fill) {
+    return undefined;
+  }
+
+  const line: Line = {
+    width: px(1), // Default 1px line width per ECMA-376
+    cap: "flat",
+    compound: "sng",
+    alignment: "ctr",
+    fill,
+    dash: "solid",
+    join: "round",
+  };
+
+  return line;
 }
 
 /**
  * Calculate color index based on application method
+ *
+ * @see ECMA-376 Part 1, Section 21.4.4.7 (fillClrLst)
  */
 export function calculateColorIndex(
   nodeIndex: number,
@@ -286,155 +307,173 @@ export function calculateColorIndex(
       return Math.min(Math.floor(ratio * colorCount), colorCount - 1);
 
     default:
-      // Default to cycle
+      // Default to cycle per ECMA-376
       return nodeIndex % colorCount;
   }
 }
 
+// =============================================================================
+// Color Resolution (delegated to domain/drawing-ml)
+// =============================================================================
+
 /**
  * Resolve a Color to hex string (without #)
- * Wrapper around drawing-ml resolveColor for diagram-specific handling
+ *
+ * Delegates to domain/drawing-ml/color.ts for actual resolution.
+ *
+ * @param color - Color domain object
+ * @param colorContext - Color context with theme colors
+ * @returns Hex color string (without #) or undefined
  */
 export function resolveColor(
   color: Color,
   colorContext: ColorContext
 ): string | undefined {
-  // Use the shared drawing-ml color resolver
   return resolveDrawingMlColor(color, colorContext);
 }
 
 /**
- * Resolve scheme color using theme colors
- * For backward compatibility and direct scheme color resolution
+ * @deprecated Use resolveFillFromList instead
+ * Resolve color from a color list (returns CSS string for backward compatibility)
  */
-export function resolveSchemeColor(
-  schemeColor: { val: string; lumMod?: number; lumOff?: number; satMod?: number; tint?: number; shade?: number },
-  themeColors: ReadonlyMap<string, string>
+export function resolveColorFromList(
+  colorList: DiagramColorList | undefined,
+  nodeIndex: number,
+  totalNodes: number,
+  colorContext: ColorContext,
+  defaultColor: string | undefined
 ): string | undefined {
-  const { val, lumMod, lumOff, satMod, tint, shade } = schemeColor;
-
-  // Get base color from theme
-  let baseColor = themeColors.get(val);
-  if (!baseColor) {
-    // Try common mappings
-    baseColor = getDefaultSchemeColor(val);
+  if (!colorList || colorList.colors.length === 0) {
+    return defaultColor;
   }
 
-  if (!baseColor) {
-    return undefined;
+  const { colors, method } = colorList;
+  const colorIndex = calculateColorIndex(nodeIndex, totalNodes, colors.length, method);
+  const color = colors[colorIndex];
+
+  if (!color) {
+    return defaultColor;
   }
 
-  // Normalize to hex without #
-  const hexColor = baseColor.replace(/^#/, "");
-
-  // Apply color transforms using shared utilities
-  return applyColorTransforms(hexColor, { lumMod, lumOff, satMod, tint, shade });
+  const resolved = resolveColor(color, colorContext);
+  return resolved ? `#${resolved}` : defaultColor;
 }
 
+// =============================================================================
+// Context Creation
+// =============================================================================
+
 /**
- * Get default scheme color for common values
+ * Create style resolver context
+ *
+ * @param colorContext - Color context with theme colors (required)
+ * @param styleDefinition - Style definition from diagram (optional)
+ * @param colorDefinition - Color definition from diagram (optional)
  */
-function getDefaultSchemeColor(val: string): string | undefined {
-  const defaults: Record<string, string> = {
-    accent1: "#4472C4",
-    accent2: "#ED7D31",
-    accent3: "#A5A5A5",
-    accent4: "#FFC000",
-    accent5: "#5B9BD5",
-    accent6: "#70AD47",
-    dk1: "#000000",
-    dk2: "#44546A",
-    lt1: "#FFFFFF",
-    lt2: "#E7E6E6",
-    tx1: "#000000",
-    tx2: "#44546A",
-    bg1: "#FFFFFF",
-    bg2: "#E7E6E6",
-    hlink: "#0563C1",
-    folHlink: "#954F72",
+export function createStyleContext(
+  colorContext: ColorContext,
+  styleDefinition?: DiagramStyleDefinition,
+  colorDefinition?: DiagramColorsDefinition
+): StyleResolverContext {
+  return {
+    styleDefinition,
+    colorDefinition,
+    colorContext,
   };
-
-  return defaults[val];
 }
 
-// =============================================================================
-// Color Transforms (using shared utilities)
-// =============================================================================
-
-type ColorTransforms = {
-  lumMod?: number;
-  lumOff?: number;
-  satMod?: number;
-  tint?: number;
-  shade?: number;
-};
-
 /**
- * Apply color transforms to a hex color
- * Uses shared utilities from src/color
+ * Create an empty color context (for testing or when no theme is available)
+ *
+ * Note: Using this means scheme colors will not resolve.
+ * In production, always use a proper ColorContext from the theme.
  */
-export function applyColorTransforms(
-  hexColor: string,
-  transforms: ColorTransforms
-): string {
-  let result = hexColor.replace(/^#/, "");
-
-  // Apply luminance modifier (percentage, where 100000 = 100%)
-  if (transforms.lumMod !== undefined) {
-    const multiplier = transforms.lumMod / 100000;
-    result = applyLumMod(result, multiplier);
-  }
-
-  // Apply luminance offset (percentage)
-  if (transforms.lumOff !== undefined) {
-    const offset = transforms.lumOff / 100000;
-    result = applyLumOff(result, offset);
-  }
-
-  // Apply saturation modifier
-  if (transforms.satMod !== undefined) {
-    const multiplier = transforms.satMod / 100000;
-    result = applySatMod(result, multiplier);
-  }
-
-  // Apply tint (mix with white)
-  // ECMA-376: tint value is percentage where 100000 = 100%
-  if (transforms.tint !== undefined) {
-    const tintAmount = transforms.tint / 100000;
-    result = applyTint(result, tintAmount);
-  }
-
-  // Apply shade (mix with black)
-  // ECMA-376: shade value is percentage where 100000 = 100%
-  if (transforms.shade !== undefined) {
-    const shadeAmount = transforms.shade / 100000;
-    result = applyShade(result, shadeAmount);
-  }
-
-  return `#${result}`;
+export function createEmptyColorContext(): ColorContext {
+  return {
+    colorScheme: {},
+    colorMap: {},
+  };
 }
 
-// =============================================================================
-// Default Context Creation
-// =============================================================================
-
 /**
- * Create default style resolver context
+ * @deprecated Use createStyleContext instead
+ * Create default style resolver context (for backward compatibility)
  */
 export function createDefaultStyleContext(
   styleDefinition?: DiagramStyleDefinition,
   colorDefinition?: DiagramColorsDefinition,
   themeColors?: Map<string, string>
-): StyleResolverContext {
+): StyleResolverContext & { themeColors: ReadonlyMap<string, string>; defaultFills: DefaultFills } {
+  // Convert themeColors map to ColorContext
+  const colorScheme: Record<string, string> = {};
+  if (themeColors) {
+    for (const [key, value] of themeColors) {
+      colorScheme[key] = value.replace(/^#/, "");
+    }
+  }
+
+  const colorContext: ColorContext = {
+    colorScheme,
+    colorMap: {},
+  };
+
+  // Create placeholder defaults for backward compatibility
+  // These should NOT be used in new code - handle undefined properly instead
+  const defaultFills: DefaultFills = {
+    fill: createSolidFillFromHex("4472C4"), // Office default accent1 (for legacy compatibility only)
+    line: createLineFromHex("2F528F"),
+    text: createSolidFillFromHex("000000"),
+    background: createSolidFillFromHex("FFFFFF"),
+  };
+
   return {
     styleDefinition,
     colorDefinition,
+    colorContext,
     themeColors: themeColors ?? new Map(),
-    defaultColors: {
-      fill: "#4472C4",
-      line: "#2F528F",
-      text: "#000000",
-      background: "#FFFFFF",
+    defaultFills,
+  };
+}
+
+/**
+ * @deprecated For backward compatibility only
+ */
+export type DefaultFills = {
+  readonly fill: Fill;
+  readonly line: Line;
+  readonly text: Fill;
+  readonly background: Fill;
+};
+
+/**
+ * @deprecated Use DefaultFills instead
+ */
+export type DefaultColors = DefaultFills;
+
+// =============================================================================
+// Internal Helpers (for backward compatibility)
+// =============================================================================
+
+function createSolidFillFromHex(hexValue: string): SolidFill {
+  return {
+    type: "solidFill",
+    color: {
+      spec: {
+        type: "srgb",
+        value: hexValue,
+      },
     },
+  };
+}
+
+function createLineFromHex(hexValue: string): Line {
+  return {
+    width: px(1),
+    cap: "flat",
+    compound: "sng",
+    alignment: "ctr",
+    fill: createSolidFillFromHex(hexValue),
+    dash: "solid",
+    join: "round",
   };
 }

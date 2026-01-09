@@ -7,7 +7,7 @@
  */
 
 import type { Effects, ShadowEffect, GlowEffect, SoftEdgeEffect, ReflectionEffect } from "../../domain/effects";
-import type { Color } from "../../domain/color";
+import type { Color } from "../../domain/color/types";
 import type { ColorContext } from "../../domain/resolution";
 import type {
   TextEffectsConfig,

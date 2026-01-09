@@ -7,9 +7,9 @@
  * @see ECMA-376 Part 1, Section 20.1.8 (Fill Properties)
  */
 
-import type { Color, Fill, Line, PatternType, BlipFill } from "../color";
-import { resolveColor } from "./color";
-import type { ColorContext } from "../resolution";
+import type { Color, Fill, Line, PatternType, BlipFill } from "./types";
+import { resolveColor } from "./resolution";
+import type { ColorContext } from "./context";
 import type { ResourceResolverFn } from "../resource-resolver";
 
 // =============================================================================

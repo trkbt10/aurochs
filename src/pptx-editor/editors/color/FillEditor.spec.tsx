@@ -6,7 +6,7 @@
 
 // @vitest-environment jsdom
 
-import type { Fill, SolidFill, GradientFill, NoFill, GradientStop } from "../../../pptx/domain/color";
+import type { Fill, SolidFill, GradientFill, NoFill, GradientStop } from "../../../pptx/domain/color/types";
 import { pct, deg } from "../../../pptx/domain/types";
 import { render, fireEvent } from "@testing-library/react";
 import { FillEditor } from "./FillEditor";

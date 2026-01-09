@@ -15,7 +15,7 @@ import {
   type MouseEvent,
   type PointerEvent,
 } from "react";
-import type { GradientFill, LinearGradient } from "../../../../pptx/domain/color";
+import type { GradientFill, LinearGradient } from "../../../../pptx/domain/color/types";
 import { deg, pct } from "../../../../pptx/domain/types";
 import { LabeledSlider } from "../../common";
 import { GradientStopRow } from "./GradientStopRow";

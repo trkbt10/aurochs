@@ -9,7 +9,7 @@ import type { LayoutInput, LayoutParagraphInput, LayoutSpan, TextBoxConfig, Bull
 import type { RenderOptions } from "../render-options";
 import type { ColorContext, FontScheme } from "../../domain/resolution";
 import { resolveThemeFont } from "../../domain/resolution";
-import type { Color, Line, Fill } from "../../domain/color";
+import type { Color, Line, Fill } from "../../domain/color/types";
 
 import { resolveColor as resolveColorRaw } from "../../domain/drawing-ml";
 import { resolveTextFill, resolveTextEffects } from "../../parser/drawing-ml";

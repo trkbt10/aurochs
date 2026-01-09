@@ -5,7 +5,7 @@
  */
 
 import { deg, pct } from "../../../../pptx/domain/types";
-import type { Fill, Color, GradientStop } from "../../../../pptx/domain/color";
+import type { Fill, Color, GradientStop } from "../../../../pptx/domain/color/types";
 import type { SelectOption } from "../../../types";
 
 export type FillType = Fill["type"];

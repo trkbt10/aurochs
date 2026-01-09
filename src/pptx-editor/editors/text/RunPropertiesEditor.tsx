@@ -12,7 +12,7 @@ import { PointsEditor, PixelsEditor } from "../primitives";
 import { ColorEditor, createDefaultColor } from "../color";
 import type { RunProperties, UnderlineStyle, StrikeStyle } from "../../../pptx/domain/text";
 import type { TextCaps, Points, TextTypeface } from "../../../pptx/domain/types";
-import type { Color } from "../../../pptx/domain/color";
+import type { Color } from "../../../pptx/domain/color/types";
 import type { EditorProps, SelectOption } from "../../types";
 import { pt, px } from "../../../pptx/domain/types";
 

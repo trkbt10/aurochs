@@ -103,10 +103,23 @@ describe("linearLayout", () => {
     const nodes = [createTreeNode("a"), createTreeNode("b")];
     const result = linearLayout(nodes, createContext(defaultBounds));
 
-    expect(result.bounds.x).toBe(0);
-    expect(result.bounds.y).toBe(0);
+    // Bounds should encompass all nodes
     expect(result.bounds.width).toBeGreaterThan(0);
     expect(result.bounds.height).toBeGreaterThan(0);
+    // X position depends on alignment (default is centered)
+    expect(result.bounds.x).toBeGreaterThanOrEqual(0);
+    expect(result.bounds.y).toBeGreaterThanOrEqual(0);
+  });
+
+  it("aligns nodes to left when nodeHorzAlign=l", () => {
+    const nodes = [createTreeNode("a"), createTreeNode("b")];
+    const context = createDefaultContext(defaultBounds, [
+      { type: "nodeHorzAlign", value: "l" },
+    ]);
+    const result = linearLayout(nodes, context);
+
+    // First node should start at bounds.x
+    expect(result.bounds.x).toBe(0);
   });
 });
 
@@ -121,10 +134,28 @@ describe("spaceLayout", () => {
     expect(result.nodes).toHaveLength(0);
   });
 
-  it("positions single node at bounds origin", () => {
+  it("centers single node within bounds by default", () => {
+    const nodes = [createTreeNode("a")];
+    const bounds: LayoutBounds = { x: 0, y: 0, width: 200, height: 150 };
+    const result = spaceLayout(nodes, createContext(bounds));
+
+    expect(result.nodes).toHaveLength(1);
+    // Default alignment is center - node should be centered in bounds
+    const node = result.nodes[0];
+    const centerX = bounds.x + (bounds.width - node.width) / 2;
+    const centerY = bounds.y + (bounds.height - node.height) / 2;
+    expect(node.x).toBe(centerX);
+    expect(node.y).toBe(centerY);
+  });
+
+  it("positions node at origin when aligned left/top", () => {
     const nodes = [createTreeNode("a")];
     const bounds: LayoutBounds = { x: 50, y: 100, width: 200, height: 150 };
-    const result = spaceLayout(nodes, createContext(bounds));
+    const context = createDefaultContext(bounds, [
+      { type: "nodeHorzAlign", value: "l" },
+      { type: "nodeVertAlign", value: "t" },
+    ]);
+    const result = spaceLayout(nodes, context);
 
     expect(result.nodes).toHaveLength(1);
     expect(result.nodes[0].x).toBe(50);
@@ -189,7 +220,28 @@ describe("cycleLayout", () => {
 
     expect(result.nodes).toHaveLength(4);
 
-    // All nodes should have rotation set
+    // Nodes should be distributed in a circle
+    // Without rotPath param, rotation should be undefined
+    for (const node of result.nodes) {
+      expect(node.rotation).toBeUndefined();
+    }
+  });
+
+  it("sets rotation when rotPath=alongPath", () => {
+    const nodes = [
+      createTreeNode("a"),
+      createTreeNode("b"),
+      createTreeNode("c"),
+      createTreeNode("d"),
+    ];
+    const context = createDefaultContext(defaultBounds, [
+      { type: "rotPath", value: "alongPath" },
+    ]);
+    const result = cycleLayout(nodes, context);
+
+    expect(result.nodes).toHaveLength(4);
+
+    // All nodes should have rotation set when rotPath is alongPath
     for (const node of result.nodes) {
       expect(node.rotation).toBeDefined();
     }
@@ -212,6 +264,28 @@ describe("cycleLayout", () => {
     // Average position should be near center
     expect(Math.abs(avgX - 250)).toBeLessThan(50);
     expect(Math.abs(avgY - 250)).toBeLessThan(50);
+  });
+
+  it("places first node in center when ctrShpMap=fNode", () => {
+    const nodes = [
+      createTreeNode("center"),
+      createTreeNode("a"),
+      createTreeNode("b"),
+      createTreeNode("c"),
+    ];
+    const bounds: LayoutBounds = { x: 0, y: 0, width: 300, height: 300 };
+    const context = createDefaultContext(bounds, [
+      { type: "ctrShpMap", value: "fNode" },
+    ]);
+    const result = cycleLayout(nodes, context);
+
+    expect(result.nodes).toHaveLength(4);
+    // First node should be at center
+    const centerNode = result.nodes[0];
+    const expectedCenterX = bounds.width / 2 - centerNode.width / 2;
+    const expectedCenterY = bounds.height / 2 - centerNode.height / 2;
+    expect(centerNode.x).toBe(expectedCenterX);
+    expect(centerNode.y).toBe(expectedCenterY);
   });
 });
 

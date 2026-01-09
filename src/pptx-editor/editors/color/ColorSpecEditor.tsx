@@ -19,7 +19,7 @@ import type {
   PresetColor,
   HslColor,
   SolidFill,
-} from "../../../pptx/domain/color";
+} from "../../../pptx/domain/color/types";
 import type { EditorProps, SelectOption } from "../../types";
 import type { ColorContext } from "../../../pptx/domain/resolution";
 import { resolveColor } from "../../../pptx/domain/drawing-ml";

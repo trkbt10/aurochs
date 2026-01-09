@@ -14,7 +14,7 @@
  */
 
 import type { TextBody } from "../../domain/text";
-import type { Color } from "../../domain/color";
+import type { Color } from "../../domain/color/types";
 import type { ColorContext } from "../../domain/resolution";
 import type { CoreRenderContext } from "../render-context";
 import type { SvgDefsCollector } from "./slide-utils";

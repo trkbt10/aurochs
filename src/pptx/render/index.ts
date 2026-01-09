@@ -70,9 +70,9 @@ export type {
   ResolvedFill,
   ResolvedLine,
   DashStyle,
-} from "../domain/drawing-ml/fill-resolution";
+} from "../domain/color/fill";
 
-export { resolveFill, resolveLine, resolveColorWithAlpha, formatRgba, getDashArrayPattern } from "../domain/drawing-ml/fill-resolution";
+export { resolveFill, resolveLine, resolveColorWithAlpha, formatRgba, getDashArrayPattern } from "../domain/color/fill";
 
 // =============================================================================
 // Types from domain (resource resolver)

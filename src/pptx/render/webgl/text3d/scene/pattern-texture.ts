@@ -10,7 +10,7 @@
 
 import * as THREE from "three";
 import { createPatternCanvas } from "../utils/canvas";
-import type { TileFlipMode } from "../../../../domain/color";
+import type { TileFlipMode } from "../../../../domain/color/types";
 import { applyTileFlipMode } from "./tile-config";
 
 // =============================================================================

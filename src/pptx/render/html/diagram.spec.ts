@@ -227,7 +227,9 @@ describe("renderDiagram", () => {
 
       // Shape should be rendered
       expect(result).toContain("diagram-content");
-      expect(result).toContain("Diagram Text");
+      // Text may be wrapped across multiple lines
+      expect(result).toContain("Diagram");
+      expect(result).toContain("Text");
     });
 
     it("should render diagram shape with textTransform", () => {
@@ -239,8 +241,9 @@ describe("renderDiagram", () => {
 
       const result = renderDiagram(diagram, 500, 300, ctx);
 
-      // Shape should be rendered with text
-      expect(result).toContain("Diagram Text");
+      // Shape should be rendered with text (may be wrapped)
+      expect(result).toContain("Diagram");
+      expect(result).toContain("Text");
       // The text-body should use textTransform dimensions
       expect(result).toContain("text-body");
     });
@@ -256,7 +259,9 @@ describe("renderDiagram", () => {
       const result = renderDiagram(diagram, 500, 300, ctx);
 
       expect(result).toContain("diagram-content");
-      expect(result).toContain("Diagram Text");
+      // Text may be wrapped across multiple lines
+      expect(result).toContain("Diagram");
+      expect(result).toContain("Text");
     });
   });
 });

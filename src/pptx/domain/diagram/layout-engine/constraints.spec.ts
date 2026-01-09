@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from "vitest";
-import type { DiagramConstraint } from "../types";
+import type { DiagramConstraint, DiagramConstraintType } from "../types";
 import type { DiagramTreeNode } from "./tree-builder";
 import type { LayoutNode, LayoutBounds } from "./types";
 import type { ConstraintContext } from "./constraints";
@@ -405,5 +405,131 @@ describe("getHeightConstraint", () => {
     const result = getHeightConstraint(constraints, context, 60);
 
     expect(result).toBe(45);
+  });
+});
+
+// =============================================================================
+// Topological Sort Tests
+// =============================================================================
+
+import {
+  sortConstraintsByDependency,
+  resolveAllConstraints,
+  applyRules,
+} from "./constraints";
+
+describe("sortConstraintsByDependency", () => {
+  it("handles constraints with no dependencies", () => {
+    const constraints: DiagramConstraint[] = [
+      { type: "w", value: "100" },
+      { type: "h", value: "60" },
+    ];
+
+    const sorted = sortConstraintsByDependency(constraints);
+
+    expect(sorted).toHaveLength(2);
+  });
+
+  it("sorts constraints with dependencies", () => {
+    const constraints: DiagramConstraint[] = [
+      { type: "w", referenceType: "h", factor: "2" }, // depends on h
+      { type: "h", value: "60" }, // no dependency
+    ];
+
+    const sorted = sortConstraintsByDependency(constraints);
+
+    // h should come before w because w depends on h
+    const hIndex = sorted.findIndex((c) => c.type === "h");
+    const wIndex = sorted.findIndex((c) => c.type === "w");
+    expect(hIndex).toBeLessThan(wIndex);
+  });
+
+  it("handles circular dependencies gracefully", () => {
+    const constraints: DiagramConstraint[] = [
+      { type: "w", referenceType: "h" },
+      { type: "h", referenceType: "w" },
+    ];
+
+    // Should not throw, returns all constraints
+    const sorted = sortConstraintsByDependency(constraints);
+    expect(sorted).toHaveLength(2);
+  });
+});
+
+describe("resolveAllConstraints", () => {
+  it("resolves multiple constraints", () => {
+    const constraints: DiagramConstraint[] = [
+      { type: "w", value: "100" },
+      { type: "h", value: "60" },
+      { type: "sp", value: "10" },
+    ];
+    const context = createContext(defaultBounds);
+
+    const resolved = resolveAllConstraints(constraints, context);
+
+    expect(resolved.get("w")).toBe(100);
+    expect(resolved.get("h")).toBe(60);
+    expect(resolved.get("sp")).toBe(10);
+  });
+
+  it("resolves reference constraints after their dependencies", () => {
+    const constraints: DiagramConstraint[] = [
+      { type: "w", referenceType: "h", factor: "2" },
+      { type: "h", value: "50" },
+    ];
+    const context = createContext(defaultBounds);
+
+    const resolved = resolveAllConstraints(constraints, context);
+
+    expect(resolved.get("h")).toBe(50);
+    expect(resolved.get("w")).toBe(100); // 50 * 2
+  });
+});
+
+describe("applyRules", () => {
+  it("applies factor to constraint value", () => {
+    const resolved = new Map<DiagramConstraintType, number>([["w", 100]]);
+    const rules = [{ type: "w", factor: "0.5" }];
+
+    applyRules(resolved, rules);
+
+    expect(resolved.get("w")).toBe(50);
+  });
+
+  it("applies min bound", () => {
+    const resolved = new Map<DiagramConstraintType, number>([["w", 50]]);
+    const rules = [{ type: "w", min: "100" }];
+
+    applyRules(resolved, rules);
+
+    expect(resolved.get("w")).toBe(100);
+  });
+
+  it("applies max bound", () => {
+    const resolved = new Map<DiagramConstraintType, number>([["w", 200]]);
+    const rules = [{ type: "w", max: "150" }];
+
+    applyRules(resolved, rules);
+
+    expect(resolved.get("w")).toBe(150);
+  });
+
+  it("applies explicit value override", () => {
+    const resolved = new Map<DiagramConstraintType, number>([["w", 100]]);
+    const rules = [{ type: "w", value: "200" }];
+
+    applyRules(resolved, rules);
+
+    expect(resolved.get("w")).toBe(200);
+  });
+
+  it("ignores rules for missing constraints", () => {
+    const resolved = new Map<DiagramConstraintType, number>([["w", 100]]);
+    const rules = [{ type: "h", value: "200" }];
+
+    applyRules(resolved, rules);
+
+    expect(resolved.has("h")).toBe(false);
+    expect(resolved.get("w")).toBe(100);
   });
 });

@@ -13,7 +13,7 @@ import {
   type ResolvedFill,
   type ResolvedGradientFill,
   type ResolvedLine,
-} from "../../domain/drawing-ml/fill-resolution";
+} from "../../domain/color/fill";
 
 // =============================================================================
 // Fill to CSS Background

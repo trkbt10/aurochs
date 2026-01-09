@@ -6,7 +6,7 @@
  * @see ECMA-376 Part 1, Section 20.1.8 (Fill Properties)
  */
 
-import type { Fill, Color } from "../../domain/color";
+import type { Fill, Color } from "../../domain/color/types";
 import type { ColorContext } from "../../domain/resolution";
 import type { TextFillConfig } from "../../domain/drawing-ml";
 import type { ResourceResolverFn } from "../../domain";

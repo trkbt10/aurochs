@@ -14,8 +14,8 @@ import type {
   RectAlignment,
   ResourceId,
   SchemeColorValue,
-} from "./types";
-import type { ResolvedBlipResource } from "./resource";
+} from "../types";
+import type { ResolvedBlipResource } from "../resource";
 
 // =============================================================================
 // Color Types

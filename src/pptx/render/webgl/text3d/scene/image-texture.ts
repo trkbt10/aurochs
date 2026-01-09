@@ -8,7 +8,7 @@
  */
 
 import * as THREE from "three";
-import type { TileFill } from "../../../../domain/color";
+import type { TileFill } from "../../../../domain/color/types";
 import { applyTileFlipMode, applyTileFillConfig } from "./tile-config";
 
 // =============================================================================

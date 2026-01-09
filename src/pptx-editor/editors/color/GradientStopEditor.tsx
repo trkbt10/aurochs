@@ -10,7 +10,7 @@ import { Button } from "../../ui/primitives";
 import { FieldGroup } from "../../ui/layout";
 import { PercentEditor } from "../primitives";
 import { ColorEditor } from "./ColorEditor";
-import type { GradientStop, Color } from "../../../pptx/domain/color";
+import type { GradientStop, Color } from "../../../pptx/domain/color/types";
 import type { Percent } from "../../../pptx/domain/types";
 import { pct } from "../../../pptx/domain/types";
 import type { EditorProps } from "../../types";

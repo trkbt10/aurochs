@@ -40,7 +40,7 @@ import {
   type EffectContainer,
   type EffectContainerType,
 } from "../../../../pptx/domain/types";
-import type { Color } from "../../../../pptx/domain/color";
+import type { Color } from "../../../../pptx/domain/color/types";
 import type { SelectOption } from "../../../types";
 import type { EffectConfig } from "./types";
 

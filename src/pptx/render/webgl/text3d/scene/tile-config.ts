@@ -9,7 +9,7 @@
  */
 
 import * as THREE from "three";
-import type { TileFlipMode, TileFill, GradientFill } from "../../../../domain/color";
+import type { TileFlipMode, TileFill, GradientFill } from "../../../../domain/color/types";
 import type { Percent, Pixels } from "../../../../domain/types";
 
 // =============================================================================

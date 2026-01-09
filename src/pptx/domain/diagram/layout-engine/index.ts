@@ -15,6 +15,16 @@ export {
   filterNodesByType,
   getContentNodes,
   getNodeText,
+  // Axis traversal functions (ECMA-376 21.4.7.6)
+  getAncestors,
+  getAncestorsOrSelf,
+  getDescendants,
+  getDescendantsOrSelf,
+  getFollowingSiblings,
+  getPrecedingSiblings,
+  getSiblings,
+  getRoot,
+  calculateMaxDepth,
   type DiagramTreeNode,
   type DiagramTreeBuildResult,
   type DiagramPointType,
@@ -23,8 +33,11 @@ export {
 // Layout types
 export {
   createDefaultContext,
+  createChildContext,
   createEmptyResult,
   getParam,
+  getConstraint,
+  getVariable,
   mergeBounds,
   type LayoutNode,
   type LayoutBounds,
@@ -32,7 +45,16 @@ export {
   type LayoutContext,
   type LayoutAlgorithmFn,
   type LayoutAlgorithmRegistry,
+  type CreateContextOptions,
+  type DiagramVariableValue,
 } from "./types";
+
+// Layout definition processor (ECMA-376 21.4.2)
+export {
+  processLayoutDefinition,
+  type LayoutProcessResult,
+  type LayoutProcessOptions,
+} from "./layout-processor";
 
 // Layout algorithms
 export {
@@ -50,7 +72,7 @@ export {
   getLayoutAlgorithm,
 } from "./algorithms";
 
-// Constraints
+// Constraints (ECMA-376 21.4.2.4)
 export {
   resolveConstraint,
   applyConstraints,
@@ -59,6 +81,11 @@ export {
   getSpacingConstraint,
   getWidthConstraint,
   getHeightConstraint,
+  sortConstraintsByDependency,
+  resolveAllConstraints,
+  getNodesForRelationship,
+  applyRules,
+  createConstraintContext,
   type ResolvedConstraint,
   type ConstraintContext,
   type ConstraintResult,
@@ -74,7 +101,7 @@ export {
   evaluateFunction,
   evaluateOperator,
   createForEachContext,
-  createChildContext,
+  createForEachChildContext,
   type ForEachContext,
   type ForEachResult,
   type ChooseResult,
@@ -86,13 +113,16 @@ export {
   findStyleLabel,
   findColorStyleLabel,
   resolveColorFromList,
+  resolveFillFromList,
+  resolveLineFromList,
   calculateColorIndex,
   resolveColor,
-  resolveSchemeColor,
-  applyColorTransforms,
+  createStyleContext,
+  createEmptyColorContext,
   createDefaultStyleContext,
   type ResolvedDiagramStyle,
   type StyleResolverContext,
+  type DefaultFills,
   type DefaultColors,
 } from "./style-resolver";
 

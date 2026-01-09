@@ -7,7 +7,7 @@
  * @see ECMA-376 Part 1, Section 21.1.3 - DrawingML Tables
  */
 
-import type { Fill, Line } from "../../domain/color";
+import type { Fill, Line } from "../../domain/color/types";
 import type { Table, TableCell, TablePartStyle, TableProperties, TableStyle } from "../../domain/table/types";
 import {
   resolveSvgRowHeight,

@@ -8,7 +8,7 @@
 
 import type { ChartShapeProperties } from "../../domain/chart";
 import type { CoreRenderContext } from "../render-context";
-import { resolveFill } from "../../domain/drawing-ml/fill-resolution";
+import { resolveFill } from "../../domain/color/fill";
 
 /**
  * Fallback color palette for chart series (implementation-defined)

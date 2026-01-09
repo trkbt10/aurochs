@@ -8,7 +8,7 @@
  */
 
 import type { Trendline, ChartShapeProperties, Layout } from "../../domain/chart";
-import type { Fill } from "../../domain/color";
+import type { Fill } from "../../domain/color/types";
 import type { SeriesData } from "./types";
 import { extractLineStyle, type ResolvedLineStyle } from "./line-style";
 import { resolveTextStyle, toSvgTextAttributes } from "./text-props";

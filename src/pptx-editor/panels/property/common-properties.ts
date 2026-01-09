@@ -7,7 +7,7 @@
 
 import type { Shape } from "../../../pptx/domain/index";
 import type { Transform } from "../../../pptx/domain/types";
-import type { Fill, Line } from "../../../pptx/domain/color";
+import type { Fill, Line } from "../../../pptx/domain/color/types";
 
 // =============================================================================
 // Types

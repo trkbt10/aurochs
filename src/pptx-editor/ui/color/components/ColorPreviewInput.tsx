@@ -5,7 +5,7 @@
  */
 
 import { useCallback, useMemo, type CSSProperties } from "react";
-import type { SolidFill } from "../../../../pptx/domain/color";
+import type { SolidFill } from "../../../../pptx/domain/color/types";
 import { pct } from "../../../../pptx/domain/types";
 import { Input } from "../../primitives/Input";
 import { FillPreview } from "../FillPreview";

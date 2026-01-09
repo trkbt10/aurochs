@@ -7,7 +7,7 @@
 // @vitest-environment jsdom
 
 import { render } from "@testing-library/react";
-import type { PatternType } from "../../../../domain/color";
+import type { PatternType } from "../../../../domain/color/types";
 import {
   PatternDef,
   getPatternGeometry,

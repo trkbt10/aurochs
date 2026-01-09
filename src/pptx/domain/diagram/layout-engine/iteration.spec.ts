@@ -17,7 +17,7 @@ import {
   evaluateFunction,
   evaluateOperator,
   createForEachContext,
-  createChildContext,
+  createForEachChildContext,
   type ForEachContext,
 } from "./iteration";
 
@@ -311,7 +311,7 @@ describe("processChoose", () => {
         function: "cnt",
         operator: "gt",
         value: 0,
-        content: {},
+        // DiagramIf extends DiagramLayoutContent directly (no content property)
       },
     };
     const context = createContext(root, tree);
@@ -417,28 +417,28 @@ describe("evaluateFunction", () => {
   });
 
   it("evaluates pos", () => {
-    const context = createChildContext(createContext(root, tree), root, 5, 10);
+    const context = createForEachChildContext(createContext(root, tree), root, 5, 10);
     const result = evaluateFunction("pos", undefined, context);
 
     expect(result).toBe(5);
   });
 
   it("evaluates posEven", () => {
-    const context = createChildContext(createContext(root, tree), root, 4, 10);
+    const context = createForEachChildContext(createContext(root, tree), root, 4, 10);
     const result = evaluateFunction("posEven", undefined, context);
 
     expect(result).toBe(true);
   });
 
   it("evaluates posOdd", () => {
-    const context = createChildContext(createContext(root, tree), root, 3, 10);
+    const context = createForEachChildContext(createContext(root, tree), root, 3, 10);
     const result = evaluateFunction("posOdd", undefined, context);
 
     expect(result).toBe(true);
   });
 
   it("evaluates revPos", () => {
-    const context = createChildContext(createContext(root, tree), root, 3, 10);
+    const context = createForEachChildContext(createContext(root, tree), root, 3, 10);
     const result = evaluateFunction("revPos", undefined, context);
 
     expect(result).toBe(8); // 10 - 3 + 1
@@ -537,14 +537,14 @@ describe("createForEachContext", () => {
   });
 });
 
-describe("createChildContext", () => {
+describe("createForEachChildContext", () => {
   const tree = createTree();
   const root = tree[0];
 
   it("creates child context with position", () => {
     const parent = createForEachContext(root, tree);
     const child = root.children[0];
-    const context = createChildContext(parent, child, 2, 5);
+    const context = createForEachChildContext(parent, child, 2, 5);
 
     expect(context.currentNode).toBe(child);
     expect(context.position).toBe(2);
@@ -556,7 +556,7 @@ describe("createChildContext", () => {
     const vars = new Map<string, number>();
     vars.set("inherited", 123);
     const parent = createForEachContext(root, tree, vars);
-    const context = createChildContext(parent, root.children[0], 1, 3);
+    const context = createForEachChildContext(parent, root.children[0], 1, 3);
 
     expect(context.variables.get("inherited")).toBe(123);
   });

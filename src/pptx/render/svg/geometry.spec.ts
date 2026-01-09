@@ -270,8 +270,8 @@ describe("Preset Geometry Rendering - ECMA-376 20.1.10.56 (ST_ShapeType)", () =>
     it("renders leftArrow pointing left", () => {
       const path = renderPresetGeometryData(createPresetGeom("leftArrow"), 100, 60);
 
-      expect(path).toContain("L 0 30"); // Point at left center
-      expect(path).toContain("M 100"); // Starts at right edge
+      expect(path).toContain("M 0 30"); // Point at left center (start of path)
+      expect(path).toContain("L 100"); // Extends to right edge
       expect(path).toContain("Z");
     });
 

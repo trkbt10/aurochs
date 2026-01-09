@@ -4,7 +4,7 @@
  * @see ECMA-376 Part 1, Section 21.2 - DrawingML Charts
  */
 
-import type { Fill, Line } from "./color";
+import type { Fill, Line } from "./color/types";
 import type { TextBody } from "./text";
 import type { Degrees, Percent, Pixels, Points } from "./types";
 

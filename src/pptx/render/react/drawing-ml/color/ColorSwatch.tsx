@@ -6,7 +6,7 @@
  */
 
 import { memo } from "react";
-import type { Color } from "../../../../domain/color";
+import type { Color } from "../../../../domain/color/types";
 import { useColor, type ResolvedColorResult } from "./useColor";
 
 /**

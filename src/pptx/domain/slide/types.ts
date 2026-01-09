@@ -8,8 +8,8 @@
  */
 
 import type { XmlElement } from "../../../xml";
-import type { Fill } from "../color";
-import type { ColorMapping, ColorMapOverride } from "../color";
+import type { Fill } from "../color/types";
+import type { ColorMapping, ColorMapOverride } from "../color/types";
 import type { ColorMap } from "../resolution";
 import type { Shape } from "../shape";
 import type { Pixels, ResourceId, ShapeId } from "../types";

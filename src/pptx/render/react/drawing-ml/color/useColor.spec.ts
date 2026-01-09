@@ -4,7 +4,7 @@
  * Tests color resolution for all 5 color types and transforms.
  */
 
-import type { Color } from "../../../../domain/color";
+import type { Color } from "../../../../domain/color/types";
 import type { ColorContext } from "../../../../domain/resolution";
 import type { SchemeColorValue } from "../../../../domain/types";
 import { deg, pct } from "../../../../domain/types";

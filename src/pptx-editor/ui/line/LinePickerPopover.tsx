@@ -9,7 +9,7 @@ import { type CSSProperties, type ReactNode } from "react";
 import { Popover } from "../primitives/Popover";
 import { LineSwatch, type LineSwatchSize } from "./LineSwatch";
 import { LineEditor } from "./LineEditor";
-import type { Line } from "../../../pptx/domain/color";
+import type { Line } from "../../../pptx/domain/color/types";
 
 export type LinePickerPopoverProps = {
   /** Current line value */

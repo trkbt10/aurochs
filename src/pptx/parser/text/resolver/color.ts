@@ -8,7 +8,7 @@
 import type { XmlElement } from "../../../../xml/index";
 import { getChild, getByPath } from "../../../../xml/index";
 import type { TextStyleContext, MasterTextStyles } from "../../context";
-import type { Color } from "../../../domain/color";
+import type { Color } from "../../../domain/color/types";
 import { parseColorFromParent } from "../../graphics/color-parser";
 import { TYPE_TO_MASTER_STYLE } from "./constants";
 import { lookupPlaceholder } from "./placeholder";

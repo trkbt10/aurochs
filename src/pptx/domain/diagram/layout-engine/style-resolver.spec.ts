@@ -10,7 +10,7 @@ import type {
   DiagramColorsDefinition,
   DiagramColorList,
 } from "../types";
-import type { Color } from "../../color";
+import type { Color, Fill, SolidFill } from "../../color/types";
 import type { ColorContext } from "../../resolution";
 import type { DiagramTreeNode } from "./tree-builder";
 import {
@@ -18,13 +18,33 @@ import {
   findStyleLabel,
   findColorStyleLabel,
   resolveColorFromList,
+  resolveFillFromList,
+  resolveLineFromList,
   calculateColorIndex,
   resolveColor,
-  resolveSchemeColor,
-  applyColorTransforms,
+  createStyleContext,
+  createEmptyColorContext,
   createDefaultStyleContext,
   type StyleResolverContext,
 } from "./style-resolver";
+
+// =============================================================================
+// Helper Functions for Testing Fill Types
+// =============================================================================
+
+/**
+ * Extract the hex color value from a Fill (only works for SolidFill with srgb)
+ */
+function extractColorFromFill(fill: Fill | undefined): string | undefined {
+  if (!fill || fill.type !== "solidFill") {
+    return undefined;
+  }
+  const spec = fill.color.spec;
+  if (spec.type === "srgb") {
+    return `#${spec.value.toUpperCase()}`;
+  }
+  return undefined;
+}
 
 // =============================================================================
 // Test Fixtures
@@ -51,9 +71,9 @@ function createStyleDefinition(): DiagramStyleDefinition {
   return {
     uniqueId: "test-style",
     styleLabels: [
-      { name: "node0", style: { fillRef: { idx: 1 } } },
-      { name: "node1", style: { fillRef: { idx: 2 } } },
-      { name: "sibTrans", style: { fillRef: { idx: 3 } } },
+      { name: "node0", style: { fillReference: { index: 1 } } },
+      { name: "node1", style: { fillReference: { index: 2 } } },
+      { name: "sibTrans", style: { fillReference: { index: 3 } } },
     ],
   };
 }
@@ -91,19 +111,6 @@ function createColorDefinition(): DiagramColorsDefinition {
   };
 }
 
-function createContext(): StyleResolverContext {
-  return createDefaultStyleContext(
-    createStyleDefinition(),
-    createColorDefinition(),
-    new Map([
-      ["accent1", "#4472C4"],
-      ["accent2", "#ED7D31"],
-      ["dk1", "#000000"],
-      ["lt1", "#FFFFFF"],
-    ])
-  );
-}
-
 function createColorContext(themeColors?: Map<string, string>): ColorContext {
   const colorScheme: Record<string, string> = {};
   if (themeColors) {
@@ -117,6 +124,20 @@ function createColorContext(themeColors?: Map<string, string>): ColorContext {
   };
 }
 
+function createContext(): StyleResolverContext {
+  const colorContext = createColorContext(new Map([
+    ["accent1", "#4472C4"],
+    ["accent2", "#ED7D31"],
+    ["dk1", "#000000"],
+    ["lt1", "#FFFFFF"],
+  ]));
+  return createStyleContext(
+    colorContext,
+    createStyleDefinition(),
+    createColorDefinition()
+  );
+}
+
 // =============================================================================
 // resolveNodeStyle Tests
 // =============================================================================
@@ -128,18 +149,22 @@ describe("resolveNodeStyle", () => {
 
     const result = resolveNodeStyle(node, 0, 3, context);
 
-    expect(result.fillColor?.toUpperCase()).toBe("#4472C4");
-    expect(result.lineColor?.toUpperCase()).toBe("#2F528F");
+    // Fill should be the first color in the cycle
+    expect(extractColorFromFill(result.fill)).toBe("#4472C4");
+    // Line should be resolved
+    expect(result.line).toBeDefined();
+    expect(extractColorFromFill(result.line?.fill)).toBe("#2F528F");
   });
 
-  it("uses default colors when no style label", () => {
+  it("returns undefined when no style label", () => {
     const node = createTreeNode("1");
     const context = createContext();
 
     const result = resolveNodeStyle(node, 0, 3, context);
 
-    expect(result.fillColor).toBe("#4472C4"); // default
-    expect(result.lineColor).toBe("#2F528F"); // default
+    // No style label means no fill/line resolved
+    expect(result.fill).toBeUndefined();
+    expect(result.line).toBeUndefined();
   });
 
   it("cycles through colors for multiple nodes", () => {
@@ -150,9 +175,28 @@ describe("resolveNodeStyle", () => {
     const result1 = resolveNodeStyle(node, 1, 3, context);
     const result2 = resolveNodeStyle(node, 2, 3, context);
 
-    expect(result0.fillColor?.toUpperCase()).toBe("#4472C4");
-    expect(result1.fillColor?.toUpperCase()).toBe("#ED7D31");
-    expect(result2.fillColor?.toUpperCase()).toBe("#A5A5A5");
+    expect(extractColorFromFill(result0.fill)).toBe("#4472C4");
+    expect(extractColorFromFill(result1.fill)).toBe("#ED7D31");
+    expect(extractColorFromFill(result2.fill)).toBe("#A5A5A5");
+  });
+
+  it("returns style label name", () => {
+    const node = createTreeNode("1", "node0");
+    const context = createContext();
+
+    const result = resolveNodeStyle(node, 0, 3, context);
+
+    expect(result.styleLabel).toBe("node0");
+  });
+
+  it("returns shapeStyle from style definition", () => {
+    const node = createTreeNode("1", "node0");
+    const context = createContext();
+
+    const result = resolveNodeStyle(node, 0, 3, context);
+
+    expect(result.shapeStyle).toBeDefined();
+    expect(result.shapeStyle?.fillReference?.index).toBe(1);
   });
 });
 
@@ -247,7 +291,87 @@ describe("calculateColorIndex", () => {
 });
 
 // =============================================================================
-// resolveColorFromList Tests
+// resolveFillFromList Tests
+// =============================================================================
+
+describe("resolveFillFromList", () => {
+  it("resolves Fill from color list", () => {
+    const colorList: DiagramColorList = {
+      colors: [
+        { spec: { type: "srgb", value: "FF0000" } },
+        { spec: { type: "srgb", value: "00FF00" } },
+      ],
+    };
+
+    const result = resolveFillFromList(colorList, 0, 2);
+
+    expect(result).toBeDefined();
+    expect(result?.type).toBe("solidFill");
+    expect(extractColorFromFill(result)).toBe("#FF0000");
+  });
+
+  it("returns undefined when no color list", () => {
+    const result = resolveFillFromList(undefined, 0, 2);
+
+    expect(result).toBeUndefined();
+  });
+
+  it("returns undefined when empty colors", () => {
+    const colorList: DiagramColorList = { colors: [] };
+
+    const result = resolveFillFromList(colorList, 0, 2);
+
+    expect(result).toBeUndefined();
+  });
+
+  it("cycles through colors correctly", () => {
+    const colorList: DiagramColorList = {
+      method: "cycle",
+      colors: [
+        { spec: { type: "srgb", value: "FF0000" } },
+        { spec: { type: "srgb", value: "00FF00" } },
+      ],
+    };
+
+    const result0 = resolveFillFromList(colorList, 0, 4);
+    const result1 = resolveFillFromList(colorList, 1, 4);
+    const result2 = resolveFillFromList(colorList, 2, 4);
+    const result3 = resolveFillFromList(colorList, 3, 4);
+
+    expect(extractColorFromFill(result0)).toBe("#FF0000");
+    expect(extractColorFromFill(result1)).toBe("#00FF00");
+    expect(extractColorFromFill(result2)).toBe("#FF0000");
+    expect(extractColorFromFill(result3)).toBe("#00FF00");
+  });
+});
+
+// =============================================================================
+// resolveLineFromList Tests
+// =============================================================================
+
+describe("resolveLineFromList", () => {
+  it("resolves Line from color list", () => {
+    const colorList: DiagramColorList = {
+      colors: [{ spec: { type: "srgb", value: "2F528F" } }],
+    };
+
+    const result = resolveLineFromList(colorList, 0, 1);
+
+    expect(result).toBeDefined();
+    expect(result?.width).toBeDefined();
+    expect(result?.cap).toBe("flat");
+    expect(extractColorFromFill(result?.fill)).toBe("#2F528F");
+  });
+
+  it("returns undefined when no color list", () => {
+    const result = resolveLineFromList(undefined, 0, 1);
+
+    expect(result).toBeUndefined();
+  });
+});
+
+// =============================================================================
+// resolveColorFromList Tests (deprecated but still tested for backward compat)
 // =============================================================================
 
 describe("resolveColorFromList", () => {
@@ -328,120 +452,66 @@ describe("resolveColor", () => {
 });
 
 // =============================================================================
-// resolveSchemeColor Tests
+// createStyleContext Tests
 // =============================================================================
 
-describe("resolveSchemeColor", () => {
-  const themeColors = new Map([
-    ["accent1", "#4472C4"],
-    ["dk1", "#000000"],
-  ]);
+describe("createStyleContext", () => {
+  it("creates context with color context", () => {
+    const colorContext = createColorContext(new Map([["accent1", "#FF0000"]]));
+    const context = createStyleContext(colorContext);
 
-  it("resolves from theme colors", () => {
-    const result = resolveSchemeColor({ val: "accent1" }, themeColors);
-
-    expect(result?.toLowerCase()).toBe("#4472c4");
-  });
-
-  it("falls back to default scheme colors", () => {
-    const result = resolveSchemeColor({ val: "accent2" }, new Map());
-
-    expect(result?.toLowerCase()).toBe("#ed7d31");
-  });
-
-  it("applies luminance modifier", () => {
-    const result = resolveSchemeColor(
-      { val: "accent1", lumMod: 50000 },
-      themeColors
-    );
-
-    // Should be darker (50% luminance)
-    expect(result).toBeDefined();
-    expect(result?.toLowerCase()).not.toBe("#4472c4");
-  });
-
-  it("applies tint", () => {
-    const result = resolveSchemeColor(
-      { val: "dk1", tint: 50000 },
-      themeColors
-    );
-
-    // Should be lighter (mixed with white)
-    expect(result).toBeDefined();
-    expect(result?.toLowerCase()).not.toBe("#000000");
-  });
-});
-
-// =============================================================================
-// applyColorTransforms Tests
-// =============================================================================
-
-describe("applyColorTransforms", () => {
-  it("applies luminance modifier", () => {
-    const result = applyColorTransforms("#808080", { lumMod: 50000 });
-
-    // Gray at 50% luminance should be darker
-    expect(result).toBeDefined();
-  });
-
-  it("applies luminance offset", () => {
-    const result = applyColorTransforms("#808080", { lumOff: 20000 });
-
-    // Should be lighter
-    expect(result).toBeDefined();
-  });
-
-  it("applies tint", () => {
-    const result = applyColorTransforms("#000000", { tint: 50000 });
-
-    // Black with 50% tint should be gray-ish
-    expect(result).toBeDefined();
-    expect(result?.toLowerCase()).not.toBe("#000000");
-  });
-
-  it("applies shade", () => {
-    const result = applyColorTransforms("#FFFFFF", { shade: 50000 });
-
-    // White with 50% shade should be gray-ish
-    expect(result).toBeDefined();
-    expect(result?.toLowerCase()).not.toBe("#ffffff");
-  });
-
-  it("clamps values", () => {
-    // Extreme transforms should not exceed valid ranges
-    const result = applyColorTransforms("#FFFFFF", { lumMod: 200000 });
-
-    expect(result).toBeDefined();
-    expect(result).toMatch(/^#[0-9a-f]{6}$/i);
-  });
-});
-
-// =============================================================================
-// createDefaultStyleContext Tests
-// =============================================================================
-
-describe("createDefaultStyleContext", () => {
-  it("creates context with defaults", () => {
-    const context = createDefaultStyleContext();
-
+    expect(context.colorContext).toBe(colorContext);
     expect(context.styleDefinition).toBeUndefined();
     expect(context.colorDefinition).toBeUndefined();
-    expect(context.defaultColors.fill).toBe("#4472C4");
   });
 
   it("creates context with provided definitions", () => {
+    const colorContext = createEmptyColorContext();
     const styleDef = createStyleDefinition();
     const colorDef = createColorDefinition();
-    const context = createDefaultStyleContext(styleDef, colorDef);
+    const context = createStyleContext(colorContext, styleDef, colorDef);
 
     expect(context.styleDefinition).toBe(styleDef);
     expect(context.colorDefinition).toBe(colorDef);
   });
+});
 
-  it("creates context with theme colors", () => {
+// =============================================================================
+// createEmptyColorContext Tests
+// =============================================================================
+
+describe("createEmptyColorContext", () => {
+  it("creates empty color context", () => {
+    const context = createEmptyColorContext();
+
+    expect(context.colorScheme).toEqual({});
+    expect(context.colorMap).toEqual({});
+  });
+});
+
+// =============================================================================
+// createDefaultStyleContext Tests (deprecated)
+// =============================================================================
+
+describe("createDefaultStyleContext", () => {
+  it("creates context with deprecated API", () => {
+    const styleDef = createStyleDefinition();
+    const colorDef = createColorDefinition();
     const themeColors = new Map([["accent1", "#FF0000"]]);
-    const context = createDefaultStyleContext(undefined, undefined, themeColors);
+    const context = createDefaultStyleContext(styleDef, colorDef, themeColors);
 
+    expect(context.styleDefinition).toBe(styleDef);
+    expect(context.colorDefinition).toBe(colorDef);
     expect(context.themeColors.get("accent1")).toBe("#FF0000");
+  });
+
+  it("has defaultFills for backward compatibility", () => {
+    const context = createDefaultStyleContext();
+
+    expect(context.defaultFills).toBeDefined();
+    expect(context.defaultFills.fill).toBeDefined();
+    expect(context.defaultFills.line).toBeDefined();
+    expect(context.defaultFills.text).toBeDefined();
+    expect(context.defaultFills.background).toBeDefined();
   });
 });

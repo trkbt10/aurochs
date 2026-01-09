@@ -17,6 +17,8 @@ export type GraphicFrameRendererProps = {
   readonly height: number;
   /** Shape ID for data attribute */
   readonly shapeId?: ShapeId;
+  /** ID of shape currently being edited (for nested content like diagrams) */
+  readonly editingShapeId?: ShapeId;
 };
 
 /**

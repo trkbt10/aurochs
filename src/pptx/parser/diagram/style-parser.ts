@@ -23,7 +23,7 @@ import type {
   PresetCameraType,
   PresetMaterialType,
 } from "../../domain/index";
-import type { Color } from "../../domain/color";
+import type { Color } from "../../domain/color/types";
 import type { XmlDocument, XmlElement } from "../../../xml/index";
 import { getAttr, getByPath, getChild, getChildren, isXmlElement } from "../../../xml/index";
 import { getAngleAttr, getEmuAttr, getIntAttr, getPercent100kAttr } from "../primitive";

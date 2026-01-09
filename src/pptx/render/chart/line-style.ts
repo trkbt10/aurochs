@@ -9,7 +9,7 @@
  */
 
 import type { ChartLines, ChartShapeProperties } from "../../domain/chart";
-import type { Fill } from "../../domain/color";
+import type { Fill } from "../../domain/color/types";
 import { resolveColor } from "../../domain/drawing-ml/index";
 
 // =============================================================================

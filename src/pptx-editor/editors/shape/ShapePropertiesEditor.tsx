@@ -18,7 +18,7 @@ import type { ShapeProperties, Geometry } from "../../../pptx/domain/shape";
 import type { Scene3d, Shape3d } from "../../../pptx/domain";
 import type { EditorProps } from "../../types";
 import type { Transform, Effects } from "../../../pptx/domain/types";
-import type { Fill, Line } from "../../../pptx/domain/color";
+import type { Fill, Line } from "../../../pptx/domain/color/types";
 
 export type ShapePropertiesEditorProps = EditorProps<ShapeProperties> & {
   readonly showTransform?: boolean;

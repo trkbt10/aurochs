@@ -22,7 +22,7 @@ import type {
   Cell3d,
 } from "../../../pptx/domain/table/types";
 import type { BevelPresetType } from "../../../pptx/domain";
-import type { Line } from "../../../pptx/domain/color";
+import type { Line } from "../../../pptx/domain/color/types";
 import type {
   PresetMaterialType,
   LightRigType,

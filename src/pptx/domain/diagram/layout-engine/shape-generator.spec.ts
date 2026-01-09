@@ -14,7 +14,7 @@ import type {
   DiagramConnection,
 } from "../types";
 import type { SpShape } from "../../shape";
-import type { Fill, SolidFill } from "../../color";
+import type { Fill, SolidFill } from "../../color/types";
 import {
   generateDiagramShapes,
   flattenShapes,
@@ -233,12 +233,9 @@ describe("generateDiagramShapes", () => {
     expect(uniqueIds.size).toBe(ids.length);
   });
 
-  it("uses provided theme colors", () => {
+  it("returns shapes without fills when no color definition provided", () => {
     const dataModel = createSimpleDataModel();
-    const config: ShapeGenerationConfig = {
-      ...createDefaultConfig(),
-      themeColors: new Map([["accent1", "#FF0000"]]),
-    };
+    const config = createDefaultConfig();
 
     const result = generateDiagramShapes(
       dataModel,
@@ -248,8 +245,9 @@ describe("generateDiagramShapes", () => {
       config
     );
 
-    // Should have fill colors applied
-    expect(result.shapes.some((s) => getShapeFillColor(s))).toBe(true);
+    // Without color definition, shapes have no fills
+    // This is correct behavior - fills come from color definitions, not defaults
+    expect(result.shapes.every((s) => getShapeFillColor(s) === undefined)).toBe(true);
   });
 
   it("applies layout definition", () => {

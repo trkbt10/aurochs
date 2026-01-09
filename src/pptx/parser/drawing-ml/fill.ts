@@ -6,13 +6,74 @@
 
 import type { XmlElement } from "../../../xml/index";
 import { isXmlElement, getChild, getChildren, getAttr, escapeXml } from "../../../xml/index";
-import type { FillType, GradientFill, FillResult } from "../../domain/drawing-ml";
 import type { ColorResolveContext } from "../../domain/resolution";
 import type { ResourceContext } from "../slide/context";
 import { angleToDegrees } from "../../domain/unit-conversion";
 import { base64ArrayBuffer } from "../../../buffer/index";
 import { getMimeType } from "../../../files/index";
 import { getSolidFill } from "./color";
+
+// =============================================================================
+// Parser-specific Fill Types
+// =============================================================================
+
+/**
+ * Fill type enumeration (parser layer)
+ *
+ * Note: This is a parser-specific representation, not the domain Fill type.
+ *
+ * @see ECMA-376 Part 1, Section 20.1.8 (Fill Types)
+ */
+export type FillType =
+  | "SOLID_FILL"
+  | "GRADIENT_FILL"
+  | "PIC_FILL"
+  | "PATTERN_FILL"
+  | "GROUP_FILL"
+  | "NO_FILL"
+  | "";
+
+/**
+ * Gradient fill data (parser layer)
+ *
+ * Note: This is a parser-specific representation for legacy rendering.
+ * Domain code should use GradientFill from domain/color.
+ *
+ * @see ECMA-376 Part 1, Section 20.1.8.33 (a:gradFill)
+ */
+export type GradientFill = {
+  /** Color stops with position (in 1/100000 units) and hex color */
+  readonly color: ReadonlyArray<{ readonly pos: string; readonly color: string }>;
+  /** Rotation angle in degrees */
+  readonly rot: number;
+  /** Gradient type: 'linear' (default) or 'path' (radial/shape) */
+  readonly type?: "linear" | "path";
+  /**
+   * Path gradient shade type (for type='path')
+   * @see ECMA-376 Part 1, Section 20.1.8.46 (a:path)
+   */
+  readonly pathShadeType?: "circle" | "rect" | "shape";
+  /**
+   * Fill-to-rect for path gradients (in 1/100000 units)
+   * @see ECMA-376 Part 1, Section 20.1.8.30 (a:fillToRect)
+   */
+  readonly fillToRect?: {
+    readonly l: number;
+    readonly t: number;
+    readonly r: number;
+    readonly b: number;
+  };
+};
+
+/**
+ * Fill result from parsing (parser layer)
+ *
+ * Can be:
+ * - string: CSS color value (e.g., "#FF0000")
+ * - GradientFill: Gradient data
+ * - null: No fill / transparent
+ */
+export type FillResult = string | GradientFill | null;
 
 // =============================================================================
 // Fill Element Keys (ECMA-376)

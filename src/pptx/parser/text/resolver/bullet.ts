@@ -10,7 +10,7 @@ import type { TextStyleContext, MasterTextStyles } from "../../context";
 import type { Points, Percent } from "../../../domain/types";
 import { pt } from "../../../domain/types";
 import type { Bullet, BulletStyle } from "../../../domain/text";
-import type { Color } from "../../../domain/color";
+import type { Color } from "../../../domain/color/types";
 import { parseColorFromParent } from "../../graphics/color-parser";
 import { parseTextBulletSize, parseTextBulletStartAt } from "../../primitive";
 import { TYPE_TO_MASTER_STYLE } from "./constants";

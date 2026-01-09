@@ -10,7 +10,7 @@ import type { ShapeProperties, ShapeStyle } from "../shape";
 import type { Scene3d, Shape3d } from "../three-d";
 import type { Percent, PresetShapeType } from "../types";
 import type { TextBody } from "../text";
-import type { Color } from "../color";
+import type { Color } from "../color/types";
 
 // =============================================================================
 // Common Types

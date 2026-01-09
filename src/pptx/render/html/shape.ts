@@ -14,9 +14,9 @@ import {
   resolveFill,
   formatRgba,
   getDashArrayPattern,
-} from "../../domain/drawing-ml/fill-resolution";
+} from "../../domain/color/fill";
 import { extractTransformData, buildCssPositionStyles } from "../transform";
-import type { ResolvedImageFill } from "../../domain/drawing-ml/fill-resolution";
+import type { ResolvedImageFill } from "../../domain/color/fill";
 import { renderTextBody } from "./text";
 import { renderChart } from "../chart/index";
 import { renderDiagram, renderDiagramPlaceholder } from "./diagram";

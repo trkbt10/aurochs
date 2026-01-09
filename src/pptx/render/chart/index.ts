@@ -21,7 +21,7 @@ import type { TextBody } from "../../domain/text";
 import { pt } from "../../domain/types";
 import type { CoreRenderContext } from "../render-context";
 import { type HtmlString, unsafeHtml, escapeHtml } from "../html/index";
-import { resolveFill } from "../../domain/drawing-ml/fill-resolution";
+import { resolveFill } from "../../domain/color/fill";
 import { createDefsCollector, type DefsCollector } from "../svg/context";
 import { renderFillToSvgDef } from "../svg/fill";
 

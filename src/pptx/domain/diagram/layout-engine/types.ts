@@ -10,7 +10,16 @@ import type { DiagramTreeNode } from "./tree-builder";
 import type {
   DiagramAlgorithmType,
   DiagramAlgorithmParam,
+  DiagramAnimLvlStr,
+  DiagramAnimOneStr,
   DiagramConstraint,
+  DiagramConstraintType,
+  DiagramDirection,
+  DiagramHierBranchStyle,
+  DiagramLayoutNode,
+  DiagramResizeHandlesStr,
+  DiagramRule,
+  DiagramVariableType,
 } from "../types";
 
 // =============================================================================
@@ -35,6 +44,8 @@ export type LayoutNode = {
   readonly rotation?: number;
   /** Child layout nodes */
   readonly children: readonly LayoutNode[];
+  /** Whether this node represents a connector (line/arrow between shapes) */
+  readonly isConnector?: boolean;
 };
 
 /**
@@ -67,6 +78,8 @@ export type LayoutResult = {
 
 /**
  * Context passed to layout algorithms
+ *
+ * @see ECMA-376 Part 1, Section 21.4.2 - Layout Definition
  */
 export type LayoutContext = {
   /** Available bounds for layout */
@@ -81,7 +94,44 @@ export type LayoutContext = {
   readonly defaultNodeWidth: number;
   /** Default node height */
   readonly defaultNodeHeight: number;
+
+  // ECMA-376 21.4.2.6 forEach / 21.4.2.7 if context
+  /** Current tree node being processed (for forEach/if evaluation) */
+  readonly currentNode?: DiagramTreeNode;
+  /** Position in current forEach iteration (1-based, per 21.4.7.27 pos) */
+  readonly position?: number;
+  /** Total count in current forEach iteration */
+  readonly totalCount?: number;
+  /** All tree nodes for axis traversal */
+  readonly allNodes?: readonly DiagramTreeNode[];
+  /** Parent context (for nested forEach/choose) */
+  readonly parent?: LayoutContext;
+
+  // ECMA-376 21.4.2.16 varLst
+  /** Variable map for var function evaluation */
+  readonly variables: ReadonlyMap<string, DiagramVariableValue>;
+
+  // ECMA-376 21.4.2.4 constr - resolved constraints
+  /** Resolved constraint values by type */
+  readonly resolvedConstraints: ReadonlyMap<DiagramConstraintType, number>;
+
+  // ECMA-376 21.4.2.9 layoutNode - named node references
+  /** Named layout nodes for constraint references */
+  readonly namedNodes: ReadonlyMap<string, LayoutNode>;
 };
+
+/**
+ * Variable value types
+ * @see ECMA-376 Part 1, Section 21.4.7 (ST_VariableType values)
+ */
+export type DiagramVariableValue =
+  | DiagramAnimLvlStr
+  | DiagramAnimOneStr
+  | DiagramDirection
+  | DiagramHierBranchStyle
+  | DiagramResizeHandlesStr
+  | boolean
+  | number;
 
 /**
  * Resolved algorithm parameter value
@@ -113,16 +163,60 @@ export type LayoutAlgorithmRegistry = ReadonlyMap<
 // =============================================================================
 
 /**
+ * Options for creating a layout context
+ */
+export type CreateContextOptions = {
+  readonly bounds: LayoutBounds;
+  readonly params?: readonly DiagramAlgorithmParam[];
+  readonly constraints?: readonly DiagramConstraint[];
+  readonly currentNode?: DiagramTreeNode;
+  readonly position?: number;
+  readonly totalCount?: number;
+  readonly allNodes?: readonly DiagramTreeNode[];
+  readonly parent?: LayoutContext;
+  readonly variables?: ReadonlyMap<string, DiagramVariableValue>;
+  readonly resolvedConstraints?: ReadonlyMap<DiagramConstraintType, number>;
+  readonly namedNodes?: ReadonlyMap<string, LayoutNode>;
+};
+
+/**
  * Create a default layout context
+ *
+ * @see ECMA-376 Part 1, Section 21.4.2 - Layout Definition
+ */
+export function createDefaultContext(
+  options: CreateContextOptions
+): LayoutContext;
+/**
+ * @deprecated Use options object instead
  */
 export function createDefaultContext(
   bounds: LayoutBounds,
   params?: readonly DiagramAlgorithmParam[],
   constraints?: readonly DiagramConstraint[]
+): LayoutContext;
+export function createDefaultContext(
+  boundsOrOptions: LayoutBounds | CreateContextOptions,
+  params?: readonly DiagramAlgorithmParam[],
+  constraints?: readonly DiagramConstraint[]
 ): LayoutContext {
+  // Handle both signatures - check if it's a LayoutBounds (has x property directly)
+  // vs CreateContextOptions (has bounds property)
+  const isLayoutBounds =
+    typeof boundsOrOptions === "object" &&
+    "x" in boundsOrOptions &&
+    "y" in boundsOrOptions &&
+    "width" in boundsOrOptions &&
+    "height" in boundsOrOptions &&
+    !("bounds" in boundsOrOptions);
+
+  const options: CreateContextOptions = isLayoutBounds
+    ? { bounds: boundsOrOptions as LayoutBounds, params, constraints }
+    : (boundsOrOptions as CreateContextOptions);
+
   const paramMap = new Map<string, DiagramAlgorithmParamValue>();
-  if (params) {
-    for (const param of params) {
+  if (options.params) {
+    for (const param of options.params) {
       if (param.type && param.value !== undefined) {
         paramMap.set(param.type, param.value);
       }
@@ -130,12 +224,46 @@ export function createDefaultContext(
   }
 
   return {
-    bounds,
+    bounds: options.bounds,
     params: paramMap,
-    constraints: constraints ?? [],
+    constraints: options.constraints ?? [],
     defaultSpacing: 10,
     defaultNodeWidth: 100,
     defaultNodeHeight: 60,
+    // ECMA-376 21.4.2.6 forEach context
+    currentNode: options.currentNode,
+    position: options.position,
+    totalCount: options.totalCount,
+    allNodes: options.allNodes,
+    parent: options.parent,
+    // ECMA-376 21.4.2.16 varLst
+    variables: options.variables ?? new Map(),
+    // ECMA-376 21.4.2.4 constr
+    resolvedConstraints: options.resolvedConstraints ?? new Map(),
+    // ECMA-376 21.4.2.9 layoutNode references
+    namedNodes: options.namedNodes ?? new Map(),
+  };
+}
+
+/**
+ * Create a child context for forEach iteration
+ *
+ * @see ECMA-376 Part 1, Section 21.4.2.6 - forEach
+ */
+export function createChildContext(
+  parent: LayoutContext,
+  currentNode: DiagramTreeNode,
+  position: number,
+  totalCount: number,
+  bounds?: LayoutBounds
+): LayoutContext {
+  return {
+    ...parent,
+    bounds: bounds ?? parent.bounds,
+    currentNode,
+    position,
+    totalCount,
+    parent,
   };
 }
 
@@ -148,6 +276,37 @@ export function getParam<T extends DiagramAlgorithmParamValue>(
   defaultValue: T
 ): T {
   const value = context.params.get(key);
+  if (value === undefined) {
+    return defaultValue;
+  }
+  return value as T;
+}
+
+/**
+ * Get a resolved constraint value
+ *
+ * @see ECMA-376 Part 1, Section 21.4.2.4 - constr
+ */
+export function getConstraint(
+  context: LayoutContext,
+  type: DiagramConstraintType,
+  defaultValue: number
+): number {
+  const value = context.resolvedConstraints.get(type);
+  return value ?? defaultValue;
+}
+
+/**
+ * Get a variable value
+ *
+ * @see ECMA-376 Part 1, Section 21.4.2.16 - varLst
+ */
+export function getVariable<T extends DiagramVariableValue>(
+  context: LayoutContext,
+  name: string,
+  defaultValue: T
+): T {
+  const value = context.variables.get(name);
   if (value === undefined) {
     return defaultValue;
   }
