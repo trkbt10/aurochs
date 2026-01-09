@@ -47,8 +47,9 @@ async function capturePreset(presetName: string): Promise<void> {
   page.on("console", (msg) => {
     console.log(`[browser ${msg.type()}]`, msg.text());
   });
-  page.on("pageerror", (err: Error) => {
-    console.error("[browser error]", err.message);
+  page.on("pageerror", (err: unknown) => {
+    const error = err instanceof Error ? err : new Error(String(err));
+    console.error("[browser error]", error.message);
   });
 
   try {

@@ -577,8 +577,9 @@ export async function captureCustomBevelScreenshot(
   page.on("console", (msg) => {
     consoleLogs.push(`[${msg.type()}] ${msg.text()}`);
   });
-  page.on("pageerror", (err) => {
-    consoleLogs.push(`[pageerror] ${err.message}`);
+  page.on("pageerror", (err: unknown) => {
+    const error = err instanceof Error ? err : new Error(String(err));
+    consoleLogs.push(`[pageerror] ${error.message}`);
   });
 
   try {

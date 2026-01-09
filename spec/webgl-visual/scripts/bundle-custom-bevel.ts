@@ -9,6 +9,28 @@
 import * as path from "node:path";
 import * as fs from "node:fs";
 
+type BunBuildConfig = {
+  readonly entrypoints: readonly string[];
+  readonly outdir: string;
+  readonly target: "browser" | "node";
+  readonly format: "esm" | "cjs";
+  readonly minify: boolean;
+  readonly sourcemap: "none" | "inline" | "external";
+  readonly external?: readonly string[];
+  readonly naming?: {
+    readonly entry?: string;
+  };
+};
+
+type BunBuildResult = {
+  readonly success: boolean;
+  readonly logs?: readonly unknown[];
+};
+
+declare const Bun: {
+  readonly build: (config: BunBuildConfig) => Promise<BunBuildResult>;
+};
+
 const ROOT_DIR = path.resolve(
   path.dirname(new URL(import.meta.url).pathname),
   "../../..",
@@ -121,7 +143,7 @@ export type {
 
   if (!result.success) {
     console.error("Bundle failed:");
-    for (const log of result.logs) {
+    for (const log of result.logs ?? []) {
       console.error(log);
     }
     process.exit(1);
