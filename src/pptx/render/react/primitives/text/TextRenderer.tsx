@@ -6,8 +6,10 @@
  * @see ECMA-376 Part 1, Section 21.1.2 (DrawingML - Text)
  */
 
+import { useMemo } from "react";
 import type { TextBody } from "../../../../domain/text";
 import { layoutTextBody, toLayoutInput } from "../../../text-layout";
+import { createLayoutParagraphMeasurer } from "../../text-measure/layout-bridge";
 import { px, deg } from "../../../../domain/types";
 import { useRenderContext } from "../../context";
 import { useSvgDefs } from "../../hooks/useSvgDefs";
@@ -120,6 +122,7 @@ function applyUprightText(content: React.ReactNode): React.ReactNode {
 export function TextRenderer({ textBody, width, height }: TextRendererProps) {
   const { colorContext, fontScheme, options, resources } = useRenderContext();
   const { getNextId, addDef, hasDef } = useSvgDefs();
+  const paragraphMeasurer = useMemo(() => createLayoutParagraphMeasurer(), []);
 
   if (textBody.paragraphs.length === 0) {
     return null;
@@ -147,7 +150,10 @@ export function TextRenderer({ textBody, width, height }: TextRendererProps) {
   });
 
   // Run the layout engine
-  const layoutResult = layoutTextBody(layoutInput);
+  const layoutResult = layoutTextBody({
+    ...layoutInput,
+    measureParagraph: paragraphMeasurer ?? undefined,
+  });
 
   // Render layout result
   const defs = { getNextId, addDef, hasDef };

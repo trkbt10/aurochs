@@ -15,6 +15,7 @@ import {
   useCallback,
 } from "react";
 import { toLayoutInput, layoutTextBody } from "../../../../pptx/render/text-layout";
+import { createLayoutParagraphMeasurer } from "../../../../pptx/render/react/text-measure/layout-bridge";
 import {
   getPlainText,
   cursorPositionToOffset,
@@ -87,7 +88,7 @@ export function TextEditController({
   onCancel,
   onSelectionChange,
 }: TextEditControllerProps) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const dragAnchorRef = useRef<number | null>(null);
   const isDraggingRef = useRef(false);
@@ -109,6 +110,7 @@ export function TextEditController({
   );
 
   // Compute layout result for current text
+  const paragraphMeasurer = useMemo(() => createLayoutParagraphMeasurer(), []);
   const layoutResult = useMemo(() => {
     const input = toLayoutInput({
       body: currentTextBody,
@@ -117,8 +119,11 @@ export function TextEditController({
       colorContext: colorContext ?? EMPTY_COLOR_CONTEXT,
       fontScheme,
     });
-    return layoutTextBody(input);
-  }, [currentTextBody, bounds.width, bounds.height, colorContext, fontScheme]);
+    return layoutTextBody({
+      ...input,
+      measureParagraph: paragraphMeasurer ?? undefined,
+    });
+  }, [currentTextBody, bounds.width, bounds.height, colorContext, fontScheme, paragraphMeasurer]);
 
   // Cursor state
   const [cursorState, setCursorState] = useState<CursorState>(INITIAL_CURSOR_STATE);

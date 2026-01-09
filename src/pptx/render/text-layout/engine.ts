@@ -143,21 +143,28 @@ function layoutParagraph(
   contentWidth: Pixels,
   startY: number,
   renderOptions: RenderOptions = DEFAULT_RENDER_OPTIONS,
+  measureParagraphFn: (paragraph: LayoutParagraphInput) => {
+    readonly spans: readonly MeasuredSpan[];
+    readonly bulletWidth?: Pixels;
+  },
 ): { paragraph: LayoutParagraphResult; endY: number } {
   // Calculate margins
   const marginLeft = para.marginLeft as number;
   const marginRight = para.marginRight as number;
   const indent = para.indent as number;
 
-  // Calculate bullet width if present
-  const bulletWidth = getBulletWidth(para.bullet);
+  // Measure spans (and optional bullet width)
+  const measuredParagraph = measureParagraphFn(para);
+  const bulletWidth = measuredParagraph.bulletWidth ?? px(getBulletWidth(para.bullet));
 
   // Calculate available widths
-  const firstLineWidth = px((contentWidth as number) - marginLeft - marginRight - indent - bulletWidth);
+  const firstLineWidth = px(
+    (contentWidth as number) - marginLeft - marginRight - indent - (bulletWidth as number),
+  );
   const nextLineWidth = px((contentWidth as number) - marginLeft - marginRight);
 
-  // Measure spans
-  const measuredSpans = measureSpans(para.spans);
+  // Measured spans
+  const measuredSpans = measuredParagraph.spans;
 
   // Determine wrap mode
   const wrapMode = measuredSpans.length === 0 ? "none" : "wrap";
@@ -196,7 +203,7 @@ function layoutParagraph(
     const lineWidth = getLineWidth(lineSpans);
     const availableWidth = index === 0 ? firstLineWidth : nextLineWidth;
     const lineIndent = index === 0 ? indent : 0;
-    const lineBulletWidth = index === 0 ? bulletWidth : 0;
+    const lineBulletWidth = index === 0 ? (bulletWidth as number) : 0;
     const x = calculateLineX(
       para.alignment,
       marginLeft,
@@ -228,7 +235,7 @@ function layoutParagraph(
       lines,
       alignment: para.alignment,
       bullet: para.bullet,
-      bulletWidth: px(bulletWidth),
+      bulletWidth,
       fontAlignment: para.fontAlignment,
     },
     endY: layoutState.currentY,
@@ -476,8 +483,9 @@ function applyAutoFit(paragraphs: readonly LayoutParagraphInput[], autoFit: Auto
  * Layout text content within a text box
  */
 export function layoutTextBody(input: LayoutInput): LayoutResult {
-  const { textBox, paragraphs: inputParagraphs, renderOptions } = input;
+  const { textBox, paragraphs: inputParagraphs, renderOptions, measureParagraph } = input;
   const effectiveRenderOptions = renderOptions ?? DEFAULT_RENDER_OPTIONS;
+  const measureParagraphFn = measureParagraph ?? ((para) => ({ spans: measureSpans(para.spans) }));
 
   // Apply auto-fit scaling if configured
   const scaledParagraphs = applyAutoFit(inputParagraphs, textBox.autoFit);
@@ -510,7 +518,13 @@ export function layoutTextBody(input: LayoutInput): LayoutResult {
   const layoutedParagraphs: LayoutParagraphResult[] = [];
 
   adjustedParagraphs.forEach((para) => {
-    const { paragraph, endY } = layoutParagraph(para, contentWidth, layoutState.currentY, effectiveRenderOptions);
+    const { paragraph, endY } = layoutParagraph(
+      para,
+      contentWidth,
+      layoutState.currentY,
+      effectiveRenderOptions,
+      measureParagraphFn,
+    );
     layoutedParagraphs.push(paragraph);
     layoutState.currentY = endY;
   });

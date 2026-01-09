@@ -20,7 +20,7 @@ export type TextEditInputFrameProps = {
   readonly bounds: TextEditBounds;
   readonly slideWidth: number;
   readonly slideHeight: number;
-  readonly textareaRef: RefObject<HTMLTextAreaElement>;
+  readonly textareaRef: RefObject<HTMLTextAreaElement | null>;
   readonly value: string;
   readonly onChange: ChangeEventHandler<HTMLTextAreaElement>;
   readonly onKeyDown: KeyboardEventHandler<HTMLTextAreaElement>;

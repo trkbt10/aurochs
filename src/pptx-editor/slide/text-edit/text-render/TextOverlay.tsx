@@ -13,6 +13,12 @@ import type {
   PositionedSpan,
 } from "../../../../pptx/render/text-layout";
 import { fontSizeToPixels, getTextVisualBounds } from "./text-geometry";
+import {
+  applyTextTransform,
+  applyVerticalAlign,
+  buildFontFamily,
+  toSvgDominantBaseline,
+} from "../../../../pptx/render/react/primitives/text/text-utils";
 import type { CompositionState } from "../coordinator/types";
 
 // =============================================================================
@@ -26,26 +32,6 @@ export type TextOverlayProps = {
 };
 
 // =============================================================================
-// Text Transform
-// =============================================================================
-
-/**
- * Apply text transform (uppercase, lowercase) to text content.
- */
-function applyTextTransform(
-  text: string,
-  transform: "none" | "uppercase" | "lowercase" | undefined,
-): string {
-  if (transform === "uppercase") {
-    return text.toUpperCase();
-  }
-  if (transform === "lowercase") {
-    return text.toLowerCase();
-  }
-  return text;
-}
-
-// =============================================================================
 // Span Rendering
 // =============================================================================
 
@@ -56,6 +42,7 @@ function renderSpan(
   span: PositionedSpan,
   x: number,
   lineY: number,
+  dominantBaseline: string | undefined,
   key: number,
 ): ReactNode {
   const fontSizePx = fontSizeToPixels(span.fontSize);
@@ -79,9 +66,11 @@ function renderSpan(
   // Build text props
   const textProps: Record<string, string | number | undefined> = {
     x,
-    y: lineY,
+    y: applyVerticalAlign(lineY, fontSizePx as number, span.verticalAlign),
     fontSize: `${fontSizePx as number}px`,
-    fontFamily: span.fontFamily,
+    fontFamily: buildFontFamily(span),
+    dominantBaseline,
+    xmlSpace: "preserve",
   };
 
   // Handle fill
@@ -108,6 +97,17 @@ function renderSpan(
   if (span.textDecoration !== undefined) {
     textProps.textDecoration = span.textDecoration;
   }
+  if (span.letterSpacing !== undefined && (span.letterSpacing as number) !== 0) {
+    textProps.letterSpacing = `${span.letterSpacing}px`;
+  }
+  if (span.kerning !== undefined) {
+    const fontSize = span.fontSize as number;
+    textProps.fontKerning = fontSize >= (span.kerning as number) ? "normal" : "none";
+  }
+  if (span.direction === "rtl") {
+    textProps.direction = "rtl";
+    textProps.unicodeBidi = "bidi-override";
+  }
 
   // Apply text transform
   const textContent = applyTextTransform(span.text, span.textTransform);
@@ -128,19 +128,24 @@ function renderSpan(
 /**
  * Render a line of text with all its spans.
  */
-function renderLine(line: LayoutLine, startKey: number): ReactNode[] {
+function renderLine(
+  line: LayoutLine,
+  fontAlignment: LayoutResult["paragraphs"][number]["fontAlignment"],
+  startKey: number,
+): ReactNode[] {
   const elements: ReactNode[] = [];
   // eslint-disable-next-line no-restricted-syntax -- accumulating position
   let cursorX = line.x as number;
   // eslint-disable-next-line no-restricted-syntax -- key generation
   let key = startKey;
+  const dominantBaseline = toSvgDominantBaseline(fontAlignment);
 
   for (const span of line.spans) {
     if (span.text.length === 0) {
       continue;
     }
 
-    const element = renderSpan(span, cursorX, line.y as number, key++);
+    const element = renderSpan(span, cursorX, line.y as number, dominantBaseline, key++);
     elements.push(element);
     cursorX += (span.width as number) + (span.dx as number);
   }
@@ -220,7 +225,7 @@ export function TextOverlay({ layoutResult, composition }: TextOverlayProps) {
 
     // Render lines
     for (const line of para.lines) {
-      const lineElements = renderLine(line, key);
+      const lineElements = renderLine(line, para.fontAlignment, key);
       elements.push(...lineElements);
       key += line.spans.length + 1;
     }

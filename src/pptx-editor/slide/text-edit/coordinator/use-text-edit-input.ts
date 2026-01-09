@@ -27,7 +27,7 @@ import {
 import type { CursorState, CompositionState, SelectionChangeEvent } from "./types";
 
 type UseTextEditInputArgs = {
-  readonly textareaRef: RefObject<HTMLTextAreaElement>;
+  readonly textareaRef: RefObject<HTMLTextAreaElement | null>;
   readonly currentTextBody: TextBody;
   readonly layoutResult: LayoutResult;
   readonly composition: CompositionState;

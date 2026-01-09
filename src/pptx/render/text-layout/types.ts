@@ -454,4 +454,16 @@ export type LayoutInput = {
   readonly paragraphs: readonly LayoutParagraphInput[];
   /** Render options for dialect-specific behavior */
   readonly renderOptions?: RenderOptions;
+  /** Override paragraph measurement (browser layout, etc.) */
+  readonly measureParagraph?: (paragraph: LayoutParagraphInput) => MeasuredParagraph;
+};
+
+/**
+ * Measured paragraph output for custom measurement.
+ */
+export type MeasuredParagraph = {
+  /** Measured spans for the paragraph */
+  readonly spans: readonly MeasuredSpan[];
+  /** Optional bullet width override */
+  readonly bulletWidth?: Pixels;
 };

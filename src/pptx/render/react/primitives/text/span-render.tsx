@@ -246,6 +246,7 @@ export function renderSpan(
     fontSize: `${fontSizePx}px`,
     fontFamily: buildFontFamily(span),
     dominantBaseline,
+    xmlSpace: "preserve",
   };
 
   // Apply all styling
