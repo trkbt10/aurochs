@@ -222,25 +222,32 @@ export function getSelectionForCursor(
     return undefined;
   }
 
-  let currentOffset = 0;
-
-  for (const [runIndex, run] of paragraph.runs.entries()) {
+  const result = paragraph.runs.reduce<{
+    readonly offset: number;
+    readonly selection: TextSelection | undefined;
+  }>((acc, run, runIndex) => {
+    if (acc.selection) {
+      return acc;
+    }
     const runLength = getRunLength(run);
-    const runStart = currentOffset;
-    const runEnd = currentOffset + runLength;
+    const runStart = acc.offset;
+    const runEnd = acc.offset + runLength;
     const isLastRun = runIndex === paragraph.runs.length - 1;
 
     if (position.charOffset < runEnd || (position.charOffset === runEnd && isLastRun)) {
       return {
-        start: { paragraphIndex: position.paragraphIndex, charOffset: runStart },
-        end: { paragraphIndex: position.paragraphIndex, charOffset: runEnd },
+        offset: runEnd,
+        selection: {
+          start: { paragraphIndex: position.paragraphIndex, charOffset: runStart },
+          end: { paragraphIndex: position.paragraphIndex, charOffset: runEnd },
+        },
       };
     }
 
-    currentOffset = runEnd;
-  }
+    return { offset: runEnd, selection: undefined };
+  }, { offset: 0, selection: undefined });
 
-  return undefined;
+  return result.selection;
 }
 
 /**

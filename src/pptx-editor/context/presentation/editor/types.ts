@@ -256,6 +256,11 @@ export type PresentationEditorAction =
       readonly shapeId: ShapeId;
       readonly textBody: TextBody;
     }
+  | {
+      readonly type: "UPDATE_TEXT_BODY_IN_EDIT";
+      readonly shapeId: ShapeId;
+      readonly textBody: TextBody;
+    }
 
   // Text formatting (in-place, while editing)
   | {

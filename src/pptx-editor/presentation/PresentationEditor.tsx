@@ -37,6 +37,7 @@ import {
   isTextEditActive,
   mergeTextIntoBody,
   extractDefaultRunProperties,
+  getPlainText,
   createActiveStickyFormatting,
   createInitialStickyFormatting,
   type StickyFormattingState,
@@ -141,6 +142,7 @@ function EditorContent({
   const [textEditCursorState, setTextEditCursorState] = useState<TextCursorState | undefined>(undefined);
   const [textEditCurrentTextBody, setTextEditCurrentTextBody] = useState<TextBody | undefined>(undefined);
   const previousTextEditRef = useRef<typeof textEdit | null>(null);
+  const lastCommittedTextBodyRef = useRef<TextBody | undefined>(undefined);
   const [viewport, setViewport] = useState<ViewportTransform | undefined>(undefined);
 
   const slide = activeSlide?.slide;
@@ -235,6 +237,10 @@ function EditorContent({
   const handleTextEditComplete = useCallback(
     (newText: string) => {
       if (isTextEditActive(textEdit)) {
+        if (getPlainText(textEdit.initialTextBody) === newText) {
+          dispatch({ type: "EXIT_TEXT_EDIT" });
+          return;
+        }
         const defaultRunProperties = extractDefaultRunProperties(textEdit.initialTextBody);
         const newTextBody = mergeTextIntoBody(textEdit.initialTextBody, newText, defaultRunProperties);
         dispatch({ type: "UPDATE_TEXT_BODY", shapeId: textEdit.shapeId, textBody: newTextBody });
@@ -321,10 +327,12 @@ function EditorContent({
       setTextEditSelectionContext({ type: "none" });
       setTextEditCursorState(undefined);
       setTextEditCurrentTextBody(undefined);
+      lastCommittedTextBodyRef.current = undefined;
     } else if (!previous || previous.type !== "active" || previous.shapeId !== textEdit.shapeId) {
       setTextEditSelectionContext({ type: "shape" });
       setTextEditCursorState(undefined);
       setTextEditCurrentTextBody(textEdit.initialTextBody);
+      lastCommittedTextBodyRef.current = textEdit.initialTextBody;
     }
     previousTextEditRef.current = textEdit;
   }, [textEdit]);
@@ -334,6 +342,17 @@ function EditorContent({
 
   const handleTextEditSelectionChange = useCallback((event: SelectionChangeEvent) => {
     setTextEditCurrentTextBody(event.textBody);
+    if (isTextEditActive(textEdit)) {
+      const lastCommitted = lastCommittedTextBodyRef.current;
+      if (event.textBody !== textEdit.initialTextBody && event.textBody !== lastCommitted) {
+        lastCommittedTextBodyRef.current = event.textBody;
+        dispatch({
+          type: "UPDATE_TEXT_BODY_IN_EDIT",
+          shapeId: textEdit.shapeId,
+          textBody: event.textBody,
+        });
+      }
+    }
     if (event.selection) {
       setTextEditSelectionContext({ type: "selection", selection: event.selection });
       setTextEditCursorState({
@@ -352,7 +371,7 @@ function EditorContent({
     }
     setTextEditSelectionContext({ type: "shape" });
     setTextEditCursorState(undefined);
-  }, []);
+  }, [dispatch, textEdit]);
 
   const getFullTextSelection = useCallback((textBody: TextBody): TextSelection | undefined => {
     if (textBody.paragraphs.length === 0) {

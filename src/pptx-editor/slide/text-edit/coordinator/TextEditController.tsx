@@ -13,6 +13,7 @@ import {
   useState,
   useMemo,
   useCallback,
+  useEffect,
 } from "react";
 import { toLayoutInput, layoutTextBody } from "../../../../pptx/render/text-layout";
 import { createLayoutParagraphMeasurer } from "../../../../pptx/render/react/text-measure/layout-bridge";
@@ -54,30 +55,16 @@ function getWordRange(text: string, offset: number): { start: number; end: numbe
   }
 
   const wordChar = isWordChar(char);
-  let start = clamped;
-  let end = clamped + 1;
+  const leftSlice = text.slice(0, clamped);
+  const leftBoundary = Array.from(leftSlice)
+    .reverse()
+    .findIndex((prev) => prev === "\n" || isWordChar(prev) !== wordChar);
+  const start = leftBoundary === -1 ? 0 : clamped - leftBoundary;
 
-  while (start > 0) {
-    const prev = text[start - 1];
-    if (prev === "\n") {
-      break;
-    }
-    if (isWordChar(prev) !== wordChar) {
-      break;
-    }
-    start -= 1;
-  }
-
-  while (end < text.length) {
-    const next = text[end];
-    if (next === "\n") {
-      break;
-    }
-    if (isWordChar(next) !== wordChar) {
-      break;
-    }
-    end += 1;
-  }
+  const rightSlice = text.slice(clamped + 1);
+  const rightBoundary = Array.from(rightSlice)
+    .findIndex((next) => next === "\n" || isWordChar(next) !== wordChar);
+  const end = rightBoundary === -1 ? text.length : clamped + 1 + rightBoundary;
 
   return { start, end };
 }
@@ -162,6 +149,10 @@ export function TextEditController({
   const [composition, setComposition] = useState<CompositionState>(INITIAL_COMPOSITION_STATE);
   const initialTextRef = useRef(getPlainText(textBody));
   const finishedRef = useRef(false);
+
+  useEffect(() => {
+    initialTextRef.current = getPlainText(textBody);
+  }, [textBody]);
 
   // Extract default run properties from original text body (memoized)
   const defaultRunProperties = useMemo(
@@ -307,10 +298,7 @@ export function TextEditController({
       isDraggingRef.current = true;
       textarea.focus();
 
-      let anchorOffset = offset;
-      if (event.shiftKey) {
-        anchorOffset = getSelectionAnchor(textarea);
-      }
+      const anchorOffset = event.shiftKey ? getSelectionAnchor(textarea) : offset;
       dragAnchorRef.current = anchorOffset;
       applySelectionRange(textarea, anchorOffset, offset);
       updateCursorPosition();

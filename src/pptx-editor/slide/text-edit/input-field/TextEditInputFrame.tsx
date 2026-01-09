@@ -84,6 +84,9 @@ function buildContainerStyle(
   };
 }
 
+/**
+ * Text edit input frame that hosts the hidden textarea and overlay content.
+ */
 export function TextEditInputFrame({
   bounds,
   slideWidth,

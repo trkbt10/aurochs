@@ -5,7 +5,7 @@
  * Organized by editor category with tab navigation.
  */
 
-import { useState, type CSSProperties } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import { EditorConfigProvider, Button } from "@lib/pptx-editor";
 import {
   ColorEditorsTest,
@@ -18,6 +18,7 @@ import {
   SlideEditorTest,
   PresentationEditorTest,
 } from "../components/editor-tests";
+import { createPagesFontCatalog } from "../fonts/pages-font-catalog";
 
 type EditorTestPageProps = {
   readonly onBack: () => void;
@@ -145,9 +146,10 @@ function TabContent({ activeTab }: { activeTab: TabId }) {
  */
 export function EditorTestPage({ onBack }: EditorTestPageProps) {
   const [activeTab, setActiveTab] = useState<TabId>("presentation");
+  const fontCatalog = useMemo(() => createPagesFontCatalog(), []);
 
   return (
-    <EditorConfigProvider config={{ locale: "en-US" }}>
+    <EditorConfigProvider config={{ locale: "en-US", fontCatalog }}>
       <div style={pageStyle}>
         {/* Header */}
         <header style={headerStyle}>

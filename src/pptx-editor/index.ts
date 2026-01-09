@@ -39,6 +39,9 @@ export {
   type EditorConfig,
 } from "./context/editor/EditorConfigContext";
 
+// Fonts (injectable catalog types)
+export type { FontCatalog } from "./fonts/types";
+
 // UI Primitives
 export {
   Button,

@@ -16,6 +16,10 @@ import {
   redoHistory,
   createEmptySelection,
 } from "../../../slide/state";
+import { findSlideById } from "../slide";
+import { findShapeById } from "../../../../shape/query";
+import { createInactiveTextEditState } from "../../../../slide/text-edit";
+import type { TextEditState } from "../../../../slide/text-edit";
 
 type SetDocumentAction = Extract<
   PresentationEditorAction,
@@ -48,6 +52,22 @@ function handleSetDocument(
   };
 }
 
+function getTextEditAfterHistoryChange(
+  state: PresentationEditorState,
+  newDoc: PresentationDocument,
+  activeSlideId: SlideId | undefined
+): TextEditState {
+  if (state.textEdit.type !== "active" || !activeSlideId) {
+    return state.textEdit;
+  }
+  const activeSlide = findSlideById(newDoc, activeSlideId);
+  const shape = activeSlide ? findShapeById(activeSlide.slide.shapes, state.textEdit.shapeId) : undefined;
+  if (!shape || shape.type !== "sp" || !shape.textBody) {
+    return createInactiveTextEditState();
+  }
+  return { ...state.textEdit, initialTextBody: shape.textBody };
+}
+
 function handleUndo(
   state: PresentationEditorState
 ): PresentationEditorState {
@@ -55,14 +75,17 @@ function handleUndo(
   if (newHistory === state.documentHistory) {
     return state;
   }
+  const nextActiveSlideId = getActiveSlideAfterHistoryChange(
+    state.activeSlideId,
+    newHistory.present
+  );
+  const nextTextEdit = getTextEditAfterHistoryChange(state, newHistory.present, nextActiveSlideId);
   return {
     ...state,
     documentHistory: newHistory,
-    activeSlideId: getActiveSlideAfterHistoryChange(
-      state.activeSlideId,
-      newHistory.present
-    ),
+    activeSlideId: nextActiveSlideId,
     shapeSelection: createEmptySelection(),
+    textEdit: nextTextEdit,
   };
 }
 
@@ -73,14 +96,17 @@ function handleRedo(
   if (newHistory === state.documentHistory) {
     return state;
   }
+  const nextActiveSlideId = getActiveSlideAfterHistoryChange(
+    state.activeSlideId,
+    newHistory.present
+  );
+  const nextTextEdit = getTextEditAfterHistoryChange(state, newHistory.present, nextActiveSlideId);
   return {
     ...state,
     documentHistory: newHistory,
-    activeSlideId: getActiveSlideAfterHistoryChange(
-      state.activeSlideId,
-      newHistory.present
-    ),
+    activeSlideId: nextActiveSlideId,
     shapeSelection: createEmptySelection(),
+    textEdit: nextTextEdit,
   };
 }
 

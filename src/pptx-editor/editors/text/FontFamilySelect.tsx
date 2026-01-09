@@ -5,10 +5,12 @@
  * and renders each option in its own font for easier discovery.
  */
 
-import { useMemo, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { SearchableSelect } from "../../ui/primitives";
 import type { SearchableSelectOption, SearchableSelectItemProps } from "../../ui/primitives/SearchableSelect";
 import { useDocumentFontFamilies } from "./hooks/useDocumentFontFamilies";
+import { useEditorConfig } from "../../context/editor/EditorConfigContext";
+import type { FontCatalog } from "../../fonts/types";
 
 const CLEAR_VALUE = "__pptx_editor_font_family_clear__";
 
@@ -23,9 +25,38 @@ export type FontFamilySelectProps = {
   readonly placeholder?: string;
   readonly searchPlaceholder?: string;
   readonly sampleText?: string;
+  /** Optional injected catalog override (defaults to EditorConfig.fontCatalog) */
+  readonly fontCatalog?: FontCatalog;
 };
 
-function buildFontFamilyOptions(documentFamilies: readonly string[], currentValue: string): SearchableSelectOption<FontFamilySelectValue>[] {
+function isFamilyLoaded(family: string): boolean {
+  if (typeof document === "undefined") {
+    return false;
+  }
+  // Using a generic size; only presence matters.
+  return document.fonts.check(`12px "${family.replaceAll('"', '\\"')}"`);
+}
+
+function uniqueFamilies(families: readonly string[]): readonly string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const family of families) {
+    const normalized = family.trim();
+    if (normalized === "" || seen.has(normalized)) {
+      continue;
+    }
+    seen.add(normalized);
+    result.push(normalized);
+  }
+  return result;
+}
+
+function buildFontFamilyOptions(
+  loadedFamilies: readonly string[],
+  catalogFamilies: readonly string[],
+  currentValue: string,
+  catalogLabel: string
+): SearchableSelectOption<FontFamilySelectValue>[] {
   const options: SearchableSelectOption<FontFamilySelectValue>[] = [
     {
       value: CLEAR_VALUE,
@@ -36,7 +67,9 @@ function buildFontFamilyOptions(documentFamilies: readonly string[], currentValu
   ];
 
   const normalizedCurrent = currentValue.trim();
-  const familySet = new Set(documentFamilies);
+  const familySet = new Set(
+    [...loadedFamilies, ...catalogFamilies].map((family) => family.trim()).filter((family) => family !== "")
+  );
   if (normalizedCurrent !== "" && !familySet.has(normalizedCurrent)) {
     options.push({
       value: normalizedCurrent,
@@ -56,12 +89,26 @@ function buildFontFamilyOptions(documentFamilies: readonly string[], currentValu
     });
   }
 
-  for (const family of documentFamilies) {
+  for (const family of uniqueFamilies(loadedFamilies)) {
     options.push({
       value: family,
       label: family,
-      group: "Fonts",
+      group: "Loaded",
       keywords: [family],
+    });
+  }
+
+  const loadedSet = new Set(loadedFamilies.map((f) => f.trim()));
+  for (const family of uniqueFamilies(catalogFamilies)) {
+    if (loadedSet.has(family)) {
+      continue;
+    }
+    options.push({
+      value: family,
+      label: family,
+      group: catalogLabel,
+      keywords: [family],
+      hiddenWhenEmptySearch: true,
     });
   }
 
@@ -124,13 +171,43 @@ export function FontFamilySelect({
   placeholder = "Family",
   searchPlaceholder = "Search fonts...",
   sampleText = "AaBbCc",
+  fontCatalog: fontCatalogOverride,
 }: FontFamilySelectProps) {
+  const { fontCatalog: fontCatalogFromContext } = useEditorConfig();
+  const fontCatalog = fontCatalogOverride ?? fontCatalogFromContext;
   const documentFamilies = useDocumentFontFamilies();
+  const [catalogFamilies, setCatalogFamilies] = useState<readonly string[]>([]);
+
+  useEffect(() => {
+    if (!fontCatalog) {
+      setCatalogFamilies([]);
+      return;
+    }
+
+    const canceled = { value: false };
+    Promise.resolve(fontCatalog.listFamilies())
+      .then((families) => {
+        if (!canceled.value) {
+          setCatalogFamilies(families);
+        }
+      })
+      .catch(() => {
+        if (!canceled.value) {
+          setCatalogFamilies([]);
+        }
+      });
+
+    return () => {
+      canceled.value = true;
+    };
+  }, [fontCatalog]);
 
   const options = useMemo(
-    () => buildFontFamilyOptions(documentFamilies, value),
-    [documentFamilies, value]
+    () => buildFontFamilyOptions(documentFamilies, catalogFamilies, value, fontCatalog?.label ?? "Catalog"),
+    [documentFamilies, catalogFamilies, value, fontCatalog?.label]
   );
+
+  const catalogSet = useMemo(() => new Set(catalogFamilies.map((f) => f.trim())), [catalogFamilies]);
 
   const handleChange = (next: FontFamilySelectValue) => {
     if (next === CLEAR_VALUE) {
@@ -138,7 +215,22 @@ export function FontFamilySelect({
       return;
     }
     const normalized = next.trim();
-    onChange(normalized === "" ? undefined : normalized);
+    if (normalized === "") {
+      onChange(undefined);
+      return;
+    }
+
+    const shouldAttemptLoad = !!fontCatalog && catalogSet.has(normalized) && !isFamilyLoaded(normalized);
+    if (shouldAttemptLoad) {
+      void fontCatalog.ensureFamilyLoaded(normalized)
+        .catch(() => false)
+        .finally(() => {
+          onChange(normalized);
+        });
+      return;
+    }
+
+    onChange(normalized);
   };
 
   return (

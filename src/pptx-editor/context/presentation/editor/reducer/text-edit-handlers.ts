@@ -19,6 +19,7 @@ import {
   createInactiveTextEditState,
   createActiveTextEditState,
 } from "../../../../slide/text-edit";
+import type { TextEditState } from "../../../../slide/text-edit";
 
 type EnterTextEditAction = Extract<
   PresentationEditorAction,
@@ -29,6 +30,10 @@ type UpdateTextBodyAction = Extract<
   PresentationEditorAction,
   { type: "UPDATE_TEXT_BODY" }
 >;
+type UpdateTextBodyInEditAction = Extract<
+  PresentationEditorAction,
+  { type: "UPDATE_TEXT_BODY_IN_EDIT" }
+>;
 type ApplyRunFormatAction = Extract<
   PresentationEditorAction,
   { type: "APPLY_RUN_FORMAT" }
@@ -37,6 +42,17 @@ type ApplyParagraphFormatAction = Extract<
   PresentationEditorAction,
   { type: "APPLY_PARAGRAPH_FORMAT" }
 >;
+
+function updateTextEditInPlace(
+  state: PresentationEditorState,
+  shapeId: UpdateTextBodyInEditAction["shapeId"],
+  textBody: UpdateTextBodyInEditAction["textBody"]
+): TextEditState {
+  if (state.textEdit.type !== "active" || state.textEdit.shapeId !== shapeId) {
+    return state.textEdit;
+  }
+  return { ...state.textEdit, initialTextBody: textBody };
+}
 
 /**
  * Get active slide for text editing
@@ -120,6 +136,37 @@ function handleUpdateTextBody(
 }
 
 /**
+ * Update text body while keeping text edit active.
+ * Creates an undo history entry.
+ */
+function handleUpdateTextBodyInEdit(
+  state: PresentationEditorState,
+  action: UpdateTextBodyInEditAction
+): PresentationEditorState {
+  const newDoc = updateActiveSlideInDocument(
+    state.documentHistory.present,
+    state.activeSlideId,
+    (slide) => ({
+      ...slide,
+      shapes: updateShapeById(slide.shapes, action.shapeId, (shape) => {
+        if (shape.type !== "sp") {
+          return shape;
+        }
+        return { ...shape, textBody: action.textBody };
+      }),
+    })
+  );
+
+  const nextTextEdit = updateTextEditInPlace(state, action.shapeId, action.textBody);
+
+  return {
+    ...state,
+    documentHistory: pushHistory(state.documentHistory, newDoc),
+    textEdit: nextTextEdit,
+  };
+}
+
+/**
  * Apply run formatting (e.g., bold, italic) without exiting text edit mode.
  * Creates an undo history entry.
  */
@@ -142,10 +189,7 @@ function handleApplyRunFormat(
   );
 
   // Stay in text edit mode (don't exit)
-  const nextTextEdit =
-    state.textEdit.type === "active" && state.textEdit.shapeId === action.shapeId
-      ? { ...state.textEdit, initialTextBody: action.textBody }
-      : state.textEdit;
+  const nextTextEdit = updateTextEditInPlace(state, action.shapeId, action.textBody);
 
   return {
     ...state,
@@ -177,10 +221,7 @@ function handleApplyParagraphFormat(
   );
 
   // Stay in text edit mode (don't exit)
-  const nextTextEdit =
-    state.textEdit.type === "active" && state.textEdit.shapeId === action.shapeId
-      ? { ...state.textEdit, initialTextBody: action.textBody }
-      : state.textEdit;
+  const nextTextEdit = updateTextEditInPlace(state, action.shapeId, action.textBody);
 
   return {
     ...state,
@@ -196,6 +237,7 @@ export const TEXT_EDIT_HANDLERS: HandlerMap = {
   ENTER_TEXT_EDIT: handleEnterTextEdit,
   EXIT_TEXT_EDIT: handleExitTextEdit,
   UPDATE_TEXT_BODY: handleUpdateTextBody,
+  UPDATE_TEXT_BODY_IN_EDIT: handleUpdateTextBodyInEdit,
   APPLY_RUN_FORMAT: handleApplyRunFormat,
   APPLY_PARAGRAPH_FORMAT: handleApplyParagraphFormat,
 };

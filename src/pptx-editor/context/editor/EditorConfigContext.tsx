@@ -7,6 +7,7 @@
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 import type { ColorScheme, ColorMap } from "../../../pptx/domain/color/context";
 import type { FontScheme } from "../../../pptx/domain/resolution";
+import type { FontCatalog } from "../../fonts/types";
 
 /**
  * Editor configuration
@@ -20,6 +21,8 @@ export type EditorConfig = {
   readonly colorMap?: ColorMap;
   /** Font scheme for resolving fonts */
   readonly fontScheme?: FontScheme;
+  /** Injectable font catalog for dynamic font selection/loading */
+  readonly fontCatalog?: FontCatalog;
   /** Show advanced options */
   readonly showAdvanced?: boolean;
   /** Compact mode for tight layouts */

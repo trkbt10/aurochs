@@ -26,6 +26,7 @@ import type { Slide, TextBody, TextRun } from "@lib/pptx/domain";
 import { px, deg, pt, type Pixels } from "@lib/pptx/domain";
 import { SlideRendererSvg } from "@lib/pptx/render/react";
 import { layoutTextBody, toLayoutInput } from "@lib/pptx/render/text-layout";
+import { createPagesFontCatalog } from "../fonts/pages-font-catalog";
 import { TextEditController } from "../../../src/pptx-editor/slide/text-edit";
 import type { TextSelection, CursorPosition, SelectionChangeEvent } from "../../../src/pptx-editor/slide/text-edit";
 import {
@@ -104,7 +105,11 @@ function getSelectionForBody(textBody: TextBody): TextSelection | null {
   };
 }
 
+/**
+ * Demo page for inline text editing + formatting UI.
+ */
 export function TextEditorTestPage({ onBack }: TextEditorTestPageProps) {
+  const fontCatalog = useMemo(() => createPagesFontCatalog(), []);
   const slideWidth = Number(testSlideSize.width);
   const slideHeight = Number(testSlideSize.height);
 
@@ -282,7 +287,7 @@ export function TextEditorTestPage({ onBack }: TextEditorTestPageProps) {
   }, [currentTextBody, extractedProperties.runRanges, selectionContext]);
 
   return (
-    <EditorConfigProvider config={{ locale: "en-US" }}>
+    <EditorConfigProvider config={{ locale: "en-US", fontCatalog }}>
       <div className="drawingml-test-page">
         <header className="test-header">
           <button className="back-button" onClick={onBack}>

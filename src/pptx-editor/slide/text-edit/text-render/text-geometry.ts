@@ -39,13 +39,10 @@ export function getLineFontSize(line: LayoutLine): Points {
     return DEFAULT_FONT_SIZE_PT;
   }
 
-  let maxSize = line.spans[0].fontSize as number;
-  for (const span of line.spans) {
+  const maxSize = line.spans.reduce((currentMax, span) => {
     const size = span.fontSize as number;
-    if (size > maxSize) {
-      maxSize = size;
-    }
-  }
+    return size > currentMax ? size : currentMax;
+  }, line.spans[0].fontSize as number);
 
   return maxSize as Points;
 }
@@ -54,14 +51,21 @@ export function getLineFontSize(line: LayoutLine): Points {
  * Get the font size at a specific character offset within a line.
  */
 export function getFontSizeAtOffset(line: LayoutLine, charOffset: number): Points {
-  // eslint-disable-next-line no-restricted-syntax -- early return in loop
-  let remaining = charOffset;
-
-  for (const span of line.spans) {
-    if (remaining <= span.text.length) {
-      return span.fontSize;
+  const match = line.spans.reduce<{
+    readonly remaining: number;
+    readonly fontSize: Points | undefined;
+  }>((acc, span) => {
+    if (acc.fontSize !== undefined) {
+      return acc;
     }
-    remaining -= span.text.length;
+    if (acc.remaining <= span.text.length) {
+      return { remaining: 0, fontSize: span.fontSize };
+    }
+    return { remaining: acc.remaining - span.text.length, fontSize: undefined };
+  }, { remaining: charOffset, fontSize: undefined });
+
+  if (match.fontSize !== undefined) {
+    return match.fontSize;
   }
 
   // Past end of line - use last span's font size or default
@@ -85,30 +89,30 @@ export function getFontSizeForRange(
 
   const rangeStart = Math.min(startOffset, endOffset);
   const rangeEnd = Math.max(startOffset, endOffset);
-  let maxSize = 0;
-  let hasSelection = false;
-  // eslint-disable-next-line no-restricted-syntax -- offset tracking
-  let offset = 0;
-
-  for (const span of line.spans) {
-    const spanStart = offset;
-    const spanEnd = offset + span.text.length;
+  const result = line.spans.reduce<{
+    readonly offset: number;
+    readonly maxSize: number;
+    readonly hasSelection: boolean;
+  }>((acc, span) => {
+    const spanStart = acc.offset;
+    const spanEnd = acc.offset + span.text.length;
     const intersects = spanEnd > rangeStart && spanStart < rangeEnd;
-    if (intersects) {
-      hasSelection = true;
-      const size = span.fontSize as number;
-      if (size > maxSize) {
-        maxSize = size;
-      }
+    if (!intersects) {
+      return { ...acc, offset: spanEnd };
     }
-    offset = spanEnd;
-  }
+    const size = span.fontSize as number;
+    return {
+      offset: spanEnd,
+      maxSize: size > acc.maxSize ? size : acc.maxSize,
+      hasSelection: true,
+    };
+  }, { offset: 0, maxSize: 0, hasSelection: false });
 
-  if (!hasSelection) {
+  if (!result.hasSelection) {
     return getLineFontSize(line);
   }
 
-  return maxSize as Points;
+  return result.maxSize as Points;
 }
 
 // =============================================================================
@@ -183,17 +187,20 @@ function getSpanAtOffset(
   line: LayoutLine,
   charOffset: number,
 ): PositionedSpan | undefined {
-  // eslint-disable-next-line no-restricted-syntax -- early return in loop
-  let remaining = charOffset;
-
-  for (const span of line.spans) {
-    if (remaining <= span.text.length) {
-      return span;
+  const match = line.spans.reduce<{
+    readonly remaining: number;
+    readonly span: PositionedSpan | undefined;
+  }>((acc, span) => {
+    if (acc.span) {
+      return acc;
     }
-    remaining -= span.text.length;
-  }
+    if (acc.remaining <= span.text.length) {
+      return { remaining: 0, span };
+    }
+    return { remaining: acc.remaining - span.text.length, span: undefined };
+  }, { remaining: charOffset, span: undefined });
 
-  return line.spans.length > 0 ? line.spans[line.spans.length - 1] : undefined;
+  return match.span ?? (line.spans.length > 0 ? line.spans[line.spans.length - 1] : undefined);
 }
 
 function getFontMetricsForRange(
@@ -207,35 +214,41 @@ function getFontMetricsForRange(
 
   const rangeStart = Math.min(startOffset, endOffset);
   const rangeEnd = Math.max(startOffset, endOffset);
-  let maxSize = 0;
-  let maxFamily: string | undefined = undefined;
-  let hasSelection = false;
-  // eslint-disable-next-line no-restricted-syntax -- offset tracking
-  let offset = 0;
-
-  for (const span of line.spans) {
-    const spanStart = offset;
-    const spanEnd = offset + span.text.length;
+  const result = line.spans.reduce<{
+    readonly offset: number;
+    readonly maxSize: number;
+    readonly maxFamily: string | undefined;
+    readonly hasSelection: boolean;
+  }>((acc, span) => {
+    const spanStart = acc.offset;
+    const spanEnd = acc.offset + span.text.length;
     const intersects = spanEnd > rangeStart && spanStart < rangeEnd;
-    if (intersects) {
-      hasSelection = true;
-      const size = span.fontSize as number;
-      if (size > maxSize) {
-        maxSize = size;
-        maxFamily = span.fontFamily;
-      }
+    if (!intersects) {
+      return { ...acc, offset: spanEnd };
     }
-    offset = spanEnd;
-  }
+    const size = span.fontSize as number;
+    const nextMaxSize = size > acc.maxSize ? size : acc.maxSize;
+    return {
+      offset: spanEnd,
+      maxSize: nextMaxSize,
+      maxFamily: size > acc.maxSize ? span.fontFamily : acc.maxFamily,
+      hasSelection: true,
+    };
+  }, {
+    offset: 0,
+    maxSize: 0,
+    maxFamily: undefined,
+    hasSelection: false,
+  });
 
-  if (!hasSelection) {
+  if (!result.hasSelection) {
     return {
       fontSizePt: getLineFontSize(line),
       fontFamily: line.spans[0]?.fontFamily,
     };
   }
 
-  return { fontSizePt: maxSize as Points, fontFamily: maxFamily };
+  return { fontSizePt: result.maxSize as Points, fontFamily: result.maxFamily };
 }
 
 // =============================================================================

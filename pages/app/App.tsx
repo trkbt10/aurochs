@@ -14,6 +14,7 @@ import { GlyphTestPage } from "./pages/GlyphTestPage";
 import { TextEditorTestPage } from "./pages/TextEditorTestPage";
 import { PresentationEditor, EditorConfigProvider } from "@lib/pptx-editor";
 import { convertToPresentationDocument } from "@lib/pptx/app";
+import { createPagesFontCatalog } from "./fonts/pages-font-catalog";
 import "./App.css";
 
 // Demo PPTX URL (will be in the public folder)
@@ -24,6 +25,7 @@ const DEMO_PPTX_URL = import.meta.env.BASE_URL + "demo.pptx";
  */
 export function App() {
   const navigate = useNavigate();
+  const fontCatalog = useMemo(() => createPagesFontCatalog(), []);
 
   const {
     status,
@@ -201,7 +203,7 @@ export function App() {
     }
 
     return (
-      <EditorConfigProvider config={{ locale: "en-US" }}>
+      <EditorConfigProvider config={{ locale: "en-US", fontCatalog }}>
         <div className="editor-page">
           <header className="editor-header">
             <button className="back-button" onClick={handleExitEditor}>

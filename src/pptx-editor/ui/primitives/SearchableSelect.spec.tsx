@@ -48,4 +48,32 @@ describe("SearchableSelect", () => {
     expect(counters.parentClicks).toBe(0);
     expect(counters.changeCalls).toBe(0);
   });
+
+  it("hides options marked hiddenWhenEmptySearch until searching", () => {
+    if (!HTMLElement.prototype.scrollIntoView) {
+      Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+        value: () => undefined,
+        writable: true,
+      });
+    }
+
+    const { getByRole, getByPlaceholderText, queryByText, getByText } = render(
+      <SearchableSelect
+        value="a"
+        onChange={() => undefined}
+        options={[
+          { value: "a", label: "Alpha" },
+          { value: "b", label: "Beta", hiddenWhenEmptySearch: true },
+        ]}
+        searchPlaceholder="Search..."
+      />
+    );
+
+    fireEvent.click(getByRole("button"));
+    expect(queryByText("Beta")).toBeNull();
+
+    const searchInput = getByPlaceholderText("Search...");
+    fireEvent.change(searchInput, { target: { value: "Be" } });
+    expect(getByText("Beta")).toBeTruthy();
+  });
 });

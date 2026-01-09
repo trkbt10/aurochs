@@ -29,6 +29,11 @@ export type SearchableSelectOption<T extends string = string> = {
   readonly value: T;
   readonly label: string;
   readonly disabled?: boolean;
+  /**
+   * If true, hides this option when the search query is empty.
+   * Useful for very large catalogs that should only appear when searching.
+   */
+  readonly hiddenWhenEmptySearch?: boolean;
   /** Optional group/category name */
   readonly group?: string;
   /** Optional search keywords (for matching beyond label) */
@@ -262,7 +267,15 @@ export function SearchableSelect<T extends string = string>({
   // Filter options based on search query
   const filteredOptions = useMemo(() => {
     if (!searchQuery.trim()) {
-      return options.filter((opt) => !opt.disabled);
+      return options.filter((opt) => {
+        if (opt.disabled) {
+          return false;
+        }
+        if (opt.hiddenWhenEmptySearch && opt.value !== value) {
+          return false;
+        }
+        return true;
+      });
     }
     const query = searchQuery.toLowerCase();
     return options.filter((opt) => {

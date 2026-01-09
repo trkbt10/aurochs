@@ -159,29 +159,22 @@ function applySingleReplaceEdit(
   const oldText = originalEntries.map((entry) => entry.char).join("");
   const oldLength = oldText.length;
   const newLength = newText.length;
-
-  let prefixLength = 0;
   const minLength = Math.min(oldLength, newLength);
-  while (prefixLength < minLength && oldText[prefixLength] === newText[prefixLength]) {
-    prefixLength += 1;
-  }
-
-  let suffixLength = 0;
-  while (
-    suffixLength < minLength - prefixLength
-    && oldText[oldLength - 1 - suffixLength] === newText[newLength - 1 - suffixLength]
-  ) {
-    suffixLength += 1;
-  }
+  const prefixMismatch = Array.from({ length: minLength }).findIndex(
+    (_, index) => oldText[index] !== newText[index],
+  );
+  const prefixLength = prefixMismatch === -1 ? minLength : prefixMismatch;
+  const maxSuffix = minLength - prefixLength;
+  const suffixMismatch = Array.from({ length: maxSuffix }).findIndex(
+    (_, index) => oldText[oldLength - 1 - index] !== newText[newLength - 1 - index],
+  );
+  const suffixLength = suffixMismatch === -1 ? maxSuffix : suffixMismatch;
 
   const insertedText = newText.slice(prefixLength, newLength - suffixLength);
   const prefixEntries = originalEntries.slice(0, prefixLength);
   const suffixEntries = originalEntries.slice(oldLength - suffixLength);
 
-  let paragraphTemplateEntry = originalEntries[0];
-  if (prefixLength > 0) {
-    paragraphTemplateEntry = originalEntries[prefixLength - 1];
-  }
+  const paragraphTemplateEntry = prefixLength > 0 ? originalEntries[prefixLength - 1] : originalEntries[0];
   const insertedParagraphProperties = paragraphTemplateEntry?.paragraphProperties ?? fallbackParagraphProperties;
   const insertedParagraphEndProperties = paragraphTemplateEntry?.paragraphEndProperties ?? fallbackParagraphEndProperties;
 
@@ -211,89 +204,123 @@ function buildParagraphsFromEntries(
   entries: TextCharEntry[],
   originalBody: TextBody
 ): TextBody["paragraphs"] {
-  const paragraphs: Array<TextBody["paragraphs"][number]> = [];
-  let currentParagraphProperties = originalBody.paragraphs[0]?.properties ?? {};
-  let currentParagraphEndProperties = originalBody.paragraphs[0]?.endProperties;
-  // eslint-disable-next-line no-restricted-syntax -- incremental construction
-  let runs: TextRun[] = [];
-  // eslint-disable-next-line no-restricted-syntax -- incremental construction
-  let currentRun: {
-    kind: "text" | "field";
-    properties: RunProperties | undefined;
-    fieldType?: string;
-    fieldId?: string;
-    text: string;
-  } | null = null;
+  const initialProperties = originalBody.paragraphs[0]?.properties ?? {};
+  const initialEndProperties = originalBody.paragraphs[0]?.endProperties;
+  type BuildState = {
+    readonly paragraphs: Array<TextBody["paragraphs"][number]>;
+    readonly runs: TextRun[];
+    readonly currentRun: {
+      kind: "text" | "field";
+      properties: RunProperties | undefined;
+      fieldType?: string;
+      fieldId?: string;
+      text: string;
+    } | null;
+    readonly currentParagraphProperties: ParagraphProperties;
+    readonly currentParagraphEndProperties: RunProperties | undefined;
+  };
 
-  const flushRun = () => {
-    if (!currentRun) {
-      return;
-    }
-    if (currentRun.kind === "field" && currentRun.fieldType && currentRun.fieldId) {
-      runs.push({
+  const buildRunFromCurrent = (run: NonNullable<BuildState["currentRun"]>): TextRun => {
+    if (run.kind === "field" && run.fieldType && run.fieldId) {
+      return {
         type: "field",
-        fieldType: currentRun.fieldType,
-        id: currentRun.fieldId,
-        text: currentRun.text,
-        properties: currentRun.properties,
-      });
-    } else {
-      runs.push({
-        type: "text",
-        text: currentRun.text,
-        properties: currentRun.properties,
-      });
+        fieldType: run.fieldType,
+        id: run.fieldId,
+        text: run.text,
+        properties: run.properties,
+      };
     }
-    currentRun = null;
+    return {
+      type: "text",
+      text: run.text,
+      properties: run.properties,
+    };
   };
 
-  const pushParagraph = () => {
-    flushRun();
-    paragraphs.push({
-      properties: currentParagraphProperties ?? {},
-      runs: runs.length > 0 ? runs : [{ type: "text", text: "", properties: undefined }],
-      endProperties: currentParagraphEndProperties,
-    });
-    runs = [];
+  const flushRun = (state: BuildState): BuildState => {
+    if (!state.currentRun) {
+      return state;
+    }
+    const nextRun = buildRunFromCurrent(state.currentRun);
+    return {
+      ...state,
+      runs: [...state.runs, nextRun],
+      currentRun: null,
+    };
   };
 
-  for (const entry of entries) {
+  const pushParagraph = (state: BuildState): BuildState => {
+    const flushed = flushRun(state);
+    const paragraph = {
+      properties: flushed.currentParagraphProperties ?? {},
+      runs: flushed.runs.length > 0 ? flushed.runs : [{ type: "text", text: "", properties: undefined }],
+      endProperties: flushed.currentParagraphEndProperties,
+    };
+    return {
+      ...flushed,
+      paragraphs: [...flushed.paragraphs, paragraph],
+      runs: [],
+    };
+  };
+
+  const finalState = entries.reduce<BuildState>((state, entry) => {
     if (entry.kind === "paragraph") {
-      pushParagraph();
-      currentParagraphProperties = entry.paragraphProperties ?? currentParagraphProperties ?? {};
-      currentParagraphEndProperties = entry.paragraphEndProperties ?? currentParagraphEndProperties;
-      continue;
+      const nextState = pushParagraph(state);
+      return {
+        ...nextState,
+        currentParagraphProperties: entry.paragraphProperties ?? nextState.currentParagraphProperties ?? {},
+        currentParagraphEndProperties: entry.paragraphEndProperties ?? nextState.currentParagraphEndProperties,
+      };
     }
 
     if (entry.kind === "break") {
-      flushRun();
-      runs.push({
-        type: "break",
-        properties: entry.properties,
-      });
-      continue;
+      const flushed = flushRun(state);
+      return {
+        ...flushed,
+        runs: [
+          ...flushed.runs,
+          {
+            type: "break",
+            properties: entry.properties,
+          },
+        ],
+      };
     }
 
-    if (
-      currentRun
-      && currentRun.kind === entry.kind
-      && currentRun.properties === entry.properties
-      && currentRun.fieldType === entry.fieldType
-      && currentRun.fieldId === entry.fieldId
-    ) {
-      currentRun.text += entry.char;
-    } else {
-      flushRun();
-      currentRun = {
+    const canAppend = state.currentRun
+      && state.currentRun.kind === entry.kind
+      && state.currentRun.properties === entry.properties
+      && state.currentRun.fieldType === entry.fieldType
+      && state.currentRun.fieldId === entry.fieldId;
+
+    if (canAppend && state.currentRun) {
+      return {
+        ...state,
+        currentRun: {
+          ...state.currentRun,
+          text: state.currentRun.text + entry.char,
+        },
+      };
+    }
+
+    const reset = flushRun(state);
+    return {
+      ...reset,
+      currentRun: {
         kind: entry.kind,
         properties: entry.properties,
         fieldType: entry.fieldType,
         fieldId: entry.fieldId,
         text: entry.char,
-      };
-    }
-  }
+      },
+    };
+  }, {
+    paragraphs: [],
+    runs: [],
+    currentRun: null,
+    currentParagraphProperties: initialProperties,
+    currentParagraphEndProperties: initialEndProperties,
+  });
 
-  pushParagraph();
-  return paragraphs;
+  return pushParagraph(finalState).paragraphs;
 }

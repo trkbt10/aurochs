@@ -160,11 +160,11 @@ function applyMovePreview(
   baseBounds: BaseBounds,
   drag: Extract<DragState, { type: "move" }>
 ): BaseBounds {
-  if (!drag.shapeIds.includes(id)) return baseBounds;
+  if (!drag.shapeIds.includes(id)) {return baseBounds;}
   const dx = drag.previewDelta.dx as number;
   const dy = drag.previewDelta.dy as number;
   const initial = drag.initialBounds.get(id);
-  if (!initial) return baseBounds;
+  if (!initial) {return baseBounds;}
   return {
     ...baseBounds,
     x: (initial.x as number) + dx,
@@ -209,14 +209,14 @@ function applyResizePreview(
   baseBounds: BaseBounds,
   drag: Extract<DragState, { type: "resize" }>
 ): BaseBounds {
-  if (!drag.shapeIds.includes(id)) return baseBounds;
+  if (!drag.shapeIds.includes(id)) {return baseBounds;}
 
   const dx = drag.previewDelta.dx as number;
   const dy = drag.previewDelta.dy as number;
   const { handle, combinedBounds: cb, initialBoundsMap, aspectLocked } = drag;
   const initial = initialBoundsMap.get(id);
 
-  if (!initial || !cb) return baseBounds;
+  if (!initial || !cb) {return baseBounds;}
 
   const baseX = cb.x as number;
   const baseY = cb.y as number;
@@ -247,12 +247,12 @@ function applyRotatePreview(
   baseBounds: BaseBounds,
   drag: Extract<DragState, { type: "rotate" }>
 ): BaseBounds {
-  if (!drag.shapeIds.includes(id)) return baseBounds;
+  if (!drag.shapeIds.includes(id)) {return baseBounds;}
 
   const angleDelta = drag.previewAngleDelta as number;
   const initialRotation = drag.initialRotationsMap.get(id);
 
-  if (initialRotation === undefined) return baseBounds;
+  if (initialRotation === undefined) {return baseBounds;}
 
   return {
     ...baseBounds,
@@ -384,7 +384,7 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
   // Register wheel handler
   useEffect(() => {
     const svg = svgRef.current;
-    if (!svg) return;
+    if (!svg) {return;}
 
     svg.addEventListener("wheel", handleWheel, { passive: false });
     return () => svg.removeEventListener("wheel", handleWheel);
@@ -398,10 +398,10 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
     return selection.selectedIds
       .map((id) => {
         const result = findShapeByIdWithParents(slide.shapes, id);
-        if (!result) return undefined;
+        if (!result) {return undefined;}
 
         const absoluteBounds = getAbsoluteBounds(result.shape, result.parentGroups);
-        if (!absoluteBounds) return undefined;
+        if (!absoluteBounds) {return undefined;}
 
         const baseBounds = {
           x: absoluteBounds.x,
@@ -418,7 +418,7 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
   }, [slide.shapes, selection.selectedIds, drag]);
 
   const combinedBounds = useMemo(() => {
-    if (selectedBounds.length <= 1) return undefined;
+    if (selectedBounds.length <= 1) {return undefined;}
     return getCombinedBoundsWithRotation(selectedBounds);
   }, [selectedBounds]);
 
@@ -433,7 +433,7 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
   const clientToSlide = useCallback(
     (clientX: number, clientY: number) => {
       const svg = svgRef.current;
-      if (!svg) return { x: 0, y: 0 };
+      if (!svg) {return { x: 0, y: 0 };}
       const rect = svg.getBoundingClientRect();
       return screenToSlideCoords(clientX, clientY, rect, viewport, rulerThickness);
     },
@@ -467,7 +467,7 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
         return;
       }
       const target = e.target as HTMLElement | null;
-      if (target?.closest("[data-shape-id]")) return;
+      if (target?.closest("[data-shape-id]")) {return;}
 
       if (isTextEditActive(textEdit)) {
         onTextEditCancel();
@@ -492,10 +492,10 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
         return;
       }
 
-      if (e.button !== 0) return;
+      if (e.button !== 0) {return;}
 
       const target = e.target as HTMLElement | null;
-      if (target?.closest("[data-shape-id]")) return;
+      if (target?.closest("[data-shape-id]")) {return;}
 
       if (isTextEditActive(textEdit)) {
         onTextEditCancel();
@@ -505,7 +505,7 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
 
       // Creation drag
       if (creationMode && creationMode.type !== "select") {
-        if (isPathMode(creationMode)) return;
+        if (isPathMode(creationMode)) {return;}
         const coords = clientToSlide(e.clientX, e.clientY);
         const nextDrag: CreationDrag = {
           startX: coords.x,
@@ -566,7 +566,7 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
       const dy = Math.abs(current.currentY - current.startY);
       const dragged = dx > 2 || dy > 2;
 
-      if (!dragged) return;
+      if (!dragged) {return;}
 
       ignoreNextClickRef.current = true;
 
@@ -586,14 +586,14 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
         .map((shape) => shape.id);
 
       if (idsInRect.length === 0) {
-        if (!current.additive) onClearSelection();
+        if (!current.additive) {onClearSelection();}
         return;
       }
 
       if (current.additive) {
         const combinedIds = [...selection.selectedIds];
         for (const id of idsInRect) {
-          if (!combinedIds.includes(id)) combinedIds.push(id);
+          if (!combinedIds.includes(id)) {combinedIds.push(id);}
         }
         onSelectMultiple(combinedIds);
         return;
@@ -611,7 +611,7 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
       const dy = Math.abs(current.currentY - current.startY);
       const dragged = dx > 2 || dy > 2;
 
-      if (!dragged) return;
+      if (!dragged) {return;}
 
       ignoreNextClickRef.current = true;
 
@@ -681,7 +681,7 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
 
   // Register window listeners
   useEffect(() => {
-    if (!marquee && !creationDrag && !isPanning) return;
+    if (!marquee && !creationDrag && !isPanning) {return;}
 
     const handleCancel = () => {
       marqueeRef.current = null;
@@ -705,7 +705,7 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
   // Shape interaction handlers
   const handlePointerDown = useCallback(
     (shapeId: ShapeId, e: React.PointerEvent) => {
-      if (e.button !== 0) return;
+      if (e.button !== 0) {return;}
       e.stopPropagation();
       e.preventDefault();
 
@@ -741,7 +741,7 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
     (shapeId: ShapeId, e: MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      if (!isSelected(shapeId)) onSelect(shapeId, false);
+      if (!isSelected(shapeId)) {onSelect(shapeId, false);}
       setContextMenu({ x: e.clientX, y: e.clientY });
     },
     [isSelected, onSelect]
@@ -751,7 +751,7 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
 
   // Selection/creation rect calculation
   const selectionRect = useMemo(() => {
-    if (marquee === null) return null;
+    if (marquee === null) {return null;}
     return {
       x: Math.min(marquee.startX, marquee.currentX),
       y: Math.min(marquee.startY, marquee.currentY),
@@ -761,7 +761,7 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
   }, [marquee]);
 
   const creationRect = useMemo(() => {
-    if (creationDrag === null) return null;
+    if (creationDrag === null) {return null;}
     return {
       x: Math.min(creationDrag.startX, creationDrag.currentX),
       y: Math.min(creationDrag.startY, creationDrag.currentY),
@@ -936,7 +936,7 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
       {/* Path edit overlay */}
       {pathEdit && isPathEditEditing(pathEdit) && onPathEditCommit && onPathEditCancel && (() => {
         const editingShape = slide.shapes.find((s) => {
-          if (s.type === "contentPart") return false;
+          if (s.type === "contentPart") {return false;}
           return s.nonVisual.id === pathEdit.shapeId;
         });
 
@@ -945,7 +945,7 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
         }
 
         const shapeTransform = editingShape.properties.transform;
-        if (!shapeTransform) return null;
+        if (!shapeTransform) {return null;}
 
         const shapeWidth = shapeTransform.width as number;
         const shapeHeight = shapeTransform.height as number;
@@ -956,7 +956,7 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
           shapeHeight
         );
 
-        if (!drawingPath) return null;
+        if (!drawingPath) {return null;}
 
         return (
           <ViewportOverlay
