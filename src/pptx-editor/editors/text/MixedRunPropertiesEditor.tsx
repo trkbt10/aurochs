@@ -17,6 +17,7 @@ import type { SelectOption } from "../../types";
 import { pt, px } from "../../../pptx/domain/types";
 import type { MixedRunProperties, PropertyExtraction } from "./mixed-properties";
 import { getExtractionValue, isMixed } from "./mixed-properties";
+import { FontFamilySelect } from "./FontFamilySelect";
 
 // =============================================================================
 // Types
@@ -144,8 +145,8 @@ export function MixedRunPropertiesEditor({
 }: MixedRunPropertiesEditorProps) {
   // Font handlers
   const handleFontFamilyChange = useCallback(
-    (newValue: string | number) => {
-      const strValue = String(newValue).trim();
+    (newValue: string | undefined) => {
+      const strValue = newValue?.trim() ?? "";
       onChange({ fontFamily: strValue === "" ? undefined : (strValue as TextTypeface) });
     },
     [onChange]
@@ -257,12 +258,11 @@ export function MixedRunPropertiesEditor({
       {/* Font: Family + Size */}
       <FieldRow>
         <FieldGroup label="Font" inline labelWidth={36} style={{ flex: 1 }}>
-          <Input
-            type="text"
-            value={fontFamilyValue}
+          <FontFamilySelect
+            value={String(fontFamilyValue)}
             onChange={handleFontFamilyChange}
-            placeholder={getPlaceholder(value.fontFamily, "Family")}
             disabled={disabled}
+            placeholder={getPlaceholder(value.fontFamily, "Family")}
           />
         </FieldGroup>
         <FieldGroup label={isMixed(value.fontSize) ? "Size (Mixed)" : "Size"} inline labelWidth={isMixed(value.fontSize) ? 72 : 32} style={{ width: isMixed(value.fontSize) ? "130px" : "90px" }}>

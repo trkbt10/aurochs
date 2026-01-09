@@ -4,17 +4,15 @@
  * Edits paragraph-level formatting including alignment, indentation, spacing, and bullets.
  */
 
-import { useCallback, useState, type CSSProperties } from "react";
-import { Button, Input, Select, Toggle } from "../../ui/primitives";
-import { FieldGroup, FieldRow } from "../../ui/layout";
-import { PixelsEditor } from "../primitives";
-import { LineSpacingEditor } from "./LineSpacingEditor";
+import { useCallback, useMemo, useState, type CSSProperties } from "react";
+import { Button, Select } from "../../ui/primitives";
+import { FieldGroup } from "../../ui/layout";
 import { BulletStyleEditor, createDefaultBulletStyle } from "./BulletStyleEditor";
 import { RunPropertiesEditor, createDefaultRunProperties } from "./RunPropertiesEditor";
-import type { ParagraphProperties, LineSpacing, BulletStyle, RunProperties } from "../../../pptx/domain/text";
-import type { TextAlign } from "../../../pptx/domain/types";
+import type { ParagraphProperties, BulletStyle, RunProperties } from "../../../pptx/domain/text";
 import type { EditorProps, SelectOption } from "../../types";
-import { px } from "../../../pptx/domain/types";
+import { MixedParagraphPropertiesEditor } from "./MixedParagraphPropertiesEditor";
+import { extractMixedParagraphProperties, mergeParagraphProperties } from "./mixed-properties";
 
 // =============================================================================
 // Types
@@ -33,16 +31,6 @@ export type ParagraphPropertiesEditorProps = EditorProps<ParagraphProperties> & 
 // =============================================================================
 // Options
 // =============================================================================
-
-const alignmentOptions: readonly SelectOption<TextAlign>[] = [
-  { value: "left", label: "Left" },
-  { value: "center", label: "Center" },
-  { value: "right", label: "Right" },
-  { value: "justify", label: "Justify" },
-  { value: "justifyLow", label: "Justify Low" },
-  { value: "distributed", label: "Distributed" },
-  { value: "thaiDistributed", label: "Thai Distributed" },
-];
 
 const fontAlignmentOptions: readonly SelectOption<"auto" | "top" | "center" | "base" | "bottom">[] = [
   { value: "auto", label: "Auto" },
@@ -69,10 +57,6 @@ const sectionStyle: CSSProperties = {
   border: "1px solid var(--border-subtle, rgba(255, 255, 255, 0.08))",
 };
 
-const fieldStyle: CSSProperties = {
-  flex: 1,
-};
-
 // =============================================================================
 // Component
 // =============================================================================
@@ -90,6 +74,7 @@ export function ParagraphPropertiesEditor({
   showDefaultRunProperties = false,
   showAdvanced = false,
 }: ParagraphPropertiesEditorProps) {
+  const mixedValue = useMemo(() => extractMixedParagraphProperties([value]), [value]);
   const [bulletExpanded, setBulletExpanded] = useState(!!value.bulletStyle);
   const [defaultRunPropsExpanded, setDefaultRunPropsExpanded] = useState(!!value.defaultRunProperties);
 
@@ -106,34 +91,11 @@ export function ParagraphPropertiesEditor({
     [value, onChange]
   );
 
-  const handleLevelChange = useCallback(
-    (newLevel: string | number) => {
-      const num = typeof newLevel === "number" ? newLevel : parseInt(newLevel, 10);
-      const clamped = Math.max(0, Math.min(8, isNaN(num) ? 0 : num));
-      updateField("level", clamped);
+  const handleCoreChange = useCallback(
+    (update: Partial<ParagraphProperties>) => {
+      onChange(mergeParagraphProperties(value, update));
     },
-    [updateField]
-  );
-
-  const handleLineSpacingChange = useCallback(
-    (spacing: LineSpacing | undefined) => {
-      updateField("lineSpacing", spacing);
-    },
-    [updateField]
-  );
-
-  const handleSpaceBeforeChange = useCallback(
-    (spacing: LineSpacing | undefined) => {
-      updateField("spaceBefore", spacing);
-    },
-    [updateField]
-  );
-
-  const handleSpaceAfterChange = useCallback(
-    (spacing: LineSpacing | undefined) => {
-      updateField("spaceAfter", spacing);
-    },
-    [updateField]
+    [value, onChange]
   );
 
   const handleBulletStyleChange = useCallback(
@@ -171,90 +133,15 @@ export function ParagraphPropertiesEditor({
 
   return (
     <div style={{ ...containerStyle, ...style }} className={className}>
-      {/* Alignment & Level Section */}
       <div style={sectionStyle}>
-        <FieldRow>
-          <FieldGroup label="Alignment" style={fieldStyle}>
-            <Select
-              value={value.alignment ?? "left"}
-              onChange={(v) => updateField("alignment", v as TextAlign)}
-              options={alignmentOptions}
-              disabled={disabled}
-            />
-          </FieldGroup>
-          <FieldGroup label="Level" style={{ minWidth: "70px" }}>
-            <Input
-              type="number"
-              value={value.level ?? 0}
-              onChange={handleLevelChange}
-              min={0}
-              max={8}
-              disabled={disabled}
-            />
-          </FieldGroup>
-        </FieldRow>
-      </div>
-
-      {/* Indentation Section */}
-      <div style={sectionStyle}>
-        <FieldGroup label="Indentation">
-          <FieldRow>
-            <FieldGroup label="Left Margin" style={fieldStyle}>
-              <PixelsEditor
-                value={value.marginLeft ?? px(0)}
-                onChange={(v) => updateField("marginLeft", v === px(0) ? undefined : v)}
-                disabled={disabled}
-              />
-            </FieldGroup>
-            <FieldGroup label="Right Margin" style={fieldStyle}>
-              <PixelsEditor
-                value={value.marginRight ?? px(0)}
-                onChange={(v) => updateField("marginRight", v === px(0) ? undefined : v)}
-                disabled={disabled}
-              />
-            </FieldGroup>
-          </FieldRow>
-          <div style={{ marginTop: "12px" }}>
-            <FieldGroup label="First Line Indent">
-              <PixelsEditor
-                value={value.indent ?? px(0)}
-                onChange={(v) => updateField("indent", v === px(0) ? undefined : v)}
-                disabled={disabled}
-              />
-            </FieldGroup>
-          </div>
-        </FieldGroup>
-      </div>
-
-      {/* Line Spacing Section */}
-      <div style={sectionStyle}>
-        <FieldGroup label="Spacing">
-          <FieldGroup label="Line Spacing">
-            <LineSpacingEditor
-              value={value.lineSpacing}
-              onChange={handleLineSpacingChange}
-              disabled={disabled}
-            />
-          </FieldGroup>
-          <div style={{ marginTop: "12px" }}>
-            <FieldRow>
-              <FieldGroup label="Before Paragraph" style={fieldStyle}>
-                <LineSpacingEditor
-                  value={value.spaceBefore}
-                  onChange={handleSpaceBeforeChange}
-                  disabled={disabled}
-                />
-              </FieldGroup>
-              <FieldGroup label="After Paragraph" style={fieldStyle}>
-                <LineSpacingEditor
-                  value={value.spaceAfter}
-                  onChange={handleSpaceAfterChange}
-                  disabled={disabled}
-                />
-              </FieldGroup>
-            </FieldRow>
-          </div>
-        </FieldGroup>
+        <MixedParagraphPropertiesEditor
+          value={mixedValue}
+          onChange={handleCoreChange}
+          disabled={disabled}
+          showSpacing
+          showIndentation
+          showDirection={showAdvanced}
+        />
       </div>
 
       {/* Bullet Section */}
@@ -287,24 +174,14 @@ export function ParagraphPropertiesEditor({
       {showAdvanced && (
         <div style={sectionStyle}>
           <FieldGroup label="Advanced">
-            <FieldRow>
-              <Toggle
-                checked={value.rtl ?? false}
-                onChange={(v) => updateField("rtl", v || undefined)}
-                label="Right-to-Left"
+            <FieldGroup label="Font Alignment">
+              <Select
+                value={value.fontAlignment ?? "auto"}
+                onChange={(v) => updateField("fontAlignment", v === "auto" ? undefined : v)}
+                options={fontAlignmentOptions}
                 disabled={disabled}
               />
-            </FieldRow>
-            <div style={{ marginTop: "12px" }}>
-              <FieldGroup label="Font Alignment">
-                <Select
-                  value={value.fontAlignment ?? "auto"}
-                  onChange={(v) => updateField("fontAlignment", v === "auto" ? undefined : v)}
-                  options={fontAlignmentOptions}
-                  disabled={disabled}
-                />
-              </FieldGroup>
-            </div>
+            </FieldGroup>
           </FieldGroup>
         </div>
       )}

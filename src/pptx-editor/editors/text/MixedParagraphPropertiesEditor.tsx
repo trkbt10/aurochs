@@ -36,6 +36,8 @@ export type MixedParagraphPropertiesEditorProps = {
   readonly showSpacing?: boolean;
   /** Show indentation section */
   readonly showIndentation?: boolean;
+  /** Show direction controls (RTL) */
+  readonly showDirection?: boolean;
 };
 
 // =============================================================================
@@ -123,6 +125,7 @@ export function MixedParagraphPropertiesEditor({
   style,
   showSpacing = true,
   showIndentation = true,
+  showDirection = true,
 }: MixedParagraphPropertiesEditorProps) {
   // Alignment handler
   const handleAlignmentChange = useCallback(
@@ -296,13 +299,17 @@ export function MixedParagraphPropertiesEditor({
       )}
 
       {/* Direction */}
-      <div style={separatorStyle} />
-      <Toggle
-        checked={isMixed(value.rtl) ? false : rtlValue}
-        onChange={handleRtlChange}
-        label={getLabel(value.rtl, "Right-to-Left")}
-        disabled={disabled}
-      />
+      {showDirection && (
+        <>
+          <div style={separatorStyle} />
+          <Toggle
+            checked={isMixed(value.rtl) ? false : rtlValue}
+            onChange={handleRtlChange}
+            label={getLabel(value.rtl, "Right-to-Left")}
+            disabled={disabled}
+          />
+        </>
+      )}
     </div>
   );
 }

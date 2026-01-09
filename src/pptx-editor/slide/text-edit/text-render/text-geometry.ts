@@ -9,17 +9,11 @@ import type { Pixels, Points } from "../../../../pptx/domain/types";
 import type { LayoutLine, PositionedSpan } from "../../../../pptx/render/text-layout";
 import { PT_TO_PX } from "../../../../pptx/domain/unit-conversion";
 import { measureLayoutSpanTextWidth } from "../../../../pptx/render/react/text-measure/span-measure";
+import { getAscenderRatio } from "../../../../text/font-metrics";
 
 // =============================================================================
 // Constants
 // =============================================================================
-
-/**
- * Ratio of font ascender height to font size.
- * SVG text baseline is at y, text extends upward by this ratio.
- * Standard typographic ascender is typically ~0.8 of em-square.
- */
-export const TEXT_ASCENDER_RATIO = 0.8;
 
 /**
  * Default font size in points when no span is available.
@@ -140,9 +134,10 @@ export type TextVisualBounds = {
 export function getTextVisualBounds(
   baselineY: Pixels,
   fontSizePt: Points,
+  fontFamily?: string,
 ): TextVisualBounds {
   const fontSizePx = fontSizeToPixels(fontSizePt);
-  const ascenderHeight = (fontSizePx as number) * TEXT_ASCENDER_RATIO;
+  const ascenderHeight = (fontSizePx as number) * getAscenderRatio(fontFamily);
 
   return {
     topY: ((baselineY as number) - ascenderHeight) as Pixels,
@@ -156,7 +151,8 @@ export function getTextVisualBounds(
  */
 export function getLineVisualBounds(line: LayoutLine): TextVisualBounds {
   const fontSizePt = getLineFontSize(line);
-  return getTextVisualBounds(line.y, fontSizePt);
+  const fontFamily = line.spans[0]?.fontFamily;
+  return getTextVisualBounds(line.y, fontSizePt, fontFamily);
 }
 
 /**
@@ -166,8 +162,9 @@ export function getVisualBoundsAtOffset(
   line: LayoutLine,
   charOffset: number,
 ): TextVisualBounds {
-  const fontSizePt = getFontSizeAtOffset(line, charOffset);
-  return getTextVisualBounds(line.y, fontSizePt);
+  const span = getSpanAtOffset(line, charOffset);
+  const fontSizePt = span?.fontSize ?? getFontSizeAtOffset(line, charOffset);
+  return getTextVisualBounds(line.y, fontSizePt, span?.fontFamily);
 }
 
 /**
@@ -178,8 +175,67 @@ export function getVisualBoundsForRange(
   startOffset: number,
   endOffset: number,
 ): TextVisualBounds {
-  const fontSizePt = getFontSizeForRange(line, startOffset, endOffset);
-  return getTextVisualBounds(line.y, fontSizePt);
+  const { fontSizePt, fontFamily } = getFontMetricsForRange(line, startOffset, endOffset);
+  return getTextVisualBounds(line.y, fontSizePt, fontFamily);
+}
+
+function getSpanAtOffset(
+  line: LayoutLine,
+  charOffset: number,
+): PositionedSpan | undefined {
+  // eslint-disable-next-line no-restricted-syntax -- early return in loop
+  let remaining = charOffset;
+
+  for (const span of line.spans) {
+    if (remaining <= span.text.length) {
+      return span;
+    }
+    remaining -= span.text.length;
+  }
+
+  return line.spans.length > 0 ? line.spans[line.spans.length - 1] : undefined;
+}
+
+function getFontMetricsForRange(
+  line: LayoutLine,
+  startOffset: number,
+  endOffset: number,
+): { fontSizePt: Points; fontFamily?: string } {
+  if (line.spans.length === 0) {
+    return { fontSizePt: DEFAULT_FONT_SIZE_PT };
+  }
+
+  const rangeStart = Math.min(startOffset, endOffset);
+  const rangeEnd = Math.max(startOffset, endOffset);
+  let maxSize = 0;
+  let maxFamily: string | undefined = undefined;
+  let hasSelection = false;
+  // eslint-disable-next-line no-restricted-syntax -- offset tracking
+  let offset = 0;
+
+  for (const span of line.spans) {
+    const spanStart = offset;
+    const spanEnd = offset + span.text.length;
+    const intersects = spanEnd > rangeStart && spanStart < rangeEnd;
+    if (intersects) {
+      hasSelection = true;
+      const size = span.fontSize as number;
+      if (size > maxSize) {
+        maxSize = size;
+        maxFamily = span.fontFamily;
+      }
+    }
+    offset = spanEnd;
+  }
+
+  if (!hasSelection) {
+    return {
+      fontSizePt: getLineFontSize(line),
+      fontFamily: line.spans[0]?.fontFamily,
+    };
+  }
+
+  return { fontSizePt: maxSize as Points, fontFamily: maxFamily };
 }
 
 // =============================================================================

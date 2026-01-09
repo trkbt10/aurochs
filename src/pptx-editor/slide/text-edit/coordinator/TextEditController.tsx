@@ -194,6 +194,7 @@ export function TextEditController({
   // Cursor state
   const [cursorState, setCursorState] = useState<CursorState>(INITIAL_CURSOR_STATE);
 
+
   const {
     handleChange,
     updateCursorPosition,

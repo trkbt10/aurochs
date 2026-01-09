@@ -211,6 +211,39 @@ export function getParagraphsInSelection(
 }
 
 /**
+ * Get a selection range that covers the run at the cursor position.
+ */
+export function getSelectionForCursor(
+  textBody: TextBody,
+  position: CursorPosition
+): TextSelection | undefined {
+  const paragraph = textBody.paragraphs[position.paragraphIndex];
+  if (!paragraph) {
+    return undefined;
+  }
+
+  let currentOffset = 0;
+
+  for (const [runIndex, run] of paragraph.runs.entries()) {
+    const runLength = getRunLength(run);
+    const runStart = currentOffset;
+    const runEnd = currentOffset + runLength;
+    const isLastRun = runIndex === paragraph.runs.length - 1;
+
+    if (position.charOffset < runEnd || (position.charOffset === runEnd && isLastRun)) {
+      return {
+        start: { paragraphIndex: position.paragraphIndex, charOffset: runStart },
+        end: { paragraphIndex: position.paragraphIndex, charOffset: runEnd },
+      };
+    }
+
+    currentOffset = runEnd;
+  }
+
+  return undefined;
+}
+
+/**
  * Extract properties at a specific cursor position.
  * Returns properties of the run at the cursor.
  */

@@ -142,9 +142,15 @@ function handleApplyRunFormat(
   );
 
   // Stay in text edit mode (don't exit)
+  const nextTextEdit =
+    state.textEdit.type === "active" && state.textEdit.shapeId === action.shapeId
+      ? { ...state.textEdit, initialTextBody: action.textBody }
+      : state.textEdit;
+
   return {
     ...state,
     documentHistory: pushHistory(state.documentHistory, newDoc),
+    textEdit: nextTextEdit,
   };
 }
 
@@ -171,9 +177,15 @@ function handleApplyParagraphFormat(
   );
 
   // Stay in text edit mode (don't exit)
+  const nextTextEdit =
+    state.textEdit.type === "active" && state.textEdit.shapeId === action.shapeId
+      ? { ...state.textEdit, initialTextBody: action.textBody }
+      : state.textEdit;
+
   return {
     ...state,
     documentHistory: pushHistory(state.documentHistory, newDoc),
+    textEdit: nextTextEdit,
   };
 }
 

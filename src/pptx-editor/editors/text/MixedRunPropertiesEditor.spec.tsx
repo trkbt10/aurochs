@@ -109,6 +109,18 @@ describe("MixedRunPropertiesEditor", () => {
 
   beforeEach(() => {
     onChange = vi.fn();
+    const fakeFonts = Object.assign(
+      [{ family: "Arial" }, { family: "Helvetica" }],
+      { ready: Promise.resolve(), status: "loaded" }
+    );
+    try {
+      Object.defineProperty(document, "fonts", {
+        value: fakeFonts,
+        configurable: true,
+      });
+    } catch {
+      // Ignore if document.fonts is non-configurable in this environment
+    }
   });
 
   describe("rendering", () => {
@@ -121,8 +133,8 @@ describe("MixedRunPropertiesEditor", () => {
       );
 
       // Font section
-      const fontInput = screen.getByPlaceholderText("Family");
-      expect(fontInput).toBeTruthy();
+      const fontSelect = screen.getByRole("button", { name: /Arial/i });
+      expect(fontSelect).toBeTruthy();
 
       // Style buttons
       const boldButton = screen.getByRole("button", { name: /bold/i });
@@ -169,8 +181,8 @@ describe("MixedRunPropertiesEditor", () => {
         />
       );
 
-      const fontInput = screen.getByPlaceholderText("Family") as HTMLInputElement;
-      expect(fontInput.value).toBe("Arial");
+      const fontSelect = screen.getByRole("button", { name: /arial/i });
+      expect(fontSelect).toBeTruthy();
     });
 
     it("displays bold button as pressed when bold is true", () => {
@@ -200,27 +212,15 @@ describe("MixedRunPropertiesEditor", () => {
 
   describe("mixed values display", () => {
     it("displays Mixed placeholder for mixed font family", () => {
-      const { container } = render(
+      render(
         <MixedRunPropertiesEditor
           value={createMixedProperties()}
           onChange={onChange}
         />
       );
 
-      // When fontFamily is mixed, the text input should have placeholder="Mixed"
-      // It's the text input (not number) - there should be an input with "Mixed" placeholder
-      const mixedInputs = container.querySelectorAll('input[placeholder="Mixed"]') as NodeListOf<HTMLInputElement>;
-      // Find the text type input with Mixed placeholder
-      let fontInput: HTMLInputElement | null = null;
-      for (const input of mixedInputs) {
-        if (input.type === "text") {
-          fontInput = input;
-          break;
-        }
-      }
-      expect(fontInput).toBeTruthy();
-      expect(fontInput?.value).toBe("");
-      expect(fontInput?.placeholder).toBe("Mixed");
+      const fontSelect = screen.getByRole("button", { name: "Mixed" });
+      expect(fontSelect).toBeTruthy();
     });
 
     it("displays bold button with mixed aria-pressed state", () => {
@@ -268,8 +268,9 @@ describe("MixedRunPropertiesEditor", () => {
         />
       );
 
-      const fontInput = screen.getByPlaceholderText("Family");
-      fireEvent.change(fontInput, { target: { value: "Helvetica" } });
+      const fontSelect = screen.getByRole("button", { name: /arial/i });
+      fireEvent.click(fontSelect);
+      fireEvent.click(screen.getByText("Helvetica"));
 
       expect(onChange).toHaveBeenCalledWith({ fontFamily: "Helvetica" });
     });
@@ -282,8 +283,9 @@ describe("MixedRunPropertiesEditor", () => {
         />
       );
 
-      const fontInput = screen.getByPlaceholderText("Family");
-      fireEvent.change(fontInput, { target: { value: "" } });
+      const fontSelect = screen.getByRole("button", { name: /arial/i });
+      fireEvent.click(fontSelect);
+      fireEvent.click(screen.getByText("Default"));
 
       expect(onChange).toHaveBeenCalledWith({ fontFamily: undefined });
     });
@@ -488,7 +490,7 @@ describe("MixedRunPropertiesEditor", () => {
 
   describe("partially mixed properties", () => {
     it("displays same values correctly alongside mixed values", () => {
-      const { container } = render(
+      render(
         <MixedRunPropertiesEditor
           value={createPartiallyMixedProperties()}
           onChange={onChange}
@@ -504,10 +506,8 @@ describe("MixedRunPropertiesEditor", () => {
       expect(italicButton.getAttribute("aria-pressed")).toBe("mixed");
 
       // Font family should show Mixed placeholder
-      // Find the text input with Mixed placeholder
-      const mixedTextInputs = container.querySelectorAll('input[type="text"][placeholder="Mixed"]') as NodeListOf<HTMLInputElement>;
-      expect(mixedTextInputs.length).toBeGreaterThan(0);
-      expect(mixedTextInputs[0]?.placeholder).toBe("Mixed");
+      const fontSelect = screen.getByRole("button", { name: "Mixed" });
+      expect(fontSelect).toBeTruthy();
     });
   });
 

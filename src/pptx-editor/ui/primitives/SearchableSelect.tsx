@@ -423,7 +423,7 @@ export function SearchableSelect<T extends string = string>({
     const items = listRef.current.querySelectorAll("[data-option-index]");
     const highlighted = items[highlightedIndex];
     if (highlighted instanceof HTMLElement) {
-      highlighted.scrollIntoView({ block: "nearest" });
+      highlighted.scrollIntoView?.({ block: "nearest" });
     }
   }, [isOpen, highlightedIndex]);
 

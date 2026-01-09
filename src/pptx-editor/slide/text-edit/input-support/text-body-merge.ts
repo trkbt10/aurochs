@@ -5,7 +5,7 @@
  * preserving original styling and properties.
  */
 
-import type { TextBody, RunProperties, TextRun } from "../../../../pptx/domain";
+import type { TextBody, RunProperties, TextRun, ParagraphProperties } from "../../../../pptx/domain";
 import { getPlainText } from "./cursor";
 
 type TextCharEntry = {
@@ -14,6 +14,8 @@ type TextCharEntry = {
   readonly properties: RunProperties | undefined;
   readonly fieldType?: string;
   readonly fieldId?: string;
+  readonly paragraphProperties?: ParagraphProperties;
+  readonly paragraphEndProperties?: RunProperties;
 };
 
 /**
@@ -44,16 +46,23 @@ export function mergeTextIntoBody(
 
   const defaultProps = Object.keys(defaultRunProperties).length > 0 ? defaultRunProperties : undefined;
   const originalEntries = flattenTextBody(originalBody);
-  const mergedEntries = applySingleReplaceEdit(originalEntries, newText, defaultProps);
+  const mergedEntries = applySingleReplaceEdit(
+    originalEntries,
+    newText,
+    defaultProps,
+    originalBody.paragraphs[0]?.properties ?? {},
+    originalBody.paragraphs[0]?.endProperties,
+  );
   const paragraphs = buildParagraphsFromEntries(mergedEntries, originalBody);
 
   const fallbackParagraph: TextBody["paragraphs"][number] = {
-    properties: {},
+    properties: originalBody.paragraphs[0]?.properties ?? {},
     runs: [{
       type: "text",
       text: "",
       properties: defaultProps,
     }],
+    endProperties: originalBody.paragraphs[0]?.endProperties,
   };
 
   return {
@@ -82,6 +91,8 @@ function flattenTextBody(textBody: TextBody): TextCharEntry[] {
   const entries: TextCharEntry[] = [];
 
   textBody.paragraphs.forEach((paragraph, paragraphIndex) => {
+    const paraProperties = paragraph.properties;
+    const paraEndProperties = paragraph.endProperties;
     paragraph.runs.forEach((run) => {
       switch (run.type) {
         case "text": {
@@ -90,6 +101,8 @@ function flattenTextBody(textBody: TextBody): TextCharEntry[] {
               char,
               kind: "text",
               properties: run.properties,
+              paragraphProperties: paraProperties,
+              paragraphEndProperties: paraEndProperties,
             });
           }
           break;
@@ -102,6 +115,8 @@ function flattenTextBody(textBody: TextBody): TextCharEntry[] {
               properties: run.properties,
               fieldType: run.fieldType,
               fieldId: run.id,
+              paragraphProperties: paraProperties,
+              paragraphEndProperties: paraEndProperties,
             });
           }
           break;
@@ -111,6 +126,8 @@ function flattenTextBody(textBody: TextBody): TextCharEntry[] {
             char: "\n",
             kind: "break",
             properties: run.properties,
+            paragraphProperties: paraProperties,
+            paragraphEndProperties: paraEndProperties,
           });
           break;
         }
@@ -118,10 +135,13 @@ function flattenTextBody(textBody: TextBody): TextCharEntry[] {
     });
 
     if (paragraphIndex < textBody.paragraphs.length - 1) {
+      const nextParagraph = textBody.paragraphs[paragraphIndex + 1];
       entries.push({
         char: "\n",
         kind: "paragraph",
         properties: undefined,
+        paragraphProperties: nextParagraph?.properties,
+        paragraphEndProperties: nextParagraph?.endProperties,
       });
     }
   });
@@ -132,7 +152,9 @@ function flattenTextBody(textBody: TextBody): TextCharEntry[] {
 function applySingleReplaceEdit(
   originalEntries: TextCharEntry[],
   newText: string,
-  defaultProps: RunProperties | undefined
+  defaultProps: RunProperties | undefined,
+  fallbackParagraphProperties: ParagraphProperties,
+  fallbackParagraphEndProperties?: RunProperties,
 ): TextCharEntry[] {
   const oldText = originalEntries.map((entry) => entry.char).join("");
   const oldLength = oldText.length;
@@ -156,11 +178,30 @@ function applySingleReplaceEdit(
   const prefixEntries = originalEntries.slice(0, prefixLength);
   const suffixEntries = originalEntries.slice(oldLength - suffixLength);
 
-  const insertedEntries: TextCharEntry[] = Array.from(insertedText).map((char) => ({
-    char,
-    kind: "text",
-    properties: defaultProps,
-  }));
+  const paragraphTemplateEntry = prefixLength > 0
+    ? originalEntries[prefixLength - 1]
+    : originalEntries[0];
+  const insertedParagraphProperties = paragraphTemplateEntry?.paragraphProperties ?? fallbackParagraphProperties;
+  const insertedParagraphEndProperties = paragraphTemplateEntry?.paragraphEndProperties ?? fallbackParagraphEndProperties;
+
+  const insertedEntries: TextCharEntry[] = Array.from(insertedText).map((char) => {
+    if (char === "\n") {
+      return {
+        char,
+        kind: "paragraph",
+        properties: undefined,
+        paragraphProperties: insertedParagraphProperties,
+        paragraphEndProperties: insertedParagraphEndProperties,
+      };
+    }
+    return {
+      char,
+      kind: "text",
+      properties: defaultProps,
+      paragraphProperties: insertedParagraphProperties,
+      paragraphEndProperties: insertedParagraphEndProperties,
+    };
+  });
 
   return [...prefixEntries, ...insertedEntries, ...suffixEntries];
 }
@@ -170,6 +211,8 @@ function buildParagraphsFromEntries(
   originalBody: TextBody
 ): TextBody["paragraphs"] {
   const paragraphs: Array<TextBody["paragraphs"][number]> = [];
+  let currentParagraphProperties = originalBody.paragraphs[0]?.properties ?? {};
+  let currentParagraphEndProperties = originalBody.paragraphs[0]?.endProperties;
   // eslint-disable-next-line no-restricted-syntax -- incremental construction
   let runs: TextRun[] = [];
   // eslint-disable-next-line no-restricted-syntax -- incremental construction
@@ -205,12 +248,10 @@ function buildParagraphsFromEntries(
 
   const pushParagraph = () => {
     flushRun();
-    const index = paragraphs.length;
-    const originalParagraph = originalBody.paragraphs[index];
     paragraphs.push({
-      properties: originalParagraph?.properties ?? {},
+      properties: currentParagraphProperties ?? {},
       runs: runs.length > 0 ? runs : [{ type: "text", text: "", properties: undefined }],
-      endProperties: originalParagraph?.endProperties,
+      endProperties: currentParagraphEndProperties,
     });
     runs = [];
   };
@@ -218,7 +259,16 @@ function buildParagraphsFromEntries(
   for (const entry of entries) {
     if (entry.kind === "paragraph") {
       pushParagraph();
+      currentParagraphProperties = entry.paragraphProperties ?? currentParagraphProperties ?? {};
+      currentParagraphEndProperties = entry.paragraphEndProperties ?? currentParagraphEndProperties;
       continue;
+    }
+
+    if (entry.paragraphProperties && currentParagraphProperties === undefined) {
+      currentParagraphProperties = entry.paragraphProperties;
+    }
+    if (entry.paragraphEndProperties && currentParagraphEndProperties === undefined) {
+      currentParagraphEndProperties = entry.paragraphEndProperties;
     }
 
     if (entry.kind === "break") {

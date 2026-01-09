@@ -47,7 +47,7 @@ function renderSpan(
   key: number,
 ): ReactNode {
   const fontSizePx = fontSizeToPixels(span.fontSize);
-  const bounds = getTextVisualBounds(lineY as Pixels, span.fontSize);
+  const bounds = getTextVisualBounds(lineY as Pixels, span.fontSize, span.fontFamily);
   const elements: ReactNode[] = [];
 
   // Handle highlight background
@@ -186,7 +186,7 @@ function renderBullet(
   key: number,
 ): ReactNode {
   const bulletFontSizePx = fontSizeToPixels(bullet.fontSize);
-  const bulletBounds = getTextVisualBounds(bulletY as Pixels, bullet.fontSize);
+  const bulletBounds = getTextVisualBounds(bulletY as Pixels, bullet.fontSize, bullet.fontFamily);
 
   if (bullet.imageUrl !== undefined) {
     const imageSize = bulletFontSizePx as number;

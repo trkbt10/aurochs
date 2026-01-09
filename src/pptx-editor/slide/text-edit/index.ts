@@ -58,7 +58,6 @@ export type {
 // Text geometry utilities (shared between cursor and rendering)
 export {
   type TextVisualBounds,
-  TEXT_ASCENDER_RATIO,
   DEFAULT_FONT_SIZE_PT,
   fontSizeToPixels,
   getLineFontSize,

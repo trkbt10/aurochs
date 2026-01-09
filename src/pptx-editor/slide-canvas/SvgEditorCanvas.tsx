@@ -42,7 +42,12 @@ import type { ShapeBounds as CreationBounds } from "../shape/creation-bounds";
 import { SlideContextMenu, type ContextMenuActions } from "../slide/context-menu/SlideContextMenu";
 import { SelectionBox } from "../selection/SelectionBox";
 import { SlideRenderer } from "../../pptx/render/react";
-import { TextEditController, isTextEditActive, type TextEditState } from "../slide/text-edit";
+import {
+  TextEditController,
+  isTextEditActive,
+  type TextEditState,
+  type SelectionChangeEvent,
+} from "../slide/text-edit";
 import { colorTokens } from "../ui/design-tokens";
 import { SvgRulers } from "./SvgRulers";
 import { ViewportOverlay } from "./ViewportOverlay";
@@ -83,6 +88,7 @@ export type SvgEditorCanvasProps = {
   readonly onCreateFromDrag?: (bounds: CreationBounds) => void;
   readonly onTextEditComplete: (text: string) => void;
   readonly onTextEditCancel: () => void;
+  readonly onTextEditSelectionChange?: (event: SelectionChangeEvent) => void;
   readonly onPathCommit?: (path: DrawingPath) => void;
   readonly onPathCancel?: () => void;
   readonly pathEdit?: PathEditState;
@@ -131,6 +137,23 @@ type CreationDrag = {
 // =============================================================================
 // Drag Preview Helpers
 // =============================================================================
+
+function isPointInBounds(
+  x: number,
+  y: number,
+  bounds: { x: number; y: number; width: number; height: number; rotation: number },
+): boolean {
+  const centerX = bounds.x + bounds.width / 2;
+  const centerY = bounds.y + bounds.height / 2;
+  const dx = x - centerX;
+  const dy = y - centerY;
+  const angle = (-bounds.rotation * Math.PI) / 180;
+  const rotatedX = dx * Math.cos(angle) - dy * Math.sin(angle);
+  const rotatedY = dx * Math.sin(angle) + dy * Math.cos(angle);
+  const halfWidth = bounds.width / 2;
+  const halfHeight = bounds.height / 2;
+  return Math.abs(rotatedX) <= halfWidth && Math.abs(rotatedY) <= halfHeight;
+}
 
 function applyMovePreview(
   id: ShapeId,
@@ -295,6 +318,7 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
     onCreateFromDrag,
     onTextEditComplete,
     onTextEditCancel,
+    onTextEditSelectionChange,
     onPathCommit,
     onPathCancel,
     pathEdit,
@@ -445,6 +469,11 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
       const target = e.target as HTMLElement | null;
       if (target?.closest("[data-shape-id]")) return;
 
+      if (isTextEditActive(textEdit)) {
+        onTextEditCancel();
+        return;
+      }
+
       if (creationMode && creationMode.type !== "select" && onCreate) {
         const coords = clientToSlide(e.clientX, e.clientY);
         onCreate(coords.x, coords.y);
@@ -452,7 +481,7 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
       }
       onClearSelection();
     },
-    [onClearSelection, creationMode, onCreate, clientToSlide]
+    [onClearSelection, creationMode, onCreate, clientToSlide, textEdit, onTextEditCancel]
   );
 
   const handleSvgPointerDown = useCallback(
@@ -467,6 +496,12 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
 
       const target = e.target as HTMLElement | null;
       if (target?.closest("[data-shape-id]")) return;
+
+      if (isTextEditActive(textEdit)) {
+        onTextEditCancel();
+        e.preventDefault();
+        return;
+      }
 
       // Creation drag
       if (creationMode && creationMode.type !== "select") {
@@ -500,7 +535,28 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
       ignoreNextClickRef.current = false;
       e.preventDefault();
     },
-    [creationMode, clientToSlide, handlePanStart]
+    [creationMode, clientToSlide, handlePanStart, textEdit, onTextEditCancel]
+  );
+
+  const handleTextEditOverlayPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (!isTextEditActive(textEdit)) {
+        return;
+      }
+      const coords = clientToSlide(e.clientX, e.clientY);
+      const bounds = textEdit.bounds;
+      const isInside = isPointInBounds(coords.x, coords.y, {
+        x: bounds.x as number,
+        y: bounds.y as number,
+        width: bounds.width as number,
+        height: bounds.height as number,
+        rotation: bounds.rotation,
+      });
+      if (!isInside) {
+        onTextEditCancel();
+      }
+    },
+    [clientToSlide, onTextEditCancel, textEdit],
   );
 
   // Marquee finalization
@@ -795,14 +851,14 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
                   height={bounds.height}
                   rotation={bounds.rotation}
                   variant="primary"
-                  showResizeHandles={!isMultiSelection}
-                  showRotateHandle={!isMultiSelection}
+                  showResizeHandles={!isTextEditActive(textEdit) && !isMultiSelection}
+                  showRotateHandle={!isTextEditActive(textEdit) && !isMultiSelection}
                   onResizeStart={handleResizeStart}
                   onRotateStart={handleRotateStart}
                 />
               ))}
 
-              {isMultiSelection && combinedBounds && (
+              {!isTextEditActive(textEdit) && isMultiSelection && combinedBounds && (
                 <SelectionBox
                   x={combinedBounds.x}
                   y={combinedBounds.y}
@@ -933,16 +989,24 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
           slideHeight={heightNum}
           rulerThickness={rulerThickness}
         >
-          <TextEditController
-            bounds={textEdit.bounds}
-            textBody={textEdit.initialTextBody}
-            colorContext={colorContext}
-            fontScheme={fontScheme}
-            slideWidth={widthNum}
-            slideHeight={heightNum}
-            onComplete={onTextEditComplete}
-            onCancel={onTextEditCancel}
-          />
+          <div
+            style={{ position: "absolute", inset: 0 }}
+            onPointerDown={handleTextEditOverlayPointerDown}
+          >
+            <TextEditController
+              bounds={textEdit.bounds}
+              textBody={textEdit.initialTextBody}
+              colorContext={colorContext}
+              fontScheme={fontScheme}
+              slideWidth={widthNum}
+              slideHeight={heightNum}
+              onComplete={onTextEditComplete}
+              onCancel={onTextEditCancel}
+              onSelectionChange={onTextEditSelectionChange}
+              showSelectionOverlay={true}
+              showFrameOutline={false}
+            />
+          </div>
         </ViewportOverlay>
       )}
 

@@ -148,6 +148,29 @@ export function TextEditorTestPage({ onBack }: TextEditorTestPageProps) {
             createTextRun("."),
           ],
         },
+        {
+          ...firstParagraph,
+          runs: [
+            createTextRun("Text effects: ", { fontFamily: "Inter", fontSize: pt(16) }),
+            createTextRun("Glow + Shadow", {
+              fontFamily: "Inter",
+              fontSize: pt(20),
+              effects: {
+                glow: {
+                  color: createDefaultColor("00BFFF"),
+                  radius: px(6),
+                },
+                shadow: {
+                  type: "outer",
+                  color: createDefaultColor("000000"),
+                  blurRadius: px(6),
+                  distance: px(6),
+                  direction: deg(45),
+                },
+              },
+            }),
+          ],
+        },
       ],
     };
   }, []);
