@@ -8,6 +8,7 @@ import {
   createMinimalFakePresentationFile,
   MINIMAL_CONTENT_TYPES,
   MINIMAL_PRESENTATION,
+  MINIMAL_PRESENTATION_RELS,
   MINIMAL_SLIDE,
   MINIMAL_SLIDE_RELS,
   MINIMAL_LAYOUT,
@@ -45,6 +46,7 @@ describe("openPresentation", () => {
       const file = createFakePresentationFile({
         "[Content_Types].xml": MINIMAL_CONTENT_TYPES,
         "ppt/presentation.xml": MINIMAL_PRESENTATION,
+        "ppt/_rels/presentation.xml.rels": MINIMAL_PRESENTATION_RELS,
         "ppt/slides/slide1.xml": MINIMAL_SLIDE,
         "ppt/slides/slide2.xml": MINIMAL_SLIDE,
         "ppt/slides/_rels/slide1.xml.rels": MINIMAL_SLIDE_RELS,
@@ -70,6 +72,7 @@ describe("openPresentation", () => {
       const file = createFakePresentationFile({
         "[Content_Types].xml": MINIMAL_CONTENT_TYPES,
         "ppt/presentation.xml": MINIMAL_PRESENTATION,
+        "ppt/_rels/presentation.xml.rels": MINIMAL_PRESENTATION_RELS,
         "ppt/slides/slide1.xml": MINIMAL_SLIDE,
         "ppt/slides/slide2.xml": MINIMAL_SLIDE,
         "ppt/slides/_rels/slide1.xml.rels": MINIMAL_SLIDE_RELS,
@@ -211,13 +214,14 @@ describe("openPresentation", () => {
       const file = createFakePresentationFile({
         "[Content_Types].xml": MINIMAL_CONTENT_TYPES,
         "ppt/presentation.xml": MINIMAL_PRESENTATION,
+        "ppt/_rels/presentation.xml.rels": MINIMAL_PRESENTATION_RELS,
         // Missing slide files
       });
       const presentation = openPresentation(file);
       expect(() => presentation.getSlide(1)).toThrow("Failed to read slide");
     });
 
-    it("should use default size when presentation.xml is missing", () => {
+    it("should throw when presentation.xml is missing", () => {
       const file = createFakePresentationFile({
         "[Content_Types].xml": MINIMAL_CONTENT_TYPES,
         "ppt/slides/slide1.xml": MINIMAL_SLIDE,
@@ -230,9 +234,7 @@ describe("openPresentation", () => {
         "ppt/slideMasters/_rels/slideMaster1.xml.rels": MINIMAL_MASTER_RELS,
         "ppt/theme/theme1.xml": MINIMAL_THEME,
       });
-      const presentation = openPresentation(file);
-      expect(presentation.size.width).toBe(960);
-      expect(presentation.size.height).toBe(540);
+      expect(() => openPresentation(file)).toThrow("Failed to read ppt/presentation.xml");
     });
   });
 

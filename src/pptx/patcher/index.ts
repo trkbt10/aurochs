@@ -23,3 +23,18 @@ export * from "./slide";
 
 // Shape - Shape addition/serialization helpers
 export * from "./shape";
+
+// Resources - media/relationships/content-types helpers (Phase 7)
+export * from "./resources/media-manager";
+export * from "./resources/relationship-manager";
+export * from "./resources/content-types-manager";
+
+// Phase 9: Master / Layout / Theme
+export * from "./master";
+export * from "./theme";
+
+// Presentation - slide structure management
+export * from "./presentation";
+
+// Parts - shared XML part updaters
+export * from "./parts";

@@ -141,21 +141,7 @@ function pxToEmuString(valuePx: number): string {
 function getShapeById(doc: XmlDocument, id: string): XmlElement | null {
   const spTree = getSpTree(doc);
   if (!spTree) return null;
-
-  for (const child of spTree.children) {
-    if (!isXmlElement(child)) continue;
-    if (child.name !== "p:sp") continue;
-
-    const nvSpPr = getChild(child, "p:nvSpPr");
-    if (!nvSpPr) continue;
-
-    const cNvPr = getChild(nvSpPr, "p:cNvPr");
-    if (cNvPr && cNvPr.attrs.id === id) {
-      return child;
-    }
-  }
-
-  return null;
+  return findShapeById(spTree, id);
 }
 
 function getXfrmFromShape(shape: XmlElement): XmlElement | null {
@@ -733,6 +719,97 @@ describe("patchSlideXml", () => {
     });
   });
 });
+
+describe("patchSlideXml (blipFill)", () => {
+  function createPicElementWithEmbed(id: string, rId: string): XmlElement {
+    return createElement("p:pic", {}, [
+      createElement("p:nvPicPr", {}, [
+        createElement("p:cNvPr", { id, name: `Picture ${id}` }),
+        createElement("p:cNvPicPr"),
+        createElement("p:nvPr"),
+      ]),
+      createElement("p:blipFill", {}, [
+        createElement("a:blip", { "r:embed": rId }),
+        createElement("a:stretch", {}, [createElement("a:fillRect")]),
+      ]),
+      createElement("p:spPr", {}, [
+        createElement("a:xfrm", {}, [
+          createElement("a:off", { x: "0", y: "0" }),
+          createElement("a:ext", { cx: "100", cy: "100" }),
+        ]),
+      ]),
+    ]);
+  }
+
+  function createPicElementWithLink(id: string, rId: string): XmlElement {
+    return createElement("p:pic", {}, [
+      createElement("p:nvPicPr", {}, [
+        createElement("p:cNvPr", { id, name: `Picture ${id}` }),
+        createElement("p:cNvPicPr"),
+        createElement("p:nvPr"),
+      ]),
+      createElement("p:blipFill", {}, [
+        createElement("a:blip", { "r:link": rId }),
+        createElement("a:stretch", {}, [createElement("a:fillRect")]),
+      ]),
+      createElement("p:spPr", {}, [
+        createElement("a:xfrm", {}, [
+          createElement("a:off", { x: "0", y: "0" }),
+          createElement("a:ext", { cx: "100", cy: "100" }),
+        ]),
+      ]),
+    ]);
+  }
+
+  it("updates a:blip r:embed in p:pic/p:blipFill", () => {
+    const doc = createSlideDocument([createPicElementWithEmbed("10", "rId1")]);
+    const changes: ShapeChange[] = [
+      {
+        type: "modified",
+        shapeId: "10",
+        shapeType: "pic",
+        changes: [{ property: "blipFill", oldValue: { resourceId: "rId1" }, newValue: { resourceId: "rId9" } }],
+      },
+    ];
+
+    const result = patchSlideXml(doc, changes);
+    const pic = getShapeById(result, "10")!;
+    const blip = getChild(getChild(pic, "p:blipFill")!, "a:blip")!;
+    expect(blip.attrs["r:embed"]).toBe("rId9");
+  });
+
+  it("updates a:blip r:link when embed is not present", () => {
+    const doc = createSlideDocument([createPicElementWithLink("11", "rId2")]);
+    const changes: ShapeChange[] = [
+      {
+        type: "modified",
+        shapeId: "11",
+        shapeType: "pic",
+        changes: [{ property: "blipFill", oldValue: { resourceId: "rId2" }, newValue: { resourceId: "rId8" } }],
+      },
+    ];
+
+    const result = patchSlideXml(doc, changes);
+    const pic = getShapeById(result, "11")!;
+    const blip = getChild(getChild(pic, "p:blipFill")!, "a:blip")!;
+    expect(blip.attrs["r:link"]).toBe("rId8");
+  });
+
+  it("throws when new blipFill uses data: resourceId", () => {
+    const doc = createSlideDocument([createPicElementWithEmbed("12", "rId1")]);
+    const changes: ShapeChange[] = [
+      {
+        type: "modified",
+        shapeId: "12",
+        shapeType: "pic",
+        changes: [{ property: "blipFill", oldValue: { resourceId: "rId1" }, newValue: { resourceId: "data:image/png;base64,AA==" } }],
+      },
+    ];
+
+    expect(() => patchSlideXml(doc, changes)).toThrow("applyBlipFillChange: data: resourceId requires Phase 7 media embedding");
+  });
+});
+
 
 // =============================================================================
 // Utility Function Tests

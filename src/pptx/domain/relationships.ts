@@ -23,6 +23,8 @@ import type { ResourceMap } from "./opc";
  * @see ECMA-376 Part 1, Section 13 (PresentationML)
  */
 export const RELATIONSHIP_TYPES = {
+  /** Slide relationship (presentation.xml -> slideN.xml) */
+  SLIDE: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide",
   /** Slide layout relationship */
   SLIDE_LAYOUT: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout",
   /** Slide master relationship */

@@ -192,6 +192,8 @@ describe("shape-serializer", () => {
     const blipFill = getChild(xml, "p:blipFill");
     const blip = blipFill ? getChild(blipFill, "a:blip") : undefined;
     expect(blip?.attrs["r:embed"]).toBe("rId2");
+    const stretch = blipFill ? getChild(blipFill, "a:stretch") : undefined;
+    expect(getChild(stretch!, "a:fillRect")).toBeDefined();
   });
 
   it("serializes a connection shape", () => {

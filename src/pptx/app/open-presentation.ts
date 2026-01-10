@@ -6,11 +6,10 @@
 import type { Presentation, Slide, SlideInfo, ListOptions, PresentationOptions } from "./types";
 import type { SlideFileInfo, ZipFile } from "../opc";
 import type { SlideSize } from "../domain";
-import { getByPath, type XmlElement } from "../../xml";
+import { getBasename, getByPath, getChildren, type XmlDocument, type XmlElement } from "../../xml";
 import type { SlideData } from "../parser/slide/data-types";
 import type { RenderOptions } from "../render/render-options";
 import type { TableStyleList } from "../parser/table/style-parser";
-import { parseContentTypes, buildSlideFileInfoList } from "../opc";
 import { parseSlideSizeFromXml, parseDefaultTextStyle, parseAppVersion } from "./presentation-info";
 import { parseTableStyleList } from "../parser/table/style-parser";
 import { createZipAdapter } from "../domain/zip-adapter";
@@ -18,6 +17,7 @@ import { readXml, getRelationships, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS } from 
 import { createSlide } from "./slide-builder";
 import { loadLayoutData, loadMasterData, loadThemeData, loadDiagramData } from "../parser/slide/loader";
 import type { PresentationFile } from "../domain";
+import { RELATIONSHIP_TYPES } from "../domain/relationships";
 
 /**
  * Parse a slide from file
@@ -75,6 +75,52 @@ function parseSlide(
   return createSlide(data, zipAdapter, defaultTextStyle, tableStyles, slideSize, renderOptions);
 }
 
+function buildSlideFileInfoListFromPresentation(
+  file: PresentationFile,
+  presentationXml: XmlDocument,
+): SlideFileInfo[] {
+  const sldIdLst = getByPath(presentationXml, ["p:presentation", "p:sldIdLst"]);
+  if (!sldIdLst) {
+    throw new Error("ppt/presentation.xml is missing p:sldIdLst (required for slide order)");
+  }
+
+  const sldIds = getChildren(sldIdLst, "p:sldId");
+  if (sldIds.length === 0) {
+    throw new Error("ppt/presentation.xml: p:sldIdLst has no p:sldId entries");
+  }
+
+  const presentationRels = getRelationships(
+    file,
+    "ppt/presentation.xml",
+    DEFAULT_MARKUP_COMPATIBILITY_OPTIONS,
+  );
+
+  return sldIds.map((sldId, index) => {
+    const rId = sldId.attrs["r:id"];
+    if (!rId) {
+      throw new Error("ppt/presentation.xml: p:sldId is missing r:id");
+    }
+
+    const target = presentationRels.getTarget(rId);
+    if (!target) {
+      throw new Error(`ppt/_rels/presentation.xml.rels: missing Target for ${rId}`);
+    }
+
+    const type = presentationRels.getType(rId);
+    if (type !== RELATIONSHIP_TYPES.SLIDE) {
+      throw new Error(
+        `ppt/_rels/presentation.xml.rels: ${rId} is not a slide relationship (Type=${type ?? "undefined"})`,
+      );
+    }
+
+    return {
+      path: target,
+      number: index + 1,
+      filename: getBasename(target),
+    };
+  });
+}
+
 /**
  * Create a Presentation instance from a PresentationFile
  * @param file - A PresentationFile implementation (e.g., from fflate, pako, or filesystem)
@@ -111,15 +157,10 @@ export function openPresentation(file: PresentationFile, options?: PresentationO
   const renderOptions = options?.renderOptions;
   const zipAdapter = createZipAdapter(file);
 
-  // Parse content types to get slide list
-  const contentTypesXml = readXml(file, "[Content_Types].xml", 16, false, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS);
-  if (contentTypesXml === null) {
+  // Require content types (OPC requirement)
+  if (readXml(file, "[Content_Types].xml", 16, false, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS) === null) {
     throw new Error("Failed to read [Content_Types].xml");
   }
-  const contentTypes = parseContentTypes(contentTypesXml);
-
-  // Build slide file info
-  const slideFiles = buildSlideFileInfoList(contentTypes.slides);
 
   // Read app version from app.xml
   const appXml = readXml(file, "docProps/app.xml", 16, false, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS);
@@ -127,8 +168,14 @@ export function openPresentation(file: PresentationFile, options?: PresentationO
 
   // Read presentation.xml for slide size and default text style
   const presentationXml = readXml(file, "ppt/presentation.xml", 16, false, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS);
+  if (presentationXml === null) {
+    throw new Error("Failed to read ppt/presentation.xml");
+  }
   const size = parseSlideSizeFromXml(presentationXml);
   const defaultTextStyle = parseDefaultTextStyle(presentationXml);
+
+  // ECMA-376: slide order is defined by p:sldIdLst in presentation.xml (not by file naming/content types)
+  const slideFiles = buildSlideFileInfoListFromPresentation(file, presentationXml);
 
   // Read table styles from ppt/tableStyles.xml
   const tableStylesXml = readXml(file, "ppt/tableStyles.xml", 16, false, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS);

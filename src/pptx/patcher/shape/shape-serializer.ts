@@ -327,7 +327,7 @@ function serializePictureBlipFill(blipFill: PicShape["blipFill"]): XmlElement {
       }),
     );
   } else if (blipFill.stretch) {
-    children.push(createElement("a:stretch"));
+    children.push(createElement("a:stretch", {}, [createElement("a:fillRect")]));
   } else {
     throw new Error("serializePictureBlipFill: blipFill requires tile or stretch");
   }

@@ -58,6 +58,7 @@ export const CONTENT_TYPES = {
  * Relationship type constants
  */
 export const RELATIONSHIP_TYPES = {
+  SLIDE: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide",
   SLIDE_LAYOUT: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout",
   SLIDE_MASTER: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster",
   THEME: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme",

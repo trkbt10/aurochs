@@ -53,7 +53,12 @@ export const MINIMAL_CONTENT_TYPES = `<?xml version="1.0" encoding="UTF-8" stand
  * Minimal presentation XML for testing
  */
 export const MINIMAL_PRESENTATION = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
+<p:presentation xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"
+  xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <p:sldIdLst>
+    <p:sldId id="256" r:id="rId1"/>
+    <p:sldId id="257" r:id="rId2"/>
+  </p:sldIdLst>
   <p:sldSz cx="9144000" cy="6858000"/>
   <p:defaultTextStyle>
     <a:defPPr xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">
@@ -61,6 +66,15 @@ export const MINIMAL_PRESENTATION = `<?xml version="1.0" encoding="UTF-8" standa
     </a:defPPr>
   </p:defaultTextStyle>
 </p:presentation>`;
+
+/**
+ * Minimal presentation relationships XML for testing
+ */
+export const MINIMAL_PRESENTATION_RELS = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide2.xml"/>
+</Relationships>`;
 
 /**
  * Minimal slide XML for testing
@@ -177,6 +191,7 @@ export function createMinimalFakePresentationFile(): PresentationFile {
   return createFakePresentationFile({
     "[Content_Types].xml": MINIMAL_CONTENT_TYPES,
     "ppt/presentation.xml": MINIMAL_PRESENTATION,
+    "ppt/_rels/presentation.xml.rels": MINIMAL_PRESENTATION_RELS,
     "ppt/slides/slide1.xml": MINIMAL_SLIDE,
     "ppt/slides/slide2.xml": MINIMAL_SLIDE,
     "ppt/slides/_rels/slide1.xml.rels": MINIMAL_SLIDE_RELS,

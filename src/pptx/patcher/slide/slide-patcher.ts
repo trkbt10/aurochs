@@ -522,11 +522,60 @@ function applyGeometryChange(
 
 function applyBlipFillChange(
   shape: XmlElement,
-  _change: PropertyChange & { property: "blipFill" },
+  change: PropertyChange & { property: "blipFill" },
 ): XmlElement {
-  void _change;
-  // TODO: Implement in Phase 7
-  return shape;
+  if (shape.name !== "p:pic") {
+    return shape;
+  }
+
+  const newValue = change.newValue;
+  if (!isBlipFillChangeValue(newValue)) {
+    return shape;
+  }
+
+  if (newValue.resourceId.startsWith("data:")) {
+    throw new Error("applyBlipFillChange: data: resourceId requires Phase 7 media embedding");
+  }
+
+  return mapXmlElement(shape, (el) => {
+    if (el.name !== "a:blip") {
+      return el;
+    }
+
+    const hasEmbed = el.attrs["r:embed"] !== undefined;
+    const hasLink = el.attrs["r:link"] !== undefined;
+
+    if (hasEmbed) {
+      return { ...el, attrs: { ...el.attrs, "r:embed": newValue.resourceId } };
+    }
+    if (hasLink) {
+      return { ...el, attrs: { ...el.attrs, "r:link": newValue.resourceId } };
+    }
+
+    return { ...el, attrs: { ...el.attrs, "r:embed": newValue.resourceId } };
+  });
+}
+
+type BlipFillChangeValue = { readonly resourceId: string };
+
+function isBlipFillChangeValue(value: unknown): value is BlipFillChangeValue {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  if (!("resourceId" in value)) {
+    return false;
+  }
+  return typeof (value as { resourceId?: unknown }).resourceId === "string";
+}
+
+function mapXmlElement(el: XmlElement, mapper: (el: XmlElement) => XmlElement): XmlElement {
+  const mappedChildren = el.children.map((child) => {
+    if (!isXmlElement(child)) {
+      return child;
+    }
+    return mapXmlElement(child, mapper);
+  });
+  return mapper({ ...el, children: mappedChildren });
 }
 
 // =============================================================================
