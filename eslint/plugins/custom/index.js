@@ -8,6 +8,7 @@ import noEmptyJsdoc from "./rules/no-empty-jsdoc.js";
 import noAsOutsideGuard from "./rules/no-as-outside-guard.js";
 import noNestedTry from "./rules/no-nested-try.js";
 import noIifeInAnonymous from "./rules/no-iife-in-anonymous.js";
+import noDeepReexport from "./rules/no-deep-reexport.js";
 
 export default {
   rules: {
@@ -18,5 +19,6 @@ export default {
     "no-as-outside-guard": noAsOutsideGuard,
     "no-nested-try": noNestedTry,
     "no-iife-in-anonymous": noIifeInAnonymous,
+    "no-deep-reexport": noDeepReexport,
   },
 };
