@@ -1,296 +1,441 @@
 /**
  * @file Chart-Workbook Synchronization
  *
- * Unified handler for synchronizing chart data with embedded workbooks.
- * Updates both chart caches and embedded Excel workbooks in the correct order.
+ * Provides functions for synchronizing PPTX chart data with embedded Excel workbooks.
+ * This ensures that when chart data is updated, both the chart cache and the
+ * embedded workbook remain consistent.
  *
- * Update Order (per Phase 10 report):
- * 1. Workbook (xlsx) - the source of truth
- * 2. Chart formulas (c:f) - to match workbook ranges
- * 3. Chart caches (c:*Cache) - for display/compatibility
+ * PPTX charts have two data sources:
+ * 1. chart.xml cache (c:numCache, c:strCache) - for display
+ * 2. externalData (embeddings/*.xlsx) - for editing in PowerPoint
+ *
+ * When updating chart data, both must be synchronized.
  *
  * @see ECMA-376 Part 1, Section 21.2 (DrawingML - Charts)
  * @see docs/reports/phase-10-chart-externalData-workbook-sync.md
  */
 
-import type { XmlDocument, XmlElement, XmlNode } from "../../../xml";
-import { getByPath, getChild, getChildren, isXmlElement, getTextContent } from "../../../xml";
-import { createElement, replaceChildByName, setChildren, updateDocumentRoot } from "../core/xml-mutator";
-import type { PresentationFile } from "../../domain/opc";
-import { patchChartData, type ChartData } from "./chart-data-patcher";
-import {
-  resolveChartExternalData,
-  parseFormulaSheetName,
-  composeFormula,
-  hasExternalData,
-  type ChartExternalDataReference,
-} from "./chart-external-data-resolver";
-import { parseRange, formatRange, updateRangeForItemCount } from "./a1-range";
-import { parseWorkbook, type Workbook } from "../../../xlsx/workbook-parser";
-import { updateChartDataInWorkbook } from "../../../xlsx/workbook-patcher";
+import type { XlsxWorkbook, XlsxWorksheet, XlsxRow } from "../../../xlsx/domain/workbook";
+import type { Cell, CellValue } from "../../../xlsx/domain/cell/types";
+import { colIdx, rowIdx } from "../../../xlsx/domain/types";
+import { parseXml, getByPath, getChildren, getAttr } from "../../../xml";
 
 // =============================================================================
 // Types
 // =============================================================================
 
 /**
- * Result of chart-workbook synchronization
+ * Chart data structure for synchronization.
+ *
+ * This matches the standard chart data layout:
+ * - Categories in column A (A2:A[n])
+ * - Series names in row 1 (B1, C1, ...)
+ * - Series values in data cells (B2:B[n], C2:C[n], ...)
  */
-export type ChartSyncResult = {
-  /** Updated chart XML document */
-  readonly chartXml: XmlDocument;
-  /** Updated workbook buffer (if external data exists) */
-  readonly workbookBuffer: ArrayBuffer | undefined;
-  /** Path to the workbook in the PPTX (if external data exists) */
-  readonly workbookPath: string | undefined;
-  /** Whether workbook was updated */
-  readonly workbookUpdated: boolean;
-};
-
-/**
- * Options for chart-workbook sync
- */
-export type ChartSyncOptions = {
-  /** Whether to update workbook (default: true if external data exists) */
-  readonly updateWorkbook?: boolean;
-  /** Whether to update chart formulas (default: true) */
-  readonly updateFormulas?: boolean;
-  /** Sheet name in workbook (default: auto-detect from existing formulas) */
-  readonly sheetName?: string;
+export type ChartDataUpdate = {
+  /** Category labels (X-axis values) */
+  readonly categories: readonly string[];
+  /** Data series with names and values */
+  readonly series: readonly {
+    /** Series name (legend label) */
+    readonly name: string;
+    /** Series values (Y-axis values) */
+    readonly values: readonly number[];
+  }[];
 };
 
 // =============================================================================
-// Main Sync Function
+// Workbook Update Functions
 // =============================================================================
 
 /**
- * Synchronize chart data with embedded workbook.
+ * Synchronize chart data to an XLSX workbook.
  *
- * This is the main entry point for chart data updates that need to
- * maintain consistency with embedded Excel workbooks.
+ * Updates the workbook's first sheet with chart data in the standard layout:
+ * - A1: preserved (title/header)
+ * - A2:A[n]: categories
+ * - B1, C1, ...: series names
+ * - B2:B[n], C2:C[n], ...: series values
  *
- * @param chartXml - Parsed chart XML document
- * @param chartPath - Path to chart XML (e.g., "ppt/charts/chart1.xml")
- * @param file - Presentation file for reading workbook
- * @param data - New chart data
- * @param options - Sync options
- * @returns Sync result with updated chart and optionally workbook
+ * @param workbook - The XLSX workbook to update
+ * @param chartData - The chart data to write
+ * @returns A new workbook with updated data
  *
  * @example
- * const result = await syncChartWithWorkbook(
- *   chartXml,
- *   "ppt/charts/chart1.xml",
- *   file,
- *   { categories: ["A", "B", "C"], series: [{ name: "Sales", values: [1, 2, 3] }] }
- * );
- * // Use result.chartXml for the updated chart
- * // Use result.workbookBuffer for the updated xlsx (if present)
+ * ```typescript
+ * const updatedWorkbook = syncChartToWorkbook(workbook, {
+ *   categories: ["Q1", "Q2", "Q3", "Q4"],
+ *   series: [
+ *     { name: "Sales", values: [100, 120, 140, 160] },
+ *     { name: "Costs", values: [80, 85, 90, 95] },
+ *   ],
+ * });
+ * ```
  */
-export async function syncChartWithWorkbook(
-  chartXml: XmlDocument,
-  chartPath: string,
-  file: PresentationFile,
-  data: ChartData,
-  options: ChartSyncOptions = {},
-): Promise<ChartSyncResult> {
-  const { updateWorkbook = true, updateFormulas = true } = options;
-
-  // Check for external data
-  const externalDataRef = hasExternalData(chartXml)
-    ? resolveChartExternalData(chartXml, chartPath, file)
-    : undefined;
-
-  let workbookBuffer: ArrayBuffer | undefined;
-  let workbookUpdated = false;
-  let updatedChartXml = chartXml;
-
-  // Step 1: Update workbook (if exists and enabled)
-  if (externalDataRef && updateWorkbook) {
-    const xlsxBuffer = file.readBinary(externalDataRef.workbookPath);
-    if (!xlsxBuffer) {
-      throw new Error(
-        `syncChartWithWorkbook: embedded workbook not found at ${externalDataRef.workbookPath}`,
-      );
-    }
-
-    const workbook = await parseWorkbook(xlsxBuffer);
-
-    // Detect sheet name from existing formulas
-    const sheetName = options.sheetName ?? detectSheetNameFromChart(chartXml) ?? "Sheet1";
-
-    // Update workbook data
-    const seriesValues = data.series.map((s) => s.values);
-    const seriesNames = data.series.map((s) => s.name);
-
-    workbookBuffer = await updateChartDataInWorkbook(
-      workbook,
-      sheetName,
-      data.categories,
-      seriesValues,
-      1, // headerRow
-      seriesNames,
-    );
-    workbookUpdated = true;
-
-    // Step 2: Update chart formulas (if enabled)
-    if (updateFormulas) {
-      updatedChartXml = updateChartFormulas(
-        chartXml,
-        sheetName,
-        data.categories.length,
-        data.series.length,
-      );
-    }
+export function syncChartToWorkbook(
+  workbook: XlsxWorkbook,
+  chartData: ChartDataUpdate,
+): XlsxWorkbook {
+  if (workbook.sheets.length === 0) {
+    throw new Error("syncChartToWorkbook: workbook has no sheets");
   }
 
-  // Step 3: Update chart caches (always)
-  updatedChartXml = patchChartData(updatedChartXml, data);
+  const firstSheet = workbook.sheets[0];
+  const updatedSheet = updateWorksheetWithChartData(firstSheet, chartData);
 
   return {
-    chartXml: updatedChartXml,
-    workbookBuffer,
-    workbookPath: externalDataRef?.workbookPath,
-    workbookUpdated,
+    ...workbook,
+    sheets: [updatedSheet, ...workbook.sheets.slice(1)],
   };
 }
 
-// =============================================================================
-// Formula Detection
-// =============================================================================
-
 /**
- * Detect sheet name from existing chart formulas.
+ * Update a worksheet with chart data.
+ *
+ * @param worksheet - The worksheet to update
+ * @param chartData - The chart data
+ * @returns Updated worksheet
  */
-function detectSheetNameFromChart(chartXml: XmlDocument): string | undefined {
-  const chartSpace = getByPath(chartXml, ["c:chartSpace"]);
-  if (!chartSpace) return undefined;
+function updateWorksheetWithChartData(
+  worksheet: XlsxWorksheet,
+  chartData: ChartDataUpdate,
+): XlsxWorksheet {
+  const { categories, series } = chartData;
 
-  const chart = getChild(chartSpace, "c:chart");
-  if (!chart) return undefined;
+  // Build new rows
+  const newRows: XlsxRow[] = [];
 
-  const plotArea = getChild(chart, "c:plotArea");
-  if (!plotArea) return undefined;
+  // Row 1: Header row with series names
+  // Preserve A1 from existing data if present
+  const existingA1 = getCellFromWorksheet(worksheet, 1, 1);
+  const headerCells: Cell[] = [];
 
-  // Find first c:f element
-  const formula = findFirstFormula(plotArea);
-  if (!formula) return undefined;
-
-  const parsed = parseFormulaSheetName(formula);
-  return parsed?.sheetName;
-}
-
-/**
- * Find first formula (c:f) in element tree.
- */
-function findFirstFormula(element: XmlElement): string | undefined {
-  for (const child of element.children) {
-    if (!isXmlElement(child)) continue;
-
-    if (child.name === "c:f") {
-      return getTextContent(child) || undefined;
-    }
-
-    const found = findFirstFormula(child);
-    if (found) return found;
+  // A1: preserve or leave empty
+  if (existingA1) {
+    headerCells.push(existingA1);
+  } else {
+    headerCells.push(createCell(1, 1, { type: "empty" }));
   }
-  return undefined;
-}
 
-// =============================================================================
-// Formula Updates
-// =============================================================================
+  // B1, C1, ... : series names
+  for (let i = 0; i < series.length; i++) {
+    headerCells.push(
+      createCell(i + 2, 1, { type: "string", value: series[i].name }),
+    );
+  }
 
-/**
- * Update chart formulas (c:f elements) to match new data ranges.
- */
-function updateChartFormulas(
-  chartXml: XmlDocument,
-  sheetName: string,
-  categoryCount: number,
-  seriesCount: number,
-): XmlDocument {
-  return updateDocumentRoot(chartXml, (root) => {
-    return updateFormulasInElement(root, sheetName, categoryCount, seriesCount);
+  newRows.push({
+    rowNumber: rowIdx(1),
+    cells: headerCells,
   });
-}
 
-/**
- * Recursively update c:f elements in an element tree.
- */
-function updateFormulasInElement(
-  element: XmlElement,
-  sheetName: string,
-  categoryCount: number,
-  seriesCount: number,
-): XmlElement {
-  const updatedChildren = element.children.map((child): XmlNode => {
-    if (!isXmlElement(child)) return child;
+  // Rows 2+: Category + values
+  for (let rowIdx_ = 0; rowIdx_ < categories.length; rowIdx_++) {
+    const rowNumber = rowIdx_ + 2;
+    const rowCells: Cell[] = [];
 
-    // Handle c:f elements
-    if (child.name === "c:f") {
-      const formula = getTextContent(child) ?? "";
-      const updatedFormula = updateFormulaRange(formula, sheetName, categoryCount);
-      return createElement("c:f", child.attrs, [{ type: "text", value: updatedFormula }]);
+    // Column A: category
+    rowCells.push(
+      createCell(1, rowNumber, { type: "string", value: categories[rowIdx_] }),
+    );
+
+    // Columns B, C, ...: series values
+    for (let seriesIdx = 0; seriesIdx < series.length; seriesIdx++) {
+      const value = series[seriesIdx].values[rowIdx_];
+      rowCells.push(
+        createCell(seriesIdx + 2, rowNumber, {
+          type: "number",
+          value: value ?? 0,
+        }),
+      );
     }
 
-    // Recurse into children
-    return updateFormulasInElement(child, sheetName, categoryCount, seriesCount);
-  });
+    newRows.push({
+      rowNumber: rowIdx(rowNumber),
+      cells: rowCells,
+    });
+  }
 
-  return createElement(element.name, element.attrs, updatedChildren);
+  return {
+    ...worksheet,
+    rows: newRows,
+    dimension: {
+      start: {
+        col: colIdx(1),
+        row: rowIdx(1),
+        colAbsolute: false,
+        rowAbsolute: false,
+      },
+      end: {
+        col: colIdx(series.length + 1),
+        row: rowIdx(categories.length + 1),
+        colAbsolute: false,
+        rowAbsolute: false,
+      },
+    },
+  };
 }
 
 /**
- * Update a formula's range to match new item count.
+ * Create a cell with address and value.
  */
-function updateFormulaRange(formula: string, sheetName: string, itemCount: number): string {
-  const parsed = parseFormulaSheetName(formula);
-  if (!parsed) return formula;
+function createCell(col: number, row: number, value: CellValue): Cell {
+  return {
+    address: {
+      col: colIdx(col),
+      row: rowIdx(row),
+      colAbsolute: false,
+      rowAbsolute: false,
+    },
+    value,
+  };
+}
 
-  const range = parseRange(parsed.rangeRef);
-  if (!range) return formula;
+/**
+ * Get a cell from a worksheet by column and row index.
+ */
+function getCellFromWorksheet(
+  worksheet: XlsxWorksheet,
+  col: number,
+  row: number,
+): Cell | undefined {
+  const targetRow = worksheet.rows.find((r) => (r.rowNumber as number) === row);
+  if (!targetRow) {
+    return undefined;
+  }
 
-  const updatedRange = updateRangeForItemCount(range, itemCount);
-  const newRangeRef = formatRange(updatedRange);
-
-  return composeFormula(parsed.sheetName, newRangeRef);
+  return targetRow.cells.find((c) => (c.address.col as number) === col);
 }
 
 // =============================================================================
-// Convenience Functions
+// Workbook Read Functions
 // =============================================================================
 
 /**
- * Check if a chart requires workbook synchronization.
+ * Extract chart data from an XLSX workbook.
  *
- * @param chartXml - Parsed chart XML
- * @returns true if chart has external data
+ * Reads chart data from the standard layout:
+ * - A2:A[n]: categories
+ * - B1, C1, ...: series names
+ * - B2:B[n], C2:C[n], ...: series values
+ *
+ * @param workbook - The XLSX workbook to read
+ * @param sheetIndex - Sheet index (0-based, defaults to 0)
+ * @returns Extracted chart data
+ *
+ * @example
+ * ```typescript
+ * const chartData = extractChartDataFromWorkbook(workbook);
+ * console.log(chartData.categories); // ["Q1", "Q2", "Q3", "Q4"]
+ * console.log(chartData.series[0].name); // "Sales"
+ * ```
  */
-export function requiresWorkbookSync(chartXml: XmlDocument): boolean {
-  return hasExternalData(chartXml);
+export function extractChartDataFromWorkbook(
+  workbook: XlsxWorkbook,
+  sheetIndex: number = 0,
+): ChartDataUpdate {
+  if (sheetIndex < 0 || sheetIndex >= workbook.sheets.length) {
+    throw new Error(
+      `extractChartDataFromWorkbook: sheet index ${sheetIndex} out of range (0-${workbook.sheets.length - 1})`,
+    );
+  }
+
+  const sheet = workbook.sheets[sheetIndex];
+  return extractChartDataFromWorksheet(sheet);
 }
 
 /**
- * Get the workbook path for a chart (if external data exists).
- *
- * @param chartXml - Parsed chart XML
- * @param chartPath - Path to chart XML
- * @param file - Presentation file
- * @returns Workbook path or undefined
+ * Extract chart data from a single worksheet.
  */
-export function getChartWorkbookPath(
-  chartXml: XmlDocument,
-  chartPath: string,
-  file: PresentationFile,
-): string | undefined {
-  if (!hasExternalData(chartXml)) {
+function extractChartDataFromWorksheet(worksheet: XlsxWorksheet): ChartDataUpdate {
+  // Build a cell lookup map for efficient access
+  const cellMap = buildCellMap(worksheet);
+
+  // Determine data dimensions
+  const { maxRow, maxCol } = findDataDimensions(worksheet);
+
+  // Extract categories from column A (A2:A[maxRow])
+  const categories: string[] = [];
+  for (let row = 2; row <= maxRow; row++) {
+    const cell = cellMap.get(cellKey(1, row));
+    categories.push(getCellStringValue(cell));
+  }
+
+  // Extract series names from row 1 (B1, C1, ...)
+  // and series values from B2:B[n], C2:C[n], ...
+  const series: { name: string; values: number[] }[] = [];
+
+  for (let col = 2; col <= maxCol; col++) {
+    const nameCell = cellMap.get(cellKey(col, 1));
+    const name = getCellStringValue(nameCell);
+
+    const values: number[] = [];
+    for (let row = 2; row <= maxRow; row++) {
+      const valueCell = cellMap.get(cellKey(col, row));
+      values.push(getCellNumericValue(valueCell));
+    }
+
+    series.push({ name, values });
+  }
+
+  return { categories, series };
+}
+
+/**
+ * Build a map of cells by "col,row" key for efficient lookup.
+ */
+function buildCellMap(worksheet: XlsxWorksheet): Map<string, Cell> {
+  const map = new Map<string, Cell>();
+
+  for (const row of worksheet.rows) {
+    for (const cell of row.cells) {
+      const key = cellKey(cell.address.col as number, cell.address.row as number);
+      map.set(key, cell);
+    }
+  }
+
+  return map;
+}
+
+/**
+ * Create a cell key from column and row.
+ */
+function cellKey(col: number, row: number): string {
+  return `${col},${row}`;
+}
+
+/**
+ * Find the maximum row and column with data.
+ */
+function findDataDimensions(worksheet: XlsxWorksheet): { maxRow: number; maxCol: number } {
+  return worksheet.rows.reduce(
+    (acc, row) => {
+      const rowNum = row.rowNumber as number;
+      const maxCellCol = row.cells.reduce(
+        (colAcc, cell) => Math.max(colAcc, cell.address.col as number),
+        acc.maxCol,
+      );
+      return {
+        maxRow: Math.max(acc.maxRow, rowNum),
+        maxCol: maxCellCol,
+      };
+    },
+    { maxRow: 1, maxCol: 1 },
+  );
+}
+
+/**
+ * Get string value from a cell.
+ */
+function getCellStringValue(cell: Cell | undefined): string {
+  if (!cell) {
+    return "";
+  }
+
+  switch (cell.value.type) {
+    case "string":
+      return cell.value.value;
+    case "number":
+      return String(cell.value.value);
+    case "boolean":
+      return cell.value.value ? "TRUE" : "FALSE";
+    case "empty":
+      return "";
+    case "error":
+      return cell.value.value;
+    case "date":
+      return cell.value.value.toISOString();
+    default:
+      return "";
+  }
+}
+
+/**
+ * Get numeric value from a cell.
+ */
+function getCellNumericValue(cell: Cell | undefined): number {
+  if (!cell) {
+    return 0;
+  }
+
+  switch (cell.value.type) {
+    case "number":
+      return cell.value.value;
+    case "string": {
+      const parsed = parseFloat(cell.value.value);
+      return Number.isNaN(parsed) ? 0 : parsed;
+    }
+    case "boolean":
+      return cell.value.value ? 1 : 0;
+    case "empty":
+      return 0;
+    default:
+      return 0;
+  }
+}
+
+// =============================================================================
+// Relationship Resolution
+// =============================================================================
+
+/**
+ * Namespace URIs for OPC relationships.
+ */
+const RELATIONSHIP_TYPE_PACKAGE =
+  "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package";
+
+/**
+ * Resolve the embedded XLSX path from chart relationships XML.
+ *
+ * Parses the chart's .rels file to find the external data (embedded workbook)
+ * relationship target.
+ *
+ * @param chartRelsXml - The chart relationships XML content
+ * @returns The resolved path to the embedded XLSX, or undefined if not found
+ *
+ * @example
+ * ```typescript
+ * const relsXml = file.readText("ppt/charts/_rels/chart1.xml.rels");
+ * const xlsxPath = resolveEmbeddedXlsxPath(relsXml);
+ * // => "../embeddings/Microsoft_Excel_Worksheet1.xlsx"
+ * ```
+ */
+export function resolveEmbeddedXlsxPath(chartRelsXml: string): string | undefined {
+  if (!chartRelsXml) {
     return undefined;
   }
 
   try {
-    const ref = resolveChartExternalData(chartXml, chartPath, file);
-    return ref?.workbookPath;
+    const doc = parseXml(chartRelsXml);
+    const relationships = getByPath(doc, ["Relationships"]);
+
+    if (!relationships) {
+      return undefined;
+    }
+
+    const relationshipElements = getChildren(relationships, "Relationship");
+
+    for (const rel of relationshipElements) {
+      const type = getAttr(rel, "Type");
+      const target = getAttr(rel, "Target");
+
+      // Look for package relationship (embedded xlsx)
+      if (type === RELATIONSHIP_TYPE_PACKAGE && target) {
+        // Check if it's an xlsx file
+        if (target.endsWith(".xlsx")) {
+          return target;
+        }
+      }
+    }
+
+    return undefined;
   } catch {
     return undefined;
   }
 }
+
+// =============================================================================
+// Re-exports for backward compatibility
+// =============================================================================
+
+export type { XlsxWorkbook, XlsxWorksheet } from "../../../xlsx/domain/workbook";

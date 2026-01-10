@@ -1,5 +1,4 @@
-import { getChild, getTextByPath } from "../../../xml";
-import { createElement } from "../core/xml-mutator";
+import { createElement, getChild, getTextByPath } from "../../../xml";
 import { patchTableStyleId } from "./table-style-patcher";
 
 describe("patchTableStyleId", () => {

@@ -1,6 +1,5 @@
-import type { XmlDocument, XmlElement } from "../../../xml";
-import { isXmlElement } from "../../../xml";
-import { createElement, getDocumentRoot, updateDocumentRoot } from "../core/xml-mutator";
+import { createElement, isXmlElement, type XmlDocument, type XmlElement } from "../../../xml";
+import { getDocumentRoot, updateDocumentRoot } from "../core/xml-mutator";
 
 export function addContentType(
   contentTypesXml: XmlDocument,

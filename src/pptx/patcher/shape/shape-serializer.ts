@@ -1,4 +1,4 @@
-import type { XmlElement } from "../../../xml";
+import { createElement, type XmlElement } from "../../../xml";
 import type {
   Shape,
   SpShape,
@@ -14,7 +14,6 @@ import type {
   ConnectionTarget,
 } from "../../domain";
 import type { Transform, GroupTransform } from "../../domain/geometry";
-import { createElement } from "../core/xml-mutator";
 import { serializeTransform } from "../serializer/transform";
 import { serializeColor, serializeEffects, serializeFill, serializeLine, serializeTextBody } from "../serializer";
 import { ooxmlAngleUnits, ooxmlBool, ooxmlEmu, ooxmlPercent100k } from "../serializer/units";

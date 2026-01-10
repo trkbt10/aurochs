@@ -1,5 +1,4 @@
-import type { XmlDocument, XmlElement } from "../../../xml";
-import { createElement } from "../core/xml-mutator";
+import { createElement, type XmlDocument, type XmlElement } from "../../../xml";
 
 export const RELATIONSHIPS_XMLNS = "http://schemas.openxmlformats.org/package/2006/relationships";
 

@@ -2,11 +2,9 @@
  * @file Transform serializer tests
  */
 
-import type { XmlElement } from "../../../xml";
-import { getChild } from "../../../xml";
+import { createElement, getChild, type XmlElement } from "../../../xml";
 import type { Transform } from "../../domain/geometry";
 import { deg, px } from "../../domain/types";
-import { createElement } from "../core/xml-mutator";
 import { patchTransformElement, serializeTransform } from "./transform";
 
 function createTransform(overrides: Partial<{

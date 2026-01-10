@@ -2,7 +2,7 @@
  * @file Effects serializer
  */
 
-import type { XmlElement } from "../../../xml";
+import { createElement, type XmlElement } from "../../../xml";
 import type {
   AlphaBiLevelEffect,
   AlphaCeilingEffect,
@@ -28,7 +28,6 @@ import type {
   ShadowEffect,
   SoftEdgeEffect,
 } from "../../domain";
-import { createElement } from "../core/xml-mutator";
 import { serializeColor } from "./color";
 import { serializeFill } from "./fill";
 import { ooxmlAngleUnits, ooxmlBool, ooxmlEmu, ooxmlPercent1000, ooxmlPercent100k } from "./units";

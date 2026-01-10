@@ -2,8 +2,7 @@
  * @file Theme font scheme patcher tests (Phase 9)
  */
 
-import { getChild } from "../../../xml";
-import { createElement } from "../core/xml-mutator";
+import { createElement, getChild } from "../../../xml";
 import { patchMajorFont, patchMinorFont } from "./font-scheme-patcher";
 
 describe("patchMajorFont / patchMinorFont", () => {

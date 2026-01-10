@@ -2,12 +2,10 @@
  * @file Layout patcher tests (Phase 9)
  */
 
-import type { XmlDocument, XmlElement } from "../../../xml";
-import { getChild } from "../../../xml";
+import { createElement, getChild, type XmlDocument, type XmlElement } from "../../../xml";
 import { deg, px } from "../../domain/types";
 import type { Transform } from "../../domain/geometry";
 import type { ShapeChange } from "../core/shape-differ";
-import { createElement } from "../core/xml-mutator";
 import { patchLayoutPlaceholders, patchLayoutShapes } from "./layout-patcher";
 
 function doc(root: XmlElement): XmlDocument {

@@ -1,6 +1,5 @@
-import type { XmlElement } from "../../../xml";
+import { createElement, type XmlElement } from "../../../xml";
 import type { CustomDash, Line, LineEnd } from "../../domain";
-import { createElement } from "../core/xml-mutator";
 import { serializeFill } from "./fill";
 import { ooxmlEmu, ooxmlPercent100k } from "./units";
 

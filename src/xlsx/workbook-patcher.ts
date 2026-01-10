@@ -13,6 +13,8 @@ import {
   getChildren,
   getChild,
   isXmlElement,
+  createElement,
+  createText,
   type XmlDocument,
   type XmlElement,
   type XmlNode,
@@ -20,6 +22,8 @@ import {
 import { serializeDocument } from "../xml/serializer";
 import type { ZipPackage } from "../pptx/opc/zip-package";
 import type { Workbook, WorkbookSheet } from "./workbook-parser";
+import { indexToColumnLetter } from "./domain/cell/address";
+import { colIdx } from "./domain/types";
 
 // =============================================================================
 // Types
@@ -288,20 +292,20 @@ function createCellElement(
 ): XmlElement {
   if (typeof value === "number") {
     // Numeric cell
-    return createElement("c", { r: ref }, [createElement("v", {}, [createTextNode(String(value))])]);
+    return createElement("c", { r: ref }, [createElement("v", {}, [createText(String(value))])]);
   }
 
   // String cell - use shared string
   const ssIndex = sharedStrings.indexOf(value);
   if (ssIndex !== -1) {
     return createElement("c", { r: ref, t: "s" }, [
-      createElement("v", {}, [createTextNode(String(ssIndex))]),
+      createElement("v", {}, [createText(String(ssIndex))]),
     ]);
   }
 
   // Inline string fallback (shouldn't happen if we added to shared strings)
   return createElement("c", { r: ref, t: "inlineStr" }, [
-    createElement("is", {}, [createElement("t", {}, [createTextNode(value)])]),
+    createElement("is", {}, [createElement("t", {}, [createText(value)])]),
   ]);
 }
 
@@ -310,7 +314,7 @@ function createCellElement(
  */
 function patchSharedStringsXml(pkg: ZipPackage, sharedStrings: readonly string[]): void {
   const siElements = sharedStrings.map((str) =>
-    createElement("si", {}, [createElement("t", {}, [createTextNode(str)])]),
+    createElement("si", {}, [createElement("t", {}, [createText(str)])]),
   );
 
   const sstElement = createElement(
@@ -330,14 +334,6 @@ function patchSharedStringsXml(pkg: ZipPackage, sharedStrings: readonly string[]
 // =============================================================================
 // Helper Functions
 // =============================================================================
-
-function createElement(name: string, attrs: Record<string, string>, children: XmlNode[] = []): XmlElement {
-  return { type: "element", name, attrs, children };
-}
-
-function createTextNode(text: string): XmlNode {
-  return { type: "text", value: text };
-}
 
 function replaceChild(parent: XmlElement, childName: string, newChild: XmlElement): XmlElement {
   const newChildren = parent.children.map((child) => {
@@ -418,7 +414,7 @@ export async function updateChartDataInWorkbook(
   if (seriesNames) {
     for (let i = 0; i < seriesNames.length; i++) {
       cells.push({
-        col: indexToColumnLetter(i + 2), // B, C, D, ...
+        col: indexToColumnLetter(colIdx(i + 2)), // B, C, D, ...
         row: headerRow,
         value: seriesNames[i],
       });
@@ -437,7 +433,7 @@ export async function updateChartDataInWorkbook(
   // Write series values to columns B, C, D, ...
   for (let seriesIdx = 0; seriesIdx < seriesData.length; seriesIdx++) {
     const values = seriesData[seriesIdx];
-    const col = indexToColumnLetter(seriesIdx + 2); // B, C, D, ...
+    const col = indexToColumnLetter(colIdx(seriesIdx + 2)); // B, C, D, ...
 
     for (let i = 0; i < values.length; i++) {
       cells.push({
@@ -450,7 +446,7 @@ export async function updateChartDataInWorkbook(
 
   // Calculate dimension
   const lastRow = startRow + categories.length - 1;
-  const lastCol = indexToColumnLetter(seriesData.length + 1);
+  const lastCol = indexToColumnLetter(colIdx(seriesData.length + 1));
   const dimension = `A${headerRow}:${lastCol}${lastRow}`;
 
   const result = await patchWorkbook(workbook, [
@@ -458,15 +454,4 @@ export async function updateChartDataInWorkbook(
   ]);
 
   return result.xlsxBuffer;
-}
-
-function indexToColumnLetter(index: number): string {
-  let result = "";
-  let n = index;
-  while (n > 0) {
-    n--;
-    result = String.fromCharCode((n % 26) + 65) + result;
-    n = Math.floor(n / 26);
-  }
-  return result;
 }

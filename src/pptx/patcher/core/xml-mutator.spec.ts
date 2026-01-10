@@ -2,7 +2,7 @@
  * @file XML Mutator Tests
  */
 
-import type { XmlElement, XmlDocument } from "../../../xml";
+import { createElement, createText, type XmlElement, type XmlDocument } from "../../../xml";
 import {
   setAttribute,
   setAttributes,
@@ -26,8 +26,6 @@ import {
   removeShapeById,
   updateDocumentRoot,
   getDocumentRoot,
-  createElement,
-  createText,
 } from "./xml-mutator";
 
 // =============================================================================

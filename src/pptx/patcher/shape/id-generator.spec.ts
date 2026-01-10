@@ -1,5 +1,4 @@
-import type { XmlDocument, XmlElement } from "../../../xml";
-import { createElement } from "../core/xml-mutator";
+import { createElement, type XmlDocument, type XmlElement } from "../../../xml";
 import { extractShapeIds, generateShapeId, generateShapeName } from "./id-generator";
 
 function createSlideDocument(shapes: XmlElement[]): XmlDocument {

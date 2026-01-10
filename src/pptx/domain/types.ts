@@ -10,79 +10,18 @@
  */
 
 // =============================================================================
-// Branded Type Utilities
+// Re-export common OOXML unit types
 // =============================================================================
 
-/**
- * Brand a primitive type to create a nominal type.
- * This prevents accidental mixing of semantically different values.
- *
- * @example
- * type Pixels = Brand<number, 'Pixels'>;
- * type Degrees = Brand<number, 'Degrees'>;
- * const px: Pixels = 100 as Pixels;
- * const deg: Degrees = 45 as Degrees;
- * // px = deg; // Error: Type 'Degrees' is not assignable to type 'Pixels'
- */
-declare const __brand: unique symbol;
-
-/**
- * Brand a primitive type to create a nominal type.
- * Exported for use in other domain type definitions.
- */
-export type Brand<K, T> = K & { readonly [__brand]: T };
+export type { Brand, Pixels, Degrees, Percent, Points, EMU } from "../../ooxml/domain/units";
+export { px, deg, pct, pt, emu } from "../../ooxml/domain/units";
 
 // =============================================================================
-// Measurement Types (Branded)
+// PPTX-specific Branded Types
 // =============================================================================
 
-/**
- * Length in pixels (branded)
- * Original EMU values are converted during parsing
- *
- * @example
- * const width = parseEmu("914400") as Pixels; // 1 inch = 96px
- */
-export type Pixels = Brand<number, 'Pixels'>;
-
-/**
- * Angle in degrees 0-360 (branded)
- * Original 60000ths values are converted during parsing
- *
- * @example
- * const rotation = parseAngle("5400000") as Degrees; // 90 degrees
- */
-export type Degrees = Brand<number, 'Degrees'>;
-
-/**
- * Percentage 0-100 (branded)
- * Original 1000ths or 100000ths values are converted during parsing
- *
- * @example
- * const opacity = parsePercentage100k("50000") as Percent; // 50%
- */
-export type Percent = Brand<number, 'Percent'>;
-
-/**
- * Points for font sizes (branded)
- * Original 100ths values are converted during parsing
- *
- * @example
- * const fontSize = parseFontSize("1800") as Points; // 18pt
- */
-export type Points = Brand<number, 'Points'>;
-
-// =============================================================================
-// OOXML Base Types (Branded)
-// =============================================================================
-
-/**
- * EMU (English Metric Units) - the base unit in Office Open XML
- * 914400 EMU = 1 inch = 96 CSS pixels
- *
- * @see ECMA-376 Part 1, Section 20.1.10.16 (ST_Coordinate)
- */
-export type EMU = Brand<number, 'EMU'>;
+// Import Brand for defining PPTX-specific types
+import type { Brand } from "../../ooxml/domain/units";
 
 /**
  * Relationship ID (rId1, rId2, etc.) used in .rels files
@@ -97,34 +36,8 @@ export type RelationshipId = Brand<string, 'RelationshipId'>;
 export type HexColor = Brand<string, 'HexColor'>;
 
 // =============================================================================
-// Branded Type Constructors
+// PPTX-specific Branded Type Constructors
 // =============================================================================
-
-/**
- * Create a Pixels value from a number.
- * Use this instead of `as Pixels` for runtime conversion.
- */
-export const px = (value: number): Pixels => value as Pixels;
-
-/**
- * Create a Degrees value from a number.
- */
-export const deg = (value: number): Degrees => value as Degrees;
-
-/**
- * Create a Percent value from a number.
- */
-export const pct = (value: number): Percent => value as Percent;
-
-/**
- * Create a Points value from a number.
- */
-export const pt = (value: number): Points => value as Points;
-
-/**
- * Create an EMU value from a number.
- */
-export const emu = (value: number): EMU => value as EMU;
 
 /**
  * Create a RelationshipId from a string.

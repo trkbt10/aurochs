@@ -6,10 +6,8 @@
  * @see docs/plans/pptx-export/phase-9-master-layout-theme.md
  */
 
-import type { XmlElement } from "../../../xml";
-import { getChild, isXmlElement } from "../../../xml";
+import { createElement, getChild, isXmlElement, type XmlElement } from "../../../xml";
 import type { FontSpec } from "../../domain/resolution";
-import { createElement } from "../core/xml-mutator";
 
 function upsertTypeface(
   fontElement: XmlElement,

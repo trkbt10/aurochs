@@ -9,6 +9,8 @@
 
 import { parseXml, getByPath, getChildren, getChild, getTextContent, type XmlDocument, type XmlElement } from "../xml";
 import { loadZipPackage, type ZipPackage } from "../pptx/opc/zip-package";
+import { indexToColumnLetter, columnLetterToIndex } from "./domain/cell/address";
+import { colIdx } from "./domain/types";
 
 // =============================================================================
 // Types
@@ -346,36 +348,12 @@ export function getRowValues(
   startCol: string,
   endCol: string,
 ): readonly (string | number | boolean | undefined)[] {
-  const startIndex = columnLetterToIndex(startCol);
-  const endIndex = columnLetterToIndex(endCol);
+  const startIndex = columnLetterToIndex(startCol) as number;
+  const endIndex = columnLetterToIndex(endCol) as number;
 
   const values: (string | number | boolean | undefined)[] = [];
   for (let col = startIndex; col <= endIndex; col++) {
-    values.push(getCellValue(sheet, indexToColumnLetter(col), row));
+    values.push(getCellValue(sheet, indexToColumnLetter(colIdx(col)), row));
   }
   return values;
-}
-
-// =============================================================================
-// Column Utilities (copied from a1-range for self-containment)
-// =============================================================================
-
-function columnLetterToIndex(col: string): number {
-  let index = 0;
-  const upper = col.toUpperCase();
-  for (let i = 0; i < upper.length; i++) {
-    index = index * 26 + (upper.charCodeAt(i) - 64);
-  }
-  return index;
-}
-
-function indexToColumnLetter(index: number): string {
-  let result = "";
-  let n = index;
-  while (n > 0) {
-    n--;
-    result = String.fromCharCode((n % 26) + 65) + result;
-    n = Math.floor(n / 26);
-  }
-  return result;
 }

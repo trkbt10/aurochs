@@ -1,8 +1,7 @@
-import { getChild, getChildren, getTextByPath, isXmlElement, type XmlElement } from "../../../xml";
+import { createElement, createText, getChild, getChildren, getTextByPath, isXmlElement, type XmlElement } from "../../../xml";
 import { px } from "../../domain/types";
 import type { TextBody } from "../../domain/text";
 import type { TableRow } from "../../domain/table/types";
-import { createElement, createText } from "../core/xml-mutator";
 import { patchTable } from "./table-patcher";
 
 function textBody(text: string): TextBody {

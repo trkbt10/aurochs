@@ -2,7 +2,7 @@
  * @file Fill serializer
  */
 
-import type { XmlElement } from "../../../xml";
+import { createElement, type XmlElement } from "../../../xml";
 import type {
   BlipEffects,
   BlipFill,
@@ -13,7 +13,6 @@ import type {
   StretchFill,
   TileFill,
 } from "../../domain";
-import { createElement } from "../core/xml-mutator";
 import { serializeColor } from "./color";
 import { ooxmlBool, ooxmlAngleUnits, ooxmlEmu, ooxmlPercent100k } from "./units";
 

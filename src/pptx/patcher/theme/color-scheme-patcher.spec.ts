@@ -2,8 +2,7 @@
  * @file Theme color scheme patcher tests (Phase 9)
  */
 
-import { getChild } from "../../../xml";
-import { createElement } from "../core/xml-mutator";
+import { createElement, getChild } from "../../../xml";
 import type { Color } from "../../domain/color/types";
 import { patchSchemeColor } from "./color-scheme-patcher";
 

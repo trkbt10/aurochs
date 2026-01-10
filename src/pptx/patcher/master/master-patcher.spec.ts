@@ -2,10 +2,8 @@
  * @file Master patcher tests (Phase 9)
  */
 
-import type { XmlDocument, XmlElement } from "../../../xml";
-import { getChild } from "../../../xml";
+import { createElement, getChild, type XmlDocument, type XmlElement } from "../../../xml";
 import type { ShapeChange } from "../core/shape-differ";
-import { createElement } from "../core/xml-mutator";
 import type { ParagraphProperties } from "../../domain/text";
 import type { Transform } from "../../domain/geometry";
 import { deg, px } from "../../domain/types";

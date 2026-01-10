@@ -4,12 +4,11 @@
  * Updates DrawingML tables (a:tbl) embedded in p:graphicFrame.
  */
 
-import type { XmlElement, XmlNode } from "../../../xml";
-import { getChild, getChildren, isXmlElement } from "../../../xml";
+import { createElement, getChild, getChildren, isXmlElement, type XmlElement, type XmlNode } from "../../../xml";
 import type { TextBody } from "../../domain/text";
 import type { TableCell, TableCellProperties, TableColumn, TableRow } from "../../domain/table/types";
 import { ooxmlEmu } from "../serializer/units";
-import { createElement, removeAttribute, replaceChildByName, setAttribute, setChildren } from "../core/xml-mutator";
+import { removeAttribute, replaceChildByName, setAttribute, setChildren } from "../core/xml-mutator";
 import { patchTextBodyElement, serializeDrawingTextBody } from "../serializer/text";
 
 export type TableChange =

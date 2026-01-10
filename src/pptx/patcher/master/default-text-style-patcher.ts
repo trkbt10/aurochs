@@ -7,10 +7,8 @@
  * @see docs/plans/pptx-export/phase-9-master-layout-theme.md
  */
 
-import type { XmlElement, XmlNode } from "../../../xml";
-import { isXmlElement } from "../../../xml";
+import { createElement, isXmlElement, type XmlElement, type XmlNode } from "../../../xml";
 import type { ParagraphProperties, TextLevelStyle, TextStyleLevels } from "../../domain";
-import { createElement } from "../core/xml-mutator";
 import { serializeParagraphProperties } from "../serializer";
 
 const BULLET_ELEMENT_NAMES = [

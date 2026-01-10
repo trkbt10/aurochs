@@ -6,12 +6,11 @@
  * @see docs/plans/pptx-export/phase-9-master-layout-theme.md
  */
 
-import type { XmlDocument, XmlElement } from "../../../xml";
-import { getChild, isXmlElement } from "../../../xml";
+import { createElement, getChild, isXmlElement, type XmlDocument, type XmlElement } from "../../../xml";
 import type { Color } from "../../domain/color/types";
 import type { FontScheme } from "../../domain/resolution";
 import type { FormatScheme } from "../../domain/theme/types";
-import { createElement, replaceChildByName, updateDocumentRoot } from "../core/xml-mutator";
+import { replaceChildByName, updateDocumentRoot } from "../core/xml-mutator";
 import type { SchemeColorName } from "./color-scheme-patcher";
 import { patchSchemeColor } from "./color-scheme-patcher";
 import { patchMajorFont, patchMinorFont } from "./font-scheme-patcher";

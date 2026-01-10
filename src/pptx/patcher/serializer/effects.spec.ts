@@ -2,11 +2,10 @@
  * @file Effects serializer tests
  */
 
-import { getChild } from "../../../xml";
+import { createElement, getChild } from "../../../xml";
 import { deg, pct, px } from "../../domain/types";
 import type { Effects } from "../../domain";
 import { parseEffects } from "../../parser/graphics/effects-parser";
-import { createElement } from "../core/xml-mutator";
 import { serializeEffects } from "./effects";
 
 describe("serializeEffects", () => {

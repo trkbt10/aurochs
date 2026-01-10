@@ -6,11 +6,10 @@
  * @see docs/plans/pptx-export/phase-9-master-layout-theme.md
  */
 
-import type { XmlDocument, XmlElement } from "../../../xml";
-import { getChild } from "../../../xml";
+import { createElement, getChild, type XmlDocument, type XmlElement } from "../../../xml";
 import type { ParagraphProperties, TextStyleLevels } from "../../domain";
 import type { ShapeChange } from "../core/shape-differ";
-import { updateDocumentRoot, replaceChildByName, createElement } from "../core/xml-mutator";
+import { updateDocumentRoot, replaceChildByName } from "../core/xml-mutator";
 import { patchSlideXml } from "../slide/slide-patcher";
 import { patchTextStyleLevelByNumber, patchTextStyleLevelsElement } from "./default-text-style-patcher";
 

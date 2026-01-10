@@ -8,10 +8,9 @@
  * - progId updates on p:oleObj (XML-only; binary replacement handled separately)
  */
 
-import type { XmlElement } from "../../../xml";
-import { getChild, isXmlElement } from "../../../xml";
+import { createElement, getChild, isXmlElement, type XmlElement } from "../../../xml";
 import type { Transform } from "../../domain/geometry";
-import { createElement, findElements, replaceChildByName, setAttribute, updateChildByName } from "../core/xml-mutator";
+import { findElements, replaceChildByName, setAttribute, updateChildByName } from "../core/xml-mutator";
 import { patchTransformElement } from "../serializer/transform";
 
 export type OleChange =

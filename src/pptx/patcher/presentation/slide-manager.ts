@@ -11,11 +11,10 @@
 import type { PresentationDocument, SlideWithId } from "../../app/presentation-document";
 import type { Slide } from "../../domain/slide/types";
 import type { PresentationFile } from "../../domain/opc";
-import type { XmlDocument, XmlElement } from "../../../xml";
-import { getByPath, getChildren, isXmlElement, parseXml, serializeDocument } from "../../../xml";
+import { createElement, getByPath, getChildren, isXmlElement, parseXml, serializeDocument, type XmlDocument, type XmlElement } from "../../../xml";
 import { CONTENT_TYPES, RELATIONSHIP_TYPES, getRelationshipPath } from "../../opc/content-types";
 import { createEmptyZipPackage, isBinaryFile, type ZipPackage } from "../../opc/zip-package";
-import { createElement, setChildren, updateDocumentRoot } from "../core/xml-mutator";
+import { setChildren, updateDocumentRoot } from "../core/xml-mutator";
 import { addSlideToList, removeSlideFromList, reorderSlideInList } from "../parts/presentation";
 import { generateSlideId, generateSlideRId } from "./slide-id-manager";
 

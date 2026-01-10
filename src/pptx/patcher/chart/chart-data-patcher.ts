@@ -8,9 +8,8 @@
  * - Editing embedded Excel (xlsx) sources is out of scope.
  */
 
-import type { XmlDocument, XmlElement, XmlNode } from "../../../xml";
-import { getByPath, getChild, getChildren, isXmlElement } from "../../../xml";
-import { createElement, createText, findElements, replaceChildByName, setChildren, updateDocumentRoot } from "../core/xml-mutator";
+import { createElement, createText, getByPath, getChild, getChildren, isXmlElement, type XmlDocument, type XmlElement, type XmlNode } from "../../../xml";
+import { findElements, replaceChildByName, setChildren, updateDocumentRoot } from "../core/xml-mutator";
 
 export type ChartSeries = {
   readonly name: string;

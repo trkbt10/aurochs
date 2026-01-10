@@ -1,5 +1,4 @@
-import { getChild, getChildren, getTextContent } from "../../../xml";
-import { createElement } from "../core/xml-mutator";
+import { createElement, getChild, getChildren, getTextContent } from "../../../xml";
 import type { TextBody } from "../../domain/text";
 import { patchTextBodyElement, serializeTextBody } from "./text";
 

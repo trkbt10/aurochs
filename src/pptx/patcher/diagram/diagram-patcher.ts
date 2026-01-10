@@ -10,9 +10,8 @@
  * - quickStyle.xml: style definition
  */
 
-import type { XmlDocument, XmlElement, XmlNode } from "../../../xml";
-import { getByPath, getChild, getChildren, isXmlElement } from "../../../xml";
-import { createElement, createText, setChildren, updateDocumentRoot } from "../core/xml-mutator";
+import { createElement, createText, getByPath, getChild, getChildren, isXmlElement, type XmlDocument, type XmlElement, type XmlNode } from "../../../xml";
+import { setChildren, updateDocumentRoot } from "../core/xml-mutator";
 
 export type DiagramFiles = {
   readonly data: XmlDocument;

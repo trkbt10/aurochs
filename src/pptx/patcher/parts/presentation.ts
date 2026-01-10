@@ -4,10 +4,8 @@
  * Updates <p:sldIdLst> for slide insert/remove/reorder.
  */
 
-import type { XmlDocument, XmlElement } from "../../../xml";
-import { isXmlElement } from "../../../xml";
+import { createElement, isXmlElement, type XmlDocument, type XmlElement } from "../../../xml";
 import {
-  createElement,
   getDocumentRoot,
   replaceChildByName,
   setChildren,

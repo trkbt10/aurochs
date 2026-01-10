@@ -4,10 +4,8 @@
  * Serializes domain TextBody to DrawingML text body XML.
  */
 
-import type { XmlElement, XmlNode } from "../../../xml";
-import { isXmlElement } from "../../../xml";
+import { createElement, isXmlElement, type XmlElement, type XmlNode } from "../../../xml";
 import type { TextBody } from "../../domain/text";
-import { createElement } from "../core/xml-mutator";
 import { serializeParagraph } from "./paragraph";
 import { serializeBodyProperties } from "./text-properties";
 

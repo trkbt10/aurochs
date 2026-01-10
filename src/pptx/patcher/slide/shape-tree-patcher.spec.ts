@@ -1,6 +1,4 @@
-import type { XmlElement } from "../../../xml";
-import { isXmlElement, getChild } from "../../../xml";
-import { createElement } from "../core/xml-mutator";
+import { createElement, isXmlElement, getChild, type XmlElement } from "../../../xml";
 import { addShapeToTree, batchUpdateShapeTree, removeShapeFromTree } from "./shape-tree-patcher";
 
 function createTree(shapes: XmlElement[]): XmlElement {

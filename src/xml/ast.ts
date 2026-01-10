@@ -327,3 +327,51 @@ export function findChild(
 export function hasChild(element: XmlElement | null | undefined, name: string): boolean {
   return getChild(element ?? ({ type: "element", name: "", attrs: {}, children: [] }), name) !== undefined;
 }
+
+// =============================================================================
+// Element Construction
+// =============================================================================
+
+/**
+ * Create a new XmlElement.
+ *
+ * @param name - Element tag name
+ * @param attrs - Element attributes (default: empty)
+ * @param children - Child nodes (default: empty)
+ * @returns New XmlElement
+ *
+ * @example
+ * ```typescript
+ * createElement("font", { val: "Calibri" })
+ * // => { type: "element", name: "font", attrs: { val: "Calibri" }, children: [] }
+ *
+ * createElement("row", { r: "1" }, [
+ *   createElement("c", { r: "A1" })
+ * ])
+ * ```
+ */
+export function createElement(
+  name: string,
+  attrs: Record<string, string> = {},
+  children: readonly XmlNode[] = [],
+): XmlElement {
+  return {
+    type: "element",
+    name,
+    attrs,
+    children,
+  };
+}
+
+/**
+ * Create a new XmlText node.
+ *
+ * @param value - Text content
+ * @returns New XmlText
+ */
+export function createText(value: string): XmlText {
+  return {
+    type: "text",
+    value,
+  };
+}

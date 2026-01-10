@@ -2,9 +2,7 @@
  * @file Theme patcher tests (Phase 9)
  */
 
-import type { XmlDocument, XmlElement } from "../../../xml";
-import { getChild } from "../../../xml";
-import { createElement } from "../core/xml-mutator";
+import { createElement, getChild, type XmlDocument, type XmlElement } from "../../../xml";
 import type { Color } from "../../domain/color/types";
 import type { FormatScheme } from "../../domain/theme/types";
 import { patchTheme } from "./theme-patcher";

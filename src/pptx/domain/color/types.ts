@@ -13,12 +13,64 @@ import type {
   Pixels,
   RectAlignment,
   ResourceId,
-  SchemeColorValue,
 } from "../types";
 import type { ResolvedBlipResource } from "../resource";
+import type {
+  Color,
+  ColorSpec,
+  ColorTransform,
+  HslColor,
+  PresetColor,
+  SchemeColor,
+  ScrgbColor,
+  SrgbColor,
+  SystemColor,
+} from "../../../ooxml/domain/color";
+// Import only types needed for Fill union (others are directly re-exported)
+import type {
+  NoFill,
+  SolidFill,
+  GradientFill,
+  PatternFill,
+  GroupFill,
+} from "../../../ooxml/domain/fill";
 
 // =============================================================================
-// Color Types
+// Re-export shared Color types from OOXML
+// =============================================================================
+
+export type {
+  Color,
+  ColorSpec,
+  ColorTransform,
+  HslColor,
+  PresetColor,
+  SchemeColor,
+  ScrgbColor,
+  SrgbColor,
+  SystemColor,
+};
+
+// =============================================================================
+// Re-export shared Fill types from OOXML
+// =============================================================================
+
+export type {
+  NoFill,
+  SolidFill,
+  GradientStop,
+  LinearGradient,
+  PathGradient,
+  GradientFill,
+  PatternType,
+  PatternFill,
+  GroupFill,
+} from "../../../ooxml/domain/fill";
+
+export { PATTERN_PRESETS } from "../../../ooxml/domain/fill";
+
+// =============================================================================
+// PPTX-specific Color Types
 // =============================================================================
 
 /**
@@ -34,189 +86,6 @@ export type ResolvedColor = Brand<string, 'ResolvedColor'>;
  * Create a ResolvedColor from a hex string.
  */
 export const color = (value: string): ResolvedColor => value as ResolvedColor;
-
-/**
- * sRGB color specification
- * @see ECMA-376 Part 1, Section 20.1.2.3.32 (srgbClr)
- */
-export type SrgbColor = {
-  readonly type: "srgb";
-  readonly value: string; // 6-digit hex (e.g., "FF0000")
-};
-
-/**
- * Scheme color specification
- * @see ECMA-376 Part 1, Section 20.1.2.3.29 (schemeClr)
- */
-export type SchemeColor = {
-  readonly type: "scheme";
-  readonly value: SchemeColorValue;
-};
-
-/**
- * System color specification
- * @see ECMA-376 Part 1, Section 20.1.2.3.33 (sysClr)
- */
-export type SystemColor = {
-  readonly type: "system";
-  readonly value: string; // e.g., "windowText", "window"
-  readonly lastColor?: string; // Cached color value
-};
-
-/**
- * Preset color specification
- * @see ECMA-376 Part 1, Section 20.1.2.3.22 (prstClr)
- */
-export type PresetColor = {
-  readonly type: "preset";
-  readonly value: string; // e.g., "red", "blue", "green"
-};
-
-/**
- * HSL color specification
- * @see ECMA-376 Part 1, Section 20.1.2.3.13 (hslClr)
- */
-export type HslColor = {
-  readonly type: "hsl";
-  readonly hue: Degrees;
-  readonly saturation: Percent;
-  readonly luminance: Percent;
-};
-
-/**
- * scRGB color specification
- * Uses percentage values for each channel (-1000% to +1000% per ECMA-376)
- * @see ECMA-376 Part 1, Section 20.1.2.3.30 (scrgbClr)
- */
-export type ScrgbColor = {
-  readonly type: "scrgb";
-  readonly red: Percent;
-  readonly green: Percent;
-  readonly blue: Percent;
-};
-
-/**
- * Color transform modifications
- * @see ECMA-376 Part 1, Section 20.1.2.3 (color transforms)
- */
-export type ColorTransform = {
-  readonly alpha?: Percent;
-  readonly alphaMod?: Percent;
-  readonly alphaOff?: Percent;
-  readonly hue?: Degrees;
-  readonly hueMod?: Percent;
-  readonly hueOff?: Degrees;
-  readonly sat?: Percent;
-  readonly satMod?: Percent;
-  readonly satOff?: Percent;
-  readonly lum?: Percent;
-  readonly lumMod?: Percent;
-  readonly lumOff?: Percent;
-  readonly gamma?: boolean;
-  readonly invGamma?: boolean;
-  readonly blueMod?: Percent;
-  readonly blueOff?: Percent;
-  readonly green?: Percent;
-  readonly greenMod?: Percent;
-  readonly greenOff?: Percent;
-  readonly redMod?: Percent;
-  readonly redOff?: Percent;
-  readonly shade?: Percent;
-  readonly tint?: Percent;
-  readonly comp?: boolean; // Complement
-  readonly inv?: boolean; // Inverse
-  readonly gray?: boolean; // Grayscale
-};
-
-/**
- * Union of all color specifications
- */
-export type ColorSpec =
-  | SrgbColor
-  | SchemeColor
-  | SystemColor
-  | PresetColor
-  | HslColor
-  | ScrgbColor;
-
-/**
- * Color with optional transforms
- */
-export type Color = {
-  readonly spec: ColorSpec;
-  readonly transform?: ColorTransform;
-};
-
-// =============================================================================
-// Fill Types
-// =============================================================================
-
-/**
- * No fill
- * @see ECMA-376 Part 1, Section 20.1.8.44 (noFill)
- */
-export type NoFill = {
-  readonly type: "noFill";
-};
-
-/**
- * Solid fill
- * @see ECMA-376 Part 1, Section 20.1.8.54 (solidFill)
- */
-export type SolidFill = {
-  readonly type: "solidFill";
-  readonly color: Color;
-};
-
-/**
- * Gradient stop
- * @see ECMA-376 Part 1, Section 20.1.8.36 (gs)
- */
-export type GradientStop = {
-  readonly position: Percent;
-  readonly color: Color;
-};
-
-/**
- * Linear gradient properties
- * @see ECMA-376 Part 1, Section 20.1.8.41 (lin)
- */
-export type LinearGradient = {
-  readonly angle: Degrees;
-  readonly scaled: boolean;
-};
-
-/**
- * Path gradient properties
- * @see ECMA-376 Part 1, Section 20.1.8.46 (path)
- */
-export type PathGradient = {
-  readonly path: "circle" | "rect" | "shape";
-  readonly fillToRect?: {
-    readonly left: Percent;
-    readonly top: Percent;
-    readonly right: Percent;
-    readonly bottom: Percent;
-  };
-};
-
-/**
- * Gradient fill
- * @see ECMA-376 Part 1, Section 20.1.8.33 (gradFill)
- */
-export type GradientFill = {
-  readonly type: "gradientFill";
-  readonly stops: readonly GradientStop[];
-  readonly linear?: LinearGradient;
-  readonly path?: PathGradient;
-  readonly tileRect?: {
-    readonly left: Percent;
-    readonly top: Percent;
-    readonly right: Percent;
-    readonly bottom: Percent;
-  };
-  readonly rotWithShape: boolean;
-};
 
 /**
  * Tile mode for picture fills
@@ -320,50 +189,13 @@ export type BlipFill = {
   readonly rotWithShape: boolean;
 };
 
-/**
- * Pattern preset values
- * @see ECMA-376 Part 1, Section 20.1.10.50 (ST_PresetPatternVal)
- */
-export const PATTERN_PRESETS = [
-  "pct5", "pct10", "pct20", "pct25", "pct30", "pct40", "pct50",
-  "pct60", "pct70", "pct75", "pct80", "pct90",
-  "horz", "vert", "ltHorz", "ltVert", "dkHorz", "dkVert",
-  "narHorz", "narVert", "dashHorz", "dashVert", "cross",
-  "dnDiag", "upDiag", "ltDnDiag", "ltUpDiag", "dkDnDiag", "dkUpDiag",
-  "wdDnDiag", "wdUpDiag", "dashDnDiag", "dashUpDiag", "diagCross",
-  "smCheck", "lgCheck", "smGrid", "lgGrid", "dotGrid",
-  "smConfetti", "lgConfetti", "horzBrick", "diagBrick",
-  "solidDmnd", "openDmnd", "dotDmnd", "plaid", "sphere",
-  "weave", "divot", "shingle", "wave", "trellis", "zigZag",
-] as const;
+// =============================================================================
+// PPTX-specific Fill Union (includes BlipFill)
+// =============================================================================
 
 /**
- * Pattern fill type
- * @see ECMA-376 Part 1, Section 20.1.10.50 (ST_PresetPatternVal)
- */
-export type PatternType = typeof PATTERN_PRESETS[number];
-
-/**
- * Pattern fill
- * @see ECMA-376 Part 1, Section 20.1.8.47 (pattFill)
- */
-export type PatternFill = {
-  readonly type: "patternFill";
-  readonly preset: PatternType;
-  readonly foregroundColor: Color;
-  readonly backgroundColor: Color;
-};
-
-/**
- * Group fill (inherit from group)
- * @see ECMA-376 Part 1, Section 20.1.8.35 (grpFill)
- */
-export type GroupFill = {
-  readonly type: "groupFill";
-};
-
-/**
- * Union of all fill types
+ * Union of all fill types for PPTX
+ * Extends OOXML BaseFill with PPTX-specific BlipFill
  */
 export type Fill =
   | NoFill

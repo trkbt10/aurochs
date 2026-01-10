@@ -2,9 +2,8 @@
  * @file Color serializer
  */
 
-import type { XmlElement } from "../../../xml";
+import { createElement, type XmlElement } from "../../../xml";
 import type { Color, ColorTransform } from "../../domain";
-import { createElement } from "../core/xml-mutator";
 import { ooxmlAngleUnits, ooxmlPercent100k } from "./units";
 
 export function serializeColor(color: Color): XmlElement {

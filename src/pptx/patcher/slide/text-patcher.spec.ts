@@ -1,5 +1,4 @@
-import { getChild, getChildren, getTextContent, isXmlElement } from "../../../xml";
-import { createElement } from "../core/xml-mutator";
+import { createElement, getChild, getChildren, getTextContent, isXmlElement } from "../../../xml";
 import type { TextBody } from "../../domain/text";
 import type { TextBodyChange } from "../core/shape-differ";
 import { applyTextBodyChangeToShape } from "./text-patcher";

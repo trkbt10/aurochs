@@ -2,10 +2,8 @@
  * @file Text patcher - apply TextBody changes to shape XML
  */
 
-import type { XmlElement } from "../../../xml";
-import { isXmlElement } from "../../../xml";
+import { createElement, isXmlElement, type XmlElement } from "../../../xml";
 import type { TextBodyChange } from "../core/shape-differ";
-import { createElement } from "../core/xml-mutator";
 import { patchTextBodyElement, serializeTextBody } from "../serializer/text";
 
 function findTxBodyIndex(shape: XmlElement): number {

@@ -4,7 +4,7 @@
  * Converts domain text property types into DrawingML XML elements.
  */
 
-import type { XmlElement } from "../../../xml";
+import { createElement, createText, type XmlElement } from "../../../xml";
 import type {
   BodyProperties,
   Bullet,
@@ -17,7 +17,6 @@ import type {
   TabStop,
 } from "../../domain";
 import type { Pixels, Points } from "../../domain/types";
-import { createElement, createText } from "../core/xml-mutator";
 import { serializeColor } from "./color";
 import { serializeEffects } from "./effects";
 import { serializeFill } from "./fill";

@@ -2,9 +2,8 @@
  * @file Text serializer - paragraph (a:p) and run (a:r/a:br/a:fld)
  */
 
-import type { XmlElement } from "../../../xml";
+import { createElement, type XmlElement } from "../../../xml";
 import type { FieldRun, LineBreakRun, Paragraph, RegularRun, TextRun } from "../../domain/text";
-import { createElement } from "../core/xml-mutator";
 import {
   serializeEndParaRunProperties,
   serializeParagraphProperties,

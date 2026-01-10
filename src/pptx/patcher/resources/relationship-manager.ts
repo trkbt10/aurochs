@@ -1,6 +1,5 @@
-import type { XmlDocument, XmlElement } from "../../../xml";
-import { isXmlElement } from "../../../xml";
-import { getDocumentRoot, updateDocumentRoot, createElement } from "../core/xml-mutator";
+import { createElement, isXmlElement, type XmlDocument, type XmlElement } from "../../../xml";
+import { getDocumentRoot, updateDocumentRoot } from "../core/xml-mutator";
 import { createRelationshipsDocument, RELATIONSHIPS_XMLNS, type RelationshipTargetMode } from "../parts/relationships";
 
 export type RelationshipType =

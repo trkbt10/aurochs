@@ -29,6 +29,8 @@ export {
   mapChildren,
   findChild,
   hasChild,
+  createElement,
+  createText,
 } from "./ast";
 
 // =============================================================================

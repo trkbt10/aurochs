@@ -33,10 +33,10 @@ export {
   // Document operations
   updateDocumentRoot,
   getDocumentRoot,
-  // Element creation
-  createElement,
-  createText,
 } from "./xml-mutator";
+
+// Re-export element creation from xml module
+export { createElement, createText } from "../../../xml";
 
 // Shape Differ
 export type {

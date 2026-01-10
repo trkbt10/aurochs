@@ -2,8 +2,7 @@
  * @file Slide Patcher Tests
  */
 
-import type { XmlDocument, XmlElement } from "../../../xml";
-import { isXmlElement, getChild } from "../../../xml";
+import { createElement, isXmlElement, getChild, type XmlDocument, type XmlElement } from "../../../xml";
 import type { ShapeChange } from "../core/shape-differ";
 import type { Transform } from "../../domain/geometry";
 import { EMU_PER_PIXEL } from "../../domain";
@@ -12,7 +11,7 @@ import type { SpShape } from "../../domain/shape";
 import type { TextBody } from "../../domain/text";
 import { parseShapeTree } from "../../parser/shape-parser";
 import { patchSlideXml, getSpTree, hasShapes } from "./slide-patcher";
-import { createElement, findShapeById } from "../core/xml-mutator";
+import { findShapeById } from "../core/xml-mutator";
 
 // =============================================================================
 // Test Helpers

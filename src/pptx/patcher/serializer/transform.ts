@@ -8,9 +8,7 @@
 
 import type { Transform } from "../../domain/geometry";
 import { EMU_PER_PIXEL } from "../../domain";
-import type { XmlElement, XmlNode } from "../../../xml";
-import { isXmlElement } from "../../../xml";
-import { createElement } from "../core/xml-mutator";
+import { createElement, isXmlElement, type XmlElement, type XmlNode } from "../../../xml";
 
 const ANGLE_UNITS_PER_DEGREE = 60000;
 

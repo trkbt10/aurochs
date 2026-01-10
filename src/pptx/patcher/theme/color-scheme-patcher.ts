@@ -6,10 +6,8 @@
  * @see docs/plans/pptx-export/phase-9-master-layout-theme.md
  */
 
-import type { XmlElement, XmlNode } from "../../../xml";
-import { isXmlElement } from "../../../xml";
+import { createElement, isXmlElement, type XmlElement, type XmlNode } from "../../../xml";
 import type { Color } from "../../domain/color/types";
-import { createElement } from "../core/xml-mutator";
 import { serializeColor } from "../serializer/color";
 
 export type SchemeColorName =

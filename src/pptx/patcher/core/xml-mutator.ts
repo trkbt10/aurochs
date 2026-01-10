@@ -544,32 +544,3 @@ export function getDocumentRoot(doc: XmlDocument): XmlElement | null {
   return root ?? null;
 }
 
-// =============================================================================
-// Element Creation Helpers
-// =============================================================================
-
-/**
- * Create a new XmlElement.
- */
-export function createElement(
-  name: string,
-  attrs: Record<string, string> = {},
-  children: readonly XmlNode[] = [],
-): XmlElement {
-  return {
-    type: "element",
-    name,
-    attrs,
-    children,
-  };
-}
-
-/**
- * Create a text node.
- */
-export function createText(value: string): XmlNode {
-  return {
-    type: "text",
-    value,
-  };
-}
