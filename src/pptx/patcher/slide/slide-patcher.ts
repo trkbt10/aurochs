@@ -23,8 +23,9 @@ import { serializeEffects, serializeFill, serializeLine } from "../serializer";
 import { patchTransformElement, serializeTransform } from "../serializer/transform";
 import { addShapeToTree } from "./shape-tree-patcher";
 import { extractShapeIds, generateShapeId } from "../shape/id-generator";
-import { serializeShape } from "../shape/shape-serializer";
+import { serializeShape, serializeGeometry } from "../shape/shape-serializer";
 import { applyTextBodyChangeToShape } from "./text-patcher";
+import type { Geometry } from "../../domain";
 
 // =============================================================================
 // Main Patching Function
@@ -504,16 +505,106 @@ function findInsertIndexByName(children: readonly unknown[], names: readonly str
 }
 
 // =============================================================================
-// Geometry Change (Stub - Future phase)
+// Geometry Change
 // =============================================================================
 
+/**
+ * Apply geometry change to shape XML.
+ *
+ * Updates a:prstGeom or a:custGeom within p:spPr.
+ */
 function applyGeometryChange(
   shape: XmlElement,
-  _change: PropertyChange & { property: "geometry" },
+  change: PropertyChange & { property: "geometry" },
 ): XmlElement {
-  void _change;
-  // TODO: Implement in future phase
-  return shape;
+  const newGeometry = change.newValue as Geometry | undefined;
+
+  const spPrName = getShapePropertiesName(shape.name);
+  if (spPrName === "p:xfrm") {
+    // GraphicFrame doesn't have geometry
+    return shape;
+  }
+
+  const spPr = shape.children.find(
+    (c): c is XmlElement => isXmlElement(c) && c.name === spPrName,
+  );
+  if (!spPr) {
+    return shape;
+  }
+
+  // Geometry element names
+  const geometryNames = new Set(["a:prstGeom", "a:custGeom"]);
+
+  const originalChildren = [...spPr.children];
+  const existingGeomIndex = originalChildren.findIndex(
+    (c) => isXmlElement(c) && geometryNames.has(c.name),
+  );
+
+  // Remove existing geometry elements
+  const keptChildren = originalChildren.filter(
+    (c) => !(isXmlElement(c) && geometryNames.has(c.name)),
+  );
+
+  if (!newGeometry) {
+    // If no new geometry, use default rect
+    const defaultGeom: XmlElement = {
+      type: "element",
+      name: "a:prstGeom",
+      attrs: { prst: "rect" },
+      children: [{ type: "element", name: "a:avLst", attrs: {}, children: [] }],
+    };
+    const insertIndex = existingGeomIndex !== -1 ? existingGeomIndex : findGeometryInsertIndex(keptChildren);
+    const newSpPr = {
+      ...spPr,
+      children: [
+        ...keptChildren.slice(0, insertIndex),
+        defaultGeom,
+        ...keptChildren.slice(insertIndex),
+      ],
+    };
+    return replaceChildByName(shape, spPrName, newSpPr);
+  }
+
+  // Serialize new geometry
+  const geomElement = serializeGeometry(newGeometry);
+
+  // Find insert position (geometry should come after a:xfrm)
+  let insertIndex = 0;
+  if (existingGeomIndex !== -1) {
+    // Use same position as existing geometry
+    insertIndex = originalChildren
+      .slice(0, existingGeomIndex)
+      .filter((c) => !(isXmlElement(c) && geometryNames.has(c.name))).length;
+  } else {
+    insertIndex = findGeometryInsertIndex(keptChildren);
+  }
+
+  const newSpPr = {
+    ...spPr,
+    children: [
+      ...keptChildren.slice(0, insertIndex),
+      geomElement,
+      ...keptChildren.slice(insertIndex),
+    ],
+  };
+
+  return replaceChildByName(shape, spPrName, newSpPr);
+}
+
+/**
+ * Find the correct insert index for geometry element.
+ * Geometry should come after a:xfrm but before fill/line/effects.
+ */
+function findGeometryInsertIndex(children: readonly unknown[]): number {
+  // Find a:xfrm and insert after it
+  for (let i = 0; i < children.length; i++) {
+    const child = children[i];
+    if (isXmlElement(child) && child.name === "a:xfrm") {
+      return i + 1;
+    }
+  }
+  // If no xfrm, insert at start
+  return 0;
 }
 
 // =============================================================================

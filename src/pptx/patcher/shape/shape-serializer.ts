@@ -435,7 +435,7 @@ function serializeGroupTransform(transform: GroupTransform): XmlElement {
   ]);
 }
 
-function serializeGeometry(geometry: Geometry): XmlElement {
+export function serializeGeometry(geometry: Geometry): XmlElement {
   switch (geometry.type) {
     case "preset":
       return serializePresetGeometry(geometry);

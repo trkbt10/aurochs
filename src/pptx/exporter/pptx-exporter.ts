@@ -12,14 +12,19 @@
  */
 
 import type { PresentationDocument } from "../app/presentation-document";
-import type { PresentationFile } from "../domain";
+import type { PresentationFile, Slide } from "../domain";
 import type { XmlDocument } from "../../xml";
 import { serializeDocument } from "../../xml";
+import { parseDataUrl } from "../../buffer";
 import {
   createEmptyZipPackage,
   isBinaryFile,
   type ZipPackage,
 } from "../opc/zip-package";
+import { parseSlide } from "../parser/slide/slide-parser";
+import { detectSlideChanges, type ShapeChange, type PropertyChange } from "../patcher/core/shape-differ";
+import { patchSlideXml } from "../patcher/slide/slide-patcher";
+import { addMedia, type MediaType } from "../patcher/resources/media-manager";
 
 // =============================================================================
 // Types
@@ -118,11 +123,20 @@ export async function exportPptx(
   // Create a ZipPackage and copy all files from source
   const pkg = copyPresentationFileToPackage(doc.presentationFile);
 
-  // Update slide XMLs from apiSlide.content
+  // Update slide XMLs with editor changes applied
   for (const slideWithId of doc.slides) {
     if (slideWithId.apiSlide) {
       const slidePath = `ppt/slides/${slideWithId.apiSlide.filename}.xml`;
-      const xml = serializeDocument(slideWithId.apiSlide.content, {
+
+      // Get the updated XML with editor changes applied (including media embedding)
+      const updatedXml = applySlideEditsWithMedia(
+        slideWithId.apiSlide.content,
+        slideWithId.slide,
+        slidePath,
+        pkg,
+      );
+
+      const xml = serializeDocument(updatedXml, {
         declaration: true,
         standalone: true,
       });
@@ -175,10 +189,20 @@ export async function exportPptxAsBuffer(
 
   const pkg = copyPresentationFileToPackage(doc.presentationFile);
 
+  // Update slide XMLs with editor changes applied
   for (const slideWithId of doc.slides) {
     if (slideWithId.apiSlide) {
       const slidePath = `ppt/slides/${slideWithId.apiSlide.filename}.xml`;
-      const xml = serializeDocument(slideWithId.apiSlide.content, {
+
+      // Get the updated XML with editor changes applied (including media embedding)
+      const updatedXml = applySlideEditsWithMedia(
+        slideWithId.apiSlide.content,
+        slideWithId.slide,
+        slidePath,
+        pkg,
+      );
+
+      const xml = serializeDocument(updatedXml, {
         declaration: true,
         standalone: true,
       });
@@ -246,4 +270,181 @@ function copyPresentationFileToPackage(file: PresentationFile): ZipPackage {
   }
 
   return pkg;
+}
+
+/**
+ * Apply editor changes to slide XML with media embedding support.
+ *
+ * Compares the original slide (parsed from XML) with the edited slide,
+ * embeds any data: URL media, and applies detected changes to the XML document.
+ *
+ * @param originalXml - The original slide XML document
+ * @param editedSlide - The edited slide domain object
+ * @param slidePath - Path to the slide in the package
+ * @param pkg - ZipPackage for media embedding
+ * @returns Updated XML document with changes applied
+ */
+function applySlideEditsWithMedia(
+  originalXml: XmlDocument,
+  editedSlide: Slide,
+  slidePath: string,
+  pkg: ZipPackage,
+): XmlDocument {
+  // Parse the original XML to get the original domain slide
+  const originalSlide = parseSlide(originalXml);
+  if (!originalSlide) {
+    // If parsing fails, return original unchanged
+    return originalXml;
+  }
+
+  // Detect changes between original and edited slides
+  const changes = detectSlideChanges(originalSlide, editedSlide);
+
+  // If no changes, return original
+  if (changes.length === 0) {
+    return originalXml;
+  }
+
+  // Process media changes and get updated changes with embedded rIds
+  const processedChanges = processMediaChanges(changes, slidePath, pkg);
+
+  // Apply changes to XML
+  return patchSlideXml(originalXml, processedChanges);
+}
+
+/**
+ * Process changes to embed data: URL media and replace with rIds.
+ */
+function processMediaChanges(
+  changes: readonly ShapeChange[],
+  slidePath: string,
+  pkg: ZipPackage,
+): readonly ShapeChange[] {
+  return changes.map((change): ShapeChange => {
+    if (change.type === "added") {
+      // Process added shapes for data: URL media
+      return processAddedShapeMedia(change, slidePath, pkg);
+    }
+    if (change.type === "modified") {
+      // Process modified shapes for blipFill changes
+      return processModifiedShapeMedia(change, slidePath, pkg);
+    }
+    return change;
+  });
+}
+
+/**
+ * Process added shape for data: URL media.
+ */
+function processAddedShapeMedia(
+  change: Extract<ShapeChange, { type: "added" }>,
+  slidePath: string,
+  pkg: ZipPackage,
+): Extract<ShapeChange, { type: "added" }> {
+  const shape = change.shape;
+
+  // Only process pictures with data: URL
+  if (shape.type !== "pic") {
+    return change;
+  }
+
+  const resourceId = shape.blipFill?.resourceId;
+  if (!resourceId || !isDataUrl(resourceId)) {
+    return change;
+  }
+
+  // Embed the media and get new rId
+  const rId = embedDataUrlMedia(pkg, slidePath, resourceId);
+
+  // Return updated change with new resourceId
+  return {
+    ...change,
+    shape: {
+      ...shape,
+      blipFill: {
+        ...shape.blipFill,
+        resourceId: rId,
+      },
+    },
+  };
+}
+
+/**
+ * Process modified shape for blipFill changes with data: URL.
+ */
+function processModifiedShapeMedia(
+  change: Extract<ShapeChange, { type: "modified" }>,
+  slidePath: string,
+  pkg: ZipPackage,
+): Extract<ShapeChange, { type: "modified" }> {
+  const processedPropertyChanges = change.changes.map((propChange): PropertyChange => {
+    if (propChange.property !== "blipFill") {
+      return propChange;
+    }
+
+    const newValue = propChange.newValue as { resourceId?: string } | undefined;
+    if (!newValue?.resourceId || !isDataUrl(newValue.resourceId)) {
+      return propChange;
+    }
+
+    // Embed the media and get new rId
+    const rId = embedDataUrlMedia(pkg, slidePath, newValue.resourceId);
+
+    // Return updated property change with new resourceId
+    return {
+      ...propChange,
+      newValue: {
+        ...newValue,
+        resourceId: rId,
+      },
+    };
+  });
+
+  return {
+    ...change,
+    changes: processedPropertyChanges,
+  };
+}
+
+// =============================================================================
+// Data URL Media Helpers
+// =============================================================================
+
+/**
+ * Check if a string is a data: URL.
+ */
+function isDataUrl(value: string): boolean {
+  return value.startsWith("data:");
+}
+
+/**
+ * Embed media from data: URL using media-manager.
+ */
+function embedDataUrlMedia(pkg: ZipPackage, slidePath: string, dataUrl: string): string {
+  const { mimeType, data } = parseDataUrl(dataUrl);
+  const mediaType = mimeTypeToMediaType(mimeType);
+  const result = addMedia(pkg, data, mediaType, slidePath);
+  return result.rId;
+}
+
+/**
+ * Convert MIME type string to MediaType.
+ */
+function mimeTypeToMediaType(mimeType: string): MediaType {
+  const mapping: Record<string, MediaType> = {
+    "image/png": "image/png",
+    "image/jpeg": "image/jpeg",
+    "image/jpg": "image/jpeg",
+    "image/gif": "image/gif",
+    "image/svg+xml": "image/svg+xml",
+    "video/mp4": "video/mp4",
+    "audio/mpeg": "audio/mpeg",
+    "audio/mp3": "audio/mpeg",
+  };
+
+  const mediaType = mapping[mimeType];
+  if (!mediaType) {
+    throw new Error(`Unsupported media type: ${mimeType}`);
+  }
+  return mediaType;
 }
