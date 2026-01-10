@@ -92,7 +92,7 @@ function flattenWithSeparators(groups: readonly (readonly MenuEntry[])[]): reado
 
   for (let i = 0; i < groups.length; i++) {
     const group = groups[i];
-    if (group.length === 0) continue;
+    if (group.length === 0) {continue;}
 
     if (result.length > 0) {
       result.push({ type: "separator" });

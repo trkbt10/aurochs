@@ -47,7 +47,7 @@ export function calculateAspectDelta(
   aspectRatio: number,
   aspectLocked: boolean
 ): { dw: number; dh: number } {
-  if (!aspectLocked) return { dw, dh };
+  if (!aspectLocked) {return { dw, dh };}
 
   const aspectDw = dh * aspectRatio;
 

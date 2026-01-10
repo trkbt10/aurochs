@@ -176,10 +176,10 @@ function calculateInsetBounds(
     const x = position.x + normal.x * insetAmount;
     const y = position.y + normal.y * insetAmount;
 
-    if (x < minX) minX = x;
-    if (x > maxX) maxX = x;
-    if (y < minY) minY = y;
-    if (y > maxY) maxY = y;
+    if (x < minX) {minX = x;}
+    if (x > maxX) {maxX = x;}
+    if (y < minY) {minY = y;}
+    if (y > maxY) {maxY = y;}
   }
 
   return { minX, maxX, minY, maxY };
@@ -470,7 +470,7 @@ export function extractInnerRingFromBevelPaths(
   const holePaths = paths.filter((p) => p.isHole);
 
   // Calculate outer ring at full inset
-  let outer: { x: number; y: number }[] = [];
+  const outer: { x: number; y: number }[] = [];
   if (outerPath) {
     for (const pathPoint of outerPath.points) {
       const { position, normal: inwardNormal, miterFactor } = pathPoint;
@@ -490,7 +490,7 @@ export function extractInnerRingFromBevelPaths(
   const finalHoles: { x: number; y: number }[][] = [];
 
   for (const holePath of holePaths) {
-    if (holePath.points.length < 3) continue;
+    if (holePath.points.length < 3) {continue;}
 
     // Calculate same safe ratio as generateBevelMesh
     const safeRatio = calculateSafeHoleInsetRatio(holePath, outerBounds, width);
@@ -524,10 +524,10 @@ function computeBounds(points: readonly { x: number; y: number }[]): {
   let minY = Infinity, maxY = -Infinity;
 
   for (const p of points) {
-    if (p.x < minX) minX = p.x;
-    if (p.x > maxX) maxX = p.x;
-    if (p.y < minY) minY = p.y;
-    if (p.y > maxY) maxY = p.y;
+    if (p.x < minX) {minX = p.x;}
+    if (p.x > maxX) {maxX = p.x;}
+    if (p.y < minY) {minY = p.y;}
+    if (p.y > maxY) {maxY = p.y;}
   }
 
   return { minX, maxX, minY, maxY };

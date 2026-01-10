@@ -107,6 +107,11 @@ export const thumbnailWrapperStyle: CSSProperties = {
   transition: "transform 0.15s ease",
 };
 
+
+
+
+
+
 export function getThumbnailStyle(aspectRatio: string): CSSProperties {
   return {
     width: "100%",
@@ -121,6 +126,11 @@ export function getThumbnailStyle(aspectRatio: string): CSSProperties {
     overflow: "hidden",
   };
 }
+
+
+
+
+
 
 export function getThumbnailActiveStyle(aspectRatio: string): CSSProperties {
   return {

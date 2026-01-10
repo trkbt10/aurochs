@@ -260,7 +260,7 @@ describe("TextPropertyPanel", () => {
             break;
           }
         }
-        if (alignmentSelect) break;
+        if (alignmentSelect) {break;}
       }
 
       if (alignmentSelect) {

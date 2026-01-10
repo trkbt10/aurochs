@@ -43,7 +43,7 @@ import {
  * Check if a shape has CustomGeometry
  */
 function isCustomGeometryShape(shape: Shape): shape is SpShape & { properties: { geometry: CustomGeometry } } {
-  if (shape.type !== "sp") return false;
+  if (shape.type !== "sp") {return false;}
   return shape.properties.geometry?.type === "custom";
 }
 
@@ -51,7 +51,7 @@ function isCustomGeometryShape(shape: Shape): shape is SpShape & { properties: {
  * Get shape ID from a shape (some shapes like ContentPartShape don't have nonVisual)
  */
 function getShapeId(shape: Shape): ShapeId | undefined {
-  if (shape.type === "contentPart") return undefined;
+  if (shape.type === "contentPart") {return undefined;}
   return shape.nonVisual.id;
 }
 
@@ -64,7 +64,7 @@ function findShapeById(
 ): Shape | undefined {
   const document = state.documentHistory.present;
   const activeSlide = document.slides.find((s) => s.id === state.activeSlideId);
-  if (!activeSlide) return undefined;
+  if (!activeSlide) {return undefined;}
   return activeSlide.slide.shapes.find((s) => getShapeId(s) === shapeId);
 }
 

@@ -363,10 +363,10 @@ export function calculateAlignedBounds(
   const selectedBounds: ShapeBoundsWithId[] = [];
   for (const id of selectedIds) {
     const shape = shapes.find((s) => "nonVisual" in s && s.nonVisual.id === id);
-    if (!shape) continue;
+    if (!shape) {continue;}
 
     const bounds = getShapeBounds(shape);
-    if (!bounds) continue;
+    if (!bounds) {continue;}
 
     selectedBounds.push({ id, bounds });
   }

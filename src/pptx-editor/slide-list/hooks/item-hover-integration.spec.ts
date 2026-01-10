@@ -107,7 +107,7 @@ function endDrag(state: ListState): ListState {
 
 function isDeleteButtonVisible(state: ListState, slideId: string): boolean {
   const item = state.items.find((i) => i.id === slideId);
-  if (!item) return false;
+  if (!item) {return false;}
   return shouldShowHover(item.hoverState, state.isAnyDragging);
 }
 

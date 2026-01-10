@@ -199,14 +199,14 @@ export function MixedTextBodyEditor({
 
   // Handle run property changes
   const handleRunPropertiesChange = (update: Partial<RunProperties>) => {
-    if (disabled) return;
+    if (disabled) {return;}
     const newTextBody = applyRunPropertiesToAll(value, update);
     onChange(newTextBody);
   };
 
   // Handle paragraph property changes
   const handleParagraphPropertiesChange = (update: Partial<ParagraphProperties>) => {
-    if (disabled) return;
+    if (disabled) {return;}
     const newTextBody = applyParagraphPropertiesToAll(value, update);
     onChange(newTextBody);
   };

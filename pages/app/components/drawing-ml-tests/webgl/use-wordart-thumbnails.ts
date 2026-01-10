@@ -106,12 +106,12 @@ export function useWordArtThumbnails(presets: readonly DemoWordArtPreset[]): Thu
     queueRef.current = [...presets];
 
     const processQueue = async () => {
-      if (isGeneratingRef.current) return;
+      if (isGeneratingRef.current) {return;}
       isGeneratingRef.current = true;
 
       while (queueRef.current.length > 0) {
         const preset = queueRef.current.shift();
-        if (!preset) continue;
+        if (!preset) {continue;}
 
         // Small delay between renders to let browser release resources
         await new Promise((resolve) => setTimeout(resolve, 50));

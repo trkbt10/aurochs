@@ -38,6 +38,13 @@ export type PresentationFile = {
    * @param path - Entry path within the archive
    */
   exists(path: string): boolean;
+
+  /**
+   * List all file paths in the archive.
+   * Optional for backward compatibility - implementations may not support this.
+   * @returns Array of file paths (excludes directories)
+   */
+  listFiles?(): readonly string[];
 };
 
 // =============================================================================

@@ -277,7 +277,7 @@ function mergeCustomAttribute(
   for (const geom of geometries) {
     const attr = geom.attributes[attrName];
     const posAttr = geom.attributes.position;
-    if (!posAttr) continue;
+    if (!posAttr) {continue;}
 
     if (attr && attr.itemSize === itemSize) {
       merged.set(attr.array as Float32Array, offset * itemSize);

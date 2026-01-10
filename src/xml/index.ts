@@ -84,6 +84,13 @@ export function getXmlText(value: unknown): string | undefined {
 export { parseXml } from "./parser";
 
 // =============================================================================
+// Serializer
+// =============================================================================
+
+export type { SerializeOptions } from "./serializer";
+export { serializeElement, serializeDocument, serializeNode } from "./serializer";
+
+// =============================================================================
 // Markup Compatibility (ECMA-376 Part 3)
 // =============================================================================
 

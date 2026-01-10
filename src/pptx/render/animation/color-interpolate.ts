@@ -215,8 +215,8 @@ export function lerpHSL(
   const l = lerp(from.l, to.l, t);
 
   // Handle hue with direction
-  let fromH = ((from.h % 360) + 360) % 360;
-  let toH = ((to.h % 360) + 360) % 360;
+  const fromH = ((from.h % 360) + 360) % 360;
+  const toH = ((to.h % 360) + 360) % 360;
 
   let delta = toH - fromH;
 

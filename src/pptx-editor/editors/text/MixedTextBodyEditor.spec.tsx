@@ -214,7 +214,7 @@ describe("MixedTextBodyEditor", () => {
             break;
           }
         }
-        if (alignmentSelect) break;
+        if (alignmentSelect) {break;}
       }
 
       if (alignmentSelect) {

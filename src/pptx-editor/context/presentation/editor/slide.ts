@@ -18,6 +18,11 @@ function findMaxNumericId(slides: readonly SlideWithId[]): number {
   }, 0);
 }
 
+
+
+
+
+
 export function generateSlideId(document: PresentationDocument): SlideId {
   return String(findMaxNumericId(document.slides) + 1);
 }
@@ -26,12 +31,22 @@ export function generateSlideId(document: PresentationDocument): SlideId {
 // Query
 // =============================================================================
 
+
+
+
+
+
 export function findSlideById(
   document: PresentationDocument,
   slideId: SlideId
 ): SlideWithId | undefined {
   return document.slides.find((s) => s.id === slideId);
 }
+
+
+
+
+
 
 export function getSlideIndex(
   document: PresentationDocument,
@@ -63,6 +78,11 @@ function insertSlideAt(
   return [...slides.slice(0, index), slide, ...slides.slice(index)];
 }
 
+
+
+
+
+
 export function addSlide(
   document: PresentationDocument,
   slide: Slide,
@@ -82,6 +102,11 @@ export function addSlide(
     newSlideId,
   };
 }
+
+
+
+
+
 
 export function deleteSlide(
   document: PresentationDocument,
@@ -104,6 +129,11 @@ function createDuplicatedSlide(
     layoutPathOverride: sourceSlide.layoutPathOverride,
   };
 }
+
+
+
+
+
 
 export function duplicateSlide(
   document: PresentationDocument,
@@ -142,6 +172,11 @@ function moveElementInArray<T>(
   ];
 }
 
+
+
+
+
+
 export function moveSlide(
   document: PresentationDocument,
   slideId: SlideId,
@@ -156,6 +191,11 @@ export function moveSlide(
   return { ...document, slides };
 }
 
+
+
+
+
+
 export function updateSlide(
   document: PresentationDocument,
   slideId: SlideId,
@@ -166,6 +206,11 @@ export function updateSlide(
   );
   return { ...document, slides: newSlides };
 }
+
+
+
+
+
 
 export function updateSlideEntry(
   document: PresentationDocument,

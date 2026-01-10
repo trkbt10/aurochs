@@ -172,7 +172,7 @@ function extractHoleMask(
     ];
 
     for (const n of neighbors) {
-      if (n.x < 0 || n.x >= width || n.y < 0 || n.y >= height) continue;
+      if (n.x < 0 || n.x >= width || n.y < 0 || n.y >= height) {continue;}
       const nIdx = n.y * width + n.x;
       if (binary[nIdx] === 0 && outside[nIdx] === 0) {
         outside[nIdx] = 1;
@@ -259,7 +259,7 @@ function marchingSquares(
       const caseIndex = getCellCase(gray, width, cx, cy, threshold);
       const edges = MARCHING_SQUARES_TABLE[caseIndex];
 
-      if (edges.length === 0) continue;
+      if (edges.length === 0) {continue;}
 
       for (let i = 0; i < edges.length; i += 2) {
         // Use canonical edge key for visited tracking
@@ -267,7 +267,7 @@ function marchingSquares(
         const edge2 = edges[i + 1];
         const edgeKey = `${cx},${cy},${Math.min(edge1, edge2)}`;
 
-        if (visitedEdges.has(edgeKey)) continue;
+        if (visitedEdges.has(edgeKey)) {continue;}
 
         // Start from edge2 to get correct winding direction
         const startEdge = edge2;
@@ -359,8 +359,8 @@ function getExitEdge(caseIndex: number, entryEdge: number): number {
   const edges = MARCHING_SQUARES_TABLE[caseIndex];
 
   for (let i = 0; i < edges.length; i += 2) {
-    if (edges[i] === entryEdge) return edges[i + 1];
-    if (edges[i + 1] === entryEdge) return edges[i];
+    if (edges[i] === entryEdge) {return edges[i + 1];}
+    if (edges[i + 1] === entryEdge) {return edges[i];}
   }
 
   return -1;
@@ -411,14 +411,14 @@ function traceContour(
   let iterations = 0;
 
   do {
-    if (++iterations > maxIterations) break;
-    if (cx < 0 || cx >= width - 1 || cy < 0 || cy >= height - 1) break;
+    if (++iterations > maxIterations) {break;}
+    if (cx < 0 || cx >= width - 1 || cy < 0 || cy >= height - 1) {break;}
 
     const caseIndex = getCellCase(gray, width, cx, cy, threshold);
-    if (caseIndex === 0 || caseIndex === 15) break;
+    if (caseIndex === 0 || caseIndex === 15) {break;}
 
     const exitEdge = getExitEdge(caseIndex, entryEdge);
-    if (exitEdge < 0) break;
+    if (exitEdge < 0) {break;}
 
     const edgeKey = `${cx},${cy},${Math.min(entryEdge, exitEdge)}`;
     visitedEdges.add(edgeKey);
@@ -442,7 +442,7 @@ function traceContour(
 // =============================================================================
 
 function douglasPeucker(points: Point[], tolerance: number): Point[] {
-  if (points.length <= 2) return points;
+  if (points.length <= 2) {return points;}
 
   const first = points[0];
   const last = points[points.length - 1];
@@ -475,7 +475,7 @@ function perpDistance(p: Point, a: Point, b: Point): number {
   const dx = b.x - a.x;
   const dy = b.y - a.y;
   const len = Math.sqrt(dx * dx + dy * dy);
-  if (len === 0) return Math.sqrt((p.x - a.x) ** 2 + (p.y - a.y) ** 2);
+  if (len === 0) {return Math.sqrt((p.x - a.x) ** 2 + (p.y - a.y) ** 2);}
   return Math.abs(dy * p.x - dx * p.y + b.x * a.y - b.y * a.x) / len;
 }
 

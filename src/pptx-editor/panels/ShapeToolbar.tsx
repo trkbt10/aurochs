@@ -85,7 +85,9 @@ export type ShapeToolbarProps = {
  * Get line property from a shape if it exists.
  */
 function getShapeLine(shape: Shape | undefined): Line | undefined {
-  if (!shape) return undefined;
+  if (!shape) {
+    return undefined;
+  }
   if (shape.type === "sp" || shape.type === "cxnSp") {
     return shape.properties.line;
   }
@@ -126,7 +128,9 @@ export function ShapeToolbar({
 
   const handleLineChange = useCallback(
     (line: Line) => {
-      if (!primaryId) return;
+      if (!primaryId) {
+        return;
+      }
       onShapeChange(primaryId, (shape) => {
         if (shape.type === "sp" || shape.type === "cxnSp") {
           return {
@@ -140,7 +144,7 @@ export function ShapeToolbar({
         return shape;
       });
     },
-    [primaryId, onShapeChange]
+    [primaryId, onShapeChange],
   );
 
   const handleDelete = useCallback(() => {
@@ -201,22 +205,10 @@ export function ShapeToolbar({
   return (
     <div className={className} style={containerStyle}>
       {/* Undo/Redo */}
-      <Button
-        variant="ghost"
-        onClick={onUndo}
-        disabled={!canUndo}
-        title="Undo (Ctrl+Z)"
-        style={{ padding: "4px 6px" }}
-      >
+      <Button variant="ghost" onClick={onUndo} disabled={!canUndo} title="Undo (Ctrl+Z)" style={{ padding: "4px 6px" }}>
         <UndoIcon size={iconSize} strokeWidth={strokeWidth} />
       </Button>
-      <Button
-        variant="ghost"
-        onClick={onRedo}
-        disabled={!canRedo}
-        title="Redo (Ctrl+Y)"
-        style={{ padding: "4px 6px" }}
-      >
+      <Button variant="ghost" onClick={onRedo} disabled={!canRedo} title="Redo (Ctrl+Y)" style={{ padding: "4px 6px" }}>
         <RedoIcon size={iconSize} strokeWidth={strokeWidth} />
       </Button>
 

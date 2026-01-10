@@ -322,7 +322,7 @@ function getTransitionTypeElement(type: TransitionType, direction?: TransitionDi
  * @see ECMA-376 Part 1, Section 19.5 (Timing)
  */
 function generateTimingXml(animations: ShapeAnimation[]): string {
-  if (animations.length === 0) return "";
+  if (animations.length === 0) {return "";}
 
   const animationNodes = animations.map((anim, index) => {
     const { shapeId, preset } = anim;

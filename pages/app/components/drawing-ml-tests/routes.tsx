@@ -86,14 +86,29 @@ export const categories: readonly CategoryRoute[] = [
 // Helpers
 // =============================================================================
 
+
+
+
+
+
 export function findCategory(categoryId: string): CategoryRoute | undefined {
   return categories.find((c) => c.id === categoryId);
 }
+
+
+
+
+
 
 export function findFeature(categoryId: string, featureId: string): FeatureRoute | undefined {
   const category = findCategory(categoryId);
   return category?.features.find((f) => f.id === featureId);
 }
+
+
+
+
+
 
 export function getDefaultRoute(): { category: Category; feature: string } {
   const category = categories[0];

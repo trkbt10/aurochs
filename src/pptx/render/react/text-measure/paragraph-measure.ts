@@ -173,6 +173,11 @@ function measureBulletWidth(
   return textNode.getComputedTextLength();
 }
 
+
+
+
+
+
 export function createParagraphMeasurer(): ParagraphMeasurer | null {
   const textNode = ensureSvgTextNode();
   if (!textNode) {

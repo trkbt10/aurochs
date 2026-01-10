@@ -831,12 +831,12 @@ function processVariables(
  */
 function parseVariableValue(value: string): DiagramVariableValue {
   // Try boolean
-  if (value === "true") return true;
-  if (value === "false") return false;
+  if (value === "true") {return true;}
+  if (value === "false") {return false;}
 
   // Try number
   const num = parseFloat(value);
-  if (!isNaN(num)) return num;
+  if (!isNaN(num)) {return num;}
 
   // Return as string (will be cast to appropriate type when used)
   return value as DiagramVariableValue;

@@ -44,7 +44,7 @@ const PRESET_FONTS = [
 // =============================================================================
 
 function pathToSvgD(points: readonly { x: number; y: number }[]): string {
-  if (points.length === 0) return "";
+  if (points.length === 0) {return "";}
   const [first, ...rest] = points;
   const moveTo = `M ${first.x.toFixed(2)} ${first.y.toFixed(2)}`;
   const lineTo = rest.map((p) => `L ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(" ");
@@ -172,6 +172,11 @@ function PathDetails({ glyph }: { glyph: GlyphContour }) {
 // Main Component
 // =============================================================================
 
+
+
+
+
+
 export function GlyphTestPage({ onBack }: GlyphTestPageProps) {
   const [inputText, setInputText] = useState(DEFAULT_CHARS);
   const [fontFamily, setFontFamily] = useState(DEFAULT_FONT);
@@ -209,7 +214,7 @@ export function GlyphTestPage({ onBack }: GlyphTestPageProps) {
   }, [inputText, effectiveFont, style]);
 
   const selectedGlyph = useMemo(() => {
-    if (!selectedChar) return null;
+    if (!selectedChar) {return null;}
     return glyphs.find((g) => g.char === selectedChar)?.glyph ?? null;
   }, [selectedChar, glyphs]);
 

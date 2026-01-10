@@ -350,7 +350,7 @@ function findBridgePoint(
     const v = polygon[i];
 
     // Skip if not to the right of holePoint
-    if (v.x <= holePoint.x) continue;
+    if (v.x <= holePoint.x) {continue;}
 
     // Check if inside the visibility triangle
     if (isPointInTriangle(v, holePoint, closestIntersection, bridgeVertex)) {

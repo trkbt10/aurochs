@@ -44,7 +44,7 @@ export const Vec2 = {
 
   normalize(v: Vector2): Vector2 {
     const len = Math.sqrt(v.x * v.x + v.y * v.y);
-    if (len === 0) return { x: 0, y: 0 };
+    if (len === 0) {return { x: 0, y: 0 };}
     return { x: v.x / len, y: v.y / len };
   },
 

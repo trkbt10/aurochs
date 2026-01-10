@@ -39,7 +39,7 @@ function getCurrentIndex(
 ): number {
   if (selection.primaryId) {
     const idx = slides.findIndex((s) => s.id === selection.primaryId);
-    if (idx !== -1) return idx;
+    if (idx !== -1) {return idx;}
   }
   return 0;
 }
@@ -82,7 +82,7 @@ export function useSlideKeyNavigation(
 
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent) => {
-      if (!enabled || slides.length === 0) return;
+      if (!enabled || slides.length === 0) {return;}
 
       const { isNext, isPrev } = isNavigationKey(event.key, orientation);
 
@@ -125,7 +125,7 @@ export function useSlideKeyNavigation(
         ? Math.min(currentIndex + 1, slides.length - 1)
         : Math.max(currentIndex - 1, 0);
 
-      if (newIndex === currentIndex) return;
+      if (newIndex === currentIndex) {return;}
 
       if (event.shiftKey) {
         // Extend selection
@@ -148,13 +148,13 @@ export function useSlideKeyNavigation(
 
   // Global keyboard listener when container is focused
   useEffect(() => {
-    if (!enabled || !containerRef?.current) return;
+    if (!enabled || !containerRef?.current) {return;}
 
     const container = containerRef.current;
 
     function handleGlobalKeyDown(event: KeyboardEvent) {
       // Only handle if container or child is focused
-      if (!container.contains(document.activeElement)) return;
+      if (!container.contains(document.activeElement)) {return;}
 
       const { isNext, isPrev } = isNavigationKey(event.key, orientation);
       const isNavKey =

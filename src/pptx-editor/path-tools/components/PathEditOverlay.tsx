@@ -126,7 +126,7 @@ export function PathEditOverlay({
   // Handle pointer down on the overlay
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
-      if (!isActive) return;
+      if (!isActive) {return;}
       e.preventDefault();
       e.stopPropagation();
 
@@ -142,7 +142,7 @@ export function PathEditOverlay({
   // Handle pointer move on the overlay
   const handlePointerMove = useCallback(
     (e: React.PointerEvent) => {
-      if (!isActive) return;
+      if (!isActive) {return;}
 
       const rect = e.currentTarget.getBoundingClientRect();
       const { x, y } = clientToSlideCoords(e.clientX, e.clientY, rect);
@@ -156,7 +156,7 @@ export function PathEditOverlay({
   // Handle key down
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (!isActive) return;
+      if (!isActive) {return;}
       onKeyDown(e);
     },
     [isActive, onKeyDown]

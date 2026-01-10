@@ -72,6 +72,11 @@ const animationIndicatorStyle: CSSProperties = {
   animation: "pulse 2s ease-in-out infinite",
 };
 
+
+
+
+
+
 export function SlideIndicator({
   current,
   total,

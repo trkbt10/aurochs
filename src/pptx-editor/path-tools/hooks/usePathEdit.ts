@@ -144,7 +144,7 @@ export function usePathEdit(callbacks: PathEditCallbacks): UsePathEditReturn {
 
   // Delete selected points
   const deleteSelectedPoints = useCallback(() => {
-    if (selectedPoints.length === 0) return;
+    if (selectedPoints.length === 0) {return;}
     if (path.points.length - selectedPoints.length < 2) {
       // Can't have a path with less than 2 points
       return;

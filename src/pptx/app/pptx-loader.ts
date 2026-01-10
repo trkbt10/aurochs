@@ -46,6 +46,9 @@ async function preloadZipFiles(jszip: JSZip): Promise<PptxFileCache> {
  * Create a PresentationFile interface from the cached files
  */
 export function createPresentationFile(cache: PptxFileCache): PresentationFile {
+  // Pre-compute file list for efficient access
+  const fileList = Array.from(cache.keys());
+
   return {
     readText(filePath: string): string | null {
       const entry = cache.get(filePath);
@@ -57,6 +60,9 @@ export function createPresentationFile(cache: PptxFileCache): PresentationFile {
     },
     exists(filePath: string): boolean {
       return cache.has(filePath);
+    },
+    listFiles(): readonly string[] {
+      return fileList;
     },
   };
 }

@@ -75,7 +75,7 @@ export function useSlideContextMenu(
 
   // Get the effective selection (include right-clicked slide if not selected)
   const getEffectiveSelection = useCallback((): readonly SlideId[] => {
-    if (!contextMenu.slideId) return selectedIds;
+    if (!contextMenu.slideId) {return selectedIds;}
 
     if (selectedIds.includes(contextMenu.slideId)) {
       return selectedIds;
@@ -88,7 +88,7 @@ export function useSlideContextMenu(
   const handleMenuAction = useCallback(
     (actionId: string) => {
       const effectiveIds = getEffectiveSelection();
-      if (effectiveIds.length === 0) return;
+      if (effectiveIds.length === 0) {return;}
 
       switch (actionId) {
         case SLIDE_LIST_MENU_ACTIONS.DUPLICATE:

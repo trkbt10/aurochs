@@ -57,7 +57,7 @@ export function SvgRulers({
   rulerThickness,
   visible,
 }: SvgRulersProps) {
-  if (!visible) return null;
+  if (!visible) {return null;}
 
   const { major, minor } = useMemo(() => getStepForZoom(viewport.scale), [viewport.scale]);
 
@@ -122,7 +122,7 @@ export function SvgRulers({
           {/* Minor ticks */}
           {hMinorTicks.map((value) => {
             const pos = value * viewport.scale + viewport.translateX;
-            if (pos < 0 || pos > hRulerWidth) return null;
+            if (pos < 0 || pos > hRulerWidth) {return null;}
             return (
               <line
                 key={`h-minor-${value}`}
@@ -138,7 +138,7 @@ export function SvgRulers({
           {/* Major ticks with labels */}
           {hMajorTicks.map((value) => {
             const pos = value * viewport.scale + viewport.translateX;
-            if (pos < -20 || pos > hRulerWidth + 20) return null;
+            if (pos < -20 || pos > hRulerWidth + 20) {return null;}
             return (
               <g key={`h-major-${value}`}>
                 <line
@@ -181,7 +181,7 @@ export function SvgRulers({
           {/* Minor ticks */}
           {vMinorTicks.map((value) => {
             const pos = value * viewport.scale + viewport.translateY;
-            if (pos < 0 || pos > vRulerHeight) return null;
+            if (pos < 0 || pos > vRulerHeight) {return null;}
             return (
               <line
                 key={`v-minor-${value}`}
@@ -197,7 +197,7 @@ export function SvgRulers({
           {/* Major ticks with labels */}
           {vMajorTicks.map((value) => {
             const pos = value * viewport.scale + viewport.translateY;
-            if (pos < -20 || pos > vRulerHeight + 20) return null;
+            if (pos < -20 || pos > vRulerHeight + 20) {return null;}
             return (
               <g key={`v-major-${value}`}>
                 <line

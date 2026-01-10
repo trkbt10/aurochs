@@ -65,8 +65,8 @@ type AnimationExecOptions = {
  * Handles "indefinite" string and numeric values.
  */
 function parseDuration(duration: number | "indefinite" | undefined): number {
-  if (duration === "indefinite") return 1000;
-  if (typeof duration === "number") return duration;
+  if (duration === "indefinite") {return 1000;}
+  if (typeof duration === "number") {return duration;}
   return 1000;
 }
 
@@ -75,7 +75,7 @@ function parseDuration(duration: number | "indefinite" | undefined): number {
  * Returns undefined if target is not a shape target.
  */
 function getShapeId(target: AnimationTarget | undefined): string | undefined {
-  if (!target) return undefined;
+  if (!target) {return undefined;}
   if (target.type === "shape") {
     return target.shapeId;
   }
@@ -175,7 +175,7 @@ export function createPlayer(options: PlayerOptions): AnimationPlayerInstance {
     target: AnimationTarget | undefined
   ): HTMLElement | SVGElement | null {
     const shapeId = getShapeId(target);
-    if (!shapeId) return null;
+    if (!shapeId) {return null;}
     return findElement(shapeId);
   }
 
@@ -343,7 +343,7 @@ export function createPlayer(options: PlayerOptions): AnimationPlayerInstance {
    */
   async function processAnimateRotation(node: AnimateRotationBehavior): Promise<void> {
     const el = findTargetElement(node.target);
-    if (!el) return;
+    if (!el) {return;}
 
     const shapeId = getShapeId(node.target);
     const by = node.by ?? 360;
@@ -362,7 +362,7 @@ export function createPlayer(options: PlayerOptions): AnimationPlayerInstance {
    */
   async function processAnimateScale(node: AnimateScaleBehavior): Promise<void> {
     const el = findTargetElement(node.target);
-    if (!el) return;
+    if (!el) {return;}
 
     const shapeId = getShapeId(node.target);
     const toX = node.toX ?? 1;
@@ -382,7 +382,7 @@ export function createPlayer(options: PlayerOptions): AnimationPlayerInstance {
    */
   async function processAnimateColor(node: AnimateColorBehavior): Promise<void> {
     const el = findTargetElement(node.target);
-    if (!el) return;
+    if (!el) {return;}
 
     const shapeId = getShapeId(node.target);
     const duration = parseDuration(node.duration);
@@ -407,7 +407,7 @@ export function createPlayer(options: PlayerOptions): AnimationPlayerInstance {
    * Process a time node and its children.
    */
   async function processNode(node: TimeNode): Promise<void> {
-    if (shouldStop()) return;
+    if (shouldStop()) {return;}
 
     log(`Processing node: ${node.type}`);
 
@@ -429,7 +429,7 @@ export function createPlayer(options: PlayerOptions): AnimationPlayerInstance {
 
       case "sequence": {
         for (const child of node.children) {
-          if (shouldStop()) break;
+          if (shouldStop()) {break;}
           await processNode(child);
         }
         break;
@@ -522,7 +522,7 @@ export function createPlayer(options: PlayerOptions): AnimationPlayerInstance {
     },
 
     stop(): void {
-      if (state.status !== "playing") return;
+      if (state.status !== "playing") {return;}
 
       state.status = "stopping";
       state.abortController?.abort();

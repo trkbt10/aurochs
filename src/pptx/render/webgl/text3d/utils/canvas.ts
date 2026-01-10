@@ -52,6 +52,11 @@ export function isOffscreenCanvasSupported(): boolean {
  */
 let offscreenCanvas2dSupported: boolean | null = null;
 
+
+
+
+
+
 export function isOffscreenCanvas2dSupported(): boolean {
   if (offscreenCanvas2dSupported !== null) {
     return offscreenCanvas2dSupported;

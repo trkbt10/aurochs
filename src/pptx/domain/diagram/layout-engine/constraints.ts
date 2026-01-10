@@ -513,7 +513,7 @@ export function sortConstraintsByDependency(
   const constraintMap = new Map<string, DiagramConstraint>();
 
   for (const constraint of constraints) {
-    if (!constraint.type) continue;
+    if (!constraint.type) {continue;}
 
     const key = buildConstraintKey(constraint.type, constraint.forName);
     constraintMap.set(key, constraint);
@@ -550,7 +550,7 @@ export function sortConstraintsByDependency(
 
   while (queue.length > 0) {
     const key = queue.shift()!;
-    if (visited.has(key)) continue;
+    if (visited.has(key)) {continue;}
     visited.add(key);
 
     const constraint = constraintMap.get(key);
@@ -572,7 +572,7 @@ export function sortConstraintsByDependency(
 
   // Add any remaining constraints (circular dependencies or isolated)
   for (const constraint of constraints) {
-    if (!constraint.type) continue;
+    if (!constraint.type) {continue;}
     const key = buildConstraintKey(constraint.type, constraint.forName);
     if (!visited.has(key)) {
       sorted.push(constraint);
@@ -666,12 +666,12 @@ export function applyRules(
   rules: readonly DiagramRule[]
 ): void {
   for (const rule of rules) {
-    if (!rule.type) continue;
+    if (!rule.type) {continue;}
 
     const constraintType = rule.type as DiagramConstraintType;
     const currentValue = resolved.get(constraintType);
 
-    if (currentValue === undefined) continue;
+    if (currentValue === undefined) {continue;}
 
     let newValue = currentValue;
 

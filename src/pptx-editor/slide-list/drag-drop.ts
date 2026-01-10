@@ -67,7 +67,7 @@ export function isValidGapDrop(
     .filter((idx) => idx >= 0)
     .sort((a, b) => a - b);
 
-  if (draggingIndices.length === 0) return false;
+  if (draggingIndices.length === 0) {return false;}
 
   // Check for contiguous selection - only then check for no-op
   const isContiguous = draggingIndices.every(
@@ -137,6 +137,11 @@ export function calculateGapIndexFromItemDragOver(
 }
 
 // Legacy exports for backwards compatibility with tests
+
+
+
+
+
 export function getVerticalDropPosition(
   clientY: number,
   rectTop: number,
@@ -146,6 +151,11 @@ export function getVerticalDropPosition(
   return clientY < mid ? "before" : "after";
 }
 
+
+
+
+
+
 export function getHorizontalDropPosition(
   clientX: number,
   rectLeft: number,
@@ -154,6 +164,11 @@ export function getHorizontalDropPosition(
   const mid = rectLeft + rectWidth / 2;
   return clientX < mid ? "before" : "after";
 }
+
+
+
+
+
 
 export function calculateTargetIndex(
   slides: readonly SlideWithId[],
@@ -165,12 +180,22 @@ export function calculateTargetIndex(
   return calculateTargetIndexFromGap(slides, draggingIds, gapIndex);
 }
 
+
+
+
+
+
 export function isValidDrop(
   dragState: SlideDragState,
   _targetSlideId: SlideId
 ): boolean {
   return dragState.isDragging && dragState.draggingIds.length > 0;
 }
+
+
+
+
+
 
 export function updateDragOverState(
   currentState: SlideDragState,
@@ -180,12 +205,22 @@ export function updateDragOverState(
   return currentState;
 }
 
+
+
+
+
+
 export function isDragTarget(
   _dragState: SlideDragState,
   _slideId: SlideId
 ): boolean {
   return false;
 }
+
+
+
+
+
 
 export function getDragPositionForSlide(
   _dragState: SlideDragState,

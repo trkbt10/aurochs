@@ -373,7 +373,7 @@ describe("MixedRunPropertiesEditor", () => {
             break;
           }
         }
-        if (underlineSelect) break;
+        if (underlineSelect) {break;}
       }
       expect(underlineSelect).toBeTruthy();
       expect(underlineSelect?.value).toBe("sng");
@@ -397,7 +397,7 @@ describe("MixedRunPropertiesEditor", () => {
             break;
           }
         }
-        if (underlineSelect) break;
+        if (underlineSelect) {break;}
       }
 
       if (underlineSelect) {
@@ -424,7 +424,7 @@ describe("MixedRunPropertiesEditor", () => {
             break;
           }
         }
-        if (underlineSelect) break;
+        if (underlineSelect) {break;}
       }
 
       if (underlineSelect) {
@@ -454,7 +454,7 @@ describe("MixedRunPropertiesEditor", () => {
             break;
           }
         }
-        if (capsSelect) break;
+        if (capsSelect) {break;}
       }
       expect(capsSelect).toBeTruthy();
       expect(capsSelect?.value).toBe("none");
@@ -478,7 +478,7 @@ describe("MixedRunPropertiesEditor", () => {
             break;
           }
         }
-        if (capsSelect) break;
+        if (capsSelect) {break;}
       }
 
       if (capsSelect) {

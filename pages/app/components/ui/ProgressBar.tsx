@@ -40,6 +40,11 @@ const fillGradientStyle: CSSProperties = {
   background: "linear-gradient(90deg, #3b82f6, #22d3ee)",
 };
 
+
+
+
+
+
 export function ProgressBar({ progress, variant = "dark", className }: Props) {
   const trackStyle = trackStyles[variant];
   const barStyle = variant === "light" ? fillGradientStyle : fillStyle;

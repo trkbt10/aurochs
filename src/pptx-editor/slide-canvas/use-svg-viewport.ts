@@ -82,7 +82,7 @@ export function useSvgViewport({
   // Update viewport size on resize
   useLayoutEffect(() => {
     const svg = svgRef.current;
-    if (!svg) return;
+    if (!svg) {return;}
 
     const updateSize = () => {
       const rect = svg.getBoundingClientRect();
@@ -103,8 +103,8 @@ export function useSvgViewport({
 
   // Auto-center on mount
   useLayoutEffect(() => {
-    if (!autoCenter || hasCenteredRef.current) return;
-    if (viewportSize.width === 0 || viewportSize.height === 0) return;
+    if (!autoCenter || hasCenteredRef.current) {return;}
+    if (viewportSize.width === 0 || viewportSize.height === 0) {return;}
 
     const fitted = createFittedViewport(viewportSize, slideSize, rulerThickness);
     setViewport(fitted);
@@ -120,7 +120,7 @@ export function useSvgViewport({
   const handleWheel = useCallback(
     (e: WheelEvent) => {
       const svg = svgRef.current;
-      if (!svg) return;
+      if (!svg) {return;}
 
       const isMac = navigator.platform.toUpperCase().includes("MAC");
       const zoomModifier = isMac ? e.metaKey : e.ctrlKey;
@@ -178,7 +178,7 @@ export function useSvgViewport({
 
   const handlePanMove = useCallback(
     (e: PointerEvent) => {
-      if (!isPanning) return;
+      if (!isPanning) {return;}
 
       const dx = e.clientX - lastPointerRef.current.x;
       const dy = e.clientY - lastPointerRef.current.y;

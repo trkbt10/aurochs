@@ -239,6 +239,11 @@ type PathMeta = {
   readonly area: number;
 };
 
+
+
+
+
+
 export function pathsToShapes(paths: readonly ContourPath[]): THREE.Shape[] {
   if (!paths || !Array.isArray(paths)) {
     return [];
@@ -428,13 +433,18 @@ export function mergeExtrudeGeometries(
 // Utility
 // =============================================================================
 
+
+
+
+
+
 export function scaleGeometryToFit(
   geometry: THREE.BufferGeometry,
   maxWidth: number,
   maxHeight: number,
 ): void {
   geometry.computeBoundingBox();
-  if (!geometry.boundingBox) return;
+  if (!geometry.boundingBox) {return;}
 
   const size = new THREE.Vector3();
   geometry.boundingBox.getSize(size);

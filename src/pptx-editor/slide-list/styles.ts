@@ -20,6 +20,11 @@ import {
 /** Gap size used for consistent spacing */
 const CONTAINER_GAP = 8;
 
+
+
+
+
+
 export function getContainerStyle(
   orientation: SlideListOrientation
 ): CSSProperties {
@@ -38,6 +43,11 @@ export function getContainerStyle(
 // Item wrapper styles
 // =============================================================================
 
+
+
+
+
+
 export function getItemWrapperStyle(
   orientation: SlideListOrientation
 ): CSSProperties {
@@ -54,6 +64,11 @@ export function getItemWrapperStyle(
 // =============================================================================
 // Number badge styles (positioned outside slide)
 // =============================================================================
+
+
+
+
+
 
 export function getNumberBadgeStyle(
   orientation: SlideListOrientation
@@ -108,6 +123,11 @@ function getSelectionRing(
   }
   return "none";
 }
+
+
+
+
+
 
 export function getThumbnailContainerStyle(
   aspectRatio: string,
@@ -175,6 +195,11 @@ export const thumbnailFallbackStyle: CSSProperties = {
 // Delete button styles (circular)
 // =============================================================================
 
+
+
+
+
+
 export function getDeleteButtonStyle(visible: boolean): CSSProperties {
   return {
     position: "absolute",
@@ -201,6 +226,11 @@ export function getDeleteButtonStyle(visible: boolean): CSSProperties {
 // =============================================================================
 // Fx button styles
 // =============================================================================
+
+
+
+
+
 
 export function getFxButtonStyle(visible: boolean): CSSProperties {
   return {
@@ -233,6 +263,11 @@ export function getFxButtonStyle(visible: boolean): CSSProperties {
 /** Fixed gap size - matches CONTAINER_GAP */
 const GAP_SIZE = 8;
 
+
+
+
+
+
 export function getGapStyle(
   orientation: SlideListOrientation
 ): CSSProperties {
@@ -262,6 +297,11 @@ export function getGapStyle(
     zIndex: 2,
   };
 }
+
+
+
+
+
 
 export function getGapDropIndicatorStyle(
   orientation: SlideListOrientation

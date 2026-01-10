@@ -164,7 +164,7 @@ function buildReflectionGradientTable(reflection: NonNullable<TextEffectsConfig[
     } else {
       // Between start and end: interpolate
       const range = endPos - stPos;
-      if (range <= 0) return stA;
+      if (range <= 0) {return stA;}
       const t = (pos - stPos) / range;
       return stA + t * (endA - stA);
     }

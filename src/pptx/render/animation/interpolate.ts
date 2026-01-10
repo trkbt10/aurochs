@@ -124,7 +124,7 @@ export function parseCoordinateValue(
   slideSize: number
 ): number | undefined {
   const parsed = parseAnimateValue(value);
-  if (!parsed) return undefined;
+  if (!parsed) {return undefined;}
 
   // If already in pixels, return as-is
   if (parsed.unit === "px") {

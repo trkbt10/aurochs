@@ -949,7 +949,7 @@ export function SlideCanvas({
         {pathEdit && isPathEditEditing(pathEdit) && onPathEditCommit && onPathEditCancel && (() => {
           // Find the shape being edited
           const editingShape = slide.shapes.find((s) => {
-            if (s.type === "contentPart") return false;
+            if (s.type === "contentPart") {return false;}
             return s.nonVisual.id === pathEdit.shapeId;
           });
 
@@ -958,7 +958,7 @@ export function SlideCanvas({
           }
 
           const transform = editingShape.properties.transform;
-          if (!transform) return null;
+          if (!transform) {return null;}
 
           const shapeWidth = transform.width as number;
           const shapeHeight = transform.height as number;
@@ -970,7 +970,7 @@ export function SlideCanvas({
             shapeHeight
           );
 
-          if (!drawingPath) return null;
+          if (!drawingPath) {return null;}
 
           return (
             <PathEditOverlay

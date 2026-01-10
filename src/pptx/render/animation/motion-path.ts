@@ -346,7 +346,7 @@ export function parseMotionPath(pathString: string): MotionPath {
   let cumulativeLength = 0;
 
   for (const cmd of commands) {
-    let startPoint = { ...currentPoint };
+    const startPoint = { ...currentPoint };
     let endPoint: Point;
     let length: number;
 

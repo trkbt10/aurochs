@@ -86,7 +86,7 @@ function computeBoundingBox(geometry: THREE.BufferGeometry): BoundingBox {
  * Normalize coordinates to 0-1 range
  */
 function normalize(value: number, min: number, max: number): number {
-  if (max === min) return 0.5;
+  if (max === min) {return 0.5;}
   return (value - min) / (max - min);
 }
 

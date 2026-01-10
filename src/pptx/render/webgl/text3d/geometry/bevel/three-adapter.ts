@@ -758,7 +758,7 @@ export function createExtrudedGeometryWithBevel(
  */
 function translateGeometryZ(geometry: THREE.BufferGeometry, z: number): void {
   const positions = geometry.getAttribute("position") as THREE.BufferAttribute;
-  if (!positions) return;
+  if (!positions) {return;}
 
   for (let i = 0; i < positions.count; i++) {
     positions.setZ(i, positions.getZ(i) + z);

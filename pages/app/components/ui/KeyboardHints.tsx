@@ -70,6 +70,11 @@ function Kbd({ children, variant }: { children: ReactNode; variant: Variant }) {
   return <span style={kbdStyles[variant]}>{children}</span>;
 }
 
+
+
+
+
+
 export function KeyboardHints({ hints, variant = "dark", className }: Props) {
   return (
     <div style={containerStyles[variant]} className={className}>
