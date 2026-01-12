@@ -2,7 +2,7 @@
  * @file Tests for PDF content stream tokenizer
  */
 
-import { tokenizeContentStream, type PdfToken } from "./tokenizer";
+import { tokenizeContentStream } from "./tokenizer";
 
 describe("tokenizeContentStream", () => {
   describe("number tokenization", () => {

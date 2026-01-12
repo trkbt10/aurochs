@@ -15,12 +15,12 @@ import {
   PDFArray,
   decodePDFRawStream,
 } from "pdf-lib";
-import type { FontMapping, FontMetrics, FontInfo, FontMappings } from "../domain/font";
-import { DEFAULT_FONT_METRICS } from "../domain/font";
+import type { FontMapping, FontMetrics, FontInfo, FontMappings, CMapParseResult } from "../domain/font";
+import { DEFAULT_FONT_METRICS, parseToUnicodeCMap } from "../domain/font";
 
-// Re-export types for backwards compatibility
+// Re-export for backwards compatibility
 export type { FontMapping, FontMetrics, FontInfo, FontMappings } from "../domain/font";
-export { DEFAULT_FONT_METRICS } from "../domain/font";
+export { DEFAULT_FONT_METRICS, decodeText } from "../domain/font";
 
 // =============================================================================
 // Font Extraction
@@ -372,21 +372,13 @@ function getNumber(obj: unknown): number | null {
 }
 
 /**
- * Parse result containing mapping and detected byte width
- */
-type ParseResult = {
-  mapping: FontMapping;
-  codeByteWidth: 1 | 2;
-};
-
-/**
  * Extract mapping from ToUnicode reference
  */
 function extractToUnicodeMappingFromRef(
   toUnicodeRef: unknown,
   context: PDFPage["node"]["context"]
-): ParseResult {
-  const emptyResult: ParseResult = { mapping: new Map(), codeByteWidth: 1 };
+): CMapParseResult {
+  const emptyResult: CMapParseResult = { mapping: new Map(), codeByteWidth: 1 };
 
   const toUnicodeStream =
     toUnicodeRef instanceof PDFRef
@@ -405,260 +397,5 @@ function extractToUnicodeMappingFromRef(
   const result = parseToUnicodeCMap(cmapData);
 
   return result;
-}
-
-// =============================================================================
-// CMap Parsing
-// =============================================================================
-
-/**
- * Parse ToUnicode CMap data and detect byte width
- */
-function parseToUnicodeCMap(data: string): ParseResult {
-  const mapping: FontMapping = new Map();
-  let maxSourceHexLength = 0;
-
-  // Parse beginbfchar sections (single character mappings)
-  const bfcharLength = parseBfChar(data, mapping);
-  maxSourceHexLength = Math.max(maxSourceHexLength, bfcharLength);
-
-  // Parse beginbfrange sections (range mappings)
-  const bfrangeLength = parseBfRange(data, mapping);
-  maxSourceHexLength = Math.max(maxSourceHexLength, bfrangeLength);
-
-  // Determine byte width from source hex length
-  // 2 hex digits = 1 byte, 4 hex digits = 2 bytes
-  const codeByteWidth: 1 | 2 = maxSourceHexLength > 2 ? 2 : 1;
-
-  return { mapping, codeByteWidth };
-}
-
-/**
- * Parse beginbfchar sections
- * Format: <source> <destination>
- * Returns the maximum source hex length found
- */
-function parseBfChar(data: string, mapping: FontMapping): number {
-  const sectionRegex = /beginbfchar\s*\n?([\s\S]*?)endbfchar/gi;
-  let sectionMatch;
-  let maxSourceLength = 0;
-
-  while ((sectionMatch = sectionRegex.exec(data)) !== null) {
-    const content = sectionMatch[1];
-    if (!content) continue;
-
-    // Match each <source> <destination> pair
-    const entryRegex = /<([0-9a-fA-F]+)>\s*<([0-9a-fA-F]+)>/g;
-    let entryMatch;
-
-    while ((entryMatch = entryRegex.exec(content)) !== null) {
-      const sourceHex = entryMatch[1];
-      const destHex = entryMatch[2];
-      if (!sourceHex || !destHex) continue;
-
-      maxSourceLength = Math.max(maxSourceLength, sourceHex.length);
-
-      const source = parseInt(sourceHex, 16);
-      const unicode = hexToString(destHex);
-
-      if (unicode) {
-        mapping.set(source, unicode);
-      }
-    }
-  }
-
-  return maxSourceLength;
-}
-
-/**
- * Parse beginbfrange sections
- * Format: <start> <end> <destStart> or <start> <end> [<dest1> <dest2> ...]
- * Returns the maximum source hex length found
- */
-function parseBfRange(data: string, mapping: FontMapping): number {
-  const sectionRegex = /beginbfrange\s*\n?([\s\S]*?)endbfrange/gi;
-  let sectionMatch;
-  let maxSourceLength = 0;
-
-  while ((sectionMatch = sectionRegex.exec(data)) !== null) {
-    const content = sectionMatch[1];
-    if (!content) continue;
-
-    // Match range entries: <start> <end> <destStart>
-    const simpleRangeRegex =
-      /<([0-9a-fA-F]+)>\s*<([0-9a-fA-F]+)>\s*<([0-9a-fA-F]+)>/g;
-    let simpleMatch;
-
-    while ((simpleMatch = simpleRangeRegex.exec(content)) !== null) {
-      const startHex = simpleMatch[1];
-      const endHex = simpleMatch[2];
-      const destHex = simpleMatch[3];
-      if (!startHex || !endHex || !destHex) continue;
-
-      maxSourceLength = Math.max(maxSourceLength, startHex.length, endHex.length);
-
-      const start = parseInt(startHex, 16);
-      const end = parseInt(endHex, 16);
-      const destStart = parseInt(destHex, 16);
-
-      // Limit range to prevent memory issues
-      const maxRange = 256;
-      const rangeSize = Math.min(end - start + 1, maxRange);
-
-      for (let i = 0; i < rangeSize; i++) {
-        const source = start + i;
-        const unicode = String.fromCodePoint(destStart + i);
-        mapping.set(source, unicode);
-      }
-    }
-
-    // Match array range entries: <start> <end> [<dest1> <dest2> ...]
-    const arrayRangeRegex =
-      /<([0-9a-fA-F]+)>\s*<([0-9a-fA-F]+)>\s*\[([\s\S]*?)\]/g;
-    let arrayMatch;
-
-    while ((arrayMatch = arrayRangeRegex.exec(content)) !== null) {
-      const startHex = arrayMatch[1];
-      const endHex = arrayMatch[2];
-      const arrayContent = arrayMatch[3];
-      if (!startHex || !endHex || !arrayContent) continue;
-
-      maxSourceLength = Math.max(maxSourceLength, startHex.length, endHex.length);
-
-      const start = parseInt(startHex, 16);
-      const end = parseInt(endHex, 16);
-
-      // Parse array elements
-      const destRegex = /<([0-9a-fA-F]+)>/g;
-      const dests: string[] = [];
-      let destMatch;
-
-      while ((destMatch = destRegex.exec(arrayContent)) !== null) {
-        const hex = destMatch[1];
-        if (hex) {
-          const unicode = hexToString(hex);
-          if (unicode) dests.push(unicode);
-        }
-      }
-
-      // Apply mappings
-      const rangeSize = Math.min(end - start + 1, dests.length);
-      for (let i = 0; i < rangeSize; i++) {
-        const unicode = dests[i];
-        if (unicode) {
-          mapping.set(start + i, unicode);
-        }
-      }
-    }
-  }
-
-  return maxSourceLength;
-}
-
-/**
- * Convert hex string to Unicode string
- * Handles both 2-byte (BMP) and 4-byte (surrogate) encodings
- */
-function hexToString(hex: string): string | null {
-  if (hex.length === 0 || hex.length % 2 !== 0) return null;
-
-  try {
-    // For 4-digit hex (2 bytes), it's a single BMP character
-    if (hex.length <= 4) {
-      const code = parseInt(hex, 16);
-      return String.fromCodePoint(code);
-    }
-
-    // For longer hex, treat as UTF-16BE
-    let result = "";
-    for (let i = 0; i < hex.length; i += 4) {
-      const chunk = hex.slice(i, i + 4);
-      const code = parseInt(chunk, 16);
-      result += String.fromCodePoint(code);
-    }
-    return result;
-  } catch {
-    return null;
-  }
-}
-
-// =============================================================================
-// Text Decoding
-// =============================================================================
-
-/**
- * Decode text using font mapping
- */
-export function decodeText(
-  rawText: string,
-  fontName: string,
-  mappings: FontMappings
-): string {
-  // Clean font name (remove leading slash and subset prefix)
-  const cleanName = fontName.startsWith("/") ? fontName.slice(1) : fontName;
-
-  // Try exact match first
-  let fontInfo = mappings.get(cleanName);
-
-  // Try without subset prefix (e.g., "XGIAKD+Arial" → "Arial")
-  if (!fontInfo) {
-    const plusIndex = cleanName.indexOf("+");
-    if (plusIndex > 0) {
-      const baseName = cleanName.slice(plusIndex + 1);
-      fontInfo = mappings.get(baseName);
-    }
-  }
-
-  // Try matching by prefix
-  if (!fontInfo) {
-    for (const [key, value] of mappings.entries()) {
-      if (cleanName.includes(key) || key.includes(cleanName)) {
-        fontInfo = value;
-        break;
-      }
-    }
-  }
-
-  if (!fontInfo || fontInfo.mapping.size === 0) {
-    return rawText;
-  }
-
-  const { mapping, codeByteWidth } = fontInfo;
-
-  // Decode characters
-  let decoded = "";
-
-  if (codeByteWidth === 2) {
-    // For CID fonts with 2-byte codes, read pairs of bytes as big-endian 16-bit values
-    for (let i = 0; i < rawText.length; i += 2) {
-      const highByte = rawText.charCodeAt(i);
-      const lowByte = i + 1 < rawText.length ? rawText.charCodeAt(i + 1) : 0;
-      const code = (highByte << 8) | lowByte;
-
-      const mapped = mapping.get(code);
-      if (mapped) {
-        decoded += mapped;
-      } else {
-        // No mapping found for this 2-byte code
-        // Try to preserve the original if it's a printable character
-        if (code >= 32 && code < 127) {
-          decoded += String.fromCharCode(code);
-        }
-      }
-    }
-  } else {
-    // For single-byte fonts
-    for (let i = 0; i < rawText.length; i++) {
-      const code = rawText.charCodeAt(i);
-      const mapped = mapping.get(code);
-      if (mapped) {
-        decoded += mapped;
-      } else {
-        decoded += rawText[i];
-      }
-    }
-  }
-
-  return decoded;
 }
 

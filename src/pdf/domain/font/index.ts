@@ -21,3 +21,15 @@ export { normalizeFontName, isBoldFont, isItalicFont } from "./font-style";
 
 // Font name mapping
 export { mapFontName } from "./font-name-map";
+
+// CMap parsing
+export type { CMapParseResult } from "./cmap-parser";
+export {
+  parseToUnicodeCMap,
+  parseBfChar,
+  parseBfRange,
+  hexToString,
+} from "./cmap-parser";
+
+// Text decoding
+export { decodeText } from "./text-decoder";

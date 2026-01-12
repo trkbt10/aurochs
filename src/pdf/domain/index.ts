@@ -89,5 +89,9 @@ export type { PdfImage } from "./image";
 export type { PdfElement, PdfPage, PdfDocument, PdfImportOptions } from "./document";
 export { isPdfPath, isPdfText, isPdfImage } from "./document";
 
+// Content stream domain
+export type { PdfTokenType, PdfToken } from "./content-stream";
+export { tokenizeContentStream } from "./content-stream";
+
 // Constants
 export { PT_TO_PX, PX_TO_PT } from "./constants";

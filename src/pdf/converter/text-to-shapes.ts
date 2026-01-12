@@ -10,7 +10,7 @@ import { deg, pt, px } from "../../ooxml/domain/units";
 import type { ConversionContext } from "./transform-converter";
 import { convertPoint, convertSize } from "./transform-converter";
 import { convertFill } from "./color-converter";
-import { mapFontName, isBoldFont, isItalicFont, normalizeFontName } from "../parser/text-extractor";
+import { mapFontName, isBoldFont, isItalicFont, normalizeFontName } from "../domain/font";
 
 /**
  * PdfTextをSpShape（テキストボックス）に変換
