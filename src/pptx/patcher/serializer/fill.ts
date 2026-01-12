@@ -6,7 +6,7 @@ import { createElement, type XmlElement } from "../../../xml";
 import type { GradientFill, GradientStop, PatternFill } from "../../../ooxml/domain/fill";
 import type { BlipEffects, BlipFill, Fill, StretchFill, TileFill } from "../../domain";
 import { serializeColor } from "./color";
-import { ooxmlBool, ooxmlAngleUnits, ooxmlEmu, ooxmlPercent100k } from "./units";
+import { ooxmlBool, ooxmlAngleUnits, ooxmlEmu, ooxmlPercent100k } from "../../../ooxml/serializer/units";
 
 export function serializeFill(fill: Fill): XmlElement {
   switch (fill.type) {

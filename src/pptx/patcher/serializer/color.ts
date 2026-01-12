@@ -4,7 +4,7 @@
 
 import { createElement, type XmlElement } from "../../../xml";
 import type { Color, ColorTransform } from "../../../ooxml/domain/color";
-import { ooxmlAngleUnits, ooxmlPercent100k } from "./units";
+import { ooxmlAngleUnits, ooxmlPercent100k } from "../../../ooxml/serializer/units";
 
 export function serializeColor(color: Color): XmlElement {
   const children = serializeColorTransform(color.transform);

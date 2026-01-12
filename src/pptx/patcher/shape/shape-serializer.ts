@@ -3,7 +3,7 @@ import type { Shape, SpShape, GrpShape, PicShape, CxnShape, NonVisualProperties,
 import type { Transform, GroupTransform } from "../../domain/geometry";
 import { serializeTransform } from "../serializer/transform";
 import { serializeColor, serializeEffects, serializeFill, serializeLine, serializeTextBody } from "../serializer";
-import { ooxmlAngleUnits, ooxmlBool, ooxmlEmu, ooxmlPercent100k } from "../serializer/units";
+import { ooxmlAngleUnits, ooxmlBool, ooxmlEmu, ooxmlPercent100k } from "../../../ooxml/serializer/units";
 
 /**
  * Domain Shape から完全な p:sp 要素を生成する

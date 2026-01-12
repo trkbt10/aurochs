@@ -1,7 +1,7 @@
 import { createElement, type XmlElement } from "../../../xml";
 import type { CustomDash, Line, LineEnd } from "../../domain";
 import { serializeFill } from "./fill";
-import { ooxmlEmu, ooxmlPercent100k } from "./units";
+import { ooxmlEmu, ooxmlPercent100k } from "../../../ooxml/serializer/units";
 
 export function serializeLine(line: Line): XmlElement {
   const attrs: Record<string, string> = {

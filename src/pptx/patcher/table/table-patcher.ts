@@ -7,7 +7,7 @@
 import { createElement, getChild, getChildren, isXmlElement, type XmlElement, type XmlNode } from "../../../xml";
 import type { TextBody } from "../../domain/text";
 import type { TableCell, TableCellProperties, TableColumn, TableRow } from "../../domain/table/types";
-import { ooxmlEmu } from "../serializer/units";
+import { ooxmlEmu } from "../../../ooxml/serializer/units";
 import { removeAttribute, replaceChildByName, setAttribute, setChildren } from "../core/xml-mutator";
 import { patchTextBodyElement, serializeDrawingTextBody } from "../serializer/text";
 

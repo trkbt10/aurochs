@@ -28,3 +28,13 @@ export {
   createResourceMap,
 } from "./opc";
 export type { PackResource, ResourceEntry } from "./opc";
+
+// Serializer utilities
+export {
+  ooxmlBool,
+  ooxmlAngleUnits,
+  ooxmlPercent100k,
+  ooxmlPercent1000,
+  ooxmlEmu,
+  EMU_PER_PIXEL,
+} from "./serializer";
