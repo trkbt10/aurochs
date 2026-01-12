@@ -12,7 +12,7 @@ export default defineConfig({
       formats: ["cjs", "es"],
     },
     rollupOptions: {
-      external: [/node:.+/],
+      external: [/node:.+/, "pngjs"],
     },
   },
 });

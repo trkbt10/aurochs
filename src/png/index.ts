@@ -1,8 +1,8 @@
 /**
  * @file PNG Module
  *
- * Pure JavaScript PNG encoder with Canvas API fallback for browsers.
- * No external dependencies.
+ * Browser: Canvas API
+ * Node.js: pngjs
  */
 
 export { encodeRgbaToPngDataUrl, encodeRgbaToPng } from "./encoder";

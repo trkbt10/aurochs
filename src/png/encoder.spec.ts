@@ -1,3 +1,7 @@
+/**
+ * @file PNG Encoder tests
+ */
+
 import { encodeRgbaToPng, encodeRgbaToPngDataUrl } from "./encoder";
 
 describe("PNG Encoder", () => {
