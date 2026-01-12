@@ -4,6 +4,35 @@
  * Exports all PDF domain types and utilities.
  */
 
+// Color domain
+export type { PdfColorSpace, PdfAlternateColorSpace, PdfColor, RgbColor } from "./color";
+export {
+  getColorSpaceComponents,
+  grayToRgb,
+  rgbToRgbBytes,
+  cmykToRgb,
+  rgbToHex,
+  clamp01,
+  clampByte,
+  toByte,
+} from "./color";
+
+// Font domain
+export type {
+  FontMapping,
+  FontMetrics,
+  FontInfo,
+  FontMappings,
+  CIDOrdering,
+} from "./font";
+export {
+  DEFAULT_FONT_METRICS,
+  normalizeFontName,
+  isBoldFont,
+  isItalicFont,
+  mapFontName,
+} from "./font";
+
 // Coordinate domain
 export type { PdfPoint, PdfBBox, PdfMatrix, MatrixDecomposition } from "./coordinate";
 export {
@@ -22,11 +51,8 @@ export {
   hasShear,
 } from "./coordinate";
 
-// Graphics state domain
+// Graphics state domain (color types are exported from ./color above)
 export type {
-  PdfColorSpace,
-  PdfAlternateColorSpace,
-  PdfColor,
   PdfLineJoin,
   PdfLineCap,
   PdfTextRenderingMode,
@@ -37,7 +63,6 @@ export {
   DEFAULT_STROKE_COLOR,
   createDefaultGraphicsState,
   GraphicsStateStack,
-  getColorSpaceComponents,
 } from "./graphics-state";
 
 // Path domain

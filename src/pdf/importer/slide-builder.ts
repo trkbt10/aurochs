@@ -9,6 +9,25 @@ import { rgbToHex } from "../../color/convert";
 import { convertPageToShapes, type ConversionOptions } from "../converter/pdf-to-shapes";
 import { PT_TO_PX } from "../domain";
 
+// =============================================================================
+// ページ番号表示の定数
+// =============================================================================
+
+/** ページ番号のフォントサイズ（ポイント） */
+const PAGE_NUMBER_FONT_SIZE_PT = 12;
+
+/** ページ番号テキストボックスの幅（ピクセル） */
+const PAGE_NUMBER_BOX_WIDTH = 50;
+
+/** ページ番号テキストボックスの高さ（ピクセル） */
+const PAGE_NUMBER_BOX_HEIGHT = 30;
+
+/** ページ番号テキストボックスのパディング（ピクセル） */
+const PAGE_NUMBER_PADDING = 10;
+
+/** ページ番号テキストの色（グレー） */
+const PAGE_NUMBER_COLOR = "808080";
+
 export type SlideBuilderOptions = ConversionOptions & {
   /** 背景色を設定するか */
   readonly setBackground?: boolean;

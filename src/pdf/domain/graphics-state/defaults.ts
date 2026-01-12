@@ -5,7 +5,8 @@
  */
 
 import { IDENTITY_MATRIX } from "../coordinate";
-import type { PdfColor, PdfGraphicsState } from "./types";
+import type { PdfColor } from "../color";
+import type { PdfGraphicsState } from "./types";
 
 // =============================================================================
 // Default Colors

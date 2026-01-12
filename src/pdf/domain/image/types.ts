@@ -4,7 +4,8 @@
  * Types for PDF image elements.
  */
 
-import type { PdfColorSpace, PdfGraphicsState } from "../graphics-state";
+import type { PdfColorSpace } from "../color";
+import type { PdfGraphicsState } from "../graphics-state";
 
 // =============================================================================
 // Image Element

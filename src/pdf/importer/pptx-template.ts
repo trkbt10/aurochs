@@ -4,6 +4,20 @@ import type { PresentationFile } from "../../pptx/domain";
 import { CONTENT_TYPES, RELATIONSHIP_TYPES } from "../../pptx/opc/content-types";
 import { createEmptyZipPackage } from "../../pptx/opc/zip-package";
 
+/**
+ * OOXML仕様: ST_SlideId は 256〜2147483647 の範囲
+ * スライドIDは256から開始（255 + 1）
+ * @see ISO/IEC 29500-1:2016 §19.7.4
+ */
+const SLIDE_ID_START = 256;
+
+/**
+ * OOXML仕様: ST_SlideMasterId は 2147483648 (2^31) 以上を使用
+ * マスターIDはスライドIDと衝突しない値を使用
+ * @see ISO/IEC 29500-1:2016 §19.7.4
+ */
+const SLIDE_MASTER_ID = 2147483648;
+
 export type BlankPptxSlideSize = {
   readonly width: Pixels;
   readonly height: Pixels;
@@ -157,8 +171,10 @@ function buildPresentationXml(
 ): string {
   const sldIds: string[] = [];
   for (let i = 1; i <= slideCount; i++) {
-    const id = 255 + i; // 256, 257, ...
-    const rId = `rId${i + 1}`; // rId2.. (rId1 reserved for slideMaster)
+    // スライドIDは SLIDE_ID_START (256) から開始
+    const id = SLIDE_ID_START - 1 + i;
+    // rId1 は slideMaster 用に予約、スライドは rId2 から開始
+    const rId = `rId${i + 1}`;
     sldIds.push(`<p:sldId id="${id}" r:id="${rId}"/>`);
   }
 
@@ -168,7 +184,7 @@ function buildPresentationXml(
     `xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" ` +
     `xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" ` +
     `xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">` +
-    `<p:sldMasterIdLst><p:sldMasterId id="2147483648" r:id="rId1"/></p:sldMasterIdLst>` +
+    `<p:sldMasterIdLst><p:sldMasterId id="${SLIDE_MASTER_ID}" r:id="rId1"/></p:sldMasterIdLst>` +
     `<p:sldIdLst>${sldIds.join("")}</p:sldIdLst>` +
     `<p:sldSz cx="${sizeEmu.cx}" cy="${sizeEmu.cy}"/>` +
     `<p:defaultTextStyle><a:defPPr><a:defRPr sz="1800"/></a:defPPr></p:defaultTextStyle>` +

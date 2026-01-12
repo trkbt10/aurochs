@@ -1,4 +1,5 @@
 import type { PdfColor, PdfGraphicsState, PdfLineCap, PdfLineJoin, PdfAlternateColorSpace } from "../domain";
+import { grayToRgb, cmykToRgb, rgbToHex, clamp01, toByte } from "../domain/color";
 import type { Color } from "../../ooxml/domain/color";
 import { pct, px } from "../../ooxml/domain/units";
 import type { DashStyle, LineCap, LineJoin } from "../../pptx/domain/line";
@@ -84,8 +85,8 @@ function convertIccBasedToSrgb(
 }
 
 function convertGrayToSrgb(gray: number): Color {
-  const value = toByte(gray);
-  return { spec: { type: "srgb", value: rgbToHex(value, value, value) } };
+  const [r, g, b] = grayToRgb(gray);
+  return { spec: { type: "srgb", value: rgbToHex(r, g, b) } };
 }
 
 function convertRgbToSrgb(components: readonly number[]): Color {
@@ -100,20 +101,11 @@ function convertRgbToSrgb(components: readonly number[]): Color {
 
 function convertCmykToSrgb(components: readonly number[]): Color {
   const [c = 0, m = 0, y = 0, k = 0] = components;
-
-  const cc = clamp01(c);
-  const mm = clamp01(m);
-  const yy = clamp01(y);
-  const kk = clamp01(k);
-
-  const r = 255 * (1 - cc) * (1 - kk);
-  const g = 255 * (1 - mm) * (1 - kk);
-  const b = 255 * (1 - yy) * (1 - kk);
-
+  const [r, g, b] = cmykToRgb(c, m, y, k);
   return {
     spec: {
       type: "srgb",
-      value: rgbToHex(clampByte(Math.round(r)), clampByte(Math.round(g)), clampByte(Math.round(b))),
+      value: rgbToHex(r, g, b),
     },
   };
 }
@@ -242,43 +234,4 @@ export function convertGraphicsStateToStyle(
   }
 
   return { fill, line };
-}
-
-function clamp01(value: number): number {
-  if (!Number.isFinite(value)) {
-    return 0;
-  }
-  if (value < 0) {
-    return 0;
-  }
-  if (value > 1) {
-    return 1;
-  }
-  return value;
-}
-
-function clampByte(value: number): number {
-  if (value < 0) {
-    return 0;
-  }
-  if (value > 255) {
-    return 255;
-  }
-  return value;
-}
-
-function toByte(component01: number): number {
-  return clampByte(Math.round(clamp01(component01) * 255));
-}
-
-function rgbToHex(red: number, green: number, blue: number): string {
-  return (
-    toHex2(red) +
-    toHex2(green) +
-    toHex2(blue)
-  );
-}
-
-function toHex2(byte: number): string {
-  return clampByte(byte).toString(16).padStart(2, "0").toUpperCase();
 }

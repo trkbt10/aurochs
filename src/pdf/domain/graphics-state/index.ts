@@ -2,12 +2,10 @@
  * @file PDF graphics state domain
  *
  * Exports types and utilities for PDF graphics state handling.
+ * Color types and utilities are in domain/color.
  */
 
 export type {
-  PdfColorSpace,
-  PdfAlternateColorSpace,
-  PdfColor,
   PdfLineJoin,
   PdfLineCap,
   PdfTextRenderingMode,
@@ -17,5 +15,3 @@ export type {
 export { DEFAULT_FILL_COLOR, DEFAULT_STROKE_COLOR, createDefaultGraphicsState } from "./defaults";
 
 export { GraphicsStateStack } from "./stack";
-
-export { getColorSpaceComponents } from "./color-space";
