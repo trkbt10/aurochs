@@ -5,7 +5,8 @@
  * Supports DeviceGray, DeviceRGB, DeviceCMYK, and ICCBased color spaces.
  */
 
-import type { PdfColorSpace } from "../pdf/domain";
+import type { PdfColorSpace } from "../domain";
+import { getColorSpaceComponents } from "../domain";
 
 // =============================================================================
 // Public API
@@ -71,26 +72,6 @@ export function convertToRgba(
     default:
       console.warn(`[PDF Image] Unsupported color space: ${colorSpace}`);
       return rgba;
-  }
-}
-
-/**
- * Get number of components for a color space
- */
-export function getColorSpaceComponents(colorSpace: PdfColorSpace): number {
-  switch (colorSpace) {
-    case "DeviceGray":
-      return 1;
-    case "DeviceRGB":
-      return 3;
-    case "DeviceCMYK":
-      return 4;
-    case "ICCBased":
-      return 3; // Most common, but may vary
-    case "Pattern":
-      return 0;
-    default:
-      return 3;
   }
 }
 

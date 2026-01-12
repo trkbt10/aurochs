@@ -37,6 +37,7 @@ export {
   DEFAULT_STROKE_COLOR,
   createDefaultGraphicsState,
   GraphicsStateStack,
+  getColorSpaceComponents,
 } from "./graphics-state";
 
 // Path domain

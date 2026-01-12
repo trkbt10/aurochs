@@ -6,7 +6,7 @@ import { convertMatrix } from "./transform-converter";
 import { toDataUrl } from "../../buffer/data-url";
 import { encodeRgbaToPngDataUrl, isPng } from "../../png";
 import { isJpeg } from "../../jpeg";
-import { convertToRgba } from "../../color";
+import { convertToRgba } from "./pixel-converter";
 
 /**
  * PdfImageをPicShapeに変換

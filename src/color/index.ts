@@ -38,12 +38,3 @@ export {
   extractFirstColor,
 } from "./gradient";
 
-// Raw pixel conversion utilities
-export {
-  convertToRgba,
-  getColorSpaceComponents,
-  convertGrayToRgba,
-  convertRgbToRgba,
-  convertCmykToRgba,
-  convertIccBasedToRgba,
-} from "./raw-pixel-converter";

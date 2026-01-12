@@ -17,3 +17,5 @@ export type {
 export { DEFAULT_FILL_COLOR, DEFAULT_STROKE_COLOR, createDefaultGraphicsState } from "./defaults";
 
 export { GraphicsStateStack } from "./stack";
+
+export { getColorSpaceComponents } from "./color-space";

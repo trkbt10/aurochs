@@ -17,7 +17,7 @@ import {
   decodePDFRawStream,
 } from "pdf-lib";
 import type { PdfImage, PdfColorSpace, PdfAlternateColorSpace, PdfGraphicsState } from "../domain";
-import { createDefaultGraphicsState } from "../domain";
+import { createDefaultGraphicsState, getColorSpaceComponents } from "../domain";
 import type { ParsedImage } from "./operator-parser";
 
 // =============================================================================
@@ -297,38 +297,6 @@ function getImageGraphicsState(graphicsState: PdfGraphicsState, _pageHeight: num
 export function estimateImageSize(image: RawImageData): number {
   const bytesPerPixel = getColorSpaceComponents(image.colorSpace) * (image.bitsPerComponent / 8);
   return image.width * image.height * bytesPerPixel;
-}
-
-/**
- * Get number of components for a color space
- *
- * PDF Reference 8.6 defines component counts:
- * - DeviceGray: 1 component
- * - DeviceRGB: 3 components
- * - DeviceCMYK: 4 components
- * - ICCBased: Determined by N value in ICC profile (1, 3, or 4)
- * - Pattern: No color components (pattern is separate)
- */
-export function getColorSpaceComponents(colorSpace: PdfColorSpace, alternateColorSpace?: PdfAlternateColorSpace): number {
-  switch (colorSpace) {
-    case "DeviceGray":
-      return 1;
-    case "DeviceRGB":
-      return 3;
-    case "DeviceCMYK":
-      return 4;
-    case "ICCBased":
-      // For ICCBased, use alternate color space if available
-      if (alternateColorSpace) {
-        return getColorSpaceComponents(alternateColorSpace);
-      }
-      // Default to RGB if no alternate specified
-      return 3;
-    case "Pattern":
-      return 0;
-    default:
-      return 3;
-  }
 }
 
 /**
