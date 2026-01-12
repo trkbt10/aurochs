@@ -38,7 +38,7 @@ export type PdfToken = {
 // =============================================================================
 
 // PDF Reference Table 1 - White-space characters
-// eslint-disable-next-line no-control-regex
+// eslint-disable-next-line no-control-regex -- PDF spec requires these control characters
 const WHITESPACE = /[\x00\x09\x0a\x0c\x0d\x20]/;
 // PDF Reference Table 2 - Delimiter characters
 const DELIMITER = /[()<>[\]{}/%]/;
@@ -57,7 +57,9 @@ export function tokenizeContentStream(content: string): PdfToken[] {
       pos++;
     }
 
-    if (pos >= content.length) break;
+    if (pos >= content.length) {
+      break;
+    }
 
     const char = content[pos];
 
