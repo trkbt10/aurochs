@@ -264,6 +264,22 @@
   color: var(--text-tertiary);
 }
 
+.upload-error {
+  color: #ef4444;
+}
+
+.import-progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: center;
+  text-align: center;
+}
+
+.import-progress progress {
+  width: 240px;
+}
+
 /* Loading State */
 .loading-state {
   display: flex;

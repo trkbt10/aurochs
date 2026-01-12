@@ -3,6 +3,8 @@
  */
 
 import { useCallback, useRef, useState, useEffect } from "react";
+import { importPdfFromFile, PdfImportError } from "@lib/pdf/importer/pdf-importer";
+import type { PresentationDocument } from "@lib/pptx/app";
 import {
   UploadIcon,
   ArrowRightIcon,
@@ -14,15 +16,77 @@ import {
 } from "../components/ui";
 import "./FileUploadPage.css";
 
+type FileType = "pptx" | "pdf";
+
+export type FileSelectResult =
+  | { readonly type: "pptx"; readonly file: File }
+  | { readonly type: "pdf"; readonly document: PresentationDocument; readonly fileName: string };
+
 type Props = {
-  onFileSelect: (file: File) => void;
-  onDemoLoad: () => void;
-  isLoading?: boolean;
-  onEditorTest?: () => void;
-  onTextEditorTest?: () => void;
-  onDrawingMLTest?: () => void;
-  onGlyphTest?: () => void;
+  readonly onFileSelect: (result: FileSelectResult) => void;
+  readonly onDemoLoad: () => void;
+  readonly isLoading?: boolean;
+  readonly onEditorTest?: () => void;
+  readonly onTextEditorTest?: () => void;
+  readonly onDrawingMLTest?: () => void;
+  readonly onGlyphTest?: () => void;
 };
+
+const ACCEPTED_EXTENSIONS = ".pptx,.pdf";
+
+function detectFileType(file: File): FileType | null {
+  const name = file.name.toLowerCase();
+  if (name.endsWith(".pptx")) return "pptx";
+  if (name.endsWith(".pdf")) return "pdf";
+  return null;
+}
+
+type ImportProgress = {
+  readonly currentPage: number;
+  readonly totalPages: number;
+};
+
+type ImportState =
+  | { readonly status: "idle" }
+  | { readonly status: "loading"; readonly progress?: ImportProgress }
+  | { readonly status: "error"; readonly error: string };
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof PdfImportError) {
+    switch (error.code) {
+      case "INVALID_PDF":
+        return "The file is not a valid PDF.";
+      case "ENCRYPTED_PDF":
+        return "The PDF is encrypted and cannot be imported.";
+      case "PARSE_ERROR":
+        return "Failed to parse the PDF file.";
+      case "CONVERSION_ERROR":
+        return "Failed to convert PDF to presentation.";
+      default:
+        return error.message;
+    }
+  }
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return "An unknown error occurred.";
+}
+
+function ImportProgress({ state }: { readonly state: ImportState }) {
+  if (state.status !== "loading" || !state.progress) {
+    return null;
+  }
+
+  return (
+    <div className="import-progress">
+      <p>Importing PDF...</p>
+      <p>
+        Page {state.progress.currentPage} of {state.progress.totalPages}
+      </p>
+      <progress value={state.progress.currentPage} max={state.progress.totalPages} />
+    </div>
+  );
+}
 
 /**
  * File upload landing screen for the web PPTX viewer.
@@ -39,19 +103,60 @@ export function FileUploadPage({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [importState, setImportState] = useState<ImportState>({ status: "idle" });
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const handleFileChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (file && file.name.endsWith(".pptx")) {
-        onFileSelect(file);
+  const validateFile = useCallback((file: File): boolean => {
+    return detectFileType(file) !== null;
+  }, []);
+
+  const onPdfSelect = useCallback(
+    async (file: File) => {
+      setImportState({ status: "loading" });
+
+      try {
+        const result = await importPdfFromFile(file, {
+          setWhiteBackground: true,
+          onProgress: (progress) => {
+            setImportState({ status: "loading", progress });
+          },
+        });
+
+        onFileSelect({ type: "pdf", document: result.document, fileName: file.name });
+        setImportState({ status: "idle" });
+      } catch (error) {
+        setImportState({ status: "error", error: getErrorMessage(error) });
       }
     },
     [onFileSelect]
+  );
+
+  const handleFileSelect = useCallback(
+    async (file: File) => {
+      const fileType = detectFileType(file);
+      if (fileType === "pptx") {
+        setImportState({ status: "idle" });
+        onFileSelect({ type: "pptx", file });
+        return;
+      }
+      if (fileType === "pdf") {
+        await onPdfSelect(file);
+      }
+    },
+    [onFileSelect, onPdfSelect]
+  );
+
+  const handleFileChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file && validateFile(file)) {
+        void handleFileSelect(file);
+      }
+    },
+    [handleFileSelect, validateFile]
   );
 
   const handleDrop = useCallback(
@@ -60,11 +165,11 @@ export function FileUploadPage({
       setIsDragging(false);
 
       const file = e.dataTransfer.files[0];
-      if (file && file.name.endsWith(".pptx")) {
-        onFileSelect(file);
+      if (file && validateFile(file)) {
+        void handleFileSelect(file);
       }
     },
-    [onFileSelect]
+    [handleFileSelect, validateFile]
   );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -82,6 +187,15 @@ export function FileUploadPage({
   }, []);
 
   const renderUploadContent = () => {
+    if (importState.status === "loading") {
+      return (
+        <div className="loading-state">
+          <div className="spinner" />
+          <ImportProgress state={importState} />
+        </div>
+      );
+    }
+
     if (isLoading) {
       return (
         <div className="loading-state">
@@ -97,7 +211,11 @@ export function FileUploadPage({
           <UploadIcon size={32} />
         </div>
         <div className="upload-text">
-          <span className="upload-primary">Drop your .pptx file here</span>
+          <span className="upload-primary">Drop a file here</span>
+          <span className="upload-secondary">Supported formats: PPTX, PDF</span>
+          {importState.status === "error" && (
+            <span className="upload-secondary upload-error">{importState.error}</span>
+          )}
           <span className="upload-secondary">or click to browse</span>
         </div>
       </>
@@ -163,7 +281,7 @@ export function FileUploadPage({
             <input
               ref={fileInputRef}
               type="file"
-              accept=".pptx"
+              accept={ACCEPTED_EXTENSIONS}
               onChange={handleFileChange}
               className="file-input"
             />

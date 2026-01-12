@@ -2,10 +2,10 @@
  * @file App entry for the pages demo.
  */
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { Routes, Route, Navigate, useNavigate, useParams } from "react-router-dom";
 import { usePptx } from "./hooks/usePptx";
-import { FileUploadPage } from "./pages/FileUploadPage";
+import { FileUploadPage, type FileSelectResult } from "./pages/FileUploadPage";
 import { SlideViewer } from "./pages/SlideViewer";
 import { SlideshowPage } from "./pages/SlideshowPage";
 import { EditorTestPage } from "./pages/EditorTestPage";
@@ -13,7 +13,7 @@ import { DrawingMLTestPage } from "./pages/DrawingMLTestPage";
 import { GlyphTestPage } from "./pages/GlyphTestPage";
 import { TextEditorTestPage } from "./pages/TextEditorTestPage";
 import { PresentationEditor } from "@lib/pptx-editor";
-import { convertToPresentationDocument } from "@lib/pptx/app";
+import { convertToPresentationDocument, type PresentationDocument } from "@lib/pptx/app";
 import "./App.css";
 
 // Demo PPTX URL (will be in the public folder)
@@ -24,6 +24,8 @@ const DEMO_PPTX_URL = import.meta.env.BASE_URL + "demo.pptx";
  */
 export function App() {
   const navigate = useNavigate();
+  const [importedDocument, setImportedDocument] = useState<PresentationDocument | null>(null);
+  const [importedFileName, setImportedFileName] = useState<string | null>(null);
 
   const {
     status,
@@ -36,26 +38,43 @@ export function App() {
   } = usePptx();
 
   const handleFileSelect = useCallback(
-    (file: File) => {
-      loadFromFile(file);
-      navigate("/viewer");
+    (result: FileSelectResult) => {
+      if (result.type === "pptx") {
+        setImportedDocument(null);
+        setImportedFileName(null);
+        loadFromFile(result.file);
+        navigate("/viewer");
+        return;
+      }
+
+      setImportedDocument(result.document);
+      setImportedFileName(result.fileName);
+      reset();
+      navigate("/editor");
     },
-    [loadFromFile, navigate]
+    [loadFromFile, navigate, reset]
   );
 
   const handleDemoLoad = useCallback(() => {
+    setImportedDocument(null);
+    setImportedFileName(null);
     loadFromUrl(DEMO_PPTX_URL, "demo.pptx");
     navigate("/viewer");
   }, [loadFromUrl, navigate]);
 
   const handleBack = useCallback(() => {
+    setImportedDocument(null);
+    setImportedFileName(null);
     reset();
     navigate("/");
   }, [reset, navigate]);
 
   const handleGoHome = useCallback(() => {
+    setImportedDocument(null);
+    setImportedFileName(null);
+    reset();
     navigate("/");
-  }, [navigate]);
+  }, [navigate, reset]);
 
   const handleStartSlideshow = useCallback((slideNumber: number) => {
     navigate(`/slideshow/${slideNumber}`);
@@ -86,8 +105,12 @@ export function App() {
   }, [navigate]);
 
   const handleExitEditor = useCallback(() => {
-    navigate("/viewer");
-  }, [navigate]);
+    if (presentation) {
+      navigate("/viewer");
+      return;
+    }
+    handleGoHome();
+  }, [handleGoHome, navigate, presentation]);
 
   // Convert presentation to editor document
   const editorDocument = useMemo(() => {
@@ -175,11 +198,8 @@ export function App() {
   };
 
   const EditorRoute = () => {
-    if (!presentation) {
-      return <Navigate to="/" replace />;
-    }
-
-    if (!editorDocument) {
+    const activeDocument = importedDocument ?? editorDocument;
+    if (!activeDocument) {
       return (
         <div className="error-page">
           <div className="error-card">
@@ -191,14 +211,19 @@ export function App() {
               </svg>
             </div>
             <h2 className="error-title">Failed to open editor</h2>
-            <p className="error-message">Could not convert presentation for editing. Check the console for details.</p>
+            <p className="error-message">
+              Could not open document for editing. Check the console for details.
+            </p>
             <button className="error-button" onClick={handleExitEditor}>
-              Back to Viewer
+              Back
             </button>
           </div>
         </div>
       );
     }
+
+    const activeFileName = importedFileName ?? fileName ?? "presentation";
+    const backLabel = importedDocument ? "Back to Home" : "Back to Viewer";
 
     return (
       <div className="editor-page">
@@ -207,13 +232,13 @@ export function App() {
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <polyline points="15 18 9 12 15 6" />
             </svg>
-            <span>Back to Viewer</span>
+            <span>{backLabel}</span>
           </button>
-          <span className="editor-title">{fileName}</span>
+          <span className="editor-title">{activeFileName}</span>
         </header>
         <div className="editor-content">
           <PresentationEditor
-            initialDocument={editorDocument}
+            initialDocument={activeDocument}
             showPropertyPanel
             showLayerPanel
             showToolbar

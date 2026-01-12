@@ -31,6 +31,7 @@ export default [
       "*.config.ts",
       "eslint/**",
       "src/index.ts",
+      ".*/**",
     ],
   },
 
