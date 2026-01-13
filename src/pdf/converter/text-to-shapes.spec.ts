@@ -91,7 +91,7 @@ describe("convertTextToShape", () => {
               text: "Hello",
               properties: {
                 fontSize: pt(12),
-                fontFamily: "Arial",
+                fontFamily: "ArialMT",
                 fill: {
                   type: "solidFill",
                   color: { spec: { type: "srgb", value: "FF0000" } },
@@ -267,8 +267,10 @@ describe("convertTextToShape", () => {
 
       const run = shape.textBody?.paragraphs[0]?.runs[0];
       if (!run || run.type !== "text") throw new Error("Expected text run");
-      expect(run.properties?.fontFamily).toBe("MS Gothic");
-      expect(run.properties?.fontFamilyEastAsian).toBe("MS Gothic");
+      // Font name is preserved as-is (after removing subset prefix)
+      // This ensures @font-face matching for embedded fonts
+      expect(run.properties?.fontFamily).toBe("MSGothic");
+      expect(run.properties?.fontFamilyEastAsian).toBe("MSGothic");
     });
 
     it("sets fontFamilyEastAsian for Japanese font (Yu Mincho)", () => {
@@ -381,7 +383,8 @@ describe("convertTextToShape", () => {
 
       const run = shape.textBody?.paragraphs[0]?.runs[0];
       if (!run || run.type !== "text") throw new Error("Expected text run");
-      expect(run.properties?.fontFamily).toBe("Arial");
+      // ArialMT is not Standard 14, preserved as-is
+      expect(run.properties?.fontFamily).toBe("ArialMT");
       expect(run.properties?.fontFamilyEastAsian).toBeUndefined();
       expect(run.properties?.fontFamilyComplexScript).toBeUndefined();
     });

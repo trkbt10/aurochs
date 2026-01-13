@@ -28,12 +28,23 @@ import {
 import { normalizeFontFamily } from "./font-name-map";
 import { repairFontForWeb } from "./font-repair";
 import { parseToUnicodeCMap } from "./cmap-parser";
+import { extractTrueTypeMetrics, normalizeMetricsTo1000 } from "./truetype-parser";
 import type { FontMapping } from "./types";
 
 /**
  * Font format detected from PDF
  */
 export type FontFormat = "type1" | "truetype" | "opentype" | "cff";
+
+/**
+ * Font metrics in 1/1000 em units (PDF standard).
+ */
+export type EmbeddedFontMetrics = {
+  /** Ascender height (positive value) */
+  readonly ascender: number;
+  /** Descender depth (negative value) */
+  readonly descender: number;
+};
 
 /**
  * Embedded font data extracted from PDF
@@ -49,6 +60,8 @@ export type EmbeddedFont = {
   readonly data: Uint8Array;
   /** MIME type for the font format */
   readonly mimeType: string;
+  /** Font metrics from font file (hhea table), normalized to 1000 units */
+  readonly metrics?: EmbeddedFontMetrics;
 };
 
 /**
@@ -202,9 +215,16 @@ function extractFontFromDict(
     const fontFamily = extractFontFamily(baseFontRaw, fontDescriptor);
 
     // For TrueType fonts, build missing tables required for web rendering
+    let metrics: EmbeddedFontMetrics | undefined;
     if (format === "truetype") {
       const toUnicode = extractToUnicodeFromFontDict(pdfDoc, fontDict);
       data = repairFontForWeb(data, toUnicode, fontFamily);
+
+      // Extract metrics from repaired font (hhea table)
+      const rawMetrics = extractTrueTypeMetrics(data);
+      if (rawMetrics) {
+        metrics = normalizeMetricsTo1000(rawMetrics);
+      }
     }
 
     return {
@@ -213,6 +233,7 @@ function extractFontFromDict(
       format,
       data,
       mimeType,
+      metrics,
     };
   } catch (e) {
     console.warn(`Failed to extract font ${baseFontRaw}:`, e);
@@ -333,25 +354,19 @@ function getMimeType(format: FontFormat): string {
 }
 
 /**
- * Extract font family name from BaseFont and FontDescriptor.
+ * Extract font family name from BaseFont.
  *
- * Uses normalizeFontFamily() for consistent font name normalization
- * across @font-face declarations and text elements.
+ * IMPORTANT: Always use BaseFont name (not FontDescriptor's FontFamily).
+ * This ensures consistency between:
+ * - @font-face declarations (use this name)
+ * - Text elements (use normalized fontName which comes from BaseFont)
+ *
+ * FontDescriptor's FontFamily may differ from BaseFont (e.g., "Hiragino Sans"
+ * vs "Hiragino-Sans"), causing @font-face and text not to match.
  *
  * @see normalizeFontFamily in font-name-map.ts
  */
-function extractFontFamily(baseFontRaw: string, fontDescriptor: PDFDict): string {
-  // Try to get FontFamily from FontDescriptor first
-  const fontFamilyRaw = fontDescriptor.get(PDFName.of("FontFamily"));
-  if (fontFamilyRaw) {
-    const familyStr = fontFamilyRaw.toString();
-    // Remove parentheses and leading/trailing whitespace
-    const cleaned = familyStr.replace(/^\(|\)$/g, "").trim();
-    if (cleaned.length > 0) {
-      return cleaned;
-    }
-  }
-
-  // Use shared normalization logic for BaseFont name
+function extractFontFamily(baseFontRaw: string, _fontDescriptor: PDFDict): string {
+  // Always use BaseFont name for consistency with text elements
   return normalizeFontFamily(baseFontRaw);
 }

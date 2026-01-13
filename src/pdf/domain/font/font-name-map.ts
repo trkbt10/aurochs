@@ -45,6 +45,10 @@ const PDF_STANDARD_14_FONTS: Record<string, string> = {
  * For embedded fonts, returns the font name as-is (after cleanup).
  * For PDF Standard 14 fonts, maps to system font equivalents.
  *
+ * IMPORTANT: Do NOT modify font names beyond removing PDF syntax artifacts.
+ * Embedded fonts use their exact names for @font-face declarations.
+ * Changing the name (e.g., hyphens to spaces) would break font matching.
+ *
  * @param pdfFontName - Raw font name from PDF (BaseFont entry)
  * @returns Normalized font-family name
  */
@@ -58,12 +62,13 @@ export function normalizeFontFamily(pdfFontName: string): string {
   const baseName = plusIndex > 0 ? cleanName.slice(plusIndex + 1) : cleanName;
 
   // Step 3: Check PDF Standard 14 fonts (exact match required)
+  // ISO 32000-1:2008 Section 9.6.2.2 defines exactly 14 standard fonts
   const standard14 = PDF_STANDARD_14_FONTS[baseName];
   if (standard14) {
     return standard14;
   }
 
-  // Step 4: Normalize hyphens to spaces for display
-  // e.g., "MS-PGothic" → "MS PGothic"
-  return baseName.replace(/-/g, " ");
+  // Step 4: Return font name as-is
+  // Non-standard fonts are preserved exactly for @font-face matching
+  return baseName;
 }

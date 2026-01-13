@@ -54,15 +54,21 @@ export {
 } from "./encoding-maps";
 
 // Embedded font extraction
-export type { FontFormat, EmbeddedFont } from "./font-extractor";
+export type { FontFormat, EmbeddedFont, EmbeddedFontMetrics } from "./font-extractor";
 export { extractEmbeddedFonts } from "./font-extractor";
 
 // TrueType font repair for web compatibility
 export { hasCmapTable, injectCmapTable, repairFontForWeb } from "./font-repair";
 
 // TrueType parsing utilities
-export type { TableEntry } from "./truetype-parser";
-export { parseTrueTypeTableDirectory, hasTable, getTableTags } from "./truetype-parser";
+export type { TableEntry, TrueTypeFontMetrics } from "./truetype-parser";
+export {
+  parseTrueTypeTableDirectory,
+  hasTable,
+  getTableTags,
+  extractTrueTypeMetrics,
+  normalizeMetricsTo1000,
+} from "./truetype-parser";
 
 // Font CSS generation (@font-face)
 export {

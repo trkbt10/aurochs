@@ -48,7 +48,8 @@ describe("PDF import with embedded fonts", () => {
     // Check that font CSS is generated
     expect(result.document.embeddedFontCss).toBeDefined();
     expect(result.document.embeddedFontCss).toContain("@font-face");
-    expect(result.document.embeddedFontCss).toContain("Hiragino Sans");
+    // Font name is preserved from BaseFont (with hyphen)
+    expect(result.document.embeddedFontCss).toContain("Hiragino-Sans");
 
     // Log CSS preview
     console.log("\nFont CSS (first 300 chars):");

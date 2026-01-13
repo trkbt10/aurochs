@@ -41,6 +41,12 @@ const DEFAULT_OPTIONS: Required<PdfParserOptions> = {
 // =============================================================================
 
 /**
+ * Embedded font metrics lookup map.
+ * Maps fontFamily to accurate metrics from hhea table.
+ */
+type EmbeddedFontMetricsMap = Map<string, { ascender: number; descender: number }>;
+
+/**
  * Parse a PDF file and extract elements
  */
 export async function parsePdf(
@@ -55,6 +61,17 @@ export async function parsePdf(
     updateMetadata: false,
   });
 
+  // Extract embedded fonts first to get accurate metrics
+  const embeddedFontsRaw = extractEmbeddedFonts(pdfDoc);
+
+  // Build metrics lookup map from embedded fonts
+  const embeddedFontMetrics: EmbeddedFontMetricsMap = new Map();
+  for (const font of embeddedFontsRaw) {
+    if (font.metrics) {
+      embeddedFontMetrics.set(font.fontFamily, font.metrics);
+    }
+  }
+
   const pdfPages = pdfDoc.getPages();
   const pagesToParse = opts.pages.length > 0
     ? opts.pages.filter((p) => p >= 1 && p <= pdfPages.length)
@@ -64,15 +81,14 @@ export async function parsePdf(
 
   for (const pageNum of pagesToParse) {
     const pdfPage = pdfPages[pageNum - 1];
-    const parsedPage = await parsePage(pdfPage, pageNum, opts);
+    const parsedPage = await parsePage(pdfPage, pageNum, opts, embeddedFontMetrics);
     pages.push(parsedPage);
   }
 
   // Extract metadata
   const metadata = extractMetadata(pdfDoc);
 
-  // Extract embedded fonts
-  const embeddedFontsRaw = extractEmbeddedFonts(pdfDoc);
+  // Convert embedded fonts for output
   const embeddedFonts = embeddedFontsRaw.length > 0
     ? embeddedFontsRaw.map((f) => ({
         fontFamily: f.fontFamily,
@@ -95,7 +111,8 @@ export async function parsePdf(
 async function parsePage(
   pdfPage: PDFPage,
   pageNumber: number,
-  opts: Required<PdfParserOptions>
+  opts: Required<PdfParserOptions>,
+  embeddedFontMetrics: EmbeddedFontMetricsMap
 ): Promise<PdfPage> {
   const { width, height } = pdfPage.getSize();
 
@@ -113,6 +130,10 @@ async function parsePage(
 
   // Extract font mappings for text decoding
   const fontMappings = extractFontMappings(pdfPage);
+
+  // Override font metrics with accurate values from embedded fonts (hhea table)
+  // FontDescriptor metrics may be inaccurate, while hhea table values are authoritative
+  mergeFontMetrics(fontMappings, embeddedFontMetrics);
 
   // Tokenize content stream
   const tokens = tokenizeContentStream(contentStream);
@@ -134,6 +155,54 @@ async function parsePage(
     height,
     elements,
   };
+}
+
+/**
+ * Merge embedded font metrics into font mappings.
+ *
+ * PDF FontDescriptor metrics may be inaccurate or use default values.
+ * Embedded font hhea table contains authoritative ascender/descender values.
+ * This function updates fontMappings with accurate metrics from embedded fonts.
+ */
+function mergeFontMetrics(
+  fontMappings: FontMappings,
+  embeddedFontMetrics: EmbeddedFontMetricsMap
+): void {
+  for (const [fontName, fontInfo] of fontMappings) {
+    // Try to match by baseFont name (actual font name)
+    const baseFont = fontInfo.baseFont;
+    if (!baseFont) continue;
+
+    // Normalize baseFont name for lookup (remove subset prefix)
+    const normalizedName = normalizeBaseFontForMetricsLookup(baseFont);
+
+    // Look up metrics from embedded fonts
+    const embeddedMetrics = embeddedFontMetrics.get(normalizedName);
+    if (embeddedMetrics) {
+      // Update metrics with authoritative values from hhea table
+      fontMappings.set(fontName, {
+        ...fontInfo,
+        metrics: {
+          ...fontInfo.metrics,
+          ascender: embeddedMetrics.ascender,
+          descender: embeddedMetrics.descender,
+        },
+      });
+    }
+  }
+}
+
+/**
+ * Normalize baseFont name for metrics lookup.
+ * Handles subset prefixes (e.g., "ABCDEF+FontName" → "FontName").
+ *
+ * IMPORTANT: Do NOT modify the font name beyond removing the subset prefix.
+ * Font names must match exactly with embedded font family names.
+ */
+function normalizeBaseFontForMetricsLookup(baseFont: string): string {
+  // Remove subset prefix (e.g., "XGIAKD+Helvetica" → "Helvetica")
+  const plusIndex = baseFont.indexOf("+");
+  return plusIndex > 0 ? baseFont.slice(plusIndex + 1) : baseFont;
 }
 
 /**

@@ -8,7 +8,7 @@ import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { importPdf } from "./pdf-importer";
-import { getTableTags } from "../domain/font";
+import { getTableTags, extractTrueTypeMetrics, normalizeMetricsTo1000 } from "../domain/font";
 
 describe("PDF embedded font extraction", () => {
   it("should extract fonts with all required web tables", async () => {
@@ -108,6 +108,49 @@ describe("PDF embedded font extraction", () => {
 
     for (const font of document.embeddedFonts!) {
       expect(cssMatches).toContain(font.fontFamily);
+    }
+  });
+
+  it("should extract font metrics from hhea table", async () => {
+    const pdfPath = path.resolve("fixtures/samples/k-resource-dl.pdf");
+    if (!fs.existsSync(pdfPath)) {
+      return;
+    }
+
+    const buffer = fs.readFileSync(pdfPath);
+    const data = new Uint8Array(buffer);
+    const result = await importPdf(data);
+    const { document } = result;
+
+    // Verify embedded fonts have metrics
+    expect(document.embeddedFonts).toBeDefined();
+    expect(document.embeddedFonts!.length).toBeGreaterThan(0);
+
+    // Check that we can extract metrics from each TrueType font
+    for (const font of document.embeddedFonts!) {
+      if (font.format !== "truetype") continue;
+
+      const rawMetrics = extractTrueTypeMetrics(font.data);
+      expect(rawMetrics).not.toBeNull();
+
+      if (rawMetrics) {
+        // unitsPerEm should be a standard value (typically 1000 or 2048)
+        expect(rawMetrics.unitsPerEm).toBeGreaterThan(0);
+        expect(rawMetrics.unitsPerEm).toBeLessThanOrEqual(16384);
+
+        // Ascender should be positive
+        expect(rawMetrics.ascender).toBeGreaterThan(0);
+
+        // Descender should be negative or zero
+        expect(rawMetrics.descender).toBeLessThanOrEqual(0);
+
+        // Normalized metrics should be within reasonable bounds
+        const normalized = normalizeMetricsTo1000(rawMetrics);
+        expect(normalized.ascender).toBeGreaterThan(0);
+        expect(normalized.ascender).toBeLessThan(1500); // Reasonable upper bound
+        expect(normalized.descender).toBeLessThanOrEqual(0);
+        expect(normalized.descender).toBeGreaterThan(-500); // Reasonable lower bound
+      }
     }
   });
 });

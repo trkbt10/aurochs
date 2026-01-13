@@ -28,6 +28,7 @@ import { detectSlideChanges, type ShapeChange, type PropertyChange } from "../pa
 import { patchSlideXml } from "../patcher/slide/slide-patcher";
 import { addMedia, type MediaType } from "../patcher/resources/media-manager";
 import { addOleObject, getOleTypeFromFile } from "../patcher/resources/ole-manager";
+import { embedFonts } from "../patcher/resources/font-manager";
 
 // =============================================================================
 // Types
@@ -156,6 +157,11 @@ export async function exportPptx(
   // Create a ZipPackage and copy all files from source
   const pkg = copyPresentationFileToPackage(doc.presentationFile);
 
+  // Embed fonts if present (from PDF import)
+  if (doc.embeddedFonts && doc.embeddedFonts.length > 0) {
+    embedFonts(pkg, doc.embeddedFonts);
+  }
+
   // Update slide XMLs with editor changes applied
   for (const slideWithId of doc.slides) {
     if (slideWithId.apiSlide) {
@@ -248,6 +254,11 @@ export async function exportPptxAsBuffer(
   }
 
   const pkg = copyPresentationFileToPackage(doc.presentationFile);
+
+  // Embed fonts if present (from PDF import)
+  if (doc.embeddedFonts && doc.embeddedFonts.length > 0) {
+    embedFonts(pkg, doc.embeddedFonts);
+  }
 
   // Update slide XMLs with editor changes applied
   for (const slideWithId of doc.slides) {

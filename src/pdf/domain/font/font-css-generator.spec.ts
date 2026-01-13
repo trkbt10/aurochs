@@ -78,8 +78,9 @@ describe("generateFontFaceCss", () => {
 
     console.log("All fonts CSS:\n", allCss.slice(0, 500) + "...");
 
-    expect(allCss).toContain("Hiragino Sans");
-    expect(allCss).toContain("PingFang SC");
+    // Font names preserved from BaseFont (with hyphens)
+    expect(allCss).toContain("Hiragino-Sans");
+    expect(allCss).toContain("PingFang-SC");
   });
 });
 
@@ -99,9 +100,9 @@ describe("generateFontFaceStyle", () => {
 
     console.log("Style element content (first 500 chars):\n", styleContent.slice(0, 500));
 
-    // Should contain all fonts
-    expect(styleContent).toContain("Hiragino Sans");
-    expect(styleContent).toContain("PingFang SC");
+    // Should contain all fonts (names preserved from BaseFont with hyphens)
+    expect(styleContent).toContain("Hiragino-Sans");
+    expect(styleContent).toContain("PingFang-SC");
     expect(styleContent).toContain("@font-face");
   });
 });

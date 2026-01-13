@@ -91,3 +91,97 @@ export function calculateTableChecksum(data: Uint8Array): number {
 
   return sum;
 }
+
+/**
+ * Font metrics extracted from TrueType font.
+ *
+ * Values are in font design units (typically 1000 or 2048 per em).
+ */
+export type TrueTypeFontMetrics = {
+  /** Units per em from head table */
+  readonly unitsPerEm: number;
+  /** Ascender from hhea table */
+  readonly ascender: number;
+  /** Descender from hhea table (negative value) */
+  readonly descender: number;
+  /** Line gap from hhea table */
+  readonly lineGap: number;
+};
+
+/**
+ * Extract font metrics from TrueType font data.
+ *
+ * Reads metrics from:
+ * - head table: unitsPerEm
+ * - hhea table: ascender, descender, lineGap
+ *
+ * @param fontData - Raw TrueType font data
+ * @returns Font metrics, or null if tables are missing/invalid
+ */
+export function extractTrueTypeMetrics(fontData: Uint8Array): TrueTypeFontMetrics | null {
+  const tables = parseTrueTypeTableDirectory(fontData);
+  if (tables.length === 0) {
+    return null;
+  }
+
+  const view = new DataView(fontData.buffer, fontData.byteOffset, fontData.byteLength);
+
+  // Find head table for unitsPerEm
+  const headTable = tables.find((t) => t.tag === "head");
+  if (!headTable || headTable.offset + 18 > fontData.length) {
+    return null;
+  }
+
+  // head table layout:
+  // offset 0: version (fixed 32-bit)
+  // offset 4: fontRevision (fixed 32-bit)
+  // offset 8: checkSumAdjustment (uint32)
+  // offset 12: magicNumber (uint32)
+  // offset 16: flags (uint16)
+  // offset 18: unitsPerEm (uint16)
+  const unitsPerEm = view.getUint16(headTable.offset + 18, false);
+  if (unitsPerEm === 0) {
+    return null;
+  }
+
+  // Find hhea table for ascender/descender
+  const hheaTable = tables.find((t) => t.tag === "hhea");
+  if (!hheaTable || hheaTable.offset + 10 > fontData.length) {
+    return null;
+  }
+
+  // hhea table layout:
+  // offset 0: version (fixed 32-bit)
+  // offset 4: ascender (int16)
+  // offset 6: descender (int16)
+  // offset 8: lineGap (int16)
+  const ascender = view.getInt16(hheaTable.offset + 4, false);
+  const descender = view.getInt16(hheaTable.offset + 6, false);
+  const lineGap = view.getInt16(hheaTable.offset + 8, false);
+
+  return {
+    unitsPerEm,
+    ascender,
+    descender,
+    lineGap,
+  };
+}
+
+/**
+ * Convert TrueType metrics to normalized 1000 units.
+ *
+ * PDF uses 1/1000 em units for font metrics.
+ * This function normalizes TrueType metrics to that scale.
+ *
+ * @param metrics - Raw TrueType metrics
+ * @returns Metrics normalized to 1000 units per em
+ */
+export function normalizeMetricsTo1000(
+  metrics: TrueTypeFontMetrics
+): { ascender: number; descender: number } {
+  const scale = 1000 / metrics.unitsPerEm;
+  return {
+    ascender: Math.round(metrics.ascender * scale),
+    descender: Math.round(metrics.descender * scale),
+  };
+}
