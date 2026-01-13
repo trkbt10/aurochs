@@ -68,8 +68,7 @@ export default [
         "custom/no-nested-try": "error",
         "custom/no-iife-in-anonymous": "error",
         // Prohibit deep re-exports that cross multiple directory levels
-        // Only allow 1 parent level (../) - NO EXCEPTIONS
-        "custom/no-deep-reexport": ["error", { maxParentDepth: 1 }],
+        "custom/no-deep-reexport": ["error", { maxParentDepth: 0 }],
         // Spread from modular groups
         ...rulesJSDoc,
         ...rulesRestrictedSyntax,
