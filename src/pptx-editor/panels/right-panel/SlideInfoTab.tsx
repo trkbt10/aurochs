@@ -30,6 +30,8 @@ export type SlideInfoTabProps = {
   readonly onLayoutChange: (layoutPath: string) => void;
   /** Slide size for layout preview */
   readonly slideSize?: SlideSize;
+  /** Callback when slide size changes */
+  readonly onSlideSizeChange?: (size: SlideSize) => void;
   /** Presentation file for loading layout shapes */
   readonly presentationFile?: PresentationFile;
 };
@@ -57,6 +59,7 @@ export function SlideInfoTab({
   onLayoutAttributesChange,
   onLayoutChange,
   slideSize,
+  onSlideSizeChange,
   presentationFile,
 }: SlideInfoTabProps) {
   return (
@@ -71,6 +74,7 @@ export function SlideInfoTab({
           onLayoutAttributesChange={onLayoutAttributesChange}
           onLayoutChange={onLayoutChange}
           slideSize={slideSize}
+          onSlideSizeChange={onSlideSizeChange}
           presentationFile={presentationFile}
         />
       </InspectorSection>

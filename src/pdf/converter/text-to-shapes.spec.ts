@@ -244,6 +244,268 @@ describe("convertTextToShape", () => {
     expect(run.properties.italic).toBe(true);
   });
 
+  describe("script type detection for font elements", () => {
+    const g = createGraphicsState({ colorSpace: "DeviceGray", components: [0] as const });
+    const context = { pdfWidth: 100, pdfHeight: 100, slideWidth: px(100), slideHeight: px(100) } as const;
+
+    it("sets fontFamilyEastAsian for Japanese font (MS Gothic)", () => {
+      const shape = convertTextToShape(
+        {
+          type: "text",
+          text: "テスト",
+          x: 0,
+          y: 50,
+          width: 30,
+          height: 12,
+          fontName: "ABCDEF+MSGothic",
+          fontSize: 12,
+          graphicsState: g,
+        },
+        context,
+        "1"
+      );
+
+      const run = shape.textBody?.paragraphs[0]?.runs[0];
+      if (!run || run.type !== "text") throw new Error("Expected text run");
+      expect(run.properties?.fontFamily).toBe("MS Gothic");
+      expect(run.properties?.fontFamilyEastAsian).toBe("MS Gothic");
+    });
+
+    it("sets fontFamilyEastAsian for Japanese font (Yu Mincho)", () => {
+      const shape = convertTextToShape(
+        {
+          type: "text",
+          text: "日本語",
+          x: 0,
+          y: 50,
+          width: 30,
+          height: 12,
+          fontName: "YuMincho-Regular",
+          fontSize: 12,
+          graphicsState: g,
+        },
+        context,
+        "1"
+      );
+
+      const run = shape.textBody?.paragraphs[0]?.runs[0];
+      if (!run || run.type !== "text") throw new Error("Expected text run");
+      // YuMincho maps to Yu Mincho
+      expect(run.properties?.fontFamilyEastAsian).toBeDefined();
+    });
+
+    it("sets fontFamilyEastAsian for Chinese Simplified font (SimSun)", () => {
+      const shape = convertTextToShape(
+        {
+          type: "text",
+          text: "中文",
+          x: 0,
+          y: 50,
+          width: 20,
+          height: 12,
+          fontName: "SimSun",
+          fontSize: 12,
+          graphicsState: g,
+        },
+        context,
+        "1"
+      );
+
+      const run = shape.textBody?.paragraphs[0]?.runs[0];
+      if (!run || run.type !== "text") throw new Error("Expected text run");
+      expect(run.properties?.fontFamily).toBe("SimSun");
+      expect(run.properties?.fontFamilyEastAsian).toBe("SimSun");
+    });
+
+    it("sets fontFamilyComplexScript for Arabic font", () => {
+      const shape = convertTextToShape(
+        {
+          type: "text",
+          text: "عربي",
+          x: 0,
+          y: 50,
+          width: 30,
+          height: 12,
+          fontName: "Traditional Arabic",
+          fontSize: 12,
+          graphicsState: g,
+        },
+        context,
+        "1"
+      );
+
+      const run = shape.textBody?.paragraphs[0]?.runs[0];
+      if (!run || run.type !== "text") throw new Error("Expected text run");
+      expect(run.properties?.fontFamilyComplexScript).toBe("Traditional Arabic");
+      expect(run.properties?.fontFamilyEastAsian).toBeUndefined();
+    });
+
+    it("sets fontFamilyComplexScript for Thai font", () => {
+      const shape = convertTextToShape(
+        {
+          type: "text",
+          text: "ไทย",
+          x: 0,
+          y: 50,
+          width: 20,
+          height: 12,
+          fontName: "Angsana New",
+          fontSize: 12,
+          graphicsState: g,
+        },
+        context,
+        "1"
+      );
+
+      const run = shape.textBody?.paragraphs[0]?.runs[0];
+      if (!run || run.type !== "text") throw new Error("Expected text run");
+      expect(run.properties?.fontFamilyComplexScript).toBe("Angsana New");
+    });
+
+    it("does not set fontFamilyEastAsian for Latin font (Arial)", () => {
+      const shape = convertTextToShape(
+        {
+          type: "text",
+          text: "Test",
+          x: 0,
+          y: 50,
+          width: 20,
+          height: 12,
+          fontName: "ArialMT",
+          fontSize: 12,
+          graphicsState: g,
+        },
+        context,
+        "1"
+      );
+
+      const run = shape.textBody?.paragraphs[0]?.runs[0];
+      if (!run || run.type !== "text") throw new Error("Expected text run");
+      expect(run.properties?.fontFamily).toBe("Arial");
+      expect(run.properties?.fontFamilyEastAsian).toBeUndefined();
+      expect(run.properties?.fontFamilyComplexScript).toBeUndefined();
+    });
+
+    // CIDOrdering-based detection (ISO 32000-1 Section 9.7.3)
+    it("sets fontFamilyEastAsian from cidOrdering Japan1", () => {
+      const shape = convertTextToShape(
+        {
+          type: "text",
+          text: "日本語テスト",
+          x: 0,
+          y: 50,
+          width: 60,
+          height: 12,
+          fontName: "UnknownFont", // Font name doesn't indicate script
+          fontSize: 12,
+          graphicsState: g,
+          cidOrdering: "Japan1", // But CIDOrdering identifies it as Japanese
+        },
+        context,
+        "1"
+      );
+
+      const run = shape.textBody?.paragraphs[0]?.runs[0];
+      if (!run || run.type !== "text") throw new Error("Expected text run");
+      expect(run.properties?.fontFamilyEastAsian).toBe("UnknownFont");
+    });
+
+    it("sets fontFamilyEastAsian from cidOrdering GB1", () => {
+      const shape = convertTextToShape(
+        {
+          type: "text",
+          text: "简体中文",
+          x: 0,
+          y: 50,
+          width: 40,
+          height: 12,
+          fontName: "CustomFont",
+          fontSize: 12,
+          graphicsState: g,
+          cidOrdering: "GB1",
+        },
+        context,
+        "1"
+      );
+
+      const run = shape.textBody?.paragraphs[0]?.runs[0];
+      if (!run || run.type !== "text") throw new Error("Expected text run");
+      expect(run.properties?.fontFamilyEastAsian).toBe("CustomFont");
+    });
+
+    it("sets fontFamilyEastAsian from cidOrdering CNS1", () => {
+      const shape = convertTextToShape(
+        {
+          type: "text",
+          text: "繁體中文",
+          x: 0,
+          y: 50,
+          width: 40,
+          height: 12,
+          fontName: "TraditionalFont",
+          fontSize: 12,
+          graphicsState: g,
+          cidOrdering: "CNS1",
+        },
+        context,
+        "1"
+      );
+
+      const run = shape.textBody?.paragraphs[0]?.runs[0];
+      if (!run || run.type !== "text") throw new Error("Expected text run");
+      expect(run.properties?.fontFamilyEastAsian).toBe("TraditionalFont");
+    });
+
+    it("sets fontFamilyEastAsian from cidOrdering Korea1", () => {
+      const shape = convertTextToShape(
+        {
+          type: "text",
+          text: "한국어",
+          x: 0,
+          y: 50,
+          width: 30,
+          height: 12,
+          fontName: "KoreanFont",
+          fontSize: 12,
+          graphicsState: g,
+          cidOrdering: "Korea1",
+        },
+        context,
+        "1"
+      );
+
+      const run = shape.textBody?.paragraphs[0]?.runs[0];
+      if (!run || run.type !== "text") throw new Error("Expected text run");
+      expect(run.properties?.fontFamilyEastAsian).toBe("KoreanFont");
+    });
+
+    it("cidOrdering takes priority over font name pattern", () => {
+      // Font name suggests Arabic (Complex Script), but CIDOrdering says Japan1
+      const shape = convertTextToShape(
+        {
+          type: "text",
+          text: "テスト",
+          x: 0,
+          y: 50,
+          width: 30,
+          height: 12,
+          fontName: "Arabic-Style-Font", // Name suggests Arabic
+          fontSize: 12,
+          graphicsState: g,
+          cidOrdering: "Japan1", // But CIDOrdering says Japanese
+        },
+        context,
+        "1"
+      );
+
+      const run = shape.textBody?.paragraphs[0]?.runs[0];
+      if (!run || run.type !== "text") throw new Error("Expected text run");
+      // CIDOrdering wins: should be East Asian, not Complex Script
+      expect(run.properties?.fontFamilyEastAsian).toBe("Arabic-Style-Font");
+      expect(run.properties?.fontFamilyComplexScript).toBeUndefined();
+    });
+  });
+
   describe("charSpacing conversion", () => {
     const context = { pdfWidth: 100, pdfHeight: 100, slideWidth: px(100), slideHeight: px(100) } as const;
     const g = createGraphicsState({ colorSpace: "DeviceGray", components: [0] as const });

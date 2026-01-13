@@ -342,7 +342,93 @@ function createParagraphFromTexts(texts: readonly PdfText[]): GroupedParagraph {
 }
 
 /**
+ * Width buffer ratio for TextBox bounds.
+ *
+ * PDF text width includes charSpacing/wordSpacing effects from the original rendering.
+ * However, when PPTX applies the `spacing` property, it may add additional space
+ * that causes the effective text width to exceed the TextBox bounds.
+ *
+ * Additionally, font substitution (PDF font → PPTX font) may result in
+ * slightly different character widths.
+ *
+ * This buffer ensures the TextBox is wide enough to prevent unintended line breaks.
+ */
+const WIDTH_BUFFER_RATIO = 0.05; // 5% buffer
+
+
+/**
+ * Calculate spacing-based width adjustment.
+ *
+ * When texts have charSpacing, the PPTX spacing property may cause
+ * additional width expansion. Calculate the extra width needed.
+ */
+function calculateSpacingWidthAdjustment(runs: readonly PdfText[]): number {
+  let maxAdjustment = 0;
+
+  for (const run of runs) {
+    if (run.charSpacing && run.charSpacing > 0) {
+      // Each character gets extra spacing, so total adjustment = charSpacing × (charCount - 1)
+      const charCount = Math.max(run.text.length - 1, 0);
+      const adjustment = run.charSpacing * charCount * ((run.horizontalScaling ?? 100) / 100);
+      maxAdjustment = Math.max(maxAdjustment, adjustment);
+    }
+  }
+
+  return maxAdjustment;
+}
+
+
+/**
+ * Add line spacing information to paragraphs.
+ *
+ * Calculates the baseline distance between consecutive paragraphs
+ * and stores it with the current line's font size for PPTX line spacing conversion.
+ *
+ * The font size is taken from the current line because:
+ * - lineSpacing = baselineDistance / fontSize gives the spacing ratio
+ * - The ratio is relative to the font size of the line that "owns" this spacing
+ */
+function addLineSpacingToParagraphs(paragraphs: readonly GroupedParagraph[]): GroupedParagraph[] {
+  if (paragraphs.length <= 1) {
+    return [...paragraphs];
+  }
+
+  const result: GroupedParagraph[] = [];
+
+  for (let i = 0; i < paragraphs.length; i++) {
+    const current = paragraphs[i];
+    const next = paragraphs[i + 1];
+
+    if (next) {
+      // Baseline distance from current line to next line
+      // In PDF coordinates, Y increases upward, so current.baselineY > next.baselineY
+      const baselineDistance = current.baselineY - next.baselineY;
+      const fontSize = current.runs[0]?.fontSize;
+
+      if (baselineDistance > 0 && fontSize !== undefined && fontSize > 0) {
+        result.push({
+          ...current,
+          lineSpacing: { baselineDistance, fontSize },
+        });
+      } else {
+        result.push(current);
+      }
+    } else {
+      // Last paragraph has no line spacing
+      result.push(current);
+    }
+  }
+
+  return result;
+}
+
+
+/**
  * Create GroupedText from paragraphs.
+ *
+ * Adds width buffer to account for:
+ * 1. PPTX spacing property potentially adding extra character spacing
+ * 2. Font substitution causing slightly different character widths
  */
 function createGroupedText(paragraphs: readonly GroupedParagraph[]): GroupedText {
   const allRuns = paragraphs.flatMap((p) => p.runs);
@@ -352,14 +438,24 @@ function createGroupedText(paragraphs: readonly GroupedParagraph[]): GroupedText
   const minY = Math.min(...allRuns.map((r) => r.y));
   const maxY = Math.max(...allRuns.map((r) => r.y + r.height));
 
+  const baseWidth = maxX - minX;
+
+  // Add width buffer to prevent unintended line breaks
+  const spacingAdjustment = calculateSpacingWidthAdjustment(allRuns);
+  const percentageBuffer = baseWidth * WIDTH_BUFFER_RATIO;
+  const totalBuffer = Math.max(spacingAdjustment, percentageBuffer);
+
+  // Add line spacing information
+  const paragraphsWithSpacing = addLineSpacingToParagraphs(paragraphs);
+
   return {
     bounds: {
       x: minX,
       y: minY,
-      width: maxX - minX,
+      width: baseWidth + totalBuffer,
       height: maxY - minY,
     },
-    paragraphs,
+    paragraphs: paragraphsWithSpacing,
   };
 }
 
@@ -400,7 +496,10 @@ function mergeHorizontallyAdjacent(
 /**
  * Create a paragraph from texts on the same line.
  */
-function createParagraph(texts: readonly PdfText[], options: Required<SpatialGroupingOptions>): GroupedParagraph {
+function createParagraph(
+  texts: readonly PdfText[],
+  options: Required<SpatialGroupingOptions>
+): GroupedParagraph {
   // Sort by X (left to right)
   const sorted = [...texts].sort((a, b) => a.x - b.x);
 

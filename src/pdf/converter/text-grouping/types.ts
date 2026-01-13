@@ -30,6 +30,17 @@ export type GroupingContext = {
    * Texts should not be grouped if a blocking zone is between them.
    */
   readonly blockingZones?: readonly BlockingZone[];
+
+  /**
+   * Page width in PDF points.
+   * Used for column separation calculations.
+   */
+  readonly pageWidth?: number;
+
+  /**
+   * Page height in PDF points.
+   */
+  readonly pageHeight?: number;
 };
 
 /**
@@ -72,6 +83,16 @@ export type GroupedText = {
 };
 
 /**
+ * Line spacing information with the reference font size used in calculation.
+ */
+export type LineSpacingInfo = {
+  /** Baseline distance to next line in PDF points */
+  readonly baselineDistance: number;
+  /** Font size of this line used to calculate the spacing */
+  readonly fontSize: number;
+};
+
+/**
  * A paragraph within a text group (typically a single line).
  */
 export type GroupedParagraph = {
@@ -79,4 +100,10 @@ export type GroupedParagraph = {
   readonly runs: readonly PdfText[];
   /** Baseline Y coordinate in PDF points */
   readonly baselineY: number;
+  /**
+   * Line spacing to next paragraph.
+   * Contains baseline distance and the font size of this line.
+   * Undefined for the last paragraph.
+   */
+  readonly lineSpacing?: LineSpacingInfo;
 };

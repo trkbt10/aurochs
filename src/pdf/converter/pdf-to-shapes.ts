@@ -94,18 +94,59 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
 
   // Add paths as blocking zones (using bounding boxes)
   // PdfBBox is [x1, y1, x2, y2] where (x1,y1) is bottom-left and (x2,y2) is top-right
+  //
+  // Strategy for blocking zones:
+  // - Stroke paths (lines/borders) are prioritized as visual separators
+  // - Fill-only paths are treated more carefully:
+  //   - Thin fill areas (likely dividers) are included
+  //   - Large filled areas are likely containers (table cells, backgrounds) and excluded
   for (const path of paths) {
     if (path.paintOp === "none" || path.paintOp === "clip") {
       continue; // Skip invisible paths
     }
+
     const bbox = computePathBBox(path);
     const [x1, y1, x2, y2] = bbox;
-    blockingZones.push({
-      x: Math.min(x1, x2),
-      y: Math.min(y1, y2),
-      width: Math.abs(x2 - x1),
-      height: Math.abs(y2 - y1),
-    });
+    const width = Math.abs(x2 - x1);
+    const height = Math.abs(y2 - y1);
+
+    // Skip very small paths (likely rendering artifacts)
+    if (width < 0.5 && height < 0.5) {
+      continue;
+    }
+
+    // Determine if this path should be a blocking zone based on paint operation
+    let isBlockingZone = false;
+
+    if (path.paintOp === "stroke" || path.paintOp === "fillStroke") {
+      // Stroked paths (lines, borders) are always blocking zones
+      // They represent visual separators like table borders, divider lines
+      isBlockingZone = true;
+    } else if (path.paintOp === "fill") {
+      // Fill-only paths need careful consideration:
+      // - Thin fills (divider lines drawn as filled rectangles) should block
+      // - Large filled areas (backgrounds, table cells) should NOT block
+
+      // Threshold for "thin" fill: less than 3 points in either dimension
+      const thinThreshold = 3;
+      const isThinFill = width < thinThreshold || height < thinThreshold;
+
+      // Aspect ratio check: very elongated shapes are likely dividers
+      const aspectRatio = Math.max(width, height) / Math.max(Math.min(width, height), 0.1);
+      const isElongated = aspectRatio > 20;
+
+      // Include thin or elongated fills as blocking zones (they're visual separators)
+      isBlockingZone = isThinFill || isElongated;
+    }
+
+    if (isBlockingZone) {
+      blockingZones.push({
+        x: Math.min(x1, x2),
+        y: Math.min(y1, y2),
+        width,
+        height,
+      });
+    }
   }
 
   // Add images as blocking zones (compute bounding box from CTM)
@@ -138,6 +179,8 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
 
   const groupingContext: GroupingContext = {
     blockingZones: blockingZones.length > 0 ? blockingZones : undefined,
+    pageWidth: page.width,
+    pageHeight: page.height,
   };
 
   // Apply text grouping function (default: spatial grouping for better PPTX editability)

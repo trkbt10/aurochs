@@ -224,6 +224,9 @@ describe("createSpatialGrouping", () => {
   });
 
   describe("bounds calculation", () => {
+    // Width includes 5% buffer to account for letter-spacing and font substitution
+    const WIDTH_BUFFER_RATIO = 0.05;
+
     it("calculates correct bounds for single text", () => {
       const groupFn = spatialGrouping;
       const text = createPdfText({
@@ -238,7 +241,7 @@ describe("createSpatialGrouping", () => {
       expect(group.bounds).toEqual({
         x: 10,
         y: 100,
-        width: 50,
+        width: 50 * (1 + WIDTH_BUFFER_RATIO), // 52.5 with buffer
         height: 12,
       });
     });
@@ -255,7 +258,7 @@ describe("createSpatialGrouping", () => {
       expect(group.bounds).toEqual({
         x: 10,
         y: 100,
-        width: 100, // 110 - 10
+        width: 100 * (1 + WIDTH_BUFFER_RATIO), // 105 with buffer (base: 110 - 10)
         height: 12,
       });
     });
@@ -271,7 +274,7 @@ describe("createSpatialGrouping", () => {
 
       expect(group.bounds.x).toBe(0);
       expect(group.bounds.y).toBe(85);
-      expect(group.bounds.width).toBe(80);
+      expect(group.bounds.width).toBe(80 * (1 + WIDTH_BUFFER_RATIO)); // 84 with buffer
       expect(group.bounds.height).toBe(27); // 112 - 85
     });
   });

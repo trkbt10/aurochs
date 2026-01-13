@@ -23,6 +23,7 @@ import type { Fill, BlipFill } from "../../../pptx/domain/color/types";
 import { deg } from "../../../ooxml/domain/units";
 import type { ResourceId } from "../../../pptx/domain/types";
 import type { EditorProps, SelectOption } from "../../types";
+import { useEditorResourceContext } from "../../context/editor/EditorResourceContext";
 
 // =============================================================================
 // Types
@@ -328,63 +329,16 @@ export function FillEditor({
 
   // Blip Fill (Image)
   if (value.type === "blipFill") {
-    const blipFill = value as BlipFill;
-    const hasImage = blipFill.resourceId !== "";
-
-    const handleFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) {
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = () => {
-        const dataUrl = reader.result as string;
-        onChange({
-          ...blipFill,
-          resourceId: dataUrl as ResourceId,
-        });
-      };
-      reader.readAsDataURL(file);
-    };
-
     return (
-      <div className={className} style={{ ...containerStyle, ...style }}>
-        <div style={rowStyle}>
-          <Select
-            value={value.type}
-            onChange={handleTypeChange}
-            options={fillTypeOptions}
-            disabled={disabled}
-            style={typeSelectStyle}
-          />
-          <label style={imageSelectLabelStyle}>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFileSelect}
-              disabled={disabled}
-              style={{ display: "none" }}
-            />
-            {hasImage ? "Change Image" : "Select Image"}
-          </label>
-          <Toggle
-            checked={blipFill.rotWithShape}
-            onChange={(checked) => onChange({ ...blipFill, rotWithShape: checked })}
-            disabled={disabled}
-          />
-          <span style={{ fontSize: fontTokens.size.sm, color: `var(--text-tertiary, ${colorTokens.text.tertiary})` }}>Rotate</span>
-        </div>
-        {hasImage && (
-          <div style={imagePreviewContainerStyle}>
-            <img
-              src={blipFill.resourceId}
-              alt="Fill preview"
-              style={imagePreviewStyle}
-            />
-          </div>
-        )}
-      </div>
+      <BlipFillEditor
+        value={value as BlipFill}
+        onChange={onChange}
+        onTypeChange={handleTypeChange}
+        fillTypeOptions={fillTypeOptions}
+        disabled={disabled}
+        className={className}
+        style={style}
+      />
     );
   }
 
@@ -398,6 +352,96 @@ export function FillEditor({
         disabled={disabled}
         style={typeSelectStyle}
       />
+    </div>
+  );
+}
+
+// =============================================================================
+// BlipFillEditor (Image Fill)
+// =============================================================================
+
+type BlipFillEditorProps = {
+  readonly value: BlipFill;
+  readonly onChange: (fill: Fill) => void;
+  readonly onTypeChange: (type: string) => void;
+  readonly fillTypeOptions: SelectOption<FillType>[];
+  readonly disabled?: boolean;
+  readonly className?: string;
+  readonly style?: CSSProperties;
+};
+
+/**
+ * Separated component for BlipFill editing.
+ * Uses EditorResourceContext to manage uploaded images.
+ */
+function BlipFillEditor({
+  value: blipFill,
+  onChange,
+  onTypeChange,
+  fillTypeOptions,
+  disabled,
+  className,
+  style,
+}: BlipFillEditorProps) {
+  const { store, registerUpload } = useEditorResourceContext();
+  const hasImage = blipFill.resourceId !== "";
+
+  // Get the preview URL from resource store
+  const previewUrl = hasImage ? store.toDataUrl(blipFill.resourceId) : undefined;
+
+  const handleFileSelect = useCallback(
+    async (e: ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) {
+        return;
+      }
+
+      // Register the uploaded file to ResourceStore and get the resourceId
+      const resourceId = await registerUpload(file);
+      onChange({
+        ...blipFill,
+        resourceId,
+      });
+    },
+    [blipFill, onChange, registerUpload]
+  );
+
+  return (
+    <div className={className} style={{ ...containerStyle, ...style }}>
+      <div style={rowStyle}>
+        <Select
+          value={blipFill.type}
+          onChange={onTypeChange}
+          options={fillTypeOptions}
+          disabled={disabled}
+          style={typeSelectStyle}
+        />
+        <label style={imageSelectLabelStyle}>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFileSelect}
+            disabled={disabled}
+            style={{ display: "none" }}
+          />
+          {hasImage ? "Change Image" : "Select Image"}
+        </label>
+        <Toggle
+          checked={blipFill.rotWithShape}
+          onChange={(checked) => onChange({ ...blipFill, rotWithShape: checked })}
+          disabled={disabled}
+        />
+        <span style={{ fontSize: fontTokens.size.sm, color: `var(--text-tertiary, ${colorTokens.text.tertiary})` }}>Rotate</span>
+      </div>
+      {previewUrl && (
+        <div style={imagePreviewContainerStyle}>
+          <img
+            src={previewUrl}
+            alt="Fill preview"
+            style={imagePreviewStyle}
+          />
+        </div>
+      )}
     </div>
   );
 }

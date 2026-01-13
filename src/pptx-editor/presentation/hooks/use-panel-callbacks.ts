@@ -5,7 +5,7 @@
  */
 
 import { useCallback } from "react";
-import type { Shape } from "../../../pptx/domain";
+import type { Shape, SlideSize } from "../../../pptx/domain";
 import type { Background } from "../../../pptx/domain/slide";
 import { applySlideLayoutAttributes, type SlideLayoutAttributes } from "../../../pptx/parser/slide/layout-parser";
 import type { ShapeId } from "../../../pptx/domain/types";
@@ -51,6 +51,7 @@ export type SlideCallbacks = {
   readonly handleBackgroundChange: (background: Background | undefined) => void;
   readonly handleLayoutAttributesChange: (attributes: SlideLayoutAttributes) => void;
   readonly handleLayoutChange: (layoutTargetPath: string) => void;
+  readonly handleSlideSizeChange: (slideSize: SlideSize) => void;
 };
 
 export type UsePanelCallbacksResult = {
@@ -235,6 +236,13 @@ export function usePanelCallbacks({ dispatch, document }: UsePanelCallbacksParam
     [dispatch, document.presentationFile],
   );
 
+  const handleSlideSizeChange = useCallback(
+    (slideSize: SlideSize): void => {
+      dispatch({ type: "SET_SLIDE_SIZE", slideSize });
+    },
+    [dispatch],
+  );
+
   return {
     canvas: {
       handleSelect,
@@ -258,6 +266,7 @@ export function usePanelCallbacks({ dispatch, document }: UsePanelCallbacksParam
       handleBackgroundChange,
       handleLayoutAttributesChange,
       handleLayoutChange,
+      handleSlideSizeChange,
     },
   };
 }

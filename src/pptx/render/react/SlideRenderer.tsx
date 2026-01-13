@@ -12,6 +12,7 @@ import type { ShapeId } from "../../domain/types";
 import type { RenderOptions } from "../render-options";
 import type { ResolvedBackgroundFill } from "../background-fill";
 import type { ResourceResolver } from "../../domain/resource-resolver";
+import type { ResourceStore } from "../../domain/resource-store";
 import { RenderProvider, useRenderContext } from "./context";
 import { SvgDefsProvider } from "./hooks/useSvgDefs";
 import { ResolvedBackgroundRenderer, BackgroundRenderer } from "./Background";
@@ -33,6 +34,8 @@ export type SlideRendererProps = {
   readonly colorContext?: ColorContext;
   /** Resource resolver */
   readonly resources?: ResourceResolver;
+  /** Resource store for centralized resource management (e.g., uploaded images) */
+  readonly resourceStore?: ResourceStore;
   /** Font scheme for theme fonts */
   readonly fontScheme?: FontScheme;
   /** Render options */
@@ -90,6 +93,7 @@ export function SlideRenderer({
   slideSize,
   colorContext,
   resources,
+  resourceStore,
   fontScheme,
   options,
   resolvedBackground,
@@ -101,6 +105,7 @@ export function SlideRenderer({
       slideSize={slideSize}
       colorContext={colorContext}
       resources={resources}
+      resourceStore={resourceStore}
       fontScheme={fontScheme}
       options={options}
       resolvedBackground={resolvedBackground}
@@ -216,6 +221,7 @@ export function SlideRendererSvg({
   slideSize,
   colorContext,
   resources,
+  resourceStore,
   fontScheme,
   options,
   resolvedBackground,
@@ -241,6 +247,7 @@ export function SlideRendererSvg({
         slideSize={slideSize}
         colorContext={colorContext}
         resources={resources}
+        resourceStore={resourceStore}
         fontScheme={fontScheme}
         options={options}
         resolvedBackground={resolvedBackground}

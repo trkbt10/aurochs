@@ -17,6 +17,7 @@ import type { ShapeId } from "../../pptx/domain/types";
 import { px } from "../../ooxml/domain/units";
 import type { PresentationDocument, SlideWithId } from "../../pptx/app";
 import { PresentationEditorProvider, usePresentationEditor } from "../context/presentation/PresentationEditorContext";
+import { EditorResourceProvider, useEditorResourceStore } from "../context/editor/EditorResourceContext";
 import { SlideThumbnailPanel } from "../panels";
 import { useSlideThumbnails } from "../thumbnail/use-slide-thumbnails";
 import { SlideThumbnailPreview } from "../thumbnail/SlideThumbnailPreview";
@@ -141,6 +142,9 @@ function EditorContent({
     textEdit,
     pathEdit,
   } = usePresentationEditor();
+
+  // Get the editor resource store for uploaded/created resources
+  const editorResourceStore = useEditorResourceStore();
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const { shapeSelection: selection, drag } = state;
@@ -751,6 +755,7 @@ function EditorContent({
           onLayoutAttributesChange={slideCallbacks.handleLayoutAttributesChange}
           onLayoutChange={slideCallbacks.handleLayoutChange}
           slideSize={{ width, height }}
+          onSlideSizeChange={slideCallbacks.handleSlideSizeChange}
           presentationFile={document.presentationFile}
         />
         <LayoutInfoPanel
@@ -771,6 +776,7 @@ function EditorContent({
     layoutOptions,
     slideCallbacks.handleLayoutAttributesChange,
     slideCallbacks.handleLayoutChange,
+    slideCallbacks.handleSlideSizeChange,
     width,
     height,
     document.presentationFile,
@@ -840,6 +846,7 @@ function EditorContent({
           contextMenuActions={contextMenuActions}
           colorContext={colorContext}
           resources={renderContext?.resources ?? document.resources}
+          resourceStore={editorResourceStore}
           fontScheme={fontScheme}
           resolvedBackground={renderContext?.resolvedBackground ?? activeSlide?.resolvedBackground}
           editingShapeId={editingShapeId}
@@ -887,6 +894,7 @@ function EditorContent({
     colorContext,
     renderContext,
     document.resources,
+    editorResourceStore,
     fontScheme,
     editingShapeId,
     layoutShapes,
@@ -1018,11 +1026,13 @@ export function PresentationEditor({
 
   return (
     <PresentationPreviewProvider>
-      <PresentationEditorProvider initialDocument={initialDocument}>
-        <div className={className} style={containerStyles}>
-          <EditorContent showInspector={showInspector} showToolbar={showToolbar} />
-        </div>
-      </PresentationEditorProvider>
+      <EditorResourceProvider>
+        <PresentationEditorProvider initialDocument={initialDocument}>
+          <div className={className} style={containerStyles}>
+            <EditorContent showInspector={showInspector} showToolbar={showToolbar} />
+          </div>
+        </PresentationEditorProvider>
+      </EditorResourceProvider>
     </PresentationPreviewProvider>
   );
 }

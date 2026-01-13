@@ -6,13 +6,15 @@ import type { PdfText } from "../domain";
 import type { SpShape } from "../../pptx/domain/shape";
 import type { Paragraph, TextBody, TextRun } from "../../pptx/domain/text";
 import type { Pixels, Points } from "../../ooxml/domain/units";
-import { deg, pt, px } from "../../ooxml/domain/units";
+import { deg, pct, pt, px } from "../../ooxml/domain/units";
 import type { ConversionContext } from "./transform-converter";
 import { convertPoint, convertSize } from "./transform-converter";
 import { convertFill } from "./color-converter";
+import type { CIDOrdering } from "../domain/font";
 import { mapFontName, isBoldFont, isItalicFont, normalizeFontName } from "../domain/font";
 import { PT_TO_PX } from "../domain/constants";
-import type { GroupedText, GroupedParagraph } from "./text-grouping/types";
+import type { GroupedText, GroupedParagraph, LineSpacingInfo } from "./text-grouping/types";
+import { detectScriptFromText, type ScriptType } from "./unicode-script";
 
 /**
  * Convert PDF text position to PPTX shape position.
@@ -154,8 +156,62 @@ function createParagraph(pdfText: PdfText): Paragraph {
   };
 }
 
+// ScriptType is imported from unicode-script.ts
+
+/**
+ * Detect script type from CID ordering.
+ *
+ * This is the most accurate method based on PDF specification.
+ * CIDSystemInfo Ordering identifies the character collection.
+ *
+ * - Adobe character collections (Japan1, GB1, CNS1, Korea1): Provides script type
+ * - Identity: No script type info, returns null to trigger font name fallback
+ *
+ * @see ISO 32000-1:2008 Section 9.7.3 - CIDSystemInfo Dictionaries
+ * @see ISO 32000-1:2008 Section 9.7.5 - Identity-H/V encodings
+ */
+function detectScriptTypeFromCIDOrdering(ordering: CIDOrdering | undefined): ScriptType | null {
+  if (!ordering) {
+    return null;
+  }
+
+  // Adobe character collections provide script type info
+  // Japan1, GB1, CNS1, Korea1 are all CJK character collections
+  switch (ordering) {
+    case "Japan1":
+    case "GB1":
+    case "CNS1":
+    case "Korea1":
+      return "eastAsian";
+    case "Identity":
+      // Identity encoding doesn't provide script type info
+      // Fall back to font name pattern detection
+      return null;
+    default:
+      return null;
+  }
+}
+
+
 /**
  * TextRunを構築
+ *
+ * ## Font Element Mapping (ECMA-376 Part 1, Section 21.1.2.3.3)
+ *
+ * PPTX uses script-specific font elements:
+ * - a:latin (fontFamily): Latin/Western script
+ * - a:ea (fontFamilyEastAsian): East Asian script (CJK)
+ * - a:cs (fontFamilyComplexScript): Complex script (RTL, Indic)
+ *
+ * ## Script Type Detection (Spec-based)
+ *
+ * 1. CIDOrdering from CIDSystemInfo (ISO 32000-1 Section 9.7.3)
+ *    - Japan1, GB1, CNS1, Korea1: Adobe character collections → eastAsian
+ *    - Identity: No script info (ISO 32000-1 Section 9.7.5) → fallback
+ *
+ * 2. Unicode Script Property (UAX #24)
+ *    - Analyzes text content to determine script type
+ *    - Based on Unicode Standard character classifications
  */
 function createTextRun(pdfText: PdfText): TextRun {
   const normalizedName = normalizeFontName(pdfText.fontName);
@@ -169,12 +225,28 @@ function createTextRun(pdfText: PdfText): TextRun {
   const bold = pdfText.isBold ?? isBoldFont(normalizedName);
   const italic = pdfText.isItalic ?? isItalicFont(normalizedName);
 
+  const mappedFontName = mapFontName(pdfText.fontName);
+
+  // Script type detection (spec-based):
+  // 1. CIDOrdering from CIDSystemInfo (ISO 32000-1 Section 9.7.3)
+  //    - Japan1, GB1, CNS1, Korea1 → eastAsian
+  //    - Identity → no script info, fall back to text analysis
+  // 2. Unicode Script Property (UAX #24) based on text content
+  const cidScriptType = detectScriptTypeFromCIDOrdering(pdfText.cidOrdering);
+  const textScriptType = detectScriptFromText(pdfText.text);
+  const effectiveScriptType = cidScriptType ?? textScriptType;
+
   return {
     type: "text",
     text: pdfText.text,
     properties: {
       fontSize: convertFontSize(pdfText.fontSize),
-      fontFamily: mapFontName(pdfText.fontName),
+      // Always set a:latin as base font
+      fontFamily: mappedFontName,
+      // Set a:ea for East Asian fonts (ECMA-376 21.1.2.3.3)
+      ...(effectiveScriptType === "eastAsian" && { fontFamilyEastAsian: mappedFontName }),
+      // Set a:cs for Complex Script fonts (ECMA-376 21.1.2.3.3)
+      ...(effectiveScriptType === "complexScript" && { fontFamilyComplexScript: mappedFontName }),
       fill: convertFill(pdfText.graphicsState.fillColor, pdfText.graphicsState.fillAlpha),
       bold,
       italic,
@@ -304,6 +376,7 @@ function convertGroupedTextPosition(
  */
 const PARAGRAPH_BREAK_THRESHOLD_RATIO = 0.5;
 
+
 /**
  * Create TextBody from grouped paragraphs.
  *
@@ -321,6 +394,13 @@ const PARAGRAPH_BREAK_THRESHOLD_RATIO = 0.5;
  *
  * A new paragraph is created only when:
  * - There's significant extra space (actual paragraph break in the PDF)
+ *
+ * ## Alignment Strategy
+ *
+ * All text uses "left" alignment. The TextBox position itself handles
+ * visual alignment - if text appears centered on the page, it's because
+ * the TextBox is centered. PDF uses absolute coordinates, so we don't
+ * need to detect/apply alignment.
  *
  * ## Coordinate System
  *
@@ -359,24 +439,39 @@ function createTextBodyFromGroup(group: GroupedText): TextBody {
  * Consecutive lines with normal line spacing are combined into one paragraph
  * to enable text wrapping. A new paragraph is created only when there's
  * significant extra space (indicating a real paragraph break).
+ *
+ * @param groupedParas - PDF paragraphs to flatten
  */
 function flattenToParagraphs(groupedParas: readonly GroupedParagraph[]): Paragraph[] {
   if (groupedParas.length === 0) return [];
+
+  const firstRun = groupedParas[0].runs[0];
+  if (!firstRun) return [];
+
   if (groupedParas.length === 1) {
-    return [createFlatParagraph(groupedParas[0].runs, undefined)];
+    return [createFlatParagraph(groupedParas[0].runs, undefined, groupedParas[0].lineSpacing)];
   }
 
   const result: Paragraph[] = [];
   let currentRuns: PdfText[] = [...groupedParas[0].runs];
   let spaceBefore: number | undefined = undefined;
+  let currentLineSpacing: LineSpacingInfo | undefined = groupedParas[0].lineSpacing;
 
   for (let i = 1; i < groupedParas.length; i++) {
     const prevPara = groupedParas[i - 1];
     const currPara = groupedParas[i];
 
-    // Calculate spacing between lines
-    const baselineDistance = prevPara.baselineY - currPara.baselineY;
-    const prevFontSize = prevPara.runs[0]?.fontSize ?? 12;
+    // Calculate spacing between lines using prevPara's lineSpacing info
+    const prevLineSpacing = prevPara.lineSpacing;
+    const baselineDistance = prevLineSpacing?.baselineDistance ?? (prevPara.baselineY - currPara.baselineY);
+    const prevFontSize = prevLineSpacing?.fontSize ?? prevPara.runs[0]?.fontSize;
+
+    if (prevFontSize === undefined) {
+      // Cannot determine paragraph break without font size
+      currentRuns.push(...currPara.runs);
+      continue;
+    }
+
     const extraSpace = baselineDistance - prevFontSize;
 
     // Check if this is a paragraph break (significant extra space)
@@ -385,19 +480,24 @@ function flattenToParagraphs(groupedParas: readonly GroupedParagraph[]): Paragra
 
     if (isParagraphBreak) {
       // Finish current paragraph and start new one
-      result.push(createFlatParagraph(currentRuns, spaceBefore));
+      result.push(createFlatParagraph(currentRuns, spaceBefore, currentLineSpacing));
       currentRuns = [...currPara.runs];
       // Set spaceBefore for the new paragraph
       spaceBefore = extraSpace > 0 ? extraSpace : undefined;
+      currentLineSpacing = currPara.lineSpacing;
     } else {
       // Continue same paragraph - add runs from this line
       currentRuns.push(...currPara.runs);
+      // Update line spacing if available
+      if (currPara.lineSpacing !== undefined) {
+        currentLineSpacing = currPara.lineSpacing;
+      }
     }
   }
 
   // Don't forget the last paragraph
   if (currentRuns.length > 0) {
-    result.push(createFlatParagraph(currentRuns, spaceBefore));
+    result.push(createFlatParagraph(currentRuns, spaceBefore, currentLineSpacing));
   }
 
   return result;
@@ -405,13 +505,42 @@ function flattenToParagraphs(groupedParas: readonly GroupedParagraph[]): Paragra
 
 /**
  * Create a flattened PPTX Paragraph from multiple runs.
+ *
+ * ## Line Spacing Conversion
+ *
+ * PDF baseline distance = fontSize + extra spacing
+ * PPTX a:spcPct = percentage of font size (100% = single spacing)
+ *
+ * To match PDF layout:
+ * lineSpacing% = (baseline distance / fontSize) * 100
+ *
+ * Example: 14pt baseline distance with 12pt font = 116.7% line spacing
+ *
+ * @param runs - Text runs for this paragraph
+ * @param spaceBeforePts - Space before paragraph in PDF points
+ * @param lineSpacing - Line spacing info with reference font size
  */
-function createFlatParagraph(runs: readonly PdfText[], spaceBeforePts: number | undefined): Paragraph {
+function createFlatParagraph(
+  runs: readonly PdfText[],
+  spaceBeforePts: number | undefined,
+  lineSpacing: LineSpacingInfo | undefined
+): Paragraph {
+  // Convert baseline distance to line spacing percentage
+  // lineSpacing% = (baseline distance / fontSize) * 100
+  const lineSpacingPercent = lineSpacing !== undefined &&
+    lineSpacing.baselineDistance > 0 &&
+    lineSpacing.fontSize > 0
+    ? (lineSpacing.baselineDistance / lineSpacing.fontSize) * 100
+    : undefined;
+
   return {
     properties: {
       alignment: "left",
       ...(spaceBeforePts !== undefined && spaceBeforePts > 0 && {
         spaceBefore: { type: "points" as const, value: pt(spaceBeforePts) },
+      }),
+      ...(lineSpacingPercent !== undefined && {
+        lineSpacing: { type: "percent" as const, value: pct(lineSpacingPercent) },
       }),
     },
     runs: runs.map(createTextRun),

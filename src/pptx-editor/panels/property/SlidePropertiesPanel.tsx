@@ -10,7 +10,7 @@ import type { Background } from "../../../pptx/domain/slide";
 import type { SlideLayoutAttributes } from "../../../pptx/parser/slide/layout-parser";
 import { Accordion } from "../../ui/layout/Accordion";
 import type { SlideLayoutOption } from "../../../pptx/app";
-import { BackgroundEditor, SlideLayoutEditor, createDefaultBackground } from "../../editors/index";
+import { BackgroundEditor, SlideLayoutEditor, SlideSizeEditor, createDefaultBackground } from "../../editors/index";
 import { Button } from "../../ui/primitives";
 
 // =============================================================================
@@ -26,6 +26,7 @@ export type SlidePropertiesPanelProps = {
   readonly onLayoutAttributesChange: (attrs: SlideLayoutAttributes) => void;
   readonly onLayoutChange: (layoutPath: string) => void;
   readonly slideSize?: SlideSize;
+  readonly onSlideSizeChange?: (size: SlideSize) => void;
   readonly presentationFile?: PresentationFile;
 };
 
@@ -67,6 +68,7 @@ export function SlidePropertiesPanel({
   onLayoutAttributesChange,
   onLayoutChange,
   slideSize,
+  onSlideSizeChange,
   presentationFile,
 }: SlidePropertiesPanelProps) {
   const handleCreateBackground = useCallback(() => {
@@ -79,7 +81,14 @@ export function SlidePropertiesPanel({
 
   return (
     <>
-      <Accordion title="Slide Background" defaultExpanded>
+      {/* Slide Size - shown first as it's fundamental to the canvas */}
+      {slideSize && onSlideSizeChange && (
+        <Accordion title="Slide Size" defaultExpanded>
+          <SlideSizeEditor value={slideSize} onChange={onSlideSizeChange} />
+        </Accordion>
+      )}
+
+      <Accordion title="Slide Background" defaultExpanded={!slideSize}>
         <BackgroundContent
           background={background}
           onBackgroundChange={onBackgroundChange}

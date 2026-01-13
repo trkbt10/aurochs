@@ -164,23 +164,18 @@ const FONT_NAME_MAP: Record<string, string> = {
  */
 export function mapFontName(pdfFontName: string): string {
   // Remove leading slash if present
-  const name = pdfFontName.startsWith("/") ? pdfFontName.slice(1) : pdfFontName;
+  let name = pdfFontName.startsWith("/") ? pdfFontName.slice(1) : pdfFontName;
+
+  // Check for subset prefix (e.g., "ABCDEF+Helvetica") and extract base name
+  const plusIndex = name.indexOf("+");
+  if (plusIndex > 0) {
+    name = name.slice(plusIndex + 1);
+  }
 
   // Check direct mapping
   const mapped = FONT_NAME_MAP[name];
   if (mapped) {
     return mapped;
-  }
-
-  // Check for subset prefix (e.g., "ABCDEF+Helvetica")
-  const plusIndex = name.indexOf("+");
-  if (plusIndex > 0) {
-    const baseName = name.slice(plusIndex + 1);
-    const baseMapping = FONT_NAME_MAP[baseName];
-    if (baseMapping) {
-      return baseMapping;
-    }
-    return baseName;
   }
 
   // Check for common patterns in embedded font names
@@ -224,6 +219,29 @@ export function mapFontName(pdfFontName: string): string {
   }
   if (lowerName.includes("gulim") || lowerName.includes("dotum")) {
     return "Gulim";
+  }
+
+  // Hiragino fonts (macOS)
+  if (lowerName.includes("hiragino")) {
+    if (lowerName.includes("mincho")) {
+      return "Hiragino Mincho ProN";
+    }
+    if (lowerName.includes("maru")) {
+      return "Hiragino Maru Gothic ProN";
+    }
+    if (lowerName.includes("gb")) {
+      return "Hiragino Sans GB";
+    }
+    // Default to Hiragino Sans (Kaku Gothic replacement)
+    return "Hiragino Sans";
+  }
+
+  // PingFang fonts (macOS/iOS)
+  if (lowerName.includes("pingfang")) {
+    if (lowerName.includes("tc") || lowerName.includes("hk")) {
+      return "PingFang TC";
+    }
+    return "PingFang SC";
   }
 
   // Return as-is if no mapping found

@@ -5,7 +5,7 @@
  * Uses state/ module for shared state management primitives.
  */
 
-import type { Slide, Shape, TextBody } from "../../../../pptx/domain";
+import type { Slide, Shape, TextBody, SlideSize } from "../../../../pptx/domain";
 import type { ShapeId } from "../../../../pptx/domain/types";
 import type { Pixels, Degrees } from "../../../../ooxml/domain/units";
 import type { PresentationDocument, SlideWithId, SlideId } from "../../../../pptx/app";
@@ -124,6 +124,7 @@ export type PresentationEditorState = {
 export type PresentationEditorAction =
   // Document mutations
   | { readonly type: "SET_DOCUMENT"; readonly document: PresentationDocument }
+  | { readonly type: "SET_SLIDE_SIZE"; readonly slideSize: SlideSize }
 
   // Slide management
   | { readonly type: "ADD_SLIDE"; readonly slide: Slide; readonly afterSlideId?: SlideId; readonly atIndex?: number }

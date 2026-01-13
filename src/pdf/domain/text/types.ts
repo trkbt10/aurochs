@@ -31,6 +31,7 @@
  */
 
 import type { PdfGraphicsState } from "../graphics-state";
+import type { CIDOrdering } from "../font";
 
 // =============================================================================
 // Text Element
@@ -166,6 +167,26 @@ export type PdfText = {
    * Detected from FontDescriptor Flags (Italic) or font name.
    */
   readonly isItalic?: boolean;
+
+  // =============================================================================
+  // CID Font Information (ISO 32000-1:2008 Section 9.7)
+  // =============================================================================
+
+  /**
+   * CID ordering from CIDSystemInfo dictionary.
+   * Identifies the character collection for CID fonts.
+   *
+   * Values:
+   * - Japan1: Adobe-Japan1 (Japanese)
+   * - GB1: Adobe-GB1 (Simplified Chinese)
+   * - CNS1: Adobe-CNS1 (Traditional Chinese)
+   * - Korea1: Adobe-Korea1 (Korean)
+   *
+   * Used for accurate script type detection in PPTX conversion.
+   *
+   * @see ISO 32000-1:2008 Section 9.7.3 - CIDSystemInfo Dictionaries
+   */
+  readonly cidOrdering?: CIDOrdering;
 };
 
 /**

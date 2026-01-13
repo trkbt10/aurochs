@@ -27,6 +27,7 @@ import { isPathEditEditing } from "../context/slide/state";
 import type { CreationMode } from "../context/presentation/editor/types";
 import { isPenMode, isPathMode } from "../context/presentation/editor/types";
 import type { ResourceResolver } from "../../pptx/domain/resource-resolver";
+import type { ResourceStore } from "../../pptx/domain/resource-store";
 import type { ResolvedBackgroundFill } from "../../pptx/render/background-fill";
 import type { RenderOptions } from "../../pptx/render/render-options";
 import type { DrawingPath } from "../path-tools/types";
@@ -73,6 +74,7 @@ export type SvgEditorCanvasProps = {
   readonly contextMenuActions: ContextMenuActions;
   readonly colorContext?: ColorContext;
   readonly resources?: ResourceResolver;
+  readonly resourceStore?: ResourceStore;
   readonly fontScheme?: FontScheme;
   readonly resolvedBackground?: ResolvedBackgroundFill;
   readonly renderOptions?: Partial<RenderOptions>;
@@ -314,6 +316,7 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
     contextMenuActions,
     colorContext,
     resources,
+    resourceStore,
     fontScheme,
     resolvedBackground,
     renderOptions,
@@ -877,6 +880,7 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
               slideSize={slideSizeForRenderer}
               colorContext={colorContext}
               resources={resources}
+              resourceStore={resourceStore}
               fontScheme={fontScheme}
               options={renderOptions}
               resolvedBackground={resolvedBackground}
@@ -967,6 +971,18 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
                 pointerEvents="none"
               />
             )}
+
+            {/* Slide boundary overlay - rendered on top to show document bounds */}
+            <rect
+              x={0}
+              y={0}
+              width={widthNum}
+              height={heightNum}
+              fill="none"
+              stroke="rgba(128, 128, 128, 0.5)"
+              strokeWidth={1 / viewport.scale}
+              pointerEvents="none"
+            />
           </g>
         </g>
 

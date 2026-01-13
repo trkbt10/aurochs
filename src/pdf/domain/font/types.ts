@@ -56,6 +56,12 @@ export type FontInfo = {
    * Detected from FontDescriptor Flags (bit 64) or font name.
    */
   readonly isItalic?: boolean;
+  /**
+   * The actual font name from BaseFont entry.
+   * This is the real font name (e.g., "ABCDEF+Arial" or "Helvetica"),
+   * not the resource identifier (e.g., "F1" or "JRLKGN").
+   */
+  readonly baseFont?: string;
 };
 
 /**
@@ -69,5 +75,8 @@ export type FontMappings = Map<string, FontInfo>;
  * PDF Reference 5.6.1 defines the Registry-Ordering-Supplement system
  * for CID fonts. The Registry identifies the authority, Ordering identifies
  * the character collection, and Supplement identifies the version.
+ *
+ * - Japan1, GB1, CNS1, Korea1: Adobe character collections with script type info
+ * - Identity: Generic CID encoding without script type info (ISO 32000-1 Section 9.7.5)
  */
-export type CIDOrdering = "Japan1" | "GB1" | "CNS1" | "Korea1";
+export type CIDOrdering = "Japan1" | "GB1" | "CNS1" | "Korea1" | "Identity";

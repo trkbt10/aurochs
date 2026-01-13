@@ -295,6 +295,11 @@ function convertText(parsed: ParsedText, _pageHeight: number, fontMappings: Font
     const minY = run.y + (descender * effectiveSize) / 1000;
     const width = Math.max(run.endX - run.x, 1); // Ensure non-zero width
 
+    // Use baseFont (actual font name) if available, otherwise fall back to resource identifier
+    // baseFont is the real font name from BaseFont entry (e.g., "ABCDEF+Arial" or "Helvetica")
+    // run.fontName is the resource identifier (e.g., "F1" or "JRLKGN")
+    const actualFontName = fontInfo?.baseFont ?? run.fontName;
+
     results.push({
       type: "text" as const,
       text: decodedText,
@@ -302,7 +307,7 @@ function convertText(parsed: ParsedText, _pageHeight: number, fontMappings: Font
       y: minY,
       width,
       height: Math.max(textHeight, 1), // Ensure non-zero height
-      fontName: run.fontName,
+      fontName: actualFontName,
       fontSize: effectiveSize, // Use effective font size for PPTX rendering
       graphicsState: parsed.graphicsState,
       // Spacing properties from text state operators
@@ -317,6 +322,8 @@ function convertText(parsed: ParsedText, _pageHeight: number, fontMappings: Font
       // Font style from FontDescriptor or font name
       isBold: fontInfo?.isBold,
       isItalic: fontInfo?.isItalic,
+      // CID ordering for script type detection (ISO 32000-1 Section 9.7)
+      cidOrdering: fontInfo?.ordering,
     });
   }
 

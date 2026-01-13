@@ -203,6 +203,9 @@ export function getCIDFallbackMapping(ordering: CIDOrdering): CIDFallbackMapping
  * Detect CID ordering from font ordering string
  *
  * The Ordering string in CIDSystemInfo typically contains the ordering name.
+ *
+ * - Adobe character collections: Japan1, GB1, CNS1, Korea1 (provide script type)
+ * - Identity: Modern generic encoding (no script type info, ISO 32000-1 Section 9.7.5)
  */
 export function detectCIDOrdering(ordering: string): CIDOrdering | null {
   const normalized = ordering.toLowerCase();
@@ -218,6 +221,9 @@ export function detectCIDOrdering(ordering: string): CIDOrdering | null {
   }
   if (normalized.includes("korea") || normalized.includes("ksc")) {
     return "Korea1";
+  }
+  if (normalized.includes("identity")) {
+    return "Identity";
   }
 
   return null;

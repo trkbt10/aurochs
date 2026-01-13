@@ -49,6 +49,12 @@ export type FontExtractionResult = {
   readonly isBold: boolean;
   /** Whether font is italic/oblique (from FontDescriptor flags or font name) */
   readonly isItalic: boolean;
+  /**
+   * The actual font name from BaseFont entry.
+   * This is the real font name (e.g., "ABCDEF+Arial" or "Helvetica"),
+   * not the resource identifier.
+   */
+  readonly baseFont: string | null;
   readonly errors: readonly string[];
 };
 
@@ -76,7 +82,7 @@ export function extractFontInfoWithDeps<PdfPageT, ResourcesT>(
     resources = deps.getPageResources(pdfPage);
   } catch (error) {
     errors.push(`Failed to get page resources: ${formatError(error)}`);
-    return { toUnicode, metrics, ordering: null, encoding: null, isBold: false, isItalic: false, errors };
+    return { toUnicode, metrics, ordering: null, encoding: null, isBold: false, isItalic: false, baseFont: null, errors };
   }
 
   try {
@@ -93,7 +99,7 @@ export function extractFontInfoWithDeps<PdfPageT, ResourcesT>(
 
   // Note: CID ordering and encoding are not extracted via deps as they require PDFPage access
   // This function is primarily for testing; real extraction uses extractFontMappings
-  return { toUnicode, metrics, ordering: null, encoding: null, isBold: false, isItalic: false, errors };
+  return { toUnicode, metrics, ordering: null, encoding: null, isBold: false, isItalic: false, baseFont: null, errors };
 }
 
 export function logExtractionErrors(result: FontExtractionResult, fontName: string): void {
@@ -262,7 +268,24 @@ function extractFontInfoFromFontDict(
   // Extract bold/italic from font descriptor and name
   const { isBold, isItalic } = extractBoldItalic(fontDict, context);
 
-  return { toUnicode, metrics, ordering, encoding, isBold, isItalic, errors };
+  // Extract BaseFont (the actual font name)
+  const baseFont = extractBaseFont(fontDict);
+
+  return { toUnicode, metrics, ordering, encoding, isBold, isItalic, baseFont, errors };
+}
+
+/**
+ * Extract BaseFont name from font dictionary.
+ * Returns the actual font name, which may include subset prefix (e.g., "ABCDEF+Arial").
+ */
+function extractBaseFont(fontDict: PDFDict): string | null {
+  const baseFontRef = fontDict.get(PDFName.of("BaseFont"));
+  if (baseFontRef instanceof PDFName) {
+    const name = baseFontRef.asString();
+    // Remove leading slash if present
+    return name.startsWith("/") ? name.slice(1) : name;
+  }
+  return null;
 }
 
 function fontExtractionResultToFontInfo(result: FontExtractionResult): FontInfo {
@@ -276,6 +299,7 @@ function fontExtractionResultToFontInfo(result: FontExtractionResult): FontInfo 
     encodingMap: result.encoding ?? undefined,
     isBold: result.isBold || undefined,
     isItalic: result.isItalic || undefined,
+    baseFont: result.baseFont ?? undefined,
   };
 }
 

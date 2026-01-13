@@ -5,6 +5,7 @@
  */
 
 import type { SlideId, PresentationDocument } from "../../../../../pptx/app";
+import type { SlideSize } from "../../../../../pptx/domain";
 import type {
   PresentationEditorState,
   PresentationEditorAction,
@@ -60,6 +61,7 @@ type UpdateActiveSlideEntryAction = Extract<
   PresentationEditorAction,
   { type: "UPDATE_ACTIVE_SLIDE_ENTRY" }
 >;
+type SetSlideSizeAction = Extract<PresentationEditorAction, { type: "SET_SLIDE_SIZE" }>;
 
 function handleAddSlide(
   state: PresentationEditorState,
@@ -191,6 +193,38 @@ function handleUpdateActiveSlideEntry(
 }
 
 /**
+ * Update document with new slide size
+ */
+function updateSlideSizeInDocument(
+  doc: PresentationDocument,
+  slideSize: SlideSize
+): PresentationDocument {
+  return {
+    ...doc,
+    slideWidth: slideSize.width,
+    slideHeight: slideSize.height,
+    presentation: {
+      ...doc.presentation,
+      slideSize,
+    },
+  };
+}
+
+function handleSetSlideSize(
+  state: PresentationEditorState,
+  action: SetSlideSizeAction
+): PresentationEditorState {
+  const newDoc = updateSlideSizeInDocument(
+    state.documentHistory.present,
+    action.slideSize
+  );
+  return {
+    ...state,
+    documentHistory: pushHistory(state.documentHistory, newDoc),
+  };
+}
+
+/**
  * Slide management handlers
  */
 export const SLIDE_HANDLERS: HandlerMap = {
@@ -201,4 +235,5 @@ export const SLIDE_HANDLERS: HandlerMap = {
   SELECT_SLIDE: handleSelectSlide,
   UPDATE_SLIDE: handleUpdateSlide,
   UPDATE_ACTIVE_SLIDE_ENTRY: handleUpdateActiveSlideEntry,
+  SET_SLIDE_SIZE: handleSetSlideSize,
 };

@@ -18,3 +18,9 @@ export {
   SlideLayoutEditor,
   type SlideLayoutEditorProps,
 } from "./SlideLayoutEditor";
+
+export {
+  SlideSizeEditor,
+  createDefaultSlideSize,
+  type SlideSizeEditorProps,
+} from "./SlideSizeEditor";
