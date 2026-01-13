@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 import {
   createResourceStore,
   createEmptyResourceStore,
@@ -68,7 +68,7 @@ describe("createResourceStore", () => {
       });
 
       const url = store.toDataUrl("rId1");
-      expect(url).toStartWith("data:image/png;base64,");
+      expect(url?.startsWith("data:image/png;base64,")).toBe(true);
     });
 
     it("should return undefined when mimeType is missing", () => {

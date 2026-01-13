@@ -6,6 +6,7 @@
 
 import type { GraphicFrame } from "../../../pptx/domain/index";
 import type { DiagramDataModel } from "../../../pptx/domain/diagram";
+import type { Shape } from "../../../pptx/domain/index";
 import { Accordion } from "../../ui/layout/Accordion";
 import {
   NonVisualPropertiesEditor,
@@ -17,9 +18,26 @@ import {
 // Types
 // =============================================================================
 
+/**
+ * Diagram data passed from ResourceStore
+ */
+export type DiagramParsedData = {
+  readonly shapes?: readonly Shape[];
+  readonly dataModel?: DiagramDataModel;
+};
+
 export type DiagramFramePanelProps = {
   readonly shape: GraphicFrame;
   readonly onChange: (shape: GraphicFrame) => void;
+  /**
+   * Parsed diagram data from ResourceStore
+   */
+  readonly diagramData?: DiagramParsedData;
+  /**
+   * Callback for diagram data model changes.
+   * Diagram data is stored in ResourceStore, not on the shape.
+   */
+  readonly onDiagramChange?: (dataModel: DiagramDataModel) => void;
 };
 
 // =============================================================================
@@ -37,24 +55,12 @@ export type DiagramFramePanelProps = {
 export function DiagramFramePanel({
   shape,
   onChange,
+  diagramData,
+  onDiagramChange,
 }: DiagramFramePanelProps) {
-  const diagramData =
-    shape.content.type === "diagram" ? shape.content.data : undefined;
-
   const handleDataModelChange = (dataModel: DiagramDataModel) => {
-    if (shape.content.type !== "diagram") {
-      return;
-    }
-    onChange({
-      ...shape,
-      content: {
-        ...shape.content,
-        data: {
-          ...shape.content.data,
-          dataModel,
-        },
-      },
-    });
+    // Diagram data is stored in ResourceStore, notify parent
+    onDiagramChange?.(dataModel);
   };
 
   const renderDiagramContent = () => {
@@ -67,7 +73,7 @@ export function DiagramFramePanel({
       );
     }
 
-    if (diagramData?.parsedContent) {
+    if (diagramData?.shapes && diagramData.shapes.length > 0) {
       return (
         <div
           style={{
@@ -77,8 +83,8 @@ export function DiagramFramePanel({
             fontSize: "12px",
           }}
         >
-          Diagram with {diagramData.parsedContent.shapes.length} shapes (data
-          model not available)
+          Diagram with {diagramData.shapes.length} shapes (data model not
+          available)
         </div>
       );
     }

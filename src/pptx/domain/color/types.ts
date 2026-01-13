@@ -118,14 +118,6 @@ export type BlipFill = {
    * for OOXML export and is typically set to "embed".
    */
   readonly relationshipType: "embed" | "link";
-  /**
-   * Resolved image resource data (when resolved at parse time).
-   * This allows the render layer to convert to the appropriate format
-   * (Data URL, Blob URL, etc.) without needing to access the zip file.
-   *
-   * @deprecated Use ResourceStore.get(resourceId) instead. This field will be removed.
-   */
-  readonly resolvedResource?: ResolvedBlipResource;
   readonly compressionState?: BlipCompression;
   /**
    * DPI for rendering the blip.

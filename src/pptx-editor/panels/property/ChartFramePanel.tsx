@@ -21,6 +21,11 @@ export type ChartFramePanelProps = {
   readonly shape: GraphicFrame;
   readonly chart: Chart;
   readonly onChange: (shape: GraphicFrame) => void;
+  /**
+   * Callback for chart content changes.
+   * Chart data is stored in ResourceStore, not on the shape.
+   */
+  readonly onChartChange?: (chart: Chart) => void;
 };
 
 // =============================================================================
@@ -39,21 +44,11 @@ export function ChartFramePanel({
   shape,
   chart,
   onChange,
+  onChartChange,
 }: ChartFramePanelProps) {
   const handleChartChange = (newChart: Chart) => {
-    if (shape.content.type !== "chart") {
-      return;
-    }
-    onChange({
-      ...shape,
-      content: {
-        ...shape.content,
-        data: {
-          ...shape.content.data,
-          parsedChart: newChart,
-        },
-      },
-    });
+    // Chart data is stored in ResourceStore, notify parent
+    onChartChange?.(newChart);
   };
 
   return (

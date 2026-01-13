@@ -79,15 +79,14 @@ function PicShapeRendererBase({
   const resourceStore = useRenderResourceStore();
   const { blipFill, properties } = shape;
 
-  // Use ResourceStore (centralized) > resolvedResource (legacy) > runtime resolver (legacy)
+  // Use ResourceStore (centralized) > runtime resolver (fallback)
   const imagePath = useMemo(
     () => resolveImageUrl(
       blipFill.resourceId,
       resourceStore,
-      blipFill,
       (rId) => resources.resolve(rId),
     ),
-    [blipFill, resources, resourceStore],
+    [blipFill.resourceId, resources, resourceStore],
   );
   if (imagePath === undefined) {
     return null;
@@ -218,11 +217,6 @@ function arePicShapePropsEqual(prev: PicShapeRendererProps, next: PicShapeRender
   }
 
   if (prev.shape.blipFill.resourceId !== next.shape.blipFill.resourceId) {
-    return false;
-  }
-
-  // Check if resolvedResource changed (reference equality is sufficient since it's immutable)
-  if (prev.shape.blipFill.resolvedResource !== next.shape.blipFill.resolvedResource) {
     return false;
   }
 

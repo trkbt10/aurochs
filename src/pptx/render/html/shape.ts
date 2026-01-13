@@ -549,19 +549,21 @@ function renderConnectorSvg(
 /**
  * Render chart content
  *
- * Uses pre-parsed chart data if available (populated by integration layer).
+ * Uses chart data from ResourceStore if available (populated by integration layer).
  * This allows render to render charts without directly calling parser.
  */
 function renderChartContent(chartRef: ChartReference, width: number, height: number, ctx: CoreRenderContext): HtmlString {
-  // Use pre-parsed chart data if available
-  if (chartRef.parsedChart !== undefined) {
-    return renderChart(chartRef.parsedChart, width, height, ctx);
+  // Get chart data from ResourceStore
+  const entry = ctx.resourceStore?.get<import("../../domain/chart").Chart>(chartRef.resourceId);
+  const parsedChart = entry?.parsed;
+  if (parsedChart !== undefined) {
+    return renderChart(parsedChart, width, height, ctx);
   }
 
-  // Pre-parsed content not available
+  // Chart not in ResourceStore
   ctx.warnings.add({
     type: "fallback",
-    message: `Chart not pre-parsed: ${chartRef.resourceId}`,
+    message: `Chart not in ResourceStore: ${chartRef.resourceId}`,
     element: "chart",
   });
   return unsafeHtml(
@@ -572,7 +574,7 @@ function renderChartContent(chartRef: ChartReference, width: number, height: num
 /**
  * Render diagram content
  *
- * Uses pre-parsed diagram data if available (populated by integration layer).
+ * Uses diagram data from ResourceStore if available (populated by integration layer).
  * This allows render to render diagrams without directly calling parser.
  */
 function renderDiagramContent(
@@ -581,9 +583,13 @@ function renderDiagramContent(
   height: number,
   ctx: CoreRenderContext,
 ): HtmlString {
-  // Use pre-parsed diagram content if available
-  if (diagramRef.parsedContent !== undefined && diagramRef.parsedContent.shapes.length > 0) {
-    return renderDiagram(diagramRef.parsedContent, width, height, ctx);
+  // Get diagram content from ResourceStore
+  if (diagramRef.dataResourceId !== undefined) {
+    const entry = ctx.resourceStore?.get<{ readonly shapes: readonly import("../../domain").Shape[] }>(diagramRef.dataResourceId);
+    const parsedContent = entry?.parsed;
+    if (parsedContent !== undefined && parsedContent.shapes.length > 0) {
+      return renderDiagram(parsedContent, width, height, ctx);
+    }
   }
 
   // Return placeholder if diagram content not available

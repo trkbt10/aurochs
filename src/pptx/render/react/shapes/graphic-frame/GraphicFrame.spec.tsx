@@ -13,6 +13,7 @@ import type { GraphicFrame as GraphicFrameType, Transform } from "../../../../do
 import type { Table } from "../../../../domain/table/types";
 import type { SlideSize } from "../../../../domain";
 import type { ColorContext } from "../../../../domain/color/context";
+import { createResourceStore, type ResourceStore } from "../../../../domain/resource-store";
 import { px, deg } from "../../../../../ooxml/domain/units";
 import { RenderProvider } from "../../context";
 import { SvgDefsProvider } from "../../hooks/useSvgDefs";
@@ -184,9 +185,8 @@ function createOleObjectGraphicFrame(): GraphicFrameType {
  * Create a test GraphicFrame shape with OLE object containing preview image
  */
 function createOleObjectWithPreviewGraphicFrame(): GraphicFrameType {
-  // Create a 1x1 red pixel PNG as base64
-  const redPixelPng = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAXxPhfQAAAABJRU5ErkJggg==";
-
+  // Note: previewImageUrl is now stored in ResourceStore, not on OleReference
+  // Tests that need preview should mock ResourceStore
   return {
     type: "graphicFrame",
     nonVisual: defaultNonVisual,
@@ -194,8 +194,8 @@ function createOleObjectWithPreviewGraphicFrame(): GraphicFrameType {
     content: {
       type: "oleObject",
       data: {
+        resourceId: "rId-ole-1",
         progId: "Excel.Sheet.12",
-        previewImageUrl: redPixelPng,
       },
     },
   };
@@ -223,9 +223,15 @@ function createOleObjectShowAsIconGraphicFrame(): GraphicFrameType {
 /**
  * Wrapper component that provides required context
  */
-function TestWrapper({ children }: { readonly children: React.ReactNode }) {
+function TestWrapper({
+  children,
+  resourceStore,
+}: {
+  readonly children: React.ReactNode;
+  readonly resourceStore?: ResourceStore;
+}) {
   return (
-    <RenderProvider slideSize={testSlideSize} colorContext={testColorContext}>
+    <RenderProvider slideSize={testSlideSize} colorContext={testColorContext} resourceStore={resourceStore}>
       <SvgDefsProvider>
         <svg>{children}</svg>
       </SvgDefsProvider>
@@ -419,11 +425,20 @@ describe("GraphicFrameRenderer", () => {
       expect(text?.textContent).toContain("OLE Object");
     });
 
-    it("renders image when previewImageUrl is available", () => {
+    it("renders image when preview is available in ResourceStore", () => {
       const shape = createOleObjectWithPreviewGraphicFrame();
+      // Create ResourceStore with preview URL
+      const resourceStore = createResourceStore();
+      const redPixelPng = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFBQIAXxPhfQAAAABJRU5ErkJggg==";
+      resourceStore.set("rId-ole-1", {
+        kind: "ole",
+        source: "parsed",
+        data: new ArrayBuffer(0),
+        previewUrl: redPixelPng,
+      });
 
       const { container } = render(
-        <TestWrapper>
+        <TestWrapper resourceStore={resourceStore}>
           <GraphicFrameRenderer
             shape={shape}
             width={200}

@@ -59,6 +59,9 @@ export function parseBlipFillProperties(
     }
   }
 
+  // Note: resolvedResource is no longer stored on BlipFillProperties
+  // It's registered in ResourceStore above
+
   // Parse source rect
   const sourceRect = parseSourceRect(getChild(blipFill, "a:srcRect"));
 
@@ -70,7 +73,6 @@ export function parseBlipFillProperties(
 
   return {
     resourceId,
-    resolvedResource,
     compressionState: parseBlipCompression(getAttr(blip, "cstate")),
     sourceRect,
     stretch: stretch !== undefined,

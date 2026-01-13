@@ -39,26 +39,14 @@ export function useChartSvg(
       return { svg: null, hasContent: false };
     }
 
-    // Try to get chart from ResourceStore first, then fall back to parsedChart
-    let chart: Chart | undefined;
-
-    if (resourceStore !== undefined) {
-      const entry = resourceStore.get<{ shapes?: unknown; dataModel?: unknown } | Chart>(chartData.resourceId);
-      // Check if it's a Chart (has specific chart properties)
-      if (entry?.parsed !== undefined && "plotArea" in (entry.parsed as object)) {
-        chart = entry.parsed as Chart;
-      }
-    }
-
-    // Fall back to legacy parsedChart field
-    if (chart === undefined) {
-      chart = chartData.parsedChart;
-    }
+    // Get chart from ResourceStore
+    const entry = resourceStore?.get<Chart>(chartData.resourceId);
+    const chart = entry?.parsed;
 
     if (chart === undefined) {
       ctx.warnings.add({
         type: "fallback",
-        message: `Chart not pre-parsed: ${chartData.resourceId}`,
+        message: `Chart not in ResourceStore: ${chartData.resourceId}`,
       });
       return { svg: null, hasContent: false };
     }

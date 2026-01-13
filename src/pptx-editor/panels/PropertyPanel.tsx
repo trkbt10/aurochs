@@ -134,25 +134,18 @@ function renderGraphicFramePanel(
         />
       );
     case "chart":
-      if (!shape.content.data.parsedChart) {
-        return (
-          <div
-            style={{
-              padding: "16px",
-              color: "var(--editor-text-secondary, #888)",
-              fontSize: "12px",
-            }}
-          >
-            Chart data not loaded
-          </div>
-        );
-      }
+      // TODO: Get chart data from ResourceStore
+      // Chart data is now stored in ResourceStore, not on the shape
       return (
-        <ChartFramePanel
-          shape={shape}
-          chart={shape.content.data.parsedChart}
-          onChange={onShapeChange}
-        />
+        <div
+          style={{
+            padding: "16px",
+            color: "var(--editor-text-secondary, #888)",
+            fontSize: "12px",
+          }}
+        >
+          Chart editing requires ResourceStore integration
+        </div>
       );
     case "diagram":
       return <DiagramFramePanel shape={shape} onChange={onShapeChange} />;

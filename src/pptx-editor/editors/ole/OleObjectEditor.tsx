@@ -166,18 +166,7 @@ export function OleObjectEditor({
         />
       </FieldGroup>
 
-      {/* Preview Image */}
-      {value.previewImageUrl && (
-        <FieldGroup label="Preview">
-          <div style={previewContainerStyle}>
-            <img
-              src={value.previewImageUrl}
-              alt="OLE Object Preview"
-              style={previewImageStyle}
-            />
-          </div>
-        </FieldGroup>
-      )}
+      {/* Note: Preview is shown in the canvas via ResourceStore */}
     </div>
   );
 }

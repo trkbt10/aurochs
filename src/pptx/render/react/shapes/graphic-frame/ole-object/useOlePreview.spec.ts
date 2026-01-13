@@ -2,7 +2,7 @@
  * @file Unit tests for useOlePreview hook
  *
  * Tests OLE object preview resolution including:
- * - Preview URL resolution
+ * - Preview URL resolution from ResourceStore
  * - imgW/imgH EMU to pixel conversion
  * - showAsIcon flag handling
  *
@@ -13,7 +13,7 @@
 
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import { renderHook } from "@testing-library/react";
-import { useOlePreview, type OlePreviewResult } from "./useOlePreview";
+import { useOlePreview } from "./useOlePreview";
 import type { OleReference } from "../../../../../domain";
 import { EMU_PER_PIXEL } from "../../../../../domain/defaults";
 
@@ -21,13 +21,16 @@ import { EMU_PER_PIXEL } from "../../../../../domain/defaults";
 vi.mock("../../../context", () => ({
   useRenderResources: vi.fn(),
   useRenderContext: vi.fn(),
+  useRenderResourceStore: vi.fn(),
 }));
 
-import { useRenderResources, useRenderContext } from "../../../context";
+import { useRenderResources, useRenderContext, useRenderResourceStore } from "../../../context";
 
 describe("useOlePreview", () => {
   const mockResolve = vi.fn();
   const mockWarningsAdd = vi.fn();
+  const mockResourceStoreGet = vi.fn();
+  const mockResourceStoreToDataUrl = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -36,6 +39,10 @@ describe("useOlePreview", () => {
     });
     (useRenderContext as Mock).mockReturnValue({
       warnings: { add: mockWarningsAdd },
+    });
+    (useRenderResourceStore as Mock).mockReturnValue({
+      get: mockResourceStoreGet,
+      toDataUrl: mockResourceStoreToDataUrl,
     });
   });
 
@@ -53,15 +60,20 @@ describe("useOlePreview", () => {
     });
   });
 
-  it("returns pre-resolved preview image URL", () => {
+  it("returns preview image URL from ResourceStore", () => {
+    mockResourceStoreGet.mockReturnValue({
+      previewUrl: "data:image/png;base64,abc123",
+    });
+
     const oleData: OleReference = {
-      previewImageUrl: "data:image/png;base64,abc123",
+      resourceId: "rId1",
       progId: "Excel.Sheet.12",
       name: "Sheet1",
     };
 
     const { result } = renderHook(() => useOlePreview(oleData));
 
+    expect(mockResourceStoreGet).toHaveBeenCalledWith("rId1");
     expect(result.current).toEqual({
       previewUrl: "data:image/png;base64,abc123",
       hasPreview: true,
@@ -73,8 +85,26 @@ describe("useOlePreview", () => {
     });
   });
 
-  it("resolves preview from p:pic child element", () => {
-    mockResolve.mockReturnValue("data:image/png;base64,picdata");
+  it("resolves preview from p:pic child element via ResourceStore", () => {
+    mockResourceStoreGet.mockReturnValue(undefined);
+    mockResourceStoreToDataUrl.mockReturnValue("data:image/png;base64,picdata");
+
+    const oleData: OleReference = {
+      progId: "PowerPoint.Slide.8",
+      pic: { resourceId: "rId5" },
+    };
+
+    const { result } = renderHook(() => useOlePreview(oleData));
+
+    expect(mockResourceStoreToDataUrl).toHaveBeenCalledWith("rId5");
+    expect(result.current.previewUrl).toBe("data:image/png;base64,picdata");
+    expect(result.current.hasPreview).toBe(true);
+  });
+
+  it("falls back to resource resolver for p:pic when ResourceStore fails", () => {
+    mockResourceStoreGet.mockReturnValue(undefined);
+    mockResourceStoreToDataUrl.mockReturnValue(undefined);
+    mockResolve.mockReturnValue("data:image/png;base64,resolved");
 
     const oleData: OleReference = {
       progId: "PowerPoint.Slide.8",
@@ -84,11 +114,13 @@ describe("useOlePreview", () => {
     const { result } = renderHook(() => useOlePreview(oleData));
 
     expect(mockResolve).toHaveBeenCalledWith("rId5");
-    expect(result.current.previewUrl).toBe("data:image/png;base64,picdata");
+    expect(result.current.previewUrl).toBe("data:image/png;base64,resolved");
     expect(result.current.hasPreview).toBe(true);
   });
 
   it("adds warning when no preview is available", () => {
+    mockResourceStoreGet.mockReturnValue(undefined);
+
     const oleData: OleReference = {
       progId: "Unknown.Object.1",
     };
@@ -104,8 +136,12 @@ describe("useOlePreview", () => {
   });
 
   it("returns showAsIcon flag", () => {
+    mockResourceStoreGet.mockReturnValue({
+      previewUrl: "data:image/png;base64,abc",
+    });
+
     const oleData: OleReference = {
-      previewImageUrl: "data:image/png;base64,abc",
+      resourceId: "rId1",
       showAsIcon: true,
       progId: "Equation.3",
     };
@@ -117,10 +153,16 @@ describe("useOlePreview", () => {
   });
 
   describe("imgW/imgH to pixel conversion", () => {
+    beforeEach(() => {
+      mockResourceStoreGet.mockReturnValue({
+        previewUrl: "data:image/png;base64,abc",
+      });
+    });
+
     it("converts imgW from EMU to pixels", () => {
       const imgWEmu = 914400; // 1 inch = 96 pixels at 96 DPI
       const oleData: OleReference = {
-        previewImageUrl: "data:image/png;base64,abc",
+        resourceId: "rId1",
         imgW: imgWEmu,
       };
 
@@ -134,7 +176,7 @@ describe("useOlePreview", () => {
     it("converts imgH from EMU to pixels", () => {
       const imgHEmu = 457200; // 0.5 inch = 48 pixels at 96 DPI
       const oleData: OleReference = {
-        previewImageUrl: "data:image/png;base64,abc",
+        resourceId: "rId1",
         imgH: imgHEmu,
       };
 
@@ -147,7 +189,7 @@ describe("useOlePreview", () => {
 
     it("handles both imgW and imgH", () => {
       const oleData: OleReference = {
-        previewImageUrl: "data:image/png;base64,abc",
+        resourceId: "rId1",
         imgW: 1828800, // 2 inches = 192 pixels
         imgH: 914400, // 1 inch = 96 pixels
       };
@@ -160,7 +202,7 @@ describe("useOlePreview", () => {
 
     it("returns undefined for imageWidth/imageHeight when not specified", () => {
       const oleData: OleReference = {
-        previewImageUrl: "data:image/png;base64,abc",
+        resourceId: "rId1",
       };
 
       const { result } = renderHook(() => useOlePreview(oleData));
@@ -172,7 +214,7 @@ describe("useOlePreview", () => {
     it("converts typical OLE preview dimensions", () => {
       // Typical Excel chart preview: 4 inches x 3 inches
       const oleData: OleReference = {
-        previewImageUrl: "data:image/png;base64,abc",
+        resourceId: "rId1",
         imgW: 3657600, // 4 inches
         imgH: 2743200, // 3 inches
       };

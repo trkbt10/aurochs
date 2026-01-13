@@ -48,18 +48,14 @@ export const DiagramContent = memo(function DiagramContent({
 }: DiagramContentProps) {
   const resourceStore = useRenderResourceStore();
 
-  // Get shapes: try ResourceStore first, then fall back to parsedContent
+  // Get shapes from ResourceStore
   const shapes = useMemo(() => {
-    // Try ResourceStore first
-    if (resourceStore !== undefined && data.dataResourceId !== undefined) {
-      const entry = resourceStore.get<ParsedDiagramData>(data.dataResourceId);
-      if (entry?.parsed?.shapes !== undefined) {
-        return entry.parsed.shapes;
-      }
+    if (resourceStore === undefined || data.dataResourceId === undefined) {
+      return undefined;
     }
-    // Fall back to legacy parsedContent field
-    return data.parsedContent?.shapes;
-  }, [resourceStore, data.dataResourceId, data.parsedContent]);
+    const entry = resourceStore.get<ParsedDiagramData>(data.dataResourceId);
+    return entry?.parsed?.shapes;
+  }, [resourceStore, data.dataResourceId]);
 
   if (shapes === undefined || shapes.length === 0) {
     return <Placeholder width={width} height={height} label="Diagram" />;
@@ -67,7 +63,7 @@ export const DiagramContent = memo(function DiagramContent({
 
   return (
     <g data-diagram-content="true">
-      {shapes.map((shape, index) => (
+      {shapes.map((shape: Shape, index: number) => (
         <ShapeRenderer
           key={getShapeKey(shape, index)}
           shape={shape}

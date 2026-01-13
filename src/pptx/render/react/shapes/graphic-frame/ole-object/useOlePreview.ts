@@ -85,19 +85,6 @@ export function useOlePreview(oleData: OleReference | undefined): OlePreviewResu
       }
     }
 
-    // Try pre-resolved preview image (legacy)
-    if (oleData.previewImageUrl !== undefined) {
-      return {
-        previewUrl: oleData.previewImageUrl,
-        hasPreview: true,
-        showAsIcon,
-        objectName,
-        progId,
-        imageWidth,
-        imageHeight,
-      };
-    }
-
     // Try p:pic child element
     if (oleData.pic?.resourceId !== undefined) {
       // Check ResourceStore for pic resource first

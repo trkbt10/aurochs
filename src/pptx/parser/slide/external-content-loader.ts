@@ -124,8 +124,8 @@ function enrichChartFrame(frame: GraphicFrame, ctx: EnrichmentContext): GraphicF
   const { fileReader, resourceStore } = ctx;
   const chartRef = frame.content.data;
 
-  // Skip if already parsed
-  if (chartRef.parsedChart !== undefined) {
+  // Skip if already in ResourceStore
+  if (resourceStore?.has(chartRef.resourceId as string)) {
     return frame;
   }
 
@@ -155,7 +155,7 @@ function enrichChartFrame(frame: GraphicFrame, ctx: EnrichmentContext): GraphicF
     return frame;
   }
 
-  // Register in ResourceStore if available
+  // Register in ResourceStore
   if (resourceStore !== undefined) {
     resourceStore.set(chartRef.resourceId as string, {
       kind: "chart",
@@ -166,17 +166,8 @@ function enrichChartFrame(frame: GraphicFrame, ctx: EnrichmentContext): GraphicF
     });
   }
 
-  // Return new frame with parsed chart attached (legacy compatibility)
-  return {
-    ...frame,
-    content: {
-      ...frame.content,
-      data: {
-        ...chartRef,
-        parsedChart,
-      },
-    },
-  };
+  // Chart data is now stored in ResourceStore, frame remains unchanged
+  return frame;
 }
 
 /**
@@ -200,18 +191,15 @@ function enrichDiagramFrame(frame: GraphicFrame, ctx: EnrichmentContext): Graphi
   const { fileReader, resourceStore } = ctx;
   const diagramRef = frame.content.data;
 
-  // Skip if already parsed
-  if (diagramRef.parsedContent !== undefined) {
+  // Skip if already in ResourceStore
+  if (resourceStore?.has(diagramRef.dataResourceId ?? "")) {
     return frame;
   }
 
-  const dataModel = diagramRef.dataModel ?? loadDiagramDataModel(diagramRef.dataResourceId, fileReader);
-  const layoutDefinition =
-    diagramRef.layoutDefinition ?? loadDiagramLayoutDefinition(diagramRef.layoutResourceId, fileReader);
-  const styleDefinition =
-    diagramRef.styleDefinition ?? loadDiagramStyleDefinition(diagramRef.styleResourceId, fileReader);
-  const colorsDefinition =
-    diagramRef.colorsDefinition ?? loadDiagramColorsDefinition(diagramRef.colorResourceId, fileReader);
+  const dataModel = loadDiagramDataModel(diagramRef.dataResourceId, fileReader);
+  const layoutDefinition = loadDiagramLayoutDefinition(diagramRef.layoutResourceId, fileReader);
+  const styleDefinition = loadDiagramStyleDefinition(diagramRef.styleResourceId, fileReader);
+  const colorsDefinition = loadDiagramColorsDefinition(diagramRef.colorResourceId, fileReader);
 
   // Try to get pre-rendered shapes from diagram drawing file
   let shapes = tryParseDiagramDrawing(frame, fileReader);
@@ -221,7 +209,7 @@ function enrichDiagramFrame(frame: GraphicFrame, ctx: EnrichmentContext): Graphi
     shapes = tryGenerateDiagramShapes(frame, dataModel, layoutDefinition, styleDefinition, colorsDefinition);
   }
 
-  // Register diagram data in ResourceStore if available
+  // Register diagram data in ResourceStore
   if (resourceStore !== undefined && diagramRef.dataResourceId !== undefined) {
     resourceStore.set(diagramRef.dataResourceId, {
       kind: "diagram",
@@ -237,38 +225,8 @@ function enrichDiagramFrame(frame: GraphicFrame, ctx: EnrichmentContext): Graphi
     });
   }
 
-  // If still no shapes, return frame without parsedContent
-  if (shapes === undefined || shapes.length === 0) {
-    return {
-      ...frame,
-      content: {
-        ...frame.content,
-        data: {
-          ...diagramRef,
-          dataModel,
-          layoutDefinition,
-          styleDefinition,
-          colorsDefinition,
-        },
-      },
-    };
-  }
-
-  // Return new frame with parsed diagram attached (legacy compatibility)
-  return {
-    ...frame,
-    content: {
-      ...frame.content,
-      data: {
-        ...diagramRef,
-        parsedContent: { shapes },
-        dataModel,
-        layoutDefinition,
-        styleDefinition,
-        colorsDefinition,
-      },
-    },
-  };
+  // Diagram data is now stored in ResourceStore, frame remains unchanged
+  return frame;
 }
 
 /**
@@ -647,8 +605,8 @@ function enrichOleFrame(frame: GraphicFrame, ctx: EnrichmentContext): GraphicFra
   const { fileReader, resourceStore } = ctx;
   const oleRef = frame.content.data;
 
-  // Skip if already has preview URL
-  if (oleRef.previewImageUrl !== undefined) {
+  // Skip if already in ResourceStore
+  if (resourceStore?.has(oleRef.resourceId ?? "")) {
     return frame;
   }
 
@@ -663,7 +621,7 @@ function enrichOleFrame(frame: GraphicFrame, ctx: EnrichmentContext): GraphicFra
     return frame;
   }
 
-  // Register preview image in ResourceStore if available
+  // Register preview image in ResourceStore
   if (resourceStore !== undefined && oleRef.resourceId !== undefined) {
     resourceStore.set(oleRef.resourceId, {
       kind: "ole",
@@ -673,17 +631,8 @@ function enrichOleFrame(frame: GraphicFrame, ctx: EnrichmentContext): GraphicFra
     });
   }
 
-  // Return new frame with preview image URL attached (legacy compatibility)
-  return {
-    ...frame,
-    content: {
-      ...frame.content,
-      data: {
-        ...oleRef,
-        previewImageUrl,
-      },
-    },
-  };
+  // OLE preview is now stored in ResourceStore, frame remains unchanged
+  return frame;
 }
 
 /**

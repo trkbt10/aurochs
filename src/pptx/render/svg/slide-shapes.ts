@@ -588,17 +588,27 @@ export function renderDiagramShapesSvg(
   h: number,
   ctx: CoreRenderContext,
 ): string | undefined {
-  // Use pre-parsed diagram content if available
-  if (diagramRef.parsedContent === undefined) {
+  // Get diagram content from ResourceStore
+  if (diagramRef.dataResourceId === undefined) {
     ctx.warnings.add({
       type: "fallback",
-      message: "Diagram not pre-parsed",
-      details: "Diagram content should be pre-parsed in the integration layer",
+      message: "Diagram has no dataResourceId",
     });
     return undefined;
   }
 
-  const diagramContent = diagramRef.parsedContent;
+  const entry = ctx.resourceStore?.get<{ readonly shapes: readonly import("../../domain").Shape[] }>(diagramRef.dataResourceId);
+  const diagramContent = entry?.parsed;
+
+  if (diagramContent === undefined) {
+    ctx.warnings.add({
+      type: "fallback",
+      message: "Diagram not in ResourceStore",
+      details: "Diagram content should be registered in ResourceStore by integration layer",
+    });
+    return undefined;
+  }
+
   if (diagramContent.shapes.length === 0) {
     ctx.warnings.add({
       type: "fallback",
@@ -642,14 +652,17 @@ export function renderDiagramShapesSvg(
  * @see MS-OE376 Part 4 Section 4.4.2.4
  */
 function renderOleObjectImage(data: OleReference, w: number, h: number, ctx: CoreRenderContext): string | undefined {
-  // 1. Pre-resolved preview image (from integration layer)
-  if (data.previewImageUrl !== undefined) {
-    return `<image href="${data.previewImageUrl}" x="0" y="0" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet"/>`;
+  // 1. Check ResourceStore for preview URL
+  if (data.resourceId !== undefined) {
+    const entry = ctx.resourceStore?.get(data.resourceId);
+    if (entry?.previewUrl !== undefined) {
+      return `<image href="${entry.previewUrl}" x="0" y="0" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet"/>`;
+    }
   }
 
   // 2. Modern format: p:pic child element (ECMA-376-1:2016)
   if (data.pic?.resourceId !== undefined) {
-    const dataUrl = ctx.resources.resolve(data.pic.resourceId);
+    const dataUrl = ctx.resourceStore?.toDataUrl(data.pic.resourceId) ?? ctx.resources.resolve(data.pic.resourceId);
     if (dataUrl !== undefined) {
       return `<image href="${dataUrl}" x="0" y="0" width="${w}" height="${h}" preserveAspectRatio="xMidYMid meet"/>`;
     }
@@ -679,22 +692,25 @@ function getConnectorPathData(geometry: Geometry | undefined, w: number, h: numb
 /**
  * Render chart from ChartReference
  *
- * Uses pre-parsed chart data if available (populated by integration layer).
+ * Uses chart data from ResourceStore if available (populated by integration layer).
  * This allows render to render charts without directly calling parser.
  */
 function renderChartFromRef(chartRef: ChartReference, w: number, h: number, ctx: CoreRenderContext): string | undefined {
-  // Use pre-parsed chart data if available
-  if (chartRef.parsedChart !== undefined) {
-    const chartHtml = renderChart(chartRef.parsedChart, w, h, ctx);
+  // Get chart data from ResourceStore
+  const entry = ctx.resourceStore?.get<import("../../domain/chart").Chart>(chartRef.resourceId);
+  const parsedChart = entry?.parsed;
+
+  if (parsedChart !== undefined) {
+    const chartHtml = renderChart(parsedChart, w, h, ctx);
     return extractSvgContent(chartHtml as string);
   }
 
-  // Pre-parsed content not available - this means the integration layer
-  // didn't enrich the slide (e.g., direct render without integration layer)
+  // Chart not in ResourceStore - this means the integration layer
+  // didn't register it (e.g., direct render without integration layer)
   ctx.warnings.add({
     type: "fallback",
-    message: `Chart not pre-parsed: ${chartRef.resourceId}`,
-    details: "Chart content should be pre-parsed in the integration layer",
+    message: `Chart not in ResourceStore: ${chartRef.resourceId}`,
+    details: "Chart content should be registered in ResourceStore by integration layer",
   });
   return undefined;
 }

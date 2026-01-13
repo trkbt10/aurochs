@@ -332,7 +332,8 @@ export function createChartGraphicFrame(
       type: "chart",
       data: {
         resourceId: chartResourceId,
-        parsedChart: createDefaultChart(chartType),
+        // Note: Chart data should be stored in ResourceStore separately
+        // The factory creates the shape reference; the editor manages the data
       },
     },
   };
@@ -374,18 +375,8 @@ export function createDiagramGraphicFrame(
       type: "diagram",
       data: {
         dataResourceId: diagramResourceId,
-        dataModel: {
-          points: [
-            { modelId: "pt-1" as `dg-${"pt-1"}`, type: "doc" },
-            { modelId: "pt-2" as `dg-${"pt-2"}`, type: "node" },
-            { modelId: "pt-3" as `dg-${"pt-3"}`, type: "node" },
-          ],
-          connections: [
-            { modelId: "cxn-1" as `dg-${"cxn-1"}`, sourceId: "pt-1", destinationId: "pt-2", type: "parOf" as const },
-            { modelId: "cxn-2" as `dg-${"cxn-2"}`, sourceId: "pt-2", destinationId: "pt-3", type: "parOf" as const },
-          ],
-        },
-        parsedContent: { shapes: [] },
+        // Note: Diagram data should be stored in ResourceStore separately
+        // The factory creates the shape reference; the editor manages the data
       },
     },
   };

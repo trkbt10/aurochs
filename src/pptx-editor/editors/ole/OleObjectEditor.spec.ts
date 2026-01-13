@@ -80,14 +80,7 @@ describe("OleObjectEditor: OLE reference handling", () => {
       }
     });
 
-    it("handles OLE reference with preview image", () => {
-      const oleRef: OleReference = {
-        previewImageUrl: "data:image/png;base64,abc123",
-        showAsIcon: false,
-      };
-
-      expect(oleRef.previewImageUrl).toBe("data:image/png;base64,abc123");
-    });
+    // Note: previewImageUrl is now stored in ResourceStore, not on OleReference
 
     it("handles complete OLE reference", () => {
       const oleRef: OleReference = {
@@ -98,7 +91,6 @@ describe("OleObjectEditor: OLE reference handling", () => {
         imgH: 609600,
         showAsIcon: false,
         followColorScheme: "full",
-        previewImageUrl: "data:image/png;base64,preview",
       };
 
       expect(oleRef.progId).toBe("Excel.Sheet.12");
@@ -108,7 +100,6 @@ describe("OleObjectEditor: OLE reference handling", () => {
       expect(oleRef.imgH).toBe(609600);
       expect(oleRef.showAsIcon).toBe(false);
       expect(oleRef.followColorScheme).toBe("full");
-      expect(oleRef.previewImageUrl).toBe("data:image/png;base64,preview");
     });
   });
 });

@@ -78,19 +78,16 @@ export function getBlipFillImageSrc(
  *
  * Resolution order:
  * 1. ResourceStore.toDataUrl() - centralized resource management
- * 2. BlipFill.resolvedResource - legacy parse-time resolution
- * 3. fallbackResolver - legacy runtime resolution
+ * 2. fallbackResolver - runtime resolution
  *
  * @param resourceId - Resource ID (rId)
  * @param resourceStore - Centralized resource store (optional)
- * @param blipFill - BlipFill with optional resolvedResource (optional)
  * @param fallbackResolver - Runtime fallback resolver (optional)
  * @returns Image source URL or undefined
  */
 export function resolveImageUrl(
   resourceId: string,
   resourceStore?: ResourceStore,
-  blipFill?: { readonly resolvedResource?: ResolvedBlipResource },
   fallbackResolver?: (rId: string) => string | undefined,
 ): string | undefined {
   // 1. If resourceId is already a data URL, use it directly
@@ -106,12 +103,7 @@ export function resolveImageUrl(
     }
   }
 
-  // 3. Legacy: resolvedResource on blipFill
-  if (blipFill?.resolvedResource !== undefined) {
-    return blipToDataUrl(blipFill.resolvedResource);
-  }
-
-  // 4. Legacy: runtime resolver
+  // 3. Fallback: runtime resolver
   if (fallbackResolver !== undefined) {
     return fallbackResolver(resourceId);
   }
