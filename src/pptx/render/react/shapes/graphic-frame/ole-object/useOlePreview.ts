@@ -9,7 +9,7 @@
 import { useMemo } from "react";
 import type { OleReference } from "../../../../../domain";
 import { EMU_PER_PIXEL } from "../../../../../domain/defaults";
-import { useRenderContext, useRenderResources } from "../../../context";
+import { useRenderContext, useRenderResources, useRenderResourceStore } from "../../../context";
 
 /**
  * Result of OLE preview resolution
@@ -43,6 +43,7 @@ export type OlePreviewResult = {
  */
 export function useOlePreview(oleData: OleReference | undefined): OlePreviewResult {
   const resources = useRenderResources();
+  const resourceStore = useRenderResourceStore();
   const { warnings } = useRenderContext();
 
   return useMemo(() => {
@@ -68,7 +69,23 @@ export function useOlePreview(oleData: OleReference | undefined): OlePreviewResu
     const imageHeight =
       oleData.imgH !== undefined ? oleData.imgH / EMU_PER_PIXEL : undefined;
 
-    // Try pre-resolved preview image first
+    // Try ResourceStore first (centralized resource management)
+    if (resourceStore !== undefined && oleData.resourceId !== undefined) {
+      const entry = resourceStore.get(oleData.resourceId);
+      if (entry?.previewUrl !== undefined) {
+        return {
+          previewUrl: entry.previewUrl,
+          hasPreview: true,
+          showAsIcon,
+          objectName,
+          progId,
+          imageWidth,
+          imageHeight,
+        };
+      }
+    }
+
+    // Try pre-resolved preview image (legacy)
     if (oleData.previewImageUrl !== undefined) {
       return {
         previewUrl: oleData.previewImageUrl,
@@ -83,10 +100,11 @@ export function useOlePreview(oleData: OleReference | undefined): OlePreviewResu
 
     // Try p:pic child element
     if (oleData.pic?.resourceId !== undefined) {
-      const dataUrl = resources.resolve(oleData.pic.resourceId);
-      if (dataUrl !== undefined) {
+      // Check ResourceStore for pic resource first
+      const picUrl = resourceStore?.toDataUrl(oleData.pic.resourceId) ?? resources.resolve(oleData.pic.resourceId);
+      if (picUrl !== undefined) {
         return {
-          previewUrl: dataUrl,
+          previewUrl: picUrl,
           hasPreview: true,
           showAsIcon,
           objectName,
@@ -112,5 +130,5 @@ export function useOlePreview(oleData: OleReference | undefined): OlePreviewResu
       imageWidth,
       imageHeight,
     };
-  }, [oleData, resources, warnings]);
+  }, [oleData, resources, resourceStore, warnings]);
 }

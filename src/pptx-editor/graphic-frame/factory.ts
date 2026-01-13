@@ -9,6 +9,7 @@ import type { ShapeId, ResourceId } from "../../pptx/domain/types";
 import { deg, pct, px } from "../../ooxml/domain/units";
 import type { CreationChartType, CreationDiagramType } from "../context/presentation/editor/types";
 import type { ShapeBounds } from "../shape/creation-bounds";
+import { type OleType, OLE_TYPE_MAP } from "../../pptx/patcher/resources/ole-manager";
 
 // =============================================================================
 // Defaults
@@ -385,6 +386,61 @@ export function createDiagramGraphicFrame(
           ],
         },
         parsedContent: { shapes: [] },
+      },
+    },
+  };
+}
+
+// =============================================================================
+// OLE Object Creation
+// =============================================================================
+
+/**
+ * Create an OLE object graphic frame.
+ *
+ * The embedData is stored in the shape and will be processed during export
+ * to create the actual embedded file in the PPTX package.
+ *
+ * @param id - Shape ID
+ * @param bounds - Position and size
+ * @param oleType - Type of OLE object (xlsx, docx, pptx)
+ * @param embedData - Binary data of the file to embed
+ * @param filename - Original filename for naming
+ * @returns GraphicFrame with OLE object content
+ */
+export function createOleGraphicFrame(
+  id: ShapeId,
+  bounds: ShapeBounds,
+  oleType: OleType,
+  embedData: ArrayBuffer,
+  filename: string,
+): GraphicFrame {
+  const typeInfo = OLE_TYPE_MAP[oleType];
+  const objectName = filename.replace(/\.[^/.]+$/, ""); // Remove extension
+
+  return {
+    type: "graphicFrame",
+    nonVisual: {
+      id,
+      name: `Object ${id}`,
+    },
+    transform: {
+      x: bounds.x,
+      y: bounds.y,
+      width: bounds.width,
+      height: bounds.height,
+      rotation: deg(0),
+      flipH: false,
+      flipV: false,
+    },
+    content: {
+      type: "oleObject",
+      data: {
+        progId: typeInfo.progId,
+        name: objectName,
+        showAsIcon: true, // Default to icon view since we don't have preview
+        embedData,
+        originalFilename: filename,
       },
     },
   };

@@ -18,6 +18,7 @@ import { DEFAULT_RENDER_OPTIONS } from "../render-options";
 import type { ResolvedBackgroundFill } from "../background-fill";
 import type { ResourceResolver } from "../../domain/resource-resolver";
 import { createEmptyResourceResolver } from "../../domain/resource-resolver";
+import type { ResourceStore } from "../../domain/resource-store";
 import { createWarningCollector } from "../warnings";
 import type { TableStyleList } from "../../parser/table/style-parser";
 
@@ -40,6 +41,7 @@ export type RenderProviderProps = {
   readonly slideSize: SlideSize;
   readonly colorContext?: ColorContext;
   readonly resources?: ResourceResolver;
+  readonly resourceStore?: ResourceStore;
   readonly fontScheme?: FontScheme;
   readonly options?: Partial<RenderOptions>;
   readonly resolvedBackground?: ResolvedBackgroundFill;
@@ -67,6 +69,7 @@ export function RenderProvider({
   slideSize,
   colorContext,
   resources,
+  resourceStore,
   fontScheme,
   options,
   resolvedBackground,
@@ -110,6 +113,7 @@ export function RenderProvider({
       options: resolvedOptions,
       colorContext: resolvedColorContext,
       resources: resolvedResources,
+      resourceStore,
       warnings,
       getNextShapeId: () => `shape-${shapeIdRef.value++}`,
       resolvedBackground,
@@ -122,6 +126,7 @@ export function RenderProvider({
       resolvedOptions,
       resolvedColorContext,
       resolvedResources,
+      resourceStore,
       warnings,
       fontScheme,
       resolvedBackground,
@@ -163,6 +168,15 @@ export function useRenderResources(): ResourceResolver {
     throw new Error("useRenderResources must be used within a RenderProvider");
   }
   return resources;
+}
+
+/**
+ * Access resource store from the render context.
+ * Returns undefined if resourceStore was not provided to RenderProvider.
+ */
+export function useRenderResourceStore(): ResourceStore | undefined {
+  const ctx = useContext(RenderContext);
+  return ctx?.resourceStore;
 }
 
 /**

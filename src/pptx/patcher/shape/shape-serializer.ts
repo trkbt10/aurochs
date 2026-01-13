@@ -1,5 +1,5 @@
 import { createElement, type XmlElement } from "../../../xml";
-import type { Shape, SpShape, GrpShape, PicShape, CxnShape, NonVisualProperties, Geometry, PresetGeometry, CustomGeometry, GeometryPath, PathCommand, ConnectionTarget } from "../../domain";
+import type { Shape, SpShape, GrpShape, PicShape, CxnShape, GraphicFrame, NonVisualProperties, Geometry, PresetGeometry, CustomGeometry, GeometryPath, PathCommand, ConnectionTarget, OleReference } from "../../domain";
 import type { Transform, GroupTransform } from "../../domain/geometry";
 import { serializeTransform } from "../serializer/transform";
 import { serializeColor, serializeEffects, serializeFill, serializeLine, serializeTextBody } from "../serializer";
@@ -22,9 +22,9 @@ export function serializeShape(shape: Shape): XmlElement {
     case "cxnSp":
       return serializeConnectionShape(shape);
     case "graphicFrame":
-      throw new Error("serializeShape: graphicFrame is not supported in Phase 6");
+      return serializeGraphicFrame(shape);
     case "contentPart":
-      throw new Error("serializeShape: contentPart is not supported in Phase 6");
+      throw new Error("serializeShape: contentPart is not supported");
   }
 }
 
@@ -553,4 +553,133 @@ function serializePathCommand(command: PathCommand): XmlElement {
 
 function serializeConnectionTarget(name: "a:stCxn" | "a:endCxn", target: ConnectionTarget): XmlElement {
   return createElement(name, { id: target.shapeId, idx: String(target.siteIndex) });
+}
+
+// =============================================================================
+// GraphicFrame Serialization
+// =============================================================================
+
+/**
+ * GraphicFrame から p:graphicFrame 要素を生成する
+ *
+ * 現在はOLEオブジェクトのみサポート。
+ * Table/Chart/Diagramは既存のXMLを更新するパターンを使用する。
+ *
+ * @see ECMA-376 Part 1, Section 19.3.1.21 (p:graphicFrame)
+ */
+export function serializeGraphicFrame(frame: GraphicFrame): XmlElement {
+  if (frame.content.type !== "oleObject") {
+    throw new Error(`serializeGraphicFrame: content type '${frame.content.type}' is not supported for serialization. Only oleObject is supported.`);
+  }
+
+  const nvGraphicFramePr = createElement("p:nvGraphicFramePr", {}, [
+    serializeGraphicFrameCNvPr(frame.nonVisual),
+    createElement("p:cNvGraphicFramePr", {}, frame.nonVisual.graphicFrameLocks
+      ? [serializeGraphicFrameLocks(frame.nonVisual.graphicFrameLocks)]
+      : []),
+    createElement("p:nvPr"),
+  ]);
+
+  const xfrm = serializeGraphicFrameTransform(frame.transform);
+
+  const graphic = createElement("a:graphic", {
+    xmlns: "http://schemas.openxmlformats.org/drawingml/2006/main",
+  }, [
+    serializeOleObjectGraphicData(frame.content.data),
+  ]);
+
+  return createElement("p:graphicFrame", {}, [nvGraphicFramePr, xfrm, graphic]);
+}
+
+/**
+ * GraphicFrame用のcNvPr要素を生成
+ */
+function serializeGraphicFrameCNvPr(nonVisual: GraphicFrame["nonVisual"]): XmlElement {
+  const attrs: Record<string, string> = {
+    id: nonVisual.id,
+    name: nonVisual.name,
+  };
+  if (nonVisual.description) {
+    attrs.descr = nonVisual.description;
+  }
+  if (nonVisual.title) {
+    attrs.title = nonVisual.title;
+  }
+  if (nonVisual.hidden !== undefined) {
+    attrs.hidden = nonVisual.hidden ? "1" : "0";
+  }
+
+  return createElement("p:cNvPr", attrs);
+}
+
+/**
+ * GraphicFrameLocks要素を生成
+ */
+function serializeGraphicFrameLocks(locks: NonNullable<GraphicFrame["nonVisual"]["graphicFrameLocks"]>): XmlElement {
+  const attrs: Record<string, string> = {};
+  if (locks.noGrp !== undefined) attrs.noGrp = ooxmlBool(locks.noGrp);
+  if (locks.noDrilldown !== undefined) attrs.noDrilldown = ooxmlBool(locks.noDrilldown);
+  if (locks.noSelect !== undefined) attrs.noSelect = ooxmlBool(locks.noSelect);
+  if (locks.noChangeAspect !== undefined) attrs.noChangeAspect = ooxmlBool(locks.noChangeAspect);
+  if (locks.noMove !== undefined) attrs.noMove = ooxmlBool(locks.noMove);
+  if (locks.noResize !== undefined) attrs.noResize = ooxmlBool(locks.noResize);
+
+  return createElement("a:graphicFrameLocks", attrs);
+}
+
+/**
+ * GraphicFrame用のp:xfrm要素を生成
+ */
+function serializeGraphicFrameTransform(transform: GraphicFrame["transform"]): XmlElement {
+  const attrs: Record<string, string> = {};
+  if (transform.rotation && Number(transform.rotation) !== 0) {
+    attrs.rot = ooxmlAngleUnits(transform.rotation);
+  }
+  if (transform.flipH) attrs.flipH = "1";
+  if (transform.flipV) attrs.flipV = "1";
+
+  return createElement("p:xfrm", attrs, [
+    createElement("a:off", { x: ooxmlEmu(transform.x), y: ooxmlEmu(transform.y) }),
+    createElement("a:ext", { cx: ooxmlEmu(transform.width), cy: ooxmlEmu(transform.height) }),
+  ]);
+}
+
+/**
+ * OLEオブジェクト用のa:graphicData要素を生成
+ *
+ * @see ECMA-376 Part 1, Section 19.3.1.36a (oleObj)
+ */
+function serializeOleObjectGraphicData(oleRef: OleReference): XmlElement {
+  if (!oleRef.resourceId) {
+    throw new Error("serializeOleObjectGraphicData: resourceId is required");
+  }
+  if (!oleRef.progId) {
+    throw new Error("serializeOleObjectGraphicData: progId is required");
+  }
+
+  const oleObjAttrs: Record<string, string> = {
+    "r:id": oleRef.resourceId,
+    progId: oleRef.progId,
+  };
+  if (oleRef.name) {
+    oleObjAttrs.name = oleRef.name;
+  }
+  if (oleRef.showAsIcon !== undefined) {
+    oleObjAttrs.showAsIcon = ooxmlBool(oleRef.showAsIcon);
+  }
+  if (oleRef.imgW !== undefined) {
+    oleObjAttrs.imgW = String(oleRef.imgW);
+  }
+  if (oleRef.imgH !== undefined) {
+    oleObjAttrs.imgH = String(oleRef.imgH);
+  }
+
+  // Create p:oleObj with p:embed child
+  const oleObjChildren: XmlElement[] = [createElement("p:embed")];
+
+  const oleObj = createElement("p:oleObj", oleObjAttrs, oleObjChildren);
+
+  return createElement("a:graphicData", {
+    uri: "http://schemas.openxmlformats.org/presentationml/2006/ole",
+  }, [oleObj]);
 }

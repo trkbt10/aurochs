@@ -455,6 +455,8 @@ export type BlipFillProperties = {
    * Resolved image resource data (when resolved at parse time).
    * This allows the render layer to convert to the appropriate format
    * (Data URL, Blob URL, etc.) without needing to access the zip file.
+   *
+   * @deprecated Use ResourceStore.get(resourceId) instead. This field will be removed.
    */
   readonly resolvedResource?: ResolvedBlipResource;
   readonly compressionState?: BlipCompression;
@@ -585,7 +587,10 @@ export type TableReference = {
  */
 export type ChartReference = {
   readonly resourceId: ResourceId;
-  /** Pre-parsed chart data (populated by integration layer) */
+  /**
+   * Pre-parsed chart data (populated by integration layer).
+   * @deprecated Use ResourceStore.get(resourceId).parsed instead. This field will be removed.
+   */
   readonly parsedChart?: Chart;
 };
 
@@ -612,15 +617,30 @@ export type DiagramReference = {
   readonly layoutResourceId?: ResourceId;
   readonly styleResourceId?: ResourceId;
   readonly colorResourceId?: ResourceId;
-  /** Pre-parsed diagram content (populated by integration layer) */
+  /**
+   * Pre-parsed diagram content (populated by integration layer).
+   * @deprecated Use ResourceStore.get(dataResourceId).parsed.shapes instead. This field will be removed.
+   */
   readonly parsedContent?: DiagramContent;
-  /** Parsed diagram data model (dgm:dataModel) */
+  /**
+   * Parsed diagram data model (dgm:dataModel).
+   * @deprecated Use ResourceStore.get(dataResourceId).parsed.dataModel instead. This field will be removed.
+   */
   readonly dataModel?: DiagramDataModel;
-  /** Parsed diagram layout definition (dgm:layoutDef) */
+  /**
+   * Parsed diagram layout definition (dgm:layoutDef).
+   * @deprecated Use ResourceStore.get(dataResourceId).parsed.layoutDefinition instead. This field will be removed.
+   */
   readonly layoutDefinition?: DiagramLayoutDefinition;
-  /** Parsed diagram style definition (dgm:styleDef) */
+  /**
+   * Parsed diagram style definition (dgm:styleDef).
+   * @deprecated Use ResourceStore.get(dataResourceId).parsed.styleDefinition instead. This field will be removed.
+   */
   readonly styleDefinition?: DiagramStyleDefinition;
-  /** Parsed diagram color definition (dgm:colorsDef) */
+  /**
+   * Parsed diagram color definition (dgm:colorsDef).
+   * @deprecated Use ResourceStore.get(dataResourceId).parsed.colorsDefinition instead. This field will be removed.
+   */
   readonly colorsDefinition?: DiagramColorsDefinition;
 };
 
@@ -648,8 +668,23 @@ export type OleReference = {
   readonly followColorScheme?: OleObjectFollowColorScheme;
   /** Preview picture (ECMA-376-1:2016 format) */
   readonly pic?: BlipFillProperties;
-  /** Pre-resolved preview image data URL (populated by integration layer) */
+  /**
+   * Pre-resolved preview image data URL (populated by integration layer).
+   * @deprecated Use ResourceStore.get(resourceId).previewUrl instead. This field will be removed.
+   */
   readonly previewImageUrl?: string;
+  /**
+   * Original file data for embedding (only used during shape creation).
+   * This is stripped out when the shape is exported and replaced with resourceId.
+   * @deprecated Use ResourceStore.get(resourceId).data instead. This field will be removed.
+   */
+  readonly embedData?: ArrayBuffer;
+  /**
+   * Original filename for naming the embedded object.
+   * Used to derive the object name during export.
+   * @deprecated Use ResourceStore.get(resourceId).originalFilename instead. This field will be removed.
+   */
+  readonly originalFilename?: string;
 };
 
 /**

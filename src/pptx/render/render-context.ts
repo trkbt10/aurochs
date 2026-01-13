@@ -9,6 +9,7 @@ import type { ColorContext } from "../domain/color/context";
 import type { FontScheme } from "../domain/resolution";
 import type { ResourceResolver } from "../domain/resource-resolver";
 import { createEmptyResourceResolver } from "../domain/resource-resolver";
+import type { ResourceStore } from "../domain/resource-store";
 import { px } from "../../ooxml/domain/units";
 import type { RenderOptions } from "./render-options";
 import { DEFAULT_RENDER_OPTIONS } from "./render-options";
@@ -74,6 +75,15 @@ export type CoreRenderContext = {
    * @see ECMA-376 Part 1, Section 20.1.4.2 (a:tblStyleLst)
    */
   readonly tableStyles?: TableStyleList;
+
+  /**
+   * Centralized resource store for resolved resource data.
+   *
+   * During migration, this runs in parallel with `resources: ResourceResolver`.
+   * Eventually, this will replace the scattered resolved resource fields
+   * (e.g., BlipFillProperties.resolvedResource, OleReference.embedData).
+   */
+  readonly resourceStore?: ResourceStore;
 };
 
 // =============================================================================
@@ -95,6 +105,7 @@ export type CoreRenderContextConfig = {
   readonly resolvedBackground?: ResolvedBackgroundFill;
   readonly layoutShapes?: readonly Shape[];
   readonly tableStyles?: TableStyleList;
+  readonly resourceStore?: ResourceStore;
 };
 
 // =============================================================================
@@ -121,6 +132,7 @@ export function createCoreRenderContext(config: CoreRenderContextConfig): CoreRe
     resolvedBackground: config.resolvedBackground,
     layoutShapes: config.layoutShapes,
     tableStyles: config.tableStyles,
+    resourceStore: config.resourceStore,
   };
 }
 

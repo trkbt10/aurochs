@@ -19,7 +19,7 @@ import type { ResourceResolverFn } from "../../../domain/resource-resolver";
 import { PatternDef } from "../drawing-ml/fill";
 import { ooxmlAngleToSvgLinearGradient, getRadialGradientCoords } from "../../svg/gradient-utils";
 import { useSvgDefs } from "../hooks/useSvgDefs";
-import { useRenderContext, useRenderResources } from "../context";
+import { useRenderContext, useRenderResources, useRenderResourceStore } from "../context";
 
 // =============================================================================
 // Types
@@ -222,13 +222,25 @@ export function useFillWithDefs(
 ): FillWithDefsResult {
   const { colorContext } = useRenderContext();
   const resources = useRenderResources();
+  const resourceStore = useRenderResourceStore();
   const { getNextId } = useSvgDefs();
 
   if (fill === undefined || fill.type === "noFill") {
     return { props: { fill: "none" } };
   }
 
-  const resolved = resolveFill(fill, colorContext, resources.resolve);
+  // Create composite resolver: ResourceStore > legacy resolver
+  const compositeResolver: ResourceResolverFn = (resourceId) => {
+    // 1. Check ResourceStore first
+    if (resourceStore !== undefined) {
+      const url = resourceStore.toDataUrl(resourceId);
+      if (url !== undefined) return url;
+    }
+    // 2. Fall back to legacy resolver
+    return resources.resolve(resourceId);
+  };
+
+  const resolved = resolveFill(fill, colorContext, compositeResolver);
   const result = resolvedFillToResult(resolved, getNextId, width, height);
 
   return {
@@ -253,13 +265,25 @@ export function useFill(
 ): SvgFillProps {
   const { colorContext } = useRenderContext();
   const resources = useRenderResources();
+  const resourceStore = useRenderResourceStore();
   const { getNextId, addDef, hasDef } = useSvgDefs();
 
   if (fill === undefined || fill.type === "noFill") {
     return { fill: "none" };
   }
 
-  const resolved = resolveFill(fill, colorContext, resources.resolve);
+  // Create composite resolver: ResourceStore > legacy resolver
+  const compositeResolver: ResourceResolverFn = (resourceId) => {
+    // 1. Check ResourceStore first
+    if (resourceStore !== undefined) {
+      const url = resourceStore.toDataUrl(resourceId);
+      if (url !== undefined) return url;
+    }
+    // 2. Fall back to legacy resolver
+    return resources.resolve(resourceId);
+  };
+
+  const resolved = resolveFill(fill, colorContext, compositeResolver);
   const result = resolvedFillToResult(resolved, getNextId, width, height);
 
   // Register def if present and not already registered

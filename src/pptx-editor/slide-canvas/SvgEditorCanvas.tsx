@@ -54,6 +54,8 @@ import { SvgRulers } from "./SvgRulers";
 import { ViewportOverlay } from "./ViewportOverlay";
 import { useSvgViewport } from "./use-svg-viewport";
 import { getTransformString, screenToSlideCoords, type ViewportTransform } from "../../pptx/render/svg-viewport";
+import type { ZoomMode } from "./canvas-controls";
+import { ASSET_DRAG_TYPE } from "../panels/inspector/AssetPanel";
 
 // =============================================================================
 // Types
@@ -95,13 +97,24 @@ export type SvgEditorCanvasProps = {
   readonly pathEdit?: PathEditState;
   readonly onPathEditCommit?: (path: DrawingPath, shapeId: ShapeId) => void;
   readonly onPathEditCancel?: () => void;
-  readonly zoom: number;
-  readonly onZoomChange: (value: number) => void;
+  readonly zoomMode: ZoomMode;
+  readonly onZoomModeChange: (mode: ZoomMode) => void;
+  /** Callback when display zoom value changes (useful when in fit mode) */
+  readonly onDisplayZoomChange?: (zoom: number) => void;
   readonly showRulers: boolean;
   readonly rulerThickness: number;
   /** Callback when viewport transform changes (for drag coordinate conversion) */
   readonly onViewportChange?: (viewport: ViewportTransform) => void;
+  /** Callback when an asset is dropped onto the canvas */
+  readonly onAssetDrop?: (x: number, y: number, assetData: AssetDropData) => void;
 };
+
+/**
+ * Data passed when an asset is dropped on the canvas.
+ */
+export type AssetDropData =
+  | { readonly type: "image"; readonly dataUrl: string }
+  | { readonly type: "ole"; readonly embedDataBase64: string; readonly extension: string; readonly name: string };
 
 type ShapeBounds = {
   readonly id: ShapeId;
@@ -325,11 +338,13 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
     pathEdit,
     onPathEditCommit,
     onPathEditCancel,
-    zoom,
-    onZoomChange,
+    zoomMode,
+    onZoomModeChange,
+    onDisplayZoomChange,
     showRulers,
     rulerThickness: rulerThicknessProp,
     onViewportChange,
+    onAssetDrop,
   },
   containerRef
 ) {
@@ -356,9 +371,9 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
   } = useSvgViewport({
     slideSize,
     rulerThickness,
-    zoom,
-    onZoomChange,
-    autoCenter: true,
+    zoomMode,
+    onZoomModeChange,
+    onDisplayZoomChange,
   });
 
   // Notify parent of viewport changes
@@ -390,6 +405,54 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
     svg.addEventListener("wheel", handleWheel, { passive: false });
     return () => svg.removeEventListener("wheel", handleWheel);
   }, [svgRef, handleWheel]);
+
+  // Handle drag over for asset drops
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    if (e.dataTransfer.types.includes(ASSET_DRAG_TYPE)) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "copy";
+    }
+  }, []);
+
+  // Handle asset drop
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      const assetData = e.dataTransfer.getData(ASSET_DRAG_TYPE);
+      if (!assetData || !onAssetDrop) {
+        return;
+      }
+      e.preventDefault();
+
+      const svg = svgRef.current;
+      if (!svg) {return;}
+
+      const rect = svg.getBoundingClientRect();
+      const coords = screenToSlideCoords(e.clientX, e.clientY, rect, viewport, rulerThickness);
+
+      try {
+        const parsed = JSON.parse(assetData) as {
+          type?: string;
+          dataUrl?: string;
+          embedDataBase64?: string;
+          extension?: string;
+          name?: string;
+        };
+        if (parsed.type === "image" && parsed.dataUrl) {
+          onAssetDrop(coords.x, coords.y, { type: "image", dataUrl: parsed.dataUrl });
+        } else if (parsed.type === "ole" && parsed.embedDataBase64 && parsed.extension && parsed.name) {
+          onAssetDrop(coords.x, coords.y, {
+            type: "ole",
+            embedDataBase64: parsed.embedDataBase64,
+            extension: parsed.extension,
+            name: parsed.name,
+          });
+        }
+      } catch {
+        // Invalid JSON, ignore
+      }
+    },
+    [onAssetDrop, viewport, rulerThickness],
+  );
 
   // Collect shape render data
   const shapeRenderData = useMemo(() => collectShapeRenderData(slide.shapes), [slide.shapes]);
@@ -792,6 +855,8 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
         style={svgStyle}
         onClick={handleSvgClick}
         onPointerDown={handleSvgPointerDown}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
       >
         {/* Canvas viewport group with pan/zoom transform */}
         <g transform={`translate(${rulerThickness}, ${rulerThickness})`}>

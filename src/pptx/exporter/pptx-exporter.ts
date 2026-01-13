@@ -13,7 +13,8 @@
 
 import type { PresentationDocument, SlideWithId } from "../app/presentation-document";
 import type { Slide as ApiSlide } from "../app/types";
-import type { PresentationFile, Slide } from "../domain";
+import type { GraphicFrame, PresentationFile, Slide } from "../domain";
+import type { ResourceId } from "../domain/types";
 import type { XmlDocument } from "../../xml";
 import { serializeDocument } from "../../xml";
 import { parseDataUrl } from "../../buffer";
@@ -26,6 +27,7 @@ import { parseSlide } from "../parser/slide/slide-parser";
 import { detectSlideChanges, type ShapeChange, type PropertyChange } from "../patcher/core/shape-differ";
 import { patchSlideXml } from "../patcher/slide/slide-patcher";
 import { addMedia, type MediaType } from "../patcher/resources/media-manager";
+import { addOleObject, getOleTypeFromFile } from "../patcher/resources/ole-manager";
 
 // =============================================================================
 // Types
@@ -419,7 +421,7 @@ function processMediaChanges(
 }
 
 /**
- * Process added shape for data: URL media.
+ * Process added shape for data: URL media or OLE embedData.
  */
 function processAddedShapeMedia(
   change: Extract<ShapeChange, { type: "added" }>,
@@ -428,27 +430,81 @@ function processAddedShapeMedia(
 ): Extract<ShapeChange, { type: "added" }> {
   const shape = change.shape;
 
-  // Only process pictures with data: URL
-  if (shape.type !== "pic") {
-    return change;
+  // Process pictures with data: URL
+  if (shape.type === "pic") {
+    const resourceId = shape.blipFill?.resourceId;
+    if (!resourceId || !isDataUrl(resourceId)) {
+      return change;
+    }
+
+    // Embed the media and get new rId
+    const rId = embedDataUrlMedia(pkg, slidePath, resourceId);
+
+    // Return updated change with new resourceId
+    return {
+      ...change,
+      shape: {
+        ...shape,
+        blipFill: {
+          ...shape.blipFill,
+          resourceId: rId,
+        },
+      },
+    };
   }
 
-  const resourceId = shape.blipFill?.resourceId;
-  if (!resourceId || !isDataUrl(resourceId)) {
-    return change;
+  // Process OLE objects with embedData
+  if (shape.type === "graphicFrame") {
+    const processedFrame = processOleGraphicFrame(shape, slidePath, pkg);
+    if (processedFrame !== shape) {
+      return {
+        ...change,
+        shape: processedFrame,
+      };
+    }
   }
 
-  // Embed the media and get new rId
-  const rId = embedDataUrlMedia(pkg, slidePath, resourceId);
+  return change;
+}
 
-  // Return updated change with new resourceId
+/**
+ * Process GraphicFrame with OLE embedData.
+ * Embeds the data and replaces embedData with resourceId.
+ */
+function processOleGraphicFrame(
+  frame: GraphicFrame,
+  slidePath: string,
+  pkg: ZipPackage,
+): GraphicFrame {
+  if (frame.content.type !== "oleObject") {
+    return frame;
+  }
+
+  const oleData = frame.content.data;
+  if (!oleData.embedData || !oleData.originalFilename) {
+    return frame;
+  }
+
+  // Get OLE type from filename
+  const oleType = getOleTypeFromFile(oleData.originalFilename);
+  if (!oleType) {
+    throw new Error(`Unsupported OLE file type: ${oleData.originalFilename}`);
+  }
+
+  // Embed the OLE object and get rId
+  const result = addOleObject(pkg, oleData.embedData, oleType, slidePath);
+
+  // Return updated frame with resourceId and without embedData
   return {
-    ...change,
-    shape: {
-      ...shape,
-      blipFill: {
-        ...shape.blipFill,
-        resourceId: rId,
+    ...frame,
+    content: {
+      type: "oleObject",
+      data: {
+        resourceId: result.rId as ResourceId,
+        progId: result.progId,
+        name: oleData.name,
+        showAsIcon: oleData.showAsIcon,
+        // Remove embedData and originalFilename as they're now embedded
       },
     },
   };

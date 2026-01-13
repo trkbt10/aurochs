@@ -9,9 +9,9 @@
 import { memo, useMemo } from "react";
 import type { PicShape as PicShapeType, Transform } from "../../../domain";
 import type { ShapeId } from "../../../domain/types";
-import { useRenderResources } from "../context";
+import { useRenderResources, useRenderResourceStore } from "../context";
 import { buildTransformAttr } from "./transform";
-import { getBlipFillImageSrc } from "../../utils/image-conversion";
+import { resolveImageUrl } from "../../utils/image-conversion";
 
 // =============================================================================
 // Types
@@ -76,12 +76,18 @@ function PicShapeRendererBase({
   shapeId,
 }: PicShapeRendererProps) {
   const resources = useRenderResources();
+  const resourceStore = useRenderResourceStore();
   const { blipFill, properties } = shape;
 
-  // Use resolvedResource (resolved at parse time) if available, otherwise fall back to runtime resolution
+  // Use ResourceStore (centralized) > resolvedResource (legacy) > runtime resolver (legacy)
   const imagePath = useMemo(
-    () => getBlipFillImageSrc(blipFill, (rId) => resources.resolve(rId)),
-    [blipFill, resources],
+    () => resolveImageUrl(
+      blipFill.resourceId,
+      resourceStore,
+      blipFill,
+      (rId) => resources.resolve(rId),
+    ),
+    [blipFill, resources, resourceStore],
   );
   if (imagePath === undefined) {
     return null;

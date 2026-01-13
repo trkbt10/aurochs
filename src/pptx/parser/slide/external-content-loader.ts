@@ -33,6 +33,7 @@ import {
 import { createEmptyResourceMap } from "../../domain/relationships";
 import { findVmlShapeImage, getVmlRelsPath, normalizeVmlImagePath } from "../external/vml-parser";
 import { emfToSvg } from "../external/emf-parser";
+import type { ResourceStore } from "../../domain/resource-store";
 
 /**
  * File reader interface for loading content from PPTX archive
@@ -44,18 +45,35 @@ export type FileReader = {
 };
 
 /**
+ * Context for enrichment operations
+ */
+type EnrichmentContext = {
+  readonly fileReader: FileReader;
+  readonly resourceStore?: ResourceStore;
+};
+
+/**
  * Enrich a Slide with pre-parsed chart and diagram content.
  *
  * This function iterates through all shapes in the slide and for each
  * GraphicFrame with chart or diagram content, loads and parses the
  * external XML files and attaches the parsed data to the domain objects.
  *
+ * If a ResourceStore is provided, parsed content is also registered there
+ * for centralized resource management.
+ *
  * @param slide - The parsed Slide domain object
  * @param fileReader - Interface for reading files from the PPTX archive
+ * @param resourceStore - Optional resource store for centralized management
  * @returns A new Slide with pre-parsed content attached
  */
-export function enrichSlideContent(slide: Slide, fileReader: FileReader): Slide {
-  const enrichedShapes = slide.shapes.map((shape) => enrichShape(shape, fileReader));
+export function enrichSlideContent(
+  slide: Slide,
+  fileReader: FileReader,
+  resourceStore?: ResourceStore,
+): Slide {
+  const ctx: EnrichmentContext = { fileReader, resourceStore };
+  const enrichedShapes = slide.shapes.map((shape) => enrichShape(shape, ctx));
 
   // If no shapes were enriched, return the original slide
   if (enrichedShapes.every((s, i) => s === slide.shapes[i])) {
@@ -71,7 +89,7 @@ export function enrichSlideContent(slide: Slide, fileReader: FileReader): Slide 
 /**
  * Enrich a single shape with pre-parsed content if applicable.
  */
-function enrichShape(shape: Shape, fileReader: FileReader): Shape {
+function enrichShape(shape: Shape, ctx: EnrichmentContext): Shape {
   if (shape.type !== "graphicFrame") {
     return shape;
   }
@@ -79,15 +97,15 @@ function enrichShape(shape: Shape, fileReader: FileReader): Shape {
   const frame = shape as GraphicFrame;
 
   if (frame.content.type === "chart") {
-    return enrichChartFrame(frame, fileReader);
+    return enrichChartFrame(frame, ctx);
   }
 
   if (frame.content.type === "diagram") {
-    return enrichDiagramFrame(frame, fileReader);
+    return enrichDiagramFrame(frame, ctx);
   }
 
   if (frame.content.type === "oleObject") {
-    return enrichOleFrame(frame, fileReader);
+    return enrichOleFrame(frame, ctx);
   }
 
   return shape;
@@ -95,12 +113,15 @@ function enrichShape(shape: Shape, fileReader: FileReader): Shape {
 
 /**
  * Enrich a chart GraphicFrame with pre-parsed Chart data.
+ *
+ * If ResourceStore is provided, the parsed chart is also registered there.
  */
-function enrichChartFrame(frame: GraphicFrame, fileReader: FileReader): GraphicFrame {
+function enrichChartFrame(frame: GraphicFrame, ctx: EnrichmentContext): GraphicFrame {
   if (frame.content.type !== "chart") {
     return frame;
   }
 
+  const { fileReader, resourceStore } = ctx;
   const chartRef = frame.content.data;
 
   // Skip if already parsed
@@ -134,7 +155,18 @@ function enrichChartFrame(frame: GraphicFrame, fileReader: FileReader): GraphicF
     return frame;
   }
 
-  // Return new frame with parsed chart attached
+  // Register in ResourceStore if available
+  if (resourceStore !== undefined) {
+    resourceStore.set(chartRef.resourceId as string, {
+      kind: "chart",
+      source: "parsed",
+      data: chartData,
+      path: chartPath,
+      parsed: parsedChart,
+    });
+  }
+
+  // Return new frame with parsed chart attached (legacy compatibility)
   return {
     ...frame,
     content: {
@@ -156,13 +188,16 @@ function enrichChartFrame(frame: GraphicFrame, fileReader: FileReader): GraphicF
  * If the diagram drawing file is not available or has no shapes, it falls back
  * to generating shapes dynamically using the layout engine.
  *
+ * If ResourceStore is provided, parsed diagram data is also registered there.
+ *
  * @see ECMA-376 Part 1, Section 21.4 - DrawingML Diagrams
  */
-function enrichDiagramFrame(frame: GraphicFrame, fileReader: FileReader): GraphicFrame {
+function enrichDiagramFrame(frame: GraphicFrame, ctx: EnrichmentContext): GraphicFrame {
   if (frame.content.type !== "diagram") {
     return frame;
   }
 
+  const { fileReader, resourceStore } = ctx;
   const diagramRef = frame.content.data;
 
   // Skip if already parsed
@@ -186,6 +221,22 @@ function enrichDiagramFrame(frame: GraphicFrame, fileReader: FileReader): Graphi
     shapes = tryGenerateDiagramShapes(frame, dataModel, layoutDefinition, styleDefinition, colorsDefinition);
   }
 
+  // Register diagram data in ResourceStore if available
+  if (resourceStore !== undefined && diagramRef.dataResourceId !== undefined) {
+    resourceStore.set(diagramRef.dataResourceId, {
+      kind: "diagram",
+      source: "parsed",
+      data: new ArrayBuffer(0), // Diagram data is stored as parsed objects
+      parsed: {
+        shapes: shapes ?? [],
+        dataModel,
+        layoutDefinition,
+        styleDefinition,
+        colorsDefinition,
+      },
+    });
+  }
+
   // If still no shapes, return frame without parsedContent
   if (shapes === undefined || shapes.length === 0) {
     return {
@@ -203,7 +254,7 @@ function enrichDiagramFrame(frame: GraphicFrame, fileReader: FileReader): Graphi
     };
   }
 
-  // Return new frame with parsed diagram attached
+  // Return new frame with parsed diagram attached (legacy compatibility)
   return {
     ...frame,
     content: {
@@ -583,14 +634,17 @@ function resolveResourceToDataUrl(
  * This function resolves VML-based preview images and attaches them as data URLs
  * to OleReference.previewImageUrl, allowing render to render without calling parser.
  *
+ * If ResourceStore is provided, preview image data is also registered there.
+ *
  * @see ECMA-376 Part 1, Section 19.3.1.36a (oleObj)
  * @see MS-OE376 Part 4 Section 4.4.2.4
  */
-function enrichOleFrame(frame: GraphicFrame, fileReader: FileReader): GraphicFrame {
+function enrichOleFrame(frame: GraphicFrame, ctx: EnrichmentContext): GraphicFrame {
   if (frame.content.type !== "oleObject") {
     return frame;
   }
 
+  const { fileReader, resourceStore } = ctx;
   const oleRef = frame.content.data;
 
   // Skip if already has preview URL
@@ -609,7 +663,17 @@ function enrichOleFrame(frame: GraphicFrame, fileReader: FileReader): GraphicFra
     return frame;
   }
 
-  // Return new frame with preview image URL attached
+  // Register preview image in ResourceStore if available
+  if (resourceStore !== undefined && oleRef.resourceId !== undefined) {
+    resourceStore.set(oleRef.resourceId, {
+      kind: "ole",
+      source: "parsed",
+      data: new ArrayBuffer(0), // Preview is stored as data URL
+      previewUrl: previewImageUrl,
+    });
+  }
+
+  // Return new frame with preview image URL attached (legacy compatibility)
   return {
     ...frame,
     content: {

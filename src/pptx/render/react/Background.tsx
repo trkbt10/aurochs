@@ -9,7 +9,7 @@
 import type { ReactNode } from "react";
 import type { Background as BackgroundType, SlideSize } from "../../domain";
 import type { ResolvedBackgroundFill } from "../background-fill";
-import { useRenderContext } from "./context";
+import { useRenderContext, useRenderResourceStore } from "./context";
 import { useSvgDefs } from "./hooks/useSvgDefs";
 import { resolveFill } from "../../domain/color/fill";
 import { ooxmlAngleToSvgLinearGradient, getRadialGradientCoords } from "../svg/gradient-utils";
@@ -101,6 +101,7 @@ export function BackgroundRenderer({
 }: BackgroundRendererProps) {
   const { width, height } = slideSize;
   const { colorContext, resources, warnings } = useRenderContext();
+  const resourceStore = useRenderResourceStore();
   const { getNextId } = useSvgDefs();
 
   // Default white background
@@ -164,7 +165,8 @@ export function BackgroundRenderer({
     }
 
     case "blipFill": {
-      const imagePath = resources.resolve(fill.resourceId);
+      // Use ResourceStore (centralized) > legacy resolver
+      const imagePath = resourceStore?.toDataUrl(fill.resourceId) ?? resources.resolve(fill.resourceId);
       if (imagePath !== undefined) {
         const aspectRatio = fill.stretch !== undefined ? "none" : "xMidYMid slice";
         return (

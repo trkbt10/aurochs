@@ -10,11 +10,24 @@ import { Select } from "../ui/primitives/Select";
 import { Toggle } from "../ui/primitives/Toggle";
 import { Popover } from "../ui/primitives/Popover";
 import { AddIcon, LineIcon, SettingsIcon } from "../ui/icons";
-import { getClosestZoomIndex, getNextZoomValue, getSnapOptions, getZoomOptions, ZOOM_STEPS } from "./canvas-controls";
+import {
+  getClosestZoomIndex,
+  getNextZoomValue,
+  getSnapOptions,
+  getZoomOptions,
+  ZOOM_STEPS,
+  FIT_ZOOM_VALUE,
+  isFitMode,
+  type ZoomMode,
+} from "./canvas-controls";
 
 export type CanvasControlsProps = {
-  readonly zoom: number;
-  readonly onZoomChange: (value: number) => void;
+  /** Current zoom mode ('fit' or a fixed zoom value) */
+  readonly zoomMode: ZoomMode;
+  /** Callback when zoom mode changes */
+  readonly onZoomModeChange: (mode: ZoomMode) => void;
+  /** Current display zoom value (used when in fit mode to show actual zoom) */
+  readonly displayZoom: number;
   readonly showRulers: boolean;
   readonly onShowRulersChange: (value: boolean) => void;
   readonly snapEnabled: boolean;
@@ -56,8 +69,9 @@ const settingsRowStyle: CSSProperties = {
  * Toolbar section for canvas zoom and snapping settings.
  */
 export function CanvasControls({
-  zoom,
-  onZoomChange,
+  zoomMode,
+  onZoomModeChange,
+  displayZoom,
   showRulers,
   onShowRulersChange,
   snapEnabled,
@@ -65,16 +79,29 @@ export function CanvasControls({
   snapStep,
   onSnapStepChange,
 }: CanvasControlsProps) {
-  const zoomIndex = getClosestZoomIndex(zoom);
-  const zoomSelectValue = `${Math.round(ZOOM_STEPS[zoomIndex] * 100)}`;
-  const zoomOptions = useMemo(() => getZoomOptions(), []);
+  // Determine the select value based on zoom mode
+  const zoomSelectValue = isFitMode(zoomMode)
+    ? FIT_ZOOM_VALUE
+    : `${Math.round(ZOOM_STEPS[getClosestZoomIndex(zoomMode)] * 100)}`;
+  const zoomOptions = useMemo(() => getZoomOptions(true), []);
   const snapOptions = useMemo(() => getSnapOptions(), []);
+
+  // Handle zoom in/out buttons - these always switch to fixed zoom mode
+  const handleZoomIn = () => {
+    const currentZoom = isFitMode(zoomMode) ? displayZoom : zoomMode;
+    onZoomModeChange(getNextZoomValue(currentZoom, "in"));
+  };
+
+  const handleZoomOut = () => {
+    const currentZoom = isFitMode(zoomMode) ? displayZoom : zoomMode;
+    onZoomModeChange(getNextZoomValue(currentZoom, "out"));
+  };
 
   return (
     <div style={toolbarControlsStyle}>
       <Button
         variant="ghost"
-        onClick={() => onZoomChange(getNextZoomValue(zoom, "in"))}
+        onClick={handleZoomIn}
         title="Zoom In"
         style={zoomButtonStyle}
       >
@@ -82,7 +109,7 @@ export function CanvasControls({
       </Button>
       <Button
         variant="ghost"
-        onClick={() => onZoomChange(getNextZoomValue(zoom, "out"))}
+        onClick={handleZoomOut}
         title="Zoom Out"
         style={zoomButtonStyle}
       >
@@ -93,9 +120,13 @@ export function CanvasControls({
           value={zoomSelectValue}
           options={zoomOptions}
           onChange={(value) => {
+            if (value === FIT_ZOOM_VALUE) {
+              onZoomModeChange("fit");
+              return;
+            }
             const nextZoom = Number(value) / 100;
             if (!Number.isNaN(nextZoom)) {
-              onZoomChange(nextZoom);
+              onZoomModeChange(nextZoom);
             }
           }}
           style={zoomSelectStyle}

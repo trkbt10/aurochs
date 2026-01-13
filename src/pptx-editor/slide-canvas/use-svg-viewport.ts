@@ -15,18 +15,19 @@ import {
   createFittedViewport,
   screenToCanvasCoords,
 } from "../../pptx/render/svg-viewport";
+import { type ZoomMode, isFitMode } from "./canvas-controls";
 
 export type UseSvgViewportOptions = {
   /** Slide dimensions */
   readonly slideSize: SlideSize;
   /** Ruler thickness in pixels */
   readonly rulerThickness: number;
-  /** External zoom value (for controlled mode) */
-  readonly zoom?: number;
-  /** Callback when zoom changes (for controlled mode) */
-  readonly onZoomChange?: (zoom: number) => void;
-  /** Whether to auto-center on mount */
-  readonly autoCenter?: boolean;
+  /** External zoom mode (for controlled mode) */
+  readonly zoomMode: ZoomMode;
+  /** Callback when zoom mode changes (for controlled mode) */
+  readonly onZoomModeChange?: (mode: ZoomMode) => void;
+  /** Callback to report current display zoom value (useful when in fit mode) */
+  readonly onDisplayZoomChange?: (zoom: number) => void;
 };
 
 export type UseSvgViewportResult = {
@@ -60,24 +61,37 @@ export type UseSvgViewportResult = {
 export function useSvgViewport({
   slideSize,
   rulerThickness,
-  zoom: externalZoom,
-  onZoomChange,
-  autoCenter = true,
+  zoomMode,
+  onZoomModeChange,
+  onDisplayZoomChange,
 }: UseSvgViewportOptions): UseSvgViewportResult {
   const svgRef = useRef<SVGSVGElement>(null);
   const [viewport, setViewport] = useState<ViewportTransform>(INITIAL_VIEWPORT);
   const [viewportSize, setViewportSize] = useState<ViewportSize>({ width: 0, height: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const lastPointerRef = useRef({ x: 0, y: 0 });
-  const hasCenteredRef = useRef(false);
+  const hasInitializedRef = useRef(false);
 
-  // Apply external zoom if controlled
-  const effectiveViewport = useMemo(() => {
-    if (externalZoom !== undefined) {
-      return { ...viewport, scale: externalZoom };
+  // Calculate fitted viewport for fit mode
+  const fittedViewport = useMemo(() => {
+    if (viewportSize.width === 0 || viewportSize.height === 0) {
+      return INITIAL_VIEWPORT;
     }
-    return viewport;
-  }, [viewport, externalZoom]);
+    return createFittedViewport(viewportSize, slideSize, rulerThickness);
+  }, [viewportSize, slideSize, rulerThickness]);
+
+  // Determine effective viewport based on zoom mode
+  const effectiveViewport = useMemo(() => {
+    if (isFitMode(zoomMode)) {
+      return fittedViewport;
+    }
+    return { ...viewport, scale: zoomMode };
+  }, [viewport, zoomMode, fittedViewport]);
+
+  // Report display zoom changes
+  useLayoutEffect(() => {
+    onDisplayZoomChange?.(effectiveViewport.scale);
+  }, [effectiveViewport.scale, onDisplayZoomChange]);
 
   // Update viewport size on resize
   useLayoutEffect(() => {
@@ -101,20 +115,17 @@ export function useSvgViewport({
     return () => observer.disconnect();
   }, []);
 
-  // Auto-center on mount
+  // Initialize viewport translation when viewport size is first available
   useLayoutEffect(() => {
-    if (!autoCenter || hasCenteredRef.current) {return;}
+    if (hasInitializedRef.current) {return;}
     if (viewportSize.width === 0 || viewportSize.height === 0) {return;}
 
+    // Set initial viewport position (centered)
     const fitted = createFittedViewport(viewportSize, slideSize, rulerThickness);
     setViewport(fitted);
 
-    if (externalZoom === undefined && onZoomChange) {
-      onZoomChange(fitted.scale);
-    }
-
-    hasCenteredRef.current = true;
-  }, [autoCenter, viewportSize, slideSize, rulerThickness, externalZoom, onZoomChange]);
+    hasInitializedRef.current = true;
+  }, [viewportSize, slideSize, rulerThickness]);
 
   // Wheel handler for zoom and scroll-based panning
   const handleWheel = useCallback(
@@ -126,23 +137,22 @@ export function useSvgViewport({
       const zoomModifier = isMac ? e.metaKey : e.ctrlKey;
 
       if (zoomModifier) {
-        // Zoom mode: Ctrl/Cmd + wheel
+        // Zoom mode: Ctrl/Cmd + wheel - switches to fixed zoom
         e.preventDefault();
 
         const rect = svg.getBoundingClientRect();
         const cursorPos = screenToCanvasCoords(e.clientX, e.clientY, rect, rulerThickness);
 
-        const currentScale = externalZoom ?? viewport.scale;
+        const currentScale = effectiveViewport.scale;
         const direction = e.deltaY < 0 ? "in" : "out";
         const newScale = getNextZoomValue(currentScale, direction);
 
-        if (onZoomChange) {
-          onZoomChange(newScale);
-        }
+        // Switch to fixed zoom mode
+        onZoomModeChange?.(newScale);
 
         // Update viewport with zoom-toward-cursor
         setViewport((prev) => {
-          const currentVp = externalZoom !== undefined ? { ...prev, scale: externalZoom } : prev;
+          const currentVp = { ...prev, scale: currentScale };
           return zoomTowardCursor(currentVp, cursorPos.x, cursorPos.y, newScale);
         });
       } else {
@@ -159,7 +169,7 @@ export function useSvgViewport({
         });
       }
     },
-    [viewport.scale, externalZoom, onZoomChange, rulerThickness, viewportSize, slideSize]
+    [effectiveViewport.scale, onZoomModeChange, rulerThickness, viewportSize, slideSize]
   );
 
   // Pan handlers
@@ -206,26 +216,17 @@ export function useSvgViewport({
     }));
   }, [viewportSize, slideSize, rulerThickness]);
 
-  // Fit to view
+  // Fit to view - switches to fit mode
   const fitToView = useCallback(() => {
-    const fitted = createFittedViewport(viewportSize, slideSize, rulerThickness);
-    setViewport(fitted);
+    onZoomModeChange?.("fit");
+  }, [onZoomModeChange]);
 
-    if (onZoomChange) {
-      onZoomChange(fitted.scale);
-    }
-  }, [viewportSize, slideSize, rulerThickness, onZoomChange]);
-
-  // Set zoom
+  // Set zoom - switches to fixed zoom mode
   const setZoom = useCallback(
     (newZoom: number) => {
-      if (onZoomChange) {
-        onZoomChange(newZoom);
-      } else {
-        setViewport((prev) => ({ ...prev, scale: newZoom }));
-      }
+      onZoomModeChange?.(newZoom);
     },
-    [onZoomChange]
+    [onZoomModeChange]
   );
 
   return {

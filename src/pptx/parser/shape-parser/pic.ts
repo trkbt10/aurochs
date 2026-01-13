@@ -14,16 +14,19 @@ import { parseShapeStyle } from "./style";
 import { getBlipFillElement } from "./alternate-content";
 import { resolveEffectsFromStyleReference } from "../graphics/effects-parser";
 import type { FormatScheme, ResourceContext } from "../context";
+import type { ResourceStore } from "../../domain/resource-store";
 
 /**
  * Parse blip fill properties for pictures
  *
  * @param blipFill - The blipFill XML element
  * @param resourceContext - Optional resource context for resolving images at parse time
+ * @param resourceStore - Optional resource store for centralized resource registration
  */
 export function parseBlipFillProperties(
   blipFill: XmlElement | undefined,
   resourceContext?: ResourceContext,
+  resourceStore?: ResourceStore,
 ): BlipFillProperties | undefined {
   if (!blipFill) {
     return undefined;
@@ -43,6 +46,17 @@ export function parseBlipFillProperties(
   let resolvedResource: ResolvedBlipResource | undefined;
   if (resourceContext !== undefined && !resourceId.startsWith("data:")) {
     resolvedResource = resourceContext.resolveBlipFill(resourceId);
+
+    // Register in ResourceStore if available
+    if (resourceStore && resolvedResource) {
+      resourceStore.set(resourceId, {
+        kind: "image",
+        source: "parsed",
+        data: resolvedResource.data,
+        mimeType: resolvedResource.mimeType,
+        path: resolvedResource.path,
+      });
+    }
   }
 
   // Parse source rect

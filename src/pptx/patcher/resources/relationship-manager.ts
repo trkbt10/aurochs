@@ -6,7 +6,8 @@ export type RelationshipType =
   | "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"
   | "http://schemas.openxmlformats.org/officeDocument/2006/relationships/video"
   | "http://schemas.openxmlformats.org/officeDocument/2006/relationships/audio"
-  | "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink";
+  | "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"
+  | "http://schemas.openxmlformats.org/officeDocument/2006/relationships/oleObject";
 
 export type RelationshipInfo = {
   readonly id: string;

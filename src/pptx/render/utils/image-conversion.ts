@@ -8,6 +8,7 @@
 
 import { toDataUrl as bufferToDataUrl } from "../../../buffer";
 import type { ResolvedBlipResource } from "../../domain";
+import type { ResourceStore } from "../../domain/resource-store";
 
 /**
  * Convert resolved blip resource to Data URL.
@@ -67,6 +68,52 @@ export function getBlipFillImageSrc(
   // 3. Fallback to runtime resolver (legacy path)
   if (fallbackResolver !== undefined) {
     return fallbackResolver(blipFill.resourceId);
+  }
+
+  return undefined;
+}
+
+/**
+ * Resolve image URL with ResourceStore priority.
+ *
+ * Resolution order:
+ * 1. ResourceStore.toDataUrl() - centralized resource management
+ * 2. BlipFill.resolvedResource - legacy parse-time resolution
+ * 3. fallbackResolver - legacy runtime resolution
+ *
+ * @param resourceId - Resource ID (rId)
+ * @param resourceStore - Centralized resource store (optional)
+ * @param blipFill - BlipFill with optional resolvedResource (optional)
+ * @param fallbackResolver - Runtime fallback resolver (optional)
+ * @returns Image source URL or undefined
+ */
+export function resolveImageUrl(
+  resourceId: string,
+  resourceStore?: ResourceStore,
+  blipFill?: { readonly resolvedResource?: ResolvedBlipResource },
+  fallbackResolver?: (rId: string) => string | undefined,
+): string | undefined {
+  // 1. If resourceId is already a data URL, use it directly
+  if (resourceId.startsWith("data:")) {
+    return resourceId;
+  }
+
+  // 2. ResourceStore - centralized resource management (preferred)
+  if (resourceStore !== undefined) {
+    const url = resourceStore.toDataUrl(resourceId);
+    if (url !== undefined) {
+      return url;
+    }
+  }
+
+  // 3. Legacy: resolvedResource on blipFill
+  if (blipFill?.resolvedResource !== undefined) {
+    return blipToDataUrl(blipFill.resolvedResource);
+  }
+
+  // 4. Legacy: runtime resolver
+  if (fallbackResolver !== undefined) {
+    return fallbackResolver(resourceId);
   }
 
   return undefined;

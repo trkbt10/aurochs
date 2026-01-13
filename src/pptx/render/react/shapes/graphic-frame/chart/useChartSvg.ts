@@ -7,8 +7,9 @@
  */
 
 import { useMemo } from "react";
+import type { Chart } from "../../../../../domain/chart";
 import type { ChartReference } from "../../../../../domain";
-import { useRenderContext } from "../../../context";
+import { useRenderContext, useRenderResourceStore } from "../../../context";
 import { renderChart } from "../../../../chart";
 import { extractSvgContent } from "../../../../svg/svg-utils";
 import type { SvgResult } from "../types";
@@ -31,13 +32,30 @@ export function useChartSvg(
 ): SvgResult {
   // Get full render context for chart rendering
   const ctx = useRenderContext();
+  const resourceStore = useRenderResourceStore();
 
   return useMemo(() => {
     if (chartData === undefined) {
       return { svg: null, hasContent: false };
     }
 
-    if (chartData.parsedChart === undefined) {
+    // Try to get chart from ResourceStore first, then fall back to parsedChart
+    let chart: Chart | undefined;
+
+    if (resourceStore !== undefined) {
+      const entry = resourceStore.get<{ shapes?: unknown; dataModel?: unknown } | Chart>(chartData.resourceId);
+      // Check if it's a Chart (has specific chart properties)
+      if (entry?.parsed !== undefined && "plotArea" in (entry.parsed as object)) {
+        chart = entry.parsed as Chart;
+      }
+    }
+
+    // Fall back to legacy parsedChart field
+    if (chart === undefined) {
+      chart = chartData.parsedChart;
+    }
+
+    if (chart === undefined) {
       ctx.warnings.add({
         type: "fallback",
         message: `Chart not pre-parsed: ${chartData.resourceId}`,
@@ -46,7 +64,7 @@ export function useChartSvg(
     }
 
     const chartHtml = renderChart(
-      chartData.parsedChart,
+      chart,
       width,
       height,
       ctx,
@@ -54,5 +72,5 @@ export function useChartSvg(
 
     const svg = extractSvgContent(chartHtml as string);
     return { svg, hasContent: svg !== null };
-  }, [chartData, width, height, ctx]);
+  }, [chartData, width, height, ctx, resourceStore]);
 }

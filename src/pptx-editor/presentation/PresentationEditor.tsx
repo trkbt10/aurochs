@@ -30,7 +30,10 @@ import {
   getDefaultBoundsForMode,
   createCustomGeometryShape,
   generateShapeId,
+  createPicShape,
 } from "../shape/factory";
+import { createOleGraphicFrame } from "../graphic-frame/factory";
+import { getOleTypeFromFile } from "../../pptx/patcher/resources/ole-manager";
 import type { ShapeBounds } from "../shape/creation-bounds";
 import { drawingPathToCustomGeometry } from "../path-tools/utils/path-commands";
 import {
@@ -55,7 +58,8 @@ import { getSlideLayoutAttributes } from "../../pptx/parser/slide/layout-parser"
 import { RELATIONSHIP_TYPES } from "../../pptx/opc";
 import { createZipAdapter } from "../../pptx/domain";
 import { CanvasControls } from "../slide-canvas/CanvasControls";
-import { SvgEditorCanvas } from "../slide-canvas/SvgEditorCanvas";
+import type { ZoomMode } from "../slide-canvas/canvas-controls";
+import { SvgEditorCanvas, type AssetDropData } from "../slide-canvas/SvgEditorCanvas";
 import type { ViewportTransform } from "../../pptx/render/svg-viewport";
 import { TextEditContextProvider, useTextEditContextValue } from "../context/slide/TextEditContext";
 import { PresentationPreviewProvider, usePresentationPreview } from "../context/presentation/PresentationPreviewContext";
@@ -140,7 +144,8 @@ function EditorContent({
 
   const canvasRef = useRef<HTMLDivElement>(null);
   const { shapeSelection: selection, drag } = state;
-  const [zoom, setZoom] = useState(1);
+  const [zoomMode, setZoomMode] = useState<ZoomMode>("fit");
+  const [displayZoom, setDisplayZoom] = useState(1);
   const [showRulers, setShowRulers] = useState(true);
   const [snapEnabled, setSnapEnabled] = useState(true);
   const [snapStep, setSnapStep] = useState(10);
@@ -219,6 +224,46 @@ function EditorContent({
       }
     },
     [creationMode, dispatch],
+  );
+
+  const handleAssetDrop = useCallback(
+    (x: number, y: number, assetData: AssetDropData) => {
+      // Default size: 200x150 pixels
+      const bounds: ShapeBounds = {
+        x: px(x),
+        y: px(y),
+        width: px(200),
+        height: px(150),
+      };
+
+      if (assetData.type === "image") {
+        // Create a picture shape at the drop position
+        const newShape = createPicShape(generateShapeId(), bounds, assetData.dataUrl);
+        dispatch({ type: "CREATE_SHAPE", shape: newShape });
+      } else if (assetData.type === "ole") {
+        // Create an OLE object graphic frame
+        const oleType = getOleTypeFromFile(assetData.name);
+        if (oleType) {
+          // Decode base64 back to ArrayBuffer
+          const binaryString = atob(assetData.embedDataBase64);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          const embedData = bytes.buffer;
+
+          const newFrame = createOleGraphicFrame(
+            generateShapeId(),
+            bounds,
+            oleType,
+            embedData,
+            assetData.name,
+          );
+          dispatch({ type: "CREATE_SHAPE", shape: newFrame });
+        }
+      }
+    },
+    [dispatch],
   );
 
   // ==========================================================================
@@ -818,11 +863,13 @@ function EditorContent({
           pathEdit={pathEdit}
           onPathEditCommit={handlePathEditCommit}
           onPathEditCancel={handlePathEditCancel}
-          zoom={zoom}
-          onZoomChange={setZoom}
+          zoomMode={zoomMode}
+          onZoomModeChange={setZoomMode}
+          onDisplayZoomChange={setDisplayZoom}
           showRulers={showRulers}
           rulerThickness={rulerThickness}
           onViewportChange={setViewport}
+          onAssetDrop={handleAssetDrop}
         />
       </CanvasArea>
     );
@@ -849,6 +896,7 @@ function EditorContent({
     handleDoubleClick,
     handleCanvasCreate,
     handleCanvasCreateFromDrag,
+    handleAssetDrop,
     handleTextEditComplete,
     handleTextEditCancel,
     handleTextEditSelectionChange,
@@ -857,7 +905,7 @@ function EditorContent({
     pathEdit,
     handlePathEditCommit,
     handlePathEditCancel,
-    zoom,
+    zoomMode,
     showRulers,
     rulerThickness,
   ]);
@@ -909,8 +957,9 @@ function EditorContent({
                 direction="horizontal"
               />
               <CanvasControls
-                zoom={zoom}
-                onZoomChange={setZoom}
+                zoomMode={zoomMode}
+                onZoomModeChange={setZoomMode}
+                displayZoom={displayZoom}
                 showRulers={showRulers}
                 onShowRulersChange={setShowRulers}
                 snapEnabled={snapEnabled}
