@@ -13,7 +13,7 @@
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit --rootDir .",
     "test:cov": "vitest run --coverage",
     "test": "vitest --run",
     "dev:api": "bun run demo/api/index.ts",
