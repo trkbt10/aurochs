@@ -159,18 +159,48 @@ const FONT_NAME_MAP: Record<string, string> = {
 };
 
 /**
- * Map PDF font name to standard font name
- * Handles subset prefixes (e.g., "ABCDEF+Helvetica")
+ * Normalize PDF font name to a clean font-family name.
+ *
+ * This is the single source of truth for font name normalization.
+ * Used by both @font-face generation (font-extractor) and text rendering.
+ *
+ * Steps:
+ * 1. Remove leading slash (e.g., "/Helvetica" → "Helvetica")
+ * 2. Remove subset prefix (e.g., "ABCDEF+Helvetica" → "Helvetica")
+ * 3. Replace hyphens with spaces (e.g., "Hiragino-Sans" → "Hiragino Sans")
+ *
+ * @param pdfFontName - Raw font name from PDF (BaseFont or resource identifier)
+ * @returns Normalized font-family name
  */
-export function mapFontName(pdfFontName: string): string {
+export function normalizeFontFamily(pdfFontName: string): string {
   // Remove leading slash if present
   let name = pdfFontName.startsWith("/") ? pdfFontName.slice(1) : pdfFontName;
 
-  // Check for subset prefix (e.g., "ABCDEF+Helvetica") and extract base name
+  // Remove subset/synthetic prefix (e.g., "ABCDEF+", "CIDFont+")
   const plusIndex = name.indexOf("+");
   if (plusIndex > 0) {
     name = name.slice(plusIndex + 1);
   }
+
+  // Replace hyphens with spaces for common patterns
+  // e.g., "Hiragino-Sans" -> "Hiragino Sans"
+  name = name.replace(/-/g, " ");
+
+  return name;
+}
+
+/**
+ * Map PDF font name to standard system font name.
+ *
+ * For non-embedded fonts, maps PDF font names to available system fonts.
+ * For embedded fonts, use normalizeFontFamily() directly instead.
+ *
+ * @param pdfFontName - Raw font name from PDF
+ * @returns Standard system font name
+ */
+export function mapFontName(pdfFontName: string): string {
+  // Normalize first
+  const name = normalizeFontFamily(pdfFontName);
 
   // Check direct mapping
   const mapped = FONT_NAME_MAP[name];

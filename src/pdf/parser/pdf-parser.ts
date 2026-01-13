@@ -12,6 +12,7 @@ import { OperatorParser, type ParsedElement, type ParsedPath, type ParsedText, t
 import { buildPath, builtPathToPdfPath } from "./path-builder";
 import { extractImages } from "./image-extractor";
 import { extractFontMappings, decodeText, type FontMappings } from "./font-decoder";
+import { extractEmbeddedFonts, type EmbeddedFont } from "../domain/font/font-extractor";
 
 // =============================================================================
 // Parser Options
@@ -70,9 +71,21 @@ export async function parsePdf(
   // Extract metadata
   const metadata = extractMetadata(pdfDoc);
 
+  // Extract embedded fonts
+  const embeddedFontsRaw = extractEmbeddedFonts(pdfDoc);
+  const embeddedFonts = embeddedFontsRaw.length > 0
+    ? embeddedFontsRaw.map((f) => ({
+        fontFamily: f.fontFamily,
+        format: f.format,
+        data: f.data,
+        mimeType: f.mimeType,
+      }))
+    : undefined;
+
   return {
     pages,
     metadata,
+    embeddedFonts,
   };
 }
 
@@ -296,9 +309,10 @@ function convertText(parsed: ParsedText, _pageHeight: number, fontMappings: Font
     const width = Math.max(run.endX - run.x, 1); // Ensure non-zero width
 
     // Use baseFont (actual font name) if available, otherwise fall back to resource identifier
+    // Priority: run.baseFont (from operator parser) > fontInfo.baseFont (from mappings) > run.fontName
     // baseFont is the real font name from BaseFont entry (e.g., "ABCDEF+Arial" or "Helvetica")
     // run.fontName is the resource identifier (e.g., "F1" or "JRLKGN")
-    const actualFontName = fontInfo?.baseFont ?? run.fontName;
+    const actualFontName = run.baseFont ?? fontInfo?.baseFont ?? run.fontName;
 
     results.push({
       type: "text" as const,
@@ -308,6 +322,7 @@ function convertText(parsed: ParsedText, _pageHeight: number, fontMappings: Font
       width,
       height: Math.max(textHeight, 1), // Ensure non-zero height
       fontName: actualFontName,
+      baseFont: run.baseFont ?? fontInfo?.baseFont,
       fontSize: effectiveSize, // Use effective font size for PPTX rendering
       graphicsState: parsed.graphicsState,
       // Spacing properties from text state operators

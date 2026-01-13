@@ -19,8 +19,8 @@ export { DEFAULT_FONT_METRICS } from "./defaults";
 // Font style detection
 export { normalizeFontName, isBoldFont, isItalicFont } from "./font-style";
 
-// Font name mapping
-export { mapFontName } from "./font-name-map";
+// Font name mapping and normalization
+export { mapFontName, normalizeFontFamily } from "./font-name-map";
 
 // CMap parsing
 export type { CMapParseResult, CMapParserOptions } from "./cmap-parser";
@@ -52,3 +52,14 @@ export {
   applyEncodingDifferences,
   glyphNameToUnicode,
 } from "./encoding-maps";
+
+// Embedded font extraction
+export type { FontFormat, EmbeddedFont } from "./font-extractor";
+export { extractEmbeddedFonts } from "./font-extractor";
+
+// Font CSS generation (@font-face)
+export {
+  fontToDataUrl,
+  generateFontFaceCss,
+  generateFontFaceStyle,
+} from "./font-css-generator";

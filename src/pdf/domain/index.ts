@@ -86,7 +86,7 @@ export type { PdfText, PdfTextFontMetrics } from "./text";
 export type { PdfImage } from "./image";
 
 // Document domain
-export type { PdfElement, PdfPage, PdfDocument, PdfImportOptions } from "./document";
+export type { PdfElement, PdfPage, PdfDocument, PdfImportOptions, PdfEmbeddedFont } from "./document";
 export { PDF_UNITS, isPdfPath, isPdfText, isPdfImage } from "./document";
 
 // Content stream domain

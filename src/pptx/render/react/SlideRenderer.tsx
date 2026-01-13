@@ -209,6 +209,12 @@ export type SlideRendererSvgProps = SlideRendererProps & {
   readonly className?: string;
   /** Additional style for the SVG element */
   readonly style?: React.CSSProperties;
+  /**
+   * Embedded font CSS (@font-face declarations).
+   * If provided, will be injected as a <style> element in the SVG.
+   * Typically comes from PDF import with embedded fonts.
+   */
+  readonly embeddedFontCss?: string;
 };
 
 /**
@@ -229,6 +235,7 @@ export function SlideRendererSvg({
   layoutShapes,
   className,
   style,
+  embeddedFontCss,
 }: SlideRendererSvgProps) {
   const { width, height } = slideSize;
 
@@ -242,6 +249,10 @@ export function SlideRendererSvg({
       className={className}
       style={style}
     >
+      {/* Embedded fonts CSS (from PDF import) */}
+      {embeddedFontCss && (
+        <style type="text/css">{embeddedFontCss}</style>
+      )}
       <SlideRenderer
         slide={slide}
         slideSize={slideSize}

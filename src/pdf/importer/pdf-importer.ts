@@ -15,6 +15,9 @@ import {
   type SlideSize,
 } from "./slide-builder";
 import { createBlankPptxPresentationFile } from "./pptx-template";
+import type { PdfEmbeddedFont } from "../domain";
+import { generateFontFaceStyle } from "../domain/font/font-css-generator";
+import type { EmbeddedFontData } from "../../pptx/app/presentation-document";
 
 export type PdfImportOptions = {
   /** インポートするページ番号（1始まり）。省略時は全ページ */
@@ -129,7 +132,7 @@ export async function importPdf(
   }));
 
   const document = {
-    ...createPresentationDocument(slidesWithApi, slideSize),
+    ...createPresentationDocument(slidesWithApi, slideSize, pdfDoc.embeddedFonts),
     presentationFile: templateFile,
   };
 
@@ -258,6 +261,7 @@ function addPageNumber(slide: Slide, pageNumber: number, slideSize: SlideSize): 
 function createPresentationDocument(
   slides: readonly SlideWithId[],
   slideSize: { readonly width: Pixels; readonly height: Pixels },
+  pdfEmbeddedFonts?: readonly PdfEmbeddedFont[],
 ): PresentationDocument {
   const presentation: Presentation = {
     slideSize: {
@@ -266,6 +270,25 @@ function createPresentationDocument(
     },
   };
 
+  // Convert PDF embedded fonts to PresentationDocument format
+  const embeddedFonts: EmbeddedFontData[] | undefined = pdfEmbeddedFonts?.map((f) => ({
+    fontFamily: f.fontFamily,
+    format: f.format,
+    data: f.data,
+    mimeType: f.mimeType,
+  }));
+
+  // Generate @font-face CSS for embedded fonts
+  const embeddedFontCss = pdfEmbeddedFonts && pdfEmbeddedFonts.length > 0
+    ? generateFontFaceStyle(pdfEmbeddedFonts.map((f) => ({
+        baseFontName: f.fontFamily,
+        fontFamily: f.fontFamily,
+        format: f.format,
+        data: f.data,
+        mimeType: f.mimeType,
+      })))
+    : undefined;
+
   return {
     presentation,
     slides,
@@ -273,6 +296,8 @@ function createPresentationDocument(
     slideHeight: slideSize.height,
     colorContext: createDefaultColorContextForPdf(),
     resources: createDataUrlResourceResolver(),
+    embeddedFonts,
+    embeddedFontCss,
   };
 }
 

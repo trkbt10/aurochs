@@ -851,6 +851,7 @@ function EditorContent({
           resolvedBackground={renderContext?.resolvedBackground ?? activeSlide?.resolvedBackground}
           editingShapeId={editingShapeId}
           layoutShapes={layoutShapes}
+          embeddedFontCss={document.embeddedFontCss}
           creationMode={creationMode}
           textEdit={textEdit}
           onSelect={canvas.handleSelect}
@@ -894,6 +895,7 @@ function EditorContent({
     colorContext,
     renderContext,
     document.resources,
+    document.embeddedFontCss,
     editorResourceStore,
     fontScheme,
     editingShapeId,

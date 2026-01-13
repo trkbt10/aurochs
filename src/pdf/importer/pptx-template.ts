@@ -28,6 +28,16 @@ const APP_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
   <AppVersion>16.0</AppVersion>
 </Properties>`;
 
+/**
+ * Root relationships file (_rels/.rels)
+ * Required by OPC (ECMA-376 Part 2) to identify the main document.
+ */
+const ROOT_RELS_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/>
+</Relationships>`;
+
 const MINIMAL_THEME = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="WebPptx PDF Import">
   <a:themeElements>
@@ -122,6 +132,9 @@ export function createBlankPptxPresentationFile(
   }
 
   const pkg = createEmptyZipPackage();
+
+  // Root relationships (required by OPC)
+  pkg.writeText("_rels/.rels", ROOT_RELS_XML);
 
   const contentTypesXml = buildContentTypesXml(slideCount);
   pkg.writeText("[Content_Types].xml", contentTypesXml);

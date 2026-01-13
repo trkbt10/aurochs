@@ -66,6 +66,22 @@ export type PdfPage = {
   readonly elements: readonly PdfElement[];
 };
 
+/**
+ * Embedded font data extracted from PDF.
+ *
+ * @see ISO 32000-1:2008 Section 9.9 (Embedded Font Programs)
+ */
+export type PdfEmbeddedFont = {
+  /** Font family name (e.g., "Hiragino Sans") */
+  readonly fontFamily: string;
+  /** Font format */
+  readonly format: "opentype" | "truetype" | "type1" | "cff";
+  /** Raw font data */
+  readonly data: Uint8Array;
+  /** MIME type */
+  readonly mimeType: string;
+};
+
 export type PdfDocument = {
   readonly pages: readonly PdfPage[];
   readonly metadata?: {
@@ -73,6 +89,11 @@ export type PdfDocument = {
     readonly author?: string;
     readonly subject?: string;
   };
+  /**
+   * Embedded fonts extracted from PDF.
+   * Only present if PDF contains embedded font programs.
+   */
+  readonly embeddedFonts?: readonly PdfEmbeddedFont[];
 };
 
 // =============================================================================

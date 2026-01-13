@@ -110,7 +110,19 @@ export type PdfText = {
    * @see ISO 32000-1:2008 Section 9.8 - Font Descriptors
    */
   readonly height: number;
+  /**
+   * Font resource identifier (e.g., "F1", "F2").
+   * This is the PDF internal name used in content stream operators.
+   */
   readonly fontName: string;
+  /**
+   * Actual font name from BaseFont entry (e.g., "CIDFont+F1", "Helvetica").
+   * This is the real font name for rendering, not the resource identifier.
+   * Used for @font-face matching when embedded fonts are present.
+   *
+   * @see ISO 32000-1:2008 Section 9.6 - Simple Fonts
+   */
+  readonly baseFont?: string;
   /**
    * Font size in PDF points (1 point = 1/72 inch).
    */

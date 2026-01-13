@@ -14,6 +14,23 @@ import type { ResolvedBackgroundFill } from "../render/background-fill";
 import type { Slide as ApiSlide } from "./types";
 
 /**
+ * Embedded font data extracted from source document (e.g., PDF).
+ *
+ * Contains font program data that can be used to create @font-face
+ * declarations for accurate rendering in web contexts.
+ */
+export type EmbeddedFontData = {
+  /** Font family name (e.g., "Hiragino Sans") */
+  readonly fontFamily: string;
+  /** Font format ("opentype", "truetype", "type1", "cff") */
+  readonly format: string;
+  /** Raw font data */
+  readonly data: Uint8Array;
+  /** MIME type for the font */
+  readonly mimeType: string;
+};
+
+/**
  * Slide identifier
  */
 export type SlideId = string;
@@ -67,4 +84,17 @@ export type PresentationDocument = {
    * Used to build SlideRenderContext for proper rendering after edits.
    */
   readonly presentationFile?: PresentationFile;
+
+  // === Embedded Fonts (from PDF import) ===
+  /**
+   * Embedded fonts extracted from source document.
+   * Only present for PDF imports where fonts are embedded in the PDF.
+   */
+  readonly embeddedFonts?: readonly EmbeddedFontData[];
+
+  /**
+   * Pre-generated @font-face CSS for embedded fonts.
+   * Can be injected into SVG <style> or HTML <style> for rendering.
+   */
+  readonly embeddedFontCss?: string;
 };

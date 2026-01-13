@@ -9,6 +9,31 @@ import { usePresentationEditor } from "../../context/presentation/PresentationEd
 import { exportPptx, type ExportOptions, type ExportResult } from "../../../pptx/exporter/pptx-exporter";
 
 // =============================================================================
+// File System Access API Types (for browsers that support it)
+// =============================================================================
+
+type FileSystemWritableFileStream = {
+  write(data: Blob | ArrayBuffer | ArrayBufferView | string): Promise<void>;
+  close(): Promise<void>;
+};
+
+type FileSystemFileHandle = {
+  createWritable(): Promise<FileSystemWritableFileStream>;
+};
+
+type SaveFilePickerOptions = {
+  suggestedName?: string;
+  types?: Array<{
+    description?: string;
+    accept: Record<string, string[]>;
+  }>;
+};
+
+type WindowWithFileSystem = Window & {
+  showSaveFilePicker(options?: SaveFilePickerOptions): Promise<FileSystemFileHandle>;
+};
+
+// =============================================================================
 // Types
 // =============================================================================
 
@@ -51,7 +76,7 @@ export type UseExportPresentationResult = ExportState & {
   /** Export presentation as ArrayBuffer */
   readonly exportAsBuffer: (options?: ExportOptions) => Promise<ArrayBuffer | null>;
   /** Download a blob as file */
-  readonly downloadBlob: (blob: Blob, fileName?: string) => void;
+  readonly downloadBlob: (blob: Blob, fileName?: string) => Promise<void>;
   /** Clear error state */
   readonly clearError: () => void;
 };
@@ -90,9 +115,39 @@ export function useExportPresentation(): UseExportPresentationResult {
   });
 
   /**
-   * Download a blob as file
+   * Download a blob as file using File System Access API when available.
+   *
+   * File System Access API (showSaveFilePicker) provides reliable completion detection.
+   * Falls back to anchor download for unsupported browsers.
    */
-  const downloadBlob = useCallback((blob: Blob, fileName: string = "presentation.pptx") => {
+  const downloadBlob = useCallback(async (blob: Blob, fileName: string = "presentation.pptx") => {
+    // Try File System Access API first (Chrome, Edge)
+    if ("showSaveFilePicker" in window) {
+      try {
+        const handle = await (window as WindowWithFileSystem).showSaveFilePicker({
+          suggestedName: fileName,
+          types: [{
+            description: "PowerPoint Presentation",
+            accept: {
+              "application/vnd.openxmlformats-officedocument.presentationml.presentation": [".pptx"],
+            },
+          }],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        return; // Write completed successfully
+      } catch (err) {
+        // User cancelled or API unavailable - fall through to legacy method
+        if ((err as Error).name === "AbortError") {
+          return; // User cancelled, don't fall back
+        }
+        // Other errors: fall through to legacy method
+      }
+    }
+
+    // Fallback: anchor download (Firefox, Safari, etc.)
+    // Keep URL alive longer since we can't detect completion
     const url = URL.createObjectURL(blob);
     const a = window.document.createElement("a");
     a.href = url;
@@ -101,7 +156,10 @@ export function useExportPresentation(): UseExportPresentationResult {
     window.document.body.appendChild(a);
     a.click();
     window.document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    // Delay revocation - 60s should be enough for most downloads to start
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 60000);
   }, []);
 
   /**
@@ -177,7 +235,7 @@ export function useExportPresentation(): UseExportPresentationResult {
         setState({ isExporting: false, error: null, lastResult: result });
 
         if (autoDownload) {
-          downloadBlob(result.blob, fileName);
+          await downloadBlob(result.blob, fileName);
         }
 
         onExportComplete?.(result);

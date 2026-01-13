@@ -80,6 +80,12 @@ export type SvgEditorCanvasProps = {
   readonly renderOptions?: Partial<RenderOptions>;
   readonly editingShapeId?: ShapeId;
   readonly layoutShapes?: readonly Shape[];
+  /**
+   * Embedded font CSS (@font-face declarations).
+   * If provided, will be injected as a <style> element in the SVG.
+   * Typically comes from PDF import with embedded fonts.
+   */
+  readonly embeddedFontCss?: string;
   readonly creationMode: CreationMode;
   readonly textEdit: TextEditState;
   readonly onSelect: (shapeId: ShapeId, addToSelection: boolean, toggle?: boolean) => void;
@@ -348,6 +354,7 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
     rulerThickness: rulerThicknessProp,
     onViewportChange,
     onAssetDrop,
+    embeddedFontCss,
   },
   containerRef
 ) {
@@ -861,6 +868,11 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
         onDragOver={handleDragOver}
         onDrop={handleDrop}
       >
+        {/* Embedded fonts CSS (from PDF import) */}
+        {embeddedFontCss && (
+          <style type="text/css">{embeddedFontCss}</style>
+        )}
+
         {/* Canvas viewport group with pan/zoom transform */}
         <g transform={`translate(${rulerThickness}, ${rulerThickness})`}>
           <g transform={getTransformString(viewport)}>

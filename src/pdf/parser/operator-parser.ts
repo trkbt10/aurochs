@@ -58,7 +58,16 @@ export type TextRun = {
   readonly y: number;
 
   readonly fontSize: number;
+  /**
+   * Font resource identifier (e.g., "F1", "/F1").
+   * This is the PDF internal name used in Tf operator.
+   */
   readonly fontName: string;
+  /**
+   * Actual font name from BaseFont entry (e.g., "CIDFont+F1", "Helvetica").
+   * This is the real font name for rendering, used for @font-face matching.
+   */
+  readonly baseFont?: string;
 
   /**
    * X coordinate where text ends (after last glyph).
@@ -124,6 +133,7 @@ export class OperatorParser {
   private textMatrix: PdfMatrix = IDENTITY_MATRIX;
   private textLineMatrix: PdfMatrix = IDENTITY_MATRIX;
   private currentFont = "";
+  private currentBaseFont: string | undefined = undefined;
   private currentFontSize = 12;
   private textRuns: TextRun[] = [];
   private currentFontMetrics: FontMetrics = DEFAULT_FONT_METRICS;
@@ -556,6 +566,8 @@ export class OperatorParser {
 
     this.currentFontMetrics = fontInfo?.metrics ?? DEFAULT_FONT_METRICS;
     this.currentCodeByteWidth = fontInfo?.codeByteWidth ?? 1;
+    // Store baseFont for accurate font-family matching (ISO 32000-1 Section 9.6)
+    this.currentBaseFont = fontInfo?.baseFont;
   }
 
   /** Tc operator: set character spacing (PDF Reference 9.3.2) */
@@ -693,6 +705,7 @@ export class OperatorParser {
       y: startPos.y,
       fontSize: this.currentFontSize,
       fontName: this.currentFont,
+      baseFont: this.currentBaseFont,
       endX: endPos.x,
       effectiveFontSize,
       // Add spacing properties from text state
