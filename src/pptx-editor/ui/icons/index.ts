@@ -67,6 +67,10 @@ export {
   Video as VideoIcon,
   File as FileIcon,
 
+  // View modes
+  LayoutGrid as TileViewIcon,
+  List as ListViewIcon,
+
   // UI elements
   Plus as AddIcon,
   Maximize2 as EnterFullscreenIcon,

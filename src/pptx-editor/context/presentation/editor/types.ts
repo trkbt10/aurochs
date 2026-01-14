@@ -10,6 +10,8 @@ import type { ShapeId } from "../../../../pptx/domain/types";
 import type { Pixels, Degrees } from "../../../../ooxml/domain/units";
 import type { PresentationDocument, SlideWithId, SlideId } from "../../../../pptx/app";
 import type { ShapeHierarchyTarget } from "../../../shape";
+import type { FontSpec } from "../../../../pptx/domain/resolution";
+import type { ThemePreset, SchemeColorName } from "../../../panels/theme-editor/types";
 import type {
   UndoRedoHistory,
   SelectionState,
@@ -21,6 +23,22 @@ import type {
   PathEditAction,
 } from "../../slide/state";
 import type { TextEditState } from "../../../slide/text-edit";
+
+// =============================================================================
+// Editor Mode Types
+// =============================================================================
+
+/**
+ * Editor mode - determines the main editing context
+ */
+export type EditorMode = "slide" | "theme";
+
+/**
+ * Create default slide editor mode
+ */
+export function createSlideEditorMode(): EditorMode {
+  return "slide";
+}
 
 // =============================================================================
 // Creation Mode Types
@@ -112,6 +130,8 @@ export type PresentationEditorState = {
   readonly pathDraw: PathDrawState;
   /** Path editing state (for editing existing paths) */
   readonly pathEdit: PathEditState;
+  /** Current editor mode (slide or theme) */
+  readonly editorMode: EditorMode;
 };
 
 // =============================================================================
@@ -312,7 +332,26 @@ export type PresentationEditorAction =
   | { readonly type: "END_PENCIL_DRAW" }
 
   // Path editing (editing existing paths)
-  | PathEditAction;
+  | PathEditAction
+
+  // Editor mode
+  | { readonly type: "SET_EDITOR_MODE"; readonly mode: EditorMode }
+
+  // Theme editing
+  | {
+      readonly type: "UPDATE_COLOR_SCHEME";
+      readonly name: SchemeColorName;
+      readonly color: string;
+    }
+  | {
+      readonly type: "UPDATE_FONT_SCHEME";
+      readonly target: "major" | "minor";
+      readonly spec: Partial<FontSpec>;
+    }
+  | {
+      readonly type: "APPLY_THEME_PRESET";
+      readonly preset: ThemePreset;
+    };
 
 // =============================================================================
 // Context Value Types
@@ -344,6 +383,8 @@ export type PresentationEditorContextValue = {
   readonly pathDraw: PathDrawState;
   /** Path editing state */
   readonly pathEdit: PathEditState;
+  /** Current editor mode (slide or theme) */
+  readonly editorMode: EditorMode;
 };
 
 // =============================================================================

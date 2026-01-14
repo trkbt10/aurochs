@@ -80,6 +80,7 @@ export function PresentationEditorProvider({
   const textEdit = state.textEdit;
   const pathDraw = state.pathDraw;
   const pathEdit = state.pathEdit;
+  const editorMode = state.editorMode;
 
   const value = useMemo<PresentationEditorContextValue>(
     () => ({
@@ -95,8 +96,9 @@ export function PresentationEditorProvider({
       textEdit,
       pathDraw,
       pathEdit,
+      editorMode,
     }),
-    [state, document, activeSlide, selectedShapes, primaryShape, canUndo, canRedo, creationMode, textEdit, pathDraw, pathEdit]
+    [state, document, activeSlide, selectedShapes, primaryShape, canUndo, canRedo, creationMode, textEdit, pathDraw, pathEdit, editorMode]
   );
 
   return (

@@ -22,7 +22,8 @@ import { SlideThumbnailPanel } from "../panels";
 import { useSlideThumbnails } from "../thumbnail/use-slide-thumbnails";
 import { SlideThumbnailPreview } from "../thumbnail/SlideThumbnailPreview";
 import { CreationToolbar } from "../panels/CreationToolbar";
-import type { CreationMode } from "../context/presentation/editor/types";
+import { EditorModePivot } from "../panels/EditorModePivot";
+import type { CreationMode, EditorMode } from "../context/presentation/editor/types";
 import { createSelectMode } from "../context/presentation/editor/types";
 import type { DrawingPath } from "../path-tools/types";
 import { isCustomGeometry } from "../path-tools/utils/path-commands";
@@ -77,6 +78,9 @@ import {
 import { EDITOR_GRID_CONFIG, usePivotTabs, CanvasArea } from "../layout";
 import { SelectedElementTab, SlideInfoTab, LayersTab } from "../panels/right-panel";
 import { AssetPanel, LayoutInfoPanel, ThemeViewerPanel } from "../panels/inspector";
+import { ThemeEditorTabs, ThemeEditorCanvas } from "../panels/theme-editor";
+import type { ThemePreset, SchemeColorName } from "../panels/theme-editor/types";
+import type { FontSpec } from "../../pptx/domain/resolution";
 import {
   editorContainerStyle,
   toolbarStyle,
@@ -141,6 +145,7 @@ function EditorContent({
     creationMode,
     textEdit,
     pathEdit,
+    editorMode,
   } = usePresentationEditor();
 
   // Get the editor resource store for uploaded/created resources
@@ -203,6 +208,49 @@ function EditorContent({
   const handleCreationModeChange = useCallback(
     (mode: CreationMode) => {
       dispatch({ type: "SET_CREATION_MODE", mode });
+    },
+    [dispatch],
+  );
+
+  const handleEditorModeChange = useCallback(
+    (mode: EditorMode) => {
+      dispatch({ type: "SET_EDITOR_MODE", mode });
+      // Auto-switch to properties tab when entering theme mode
+      if (mode === "theme") {
+        handleTabChange("properties");
+      }
+    },
+    [dispatch, handleTabChange],
+  );
+
+  // ==========================================================================
+  // Theme editing handlers
+  // ==========================================================================
+
+  const handleColorSchemeChange = useCallback(
+    (name: SchemeColorName, color: string) => {
+      dispatch({ type: "UPDATE_COLOR_SCHEME", name, color });
+    },
+    [dispatch],
+  );
+
+  const handleMajorFontChange = useCallback(
+    (spec: Partial<FontSpec>) => {
+      dispatch({ type: "UPDATE_FONT_SCHEME", target: "major", spec });
+    },
+    [dispatch],
+  );
+
+  const handleMinorFontChange = useCallback(
+    (spec: Partial<FontSpec>) => {
+      dispatch({ type: "UPDATE_FONT_SCHEME", target: "minor", spec });
+    },
+    [dispatch],
+  );
+
+  const handleThemePresetSelect = useCallback(
+    (preset: ThemePreset) => {
+      dispatch({ type: "APPLY_THEME_PRESET", preset });
     },
     [dispatch],
   );
@@ -793,14 +841,46 @@ function EditorContent({
     [document.presentationFile, colorContext, fontScheme],
   );
 
-  const tabContents = useMemo<TabContents>(
-    () => ({
+  // テーマモード用タブコンテンツ
+  const themeEditorTabContent = useMemo(
+    () => (
+      <ThemeEditorTabs
+        colorScheme={colorContext.colorScheme}
+        fontScheme={fontScheme}
+        onColorChange={handleColorSchemeChange}
+        onMajorFontChange={handleMajorFontChange}
+        onMinorFontChange={handleMinorFontChange}
+        onPresetSelect={handleThemePresetSelect}
+      />
+    ),
+    [colorContext.colorScheme, fontScheme, handleColorSchemeChange, handleMajorFontChange, handleMinorFontChange, handleThemePresetSelect],
+  );
+
+  // モードに応じたタブコンテンツを選択
+  const tabContents = useMemo<TabContents>(() => {
+    if (editorMode === "theme") {
+      // テーマモード: propertiesタブにテーマエディターを表示
+      return {
+        properties: themeEditorTabContent,
+        slide: slideTabContent,
+        resources: resourcesTabContent,
+      };
+    }
+    // スライドモード: 通常のタブコンテンツ
+    return {
       properties: propertiesTabContent,
       slide: slideTabContent,
       resources: resourcesTabContent,
-    }),
-    [propertiesTabContent, slideTabContent, resourcesTabContent],
-  );
+    };
+  }, [editorMode, propertiesTabContent, slideTabContent, resourcesTabContent, themeEditorTabContent]);
+
+  // モードに応じたタブラベルのオーバーライド
+  const tabLabelOverrides = useMemo(() => {
+    if (editorMode === "theme") {
+      return { properties: "テーマ" };
+    }
+    return undefined;
+  }, [editorMode]);
 
   // ==========================================================================
   // Memoized Layer Components
@@ -822,7 +902,23 @@ function EditorContent({
     return <CreationToolbar mode={creationMode} onModeChange={handleCreationModeChange} appearance="floating" />;
   }, [showToolbar, creationMode, handleCreationModeChange]);
 
-  const canvasLayerComponent = useMemo(() => {
+  // Theme editor canvas for theme mode
+  const themeEditorCanvasComponent = useMemo(
+    () => (
+      <ThemeEditorCanvas
+        colorScheme={colorContext.colorScheme}
+        fontScheme={fontScheme}
+        onColorChange={handleColorSchemeChange}
+        onMajorFontChange={handleMajorFontChange}
+        onMinorFontChange={handleMinorFontChange}
+        onPresetSelect={handleThemePresetSelect}
+      />
+    ),
+    [colorContext.colorScheme, fontScheme, handleColorSchemeChange, handleMajorFontChange, handleMinorFontChange, handleThemePresetSelect]
+  );
+
+  // Slide editor canvas for slide mode
+  const slideEditorCanvasComponent = useMemo(() => {
     if (!activeSlide || !slide) {
       return (
         <div style={noSlideStyle}>
@@ -920,6 +1016,9 @@ function EditorContent({
     rulerThickness,
   ]);
 
+  // Select canvas based on editor mode
+  const canvasLayerComponent = editorMode === "theme" ? themeEditorCanvasComponent : slideEditorCanvasComponent;
+
   // ==========================================================================
   // Build GridLayout layers
   // ==========================================================================
@@ -928,6 +1027,7 @@ function EditorContent({
     thumbnailComponent: thumbnailLayerComponent,
     canvasComponent: canvasLayerComponent,
     tabContents,
+    tabLabelOverrides,
     showInspector,
     activeTab,
     onTabChange: handleTabChange,
@@ -953,47 +1053,67 @@ function EditorContent({
         {showToolbar && (
           <div style={toolbarStyle}>
             <div style={{ display: "flex", gap: "16px", alignItems: "center", width: "100%" }}>
-              <ShapeToolbar
-                canUndo={canUndo}
-                canRedo={canRedo}
-                selectedIds={selection.selectedIds}
-                primaryShape={primaryShape}
-                onUndo={() => dispatch({ type: "UNDO" })}
-                onRedo={() => dispatch({ type: "REDO" })}
-                onDelete={shape.handleDelete}
-                onDuplicate={shape.handleDuplicate}
-                onReorder={shape.handleReorder}
-                onShapeChange={shape.handleShapeChange}
-                direction="horizontal"
-              />
-              <CanvasControls
-                zoomMode={zoomMode}
-                onZoomModeChange={setZoomMode}
-                displayZoom={displayZoom}
-                showRulers={showRulers}
-                onShowRulersChange={setShowRulers}
-                snapEnabled={snapEnabled}
-                onSnapEnabledChange={setSnapEnabled}
-                snapStep={snapStep}
-                onSnapStepChange={setSnapStep}
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => openPreview(getEditorSlideIndex())}
-                title="Preview slideshow"
-                style={{ marginLeft: "auto" }}
-              >
-                <PlayIcon size={16} />
-                <span style={{ marginLeft: "6px" }}>Preview</span>
-              </Button>
-              <ExportButton fileName="presentation.pptx" />
+              <EditorModePivot mode={editorMode} onModeChange={handleEditorModeChange} />
+              {editorMode === "slide" && (
+                <>
+                  <ShapeToolbar
+                    canUndo={canUndo}
+                    canRedo={canRedo}
+                    selectedIds={selection.selectedIds}
+                    primaryShape={primaryShape}
+                    onUndo={() => dispatch({ type: "UNDO" })}
+                    onRedo={() => dispatch({ type: "REDO" })}
+                    onDelete={shape.handleDelete}
+                    onDuplicate={shape.handleDuplicate}
+                    onReorder={shape.handleReorder}
+                    onShapeChange={shape.handleShapeChange}
+                    direction="horizontal"
+                  />
+                  <CanvasControls
+                    zoomMode={zoomMode}
+                    onZoomModeChange={setZoomMode}
+                    displayZoom={displayZoom}
+                    showRulers={showRulers}
+                    onShowRulersChange={setShowRulers}
+                    snapEnabled={snapEnabled}
+                    onSnapEnabledChange={setSnapEnabled}
+                    snapStep={snapStep}
+                    onSnapStepChange={setSnapStep}
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => openPreview(getEditorSlideIndex())}
+                    title="Preview slideshow"
+                    style={{ marginLeft: "auto" }}
+                  >
+                    <PlayIcon size={16} />
+                    <span style={{ marginLeft: "6px" }}>Preview</span>
+                  </Button>
+                  <ExportButton fileName="presentation.pptx" />
+                </>
+              )}
             </div>
           </div>
         )}
 
         <div style={gridContainerStyle}>
-          <GridLayout config={EDITOR_GRID_CONFIG} layers={layers} />
+          {editorMode === "theme" ? (
+            <ThemeEditorCanvas
+              colorScheme={colorContext.colorScheme}
+              fontScheme={fontScheme}
+              onColorChange={handleColorSchemeChange}
+              onMajorFontChange={handleMajorFontChange}
+              onMinorFontChange={handleMinorFontChange}
+              onPresetSelect={handleThemePresetSelect}
+              canUndo={canUndo}
+              canRedo={canRedo}
+              onUndo={() => dispatch({ type: "UNDO" })}
+              onRedo={() => dispatch({ type: "REDO" })}
+            />
+          ) : (
+            <GridLayout config={EDITOR_GRID_CONFIG} layers={layers} />
+          )}
         </div>
       </div>
     </TextEditContextProvider>

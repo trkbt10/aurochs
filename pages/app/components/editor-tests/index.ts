@@ -13,3 +13,4 @@ export { SlidePropertiesTest } from "./SlidePropertiesTest";
 export { UIComponentsTest } from "./UIComponentsTest";
 export { SlideEditorTest } from "./SlideEditorTest";
 export { PresentationEditorTest } from "./PresentationEditorTest";
+export { ThemeEditorTest } from "./ThemeEditorTest";

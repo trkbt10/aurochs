@@ -17,13 +17,14 @@ import {
   UIComponentsTest,
   SlideEditorTest,
   PresentationEditorTest,
+  ThemeEditorTest,
 } from "../components/editor-tests";
 
 type EditorTestPageProps = {
   readonly onBack: () => void;
 };
 
-type TabId = "presentation" | "slide" | "primitives" | "colors" | "text" | "shapes" | "tables" | "charts" | "ui";
+type TabId = "presentation" | "slide" | "primitives" | "colors" | "text" | "shapes" | "tables" | "charts" | "ui" | "theme";
 
 type Tab = {
   readonly id: TabId;
@@ -40,6 +41,7 @@ const tabs: readonly Tab[] = [
   { id: "tables", label: "Tables" },
   { id: "charts", label: "Charts" },
   { id: "ui", label: "UI Components" },
+  { id: "theme", label: "Theme" },
 ];
 
 const pageStyle: CSSProperties = {
@@ -137,6 +139,8 @@ function TabContent({ activeTab }: { activeTab: TabId }) {
       return <ChartEditorsTest />;
     case "ui":
       return <UIComponentsTest />;
+    case "theme":
+      return <ThemeEditorTest />;
   }
 }
 

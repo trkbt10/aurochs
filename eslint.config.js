@@ -20,6 +20,8 @@ export default [
   // Ignore patterns
   {
     ignores: [
+      "reference/**",
+      "**/dist/**",
       "node_modules/**",
       "fixtures/**",
       "demo/**",

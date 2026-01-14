@@ -22,10 +22,20 @@ export type TabContents = {
   readonly resources: ReactNode;
 };
 
+/**
+ * Optional tab label overrides.
+ */
+export type TabLabelOverrides = {
+  readonly properties?: string;
+  readonly slide?: string;
+  readonly resources?: string;
+};
+
 export type UseEditorLayersParams = {
   readonly thumbnailComponent: ReactNode;
   readonly canvasComponent: ReactNode;
   readonly tabContents: TabContents;
+  readonly tabLabelOverrides?: TabLabelOverrides;
   readonly showInspector: boolean;
   readonly activeTab: string;
   readonly onTabChange: (tabId: string) => void;
@@ -36,10 +46,10 @@ export type UseEditorLayersResult = {
   readonly layers: LayerDefinition[];
 };
 
-function buildPivotItems(tabContents: TabContents): PivotBehavior["items"] {
+function buildPivotItems(tabContents: TabContents, labelOverrides?: TabLabelOverrides): PivotBehavior["items"] {
   return RIGHT_PANEL_TABS.map((tab) => ({
     id: tab.id,
-    label: tab.label,
+    label: labelOverrides?.[tab.id] ?? tab.label,
     content: tabContents[tab.id] ?? null,
     cache: true,
   }));
@@ -52,12 +62,13 @@ export function useEditorLayers({
   thumbnailComponent,
   canvasComponent,
   tabContents,
+  tabLabelOverrides,
   showInspector,
   activeTab,
   onTabChange,
   inspectorPanelStyle,
 }: UseEditorLayersParams): UseEditorLayersResult {
-  const pivotItems = useMemo(() => buildPivotItems(tabContents), [tabContents]);
+  const pivotItems = useMemo(() => buildPivotItems(tabContents, tabLabelOverrides), [tabContents, tabLabelOverrides]);
 
   const pivotConfig = useMemo<PivotBehavior | undefined>(() => {
     if (!showInspector) {

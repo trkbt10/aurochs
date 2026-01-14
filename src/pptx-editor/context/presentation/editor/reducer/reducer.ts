@@ -6,7 +6,7 @@
 
 import type { PresentationDocument } from "../../../../../pptx/app";
 import type { PresentationEditorState, PresentationEditorAction } from "../types";
-import { createSelectMode } from "../types";
+import { createSelectMode, createSlideEditorMode } from "../types";
 import type { HandlerMap, ActionHandler } from "./handler-types";
 import {
   createHistory,
@@ -28,6 +28,7 @@ import { CREATION_HANDLERS } from "./creation-handlers";
 import { TEXT_EDIT_HANDLERS } from "./text-edit-handlers";
 import { PATH_DRAW_HANDLERS } from "./path-draw-handlers";
 import { PATH_EDIT_HANDLERS } from "./path-edit-handlers";
+import { THEME_HANDLERS } from "./theme-handlers";
 
 /**
  * Combined handler map from all domains
@@ -43,6 +44,7 @@ const ALL_HANDLERS: HandlerMap = {
   ...TEXT_EDIT_HANDLERS,
   ...PATH_DRAW_HANDLERS,
   ...PATH_EDIT_HANDLERS,
+  ...THEME_HANDLERS,
 };
 
 /**
@@ -62,6 +64,7 @@ export function createPresentationEditorState(
     textEdit: createInactiveTextEditState(),
     pathDraw: createIdlePathDrawState(),
     pathEdit: createInactivePathEditState(),
+    editorMode: createSlideEditorMode(),
   };
 }
 

@@ -6,7 +6,7 @@ export { usePanelCallbacks, type UsePanelCallbacksParams, type UsePanelCallbacks
 export { useContextMenuActions, type UseContextMenuActionsParams, type UseContextMenuActionsResult } from "./use-context-menu-actions";
 export { useKeyboardShortcuts, type UseKeyboardShortcutsParams } from "./use-keyboard-shortcuts";
 export { useDragHandlers, type UseDragHandlersParams } from "./use-drag-handlers";
-export { useEditorLayers, type UseEditorLayersParams, type UseEditorLayersResult, type TabContents } from "./use-editor-layers";
+export { useEditorLayers, type UseEditorLayersParams, type UseEditorLayersResult, type TabContents, type TabLabelOverrides } from "./use-editor-layers";
 export {
   useExportPresentation,
   type ExportState,
