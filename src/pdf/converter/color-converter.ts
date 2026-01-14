@@ -227,6 +227,9 @@ function convertDashPattern(dashArray: readonly number[]): DashStyle {
 
 /**
  * PdfGraphicsStateからFillとLineを生成
+ *
+ * For stroke-only paths, explicitly returns noFill to prevent
+ * PPTX from applying theme default fills.
  */
 export function convertGraphicsStateToStyle(
   graphicsState: PdfGraphicsState,
@@ -237,6 +240,10 @@ export function convertGraphicsStateToStyle(
 
   if (paintOp === "fill" || paintOp === "fillStroke") {
     fill = convertFill(graphicsState.fillColor, graphicsState.fillAlpha);
+  } else if (paintOp === "stroke") {
+    // Explicitly set noFill for stroke-only paths to prevent
+    // PPTX theme default fills from being applied
+    fill = noFill();
   }
 
   if (paintOp === "stroke" || paintOp === "fillStroke") {

@@ -59,7 +59,9 @@ export function decodeText(
 
   // For 2-byte CID fonts, try CID fallback if mapping is empty or incomplete
   if (codeByteWidth === 2) {
-    return decodeTwoByteText(rawText, mapping, ordering);
+    // Identity ordering has no standard CID fallback mappings
+    const fallbackOrdering = ordering === "Identity" ? undefined : ordering;
+    return decodeTwoByteText(rawText, mapping, fallbackOrdering);
   }
 
   // For single-byte fonts, use ToUnicode mapping if available

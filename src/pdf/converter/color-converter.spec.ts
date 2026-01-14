@@ -172,7 +172,7 @@ describe("convertGraphicsStateToStyle", () => {
     });
 
     expect(convertGraphicsStateToStyle(graphicsState, "stroke")).toEqual({
-      fill: undefined,
+      fill: { type: "noFill" }, // Explicit noFill prevents PPTX theme default fills
       line: {
         width: px(3),
         cap: "square",

@@ -24,6 +24,7 @@
  */
 
 import type { CIDOrdering } from "./types";
+import { JAPAN1_KANJI_MAPPINGS } from "./japan1-kanji-mappings";
 
 /**
  * CID-to-Unicode fallback mapping
@@ -177,6 +178,10 @@ export function getCIDFallbackMapping(ordering: CIDOrdering): CIDFallbackMapping
   switch (ordering) {
     case "Japan1":
       for (const [k, v] of JAPAN1_EXTRA_MAPPINGS) {
+        combined.set(k, v);
+      }
+      // Add kanji mappings (CJK Unified Ideographs)
+      for (const [k, v] of JAPAN1_KANJI_MAPPINGS) {
         combined.set(k, v);
       }
       break;

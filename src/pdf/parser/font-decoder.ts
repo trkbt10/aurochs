@@ -291,9 +291,20 @@ function extractBaseFont(fontDict: PDFDict): string | null {
 function fontExtractionResultToFontInfo(result: FontExtractionResult): FontInfo {
   const toUnicode = result.toUnicode ?? { mapping: new Map<number, string>(), codeByteWidth: 1 as const };
 
+  // Determine code byte width:
+  // 1. If ToUnicode CMap was parsed, use its detected byte width
+  // 2. If CID ordering is present (Japan1, GB1, CNS1, Korea1), it's a CID font which uses 2-byte codes
+  // 3. Otherwise, default to 1-byte
+  let codeByteWidth: 1 | 2 = toUnicode.codeByteWidth;
+  if (result.ordering !== null && codeByteWidth === 1) {
+    // CID fonts (Japan1, GB1, CNS1, Korea1) always use 2-byte character codes
+    // even if ToUnicode CMap is missing or incomplete
+    codeByteWidth = 2;
+  }
+
   return {
     mapping: toUnicode.mapping,
-    codeByteWidth: toUnicode.codeByteWidth,
+    codeByteWidth,
     metrics: result.metrics ?? DEFAULT_FONT_METRICS,
     ordering: result.ordering ?? undefined,
     encodingMap: result.encoding ?? undefined,
