@@ -97,14 +97,71 @@ function applyForceAntiAlias(content: React.ReactNode): React.ReactNode {
 }
 
 /**
- * Apply upright text for vertical types.
+ * Apply vertical text transformation based on verticalType.
+ *
+ * Per ECMA-376 Part 1, Section 21.1.2.1.39:
+ * - "vert": 90 degree clockwise rotation, text flows top-to-bottom
+ * - "vert270": 270 degree (or -90) rotation
+ * - "eaVert": Same as vert, but CJK glyphs may remain upright
+ * - "wordArtVert": Characters stacked vertically (no rotation)
+ * - "mongolianVert": Similar to wordArtVert
+ *
+ * @see ECMA-376 Part 1, Section 21.1.2.1.39 (ST_TextVerticalType)
  */
-function applyUprightText(content: React.ReactNode): React.ReactNode {
-  return (
-    <g style={{ textOrientation: "upright", writingMode: "vertical-rl" }}>
-      {content}
-    </g>
-  );
+function applyVerticalTextTransform(
+  content: React.ReactNode,
+  bodyProps: TextBody["bodyProperties"],
+  width: number,
+  height: number,
+): React.ReactNode {
+  const verticalType = bodyProps.verticalType ?? "horz";
+
+  if (verticalType === "horz") {
+    return content;
+  }
+
+  // CSS-based upright mode (glyphs remain upright in vertical layout)
+  if (bodyProps.upright === true) {
+    return (
+      <g style={{ textOrientation: "upright", writingMode: "vertical-rl" }}>
+        {content}
+      </g>
+    );
+  }
+
+  // SVG transform-based vertical text
+  switch (verticalType) {
+    case "vert":
+    case "eaVert": {
+      // 90° clockwise: translate to right edge, then rotate
+      // The layout engine swapped dimensions, so we use original width (now height) for translation
+      return (
+        <g transform={`translate(${width}, 0) rotate(90)`}>
+          {content}
+        </g>
+      );
+    }
+    case "vert270": {
+      // -90° (270°): translate to bottom edge, then rotate
+      return (
+        <g transform={`translate(0, ${height}) rotate(-90)`}>
+          {content}
+        </g>
+      );
+    }
+    case "wordArtVert":
+    case "mongolianVert":
+    case "wordArtVertRtl": {
+      // Characters stacked vertically - use CSS approach
+      return (
+        <g style={{ writingMode: "vertical-rl", textOrientation: "mixed" }}>
+          {content}
+        </g>
+      );
+    }
+    default:
+      return content;
+  }
 }
 
 // =============================================================================
@@ -261,8 +318,8 @@ function applyTextTransforms(
   // Apply force anti-alias
   const antiAliasedContent = applyAntiAliasIfNeeded(clippedContent, bodyProps);
 
-  // Apply upright text
-  const finalContent = applyUprightIfNeeded(antiAliasedContent, bodyProps);
+  // Apply vertical text transform
+  const finalContent = applyVerticalTextTransform(antiAliasedContent, bodyProps, width, height);
 
   return finalContent;
 }
@@ -323,16 +380,3 @@ function applyAntiAliasIfNeeded(
   return applyForceAntiAlias(content);
 }
 
-/**
- * Apply upright text if needed for vertical types.
- */
-function applyUprightIfNeeded(
-  content: React.ReactNode,
-  bodyProps: TextBody["bodyProperties"],
-): React.ReactNode {
-  if (bodyProps.upright !== true || bodyProps.verticalType === "horz") {
-    return content;
-  }
-
-  return applyUprightText(content);
-}

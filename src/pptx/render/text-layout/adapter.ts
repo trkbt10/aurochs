@@ -293,6 +293,11 @@ export function toTextBoxConfig(options: ToTextBoxConfigOptions): TextBoxConfig 
   // Determine wrap mode
   const wrapMode = resolveWrapMode(bodyProperties.wrapping);
 
+  // Determine vertical text type
+  // @see ECMA-376 Part 1, Section 21.1.2.1.39 (ST_TextVerticalType)
+  const verticalType = bodyProperties.verticalType ?? "horz";
+  const isVertical = verticalType !== "horz";
+
   // ECMA-376 Part 1, Section 21.1.2.1.1 (bodyPr) default insets:
   // lIns=91440 EMU (0.1 inch), tIns=45720 EMU (0.05 inch)
   // rIns=91440 EMU (0.1 inch), bIns=45720 EMU (0.05 inch)
@@ -308,8 +313,10 @@ export function toTextBoxConfig(options: ToTextBoxConfigOptions): TextBoxConfig 
   };
 
   return {
-    width,
-    height,
+    // For vertical text, swap width/height so layout engine calculates correctly
+    // The text will be laid out "horizontally" then rotated via transform
+    width: isVertical ? height : width,
+    height: isVertical ? width : height,
     insetLeft: insets.left,
     insetRight: insets.right,
     insetTop: insets.top,
@@ -332,6 +339,7 @@ export function toTextBoxConfig(options: ToTextBoxConfigOptions): TextBoxConfig 
     rtlCol: bodyProperties.rtlColumns ?? false,
     spcFirstLastPara: bodyProperties.spaceFirstLastPara ?? false,
     upright: bodyProperties.upright ?? false,
+    verticalType,
   };
 }
 

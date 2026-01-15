@@ -36,6 +36,10 @@ export type BodyProperties = {
   rIns?: number;
   tIns?: number;
   bIns?: number;
+  /** Vertical text type - ECMA-376 21.1.2.1.39 (ST_TextVerticalType) */
+  vert?: "horz" | "vert" | "vert270" | "wordArtVert" | "eaVert" | "mongolianVert" | "wordArtVertRtl";
+  /** Keep text upright in vertical layout - ECMA-376 21.1.2.1.2 */
+  upright?: boolean;
 }
 
 export type ParagraphContent = {
@@ -101,6 +105,10 @@ export type RunProperties = {
   fontSize?: number;
   /** Bold - b */
   bold?: boolean;
+  /** Italic - i */
+  italic?: boolean;
+  /** Underline - u */
+  underline?: boolean;
 }
 
 export type LineSpacing =
@@ -405,6 +413,8 @@ function generateBodyPropertiesXml(bodyPr?: BodyProperties): string {
     if (bodyPr.rIns !== undefined) {attrs.push(`rIns="${bodyPr.rIns}"`);}
     if (bodyPr.tIns !== undefined) {attrs.push(`tIns="${bodyPr.tIns}"`);}
     if (bodyPr.bIns !== undefined) {attrs.push(`bIns="${bodyPr.bIns}"`);}
+    if (bodyPr.vert) {attrs.push(`vert="${bodyPr.vert}"`);}
+    if (bodyPr.upright) {attrs.push(`upright="1"`);}
   } else {
     attrs.push('wrap="square"');
   }

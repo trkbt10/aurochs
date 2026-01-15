@@ -79,7 +79,7 @@ export function renderTextSvg(
   const rotatedTextSvg = applyBodyRotation(baseTextSvg, bodyRotation, boxWidth, boxHeight);
   const clippedTextSvg = applyOverflowClip(rotatedTextSvg, textBody, defsCollector, boxWidth, boxHeight);
   const antiAliasedSvg = applyForceAntiAlias(clippedTextSvg, textBody);
-  return applyUprightText(antiAliasedSvg, textBody);
+  return applyVerticalTextTransform(antiAliasedSvg, textBody, boxWidth, boxHeight);
 }
 
 function applyBodyRotation(
@@ -122,12 +122,55 @@ function applyForceAntiAlias(textSvg: string, textBody: TextBody): string {
   return `<g text-rendering="geometricPrecision">${textSvg}</g>`;
 }
 
-function applyUprightText(textSvg: string, textBody: TextBody): string {
-  const vertType = textBody.bodyProperties.verticalType;
-  if (textBody.bodyProperties.upright === true && vertType !== "horz") {
+/**
+ * Apply vertical text transformation based on verticalType.
+ *
+ * Per ECMA-376 Part 1, Section 21.1.2.1.39:
+ * - "vert": 90 degree clockwise rotation, text flows top-to-bottom
+ * - "vert270": 270 degree (or -90) rotation
+ * - "eaVert": Same as vert, but CJK glyphs may remain upright
+ * - "wordArtVert": Characters stacked vertically (no rotation)
+ * - "mongolianVert": Similar to wordArtVert
+ *
+ * @see ECMA-376 Part 1, Section 21.1.2.1.39 (ST_TextVerticalType)
+ */
+function applyVerticalTextTransform(
+  textSvg: string,
+  textBody: TextBody,
+  boxWidth: number,
+  boxHeight: number,
+): string {
+  const verticalType = textBody.bodyProperties.verticalType ?? "horz";
+
+  if (verticalType === "horz") {
+    return textSvg;
+  }
+
+  // CSS-based upright mode (glyphs remain upright in vertical layout)
+  if (textBody.bodyProperties.upright === true) {
     return `<g style="text-orientation: upright; writing-mode: vertical-rl">${textSvg}</g>`;
   }
-  return textSvg;
+
+  // SVG transform-based vertical text
+  switch (verticalType) {
+    case "vert":
+    case "eaVert": {
+      // 90° clockwise: translate to right edge, then rotate
+      return `<g transform="translate(${boxWidth}, 0) rotate(90)">${textSvg}</g>`;
+    }
+    case "vert270": {
+      // -90° (270°): translate to bottom edge, then rotate
+      return `<g transform="translate(0, ${boxHeight}) rotate(-90)">${textSvg}</g>`;
+    }
+    case "wordArtVert":
+    case "mongolianVert":
+    case "wordArtVertRtl": {
+      // Characters stacked vertically - use CSS approach
+      return `<g style="writing-mode: vertical-rl; text-orientation: mixed">${textSvg}</g>`;
+    }
+    default:
+      return textSvg;
+  }
 }
 
 // =============================================================================

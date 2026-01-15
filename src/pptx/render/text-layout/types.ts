@@ -5,7 +5,7 @@
 
 import type { Pixels, Points, Percent } from "../../../ooxml/domain/units";
 import type { TextAlign, TextAnchor } from "../../domain/types";
-import type { LineSpacing, TextWrapping, TextOverflow, TextVerticalOverflow } from "../../domain/text";
+import type { LineSpacing, TextWrapping, TextOverflow, TextVerticalOverflow, TextVerticalType } from "../../domain/text";
 import type { RenderOptions } from "../render-options";
 import type { TextFillConfig } from "../../domain/drawing-ml/text-fill";
 import type { TextEffectsConfig } from "../../domain/drawing-ml/text-effects";
@@ -120,6 +120,13 @@ export type TextBoxConfig = {
    * @see ECMA-376 Part 1, Section 21.1.2.1.2 (upright attribute)
    */
   readonly upright: boolean;
+  /**
+   * Vertical text type for layout direction.
+   * Determines how text flows within the text box.
+   *
+   * @see ECMA-376 Part 1, Section 21.1.2.1.39 (ST_TextVerticalType)
+   */
+  readonly verticalType: TextVerticalType;
 };
 
 // =============================================================================
