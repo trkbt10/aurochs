@@ -6,7 +6,7 @@
  *
  * @see https://developer.mozilla.org/en-US/docs/Web/CSS/@font-face
  */
-import type { EmbeddedFont } from "./font-extractor";
+import type { EmbeddedFont } from "./embedded-font";
 
 /**
  * Convert font data to a base64-encoded data URL.

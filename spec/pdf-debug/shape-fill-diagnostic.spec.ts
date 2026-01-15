@@ -5,11 +5,11 @@
  * why shapes (especially architecture diagrams) are being filled incorrectly.
  */
 
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import { PDFDocument, PDFPage, decodePDFRawStream, PDFRawStream, PDFArray, PDFRef } from "pdf-lib";
+import { loadNativePdfDocument } from "../../src/pdf/native";
 import { parsePdf } from "../../src/pdf/parser/pdf-parser";
 import type { PdfPath, PdfPaintOp } from "../../src/pdf/domain";
 
@@ -136,32 +136,22 @@ describe("Shape Fill Diagnostic for panel2.pdf", () => {
     console.log("\n=== RAW CONTENT STREAM ANALYSIS ===\n");
 
     const pdfBuffer = fs.readFileSync(PDF_PATH);
-    const pdfDoc = await PDFDocument.load(pdfBuffer, { ignoreEncryption: true });
+    const pdfDoc = loadNativePdfDocument(pdfBuffer, { encryption: "ignore" });
     const page = pdfDoc.getPages()[0];
-    const context = page.node.context;
+    if (!page) {
+      console.log("No pages found");
+      return;
+    }
 
-    // Get content streams
-    const contentsRef = page.node.Contents();
-    if (!contentsRef) {
+    const streams = page.getDecodedContentStreams();
+    if (streams.length === 0) {
       console.log("No content streams found");
       return;
     }
 
-    const contents = contentsRef instanceof PDFRef ? context.lookup(contentsRef) : contentsRef;
     let contentData = "";
-
-    if (contents instanceof PDFRawStream) {
-      const decoded = decodePDFRawStream(contents);
-      contentData = new TextDecoder("latin1").decode(decoded.decode());
-    } else if (contents instanceof PDFArray) {
-      for (let i = 0; i < contents.size(); i++) {
-        const streamRef = contents.get(i);
-        const stream = streamRef instanceof PDFRef ? context.lookup(streamRef) : streamRef;
-        if (stream instanceof PDFRawStream) {
-          const decoded = decodePDFRawStream(stream);
-          contentData += new TextDecoder("latin1").decode(decoded.decode()) + "\n";
-        }
-      }
+    for (const bytes of streams) {
+      contentData += new TextDecoder("latin1").decode(bytes) + "\n";
     }
 
     console.log(`Content stream length: ${contentData.length} bytes\n`);

@@ -297,7 +297,7 @@ describe("font-decoder", () => {
   describe("logExtractionErrors", () => {
     it("does not log when no errors", () => {
       const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
-      const result: FontExtractionResult = { toUnicode: null, metrics: null, ordering: null, encoding: null, isBold: false, isItalic: false, errors: [] };
+      const result: FontExtractionResult = { toUnicode: null, metrics: null, ordering: null, encoding: null, isBold: false, isItalic: false, baseFont: null, errors: [] };
 
       logExtractionErrors(result, "F1");
 
@@ -314,6 +314,7 @@ describe("font-decoder", () => {
         encoding: null,
         isBold: false,
         isItalic: false,
+        baseFont: null,
         errors: ["Failed to extract metrics for F1: metrics broken"],
       };
 
@@ -334,6 +335,7 @@ describe("font-decoder", () => {
         encoding: null,
         isBold: false,
         isItalic: false,
+        baseFont: null,
         errors: [
           "Failed to extract ToUnicode for F1: cmap broken",
           "Failed to extract metrics for F1: metrics broken",

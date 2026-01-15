@@ -19,9 +19,9 @@
 import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { PDFDocument, StandardFonts } from "pdf-lib";
 import { parsePdf } from "./pdf-parser";
 import type { PdfText } from "../domain";
+import { buildSimplePdfBytes } from "../test-utils/simple-pdf";
 
 describe("CIDOrdering extraction from real PDFs", () => {
   it("Identity-H encoded CJK PDF has Identity ordering (cjk-test.pdf)", async () => {
@@ -91,12 +91,17 @@ describe("CIDOrdering extraction from real PDFs", () => {
   });
 
   it("standard fonts do not have CIDOrdering", async () => {
-    const pdfDoc = await PDFDocument.create();
-    const page = pdfDoc.addPage([200, 200]);
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    page.drawText("Test", { x: 10, y: 180, size: 12, font });
-
-    const pdfBytes = await pdfDoc.save();
+    const pdfBytes = buildSimplePdfBytes({
+      pages: [
+        {
+          width: 200,
+          height: 200,
+          includeHelvetica: true,
+          content: ["BT", "/F1 12 Tf", "10 180 Td", "(Test) Tj", "ET"].join("\n"),
+        },
+      ],
+      info: { title: "standard-fonts.pdf" },
+    });
     const doc = await parsePdf(pdfBytes);
 
     const textElements = doc.pages[0]?.elements.filter((e): e is PdfText => e.type === "text") ?? [];

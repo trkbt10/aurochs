@@ -193,7 +193,7 @@ describe("PDF to SVG font rendering", () => {
 
   it("PDF with cidOrdering Japan1 renders correct font-family in SVG", () => {
     const pdfText = {
-      type: "text",
+      type: "text" as const,
       text: "日本語テスト",
       x: 10,
       y: 80,
@@ -202,7 +202,7 @@ describe("PDF to SVG font rendering", () => {
       fontName: "MSGothic",
       fontSize: 12,
       graphicsState: createDefaultGraphicsState(),
-      cidOrdering: "Japan1",
+      cidOrdering: "Japan1" as const,
     };
 
     const context = {
@@ -251,7 +251,7 @@ describe("PDF to SVG font rendering", () => {
 
   it("PDF with Chinese font renders correct font-family in SVG", () => {
     const pdfText = {
-      type: "text",
+      type: "text" as const,
       text: "中文测试",
       x: 10,
       y: 80,
@@ -260,7 +260,7 @@ describe("PDF to SVG font rendering", () => {
       fontName: "SimSun",
       fontSize: 12,
       graphicsState: createDefaultGraphicsState(),
-      cidOrdering: "GB1",
+      cidOrdering: "GB1" as const,
     };
 
     const context = {

@@ -1,6 +1,7 @@
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { existsSync, readFileSync } from "node:fs";
 import { px } from "../../ooxml/domain/units";
 import { importPdf, importPdfFromFile, importPdfFromUrl, PdfImportError } from "./pdf-importer";
+import { buildSimplePdfBytes } from "../test-utils/simple-pdf";
 
 function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   if (bytes.buffer instanceof ArrayBuffer) {
@@ -12,33 +13,37 @@ function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
 }
 
 async function createPdfBytes(pages: readonly { readonly width: number; readonly height: number }[]): Promise<Uint8Array> {
-  const pdf = await PDFDocument.create();
-
-  for (const p of pages) {
-    pdf.addPage([p.width, p.height]);
-  }
-
-  return await pdf.save();
+  return buildSimplePdfBytes({
+    pages: pages.map((p) => ({ width: p.width, height: p.height })),
+    info: { title: "test.pdf" },
+  });
 }
 
 async function createPdfBytesWithContent(): Promise<Uint8Array> {
-  const pdf = await PDFDocument.create();
+  const content = [
+    "0 0 0 RG",
+    "1 0 0 rg",
+    "1 w",
+    "10 10 50 40 re",
+    "B",
+    "BT",
+    "/F1 12 Tf",
+    "10 180 Td",
+    "(Hello) Tj",
+    "ET",
+  ].join("\n");
 
-  const page = pdf.addPage([200, 200]);
-  page.drawRectangle({
-    x: 10,
-    y: 10,
-    width: 50,
-    height: 40,
-    borderWidth: 1,
-    borderColor: rgb(0, 0, 0),
-    color: rgb(1, 0, 0),
+  return buildSimplePdfBytes({
+    pages: [
+      {
+        width: 200,
+        height: 200,
+        content,
+        includeHelvetica: true,
+      },
+    ],
+    info: { title: "test.pdf" },
   });
-
-  const font = await pdf.embedFont(StandardFonts.Helvetica);
-  page.drawText("Hello", { x: 10, y: 180, size: 12, font });
-
-  return await pdf.save();
 }
 
 describe("pdf-importer", () => {
@@ -59,6 +64,17 @@ describe("pdf-importer", () => {
     expect(result.pageCount).toBe(1);
     expect(result.document.slides).toHaveLength(1);
   });
+
+  (existsSync("fixtures/samples/000459554.pdf") ? it : it.skip)(
+    "rejects encrypted PDFs with ENCRYPTED_PDF",
+    async () => {
+      const bytes = new Uint8Array(readFileSync("fixtures/samples/000459554.pdf"));
+
+      await expect(importPdf(bytes)).rejects.toBeInstanceOf(PdfImportError);
+      await expect(importPdf(bytes)).rejects.toMatchObject({ code: "ENCRYPTED_PDF" });
+    },
+    30_000,
+  );
 
   it("imports from URL successfully", async () => {
     const bytes = await createPdfBytes([{ width: 200, height: 200 }] as const);

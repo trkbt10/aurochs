@@ -7,6 +7,7 @@ import type { Slide } from "../../pptx/domain/slide/types";
 import { openPresentation } from "../../pptx/app/open-presentation";
 import { parsePdf } from "../parser/pdf-parser";
 import type { PdfPage } from "../domain";
+import { PdfLoadError } from "../parser/pdf-load-error";
 import {
   buildSlideFromPage,
   createPageNumberShape,
@@ -217,23 +218,11 @@ async function parsePdfOrThrow(
   try {
     return await parsePdf(buffer, options.pages ? { pages: options.pages } : {});
   } catch (error) {
-    throw wrapError(error, detectPdfParseErrorCode(error));
+    if (error instanceof PdfLoadError) {
+      throw wrapError(error, error.code);
+    }
+    throw wrapError(error, "PARSE_ERROR");
   }
-}
-
-function detectPdfParseErrorCode(error: unknown): PdfImportErrorCode {
-  const message = error instanceof Error ? error.message : String(error);
-  const lower = message.toLowerCase();
-
-  if (lower.includes("encrypted") || lower.includes("password")) {
-    return "ENCRYPTED_PDF";
-  }
-
-  if (lower.includes("no pdf header") || lower.includes("failed to parse") || lower.includes("invalid pdf")) {
-    return "INVALID_PDF";
-  }
-
-  return "PARSE_ERROR";
 }
 
 function buildSlideFromPageOrThrow(page: PdfPage, slideSize: SlideSize, options: PdfImportOptions): Slide {

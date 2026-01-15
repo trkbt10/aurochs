@@ -24,6 +24,7 @@ describe("layoutTextBody", () => {
     autoFit: defaultAutoFit,
     horzOverflow: "overflow",
     vertOverflow: "overflow",
+    verticalType: "horz",
     compatLnSpc: false,
     forceAA: false,
     rtlCol: false,
