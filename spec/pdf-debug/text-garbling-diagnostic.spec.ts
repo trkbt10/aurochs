@@ -5,11 +5,13 @@
  * why Japanese text is being garbled (mojibake).
  */
 
-import { describe, it, expect } from "bun:test";
+import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import { PDFDocument, PDFPage, PDFDict, PDFName, PDFRef, PDFRawStream, decodePDFRawStream } from "pdf-lib";
+import { loadNativePdfDocument } from "../../src/pdf/native";
+import { decodePdfStream } from "../../src/pdf/native/stream";
+import type { PdfDict, PdfObject, PdfStream } from "../../src/pdf/native";
 import { parsePdf } from "../../src/pdf/parser/pdf-parser";
 import { extractFontMappings } from "../../src/pdf/parser/font-decoder";
 import { decodeText } from "../../src/pdf/domain/font/text-decoder";
@@ -25,8 +27,7 @@ describe("Text Garbling Diagnostic for panel2.pdf", () => {
     console.log(`PDF file: ${PDF_PATH}`);
     console.log(`PDF size: ${pdfBuffer.length} bytes\n`);
 
-    // Load PDF with pdf-lib
-    const pdfDoc = await PDFDocument.load(pdfBuffer, { ignoreEncryption: true });
+    const pdfDoc = loadNativePdfDocument(pdfBuffer, { encryption: "ignore" });
     const pages = pdfDoc.getPages();
 
     console.log(`Total pages: ${pages.length}\n`);
@@ -35,6 +36,7 @@ describe("Text Garbling Diagnostic for panel2.pdf", () => {
     for (let pageIndex = 0; pageIndex < Math.min(pages.length, 2); pageIndex++) {
       console.log(`\n--- Page ${pageIndex + 1} ---\n`);
       const page = pages[pageIndex];
+      if (!page) continue;
 
       // Extract font mappings
       const fontMappings = extractFontMappings(page);
@@ -97,25 +99,19 @@ describe("Text Garbling Diagnostic for panel2.pdf", () => {
           textElementCount++;
           console.log(`\nText Element ${textElementCount}:`);
 
-          for (const run of element.runs) {
-            // Show raw text bytes
-            const rawBytes = [...run.text].map(c => c.charCodeAt(0).toString(16).padStart(2, "0")).join(" ");
-            console.log(`  Raw text (hex): ${rawBytes.slice(0, 100)}${rawBytes.length > 100 ? "..." : ""}`);
-            console.log(`  Decoded text: "${run.text.slice(0, 50)}${run.text.length > 50 ? "..." : ""}"`);
-            console.log(`  Font: ${run.fontName} (baseFont: ${run.baseFont ?? "N/A"})`);
-            console.log(`  Position: (${run.x.toFixed(2)}, ${run.y.toFixed(2)})`);
+          const rawBytes = [...element.text]
+            .map((c) => c.charCodeAt(0).toString(16).padStart(2, "0"))
+            .join(" ");
+          console.log(`  Raw text (hex): ${rawBytes.slice(0, 100)}${rawBytes.length > 100 ? "..." : ""}`);
+          console.log(`  Decoded text: "${element.text.slice(0, 50)}${element.text.length > 50 ? "..." : ""}"`);
+          console.log(`  Font: ${element.fontName} (baseFont: ${element.baseFont ?? "N/A"})`);
+          console.log(`  Position: (${element.x.toFixed(2)}, ${element.y.toFixed(2)})`);
 
-            // Check for replacement characters (U+FFFD)
-            const hasReplacementChars = run.text.includes("\uFFFD");
-            if (hasReplacementChars) {
-              console.log(`  WARNING: Contains replacement characters (U+FFFD) - indicates failed decoding`);
-            }
-
-            // Check for null bytes
-            const hasNullBytes = run.text.includes("\u0000");
-            if (hasNullBytes) {
-              console.log(`  WARNING: Contains null bytes - indicates encoding issue`);
-            }
+          if (element.text.includes("\uFFFD")) {
+            console.log(`  WARNING: Contains replacement characters (U+FFFD) - indicates failed decoding`);
+          }
+          if (element.text.includes("\u0000")) {
+            console.log(`  WARNING: Contains null bytes - indicates encoding issue`);
           }
 
           if (textElementCount >= 20) {
@@ -138,91 +134,56 @@ describe("Text Garbling Diagnostic for panel2.pdf", () => {
     console.log("\n=== RAW TOUNICODE CMAP ANALYSIS ===\n");
 
     const pdfBuffer = fs.readFileSync(PDF_PATH);
-    const pdfDoc = await PDFDocument.load(pdfBuffer, { ignoreEncryption: true });
+    const pdfDoc = loadNativePdfDocument(pdfBuffer, { encryption: "ignore" });
     const page = pdfDoc.getPages()[0];
-    const context = page.node.context;
+    if (!page) return;
 
-    // Get Resources dictionary
-    const resourcesRef = page.node.Resources();
-    if (!resourcesRef) {
+    const asDict = (obj: PdfObject | undefined): PdfDict | null => (obj?.type === "dict" ? obj : null);
+    const asName = (obj: PdfObject | undefined): string | null => (obj?.type === "name" ? obj.value : null);
+    const asArray = (obj: PdfObject | undefined) => (obj?.type === "array" ? obj : null);
+    const asStream = (obj: PdfObject | undefined): PdfStream | null => (obj?.type === "stream" ? obj : null);
+    const dictGet = (dict: PdfDict, key: string): PdfObject | undefined => dict.map.get(key);
+    const resolve = (obj: PdfObject | undefined): PdfObject | undefined => (obj ? page.lookup(obj) : undefined);
+
+    const resources = page.getResourcesDict();
+    if (!resources) {
       console.log("No resources found");
       return;
     }
 
-    const resources = context.lookup(resourcesRef);
-    if (!(resources instanceof PDFDict)) {
-      console.log("Resources is not a dictionary");
-      return;
-    }
-
-    // Get Font dictionary
-    const fontRef = resources.get(PDFName.of("Font"));
-    if (!fontRef) {
+    const fonts = asDict(resolve(dictGet(resources, "Font")));
+    if (!fonts) {
       console.log("No font dictionary found");
       return;
     }
 
-    const fonts = fontRef instanceof PDFRef ? context.lookup(fontRef) : fontRef;
-    if (!(fonts instanceof PDFDict)) {
-      console.log("Font is not a dictionary");
-      return;
-    }
+    const findToUnicodeStream = (fontDict: PdfDict): PdfStream | null => {
+      const direct = asStream(resolve(dictGet(fontDict, "ToUnicode")));
+      if (direct) return direct;
+      const subtype = asName(resolve(dictGet(fontDict, "Subtype")));
+      if (subtype !== "Type0") return null;
+      const descendants = asArray(resolve(dictGet(fontDict, "DescendantFonts")));
+      if (!descendants || descendants.items.length === 0) return null;
+      const first = asDict(resolve(descendants.items[0]));
+      if (!first) return null;
+      return asStream(resolve(dictGet(first, "ToUnicode")));
+    };
 
-    // Iterate fonts and check ToUnicode
-    for (const [name, ref] of fonts.entries()) {
-      const fontName = name instanceof PDFName ? name.asString() : String(name);
-      const cleanName = fontName.startsWith("/") ? fontName.slice(1) : fontName;
+    for (const [name, ref] of fonts.map.entries()) {
+      const fontName = name;
+      const fontDict = asDict(resolve(ref));
+      if (!fontDict) continue;
 
-      const fontDict = ref instanceof PDFRef ? context.lookup(ref) : ref;
-      if (!(fontDict instanceof PDFDict)) continue;
+      const subtype = asName(resolve(dictGet(fontDict, "Subtype"))) ?? "unknown";
+      console.log(`\nFont: ${fontName} (/${subtype})`);
 
-      // Check Subtype
-      const subtype = fontDict.get(PDFName.of("Subtype"));
-      const subtypeStr = subtype instanceof PDFName ? subtype.asString() : "unknown";
-
-      console.log(`\nFont: ${cleanName} (${subtypeStr})`);
-
-      // Get ToUnicode
-      let toUnicodeRef = fontDict.get(PDFName.of("ToUnicode"));
-
-      // For Type0, check DescendantFonts
-      if (!toUnicodeRef && subtypeStr === "/Type0") {
-        const descendantsRef = fontDict.get(PDFName.of("DescendantFonts"));
-        if (descendantsRef) {
-          const descendants = descendantsRef instanceof PDFRef
-            ? context.lookup(descendantsRef)
-            : descendantsRef;
-
-          if (descendants && typeof descendants === "object" && "get" in descendants) {
-            const arr = descendants as { get(i: number): unknown; size(): number };
-            if (arr.size() > 0) {
-              const firstRef = arr.get(0);
-              const first = firstRef instanceof PDFRef ? context.lookup(firstRef) : firstRef;
-              if (first instanceof PDFDict) {
-                toUnicodeRef = first.get(PDFName.of("ToUnicode"));
-              }
-            }
-          }
-        }
-      }
-
-      if (!toUnicodeRef) {
+      const toUnicodeStream = findToUnicodeStream(fontDict);
+      if (!toUnicodeStream) {
         console.log("  No ToUnicode CMap found");
         continue;
       }
 
-      const toUnicodeStream = toUnicodeRef instanceof PDFRef
-        ? context.lookup(toUnicodeRef)
-        : toUnicodeRef;
-
-      if (!(toUnicodeStream instanceof PDFRawStream)) {
-        console.log("  ToUnicode is not a stream");
-        continue;
-      }
-
-      // Decode and display CMap content
-      const decoded = decodePDFRawStream(toUnicodeStream);
-      const cmapData = new TextDecoder("latin1").decode(decoded.decode());
+      const cmapData = new TextDecoder("latin1").decode(decodePdfStream(toUnicodeStream));
 
       console.log(`  ToUnicode CMap length: ${cmapData.length} bytes`);
 

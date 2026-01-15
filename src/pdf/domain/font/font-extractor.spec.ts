@@ -9,7 +9,7 @@
 import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { PDFDocument } from "pdf-lib";
+import { loadNativePdfDocument } from "../../native";
 import { extractEmbeddedFonts, type EmbeddedFont } from "./font-extractor";
 
 describe("extractEmbeddedFonts", () => {
@@ -21,10 +21,7 @@ describe("extractEmbeddedFonts", () => {
     }
 
     const buffer = fs.readFileSync(pdfPath);
-    const pdfDoc = await PDFDocument.load(buffer, {
-      ignoreEncryption: true,
-      updateMetadata: false,
-    });
+    const pdfDoc = loadNativePdfDocument(buffer, { encryption: "ignore" });
 
     const fonts = extractEmbeddedFonts(pdfDoc);
 
@@ -44,18 +41,9 @@ describe("extractEmbeddedFonts", () => {
   });
 
   it("should return empty array for PDF without embedded fonts", async () => {
-    // Create a PDF with standard font (not embedded)
-    const { PDFDocument: PdfDoc, StandardFonts } = await import("pdf-lib");
-    const pdfDoc = await PdfDoc.create();
-    const page = pdfDoc.addPage();
-    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    page.drawText("Test", { x: 10, y: 10, size: 12, font });
-    const pdfBytes = await pdfDoc.save();
-
-    const loadedDoc = await PdfDoc.load(pdfBytes);
+    const pdfBytes = fs.readFileSync(path.resolve("spec/fixtures/pdf/simple-rect.pdf"));
+    const loadedDoc = loadNativePdfDocument(pdfBytes, { encryption: "reject" });
     const fonts = extractEmbeddedFonts(loadedDoc);
-
-    // Standard fonts are not embedded
     expect(fonts.length).toBe(0);
   });
 
@@ -67,10 +55,7 @@ describe("extractEmbeddedFonts", () => {
     }
 
     const buffer = fs.readFileSync(pdfPath);
-    const pdfDoc = await PDFDocument.load(buffer, {
-      ignoreEncryption: true,
-      updateMetadata: false,
-    });
+    const pdfDoc = loadNativePdfDocument(buffer, { encryption: "ignore" });
 
     const fonts = extractEmbeddedFonts(pdfDoc);
 
@@ -89,10 +74,7 @@ describe("extractEmbeddedFonts", () => {
     }
 
     const buffer = fs.readFileSync(pdfPath);
-    const pdfDoc = await PDFDocument.load(buffer, {
-      ignoreEncryption: true,
-      updateMetadata: false,
-    });
+    const pdfDoc = loadNativePdfDocument(buffer, { encryption: "ignore" });
 
     const fonts = extractEmbeddedFonts(pdfDoc);
 

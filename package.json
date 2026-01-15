@@ -53,11 +53,11 @@
   },
   "dependencies": {
     "@types/three": "^0.182.0",
+    "fflate": "^0.8.2",
     "hono": "^4.11.1",
     "pngjs": "^7.0.0",
     "jszip": "^3.10.1",
     "lucide-react": "^0.562.0",
-    "pdf-lib": "^1.17.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-panel-layout": "^0.6.1",

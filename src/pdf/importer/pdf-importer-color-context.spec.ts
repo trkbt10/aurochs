@@ -1,4 +1,3 @@
-import { PDFDocument } from "pdf-lib";
 import type { Color } from "../../ooxml/domain/color";
 import { resolveColor } from "../../pptx/domain/color/resolution";
 import {
@@ -6,15 +5,13 @@ import {
   createEmptyColorContext,
   importPdf,
 } from "./pdf-importer";
+import { buildSimplePdfBytes } from "../test-utils/simple-pdf";
 
 async function createPdfBytes(pages: readonly { readonly width: number; readonly height: number }[]): Promise<Uint8Array> {
-  const pdf = await PDFDocument.create();
-
-  for (const p of pages) {
-    pdf.addPage([p.width, p.height]);
-  }
-
-  return await pdf.save();
+  return buildSimplePdfBytes({
+    pages: pages.map((p) => ({ width: p.width, height: p.height })),
+    info: { title: "color-context.pdf" },
+  });
 }
 
 describe("createDefaultColorContextForPdf", () => {
@@ -83,4 +80,3 @@ describe("PDF importer ColorContext initialization", () => {
     expect(result.document.colorContext).toEqual(createDefaultColorContextForPdf());
   });
 });
-

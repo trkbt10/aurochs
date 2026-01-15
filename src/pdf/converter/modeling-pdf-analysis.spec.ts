@@ -18,7 +18,6 @@
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { PDFDocument, PDFDict, PDFName, PDFRef, PDFArray } from "pdf-lib";
 import { parsePdf } from "../parser/pdf-parser";
 import type { PdfText, PdfPath, PdfImage, PdfElement } from "../domain";
 import { spatialGrouping } from "./text-grouping/spatial-grouping";
@@ -26,6 +25,9 @@ import { extractFontMappings, extractFontInfo } from "../parser/font-decoder";
 import { computePathBBox } from "../parser/path-builder";
 import { px } from "../../ooxml/domain/units";
 import { convertPageToShapes } from "./pdf-to-shapes";
+import { loadNativePdfDocument } from "../native";
+import type { NativePdfPage, PdfArray, PdfDict, PdfName, PdfObject } from "../native";
+import type { Shape, SpShape } from "../../pptx/domain/shape";
 
 const PDF_PATH = join(process.cwd(), "fixtures/samples/modeling.pdf");
 
@@ -33,43 +35,42 @@ const PDF_PATH = join(process.cwd(), "fixtures/samples/modeling.pdf");
 // Helper Functions for PDF Analysis
 // ============================================================================
 
-/**
- * Extract number value from PDF object (handles PDFNumber with numberValue property)
- */
-function extractPdfNumber(ref: unknown): number | null {
-  if (typeof ref === "number") {
-    return ref;
-  }
-  if (ref && typeof ref === "object") {
-    const obj = ref as Record<string, unknown>;
-    if ("numberValue" in obj && typeof obj.numberValue === "number") {
-      return obj.numberValue;
-    }
-    if ("value" in obj && typeof obj.value === "number") {
-      return obj.value;
-    }
-  }
+function asDict(obj: PdfObject | undefined): PdfDict | null {
+  return obj?.type === "dict" ? obj : null;
+}
+function asArray(obj: PdfObject | undefined): PdfArray | null {
+  return obj?.type === "array" ? obj : null;
+}
+function asName(obj: PdfObject | undefined): PdfName | null {
+  return obj?.type === "name" ? obj : null;
+}
+function asNumber(obj: PdfObject | undefined): number | null {
+  return obj?.type === "number" ? obj.value : null;
+}
+function asString(obj: PdfObject | undefined): string | null {
+  if (!obj) return null;
+  if (obj.type === "string") return obj.text;
+  if (obj.type === "name") return `/${obj.value}`;
   return null;
 }
-
-/**
- * Lookup PDF reference or return directly if not a ref
- */
-function lookupPdfRef(context: PDFDict["context"], ref: unknown): unknown {
-  if (ref instanceof PDFRef) {
-    return context.lookup(ref);
-  }
-  return ref;
+function resolve(page: NativePdfPage, obj: PdfObject | undefined): PdfObject | undefined {
+  return obj ? page.lookup(obj) : undefined;
+}
+function resolveDict(page: NativePdfPage, obj: PdfObject | undefined): PdfDict | null {
+  return asDict(resolve(page, obj));
+}
+function dictGet(dict: PdfDict, key: string): PdfObject | undefined {
+  return dict.map.get(key);
 }
 
-/**
- * Get string value from PDFName or convert to string
- */
-function getPdfNameString(name: unknown): string {
-  if (name instanceof PDFName) {
-    return name.asString();
+function getSpShapesWithTextBody(shapes: readonly Shape[]): readonly SpShape[] {
+  const out: SpShape[] = [];
+  for (const shape of shapes) {
+    if (shape.type === "sp" && shape.textBody) {
+      out.push(shape);
+    }
   }
-  return String(name);
+  return out;
 }
 
 /**
@@ -425,118 +426,69 @@ describe("modeling.pdf analysis", () => {
 
   it("should analyze font descriptors for bold/italic flags", async () => {
     const pdfBytes = readFileSync(PDF_PATH);
-    const pdfDoc = await PDFDocument.load(pdfBytes);
-    const page = pdfDoc.getPage(0);
+    const pdfDoc = loadNativePdfDocument(pdfBytes, { encryption: "ignore" });
+    const page = pdfDoc.getPages()[0];
+    if (!page) return;
 
-    // Get font dictionary
-    const resources = page.node.Resources();
-    if (!resources) {
+    const resourcesDict = page.getResourcesDict();
+    if (!resourcesDict) {
       console.log("No resources found");
       return;
     }
 
-    const resourcesDict = page.node.context.lookup(resources);
-    if (!(resourcesDict instanceof PDFDict)) {
-      console.log("Resources is not a PDFDict");
-      return;
-    }
-
-    const fontsRef = resourcesDict.get(PDFName.of("Font"));
-    if (!fontsRef) {
+    const fontsDict = resolveDict(page, dictGet(resourcesDict, "Font"));
+    if (!fontsDict) {
       console.log("No Font entry in resources");
-      return;
-    }
-
-    const fontsDict = lookupPdfRef(page.node.context, fontsRef);
-
-    if (!(fontsDict instanceof PDFDict)) {
-      console.log("Fonts is not a PDFDict");
       return;
     }
 
     console.log("\n=== Font Descriptor Analysis ===");
 
-    for (const [name, ref] of fontsDict.entries()) {
-      const fontName = getPdfNameString(name);
-      const fontDict = lookupPdfRef(page.node.context, ref);
-
-      if (!(fontDict instanceof PDFDict)) {
-        continue;
-      }
+    for (const [fontName, ref] of fontsDict.map.entries()) {
+      const fontDict = resolveDict(page, ref);
+      if (!fontDict) continue;
 
       // Get font subtype
-      const subtypeRef = fontDict.get(PDFName.of("Subtype"));
-      const subtype = subtypeRef instanceof PDFName ? subtypeRef.asString() : "unknown";
-      console.log(`  ${fontName}: Subtype=${subtype}`);
+      const subtype = asName(resolve(page, dictGet(fontDict, "Subtype")))?.value ?? "unknown";
+      console.log(`  ${fontName}: Subtype=/${subtype}`);
 
       // For Type0 fonts, look in DescendantFonts
-      if (subtype === "/Type0") {
-        const descendantsRef = fontDict.get(PDFName.of("DescendantFonts"));
-        if (descendantsRef) {
-          try {
-            const descendants = lookupPdfRef(page.node.context, descendantsRef);
+      if (subtype === "Type0") {
+        const descendants = asArray(resolve(page, dictGet(fontDict, "DescendantFonts")));
+        if (!descendants || descendants.items.length === 0) continue;
 
-            if (descendants instanceof PDFArray && descendants.size() > 0) {
-              const firstRef = descendants.get(0);
-              const cidFont = lookupPdfRef(page.node.context, firstRef);
+        const cidFont = asDict(resolve(page, descendants.items[0]));
+        if (!cidFont) continue;
 
-              if (cidFont instanceof PDFDict) {
-                const cidDescriptorRef = cidFont.get(PDFName.of("FontDescriptor"));
-                if (cidDescriptorRef) {
-                  const cidDescriptor = lookupPdfRef(page.node.context, cidDescriptorRef);
+        const cidDescriptor = resolveDict(page, dictGet(cidFont, "FontDescriptor"));
+        if (!cidDescriptor) continue;
 
-                  if (cidDescriptor instanceof PDFDict) {
-                    const flagsRef = cidDescriptor.get(PDFName.of("Flags"));
-                    const flags = extractPdfNumber(flagsRef);
+        const flags = asNumber(resolve(page, dictGet(cidDescriptor, "Flags")));
+        const cidFontName = asString(resolve(page, dictGet(cidDescriptor, "FontName"))) ?? "unknown";
+        const isItalic = flags !== null && (flags & 64) !== 0;
+        const isForceBold = flags !== null && (flags & 262144) !== 0;
 
-                    const cidFontNameRef = cidDescriptor.get(PDFName.of("FontName"));
-                    const cidFontName = getPdfNameString(cidFontNameRef);
+        console.log(
+          `    -> CID FontDescriptor: name=${cidFontName} flags=${flags ?? "null"} ` +
+            `italic=${isItalic} forceBold=${isForceBold}`,
+        );
 
-                    const isItalic = flags !== null && (flags & 64) !== 0;
-                    const isForceBold = flags !== null && (flags & 262144) !== 0;
-
-                    console.log(
-                      `    -> CID FontDescriptor: name=${cidFontName} flags=${flags} ` +
-                      `italic=${isItalic} forceBold=${isForceBold}`
-                    );
-
-                    const italicAngleRef = cidDescriptor.get(PDFName.of("ItalicAngle"));
-                    const italicAngle = extractPdfNumber(italicAngleRef);
-
-                    if (italicAngle !== null && italicAngle !== 0) {
-                      console.log(`    -> ItalicAngle: ${italicAngle}`);
-                    }
-                  }
-                }
-              }
-            }
-          } catch (e) {
-            console.log(`    -> Error parsing DescendantFonts: ${e}`);
-          }
+        const italicAngle = asNumber(resolve(page, dictGet(cidDescriptor, "ItalicAngle")));
+        if (italicAngle !== null && italicAngle !== 0) {
+          console.log(`    -> ItalicAngle: ${italicAngle}`);
         }
         continue;
       }
 
       // Get FontDescriptor for non-Type0 fonts
-      const descriptorRef = fontDict.get(PDFName.of("FontDescriptor"));
-      if (!descriptorRef) {
-        continue;
-      }
-
-      const descriptor = lookupPdfRef(page.node.context, descriptorRef);
-
-      if (!(descriptor instanceof PDFDict)) {
-        console.log(`  ${fontName}: FontDescriptor is not a dict`);
-        continue;
-      }
+      const descriptor = resolveDict(page, dictGet(fontDict, "FontDescriptor"));
+      if (!descriptor) continue;
 
       // Get Flags
-      const flagsRef = descriptor.get(PDFName.of("Flags"));
-      const flags = extractPdfNumber(flagsRef);
+      const flags = asNumber(resolve(page, dictGet(descriptor, "Flags")));
 
       // Get FontName from descriptor
-      const fontNameRef = descriptor.get(PDFName.of("FontName"));
-      const fontNameStr = getPdfNameString(fontNameRef);
+      const fontNameStr = asString(resolve(page, dictGet(descriptor, "FontName"))) ?? "unknown";
 
       // Parse flags (PDF Reference Table 5.20)
       // Bit 1 (1): FixedPitch
@@ -559,16 +511,14 @@ describe("modeling.pdf analysis", () => {
       );
 
       // Also check FontWeight if available
-      const weightRef = descriptor.get(PDFName.of("FontWeight"));
-      const weight = extractPdfNumber(weightRef);
+      const weight = asNumber(resolve(page, dictGet(descriptor, "FontWeight")));
 
       if (weight !== null) {
         console.log(`    FontWeight: ${weight}`);
       }
 
       // Check ItalicAngle
-      const italicAngleRef = descriptor.get(PDFName.of("ItalicAngle"));
-      const italicAngle = extractPdfNumber(italicAngleRef);
+      const italicAngle = asNumber(resolve(page, dictGet(descriptor, "ItalicAngle")));
 
       if (italicAngle !== null && italicAngle !== 0) {
         console.log(`    ItalicAngle: ${italicAngle}`);
@@ -687,115 +637,77 @@ describe("Japanese PDF width analysis", () => {
 
   it("should verify font W array and DW values", async () => {
     const pdfBytes = readFileSync(JP_PDF_PATH);
-    const pdfDoc = await PDFDocument.load(pdfBytes);
-    const page = pdfDoc.getPage(0);
+    const pdfDoc = loadNativePdfDocument(pdfBytes, { encryption: "ignore" });
+    const page = pdfDoc.getPages()[0];
+    if (!page) return;
 
-    const resources = page.node.Resources();
-    if (!resources) {
-      console.log("No resources");
-      return;
-    }
+    const resourcesDict = page.getResourcesDict();
+    if (!resourcesDict) return;
 
-    const resourcesDict = page.node.context.lookup(resources);
-    if (!(resourcesDict instanceof PDFDict)) {
-      return;
-    }
-
-    const fontsRef = resourcesDict.get(PDFName.of("Font"));
-    if (!fontsRef) {
-      return;
-    }
-
-    const fontsDict = lookupPdfRef(page.node.context, fontsRef);
-
-    if (!(fontsDict instanceof PDFDict)) {
-      return;
-    }
+    const fontsDict = resolveDict(page, dictGet(resourcesDict, "Font"));
+    if (!fontsDict) return;
 
     console.log("\n=== Font W/DW Analysis for Japanese PDF ===");
 
-    for (const [name, ref] of fontsDict.entries()) {
-      const fontName = getPdfNameString(name);
-      const fontDict = lookupPdfRef(page.node.context, ref);
-      if (!(fontDict instanceof PDFDict)) {
+    for (const [fontName, ref] of fontsDict.map.entries()) {
+      const fontDict = resolveDict(page, ref);
+      if (!fontDict) continue;
+
+      const subtype = asName(resolve(page, dictGet(fontDict, "Subtype")))?.value ?? "unknown";
+      console.log(`\nFont ${fontName}: Subtype=/${subtype}`);
+
+      if (subtype !== "Type0") continue;
+
+      const descendants = asArray(resolve(page, dictGet(fontDict, "DescendantFonts")));
+      if (!descendants || descendants.items.length === 0) continue;
+
+      const cidFont = asDict(resolve(page, descendants.items[0]));
+      if (!cidFont) continue;
+
+      const dw = asNumber(resolve(page, dictGet(cidFont, "DW")));
+      console.log(`  DW: ${dw ?? "NOT SET (should default to 1000)"}`);
+
+      const wArr = asArray(resolve(page, dictGet(cidFont, "W")));
+      if (!wArr) {
+        console.log("  W array: NOT PRESENT (all glyphs use DW)");
         continue;
       }
 
-      const subtypeRef = fontDict.get(PDFName.of("Subtype"));
-      const subtype = subtypeRef instanceof PDFName ? subtypeRef.asString() : "unknown";
+      console.log(`  W array size: ${wArr.items.length} entries`);
 
-      console.log(`\nFont ${fontName}: Subtype=${subtype}`);
-
-      if (subtype === "/Type0") {
-        const descendantsRef = fontDict.get(PDFName.of("DescendantFonts"));
-        if (!descendantsRef) {
+      // W array format: [cFirst [w1 w2 ...] cFirst2 cLast2 w ...]
+      // eslint-disable-next-line no-restricted-syntax -- analysis loop requires mutable index
+      let i = 0;
+      // eslint-disable-next-line no-restricted-syntax -- analysis loop counter
+      let sampleCount = 0;
+      while (i < wArr.items.length && sampleCount < 5) {
+        const first = asNumber(resolve(page, wArr.items[i]));
+        if (first === null) {
+          i += 1;
           continue;
         }
 
-        const descendants = lookupPdfRef(page.node.context, descendantsRef);
+        const second = resolve(page, wArr.items[i + 1]);
+        if (!second) break;
 
-        if (!(descendants instanceof PDFArray) || descendants.size() === 0) {
-          continue;
-        }
-
-        const firstRef = descendants.get(0);
-        const cidFont = lookupPdfRef(page.node.context, firstRef);
-        if (!(cidFont instanceof PDFDict)) {
-          continue;
-        }
-
-        // Get DW (default width)
-        const dwRef = cidFont.get(PDFName.of("DW"));
-        const dw = extractPdfNumber(dwRef);
-        console.log(`  DW: ${dw ?? "NOT SET (should default to 1000)"}`);
-
-        // Check W array in detail
-        const wRef = cidFont.get(PDFName.of("W"));
-        if (wRef) {
-          const wArr = lookupPdfRef(page.node.context, wRef);
-          if (wArr instanceof PDFArray) {
-            console.log(`  W array size: ${wArr.size()} entries`);
-
-            // Parse W array to show CID ranges and widths
-            // eslint-disable-next-line no-restricted-syntax -- analysis loop requires mutable index
-            let i = 0;
-            // eslint-disable-next-line no-restricted-syntax -- analysis loop counter
-            let sampleCount = 0;
-            while (i < wArr.size() && sampleCount < 5) {
-              const first = extractPdfNumber(wArr.get(i));
-              if (first === null) {
-                i++;
-                continue;
-              }
-
-              const second = wArr.get(i + 1);
-              if (second instanceof PDFArray) {
-                // Format: c [w1 w2 w3 ...]
-                const widths: number[] = [];
-                for (let j = 0; j < Math.min(5, second.size()); j++) {
-                  const w = extractPdfNumber(second.get(j));
-                  if (w !== null) {
-                    widths.push(w);
-                  }
-                }
-                const suffix = second.size() > 5 ? "..." : "";
-                console.log(`    CID ${first}: [${widths.join(", ")}${suffix}] (${second.size()} widths)`);
-                i += 2;
-              } else {
-                // Format: c1 c2 w
-                const last = extractPdfNumber(second);
-                const w = extractPdfNumber(wArr.get(i + 2));
-                if (last !== null && w !== null) {
-                  console.log(`    CID ${first}-${last}: width=${w}`);
-                }
-                i += 3;
-              }
-              sampleCount++;
-            }
+        if (second.type === "array") {
+          const widths: number[] = [];
+          for (let j = 0; j < Math.min(5, second.items.length); j += 1) {
+            const w = asNumber(resolve(page, second.items[j]));
+            if (w !== null) widths.push(w);
           }
+          const suffix = second.items.length > 5 ? "..." : "";
+          console.log(`    CID ${first}: [${widths.join(", ")}${suffix}] (${second.items.length} widths)`);
+          i += 2;
         } else {
-          console.log(`  W array: NOT PRESENT (all glyphs use DW)`);
+          const last = asNumber(second);
+          const w = asNumber(resolve(page, wArr.items[i + 2]));
+          if (last !== null && w !== null) {
+            console.log(`    CID ${first}-${last}: width=${w}`);
+          }
+          i += 3;
         }
+        sampleCount += 1;
       }
     }
 
@@ -809,8 +721,9 @@ describe("Japanese PDF width analysis", () => {
     }
 
     const pdfBytes = readFileSync(JP_PDF_PATH);
-    const pdfDoc = await PDFDocument.load(pdfBytes);
-    const page = pdfDoc.getPage(0);
+    const pdfDoc = loadNativePdfDocument(pdfBytes, { encryption: "ignore" });
+    const page = pdfDoc.getPages()[0];
+    if (!page) return;
 
     const fontMappings = extractFontMappings(page);
     const fontInfo = extractFontInfo(page, "F0");
@@ -959,7 +872,7 @@ describe("Text Grouping analysis", () => {
     const pdfDoc = await parsePdf(pdfBytes);
     const page = pdfDoc.pages[2] ?? pdfDoc.pages[0]; // Try page 3, fallback to page 1
 
-    const shapes = convertPageToShapes(page, {
+    const shapes: Shape[] = convertPageToShapes(page, {
       slideWidth: px(960),
       slideHeight: px(540),
       fit: "contain",
@@ -969,20 +882,20 @@ describe("Text Grouping analysis", () => {
     console.log(`Total shapes: ${shapes.length}`);
 
     // Count shape types
-    const textBoxes = shapes.filter(s => s.type === "sp" && "textBody" in s && s.textBody);
+    const textBoxes: readonly SpShape[] = getSpShapesWithTextBody(shapes);
     console.log(`TextBoxes: ${textBoxes.length}`);
 
     // Analyze textboxes
     console.log("\n--- TextBox Details ---");
     textBoxes.slice(0, 5).forEach((shape, i) => {
-      if (shape.type !== "sp" || !("textBody" in shape) || !shape.textBody) {return;}
-
       const tb = shape.textBody;
+      if (!tb) return;
       const paras = tb.paragraphs.length;
       const runs = tb.paragraphs.reduce((sum, p) => sum + p.runs.length, 0);
       const allText = tb.paragraphs.flatMap(p => p.runs.filter(r => r.type === "text").map(r => r.text)).join("");
 
       const transform = shape.properties.transform;
+      if (!transform) return;
       console.log(
         `  [${i}] ${paras} para(s), ${runs} run(s): "${allText.slice(0, 50)}${allText.length > 50 ? "..." : ""}"`
       );
@@ -1067,14 +980,14 @@ describe("Text Grouping analysis", () => {
 
     const page = pdfDoc.pages[2] ?? pdfDoc.pages[0];
 
-    const shapes = convertPageToShapes(page, {
+    const shapes: Shape[] = convertPageToShapes(page, {
       slideWidth: px(960),
       slideHeight: px(540),
       fit: "contain",
     });
 
     // Filter to TextBoxes
-    const textBoxes = shapes.filter(s => s.type === "sp" && "textBody" in s && s.textBody);
+    const textBoxes: readonly SpShape[] = getSpShapesWithTextBody(shapes);
 
     console.log("\n=== Paragraph Flattening Verification ===");
     console.log(`Total TextBoxes: ${textBoxes.length}`);
@@ -1083,19 +996,21 @@ describe("Text Grouping analysis", () => {
     // eslint-disable-next-line no-restricted-syntax -- reassigned in forEach
     let maxRuns = 0;
     // eslint-disable-next-line no-restricted-syntax -- reassigned in forEach
-    let maxRunsTextBox: (typeof textBoxes)[number] | null = null;
+    let maxRunsTextBox: SpShape | null = null;
 
-    textBoxes.forEach((shape) => {
-      if (shape.type !== "sp" || !("textBody" in shape) || !shape.textBody) {return;}
-      const totalRuns = shape.textBody.paragraphs.reduce((sum, p) => sum + p.runs.length, 0);
+    for (const shape of textBoxes) {
+      const tb = shape.textBody;
+      if (!tb) continue;
+      const totalRuns = tb.paragraphs.reduce((sum, p) => sum + p.runs.length, 0);
       if (totalRuns > maxRuns) {
         maxRuns = totalRuns;
         maxRunsTextBox = shape;
       }
-    });
+    }
 
-    if (maxRunsTextBox && maxRunsTextBox.type === "sp" && "textBody" in maxRunsTextBox && maxRunsTextBox.textBody) {
-      const tb = maxRunsTextBox.textBody;
+    if (!maxRunsTextBox) return;
+    const tb = maxRunsTextBox.textBody;
+    if (tb) {
       console.log(`\n--- TextBox with most runs (${maxRuns} runs) ---`);
       console.log(`Paragraphs: ${tb.paragraphs.length}`);
       console.log(`wrapping: ${tb.bodyProperties.wrapping}`);
