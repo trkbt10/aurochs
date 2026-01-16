@@ -8,12 +8,15 @@ import { extractFontMappingsNative } from "./font-decoder.native";
 import { extractImagesNative } from "./image-extractor.native";
 import { loadNativePdfDocumentForParser } from "./native-load";
 import { extractEmbeddedFontsFromNativePages } from "../domain/font/font-extractor.native";
+import type { PdfLoadEncryption } from "./pdf-load-error";
+import { extractExtGStateAlphaNative } from "./ext-gstate.native";
 
 export type PdfParserOptions = {
   readonly pages?: readonly number[];
   readonly minPathComplexity?: number;
   readonly includeText?: boolean;
   readonly includePaths?: boolean;
+  readonly encryption?: PdfLoadEncryption;
 };
 
 const DEFAULT_OPTIONS: Required<PdfParserOptions> = {
@@ -21,6 +24,7 @@ const DEFAULT_OPTIONS: Required<PdfParserOptions> = {
   minPathComplexity: 0,
   includeText: true,
   includePaths: true,
+  encryption: { mode: "reject" },
 };
 
 export async function parsePdfNative(
@@ -31,7 +35,7 @@ export async function parsePdfNative(
 
   const pdfDoc = await loadNativePdfDocumentForParser(data, {
     purpose: "parse",
-    encryption: { mode: "reject" },
+    encryption: opts.encryption,
     updateMetadata: false,
   });
 
@@ -98,7 +102,8 @@ async function parsePage(
   const fontMappings = extractFontMappingsNative(page);
   mergeFontMetrics(fontMappings, embeddedFontMetrics);
   const tokens = tokenizeContentStream(contentStream);
-  const parsedElements = [...parseContentStream(tokens, fontMappings)];
+  const extGState = extractExtGStateAlphaNative(page);
+  const parsedElements = [...parseContentStream(tokens, fontMappings, { extGState })];
 
   const parsedImages = parsedElements.filter((e): e is ParsedImage => e.type === "image");
   const images = await extractImagesNative(page, parsedImages, { pageHeight: height });

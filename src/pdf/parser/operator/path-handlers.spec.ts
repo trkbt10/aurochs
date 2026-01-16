@@ -26,6 +26,8 @@ function createMockGfxOps(): GraphicsStateOps {
     setStrokeRgb: () => {},
     setFillCmyk: () => {},
     setStrokeCmyk: () => {},
+    setFillAlpha: () => {},
+    setStrokeAlpha: () => {},
     setCharSpacing: () => {},
     setWordSpacing: () => {},
     setHorizontalScaling: () => {},
@@ -43,6 +45,7 @@ function createContext(operandStack: (number | string | (number | string)[])[] =
     inTextObject: false,
     textState: createInitialTextState(),
     fontMappings: new Map(),
+    extGState: new Map(),
   };
 }
 

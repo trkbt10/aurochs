@@ -1,6 +1,98 @@
 import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { loadNativePdfDocumentForParser } from "./native-load";
+import PDFDocument from "pdfkit";
+
+function renderPdfkitEncryptedPdf(args: { readonly userPassword: string; readonly ownerPassword: string; readonly text: string }): Promise<Uint8Array> {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({
+      // Keep output stable where possible; encryption still introduces /ID, but tests should not depend on bytes.
+      compress: false,
+      userPassword: args.userPassword,
+      ownerPassword: args.ownerPassword,
+    });
+
+    const chunks: Buffer[] = [];
+    doc.on("data", (chunk: Buffer) => chunks.push(chunk));
+    doc.on("error", reject);
+    doc.on("end", () => resolve(new Uint8Array(Buffer.concat(chunks))));
+
+    doc.text(args.text);
+    doc.end();
+  });
+}
+
+function pad10(n: number): string {
+  return String(n).padStart(10, "0");
+}
+
+function buildXrefTable(entries: ReadonlyArray<{ readonly obj: number; readonly offset: number; readonly gen: number }>, size: number): string {
+  const byObj = new Map<number, { offset: number; gen: number }>(entries.map((e) => [e.obj, { offset: e.offset, gen: e.gen }]));
+  let out = "xref\n";
+  out += `0 ${size}\n`;
+  out += "0000000000 65535 f \n";
+  for (let obj = 1; obj < size; obj += 1) {
+    const e = byObj.get(obj);
+    if (!e) {
+      out += "0000000000 00000 f \n";
+      continue;
+    }
+    out += `${pad10(e.offset)} ${String(e.gen).padStart(5, "0")} n \n`;
+  }
+  return out;
+}
+
+function buildPdfWithEncryptTrailer(options: { readonly includeRoot: boolean }): Uint8Array {
+  const header = "%PDF-1.7\n";
+
+  const obj1 = "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n";
+  const obj2 = "2 0 obj\n<< /Type /Pages /Count 0 /Kids [] >>\nendobj\n";
+  const obj3 = "3 0 obj\n<< /Filter /Standard >>\nendobj\n"; // dummy Encrypt dictionary (not actually used)
+
+  const offset1 = header.length;
+  const offset2 = offset1 + obj1.length;
+  const offset3 = offset2 + obj2.length;
+
+  const size = options.includeRoot ? 4 : 1;
+  const xrefOffset = options.includeRoot ? offset3 + obj3.length : header.length;
+
+  const xref = options.includeRoot
+    ? buildXrefTable(
+        [
+          { obj: 1, offset: offset1, gen: 0 },
+          { obj: 2, offset: offset2, gen: 0 },
+          { obj: 3, offset: offset3, gen: 0 },
+        ],
+        size,
+      )
+    : "xref\n0 1\n0000000000 65535 f \n";
+
+  const trailer =
+    "trailer\n" +
+    (options.includeRoot
+      ? `<< /Size ${size} /Root 1 0 R /Encrypt 3 0 R >>\n`
+      : `<< /Size ${size} /Encrypt 1 0 R >>\n`) +
+    "startxref\n" +
+    `${xrefOffset}\n` +
+    "%%EOF\n";
+
+  const bytes = options.includeRoot
+    ? new Uint8Array([
+        ...new TextEncoder().encode(header),
+        ...new TextEncoder().encode(obj1),
+        ...new TextEncoder().encode(obj2),
+        ...new TextEncoder().encode(obj3),
+        ...new TextEncoder().encode(xref),
+        ...new TextEncoder().encode(trailer),
+      ])
+    : new Uint8Array([
+        ...new TextEncoder().encode(header),
+        ...new TextEncoder().encode(xref),
+        ...new TextEncoder().encode(trailer),
+      ]);
+
+  return bytes;
+}
 
 describe("loadNativePdfDocumentForParser", () => {
   it("loads xref-table fixtures", async () => {
@@ -11,6 +103,58 @@ describe("loadNativePdfDocumentForParser", () => {
       updateMetadata: false,
     });
     expect(doc.getPageCount()).toBe(1);
+  });
+
+  it("classifies trailer /Encrypt as ENCRYPTED_PDF when encryption=reject", async () => {
+    const bytes = buildPdfWithEncryptTrailer({ includeRoot: false });
+    await expect(
+      loadNativePdfDocumentForParser(bytes, {
+        purpose: "parse",
+        encryption: { mode: "reject" },
+        updateMetadata: false,
+      }),
+    ).rejects.toMatchObject({ name: "PdfLoadError", code: "ENCRYPTED_PDF" });
+  });
+
+  it("allows trailer /Encrypt when encryption=ignore", async () => {
+    // This is intentionally not a real encrypted PDF; it's a regression test for classification behavior.
+    const bytes = buildPdfWithEncryptTrailer({ includeRoot: true });
+    const doc = await loadNativePdfDocumentForParser(bytes, {
+      purpose: "inspect",
+      encryption: { mode: "ignore" },
+      updateMetadata: false,
+    });
+    expect(doc.getPageCount()).toBe(0);
+  });
+
+  it("loads encrypted PDFs when encryption=password (pdfkit V=1/R=2)", async () => {
+    const bytes = await renderPdfkitEncryptedPdf({ userPassword: "pw", ownerPassword: "pw", text: "HELLO" });
+    const doc = await loadNativePdfDocumentForParser(bytes, {
+      purpose: "parse",
+      encryption: { mode: "password", password: "pw" },
+      updateMetadata: false,
+    });
+
+    const pages = doc.getPages();
+    expect(pages.length).toBe(1);
+
+    const page0 = pages[0]!;
+    const streams = page0.getDecodedContentStreams();
+    expect(streams.length).toBeGreaterThan(0);
+    const content = new TextDecoder("latin1").decode(streams[0]!);
+    // pdfkit encodes the text as a hex string in TJ: <48454c4c4f> == "HELLO".
+    expect(content).toContain("<48454c4c4f>");
+  });
+
+  it("rejects encrypted PDFs when encryption=password with wrong password", async () => {
+    const bytes = await renderPdfkitEncryptedPdf({ userPassword: "pw", ownerPassword: "pw", text: "HELLO" });
+    await expect(
+      loadNativePdfDocumentForParser(bytes, {
+        purpose: "parse",
+        encryption: { mode: "password", password: "wrong" },
+        updateMetadata: false,
+      }),
+    ).rejects.toMatchObject({ name: "PdfLoadError", code: "ENCRYPTED_PDF" });
   });
 
   (existsSync("fixtures/samples/000459554.pdf") ? it : it.skip)(
@@ -28,4 +172,3 @@ describe("loadNativePdfDocumentForParser", () => {
     30_000,
   );
 });
-

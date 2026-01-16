@@ -136,7 +136,7 @@ describe("Shape Fill Diagnostic for panel2.pdf", () => {
     console.log("\n=== RAW CONTENT STREAM ANALYSIS ===\n");
 
     const pdfBuffer = fs.readFileSync(PDF_PATH);
-    const pdfDoc = loadNativePdfDocument(pdfBuffer, { encryption: "ignore" });
+    const pdfDoc = loadNativePdfDocument(pdfBuffer, { encryption: { mode: "ignore" } });
     const page = pdfDoc.getPages()[0];
     if (!page) {
       console.log("No pages found");

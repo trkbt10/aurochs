@@ -96,7 +96,29 @@ function encodeRawToPngDataUrl(image: PdfImage): string {
 
   // Convert raw pixels to RGBA
   const rgbaData = convertToRgba(data, width, height, colorSpace, bitsPerComponent);
+  applyAlphaMaskInPlace(rgbaData, image.alpha, width, height);
 
   // Encode to PNG using png module (Canvas API or Pure JS)
   return encodeRgbaToPngDataUrl(rgbaData, width, height);
+}
+
+function applyAlphaMaskInPlace(
+  rgbaData: Uint8ClampedArray,
+  alpha: Uint8Array | undefined,
+  width: number,
+  height: number
+): void {
+  if (!alpha) return;
+
+  const expectedLength = width * height;
+  if (alpha.length !== expectedLength) {
+    console.warn(
+      `[PDF Image] Alpha length mismatch: expected ${expectedLength} bytes for ${width}x${height}, got ${alpha.length}`
+    );
+    return;
+  }
+
+  for (let i = 0; i < expectedLength; i += 1) {
+    rgbaData[i * 4 + 3] = alpha[i] ?? 255;
+  }
 }

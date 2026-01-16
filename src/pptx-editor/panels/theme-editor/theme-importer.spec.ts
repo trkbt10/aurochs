@@ -5,7 +5,7 @@
  * Uses OFFICE_THEME preset to generate test fixtures dynamically.
  */
 
-import { describe, it, expect, beforeAll } from "bun:test";
+import { describe, it, expect, beforeAll } from "vitest";
 import { extractThemeFromPptx } from "./theme-importer";
 import { exportThemeAsPotx } from "./theme-exporter";
 import { OFFICE_THEME } from "./presets/office-themes";

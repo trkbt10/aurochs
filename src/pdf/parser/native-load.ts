@@ -32,16 +32,9 @@ export async function loadNativePdfDocumentForParser(
   if (!options.encryption) throw new Error("options.encryption is required");
   if (typeof options.updateMetadata !== "boolean") throw new Error("options.updateMetadata must be a boolean");
 
-  if (options.encryption.mode === "password") {
-    throw new PdfLoadError(
-      "Encrypted PDFs with passwords are not supported yet",
-      "ENCRYPTED_PDF",
-    );
-  }
-
   try {
     const doc = loadNativePdfDocument(data, {
-      encryption: options.encryption.mode === "ignore" ? "ignore" : "reject",
+      encryption: options.encryption,
     });
     return doc;
   } catch (error) {

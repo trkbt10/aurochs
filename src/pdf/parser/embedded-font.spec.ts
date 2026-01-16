@@ -33,7 +33,7 @@ describe("Embedded font investigation (native)", () => {
     }
 
     const buffer = fs.readFileSync(pdfPath);
-    const pdfDoc = loadNativePdfDocument(buffer, { encryption: "ignore" });
+    const pdfDoc = loadNativePdfDocument(buffer, { encryption: { mode: "ignore" } });
     const page = pdfDoc.getPages()[0];
     if (!page) return;
 
@@ -80,7 +80,7 @@ describe("Embedded font investigation (native)", () => {
     }
 
     const buffer = fs.readFileSync(pdfPath);
-    const pdfDoc = loadNativePdfDocument(buffer, { encryption: "ignore" });
+    const pdfDoc = loadNativePdfDocument(buffer, { encryption: { mode: "ignore" } });
     const fonts = extractEmbeddedFontsFromNativePages(pdfDoc.getPages());
 
     expect(fonts.length).toBeGreaterThan(0);

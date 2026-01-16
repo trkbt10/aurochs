@@ -71,7 +71,12 @@ export function getSupportedOperators(): ReadonlyArray<{
 /**
  * Create initial parser context with empty state.
  */
-export function createInitialContext(fontMappings: FontMappings): ParserContext {
+export function createInitialContext(
+  fontMappings: FontMappings,
+  options: Readonly<{
+    readonly extGState?: ReadonlyMap<string, { readonly fillAlpha?: number; readonly strokeAlpha?: number }>;
+  }> = {},
+): ParserContext {
   return {
     operandStack: [],
     currentPath: [],
@@ -79,6 +84,7 @@ export function createInitialContext(fontMappings: FontMappings): ParserContext 
     inTextObject: false,
     textState: createInitialTextState(),
     fontMappings,
+    extGState: options.extGState ?? new Map(),
   };
 }
 
@@ -95,6 +101,7 @@ export function applyUpdate(ctx: ParserContext, update: ParserStateUpdate): Pars
     inTextObject: update.inTextObject ?? ctx.inTextObject,
     textState: update.textState ?? ctx.textState,
     fontMappings: ctx.fontMappings,
+    extGState: ctx.extGState,
   };
 }
 
@@ -124,6 +131,8 @@ export function createGfxOpsFromStack(stack: GraphicsStateStack): GraphicsStateO
     setStrokeRgb: (r, g, b) => stack.setStrokeRgb(r, g, b),
     setFillCmyk: (c, m, y, k) => stack.setFillCmyk(c, m, y, k),
     setStrokeCmyk: (c, m, y, k) => stack.setStrokeCmyk(c, m, y, k),
+    setFillAlpha: (a) => stack.setFillAlpha(a),
+    setStrokeAlpha: (a) => stack.setStrokeAlpha(a),
     setCharSpacing: (s) => stack.setCharSpacing(s),
     setWordSpacing: (s) => stack.setWordSpacing(s),
     setHorizontalScaling: (s) => stack.setHorizontalScaling(s),
@@ -227,12 +236,15 @@ export function processToken(
  */
 export function parseContentStream(
   tokens: readonly PdfToken[],
-  fontMappings: FontMappings = new Map()
+  fontMappings: FontMappings = new Map(),
+  options: Readonly<{
+    readonly extGState?: ReadonlyMap<string, { readonly fillAlpha?: number; readonly strokeAlpha?: number }>;
+  }> = {},
 ): readonly ParsedElement[] {
   const gfxStack = new GraphicsStateStack();
   const gfxOps = createGfxOpsFromStack(gfxStack);
 
-  let ctx = createInitialContext(fontMappings);
+  let ctx = createInitialContext(fontMappings, options);
 
   for (const token of tokens) {
     ctx = processToken(ctx, token, gfxOps);
@@ -256,10 +268,13 @@ export function parseContentStream(
  */
 export function createParser(
   gfxOps: GraphicsStateOps,
-  fontMappings: FontMappings = new Map()
+  fontMappings: FontMappings = new Map(),
+  options: Readonly<{
+    readonly extGState?: ReadonlyMap<string, { readonly fillAlpha?: number; readonly strokeAlpha?: number }>;
+  }> = {},
 ): (tokens: readonly PdfToken[]) => readonly ParsedElement[] {
   return (tokens) => {
-    let ctx = createInitialContext(fontMappings);
+    let ctx = createInitialContext(fontMappings, options);
 
     for (const token of tokens) {
       ctx = processToken(ctx, token, gfxOps);

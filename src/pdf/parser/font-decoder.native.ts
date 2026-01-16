@@ -202,6 +202,23 @@ function computeBoldItalic(baseFont: string | undefined, descriptor: PdfDict | n
 }
 
 function extractSimpleFontWidths(page: NativePdfPage, fontDict: PdfDict): Pick<FontMetrics, "widths" | "defaultWidth"> {
+  const subtype = asName(dictGet(fontDict, "Subtype"))?.value ?? "";
+  const widthScale = (() => {
+    if (subtype !== "Type3") return 1;
+    const fmObj = resolve(page, dictGet(fontDict, "FontMatrix"));
+    const fm = asArray(fmObj);
+    if (!fm || fm.items.length < 6) return 1;
+    const a = fm.items[0];
+    const b = fm.items[1];
+    const c = fm.items[2];
+    const d = fm.items[3];
+    if (a?.type !== "number" || b?.type !== "number" || c?.type !== "number" || d?.type !== "number") return 1;
+    if (b.value !== 0 || c.value !== 0 || a.value <= 0 || d.value <= 0) return 1;
+    // Type3 widths are in glyph space units; convert to "per 1000 em" units used by our text layout.
+    // For the common FontMatrix [0.001 0 0 0.001 0 0], this becomes a no-op scale of 1.
+    return a.value * 1000;
+  })();
+
   const firstChar = asNumber(resolve(page, dictGet(fontDict, "FirstChar")));
   const widthsObj = resolve(page, dictGet(fontDict, "Widths"));
   if (firstChar == null || !widthsObj || widthsObj.type !== "array") {
@@ -211,9 +228,9 @@ function extractSimpleFontWidths(page: NativePdfPage, fontDict: PdfDict): Pick<F
   for (let i = 0; i < widthsObj.items.length; i += 1) {
     const w = widthsObj.items[i];
     if (!w || w.type !== "number") continue;
-    widths.set(Math.trunc(firstChar) + i, w.value);
+    widths.set(Math.trunc(firstChar) + i, w.value * widthScale);
   }
-  return { widths, defaultWidth: DEFAULT_FONT_METRICS.defaultWidth };
+  return { widths, defaultWidth: DEFAULT_FONT_METRICS.defaultWidth * widthScale };
 }
 
 function extractCidFontWidths(page: NativePdfPage, fontDict: PdfDict): Pick<FontMetrics, "widths" | "defaultWidth"> {
@@ -320,4 +337,3 @@ export function extractFontMappingsNative(page: NativePdfPage, options: NativeFo
 
   return mappings;
 }
-

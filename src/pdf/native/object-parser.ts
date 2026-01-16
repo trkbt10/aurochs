@@ -1,5 +1,6 @@
-import { decodeLatin1 } from "./encoding";
+import { decodePdfStringBytes, encodeAscii } from "./encoding";
 import { createLexer, nextToken, type PdfLexer, type PdfToken } from "./lexer";
+import { indexOfBytes, isDelimiter, isWhite } from "./scan";
 import type {
   PdfArray,
   PdfBool,
@@ -15,6 +16,9 @@ import type {
 } from "./types";
 
 type ParseState = Readonly<{ lex: PdfLexer }>;
+type ParseIndirectOptions = Readonly<{
+  readonly resolveObject?: (objNum: number) => PdfObject;
+}>;
 
 function expectKeyword(state: ParseState, keyword: string): ParseState {
   const { token, next } = nextToken(state.lex);
@@ -33,10 +37,10 @@ function parsePrimitiveFromToken(token: PdfToken): PdfObject | null {
   if (token.type === "number") return { type: "number", value: token.value } satisfies PdfNumber;
   if (token.type === "name") return { type: "name", value: token.value } satisfies PdfName;
   if (token.type === "string") {
-    return { type: "string", bytes: token.bytes, text: decodeLatin1(token.bytes) } satisfies PdfString;
+    return { type: "string", bytes: token.bytes, text: decodePdfStringBytes(token.bytes) } satisfies PdfString;
   }
   if (token.type === "hexstring") {
-    return { type: "string", bytes: token.bytes, text: decodeLatin1(token.bytes) } satisfies PdfString;
+    return { type: "string", bytes: token.bytes, text: decodePdfStringBytes(token.bytes) } satisfies PdfString;
   }
   return null;
 }
@@ -108,14 +112,65 @@ export function parseObject(state: ParseState): { value: PdfObject; state: Parse
 }
 
 function skipStreamEol(bytes: Uint8Array, pos: number): number {
-  // After "stream", allow either LF or CRLF.
-  const b = bytes[pos] ?? 0;
-  if (b === 0x0d) {
-    pos += 1;
-    if ((bytes[pos] ?? 0) === 0x0a) pos += 1;
+  // After "stream", allow:
+  // - LF or CRLF (common, per spec)
+  // - optional spaces/tabs before the line break (tolerate non-standard writers)
+  // - an optional comment up to the line break (tolerate odd formatting)
+  //
+  // IMPORTANT: do not skip arbitrary whitespace unless a line break follows; otherwise we would
+  // accidentally consume whitespace that is part of the stream data.
+  const b0 = bytes[pos] ?? 0;
+
+  const consumeEol = (p: number): number => {
+    const b = bytes[p] ?? 0;
+    if (b === 0x0d) {
+      p += 1;
+      if ((bytes[p] ?? 0) === 0x0a) p += 1;
+      return p;
+    }
+    if (b === 0x0a) return p + 1;
+    return p;
+  };
+
+  if (b0 === 0x0d || b0 === 0x0a) return consumeEol(pos);
+
+  // spaces/tabs before EOL
+  if (b0 === 0x20 || b0 === 0x09) {
+    let p = pos;
+    while (p < bytes.length) {
+      const b = bytes[p] ?? 0;
+      if (b === 0x20 || b === 0x09) {
+        p += 1;
+        continue;
+      }
+      break;
+    }
+    const b = bytes[p] ?? 0;
+    if (b === 0x0d || b === 0x0a) return consumeEol(p);
+    if (b === 0x25) {
+      // comment until EOL
+      p += 1;
+      while (p < bytes.length) {
+        const c = bytes[p] ?? 0;
+        if (c === 0x0d || c === 0x0a) break;
+        p += 1;
+      }
+      return consumeEol(p);
+    }
     return pos;
   }
-  if (b === 0x0a) return pos + 1;
+
+  // comment immediately after stream keyword
+  if (b0 === 0x25) {
+    let p = pos + 1;
+    while (p < bytes.length) {
+      const c = bytes[p] ?? 0;
+      if (c === 0x0d || c === 0x0a) break;
+      p += 1;
+    }
+    return consumeEol(p);
+  }
+
   return pos;
 }
 
@@ -132,22 +187,8 @@ function parseStreamDataFromRaw(
     return { data, nextPos: dataEnd };
   }
 
-  // Fallback: search for endstream.
-  const endMarker = new TextEncoder().encode("endstream");
-  const dataEnd = (() => {
-    // naive scan
-    for (let i = streamStart; i + endMarker.length <= bytes.length; i += 1) {
-      let ok = true;
-      for (let j = 0; j < endMarker.length; j += 1) {
-        if (bytes[i + j] !== endMarker[j]) {
-          ok = false;
-          break;
-        }
-      }
-      if (ok) return i;
-    }
-    return -1;
-  })();
+  // Fallback: search for endstream, but avoid obvious false positives inside binary payloads.
+  const dataEnd = findEndstreamStart(bytes, streamStart);
   if (dataEnd < 0) throw new Error("Failed to find endstream");
   return { data: bytes.slice(streamStart, dataEnd), nextPos: dataEnd };
 }
@@ -162,7 +203,52 @@ function asNumber(obj: PdfObject | undefined): number | null {
   return null;
 }
 
-export function parseIndirectObjectAt(bytes: Uint8Array, offset: number): { obj: PdfIndirectObject; nextOffset: number } {
+function asRef(obj: PdfObject | undefined): PdfRef | null {
+  return obj?.type === "ref" ? obj : null;
+}
+
+const ENDSTREAM = encodeAscii("endstream");
+
+function isTokenBoundary(byte: number): boolean {
+  return isWhite(byte) || isDelimiter(byte);
+}
+
+function findEndstreamStart(bytes: Uint8Array, from: number): number {
+  let pos = from;
+  while (pos >= 0 && pos < bytes.length) {
+    const idx = indexOfBytes(bytes, ENDSTREAM, pos);
+    if (idx < 0) return -1;
+
+    const before = idx > 0 ? (bytes[idx - 1] ?? 0) : 0;
+    const after = bytes[idx + ENDSTREAM.length] ?? 0;
+    if (idx > 0 && !isTokenBoundary(before)) {
+      pos = idx + 1;
+      continue;
+    }
+    if (!isTokenBoundary(after)) {
+      pos = idx + 1;
+      continue;
+    }
+
+    // Additional check: ensure 'endobj' follows.
+    const st: ParseState = { lex: createLexer(bytes, idx) };
+    const s1 = expectKeyword(st, "endstream");
+    try {
+      expectKeyword(s1, "endobj");
+      return idx;
+    } catch {
+      pos = idx + 1;
+      continue;
+    }
+  }
+  return -1;
+}
+
+export function parseIndirectObjectAt(
+  bytes: Uint8Array,
+  offset: number,
+  options: ParseIndirectOptions = {},
+): { obj: PdfIndirectObject; nextOffset: number } {
   let st: ParseState = { lex: createLexer(bytes, offset) };
 
   const { token: tObj, next: n1 } = nextToken(st.lex);
@@ -181,7 +267,17 @@ export function parseIndirectObjectAt(bytes: Uint8Array, offset: number): { obj:
     const afterDict = st;
     const { token: maybeStream, next: afterStreamToken } = nextToken(afterDict.lex);
     if (maybeStream.type === "keyword" && maybeStream.value === "stream") {
-      const length = asNumber(dictGet(value, "Length"));
+      const lengthObj = dictGet(value, "Length");
+      const length = (() => {
+        const direct = asNumber(lengthObj);
+        if (direct != null) return direct;
+        const ref = asRef(lengthObj);
+        if (ref && options.resolveObject) {
+          const resolved = options.resolveObject(ref.obj);
+          return resolved.type === "number" ? resolved.value : null;
+        }
+        return null;
+      })();
       const rawPos = afterStreamToken.pos;
       const { data, nextPos } = parseStreamDataFromRaw(bytes, rawPos, length);
       // Move lexer to after stream data; then expect endstream/endobj.

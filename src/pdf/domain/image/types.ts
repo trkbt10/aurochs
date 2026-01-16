@@ -15,6 +15,13 @@ export type PdfImage = {
   readonly type: "image";
   readonly data: Uint8Array;
   /**
+   * Optional 8-bit alpha channel per pixel (soft mask).
+   *
+   * Length must be `width * height` when present.
+   * 0 = transparent, 255 = opaque.
+   */
+  readonly alpha?: Uint8Array;
+  /**
    * Image pixel width (sample columns).
    *
    * Note: The rendered size/placement on the page is determined by the current

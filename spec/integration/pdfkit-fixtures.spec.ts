@@ -1,0 +1,124 @@
+import { describe, it, expect } from "vitest";
+import { spawnSync } from "node:child_process";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { fileURLToPath } from "node:url";
+import { parsePdf } from "../../src/pdf";
+
+type FixtureExpectation = Readonly<{
+  readonly fileName: string;
+  readonly expectedPages: number;
+  readonly minPaths?: number;
+  readonly minTexts?: number;
+  readonly expectedTextIncludes?: readonly string[];
+}>;
+
+const FIXTURES: readonly FixtureExpectation[] = [
+  {
+    fileName: "pdfkit-basic.pdf",
+    expectedPages: 1,
+    minPaths: 1,
+    minTexts: 2,
+    expectedTextIncludes: ["Hello PDFKit", "Café résumé naïve"],
+  },
+  {
+    fileName: "pdfkit-multipage.pdf",
+    expectedPages: 3,
+    minPaths: 3,
+    minTexts: 3,
+    expectedTextIncludes: ["Page 1", "Page 2", "Page 3"],
+  },
+  {
+    fileName: "pdfkit-image.pdf",
+    expectedPages: 1,
+    minTexts: 1,
+    expectedTextIncludes: ["PNG image above"],
+  },
+];
+
+const DEFAULT_PDFKIT_FIXTURE_DIR = path.resolve("spec", "fixtures", "pdfkit");
+
+function isValidPdf(bytes: Uint8Array): boolean {
+  const header = new TextDecoder("latin1").decode(bytes.slice(0, 8));
+  const trailer = new TextDecoder("latin1").decode(bytes.slice(Math.max(0, bytes.length - 32)));
+  return header.startsWith("%PDF-") && trailer.includes("%%EOF");
+}
+
+function normalizeTextForIncludes(text: string): string {
+  return text.replace(/\s+/g, "");
+}
+
+function createTempDir(): string {
+  const __dirname = path.dirname(fileURLToPath(import.meta.url));
+  const base = path.resolve(__dirname, "../.tmp/pdfkit-fixtures");
+  fs.mkdirSync(base, { recursive: true });
+  const tmp = path.join(base, `${Date.now()}-${Math.random().toString(16).slice(2)}`);
+  fs.mkdirSync(tmp, { recursive: true });
+  return tmp;
+}
+
+function generateFixturesWithBun(outputDir: string): void {
+  const result = spawnSync(
+    "bun",
+    ["run", "scripts/generate-pdfkit-fixtures.ts", "--outputDir", outputDir, "--no-log"],
+    { cwd: path.resolve("."), encoding: "utf8" },
+  );
+  if (result.status !== 0) {
+    throw new Error(result.stderr || result.stdout || "bun fixture generation failed");
+  }
+}
+
+describe("PDFKit fixtures", () => {
+  it("checked-in fixtures exist, are valid PDFs, and match expected content", async () => {
+    for (const fixture of FIXTURES) {
+      const filePath = path.join(DEFAULT_PDFKIT_FIXTURE_DIR, fixture.fileName);
+      expect(fs.existsSync(filePath)).toBe(true);
+
+      const bytes = fs.readFileSync(filePath);
+      expect(isValidPdf(bytes)).toBe(true);
+
+      const parsed = await parsePdf(bytes);
+      expect(parsed.pages.length).toBe(fixture.expectedPages);
+
+      const allElements = parsed.pages.flatMap((p) => p.elements);
+      const pathElements = allElements.filter((e) => e.type === "path");
+      const textElements = allElements.filter((e) => e.type === "text");
+
+      if (fixture.minPaths !== undefined) {
+        expect(pathElements.length).toBeGreaterThanOrEqual(fixture.minPaths);
+      }
+      if (fixture.minTexts !== undefined) {
+        expect(textElements.length).toBeGreaterThanOrEqual(fixture.minTexts);
+      }
+      if (fixture.expectedTextIncludes && fixture.expectedTextIncludes.length > 0) {
+        const allText = normalizeTextForIncludes(textElements.map((t) => t.text).join("\n"));
+        for (const expected of fixture.expectedTextIncludes) {
+          expect(allText).toContain(normalizeTextForIncludes(expected));
+        }
+      }
+    }
+  });
+
+  it("generator output is deterministic and matches checked-in fixtures", async () => {
+    const tmpDir = createTempDir();
+
+    try {
+      generateFixturesWithBun(tmpDir);
+      const firstRun = new Map<string, Buffer>();
+      for (const fixture of FIXTURES) {
+        firstRun.set(fixture.fileName, fs.readFileSync(path.join(tmpDir, fixture.fileName)));
+      }
+
+      generateFixturesWithBun(tmpDir);
+
+      for (const fixture of FIXTURES) {
+        const generated = fs.readFileSync(path.join(tmpDir, fixture.fileName));
+        const expected = fs.readFileSync(path.join(DEFAULT_PDFKIT_FIXTURE_DIR, fixture.fileName));
+        expect(generated.equals(expected)).toBe(true);
+        expect(generated.equals(firstRun.get(fixture.fileName)!)).toBe(true);
+      }
+    } finally {
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    }
+  });
+});

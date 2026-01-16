@@ -27,7 +27,7 @@ describe("Text Garbling Diagnostic for panel2.pdf", () => {
     console.log(`PDF file: ${PDF_PATH}`);
     console.log(`PDF size: ${pdfBuffer.length} bytes\n`);
 
-    const pdfDoc = loadNativePdfDocument(pdfBuffer, { encryption: "ignore" });
+    const pdfDoc = loadNativePdfDocument(pdfBuffer, { encryption: { mode: "ignore" } });
     const pages = pdfDoc.getPages();
 
     console.log(`Total pages: ${pages.length}\n`);
@@ -134,7 +134,7 @@ describe("Text Garbling Diagnostic for panel2.pdf", () => {
     console.log("\n=== RAW TOUNICODE CMAP ANALYSIS ===\n");
 
     const pdfBuffer = fs.readFileSync(PDF_PATH);
-    const pdfDoc = loadNativePdfDocument(pdfBuffer, { encryption: "ignore" });
+    const pdfDoc = loadNativePdfDocument(pdfBuffer, { encryption: { mode: "ignore" } });
     const page = pdfDoc.getPages()[0];
     if (!page) return;
 

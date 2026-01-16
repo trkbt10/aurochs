@@ -19,9 +19,36 @@ function filterNamesFromStreamDict(dict: PdfDict): readonly string[] {
   return [];
 }
 
+function decodeParmsFromStreamDict(dict: PdfDict, filterCount: number): readonly (PdfObject | null)[] | undefined {
+  const decodeParms = dictGet(dict, "DecodeParms");
+  if (!decodeParms) return undefined;
+
+  if (decodeParms.type === "array") {
+    const out: (PdfObject | null)[] = [];
+    for (const item of decodeParms.items) {
+      if (item.type === "null") out.push(null);
+      else out.push(item);
+    }
+    return out;
+  }
+
+  if (decodeParms.type === "null") {
+    return [null];
+  }
+
+  // Common case: single filter with a dict decode parm.
+  if (decodeParms.type === "dict") {
+    if (filterCount <= 1) return [decodeParms];
+    // Multiple filters should normally provide an array; keep the first and leave the rest unspecified.
+    return [decodeParms, ...new Array<null>(Math.max(0, filterCount - 1)).fill(null)];
+  }
+
+  return undefined;
+}
+
 export function decodePdfStream(stream: PdfStream): Uint8Array {
   const filters = filterNamesFromStreamDict(stream.dict);
   if (filters.length === 0) return stream.data;
-  return decodeStreamData(stream.data, { filters });
+  const decodeParms = decodeParmsFromStreamDict(stream.dict, filters.length);
+  return decodeStreamData(stream.data, { filters, decodeParms });
 }
-

@@ -56,6 +56,38 @@ describe("convertImageToShape", () => {
     expect(shape.blipFill.resourceId.startsWith("data:image/png;base64,")).toBe(true);
   });
 
+  it("applies alpha mask when encoding raw pixels to PNG", () => {
+    const image: PdfImage = {
+      type: "image",
+      data: new Uint8Array([
+        255, 0, 0, // red (transparent)
+        0, 255, 0, // green (opaque)
+      ]),
+      alpha: new Uint8Array([0, 255]),
+      width: 2,
+      height: 1,
+      colorSpace: "DeviceRGB",
+      bitsPerComponent: 8,
+      graphicsState,
+    };
+
+    const shape = convertImageToShape(image, context, "1");
+    const parsed = parseDataUrl(shape.blipFill.resourceId);
+    expect(parsed.mimeType).toBe("image/png");
+
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- pngjs is CJS
+    const pngjs = require("pngjs") as typeof import("pngjs");
+    const { PNG } = pngjs;
+    const decoded = PNG.sync.read(Buffer.from(parsed.data));
+
+    expect(decoded.width).toBe(2);
+    expect(decoded.height).toBe(1);
+
+    // RGBA for 2x1: [r,g,b,a, r,g,b,a]
+    expect(decoded.data[3]).toBe(0);
+    expect(decoded.data[7]).toBe(255);
+  });
+
   it("detects JPEG signature and uses image/jpeg", () => {
     const image: PdfImage = {
       type: "image",

@@ -21,7 +21,7 @@ describe("extractEmbeddedFonts", () => {
     }
 
     const buffer = fs.readFileSync(pdfPath);
-    const pdfDoc = loadNativePdfDocument(buffer, { encryption: "ignore" });
+    const pdfDoc = loadNativePdfDocument(buffer, { encryption: { mode: "ignore" } });
 
     const fonts = extractEmbeddedFonts(pdfDoc);
 
@@ -42,7 +42,7 @@ describe("extractEmbeddedFonts", () => {
 
   it("should return empty array for PDF without embedded fonts", async () => {
     const pdfBytes = fs.readFileSync(path.resolve("spec/fixtures/pdf/simple-rect.pdf"));
-    const loadedDoc = loadNativePdfDocument(pdfBytes, { encryption: "reject" });
+    const loadedDoc = loadNativePdfDocument(pdfBytes, { encryption: { mode: "reject" } });
     const fonts = extractEmbeddedFonts(loadedDoc);
     expect(fonts.length).toBe(0);
   });
@@ -55,7 +55,7 @@ describe("extractEmbeddedFonts", () => {
     }
 
     const buffer = fs.readFileSync(pdfPath);
-    const pdfDoc = loadNativePdfDocument(buffer, { encryption: "ignore" });
+    const pdfDoc = loadNativePdfDocument(buffer, { encryption: { mode: "ignore" } });
 
     const fonts = extractEmbeddedFonts(pdfDoc);
 
@@ -74,7 +74,7 @@ describe("extractEmbeddedFonts", () => {
     }
 
     const buffer = fs.readFileSync(pdfPath);
-    const pdfDoc = loadNativePdfDocument(buffer, { encryption: "ignore" });
+    const pdfDoc = loadNativePdfDocument(buffer, { encryption: { mode: "ignore" } });
 
     const fonts = extractEmbeddedFonts(pdfDoc);
 

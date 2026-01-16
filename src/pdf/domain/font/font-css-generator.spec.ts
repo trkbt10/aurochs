@@ -23,7 +23,7 @@ describe("fontToDataUrl", () => {
     }
 
     const buffer = fs.readFileSync(pdfPath);
-    const pdfDoc = loadNativePdfDocument(buffer, { encryption: "ignore" });
+    const pdfDoc = loadNativePdfDocument(buffer, { encryption: { mode: "ignore" } });
     const fonts = extractEmbeddedFonts(pdfDoc);
 
     expect(fonts.length).toBeGreaterThan(0);
@@ -46,7 +46,7 @@ describe("generateFontFaceCss", () => {
     }
 
     const buffer = fs.readFileSync(pdfPath);
-    const pdfDoc = loadNativePdfDocument(buffer, { encryption: "ignore" });
+    const pdfDoc = loadNativePdfDocument(buffer, { encryption: { mode: "ignore" } });
     const fonts = extractEmbeddedFonts(pdfDoc);
 
     const font = fonts[0]!;
@@ -70,7 +70,7 @@ describe("generateFontFaceCss", () => {
     }
 
     const buffer = fs.readFileSync(pdfPath);
-    const pdfDoc = loadNativePdfDocument(buffer, { encryption: "ignore" });
+    const pdfDoc = loadNativePdfDocument(buffer, { encryption: { mode: "ignore" } });
     const fonts = extractEmbeddedFonts(pdfDoc);
 
     // Generate CSS for all fonts
@@ -93,7 +93,7 @@ describe("generateFontFaceStyle", () => {
     }
 
     const buffer = fs.readFileSync(pdfPath);
-    const pdfDoc = loadNativePdfDocument(buffer, { encryption: "ignore" });
+    const pdfDoc = loadNativePdfDocument(buffer, { encryption: { mode: "ignore" } });
     const fonts = extractEmbeddedFonts(pdfDoc);
 
     const styleContent = generateFontFaceStyle(fonts);

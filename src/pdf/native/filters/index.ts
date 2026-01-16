@@ -2,6 +2,7 @@ import type { PdfObject } from "../types";
 import { decodeAscii85 } from "./ascii85";
 import { decodeAsciiHex } from "./ascii-hex";
 import { decodeFlate } from "./flate";
+import { decodeLzw, readLzwDecodeOptions } from "./lzw";
 import { decodeRunLength } from "./run-length";
 
 export type DecodeStreamOptions = Readonly<{
@@ -15,6 +16,9 @@ function normalizeFilterName(name: string): string {
     case "FlateDecode":
     case "Fl":
       return "FlateDecode";
+    case "LZWDecode":
+    case "LZW":
+      return "LZWDecode";
     case "ASCII85Decode":
     case "A85":
       return "ASCII85Decode";
@@ -27,6 +31,8 @@ function normalizeFilterName(name: string): string {
     case "DCTDecode":
     case "DCT":
       return "DCTDecode";
+    case "Crypt":
+      return "Crypt";
     case "JPXDecode":
       return "JPXDecode";
     default:
@@ -40,12 +46,23 @@ export function decodeStreamData(encoded: Uint8Array, options: DecodeStreamOptio
   if (!options.filters) throw new Error("options.filters is required");
 
   let data = encoded;
-  for (const rawFilter of options.filters) {
+  for (let i = 0; i < options.filters.length; i += 1) {
+    const rawFilter = options.filters[i]!;
     const filter = normalizeFilterName(rawFilter);
+    const parms = options.decodeParms?.[i];
     switch (filter) {
-      case "FlateDecode":
-        data = decodeFlate(data);
+      case "Crypt":
+        // Decryption is handled at object-load time (NativePdfDocument + PdfResolver).
+        // When /Filter includes /Crypt, stream.data should already be decrypted.
         break;
+      case "FlateDecode":
+        data = decodeFlate(data, parms);
+        break;
+      case "LZWDecode": {
+        const lzwOpts = readLzwDecodeOptions(parms);
+        data = decodeLzw(data, lzwOpts);
+        break;
+      }
       case "ASCII85Decode":
         data = decodeAscii85(data);
         break;

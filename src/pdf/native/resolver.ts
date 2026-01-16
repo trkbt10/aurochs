@@ -2,6 +2,8 @@ import { parseIndirectObjectAt, parseObject } from "./object-parser";
 import { decodeStreamData } from "./filters";
 import type { PdfDict, PdfObject, PdfStream } from "./types";
 import type { XRefTable } from "./xref";
+import type { PdfDecrypter } from "./encryption/standard";
+import { decryptPdfObject } from "./encryption/decrypt-object";
 
 type ObjStmCacheEntry = Readonly<{
   readonly objStm: number;
@@ -38,6 +40,31 @@ function readFilterNames(dict: PdfDict): readonly string[] {
   return [];
 }
 
+function decodeParmsFromStreamDict(dict: PdfDict, filterCount: number): readonly (PdfObject | null)[] | undefined {
+  const decodeParms = dictGet(dict, "DecodeParms");
+  if (!decodeParms) return undefined;
+
+  if (decodeParms.type === "array") {
+    const out: (PdfObject | null)[] = [];
+    for (const item of decodeParms.items) {
+      if (item.type === "null") out.push(null);
+      else out.push(item);
+    }
+    return out;
+  }
+
+  if (decodeParms.type === "null") {
+    return [null];
+  }
+
+  if (decodeParms.type === "dict") {
+    if (filterCount <= 1) return [decodeParms];
+    return [decodeParms, ...new Array<null>(Math.max(0, filterCount - 1)).fill(null)];
+  }
+
+  return undefined;
+}
+
 export class PdfResolver {
   private readonly indirectCache = new Map<number, PdfObject>();
   private readonly objStmCache = new Map<number, ObjStmCacheEntry>();
@@ -45,6 +72,10 @@ export class PdfResolver {
   constructor(
     private readonly bytes: Uint8Array,
     private readonly xref: XRefTable,
+    private readonly options: Readonly<{
+      readonly decrypter?: PdfDecrypter;
+      readonly skipDecryptObjectNums?: ReadonlySet<number>;
+    }> = {},
   ) {}
 
   deref(obj: PdfObject): PdfObject {
@@ -60,26 +91,34 @@ export class PdfResolver {
       throw new Error(`Missing xref entry for object ${objNum}`);
     }
 
-    const value = (() => {
+    const { value, gen } = (() => {
       if (entry.type === 0) {
         throw new Error(`Object ${objNum} is free`);
       }
       if (entry.type === 1) {
-        const { obj } = parseIndirectObjectAt(this.bytes, entry.offset);
+        const { obj } = parseIndirectObjectAt(this.bytes, entry.offset, { resolveObject: (n) => this.getObject(n) });
         if (obj.obj !== objNum) {
           // Some PDFs may have padding; still trust parsed obj.
         }
-        return obj.value;
+        return { value: obj.value, gen: entry.gen };
       }
       if (entry.type === 2) {
-        return this.getCompressedObject(entry.objStm, entry.index);
+        return { value: this.getCompressedObject(entry.objStm, entry.index), gen: 0 };
       }
       const exhaustive: never = entry;
       throw new Error(`Unsupported xref entry: ${String(exhaustive)}`);
     })();
 
-    this.indirectCache.set(objNum, value);
-    return value;
+    const decrypted = (() => {
+      const decrypter = this.options.decrypter;
+      if (!decrypter) return value;
+      const skip = this.options.skipDecryptObjectNums;
+      if (skip?.has(objNum)) return value;
+      return decryptPdfObject(value, objNum, gen, decrypter);
+    })();
+
+    this.indirectCache.set(objNum, decrypted);
+    return decrypted;
   }
 
   private getCompressedObject(objStmNum: number, index: number): PdfObject {
@@ -100,10 +139,11 @@ export class PdfResolver {
 
     const n = asNumber(dictGet(stream.dict, "N"));
     const first = asNumber(dictGet(stream.dict, "First"));
-    if (!n || !first) throw new Error(`ObjStm ${objStmNum}: missing /N or /First`);
+    if (n == null || first == null) throw new Error(`ObjStm ${objStmNum}: missing /N or /First`);
 
     const filters = readFilterNames(stream.dict);
-    const decoded = decodeStreamData(stream.data, { filters });
+    const decodeParms = decodeParmsFromStreamDict(stream.dict, filters.length);
+    const decoded = decodeStreamData(stream.data, { filters, decodeParms });
 
     const headerBytes = decoded.slice(0, first);
     const headerText = new TextDecoder("latin1").decode(headerBytes);

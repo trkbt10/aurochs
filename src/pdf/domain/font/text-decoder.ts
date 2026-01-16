@@ -66,7 +66,7 @@ export function decodeText(
 
   // For single-byte fonts, use ToUnicode mapping if available
   if (mapping.size > 0) {
-    return decodeSingleByteText(rawText, mapping);
+    return decodeSingleByteTextWithFallback(rawText, mapping, encodingMap);
   }
 
   // Fall back to encoding map if available (WinAnsi, MacRoman, etc.)
@@ -133,6 +133,22 @@ function decodeSingleByteText(rawText: string, mapping: Map<number, string>): st
     .map((char) => {
       const code = char.charCodeAt(0);
       return mapping.get(code) ?? char;
+    })
+    .join("");
+}
+
+function decodeSingleByteTextWithFallback(
+  rawText: string,
+  toUnicode: Map<number, string>,
+  encodingMap: ReadonlyMap<number, string> | undefined,
+): string {
+  return Array.from(rawText)
+    .map((char) => {
+      const code = char.charCodeAt(0);
+      const mapped = toUnicode.get(code);
+      if (mapped) return mapped;
+      const fallback = encodingMap?.get(code);
+      return fallback ?? char;
     })
     .join("");
 }

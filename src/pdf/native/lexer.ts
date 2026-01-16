@@ -199,7 +199,9 @@ function readHexString(lex: PdfLexer): { bytes: Uint8Array; next: number } {
     pos += 1;
     if (b === 0x3e) break; // >
     if (isWhite(b)) continue;
-    if (!isHexDigit(b)) continue;
+    if (!isHexDigit(b)) {
+      throw new Error("readHexString: invalid hex digit");
+    }
     nibbles.push(hexValue(b));
   }
 
@@ -270,4 +272,3 @@ export function nextToken(lex: PdfLexer): { token: PdfToken; next: PdfLexer } {
     return { token, next: { bytes, pos: next } };
   })();
 }
-

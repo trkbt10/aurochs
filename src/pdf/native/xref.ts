@@ -101,7 +101,8 @@ function parseXRefStream(stream: PdfStream): { entries: ReadonlyMap<number, XRef
   if (indexPairs.length % 2 !== 0) throw new Error("xref stream: /Index must have even length");
 
   const filters = readFilterNames(dict);
-  const decoded = decodeStreamData(stream.data, { filters });
+  const decodeParms = decodeParmsFromStreamDict(dict, filters.length);
+  const decoded = decodeStreamData(stream.data, { filters, decodeParms });
 
   const entryWidth = w0 + w1 + w2;
   if (entryWidth <= 0) throw new Error("xref stream: invalid /W");
@@ -146,6 +147,31 @@ function readFilterNames(dict: PdfDict): readonly string[] {
   return [];
 }
 
+function decodeParmsFromStreamDict(dict: PdfDict, filterCount: number): readonly (PdfObject | null)[] | undefined {
+  const decodeParms = dictGet(dict, "DecodeParms");
+  if (!decodeParms) return undefined;
+
+  if (decodeParms.type === "array") {
+    const out: (PdfObject | null)[] = [];
+    for (const item of decodeParms.items) {
+      if (item.type === "null") out.push(null);
+      else out.push(item);
+    }
+    return out;
+  }
+
+  if (decodeParms.type === "null") {
+    return [null];
+  }
+
+  if (decodeParms.type === "dict") {
+    if (filterCount <= 1) return [decodeParms];
+    return [decodeParms, ...new Array<null>(Math.max(0, filterCount - 1)).fill(null)];
+  }
+
+  return undefined;
+}
+
 function skipWs(bytes: Uint8Array, pos: number): number {
   while (pos < bytes.length) {
     const b = bytes[pos] ?? 0;
@@ -175,7 +201,12 @@ function readLine(bytes: Uint8Array, pos: number): { line: string; nextPos: numb
   return { line, nextPos: pos };
 }
 
-function parseXRefTableAt(bytes: Uint8Array, offset: number): { entries: ReadonlyMap<number, XRefEntry>; trailer: PdfDict; prev: number | null } {
+function parseXRefTableAt(bytes: Uint8Array, offset: number): {
+  entries: ReadonlyMap<number, XRefEntry>;
+  trailer: PdfDict;
+  prev: number | null;
+  xrefStm: number | null;
+} {
   let pos = skipWs(bytes, offset);
   const first = readLine(bytes, pos);
   if (first.line.trim() !== "xref") throw new Error("xref table: missing 'xref'");
@@ -222,16 +253,22 @@ function parseXRefTableAt(bytes: Uint8Array, offset: number): { entries: Readonl
     throw new Error("xref table: trailer is not a dictionary");
   }
   const prev = asInt(dictGet(trailer, "Prev"));
-  return { entries, trailer, prev };
+  const xrefStm = asInt(dictGet(trailer, "XRefStm"));
+  return { entries, trailer, prev, xrefStm };
 }
 
-function parseXRefStreamAt(bytes: Uint8Array, offset: number): { entries: ReadonlyMap<number, XRefEntry>; trailer: PdfDict; prev: number | null } {
+function parseXRefStreamAt(bytes: Uint8Array, offset: number): {
+  entries: ReadonlyMap<number, XRefEntry>;
+  trailer: PdfDict;
+  prev: number | null;
+  xrefStm: number | null;
+} {
   const { obj } = parseIndirectObjectAt(bytes, offset);
   const stream = asStream(obj.value);
   if (!stream) throw new Error("xref stream: object is not a stream");
   const parsed = parseXRefStream(stream);
   const prev = asInt(dictGet(parsed.trailer, "Prev"));
-  return { entries: parsed.entries, trailer: parsed.trailer, prev };
+  return { entries: parsed.entries, trailer: parsed.trailer, prev, xrefStm: null };
 }
 
 export function loadXRef(bytes: Uint8Array): XRefTable {
@@ -248,7 +285,12 @@ export function loadXRef(bytes: Uint8Array): XRefTable {
       (bytes[pos + 2] ?? 0) === 0x65 && // 'e'
       (bytes[pos + 3] ?? 0) === 0x66; // 'f'
 
-    const parsed: { entries: ReadonlyMap<number, XRefEntry>; trailer: PdfDict; prev: number | null } = looksLikeXrefTable
+    const parsed: {
+      entries: ReadonlyMap<number, XRefEntry>;
+      trailer: PdfDict;
+      prev: number | null;
+      xrefStm: number | null;
+    } = looksLikeXrefTable
       ? parseXRefTableAt(bytes, offset)
       : parseXRefStreamAt(bytes, offset);
 
@@ -258,6 +300,19 @@ export function loadXRef(bytes: Uint8Array): XRefTable {
         entries.set(objNum, entry);
       }
     }
+
+    // Hybrid-reference PDFs: trailer of an xref table may include /XRefStm pointing to an xref stream offset.
+    // Load that additional xref stream and merge its entries (without overriding the xref table section).
+    if (looksLikeXrefTable && parsed.xrefStm != null && parsed.xrefStm > 0) {
+      const hybrid = parseXRefStreamAt(bytes, parsed.xrefStm);
+      for (const [objNum, entry] of hybrid.entries.entries()) {
+        if (!entries.has(objNum)) {
+          entries.set(objNum, entry);
+        }
+      }
+      if (!trailer) trailer = hybrid.trailer;
+    }
+
     offset = parsed.prev;
   }
 

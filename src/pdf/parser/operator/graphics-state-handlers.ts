@@ -20,7 +20,7 @@ import type {
   OperatorHandler,
   OperatorHandlerEntry,
 } from "./types";
-import { popNumber, popArray } from "./stack-ops";
+import { popNumber, popArray, popString } from "./stack-ops";
 
 // =============================================================================
 // State Stack Handlers
@@ -142,6 +142,28 @@ const handleDashPattern: OperatorHandler = (ctx, gfxOps) => {
 };
 
 // =============================================================================
+// Extended Graphics State (gs)
+// =============================================================================
+
+/**
+ * gs operator: Set parameters from an ExtGState resource dictionary.
+ *
+ * This implementation currently supports only transparency:
+ * - /ca: fill alpha
+ * - /CA: stroke alpha
+ */
+const handleExtGState: OperatorHandler = (ctx, gfxOps) => {
+  const [name, newStack] = popString(ctx.operandStack);
+  const key = name.startsWith("/") ? name.slice(1) : name;
+  const gs = ctx.extGState.get(key);
+  if (gs) {
+    if (typeof gs.fillAlpha === "number") gfxOps.setFillAlpha(gs.fillAlpha);
+    if (typeof gs.strokeAlpha === "number") gfxOps.setStrokeAlpha(gs.strokeAlpha);
+  }
+  return { operandStack: newStack };
+};
+
+// =============================================================================
 // Handler Registry (Rule 1: Lookup objects instead of switch)
 // =============================================================================
 
@@ -154,6 +176,8 @@ export const GRAPHICS_STATE_HANDLERS: ReadonlyMap<string, OperatorHandlerEntry> 
   ["Q", { handler: handleRestoreState, category: "graphics-state", description: "Restore graphics state" }],
   // Transformation
   ["cm", { handler: handleConcatMatrix, category: "graphics-state", description: "Concatenate matrix to CTM" }],
+  // ExtGState
+  ["gs", { handler: handleExtGState, category: "graphics-state", description: "Set ExtGState parameters" }],
   // Line style
   ["w", { handler: handleLineWidth, category: "graphics-state", description: "Set line width" }],
   ["J", { handler: handleLineCap, category: "graphics-state", description: "Set line cap style" }],
@@ -170,6 +194,7 @@ export const graphicsStateHandlers = {
   handleSaveState,
   handleRestoreState,
   handleConcatMatrix,
+  handleExtGState,
   handleLineWidth,
   handleLineCap,
   handleLineJoin,

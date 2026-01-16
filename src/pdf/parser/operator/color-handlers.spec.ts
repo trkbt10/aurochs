@@ -30,6 +30,8 @@ function createMockGfxOps() {
       setStrokeRgb: (r: number, g: number, b: number) => calls.push({ method: "setStrokeRgb", args: [r, g, b] }),
       setFillCmyk: (c: number, m: number, y: number, k: number) => calls.push({ method: "setFillCmyk", args: [c, m, y, k] }),
       setStrokeCmyk: (c: number, m: number, y: number, k: number) => calls.push({ method: "setStrokeCmyk", args: [c, m, y, k] }),
+      setFillAlpha: () => {},
+      setStrokeAlpha: () => {},
       setCharSpacing: () => {},
       setWordSpacing: () => {},
       setHorizontalScaling: () => {},
@@ -48,6 +50,7 @@ function createContext(operandStack: (number | string | (number | string)[])[] =
     inTextObject: false,
     textState: createInitialTextState(),
     fontMappings: new Map(),
+    extGState: new Map(),
   };
 }
 

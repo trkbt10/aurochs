@@ -426,7 +426,7 @@ describe("modeling.pdf analysis", () => {
 
   it("should analyze font descriptors for bold/italic flags", async () => {
     const pdfBytes = readFileSync(PDF_PATH);
-    const pdfDoc = loadNativePdfDocument(pdfBytes, { encryption: "ignore" });
+    const pdfDoc = loadNativePdfDocument(pdfBytes, { encryption: { mode: "ignore" } });
     const page = pdfDoc.getPages()[0];
     if (!page) return;
 
@@ -637,7 +637,7 @@ describe("Japanese PDF width analysis", () => {
 
   it("should verify font W array and DW values", async () => {
     const pdfBytes = readFileSync(JP_PDF_PATH);
-    const pdfDoc = loadNativePdfDocument(pdfBytes, { encryption: "ignore" });
+    const pdfDoc = loadNativePdfDocument(pdfBytes, { encryption: { mode: "ignore" } });
     const page = pdfDoc.getPages()[0];
     if (!page) return;
 
@@ -721,7 +721,7 @@ describe("Japanese PDF width analysis", () => {
     }
 
     const pdfBytes = readFileSync(JP_PDF_PATH);
-    const pdfDoc = loadNativePdfDocument(pdfBytes, { encryption: "ignore" });
+    const pdfDoc = loadNativePdfDocument(pdfBytes, { encryption: { mode: "ignore" } });
     const page = pdfDoc.getPages()[0];
     if (!page) return;
 

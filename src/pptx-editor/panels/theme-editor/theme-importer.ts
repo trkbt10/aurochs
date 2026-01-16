@@ -5,7 +5,7 @@
  */
 
 import { loadZipPackage } from "../../../pptx/opc/zip-package";
-import { parseXml, getChildren } from "../../../xml";
+import { parseXml, getChildren, isXmlElement } from "../../../xml";
 import { parseColorScheme, parseFontScheme } from "../../../pptx/parser/drawing-ml/theme";
 import type { ThemePreset } from "./types";
 import { OFFICE_THEME } from "./presets";
@@ -19,14 +19,21 @@ const THEME_REL_TYPE = "http://schemas.openxmlformats.org/officeDocument/2006/re
  * Parses ppt/_rels/presentation.xml.rels to find the theme relationship.
  * Falls back to sorting theme files if relationships are unavailable.
  */
-function findPresentationThemePath(pkg: { listFiles: () => string[]; readText: (path: string) => string | undefined }): string | undefined {
+function findPresentationThemePath(pkg: {
+  listFiles: () => readonly string[];
+  readText: (path: string) => string | null | undefined;
+}): string | undefined {
   // Try to read presentation relationships
   const relsXml = pkg.readText("ppt/_rels/presentation.xml.rels");
   if (relsXml) {
     const relsDoc = parseXml(relsXml);
     if (relsDoc) {
+      const relsRoot = relsDoc.children.find(isXmlElement);
+      if (!relsRoot) {
+        return undefined;
+      }
       // Find theme relationship
-      const relationships = getChildren(relsDoc, "Relationship");
+      const relationships = getChildren(relsRoot, "Relationship");
       for (const rel of relationships) {
         if (rel.attrs?.Type === THEME_REL_TYPE) {
           const target = rel.attrs?.Target;

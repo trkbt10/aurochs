@@ -38,6 +38,8 @@ function createMockGfxOps(overrides: Partial<ReturnType<typeof createDefaultGrap
       setStrokeRgb: () => {},
       setFillCmyk: () => {},
       setStrokeCmyk: () => {},
+      setFillAlpha: (a: number) => { state = { ...state, fillAlpha: a }; calls.push({ method: "setFillAlpha", args: [a] }); },
+      setStrokeAlpha: (a: number) => { state = { ...state, strokeAlpha: a }; calls.push({ method: "setStrokeAlpha", args: [a] }); },
       setCharSpacing: (s: number) => { state = { ...state, charSpacing: s }; calls.push({ method: "setCharSpacing", args: [s] }); },
       setWordSpacing: (s: number) => { state = { ...state, wordSpacing: s }; calls.push({ method: "setWordSpacing", args: [s] }); },
       setHorizontalScaling: (s: number) => { state = { ...state, horizontalScaling: s }; calls.push({ method: "setHorizontalScaling", args: [s] }); },
@@ -60,6 +62,7 @@ function createContext(
     textState: createInitialTextState(),
     fontMappings: new Map(),
     ...options,
+    extGState: options.extGState ?? new Map(),
   };
 }
 

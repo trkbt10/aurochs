@@ -2,8 +2,13 @@ import { PdfResolver } from "./resolver";
 import { loadXRef, type XRefTable } from "./xref";
 import type { PdfDict, PdfObject, PdfRef, PdfStream, PdfString } from "./types";
 import { decodePdfStream } from "./stream";
+import { extractXmpMetadata } from "./xmp";
+import { createStandardDecrypter } from "./encryption/standard";
 
-export type NativePdfEncryptionMode = "reject" | "ignore";
+export type NativePdfEncryptionMode =
+  | { readonly mode: "reject" }
+  | { readonly mode: "ignore" }
+  | { readonly mode: "password"; readonly password: string };
 
 export type NativePdfLoadOptions = Readonly<{
   readonly encryption: NativePdfEncryptionMode;
@@ -18,6 +23,7 @@ export type NativePdfMetadata = Readonly<{
 export type NativePdfPage = Readonly<{
   readonly pageNumber: number;
   getSize: () => { width: number; height: number };
+  getBox: (name: "MediaBox" | "CropBox" | "BleedBox" | "TrimBox" | "ArtBox") => readonly number[] | null;
   getResourcesDict: () => PdfDict | null;
   getDecodedContentStreams: () => readonly Uint8Array[];
   lookup: (obj: PdfObject) => PdfObject;
@@ -28,6 +34,9 @@ function asDict(obj: PdfObject): PdfDict | null {
 }
 function asRef(obj: PdfObject | undefined): PdfRef | null {
   return obj?.type === "ref" ? obj : null;
+}
+function asArray(obj: PdfObject | undefined): PdfObject[] | null {
+  return obj?.type === "array" ? [...obj.items] : null;
 }
 function asName(obj: PdfObject | undefined): string | null {
   return obj?.type === "name" ? obj.value : null;
@@ -44,8 +53,8 @@ function decodeStream(stream: PdfStream): Uint8Array {
   return decodePdfStream(stream);
 }
 
-function readMediaBox(dict: PdfDict): readonly number[] | null {
-  const mb = dictGet(dict, "MediaBox");
+function readBox(dict: PdfDict, key: string): readonly number[] | null {
+  const mb = dictGet(dict, key);
   if (!mb || mb.type !== "array") return null;
   const nums: number[] = [];
   for (const item of mb.items) {
@@ -55,10 +64,52 @@ function readMediaBox(dict: PdfDict): readonly number[] | null {
   return nums.length === 4 ? nums : null;
 }
 
-function readInherited(dict: PdfDict, resolver: PdfResolver): { resources: PdfDict | null; mediaBox: readonly number[] | null } {
+function readRotate(dict: PdfDict): number | null {
+  const v = dictGet(dict, "Rotate");
+  if (!v || v.type !== "number") return null;
+  if (!Number.isFinite(v.value)) return null;
+  return Math.trunc(v.value);
+}
+
+function normalizeRotate(value: number | null): 0 | 90 | 180 | 270 {
+  const raw = value ?? 0;
+  const mod = ((raw % 360) + 360) % 360;
+  if (mod === 90) return 90;
+  if (mod === 180) return 180;
+  if (mod === 270) return 270;
+  return 0;
+}
+
+function readUserUnit(dict: PdfDict): number | null {
+  const v = dictGet(dict, "UserUnit");
+  if (!v || v.type !== "number") return null;
+  if (!Number.isFinite(v.value)) return null;
+  if (v.value <= 0) return null;
+  return v.value;
+}
+
+function readInherited(
+  dict: PdfDict,
+  resolver: PdfResolver,
+): {
+  resources: PdfDict | null;
+  mediaBox: readonly number[] | null;
+  cropBox: readonly number[] | null;
+  bleedBox: readonly number[] | null;
+  trimBox: readonly number[] | null;
+  artBox: readonly number[] | null;
+  rotate: number | null;
+  userUnit: number | null;
+} {
   let cur: PdfDict | null = dict;
   let resources: PdfDict | null = null;
   let mediaBox: readonly number[] | null = null;
+  let cropBox: readonly number[] | null = null;
+  let bleedBox: readonly number[] | null = null;
+  let trimBox: readonly number[] | null = null;
+  let artBox: readonly number[] | null = null;
+  let rotate: number | null = null;
+  let userUnit: number | null = null;
   while (cur) {
     if (!resources) {
       const resourcesObj = dictGet(cur, "Resources");
@@ -87,14 +138,96 @@ function readInherited(dict: PdfDict, resolver: PdfResolver): { resources: PdfDi
       }
     }
 
-    if (resources && mediaBox) break;
+    if (!cropBox) {
+      const cropBoxObj = dictGet(cur, "CropBox");
+      if (cropBoxObj) {
+        const resolved = resolver.deref(cropBoxObj);
+        if (resolved.type === "array") {
+          const nums: number[] = [];
+          for (const item of resolved.items) {
+            if (item.type !== "number") {
+              nums.length = 0;
+              break;
+            }
+            nums.push(item.value);
+          }
+          if (nums.length === 4) cropBox = nums;
+        }
+      }
+    }
+
+    if (!bleedBox) {
+      const bleedBoxObj = dictGet(cur, "BleedBox");
+      if (bleedBoxObj) {
+        const resolved = resolver.deref(bleedBoxObj);
+        if (resolved.type === "array") {
+          const nums: number[] = [];
+          for (const item of resolved.items) {
+            if (item.type !== "number") {
+              nums.length = 0;
+              break;
+            }
+            nums.push(item.value);
+          }
+          if (nums.length === 4) bleedBox = nums;
+        }
+      }
+    }
+
+    if (!trimBox) {
+      const trimBoxObj = dictGet(cur, "TrimBox");
+      if (trimBoxObj) {
+        const resolved = resolver.deref(trimBoxObj);
+        if (resolved.type === "array") {
+          const nums: number[] = [];
+          for (const item of resolved.items) {
+            if (item.type !== "number") {
+              nums.length = 0;
+              break;
+            }
+            nums.push(item.value);
+          }
+          if (nums.length === 4) trimBox = nums;
+        }
+      }
+    }
+
+    if (!artBox) {
+      const artBoxObj = dictGet(cur, "ArtBox");
+      if (artBoxObj) {
+        const resolved = resolver.deref(artBoxObj);
+        if (resolved.type === "array") {
+          const nums: number[] = [];
+          for (const item of resolved.items) {
+            if (item.type !== "number") {
+              nums.length = 0;
+              break;
+            }
+            nums.push(item.value);
+          }
+          if (nums.length === 4) artBox = nums;
+        }
+      }
+    }
+
+    if (rotate == null) {
+      const rotateObj = resolver.deref(dictGet(cur, "Rotate") ?? { type: "null" });
+      if (rotateObj.type === "number") rotate = Math.trunc(rotateObj.value);
+    }
+
+    if (userUnit == null) {
+      const userUnitObj = resolver.deref(dictGet(cur, "UserUnit") ?? { type: "null" });
+      if (userUnitObj.type === "number" && userUnitObj.value > 0) userUnit = userUnitObj.value;
+    }
+
+    if (resources && mediaBox && cropBox && bleedBox && trimBox && artBox && rotate != null && userUnit != null) break;
 
     const parentRef = asRef(dictGet(cur, "Parent"));
     if (!parentRef) break;
     const parent = resolver.getObject(parentRef.obj);
     cur = asDict(parent);
   }
-  return { resources, mediaBox };
+  return { resources, mediaBox, cropBox, bleedBox, trimBox, artBox, rotate, userUnit };
 }
 
 function collectPages(pagesNode: PdfDict, resolver: PdfResolver): readonly PdfDict[] {
@@ -125,6 +258,18 @@ function extractInfoMetadata(info: PdfDict): NativePdfMetadata {
   return out;
 }
 
+function mergeMetadata(
+  info: NativePdfMetadata,
+  xmp: NativePdfMetadata | null,
+): NativePdfMetadata {
+  if (!xmp) return info;
+  return {
+    title: info.title ?? xmp.title,
+    author: info.author ?? xmp.author,
+    subject: info.subject ?? xmp.subject,
+  };
+}
+
 export class NativePdfDocument {
   private readonly xref: XRefTable;
   private readonly resolver: PdfResolver;
@@ -144,10 +289,39 @@ export class NativePdfDocument {
 
     this.xref = loadXRef(bytes);
     this.trailer = this.xref.trailer;
-    this.resolver = new PdfResolver(bytes, this.xref);
 
-    if (options.encryption === "reject" && this.trailer.map.has("Encrypt")) {
-      throw new Error("Encrypted PDF");
+    const encryptRef = asRef(dictGet(this.trailer, "Encrypt"));
+    if (encryptRef) {
+      if (options.encryption.mode === "reject") {
+        throw new Error("Encrypted PDF");
+      }
+
+      if (options.encryption.mode === "password") {
+        const idArr = asArray(dictGet(this.trailer, "ID"));
+        const id0 = idArr && idArr.length > 0 ? asString(idArr[0])?.bytes : null;
+        if (!id0) throw new Error("Encrypted PDF: trailer /ID is missing");
+
+        const tmpResolver = new PdfResolver(bytes, this.xref);
+        const encryptObj = tmpResolver.getObject(encryptRef.obj);
+        const encryptDict = asDict(encryptObj);
+        if (!encryptDict) throw new Error("Encrypted PDF: /Encrypt is not a dictionary");
+
+        const decrypter = createStandardDecrypter({
+          encryptDict,
+          fileId0: id0,
+          password: options.encryption.password,
+        });
+
+        this.resolver = new PdfResolver(bytes, this.xref, {
+          decrypter,
+          skipDecryptObjectNums: new Set([encryptRef.obj]),
+        });
+      } else {
+        // ignore
+        this.resolver = new PdfResolver(bytes, this.xref);
+      }
+    } else {
+      this.resolver = new PdfResolver(bytes, this.xref);
     }
 
     const rootRef = asRef(dictGet(this.trailer, "Root"));
@@ -166,7 +340,9 @@ export class NativePdfDocument {
 
     const infoRef = asRef(dictGet(this.trailer, "Info"));
     const infoDict = infoRef ? asDict(this.resolver.getObject(infoRef.obj)) : null;
-    this.metadata = infoDict ? extractInfoMetadata(infoDict) : {};
+    const info = infoDict ? extractInfoMetadata(infoDict) : {};
+    const xmp = extractXmpMetadata(this.catalog, (o) => this.resolver.deref(o), decodePdfStream);
+    this.metadata = mergeMetadata(info, xmp);
   }
 
   getPageCount(): number {
@@ -185,14 +361,55 @@ export class NativePdfDocument {
       const pageNumber = i + 1;
 
       const inherited = readInherited(pageDict, this.resolver);
-      const mediaBox = inherited.mediaBox ?? readMediaBox(pageDict);
+      const mediaBox = inherited.mediaBox ?? readBox(pageDict, "MediaBox");
+      const cropBox = inherited.cropBox ?? readBox(pageDict, "CropBox");
+      const bleedBox = inherited.bleedBox ?? readBox(pageDict, "BleedBox");
+      const trimBox = inherited.trimBox ?? readBox(pageDict, "TrimBox");
+      const artBox = inherited.artBox ?? readBox(pageDict, "ArtBox");
       const resources = inherited.resources;
+      const rotate = normalizeRotate(inherited.rotate ?? readRotate(pageDict));
+      const userUnit = inherited.userUnit ?? readUserUnit(pageDict) ?? 1;
+
+      // Defaulting per ISO 32000:
+      // - CropBox defaults to MediaBox
+      // - BleedBox/TrimBox/ArtBox default to CropBox
+      const effectiveMediaBox = mediaBox;
+      const effectiveCropBox = cropBox ?? effectiveMediaBox;
+      const effectiveBleedBox = bleedBox ?? effectiveCropBox;
+      const effectiveTrimBox = trimBox ?? effectiveCropBox;
+      const effectiveArtBox = artBox ?? effectiveCropBox;
+
+      const scaleBox = (box: readonly number[] | null): readonly number[] | null => {
+        if (!box) return null;
+        return [box[0] ?? 0, box[1] ?? 0, box[2] ?? 0, box[3] ?? 0].map((v) => v * userUnit);
+      };
 
       const getSize = () => {
-        const box = mediaBox;
+        const box = effectiveCropBox ?? effectiveMediaBox;
         if (!box) throw new Error("Page MediaBox is missing");
         const [llx, lly, urx, ury] = box;
-        return { width: (urx ?? 0) - (llx ?? 0), height: (ury ?? 0) - (lly ?? 0) };
+        const w = ((urx ?? 0) - (llx ?? 0)) * userUnit;
+        const h = ((ury ?? 0) - (lly ?? 0)) * userUnit;
+        return rotate === 90 || rotate === 270 ? { width: h, height: w } : { width: w, height: h };
+      };
+
+      const getBox = (name: "MediaBox" | "CropBox" | "BleedBox" | "TrimBox" | "ArtBox") => {
+        switch (name) {
+          case "MediaBox":
+            return scaleBox(effectiveMediaBox);
+          case "CropBox":
+            return scaleBox(effectiveCropBox);
+          case "BleedBox":
+            return scaleBox(effectiveBleedBox);
+          case "TrimBox":
+            return scaleBox(effectiveTrimBox);
+          case "ArtBox":
+            return scaleBox(effectiveArtBox);
+          default: {
+            const exhaustive: never = name;
+            throw new Error(`Unsupported box name: ${String(exhaustive)}`);
+          }
+        }
       };
 
       const getResourcesDict = () => resources;
@@ -216,6 +433,7 @@ export class NativePdfDocument {
       out.push({
         pageNumber,
         getSize,
+        getBox,
         getResourcesDict,
         getDecodedContentStreams,
         lookup: (obj) => this.resolver.deref(obj),

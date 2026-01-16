@@ -8,11 +8,11 @@
  * ## Supported (current)
  * - `K < 0` (Group 4 / T.6), with `Columns == Width` and `Rows == Height` (or `Rows == 0`)
  * - `K = 0` (Group 3 1D / T.4), with the same dimension constraints
+ * - `K > 0` (Group 3 mixed 1D/2D / T.4 2D groups), with the same dimension constraints
  * - `BlackIs1` (handled by inverting the 1bpp output when true)
  * - Optional pre-filters (e.g. `/ASCII85Decode`) are decoded in `image-extractor.ts`
  *
  * ## Not supported (fail-fast)
- * - `K > 0` (Group 3 mixed 1D/2D)
  * - `EndOfLine = true` (explicit EOL markers)
  * - `DamagedRowsBeforeError != 0` (resynchronization behavior)
  *
@@ -26,7 +26,7 @@ export type CcittFaxDecodeParms = Readonly<{
    * K parameter:
    * - K < 0: Group 4 (T.6) 2D encoding
    * - K = 0: Group 3 (T.4) 1D encoding
-   * - K > 0: Group 3 mixed 1D/2D (not supported here yet)
+   * - K > 0: Group 3 mixed 1D/2D (T.4 2D groups)
    */
   readonly k: number;
   readonly columns: number;
@@ -506,15 +506,17 @@ export function decodeCcittFax(args: DecodeCcittFaxArgs): Uint8Array {
 
   // Not implemented yet: handling EOL markers and error-resync requires additional
   // decoding logic and fixtures. Fail fast rather than returning corrupted output.
-  if (parms.endOfLine) {
-    throw new Error("decodeCcittFax: EndOfLine=true is not supported yet");
-  }
-  if (parms.damagedRowsBeforeError !== 0) {
-    throw new Error("decodeCcittFax: DamagedRowsBeforeError is not supported yet");
-  }
-
-  if (parms.k > 0) {
-    throw new Error(`decodeCcittFax: unsupported CCITT mixed 1D/2D encoding (K=${parms.k})`);
+  //
+  // However, some PDFs set these parms even for Group 4 (K=-1) where EOL markers
+  // are not used and damaged-row resync is irrelevant for our decoder. In that
+  // case, accept them as no-ops.
+  if (parms.k !== -1) {
+    if (parms.endOfLine) {
+      throw new Error("decodeCcittFax: EndOfLine=true is not supported yet");
+    }
+    if (parms.damagedRowsBeforeError !== 0) {
+      throw new Error("decodeCcittFax: DamagedRowsBeforeError is not supported yet");
+    }
   }
 
   const rowBytes = Math.ceil(width / 8);
@@ -522,35 +524,26 @@ export function decodeCcittFax(args: DecodeCcittFaxArgs): Uint8Array {
 
   const reader = new MsbBitReader(encoded);
 
-  if (parms.k === 0) {
-    // Group 3 1D: each line is alternating white/black run lengths.
-    for (let y = 0; y < height; y += 1) {
-      const runs: number[] = [];
-      let x = 0;
-      while (x < width) {
-        const whiteRun = decodeRunLength(reader, "white");
-        runs.push(whiteRun);
-        x += whiteRun;
-        if (x >= width) break;
-        const blackRun = decodeRunLength(reader, "black");
-        runs.push(blackRun);
-        x += blackRun;
-      }
-      writeRunsToBitmapRow(out, y * rowBytes, rowBytes, width, runs);
-      if (parms.encodedByteAlign) {
-        reader.alignToByte();
-      }
-    }
-    if (parms.blackIs1) {
-      for (let i = 0; i < out.length; i += 1) out[i] = (out[i] ?? 0) ^ 0xff;
-    }
-    return out;
-  }
+  const decode1DLine = (): number[] => {
+    const runs: number[] = [];
+    let x = 0;
+    while (x < width) {
+      const whiteRun = decodeRunLength(reader, "white");
+      const w = Math.min(whiteRun, width - x);
+      runs.push(w);
+      x += w;
+      if (x >= width) break;
 
-  // Group 4 2D
-  let referenceRuns: number[] = [width, 0]; // all-white reference line + sentinel
+      const blackRun = decodeRunLength(reader, "black");
+      const b = Math.min(blackRun, width - x);
+      runs.push(b);
+      x += b;
+    }
+    runs.push(0);
+    return runs;
+  };
 
-  for (let y = 0; y < height; y += 1) {
+  const decode2DLine = (referenceRuns: number[]): number[] => {
     const runs: number[] = [];
     let a0 = 0;
     let pending = 0;
@@ -570,7 +563,9 @@ export function decodeCcittFax(args: DecodeCcittFaxArgs): Uint8Array {
     };
 
     const setValue = (len: number): void => {
-      runs.push(pending + len);
+      const value = pending + len;
+      if (value < 0) throw new Error("CCITT: negative run length");
+      runs.push(value);
       a0 += len;
       pending = 0;
     };
@@ -636,14 +631,49 @@ export function decodeCcittFax(args: DecodeCcittFaxArgs): Uint8Array {
       runs.push(pending);
       pending = 0;
     }
-    runs.push(0); // sentinel for the next line's reference
+    runs.push(0);
+    return runs;
+  };
 
+  if (parms.k === 0) {
+    // Group 3 1D: each line is alternating white/black run lengths.
+    for (let y = 0; y < height; y += 1) {
+      const runs = decode1DLine();
+      writeRunsToBitmapRow(out, y * rowBytes, rowBytes, width, runs);
+      if (parms.encodedByteAlign) reader.alignToByte();
+    }
+    if (parms.blackIs1) {
+      for (let i = 0; i < out.length; i += 1) out[i] = (out[i] ?? 0) ^ 0xff;
+    }
+    return out;
+  }
+
+  if (parms.k > 0) {
+    // Group 3 mixed 1D/2D: first line is 1D, then K lines 2D, repeating.
+    let referenceRuns: number[] = [width, 0];
+    const groupLen = parms.k + 1;
+
+    for (let y = 0; y < height; y += 1) {
+      const runs = y % groupLen === 0 ? decode1DLine() : decode2DLine(referenceRuns);
+      writeRunsToBitmapRow(out, y * rowBytes, rowBytes, width, runs);
+      referenceRuns = runs;
+      if (parms.encodedByteAlign) reader.alignToByte();
+    }
+
+    if (parms.blackIs1) {
+      for (let i = 0; i < out.length; i += 1) out[i] = (out[i] ?? 0) ^ 0xff;
+    }
+    return out;
+  }
+
+  // Group 4 2D (K < 0)
+  let referenceRuns: number[] = [width, 0]; // all-white reference line + sentinel
+
+  for (let y = 0; y < height; y += 1) {
+    const runs = decode2DLine(referenceRuns);
     writeRunsToBitmapRow(out, y * rowBytes, rowBytes, width, runs);
     referenceRuns = runs;
-
-    if (parms.encodedByteAlign) {
-      reader.alignToByte();
-    }
+    if (parms.encodedByteAlign) reader.alignToByte();
   }
 
   if (parms.blackIs1) {

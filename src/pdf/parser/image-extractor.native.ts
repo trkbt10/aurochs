@@ -5,12 +5,72 @@ import type { PdfColorSpace, PdfImage } from "../domain";
 import { getColorSpaceComponents } from "../domain";
 import type { ParsedImage } from "./operator-parser";
 import { decodeCcittFax, type CcittFaxDecodeParms } from "./ccitt-fax-decode";
+import { decodeJpegToRgb } from "./jpeg-decode";
 
 export type ImageExtractorOptions = {
   readonly extractImages?: boolean;
   readonly maxDimension?: number;
   readonly pageHeight: number;
 };
+
+function decodeMaskSamplesToAlpha8(
+  data: Uint8Array,
+  width: number,
+  height: number,
+  bitsPerComponent: number,
+): Uint8Array {
+  const pixelCount = width * height;
+
+  switch (bitsPerComponent) {
+    case 8: {
+      if (data.length === pixelCount) return data;
+      // Some producers may encode the soft mask as RGB; treat the first component as alpha.
+      if (data.length === pixelCount * 3) {
+        const alpha = new Uint8Array(pixelCount);
+        for (let i = 0; i < pixelCount; i += 1) alpha[i] = data[i * 3] ?? 0;
+        return alpha;
+      }
+      throw new Error(
+        `[PDF Image] Soft mask length mismatch (bpc=8): expected ${pixelCount} (or ${pixelCount * 3}) bytes, got ${data.length}`,
+      );
+    }
+    case 16: {
+      if (data.length !== pixelCount * 2) {
+        throw new Error(
+          `[PDF Image] Soft mask length mismatch (bpc=16): expected ${pixelCount * 2} bytes, got ${data.length}`,
+        );
+      }
+      const alpha = new Uint8Array(pixelCount);
+      for (let i = 0; i < pixelCount; i += 1) alpha[i] = data[i * 2] ?? 0;
+      return alpha;
+    }
+    case 1:
+    case 2:
+    case 4: {
+      const expected = Math.ceil((pixelCount * bitsPerComponent) / 8);
+      if (data.length !== expected) {
+        throw new Error(
+          `[PDF Image] Soft mask length mismatch (bpc=${bitsPerComponent}): expected ${expected} bytes, got ${data.length}`,
+        );
+      }
+      const samplesPerByte = 8 / bitsPerComponent;
+      const mask = (1 << bitsPerComponent) - 1;
+      const scale = 255 / mask;
+
+      const alpha = new Uint8Array(pixelCount);
+      for (let i = 0; i < pixelCount; i += 1) {
+        const byteIdx = Math.floor(i / samplesPerByte);
+        const bitOffset = (samplesPerByte - 1 - (i % samplesPerByte)) * bitsPerComponent;
+        const byte = data[byteIdx] ?? 0;
+        const value = (byte >> bitOffset) & mask;
+        alpha[i] = Math.round(value * scale);
+      }
+      return alpha;
+    }
+    default:
+      throw new Error(`[PDF Image] Unsupported soft mask BitsPerComponent=${bitsPerComponent}`);
+  }
+}
 
 function asDict(obj: PdfObject | undefined): PdfDict | null {
   return obj?.type === "dict" ? obj : null;
@@ -72,6 +132,69 @@ function getFilterNames(page: NativePdfPage, dict: PdfDict): readonly string[] {
     return out;
   }
   return [];
+}
+
+function shouldInvertSoftMaskDecode(page: NativePdfPage, dict: PdfDict): boolean {
+  const decodeObj = resolve(page, dictGet(dict, "Decode"));
+  const decode = asArray(decodeObj);
+  if (!decode || decode.items.length < 2) return false;
+  const a = decode.items[0]?.type === "number" ? decode.items[0].value : null;
+  const b = decode.items[1]?.type === "number" ? decode.items[1].value : null;
+  if (a === null || b === null) return false;
+  return a === 1 && b === 0;
+}
+
+function getSoftMaskAlpha8(page: NativePdfPage, imageDict: PdfDict, width: number, height: number): Uint8Array | null {
+  try {
+    const smaskObj = resolve(page, dictGet(imageDict, "SMask"));
+    const smaskStream = asStream(smaskObj);
+    if (!smaskStream) return null;
+
+    const smaskDict = smaskStream.dict;
+    const subtype = asName(dictGet(smaskDict, "Subtype"))?.value ?? "";
+    if (subtype.length > 0 && subtype !== "Image") return null;
+
+    const mw = getNumberValue(smaskDict, "Width") ?? 0;
+    const mh = getNumberValue(smaskDict, "Height") ?? 0;
+    if (mw !== width || mh !== height) {
+      throw new Error(`[PDF Image] Soft mask dimensions mismatch: image=${width}x${height}, smask=${mw}x${mh}`);
+    }
+
+    const bitsPerComponent = getNumberValue(smaskDict, "BitsPerComponent") ?? 8;
+    const filters = getFilterNames(page, smaskDict);
+
+    if (filters.includes("CCITTFaxDecode")) {
+      throw new Error("[PDF Image] Soft mask with /CCITTFaxDecode is not supported yet");
+    }
+
+    const normalized = filters.map((f) => (f === "DCT" ? "DCTDecode" : f === "JPX" ? "JPXDecode" : f));
+    if (normalized.includes("JPXDecode")) {
+      throw new Error("[PDF Image] Soft mask with /JPXDecode is not supported yet");
+    }
+
+    const dctIndex = normalized.indexOf("DCTDecode");
+    let decoded: Uint8Array;
+    if (dctIndex >= 0) {
+      if (dctIndex !== normalized.length - 1) {
+        throw new Error(`[PDF Image] Unsupported soft mask filter chain with /DCTDecode: ${filters.join(", ")}`);
+      }
+      const jpegBytes = decodePdfStream(smaskStream);
+      const rgb = decodeJpegToRgb(jpegBytes, { expectedWidth: mw, expectedHeight: mh });
+      const alpha = new Uint8Array(mw * mh);
+      for (let i = 0; i < mw * mh; i += 1) alpha[i] = rgb.data[i * 3] ?? 0;
+      return alpha;
+    }
+
+    decoded = decodePdfStream(smaskStream);
+    const alpha = decodeMaskSamplesToAlpha8(decoded, mw, mh, bitsPerComponent);
+    if (shouldInvertSoftMaskDecode(page, smaskDict)) {
+      for (let i = 0; i < alpha.length; i += 1) alpha[i] = 255 - (alpha[i] ?? 0);
+    }
+    return alpha;
+  } catch (error) {
+    console.warn("Failed to decode /SMask:", error);
+    return null;
+  }
 }
 
 type DecodeParms = {
@@ -294,6 +417,7 @@ export async function extractImagesNative(
       const bitsPerComponent = getNumberValue(dict, "BitsPerComponent") ?? 8;
       const colorSpace = getColorSpace(pdfPage, dict);
       const filters = getFilterNames(pdfPage, dict);
+      const alpha = getSoftMaskAlpha8(pdfPage, dict, width, height) ?? undefined;
 
       let data: Uint8Array;
       if (filters.includes("CCITTFaxDecode")) {
@@ -311,6 +435,34 @@ export async function extractImagesNative(
         const ccittParms = getCcittDecodeParms(pdfPage, dict, filters, width, height);
         data = decodeCcittFax({ encoded: preDecoded, width, height, parms: ccittParms });
       } else {
+        const normalized = filters.map((f) => (f === "DCT" ? "DCTDecode" : f === "JPX" ? "JPXDecode" : f));
+        const dctIndex = normalized.indexOf("DCTDecode");
+        const jpxIndex = normalized.indexOf("JPXDecode");
+
+        if (jpxIndex >= 0) {
+          throw new Error("[PDF Image] /JPXDecode is not supported yet");
+        }
+
+        if (dctIndex >= 0) {
+          if (dctIndex !== normalized.length - 1) {
+            throw new Error(`[PDF Image] Unsupported filter chain with /DCTDecode: ${filters.join(", ")}`);
+          }
+          const jpegBytes = decodePdfStream(imageStream);
+          const rgb = decodeJpegToRgb(jpegBytes, { expectedWidth: width, expectedHeight: height });
+          data = rgb.data;
+          images.push({
+            type: "image",
+            data,
+            alpha,
+            width,
+            height,
+            colorSpace: "DeviceRGB",
+            bitsPerComponent: 8,
+            graphicsState: parsed.graphicsState,
+          });
+          continue;
+        }
+
         const decoded = decodePdfStream(imageStream);
         const decodeParms = getDecodeParms(pdfPage, dict);
         const components = getColorSpaceComponents(colorSpace);
@@ -320,6 +472,7 @@ export async function extractImagesNative(
       images.push({
         type: "image",
         data,
+        alpha,
         width,
         height,
         colorSpace: colorSpace as PdfColorSpace,
