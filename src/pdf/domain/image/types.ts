@@ -15,6 +15,13 @@ export type PdfImage = {
   readonly type: "image";
   readonly data: Uint8Array;
   /**
+   * Optional `/Decode` array (2 entries per component).
+   *
+   * Applied after unpacking to the 0..1 component domain (then re-quantized to 0..255),
+   * typically used for inversion (e.g., `[1 0]` for grayscale).
+   */
+  readonly decode?: readonly number[];
+  /**
    * Optional 8-bit alpha channel per pixel (soft mask).
    *
    * Length must be `width * height` when present.

@@ -92,10 +92,10 @@ function detectImageFormat(data: Uint8Array): "jpeg" | "png" | "raw" {
  * RAWピクセルデータをPNG Data URLにエンコード
  */
 function encodeRawToPngDataUrl(image: PdfImage): string {
-  const { width, height, data, colorSpace, bitsPerComponent } = image;
+  const { width, height, data, colorSpace, bitsPerComponent, decode } = image;
 
   // Convert raw pixels to RGBA
-  const rgbaData = convertToRgba(data, width, height, colorSpace, bitsPerComponent);
+  const rgbaData = convertToRgba(data, width, height, colorSpace, bitsPerComponent, { decode });
   applyAlphaMaskInPlace(rgbaData, image.alpha, width, height);
 
   // Encode to PNG using png module (Canvas API or Pure JS)

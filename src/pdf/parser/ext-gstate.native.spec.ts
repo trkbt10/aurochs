@@ -1,13 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { parsePdfNative } from "./pdf-parser.native";
 
-function buildMinimalPdfWithExtGStateAlpha(args: {
+function buildMinimalPdfWithExtGState(args: {
   readonly ca: number;
   readonly CA: number;
+  readonly LW?: number;
+  readonly LC?: 0 | 1 | 2;
+  readonly LJ?: 0 | 1 | 2;
+  readonly ML?: number;
+  readonly D?: { readonly array: readonly number[]; readonly phase: number };
 }): Uint8Array {
   const contentStream = "q /GS1 gs 0 0 10 10 re f Q\n";
   const contentLength = new TextEncoder().encode(contentStream).length;
 
+  const dash = args.D ? `/D [ [${args.D.array.join(" ")}] ${args.D.phase} ] ` : "";
   const objects: Record<number, string> = {
     1: "<< /Type /Catalog /Pages 2 0 R >>",
     2: "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
@@ -15,7 +21,14 @@ function buildMinimalPdfWithExtGStateAlpha(args: {
       "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] " +
       "/Resources << /ExtGState << /GS1 4 0 R >> >> " +
       "/Contents 5 0 R >>",
-    4: `<< /Type /ExtGState /ca ${args.ca} /CA ${args.CA} >>`,
+    4:
+      `<< /Type /ExtGState /ca ${args.ca} /CA ${args.CA} ` +
+      (args.LW != null ? `/LW ${args.LW} ` : "") +
+      (args.LC != null ? `/LC ${args.LC} ` : "") +
+      (args.LJ != null ? `/LJ ${args.LJ} ` : "") +
+      (args.ML != null ? `/ML ${args.ML} ` : "") +
+      dash +
+      ">>",
     5: `<< /Length ${contentLength} >>\nstream\n${contentStream}endstream`,
   };
 
@@ -50,7 +63,7 @@ function buildMinimalPdfWithExtGStateAlpha(args: {
 
 describe("ExtGState alpha (native)", () => {
   it("applies /ca and /CA via gs operator to parsed elements", async () => {
-    const bytes = buildMinimalPdfWithExtGStateAlpha({ ca: 0.5, CA: 0.25 });
+    const bytes = buildMinimalPdfWithExtGState({ ca: 0.5, CA: 0.25 });
     const doc = await parsePdfNative(bytes);
     expect(doc.pages).toHaveLength(1);
 
@@ -61,5 +74,29 @@ describe("ExtGState alpha (native)", () => {
     expect(path.graphicsState.fillAlpha).toBeCloseTo(0.5);
     expect(path.graphicsState.strokeAlpha).toBeCloseTo(0.25);
   });
-});
 
+  it("applies /LW /LC /LJ /ML /D via gs operator to parsed elements", async () => {
+    const bytes = buildMinimalPdfWithExtGState({
+      ca: 1,
+      CA: 1,
+      LW: 3,
+      LC: 2,
+      LJ: 1,
+      ML: 7,
+      D: { array: [2, 1], phase: 0 },
+    });
+    const doc = await parsePdfNative(bytes);
+    expect(doc.pages).toHaveLength(1);
+
+    const paths = doc.pages[0]!.elements.filter((e) => e.type === "path");
+    expect(paths).toHaveLength(1);
+    const path = paths[0]!;
+    if (path.type !== "path") throw new Error("Expected path");
+    expect(path.graphicsState.lineWidth).toBeCloseTo(3);
+    expect(path.graphicsState.lineCap).toBe(2);
+    expect(path.graphicsState.lineJoin).toBe(1);
+    expect(path.graphicsState.miterLimit).toBeCloseTo(7);
+    expect(path.graphicsState.dashArray).toEqual([2, 1]);
+    expect(path.graphicsState.dashPhase).toBeCloseTo(0);
+  });
+});

@@ -17,8 +17,23 @@ export class GraphicsStateStack {
   private stack: PdfGraphicsState[] = [];
   private current: PdfGraphicsState;
 
-  constructor() {
-    this.current = createDefaultGraphicsState();
+  constructor(initial?: PdfGraphicsState) {
+    if (initial) {
+      this.current = {
+        ...initial,
+        fillColor: {
+          ...initial.fillColor,
+          components: [...initial.fillColor.components],
+        },
+        strokeColor: {
+          ...initial.strokeColor,
+          components: [...initial.strokeColor.components],
+        },
+        dashArray: [...initial.dashArray],
+      };
+    } else {
+      this.current = createDefaultGraphicsState();
+    }
   }
 
   /** q operator: save graphics state */

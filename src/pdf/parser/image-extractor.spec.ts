@@ -21,8 +21,9 @@ function toRgba64x64(image: {
   readonly height: number;
   readonly colorSpace: "DeviceGray" | "DeviceRGB" | "DeviceCMYK" | "ICCBased" | "Pattern";
   readonly bitsPerComponent: number;
+  readonly decode?: readonly number[];
 }): Uint8ClampedArray {
-  return convertToRgba(image.data, image.width, image.height, image.colorSpace, image.bitsPerComponent);
+  return convertToRgba(image.data, image.width, image.height, image.colorSpace, image.bitsPerComponent, { decode: image.decode });
 }
 
 function pixelGray(rgba: Uint8ClampedArray, x: number, y: number, width: number): number {
@@ -138,8 +139,9 @@ function lzwEncode(data: Uint8Array, options: LzwEncodeOptions = { earlyChange: 
 function buildMinimalPdfWithImageXObject(args: {
   readonly imageStreamAscii: string;
   readonly imageDictEntries: string;
+  readonly contentStream?: string;
 }): Uint8Array {
-  const contentStream = "q 15.36 0 0 15.36 0 0 cm /Im1 Do Q\n";
+  const contentStream = args.contentStream ?? "q 15.36 0 0 15.36 0 0 cm /Im1 Do Q\n";
   const contentLength = new TextEncoder().encode(contentStream).length;
   const imageLength = new TextEncoder().encode(args.imageStreamAscii).length;
 
@@ -571,5 +573,112 @@ describe("image-extractor (DeviceCMYK)", () => {
     expect(p0[1]).toBeLessThan(60);
     expect(p0[2]).toBeGreaterThan(200);
     expect(p0[3]).toBe(255);
+  });
+});
+
+describe("image-extractor (/Decode)", () => {
+  it("honors grayscale inversion via /Decode [1 0]", async () => {
+    // 1x1 pixel: raw=0 (black). With /Decode [1 0], it inverts to white.
+    const pdfBytes = buildMinimalPdfWithImageXObject({
+      imageStreamAscii: "00>",
+      imageDictEntries:
+        "/Type /XObject /Subtype /Image /Name /Im1 /Width 1 /Height 1 " +
+        "/BitsPerComponent 8 /ColorSpace /DeviceGray " +
+        "/Decode [1 0] " +
+        "/Filter /ASCIIHexDecode",
+    });
+
+    const doc = await parsePdf(pdfBytes);
+    const images = doc.pages.flatMap((p) => p.elements.filter((e) => e.type === "image"));
+    expect(images).toHaveLength(1);
+
+    const image = images[0]!;
+    const rgba = convertToRgba(image.data, image.width, image.height, image.colorSpace, image.bitsPerComponent, {
+      decode: image.decode,
+    });
+    expect(Array.from(rgba.slice(0, 4))).toEqual([255, 255, 255, 255]);
+  });
+});
+
+describe("image-extractor (/Indexed)", () => {
+  it("expands /Indexed palette images into DeviceRGB bytes", async () => {
+    // /Indexed /DeviceRGB 1 with lookup: index0=black, index1=white.
+    // 2 pixels @ 1bpp: indices [0, 1] => 0b01000000 (0x40)
+    const pdfBytes = buildMinimalPdfWithImageXObject({
+      imageStreamAscii: "40>",
+      imageDictEntries:
+        "/Type /XObject /Subtype /Image /Name /Im1 /Width 2 /Height 1 " +
+        "/BitsPerComponent 1 /ColorSpace [/Indexed /DeviceRGB 1 <000000FFFFFF>] " +
+        "/Filter /ASCIIHexDecode",
+    });
+
+    const doc = await parsePdf(pdfBytes);
+    const images = doc.pages.flatMap((p) => p.elements.filter((e) => e.type === "image"));
+    expect(images).toHaveLength(1);
+
+    const image = images[0]!;
+    expect(image.colorSpace).toBe("DeviceRGB");
+    expect(image.bitsPerComponent).toBe(8);
+    const rgba = convertToRgba(image.data, image.width, image.height, image.colorSpace, image.bitsPerComponent);
+    expect(Array.from(rgba.slice(0, 8))).toEqual([0, 0, 0, 255, 255, 255, 255, 255]);
+  });
+
+  it("applies /Decode [1 0] to indices before palette lookup", async () => {
+    // Same as above, but invert indices so [0,1] becomes [1,0].
+    const pdfBytes = buildMinimalPdfWithImageXObject({
+      imageStreamAscii: "40>",
+      imageDictEntries:
+        "/Type /XObject /Subtype /Image /Name /Im1 /Width 2 /Height 1 " +
+        "/BitsPerComponent 1 /ColorSpace [/Indexed /DeviceRGB 1 <000000FFFFFF>] " +
+        "/Decode [1 0] " +
+        "/Filter /ASCIIHexDecode",
+    });
+
+    const doc = await parsePdf(pdfBytes);
+    const images = doc.pages.flatMap((p) => p.elements.filter((e) => e.type === "image"));
+    expect(images).toHaveLength(1);
+
+    const image = images[0]!;
+    const rgba = convertToRgba(image.data, image.width, image.height, image.colorSpace, image.bitsPerComponent);
+    expect(Array.from(rgba.slice(0, 8))).toEqual([255, 255, 255, 255, 0, 0, 0, 255]);
+  });
+});
+
+describe("image-extractor (ImageMask)", () => {
+  it("expands /ImageMask true into RGB+alpha using current fill color", async () => {
+    const pdfBytes = buildMinimalPdfWithImageXObject({
+      contentStream: "1 0 0 rg q 15.36 0 0 15.36 0 0 cm /Im1 Do Q\n",
+      imageStreamAscii: "80>",
+      imageDictEntries:
+        "/Type /XObject /Subtype /Image /Name /Im1 /Width 2 /Height 1 " +
+        "/ImageMask true /Filter /ASCIIHexDecode",
+    });
+
+    const doc = await parsePdf(pdfBytes);
+    const images = doc.pages.flatMap((p) => p.elements.filter((e) => e.type === "image"));
+    expect(images).toHaveLength(1);
+
+    const image = images[0]!;
+    expect(image.colorSpace).toBe("DeviceRGB");
+    expect(image.bitsPerComponent).toBe(8);
+    expect(Array.from(image.data)).toEqual([255, 0, 0, 255, 0, 0]);
+    expect(Array.from(image.alpha ?? [])).toEqual([255, 0]);
+  });
+
+  it("honors /Decode [1 0] inversion for ImageMask", async () => {
+    const pdfBytes = buildMinimalPdfWithImageXObject({
+      contentStream: "0 0 1 rg q 15.36 0 0 15.36 0 0 cm /Im1 Do Q\n",
+      imageStreamAscii: "80>",
+      imageDictEntries:
+        "/Type /XObject /Subtype /Image /Name /Im1 /Width 2 /Height 1 " +
+        "/ImageMask true /Decode [1 0] /Filter /ASCIIHexDecode",
+    });
+
+    const doc = await parsePdf(pdfBytes);
+    const images = doc.pages.flatMap((p) => p.elements.filter((e) => e.type === "image"));
+    expect(images).toHaveLength(1);
+
+    const image = images[0]!;
+    expect(Array.from(image.alpha ?? [])).toEqual([0, 255]);
   });
 });

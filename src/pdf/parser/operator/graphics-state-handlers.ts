@@ -148,9 +148,14 @@ const handleDashPattern: OperatorHandler = (ctx, gfxOps) => {
 /**
  * gs operator: Set parameters from an ExtGState resource dictionary.
  *
- * This implementation currently supports only transparency:
+ * This implementation supports a subset of ExtGState keys:
  * - /ca: fill alpha
  * - /CA: stroke alpha
+ * - /LW: line width
+ * - /LC: line cap
+ * - /LJ: line join
+ * - /ML: miter limit
+ * - /D: dash pattern
  */
 const handleExtGState: OperatorHandler = (ctx, gfxOps) => {
   const [name, newStack] = popString(ctx.operandStack);
@@ -159,6 +164,11 @@ const handleExtGState: OperatorHandler = (ctx, gfxOps) => {
   if (gs) {
     if (typeof gs.fillAlpha === "number") gfxOps.setFillAlpha(gs.fillAlpha);
     if (typeof gs.strokeAlpha === "number") gfxOps.setStrokeAlpha(gs.strokeAlpha);
+    if (typeof gs.lineWidth === "number") gfxOps.setLineWidth(gs.lineWidth);
+    if (gs.lineCap === 0 || gs.lineCap === 1 || gs.lineCap === 2) gfxOps.setLineCap(gs.lineCap);
+    if (gs.lineJoin === 0 || gs.lineJoin === 1 || gs.lineJoin === 2) gfxOps.setLineJoin(gs.lineJoin);
+    if (typeof gs.miterLimit === "number") gfxOps.setMiterLimit(gs.miterLimit);
+    if (Array.isArray(gs.dashArray) && typeof gs.dashPhase === "number") gfxOps.setDashPattern(gs.dashArray, gs.dashPhase);
   }
   return { operandStack: newStack };
 };

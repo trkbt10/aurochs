@@ -3,6 +3,7 @@ import { decodeStreamData } from "../native/filters";
 import { decodePdfStream } from "../native/stream";
 import type { PdfColorSpace, PdfImage } from "../domain";
 import { getColorSpaceComponents } from "../domain";
+import { cmykToRgb, grayToRgb, rgbToRgbBytes } from "../domain/color";
 import type { ParsedImage } from "./operator-parser";
 import { decodeCcittFax, type CcittFaxDecodeParms } from "./ccitt-fax-decode";
 import { decodeJpegToRgb } from "./jpeg-decode";
@@ -276,12 +277,16 @@ function parseColorSpaceName(name: string): PdfColorSpace {
   }
 }
 
-function getColorSpace(page: NativePdfPage, dict: PdfDict): PdfColorSpace {
+type ColorSpaceInfo =
+  | Readonly<{ kind: "direct"; colorSpace: PdfColorSpace }>
+  | Readonly<{ kind: "indexed"; base: PdfColorSpace; hival: number; lookup: Uint8Array }>;
+
+function getColorSpaceInfo(page: NativePdfPage, dict: PdfDict): ColorSpaceInfo {
   const csObj = resolve(page, dictGet(dict, "ColorSpace"));
-  if (!csObj) return "DeviceRGB";
+  if (!csObj) return { kind: "direct", colorSpace: "DeviceRGB" };
 
   if (csObj.type === "name") {
-    return parseColorSpaceName(csObj.value);
+    return { kind: "direct", colorSpace: parseColorSpaceName(csObj.value) };
   }
 
   if (csObj.type === "array" && csObj.items.length > 0) {
@@ -293,16 +298,185 @@ function getColorSpace(page: NativePdfPage, dict: PdfDict): PdfColorSpace {
         const profileStream = asStream(profile);
         if (profileStream) {
           const n = getNumberValue(profileStream.dict, "N");
-          if (n === 1) return "DeviceGray";
-          if (n === 3) return "DeviceRGB";
-          if (n === 4) return "DeviceCMYK";
+          if (n === 1) return { kind: "direct", colorSpace: "DeviceGray" };
+          if (n === 3) return { kind: "direct", colorSpace: "DeviceRGB" };
+          if (n === 4) return { kind: "direct", colorSpace: "DeviceCMYK" };
         }
+        return { kind: "direct", colorSpace: "DeviceRGB" };
       }
-      return parseColorSpaceName(name);
+
+      if (name === "Indexed" && csObj.items.length >= 4) {
+        const baseObj = resolve(page, csObj.items[1]);
+        const base =
+          baseObj?.type === "name"
+            ? parseColorSpaceName(baseObj.value)
+            : baseObj?.type === "array" && baseObj.items[0]?.type === "name"
+              ? parseColorSpaceName(baseObj.items[0].value)
+              : null;
+
+        const hivalObj = resolve(page, csObj.items[2]);
+        const hival = hivalObj?.type === "number" && Number.isFinite(hivalObj.value) ? Math.trunc(hivalObj.value) : null;
+
+        const lookupObj = resolve(page, csObj.items[3]);
+        const lookup =
+          lookupObj?.type === "string"
+            ? lookupObj.bytes
+            : lookupObj?.type === "stream"
+              ? decodePdfStream(lookupObj)
+              : null;
+
+        if (base && hival != null && hival >= 0 && lookup) {
+          return { kind: "indexed", base, hival, lookup };
+        }
+
+        return { kind: "direct", colorSpace: "DeviceRGB" };
+      }
+
+      return { kind: "direct", colorSpace: parseColorSpaceName(name) };
     }
   }
 
-  return "DeviceRGB";
+  return { kind: "direct", colorSpace: "DeviceRGB" };
+}
+
+function getDecodeArray(page: NativePdfPage, dict: PdfDict): readonly number[] | null {
+  const decodeObj = resolve(page, dictGet(dict, "Decode"));
+  if (!decodeObj || decodeObj.type !== "array") return null;
+  const nums = decodeObj.items
+    .map((it) => (it?.type === "number" ? it.value : null))
+    .filter((n): n is number => n != null && Number.isFinite(n));
+  if (nums.length === 0) return null;
+  return nums;
+}
+
+function unpackIndexedSamples(data: Uint8Array, width: number, height: number, bitsPerComponent: number): Uint8Array {
+  const pixelCount = width * height;
+  if (bitsPerComponent === 8) {
+    if (data.length !== pixelCount) {
+      throw new Error(`[PDF Image] Indexed sample length mismatch: expected ${pixelCount}, got ${data.length}`);
+    }
+    return data;
+  }
+  if (bitsPerComponent !== 1 && bitsPerComponent !== 2 && bitsPerComponent !== 4) {
+    throw new Error(`[PDF Image] Indexed BitsPerComponent must be 1,2,4,8 (got ${bitsPerComponent})`);
+  }
+
+  const out = new Uint8Array(pixelCount);
+  const samplesPerByte = 8 / bitsPerComponent;
+  const mask = (1 << bitsPerComponent) - 1;
+
+  for (let i = 0; i < pixelCount; i += 1) {
+    const byteIdx = Math.floor(i / samplesPerByte);
+    const bitOffset = (samplesPerByte - 1 - (i % samplesPerByte)) * bitsPerComponent;
+    const byte = data[byteIdx] ?? 0;
+    out[i] = (byte >> bitOffset) & mask;
+  }
+
+  return out;
+}
+
+function expandIndexedToRgb(args: {
+  readonly samples: Uint8Array;
+  readonly bitsPerComponent: number;
+  readonly base: PdfColorSpace;
+  readonly hival: number;
+  readonly lookup: Uint8Array;
+  readonly decode?: readonly number[];
+}): Uint8Array {
+  const { base, hival, lookup, samples, bitsPerComponent, decode } = args;
+  const comps = base === "DeviceGray" ? 1 : base === "DeviceRGB" ? 3 : null;
+  if (!comps) throw new Error(`[PDF Image] /Indexed base color space not supported: ${base}`);
+
+  const expectedLookupLen = (hival + 1) * comps;
+  if (lookup.length < expectedLookupLen) {
+    throw new Error(`[PDF Image] /Indexed lookup length mismatch: expected >= ${expectedLookupLen}, got ${lookup.length}`);
+  }
+
+  const decodePair = decode && decode.length === 2 ? decode : null;
+  const sampleMax = (1 << bitsPerComponent) - 1;
+  const out = new Uint8Array(samples.length * 3);
+
+  for (let i = 0; i < samples.length; i += 1) {
+    let idx = samples[i] ?? 0;
+    if (decodePair) {
+      const dmin = decodePair[0] ?? 0;
+      const dmax = decodePair[1] ?? hival;
+      const v = sampleMax > 0 ? idx / sampleMax : 0;
+      idx = Math.round(dmin + v * (dmax - dmin));
+    }
+    if (idx < 0) idx = 0;
+    if (idx > hival) idx = hival;
+
+    const dst = i * 3;
+    if (comps === 1) {
+      const g = lookup[idx] ?? 0;
+      out[dst] = g;
+      out[dst + 1] = g;
+      out[dst + 2] = g;
+    } else {
+      const src = idx * 3;
+      out[dst] = lookup[src] ?? 0;
+      out[dst + 1] = lookup[src + 1] ?? 0;
+      out[dst + 2] = lookup[src + 2] ?? 0;
+    }
+  }
+
+  return out;
+}
+
+function expandImageMaskToRgbAlpha(args: {
+  readonly decoded: Uint8Array;
+  readonly width: number;
+  readonly height: number;
+  readonly invert: boolean;
+  readonly fillColor: { readonly colorSpace: string; readonly components: readonly number[] };
+}): { readonly rgb: Uint8Array; readonly alpha: Uint8Array } {
+  const { decoded, width, height, invert, fillColor } = args;
+  const rowBytes = Math.ceil(width / 8);
+  const expectedLen = rowBytes * height;
+  if (decoded.length !== expectedLen) {
+    throw new Error(`[PDF Image] ImageMask length mismatch: expected ${expectedLen} bytes, got ${decoded.length}`);
+  }
+
+  const pixelCount = width * height;
+  const alpha = new Uint8Array(pixelCount);
+
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const byte = decoded[y * rowBytes + Math.floor(x / 8)] ?? 0;
+      const bit = (byte >> (7 - (x % 8))) & 1;
+      const sample = invert ? 1 - bit : bit;
+      alpha[y * width + x] = sample ? 255 : 0;
+    }
+  }
+
+  const rgbFill = (() => {
+    switch (fillColor.colorSpace) {
+      case "DeviceGray":
+        return grayToRgb(fillColor.components[0] ?? 0);
+      case "DeviceRGB":
+        return rgbToRgbBytes(fillColor.components[0] ?? 0, fillColor.components[1] ?? 0, fillColor.components[2] ?? 0);
+      case "DeviceCMYK":
+        return cmykToRgb(
+          fillColor.components[0] ?? 0,
+          fillColor.components[1] ?? 0,
+          fillColor.components[2] ?? 0,
+          fillColor.components[3] ?? 0,
+        );
+      default:
+        return [0, 0, 0] as const;
+    }
+  })();
+
+  const rgb = new Uint8Array(pixelCount * 3);
+  for (let i = 0; i < pixelCount; i += 1) {
+    const dst = i * 3;
+    rgb[dst] = rgbFill[0];
+    rgb[dst + 1] = rgbFill[1];
+    rgb[dst + 2] = rgbFill[2];
+  }
+
+  return { rgb, alpha };
 }
 
 function reversePngPredictor(
@@ -386,14 +560,18 @@ export async function extractImagesNative(
   pdfPage: NativePdfPage,
   parsedImages: readonly ParsedImage[],
   options: ImageExtractorOptions,
+  xObjectsOverride?: PdfDict,
 ): Promise<PdfImage[]> {
   const { extractImages = true, maxDimension = 4096, pageHeight: _pageHeight } = options;
   if (!extractImages) return [];
 
-  const resources = pdfPage.getResourcesDict();
-  if (!resources) return [];
-
-  const xObjects = resolveDict(pdfPage, dictGet(resources, "XObject"));
+  const xObjects =
+    xObjectsOverride ??
+    (() => {
+      const resources = pdfPage.getResourcesDict();
+      if (!resources) return null;
+      return resolveDict(pdfPage, dictGet(resources, "XObject"));
+    })();
   if (!xObjects) return [];
 
   const images: PdfImage[] = [];
@@ -414,12 +592,37 @@ export async function extractImagesNative(
       if (width === 0 || height === 0) continue;
       if (width > maxDimension || height > maxDimension) continue;
 
-      const bitsPerComponent = getNumberValue(dict, "BitsPerComponent") ?? 8;
-      const colorSpace = getColorSpace(pdfPage, dict);
+      const imageMask = getBoolValue(dict, "ImageMask") ?? false;
+      const bitsPerComponent = imageMask ? 1 : (getNumberValue(dict, "BitsPerComponent") ?? 8);
+      const colorSpaceInfo = getColorSpaceInfo(pdfPage, dict);
+      const colorSpace = colorSpaceInfo.kind === "indexed" ? "DeviceRGB" : colorSpaceInfo.colorSpace;
       const filters = getFilterNames(pdfPage, dict);
+      const decode = getDecodeArray(pdfPage, dict) ?? undefined;
       const alpha = getSoftMaskAlpha8(pdfPage, dict, width, height) ?? undefined;
 
       let data: Uint8Array;
+      if (imageMask) {
+        const decoded = decodePdfStream(imageStream);
+        const invert = decode?.length === 2 && decode[0] === 1 && decode[1] === 0;
+        const out = expandImageMaskToRgbAlpha({
+          decoded,
+          width,
+          height,
+          invert,
+          fillColor: parsed.graphicsState.fillColor,
+        });
+        images.push({
+          type: "image",
+          data: out.rgb,
+          alpha: out.alpha,
+          width,
+          height,
+          colorSpace: "DeviceRGB",
+          bitsPerComponent: 8,
+          graphicsState: parsed.graphicsState,
+        });
+        continue;
+      }
       if (filters.includes("CCITTFaxDecode")) {
         if (bitsPerComponent !== 1) {
           throw new Error(`[PDF Image] /CCITTFaxDecode requires BitsPerComponent=1 (got ${bitsPerComponent})`);
@@ -454,6 +657,7 @@ export async function extractImagesNative(
             type: "image",
             data,
             alpha,
+            decode,
             width,
             height,
             colorSpace: "DeviceRGB",
@@ -465,14 +669,39 @@ export async function extractImagesNative(
 
         const decoded = decodePdfStream(imageStream);
         const decodeParms = getDecodeParms(pdfPage, dict);
-        const components = getColorSpaceComponents(colorSpace);
-        data = reversePngPredictor(decoded, width, height, components, decodeParms);
+        const predictorComponents =
+          colorSpaceInfo.kind === "indexed" ? 1 : getColorSpaceComponents(colorSpaceInfo.colorSpace);
+        data = reversePngPredictor(decoded, width, height, predictorComponents, decodeParms);
+
+        if (colorSpaceInfo.kind === "indexed") {
+          const samples = unpackIndexedSamples(data, width, height, bitsPerComponent);
+          data = expandIndexedToRgb({
+            samples,
+            bitsPerComponent,
+            base: colorSpaceInfo.base,
+            hival: colorSpaceInfo.hival,
+            lookup: colorSpaceInfo.lookup,
+            decode,
+          });
+          images.push({
+            type: "image",
+            data,
+            alpha,
+            width,
+            height,
+            colorSpace: "DeviceRGB",
+            bitsPerComponent: 8,
+            graphicsState: parsed.graphicsState,
+          });
+          continue;
+        }
       }
 
       images.push({
         type: "image",
         data,
         alpha,
+        decode,
         width,
         height,
         colorSpace: colorSpace as PdfColorSpace,

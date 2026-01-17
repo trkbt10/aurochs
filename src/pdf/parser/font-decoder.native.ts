@@ -96,6 +96,12 @@ function extractBaseFontName(page: NativePdfPage, fontDict: PdfDict): string | u
   return undefined;
 }
 
+function normalizeBaseFontKey(baseFont: string): string {
+  const clean = baseFont.startsWith("/") ? baseFont.slice(1) : baseFont;
+  const plusIndex = clean.indexOf("+");
+  return plusIndex > 0 ? clean.slice(plusIndex + 1) : clean;
+}
+
 function extractCIDOrderingFromFontDict(page: NativePdfPage, fontDict: PdfDict): CIDOrdering | null {
   const subtype = asName(dictGet(fontDict, "Subtype"))?.value ?? "";
   if (subtype !== "Type0") return null;
@@ -303,6 +309,15 @@ export function extractFontMappingsNative(page: NativePdfPage, options: NativeFo
   const resources = getResources(page);
   if (!resources) return mappings;
 
+  return extractFontMappingsFromResourcesNative(page, resources, options);
+}
+
+export function extractFontMappingsFromResourcesNative(
+  page: NativePdfPage,
+  resources: PdfDict,
+  options: NativeFontExtractionOptions = {},
+): FontMappings {
+  const mappings: FontMappings = new Map();
   const fonts = getFontDict(page, resources);
   if (!fonts) return mappings;
 
@@ -333,6 +348,10 @@ export function extractFontMappingsNative(page: NativePdfPage, options: NativeFo
     };
 
     mappings.set(fontName, info);
+    if (baseFont) {
+      const key = normalizeBaseFontKey(baseFont);
+      if (key && !mappings.has(key)) mappings.set(key, info);
+    }
   }
 
   return mappings;

@@ -162,12 +162,24 @@ export type ParserContext = {
   readonly textState: TextObjectState;
   readonly fontMappings: FontMappings;
   /**
-   * Extracted `/ExtGState` resources for the current page (name → alpha values).
+   * Extracted `/ExtGState` resources for the current page (name → supported params).
    *
    * This is injected by the native parser to keep operator parsing independent
    * from the native object model.
    */
-  readonly extGState: ReadonlyMap<string, { readonly fillAlpha?: number; readonly strokeAlpha?: number }>;
+  readonly extGState: ReadonlyMap<
+    string,
+    {
+      readonly fillAlpha?: number;
+      readonly strokeAlpha?: number;
+      readonly lineWidth?: number;
+      readonly lineCap?: 0 | 1 | 2;
+      readonly lineJoin?: 0 | 1 | 2;
+      readonly miterLimit?: number;
+      readonly dashArray?: readonly number[];
+      readonly dashPhase?: number;
+    }
+  >;
   /** GraphicsStateStack is mutable by design - we don't include it in immutable context */
 };
 

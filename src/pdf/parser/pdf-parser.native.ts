@@ -1,15 +1,25 @@
 import type { PdfDocument, PdfElement, PdfImage, PdfPage, PdfPath, PdfText } from "../domain";
 import { tokenizeContentStream } from "../domain/content-stream";
 import { decodeText, type FontMappings } from "../domain/font";
-import type { NativePdfPage } from "../native";
+import { GraphicsStateStack, type PdfMatrix } from "../domain";
+import type { NativePdfPage, PdfArray, PdfDict, PdfName, PdfNumber, PdfObject, PdfRef, PdfStream } from "../native";
+import { decodePdfStream } from "../native/stream";
 import { buildPath, builtPathToPdfPath } from "./path-builder";
-import { parseContentStream, type ParsedElement, type ParsedImage, type ParsedPath, type ParsedText } from "./operator";
-import { extractFontMappingsNative } from "./font-decoder.native";
+import {
+  parseContentStream,
+  createParser,
+  createGfxOpsFromStack,
+  type ParsedElement,
+  type ParsedImage,
+  type ParsedPath,
+  type ParsedText,
+} from "./operator";
+import { extractFontMappingsFromResourcesNative, extractFontMappingsNative } from "./font-decoder.native";
 import { extractImagesNative } from "./image-extractor.native";
 import { loadNativePdfDocumentForParser } from "./native-load";
 import { extractEmbeddedFontsFromNativePages } from "../domain/font/font-extractor.native";
 import type { PdfLoadEncryption } from "./pdf-load-error";
-import { extractExtGStateAlphaNative } from "./ext-gstate.native";
+import { extractExtGStateFromResourcesNative, extractExtGStateNative, type ExtGStateParams } from "./ext-gstate.native";
 
 export type PdfParserOptions = {
   readonly pages?: readonly number[];
@@ -102,15 +112,192 @@ async function parsePage(
   const fontMappings = extractFontMappingsNative(page);
   mergeFontMetrics(fontMappings, embeddedFontMetrics);
   const tokens = tokenizeContentStream(contentStream);
-  const extGState = extractExtGStateAlphaNative(page);
+  const extGState = extractExtGStateNative(page);
   const parsedElements = [...parseContentStream(tokens, fontMappings, { extGState })];
 
-  const parsedImages = parsedElements.filter((e): e is ParsedImage => e.type === "image");
-  const images = await extractImagesNative(page, parsedImages, { pageHeight: height });
+  const { elements: expandedElements, imageGroups } = expandFormXObjectsNative(
+    page,
+    parsedElements,
+    fontMappings,
+    extGState,
+    embeddedFontMetrics,
+  );
 
-  const elements = convertElements(parsedElements, opts, height, images, fontMappings);
+  const images: PdfImage[] = [];
+  for (const [xObjects, group] of imageGroups) {
+    const extracted = await extractImagesNative(page, group, { pageHeight: height }, xObjects);
+    images.push(...extracted);
+  }
+
+  const elements = convertElements(expandedElements, opts, height, images, fontMappings);
 
   return { pageNumber, width, height, elements };
+}
+
+function asDict(obj: PdfObject | undefined): PdfDict | null {
+  return obj?.type === "dict" ? obj : null;
+}
+function asStream(obj: PdfObject | undefined): PdfStream | null {
+  return obj?.type === "stream" ? obj : null;
+}
+function asName(obj: PdfObject | undefined): PdfName | null {
+  return obj?.type === "name" ? obj : null;
+}
+function asArray(obj: PdfObject | undefined): PdfArray | null {
+  return obj?.type === "array" ? obj : null;
+}
+function asNumber(obj: PdfObject | undefined): number | null {
+  return obj?.type === "number" ? obj.value : null;
+}
+
+function dictGet(dict: PdfDict, key: string): PdfObject | undefined {
+  return dict.map.get(key);
+}
+
+function resolve(page: NativePdfPage, obj: PdfObject | undefined): PdfObject | undefined {
+  if (!obj) return undefined;
+  return page.lookup(obj);
+}
+
+function resolveDict(page: NativePdfPage, obj: PdfObject | undefined): PdfDict | null {
+  return asDict(resolve(page, obj));
+}
+
+function parseMatrix6(page: NativePdfPage, obj: PdfObject | undefined): PdfMatrix | null {
+  const resolved = resolve(page, obj);
+  const arr = asArray(resolved);
+  if (!arr || arr.items.length !== 6) return null;
+  const nums: number[] = [];
+  for (const item of arr.items) {
+    const v = asNumber(resolve(page, item));
+    if (v == null || !Number.isFinite(v)) return null;
+    nums.push(v);
+  }
+  return nums as unknown as PdfMatrix;
+}
+
+type ImageGroupMap = Map<PdfDict, ParsedImage[]>;
+
+function addImageToGroup(groups: ImageGroupMap, xObjects: PdfDict, img: ParsedImage): void {
+  const prev = groups.get(xObjects);
+  if (prev) {
+    prev.push(img);
+    return;
+  }
+  groups.set(xObjects, [img]);
+}
+
+function expandFormXObjectsNative(
+  page: NativePdfPage,
+  parsedElements: readonly ParsedElement[],
+  fontMappings: FontMappings,
+  extGState: ReadonlyMap<string, ExtGStateParams>,
+  embeddedFontMetrics: Map<string, { ascender: number; descender: number }>,
+): Readonly<{ elements: ParsedElement[]; imageGroups: ImageGroupMap }> {
+  const resources = page.getResourcesDict();
+  const xObjects = resources ? resolveDict(page, dictGet(resources, "XObject")) : null;
+  const outElements: ParsedElement[] = [];
+  const imageGroups: ImageGroupMap = new Map();
+
+  const expandInScope = (
+    elements: readonly ParsedElement[],
+    scope: Readonly<{
+      readonly resources: PdfDict | null;
+      readonly xObjects: PdfDict | null;
+      readonly fontMappings: FontMappings;
+      readonly extGState: ReadonlyMap<string, ExtGStateParams>;
+    }>,
+    callStack: Set<string>,
+    depth: number,
+  ): void => {
+    if (depth > 16) return;
+
+    for (const elem of elements) {
+      if (elem.type !== "image") {
+        outElements.push(elem);
+        continue;
+      }
+
+      const xObjDict = scope.xObjects;
+      if (!xObjDict) continue;
+
+      const cleanName = elem.name.startsWith("/") ? elem.name.slice(1) : elem.name;
+      const refOrObj = dictGet(xObjDict, cleanName);
+      const stackKey = refOrObj?.type === "ref" ? `${refOrObj.obj} ${refOrObj.gen}` : null;
+      const resolved = resolve(page, refOrObj);
+      const stream = asStream(resolved);
+      if (!stream) continue;
+
+      const subtype = asName(dictGet(stream.dict, "Subtype"))?.value ?? "";
+      if (subtype === "Image") {
+        addImageToGroup(imageGroups, xObjDict, elem);
+        continue;
+      }
+
+      if (subtype !== "Form") continue;
+
+      if (stackKey && callStack.has(stackKey)) continue;
+      if (stackKey) callStack.add(stackKey);
+
+      const formResources = resolveDict(page, dictGet(stream.dict, "Resources")) ?? scope.resources;
+      const formXObjects =
+        (formResources ? resolveDict(page, dictGet(formResources, "XObject")) : null) ?? scope.xObjects;
+
+      const scopedFonts = new Map(scope.fontMappings);
+      const formFonts = formResources ? extractFontMappingsFromResourcesNative(page, formResources) : new Map();
+      for (const [k, v] of formFonts) scopedFonts.set(k, v);
+      mergeFontMetrics(scopedFonts, embeddedFontMetrics);
+      for (const info of formFonts.values()) {
+        if (!info.baseFont) continue;
+        const key = normalizeBaseFontForMetricsLookup(info.baseFont);
+        if (!fontMappings.has(key)) fontMappings.set(key, info);
+      }
+      mergeFontMetrics(fontMappings, embeddedFontMetrics);
+
+      const localExt = formResources ? extractExtGStateFromResourcesNative(page, formResources) : new Map();
+      const mergedExt = new Map(scope.extGState);
+      for (const [k, v] of localExt) mergedExt.set(k, v);
+
+      const matrix = parseMatrix6(page, dictGet(stream.dict, "Matrix")) ?? ([1, 0, 0, 1, 0, 0] as PdfMatrix);
+
+      const decoded = decodePdfStream(stream);
+      const content = new TextDecoder("latin1").decode(decoded);
+      if (!content) {
+        if (stackKey) callStack.delete(stackKey);
+        continue;
+      }
+
+      const gfxStack = new GraphicsStateStack(elem.graphicsState);
+      gfxStack.concatMatrix(matrix);
+      const gfxOps = createGfxOpsFromStack(gfxStack);
+      const tokens = tokenizeContentStream(content);
+      const parse = createParser(gfxOps, scopedFonts, { extGState: mergedExt });
+      const inner = parse(tokens);
+
+      expandInScope(
+        inner,
+        {
+          resources: formResources,
+          xObjects: formXObjects,
+          fontMappings: scopedFonts,
+          extGState: mergedExt,
+        },
+        callStack,
+        depth + 1,
+      );
+
+      if (stackKey) callStack.delete(stackKey);
+    }
+  };
+
+  expandInScope(
+    parsedElements,
+    { resources, xObjects: xObjects ?? null, fontMappings, extGState },
+    new Set(),
+    0,
+  );
+
+  return { elements: outElements, imageGroups };
 }
 
 function mergeFontMetrics(
@@ -203,8 +390,9 @@ function convertText(parsed: ParsedText, fontMappings: FontMappings): PdfText[] 
   const results: PdfText[] = [];
 
   for (const run of parsed.runs) {
-    const fontInfo = getFontInfo(run.fontName, fontMappings);
-    const decodedText = decodeText(run.text, run.fontName, fontMappings);
+    const fontKey = run.baseFont ?? run.fontName;
+    const fontInfo = getFontInfo(fontKey, fontMappings);
+    const decodedText = decodeText(run.text, fontKey, fontMappings);
 
     const metrics = fontInfo?.metrics;
     const ascender = metrics?.ascender ?? 800;

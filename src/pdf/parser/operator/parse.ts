@@ -74,7 +74,19 @@ export function getSupportedOperators(): ReadonlyArray<{
 export function createInitialContext(
   fontMappings: FontMappings,
   options: Readonly<{
-    readonly extGState?: ReadonlyMap<string, { readonly fillAlpha?: number; readonly strokeAlpha?: number }>;
+    readonly extGState?: ReadonlyMap<
+      string,
+      {
+        readonly fillAlpha?: number;
+        readonly strokeAlpha?: number;
+        readonly lineWidth?: number;
+        readonly lineCap?: 0 | 1 | 2;
+        readonly lineJoin?: 0 | 1 | 2;
+        readonly miterLimit?: number;
+        readonly dashArray?: readonly number[];
+        readonly dashPhase?: number;
+      }
+    >;
   }> = {},
 ): ParserContext {
   return {
@@ -238,7 +250,19 @@ export function parseContentStream(
   tokens: readonly PdfToken[],
   fontMappings: FontMappings = new Map(),
   options: Readonly<{
-    readonly extGState?: ReadonlyMap<string, { readonly fillAlpha?: number; readonly strokeAlpha?: number }>;
+    readonly extGState?: ReadonlyMap<
+      string,
+      {
+        readonly fillAlpha?: number;
+        readonly strokeAlpha?: number;
+        readonly lineWidth?: number;
+        readonly lineCap?: 0 | 1 | 2;
+        readonly lineJoin?: 0 | 1 | 2;
+        readonly miterLimit?: number;
+        readonly dashArray?: readonly number[];
+        readonly dashPhase?: number;
+      }
+    >;
   }> = {},
 ): readonly ParsedElement[] {
   const gfxStack = new GraphicsStateStack();
@@ -270,7 +294,19 @@ export function createParser(
   gfxOps: GraphicsStateOps,
   fontMappings: FontMappings = new Map(),
   options: Readonly<{
-    readonly extGState?: ReadonlyMap<string, { readonly fillAlpha?: number; readonly strokeAlpha?: number }>;
+    readonly extGState?: ReadonlyMap<
+      string,
+      {
+        readonly fillAlpha?: number;
+        readonly strokeAlpha?: number;
+        readonly lineWidth?: number;
+        readonly lineCap?: 0 | 1 | 2;
+        readonly lineJoin?: 0 | 1 | 2;
+        readonly miterLimit?: number;
+        readonly dashArray?: readonly number[];
+        readonly dashPhase?: number;
+      }
+    >;
   }> = {},
 ): (tokens: readonly PdfToken[]) => readonly ParsedElement[] {
   return (tokens) => {

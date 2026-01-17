@@ -62,7 +62,8 @@ export function convertToRgba(
   width: number,
   height: number,
   colorSpace: PdfColorSpace,
-  bitsPerComponent: number
+  bitsPerComponent: number,
+  options: Readonly<{ readonly decode?: readonly number[] }> = {},
 ): Uint8ClampedArray {
   const pixelCount = width * height;
   const rgba = new Uint8ClampedArray(pixelCount * 4);
@@ -125,6 +126,13 @@ export function convertToRgba(
       );
   }
 
+  if (options.decode) {
+    const expectedDecodeLen = componentsPerPixel * 2;
+    if (options.decode.length === expectedDecodeLen) {
+      normalizedData = applyDecodeArray(normalizedData, componentsPerPixel, options.decode);
+    }
+  }
+
   if (bitsPerComponent === 8 && normalizedData.length !== sampleCount) {
     // Try to auto-detect color space based on data length (8-bit only)
     const actualComponents = normalizedData.length / pixelCount;
@@ -156,6 +164,27 @@ export function convertToRgba(
       console.warn(`[PDF Image] Unsupported color space: ${colorSpace}`);
       return rgba;
   }
+}
+
+function applyDecodeArray(
+  data: Uint8Array,
+  componentsPerPixel: number,
+  decode: readonly number[],
+): Uint8Array {
+  if (componentsPerPixel <= 0) return data;
+  if (decode.length !== componentsPerPixel * 2) return data;
+
+  const out = new Uint8Array(data.length);
+  for (let i = 0; i < data.length; i += 1) {
+    const component = i % componentsPerPixel;
+    const dmin = decode[component * 2] ?? 0;
+    const dmax = decode[component * 2 + 1] ?? 1;
+    const v = (data[i] ?? 0) / 255;
+    const decoded = dmin + v * (dmax - dmin);
+    const clamped = Math.min(1, Math.max(0, decoded));
+    out[i] = Math.round(clamped * 255);
+  }
+  return out;
 }
 
 // =============================================================================
