@@ -18,7 +18,7 @@ function decodeAscii85Group(group: ReadonlyArray<number>): number {
 
 
 
-/** decodeAscii85 */
+/** Decode data using the PDF `/ASCII85Decode` filter. */
 export function decodeAscii85(data: Uint8Array): Uint8Array {
   const out: number[] = [];
   const group: number[] = [];

@@ -79,76 +79,82 @@ function decodeParmsFromStreamDict(dict: PdfDict, filterCount: number): readonly
 
 
 
-/** PdfResolver */
-export class PdfResolver {
-  private readonly indirectCache = new Map<number, PdfObject>();
-  private readonly objStmCache = new Map<number, ObjStmCacheEntry>();
+/** PDF object resolver (xref + ObjStm aware). */
+export type PdfResolver = Readonly<{
+  deref(obj: PdfObject): PdfObject;
+  getObject(objNum: number): PdfObject;
+}>;
 
-  constructor(
-    private readonly bytes: Uint8Array,
-    private readonly xref: XRefTable,
-    private readonly options: Readonly<{
-      readonly decrypter?: PdfDecrypter;
-      readonly skipDecryptObjectNums?: ReadonlySet<number>;
-    }> = {},
-  ) {}
+/**
+ * Create an object resolver for a PDF file.
+ *
+ * Resolves indirect references via the xref table, including objects stored in ObjStm streams.
+ */
+export function createPdfResolver(
+  bytes: Uint8Array,
+  xref: XRefTable,
+  options: Readonly<{
+    readonly decrypter?: PdfDecrypter;
+    readonly skipDecryptObjectNums?: ReadonlySet<number>;
+  }> = {},
+): PdfResolver {
+  const indirectCache = new Map<number, PdfObject>();
+  const objStmCache = new Map<number, ObjStmCacheEntry>();
 
-  deref(obj: PdfObject): PdfObject {
-    return obj.type === "ref" ? this.getObject(obj.obj) : obj;
-  }
+  const deref = (obj: PdfObject): PdfObject => (obj.type === "ref" ? getObject(obj.obj) : obj);
 
-  getObject(objNum: number): PdfObject {
-    const cached = this.indirectCache.get(objNum);
+  function getObject(objNum: number): PdfObject {
+    const cached = indirectCache.get(objNum);
     if (cached) {return cached;}
 
-    const entry = this.xref.entries.get(objNum);
+    const entry = xref.entries.get(objNum);
     if (!entry) {
       throw new Error(`Missing xref entry for object ${objNum}`);
     }
 
-    const { value, gen } = this.resolveXRefEntry(objNum, entry);
-    const decrypted = this.decryptIfNeeded(value, objNum, gen);
+    const { value, gen } = resolveXRefEntry(objNum, entry);
+    const decrypted = decryptIfNeeded(value, objNum, gen);
 
-    this.indirectCache.set(objNum, decrypted);
+    indirectCache.set(objNum, decrypted);
     return decrypted;
   }
 
-  private resolveXRefEntry(objNum: number, entry: XRefEntry): { readonly value: PdfObject; readonly gen: number } {
+  const resolveXRefEntry = (objNum: number, entry: XRefEntry): { readonly value: PdfObject; readonly gen: number } => {
     if (entry.type === 0) {
       throw new Error(`Object ${objNum} is free`);
     }
     if (entry.type === 1) {
-      const { obj } = parseIndirectObjectAt(this.bytes, entry.offset, { resolveObject: (n) => this.getObject(n) });
+      const { obj } = parseIndirectObjectAt(bytes, entry.offset, { resolveObject: (n) => getObject(n) });
       if (obj.obj !== objNum) {
         // Some PDFs may have padding; still trust parsed obj.
       }
       return { value: obj.value, gen: entry.gen };
     }
     if (entry.type === 2) {
-      return { value: this.getCompressedObject(entry.objStm, entry.index), gen: 0 };
+      return { value: getCompressedObject(entry.objStm, entry.index), gen: 0 };
     }
     const exhaustive: never = entry;
     throw new Error(`Unsupported xref entry: ${String(exhaustive)}`);
-  }
+  };
 
-  private decryptIfNeeded(value: PdfObject, objNum: number, gen: number): PdfObject {
-    const decrypter = this.options.decrypter;
+  const decryptIfNeeded = (value: PdfObject, objNum: number, gen: number): PdfObject => {
+    const decrypter = options.decrypter;
     if (!decrypter) {return value;}
-    const skip = this.options.skipDecryptObjectNums;
+    const skip = options.skipDecryptObjectNums;
     if (skip?.has(objNum)) {return value;}
     return decryptPdfObject(value, objNum, gen, decrypter);
-  }
+  };
 
-  private getCompressedObject(objStmNum: number, index: number): PdfObject {
-    const cache = this.objStmCache.get(objStmNum);
-    const objects = cache ? cache.objects : this.parseObjStm(objStmNum);
+  const getCompressedObject = (objStmNum: number, index: number): PdfObject => {
+    const cache = objStmCache.get(objStmNum);
+    const objects = cache ? cache.objects : parseObjStm(objStmNum);
     const value = objects.get(index);
     if (!value) {throw new Error(`ObjStm ${objStmNum}: missing object index ${index}`);}
     return value;
-  }
+  };
 
-  private parseObjStm(objStmNum: number): ReadonlyMap<number, PdfObject> {
-    const stmObj = this.getObject(objStmNum);
+  const parseObjStm = (objStmNum: number): ReadonlyMap<number, PdfObject> => {
+    const stmObj = getObject(objStmNum);
     const stream = asStream(stmObj);
     if (!stream) {throw new Error(`ObjStm ${objStmNum}: not a stream`);}
 
@@ -187,7 +193,9 @@ export class PdfResolver {
       out.set(i, parsed.value);
     }
 
-    this.objStmCache.set(objStmNum, { objStm: objStmNum, objects: out });
+    objStmCache.set(objStmNum, { objStm: objStmNum, objects: out });
     return out;
-  }
+  };
+
+  return { deref, getObject };
 }

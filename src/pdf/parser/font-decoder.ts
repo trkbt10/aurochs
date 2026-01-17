@@ -114,24 +114,27 @@ export function extractFontInfoWithDeps<PdfPageT, ResourcesT>(
     (e) => `Failed to extract metrics for ${fontName}: ${e instanceof Error ? e.message : String(e)}`,
   );
 
-  if (deps.extractCIDOrdering) {
+  const extractCIDOrdering = deps.extractCIDOrdering;
+  if (extractCIDOrdering) {
     state.ordering = safelyExtract(
-      () => deps.extractCIDOrdering(resources, fontName),
+      () => extractCIDOrdering(resources, fontName),
       (e) => `Failed to extract CIDOrdering for ${fontName}: ${e instanceof Error ? e.message : String(e)}`,
     );
   }
 
-  if (deps.extractEncoding) {
+  const extractEncoding = deps.extractEncoding;
+  if (extractEncoding) {
     state.encoding = safelyExtract(
-      () => deps.extractEncoding(resources, fontName),
+      () => extractEncoding(resources, fontName),
       (e) => `Failed to extract Encoding for ${fontName}: ${e instanceof Error ? e.message : String(e)}`,
     );
   }
 
   const styleState: { value: { isBold: boolean; isItalic: boolean } | null } = { value: null };
-  if (deps.extractBoldItalic) {
+  const extractBoldItalic = deps.extractBoldItalic;
+  if (extractBoldItalic) {
     styleState.value = safelyExtract(
-      () => deps.extractBoldItalic(resources, fontName),
+      () => extractBoldItalic(resources, fontName),
       (e) => `Failed to extract bold/italic for ${fontName}: ${e instanceof Error ? e.message : String(e)}`,
     );
   }
@@ -142,9 +145,10 @@ export function extractFontInfoWithDeps<PdfPageT, ResourcesT>(
     state.isItalic = style.isItalic;
   }
 
-  if (deps.extractBaseFont) {
+  const extractBaseFont = deps.extractBaseFont;
+  if (extractBaseFont) {
     state.baseFont = safelyExtract(
-      () => deps.extractBaseFont(resources, fontName),
+      () => extractBaseFont(resources, fontName),
       (e) => `Failed to extract BaseFont for ${fontName}: ${e instanceof Error ? e.message : String(e)}`,
     );
   }

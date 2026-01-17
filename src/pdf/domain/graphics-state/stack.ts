@@ -23,261 +23,290 @@ import type { PdfGraphicsState, PdfLineCap, PdfLineJoin, PdfTextRenderingMode } 
 
 
 
-/** GraphicsStateStack */
-export class GraphicsStateStack {
-  private stack: PdfGraphicsState[] = [];
-  private current: PdfGraphicsState;
-
-  constructor(initial?: PdfGraphicsState) {
-    if (initial) {
-      this.current = {
-        ...initial,
-        clipBBox: initial.clipBBox ? cloneBBox(initial.clipBBox) : undefined,
-        fillColor: {
-          ...initial.fillColor,
-          components: [...initial.fillColor.components],
-        },
-        strokeColor: {
-          ...initial.strokeColor,
-          components: [...initial.strokeColor.components],
-        },
-        dashArray: [...initial.dashArray],
-      };
-    } else {
-      this.current = createDefaultGraphicsState();
-    }
-  }
-
+export type GraphicsStateStack = Readonly<{
+  /** Reset internal state (testing/debugging helper) */
+  reset(initial?: PdfGraphicsState): void;
   /** q operator: save graphics state */
-  push(): void {
-    this.stack.push({
-      ...this.current,
-      clipBBox: this.current.clipBBox ? cloneBBox(this.current.clipBBox) : undefined,
-    });
-  }
-
+  push(): void;
   /** Q operator: restore graphics state */
-  pop(): void {
-    const prev = this.stack.pop();
-    if (prev) {
-      this.current = prev;
-    }
-  }
-
+  pop(): void;
   /** Get current state (copy) */
-  get(): PdfGraphicsState {
-    return {
-      ...this.current,
-      clipBBox: this.current.clipBBox ? cloneBBox(this.current.clipBBox) : undefined,
-    };
-  }
-
-  // --- CTM Operations ---
-
+  get(): PdfGraphicsState;
   /** cm operator: concatenate matrix to CTM */
-  concatMatrix(matrix: PdfMatrix): void {
-    this.current = {
-      ...this.current,
-      ctm: multiplyMatrices(matrix, this.current.ctm),
+  concatMatrix(matrix: PdfMatrix): void;
+  setClipBBox(bbox: PdfBBox): void;
+  setFillGray(gray: number): void;
+  setStrokeGray(gray: number): void;
+  setFillRgb(r: number, g: number, b: number): void;
+  setStrokeRgb(r: number, g: number, b: number): void;
+  setFillCmyk(c: number, m: number, y: number, k: number): void;
+  setStrokeCmyk(c: number, m: number, y: number, k: number): void;
+  setLineWidth(width: number): void;
+  setLineCap(cap: PdfLineCap): void;
+  setLineJoin(join: PdfLineJoin): void;
+  setMiterLimit(limit: number): void;
+  setDashPattern(array: readonly number[], phase: number): void;
+  setFillAlpha(alpha: number): void;
+  setStrokeAlpha(alpha: number): void;
+  setCharSpacing(spacing: number): void;
+  setWordSpacing(spacing: number): void;
+  setHorizontalScaling(scale: number): void;
+  setTextLeading(leading: number): void;
+  setTextRenderingMode(mode: PdfTextRenderingMode): void;
+  setTextRise(rise: number): void;
+}>;
+
+/**
+ * Create a new graphics state stack.
+ *
+ * @param initial - Optional initial graphics state (used for Form/XObject scopes)
+ */
+export function createGraphicsStateStack(initial?: PdfGraphicsState): GraphicsStateStack {
+  const stack: PdfGraphicsState[] = [];
+  const current = { value: cloneState(initial ?? createDefaultGraphicsState()) };
+
+  const reset = (initial?: PdfGraphicsState): void => {
+    stack.length = 0;
+    current.value = cloneState(initial ?? createDefaultGraphicsState());
+  };
+
+  const push = (): void => {
+    stack.push({
+      ...current.value,
+      clipBBox: current.value.clipBBox ? cloneBBox(current.value.clipBBox) : undefined,
+    });
+  };
+
+  const pop = (): void => {
+    const prev = stack.pop();
+    if (prev) {
+      current.value = prev;
+    }
+  };
+
+  const get = (): PdfGraphicsState => ({
+    ...current.value,
+    clipBBox: current.value.clipBBox ? cloneBBox(current.value.clipBBox) : undefined,
+  });
+
+  const concatMatrix = (matrix: PdfMatrix): void => {
+    current.value = {
+      ...current.value,
+      ctm: multiplyMatrices(matrix, current.value.ctm),
     };
-  }
+  };
 
-  // --- Clip Operations ---
-
-  setClipBBox(bbox: PdfBBox): void {
+  const setClipBBox = (bbox: PdfBBox): void => {
     const [x1, y1, x2, y2] = bbox;
     const minX = Math.min(x1, x2);
     const minY = Math.min(y1, y2);
     const maxX = Math.max(x1, x2);
     const maxY = Math.max(y1, y2);
 
-    const prev = this.current.clipBBox;
+    const prev = current.value.clipBBox;
     const next = intersectBBoxOrDefault(prev, minX, minY, maxX, maxY);
 
-    this.current = {
-      ...this.current,
+    current.value = {
+      ...current.value,
       clipBBox: next,
     };
-  }
+  };
 
-  // --- Color Operations ---
-
-  /** g operator: set fill gray */
-  setFillGray(gray: number): void {
-    this.current = {
-      ...this.current,
+  const setFillGray = (gray: number): void => {
+    current.value = {
+      ...current.value,
       fillColor: {
         colorSpace: "DeviceGray",
         components: [gray],
       },
     };
-  }
+  };
 
-  /** G operator: set stroke gray */
-  setStrokeGray(gray: number): void {
-    this.current = {
-      ...this.current,
+  const setStrokeGray = (gray: number): void => {
+    current.value = {
+      ...current.value,
       strokeColor: {
         colorSpace: "DeviceGray",
         components: [gray],
       },
     };
-  }
+  };
 
-  /** rg operator: set fill RGB */
-  setFillRgb(r: number, g: number, b: number): void {
-    this.current = {
-      ...this.current,
+  const setFillRgb = (r: number, g: number, b: number): void => {
+    current.value = {
+      ...current.value,
       fillColor: {
         colorSpace: "DeviceRGB",
         components: [r, g, b],
       },
     };
-  }
+  };
 
-  /** RG operator: set stroke RGB */
-  setStrokeRgb(r: number, g: number, b: number): void {
-    this.current = {
-      ...this.current,
+  const setStrokeRgb = (r: number, g: number, b: number): void => {
+    current.value = {
+      ...current.value,
       strokeColor: {
         colorSpace: "DeviceRGB",
         components: [r, g, b],
       },
     };
-  }
+  };
 
-  /** k operator: set fill CMYK */
-  setFillCmyk(c: number, m: number, y: number, k: number): void {
-    this.current = {
-      ...this.current,
+  const setFillCmyk = (c: number, m: number, y: number, k: number): void => {
+    current.value = {
+      ...current.value,
       fillColor: {
         colorSpace: "DeviceCMYK",
         components: [c, m, y, k],
       },
     };
-  }
+  };
 
-  /** K operator: set stroke CMYK */
-  setStrokeCmyk(c: number, m: number, y: number, k: number): void {
-    this.current = {
-      ...this.current,
+  const setStrokeCmyk = (c: number, m: number, y: number, k: number): void => {
+    current.value = {
+      ...current.value,
       strokeColor: {
         colorSpace: "DeviceCMYK",
         components: [c, m, y, k],
       },
     };
-  }
+  };
 
-  // --- Line Style Operations ---
-
-  /** w operator: set line width */
-  setLineWidth(width: number): void {
-    this.current = {
-      ...this.current,
+  const setLineWidth = (width: number): void => {
+    current.value = {
+      ...current.value,
       lineWidth: width,
     };
-  }
+  };
 
-  /** J operator: set line cap */
-  setLineCap(cap: PdfLineCap): void {
-    this.current = {
-      ...this.current,
+  const setLineCap = (cap: PdfLineCap): void => {
+    current.value = {
+      ...current.value,
       lineCap: cap,
     };
-  }
+  };
 
-  /** j operator: set line join */
-  setLineJoin(join: PdfLineJoin): void {
-    this.current = {
-      ...this.current,
+  const setLineJoin = (join: PdfLineJoin): void => {
+    current.value = {
+      ...current.value,
       lineJoin: join,
     };
-  }
+  };
 
-  /** M operator: set miter limit */
-  setMiterLimit(limit: number): void {
-    this.current = {
-      ...this.current,
+  const setMiterLimit = (limit: number): void => {
+    current.value = {
+      ...current.value,
       miterLimit: limit,
     };
-  }
+  };
 
-  /** d operator: set dash pattern */
-  setDashPattern(array: readonly number[], phase: number): void {
-    this.current = {
-      ...this.current,
+  const setDashPattern = (array: readonly number[], phase: number): void => {
+    current.value = {
+      ...current.value,
       dashArray: [...array],
       dashPhase: phase,
     };
-  }
+  };
 
-  // --- Alpha Operations ---
-
-  /** Set fill alpha (from extended graphics state) */
-  setFillAlpha(alpha: number): void {
-    this.current = {
-      ...this.current,
+  const setFillAlpha = (alpha: number): void => {
+    current.value = {
+      ...current.value,
       fillAlpha: alpha,
     };
-  }
+  };
 
-  /** Set stroke alpha (from extended graphics state) */
-  setStrokeAlpha(alpha: number): void {
-    this.current = {
-      ...this.current,
+  const setStrokeAlpha = (alpha: number): void => {
+    current.value = {
+      ...current.value,
       strokeAlpha: alpha,
     };
-  }
+  };
 
-  // --- Text State Operations (PDF Reference 9.3) ---
-
-  /** Tc operator: set character spacing */
-  setCharSpacing(spacing: number): void {
-    this.current = {
-      ...this.current,
+  const setCharSpacing = (spacing: number): void => {
+    current.value = {
+      ...current.value,
       charSpacing: spacing,
     };
-  }
+  };
 
-  /** Tw operator: set word spacing */
-  setWordSpacing(spacing: number): void {
-    this.current = {
-      ...this.current,
+  const setWordSpacing = (spacing: number): void => {
+    current.value = {
+      ...current.value,
       wordSpacing: spacing,
     };
-  }
+  };
 
-  /** Tz operator: set horizontal scaling (percentage, e.g., 100 = normal) */
-  setHorizontalScaling(scale: number): void {
-    this.current = {
-      ...this.current,
+  const setHorizontalScaling = (scale: number): void => {
+    current.value = {
+      ...current.value,
       horizontalScaling: scale,
     };
-  }
+  };
 
-  /** TL operator: set text leading */
-  setTextLeading(leading: number): void {
-    this.current = {
-      ...this.current,
+  const setTextLeading = (leading: number): void => {
+    current.value = {
+      ...current.value,
       textLeading: leading,
     };
-  }
+  };
 
-  /** Tr operator: set text rendering mode */
-  setTextRenderingMode(mode: PdfTextRenderingMode): void {
-    this.current = {
-      ...this.current,
+  const setTextRenderingMode = (mode: PdfTextRenderingMode): void => {
+    current.value = {
+      ...current.value,
       textRenderingMode: mode,
     };
-  }
+  };
 
-  /** Ts operator: set text rise */
-  setTextRise(rise: number): void {
-    this.current = {
-      ...this.current,
+  const setTextRise = (rise: number): void => {
+    current.value = {
+      ...current.value,
       textRise: rise,
     };
-  }
+  };
+
+  return {
+    reset,
+    push,
+    pop,
+    get,
+    concatMatrix,
+    setClipBBox,
+    setFillGray,
+    setStrokeGray,
+    setFillRgb,
+    setStrokeRgb,
+    setFillCmyk,
+    setStrokeCmyk,
+    setLineWidth,
+    setLineCap,
+    setLineJoin,
+    setMiterLimit,
+    setDashPattern,
+    setFillAlpha,
+    setStrokeAlpha,
+    setCharSpacing,
+    setWordSpacing,
+    setHorizontalScaling,
+    setTextLeading,
+    setTextRenderingMode,
+    setTextRise,
+  };
+}
+
+function cloneState(state: PdfGraphicsState): PdfGraphicsState {
+  return {
+    ...state,
+    clipBBox: state.clipBBox ? cloneBBox(state.clipBBox) : undefined,
+    fillColor: {
+      ...state.fillColor,
+      components: [...state.fillColor.components],
+    },
+    strokeColor: {
+      ...state.strokeColor,
+      components: [...state.strokeColor.components],
+    },
+    dashArray: [...state.dashArray],
+  };
 }
 
 function cloneBBox(bbox: PdfBBox): PdfBBox {

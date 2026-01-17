@@ -21,7 +21,7 @@ function hexValue(b: number): number | null {
 
 
 
-/** decodeAsciiHex */
+/** Decode data using the PDF `/ASCIIHexDecode` filter. */
 export function decodeAsciiHex(data: Uint8Array): Uint8Array {
   const out: number[] = [];
   const state: { hi: number | null } = { hi: null };

@@ -13,7 +13,7 @@
 
 import type { PdfToken } from "../../domain/content-stream";
 import type { FontMappings } from "../../domain";
-import { GraphicsStateStack } from "../../domain";
+import { createGraphicsStateStack, type GraphicsStateStack } from "../../domain";
 import type {
   ParserContext,
   ParserStateUpdate,
@@ -266,7 +266,7 @@ export function parseContentStream(
     >;
   }> = {},
 ): readonly ParsedElement[] {
-  const gfxStack = new GraphicsStateStack();
+  const gfxStack = createGraphicsStateStack();
   const gfxOps = createGfxOpsFromStack(gfxStack);
 
   const ctx = tokens.reduce(

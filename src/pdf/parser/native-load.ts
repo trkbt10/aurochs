@@ -36,7 +36,7 @@ function detectPdfLoadErrorCode(error: unknown): PdfLoadErrorCode {
 
 
 
-/** loadNativePdfDocumentForParser */
+/** Load a PDF as a native document for parsing/inspection. */
 export async function loadNativePdfDocumentForParser(
   data: Uint8Array | ArrayBuffer,
   options: PdfLoadOptions,

@@ -2,7 +2,7 @@
  * @file src/pdf/native/document.ts
  */
 
-import { PdfResolver } from "./resolver";
+import { createPdfResolver, type PdfResolver } from "./resolver";
 import { loadXRef, type XRefTable } from "./xref";
 import type { PdfDict, PdfObject, PdfRef, PdfStream, PdfString } from "./types";
 import { decodePdfStream } from "./stream";
@@ -319,178 +319,186 @@ function mergeMetadata(
 
 
 
-/** NativePdfDocument */
-export class NativePdfDocument {
-  private readonly xref: XRefTable;
-  private readonly resolver: PdfResolver;
-  private readonly trailer: PdfDict;
-  private readonly catalog: PdfDict;
-  private readonly pages: readonly PdfDict[];
+export type NativePdfDocument = Readonly<{
+  getPageCount(): number;
+  getMetadata(): NativePdfMetadata | undefined;
+  getPages(): readonly NativePdfPage[];
+}>;
 
-  private readonly metadata: NativePdfMetadata;
+/**
+ * Create a native PDF document loader over raw bytes.
+ *
+ * @param bytes - PDF file bytes
+ * @param options - Load options including encryption handling
+ */
+export function createNativePdfDocument(
+  bytes: Uint8Array,
+  options: NativePdfLoadOptions,
+): NativePdfDocument {
+  if (!bytes) {throw new Error("bytes is required");}
+  if (!options) {throw new Error("options is required");}
+  if (!options.encryption) {throw new Error("options.encryption is required");}
 
-  constructor(
-    private readonly bytes: Uint8Array,
-    options: NativePdfLoadOptions,
-  ) {
-    if (!bytes) {throw new Error("bytes is required");}
-    if (!options) {throw new Error("options is required");}
-    if (!options.encryption) {throw new Error("options.encryption is required");}
+  const xref = loadXRef(bytes);
+  const trailer = xref.trailer;
 
-    this.xref = loadXRef(bytes);
-    this.trailer = this.xref.trailer;
+  const resolver = createPdfResolverWithEncryption(bytes, xref, trailer, options);
 
-    const encryptRef = asRef(dictGet(this.trailer, "Encrypt"));
-    if (encryptRef) {
-      if (options.encryption.mode === "reject") {
-        throw new Error("Encrypted PDF");
-      }
+  const rootRef = asRef(dictGet(trailer, "Root"));
+  if (!rootRef) {throw new Error("Missing trailer /Root");}
+  const catalogObj = resolver.getObject(rootRef.obj);
+  const catalog = asDict(catalogObj);
+  if (!catalog) {throw new Error("/Root is not a dictionary");}
 
-      if (options.encryption.mode === "password") {
-        const idArr = asArray(dictGet(this.trailer, "ID"));
-        const id0 = idArr && idArr.length > 0 ? asString(idArr[0])?.bytes : null;
-        if (!id0) {throw new Error("Encrypted PDF: trailer /ID is missing");}
+  const pagesRef = asRef(dictGet(catalog, "Pages"));
+  if (!pagesRef) {throw new Error("Missing catalog /Pages");}
+  const pagesObj = resolver.getObject(pagesRef.obj);
+  const pagesNode = asDict(pagesObj);
+  if (!pagesNode) {throw new Error("Catalog /Pages is not a dictionary");}
+  const pageDicts = collectPages(pagesNode, resolver);
 
-        const tmpResolver = new PdfResolver(bytes, this.xref);
-        const encryptObj = tmpResolver.getObject(encryptRef.obj);
-        const encryptDict = asDict(encryptObj);
-        if (!encryptDict) {throw new Error("Encrypted PDF: /Encrypt is not a dictionary");}
+  const infoRef = asRef(dictGet(trailer, "Info"));
+  const infoDict = infoRef ? asDict(resolver.getObject(infoRef.obj)) : null;
+  const info = infoDict ? extractInfoMetadata(infoDict) : {};
+  const xmp = extractXmpMetadata(catalog, (o) => resolver.deref(o), decodePdfStream);
+  const metadata = mergeMetadata(info, xmp);
 
-        const decrypter = createStandardDecrypter({
-          encryptDict,
-          fileId0: id0,
-          password: options.encryption.password,
-        });
+  return {
+    getPageCount: () => pageDicts.length,
+    getMetadata: () => {
+      const has = metadata.title || metadata.author || metadata.subject;
+      return has ? metadata : undefined;
+    },
+    getPages: () => createNativePdfPages(pageDicts, resolver),
+  };
+}
 
-        this.resolver = new PdfResolver(bytes, this.xref, {
-          decrypter,
-          skipDecryptObjectNums: new Set([encryptRef.obj]),
-        });
-      } else {
-        // ignore
-        this.resolver = new PdfResolver(bytes, this.xref);
-      }
-    } else {
-      this.resolver = new PdfResolver(bytes, this.xref);
-    }
-
-    const rootRef = asRef(dictGet(this.trailer, "Root"));
-    if (!rootRef) {throw new Error("Missing trailer /Root");}
-    const catalogObj = this.resolver.getObject(rootRef.obj);
-    const catalog = asDict(catalogObj);
-    if (!catalog) {throw new Error("/Root is not a dictionary");}
-    this.catalog = catalog;
-
-    const pagesRef = asRef(dictGet(this.catalog, "Pages"));
-    if (!pagesRef) {throw new Error("Missing catalog /Pages");}
-    const pagesObj = this.resolver.getObject(pagesRef.obj);
-    const pagesNode = asDict(pagesObj);
-    if (!pagesNode) {throw new Error("Catalog /Pages is not a dictionary");}
-    this.pages = collectPages(pagesNode, this.resolver);
-
-    const infoRef = asRef(dictGet(this.trailer, "Info"));
-    const infoDict = infoRef ? asDict(this.resolver.getObject(infoRef.obj)) : null;
-    const info = infoDict ? extractInfoMetadata(infoDict) : {};
-    const xmp = extractXmpMetadata(this.catalog, (o) => this.resolver.deref(o), decodePdfStream);
-    this.metadata = mergeMetadata(info, xmp);
+function createPdfResolverWithEncryption(
+  bytes: Uint8Array,
+  xref: XRefTable,
+  trailer: PdfDict,
+  options: NativePdfLoadOptions,
+): PdfResolver {
+  const encryptRef = asRef(dictGet(trailer, "Encrypt"));
+  if (!encryptRef) {
+    return createPdfResolver(bytes, xref);
   }
 
-  getPageCount(): number {
-    return this.pages.length;
+  if (options.encryption.mode === "reject") {
+    throw new Error("Encrypted PDF");
   }
 
-  getMetadata(): NativePdfMetadata | undefined {
-    const has = this.metadata.title || this.metadata.author || this.metadata.subject;
-    return has ? this.metadata : undefined;
+  if (options.encryption.mode !== "password") {
+    return createPdfResolver(bytes, xref);
   }
 
-  getPages(): readonly NativePdfPage[] {
-    const out: NativePdfPage[] = [];
-    for (let i = 0; i < this.pages.length; i += 1) {
-      const pageDict = this.pages[i]!;
-      const pageNumber = i + 1;
+  const idArr = asArray(dictGet(trailer, "ID"));
+  const id0 = idArr && idArr.length > 0 ? asString(idArr[0])?.bytes : null;
+  if (!id0) {throw new Error("Encrypted PDF: trailer /ID is missing");}
 
-      const inherited = readInherited(pageDict, this.resolver);
-      const mediaBox = inherited.mediaBox ?? readBox(pageDict, "MediaBox");
-      const cropBox = inherited.cropBox ?? readBox(pageDict, "CropBox");
-      const bleedBox = inherited.bleedBox ?? readBox(pageDict, "BleedBox");
-      const trimBox = inherited.trimBox ?? readBox(pageDict, "TrimBox");
-      const artBox = inherited.artBox ?? readBox(pageDict, "ArtBox");
-      const resources = inherited.resources;
-      const rotate = normalizeRotate(inherited.rotate ?? readRotate(pageDict));
-      const userUnit = inherited.userUnit ?? readUserUnit(pageDict) ?? 1;
+  const tmpResolver = createPdfResolver(bytes, xref);
+  const encryptObj = tmpResolver.getObject(encryptRef.obj);
+  const encryptDict = asDict(encryptObj);
+  if (!encryptDict) {throw new Error("Encrypted PDF: /Encrypt is not a dictionary");}
 
-      // Defaulting per ISO 32000:
-      // - CropBox defaults to MediaBox
-      // - BleedBox/TrimBox/ArtBox default to CropBox
-      const effectiveMediaBox = mediaBox;
-      const effectiveCropBox = cropBox ?? effectiveMediaBox;
-      const effectiveBleedBox = bleedBox ?? effectiveCropBox;
-      const effectiveTrimBox = trimBox ?? effectiveCropBox;
-      const effectiveArtBox = artBox ?? effectiveCropBox;
+  const decrypter = createStandardDecrypter({
+    encryptDict,
+    fileId0: id0,
+    password: options.encryption.password,
+  });
 
-      const scaleBox = (box: readonly number[] | null): readonly number[] | null => {
-        if (!box) {return null;}
-        return [box[0] ?? 0, box[1] ?? 0, box[2] ?? 0, box[3] ?? 0].map((v) => v * userUnit);
-      };
+  return createPdfResolver(bytes, xref, {
+    decrypter,
+    skipDecryptObjectNums: new Set([encryptRef.obj]),
+  });
+}
 
-      const getSize = () => {
-        const box = effectiveCropBox ?? effectiveMediaBox;
-        if (!box) {throw new Error("Page MediaBox is missing");}
-        const [llx, lly, urx, ury] = box;
-        const w = ((urx ?? 0) - (llx ?? 0)) * userUnit;
-        const h = ((ury ?? 0) - (lly ?? 0)) * userUnit;
-        return rotate === 90 || rotate === 270 ? { width: h, height: w } : { width: w, height: h };
-      };
+function createNativePdfPages(pageDicts: readonly PdfDict[], resolver: PdfResolver): readonly NativePdfPage[] {
+  const out: NativePdfPage[] = [];
+  for (let i = 0; i < pageDicts.length; i += 1) {
+    const pageDict = pageDicts[i]!;
+    const pageNumber = i + 1;
 
-      const getBox = (name: "MediaBox" | "CropBox" | "BleedBox" | "TrimBox" | "ArtBox") => {
-        switch (name) {
-          case "MediaBox":
-            return scaleBox(effectiveMediaBox);
-          case "CropBox":
-            return scaleBox(effectiveCropBox);
-          case "BleedBox":
-            return scaleBox(effectiveBleedBox);
-          case "TrimBox":
-            return scaleBox(effectiveTrimBox);
-          case "ArtBox":
-            return scaleBox(effectiveArtBox);
-          default: {
-            const exhaustive: never = name;
-            throw new Error(`Unsupported box name: ${String(exhaustive)}`);
-          }
+    const inherited = readInherited(pageDict, resolver);
+    const mediaBox = inherited.mediaBox ?? readBox(pageDict, "MediaBox");
+    const cropBox = inherited.cropBox ?? readBox(pageDict, "CropBox");
+    const bleedBox = inherited.bleedBox ?? readBox(pageDict, "BleedBox");
+    const trimBox = inherited.trimBox ?? readBox(pageDict, "TrimBox");
+    const artBox = inherited.artBox ?? readBox(pageDict, "ArtBox");
+    const resources = inherited.resources;
+    const rotate = normalizeRotate(inherited.rotate ?? readRotate(pageDict));
+    const userUnit = inherited.userUnit ?? readUserUnit(pageDict) ?? 1;
+
+    // Defaulting per ISO 32000:
+    // - CropBox defaults to MediaBox
+    // - BleedBox/TrimBox/ArtBox default to CropBox
+    const effectiveMediaBox = mediaBox;
+    const effectiveCropBox = cropBox ?? effectiveMediaBox;
+    const effectiveBleedBox = bleedBox ?? effectiveCropBox;
+    const effectiveTrimBox = trimBox ?? effectiveCropBox;
+    const effectiveArtBox = artBox ?? effectiveCropBox;
+
+    const scaleBox = (box: readonly number[] | null): readonly number[] | null => {
+      if (!box) {return null;}
+      return [box[0] ?? 0, box[1] ?? 0, box[2] ?? 0, box[3] ?? 0].map((v) => v * userUnit);
+    };
+
+    const getSize = () => {
+      const box = effectiveCropBox ?? effectiveMediaBox;
+      if (!box) {throw new Error("Page MediaBox is missing");}
+      const [llx, lly, urx, ury] = box;
+      const w = ((urx ?? 0) - (llx ?? 0)) * userUnit;
+      const h = ((ury ?? 0) - (lly ?? 0)) * userUnit;
+      return rotate === 90 || rotate === 270 ? { width: h, height: w } : { width: w, height: h };
+    };
+
+    const getBox = (name: "MediaBox" | "CropBox" | "BleedBox" | "TrimBox" | "ArtBox") => {
+      switch (name) {
+        case "MediaBox":
+          return scaleBox(effectiveMediaBox);
+        case "CropBox":
+          return scaleBox(effectiveCropBox);
+        case "BleedBox":
+          return scaleBox(effectiveBleedBox);
+        case "TrimBox":
+          return scaleBox(effectiveTrimBox);
+        case "ArtBox":
+          return scaleBox(effectiveArtBox);
+        default: {
+          const exhaustive: never = name;
+          throw new Error(`Unsupported box name: ${String(exhaustive)}`);
         }
-      };
+      }
+    };
 
-      const getResourcesDict = () => resources;
+    const getResourcesDict = () => resources;
 
-      const getDecodedContentStreams = () => {
-        const contents = dictGet(pageDict, "Contents");
-        if (!contents) {return [];}
-        const resolved = this.resolver.deref(contents);
-        const streams: PdfStream[] = [];
-        if (resolved.type === "stream") {
-          streams.push(resolved);
-        } else if (resolved.type === "array") {
-          for (const item of resolved.items) {
-            const obj = this.resolver.deref(item);
-            if (obj.type === "stream") {streams.push(obj);}
-          }
+    const getDecodedContentStreams = () => {
+      const contents = dictGet(pageDict, "Contents");
+      if (!contents) {return [];}
+      const resolved = resolver.deref(contents);
+      const streams: PdfStream[] = [];
+      if (resolved.type === "stream") {
+        streams.push(resolved);
+      } else if (resolved.type === "array") {
+        for (const item of resolved.items) {
+          const obj = resolver.deref(item);
+          if (obj.type === "stream") {streams.push(obj);}
         }
-        return streams.map(decodeStream);
-      };
+      }
+      return streams.map(decodeStream);
+    };
 
-      out.push({
-        pageNumber,
-        getSize,
-        getBox,
-        getResourcesDict,
-        getDecodedContentStreams,
-        lookup: (obj) => this.resolver.deref(obj),
-      });
-    }
-    return out;
+    out.push({
+      pageNumber,
+      getSize,
+      getBox,
+      getResourcesDict,
+      getDecodedContentStreams,
+      lookup: (obj) => resolver.deref(obj),
+    });
   }
+  return out;
 }
 
 
@@ -503,10 +511,10 @@ export class NativePdfDocument {
 
 
 
-/** loadNativePdfDocument */
+/** Load a native PDF document from bytes or an ArrayBuffer. */
 export function loadNativePdfDocument(data: Uint8Array | ArrayBuffer, options: NativePdfLoadOptions): NativePdfDocument {
   if (!data) {throw new Error("data is required");}
   if (!options) {throw new Error("options is required");}
   const bytes = data instanceof Uint8Array ? data : new Uint8Array(data);
-  return new NativePdfDocument(bytes, options);
+  return createNativePdfDocument(bytes, options);
 }

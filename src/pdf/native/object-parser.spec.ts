@@ -3,7 +3,7 @@
  */
 
 import { loadXRef } from "./xref";
-import { PdfResolver } from "./resolver";
+import { createPdfResolver } from "./resolver";
 import type { PdfStream } from "./types";
 
 function encodeLatin1(text: string): Uint8Array {
@@ -63,7 +63,7 @@ describe("parseIndirectObjectAt (stream Length)", () => {
     ]);
 
     const xrefTable = loadXRef(pdfBytes);
-    const resolver = new PdfResolver(pdfBytes, xrefTable);
+    const resolver = createPdfResolver(pdfBytes, xrefTable);
 
     const obj = resolver.getObject(4);
     const stream = asStream(obj);
@@ -107,7 +107,7 @@ describe("parseIndirectObjectAt (stream Length)", () => {
     ]);
 
     const xrefTable = loadXRef(pdfBytes);
-    const resolver = new PdfResolver(pdfBytes, xrefTable);
+    const resolver = createPdfResolver(pdfBytes, xrefTable);
     const obj = resolver.getObject(3);
     const stream = asStream(obj);
     expect(stream.data).toEqual(streamData);

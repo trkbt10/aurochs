@@ -2,7 +2,7 @@
  * @file src/pdf/native/resolver.spec.ts
  */
 
-import { PdfResolver } from "./resolver";
+import { createPdfResolver } from "./resolver";
 import type { PdfDict, PdfObject } from "./types";
 
 type LzwEncodeOptions = Readonly<{ readonly earlyChange: 0 | 1 }>;
@@ -102,7 +102,7 @@ describe("PdfResolver (ObjStm)", () => {
       [10, { type: 2, objStm: 5, index: 0 }],
     ]);
 
-    const resolver = new PdfResolver(objStmBytes, { entries, trailer });
+    const resolver = createPdfResolver(objStmBytes, { entries, trailer });
     const obj = resolver.getObject(10);
     expect(obj).toEqual({ type: "number", value: 42 });
   });
@@ -130,7 +130,7 @@ describe("PdfResolver (ObjStm)", () => {
       [11, { type: 2, objStm: 5, index: 1 }],
     ]);
 
-    const resolver = new PdfResolver(objStmBytes, { entries, trailer });
+    const resolver = createPdfResolver(objStmBytes, { entries, trailer });
     expect(resolver.getObject(10)).toEqual({ type: "number", value: 42 });
     expect(resolver.getObject(11)).toEqual({ type: "number", value: 43 });
   });
@@ -157,7 +157,7 @@ describe("PdfResolver (ObjStm)", () => {
       [11, { type: 2, objStm: 5, index: 1 }],
     ]);
 
-    const resolver = new PdfResolver(objStmBytes, { entries, trailer });
+    const resolver = createPdfResolver(objStmBytes, { entries, trailer });
     expect(() => resolver.getObject(11)).toThrow(/missing object index 1/);
   });
 });

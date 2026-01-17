@@ -3,6 +3,7 @@
  */
 
 import { parsePdf } from "./pdf-parser";
+import { buildSimplePdfBytes } from "../test-utils/simple-pdf";
 
 function buildMinimalPdfWithClipAndImage(args: {
   readonly clipRect: Readonly<{ x: number; y: number; width: number; height: number }>;
@@ -74,5 +75,71 @@ describe("clip paths (native)", () => {
 
     const image = images[0]!;
     expect(image.graphicsState.clipBBox).toEqual([10, 10, 30, 30]);
+  });
+
+  it("drops paths that are completely outside a rectangular clipBBox (bbox-only)", async () => {
+    const pdfBytes = buildSimplePdfBytes({
+      pages: [
+        {
+          width: 100,
+          height: 100,
+          content: "q 0 0 10 10 re W n 20 20 5 5 re f Q\n",
+        },
+      ],
+    });
+
+    const doc = await parsePdf(pdfBytes);
+    const paths = doc.pages.flatMap((p) => p.elements.filter((e) => e.type === "path"));
+    expect(paths).toHaveLength(0);
+  });
+
+  it("keeps paths that intersect a rectangular clipBBox (bbox-only)", async () => {
+    const pdfBytes = buildSimplePdfBytes({
+      pages: [
+        {
+          width: 100,
+          height: 100,
+          content: "q 0 0 10 10 re W n 5 5 10 10 re f Q\n",
+        },
+      ],
+    });
+
+    const doc = await parsePdf(pdfBytes);
+    const paths = doc.pages.flatMap((p) => p.elements.filter((e) => e.type === "path"));
+    expect(paths).toHaveLength(1);
+  });
+
+  it("drops text that is completely outside a rectangular clipBBox (bbox-only)", async () => {
+    const pdfBytes = buildSimplePdfBytes({
+      pages: [
+        {
+          width: 100,
+          height: 100,
+          includeHelvetica: true,
+          content: "q 0 0 10 10 re W n BT /F1 12 Tf 30 30 Td (Hi) Tj ET Q\n",
+        },
+      ],
+    });
+
+    const doc = await parsePdf(pdfBytes);
+    const texts = doc.pages.flatMap((p) => p.elements.filter((e) => e.type === "text"));
+    expect(texts).toHaveLength(0);
+  });
+
+  it("keeps text that intersects a rectangular clipBBox (bbox-only)", async () => {
+    const pdfBytes = buildSimplePdfBytes({
+      pages: [
+        {
+          width: 100,
+          height: 100,
+          includeHelvetica: true,
+          content: "q 0 0 10 10 re W n BT /F1 12 Tf 2 2 Td (Hi) Tj ET Q\n",
+        },
+      ],
+    });
+
+    const doc = await parsePdf(pdfBytes);
+    const texts = doc.pages.flatMap((p) => p.elements.filter((e) => e.type === "text"));
+    expect(texts).toHaveLength(1);
   });
 });

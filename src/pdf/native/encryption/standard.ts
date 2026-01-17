@@ -220,7 +220,7 @@ function deriveObjectKeyRc4(fileKey: Uint8Array, objNum: number, gen: number): U
 
 
 
-/** createStandardDecrypter */
+/** Create a decrypter for the PDF Standard Security Handler. */
 export function createStandardDecrypter(args: {
   readonly encryptDict: PdfDict;
   readonly fileId0: Uint8Array;

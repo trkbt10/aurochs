@@ -57,12 +57,13 @@ export type {
   PdfLineCap,
   PdfTextRenderingMode,
   PdfGraphicsState,
+  GraphicsStateStack,
 } from "./graphics-state";
 export {
   DEFAULT_FILL_COLOR,
   DEFAULT_STROKE_COLOR,
   createDefaultGraphicsState,
-  GraphicsStateStack,
+  createGraphicsStateStack,
 } from "./graphics-state";
 
 // Path domain

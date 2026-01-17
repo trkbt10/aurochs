@@ -141,7 +141,7 @@ function applyFlateDecodeParms(decoded: Uint8Array, decodeParms: PdfObject | nul
 
 
 
-/** decodeFlate */
+/** Decode data using the PDF `/FlateDecode` filter. */
 export function decodeFlate(data: Uint8Array, decodeParms?: PdfObject | null): Uint8Array {
   // FlateDecode uses zlib-wrapped DEFLATE per ISO 32000.
   const decoded = unzlibSync(data);

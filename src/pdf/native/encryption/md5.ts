@@ -84,7 +84,7 @@ function writeUint32LE(out: Uint8Array, pos: number, v: number): void {
 
 
 
-/** md5 */
+/** Compute MD5 digest bytes (used by legacy PDF encryption). */
 export function md5(input: Uint8Array): Uint8Array {
   const bitLen = input.length * 8;
 

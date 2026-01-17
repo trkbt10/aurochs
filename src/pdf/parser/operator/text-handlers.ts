@@ -498,9 +498,10 @@ const handleShowTextArray: OperatorHandler = (ctx, gfxOps) => {
       // Positive values move left (subtract from position)
       const adjustment = -elem * currentFontSize / 1000 * Th;
       const [a, b, c, d, e, f] = textState.textMatrix;
+      const newTextMatrix: PdfMatrix = [a, b, c, d, e + adjustment, f];
       return {
         ...textState,
-        textMatrix: [a, b, c, d, e + adjustment, f],
+        textMatrix: newTextMatrix,
       };
     }
     return textState;

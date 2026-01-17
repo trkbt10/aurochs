@@ -4,7 +4,7 @@
 
 import type { PdfPath } from "../domain";
 import {
-  GraphicsStateStack,
+  createGraphicsStateStack,
   IDENTITY_MATRIX,
   createDefaultGraphicsState,
   getMatrixRotation,
@@ -379,7 +379,7 @@ describe("pdf/parser/graphics-state", () => {
     expect(s0.ctm).toEqual(IDENTITY_MATRIX);
     expect(s0.lineWidth).toBe(1);
 
-    const stack = new GraphicsStateStack();
+    const stack = createGraphicsStateStack();
     const before = stack.get();
     stack.push();
     stack.setFillRgb(1, 0, 0);

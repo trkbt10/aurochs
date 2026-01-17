@@ -20,7 +20,7 @@ export type PdfParserOptions = NativePdfParserOptions;
 
 
 
-/** parsePdf */
+/** Parse a PDF into the internal document model. */
 export async function parsePdf(
   data: Uint8Array | ArrayBuffer,
   options: PdfParserOptions = {},
@@ -38,7 +38,7 @@ export async function parsePdf(
 
 
 
-/** getPdfPageCount */
+/** Get the total number of pages in a PDF. */
 export async function getPdfPageCount(data: Uint8Array | ArrayBuffer): Promise<number> {
   const pdfDoc = await loadNativePdfDocumentForParser(data, {
     purpose: "inspect",
@@ -58,7 +58,7 @@ export async function getPdfPageCount(data: Uint8Array | ArrayBuffer): Promise<n
 
 
 
-/** getPdfPageDimensions */
+/** Get width/height for a single page in a PDF (1-based pageNumber). */
 export async function getPdfPageDimensions(
   data: Uint8Array | ArrayBuffer,
   pageNumber: number = 1,
@@ -73,4 +73,3 @@ export async function getPdfPageDimensions(
   if (pageNumber < 1 || pageNumber > pages.length) {return null;}
   return pages[pageNumber - 1]!.getSize();
 }
-

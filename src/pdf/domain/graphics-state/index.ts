@@ -14,4 +14,5 @@ export type {
 
 export { DEFAULT_FILL_COLOR, DEFAULT_STROKE_COLOR, createDefaultGraphicsState } from "./defaults";
 
-export { GraphicsStateStack } from "./stack";
+export type { GraphicsStateStack } from "./stack";
+export { createGraphicsStateStack } from "./stack";

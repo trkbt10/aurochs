@@ -120,7 +120,7 @@ function parseObjectWithInitialToken(state: ParseState, initial: PdfToken): { va
 
 
 
-/** parseObject */
+/** Parse a single PDF object from the current parser state. */
 export function parseObject(state: ParseState): { value: PdfObject; state: ParseState } {
   const { token, next } = nextToken(state.lex);
   return parseObjectWithInitialToken({ lex: next }, token);
@@ -269,7 +269,7 @@ function findEndstreamStart(bytes: Uint8Array, from: number): number {
 
 
 
-/** parseIndirectObjectAt */
+/** Parse an indirect object (`n n obj ... endobj`) at a byte offset. */
 export function parseIndirectObjectAt(
   bytes: Uint8Array,
   offset: number,

@@ -7,7 +7,7 @@ import { convertToRgba } from "../converter/pixel-converter";
 import { base64ToArrayBuffer } from "../../buffer/base64";
 import jpeg from "jpeg-js";
 import { loadXRef } from "../native/xref";
-import { PdfResolver } from "../native/resolver";
+import { createPdfResolver } from "../native/resolver";
 import type { PdfObject } from "../native/types";
 
 const CCITT_GROUP4_PDF_BASE64 = `
@@ -283,7 +283,7 @@ function buildMinimalPdfWithMaskImageXObject(args: {
 
 async function extractFirstCcittImageStreamBytes(pdfBytes: Uint8Array): Promise<Uint8Array> {
   const xref = loadXRef(pdfBytes);
-  const resolver = new PdfResolver(pdfBytes, xref);
+  const resolver = createPdfResolver(pdfBytes, xref);
 
   const readNameArray = (obj: PdfObject | undefined): readonly string[] => {
     const v = obj ? resolver.deref(obj) : undefined;

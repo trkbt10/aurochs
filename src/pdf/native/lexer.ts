@@ -29,7 +29,7 @@ export type PdfLexer = Readonly<{
 
 
 
-/** createLexer */
+/** Create a lexer state at a specific byte position. */
 export function createLexer(bytes: Uint8Array, pos: number): PdfLexer {
   return { bytes, pos };
 }
@@ -251,7 +251,7 @@ function readNumberOrKeyword(lex: PdfLexer): { token: PdfToken; next: number } {
 
 
 
-/** nextToken */
+/** Read the next PDF token and return the advanced lexer state. */
 export function nextToken(lex: PdfLexer): { token: PdfToken; next: PdfLexer } {
   const trimmed = skipWhitespaceAndComments(lex);
   const { bytes } = trimmed;

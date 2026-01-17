@@ -4,14 +4,14 @@
 
 import { tokenizeContentStream } from "../../domain/content-stream";
 import { createParser } from "./parse";
-import { GraphicsStateStack } from "../../domain";
+import { createGraphicsStateStack } from "../../domain";
 import type { GraphicsStateOps } from "./types";
 import { createGfxOpsFromStack } from "./parse";
 
 describe("graphics-state-handlers (gs)", () => {
   it("applies fillAlpha/strokeAlpha from injected ExtGState map", () => {
     const tokens = tokenizeContentStream("/GS1 gs 0 0 10 10 re f");
-    const gfxStack = new GraphicsStateStack();
+    const gfxStack = createGraphicsStateStack();
     const gfxOps: GraphicsStateOps = createGfxOpsFromStack(gfxStack);
 
     const extGState = new Map([["GS1", { fillAlpha: 0.5, strokeAlpha: 0.25 }]]);
@@ -28,7 +28,7 @@ describe("graphics-state-handlers (gs)", () => {
 
   it("applies line style values from injected ExtGState map", () => {
     const tokens = tokenizeContentStream("/GS1 gs 0 0 10 10 re S");
-    const gfxStack = new GraphicsStateStack();
+    const gfxStack = createGraphicsStateStack();
     const gfxOps: GraphicsStateOps = createGfxOpsFromStack(gfxStack);
 
     const extGState = new Map<

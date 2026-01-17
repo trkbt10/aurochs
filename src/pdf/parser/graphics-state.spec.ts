@@ -3,7 +3,7 @@
  */
 
 import {
-  GraphicsStateStack,
+  createGraphicsStateStack,
   IDENTITY_MATRIX,
   multiplyMatrices,
   transformPoint,
@@ -17,12 +17,13 @@ import {
   decomposeMatrix,
   hasShear,
 } from "../domain";
+import type { GraphicsStateStack } from "../domain";
 
 describe("GraphicsStateStack", () => {
-  let stack: GraphicsStateStack;
+  const stack: GraphicsStateStack = createGraphicsStateStack();
 
   beforeEach(() => {
-    stack = new GraphicsStateStack();
+    stack.reset();
   });
 
   describe("initial state", () => {

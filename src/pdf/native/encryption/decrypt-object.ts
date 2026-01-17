@@ -90,7 +90,7 @@ function decryptStream(value: PdfStream, objNum: number, gen: number, decrypter:
 
 
 
-/** decryptPdfObject */
+/** Decrypt a PDF object (including stream bytes) using the provided decrypter. */
 export function decryptPdfObject(value: PdfObject, objNum: number, gen: number, decrypter: PdfDecrypter): PdfObject {
   switch (value.type) {
     case "string":

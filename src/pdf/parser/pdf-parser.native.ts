@@ -5,7 +5,7 @@
 import type { PdfDocument, PdfElement, PdfEmbeddedFont, PdfImage, PdfPage, PdfPath, PdfText } from "../domain";
 import { tokenizeContentStream } from "../domain/content-stream";
 import { decodeText, type FontMappings } from "../domain/font";
-import { GraphicsStateStack, transformPoint, type PdfBBox, type PdfMatrix } from "../domain";
+import { createGraphicsStateStack, transformPoint, type PdfBBox, type PdfMatrix } from "../domain";
 import type { NativePdfPage, PdfArray, PdfDict, PdfName, PdfObject, PdfStream } from "../native";
 import { decodePdfStream } from "../native/stream";
 import { buildPath, builtPathToPdfPath } from "./path-builder";
@@ -52,7 +52,7 @@ const DEFAULT_OPTIONS: Required<PdfParserOptions> = {
 
 
 
-/** parsePdfNative */
+/** Parse a PDF using the native loader (no `pdf-lib`). */
 export async function parsePdfNative(
   data: Uint8Array | ArrayBuffer,
   options: PdfParserOptions = {},
@@ -278,6 +278,20 @@ function transformBBox(bbox: PdfBBox, ctm: PdfMatrix): PdfBBox {
   return [bounds.minX, bounds.minY, bounds.maxX, bounds.maxY];
 }
 
+function bboxIntersects(a: PdfBBox, b: PdfBBox): boolean {
+  const [ax1, ay1, ax2, ay2] = a;
+  const [bx1, by1, bx2, by2] = b;
+  const aMinX = Math.min(ax1, ax2);
+  const aMinY = Math.min(ay1, ay2);
+  const aMaxX = Math.max(ax1, ax2);
+  const aMaxY = Math.max(ay1, ay2);
+  const bMinX = Math.min(bx1, bx2);
+  const bMinY = Math.min(by1, by2);
+  const bMaxX = Math.max(bx1, bx2);
+  const bMaxY = Math.max(by1, by2);
+  return aMaxX > bMinX && aMinX < bMaxX && aMaxY > bMinY && aMinY < bMaxY;
+}
+
 type ImageGroupMap = Map<PdfDict, ParsedImage[]>;
 
 function addImageToGroup(groups: ImageGroupMap, xObjects: PdfDict, img: ParsedImage): void {
@@ -377,7 +391,7 @@ function expandFormXObjectsNative(
         continue;
       }
 
-      const gfxStack = new GraphicsStateStack(elem.graphicsState);
+      const gfxStack = createGraphicsStateStack(elem.graphicsState);
       gfxStack.concatMatrix(matrix);
       if (bbox) {
         gfxStack.setClipBBox(transformBBox(bbox, gfxStack.get().ctm));
@@ -476,6 +490,8 @@ function convertPath(parsed: ParsedPath, minComplexity: number): PdfPath | null 
   if (parsed.paintOp === "none" || parsed.paintOp === "clip") {return null;}
   const built = buildPath(parsed);
   if (built.operations.length < minComplexity) {return null;}
+  const clipBBox = parsed.graphicsState.clipBBox;
+  if (clipBBox && !bboxIntersects(built.bounds, clipBBox)) {return null;}
   return builtPathToPdfPath(built);
 }
 
@@ -501,6 +517,7 @@ function getFontInfo(fontName: string, fontMappings: FontMappings) {
 
 function convertText(parsed: ParsedText, fontMappings: FontMappings): PdfText[] {
   const results: PdfText[] = [];
+  const clipBBox = parsed.graphicsState.clipBBox;
 
   for (const run of parsed.runs) {
     const fontKey = run.baseFont ?? run.fontName;
@@ -515,6 +532,13 @@ function convertText(parsed: ParsedText, fontMappings: FontMappings): PdfText[] 
     const textHeight = ((ascender - descender) * effectiveSize) / 1000;
     const minY = run.y + (descender * effectiveSize) / 1000;
     const width = Math.max(run.endX - run.x, 1);
+
+    if (clipBBox) {
+      const bbox: PdfBBox = [run.x, minY, run.x + width, minY + Math.max(textHeight, 1)];
+      if (!bboxIntersects(bbox, clipBBox)) {
+        continue;
+      }
+    }
 
     const actualFontName = run.baseFont ?? fontInfo?.baseFont ?? run.fontName;
 

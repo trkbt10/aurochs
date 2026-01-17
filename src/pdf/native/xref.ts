@@ -62,7 +62,7 @@ function readUIntBE(bytes: Uint8Array, pos: number, width: number): number {
 
 
 
-/** findStartXrefOffset */
+/** Locate `startxref` and return the xref section offset. */
 export function findStartXrefOffset(bytes: Uint8Array): number {
   const marker = encodeAscii("startxref");
   const idx = lastIndexOfBytes(bytes, marker);
@@ -300,7 +300,7 @@ function parseXRefStreamAt(bytes: Uint8Array, offset: number): {
 
 
 
-/** loadXRef */
+/** Load and merge xref sections (including xref streams) into a single table. */
 export function loadXRef(bytes: Uint8Array): XRefTable {
   const state: { offset: number | null; trailer: PdfDict | null } = { offset: findStartXrefOffset(bytes), trailer: null };
   const entries = new Map<number, XRefEntry>();
@@ -367,7 +367,7 @@ function parseXRefSectionAt(
 
 
 
-/** getTrailerRef */
+/** Get a `/ref` value from the trailer, if present. */
 export function getTrailerRef(trailer: PdfDict, key: string): PdfRef | null {
   const value = trailer.map.get(key);
   return value?.type === "ref" ? value : null;

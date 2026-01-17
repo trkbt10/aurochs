@@ -14,7 +14,7 @@ const LATIN1_DECODER = new TextDecoder("latin1");
 
 
 
-/** decodeLatin1 */
+/** Decode bytes as ISO-8859-1 (latin1). */
 export function decodeLatin1(bytes: Uint8Array): string {
   return LATIN1_DECODER.decode(bytes);
 }
@@ -66,7 +66,7 @@ const PDF_DOC_ENCODING: readonly number[] = [
 
 
 
-/** decodePdfDocEncoding */
+/** Decode bytes using PDFDocEncoding (ISO 32000). */
 export function decodePdfDocEncoding(bytes: Uint8Array): string {
   const out: number[] = [];
   for (const b of bytes) {
@@ -130,7 +130,7 @@ export function decodePdfStringBytes(bytes: Uint8Array): string {
 
 
 
-/** encodeAscii */
+/** Encode ASCII text to bytes (no validation). */
 export function encodeAscii(text: string): Uint8Array {
   return new TextEncoder().encode(text);
 }

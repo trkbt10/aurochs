@@ -21,7 +21,7 @@ function bytesMatchAt(haystack: Uint8Array, needle: Uint8Array, start: number): 
 
 
 
-/** lastIndexOfBytes */
+/** Find the last index of `needle` in `haystack` (byte-wise). */
 export function lastIndexOfBytes(haystack: Uint8Array, needle: Uint8Array): number {
   if (needle.length === 0) {return haystack.length;}
   if (needle.length > haystack.length) {return -1;}
@@ -41,7 +41,7 @@ export function lastIndexOfBytes(haystack: Uint8Array, needle: Uint8Array): numb
 
 
 
-/** indexOfBytes */
+/** Find the first index of `needle` in `haystack` starting at `from` (byte-wise). */
 export function indexOfBytes(haystack: Uint8Array, needle: Uint8Array, from: number): number {
   if (needle.length === 0) {return from;}
   const start = Math.max(0, from);
@@ -61,7 +61,7 @@ export function indexOfBytes(haystack: Uint8Array, needle: Uint8Array, from: num
 
 
 
-/** isWhite */
+/** Return true if the byte is treated as whitespace in PDF syntax. */
 export function isWhite(byte: number): boolean {
   // 0x00 NUL is treated as whitespace in PDFs.
   return (
@@ -84,7 +84,7 @@ export function isWhite(byte: number): boolean {
 
 
 
-/** isDelimiter */
+/** Return true if the byte is a delimiter in PDF syntax. */
 export function isDelimiter(byte: number): boolean {
   // PDF delimiters: ()<>[]{}/%
   return (

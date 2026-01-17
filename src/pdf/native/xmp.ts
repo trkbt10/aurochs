@@ -62,7 +62,7 @@ function parseXmpFields(xml: string): { title?: string; author?: string; subject
 
 
 
-/** extractXmpMetadata */
+/** Extract document metadata from XMP packets under `/Metadata`. */
 export function extractXmpMetadata(
   catalog: PdfDict,
   deref: (obj: PdfObject) => PdfObject,
@@ -85,4 +85,3 @@ export function extractXmpMetadata(
   const has = parsed.title || parsed.author || parsed.subject;
   return has ? parsed : null;
 }
-

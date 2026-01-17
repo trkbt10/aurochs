@@ -48,26 +48,25 @@ import type { ParsedElement } from "./operator";
  *
  * @example
  * // Old usage (deprecated):
- * const parser = new OperatorParser(fontMappings);
+ * const parser = createOperatorParser(fontMappings);
  * const elements = parser.parse(tokens);
  *
  * // New usage (recommended):
  * import { parseContentStream } from "./operator";
  * const elements = parseContentStream(tokens, fontMappings);
  */
-export class OperatorParser {
-  private readonly fontMappings: FontMappings;
-
-  constructor(fontMappings: FontMappings = new Map()) {
-    this.fontMappings = fontMappings;
-  }
-
+export type OperatorParser = Readonly<{
   /**
    * Parse token stream and return extracted elements.
    *
    * @deprecated Use `parseContentStream(tokens, fontMappings)` instead.
    */
-  parse(tokens: PdfToken[]): ParsedElement[] {
-    return [...parseContentStream(tokens, this.fontMappings)];
-  }
+  parse(tokens: PdfToken[]): ParsedElement[];
+}>;
+
+/** @deprecated Use `parseContentStream` directly instead. */
+export function createOperatorParser(fontMappings: FontMappings = new Map()): OperatorParser {
+  return {
+    parse: (tokens) => [...parseContentStream(tokens, fontMappings)],
+  };
 }

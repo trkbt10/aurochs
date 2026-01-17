@@ -12,7 +12,7 @@
 
 
 
-/** decodeRunLength */
+/** Decode data using the PDF `/RunLengthDecode` filter. */
 export function decodeRunLength(data: Uint8Array): Uint8Array {
   const out: number[] = [];
   for (let i = 0; i < data.length; ) {

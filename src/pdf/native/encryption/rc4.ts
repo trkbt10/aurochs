@@ -12,7 +12,7 @@
 
 
 
-/** rc4 */
+/** RC4 stream cipher (used by legacy PDF encryption). */
 export function rc4(key: Uint8Array, data: Uint8Array): Uint8Array {
   if (key.length === 0) {throw new Error("rc4: key is required");}
 

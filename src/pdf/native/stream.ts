@@ -60,7 +60,7 @@ function decodeParmsFromStreamDict(dict: PdfDict, filterCount: number): readonly
 
 
 
-/** decodePdfStream */
+/** Decode a PDF stream by applying its filters in order. */
 export function decodePdfStream(stream: PdfStream): Uint8Array {
   const filters = filterNamesFromStreamDict(stream.dict);
   if (filters.length === 0) {return stream.data;}

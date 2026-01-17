@@ -2,14 +2,14 @@
  * @file Tests for PDF operator parser
  */
 
-import { OperatorParser, type ParsedPath, type ParsedText, type ParsedImage } from "./operator-parser";
+import { createOperatorParser, type ParsedPath, type ParsedText, type ParsedImage } from "./operator-parser";
 import { tokenizeContentStream } from "../domain/content-stream";
 import type { FontMappings, FontInfo, FontMetrics } from "../domain/font";
 
 describe("OperatorParser", () => {
   function parse(content: string, fontMappings?: FontMappings) {
     const tokens = tokenizeContentStream(content);
-    const parser = new OperatorParser(fontMappings);
+    const parser = createOperatorParser(fontMappings);
     return parser.parse(tokens);
   }
 
