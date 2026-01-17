@@ -60,17 +60,16 @@ function readBitsMSB(r: BitReader, n: number): { value: number | null; next: Bit
     return { value: null, next: r };
   }
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let value = 0;
+  const state = { value: 0 };
   for (let i = 0; i < n; i += 1) {
     const bitIndex = r.bitPos + i;
     const byteIndex = Math.floor(bitIndex / 8);
     const within = bitIndex % 8;
     const b = r.bytes[byteIndex] ?? 0;
     const bit = (b >> (7 - within)) & 1;
-    value = (value << 1) | bit;
+    state.value = (state.value << 1) | bit;
   }
-  return { value, next: { bytes: r.bytes, bitPos: r.bitPos + n } };
+  return { value: state.value, next: { bytes: r.bytes, bitPos: r.bitPos + n } };
 }
 
 function shouldIncreaseCodeSize(nextCode: number, codeSize: number, earlyChange: 0 | 1): boolean {
@@ -108,28 +107,25 @@ export function decodeLzw(encoded: Uint8Array, options: LzwDecodeOptions = {}): 
 
   resetDict();
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let codeSize = 9;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let nextCode = 258;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let reader: BitReader = { bytes: encoded, bitPos: 0 };
-
   const out: number[] = [];
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let prev: Uint8Array | null = null;
+  const state: { codeSize: number; nextCode: number; reader: BitReader; prev: Uint8Array | null } = {
+    codeSize: 9,
+    nextCode: 258,
+    reader: { bytes: encoded, bitPos: 0 },
+    prev: null,
+  };
 
   while (true) {
-    const read = readBitsMSB(reader, codeSize);
-    reader = read.next;
+    const read = readBitsMSB(state.reader, state.codeSize);
+    state.reader = read.next;
     const code = read.value;
     if (code == null) {break;}
 
     if (code === CLEAR) {
       resetDict();
-      codeSize = 9;
-      nextCode = 258;
-      prev = null;
+      state.codeSize = 9;
+      state.nextCode = 258;
+      state.prev = null;
       continue;
     }
     if (code === EOD) {
@@ -140,11 +136,11 @@ export function decodeLzw(encoded: Uint8Array, options: LzwDecodeOptions = {}): 
       const direct = dict.get(code);
       if (direct) {return direct;}
       // KwKwK special case: code is nextCode, meaning current = prev + first(prev)
-      if (code === nextCode && prev) {
-        const first = prev[0] ?? 0;
-        const combined: Uint8Array = new Uint8Array(prev.length + 1);
-        combined.set(prev, 0);
-        combined[prev.length] = first;
+      if (code === state.nextCode && state.prev) {
+        const first = state.prev[0] ?? 0;
+        const combined: Uint8Array = new Uint8Array(state.prev.length + 1);
+        combined.set(state.prev, 0);
+        combined[state.prev.length] = first;
         return combined;
       }
       throw new Error(`LZWDecode: invalid code ${code}`);
@@ -152,26 +148,26 @@ export function decodeLzw(encoded: Uint8Array, options: LzwDecodeOptions = {}): 
 
     for (const b of entry) {out.push(b);}
 
-    if (prev) {
+    if (state.prev) {
       const first = entry[0] ?? 0;
-      const combined: Uint8Array = new Uint8Array(prev.length + 1);
-      combined.set(prev, 0);
-      combined[prev.length] = first;
-      dict.set(nextCode, combined);
-      nextCode += 1;
+      const combined: Uint8Array = new Uint8Array(state.prev.length + 1);
+      combined.set(state.prev, 0);
+      combined[state.prev.length] = first;
+      dict.set(state.nextCode, combined);
+      state.nextCode += 1;
 
-      if (shouldIncreaseCodeSize(nextCode, codeSize, earlyChange)) {
-        codeSize += 1;
+      if (shouldIncreaseCodeSize(state.nextCode, state.codeSize, earlyChange)) {
+        state.codeSize += 1;
       }
     }
 
-    prev = entry;
+    state.prev = entry;
 
     // PDF limits dictionary to 4096 entries; stop adding beyond that.
-    if (nextCode > 4095) {
+    if (state.nextCode > 4095) {
       // Spec suggests the encoder should emit CLEAR; decoding can continue reading codes,
       // but no longer grows the dictionary until reset.
-      nextCode = 4096;
+      state.nextCode = 4096;
     }
   }
 

@@ -291,20 +291,18 @@ function applyColorKeyMask(args: {
   const pixelCount = width * height;
   const alpha = new Uint8Array(pixelCount);
 
-  for (let p = 0; p < pixelCount; p += 1) {
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-    let masked = true;
+  pixelLoop: for (let p = 0; p < pixelCount; p += 1) {
     for (let c = 0; c < components; c += 1) {
       const sampleIndex = p * components + c;
       const v = unpackSample(data, sampleIndex, bitsPerComponent);
       const min = ranges[c * 2] ?? 0;
       const max = ranges[c * 2 + 1] ?? 0;
       if (v < min || v > max) {
-        masked = false;
-        break;
+        alpha[p] = 255;
+        continue pixelLoop;
       }
     }
-    alpha[p] = masked ? 0 : 255;
+    alpha[p] = 0;
   }
 
   return alpha;
@@ -588,16 +586,16 @@ function expandIndexedToRgb(args: {
   const out = new Uint8Array(samples.length * 3);
 
   for (let i = 0; i < samples.length; i += 1) {
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-    let idx = samples[i] ?? 0;
+    const idxState = { idx: samples[i] ?? 0 };
     if (decodePair) {
       const dmin = decodePair[0] ?? 0;
       const dmax = decodePair[1] ?? hival;
-      const v = sampleMax > 0 ? idx / sampleMax : 0;
-      idx = Math.round(dmin + v * (dmax - dmin));
+      const v = sampleMax > 0 ? idxState.idx / sampleMax : 0;
+      idxState.idx = Math.round(dmin + v * (dmax - dmin));
     }
-    if (idx < 0) {idx = 0;}
-    if (idx > hival) {idx = hival;}
+    if (idxState.idx < 0) {idxState.idx = 0;}
+    if (idxState.idx > hival) {idxState.idx = hival;}
+    const idx = idxState.idx;
 
     const dst = i * 3;
     if (comps === 1) {
@@ -804,8 +802,7 @@ export async function extractImagesNative(
       const alpha = getSoftMaskAlpha8(pdfPage, dict, width, height) ?? undefined;
       const maskEntry = getMaskEntry(pdfPage, dict);
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-      let data: Uint8Array;
+      const dataState: { data: Uint8Array | null } = { data: null };
       if (imageMask) {
         const decoded = decodePdfStream(imageStream);
         const invert = decode?.length === 2 && decode[0] === 1 && decode[1] === 0;
@@ -816,10 +813,7 @@ export async function extractImagesNative(
           invert,
           fillColor: parsed.graphicsState.fillColor,
         });
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-        let combinedAlpha = out.alpha;
-        // Some PDFs may still provide an /SMask; combine if present.
-        if (alpha) {combinedAlpha = combineAlpha(combinedAlpha, alpha);}
+        const combinedAlpha = alpha ? combineAlpha(out.alpha, alpha) : out.alpha;
         images.push({
           type: "image",
           data: out.rgb,
@@ -845,7 +839,7 @@ export async function extractImagesNative(
         const pre = ccittIndex > 0 ? filters.slice(0, ccittIndex) : [];
         const preDecoded = pre.length > 0 ? decodeStreamData(imageStream.data, { filters: pre }) : imageStream.data;
         const ccittParms = getCcittDecodeParms(pdfPage, dict, filters, width, height);
-        data = decodeCcittFax({ encoded: preDecoded, width, height, parms: ccittParms });
+        dataState.data = decodeCcittFax({ encoded: preDecoded, width, height, parms: ccittParms });
       } else {
         const normalized = filters.map((f) => (f === "DCT" ? "DCTDecode" : f === "JPX" ? "JPXDecode" : f));
         const dctIndex = normalized.indexOf("DCTDecode");
@@ -861,21 +855,23 @@ export async function extractImagesNative(
           }
           const jpegBytes = decodePdfStream(imageStream);
           const rgb = decodeJpegToRgb(jpegBytes, { expectedWidth: width, expectedHeight: height });
-          data = rgb.data;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-          let combinedAlpha: Uint8Array | undefined = alpha;
+          const data = rgb.data;
+          const combinedAlpha: { value: Uint8Array | undefined } = { value: alpha };
           if (maskEntry.kind === "explicit") {
-            combinedAlpha = combineAlpha(combinedAlpha, decodeExplicitMaskAlpha8(pdfPage, maskEntry.stream, width, height));
+            combinedAlpha.value = combineAlpha(
+              combinedAlpha.value,
+              decodeExplicitMaskAlpha8(pdfPage, maskEntry.stream, width, height),
+            );
           } else if (maskEntry.kind === "colorKey") {
-            combinedAlpha = combineAlpha(
-              combinedAlpha,
+            combinedAlpha.value = combineAlpha(
+              combinedAlpha.value,
               applyColorKeyMask({ data, width, height, components: 3, bitsPerComponent: 8, ranges: maskEntry.ranges }),
             );
           }
           images.push({
             type: "image",
             data,
-            alpha: combinedAlpha,
+            alpha: combinedAlpha.value,
             decode,
             width,
             height,
@@ -890,11 +886,11 @@ export async function extractImagesNative(
         const decodeParms = getDecodeParms(pdfPage, dict);
         const predictorComponents =
           colorSpaceInfo.kind === "indexed" ? 1 : getColorSpaceComponents(colorSpaceInfo.colorSpace);
-        data = reversePngPredictor(decoded, width, height, predictorComponents, decodeParms);
+        const data = reversePngPredictor(decoded, width, height, predictorComponents, decodeParms);
 
         if (colorSpaceInfo.kind === "indexed") {
           const samples = unpackIndexedSamples(data, width, height, bitsPerComponent);
-          data = expandIndexedToRgb({
+          const expanded = expandIndexedToRgb({
             samples,
             bitsPerComponent,
             base: colorSpaceInfo.base,
@@ -903,15 +899,17 @@ export async function extractImagesNative(
             decode,
           });
           // For now, only apply explicit /Mask streams (not color-key) after palette expansion.
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-          let combinedAlpha: Uint8Array | undefined = alpha;
+          const combinedAlpha: { value: Uint8Array | undefined } = { value: alpha };
           if (maskEntry.kind === "explicit") {
-            combinedAlpha = combineAlpha(combinedAlpha, decodeExplicitMaskAlpha8(pdfPage, maskEntry.stream, width, height));
+            combinedAlpha.value = combineAlpha(
+              combinedAlpha.value,
+              decodeExplicitMaskAlpha8(pdfPage, maskEntry.stream, width, height),
+            );
           }
           images.push({
             type: "image",
-            data,
-            alpha: combinedAlpha,
+            data: expanded,
+            alpha: combinedAlpha.value,
             width,
             height,
             colorSpace: "DeviceRGB",
@@ -920,17 +918,26 @@ export async function extractImagesNative(
           });
           continue;
         }
+
+        dataState.data = data;
       }
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-      let combinedAlpha: Uint8Array | undefined = alpha;
+      const data = dataState.data;
+      if (!data) {
+        throw new Error("[PDF Image] Internal error: image data was not produced");
+      }
+
+      const combinedAlpha: { value: Uint8Array | undefined } = { value: alpha };
       if (maskEntry.kind === "explicit") {
-        combinedAlpha = combineAlpha(combinedAlpha, decodeExplicitMaskAlpha8(pdfPage, maskEntry.stream, width, height));
+        combinedAlpha.value = combineAlpha(
+          combinedAlpha.value,
+          decodeExplicitMaskAlpha8(pdfPage, maskEntry.stream, width, height),
+        );
       } else if (maskEntry.kind === "colorKey" && colorSpaceInfo.kind !== "indexed") {
         const components = getColorSpaceComponents(colorSpaceInfo.colorSpace);
         if (components > 0) {
-          combinedAlpha = combineAlpha(
-            combinedAlpha,
+          combinedAlpha.value = combineAlpha(
+            combinedAlpha.value,
             applyColorKeyMask({ data, width, height, components, bitsPerComponent, ranges: maskEntry.ranges }),
           );
         }
@@ -939,7 +946,7 @@ export async function extractImagesNative(
       images.push({
         type: "image",
         data,
-        alpha: combinedAlpha,
+        alpha: combinedAlpha.value,
         decode,
         width,
         height,

@@ -105,23 +105,21 @@ function computeBounds(points: readonly PptxPoint[]): {
     throw new Error("points is required");
   }
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let minX = points[0].x;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let minY = points[0].y;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let maxX = points[0].x;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let maxY = points[0].y;
+  const bounds = {
+    minX: points[0].x,
+    minY: points[0].y,
+    maxX: points[0].x,
+    maxY: points[0].y,
+  };
 
   for (const point of points) {
-    minX = Math.min(minX, point.x);
-    minY = Math.min(minY, point.y);
-    maxX = Math.max(maxX, point.x);
-    maxY = Math.max(maxY, point.y);
+    bounds.minX = Math.min(bounds.minX, point.x);
+    bounds.minY = Math.min(bounds.minY, point.y);
+    bounds.maxX = Math.max(bounds.maxX, point.x);
+    bounds.maxY = Math.max(bounds.maxY, point.y);
   }
 
-  return { minX, minY, maxX, maxY };
+  return bounds;
 }
 
 function getScale(context: ConversionContext): { readonly scaleX: number; readonly scaleY: number } {
@@ -389,29 +387,26 @@ export function createFitContext(
   const pdfAspect = pdfWidth / pdfHeight;
   const slideAspect = (slideWidth as number) / (slideHeight as number);
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let effectiveWidth = slideWidth as number;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let effectiveHeight = slideHeight as number;
+  const effective = { width: slideWidth as number, height: slideHeight as number };
 
   if (fit === "contain") {
     if (pdfAspect > slideAspect) {
-      effectiveHeight = (slideWidth as number) / pdfAspect;
+      effective.height = (slideWidth as number) / pdfAspect;
     } else {
-      effectiveWidth = (slideHeight as number) * pdfAspect;
+      effective.width = (slideHeight as number) * pdfAspect;
     }
   } else {
     if (pdfAspect > slideAspect) {
-      effectiveWidth = (slideHeight as number) * pdfAspect;
+      effective.width = (slideHeight as number) * pdfAspect;
     } else {
-      effectiveHeight = (slideWidth as number) / pdfAspect;
+      effective.height = (slideWidth as number) / pdfAspect;
     }
   }
 
   return {
     pdfWidth,
     pdfHeight,
-    slideWidth: px(effectiveWidth),
-    slideHeight: px(effectiveHeight),
+    slideWidth: px(effective.width),
+    slideHeight: px(effective.height),
   };
 }

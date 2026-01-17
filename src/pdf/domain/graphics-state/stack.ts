@@ -24,7 +24,7 @@ import type { PdfGraphicsState, PdfLineCap, PdfLineJoin, PdfTextRenderingMode } 
 
 
 /** GraphicsStateStack */
-export class GraphicsStateStack { // eslint-disable-line no-restricted-syntax -- Stateful stack API.
+export class GraphicsStateStack {
   private stack: PdfGraphicsState[] = [];
   private current: PdfGraphicsState;
 

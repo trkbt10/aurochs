@@ -69,71 +69,87 @@ export function extractFontInfoWithDeps<PdfPageT, ResourcesT>(
   if (!deps) {throw new Error("deps is required");}
 
   const errors: string[] = [];
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let toUnicode: CMapParseResult | null = null;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let metrics: FontMetrics | null = null;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let ordering: CIDOrdering | null = null;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let encoding: ReadonlyMap<number, string> | null = null;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let isBold = false;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let isItalic = false;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let baseFont: string | null = null;
+  const state: {
+    toUnicode: CMapParseResult | null;
+    metrics: FontMetrics | null;
+    ordering: CIDOrdering | null;
+    encoding: ReadonlyMap<number, string> | null;
+    isBold: boolean;
+    isItalic: boolean;
+    baseFont: string | null;
+  } = {
+    toUnicode: null,
+    metrics: null,
+    ordering: null,
+    encoding: null,
+    isBold: false,
+    isItalic: false,
+    baseFont: null,
+  };
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let resources: ResourcesT;
-  try {
-    resources = deps.getPageResources(pdfPage);
-  } catch (e) {
-    errors.push(`Failed to get page resources: ${e instanceof Error ? e.message : String(e)}`);
-    return { toUnicode, metrics, ordering, encoding, isBold, isItalic, baseFont, errors };
-  }
-
-  try {
-    toUnicode = deps.extractToUnicode(resources, fontName);
-  } catch (e) {
-    errors.push(`Failed to extract ToUnicode for ${fontName}: ${e instanceof Error ? e.message : String(e)}`);
-  }
-
-  try {
-    metrics = deps.extractFontMetrics(resources, fontName);
-  } catch (e) {
-    errors.push(`Failed to extract metrics for ${fontName}: ${e instanceof Error ? e.message : String(e)}`);
-  }
-
-  try {
-    ordering = deps.extractCIDOrdering?.(resources, fontName) ?? null;
-  } catch (e) {
-    errors.push(`Failed to extract CIDOrdering for ${fontName}: ${e instanceof Error ? e.message : String(e)}`);
-  }
-
-  try {
-    encoding = deps.extractEncoding?.(resources, fontName) ?? null;
-  } catch (e) {
-    errors.push(`Failed to extract Encoding for ${fontName}: ${e instanceof Error ? e.message : String(e)}`);
-  }
-
-  try {
-    const style = deps.extractBoldItalic?.(resources, fontName);
-    if (style) {
-      isBold = style.isBold;
-      isItalic = style.isItalic;
+  const safelyExtract = <T,>(fn: () => T, errorMessage: (error: unknown) => string): T | null => {
+    try {
+      return fn();
+    } catch (e) {
+      errors.push(errorMessage(e));
+      return null;
     }
-  } catch (e) {
-    errors.push(`Failed to extract bold/italic for ${fontName}: ${e instanceof Error ? e.message : String(e)}`);
+  };
+
+  const resources = safelyExtract(
+    () => deps.getPageResources(pdfPage),
+    (e) => `Failed to get page resources: ${e instanceof Error ? e.message : String(e)}`,
+  );
+  if (resources === null) {
+    return { ...state, errors };
   }
 
-  try {
-    baseFont = deps.extractBaseFont?.(resources, fontName) ?? null;
-  } catch (e) {
-    errors.push(`Failed to extract BaseFont for ${fontName}: ${e instanceof Error ? e.message : String(e)}`);
+  state.toUnicode = safelyExtract(
+    () => deps.extractToUnicode(resources, fontName),
+    (e) => `Failed to extract ToUnicode for ${fontName}: ${e instanceof Error ? e.message : String(e)}`,
+  );
+
+  state.metrics = safelyExtract(
+    () => deps.extractFontMetrics(resources, fontName),
+    (e) => `Failed to extract metrics for ${fontName}: ${e instanceof Error ? e.message : String(e)}`,
+  );
+
+  if (deps.extractCIDOrdering) {
+    state.ordering = safelyExtract(
+      () => deps.extractCIDOrdering(resources, fontName),
+      (e) => `Failed to extract CIDOrdering for ${fontName}: ${e instanceof Error ? e.message : String(e)}`,
+    );
   }
 
-  return { toUnicode, metrics, ordering, encoding, isBold, isItalic, baseFont, errors };
+  if (deps.extractEncoding) {
+    state.encoding = safelyExtract(
+      () => deps.extractEncoding(resources, fontName),
+      (e) => `Failed to extract Encoding for ${fontName}: ${e instanceof Error ? e.message : String(e)}`,
+    );
+  }
+
+  const styleState: { value: { isBold: boolean; isItalic: boolean } | null } = { value: null };
+  if (deps.extractBoldItalic) {
+    styleState.value = safelyExtract(
+      () => deps.extractBoldItalic(resources, fontName),
+      (e) => `Failed to extract bold/italic for ${fontName}: ${e instanceof Error ? e.message : String(e)}`,
+    );
+  }
+
+  const style = styleState.value;
+  if (style) {
+    state.isBold = style.isBold;
+    state.isItalic = style.isItalic;
+  }
+
+  if (deps.extractBaseFont) {
+    state.baseFont = safelyExtract(
+      () => deps.extractBaseFont(resources, fontName),
+      (e) => `Failed to extract BaseFont for ${fontName}: ${e instanceof Error ? e.message : String(e)}`,
+    );
+  }
+
+  return { ...state, errors };
 }
 
 

@@ -244,23 +244,16 @@ function computeRectClipBBoxFromPath(ops: readonly PdfPathOp[], ctm: PdfMatrix):
     { x: op.x, y: op.y + op.height },
   ].map((p) => transformPoint(p, ctm));
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let minX = corners[0]!.x;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let minY = corners[0]!.y;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let maxX = corners[0]!.x;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let maxY = corners[0]!.y;
+  const bounds = { minX: corners[0]!.x, minY: corners[0]!.y, maxX: corners[0]!.x, maxY: corners[0]!.y };
 
   for (const p of corners) {
-    minX = Math.min(minX, p.x);
-    minY = Math.min(minY, p.y);
-    maxX = Math.max(maxX, p.x);
-    maxY = Math.max(maxY, p.y);
+    bounds.minX = Math.min(bounds.minX, p.x);
+    bounds.minY = Math.min(bounds.minY, p.y);
+    bounds.maxX = Math.max(bounds.maxX, p.x);
+    bounds.maxY = Math.max(bounds.maxY, p.y);
   }
 
-  return [minX, minY, maxX, maxY];
+  return [bounds.minX, bounds.minY, bounds.maxX, bounds.maxY];
 }
 
 /** W operator: Set clipping path (nonzero) */

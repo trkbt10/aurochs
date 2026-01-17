@@ -168,13 +168,9 @@ export async function importPdfFromFile(
     throw new PdfImportError("file is required", "PARSE_ERROR");
   }
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let buffer: ArrayBuffer;
-  try {
-    buffer = await file.arrayBuffer();
-  } catch (error) {
+  const buffer = await file.arrayBuffer().catch((error) => {
     throw wrapError(error, "PARSE_ERROR");
-  }
+  });
 
   return importPdf(buffer, options);
 }
@@ -190,13 +186,9 @@ export async function importPdfFromUrl(
     throw new PdfImportError("url is required", "FETCH_ERROR");
   }
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let response: Response;
-  try {
-    response = await fetch(url);
-  } catch (error) {
+  const response = await fetch(url).catch((error) => {
     throw wrapError(error, "FETCH_ERROR");
-  }
+  });
 
   if (!response.ok) {
     throw new PdfImportError(
@@ -205,13 +197,9 @@ export async function importPdfFromUrl(
     );
   }
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let buffer: ArrayBuffer;
-  try {
-    buffer = await response.arrayBuffer();
-  } catch (error) {
+  const buffer = await response.arrayBuffer().catch((error) => {
     throw wrapError(error, "FETCH_ERROR");
-  }
+  });
 
   return importPdf(buffer, options);
 }
@@ -469,23 +457,18 @@ export function createEmptyColorContext(): ColorContext {
 }
 
 function collectPageStats(page: PdfPage, slide: Slide): PageStats {
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let pathCount = 0;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let textCount = 0;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let imageCount = 0;
+  const counts = { pathCount: 0, textCount: 0, imageCount: 0 };
 
   for (const elem of page.elements) {
     switch (elem.type) {
       case "path":
-        pathCount++;
+        counts.pathCount += 1;
         break;
       case "text":
-        textCount++;
+        counts.textCount += 1;
         break;
       case "image":
-        imageCount++;
+        counts.imageCount += 1;
         break;
     }
   }
@@ -493,9 +476,9 @@ function collectPageStats(page: PdfPage, slide: Slide): PageStats {
   return {
     pageNumber: page.pageNumber,
     shapeCount: slide.shapes.length,
-    pathCount,
-    textCount,
-    imageCount,
+    pathCount: counts.pathCount,
+    textCount: counts.textCount,
+    imageCount: counts.imageCount,
   };
 }
 

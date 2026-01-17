@@ -62,10 +62,10 @@ export function convertPathToGeometry(pdfPath: PdfPath, context: ConversionConte
 
 function convertPathOps(ops: readonly PdfPathOp[], context: LocalConversionContext): readonly PathCommand[] {
   const commands: PathCommand[] = [];
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let currentPoint: PdfPoint = { x: 0, y: 0 };
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let subpathStartPoint: PdfPoint = { x: 0, y: 0 };
+  const state: { currentPoint: PdfPoint; subpathStartPoint: PdfPoint } = {
+    currentPoint: { x: 0, y: 0 },
+    subpathStartPoint: { x: 0, y: 0 },
+  };
 
   for (const op of ops) {
     switch (op.type) {
@@ -73,8 +73,8 @@ function convertPathOps(ops: readonly PdfPathOp[], context: LocalConversionConte
         const point = convertToLocal(op.point, context);
         const cmd: MoveToCommand = { type: "moveTo", point };
         commands.push(cmd);
-        currentPoint = op.point;
-        subpathStartPoint = op.point;
+        state.currentPoint = op.point;
+        state.subpathStartPoint = op.point;
         break;
       }
 
@@ -82,7 +82,7 @@ function convertPathOps(ops: readonly PdfPathOp[], context: LocalConversionConte
         const point = convertToLocal(op.point, context);
         const cmd: LineToCommand = { type: "lineTo", point };
         commands.push(cmd);
-        currentPoint = op.point;
+        state.currentPoint = op.point;
         break;
       }
 
@@ -94,19 +94,19 @@ function convertPathOps(ops: readonly PdfPathOp[], context: LocalConversionConte
           end: convertToLocal(op.end, context),
         };
         commands.push(cmd);
-        currentPoint = op.end;
+        state.currentPoint = op.end;
         break;
       }
 
       case "curveToV": {
         const cmd: CubicBezierCommand = {
           type: "cubicBezierTo",
-          control1: convertToLocal(currentPoint, context),
+          control1: convertToLocal(state.currentPoint, context),
           control2: convertToLocal(op.cp2, context),
           end: convertToLocal(op.end, context),
         };
         commands.push(cmd);
-        currentPoint = op.end;
+        state.currentPoint = op.end;
         break;
       }
 
@@ -118,7 +118,7 @@ function convertPathOps(ops: readonly PdfPathOp[], context: LocalConversionConte
           end: convertToLocal(op.end, context),
         };
         commands.push(cmd);
-        currentPoint = op.end;
+        state.currentPoint = op.end;
         break;
       }
 
@@ -136,15 +136,15 @@ function convertPathOps(ops: readonly PdfPathOp[], context: LocalConversionConte
 
         commands.push(move, l1, l2, l3, close);
 
-        currentPoint = p1;
-        subpathStartPoint = p1;
+        state.currentPoint = p1;
+        state.subpathStartPoint = p1;
         break;
       }
 
       case "closePath": {
         const close: CloseCommand = { type: "close" };
         commands.push(close);
-        currentPoint = subpathStartPoint;
+        state.currentPoint = state.subpathStartPoint;
         break;
       }
     }
@@ -314,17 +314,14 @@ export function detectRoundedRectangle(pdfPath: PdfPath): number | null {
   if (ops[0]?.type !== "moveTo") {return null;}
 
   // Count curve operations (corners) and line operations (edges)
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let curveCount = 0;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let lineCount = 0;
+  const counts = { curveCount: 0, lineCount: 0 };
 
   for (let i = 1; i < ops.length; i++) {
     const op = ops[i];
     if (op.type === "curveTo" || op.type === "curveToV" || op.type === "curveToY") {
-      curveCount++;
+      counts.curveCount += 1;
     } else if (op.type === "lineTo") {
-      lineCount++;
+      counts.lineCount += 1;
     } else if (op.type === "closePath") {
       // Expected at the end
     } else {
@@ -334,8 +331,8 @@ export function detectRoundedRectangle(pdfPath: PdfPath): number | null {
   }
 
   // A rounded rectangle should have 4 corners (curves) and some line segments
-  if (curveCount !== 4) {return null;}
-  if (lineCount < 2) {return null;} // At least 2 lines (could be 4, but short edges may be omitted)
+  if (counts.curveCount !== 4) {return null;}
+  if (counts.lineCount < 2) {return null;} // At least 2 lines (could be 4, but short edges may be omitted)
 
   // Get bounding box
   const [minX, minY, maxX, maxY] = computePathBBox(pdfPath);
@@ -360,16 +357,16 @@ export function detectRoundedRectangle(pdfPath: PdfPath): number | null {
   const end = firstCurve.end;
 
   // Get the start point of the curve (from the previous operation)
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let startPoint: PdfPoint | null = null;
+  const startPointState: { value: PdfPoint | null } = { value: null };
   for (let i = 0; i < ops.length; i++) {
     const op = ops[i];
     if (op.type === "moveTo" || op.type === "lineTo") {
-      startPoint = op.point;
+      startPointState.value = op.point;
     }
     if (ops[i + 1] === firstCurve) {break;}
   }
 
+  const startPoint = startPointState.value;
   if (!startPoint) {return null;}
 
   // For a Bézier curve approximating a 90-degree arc:
@@ -398,18 +395,18 @@ export function detectRoundedRectangle(pdfPath: PdfPath): number | null {
     if (curve.type !== "curveTo") {continue;}
 
     // Find the start point for this curve
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-    let curveStart: PdfPoint | null = null;
+    const curveStartState: { value: PdfPoint | null } = { value: null };
     for (let j = 0; j < ops.length; j++) {
       const op = ops[j];
       if (op.type === "moveTo" || op.type === "lineTo") {
-        curveStart = op.point;
+        curveStartState.value = op.point;
       } else if (op.type === "curveTo" || op.type === "curveToV" || op.type === "curveToY") {
-        curveStart = op.end;
+        curveStartState.value = op.end;
       }
       if (ops[j + 1] === curve) {break;}
     }
 
+    const curveStart = curveStartState.value;
     if (!curveStart) {continue;}
 
     const d1 = Math.hypot(curve.cp1.x - curveStart.x, curve.cp1.y - curveStart.y);

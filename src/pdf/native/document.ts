@@ -105,23 +105,14 @@ function readInherited(
   rotate: number | null;
   userUnit: number | null;
 } {
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
   let cur: PdfDict | null = dict;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
   let resources: PdfDict | null = null;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
   let mediaBox: readonly number[] | null = null;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
   let cropBox: readonly number[] | null = null;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
   let bleedBox: readonly number[] | null = null;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
   let trimBox: readonly number[] | null = null;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
   let artBox: readonly number[] | null = null;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
   let rotate: number | null = null;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
   let userUnit: number | null = null;
   while (cur) {
     if (!resources) {
@@ -294,7 +285,7 @@ function mergeMetadata(
 
 
 /** NativePdfDocument */
-export class NativePdfDocument { // eslint-disable-line no-restricted-syntax -- Stateful document loader API.
+export class NativePdfDocument {
   private readonly xref: XRefTable;
   private readonly resolver: PdfResolver;
   private readonly trailer: PdfDict;

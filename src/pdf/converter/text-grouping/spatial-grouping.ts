@@ -363,19 +363,18 @@ const WIDTH_BUFFER_RATIO = 0.05; // 5% buffer
  * additional width expansion. Calculate the extra width needed.
  */
 function calculateSpacingWidthAdjustment(runs: readonly PdfText[]): number {
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let maxAdjustment = 0;
+  const maxAdjustment = { value: 0 };
 
   for (const run of runs) {
     if (run.charSpacing && run.charSpacing > 0) {
       // Each character gets extra spacing, so total adjustment = charSpacing × (charCount - 1)
       const charCount = Math.max(run.text.length - 1, 0);
       const adjustment = run.charSpacing * charCount * ((run.horizontalScaling ?? 100) / 100);
-      maxAdjustment = Math.max(maxAdjustment, adjustment);
+      maxAdjustment.value = Math.max(maxAdjustment.value, adjustment);
     }
   }
 
-  return maxAdjustment;
+  return maxAdjustment.value;
 }
 
 
@@ -529,14 +528,11 @@ function groupIntoLines(
 ): GroupedParagraph[] {
   const lines: GroupedParagraph[] = [];
   const currentLine: PdfText[] = [];
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let currentY = texts[0]?.y ?? 0;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let referenceFontSize = texts[0]?.fontSize ?? 12;
+  const state = { currentY: texts[0]?.y ?? 0, referenceFontSize: texts[0]?.fontSize ?? 12 };
 
   for (const text of texts) {
-    const tolerance = referenceFontSize * options.lineToleranceRatio;
-    const sameY = Math.abs(text.y - currentY) <= tolerance;
+    const tolerance = state.referenceFontSize * options.lineToleranceRatio;
+    const sameY = Math.abs(text.y - state.currentY) <= tolerance;
 
     // Check if there's a blocking zone between the last text in current line and this text
     const lastText = currentLine[currentLine.length - 1];
@@ -550,8 +546,8 @@ function groupIntoLines(
       }
       currentLine.length = 0;
       currentLine.push(text);
-      currentY = text.y;
-      referenceFontSize = text.fontSize;
+      state.currentY = text.y;
+      state.referenceFontSize = text.fontSize;
     }
   }
 
@@ -617,15 +613,12 @@ function groupIntoLinesWithColumns(
 ): GroupedParagraph[] {
   const paragraphs: GroupedParagraph[] = [];
   const currentLine: PdfText[] = [];
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let currentY = texts[0]?.y ?? 0;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let referenceFontSize = texts[0]?.fontSize ?? 12;
+  const state = { currentY: texts[0]?.y ?? 0, referenceFontSize: texts[0]?.fontSize ?? 12 };
 
   for (const text of texts) {
-    const tolerance = referenceFontSize * options.lineToleranceRatio;
+    const tolerance = state.referenceFontSize * options.lineToleranceRatio;
 
-    if (Math.abs(text.y - currentY) <= tolerance) {
+    if (Math.abs(text.y - state.currentY) <= tolerance) {
       currentLine.push(text);
     } else {
       // Process current line and split into columns
@@ -637,8 +630,8 @@ function groupIntoLinesWithColumns(
       }
       currentLine.length = 0;
       currentLine.push(text);
-      currentY = text.y;
-      referenceFontSize = text.fontSize;
+      state.currentY = text.y;
+      state.referenceFontSize = text.fontSize;
     }
   }
 
@@ -874,4 +867,3 @@ export function createSpatialGrouping(userOptions: SpatialGroupingOptions = {}):
  * Default spatial grouping function with default options.
  */
 export const spatialGrouping: TextGroupingFn = createSpatialGrouping();
-

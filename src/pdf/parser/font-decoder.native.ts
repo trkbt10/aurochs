@@ -191,9 +191,7 @@ function extractFontDescriptor(page: NativePdfPage, fontDict: PdfDict): PdfDict 
 
 function computeBoldItalic(baseFont: string | undefined, descriptor: PdfDict | null): { isBold?: boolean; isItalic?: boolean } {
   const name = baseFont ?? "";
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
   let isBold = isBoldFont(name);
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
   let isItalic = isItalicFont(name);
 
   if (descriptor) {
@@ -260,7 +258,6 @@ function extractCidFontWidths(page: NativePdfPage, fontDict: PdfDict): Pick<Font
   if (!wArr) {return { widths, defaultWidth };}
 
   // W array format: [cFirst [w1 w2 ...] cFirst2 cLast2 w ...]
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
   let i = 0;
   while (i < wArr.items.length) {
     const first = wArr.items[i];

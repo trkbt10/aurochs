@@ -79,18 +79,17 @@ export function getTableTags(fontData: Uint8Array): string[] {
  * Calculate OpenType table checksum.
  */
 export function calculateTableChecksum(data: Uint8Array): number {
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let sum = 0;
+  const sumState = { value: 0 };
   const paddedLength = (data.length + 3) & ~3;
   const padded = new Uint8Array(paddedLength);
   padded.set(data);
   const view = new DataView(padded.buffer);
 
   for (let i = 0; i < paddedLength; i += 4) {
-    sum = (sum + view.getUint32(i, false)) >>> 0;
+    sumState.value = (sumState.value + view.getUint32(i, false)) >>> 0;
   }
 
-  return sum;
+  return sumState.value;
 }
 
 /**

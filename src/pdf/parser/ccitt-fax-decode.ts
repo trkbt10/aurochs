@@ -65,67 +65,77 @@ type TwoDCode =
 // Bit Reader (MSB-first)
 // =============================================================================
 
-// eslint-disable-next-line no-restricted-syntax -- Bit-level decoding is stateful; a small class keeps cursor handling explicit.
-class MsbBitReader {
-  private byteIndex = 0;
-  private bitIndex = 0; // 0..7 (0 = MSB)
+type MsbBitReader = Readonly<{
+  savePosition: () => Readonly<{ readonly byteIndex: number; readonly bitIndex: number }>;
+  restorePosition: (pos: Readonly<{ readonly byteIndex: number; readonly bitIndex: number }>) => void;
+  readBit: () => 0 | 1;
+  readBits: (count: number) => number;
+  peekBits: (count: number) => number;
+  alignToByte: () => void;
+}>;
 
-  public constructor(private readonly data: Uint8Array) {
-    if (!data) {
-      throw new Error("MsbBitReader: data is required");
-    }
+function createMsbBitReader(data: Uint8Array): MsbBitReader {
+  if (!data) {
+    throw new Error("MsbBitReader: data is required");
   }
 
-  public savePosition(): Readonly<{ readonly byteIndex: number; readonly bitIndex: number }> {
-    return { byteIndex: this.byteIndex, bitIndex: this.bitIndex };
-  }
+  const state = { byteIndex: 0, bitIndex: 0 };
 
-  public restorePosition(pos: Readonly<{ readonly byteIndex: number; readonly bitIndex: number }>): void {
-    this.byteIndex = pos.byteIndex;
-    this.bitIndex = pos.bitIndex;
-  }
+  const savePosition = (): Readonly<{ readonly byteIndex: number; readonly bitIndex: number }> => ({
+    byteIndex: state.byteIndex,
+    bitIndex: state.bitIndex,
+  });
 
-  public readBit(): 0 | 1 {
-    const byte = this.data[this.byteIndex];
+  const restorePosition = (pos: Readonly<{ readonly byteIndex: number; readonly bitIndex: number }>): void => {
+    state.byteIndex = pos.byteIndex;
+    state.bitIndex = pos.bitIndex;
+  };
+
+  const readBit = (): 0 | 1 => {
+    const byte = data[state.byteIndex];
     if (byte === undefined) {
       return 0;
     }
-    const bit = (byte >> (7 - this.bitIndex)) & 1;
-    this.bitIndex += 1;
-    if (this.bitIndex === 8) {
-      this.bitIndex = 0;
-      this.byteIndex += 1;
+    const bit = (byte >> (7 - state.bitIndex)) & 1;
+    state.bitIndex += 1;
+    if (state.bitIndex === 8) {
+      state.bitIndex = 0;
+      state.byteIndex += 1;
     }
     return bit as 0 | 1;
-  }
+  };
 
-  public readBits(count: number): number {
+  const readBits = (count: number): number => {
     if (!Number.isFinite(count) || count <= 0) {
       throw new Error(`MsbBitReader.readBits: count must be > 0 (got ${count})`);
     }
     if (count > 31) {
       throw new Error(`MsbBitReader.readBits: count must be <= 31 (got ${count})`);
     }
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-    let value = 0;
+
+    const acc = { value: 0 };
     for (let i = 0; i < count; i += 1) {
-      value = (value << 1) | this.readBit();
+      acc.value = (acc.value << 1) | readBit();
     }
-    return value >>> 0;
-  }
+    return acc.value >>> 0;
+  };
 
-  public peekBits(count: number): number {
-    const pos = this.savePosition();
-    const value = this.readBits(count);
-    this.restorePosition(pos);
+  const peekBits = (count: number): number => {
+    const pos = savePosition();
+    const value = readBits(count);
+    restorePosition(pos);
     return value;
-  }
+  };
 
-  public alignToByte(): void {
-    if (this.bitIndex === 0) {return;}
-    this.bitIndex = 0;
-    this.byteIndex += 1;
-  }
+  const alignToByte = (): void => {
+    if (state.bitIndex === 0) {
+      return;
+    }
+    state.bitIndex = 0;
+    state.byteIndex += 1;
+  };
+
+  return { savePosition, restorePosition, readBit, readBits, peekBits, alignToByte };
 }
 
 // =============================================================================
@@ -133,19 +143,18 @@ class MsbBitReader {
 // =============================================================================
 
 function addToTrie<T>(root: TrieNode<T>, bits: number, code: number, value: T): TrieNode<T> {
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let node = root;
+  const state = { node: root };
   for (let i = bits - 1; i >= 0; i -= 1) {
     const bit = (code >> i) & 1;
     if (bit === 0) {
-      if (!node.next0) {node.next0 = {};}
-      node = node.next0;
+      if (!state.node.next0) {state.node.next0 = {};}
+      state.node = state.node.next0;
     } else {
-      if (!node.next1) {node.next1 = {};}
-      node = node.next1;
+      if (!state.node.next1) {state.node.next1 = {};}
+      state.node = state.node.next1;
     }
   }
-  node.value = value;
+  state.node.value = value;
   return root;
 }
 
@@ -158,9 +167,7 @@ function buildTrie<T>(codes: readonly Readonly<{ readonly bits: number; readonly
 }
 
 function decodeFromTrie<T>(reader: MsbBitReader, trie: TrieNode<T>, maxBits: number): T {
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let node: TrieNode<T> | undefined = trie;
-  for (let i = 0; i < maxBits; i += 1) {
+  for (let node: TrieNode<T> | undefined = trie, i = 0; i < maxBits; i += 1) {
     const bit = reader.readBit();
     node = bit === 0 ? node?.next0 : node?.next1;
     if (!node) {
@@ -401,10 +408,7 @@ const BLACK_TRIE = buildTrie(
 function decodeRunLength(reader: MsbBitReader, color: Color): number {
   const trie = color === "white" ? WHITE_TRIE : BLACK_TRIE;
   const maxBits = color === "white" ? 12 : 13;
-
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let total = 0;
-  while (true) {
+  for (let total = 0; ; ) {
     const run = decodeFromTrie(reader, trie, maxBits);
     total += run;
     if (run < 64) {
@@ -502,10 +506,7 @@ function writeRunsToBitmapRow(
 ): void {
   // Start with all white (1 bits). Black runs (odd index) clear bits to 0.
   out.fill(0xff, outOffset, outOffset + rowBytes);
-
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let x = 0;
-  for (let i = 0; i < runs.length && x < width; i += 1) {
+  for (let i = 0, x = 0; i < runs.length && x < width; i += 1) {
     const runLen = runs[i] ?? 0;
     if (runLen < 0) {
       throw new Error("CCITT: negative run length");
@@ -566,15 +567,13 @@ export function decodeCcittFax(args: DecodeCcittFaxArgs): Uint8Array {
   const rowBytes = Math.ceil(width / 8);
   const out = new Uint8Array(rowBytes * height);
 
-  const reader = new MsbBitReader(encoded);
+  const reader = createMsbBitReader(encoded);
 
   const EOL_MARKER_12BIT = 0x001; // 000000000001 (11 zeros + 1)
   const consumeEolMarker = (): void => {
     // The EOL marker is not necessarily byte-aligned.
     // Scan forward until we see the 12-bit EOL pattern.
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-    let window = 0;
-    for (let i = 0; i < 2048; i += 1) {
+    for (let i = 0, window = 0; i < 2048; i += 1) {
       window = ((window << 1) | reader.readBit()) & 0xfff;
       if (i >= 11 && window === EOL_MARKER_12BIT) {
         return;
@@ -594,9 +593,7 @@ export function decodeCcittFax(args: DecodeCcittFaxArgs): Uint8Array {
 
   const decode1DLine = (): number[] => {
     const runs: number[] = [];
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-    let x = 0;
-    while (x < width) {
+    for (let x = 0; x < width;) {
       const whiteRun = decodeRunLength(reader, "white");
       const w = Math.min(whiteRun, width - x);
       runs.push(w);
@@ -614,48 +611,39 @@ export function decodeCcittFax(args: DecodeCcittFaxArgs): Uint8Array {
 
   const decode2DLine = (referenceRuns: number[]): number[] => {
     const runs: number[] = [];
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-    let a0 = 0;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-    let pending = 0;
-
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-    let pbIndex = 0;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-    let b1 = referenceRuns[pbIndex] ?? width;
-    pbIndex += 1;
+    const state = { a0: 0, pending: 0, pbIndex: 1, b1: referenceRuns[0] ?? width };
 
     const checkB1 = (): void => {
       if (runs.length === 0) {return;}
-      while (b1 <= a0 && b1 < width) {
-        const r0 = referenceRuns[pbIndex] ?? 0;
-        const r1 = referenceRuns[pbIndex + 1] ?? 0;
-        b1 += r0 + r1;
-        pbIndex += 2;
+      while (state.b1 <= state.a0 && state.b1 < width) {
+        const r0 = referenceRuns[state.pbIndex] ?? 0;
+        const r1 = referenceRuns[state.pbIndex + 1] ?? 0;
+        state.b1 += r0 + r1;
+        state.pbIndex += 2;
       }
     };
 
     const setValue = (len: number): void => {
-      const value = pending + len;
+      const value = state.pending + len;
       if (value < 0) {throw new Error("CCITT: negative run length");}
       runs.push(value);
-      a0 += len;
-      pending = 0;
+      state.a0 += len;
+      state.pending = 0;
     };
 
-    while (a0 < width) {
+    for (; state.a0 < width;) {
       const code = decode2DCode(reader);
       switch (code.type) {
         case "pass": {
           checkB1();
-          const b2Delta = referenceRuns[pbIndex] ?? 0;
-          pbIndex += 1;
-          const b2 = b1 + b2Delta;
-          pending += b2 - a0;
-          a0 = b2;
-          const nextDelta = referenceRuns[pbIndex] ?? 0;
-          pbIndex += 1;
-          b1 = b2 + nextDelta;
+          const b2Delta = referenceRuns[state.pbIndex] ?? 0;
+          state.pbIndex += 1;
+          const b2 = state.b1 + b2Delta;
+          state.pending += b2 - state.a0;
+          state.a0 = b2;
+          const nextDelta = referenceRuns[state.pbIndex] ?? 0;
+          state.pbIndex += 1;
+          state.b1 = b2 + nextDelta;
           break;
         }
         case "horizontal": {
@@ -676,33 +664,33 @@ export function decodeCcittFax(args: DecodeCcittFaxArgs): Uint8Array {
         }
         case "vertical": {
           checkB1();
-          const len = b1 - a0 + code.delta;
+          const len = state.b1 - state.a0 + code.delta;
           if (len < 0) {
             throw new Error("CCITT: vertical code produced negative run");
           }
           setValue(len);
           if (code.delta >= 0) {
-            const delta = referenceRuns[pbIndex] ?? 0;
-            pbIndex += 1;
-            b1 += delta;
+            const delta = referenceRuns[state.pbIndex] ?? 0;
+            state.pbIndex += 1;
+            state.b1 += delta;
           } else {
-            pbIndex -= 1;
-            b1 -= referenceRuns[pbIndex] ?? 0;
+            state.pbIndex -= 1;
+            state.b1 -= referenceRuns[state.pbIndex] ?? 0;
           }
           break;
         }
         case "extension": {
           // Not supported: treat as end of line for robustness
-          pending += width - a0;
-          a0 = width;
+          state.pending += width - state.a0;
+          state.a0 = width;
           break;
         }
       }
     }
 
-    if (pending > 0 || runs.length === 0) {
-      runs.push(pending);
-      pending = 0;
+    if (state.pending > 0 || runs.length === 0) {
+      runs.push(state.pending);
+      state.pending = 0;
     }
     runs.push(0);
     return runs;
@@ -731,11 +719,9 @@ export function decodeCcittFax(args: DecodeCcittFaxArgs): Uint8Array {
 
   if (parms.k > 0) {
     // Group 3 mixed 1D/2D: first line is 1D, then K lines 2D, repeating.
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-    let referenceRuns: number[] = [width, 0];
     const groupLen = parms.k + 1;
 
-    for (let y = 0; y < height; y += 1) {
+    for (let y = 0, referenceRuns: number[] = [width, 0]; y < height; y += 1) {
       if (parms.endOfLine) {
         consumeLeadingEolMarkersIfPresent();
       }
@@ -757,10 +743,7 @@ export function decodeCcittFax(args: DecodeCcittFaxArgs): Uint8Array {
   }
 
   // Group 4 2D (K < 0)
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let referenceRuns: number[] = [width, 0]; // all-white reference line + sentinel
-
-  for (let y = 0; y < height; y += 1) {
+  for (let y = 0, referenceRuns: number[] = [width, 0]; y < height; y += 1) { // all-white reference line + sentinel
     const runs = decode2DLine(referenceRuns);
     writeRunsToBitmapRow(out, y * rowBytes, rowBytes, width, runs);
     referenceRuns = runs;

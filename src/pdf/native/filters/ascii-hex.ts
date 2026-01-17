@@ -24,24 +24,22 @@ function hexValue(b: number): number | null {
 /** decodeAsciiHex */
 export function decodeAsciiHex(data: Uint8Array): Uint8Array {
   const out: number[] = [];
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let hi: number | null = null;
+  const state: { hi: number | null } = { hi: null };
   for (let i = 0; i < data.length; i += 1) {
     const b = data[i] ?? 0;
     if (b === 0x3e) {break;} // '>'
     if (isWhite(b)) {continue;}
     const v = hexValue(b);
     if (v == null) {continue;}
-    if (hi == null) {
-      hi = v;
+    if (state.hi == null) {
+      state.hi = v;
     } else {
-      out.push((hi << 4) | v);
-      hi = null;
+      out.push((state.hi << 4) | v);
+      state.hi = null;
     }
   }
-  if (hi != null) {
-    out.push(hi << 4);
+  if (state.hi != null) {
+    out.push(state.hi << 4);
   }
   return new Uint8Array(out);
 }
-

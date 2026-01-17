@@ -36,23 +36,22 @@ export function createLexer(bytes: Uint8Array, pos: number): PdfLexer {
 
 function skipWhitespaceAndComments(lex: PdfLexer): PdfLexer {
   const { bytes } = lex;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let pos = lex.pos;
-  while (pos < bytes.length) {
-    const b = bytes[pos] ?? 0;
+  const state = { pos: lex.pos };
+  while (state.pos < bytes.length) {
+    const b = bytes[state.pos] ?? 0;
     if (isWhite(b)) {
-      pos += 1;
+      state.pos += 1;
       continue;
     }
     if (b === 0x25) {
       // comment '% ... \r?\n'
-      pos += 1;
-      while (pos < bytes.length) {
-        const c = bytes[pos] ?? 0;
-        pos += 1;
+      state.pos += 1;
+      while (state.pos < bytes.length) {
+        const c = bytes[state.pos] ?? 0;
+        state.pos += 1;
         if (c === 0x0a) {break;}
         if (c === 0x0d) {
-          if ((bytes[pos] ?? 0) === 0x0a) {pos += 1;}
+          if ((bytes[state.pos] ?? 0) === 0x0a) {state.pos += 1;}
           break;
         }
       }
@@ -60,7 +59,7 @@ function skipWhitespaceAndComments(lex: PdfLexer): PdfLexer {
     }
     break;
   }
-  return { bytes, pos };
+  return { bytes, pos: state.pos };
 }
 
 function readWhile(bytes: Uint8Array, pos: number, pred: (b: number) => boolean): { text: string; next: number } {
@@ -90,73 +89,69 @@ function hexValue(b: number): number {
 
 function readName(lex: PdfLexer): { value: string; next: number } {
   const { bytes } = lex;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let pos = lex.pos;
-  if ((bytes[pos] ?? 0) !== 0x2f) {throw new Error("readName: expected '/'");}
-  pos += 1;
+  const state = { pos: lex.pos };
+  if ((bytes[state.pos] ?? 0) !== 0x2f) {throw new Error("readName: expected '/'");}
+  state.pos += 1;
   const out: number[] = [];
-  while (pos < bytes.length) {
-    const b = bytes[pos] ?? 0;
+  while (state.pos < bytes.length) {
+    const b = bytes[state.pos] ?? 0;
     if (isWhite(b) || isDelimiter(b)) {break;}
     if (b === 0x23) {
       // #xx hex escape
-      const h1 = bytes[pos + 1] ?? 0;
-      const h2 = bytes[pos + 2] ?? 0;
+      const h1 = bytes[state.pos + 1] ?? 0;
+      const h2 = bytes[state.pos + 2] ?? 0;
       if (isHexDigit(h1) && isHexDigit(h2)) {
         out.push((hexValue(h1) << 4) | hexValue(h2));
-        pos += 3;
+        state.pos += 3;
         continue;
       }
     }
     out.push(b);
-    pos += 1;
+    state.pos += 1;
   }
-  return { value: decodeLatin1(new Uint8Array(out)), next: pos };
+  return { value: decodeLatin1(new Uint8Array(out)), next: state.pos };
 }
 
 function readLiteralString(lex: PdfLexer): { bytes: Uint8Array; next: number } {
   const { bytes } = lex;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let pos = lex.pos;
-  if ((bytes[pos] ?? 0) !== 0x28) {throw new Error("readLiteralString: expected '('");}
-  pos += 1;
+  const state = { pos: lex.pos, depth: 1 };
+  if ((bytes[state.pos] ?? 0) !== 0x28) {throw new Error("readLiteralString: expected '('");}
+  state.pos += 1;
 
   const out: number[] = [];
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let depth = 1;
-  while (pos < bytes.length) {
-    const b = bytes[pos] ?? 0;
-    pos += 1;
+  while (state.pos < bytes.length) {
+    const b = bytes[state.pos] ?? 0;
+    state.pos += 1;
 
     if (b === 0x28) {
       // (
-      depth += 1;
+      state.depth += 1;
       out.push(b);
       continue;
     }
     if (b === 0x29) {
       // )
-      depth -= 1;
-      if (depth === 0) {break;}
+      state.depth -= 1;
+      if (state.depth === 0) {break;}
       out.push(b);
       continue;
     }
     if (b === 0x5c) {
       // backslash
-      const next = bytes[pos] ?? 0;
+      const next = bytes[state.pos] ?? 0;
       if (next === 0x0d) {
         // \r\n? line continuation
-        pos += 1;
-        if ((bytes[pos] ?? 0) === 0x0a) {pos += 1;}
+        state.pos += 1;
+        if ((bytes[state.pos] ?? 0) === 0x0a) {state.pos += 1;}
         continue;
       }
       if (next === 0x0a) {
-        pos += 1;
+        state.pos += 1;
         continue;
       }
 
       // escaped
-      pos += 1;
+      state.pos += 1;
       switch (next) {
         case 0x6e: // n
           out.push(0x0a);
@@ -181,15 +176,14 @@ function readLiteralString(lex: PdfLexer): { bytes: Uint8Array; next: number } {
         default:
           // octal? up to 3 digits
           if (next >= 0x30 && next <= 0x37) {
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-            let value = next - 0x30;
+            const value = { v: next - 0x30 };
             for (let i = 0; i < 2; i += 1) {
-              const d = bytes[pos] ?? 0;
+              const d = bytes[state.pos] ?? 0;
               if (d < 0x30 || d > 0x37) {break;}
-              value = value * 8 + (d - 0x30);
-              pos += 1;
+              value.v = value.v * 8 + (d - 0x30);
+              state.pos += 1;
             }
-            out.push(value & 0xff);
+            out.push(value.v & 0xff);
             continue;
           }
           out.push(next);
@@ -199,21 +193,20 @@ function readLiteralString(lex: PdfLexer): { bytes: Uint8Array; next: number } {
     out.push(b);
   }
 
-  return { bytes: new Uint8Array(out), next: pos };
+  return { bytes: new Uint8Array(out), next: state.pos };
 }
 
 function readHexString(lex: PdfLexer): { bytes: Uint8Array; next: number } {
   const { bytes } = lex;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let pos = lex.pos;
-  if ((bytes[pos] ?? 0) !== 0x3c) {throw new Error("readHexString: expected '<'");}
+  const state = { pos: lex.pos };
+  if ((bytes[state.pos] ?? 0) !== 0x3c) {throw new Error("readHexString: expected '<'");}
   // caller ensures not '<<'
-  pos += 1;
+  state.pos += 1;
 
   const nibbles: number[] = [];
-  while (pos < bytes.length) {
-    const b = bytes[pos] ?? 0;
-    pos += 1;
+  while (state.pos < bytes.length) {
+    const b = bytes[state.pos] ?? 0;
+    state.pos += 1;
     if (b === 0x3e) {break;} // >
     if (isWhite(b)) {continue;}
     if (!isHexDigit(b)) {
@@ -229,16 +222,13 @@ function readHexString(lex: PdfLexer): { bytes: Uint8Array; next: number } {
     out[i / 2] = (hi << 4) | lo;
   }
 
-  return { bytes: out, next: pos };
+  return { bytes: out, next: state.pos };
 }
 
 function readNumberOrKeyword(lex: PdfLexer): { token: PdfToken; next: number } {
   const { bytes } = lex;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let pos = lex.pos;
-
-  const { text, next } = readWhile(bytes, pos, (b) => !isWhite(b) && !isDelimiter(b));
-  pos = next;
+  const { text, next } = readWhile(bytes, lex.pos, (b) => !isWhite(b) && !isDelimiter(b));
+  const pos = next;
 
   // number?
   const maybe = Number(text);

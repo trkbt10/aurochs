@@ -136,11 +136,14 @@ function parseValue(tokens: readonly Token[], start: number): { value: PdfObject
     }
     case "array_start": {
       const items: PdfObject[] = [];
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-      let i = start + 1;
-      while (i < tokens.length) {
+      for (let i = start + 1; ; ) {
+        if (i >= tokens.length) {
+          return { value: makeArray(items), next: i };
+        }
         const t = tokens[i];
-        if (!t) {break;}
+        if (!t) {
+          return { value: makeArray(items), next: i };
+        }
         if (t.type === "array_end") {
           return { value: makeArray(items), next: i + 1 };
         }
@@ -148,15 +151,17 @@ function parseValue(tokens: readonly Token[], start: number): { value: PdfObject
         items.push(parsed.value);
         i = parsed.next;
       }
-      return { value: makeArray(items), next: i };
     }
     case "dict_start": {
       const entries: Array<readonly [string, PdfObject]> = [];
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-      let i = start + 1;
-      while (i < tokens.length) {
+      for (let i = start + 1; ; ) {
+        if (i >= tokens.length) {
+          return { value: makeDict(entries), next: i };
+        }
         const t = tokens[i];
-        if (!t) {break;}
+        if (!t) {
+          return { value: makeDict(entries), next: i };
+        }
         if (t.type === "dict_end") {
           return { value: makeDict(entries), next: i + 1 };
         }
@@ -169,7 +174,6 @@ function parseValue(tokens: readonly Token[], start: number): { value: PdfObject
         entries.push([key, parsed.value]);
         i = parsed.next;
       }
-      return { value: makeDict(entries), next: i };
     }
     default:
       return { value: makeNull(), next: start + 1 };
@@ -180,9 +184,7 @@ function parseInlineImageDict(dictText: string): PdfDict {
   const tokens = tokenizeContentStream(dictText);
   const entries: Array<readonly [string, PdfObject]> = [];
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let i = 0;
-  while (i < tokens.length) {
+  for (let i = 0; i < tokens.length; ) {
     const t = tokens[i];
     if (!t) {break;}
     if (t.type !== "name") {
@@ -214,9 +216,7 @@ function findInlineImageEnd(content: string, startData: number): number | null {
 }
 
 function findOperatorWithBoundary(content: string, op: string, start: number): number | null {
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let pos = start;
-  while (pos < content.length) {
+  for (let pos = start; pos < content.length; ) {
     const idx = content.indexOf(op, pos);
     if (idx < 0) {return null;}
     if (isBoundaryChar(content[idx - 1]) && isBoundaryChar(content[idx + op.length])) {return idx;}
@@ -258,10 +258,19 @@ export function preprocessInlineImages(
 
   const used = new Set<string>(options.existingNames ? [...options.existingNames] : []);
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let pos = 0;
-  while (pos < content.length) {
-    const bi = findOperatorWithBoundary(content, "BI", pos);
+  const allocateName = (): string => {
+    for (;;) {
+      const candidate = `__InlineIm${options.nextId()}`;
+      if (!used.has(candidate)) {
+        used.add(candidate);
+        return candidate;
+      }
+    }
+  };
+
+  const pos = { value: 0 };
+  while (pos.value < content.length) {
+    const bi = findOperatorWithBoundary(content, "BI", pos.value);
     if (bi == null) {break;}
 
     const id = findOperatorWithBoundary(content, "ID", bi + 2);
@@ -273,32 +282,25 @@ export function preprocessInlineImages(
     const dictText = content.slice(bi + 2, id);
     const dict = parseInlineImageDict(dictText);
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-    let dataStart = id + 2;
+    const dataStart = { value: id + 2 };
     // Consume the required whitespace separator after ID. Some producers use CRLF.
-    if (content[dataStart] === "\r" && content[dataStart + 1] === "\n") {dataStart += 2;}
-    else if (isBoundaryChar(content[dataStart])) {dataStart += 1;}
+    if (content[dataStart.value] === "\r" && content[dataStart.value + 1] === "\n") {dataStart.value += 2;}
+    else if (isBoundaryChar(content[dataStart.value])) {dataStart.value += 1;}
 
-    const ei = findInlineImageEnd(content, dataStart);
+    const ei = findInlineImageEnd(content, dataStart.value);
     if (ei == null) {break;}
 
-    const dataEnd = Math.max(dataStart, ei - 1); // exclude the whitespace before EI
-    const data = latin1ToBytes(content.slice(dataStart, dataEnd));
-
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-    let name: string;
-    do {
-      name = `__InlineIm${options.nextId()}`;
-    } while (used.has(name));
-    used.add(name);
+    const dataEnd = Math.max(dataStart.value, ei - 1); // exclude the whitespace before EI
+    const data = latin1ToBytes(content.slice(dataStart.value, dataEnd));
+    const name = allocateName();
 
     xObjects.set(name, { type: "stream", dict, data });
 
-    out.push(content.slice(pos, bi));
+    out.push(content.slice(pos.value, bi));
     out.push(`/${name} Do`);
-    pos = ei + 2;
+    pos.value = ei + 2;
   }
 
-  out.push(content.slice(pos));
+  out.push(content.slice(pos.value));
   return { content: out.join(""), xObjects };
 }

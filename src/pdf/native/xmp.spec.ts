@@ -10,15 +10,12 @@ function pad10(n: number): string {
 
 function buildXref(entries: ReadonlyArray<{ readonly obj: number; readonly offset: number }>, size: number): string {
   const map = new Map(entries.map((e) => [e.obj, e.offset]));
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let out = "xref\n";
-  out += `0 ${size}\n`;
-  out += "0000000000 65535 f \n";
+  const lines: string[] = ["xref", `0 ${size}`, "0000000000 65535 f "];
   for (let i = 1; i < size; i += 1) {
     const off = map.get(i) ?? 0;
-    out += `${pad10(off)} 00000 n \n`;
+    lines.push(`${pad10(off)} 00000 n `);
   }
-  return out;
+  return `${lines.join("\n")}\n`;
 }
 
 function buildPdfWithXmp(xml: string): Uint8Array {

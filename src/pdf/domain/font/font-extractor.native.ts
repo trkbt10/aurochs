@@ -156,9 +156,7 @@ export function extractEmbeddedFontsFromNativePages(pages: readonly NativePdfPag
 
       const fontFamily = normalizeFontFamily(baseFontRaw);
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
       let data = rawData;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
       let metrics: EmbeddedFontMetrics | undefined;
       if (format === "truetype") {
         const toUnicode = extractToUnicodeMap(page, fontDict);

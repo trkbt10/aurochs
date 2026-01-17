@@ -139,11 +139,8 @@ export function convertFill(pdfColor: PdfColor, alpha: number = 1): Fill {
   const baseColor = convertColor(pdfColor);
   const a = clamp01(alpha);
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let color: Color = baseColor;
-  if (a < 1) {
-    color = { ...baseColor, transform: { ...baseColor.transform, alpha: pct(a * 100) } };
-  }
+  const color: Color =
+    a < 1 ? { ...baseColor, transform: { ...baseColor.transform, alpha: pct(a * 100) } } : baseColor;
 
   return {
     type: "solidFill",
@@ -240,21 +237,18 @@ export function convertGraphicsStateToStyle(
   graphicsState: PdfGraphicsState,
   paintOp: "stroke" | "fill" | "fillStroke",
 ): { fill: Fill | undefined; line: Line | undefined } {
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let fill: Fill | undefined;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let line: Line | undefined;
+  const style: { fill: Fill | undefined; line: Line | undefined } = { fill: undefined, line: undefined };
 
   if (paintOp === "fill" || paintOp === "fillStroke") {
-    fill = convertFill(graphicsState.fillColor, graphicsState.fillAlpha);
+    style.fill = convertFill(graphicsState.fillColor, graphicsState.fillAlpha);
   } else if (paintOp === "stroke") {
     // Explicitly set noFill for stroke-only paths to prevent
     // PPTX theme default fills from being applied
-    fill = noFill();
+    style.fill = noFill();
   }
 
   if (paintOp === "stroke" || paintOp === "fillStroke") {
-    line = convertLine(
+    style.line = convertLine(
       graphicsState.strokeColor,
       graphicsState.lineWidth,
       graphicsState.lineCap,
@@ -265,5 +259,5 @@ export function convertGraphicsStateToStyle(
     );
   }
 
-  return { fill, line };
+  return style;
 }

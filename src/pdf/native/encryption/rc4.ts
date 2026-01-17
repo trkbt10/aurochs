@@ -19,31 +19,27 @@ export function rc4(key: Uint8Array, data: Uint8Array): Uint8Array {
   const s = new Uint8Array(256);
   for (let i = 0; i < 256; i += 1) {s[i] = i;}
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let j = 0;
+  const ksa = { j: 0 };
   for (let i = 0; i < 256; i += 1) {
-    j = (j + (s[i] ?? 0) + (key[i % key.length] ?? 0)) & 0xff;
+    ksa.j = (ksa.j + (s[i] ?? 0) + (key[i % key.length] ?? 0)) & 0xff;
     const tmp = s[i] ?? 0;
-    s[i] = s[j] ?? 0;
-    s[j] = tmp;
+    s[i] = s[ksa.j] ?? 0;
+    s[ksa.j] = tmp;
   }
 
   const out = new Uint8Array(data.length);
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let i = 0;
-  j = 0;
+  const prga = { i: 0, j: 0 };
   for (let k = 0; k < data.length; k += 1) {
-    i = (i + 1) & 0xff;
-    j = (j + (s[i] ?? 0)) & 0xff;
-    const tmp = s[i] ?? 0;
-    s[i] = s[j] ?? 0;
-    s[j] = tmp;
+    prga.i = (prga.i + 1) & 0xff;
+    prga.j = (prga.j + (s[prga.i] ?? 0)) & 0xff;
+    const tmp = s[prga.i] ?? 0;
+    s[prga.i] = s[prga.j] ?? 0;
+    s[prga.j] = tmp;
 
-    const t = ((s[i] ?? 0) + (s[j] ?? 0)) & 0xff;
+    const t = ((s[prga.i] ?? 0) + (s[prga.j] ?? 0)) & 0xff;
     const ks = s[t] ?? 0;
     out[k] = (data[k] ?? 0) ^ ks;
   }
 
   return out;
 }
-

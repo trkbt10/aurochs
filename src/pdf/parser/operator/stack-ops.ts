@@ -110,16 +110,15 @@ export function popArray(stack: OperandStack): [readonly (number | string)[], Op
  */
 export function popNumbers(stack: OperandStack, count: number): [number[], OperandStack] {
   const values: number[] = [];
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let currentStack = stack;
+  const state = { currentStack: stack };
 
   for (let i = 0; i < count; i++) {
-    const [val, newStack] = popNumber(currentStack);
+    const [val, newStack] = popNumber(state.currentStack);
     values.unshift(val); // Prepend to maintain original order
-    currentStack = newStack;
+    state.currentStack = newStack;
   }
 
-  return [values, currentStack];
+  return [values, state.currentStack];
 }
 
 /**
@@ -154,18 +153,15 @@ export function pushValues(stack: OperandStack, values: readonly OperandValue[])
  */
 export function finalizeArray(stack: OperandStack): OperandStack {
   const items: (number | string)[] = [];
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let currentStack = stack;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let foundStart = false;
+  const state = { currentStack: stack, foundStart: false };
 
-  while (currentStack.length > 0) {
-    const item = currentStack[currentStack.length - 1];
-    currentStack = currentStack.slice(0, -1);
+  while (state.currentStack.length > 0) {
+    const item = state.currentStack[state.currentStack.length - 1];
+    state.currentStack = state.currentStack.slice(0, -1);
 
     // Empty array serves as the array start marker
     if (Array.isArray(item) && item.length === 0) {
-      foundStart = true;
+      state.foundStart = true;
       break;
     }
 
@@ -174,11 +170,11 @@ export function finalizeArray(stack: OperandStack): OperandStack {
     }
   }
 
-  if (!foundStart) {
+  if (!state.foundStart) {
     console.warn("[PDF Parser] Array end found without matching start");
   }
 
-  return [...currentStack, items];
+  return [...state.currentStack, items];
 }
 
 // =============================================================================
@@ -195,18 +191,17 @@ export function finalizeArray(stack: OperandStack): OperandStack {
  */
 export function collectColorComponents(stack: OperandStack): [number[], OperandStack] {
   const components: number[] = [];
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let currentStack = stack;
+  const state = { currentStack: stack };
 
-  while (currentStack.length > 0) {
-    const top = currentStack[currentStack.length - 1];
+  while (state.currentStack.length > 0) {
+    const top = state.currentStack[state.currentStack.length - 1];
     if (typeof top === "number") {
       components.unshift(top);
-      currentStack = currentStack.slice(0, -1);
+      state.currentStack = state.currentStack.slice(0, -1);
     } else {
       break;
     }
   }
 
-  return [components, currentStack];
+  return [components, state.currentStack];
 }

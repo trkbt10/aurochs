@@ -106,17 +106,23 @@ function printElement(elem: PdfElement, index: number): void {
 }
 
 describe("modeling.pdf analysis", () => {
-  // eslint-disable-next-line no-restricted-syntax -- assigned in beforeAll
-  let pages: Awaited<ReturnType<typeof parsePdf>>["pages"];
+  const pagesState: { pages: Awaited<ReturnType<typeof parsePdf>>["pages"] | null } = { pages: null };
+  const requirePages = (): Awaited<ReturnType<typeof parsePdf>>["pages"] => {
+    if (!pagesState.pages) {
+      throw new Error("Pages are not loaded yet");
+    }
+    return pagesState.pages;
+  };
 
   beforeAll(async () => {
     const pdfBytes = readFileSync(PDF_PATH);
     const pdfDoc = await parsePdf(pdfBytes);
-    pages = pdfDoc.pages;
-    console.log(`\n=== Loaded ${pages.length} pages ===\n`);
+    pagesState.pages = pdfDoc.pages;
+    console.log(`\n=== Loaded ${pdfDoc.pages.length} pages ===\n`);
   });
 
   it("should analyze page 1 structure", () => {
+    const pages = requirePages();
     const page = pages[0];
     console.log(`\n=== Page 1: ${page.width}x${page.height} ===`);
     console.log(`Elements: ${page.elements.length}`);
@@ -156,6 +162,7 @@ describe("modeling.pdf analysis", () => {
   });
 
   it("should identify bold/italic fonts", () => {
+    const pages = requirePages();
     const page = pages[0];
     const texts = page.elements.filter((e): e is PdfText => e.type === "text");
 
@@ -208,6 +215,7 @@ describe("modeling.pdf analysis", () => {
   });
 
   it("should analyze path paint operations", () => {
+    const pages = requirePages();
     const page = pages[0];
     const paths = page.elements.filter((e): e is PdfPath => e.type === "path");
 
@@ -240,6 +248,7 @@ describe("modeling.pdf analysis", () => {
   });
 
   it("should find shapes near text (potential inline references)", () => {
+    const pages = requirePages();
     const page = pages[0];
     const texts = page.elements.filter((e): e is PdfText => e.type === "text");
     const paths = page.elements.filter((e): e is PdfPath => e.type === "path");
@@ -267,6 +276,7 @@ describe("modeling.pdf analysis", () => {
   });
 
   it("should analyze images and nearby shapes", () => {
+    const pages = requirePages();
     const page = pages[0];
     const images = page.elements.filter((e): e is PdfImage => e.type === "image");
     const paths = page.elements.filter((e): e is PdfPath => e.type === "path");
@@ -295,14 +305,16 @@ describe("modeling.pdf analysis", () => {
       const lineWidth = p.graphicsState.lineWidth;
 
       // Get approx bounds
-      // eslint-disable-next-line no-restricted-syntax -- conditionally assigned
-      let boundsInfo = "";
+      const boundsInfoParts: string[] = [];
       if (p.operations.length > 0) {
         const firstOp = p.operations[0];
         if (firstOp.type === "rect") {
-          boundsInfo = ` rect=(${firstOp.x.toFixed(0)},${firstOp.y.toFixed(0)},${firstOp.width.toFixed(0)}x${firstOp.height.toFixed(0)})`;
+          boundsInfoParts.push(
+            ` rect=(${firstOp.x.toFixed(0)},${firstOp.y.toFixed(0)},${firstOp.width.toFixed(0)}x${firstOp.height.toFixed(0)})`
+          );
         }
       }
+      const boundsInfo = boundsInfoParts.join("");
 
       console.log(
         `  [${i}] paintOp=${p.paintOp} ops=${p.operations.length} ` +
@@ -316,6 +328,7 @@ describe("modeling.pdf analysis", () => {
   });
 
   it("should check all pages for structure", () => {
+    const pages = requirePages();
     console.log(`\n=== All pages summary ===`);
     pages.forEach((page, i) => {
       const texts = page.elements.filter((e) => e.type === "text").length;
@@ -328,6 +341,7 @@ describe("modeling.pdf analysis", () => {
   });
 
   it("should analyze text widths for debugging", () => {
+    const pages = requirePages();
     const page = pages[0];
     const texts = page.elements.filter((e): e is PdfText => e.type === "text");
 
@@ -363,6 +377,7 @@ describe("modeling.pdf analysis", () => {
   });
 
   it("should analyze page 7 paths in detail (most shapes)", () => {
+    const pages = requirePages();
     const page = pages[6]; // Page 7 (0-indexed)
     const paths = page.elements.filter((e): e is PdfPath => e.type === "path");
     const texts = page.elements.filter((e): e is PdfText => e.type === "text");
@@ -383,16 +398,18 @@ describe("modeling.pdf analysis", () => {
       const stroke = p.graphicsState.strokeColor;
       const lineWidth = p.graphicsState.lineWidth;
       // Calculate approximate bounds from first few operations
-      // eslint-disable-next-line no-restricted-syntax -- conditionally assigned
-      let bounds = "";
+      const boundsParts: string[] = [];
       if (p.operations.length > 0) {
         const firstOp = p.operations[0];
         if (firstOp.type === "rect") {
-          bounds = ` rect=(${firstOp.x.toFixed(0)},${firstOp.y.toFixed(0)},${firstOp.width.toFixed(0)}x${firstOp.height.toFixed(0)})`;
+          boundsParts.push(
+            ` rect=(${firstOp.x.toFixed(0)},${firstOp.y.toFixed(0)},${firstOp.width.toFixed(0)}x${firstOp.height.toFixed(0)})`
+          );
         } else if (firstOp.type === "moveTo") {
-          bounds = ` start=(${firstOp.point.x.toFixed(0)},${firstOp.point.y.toFixed(0)})`;
+          boundsParts.push(` start=(${firstOp.point.x.toFixed(0)},${firstOp.point.y.toFixed(0)})`);
         }
       }
+      const bounds = boundsParts.join("");
       console.log(
         `    [${i}] ops=${p.operations.length} fill=${fill.colorSpace}[${fill.components.map((c) => c.toFixed(2)).join(",")}] ` +
         `stroke=${stroke.colorSpace}[${stroke.components.map((c) => c.toFixed(2)).join(",")}] ` +
@@ -529,6 +546,7 @@ describe("modeling.pdf analysis", () => {
   });
 
   it("should analyze inline reference positions", () => {
+    const pages = requirePages();
     const page = pages[0];
     const texts = page.elements.filter((e): e is PdfText => e.type === "text");
 
@@ -565,22 +583,22 @@ describe("modeling.pdf analysis", () => {
 // Additional test for Japanese PDF
 describe("Japanese PDF width analysis", () => {
   const JP_PDF_PATH = join(process.cwd(), "fixtures/samples/k-resource-dl.pdf");
-  // eslint-disable-next-line no-restricted-syntax -- assigned in beforeAll
-  let jpPages: Awaited<ReturnType<typeof parsePdf>>["pages"];
+  const jpPagesState: { pages: Awaited<ReturnType<typeof parsePdf>>["pages"] } = { pages: [] };
 
   beforeAll(async () => {
     try {
       const pdfBytes = readFileSync(JP_PDF_PATH);
       const pdfDoc = await parsePdf(pdfBytes);
-      jpPages = pdfDoc.pages;
-      console.log(`\n=== Loaded Japanese PDF: ${jpPages.length} pages ===\n`);
+      jpPagesState.pages = pdfDoc.pages;
+      console.log(`\n=== Loaded Japanese PDF: ${pdfDoc.pages.length} pages ===\n`);
     } catch (e) {
       console.log(`Failed to load Japanese PDF: ${e}`);
-      jpPages = [];
+      jpPagesState.pages = [];
     }
   });
 
   it("should analyze CJK vs Latin character widths", () => {
+    const jpPages = jpPagesState.pages;
     if (jpPages.length === 0) {
       console.log("Skipping: Japanese PDF not loaded");
       return;
@@ -676,11 +694,7 @@ describe("Japanese PDF width analysis", () => {
       console.log(`  W array size: ${wArr.items.length} entries`);
 
       // W array format: [cFirst [w1 w2 ...] cFirst2 cLast2 w ...]
-      // eslint-disable-next-line no-restricted-syntax -- analysis loop requires mutable index
-      let i = 0;
-      // eslint-disable-next-line no-restricted-syntax -- analysis loop counter
-      let sampleCount = 0;
-      while (i < wArr.items.length && sampleCount < 5) {
+      for (let i = 0, sampleCount = 0; i < wArr.items.length && sampleCount < 5; ) {
         const first = asNumber(resolve(page, wArr.items[i]));
         if (first === null) {
           i += 1;
@@ -715,6 +729,7 @@ describe("Japanese PDF width analysis", () => {
   });
 
   it("should debug CID lookup by extracting font metrics", async () => {
+    const jpPages = jpPagesState.pages;
     if (jpPages.length === 0) {
       console.log("Skipping: Japanese PDF not loaded");
       return;
@@ -993,25 +1008,25 @@ describe("Text Grouping analysis", () => {
     console.log(`Total TextBoxes: ${textBoxes.length}`);
 
     // Find the TextBox with most runs (should be flattened now)
-    // eslint-disable-next-line no-restricted-syntax -- reassigned in forEach
-    let maxRuns = 0;
-    // eslint-disable-next-line no-restricted-syntax -- reassigned in forEach
-    let maxRunsTextBox: SpShape | null = null;
+    const maxRunsInfo = textBoxes.reduce<{ maxRuns: number; textBox: SpShape | null }>(
+      (acc, shape) => {
+        const tb = shape.textBody;
+        if (!tb) {
+          return acc;
+        }
+        const totalRuns = tb.paragraphs.reduce((sum, p) => sum + p.runs.length, 0);
+        if (totalRuns > acc.maxRuns) {
+          return { maxRuns: totalRuns, textBox: shape };
+        }
+        return acc;
+      },
+      { maxRuns: 0, textBox: null }
+    );
 
-    for (const shape of textBoxes) {
-      const tb = shape.textBody;
-      if (!tb) {continue;}
-      const totalRuns = tb.paragraphs.reduce((sum, p) => sum + p.runs.length, 0);
-      if (totalRuns > maxRuns) {
-        maxRuns = totalRuns;
-        maxRunsTextBox = shape;
-      }
-    }
-
-    if (!maxRunsTextBox) {return;}
-    const tb = maxRunsTextBox.textBody;
+    if (!maxRunsInfo.textBox) {return;}
+    const tb = maxRunsInfo.textBox.textBody;
     if (tb) {
-      console.log(`\n--- TextBox with most runs (${maxRuns} runs) ---`);
+      console.log(`\n--- TextBox with most runs (${maxRunsInfo.maxRuns} runs) ---`);
       console.log(`Paragraphs: ${tb.paragraphs.length}`);
       console.log(`wrapping: ${tb.bodyProperties.wrapping}`);
 
@@ -1063,8 +1078,7 @@ describe("Receipt PDF analysis", () => {
     // Find texts that are positioned within filled rectangles
     console.log("\n--- Texts on filled shapes ---");
 
-    // eslint-disable-next-line no-restricted-syntax -- counter incremented in loop
-    let textsOnShapes = 0;
+    const state = { textsOnShapes: 0 };
     const textShapeMap = new Map<PdfText, PdfPath[]>();
 
     for (const text of texts.slice(0, 50)) {
@@ -1087,9 +1101,9 @@ describe("Receipt PDF analysis", () => {
       }
 
       if (containingShapes.length > 0) {
-        textsOnShapes++;
+        state.textsOnShapes += 1;
         textShapeMap.set(text, containingShapes);
-        if (textsOnShapes <= 10) {
+        if (state.textsOnShapes <= 10) {
           console.log(
             `  "${text.text.slice(0, 20)}" @ (${text.x.toFixed(1)}, ${text.y.toFixed(1)}) ` +
             `in ${containingShapes.length} shape(s)`
@@ -1098,7 +1112,7 @@ describe("Receipt PDF analysis", () => {
       }
     }
 
-    console.log(`\nTexts on shapes: ${textsOnShapes} / ${Math.min(50, texts.length)}`);
+    console.log(`\nTexts on shapes: ${state.textsOnShapes} / ${Math.min(50, texts.length)}`);
 
     // Current grouping result
     const groups = spatialGrouping(texts);
@@ -1173,21 +1187,19 @@ describe("Receipt PDF analysis", () => {
 
     // Show cells with their texts
     console.log("\n--- Cells with texts ---");
-    // eslint-disable-next-line no-restricted-syntax -- loop counter
-    let cellIndex = 0;
-    for (const [rect, cellTexts] of textsByRect) {
-      if (cellIndex >= 10) {break;}
-      const [x1, y1, x2, y2] = computePathBBox(rect);
-      const cellText = cellTexts.map(t => t.text).join("");
-      const fill = rect.graphicsState.fillColor;
-      console.log(
-        `  Cell[${cellIndex}] (${Math.min(x1, x2).toFixed(0)},${Math.min(y1, y2).toFixed(0)}) ` +
-        `${Math.abs(x2 - x1).toFixed(0)}x${Math.abs(y2 - y1).toFixed(0)} ` +
-        `fill=${fill.colorSpace}[${fill.components.map(c => c.toFixed(2)).join(",")}] ` +
-        `texts=${cellTexts.length}: "${cellText.slice(0, 30)}${cellText.length > 30 ? "..." : ""}"`
-      );
-      cellIndex++;
-    }
+    Array.from(textsByRect.entries())
+      .slice(0, 10)
+      .forEach(([rect, cellTexts], cellIndex) => {
+        const [x1, y1, x2, y2] = computePathBBox(rect);
+        const cellText = cellTexts.map(t => t.text).join("");
+        const fill = rect.graphicsState.fillColor;
+        console.log(
+          `  Cell[${cellIndex}] (${Math.min(x1, x2).toFixed(0)},${Math.min(y1, y2).toFixed(0)}) ` +
+          `${Math.abs(x2 - x1).toFixed(0)}x${Math.abs(y2 - y1).toFixed(0)} ` +
+          `fill=${fill.colorSpace}[${fill.components.map(c => c.toFixed(2)).join(",")}] ` +
+          `texts=${cellTexts.length}: "${cellText.slice(0, 30)}${cellText.length > 30 ? "..." : ""}"`
+        );
+      });
 
     // Propose: Group texts by containing cell
     console.log("\n--- Proposed cell-based grouping ---");
@@ -1206,23 +1218,23 @@ describe("K-resource PDF table analysis", () => {
     const pdfDoc = await parsePdf(pdfBytes);
 
     // Find a page with more paths (likely has tables)
-    // eslint-disable-next-line no-restricted-syntax -- reassigned in loop
-    let bestPage = pdfDoc.pages[0];
-    // eslint-disable-next-line no-restricted-syntax -- reassigned in loop
-    let maxPaths = 0;
-    for (let i = 0; i < Math.min(10, pdfDoc.pages.length); i++) {
-      const pathCount = pdfDoc.pages[i].elements.filter(e => e.type === "path").length;
-      if (pathCount > maxPaths) {
-        maxPaths = pathCount;
-        bestPage = pdfDoc.pages[i];
-      }
-    }
+    const candidatePages = pdfDoc.pages.slice(0, Math.min(10, pdfDoc.pages.length));
+    const best = candidatePages.reduce<{ page: typeof pdfDoc.pages[number]; maxPaths: number }>(
+      (acc, page) => {
+        const pathCount = page.elements.filter(e => e.type === "path").length;
+        if (pathCount > acc.maxPaths) {
+          return { page, maxPaths: pathCount };
+        }
+        return acc;
+      },
+      { page: candidatePages[0], maxPaths: 0 }
+    );
 
-    const texts = bestPage.elements.filter((e): e is PdfText => e.type === "text");
-    const paths = bestPage.elements.filter((e): e is PdfPath => e.type === "path");
+    const texts = best.page.elements.filter((e): e is PdfText => e.type === "text");
+    const paths = best.page.elements.filter((e): e is PdfPath => e.type === "path");
 
     console.log("\n=== K-resource PDF Table Analysis ===");
-    console.log(`Page with most paths: ${maxPaths} paths, ${texts.length} texts`);
+    console.log(`Page with most paths: ${best.maxPaths} paths, ${texts.length} texts`);
 
     // Find filled rectangles
     const filledRects = paths.filter(p =>
@@ -1236,9 +1248,7 @@ describe("K-resource PDF table analysis", () => {
     const textsByRect = new Map<PdfPath, PdfText[]>();
     const textsNotInRect: PdfText[] = [];
 
-    for (const text of texts) {
-      // eslint-disable-next-line no-restricted-syntax -- flag updated in inner loop
-      let found = false;
+    const tryPlaceTextIntoRects = (text: PdfText): boolean => {
       for (const rect of filledRects) {
         const [x1, y1, x2, y2] = computePathBBox(rect);
         const minX = Math.min(x1, x2);
@@ -1253,11 +1263,14 @@ describe("K-resource PDF table analysis", () => {
             textsByRect.set(rect, []);
           }
           textsByRect.get(rect)!.push(text);
-          found = true;
-          break;
+          return true;
         }
       }
-      if (!found) {
+      return false;
+    };
+
+    for (const text of texts) {
+      if (!tryPlaceTextIntoRects(text)) {
         textsNotInRect.push(text);
       }
     }
@@ -1268,21 +1281,19 @@ describe("K-resource PDF table analysis", () => {
 
     // Show sample cells
     console.log("\n--- Sample cells ---");
-    // eslint-disable-next-line no-restricted-syntax -- loop counter
-    let cellIndex = 0;
-    for (const [rect, cellTexts] of textsByRect) {
-      if (cellIndex >= 15) {break;}
-      const [x1, y1, x2, y2] = computePathBBox(rect);
-      const cellText = cellTexts.map(t => t.text).join("");
-      const fill = rect.graphicsState.fillColor;
-      console.log(
-        `  Cell[${cellIndex}] (${Math.min(x1, x2).toFixed(0)},${Math.min(y1, y2).toFixed(0)}) ` +
-        `${Math.abs(x2 - x1).toFixed(0)}x${Math.abs(y2 - y1).toFixed(0)} ` +
-        `fill=${fill.components.map(c => c.toFixed(2)).join(",")} ` +
-        `texts=${cellTexts.length}: "${cellText.slice(0, 25)}${cellText.length > 25 ? "..." : ""}"`
-      );
-      cellIndex++;
-    }
+    Array.from(textsByRect.entries())
+      .slice(0, 15)
+      .forEach(([rect, cellTexts], cellIndex) => {
+        const [x1, y1, x2, y2] = computePathBBox(rect);
+        const cellText = cellTexts.map(t => t.text).join("");
+        const fill = rect.graphicsState.fillColor;
+        console.log(
+          `  Cell[${cellIndex}] (${Math.min(x1, x2).toFixed(0)},${Math.min(y1, y2).toFixed(0)}) ` +
+          `${Math.abs(x2 - x1).toFixed(0)}x${Math.abs(y2 - y1).toFixed(0)} ` +
+          `fill=${fill.components.map(c => c.toFixed(2)).join(",")} ` +
+          `texts=${cellTexts.length}: "${cellText.slice(0, 25)}${cellText.length > 25 ? "..." : ""}"`
+        );
+      });
 
     // Current grouping result for comparison
     const groups = spatialGrouping(texts);
@@ -1344,14 +1355,14 @@ describe("TextBox width and spacing verification", () => {
 
       // Check for gaps between runs
       const sortedRuns = [...allRuns].sort((a, b) => a.x - b.x);
-      // eslint-disable-next-line no-restricted-syntax -- accumulated in loop
-      let totalGaps = 0;
-      for (let j = 1; j < sortedRuns.length; j++) {
+      const totalGaps = sortedRuns.reduce((sum, curr, j) => {
+        if (j === 0) {
+          return sum;
+        }
         const prev = sortedRuns[j - 1];
-        const curr = sortedRuns[j];
         const gap = curr.x - (prev.x + prev.width);
-        totalGaps += gap;
-      }
+        return sum + gap;
+      }, 0);
 
       const minX = Math.min(...allRuns.map(r => r.x));
       const maxX = Math.max(...allRuns.map(r => r.x + r.width));
@@ -1383,8 +1394,7 @@ describe("TextBox width and spacing verification", () => {
       return a.x - b.x;
     });
 
-    // eslint-disable-next-line no-restricted-syntax -- counter incremented in loop
-    let adjacentPairs = 0;
+    const state = { adjacentPairs: 0 };
     const adjacentExamples: { prev: PdfText; curr: PdfText; gap: number }[] = [];
 
     for (let i = 1; i < sortedByX.length; i++) {
@@ -1395,7 +1405,7 @@ describe("TextBox width and spacing verification", () => {
       if (Math.abs(prev.y - curr.y) < 5) {
         const gap = curr.x - (prev.x + prev.width);
         if (gap >= -0.5 && gap <= 1) {
-          adjacentPairs++;
+          state.adjacentPairs += 1;
           if (adjacentExamples.length < 10) {
             adjacentExamples.push({ prev, curr, gap });
           }
@@ -1403,7 +1413,7 @@ describe("TextBox width and spacing verification", () => {
       }
     }
 
-    console.log(`Adjacent pairs (gap 0-1pt): ${adjacentPairs}`);
+    console.log(`Adjacent pairs (gap 0-1pt): ${state.adjacentPairs}`);
     console.log("\n--- Sample adjacent pairs ---");
     adjacentExamples.forEach(({ prev, curr, gap }, i) => {
       console.log(

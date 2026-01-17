@@ -50,9 +50,7 @@ function ascii85Encode(data: Uint8Array): string {
     }
 
     const digits = new Array<number>(5);
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-    let v = value;
-    for (let j = 4; j >= 0; j -= 1) {
+    for (let j = 4, v = value; j >= 0; j -= 1) {
       digits[j] = v % 85;
       v = Math.floor(v / 85);
     }
@@ -80,68 +78,59 @@ function lzwEncode(data: Uint8Array, options: LzwEncodeOptions = { earlyChange: 
   const dict = new Map<string, number>();
   for (let i = 0; i < 256; i += 1) {dict.set(String.fromCharCode(i), i);}
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let nextCode = 258;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let codeSize = 9;
+  const build = { nextCode: 258, codeSize: 9 };
   const codes: number[] = [CLEAR];
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let w = "";
+  const wState = { w: "" };
   for (const b of data) {
     const c = String.fromCharCode(b);
-    const wc = w + c;
+    const wc = wState.w + c;
     if (dict.has(wc)) {
-      w = wc;
+      wState.w = wc;
       continue;
     }
-    if (w.length > 0) {codes.push(dict.get(w)!);}
+    if (wState.w.length > 0) {codes.push(dict.get(wState.w)!);}
 
-    if (nextCode <= maxCode) {
-      dict.set(wc, nextCode);
-      nextCode += 1;
-      const threshold = early ? (1 << codeSize) - 1 : 1 << codeSize;
-      if (nextCode === threshold && codeSize < 12) {codeSize += 1;}
+    if (build.nextCode <= maxCode) {
+      dict.set(wc, build.nextCode);
+      build.nextCode += 1;
+      const threshold = early ? (1 << build.codeSize) - 1 : 1 << build.codeSize;
+      if (build.nextCode === threshold && build.codeSize < 12) {build.codeSize += 1;}
     }
 
-    w = c;
+    wState.w = c;
   }
-  if (w.length > 0) {codes.push(dict.get(w)!);}
+  if (wState.w.length > 0) {codes.push(dict.get(wState.w)!);}
   codes.push(EOD);
 
   const out: number[] = [];
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let bitBuf = 0;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let bitLen = 0;
+  const pack = { bitBuf: 0, bitLen: 0, nextCode: 258, codeSize: 9 };
 
-  nextCode = 258;
-  codeSize = 9;
   for (const code of codes) {
-    bitBuf = (bitBuf << codeSize) | (code & ((1 << codeSize) - 1));
-    bitLen += codeSize;
-    while (bitLen >= 8) {
-      const shift = bitLen - 8;
-      out.push((bitBuf >>> shift) & 0xff);
-      bitLen -= 8;
-      bitBuf &= (1 << bitLen) - 1;
+    pack.bitBuf = (pack.bitBuf << pack.codeSize) | (code & ((1 << pack.codeSize) - 1));
+    pack.bitLen += pack.codeSize;
+    while (pack.bitLen >= 8) {
+      const shift = pack.bitLen - 8;
+      out.push((pack.bitBuf >>> shift) & 0xff);
+      pack.bitLen -= 8;
+      pack.bitBuf &= (1 << pack.bitLen) - 1;
     }
 
     if (code === CLEAR) {
-      nextCode = 258;
-      codeSize = 9;
+      pack.nextCode = 258;
+      pack.codeSize = 9;
       continue;
     }
     if (code === EOD) {break;}
 
-    if (nextCode <= maxCode) {
-      nextCode += 1;
-      const threshold = early ? (1 << codeSize) - 1 : 1 << codeSize;
-      if (nextCode === threshold && codeSize < 12) {codeSize += 1;}
+    if (pack.nextCode <= maxCode) {
+      pack.nextCode += 1;
+      const threshold = early ? (1 << pack.codeSize) - 1 : 1 << pack.codeSize;
+      if (pack.nextCode === threshold && pack.codeSize < 12) {pack.codeSize += 1;}
     }
   }
 
-  if (bitLen > 0) {out.push((bitBuf << (8 - bitLen)) & 0xff);}
+  if (pack.bitLen > 0) {out.push((pack.bitBuf << (8 - pack.bitLen)) & 0xff);}
   return new Uint8Array(out);
 }
 
@@ -167,16 +156,15 @@ function buildMinimalPdfWithImageXObject(args: {
   const parts: string[] = [header];
   const offsets: number[] = [0];
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let cursor = header.length;
+  const cursor = { value: header.length };
   for (const n of order) {
-    offsets[n] = cursor;
+    offsets[n] = cursor.value;
     const body = `${n} 0 obj\n${objects[n]}\nendobj\n`;
     parts.push(body);
-    cursor += body.length;
+    cursor.value += body.length;
   }
 
-  const xrefStart = cursor;
+  const xrefStart = cursor.value;
   const size = Math.max(...order) + 1;
   const xrefLines: string[] = [];
   xrefLines.push("xref\n");
@@ -218,16 +206,15 @@ function buildMinimalPdfWithSmaskImageXObject(args: {
   const parts: string[] = [header];
   const offsets: number[] = [0];
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let cursor = header.length;
+  const cursor = { value: header.length };
   for (const n of order) {
-    offsets[n] = cursor;
+    offsets[n] = cursor.value;
     const body = `${n} 0 obj\n${objects[n]}\nendobj\n`;
     parts.push(body);
-    cursor += body.length;
+    cursor.value += body.length;
   }
 
-  const xrefStart = cursor;
+  const xrefStart = cursor.value;
   const size = Math.max(...order) + 1;
   const xrefLines: string[] = [];
   xrefLines.push("xref\n");
@@ -269,16 +256,15 @@ function buildMinimalPdfWithMaskImageXObject(args: {
   const parts: string[] = [header];
   const offsets: number[] = [0];
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let cursor = header.length;
+  const cursor = { value: header.length };
   for (const n of order) {
-    offsets[n] = cursor;
+    offsets[n] = cursor.value;
     const body = `${n} 0 obj\n${objects[n]}\nendobj\n`;
     parts.push(body);
-    cursor += body.length;
+    cursor.value += body.length;
   }
 
-  const xrefStart = cursor;
+  const xrefStart = cursor.value;
   const size = Math.max(...order) + 1;
   const xrefLines: string[] = [];
   xrefLines.push("xref\n");

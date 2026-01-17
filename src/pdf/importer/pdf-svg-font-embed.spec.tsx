@@ -67,7 +67,6 @@ describe("SVG rendering with embedded fonts", () => {
     const fontFaceFamilies: string[] = [];
     styleElements.forEach((style) => {
       const content = style.textContent ?? "";
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
       let match;
       while ((match = fontFaceRegex.exec(content)) !== null) {
         fontFaceFamilies.push(match[1]);
@@ -96,7 +95,6 @@ describe("SVG rendering with embedded fonts", () => {
     });
 
     // Find style element with @font-face
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
     let fontFaceStyleFound = false;
     styleElements.forEach((style) => {
       if (style.textContent?.includes("@font-face")) {

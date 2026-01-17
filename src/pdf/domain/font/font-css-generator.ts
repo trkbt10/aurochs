@@ -82,11 +82,6 @@ function uint8ArrayToBase64(data: Uint8Array): string {
   }
 
   // Browser environment
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let binary = "";
-  const len = data.byteLength;
-  for (let i = 0; i < len; i++) {
-    binary += String.fromCharCode(data[i]!);
-  }
+  const binary = Array.from(data, (byte) => String.fromCharCode(byte)).join("");
   return btoa(binary);
 }

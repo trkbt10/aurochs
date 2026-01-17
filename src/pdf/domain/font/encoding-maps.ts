@@ -688,7 +688,6 @@ export function applyEncodingDifferences(
   differences: readonly (number | string)[]
 ): Map<number, string> {
   const result = new Map(baseEncoding);
-  // eslint-disable-next-line no-restricted-syntax -- mutable state needed for PDF Differences array processing
   let currentCode = 0;
 
   for (const entry of differences) {

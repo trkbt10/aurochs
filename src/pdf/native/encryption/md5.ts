@@ -32,6 +32,21 @@ const S2 = [5, 9, 14, 20] as const;
 const S3 = [4, 11, 16, 23] as const;
 const S4 = [6, 10, 15, 21] as const;
 
+type RoundParams = { fn: number; gIdx: number; s: number };
+
+function getRoundParams(n: number, bb: number, cc: number, dd: number): RoundParams {
+  if (n < 16) {
+    return { fn: f(bb, cc, dd), gIdx: n, s: S1[n % 4]! };
+  }
+  if (n < 32) {
+    return { fn: g(bb, cc, dd), gIdx: (5 * n + 1) % 16, s: S2[n % 4]! };
+  }
+  if (n < 48) {
+    return { fn: h(bb, cc, dd), gIdx: (3 * n + 5) % 16, s: S3[n % 4]! };
+  }
+  return { fn: i(bb, cc, dd), gIdx: (7 * n) % 16, s: S4[n % 4]! };
+}
+
 const K: readonly number[] = (() => {
   const out: number[] = [];
   for (let n = 0; n < 64; n += 1) {
@@ -88,71 +103,39 @@ export function md5(input: Uint8Array): Uint8Array {
   writeUint32LE(padded, padded.length - 8, lo);
   writeUint32LE(padded, padded.length - 4, hi);
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let a = 0x67452301;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let b = 0xefcdab89;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let c = 0x98badcfe;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let d = 0x10325476;
+  const state = {
+    a: 0x67452301,
+    b: 0xefcdab89,
+    c: 0x98badcfe,
+    d: 0x10325476,
+  };
 
   const words = toWordsLE(padded);
 
   for (let block = 0; block < words.length; block += 16) {
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-    let aa = a;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-    let bb = b;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-    let cc = c;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-    let dd = d;
+    const round = { aa: state.a, bb: state.b, cc: state.c, dd: state.d };
 
     for (let n = 0; n < 64; n += 1) {
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-      let fn: number;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-      let gIdx: number;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-      let s: number;
-      if (n < 16) {
-        fn = f(bb, cc, dd);
-        gIdx = n;
-        s = S1[n % 4]!;
-      } else if (n < 32) {
-        fn = g(bb, cc, dd);
-        gIdx = (5 * n + 1) % 16;
-        s = S2[n % 4]!;
-      } else if (n < 48) {
-        fn = h(bb, cc, dd);
-        gIdx = (3 * n + 5) % 16;
-        s = S3[n % 4]!;
-      } else {
-        fn = i(bb, cc, dd);
-        gIdx = (7 * n) % 16;
-        s = S4[n % 4]!;
-      }
+      const { fn, gIdx, s } = getRoundParams(n, round.bb, round.cc, round.dd);
 
       const m = words[block + gIdx] ?? 0;
-      const t = add(add(add(aa, fn), m), K[n] ?? 0);
-      aa = dd;
-      dd = cc;
-      cc = bb;
-      bb = add(bb, rotl(t, s));
+      const t = add(add(add(round.aa, fn), m), K[n] ?? 0);
+      round.aa = round.dd;
+      round.dd = round.cc;
+      round.cc = round.bb;
+      round.bb = add(round.bb, rotl(t, s));
     }
 
-    a = add(a, aa);
-    b = add(b, bb);
-    c = add(c, cc);
-    d = add(d, dd);
+    state.a = add(state.a, round.aa);
+    state.b = add(state.b, round.bb);
+    state.c = add(state.c, round.cc);
+    state.d = add(state.d, round.dd);
   }
 
   const out = new Uint8Array(16);
-  writeUint32LE(out, 0, a);
-  writeUint32LE(out, 4, b);
-  writeUint32LE(out, 8, c);
-  writeUint32LE(out, 12, d);
+  writeUint32LE(out, 0, state.a);
+  writeUint32LE(out, 4, state.b);
+  writeUint32LE(out, 8, state.c);
+  writeUint32LE(out, 12, state.d);
   return out;
 }
-

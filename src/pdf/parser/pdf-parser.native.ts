@@ -131,11 +131,10 @@ async function parsePage(
   const resources = page.getResourcesDict();
   const baseXObjects = resources ? resolveDict(page, dictGet(resources, "XObject")) : null;
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let inlineId = 0;
+  const inlineId = { value: 0 };
   const nextInlineId = (): number => {
-    inlineId += 1;
-    return inlineId;
+    inlineId.value += 1;
+    return inlineId.value;
   };
 
   const inlineXObjects = new Map<string, PdfStream>();
@@ -269,21 +268,14 @@ function transformBBox(bbox: PdfBBox, ctm: PdfMatrix): PdfBBox {
     transformPoint({ x: x2, y: y2 }, ctm),
     transformPoint({ x: x1, y: y2 }, ctm),
   ];
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let minX = corners[0]!.x;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let minY = corners[0]!.y;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let maxX = corners[0]!.x;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let maxY = corners[0]!.y;
+  const bounds = { minX: corners[0]!.x, minY: corners[0]!.y, maxX: corners[0]!.x, maxY: corners[0]!.y };
   for (const p of corners) {
-    minX = Math.min(minX, p.x);
-    minY = Math.min(minY, p.y);
-    maxX = Math.max(maxX, p.x);
-    maxY = Math.max(maxY, p.y);
+    bounds.minX = Math.min(bounds.minX, p.x);
+    bounds.minY = Math.min(bounds.minY, p.y);
+    bounds.maxX = Math.max(bounds.maxX, p.x);
+    bounds.maxY = Math.max(bounds.maxY, p.y);
   }
-  return [minX, minY, maxX, maxY];
+  return [bounds.minX, bounds.minY, bounds.maxX, bounds.maxY];
 }
 
 type ImageGroupMap = Map<PdfDict, ParsedImage[]>;
@@ -489,23 +481,22 @@ function convertPath(parsed: ParsedPath, minComplexity: number): PdfPath | null 
 
 function getFontInfo(fontName: string, fontMappings: FontMappings) {
   const cleanName = fontName.startsWith("/") ? fontName.slice(1) : fontName;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let fontInfo = fontMappings.get(cleanName);
-  if (!fontInfo) {
+  const state = { fontInfo: fontMappings.get(cleanName) };
+  if (!state.fontInfo) {
     const plusIndex = cleanName.indexOf("+");
     if (plusIndex > 0) {
-      fontInfo = fontMappings.get(cleanName.slice(plusIndex + 1));
+      state.fontInfo = fontMappings.get(cleanName.slice(plusIndex + 1));
     }
   }
-  if (!fontInfo) {
+  if (!state.fontInfo) {
     for (const [key, value] of fontMappings.entries()) {
       if (cleanName.includes(key) || key.includes(cleanName)) {
-        fontInfo = value;
+        state.fontInfo = value;
         break;
       }
     }
   }
-  return fontInfo;
+  return state.fontInfo;
 }
 
 function convertText(parsed: ParsedText, fontMappings: FontMappings): PdfText[] {

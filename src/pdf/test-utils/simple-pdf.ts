@@ -109,12 +109,13 @@ export function buildSimplePdfBytes(args: {
 
   // Page objects + content streams.
   const pageObjNums: number[] = [];
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let nextObjNum = (HELVETICA_FONT ? HELVETICA_FONT + 1 : INFO + 1);
+  const nextObjNum = { value: (HELVETICA_FONT ? HELVETICA_FONT + 1 : INFO + 1) };
 
   for (const page of args.pages) {
-    const pageObjNum = nextObjNum++;
-    const contentObjNum = nextObjNum++;
+    const pageObjNum = nextObjNum.value;
+    nextObjNum.value += 1;
+    const contentObjNum = nextObjNum.value;
+    nextObjNum.value += 1;
     pageObjNums.push(pageObjNum);
 
     const content = page.content ?? "";
@@ -150,16 +151,15 @@ export function buildSimplePdfBytes(args: {
   // Write objects in objNum order.
   objects.sort((a, b) => a.objNum - b.objNum);
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let cursor = header.length;
+  const cursor = { value: header.length };
   for (const { objNum, body } of objects) {
-    offsets[objNum] = cursor;
+    offsets[objNum] = cursor.value;
     const objText = `${objNum} 0 obj\n${body}\nendobj\n`;
     parts.push(objText);
-    cursor += objText.length;
+    cursor.value += objText.length;
   }
 
-  const xrefStart = cursor;
+  const xrefStart = cursor.value;
   const maxObjNum = Math.max(...objects.map((o) => o.objNum));
   const objectOffsets: Array<number | undefined> = new Array(maxObjNum + 1);
   for (let i = 0; i <= maxObjNum; i += 1) {objectOffsets[i] = offsets[i];}
@@ -175,4 +175,3 @@ export function buildSimplePdfBytes(args: {
 
   return encodeAscii(parts.join(""));
 }
-

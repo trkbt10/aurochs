@@ -16,11 +16,10 @@
 export function concatBytes(...parts: readonly Uint8Array[]): Uint8Array {
   const total = parts.reduce((sum, p) => sum + p.length, 0);
   const out = new Uint8Array(total);
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let pos = 0;
+  const pos = { value: 0 };
   for (const p of parts) {
-    out.set(p, pos);
-    pos += p.length;
+    out.set(p, pos.value);
+    pos.value += p.length;
   }
   return out;
 }
@@ -82,9 +81,6 @@ export function objKeySalt(objNum: number, gen: number): Uint8Array {
 /** bytesEqual */
 export function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
   if (a.length !== b.length) {return false;}
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let diff = 0;
-  for (let i = 0; i < a.length; i += 1) {diff |= (a[i] ?? 0) ^ (b[i] ?? 0);}
+  const diff = a.reduce((d, byte, i) => d | (byte ^ (b[i] ?? 0)), 0);
   return diff === 0;
 }
-

@@ -2,6 +2,15 @@
  * @file src/pdf/native/scan.ts
  */
 
+function bytesMatchAt(haystack: Uint8Array, needle: Uint8Array, start: number): boolean {
+  for (let j = 0; j < needle.length; j += 1) {
+    if (haystack[start + j] !== needle[j]) {
+      return false;
+    }
+  }
+  return true;
+}
+
 
 
 
@@ -17,15 +26,7 @@ export function lastIndexOfBytes(haystack: Uint8Array, needle: Uint8Array): numb
   if (needle.length === 0) {return haystack.length;}
   if (needle.length > haystack.length) {return -1;}
   for (let i = haystack.length - needle.length; i >= 0; i -= 1) {
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-    let ok = true;
-    for (let j = 0; j < needle.length; j += 1) {
-      if (haystack[i + j] !== needle[j]) {
-        ok = false;
-        break;
-      }
-    }
-    if (ok) {return i;}
+    if (bytesMatchAt(haystack, needle, i)) {return i;}
   }
   return -1;
 }
@@ -45,15 +46,7 @@ export function indexOfBytes(haystack: Uint8Array, needle: Uint8Array, from: num
   if (needle.length === 0) {return from;}
   const start = Math.max(0, from);
   for (let i = start; i + needle.length <= haystack.length; i += 1) {
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-    let ok = true;
-    for (let j = 0; j < needle.length; j += 1) {
-      if (haystack[i + j] !== needle[j]) {
-        ok = false;
-        break;
-      }
-    }
-    if (ok) {return i;}
+    if (bytesMatchAt(haystack, needle, i)) {return i;}
   }
   return -1;
 }
@@ -107,4 +100,3 @@ export function isDelimiter(byte: number): boolean {
     byte === 0x25 // %
   );
 }
-

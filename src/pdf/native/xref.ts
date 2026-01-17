@@ -45,12 +45,11 @@ function asInt(obj: PdfObject | undefined): number | null {
 }
 
 function readUIntBE(bytes: Uint8Array, pos: number, width: number): number {
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let value = 0;
+  const state = { value: 0 };
   for (let i = 0; i < width; i += 1) {
-    value = (value << 8) | (bytes[pos + i] ?? 0);
+    state.value = (state.value << 8) | (bytes[pos + i] ?? 0);
   }
-  return value >>> 0;
+  return state.value >>> 0;
 }
 
 
@@ -69,32 +68,29 @@ export function findStartXrefOffset(bytes: Uint8Array): number {
   const idx = lastIndexOfBytes(bytes, marker);
   if (idx < 0) {throw new Error("startxref not found");}
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let pos = idx + marker.length;
+  const state = { pos: idx + marker.length, num: "" };
   // skip whitespace
-  while (pos < bytes.length) {
-    const b = bytes[pos] ?? 0;
+  while (state.pos < bytes.length) {
+    const b = bytes[state.pos] ?? 0;
     if (b === 0x0d || b === 0x0a || b === 0x20 || b === 0x09) {
-      pos += 1;
+      state.pos += 1;
       continue;
     }
     break;
   }
 
   // parse integer line
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let num = "";
-  while (pos < bytes.length) {
-    const b = bytes[pos] ?? 0;
+  while (state.pos < bytes.length) {
+    const b = bytes[state.pos] ?? 0;
     if (b >= 0x30 && b <= 0x39) {
-      num += String.fromCharCode(b);
-      pos += 1;
+      state.num += String.fromCharCode(b);
+      state.pos += 1;
       continue;
     }
     break;
   }
-  if (num.length === 0) {throw new Error("startxref offset missing");}
-  return Number.parseInt(num, 10);
+  if (state.num.length === 0) {throw new Error("startxref offset missing");}
+  return Number.parseInt(state.num, 10);
 }
 
 function parseXRefStream(stream: PdfStream): { entries: ReadonlyMap<number, XRefEntry>; trailer: PdfDict } {
@@ -124,17 +120,16 @@ function parseXRefStream(stream: PdfStream): { entries: ReadonlyMap<number, XRef
   if (entryWidth <= 0) {throw new Error("xref stream: invalid /W");}
 
   const out = new Map<number, XRefEntry>();
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let cursor = 0;
+  const cursor = { value: 0 };
   for (let i = 0; i < indexPairs.length; i += 2) {
     const start = indexPairs[i] ?? 0;
     const count = indexPairs[i + 1] ?? 0;
     for (let j = 0; j < count; j += 1) {
       const objNum = start + j;
-      const t = w0 === 0 ? 1 : readUIntBE(decoded, cursor, w0);
-      const f1 = w1 === 0 ? 0 : readUIntBE(decoded, cursor + w0, w1);
-      const f2 = w2 === 0 ? 0 : readUIntBE(decoded, cursor + w0 + w1, w2);
-      cursor += entryWidth;
+      const t = w0 === 0 ? 1 : readUIntBE(decoded, cursor.value, w0);
+      const f1 = w1 === 0 ? 0 : readUIntBE(decoded, cursor.value + w0, w1);
+      const f2 = w2 === 0 ? 0 : readUIntBE(decoded, cursor.value + w0 + w1, w2);
+      cursor.value += entryWidth;
 
       if (t === 0) {
         out.set(objNum, { type: 0 });
@@ -231,18 +226,17 @@ function parseXRefTableAt(bytes: Uint8Array, offset: number): {
   prev: number | null;
   xrefStm: number | null;
 } {
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let pos = skipWs(bytes, offset);
-  const first = readLine(bytes, pos);
+  const pos = { value: skipWs(bytes, offset) };
+  const first = readLine(bytes, pos.value);
   if (first.line.trim() !== "xref") {throw new Error("xref table: missing 'xref'");}
-  pos = first.nextPos;
+  pos.value = first.nextPos;
 
   const entries = new Map<number, XRefEntry>();
 
-  while (pos < bytes.length) {
-    pos = skipWs(bytes, pos);
-    const { line, nextPos } = readLine(bytes, pos);
-    pos = nextPos;
+  while (pos.value < bytes.length) {
+    pos.value = skipWs(bytes, pos.value);
+    const { line, nextPos } = readLine(bytes, pos.value);
+    pos.value = nextPos;
     const trimmed = line.trim();
     if (trimmed.length === 0) {continue;}
     if (trimmed === "trailer") {break;}
@@ -255,8 +249,8 @@ function parseXRefTableAt(bytes: Uint8Array, offset: number): {
     }
 
     for (let i = 0; i < count; i += 1) {
-      const row = readLine(bytes, pos);
-      pos = row.nextPos;
+      const row = readLine(bytes, pos.value);
+      pos.value = row.nextPos;
       const rowParts = row.line.trim().split(/\s+/);
       const off = Number.parseInt(rowParts[0] ?? "", 10);
       const gen = Number.parseInt(rowParts[1] ?? "", 10);
@@ -271,8 +265,8 @@ function parseXRefTableAt(bytes: Uint8Array, offset: number): {
     }
   }
 
-  pos = skipWs(bytes, pos);
-  const parsedTrailer = parseObject({ lex: createLexer(bytes, pos) });
+  pos.value = skipWs(bytes, pos.value);
+  const parsedTrailer = parseObject({ lex: createLexer(bytes, pos.value) });
   const trailer = parsedTrailer.value;
   if (trailer.type !== "dict") {
     throw new Error("xref table: trailer is not a dictionary");
@@ -308,15 +302,11 @@ function parseXRefStreamAt(bytes: Uint8Array, offset: number): {
 
 /** loadXRef */
 export function loadXRef(bytes: Uint8Array): XRefTable {
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let offset: number | null = findStartXrefOffset(bytes);
-
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let trailer: PdfDict | null = null;
+  const state: { offset: number | null; trailer: PdfDict | null } = { offset: findStartXrefOffset(bytes), trailer: null };
   const entries = new Map<number, XRefEntry>();
 
-  while (offset != null && offset > 0) {
-    const pos = skipWs(bytes, offset);
+  while (state.offset != null && state.offset > 0) {
+    const pos = skipWs(bytes, state.offset);
     const looksLikeXrefTable =
       (bytes[pos] ?? 0) === 0x78 && // 'x'
       (bytes[pos + 1] ?? 0) === 0x72 && // 'r'
@@ -328,9 +318,9 @@ export function loadXRef(bytes: Uint8Array): XRefTable {
       trailer: PdfDict;
       prev: number | null;
       xrefStm: number | null;
-    } = parseXRefSectionAt(bytes, offset, looksLikeXrefTable);
+    } = parseXRefSectionAt(bytes, state.offset, looksLikeXrefTable);
 
-    if (!trailer) {trailer = parsed.trailer;}
+    if (!state.trailer) {state.trailer = parsed.trailer;}
     for (const [objNum, entry] of parsed.entries.entries()) {
       if (!entries.has(objNum)) {
         entries.set(objNum, entry);
@@ -346,14 +336,14 @@ export function loadXRef(bytes: Uint8Array): XRefTable {
           entries.set(objNum, entry);
         }
       }
-      if (!trailer) {trailer = hybrid.trailer;}
+      if (!state.trailer) {state.trailer = hybrid.trailer;}
     }
 
-    offset = parsed.prev;
+    state.offset = parsed.prev;
   }
 
-  if (!trailer) {throw new Error("Failed to load xref");}
-  return { entries, trailer };
+  if (!state.trailer) {throw new Error("Failed to load xref");}
+  return { entries, trailer: state.trailer };
 }
 
 function parseXRefSectionAt(

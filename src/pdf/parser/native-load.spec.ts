@@ -31,19 +31,16 @@ function pad10(n: number): string {
 
 function buildXrefTable(entries: ReadonlyArray<{ readonly obj: number; readonly offset: number; readonly gen: number }>, size: number): string {
   const byObj = new Map<number, { offset: number; gen: number }>(entries.map((e) => [e.obj, { offset: e.offset, gen: e.gen }]));
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let out = "xref\n";
-  out += `0 ${size}\n`;
-  out += "0000000000 65535 f \n";
+  const lines: string[] = ["xref", `0 ${size}`, "0000000000 65535 f "];
   for (let obj = 1; obj < size; obj += 1) {
     const e = byObj.get(obj);
     if (!e) {
-      out += "0000000000 00000 f \n";
+      lines.push("0000000000 00000 f ");
       continue;
     }
-    out += `${pad10(e.offset)} ${String(e.gen).padStart(5, "0")} n \n`;
+    lines.push(`${pad10(e.offset)} ${String(e.gen).padStart(5, "0")} n `);
   }
-  return out;
+  return `${lines.join("\n")}\n`;
 }
 
 function buildPdfWithEncryptTrailer(options: { readonly includeRoot: boolean }): Uint8Array {

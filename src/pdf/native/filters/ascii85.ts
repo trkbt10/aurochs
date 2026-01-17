@@ -4,6 +4,10 @@
 
 import { isWhite } from "../scan";
 
+function decodeAscii85Group(group: ReadonlyArray<number>): number {
+  return group.reduce((value, digit) => (value * 85) + digit, 0);
+}
+
 
 
 
@@ -19,9 +23,7 @@ export function decodeAscii85(data: Uint8Array): Uint8Array {
   const out: number[] = [];
   const group: number[] = [];
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let i = 0;
-  while (i < data.length) {
+  for (let i = 0; i < data.length; ) {
     const b = data[i] ?? 0;
 
     // terminator "~>"
@@ -49,9 +51,7 @@ export function decodeAscii85(data: Uint8Array): Uint8Array {
 
     group.push(b - 0x21);
     if (group.length === 5) {
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-      let value = 0;
-      for (let j = 0; j < 5; j += 1) {value = value * 85 + (group[j] ?? 0);}
+      const value = decodeAscii85Group(group);
       out.push((value >>> 24) & 0xff, (value >>> 16) & 0xff, (value >>> 8) & 0xff, value & 0xff);
       group.length = 0;
     }
@@ -61,9 +61,7 @@ export function decodeAscii85(data: Uint8Array): Uint8Array {
     // pad with 'u' (84)
     const n = group.length;
     while (group.length < 5) {group.push(84);}
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-    let value = 0;
-    for (let j = 0; j < 5; j += 1) {value = value * 85 + (group[j] ?? 0);}
+    const value = decodeAscii85Group(group);
     const bytes = [(value >>> 24) & 0xff, (value >>> 16) & 0xff, (value >>> 8) & 0xff, value & 0xff];
     // emit n-1 bytes
     for (let k = 0; k < n - 1; k += 1) {out.push(bytes[k] ?? 0);}
@@ -71,4 +69,3 @@ export function decodeAscii85(data: Uint8Array): Uint8Array {
 
   return new Uint8Array(out);
 }
-

@@ -15,9 +15,7 @@
 /** decodeRunLength */
 export function decodeRunLength(data: Uint8Array): Uint8Array {
   const out: number[] = [];
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let i = 0;
-  while (i < data.length) {
+  for (let i = 0; i < data.length; ) {
     const len = data[i] ?? 0;
     i += 1;
     if (len === 128) {break;} // EOD
@@ -37,4 +35,3 @@ export function decodeRunLength(data: Uint8Array): Uint8Array {
   }
   return new Uint8Array(out);
 }
-

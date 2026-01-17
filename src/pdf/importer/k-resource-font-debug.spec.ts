@@ -97,9 +97,7 @@ describe("PDF embedded font extraction", () => {
     // Verify @font-face structure
     const fontFaceRegex = /@font-face\s*\{[^}]*font-family:\s*"([^"]+)"/g;
     const cssMatches: string[] = [];
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-    let match;
-    while ((match = fontFaceRegex.exec(document.embeddedFontCss!)) !== null) {
+    for (let match = fontFaceRegex.exec(document.embeddedFontCss!); match !== null; match = fontFaceRegex.exec(document.embeddedFontCss!)) {
       cssMatches.push(match[1]);
     }
 

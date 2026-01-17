@@ -64,26 +64,20 @@ export function buildPaths(parsedPaths: readonly ParsedPath[]): readonly BuiltPa
 export function buildPath(parsed: ParsedPath): BuiltPath {
   const ctm = parsed.graphicsState.ctm;
   const normalizedOps: NormalizedPathOp[] = [];
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let currentPoint: PdfPoint = { x: 0, y: 0 };
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let startPoint: PdfPoint = { x: 0, y: 0 };
-
-  // Track bounds
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let minX = Infinity;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let minY = Infinity;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let maxX = -Infinity;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let maxY = -Infinity;
+  const state = {
+    currentPoint: { x: 0, y: 0 } satisfies PdfPoint,
+    startPoint: { x: 0, y: 0 } satisfies PdfPoint,
+    minX: Infinity,
+    minY: Infinity,
+    maxX: -Infinity,
+    maxY: -Infinity,
+  };
 
   const updateBounds = (x: number, y: number): void => {
-    minX = Math.min(minX, x);
-    minY = Math.min(minY, y);
-    maxX = Math.max(maxX, x);
-    maxY = Math.max(maxY, y);
+    state.minX = Math.min(state.minX, x);
+    state.minY = Math.min(state.minY, y);
+    state.maxX = Math.max(state.maxX, x);
+    state.maxY = Math.max(state.maxY, y);
   };
 
   for (const op of parsed.operations) {
@@ -95,8 +89,8 @@ export function buildPath(parsed: ParsedPath): BuiltPath {
           x: transformed.x,
           y: transformed.y,
         });
-        currentPoint = transformed;
-        startPoint = transformed;
+        state.currentPoint = transformed;
+        state.startPoint = transformed;
         updateBounds(transformed.x, transformed.y);
         break;
       }
@@ -108,7 +102,7 @@ export function buildPath(parsed: ParsedPath): BuiltPath {
           x: transformed.x,
           y: transformed.y,
         });
-        currentPoint = transformed;
+        state.currentPoint = transformed;
         updateBounds(transformed.x, transformed.y);
         break;
       }
@@ -126,7 +120,7 @@ export function buildPath(parsed: ParsedPath): BuiltPath {
           x: end.x,
           y: end.y,
         });
-        currentPoint = end;
+        state.currentPoint = end;
         // Include control points in bounds for safety
         updateBounds(cp1.x, cp1.y);
         updateBounds(cp2.x, cp2.y);
@@ -140,14 +134,14 @@ export function buildPath(parsed: ParsedPath): BuiltPath {
         const end = transformPoint(op.end, ctm);
         normalizedOps.push({
           type: "curveTo",
-          cp1x: currentPoint.x,
-          cp1y: currentPoint.y,
+          cp1x: state.currentPoint.x,
+          cp1y: state.currentPoint.y,
           cp2x: cp2.x,
           cp2y: cp2.y,
           x: end.x,
           y: end.y,
         });
-        currentPoint = end;
+        state.currentPoint = end;
         updateBounds(cp2.x, cp2.y);
         updateBounds(end.x, end.y);
         break;
@@ -166,7 +160,7 @@ export function buildPath(parsed: ParsedPath): BuiltPath {
           x: end.x,
           y: end.y,
         });
-        currentPoint = end;
+        state.currentPoint = end;
         updateBounds(cp1.x, cp1.y);
         updateBounds(end.x, end.y);
         break;
@@ -185,8 +179,8 @@ export function buildPath(parsed: ParsedPath): BuiltPath {
         normalizedOps.push({ type: "lineTo", x: p4.x, y: p4.y });
         normalizedOps.push({ type: "closePath" });
 
-        currentPoint = p1;
-        startPoint = p1;
+        state.currentPoint = p1;
+        state.startPoint = p1;
         updateBounds(p1.x, p1.y);
         updateBounds(p2.x, p2.y);
         updateBounds(p3.x, p3.y);
@@ -196,20 +190,23 @@ export function buildPath(parsed: ParsedPath): BuiltPath {
 
       case "closePath": {
         normalizedOps.push({ type: "closePath" });
-        currentPoint = startPoint;
+        state.currentPoint = state.startPoint;
         break;
       }
     }
   }
 
   // Handle empty or degenerate paths
-  if (minX === Infinity) {
-    minX = minY = maxX = maxY = 0;
+  if (state.minX === Infinity) {
+    state.minX = 0;
+    state.minY = 0;
+    state.maxX = 0;
+    state.maxY = 0;
   }
 
   return {
     operations: normalizedOps,
-    bounds: [minX, minY, maxX, maxY],
+    bounds: [state.minX, state.minY, state.maxX, state.maxY],
     paintOp: parsed.paintOp,
     graphicsState: parsed.graphicsState,
   };
@@ -256,39 +253,34 @@ export function builtPathToPdfPath(built: BuiltPath): PdfPath {
  * Note: Includes bezier control points for safety.
  */
 export function computePathBBox(path: PdfPath): PdfBBox {
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let minX = Infinity;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let minY = Infinity;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let maxX = -Infinity;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let maxY = -Infinity;
-
-  const updateBounds = (point: PdfPoint): void => {
-    minX = Math.min(minX, point.x);
-    minY = Math.min(minY, point.y);
-    maxX = Math.max(maxX, point.x);
-    maxY = Math.max(maxY, point.y);
+  const state = {
+    minX: Infinity,
+    minY: Infinity,
+    maxX: -Infinity,
+    maxY: -Infinity,
+    currentPoint: { x: 0, y: 0 } satisfies PdfPoint,
+    subpathStartPoint: { x: 0, y: 0 } satisfies PdfPoint,
   };
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let currentPoint: PdfPoint = { x: 0, y: 0 };
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let subpathStartPoint: PdfPoint = { x: 0, y: 0 };
+  const updateBounds = (point: PdfPoint): void => {
+    state.minX = Math.min(state.minX, point.x);
+    state.minY = Math.min(state.minY, point.y);
+    state.maxX = Math.max(state.maxX, point.x);
+    state.maxY = Math.max(state.maxY, point.y);
+  };
 
   for (const op of path.operations) {
     switch (op.type) {
       case "moveTo": {
         updateBounds(op.point);
-        currentPoint = op.point;
-        subpathStartPoint = op.point;
+        state.currentPoint = op.point;
+        state.subpathStartPoint = op.point;
         break;
       }
 
       case "lineTo": {
         updateBounds(op.point);
-        currentPoint = op.point;
+        state.currentPoint = op.point;
         break;
       }
 
@@ -296,22 +288,22 @@ export function computePathBBox(path: PdfPath): PdfBBox {
         updateBounds(op.cp1);
         updateBounds(op.cp2);
         updateBounds(op.end);
-        currentPoint = op.end;
+        state.currentPoint = op.end;
         break;
       }
 
       case "curveToV": {
-        updateBounds(currentPoint);
+        updateBounds(state.currentPoint);
         updateBounds(op.cp2);
         updateBounds(op.end);
-        currentPoint = op.end;
+        state.currentPoint = op.end;
         break;
       }
 
       case "curveToY": {
         updateBounds(op.cp1);
         updateBounds(op.end);
-        currentPoint = op.end;
+        state.currentPoint = op.end;
         break;
       }
 
@@ -326,24 +318,24 @@ export function computePathBBox(path: PdfPath): PdfBBox {
         updateBounds(p3);
         updateBounds(p4);
 
-        currentPoint = p1;
-        subpathStartPoint = p1;
+        state.currentPoint = p1;
+        state.subpathStartPoint = p1;
         break;
       }
 
       case "closePath": {
-        updateBounds(subpathStartPoint);
-        currentPoint = subpathStartPoint;
+        updateBounds(state.subpathStartPoint);
+        state.currentPoint = state.subpathStartPoint;
         break;
       }
     }
   }
 
-  if (minX === Infinity) {
+  if (state.minX === Infinity) {
     return [0, 0, 0, 0];
   }
 
-  return [minX, minY, maxX, maxY];
+  return [state.minX, state.minY, state.maxX, state.maxY];
 }
 
 /**
@@ -453,14 +445,7 @@ export function mergePaths(paths: readonly BuiltPath[]): BuiltPath | null {
 
   const first = paths[0];
   const allOps: NormalizedPathOp[] = [];
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let minX = Infinity;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let minY = Infinity;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let maxX = -Infinity;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let maxY = -Infinity;
+  const bounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
 
   for (const path of paths) {
     // Ensure all paths have same paint op
@@ -471,15 +456,15 @@ export function mergePaths(paths: readonly BuiltPath[]): BuiltPath | null {
     allOps.push(...path.operations);
 
     const [pMinX, pMinY, pMaxX, pMaxY] = path.bounds;
-    minX = Math.min(minX, pMinX);
-    minY = Math.min(minY, pMinY);
-    maxX = Math.max(maxX, pMaxX);
-    maxY = Math.max(maxY, pMaxY);
+    bounds.minX = Math.min(bounds.minX, pMinX);
+    bounds.minY = Math.min(bounds.minY, pMinY);
+    bounds.maxX = Math.max(bounds.maxX, pMaxX);
+    bounds.maxY = Math.max(bounds.maxY, pMaxY);
   }
 
   return {
     operations: allOps,
-    bounds: [minX, minY, maxX, maxY],
+    bounds: [bounds.minX, bounds.minY, bounds.maxX, bounds.maxY],
     paintOp: first.paintOp,
     graphicsState: first.graphicsState,
   };

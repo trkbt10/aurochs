@@ -60,42 +60,33 @@ export function decodeStreamData(encoded: Uint8Array, options: DecodeStreamOptio
   if (!options) {throw new Error("options is required");}
   if (!options.filters) {throw new Error("options.filters is required");}
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let data = encoded;
-  for (let i = 0; i < options.filters.length; i += 1) {
-    const rawFilter = options.filters[i]!;
+  return options.filters.reduce((data, rawFilter, i) => {
     const filter = normalizeFilterName(rawFilter);
     const parms = options.decodeParms?.[i];
     switch (filter) {
       case "Crypt":
         // Decryption is handled at object-load time (NativePdfDocument + PdfResolver).
         // When /Filter includes /Crypt, stream.data should already be decrypted.
-        break;
+        return data;
       case "FlateDecode":
-        data = decodeFlate(data, parms);
-        break;
+        return decodeFlate(data, parms);
       case "LZWDecode": {
         const lzwOpts = readLzwDecodeOptions(parms);
-        data = decodeLzw(data, lzwOpts);
-        break;
+        return decodeLzw(data, lzwOpts);
       }
       case "ASCII85Decode":
-        data = decodeAscii85(data);
-        break;
+        return decodeAscii85(data);
       case "ASCIIHexDecode":
-        data = decodeAsciiHex(data);
-        break;
+        return decodeAsciiHex(data);
       case "RunLengthDecode":
-        data = decodeRunLength(data);
-        break;
+        return decodeRunLength(data);
       case "DCTDecode":
       case "JPXDecode":
         // Keep bytes as-is.
-        break;
+        return data;
       default: {
         throw new Error(`Unsupported filter: ${String(filter)}`);
       }
     }
-  }
-  return data;
+  }, encoded);
 }

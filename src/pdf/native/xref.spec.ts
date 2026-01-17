@@ -29,85 +29,84 @@ function encodeLzw(data: Uint8Array, options: LzwEncodeOptions): Uint8Array {
   const dict = new Map<string, number>();
   for (let i = 0; i < 256; i += 1) {dict.set(String.fromCharCode(i), i);}
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let nextCode = 258;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let codeSize = 9;
+  const build = { nextCode: 258, codeSize: 9 };
 
   const codes: number[] = [CLEAR];
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let w = "";
+  const wState = { w: "" };
   for (const b of data) {
     const c = String.fromCharCode(b);
-    const wc = w + c;
+    const wc = wState.w + c;
     if (dict.has(wc)) {
-      w = wc;
+      wState.w = wc;
       continue;
     }
-    if (w.length > 0) {codes.push(dict.get(w)!);}
+    if (wState.w.length > 0) {codes.push(dict.get(wState.w)!);}
 
-    if (nextCode <= maxCode) {
-      dict.set(wc, nextCode);
-      nextCode += 1;
-      const threshold = early ? (1 << codeSize) - 1 : 1 << codeSize;
-      if (nextCode === threshold && codeSize < 12) {codeSize += 1;}
+    if (build.nextCode <= maxCode) {
+      dict.set(wc, build.nextCode);
+      build.nextCode += 1;
+      const threshold = early ? (1 << build.codeSize) - 1 : 1 << build.codeSize;
+      if (build.nextCode === threshold && build.codeSize < 12) {build.codeSize += 1;}
     }
 
-    w = c;
+    wState.w = c;
   }
-  if (w.length > 0) {codes.push(dict.get(w)!);}
+  if (wState.w.length > 0) {codes.push(dict.get(wState.w)!);}
   codes.push(EOD);
 
   // Pack MSB-first bitstream.
   const out: number[] = [];
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let bitBuf = 0;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let bitLen = 0;
+  const pack = { bitBuf: 0, bitLen: 0, nextCode: 258, codeSize: 9 };
 
   // Replay with code size changes matching decoder rules.
-  nextCode = 258;
-  codeSize = 9;
   for (const code of codes) {
-    bitBuf = (bitBuf << codeSize) | (code & ((1 << codeSize) - 1));
-    bitLen += codeSize;
-    while (bitLen >= 8) {
-      const shift = bitLen - 8;
-      out.push((bitBuf >>> shift) & 0xff);
-      bitLen -= 8;
-      bitBuf &= (1 << bitLen) - 1;
+    pack.bitBuf = (pack.bitBuf << pack.codeSize) | (code & ((1 << pack.codeSize) - 1));
+    pack.bitLen += pack.codeSize;
+    while (pack.bitLen >= 8) {
+      const shift = pack.bitLen - 8;
+      out.push((pack.bitBuf >>> shift) & 0xff);
+      pack.bitLen -= 8;
+      pack.bitBuf &= (1 << pack.bitLen) - 1;
     }
 
     if (code === CLEAR) {
-      nextCode = 258;
-      codeSize = 9;
+      pack.nextCode = 258;
+      pack.codeSize = 9;
       continue;
     }
     if (code === EOD) {break;}
 
-    if (nextCode <= maxCode) {
-      nextCode += 1;
-      const threshold = early ? (1 << codeSize) - 1 : 1 << codeSize;
-      if (nextCode === threshold && codeSize < 12) {codeSize += 1;}
+    if (pack.nextCode <= maxCode) {
+      pack.nextCode += 1;
+      const threshold = early ? (1 << pack.codeSize) - 1 : 1 << pack.codeSize;
+      if (pack.nextCode === threshold && pack.codeSize < 12) {pack.codeSize += 1;}
     }
   }
-  if (bitLen > 0) {out.push((bitBuf << (8 - bitLen)) & 0xff);}
+  if (pack.bitLen > 0) {out.push((pack.bitBuf << (8 - pack.bitLen)) & 0xff);}
   return new Uint8Array(out);
 }
 
 function concatBytes(parts: readonly Uint8Array[]): Uint8Array {
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let total = 0;
-  for (const p of parts) {total += p.length;}
+  const total = parts.reduce((sum, p) => sum + p.length, 0);
   const out = new Uint8Array(total);
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let off = 0;
-  for (const p of parts) {
+  for (let off = 0, i = 0; i < parts.length; i += 1) {
+    const p = parts[i]!;
     out.set(p, off);
     off += p.length;
   }
   return out;
+}
+
+function findConsecutiveEntryRunEnd(sorted: ReadonlyArray<readonly [number, unknown]>, start: number): number {
+  for (let end = start + 1; end < sorted.length; end += 1) {
+    const prevObj = sorted[end - 1]![0];
+    const curObj = sorted[end]![0];
+    if (curObj !== prevObj + 1) {
+      return end;
+    }
+  }
+  return sorted.length;
 }
 
 function pad10(n: number): string {
@@ -124,38 +123,28 @@ function buildXrefTableSection(
 ): string {
   const sorted = [...entries.entries()].sort((a, b) => a[0] - b[0]);
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let out = "xref\n";
+  const out: string[] = ["xref\n"];
 
   if (options.includeFree0) {
-    out += "0 1\n";
-    out += "0000000000 65535 f \n";
+    out.push("0 1\n");
+    out.push("0000000000 65535 f \n");
   }
 
   // Group into consecutive runs so we don't emit synthetic "free" entries for objects
   // that are not present in this incremental xref section.
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let i = 0;
-  while (i < sorted.length) {
+  for (let i = 0; i < sorted.length; ) {
     const startObj = sorted[i]![0];
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-    let end = i + 1;
-    while (end < sorted.length) {
-      const prevObj = sorted[end - 1]![0];
-      const curObj = sorted[end]![0];
-      if (curObj !== prevObj + 1) {break;}
-      end += 1;
-    }
+    const end = findConsecutiveEntryRunEnd(sorted, i);
 
-    out += `${startObj} ${end - i}\n`;
+    out.push(`${startObj} ${end - i}\n`);
     for (let j = i; j < end; j += 1) {
       const [, e] = sorted[j]!;
-      out += `${pad10(e.offset)} ${pad5(e.gen)} n \n`;
+      out.push(`${pad10(e.offset)} ${pad5(e.gen)} n \n`);
     }
     i = end;
   }
 
-  return out;
+  return out.join("");
 }
 
 function buildXrefStreamData(

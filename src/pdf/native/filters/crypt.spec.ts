@@ -46,17 +46,15 @@ function xorKey(key: Uint8Array, value: number): Uint8Array {
 }
 
 function computeOwnerKeyR3(ownerPassword32: Uint8Array, keyLengthBytes: number): Uint8Array {
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let digest = md5(ownerPassword32).slice(0, keyLengthBytes);
-  for (let i = 0; i < 50; i += 1) {digest = md5(digest).slice(0, keyLengthBytes);}
-  return digest;
+  const state = { digest: md5(ownerPassword32).slice(0, keyLengthBytes) };
+  for (let i = 0; i < 50; i += 1) {state.digest = md5(state.digest).slice(0, keyLengthBytes);}
+  return state.digest;
 }
 
 function computeOValueR3(ownerKey: Uint8Array, userPassword32: Uint8Array): Uint8Array {
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let cur = rc4(ownerKey, userPassword32);
-  for (let i = 1; i <= 19; i += 1) {cur = rc4(xorKey(ownerKey, i), cur);}
-  return cur;
+  const state = { cur: rc4(ownerKey, userPassword32) };
+  for (let i = 1; i <= 19; i += 1) {state.cur = rc4(xorKey(ownerKey, i), state.cur);}
+  return state.cur;
 }
 
 function computeFileKeyR3(args: {
@@ -67,18 +65,16 @@ function computeFileKeyR3(args: {
   readonly keyLengthBytes: number;
 }): Uint8Array {
   const seed = concatBytes(args.userPassword32, args.o, int32le(args.p), args.id0);
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let digest = md5(seed).slice(0, args.keyLengthBytes);
-  for (let i = 0; i < 50; i += 1) {digest = md5(digest).slice(0, args.keyLengthBytes);}
-  return digest;
+  const state = { digest: md5(seed).slice(0, args.keyLengthBytes) };
+  for (let i = 0; i < 50; i += 1) {state.digest = md5(state.digest).slice(0, args.keyLengthBytes);}
+  return state.digest;
 }
 
 function computeU16R3(fileKey: Uint8Array, id0: Uint8Array): Uint8Array {
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let cur = md5(concatBytes(PASSWORD_PADDING, id0));
-  cur = rc4(fileKey, cur);
-  for (let i = 1; i <= 19; i += 1) {cur = rc4(xorKey(fileKey, i), cur);}
-  return cur;
+  const state = { cur: md5(concatBytes(PASSWORD_PADDING, id0)) };
+  state.cur = rc4(fileKey, state.cur);
+  for (let i = 1; i <= 19; i += 1) {state.cur = rc4(xorKey(fileKey, i), state.cur);}
+  return state.cur;
 }
 
 function deriveObjectKeyRc4(fileKey: Uint8Array, objNum: number, gen: number): Uint8Array {
@@ -125,20 +121,19 @@ function buildEncryptedCryptFlatePdfR3(args: { readonly password: string; readon
   const objects = [obj1, obj2, obj3, obj4, obj5];
 
   const offsets = new Map<number, number>();
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let cursor = header.length;
-  offsets.set(1, cursor);
-  cursor += obj1.length;
-  offsets.set(2, cursor);
-  cursor += obj2.length;
-  offsets.set(3, cursor);
-  cursor += obj3.length;
-  offsets.set(4, cursor);
-  cursor += obj4.length;
-  offsets.set(5, cursor);
-  cursor += obj5.length;
+  const cursor = { value: header.length };
+  offsets.set(1, cursor.value);
+  cursor.value += obj1.length;
+  offsets.set(2, cursor.value);
+  cursor.value += obj2.length;
+  offsets.set(3, cursor.value);
+  cursor.value += obj3.length;
+  offsets.set(4, cursor.value);
+  cursor.value += obj4.length;
+  offsets.set(5, cursor.value);
+  cursor.value += obj5.length;
 
-  const xrefStart = cursor;
+  const xrefStart = cursor.value;
   const size = 6;
   const xrefLines: string[] = [];
   xrefLines.push("xref\n");
@@ -213,20 +208,19 @@ describe("decodeStreamData (Crypt filter)", () => {
     const objects = [obj1, obj2, obj3, obj4, obj5];
 
     const offsets = new Map<number, number>();
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-    let cursor = header.length;
-    offsets.set(1, cursor);
-    cursor += obj1.length;
-    offsets.set(2, cursor);
-    cursor += obj2.length;
-    offsets.set(3, cursor);
-    cursor += obj3.length;
-    offsets.set(4, cursor);
-    cursor += obj4.length;
-    offsets.set(5, cursor);
-    cursor += obj5.length;
+    const cursor = { value: header.length };
+    offsets.set(1, cursor.value);
+    cursor.value += obj1.length;
+    offsets.set(2, cursor.value);
+    cursor.value += obj2.length;
+    offsets.set(3, cursor.value);
+    cursor.value += obj3.length;
+    offsets.set(4, cursor.value);
+    cursor.value += obj4.length;
+    offsets.set(5, cursor.value);
+    cursor.value += obj5.length;
 
-    const xrefStart = cursor;
+    const xrefStart = cursor.value;
     const size = 6;
     const xrefLines: string[] = [];
     xrefLines.push("xref\n");

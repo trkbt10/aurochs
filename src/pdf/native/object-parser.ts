@@ -53,29 +53,27 @@ function parseObjectWithInitialToken(state: ParseState, initial: PdfToken): { va
   // compound
   if (initial.type === "punct" && initial.value === "[") {
     const items: PdfObject[] = [];
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-    let st: ParseState = state;
+    const st = { state };
     while (true) {
-      const { token, next } = nextToken(st.lex);
+      const { token, next } = nextToken(st.state.lex);
       if (token.type === "punct" && token.value === "]") {
-        st = { lex: next };
+        st.state = { lex: next };
         break;
       }
       const parsed = parseObjectWithInitialToken({ lex: next }, token);
       items.push(parsed.value);
-      st = parsed.state;
+      st.state = parsed.state;
     }
-    return { value: { type: "array", items } satisfies PdfArray, state: st };
+    return { value: { type: "array", items } satisfies PdfArray, state: st.state };
   }
 
   if (initial.type === "punct" && initial.value === "<<") {
     const entries = new Map<string, PdfObject>();
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-    let st: ParseState = state;
+    const st = { state };
     while (true) {
-      const { token, next } = nextToken(st.lex);
+      const { token, next } = nextToken(st.state.lex);
       if (token.type === "punct" && token.value === ">>") {
-        st = { lex: next };
+        st.state = { lex: next };
         break;
       }
       if (token.type !== "name") {
@@ -84,9 +82,9 @@ function parseObjectWithInitialToken(state: ParseState, initial: PdfToken): { va
       const key = token.value;
       const valueParsed = parseObject({ lex: next });
       entries.set(key, valueParsed.value);
-      st = valueParsed.state;
+      st.state = valueParsed.state;
     }
-    return { value: { type: "dict", map: entries } satisfies PdfDict, state: st };
+    return { value: { type: "dict", map: entries } satisfies PdfDict, state: st.state };
   }
 
   // primitives and refs
@@ -153,41 +151,39 @@ function skipStreamEol(bytes: Uint8Array, pos: number): number {
 
   // spaces/tabs before EOL
   if (b0 === 0x20 || b0 === 0x09) {
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-    let p = pos;
-    while (p < bytes.length) {
-      const b = bytes[p] ?? 0;
+    const pState = { p: pos };
+    while (pState.p < bytes.length) {
+      const b = bytes[pState.p] ?? 0;
       if (b === 0x20 || b === 0x09) {
-        p += 1;
+        pState.p += 1;
         continue;
       }
       break;
     }
-    const b = bytes[p] ?? 0;
-    if (b === 0x0d || b === 0x0a) {return consumeEol(p);}
+    const b = bytes[pState.p] ?? 0;
+    if (b === 0x0d || b === 0x0a) {return consumeEol(pState.p);}
     if (b === 0x25) {
       // comment until EOL
-      p += 1;
-      while (p < bytes.length) {
-        const c = bytes[p] ?? 0;
+      pState.p += 1;
+      while (pState.p < bytes.length) {
+        const c = bytes[pState.p] ?? 0;
         if (c === 0x0d || c === 0x0a) {break;}
-        p += 1;
+        pState.p += 1;
       }
-      return consumeEol(p);
+      return consumeEol(pState.p);
     }
     return pos;
   }
 
   // comment immediately after stream keyword
   if (b0 === 0x25) {
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-    let p = pos + 1;
-    while (p < bytes.length) {
-      const c = bytes[p] ?? 0;
+    const pState = { p: pos + 1 };
+    while (pState.p < bytes.length) {
+      const c = bytes[pState.p] ?? 0;
       if (c === 0x0d || c === 0x0a) {break;}
-      p += 1;
+      pState.p += 1;
     }
-    return consumeEol(p);
+    return consumeEol(pState.p);
   }
 
   return pos;
@@ -233,20 +229,19 @@ function isTokenBoundary(byte: number): boolean {
 }
 
 function findEndstreamStart(bytes: Uint8Array, from: number): number {
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let pos = from;
-  while (pos >= 0 && pos < bytes.length) {
-    const idx = indexOfBytes(bytes, ENDSTREAM, pos);
+  const state = { pos: from };
+  while (state.pos >= 0 && state.pos < bytes.length) {
+    const idx = indexOfBytes(bytes, ENDSTREAM, state.pos);
     if (idx < 0) {return -1;}
 
     const before = idx > 0 ? (bytes[idx - 1] ?? 0) : 0;
     const after = bytes[idx + ENDSTREAM.length] ?? 0;
     if (idx > 0 && !isTokenBoundary(before)) {
-      pos = idx + 1;
+      state.pos = idx + 1;
       continue;
     }
     if (!isTokenBoundary(after)) {
-      pos = idx + 1;
+      state.pos = idx + 1;
       continue;
     }
 
@@ -257,7 +252,7 @@ function findEndstreamStart(bytes: Uint8Array, from: number): number {
       expectKeyword(s1, "endobj");
       return idx;
     } catch {
-      pos = idx + 1;
+      state.pos = idx + 1;
       continue;
     }
   }
@@ -280,27 +275,25 @@ export function parseIndirectObjectAt(
   offset: number,
   options: ParseIndirectOptions = {},
 ): { obj: PdfIndirectObject; nextOffset: number } {
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let st: ParseState = { lex: createLexer(bytes, offset) };
+  const parseState: { st: ParseState } = { st: { lex: createLexer(bytes, offset) } };
 
-  const { token: tObj, next: n1 } = nextToken(st.lex);
+  const { token: tObj, next: n1 } = nextToken(parseState.st.lex);
   if (tObj.type !== "number" || !tObj.isInt) {throw new Error("Indirect object: missing object number");}
   const { token: tGen, next: n2 } = nextToken(n1);
   if (tGen.type !== "number" || !tGen.isInt) {throw new Error("Indirect object: missing generation number");}
-  st = { lex: n2 };
-  st = expectKeyword(st, "obj");
+  parseState.st = { lex: n2 };
+  parseState.st = expectKeyword(parseState.st, "obj");
 
-  const parsed = parseObject(st);
-  st = parsed.state;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let value: PdfObject = parsed.value;
+  const parsed = parseObject(parseState.st);
+  parseState.st = parsed.state;
+  const value = { value: parsed.value };
 
   // If the value is a dict and followed by "stream", parse stream body.
-  if (value.type === "dict") {
-    const afterDict = st;
+  if (value.value.type === "dict") {
+    const afterDict = parseState.st;
     const { token: maybeStream, next: afterStreamToken } = nextToken(afterDict.lex);
     if (maybeStream.type === "keyword" && maybeStream.value === "stream") {
-      const lengthObj = dictGet(value, "Length");
+      const lengthObj = dictGet(value.value, "Length");
       const length = (() => {
         const direct = asNumber(lengthObj);
         if (direct != null) {return direct;}
@@ -314,15 +307,15 @@ export function parseIndirectObjectAt(
       const rawPos = afterStreamToken.pos;
       const { data, nextPos } = parseStreamDataFromRaw(bytes, rawPos, length);
       // Move lexer to after stream data; then expect endstream/endobj.
-      st = { lex: createLexer(bytes, nextPos) };
-      st = expectKeyword(st, "endstream");
-      value = { type: "stream", dict: value, data } satisfies PdfStream;
+      parseState.st = { lex: createLexer(bytes, nextPos) };
+      parseState.st = expectKeyword(parseState.st, "endstream");
+      value.value = { type: "stream", dict: value.value, data } satisfies PdfStream;
     }
   }
 
-  st = expectKeyword(st, "endobj");
+  parseState.st = expectKeyword(parseState.st, "endobj");
   return {
-    obj: { obj: Math.trunc(tObj.value), gen: Math.trunc(tGen.value), value },
-    nextOffset: st.lex.pos,
+    obj: { obj: Math.trunc(tObj.value), gen: Math.trunc(tGen.value), value: value.value },
+    nextOffset: parseState.st.lex.pos,
   };
 }

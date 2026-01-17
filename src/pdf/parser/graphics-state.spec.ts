@@ -19,7 +19,6 @@ import {
 } from "../domain";
 
 describe("GraphicsStateStack", () => {
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
   let stack: GraphicsStateStack;
 
   beforeEach(() => {

@@ -80,7 +80,6 @@ export function calculateTextDisplacement(
   tjAdjustment: number = 0
 ): number {
   const Th = horizontalScaling / 100;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
   let totalDisplacement = 0;
 
   // For 2-byte CID fonts, character codes are encoded as pairs of bytes
@@ -192,7 +191,6 @@ const handleSetFont: OperatorHandler = (ctx) => {
 
   // Load font metrics for glyph width calculations
   const cleanName = name.startsWith("/") ? name.slice(1) : name;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
   let fontInfo = ctx.fontMappings.get(cleanName);
 
   // Try without subset prefix (e.g., "XGIAKD+Arial" → "Arial")
@@ -474,7 +472,6 @@ const handleShowTextArray: OperatorHandler = (ctx, gfxOps) => {
   const { horizontalScaling } = state;
   const Th = horizontalScaling / 100;
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
   let textState = ctx.textState;
 
   for (const elem of array) {

@@ -16,8 +16,7 @@ import { createDefaultGraphicsState, IDENTITY_MATRIX, type PdfMatrix, type FontM
 // Mock GraphicsStateOps for testing with tracking
 function createMockGfxOps(overrides: Partial<ReturnType<typeof createDefaultGraphicsState>> = {}) {
   const calls: { method: string; args: unknown[] }[] = [];
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let state = { ...createDefaultGraphicsState(), ...overrides };
+  const state = { value: { ...createDefaultGraphicsState(), ...overrides } };
 
   return {
     calls,
@@ -25,7 +24,7 @@ function createMockGfxOps(overrides: Partial<ReturnType<typeof createDefaultGrap
     ops: {
       push: () => {},
       pop: () => {},
-      get: () => state,
+      get: () => state.value,
       concatMatrix: () => {},
       setClipBBox: () => {},
       setLineWidth: () => {},
@@ -39,14 +38,14 @@ function createMockGfxOps(overrides: Partial<ReturnType<typeof createDefaultGrap
       setStrokeRgb: () => {},
       setFillCmyk: () => {},
       setStrokeCmyk: () => {},
-      setFillAlpha: (a: number) => { state = { ...state, fillAlpha: a }; calls.push({ method: "setFillAlpha", args: [a] }); },
-      setStrokeAlpha: (a: number) => { state = { ...state, strokeAlpha: a }; calls.push({ method: "setStrokeAlpha", args: [a] }); },
-      setCharSpacing: (s: number) => { state = { ...state, charSpacing: s }; calls.push({ method: "setCharSpacing", args: [s] }); },
-      setWordSpacing: (s: number) => { state = { ...state, wordSpacing: s }; calls.push({ method: "setWordSpacing", args: [s] }); },
-      setHorizontalScaling: (s: number) => { state = { ...state, horizontalScaling: s }; calls.push({ method: "setHorizontalScaling", args: [s] }); },
-      setTextLeading: (l: number) => { state = { ...state, textLeading: l }; calls.push({ method: "setTextLeading", args: [l] }); },
-      setTextRenderingMode: (m: number) => { state = { ...state, textRenderingMode: m as 0 }; calls.push({ method: "setTextRenderingMode", args: [m] }); },
-      setTextRise: (r: number) => { state = { ...state, textRise: r }; calls.push({ method: "setTextRise", args: [r] }); },
+      setFillAlpha: (a: number) => { state.value = { ...state.value, fillAlpha: a }; calls.push({ method: "setFillAlpha", args: [a] }); },
+      setStrokeAlpha: (a: number) => { state.value = { ...state.value, strokeAlpha: a }; calls.push({ method: "setStrokeAlpha", args: [a] }); },
+      setCharSpacing: (s: number) => { state.value = { ...state.value, charSpacing: s }; calls.push({ method: "setCharSpacing", args: [s] }); },
+      setWordSpacing: (s: number) => { state.value = { ...state.value, wordSpacing: s }; calls.push({ method: "setWordSpacing", args: [s] }); },
+      setHorizontalScaling: (s: number) => { state.value = { ...state.value, horizontalScaling: s }; calls.push({ method: "setHorizontalScaling", args: [s] }); },
+      setTextLeading: (l: number) => { state.value = { ...state.value, textLeading: l }; calls.push({ method: "setTextLeading", args: [l] }); },
+      setTextRenderingMode: (m: number) => { state.value = { ...state.value, textRenderingMode: m as 0 }; calls.push({ method: "setTextRenderingMode", args: [m] }); },
+      setTextRise: (r: number) => { state.value = { ...state.value, textRise: r }; calls.push({ method: "setTextRise", args: [r] }); },
     } as GraphicsStateOps,
   };
 }

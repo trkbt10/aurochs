@@ -48,7 +48,6 @@ const DELIMITER = /[()<>[\]{}/%]/;
  */
 export function tokenizeContentStream(content: string): PdfToken[] {
   const tokens: PdfToken[] = [];
-  // eslint-disable-next-line no-restricted-syntax -- position tracking requires mutation
   let pos = 0;
 
   while (pos < content.length) {

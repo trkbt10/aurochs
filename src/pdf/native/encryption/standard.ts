@@ -84,13 +84,11 @@ function computeFileKeyR3(args: {
   readonly keyLengthBytes: number;
 }): Uint8Array {
   const seed = concatBytes(args.password32, args.o, int32le(args.p), args.id0);
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let digest = md5(seed);
-  digest = digest.slice(0, args.keyLengthBytes);
+  const state = { digest: md5(seed).slice(0, args.keyLengthBytes) };
   for (let i = 0; i < 50; i += 1) {
-    digest = md5(digest).slice(0, args.keyLengthBytes);
+    state.digest = md5(state.digest).slice(0, args.keyLengthBytes);
   }
-  return digest;
+  return state.digest;
 }
 
 function xorKey(key: Uint8Array, value: number): Uint8Array {
@@ -100,23 +98,20 @@ function xorKey(key: Uint8Array, value: number): Uint8Array {
 }
 
 function computeUValueR3(fileKey: Uint8Array, id0: Uint8Array): Uint8Array {
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let cur = md5(concatBytes(PASSWORD_PADDING, id0));
-  cur = rc4(fileKey, cur);
+  const state = { cur: md5(concatBytes(PASSWORD_PADDING, id0)) };
+  state.cur = rc4(fileKey, state.cur);
   for (let i = 1; i <= 19; i += 1) {
-    cur = rc4(xorKey(fileKey, i), cur);
+    state.cur = rc4(xorKey(fileKey, i), state.cur);
   }
-  return cur; // 16 bytes
+  return state.cur; // 16 bytes
 }
 
 function computeOwnerKeyR3(ownerPassword32: Uint8Array, keyLengthBytes: number): Uint8Array {
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let digest = md5(ownerPassword32);
-  digest = digest.slice(0, keyLengthBytes);
+  const state = { digest: md5(ownerPassword32).slice(0, keyLengthBytes) };
   for (let i = 0; i < 50; i += 1) {
-    digest = md5(digest).slice(0, keyLengthBytes);
+    state.digest = md5(state.digest).slice(0, keyLengthBytes);
   }
-  return digest;
+  return state.digest;
 }
 
 function isValidUserPasswordR2(args: {
@@ -192,14 +187,13 @@ function tryFileKeyFromOwnerPasswordR3(args: {
 }): Uint8Array | null {
   const ownerPassword32 = padPassword32(encodePasswordBytes(args.password));
   const ownerKey = computeOwnerKeyR3(ownerPassword32, args.keyLengthBytes);
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let userPassword32 = args.o;
+  const userPassword32 = { value: args.o };
   for (let i = 19; i >= 0; i -= 1) {
-    userPassword32 = rc4(xorKey(ownerKey, i), userPassword32);
+    userPassword32.value = rc4(xorKey(ownerKey, i), userPassword32.value);
   }
 
   const fileKey = computeFileKeyR3({
-    password32: userPassword32,
+    password32: userPassword32.value,
     o: args.o,
     p: args.p,
     id0: args.id0,

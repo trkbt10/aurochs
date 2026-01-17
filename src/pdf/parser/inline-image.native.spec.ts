@@ -22,7 +22,6 @@ function buildPdfWithInlineImage(args: { readonly contentStream: string }): Uint
   const parts: string[] = [header];
   const offsets: number[] = [0];
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
   let cursor = header.length;
   for (const n of order) {
     offsets[n] = cursor;
@@ -75,7 +74,6 @@ function buildPdfWithInlineImageInsideForm(): Uint8Array {
   const parts: string[] = [header];
   const offsets: number[] = [0];
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
   let cursor = header.length;
   for (const n of order) {
     offsets[n] = cursor;

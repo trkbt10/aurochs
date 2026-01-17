@@ -50,12 +50,11 @@ export function repairFontForWeb(
   toUnicode: FontMapping,
   fontName?: string
 ): Uint8Array {
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let tables = parseTrueTypeTableDirectory(fontData);
-  const existingTags = new Set(tables.map((t) => t.tag));
-
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let result = fontData;
+  const state: { tables: ReturnType<typeof parseTrueTypeTableDirectory>; result: Uint8Array } = {
+    tables: parseTrueTypeTableDirectory(fontData),
+    result: fontData,
+  };
+  const existingTags = new Set(state.tables.map((t) => t.tag));
 
   // Build Unicode → GlyphID mapping from ToUnicode
   const unicodeToGlyph = new Map<number, number>();
@@ -69,31 +68,31 @@ export function repairFontForWeb(
   // Add cmap if missing
   if (!existingTags.has("cmap") && unicodeToGlyph.size > 0) {
     const cmapData = buildCmapTable(unicodeToGlyph);
-    result = injectTable(result, "cmap", cmapData);
+    state.result = injectTable(state.result, "cmap", cmapData);
   }
 
   // Add OS/2 if missing
-  tables = parseTrueTypeTableDirectory(result);
-  if (!tables.some((t) => t.tag === "OS/2")) {
-    const os2Data = buildOS2Table(result);
-    result = injectTable(result, "OS/2", os2Data);
+  state.tables = parseTrueTypeTableDirectory(state.result);
+  if (!state.tables.some((t) => t.tag === "OS/2")) {
+    const os2Data = buildOS2Table(state.result);
+    state.result = injectTable(state.result, "OS/2", os2Data);
   }
 
   // Add name if missing
-  tables = parseTrueTypeTableDirectory(result);
-  if (!tables.some((t) => t.tag === "name")) {
+  state.tables = parseTrueTypeTableDirectory(state.result);
+  if (!state.tables.some((t) => t.tag === "name")) {
     const nameData = buildNameTable(fontName ?? "EmbeddedFont");
-    result = injectTable(result, "name", nameData);
+    state.result = injectTable(state.result, "name", nameData);
   }
 
   // Add post if missing
-  tables = parseTrueTypeTableDirectory(result);
-  if (!tables.some((t) => t.tag === "post")) {
+  state.tables = parseTrueTypeTableDirectory(state.result);
+  if (!state.tables.some((t) => t.tag === "post")) {
     const postData = buildPostTable();
-    result = injectTable(result, "post", postData);
+    state.result = injectTable(state.result, "post", postData);
   }
 
-  return result;
+  return state.result;
 }
 
 // Backwards compatibility alias
@@ -160,14 +159,13 @@ function injectTable(
   });
 
   // Assign new offsets
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let currentOffset = newTableDirectoryEnd;
+  const currentOffset = { value: newTableDirectoryEnd };
   for (const t of allTables) {
-    t.newOffset = currentOffset;
-    currentOffset += (t.length + 3) & ~3;
+    t.newOffset = currentOffset.value;
+    currentOffset.value += (t.length + 3) & ~3;
   }
 
-  const newTotalSize = currentOffset;
+  const newTotalSize = currentOffset.value;
   const newFontData = new Uint8Array(newTotalSize);
   const newView = new DataView(newFontData.buffer);
 
@@ -184,16 +182,15 @@ function injectTable(
   newView.setUint16(10, rangeShift, false);
 
   // Write table directory
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let dirOffset = 12;
+  const dirOffset = { value: 12 };
   for (const t of allTables) {
     for (let i = 0; i < 4; i++) {
-      newFontData[dirOffset + i] = t.tag.charCodeAt(i);
+      newFontData[dirOffset.value + i] = t.tag.charCodeAt(i);
     }
-    newView.setUint32(dirOffset + 4, t.checksum, false);
-    newView.setUint32(dirOffset + 8, t.newOffset, false);
-    newView.setUint32(dirOffset + 12, t.length, false);
-    dirOffset += 16;
+    newView.setUint32(dirOffset.value + 4, t.checksum, false);
+    newView.setUint32(dirOffset.value + 8, t.newOffset, false);
+    newView.setUint32(dirOffset.value + 12, t.length, false);
+    dirOffset.value += 16;
   }
 
   // Copy table data

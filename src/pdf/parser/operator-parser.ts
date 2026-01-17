@@ -55,7 +55,6 @@ import type { ParsedElement } from "./operator";
  * import { parseContentStream } from "./operator";
  * const elements = parseContentStream(tokens, fontMappings);
  */
-// eslint-disable-next-line no-restricted-syntax -- Backwards-compat wrapper retained during migration; prefer the functional API.
 export class OperatorParser {
   private readonly fontMappings: FontMappings;
 

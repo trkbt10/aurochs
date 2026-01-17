@@ -8,6 +8,7 @@
  */
 
 import { parseTrueTypeTableDirectory } from "./truetype-parser";
+import type { TableEntry } from "./truetype-parser";
 
 /**
  * Build a cmap table with format 4 subtable for BMP characters.
@@ -28,30 +29,29 @@ export function buildCmapTable(unicodeToGlyph: Map<number, number>): Uint8Array 
 
   // Build segments for format 4
   const segments: Segment[] = [];
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let currentSegment: Segment | null = null;
+  const state: { currentSegment: Segment | null } = { currentSegment: null };
 
   for (const [codePoint, glyphId] of entries) {
-    if (currentSegment === null) {
-      currentSegment = {
+    if (state.currentSegment === null) {
+      state.currentSegment = {
         startCode: codePoint,
         endCode: codePoint,
         idDelta: glyphId - codePoint,
         glyphIds: [glyphId],
       };
     } else if (
-      codePoint === currentSegment.endCode + 1 &&
-      glyphId - codePoint === currentSegment.idDelta
+      codePoint === state.currentSegment.endCode + 1 &&
+      glyphId - codePoint === state.currentSegment.idDelta
     ) {
-      currentSegment.endCode = codePoint;
-      currentSegment.glyphIds.push(glyphId);
-    } else if (codePoint === currentSegment.endCode + 1) {
-      currentSegment.endCode = codePoint;
-      currentSegment.glyphIds.push(glyphId);
-      currentSegment.idDelta = 0;
+      state.currentSegment.endCode = codePoint;
+      state.currentSegment.glyphIds.push(glyphId);
+    } else if (codePoint === state.currentSegment.endCode + 1) {
+      state.currentSegment.endCode = codePoint;
+      state.currentSegment.glyphIds.push(glyphId);
+      state.currentSegment.idDelta = 0;
     } else {
-      segments.push(currentSegment);
-      currentSegment = {
+      segments.push(state.currentSegment);
+      state.currentSegment = {
         startCode: codePoint,
         endCode: codePoint,
         idDelta: glyphId - codePoint,
@@ -60,8 +60,8 @@ export function buildCmapTable(unicodeToGlyph: Map<number, number>): Uint8Array 
     }
   }
 
-  if (currentSegment) {
-    segments.push(currentSegment);
+  if (state.currentSegment) {
+    segments.push(state.currentSegment);
   }
 
   // Add terminating segment
@@ -115,64 +115,63 @@ function buildFormat4Subtable(segments: Segment[]): Uint8Array {
   const buffer = new ArrayBuffer(totalSize);
   const view = new DataView(buffer);
   const data = new Uint8Array(buffer);
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let offset = 0;
+  const offset = { value: 0 };
 
   // cmap header
-  view.setUint16(offset, 0, false);
-  offset += 2;
-  view.setUint16(offset, 1, false);
-  offset += 2;
+  view.setUint16(offset.value, 0, false);
+  offset.value += 2;
+  view.setUint16(offset.value, 1, false);
+  offset.value += 2;
 
   // Encoding record
-  view.setUint16(offset, 3, false);
-  offset += 2;
-  view.setUint16(offset, 1, false);
-  offset += 2;
-  view.setUint32(offset, cmapHeaderSize, false);
-  offset += 4;
+  view.setUint16(offset.value, 3, false);
+  offset.value += 2;
+  view.setUint16(offset.value, 1, false);
+  offset.value += 2;
+  view.setUint32(offset.value, cmapHeaderSize, false);
+  offset.value += 4;
 
   // Format 4 subtable
-  view.setUint16(offset, 4, false);
-  offset += 2;
-  view.setUint16(offset, format4Size, false);
-  offset += 2;
-  view.setUint16(offset, 0, false);
-  offset += 2;
-  view.setUint16(offset, segCount * 2, false);
-  offset += 2;
+  view.setUint16(offset.value, 4, false);
+  offset.value += 2;
+  view.setUint16(offset.value, format4Size, false);
+  offset.value += 2;
+  view.setUint16(offset.value, 0, false);
+  offset.value += 2;
+  view.setUint16(offset.value, segCount * 2, false);
+  offset.value += 2;
 
   const searchRange = 2 * Math.pow(2, Math.floor(Math.log2(segCount)));
   const entrySelector = Math.floor(Math.log2(segCount));
   const rangeShift = 2 * segCount - searchRange;
 
-  view.setUint16(offset, searchRange, false);
-  offset += 2;
-  view.setUint16(offset, entrySelector, false);
-  offset += 2;
-  view.setUint16(offset, rangeShift, false);
-  offset += 2;
+  view.setUint16(offset.value, searchRange, false);
+  offset.value += 2;
+  view.setUint16(offset.value, entrySelector, false);
+  offset.value += 2;
+  view.setUint16(offset.value, rangeShift, false);
+  offset.value += 2;
 
   // endCode array
   for (const seg of segments) {
-    view.setUint16(offset, seg.endCode, false);
-    offset += 2;
+    view.setUint16(offset.value, seg.endCode, false);
+    offset.value += 2;
   }
 
   // reservedPad
-  view.setUint16(offset, 0, false);
-  offset += 2;
+  view.setUint16(offset.value, 0, false);
+  offset.value += 2;
 
   // startCode array
   for (const seg of segments) {
-    view.setUint16(offset, seg.startCode, false);
-    offset += 2;
+    view.setUint16(offset.value, seg.startCode, false);
+    offset.value += 2;
   }
 
   // idDelta array
   for (const seg of segments) {
-    view.setInt16(offset, seg.idDelta, false);
-    offset += 2;
+    view.setInt16(offset.value, seg.idDelta, false);
+    offset.value += 2;
   }
 
   // idRangeOffset array
@@ -181,28 +180,50 @@ function buildFormat4Subtable(segments: Segment[]): Uint8Array {
   for (let i = 0; i < segments.length; i++) {
     const seg = segments[i];
     if (seg.idDelta === 0 && seg.glyphIds.length > 0) {
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-      let arrayOffset = 0;
-      for (let j = 0; j < i; j++) {
-        arrayOffset += glyphIdArrays[j].length * 2;
-      }
+      const arrayOffset = glyphIdArrays.slice(0, i).reduce((sum, arr) => sum + arr.length * 2, 0);
       const rangeOffset = glyphIdArrayOffset + arrayOffset - (i * 2);
-      view.setUint16(offset, rangeOffset, false);
+      view.setUint16(offset.value, rangeOffset, false);
     } else {
-      view.setUint16(offset, 0, false);
+      view.setUint16(offset.value, 0, false);
     }
-    offset += 2;
+    offset.value += 2;
   }
 
   // glyphIdArray
   for (const arr of glyphIdArrays) {
     for (const glyphId of arr) {
-      view.setUint16(offset, glyphId, false);
-      offset += 2;
+      view.setUint16(offset.value, glyphId, false);
+      offset.value += 2;
     }
   }
 
   return data;
+}
+
+function readUint16FromTableOrDefault(
+  view: DataView,
+  dataLength: number,
+  table: TableEntry | undefined,
+  fieldOffset: number,
+  defaultValue: number,
+): number {
+  if (!table) {return defaultValue;}
+  const start = table.offset + fieldOffset;
+  if (start + 2 > dataLength) {return defaultValue;}
+  return view.getUint16(start, false);
+}
+
+function readInt16FromTableOrDefault(
+  view: DataView,
+  dataLength: number,
+  table: TableEntry | undefined,
+  fieldOffset: number,
+  defaultValue: number,
+): number {
+  if (!table) {return defaultValue;}
+  const start = table.offset + fieldOffset;
+  if (start + 2 > dataLength) {return defaultValue;}
+  return view.getInt16(start, false);
 }
 
 /**
@@ -215,68 +236,59 @@ export function buildOS2Table(fontData: Uint8Array): Uint8Array {
   const view = new DataView(fontData.buffer, fontData.byteOffset, fontData.byteLength);
 
   const headTable = tables.find((t) => t.tag === "head");
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let unitsPerEm = 1000;
-  if (headTable && headTable.offset + 18 <= fontData.length) {
-    unitsPerEm = view.getUint16(headTable.offset + 18, false);
-  }
+  const unitsPerEm = readUint16FromTableOrDefault(view, fontData.length, headTable, 18, 1000);
 
   const hheaTable = tables.find((t) => t.tag === "hhea");
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let ascender = Math.round(unitsPerEm * 0.8);
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let descender = Math.round(unitsPerEm * -0.2);
-  if (hheaTable && hheaTable.offset + 8 <= fontData.length) {
-    ascender = view.getInt16(hheaTable.offset + 4, false);
-    descender = view.getInt16(hheaTable.offset + 6, false);
-  }
+  const defaultAscender = Math.round(unitsPerEm * 0.8);
+  const defaultDescender = Math.round(unitsPerEm * -0.2);
+  const ascender = readInt16FromTableOrDefault(view, fontData.length, hheaTable, 4, defaultAscender);
+  const descender = readInt16FromTableOrDefault(view, fontData.length, hheaTable, 6, defaultDescender);
 
   const os2Size = 96;
   const buffer = new ArrayBuffer(os2Size);
   const os2View = new DataView(buffer);
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let offset = 0;
+  const offset = { value: 0 };
 
-  os2View.setUint16(offset, 4, false); offset += 2; // version
-  os2View.setInt16(offset, Math.round(unitsPerEm * 0.5), false); offset += 2; // xAvgCharWidth
-  os2View.setUint16(offset, 400, false); offset += 2; // usWeightClass
-  os2View.setUint16(offset, 5, false); offset += 2; // usWidthClass
-  os2View.setUint16(offset, 0, false); offset += 2; // fsType
-  os2View.setInt16(offset, Math.round(unitsPerEm * 0.65), false); offset += 2;
-  os2View.setInt16(offset, Math.round(unitsPerEm * 0.6), false); offset += 2;
-  os2View.setInt16(offset, 0, false); offset += 2;
-  os2View.setInt16(offset, Math.round(unitsPerEm * 0.075), false); offset += 2;
-  os2View.setInt16(offset, Math.round(unitsPerEm * 0.65), false); offset += 2;
-  os2View.setInt16(offset, Math.round(unitsPerEm * 0.6), false); offset += 2;
-  os2View.setInt16(offset, 0, false); offset += 2;
-  os2View.setInt16(offset, Math.round(unitsPerEm * 0.35), false); offset += 2;
-  os2View.setInt16(offset, Math.round(unitsPerEm * 0.05), false); offset += 2;
-  os2View.setInt16(offset, Math.round(unitsPerEm * 0.3), false); offset += 2;
-  os2View.setInt16(offset, 0, false); offset += 2; // sFamilyClass
-  offset += 10; // panose
-  os2View.setUint32(offset, 0x00000003, false); offset += 4;
-  os2View.setUint32(offset, 0x10000000, false); offset += 4;
-  os2View.setUint32(offset, 0x00000000, false); offset += 4;
-  os2View.setUint32(offset, 0x00000000, false); offset += 4;
-  os2View.setUint8(offset++, 0x4E);
-  os2View.setUint8(offset++, 0x4F);
-  os2View.setUint8(offset++, 0x4E);
-  os2View.setUint8(offset++, 0x45);
-  os2View.setUint16(offset, 0x0040, false); offset += 2; // fsSelection
-  os2View.setUint16(offset, 0x0020, false); offset += 2;
-  os2View.setUint16(offset, 0xFFFF, false); offset += 2;
-  os2View.setInt16(offset, ascender, false); offset += 2;
-  os2View.setInt16(offset, descender, false); offset += 2;
-  os2View.setInt16(offset, Math.round(unitsPerEm * 0.1), false); offset += 2;
-  os2View.setUint16(offset, Math.max(0, ascender), false); offset += 2;
-  os2View.setUint16(offset, Math.abs(descender), false); offset += 2;
-  os2View.setUint32(offset, 0x00000001, false); offset += 4;
-  os2View.setUint32(offset, 0x00000000, false); offset += 4;
-  os2View.setInt16(offset, Math.round(unitsPerEm * 0.5), false); offset += 2;
-  os2View.setInt16(offset, Math.round(unitsPerEm * 0.7), false); offset += 2;
-  os2View.setUint16(offset, 0, false); offset += 2;
-  os2View.setUint16(offset, 0x0020, false); offset += 2;
-  os2View.setUint16(offset, 0, false); offset += 2;
+  os2View.setUint16(offset.value, 4, false); offset.value += 2; // version
+  os2View.setInt16(offset.value, Math.round(unitsPerEm * 0.5), false); offset.value += 2; // xAvgCharWidth
+  os2View.setUint16(offset.value, 400, false); offset.value += 2; // usWeightClass
+  os2View.setUint16(offset.value, 5, false); offset.value += 2; // usWidthClass
+  os2View.setUint16(offset.value, 0, false); offset.value += 2; // fsType
+  os2View.setInt16(offset.value, Math.round(unitsPerEm * 0.65), false); offset.value += 2;
+  os2View.setInt16(offset.value, Math.round(unitsPerEm * 0.6), false); offset.value += 2;
+  os2View.setInt16(offset.value, 0, false); offset.value += 2;
+  os2View.setInt16(offset.value, Math.round(unitsPerEm * 0.075), false); offset.value += 2;
+  os2View.setInt16(offset.value, Math.round(unitsPerEm * 0.65), false); offset.value += 2;
+  os2View.setInt16(offset.value, Math.round(unitsPerEm * 0.6), false); offset.value += 2;
+  os2View.setInt16(offset.value, 0, false); offset.value += 2;
+  os2View.setInt16(offset.value, Math.round(unitsPerEm * 0.35), false); offset.value += 2;
+  os2View.setInt16(offset.value, Math.round(unitsPerEm * 0.05), false); offset.value += 2;
+  os2View.setInt16(offset.value, Math.round(unitsPerEm * 0.3), false); offset.value += 2;
+  os2View.setInt16(offset.value, 0, false); offset.value += 2; // sFamilyClass
+  offset.value += 10; // panose
+  os2View.setUint32(offset.value, 0x00000003, false); offset.value += 4;
+  os2View.setUint32(offset.value, 0x10000000, false); offset.value += 4;
+  os2View.setUint32(offset.value, 0x00000000, false); offset.value += 4;
+  os2View.setUint32(offset.value, 0x00000000, false); offset.value += 4;
+  os2View.setUint8(offset.value, 0x4E); offset.value += 1;
+  os2View.setUint8(offset.value, 0x4F); offset.value += 1;
+  os2View.setUint8(offset.value, 0x4E); offset.value += 1;
+  os2View.setUint8(offset.value, 0x45); offset.value += 1;
+  os2View.setUint16(offset.value, 0x0040, false); offset.value += 2; // fsSelection
+  os2View.setUint16(offset.value, 0x0020, false); offset.value += 2;
+  os2View.setUint16(offset.value, 0xFFFF, false); offset.value += 2;
+  os2View.setInt16(offset.value, ascender, false); offset.value += 2;
+  os2View.setInt16(offset.value, descender, false); offset.value += 2;
+  os2View.setInt16(offset.value, Math.round(unitsPerEm * 0.1), false); offset.value += 2;
+  os2View.setUint16(offset.value, Math.max(0, ascender), false); offset.value += 2;
+  os2View.setUint16(offset.value, Math.abs(descender), false); offset.value += 2;
+  os2View.setUint32(offset.value, 0x00000001, false); offset.value += 4;
+  os2View.setUint32(offset.value, 0x00000000, false); offset.value += 4;
+  os2View.setInt16(offset.value, Math.round(unitsPerEm * 0.5), false); offset.value += 2;
+  os2View.setInt16(offset.value, Math.round(unitsPerEm * 0.7), false); offset.value += 2;
+  os2View.setUint16(offset.value, 0, false); offset.value += 2;
+  os2View.setUint16(offset.value, 0x0020, false); offset.value += 2;
+  os2View.setUint16(offset.value, 0, false); offset.value += 2;
 
   return new Uint8Array(buffer);
 }
@@ -303,8 +315,7 @@ export function buildNameTable(fontName: string): Uint8Array {
   const stringOffset = headerSize + recordCount * recordSize;
 
   const stringParts: { offset: number; data: Uint8Array }[] = [];
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let currentStringOffset = 0;
+  const currentStringOffset = { value: 0 };
 
   for (const name of names) {
     const utf16Data = new Uint8Array(name.value.length * 2);
@@ -313,11 +324,11 @@ export function buildNameTable(fontName: string): Uint8Array {
       utf16Data[i * 2] = (code >> 8) & 0xFF;
       utf16Data[i * 2 + 1] = code & 0xFF;
     }
-    stringParts.push({ offset: currentStringOffset, data: utf16Data });
-    currentStringOffset += utf16Data.length;
+    stringParts.push({ offset: currentStringOffset.value, data: utf16Data });
+    currentStringOffset.value += utf16Data.length;
   }
 
-  const totalSize = stringOffset + currentStringOffset;
+  const totalSize = stringOffset + currentStringOffset.value;
   const buffer = new ArrayBuffer(totalSize);
   const view = new DataView(buffer);
   const data = new Uint8Array(buffer);
@@ -326,27 +337,26 @@ export function buildNameTable(fontName: string): Uint8Array {
   view.setUint16(2, recordCount, false);
   view.setUint16(4, stringOffset, false);
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let recordOffset = headerSize;
+  const recordOffset = { value: headerSize };
   for (let i = 0; i < names.length; i++) {
     const name = names[i];
     const stringPart = stringParts[i];
 
-    view.setUint16(recordOffset, 3, false);
-    view.setUint16(recordOffset + 2, 1, false);
-    view.setUint16(recordOffset + 4, 0x0409, false);
-    view.setUint16(recordOffset + 6, name.id, false);
-    view.setUint16(recordOffset + 8, stringPart.data.length, false);
-    view.setUint16(recordOffset + 10, stringPart.offset, false);
-    recordOffset += recordSize;
+    view.setUint16(recordOffset.value, 3, false);
+    view.setUint16(recordOffset.value + 2, 1, false);
+    view.setUint16(recordOffset.value + 4, 0x0409, false);
+    view.setUint16(recordOffset.value + 6, name.id, false);
+    view.setUint16(recordOffset.value + 8, stringPart.data.length, false);
+    view.setUint16(recordOffset.value + 10, stringPart.offset, false);
+    recordOffset.value += recordSize;
 
-    view.setUint16(recordOffset, 1, false);
-    view.setUint16(recordOffset + 2, 0, false);
-    view.setUint16(recordOffset + 4, 0, false);
-    view.setUint16(recordOffset + 6, name.id, false);
-    view.setUint16(recordOffset + 8, stringPart.data.length, false);
-    view.setUint16(recordOffset + 10, stringPart.offset, false);
-    recordOffset += recordSize;
+    view.setUint16(recordOffset.value, 1, false);
+    view.setUint16(recordOffset.value + 2, 0, false);
+    view.setUint16(recordOffset.value + 4, 0, false);
+    view.setUint16(recordOffset.value + 6, name.id, false);
+    view.setUint16(recordOffset.value + 8, stringPart.data.length, false);
+    view.setUint16(recordOffset.value + 10, stringPart.offset, false);
+    recordOffset.value += recordSize;
   }
 
   for (const part of stringParts) {

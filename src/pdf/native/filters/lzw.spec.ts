@@ -38,41 +38,36 @@ function lzwEncodePdf(data: Uint8Array, earlyChange: 0 | 1 = 1): Uint8Array {
   };
   resetDict();
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let codeSize = 9;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let nextCode = 258;
+  const state: { codeSize: number; nextCode: number; phrase: string } = { codeSize: 9, nextCode: 258, phrase: "" };
 
   const w: BitWriter = { bytes: [], bitPos: 0 };
-  writeBitsMSB(w, codeSize, CLEAR);
+  writeBitsMSB(w, state.codeSize, CLEAR);
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
-  let phrase = "";
   for (const b of data) {
     const ch = String.fromCharCode(b);
-    const nextPhrase = phrase + ch;
+    const nextPhrase = state.phrase + ch;
     if (dict.has(nextPhrase)) {
-      phrase = nextPhrase;
+      state.phrase = nextPhrase;
       continue;
     }
 
-    if (phrase.length > 0) {
-      writeBitsMSB(w, codeSize, dict.get(phrase)!);
+    if (state.phrase.length > 0) {
+      writeBitsMSB(w, state.codeSize, dict.get(state.phrase)!);
     }
 
-    if (nextCode <= 4095) {
-      dict.set(nextPhrase, nextCode);
-      nextCode += 1;
-      if (shouldIncreaseCodeSize(nextCode, codeSize, earlyChange)) {codeSize += 1;}
+    if (state.nextCode <= 4095) {
+      dict.set(nextPhrase, state.nextCode);
+      state.nextCode += 1;
+      if (shouldIncreaseCodeSize(state.nextCode, state.codeSize, earlyChange)) {state.codeSize += 1;}
     }
-    phrase = ch;
+    state.phrase = ch;
   }
 
-  if (phrase.length > 0) {
-    writeBitsMSB(w, codeSize, dict.get(phrase)!);
+  if (state.phrase.length > 0) {
+    writeBitsMSB(w, state.codeSize, dict.get(state.phrase)!);
   }
 
-  writeBitsMSB(w, codeSize, EOD);
+  writeBitsMSB(w, state.codeSize, EOD);
   return new Uint8Array(w.bytes);
 }
 

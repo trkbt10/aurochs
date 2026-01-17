@@ -60,7 +60,6 @@ function printGroupInfo(groups: readonly GroupedText[], verbose = false): void {
 describe("spatialGrouping with real PDF", () => {
   const PDF_PATH = join(process.cwd(), "fixtures/samples/k-namingrule-dl.pdf");
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
   let groups: readonly GroupedText[];
 
   beforeAll(async () => {

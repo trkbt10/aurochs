@@ -453,11 +453,8 @@ function flattenToParagraphs(groupedParas: readonly GroupedParagraph[]): Paragra
   }
 
   const result: Paragraph[] = [];
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
   let currentRuns: PdfText[] = [...groupedParas[0].runs];
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
   let spaceBefore: number | undefined = undefined;
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
   let currentLineSpacing: LineSpacingInfo | undefined = groupedParas[0].lineSpacing;
 
   for (let i = 1; i < groupedParas.length; i++) {

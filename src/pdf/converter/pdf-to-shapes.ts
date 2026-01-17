@@ -55,7 +55,6 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
   );
 
   const shapes: Shape[] = [];
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
   let shapeIdCounter = 1;
 
   const generateId = (): string => String(shapeIdCounter++);
@@ -121,7 +120,6 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
     }
 
     // Determine if this path should be a blocking zone based on paint operation
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
     let isBlockingZone = false;
 
     if (path.paintOp === "stroke" || path.paintOp === "fillStroke") {
@@ -268,7 +266,6 @@ function convertPath(path: PdfPath, context: ConversionContext, shapeId: string)
   // (like rect, ellipse) won't represent the actual shape correctly
   const usePresetOptimization = ctmDecomposition.isSimple;
 
-// eslint-disable-next-line no-restricted-syntax -- Local reassignment keeps this parsing/decoding logic straightforward.
   let geometry: SpShape["properties"]["geometry"];
   if (usePresetOptimization && isSimpleRectangle(path)) {
     geometry = convertToPresetRect(path);

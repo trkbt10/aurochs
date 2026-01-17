@@ -80,7 +80,7 @@ function decodeParmsFromStreamDict(dict: PdfDict, filterCount: number): readonly
 
 
 /** PdfResolver */
-export class PdfResolver { // eslint-disable-line no-restricted-syntax -- Stateful cache/resolution API.
+export class PdfResolver {
   private readonly indirectCache = new Map<number, PdfObject>();
   private readonly objStmCache = new Map<number, ObjStmCacheEntry>();
 
