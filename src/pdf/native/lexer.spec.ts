@@ -1,4 +1,3 @@
-import { describe, it, expect } from "vitest";
 import { createLexer, nextToken } from "./lexer";
 
 describe("PDF lexer (hex strings)", () => {
@@ -34,4 +33,3 @@ describe("PDF lexer (hex strings)", () => {
     expect(() => nextToken(createLexer(bytes, 0))).toThrow(/invalid hex digit/i);
   });
 });
-

@@ -5,7 +5,6 @@
  * Tests that embedded fonts from PDF are included in SVG output
  * via <style> element with @font-face declarations.
  */
-import { describe, it, expect, beforeAll } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { render } from "@testing-library/react";

@@ -2,7 +2,7 @@ import type { PdfImage, PdfPage, PdfPath, PdfText } from "../domain";
 import { createDefaultGraphicsState } from "../domain";
 import { px } from "../../ooxml/domain/units";
 import { convertDocumentToSlides, convertPageToShapes } from "./pdf-to-shapes";
-import { createSpatialGrouping, spatialGrouping } from "./text-grouping/spatial-grouping";
+import { spatialGrouping } from "./text-grouping/spatial-grouping";
 
 const graphicsState = {
   ...createDefaultGraphicsState(),

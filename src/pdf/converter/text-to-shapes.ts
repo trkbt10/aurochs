@@ -525,13 +525,7 @@ function createFlatParagraph(
   spaceBeforePts: number | undefined,
   lineSpacing: LineSpacingInfo | undefined
 ): Paragraph {
-  // Convert baseline distance to line spacing percentage
-  // lineSpacing% = (baseline distance / fontSize) * 100
-  const lineSpacingPercent = lineSpacing !== undefined &&
-    lineSpacing.baselineDistance > 0 &&
-    lineSpacing.fontSize > 0
-    ? (lineSpacing.baselineDistance / lineSpacing.fontSize) * 100
-    : undefined;
+  const lineSpacingPercent = calculateLineSpacingPercent(lineSpacing);
 
   return {
     properties: {
@@ -546,6 +540,20 @@ function createFlatParagraph(
     runs: runs.map(createTextRun),
     endProperties: {},
   };
+}
+
+function calculateLineSpacingPercent(lineSpacing: LineSpacingInfo | undefined): number | undefined {
+  if (!lineSpacing) {
+    return undefined;
+  }
+  if (lineSpacing.baselineDistance <= 0) {
+    return undefined;
+  }
+  if (lineSpacing.fontSize <= 0) {
+    return undefined;
+  }
+  // lineSpacing% = (baseline distance / fontSize) * 100
+  return (lineSpacing.baselineDistance / lineSpacing.fontSize) * 100;
 }
 
 /**

@@ -9,9 +9,8 @@ import {
   calculateTextDisplacement,
   calculateEffectiveFontSize,
   getGlyphWidth,
-  createTextRun,
 } from "./text-handlers";
-import type { ParserContext, GraphicsStateOps, ParsedText, TextObjectState } from "./types";
+import type { ParserContext, GraphicsStateOps, ParsedText } from "./types";
 import { createDefaultGraphicsState, IDENTITY_MATRIX, type PdfMatrix, type FontMetrics } from "../../domain";
 
 // Mock GraphicsStateOps for testing with tracking
@@ -327,7 +326,7 @@ describe("text-handlers", () => {
     });
 
     it("all handlers have text category", () => {
-      for (const [_, entry] of TEXT_HANDLERS) {
+      for (const [, entry] of TEXT_HANDLERS) {
         expect(entry.category).toBe("text");
       }
     });

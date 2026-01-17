@@ -4,7 +4,6 @@
  * Verifies that PDF embedded fonts are properly extracted and repaired
  * for web rendering (cmap, OS/2, name, post tables added).
  */
-import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { importPdf } from "./pdf-importer";

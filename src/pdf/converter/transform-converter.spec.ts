@@ -6,6 +6,24 @@ import { px } from "../../ooxml/domain/units";
 import type { ConversionContext } from "./transform-converter";
 import { convertBBox, convertMatrix, convertPoint, convertSize, createFitContext } from "./transform-converter";
 
+function createConsoleWarnSpy(): Readonly<{
+  readonly calls: readonly ReadonlyArray<unknown>[];
+  readonly restore: () => void;
+}> {
+  const calls: ReadonlyArray<unknown>[] = [];
+  const original = console.warn;
+
+  console.warn = (...args: unknown[]) => {
+    calls.push(args);
+  };
+
+  const restore = (): void => {
+    console.warn = original;
+  };
+
+  return { calls, restore };
+}
+
 describe("convertPoint", () => {
   it("flips Y-axis (PDF bottom-left → PPTX top-left)", () => {
     const context = {
@@ -166,14 +184,7 @@ describe("convertMatrix", () => {
     const cx = x + width / 2;
     const cy = y + height / 2;
 
-    const local =
-      corner === "tl"
-        ? { x: -width / 2, y: -height / 2 }
-        : corner === "tr"
-          ? { x: width / 2, y: -height / 2 }
-          : corner === "bl"
-            ? { x: -width / 2, y: height / 2 }
-            : { x: width / 2, y: height / 2 };
+    const local = getLocalCornerPoint(corner, width, height);
 
     const flipped = {
       x: transform.flipH ? -local.x : local.x,
@@ -189,6 +200,19 @@ describe("convertMatrix", () => {
     };
 
     return { x: cx + rotated.x, y: cy + rotated.y };
+  }
+
+  function getLocalCornerPoint(corner: "tl" | "tr" | "bl" | "br", width: number, height: number): Point {
+    if (corner === "tl") {
+      return { x: -width / 2, y: -height / 2 };
+    }
+    if (corner === "tr") {
+      return { x: width / 2, y: -height / 2 };
+    }
+    if (corner === "bl") {
+      return { x: -width / 2, y: height / 2 };
+    }
+    return { x: width / 2, y: height / 2 };
   }
 
   function expectPointClose(actual: Point, expected: Point): void {
@@ -283,13 +307,13 @@ describe("convertMatrix", () => {
   });
 
   it("warns and falls back for shear transforms", () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warnSpy = createConsoleWarnSpy();
 
     const ctm = [200, 0, 50, 150, 100, 200] as const;
     const expected = getExpectedCorners(ctm, context);
     const result = convertMatrix(ctm, context);
 
-    expect(warnSpy).toHaveBeenCalled();
+    expect(warnSpy.calls.length).toBeGreaterThan(0);
 
     const xs = [expected.tl.x, expected.tr.x, expected.bl.x, expected.br.x];
     const ys = [expected.tl.y, expected.tr.y, expected.bl.y, expected.br.y];
@@ -306,7 +330,7 @@ describe("convertMatrix", () => {
     expect(result.width as number).toBeCloseTo(maxX - minX, 6);
     expect(result.height as number).toBeCloseTo(maxY - minY, 6);
 
-    warnSpy.mockRestore();
+    warnSpy.restore();
   });
 
   it("supports composite transform (rotation + non-uniform scale) when representable", () => {
@@ -327,7 +351,7 @@ describe("convertMatrix", () => {
   });
 
   it("falls back when slide scaling introduces shear (scaleX ≠ scaleY with rotation)", () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warnSpy = createConsoleWarnSpy();
 
     const scaledContext = {
       pdfWidth: 400,
@@ -340,7 +364,7 @@ describe("convertMatrix", () => {
     const expected = getExpectedCorners(ctm, scaledContext);
     const result = convertMatrix(ctm, scaledContext);
 
-    expect(warnSpy).toHaveBeenCalled();
+    expect(warnSpy.calls.length).toBeGreaterThan(0);
 
     const xs = [expected.tl.x, expected.tr.x, expected.bl.x, expected.br.x];
     const ys = [expected.tl.y, expected.tr.y, expected.bl.y, expected.br.y];
@@ -355,6 +379,6 @@ describe("convertMatrix", () => {
     expect(result.width as number).toBeCloseTo(maxX - minX, 6);
     expect(result.height as number).toBeCloseTo(maxY - minY, 6);
 
-    warnSpy.mockRestore();
+    warnSpy.restore();
   });
 });

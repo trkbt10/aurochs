@@ -15,7 +15,6 @@ import type { FontMapping } from "./types";
 import {
   parseTrueTypeTableDirectory,
   calculateTableChecksum,
-  type TableEntry,
 } from "./truetype-parser";
 import {
   buildCmapTable,

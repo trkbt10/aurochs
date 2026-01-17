@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { decodeLzw } from "./lzw";
 
 type BitWriter = {
@@ -85,4 +84,3 @@ describe("LZWDecode (PDF)", () => {
     expect(decoded).toEqual(input);
   });
 });
-

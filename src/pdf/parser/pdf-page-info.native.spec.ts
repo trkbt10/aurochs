@@ -1,5 +1,4 @@
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
 import { getPdfPageCount, getPdfPageDimensions } from "./pdf-parser";
 
 describe("PDF page info (native loader)", () => {
@@ -21,4 +20,3 @@ describe("PDF page info (native loader)", () => {
     expect(Math.round(size!.height)).toBe(15);
   });
 });
-

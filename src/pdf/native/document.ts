@@ -275,6 +275,11 @@ function mergeMetadata(
 
 
 
+
+
+
+
+
 export class NativePdfDocument {
   private readonly xref: XRefTable;
   private readonly resolver: PdfResolver;
@@ -447,6 +452,11 @@ export class NativePdfDocument {
     return out;
   }
 }
+
+
+
+
+
 
 
 

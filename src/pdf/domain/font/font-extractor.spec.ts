@@ -6,11 +6,10 @@
  *
  * @see ISO 32000-1:2008 Section 9.9 (Embedded Font Programs)
  */
-import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { loadNativePdfDocument } from "../../native";
-import { extractEmbeddedFonts, type EmbeddedFont } from "./font-extractor";
+import { extractEmbeddedFonts } from "./font-extractor";
 
 describe("extractEmbeddedFonts", () => {
   it("should extract OpenType fonts from CJK PDF", async () => {

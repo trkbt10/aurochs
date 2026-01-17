@@ -361,11 +361,11 @@ describe("convertToPresetRect / convertToPresetEllipse", () => {
       graphicsState,
     };
 
-    expect(convertToPresetRect(rectPath, context)).toEqual({ type: "preset", preset: "rect", adjustValues: [] });
-    expect(() => convertToPresetEllipse(rectPath, context)).toThrow("Path is not an approximate ellipse");
+    expect(convertToPresetRect(rectPath)).toEqual({ type: "preset", preset: "rect", adjustValues: [] });
+    expect(() => convertToPresetEllipse(rectPath)).toThrow("Path is not an approximate ellipse");
 
     const ellipsePath = createEllipsePath({ cx: 50, cy: 50, rx: 10, ry: 20, paintOp: "stroke", closePath: true });
-    expect(convertToPresetEllipse(ellipsePath, context)).toEqual({ type: "preset", preset: "ellipse", adjustValues: [] });
+    expect(convertToPresetEllipse(ellipsePath)).toEqual({ type: "preset", preset: "ellipse", adjustValues: [] });
   });
 });
 
@@ -666,7 +666,7 @@ describe("isRoundedRectangle", () => {
 
   it("converts rounded rect to roundRect preset", () => {
     const path = createRoundedRectPath(0, 0, 100, 100, 16.67); // ~16.7%
-    const preset = convertToPresetRoundRect(path, context);
+    const preset = convertToPresetRoundRect(path);
 
     expect(preset.type).toBe("preset");
     expect(preset.preset).toBe("roundRect");

@@ -3,6 +3,11 @@
 
 
 
+
+
+
+
+
 export function concatBytes(...parts: readonly Uint8Array[]): Uint8Array {
   const total = parts.reduce((sum, p) => sum + p.length, 0);
   const out = new Uint8Array(total);
@@ -13,6 +18,11 @@ export function concatBytes(...parts: readonly Uint8Array[]): Uint8Array {
   }
   return out;
 }
+
+
+
+
+
 
 
 
@@ -34,6 +44,11 @@ export function int32le(value: number): Uint8Array {
 
 
 
+
+
+
+
+
 export function objKeySalt(objNum: number, gen: number): Uint8Array {
   const o = objNum >>> 0;
   const g = gen >>> 0;
@@ -45,6 +60,11 @@ export function objKeySalt(objNum: number, gen: number): Uint8Array {
     (g >>> 8) & 0xff,
   ]);
 }
+
+
+
+
+
 
 
 

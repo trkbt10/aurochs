@@ -1,7 +1,17 @@
 import { tokenizeContentStream } from "../domain/content-stream";
 import type { PdfArray, PdfBool, PdfDict, PdfName, PdfNumber, PdfObject, PdfStream, PdfString } from "../native";
 
-const WHITESPACE = /[\x00\x09\x0a\x0c\x0d\x20]/;
+function isPdfWhitespace(ch: string): boolean {
+  const code = ch.charCodeAt(0);
+  return (
+    code === 0x00 ||
+    code === 0x09 ||
+    code === 0x0a ||
+    code === 0x0c ||
+    code === 0x0d ||
+    code === 0x20
+  );
+}
 
 function latin1ToBytes(str: string): Uint8Array {
   const out = new Uint8Array(str.length);
@@ -11,7 +21,7 @@ function latin1ToBytes(str: string): Uint8Array {
 
 function isBoundaryChar(ch: string | undefined): boolean {
   if (!ch) {return true;}
-  return WHITESPACE.test(ch);
+  return isPdfWhitespace(ch);
 }
 
 function makeName(value: string): PdfName {
@@ -211,6 +221,11 @@ export type PreprocessInlineImagesResult = Readonly<{
   readonly content: string;
   readonly xObjects: ReadonlyMap<string, PdfStream>;
 }>;
+
+
+
+
+
 
 
 

@@ -1,4 +1,3 @@
-import { describe, it, expect } from "vitest";
 import { loadNativePdfDocument } from "./document";
 
 function pad10(n: number): string {

@@ -60,12 +60,22 @@ function parseDashPattern(obj: PdfObject | undefined): { dashArray: readonly num
 
 
 
+
+
+
+
+
 export function extractExtGStateNative(page: NativePdfPage): ReadonlyMap<string, ExtGStateParams> {
   const resources = page.getResourcesDict();
   if (!resources) {return new Map();}
 
   return extractExtGStateFromResourcesNative(page, resources);
 }
+
+
+
+
+
 
 
 
@@ -132,6 +142,11 @@ export function extractExtGStateFromResourcesNative(
 
   return out;
 }
+
+
+
+
+
 
 
 

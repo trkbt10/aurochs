@@ -1,5 +1,4 @@
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
 import { loadNativePdfDocument } from "./document";
 
 function pad10(n: number): string {

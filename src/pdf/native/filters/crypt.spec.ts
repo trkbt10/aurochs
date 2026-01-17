@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { zlibSync } from "fflate";
 import { loadNativePdfDocument } from "../document";
 import { concatBytes, int32le, objKeySalt } from "../encryption/bytes";

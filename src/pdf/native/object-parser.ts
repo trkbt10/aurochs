@@ -111,6 +111,11 @@ function parseObjectWithInitialToken(state: ParseState, initial: PdfToken): { va
 
 
 
+
+
+
+
+
 export function parseObject(state: ParseState): { value: PdfObject; state: ParseState } {
   const { token, next } = nextToken(state.lex);
   return parseObjectWithInitialToken({ lex: next }, token);
@@ -248,6 +253,11 @@ function findEndstreamStart(bytes: Uint8Array, from: number): number {
   }
   return -1;
 }
+
+
+
+
+
 
 
 

@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { decodePdfDocEncoding, decodePdfStringBytes } from "./encoding";
 import { createLexer } from "./lexer";
 import { parseObject } from "./object-parser";

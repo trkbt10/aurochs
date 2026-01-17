@@ -1,8 +1,8 @@
-import type { PdfDocument, PdfElement, PdfImage, PdfPage, PdfPath, PdfText } from "../domain";
+import type { PdfDocument, PdfElement, PdfEmbeddedFont, PdfImage, PdfPage, PdfPath, PdfText } from "../domain";
 import { tokenizeContentStream } from "../domain/content-stream";
 import { decodeText, type FontMappings } from "../domain/font";
 import { GraphicsStateStack, type PdfMatrix } from "../domain";
-import type { NativePdfPage, PdfArray, PdfDict, PdfName, PdfNumber, PdfObject, PdfRef, PdfStream } from "../native";
+import type { NativePdfPage, PdfArray, PdfDict, PdfName, PdfObject, PdfStream } from "../native";
 import { decodePdfStream } from "../native/stream";
 import { buildPath, builtPathToPdfPath } from "./path-builder";
 import {
@@ -43,6 +43,11 @@ const DEFAULT_OPTIONS: Required<PdfParserOptions> = {
 
 
 
+
+
+
+
+
 export async function parsePdfNative(
   data: Uint8Array | ArrayBuffer,
   options: PdfParserOptions = {},
@@ -73,9 +78,7 @@ export async function parsePdfNative(
   }
 
   const pdfPages = pdfDoc.getPages();
-  const pagesToParse = opts.pages.length > 0
-    ? opts.pages.filter((p) => p >= 1 && p <= pdfPages.length)
-    : Array.from({ length: pdfPages.length }, (_, i) => i + 1);
+  const pagesToParse = resolvePagesToParse(opts.pages, pdfPages.length);
 
   const pages: PdfPage[] = [];
   for (const pageNum of pagesToParse) {
@@ -86,16 +89,30 @@ export async function parsePdfNative(
 
   const metadata = pdfDoc.getMetadata();
 
-  const embeddedFonts = embeddedFontsRaw.length > 0
-    ? embeddedFontsRaw.map((f) => ({
-        fontFamily: f.fontFamily,
-        format: f.format,
-        data: f.data,
-        mimeType: f.mimeType,
-      }))
-    : undefined;
+  const embeddedFonts = buildEmbeddedFonts(embeddedFontsRaw);
 
   return { pages, metadata, embeddedFonts };
+}
+
+function resolvePagesToParse(requested: readonly number[], pageCount: number): readonly number[] {
+  if (requested.length > 0) {
+    return requested.filter((p) => p >= 1 && p <= pageCount);
+  }
+  return Array.from({ length: pageCount }, (_, i) => i + 1);
+}
+
+function buildEmbeddedFonts(
+  embeddedFontsRaw: readonly { readonly fontFamily: string; readonly format: PdfEmbeddedFont["format"]; readonly data: Uint8Array; readonly mimeType: string }[],
+): readonly PdfEmbeddedFont[] | undefined {
+  if (embeddedFontsRaw.length === 0) {
+    return undefined;
+  }
+  return embeddedFontsRaw.map((f) => ({
+    fontFamily: f.fontFamily,
+    format: f.format,
+    data: f.data,
+    mimeType: f.mimeType,
+  }));
 }
 
 async function parsePage(
@@ -206,13 +223,20 @@ function parseMatrix6(page: NativePdfPage, obj: PdfObject | undefined): PdfMatri
   const resolved = resolve(page, obj);
   const arr = asArray(resolved);
   if (!arr || arr.items.length !== 6) {return null;}
-  const nums: number[] = [];
-  for (const item of arr.items) {
-    const v = asNumber(resolve(page, item));
-    if (v == null || !Number.isFinite(v)) {return null;}
-    nums.push(v);
-  }
-  return nums as unknown as PdfMatrix;
+  const [i0, i1, i2, i3, i4, i5] = arr.items;
+  const n0 = asNumber(resolve(page, i0));
+  const n1 = asNumber(resolve(page, i1));
+  const n2 = asNumber(resolve(page, i2));
+  const n3 = asNumber(resolve(page, i3));
+  const n4 = asNumber(resolve(page, i4));
+  const n5 = asNumber(resolve(page, i5));
+  if (n0 == null || !Number.isFinite(n0)) {return null;}
+  if (n1 == null || !Number.isFinite(n1)) {return null;}
+  if (n2 == null || !Number.isFinite(n2)) {return null;}
+  if (n3 == null || !Number.isFinite(n3)) {return null;}
+  if (n4 == null || !Number.isFinite(n4)) {return null;}
+  if (n5 == null || !Number.isFinite(n5)) {return null;}
+  return [n0, n1, n2, n3, n4, n5];
 }
 
 type ImageGroupMap = Map<PdfDict, ParsedImage[]>;

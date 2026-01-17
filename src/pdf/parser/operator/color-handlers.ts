@@ -13,8 +13,6 @@
  */
 
 import type {
-  ParserContext,
-  ParserStateUpdate,
   GraphicsStateOps,
   OperatorHandler,
   OperatorHandlerEntry,

@@ -12,6 +12,11 @@ function hexValue(b: number): number | null {
 
 
 
+
+
+
+
+
 export function decodeAsciiHex(data: Uint8Array): Uint8Array {
   const out: number[] = [];
   let hi: number | null = null;

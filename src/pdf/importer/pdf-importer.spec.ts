@@ -3,6 +3,24 @@ import { px } from "../../ooxml/domain/units";
 import { importPdf, importPdfFromFile, importPdfFromUrl, PdfImportError } from "./pdf-importer";
 import { buildSimplePdfBytes } from "../test-utils/simple-pdf";
 
+function createConsoleWarnSpy(): Readonly<{
+  readonly calls: readonly ReadonlyArray<unknown>[];
+  readonly restore: () => void;
+}> {
+  const calls: ReadonlyArray<unknown>[] = [];
+  const original = console.warn;
+
+  console.warn = (...args: unknown[]) => {
+    calls.push(args);
+  };
+
+  const restore = (): void => {
+    console.warn = original;
+  };
+
+  return { calls, restore };
+}
+
 function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   if (bytes.buffer instanceof ArrayBuffer) {
     return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
@@ -150,10 +168,10 @@ describe("pdf-importer", () => {
     expect(resolver.resolve(dataUrl)).toBe(dataUrl);
     expect(resolver.getMimeType(dataUrl)).toBe("image/png");
 
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const warnSpy = createConsoleWarnSpy();
     expect(resolver.resolve("file:///tmp/image.png")).toBeUndefined();
-    expect(warnSpy).toHaveBeenCalledTimes(1);
-    warnSpy.mockRestore();
+    expect(warnSpy.calls).toHaveLength(1);
+    warnSpy.restore();
 
     expect(resolver.getMimeType("file:///tmp/image.png")).toBeUndefined();
     expect(resolver.getFilePath("file:///tmp/image.png")).toBeUndefined();

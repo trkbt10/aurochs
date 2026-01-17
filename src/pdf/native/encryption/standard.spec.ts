@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { loadNativePdfDocument } from "../document";
 import { concatBytes, int32le, objKeySalt } from "./bytes";
 import { md5 } from "./md5";
@@ -168,4 +167,3 @@ describe("Standard Security Handler (V=2/R=3)", () => {
     expect(() => loadNativePdfDocument(bytes, { encryption: { mode: "password", password: "wrong" } })).toThrow(/password/i);
   });
 });
-

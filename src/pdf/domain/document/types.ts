@@ -187,6 +187,11 @@ export const PDF_UNITS = {
 
 
 
+
+
+
+
+
 export function isPdfPath(element: PdfElement): element is PdfPath {
   return element.type === "path";
 }
@@ -196,9 +201,19 @@ export function isPdfPath(element: PdfElement): element is PdfPath {
 
 
 
+
+
+
+
+
 export function isPdfText(element: PdfElement): element is PdfText {
   return element.type === "text";
 }
+
+
+
+
+
 
 
 

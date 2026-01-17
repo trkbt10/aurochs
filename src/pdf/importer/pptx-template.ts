@@ -125,6 +125,11 @@ const BLANK_SLIDE_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 
 
 
+
+
+
+
+
 export function createBlankPptxPresentationFile(
   slideCount: number,
   slideSize: BlankPptxSlideSize,

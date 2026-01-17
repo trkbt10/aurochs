@@ -15,12 +15,22 @@ export type PdfParserOptions = NativePdfParserOptions;
 
 
 
+
+
+
+
+
 export async function parsePdf(
   data: Uint8Array | ArrayBuffer,
   options: PdfParserOptions = {},
 ): Promise<PdfDocument> {
   return await parsePdfNative(data, options);
 }
+
+
+
+
+
 
 
 
@@ -35,6 +45,11 @@ export async function getPdfPageCount(data: Uint8Array | ArrayBuffer): Promise<n
   });
   return pdfDoc.getPageCount();
 }
+
+
+
+
+
 
 
 

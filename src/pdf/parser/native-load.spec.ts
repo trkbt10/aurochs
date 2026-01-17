@@ -1,5 +1,4 @@
 import { existsSync, readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
 import { loadNativePdfDocumentForParser } from "./native-load";
 import PDFDocument from "pdfkit";
 
@@ -53,45 +52,62 @@ function buildPdfWithEncryptTrailer(options: { readonly includeRoot: boolean }):
   const offset2 = offset1 + obj1.length;
   const offset3 = offset2 + obj2.length;
 
-  const size = options.includeRoot ? 4 : 1;
-  const xrefOffset = options.includeRoot ? offset3 + obj3.length : header.length;
+  const includeRoot = options.includeRoot;
+  const size = includeRoot ? 4 : 1;
+  const xrefOffset = includeRoot ? offset3 + obj3.length : header.length;
+  const xref = buildEncryptTrailerXref(includeRoot, size, offset1, offset2, offset3);
+  const trailer = buildEncryptTrailerTrailer(includeRoot, size, xrefOffset);
+  return buildEncryptTrailerBytes(includeRoot, header, obj1, obj2, obj3, xref, trailer);
+}
 
-  const xref = options.includeRoot
-    ? buildXrefTable(
-        [
-          { obj: 1, offset: offset1, gen: 0 },
-          { obj: 2, offset: offset2, gen: 0 },
-          { obj: 3, offset: offset3, gen: 0 },
-        ],
-        size,
-      )
-    : "xref\n0 1\n0000000000 65535 f \n";
+function buildEncryptTrailerXref(
+  includeRoot: boolean,
+  size: number,
+  offset1: number,
+  offset2: number,
+  offset3: number,
+): string {
+  if (!includeRoot) {
+    return "xref\n0 1\n0000000000 65535 f \n";
+  }
+  return buildXrefTable(
+    [
+      { obj: 1, offset: offset1, gen: 0 },
+      { obj: 2, offset: offset2, gen: 0 },
+      { obj: 3, offset: offset3, gen: 0 },
+    ],
+    size,
+  );
+}
 
-  const trailer =
-    "trailer\n" +
-    (options.includeRoot
-      ? `<< /Size ${size} /Root 1 0 R /Encrypt 3 0 R >>\n`
-      : `<< /Size ${size} /Encrypt 1 0 R >>\n`) +
-    "startxref\n" +
-    `${xrefOffset}\n` +
-    "%%EOF\n";
+function buildEncryptTrailerTrailer(includeRoot: boolean, size: number, xrefOffset: number): string {
+  if (includeRoot) {
+    return `trailer\n<< /Size ${size} /Root 1 0 R /Encrypt 3 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
+  }
+  return `trailer\n<< /Size ${size} /Encrypt 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
+}
 
-  const bytes = options.includeRoot
-    ? new Uint8Array([
-        ...new TextEncoder().encode(header),
-        ...new TextEncoder().encode(obj1),
-        ...new TextEncoder().encode(obj2),
-        ...new TextEncoder().encode(obj3),
-        ...new TextEncoder().encode(xref),
-        ...new TextEncoder().encode(trailer),
-      ])
-    : new Uint8Array([
-        ...new TextEncoder().encode(header),
-        ...new TextEncoder().encode(xref),
-        ...new TextEncoder().encode(trailer),
-      ]);
-
-  return bytes;
+function buildEncryptTrailerBytes(
+  includeRoot: boolean,
+  header: string,
+  obj1: string,
+  obj2: string,
+  obj3: string,
+  xref: string,
+  trailer: string,
+): Uint8Array {
+  const encoder = new TextEncoder();
+  if (includeRoot) {
+    return new Uint8Array([
+      ...encoder.encode(header),
+      ...encoder.encode(obj1),
+      ...encoder.encode(obj2),
+      ...encoder.encode(obj3),
+      ...encoder.encode(xref),
+      ...encoder.encode(trailer),
+    ]);
+  }
+  return new Uint8Array([...encoder.encode(header), ...encoder.encode(xref), ...encoder.encode(trailer)]);
 }
 
 describe("loadNativePdfDocumentForParser", () => {

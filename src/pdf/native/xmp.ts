@@ -53,6 +53,11 @@ function parseXmpFields(xml: string): { title?: string; author?: string; subject
 
 
 
+
+
+
+
+
 export function extractXmpMetadata(
   catalog: PdfDict,
   deref: (obj: PdfObject) => PdfObject,

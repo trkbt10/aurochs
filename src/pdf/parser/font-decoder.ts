@@ -6,23 +6,7 @@
  */
 
 import type { NativePdfPage } from "../native";
-import type {
-  CMapParseResult,
-  CMapParserOptions,
-  CIDOrdering,
-  FontInfo,
-  FontMapping,
-  FontMappings,
-  FontMetrics,
-} from "../domain/font";
-import {
-  DEFAULT_FONT_METRICS,
-  decodeText,
-  detectCIDOrdering,
-  getEncodingByName,
-  applyEncodingDifferences,
-  glyphNameToUnicode,
-} from "../domain/font";
+import type { CMapParseResult, CMapParserOptions, CIDOrdering, FontMappings, FontMetrics } from "../domain/font";
 import { extractFontMappingsNative } from "./font-decoder.native";
 
 /**
@@ -35,10 +19,6 @@ export type FontExtractionOptions = {
    */
   readonly cmapOptions?: CMapParserOptions;
 };
-
-// Re-export for backwards compatibility with existing unit tests.
-export type { FontMapping, FontMetrics, FontInfo, FontMappings } from "../domain/font";
-export { DEFAULT_FONT_METRICS, decodeText } from "../domain/font";
 
 export type FontExtractionResult = {
   readonly toUnicode: CMapParseResult | null;
@@ -67,6 +47,11 @@ export type ExtractFontInfoDeps<PdfPageT, ResourcesT> = Readonly<{
   readonly extractBoldItalic?: (resources: ResourcesT, fontName: string) => { isBold: boolean; isItalic: boolean };
   readonly extractBaseFont?: (resources: ResourcesT, fontName: string) => string | null;
 }>;
+
+
+
+
+
 
 
 
@@ -147,6 +132,11 @@ export function extractFontInfoWithDeps<PdfPageT, ResourcesT>(
 
 
 
+
+
+
+
+
 export function logExtractionErrors(result: FontExtractionResult, fontName: string): void {
   if (!result) {throw new Error("result is required");}
   if (typeof fontName !== "string" || fontName.length === 0) {throw new Error("fontName is required");}
@@ -215,6 +205,3 @@ export function extractFontInfo(page: NativePdfPage, fontName: string, options: 
     errors: [],
   };
 }
-
-// Keep a small surface for encoding-related utilities used in older docs/specs.
-export { detectCIDOrdering, getEncodingByName, applyEncodingDifferences, glyphNameToUnicode };

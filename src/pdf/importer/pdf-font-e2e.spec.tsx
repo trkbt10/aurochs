@@ -5,7 +5,6 @@
  * Tests the complete flow from PDF import to SVG rendering
  * to verify font-family is correctly propagated.
  */
-import { describe, it, expect, beforeAll } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { render } from "@testing-library/react";

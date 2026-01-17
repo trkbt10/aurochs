@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { parsePdfNative } from "./pdf-parser.native";
 
 function buildPdfWithInlineImage(args: { readonly contentStream: string }): Uint8Array {
@@ -131,4 +130,3 @@ describe("Inline images (BI/ID/EI) (native)", () => {
     expect(img.graphicsState.ctm).toEqual([1, 0, 0, 1, 10, 20]);
   });
 });
-

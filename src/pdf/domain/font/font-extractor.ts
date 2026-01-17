@@ -6,10 +6,15 @@
  */
 
 import type { NativePdfDocument, NativePdfPage } from "../../native";
-import type { EmbeddedFont, EmbeddedFontMetrics, FontFormat } from "./embedded-font";
+import type { EmbeddedFont } from "./embedded-font";
 import { extractEmbeddedFontsFromNativePages } from "./font-extractor.native";
 
 export type { EmbeddedFont, EmbeddedFontMetrics, FontFormat } from "./embedded-font";
+
+
+
+
+
 
 
 
@@ -26,8 +31,12 @@ export function extractEmbeddedFontsFromPages(pages: readonly NativePdfPage[]): 
 
 
 
+
+
+
+
+
 export function extractEmbeddedFonts(pdfDoc: NativePdfDocument): EmbeddedFont[] {
   if (!pdfDoc) {throw new Error("pdfDoc is required");}
   return extractEmbeddedFontsFromNativePages(pdfDoc.getPages());
 }
-

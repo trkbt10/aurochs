@@ -1,4 +1,3 @@
-import { describe, it, expect } from "vitest";
 import { loadXRef } from "./xref";
 
 function encodeLatin1(text: string): Uint8Array {

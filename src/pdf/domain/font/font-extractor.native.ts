@@ -1,4 +1,4 @@
-import type { NativePdfPage, PdfArray, PdfDict, PdfObject, PdfRef, PdfStream } from "../../native";
+import type { NativePdfPage, PdfArray, PdfDict, PdfObject, PdfStream } from "../../native";
 import { decodePdfStream } from "../../native/stream";
 import { normalizeFontFamily } from "./font-name-map";
 import { repairFontForWeb } from "./font-repair";
@@ -107,6 +107,11 @@ function extractEmbeddedFontStream(page: NativePdfPage, fontDescriptor: PdfDict)
   const streamSubtype = subtypeObj?.type === "name" ? subtypeObj.value : undefined;
   return { stream, streamSubtype, fontFile, fontFile2, fontFile3 };
 }
+
+
+
+
+
 
 
 

@@ -4,7 +4,6 @@
  * Verifies script detection based on Unicode Standard Annex #24.
  * @see https://www.unicode.org/reports/tr24/
  */
-import { describe, it, expect } from "vitest";
 import { detectScriptFromText } from "./unicode-script";
 
 describe("detectScriptFromText (UAX #24)", () => {

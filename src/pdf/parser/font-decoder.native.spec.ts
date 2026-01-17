@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { loadNativePdfDocument } from "../native";
 import { extractFontMappingsNative } from "./font-decoder.native";
 
@@ -70,4 +69,3 @@ describe("extractFontMappingsNative (Type3 widths)", () => {
     expect(f1?.metrics.widths.get(65)).toBeCloseTo(1000);
   });
 });
-

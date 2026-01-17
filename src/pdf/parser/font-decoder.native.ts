@@ -1,5 +1,5 @@
 import type { NativePdfPage } from "../native";
-import type { PdfArray, PdfDict, PdfName, PdfObject, PdfRef, PdfStream, PdfString } from "../native";
+import type { PdfArray, PdfDict, PdfName, PdfObject, PdfStream } from "../native";
 import { decodePdfStream } from "../native/stream";
 import type { FontInfo, FontMappings, FontMetrics } from "../domain/font";
 import {
@@ -28,14 +28,8 @@ function asArray(obj: PdfObject | undefined): PdfArray | null {
 function asName(obj: PdfObject | undefined): PdfName | null {
   return obj?.type === "name" ? obj : null;
 }
-function asString(obj: PdfObject | undefined): PdfString | null {
-  return obj?.type === "string" ? obj : null;
-}
 function asNumber(obj: PdfObject | undefined): number | null {
   return obj?.type === "number" ? obj.value : null;
-}
-function asRef(obj: PdfObject | undefined): PdfRef | null {
-  return obj?.type === "ref" ? obj : null;
 }
 function asStream(obj: PdfObject | undefined): PdfStream | null {
   return obj?.type === "stream" ? obj : null;
@@ -117,14 +111,19 @@ function extractCIDOrderingFromFontDict(page: NativePdfPage, fontDict: PdfDict):
   if (!cidSystemInfo) {return null;}
 
   const orderingObj = resolve(page, dictGet(cidSystemInfo, "Ordering"));
-  const orderingStr =
-    orderingObj?.type === "string"
-      ? orderingObj.text
-      : orderingObj?.type === "name"
-        ? orderingObj.value
-        : null;
+  const orderingStr = extractCIDOrderingString(orderingObj);
   if (!orderingStr) {return null;}
   return detectCIDOrdering(orderingStr);
+}
+
+function extractCIDOrderingString(orderingObj: PdfObject | undefined): string | null {
+  if (orderingObj?.type === "string") {
+    return orderingObj.text;
+  }
+  if (orderingObj?.type === "name") {
+    return orderingObj.value;
+  }
+  return null;
 }
 
 function extractEncodingMap(page: NativePdfPage, fontDict: PdfDict): ReadonlyMap<number, string> | null {
@@ -285,7 +284,7 @@ function extractCidFontWidths(page: NativePdfPage, fontDict: PdfDict): Pick<Font
   return { widths, defaultWidth };
 }
 
-function extractFontMetrics(page: NativePdfPage, fontDict: PdfDict, baseFont: string | undefined): FontMetrics {
+function extractFontMetrics(page: NativePdfPage, fontDict: PdfDict): FontMetrics {
   const subtype = asName(dictGet(fontDict, "Subtype"))?.value ?? "";
   const descriptor = extractFontDescriptor(page, fontDict);
 
@@ -309,6 +308,11 @@ function extractFontMetrics(page: NativePdfPage, fontDict: PdfDict, baseFont: st
 
 
 
+
+
+
+
+
 export function extractFontMappingsNative(page: NativePdfPage, options: NativeFontExtractionOptions = {}): FontMappings {
   const mappings: FontMappings = new Map();
   const resources = getResources(page);
@@ -316,6 +320,11 @@ export function extractFontMappingsNative(page: NativePdfPage, options: NativeFo
 
   return extractFontMappingsFromResourcesNative(page, resources, options);
 }
+
+
+
+
+
 
 
 
@@ -340,7 +349,7 @@ export function extractFontMappingsFromResourcesNative(
     const toUnicodeStream = findToUnicodeStream(page, fontDict);
     const toUnicode = toUnicodeStream ? parseToUnicodeFromStream(toUnicodeStream, options.cmapOptions) : null;
 
-    const metrics = extractFontMetrics(page, fontDict, baseFont);
+    const metrics = extractFontMetrics(page, fontDict);
     const ordering = extractCIDOrderingFromFontDict(page, fontDict) ?? undefined;
     const encodingMap = extractEncodingMap(page, fontDict) ?? undefined;
 

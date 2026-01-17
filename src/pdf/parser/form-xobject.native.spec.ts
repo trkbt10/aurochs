@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { parsePdfNative } from "./pdf-parser.native";
 
 function buildMinimalPdfWithFormXObject(): Uint8Array {

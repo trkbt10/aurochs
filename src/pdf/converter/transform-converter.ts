@@ -31,7 +31,7 @@ type TransformComponents = {
 };
 
 function extractTransformComponents(ctm: PdfMatrix): TransformComponents {
-  const [a, b, c, d, e, f] = ctm;
+  const [, , , , e, f] = ctm;
   const decomposed = decomposeMatrix(ctm);
 
   return {
@@ -299,15 +299,7 @@ export function convertMatrix(pdfMatrix: PdfMatrix, context: ConversionContext):
     readonly absRotationDeg: number;
   }> = [];
 
-  const possibleFlips: ReadonlyArray<{ readonly flipH: boolean; readonly flipV: boolean }> = detNegative
-    ? [
-        { flipH: true, flipV: false },
-        { flipH: false, flipV: true },
-      ]
-    : [
-        { flipH: false, flipV: false },
-        { flipH: true, flipV: true },
-      ];
+  const possibleFlips = getPossibleFlips(detNegative);
 
   const vHat = { x: v.x / height, y: v.y / height };
   for (const { flipH, flipV } of possibleFlips) {
@@ -332,6 +324,19 @@ export function convertMatrix(pdfMatrix: PdfMatrix, context: ConversionContext):
       absRotationDeg: Math.abs(rotationDeg),
     });
   }
+
+function getPossibleFlips(detNegative: boolean): ReadonlyArray<{ readonly flipH: boolean; readonly flipV: boolean }> {
+  if (detNegative) {
+    return [
+      { flipH: true, flipV: false },
+      { flipH: false, flipV: true },
+    ];
+  }
+  return [
+    { flipH: false, flipV: false },
+    { flipH: true, flipV: true },
+  ];
+}
 
   candidates.sort((a, b) => {
     if (b.dot !== a.dot) {

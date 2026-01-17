@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { rc4 } from "./rc4";
 
 function hex(bytes: Uint8Array): string {
@@ -16,4 +15,3 @@ describe("rc4", () => {
     expect(hex(ct)).toBe("BBF316E8D940AF0AD3");
   });
 });
-

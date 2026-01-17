@@ -81,6 +81,11 @@ function decryptStream(value: PdfStream, objNum: number, gen: number, decrypter:
 
 
 
+
+
+
+
+
 export function decryptPdfObject(value: PdfObject, objNum: number, gen: number, decrypter: PdfDecrypter): PdfObject {
   switch (value.type) {
     case "string":

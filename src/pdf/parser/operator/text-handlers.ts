@@ -18,16 +18,13 @@
 import type { PdfMatrix, FontMetrics } from "../../domain";
 import { IDENTITY_MATRIX, transformPoint, multiplyMatrices, DEFAULT_FONT_METRICS } from "../../domain";
 import type {
-  ParserContext,
-  ParserStateUpdate,
-  GraphicsStateOps,
   OperatorHandler,
   OperatorHandlerEntry,
   TextObjectState,
   TextRun,
   ParsedText,
 } from "./types";
-import { popNumber, popString, popArray, pushValue } from "./stack-ops";
+import { popNumber, popString, popArray } from "./stack-ops";
 
 // =============================================================================
 // Text Object State Helpers
@@ -188,7 +185,7 @@ const handleEndText: OperatorHandler = (ctx, gfxOps) => {
 /**
  * Tf operator: Set font and size
  */
-const handleSetFont: OperatorHandler = (ctx, _gfxOps) => {
+const handleSetFont: OperatorHandler = (ctx) => {
   const [size, stack1] = popNumber(ctx.operandStack);
   const [name, stack2] = popString(stack1);
 

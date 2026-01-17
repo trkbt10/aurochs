@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { md5 } from "./md5";
 
 function hex(bytes: Uint8Array): string {
@@ -14,4 +13,3 @@ describe("md5", () => {
     expect(hex(md5(new TextEncoder().encode("message digest")))).toBe("f96b697d7cb7938d525a2f31aaf161d0");
   });
 });
-

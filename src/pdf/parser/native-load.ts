@@ -27,6 +27,11 @@ function detectPdfLoadErrorCode(error: unknown): PdfLoadErrorCode {
 
 
 
+
+
+
+
+
 export async function loadNativePdfDocumentForParser(
   data: Uint8Array | ArrayBuffer,
   options: PdfLoadOptions,

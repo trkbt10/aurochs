@@ -11,6 +11,11 @@ export type DecodedJpegRgb = Readonly<{
 
 
 
+
+
+
+
+
 export function decodeJpegToRgb(
   bytes: Uint8Array,
   options: { readonly expectedWidth?: number; readonly expectedHeight?: number } = {},

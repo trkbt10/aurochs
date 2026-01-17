@@ -213,6 +213,11 @@ export type DocumentConversionResult = {
 
 
 
+
+
+
+
+
 export function convertDocumentToSlides(
   doc: PdfDocument,
   options: ConversionOptions
@@ -256,11 +261,11 @@ function convertPath(path: PdfPath, context: ConversionContext, shapeId: string)
 
   let geometry: SpShape["properties"]["geometry"];
   if (usePresetOptimization && isSimpleRectangle(path)) {
-    geometry = convertToPresetRect(path, context);
+    geometry = convertToPresetRect(path);
   } else if (usePresetOptimization && isApproximateEllipse(path)) {
-    geometry = convertToPresetEllipse(path, context);
+    geometry = convertToPresetEllipse(path);
   } else if (usePresetOptimization && isRoundedRectangle(path)) {
-    geometry = convertToPresetRoundRect(path, context);
+    geometry = convertToPresetRoundRect(path);
   } else {
     geometry = convertPathToGeometry(path, context);
   }

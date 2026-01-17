@@ -1,4 +1,3 @@
-import { describe, it, expect } from "vitest";
 import { zlibSync } from "fflate";
 import { decodeStreamData } from "./index";
 import type { PdfDict, PdfObject } from "../types";
@@ -73,4 +72,3 @@ describe("FlateDecode DecodeParms predictors", () => {
     expect(decoded).toEqual(raw);
   });
 });
-

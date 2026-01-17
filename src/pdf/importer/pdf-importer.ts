@@ -65,6 +65,11 @@ export type PageStats = {
 
 
 
+
+
+
+
+
 export class PdfImportError extends Error {
   constructor(
     message: string,
@@ -116,9 +121,7 @@ export async function importPdf(
     }
     const baseSlide = buildSlideFromPageOrThrow(page, slideSize, options);
 
-    const slide = options.addPageNumbers
-      ? addPageNumber(baseSlide, page.pageNumber, slideSize)
-      : baseSlide;
+    const slide = addPageNumberIfEnabled(baseSlide, page.pageNumber, slideSize, options.addPageNumbers ?? false);
 
     slides.push(slide);
     pageStats.push(collectPageStats(page, slide));
@@ -244,6 +247,13 @@ function buildSlideFromPageOrThrow(page: PdfPage, slideSize: SlideSize, options:
   }
 }
 
+function addPageNumberIfEnabled(slide: Slide, pageNumber: number, slideSize: SlideSize, enabled: boolean): Slide {
+  if (!enabled) {
+    return slide;
+  }
+  return addPageNumber(slide, pageNumber, slideSize);
+}
+
 function addPageNumber(slide: Slide, pageNumber: number, slideSize: SlideSize): Slide {
   const pageNumberShape = createPageNumberShape(pageNumber, slideSize, `pageNum-${pageNumber}`);
   return {
@@ -273,15 +283,7 @@ function createPresentationDocument(
   }));
 
   // Generate @font-face CSS for embedded fonts
-  const embeddedFontCss = pdfEmbeddedFonts && pdfEmbeddedFonts.length > 0
-    ? generateFontFaceStyle(pdfEmbeddedFonts.map((f) => ({
-        baseFontName: f.fontFamily,
-        fontFamily: f.fontFamily,
-        format: f.format,
-        data: f.data,
-        mimeType: f.mimeType,
-      })))
-    : undefined;
+  const embeddedFontCss = buildEmbeddedFontCss(pdfEmbeddedFonts);
 
   return {
     presentation,
@@ -293,6 +295,21 @@ function createPresentationDocument(
     embeddedFonts,
     embeddedFontCss,
   };
+}
+
+function buildEmbeddedFontCss(pdfEmbeddedFonts: readonly PdfEmbeddedFont[] | undefined): string | undefined {
+  if (!pdfEmbeddedFonts || pdfEmbeddedFonts.length === 0) {
+    return undefined;
+  }
+  return generateFontFaceStyle(
+    pdfEmbeddedFonts.map((f) => ({
+      baseFontName: f.fontFamily,
+      fontFamily: f.fontFamily,
+      format: f.format,
+      data: f.data,
+      mimeType: f.mimeType,
+    })),
+  );
 }
 
 /**

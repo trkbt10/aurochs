@@ -14,9 +14,6 @@
 
 import type { PdfMatrix } from "../../domain";
 import type {
-  ParserContext,
-  ParserStateUpdate,
-  GraphicsStateOps,
   OperatorHandler,
   OperatorHandlerEntry,
 } from "./types";

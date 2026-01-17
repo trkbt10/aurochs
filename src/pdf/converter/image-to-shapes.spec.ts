@@ -75,10 +75,12 @@ describe("convertImageToShape", () => {
     const parsed = parseDataUrl(shape.blipFill.resourceId);
     expect(parsed.mimeType).toBe("image/png");
 
+    type PngReadResult = Readonly<{ readonly width: number; readonly height: number; readonly data: Uint8Array }>;
+    type PngjsModule = Readonly<{ readonly PNG: Readonly<{ readonly sync: Readonly<{ readonly read: (bytes: Buffer) => PngReadResult }> }> }>;
+
     // eslint-disable-next-line @typescript-eslint/no-require-imports -- pngjs is CJS
-    const pngjs = require("pngjs") as typeof import("pngjs");
-    const { PNG } = pngjs;
-    const decoded = PNG.sync.read(Buffer.from(parsed.data));
+    const pngjs = require("pngjs") as PngjsModule;
+    const decoded = pngjs.PNG.sync.read(Buffer.from(parsed.data));
 
     expect(decoded.width).toBe(2);
     expect(decoded.height).toBe(1);

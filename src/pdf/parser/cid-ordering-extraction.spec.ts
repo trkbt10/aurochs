@@ -16,11 +16,13 @@
  * Per PDF spec, both approaches are valid. Only Adobe character collection
  * orderings can be used for script type detection.
  */
-import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { px } from "../../ooxml/domain/units";
 import { parsePdf } from "./pdf-parser";
+import { convertTextToShape } from "../converter/text-to-shapes";
 import type { PdfText } from "../domain";
+import { createDefaultGraphicsState } from "../domain";
 import { buildSimplePdfBytes } from "../test-utils/simple-pdf";
 
 describe("CIDOrdering extraction from real PDFs", () => {
@@ -54,10 +56,6 @@ describe("CIDOrdering extraction from real PDFs", () => {
   });
 
   it("Identity ordering triggers Unicode Script fallback (UAX #24)", async () => {
-    const { convertTextToShape } = await import("../converter/text-to-shapes");
-    const { createDefaultGraphicsState } = await import("../domain");
-    const { px } = await import("../../ooxml/domain/units");
-
     // Identity-encoded CJK font (like from weasyprint)
     // Script type is detected from text content, not font name
     const pdfText = {

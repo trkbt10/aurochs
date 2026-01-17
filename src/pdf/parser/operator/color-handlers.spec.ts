@@ -5,7 +5,7 @@
 import { colorHandlers, COLOR_HANDLERS } from "./color-handlers";
 import type { ParserContext, GraphicsStateOps } from "./types";
 import { createInitialTextState } from "./text-handlers";
-import { createDefaultGraphicsState, type PdfColor } from "../../domain";
+import { createDefaultGraphicsState } from "../../domain";
 
 // Mock GraphicsStateOps for testing with tracking
 function createMockGfxOps() {
@@ -188,7 +188,7 @@ describe("color-handlers", () => {
     });
 
     it("all handlers have correct category", () => {
-      for (const [_, entry] of COLOR_HANDLERS) {
+      for (const [, entry] of COLOR_HANDLERS) {
         expect(entry.category).toBe("color");
       }
     });

@@ -1,4 +1,4 @@
-import type { NativePdfPage, PdfArray, PdfBool, PdfDict, PdfName, PdfNumber, PdfObject, PdfRef, PdfStream } from "../native";
+import type { NativePdfPage, PdfArray, PdfBool, PdfDict, PdfName, PdfNumber, PdfObject, PdfStream } from "../native";
 import { decodeStreamData } from "../native/filters";
 import { decodePdfStream } from "../native/stream";
 import type { PdfColorSpace, PdfImage } from "../domain";
@@ -90,9 +90,6 @@ function asBool(obj: PdfObject | undefined): PdfBool | null {
 }
 function asStream(obj: PdfObject | undefined): PdfStream | null {
   return obj?.type === "stream" ? obj : null;
-}
-function asRef(obj: PdfObject | undefined): PdfRef | null {
-  return obj?.type === "ref" ? obj : null;
 }
 
 function dictGet(dict: PdfDict, key: string): PdfObject | undefined {
@@ -207,7 +204,6 @@ function getSoftMaskAlpha8(page: NativePdfPage, imageDict: PdfDict, width: numbe
     }
 
     const dctIndex = normalized.indexOf("DCTDecode");
-    let decoded: Uint8Array;
     if (dctIndex >= 0) {
       if (dctIndex !== normalized.length - 1) {
         throw new Error(`[PDF Image] Unsupported soft mask filter chain with /DCTDecode: ${filters.join(", ")}`);
@@ -219,7 +215,7 @@ function getSoftMaskAlpha8(page: NativePdfPage, imageDict: PdfDict, width: numbe
       return alpha;
     }
 
-    decoded = decodePdfStream(smaskStream);
+    const decoded = decodePdfStream(smaskStream);
     const alpha = decodeMaskSamplesToAlpha8(decoded, mw, mh, bitsPerComponent);
     if (shouldInvertSoftMaskDecode(page, smaskDict)) {
       for (let i = 0; i < alpha.length; i += 1) {alpha[i] = 255 - (alpha[i] ?? 0);}
@@ -329,9 +325,7 @@ function decodeExplicitMaskAlpha8(page: NativePdfPage, maskStream: PdfStream, wi
   }
 
   const filters = getFilterNames(page, dict);
-  const decoded = filters.includes("CCITTFaxDecode")
-    ? decodeCcittFaxStreamToPacked1bpp(page, maskStream, width, height)
-    : decodePdfStream(maskStream);
+  const decoded = decodeExplicitMaskStreamToPacked1bpp(page, maskStream, filters, width, height);
   const rowBytes = Math.ceil(width / 8);
   const expectedLen = rowBytes * height;
   if (decoded.length !== expectedLen) {
@@ -350,6 +344,19 @@ function decodeExplicitMaskAlpha8(page: NativePdfPage, maskStream: PdfStream, wi
     }
   }
   return alpha;
+}
+
+function decodeExplicitMaskStreamToPacked1bpp(
+  page: NativePdfPage,
+  maskStream: PdfStream,
+  filters: readonly string[],
+  width: number,
+  height: number,
+): Uint8Array {
+  if (filters.includes("CCITTFaxDecode")) {
+    return decodeCcittFaxStreamToPacked1bpp(page, maskStream, width, height);
+  }
+  return decodePdfStream(maskStream);
 }
 
 function combineAlpha(base: Uint8Array | undefined, extra: Uint8Array): Uint8Array {
@@ -472,24 +479,12 @@ function getColorSpaceInfo(page: NativePdfPage, dict: PdfDict): ColorSpaceInfo {
       }
 
       if (name === "Indexed" && csObj.items.length >= 4) {
-        const baseObj = resolve(page, csObj.items[1]);
-        const base =
-          baseObj?.type === "name"
-            ? parseColorSpaceName(baseObj.value)
-            : baseObj?.type === "array" && baseObj.items[0]?.type === "name"
-              ? parseColorSpaceName(baseObj.items[0].value)
-              : null;
+        const base = extractIndexedBaseColorSpace(page, csObj.items[1]);
 
         const hivalObj = resolve(page, csObj.items[2]);
         const hival = hivalObj?.type === "number" && Number.isFinite(hivalObj.value) ? Math.trunc(hivalObj.value) : null;
 
-        const lookupObj = resolve(page, csObj.items[3]);
-        const lookup =
-          lookupObj?.type === "string"
-            ? lookupObj.bytes
-            : lookupObj?.type === "stream"
-              ? decodePdfStream(lookupObj)
-              : null;
+        const lookup = extractIndexedLookupBytes(page, csObj.items[3]);
 
         if (base && hival != null && hival >= 0 && lookup) {
           return { kind: "indexed", base, hival, lookup };
@@ -503,6 +498,31 @@ function getColorSpaceInfo(page: NativePdfPage, dict: PdfDict): ColorSpaceInfo {
   }
 
   return { kind: "direct", colorSpace: "DeviceRGB" };
+}
+
+function extractIndexedBaseColorSpace(page: NativePdfPage, baseObj: PdfObject | undefined): PdfColorSpace | null {
+  const resolved = resolve(page, baseObj);
+  if (resolved?.type === "name") {
+    return parseColorSpaceName(resolved.value);
+  }
+  if (resolved?.type === "array") {
+    const first = resolved.items[0];
+    if (first?.type === "name") {
+      return parseColorSpaceName(first.value);
+    }
+  }
+  return null;
+}
+
+function extractIndexedLookupBytes(page: NativePdfPage, lookupObj: PdfObject | undefined): Uint8Array | null {
+  const resolved = resolve(page, lookupObj);
+  if (resolved?.type === "string") {
+    return resolved.bytes;
+  }
+  if (resolved?.type === "stream") {
+    return decodePdfStream(resolved);
+  }
+  return null;
 }
 
 function getDecodeArray(page: NativePdfPage, dict: PdfDict): readonly number[] | null {
@@ -727,13 +747,18 @@ function paethPredictor(a: number, b: number, c: number): number {
 
 
 
+
+
+
+
+
 export async function extractImagesNative(
   pdfPage: NativePdfPage,
   parsedImages: readonly ParsedImage[],
   options: ImageExtractorOptions,
   xObjectsOverride?: PdfDict,
 ): Promise<PdfImage[]> {
-  const { extractImages = true, maxDimension = 4096, pageHeight: _pageHeight } = options;
+  const { extractImages = true, maxDimension = 4096 } = options;
   if (!extractImages) {return [];}
 
   const xObjects =

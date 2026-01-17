@@ -6,6 +6,24 @@ import {
   convertIccBasedToRgba,
 } from "./pixel-converter";
 
+function createConsoleSpy(method: "warn" | "info"): Readonly<{
+  readonly calls: readonly ReadonlyArray<unknown>[];
+  readonly restore: () => void;
+}> {
+  const calls: ReadonlyArray<unknown>[] = [];
+  const original = console[method];
+
+  console[method] = (...args: unknown[]) => {
+    calls.push(args);
+  };
+
+  const restore = (): void => {
+    console[method] = original;
+  };
+
+  return { calls, restore };
+}
+
 describe("pixel-converter", () => {
   describe("convertGrayToRgba", () => {
     test("converts single pixel grayscale", () => {
@@ -189,12 +207,12 @@ describe("pixel-converter", () => {
       // 1 pixel, RGB, big-endian per component:
       // R=0x1234 => 0x12, G=0xABCD => 0xAB, B=0x00FF => 0x00
       const data = new Uint8Array([0x12, 0x34, 0xab, 0xcd, 0x00, 0xff]);
-      const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {});
+      const infoSpy = createConsoleSpy("info");
       const result = convertToRgba(data, 1, 1, "DeviceRGB", 16);
 
       expect(Array.from(result)).toEqual([0x12, 0xab, 0x00, 255]);
-      expect(infoSpy).toHaveBeenCalled();
-      infoSpy.mockRestore();
+      expect(infoSpy.calls.length).toBeGreaterThan(0);
+      infoSpy.restore();
     });
 
     test("throws for unsupported bitsPerComponent", () => {
@@ -205,16 +223,16 @@ describe("pixel-converter", () => {
     });
 
     test("warns and proceeds on small data length mismatch", () => {
-      const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const warnSpy = createConsoleSpy("warn");
       const data = new Uint8Array(19).fill(255);
       const result = convertToRgba(data, 20, 1, "DeviceGray", 8);
 
       expect(result.length).toBe(20 * 4);
       expect(result[19 * 4]).toBe(0);
-      expect(warnSpy.mock.calls.some((call) => String(call[0]).includes("Attempting to proceed."))).toBe(
+      expect(warnSpy.calls.some((call) => String(call[0]).includes("Attempting to proceed."))).toBe(
         true
       );
-      warnSpy.mockRestore();
+      warnSpy.restore();
     });
 
     test("throws on large data length mismatch", () => {

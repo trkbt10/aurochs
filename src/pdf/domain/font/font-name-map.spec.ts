@@ -5,7 +5,6 @@
  * Only PDF Standard 14 fonts (ISO 32000-1:2008 Section 9.6.2.2) are mapped.
  * All other fonts preserve their original names for @font-face matching.
  */
-import { describe, it, expect } from "vitest";
 import { normalizeFontFamily } from "./font-name-map";
 
 describe("normalizeFontFamily", () => {

@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { parsePdf } from "./pdf-parser";
 import { convertToRgba } from "../converter/pixel-converter";
 import { base64ToArrayBuffer } from "../../buffer/base64";

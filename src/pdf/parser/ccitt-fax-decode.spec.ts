@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { decodeCcittFax } from "./ccitt-fax-decode";
 
 describe("decodeCcittFax (Group 3 mixed 1D/2D)", () => {

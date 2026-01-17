@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { decodeText } from "./text-decoder";
 import type { FontInfo, FontMappings } from "./types";
 
@@ -46,4 +45,3 @@ describe("decodeText", () => {
     expect(decodeText(raw, "F1", fontMappings)).toBe("αB");
   });
 });
-

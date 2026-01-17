@@ -3,6 +3,11 @@
 
 
 
+
+
+
+
+
 export function lastIndexOfBytes(haystack: Uint8Array, needle: Uint8Array): number {
   if (needle.length === 0) {return haystack.length;}
   if (needle.length > haystack.length) {return -1;}
@@ -18,6 +23,11 @@ export function lastIndexOfBytes(haystack: Uint8Array, needle: Uint8Array): numb
   }
   return -1;
 }
+
+
+
+
+
 
 
 
@@ -45,6 +55,11 @@ export function indexOfBytes(haystack: Uint8Array, needle: Uint8Array, from: num
 
 
 
+
+
+
+
+
 export function isWhite(byte: number): boolean {
   // 0x00 NUL is treated as whitespace in PDFs.
   return (
@@ -56,6 +71,11 @@ export function isWhite(byte: number): boolean {
     byte === 0x20 // SP
   );
 }
+
+
+
+
+
 
 
 

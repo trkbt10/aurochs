@@ -1,4 +1,3 @@
-import { describe, it, expect } from "vitest";
 import { loadXRef } from "./xref";
 import { PdfResolver } from "./resolver";
 import type { PdfStream } from "./types";

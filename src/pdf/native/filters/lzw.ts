@@ -25,6 +25,11 @@ function dictGet(dict: PdfDict, key: string): PdfObject | undefined {
 
 
 
+
+
+
+
+
 export function readLzwDecodeOptions(decodeParms: PdfObject | null | undefined): LzwDecodeOptions {
   const dict = asDict(decodeParms);
   if (!dict) {return {};}

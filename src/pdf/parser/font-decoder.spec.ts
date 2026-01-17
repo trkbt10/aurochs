@@ -6,18 +6,26 @@
  * PDF Reference 5.2-5.7 - Font metrics
  */
 
-import {
-  decodeText,
-  DEFAULT_FONT_METRICS,
-  extractFontInfoWithDeps,
-  logExtractionErrors,
-  type ExtractFontInfoDeps,
-  type FontMapping,
-  type FontExtractionResult,
-  type FontInfo,
-  type FontMappings,
-  type FontMetrics,
-} from "./font-decoder";
+import { decodeText, DEFAULT_FONT_METRICS, type FontMapping, type FontInfo, type FontMappings, type FontMetrics } from "../domain/font";
+import { extractFontInfoWithDeps, logExtractionErrors, type ExtractFontInfoDeps, type FontExtractionResult } from "./font-decoder";
+
+function createConsoleWarnSpy(): Readonly<{
+  readonly calls: readonly ReadonlyArray<unknown>[];
+  readonly restore: () => void;
+}> {
+  const calls: ReadonlyArray<unknown>[] = [];
+  const original = console.warn;
+
+  console.warn = (...args: unknown[]) => {
+    calls.push(args);
+  };
+
+  const restore = (): void => {
+    console.warn = original;
+  };
+
+  return { calls, restore };
+}
 
 describe("font-decoder", () => {
   describe("decodeText", () => {
@@ -206,8 +214,8 @@ describe("font-decoder", () => {
 
     it("handles ToUnicode success + metrics failure", () => {
       const deps = {
-        getPageResources: (_pdfPage: FakePage): FakeResources => ({ resourcesId: "r1" }),
-        extractToUnicode: (_resources: FakeResources, _fontName: string) => TO_UNICODE,
+        getPageResources: (): FakeResources => ({ resourcesId: "r1" }),
+        extractToUnicode: () => TO_UNICODE,
         extractFontMetrics: () => {
           throw new Error("metrics broken");
         },
@@ -224,11 +232,11 @@ describe("font-decoder", () => {
 
     it("handles ToUnicode failure + metrics success", () => {
       const deps = {
-        getPageResources: (_pdfPage: FakePage): FakeResources => ({ resourcesId: "r1" }),
+        getPageResources: (): FakeResources => ({ resourcesId: "r1" }),
         extractToUnicode: () => {
           throw new Error("cmap broken");
         },
-        extractFontMetrics: (_resources: FakeResources, _fontName: string) => METRICS,
+        extractFontMetrics: () => METRICS,
       } satisfies ExtractFontInfoDeps<FakePage, FakeResources>;
 
       const result = extractFontInfoWithDeps({ pageId: "p1" }, "F1", deps);
@@ -242,9 +250,9 @@ describe("font-decoder", () => {
 
     it("handles both success", () => {
       const deps = {
-        getPageResources: (_pdfPage: FakePage): FakeResources => ({ resourcesId: "r1" }),
-        extractToUnicode: (_resources: FakeResources, _fontName: string) => TO_UNICODE,
-        extractFontMetrics: (_resources: FakeResources, _fontName: string) => METRICS,
+        getPageResources: (): FakeResources => ({ resourcesId: "r1" }),
+        extractToUnicode: () => TO_UNICODE,
+        extractFontMetrics: () => METRICS,
       } satisfies ExtractFontInfoDeps<FakePage, FakeResources>;
 
       const result = extractFontInfoWithDeps({ pageId: "p1" }, "F1", deps);
@@ -256,7 +264,7 @@ describe("font-decoder", () => {
 
     it("handles both failure", () => {
       const deps = {
-        getPageResources: (_pdfPage: FakePage): FakeResources => ({ resourcesId: "r1" }),
+        getPageResources: (): FakeResources => ({ resourcesId: "r1" }),
         extractToUnicode: () => {
           throw new Error("cmap broken");
         },
@@ -296,17 +304,17 @@ describe("font-decoder", () => {
 
   describe("logExtractionErrors", () => {
     it("does not log when no errors", () => {
-      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const warn = createConsoleWarnSpy();
       const result: FontExtractionResult = { toUnicode: null, metrics: null, ordering: null, encoding: null, isBold: false, isItalic: false, baseFont: null, errors: [] };
 
       logExtractionErrors(result, "F1");
 
-      expect(warn).not.toHaveBeenCalled();
-      warn.mockRestore();
+      expect(warn.calls).toHaveLength(0);
+      warn.restore();
     });
 
     it("logs partial extraction summary", () => {
-      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const warn = createConsoleWarnSpy();
       const result: FontExtractionResult = {
         toUnicode: { mapping: new Map(), codeByteWidth: 1 },
         metrics: null,
@@ -320,14 +328,14 @@ describe("font-decoder", () => {
 
       logExtractionErrors(result, "F1");
 
-      expect(warn).toHaveBeenCalledWith(
-        "[PDF Font] Partial extraction for \"F1\": succeeded: [ToUnicode], failed: 1 operation(s)"
-      );
-      warn.mockRestore();
+      expect(warn.calls).toEqual([
+        ["[PDF Font] Partial extraction for \"F1\": succeeded: [ToUnicode], failed: 1 operation(s)"],
+      ]);
+      warn.restore();
     });
 
     it("logs complete extraction failure summary with messages", () => {
-      const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+      const warn = createConsoleWarnSpy();
       const result: FontExtractionResult = {
         toUnicode: null,
         metrics: null,
@@ -344,12 +352,14 @@ describe("font-decoder", () => {
 
       logExtractionErrors(result, "F1");
 
-      expect(warn).toHaveBeenCalledWith(
-        "[PDF Font] Complete extraction failure for \"F1\": " +
-        "Failed to extract ToUnicode for F1: cmap broken; " +
-        "Failed to extract metrics for F1: metrics broken"
-      );
-      warn.mockRestore();
+      expect(warn.calls).toEqual([
+        [
+          "[PDF Font] Complete extraction failure for \"F1\": " +
+            "Failed to extract ToUnicode for F1: cmap broken; " +
+            "Failed to extract metrics for F1: metrics broken",
+        ],
+      ]);
+      warn.restore();
     });
   });
 });

@@ -53,6 +53,11 @@ function readUIntBE(bytes: Uint8Array, pos: number, width: number): number {
 
 
 
+
+
+
+
+
 export function findStartXrefOffset(bytes: Uint8Array): number {
   const marker = encodeAscii("startxref");
   const idx = lastIndexOfBytes(bytes, marker);
@@ -99,9 +104,7 @@ function parseXRefStream(stream: PdfStream): { entries: ReadonlyMap<number, XRef
   if (!size) {throw new Error("xref stream: missing /Size");}
 
   const indexArr = asArray(dictGet(dict, "Index"));
-  const indexPairs = indexArr
-    ? indexArr.items.map((x) => (x.type === "number" ? Math.trunc(x.value) : 0))
-    : [0, Math.trunc(size)];
+  const indexPairs = buildXRefIndexPairs(indexArr, size);
 
   if (indexPairs.length % 2 !== 0) {throw new Error("xref stream: /Index must have even length");}
 
@@ -136,6 +139,13 @@ function parseXRefStream(stream: PdfStream): { entries: ReadonlyMap<number, XRef
     }
   }
   return { entries: out, trailer: dict };
+}
+
+function buildXRefIndexPairs(indexArr: PdfArray | null, size: number): number[] {
+  if (indexArr) {
+    return indexArr.items.map((x) => (x.type === "number" ? Math.trunc(x.value) : 0));
+  }
+  return [0, Math.trunc(size)];
 }
 
 function readFilterNames(dict: PdfDict): readonly string[] {
@@ -281,6 +291,11 @@ function parseXRefStreamAt(bytes: Uint8Array, offset: number): {
 
 
 
+
+
+
+
+
 export function loadXRef(bytes: Uint8Array): XRefTable {
   let offset: number | null = findStartXrefOffset(bytes);
 
@@ -300,9 +315,7 @@ export function loadXRef(bytes: Uint8Array): XRefTable {
       trailer: PdfDict;
       prev: number | null;
       xrefStm: number | null;
-    } = looksLikeXrefTable
-      ? parseXRefTableAt(bytes, offset)
-      : parseXRefStreamAt(bytes, offset);
+    } = parseXRefSectionAt(bytes, offset, looksLikeXrefTable);
 
     if (!trailer) {trailer = parsed.trailer;}
     for (const [objNum, entry] of parsed.entries.entries()) {
@@ -329,6 +342,22 @@ export function loadXRef(bytes: Uint8Array): XRefTable {
   if (!trailer) {throw new Error("Failed to load xref");}
   return { entries, trailer };
 }
+
+function parseXRefSectionAt(
+  bytes: Uint8Array,
+  offset: number,
+  looksLikeXrefTable: boolean,
+): { entries: ReadonlyMap<number, XRefEntry>; trailer: PdfDict; prev: number | null; xrefStm: number | null } {
+  if (looksLikeXrefTable) {
+    return parseXRefTableAt(bytes, offset);
+  }
+  return parseXRefStreamAt(bytes, offset);
+}
+
+
+
+
+
 
 
 

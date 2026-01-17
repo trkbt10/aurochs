@@ -523,6 +523,11 @@ function writeRunsToBitmapRow(
 
 
 
+
+
+
+
+
 export function decodeCcittFax(args: DecodeCcittFaxArgs): Uint8Array {
   const { encoded, width, height, parms } = args;
   if (!encoded) {throw new Error("decodeCcittFax: encoded is required");}
@@ -575,7 +580,7 @@ export function decodeCcittFax(args: DecodeCcittFaxArgs): Uint8Array {
     // Only consume when the next 12 bits match exactly; otherwise leave the stream untouched.
     while (reader.peekBits(12) === EOL_MARKER_12BIT) {
       reader.readBits(12);
-      if (parms.encodedByteAlign) reader.alignToByte();
+      if (parms.encodedByteAlign) {reader.alignToByte();}
     }
   };
 

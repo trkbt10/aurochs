@@ -8,7 +8,6 @@
 import type {
   PdfPathOp,
   PdfGraphicsState,
-  PdfMatrix,
   PdfPoint,
   PdfBBox,
   PdfPaintOp,

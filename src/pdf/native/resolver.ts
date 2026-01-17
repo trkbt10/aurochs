@@ -1,7 +1,7 @@
 import { parseIndirectObjectAt, parseObject } from "./object-parser";
 import { decodeStreamData } from "./filters";
 import type { PdfDict, PdfObject, PdfStream } from "./types";
-import type { XRefTable } from "./xref";
+import type { XRefEntry, XRefTable } from "./xref";
 import type { PdfDecrypter } from "./encryption/standard";
 import { decryptPdfObject } from "./encryption/decrypt-object";
 
@@ -70,6 +70,11 @@ function decodeParmsFromStreamDict(dict: PdfDict, filterCount: number): readonly
 
 
 
+
+
+
+
+
 export class PdfResolver {
   private readonly indirectCache = new Map<number, PdfObject>();
   private readonly objStmCache = new Map<number, ObjStmCacheEntry>();
@@ -96,34 +101,37 @@ export class PdfResolver {
       throw new Error(`Missing xref entry for object ${objNum}`);
     }
 
-    const { value, gen } = (() => {
-      if (entry.type === 0) {
-        throw new Error(`Object ${objNum} is free`);
-      }
-      if (entry.type === 1) {
-        const { obj } = parseIndirectObjectAt(this.bytes, entry.offset, { resolveObject: (n) => this.getObject(n) });
-        if (obj.obj !== objNum) {
-          // Some PDFs may have padding; still trust parsed obj.
-        }
-        return { value: obj.value, gen: entry.gen };
-      }
-      if (entry.type === 2) {
-        return { value: this.getCompressedObject(entry.objStm, entry.index), gen: 0 };
-      }
-      const exhaustive: never = entry;
-      throw new Error(`Unsupported xref entry: ${String(exhaustive)}`);
-    })();
-
-    const decrypted = (() => {
-      const decrypter = this.options.decrypter;
-      if (!decrypter) {return value;}
-      const skip = this.options.skipDecryptObjectNums;
-      if (skip?.has(objNum)) {return value;}
-      return decryptPdfObject(value, objNum, gen, decrypter);
-    })();
+    const { value, gen } = this.resolveXRefEntry(objNum, entry);
+    const decrypted = this.decryptIfNeeded(value, objNum, gen);
 
     this.indirectCache.set(objNum, decrypted);
     return decrypted;
+  }
+
+  private resolveXRefEntry(objNum: number, entry: XRefEntry): { readonly value: PdfObject; readonly gen: number } {
+    if (entry.type === 0) {
+      throw new Error(`Object ${objNum} is free`);
+    }
+    if (entry.type === 1) {
+      const { obj } = parseIndirectObjectAt(this.bytes, entry.offset, { resolveObject: (n) => this.getObject(n) });
+      if (obj.obj !== objNum) {
+        // Some PDFs may have padding; still trust parsed obj.
+      }
+      return { value: obj.value, gen: entry.gen };
+    }
+    if (entry.type === 2) {
+      return { value: this.getCompressedObject(entry.objStm, entry.index), gen: 0 };
+    }
+    const exhaustive: never = entry;
+    throw new Error(`Unsupported xref entry: ${String(exhaustive)}`);
+  }
+
+  private decryptIfNeeded(value: PdfObject, objNum: number, gen: number): PdfObject {
+    const decrypter = this.options.decrypter;
+    if (!decrypter) {return value;}
+    const skip = this.options.skipDecryptObjectNums;
+    if (skip?.has(objNum)) {return value;}
+    return decryptPdfObject(value, objNum, gen, decrypter);
   }
 
   private getCompressedObject(objStmNum: number, index: number): PdfObject {

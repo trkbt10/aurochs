@@ -3,7 +3,6 @@
  *
  * Tests generation of @font-face CSS from embedded font data.
  */
-import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { loadNativePdfDocument } from "../../native";

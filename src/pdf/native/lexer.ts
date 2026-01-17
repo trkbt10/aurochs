@@ -20,6 +20,11 @@ export type PdfLexer = Readonly<{
 
 
 
+
+
+
+
+
 export function createLexer(bytes: Uint8Array, pos: number): PdfLexer {
   return { bytes, pos };
 }
@@ -60,10 +65,6 @@ function readWhile(bytes: Uint8Array, pos: number, pred: (b: number) => boolean)
     pos += 1;
   }
   return { text: decodeLatin1(bytes.slice(start, pos)), next: pos };
-}
-
-function isDigit(b: number): boolean {
-  return b >= 0x30 && b <= 0x39;
 }
 
 function isHexDigit(b: number): boolean {
@@ -237,6 +238,11 @@ function readNumberOrKeyword(lex: PdfLexer): { token: PdfToken; next: number } {
 
   return { token: { type: "keyword", value: text }, next: pos };
 }
+
+
+
+
+
 
 
 

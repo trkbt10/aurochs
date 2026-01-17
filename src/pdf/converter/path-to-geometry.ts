@@ -189,7 +189,10 @@ export function isSimpleRectangle(pdfPath: PdfPath): boolean {
 /**
  * 矩形パスをPresetGeometry（rect）に変換
  */
-export function convertToPresetRect(_pdfPath: PdfPath, _context: ConversionContext): PresetGeometry {
+export function convertToPresetRect(pdfPath: PdfPath): PresetGeometry {
+  if (!isSimpleRectangle(pdfPath)) {
+    throw new Error("Path is not a simple rectangle");
+  }
   return {
     type: "preset",
     preset: "rect",
@@ -272,7 +275,7 @@ export function isApproximateEllipse(pdfPath: PdfPath): boolean {
 /**
  * 楕円パスをPresetGeometry（ellipse）に変換
  */
-export function convertToPresetEllipse(pdfPath: PdfPath, _context: ConversionContext): PresetGeometry {
+export function convertToPresetEllipse(pdfPath: PdfPath): PresetGeometry {
   if (!isApproximateEllipse(pdfPath)) {
     throw new Error("Path is not an approximate ellipse");
   }
@@ -431,7 +434,7 @@ export function isRoundedRectangle(pdfPath: PdfPath): boolean {
  * PPTX roundRect uses an adjust value (adj) that represents the radius
  * as a percentage of the smaller dimension, scaled to 50000 = 50%.
  */
-export function convertToPresetRoundRect(pdfPath: PdfPath, _context: ConversionContext): PresetGeometry {
+export function convertToPresetRoundRect(pdfPath: PdfPath): PresetGeometry {
   const radiusRatio = detectRoundedRectangle(pdfPath);
   if (radiusRatio === null) {
     throw new Error("Path is not a rounded rectangle");

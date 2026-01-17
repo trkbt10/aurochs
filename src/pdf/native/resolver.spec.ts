@@ -1,4 +1,3 @@
-import { describe, it, expect } from "vitest";
 import { PdfResolver } from "./resolver";
 import type { PdfDict, PdfObject } from "./types";
 
