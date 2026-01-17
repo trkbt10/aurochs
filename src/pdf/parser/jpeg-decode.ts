@@ -20,7 +20,7 @@ export type DecodedJpegRgb = Readonly<{
 
 
 
-/** decodeJpegToRgb */
+/** Decode JPEG bytes into raw RGB pixels (3 bytes/pixel). */
 export function decodeJpegToRgb(
   bytes: Uint8Array,
   options: { readonly expectedWidth?: number; readonly expectedHeight?: number } = {},
@@ -57,4 +57,3 @@ export function decodeJpegToRgb(
   }
   return { width, height, data: rgb };
 }
-

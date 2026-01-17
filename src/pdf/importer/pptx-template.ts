@@ -134,7 +134,7 @@ const BLANK_SLIDE_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 
 
 
-/** createBlankPptxPresentationFile */
+/** Create a minimal blank PPTX `PresentationFile` with the given slide count/size. */
 export function createBlankPptxPresentationFile(
   slideCount: number,
   slideSize: BlankPptxSlideSize,
@@ -291,4 +291,3 @@ function buildMasterRelsXml(): string {
     `</Relationships>`
   );
 }
-

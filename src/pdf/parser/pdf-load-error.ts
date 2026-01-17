@@ -36,7 +36,7 @@ export type PdfLoadErrorCode = "INVALID_PDF" | "ENCRYPTED_PDF" | "PARSE_ERROR";
 
 
 
-/** PdfLoadError */
+/** Error thrown when loading/parsing a PDF fails. */
 export class PdfLoadError extends Error {
   constructor(
     message: string,
@@ -47,4 +47,3 @@ export class PdfLoadError extends Error {
     this.name = "PdfLoadError";
   }
 }
-

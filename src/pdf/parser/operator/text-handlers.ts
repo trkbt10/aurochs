@@ -15,7 +15,7 @@
  * - Split complex calculations into testable helpers
  */
 
-import type { PdfMatrix, FontMetrics, FontInfo, FontMappings } from "../../domain";
+import type { PdfBBox, PdfMatrix, FontMetrics, FontInfo, FontMappings } from "../../domain";
 import { IDENTITY_MATRIX, transformPoint, multiplyMatrices, DEFAULT_FONT_METRICS } from "../../domain";
 import type {
   OperatorHandler,
@@ -428,6 +428,30 @@ export function createTextRun(
   };
 
   return { run, newTextMatrix };
+}
+
+function maybeApplyTextClipBBox(
+  textRun: TextRun,
+  textState: TextObjectState,
+  gfxOps: Readonly<{ get: () => { textRenderingMode: number }; setClipBBox: (bbox: PdfBBox) => void }>,
+): void {
+  const mode = gfxOps.get().textRenderingMode;
+  if (mode < 4 || mode > 7) {return;}
+
+  const metrics = textState.currentFontMetrics;
+  const ascender = metrics.ascender ?? 800;
+  const descender = metrics.descender ?? -200;
+  const size = textRun.effectiveFontSize;
+  if (!Number.isFinite(size) || size <= 0) {return;}
+
+  const textHeight = ((ascender - descender) * size) / 1000;
+  const minY = textRun.y + (descender * size) / 1000;
+  const x1 = Math.min(textRun.x, textRun.endX);
+  const x2 = Math.max(textRun.x, textRun.endX);
+
+  if (!Number.isFinite(x1) || !Number.isFinite(x2) || !Number.isFinite(minY) || !Number.isFinite(textHeight)) {return;}
+
+  gfxOps.setClipBBox([x1, minY, x2, minY + Math.max(textHeight, 0)]);
 }
 
 /**

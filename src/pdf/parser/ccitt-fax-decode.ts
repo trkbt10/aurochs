@@ -535,7 +535,7 @@ function writeRunsToBitmapRow(
 
 
 
-/** decodeCcittFax */
+/** Decode `/CCITTFaxDecode`-encoded data into unpacked 1bpp pixels. */
 export function decodeCcittFax(args: DecodeCcittFaxArgs): Uint8Array {
   const { encoded, width, height, parms } = args;
   if (!encoded) {throw new Error("decodeCcittFax: encoded is required");}

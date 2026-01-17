@@ -240,7 +240,7 @@ export type PreprocessInlineImagesResult = Readonly<{
 
 
 
-/** preprocessInlineImages */
+/** Rewrite inline images (BI/ID/EI) into synthetic XObject `/Do` calls. */
 export function preprocessInlineImages(
   bytes: Uint8Array,
   options: Readonly<{

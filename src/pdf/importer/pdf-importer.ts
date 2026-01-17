@@ -74,7 +74,7 @@ export type PageStats = {
 
 
 
-/** PdfImportError */
+/** Error thrown when PDF import fails. */
 export class PdfImportError extends Error {
   constructor(
     message: string,

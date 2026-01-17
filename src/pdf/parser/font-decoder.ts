@@ -58,7 +58,7 @@ export type ExtractFontInfoDeps<PdfPageT, ResourcesT> = Readonly<{
 
 
 
-/** extractFontInfoWithDeps */
+/** Extract font info using injected resource/extraction functions. */
 export function extractFontInfoWithDeps<PdfPageT, ResourcesT>(
   pdfPage: PdfPageT,
   fontName: string,
@@ -166,7 +166,7 @@ export function extractFontInfoWithDeps<PdfPageT, ResourcesT>(
 
 
 
-/** logExtractionErrors */
+/** Log extraction errors (best-effort) for debugging font issues. */
 export function logExtractionErrors(result: FontExtractionResult, fontName: string): void {
   if (!result) {throw new Error("result is required");}
   if (typeof fontName !== "string" || fontName.length === 0) {throw new Error("fontName is required");}

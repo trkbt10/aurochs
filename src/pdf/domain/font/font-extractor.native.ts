@@ -138,7 +138,7 @@ function normalizeEmbeddedFontData(args: {
 
 
 
-/** extractEmbeddedFontsFromNativePages */
+/** Extract embedded font programs from native PDF pages. */
 export function extractEmbeddedFontsFromNativePages(pages: readonly NativePdfPage[]): EmbeddedFont[] {
   const fonts: EmbeddedFont[] = [];
   const seen = new Set<string>();

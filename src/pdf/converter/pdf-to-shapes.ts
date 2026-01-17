@@ -230,7 +230,7 @@ export type DocumentConversionResult = {
 
 
 
-/** convertDocumentToSlides */
+/** Convert a parsed `PdfDocument` into PPTX slides (shapes only). */
 export function convertDocumentToSlides(
   doc: PdfDocument,
   options: ConversionOptions

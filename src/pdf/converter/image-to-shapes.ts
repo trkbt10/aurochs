@@ -29,8 +29,16 @@ export function convertImageToShape(
     throw new Error("shapeId is required");
   }
 
+  const clipBBox = image.graphicsState.clipBBox;
+  if (clipBBox) {
+    const imageBBox = computeImageBBoxFromCtm(image.graphicsState.ctm);
+    if (!bboxIntersects(imageBBox, clipBBox)) {
+      return null;
+    }
+  }
+
   const dataUrl = createDataUrl(image);
-  const { sourceRect, clippedBBox } = computeRectClipForImage(image.graphicsState.ctm, image.graphicsState.clipBBox);
+  const { sourceRect, clippedBBox } = computeRectClipForImage(image.graphicsState.ctm, clipBBox);
   const transform = createImageTransform(image.graphicsState.ctm, clippedBBox ?? null, context);
 
   if (clippedBBox && ((transform.width as number) <= 0 || (transform.height as number) <= 0)) {
@@ -216,4 +224,36 @@ function computeRectClipForImage(
     sourceRect: { left, top, right, bottom },
     clippedBBox: [ix1, iy1, ix2, iy2],
   };
+}
+
+function computeImageBBoxFromCtm(ctm: PdfMatrix): PdfBBox {
+  const [a, b, c, d, e, f] = ctm;
+  const p0 = { x: e, y: f };
+  const p1 = { x: a + e, y: b + f };
+  const p2 = { x: c + e, y: d + f };
+  const p3 = { x: a + c + e, y: b + d + f };
+
+  const bounds = { minX: p0.x, minY: p0.y, maxX: p0.x, maxY: p0.y };
+  for (const p of [p1, p2, p3]) {
+    bounds.minX = Math.min(bounds.minX, p.x);
+    bounds.minY = Math.min(bounds.minY, p.y);
+    bounds.maxX = Math.max(bounds.maxX, p.x);
+    bounds.maxY = Math.max(bounds.maxY, p.y);
+  }
+
+  return [bounds.minX, bounds.minY, bounds.maxX, bounds.maxY];
+}
+
+function bboxIntersects(a: PdfBBox, b: PdfBBox): boolean {
+  const [ax1, ay1, ax2, ay2] = a;
+  const [bx1, by1, bx2, by2] = b;
+  const aMinX = Math.min(ax1, ax2);
+  const aMinY = Math.min(ay1, ay2);
+  const aMaxX = Math.max(ax1, ax2);
+  const aMaxY = Math.max(ay1, ay2);
+  const bMinX = Math.min(bx1, bx2);
+  const bMinY = Math.min(by1, by2);
+  const bMaxX = Math.max(bx1, bx2);
+  const bMaxY = Math.max(by1, by2);
+  return aMaxX > bMinX && aMinX < bMaxX && aMaxY > bMinY && aMinY < bMaxY;
 }

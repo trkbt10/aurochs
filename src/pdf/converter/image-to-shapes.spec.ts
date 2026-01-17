@@ -170,6 +170,25 @@ describe("convertImageToShape", () => {
       height: 20,
     });
   });
+
+  it("drops images that are completely outside clipBBox even when rotated/sheared (bbox-only)", () => {
+    const image: PdfImage = {
+      type: "image",
+      data: new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00]),
+      width: 10,
+      height: 10,
+      colorSpace: "DeviceRGB",
+      bitsPerComponent: 8,
+      graphicsState: {
+        ...graphicsState,
+        // Rotated/scaled image far away from the clip region.
+        ctm: [10, 10, -10, 10, 80, 80],
+        clipBBox: [0, 0, 10, 10],
+      },
+    };
+
+    expect(convertImageToShape(image, context, "1")).toBeNull();
+  });
 });
 
 describe("buffer/data-url + buffer/base64", () => {

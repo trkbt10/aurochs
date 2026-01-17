@@ -756,7 +756,7 @@ function paethPredictor(a: number, b: number, c: number): number {
 
 
 
-/** extractImagesNative */
+/** Extract images referenced by parsed XObject `/Do` calls (native parser). */
 export async function extractImagesNative(
   pdfPage: NativePdfPage,
   parsedImages: readonly ParsedImage[],

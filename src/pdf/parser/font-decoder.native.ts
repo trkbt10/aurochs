@@ -315,7 +315,7 @@ function extractFontMetrics(page: NativePdfPage, fontDict: PdfDict): FontMetrics
 
 
 
-/** extractFontMappingsNative */
+/** Extract font mappings (ToUnicode + metrics + style hints) from a native page. */
 export function extractFontMappingsNative(page: NativePdfPage, options: NativeFontExtractionOptions = {}): FontMappings {
   const mappings: FontMappings = new Map();
   const resources = getResources(page);
@@ -334,7 +334,7 @@ export function extractFontMappingsNative(page: NativePdfPage, options: NativeFo
 
 
 
-/** extractFontMappingsFromResourcesNative */
+/** Extract font mappings from a specific `/Resources` dictionary (native). */
 export function extractFontMappingsFromResourcesNative(
   page: NativePdfPage,
   resources: PdfDict,
