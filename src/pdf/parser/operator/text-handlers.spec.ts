@@ -26,6 +26,7 @@ function createMockGfxOps(overrides: Partial<ReturnType<typeof createDefaultGrap
       pop: () => {},
       get: () => state,
       concatMatrix: () => {},
+      setClipBBox: () => {},
       setLineWidth: () => {},
       setLineCap: () => {},
       setLineJoin: () => {},

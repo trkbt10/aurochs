@@ -6,6 +6,7 @@
  */
 
 import type { PdfMatrix } from "../coordinate";
+import type { PdfBBox } from "../coordinate";
 import type { PdfColor } from "../color";
 
 // =============================================================================
@@ -41,6 +42,14 @@ export type PdfTextRenderingMode = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 export type PdfGraphicsState = {
   readonly ctm: PdfMatrix;
+  /**
+   * Current clipping bounding box in PDF page space.
+   *
+   * This is a conservative representation of the actual clipping path.
+   * When present, it represents the intersection of rectangular clips (and/or Form `/BBox`)
+   * applied so far in the current graphics state.
+   */
+  readonly clipBBox?: PdfBBox;
   readonly fillColor: PdfColor;
   readonly strokeColor: PdfColor;
   /**

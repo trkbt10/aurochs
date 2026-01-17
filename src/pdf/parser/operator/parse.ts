@@ -132,6 +132,7 @@ export function createGfxOpsFromStack(stack: GraphicsStateStack): GraphicsStateO
     pop: () => stack.pop(),
     get: () => stack.get(),
     concatMatrix: (m) => stack.concatMatrix(m),
+    setClipBBox: (b) => stack.setClipBBox(b),
     setLineWidth: (w) => stack.setLineWidth(w),
     setLineCap: (c) => stack.setLineCap(c),
     setLineJoin: (j) => stack.setLineJoin(j),

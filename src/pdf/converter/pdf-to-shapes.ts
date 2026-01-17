@@ -195,7 +195,7 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
 
   for (const image of images) {
     const shape = convertImageToShape(image, context, generateId());
-    shapes.push(shape);
+    if (shape) shapes.push(shape);
   }
 
   return shapes;

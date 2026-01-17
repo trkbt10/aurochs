@@ -19,6 +19,7 @@ function createMockGfxOps() {
       pop: () => {},
       get: () => state,
       concatMatrix: () => {},
+      setClipBBox: () => {},
       setLineWidth: () => {},
       setLineCap: () => {},
       setLineJoin: () => {},

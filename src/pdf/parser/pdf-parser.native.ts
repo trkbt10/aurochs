@@ -1,7 +1,7 @@
 import type { PdfDocument, PdfElement, PdfEmbeddedFont, PdfImage, PdfPage, PdfPath, PdfText } from "../domain";
 import { tokenizeContentStream } from "../domain/content-stream";
 import { decodeText, type FontMappings } from "../domain/font";
-import { GraphicsStateStack, type PdfMatrix } from "../domain";
+import { GraphicsStateStack, transformPoint, type PdfBBox, type PdfMatrix } from "../domain";
 import type { NativePdfPage, PdfArray, PdfDict, PdfName, PdfObject, PdfStream } from "../native";
 import { decodePdfStream } from "../native/stream";
 import { buildPath, builtPathToPdfPath } from "./path-builder";
@@ -239,6 +239,43 @@ function parseMatrix6(page: NativePdfPage, obj: PdfObject | undefined): PdfMatri
   return [n0, n1, n2, n3, n4, n5];
 }
 
+function parseBBox4(page: NativePdfPage, obj: PdfObject | undefined): PdfBBox | null {
+  const resolved = resolve(page, obj);
+  const arr = asArray(resolved);
+  if (!arr || arr.items.length !== 4) {return null;}
+  const [i0, i1, i2, i3] = arr.items;
+  const n0 = asNumber(resolve(page, i0));
+  const n1 = asNumber(resolve(page, i1));
+  const n2 = asNumber(resolve(page, i2));
+  const n3 = asNumber(resolve(page, i3));
+  if (n0 == null || !Number.isFinite(n0)) {return null;}
+  if (n1 == null || !Number.isFinite(n1)) {return null;}
+  if (n2 == null || !Number.isFinite(n2)) {return null;}
+  if (n3 == null || !Number.isFinite(n3)) {return null;}
+  return [n0, n1, n2, n3];
+}
+
+function transformBBox(bbox: PdfBBox, ctm: PdfMatrix): PdfBBox {
+  const [x1, y1, x2, y2] = bbox;
+  const corners = [
+    transformPoint({ x: x1, y: y1 }, ctm),
+    transformPoint({ x: x2, y: y1 }, ctm),
+    transformPoint({ x: x2, y: y2 }, ctm),
+    transformPoint({ x: x1, y: y2 }, ctm),
+  ];
+  let minX = corners[0]!.x;
+  let minY = corners[0]!.y;
+  let maxX = corners[0]!.x;
+  let maxY = corners[0]!.y;
+  for (const p of corners) {
+    minX = Math.min(minX, p.x);
+    minY = Math.min(minY, p.y);
+    maxX = Math.max(maxX, p.x);
+    maxY = Math.max(maxY, p.y);
+  }
+  return [minX, minY, maxX, maxY];
+}
+
 type ImageGroupMap = Map<PdfDict, ParsedImage[]>;
 
 function addImageToGroup(groups: ImageGroupMap, xObjects: PdfDict, img: ParsedImage): void {
@@ -324,6 +361,7 @@ function expandFormXObjectsNative(
       for (const [k, v] of localExt) {mergedExt.set(k, v);}
 
       const matrix = parseMatrix6(page, dictGet(stream.dict, "Matrix")) ?? ([1, 0, 0, 1, 0, 0] as PdfMatrix);
+      const bbox = parseBBox4(page, dictGet(stream.dict, "BBox"));
 
       const decoded = decodePdfStream(stream);
       const pre = preprocessInlineImages(decoded, {
@@ -339,6 +377,9 @@ function expandFormXObjectsNative(
 
       const gfxStack = new GraphicsStateStack(elem.graphicsState);
       gfxStack.concatMatrix(matrix);
+      if (bbox) {
+        gfxStack.setClipBBox(transformBBox(bbox, gfxStack.get().ctm));
+      }
       const gfxOps = createGfxOpsFromStack(gfxStack);
       const tokens = tokenizeContentStream(content);
       const parse = createParser(gfxOps, scopedFonts, { extGState: mergedExt });

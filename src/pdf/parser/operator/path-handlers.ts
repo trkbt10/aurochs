@@ -11,6 +11,8 @@
  */
 
 import type { PdfPathOp, PdfPaintOp } from "../../domain";
+import type { PdfBBox, PdfMatrix, PdfPoint } from "../../domain";
+import { transformPoint } from "../../domain";
 import type {
   ParserContext,
   ParserStateUpdate,
@@ -225,11 +227,56 @@ const handleCloseFillStrokeEvenOdd: OperatorHandler = (ctx, gfxOps) => closeAndF
 /** n operator: End path without filling or stroking */
 const handleEndPath: OperatorHandler = (ctx, gfxOps) => finishPath(ctx, gfxOps, "none");
 
-/** W operator: Clip path (nonzero) */
-const handleClip: OperatorHandler = (ctx, gfxOps) => finishPath(ctx, gfxOps, "clip");
+function computeRectClipBBoxFromPath(ops: readonly PdfPathOp[], ctm: PdfMatrix): PdfBBox | null {
+  // Only support the common `re W` case for now (rectangular clip paths).
+  if (ops.length !== 1) return null;
+  const op = ops[0];
+  if (!op || op.type !== "rect") return null;
 
-/** W* operator: Clip path (even-odd) */
-const handleClipEvenOdd: OperatorHandler = (ctx, gfxOps) => finishPath(ctx, gfxOps, "clip");
+  const corners: PdfPoint[] = [
+    { x: op.x, y: op.y },
+    { x: op.x + op.width, y: op.y },
+    { x: op.x + op.width, y: op.y + op.height },
+    { x: op.x, y: op.y + op.height },
+  ].map((p) => transformPoint(p, ctm));
+
+  let minX = corners[0]!.x;
+  let minY = corners[0]!.y;
+  let maxX = corners[0]!.x;
+  let maxY = corners[0]!.y;
+
+  for (const p of corners) {
+    minX = Math.min(minX, p.x);
+    minY = Math.min(minY, p.y);
+    maxX = Math.max(maxX, p.x);
+    maxY = Math.max(maxY, p.y);
+  }
+
+  return [minX, minY, maxX, maxY];
+}
+
+/** W operator: Set clipping path (nonzero) */
+const handleClip: OperatorHandler = (ctx, gfxOps) => {
+  if (ctx.currentPath.length === 0) {
+    return {};
+  }
+
+  const gs = gfxOps.get();
+  const bbox = computeRectClipBBoxFromPath(ctx.currentPath, gs.ctm);
+  if (bbox) {
+    gfxOps.setClipBBox(bbox);
+  }
+
+  return {
+    currentPath: [],
+  };
+};
+
+/** W* operator: Set clipping path (even-odd) */
+const handleClipEvenOdd: OperatorHandler = (ctx, gfxOps) => {
+  // For rectangular clips, the even-odd rule doesn't change the result.
+  return handleClip(ctx, gfxOps);
+};
 
 // =============================================================================
 // Handler Registry (Rule 1: Lookup objects instead of switch)

@@ -28,6 +28,7 @@ describe("convertImageToShape", () => {
     };
 
     const shape = convertImageToShape(image, context, "1");
+    if (!shape) throw new Error("Expected shape to be created");
     expect(shape.type).toBe("pic");
     expect(shape.nonVisual.id).toBe("1");
     expect(shape.blipFill.resourceId.startsWith("data:image/png;base64,")).toBe(true);
@@ -51,6 +52,7 @@ describe("convertImageToShape", () => {
     };
 
     const shape = convertImageToShape(image, context, "1");
+    if (!shape) throw new Error("Expected shape to be created");
     expect(shape.type).toBe("pic");
     expect(shape.nonVisual.id).toBe("1");
     expect(shape.blipFill.resourceId.startsWith("data:image/png;base64,")).toBe(true);
@@ -72,6 +74,7 @@ describe("convertImageToShape", () => {
     };
 
     const shape = convertImageToShape(image, context, "1");
+    if (!shape) throw new Error("Expected shape to be created");
     const parsed = parseDataUrl(shape.blipFill.resourceId);
     expect(parsed.mimeType).toBe("image/png");
 
@@ -102,6 +105,7 @@ describe("convertImageToShape", () => {
     };
 
     const shape = convertImageToShape(image, context, "1");
+    if (!shape) throw new Error("Expected shape to be created");
     expect(shape.blipFill.resourceId.startsWith("data:image/jpeg;base64,")).toBe(true);
   });
 
@@ -117,6 +121,40 @@ describe("convertImageToShape", () => {
     };
 
     expect(() => convertImageToShape(image, context, "")).toThrow("shapeId is required");
+  });
+
+  it("applies rectangular clipBBox by setting srcRect and shrinking transform", () => {
+    const image: PdfImage = {
+      type: "image",
+      data: new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00]),
+      width: 10,
+      height: 10,
+      colorSpace: "DeviceRGB",
+      bitsPerComponent: 8,
+      graphicsState: {
+        ...graphicsState,
+        ctm: [50, 0, 0, 50, 10, 10],
+        clipBBox: [20, 20, 50, 40],
+      },
+    };
+
+    const shape = convertImageToShape(image, context, "1");
+    if (!shape) throw new Error("Expected shape to be created");
+
+    expect(shape.blipFill.sourceRect).toEqual({
+      left: 20,
+      top: 40,
+      right: 20,
+      bottom: 20,
+    });
+
+    // pdfHeight=100 => y is flipped: [20..40] becomes [60..80] in PPTX.
+    expect(shape.properties.transform).toMatchObject({
+      x: 20,
+      y: 60,
+      width: 30,
+      height: 20,
+    });
   });
 });
 

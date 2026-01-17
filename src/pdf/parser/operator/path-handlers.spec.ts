@@ -9,12 +9,17 @@ import { createDefaultGraphicsState } from "../../domain";
 
 // Mock GraphicsStateOps for testing
 function createMockGfxOps(): GraphicsStateOps {
-  const state = createDefaultGraphicsState();
+  let state = createDefaultGraphicsState();
+  const clipCalls: unknown[] = [];
   return {
     push: () => {},
     pop: () => {},
     get: () => state,
     concatMatrix: () => {},
+    setClipBBox: (bbox) => {
+      clipCalls.push(bbox);
+      state = { ...state, clipBBox: bbox };
+    },
     setLineWidth: () => {},
     setLineCap: () => {},
     setLineJoin: () => {},
@@ -181,6 +186,23 @@ describe("path-handlers", () => {
       const update = pathHandlers.handleFillStroke(ctx, createMockGfxOps());
 
       expect((update.elements![0] as ParsedPath).paintOp).toBe("fillStroke");
+    });
+  });
+
+  describe("handleClip", () => {
+    it("sets clipBBox for `re W` and clears current path without emitting elements", () => {
+      const ops = createMockGfxOps();
+      const ctx: ParserContext = {
+        ...createContext(),
+        currentPath: [{ type: "rect" as const, x: 10, y: 20, width: 30, height: 40 }],
+      };
+
+      const update = pathHandlers.handleClip(ctx, ops);
+      expect(update.currentPath).toEqual([]);
+      expect(update.elements).toBeUndefined();
+
+      const clipBBox = ops.get().clipBBox;
+      expect(clipBBox).toEqual([10, 20, 40, 60]);
     });
   });
 

@@ -10,7 +10,7 @@
  * - Higher-order functions for dependency injection (Rule 4)
  */
 
-import type { PdfPathOp, PdfPaintOp, PdfGraphicsState, PdfMatrix, FontMappings, FontMetrics } from "../../domain";
+import type { PdfPathOp, PdfPaintOp, PdfGraphicsState, PdfMatrix, PdfBBox, FontMappings, FontMetrics } from "../../domain";
 
 // =============================================================================
 // Parsed Element Types
@@ -211,6 +211,7 @@ export type GraphicsStateOps = {
   readonly pop: () => void;
   readonly get: () => PdfGraphicsState;
   readonly concatMatrix: (matrix: PdfMatrix) => void;
+  readonly setClipBBox: (bbox: PdfBBox) => void;
   readonly setLineWidth: (width: number) => void;
   readonly setLineCap: (cap: 0 | 1 | 2) => void;
   readonly setLineJoin: (join: 0 | 1 | 2) => void;

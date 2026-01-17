@@ -7,7 +7,7 @@
 import type { PdfMatrix } from "../coordinate";
 import { multiplyMatrices } from "../coordinate";
 import { createDefaultGraphicsState } from "./defaults";
-import type { PdfGraphicsState, PdfLineCap, PdfLineJoin, PdfTextRenderingMode } from "./types";
+import type { PdfBBox, PdfGraphicsState, PdfLineCap, PdfLineJoin, PdfTextRenderingMode } from "./types";
 
 // =============================================================================
 // Graphics State Stack
@@ -31,6 +31,7 @@ export class GraphicsStateStack {
     if (initial) {
       this.current = {
         ...initial,
+        clipBBox: initial.clipBBox ? ([...initial.clipBBox] as unknown as PdfBBox) : undefined,
         fillColor: {
           ...initial.fillColor,
           components: [...initial.fillColor.components],
@@ -48,7 +49,10 @@ export class GraphicsStateStack {
 
   /** q operator: save graphics state */
   push(): void {
-    this.stack.push({ ...this.current });
+    this.stack.push({
+      ...this.current,
+      clipBBox: this.current.clipBBox ? ([...this.current.clipBBox] as unknown as PdfBBox) : undefined,
+    });
   }
 
   /** Q operator: restore graphics state */
@@ -61,7 +65,10 @@ export class GraphicsStateStack {
 
   /** Get current state (copy) */
   get(): PdfGraphicsState {
-    return { ...this.current };
+    return {
+      ...this.current,
+      clipBBox: this.current.clipBBox ? ([...this.current.clipBBox] as unknown as PdfBBox) : undefined,
+    };
   }
 
   // --- CTM Operations ---
@@ -71,6 +78,31 @@ export class GraphicsStateStack {
     this.current = {
       ...this.current,
       ctm: multiplyMatrices(matrix, this.current.ctm),
+    };
+  }
+
+  // --- Clip Operations ---
+
+  setClipBBox(bbox: PdfBBox): void {
+    const [x1, y1, x2, y2] = bbox;
+    const minX = Math.min(x1, x2);
+    const minY = Math.min(y1, y2);
+    const maxX = Math.max(x1, x2);
+    const maxY = Math.max(y1, y2);
+
+    const prev = this.current.clipBBox;
+    const next: PdfBBox = prev
+      ? [
+          Math.max(prev[0], minX),
+          Math.max(prev[1], minY),
+          Math.min(prev[2], maxX),
+          Math.min(prev[3], maxY),
+        ]
+      : [minX, minY, maxX, maxY];
+
+    this.current = {
+      ...this.current,
+      clipBBox: next,
     };
   }
 
