@@ -621,6 +621,118 @@ export type LayoutInput = {
 };
 
 // =============================================================================
+// Floating Image Types (for DOCX anchor drawings)
+// =============================================================================
+
+/**
+ * Horizontal position reference for floating images.
+ *
+ * @see ECMA-376 Part 1, Section 20.4.3.4 (positionH)
+ */
+export type FloatingImageHorizontalRef =
+  | "character"
+  | "column"
+  | "insideMargin"
+  | "leftMargin"
+  | "margin"
+  | "outsideMargin"
+  | "page"
+  | "rightMargin";
+
+/**
+ * Vertical position reference for floating images.
+ *
+ * @see ECMA-376 Part 1, Section 20.4.3.5 (positionV)
+ */
+export type FloatingImageVerticalRef =
+  | "bottomMargin"
+  | "insideMargin"
+  | "line"
+  | "margin"
+  | "outsideMargin"
+  | "page"
+  | "paragraph"
+  | "topMargin";
+
+/**
+ * Text wrapping mode for floating images.
+ *
+ * @see ECMA-376 Part 1, Section 20.4.3 (Wrapping)
+ */
+export type FloatingImageWrap =
+  | { readonly type: "none" }
+  | { readonly type: "topAndBottom" }
+  | { readonly type: "square"; readonly side?: "bothSides" | "left" | "right" | "largest" }
+  | { readonly type: "tight"; readonly side?: "bothSides" | "left" | "right" | "largest" }
+  | { readonly type: "through"; readonly side?: "bothSides" | "left" | "right" | "largest" };
+
+/**
+ * Floating image configuration for anchor drawings.
+ *
+ * @see ECMA-376 Part 1, Section 20.4.2.3 (anchor)
+ */
+export type FloatingImageConfig = {
+  /** Image source URL (data URL or resource URL) */
+  readonly src: string;
+  /** Image width in pixels */
+  readonly width: Pixels;
+  /** Image height in pixels */
+  readonly height: Pixels;
+  /** Alt text for accessibility */
+  readonly alt: string | undefined;
+  /** Title for tooltip */
+  readonly title: string | undefined;
+  /** Relationship ID for resource resolution */
+  readonly relationshipId: string | undefined;
+
+  // Positioning
+  /** Horizontal position reference */
+  readonly horizontalRef: FloatingImageHorizontalRef;
+  /** Horizontal offset in pixels (from reference) */
+  readonly horizontalOffset: Pixels;
+  /** Horizontal alignment (alternative to offset) */
+  readonly horizontalAlign?: "left" | "right" | "center" | "inside" | "outside";
+  /** Vertical position reference */
+  readonly verticalRef: FloatingImageVerticalRef;
+  /** Vertical offset in pixels (from reference) */
+  readonly verticalOffset: Pixels;
+  /** Vertical alignment (alternative to offset) */
+  readonly verticalAlign?: "top" | "bottom" | "center" | "inside" | "outside";
+
+  // Text wrapping
+  /** Text wrapping mode */
+  readonly wrap: FloatingImageWrap;
+  /** Distance from text - top (in pixels) */
+  readonly distanceTop: Pixels;
+  /** Distance from text - bottom (in pixels) */
+  readonly distanceBottom: Pixels;
+  /** Distance from text - left (in pixels) */
+  readonly distanceLeft: Pixels;
+  /** Distance from text - right (in pixels) */
+  readonly distanceRight: Pixels;
+
+  // Z-ordering
+  /** Whether image is behind document text */
+  readonly behindDoc: boolean;
+  /** Relative z-index for overlapping images */
+  readonly relativeHeight: number;
+
+  // Paragraph context (for paragraph-relative positioning)
+  /** Index of the paragraph this image is anchored to */
+  readonly anchorParagraphIndex?: number;
+};
+
+/**
+ * Positioned floating image on a page.
+ */
+export type PositionedFloatingImage = FloatingImageConfig & {
+  /** Computed X position on page (in pixels) */
+  readonly x: Pixels;
+  /** Computed Y position on page (in pixels) */
+  readonly y: Pixels;
+};
+
+// =============================================================================
 // Continuous Document Types (for DOCX)
 // =============================================================================
 
@@ -654,6 +766,10 @@ export type PageLayout = {
   readonly header?: HeaderFooterLayout;
   /** Footer layout (if any) */
   readonly footer?: HeaderFooterLayout;
+  /** Floating images behind text */
+  readonly floatingImagesBehind?: readonly PositionedFloatingImage[];
+  /** Floating images in front of text */
+  readonly floatingImagesFront?: readonly PositionedFloatingImage[];
 };
 
 /**

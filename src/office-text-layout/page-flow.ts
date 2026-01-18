@@ -19,6 +19,8 @@ import type {
   PageLayout,
   PagedLayoutResult,
   WritingMode,
+  FloatingImageConfig,
+  PositionedFloatingImage,
 } from "./types";
 
 // =============================================================================
@@ -127,6 +129,8 @@ export type PageFlowInput = {
   readonly hints?: readonly (PageBreakHint | undefined)[];
   /** Page configuration */
   readonly config: PageFlowConfig;
+  /** Floating images to position on pages */
+  readonly floatingImages?: readonly FloatingImageConfig[];
 };
 
 // =============================================================================
@@ -570,6 +574,228 @@ function canFitInRemainingSpace(
   return totalHeight <= remainingSpace;
 }
 
+// =============================================================================
+// Floating Image Positioning
+// =============================================================================
+
+/**
+ * Find the page index for a paragraph.
+ */
+function findPageForParagraph(
+  pages: readonly PageLayout[],
+  paragraphIndex: number,
+): number {
+  let globalParagraphIndex = 0;
+  for (let pageIndex = 0; pageIndex < pages.length; pageIndex++) {
+    const page = pages[pageIndex];
+    if (globalParagraphIndex + page.paragraphs.length > paragraphIndex) {
+      return pageIndex;
+    }
+    globalParagraphIndex += page.paragraphs.length;
+  }
+  // Default to last page
+  return Math.max(0, pages.length - 1);
+}
+
+/**
+ * Get paragraph Y position for vertical reference.
+ */
+function getParagraphY(
+  pages: readonly PageLayout[],
+  paragraphIndex: number,
+): number {
+  let globalParagraphIndex = 0;
+  for (const page of pages) {
+    for (const para of page.paragraphs) {
+      if (globalParagraphIndex === paragraphIndex && para.lines.length > 0) {
+        return para.lines[0].y as number;
+      }
+      globalParagraphIndex++;
+    }
+  }
+  return 0;
+}
+
+/**
+ * Calculate horizontal position for floating image.
+ */
+function calculateHorizontalPosition(
+  image: FloatingImageConfig,
+  config: PageFlowConfig,
+): number {
+  const pageWidth = config.pageWidth as number;
+  const marginLeft = config.marginLeft as number;
+  const marginRight = config.marginRight as number;
+  const contentWidth = pageWidth - marginLeft - marginRight;
+
+  // Handle alignment
+  if (image.horizontalAlign !== undefined) {
+    switch (image.horizontalAlign) {
+      case "left":
+        return getHorizontalRefX(image.horizontalRef, config);
+      case "right":
+        return getHorizontalRefX(image.horizontalRef, config) + contentWidth - (image.width as number);
+      case "center":
+        return getHorizontalRefX(image.horizontalRef, config) + (contentWidth - (image.width as number)) / 2;
+      case "inside":
+        return marginLeft; // Same as left for now
+      case "outside":
+        return pageWidth - marginRight - (image.width as number);
+    }
+  }
+
+  // Handle offset
+  return getHorizontalRefX(image.horizontalRef, config) + (image.horizontalOffset as number);
+}
+
+/**
+ * Get X reference position based on horizontal reference type.
+ */
+function getHorizontalRefX(ref: FloatingImageConfig["horizontalRef"], config: PageFlowConfig): number {
+  const pageWidth = config.pageWidth as number;
+  const marginLeft = config.marginLeft as number;
+  const marginRight = config.marginRight as number;
+
+  switch (ref) {
+    case "page":
+      return 0;
+    case "margin":
+    case "column":
+      return marginLeft;
+    case "leftMargin":
+      return 0;
+    case "rightMargin":
+      return pageWidth - marginRight;
+    case "insideMargin":
+      return marginLeft; // Same as left for non-facing pages
+    case "outsideMargin":
+      return pageWidth - marginRight;
+    case "character":
+      return marginLeft; // Fall back to column
+  }
+}
+
+/**
+ * Calculate vertical position for floating image.
+ */
+function calculateVerticalPosition(
+  image: FloatingImageConfig,
+  config: PageFlowConfig,
+  paragraphY: number,
+): number {
+  const pageHeight = config.pageHeight as number;
+  const marginTop = config.marginTop as number;
+  const marginBottom = config.marginBottom as number;
+  const contentHeight = pageHeight - marginTop - marginBottom;
+
+  // Handle alignment
+  if (image.verticalAlign !== undefined) {
+    switch (image.verticalAlign) {
+      case "top":
+        return getVerticalRefY(image.verticalRef, config, paragraphY);
+      case "bottom":
+        return getVerticalRefY(image.verticalRef, config, paragraphY) + contentHeight - (image.height as number);
+      case "center":
+        return getVerticalRefY(image.verticalRef, config, paragraphY) + (contentHeight - (image.height as number)) / 2;
+      case "inside":
+        return marginTop;
+      case "outside":
+        return pageHeight - marginBottom - (image.height as number);
+    }
+  }
+
+  // Handle offset
+  return getVerticalRefY(image.verticalRef, config, paragraphY) + (image.verticalOffset as number);
+}
+
+/**
+ * Get Y reference position based on vertical reference type.
+ */
+function getVerticalRefY(
+  ref: FloatingImageConfig["verticalRef"],
+  config: PageFlowConfig,
+  paragraphY: number,
+): number {
+  const pageHeight = config.pageHeight as number;
+  const marginTop = config.marginTop as number;
+  const marginBottom = config.marginBottom as number;
+
+  switch (ref) {
+    case "page":
+      return 0;
+    case "margin":
+      return marginTop;
+    case "paragraph":
+    case "line":
+      return paragraphY;
+    case "topMargin":
+      return 0;
+    case "bottomMargin":
+      return pageHeight - marginBottom;
+    case "insideMargin":
+      return marginTop;
+    case "outsideMargin":
+      return pageHeight - marginBottom;
+  }
+}
+
+/**
+ * Position floating images on pages.
+ */
+function positionFloatingImages(
+  floatingImages: readonly FloatingImageConfig[],
+  pages: readonly PageLayout[],
+  config: PageFlowConfig,
+): Map<number, { behind: PositionedFloatingImage[]; front: PositionedFloatingImage[] }> {
+  const imagesByPage = new Map<number, { behind: PositionedFloatingImage[]; front: PositionedFloatingImage[] }>();
+
+  for (const image of floatingImages) {
+    // Find page for this image based on its anchor paragraph
+    const paragraphIndex = image.anchorParagraphIndex ?? 0;
+    const pageIndex = findPageForParagraph(pages, paragraphIndex);
+    const page = pages[pageIndex];
+
+    if (page === undefined) {
+      continue;
+    }
+
+    // Get paragraph Y for positioning
+    const paragraphY = getParagraphY(pages, paragraphIndex);
+
+    // Calculate X and Y positions
+    const x = calculateHorizontalPosition(image, config);
+    const y = calculateVerticalPosition(image, config, paragraphY);
+
+    const positionedImage: PositionedFloatingImage = {
+      ...image,
+      x: px(x),
+      y: px(y),
+    };
+
+    // Add to page's image list
+    if (!imagesByPage.has(pageIndex)) {
+      imagesByPage.set(pageIndex, { behind: [], front: [] });
+    }
+
+    const pageImages = imagesByPage.get(pageIndex);
+    if (pageImages !== undefined) {
+      if (image.behindDoc) {
+        pageImages.behind.push(positionedImage);
+      } else {
+        pageImages.front.push(positionedImage);
+      }
+    }
+  }
+
+  // Sort images by relativeHeight for z-ordering
+  for (const [, images] of imagesByPage) {
+    images.behind.sort((a, b) => a.relativeHeight - b.relativeHeight);
+    images.front.sort((a, b) => a.relativeHeight - b.relativeHeight);
+  }
+
+  return imagesByPage;
+}
+
 /**
  * Split paragraphs into pages.
  */
@@ -649,6 +875,31 @@ export function flowIntoPages(input: PageFlowInput): PagedLayoutResult {
       width: config.pageWidth,
       paragraphs: [],
     });
+  }
+
+  // Position floating images on pages
+  const floatingImages = input.floatingImages ?? [];
+  if (floatingImages.length > 0) {
+    const imagesByPage = positionFloatingImages(floatingImages, state.pages, config);
+
+    // Add floating images to each page
+    const pagesWithImages: PageLayout[] = state.pages.map((page, pageIndex) => {
+      const pageImages = imagesByPage.get(pageIndex);
+      if (pageImages === undefined) {
+        return page;
+      }
+      return {
+        ...page,
+        floatingImagesBehind: pageImages.behind.length > 0 ? pageImages.behind : undefined,
+        floatingImagesFront: pageImages.front.length > 0 ? pageImages.front : undefined,
+      };
+    });
+
+    return {
+      pages: pagesWithImages,
+      totalHeight: px(state.totalHeight),
+      writingMode: config.writingMode ?? "horizontal-tb",
+    };
   }
 
   return {

@@ -34,7 +34,7 @@ import {
   selectionToRects,
   moveCursorVertically,
 } from "./cursor-utils";
-import { DocumentTextOverlay } from "./DocumentTextOverlay";
+import { DocumentTextOverlay, type HyperlinkClickEvent } from "./DocumentTextOverlay";
 import { syncParagraphsWithPlainText } from "./text-merge/paragraph-sync";
 
 // =============================================================================
@@ -58,6 +58,8 @@ export type ContinuousEditorProps = {
   readonly onSelectionChange?: (selection: ContinuousSelection | undefined) => void;
   /** Called when cursor position changes */
   readonly onCursorChange?: (position: ContinuousCursorPosition) => void;
+  /** Called when a hyperlink is cmd+clicked */
+  readonly onLinkClick?: (event: HyperlinkClickEvent) => void;
 };
 
 type CursorState = {
@@ -158,6 +160,7 @@ export function ContinuousEditor({
   onTextChange,
   onSelectionChange,
   onCursorChange,
+  onLinkClick,
 }: ContinuousEditorProps): ReactNode {
   // State
   const [isFocused, setIsFocused] = useState(false);
@@ -486,6 +489,7 @@ export function ContinuousEditor({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerCancel}
+        onLinkClick={onLinkClick}
       />
     </div>
   );

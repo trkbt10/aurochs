@@ -5,14 +5,15 @@
  * Uses a single SVG for all pages to enable unified pointer capture.
  */
 
-import type { ReactNode, CSSProperties, PointerEvent as ReactPointerEvent } from "react";
-import { forwardRef, useMemo } from "react";
+import type { ReactNode, CSSProperties, PointerEvent as ReactPointerEvent, MouseEvent as ReactMouseEvent } from "react";
+import { forwardRef, useMemo, useCallback } from "react";
 import type { Pixels } from "../../ooxml/domain/units";
 import type {
   LayoutResult,
   PagedLayoutResult,
   SelectionRect,
   CursorCoordinates,
+  PositionedFloatingImage,
 } from "../../office-text-layout/types";
 import { TextOverlay, CURSOR_ANIMATION_CSS } from "../../office-text-layout";
 import { colorTokens, editorLayoutTokens } from "../../office-editor-components/design-tokens";
@@ -25,6 +26,18 @@ type CursorState = {
   cursor: CursorCoordinates | undefined;
   selectionRects: readonly SelectionRect[];
   isBlinking?: boolean;
+};
+
+/**
+ * Hyperlink click event data.
+ */
+export type HyperlinkClickEvent = {
+  /** Link ID (relationship ID for external, anchor name for internal) */
+  readonly linkId: string;
+  /** Optional tooltip text */
+  readonly tooltip: string | undefined;
+  /** Whether the link is an internal anchor (starts with #) */
+  readonly isAnchor: boolean;
 };
 
 export type DocumentTextOverlayProps = {
@@ -44,6 +57,8 @@ export type DocumentTextOverlayProps = {
   readonly onPointerUp?: (event: ReactPointerEvent<SVGSVGElement>) => void;
   /** Pointer cancel handler */
   readonly onPointerCancel?: (event: ReactPointerEvent<SVGSVGElement>) => void;
+  /** Called when a hyperlink is cmd+clicked */
+  readonly onLinkClick?: (event: HyperlinkClickEvent) => void;
 };
 
 // =============================================================================
@@ -117,10 +132,46 @@ export const DocumentTextOverlay = forwardRef<SVGSVGElement, DocumentTextOverlay
       onPointerMove,
       onPointerUp,
       onPointerCancel,
+      onLinkClick,
     },
     ref,
   ): ReactNode {
     const shouldShowCursor = showCursor && isFocused;
+
+    // Handle hyperlink click (cmd+click or ctrl+click)
+    const handleClick = useCallback(
+      (event: ReactMouseEvent<SVGSVGElement>) => {
+        // Only handle cmd+click (Mac) or ctrl+click (Windows/Linux)
+        if (!(event.metaKey || event.ctrlKey)) {
+          return;
+        }
+
+        // Find the clicked element with link data
+        const target = event.target as Element;
+        const linkElement = target.closest("[data-link-id]");
+        if (linkElement === null) {
+          return;
+        }
+
+        const linkId = linkElement.getAttribute("data-link-id");
+        if (linkId === null) {
+          return;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        const tooltip = linkElement.getAttribute("data-link-tooltip") ?? undefined;
+        const isAnchor = !linkId.startsWith("rId");
+
+        onLinkClick?.({
+          linkId,
+          tooltip,
+          isAnchor,
+        });
+      },
+      [onLinkClick],
+    );
 
     // Calculate total SVG dimensions
     const { totalWidth, totalHeight, pageYOffsets } = useMemo(() => {
@@ -198,6 +249,7 @@ export const DocumentTextOverlay = forwardRef<SVGSVGElement, DocumentTextOverlay
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerCancel}
+          onClick={handleClick}
         >
           {/* SVG filters for page shadows */}
           <defs>
@@ -229,6 +281,16 @@ export const DocumentTextOverlay = forwardRef<SVGSVGElement, DocumentTextOverlay
             />
           ))}
 
+          {/* Floating images behind text (behindDoc=true) */}
+          {pagedLayout.pages.map((page, index) => (
+            <FloatingImagesLayer
+              key={`floating-behind-${index}`}
+              images={page.floatingImagesBehind ?? []}
+              pageYOffset={pageYOffsets[index]}
+              className="floating-images-behind"
+            />
+          ))}
+
           {/* Selection highlights */}
           {adjustedSelectionRects.map((rect, index) => (
             <rect
@@ -244,6 +306,16 @@ export const DocumentTextOverlay = forwardRef<SVGSVGElement, DocumentTextOverlay
 
           {/* Rendered text */}
           <TextOverlay layoutResult={combinedLayoutResult} />
+
+          {/* Floating images in front of text (behindDoc=false) */}
+          {pagedLayout.pages.map((page, index) => (
+            <FloatingImagesLayer
+              key={`floating-front-${index}`}
+              images={page.floatingImagesFront ?? []}
+              pageYOffset={pageYOffsets[index]}
+              className="floating-images-front"
+            />
+          ))}
 
           {/* Cursor caret */}
           {shouldShowCursor && adjustedCursor && (
@@ -294,6 +366,46 @@ export function SelectionHighlight({
           width={rect.width as number}
           height={rect.height as number}
           fill={color}
+        />
+      ))}
+    </g>
+  );
+}
+
+// =============================================================================
+// Floating Image Rendering
+// =============================================================================
+
+type FloatingImagesLayerProps = {
+  readonly images: readonly PositionedFloatingImage[];
+  readonly pageYOffset: number;
+  readonly className: string;
+};
+
+/**
+ * Render a layer of floating images.
+ * Images are positioned using their computed x/y plus the page Y offset.
+ */
+function FloatingImagesLayer({
+  images,
+  pageYOffset,
+  className,
+}: FloatingImagesLayerProps): ReactNode {
+  if (images.length === 0) {
+    return null;
+  }
+
+  return (
+    <g className={className}>
+      {images.map((img, index) => (
+        <image
+          key={`${className}-${index}`}
+          href={img.src}
+          x={img.x as number}
+          y={(img.y as number) + pageYOffset}
+          width={img.width as number}
+          height={img.height as number}
+          preserveAspectRatio="none"
         />
       ))}
     </g>

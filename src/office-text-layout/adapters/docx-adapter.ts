@@ -13,6 +13,10 @@ import type {
   LineSpacing,
   LayoutTabStop,
   InlineImageConfig,
+  FloatingImageConfig,
+  FloatingImageHorizontalRef,
+  FloatingImageVerticalRef,
+  FloatingImageWrap,
 } from "../types";
 import type { DocxParagraph, DocxParagraphContent, DocxParagraphSpacing, DocxTabStops } from "../../docx/domain/paragraph";
 import type { DocxRun, DocxRunProperties, DocxRunContent } from "../../docx/domain/run";
@@ -125,7 +129,7 @@ function createInlineImageConfig(content: DocxRunContent): InlineImageConfig | u
 
   const drawing = content.drawing;
 
-  // Only handle inline drawings for now (anchor drawings need different handling)
+  // Only handle inline drawings (anchor drawings are handled separately)
   if (drawing.type !== "inline") {
     return undefined;
   }
@@ -146,6 +150,96 @@ function createInlineImageConfig(content: DocxRunContent): InlineImageConfig | u
     title: drawing.docPr.title,
     relationshipId,
   };
+}
+
+/**
+ * Create floating image config from anchor drawing content.
+ */
+function createFloatingImageConfig(
+  content: DocxRunContent,
+  paragraphIndex: number,
+): FloatingImageConfig | undefined {
+  if (content.type !== "drawing") {
+    return undefined;
+  }
+
+  const drawing = content.drawing;
+
+  // Only handle anchor drawings
+  if (drawing.type !== "anchor") {
+    return undefined;
+  }
+
+  // Get relationship ID from the blip
+  const relationshipId = drawing.pic?.blipFill?.blip?.rEmbed as string | undefined;
+
+  // Convert EMUs to pixels
+  const width = emuToPx(drawing.extent.cx as number);
+  const height = emuToPx(drawing.extent.cy as number);
+
+  // Convert wrap type
+  const wrap: FloatingImageWrap = drawing.wrap !== undefined
+    ? convertWrapType(drawing.wrap)
+    : { type: "none" };
+
+  // Convert horizontal position
+  const horizontalRef: FloatingImageHorizontalRef = drawing.positionH?.relativeFrom ?? "column";
+  const horizontalOffset = drawing.positionH?.posOffset !== undefined
+    ? emuToPx(drawing.positionH.posOffset)
+    : px(0);
+
+  // Convert vertical position
+  const verticalRef: FloatingImageVerticalRef = drawing.positionV?.relativeFrom ?? "paragraph";
+  const verticalOffset = drawing.positionV?.posOffset !== undefined
+    ? emuToPx(drawing.positionV.posOffset)
+    : px(0);
+
+  // Convert distances from text (EMUs to pixels)
+  const distanceTop = drawing.distT !== undefined ? emuToPx(drawing.distT) : px(0);
+  const distanceBottom = drawing.distB !== undefined ? emuToPx(drawing.distB) : px(0);
+  const distanceLeft = drawing.distL !== undefined ? emuToPx(drawing.distL) : px(0);
+  const distanceRight = drawing.distR !== undefined ? emuToPx(drawing.distR) : px(0);
+
+  return {
+    src: relationshipId ?? "",
+    width,
+    height,
+    alt: drawing.docPr.descr,
+    title: drawing.docPr.title,
+    relationshipId,
+    horizontalRef,
+    horizontalOffset,
+    horizontalAlign: drawing.positionH?.align,
+    verticalRef,
+    verticalOffset,
+    verticalAlign: drawing.positionV?.align,
+    wrap,
+    distanceTop,
+    distanceBottom,
+    distanceLeft,
+    distanceRight,
+    behindDoc: drawing.behindDoc ?? false,
+    relativeHeight: drawing.relativeHeight ?? 0,
+    anchorParagraphIndex: paragraphIndex,
+  };
+}
+
+/**
+ * Convert DOCX wrap type to layout wrap type.
+ */
+function convertWrapType(wrap: NonNullable<import("../../docx/domain/drawing").DocxAnchorDrawing["wrap"]>): FloatingImageWrap {
+  switch (wrap.type) {
+    case "none":
+      return { type: "none" };
+    case "topAndBottom":
+      return { type: "topAndBottom" };
+    case "square":
+      return { type: "square", side: wrap.wrapText };
+    case "tight":
+      return { type: "tight", side: wrap.wrapText };
+    case "through":
+      return { type: "through", side: wrap.wrapText };
+  }
 }
 
 /**
@@ -485,6 +579,61 @@ export function paragraphsToLayoutInputs(
 ): LayoutParagraphInput[] {
   const context = createParagraphLayoutContext(numbering, styles);
   return paragraphs.map((p) => paragraphToLayoutInput(p, context));
+}
+
+// =============================================================================
+// Floating Image Extraction
+// =============================================================================
+
+/**
+ * Extract floating images from a single paragraph.
+ */
+function extractFloatingImagesFromParagraph(
+  paragraph: DocxParagraph,
+  paragraphIndex: number,
+): FloatingImageConfig[] {
+  const floatingImages: FloatingImageConfig[] = [];
+
+  for (const content of paragraph.content) {
+    if (content.type === "run") {
+      for (const rc of content.content) {
+        const floatingImage = createFloatingImageConfig(rc, paragraphIndex);
+        if (floatingImage !== undefined) {
+          floatingImages.push(floatingImage);
+        }
+      }
+    } else if (content.type === "hyperlink") {
+      for (const run of content.content) {
+        for (const rc of run.content) {
+          const floatingImage = createFloatingImageConfig(rc, paragraphIndex);
+          if (floatingImage !== undefined) {
+            floatingImages.push(floatingImage);
+          }
+        }
+      }
+    }
+  }
+
+  return floatingImages;
+}
+
+/**
+ * Extract all floating images from an array of paragraphs.
+ *
+ * @param paragraphs The DOCX paragraphs to extract floating images from
+ * @returns Array of floating image configurations with paragraph indices
+ */
+export function extractFloatingImages(
+  paragraphs: readonly DocxParagraph[],
+): FloatingImageConfig[] {
+  const floatingImages: FloatingImageConfig[] = [];
+
+  for (let i = 0; i < paragraphs.length; i++) {
+    const images = extractFloatingImagesFromParagraph(paragraphs[i], i);
+    floatingImages.push(...images);
+  }
+
+  return floatingImages;
 }
 
 // =============================================================================

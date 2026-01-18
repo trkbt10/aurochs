@@ -54,6 +54,8 @@ export {
   type ContinuousEditorProps,
 } from "./text-edit/ContinuousEditor";
 
+export { type HyperlinkClickEvent } from "./text-edit/DocumentTextOverlay";
+
 // Layout hooks
 export {
   useDocumentLayout,

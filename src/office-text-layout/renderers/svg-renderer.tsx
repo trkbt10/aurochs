@@ -18,6 +18,7 @@ import type {
 } from "../types";
 import { PT_TO_PX } from "../measurer";
 import { getAscenderRatio } from "../../text/font-metrics";
+import { colorTokens } from "../../office-editor-components/design-tokens";
 
 // =============================================================================
 // Utility Functions
@@ -114,6 +115,38 @@ function toSvgDominantBaseline(fontAlignment: FontAlignment): string | undefined
   }
 }
 
+/**
+ * Get text decoration value with hyperlink underline if applicable.
+ * Hyperlinks should always show underline unless explicitly removed.
+ */
+function getTextDecorationWithHyperlink(
+  span: PositionedSpan,
+): string | undefined {
+  if (span.linkId !== undefined) {
+    // Hyperlink: add underline if not already present
+    if (span.textDecoration !== undefined) {
+      // Check if underline is already in the decoration
+      if (!span.textDecoration.includes("underline")) {
+        return `${span.textDecoration} underline`;
+      }
+      return span.textDecoration;
+    }
+    return "underline";
+  }
+  return span.textDecoration;
+}
+
+/**
+ * Get text color for a span, applying hyperlink color if applicable.
+ */
+function getTextColor(span: PositionedSpan): string {
+  if (span.linkId !== undefined) {
+    // Use hyperlink color
+    return colorTokens.hyperlink.default;
+  }
+  return span.color;
+}
+
 // =============================================================================
 // Span Rendering
 // =============================================================================
@@ -195,13 +228,13 @@ function renderSpan(
     xmlSpace: "preserve",
   };
 
-  // Handle fill
+  // Handle fill (with hyperlink color support)
   if (span.textFill !== undefined) {
     if (span.textFill.type === "solid") {
       textProps.fill = span.textFill.color;
     }
   } else {
-    textProps.fill = span.color;
+    textProps.fill = getTextColor(span);
   }
 
   // Font styling
@@ -211,8 +244,10 @@ function renderSpan(
   if (span.fontStyle !== "normal") {
     textProps.fontStyle = span.fontStyle;
   }
-  if (span.textDecoration !== undefined) {
-    textProps.textDecoration = span.textDecoration;
+  // Apply text decoration with hyperlink underline support
+  const textDecoration = getTextDecorationWithHyperlink(span);
+  if (textDecoration !== undefined) {
+    textProps.textDecoration = textDecoration;
   }
   if (span.letterSpacing !== undefined && (span.letterSpacing as number) !== 0) {
     textProps.letterSpacing = `${span.letterSpacing}px`;
@@ -236,11 +271,28 @@ function renderSpan(
   // Apply text transform
   const textContent = applyTextTransform(span.text, span.textTransform);
 
-  elements.push(
+  // Add hyperlink attributes
+  const isHyperlink = span.linkId !== undefined;
+  if (isHyperlink) {
+    textProps["data-link-id"] = span.linkId;
+    if (span.linkTooltip !== undefined) {
+      textProps["data-link-tooltip"] = span.linkTooltip;
+    }
+  }
+
+  // Build the text element with optional hyperlink styling
+  const textElement = isHyperlink ? (
+    <text key={`text-${key}`} {...textProps} style={{ cursor: "pointer" }}>
+      {textContent}
+      {span.linkTooltip !== undefined && <title>{span.linkTooltip}</title>}
+    </text>
+  ) : (
     <text key={`text-${key}`} {...textProps}>
       {textContent}
-    </text>,
+    </text>
   );
+
+  elements.push(textElement);
 
   return <g key={`span-${key}`}>{elements}</g>;
 }

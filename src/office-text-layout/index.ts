@@ -44,6 +44,12 @@ export type {
   // Layout input
   MeasuredParagraph,
   LayoutInput,
+  // Floating image types
+  FloatingImageHorizontalRef,
+  FloatingImageVerticalRef,
+  FloatingImageWrap,
+  FloatingImageConfig,
+  PositionedFloatingImage,
   // Continuous document types
   HeaderFooterLayout,
   PageLayout,
@@ -88,6 +94,7 @@ export {
   paragraphsToLayoutInputs,
   getParagraphPlainText,
   getDocumentPlainText,
+  extractFloatingImages,
   DEFAULT_PAGE_CONFIG,
   getContentWidth,
   getContentHeight,

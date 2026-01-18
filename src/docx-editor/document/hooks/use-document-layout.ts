@@ -21,6 +21,7 @@ import type {
 import {
   layoutDocument,
   paragraphsToLayoutInputs,
+  extractFloatingImages,
   flowIntoPages,
   createSinglePageLayout,
   DEFAULT_PAGE_FLOW_CONFIG,
@@ -165,6 +166,11 @@ export function useDocumentLayout({
     return extractPageBreakHints(paragraphs);
   }, [paragraphs]);
 
+  // Extract floating images from paragraphs
+  const floatingImages = useMemo(() => {
+    return extractFloatingImages(paragraphs);
+  }, [paragraphs]);
+
   // Compute paged layout
   const pagedLayout = useMemo(() => {
     if (mode === "continuous") {
@@ -172,13 +178,14 @@ export function useDocumentLayout({
       return createSinglePageLayout(layoutedParagraphs, contentWidth, totalHeight);
     }
 
-    // Paged mode - split into pages with page break hints
+    // Paged mode - split into pages with page break hints and floating images
     return flowIntoPages({
       paragraphs: layoutedParagraphs,
       hints: pageBreakHints,
       config: pageConfig,
+      floatingImages,
     });
-  }, [layoutedParagraphs, pageBreakHints, mode, pageConfig, contentWidth, totalHeight]);
+  }, [layoutedParagraphs, pageBreakHints, mode, pageConfig, contentWidth, totalHeight, floatingImages]);
 
   return {
     pagedLayout,

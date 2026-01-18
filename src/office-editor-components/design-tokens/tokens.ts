@@ -51,6 +51,12 @@ export const colorTokens = {
     /** Secondary selection (multi-select) */
     secondary: "#00aaff",
   },
+  hyperlink: {
+    /** Hyperlink color (Word default blue) */
+    default: "#0563C1",
+    /** Visited hyperlink color */
+    visited: "#954F72",
+  },
 } as const;
 
 /**
