@@ -9,6 +9,7 @@ export type {
   PdfLineJoin,
   PdfLineCap,
   PdfTextRenderingMode,
+  PdfSoftMask,
   PdfGraphicsState,
 } from "./types";
 

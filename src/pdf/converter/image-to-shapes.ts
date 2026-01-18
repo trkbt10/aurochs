@@ -2,7 +2,7 @@
  * @file src/pdf/converter/image-to-shapes.ts
  */
 
-import type { PdfImage } from "../domain";
+import type { PdfColorSpace, PdfImage } from "../domain";
 import type { PicShape, BlipFillProperties } from "../../pptx/domain/shape";
 import { deg, pct } from "../../ooxml/domain/units";
 import type { ConversionContext } from "./transform-converter";
@@ -12,7 +12,7 @@ import { encodeRgbaToPngDataUrl, isPng } from "../../png";
 import { isJpeg } from "../../jpeg";
 import { convertToRgba } from "./pixel-converter";
 import type { PdfBBox, PdfMatrix } from "../domain";
-import { isSimpleTransform } from "../domain";
+import { clamp01, cmykToRgb, grayToRgb, isSimpleTransform, rgbToRgbBytes } from "../domain";
 
 /**
  * PdfImageをPicShapeに変換
@@ -122,10 +122,87 @@ function encodeRawToPngDataUrl(image: PdfImage): string {
 
   // Convert raw pixels to RGBA
   const rgbaData = convertToRgba(data, width, height, colorSpace, bitsPerComponent, { decode });
+  applySoftMaskMatteInPlace(rgbaData, image.alpha, image.softMaskMatte, colorSpace, width, height);
   applyAlphaMaskInPlace(rgbaData, image.alpha, width, height);
 
   // Encode to PNG using png module (Canvas API or Pure JS)
   return encodeRgbaToPngDataUrl(rgbaData, width, height);
+}
+
+function applySoftMaskMatteInPlace(
+  rgbaData: Uint8ClampedArray,
+  alpha: Uint8Array | undefined,
+  matte: readonly number[] | undefined,
+  colorSpace: PdfColorSpace,
+  width: number,
+  height: number,
+): void {
+  if (!alpha || !matte) {return;}
+
+  const pixelCount = width * height;
+  if (alpha.length !== pixelCount) {
+    console.warn(
+      `[PDF Image] Alpha length mismatch: expected ${pixelCount} bytes for ${width}x${height}, got ${alpha.length}`,
+    );
+    return;
+  }
+
+  const matteRgb = toMatteRgbBytes(matte, colorSpace);
+  if (!matteRgb) {return;}
+
+  const mR = matteRgb[0] / 255;
+  const mG = matteRgb[1] / 255;
+  const mB = matteRgb[2] / 255;
+
+  for (let i = 0; i < pixelCount; i += 1) {
+    const aByte = alpha[i] ?? 0;
+    if (aByte === 0) {continue;}
+    const a = aByte / 255;
+
+    const base = i * 4;
+    const r = (rgbaData[base] ?? 0) / 255;
+    const g = (rgbaData[base + 1] ?? 0) / 255;
+    const b = (rgbaData[base + 2] ?? 0) / 255;
+
+    const rUnmatted = (r - mR * (1 - a)) / a;
+    const gUnmatted = (g - mG * (1 - a)) / a;
+    const bUnmatted = (b - mB * (1 - a)) / a;
+
+    rgbaData[base] = Math.round(clamp01(rUnmatted) * 255);
+    rgbaData[base + 1] = Math.round(clamp01(gUnmatted) * 255);
+    rgbaData[base + 2] = Math.round(clamp01(bUnmatted) * 255);
+  }
+}
+
+function toMatteRgbBytes(matte: readonly number[], colorSpace: PdfColorSpace): readonly [number, number, number] | null {
+  switch (colorSpace) {
+    case "DeviceGray": {
+      if (matte.length !== 1) {
+        console.warn(`[PDF Image] /Matte length mismatch for DeviceGray: expected 1, got ${matte.length}`);
+        return null;
+      }
+      return grayToRgb(matte[0] ?? 0);
+    }
+    case "DeviceRGB": {
+      if (matte.length !== 3) {
+        console.warn(`[PDF Image] /Matte length mismatch for DeviceRGB: expected 3, got ${matte.length}`);
+        return null;
+      }
+      return rgbToRgbBytes(matte[0] ?? 0, matte[1] ?? 0, matte[2] ?? 0);
+    }
+    case "DeviceCMYK": {
+      if (matte.length !== 4) {
+        console.warn(`[PDF Image] /Matte length mismatch for DeviceCMYK: expected 4, got ${matte.length}`);
+        return null;
+      }
+      return cmykToRgb(matte[0] ?? 0, matte[1] ?? 0, matte[2] ?? 0, matte[3] ?? 0);
+    }
+    case "ICCBased":
+    case "Pattern":
+    default:
+      console.warn(`[PDF Image] /Matte is not supported for colorSpace=${colorSpace}`);
+      return null;
+  }
 }
 
 function applyAlphaMaskInPlace(

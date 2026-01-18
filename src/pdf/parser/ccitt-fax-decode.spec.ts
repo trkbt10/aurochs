@@ -81,3 +81,76 @@ describe("decodeCcittFax (Group 3 EndOfLine)", () => {
     expect(Array.from(decoded)).toEqual([0xff, 0x00, 0xff, 0x00]);
   });
 });
+
+function packBitsMsb(bits: string): Uint8Array {
+  const clean = bits.replaceAll(/\s+/g, "");
+  if (clean.length === 0) {return new Uint8Array([]);}
+
+  const byteCount = Math.ceil(clean.length / 8);
+  const out = new Uint8Array(byteCount);
+  for (let i = 0; i < clean.length; i += 1) {
+    const ch = clean[i];
+    if (ch !== "0" && ch !== "1") {
+      throw new Error(`packBitsMsb: invalid bit '${ch}'`);
+    }
+    if (ch === "1") {
+      const byteIdx = Math.floor(i / 8);
+      const bitIdx = i % 8;
+      out[byteIdx] = (out[byteIdx] ?? 0) | (1 << (7 - bitIdx));
+    }
+  }
+  return out;
+}
+
+describe("decodeCcittFax (Group 3 DamagedRowsBeforeError)", () => {
+  it("resynchronizes to EOL and emits white rows when DamagedRowsBeforeError>0", () => {
+    // Valid line: white=8 (10011), black=8 (000101), EOL (000000000001)
+    const lineOk = "10011" + "000101" + "000000000001";
+    // Invalid line: start with a prefix that matches no white-run code, then an EOL marker for resync.
+    const lineBad = "00000000" + "000000000001";
+    const encoded = packBitsMsb(lineOk + lineBad + lineOk);
+
+    const decoded = decodeCcittFax({
+      encoded,
+      width: 16,
+      height: 3,
+      parms: {
+        k: 0,
+        columns: 16,
+        rows: 3,
+        endOfLine: true,
+        encodedByteAlign: false,
+        blackIs1: false,
+        endOfBlock: true,
+        damagedRowsBeforeError: 1,
+      },
+    });
+
+    // Row bytes = 2; expected rows: [FF 00], [FF FF], [FF 00]
+    expect(Array.from(decoded)).toEqual([0xff, 0x00, 0xff, 0xff, 0xff, 0x00]);
+  });
+
+  it("fails when DamagedRowsBeforeError=0 (same input)", () => {
+    const lineOk = "10011" + "000101" + "000000000001";
+    const lineBad = "00000000" + "000000000001";
+    const encoded = packBitsMsb(lineOk + lineBad + lineOk);
+
+    expect(() =>
+      decodeCcittFax({
+        encoded,
+        width: 16,
+        height: 3,
+        parms: {
+          k: 0,
+          columns: 16,
+          rows: 3,
+          endOfLine: true,
+          encodedByteAlign: false,
+          blackIs1: false,
+          endOfBlock: true,
+          damagedRowsBeforeError: 0,
+        },
+      }),
+    ).toThrow("CCITT:");
+  });
+});

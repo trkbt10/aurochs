@@ -181,6 +181,57 @@ function buildMinimalPdfWithImageXObject(args: {
   return new TextEncoder().encode(pdfText);
 }
 
+function buildMinimalPdfWithIccBasedImageXObject(args: {
+  readonly imageStreamAscii: string;
+  readonly imageDictEntries: string;
+  readonly iccProfileDictEntries: string;
+  readonly iccProfileStreamAscii?: string;
+}): Uint8Array {
+  const contentStream = "q 15.36 0 0 15.36 0 0 cm /Im1 Do Q\n";
+  const contentLength = new TextEncoder().encode(contentStream).length;
+  const imageLength = new TextEncoder().encode(args.imageStreamAscii).length;
+  const iccStream = args.iccProfileStreamAscii ?? "";
+  const iccLength = new TextEncoder().encode(iccStream).length;
+
+  const objects: Record<number, string> = {
+    1: "<< /Type /Catalog /Pages 3 0 R >>",
+    3: "<< /Type /Pages /Kids [4 0 R] /Count 1 >>",
+    4: "<< /Type /Page /Parent 3 0 R /MediaBox [0 0 15.36 15.36] /Contents 5 0 R /Resources << /XObject << /Im1 7 0 R >> >> >>",
+    5: `<< /Length ${contentLength} >>\nstream\n${contentStream}endstream`,
+    7: `<< ${args.imageDictEntries} /Length ${imageLength} >>\nstream\n${args.imageStreamAscii}\nendstream`,
+    8: `<< ${args.iccProfileDictEntries} /Length ${iccLength} >>\nstream\n${iccStream}\nendstream`,
+  };
+
+  const header = "%PDF-1.4\n";
+  const order = [1, 3, 4, 5, 7, 8];
+  const parts: string[] = [header];
+  const offsets: number[] = [0];
+
+  const cursor = { value: header.length };
+  for (const n of order) {
+    offsets[n] = cursor.value;
+    const body = `${n} 0 obj\n${objects[n]}\nendobj\n`;
+    parts.push(body);
+    cursor.value += body.length;
+  }
+
+  const xrefStart = cursor.value;
+  const size = Math.max(...order) + 1;
+  const xrefLines: string[] = [];
+  xrefLines.push("xref\n");
+  xrefLines.push(`0 ${size}\n`);
+  xrefLines.push("0000000000 65535 f \n");
+  for (let i = 1; i < size; i += 1) {
+    const off = offsets[i] ?? 0;
+    const line = `${String(off).padStart(10, "0")} 00000 n \n`;
+    xrefLines.push(line);
+  }
+  const trailer = `trailer\n<< /Size ${size} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF\n`;
+
+  const pdfText = parts.join("") + xrefLines.join("") + trailer;
+  return new TextEncoder().encode(pdfText);
+}
+
 function buildMinimalPdfWithSmaskImageXObject(args: {
   readonly imageStreamAscii: string;
   readonly imageDictEntries: string;
@@ -620,6 +671,31 @@ describe("image-extractor (SMask)", () => {
     expect(Array.from(image.alpha ?? [])).toEqual([0, 255]);
   });
 
+  it("extracts /SMask /Matte when present", async () => {
+    const pdfBytes = buildMinimalPdfWithSmaskImageXObject({
+      // 2 pixels (RGB, 8bpc): [FF 7F 7F] [BF BF FF]
+      imageStreamAscii: "FF7F7FBFBFFF>",
+      imageDictEntries:
+        "/Type /XObject /Subtype /Image /Name /Im1 /Width 2 /Height 1 " +
+        "/BitsPerComponent 8 /ColorSpace /DeviceRGB /Filter /ASCIIHexDecode",
+      // alpha: [0x80, 0x40]
+      smaskStreamAscii: "8040>",
+      smaskDictEntries:
+        "/Type /XObject /Subtype /Image /Name /SM1 /Width 2 /Height 1 " +
+        "/BitsPerComponent 8 /ColorSpace /DeviceGray /Filter /ASCIIHexDecode " +
+        "/Matte [1 1 1]",
+    });
+
+    const doc = await parsePdf(pdfBytes);
+    const images = doc.pages.flatMap((p) => p.elements.filter((e) => e.type === "image"));
+    expect(images).toHaveLength(1);
+
+    const image = images[0]!;
+    expect(image.alpha).toBeTruthy();
+    expect(Array.from(image.alpha ?? [])).toEqual([128, 64]);
+    expect(image.softMaskMatte).toEqual([1, 1, 1]);
+  });
+
   it("extracts /SMask alpha when BitsPerComponent=4", async () => {
     const pdfBytes = buildMinimalPdfWithSmaskImageXObject({
       imageStreamAscii: "FF000000FF00>",
@@ -685,6 +761,132 @@ describe("image-extractor (SMask)", () => {
     expect(a630).toBe(0);
     expect(a063).toBe(0);
     expect(a6363).toBe(255);
+  });
+});
+
+describe("image-extractor (Separation/DeviceN)", () => {
+  it("extracts /Separation images via deterministic tint fallback (tint → grayscale RGB)", async () => {
+    const pdfBytes = buildMinimalPdfWithImageXObject({
+      imageStreamAscii: "00FF>",
+      imageDictEntries:
+        "/Type /XObject /Subtype /Image /Name /Im1 /Width 2 /Height 1 " +
+        "/BitsPerComponent 8 " +
+        "/ColorSpace [/Separation /Spot /DeviceGray << /FunctionType 2 /Domain [0 1] /C0 [1] /C1 [0] /N 1 >>] " +
+        "/Filter /ASCIIHexDecode",
+    });
+
+    const doc = await parsePdf(pdfBytes);
+    const images = doc.pages.flatMap((p) => p.elements.filter((e) => e.type === "image"));
+    expect(images).toHaveLength(1);
+
+    const image = images[0]!;
+    expect(image.width).toBe(2);
+    expect(image.height).toBe(1);
+    expect(image.colorSpace).toBe("DeviceRGB");
+    expect(image.bitsPerComponent).toBe(8);
+
+    const rgba = convertToRgba(image.data, image.width, image.height, image.colorSpace, image.bitsPerComponent);
+    // tint 0 => white, tint 1 => black (inverted grayscale mapping)
+    expect(Array.from(rgba.slice(0, 4))).toEqual([255, 255, 255, 255]);
+    expect(Array.from(rgba.slice(4, 8))).toEqual([0, 0, 0, 255]);
+  });
+
+  it("extracts /DeviceN images via deterministic tint fallback (avg tints → grayscale RGB)", async () => {
+    const pdfBytes = buildMinimalPdfWithImageXObject({
+      // 1 pixel, 2 components: [0x00, 0xFF] => avg tint=0.5 => gray=0.5
+      imageStreamAscii: "00FF>",
+      imageDictEntries:
+        "/Type /XObject /Subtype /Image /Name /Im1 /Width 1 /Height 1 " +
+        "/BitsPerComponent 8 " +
+        "/ColorSpace [/DeviceN [/C1 /C2] /DeviceRGB << /FunctionType 2 /Domain [0 1 0 1] /C0 [0 0 0] /C1 [1 1 1] /N 1 >>] " +
+        "/Filter /ASCIIHexDecode",
+    });
+
+    const doc = await parsePdf(pdfBytes);
+    const images = doc.pages.flatMap((p) => p.elements.filter((e) => e.type === "image"));
+    expect(images).toHaveLength(1);
+
+    const image = images[0]!;
+    expect(image.width).toBe(1);
+    expect(image.height).toBe(1);
+    expect(image.colorSpace).toBe("DeviceRGB");
+    expect(image.bitsPerComponent).toBe(8);
+
+    const rgba = convertToRgba(image.data, image.width, image.height, image.colorSpace, image.bitsPerComponent);
+    expect(Array.from(rgba.slice(0, 4))).toEqual([128, 128, 128, 255]);
+  });
+});
+
+describe("image-extractor (Lab)", () => {
+  it("extracts /Lab images by converting Lab→sRGB (white)", async () => {
+    // 1x1 pixel with L=100, a=0, b=0 using /Decode mapping.
+    const pdfBytes = buildMinimalPdfWithImageXObject({
+      imageStreamAscii: "FF8080>",
+      imageDictEntries:
+        "/Type /XObject /Subtype /Image /Name /Im1 /Width 1 /Height 1 " +
+        "/BitsPerComponent 8 " +
+        "/ColorSpace [/Lab << /WhitePoint [0.9505 1 1.0890] /Range [-128 127 -128 127] >>] " +
+        "/Decode [0 100 -128 127 -128 127] " +
+        "/Filter /ASCIIHexDecode",
+    });
+
+    const doc = await parsePdf(pdfBytes);
+    const images = doc.pages.flatMap((p) => p.elements.filter((e) => e.type === "image"));
+    expect(images).toHaveLength(1);
+
+    const image = images[0]!;
+    expect(image.colorSpace).toBe("DeviceRGB");
+    expect(image.bitsPerComponent).toBe(8);
+
+    const rgba = convertToRgba(image.data, 1, 1, image.colorSpace, image.bitsPerComponent);
+    expect(Array.from(rgba.slice(0, 4))).toEqual([255, 255, 255, 255]);
+  });
+
+  it("extracts /Lab images by converting Lab→sRGB (black)", async () => {
+    // 1x1 pixel with L=0, a=0, b=0.
+    const pdfBytes = buildMinimalPdfWithImageXObject({
+      imageStreamAscii: "008080>",
+      imageDictEntries:
+        "/Type /XObject /Subtype /Image /Name /Im1 /Width 1 /Height 1 " +
+        "/BitsPerComponent 8 " +
+        "/ColorSpace [/Lab << /WhitePoint [0.9505 1 1.0890] /Range [-128 127 -128 127] >>] " +
+        "/Decode [0 100 -128 127 -128 127] " +
+        "/Filter /ASCIIHexDecode",
+    });
+
+    const doc = await parsePdf(pdfBytes);
+    const images = doc.pages.flatMap((p) => p.elements.filter((e) => e.type === "image"));
+    expect(images).toHaveLength(1);
+
+    const image = images[0]!;
+    const rgba = convertToRgba(image.data, 1, 1, image.colorSpace, image.bitsPerComponent);
+    expect(Array.from(rgba.slice(0, 4))).toEqual([0, 0, 0, 255]);
+  });
+});
+
+describe("image-extractor (ICCBased)", () => {
+  it("extracts ICCBased images with N=2 via deterministic tint fallback (avg tints → grayscale RGB)", async () => {
+    const pdfBytes = buildMinimalPdfWithIccBasedImageXObject({
+      // 1 pixel, 2 components: [0x00, 0xFF] => avg tint=0.5 => gray=0.5
+      imageStreamAscii: "00FF>",
+      imageDictEntries:
+        "/Type /XObject /Subtype /Image /Name /Im1 /Width 1 /Height 1 " +
+        "/BitsPerComponent 8 " +
+        "/ColorSpace [/ICCBased 8 0 R] " +
+        "/Filter /ASCIIHexDecode",
+      iccProfileDictEntries: "/N 2",
+    });
+
+    const doc = await parsePdf(pdfBytes);
+    const images = doc.pages.flatMap((p) => p.elements.filter((e) => e.type === "image"));
+    expect(images).toHaveLength(1);
+
+    const image = images[0]!;
+    expect(image.colorSpace).toBe("DeviceRGB");
+    expect(image.bitsPerComponent).toBe(8);
+
+    const rgba = convertToRgba(image.data, 1, 1, image.colorSpace, image.bitsPerComponent);
+    expect(Array.from(rgba.slice(0, 4))).toEqual([128, 128, 128, 255]);
   });
 });
 
@@ -785,6 +987,25 @@ describe("image-extractor (/Indexed)", () => {
     const image = images[0]!;
     const rgba = convertToRgba(image.data, image.width, image.height, image.colorSpace, image.bitsPerComponent);
     expect(Array.from(rgba.slice(0, 8))).toEqual([255, 255, 255, 255, 0, 0, 0, 255]);
+  });
+
+  it("applies color-key /Mask arrays to /Indexed images (mask by palette index)", async () => {
+    // Indices [0, 1]; mask out index 0 only.
+    const pdfBytes = buildMinimalPdfWithImageXObject({
+      imageStreamAscii: "40>",
+      imageDictEntries:
+        "/Type /XObject /Subtype /Image /Name /Im1 /Width 2 /Height 1 " +
+        "/BitsPerComponent 1 /ColorSpace [/Indexed /DeviceRGB 1 <000000FFFFFF>] " +
+        "/Mask [0 0] " +
+        "/Filter /ASCIIHexDecode",
+    });
+
+    const doc = await parsePdf(pdfBytes);
+    const images = doc.pages.flatMap((p) => p.elements.filter((e) => e.type === "image"));
+    expect(images).toHaveLength(1);
+
+    const image = images[0]!;
+    expect(Array.from(image.alpha ?? [])).toEqual([0, 255]);
   });
 });
 

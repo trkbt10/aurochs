@@ -13,8 +13,7 @@
  * - Optional pre-filters (e.g. `/ASCII85Decode`) are decoded in `image-extractor.ts`
  *
  * ## Not supported (fail-fast)
- * - `EndOfLine = true` (explicit EOL markers)
- * - `DamagedRowsBeforeError != 0` (resynchronization behavior)
+ * - `DamagedRowsBeforeError != 0` when `EndOfLine=false` (no resync markers)
  *
  * References:
  * - ISO 32000-1:2008 (PDF): CCITTFaxDecode filter parameters
@@ -558,10 +557,8 @@ export function decodeCcittFax(args: DecodeCcittFaxArgs): Uint8Array {
   // However, some PDFs set these parms even for Group 4 (K=-1) where EOL markers
   // are not used and damaged-row resync is irrelevant for our decoder. In that
   // case, accept them as no-ops.
-  if (parms.k !== -1) {
-    if (parms.damagedRowsBeforeError !== 0) {
-      throw new Error("decodeCcittFax: DamagedRowsBeforeError is not supported yet");
-    }
+  if (parms.k !== -1 && parms.damagedRowsBeforeError !== 0 && !parms.endOfLine) {
+    throw new Error("decodeCcittFax: DamagedRowsBeforeError requires EndOfLine=true for resynchronization");
   }
 
   const rowBytes = Math.ceil(width / 8);
@@ -590,6 +587,13 @@ export function decodeCcittFax(args: DecodeCcittFaxArgs): Uint8Array {
       if (parms.encodedByteAlign) {reader.alignToByte();}
     }
   };
+
+  const writeWhiteRow = (y: number): void => {
+    out.fill(0xff, y * rowBytes, (y + 1) * rowBytes);
+  };
+
+  const canResyncDamagedRows = parms.k !== -1 && parms.endOfLine && parms.damagedRowsBeforeError > 0;
+  const damagedState = { streak: 0 };
 
   const decode1DLine = (): number[] => {
     const runs: number[] = [];
@@ -702,8 +706,24 @@ export function decodeCcittFax(args: DecodeCcittFaxArgs): Uint8Array {
       if (parms.endOfLine) {
         consumeLeadingEolMarkersIfPresent();
       }
-      const runs = decode1DLine();
-      writeRunsToBitmapRow(out, y * rowBytes, rowBytes, width, runs);
+      try {
+        const runs = decode1DLine();
+        writeRunsToBitmapRow(out, y * rowBytes, rowBytes, width, runs);
+        damagedState.streak = 0;
+      } catch (error) {
+        if (!canResyncDamagedRows) {
+          throw error;
+        }
+        damagedState.streak += 1;
+        if (damagedState.streak > parms.damagedRowsBeforeError) {
+          throw error;
+        }
+        writeWhiteRow(y);
+        consumeEolMarker();
+        if (parms.encodedByteAlign) {reader.alignToByte();}
+        continue;
+      }
+
       if (parms.endOfLine) {
         consumeEolMarker();
         if (parms.encodedByteAlign) {reader.alignToByte();}
@@ -725,9 +745,26 @@ export function decodeCcittFax(args: DecodeCcittFaxArgs): Uint8Array {
       if (parms.endOfLine) {
         consumeLeadingEolMarkersIfPresent();
       }
-      const runs = y % groupLen === 0 ? decode1DLine() : decode2DLine(referenceRuns);
-      writeRunsToBitmapRow(out, y * rowBytes, rowBytes, width, runs);
-      referenceRuns = runs;
+      try {
+        const runs = y % groupLen === 0 ? decode1DLine() : decode2DLine(referenceRuns);
+        writeRunsToBitmapRow(out, y * rowBytes, rowBytes, width, runs);
+        referenceRuns = runs;
+        damagedState.streak = 0;
+      } catch (error) {
+        if (!canResyncDamagedRows) {
+          throw error;
+        }
+        damagedState.streak += 1;
+        if (damagedState.streak > parms.damagedRowsBeforeError) {
+          throw error;
+        }
+        writeWhiteRow(y);
+        referenceRuns = [width, 0];
+        consumeEolMarker();
+        if (parms.encodedByteAlign) {reader.alignToByte();}
+        continue;
+      }
+
       if (parms.endOfLine) {
         consumeEolMarker();
         if (parms.encodedByteAlign) {reader.alignToByte();}

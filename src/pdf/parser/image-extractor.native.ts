@@ -6,7 +6,7 @@ import type { NativePdfPage, PdfArray, PdfBool, PdfDict, PdfName, PdfNumber, Pdf
 import { decodeStreamData } from "../native/filters";
 import { decodePdfStream } from "../native/stream";
 import type { PdfColorSpace, PdfImage } from "../domain";
-import { getColorSpaceComponents } from "../domain";
+import { clamp01, getColorSpaceComponents } from "../domain";
 import { cmykToRgb, grayToRgb, rgbToRgbBytes } from "../domain/color";
 import type { ParsedImage } from "./operator-parser";
 import { decodeCcittFax, type CcittFaxDecodeParms } from "./ccitt-fax-decode";
@@ -171,7 +171,17 @@ function decodeCcittFaxStreamToPacked1bpp(
   return decodeCcittFax({ encoded: preDecoded, width, height, parms: ccittParms });
 }
 
-function getSoftMaskAlpha8(page: NativePdfPage, imageDict: PdfDict, width: number, height: number): Uint8Array | null {
+type SoftMaskInfo = Readonly<{
+  readonly alpha: Uint8Array;
+  readonly matte?: readonly number[];
+}>;
+
+function getSoftMaskInfo(
+  page: NativePdfPage,
+  imageDict: PdfDict,
+  width: number,
+  height: number,
+): SoftMaskInfo | null {
   try {
     const smaskObj = resolve(page, dictGet(imageDict, "SMask"));
     const smaskStream = asStream(smaskObj);
@@ -180,6 +190,17 @@ function getSoftMaskAlpha8(page: NativePdfPage, imageDict: PdfDict, width: numbe
     const smaskDict = smaskStream.dict;
     const subtype = asName(dictGet(smaskDict, "Subtype"))?.value ?? "";
     if (subtype.length > 0 && subtype !== "Image") {return null;}
+
+    const matteObj = resolve(page, dictGet(smaskDict, "Matte"));
+    const matteArray = asArray(matteObj);
+    const matte = matteArray
+      ? matteArray.items
+          .map((item) => {
+            const resolved = resolve(page, item);
+            return resolved?.type === "number" && Number.isFinite(resolved.value) ? resolved.value : null;
+          })
+          .filter((v): v is number => v != null)
+      : null;
 
     const mw = getNumberValue(smaskDict, "Width") ?? 0;
     const mh = getNumberValue(smaskDict, "Height") ?? 0;
@@ -199,7 +220,7 @@ function getSoftMaskAlpha8(page: NativePdfPage, imageDict: PdfDict, width: numbe
       if (shouldInvertSoftMaskDecode(page, smaskDict)) {
         for (let i = 0; i < alpha.length; i += 1) {alpha[i] = 255 - (alpha[i] ?? 0);}
       }
-      return alpha;
+      return { alpha, matte: matte && matte.length > 0 ? matte : undefined };
     }
 
     const normalized = filters.map((f) => (f === "DCT" ? "DCTDecode" : f === "JPX" ? "JPXDecode" : f));
@@ -216,7 +237,7 @@ function getSoftMaskAlpha8(page: NativePdfPage, imageDict: PdfDict, width: numbe
       const rgb = decodeJpegToRgb(jpegBytes, { expectedWidth: mw, expectedHeight: mh });
       const alpha = new Uint8Array(mw * mh);
       for (let i = 0; i < mw * mh; i += 1) {alpha[i] = rgb.data[i * 3] ?? 0;}
-      return alpha;
+      return { alpha, matte: matte && matte.length > 0 ? matte : undefined };
     }
 
     const decoded = decodePdfStream(smaskStream);
@@ -224,7 +245,7 @@ function getSoftMaskAlpha8(page: NativePdfPage, imageDict: PdfDict, width: numbe
     if (shouldInvertSoftMaskDecode(page, smaskDict)) {
       for (let i = 0; i < alpha.length; i += 1) {alpha[i] = 255 - (alpha[i] ?? 0);}
     }
-    return alpha;
+    return { alpha, matte: matte && matte.length > 0 ? matte : undefined };
   } catch (error) {
     console.warn("Failed to decode /SMask:", error);
     return null;
@@ -303,6 +324,42 @@ function applyColorKeyMask(args: {
       }
     }
     alpha[p] = 0;
+  }
+
+  return alpha;
+}
+
+function applyIndexedColorKeyMask(args: {
+  readonly packedIndices: Uint8Array;
+  readonly width: number;
+  readonly height: number;
+  readonly bitsPerComponent: number;
+  readonly ranges: readonly number[];
+  readonly decode?: readonly number[];
+}): Uint8Array {
+  const { packedIndices, width, height, bitsPerComponent, ranges, decode } = args;
+  if (ranges.length !== 2) {
+    throw new Error(`[PDF Image] /Indexed /Mask color key length mismatch: expected 2, got ${ranges.length}`);
+  }
+  const min = ranges[0] ?? 0;
+  const max = ranges[1] ?? 0;
+
+  const decodePair =
+    decode && decode.length === 2 && Number.isFinite(decode[0]) && Number.isFinite(decode[1])
+      ? ([decode[0], decode[1]] as const)
+      : null;
+  const sampleMax = (1 << bitsPerComponent) - 1;
+
+  const pixelCount = width * height;
+  const alpha = new Uint8Array(pixelCount);
+  for (let p = 0; p < pixelCount; p += 1) {
+    const raw = unpackSample(packedIndices, p, bitsPerComponent);
+    const decoded = (() => {
+      if (!decodePair) {return raw;}
+      const v = sampleMax > 0 ? raw / sampleMax : 0;
+      return Math.round(decodePair[0] + v * (decodePair[1] - decodePair[0]));
+    })();
+    alpha[p] = decoded >= min && decoded <= max ? 0 : 255;
   }
 
   return alpha;
@@ -455,7 +512,9 @@ function parseColorSpaceName(name: string): PdfColorSpace {
 
 type ColorSpaceInfo =
   | Readonly<{ kind: "direct"; colorSpace: PdfColorSpace }>
-  | Readonly<{ kind: "indexed"; base: PdfColorSpace; hival: number; lookup: Uint8Array }>;
+  | Readonly<{ kind: "indexed"; base: PdfColorSpace; hival: number; lookup: Uint8Array }>
+  | Readonly<{ kind: "tint"; components: number }>
+  | Readonly<{ kind: "lab"; whitePoint: readonly [number, number, number]; range: readonly [number, number, number, number] }>;
 
 function getColorSpaceInfo(page: NativePdfPage, dict: PdfDict): ColorSpaceInfo {
   const csObj = resolve(page, dictGet(dict, "ColorSpace"));
@@ -477,6 +536,7 @@ function getColorSpaceInfo(page: NativePdfPage, dict: PdfDict): ColorSpaceInfo {
           if (n === 1) {return { kind: "direct", colorSpace: "DeviceGray" };}
           if (n === 3) {return { kind: "direct", colorSpace: "DeviceRGB" };}
           if (n === 4) {return { kind: "direct", colorSpace: "DeviceCMYK" };}
+          if (n && n > 0) {return { kind: "tint", components: Math.trunc(n) };}
         }
         return { kind: "direct", colorSpace: "DeviceRGB" };
       }
@@ -496,11 +556,181 @@ function getColorSpaceInfo(page: NativePdfPage, dict: PdfDict): ColorSpaceInfo {
         return { kind: "direct", colorSpace: "DeviceRGB" };
       }
 
+      if (name === "Separation" && csObj.items.length >= 4) {
+        // [/Separation name alternateSpace tintTransform]
+        // We don't evaluate tintTransform yet; use a deterministic fallback by treating the image as 1-channel tint data.
+        return { kind: "tint", components: 1 };
+      }
+
+      if (name === "DeviceN" && csObj.items.length >= 4) {
+        // [/DeviceN names alternateSpace tintTransform]
+        // We don't evaluate tintTransform yet; use a deterministic fallback by treating the image as N-channel tint data.
+        const namesObj = resolve(page, csObj.items[1]);
+        const namesArr = asArray(namesObj);
+        const components = namesArr ? namesArr.items.filter((it) => it?.type === "name").length : 0;
+        return { kind: "tint", components: components > 0 ? components : 1 };
+      }
+
+      if (name === "Lab" && csObj.items.length >= 2) {
+        const paramsObj = resolve(page, csObj.items[1]);
+        const params = asDict(paramsObj);
+        if (params) {
+          const wp = resolve(page, dictGet(params, "WhitePoint"));
+          const wpArr = asArray(wp);
+          const w0 = wpArr?.items[0];
+          const w1 = wpArr?.items[1];
+          const w2 = wpArr?.items[2];
+          if (w0?.type === "number" && w1?.type === "number" && w2?.type === "number") {
+            const rangeObj = resolve(page, dictGet(params, "Range"));
+            const rangeArr = asArray(rangeObj);
+            const r0 = rangeArr?.items[0];
+            const r1 = rangeArr?.items[1];
+            const r2 = rangeArr?.items[2];
+            const r3 = rangeArr?.items[3];
+            const range: readonly [number, number, number, number] =
+              r0?.type === "number" && r1?.type === "number" && r2?.type === "number" && r3?.type === "number"
+                ? [r0.value, r1.value, r2.value, r3.value]
+                : [-128, 127, -128, 127];
+
+            return { kind: "lab", whitePoint: [w0.value, w1.value, w2.value], range };
+          }
+        }
+        return { kind: "direct", colorSpace: "DeviceRGB" };
+      }
+
       return { kind: "direct", colorSpace: parseColorSpaceName(name) };
     }
   }
 
   return { kind: "direct", colorSpace: "DeviceRGB" };
+}
+
+function applyDecodeToNormalizedSample(value01: number, decodePair: readonly [number, number] | null): number {
+  const v = clamp01(value01);
+  if (!decodePair) {return v;}
+  const dmin = decodePair[0];
+  const dmax = decodePair[1];
+  const decoded = dmin + v * (dmax - dmin);
+  return clamp01(decoded);
+}
+
+function clamp01OrZero(value: number): number {
+  return clamp01(Number.isFinite(value) ? value : 0);
+}
+
+function labToSrgbByte(value01: number): number {
+  const v = clamp01OrZero(value01);
+  const encoded = v <= 0.0031308 ? 12.92 * v : 1.055 * Math.pow(v, 1 / 2.4) - 0.055;
+  return Math.round(clamp01OrZero(encoded) * 255);
+}
+
+function labToRgbBytes(args: {
+  readonly data: Uint8Array;
+  readonly width: number;
+  readonly height: number;
+  readonly bitsPerComponent: number;
+  readonly decode?: readonly number[];
+  readonly whitePoint: readonly [number, number, number];
+  readonly range: readonly [number, number, number, number];
+}): Uint8Array {
+  const { data, width, height, bitsPerComponent, decode, whitePoint, range } = args;
+  const pixelCount = width * height;
+  const rgb = new Uint8Array(pixelCount * 3);
+
+  const max = bitsPerComponent === 16 ? 65535 : (1 << bitsPerComponent) - 1;
+  const decodePairs =
+    decode && decode.length === 6
+      ? ([0, 1, 2] as const).map((i) => [decode[i * 2] ?? 0, decode[i * 2 + 1] ?? 1] as const)
+      : ([
+          [0, 100],
+          [range[0], range[1]],
+          [range[2], range[3]],
+        ] as const);
+
+  const delta = 6 / 29;
+  const finv = (t: number): number => {
+    if (t > delta) {return t * t * t;}
+    return 3 * delta * delta * (t - 4 / 29);
+  };
+
+  const Xn = whitePoint[0];
+  const Yn = whitePoint[1];
+  const Zn = whitePoint[2];
+
+  for (let p = 0; p < pixelCount; p += 1) {
+    const Lraw = unpackSample(data, p * 3 + 0, bitsPerComponent);
+    const araw = unpackSample(data, p * 3 + 1, bitsPerComponent);
+    const braw = unpackSample(data, p * 3 + 2, bitsPerComponent);
+
+    const L01 = max > 0 ? Lraw / max : 0;
+    const a01 = max > 0 ? araw / max : 0;
+    const b01 = max > 0 ? braw / max : 0;
+
+    const Lstar = (decodePairs[0][0] + clamp01OrZero(L01) * (decodePairs[0][1] - decodePairs[0][0]));
+    const astar = (decodePairs[1][0] + clamp01OrZero(a01) * (decodePairs[1][1] - decodePairs[1][0]));
+    const bstar = (decodePairs[2][0] + clamp01OrZero(b01) * (decodePairs[2][1] - decodePairs[2][0]));
+
+    const fy = (Lstar + 16) / 116;
+    const fx = fy + astar / 500;
+    const fz = fy - bstar / 200;
+
+    const X = Xn * finv(fx);
+    const Y = Yn * finv(fy);
+    const Z = Zn * finv(fz);
+
+    // XYZ (D50/D65 per WhitePoint) -> linear sRGB via standard matrix.
+    const rLin = 3.2406 * X + -1.5372 * Y + -0.4986 * Z;
+    const gLin = -0.9689 * X + 1.8758 * Y + 0.0415 * Z;
+    const bLin = 0.0557 * X + -0.2040 * Y + 1.0570 * Z;
+
+    const off = p * 3;
+    rgb[off] = labToSrgbByte(rLin);
+    rgb[off + 1] = labToSrgbByte(gLin);
+    rgb[off + 2] = labToSrgbByte(bLin);
+  }
+
+  return rgb;
+}
+
+function expandTintImageToRgb(args: {
+  readonly data: Uint8Array;
+  readonly width: number;
+  readonly height: number;
+  readonly components: number;
+  readonly bitsPerComponent: number;
+  readonly decode?: readonly number[];
+}): Uint8Array {
+  const { data, width, height, components, bitsPerComponent, decode } = args;
+  if (components <= 0) {throw new Error("[PDF Image] Tint image requires components > 0");}
+
+  const pixelCount = width * height;
+  const rgb = new Uint8Array(pixelCount * 3);
+
+  const max = bitsPerComponent === 16 ? 65535 : (1 << bitsPerComponent) - 1;
+  const decodePairs =
+    decode && decode.length === components * 2
+      ? Array.from({ length: components }, (_, i) => [decode[i * 2] ?? 0, decode[i * 2 + 1] ?? 1] as const)
+      : null;
+
+  for (let p = 0; p < pixelCount; p += 1) {
+    let sum = 0;
+    for (let c = 0; c < components; c += 1) {
+      const sampleIndex = p * components + c;
+      const raw = unpackSample(data, sampleIndex, bitsPerComponent);
+      const value01 = max > 0 ? raw / max : 0;
+      const decoded = applyDecodeToNormalizedSample(value01, decodePairs ? decodePairs[c] ?? null : null);
+      sum += decoded;
+    }
+    const avg = sum / components;
+    // Deterministic fallback: map tint (0..1) to gray by inverting (1=full colorant => darker).
+    const g = Math.round(clamp01(1 - avg) * 255);
+    const off = p * 3;
+    rgb[off] = g;
+    rgb[off + 1] = g;
+    rgb[off + 2] = g;
+  }
+
+  return rgb;
 }
 
 function extractIndexedBaseColorSpace(page: NativePdfPage, baseObj: PdfObject | undefined): PdfColorSpace | null {
@@ -796,10 +1026,15 @@ export async function extractImagesNative(
       const imageMask = getBoolValue(dict, "ImageMask") ?? false;
       const bitsPerComponent = imageMask ? 1 : (getNumberValue(dict, "BitsPerComponent") ?? 8);
       const colorSpaceInfo = getColorSpaceInfo(pdfPage, dict);
-      const colorSpace = colorSpaceInfo.kind === "indexed" ? "DeviceRGB" : colorSpaceInfo.colorSpace;
+      const colorSpace =
+        colorSpaceInfo.kind === "indexed" || colorSpaceInfo.kind === "tint" || colorSpaceInfo.kind === "lab"
+          ? "DeviceRGB"
+          : colorSpaceInfo.colorSpace;
       const filters = getFilterNames(pdfPage, dict);
       const decode = getDecodeArray(pdfPage, dict) ?? undefined;
-      const alpha = getSoftMaskAlpha8(pdfPage, dict, width, height) ?? undefined;
+      const softMaskInfo = getSoftMaskInfo(pdfPage, dict, width, height);
+      const alpha = softMaskInfo?.alpha ?? undefined;
+      const softMaskMatte = softMaskInfo?.matte ?? undefined;
       const maskEntry = getMaskEntry(pdfPage, dict);
 
       const dataState: { data: Uint8Array | null } = { data: null };
@@ -818,6 +1053,7 @@ export async function extractImagesNative(
           type: "image",
           data: out.rgb,
           alpha: combinedAlpha,
+          softMaskMatte,
           width,
           height,
           colorSpace: "DeviceRGB",
@@ -873,6 +1109,7 @@ export async function extractImagesNative(
             data,
             alpha: combinedAlpha.value,
             decode,
+            softMaskMatte,
             width,
             height,
             colorSpace: "DeviceRGB",
@@ -885,7 +1122,13 @@ export async function extractImagesNative(
         const decoded = decodePdfStream(imageStream);
         const decodeParms = getDecodeParms(pdfPage, dict);
         const predictorComponents =
-          colorSpaceInfo.kind === "indexed" ? 1 : getColorSpaceComponents(colorSpaceInfo.colorSpace);
+          colorSpaceInfo.kind === "indexed"
+            ? 1
+            : colorSpaceInfo.kind === "tint"
+              ? colorSpaceInfo.components
+              : colorSpaceInfo.kind === "lab"
+                ? 3
+              : getColorSpaceComponents(colorSpaceInfo.colorSpace);
         const data = reversePngPredictor(decoded, width, height, predictorComponents, decodeParms);
 
         if (colorSpaceInfo.kind === "indexed") {
@@ -898,18 +1141,105 @@ export async function extractImagesNative(
             lookup: colorSpaceInfo.lookup,
             decode,
           });
-          // For now, only apply explicit /Mask streams (not color-key) after palette expansion.
           const combinedAlpha: { value: Uint8Array | undefined } = { value: alpha };
           if (maskEntry.kind === "explicit") {
             combinedAlpha.value = combineAlpha(
               combinedAlpha.value,
               decodeExplicitMaskAlpha8(pdfPage, maskEntry.stream, width, height),
             );
+          } else if (maskEntry.kind === "colorKey") {
+            combinedAlpha.value = combineAlpha(
+              combinedAlpha.value,
+              applyIndexedColorKeyMask({ packedIndices: data, width, height, bitsPerComponent, ranges: maskEntry.ranges, decode }),
+            );
           }
           images.push({
             type: "image",
             data: expanded,
             alpha: combinedAlpha.value,
+            softMaskMatte,
+            width,
+            height,
+            colorSpace: "DeviceRGB",
+            bitsPerComponent: 8,
+            graphicsState: parsed.graphicsState,
+          });
+          continue;
+        }
+
+        if (colorSpaceInfo.kind === "tint") {
+          const expanded = expandTintImageToRgb({
+            data,
+            width,
+            height,
+            components: colorSpaceInfo.components,
+            bitsPerComponent,
+            decode,
+          });
+
+          const combinedAlpha: { value: Uint8Array | undefined } = { value: alpha };
+          if (maskEntry.kind === "explicit") {
+            combinedAlpha.value = combineAlpha(
+              combinedAlpha.value,
+              decodeExplicitMaskAlpha8(pdfPage, maskEntry.stream, width, height),
+            );
+          } else if (maskEntry.kind === "colorKey") {
+            combinedAlpha.value = combineAlpha(
+              combinedAlpha.value,
+              applyColorKeyMask({
+                data,
+                width,
+                height,
+                components: colorSpaceInfo.components,
+                bitsPerComponent,
+                ranges: maskEntry.ranges,
+              }),
+            );
+          }
+
+          images.push({
+            type: "image",
+            data: expanded,
+            alpha: combinedAlpha.value,
+            softMaskMatte,
+            width,
+            height,
+            colorSpace: "DeviceRGB",
+            bitsPerComponent: 8,
+            graphicsState: parsed.graphicsState,
+          });
+          continue;
+        }
+
+        if (colorSpaceInfo.kind === "lab") {
+          const expanded = labToRgbBytes({
+            data,
+            width,
+            height,
+            bitsPerComponent,
+            decode,
+            whitePoint: colorSpaceInfo.whitePoint,
+            range: colorSpaceInfo.range,
+          });
+
+          const combinedAlpha: { value: Uint8Array | undefined } = { value: alpha };
+          if (maskEntry.kind === "explicit") {
+            combinedAlpha.value = combineAlpha(
+              combinedAlpha.value,
+              decodeExplicitMaskAlpha8(pdfPage, maskEntry.stream, width, height),
+            );
+          } else if (maskEntry.kind === "colorKey") {
+            combinedAlpha.value = combineAlpha(
+              combinedAlpha.value,
+              applyColorKeyMask({ data, width, height, components: 3, bitsPerComponent, ranges: maskEntry.ranges }),
+            );
+          }
+
+          images.push({
+            type: "image",
+            data: expanded,
+            alpha: combinedAlpha.value,
+            softMaskMatte,
             width,
             height,
             colorSpace: "DeviceRGB",
@@ -933,7 +1263,7 @@ export async function extractImagesNative(
           combinedAlpha.value,
           decodeExplicitMaskAlpha8(pdfPage, maskEntry.stream, width, height),
         );
-      } else if (maskEntry.kind === "colorKey" && colorSpaceInfo.kind !== "indexed") {
+      } else if (maskEntry.kind === "colorKey" && colorSpaceInfo.kind === "direct") {
         const components = getColorSpaceComponents(colorSpaceInfo.colorSpace);
         if (components > 0) {
           combinedAlpha.value = combineAlpha(
@@ -948,6 +1278,7 @@ export async function extractImagesNative(
         data,
         alpha: combinedAlpha.value,
         decode,
+        softMaskMatte,
         width,
         height,
         colorSpace: colorSpace as PdfColorSpace,

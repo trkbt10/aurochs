@@ -12,7 +12,7 @@
  */
 
 import type { PdfToken } from "../../domain/content-stream";
-import type { FontMappings } from "../../domain";
+import type { FontMappings, PdfSoftMask } from "../../domain";
 import { createGraphicsStateStack, type GraphicsStateStack } from "../../domain";
 import type {
   ParserContext,
@@ -79,6 +79,9 @@ export function createInitialContext(
       {
         readonly fillAlpha?: number;
         readonly strokeAlpha?: number;
+        readonly blendMode?: string;
+        readonly softMaskAlpha?: number;
+        readonly softMask?: PdfSoftMask;
         readonly lineWidth?: number;
         readonly lineCap?: 0 | 1 | 2;
         readonly lineJoin?: 0 | 1 | 2;
@@ -133,6 +136,9 @@ export function createGfxOpsFromStack(stack: GraphicsStateStack): GraphicsStateO
     get: () => stack.get(),
     concatMatrix: (m) => stack.concatMatrix(m),
     setClipBBox: (b) => stack.setClipBBox(b),
+    setBlendMode: (m) => stack.setBlendMode(m),
+    setSoftMaskAlpha: (a) => stack.setSoftMaskAlpha(a),
+    setSoftMask: (m) => stack.setSoftMask(m),
     setLineWidth: (w) => stack.setLineWidth(w),
     setLineCap: (c) => stack.setLineCap(c),
     setLineJoin: (j) => stack.setLineJoin(j),
@@ -256,6 +262,9 @@ export function parseContentStream(
       {
         readonly fillAlpha?: number;
         readonly strokeAlpha?: number;
+        readonly blendMode?: string;
+        readonly softMaskAlpha?: number;
+        readonly softMask?: PdfSoftMask;
         readonly lineWidth?: number;
         readonly lineCap?: 0 | 1 | 2;
         readonly lineJoin?: 0 | 1 | 2;
@@ -298,6 +307,9 @@ export function createParser(
       {
         readonly fillAlpha?: number;
         readonly strokeAlpha?: number;
+        readonly blendMode?: string;
+        readonly softMaskAlpha?: number;
+        readonly softMask?: PdfSoftMask;
         readonly lineWidth?: number;
         readonly lineCap?: 0 | 1 | 2;
         readonly lineJoin?: 0 | 1 | 2;

@@ -56,6 +56,7 @@ export type {
   PdfLineJoin,
   PdfLineCap,
   PdfTextRenderingMode,
+  PdfSoftMask,
   PdfGraphicsState,
   GraphicsStateStack,
 } from "./graphics-state";

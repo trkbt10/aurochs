@@ -71,6 +71,14 @@ describe("tokenizeContentStream", () => {
         { type: "operator", value: "'", raw: "'" },
       ]);
     });
+
+    it("tokenizes Type3 operators with digits", () => {
+      const tokens = tokenizeContentStream("d0 d1");
+      expect(tokens).toEqual([
+        { type: "operator", value: "d0", raw: "d0" },
+        { type: "operator", value: "d1", raw: "d1" },
+      ]);
+    });
   });
 
   describe("string tokenization", () => {

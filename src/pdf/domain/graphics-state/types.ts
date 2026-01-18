@@ -9,6 +9,27 @@ import type { PdfMatrix } from "../coordinate";
 import type { PdfBBox } from "../coordinate";
 import type { PdfColor } from "../color";
 
+export type PdfSoftMask = Readonly<{
+  readonly kind: "Alpha" | "Luminosity";
+  readonly width: number;
+  readonly height: number;
+  /** Per-pixel alpha in mask space (0..255). */
+  readonly alpha: Uint8Array;
+  /**
+   * Mask bounding box in the mask XObject's own coordinate space (Form `/BBox`).
+   *
+   * To map a point from mask space to page space at evaluation time:
+   * `pagePoint = graphicsState.ctm × softMask.matrix × maskPoint`.
+   */
+  readonly bbox: PdfBBox;
+  /**
+   * Mask space → user space matrix (Form `/Matrix`, default identity).
+   *
+   * This is multiplied with the current `graphicsState.ctm` at evaluation time.
+   */
+  readonly matrix: PdfMatrix;
+}>;
+
 // =============================================================================
 // Line Style Types
 // =============================================================================
@@ -50,6 +71,26 @@ export type PdfGraphicsState = {
    * applied so far in the current graphics state.
    */
   readonly clipBBox?: PdfBBox;
+  /**
+   * Current blend mode (ExtGState `/BM`).
+   *
+   * Stored for completeness; rendering semantics are applied (or ignored)
+   * at conversion time depending on the output format.
+   */
+  readonly blendMode?: string;
+  /**
+   * Soft mask multiplier (ExtGState `/SMask`) when it can be reduced to a constant alpha.
+   *
+   * This is a conservative subset to support common “uniform opacity mask” PDFs.
+   * Full per-pixel /SMask evaluation is not implemented.
+   */
+  readonly softMaskAlpha?: number;
+  /**
+   * Soft mask definition when the mask can be evaluated to a per-pixel alpha map.
+   *
+   * This is currently a limited subset (e.g. single-image masks with simple transforms).
+   */
+  readonly softMask?: PdfSoftMask;
   readonly fillColor: PdfColor;
   readonly strokeColor: PdfColor;
   /**

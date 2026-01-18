@@ -20,6 +20,9 @@ function createMockGfxOps(): GraphicsStateOps {
       clipCalls.push(bbox);
       state.value = { ...state.value, clipBBox: bbox };
     },
+    setBlendMode: () => {},
+    setSoftMaskAlpha: () => {},
+    setSoftMask: () => {},
     setLineWidth: () => {},
     setLineCap: () => {},
     setLineJoin: () => {},
@@ -203,6 +206,25 @@ describe("path-handlers", () => {
 
       const clipBBox = ops.get().clipBBox;
       expect(clipBBox).toEqual([10, 20, 40, 60]);
+    });
+
+    it("sets clipBBox for `m/l/h W` (bbox-only) and clears current path", () => {
+      const ops = createMockGfxOps();
+      const ctx: ParserContext = {
+        ...createContext(),
+        currentPath: [
+          { type: "moveTo" as const, point: { x: 0, y: 0 } },
+          { type: "lineTo" as const, point: { x: 10, y: 0 } },
+          { type: "lineTo" as const, point: { x: 10, y: 10 } },
+          { type: "lineTo" as const, point: { x: 0, y: 10 } },
+          { type: "closePath" as const },
+        ],
+      };
+
+      const update = pathHandlers.handleClip(ctx, ops);
+      expect(update.currentPath).toEqual([]);
+      const clipBBox = ops.get().clipBBox;
+      expect(clipBBox).toEqual([0, 0, 10, 10]);
     });
   });
 

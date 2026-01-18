@@ -7,6 +7,7 @@ import { parsePdfNative } from "./pdf-parser.native";
 function buildMinimalPdfWithExtGState(args: {
   readonly ca: number;
   readonly CA: number;
+  readonly BM?: string;
   readonly LW?: number;
   readonly LC?: 0 | 1 | 2;
   readonly LJ?: 0 | 1 | 2;
@@ -26,6 +27,7 @@ function buildMinimalPdfWithExtGState(args: {
       "/Contents 5 0 R >>",
     4:
       `<< /Type /ExtGState /ca ${args.ca} /CA ${args.CA} ` +
+      (args.BM ? `/BM /${args.BM} ` : "") +
       (args.LW != null ? `/LW ${args.LW} ` : "") +
       (args.LC != null ? `/LC ${args.LC} ` : "") +
       (args.LJ != null ? `/LJ ${args.LJ} ` : "") +
@@ -62,6 +64,396 @@ function buildMinimalPdfWithExtGState(args: {
 
   const pdfText = parts.join("") + xrefLines.join("") + trailer;
   return new TextEncoder().encode(pdfText);
+}
+
+function buildMinimalPdfWithSoftMaskExtGState(args: { readonly kind: "Alpha" | "Luminosity"; readonly value: number }): Uint8Array {
+  const contentStream = "q /GS1 gs 0 0 10 10 re f /GS2 gs 20 0 10 10 re f Q\n";
+  const contentLength = new TextEncoder().encode(contentStream).length;
+
+  const { maskStreamContent, maskResources } = (() => {
+    if (args.kind === "Alpha") {
+      return {
+        maskStreamContent: "q /GSalpha gs 0 0 100 100 re f Q\n",
+        maskResources: "/Resources << /ExtGState << /GSalpha 8 0 R >> >> ",
+      };
+    }
+    return {
+      maskStreamContent: `q ${args.value} g 0 0 100 100 re f Q\n`,
+      maskResources: "/Resources << >> ",
+    };
+  })();
+  const maskStreamLength = new TextEncoder().encode(maskStreamContent).length;
+
+  const objects: Record<number, string> = {
+    1: "<< /Type /Catalog /Pages 2 0 R >>",
+    2: "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    3:
+      "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] " +
+      "/Resources << /ExtGState << /GS1 4 0 R /GS2 5 0 R >> >> " +
+      "/Contents 9 0 R >>",
+    4: `<< /Type /ExtGState /ca 1 /CA 1 /SMask 6 0 R >>`,
+    5: `<< /Type /ExtGState /ca 1 /CA 1 /SMask /None >>`,
+    6: `<< /S /${args.kind} /G 7 0 R >>`,
+    7:
+      `<< /Type /XObject /Subtype /Form /FormType 1 /BBox [0 0 100 100] ` +
+      `/Group << /S /Transparency /CS /DeviceGray >> ` +
+      maskResources +
+      `/Length ${maskStreamLength} >>\n` +
+      `stream\n${maskStreamContent}endstream`,
+    8: `<< /Type /ExtGState /ca ${args.value} >>`,
+    9: `<< /Length ${contentLength} >>\nstream\n${contentStream}endstream`,
+  };
+
+  const header = "%PDF-1.4\n";
+  const order = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+  const parts: string[] = [header];
+  const offsets: number[] = [0];
+
+  const cursor = { value: header.length };
+  for (const n of order) {
+    offsets[n] = cursor.value;
+    const body = `${n} 0 obj\n${objects[n]}\nendobj\n`;
+    parts.push(body);
+    cursor.value += body.length;
+  }
+
+  const xrefStart = cursor.value;
+  const size = Math.max(...order) + 1;
+  const xrefLines: string[] = [];
+  xrefLines.push("xref\n");
+  xrefLines.push(`0 ${size}\n`);
+  xrefLines.push("0000000000 65535 f \n");
+  for (let i = 1; i < size; i += 1) {
+    const off = offsets[i] ?? 0;
+    xrefLines.push(`${String(off).padStart(10, "0")} 00000 n \n`);
+  }
+  const trailer = `trailer\n<< /Size ${size} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF\n`;
+
+  return new TextEncoder().encode(parts.join("") + xrefLines.join("") + trailer);
+}
+
+function buildMinimalPdfWithUnsupportedSoftMaskClears(args: { readonly maskAlpha: number }): Uint8Array {
+  const contentStream = "q /GS1 gs 0 0 10 10 re f /GSbad gs 20 0 10 10 re f Q\n";
+  const contentLength = new TextEncoder().encode(contentStream).length;
+
+  const maskStreamContent = `q /GSalpha gs 0 0 100 100 re f Q\n`;
+  const maskStreamLength = new TextEncoder().encode(maskStreamContent).length;
+
+  const objects: Record<number, string> = {
+    1: "<< /Type /Catalog /Pages 2 0 R >>",
+    2: "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    3:
+      "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] " +
+      "/Resources << /ExtGState << /GS1 4 0 R /GSbad 5 0 R >> >> " +
+      "/Contents 9 0 R >>",
+    4: `<< /Type /ExtGState /ca 1 /CA 1 /SMask 6 0 R >>`,
+    5: `<< /Type /ExtGState /ca 1 /CA 1 /SMask 10 0 R >>`,
+    6: `<< /S /Alpha /G 7 0 R >>`,
+    7:
+      `<< /Type /XObject /Subtype /Form /FormType 1 /BBox [0 0 100 100] ` +
+      `/Group << /S /Transparency /CS /DeviceGray >> ` +
+      `/Resources << /ExtGState << /GSalpha 8 0 R >> >> ` +
+      `/Length ${maskStreamLength} >>\n` +
+      `stream\n${maskStreamContent}endstream`,
+    8: `<< /Type /ExtGState /ca ${args.maskAlpha} >>`,
+    9: `<< /Length ${contentLength} >>\nstream\n${contentStream}endstream`,
+    10: `<< /S /Alpha /G 999 0 R >>`,
+  };
+
+  const header = "%PDF-1.4\n";
+  const order = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+  const parts: string[] = [header];
+  const offsets: number[] = [0];
+
+  const cursor = { value: header.length };
+  for (const n of order) {
+    offsets[n] = cursor.value;
+    const body = `${n} 0 obj\n${objects[n]}\nendobj\n`;
+    parts.push(body);
+    cursor.value += body.length;
+  }
+
+  const xrefStart = cursor.value;
+  const size = Math.max(...order) + 1;
+  const xrefLines: string[] = [];
+  xrefLines.push("xref\n");
+  xrefLines.push(`0 ${size}\n`);
+  xrefLines.push("0000000000 65535 f \n");
+  for (let i = 1; i < size; i += 1) {
+    const off = offsets[i] ?? 0;
+    xrefLines.push(`${String(off).padStart(10, "0")} 00000 n \n`);
+  }
+  const trailer = `trailer\n<< /Size ${size} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF\n`;
+
+  return new TextEncoder().encode(parts.join("") + xrefLines.join("") + trailer);
+}
+
+function buildMinimalPdfWithPerPixelLuminositySoftMask(args: { readonly fillRgb: readonly [number, number, number] }): Uint8Array {
+  const [r, g, b] = args.fillRgb;
+  const contentStream = `q /GS1 gs ${r} ${g} ${b} rg 0 0 2 1 re f Q\n`;
+  const contentLength = new TextEncoder().encode(contentStream).length;
+
+  // 2x1 RGB image: left=black, right=white. Used as a luminosity soft mask.
+  const imageStream = "000000FFFFFF>";
+  const imageLength = new TextEncoder().encode(imageStream).length;
+
+  const maskFormContent = "q 2 0 0 1 0 0 cm /Im1 Do Q\n";
+  const maskFormLength = new TextEncoder().encode(maskFormContent).length;
+
+  const objects: Record<number, string> = {
+    1: "<< /Type /Catalog /Pages 2 0 R >>",
+    2: "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    3:
+      "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] " +
+      "/Resources << /ExtGState << /GS1 4 0 R >> >> " +
+      "/Contents 10 0 R >>",
+    4: `<< /Type /ExtGState /ca 1 /CA 1 /SMask 5 0 R >>`,
+    5: `<< /S /Luminosity /G 6 0 R >>`,
+    6:
+      `<< /Type /XObject /Subtype /Form /FormType 1 /BBox [0 0 2 1] ` +
+      `/Group << /S /Transparency /CS /DeviceRGB >> ` +
+      `/Resources << /XObject << /Im1 7 0 R >> >> ` +
+      `/Length ${maskFormLength} >>\n` +
+      `stream\n${maskFormContent}endstream`,
+    7:
+      `<< /Type /XObject /Subtype /Image /Name /Im1 /Width 2 /Height 1 ` +
+      `/BitsPerComponent 8 /ColorSpace /DeviceRGB /Filter /ASCIIHexDecode /Length ${imageLength} >>\n` +
+      `stream\n${imageStream}\nendstream`,
+    10: `<< /Length ${contentLength} >>\nstream\n${contentStream}endstream`,
+  };
+
+  const header = "%PDF-1.4\n";
+  const order = [1, 2, 3, 4, 5, 6, 7, 10];
+  const parts: string[] = [header];
+  const offsets: number[] = [0];
+
+  const cursor = { value: header.length };
+  for (const n of order) {
+    offsets[n] = cursor.value;
+    const body = `${n} 0 obj\n${objects[n]}\nendobj\n`;
+    parts.push(body);
+    cursor.value += body.length;
+  }
+
+  const xrefStart = cursor.value;
+  const size = Math.max(...order) + 1;
+  const xrefLines: string[] = [];
+  xrefLines.push("xref\n");
+  xrefLines.push(`0 ${size}\n`);
+  xrefLines.push("0000000000 65535 f \n");
+  for (let i = 1; i < size; i += 1) {
+    const off = offsets[i] ?? 0;
+    xrefLines.push(`${String(off).padStart(10, "0")} 00000 n \n`);
+  }
+  const trailer = `trailer\n<< /Size ${size} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF\n`;
+
+  return new TextEncoder().encode(parts.join("") + xrefLines.join("") + trailer);
+}
+
+function buildMinimalPdfWithPerPixelLuminositySoftMaskScaled(args: { readonly fillRgb: readonly [number, number, number] }): Uint8Array {
+  const [r, g, b] = args.fillRgb;
+  const contentStream = `q 10 0 0 10 0 0 cm /GS1 gs ${r} ${g} ${b} rg 0 0 2 1 re f Q\n`;
+  const contentLength = new TextEncoder().encode(contentStream).length;
+
+  // 2x1 RGB image: left=black, right=white. Used as a luminosity soft mask.
+  const imageStream = "000000FFFFFF>";
+  const imageLength = new TextEncoder().encode(imageStream).length;
+
+  const maskFormContent = "q 2 0 0 1 0 0 cm /Im1 Do Q\n";
+  const maskFormLength = new TextEncoder().encode(maskFormContent).length;
+
+  const objects: Record<number, string> = {
+    1: "<< /Type /Catalog /Pages 2 0 R >>",
+    2: "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    3:
+      "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] " +
+      "/Resources << /ExtGState << /GS1 4 0 R >> >> " +
+      "/Contents 10 0 R >>",
+    4: `<< /Type /ExtGState /ca 1 /CA 1 /SMask 5 0 R >>`,
+    5: `<< /S /Luminosity /G 6 0 R >>`,
+    6:
+      `<< /Type /XObject /Subtype /Form /FormType 1 /BBox [0 0 2 1] ` +
+      `/Group << /S /Transparency /CS /DeviceRGB >> ` +
+      `/Resources << /XObject << /Im1 7 0 R >> >> ` +
+      `/Length ${maskFormLength} >>\n` +
+      `stream\n${maskFormContent}endstream`,
+    7:
+      `<< /Type /XObject /Subtype /Image /Name /Im1 /Width 2 /Height 1 ` +
+      `/BitsPerComponent 8 /ColorSpace /DeviceRGB /Filter /ASCIIHexDecode /Length ${imageLength} >>\n` +
+      `stream\n${imageStream}\nendstream`,
+    10: `<< /Length ${contentLength} >>\nstream\n${contentStream}endstream`,
+  };
+
+  const header = "%PDF-1.4\n";
+  const order = [1, 2, 3, 4, 5, 6, 7, 10];
+  const parts: string[] = [header];
+  const offsets: number[] = [0];
+
+  const cursor = { value: header.length };
+  for (const n of order) {
+    offsets[n] = cursor.value;
+    const body = `${n} 0 obj\n${objects[n]}\nendobj\n`;
+    parts.push(body);
+    cursor.value += body.length;
+  }
+
+  const xrefStart = cursor.value;
+  const size = Math.max(...order) + 1;
+  const xrefLines: string[] = [];
+  xrefLines.push("xref\n");
+  xrefLines.push(`0 ${size}\n`);
+  xrefLines.push("0000000000 65535 f \n");
+  for (let i = 1; i < size; i += 1) {
+    const off = offsets[i] ?? 0;
+    xrefLines.push(`${String(off).padStart(10, "0")} 00000 n \n`);
+  }
+  const trailer = `trailer\n<< /Size ${size} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF\n`;
+
+  return new TextEncoder().encode(parts.join("") + xrefLines.join("") + trailer);
+}
+
+function buildMinimalPdfWithPerPixelLuminositySoftMaskWithFormMatrix(args: {
+  readonly fillRgb: readonly [number, number, number];
+  readonly formMatrix: readonly [number, number, number, number, number, number];
+  readonly drawRect: readonly [number, number, number, number];
+}): Uint8Array {
+  const [r, g, b] = args.fillRgb;
+  const [x, y, w, h] = args.drawRect;
+  const [m0, m1, m2, m3, m4, m5] = args.formMatrix;
+  const contentStream = `q /GS1 gs ${r} ${g} ${b} rg ${x} ${y} ${w} ${h} re f Q\n`;
+  const contentLength = new TextEncoder().encode(contentStream).length;
+
+  // 2x1 RGB image: left=black, right=white. Used as a luminosity soft mask.
+  const imageStream = "000000FFFFFF>";
+  const imageLength = new TextEncoder().encode(imageStream).length;
+
+  const maskFormContent = "q 2 0 0 1 0 0 cm /Im1 Do Q\n";
+  const maskFormLength = new TextEncoder().encode(maskFormContent).length;
+
+  const objects: Record<number, string> = {
+    1: "<< /Type /Catalog /Pages 2 0 R >>",
+    2: "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    3:
+      "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] " +
+      "/Resources << /ExtGState << /GS1 4 0 R >> >> " +
+      "/Contents 10 0 R >>",
+    4: `<< /Type /ExtGState /ca 1 /CA 1 /SMask 5 0 R >>`,
+    5: `<< /S /Luminosity /G 6 0 R >>`,
+    6:
+      `<< /Type /XObject /Subtype /Form /FormType 1 /BBox [0 0 2 1] ` +
+      `/Matrix [${m0} ${m1} ${m2} ${m3} ${m4} ${m5}] ` +
+      `/Group << /S /Transparency /CS /DeviceRGB >> ` +
+      `/Resources << /XObject << /Im1 7 0 R >> >> ` +
+      `/Length ${maskFormLength} >>\n` +
+      `stream\n${maskFormContent}endstream`,
+    7:
+      `<< /Type /XObject /Subtype /Image /Name /Im1 /Width 2 /Height 1 ` +
+      `/BitsPerComponent 8 /ColorSpace /DeviceRGB /Filter /ASCIIHexDecode /Length ${imageLength} >>\n` +
+      `stream\n${imageStream}\nendstream`,
+    10: `<< /Length ${contentLength} >>\nstream\n${contentStream}endstream`,
+  };
+
+  const header = "%PDF-1.4\n";
+  const order = [1, 2, 3, 4, 5, 6, 7, 10];
+  const parts: string[] = [header];
+  const offsets: number[] = [0];
+
+  const cursor = { value: header.length };
+  for (const n of order) {
+    offsets[n] = cursor.value;
+    const body = `${n} 0 obj\n${objects[n]}\nendobj\n`;
+    parts.push(body);
+    cursor.value += body.length;
+  }
+
+  const xrefStart = cursor.value;
+  const size = Math.max(...order) + 1;
+  const xrefLines: string[] = [];
+  xrefLines.push("xref\n");
+  xrefLines.push(`0 ${size}\n`);
+  xrefLines.push("0000000000 65535 f \n");
+  for (let i = 1; i < size; i += 1) {
+    const off = offsets[i] ?? 0;
+    xrefLines.push(`${String(off).padStart(10, "0")} 00000 n \n`);
+  }
+  const trailer = `trailer\n<< /Size ${size} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF\n`;
+
+  return new TextEncoder().encode(parts.join("") + xrefLines.join("") + trailer);
+}
+
+function buildMinimalPdfWithPerPixelSoftMaskFromImageSMask(args: {
+  readonly kind: "Alpha" | "Luminosity";
+  readonly fillRgb: readonly [number, number, number];
+  readonly alphaImageHex: string;
+}): Uint8Array {
+  const [r, g, b] = args.fillRgb;
+  const contentStream = `q /GS1 gs ${r} ${g} ${b} rg 0 0 2 1 re f Q\n`;
+  const contentLength = new TextEncoder().encode(contentStream).length;
+
+  // Base 2x1 RGB image: left=black, right=white.
+  const baseImageStream = "000000FFFFFF>";
+  const baseImageLength = new TextEncoder().encode(baseImageStream).length;
+
+  // 2x1 Gray alpha image for the base image /SMask.
+  const alphaImageStream = args.alphaImageHex;
+  const alphaImageLength = new TextEncoder().encode(alphaImageStream).length;
+
+  const maskFormContent = "q 2 0 0 1 0 0 cm /Im1 Do Q\n";
+  const maskFormLength = new TextEncoder().encode(maskFormContent).length;
+
+  const objects: Record<number, string> = {
+    1: "<< /Type /Catalog /Pages 2 0 R >>",
+    2: "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    3:
+      "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] " +
+      "/Resources << /ExtGState << /GS1 4 0 R >> >> " +
+      "/Contents 10 0 R >>",
+    4: `<< /Type /ExtGState /ca 1 /CA 1 /SMask 5 0 R >>`,
+    5: `<< /S /${args.kind} /G 6 0 R >>`,
+    6:
+      `<< /Type /XObject /Subtype /Form /FormType 1 /BBox [0 0 2 1] ` +
+      `/Group << /S /Transparency /CS /DeviceRGB >> ` +
+      `/Resources << /XObject << /Im1 7 0 R >> >> ` +
+      `/Length ${maskFormLength} >>\n` +
+      `stream\n${maskFormContent}endstream`,
+    7:
+      `<< /Type /XObject /Subtype /Image /Name /Im1 /Width 2 /Height 1 ` +
+      `/BitsPerComponent 8 /ColorSpace /DeviceRGB /Filter /ASCIIHexDecode ` +
+      `/SMask 8 0 R /Length ${baseImageLength} >>\n` +
+      `stream\n${baseImageStream}\nendstream`,
+    8:
+      `<< /Type /XObject /Subtype /Image /Width 2 /Height 1 ` +
+      `/BitsPerComponent 8 /ColorSpace /DeviceGray /Filter /ASCIIHexDecode /Length ${alphaImageLength} >>\n` +
+      `stream\n${alphaImageStream}\nendstream`,
+    10: `<< /Length ${contentLength} >>\nstream\n${contentStream}endstream`,
+  };
+
+  const header = "%PDF-1.4\n";
+  const order = [1, 2, 3, 4, 5, 6, 7, 8, 10];
+  const parts: string[] = [header];
+  const offsets: number[] = [0];
+
+  const cursor = { value: header.length };
+  for (const n of order) {
+    offsets[n] = cursor.value;
+    const body = `${n} 0 obj\n${objects[n]}\nendobj\n`;
+    parts.push(body);
+    cursor.value += body.length;
+  }
+
+  const xrefStart = cursor.value;
+  const size = Math.max(...order) + 1;
+  const xrefLines: string[] = [];
+  xrefLines.push("xref\n");
+  xrefLines.push(`0 ${size}\n`);
+  xrefLines.push("0000000000 65535 f \n");
+  for (let i = 1; i < size; i += 1) {
+    const off = offsets[i] ?? 0;
+    xrefLines.push(`${String(off).padStart(10, "0")} 00000 n \n`);
+  }
+  const trailer = `trailer\n<< /Size ${size} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF\n`;
+
+  return new TextEncoder().encode(parts.join("") + xrefLines.join("") + trailer);
 }
 
 describe("ExtGState alpha (native)", () => {
@@ -101,5 +493,147 @@ describe("ExtGState alpha (native)", () => {
     expect(path.graphicsState.miterLimit).toBeCloseTo(7);
     expect(path.graphicsState.dashArray).toEqual([2, 1]);
     expect(path.graphicsState.dashPhase).toBeCloseTo(0);
+  });
+
+  it("extracts /BM and applies it via gs operator", async () => {
+    const bytes = buildMinimalPdfWithExtGState({ ca: 1, CA: 1, BM: "Multiply" });
+    const doc = await parsePdfNative(bytes);
+    expect(doc.pages).toHaveLength(1);
+
+    const paths = doc.pages[0]!.elements.filter((e) => e.type === "path");
+    expect(paths).toHaveLength(1);
+    const path = paths[0]!;
+    if (path.type !== "path") {throw new Error("Expected path");}
+    expect(path.graphicsState.blendMode).toBe("Multiply");
+  });
+
+  it("extracts a constant /SMask (Alpha) and applies it via gs operator", async () => {
+    const bytes = buildMinimalPdfWithSoftMaskExtGState({ kind: "Alpha", value: 0.25 });
+    const doc = await parsePdfNative(bytes);
+    expect(doc.pages).toHaveLength(1);
+
+    const paths = doc.pages[0]!.elements.filter((e) => e.type === "path");
+    expect(paths).toHaveLength(2);
+    const p1 = paths[0]!;
+    const p2 = paths[1]!;
+    if (p1.type !== "path" || p2.type !== "path") {throw new Error("Expected paths");}
+
+    expect(p1.graphicsState.softMaskAlpha).toBeCloseTo(0.25);
+    expect(p2.graphicsState.softMaskAlpha).toBeCloseTo(1);
+  });
+
+  it("extracts a constant /SMask (Luminosity) and applies it via gs operator", async () => {
+    const bytes = buildMinimalPdfWithSoftMaskExtGState({ kind: "Luminosity", value: 0.3 });
+    const doc = await parsePdfNative(bytes);
+    expect(doc.pages).toHaveLength(1);
+
+    const paths = doc.pages[0]!.elements.filter((e) => e.type === "path");
+    expect(paths).toHaveLength(2);
+    const p1 = paths[0]!;
+    if (p1.type !== "path") {throw new Error("Expected path");}
+    expect(p1.graphicsState.softMaskAlpha).toBeCloseTo(0.3);
+  });
+
+  it("clears the previous /SMask when a new /SMask is present but unsupported", async () => {
+    const bytes = buildMinimalPdfWithUnsupportedSoftMaskClears({ maskAlpha: 0.25 });
+    const doc = await parsePdfNative(bytes);
+    expect(doc.pages).toHaveLength(1);
+
+    const paths = doc.pages[0]!.elements.filter((e) => e.type === "path");
+    expect(paths).toHaveLength(2);
+    const p1 = paths[0]!;
+    const p2 = paths[1]!;
+    if (p1.type !== "path" || p2.type !== "path") {throw new Error("Expected paths");}
+
+    expect(p1.graphicsState.softMaskAlpha).toBeCloseTo(0.25);
+    expect(p2.graphicsState.softMaskAlpha).toBeCloseTo(1);
+  });
+
+  it("evaluates a non-constant /SMask (Luminosity) based on a mask image and preserves it via rasterization", async () => {
+    const bytes = buildMinimalPdfWithPerPixelLuminositySoftMask({ fillRgb: [1, 0, 0] as const });
+    const doc = await parsePdfNative(bytes);
+    expect(doc.pages).toHaveLength(1);
+
+    const images = doc.pages[0]!.elements.filter((e) => e.type === "image");
+    expect(images).toHaveLength(1);
+    const image = images[0]!;
+    if (image.type !== "image") {throw new Error("Expected image");}
+
+    expect(image.width).toBe(2);
+    expect(image.height).toBe(1);
+    expect(Array.from(image.data)).toEqual([255, 0, 0, 255, 0, 0]);
+    expect(Array.from(image.alpha ?? [])).toEqual([0, 255]);
+  });
+
+  it("evaluates a non-constant /SMask (Luminosity) under a non-identity CTM and preserves placement via rasterization", async () => {
+    const bytes = buildMinimalPdfWithPerPixelLuminositySoftMaskScaled({ fillRgb: [1, 0, 0] as const });
+    const doc = await parsePdfNative(bytes);
+    expect(doc.pages).toHaveLength(1);
+
+    const images = doc.pages[0]!.elements.filter((e) => e.type === "image");
+    expect(images).toHaveLength(1);
+    const image = images[0]!;
+    if (image.type !== "image") {throw new Error("Expected image");}
+
+    expect(image.graphicsState.ctm).toEqual([20, 0, 0, 10, 0, 0]);
+    expect(Array.from(image.alpha ?? [])).toEqual([0, 255]);
+  });
+
+  it("honors the /Matrix on the /SMask /G Form XObject", async () => {
+    const bytes = buildMinimalPdfWithPerPixelLuminositySoftMaskWithFormMatrix({
+      fillRgb: [1, 0, 0] as const,
+      formMatrix: [10, 0, 0, 10, 0, 0] as const,
+      drawRect: [0, 0, 20, 10] as const,
+    });
+    const doc = await parsePdfNative(bytes);
+    expect(doc.pages).toHaveLength(1);
+
+    const images = doc.pages[0]!.elements.filter((e) => e.type === "image");
+    expect(images).toHaveLength(1);
+    const image = images[0]!;
+    if (image.type !== "image") {throw new Error("Expected image");}
+
+    expect(image.graphicsState.ctm).toEqual([20, 0, 0, 10, 0, 0]);
+    expect(Array.from(image.alpha ?? [])).toEqual([0, 255]);
+  });
+
+  it("evaluates a non-constant /SMask (Alpha) from the mask image's own /SMask and preserves it via rasterization", async () => {
+    const bytes = buildMinimalPdfWithPerPixelSoftMaskFromImageSMask({
+      kind: "Alpha",
+      fillRgb: [1, 0, 0] as const,
+      alphaImageHex: "00FF>",
+    });
+    const doc = await parsePdfNative(bytes);
+    expect(doc.pages).toHaveLength(1);
+
+    const images = doc.pages[0]!.elements.filter((e) => e.type === "image");
+    expect(images).toHaveLength(1);
+    const image = images[0]!;
+    if (image.type !== "image") {throw new Error("Expected image");}
+
+    expect(image.width).toBe(2);
+    expect(image.height).toBe(1);
+    expect(Array.from(image.data)).toEqual([255, 0, 0, 255, 0, 0]);
+    expect(Array.from(image.alpha ?? [])).toEqual([0, 255]);
+  });
+
+  it("evaluates a non-constant /SMask (Luminosity) and multiplies by the mask image alpha (/SMask)", async () => {
+    const bytes = buildMinimalPdfWithPerPixelSoftMaskFromImageSMask({
+      kind: "Luminosity",
+      fillRgb: [1, 0, 0] as const,
+      alphaImageHex: "FF80>",
+    });
+    const doc = await parsePdfNative(bytes);
+    expect(doc.pages).toHaveLength(1);
+
+    const images = doc.pages[0]!.elements.filter((e) => e.type === "image");
+    expect(images).toHaveLength(1);
+    const image = images[0]!;
+    if (image.type !== "image") {throw new Error("Expected image");}
+
+    expect(image.width).toBe(2);
+    expect(image.height).toBe(1);
+    expect(Array.from(image.data)).toEqual([255, 0, 0, 255, 0, 0]);
+    expect(Array.from(image.alpha ?? [])).toEqual([0, 128]);
   });
 });

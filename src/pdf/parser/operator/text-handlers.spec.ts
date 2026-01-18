@@ -27,6 +27,9 @@ function createMockGfxOps(overrides: Partial<ReturnType<typeof createDefaultGrap
       get: () => state.value,
       concatMatrix: () => {},
       setClipBBox: () => {},
+      setBlendMode: () => {},
+      setSoftMaskAlpha: () => {},
+      setSoftMask: () => {},
       setLineWidth: () => {},
       setLineCap: () => {},
       setLineJoin: () => {},
@@ -192,8 +195,10 @@ describe("text-handlers", () => {
 
   describe("handleEndText", () => {
     it("emits text element if there are runs", () => {
+      const gs = createDefaultGraphicsState();
       const textRun = {
         text: "Hello",
+        textMatrix: IDENTITY_MATRIX,
         x: 0,
         y: 0,
         fontSize: 12,
@@ -201,9 +206,11 @@ describe("text-handlers", () => {
         baseFont: undefined,
         endX: 50,
         effectiveFontSize: 12,
+        textRise: 0,
         charSpacing: 0,
         wordSpacing: 0,
         horizontalScaling: 100,
+        graphicsState: gs,
       };
       const ctx = createContext([], {
         inTextObject: true,

@@ -26,6 +26,38 @@ describe("graphics-state-handlers (gs)", () => {
     expect(path.graphicsState.strokeAlpha).toBeCloseTo(0.25);
   });
 
+  it("applies blendMode from injected ExtGState map", () => {
+    const tokens = tokenizeContentStream("/GS1 gs 0 0 10 10 re f");
+    const gfxStack = createGraphicsStateStack();
+    const gfxOps: GraphicsStateOps = createGfxOpsFromStack(gfxStack);
+
+    const extGState = new Map([["GS1", { blendMode: "Multiply" }]]);
+    const parse = createParser(gfxOps, new Map(), { extGState });
+    const elements = parse(tokens);
+
+    const paths = elements.filter((e) => e.type === "path");
+    expect(paths).toHaveLength(1);
+    const path = paths[0]!;
+    if (path.type !== "path") {throw new Error("Expected path");}
+    expect(path.graphicsState.blendMode).toBe("Multiply");
+  });
+
+  it("applies softMaskAlpha from injected ExtGState map", () => {
+    const tokens = tokenizeContentStream("/GS1 gs 0 0 10 10 re f");
+    const gfxStack = createGraphicsStateStack();
+    const gfxOps: GraphicsStateOps = createGfxOpsFromStack(gfxStack);
+
+    const extGState = new Map([["GS1", { softMaskAlpha: 0.4 }]]);
+    const parse = createParser(gfxOps, new Map(), { extGState });
+    const elements = parse(tokens);
+
+    const paths = elements.filter((e) => e.type === "path");
+    expect(paths).toHaveLength(1);
+    const path = paths[0]!;
+    if (path.type !== "path") {throw new Error("Expected path");}
+    expect(path.graphicsState.softMaskAlpha).toBeCloseTo(0.4);
+  });
+
   it("applies line style values from injected ExtGState map", () => {
     const tokens = tokenizeContentStream("/GS1 gs 0 0 10 10 re S");
     const gfxStack = createGraphicsStateStack();

@@ -20,6 +20,9 @@ function createMockGfxOps() {
       get: () => state,
       concatMatrix: () => {},
       setClipBBox: () => {},
+      setBlendMode: () => {},
+      setSoftMaskAlpha: () => {},
+      setSoftMask: () => {},
       setLineWidth: () => {},
       setLineCap: () => {},
       setLineJoin: () => {},
@@ -159,6 +162,55 @@ describe("color-handlers", () => {
 
       expect(calls).toEqual([{ method: "setFillRgb", args: [1, 0, 0] }]);
       expect(update.operandStack).toEqual(["/CS"]);
+    });
+  });
+
+  describe("handleFillColorNWithOptionalName (scn)", () => {
+    it("consumes trailing pattern name operand", () => {
+      const { calls, ops } = createMockGfxOps();
+      const ctx = createContext([0.25, "/P1"]);
+      const update = colorHandlers.handleFillColorNWithOptionalName(ctx, ops);
+
+      expect(calls).toEqual([{ method: "setFillRgb", args: [0, 0, 0] }]);
+      expect(update.operandStack).toEqual([]);
+    });
+
+    it("consumes name even when there are no numeric components", () => {
+      const { calls, ops } = createMockGfxOps();
+      const ctx = createContext(["/P1"]);
+      const update = colorHandlers.handleFillColorNWithOptionalName(ctx, ops);
+
+      expect(calls).toEqual([{ method: "setFillRgb", args: [0, 0, 0] }]);
+      expect(update.operandStack).toEqual([]);
+    });
+
+    it("consumes numeric components for uncolored patterns and still falls back to black", () => {
+      const { calls, ops } = createMockGfxOps();
+      const ctx = createContext([1, 0, 0, "/P1"]);
+      const update = colorHandlers.handleFillColorNWithOptionalName(ctx, ops);
+
+      expect(calls).toEqual([{ method: "setFillRgb", args: [0, 0, 0] }]);
+      expect(update.operandStack).toEqual([]);
+    });
+  });
+
+  describe("handleStrokeColorNWithOptionalName (SCN)", () => {
+    it("consumes trailing pattern name operand", () => {
+      const { calls, ops } = createMockGfxOps();
+      const ctx = createContext([1, 0, 0, "/P1"]);
+      const update = colorHandlers.handleStrokeColorNWithOptionalName(ctx, ops);
+
+      expect(calls).toEqual([{ method: "setStrokeRgb", args: [0, 0, 0] }]);
+      expect(update.operandStack).toEqual([]);
+    });
+
+    it("consumes name even when there are no numeric components", () => {
+      const { calls, ops } = createMockGfxOps();
+      const ctx = createContext(["/P1"]);
+      const update = colorHandlers.handleStrokeColorNWithOptionalName(ctx, ops);
+
+      expect(calls).toEqual([{ method: "setStrokeRgb", args: [0, 0, 0] }]);
+      expect(update.operandStack).toEqual([]);
     });
   });
 

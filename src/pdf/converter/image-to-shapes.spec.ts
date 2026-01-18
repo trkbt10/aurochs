@@ -103,6 +103,41 @@ describe("convertImageToShape", () => {
     expect(decoded.data[7]).toBe(255);
   });
 
+  it("applies /SMask /Matte by un-matting RGB before alpha is applied", () => {
+    const image: PdfImage = {
+      type: "image",
+      // 2 pixels (RGB, 8bpc) that were composited over a white matte:
+      // p0: intended red @ alpha=128 => stored [FF 7F 7F]
+      // p1: intended blue @ alpha=64  => stored [BF BF FF]
+      data: new Uint8Array([255, 127, 127, 191, 191, 255]),
+      alpha: new Uint8Array([128, 64]),
+      softMaskMatte: [1, 1, 1],
+      width: 2,
+      height: 1,
+      colorSpace: "DeviceRGB",
+      bitsPerComponent: 8,
+      graphicsState,
+    };
+
+    const shape = convertImageToShape(image, context, "1");
+    if (!shape) {
+      throw new Error("Expected shape to be created");
+    }
+    const parsed = parseDataUrl(shape.blipFill.resourceId);
+    expect(parsed.mimeType).toBe("image/png");
+
+    type PngReadResult = Readonly<{ readonly width: number; readonly height: number; readonly data: Uint8Array }>;
+    type PngjsModule = Readonly<{ readonly PNG: Readonly<{ readonly sync: Readonly<{ readonly read: (bytes: Buffer) => PngReadResult }> }> }>;
+
+    // eslint-disable-next-line @typescript-eslint/no-require-imports -- pngjs is CJS
+    const pngjs = require("pngjs") as PngjsModule;
+    const decoded = pngjs.PNG.sync.read(Buffer.from(parsed.data));
+
+    // RGBA for 2x1: [r,g,b,a, r,g,b,a]
+    expect(Array.from(decoded.data.slice(0, 4))).toEqual([255, 0, 0, 128]);
+    expect(Array.from(decoded.data.slice(4, 8))).toEqual([0, 0, 255, 64]);
+  });
+
   it("detects JPEG signature and uses image/jpeg", () => {
     const image: PdfImage = {
       type: "image",

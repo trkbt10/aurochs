@@ -165,12 +165,13 @@ describe("convertGraphicsStateToStyle", () => {
       dashPhase: 0,
       fillAlpha: 0.25,
       strokeAlpha: 0.75,
+      softMaskAlpha: 0.5,
     };
 
     expect(convertGraphicsStateToStyle(graphicsState, "fill")).toEqual({
       fill: {
         type: "solidFill",
-        color: { spec: { type: "srgb", value: "808080" }, transform: { alpha: pct(25) } },
+        color: { spec: { type: "srgb", value: "808080" }, transform: { alpha: pct(12.5) } },
       },
       line: undefined,
     });
@@ -184,7 +185,7 @@ describe("convertGraphicsStateToStyle", () => {
         alignment: "ctr",
         fill: {
           type: "solidFill",
-          color: { spec: { type: "srgb", value: "00FF00" }, transform: { alpha: pct(75) } },
+          color: { spec: { type: "srgb", value: "00FF00" }, transform: { alpha: pct(37.5) } },
         },
         dash: "dash",
         join: "round",

@@ -10,7 +10,16 @@
  * - Higher-order functions for dependency injection (Rule 4)
  */
 
-import type { PdfPathOp, PdfPaintOp, PdfGraphicsState, PdfMatrix, PdfBBox, FontMappings, FontMetrics } from "../../domain";
+import type {
+  PdfPathOp,
+  PdfPaintOp,
+  PdfGraphicsState,
+  PdfMatrix,
+  PdfBBox,
+  PdfSoftMask,
+  FontMappings,
+  FontMetrics,
+} from "../../domain";
 
 // =============================================================================
 // Parsed Element Types
@@ -21,6 +30,12 @@ export type ParsedPath = {
   readonly operations: readonly PdfPathOp[];
   readonly paintOp: PdfPaintOp;
   readonly graphicsState: PdfGraphicsState;
+  /**
+   * Optional source tag for elements produced outside the primary content stream.
+   *
+   * - `"type3"`: path created by executing a Type3 `/CharProcs` glyph program
+   */
+  readonly source?: "type3";
 };
 
 /**
@@ -40,6 +55,14 @@ export type ParsedPath = {
  */
 export type TextRun = {
   readonly text: string;
+
+  /**
+   * Snapshot of the text matrix (Tm) at the moment the text-showing operator ran.
+   *
+   * This is required for rendering Type3 glyph programs, which are executed in
+   * graphics mode using the text rendering matrix derived from Tm + font state.
+   */
+  readonly textMatrix: PdfMatrix;
 
   /**
    * X coordinate of baseline start in PDF points (page space).
@@ -83,6 +106,9 @@ export type TextRun = {
    */
   readonly effectiveFontSize: number;
 
+  /** Text rise (Ts) in text space units. */
+  readonly textRise: number;
+
   // ==========================================================================
   // Text spacing properties (from PDF text state operators)
   // ==========================================================================
@@ -104,6 +130,14 @@ export type TextRun = {
    * Default: 100 (no scaling).
    */
   readonly horizontalScaling: number;
+
+  /**
+   * Snapshot of the full graphics state at the moment the run was created.
+   *
+   * Used for Type3 glyph rendering where each glyph program inherits the
+   * current fill/stroke colors, alpha, line styles, and CTM.
+   */
+  readonly graphicsState: PdfGraphicsState;
 };
 
 export type ParsedText = {
@@ -172,6 +206,9 @@ export type ParserContext = {
     {
       readonly fillAlpha?: number;
       readonly strokeAlpha?: number;
+      readonly blendMode?: string;
+      readonly softMaskAlpha?: number;
+      readonly softMask?: PdfSoftMask;
       readonly lineWidth?: number;
       readonly lineCap?: 0 | 1 | 2;
       readonly lineJoin?: 0 | 1 | 2;
@@ -212,6 +249,9 @@ export type GraphicsStateOps = {
   readonly get: () => PdfGraphicsState;
   readonly concatMatrix: (matrix: PdfMatrix) => void;
   readonly setClipBBox: (bbox: PdfBBox) => void;
+  readonly setBlendMode: (mode: string) => void;
+  readonly setSoftMaskAlpha: (alpha: number) => void;
+  readonly setSoftMask: (mask: PdfSoftMask | undefined) => void;
   readonly setLineWidth: (width: number) => void;
   readonly setLineCap: (cap: 0 | 1 | 2) => void;
   readonly setLineJoin: (join: 0 | 1 | 2) => void;

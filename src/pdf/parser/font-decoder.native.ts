@@ -5,6 +5,8 @@
 import type { NativePdfPage } from "../native";
 import type { PdfArray, PdfDict, PdfName, PdfObject, PdfStream } from "../native";
 import { decodePdfStream } from "../native/stream";
+import type { PdfMatrix } from "../domain";
+import { tokenizeContentStream } from "../domain/content-stream";
 import type { FontInfo, FontMappings, FontMetrics } from "../domain/font";
 import {
   DEFAULT_FONT_METRICS,
@@ -213,18 +215,13 @@ function extractSimpleFontWidths(page: NativePdfPage, fontDict: PdfDict): Pick<F
   const subtype = asName(dictGet(fontDict, "Subtype"))?.value ?? "";
   const widthScale = (() => {
     if (subtype !== "Type3") {return 1;}
-    const fmObj = resolve(page, dictGet(fontDict, "FontMatrix"));
-    const fm = asArray(fmObj);
-    if (!fm || fm.items.length < 6) {return 1;}
-    const a = fm.items[0];
-    const b = fm.items[1];
-    const c = fm.items[2];
-    const d = fm.items[3];
-    if (a?.type !== "number" || b?.type !== "number" || c?.type !== "number" || d?.type !== "number") {return 1;}
-    if (b.value !== 0 || c.value !== 0 || a.value <= 0 || d.value <= 0) {return 1;}
+    const fontMatrix = extractType3FontMatrix(page, fontDict);
+    if (!fontMatrix) {return 1;}
+    const [a, b, c, d] = fontMatrix;
+    if (b !== 0 || c !== 0 || a <= 0 || d <= 0) {return 1;}
     // Type3 widths are in glyph space units; convert to "per 1000 em" units used by our text layout.
     // For the common FontMatrix [0.001 0 0 0.001 0 0], this becomes a no-op scale of 1.
-    return a.value * 1000;
+    return a * 1000;
   })();
 
   const firstChar = asNumber(resolve(page, dictGet(fontDict, "FirstChar")));
@@ -305,6 +302,164 @@ function extractFontMetrics(page: NativePdfPage, fontDict: PdfDict): FontMetrics
   };
 }
 
+function extractType3FontMatrix(page: NativePdfPage, fontDict: PdfDict): PdfMatrix | null {
+  const fmObj = resolve(page, dictGet(fontDict, "FontMatrix"));
+  const fm = asArray(fmObj);
+  if (!fm || fm.items.length !== 6) {return null;}
+
+  const [i0, i1, i2, i3, i4, i5] = fm.items;
+  const n0 = asNumber(resolve(page, i0));
+  const n1 = asNumber(resolve(page, i1));
+  const n2 = asNumber(resolve(page, i2));
+  const n3 = asNumber(resolve(page, i3));
+  const n4 = asNumber(resolve(page, i4));
+  const n5 = asNumber(resolve(page, i5));
+  if (n0 == null || n1 == null || n2 == null || n3 == null || n4 == null || n5 == null) {return null;}
+  if (!Number.isFinite(n0) || !Number.isFinite(n1) || !Number.isFinite(n2) || !Number.isFinite(n3) || !Number.isFinite(n4) || !Number.isFinite(n5)) {
+    return null;
+  }
+  return [n0, n1, n2, n3, n4, n5];
+}
+
+function computeType3WidthScale(fontMatrix: PdfMatrix): number {
+  const [a, b, c, d] = fontMatrix;
+  if (b !== 0 || c !== 0 || a <= 0 || d <= 0) {return 1;}
+  return a * 1000;
+}
+
+function extractType3CodeToCharName(page: NativePdfPage, fontDict: PdfDict): ReadonlyMap<number, string> {
+  const encodingObj = resolve(page, dictGet(fontDict, "Encoding"));
+  const encDict = asDict(encodingObj);
+  if (!encDict) {return new Map();}
+
+  const diffsObj = resolve(page, dictGet(encDict, "Differences"));
+  const diffsArr = asArray(diffsObj);
+  if (!diffsArr) {return new Map();}
+
+  const map = new Map<number, string>();
+  let currentCode = 0;
+  for (const item of diffsArr.items) {
+    if (item.type === "number") {
+      currentCode = Math.trunc(item.value);
+      continue;
+    }
+    if (item.type === "name") {
+      map.set(currentCode, item.value);
+      currentCode += 1;
+    }
+  }
+  return map;
+}
+
+function extractType3CharProcs(page: NativePdfPage, fontDict: PdfDict): ReadonlyMap<string, Uint8Array> {
+  const charProcsObj = resolve(page, dictGet(fontDict, "CharProcs"));
+  const charProcs = asDict(charProcsObj);
+  if (!charProcs) {return new Map();}
+
+  const out = new Map<string, Uint8Array>();
+  for (const [glyphName, refOrObj] of charProcs.map.entries()) {
+    const resolved = resolve(page, refOrObj);
+    const stream = asStream(resolved);
+    if (!stream) {continue;}
+    out.set(glyphName, decodePdfStream(stream));
+  }
+  return out;
+}
+
+function extractType3CharProcWidth(procBytes: Uint8Array): number | null {
+  const content = new TextDecoder("latin1").decode(procBytes);
+  const tokens = tokenizeContentStream(content);
+
+  const operandStack: Array<number | string | readonly (number | string)[]> = [];
+
+  const popNumberFromStack = (): number | null => {
+    const v = operandStack.pop();
+    if (typeof v !== "number") {return null;}
+    if (!Number.isFinite(v)) {return null;}
+    return v;
+  };
+
+  for (const token of tokens) {
+    switch (token.type) {
+      case "number":
+        operandStack.push(token.value as number);
+        break;
+      case "string":
+      case "name":
+        operandStack.push(token.value as string);
+        break;
+      case "operator": {
+        const op = token.value as string;
+        if (op === "d0") {
+          const wy = popNumberFromStack();
+          const wx = popNumberFromStack();
+          operandStack.length = 0;
+          return wx != null && wy != null ? wx : null;
+        }
+        if (op === "d1") {
+          const ury = popNumberFromStack();
+          const urx = popNumberFromStack();
+          const lly = popNumberFromStack();
+          const llx = popNumberFromStack();
+          const wy = popNumberFromStack();
+          const wx = popNumberFromStack();
+          operandStack.length = 0;
+          return wx != null && wy != null && llx != null && lly != null && urx != null && ury != null ? wx : null;
+        }
+        operandStack.length = 0;
+        break;
+      }
+      default:
+        break;
+    }
+  }
+
+  return null;
+}
+
+function applyType3CharProcWidths(info: FontInfo): FontInfo {
+  const type3 = info.type3;
+  if (!type3) {return info;}
+
+  const widthScale = computeType3WidthScale(type3.fontMatrix);
+  const mergedWidths = new Map(info.metrics.widths);
+
+  for (const [code, glyphName] of type3.codeToCharName.entries()) {
+    if (mergedWidths.has(code)) {continue;}
+    const procBytes = type3.charProcs.get(glyphName);
+    if (!procBytes) {continue;}
+    const wx = extractType3CharProcWidth(procBytes);
+    if (wx == null) {continue;}
+    mergedWidths.set(code, wx * widthScale);
+  }
+
+  if (mergedWidths.size === info.metrics.widths.size) {return info;}
+  return {
+    ...info,
+    metrics: {
+      ...info.metrics,
+      widths: mergedWidths,
+    },
+  };
+}
+
+function extractType3Info(page: NativePdfPage, fontDict: PdfDict): FontInfo["type3"] | undefined {
+  const subtype = asName(dictGet(fontDict, "Subtype"))?.value ?? "";
+  if (subtype !== "Type3") {return undefined;}
+
+  const fontMatrix = extractType3FontMatrix(page, fontDict);
+  if (!fontMatrix) {return undefined;}
+
+  const codeToCharName = extractType3CodeToCharName(page, fontDict);
+  const charProcs = extractType3CharProcs(page, fontDict);
+
+  return {
+    fontMatrix,
+    codeToCharName,
+    charProcs,
+  };
+}
+
 
 
 
@@ -359,16 +514,19 @@ export function extractFontMappingsFromResourcesNative(
 
     const { isBold, isItalic } = computeBoldItalic(baseFont, extractFontDescriptor(page, fontDict));
 
-    const info: FontInfo = {
+    const infoRaw: FontInfo = {
       mapping: toUnicode?.mapping ?? new Map(),
       codeByteWidth: (toUnicode?.codeByteWidth ?? 1) as 1 | 2,
       metrics,
+      type3: extractType3Info(page, fontDict),
       ordering,
       encodingMap,
       isBold,
       isItalic,
       baseFont,
     };
+
+    const info = applyType3CharProcWidths(infoRaw);
 
     mappings.set(fontName, info);
     if (baseFont) {

@@ -194,6 +194,48 @@ const handleStrokeColorN: OperatorHandler = (ctx, gfxOps) => {
   return { operandStack: newStack };
 };
 
+function popOptionalName(
+  stack: readonly (number | string | readonly (number | string)[])[],
+): readonly [name: string | null, newStack: readonly (number | string | readonly (number | string)[])[]] {
+  if (stack.length === 0) {return [null, stack];}
+  const top = stack[stack.length - 1];
+  if (typeof top !== "string" || !top.startsWith("/")) {return [null, stack];}
+  return [top, stack.slice(0, -1)];
+}
+
+/**
+ * scn/SCN operator: Set color in current color space (including patterns/separation)
+ *
+ * For pattern/separation color spaces, a trailing name operand may appear.
+ * We don't render patterns yet, but we must consume the name to avoid leaking
+ * operands into subsequent operators.
+ */
+const handleFillColorNWithOptionalName: OperatorHandler = (ctx, gfxOps) => {
+  const [name, stackAfterName] = popOptionalName(ctx.operandStack);
+  const [components, newStack] = collectColorComponents(stackAfterName);
+  if (name) {
+    // Pattern color space (`/Pattern`) can be set as: `/Pattern cs /P1 scn`.
+    // Uncolored tiling patterns can also be set as: `/Pattern cs c1 ... cn /P1 scn`.
+    // We don't render patterns yet; make the fallback deterministic (black) and
+    // avoid incorrectly using the numeric components as a solid fill.
+    gfxOps.setFillRgb(0, 0, 0);
+    return { operandStack: newStack };
+  }
+  applyFillColorN(components, gfxOps);
+  return { operandStack: newStack };
+};
+
+const handleStrokeColorNWithOptionalName: OperatorHandler = (ctx, gfxOps) => {
+  const [name, stackAfterName] = popOptionalName(ctx.operandStack);
+  const [components, newStack] = collectColorComponents(stackAfterName);
+  if (name) {
+    gfxOps.setStrokeRgb(0, 0, 0);
+    return { operandStack: newStack };
+  }
+  applyStrokeColorN(components, gfxOps);
+  return { operandStack: newStack };
+};
+
 // =============================================================================
 // Handler Registry (Rule 1: Lookup objects instead of switch)
 // =============================================================================
@@ -216,9 +258,9 @@ export const COLOR_HANDLERS: ReadonlyMap<string, OperatorHandlerEntry> = new Map
   ["CS", { handler: handleColorSpace, category: "color", description: "Set stroke color space" }],
   // General color
   ["sc", { handler: handleFillColorN, category: "color", description: "Set fill color (current space)" }],
-  ["scn", { handler: handleFillColorN, category: "color", description: "Set fill color (pattern/separation)" }],
+  ["scn", { handler: handleFillColorNWithOptionalName, category: "color", description: "Set fill color (pattern/separation)" }],
   ["SC", { handler: handleStrokeColorN, category: "color", description: "Set stroke color (current space)" }],
-  ["SCN", { handler: handleStrokeColorN, category: "color", description: "Set stroke color (pattern/separation)" }],
+  ["SCN", { handler: handleStrokeColorNWithOptionalName, category: "color", description: "Set stroke color (pattern/separation)" }],
 ]);
 
 // =============================================================================
@@ -235,6 +277,8 @@ export const colorHandlers = {
   handleColorSpace,
   handleFillColorN,
   handleStrokeColorN,
+  handleFillColorNWithOptionalName,
+  handleStrokeColorNWithOptionalName,
   applyFillColorN,
   applyStrokeColorN,
 } as const;

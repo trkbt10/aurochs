@@ -7,7 +7,7 @@
 import type { PdfBBox, PdfMatrix } from "../coordinate";
 import { multiplyMatrices } from "../coordinate";
 import { createDefaultGraphicsState } from "./defaults";
-import type { PdfGraphicsState, PdfLineCap, PdfLineJoin, PdfTextRenderingMode } from "./types";
+import type { PdfGraphicsState, PdfLineCap, PdfLineJoin, PdfSoftMask, PdfTextRenderingMode } from "./types";
 
 // =============================================================================
 // Graphics State Stack
@@ -35,6 +35,9 @@ export type GraphicsStateStack = Readonly<{
   /** cm operator: concatenate matrix to CTM */
   concatMatrix(matrix: PdfMatrix): void;
   setClipBBox(bbox: PdfBBox): void;
+  setBlendMode(mode: string): void;
+  setSoftMaskAlpha(alpha: number): void;
+  setSoftMask(mask: PdfSoftMask | undefined): void;
   setFillGray(gray: number): void;
   setStrokeGray(gray: number): void;
   setFillRgb(r: number, g: number, b: number): void;
@@ -109,6 +112,27 @@ export function createGraphicsStateStack(initial?: PdfGraphicsState): GraphicsSt
     current.value = {
       ...current.value,
       clipBBox: next,
+    };
+  };
+
+  const setBlendMode = (mode: string): void => {
+    current.value = {
+      ...current.value,
+      blendMode: mode,
+    };
+  };
+
+  const setSoftMaskAlpha = (alpha: number): void => {
+    current.value = {
+      ...current.value,
+      softMaskAlpha: alpha,
+    };
+  };
+
+  const setSoftMask = (mask: PdfSoftMask | undefined): void => {
+    current.value = {
+      ...current.value,
+      softMask: mask,
     };
   };
 
@@ -271,6 +295,9 @@ export function createGraphicsStateStack(initial?: PdfGraphicsState): GraphicsSt
     get,
     concatMatrix,
     setClipBBox,
+    setBlendMode,
+    setSoftMaskAlpha,
+    setSoftMask,
     setFillGray,
     setStrokeGray,
     setFillRgb,

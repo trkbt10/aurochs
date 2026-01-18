@@ -117,8 +117,11 @@ describe("OperatorParser", () => {
     });
 
     it("parses clip (W)", () => {
-      const elements = parse("0 0 m 100 0 l 100 100 l W");
-      expect((elements[0] as ParsedPath).paintOp).toBe("clip");
+      const elements = parse("0 0 m 100 0 l 100 100 l W 0 0 10 10 re f");
+      expect(elements).toHaveLength(1);
+      const path = elements[0] as ParsedPath;
+      expect(path.paintOp).toBe("fill");
+      expect(path.graphicsState.clipBBox).toEqual([0, 0, 100, 100]);
     });
   });
 

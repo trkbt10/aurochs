@@ -238,9 +238,10 @@ export function convertGraphicsStateToStyle(
   paintOp: "stroke" | "fill" | "fillStroke",
 ): { fill: Fill | undefined; line: Line | undefined } {
   const style: { fill: Fill | undefined; line: Line | undefined } = { fill: undefined, line: undefined };
+  const softMaskAlpha = graphicsState.softMaskAlpha ?? 1;
 
   if (paintOp === "fill" || paintOp === "fillStroke") {
-    style.fill = convertFill(graphicsState.fillColor, graphicsState.fillAlpha);
+    style.fill = convertFill(graphicsState.fillColor, graphicsState.fillAlpha * softMaskAlpha);
   } else if (paintOp === "stroke") {
     // Explicitly set noFill for stroke-only paths to prevent
     // PPTX theme default fills from being applied
@@ -255,7 +256,7 @@ export function convertGraphicsStateToStyle(
       graphicsState.lineJoin,
       graphicsState.dashArray,
       graphicsState.dashPhase,
-      graphicsState.strokeAlpha,
+      graphicsState.strokeAlpha * softMaskAlpha,
     );
   }
 

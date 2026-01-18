@@ -15,7 +15,7 @@
  * - Split complex calculations into testable helpers
  */
 
-import type { PdfBBox, PdfMatrix, FontMetrics, FontInfo, FontMappings } from "../../domain";
+import type { PdfBBox, PdfMatrix, PdfGraphicsState, FontMetrics, FontInfo, FontMappings } from "../../domain";
 import { IDENTITY_MATRIX, transformPoint, multiplyMatrices, DEFAULT_FONT_METRICS } from "../../domain";
 import type {
   OperatorHandler,
@@ -378,9 +378,16 @@ const handleTextNextLine: OperatorHandler = (ctx, gfxOps) => {
 export function createTextRun(
   text: string,
   textState: TextObjectState,
-  gfxState: { ctm: PdfMatrix; textRise: number; charSpacing: number; wordSpacing: number; horizontalScaling: number }
+  gfxState: {
+    readonly ctm: PdfMatrix;
+    readonly textRise: number;
+    readonly charSpacing: number;
+    readonly wordSpacing: number;
+    readonly horizontalScaling: number;
+    readonly graphicsState: PdfGraphicsState;
+  }
 ): { run: TextRun; newTextMatrix: PdfMatrix } {
-  const { ctm, textRise, charSpacing, wordSpacing, horizontalScaling } = gfxState;
+  const { ctm, textRise, charSpacing, wordSpacing, horizontalScaling, graphicsState } = gfxState;
   const { textMatrix, currentFont, currentBaseFont, currentFontSize, currentFontMetrics, currentCodeByteWidth } = textState;
 
   // Text matrix translation gives position in text space
@@ -415,6 +422,7 @@ export function createTextRun(
 
   const run: TextRun = {
     text,
+    textMatrix,
     x: startPos.x,
     y: startPos.y,
     fontSize: currentFontSize,
@@ -422,9 +430,11 @@ export function createTextRun(
     baseFont: currentBaseFont,
     endX: endPos.x,
     effectiveFontSize,
+    textRise,
     charSpacing,
     wordSpacing,
     horizontalScaling,
+    graphicsState,
   };
 
   return { run, newTextMatrix };
@@ -471,7 +481,10 @@ const handleShowText: OperatorHandler = (ctx, gfxOps) => {
     charSpacing: state.charSpacing,
     wordSpacing: state.wordSpacing,
     horizontalScaling: state.horizontalScaling,
+    graphicsState: state,
   });
+
+  maybeApplyTextClipBBox(run, ctx.textState, gfxOps);
 
   return {
     operandStack: newStack,
@@ -509,7 +522,9 @@ const handleShowTextArray: OperatorHandler = (ctx, gfxOps) => {
         charSpacing: state.charSpacing,
         wordSpacing: state.wordSpacing,
         horizontalScaling,
+        graphicsState: state,
       });
+      maybeApplyTextClipBBox(run, textState, gfxOps);
       return {
         ...textState,
         textMatrix: newTextMatrix,
@@ -566,6 +581,7 @@ const handleTextNextLineShow: OperatorHandler = (ctx, gfxOps) => {
     charSpacing: state.charSpacing,
     wordSpacing: state.wordSpacing,
     horizontalScaling: state.horizontalScaling,
+    graphicsState: state,
   });
 
   return {
@@ -617,6 +633,7 @@ const handleTextNextLineShowSpacing: OperatorHandler = (ctx, gfxOps) => {
     charSpacing: state.charSpacing,
     wordSpacing: state.wordSpacing,
     horizontalScaling: state.horizontalScaling,
+    graphicsState: state,
   });
 
   return {

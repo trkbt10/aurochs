@@ -5,6 +5,8 @@
  * PDF Reference Chapter 5 - Fonts
  */
 
+import type { PdfMatrix } from "../coordinate";
+
 /**
  * Font mapping: character code → Unicode string
  */
@@ -36,6 +38,17 @@ export type FontInfo = {
   readonly codeByteWidth: 1 | 2;
   /** Font metrics for glyph widths and vertical metrics */
   readonly metrics: FontMetrics;
+  /**
+   * Type3 font support (glyph programs stored in `/CharProcs`).
+   *
+   * When present, callers may execute the glyph content streams to render
+   * vector paths (commonly used for icon fonts).
+   */
+  readonly type3?: Readonly<{
+    readonly fontMatrix: PdfMatrix;
+    readonly codeToCharName: ReadonlyMap<number, string>;
+    readonly charProcs: ReadonlyMap<string, Uint8Array>;
+  }>;
   /**
    * CID ordering for fallback decoding when ToUnicode is not available.
    * Only present for CID fonts (Type0 with CIDFont descendants).

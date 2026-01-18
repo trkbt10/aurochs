@@ -247,7 +247,10 @@ function createTextRun(pdfText: PdfText): TextRun {
       ...(effectiveScriptType === "eastAsian" && { fontFamilyEastAsian: mappedFontName }),
       // Set a:cs for Complex Script fonts (ECMA-376 21.1.2.3.3)
       ...(effectiveScriptType === "complexScript" && { fontFamilyComplexScript: mappedFontName }),
-      fill: convertFill(pdfText.graphicsState.fillColor, pdfText.graphicsState.fillAlpha),
+      fill: convertFill(
+        pdfText.graphicsState.fillColor,
+        pdfText.graphicsState.fillAlpha * (pdfText.graphicsState.softMaskAlpha ?? 1),
+      ),
       bold,
       italic,
       underline: "none",

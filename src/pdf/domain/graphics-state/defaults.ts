@@ -33,6 +33,9 @@ export function createDefaultGraphicsState(): PdfGraphicsState {
   return {
     ctm: IDENTITY_MATRIX,
     clipBBox: undefined,
+    blendMode: "Normal",
+    softMaskAlpha: 1,
+    softMask: undefined,
     fillColor: DEFAULT_FILL_COLOR,
     strokeColor: DEFAULT_STROKE_COLOR,
     lineWidth: 1,

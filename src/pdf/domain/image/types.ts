@@ -29,6 +29,14 @@ export type PdfImage = {
    */
   readonly alpha?: Uint8Array;
   /**
+   * Optional `/Matte` color from an `/SMask` dictionary.
+   *
+   * Values are normalized component values (0..1 range) in the image's base color space.
+   * When present alongside `alpha`, this can be used to "un-matte" the RGB channels
+   * before applying the alpha mask, preventing halo/fringe artifacts.
+   */
+  readonly softMaskMatte?: readonly number[];
+  /**
    * Image pixel width (sample columns).
    *
    * Note: The rendered size/placement on the page is determined by the current

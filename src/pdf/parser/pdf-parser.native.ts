@@ -25,6 +25,9 @@ import { extractEmbeddedFontsFromNativePages } from "../domain/font/font-extract
 import type { PdfLoadEncryption } from "./pdf-load-error";
 import { extractExtGStateFromResourcesNative, extractExtGStateNative, type ExtGStateParams } from "./ext-gstate.native";
 import { preprocessInlineImages } from "./inline-image.native";
+import { expandType3TextElementsNative } from "./type3-expand.native";
+import { rasterizeSoftMaskedFillPath } from "./soft-mask-raster.native";
+import { applyGraphicsSoftMaskToPdfImage } from "./soft-mask-apply.native";
 
 export type PdfParserOptions = {
   readonly pages?: readonly number[];
@@ -162,11 +165,30 @@ async function parsePage(
   const extGState = extractExtGStateNative(page);
   const parsedElements = [...parseContentStream(tokens, fontMappings, { extGState })];
 
+  const registerType3XObjectStream = (stream: PdfStream): string => {
+    let name = "";
+    do {
+      name = `T3X${nextInlineId()}`;
+    } while (usedNames.has(name));
+    inlineXObjects.set(name, stream);
+    usedNames.add(name);
+    return name;
+  };
+
+  const parsedWithType3 = expandType3TextElementsNative({
+    page,
+    resources,
+    parsedElements,
+    fontMappings,
+    pageExtGState: extGState,
+    registerXObjectStream: registerType3XObjectStream,
+  });
+
   const mergedXObjects = mergeXObjects(baseXObjects, inlineXObjects);
 
   const { elements: expandedElements, imageGroups } = expandFormXObjectsNative(
     page,
-    parsedElements,
+    parsedWithType3,
     fontMappings,
     extGState,
     embeddedFontMetrics,
@@ -467,7 +489,12 @@ function convertElements(
   for (const elem of parsed) {
     switch (elem.type) {
       case "path":
-        if (opts.includePaths) {
+        if (opts.includePaths || (opts.includeText && elem.source === "type3")) {
+          const masked = rasterizeSoftMaskedFillPath(elem);
+          if (masked) {
+            elements.push(masked);
+            break;
+          }
           const pdfPath = convertPath(elem, opts.minPathComplexity);
           if (pdfPath) {elements.push(pdfPath);}
         }
@@ -482,7 +509,7 @@ function convertElements(
         break;
     }
   }
-  elements.push(...extractedImages);
+  elements.push(...extractedImages.map(applyGraphicsSoftMaskToPdfImage));
   return elements;
 }
 
@@ -516,6 +543,11 @@ function getFontInfo(fontName: string, fontMappings: FontMappings) {
 }
 
 function convertText(parsed: ParsedText, fontMappings: FontMappings): PdfText[] {
+  const mode = parsed.graphicsState.textRenderingMode;
+  if (mode === 3 || mode === 7) {
+    return [];
+  }
+
   const results: PdfText[] = [];
   const clipBBox = parsed.graphicsState.clipBBox;
 

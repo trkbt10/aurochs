@@ -162,8 +162,9 @@ export function tokenizeContentStream(content: string): PdfToken[] {
       }
     }
 
-    // Operator (regular name)
-    if (isOperatorChar(char)) {
+    // Operator: any token that's not a number, name, string, array, dict, delimiter, or whitespace.
+    // PDF content stream operators may include digits (e.g. Type3 `d0`/`d1`).
+    if (isOperatorStart(char)) {
       const [op, newPos] = parseOperator(content, pos);
       tokens.push({
         type: "operator",
@@ -359,14 +360,8 @@ function parseName(content: string, pos: number): [string, number] {
   return [name, pos];
 }
 
-function isOperatorChar(char: string): boolean {
-  return (
-    (char >= "a" && char <= "z") ||
-    (char >= "A" && char <= "Z") ||
-    char === "*" ||
-    char === "'" ||
-    char === '"'
-  );
+function isOperatorStart(char: string): boolean {
+  return !WHITESPACE.test(char) && !DELIMITER.test(char);
 }
 
 function parseOperator(content: string, pos: number): [string, number] {
@@ -374,7 +369,7 @@ function parseOperator(content: string, pos: number): [string, number] {
 
   while (pos < content.length) {
     const char = content[pos];
-    if (!isOperatorChar(char)) {
+    if (WHITESPACE.test(char) || DELIMITER.test(char)) {
       break;
     }
     pos++;

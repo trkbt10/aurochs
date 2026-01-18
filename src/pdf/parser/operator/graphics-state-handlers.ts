@@ -148,6 +148,8 @@ const handleDashPattern: OperatorHandler = (ctx, gfxOps) => {
  * This implementation supports a subset of ExtGState keys:
  * - /ca: fill alpha
  * - /CA: stroke alpha
+ * - /BM: blend mode (stored on graphics state)
+ * - /SMask: soft mask constant alpha (subset; stored on graphics state)
  * - /LW: line width
  * - /LC: line cap
  * - /LJ: line join
@@ -161,6 +163,9 @@ const handleExtGState: OperatorHandler = (ctx, gfxOps) => {
   if (gs) {
     if (typeof gs.fillAlpha === "number") {gfxOps.setFillAlpha(gs.fillAlpha);}
     if (typeof gs.strokeAlpha === "number") {gfxOps.setStrokeAlpha(gs.strokeAlpha);}
+    if (typeof gs.blendMode === "string") {gfxOps.setBlendMode(gs.blendMode);}
+    if (typeof gs.softMaskAlpha === "number") {gfxOps.setSoftMaskAlpha(gs.softMaskAlpha);}
+    if ("softMask" in gs) {gfxOps.setSoftMask(gs.softMask);}
     if (typeof gs.lineWidth === "number") {gfxOps.setLineWidth(gs.lineWidth);}
     if (gs.lineCap === 0 || gs.lineCap === 1 || gs.lineCap === 2) {gfxOps.setLineCap(gs.lineCap);}
     if (gs.lineJoin === 0 || gs.lineJoin === 1 || gs.lineJoin === 2) {gfxOps.setLineJoin(gs.lineJoin);}

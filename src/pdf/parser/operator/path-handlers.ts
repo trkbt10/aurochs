@@ -227,32 +227,81 @@ const handleCloseFillStrokeEvenOdd: OperatorHandler = (ctx, gfxOps) => closeAndF
 /** n operator: End path without filling or stroking */
 const handleEndPath: OperatorHandler = (ctx, gfxOps) => finishPath(ctx, gfxOps, "none");
 
-function computeRectClipBBoxFromPath(ops: readonly PdfPathOp[], ctm: PdfMatrix): PdfBBox | null {
-  // Only support the common `re W` case for now (rectangular clip paths).
-  if (ops.length !== 1) {
-    return null;
-  }
-  const op = ops[0];
-  if (!op || op.type !== "rect") {
+function computeClipBBoxFromPath(ops: readonly PdfPathOp[], ctm: PdfMatrix): PdfBBox | null {
+  if (ops.length === 0) {
     return null;
   }
 
-  const corners: PdfPoint[] = [
-    { x: op.x, y: op.y },
-    { x: op.x + op.width, y: op.y },
-    { x: op.x + op.width, y: op.y + op.height },
-    { x: op.x, y: op.y + op.height },
-  ].map((p) => transformPoint(p, ctm));
-
-  const bounds = { minX: corners[0]!.x, minY: corners[0]!.y, maxX: corners[0]!.x, maxY: corners[0]!.y };
-
-  for (const p of corners) {
+  const bounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+  const addPoint = (p: PdfPoint): void => {
     bounds.minX = Math.min(bounds.minX, p.x);
     bounds.minY = Math.min(bounds.minY, p.y);
     bounds.maxX = Math.max(bounds.maxX, p.x);
     bounds.maxY = Math.max(bounds.maxY, p.y);
+  };
+  const addTransformed = (p: PdfPoint): void => addPoint(transformPoint(p, ctm));
+
+  let currentPoint: PdfPoint = { x: 0, y: 0 };
+  let subpathStartPoint: PdfPoint = { x: 0, y: 0 };
+
+  for (const op of ops) {
+    switch (op.type) {
+      case "moveTo": {
+        currentPoint = op.point;
+        subpathStartPoint = op.point;
+        addTransformed(op.point);
+        break;
+      }
+      case "lineTo": {
+        currentPoint = op.point;
+        addTransformed(op.point);
+        break;
+      }
+      case "curveTo": {
+        addTransformed(op.cp1);
+        addTransformed(op.cp2);
+        addTransformed(op.end);
+        currentPoint = op.end;
+        break;
+      }
+      case "curveToV": {
+        addTransformed(currentPoint);
+        addTransformed(op.cp2);
+        addTransformed(op.end);
+        currentPoint = op.end;
+        break;
+      }
+      case "curveToY": {
+        addTransformed(op.cp1);
+        addTransformed(op.end);
+        currentPoint = op.end;
+        break;
+      }
+      case "rect": {
+        const corners = [
+          { x: op.x, y: op.y },
+          { x: op.x + op.width, y: op.y },
+          { x: op.x + op.width, y: op.y + op.height },
+          { x: op.x, y: op.y + op.height },
+        ];
+        for (const p of corners) {
+          addTransformed(p);
+        }
+        currentPoint = { x: op.x, y: op.y };
+        subpathStartPoint = currentPoint;
+        break;
+      }
+      case "closePath": {
+        addTransformed(subpathStartPoint);
+        currentPoint = subpathStartPoint;
+        break;
+      }
+    }
   }
 
+  if (!Number.isFinite(bounds.minX)) {
+    return null;
+  }
   return [bounds.minX, bounds.minY, bounds.maxX, bounds.maxY];
 }
 
@@ -263,7 +312,7 @@ const handleClip: OperatorHandler = (ctx, gfxOps) => {
   }
 
   const gs = gfxOps.get();
-  const bbox = computeRectClipBBoxFromPath(ctx.currentPath, gs.ctm);
+  const bbox = computeClipBBoxFromPath(ctx.currentPath, gs.ctm);
   if (bbox) {
     gfxOps.setClipBBox(bbox);
   }
