@@ -7,7 +7,9 @@ import { decodePdfStringBytes } from "../encoding";
 import { concatBytes, int32le, bytesEqual, objKeySalt } from "./bytes";
 import { md5 } from "./md5";
 import { rc4 } from "./rc4";
-import { aes128CbcDecryptPkcs7 } from "./aes";
+import { aes128CbcDecryptPkcs7, aes256CbcDecryptNoPadWithIv, aes256CbcDecryptPkcs7 } from "./aes";
+import { sha256 } from "./sha256";
+import { computeR6HardenedHash } from "./r6-hash";
 
 export type PdfDecrypter = Readonly<{
   decryptBytes: (
@@ -66,6 +68,14 @@ function encodePasswordBytes(password: string): Uint8Array {
     bytes[i] = c & 0xff;
   }
   return bytes;
+}
+
+function encodePasswordBytesR5(password: string): Uint8Array {
+  const raw = new TextEncoder().encode(password);
+  const n = Math.min(raw.length, 127);
+  const out = new Uint8Array(n);
+  out.set(raw.subarray(0, n), 0);
+  return out;
 }
 
 function padPassword32(passwordBytes: Uint8Array): Uint8Array {
@@ -246,7 +256,7 @@ function deriveObjectKeyAesV2(fileKey: Uint8Array, objNum: number, gen: number):
   return digest.slice(0, n);
 }
 
-type CryptMethod = "None" | "V2" | "AESV2";
+type CryptMethod = "None" | "V2" | "AESV2" | "AESV3";
 type CryptFilter = Readonly<{ method: CryptMethod }>;
 
 function parseCryptFilterMethod(dict: PdfDict): CryptMethod | null {
@@ -255,6 +265,7 @@ function parseCryptFilterMethod(dict: PdfDict): CryptMethod | null {
   if (cfm === "None") {return "None";}
   if (cfm === "V2") {return "V2";}
   if (cfm === "AESV2") {return "AESV2";}
+  if (cfm === "AESV3") {return "AESV3";}
   return null;
 }
 
@@ -264,11 +275,11 @@ function parseCryptFilters(encryptDict: PdfDict): {
   readonly filters: ReadonlyMap<string, CryptFilter>;
 } {
   const cf = asDict(dictGet(encryptDict, "CF"));
-  if (!cf) {throw new Error("Invalid encryption dictionary for V=4/R=4: /CF is missing");}
+  if (!cf) {throw new Error("Invalid encryption dictionary for V=4/5: /CF is missing");}
 
   const strF = asNameOrString(dictGet(encryptDict, "StrF"));
   const stmF = asNameOrString(dictGet(encryptDict, "StmF"));
-  if (!strF || !stmF) {throw new Error("Invalid encryption dictionary for V=4/R=4: /StrF or /StmF is missing");}
+  if (!strF || !stmF) {throw new Error("Invalid encryption dictionary for V=4/5: /StrF or /StmF is missing");}
 
   const out = new Map<string, CryptFilter>();
   for (const [name, value] of cf.map.entries()) {
@@ -469,6 +480,195 @@ export function createStandardDecrypter(args: {
             if (key.length !== 16) {throw new Error(`AESV2 object key must be 16 bytes (got ${key.length})`);}
             return aes128CbcDecryptPkcs7(key, bytes);
           }
+          case "AESV3":
+            throw new Error("AESV3 crypt filters are not supported for V=4/R=4");
+          default: {
+            const exhaustive: never = filter.method;
+            throw new Error(`Unsupported crypt filter method: ${String(exhaustive)}`);
+          }
+        }
+      },
+    };
+  }
+
+  if (v === 5 && r === 5) {
+    const keyLengthBytes = lengthBits != null ? Math.trunc(lengthBits / 8) : 32;
+    if (keyLengthBytes !== 32) {
+      throw new Error(`Unsupported key length for V=5/R=5: ${keyLengthBytes} bytes`);
+    }
+
+    const cf = parseCryptFilters(args.encryptDict);
+    const strFilter = resolveCryptFilter(cf.filters, cf.strF);
+    const stmFilter = resolveCryptFilter(cf.filters, cf.stmF);
+    const hasAesV3 = strFilter.method === "AESV3" || stmFilter.method === "AESV3";
+    if (!hasAesV3) {
+      throw new Error("V=5/R=5 requires AESV3 for strings/streams");
+    }
+
+    const oe = asString(dictGet(args.encryptDict, "OE"))?.bytes;
+    const ue = asString(dictGet(args.encryptDict, "UE"))?.bytes;
+    if (!oe || !ue) {
+      throw new Error("Invalid encryption dictionary for V=5/R=5 (missing /OE or /UE)");
+    }
+
+    const uEntry = u;
+    const oEntry = o;
+    if (uEntry.length !== 48 || oEntry.length !== 48) {
+      throw new Error(`Invalid encryption dictionary for V=5/R=5 (expected /U and /O to be 48 bytes)`);
+    }
+    if (oe.length !== 32 || ue.length !== 32) {
+      throw new Error(`Invalid encryption dictionary for V=5/R=5 (expected /OE and /UE to be 32 bytes)`);
+    }
+
+    const userHash = uEntry.subarray(0, 32);
+    const userValidationSalt = uEntry.subarray(32, 40);
+    const userKeySalt = uEntry.subarray(40, 48);
+
+    const ownerHash = oEntry.subarray(0, 32);
+    const ownerValidationSalt = oEntry.subarray(32, 40);
+    const ownerKeySalt = oEntry.subarray(40, 48);
+
+    const iv0 = new Uint8Array(16); // all zeros
+
+    const asUser = (() => {
+      const passwordBytes = encodePasswordBytesR5(args.password);
+      const candidate = sha256(concatBytes(passwordBytes, userValidationSalt));
+      if (!bytesEqual(candidate, userHash)) {return { ok: false as const };}
+      const key = sha256(concatBytes(passwordBytes, userKeySalt));
+      const fileKey = aes256CbcDecryptNoPadWithIv(key, iv0, ue);
+      if (fileKey.length !== 32) {throw new Error(`Invalid decrypted file key length: ${fileKey.length}`);}
+      return { ok: true as const, fileKey };
+    })();
+
+    const fileKey = (() => {
+      if (asUser.ok) {return asUser.fileKey;}
+
+      const passwordBytes = encodePasswordBytesR5(args.password);
+      const candidate = sha256(concatBytes(passwordBytes, ownerValidationSalt, uEntry));
+      if (!bytesEqual(candidate, ownerHash)) {return null;}
+      const key = sha256(concatBytes(passwordBytes, ownerKeySalt, uEntry));
+      const fileKey = aes256CbcDecryptNoPadWithIv(key, iv0, oe);
+      return fileKey.length === 32 ? fileKey : null;
+    })();
+
+    if (!fileKey) {
+      const preview = decodePdfStringBytes(uEntry.slice(0, 8));
+      throw new Error(`Invalid password for encrypted PDF (U starts with ${JSON.stringify(preview)})`);
+    }
+
+    return {
+      decryptBytes: (objNum, gen, bytes, options) => {
+        if (!options) {throw new Error("decrypt options are required for V=5/R=5");}
+        void objNum;
+        void gen;
+
+        const kind = options.kind;
+        if (kind !== "string" && kind !== "stream") {throw new Error("Invalid decrypt kind");}
+
+        const filterName = options.cryptFilterName ?? (kind === "string" ? cf.strF : cf.stmF);
+        const filter = resolveCryptFilter(cf.filters, filterName);
+
+        switch (filter.method) {
+          case "None":
+            return bytes;
+          case "AESV3":
+            return aes256CbcDecryptPkcs7(fileKey, bytes);
+          case "V2":
+          case "AESV2":
+            throw new Error(`Unexpected crypt filter method for V=5/R=5: ${filter.method}`);
+          default: {
+            const exhaustive: never = filter.method;
+            throw new Error(`Unsupported crypt filter method: ${String(exhaustive)}`);
+          }
+        }
+      },
+    };
+  }
+
+  if (v === 5 && r === 6) {
+    const keyLengthBytes = lengthBits != null ? Math.trunc(lengthBits / 8) : 32;
+    if (keyLengthBytes !== 32) {
+      throw new Error(`Unsupported key length for V=5/R=6: ${keyLengthBytes} bytes`);
+    }
+
+    const cf = parseCryptFilters(args.encryptDict);
+    const strFilter = resolveCryptFilter(cf.filters, cf.strF);
+    const stmFilter = resolveCryptFilter(cf.filters, cf.stmF);
+    const hasAesV3 = strFilter.method === "AESV3" || stmFilter.method === "AESV3";
+    if (!hasAesV3) {
+      throw new Error("V=5/R=6 requires AESV3 for strings/streams");
+    }
+
+    const oe = asString(dictGet(args.encryptDict, "OE"))?.bytes;
+    const ue = asString(dictGet(args.encryptDict, "UE"))?.bytes;
+    if (!oe || !ue) {
+      throw new Error("Invalid encryption dictionary for V=5/R=6 (missing /OE or /UE)");
+    }
+
+    const uEntry = u;
+    const oEntry = o;
+    if (uEntry.length !== 48 || oEntry.length !== 48) {
+      throw new Error(`Invalid encryption dictionary for V=5/R=6 (expected /U and /O to be 48 bytes)`);
+    }
+    if (oe.length !== 32 || ue.length !== 32) {
+      throw new Error(`Invalid encryption dictionary for V=5/R=6 (expected /OE and /UE to be 32 bytes)`);
+    }
+
+    const userHash = uEntry.subarray(0, 32);
+    const userValidationSalt = uEntry.subarray(32, 40);
+    const userKeySalt = uEntry.subarray(40, 48);
+
+    const ownerHash = oEntry.subarray(0, 32);
+    const ownerValidationSalt = oEntry.subarray(32, 40);
+    const ownerKeySalt = oEntry.subarray(40, 48);
+
+    const iv0 = new Uint8Array(16); // all zeros
+    const passwordBytes = encodePasswordBytesR5(args.password);
+
+    const asUser = (() => {
+      const candidate = computeR6HardenedHash({ passwordBytes, salt: userValidationSalt });
+      if (!bytesEqual(candidate, userHash)) {return { ok: false as const };}
+      const key = computeR6HardenedHash({ passwordBytes, salt: userKeySalt });
+      const fileKey = aes256CbcDecryptNoPadWithIv(key, iv0, ue);
+      if (fileKey.length !== 32) {throw new Error(`Invalid decrypted file key length: ${fileKey.length}`);}
+      return { ok: true as const, fileKey };
+    })();
+
+    const fileKey = (() => {
+      if (asUser.ok) {return asUser.fileKey;}
+
+      const candidate = computeR6HardenedHash({ passwordBytes, salt: ownerValidationSalt, userKey: uEntry });
+      if (!bytesEqual(candidate, ownerHash)) {return null;}
+      const key = computeR6HardenedHash({ passwordBytes, salt: ownerKeySalt, userKey: uEntry });
+      const fk = aes256CbcDecryptNoPadWithIv(key, iv0, oe);
+      return fk.length === 32 ? fk : null;
+    })();
+
+    if (!fileKey) {
+      const preview = decodePdfStringBytes(uEntry.slice(0, 8));
+      throw new Error(`Invalid password for encrypted PDF (U starts with ${JSON.stringify(preview)})`);
+    }
+
+    return {
+      decryptBytes: (objNum, gen, bytes, options) => {
+        if (!options) {throw new Error("decrypt options are required for V=5/R=6");}
+        void objNum;
+        void gen;
+
+        const kind = options.kind;
+        if (kind !== "string" && kind !== "stream") {throw new Error("Invalid decrypt kind");}
+
+        const filterName = options.cryptFilterName ?? (kind === "string" ? cf.strF : cf.stmF);
+        const filter = resolveCryptFilter(cf.filters, filterName);
+
+        switch (filter.method) {
+          case "None":
+            return bytes;
+          case "AESV3":
+            return aes256CbcDecryptPkcs7(fileKey, bytes);
+          case "V2":
+          case "AESV2":
+            throw new Error(`Unexpected crypt filter method for V=5/R=6: ${filter.method}`);
           default: {
             const exhaustive: never = filter.method;
             throw new Error(`Unsupported crypt filter method: ${String(exhaustive)}`);

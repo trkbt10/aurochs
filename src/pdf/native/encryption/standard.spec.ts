@@ -2,11 +2,12 @@
  * @file src/pdf/native/encryption/standard.spec.ts
  */
 
+import { createCipheriv } from "node:crypto";
+import PDFDocument from "pdfkit";
 import { loadNativePdfDocument } from "../document";
 import { concatBytes, int32le, objKeySalt } from "./bytes";
 import { md5 } from "./md5";
 import { rc4 } from "./rc4";
-import { aes128CbcEncryptPkcs7 } from "./aes";
 
 const PASSWORD_PADDING = new Uint8Array([
   0x28, 0xbf, 0x4e, 0x5e, 0x4e, 0x75, 0x8a, 0x41,
@@ -203,7 +204,11 @@ function buildEncryptedPdfR4AesV2(args: {
   if (objKey.length !== 16) {throw new Error("expected 16-byte AES object key");}
 
   const iv = new Uint8Array(Array.from({ length: 16 }, (_, i) => 15 - i));
-  const encryptedContent = aes128CbcEncryptPkcs7(objKey, iv, contentPlainBytes);
+  const cipher = createCipheriv("aes-128-cbc", Buffer.from(objKey), Buffer.from(iv));
+  const ciphertext = Buffer.concat([cipher.update(Buffer.from(contentPlainBytes)), cipher.final()]);
+  const encryptedContent = new Uint8Array(16 + ciphertext.length);
+  encryptedContent.set(iv, 0);
+  encryptedContent.set(ciphertext, 16);
 
   const obj1 = asciiBytes("1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n");
   const obj2 = asciiBytes("2 0 obj\n<< /Type /Pages /Count 1 /Kids [3 0 R] >>\nendobj\n");
@@ -271,6 +276,52 @@ describe("Standard Security Handler (V=4/R=4, AESV2)", () => {
 
   it("rejects with wrong password", () => {
     const bytes = buildEncryptedPdfR4AesV2({ userPassword: "pw", ownerPassword: "pw", text: "HELLO" });
+    expect(() => loadNativePdfDocument(bytes, { encryption: { mode: "password", password: "wrong" } })).toThrow(/password/i);
+  });
+});
+
+function renderPdfkitEncryptedV5(args: { readonly userPassword: string; readonly ownerPassword: string; readonly text: string }): Promise<Uint8Array> {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({
+      autoFirstPage: false,
+      compress: false,
+      pdfVersion: "1.7ext3",
+      userPassword: args.userPassword,
+      ownerPassword: args.ownerPassword,
+      permissions: {},
+      info: {
+        Title: "pdfkit-encrypted-v5",
+        Creator: "web-pptx",
+        Producer: "web-pptx pdfkit encrypted tests",
+        CreationDate: new Date("2000-01-01T00:00:00.000Z"),
+        ModDate: new Date("2000-01-01T00:00:00.000Z"),
+      },
+    });
+
+    const chunks: Buffer[] = [];
+    doc.on("data", (chunk: Buffer) => chunks.push(chunk));
+    doc.on("error", reject);
+    doc.on("end", () => resolve(new Uint8Array(Buffer.concat(chunks))));
+
+    doc.addPage({ size: [300, 200], margin: 0 });
+    doc.fontSize(18).text(args.text, 20, 20);
+    doc.end();
+  });
+}
+
+describe("Standard Security Handler (V=5/R=5, AESV3)", () => {
+  it("decrypts encrypted stream data with password (pdfkit-generated)", async () => {
+    const bytes = await renderPdfkitEncryptedV5({ userPassword: "pw", ownerPassword: "pw", text: "HELLO" });
+    const doc = loadNativePdfDocument(bytes, { encryption: { mode: "password", password: "pw" } });
+    const page0 = doc.getPages()[0]!;
+    const decoded = page0.getDecodedContentStreams();
+    expect(decoded.length).toBe(1);
+    const content = new TextDecoder("latin1").decode(decoded[0]!);
+    expect(content).toContain("<48454c4c4f>");
+  });
+
+  it("rejects with wrong password (pdfkit-generated)", async () => {
+    const bytes = await renderPdfkitEncryptedV5({ userPassword: "pw", ownerPassword: "pw", text: "HELLO" });
     expect(() => loadNativePdfDocument(bytes, { encryption: { mode: "password", password: "wrong" } })).toThrow(/password/i);
   });
 });

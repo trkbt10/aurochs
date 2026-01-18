@@ -60,10 +60,12 @@ Current behavior: reject when trailer has `/Encrypt` unless caller chooses “ig
   - [x] keep `password` mode behavior explicit (requires `encryption: { mode: "password", password }`) (`src/pdf/parser/pdf-parser.native.ts`, `src/pdf/parser/native-load.ts`)
   - [x] Standard Security Handler RC4 128-bit (`V=2`, `R=3`) (`src/pdf/native/encryption/standard.ts`, `src/pdf/native/encryption/standard.spec.ts`)
   - [ ] Standard Security Handler AES (`V=4/5`) / Crypt filters
-    - [ ] `V=4` / `R=4` (AESV2) string/stream AES-CBC + per-object key derivation
-    - [ ] `V=5` / `R=6` (AESV3) string/stream AES-CBC + UTF-8 password rules
-    - [ ] `/CF` crypt filter dictionaries (`/StmF`, `/StrF`, `/EFF`) (needed for AES and some RC4 PDFs)
-    - [ ] `/EncryptMetadata` handling (metadata stream encryption on/off)
+    - [x] `V=4` / `R=4` (AESV2) string/stream AES-CBC + per-object key derivation (`src/pdf/native/encryption/standard.ts`, `src/pdf/native/encryption/aes.ts`, `src/pdf/native/encryption/standard.spec.ts`, `src/pdf/native/encryption/aes.spec.ts`)
+    - [x] `V=5` / `R=5` (AESV3) string/stream AES-256-CBC + UTF-8 password bytes (`src/pdf/native/encryption/standard.ts`, `src/pdf/native/encryption/aes.ts`, `src/pdf/native/encryption/sha256.ts`, `src/pdf/native/encryption/standard.spec.ts`)
+    - [ ] `V=5` / `R=6` (AESV3) string/stream AES-256-CBC + full UTF-8 password rules (incl. SASLprep normalization)
+    - [x] `/CF` crypt filter dictionaries (`/StmF`, `/StrF`) (needed for AES and some RC4 PDFs) (`src/pdf/native/encryption/standard.ts`)
+      - [ ] `/EFF` handling (embedded file streams)
+    - [x] `/EncryptMetadata` handling (metadata stream encryption on/off) (`src/pdf/native/encryption/standard.ts`)
 - [ ] **Crypt filter integration** (depends on decryption support)
   - [x] handle `/Crypt` `/DecodeParms << /Name /Identity >>` by skipping object-level stream decryption (`src/pdf/native/encryption/decrypt-object.ts`, `src/pdf/native/filters/crypt.spec.ts`)
 
@@ -109,10 +111,15 @@ Current behavior: collects pages, supports inherited `Resources` and `MediaBox` 
           - [x] vector fills/strokes are preserved by rasterizing masked paths into `PdfImage` (`src/pdf/parser/soft-mask-raster.native.ts`, `src/pdf/parser/soft-mask-raster.native.spec.ts`, `src/pdf/parser/pdf-parser.native.ts`)
           - [ ] text under per-pixel masks (requires text rasterization/outlines)
             - [x] bbox-based rasterization of masked text (deterministic, but over-paints glyph interiors) (`src/pdf/parser/soft-mask-text-raster.native.ts`, `src/pdf/parser/soft-mask-text-raster.native.spec.ts`, `src/pdf/parser/pdf-parser.native.ts`)
+              - [x] oriented run boxes (uses textMatrix translation + CTM; improves rotation via CTM) (`src/pdf/parser/soft-mask-text-raster.native.ts`)
       - [ ] broader `/S /Luminosity` support (non-constant)
         - [x] luminosity from mask images in `/DeviceRGB` (and other device spaces via RGBA conversion) for the limited per-pixel subset (`src/pdf/parser/ext-gstate.native.ts`, `src/pdf/parser/ext-gstate.native.spec.ts`)
         - [ ] complex luminosity groups (multi-element mask content, compositing/blend within the group, nontrivial transforms)
           - [x] multiple-image mask Forms: composite `Do` images in order using source-over, then compute `luminosity × groupAlpha` (`src/pdf/parser/ext-gstate.native.ts`, `src/pdf/parser/ext-gstate.native.spec.ts`)
+          - [x] mixed image+path mask Forms: rasterize mask paths onto the image-resolution grid then composite (`src/pdf/parser/ext-gstate.native.ts`, `src/pdf/parser/ext-gstate.native.spec.ts`, `src/pdf/parser/soft-mask-raster.native.ts`)
+          - [x] paths-only mask Forms: rasterize into a caller-provided grid size (`softMaskVectorMaxSize`) (`src/pdf/parser/ext-gstate.native.ts`, `src/pdf/parser/ext-gstate.native.spec.ts`, `src/pdf/parser/pdf-parser.native.ts`)
+          - [x] text-only mask Forms: bbox-based rasterization into a caller-provided grid size (`softMaskVectorMaxSize`) (`src/pdf/parser/ext-gstate.native.ts`, `src/pdf/parser/ext-gstate.native.spec.ts`)
+          - [x] mask group `/Group << /K true >>` (knockout) affects group compositing order (`src/pdf/parser/ext-gstate.native.ts`, `src/pdf/parser/ext-gstate.native.spec.ts`)
     - [x] ExtGState line style overrides via `gs` (`/LW`, `/LC`, `/LJ`, `/ML`, `/D`) for PDFs that don’t use `w/J/j/M/d` directly (`src/pdf/parser/ext-gstate.native.ts`, `src/pdf/parser/ext-gstate.native.spec.ts`, `src/pdf/parser/operator/graphics-state-handlers.ts`, `src/pdf/parser/operator/graphics-state-handlers.spec.ts`)
     - [ ] Transparency groups (`/Group`) with `Isolated`/`Knockout` behavior (often appears with soft masks)
   - [ ] complex transforms (shear/rotation matrix edge cases; currently warns/fallbacks) (`src/pdf/converter/transform-converter.ts`)
