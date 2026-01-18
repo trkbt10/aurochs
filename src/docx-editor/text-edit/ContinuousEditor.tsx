@@ -32,6 +32,7 @@ import {
   cursorPositionToOffset,
   offsetToCursorPosition,
   selectionToRects,
+  moveCursorVertically,
 } from "./cursor-utils";
 import { DocumentTextOverlay } from "./DocumentTextOverlay";
 import { syncParagraphsWithPlainText } from "./text-merge/paragraph-sync";
@@ -173,6 +174,8 @@ export function ContinuousEditor({
   const svgRef = useRef<SVGSVGElement>(null);
   const isDraggingRef = useRef(false);
   const dragAnchorRef = useRef<number | null>(null);
+  // Preferred X position for vertical cursor movement (maintained across up/down arrow presses)
+  const preferredXRef = useRef<number | null>(null);
 
   // Update internal state when paragraphs prop changes
   useEffect(() => {
@@ -334,13 +337,63 @@ export function ContinuousEditor({
     updateCursorPosition();
   }, [updateCursorPosition]);
 
-  const handleTextareaKeyDown = useCallback(() => {
-    // Let default behavior handle most keys
-    // Just update cursor after key processing
-    requestAnimationFrame(() => {
-      updateCursorPosition();
-    });
-  }, [updateCursorPosition]);
+  const handleTextareaKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      const textarea = textareaRef.current;
+      if (!textarea) {
+        return;
+      }
+
+      const key = event.key;
+
+      // Handle vertical cursor movement (up/down arrows)
+      if (key === "ArrowUp" || key === "ArrowDown") {
+        const direction = key === "ArrowUp" ? "up" : "down";
+        const cursorOffset = textarea.selectionDirection === "backward"
+          ? textarea.selectionStart ?? 0
+          : textarea.selectionEnd ?? 0;
+        const currentPosition = offsetToCursorPosition(internalParagraphs, cursorOffset);
+
+        const result = moveCursorVertically(
+          pagedLayout,
+          currentPosition,
+          direction,
+          preferredXRef.current ?? undefined,
+        );
+
+        if (result !== undefined) {
+          event.preventDefault();
+          const newOffset = cursorPositionToOffset(internalParagraphs, result.position);
+
+          if (event.shiftKey) {
+            // Extend selection
+            const anchorOffset = getSelectionAnchor(textarea);
+            applySelectionRange(textarea, anchorOffset, newOffset);
+          } else {
+            // Move cursor
+            textarea.setSelectionRange(newOffset, newOffset);
+          }
+
+          // Store the X position for consecutive vertical movements
+          preferredXRef.current = result.xPosition;
+          updateCursorPosition();
+        }
+        return;
+      }
+
+      // Reset preferred X on horizontal movement or other keys
+      if (key === "ArrowLeft" || key === "ArrowRight" || key === "Home" || key === "End") {
+        preferredXRef.current = null;
+      }
+
+      // Let default behavior handle most keys
+      // Just update cursor after key processing
+      requestAnimationFrame(() => {
+        updateCursorPosition();
+      });
+    },
+    [internalParagraphs, pagedLayout, updateCursorPosition],
+  );
 
   const handleFocus = useCallback(() => {
     setIsFocused(true);

@@ -618,3 +618,124 @@ function normalizeSelection(
   }
   return [endPos, startPos];
 }
+
+// =============================================================================
+// Vertical Cursor Movement (Arrow Up/Down)
+// =============================================================================
+
+/**
+ * Line info for vertical navigation.
+ */
+type FlatLineInfo = {
+  readonly paragraphIndex: number;
+  readonly lineIndex: number;
+  readonly line: LayoutLine;
+  readonly pageYOffset: number;
+  readonly charOffsetInParagraph: number;
+};
+
+/**
+ * Build a flat list of all lines with their paragraph offsets.
+ */
+function buildFlatLineList(pagedLayout: PagedLayoutResult): FlatLineInfo[] {
+  const flatParagraphs = buildFlatParagraphList(pagedLayout);
+  const result: FlatLineInfo[] = [];
+
+  for (let pIdx = 0; pIdx < flatParagraphs.length; pIdx++) {
+    const { paragraph, pageYOffset } = flatParagraphs[pIdx];
+    let charOffsetInParagraph = 0;
+
+    for (let lIdx = 0; lIdx < paragraph.lines.length; lIdx++) {
+      const line = paragraph.lines[lIdx];
+      result.push({
+        paragraphIndex: pIdx,
+        lineIndex: lIdx,
+        line,
+        pageYOffset,
+        charOffsetInParagraph,
+      });
+      charOffsetInParagraph += getLineTextLength(line.spans);
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Find the flat line index containing the cursor position.
+ */
+function findCurrentLineIndex(
+  flatLines: readonly FlatLineInfo[],
+  position: ContinuousCursorPosition,
+): number {
+  let currentLineIndex = 0;
+
+  for (let i = 0; i < flatLines.length; i++) {
+    const lineInfo = flatLines[i];
+    if (lineInfo.paragraphIndex !== position.paragraphIndex) {
+      if (lineInfo.paragraphIndex > position.paragraphIndex) {
+        break;
+      }
+      currentLineIndex = i + 1;
+      continue;
+    }
+
+    const lineLength = getLineTextLength(lineInfo.line.spans);
+    const lineEndOffset = lineInfo.charOffsetInParagraph + lineLength;
+
+    if (position.charOffset <= lineEndOffset) {
+      return i;
+    }
+    currentLineIndex = i + 1;
+  }
+
+  return Math.min(currentLineIndex, flatLines.length - 1);
+}
+
+/**
+ * Move cursor vertically (up/down) while maintaining horizontal position.
+ *
+ * @param pagedLayout - The paged layout result
+ * @param currentPosition - Current cursor position
+ * @param direction - Direction to move: "up" or "down"
+ * @param preferredX - Preferred X position (for maintaining column during vertical navigation)
+ * @returns New cursor position and the X position at that line (for future movements)
+ */
+export function moveCursorVertically(
+  pagedLayout: PagedLayoutResult,
+  currentPosition: ContinuousCursorPosition,
+  direction: "up" | "down",
+  preferredX?: number,
+): { position: ContinuousCursorPosition; xPosition: number } | undefined {
+  const flatLines = buildFlatLineList(pagedLayout);
+  if (flatLines.length === 0) {
+    return undefined;
+  }
+
+  const currentLineIdx = findCurrentLineIndex(flatLines, currentPosition);
+  const targetLineIdx = direction === "up" ? currentLineIdx - 1 : currentLineIdx + 1;
+
+  if (targetLineIdx < 0 || targetLineIdx >= flatLines.length) {
+    return undefined;
+  }
+
+  const currentLineInfo = flatLines[currentLineIdx];
+  const targetLineInfo = flatLines[targetLineIdx];
+
+  // Calculate the X position to use
+  const charOffsetInLine = currentPosition.charOffset - currentLineInfo.charOffsetInParagraph;
+  const currentX = preferredX ?? getXPositionInLine(currentLineInfo.line, charOffsetInLine);
+
+  // Find the character offset in the target line at the same X position
+  const writingMode = pagedLayout.writingMode ?? "horizontal-tb";
+  const newCharOffsetInLine = getCharOffsetInLine(targetLineInfo.line, currentX, writingMode);
+  const newCharOffset = targetLineInfo.charOffsetInParagraph + newCharOffsetInLine;
+
+  return {
+    position: {
+      paragraphIndex: targetLineInfo.paragraphIndex,
+      charOffset: newCharOffset,
+    },
+    xPosition: currentX,
+  };
+}

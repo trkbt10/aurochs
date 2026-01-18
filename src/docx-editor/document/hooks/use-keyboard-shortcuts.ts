@@ -194,6 +194,11 @@ export function useKeyboardShortcuts(
         return;
       }
 
+      // Skip during IME composition, but allow modifier shortcuts (cmd+x, etc.)
+      if (e.isComposing && !isModKey(e)) {
+        return;
+      }
+
       for (const handler of SHORTCUT_HANDLERS) {
         if (handler(e, ctx)) {
           return;
