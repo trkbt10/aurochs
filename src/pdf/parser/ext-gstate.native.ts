@@ -7,11 +7,14 @@ import type { PdfDict, PdfObject, PdfStream } from "../native/types";
 import { decodePdfStream } from "../native/stream";
 import { tokenizeContentStream } from "../domain/content-stream";
 import type { PdfColor, PdfColorSpace, PdfMatrix, PdfSoftMask } from "../domain";
-import { createGraphicsStateStack, invertMatrix, transformPoint } from "../domain";
-import { clamp01, cmykToRgb } from "../domain/color";
+import { DEFAULT_FONT_METRICS, createGraphicsStateStack, getMatrixScale, invertMatrix, transformPoint } from "../domain";
+import type { FontMappings } from "../domain/font";
+import { clamp01, cmykToRgb, grayToRgb, toByte } from "../domain/color";
 import { convertToRgba } from "../converter/pixel-converter";
 import { decodeJpegToRgb } from "./jpeg-decode";
-import { createGfxOpsFromStack, createParser, type ParsedElement } from "./operator";
+import { calculateTextDisplacement, createGfxOpsFromStack, createParser, type ParsedElement, type ParsedText, type TextRun } from "./operator";
+import { rasterizeSoftMaskedFillPath } from "./soft-mask-raster.native";
+import { extractFontMappingsFromResourcesNative } from "./font-decoder.native";
 
 function asDict(obj: PdfObject | undefined): PdfDict | null {
   return obj?.type === "dict" ? obj : null;
@@ -27,6 +30,10 @@ function asName(obj: PdfObject | undefined): string | null {
 
 function asStream(obj: PdfObject | undefined): PdfStream | null {
   return obj?.type === "stream" ? obj : null;
+}
+
+function asBool(obj: PdfObject | undefined): boolean | null {
+  return obj?.type === "bool" ? obj.value : null;
 }
 
 function dictGet(dict: PdfDict, key: string): PdfObject | undefined {
@@ -52,6 +59,16 @@ export type ExtGStateParams = Readonly<{
   readonly miterLimit?: number;
   readonly dashArray?: readonly number[];
   readonly dashPhase?: number;
+}>;
+
+export type ExtGStateExtractOptions = Readonly<{
+  /**
+   * When > 0, enables rasterization for per-pixel `/SMask` groups that do not
+   * contain images (i.e. paths-only masks).
+   *
+   * The value is the maximum of `{width,height}` for the generated mask grid.
+   */
+  readonly vectorSoftMaskMaxSize?: number;
 }>;
 
 function asArray(obj: PdfObject | undefined): readonly PdfObject[] | null {
@@ -120,6 +137,197 @@ const IDENTITY_MATRIX: PdfMatrix = [1, 0, 0, 1, 0, 0];
 type SoftMaskParseResult =
   | Readonly<{ present: false }>
   | Readonly<{ present: true; softMaskAlpha: number; softMask?: PdfSoftMask }>;
+
+type OrientedBox = Readonly<{
+  readonly origin: Readonly<{ x: number; y: number }>;
+  /** Unit vector along the baseline (start → end). */
+  readonly u: Readonly<{ x: number; y: number }>;
+  /** Unit vector orthogonal to baseline (perpendicular). */
+  readonly n: Readonly<{ x: number; y: number }>;
+  /** Baseline length in user space. */
+  readonly length: number;
+  /** Lower/upper extent along `n` relative to `origin` (user units). */
+  readonly minN: number;
+  readonly maxN: number;
+  /** Axis-aligned bounds for coarse culling. */
+  readonly aabb: BBox4;
+}>;
+
+function dot(ax: number, ay: number, bx: number, by: number): number {
+  return ax * bx + ay * by;
+}
+
+function pointInOrientedBox(p: Readonly<{ x: number; y: number }>, box: OrientedBox, pad: number): boolean {
+  const dx = p.x - box.origin.x;
+  const dy = p.y - box.origin.y;
+  const t = dot(dx, dy, box.u.x, box.u.y);
+  const s = dot(dx, dy, box.n.x, box.n.y);
+  return (
+    t >= -pad &&
+    t <= box.length + pad &&
+    s >= box.minN - pad &&
+    s <= box.maxN + pad
+  );
+}
+
+function bboxIntersects(a: BBox4, b: BBox4): boolean {
+  const [ax1, ay1, ax2, ay2] = a;
+  const [bx1, by1, bx2, by2] = b;
+  return ax1 < bx2 && ax2 > bx1 && ay1 < by2 && ay2 > by1;
+}
+
+function getFontInfo(fontKey: string, fontMappings: FontMappings) {
+  const cleanName = fontKey.startsWith("/") ? fontKey.slice(1) : fontKey;
+  const direct = fontMappings.get(cleanName);
+  if (direct) {return direct;}
+
+  const plusIndex = cleanName.indexOf("+");
+  if (plusIndex > 0) {
+    const withoutSubset = fontMappings.get(cleanName.slice(plusIndex + 1));
+    if (withoutSubset) {return withoutSubset;}
+  }
+
+  for (const [key, value] of fontMappings.entries()) {
+    if (cleanName.includes(key) || key.includes(cleanName)) {
+      return value;
+    }
+  }
+
+  return undefined;
+}
+
+function computeOrientedBoxForRun(run: TextRun, fontMappings: FontMappings): OrientedBox | null {
+  const fontKey = run.baseFont ?? run.fontName;
+  const fontInfo = getFontInfo(fontKey, fontMappings);
+  const metrics = fontInfo?.metrics ?? DEFAULT_FONT_METRICS;
+  const codeByteWidth = fontInfo?.codeByteWidth ?? 1;
+
+  const [tmE, tmF] = [run.textMatrix[4], run.textMatrix[5]];
+  const textSpaceY = tmF + run.textRise;
+
+  const displacement = calculateTextDisplacement(
+    run.text,
+    run.fontSize,
+    run.charSpacing,
+    run.wordSpacing,
+    run.horizontalScaling,
+    metrics,
+    codeByteWidth,
+    0,
+  );
+
+  const start = transformPoint({ x: tmE, y: textSpaceY }, run.graphicsState.ctm);
+  const end = transformPoint({ x: tmE + displacement, y: textSpaceY }, run.graphicsState.ctm);
+
+  const vx = end.x - start.x;
+  const vy = end.y - start.y;
+  const length = Math.sqrt(vx * vx + vy * vy);
+  const ux = length > 1e-6 ? vx / length : 1;
+  const uy = length > 1e-6 ? vy / length : 0;
+  const nx = -uy;
+  const ny = ux;
+
+  const ascender = metrics.ascender ?? 800;
+  const descender = metrics.descender ?? -200;
+  const size = run.effectiveFontSize;
+  if (!Number.isFinite(size) || size <= 0) {return null;}
+
+  const minN = (descender * size) / 1000;
+  const maxN = (ascender * size) / 1000;
+
+  const corners = [
+    { x: start.x + nx * minN, y: start.y + ny * minN },
+    { x: end.x + nx * minN, y: end.y + ny * minN },
+    { x: end.x + nx * maxN, y: end.y + ny * maxN },
+    { x: start.x + nx * maxN, y: start.y + ny * maxN },
+  ];
+
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const c of corners) {
+    minX = Math.min(minX, c.x);
+    minY = Math.min(minY, c.y);
+    maxX = Math.max(maxX, c.x);
+    maxY = Math.max(maxY, c.y);
+  }
+  if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {return null;}
+
+  return {
+    origin: start,
+    u: { x: ux, y: uy },
+    n: { x: nx, y: ny },
+    length: Math.max(length, 0),
+    minN,
+    maxN,
+    aabb: [minX, minY, maxX, maxY],
+  };
+}
+
+type TextPaintOp = "fill" | "stroke" | "fillStroke" | "none";
+function getTextPaintOp(textRenderingMode: number): TextPaintOp {
+  // PDF Reference 9.3, Table 106.
+  // 4..6 include clipping but still paint; 7 is clip-only (no paint).
+  switch (textRenderingMode) {
+    case 0:
+    case 4:
+      return "fill";
+    case 1:
+    case 5:
+      return "stroke";
+    case 2:
+    case 6:
+      return "fillStroke";
+    case 3:
+    case 7:
+    default:
+      return "none";
+  }
+}
+
+function colorToRgbBytes(color: PdfColor): readonly [number, number, number] {
+  switch (color.colorSpace) {
+    case "DeviceGray": {
+      const [r, g, b] = grayToRgb(color.components[0] ?? 0);
+      return [r, g, b];
+    }
+    case "DeviceRGB":
+      return [toByte(color.components[0] ?? 0), toByte(color.components[1] ?? 0), toByte(color.components[2] ?? 0)];
+    case "DeviceCMYK": {
+      const [r, g, b] = cmykToRgb(
+        color.components[0] ?? 0,
+        color.components[1] ?? 0,
+        color.components[2] ?? 0,
+        color.components[3] ?? 0,
+      );
+      return [r, g, b];
+    }
+    case "ICCBased": {
+      const alt = color.alternateColorSpace;
+      if (alt === "DeviceGray") {
+        const [r, g, b] = grayToRgb(color.components[0] ?? 0);
+        return [r, g, b];
+      }
+      if (alt === "DeviceRGB") {
+        return [toByte(color.components[0] ?? 0), toByte(color.components[1] ?? 0), toByte(color.components[2] ?? 0)];
+      }
+      if (alt === "DeviceCMYK") {
+        const [r, g, b] = cmykToRgb(
+          color.components[0] ?? 0,
+          color.components[1] ?? 0,
+          color.components[2] ?? 0,
+          color.components[3] ?? 0,
+        );
+        return [r, g, b];
+      }
+      return [0, 0, 0];
+    }
+    case "Pattern":
+    default:
+      return [0, 0, 0];
+  }
+}
 
 function isIdentityCtm(ctm: readonly number[]): boolean {
   return (
@@ -287,10 +495,10 @@ function tryExtractPerPixelSoftMaskFromElements(
   matrix: PdfMatrix,
   kind: SoftMaskKind,
   resources: PdfDict | null,
+  fontMappings: FontMappings,
+  options: ExtGStateExtractOptions,
+  groupKnockout: boolean,
 ): PdfSoftMask | null {
-  const xObjects = getXObjectsDict(page, resources);
-  if (!xObjects) {return null;}
-
   const decodeImageStreamToRgba = (imageStream: PdfStream): { readonly width: number; readonly height: number; readonly rgba: Uint8ClampedArray } | null => {
     const imageDict = imageStream.dict;
     const imageSubtype = asName(dictGet(imageDict, "Subtype"));
@@ -324,24 +532,316 @@ function tryExtractPerPixelSoftMaskFromElements(
     return { width: w, height: h, rgba };
   };
 
-  const imageElements = elements.filter((e): e is Extract<ParsedElement, { readonly type: "image" }> => e?.type === "image");
-  if (imageElements.length === 0) {return null;}
-  if (imageElements.length !== elements.length) {return null;}
+  type MaskLayer =
+    | Readonly<{
+      readonly kind: "image";
+      readonly width: number;
+      readonly height: number;
+      readonly rgba: Uint8ClampedArray;
+      readonly smaskAlpha: Uint8Array | null;
+      readonly imageMatrixInv: PdfMatrix;
+    }>
+    | Readonly<{
+      readonly kind: "raster";
+      readonly width: number;
+      readonly height: number;
+      readonly data: Uint8Array;
+      readonly alpha: Uint8Array;
+    }>;
 
-  type DecodedMaskImage = Readonly<{
-    readonly width: number;
-    readonly height: number;
-    readonly rgba: Uint8ClampedArray;
-    readonly smaskAlpha: Uint8Array | null;
-    readonly imageMatrixInv: PdfMatrix;
-  }>;
+  type RasterLayer = Extract<MaskLayer, { readonly kind: "raster" }>;
 
-  const decodedImages: DecodedMaskImage[] = [];
+  const hasOnlyImagesPathsOrText = elements.every((e) => e.type === "image" || e.type === "path" || e.type === "text");
+  if (!hasOnlyImagesPathsOrText) {return null;}
 
-  let width = 0;
-  let height = 0;
+  const imageElements = elements.filter((e): e is Extract<ParsedElement, { readonly type: "image" }> => e.type === "image");
+  const pathElements = elements.filter((e): e is Extract<ParsedElement, { readonly type: "path" }> => e.type === "path");
+  const textElements = elements.filter((e): e is Extract<ParsedElement, { readonly type: "text" }> => e.type === "text");
+  const hasImages = imageElements.length > 0;
+
+  const rasterizeTextElementToGrid = (
+    elem: ParsedText,
+    width: number,
+    height: number,
+    bbox: BBox4,
+    fontMappings: FontMappings,
+  ): RasterLayer | null | undefined => {
+    const gs = elem.graphicsState;
+    if (gs.softMask) {return null;}
+
+    const paintOp = getTextPaintOp(gs.textRenderingMode);
+    if (paintOp === "none") {return undefined;}
+    if (elem.runs.length === 0) {return undefined;}
+
+    const clipBBox = gs.clipBBox;
+    const runBoxes: OrientedBox[] = [];
+    for (const run of elem.runs) {
+      const box = computeOrientedBoxForRun(run, fontMappings);
+      if (!box) {continue;}
+      if (clipBBox) {
+        if (!bboxIntersects(box.aabb, clipBBox)) {continue;}
+      }
+      runBoxes.push(box);
+    }
+    if (runBoxes.length === 0) {return undefined;}
+
+    const pixelCount = width * height;
+    const alpha = new Uint8Array(pixelCount);
+    const data = new Uint8Array(pixelCount * 3);
+
+    const softMaskAlpha = clamp01(gs.softMaskAlpha ?? 1);
+    const fillMul = softMaskAlpha * clamp01(gs.fillAlpha);
+    const strokeMul = softMaskAlpha * clamp01(gs.strokeAlpha);
+
+    const fillRgb = colorToRgbBytes(gs.fillColor);
+    const strokeRgb = colorToRgbBytes(gs.strokeColor);
+
+    const scale = getMatrixScale(gs.ctm);
+    const lineWidth = gs.lineWidth * ((scale.scaleX + scale.scaleY) / 2);
+    const halfW = lineWidth / 2;
+
+    // Restrict pixel loops to the union of run AABBs (expanded for stroke pad).
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const b of runBoxes) {
+      minX = Math.min(minX, b.aabb[0]);
+      minY = Math.min(minY, b.aabb[1]);
+      maxX = Math.max(maxX, b.aabb[2]);
+      maxY = Math.max(maxY, b.aabb[3]);
+    }
+
+    const [llx, lly, urx, ury] = bbox;
+    const bw = urx - llx;
+    const bh = ury - lly;
+    if (!Number.isFinite(bw) || !Number.isFinite(bh) || bw <= 0 || bh <= 0) {return null;}
+
+    const pad = paintOp === "stroke" || paintOp === "fillStroke" ? halfW : 0;
+    const clipX1 = Math.max(llx, minX - pad);
+    const clipX2 = Math.min(urx, maxX + pad);
+    const clipY1 = Math.max(lly, minY - pad);
+    const clipY2 = Math.min(ury, maxY + pad);
+    if (clipX2 <= clipX1 || clipY2 <= clipY1) {return undefined;}
+
+    const colStart = Math.max(0, Math.floor(((clipX1 - llx) / bw) * width));
+    const colEnd = Math.min(width - 1, Math.ceil(((clipX2 - llx) / bw) * width));
+    const rowStart = Math.max(0, Math.floor(((ury - clipY2) / bh) * height));
+    const rowEnd = Math.min(height - 1, Math.ceil(((ury - clipY1) / bh) * height));
+
+    const needsStroke = paintOp === "stroke" || paintOp === "fillStroke";
+
+    for (let row = rowStart; row <= rowEnd; row += 1) {
+      const maskY = ury - ((row + 0.5) / height) * bh;
+      for (let col = colStart; col <= colEnd; col += 1) {
+        const idx = row * width + col;
+        const maskX = llx + ((col + 0.5) / width) * bw;
+
+        const p = { x: maskX, y: maskY };
+        const fillCov = (paintOp === "fill" || paintOp === "fillStroke") && runBoxes.some((b) => pointInOrientedBox(p, b, 0));
+        const strokeCov = needsStroke && runBoxes.some((b) => pointInOrientedBox(p, b, halfW));
+
+        const fillA = fillCov ? Math.round(255 * fillMul) : 0;
+        const strokeA = strokeCov ? Math.round(255 * strokeMul) : 0;
+        if (fillA === 0 && strokeA === 0) {continue;}
+
+        const dst = idx * 3;
+        if (strokeA === 0) {
+          data[dst] = fillRgb[0];
+          data[dst + 1] = fillRgb[1];
+          data[dst + 2] = fillRgb[2];
+          alpha[idx] = fillA;
+          continue;
+        }
+        if (fillA === 0) {
+          data[dst] = strokeRgb[0];
+          data[dst + 1] = strokeRgb[1];
+          data[dst + 2] = strokeRgb[2];
+          alpha[idx] = strokeA;
+          continue;
+        }
+
+        // Composite: stroke over fill (straight alpha).
+        const outA = strokeA + Math.round((fillA * (255 - strokeA)) / 255);
+        const premFillScale = (255 - strokeA) / 255;
+        const premR = strokeRgb[0] * strokeA + Math.round(fillRgb[0] * fillA * premFillScale);
+        const premG = strokeRgb[1] * strokeA + Math.round(fillRgb[1] * fillA * premFillScale);
+        const premB = strokeRgb[2] * strokeA + Math.round(fillRgb[2] * fillA * premFillScale);
+        data[dst] = Math.round(premR / outA);
+        data[dst + 1] = Math.round(premG / outA);
+        data[dst + 2] = Math.round(premB / outA);
+        alpha[idx] = outA;
+      }
+    }
+
+    return { kind: "raster", width, height, data, alpha };
+  };
+
+  if (!hasImages) {
+    const maxSize = options.vectorSoftMaskMaxSize;
+    if (maxSize == null) {return null;}
+    if (!Number.isFinite(maxSize) || maxSize <= 0) {throw new Error(`vectorSoftMaskMaxSize must be > 0 (got ${maxSize})`);}
+    if (pathElements.length === 0 && textElements.length === 0) {return null;}
+
+    const [llx, lly, urx, ury] = bbox;
+    const bw = urx - llx;
+    const bh = ury - lly;
+    if (!Number.isFinite(bw) || !Number.isFinite(bh) || bw <= 0 || bh <= 0) {return null;}
+
+    const maxDim = Math.max(bw, bh);
+    const scale = maxSize / maxDim;
+    const width = Math.max(1, Math.round(bw * scale));
+    const height = Math.max(1, Math.round(bh * scale));
+
+    const pixelCount = width * height;
+    const opaqueMask = new Uint8Array(pixelCount);
+    opaqueMask.fill(255);
+    const renderGrid: PdfSoftMask = {
+      kind: "Alpha",
+      width,
+      height,
+      alpha: opaqueMask,
+      bbox: [bbox[0], bbox[1], bbox[2], bbox[3]],
+      matrix: IDENTITY_MATRIX,
+    };
+
+    if (kind === "Alpha") {
+      const out = new Uint8Array(pixelCount);
+      for (const elem of elements) {
+        if (elem.type === "path") {
+          if (elem.paintOp === "none" || elem.paintOp === "clip") {continue;}
+
+          const raster = rasterizeSoftMaskedFillPath({
+            ...elem,
+            graphicsState: { ...elem.graphicsState, softMaskAlpha: 1, softMask: renderGrid },
+          });
+          if (!raster || raster.type !== "image" || !raster.alpha) {return null;}
+          if (raster.width !== width || raster.height !== height) {return null;}
+
+          for (let i = 0; i < pixelCount; i += 1) {
+            const srcA = raster.alpha[i] ?? 0;
+            if (srcA === 0) {continue;}
+            if (groupKnockout) {
+              out[i] = srcA;
+            } else {
+              const dstA = out[i] ?? 0;
+              out[i] = srcA + Math.round((dstA * (255 - srcA)) / 255);
+            }
+          }
+          continue;
+        }
+        if (elem.type === "text") {
+          const layer = rasterizeTextElementToGrid(elem, width, height, bbox, fontMappings);
+          if (layer === null) {return null;}
+          if (!layer) {continue;}
+
+          for (let i = 0; i < pixelCount; i += 1) {
+            const srcA = layer.alpha[i] ?? 0;
+          if (srcA === 0) {continue;}
+          if (groupKnockout) {
+            out[i] = srcA;
+          } else {
+            const dstA = out[i] ?? 0;
+            out[i] = srcA + Math.round((dstA * (255 - srcA)) / 255);
+          }
+        }
+          continue;
+        }
+        return null;
+      }
+      return { kind, width, height, alpha: out, bbox: [bbox[0], bbox[1], bbox[2], bbox[3]], matrix };
+    }
+
+    const outA = new Uint16Array(pixelCount);
+    const premR = new Uint32Array(pixelCount);
+    const premG = new Uint32Array(pixelCount);
+    const premB = new Uint32Array(pixelCount);
+
+    for (const elem of elements) {
+      let layer: RasterLayer | null | undefined = undefined;
+
+      if (elem.type === "path") {
+        if (elem.paintOp === "none" || elem.paintOp === "clip") {continue;}
+
+        const raster = rasterizeSoftMaskedFillPath({
+          ...elem,
+          graphicsState: { ...elem.graphicsState, softMaskAlpha: 1, softMask: renderGrid },
+        });
+        if (!raster || raster.type !== "image" || !raster.alpha) {return null;}
+        if (raster.width !== width || raster.height !== height) {return null;}
+        layer = { kind: "raster", width, height, data: raster.data, alpha: raster.alpha };
+      } else if (elem.type === "text") {
+        layer = rasterizeTextElementToGrid(elem, width, height, bbox, fontMappings);
+        if (layer === null) {return null;}
+        if (!layer) {continue;}
+      } else {
+        return null;
+      }
+
+      for (let i = 0; i < pixelCount; i += 1) {
+        const srcA = layer.alpha[i] ?? 0;
+        if (srcA === 0) {continue;}
+        const o = i * 3;
+        const r = layer.data[o] ?? 0;
+        const g = layer.data[o + 1] ?? 0;
+        const b = layer.data[o + 2] ?? 0;
+
+        if (groupKnockout) {
+          premR[i] = r * srcA;
+          premG[i] = g * srcA;
+          premB[i] = b * srcA;
+          outA[i] = srcA;
+        } else {
+          const invA = 255 - srcA;
+          premR[i] = r * srcA + Math.round((premR[i] * invA) / 255);
+          premG[i] = g * srcA + Math.round((premG[i] * invA) / 255);
+          premB[i] = b * srcA + Math.round((premB[i] * invA) / 255);
+          outA[i] = srcA + Math.round((outA[i] * invA) / 255);
+        }
+      }
+    }
+
+    const out = new Uint8Array(pixelCount);
+    for (let i = 0; i < pixelCount; i += 1) {
+      const a = outA[i] ?? 0;
+      if (a === 0) {
+        out[i] = 0;
+        continue;
+      }
+      const r = Math.round((premR[i] ?? 0) / a);
+      const g = Math.round((premG[i] ?? 0) / a);
+      const b = Math.round((premB[i] ?? 0) / a);
+      const lum = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+      out[i] = Math.round((lum * a) / 255);
+    }
+
+    return { kind, width, height, alpha: out, bbox: [bbox[0], bbox[1], bbox[2], bbox[3]], matrix };
+  }
+
+  const xObjects = getXObjectsDict(page, resources);
+  if (!xObjects) {return null;}
+
+  const decodedImagesByName = new Map<
+    string,
+    Readonly<{ readonly width: number; readonly height: number; readonly rgba: Uint8ClampedArray; readonly smaskAlpha: Uint8Array | null }>
+  >();
+
+  let width: number | null = null;
+  let height: number | null = null;
 
   for (const img of imageElements) {
+    const key = img.name;
+    const cached = decodedImagesByName.get(key);
+    if (cached) {
+      if (width == null || height == null) {
+        width = cached.width;
+        height = cached.height;
+      } else if (cached.width !== width || cached.height !== height) {
+        return null;
+      }
+      continue;
+    }
+
     const stream = resolveXObjectStreamByName(page, xObjects, img.name);
     if (!stream) {return null;}
 
@@ -357,21 +857,18 @@ function tryExtractPerPixelSoftMaskFromElements(
     if (!baseDecoded) {return null;}
     if (baseDecoded.width !== w || baseDecoded.height !== h) {return null;}
 
-    if (decodedImages.length === 0) {
+    if (width == null || height == null) {
       width = w;
       height = h;
-    } else {
-      if (w !== width || h !== height) {return null;}
+    } else if (w !== width || h !== height) {
+      return null;
     }
-
-    const imageMatrix = img.graphicsState.ctm;
-    const imageMatrixInv = invertMatrix(imageMatrix);
-    if (!imageMatrixInv) {return null;}
 
     const smaskStream = asStream(resolve(page, dictGet(dict, "SMask")));
     const smaskDecoded = smaskStream ? decodeImageStreamToRgba(smaskStream) : null;
     const smaskAlpha = (() => {
       if (!smaskDecoded) {return null;}
+      if (!width || !height) {return null;}
       if (smaskDecoded.width !== width || smaskDecoded.height !== height) {return null;}
       const out = new Uint8Array(width * height);
       for (let i = 0; i < width * height; i += 1) {
@@ -380,14 +877,16 @@ function tryExtractPerPixelSoftMaskFromElements(
       return out;
     })();
 
-    decodedImages.push({
+    if (width == null || height == null) {return null;}
+    decodedImagesByName.set(key, {
       width,
       height,
       rgba: baseDecoded.rgba,
       smaskAlpha,
-      imageMatrixInv,
     });
   }
+
+  if (width == null || height == null) {return null;}
 
   const [llx, lly, urx, ury] = bbox;
   const bw = urx - llx;
@@ -397,6 +896,69 @@ function tryExtractPerPixelSoftMaskFromElements(
   const pixelCount = width * height;
   const alpha = new Uint8Array(pixelCount);
 
+  const layers: MaskLayer[] = [];
+  const opaqueMask = new Uint8Array(pixelCount);
+  opaqueMask.fill(255);
+  const renderGrid: PdfSoftMask = {
+    kind: "Alpha",
+    width,
+    height,
+    alpha: opaqueMask,
+    bbox: [bbox[0], bbox[1], bbox[2], bbox[3]],
+    matrix: IDENTITY_MATRIX,
+  };
+
+  for (const elem of elements) {
+    if (elem.type === "image") {
+      const decoded = decodedImagesByName.get(elem.name);
+      if (!decoded) {return null;}
+      const imageMatrixInv = invertMatrix(elem.graphicsState.ctm);
+      if (!imageMatrixInv) {return null;}
+      layers.push({
+        kind: "image",
+        width: decoded.width,
+        height: decoded.height,
+        rgba: decoded.rgba,
+        smaskAlpha: decoded.smaskAlpha,
+        imageMatrixInv,
+      });
+      continue;
+    }
+    if (elem.type === "path") {
+      if (elem.paintOp === "none" || elem.paintOp === "clip") {
+        continue;
+      }
+      const raster = rasterizeSoftMaskedFillPath({
+        ...elem,
+        graphicsState: {
+          ...elem.graphicsState,
+          softMaskAlpha: 1,
+          softMask: renderGrid,
+        },
+      });
+      if (!raster || raster.type !== "image") {
+        return null;
+      }
+      if (!raster.alpha) {
+        return null;
+      }
+      if (raster.width !== width || raster.height !== height) {
+        return null;
+      }
+      layers.push({ kind: "raster", width, height, data: raster.data, alpha: raster.alpha });
+      continue;
+    }
+    if (elem.type === "text") {
+      const layer = rasterizeTextElementToGrid(elem, width, height, bbox, fontMappings);
+      if (layer === null) {return null;}
+      if (!layer) {continue;}
+      if (layer.width !== width || layer.height !== height) {return null;}
+      layers.push(layer);
+      continue;
+    }
+    return null;
+  }
+
   for (let row = 0; row < height; row += 1) {
     const maskY = ury - ((row + 0.5) / height) * bh;
     for (let col = 0; col < width; col += 1) {
@@ -405,30 +967,39 @@ function tryExtractPerPixelSoftMaskFromElements(
 
       if (kind === "Alpha") {
         let outA = 0;
-        for (const img of decodedImages) {
-          const imagePoint = transformPoint({ x: maskX, y: maskY }, img.imageMatrixInv);
-          const u = imagePoint.x;
-          const v = imagePoint.y;
-          if (u < 0 || u >= 1 || v < 0 || v >= 1) {
-            continue;
+        for (const layer of layers) {
+          let srcA = 0;
+          if (layer.kind === "raster") {
+            srcA = layer.alpha[idx] ?? 0;
+          } else {
+            const imagePoint = transformPoint({ x: maskX, y: maskY }, layer.imageMatrixInv);
+            const u = imagePoint.x;
+            const v = imagePoint.y;
+            if (u < 0 || u >= 1 || v < 0 || v >= 1) {
+              continue;
+            }
+            const srcCol = Math.min(width - 1, Math.max(0, Math.floor(u * width)));
+            const srcRow = Math.min(height - 1, Math.max(0, Math.floor((1 - v) * height)));
+            const srcIdx = srcRow * width + srcCol;
+
+            srcA = layer.smaskAlpha ? (layer.smaskAlpha[srcIdx] ?? 0) : -1;
+            if (srcA < 0) {
+              const o = srcIdx * 4;
+              const r = layer.rgba[o] ?? 0;
+              const g = layer.rgba[o + 1] ?? 0;
+              const b = layer.rgba[o + 2] ?? 0;
+              // Heuristic fallback: accept grayscale images as alpha sources.
+              if (r !== g || g !== b) {return null;}
+              srcA = r;
+            }
           }
 
-          const srcCol = Math.min(width - 1, Math.max(0, Math.floor(u * width)));
-          const srcRow = Math.min(height - 1, Math.max(0, Math.floor((1 - v) * height)));
-          const srcIdx = srcRow * width + srcCol;
-
-          let srcA = img.smaskAlpha ? (img.smaskAlpha[srcIdx] ?? 0) : null;
-          if (srcA == null) {
-            const o = srcIdx * 4;
-            const r = img.rgba[o] ?? 0;
-            const g = img.rgba[o + 1] ?? 0;
-            const b = img.rgba[o + 2] ?? 0;
-            // Heuristic fallback: accept grayscale images as alpha sources.
-            if (r !== g || g !== b) {return null;}
-            srcA = r;
+          if (srcA === 0) {continue;}
+          if (groupKnockout) {
+            outA = srcA;
+          } else {
+            outA = srcA + Math.round((outA * (255 - srcA)) / 255);
           }
-
-          outA = srcA + Math.round((outA * (255 - srcA)) / 255);
         }
         alpha[idx] = outA;
         continue;
@@ -439,33 +1010,51 @@ function tryExtractPerPixelSoftMaskFromElements(
       let premG = 0;
       let premB = 0;
 
-      for (const img of decodedImages) {
-        const imagePoint = transformPoint({ x: maskX, y: maskY }, img.imageMatrixInv);
-        const u = imagePoint.x;
-        const v = imagePoint.y;
-        if (u < 0 || u >= 1 || v < 0 || v >= 1) {
-          continue;
+      for (const layer of layers) {
+        let srcA = 0;
+        let r = 0;
+        let g = 0;
+        let b = 0;
+
+        if (layer.kind === "raster") {
+          srcA = layer.alpha[idx] ?? 0;
+          if (srcA === 0) {continue;}
+          const o = idx * 3;
+          r = layer.data[o] ?? 0;
+          g = layer.data[o + 1] ?? 0;
+          b = layer.data[o + 2] ?? 0;
+        } else {
+          const imagePoint = transformPoint({ x: maskX, y: maskY }, layer.imageMatrixInv);
+          const u = imagePoint.x;
+          const v = imagePoint.y;
+          if (u < 0 || u >= 1 || v < 0 || v >= 1) {
+            continue;
+          }
+          const srcCol = Math.min(width - 1, Math.max(0, Math.floor(u * width)));
+          const srcRow = Math.min(height - 1, Math.max(0, Math.floor((1 - v) * height)));
+          const srcIdx = srcRow * width + srcCol;
+
+          srcA = layer.smaskAlpha ? (layer.smaskAlpha[srcIdx] ?? 0) : 255;
+          if (srcA === 0) {continue;}
+
+          const o = srcIdx * 4;
+          r = layer.rgba[o] ?? 0;
+          g = layer.rgba[o + 1] ?? 0;
+          b = layer.rgba[o + 2] ?? 0;
         }
-
-        const srcCol = Math.min(width - 1, Math.max(0, Math.floor(u * width)));
-        const srcRow = Math.min(height - 1, Math.max(0, Math.floor((1 - v) * height)));
-        const srcIdx = srcRow * width + srcCol;
-
-        const srcA = img.smaskAlpha ? (img.smaskAlpha[srcIdx] ?? 0) : 255;
-        if (srcA === 0) {
-          continue;
-        }
-
-        const o = srcIdx * 4;
-        const r = img.rgba[o] ?? 0;
-        const g = img.rgba[o + 1] ?? 0;
-        const b = img.rgba[o + 2] ?? 0;
 
         const invA = 255 - srcA;
-        premR = r * srcA + Math.round((premR * invA) / 255);
-        premG = g * srcA + Math.round((premG * invA) / 255);
-        premB = b * srcA + Math.round((premB * invA) / 255);
-        outA = srcA + Math.round((outA * invA) / 255);
+        if (groupKnockout) {
+          premR = r * srcA;
+          premG = g * srcA;
+          premB = b * srcA;
+          outA = srcA;
+        } else {
+          premR = r * srcA + Math.round((premR * invA) / 255);
+          premG = g * srcA + Math.round((premG * invA) / 255);
+          premB = b * srcA + Math.round((premB * invA) / 255);
+          outA = srcA + Math.round((outA * invA) / 255);
+        }
       }
 
       if (outA === 0) {
@@ -491,7 +1080,7 @@ function tryExtractPerPixelSoftMaskFromElements(
   };
 }
 
-function parseSoftMask(page: NativePdfPage, obj: PdfObject | undefined): SoftMaskParseResult {
+function parseSoftMask(page: NativePdfPage, obj: PdfObject | undefined, options: ExtGStateExtractOptions): SoftMaskParseResult {
   if (!obj) {return { present: false };}
 
   try {
@@ -527,13 +1116,17 @@ function parseSoftMask(page: NativePdfPage, obj: PdfObject | undefined): SoftMas
     const matrix = parseMatrix6(page, dictGet(g.dict, "Matrix")) ?? IDENTITY_MATRIX;
 
     const resources = asDict(resolve(page, dictGet(g.dict, "Resources")));
-    const extGState = resources ? extractExtGStateFromResourcesNative(page, resources) : new Map();
+    const extGState = resources ? extractExtGStateFromResourcesNative(page, resources, options) : new Map();
+    const fontMappings = resources ? extractFontMappingsFromResourcesNative(page, resources) : new Map();
+
+    const group = asDict(resolve(page, dictGet(g.dict, "Group")));
+    const groupKnockout = group ? (asBool(resolve(page, dictGet(group, "K"))) === true) : false;
 
     const content = new TextDecoder("latin1").decode(decodePdfStream(g));
     const tokens = tokenizeContentStream(content);
     const gfxStack = createGraphicsStateStack();
     const gfxOps = createGfxOpsFromStack(gfxStack);
-    const parse = createParser(gfxOps, new Map(), { extGState });
+    const parse = createParser(gfxOps, fontMappings, { extGState });
     const elements = parse(tokens);
 
     const extracted = tryExtractConstantSoftMaskValueFromElements(elements, bbox, kind);
@@ -541,7 +1134,7 @@ function parseSoftMask(page: NativePdfPage, obj: PdfObject | undefined): SoftMas
       return { present: true, softMaskAlpha: extracted, softMask: undefined };
     }
 
-    const perPixel = tryExtractPerPixelSoftMaskFromElements(page, elements, bbox, matrix, kind, resources);
+    const perPixel = tryExtractPerPixelSoftMaskFromElements(page, elements, bbox, matrix, kind, resources, fontMappings, options, groupKnockout);
     if (perPixel) {
       return { present: true, softMaskAlpha: 1, softMask: perPixel };
     }
@@ -564,11 +1157,11 @@ function parseSoftMask(page: NativePdfPage, obj: PdfObject | undefined): SoftMas
 
 
 /** Extract ExtGState entries from a native page’s resources. */
-export function extractExtGStateNative(page: NativePdfPage): ReadonlyMap<string, ExtGStateParams> {
+export function extractExtGStateNative(page: NativePdfPage, options: ExtGStateExtractOptions = {}): ReadonlyMap<string, ExtGStateParams> {
   const resources = page.getResourcesDict();
   if (!resources) {return new Map();}
 
-  return extractExtGStateFromResourcesNative(page, resources);
+  return extractExtGStateFromResourcesNative(page, resources, options);
 }
 
 
@@ -585,6 +1178,7 @@ export function extractExtGStateNative(page: NativePdfPage): ReadonlyMap<string,
 export function extractExtGStateFromResourcesNative(
   page: NativePdfPage,
   resources: PdfDict,
+  options: ExtGStateExtractOptions = {},
 ): ReadonlyMap<string, ExtGStateParams> {
   const extObj = resolve(page, dictGet(resources, "ExtGState"));
   const ext = asDict(extObj);
@@ -599,7 +1193,7 @@ export function extractExtGStateFromResourcesNative(
     const ca = asNumber(dictGet(dict, "ca"));
     const CA = asNumber(dictGet(dict, "CA"));
     const BM = parseBlendMode(page, dictGet(dict, "BM"));
-    const SMask = parseSoftMask(page, dictGet(dict, "SMask"));
+    const SMask = parseSoftMask(page, dictGet(dict, "SMask"), options);
     const LW = asNumber(dictGet(dict, "LW"));
     const LC = asNumber(dictGet(dict, "LC"));
     const LJ = asNumber(dictGet(dict, "LJ"));
@@ -667,8 +1261,8 @@ export function extractExtGStateFromResourcesNative(
 
 
 /** Extract only alpha-related ExtGState fields (native). */
-export function extractExtGStateAlphaNative(page: NativePdfPage): ReadonlyMap<string, ExtGStateAlpha> {
-  const full = extractExtGStateNative(page);
+export function extractExtGStateAlphaNative(page: NativePdfPage, options: ExtGStateExtractOptions = {}): ReadonlyMap<string, ExtGStateAlpha> {
+  const full = extractExtGStateNative(page, options);
   const out = new Map<string, ExtGStateAlpha>();
   for (const [name, params] of full) {
     const alpha: { fillAlpha?: number; strokeAlpha?: number } = {};

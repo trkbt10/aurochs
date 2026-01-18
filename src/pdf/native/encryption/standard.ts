@@ -7,9 +7,15 @@ import { decodePdfStringBytes } from "../encoding";
 import { concatBytes, int32le, bytesEqual, objKeySalt } from "./bytes";
 import { md5 } from "./md5";
 import { rc4 } from "./rc4";
+import { aes128CbcDecryptPkcs7 } from "./aes";
 
 export type PdfDecrypter = Readonly<{
-  decryptBytes: (objNum: number, gen: number, bytes: Uint8Array) => Uint8Array;
+  decryptBytes: (
+    objNum: number,
+    gen: number,
+    bytes: Uint8Array,
+    options: Readonly<{ kind: "string" | "stream"; cryptFilterName?: string }> | null,
+  ) => Uint8Array;
 }>;
 
 const PASSWORD_PADDING = new Uint8Array([
@@ -33,6 +39,21 @@ function asName(obj: PdfObject | undefined): string | null {
 
 function asString(obj: PdfObject | undefined): PdfString | null {
   return obj?.type === "string" ? obj : null;
+}
+
+function asDict(obj: PdfObject | undefined): PdfDict | null {
+  return obj?.type === "dict" ? obj : null;
+}
+
+function asBool(obj: PdfObject | undefined): boolean | null {
+  return obj?.type === "bool" ? obj.value : null;
+}
+
+function asNameOrString(obj: PdfObject | undefined): string | null {
+  if (!obj) {return null;}
+  if (obj.type === "name") {return obj.value;}
+  if (obj.type === "string") {return obj.text;}
+  return null;
 }
 
 function encodePasswordBytes(password: string): Uint8Array {
@@ -82,8 +103,11 @@ function computeFileKeyR3(args: {
   readonly p: number;
   readonly id0: Uint8Array;
   readonly keyLengthBytes: number;
+  readonly encryptMetadata: boolean;
 }): Uint8Array {
-  const seed = concatBytes(args.password32, args.o, int32le(args.p), args.id0);
+  const seed = args.encryptMetadata
+    ? concatBytes(args.password32, args.o, int32le(args.p), args.id0)
+    : concatBytes(args.password32, args.o, int32le(args.p), args.id0, int32le(-1));
   const state = { digest: md5(seed).slice(0, args.keyLengthBytes) };
   for (let i = 0; i < 50; i += 1) {
     state.digest = md5(state.digest).slice(0, args.keyLengthBytes);
@@ -141,6 +165,7 @@ function isValidUserPasswordR3(args: {
   readonly p: number;
   readonly id0: Uint8Array;
   readonly keyLengthBytes: number;
+  readonly encryptMetadata: boolean;
 }): { ok: true; fileKey: Uint8Array } | { ok: false } {
   const password32 = padPassword32(encodePasswordBytes(args.password));
   const fileKey = computeFileKeyR3({
@@ -149,6 +174,7 @@ function isValidUserPasswordR3(args: {
     p: args.p,
     id0: args.id0,
     keyLengthBytes: args.keyLengthBytes,
+    encryptMetadata: args.encryptMetadata,
   });
   const u16 = computeUValueR3(fileKey, args.id0);
   const candidate = args.u.slice(0, 16);
@@ -184,6 +210,7 @@ function tryFileKeyFromOwnerPasswordR3(args: {
   readonly p: number;
   readonly id0: Uint8Array;
   readonly keyLengthBytes: number;
+  readonly encryptMetadata: boolean;
 }): Uint8Array | null {
   const ownerPassword32 = padPassword32(encodePasswordBytes(args.password));
   const ownerKey = computeOwnerKeyR3(ownerPassword32, args.keyLengthBytes);
@@ -198,6 +225,7 @@ function tryFileKeyFromOwnerPasswordR3(args: {
     p: args.p,
     id0: args.id0,
     keyLengthBytes: args.keyLengthBytes,
+    encryptMetadata: args.encryptMetadata,
   });
   const expectedU16 = computeUValueR3(fileKey, args.id0);
   return bytesEqual(expectedU16, args.u.slice(0, 16)) ? fileKey : null;
@@ -208,6 +236,57 @@ function deriveObjectKeyRc4(fileKey: Uint8Array, objNum: number, gen: number): U
   const digest = md5(concatBytes(fileKey, salt));
   const n = Math.min(fileKey.length + 5, 16);
   return digest.slice(0, n);
+}
+
+const AES_SALT = new Uint8Array([0x73, 0x41, 0x6c, 0x54]); // "sAlT"
+function deriveObjectKeyAesV2(fileKey: Uint8Array, objNum: number, gen: number): Uint8Array {
+  const salt = objKeySalt(objNum, gen);
+  const digest = md5(concatBytes(fileKey, salt, AES_SALT));
+  const n = Math.min(fileKey.length + 5, 16);
+  return digest.slice(0, n);
+}
+
+type CryptMethod = "None" | "V2" | "AESV2";
+type CryptFilter = Readonly<{ method: CryptMethod }>;
+
+function parseCryptFilterMethod(dict: PdfDict): CryptMethod | null {
+  const cfm = asName(dictGet(dict, "CFM"));
+  if (!cfm) {return null;}
+  if (cfm === "None") {return "None";}
+  if (cfm === "V2") {return "V2";}
+  if (cfm === "AESV2") {return "AESV2";}
+  return null;
+}
+
+function parseCryptFilters(encryptDict: PdfDict): {
+  readonly strF: string;
+  readonly stmF: string;
+  readonly filters: ReadonlyMap<string, CryptFilter>;
+} {
+  const cf = asDict(dictGet(encryptDict, "CF"));
+  if (!cf) {throw new Error("Invalid encryption dictionary for V=4/R=4: /CF is missing");}
+
+  const strF = asNameOrString(dictGet(encryptDict, "StrF"));
+  const stmF = asNameOrString(dictGet(encryptDict, "StmF"));
+  if (!strF || !stmF) {throw new Error("Invalid encryption dictionary for V=4/R=4: /StrF or /StmF is missing");}
+
+  const out = new Map<string, CryptFilter>();
+  for (const [name, value] of cf.map.entries()) {
+    const d = asDict(value);
+    if (!d) {continue;}
+    const method = parseCryptFilterMethod(d);
+    if (!method) {continue;}
+    out.set(name, { method });
+  }
+
+  return { strF, stmF, filters: out };
+}
+
+function resolveCryptFilter(filters: ReadonlyMap<string, CryptFilter>, name: string): CryptFilter {
+  if (name === "Identity") {return { method: "None" };}
+  const found = filters.get(name);
+  if (!found) {throw new Error(`Unknown crypt filter: ${name}`);}
+  return found;
 }
 
 
@@ -237,6 +316,7 @@ export function createStandardDecrypter(args: {
   const u = asString(dictGet(args.encryptDict, "U"))?.bytes;
   const p = asNumber(dictGet(args.encryptDict, "P"));
   const lengthBits = asNumber(dictGet(args.encryptDict, "Length"));
+  const encryptMetadata = asBool(dictGet(args.encryptDict, "EncryptMetadata")) ?? true;
 
   if (v == null || r == null || !o || !u || p == null) {
     const hint = [
@@ -301,6 +381,7 @@ export function createStandardDecrypter(args: {
       p: pv,
       id0: args.fileId0,
       keyLengthBytes,
+      encryptMetadata,
     });
 
     const fileKey = (() => {
@@ -312,6 +393,7 @@ export function createStandardDecrypter(args: {
         p: pv,
         id0: args.fileId0,
         keyLengthBytes,
+        encryptMetadata,
       });
     })();
 
@@ -322,6 +404,77 @@ export function createStandardDecrypter(args: {
 
     return {
       decryptBytes: (objNum, gen, bytes) => rc4(deriveObjectKeyRc4(fileKey, objNum, gen), bytes),
+    };
+  }
+
+  if (v === 4 && r === 4) {
+    const keyLengthBytes = lengthBits != null ? Math.trunc(lengthBits / 8) : 16;
+    if (keyLengthBytes < 5 || keyLengthBytes > 16) {
+      throw new Error(`Unsupported key length for V=4/R=4: ${keyLengthBytes} bytes`);
+    }
+
+    const cf = parseCryptFilters(args.encryptDict);
+    const strFilter = resolveCryptFilter(cf.filters, cf.strF);
+    const stmFilter = resolveCryptFilter(cf.filters, cf.stmF);
+    const hasAes = strFilter.method === "AESV2" || stmFilter.method === "AESV2";
+    if (hasAes && keyLengthBytes !== 16) {
+      throw new Error(`AESV2 requires /Length 128 (got ${keyLengthBytes * 8})`);
+    }
+
+    const asUser = isValidUserPasswordR3({
+      password: args.password,
+      o,
+      u,
+      p: pv,
+      id0: args.fileId0,
+      keyLengthBytes,
+      encryptMetadata,
+    });
+
+    const fileKey = (() => {
+      if (asUser.ok) {return asUser.fileKey;}
+      return tryFileKeyFromOwnerPasswordR3({
+        password: args.password,
+        o,
+        u,
+        p: pv,
+        id0: args.fileId0,
+        keyLengthBytes,
+        encryptMetadata,
+      });
+    })();
+
+    if (!fileKey) {
+      const preview = decodePdfStringBytes(u.slice(0, 8));
+      throw new Error(`Invalid password for encrypted PDF (U starts with ${JSON.stringify(preview)})`);
+    }
+
+    return {
+      decryptBytes: (objNum, gen, bytes, options) => {
+        if (!options) {throw new Error("decrypt options are required for V=4/R=4");}
+
+        const kind = options.kind;
+        if (kind !== "string" && kind !== "stream") {throw new Error("Invalid decrypt kind");}
+
+        const filterName = options.cryptFilterName ?? (kind === "string" ? cf.strF : cf.stmF);
+        const filter = resolveCryptFilter(cf.filters, filterName);
+
+        switch (filter.method) {
+          case "None":
+            return bytes;
+          case "V2":
+            return rc4(deriveObjectKeyRc4(fileKey, objNum, gen), bytes);
+          case "AESV2": {
+            const key = deriveObjectKeyAesV2(fileKey, objNum, gen);
+            if (key.length !== 16) {throw new Error(`AESV2 object key must be 16 bytes (got ${key.length})`);}
+            return aes128CbcDecryptPkcs7(key, bytes);
+          }
+          default: {
+            const exhaustive: never = filter.method;
+            throw new Error(`Unsupported crypt filter method: ${String(exhaustive)}`);
+          }
+        }
+      },
     };
   }
 

@@ -6,6 +6,7 @@ import { loadNativePdfDocument } from "../document";
 import { concatBytes, int32le, objKeySalt } from "./bytes";
 import { md5 } from "./md5";
 import { rc4 } from "./rc4";
+import { aes128CbcEncryptPkcs7 } from "./aes";
 
 const PASSWORD_PADDING = new Uint8Array([
   0x28, 0xbf, 0x4e, 0x5e, 0x4e, 0x75, 0x8a, 0x41,
@@ -68,6 +69,12 @@ function computeU16R3(fileKey: Uint8Array, id0: Uint8Array): Uint8Array {
 
 function deriveObjectKeyRc4(fileKey: Uint8Array, objNum: number, gen: number): Uint8Array {
   const digest = md5(concatBytes(fileKey, objKeySalt(objNum, gen)));
+  return digest.slice(0, Math.min(fileKey.length + 5, 16));
+}
+
+function deriveObjectKeyAesV2(fileKey: Uint8Array, objNum: number, gen: number): Uint8Array {
+  const aesSalt = new Uint8Array([0x73, 0x41, 0x6c, 0x54]); // "sAlT"
+  const digest = md5(concatBytes(fileKey, objKeySalt(objNum, gen), aesSalt));
   return digest.slice(0, Math.min(fileKey.length + 5, 16));
 }
 
@@ -168,6 +175,102 @@ describe("Standard Security Handler (V=2/R=3)", () => {
 
   it("rejects with wrong password", () => {
     const bytes = buildEncryptedPdfR3({ userPassword: "pw", ownerPassword: "pw", text: "HELLO" });
+    expect(() => loadNativePdfDocument(bytes, { encryption: { mode: "password", password: "wrong" } })).toThrow(/password/i);
+  });
+});
+
+function buildEncryptedPdfR4AesV2(args: {
+  readonly userPassword: string;
+  readonly ownerPassword: string;
+  readonly text: string;
+}): Uint8Array {
+  const id0 = new Uint8Array(Array.from({ length: 16 }, (_, i) => i));
+  const p = -4;
+  const keyLengthBytes = 16;
+
+  const userPassword32 = padPassword32(encodePasswordBytes(args.userPassword));
+  const ownerPassword32 = padPassword32(encodePasswordBytes(args.ownerPassword));
+  const ownerKey = computeOwnerKeyR3(ownerPassword32, keyLengthBytes);
+  const o = computeOValueR3(ownerKey, userPassword32);
+  const fileKey = computeFileKeyR3({ userPassword32, o, p, id0, keyLengthBytes });
+  const u16 = computeU16R3(fileKey, id0);
+  const u = new Uint8Array(32);
+  u.set(u16, 0);
+
+  const contentPlain = `BT /F1 12 Tf 72 720 Td (${args.text}) Tj ET\n`;
+  const contentPlainBytes = asciiBytes(contentPlain);
+  const objKey = deriveObjectKeyAesV2(fileKey, 4, 0);
+  if (objKey.length !== 16) {throw new Error("expected 16-byte AES object key");}
+
+  const iv = new Uint8Array(Array.from({ length: 16 }, (_, i) => 15 - i));
+  const encryptedContent = aes128CbcEncryptPkcs7(objKey, iv, contentPlainBytes);
+
+  const obj1 = asciiBytes("1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n");
+  const obj2 = asciiBytes("2 0 obj\n<< /Type /Pages /Count 1 /Kids [3 0 R] >>\nendobj\n");
+  const obj3 = asciiBytes(
+    "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> >> >> /Contents 4 0 R >>\nendobj\n",
+  );
+
+  const streamPrefix = asciiBytes(`4 0 obj\n<< /Length ${encryptedContent.length} >>\nstream\n`);
+  const streamSuffix = asciiBytes("\nendstream\nendobj\n");
+  const obj4 = concatBytes(streamPrefix, encryptedContent, streamSuffix);
+
+  const encryptDict = asciiBytes(
+    `5 0 obj\n<< /Filter /Standard /V 4 /R 4 /Length 128 /O <${toHex(o)}> /U <${toHex(u)}> /P ${p} ` +
+    "/CF << /StdCF << /CFM /AESV2 >> >> /StmF /StdCF /StrF /StdCF >>\nendobj\n",
+  );
+
+  const header = asciiBytes("%PDF-1.4\n");
+  const objects = [obj1, obj2, obj3, obj4, encryptDict];
+
+  const offsets = new Map<number, number>();
+  const cursor = { value: header.length };
+  offsets.set(1, cursor.value);
+  cursor.value += obj1.length;
+  offsets.set(2, cursor.value);
+  cursor.value += obj2.length;
+  offsets.set(3, cursor.value);
+  cursor.value += obj3.length;
+  offsets.set(4, cursor.value);
+  cursor.value += obj4.length;
+  offsets.set(5, cursor.value);
+  cursor.value += encryptDict.length;
+
+  const xrefStart = cursor.value;
+  const size = 6;
+  const xrefLines: string[] = [];
+  xrefLines.push("xref\n");
+  xrefLines.push(`0 ${size}\n`);
+  xrefLines.push("0000000000 65535 f \n");
+  for (let i = 1; i < size; i += 1) {
+    const off = offsets.get(i) ?? 0;
+    xrefLines.push(`${String(off).padStart(10, "0")} 00000 n \n`);
+  }
+
+  const idHex = toHex(id0);
+  const trailer = `trailer\n<< /Size ${size} /Root 1 0 R /Encrypt 5 0 R /ID [<${idHex}> <${idHex}>] >>\nstartxref\n${xrefStart}\n%%EOF\n`;
+
+  return concatBytes(
+    header,
+    ...objects,
+    asciiBytes(xrefLines.join("")),
+    asciiBytes(trailer),
+  );
+}
+
+describe("Standard Security Handler (V=4/R=4, AESV2)", () => {
+  it("decrypts encrypted stream data with password", () => {
+    const bytes = buildEncryptedPdfR4AesV2({ userPassword: "pw", ownerPassword: "pw", text: "HELLO" });
+    const doc = loadNativePdfDocument(bytes, { encryption: { mode: "password", password: "pw" } });
+    const page0 = doc.getPages()[0]!;
+    const decoded = page0.getDecodedContentStreams();
+    expect(decoded.length).toBe(1);
+    const content = new TextDecoder("latin1").decode(decoded[0]!);
+    expect(content).toContain("(HELLO)");
+  });
+
+  it("rejects with wrong password", () => {
+    const bytes = buildEncryptedPdfR4AesV2({ userPassword: "pw", ownerPassword: "pw", text: "HELLO" });
     expect(() => loadNativePdfDocument(bytes, { encryption: { mode: "password", password: "wrong" } })).toThrow(/password/i);
   });
 });

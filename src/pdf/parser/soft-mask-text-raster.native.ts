@@ -18,10 +18,11 @@
  */
 
 import type { PdfBBox, PdfColor, PdfImage, PdfMatrix, PdfSoftMask } from "../domain";
-import { getMatrixScale, multiplyMatrices, transformPoint } from "../domain";
+import { DEFAULT_FONT_METRICS, getMatrixScale, multiplyMatrices, transformPoint } from "../domain";
 import { clamp01, cmykToRgb, grayToRgb, toByte } from "../domain/color";
 import type { FontMappings } from "../domain/font";
 import type { ParsedText, TextRun } from "./operator";
+import { calculateTextDisplacement } from "./operator";
 
 type TextPaintOp = "fill" | "stroke" | "fillStroke" | "none";
 
@@ -107,17 +108,105 @@ function bboxIntersects(a: PdfBBox, b: PdfBBox): boolean {
   return ax1 < bx2 && ax2 > bx1 && ay1 < by2 && ay2 > by1;
 }
 
-function bboxIntersection(a: PdfBBox, b: PdfBBox): PdfBBox | null {
-  const x1 = Math.max(a[0], b[0]);
-  const y1 = Math.max(a[1], b[1]);
-  const x2 = Math.min(a[2], b[2]);
-  const y2 = Math.min(a[3], b[3]);
-  if (x2 <= x1 || y2 <= y1) {return null;}
-  return [x1, y1, x2, y2];
+type OrientedBox = Readonly<{
+  readonly origin: Readonly<{ x: number; y: number }>;
+  /** Unit vector along the baseline (start → end). */
+  readonly u: Readonly<{ x: number; y: number }>;
+  /** Unit vector orthogonal to baseline (perpendicular). */
+  readonly n: Readonly<{ x: number; y: number }>;
+  /** Baseline length in page space. */
+  readonly length: number;
+  /** Lower/upper extent along `n` relative to `origin` (page units). */
+  readonly minN: number;
+  readonly maxN: number;
+  /** Axis-aligned bounds for clip culling. */
+  readonly aabb: PdfBBox;
+}>;
+
+function dot(ax: number, ay: number, bx: number, by: number): number {
+  return ax * bx + ay * by;
 }
 
-function pointInBBox(x: number, y: number, bbox: PdfBBox): boolean {
-  return x >= bbox[0] && x <= bbox[2] && y >= bbox[1] && y <= bbox[3];
+function pointInOrientedBox(p: Readonly<{ x: number; y: number }>, box: OrientedBox, pad: number): boolean {
+  const dx = p.x - box.origin.x;
+  const dy = p.y - box.origin.y;
+  const t = dot(dx, dy, box.u.x, box.u.y);
+  const s = dot(dx, dy, box.n.x, box.n.y);
+  return (
+    t >= -pad &&
+    t <= box.length + pad &&
+    s >= box.minN - pad &&
+    s <= box.maxN + pad
+  );
+}
+
+function computeOrientedBoxForRun(run: TextRun, fontMappings: FontMappings): OrientedBox | null {
+  const fontKey = run.baseFont ?? run.fontName;
+  const fontInfo = getFontInfo(fontKey, fontMappings);
+  const metrics = fontInfo?.metrics ?? DEFAULT_FONT_METRICS;
+  const codeByteWidth = fontInfo?.codeByteWidth ?? 1;
+
+  const [tmA, tmB, tmC, tmD, tmE, tmF] = run.textMatrix;
+  const textSpaceY = tmF + run.textRise;
+
+  const displacement = calculateTextDisplacement(
+    run.text,
+    run.fontSize,
+    run.charSpacing,
+    run.wordSpacing,
+    run.horizontalScaling,
+    metrics,
+    codeByteWidth,
+    0,
+  );
+
+  const start = transformPoint({ x: tmE, y: textSpaceY }, run.graphicsState.ctm);
+  const end = transformPoint({ x: tmE + displacement, y: textSpaceY }, run.graphicsState.ctm);
+
+  const vx = end.x - start.x;
+  const vy = end.y - start.y;
+  const length = Math.sqrt(vx * vx + vy * vy);
+  const ux = length > 1e-6 ? vx / length : 1;
+  const uy = length > 1e-6 ? vy / length : 0;
+  const nx = -uy;
+  const ny = ux;
+
+  const ascender = metrics.ascender ?? 800;
+  const descender = metrics.descender ?? -200;
+  const size = run.effectiveFontSize;
+  if (!Number.isFinite(size) || size <= 0) {return null;}
+
+  const minN = (descender * size) / 1000;
+  const maxN = (ascender * size) / 1000;
+
+  const corners = [
+    { x: start.x + nx * minN, y: start.y + ny * minN },
+    { x: end.x + nx * minN, y: end.y + ny * minN },
+    { x: end.x + nx * maxN, y: end.y + ny * maxN },
+    { x: start.x + nx * maxN, y: start.y + ny * maxN },
+  ];
+
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+  for (const c of corners) {
+    minX = Math.min(minX, c.x);
+    minY = Math.min(minY, c.y);
+    maxX = Math.max(maxX, c.x);
+    maxY = Math.max(maxY, c.y);
+  }
+  if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {return null;}
+
+  return {
+    origin: start,
+    u: { x: ux, y: uy },
+    n: { x: nx, y: ny },
+    length: Math.max(length, 0),
+    minN,
+    maxN,
+    aabb: [minX, minY, maxX, maxY],
+  };
 }
 
 function getFontInfo(fontKey: string, fontMappings: FontMappings) {
@@ -138,35 +227,6 @@ function getFontInfo(fontKey: string, fontMappings: FontMappings) {
   }
 
   return undefined;
-}
-
-function computeRunBBox(run: TextRun, fontMappings: FontMappings): PdfBBox | null {
-  const fontKey = run.baseFont ?? run.fontName;
-  const fontInfo = getFontInfo(fontKey, fontMappings);
-  const metrics = fontInfo?.metrics;
-  const ascender = metrics?.ascender ?? 800;
-  const descender = metrics?.descender ?? -200;
-
-  const size = run.effectiveFontSize;
-  if (!Number.isFinite(size) || size <= 0) {return null;}
-
-  const textHeight = ((ascender - descender) * size) / 1000;
-  const minY = run.y + (descender * size) / 1000;
-
-  const x1 = Math.min(run.x, run.endX);
-  const x2 = Math.max(run.x, run.endX);
-  const width = Math.max(x2 - x1, 1);
-  const height = Math.max(textHeight, 1);
-
-  if (!Number.isFinite(x1) || !Number.isFinite(minY) || !Number.isFinite(width) || !Number.isFinite(height)) {
-    return null;
-  }
-
-  return [x1, minY, x1 + width, minY + height];
-}
-
-function expandBBox(bbox: PdfBBox, pad: number): PdfBBox {
-  return [bbox[0] - pad, bbox[1] - pad, bbox[2] + pad, bbox[3] + pad];
 }
 
 export function rasterizeSoftMaskedText(parsed: ParsedText, fontMappings: FontMappings): PdfImage | null {
@@ -190,20 +250,17 @@ export function rasterizeSoftMaskedText(parsed: ParsedText, fontMappings: FontMa
   if (softMask.alpha.length !== pixelCount) {return null;}
 
   const clipBBox = gs.clipBBox;
-  const runBBoxes: PdfBBox[] = [];
+  const runBoxes: OrientedBox[] = [];
   for (const run of parsed.runs) {
-    const bbox = computeRunBBox(run, fontMappings);
-    if (!bbox) {continue;}
+    const box = computeOrientedBoxForRun(run, fontMappings);
+    if (!box) {continue;}
     if (clipBBox) {
-      if (!bboxIntersects(bbox, clipBBox)) {continue;}
-      const clipped = bboxIntersection(bbox, clipBBox);
-      if (clipped) {runBBoxes.push(clipped);}
-      continue;
+      if (!bboxIntersects(box.aabb, clipBBox)) {continue;}
     }
-    runBBoxes.push(bbox);
+    runBoxes.push(box);
   }
 
-  if (runBBoxes.length === 0) {
+  if (runBoxes.length === 0) {
     // Match the existing bbox-only behavior: no visible output.
     return null;
   }
@@ -226,9 +283,7 @@ export function rasterizeSoftMaskedText(parsed: ParsedText, fontMappings: FontMa
   const lineWidth = gs.lineWidth * ((scale.scaleX + scale.scaleY) / 2);
   const halfW = lineWidth / 2;
 
-  const strokeBBoxes = paintOp === "stroke" || paintOp === "fillStroke"
-    ? runBBoxes.map((b) => expandBBox(b, halfW))
-    : [];
+  const needsStroke = paintOp === "stroke" || paintOp === "fillStroke";
 
   for (let row = 0; row < softMask.height; row += 1) {
     for (let col = 0; col < softMask.width; col += 1) {
@@ -244,11 +299,11 @@ export function rasterizeSoftMaskedText(parsed: ParsedText, fontMappings: FontMa
       }
 
       const fillCov = paintOp === "fill" || paintOp === "fillStroke"
-        ? runBBoxes.some((b) => pointInBBox(pagePoint.x, pagePoint.y, b))
+        ? runBoxes.some((b) => pointInOrientedBox(pagePoint, b, 0))
         : false;
 
-      const strokeCov = paintOp === "stroke" || paintOp === "fillStroke"
-        ? strokeBBoxes.some((b) => pointInBBox(pagePoint.x, pagePoint.y, b))
+      const strokeCov = needsStroke
+        ? runBoxes.some((b) => pointInOrientedBox(pagePoint, b, halfW))
         : false;
 
       const fillA = fillCov ? Math.round(maskByte * fillMul) : 0;
@@ -309,4 +364,3 @@ export function rasterizeSoftMaskedText(parsed: ParsedText, fontMappings: FontMa
     graphicsState: imageGs,
   };
 }
-

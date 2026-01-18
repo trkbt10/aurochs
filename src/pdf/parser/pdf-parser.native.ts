@@ -35,6 +35,14 @@ export type PdfParserOptions = {
   readonly minPathComplexity?: number;
   readonly includeText?: boolean;
   readonly includePaths?: boolean;
+  /**
+   * Enables rasterization for per-pixel `/SMask` groups that contain only vector
+   * paths (no images). This sets the maximum `{width,height}` of the generated
+   * mask grid.
+   *
+   * Set to `0` (default) to keep this feature disabled.
+   */
+  readonly softMaskVectorMaxSize?: number;
   readonly encryption?: PdfLoadEncryption;
 };
 
@@ -43,6 +51,7 @@ const DEFAULT_OPTIONS: Required<PdfParserOptions> = {
   minPathComplexity: 0,
   includeText: true,
   includePaths: true,
+  softMaskVectorMaxSize: 0,
   encryption: { mode: "reject" },
 };
 
@@ -62,6 +71,9 @@ export async function parsePdfNative(
   options: PdfParserOptions = {},
 ): Promise<PdfDocument> {
   const opts = { ...DEFAULT_OPTIONS, ...options };
+  if (!Number.isFinite(opts.softMaskVectorMaxSize) || opts.softMaskVectorMaxSize < 0) {
+    throw new Error(`softMaskVectorMaxSize must be >= 0 (got ${opts.softMaskVectorMaxSize})`);
+  }
 
   const pdfDoc = await loadNativePdfDocumentForParser(data, {
     purpose: "parse",
@@ -163,7 +175,9 @@ async function parsePage(
   const fontMappings = extractFontMappingsNative(page);
   mergeFontMetrics(fontMappings, embeddedFontMetrics);
   const tokens = tokenizeContentStream(contentStream);
-  const extGState = extractExtGStateNative(page);
+  const extGState = extractExtGStateNative(page, {
+    vectorSoftMaskMaxSize: opts.softMaskVectorMaxSize > 0 ? opts.softMaskVectorMaxSize : undefined,
+  });
   const parsedElements = [...parseContentStream(tokens, fontMappings, { extGState })];
 
   const registerType3XObjectStream = (stream: PdfStream): string => {
