@@ -29,6 +29,16 @@ export type ParsedPath = {
   readonly type: "path";
   readonly operations: readonly PdfPathOp[];
   readonly paintOp: PdfPaintOp;
+  /**
+   * Fill rule used for painting operations that include a fill component.
+   *
+   * - `f`, `F`, `B`, `b`: `nonzero`
+   * - `f*`, `B*`, `b*`: `evenodd`
+   *
+   * This is currently used by soft-mask rasterization to preserve the visual
+   * difference between winding rules.
+   */
+  readonly fillRule?: "nonzero" | "evenodd";
   readonly graphicsState: PdfGraphicsState;
   /**
    * Optional source tag for elements produced outside the primary content stream.

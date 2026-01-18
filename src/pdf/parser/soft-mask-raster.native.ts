@@ -8,18 +8,18 @@
  * - For some PDFs, preserving visual output requires rasterizing masked content.
  *
  * Current supported subset:
- * - `ParsedPath` with `paintOp="fill"`
+ * - `ParsedPath` with `paintOp="fill" | "stroke" | "fillStroke"`
  * - `graphicsState.softMask` is present (per-pixel alpha map + bbox + size)
  * - samples mask pixels in mask space and maps them to page space via
  *   `graphicsState.ctm × softMask.matrix`
  *
  * Notes:
- * - Currently rasterizes only the fill (not strokes).
- * - The output image is the soft mask pixel grid placed by the same transform.
+ * - Currently uses a simple binary coverage test (no anti-aliasing).
+ * - Output image is the soft mask pixel grid placed by the same transform.
  */
 
 import type { PdfColor, PdfImage, PdfMatrix, PdfPoint, PdfSoftMask } from "../domain";
-import { multiplyMatrices, transformPoint } from "../domain";
+import { getMatrixScale, multiplyMatrices, transformPoint } from "../domain";
 import { clamp01, cmykToRgb, grayToRgb, toByte } from "../domain/color";
 import type { ParsedPath } from "./operator";
 
@@ -89,6 +89,7 @@ function buildSolidRgbData(width: number, height: number, rgb: readonly [number,
 }
 
 type Poly = readonly PdfPoint[];
+type FlattenedSubpath = Readonly<{ readonly points: Poly; readonly closed: boolean }>;
 
 function cubicAt(p0: number, p1: number, p2: number, p3: number, t: number): number {
   const mt = 1 - t;
@@ -100,41 +101,30 @@ function cubicAt(p0: number, p1: number, p2: number, p3: number, t: number): num
   );
 }
 
-function flattenToPolylines(ops: ParsedPath["operations"], ctm: PdfMatrix): readonly Poly[] {
-  const polylines: PdfPoint[][] = [];
+function flattenSubpaths(ops: ParsedPath["operations"], ctm: PdfMatrix): readonly FlattenedSubpath[] {
+  const subpaths: Array<{ points: PdfPoint[]; closed: boolean }> = [];
 
   let current: PdfPoint = { x: 0, y: 0 };
-  let start: PdfPoint = { x: 0, y: 0 };
-  let currentPoly: PdfPoint[] | null = null;
+  let currentSubpath: { points: PdfPoint[]; closed: boolean } | null = null;
+
+  const finish = (closed: boolean): void => {
+    if (!currentSubpath || currentSubpath.points.length === 0) {return;}
+    subpaths.push({ points: currentSubpath.points, closed });
+    currentSubpath = null;
+  };
 
   const startNew = (p: PdfPoint): void => {
-    if (currentPoly && currentPoly.length > 0) {
-      polylines.push(currentPoly);
-    }
-    start = p;
-    currentPoly = [transformPoint(p, ctm)];
+    finish(false);
+    currentSubpath = { points: [transformPoint(p, ctm)], closed: false };
     current = p;
   };
 
   const lineTo = (p: PdfPoint): void => {
-    if (!currentPoly) {
+    if (!currentSubpath) {
       startNew(current);
     }
-    currentPoly!.push(transformPoint(p, ctm));
+    currentSubpath!.points.push(transformPoint(p, ctm));
     current = p;
-  };
-
-  const close = (): void => {
-    if (!currentPoly || currentPoly.length === 0) {return;}
-    // PDF fill implicitly closes subpaths; ensure we have a closing edge.
-    const first = currentPoly[0] ?? transformPoint(start, ctm);
-    const last = currentPoly[currentPoly.length - 1] ?? transformPoint(current, ctm);
-    if (first.x !== last.x || first.y !== last.y) {
-      currentPoly.push(first);
-    }
-    polylines.push(currentPoly);
-    currentPoly = null;
-    current = start;
   };
 
   const flattenCubic = (cp1: PdfPoint, cp2: PdfPoint, end: PdfPoint): void => {
@@ -177,17 +167,17 @@ function flattenToPolylines(ops: ParsedPath["operations"], ctm: PdfMatrix): read
         lineTo(p2);
         lineTo(p3);
         lineTo(p4);
-        close();
+        finish(true);
         break;
       }
       case "closePath":
-        close();
+        finish(true);
         break;
     }
   }
-  close();
+  finish(false);
 
-  return polylines;
+  return subpaths.map((s) => ({ points: s.points, closed: s.closed }));
 }
 
 function pointInPolyEvenOdd(x: number, y: number, poly: Poly): boolean {
@@ -221,21 +211,142 @@ function pointInPolyEvenOdd(x: number, y: number, poly: Poly): boolean {
   return inside;
 }
 
-function pointInPolylinesEvenOdd(x: number, y: number, polylines: readonly Poly[]): boolean {
+function pointInSubpathsEvenOdd(x: number, y: number, subpaths: readonly FlattenedSubpath[]): boolean {
   // Parity across all subpaths.
   let inside = false;
-  for (const poly of polylines) {
-    if (pointInPolyEvenOdd(x, y, poly)) {
+  for (const s of subpaths) {
+    if (pointInPolyEvenOdd(x, y, s.points)) {
       inside = !inside;
     }
   }
   return inside;
 }
 
+function isLeft(ax: number, ay: number, bx: number, by: number, px: number, py: number): number {
+  return (bx - ax) * (py - ay) - (px - ax) * (by - ay);
+}
+
+function windingNumber(x: number, y: number, poly: Poly): number {
+  if (poly.length < 2) {return 0;}
+  let winding = 0;
+
+  for (let i = 0; i < poly.length; i += 1) {
+    const a = poly[i]!;
+    const b = poly[(i + 1) % poly.length]!;
+
+    if (a.y <= y) {
+      if (b.y > y && isLeft(a.x, a.y, b.x, b.y, x, y) > 0) {
+        winding += 1;
+      }
+    } else {
+      if (b.y <= y && isLeft(a.x, a.y, b.x, b.y, x, y) < 0) {
+        winding -= 1;
+      }
+    }
+  }
+
+  return winding;
+}
+
+function pointInSubpathsNonZero(x: number, y: number, subpaths: readonly FlattenedSubpath[]): boolean {
+  let winding = 0;
+  for (const s of subpaths) {
+    winding += windingNumber(x, y, s.points);
+  }
+  return winding !== 0;
+}
+
+function pointInSubpaths(x: number, y: number, subpaths: readonly FlattenedSubpath[], fillRule: ParsedPath["fillRule"]): boolean {
+  if (fillRule === "evenodd") {
+    return pointInSubpathsEvenOdd(x, y, subpaths);
+  }
+  return pointInSubpathsNonZero(x, y, subpaths);
+}
+
+function distancePointToSegmentRound(p: PdfPoint, a: PdfPoint, b: PdfPoint): number {
+  const vx = b.x - a.x;
+  const vy = b.y - a.y;
+  const wx = p.x - a.x;
+  const wy = p.y - a.y;
+  const denom = vx * vx + vy * vy;
+  if (denom === 0) {
+    const dx = p.x - a.x;
+    const dy = p.y - a.y;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+  let t = (wx * vx + wy * vy) / denom;
+  t = Math.max(0, Math.min(1, t));
+  const projX = a.x + t * vx;
+  const projY = a.y + t * vy;
+  const dx = p.x - projX;
+  const dy = p.y - projY;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+function distancePointToSegmentButt(p: PdfPoint, a: PdfPoint, b: PdfPoint): number {
+  const vx = b.x - a.x;
+  const vy = b.y - a.y;
+  const wx = p.x - a.x;
+  const wy = p.y - a.y;
+  const denom = vx * vx + vy * vy;
+  if (denom === 0) {
+    return Infinity;
+  }
+  const t = (wx * vx + wy * vy) / denom;
+  if (t < 0 || t > 1) {
+    return Infinity;
+  }
+  const projX = a.x + t * vx;
+  const projY = a.y + t * vy;
+  const dx = p.x - projX;
+  const dy = p.y - projY;
+  return Math.sqrt(dx * dx + dy * dy);
+}
+
+function distancePointToSegment(p: PdfPoint, a: PdfPoint, b: PdfPoint, cap: 0 | 1 | 2, halfW: number): number {
+  if (cap === 1) {
+    return distancePointToSegmentRound(p, a, b);
+  }
+  if (cap === 2) {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+    if (len === 0) {return distancePointToSegmentRound(p, a, b);}
+    const ux = dx / len;
+    const uy = dy / len;
+    const a2 = { x: a.x - ux * halfW, y: a.y - uy * halfW };
+    const b2 = { x: b.x + ux * halfW, y: b.y + uy * halfW };
+    return distancePointToSegmentButt(p, a2, b2);
+  }
+  return distancePointToSegmentButt(p, a, b);
+}
+
+function pointInStroke(p: PdfPoint, subpaths: readonly FlattenedSubpath[], halfW: number, cap: 0 | 1 | 2): boolean {
+  if (!(halfW > 0)) {return false;}
+  let minDist = Infinity;
+  for (const s of subpaths) {
+    const pts = s.points;
+    if (pts.length < 2) {continue;}
+    for (let i = 1; i < pts.length; i += 1) {
+      const a = pts[i - 1]!;
+      const b = pts[i]!;
+      minDist = Math.min(minDist, distancePointToSegment(p, a, b, cap, halfW));
+      if (minDist <= halfW) {return true;}
+    }
+    if (s.closed) {
+      const a = pts[pts.length - 1]!;
+      const b = pts[0]!;
+      minDist = Math.min(minDist, distancePointToSegment(p, a, b, cap, halfW));
+      if (minDist <= halfW) {return true;}
+    }
+  }
+  return minDist <= halfW;
+}
+
 function rasterizeSoftMaskedFillPathInternal(parsed: ParsedPath): PdfImage | null {
   const softMask: PdfSoftMask | undefined = parsed.graphicsState.softMask;
   if (!softMask) {return null;}
-  if (parsed.paintOp !== "fill") {return null;}
+  if (parsed.paintOp === "none" || parsed.paintOp === "clip") {return null;}
   if (parsed.operations.length === 0) {return null;}
 
   const [llx, lly, urx, ury] = softMask.bbox;
@@ -250,16 +361,25 @@ function rasterizeSoftMaskedFillPathInternal(parsed: ParsedPath): PdfImage | nul
   const gs = parsed.graphicsState;
   const maskToPage = multiplyMatrices(gs.ctm, softMask.matrix);
 
-  const polylines = flattenToPolylines(parsed.operations, gs.ctm);
-  if (polylines.length === 0) {return null;}
+  const subpaths = flattenSubpaths(parsed.operations, gs.ctm);
+  if (subpaths.length === 0) {return null;}
 
-  const rgb = colorToRgbBytes(gs.fillColor);
-  const data = buildSolidRgbData(softMask.width, softMask.height, rgb);
+  const fillRgb = colorToRgbBytes(gs.fillColor);
+  const strokeRgb = colorToRgbBytes(gs.strokeColor);
+  const baseRgb = parsed.paintOp === "stroke" ? strokeRgb : fillRgb;
+  const data = buildSolidRgbData(softMask.width, softMask.height, baseRgb);
   const alpha = new Uint8Array(pixelCount);
 
   const softMaskAlpha = clamp01(gs.softMaskAlpha ?? 1);
   const fillAlpha = clamp01(gs.fillAlpha);
-  const alphaMul = softMaskAlpha * fillAlpha;
+  const strokeAlpha = clamp01(gs.strokeAlpha);
+  const fillMul = softMaskAlpha * fillAlpha;
+  const strokeMul = softMaskAlpha * strokeAlpha;
+
+  const scale = getMatrixScale(gs.ctm);
+  const lineWidth = gs.lineWidth * ((scale.scaleX + scale.scaleY) / 2);
+  const halfW = lineWidth / 2;
+  const cap: 0 | 1 | 2 = gs.lineCap;
 
   // Output alpha is stored in top-to-bottom row order (compatible with PNG encoding).
   for (let row = 0; row < softMask.height; row += 1) {
@@ -269,11 +389,55 @@ function rasterizeSoftMaskedFillPathInternal(parsed: ParsedPath): PdfImage | nul
       const maskY = ury - ((row + 0.5) / softMask.height) * bh;
       const pagePoint = transformPoint({ x: maskX, y: maskY }, maskToPage);
 
-      if (!pointInPolylinesEvenOdd(pagePoint.x, pagePoint.y, polylines)) {
+      const maskByte = softMask.alpha[idx] ?? 0;
+      if (maskByte === 0) {
         alpha[idx] = 0;
         continue;
       }
-      alpha[idx] = Math.round((softMask.alpha[idx] ?? 0) * alphaMul);
+
+      const fillRule = parsed.fillRule ?? "nonzero";
+      const fillCov = parsed.paintOp === "fill" || parsed.paintOp === "fillStroke"
+        ? pointInSubpaths(pagePoint.x, pagePoint.y, subpaths, fillRule)
+        : false;
+      const strokeCov = parsed.paintOp === "stroke" || parsed.paintOp === "fillStroke"
+        ? pointInStroke(pagePoint, subpaths, halfW, cap)
+        : false;
+
+      const fillA = fillCov ? Math.round(maskByte * fillMul) : 0;
+      const strokeA = strokeCov ? Math.round(maskByte * strokeMul) : 0;
+
+      if (fillA === 0 && strokeA === 0) {
+        alpha[idx] = 0;
+        continue;
+      }
+
+      const dst = idx * 3;
+      if (strokeA === 0) {
+        data[dst] = fillRgb[0];
+        data[dst + 1] = fillRgb[1];
+        data[dst + 2] = fillRgb[2];
+        alpha[idx] = fillA;
+        continue;
+      }
+      if (fillA === 0) {
+        data[dst] = strokeRgb[0];
+        data[dst + 1] = strokeRgb[1];
+        data[dst + 2] = strokeRgb[2];
+        alpha[idx] = strokeA;
+        continue;
+      }
+
+      // Composite: stroke over fill (straight alpha).
+      const outA = strokeA + Math.round((fillA * (255 - strokeA)) / 255);
+      const premFillScale = (255 - strokeA) / 255;
+      const premR = strokeRgb[0] * strokeA + Math.round(fillRgb[0] * fillA * premFillScale);
+      const premG = strokeRgb[1] * strokeA + Math.round(fillRgb[1] * fillA * premFillScale);
+      const premB = strokeRgb[2] * strokeA + Math.round(fillRgb[2] * fillA * premFillScale);
+
+      data[dst] = Math.round(premR / outA);
+      data[dst + 1] = Math.round(premG / outA);
+      data[dst + 2] = Math.round(premB / outA);
+      alpha[idx] = outA;
     }
   }
 

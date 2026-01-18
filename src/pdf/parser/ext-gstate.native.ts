@@ -7,7 +7,7 @@ import type { PdfDict, PdfObject, PdfStream } from "../native/types";
 import { decodePdfStream } from "../native/stream";
 import { tokenizeContentStream } from "../domain/content-stream";
 import type { PdfColor, PdfColorSpace, PdfMatrix, PdfSoftMask } from "../domain";
-import { createGraphicsStateStack } from "../domain";
+import { createGraphicsStateStack, invertMatrix, transformPoint } from "../domain";
 import { clamp01, cmykToRgb } from "../domain/color";
 import { convertToRgba } from "../converter/pixel-converter";
 import { decodeJpegToRgb } from "./jpeg-decode";
@@ -280,16 +280,6 @@ function resolveXObjectStreamByName(page: NativePdfPage, xObjects: PdfDict, name
   return asStream(resolve(page, dictGet(xObjects, clean)));
 }
 
-function isAxisAlignedImagePlacement(ctm: readonly number[], bbox: BBox4, width: number, height: number): boolean {
-  if (ctm.length !== 6) {return false;}
-  const [a, b, c, d, e, f] = ctm;
-  if (b !== 0 || c !== 0) {return false;}
-  const [llx, lly, urx, ury] = bbox;
-  const bw = urx - llx;
-  const bh = ury - lly;
-  return a === bw && d === bh && e === llx && f === lly && width > 0 && height > 0;
-}
-
 function tryExtractPerPixelSoftMaskFromElements(
   page: NativePdfPage,
   elements: readonly ParsedElement[],
@@ -298,25 +288,8 @@ function tryExtractPerPixelSoftMaskFromElements(
   kind: SoftMaskKind,
   resources: PdfDict | null,
 ): PdfSoftMask | null {
-  if (elements.length !== 1) {return null;}
-  const only = elements[0];
-  if (!only || only.type !== "image") {return null;}
-
   const xObjects = getXObjectsDict(page, resources);
   if (!xObjects) {return null;}
-
-  const stream = resolveXObjectStreamByName(page, xObjects, only.name);
-  if (!stream) {return null;}
-
-  const dict = stream.dict;
-  const subtype = asName(dictGet(dict, "Subtype"));
-  if (subtype !== "Image") {return null;}
-
-  const width = getNumberValue(page, dict, "Width") ?? 0;
-  const height = getNumberValue(page, dict, "Height") ?? 0;
-  if (width <= 0 || height <= 0) {return null;}
-
-  if (!isAxisAlignedImagePlacement(only.graphicsState.ctm, bbox, width, height)) {return null;}
 
   const decodeImageStreamToRgba = (imageStream: PdfStream): { readonly width: number; readonly height: number; readonly rgba: Uint8ClampedArray } | null => {
     const imageDict = imageStream.dict;
@@ -351,48 +324,160 @@ function tryExtractPerPixelSoftMaskFromElements(
     return { width: w, height: h, rgba };
   };
 
-  const baseDecoded = decodeImageStreamToRgba(stream);
-  if (!baseDecoded) {return null;}
-  if (baseDecoded.width !== width || baseDecoded.height !== height) {return null;}
+  const imageElements = elements.filter((e): e is Extract<ParsedElement, { readonly type: "image" }> => e?.type === "image");
+  if (imageElements.length === 0) {return null;}
+  if (imageElements.length !== elements.length) {return null;}
 
-  const rgba = baseDecoded.rgba;
+  type DecodedMaskImage = Readonly<{
+    readonly width: number;
+    readonly height: number;
+    readonly rgba: Uint8ClampedArray;
+    readonly smaskAlpha: Uint8Array | null;
+    readonly imageMatrixInv: PdfMatrix;
+  }>;
 
-  const smaskStream = asStream(resolve(page, dictGet(dict, "SMask")));
-  const smaskDecoded = smaskStream ? decodeImageStreamToRgba(smaskStream) : null;
-  const smaskAlpha = (() => {
-    if (!smaskDecoded) {return null;}
-    if (smaskDecoded.width !== width || smaskDecoded.height !== height) {return null;}
-    const out = new Uint8Array(width * height);
-    for (let i = 0; i < width * height; i += 1) {
-      out[i] = smaskDecoded.rgba[i * 4] ?? 0;
+  const decodedImages: DecodedMaskImage[] = [];
+
+  let width = 0;
+  let height = 0;
+
+  for (const img of imageElements) {
+    const stream = resolveXObjectStreamByName(page, xObjects, img.name);
+    if (!stream) {return null;}
+
+    const dict = stream.dict;
+    const subtype = asName(dictGet(dict, "Subtype"));
+    if (subtype !== "Image") {return null;}
+
+    const w = getNumberValue(page, dict, "Width") ?? 0;
+    const h = getNumberValue(page, dict, "Height") ?? 0;
+    if (w <= 0 || h <= 0) {return null;}
+
+    const baseDecoded = decodeImageStreamToRgba(stream);
+    if (!baseDecoded) {return null;}
+    if (baseDecoded.width !== w || baseDecoded.height !== h) {return null;}
+
+    if (decodedImages.length === 0) {
+      width = w;
+      height = h;
+    } else {
+      if (w !== width || h !== height) {return null;}
     }
-    return out;
-  })();
 
-  const alpha = new Uint8Array(width * height);
+    const imageMatrix = img.graphicsState.ctm;
+    const imageMatrixInv = invertMatrix(imageMatrix);
+    if (!imageMatrixInv) {return null;}
 
-  for (let i = 0; i < width * height; i += 1) {
-    const o = i * 4;
-    const r = rgba[o] ?? 0;
-    const g = rgba[o + 1] ?? 0;
-    const b = rgba[o + 2] ?? 0;
+    const smaskStream = asStream(resolve(page, dictGet(dict, "SMask")));
+    const smaskDecoded = smaskStream ? decodeImageStreamToRgba(smaskStream) : null;
+    const smaskAlpha = (() => {
+      if (!smaskDecoded) {return null;}
+      if (smaskDecoded.width !== width || smaskDecoded.height !== height) {return null;}
+      const out = new Uint8Array(width * height);
+      for (let i = 0; i < width * height; i += 1) {
+        out[i] = smaskDecoded.rgba[i * 4] ?? 0;
+      }
+      return out;
+    })();
 
-    if (kind === "Alpha") {
-      if (smaskAlpha) {
-        alpha[i] = smaskAlpha[i] ?? 0;
+    decodedImages.push({
+      width,
+      height,
+      rgba: baseDecoded.rgba,
+      smaskAlpha,
+      imageMatrixInv,
+    });
+  }
+
+  const [llx, lly, urx, ury] = bbox;
+  const bw = urx - llx;
+  const bh = ury - lly;
+  if (!Number.isFinite(bw) || !Number.isFinite(bh) || bw <= 0 || bh <= 0) {return null;}
+
+  const pixelCount = width * height;
+  const alpha = new Uint8Array(pixelCount);
+
+  for (let row = 0; row < height; row += 1) {
+    const maskY = ury - ((row + 0.5) / height) * bh;
+    for (let col = 0; col < width; col += 1) {
+      const maskX = llx + ((col + 0.5) / width) * bw;
+      const idx = row * width + col;
+
+      if (kind === "Alpha") {
+        let outA = 0;
+        for (const img of decodedImages) {
+          const imagePoint = transformPoint({ x: maskX, y: maskY }, img.imageMatrixInv);
+          const u = imagePoint.x;
+          const v = imagePoint.y;
+          if (u < 0 || u >= 1 || v < 0 || v >= 1) {
+            continue;
+          }
+
+          const srcCol = Math.min(width - 1, Math.max(0, Math.floor(u * width)));
+          const srcRow = Math.min(height - 1, Math.max(0, Math.floor((1 - v) * height)));
+          const srcIdx = srcRow * width + srcCol;
+
+          let srcA = img.smaskAlpha ? (img.smaskAlpha[srcIdx] ?? 0) : null;
+          if (srcA == null) {
+            const o = srcIdx * 4;
+            const r = img.rgba[o] ?? 0;
+            const g = img.rgba[o + 1] ?? 0;
+            const b = img.rgba[o + 2] ?? 0;
+            // Heuristic fallback: accept grayscale images as alpha sources.
+            if (r !== g || g !== b) {return null;}
+            srcA = r;
+          }
+
+          outA = srcA + Math.round((outA * (255 - srcA)) / 255);
+        }
+        alpha[idx] = outA;
         continue;
       }
-      // Heuristic fallback: accept grayscale images as alpha sources.
-      if (r !== g || g !== b) {return null;}
-      alpha[i] = r;
-      continue;
-    }
 
-    const lum = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
-    if (smaskAlpha) {
-      alpha[i] = Math.round((lum * (smaskAlpha[i] ?? 0)) / 255);
-    } else {
-      alpha[i] = lum;
+      let outA = 0;
+      let premR = 0;
+      let premG = 0;
+      let premB = 0;
+
+      for (const img of decodedImages) {
+        const imagePoint = transformPoint({ x: maskX, y: maskY }, img.imageMatrixInv);
+        const u = imagePoint.x;
+        const v = imagePoint.y;
+        if (u < 0 || u >= 1 || v < 0 || v >= 1) {
+          continue;
+        }
+
+        const srcCol = Math.min(width - 1, Math.max(0, Math.floor(u * width)));
+        const srcRow = Math.min(height - 1, Math.max(0, Math.floor((1 - v) * height)));
+        const srcIdx = srcRow * width + srcCol;
+
+        const srcA = img.smaskAlpha ? (img.smaskAlpha[srcIdx] ?? 0) : 255;
+        if (srcA === 0) {
+          continue;
+        }
+
+        const o = srcIdx * 4;
+        const r = img.rgba[o] ?? 0;
+        const g = img.rgba[o + 1] ?? 0;
+        const b = img.rgba[o + 2] ?? 0;
+
+        const invA = 255 - srcA;
+        premR = r * srcA + Math.round((premR * invA) / 255);
+        premG = g * srcA + Math.round((premG * invA) / 255);
+        premB = b * srcA + Math.round((premB * invA) / 255);
+        outA = srcA + Math.round((outA * invA) / 255);
+      }
+
+      if (outA === 0) {
+        alpha[idx] = 0;
+        continue;
+      }
+
+      const outR = Math.round(premR / outA);
+      const outG = Math.round(premG / outA);
+      const outB = Math.round(premB / outA);
+      const lum = Math.round(0.299 * outR + 0.587 * outG + 0.114 * outB);
+      alpha[idx] = Math.round((lum * outA) / 255);
     }
   }
 

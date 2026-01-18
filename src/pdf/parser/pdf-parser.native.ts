@@ -28,6 +28,7 @@ import { preprocessInlineImages } from "./inline-image.native";
 import { expandType3TextElementsNative } from "./type3-expand.native";
 import { rasterizeSoftMaskedFillPath } from "./soft-mask-raster.native";
 import { applyGraphicsSoftMaskToPdfImage } from "./soft-mask-apply.native";
+import { rasterizeSoftMaskedText } from "./soft-mask-text-raster.native";
 
 export type PdfParserOptions = {
   readonly pages?: readonly number[];
@@ -501,6 +502,11 @@ function convertElements(
         break;
       case "text":
         if (opts.includeText) {
+          const masked = rasterizeSoftMaskedText(elem, fontMappings);
+          if (masked) {
+            elements.push(masked);
+            break;
+          }
           const pdfTexts = convertText(elem, fontMappings);
           elements.push(...pdfTexts);
         }

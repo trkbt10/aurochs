@@ -149,7 +149,8 @@ const handleRectangle: OperatorHandler = (ctx) => {
 function finishPath(
   ctx: ParserContext,
   gfxOps: GraphicsStateOps,
-  paintOp: PdfPaintOp
+  paintOp: PdfPaintOp,
+  fillRule?: ParsedPath["fillRule"],
 ): ParserStateUpdate {
   if (ctx.currentPath.length === 0) {
     return {};
@@ -159,6 +160,7 @@ function finishPath(
     type: "path",
     operations: ctx.currentPath,
     paintOp,
+    fillRule,
     graphicsState: gfxOps.get(),
   };
 
@@ -174,7 +176,8 @@ function finishPath(
 function closeAndFinishPath(
   ctx: ParserContext,
   gfxOps: GraphicsStateOps,
-  paintOp: PdfPaintOp
+  paintOp: PdfPaintOp,
+  fillRule?: ParsedPath["fillRule"],
 ): ParserStateUpdate {
   const closeOp: PdfPathOp = { type: "closePath" };
   const closedPath = [...ctx.currentPath, closeOp];
@@ -187,6 +190,7 @@ function closeAndFinishPath(
     type: "path",
     operations: closedPath,
     paintOp,
+    fillRule,
     graphicsState: gfxOps.get(),
   };
 
@@ -207,22 +211,22 @@ const handleStroke: OperatorHandler = (ctx, gfxOps) => finishPath(ctx, gfxOps, "
 const handleCloseStroke: OperatorHandler = (ctx, gfxOps) => closeAndFinishPath(ctx, gfxOps, "stroke");
 
 /** f operator: Fill path (nonzero winding rule) */
-const handleFill: OperatorHandler = (ctx, gfxOps) => finishPath(ctx, gfxOps, "fill");
+const handleFill: OperatorHandler = (ctx, gfxOps) => finishPath(ctx, gfxOps, "fill", "nonzero");
 
 /** f* operator: Fill path (even-odd rule) */
-const handleFillEvenOdd: OperatorHandler = (ctx, gfxOps) => finishPath(ctx, gfxOps, "fill");
+const handleFillEvenOdd: OperatorHandler = (ctx, gfxOps) => finishPath(ctx, gfxOps, "fill", "evenodd");
 
 /** B operator: Fill and stroke path (nonzero) */
-const handleFillStroke: OperatorHandler = (ctx, gfxOps) => finishPath(ctx, gfxOps, "fillStroke");
+const handleFillStroke: OperatorHandler = (ctx, gfxOps) => finishPath(ctx, gfxOps, "fillStroke", "nonzero");
 
 /** B* operator: Fill and stroke path (even-odd) */
-const handleFillStrokeEvenOdd: OperatorHandler = (ctx, gfxOps) => finishPath(ctx, gfxOps, "fillStroke");
+const handleFillStrokeEvenOdd: OperatorHandler = (ctx, gfxOps) => finishPath(ctx, gfxOps, "fillStroke", "evenodd");
 
 /** b operator: Close, fill and stroke (nonzero) */
-const handleCloseFillStroke: OperatorHandler = (ctx, gfxOps) => closeAndFinishPath(ctx, gfxOps, "fillStroke");
+const handleCloseFillStroke: OperatorHandler = (ctx, gfxOps) => closeAndFinishPath(ctx, gfxOps, "fillStroke", "nonzero");
 
 /** b* operator: Close, fill and stroke (even-odd) */
-const handleCloseFillStrokeEvenOdd: OperatorHandler = (ctx, gfxOps) => closeAndFinishPath(ctx, gfxOps, "fillStroke");
+const handleCloseFillStrokeEvenOdd: OperatorHandler = (ctx, gfxOps) => closeAndFinishPath(ctx, gfxOps, "fillStroke", "evenodd");
 
 /** n operator: End path without filling or stroking */
 const handleEndPath: OperatorHandler = (ctx, gfxOps) => finishPath(ctx, gfxOps, "none");

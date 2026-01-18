@@ -177,6 +177,44 @@ describe("path-handlers", () => {
       const update = pathHandlers.handleFill(ctx, createMockGfxOps());
 
       expect((update.elements![0] as ParsedPath).paintOp).toBe("fill");
+      expect((update.elements![0] as ParsedPath).fillRule).toBe("nonzero");
+    });
+  });
+
+  describe("fill rules", () => {
+    it("sets fillRule=evenodd for f*", () => {
+      const handler = PATH_PAINTING_HANDLERS.get("f*")?.handler;
+      if (!handler) {throw new Error("Expected f* handler");}
+
+      const ctx = {
+        ...createContext(),
+        currentPath: [{ type: "moveTo" as const, point: { x: 0, y: 0 } }],
+      };
+      const update = handler(ctx, createMockGfxOps());
+      expect((update.elements![0] as ParsedPath).paintOp).toBe("fill");
+      expect((update.elements![0] as ParsedPath).fillRule).toBe("evenodd");
+    });
+
+    it("sets fillRule=evenodd for B* and b*", () => {
+      const handlerB = PATH_PAINTING_HANDLERS.get("B*")?.handler;
+      const handlerb = PATH_PAINTING_HANDLERS.get("b*")?.handler;
+      if (!handlerB || !handlerb) {throw new Error("Expected B*/b* handlers");}
+
+      const ctx1 = {
+        ...createContext(),
+        currentPath: [{ type: "moveTo" as const, point: { x: 0, y: 0 } }],
+      };
+      const out1 = handlerB(ctx1, createMockGfxOps());
+      expect((out1.elements![0] as ParsedPath).paintOp).toBe("fillStroke");
+      expect((out1.elements![0] as ParsedPath).fillRule).toBe("evenodd");
+
+      const ctx2 = {
+        ...createContext(),
+        currentPath: [{ type: "moveTo" as const, point: { x: 0, y: 0 } }],
+      };
+      const out2 = handlerb(ctx2, createMockGfxOps());
+      expect((out2.elements![0] as ParsedPath).paintOp).toBe("fillStroke");
+      expect((out2.elements![0] as ParsedPath).fillRule).toBe("evenodd");
     });
   });
 
@@ -189,6 +227,7 @@ describe("path-handlers", () => {
       const update = pathHandlers.handleFillStroke(ctx, createMockGfxOps());
 
       expect((update.elements![0] as ParsedPath).paintOp).toBe("fillStroke");
+      expect((update.elements![0] as ParsedPath).fillRule).toBe("nonzero");
     });
   });
 
