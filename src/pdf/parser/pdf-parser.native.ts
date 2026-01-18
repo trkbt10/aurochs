@@ -32,6 +32,7 @@ import { rasterizeSoftMaskedFillPath } from "./soft-mask-raster.native";
 import { applyGraphicsSoftMaskToPdfImage } from "./soft-mask-apply.native";
 import { rasterizeSoftMaskedText } from "./soft-mask-text-raster.native";
 import { applyGraphicsClipMaskToPdfImage, buildPageSpaceSoftMaskForClipMask } from "./clip-mask-apply.native";
+import { rasterizeFormBBoxClipToMask } from "./form-bbox-clip-mask.native";
 import type { PdfShading } from "./shading.types";
 import type { PdfPattern } from "./pattern.types";
 
@@ -525,6 +526,12 @@ function expandFormXObjectsNative(
       gfxStack.concatMatrix(matrix);
       if (bbox) {
         gfxStack.setClipBBox(transformBBox(bbox, gfxStack.get().ctm));
+        if (clipPathMaxSize > 0) {
+          const mask = rasterizeFormBBoxClipToMask(gfxStack.get(), bbox, { clipPathMaxSize });
+          if (mask) {
+            gfxStack.setClipMask(mask);
+          }
+        }
       }
       const gfxOps = createGfxOpsFromStack(gfxStack);
       const tokens = tokenizeContentStream(content);
