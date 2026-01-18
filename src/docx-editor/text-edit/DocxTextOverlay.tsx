@@ -181,6 +181,11 @@ export function computeRunSvgStyles(
   }
   if (decorations.length > 0) {
     style.textDecoration = decorations.join(" ");
+    // Double strikethrough uses double line style
+    // @see ECMA-376-1:2016 Section 17.3.2.9 (dstrike)
+    if (merged.dstrike) {
+      style.textDecorationStyle = "double";
+    }
   }
 
   if (merged.color?.val) {

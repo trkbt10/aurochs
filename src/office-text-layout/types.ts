@@ -68,10 +68,12 @@ export type TextAnchor = "top" | "center" | "bottom";
  * Line spacing configuration.
  *
  * @see ECMA-376 Part 1, Section 21.1.2.2.5 (a:lnSpc)
+ * @see ECMA-376-1:2016 Section 17.3.1.33 (spacing - lineRule)
  */
 export type LineSpacing =
   | { readonly type: "percent"; readonly value: Percent }
-  | { readonly type: "points"; readonly value: Points };
+  | { readonly type: "points"; readonly value: Points }
+  | { readonly type: "atLeast"; readonly value: Points };
 
 // =============================================================================
 // Text Span Types

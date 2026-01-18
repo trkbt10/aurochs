@@ -11,6 +11,7 @@ import type { ParagraphAlignment, TabStopAlignment, TabStopLeader } from "../../
 import type { WordBorderStyle, EighthPoints } from "../../ooxml/domain/border";
 import type { DocxStyleId, DocxNumId, DocxIlvl, Twips, DocxRelId } from "./types";
 import type { DocxRunProperties, DocxRun, DocxShading, DocxThemeColor } from "./run";
+import type { DocxSectionProperties } from "./section";
 
 // =============================================================================
 // Paragraph Spacing
@@ -318,22 +319,17 @@ export type DocxParagraphProperties = {
   readonly rPr?: DocxRunProperties;
 
   // --- Section Properties (last paragraph in section) ---
-  /** Section properties (only for last paragraph in section) */
-  readonly sectPr?: DocxSectionPropertiesRef;
+  /**
+   * Section properties (only for last paragraph in section).
+   * When present, indicates this paragraph ends a section.
+   *
+   * @see ECMA-376 Part 1, Section 17.6.17 (sectPr)
+   */
+  readonly sectPr?: DocxSectionProperties;
 
   // --- Revision Tracking ---
   /** Change tracking for paragraph properties */
   readonly pPrChange?: DocxParagraphPropertiesChange;
-};
-
-/**
- * Reference to section properties.
- * Used when section properties are embedded in paragraph.
- */
-export type DocxSectionPropertiesRef = {
-  readonly type: "sectPrRef";
-  /** Reference to full section properties */
-  readonly sectionIndex?: number;
 };
 
 /**

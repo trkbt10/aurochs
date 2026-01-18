@@ -7,9 +7,11 @@
  * @see ECMA-376-1:2016 Section 17.6 (Sections)
  */
 
-import type { DocxSectionProperties } from "../../docx/domain/section";
-import type { PageFlowConfig } from "../page-flow";
+import type { DocxSectionProperties, DocxColumns } from "../../docx/domain/section";
+import type { PageFlowConfig, ColumnConfig } from "../page-flow";
 import type { WritingMode } from "../types";
+import type { Pixels } from "../../ooxml/domain/units";
+import { px } from "../../ooxml/domain/units";
 import {
   SPEC_DEFAULT_PAGE_WIDTH_TWIPS,
   SPEC_DEFAULT_PAGE_HEIGHT_TWIPS,
@@ -21,6 +23,51 @@ import { textDirectionToWritingMode } from "../writing-mode";
 import type { EcmaTextDirection } from "../../docx/domain/ecma376-defaults";
 
 // =============================================================================
+// Column Configuration Conversion
+// =============================================================================
+
+/**
+ * Default space between columns in twips (0.5 inch = 720 twips).
+ * @see ECMA-376-1:2016 Section 17.6.4 (cols - default space)
+ */
+const DEFAULT_COLUMN_SPACE_TWIPS = 720;
+
+/**
+ * Convert DOCX columns to ColumnConfig.
+ *
+ * @see ECMA-376-1:2016 Section 17.6.4 (cols)
+ */
+function columnsToColumnConfig(
+  cols: DocxColumns | undefined,
+): ColumnConfig | undefined {
+  if (cols === undefined || cols.num === undefined || cols.num <= 1) {
+    return undefined;
+  }
+
+  const space = twipsToPx(cols.space ?? DEFAULT_COLUMN_SPACE_TWIPS);
+  const equalWidth = cols.equalWidth !== false; // Default is true
+
+  // If individual column widths are specified
+  if (!equalWidth && cols.col !== undefined && cols.col.length > 0) {
+    const columnWidths: Pixels[] = cols.col.map((c) =>
+      c.w !== undefined ? twipsToPx(c.w) : px(0)
+    );
+    return {
+      num: cols.num,
+      space,
+      equalWidth: false,
+      columnWidths,
+    };
+  }
+
+  return {
+    num: cols.num,
+    space,
+    equalWidth: true,
+  };
+}
+
+// =============================================================================
 // Section Properties to Page Configuration
 // =============================================================================
 
@@ -29,6 +76,10 @@ import type { EcmaTextDirection } from "../../docx/domain/ecma376-defaults";
  *
  * This function derives page dimensions and margins from sectPr,
  * falling back to ECMA-376 specification defaults when not specified.
+ *
+ * Gutter margin handling:
+ * - The gutter is added to the left margin by default (for LTR documents)
+ * - If rtlGutter is set, it's added to the right margin instead
  *
  * @param sectPr - DOCX section properties (may be undefined)
  * @returns Page flow configuration for the layout engine
@@ -52,16 +103,34 @@ export function sectionPropertiesToPageConfig(
   const textDirection: EcmaTextDirection = sectPr?.bidi === true ? "tbRl" : SPEC_DEFAULT_TEXT_DIRECTION;
   const writingMode: WritingMode = textDirectionToWritingMode(textDirection);
 
+  // Calculate margins with gutter support
+  // @see ECMA-376-1:2016 Section 17.6.11 (pgMar - gutter)
+  const baseLeftMargin = twipsToPx(pgMar?.left ?? SPEC_DEFAULT_MARGIN_TWIPS);
+  const baseRightMargin = twipsToPx(pgMar?.right ?? SPEC_DEFAULT_MARGIN_TWIPS);
+  const gutter = pgMar?.gutter !== undefined ? twipsToPx(pgMar.gutter) : px(0);
+
+  // Add gutter to left margin by default, right if rtlGutter is set
+  const marginLeft = sectPr?.rtlGutter === true
+    ? baseLeftMargin
+    : px((baseLeftMargin as number) + (gutter as number));
+  const marginRight = sectPr?.rtlGutter === true
+    ? px((baseRightMargin as number) + (gutter as number))
+    : baseRightMargin;
+
+  // Convert columns configuration
+  const columns = columnsToColumnConfig(sectPr?.cols);
+
   return {
     pageWidth: twipsToPx(pgSz?.w ?? SPEC_DEFAULT_PAGE_WIDTH_TWIPS),
     pageHeight: twipsToPx(pgSz?.h ?? SPEC_DEFAULT_PAGE_HEIGHT_TWIPS),
     marginTop: twipsToPx(pgMar?.top ?? SPEC_DEFAULT_MARGIN_TWIPS),
     marginBottom: twipsToPx(pgMar?.bottom ?? SPEC_DEFAULT_MARGIN_TWIPS),
-    marginLeft: twipsToPx(pgMar?.left ?? SPEC_DEFAULT_MARGIN_TWIPS),
-    marginRight: twipsToPx(pgMar?.right ?? SPEC_DEFAULT_MARGIN_TWIPS),
+    marginLeft,
+    marginRight,
     writingMode,
     widowLines: 2,
     orphanLines: 2,
+    columns,
   };
 }
 

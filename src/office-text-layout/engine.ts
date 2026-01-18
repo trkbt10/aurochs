@@ -96,7 +96,14 @@ function calculateLineHeight(baseFontSize: Points, lineSpacing: LineSpacing | un
     return fontSizePx * multiplier;
   }
 
-  // Points-based line spacing
+  if (lineSpacing.type === "atLeast") {
+    // Line height is at least the specified value, but grows for larger fonts
+    // @see ECMA-376-1:2016 Section 17.3.1.33 (spacing - atLeast)
+    const minHeight = (lineSpacing.value as number) * PT_TO_PX;
+    return Math.max(minHeight, fontSizePx);
+  }
+
+  // Points-based (exact) line spacing - use specified value exactly
   return (lineSpacing.value as number) * PT_TO_PX;
 }
 
@@ -291,11 +298,12 @@ function positionSpans(
   availableWidth: number,
   isLastLine: boolean,
 ): PositionedSpan[] {
-  // Only apply justification for justify alignment on non-last lines
+  // Apply justification for justify alignment on non-last lines
+  // For distributed alignment, also justify the last line
+  // @see ECMA-376-1:2016 Section 17.3.1.13 (jc - distribute)
   const shouldJustify =
-    (alignment === "justify" || alignment === "distributed") &&
-    !isLastLine &&
-    spans.length > 0;
+    (alignment === "justify" && !isLastLine && spans.length > 0) ||
+    (alignment === "distributed" && spans.length > 0);
 
   if (!shouldJustify) {
     return spans.map((span) => ({

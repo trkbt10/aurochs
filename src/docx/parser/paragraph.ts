@@ -40,6 +40,7 @@ import {
   parseBoolean,
 } from "./primitive";
 import { parseRun, parseShading, parseRunProperties } from "./run";
+import { parseSectionProperties } from "./section";
 import type { DocxParseContext } from "./context";
 
 // =============================================================================
@@ -534,6 +535,9 @@ export function parseParagraphProperties(
 
     // Default run properties
     rPr: parseRunProperties(getChild(element, "rPr"), context),
+
+    // Section properties (for last paragraph in section)
+    sectPr: parseSectionProperties(getChild(element, "sectPr")),
   };
 }
 

@@ -72,6 +72,7 @@ export type DocumentLayoutResult = {
  * @see ECMA-376-1:2016 Section 17.3.1.25 (pageBreakBefore)
  * @see ECMA-376-1:2016 Section 17.3.1.14 (keepNext)
  * @see ECMA-376-1:2016 Section 17.3.1.15 (keepLines)
+ * @see ECMA-376-1:2016 Section 17.6.22 (sectPr type)
  */
 function extractPageBreakHints(
   paragraphs: readonly DocxParagraph[],
@@ -82,11 +83,15 @@ function extractPageBreakHints(
       return undefined;
     }
 
+    // Check for section break in paragraph (last paragraph of a section)
+    const sectionBreakAfter = props.sectPr?.type;
+
     const hasHint =
       props.pageBreakBefore === true ||
       props.keepNext === true ||
       props.keepLines === true ||
-      props.widowControl !== undefined;
+      props.widowControl !== undefined ||
+      sectionBreakAfter !== undefined;
 
     if (!hasHint) {
       return undefined;
@@ -97,6 +102,7 @@ function extractPageBreakHints(
       keepWithNext: props.keepNext,
       keepTogether: props.keepLines,
       widowControl: props.widowControl,
+      sectionBreakAfter,
     };
   });
 }

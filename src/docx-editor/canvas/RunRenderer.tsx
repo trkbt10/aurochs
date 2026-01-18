@@ -83,14 +83,16 @@ export function computeRunStyles(
   if (properties.u && properties.u.val !== "none") {
     decorations.push("underline");
   }
-  if (properties.strike) {
-    decorations.push("line-through");
-  }
-  if (properties.dstrike) {
+  if (properties.strike || properties.dstrike) {
     decorations.push("line-through");
   }
   if (decorations.length > 0) {
     style.textDecoration = decorations.join(" ");
+    // Double strikethrough uses double line style
+    // @see ECMA-376-1:2016 Section 17.3.2.9 (dstrike)
+    if (properties.dstrike) {
+      style.textDecorationStyle = "double";
+    }
   }
 
   // Text transform

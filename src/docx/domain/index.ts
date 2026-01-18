@@ -78,7 +78,6 @@ export type {
   DocxFrameProperties,
   DocxOutlineLevel,
   DocxParagraphProperties,
-  DocxSectionPropertiesRef,
   DocxParagraphPropertiesChange,
   DocxHyperlink,
   DocxBookmarkStart,

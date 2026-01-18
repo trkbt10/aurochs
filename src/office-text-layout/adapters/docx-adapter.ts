@@ -239,8 +239,11 @@ function convertAlignment(jc: ParagraphAlignment | undefined): TextAlign {
     case "end":
       return "right";
     case "both":
-    case "distribute":
       return "justify";
+    case "distribute":
+      // Distribute alignment spreads text evenly including inter-character spacing
+      // @see ECMA-376-1:2016 Section 17.3.1.13 (jc)
+      return "distributed";
     default:
       return "left";
   }
@@ -262,9 +265,12 @@ function convertLineSpacing(spacing: DocxParagraphSpacing | undefined): LineSpac
 
   switch (lineRule) {
     case "exact":
-    case "atLeast":
-      // Line height in twips -> points
+      // Line height is exactly the specified value (in twips -> points)
       return { type: "points", value: pt(spacing.line / TWIPS_PER_POINT) };
+    case "atLeast":
+      // Line height is at least the specified value, but can grow for larger fonts
+      // @see ECMA-376-1:2016 Section 17.3.1.33 (spacing - atLeast)
+      return { type: "atLeast", value: pt(spacing.line / TWIPS_PER_POINT) };
     case "auto":
     default: {
       // Line spacing multiplier: 240 = single (100%), 480 = double (200%)

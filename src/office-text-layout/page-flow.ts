@@ -26,6 +26,22 @@ import type {
 // =============================================================================
 
 /**
+ * Column configuration for multi-column layout.
+ *
+ * @see ECMA-376-1:2016 Section 17.6.4 (cols)
+ */
+export type ColumnConfig = {
+  /** Number of columns (default: 1) */
+  readonly num: number;
+  /** Space between columns in pixels */
+  readonly space: Pixels;
+  /** Equal column widths (if true, columns are equal width) */
+  readonly equalWidth: boolean;
+  /** Individual column widths (only used if equalWidth is false) */
+  readonly columnWidths?: readonly Pixels[];
+};
+
+/**
  * Page configuration for flow.
  */
 export type PageFlowConfig = {
@@ -47,6 +63,8 @@ export type PageFlowConfig = {
   readonly widowLines?: number;
   /** Minimum lines to keep at top of page (orphans) */
   readonly orphanLines?: number;
+  /** Column configuration for multi-column layout */
+  readonly columns?: ColumnConfig;
 };
 
 /**
@@ -144,6 +162,72 @@ function adjustParagraphPosition(
   };
 }
 
+/**
+ * Split a paragraph at a specific line index.
+ * Returns two paragraph results: lines before the split and lines after.
+ *
+ * @param paragraph - The paragraph to split
+ * @param splitIndex - The line index where the split occurs (lines 0 to splitIndex-1 in first part)
+ * @returns Tuple of [first part, second part] or null if split is not possible
+ */
+function splitParagraphAtLine(
+  paragraph: LayoutParagraphResult,
+  splitIndex: number,
+): [LayoutParagraphResult, LayoutParagraphResult] | null {
+  if (splitIndex <= 0 || splitIndex >= paragraph.lines.length) {
+    return null;
+  }
+
+  const firstLines = paragraph.lines.slice(0, splitIndex);
+  const secondLines = paragraph.lines.slice(splitIndex);
+
+  // First part keeps the bullet (if any)
+  const firstPart: LayoutParagraphResult = {
+    ...paragraph,
+    lines: firstLines,
+  };
+
+  // Second part has no bullet (continuation)
+  const secondPart: LayoutParagraphResult = {
+    ...paragraph,
+    lines: secondLines,
+    bullet: undefined,
+    bulletWidth: px(0),
+  };
+
+  return [firstPart, secondPart];
+}
+
+/**
+ * Calculate how many lines can fit in the remaining space.
+ */
+function countLinesThatFit(
+  paragraph: LayoutParagraphResult,
+  remainingSpace: number,
+): number {
+  const accumulated = { height: 0, count: 0 };
+
+  for (const line of paragraph.lines) {
+    const lineHeight = line.height as number;
+    if (accumulated.height + lineHeight > remainingSpace) {
+      break;
+    }
+    accumulated.height += lineHeight;
+    accumulated.count++;
+  }
+
+  return accumulated.count;
+}
+
+/**
+ * Get height of first N lines of a paragraph.
+ */
+function getPartialParagraphHeight(paragraph: LayoutParagraphResult, lineCount: number): number {
+  return paragraph.lines
+    .slice(0, lineCount)
+    .reduce((sum, line) => sum + (line.height as number), 0);
+}
+
 // =============================================================================
 // Page Flow Algorithm
 // =============================================================================
@@ -152,6 +236,8 @@ type PageState = {
   paragraphs: LayoutParagraphResult[];
   currentY: number;
   pageStartY: number;
+  /** Current column index (0-based) */
+  currentColumn: number;
 };
 
 type FlowState = {
@@ -159,6 +245,65 @@ type FlowState = {
   currentPage: PageState;
   totalHeight: number;
 };
+
+/**
+ * Get column configuration with defaults.
+ */
+function getColumnConfig(config: PageFlowConfig): ColumnConfig {
+  if (config.columns !== undefined) {
+    return config.columns;
+  }
+  // Default: single column
+  return {
+    num: 1,
+    space: px(0),
+    equalWidth: true,
+  };
+}
+
+/**
+ * Calculate column width for a given column index.
+ */
+function getColumnWidth(config: PageFlowConfig, columnIndex: number): number {
+  const columns = getColumnConfig(config);
+  const contentWidth = (config.pageWidth as number) - (config.marginLeft as number) - (config.marginRight as number);
+
+  if (columns.num <= 1) {
+    return contentWidth;
+  }
+
+  if (columns.equalWidth) {
+    const totalSpacing = (columns.space as number) * (columns.num - 1);
+    return (contentWidth - totalSpacing) / columns.num;
+  }
+
+  // Use individual column widths if specified
+  if (columns.columnWidths !== undefined && columnIndex < columns.columnWidths.length) {
+    return columns.columnWidths[columnIndex] as number;
+  }
+
+  // Fallback to equal width
+  const totalSpacing = (columns.space as number) * (columns.num - 1);
+  return (contentWidth - totalSpacing) / columns.num;
+}
+
+/**
+ * Calculate X offset for a given column index.
+ */
+function getColumnXOffset(config: PageFlowConfig, columnIndex: number): number {
+  const columns = getColumnConfig(config);
+  const marginLeft = config.marginLeft as number;
+
+  if (columns.num <= 1 || columnIndex === 0) {
+    return marginLeft;
+  }
+
+  const accumulated = { offset: marginLeft };
+  for (let i = 0; i < columnIndex; i++) {
+    accumulated.offset += getColumnWidth(config, i) + (columns.space as number);
+  }
+  return accumulated.offset;
+}
 
 /**
  * Start a new page.
@@ -184,7 +329,31 @@ function startNewPage(
     paragraphs: [],
     currentY: config.marginTop as number,
     pageStartY: newPageStartY,
+    currentColumn: 0, // Reset to first column
   };
+}
+
+/**
+ * Start the next column on the current page.
+ * If already on the last column, starts a new page.
+ *
+ * @see ECMA-376-1:2016 Section 17.18.77 (ST_SectionMark - nextColumn)
+ */
+function startNextColumn(
+  state: FlowState,
+  config: PageFlowConfig,
+): void {
+  const columns = getColumnConfig(config);
+
+  // If single column or on last column, start a new page
+  if (columns.num <= 1 || state.currentPage.currentColumn >= columns.num - 1) {
+    startNewPage(state, config);
+    return;
+  }
+
+  // Move to next column on same page
+  state.currentPage.currentColumn++;
+  state.currentPage.currentY = config.marginTop as number;
 }
 
 /**
@@ -205,8 +374,8 @@ function addParagraphToPage(
   const contentHeight = getContentHeight(config);
   const paragraphHeight = getParagraphHeight(paragraph);
 
-  // X offset adds the page left margin
-  const xOffset = config.marginLeft as number;
+  // X offset based on current column
+  const xOffset = getColumnXOffset(config, state.currentPage.currentColumn);
 
   // Check if paragraph fits on current page
   const remainingSpace = contentHeight - state.currentPage.currentY + (config.marginTop as number);
@@ -235,11 +404,61 @@ function addParagraphToPage(
     startNewPage(state, config);
     addParagraphWithOffset(state, paragraph, xOffset);
   } else {
-    // Paragraph doesn't fit and can be split
-    // For now, just move to next page (proper splitting is complex)
-    // TODO: Implement proper paragraph splitting with widow/orphan lines
-    startNewPage(state, config);
-    addParagraphWithOffset(state, paragraph, xOffset);
+    // Paragraph doesn't fit and can be split with widow/orphan control
+    const linesThatFit = countLinesThatFit(paragraph, remainingSpace);
+
+    if (widowControlEnabled) {
+      // Check if we can satisfy widow/orphan constraints
+      const linesRemaining = paragraph.lines.length - linesThatFit;
+
+      // Can't satisfy orphan constraint - move entire paragraph
+      if (linesThatFit < orphanLines) {
+        startNewPage(state, config);
+        addParagraphWithOffset(state, paragraph, xOffset);
+        return;
+      }
+
+      // Can't satisfy widow constraint - move entire paragraph
+      if (linesRemaining < widowLines) {
+        startNewPage(state, config);
+        addParagraphWithOffset(state, paragraph, xOffset);
+        return;
+      }
+
+      // Both constraints can be satisfied - split at linesThatFit
+      const splitResult = splitParagraphAtLine(paragraph, linesThatFit);
+      if (splitResult !== null) {
+        const [firstPart, secondPart] = splitResult;
+        // Add first part to current page
+        addParagraphWithOffset(state, firstPart, xOffset);
+        // Start new page and add second part
+        startNewPage(state, config);
+        addParagraphWithOffset(state, secondPart, xOffset);
+      } else {
+        // Split failed, move entire paragraph
+        startNewPage(state, config);
+        addParagraphWithOffset(state, paragraph, xOffset);
+      }
+    } else {
+      // Widow control disabled - split at any line that fits
+      if (linesThatFit > 0) {
+        const splitResult = splitParagraphAtLine(paragraph, linesThatFit);
+        if (splitResult !== null) {
+          const [firstPart, secondPart] = splitResult;
+          addParagraphWithOffset(state, firstPart, xOffset);
+          startNewPage(state, config);
+          addParagraphWithOffset(state, secondPart, xOffset);
+        } else {
+          startNewPage(state, config);
+          addParagraphWithOffset(state, paragraph, xOffset);
+        }
+      } else {
+        // No lines fit, move entire paragraph
+        startNewPage(state, config);
+        addParagraphWithOffset(state, paragraph, xOffset);
+      }
+    }
+    return; // Already handled totalHeight update in recursive calls
   }
 
   state.totalHeight = Math.max(
@@ -317,7 +536,8 @@ function handleSectionBreak(
       break;
 
     case "nextColumn":
-      // Column break - not supported yet, treat as continuous
+      // Column break - move to next column or new page if on last column
+      startNextColumn(state, config);
       break;
   }
 }
@@ -353,6 +573,7 @@ export function flowIntoPages(input: PageFlowInput): PagedLayoutResult {
       paragraphs: [],
       currentY: config.marginTop as number,
       pageStartY: 0,
+      currentColumn: 0,
     },
     totalHeight: 0,
   };
