@@ -31,6 +31,7 @@ import { XOBJECT_HANDLERS } from "./xobject-handlers";
 import { SHADING_HANDLERS } from "./shading-handlers";
 import type { PdfShading } from "../shading.types";
 import type { PdfPattern } from "../pattern.types";
+import type { ParsedNamedColorSpace } from "../color-space.native";
 
 // =============================================================================
 // Handler Registry
@@ -99,6 +100,7 @@ export function createInitialContext(
     readonly clipPathMaxSize?: number;
     readonly pageBBox?: PdfBBox;
     readonly patterns?: ReadonlyMap<string, PdfPattern>;
+    readonly colorSpaces?: ReadonlyMap<string, ParsedNamedColorSpace>;
   }> = {},
 ): ParserContext {
   return {
@@ -113,6 +115,7 @@ export function createInitialContext(
     shadingMaxSize: options.shadingMaxSize ?? 0,
     clipPathMaxSize: options.clipPathMaxSize ?? 0,
     patterns: options.patterns ?? new Map(),
+    colorSpaces: options.colorSpaces ?? new Map(),
     extGState: options.extGState ?? new Map(),
   };
 }
@@ -135,6 +138,7 @@ export function applyUpdate(ctx: ParserContext, update: ParserStateUpdate): Pars
     shadingMaxSize: ctx.shadingMaxSize,
     clipPathMaxSize: ctx.clipPathMaxSize,
     patterns: ctx.patterns,
+    colorSpaces: ctx.colorSpaces,
     extGState: ctx.extGState,
   };
 }
@@ -165,6 +169,8 @@ export function createGfxOpsFromStack(stack: GraphicsStateStack): GraphicsStateO
     setStrokePatternUnderlyingColorSpace: (s) => stack.setStrokePatternUnderlyingColorSpace(s),
     setFillPatternColor: (c) => stack.setFillPatternColor(c),
     setStrokePatternColor: (c) => stack.setStrokePatternColor(c),
+    setFillColorSpaceName: (n) => stack.setFillColorSpaceName(n),
+    setStrokeColorSpaceName: (n) => stack.setStrokeColorSpaceName(n),
     setLineWidth: (w) => stack.setLineWidth(w),
     setLineCap: (c) => stack.setLineCap(c),
     setLineJoin: (j) => stack.setLineJoin(j),
@@ -304,6 +310,7 @@ export function parseContentStream(
     readonly clipPathMaxSize?: number;
     readonly pageBBox?: PdfBBox;
     readonly patterns?: ReadonlyMap<string, PdfPattern>;
+    readonly colorSpaces?: ReadonlyMap<string, ParsedNamedColorSpace>;
   }> = {},
 ): readonly ParsedElement[] {
   const gfxStack = createGraphicsStateStack();
@@ -354,6 +361,7 @@ export function createParser(
     readonly clipPathMaxSize?: number;
     readonly pageBBox?: PdfBBox;
     readonly patterns?: ReadonlyMap<string, PdfPattern>;
+    readonly colorSpaces?: ReadonlyMap<string, ParsedNamedColorSpace>;
   }> = {},
 ): (tokens: readonly PdfToken[]) => readonly ParsedElement[] {
   return (tokens) => {

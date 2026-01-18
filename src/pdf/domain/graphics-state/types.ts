@@ -124,6 +124,17 @@ export type PdfGraphicsState = {
    */
   readonly fillPatternColor?: PdfColor;
   readonly strokePatternColor?: PdfColor;
+  /**
+   * Current non-stroking color space name set by `cs`.
+   *
+   * Stored to allow the parser to interpret `sc/scn` operands under
+   * non-device color spaces (e.g., ICCBased) using injected resources.
+   */
+  readonly fillColorSpaceName?: string;
+  /**
+   * Current stroking color space name set by `CS`.
+   */
+  readonly strokeColorSpaceName?: string;
   readonly fillColor: PdfColor;
   readonly strokeColor: PdfColor;
   /**

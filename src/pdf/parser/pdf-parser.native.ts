@@ -36,6 +36,7 @@ import { rasterizeFormBBoxClipToMask } from "./form-bbox-clip-mask.native";
 import type { PdfShading } from "./shading.types";
 import type { PdfPattern } from "./pattern.types";
 import type { JpxDecodeFn } from "./jpx-decoder";
+import { extractColorSpacesFromResourcesNative } from "./color-space.native";
 
 function extractExtGStateFromResourcesNativeOrEmpty(
   page: NativePdfPage,
@@ -233,11 +234,13 @@ async function parsePage(
   });
   const shadings = extractShadingNative(page);
   const patterns = extractPatternsNative(page);
+  const colorSpaces = extractColorSpacesFromResourcesNative(page, resources);
   const parsedElements = [
     ...parseContentStream(tokens, fontMappings, {
       extGState,
       shadings,
       patterns,
+      colorSpaces,
       shadingMaxSize: opts.shadingMaxSize,
       clipPathMaxSize: opts.clipPathMaxSize,
       pageBBox,
@@ -275,6 +278,7 @@ async function parsePage(
     extGState,
     shadings,
     patterns,
+    colorSpaces,
     opts.shadingMaxSize,
     opts.clipPathMaxSize,
     opts.softMaskVectorMaxSize,
@@ -420,6 +424,7 @@ function expandFormXObjectsNative(
   extGState: ReadonlyMap<string, ExtGStateParams>,
   shadings: ReadonlyMap<string, PdfShading>,
   patterns: ReadonlyMap<string, PdfPattern>,
+  colorSpaces: ReadonlyMap<string, import("./color-space.native").ParsedNamedColorSpace>,
   shadingMaxSize: number,
   clipPathMaxSize: number,
   softMaskVectorMaxSize: number,
@@ -447,6 +452,16 @@ function expandFormXObjectsNative(
     return merged;
   };
 
+  const mergeColorSpaces = (
+    base: ReadonlyMap<string, import("./color-space.native").ParsedNamedColorSpace>,
+    local: ReadonlyMap<string, import("./color-space.native").ParsedNamedColorSpace>,
+  ): ReadonlyMap<string, import("./color-space.native").ParsedNamedColorSpace> => {
+    if (base.size === 0 && local.size === 0) {return new Map();}
+    const merged = new Map(base);
+    for (const [k, v] of local) {merged.set(k, v);}
+    return merged;
+  };
+
   const expandInScope = (
     elements: readonly ParsedElement[],
     scope: Readonly<{
@@ -456,6 +471,7 @@ function expandFormXObjectsNative(
       readonly extGState: ReadonlyMap<string, ExtGStateParams>;
       readonly shadings: ReadonlyMap<string, PdfShading>;
       readonly patterns: ReadonlyMap<string, PdfPattern>;
+      readonly colorSpaces: ReadonlyMap<string, import("./color-space.native").ParsedNamedColorSpace>;
     }>,
     callStack: Set<string>,
     depth: number,
@@ -518,6 +534,8 @@ function expandFormXObjectsNative(
 
       const localPatterns = formResources ? extractPatternsFromResourcesNative(page, formResources) : new Map();
       const mergedPatterns = mergePatterns(scope.patterns, localPatterns);
+      const localColorSpaces = extractColorSpacesFromResourcesNative(page, formResources);
+      const mergedColorSpaces = mergeColorSpaces(scope.colorSpaces, localColorSpaces);
 
       const matrix = parseMatrix6(page, dictGet(stream.dict, "Matrix")) ?? ([1, 0, 0, 1, 0, 0] as PdfMatrix);
       const bbox = parseBBox4(page, dictGet(stream.dict, "BBox"));
@@ -551,6 +569,7 @@ function expandFormXObjectsNative(
         extGState: mergedExt,
         shadings: mergedShadings,
         patterns: mergedPatterns,
+        colorSpaces: mergedColorSpaces,
         shadingMaxSize,
         clipPathMaxSize,
         pageBBox,
@@ -566,6 +585,7 @@ function expandFormXObjectsNative(
           extGState: mergedExt,
           shadings: mergedShadings,
           patterns: mergedPatterns,
+          colorSpaces: mergedColorSpaces,
         },
         callStack,
         depth + 1,
@@ -577,7 +597,7 @@ function expandFormXObjectsNative(
 
   expandInScope(
     parsedElements,
-    { resources, xObjects: xObjects ?? null, fontMappings, extGState, shadings, patterns },
+    { resources, xObjects: xObjects ?? null, fontMappings, extGState, shadings, patterns, colorSpaces },
     new Set(),
     0,
   );

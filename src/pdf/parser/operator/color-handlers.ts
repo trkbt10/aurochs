@@ -12,9 +12,10 @@
  * - Lookup objects instead of switch (Rule 1)
  */
 
-import type { GraphicsStateOps, OperatorHandler, OperatorHandlerEntry } from "./types";
+import type { GraphicsStateOps, OperatorHandler, OperatorHandlerEntry, ParserContext } from "./types";
 import type { PdfColor } from "../../domain";
 import { popNumber, collectColorComponents } from "./stack-ops";
+import { evalIccCurve, makeBradfordAdaptationMatrix, type ParsedIccProfile } from "../icc-profile.native";
 
 // =============================================================================
 // Gray Color Handlers
@@ -25,6 +26,7 @@ import { popNumber, collectColorComponents } from "./stack-ops";
  */
 const handleFillGray: OperatorHandler = (ctx, gfxOps) => {
   const [gray, newStack] = popNumber(ctx.operandStack);
+  gfxOps.setFillColorSpaceName("DeviceGray");
   gfxOps.setFillGray(gray);
 
   return { operandStack: newStack };
@@ -35,6 +37,7 @@ const handleFillGray: OperatorHandler = (ctx, gfxOps) => {
  */
 const handleStrokeGray: OperatorHandler = (ctx, gfxOps) => {
   const [gray, newStack] = popNumber(ctx.operandStack);
+  gfxOps.setStrokeColorSpaceName("DeviceGray");
   gfxOps.setStrokeGray(gray);
 
   return { operandStack: newStack };
@@ -51,6 +54,7 @@ const handleFillRgb: OperatorHandler = (ctx, gfxOps) => {
   const [b, stack1] = popNumber(ctx.operandStack);
   const [g, stack2] = popNumber(stack1);
   const [r, stack3] = popNumber(stack2);
+  gfxOps.setFillColorSpaceName("DeviceRGB");
   gfxOps.setFillRgb(r, g, b);
 
   return { operandStack: stack3 };
@@ -63,6 +67,7 @@ const handleStrokeRgb: OperatorHandler = (ctx, gfxOps) => {
   const [b, stack1] = popNumber(ctx.operandStack);
   const [g, stack2] = popNumber(stack1);
   const [r, stack3] = popNumber(stack2);
+  gfxOps.setStrokeColorSpaceName("DeviceRGB");
   gfxOps.setStrokeRgb(r, g, b);
 
   return { operandStack: stack3 };
@@ -80,6 +85,7 @@ const handleFillCmyk: OperatorHandler = (ctx, gfxOps) => {
   const [y, stack2] = popNumber(stack1);
   const [m, stack3] = popNumber(stack2);
   const [c, stack4] = popNumber(stack3);
+  gfxOps.setFillColorSpaceName("DeviceCMYK");
   gfxOps.setFillCmyk(c, m, y, k);
 
   return { operandStack: stack4 };
@@ -93,6 +99,7 @@ const handleStrokeCmyk: OperatorHandler = (ctx, gfxOps) => {
   const [y, stack2] = popNumber(stack1);
   const [m, stack3] = popNumber(stack2);
   const [c, stack4] = popNumber(stack3);
+  gfxOps.setStrokeColorSpaceName("DeviceCMYK");
   gfxOps.setStrokeCmyk(c, m, y, k);
 
   return { operandStack: stack4 };
@@ -126,6 +133,12 @@ const handleFillColorSpace: OperatorHandler = (ctx, gfxOps) => {
 
   const base = parsePatternUnderlyingColorSpace(top);
   gfxOps.setFillPatternUnderlyingColorSpace(base ?? undefined);
+  if (typeof top === "string" && top.length > 0) {
+    const key = top.startsWith("/") ? top.slice(1) : top;
+    gfxOps.setFillColorSpaceName(key);
+  } else {
+    gfxOps.setFillColorSpaceName(undefined);
+  }
 
   return { operandStack: newStack };
 };
@@ -137,6 +150,12 @@ const handleStrokeColorSpace: OperatorHandler = (ctx, gfxOps) => {
 
   const base = parsePatternUnderlyingColorSpace(top);
   gfxOps.setStrokePatternUnderlyingColorSpace(base ?? undefined);
+  if (typeof top === "string" && top.length > 0) {
+    const key = top.startsWith("/") ? top.slice(1) : top;
+    gfxOps.setStrokeColorSpaceName(key);
+  } else {
+    gfxOps.setStrokeColorSpaceName(undefined);
+  }
 
   return { operandStack: newStack };
 };
@@ -197,6 +216,96 @@ function applyStrokeColorN(components: readonly number[], gfxOps: GraphicsStateO
   }
 }
 
+function xyzToSrgbBytes(X: number, Y: number, Z: number): readonly [number, number, number] {
+  // XYZ -> linear sRGB via standard matrix.
+  const rLin = 3.2406 * X - 1.5372 * Y - 0.4986 * Z;
+  const gLin = -0.9689 * X + 1.8758 * Y + 0.0415 * Z;
+  const bLin = 0.0557 * X - 0.204 * Y + 1.057 * Z;
+
+  const toSrgb = (c: number): number => {
+    const v = c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
+    const clamped = Math.min(1, Math.max(0, v));
+    return Math.round(clamped * 255);
+  };
+
+  return [toSrgb(rLin), toSrgb(gLin), toSrgb(bLin)] as const;
+}
+
+function applyMat3ToXyz(m: readonly number[], v: readonly [number, number, number]): readonly [number, number, number] {
+  const x = v[0];
+  const y = v[1];
+  const z = v[2];
+  return [
+    (m[0] ?? 0) * x + (m[1] ?? 0) * y + (m[2] ?? 0) * z,
+    (m[3] ?? 0) * x + (m[4] ?? 0) * y + (m[5] ?? 0) * z,
+    (m[6] ?? 0) * x + (m[7] ?? 0) * y + (m[8] ?? 0) * z,
+  ] as const;
+}
+
+function tryApplyIccBasedFillColor(components: readonly number[], ctx: ParserContext, gfxOps: GraphicsStateOps): boolean {
+  const csName = gfxOps.get().fillColorSpaceName;
+  if (!csName) {return false;}
+  const cs = ctx.colorSpaces.get(csName);
+  if (!cs || cs.kind !== "iccBased") {return false;}
+  if (!cs.profile) {return false;}
+
+  const rgb = iccComponentsToRgbBytes(components, cs.profile, cs.n);
+  if (!rgb) {return false;}
+  gfxOps.setFillRgb((rgb[0] ?? 0) / 255, (rgb[1] ?? 0) / 255, (rgb[2] ?? 0) / 255);
+  return true;
+}
+
+function tryApplyIccBasedStrokeColor(components: readonly number[], ctx: ParserContext, gfxOps: GraphicsStateOps): boolean {
+  const csName = gfxOps.get().strokeColorSpaceName;
+  if (!csName) {return false;}
+  const cs = ctx.colorSpaces.get(csName);
+  if (!cs || cs.kind !== "iccBased") {return false;}
+  if (!cs.profile) {return false;}
+
+  const rgb = iccComponentsToRgbBytes(components, cs.profile, cs.n);
+  if (!rgb) {return false;}
+  gfxOps.setStrokeRgb((rgb[0] ?? 0) / 255, (rgb[1] ?? 0) / 255, (rgb[2] ?? 0) / 255);
+  return true;
+}
+
+function iccComponentsToRgbBytes(
+  components: readonly number[],
+  profile: ParsedIccProfile,
+  n: number,
+): readonly [number, number, number] | null {
+  // Only support Gray/RGB for now (deterministic subset).
+  if (profile.kind === "gray") {
+    if (n !== 1 || components.length < 1) {return null;}
+    const g = Math.min(1, Math.max(0, components[0] ?? 0));
+    const linear = evalIccCurve(profile.kTRC, g);
+    const D65: readonly [number, number, number] = [0.9505, 1, 1.089];
+    const adapt = makeBradfordAdaptationMatrix({ srcWhitePoint: profile.whitePoint, dstWhitePoint: D65 });
+    const xyz = applyMat3ToXyz(adapt, [
+      (profile.whitePoint[0] ?? 0) * linear,
+      (profile.whitePoint[1] ?? 0) * linear,
+      (profile.whitePoint[2] ?? 0) * linear,
+    ]);
+    return xyzToSrgbBytes(xyz[0], xyz[1], xyz[2]);
+  }
+
+  if (n !== 3 || components.length < 3) {return null;}
+  const r = Math.min(1, Math.max(0, components[0] ?? 0));
+  const g = Math.min(1, Math.max(0, components[1] ?? 0));
+  const b = Math.min(1, Math.max(0, components[2] ?? 0));
+  const R = evalIccCurve(profile.rTRC, r);
+  const G = evalIccCurve(profile.gTRC, g);
+  const B = evalIccCurve(profile.bTRC, b);
+
+  const X = (profile.rXYZ[0] ?? 0) * R + (profile.gXYZ[0] ?? 0) * G + (profile.bXYZ[0] ?? 0) * B;
+  const Y = (profile.rXYZ[1] ?? 0) * R + (profile.gXYZ[1] ?? 0) * G + (profile.bXYZ[1] ?? 0) * B;
+  const Z = (profile.rXYZ[2] ?? 0) * R + (profile.gXYZ[2] ?? 0) * G + (profile.bXYZ[2] ?? 0) * B;
+
+  const D65: readonly [number, number, number] = [0.9505, 1, 1.089];
+  const adapt = makeBradfordAdaptationMatrix({ srcWhitePoint: profile.whitePoint, dstWhitePoint: D65 });
+  const xyz = applyMat3ToXyz(adapt, [X, Y, Z]);
+  return xyzToSrgbBytes(xyz[0], xyz[1], xyz[2]);
+}
+
 /**
  * sc/scn operator: Set fill color in current color space
  *
@@ -204,7 +313,9 @@ function applyStrokeColorN(components: readonly number[], gfxOps: GraphicsStateO
  */
 const handleFillColorN: OperatorHandler = (ctx, gfxOps) => {
   const [components, newStack] = collectColorComponents(ctx.operandStack);
-  applyFillColorN(components, gfxOps);
+  if (!tryApplyIccBasedFillColor(components, ctx, gfxOps)) {
+    applyFillColorN(components, gfxOps);
+  }
 
   return { operandStack: newStack };
 };
@@ -214,7 +325,9 @@ const handleFillColorN: OperatorHandler = (ctx, gfxOps) => {
  */
 const handleStrokeColorN: OperatorHandler = (ctx, gfxOps) => {
   const [components, newStack] = collectColorComponents(ctx.operandStack);
-  applyStrokeColorN(components, gfxOps);
+  if (!tryApplyIccBasedStrokeColor(components, ctx, gfxOps)) {
+    applyStrokeColorN(components, gfxOps);
+  }
 
   return { operandStack: newStack };
 };

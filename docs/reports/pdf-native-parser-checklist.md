@@ -182,7 +182,7 @@ Current behavior in `src/pdf/parser/image-extractor.native.ts`: supports common 
 - [ ] **Color spaces / masks**
   - [ ] ICCBased: parse ICC profiles (currently infers by component count; warns on unusual cases)
     - [x] image ICCBased RGB/Gray (matrix + TRC) → DeviceRGB (`src/pdf/parser/icc-profile.native.ts`, `src/pdf/parser/image-extractor.native.ts`, `src/pdf/parser/image-extractor.spec.ts`)
-    - [ ] fill/stroke ICCBased colors (still alternate-color fallback) (`src/pdf/converter/color-converter.ts`)
+    - [x] fill/stroke ICCBased colors (parse `/Resources /ColorSpace` ICC streams and convert `sc/SC` → DeviceRGB deterministically) (`src/pdf/parser/color-space.native.ts`, `src/pdf/parser/operator/color-handlers.ts`, `src/pdf/parser/operator/color-handlers.spec.ts`, `src/pdf/parser/pdf-parser.native.ts`, `src/pdf/domain/graphics-state/stack.ts`)
     - [ ] LUT-based/CMYK ICC transforms (not supported yet)
   - [ ] Special color spaces for images
     - [x] `/Indexed` palette images (expand to DeviceRGB) (`src/pdf/parser/image-extractor.native.ts`, `src/pdf/parser/image-extractor.spec.ts`)

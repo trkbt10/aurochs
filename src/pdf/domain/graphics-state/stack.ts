@@ -45,6 +45,8 @@ export type GraphicsStateStack = Readonly<{
   setStrokePatternUnderlyingColorSpace(space: "DeviceGray" | "DeviceRGB" | "DeviceCMYK" | undefined): void;
   setFillPatternColor(color: PdfGraphicsState["fillPatternColor"] | undefined): void;
   setStrokePatternColor(color: PdfGraphicsState["strokePatternColor"] | undefined): void;
+  setFillColorSpaceName(name: string | undefined): void;
+  setStrokeColorSpaceName(name: string | undefined): void;
   setFillGray(gray: number): void;
   setStrokeGray(gray: number): void;
   setFillRgb(r: number, g: number, b: number): void;
@@ -193,6 +195,20 @@ export function createGraphicsStateStack(initial?: PdfGraphicsState): GraphicsSt
     current.value = {
       ...current.value,
       strokePatternColor: color,
+    };
+  };
+
+  const setFillColorSpaceName = (name: string | undefined): void => {
+    current.value = {
+      ...current.value,
+      fillColorSpaceName: name,
+    };
+  };
+
+  const setStrokeColorSpaceName = (name: string | undefined): void => {
+    current.value = {
+      ...current.value,
+      strokeColorSpaceName: name,
     };
   };
 
@@ -377,6 +393,8 @@ export function createGraphicsStateStack(initial?: PdfGraphicsState): GraphicsSt
     setStrokePatternUnderlyingColorSpace,
     setFillPatternColor,
     setStrokePatternColor,
+    setFillColorSpaceName,
+    setStrokeColorSpaceName,
     setFillGray,
     setStrokeGray,
     setFillRgb,

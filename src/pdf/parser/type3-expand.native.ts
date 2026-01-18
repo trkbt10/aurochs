@@ -12,6 +12,7 @@ import { extractExtGStateFromResourcesNative, type ExtGStateParams } from "./ext
 import { extractFontMappingsFromResourcesNative } from "./font-decoder.native";
 import { extractPatternsFromResourcesNative } from "./pattern.native";
 import { extractShadingFromResourcesNative } from "./shading.native";
+import { extractColorSpacesFromResourcesNative, type ParsedNamedColorSpace } from "./color-space.native";
 import type { ParsedElement, ParsedImage, ParsedText } from "./operator";
 import type { PdfPattern } from "./pattern.types";
 import type { PdfShading } from "./shading.types";
@@ -51,6 +52,7 @@ type Type3ResourceScope = Readonly<{
   readonly extGState: ReadonlyMap<string, ExtGStateParams>;
   readonly shadings: ReadonlyMap<string, PdfShading>;
   readonly patterns: ReadonlyMap<string, PdfPattern>;
+  readonly colorSpaces: ReadonlyMap<string, ParsedNamedColorSpace>;
   readonly fontMappings: FontMappings;
 }>;
 
@@ -73,8 +75,9 @@ function buildType3Scopes(page: NativePdfPage, resources: PdfDict): ReadonlyMap<
     const fontMappings = res ? extractFontMappingsFromResourcesNative(page, res) : new Map();
     const shadings = res ? extractShadingFromResourcesNative(page, res) : new Map();
     const patterns = res ? extractPatternsFromResourcesNative(page, res) : new Map();
+    const colorSpaces = extractColorSpacesFromResourcesNative(page, res);
 
-    out.set(fontName, { fontName, xObjects, extGState, shadings, patterns, fontMappings });
+    out.set(fontName, { fontName, xObjects, extGState, shadings, patterns, colorSpaces, fontMappings });
   }
 
   return out;
@@ -222,6 +225,7 @@ export function expandType3TextElementsNative(args: {
         extGState: mergedExt,
         shadings: scope?.shadings ?? new Map(),
         patterns: scope?.patterns ?? new Map(),
+        colorSpaces: scope?.colorSpaces ?? new Map(),
         shadingMaxSize: args.shadingMaxSize,
         clipPathMaxSize: args.clipPathMaxSize,
         pageBBox: args.pageBBox,

@@ -43,6 +43,8 @@ export function createDefaultGraphicsState(): PdfGraphicsState {
     strokePatternUnderlyingColorSpace: undefined,
     fillPatternColor: undefined,
     strokePatternColor: undefined,
+    fillColorSpaceName: undefined,
+    strokeColorSpaceName: undefined,
     fillColor: DEFAULT_FILL_COLOR,
     strokeColor: DEFAULT_STROKE_COLOR,
     lineWidth: 1,

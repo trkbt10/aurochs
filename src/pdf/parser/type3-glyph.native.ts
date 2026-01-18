@@ -70,6 +70,7 @@ export function renderType3TextRun(
     readonly extGState: ReadonlyMap<string, ExtGStateParams>;
     readonly shadings: ReadonlyMap<string, PdfShading>;
     readonly patterns: ReadonlyMap<string, PdfPattern>;
+    readonly colorSpaces: ReadonlyMap<string, import("./color-space.native").ParsedNamedColorSpace>;
     readonly shadingMaxSize: number;
     readonly clipPathMaxSize: number;
     readonly pageBBox: PdfBBox;
@@ -103,6 +104,7 @@ export function renderType3TextRun(
           extGState: options.extGState,
           shadings: options.shadings,
           patterns: options.patterns,
+          colorSpaces: options.colorSpaces,
           shadingMaxSize: options.shadingMaxSize,
           clipPathMaxSize: options.clipPathMaxSize,
           pageBBox: options.pageBBox,

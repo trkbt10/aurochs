@@ -37,6 +37,8 @@ function createMockGfxOps(overrides: Partial<ReturnType<typeof createDefaultGrap
       setStrokePatternUnderlyingColorSpace: () => {},
       setFillPatternColor: () => {},
       setStrokePatternColor: () => {},
+      setFillColorSpaceName: () => {},
+      setStrokeColorSpaceName: () => {},
       setLineWidth: () => {},
       setLineCap: () => {},
       setLineJoin: () => {},
@@ -64,6 +66,7 @@ function createContext(
   operandStack: (number | string | (number | string)[])[] = [],
   options: Partial<ParserContext> = {}
 ): ParserContext {
+  const colorSpaces = options.colorSpaces ?? new Map();
   return {
     operandStack,
     currentPath: [],
@@ -77,6 +80,7 @@ function createContext(
     clipPathMaxSize: options.clipPathMaxSize ?? 0,
     patterns: options.patterns ?? new Map(),
     ...options,
+    colorSpaces,
     extGState: options.extGState ?? new Map(),
   };
 }

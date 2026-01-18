@@ -30,6 +30,8 @@ function createMockGfxOps(): GraphicsStateOps {
     setStrokePatternUnderlyingColorSpace: () => {},
     setFillPatternColor: () => {},
     setStrokePatternColor: () => {},
+    setFillColorSpaceName: () => {},
+    setStrokeColorSpaceName: () => {},
     setLineWidth: () => {},
     setLineCap: () => {},
     setLineJoin: () => {},
@@ -65,6 +67,7 @@ function createContext(operandStack: (number | string | (number | string)[])[] =
     shadingMaxSize: 0,
     clipPathMaxSize: 0,
     patterns: new Map(),
+    colorSpaces: new Map(),
     extGState: new Map(),
   };
 }

@@ -23,6 +23,7 @@ import type {
 } from "../../domain";
 import type { PdfShading } from "../shading.types";
 import type { PdfPattern } from "../pattern.types";
+import type { ParsedNamedColorSpace } from "../color-space.native";
 
 // =============================================================================
 // Parsed Element Types
@@ -240,6 +241,10 @@ export type ParserContext = {
    */
   readonly patterns: ReadonlyMap<string, PdfPattern>;
   /**
+   * Extracted `/ColorSpace` resources for the current page/scope (name → supported color space).
+   */
+  readonly colorSpaces: ReadonlyMap<string, ParsedNamedColorSpace>;
+  /**
    * Extracted `/ExtGState` resources for the current page (name → supported params).
    *
    * This is injected by the native parser to keep operator parsing independent
@@ -303,6 +308,8 @@ export type GraphicsStateOps = {
   readonly setStrokePatternUnderlyingColorSpace: (space: "DeviceGray" | "DeviceRGB" | "DeviceCMYK" | undefined) => void;
   readonly setFillPatternColor: (color: PdfGraphicsState["fillPatternColor"] | undefined) => void;
   readonly setStrokePatternColor: (color: PdfGraphicsState["strokePatternColor"] | undefined) => void;
+  readonly setFillColorSpaceName: (name: string | undefined) => void;
+  readonly setStrokeColorSpaceName: (name: string | undefined) => void;
   readonly setLineWidth: (width: number) => void;
   readonly setLineCap: (cap: 0 | 1 | 2) => void;
   readonly setLineJoin: (join: 0 | 1 | 2) => void;

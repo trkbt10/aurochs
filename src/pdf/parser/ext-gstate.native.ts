@@ -17,6 +17,7 @@ import { rasterizeSoftMaskedFillPath } from "./soft-mask-raster.native";
 import { extractFontMappingsFromResourcesNative } from "./font-decoder.native";
 import { extractShadingFromResourcesNative } from "./shading.native";
 import { extractPatternsFromResourcesNative } from "./pattern.native";
+import { extractColorSpacesFromResourcesNative } from "./color-space.native";
 
 function asDict(obj: PdfObject | undefined): PdfDict | null {
   return obj?.type === "dict" ? obj : null;
@@ -1311,6 +1312,7 @@ function parseSoftMask(page: NativePdfPage, obj: PdfObject | undefined, options:
     const fontMappings = resources ? extractFontMappingsFromResourcesNative(page, resources) : new Map();
     const shadings = resources ? extractShadingFromResourcesNative(page, resources) : new Map();
     const patterns = resources ? extractPatternsFromResourcesNative(page, resources) : new Map();
+    const colorSpaces = extractColorSpacesFromResourcesNative(page, resources);
 
     const group = asDict(resolve(page, dictGet(g.dict, "Group")));
     const groupKnockout = group ? (asBool(resolve(page, dictGet(group, "K"))) === true) : false;
@@ -1326,6 +1328,7 @@ function parseSoftMask(page: NativePdfPage, obj: PdfObject | undefined, options:
       extGState,
       shadings,
       patterns,
+      colorSpaces,
       shadingMaxSize: options.shadingMaxSize ?? 0,
       clipPathMaxSize: 0,
       pageBBox: [bbox[0], bbox[1], bbox[2], bbox[3]],
