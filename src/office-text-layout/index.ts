@@ -84,6 +84,45 @@ export {
 } from "./adapters/docx-adapter";
 export type { DocxPageConfig } from "./adapters/docx-adapter";
 
+// DOCX section adapter
+export {
+  sectionPropertiesToPageConfig,
+  getSectionContentWidth,
+  getSectionContentHeight,
+  getAllSectionConfigs,
+} from "./adapters/docx-section-adapter";
+
+// DOCX style resolver
+export {
+  createStyleResolver,
+  resolveRunProperties,
+  resolveRunPropertiesWithStyles,
+} from "./adapters/docx-style-resolver";
+export type { ResolvedRunProperties } from "./adapters/docx-style-resolver";
+
+// Writing mode utilities
+export {
+  textDirectionToWritingMode,
+  toDirectional,
+  fromDirectional,
+  toDirectionalSize,
+  fromDirectionalSize,
+  toDirectionalBounds,
+  fromDirectionalBounds,
+  isHorizontal,
+  isVertical,
+  getCssWritingMode,
+} from "./writing-mode";
+export type {
+  WritingMode,
+  DirectionalCoords,
+  DirectionalSize,
+  DirectionalBounds,
+  PhysicalCoords,
+  PhysicalSize,
+  PhysicalBounds,
+} from "./writing-mode";
+
 // SVG Renderer
 export {
   TextOverlay,

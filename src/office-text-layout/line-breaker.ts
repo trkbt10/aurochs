@@ -10,6 +10,7 @@ import type { Pixels, Points } from "../ooxml/domain/units";
 import { px, pt } from "../ooxml/domain/units";
 import { estimateTextWidth } from "./measurer";
 import { isCjkCodePoint } from "../text/cjk";
+import { SPEC_DEFAULT_FONT_SIZE_PT } from "../docx/domain/ecma376-defaults";
 
 // =============================================================================
 // Constants
@@ -17,8 +18,12 @@ import { isCjkCodePoint } from "../text/cjk";
 
 /**
  * Default font size in points when no span is available.
+ * Uses ECMA-376 specification default (10pt).
+ *
+ * @deprecated Use SPEC_DEFAULT_FONT_SIZE_PT from ecma376-defaults.ts directly.
+ *             This export is kept for backwards compatibility.
  */
-export const DEFAULT_FONT_SIZE_PT = 12;
+export const DEFAULT_FONT_SIZE_PT = SPEC_DEFAULT_FONT_SIZE_PT;
 
 // =============================================================================
 // Line Break Result
@@ -59,7 +64,7 @@ function createOverflowSpan(span: MeasuredSpan, overflowText: string): MeasuredS
   return {
     ...span,
     text: overflowText,
-    width: estimateTextWidth(overflowText, span.fontSize, span.letterSpacing, span.fontFamily),
+    width: estimateTextWidth(overflowText, span.fontSize, span.letterSpacing, span.fontFamily, span.fontWeight),
   };
 }
 
@@ -85,7 +90,7 @@ function breakSpanAtWidth(
   for (const i of Array.from({ length: text.length }, (_, index) => index)) {
     const char = text[i];
     const charWidth =
-      (estimateTextWidth(char, span.fontSize, px(0), span.fontFamily) as number) +
+      (estimateTextWidth(char, span.fontSize, px(0), span.fontFamily, span.fontWeight) as number) +
       (i > 0 ? (span.letterSpacing as number) : 0);
 
     if (state.accumulatedWidth + charWidth > availableWidth && state.breakIndex >= 0) {
@@ -119,7 +124,7 @@ function breakSpanAtWidth(
       state.accumulatedWidth = 0;
       for (const i of Array.from({ length: text.length }, (_, index) => index)) {
         const charWidth =
-          (estimateTextWidth(text[i], span.fontSize, px(0), span.fontFamily) as number) +
+          (estimateTextWidth(text[i], span.fontSize, px(0), span.fontFamily, span.fontWeight) as number) +
           (i > 0 ? (span.letterSpacing as number) : 0);
         if (state.accumulatedWidth + charWidth > availableWidth && i > 0) {
           state.breakIndex = i;
@@ -143,7 +148,7 @@ function breakSpanAtWidth(
   const fitsSpan: MeasuredSpan = {
     ...span,
     text: fitsText,
-    width: estimateTextWidth(fitsText, span.fontSize, span.letterSpacing, span.fontFamily),
+    width: estimateTextWidth(fitsText, span.fontSize, span.letterSpacing, span.fontFamily, span.fontWeight),
   };
 
   return { fits: fitsSpan, overflow: createOverflowSpan(span, overflowText) };

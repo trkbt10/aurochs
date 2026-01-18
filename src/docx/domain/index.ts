@@ -185,3 +185,35 @@ export type {
   DocxRelationships,
   DocxDocument,
 } from "./document";
+
+// ECMA-376 specification defaults
+export {
+  // Unit conversion constants
+  TWIPS_PER_POINT,
+  HALF_POINTS_PER_POINT,
+  EMU_PER_INCH,
+  TWIPS_PER_INCH,
+  POINTS_PER_INCH,
+  PIXELS_PER_INCH,
+  PT_TO_PX,
+  TWIPS_TO_PX,
+  // Page defaults
+  SPEC_DEFAULT_PAGE_WIDTH_TWIPS,
+  SPEC_DEFAULT_PAGE_HEIGHT_TWIPS,
+  SPEC_DEFAULT_MARGIN_TWIPS,
+  // Font defaults
+  SPEC_DEFAULT_FONT_SIZE_HALF_POINTS,
+  SPEC_DEFAULT_FONT_SIZE_PT,
+  // Text direction defaults
+  SPEC_DEFAULT_TEXT_DIRECTION,
+  // Tab stop defaults
+  SPEC_DEFAULT_TAB_STOP_TWIPS,
+  // Line spacing defaults
+  SPEC_DEFAULT_LINE_SPACING_VALUE,
+  // Conversion utilities
+  twipsToPx,
+  twipsToPt,
+  halfPointsToPt,
+  ptToPx,
+} from "./ecma376-defaults";
+export type { EcmaTextDirection } from "./ecma376-defaults";

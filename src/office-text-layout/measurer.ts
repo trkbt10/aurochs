@@ -48,6 +48,7 @@ export type CharWidthResult = {
  * @param prevChar - Previous character (for kerning)
  * @param fontSize - Font size in points
  * @param fontFamily - Font family name
+ * @param fontWeight - Font weight (default: 400)
  * @returns Character width result with kerning adjustment
  */
 export function calculateCharWidth(
@@ -55,13 +56,14 @@ export function calculateCharWidth(
   prevChar: string | undefined,
   fontSize: Points,
   fontFamily: string,
+  fontWeight: number = 400,
 ): CharWidthResult {
   const charCode = char.charCodeAt(0);
   const fontSizePx = (fontSize as number) * PT_TO_PX;
   const isCjk = isCjkCodePoint(charCode);
 
-  // Get base character width from font metrics
-  const widthRatio = getCharWidth(char, fontFamily, isCjk);
+  // Get base character width from font metrics (with bold adjustment)
+  const widthRatio = getCharWidth(char, fontFamily, isCjk, fontWeight);
   const width = fontSizePx * widthRatio;
 
   // Calculate kerning adjustment
@@ -105,6 +107,7 @@ function resolveKerningAdjust(
  * @param fontSize - Font size in points
  * @param letterSpacing - Additional letter spacing in pixels
  * @param fontFamily - Font family for metrics lookup
+ * @param fontWeight - Font weight (default: 400)
  * @returns Width in pixels
  */
 export function estimateTextWidth(
@@ -112,13 +115,14 @@ export function estimateTextWidth(
   fontSize: Points,
   letterSpacing: Pixels,
   fontFamily: string,
+  fontWeight: number = 400,
 ): Pixels {
   const chars = Array.from(text);
   const letterSpacingNum = letterSpacing as number;
 
   const width = chars.reduce((acc, char, index) => {
     const prevChar = index > 0 ? chars[index - 1] : undefined;
-    const charResult = calculateCharWidth(char, prevChar, fontSize, fontFamily);
+    const charResult = calculateCharWidth(char, prevChar, fontSize, fontFamily, fontWeight);
     const spacing = index > 0 ? letterSpacingNum : 0;
     return acc + (charResult.totalWidth as number) + spacing;
   }, 0);
@@ -137,7 +141,13 @@ export function estimateTextWidth(
 export function measureSpan(span: LayoutSpan): MeasuredSpan {
   let width = px(0);
   if (!span.isBreak) {
-    width = estimateTextWidth(span.text, span.fontSize, span.letterSpacing, span.fontFamily);
+    width = estimateTextWidth(
+      span.text,
+      span.fontSize,
+      span.letterSpacing,
+      span.fontFamily,
+      span.fontWeight,
+    );
   }
 
   return {
@@ -185,7 +195,7 @@ export function measureSpanTextWidth(span: LayoutSpan, charCount: number): Pixel
   }
 
   const text = span.text.slice(0, Math.min(charCount, span.text.length));
-  return estimateTextWidth(text, span.fontSize, span.letterSpacing, span.fontFamily);
+  return estimateTextWidth(text, span.fontSize, span.letterSpacing, span.fontFamily, span.fontWeight);
 }
 
 /**
@@ -207,7 +217,7 @@ export function getCharIndexAtOffset(span: LayoutSpan, targetX: number): number 
 
   for (let i = 0; i < chars.length; i++) {
     const prevChar = i > 0 ? chars[i - 1] : undefined;
-    const charResult = calculateCharWidth(chars[i], prevChar, span.fontSize, span.fontFamily);
+    const charResult = calculateCharWidth(chars[i], prevChar, span.fontSize, span.fontFamily, span.fontWeight);
     const spacing = i > 0 ? letterSpacingNum : 0;
     const charWidth = (charResult.totalWidth as number) + spacing;
 
@@ -245,6 +255,7 @@ export type DetailedMeasurement = {
  * @param fontSize - Font size in points
  * @param letterSpacing - Additional letter spacing in pixels
  * @param fontFamily - Font family for metrics lookup
+ * @param fontWeight - Font weight (default: 400)
  * @returns Detailed measurement with per-character data
  */
 export function measureTextDetailed(
@@ -252,6 +263,7 @@ export function measureTextDetailed(
   fontSize: Points,
   letterSpacing: Pixels,
   fontFamily: string,
+  fontWeight: number = 400,
 ): DetailedMeasurement {
   const chars = Array.from(text);
   const letterSpacingNum = letterSpacing as number;
@@ -259,7 +271,7 @@ export function measureTextDetailed(
   const measurement = chars.reduce(
     (acc, char, index) => {
       const prevChar = index > 0 ? chars[index - 1] : undefined;
-      const charResult = calculateCharWidth(char, prevChar, fontSize, fontFamily);
+      const charResult = calculateCharWidth(char, prevChar, fontSize, fontFamily, fontWeight);
       const spacing = index > 0 ? letterSpacingNum : 0;
 
       acc.positions.push(px(acc.totalWidth));

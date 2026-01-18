@@ -7,6 +7,7 @@
 
 import { useMemo } from "react";
 import type { DocxParagraph } from "../../../docx/domain/paragraph";
+import type { DocxSectionProperties } from "../../../docx/domain/section";
 import type { Pixels } from "../../../ooxml/domain/units";
 import { px } from "../../../ooxml/domain/units";
 import type {
@@ -22,6 +23,10 @@ import {
   createSinglePageLayout,
   DEFAULT_PAGE_FLOW_CONFIG,
 } from "../../../office-text-layout";
+import {
+  sectionPropertiesToPageConfig,
+  getSectionContentWidth,
+} from "../../../office-text-layout/adapters/docx-section-adapter";
 
 // =============================================================================
 // Types
@@ -32,12 +37,14 @@ export type DocumentLayoutMode = "paged" | "continuous";
 export type UseDocumentLayoutOptions = {
   /** Paragraphs to layout */
   readonly paragraphs: readonly DocxParagraph[];
-  /** Content width in pixels (without margins) */
-  readonly contentWidth: Pixels;
+  /** Content width in pixels (without margins) - overrides sectPr if provided */
+  readonly contentWidth?: Pixels;
   /** Layout mode */
   readonly mode?: DocumentLayoutMode;
-  /** Page configuration (for paged mode) */
+  /** Page configuration (for paged mode) - overrides sectPr if provided */
   readonly pageConfig?: PageFlowConfig;
+  /** Section properties from the document - used to derive page config */
+  readonly sectPr?: DocxSectionProperties;
 };
 
 export type DocumentLayoutResult = {
@@ -57,13 +64,42 @@ export type DocumentLayoutResult = {
 
 /**
  * Hook for computing document layout.
+ *
+ * Page configuration is determined in this order:
+ * 1. Explicit pageConfig parameter (highest priority)
+ * 2. sectPr from the document
+ * 3. DEFAULT_PAGE_FLOW_CONFIG (ECMA-376 specification defaults)
  */
 export function useDocumentLayout({
   paragraphs,
-  contentWidth,
+  contentWidth: explicitContentWidth,
   mode = "paged",
-  pageConfig = DEFAULT_PAGE_FLOW_CONFIG,
+  pageConfig: explicitPageConfig,
+  sectPr,
 }: UseDocumentLayoutOptions): DocumentLayoutResult {
+  // Derive page configuration from sectPr or use defaults
+  const pageConfig = useMemo(() => {
+    if (explicitPageConfig !== undefined) {
+      return explicitPageConfig;
+    }
+    if (sectPr !== undefined) {
+      return sectionPropertiesToPageConfig(sectPr);
+    }
+    return DEFAULT_PAGE_FLOW_CONFIG;
+  }, [explicitPageConfig, sectPr]);
+
+  // Calculate content width from page config or explicit value
+  const contentWidth = useMemo(() => {
+    if (explicitContentWidth !== undefined) {
+      return explicitContentWidth;
+    }
+    return px(
+      (pageConfig.pageWidth as number) -
+      (pageConfig.marginLeft as number) -
+      (pageConfig.marginRight as number)
+    );
+  }, [explicitContentWidth, pageConfig]);
+
   // Convert DOCX paragraphs to layout inputs
   const layoutInputs = useMemo(() => {
     return paragraphsToLayoutInputs(paragraphs);

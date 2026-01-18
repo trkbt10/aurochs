@@ -14,6 +14,30 @@
 
 import type { Pixels, Points, Percent } from "../ooxml/domain/units";
 
+// Re-export writing mode types for convenience
+export type {
+  WritingMode,
+  DirectionalCoords,
+  DirectionalSize,
+  DirectionalBounds,
+  PhysicalCoords,
+  PhysicalSize,
+  PhysicalBounds,
+} from "./writing-mode";
+
+export {
+  textDirectionToWritingMode,
+  toDirectional,
+  fromDirectional,
+  toDirectionalSize,
+  fromDirectionalSize,
+  toDirectionalBounds,
+  fromDirectionalBounds,
+  isHorizontal,
+  isVertical,
+  getCssWritingMode,
+} from "./writing-mode";
+
 // =============================================================================
 // Text Alignment Types
 // =============================================================================

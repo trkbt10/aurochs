@@ -63,6 +63,7 @@ const svgStyle: CSSProperties = {
   userSelect: "none",
   backgroundColor: "white",
   boxShadow: "0 2px 8px rgba(0, 0, 0, 0.15)",
+  cursor: "text",
 };
 
 /** Default page width (A4 at 96 DPI) */

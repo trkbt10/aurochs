@@ -19,25 +19,33 @@ import type { DocxRun, DocxRunProperties, DocxRunContent, DocxHighlightColor } f
 import type { ParagraphAlignment } from "../../ooxml/domain/text";
 import type { Pixels, Points } from "../../ooxml/domain/units";
 import { px, pt, pct } from "../../ooxml/domain/units";
+import {
+  SPEC_DEFAULT_FONT_SIZE_PT,
+  SPEC_DEFAULT_TAB_STOP_TWIPS,
+  SPEC_DEFAULT_PAGE_WIDTH_TWIPS,
+  SPEC_DEFAULT_PAGE_HEIGHT_TWIPS,
+  SPEC_DEFAULT_MARGIN_TWIPS,
+  TWIPS_PER_POINT,
+  PT_TO_PX,
+  twipsToPx,
+} from "../../docx/domain/ecma376-defaults";
 
 // =============================================================================
 // Constants
 // =============================================================================
 
-/** Default font size in points */
-const DEFAULT_FONT_SIZE_PT = 11;
+/**
+ * Default font family when none specified.
+ * NOTE: ECMA-376 does not specify a default font family.
+ * This is an application-level default (sans-serif for consistent rendering).
+ */
+const DEFAULT_FONT_FAMILY = "sans-serif";
 
-/** Default font family */
-const DEFAULT_FONT_FAMILY = "Calibri";
-
-/** Default tab size in points */
-const DEFAULT_TAB_SIZE_PT = 36;
-
-/** Twips per point (1 point = 20 twips) */
-const TWIPS_PER_POINT = 20;
-
-/** Points per pixel at 96 DPI */
-const PT_TO_PX = 96 / 72;
+/**
+ * Default tab size in points.
+ * Derived from SPEC_DEFAULT_TAB_STOP_TWIPS.
+ */
+const DEFAULT_TAB_SIZE_PT = SPEC_DEFAULT_TAB_STOP_TWIPS / TWIPS_PER_POINT;
 
 // =============================================================================
 // Highlight Color Mapping
@@ -97,7 +105,7 @@ function resolveRunProperties(
 
   // Font size (in half-points)
   const szHalfPoints = props.sz ?? defaults.sz;
-  const fontSize = szHalfPoints !== undefined ? pt(szHalfPoints / 2) : pt(DEFAULT_FONT_SIZE_PT);
+  const fontSize = szHalfPoints !== undefined ? pt(szHalfPoints / 2) : pt(SPEC_DEFAULT_FONT_SIZE_PT);
 
   // Font families
   const fonts = props.rFonts ?? defaults.rFonts;
@@ -375,7 +383,7 @@ export function paragraphToLayoutInput(paragraph: DocxParagraph): LayoutParagrap
 
   // Font size for empty paragraphs
   const endParaFontSize =
-    props?.rPr?.sz !== undefined ? pt(props.rPr.sz / 2) : pt(DEFAULT_FONT_SIZE_PT);
+    props?.rPr?.sz !== undefined ? pt(props.rPr.sz / 2) : pt(SPEC_DEFAULT_FONT_SIZE_PT);
 
   return {
     spans,
@@ -466,17 +474,23 @@ export type DocxPageConfig = {
 };
 
 /**
- * Default A4 page configuration at 96 DPI.
- * A4: 210mm x 297mm = 8.27in x 11.69in = 794px x 1123px
+ * Default page configuration using ECMA-376 specification defaults.
+ * Letter size: 8.5in x 11in = 816px x 1056px at 96 DPI
  * Default margins: 1 inch = 96px
+ *
+ * @see ECMA-376-1:2016 Section 17.6.13 (pgSz)
+ * @see ECMA-376-1:2016 Section 17.6.11 (pgMar)
+ *
+ * @deprecated Use sectionPropertiesToPageConfig from docx-section-adapter.ts
+ *             to derive page configuration from sectPr.
  */
 export const DEFAULT_PAGE_CONFIG: DocxPageConfig = {
-  width: px(794),
-  height: px(1123),
-  marginLeft: px(96),
-  marginRight: px(96),
-  marginTop: px(96),
-  marginBottom: px(96),
+  width: twipsToPx(SPEC_DEFAULT_PAGE_WIDTH_TWIPS),
+  height: twipsToPx(SPEC_DEFAULT_PAGE_HEIGHT_TWIPS),
+  marginLeft: twipsToPx(SPEC_DEFAULT_MARGIN_TWIPS),
+  marginRight: twipsToPx(SPEC_DEFAULT_MARGIN_TWIPS),
+  marginTop: twipsToPx(SPEC_DEFAULT_MARGIN_TWIPS),
+  marginBottom: twipsToPx(SPEC_DEFAULT_MARGIN_TWIPS),
 };
 
 /**

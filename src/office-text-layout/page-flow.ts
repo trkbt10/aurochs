@@ -7,11 +7,18 @@
 
 import type { Pixels } from "../ooxml/domain/units";
 import { px } from "../ooxml/domain/units";
+import {
+  SPEC_DEFAULT_PAGE_WIDTH_TWIPS,
+  SPEC_DEFAULT_PAGE_HEIGHT_TWIPS,
+  SPEC_DEFAULT_MARGIN_TWIPS,
+  twipsToPx,
+} from "../docx/domain/ecma376-defaults";
 import type {
   LayoutParagraphResult,
   LayoutLine,
   PageLayout,
   PagedLayoutResult,
+  WritingMode,
 } from "./types";
 
 // =============================================================================
@@ -34,6 +41,8 @@ export type PageFlowConfig = {
   readonly marginLeft: Pixels;
   /** Right margin in pixels */
   readonly marginRight: Pixels;
+  /** Writing mode for text direction */
+  readonly writingMode?: WritingMode;
   /** Minimum lines to keep at bottom of page (widows) */
   readonly widowLines?: number;
   /** Minimum lines to keep at top of page (orphans) */
@@ -289,16 +298,21 @@ export function createSinglePageLayout(
 // =============================================================================
 
 /**
- * Default A4 page configuration.
- * A4: 210mm x 297mm = 794px x 1123px at 96 DPI
+ * Default page flow configuration using ECMA-376 specification defaults.
+ * Letter size: 8.5in x 11in = 816px x 1056px at 96 DPI
+ * Default margins: 1 inch = 96px
+ *
+ * @see ECMA-376-1:2016 Section 17.6.13 (pgSz)
+ * @see ECMA-376-1:2016 Section 17.6.11 (pgMar)
  */
 export const DEFAULT_PAGE_FLOW_CONFIG: PageFlowConfig = {
-  pageWidth: px(794),
-  pageHeight: px(1123),
-  marginTop: px(96),
-  marginBottom: px(96),
-  marginLeft: px(96),
-  marginRight: px(96),
+  pageWidth: twipsToPx(SPEC_DEFAULT_PAGE_WIDTH_TWIPS),
+  pageHeight: twipsToPx(SPEC_DEFAULT_PAGE_HEIGHT_TWIPS),
+  marginTop: twipsToPx(SPEC_DEFAULT_MARGIN_TWIPS),
+  marginBottom: twipsToPx(SPEC_DEFAULT_MARGIN_TWIPS),
+  marginLeft: twipsToPx(SPEC_DEFAULT_MARGIN_TWIPS),
+  marginRight: twipsToPx(SPEC_DEFAULT_MARGIN_TWIPS),
+  writingMode: "horizontal-tb",
   widowLines: 2,
   orphanLines: 2,
 };

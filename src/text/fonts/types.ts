@@ -34,6 +34,12 @@ export type FontMetrics = {
    * Use this to fine-tune overall text width matching.
    */
   readonly widthScale?: number;
+  /**
+   * Width scaling factor for bold text (default: 1.05).
+   * Applied when fontWeight >= 700.
+   * Bold text is typically 5-10% wider than regular text.
+   */
+  readonly boldWidthScale?: number;
 };
 
 /**

@@ -16,29 +16,43 @@
 import { getFontMetrics } from "./fonts";
 
 /**
+ * Default bold width scale factor.
+ * Bold text is typically 5% wider than regular text.
+ */
+const DEFAULT_BOLD_WIDTH_SCALE = 1.05;
+
+/**
  * Get character width for a specific character and font.
  *
  * @param char - Single character
  * @param fontFamily - Font family name
  * @param isCjk - Whether the character is CJK
+ * @param fontWeight - Font weight (default: 400)
  * @returns Width ratio relative to font size
  */
-export function getCharWidth(char: string, fontFamily: string | undefined, isCjk: boolean): number {
+export function getCharWidth(
+  char: string,
+  fontFamily: string | undefined,
+  isCjk: boolean,
+  fontWeight: number = 400,
+): number {
   const metrics = getFontMetrics(fontFamily);
   const scale = metrics.widthScale ?? 1.0;
+  const isBold = fontWeight >= 700;
+  const boldScale = isBold ? (metrics.boldWidthScale ?? DEFAULT_BOLD_WIDTH_SCALE) : 1.0;
 
   // CJK characters are typically full-width
   if (isCjk) {
-    return metrics.cjkAverage * scale;
+    return metrics.cjkAverage * scale * boldScale;
   }
 
   // Check for specific character width
   if (char in metrics.charWidths) {
-    return metrics.charWidths[char] * scale;
+    return metrics.charWidths[char] * scale * boldScale;
   }
 
   // Use average width for unknown characters
-  return metrics.latinAverage * scale;
+  return metrics.latinAverage * scale * boldScale;
 }
 
 /**

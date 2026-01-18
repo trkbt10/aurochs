@@ -18,6 +18,7 @@ import type {
 } from "../../office-text-layout/types";
 import {
   getLineTextLength,
+  getLineMaxFontInfo,
   PT_TO_PX,
   measureSpanTextWidth,
   getCharIndexAtOffset,
@@ -301,13 +302,13 @@ function findCursorCoordinatesInParagraph(
 
 /**
  * Convert a line position to cursor coordinates.
+ * Uses the maximum font in the line for vertical positioning (compound formatting support).
  */
 function lineToCoordinates(line: LayoutLine, offsetInLine: number, pageYOffset: number): CursorCoordinates {
   const x = getXPositionInLine(line, offsetInLine);
-  const fontSizePt = line.spans.length > 0 ? (line.spans[0].fontSize as number) : 12;
-  const fontFamily = line.spans.length > 0 ? line.spans[0].fontFamily : undefined;
+  const { fontSize, fontFamily } = getLineMaxFontInfo(line.spans);
   const lineY = (line.y as number) + pageYOffset;
-  const bounds = getTextVisualBounds(lineY, fontSizePt, fontFamily);
+  const bounds = getTextVisualBounds(lineY, fontSize as number, fontFamily);
 
   return {
     x: px(x),
@@ -327,16 +328,16 @@ type LineCandidate = {
 
 /**
  * Calculate distance from Y coordinate to a line.
+ * Uses the maximum font in the line for accurate bounds calculation.
  */
 function calculateLineDistance(
   y: number,
   line: LayoutLine,
   pageYOffset: number,
 ): number {
-  const fontSizePt = line.spans.length > 0 ? (line.spans[0].fontSize as number) : 12;
-  const fontFamily = line.spans.length > 0 ? line.spans[0].fontFamily : undefined;
+  const { fontSize, fontFamily } = getLineMaxFontInfo(line.spans);
   const lineY = (line.y as number) + pageYOffset;
-  const bounds = getTextVisualBounds(lineY, fontSizePt, fontFamily);
+  const bounds = getTextVisualBounds(lineY, fontSize as number, fontFamily);
   const lineTop = bounds.topY;
   const lineBottom = bounds.topY + bounds.height;
 
@@ -414,6 +415,7 @@ export function coordinatesToCursorPosition(
 
 /**
  * Create a selection rect for a line segment.
+ * Uses the maximum font in the line for consistent selection height.
  */
 function createLineSelectionRect(
   line: LayoutLine,
@@ -423,10 +425,9 @@ function createLineSelectionRect(
 ): SelectionRect {
   const startX = getXPositionInLine(line, selStart);
   const endX = getXPositionInLine(line, selEnd);
-  const fontSizePt = line.spans.length > 0 ? (line.spans[0].fontSize as number) : 12;
-  const fontFamily = line.spans.length > 0 ? line.spans[0].fontFamily : undefined;
+  const { fontSize, fontFamily } = getLineMaxFontInfo(line.spans);
   const lineY = (line.y as number) + pageYOffset;
-  const bounds = getTextVisualBounds(lineY, fontSizePt, fontFamily);
+  const bounds = getTextVisualBounds(lineY, fontSize as number, fontFamily);
 
   return {
     x: px(startX),
