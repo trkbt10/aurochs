@@ -48,13 +48,7 @@ export {
   type TableCellPropertiesEditorProps,
 } from "./editors/table/TableCellPropertiesEditor";
 
-// Main Document Editor
-export {
-  DocumentEditor,
-  type DocumentEditorProps,
-} from "./document/DocumentEditor";
-
-// Continuous Editor (SVG-based)
+// Document Editor (SVG-based)
 export {
   ContinuousEditor,
   type ContinuousEditorProps,

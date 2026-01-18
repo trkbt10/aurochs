@@ -18,7 +18,6 @@ import {
   createDefaultTableProperties,
   TableCellPropertiesEditor,
   createDefaultTableCellProperties,
-  DocumentEditor,
   ContinuousEditor,
 } from "@lib/docx-editor";
 import type { DocxRunProperties } from "@lib/docx/domain/text";
@@ -26,17 +25,15 @@ import type { DocxParagraphProperties, DocxParagraph } from "@lib/docx/domain/pa
 import type { DocxStyle } from "@lib/docx/domain/styles";
 import type { DocxLevel, DocxNumbering, DocxAbstractNum, DocxNum } from "@lib/docx/domain/numbering";
 import { docxAbstractNumId, docxNumId, docxIlvl } from "@lib/docx/domain/types";
-import type { DocxTableProperties, DocxTableCellProperties, DocxTable } from "@lib/docx/domain/table";
-import type { DocxDocument } from "@lib/docx/domain/document";
+import type { DocxTableProperties, DocxTableCellProperties } from "@lib/docx/domain/table";
 import { Button } from "@lib/office-editor-components/primitives";
-import { docxStyleId } from "@lib/docx/domain/types";
 import { px } from "@lib/ooxml/domain/units";
 
 type DocxEditorTestPageProps = {
   readonly onBack: () => void;
 };
 
-type TabId = "editor" | "layout" | "run" | "paragraph" | "style" | "numbering" | "table" | "cell";
+type TabId = "editor" | "run" | "paragraph" | "style" | "numbering" | "table" | "cell";
 
 type Tab = {
   readonly id: TabId;
@@ -45,7 +42,6 @@ type Tab = {
 
 const tabs: readonly Tab[] = [
   { id: "editor", label: "Document Editor" },
-  { id: "layout", label: "Layout Editor (New)" },
   { id: "run", label: "Run Properties" },
   { id: "paragraph", label: "Paragraph" },
   { id: "style", label: "Style" },
@@ -136,14 +132,6 @@ const descriptionStyle: CSSProperties = {
   color: "var(--text-secondary)",
   lineHeight: 1.5,
   margin: 0,
-};
-
-const editorContainerStyle: CSSProperties = {
-  height: "700px",
-  backgroundColor: "var(--bg-secondary)",
-  borderRadius: "12px",
-  border: "1px solid var(--border-subtle)",
-  overflow: "hidden",
 };
 
 const infoStyle: CSSProperties = {
@@ -485,49 +473,6 @@ function createCompoundParagraph(runs: readonly RunSpec[]): DocxParagraph {
   };
 }
 
-function createDemoTable(): DocxTable {
-  const createCell = (text: string): DocxTable["rows"][number]["cells"][number] => ({
-    type: "tableCell",
-    content: [createDemoParagraph(text)],
-  });
-
-  return {
-    type: "table",
-    properties: {
-      tblW: { w: 9000, type: "dxa" },
-    },
-    rows: [
-      {
-        type: "tableRow",
-        cells: [
-          createCell("Product"),
-          createCell("Q1"),
-          createCell("Q2"),
-          createCell("Q3"),
-        ],
-      },
-      {
-        type: "tableRow",
-        cells: [
-          createCell("Widget A"),
-          createCell("$10,000"),
-          createCell("$15,000"),
-          createCell("$12,000"),
-        ],
-      },
-      {
-        type: "tableRow",
-        cells: [
-          createCell("Widget B"),
-          createCell("$8,000"),
-          createCell("$9,500"),
-          createCell("$11,000"),
-        ],
-      },
-    ],
-  };
-}
-
 // =============================================================================
 // Numbering Demo Helpers
 // =============================================================================
@@ -641,120 +586,11 @@ function createDemoNumbering(): DocxNumbering {
   };
 }
 
-function createDemoDocument(): DocxDocument {
-  const heading1Id = docxStyleId("Heading1");
-  const heading2Id = docxStyleId("Heading2");
-  const normalId = docxStyleId("Normal");
-
-  return {
-    body: {
-      content: [
-        createDemoParagraph("Welcome to DOCX Editor", { bold: true, fontSize: 48, pStyle: "Heading1" }),
-        createDemoParagraph(""),
-        createDemoParagraph("This is a demonstration of the DOCX document editor. You can select paragraphs by clicking on them, and double-click to start editing text."),
-        createDemoParagraph(""),
-        createDemoParagraph("Features", { bold: true, fontSize: 32, pStyle: "Heading2" }),
-        createDemoParagraph(""),
-        createDemoParagraph("The editor supports the following features:"),
-        createDemoParagraph("• Paragraph selection and multi-select (Shift+click or Ctrl+click)"),
-        createDemoParagraph("• Inline text editing with IME support"),
-        createDemoParagraph("• Keyboard shortcuts (Ctrl+Z for undo, Ctrl+Y for redo)"),
-        createDemoParagraph("• Property inspection in the right panel"),
-        createDemoParagraph(""),
-        createDemoParagraph("Sample Table", { bold: true, fontSize: 32, pStyle: "Heading2" }),
-        createDemoParagraph(""),
-        createDemoTable(),
-        createDemoParagraph(""),
-        createDemoParagraph("Try It Out", { bold: true, fontSize: 32, pStyle: "Heading2" }),
-        createDemoParagraph(""),
-        createDemoParagraph("Click on any paragraph to select it. The inspector panel on the right will show statistics about the document. Double-click to edit text inline."),
-      ],
-    },
-    styles: {
-      style: [
-        {
-          type: "paragraph",
-          styleId: heading1Id,
-          name: { val: "Heading 1" },
-        },
-        {
-          type: "paragraph",
-          styleId: heading2Id,
-          name: { val: "Heading 2" },
-        },
-        {
-          type: "paragraph",
-          styleId: normalId,
-          name: { val: "Normal" },
-        },
-      ],
-    },
-  };
-}
-
 // =============================================================================
 // Document Editor Test Component
 // =============================================================================
 
-function DocumentEditorTest() {
-  const initialDocument = useMemo(createDemoDocument, []);
-
-  return (
-    <div style={containerStyle}>
-      {/* Header */}
-      <div style={panelHeaderStyle}>
-        <h2 style={panelTitleStyle}>Document Editor</h2>
-        <p style={descriptionStyle}>
-          Full DOCX editor with canvas, selection, text editing, toolbar, and inspector panels.
-          Click paragraphs to select. Double-click to edit text. Use keyboard shortcuts.
-        </p>
-      </div>
-
-      {/* Editor */}
-      <div style={editorContainerStyle}>
-        <DocumentEditor
-          initialDocument={initialDocument}
-          showToolbar
-          showInspector
-          editable
-        />
-      </div>
-
-      {/* Info Panels */}
-      <div style={infoStyle}>
-        {/* Keyboard Shortcuts */}
-        <div style={infoPanelStyle}>
-          <h3 style={infoTitleStyle}>Keyboard Shortcuts</h3>
-          <div style={shortcutListStyle}>
-            <ShortcutItem keys="Delete" description="Delete selected" />
-            <ShortcutItem keys="Ctrl+Z" description="Undo" />
-            <ShortcutItem keys="Ctrl+Y" description="Redo" />
-            <ShortcutItem keys="Escape" description="Clear selection / Exit edit" />
-          </div>
-        </div>
-
-        {/* Features */}
-        <div style={infoPanelStyle}>
-          <h3 style={infoTitleStyle}>Features</h3>
-          <div style={featureListStyle}>
-            <FeatureItem text="Paragraph and table rendering" />
-            <FeatureItem text="Element selection (single and multi)" />
-            <FeatureItem text="Inline text editing with IME" />
-            <FeatureItem text="Document statistics in inspector" />
-            <FeatureItem text="Style list and application" />
-            <FeatureItem text="Document-wide undo/redo" />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// =============================================================================
-// Layout Editor Test (New SVG-based Continuous Editor)
-// =============================================================================
-
-const layoutEditorContainerStyle: CSSProperties = {
+const documentEditorContainerStyle: CSSProperties = {
   height: "800px",
   backgroundColor: "#525659",
   borderRadius: "12px",
@@ -762,18 +598,15 @@ const layoutEditorContainerStyle: CSSProperties = {
   overflow: "auto",
 };
 
-function LayoutEditorTest() {
+function DocumentEditorTest() {
   const demoParagraphs = useMemo<DocxParagraph[]>(() => [
     createDemoParagraph("DOCX グラフィカルテキストエディタ", { bold: true, fontSize: 48 }),
     createDemoParagraph(""),
     createDemoParagraph("このエディタは、新しい統一レイアウトエンジンを使用したSVGベースのテキストレンダリングを実装しています。"),
     createDemoParagraph(""),
-    // =============================================================================
     // Compound Formatting Test Section
-    // =============================================================================
     createDemoParagraph("複合フォーマットテスト", { bold: true, fontSize: 32 }),
     createDemoParagraph(""),
-    // Basic mixed formatting
     createCompoundParagraph([
       { text: "This sentence has " },
       { text: "bold", b: true },
@@ -784,7 +617,6 @@ function LayoutEditorTest() {
       { text: " text mixed together." },
     ]),
     createDemoParagraph(""),
-    // Underline and strikethrough
     createCompoundParagraph([
       { text: "Text with " },
       { text: "underline", u: true },
@@ -795,16 +627,14 @@ function LayoutEditorTest() {
       { text: "." },
     ]),
     createDemoParagraph(""),
-    // Different font sizes in one line
     createCompoundParagraph([
-      { text: "Small", sz: 16 },  // 8pt
-      { text: " Normal", sz: 24 }, // 12pt
-      { text: " Large", sz: 36 }, // 18pt
-      { text: " Huge", sz: 48 }, // 24pt
+      { text: "Small", sz: 16 },
+      { text: " Normal", sz: 24 },
+      { text: " Large", sz: 36 },
+      { text: " Huge", sz: 48 },
       { text: " sizes mixed.", sz: 24 },
     ]),
     createDemoParagraph(""),
-    // Colors
     createCompoundParagraph([
       { text: "Red", color: "FF0000" },
       { text: " Green", color: "00FF00" },
@@ -814,7 +644,6 @@ function LayoutEditorTest() {
       { text: " colors in one line." },
     ]),
     createDemoParagraph(""),
-    // Highlight colors
     createCompoundParagraph([
       { text: "Yellow highlight", highlight: "yellow" },
       { text: " " },
@@ -824,7 +653,6 @@ function LayoutEditorTest() {
       { text: " backgrounds." },
     ]),
     createDemoParagraph(""),
-    // Superscript and subscript
     createCompoundParagraph([
       { text: "E=mc" },
       { text: "2", vertAlign: "superscript" },
@@ -838,26 +666,6 @@ function LayoutEditorTest() {
       { text: "n", vertAlign: "superscript" },
     ]),
     createDemoParagraph(""),
-    // Caps variations
-    createCompoundParagraph([
-      { text: "Normal " },
-      { text: "all caps ", caps: true },
-      { text: "small caps ", smallCaps: true },
-      { text: "text variants." },
-    ]),
-    createDemoParagraph(""),
-    // Complex combination
-    createCompoundParagraph([
-      { text: "This is a ", sz: 24 },
-      { text: "complex", b: true, color: "FF0000", sz: 28 },
-      { text: " example with ", sz: 24 },
-      { text: "multiple", i: true, u: true, color: "0000FF", sz: 32 },
-      { text: " formatting ", sz: 24 },
-      { text: "styles", b: true, i: true, highlight: "yellow", sz: 36 },
-      { text: " combined.", sz: 24 },
-    ]),
-    createDemoParagraph(""),
-    // Japanese compound formatting
     createCompoundParagraph([
       { text: "日本語の" },
       { text: "太字", b: true },
@@ -868,18 +676,7 @@ function LayoutEditorTest() {
       { text: "を混在させたテキストです。" },
     ]),
     createDemoParagraph(""),
-    // Mixed Japanese and English with formatting
-    createCompoundParagraph([
-      { text: "日本語 ", sz: 24 },
-      { text: "English", b: true, color: "0000FF", sz: 28 },
-      { text: " 混在 ", sz: 24 },
-      { text: "Mixed", i: true, color: "FF0000", sz: 28 },
-      { text: " テキスト。", sz: 24 },
-    ]),
-    createDemoParagraph(""),
-    // =============================================================================
-    // Original Test Content
-    // =============================================================================
+    // Main features section
     createDemoParagraph("主な特徴", { bold: true, fontSize: 32 }),
     createDemoParagraph(""),
     createDemoParagraph("• 共通レイアウトエンジン: PPTXとDOCXで同じレイアウトエンジンを共有"),
@@ -887,59 +684,23 @@ function LayoutEditorTest() {
     createDemoParagraph("• ページフロー対応: 複数ページに跨がる連続ドキュメント編集が可能"),
     createDemoParagraph("• 正確なカーソル位置: レイアウト結果に基づく正確なカーソル・選択範囲表示"),
     createDemoParagraph(""),
-    createDemoParagraph("技術的な詳細", { bold: true, fontSize: 32 }),
-    createDemoParagraph(""),
-    createDemoParagraph("このエディタは以下のモジュールで構成されています:"),
-    createDemoParagraph(""),
-    createDemoParagraph("1. office-text-layout - 共通テキストレイアウトモジュール"),
-    createDemoParagraph("2. docx-adapter - DOCXドメイン型からレイアウト入力への変換"),
-    createDemoParagraph("3. svg-renderer - レイアウト結果からSVG要素へのレンダリング"),
-    createDemoParagraph("4. page-flow - ページ分割エンジン"),
-    createDemoParagraph("5. ContinuousEditor - 連続編集コントローラー"),
-    createDemoParagraph(""),
     createDemoParagraph("日本語テキストの例", { bold: true, fontSize: 32 }),
     createDemoParagraph(""),
     createDemoParagraph("吾輩は猫である。名前はまだ無い。どこで生れたかとんと見当がつかぬ。何でも薄暗いじめじめした所でニャーニャー泣いていた事だけは記憶している。"),
     createDemoParagraph(""),
     createDemoParagraph("The quick brown fox jumps over the lazy dog. This sentence contains every letter of the English alphabet."),
     createDemoParagraph(""),
-    createDemoParagraph("混合テキスト: Hello, 世界! This is a mixed text example with English and 日本語."),
-    createDemoParagraph(""),
-    // =============================================================================
-    // Page 2 - Additional Content for Multi-Page Testing
-    // Uses pageBreakBefore to force a new page
-    // =============================================================================
+    // Page 2
     createDemoParagraph("ページ2: マルチページ編集テスト", { bold: true, fontSize: 40, pageBreakBefore: true }),
     createDemoParagraph(""),
     createDemoParagraph("このセクションは、複数ページにまたがる編集機能をテストするためのコンテンツです。"),
     createDemoParagraph(""),
-    createDemoParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat."),
+    createDemoParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."),
     createDemoParagraph(""),
-    createDemoParagraph("Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."),
+    createDemoParagraph("祇園精舎の鐘の声、諸行無常の響きあり。沙羅双樹の花の色、盛者必衰の理をあらはす。"),
     createDemoParagraph(""),
-    createDemoParagraph("長文テスト", { bold: true, fontSize: 32 }),
-    createDemoParagraph(""),
-    createDemoParagraph("祇園精舎の鐘の声、諸行無常の響きあり。沙羅双樹の花の色、盛者必衰の理をあらはす。おごれる人も久しからず、ただ春の夜の夢のごとし。たけき者も遂にはほろびぬ、ひとへに風の前の塵に同じ。"),
-    createDemoParagraph(""),
-    createDemoParagraph("遠く異朝をとぶらへば、秦の趙高、漢の王莽、梁の朱异、唐の禄山、これらは皆旧主先皇の政にもしたがはず、楽しみをきはめ、諫めをも思ひ入れず、天下の乱れんことを悟らずして、民間の愁ふるところを知らざりしかば、久しからずして、亡じにし者どもなり。"),
-    createDemoParagraph(""),
-    createDemoParagraph("Cross-Page Selection Test", { bold: true, fontSize: 32 }),
-    createDemoParagraph(""),
-    createDemoParagraph("1. First item - try selecting from here"),
-    createDemoParagraph("2. Second item - across multiple lines"),
-    createDemoParagraph("3. Third item - to test selection"),
-    createDemoParagraph("4. Fourth item - spanning pages"),
-    createDemoParagraph("5. Fifth item - ensure cursor works"),
-    createDemoParagraph(""),
-    createDemoParagraph("Paragraph after list items. This paragraph should help test cursor navigation between different content types."),
-    createDemoParagraph(""),
-    // =============================================================================
-    // Page 3 - More Content
-    // Uses pageBreakBefore to force a new page
-    // =============================================================================
+    // Page 3
     createDemoParagraph("ページ3: さらなるコンテンツ", { bold: true, fontSize: 40, pageBreakBefore: true }),
-    createDemoParagraph(""),
-    createDemoParagraph("このページでは、さらに長い文章での編集テストを行います。"),
     createDemoParagraph(""),
     createCompoundParagraph([
       { text: "ページをまたいだ" },
@@ -949,58 +710,23 @@ function LayoutEditorTest() {
       { text: "が正しく動作することを確認してください。" },
     ]),
     createDemoParagraph(""),
-    createDemoParagraph("The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs. How vexingly quick daft zebras jump!"),
-    createDemoParagraph(""),
-    createDemoParagraph("Sphinx of black quartz, judge my vow. Two driven jocks help fax my big quiz. The five boxing wizards jump quickly."),
-    createDemoParagraph(""),
-    createDemoParagraph("編集機能チェックリスト", { bold: true, fontSize: 32 }),
-    createDemoParagraph(""),
-    createDemoParagraph("□ ページ1からページ2への選択"),
-    createDemoParagraph("□ ページ2からページ3への選択"),
-    createDemoParagraph("□ ページ境界でのカーソル移動"),
-    createDemoParagraph("□ ページ境界での文字入力"),
-    createDemoParagraph("□ ページ境界でのバックスペース"),
-    createDemoParagraph("□ 複数ページにまたがる削除"),
-    createDemoParagraph(""),
-    // =============================================================================
-    // keepNext Test Section
-    // The heading with keepNext should stay with the following paragraph
-    // =============================================================================
-    createDemoParagraph("keepNextテスト（見出しと本文を同一ページに保持）", { bold: true, fontSize: 32, keepNext: true }),
-    createDemoParagraph("この段落は上の見出しと同じページに表示されるべきです。keepNext属性により、見出しが次の段落と分離されることを防ぎます。これはWordprocessingML仕様(ECMA-376 Section 17.3.1.14)に準拠した動作です。"),
-    createDemoParagraph(""),
-    createDemoParagraph("keepLinesテスト", { bold: true, fontSize: 32, keepLines: true }),
-    createDemoParagraph(""),
-    // =============================================================================
-    // Numbering Test Section
-    // Test numbered lists, bulleted lists, and Roman numerals
-    // =============================================================================
+    // Numbering test
     createDemoParagraph("番号付きリストテスト", { bold: true, fontSize: 32 }),
     createDemoParagraph(""),
-    createDemoParagraph("Decimal list (numId=1):", { bold: true }),
     createNumberedParagraph("First item in decimal list", 1, 0),
     createNumberedParagraph("Second item in decimal list", 1, 0),
     createNumberedParagraph("Third item in decimal list", 1, 0),
     createDemoParagraph(""),
-    createDemoParagraph("Bullet list (numId=2):", { bold: true }),
     createNumberedParagraph("Bullet item one", 2, 0),
     createNumberedParagraph("Bullet item two", 2, 0),
     createNumberedParagraph("Nested bullet item", 2, 1),
-    createNumberedParagraph("Bullet item three", 2, 0),
-    createDemoParagraph(""),
-    createDemoParagraph("Roman numeral list (numId=3):", { bold: true }),
-    createNumberedParagraph("Roman numeral I", 3, 0),
-    createNumberedParagraph("Roman numeral II", 3, 0),
-    createNumberedParagraph("Roman numeral III", 3, 0),
     createDemoParagraph(""),
     createDemoParagraph("最終テスト段落", { bold: true, fontSize: 32 }),
     createDemoParagraph(""),
-    createDemoParagraph("これがテストドキュメントの最後の段落です。ここまでスクロールして編集できることを確認してください。End of document."),
+    createDemoParagraph("これがテストドキュメントの最後の段落です。End of document."),
   ], []);
 
-  // Demo numbering definitions
   const demoNumbering = useMemo(() => createDemoNumbering(), []);
-
   const [cursorInfo, setCursorInfo] = useState<string>("クリックしてカーソル位置を確認");
 
   const handleCursorChange = (position: { paragraphIndex: number; charOffset: number }) => {
@@ -1011,9 +737,9 @@ function LayoutEditorTest() {
     <div style={containerStyle}>
       {/* Header */}
       <div style={panelHeaderStyle}>
-        <h2 style={panelTitleStyle}>Layout Editor (SVG-based)</h2>
+        <h2 style={panelTitleStyle}>Document Editor</h2>
         <p style={descriptionStyle}>
-          新しい統一レイアウトエンジンを使用したSVGベースのテキストエディタです。
+          統一レイアウトエンジンを使用したSVGベースのテキストエディタです。
           クリックでカーソル位置を設定、矢印キーでカーソル移動ができます。
         </p>
       </div>
@@ -1024,7 +750,7 @@ function LayoutEditorTest() {
       </div>
 
       {/* Editor */}
-      <div style={layoutEditorContainerStyle}>
+      <div style={documentEditorContainerStyle}>
         <ContinuousEditor
           paragraphs={demoParagraphs}
           numbering={demoNumbering}
@@ -1035,24 +761,27 @@ function LayoutEditorTest() {
 
       {/* Info Panels */}
       <div style={infoStyle}>
-        {/* Architecture */}
+        {/* Keyboard Shortcuts */}
         <div style={infoPanelStyle}>
-          <h3 style={infoTitleStyle}>アーキテクチャ</h3>
+          <h3 style={infoTitleStyle}>Keyboard Shortcuts</h3>
+          <div style={shortcutListStyle}>
+            <ShortcutItem keys="←/→/↑/↓" description="カーソル移動" />
+            <ShortcutItem keys="Shift+矢印" description="選択範囲拡張" />
+            <ShortcutItem keys="Cmd+X/C/V" description="カット/コピー/ペースト" />
+            <ShortcutItem keys="Cmd+B/I/U" description="太字/斜体/下線" />
+            <ShortcutItem keys="Cmd+Z/Y" description="Undo/Redo" />
+          </div>
+        </div>
+
+        {/* Features */}
+        <div style={infoPanelStyle}>
+          <h3 style={infoTitleStyle}>Features</h3>
           <div style={featureListStyle}>
             <FeatureItem text="共通レイアウトエンジン (office-text-layout)" />
             <FeatureItem text="SVG統一描画 (svg-renderer)" />
             <FeatureItem text="ページフロー対応 (page-flow)" />
-            <FeatureItem text="連続カーソル管理 (use-continuous-cursor)" />
-          </div>
-        </div>
-
-        {/* Controls */}
-        <div style={infoPanelStyle}>
-          <h3 style={infoTitleStyle}>操作方法</h3>
-          <div style={shortcutListStyle}>
-            <ShortcutItem keys="Click" description="カーソル位置設定" />
-            <ShortcutItem keys="←/→" description="カーソル移動" />
-            <ShortcutItem keys="Home" description="行頭へ移動" />
+            <FeatureItem text="IME入力対応" />
+            <FeatureItem text="複合フォーマット対応" />
           </div>
         </div>
       </div>
@@ -1068,8 +797,6 @@ function TabContent({ activeTab }: { activeTab: TabId }) {
   switch (activeTab) {
     case "editor":
       return <DocumentEditorTest />;
-    case "layout":
-      return <LayoutEditorTest />;
     case "run":
       return <RunPropertiesTest />;
     case "paragraph":
