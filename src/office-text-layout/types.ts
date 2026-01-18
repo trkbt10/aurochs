@@ -312,6 +312,173 @@ export type LayoutResult = {
 };
 
 // =============================================================================
+// Table Layout Types
+// =============================================================================
+
+/**
+ * Border style for table cell edges.
+ *
+ * @see ECMA-376 Part 1, Section 17.4.78 (tcBorders)
+ */
+export type LayoutBorderStyle = {
+  /** Border style name */
+  readonly style: "none" | "single" | "double" | "dotted" | "dashed" | "thick";
+  /** Border width in pixels */
+  readonly width: Pixels;
+  /** Border color as hex (with #) */
+  readonly color: string;
+};
+
+/**
+ * Table cell borders.
+ */
+export type LayoutCellBorders = {
+  readonly top?: LayoutBorderStyle;
+  readonly right?: LayoutBorderStyle;
+  readonly bottom?: LayoutBorderStyle;
+  readonly left?: LayoutBorderStyle;
+};
+
+/**
+ * Table cell input for layout.
+ *
+ * @see ECMA-376 Part 1, Section 17.4.65 (tc)
+ */
+export type LayoutTableCellInput = {
+  /** Paragraphs (and nested tables) in the cell */
+  readonly paragraphs: readonly LayoutParagraphInput[];
+  /** Cell width in pixels (if specified) */
+  readonly width?: Pixels;
+  /** Number of grid columns spanned */
+  readonly gridSpan: number;
+  /** Vertical merge state */
+  readonly vMerge?: "restart" | "continue";
+  /** Cell padding */
+  readonly padding: {
+    readonly top: Pixels;
+    readonly right: Pixels;
+    readonly bottom: Pixels;
+    readonly left: Pixels;
+  };
+  /** Cell borders */
+  readonly borders?: LayoutCellBorders;
+  /** Background color as hex (with #) */
+  readonly backgroundColor?: string;
+  /** Vertical alignment */
+  readonly verticalAlign: "top" | "center" | "bottom";
+};
+
+/**
+ * Table row input for layout.
+ *
+ * @see ECMA-376 Part 1, Section 17.4.79 (tr)
+ */
+export type LayoutTableRowInput = {
+  /** Cells in the row */
+  readonly cells: readonly LayoutTableCellInput[];
+  /** Row height in pixels (if specified) */
+  readonly height?: Pixels;
+  /** Height rule */
+  readonly heightRule: "auto" | "atLeast" | "exact";
+  /** Is this row a header row? */
+  readonly isHeader: boolean;
+};
+
+/**
+ * Table input for layout.
+ *
+ * @see ECMA-376 Part 1, Section 17.4.38 (tbl)
+ */
+export type LayoutTableInput = {
+  /** Table rows */
+  readonly rows: readonly LayoutTableRowInput[];
+  /** Grid column widths in pixels */
+  readonly gridColumnWidths: readonly Pixels[];
+  /** Table width in pixels (if specified) */
+  readonly width?: Pixels;
+  /** Table alignment */
+  readonly alignment: "left" | "center" | "right";
+  /** Left indent in pixels */
+  readonly indent: Pixels;
+  /** Cell spacing in pixels */
+  readonly cellSpacing: Pixels;
+  /** Table borders */
+  readonly borders?: {
+    readonly top?: LayoutBorderStyle;
+    readonly right?: LayoutBorderStyle;
+    readonly bottom?: LayoutBorderStyle;
+    readonly left?: LayoutBorderStyle;
+    readonly insideH?: LayoutBorderStyle;
+    readonly insideV?: LayoutBorderStyle;
+  };
+};
+
+/**
+ * Laid out table cell.
+ */
+export type LayoutTableCellResult = {
+  /** X position of cell in pixels */
+  readonly x: Pixels;
+  /** Y position of cell in pixels */
+  readonly y: Pixels;
+  /** Cell width in pixels */
+  readonly width: Pixels;
+  /** Cell height in pixels */
+  readonly height: Pixels;
+  /** Laid out paragraphs within the cell */
+  readonly paragraphs: readonly LayoutParagraphResult[];
+  /** Cell padding */
+  readonly padding: {
+    readonly top: Pixels;
+    readonly right: Pixels;
+    readonly bottom: Pixels;
+    readonly left: Pixels;
+  };
+  /** Cell borders */
+  readonly borders?: LayoutCellBorders;
+  /** Background color as hex (with #) */
+  readonly backgroundColor?: string;
+  /** Vertical alignment */
+  readonly verticalAlign: "top" | "center" | "bottom";
+  /** Column span */
+  readonly colSpan: number;
+  /** Row span (computed from vMerge) */
+  readonly rowSpan: number;
+};
+
+/**
+ * Laid out table row.
+ */
+export type LayoutTableRowResult = {
+  /** Y position of row in pixels */
+  readonly y: Pixels;
+  /** Row height in pixels */
+  readonly height: Pixels;
+  /** Laid out cells in the row */
+  readonly cells: readonly LayoutTableCellResult[];
+  /** Is this row a header row? */
+  readonly isHeader: boolean;
+};
+
+/**
+ * Laid out table.
+ */
+export type LayoutTableResult = {
+  /** X position of table in pixels */
+  readonly x: Pixels;
+  /** Y position of table in pixels */
+  readonly y: Pixels;
+  /** Total table width in pixels */
+  readonly width: Pixels;
+  /** Total table height in pixels */
+  readonly height: Pixels;
+  /** Laid out rows */
+  readonly rows: readonly LayoutTableRowResult[];
+  /** Table alignment */
+  readonly alignment: "left" | "center" | "right";
+};
+
+// =============================================================================
 // Text Box Configuration
 // =============================================================================
 

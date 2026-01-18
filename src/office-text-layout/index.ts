@@ -26,6 +26,15 @@ export type {
   LayoutLine,
   LayoutParagraphResult,
   LayoutResult,
+  // Table types
+  LayoutBorderStyle,
+  LayoutCellBorders,
+  LayoutTableCellInput,
+  LayoutTableRowInput,
+  LayoutTableInput,
+  LayoutTableCellResult,
+  LayoutTableRowResult,
+  LayoutTableResult,
   // Text box config
   TextWrapping,
   TextOverflow,
@@ -85,6 +94,17 @@ export {
 } from "./adapters/docx-adapter";
 export type { DocxPageConfig, ParagraphLayoutContext } from "./adapters/docx-adapter";
 
+// DOCX table adapter
+export {
+  tableToLayoutInput,
+  isParagraph,
+  isTable,
+} from "./adapters/docx-table-adapter";
+
+// Table layout engine
+export { layoutTable } from "./table-layout";
+export type { TableLayoutConfig } from "./table-layout";
+
 // Numbering resolver
 export {
   formatNumber,
@@ -141,6 +161,10 @@ export {
   CURSOR_ANIMATION_CSS,
 } from "./renderers/svg-renderer";
 export type { TextOverlayProps } from "./renderers/svg-renderer";
+
+// SVG Table Renderer
+export { TableOverlay, renderTables } from "./renderers/svg-table-renderer";
+export type { TableOverlayProps } from "./renderers/svg-table-renderer";
 
 // Page Flow
 export {
