@@ -8,6 +8,7 @@
 import { useMemo } from "react";
 import type { DocxParagraph } from "../../../docx/domain/paragraph";
 import type { DocxSectionProperties } from "../../../docx/domain/section";
+import type { DocxNumbering } from "../../../docx/domain/numbering";
 import type { Pixels } from "../../../ooxml/domain/units";
 import { px } from "../../../ooxml/domain/units";
 import type {
@@ -46,6 +47,8 @@ export type UseDocumentLayoutOptions = {
   readonly pageConfig?: PageFlowConfig;
   /** Section properties from the document - used to derive page config */
   readonly sectPr?: DocxSectionProperties;
+  /** Numbering definitions from the document - for list rendering */
+  readonly numbering?: DocxNumbering;
 };
 
 export type DocumentLayoutResult = {
@@ -82,7 +85,8 @@ function extractPageBreakHints(
     const hasHint =
       props.pageBreakBefore === true ||
       props.keepNext === true ||
-      props.keepLines === true;
+      props.keepLines === true ||
+      props.widowControl !== undefined;
 
     if (!hasHint) {
       return undefined;
@@ -92,6 +96,7 @@ function extractPageBreakHints(
       breakBefore: props.pageBreakBefore,
       keepWithNext: props.keepNext,
       keepTogether: props.keepLines,
+      widowControl: props.widowControl,
     };
   });
 }
@@ -114,6 +119,7 @@ export function useDocumentLayout({
   mode = "paged",
   pageConfig: explicitPageConfig,
   sectPr,
+  numbering,
 }: UseDocumentLayoutOptions): DocumentLayoutResult {
   // Derive page configuration from sectPr or use defaults
   const pageConfig = useMemo(() => {
@@ -140,8 +146,8 @@ export function useDocumentLayout({
 
   // Convert DOCX paragraphs to layout inputs
   const layoutInputs = useMemo(() => {
-    return paragraphsToLayoutInputs(paragraphs);
-  }, [paragraphs]);
+    return paragraphsToLayoutInputs(paragraphs, numbering);
+  }, [paragraphs, numbering]);
 
   // Compute paragraph layouts
   const { paragraphs: layoutedParagraphs, totalHeight } = useMemo(() => {

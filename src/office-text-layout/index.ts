@@ -81,8 +81,18 @@ export {
   DEFAULT_PAGE_CONFIG,
   getContentWidth,
   getContentHeight,
+  createParagraphLayoutContext,
 } from "./adapters/docx-adapter";
-export type { DocxPageConfig } from "./adapters/docx-adapter";
+export type { DocxPageConfig, ParagraphLayoutContext } from "./adapters/docx-adapter";
+
+// Numbering resolver
+export {
+  formatNumber,
+  substituteLevelText,
+  resolveBulletConfig,
+  createNumberingContext,
+} from "./adapters/numbering-resolver";
+export type { NumberingContext } from "./adapters/numbering-resolver";
 
 // DOCX section adapter
 export {

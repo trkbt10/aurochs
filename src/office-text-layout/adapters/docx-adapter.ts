@@ -11,13 +11,24 @@ import type {
   BulletConfig,
   TextAlign,
   LineSpacing,
-  FontAlignment,
   LayoutTabStop,
 } from "../types";
-import type { DocxParagraph, DocxParagraphContent, DocxHyperlink, DocxParagraphSpacing, DocxTabStops } from "../../docx/domain/paragraph";
-import type { DocxRun, DocxRunProperties, DocxRunContent, DocxHighlightColor } from "../../docx/domain/run";
+import type { DocxParagraph, DocxParagraphContent, DocxParagraphSpacing, DocxTabStops } from "../../docx/domain/paragraph";
+import type { DocxRun, DocxRunProperties, DocxRunContent } from "../../docx/domain/run";
+import type { DocxNumbering } from "../../docx/domain/numbering";
+import type { DocxStyles } from "../../docx/domain/styles";
 import type { ParagraphAlignment } from "../../ooxml/domain/text";
-import type { Pixels, Points } from "../../ooxml/domain/units";
+import {
+  resolveBulletConfig,
+  createNumberingContext,
+  type NumberingContext,
+} from "./numbering-resolver";
+import {
+  createStyleResolver,
+  resolveRunPropertiesWithStyles,
+  type ResolvedRunProperties,
+} from "./docx-style-resolver";
+import type { Pixels } from "../../ooxml/domain/units";
 import { px, pt, pct } from "../../ooxml/domain/units";
 import {
   SPEC_DEFAULT_FONT_SIZE_PT,
@@ -35,147 +46,14 @@ import {
 // =============================================================================
 
 /**
- * Default font family when none specified.
- * NOTE: ECMA-376 does not specify a default font family.
- * This is an application-level default (sans-serif for consistent rendering).
- */
-const DEFAULT_FONT_FAMILY = "sans-serif";
-
-/**
  * Default tab size in points.
  * Derived from SPEC_DEFAULT_TAB_STOP_TWIPS.
  */
 const DEFAULT_TAB_SIZE_PT = SPEC_DEFAULT_TAB_STOP_TWIPS / TWIPS_PER_POINT;
 
 // =============================================================================
-// Highlight Color Mapping
+// Run Content to Text
 // =============================================================================
-
-/**
- * Map DOCX highlight color names to hex values.
- */
-const HIGHLIGHT_COLOR_MAP: Record<DocxHighlightColor, string | undefined> = {
-  black: "#000000",
-  blue: "#0000FF",
-  cyan: "#00FFFF",
-  green: "#00FF00",
-  magenta: "#FF00FF",
-  red: "#FF0000",
-  yellow: "#FFFF00",
-  white: "#FFFFFF",
-  darkBlue: "#00008B",
-  darkCyan: "#008B8B",
-  darkGreen: "#006400",
-  darkMagenta: "#8B008B",
-  darkRed: "#8B0000",
-  darkYellow: "#808000",
-  darkGray: "#A9A9A9",
-  lightGray: "#D3D3D3",
-  none: undefined,
-};
-
-// =============================================================================
-// Run Properties to Layout Span
-// =============================================================================
-
-/**
- * Convert DOCX run properties to layout span properties.
- */
-function resolveRunProperties(
-  properties: DocxRunProperties | undefined,
-  paragraphDefaults: DocxRunProperties | undefined,
-): {
-  fontSize: Points;
-  fontFamily: string;
-  fontFamilyEastAsian: string | undefined;
-  fontFamilyComplexScript: string | undefined;
-  fontWeight: number;
-  fontStyle: "normal" | "italic";
-  textDecoration: string | undefined;
-  color: string;
-  verticalAlign: "baseline" | "superscript" | "subscript";
-  letterSpacing: Pixels;
-  direction: "ltr" | "rtl";
-  highlightColor: string | undefined;
-  textTransform: "none" | "uppercase" | "lowercase" | undefined;
-} {
-  // Merge run properties with paragraph defaults
-  const props = properties ?? {};
-  const defaults = paragraphDefaults ?? {};
-
-  // Font size (in half-points)
-  const szHalfPoints = props.sz ?? defaults.sz;
-  const fontSize = szHalfPoints !== undefined ? pt(szHalfPoints / 2) : pt(SPEC_DEFAULT_FONT_SIZE_PT);
-
-  // Font families
-  const fonts = props.rFonts ?? defaults.rFonts;
-  const fontFamily = fonts?.ascii ?? fonts?.hAnsi ?? DEFAULT_FONT_FAMILY;
-  const fontFamilyEastAsian = fonts?.eastAsia;
-  const fontFamilyComplexScript = fonts?.cs;
-
-  // Bold
-  const isBold = props.b ?? defaults.b ?? false;
-  const fontWeight = isBold ? 700 : 400;
-
-  // Italic
-  const isItalic = props.i ?? defaults.i ?? false;
-  const fontStyle = isItalic ? "italic" : "normal";
-
-  // Text decoration
-  const underline = props.u ?? defaults.u;
-  const strike = props.strike ?? defaults.strike ?? false;
-  const dstrike = props.dstrike ?? defaults.dstrike ?? false;
-  const decorations: string[] = [];
-  if (underline !== undefined && underline.val !== "none") {
-    decorations.push("underline");
-  }
-  if (strike || dstrike) {
-    decorations.push("line-through");
-  }
-  const textDecoration = decorations.length > 0 ? decorations.join(" ") : undefined;
-
-  // Color
-  const colorProp = props.color ?? defaults.color;
-  const color = colorProp?.val !== undefined ? `#${colorProp.val}` : "#000000";
-
-  // Vertical alignment
-  const vertAlignProp = props.vertAlign ?? defaults.vertAlign;
-  const verticalAlign = vertAlignProp ?? "baseline";
-
-  // Letter spacing (in twips)
-  const spacingTwips = props.spacing ?? defaults.spacing;
-  const letterSpacing =
-    spacingTwips !== undefined ? px((spacingTwips / TWIPS_PER_POINT) * PT_TO_PX) : px(0);
-
-  // Direction
-  const isRtl = props.rtl ?? defaults.rtl ?? false;
-  const direction = isRtl ? "rtl" : "ltr";
-
-  // Highlight color
-  const highlight = props.highlight ?? defaults.highlight;
-  const highlightColor = highlight !== undefined ? HIGHLIGHT_COLOR_MAP[highlight] : undefined;
-
-  // Text transform
-  const caps = props.caps ?? defaults.caps ?? false;
-  const smallCaps = props.smallCaps ?? defaults.smallCaps ?? false;
-  const textTransform = caps ? "uppercase" : smallCaps ? "lowercase" : "none";
-
-  return {
-    fontSize,
-    fontFamily,
-    fontFamilyEastAsian,
-    fontFamilyComplexScript,
-    fontWeight,
-    fontStyle,
-    textDecoration,
-    color,
-    verticalAlign,
-    letterSpacing,
-    direction,
-    highlightColor,
-    textTransform,
-  };
-}
 
 /**
  * Convert a DOCX run content to text.
@@ -192,13 +70,6 @@ function runContentToText(content: DocxRunContent): string {
       // Convert hex char code to character
       return String.fromCharCode(parseInt(content.char, 16));
   }
-}
-
-/**
- * Check if run content is a non-inline break (page or column).
- */
-function isNonInlineBreak(content: DocxRunContent): boolean {
-  return content.type === "break" && content.breakType !== "textWrapping";
 }
 
 /**
@@ -226,13 +97,35 @@ function getBreakType(content: DocxRunContent): "none" | "page" | "column" | "li
 /**
  * Convert a DOCX run to layout spans.
  */
-function runToSpans(
-  run: DocxRun,
-  paragraphDefaults: DocxRunProperties | undefined,
-  linkId?: string,
-  linkTooltip?: string,
-): LayoutSpan[] {
-  const props = resolveRunProperties(run.properties, paragraphDefaults);
+/**
+ * Options for run to span conversion.
+ */
+type RunToSpansOptions = {
+  readonly run: DocxRun;
+  readonly paragraphRPr: DocxRunProperties | undefined;
+  readonly paragraphStyleId: string | undefined;
+  readonly resolveStyle: (styleId: string | undefined) => ResolvedRunProperties;
+  readonly linkId?: string;
+  readonly linkTooltip?: string;
+};
+
+/**
+ * Convert a DOCX run to layout spans with full style resolution.
+ */
+function runToSpans(options: RunToSpansOptions): LayoutSpan[] {
+  const { run, paragraphRPr, paragraphStyleId, resolveStyle, linkId, linkTooltip } = options;
+
+  // Resolve properties using the full style chain
+  // rStyle on the run -> pStyle on the paragraph -> docDefaults
+  const rStyleId = run.properties?.rStyle;
+  const props = resolveRunPropertiesWithStyles(
+    resolveStyle,
+    rStyleId,
+    paragraphStyleId,
+    paragraphRPr,
+    run.properties,
+  );
+
   const spans: LayoutSpan[] = [];
 
   for (const content of run.content) {
@@ -272,23 +165,47 @@ function runToSpans(
 }
 
 /**
+ * Options for paragraph content to spans conversion.
+ */
+type ParagraphContentToSpansOptions = {
+  readonly content: readonly DocxParagraphContent[];
+  readonly paragraphRPr: DocxRunProperties | undefined;
+  readonly paragraphStyleId: string | undefined;
+  readonly resolveStyle: (styleId: string | undefined) => ResolvedRunProperties;
+};
+
+/**
  * Convert DOCX paragraph content to layout spans.
  */
-function paragraphContentToSpans(
-  content: readonly DocxParagraphContent[],
-  paragraphDefaults: DocxRunProperties | undefined,
-): LayoutSpan[] {
+function paragraphContentToSpans(options: ParagraphContentToSpansOptions): LayoutSpan[] {
+  const { content, paragraphRPr, paragraphStyleId, resolveStyle } = options;
   const spans: LayoutSpan[] = [];
 
   for (const item of content) {
     switch (item.type) {
       case "run":
-        spans.push(...runToSpans(item, paragraphDefaults));
+        spans.push(
+          ...runToSpans({
+            run: item,
+            paragraphRPr,
+            paragraphStyleId,
+            resolveStyle,
+          }),
+        );
         break;
 
       case "hyperlink":
         for (const run of item.content) {
-          spans.push(...runToSpans(run, paragraphDefaults, item.rId ?? item.anchor, item.tooltip));
+          spans.push(
+            ...runToSpans({
+              run,
+              paragraphRPr,
+              paragraphStyleId,
+              resolveStyle,
+              linkId: item.rId ?? item.anchor,
+              linkTooltip: item.tooltip,
+            }),
+          );
         }
         break;
 
@@ -349,10 +266,11 @@ function convertLineSpacing(spacing: DocxParagraphSpacing | undefined): LineSpac
       // Line height in twips -> points
       return { type: "points", value: pt(spacing.line / TWIPS_PER_POINT) };
     case "auto":
-    default:
+    default: {
       // Line spacing multiplier: 240 = single (100%), 480 = double (200%)
       const percent = (spacing.line / 240) * 100;
       return { type: "percent", value: pct(percent) };
+    }
   }
 }
 
@@ -371,13 +289,57 @@ function convertTabStops(tabs: DocxTabStops | undefined): readonly LayoutTabStop
 }
 
 /**
- * Convert a DOCX paragraph to a layout paragraph input.
+ * Context for paragraph layout conversion.
+ * Provides numbering definitions and maintains counter state.
  */
-export function paragraphToLayoutInput(paragraph: DocxParagraph): LayoutParagraphInput {
+export type ParagraphLayoutContext = {
+  /** Numbering definitions from the document */
+  readonly numbering?: DocxNumbering;
+  /** Numbering counter state (mutable for tracking) */
+  readonly numberingContext: NumberingContext;
+  /** Style definitions from the document */
+  readonly styles?: DocxStyles;
+  /** Style resolver function (memoized) */
+  readonly resolveStyle: (styleId: string | undefined) => ResolvedRunProperties;
+};
+
+/**
+ * Create a new paragraph layout context.
+ */
+export function createParagraphLayoutContext(
+  numbering?: DocxNumbering,
+  styles?: DocxStyles,
+): ParagraphLayoutContext {
+  return {
+    numbering,
+    numberingContext: createNumberingContext(),
+    styles,
+    resolveStyle: createStyleResolver(styles),
+  };
+}
+
+/**
+ * Convert a DOCX paragraph to a layout paragraph input.
+ *
+ * @param paragraph The DOCX paragraph to convert
+ * @param context Optional context with numbering definitions
+ */
+export function paragraphToLayoutInput(
+  paragraph: DocxParagraph,
+  context?: ParagraphLayoutContext,
+): LayoutParagraphInput {
   const props = paragraph.properties;
 
+  // Get style resolver - use context if available, otherwise create a no-op resolver
+  const resolveStyle = context?.resolveStyle ?? createStyleResolver(undefined);
+
   // Convert content to spans
-  const spans = paragraphContentToSpans(paragraph.content, props?.rPr);
+  const spans = paragraphContentToSpans({
+    content: paragraph.content,
+    paragraphRPr: props?.rPr,
+    paragraphStyleId: props?.pStyle,
+    resolveStyle,
+  });
 
   // Alignment
   const alignment = convertAlignment(props?.jc);
@@ -410,6 +372,12 @@ export function paragraphToLayoutInput(paragraph: DocxParagraph): LayoutParagrap
   const endParaFontSize =
     props?.rPr?.sz !== undefined ? pt(props.rPr.sz / 2) : pt(SPEC_DEFAULT_FONT_SIZE_PT);
 
+  // Resolve bullet/numbering
+  let bullet: BulletConfig | undefined;
+  if (props?.numPr !== undefined && context?.numbering !== undefined) {
+    bullet = resolveBulletConfig(props.numPr, context.numbering, context.numberingContext);
+  }
+
   return {
     spans,
     alignment,
@@ -419,7 +387,7 @@ export function paragraphToLayoutInput(paragraph: DocxParagraph): LayoutParagrap
     spaceBefore,
     spaceAfter,
     lineSpacing,
-    bullet: undefined, // TODO: Implement bullet/numbering
+    bullet,
     fontAlignment: "auto",
     defaultTabSize: px(DEFAULT_TAB_SIZE_PT * PT_TO_PX),
     tabStops,
@@ -432,9 +400,17 @@ export function paragraphToLayoutInput(paragraph: DocxParagraph): LayoutParagrap
 
 /**
  * Convert an array of DOCX paragraphs to layout paragraph inputs.
+ *
+ * @param paragraphs The DOCX paragraphs to convert
+ * @param numbering Optional numbering definitions for list rendering
  */
-export function paragraphsToLayoutInputs(paragraphs: readonly DocxParagraph[]): LayoutParagraphInput[] {
-  return paragraphs.map(paragraphToLayoutInput);
+export function paragraphsToLayoutInputs(
+  paragraphs: readonly DocxParagraph[],
+  numbering?: DocxNumbering,
+  styles?: DocxStyles,
+): LayoutParagraphInput[] {
+  const context = createParagraphLayoutContext(numbering, styles);
+  return paragraphs.map((p) => paragraphToLayoutInput(p, context));
 }
 
 // =============================================================================

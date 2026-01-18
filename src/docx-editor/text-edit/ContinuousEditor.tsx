@@ -11,6 +11,7 @@
 import type { ReactNode, CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { useState, useCallback, useRef, useEffect } from "react";
 import type { DocxParagraph } from "../../docx/domain/paragraph";
+import type { DocxNumbering } from "../../docx/domain/numbering";
 import type { Pixels } from "../../ooxml/domain/units";
 import { px } from "../../ooxml/domain/units";
 import type {
@@ -42,6 +43,8 @@ import { syncParagraphsWithPlainText } from "./text-merge/paragraph-sync";
 export type ContinuousEditorProps = {
   /** Document paragraphs */
   readonly paragraphs: readonly DocxParagraph[];
+  /** Numbering definitions (for list rendering) */
+  readonly numbering?: DocxNumbering;
   /** Content width in pixels */
   readonly contentWidth?: Pixels;
   /** Page configuration */
@@ -146,6 +149,7 @@ function computeSelectionRects(
  */
 export function ContinuousEditor({
   paragraphs,
+  numbering,
   contentWidth = px(602),
   pageConfig = DEFAULT_PAGE_FLOW_CONFIG,
   readOnly = false,
@@ -182,6 +186,7 @@ export function ContinuousEditor({
     contentWidth,
     mode: "paged",
     pageConfig,
+    numbering,
   });
 
   // Get offset from pointer event using SVG CTM

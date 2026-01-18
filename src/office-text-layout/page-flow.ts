@@ -50,6 +50,18 @@ export type PageFlowConfig = {
 };
 
 /**
+ * Section break type for page flow.
+ *
+ * @see ECMA-376-1:2016 Section 17.18.77 (ST_SectionMark)
+ */
+export type SectionBreakType =
+  | "continuous"  // No page break (continuous flow)
+  | "nextPage"    // Break to next page
+  | "evenPage"    // Break to next even page
+  | "oddPage"     // Break to next odd page
+  | "nextColumn"; // Break to next column (not yet supported)
+
+/**
  * Page break hint from paragraph properties.
  */
 export type PageBreakHint = {
@@ -59,6 +71,22 @@ export type PageBreakHint = {
   readonly keepWithNext?: boolean;
   /** Keep all lines of this paragraph together */
   readonly keepTogether?: boolean;
+  /**
+   * Widow/orphan control.
+   * When true, prevents creating orphan lines at the bottom of a page
+   * or widow lines at the top of a page when splitting paragraphs.
+   * Defaults to true if not specified.
+   *
+   * @see ECMA-376-1:2016 Section 17.3.1.44 (widowControl)
+   */
+  readonly widowControl?: boolean;
+  /**
+   * Section break after this paragraph.
+   * Indicates the type of section break that follows.
+   *
+   * @see ECMA-376-1:2016 Section 17.6.22 (type)
+   */
+  readonly sectionBreakAfter?: SectionBreakType;
 };
 
 /**
@@ -162,11 +190,17 @@ function startNewPage(
 /**
  * Add a paragraph to the current page.
  * X and Y coordinates in the output are page-relative (include page margins).
+ *
+ * Handles widow/orphan control by ensuring:
+ * - At least `orphanLines` stay on the current page when splitting
+ * - At least `widowLines` go to the next page when splitting
+ * - If these constraints can't be met, the entire paragraph moves to the next page
  */
 function addParagraphToPage(
   state: FlowState,
   paragraph: LayoutParagraphResult,
   config: PageFlowConfig,
+  hint?: PageBreakHint,
 ): void {
   const contentHeight = getContentHeight(config);
   const paragraphHeight = getParagraphHeight(paragraph);
@@ -177,34 +211,133 @@ function addParagraphToPage(
   // Check if paragraph fits on current page
   const remainingSpace = contentHeight - state.currentPage.currentY + (config.marginTop as number);
 
-  if (paragraphHeight <= remainingSpace) {
-    // Paragraph fits - add it with page-relative coordinates
-    // Y offset is: currentY on page - original first line Y position
-    const originalFirstLineY = paragraph.lines.length > 0
-      ? (paragraph.lines[0].y as number) - (paragraph.lines[0].height as number) * 0.8
-      : 0;
-    const yOffset = state.currentPage.currentY - originalFirstLineY;
-    const adjustedParagraph = adjustParagraphPosition(paragraph, xOffset, yOffset);
-    state.currentPage.paragraphs.push(adjustedParagraph);
-    state.currentPage.currentY += paragraphHeight;
-  } else {
-    // Paragraph doesn't fit - start new page
-    startNewPage(state, config);
+  // Widow/orphan control settings (default to config values or 2)
+  const widowLines = config.widowLines ?? 2;
+  const orphanLines = config.orphanLines ?? 2;
+  const minLinesForSplit = widowLines + orphanLines;
 
-    // Add to new page with page-relative coordinates
-    const originalFirstLineY = paragraph.lines.length > 0
-      ? (paragraph.lines[0].y as number) - (paragraph.lines[0].height as number) * 0.8
-      : 0;
-    const yOffset = state.currentPage.currentY - originalFirstLineY;
-    const adjustedParagraph = adjustParagraphPosition(paragraph, xOffset, yOffset);
-    state.currentPage.paragraphs.push(adjustedParagraph);
-    state.currentPage.currentY += paragraphHeight;
+  // Check if widowControl is enabled (defaults to true per ECMA-376)
+  const widowControlEnabled = hint?.widowControl !== false;
+
+  // Check if paragraph should be kept together
+  const keepTogether = hint?.keepTogether === true;
+
+  if (paragraphHeight <= remainingSpace) {
+    // Paragraph fits entirely - add it with page-relative coordinates
+    addParagraphWithOffset(state, paragraph, xOffset);
+  } else if (keepTogether) {
+    // Keep together is set - move entire paragraph to next page
+    startNewPage(state, config);
+    addParagraphWithOffset(state, paragraph, xOffset);
+  } else if (widowControlEnabled && paragraph.lines.length <= minLinesForSplit) {
+    // Widow control: short paragraphs should not be split
+    // If the paragraph has too few lines, move it entirely to the next page
+    startNewPage(state, config);
+    addParagraphWithOffset(state, paragraph, xOffset);
+  } else {
+    // Paragraph doesn't fit and can be split
+    // For now, just move to next page (proper splitting is complex)
+    // TODO: Implement proper paragraph splitting with widow/orphan lines
+    startNewPage(state, config);
+    addParagraphWithOffset(state, paragraph, xOffset);
   }
 
   state.totalHeight = Math.max(
     state.totalHeight,
     state.currentPage.pageStartY + state.currentPage.currentY,
   );
+}
+
+/**
+ * Add a paragraph with the given X offset, adjusting Y position.
+ */
+function addParagraphWithOffset(
+  state: FlowState,
+  paragraph: LayoutParagraphResult,
+  xOffset: number,
+): void {
+  const paragraphHeight = getParagraphHeight(paragraph);
+  const originalFirstLineY = paragraph.lines.length > 0
+    ? (paragraph.lines[0].y as number) - (paragraph.lines[0].height as number) * 0.8
+    : 0;
+  const yOffset = state.currentPage.currentY - originalFirstLineY;
+  const adjustedParagraph = adjustParagraphPosition(paragraph, xOffset, yOffset);
+  state.currentPage.paragraphs.push(adjustedParagraph);
+  state.currentPage.currentY += paragraphHeight;
+}
+
+/**
+ * Handle section break.
+ *
+ * @see ECMA-376-1:2016 Section 17.18.77 (ST_SectionMark)
+ */
+function handleSectionBreak(
+  state: FlowState,
+  config: PageFlowConfig,
+  breakType: SectionBreakType,
+): void {
+  switch (breakType) {
+    case "nextPage":
+      // Start a new page
+      if (state.currentPage.paragraphs.length > 0) {
+        startNewPage(state, config);
+      }
+      break;
+
+    case "evenPage": {
+      // Start on next even page (page 2, 4, 6...)
+      // First ensure we're on a new page
+      if (state.currentPage.paragraphs.length > 0) {
+        startNewPage(state, config);
+      }
+      // If we're on an odd page (1, 3, 5...), add another blank page
+      const nextPageNum = state.pages.length + 1;
+      if (nextPageNum % 2 !== 0) {
+        startNewPage(state, config);
+      }
+      break;
+    }
+
+    case "oddPage": {
+      // Start on next odd page (page 1, 3, 5...)
+      // First ensure we're on a new page
+      if (state.currentPage.paragraphs.length > 0) {
+        startNewPage(state, config);
+      }
+      // If we're on an even page (2, 4, 6...), add another blank page
+      const nextPageNum = state.pages.length + 1;
+      if (nextPageNum % 2 === 0) {
+        startNewPage(state, config);
+      }
+      break;
+    }
+
+    case "continuous":
+      // No page break - continue on same page
+      break;
+
+    case "nextColumn":
+      // Column break - not supported yet, treat as continuous
+      break;
+  }
+}
+
+/**
+ * Check if paragraphs can fit in remaining space.
+ * Used for keepWithNext calculations.
+ */
+function canFitInRemainingSpace(
+  state: FlowState,
+  paragraphsToFit: readonly LayoutParagraphResult[],
+  config: PageFlowConfig,
+): boolean {
+  const contentHeight = getContentHeight(config);
+  const remainingSpace = contentHeight - state.currentPage.currentY + (config.marginTop as number);
+  const totalHeight = paragraphsToFit.reduce(
+    (sum, para) => sum + getParagraphHeight(para),
+    0,
+  );
+  return totalHeight <= remainingSpace;
 }
 
 /**
@@ -234,14 +367,34 @@ export function flowIntoPages(input: PageFlowInput): PagedLayoutResult {
       startNewPage(state, config);
     }
 
-    // Add paragraph to page
-    addParagraphToPage(state, paragraph, config);
+    // Handle keepWithNext: check if current and next paragraph fit together
+    // @see ECMA-376-1:2016 Section 17.3.1.14 (keepNext)
+    if (hint?.keepWithNext === true && i + 1 < paragraphs.length) {
+      const nextParagraph = paragraphs[i + 1];
+      const paragraphsToKeep = [paragraph, nextParagraph];
+
+      // If both don't fit on current page and we have content, start new page
+      if (
+        !canFitInRemainingSpace(state, paragraphsToKeep, config) &&
+        state.currentPage.paragraphs.length > 0
+      ) {
+        startNewPage(state, config);
+      }
+    }
+
+    // Add paragraph to page (with hint for widow/orphan control)
+    addParagraphToPage(state, paragraph, config, hint);
 
     // Handle inline page breaks (w:br type="page")
     // Check if any line in the paragraph has pageBreakAfter
     const hasInlinePageBreak = paragraph.lines.some((line) => line.pageBreakAfter === true);
     if (hasInlinePageBreak) {
       startNewPage(state, config);
+    }
+
+    // Handle section breaks after paragraph
+    if (hint?.sectionBreakAfter !== undefined) {
+      handleSectionBreak(state, config, hint.sectionBreakAfter);
     }
   }
 

@@ -169,8 +169,15 @@ function layoutParagraph(
       lineBulletWidth,
     );
 
-    // Convert spans to positioned spans
-    const positionedSpans = positionSpans(lineSpans);
+    // Convert spans to positioned spans (with justification if needed)
+    const isLastLine = index === spanLines.length - 1;
+    const positionedSpans = positionSpans(
+      lineSpans,
+      para.alignment,
+      lineWidth as number,
+      availableWidth as number,
+      isLastLine,
+    );
 
     const hasPageBreakAfter = pageBreaksAfter[index] ?? false;
     lines.push({
@@ -231,13 +238,122 @@ function calculateLineX(
 }
 
 /**
- * Convert measured spans to positioned spans with dx values.
+ * Count word gaps in a line.
+ * A word gap is a transition from space character to non-space character.
  */
-function positionSpans(spans: readonly MeasuredSpan[]): PositionedSpan[] {
-  return spans.map((span) => ({
-    ...span,
-    dx: px(0), // dx will be calculated during SVG rendering for kerning
-  }));
+function countWordGaps(spans: readonly MeasuredSpan[]): number {
+  const fullText = spans.map((s) => s.text).join("");
+  const matches = fullText.match(/\s+(?=\S)/g);
+  return matches !== null ? matches.length : 0;
+}
+
+/**
+ * Find word boundary positions (character indices where spaces end).
+ * Returns an array of { spanIndex, charIndex } for each word boundary.
+ */
+function findWordBoundaries(
+  spans: readonly MeasuredSpan[],
+): Array<{ readonly spanIndex: number; readonly charIndex: number }> {
+  const boundaries: Array<{ readonly spanIndex: number; readonly charIndex: number }> = [];
+  const isSpace = (ch: string): boolean => /\s/.test(ch);
+
+  // Track previous character state across spans
+  const prevState = { wasSpace: false };
+
+  spans.forEach((span, spanIndex) => {
+    for (let i = 0; i < span.text.length; i++) {
+      const ch = span.text[i];
+      // Word boundary: previous was space, current is not
+      if (prevState.wasSpace && !isSpace(ch)) {
+        boundaries.push({ spanIndex, charIndex: i });
+      }
+      prevState.wasSpace = isSpace(ch);
+    }
+  });
+
+  return boundaries;
+}
+
+/**
+ * Convert measured spans to positioned spans with dx values.
+ * For justify alignment, distributes extra space between words.
+ *
+ * @param spans - Measured spans to position
+ * @param alignment - Text alignment
+ * @param lineWidth - Natural width of the line
+ * @param availableWidth - Available width to fill
+ * @param isLastLine - Whether this is the last line of the paragraph
+ */
+function positionSpans(
+  spans: readonly MeasuredSpan[],
+  alignment: TextAlign,
+  lineWidth: number,
+  availableWidth: number,
+  isLastLine: boolean,
+): PositionedSpan[] {
+  // Only apply justification for justify alignment on non-last lines
+  const shouldJustify =
+    (alignment === "justify" || alignment === "distributed") &&
+    !isLastLine &&
+    spans.length > 0;
+
+  if (!shouldJustify) {
+    return spans.map((span) => ({
+      ...span,
+      dx: px(0),
+    }));
+  }
+
+  const extraSpace = availableWidth - lineWidth;
+
+  // Don't justify if we need to shrink text (line is already wider than available)
+  if (extraSpace <= 0) {
+    return spans.map((span) => ({
+      ...span,
+      dx: px(0),
+    }));
+  }
+
+  const wordGaps = countWordGaps(spans);
+
+  // If no word gaps (single word or no spaces), can't justify
+  if (wordGaps === 0) {
+    return spans.map((span) => ({
+      ...span,
+      dx: px(0),
+    }));
+  }
+
+  // Calculate extra space per word gap
+  const extraPerGap = extraSpace / wordGaps;
+
+  // Find word boundaries and assign extra spacing
+  const boundaries = findWordBoundaries(spans);
+
+  // Track cumulative extra space added
+  const cumulativeExtra = { value: 0 };
+
+  return spans.map((span, spanIndex) => {
+    // Find all boundaries that start within this span
+    const spanBoundaries = boundaries.filter((b) => b.spanIndex === spanIndex);
+
+    if (spanBoundaries.length === 0) {
+      return {
+        ...span,
+        dx: px(cumulativeExtra.value),
+      };
+    }
+
+    // Add extra space for each word boundary in this span
+    // The dx is the cumulative offset at the start of this span
+    const startOffset = cumulativeExtra.value;
+    cumulativeExtra.value += spanBoundaries.length * extraPerGap;
+
+    return {
+      ...span,
+      dx: px(startOffset),
+    };
+  });
 }
 
 // =============================================================================
