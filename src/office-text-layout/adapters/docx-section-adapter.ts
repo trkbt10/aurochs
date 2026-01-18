@@ -17,6 +17,7 @@ import {
   SPEC_DEFAULT_PAGE_HEIGHT_TWIPS,
   SPEC_DEFAULT_MARGIN_TWIPS,
   SPEC_DEFAULT_TEXT_DIRECTION,
+  SPEC_DEFAULT_HEADER_FOOTER_DISTANCE_TWIPS,
   twipsToPx,
 } from "../../docx/domain/ecma376-defaults";
 import { textDirectionToWritingMode } from "../writing-mode";
@@ -97,10 +98,10 @@ export function sectionPropertiesToPageConfig(
   const pgSz = sectPr?.pgSz;
   const pgMar = sectPr?.pgMar;
 
-  // Determine writing mode from section bidi property
-  // Note: The exact text direction should come from textDirection element
-  // but it's often derived from the bidi flag for sections
-  const textDirection: EcmaTextDirection = sectPr?.bidi === true ? "tbRl" : SPEC_DEFAULT_TEXT_DIRECTION;
+  // Determine writing mode from section textDirection property
+  // Falls back to spec default (lrTb - horizontal left-to-right)
+  // @see ECMA-376-1:2016 Section 17.18.93 (ST_TextDirection)
+  const textDirection: EcmaTextDirection = sectPr?.textDirection ?? SPEC_DEFAULT_TEXT_DIRECTION;
   const writingMode: WritingMode = textDirectionToWritingMode(textDirection);
 
   // Calculate margins with gutter support
@@ -120,6 +121,11 @@ export function sectionPropertiesToPageConfig(
   // Convert columns configuration
   const columns = columnsToColumnConfig(sectPr?.cols);
 
+  // Header and footer distance from page edge
+  // @see ECMA-376-1:2016 Section 17.6.11 (pgMar - header/footer)
+  const headerDistance = twipsToPx(pgMar?.header ?? SPEC_DEFAULT_HEADER_FOOTER_DISTANCE_TWIPS);
+  const footerDistance = twipsToPx(pgMar?.footer ?? SPEC_DEFAULT_HEADER_FOOTER_DISTANCE_TWIPS);
+
   return {
     pageWidth: twipsToPx(pgSz?.w ?? SPEC_DEFAULT_PAGE_WIDTH_TWIPS),
     pageHeight: twipsToPx(pgSz?.h ?? SPEC_DEFAULT_PAGE_HEIGHT_TWIPS),
@@ -127,6 +133,8 @@ export function sectionPropertiesToPageConfig(
     marginBottom: twipsToPx(pgMar?.bottom ?? SPEC_DEFAULT_MARGIN_TWIPS),
     marginLeft,
     marginRight,
+    headerDistance,
+    footerDistance,
     writingMode,
     widowLines: 2,
     orphanLines: 2,

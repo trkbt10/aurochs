@@ -86,6 +86,13 @@ export const SPEC_DEFAULT_PAGE_HEIGHT_TWIPS = 15840; // 11 * 1440
  */
 export const SPEC_DEFAULT_MARGIN_TWIPS = 1440; // 1 inch
 
+/**
+ * Default header/footer distance from page edge in twips (0.5 inch).
+ * This is the distance from the top/bottom edge of the page to the header/footer content.
+ * @see ECMA-376-1:2016 Section 17.6.11 (pgMar - header/footer attributes)
+ */
+export const SPEC_DEFAULT_HEADER_FOOTER_DISTANCE_TWIPS = 720; // 0.5 inch
+
 // =============================================================================
 // Font Size - Spec Default when sz Omitted AND No Style Inheritance
 // =============================================================================
@@ -179,4 +186,18 @@ export function halfPointsToPt(halfPoints: number): Points {
  */
 export function ptToPx(points: Points): Pixels {
   return px((points as number) * PT_TO_PX);
+}
+
+/**
+ * EMU to pixels conversion factor.
+ * 914400 EMU = 1 inch = 96 CSS pixels.
+ */
+export const EMU_TO_PX = PIXELS_PER_INCH / EMU_PER_INCH;
+
+/**
+ * Convert EMUs to pixels.
+ * @see ECMA-376-1:2016 Section 20.1.10.16 (ST_Coordinate)
+ */
+export function emuToPx(emu: number): Pixels {
+  return px(emu * EMU_TO_PX);
 }

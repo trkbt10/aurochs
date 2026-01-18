@@ -24,7 +24,8 @@ import {
 import type { DocxRunProperties } from "@lib/docx/domain/text";
 import type { DocxParagraphProperties, DocxParagraph } from "@lib/docx/domain/paragraph";
 import type { DocxStyle } from "@lib/docx/domain/styles";
-import type { DocxLevel } from "@lib/docx/domain/numbering";
+import type { DocxLevel, DocxNumbering, DocxAbstractNum, DocxNum } from "@lib/docx/domain/numbering";
+import { docxAbstractNumId, docxNumId, docxIlvl } from "@lib/docx/domain/types";
 import type { DocxTableProperties, DocxTableCellProperties, DocxTable } from "@lib/docx/domain/table";
 import type { DocxDocument } from "@lib/docx/domain/document";
 import { Button } from "@lib/office-editor-components/primitives";
@@ -408,11 +409,24 @@ function createDemoParagraph(
     italic?: boolean;
     fontSize?: number;
     pStyle?: string;
+    /** Force page break before this paragraph */
+    pageBreakBefore?: boolean;
+    /** Keep this paragraph with the next paragraph on the same page */
+    keepNext?: boolean;
+    /** Keep all lines of this paragraph together on the same page */
+    keepLines?: boolean;
   }
 ): DocxParagraph {
+  const paragraphProps: DocxParagraph["properties"] = {
+    ...(options?.pStyle && { pStyle: docxStyleId(options.pStyle) }),
+    ...(options?.pageBreakBefore && { pageBreakBefore: true }),
+    ...(options?.keepNext && { keepNext: true }),
+    ...(options?.keepLines && { keepLines: true }),
+  };
+
   return {
     type: "paragraph",
-    properties: options?.pStyle ? { pStyle: docxStyleId(options.pStyle) } : undefined,
+    properties: Object.keys(paragraphProps ?? {}).length > 0 ? paragraphProps : undefined,
     content: [
       {
         type: "run",
@@ -511,6 +525,119 @@ function createDemoTable(): DocxTable {
         ],
       },
     ],
+  };
+}
+
+// =============================================================================
+// Numbering Demo Helpers
+// =============================================================================
+
+/**
+ * Create a paragraph with numbering properties.
+ */
+function createNumberedParagraph(
+  text: string,
+  numId: number,
+  ilvl: number = 0,
+): DocxParagraph {
+  return {
+    type: "paragraph",
+    properties: {
+      numPr: {
+        numId: docxNumId(numId),
+        ilvl: docxIlvl(ilvl),
+      },
+    },
+    content: [
+      {
+        type: "run",
+        content: [{ type: "text", value: text }],
+      },
+    ],
+  };
+}
+
+/**
+ * Create a demo numbering definition.
+ * Includes decimal (1, 2, 3), bullet (•), and Roman numerals (I, II, III).
+ */
+function createDemoNumbering(): DocxNumbering {
+  // Decimal list: 1. 2. 3.
+  const decimalAbstract: DocxAbstractNum = {
+    abstractNumId: docxAbstractNumId(0),
+    multiLevelType: "hybridMultilevel",
+    lvl: [
+      {
+        ilvl: docxIlvl(0),
+        start: 1,
+        numFmt: "decimal",
+        lvlText: { val: "%1." },
+        lvlJc: "left",
+      },
+      {
+        ilvl: docxIlvl(1),
+        start: 1,
+        numFmt: "lowerLetter",
+        lvlText: { val: "%2." },
+        lvlJc: "left",
+      },
+    ],
+  };
+
+  // Bullet list: •
+  const bulletAbstract: DocxAbstractNum = {
+    abstractNumId: docxAbstractNumId(1),
+    multiLevelType: "hybridMultilevel",
+    lvl: [
+      {
+        ilvl: docxIlvl(0),
+        numFmt: "bullet",
+        lvlText: { val: "•" },
+        lvlJc: "left",
+      },
+      {
+        ilvl: docxIlvl(1),
+        numFmt: "bullet",
+        lvlText: { val: "◦" },
+        lvlJc: "left",
+      },
+    ],
+  };
+
+  // Roman numerals: I. II. III.
+  const romanAbstract: DocxAbstractNum = {
+    abstractNumId: docxAbstractNumId(2),
+    multiLevelType: "hybridMultilevel",
+    lvl: [
+      {
+        ilvl: docxIlvl(0),
+        start: 1,
+        numFmt: "upperRoman",
+        lvlText: { val: "%1." },
+        lvlJc: "left",
+      },
+    ],
+  };
+
+  // Numbering instances
+  const decimalNum: DocxNum = {
+    numId: docxNumId(1),
+    abstractNumId: docxAbstractNumId(0),
+  };
+
+  const bulletNum: DocxNum = {
+    numId: docxNumId(2),
+    abstractNumId: docxAbstractNumId(1),
+  };
+
+  const romanNum: DocxNum = {
+    numId: docxNumId(3),
+    abstractNumId: docxAbstractNumId(2),
+  };
+
+  return {
+    abstractNum: [decimalAbstract, bulletAbstract, romanAbstract],
+    num: [decimalNum, bulletNum, romanNum],
   };
 }
 
@@ -780,8 +907,9 @@ function LayoutEditorTest() {
     createDemoParagraph(""),
     // =============================================================================
     // Page 2 - Additional Content for Multi-Page Testing
+    // Uses pageBreakBefore to force a new page
     // =============================================================================
-    createDemoParagraph("ページ2: マルチページ編集テスト", { bold: true, fontSize: 40 }),
+    createDemoParagraph("ページ2: マルチページ編集テスト", { bold: true, fontSize: 40, pageBreakBefore: true }),
     createDemoParagraph(""),
     createDemoParagraph("このセクションは、複数ページにまたがる編集機能をテストするためのコンテンツです。"),
     createDemoParagraph(""),
@@ -807,8 +935,9 @@ function LayoutEditorTest() {
     createDemoParagraph(""),
     // =============================================================================
     // Page 3 - More Content
+    // Uses pageBreakBefore to force a new page
     // =============================================================================
-    createDemoParagraph("ページ3: さらなるコンテンツ", { bold: true, fontSize: 40 }),
+    createDemoParagraph("ページ3: さらなるコンテンツ", { bold: true, fontSize: 40, pageBreakBefore: true }),
     createDemoParagraph(""),
     createDemoParagraph("このページでは、さらに長い文章での編集テストを行います。"),
     createDemoParagraph(""),
@@ -833,10 +962,44 @@ function LayoutEditorTest() {
     createDemoParagraph("□ ページ境界でのバックスペース"),
     createDemoParagraph("□ 複数ページにまたがる削除"),
     createDemoParagraph(""),
+    // =============================================================================
+    // keepNext Test Section
+    // The heading with keepNext should stay with the following paragraph
+    // =============================================================================
+    createDemoParagraph("keepNextテスト（見出しと本文を同一ページに保持）", { bold: true, fontSize: 32, keepNext: true }),
+    createDemoParagraph("この段落は上の見出しと同じページに表示されるべきです。keepNext属性により、見出しが次の段落と分離されることを防ぎます。これはWordprocessingML仕様(ECMA-376 Section 17.3.1.14)に準拠した動作です。"),
+    createDemoParagraph(""),
+    createDemoParagraph("keepLinesテスト", { bold: true, fontSize: 32, keepLines: true }),
+    createDemoParagraph(""),
+    // =============================================================================
+    // Numbering Test Section
+    // Test numbered lists, bulleted lists, and Roman numerals
+    // =============================================================================
+    createDemoParagraph("番号付きリストテスト", { bold: true, fontSize: 32 }),
+    createDemoParagraph(""),
+    createDemoParagraph("Decimal list (numId=1):", { bold: true }),
+    createNumberedParagraph("First item in decimal list", 1, 0),
+    createNumberedParagraph("Second item in decimal list", 1, 0),
+    createNumberedParagraph("Third item in decimal list", 1, 0),
+    createDemoParagraph(""),
+    createDemoParagraph("Bullet list (numId=2):", { bold: true }),
+    createNumberedParagraph("Bullet item one", 2, 0),
+    createNumberedParagraph("Bullet item two", 2, 0),
+    createNumberedParagraph("Nested bullet item", 2, 1),
+    createNumberedParagraph("Bullet item three", 2, 0),
+    createDemoParagraph(""),
+    createDemoParagraph("Roman numeral list (numId=3):", { bold: true }),
+    createNumberedParagraph("Roman numeral I", 3, 0),
+    createNumberedParagraph("Roman numeral II", 3, 0),
+    createNumberedParagraph("Roman numeral III", 3, 0),
+    createDemoParagraph(""),
     createDemoParagraph("最終テスト段落", { bold: true, fontSize: 32 }),
     createDemoParagraph(""),
     createDemoParagraph("これがテストドキュメントの最後の段落です。ここまでスクロールして編集できることを確認してください。End of document."),
   ], []);
+
+  // Demo numbering definitions
+  const demoNumbering = useMemo(() => createDemoNumbering(), []);
 
   const [cursorInfo, setCursorInfo] = useState<string>("クリックしてカーソル位置を確認");
 
@@ -864,6 +1027,7 @@ function LayoutEditorTest() {
       <div style={layoutEditorContainerStyle}>
         <ContinuousEditor
           paragraphs={demoParagraphs}
+          numbering={demoNumbering}
           contentWidth={px(602)}
           onCursorChange={handleCursorChange}
         />

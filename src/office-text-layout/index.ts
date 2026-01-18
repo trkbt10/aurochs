@@ -45,6 +45,7 @@ export type {
   MeasuredParagraph,
   LayoutInput,
   // Continuous document types
+  HeaderFooterLayout,
   PageLayout,
   PagedLayoutResult,
   ContinuousCursorPosition,
@@ -121,6 +122,20 @@ export {
   getSectionContentHeight,
   getAllSectionConfigs,
 } from "./adapters/docx-section-adapter";
+
+// DOCX header/footer resolver
+export {
+  resolveHeaderFooter,
+  hasHeaders,
+  hasFooters,
+  layoutHeader,
+  layoutFooter,
+} from "./adapters/docx-header-footer-resolver";
+export type {
+  ResolvedHeaderFooter,
+  HeaderFooterContext,
+  HeaderFooterLayoutConfig,
+} from "./adapters/docx-header-footer-resolver";
 
 // DOCX style resolver
 export {

@@ -27,7 +27,9 @@ import type {
   DocxTab,
   DocxBreak,
   DocxSymbol,
+  DocxDrawingContent,
 } from "../domain/run";
+import { parseDrawing } from "./drawing";
 import type { WordBorderStyle } from "../../ooxml/domain/border";
 import type { UnderlineStyle, TextEmphasisMark } from "../../ooxml/domain/text";
 import {
@@ -552,6 +554,22 @@ function parseSymbol(element: XmlElement): DocxSymbol {
 }
 
 /**
+ * Parse drawing element.
+ *
+ * @see ECMA-376 Part 1, Section 17.3.3.9 (drawing)
+ */
+function parseDrawingContent(element: XmlElement): DocxDrawingContent | undefined {
+  const drawing = parseDrawing(element);
+  if (drawing === undefined) {
+    return undefined;
+  }
+  return {
+    type: "drawing",
+    drawing,
+  };
+}
+
+/**
  * Parse run content elements.
  */
 function parseRunContent(element: XmlElement): DocxRunContent | undefined {
@@ -566,6 +584,8 @@ function parseRunContent(element: XmlElement): DocxRunContent | undefined {
       return parseBreak(element);
     case "sym":
       return parseSymbol(element);
+    case "drawing":
+      return parseDrawingContent(element);
     default:
       return undefined;
   }

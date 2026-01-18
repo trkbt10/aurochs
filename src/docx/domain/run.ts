@@ -423,9 +423,20 @@ export type DocxSymbol = {
 };
 
 /**
+ * Drawing content within a run.
+ *
+ * @see ECMA-376 Part 1, Section 17.3.3.9 (drawing)
+ */
+export type DocxDrawingContent = {
+  readonly type: "drawing";
+  /** Inline or anchor drawing */
+  readonly drawing: import("./drawing").DocxDrawing;
+};
+
+/**
  * Union of all run content types.
  */
-export type DocxRunContent = DocxText | DocxTab | DocxBreak | DocxSymbol;
+export type DocxRunContent = DocxText | DocxTab | DocxBreak | DocxSymbol | DocxDrawingContent;
 
 // =============================================================================
 // Run Type

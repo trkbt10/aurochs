@@ -119,6 +119,40 @@ function toSvgDominantBaseline(fontAlignment: FontAlignment): string | undefined
 // =============================================================================
 
 /**
+ * Render an inline image span.
+ */
+function renderInlineImage(
+  span: PositionedSpan,
+  x: number,
+  lineY: number,
+  key: string,
+): ReactNode {
+  const image = span.inlineImage;
+  if (image === undefined) {
+    return null;
+  }
+
+  // Calculate Y position - align bottom of image with baseline
+  const imageY = lineY - (image.height as number);
+
+  return (
+    <g key={`img-${key}`}>
+      <image
+        key={`img-elem-${key}`}
+        x={x}
+        y={imageY}
+        width={image.width as number}
+        height={image.height as number}
+        href={image.src}
+        preserveAspectRatio="none"
+      >
+        {image.alt !== undefined && <title>{image.alt}</title>}
+      </image>
+    </g>
+  );
+}
+
+/**
  * Render a single text span with all its styling.
  */
 function renderSpan(
@@ -128,6 +162,11 @@ function renderSpan(
   dominantBaseline: string | undefined,
   key: string,
 ): ReactNode {
+  // Handle inline images
+  if (span.inlineImage !== undefined) {
+    return renderInlineImage(span, x, lineY, key);
+  }
+
   const fontSizePx = fontSizeToPixels(span.fontSize);
   const bounds = getTextVisualBounds(lineY as Pixels, span.fontSize, span.fontFamily);
   const elements: ReactNode[] = [];

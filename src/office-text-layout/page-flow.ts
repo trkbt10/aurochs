@@ -57,6 +57,16 @@ export type PageFlowConfig = {
   readonly marginLeft: Pixels;
   /** Right margin in pixels */
   readonly marginRight: Pixels;
+  /**
+   * Distance from top edge to header content in pixels.
+   * @see ECMA-376-1:2016 Section 17.6.11 (pgMar - header)
+   */
+  readonly headerDistance?: Pixels;
+  /**
+   * Distance from bottom edge to footer content in pixels.
+   * @see ECMA-376-1:2016 Section 17.6.11 (pgMar - footer)
+   */
+  readonly footerDistance?: Pixels;
   /** Writing mode for text direction */
   readonly writingMode?: WritingMode;
   /** Minimum lines to keep at bottom of page (widows) */

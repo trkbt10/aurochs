@@ -7,9 +7,11 @@
 
 import type { ReactNode, CSSProperties } from "react";
 import type { Pixels } from "../../ooxml/domain/units";
+import { px } from "../../ooxml/domain/units";
 import type {
   LayoutResult,
   PageLayout,
+  HeaderFooterLayout,
   SelectionRect,
   CursorCoordinates,
 } from "../../office-text-layout/types";
@@ -57,6 +59,22 @@ const pageSvgStyle: CSSProperties = {
 // =============================================================================
 
 /**
+ * Convert HeaderFooterLayout to LayoutResult for TextOverlay.
+ */
+function headerFooterToLayoutResult(
+  layout: HeaderFooterLayout | undefined,
+): LayoutResult | undefined {
+  if (layout === undefined || layout.paragraphs.length === 0) {
+    return undefined;
+  }
+  return {
+    paragraphs: layout.paragraphs,
+    totalHeight: layout.height,
+    yOffset: px(0),
+  };
+}
+
+/**
  * Renders a single page of a DOCX document.
  */
 export function PageRenderer({
@@ -72,8 +90,12 @@ export function PageRenderer({
   const layoutResult: LayoutResult = {
     paragraphs: page.paragraphs,
     totalHeight: page.height,
-    yOffset: 0 as Pixels,
+    yOffset: px(0),
   };
+
+  // Convert header and footer
+  const headerResult = headerFooterToLayoutResult(page.header);
+  const footerResult = headerFooterToLayoutResult(page.footer);
 
   // Filter selection and cursor for this page
   const pageSelection = selection?.filter((rect) => rect.pageIndex === pageIndex);
@@ -120,12 +142,37 @@ export function PageRenderer({
         onClick={handleClick}
         onDoubleClick={handleDoubleClick}
       >
+        {/* Render header if present */}
+        {headerResult !== undefined && page.header !== undefined && (
+          <g transform={`translate(0, ${page.header.y as number})`}>
+            <TextOverlay
+              layoutResult={headerResult}
+              selection={undefined}
+              cursor={undefined}
+              showCursor={false}
+            />
+          </g>
+        )}
+
+        {/* Render main content */}
         <TextOverlay
           layoutResult={layoutResult}
           selection={pageSelection}
           cursor={pageCursor}
           showCursor={showCursor}
         />
+
+        {/* Render footer if present */}
+        {footerResult !== undefined && page.footer !== undefined && (
+          <g transform={`translate(0, ${page.footer.y as number})`}>
+            <TextOverlay
+              layoutResult={footerResult}
+              selection={undefined}
+              cursor={undefined}
+              showCursor={false}
+            />
+          </g>
+        )}
       </svg>
     </div>
   );

@@ -149,6 +149,35 @@ export type LayoutSpan = {
   readonly textFill: TextFillConfig | undefined;
   /** Kerning threshold in points */
   readonly kerning: Points | undefined;
+  /**
+   * Inline image configuration.
+   * When set, this span represents an inline image rather than text.
+   * The text property should be empty or a placeholder for accessibility.
+   *
+   * @see ECMA-376 Part 1, Section 20.4.2.8 (inline)
+   */
+  readonly inlineImage?: InlineImageConfig;
+};
+
+/**
+ * Inline image configuration.
+ *
+ * @see ECMA-376 Part 1, Section 20.4.2.8 (inline)
+ * @see ECMA-376 Part 1, Section 20.2 (DrawingML - Picture)
+ */
+export type InlineImageConfig = {
+  /** Image source URL (data URL or resource URL) */
+  readonly src: string;
+  /** Image width in pixels */
+  readonly width: Pixels;
+  /** Image height in pixels */
+  readonly height: Pixels;
+  /** Alt text for accessibility */
+  readonly alt: string | undefined;
+  /** Title for tooltip */
+  readonly title: string | undefined;
+  /** Relationship ID for resource resolution */
+  readonly relationshipId: string | undefined;
 };
 
 /**
@@ -574,6 +603,18 @@ export type LayoutInput = {
 // =============================================================================
 
 /**
+ * Header or footer layout result.
+ */
+export type HeaderFooterLayout = {
+  /** Paragraphs in the header/footer */
+  readonly paragraphs: readonly LayoutParagraphResult[];
+  /** Y position from top of page in pixels */
+  readonly y: Pixels;
+  /** Height of the header/footer area in pixels */
+  readonly height: Pixels;
+};
+
+/**
  * Page layout result for continuous documents.
  */
 export type PageLayout = {
@@ -587,6 +628,10 @@ export type PageLayout = {
   readonly width: Pixels;
   /** Paragraphs on this page */
   readonly paragraphs: readonly LayoutParagraphResult[];
+  /** Header layout (if any) */
+  readonly header?: HeaderFooterLayout;
+  /** Footer layout (if any) */
+  readonly footer?: HeaderFooterLayout;
 };
 
 /**

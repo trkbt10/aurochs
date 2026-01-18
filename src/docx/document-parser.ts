@@ -9,11 +9,12 @@
 
 import JSZip from "jszip";
 import { parseXml, isXmlElement, type XmlElement, type XmlDocument } from "../xml";
-import type { DocxDocument, DocxRelationships, DocxRelationship } from "./domain/document";
+import type { DocxDocument, DocxRelationships, DocxRelationship, DocxHeader, DocxFooter } from "./domain/document";
 import type { DocxStyles } from "./domain/styles";
 import type { DocxNumbering } from "./domain/numbering";
+import type { DocxRelId } from "./domain/types";
 import { createParseContext } from "./parser/context";
-import { parseDocument } from "./parser/document";
+import { parseDocument, parseHeader, parseFooter } from "./parser/document";
 import { parseStyles } from "./parser/styles";
 import { parseNumbering } from "./parser/numbering";
 import { DEFAULT_PART_PATHS, RELATIONSHIP_TYPES } from "./constants";
@@ -166,6 +167,58 @@ async function loadDocumentRelationships(zip: JSZip, path: string): Promise<Docx
   return element ? parseRelationships(element) : { relationship: [] };
 }
 
+/**
+ * Load all headers from document relationships.
+ */
+async function loadHeaders(
+  zip: JSZip,
+  documentPath: string,
+  relationships: DocxRelationships,
+  context?: ReturnType<typeof createParseContext>,
+): Promise<ReadonlyMap<DocxRelId, DocxHeader>> {
+  const headers = new Map<DocxRelId, DocxHeader>();
+
+  const headerRels = relationships.relationship.filter(
+    (r) => r.type === RELATIONSHIP_TYPES.header
+  );
+
+  for (const rel of headerRels) {
+    const path = resolvePath(documentPath, rel.target);
+    const element = await loadXmlPart(zip, path);
+    if (element) {
+      headers.set(rel.id, parseHeader(element, context));
+    }
+  }
+
+  return headers;
+}
+
+/**
+ * Load all footers from document relationships.
+ */
+async function loadFooters(
+  zip: JSZip,
+  documentPath: string,
+  relationships: DocxRelationships,
+  context?: ReturnType<typeof createParseContext>,
+): Promise<ReadonlyMap<DocxRelId, DocxFooter>> {
+  const footers = new Map<DocxRelId, DocxFooter>();
+
+  const footerRels = relationships.relationship.filter(
+    (r) => r.type === RELATIONSHIP_TYPES.footer
+  );
+
+  for (const rel of footerRels) {
+    const path = resolvePath(documentPath, rel.target);
+    const element = await loadXmlPart(zip, path);
+    if (element) {
+      footers.set(rel.id, parseFooter(element, context));
+    }
+  }
+
+  return footers;
+}
+
 // =============================================================================
 // Document Loading
 // =============================================================================
@@ -178,6 +231,8 @@ export type LoadDocxOptions = {
   readonly parseStyles?: boolean;
   /** Whether to parse numbering.xml */
   readonly parseNumbering?: boolean;
+  /** Whether to parse headers and footers */
+  readonly parseHeadersFooters?: boolean;
 };
 
 /**
@@ -186,6 +241,7 @@ export type LoadDocxOptions = {
 const DEFAULT_OPTIONS: Required<LoadDocxOptions> = {
   parseStyles: true,
   parseNumbering: true,
+  parseHeadersFooters: true,
 };
 
 /**
@@ -247,12 +303,23 @@ export async function loadDocx(
 
   const document = parseDocument(documentElement, context);
 
-  // 6. Combine all parts
+  // 6. Load headers and footers
+  let headers: ReadonlyMap<DocxRelId, DocxHeader> | undefined;
+  let footers: ReadonlyMap<DocxRelId, DocxFooter> | undefined;
+
+  if (opts.parseHeadersFooters) {
+    headers = await loadHeaders(zip, documentPath, documentRelationships, context);
+    footers = await loadFooters(zip, documentPath, documentRelationships, context);
+  }
+
+  // 7. Combine all parts
   return {
     ...document,
     styles,
     numbering,
     relationships: documentRelationships,
+    headers: headers?.size ? headers : undefined,
+    footers: footers?.size ? footers : undefined,
   };
 }
 

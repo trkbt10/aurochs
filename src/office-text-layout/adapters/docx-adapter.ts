@@ -12,6 +12,7 @@ import type {
   TextAlign,
   LineSpacing,
   LayoutTabStop,
+  InlineImageConfig,
 } from "../types";
 import type { DocxParagraph, DocxParagraphContent, DocxParagraphSpacing, DocxTabStops } from "../../docx/domain/paragraph";
 import type { DocxRun, DocxRunProperties, DocxRunContent } from "../../docx/domain/run";
@@ -39,6 +40,7 @@ import {
   TWIPS_PER_POINT,
   PT_TO_PX,
   twipsToPx,
+  emuToPx,
 } from "../../docx/domain/ecma376-defaults";
 
 // =============================================================================
@@ -57,6 +59,7 @@ const DEFAULT_TAB_SIZE_PT = SPEC_DEFAULT_TAB_STOP_TWIPS / TWIPS_PER_POINT;
 
 /**
  * Convert a DOCX run content to text.
+ * Drawing content returns empty string (handled separately for inline images).
  */
 function runContentToText(content: DocxRunContent): string {
   switch (content.type) {
@@ -69,6 +72,9 @@ function runContentToText(content: DocxRunContent): string {
     case "symbol":
       // Convert hex char code to character
       return String.fromCharCode(parseInt(content.char, 16));
+    case "drawing":
+      // Drawing content is handled separately for inline images
+      return "";
   }
 }
 
@@ -110,6 +116,39 @@ type RunToSpansOptions = {
 };
 
 /**
+ * Create inline image config from drawing content.
+ */
+function createInlineImageConfig(content: DocxRunContent): InlineImageConfig | undefined {
+  if (content.type !== "drawing") {
+    return undefined;
+  }
+
+  const drawing = content.drawing;
+
+  // Only handle inline drawings for now (anchor drawings need different handling)
+  if (drawing.type !== "inline") {
+    return undefined;
+  }
+
+  // Get relationship ID from the blip (for resource resolution later)
+  const relationshipId = drawing.pic?.blipFill?.blip?.rEmbed as string | undefined;
+
+  // Convert EMUs to pixels
+  const width = emuToPx(drawing.extent.cx as number);
+  const height = emuToPx(drawing.extent.cy as number);
+
+  return {
+    // src will be resolved later via resource resolver
+    src: relationshipId ?? "",
+    width,
+    height,
+    alt: drawing.docPr.descr,
+    title: drawing.docPr.title,
+    relationshipId,
+  };
+}
+
+/**
  * Convert a DOCX run to layout spans with full style resolution.
  */
 function runToSpans(options: RunToSpansOptions): LayoutSpan[] {
@@ -129,6 +168,35 @@ function runToSpans(options: RunToSpansOptions): LayoutSpan[] {
   const spans: LayoutSpan[] = [];
 
   for (const content of run.content) {
+    // Handle inline images
+    const inlineImage = createInlineImageConfig(content);
+    if (inlineImage !== undefined) {
+      spans.push({
+        text: "", // Empty text for image spans
+        fontSize: props.fontSize,
+        fontFamily: props.fontFamily,
+        fontFamilyEastAsian: props.fontFamilyEastAsian,
+        fontFamilyComplexScript: props.fontFamilyComplexScript,
+        fontWeight: props.fontWeight,
+        fontStyle: props.fontStyle,
+        textDecoration: props.textDecoration,
+        color: props.color,
+        verticalAlign: props.verticalAlign,
+        letterSpacing: props.letterSpacing,
+        breakType: "none",
+        direction: props.direction,
+        highlightColor: props.highlightColor,
+        textTransform: props.textTransform,
+        linkId,
+        linkTooltip,
+        textOutline: undefined,
+        textFill: undefined,
+        kerning: undefined,
+        inlineImage,
+      });
+      continue;
+    }
+
     const text = runContentToText(content);
     const breakType = getBreakType(content);
 

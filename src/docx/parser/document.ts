@@ -7,7 +7,7 @@
  */
 
 import { getChild, isXmlElement, type XmlElement } from "../../xml";
-import type { DocxBody, DocxBlockContent, DocxDocument } from "../domain/document";
+import type { DocxBody, DocxBlockContent, DocxDocument, DocxHeader, DocxFooter } from "../domain/document";
 import type { DocxParseContext } from "./context";
 import { parseParagraph } from "./paragraph";
 import { parseTable } from "./table";
@@ -71,6 +71,48 @@ export function parseBody(element: XmlElement | undefined, context?: DocxParseCo
     content,
     sectPr,
   };
+}
+
+// =============================================================================
+// Header/Footer Parsing
+// =============================================================================
+
+/**
+ * Parse header content element.
+ *
+ * @see ECMA-376 Part 1, Section 17.10.3 (hdr)
+ */
+export function parseHeader(element: XmlElement, context?: DocxParseContext): DocxHeader {
+  const content: DocxBlockContent[] = [];
+
+  for (const node of element.children) {
+    if (!isXmlElement(node)) {continue;}
+    const parsed = parseBlockContent(node, context);
+    if (parsed) {
+      content.push(parsed);
+    }
+  }
+
+  return { content };
+}
+
+/**
+ * Parse footer content element.
+ *
+ * @see ECMA-376 Part 1, Section 17.10.2 (ftr)
+ */
+export function parseFooter(element: XmlElement, context?: DocxParseContext): DocxFooter {
+  const content: DocxBlockContent[] = [];
+
+  for (const node of element.children) {
+    if (!isXmlElement(node)) {continue;}
+    const parsed = parseBlockContent(node, context);
+    if (parsed) {
+      content.push(parsed);
+    }
+  }
+
+  return { content };
 }
 
 // =============================================================================

@@ -159,10 +159,15 @@ function applyTextTransform(
  * Measure a single span and return MeasuredSpan.
  * Uses font-aware metrics and kerning for accurate width estimation.
  * Applies textTransform before measuring to match rendered width.
+ * For inline images, uses the image width directly.
  */
 export function measureSpan(span: LayoutSpan): MeasuredSpan {
   let width = px(0);
-  if (span.breakType === "none") {
+
+  // Inline images use their configured width
+  if (span.inlineImage !== undefined) {
+    width = span.inlineImage.width;
+  } else if (span.breakType === "none") {
     // Apply text transform before measuring (matches rendering)
     const transformedText = applyTextTransform(span.text, span.textTransform);
     width = estimateTextWidth(
