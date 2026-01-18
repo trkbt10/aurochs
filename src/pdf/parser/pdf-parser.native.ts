@@ -35,6 +35,7 @@ import { applyGraphicsClipMaskToPdfImage, buildPageSpaceSoftMaskForClipMask } fr
 import { rasterizeFormBBoxClipToMask } from "./form-bbox-clip-mask.native";
 import type { PdfShading } from "./shading.types";
 import type { PdfPattern } from "./pattern.types";
+import type { JpxDecodeFn } from "./jpx-decoder";
 
 function extractExtGStateFromResourcesNativeOrEmpty(
   page: NativePdfPage,
@@ -52,6 +53,12 @@ export type PdfParserOptions = {
   readonly minPathComplexity?: number;
   readonly includeText?: boolean;
   readonly includePaths?: boolean;
+  /**
+   * Optional decoder for `/JPXDecode` (JPEG2000) image streams.
+   *
+   * When a PDF contains `/JPXDecode` and this is not provided, the parser throws.
+   */
+  readonly jpxDecode?: JpxDecodeFn;
   /**
    * Enables rasterization for per-pixel `/SMask` groups that contain only vector
    * paths (no images). This sets the maximum `{width,height}` of the generated
@@ -77,11 +84,16 @@ export type PdfParserOptions = {
   readonly encryption?: PdfLoadEncryption;
 };
 
+const DEFAULT_JPX_DECODE: JpxDecodeFn = () => {
+  throw new Error("/JPXDecode requires options.jpxDecode");
+};
+
 const DEFAULT_OPTIONS: Required<PdfParserOptions> = {
   pages: [],
   minPathComplexity: 0,
   includeText: true,
   includePaths: true,
+  jpxDecode: DEFAULT_JPX_DECODE,
   softMaskVectorMaxSize: 0,
   shadingMaxSize: 0,
   clipPathMaxSize: 0,
@@ -274,7 +286,7 @@ async function parsePage(
 
   const images: PdfImage[] = [];
   for (const [xObjects, group] of imageGroups) {
-    const extracted = await extractImagesNative(page, group, { pageHeight: height }, xObjects);
+    const extracted = await extractImagesNative(page, group, { pageHeight: height, jpxDecode: opts.jpxDecode }, xObjects);
     images.push(...extracted);
   }
 

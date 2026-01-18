@@ -66,6 +66,14 @@ function ascii85Encode(data: Uint8Array): string {
   return `${chunks.join("")}~>`;
 }
 
+function asciiHexEncodeBytes(data: Uint8Array): string {
+  const hex: string[] = [];
+  for (const b of data) {
+    hex.push((b ?? 0).toString(16).padStart(2, "0").toUpperCase());
+  }
+  return `${hex.join("")}>`;
+}
+
 type LzwEncodeOptions = Readonly<{ readonly earlyChange: 0 | 1 }>;
 
 // Minimal MSB-first LZW encoder for test vectors (Clear/EOD, 9..12 bit).
@@ -132,6 +140,107 @@ function lzwEncode(data: Uint8Array, options: LzwEncodeOptions = { earlyChange: 
 
   if (pack.bitLen > 0) {out.push((pack.bitBuf << (8 - pack.bitLen)) & 0xff);}
   return new Uint8Array(out);
+}
+
+function writeAscii4(dst: Uint8Array, offset: number, s: string): void {
+  for (let i = 0; i < 4; i += 1) {dst[offset + i] = s.charCodeAt(i) & 0xff;}
+}
+
+function writeU32BE(view: DataView, offset: number, v: number): void {
+  view.setUint32(offset, v >>> 0, false);
+}
+
+function writeU16BE(view: DataView, offset: number, v: number): void {
+  view.setUint16(offset, v & 0xffff, false);
+}
+
+function writeS15Fixed16(view: DataView, offset: number, v: number): void {
+  const i32 = Math.trunc(v * 65536);
+  view.setInt32(offset, i32, false);
+}
+
+function makeIccXyzTag(x: number, y: number, z: number): Uint8Array {
+  const bytes = new Uint8Array(20);
+  writeAscii4(bytes, 0, "XYZ ");
+  const view = new DataView(bytes.buffer);
+  writeS15Fixed16(view, 8, x);
+  writeS15Fixed16(view, 12, y);
+  writeS15Fixed16(view, 16, z);
+  return bytes;
+}
+
+function makeIccParaGammaTag(gamma: number): Uint8Array {
+  const bytes = new Uint8Array(16);
+  writeAscii4(bytes, 0, "para");
+  const view = new DataView(bytes.buffer);
+  writeU16BE(view, 8, 0); // functionType 0: y = x^g
+  writeS15Fixed16(view, 12, gamma);
+  return bytes;
+}
+
+function pad4(n: number): number {
+  return (n + 3) & ~3;
+}
+
+function makeMinimalIccProfileBytes(args: { readonly dataColorSpace: "RGB " | "GRAY" }): Uint8Array {
+  const wp: readonly [number, number, number] = [0.9505, 1, 1.089];
+  const tags: Array<{ sig: string; data: Uint8Array }> = [{ sig: "wtpt", data: makeIccXyzTag(wp[0], wp[1], wp[2]) }];
+
+  if (args.dataColorSpace === "RGB ") {
+    tags.push(
+      { sig: "rXYZ", data: makeIccXyzTag(0.4124, 0.2126, 0.0193) },
+      { sig: "gXYZ", data: makeIccXyzTag(0.3576, 0.7152, 0.1192) },
+      { sig: "bXYZ", data: makeIccXyzTag(0.1805, 0.0722, 0.9505) },
+      { sig: "rTRC", data: makeIccParaGammaTag(2) },
+      { sig: "gTRC", data: makeIccParaGammaTag(2) },
+      { sig: "bTRC", data: makeIccParaGammaTag(2) },
+    );
+  } else {
+    tags.push({ sig: "kTRC", data: makeIccParaGammaTag(2) });
+  }
+
+  const headerSize = 128;
+  const tagTableSize = 4 + tags.length * 12;
+  let cursor = pad4(headerSize + tagTableSize);
+
+  const records: Array<{ sig: string; off: number; size: number }> = [];
+  const tagDataParts: Uint8Array[] = [];
+  for (const t of tags) {
+    const off = cursor;
+    const size = t.data.length;
+    records.push({ sig: t.sig, off, size });
+    tagDataParts.push(t.data);
+    cursor = pad4(cursor + size);
+    if (cursor > off + size) {
+      tagDataParts.push(new Uint8Array(cursor - (off + size)));
+    }
+  }
+
+  const totalSize = cursor;
+  const out = new Uint8Array(totalSize);
+  const view = new DataView(out.buffer);
+
+  writeU32BE(view, 0, totalSize);
+  writeAscii4(out, 16, args.dataColorSpace);
+  writeAscii4(out, 20, "XYZ ");
+  writeAscii4(out, 36, "acsp");
+
+  writeU32BE(view, 128, tags.length);
+  let tpos = 132;
+  for (const r of records) {
+    writeAscii4(out, tpos, r.sig);
+    writeU32BE(view, tpos + 4, r.off);
+    writeU32BE(view, tpos + 8, r.size);
+    tpos += 12;
+  }
+
+  let dpos = pad4(headerSize + tagTableSize);
+  for (const part of tagDataParts) {
+    out.set(part, dpos);
+    dpos += part.length;
+  }
+
+  return out;
 }
 
 function buildMinimalPdfWithImageXObject(args: {
@@ -647,6 +756,98 @@ describe("image-extractor (DCTDecode)", () => {
   });
 });
 
+describe("image-extractor (JPXDecode)", () => {
+  it("throws when /JPXDecode is present and no jpxDecode is provided", async () => {
+    const jpxBytes = new Uint8Array([0xde, 0xad, 0xbe, 0xef]);
+    const jpxHex = asciiHexEncodeBytes(jpxBytes);
+
+    const pdfBytes = buildMinimalPdfWithImageXObject({
+      imageStreamAscii: jpxHex,
+      imageDictEntries:
+        "/Type /XObject /Subtype /Image /Name /Im1 /Width 2 /Height 1 " +
+        "/BitsPerComponent 8 /ColorSpace /DeviceRGB " +
+        "/Filter [/ASCIIHexDecode /JPXDecode]",
+    });
+
+    await expect(parsePdf(pdfBytes)).rejects.toThrow("/JPXDecode requires options.jpxDecode");
+  });
+
+  it("decodes /JPXDecode images via injected jpxDecode", async () => {
+    const jpxBytes = new Uint8Array([0xde, 0xad, 0xbe, 0xef]);
+    const jpxHex = asciiHexEncodeBytes(jpxBytes);
+
+    const pdfBytes = buildMinimalPdfWithImageXObject({
+      imageStreamAscii: jpxHex,
+      imageDictEntries:
+        "/Type /XObject /Subtype /Image /Name /Im1 /Width 2 /Height 1 " +
+        "/BitsPerComponent 8 /ColorSpace /DeviceRGB " +
+        "/Filter [/ASCIIHexDecode /JPXDecode]",
+    });
+
+    const doc = await parsePdf(pdfBytes, {
+      jpxDecode: (bytes, options) => {
+        expect(options.expectedWidth).toBe(2);
+        expect(options.expectedHeight).toBe(1);
+        expect(Array.from(bytes)).toEqual(Array.from(jpxBytes));
+        return {
+          width: 2,
+          height: 1,
+          components: 3,
+          bitsPerComponent: 8,
+          data: new Uint8Array([255, 0, 0, 0, 255, 0]),
+        };
+      },
+    });
+
+    const images = doc.pages.flatMap((p) => p.elements.filter((e) => e.type === "image"));
+    expect(images).toHaveLength(1);
+
+    const image = images[0]!;
+    expect(image.colorSpace).toBe("DeviceRGB");
+    expect(image.bitsPerComponent).toBe(8);
+
+    const rgba = convertToRgba(image.data, 2, 1, image.colorSpace, image.bitsPerComponent);
+    expect(Array.from(rgba.slice(0, 4))).toEqual([255, 0, 0, 255]);
+    expect(Array.from(rgba.slice(4, 8))).toEqual([0, 255, 0, 255]);
+  });
+
+  it("decodes /SMask /JPXDecode via injected jpxDecode", async () => {
+    const smaskJpxBytes = new Uint8Array([0x01, 0x02, 0x03]);
+    const smaskJpxHex = asciiHexEncodeBytes(smaskJpxBytes);
+
+    const pdfBytes = buildMinimalPdfWithSmaskImageXObject({
+      imageStreamAscii: "FF000000FF00>",
+      imageDictEntries:
+        "/Type /XObject /Subtype /Image /Name /Im1 /Width 2 /Height 1 " +
+        "/BitsPerComponent 8 /ColorSpace /DeviceRGB /Filter /ASCIIHexDecode",
+      smaskStreamAscii: smaskJpxHex,
+      smaskDictEntries:
+        "/Type /XObject /Subtype /Image /Name /SM1 /Width 2 /Height 1 " +
+        "/BitsPerComponent 8 /ColorSpace /DeviceGray " +
+        "/Filter [/ASCIIHexDecode /JPXDecode]",
+    });
+
+    const doc = await parsePdf(pdfBytes, {
+      jpxDecode: (bytes, options) => {
+        expect(options.expectedWidth).toBe(2);
+        expect(options.expectedHeight).toBe(1);
+        expect(Array.from(bytes)).toEqual(Array.from(smaskJpxBytes));
+        return {
+          width: 2,
+          height: 1,
+          components: 1,
+          bitsPerComponent: 8,
+          data: new Uint8Array([0, 255]),
+        };
+      },
+    });
+
+    const images = doc.pages.flatMap((p) => p.elements.filter((e) => e.type === "image"));
+    expect(images).toHaveLength(1);
+    expect(Array.from(images[0]!.alpha ?? [])).toEqual([0, 255]);
+  });
+});
+
 describe("image-extractor (SMask)", () => {
   it("extracts /SMask alpha for raw images", async () => {
     const pdfBytes = buildMinimalPdfWithSmaskImageXObject({
@@ -667,6 +868,35 @@ describe("image-extractor (SMask)", () => {
     const image = images[0]!;
     expect(image.width).toBe(2);
     expect(image.height).toBe(1);
+    expect(image.alpha).toBeTruthy();
+    expect(Array.from(image.alpha ?? [])).toEqual([0, 255]);
+  });
+
+  it("extracts /SMask alpha for LZWDecode masks with Predictor=12 (PNG)", async () => {
+    // Width=2, Height=1, Colors=1, bpc=8, Predictor=12.
+    // Encoded row: [filterType=0, a0=0x00, a1=0xFF]
+    const predicted = new Uint8Array([0, 0x00, 0xff]);
+    const lzw = lzwEncode(predicted, { earlyChange: 1 });
+    const ascii85 = ascii85Encode(lzw);
+
+    const pdfBytes = buildMinimalPdfWithSmaskImageXObject({
+      imageStreamAscii: "FF000000FF00>",
+      imageDictEntries:
+        "/Type /XObject /Subtype /Image /Name /Im1 /Width 2 /Height 1 " +
+        "/BitsPerComponent 8 /ColorSpace /DeviceRGB /Filter /ASCIIHexDecode",
+      smaskStreamAscii: ascii85,
+      smaskDictEntries:
+        "/Type /XObject /Subtype /Image /Name /SM1 /Width 2 /Height 1 " +
+        "/BitsPerComponent 8 /ColorSpace /DeviceGray " +
+        "/Filter [/ASCII85Decode /LZWDecode] " +
+        "/DecodeParms [null << /Predictor 12 /Colors 1 /Columns 2 /BitsPerComponent 8 >>]",
+    });
+
+    const doc = await parsePdf(pdfBytes);
+    const images = doc.pages.flatMap((p) => p.elements.filter((e) => e.type === "image"));
+    expect(images).toHaveLength(1);
+
+    const image = images[0]!;
     expect(image.alpha).toBeTruthy();
     expect(Array.from(image.alpha ?? [])).toEqual([0, 255]);
   });
@@ -864,6 +1094,59 @@ describe("image-extractor (Lab)", () => {
   });
 });
 
+describe("image-extractor (CalGray / CalRGB)", () => {
+  it("extracts /CalGray images by applying /Gamma and /WhitePoint", async () => {
+    // 1x1 pixel: sample=0.5 with Gamma=2.0 -> linear=0.25 -> sRGB≈0.537 -> byte≈137.
+    const pdfBytes = buildMinimalPdfWithImageXObject({
+      imageStreamAscii: "80>",
+      imageDictEntries:
+        "/Type /XObject /Subtype /Image /Name /Im1 /Width 1 /Height 1 " +
+        "/BitsPerComponent 8 " +
+        "/ColorSpace [/CalGray << /WhitePoint [0.9505 1 1.0890] /Gamma 2 >>] " +
+        "/Filter /ASCIIHexDecode",
+    });
+
+    const doc = await parsePdf(pdfBytes);
+    const images = doc.pages.flatMap((p) => p.elements.filter((e) => e.type === "image"));
+    expect(images).toHaveLength(1);
+
+    const image = images[0]!;
+    expect(image.colorSpace).toBe("DeviceRGB");
+    expect(image.bitsPerComponent).toBe(8);
+
+    const rgba = convertToRgba(image.data, 1, 1, image.colorSpace, image.bitsPerComponent);
+    expect(Array.from(rgba.slice(0, 4))).toEqual([137, 137, 137, 255]);
+  });
+
+  it("extracts /CalRGB images by applying /Gamma and /Matrix", async () => {
+    // 1x1 pixel: R=0.5, Gamma=2.0 -> linear=0.25 -> sRGB≈0.537 -> byte≈137.
+    // Use an sRGB→XYZ matrix so XYZ→sRGB round-trips the linear value.
+    const pdfBytes = buildMinimalPdfWithImageXObject({
+      imageStreamAscii: "800000>",
+      imageDictEntries:
+        "/Type /XObject /Subtype /Image /Name /Im1 /Width 1 /Height 1 " +
+        "/BitsPerComponent 8 " +
+        "/ColorSpace [/CalRGB << " +
+        "/WhitePoint [0.9505 1 1.0890] " +
+        "/Gamma [2 2 2] " +
+        "/Matrix [0.4124 0.3576 0.1805 0.2126 0.7152 0.0722 0.0193 0.1192 0.9505] " +
+        ">>] " +
+        "/Filter /ASCIIHexDecode",
+    });
+
+    const doc = await parsePdf(pdfBytes);
+    const images = doc.pages.flatMap((p) => p.elements.filter((e) => e.type === "image"));
+    expect(images).toHaveLength(1);
+
+    const image = images[0]!;
+    expect(image.colorSpace).toBe("DeviceRGB");
+    expect(image.bitsPerComponent).toBe(8);
+
+    const rgba = convertToRgba(image.data, 1, 1, image.colorSpace, image.bitsPerComponent);
+    expect(Array.from(rgba.slice(0, 4))).toEqual([137, 0, 0, 255]);
+  });
+});
+
 describe("image-extractor (ICCBased)", () => {
   it("extracts ICCBased images with N=2 via deterministic tint fallback (avg tints → grayscale RGB)", async () => {
     const pdfBytes = buildMinimalPdfWithIccBasedImageXObject({
@@ -887,6 +1170,62 @@ describe("image-extractor (ICCBased)", () => {
 
     const rgba = convertToRgba(image.data, 1, 1, image.colorSpace, image.bitsPerComponent);
     expect(Array.from(rgba.slice(0, 4))).toEqual([128, 128, 128, 255]);
+  });
+
+  it("extracts ICCBased RGB images by parsing the ICC profile (matrix + TRC)", async () => {
+    const icc = makeMinimalIccProfileBytes({ dataColorSpace: "RGB " });
+    const iccHex = asciiHexEncodeBytes(icc);
+
+    const pdfBytes = buildMinimalPdfWithIccBasedImageXObject({
+      // 1 pixel: R=0.5, G=0, B=0. TRC gamma=2 => linear=0.25 => sRGB≈137
+      imageStreamAscii: "800000>",
+      imageDictEntries:
+        "/Type /XObject /Subtype /Image /Name /Im1 /Width 1 /Height 1 " +
+        "/BitsPerComponent 8 " +
+        "/ColorSpace [/ICCBased 8 0 R] " +
+        "/Filter /ASCIIHexDecode",
+      iccProfileDictEntries: "/N 3 /Filter /ASCIIHexDecode",
+      iccProfileStreamAscii: iccHex,
+    });
+
+    const doc = await parsePdf(pdfBytes);
+    const images = doc.pages.flatMap((p) => p.elements.filter((e) => e.type === "image"));
+    expect(images).toHaveLength(1);
+
+    const image = images[0]!;
+    expect(image.colorSpace).toBe("DeviceRGB");
+    expect(image.bitsPerComponent).toBe(8);
+
+    const rgba = convertToRgba(image.data, 1, 1, image.colorSpace, image.bitsPerComponent);
+    expect(Array.from(rgba.slice(0, 4))).toEqual([137, 0, 0, 255]);
+  });
+
+  it("extracts ICCBased Gray images by parsing the ICC profile (kTRC)", async () => {
+    const icc = makeMinimalIccProfileBytes({ dataColorSpace: "GRAY" });
+    const iccHex = asciiHexEncodeBytes(icc);
+
+    const pdfBytes = buildMinimalPdfWithIccBasedImageXObject({
+      // 1 pixel: gray=0.5. TRC gamma=2 => linear=0.25 => sRGB≈137
+      imageStreamAscii: "80>",
+      imageDictEntries:
+        "/Type /XObject /Subtype /Image /Name /Im1 /Width 1 /Height 1 " +
+        "/BitsPerComponent 8 " +
+        "/ColorSpace [/ICCBased 8 0 R] " +
+        "/Filter /ASCIIHexDecode",
+      iccProfileDictEntries: "/N 1 /Filter /ASCIIHexDecode",
+      iccProfileStreamAscii: iccHex,
+    });
+
+    const doc = await parsePdf(pdfBytes);
+    const images = doc.pages.flatMap((p) => p.elements.filter((e) => e.type === "image"));
+    expect(images).toHaveLength(1);
+
+    const image = images[0]!;
+    expect(image.colorSpace).toBe("DeviceRGB");
+    expect(image.bitsPerComponent).toBe(8);
+
+    const rgba = convertToRgba(image.data, 1, 1, image.colorSpace, image.bitsPerComponent);
+    expect(Array.from(rgba.slice(0, 4))).toEqual([137, 137, 137, 255]);
   });
 });
 

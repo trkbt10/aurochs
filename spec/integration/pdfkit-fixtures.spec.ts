@@ -4,13 +4,19 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parsePdf } from "../../src/pdf";
+import type { PdfParserOptions } from "../../src/pdf/parser/pdf-parser";
 
 type FixtureExpectation = Readonly<{
   readonly fileName: string;
   readonly expectedPages: number;
   readonly minPaths?: number;
   readonly minTexts?: number;
+  readonly minImages?: number;
   readonly expectedTextIncludes?: readonly string[];
+  readonly parseOptions?: PdfParserOptions;
+  readonly expectAnyImageClipMask?: boolean;
+  readonly expectAnyBlendMode?: string;
+  readonly expectAnyFillAlpha?: number;
 }>;
 
 const FIXTURES: readonly FixtureExpectation[] = [
@@ -33,6 +39,24 @@ const FIXTURES: readonly FixtureExpectation[] = [
     expectedPages: 1,
     minTexts: 1,
     expectedTextIncludes: ["PNG image above"],
+  },
+  {
+    fileName: "pdfkit-clipping.pdf",
+    expectedPages: 1,
+    minTexts: 1,
+    minImages: 1,
+    expectedTextIncludes: ["Clipped image above"],
+    parseOptions: { clipPathMaxSize: 64 },
+    expectAnyImageClipMask: true,
+  },
+  {
+    fileName: "pdfkit-alpha-blend.pdf",
+    expectedPages: 1,
+    minPaths: 2,
+    minTexts: 1,
+    expectedTextIncludes: ["Alpha+Blend (Multiply) rects above"],
+    expectAnyBlendMode: "Multiply",
+    expectAnyFillAlpha: 0.5,
   },
 ];
 
@@ -77,12 +101,13 @@ describe("PDFKit fixtures", () => {
       const bytes = fs.readFileSync(filePath);
       expect(isValidPdf(bytes)).toBe(true);
 
-      const parsed = await parsePdf(bytes);
+      const parsed = await parsePdf(bytes, fixture.parseOptions ?? {});
       expect(parsed.pages.length).toBe(fixture.expectedPages);
 
       const allElements = parsed.pages.flatMap((p) => p.elements);
       const pathElements = allElements.filter((e) => e.type === "path");
       const textElements = allElements.filter((e) => e.type === "text");
+      const imageElements = allElements.filter((e) => e.type === "image");
 
       if (fixture.minPaths !== undefined) {
         expect(pathElements.length).toBeGreaterThanOrEqual(fixture.minPaths);
@@ -90,11 +115,28 @@ describe("PDFKit fixtures", () => {
       if (fixture.minTexts !== undefined) {
         expect(textElements.length).toBeGreaterThanOrEqual(fixture.minTexts);
       }
+      if (fixture.minImages !== undefined) {
+        expect(imageElements.length).toBeGreaterThanOrEqual(fixture.minImages);
+      }
       if (fixture.expectedTextIncludes && fixture.expectedTextIncludes.length > 0) {
         const allText = normalizeTextForIncludes(textElements.map((t) => t.text).join("\n"));
         for (const expected of fixture.expectedTextIncludes) {
           expect(allText).toContain(normalizeTextForIncludes(expected));
         }
+      }
+      if (fixture.expectAnyImageClipMask) {
+        expect(imageElements.some((img) => Boolean(img.graphicsState.clipMask))).toBe(true);
+      }
+      if (fixture.expectAnyBlendMode) {
+        expect(allElements.some((e) => e.graphicsState.blendMode === fixture.expectAnyBlendMode)).toBe(true);
+      }
+      if (fixture.expectAnyFillAlpha !== undefined) {
+        const expected = fixture.expectAnyFillAlpha;
+        expect(
+          allElements.some(
+            (e) => typeof e.graphicsState.fillAlpha === "number" && Math.abs(e.graphicsState.fillAlpha - expected) < 1e-6,
+          ),
+        ).toBe(true);
       }
     }
   });

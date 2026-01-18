@@ -11,11 +11,14 @@ import { cmykToRgb, grayToRgb, rgbToRgbBytes } from "../domain/color";
 import type { ParsedImage } from "./operator-parser";
 import { decodeCcittFax, type CcittFaxDecodeParms } from "./ccitt-fax-decode";
 import { decodeJpegToRgb } from "./jpeg-decode";
+import { evalIccCurve, makeBradfordAdaptationMatrix, parseIccProfile, type ParsedIccProfile } from "./icc-profile.native";
+import { downsampleJpxTo8Bit, type JpxDecodeFn } from "./jpx-decoder";
 
 export type ImageExtractorOptions = {
   readonly extractImages?: boolean;
   readonly maxDimension?: number;
   readonly pageHeight: number;
+  readonly jpxDecode?: JpxDecodeFn;
 };
 
 function decodeMaskSamplesToAlpha8(
@@ -176,11 +179,23 @@ type SoftMaskInfo = Readonly<{
   readonly matte?: readonly number[];
 }>;
 
+function extractNumberArray(page: NativePdfPage, arr: PdfArray): readonly number[] {
+  const out: number[] = [];
+  for (const item of arr.items) {
+    const resolved = resolve(page, item);
+    if (resolved?.type === "number" && Number.isFinite(resolved.value)) {
+      out.push(resolved.value);
+    }
+  }
+  return out;
+}
+
 function getSoftMaskInfo(
   page: NativePdfPage,
   imageDict: PdfDict,
   width: number,
   height: number,
+  options: Readonly<{ readonly jpxDecode?: JpxDecodeFn }>,
 ): SoftMaskInfo | null {
   try {
     const smaskObj = resolve(page, dictGet(imageDict, "SMask"));
@@ -193,14 +208,7 @@ function getSoftMaskInfo(
 
     const matteObj = resolve(page, dictGet(smaskDict, "Matte"));
     const matteArray = asArray(matteObj);
-    const matte = matteArray
-      ? matteArray.items
-          .map((item) => {
-            const resolved = resolve(page, item);
-            return resolved?.type === "number" && Number.isFinite(resolved.value) ? resolved.value : null;
-          })
-          .filter((v): v is number => v != null)
-      : null;
+    const matte = matteArray ? extractNumberArray(page, matteArray) : null;
 
     const mw = getNumberValue(smaskDict, "Width") ?? 0;
     const mh = getNumberValue(smaskDict, "Height") ?? 0;
@@ -225,7 +233,36 @@ function getSoftMaskInfo(
 
     const normalized = filters.map((f) => (f === "DCT" ? "DCTDecode" : f === "JPX" ? "JPXDecode" : f));
     if (normalized.includes("JPXDecode")) {
-      throw new Error("[PDF Image] Soft mask with /JPXDecode is not supported yet");
+      const decoder = options.jpxDecode;
+      if (!decoder) {
+        throw new Error("[PDF Image] Soft mask with /JPXDecode requires options.jpxDecode");
+      }
+      const jpxBytes = decodePdfStream(smaskStream);
+      const decoded = decoder(jpxBytes, { expectedWidth: mw, expectedHeight: mh });
+      if (decoded.width !== mw || decoded.height !== mh) {
+        throw new Error(`[PDF Image] Soft mask /JPXDecode size mismatch: expected ${mw}x${mh}, got ${decoded.width}x${decoded.height}`);
+      }
+      const down = downsampleJpxTo8Bit(decoded);
+      const comps = decoded.components;
+      const alpha = new Uint8Array(mw * mh);
+      if (comps === 1) {
+        if (down.data.length !== mw * mh) {
+          throw new Error(`[PDF Image] Soft mask /JPXDecode length mismatch: expected ${mw * mh}, got ${down.data.length}`);
+        }
+        alpha.set(down.data);
+      } else {
+        const expected = mw * mh * comps;
+        if (down.data.length !== expected) {
+          throw new Error(`[PDF Image] Soft mask /JPXDecode length mismatch: expected ${expected}, got ${down.data.length}`);
+        }
+        for (let i = 0; i < mw * mh; i += 1) {
+          alpha[i] = down.data[i * comps] ?? 0;
+        }
+      }
+      if (shouldInvertSoftMaskDecode(page, smaskDict)) {
+        for (let i = 0; i < alpha.length; i += 1) {alpha[i] = 255 - (alpha[i] ?? 0);}
+      }
+      return { alpha, matte: matte && matte.length > 0 ? matte : undefined };
     }
 
     const dctIndex = normalized.indexOf("DCTDecode");
@@ -344,10 +381,7 @@ function applyIndexedColorKeyMask(args: {
   const min = ranges[0] ?? 0;
   const max = ranges[1] ?? 0;
 
-  const decodePair =
-    decode && decode.length === 2 && Number.isFinite(decode[0]) && Number.isFinite(decode[1])
-      ? ([decode[0], decode[1]] as const)
-      : null;
+  const decodePair = getOptionalDecodePair(decode);
   const sampleMax = (1 << bitsPerComponent) - 1;
 
   const pixelCount = width * height;
@@ -363,6 +397,14 @@ function applyIndexedColorKeyMask(args: {
   }
 
   return alpha;
+}
+
+function getOptionalDecodePair(decode: readonly number[] | undefined): readonly [number, number] | null {
+  if (!decode || decode.length !== 2) {return null;}
+  const d0 = decode[0];
+  const d1 = decode[1];
+  if (!Number.isFinite(d0) || !Number.isFinite(d1)) {return null;}
+  return [d0, d1];
 }
 
 function decodeExplicitMaskAlpha8(page: NativePdfPage, maskStream: PdfStream, width: number, height: number): Uint8Array {
@@ -452,6 +494,95 @@ function getDecodeParms(page: NativePdfPage, dict: PdfDict): DecodeParms | null 
   };
 }
 
+function getPredictorComponents(colorSpaceInfo: ColorSpaceInfo): number {
+  if (colorSpaceInfo.kind === "indexed") {return 1;}
+  if (colorSpaceInfo.kind === "tint") {return colorSpaceInfo.components;}
+  if (colorSpaceInfo.kind === "lab") {return 3;}
+  if (colorSpaceInfo.kind === "calRgb") {return 3;}
+  if (colorSpaceInfo.kind === "calGray") {return 1;}
+  if (colorSpaceInfo.kind === "iccBased") {return colorSpaceInfo.components;}
+  if (colorSpaceInfo.kind === "direct") {return getColorSpaceComponents(colorSpaceInfo.colorSpace);}
+  return 3;
+}
+
+function applyMat3ToXyz(m: readonly number[], v: readonly [number, number, number]): readonly [number, number, number] {
+  const x = v[0];
+  const y = v[1];
+  const z = v[2];
+  return [
+    (m[0] ?? 0) * x + (m[1] ?? 0) * y + (m[2] ?? 0) * z,
+    (m[3] ?? 0) * x + (m[4] ?? 0) * y + (m[5] ?? 0) * z,
+    (m[6] ?? 0) * x + (m[7] ?? 0) * y + (m[8] ?? 0) * z,
+  ] as const;
+}
+
+function iccBasedToRgbBytes(args: {
+  readonly data: Uint8Array;
+  readonly width: number;
+  readonly height: number;
+  readonly bitsPerComponent: number;
+  readonly decode?: readonly number[];
+  readonly profile: ParsedIccProfile;
+}): Uint8Array {
+  const { data, width, height, bitsPerComponent, decode, profile } = args;
+  const pixelCount = width * height;
+  const rgb = new Uint8Array(pixelCount * 3);
+
+  const max = bitsPerComponent === 16 ? 65535 : (1 << bitsPerComponent) - 1;
+  const D65: readonly [number, number, number] = [0.9505, 1, 1.089];
+  const adapt = makeBradfordAdaptationMatrix({ srcWhitePoint: profile.whitePoint, dstWhitePoint: D65 });
+
+  if (profile.kind === "gray") {
+    const decodePair = getOptionalDecodePair(decode);
+    for (let p = 0; p < pixelCount; p += 1) {
+      const raw = unpackSample(data, p, bitsPerComponent);
+      const v01 = max > 0 ? raw / max : 0;
+      const decoded = applyDecodeToNormalizedSample(v01, decodePair);
+      const linear = evalIccCurve(profile.kTRC, decoded);
+
+      const xyz = applyMat3ToXyz(adapt, [
+        (profile.whitePoint[0] ?? 0) * linear,
+        (profile.whitePoint[1] ?? 0) * linear,
+        (profile.whitePoint[2] ?? 0) * linear,
+      ]);
+      const [r, g, b] = xyzToSrgbBytes(xyz[0], xyz[1], xyz[2]);
+      const off = p * 3;
+      rgb[off] = r;
+      rgb[off + 1] = g;
+      rgb[off + 2] = b;
+    }
+    return rgb;
+  }
+
+  const decodePairs = getDecodePairs3(decode);
+  for (let p = 0; p < pixelCount; p += 1) {
+    const rraw = unpackSample(data, p * 3 + 0, bitsPerComponent);
+    const graw = unpackSample(data, p * 3 + 1, bitsPerComponent);
+    const braw = unpackSample(data, p * 3 + 2, bitsPerComponent);
+
+    const r01 = max > 0 ? rraw / max : 0;
+    const g01 = max > 0 ? graw / max : 0;
+    const b01 = max > 0 ? braw / max : 0;
+
+    const R = evalIccCurve(profile.rTRC, applyDecodeToNormalizedSample(r01, decodePairs ? decodePairs[0] ?? null : null));
+    const G = evalIccCurve(profile.gTRC, applyDecodeToNormalizedSample(g01, decodePairs ? decodePairs[1] ?? null : null));
+    const B = evalIccCurve(profile.bTRC, applyDecodeToNormalizedSample(b01, decodePairs ? decodePairs[2] ?? null : null));
+
+    const X = (profile.rXYZ[0] ?? 0) * R + (profile.gXYZ[0] ?? 0) * G + (profile.bXYZ[0] ?? 0) * B;
+    const Y = (profile.rXYZ[1] ?? 0) * R + (profile.gXYZ[1] ?? 0) * G + (profile.bXYZ[1] ?? 0) * B;
+    const Z = (profile.rXYZ[2] ?? 0) * R + (profile.gXYZ[2] ?? 0) * G + (profile.bXYZ[2] ?? 0) * B;
+
+    const xyz = applyMat3ToXyz(adapt, [X, Y, Z]);
+    const [r, g, b] = xyzToSrgbBytes(xyz[0], xyz[1], xyz[2]);
+    const off = p * 3;
+    rgb[off] = r;
+    rgb[off + 1] = g;
+    rgb[off + 2] = b;
+  }
+
+  return rgb;
+}
+
 function getCcittDecodeParms(
   page: NativePdfPage,
   dict: PdfDict,
@@ -514,7 +645,10 @@ type ColorSpaceInfo =
   | Readonly<{ kind: "direct"; colorSpace: PdfColorSpace }>
   | Readonly<{ kind: "indexed"; base: PdfColorSpace; hival: number; lookup: Uint8Array }>
   | Readonly<{ kind: "tint"; components: number }>
-  | Readonly<{ kind: "lab"; whitePoint: readonly [number, number, number]; range: readonly [number, number, number, number] }>;
+  | Readonly<{ kind: "lab"; whitePoint: readonly [number, number, number]; range: readonly [number, number, number, number] }>
+  | Readonly<{ kind: "calGray"; whitePoint: readonly [number, number, number]; gamma: number }>
+  | Readonly<{ kind: "calRgb"; whitePoint: readonly [number, number, number]; gamma: readonly [number, number, number]; matrix: readonly number[] }>
+  | Readonly<{ kind: "iccBased"; components: 1 | 3; profile: ParsedIccProfile }>;
 
 function getColorSpaceInfo(page: NativePdfPage, dict: PdfDict): ColorSpaceInfo {
   const csObj = resolve(page, dictGet(dict, "ColorSpace"));
@@ -533,6 +667,19 @@ function getColorSpaceInfo(page: NativePdfPage, dict: PdfDict): ColorSpaceInfo {
         const profileStream = asStream(profile);
         if (profileStream) {
           const n = getNumberValue(profileStream.dict, "N");
+          if (n === 1 || n === 3) {
+            const bytes = (() => {
+              try {
+                return decodePdfStream(profileStream);
+              } catch {
+                return null;
+              }
+            })();
+            const parsed = bytes ? parseIccProfile(bytes) : null;
+            if (parsed && ((n === 1 && parsed.kind === "gray") || (n === 3 && parsed.kind === "rgb"))) {
+              return { kind: "iccBased", components: n, profile: parsed };
+            }
+          }
           if (n === 1) {return { kind: "direct", colorSpace: "DeviceGray" };}
           if (n === 3) {return { kind: "direct", colorSpace: "DeviceRGB" };}
           if (n === 4) {return { kind: "direct", colorSpace: "DeviceCMYK" };}
@@ -583,16 +730,68 @@ function getColorSpaceInfo(page: NativePdfPage, dict: PdfDict): ColorSpaceInfo {
           if (w0?.type === "number" && w1?.type === "number" && w2?.type === "number") {
             const rangeObj = resolve(page, dictGet(params, "Range"));
             const rangeArr = asArray(rangeObj);
-            const r0 = rangeArr?.items[0];
-            const r1 = rangeArr?.items[1];
-            const r2 = rangeArr?.items[2];
-            const r3 = rangeArr?.items[3];
-            const range: readonly [number, number, number, number] =
-              r0?.type === "number" && r1?.type === "number" && r2?.type === "number" && r3?.type === "number"
-                ? [r0.value, r1.value, r2.value, r3.value]
-                : [-128, 127, -128, 127];
-
+            const range = parseLabRangeOrDefault(rangeArr);
             return { kind: "lab", whitePoint: [w0.value, w1.value, w2.value], range };
+          }
+        }
+        return { kind: "direct", colorSpace: "DeviceRGB" };
+      }
+
+      if (name === "CalGray" && csObj.items.length >= 2) {
+        const paramsObj = resolve(page, csObj.items[1]);
+        const params = asDict(paramsObj);
+        if (params) {
+          const wp = resolve(page, dictGet(params, "WhitePoint"));
+          const wpArr = asArray(wp);
+          const w0 = wpArr?.items[0];
+          const w1 = wpArr?.items[1];
+          const w2 = wpArr?.items[2];
+          if (w0?.type === "number" && w1?.type === "number" && w2?.type === "number") {
+            const gammaObj = resolve(page, dictGet(params, "Gamma"));
+            const gamma = gammaObj?.type === "number" && Number.isFinite(gammaObj.value) ? gammaObj.value : 1;
+            return { kind: "calGray", whitePoint: [w0.value, w1.value, w2.value], gamma };
+          }
+        }
+        return { kind: "direct", colorSpace: "DeviceGray" };
+      }
+
+      if (name === "CalRGB" && csObj.items.length >= 2) {
+        const paramsObj = resolve(page, csObj.items[1]);
+        const params = asDict(paramsObj);
+        if (params) {
+          const wp = resolve(page, dictGet(params, "WhitePoint"));
+          const wpArr = asArray(wp);
+          const w0 = wpArr?.items[0];
+          const w1 = wpArr?.items[1];
+          const w2 = wpArr?.items[2];
+          if (w0?.type === "number" && w1?.type === "number" && w2?.type === "number") {
+            const gammaObj = resolve(page, dictGet(params, "Gamma"));
+            const gammaArr = asArray(gammaObj);
+            const gamma: readonly [number, number, number] = (() => {
+              if (gammaArr && gammaArr.items.length >= 3) {
+                const g0 = resolve(page, gammaArr.items[0]);
+                const g1 = resolve(page, gammaArr.items[1]);
+                const g2 = resolve(page, gammaArr.items[2]);
+                const v0 = g0?.type === "number" && Number.isFinite(g0.value) ? g0.value : 1;
+                const v1 = g1?.type === "number" && Number.isFinite(g1.value) ? g1.value : 1;
+                const v2 = g2?.type === "number" && Number.isFinite(g2.value) ? g2.value : 1;
+                return [v0, v1, v2];
+              }
+              return [1, 1, 1];
+            })();
+
+            const matrixObj = resolve(page, dictGet(params, "Matrix"));
+            const matrixArr = asArray(matrixObj);
+            const matrix: number[] = [];
+            if (matrixArr) {
+              for (const item of matrixArr.items) {
+                const v = resolve(page, item);
+                if (v?.type === "number" && Number.isFinite(v.value)) {matrix.push(v.value);}
+              }
+            }
+            const useMatrix = matrix.length === 9 ? matrix : [1, 0, 0, 0, 1, 0, 0, 0, 1];
+
+            return { kind: "calRgb", whitePoint: [w0.value, w1.value, w2.value], gamma, matrix: useMatrix };
           }
         }
         return { kind: "direct", colorSpace: "DeviceRGB" };
@@ -624,6 +823,136 @@ function labToSrgbByte(value01: number): number {
   return Math.round(clamp01OrZero(encoded) * 255);
 }
 
+function getDecodePairs3(decode: readonly number[] | undefined): readonly (readonly [number, number])[] | null {
+  if (!decode || decode.length !== 6) {return null;}
+  const d00 = decode[0];
+  const d01 = decode[1];
+  const d10 = decode[2];
+  const d11 = decode[3];
+  const d20 = decode[4];
+  const d21 = decode[5];
+  if (!Number.isFinite(d00) || !Number.isFinite(d01)) {return null;}
+  if (!Number.isFinite(d10) || !Number.isFinite(d11)) {return null;}
+  if (!Number.isFinite(d20) || !Number.isFinite(d21)) {return null;}
+  return [
+    [d00, d01] as const,
+    [d10, d11] as const,
+    [d20, d21] as const,
+  ];
+}
+
+function xyzToSrgbBytes(X: number, Y: number, Z: number): readonly [number, number, number] {
+  // XYZ -> linear sRGB via standard matrix.
+  const rLin = 3.2406 * X + -1.5372 * Y + -0.4986 * Z;
+  const gLin = -0.9689 * X + 1.8758 * Y + 0.0415 * Z;
+  const bLin = 0.0557 * X + -0.2040 * Y + 1.0570 * Z;
+  return [labToSrgbByte(rLin), labToSrgbByte(gLin), labToSrgbByte(bLin)];
+}
+
+function calGrayToRgbBytes(args: {
+  readonly data: Uint8Array;
+  readonly width: number;
+  readonly height: number;
+  readonly bitsPerComponent: number;
+  readonly decode?: readonly number[];
+  readonly whitePoint: readonly [number, number, number];
+  readonly gamma: number;
+}): Uint8Array {
+  const { data, width, height, bitsPerComponent, decode, whitePoint, gamma } = args;
+  const pixelCount = width * height;
+  const rgb = new Uint8Array(pixelCount * 3);
+
+  const max = bitsPerComponent === 16 ? 65535 : (1 << bitsPerComponent) - 1;
+  const decodePair = decode && decode.length === 2 ? ([decode[0] ?? 0, decode[1] ?? 1] as const) : null;
+  const g = Number.isFinite(gamma) && gamma > 0 ? gamma : 1;
+
+  const Xn = whitePoint[0];
+  const Yn = whitePoint[1];
+  const Zn = whitePoint[2];
+
+  for (let p = 0; p < pixelCount; p += 1) {
+    const raw = unpackSample(data, p, bitsPerComponent);
+    const value01 = max > 0 ? raw / max : 0;
+    const decoded = applyDecodeToNormalizedSample(value01, decodePair);
+    const A = Math.pow(decoded, g);
+
+    const [r, gg, b] = xyzToSrgbBytes(Xn * A, Yn * A, Zn * A);
+    const off = p * 3;
+    rgb[off] = r;
+    rgb[off + 1] = gg;
+    rgb[off + 2] = b;
+  }
+
+  return rgb;
+}
+
+function calRgbToRgbBytes(args: {
+  readonly data: Uint8Array;
+  readonly width: number;
+  readonly height: number;
+  readonly bitsPerComponent: number;
+  readonly decode?: readonly number[];
+  readonly gamma: readonly [number, number, number];
+  readonly matrix: readonly number[];
+}): Uint8Array {
+  const { data, width, height, bitsPerComponent, decode, gamma, matrix } = args;
+  const pixelCount = width * height;
+  const rgb = new Uint8Array(pixelCount * 3);
+
+  const max = bitsPerComponent === 16 ? 65535 : (1 << bitsPerComponent) - 1;
+  const decodePairs = getDecodePairs3(decode);
+  const g0 = Number.isFinite(gamma[0]) && (gamma[0] ?? 0) > 0 ? gamma[0] : 1;
+  const g1 = Number.isFinite(gamma[1]) && (gamma[1] ?? 0) > 0 ? gamma[1] : 1;
+  const g2 = Number.isFinite(gamma[2]) && (gamma[2] ?? 0) > 0 ? gamma[2] : 1;
+
+  for (let p = 0; p < pixelCount; p += 1) {
+    const rraw = unpackSample(data, p * 3 + 0, bitsPerComponent);
+    const graw = unpackSample(data, p * 3 + 1, bitsPerComponent);
+    const braw = unpackSample(data, p * 3 + 2, bitsPerComponent);
+
+    const r01 = max > 0 ? rraw / max : 0;
+    const g01 = max > 0 ? graw / max : 0;
+    const b01 = max > 0 ? braw / max : 0;
+
+    const R = Math.pow(applyDecodeToNormalizedSample(r01, decodePairs ? decodePairs[0] ?? null : null), g0);
+    const G = Math.pow(applyDecodeToNormalizedSample(g01, decodePairs ? decodePairs[1] ?? null : null), g1);
+    const B = Math.pow(applyDecodeToNormalizedSample(b01, decodePairs ? decodePairs[2] ?? null : null), g2);
+
+    const Xa = matrix[0] ?? 1;
+    const Xb = matrix[1] ?? 0;
+    const Xc = matrix[2] ?? 0;
+    const Ya = matrix[3] ?? 0;
+    const Yb = matrix[4] ?? 1;
+    const Yc = matrix[5] ?? 0;
+    const Za = matrix[6] ?? 0;
+    const Zb = matrix[7] ?? 0;
+    const Zc = matrix[8] ?? 1;
+
+    const X = Xa * R + Xb * G + Xc * B;
+    const Y = Ya * R + Yb * G + Yc * B;
+    const Z = Za * R + Zb * G + Zc * B;
+
+    const [r, gg, bb] = xyzToSrgbBytes(X, Y, Z);
+    const off = p * 3;
+    rgb[off] = r;
+    rgb[off + 1] = gg;
+    rgb[off + 2] = bb;
+  }
+
+  return rgb;
+}
+
+function parseLabRangeOrDefault(rangeArr: PdfArray | null): readonly [number, number, number, number] {
+  const r0 = rangeArr?.items[0];
+  const r1 = rangeArr?.items[1];
+  const r2 = rangeArr?.items[2];
+  const r3 = rangeArr?.items[3];
+  if (r0?.type === "number" && r1?.type === "number" && r2?.type === "number" && r3?.type === "number") {
+    return [r0.value, r1.value, r2.value, r3.value];
+  }
+  return [-128, 127, -128, 127];
+}
+
 function labToRgbBytes(args: {
   readonly data: Uint8Array;
   readonly width: number;
@@ -639,13 +968,12 @@ function labToRgbBytes(args: {
 
   const max = bitsPerComponent === 16 ? 65535 : (1 << bitsPerComponent) - 1;
   const decodePairs =
-    decode && decode.length === 6
-      ? ([0, 1, 2] as const).map((i) => [decode[i * 2] ?? 0, decode[i * 2 + 1] ?? 1] as const)
-      : ([
-          [0, 100],
-          [range[0], range[1]],
-          [range[2], range[3]],
-        ] as const);
+    getDecodePairs3(decode) ??
+    ([
+      [0, 100],
+      [range[0], range[1]],
+      [range[2], range[3]],
+    ] as const);
 
   const delta = 6 / 29;
   const finv = (t: number): number => {
@@ -678,15 +1006,11 @@ function labToRgbBytes(args: {
     const Y = Yn * finv(fy);
     const Z = Zn * finv(fz);
 
-    // XYZ (D50/D65 per WhitePoint) -> linear sRGB via standard matrix.
-    const rLin = 3.2406 * X + -1.5372 * Y + -0.4986 * Z;
-    const gLin = -0.9689 * X + 1.8758 * Y + 0.0415 * Z;
-    const bLin = 0.0557 * X + -0.2040 * Y + 1.0570 * Z;
-
     const off = p * 3;
-    rgb[off] = labToSrgbByte(rLin);
-    rgb[off + 1] = labToSrgbByte(gLin);
-    rgb[off + 2] = labToSrgbByte(bLin);
+    const [r, g, b] = xyzToSrgbBytes(X, Y, Z);
+    rgb[off] = r;
+    rgb[off + 1] = g;
+    rgb[off + 2] = b;
   }
 
   return rgb;
@@ -707,10 +1031,7 @@ function expandTintImageToRgb(args: {
   const rgb = new Uint8Array(pixelCount * 3);
 
   const max = bitsPerComponent === 16 ? 65535 : (1 << bitsPerComponent) - 1;
-  const decodePairs =
-    decode && decode.length === components * 2
-      ? Array.from({ length: components }, (_, i) => [decode[i * 2] ?? 0, decode[i * 2 + 1] ?? 1] as const)
-      : null;
+  const decodePairs = getDecodePairsN(decode, components);
 
   for (let p = 0; p < pixelCount; p += 1) {
     let sum = 0;
@@ -731,6 +1052,19 @@ function expandTintImageToRgb(args: {
   }
 
   return rgb;
+}
+
+function getDecodePairsN(decode: readonly number[] | undefined, components: number): readonly (readonly [number, number])[] | null {
+  if (!decode) {return null;}
+  if (decode.length !== components * 2) {return null;}
+  const out: Array<readonly [number, number]> = [];
+  for (let i = 0; i < components; i += 1) {
+    const d0 = decode[i * 2];
+    const d1 = decode[i * 2 + 1];
+    if (!Number.isFinite(d0) || !Number.isFinite(d1)) {return null;}
+    out.push([d0, d1]);
+  }
+  return out;
 }
 
 function extractIndexedBaseColorSpace(page: NativePdfPage, baseObj: PdfObject | undefined): PdfColorSpace | null {
@@ -1026,13 +1360,10 @@ export async function extractImagesNative(
       const imageMask = getBoolValue(dict, "ImageMask") ?? false;
       const bitsPerComponent = imageMask ? 1 : (getNumberValue(dict, "BitsPerComponent") ?? 8);
       const colorSpaceInfo = getColorSpaceInfo(pdfPage, dict);
-      const colorSpace =
-        colorSpaceInfo.kind === "indexed" || colorSpaceInfo.kind === "tint" || colorSpaceInfo.kind === "lab"
-          ? "DeviceRGB"
-          : colorSpaceInfo.colorSpace;
+      const colorSpace = colorSpaceInfo.kind === "direct" ? colorSpaceInfo.colorSpace : "DeviceRGB";
       const filters = getFilterNames(pdfPage, dict);
       const decode = getDecodeArray(pdfPage, dict) ?? undefined;
-      const softMaskInfo = getSoftMaskInfo(pdfPage, dict, width, height);
+      const softMaskInfo = getSoftMaskInfo(pdfPage, dict, width, height, { jpxDecode: options.jpxDecode });
       const alpha = softMaskInfo?.alpha ?? undefined;
       const softMaskMatte = softMaskInfo?.matte ?? undefined;
       const maskEntry = getMaskEntry(pdfPage, dict);
@@ -1082,7 +1413,63 @@ export async function extractImagesNative(
         const jpxIndex = normalized.indexOf("JPXDecode");
 
         if (jpxIndex >= 0) {
-          throw new Error("[PDF Image] /JPXDecode is not supported yet");
+          if (jpxIndex !== normalized.length - 1) {
+            throw new Error(`[PDF Image] Unsupported filter chain with /JPXDecode: ${filters.join(", ")}`);
+          }
+          const decoder = options.jpxDecode;
+          if (!decoder) {
+            throw new Error("[PDF Image] /JPXDecode requires options.jpxDecode");
+          }
+          const jpxBytes = decodePdfStream(imageStream);
+          const decodedJpx = decoder(jpxBytes, { expectedWidth: width, expectedHeight: height });
+          if (decodedJpx.width !== width || decodedJpx.height !== height) {
+            throw new Error(
+              `[PDF Image] /JPXDecode size mismatch: expected ${width}x${height}, got ${decodedJpx.width}x${decodedJpx.height}`,
+            );
+          }
+          const down = downsampleJpxTo8Bit(decodedJpx);
+
+          const components = decodedJpx.components;
+          const expectedLen = width * height * components;
+          if (down.data.length !== expectedLen) {
+            throw new Error(`[PDF Image] /JPXDecode length mismatch: expected ${expectedLen}, got ${down.data.length}`);
+          }
+
+          const combinedAlpha: { value: Uint8Array | undefined } = { value: alpha };
+          if (maskEntry.kind === "explicit") {
+            combinedAlpha.value = combineAlpha(
+              combinedAlpha.value,
+              decodeExplicitMaskAlpha8(pdfPage, maskEntry.stream, width, height),
+            );
+          } else if (maskEntry.kind === "colorKey") {
+            combinedAlpha.value = combineAlpha(
+              combinedAlpha.value,
+              applyColorKeyMask({
+                data: down.data,
+                width,
+                height,
+                components,
+                bitsPerComponent: 8,
+                ranges: maskEntry.ranges,
+              }),
+            );
+          }
+
+          const jpxColorSpace = components === 1 ? "DeviceGray" : components === 3 ? "DeviceRGB" : "DeviceCMYK";
+
+          images.push({
+            type: "image",
+            data: down.data,
+            alpha: combinedAlpha.value,
+            decode,
+            softMaskMatte,
+            width,
+            height,
+            colorSpace: jpxColorSpace,
+            bitsPerComponent: 8,
+            graphicsState: parsed.graphicsState,
+          });
+          continue;
         }
 
         if (dctIndex >= 0) {
@@ -1121,14 +1508,7 @@ export async function extractImagesNative(
 
         const decoded = decodePdfStream(imageStream);
         const decodeParms = getDecodeParms(pdfPage, dict);
-        const predictorComponents =
-          colorSpaceInfo.kind === "indexed"
-            ? 1
-            : colorSpaceInfo.kind === "tint"
-              ? colorSpaceInfo.components
-              : colorSpaceInfo.kind === "lab"
-                ? 3
-              : getColorSpaceComponents(colorSpaceInfo.colorSpace);
+        const predictorComponents = getPredictorComponents(colorSpaceInfo);
         const data = reversePngPredictor(decoded, width, height, predictorComponents, decodeParms);
 
         if (colorSpaceInfo.kind === "indexed") {
@@ -1249,6 +1629,126 @@ export async function extractImagesNative(
           continue;
         }
 
+        if (colorSpaceInfo.kind === "calGray") {
+          const expanded = calGrayToRgbBytes({
+            data,
+            width,
+            height,
+            bitsPerComponent,
+            decode,
+            whitePoint: colorSpaceInfo.whitePoint,
+            gamma: colorSpaceInfo.gamma,
+          });
+
+          const combinedAlpha: { value: Uint8Array | undefined } = { value: alpha };
+          if (maskEntry.kind === "explicit") {
+            combinedAlpha.value = combineAlpha(
+              combinedAlpha.value,
+              decodeExplicitMaskAlpha8(pdfPage, maskEntry.stream, width, height),
+            );
+          } else if (maskEntry.kind === "colorKey") {
+            combinedAlpha.value = combineAlpha(
+              combinedAlpha.value,
+              applyColorKeyMask({ data, width, height, components: 1, bitsPerComponent, ranges: maskEntry.ranges }),
+            );
+          }
+
+          images.push({
+            type: "image",
+            data: expanded,
+            alpha: combinedAlpha.value,
+            softMaskMatte,
+            width,
+            height,
+            colorSpace: "DeviceRGB",
+            bitsPerComponent: 8,
+            graphicsState: parsed.graphicsState,
+          });
+          continue;
+        }
+
+        if (colorSpaceInfo.kind === "calRgb") {
+          const expanded = calRgbToRgbBytes({
+            data,
+            width,
+            height,
+            bitsPerComponent,
+            decode,
+            gamma: colorSpaceInfo.gamma,
+            matrix: colorSpaceInfo.matrix,
+          });
+
+          const combinedAlpha: { value: Uint8Array | undefined } = { value: alpha };
+          if (maskEntry.kind === "explicit") {
+            combinedAlpha.value = combineAlpha(
+              combinedAlpha.value,
+              decodeExplicitMaskAlpha8(pdfPage, maskEntry.stream, width, height),
+            );
+          } else if (maskEntry.kind === "colorKey") {
+            combinedAlpha.value = combineAlpha(
+              combinedAlpha.value,
+              applyColorKeyMask({ data, width, height, components: 3, bitsPerComponent, ranges: maskEntry.ranges }),
+            );
+          }
+
+          images.push({
+            type: "image",
+            data: expanded,
+            alpha: combinedAlpha.value,
+            softMaskMatte,
+            width,
+            height,
+            colorSpace: "DeviceRGB",
+            bitsPerComponent: 8,
+            graphicsState: parsed.graphicsState,
+          });
+          continue;
+        }
+
+        if (colorSpaceInfo.kind === "iccBased") {
+          const expanded = iccBasedToRgbBytes({
+            data,
+            width,
+            height,
+            bitsPerComponent,
+            decode,
+            profile: colorSpaceInfo.profile,
+          });
+
+          const combinedAlpha: { value: Uint8Array | undefined } = { value: alpha };
+          if (maskEntry.kind === "explicit") {
+            combinedAlpha.value = combineAlpha(
+              combinedAlpha.value,
+              decodeExplicitMaskAlpha8(pdfPage, maskEntry.stream, width, height),
+            );
+          } else if (maskEntry.kind === "colorKey") {
+            combinedAlpha.value = combineAlpha(
+              combinedAlpha.value,
+              applyColorKeyMask({
+                data,
+                width,
+                height,
+                components: colorSpaceInfo.components,
+                bitsPerComponent,
+                ranges: maskEntry.ranges,
+              }),
+            );
+          }
+
+          images.push({
+            type: "image",
+            data: expanded,
+            alpha: combinedAlpha.value,
+            softMaskMatte,
+            width,
+            height,
+            colorSpace: "DeviceRGB",
+            bitsPerComponent: 8,
+            graphicsState: parsed.graphicsState,
+          });
+          continue;
+        }
+
         dataState.data = data;
       }
 
@@ -1286,6 +1786,9 @@ export async function extractImagesNative(
         graphicsState: parsed.graphicsState,
       });
     } catch (error) {
+      if (error instanceof Error && error.message.includes("requires options.jpxDecode")) {
+        throw error;
+      }
       console.warn(`Failed to extract image "${parsed.name}":`, error);
       continue;
     }

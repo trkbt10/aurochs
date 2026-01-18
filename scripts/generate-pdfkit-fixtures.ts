@@ -157,6 +157,66 @@ const FIXTURES: readonly FixtureWriter[] = [
         },
       }),
   },
+  {
+    fileName: "pdfkit-clipping.pdf",
+    generate: async () =>
+      renderPdf({
+        info: {
+          Title: "pdfkit-clipping",
+          Creator: "web-pptx",
+          Producer: "web-pptx pdfkit fixtures",
+          CreationDate: FIXED_DATE,
+          ModDate: FIXED_DATE,
+        },
+        build: (doc) => {
+          doc.addPage({ size: [300, 200], margin: 0 });
+          const png = create2x2PngBuffer();
+
+          doc.save();
+          doc.moveTo(20, 20).lineTo(100, 20).lineTo(20, 100).closePath().clip();
+          doc.image(png, 20, 20, { width: 80, height: 80 });
+          doc.restore();
+
+          doc.fontSize(14).text("Clipped image above", 20, 120);
+        },
+      }),
+  },
+  {
+    fileName: "pdfkit-alpha-blend.pdf",
+    generate: async () =>
+      renderPdf({
+        info: {
+          Title: "pdfkit-alpha-blend",
+          Creator: "web-pptx",
+          Producer: "web-pptx pdfkit fixtures",
+          CreationDate: FIXED_DATE,
+          ModDate: FIXED_DATE,
+        },
+        build: (doc) => {
+          doc.addPage({ size: [300, 200], margin: 0 });
+
+          // Base rectangle (no transparency).
+          doc.save();
+          doc.fillColor("00ff00");
+          doc.rect(20, 20, 80, 80).fill();
+          doc.restore();
+
+          // Custom ExtGState with both alpha and blend mode.
+          // PDFKit doesn't expose blend modes directly, but we can register an ExtGState resource.
+          const gstate = doc.ref({ Type: "ExtGState", ca: 0.5, CA: 0.5, BM: "Multiply" });
+          gstate.end();
+          doc.page.ext_gstates.GsBlend1 = gstate;
+
+          doc.save();
+          doc.addContent("/GsBlend1 gs");
+          doc.fillColor("ff0000");
+          doc.rect(60, 60, 80, 80).fill();
+          doc.restore();
+
+          doc.fontSize(14).text("Alpha+Blend (Multiply) rects above", 20, 120);
+        },
+      }),
+  },
 ];
 
 export async function generatePdfkitFixtures(

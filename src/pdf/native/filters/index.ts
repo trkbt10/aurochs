@@ -7,6 +7,7 @@ import { decodeAscii85 } from "./ascii85";
 import { decodeAsciiHex } from "./ascii-hex";
 import { decodeFlate } from "./flate";
 import { decodeLzw, readLzwDecodeOptions } from "./lzw";
+import { applyPredictorDecodeParms } from "./predictor";
 import { decodeRunLength } from "./run-length";
 
 export type DecodeStreamOptions = Readonly<{
@@ -72,7 +73,8 @@ export function decodeStreamData(encoded: Uint8Array, options: DecodeStreamOptio
         return decodeFlate(data, parms);
       case "LZWDecode": {
         const lzwOpts = readLzwDecodeOptions(parms);
-        return decodeLzw(data, lzwOpts);
+        const decoded = decodeLzw(data, lzwOpts);
+        return applyPredictorDecodeParms(decoded, parms);
       }
       case "ASCII85Decode":
         return decodeAscii85(data);

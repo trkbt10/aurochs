@@ -145,8 +145,8 @@ Current behavior: collects pages, supports inherited `Resources` and `MediaBox` 
       - [x] drop images completely outside rectangular `clipBBox` (bbox-only) (`src/pdf/converter/image-to-shapes.ts`, `src/pdf/converter/image-to-shapes.spec.ts`)
     - [x] text clip modes (`Tr=4..7`) (bbox-only)
       - [x] bbox-only: `Tr=4..7` intersects `graphicsState.clipBBox` with per-run text bbox; `Tr=3/7` suppresses visible text output (`src/pdf/parser/operator/text-handlers.ts`, `src/pdf/parser/pdf-parser.native.ts`, `src/pdf/parser/clip-rect.native.spec.ts`)
-- [ ] **Text model**
-  - [ ] Type3 font handling (charprocs, widths, resources)
+- [x] **Text model**
+  - [x] Type3 font handling (charprocs, widths, resources)
     - [x] Type3 `/Widths` scaled by `/FontMatrix` for correct text advance (`src/pdf/parser/font-decoder.native.ts`, `src/pdf/parser/font-decoder.native.spec.ts`)
     - [x] Type3 width fallback from `d0`/`d1` when `/Widths` is missing/incomplete (`src/pdf/parser/font-decoder.native.ts`, `src/pdf/parser/type3-d0-width.native.spec.ts`)
     - [x] Type3 glyph rendering: execute `/CharProcs` streams to paths (required for icon fonts) (`src/pdf/parser/type3-glyph.native.ts`, `src/pdf/parser/type3-glyph.native.spec.ts`, `src/pdf/parser/pdf-parser.native.ts`, `src/pdf/parser/font-decoder.native.ts`)
@@ -156,11 +156,11 @@ Current behavior: collects pages, supports inherited `Resources` and `MediaBox` 
       - [x] Type3 `/Resources /Pattern` support for glyph programs that fill with tiling/shading patterns (`src/pdf/parser/type3-expand.native.ts`, `src/pdf/parser/type3-glyph.native.ts`, `src/pdf/parser/type3-pattern-resources.native.spec.ts`)
       - [x] Type3 `/Resources /Shading` support for glyph programs that use `sh` (`src/pdf/parser/type3-expand.native.ts`, `src/pdf/parser/type3-glyph.native.ts`, `src/pdf/parser/type3-shading-resources.native.spec.ts`)
   - [x] robust fallback when `ToUnicode` is missing/partial (beyond current CID fallback maps) (`src/pdf/domain/font/text-decoder.ts`, `src/pdf/domain/font/text-decoder.spec.ts`)
-  - [ ] XObject recursion (forms)
+  - [x] XObject recursion (forms)
     - [x] treat `/Subtype /Form` XObjects as nested content streams (not images) (`src/pdf/parser/pdf-parser.native.ts`, `src/pdf/parser/form-xobject.native.spec.ts`)
-    - [ ] apply Form `/Matrix` and `/BBox` clipping rules
+    - [x] apply Form `/Matrix` and `/BBox` clipping rules (full clipping behind `clipPathMaxSize>0`; bbox-only by default)
       - [x] apply Form `/Matrix` to CTM during parsing (`src/pdf/parser/pdf-parser.native.ts`, `src/pdf/parser/form-xobject.native.spec.ts`)
-      - [ ] apply `/BBox` clipping to subsequent operations (requires full clip support) (`src/pdf/converter/pdf-to-shapes.ts`)
+      - [x] apply `/BBox` clipping to subsequent operations via per-pixel `clipMask` generation when `clipPathMaxSize>0` (`src/pdf/parser/pdf-parser.native.ts`, `src/pdf/parser/form-bbox-clip-mask.native.ts`, `src/pdf/parser/form-bbox-clip-mask.native.spec.ts`)
         - [x] intersect Form `/BBox` into `graphicsState.clipBBox` for nested parsing (bbox-only) (`src/pdf/parser/pdf-parser.native.ts`)
     - [x] inherit/override resources from the Form stream dict (`src/pdf/parser/pdf-parser.native.ts`)
     - [x] extract images referenced by Form-local `/XObject` resources (scope-aware) (`src/pdf/parser/pdf-parser.native.ts`, `src/pdf/parser/form-xobject.native.spec.ts`, `src/pdf/parser/image-extractor.native.ts`)
@@ -176,23 +176,30 @@ Current behavior in `src/pdf/parser/image-extractor.native.ts`: supports common 
   - [x] `LZWDecode` images (generic filters are now present; ensure extraction path uses them as needed) (`src/pdf/parser/image-extractor.spec.ts`)
   - [x] `DCTDecode` → decode to pixel bytes when required by output format (`src/pdf/parser/image-extractor.native.ts`, `src/pdf/parser/image-extractor.spec.ts`)
   - [ ] `JPXDecode` → decode to pixel bytes when required by output format
-    - [ ] base image `/JPXDecode` (JPEG2000) decode
-    - [ ] soft mask `/JPXDecode` decode (`src/pdf/parser/image-extractor.native.ts`)
+    - [x] base image `/JPXDecode` decode via injected `jpxDecode` hook (`src/pdf/parser/jpx-decoder.ts`, `src/pdf/parser/pdf-parser.native.ts`, `src/pdf/parser/image-extractor.native.ts`, `src/pdf/parser/image-extractor.spec.ts`)
+    - [x] soft mask `/JPXDecode` decode via injected `jpxDecode` hook (`src/pdf/parser/image-extractor.native.ts`, `src/pdf/parser/image-extractor.spec.ts`)
+    - [ ] bundled JPEG2000 decoder implementation (no external deps)
 - [ ] **Color spaces / masks**
-  - [ ] ICCBased: parse ICC profiles (currently infers by component count; warns on unusual cases) (`src/pdf/converter/color-converter.ts`, `src/pdf/converter/pixel-converter.ts`)
+  - [ ] ICCBased: parse ICC profiles (currently infers by component count; warns on unusual cases)
+    - [x] image ICCBased RGB/Gray (matrix + TRC) → DeviceRGB (`src/pdf/parser/icc-profile.native.ts`, `src/pdf/parser/image-extractor.native.ts`, `src/pdf/parser/image-extractor.spec.ts`)
+    - [ ] fill/stroke ICCBased colors (still alternate-color fallback) (`src/pdf/converter/color-converter.ts`)
+    - [ ] LUT-based/CMYK ICC transforms (not supported yet)
   - [ ] Special color spaces for images
     - [x] `/Indexed` palette images (expand to DeviceRGB) (`src/pdf/parser/image-extractor.native.ts`, `src/pdf/parser/image-extractor.spec.ts`)
     - [x] `/Separation` and `/DeviceN` (spot colors; deterministic tint→grayscale RGB fallback) (`src/pdf/parser/image-extractor.native.ts`, `src/pdf/parser/image-extractor.spec.ts`)
-    - [ ] `/Lab` and calibrated spaces (`/CalGray` `/CalRGB`) beyond the current “treat as Device*” mapping
+    - [x] `/Lab` and calibrated spaces (`/CalGray` `/CalRGB`) beyond the current “treat as Device*” mapping
       - [x] `/Lab` image conversion (Lab→sRGB, WhitePoint + Range honored; deterministic) (`src/pdf/parser/image-extractor.native.ts`, `src/pdf/parser/image-extractor.spec.ts`)
+      - [x] `/CalGray` image conversion (Gamma + WhitePoint → XYZ → sRGB; deterministic) (`src/pdf/parser/image-extractor.native.ts`, `src/pdf/parser/image-extractor.spec.ts`)
+      - [x] `/CalRGB` image conversion (Gamma + Matrix → XYZ → sRGB; deterministic) (`src/pdf/parser/image-extractor.native.ts`, `src/pdf/parser/image-extractor.spec.ts`)
     - [ ] ICCBased profile parsing (beyond component-count inference)
+      - [x] parse ICCBased RGB/Gray profiles (matrix + TRC; deterministic) (`src/pdf/parser/icc-profile.native.ts`, `src/pdf/parser/image-extractor.native.ts`, `src/pdf/parser/image-extractor.spec.ts`)
       - [x] handle ICCBased with uncommon `N` deterministically (avg components → grayscale RGB) (`src/pdf/parser/image-extractor.native.ts`, `src/pdf/parser/image-extractor.spec.ts`)
   - [x] `SMask` / soft-mask alpha handling (`src/pdf/parser/image-extractor.native.ts`, `src/pdf/parser/image-extractor.spec.ts`, `src/pdf/converter/image-to-shapes.ts`, `src/pdf/converter/image-to-shapes.spec.ts`)
   - [ ] `SMask` edge cases
     - [x] `/Matte` handling (un-matte RGB before applying alpha to avoid halo/fringe) (`src/pdf/parser/image-extractor.native.ts`, `src/pdf/parser/image-extractor.spec.ts`, `src/pdf/converter/image-to-shapes.ts`, `src/pdf/converter/image-to-shapes.spec.ts`)
     - [x] soft mask with `BitsPerComponent != 8` (1/2/4/16 supported) (`src/pdf/parser/image-extractor.native.ts`, `src/pdf/parser/image-extractor.spec.ts`)
     - [x] soft mask with `/CCITTFaxDecode` (Group3/4) (`src/pdf/parser/image-extractor.native.ts`, `src/pdf/parser/image-extractor.spec.ts`)
-    - [ ] soft mask filter chains beyond the current allow-list
+    - [x] soft mask filter chains beyond the current allow-list (LZW + Predictor support) (`src/pdf/native/filters/index.ts`, `src/pdf/native/filters/predictor.ts`, `src/pdf/parser/image-extractor.spec.ts`)
   - [x] Image masks
     - [x] `/ImageMask true` stencil images (1-bit) + `/Decode` inversion rules (`src/pdf/parser/image-extractor.native.ts`, `src/pdf/parser/image-extractor.spec.ts`)
     - [x] `/Mask` key handling (color-key masks and explicit mask streams, including `/Indexed` color-key masks) (`src/pdf/parser/image-extractor.native.ts`, `src/pdf/parser/image-extractor.spec.ts`)
@@ -217,8 +224,8 @@ Current behavior: `Info` uses `PdfString.text` which is BOM-aware, otherwise Lat
   - [x] add a deterministic generator script (bun CLI) that produces a small set of PDFs for tests (text, images, multi-page, etc.) (`scripts/generate-pdfkit-fixtures.ts`)
   - [x] add an integration spec that asserts generator output matches checked-in fixtures byte-for-byte (`spec/integration/pdfkit-fixtures.spec.ts`)
 - [ ] **Extend generator fixtures as gaps are implemented**
-  - [ ] add a pdfkit fixture that exercises ExtGState alpha + blend mode (when `/BM` is supported)
-  - [ ] add a pdfkit fixture that exercises clipping (when clip paths are supported)
+  - [x] add a pdfkit fixture that exercises ExtGState alpha + blend mode (when `/BM` is supported) (`scripts/generate-pdfkit-fixtures.ts`, `spec/integration/pdfkit-fixtures.spec.ts`, `spec/fixtures/pdfkit/pdfkit-alpha-blend.pdf`)
+  - [x] add a pdfkit fixture that exercises clipping (when clip paths are supported) (`scripts/generate-pdfkit-fixtures.ts`, `spec/integration/pdfkit-fixtures.spec.ts`, `spec/fixtures/pdfkit/pdfkit-clipping.pdf`)
   - [x] add a fixture/spec that exercises Type3 text (if pdfkit can emit Type3; otherwise, use a handcrafted PDF fixture) (`src/pdf/parser/type3-glyph.native.spec.ts`)
 - [x] **Hand-crafted “evil” PDFs** (small, deterministic inputs in tests)
   - [x] indirect `/Length` + stream data that contains `endstream` (`src/pdf/native/object-parser.spec.ts`)
