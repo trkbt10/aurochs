@@ -11,13 +11,15 @@ import { DEFAULT_FONT_METRICS, createGraphicsStateStack, getMatrixScale, invertM
 import type { FontMappings } from "../domain/font";
 import { clamp01, cmykToRgb, grayToRgb, toByte } from "../domain/color";
 import { convertToRgba } from "../converter/pixel-converter";
-import { decodeJpegToRgb } from "./jpeg-decode";
 import { calculateTextDisplacement, createGfxOpsFromStack, createParser, type ParsedElement, type ParsedText, type TextRun } from "./operator";
 import { rasterizeSoftMaskedFillPath } from "./soft-mask-raster.native";
 import { extractFontMappingsFromResourcesNative } from "./font-decoder.native";
 import { extractShadingFromResourcesNative } from "./shading.native";
 import { extractPatternsFromResourcesNative } from "./pattern.native";
 import { extractColorSpacesFromResourcesNative } from "./color-space.native";
+import { decodeImageXObjectStreamNative } from "./image-extractor.native";
+import type { JpxDecodeFn } from "./jpx-decoder";
+import { applyGraphicsSoftMaskToPdfImage } from "./soft-mask-apply.native";
 
 function asDict(obj: PdfObject | undefined): PdfDict | null {
   return obj?.type === "dict" ? obj : null;
@@ -79,6 +81,11 @@ export type ExtGStateExtractOptions = Readonly<{
    * Set to `0` (or leave undefined) to keep shading rasterization disabled.
    */
   readonly shadingMaxSize?: number;
+  /**
+   * Optional decoder for `/JPXDecode` (JPEG2000) images encountered while
+   * evaluating per-pixel ExtGState `/SMask` groups.
+   */
+  readonly jpxDecode?: JpxDecodeFn;
 }>;
 
 function asArray(obj: PdfObject | undefined): readonly PdfObject[] | null {
@@ -446,65 +453,6 @@ function tryExtractConstantSoftMaskValueFromElements(
   return clamp01(lum * a);
 }
 
-function parseFilterNames(dict: PdfDict): readonly string[] {
-  const filter = dictGet(dict, "Filter");
-  if (!filter) {return [];}
-  if (filter.type === "name") {return [filter.value];}
-  if (filter.type === "array") {
-    const out: string[] = [];
-    for (const item of filter.items) {
-      if (item.type === "name") {out.push(item.value);}
-    }
-    return out;
-  }
-  return [];
-}
-
-function parseDecodeArray(dict: PdfDict): readonly number[] | undefined {
-  const decode = dictGet(dict, "Decode");
-  if (!decode || decode.type !== "array") {return undefined;}
-  const nums: number[] = [];
-  for (const item of decode.items) {
-    if (!item || item.type !== "number" || !Number.isFinite(item.value)) {return undefined;}
-    nums.push(item.value);
-  }
-  return nums.length > 0 ? nums : undefined;
-}
-
-function parseColorSpaceName(page: NativePdfPage, dict: PdfDict): PdfColorSpace | null {
-  const csObj = resolve(page, dictGet(dict, "ColorSpace"));
-  if (!csObj) {return null;}
-  if (csObj.type === "name") {
-    if (csObj.value === "DeviceGray") {return "DeviceGray";}
-    if (csObj.value === "DeviceRGB") {return "DeviceRGB";}
-    if (csObj.value === "DeviceCMYK") {return "DeviceCMYK";}
-    return null;
-  }
-  if (csObj.type === "array") {
-    const items = csObj.items;
-    const cs0 = items[0];
-    if (!cs0 || cs0.type !== "name") {return null;}
-    if (cs0.value === "DeviceGray") {return "DeviceGray";}
-    if (cs0.value === "DeviceRGB") {return "DeviceRGB";}
-    if (cs0.value === "DeviceCMYK") {return "DeviceCMYK";}
-    if (cs0.value === "ICCBased") {
-      const profileRef = items[1];
-      const profileObj = resolve(page, profileRef);
-      const profileStream = asStream(profileObj);
-      const profileDict = profileStream ? profileStream.dict : asDict(profileObj);
-      if (!profileDict) {return "DeviceRGB";}
-      const nObj = resolve(page, dictGet(profileDict, "N"));
-      const n = nObj?.type === "number" && Number.isFinite(nObj.value) ? nObj.value : null;
-      if (n === 1) {return "DeviceGray";}
-      if (n === 3) {return "DeviceRGB";}
-      if (n === 4) {return "DeviceCMYK";}
-      return "DeviceRGB";
-    }
-    return null;
-  }
-  return null;
-}
-
 function parseDeviceColorSpaceNameFromObject(page: NativePdfPage, obj: PdfObject | undefined): PdfColorSpace | null {
   const resolved = resolve(page, obj);
   const name = asName(resolved) ?? (() => {
@@ -590,39 +538,6 @@ function tryExtractPerPixelSoftMaskFromElements(
   groupIsolated: boolean,
   backdropRgb: readonly [number, number, number] | null,
 ): PdfSoftMask | null {
-  const decodeImageStreamToRgba = (imageStream: PdfStream): { readonly width: number; readonly height: number; readonly rgba: Uint8ClampedArray } | null => {
-    const imageDict = imageStream.dict;
-    const imageSubtype = asName(dictGet(imageDict, "Subtype"));
-    if (imageSubtype !== "Image") {return null;}
-
-    const w = getNumberValue(page, imageDict, "Width") ?? 0;
-    const h = getNumberValue(page, imageDict, "Height") ?? 0;
-    if (w <= 0 || h <= 0) {return null;}
-
-    const imageBpc = getNumberValue(page, imageDict, "BitsPerComponent") ?? 8;
-    const imageDecode = parseDecodeArray(imageDict);
-    const imageFilters = parseFilterNames(imageDict);
-    const imageCs = parseColorSpaceName(page, imageDict);
-    if (!imageCs) {return null;}
-
-    let raw: Uint8Array;
-    let colorSpace: PdfColorSpace = imageCs;
-    let bitsPerComponent = imageBpc;
-
-    if (imageFilters.some((f) => f === "DCTDecode" || f === "DCT")) {
-      const jpegBytes = decodePdfStream(imageStream);
-      const decodedJpeg = decodeJpegToRgb(jpegBytes, { expectedWidth: w, expectedHeight: h });
-      raw = decodedJpeg.data;
-      colorSpace = "DeviceRGB";
-      bitsPerComponent = 8;
-    } else {
-      raw = decodePdfStream(imageStream);
-    }
-
-    const rgba = convertToRgba(raw, w, h, colorSpace, bitsPerComponent, { decode: imageDecode });
-    return { width: w, height: h, rgba };
-  };
-
   type MaskLayer =
     | Readonly<{
       readonly kind: "image";
@@ -630,6 +545,7 @@ function tryExtractPerPixelSoftMaskFromElements(
       readonly height: number;
       readonly rgba: Uint8ClampedArray;
       readonly smaskAlpha: Uint8Array | null;
+      readonly opacity: number;
       readonly imageMatrixInv: PdfMatrix;
     }>
     | Readonly<{
@@ -638,6 +554,7 @@ function tryExtractPerPixelSoftMaskFromElements(
       readonly height: number;
       readonly data: Uint8Array;
       readonly alpha: Uint8Array | null;
+      readonly opacity: number;
       readonly imageMatrixInv: PdfMatrix;
     }>
     | Readonly<{
@@ -938,7 +855,13 @@ function tryExtractPerPixelSoftMaskFromElements(
 
   const decodedImagesByName = new Map<
     string,
-    Readonly<{ readonly width: number; readonly height: number; readonly rgba: Uint8ClampedArray; readonly smaskAlpha: Uint8Array | null }>
+    Readonly<{
+      readonly width: number;
+      readonly height: number;
+      readonly rgba: Uint8ClampedArray;
+      readonly smaskAlpha: Uint8Array | null;
+      readonly opacity: number;
+    }>
   >();
 
   let width: number | null = null;
@@ -966,14 +889,16 @@ function tryExtractPerPixelSoftMaskFromElements(
       const subtype = asName(dictGet(dict, "Subtype"));
       if (subtype !== "Image") {return null;}
 
-      const w = getNumberValue(page, dict, "Width") ?? 0;
-      const h = getNumberValue(page, dict, "Height") ?? 0;
+      const decoded = decodeImageXObjectStreamNative(page, stream, img.graphicsState, { jpxDecode: options.jpxDecode });
+      if (!decoded) {return null;}
+      const applied = applyGraphicsSoftMaskToPdfImage(decoded);
+      const rgba = convertToRgba(applied.data, applied.width, applied.height, applied.colorSpace, applied.bitsPerComponent, {
+        decode: applied.decode,
+      });
+
+      const w = applied.width;
+      const h = applied.height;
       if (w <= 0 || h <= 0) {return null;}
-
-      const baseDecoded = decodeImageStreamToRgba(stream);
-      if (!baseDecoded) {return null;}
-      if (baseDecoded.width !== w || baseDecoded.height !== h) {return null;}
-
       if (width == null || height == null) {
         width = w;
         height = h;
@@ -981,26 +906,10 @@ function tryExtractPerPixelSoftMaskFromElements(
         return null;
       }
 
-      const smaskStream = asStream(resolve(page, dictGet(dict, "SMask")));
-      const smaskDecoded = smaskStream ? decodeImageStreamToRgba(smaskStream) : null;
-      const smaskAlpha = (() => {
-        if (!smaskDecoded) {return null;}
-        if (!width || !height) {return null;}
-        if (smaskDecoded.width !== width || smaskDecoded.height !== height) {return null;}
-        const out = new Uint8Array(width * height);
-        for (let i = 0; i < width * height; i += 1) {
-          out[i] = smaskDecoded.rgba[i * 4] ?? 0;
-        }
-        return out;
-      })();
+      const opacity = clamp01(applied.graphicsState.fillAlpha);
+      const smaskAlpha = applied.alpha ?? null;
 
-      if (width == null || height == null) {return null;}
-      decodedImagesByName.set(key, {
-        width,
-        height,
-        rgba: baseDecoded.rgba,
-        smaskAlpha,
-      });
+      decodedImagesByName.set(key, { width, height, rgba, smaskAlpha, opacity });
     }
   }
 
@@ -1049,6 +958,7 @@ function tryExtractPerPixelSoftMaskFromElements(
         height: decoded.height,
         rgba: decoded.rgba,
         smaskAlpha: decoded.smaskAlpha,
+        opacity: decoded.opacity,
         imageMatrixInv,
       });
       continue;
@@ -1058,12 +968,14 @@ function tryExtractPerPixelSoftMaskFromElements(
       if (img.colorSpace !== "DeviceRGB" || img.bitsPerComponent !== 8) {return null;}
       const imageMatrixInv = invertMatrix(img.graphicsState.ctm);
       if (!imageMatrixInv) {return null;}
+      const opacity = clamp01(img.graphicsState.fillAlpha);
       layers.push({
         kind: "pdfImage",
         width: img.width,
         height: img.height,
         data: img.data,
         alpha: img.alpha ?? null,
+        opacity,
         imageMatrixInv,
       });
       continue;
@@ -1137,6 +1049,7 @@ function tryExtractPerPixelSoftMaskFromElements(
               if (r !== g || g !== b) {return null;}
               srcA = r;
             }
+            srcA = Math.round(srcA * layer.opacity);
           } else {
             const imagePoint = transformPoint({ x: maskX, y: maskY }, layer.imageMatrixInv);
             const u = imagePoint.x;
@@ -1158,6 +1071,7 @@ function tryExtractPerPixelSoftMaskFromElements(
               if (r !== g || g !== b) {return null;}
               srcA = r;
             }
+            srcA = Math.round(srcA * layer.opacity);
           }
 
           if (srcA === 0) {continue;}
@@ -1210,6 +1124,8 @@ function tryExtractPerPixelSoftMaskFromElements(
 
           srcA = layer.alpha ? (layer.alpha[srcIdx] ?? 0) : 255;
           if (srcA === 0) {continue;}
+          srcA = Math.round(srcA * layer.opacity);
+          if (srcA === 0) {continue;}
 
           const o = srcIdx * 3;
           r = layer.data[o] ?? 0;
@@ -1227,6 +1143,8 @@ function tryExtractPerPixelSoftMaskFromElements(
           const srcIdx = srcRow * layer.width + srcCol;
 
           srcA = layer.smaskAlpha ? (layer.smaskAlpha[srcIdx] ?? 0) : 255;
+          if (srcA === 0) {continue;}
+          srcA = Math.round(srcA * layer.opacity);
           if (srcA === 0) {continue;}
 
           const o = srcIdx * 4;
@@ -1358,7 +1276,10 @@ function parseSoftMask(page: NativePdfPage, obj: PdfObject | undefined, options:
     }
 
     return { present: true, softMaskAlpha: 1, softMask: undefined };
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message.includes("requires options.jpxDecode")) {
+      throw error;
+    }
     // `/SMask` was present but couldn't be processed (e.g. missing xref entry). Clear deterministically.
     return { present: true, softMaskAlpha: 1, softMask: undefined };
   }

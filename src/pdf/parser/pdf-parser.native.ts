@@ -41,7 +41,7 @@ import { extractColorSpacesFromResourcesNative } from "./color-space.native";
 function extractExtGStateFromResourcesNativeOrEmpty(
   page: NativePdfPage,
   resources: PdfDict | null,
-  options: Readonly<{ readonly vectorSoftMaskMaxSize?: number; readonly shadingMaxSize: number }>,
+  options: Readonly<{ readonly vectorSoftMaskMaxSize?: number; readonly shadingMaxSize: number; readonly jpxDecode?: JpxDecodeFn }>,
 ): ReadonlyMap<string, ExtGStateParams> {
   if (!resources) {
     return new Map();
@@ -231,6 +231,7 @@ async function parsePage(
   const extGState = extractExtGStateNative(page, {
     vectorSoftMaskMaxSize: opts.softMaskVectorMaxSize > 0 ? opts.softMaskVectorMaxSize : undefined,
     shadingMaxSize: opts.shadingMaxSize > 0 ? opts.shadingMaxSize : 0,
+    jpxDecode: opts.jpxDecode,
   });
   const shadings = extractShadingNative(page);
   const patterns = extractPatternsNative(page);
@@ -271,22 +272,23 @@ async function parsePage(
 
   const mergedXObjects = mergeXObjects(baseXObjects, inlineXObjects);
 
-  const { elements: expandedElements, imageGroups } = expandFormXObjectsNative(
-    page,
-    parsedWithType3,
-    fontMappings,
-    extGState,
-    shadings,
-    patterns,
-    colorSpaces,
-    opts.shadingMaxSize,
-    opts.clipPathMaxSize,
-    opts.softMaskVectorMaxSize,
-    pageBBox,
-    embeddedFontMetrics,
-    mergedXObjects,
-    nextInlineId,
-  );
+	  const { elements: expandedElements, imageGroups } = expandFormXObjectsNative(
+	    page,
+	    parsedWithType3,
+	    fontMappings,
+	    extGState,
+	    shadings,
+	    patterns,
+	    colorSpaces,
+	    opts.shadingMaxSize,
+	    opts.clipPathMaxSize,
+	    opts.softMaskVectorMaxSize,
+	    opts.jpxDecode,
+	    pageBBox,
+	    embeddedFontMetrics,
+	    mergedXObjects,
+	    nextInlineId,
+	  );
 
   const images: PdfImage[] = [];
   for (const [xObjects, group] of imageGroups) {
@@ -428,6 +430,7 @@ function expandFormXObjectsNative(
   shadingMaxSize: number,
   clipPathMaxSize: number,
   softMaskVectorMaxSize: number,
+  jpxDecode: JpxDecodeFn,
   pageBBox: PdfBBox,
   embeddedFontMetrics: Map<string, { ascender: number; descender: number }>,
   xObjectsOverride: PdfDict | null,
@@ -525,6 +528,7 @@ function expandFormXObjectsNative(
       const localExt = extractExtGStateFromResourcesNativeOrEmpty(page, formResources, {
         vectorSoftMaskMaxSize,
         shadingMaxSize: localShadingMaxSize,
+        jpxDecode,
       });
       const mergedExt = new Map(scope.extGState);
       for (const [k, v] of localExt) {mergedExt.set(k, v);}

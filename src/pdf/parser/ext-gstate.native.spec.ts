@@ -318,6 +318,71 @@ function buildMinimalPdfWithPerPixelLuminositySoftMaskIccBasedGray(args: {
   return new TextEncoder().encode(parts.join("") + xrefLines.join("") + trailer);
 }
 
+function buildMinimalPdfWithPerPixelLuminositySoftMaskIndexed(args: {
+  readonly fillRgb: readonly [number, number, number];
+}): Uint8Array {
+  const [r, g, b] = args.fillRgb;
+  const contentStream = `q /GS1 gs ${r} ${g} ${b} rg 0 0 2 1 re f Q\n`;
+  const contentLength = new TextEncoder().encode(contentStream).length;
+
+  // 2x1 Indexed image: left=index0 (black), right=index1 (white).
+  const imageStream = "0001>";
+  const imageLength = new TextEncoder().encode(imageStream).length;
+
+  const maskFormContent = "q 2 0 0 1 0 0 cm /Im1 Do Q\n";
+  const maskFormLength = new TextEncoder().encode(maskFormContent).length;
+
+  const objects: Record<number, string> = {
+    1: "<< /Type /Catalog /Pages 2 0 R >>",
+    2: "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    3:
+      "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] " +
+      "/Resources << /ExtGState << /GS1 4 0 R >> >> " +
+      "/Contents 10 0 R >>",
+    4: `<< /Type /ExtGState /ca 1 /CA 1 /SMask 5 0 R >>`,
+    5: `<< /S /Luminosity /G 6 0 R >>`,
+    6:
+      `<< /Type /XObject /Subtype /Form /FormType 1 /BBox [0 0 2 1] ` +
+      `/Group << /S /Transparency /CS /DeviceRGB >> ` +
+      `/Resources << /XObject << /Im1 7 0 R >> >> ` +
+      `/Length ${maskFormLength} >>\n` +
+      `stream\n${maskFormContent}endstream`,
+    7:
+      `<< /Type /XObject /Subtype /Image /Name /Im1 /Width 2 /Height 1 ` +
+      `/BitsPerComponent 8 /ColorSpace [ /Indexed /DeviceRGB 1 <000000FFFFFF> ] ` +
+      `/Filter /ASCIIHexDecode /Length ${imageLength} >>\n` +
+      `stream\n${imageStream}\nendstream`,
+    10: `<< /Length ${contentLength} >>\nstream\n${contentStream}endstream`,
+  };
+
+  const header = "%PDF-1.4\n";
+  const order = [1, 2, 3, 4, 5, 6, 7, 10];
+  const parts: string[] = [header];
+  const offsets: number[] = [0];
+
+  const cursor = { value: header.length };
+  for (const n of order) {
+    offsets[n] = cursor.value;
+    const body = `${n} 0 obj\n${objects[n]}\nendobj\n`;
+    parts.push(body);
+    cursor.value += body.length;
+  }
+
+  const xrefStart = cursor.value;
+  const size = Math.max(...order) + 1;
+  const xrefLines: string[] = [];
+  xrefLines.push("xref\n");
+  xrefLines.push(`0 ${size}\n`);
+  xrefLines.push("0000000000 65535 f \n");
+  for (let i = 1; i < size; i += 1) {
+    const off = offsets[i] ?? 0;
+    xrefLines.push(`${String(off).padStart(10, "0")} 00000 n \n`);
+  }
+  const trailer = `trailer\n<< /Size ${size} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF\n`;
+
+  return new TextEncoder().encode(parts.join("") + xrefLines.join("") + trailer);
+}
+
 function buildMinimalPdfWithPerPixelLuminositySoftMaskTwoImages(args: { readonly fillRgb: readonly [number, number, number] }): Uint8Array {
   const [r, g, b] = args.fillRgb;
   const contentStream = `q /GS1 gs ${r} ${g} ${b} rg 0 0 2 1 re f Q\n`;
@@ -1288,6 +1353,22 @@ describe("ExtGState alpha (native)", () => {
 
   it("evaluates a non-constant /SMask (Luminosity) for ICCBased (N=1) mask images", async () => {
     const bytes = buildMinimalPdfWithPerPixelLuminositySoftMaskIccBasedGray({ fillRgb: [1, 0, 0] as const });
+    const doc = await parsePdfNative(bytes);
+    expect(doc.pages).toHaveLength(1);
+
+    const images = doc.pages[0]!.elements.filter((e) => e.type === "image");
+    expect(images).toHaveLength(1);
+    const image = images[0]!;
+    if (image.type !== "image") {throw new Error("Expected image");}
+
+    expect(image.width).toBe(2);
+    expect(image.height).toBe(1);
+    expect(Array.from(image.data)).toEqual([255, 0, 0, 255, 0, 0]);
+    expect(Array.from(image.alpha ?? [])).toEqual([0, 255]);
+  });
+
+  it("evaluates a non-constant /SMask (Luminosity) for /Indexed mask images", async () => {
+    const bytes = buildMinimalPdfWithPerPixelLuminositySoftMaskIndexed({ fillRgb: [1, 0, 0] as const });
     const doc = await parsePdfNative(bytes);
     expect(doc.pages).toHaveLength(1);
 

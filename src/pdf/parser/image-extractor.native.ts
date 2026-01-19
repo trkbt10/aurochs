@@ -5,7 +5,7 @@
 import type { NativePdfPage, PdfArray, PdfBool, PdfDict, PdfName, PdfNumber, PdfObject, PdfStream } from "../native";
 import { decodeStreamData } from "../native/filters";
 import { decodePdfStream } from "../native/stream";
-import type { PdfColorSpace, PdfImage } from "../domain";
+import type { PdfColorSpace, PdfGraphicsState, PdfImage } from "../domain";
 import { clamp01, getColorSpaceComponents } from "../domain";
 import { cmykToRgb, grayToRgb, rgbToRgbBytes } from "../domain/color";
 import type { ParsedImage } from "./operator-parser";
@@ -20,6 +20,446 @@ export type ImageExtractorOptions = {
   readonly pageHeight: number;
   readonly jpxDecode?: JpxDecodeFn;
 };
+
+export function decodeImageXObjectStreamNative(
+  pdfPage: NativePdfPage,
+  imageStream: PdfStream,
+  graphicsState: PdfGraphicsState,
+  options: Readonly<Pick<ImageExtractorOptions, "maxDimension" | "jpxDecode">> = {},
+): PdfImage | null {
+  const maxDimension = options.maxDimension ?? 4096;
+
+  const dict = imageStream.dict;
+  const subtype = asName(dictGet(dict, "Subtype"))?.value ?? "";
+  if (subtype !== "Image") {return null;}
+
+  const width = getNumberValue(dict, "Width") ?? 0;
+  const height = getNumberValue(dict, "Height") ?? 0;
+  if (width === 0 || height === 0) {return null;}
+  if (width > maxDimension || height > maxDimension) {return null;}
+
+  const imageMask = getBoolValue(dict, "ImageMask") ?? false;
+  const bitsPerComponent = imageMask ? 1 : (getNumberValue(dict, "BitsPerComponent") ?? 8);
+  const colorSpaceInfo = getColorSpaceInfo(pdfPage, dict);
+  const colorSpace = colorSpaceInfo.kind === "direct" ? colorSpaceInfo.colorSpace : "DeviceRGB";
+  const filters = getFilterNames(pdfPage, dict);
+  const decode = getDecodeArray(pdfPage, dict) ?? undefined;
+  const softMaskInfo = getSoftMaskInfo(pdfPage, dict, width, height, { jpxDecode: options.jpxDecode });
+  const alpha = softMaskInfo?.alpha ?? undefined;
+  const softMaskMatte = softMaskInfo?.matte ?? undefined;
+  const maskEntry = getMaskEntry(pdfPage, dict);
+
+  const dataState: { data: Uint8Array | null } = { data: null };
+
+  if (imageMask) {
+    const decoded = decodePdfStream(imageStream);
+    const invert = decode?.length === 2 && decode[0] === 1 && decode[1] === 0;
+    const out = expandImageMaskToRgbAlpha({
+      decoded,
+      width,
+      height,
+      invert,
+      fillColor: graphicsState.fillColor,
+    });
+    const combinedAlpha = alpha ? combineAlpha(out.alpha, alpha) : out.alpha;
+    return {
+      type: "image",
+      data: out.rgb,
+      alpha: combinedAlpha,
+      softMaskMatte,
+      width,
+      height,
+      colorSpace: "DeviceRGB",
+      bitsPerComponent: 8,
+      graphicsState,
+    };
+  }
+
+  if (filters.includes("CCITTFaxDecode")) {
+    if (bitsPerComponent !== 1) {
+      throw new Error(`[PDF Image] /CCITTFaxDecode requires BitsPerComponent=1 (got ${bitsPerComponent})`);
+    }
+    const ccittIndex = filters.findIndex((f) => f === "CCITTFaxDecode");
+    if (ccittIndex !== filters.length - 1) {
+      throw new Error(
+        `[PDF Image] Unsupported filter chain: filters after /CCITTFaxDecode (${filters.join(", ")})`,
+      );
+    }
+    const pre = ccittIndex > 0 ? filters.slice(0, ccittIndex) : [];
+    const preDecoded = pre.length > 0 ? decodeStreamData(imageStream.data, { filters: pre }) : imageStream.data;
+    const ccittParms = getCcittDecodeParms(pdfPage, dict, filters, width, height);
+    dataState.data = decodeCcittFax({ encoded: preDecoded, width, height, parms: ccittParms });
+  } else {
+    const normalized = filters.map((f) => (f === "DCT" ? "DCTDecode" : f === "JPX" ? "JPXDecode" : f));
+    const dctIndex = normalized.indexOf("DCTDecode");
+    const jpxIndex = normalized.indexOf("JPXDecode");
+
+    if (jpxIndex >= 0) {
+      if (jpxIndex !== normalized.length - 1) {
+        throw new Error(`[PDF Image] Unsupported filter chain with /JPXDecode: ${filters.join(", ")}`);
+      }
+      const decoder = options.jpxDecode;
+      if (!decoder) {
+        throw new Error("[PDF Image] /JPXDecode requires options.jpxDecode");
+      }
+      const jpxBytes = decodePdfStream(imageStream);
+      const decodedJpx = decoder(jpxBytes, { expectedWidth: width, expectedHeight: height });
+      if (decodedJpx.width !== width || decodedJpx.height !== height) {
+        throw new Error(
+          `[PDF Image] /JPXDecode size mismatch: expected ${width}x${height}, got ${decodedJpx.width}x${decodedJpx.height}`,
+        );
+      }
+      const down = downsampleJpxTo8Bit(decodedJpx);
+
+      const components = decodedJpx.components;
+      const expectedLen = width * height * components;
+      if (down.data.length !== expectedLen) {
+        throw new Error(`[PDF Image] /JPXDecode length mismatch: expected ${expectedLen}, got ${down.data.length}`);
+      }
+
+      const combinedAlpha: { value: Uint8Array | undefined } = { value: alpha };
+      if (maskEntry.kind === "explicit") {
+        combinedAlpha.value = combineAlpha(
+          combinedAlpha.value,
+          decodeExplicitMaskAlpha8(pdfPage, maskEntry.stream, width, height),
+        );
+      } else if (maskEntry.kind === "colorKey") {
+        combinedAlpha.value = combineAlpha(
+          combinedAlpha.value,
+          applyColorKeyMask({
+            data: down.data,
+            width,
+            height,
+            components,
+            bitsPerComponent: 8,
+            ranges: maskEntry.ranges,
+          }),
+        );
+      }
+
+      const jpxColorSpace = components === 1 ? "DeviceGray" : components === 3 ? "DeviceRGB" : "DeviceCMYK";
+
+      return {
+        type: "image",
+        data: down.data,
+        alpha: combinedAlpha.value,
+        decode,
+        softMaskMatte,
+        width,
+        height,
+        colorSpace: jpxColorSpace,
+        bitsPerComponent: 8,
+        graphicsState,
+      };
+    }
+
+    if (dctIndex >= 0) {
+      if (dctIndex !== normalized.length - 1) {
+        throw new Error(`[PDF Image] Unsupported filter chain with /DCTDecode: ${filters.join(", ")}`);
+      }
+      const jpegBytes = decodePdfStream(imageStream);
+      const rgb = decodeJpegToRgb(jpegBytes, { expectedWidth: width, expectedHeight: height });
+      const data = rgb.data;
+      const combinedAlpha: { value: Uint8Array | undefined } = { value: alpha };
+      if (maskEntry.kind === "explicit") {
+        combinedAlpha.value = combineAlpha(
+          combinedAlpha.value,
+          decodeExplicitMaskAlpha8(pdfPage, maskEntry.stream, width, height),
+        );
+      } else if (maskEntry.kind === "colorKey") {
+        combinedAlpha.value = combineAlpha(
+          combinedAlpha.value,
+          applyColorKeyMask({ data, width, height, components: 3, bitsPerComponent: 8, ranges: maskEntry.ranges }),
+        );
+      }
+      return {
+        type: "image",
+        data,
+        alpha: combinedAlpha.value,
+        decode,
+        softMaskMatte,
+        width,
+        height,
+        colorSpace: "DeviceRGB",
+        bitsPerComponent: 8,
+        graphicsState,
+      };
+    }
+
+    const decoded = decodePdfStream(imageStream);
+    const decodeParms = getDecodeParms(pdfPage, dict);
+    const predictorComponents = getPredictorComponents(colorSpaceInfo);
+    const data = reversePngPredictor(decoded, width, height, predictorComponents, decodeParms);
+
+    if (colorSpaceInfo.kind === "indexed") {
+      const samples = unpackIndexedSamples(data, width, height, bitsPerComponent);
+      const expanded = expandIndexedToRgb({
+        samples,
+        bitsPerComponent,
+        base: colorSpaceInfo.base,
+        hival: colorSpaceInfo.hival,
+        lookup: colorSpaceInfo.lookup,
+        decode,
+      });
+      const combinedAlpha: { value: Uint8Array | undefined } = { value: alpha };
+      if (maskEntry.kind === "explicit") {
+        combinedAlpha.value = combineAlpha(
+          combinedAlpha.value,
+          decodeExplicitMaskAlpha8(pdfPage, maskEntry.stream, width, height),
+        );
+      } else if (maskEntry.kind === "colorKey") {
+        combinedAlpha.value = combineAlpha(
+          combinedAlpha.value,
+          applyIndexedColorKeyMask({ packedIndices: data, width, height, bitsPerComponent, ranges: maskEntry.ranges, decode }),
+        );
+      }
+      return {
+        type: "image",
+        data: expanded,
+        alpha: combinedAlpha.value,
+        softMaskMatte,
+        width,
+        height,
+        colorSpace: "DeviceRGB",
+        bitsPerComponent: 8,
+        graphicsState,
+      };
+    }
+
+    if (colorSpaceInfo.kind === "tint") {
+      const expanded = expandTintImageToRgb({
+        data,
+        width,
+        height,
+        components: colorSpaceInfo.components,
+        bitsPerComponent,
+        decode,
+      });
+
+      const combinedAlpha: { value: Uint8Array | undefined } = { value: alpha };
+      if (maskEntry.kind === "explicit") {
+        combinedAlpha.value = combineAlpha(
+          combinedAlpha.value,
+          decodeExplicitMaskAlpha8(pdfPage, maskEntry.stream, width, height),
+        );
+      } else if (maskEntry.kind === "colorKey") {
+        combinedAlpha.value = combineAlpha(
+          combinedAlpha.value,
+          applyColorKeyMask({
+            data,
+            width,
+            height,
+            components: colorSpaceInfo.components,
+            bitsPerComponent,
+            ranges: maskEntry.ranges,
+          }),
+        );
+      }
+
+      return {
+        type: "image",
+        data: expanded,
+        alpha: combinedAlpha.value,
+        softMaskMatte,
+        width,
+        height,
+        colorSpace: "DeviceRGB",
+        bitsPerComponent: 8,
+        graphicsState,
+      };
+    }
+
+    if (colorSpaceInfo.kind === "lab") {
+      const expanded = labToRgbBytes({
+        data,
+        width,
+        height,
+        bitsPerComponent,
+        decode,
+        whitePoint: colorSpaceInfo.whitePoint,
+        range: colorSpaceInfo.range,
+      });
+
+      const combinedAlpha: { value: Uint8Array | undefined } = { value: alpha };
+      if (maskEntry.kind === "explicit") {
+        combinedAlpha.value = combineAlpha(
+          combinedAlpha.value,
+          decodeExplicitMaskAlpha8(pdfPage, maskEntry.stream, width, height),
+        );
+      } else if (maskEntry.kind === "colorKey") {
+        combinedAlpha.value = combineAlpha(
+          combinedAlpha.value,
+          applyColorKeyMask({ data, width, height, components: 3, bitsPerComponent, ranges: maskEntry.ranges }),
+        );
+      }
+
+      return {
+        type: "image",
+        data: expanded,
+        alpha: combinedAlpha.value,
+        softMaskMatte,
+        width,
+        height,
+        colorSpace: "DeviceRGB",
+        bitsPerComponent: 8,
+        graphicsState,
+      };
+    }
+
+    if (colorSpaceInfo.kind === "calGray") {
+      const expanded = calGrayToRgbBytes({
+        data,
+        width,
+        height,
+        bitsPerComponent,
+        decode,
+        whitePoint: colorSpaceInfo.whitePoint,
+        gamma: colorSpaceInfo.gamma,
+      });
+
+      const combinedAlpha: { value: Uint8Array | undefined } = { value: alpha };
+      if (maskEntry.kind === "explicit") {
+        combinedAlpha.value = combineAlpha(
+          combinedAlpha.value,
+          decodeExplicitMaskAlpha8(pdfPage, maskEntry.stream, width, height),
+        );
+      } else if (maskEntry.kind === "colorKey") {
+        combinedAlpha.value = combineAlpha(
+          combinedAlpha.value,
+          applyColorKeyMask({ data, width, height, components: 1, bitsPerComponent, ranges: maskEntry.ranges }),
+        );
+      }
+
+      return {
+        type: "image",
+        data: expanded,
+        alpha: combinedAlpha.value,
+        softMaskMatte,
+        width,
+        height,
+        colorSpace: "DeviceRGB",
+        bitsPerComponent: 8,
+        graphicsState,
+      };
+    }
+
+    if (colorSpaceInfo.kind === "calRgb") {
+      const expanded = calRgbToRgbBytes({
+        data,
+        width,
+        height,
+        bitsPerComponent,
+        decode,
+        gamma: colorSpaceInfo.gamma,
+        matrix: colorSpaceInfo.matrix,
+      });
+
+      const combinedAlpha: { value: Uint8Array | undefined } = { value: alpha };
+      if (maskEntry.kind === "explicit") {
+        combinedAlpha.value = combineAlpha(
+          combinedAlpha.value,
+          decodeExplicitMaskAlpha8(pdfPage, maskEntry.stream, width, height),
+        );
+      } else if (maskEntry.kind === "colorKey") {
+        combinedAlpha.value = combineAlpha(
+          combinedAlpha.value,
+          applyColorKeyMask({ data, width, height, components: 3, bitsPerComponent, ranges: maskEntry.ranges }),
+        );
+      }
+
+      return {
+        type: "image",
+        data: expanded,
+        alpha: combinedAlpha.value,
+        softMaskMatte,
+        width,
+        height,
+        colorSpace: "DeviceRGB",
+        bitsPerComponent: 8,
+        graphicsState,
+      };
+    }
+
+    if (colorSpaceInfo.kind === "iccBased") {
+      const expanded = iccBasedToRgbBytes({
+        data,
+        width,
+        height,
+        bitsPerComponent,
+        decode,
+        profile: colorSpaceInfo.profile,
+      });
+
+      const combinedAlpha: { value: Uint8Array | undefined } = { value: alpha };
+      if (maskEntry.kind === "explicit") {
+        combinedAlpha.value = combineAlpha(
+          combinedAlpha.value,
+          decodeExplicitMaskAlpha8(pdfPage, maskEntry.stream, width, height),
+        );
+      } else if (maskEntry.kind === "colorKey") {
+        combinedAlpha.value = combineAlpha(
+          combinedAlpha.value,
+          applyColorKeyMask({
+            data,
+            width,
+            height,
+            components: colorSpaceInfo.components,
+            bitsPerComponent,
+            ranges: maskEntry.ranges,
+          }),
+        );
+      }
+
+      return {
+        type: "image",
+        data: expanded,
+        alpha: combinedAlpha.value,
+        softMaskMatte,
+        width,
+        height,
+        colorSpace: "DeviceRGB",
+        bitsPerComponent: 8,
+        graphicsState,
+      };
+    }
+
+    dataState.data = data;
+  }
+
+  const data = dataState.data;
+  if (!data) {
+    throw new Error("[PDF Image] Internal error: image data was not produced");
+  }
+
+  const combinedAlpha: { value: Uint8Array | undefined } = { value: alpha };
+  if (maskEntry.kind === "explicit") {
+    combinedAlpha.value = combineAlpha(
+      combinedAlpha.value,
+      decodeExplicitMaskAlpha8(pdfPage, maskEntry.stream, width, height),
+    );
+  } else if (maskEntry.kind === "colorKey" && colorSpaceInfo.kind === "direct") {
+    const components = getColorSpaceComponents(colorSpaceInfo.colorSpace);
+    if (components > 0) {
+      combinedAlpha.value = combineAlpha(
+        combinedAlpha.value,
+        applyColorKeyMask({ data, width, height, components, bitsPerComponent, ranges: maskEntry.ranges }),
+      );
+    }
+  }
+
+  return {
+    type: "image",
+    data,
+    alpha: combinedAlpha.value,
+    decode,
+    softMaskMatte,
+    width,
+    height,
+    colorSpace: colorSpace as PdfColorSpace,
+    bitsPerComponent,
+    graphicsState,
+  };
+}
 
 function decodeMaskSamplesToAlpha8(
   data: Uint8Array,
@@ -1408,440 +1848,11 @@ export async function extractImagesNative(
       const dict = imageStream.dict;
       const subtype = asName(dictGet(dict, "Subtype"))?.value ?? "";
       if (subtype !== "Image") {continue;}
-
-      const width = getNumberValue(dict, "Width") ?? 0;
-      const height = getNumberValue(dict, "Height") ?? 0;
-      if (width === 0 || height === 0) {continue;}
-      if (width > maxDimension || height > maxDimension) {continue;}
-
-      const imageMask = getBoolValue(dict, "ImageMask") ?? false;
-      const bitsPerComponent = imageMask ? 1 : (getNumberValue(dict, "BitsPerComponent") ?? 8);
-      const colorSpaceInfo = getColorSpaceInfo(pdfPage, dict);
-      const colorSpace = colorSpaceInfo.kind === "direct" ? colorSpaceInfo.colorSpace : "DeviceRGB";
-      const filters = getFilterNames(pdfPage, dict);
-      const decode = getDecodeArray(pdfPage, dict) ?? undefined;
-      const softMaskInfo = getSoftMaskInfo(pdfPage, dict, width, height, { jpxDecode: options.jpxDecode });
-      const alpha = softMaskInfo?.alpha ?? undefined;
-      const softMaskMatte = softMaskInfo?.matte ?? undefined;
-      const maskEntry = getMaskEntry(pdfPage, dict);
-
-      const dataState: { data: Uint8Array | null } = { data: null };
-      if (imageMask) {
-        const decoded = decodePdfStream(imageStream);
-        const invert = decode?.length === 2 && decode[0] === 1 && decode[1] === 0;
-        const out = expandImageMaskToRgbAlpha({
-          decoded,
-          width,
-          height,
-          invert,
-          fillColor: parsed.graphicsState.fillColor,
-        });
-        const combinedAlpha = alpha ? combineAlpha(out.alpha, alpha) : out.alpha;
-        images.push({
-          type: "image",
-          data: out.rgb,
-          alpha: combinedAlpha,
-          softMaskMatte,
-          width,
-          height,
-          colorSpace: "DeviceRGB",
-          bitsPerComponent: 8,
-          graphicsState: parsed.graphicsState,
-        });
-        continue;
-      }
-      if (filters.includes("CCITTFaxDecode")) {
-        if (bitsPerComponent !== 1) {
-          throw new Error(`[PDF Image] /CCITTFaxDecode requires BitsPerComponent=1 (got ${bitsPerComponent})`);
-        }
-        const ccittIndex = filters.findIndex((f) => f === "CCITTFaxDecode");
-        if (ccittIndex !== filters.length - 1) {
-          throw new Error(
-            `[PDF Image] Unsupported filter chain: filters after /CCITTFaxDecode (${filters.join(", ")})`,
-          );
-        }
-        const pre = ccittIndex > 0 ? filters.slice(0, ccittIndex) : [];
-        const preDecoded = pre.length > 0 ? decodeStreamData(imageStream.data, { filters: pre }) : imageStream.data;
-        const ccittParms = getCcittDecodeParms(pdfPage, dict, filters, width, height);
-        dataState.data = decodeCcittFax({ encoded: preDecoded, width, height, parms: ccittParms });
-      } else {
-        const normalized = filters.map((f) => (f === "DCT" ? "DCTDecode" : f === "JPX" ? "JPXDecode" : f));
-        const dctIndex = normalized.indexOf("DCTDecode");
-        const jpxIndex = normalized.indexOf("JPXDecode");
-
-        if (jpxIndex >= 0) {
-          if (jpxIndex !== normalized.length - 1) {
-            throw new Error(`[PDF Image] Unsupported filter chain with /JPXDecode: ${filters.join(", ")}`);
-          }
-          const decoder = options.jpxDecode;
-          if (!decoder) {
-            throw new Error("[PDF Image] /JPXDecode requires options.jpxDecode");
-          }
-          const jpxBytes = decodePdfStream(imageStream);
-          const decodedJpx = decoder(jpxBytes, { expectedWidth: width, expectedHeight: height });
-          if (decodedJpx.width !== width || decodedJpx.height !== height) {
-            throw new Error(
-              `[PDF Image] /JPXDecode size mismatch: expected ${width}x${height}, got ${decodedJpx.width}x${decodedJpx.height}`,
-            );
-          }
-          const down = downsampleJpxTo8Bit(decodedJpx);
-
-          const components = decodedJpx.components;
-          const expectedLen = width * height * components;
-          if (down.data.length !== expectedLen) {
-            throw new Error(`[PDF Image] /JPXDecode length mismatch: expected ${expectedLen}, got ${down.data.length}`);
-          }
-
-          const combinedAlpha: { value: Uint8Array | undefined } = { value: alpha };
-          if (maskEntry.kind === "explicit") {
-            combinedAlpha.value = combineAlpha(
-              combinedAlpha.value,
-              decodeExplicitMaskAlpha8(pdfPage, maskEntry.stream, width, height),
-            );
-          } else if (maskEntry.kind === "colorKey") {
-            combinedAlpha.value = combineAlpha(
-              combinedAlpha.value,
-              applyColorKeyMask({
-                data: down.data,
-                width,
-                height,
-                components,
-                bitsPerComponent: 8,
-                ranges: maskEntry.ranges,
-              }),
-            );
-          }
-
-          const jpxColorSpace = components === 1 ? "DeviceGray" : components === 3 ? "DeviceRGB" : "DeviceCMYK";
-
-          images.push({
-            type: "image",
-            data: down.data,
-            alpha: combinedAlpha.value,
-            decode,
-            softMaskMatte,
-            width,
-            height,
-            colorSpace: jpxColorSpace,
-            bitsPerComponent: 8,
-            graphicsState: parsed.graphicsState,
-          });
-          continue;
-        }
-
-        if (dctIndex >= 0) {
-          if (dctIndex !== normalized.length - 1) {
-            throw new Error(`[PDF Image] Unsupported filter chain with /DCTDecode: ${filters.join(", ")}`);
-          }
-          const jpegBytes = decodePdfStream(imageStream);
-          const rgb = decodeJpegToRgb(jpegBytes, { expectedWidth: width, expectedHeight: height });
-          const data = rgb.data;
-          const combinedAlpha: { value: Uint8Array | undefined } = { value: alpha };
-          if (maskEntry.kind === "explicit") {
-            combinedAlpha.value = combineAlpha(
-              combinedAlpha.value,
-              decodeExplicitMaskAlpha8(pdfPage, maskEntry.stream, width, height),
-            );
-          } else if (maskEntry.kind === "colorKey") {
-            combinedAlpha.value = combineAlpha(
-              combinedAlpha.value,
-              applyColorKeyMask({ data, width, height, components: 3, bitsPerComponent: 8, ranges: maskEntry.ranges }),
-            );
-          }
-          images.push({
-            type: "image",
-            data,
-            alpha: combinedAlpha.value,
-            decode,
-            softMaskMatte,
-            width,
-            height,
-            colorSpace: "DeviceRGB",
-            bitsPerComponent: 8,
-            graphicsState: parsed.graphicsState,
-          });
-          continue;
-        }
-
-        const decoded = decodePdfStream(imageStream);
-        const decodeParms = getDecodeParms(pdfPage, dict);
-        const predictorComponents = getPredictorComponents(colorSpaceInfo);
-        const data = reversePngPredictor(decoded, width, height, predictorComponents, decodeParms);
-
-        if (colorSpaceInfo.kind === "indexed") {
-          const samples = unpackIndexedSamples(data, width, height, bitsPerComponent);
-          const expanded = expandIndexedToRgb({
-            samples,
-            bitsPerComponent,
-            base: colorSpaceInfo.base,
-            hival: colorSpaceInfo.hival,
-            lookup: colorSpaceInfo.lookup,
-            decode,
-          });
-          const combinedAlpha: { value: Uint8Array | undefined } = { value: alpha };
-          if (maskEntry.kind === "explicit") {
-            combinedAlpha.value = combineAlpha(
-              combinedAlpha.value,
-              decodeExplicitMaskAlpha8(pdfPage, maskEntry.stream, width, height),
-            );
-          } else if (maskEntry.kind === "colorKey") {
-            combinedAlpha.value = combineAlpha(
-              combinedAlpha.value,
-              applyIndexedColorKeyMask({ packedIndices: data, width, height, bitsPerComponent, ranges: maskEntry.ranges, decode }),
-            );
-          }
-          images.push({
-            type: "image",
-            data: expanded,
-            alpha: combinedAlpha.value,
-            softMaskMatte,
-            width,
-            height,
-            colorSpace: "DeviceRGB",
-            bitsPerComponent: 8,
-            graphicsState: parsed.graphicsState,
-          });
-          continue;
-        }
-
-        if (colorSpaceInfo.kind === "tint") {
-          const expanded = expandTintImageToRgb({
-            data,
-            width,
-            height,
-            components: colorSpaceInfo.components,
-            bitsPerComponent,
-            decode,
-          });
-
-          const combinedAlpha: { value: Uint8Array | undefined } = { value: alpha };
-          if (maskEntry.kind === "explicit") {
-            combinedAlpha.value = combineAlpha(
-              combinedAlpha.value,
-              decodeExplicitMaskAlpha8(pdfPage, maskEntry.stream, width, height),
-            );
-          } else if (maskEntry.kind === "colorKey") {
-            combinedAlpha.value = combineAlpha(
-              combinedAlpha.value,
-              applyColorKeyMask({
-                data,
-                width,
-                height,
-                components: colorSpaceInfo.components,
-                bitsPerComponent,
-                ranges: maskEntry.ranges,
-              }),
-            );
-          }
-
-          images.push({
-            type: "image",
-            data: expanded,
-            alpha: combinedAlpha.value,
-            softMaskMatte,
-            width,
-            height,
-            colorSpace: "DeviceRGB",
-            bitsPerComponent: 8,
-            graphicsState: parsed.graphicsState,
-          });
-          continue;
-        }
-
-        if (colorSpaceInfo.kind === "lab") {
-          const expanded = labToRgbBytes({
-            data,
-            width,
-            height,
-            bitsPerComponent,
-            decode,
-            whitePoint: colorSpaceInfo.whitePoint,
-            range: colorSpaceInfo.range,
-          });
-
-          const combinedAlpha: { value: Uint8Array | undefined } = { value: alpha };
-          if (maskEntry.kind === "explicit") {
-            combinedAlpha.value = combineAlpha(
-              combinedAlpha.value,
-              decodeExplicitMaskAlpha8(pdfPage, maskEntry.stream, width, height),
-            );
-          } else if (maskEntry.kind === "colorKey") {
-            combinedAlpha.value = combineAlpha(
-              combinedAlpha.value,
-              applyColorKeyMask({ data, width, height, components: 3, bitsPerComponent, ranges: maskEntry.ranges }),
-            );
-          }
-
-          images.push({
-            type: "image",
-            data: expanded,
-            alpha: combinedAlpha.value,
-            softMaskMatte,
-            width,
-            height,
-            colorSpace: "DeviceRGB",
-            bitsPerComponent: 8,
-            graphicsState: parsed.graphicsState,
-          });
-          continue;
-        }
-
-        if (colorSpaceInfo.kind === "calGray") {
-          const expanded = calGrayToRgbBytes({
-            data,
-            width,
-            height,
-            bitsPerComponent,
-            decode,
-            whitePoint: colorSpaceInfo.whitePoint,
-            gamma: colorSpaceInfo.gamma,
-          });
-
-          const combinedAlpha: { value: Uint8Array | undefined } = { value: alpha };
-          if (maskEntry.kind === "explicit") {
-            combinedAlpha.value = combineAlpha(
-              combinedAlpha.value,
-              decodeExplicitMaskAlpha8(pdfPage, maskEntry.stream, width, height),
-            );
-          } else if (maskEntry.kind === "colorKey") {
-            combinedAlpha.value = combineAlpha(
-              combinedAlpha.value,
-              applyColorKeyMask({ data, width, height, components: 1, bitsPerComponent, ranges: maskEntry.ranges }),
-            );
-          }
-
-          images.push({
-            type: "image",
-            data: expanded,
-            alpha: combinedAlpha.value,
-            softMaskMatte,
-            width,
-            height,
-            colorSpace: "DeviceRGB",
-            bitsPerComponent: 8,
-            graphicsState: parsed.graphicsState,
-          });
-          continue;
-        }
-
-        if (colorSpaceInfo.kind === "calRgb") {
-          const expanded = calRgbToRgbBytes({
-            data,
-            width,
-            height,
-            bitsPerComponent,
-            decode,
-            gamma: colorSpaceInfo.gamma,
-            matrix: colorSpaceInfo.matrix,
-          });
-
-          const combinedAlpha: { value: Uint8Array | undefined } = { value: alpha };
-          if (maskEntry.kind === "explicit") {
-            combinedAlpha.value = combineAlpha(
-              combinedAlpha.value,
-              decodeExplicitMaskAlpha8(pdfPage, maskEntry.stream, width, height),
-            );
-          } else if (maskEntry.kind === "colorKey") {
-            combinedAlpha.value = combineAlpha(
-              combinedAlpha.value,
-              applyColorKeyMask({ data, width, height, components: 3, bitsPerComponent, ranges: maskEntry.ranges }),
-            );
-          }
-
-          images.push({
-            type: "image",
-            data: expanded,
-            alpha: combinedAlpha.value,
-            softMaskMatte,
-            width,
-            height,
-            colorSpace: "DeviceRGB",
-            bitsPerComponent: 8,
-            graphicsState: parsed.graphicsState,
-          });
-          continue;
-        }
-
-        if (colorSpaceInfo.kind === "iccBased") {
-          const expanded = iccBasedToRgbBytes({
-            data,
-            width,
-            height,
-            bitsPerComponent,
-            decode,
-            profile: colorSpaceInfo.profile,
-          });
-
-          const combinedAlpha: { value: Uint8Array | undefined } = { value: alpha };
-          if (maskEntry.kind === "explicit") {
-            combinedAlpha.value = combineAlpha(
-              combinedAlpha.value,
-              decodeExplicitMaskAlpha8(pdfPage, maskEntry.stream, width, height),
-            );
-          } else if (maskEntry.kind === "colorKey") {
-            combinedAlpha.value = combineAlpha(
-              combinedAlpha.value,
-              applyColorKeyMask({
-                data,
-                width,
-                height,
-                components: colorSpaceInfo.components,
-                bitsPerComponent,
-                ranges: maskEntry.ranges,
-              }),
-            );
-          }
-
-          images.push({
-            type: "image",
-            data: expanded,
-            alpha: combinedAlpha.value,
-            softMaskMatte,
-            width,
-            height,
-            colorSpace: "DeviceRGB",
-            bitsPerComponent: 8,
-            graphicsState: parsed.graphicsState,
-          });
-          continue;
-        }
-
-        dataState.data = data;
-      }
-
-      const data = dataState.data;
-      if (!data) {
-        throw new Error("[PDF Image] Internal error: image data was not produced");
-      }
-
-      const combinedAlpha: { value: Uint8Array | undefined } = { value: alpha };
-      if (maskEntry.kind === "explicit") {
-        combinedAlpha.value = combineAlpha(
-          combinedAlpha.value,
-          decodeExplicitMaskAlpha8(pdfPage, maskEntry.stream, width, height),
-        );
-      } else if (maskEntry.kind === "colorKey" && colorSpaceInfo.kind === "direct") {
-        const components = getColorSpaceComponents(colorSpaceInfo.colorSpace);
-        if (components > 0) {
-          combinedAlpha.value = combineAlpha(
-            combinedAlpha.value,
-            applyColorKeyMask({ data, width, height, components, bitsPerComponent, ranges: maskEntry.ranges }),
-          );
-        }
-      }
-
-      images.push({
-        type: "image",
-        data,
-        alpha: combinedAlpha.value,
-        decode,
-        softMaskMatte,
-        width,
-        height,
-        colorSpace: colorSpace as PdfColorSpace,
-        bitsPerComponent,
-        graphicsState: parsed.graphicsState,
+      const decoded = decodeImageXObjectStreamNative(pdfPage, imageStream, parsed.graphicsState, {
+        maxDimension,
+        jpxDecode: options.jpxDecode,
       });
+      if (decoded) {images.push(decoded);}
     } catch (error) {
       if (error instanceof Error && error.message.includes("requires options.jpxDecode")) {
         throw error;

@@ -121,6 +121,7 @@ Current behavior: collects pages, supports inherited `Resources` and `MediaBox` 
       - [x] broader `/S /Luminosity` support (non-constant)
         - [x] luminosity from mask images in `/DeviceRGB` (and other device spaces via RGBA conversion) for the limited per-pixel subset (`src/pdf/parser/ext-gstate.native.ts`, `src/pdf/parser/ext-gstate.native.spec.ts`)
         - [x] accept `/ICCBased` mask images by inferring `/N` → Device* (N=1/3/4) for RGBA conversion (`src/pdf/parser/ext-gstate.native.ts`, `src/pdf/parser/ext-gstate.native.spec.ts`)
+        - [x] accept `/Indexed` mask images (palette → RGB) for per-pixel luminosity evaluation (`src/pdf/parser/ext-gstate.native.ts`, `src/pdf/parser/ext-gstate.native.spec.ts`)
         - [x] complex luminosity groups (multi-element mask content, compositing/blend within the group, nontrivial transforms)
           - [x] multiple-image mask Forms: composite `Do` images in order using source-over, then compute `luminosity × groupAlpha` (`src/pdf/parser/ext-gstate.native.ts`, `src/pdf/parser/ext-gstate.native.spec.ts`)
           - [x] mixed image+path mask Forms: rasterize mask paths onto the image-resolution grid then composite (`src/pdf/parser/ext-gstate.native.ts`, `src/pdf/parser/ext-gstate.native.spec.ts`, `src/pdf/parser/soft-mask-raster.native.ts`)
@@ -172,30 +173,49 @@ Current behavior: collects pages, supports inherited `Resources` and `MediaBox` 
 
 Current behavior in `src/pdf/parser/image-extractor.native.ts`: supports common XObject images, Flate predictors, and CCITT (via `ccitt-fax-decode.ts`) with “fail closed” on unsupported DecodeParms.
 
-- [ ] **Additional filters**
+- [x] **Additional filters**
   - [x] `LZWDecode` images (generic filters are now present; ensure extraction path uses them as needed) (`src/pdf/parser/image-extractor.spec.ts`)
   - [x] `DCTDecode` → decode to pixel bytes when required by output format (`src/pdf/parser/image-extractor.native.ts`, `src/pdf/parser/image-extractor.spec.ts`)
-  - [ ] `JPXDecode` → decode to pixel bytes when required by output format
+  - [x] `JPXDecode` → decode to pixel bytes when required by output format
     - [x] base image `/JPXDecode` decode via injected `jpxDecode` hook (`src/pdf/parser/jpx-decoder.ts`, `src/pdf/parser/pdf-parser.native.ts`, `src/pdf/parser/image-extractor.native.ts`, `src/pdf/parser/image-extractor.spec.ts`)
     - [x] soft mask `/JPXDecode` decode via injected `jpxDecode` hook (`src/pdf/parser/image-extractor.native.ts`, `src/pdf/parser/image-extractor.spec.ts`)
-    - [ ] bundled JPEG2000 decoder implementation (no external deps)
-- [ ] **Color spaces / masks**
-  - [ ] ICCBased: parse ICC profiles (currently infers by component count; warns on unusual cases)
+    - [x] bundled JPEG2000 decoder implementation (pure TS; no external deps) (`src/pdf/parser/jpeg2000/jpx-decode.native.ts`, `src/pdf/parser/jpeg2000/j2k.ts`, `src/pdf/parser/jpeg2000/mq-decoder.ts`, `src/pdf/parser/jpeg2000/tier1.ts`, `src/pdf/parser/jpeg2000/jpx-decode.native.spec.ts`)
+      - [x] JP2 container parsing (jp2 signature + jp2c box) and raw codestream detection (`src/pdf/parser/jpeg2000/jp2.ts`)
+      - [x] baseline Tier-1 MQ decode for a single LL codeblock (`src/pdf/parser/jpeg2000/mq-decoder.ts`, `src/pdf/parser/jpeg2000/tier1.ts`)
+      - [x] supported subset for deterministic PDF output (current constraints enforced by explicit throws):
+        - [x] 8-bit, unsigned components only
+        - [x] 1 or 3 components only (Gray/RGB)
+        - [x] 1 tile-part / single tile only
+        - [x] 1 resolution only (`numResolutions=1`)
+        - [x] progression order `LRCP` only
+        - [x] no MCT (`mct=0`)
+      - [ ] JPEG2000 remaining coverage (expand by adding fixtures + tests as each is implemented)
+        - [ ] multiple resolutions (`numResolutions > 1`) + inverse DWT synthesis
+        - [ ] quantization styles beyond the current assumptions (e.g. nontrivial QCD/QCC handling)
+        - [ ] codeblock styles / segmentation symbols (VSC, SEGSYM, etc.)
+        - [ ] SOP/EPH markers handling
+        - [ ] multiple tiles / tile-part indexing beyond single-tile `TNsot=1`
+        - [ ] progression orders beyond LRCP (RLCP/RPCL/PCRL/CPRL)
+        - [ ] signed components (and correct level shift rules)
+        - [ ] higher bit depths (9–16bpc) + downshift/rounding rules for PDF image output
+        - [ ] ICC profile / embedded color profile handling for JPX images (when present)
+- [x] **Color spaces / masks**
+  - [x] ICCBased: parse ICC profiles (currently infers by component count; warns on unusual cases)
     - [x] image ICCBased RGB/Gray (matrix + TRC) → DeviceRGB (`src/pdf/parser/icc-profile.native.ts`, `src/pdf/parser/image-extractor.native.ts`, `src/pdf/parser/image-extractor.spec.ts`)
     - [x] fill/stroke ICCBased colors (parse `/Resources /ColorSpace` ICC streams and convert `sc/SC` → DeviceRGB deterministically) (`src/pdf/parser/color-space.native.ts`, `src/pdf/parser/operator/color-handlers.ts`, `src/pdf/parser/operator/color-handlers.spec.ts`, `src/pdf/parser/pdf-parser.native.ts`, `src/pdf/domain/graphics-state/stack.ts`)
-    - [ ] LUT-based/CMYK ICC transforms (not supported yet)
-  - [ ] Special color spaces for images
+    - [x] LUT-based/CMYK ICC transforms (mft1/mft2 A2B0 subset; CMYK→XYZ→sRGB) (`src/pdf/parser/icc-profile.native.ts`, `src/pdf/parser/icc-profile.native.spec.ts`, `src/pdf/parser/image-extractor.native.ts`, `src/pdf/parser/image-extractor.spec.ts`, `src/pdf/parser/operator/color-handlers.ts`, `src/pdf/parser/operator/color-handlers.spec.ts`)
+  - [x] Special color spaces for images
     - [x] `/Indexed` palette images (expand to DeviceRGB) (`src/pdf/parser/image-extractor.native.ts`, `src/pdf/parser/image-extractor.spec.ts`)
     - [x] `/Separation` and `/DeviceN` (spot colors; deterministic tint→grayscale RGB fallback) (`src/pdf/parser/image-extractor.native.ts`, `src/pdf/parser/image-extractor.spec.ts`)
     - [x] `/Lab` and calibrated spaces (`/CalGray` `/CalRGB`) beyond the current “treat as Device*” mapping
       - [x] `/Lab` image conversion (Lab→sRGB, WhitePoint + Range honored; deterministic) (`src/pdf/parser/image-extractor.native.ts`, `src/pdf/parser/image-extractor.spec.ts`)
       - [x] `/CalGray` image conversion (Gamma + WhitePoint → XYZ → sRGB; deterministic) (`src/pdf/parser/image-extractor.native.ts`, `src/pdf/parser/image-extractor.spec.ts`)
       - [x] `/CalRGB` image conversion (Gamma + Matrix → XYZ → sRGB; deterministic) (`src/pdf/parser/image-extractor.native.ts`, `src/pdf/parser/image-extractor.spec.ts`)
-    - [ ] ICCBased profile parsing (beyond component-count inference)
+  - [x] ICCBased profile parsing (beyond component-count inference)
       - [x] parse ICCBased RGB/Gray profiles (matrix + TRC; deterministic) (`src/pdf/parser/icc-profile.native.ts`, `src/pdf/parser/image-extractor.native.ts`, `src/pdf/parser/image-extractor.spec.ts`)
       - [x] handle ICCBased with uncommon `N` deterministically (avg components → grayscale RGB) (`src/pdf/parser/image-extractor.native.ts`, `src/pdf/parser/image-extractor.spec.ts`)
   - [x] `SMask` / soft-mask alpha handling (`src/pdf/parser/image-extractor.native.ts`, `src/pdf/parser/image-extractor.spec.ts`, `src/pdf/converter/image-to-shapes.ts`, `src/pdf/converter/image-to-shapes.spec.ts`)
-  - [ ] `SMask` edge cases
+  - [x] `SMask` edge cases
     - [x] `/Matte` handling (un-matte RGB before applying alpha to avoid halo/fringe) (`src/pdf/parser/image-extractor.native.ts`, `src/pdf/parser/image-extractor.spec.ts`, `src/pdf/converter/image-to-shapes.ts`, `src/pdf/converter/image-to-shapes.spec.ts`)
     - [x] soft mask with `BitsPerComponent != 8` (1/2/4/16 supported) (`src/pdf/parser/image-extractor.native.ts`, `src/pdf/parser/image-extractor.spec.ts`)
     - [x] soft mask with `/CCITTFaxDecode` (Group3/4) (`src/pdf/parser/image-extractor.native.ts`, `src/pdf/parser/image-extractor.spec.ts`)
@@ -223,7 +243,7 @@ Current behavior: `Info` uses `PdfString.text` which is BOM-aware, otherwise Lat
 - [x] **CLI-generated PDFs (famous library)**
   - [x] add a deterministic generator script (bun CLI) that produces a small set of PDFs for tests (text, images, multi-page, etc.) (`scripts/generate-pdfkit-fixtures.ts`)
   - [x] add an integration spec that asserts generator output matches checked-in fixtures byte-for-byte (`spec/integration/pdfkit-fixtures.spec.ts`)
-- [ ] **Extend generator fixtures as gaps are implemented**
+- [x] **Extend generator fixtures as gaps are implemented**
   - [x] add a pdfkit fixture that exercises ExtGState alpha + blend mode (when `/BM` is supported) (`scripts/generate-pdfkit-fixtures.ts`, `spec/integration/pdfkit-fixtures.spec.ts`, `spec/fixtures/pdfkit/pdfkit-alpha-blend.pdf`)
   - [x] add a pdfkit fixture that exercises clipping (when clip paths are supported) (`scripts/generate-pdfkit-fixtures.ts`, `spec/integration/pdfkit-fixtures.spec.ts`, `spec/fixtures/pdfkit/pdfkit-clipping.pdf`)
   - [x] add a fixture/spec that exercises Type3 text (if pdfkit can emit Type3; otherwise, use a handcrafted PDF fixture) (`src/pdf/parser/type3-glyph.native.spec.ts`)
@@ -235,7 +255,15 @@ Current behavior: `Info` uses `PdfString.text` which is BOM-aware, otherwise Lat
 ## 10) Validation matrix (what to test as work proceeds)
 
 - [ ] Add fixtures/tests per missing feature (prefer co-located `*.spec.ts` in `src/pdf/**`).
-- [ ] Regression tests for:
+  - [ ] When adding support for any unchecked JPEG2000 item, add a dedicated JP2 base64 fixture + a focused spec under `src/pdf/parser/jpeg2000/*.spec.ts`
+  - [ ] When adding a new content-stream feature (operators, color spaces, patterns, shadings), add at least:
+    - [ ] a handcrafted minimal PDF unit spec under `src/pdf/**` (fast, deterministic)
+    - [ ] and (if feasible) a PDFKit-generated fixture under `spec/fixtures/pdfkit/` (end-to-end)
+  - [ ] Add an integration spec that parses each checked-in fixture PDF and asserts:
+    - [ ] native parse completes without warnings/errors
+    - [ ] element counts per page are stable (text/path/image)
+    - [ ] snapshot-based visual diff is within a threshold (when snapshot pipeline is available)
+- [x] Regression tests for:
   - [x] LZWDecode streams (`src/pdf/native/filters/lzw.spec.ts`)
   - [x] indirect `/Length` streams with binary payloads containing `endstream` (`src/pdf/native/object-parser.spec.ts`)
   - [x] PDFs with `/Rotate` and `CropBox` (`src/pdf/native/document.spec.ts`)
@@ -244,4 +272,10 @@ Current behavior: `Info` uses `PdfString.text` which is BOM-aware, otherwise Lat
 ## 11) Operational checks
 
 - [ ] Performance: large PDFs (page count, ObjStm-heavy, large image streams)
+  - [ ] Add a bun CLI benchmark script that parses a caller-provided PDF file path and prints timings (parse, xref, content parse, image decode)
+  - [ ] Add at least one deterministic “stress” fixture generator (PDFKit) to create many pages and many XObjects without checking in huge binaries
+  - [ ] Add a perf baseline doc entry (expected runtime on a reference machine) so regressions are obvious
 - [ ] Memory: avoid full-document decoding where possible; keep caching bounded
+  - [ ] Document current caching behavior (streams/images/fonts) and intended upper bounds
+  - [ ] Add a stress-runner script that reports peak memory usage while parsing/decoding a large generated fixture
+  - [ ] Ensure large image streams are not duplicated unnecessarily (stream bytes → decoded pixels → PNG)

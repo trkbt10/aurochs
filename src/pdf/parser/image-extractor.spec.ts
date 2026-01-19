@@ -6,6 +6,7 @@ import { parsePdf } from "./pdf-parser";
 import { convertToRgba } from "../converter/pixel-converter";
 import { base64ToArrayBuffer } from "../../buffer/base64";
 import jpeg from "jpeg-js";
+import { decodeJpxNative } from "./jpeg2000/jpx-decode.native";
 import { loadXRef } from "../native/xref";
 import { createPdfResolver } from "../native/resolver";
 import type { PdfObject } from "../native/types";
@@ -967,6 +968,30 @@ describe("image-extractor (JPXDecode)", () => {
     const images = doc.pages.flatMap((p) => p.elements.filter((e) => e.type === "image"));
     expect(images).toHaveLength(1);
     expect(Array.from(images[0]!.alpha ?? [])).toEqual([0, 255]);
+  });
+
+  it("decodes /JPXDecode images via decodeJpxNative (pure TS)", async () => {
+    const jp2Base64 =
+      "AAAADGpQICANCocKAAAAFGZ0eXBqcDIgAAAAAGpwMiAAAAAtanAyaAAAABZpaGRyAAAAAQAAAAIAAwcHAAAAAAAPY29scgEAAAAAABAAAACYanAyY/9P/1EALwAAAAAAAgAAAAEAAAAAAAAAAAAAAAIAAAABAAAAAAAAAAAAAwcBAQcBAQcBAf9SAAwAAAABAAAEBAAB/1wABEBA/2QAJQABQ3JlYXRlZCBieSBPcGVuSlBFRyB2ZXJzaW9uIDIuNS40/5AACgAAAAAAIAAB/5PfgCALsop/34AYBaLd34AQCT//2Q==";
+    const jp2Bytes = new Uint8Array(base64ToArrayBuffer(jp2Base64));
+    const jpxHex = asciiHexEncodeBytes(jp2Bytes);
+
+    const pdfBytes = buildMinimalPdfWithImageXObject({
+      imageStreamAscii: jpxHex,
+      imageDictEntries:
+        "/Type /XObject /Subtype /Image /Name /Im1 /Width 2 /Height 1 " +
+        "/BitsPerComponent 8 /ColorSpace /DeviceRGB " +
+        "/Filter [/ASCIIHexDecode /JPXDecode]",
+    });
+
+    const doc = await parsePdf(pdfBytes, { jpxDecode: decodeJpxNative });
+    const images = doc.pages.flatMap((p) => p.elements.filter((e) => e.type === "image"));
+    expect(images).toHaveLength(1);
+
+    const image = images[0]!;
+    const rgba = convertToRgba(image.data, 2, 1, image.colorSpace, image.bitsPerComponent);
+    expect(Array.from(rgba.slice(0, 4))).toEqual([255, 0, 0, 255]);
+    expect(Array.from(rgba.slice(4, 8))).toEqual([0, 255, 0, 255]);
   });
 });
 
