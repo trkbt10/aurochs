@@ -7,6 +7,11 @@ import { createDefaultGraphicsState } from "../domain";
 import { deg, pt, px } from "../../ooxml/domain/units";
 import { convertTextToShape, convertGroupedTextToShape } from "./text-to-shapes";
 import type { GroupedText } from "./text-grouping/types";
+import { createFitContext } from "./transform-converter";
+
+function createContext(pdfWidth: number, pdfHeight: number, slideWidth: number, slideHeight: number) {
+  return createFitContext(pdfWidth, pdfHeight, px(slideWidth), px(slideHeight), "stretch");
+}
 
 function createGraphicsState(fillColor: PdfColor, fillAlpha: number = 1): PdfGraphicsState {
   return {
@@ -35,12 +40,7 @@ describe("convertTextToShape", () => {
       graphicsState,
     };
 
-    const context = {
-      pdfWidth: 200,
-      pdfHeight: 400,
-      slideWidth: px(400),
-      slideHeight: px(800),
-    } as const;
+    const context = createContext(200, 400, 400, 800);
 
     const shape = convertTextToShape(pdfText, context, "1");
 
@@ -90,7 +90,7 @@ describe("convertTextToShape", () => {
               type: "text",
               text: "Hello",
               properties: {
-                fontSize: pt(12),
+                fontSize: pt(18),
                 fontFamily: "ArialMT",
                 fill: {
                   type: "solidFill",
@@ -109,12 +109,7 @@ describe("convertTextToShape", () => {
   });
 
   describe("Y coordinate conversion (baseline → top edge)", () => {
-    const context = {
-      pdfWidth: 100,
-      pdfHeight: 100,
-      slideWidth: px(100),
-      slideHeight: px(100),
-    } as const;
+    const context = createContext(100, 100, 100, 100);
 
     it.each([
       { name: "page top", y: 90, height: 10, fontSize: 10, expectedY: 0 },
@@ -156,7 +151,7 @@ describe("convertTextToShape", () => {
       const run = shape.textBody?.paragraphs[0]?.runs[0];
       if (!run || run.type !== "text") {throw new Error("Expected text run");}
       if (!run.properties) {throw new Error("Expected run properties");}
-      expect(run.properties.fontSize).toEqual(pt(fontSize));
+      expect(run.properties.fontSize).toEqual(pt(fontSize * context.fontSizeScale));
     });
 
     it("keeps multiline text as-is and uses the whole block height for baseline-to-top conversion", () => {
@@ -196,13 +191,13 @@ describe("convertTextToShape", () => {
       graphicsState: createGraphicsState({ colorSpace: "DeviceGray", components: [0] as const }),
     };
 
-    const context = { pdfWidth: 100, pdfHeight: 100, slideWidth: px(100), slideHeight: px(100) } as const;
+    const context = createContext(100, 100, 100, 100);
     expect(() => convertTextToShape(pdfText, context, "")).toThrow("shapeId is required");
   });
 
   it("throws for invalid text bounds and font size", () => {
     const g = createGraphicsState({ colorSpace: "DeviceGray", components: [0] as const });
-    const context = { pdfWidth: 100, pdfHeight: 100, slideWidth: px(100), slideHeight: px(100) } as const;
+    const context = createContext(100, 100, 100, 100);
 
     expect(() =>
       convertTextToShape({ type: "text", text: "X", x: 0, y: 0, width: -1, height: 10, fontName: "ArialMT", fontSize: 10, graphicsState: g }, context, "1")
@@ -219,7 +214,7 @@ describe("convertTextToShape", () => {
 
   it("detects bold/italic from PDF font names", () => {
     const g = createGraphicsState({ colorSpace: "DeviceGray", components: [0] as const });
-    const context = { pdfWidth: 100, pdfHeight: 100, slideWidth: px(100), slideHeight: px(100) } as const;
+    const context = createContext(100, 100, 100, 100);
 
     const shape = convertTextToShape(
       {
@@ -246,7 +241,7 @@ describe("convertTextToShape", () => {
 
   describe("script type detection for font elements", () => {
     const g = createGraphicsState({ colorSpace: "DeviceGray", components: [0] as const });
-    const context = { pdfWidth: 100, pdfHeight: 100, slideWidth: px(100), slideHeight: px(100) } as const;
+    const context = createContext(100, 100, 100, 100);
 
     it("sets fontFamilyEastAsian for Japanese font (MS Gothic)", () => {
       const shape = convertTextToShape(
@@ -510,7 +505,7 @@ describe("convertTextToShape", () => {
   });
 
   describe("charSpacing conversion", () => {
-    const context = { pdfWidth: 100, pdfHeight: 100, slideWidth: px(100), slideHeight: px(100) } as const;
+    const context = createContext(100, 100, 100, 100);
     const g = createGraphicsState({ colorSpace: "DeviceGray", components: [0] as const });
 
     it("converts positive charSpacing to PPTX spacing", () => {
@@ -531,9 +526,9 @@ describe("convertTextToShape", () => {
       const run = shape.textBody?.paragraphs[0]?.runs[0];
       if (!run || run.type !== "text") {throw new Error("Expected text run");}
 
-      // 2 points * (96/72) = 2.67 pixels
+      // Spacing is converted from PDF points to slide pixels using the same X scale as coordinates.
       expect(run.properties?.spacing).toBeDefined();
-      expect((run.properties?.spacing as number)).toBeCloseTo(2 * (96 / 72), 1);
+      expect((run.properties?.spacing as number)).toBeCloseTo(2 * context.scaleX, 6);
     });
 
     it("applies horizontalScaling to spacing", () => {
@@ -555,9 +550,9 @@ describe("convertTextToShape", () => {
       const run = shape.textBody?.paragraphs[0]?.runs[0];
       if (!run || run.type !== "text") {throw new Error("Expected text run");}
 
-      // 2 points * 1.5 * (96/72) = 4 pixels
+      // Apply horizontal scaling (Tz) and then convert using the X scale.
       expect(run.properties?.spacing).toBeDefined();
-      expect((run.properties?.spacing as number)).toBeCloseTo(2 * 1.5 * (96 / 72), 1);
+      expect((run.properties?.spacing as number)).toBeCloseTo(2 * 1.5 * context.scaleX, 6);
     });
 
     it("omits spacing when charSpacing is 0", () => {
@@ -603,7 +598,7 @@ describe("convertTextToShape", () => {
   });
 
   describe("wordSpacing conversion", () => {
-    const context = { pdfWidth: 100, pdfHeight: 100, slideWidth: px(100), slideHeight: px(100) } as const;
+    const context = createContext(100, 100, 100, 100);
     const g = createGraphicsState({ colorSpace: "DeviceGray", components: [0] as const });
 
     it("ignores wordSpacing alone (only charSpacing is used)", () => {
@@ -650,9 +645,9 @@ describe("convertTextToShape", () => {
       const run = shape.textBody?.paragraphs[0]?.runs[0];
       if (!run || run.type !== "text") {throw new Error("Expected text run");}
 
-      // Only charSpacing: 2 points = 2 * (96/72) ≈ 2.67 pixels
+      // Only charSpacing is used and converted using the X scale.
       expect(run.properties?.spacing).toBeDefined();
-      expect((run.properties?.spacing as number)).toBeCloseTo(2 * (96 / 72), 1);
+      expect((run.properties?.spacing as number)).toBeCloseTo(2 * context.scaleX, 6);
     });
 
     it("ignores wordSpacing when text has no spaces", () => {
@@ -679,7 +674,7 @@ describe("convertTextToShape", () => {
   });
 
   describe("spacing validation", () => {
-    const context = { pdfWidth: 100, pdfHeight: 100, slideWidth: px(100), slideHeight: px(100) } as const;
+    const context = createContext(100, 100, 100, 100);
     const g = createGraphicsState({ colorSpace: "DeviceGray", components: [0] as const });
 
     it("omits negligible spacing (less than 0.1px)", () => {
@@ -720,12 +715,7 @@ describe("convertGroupedTextToShape", () => {
     ...overrides,
   });
 
-  const context = {
-    pdfWidth: 100,
-    pdfHeight: 100,
-    slideWidth: px(100),
-    slideHeight: px(100),
-  } as const;
+  const context = createContext(100, 100, 100, 100);
 
   it("converts single-paragraph group to SpShape", () => {
     const group: GroupedText = {
@@ -748,9 +738,8 @@ describe("convertGroupedTextToShape", () => {
     expect(run.text).toBe("Hello");
   });
 
-  it("flattens consecutive lines into single paragraph for text wrapping", () => {
-    // Lines with normal line spacing (baselineDistance ≈ fontSize) are flattened
-    // This enables proper text wrapping in PPTX
+  it("converts consecutive lines into separate paragraphs to preserve layout", () => {
+    // Preserve PDF line structure using paragraph spacing/margins (avoid PPTX reflow).
     const group: GroupedText = {
       bounds: { x: 10, y: 76, width: 100, height: 24 },
       paragraphs: [
@@ -767,11 +756,12 @@ describe("convertGroupedTextToShape", () => {
 
     const shape = convertGroupedTextToShape(group, context, "1");
 
-    // Both lines should be flattened into 1 paragraph for text wrapping
-    expect(shape.textBody?.paragraphs).toHaveLength(1);
-    expect(shape.textBody?.paragraphs[0].runs).toHaveLength(2);
+    // Two PDF lines -> two PPTX paragraphs
+    expect(shape.textBody?.paragraphs).toHaveLength(2);
+    expect(shape.textBody?.paragraphs[0]?.runs).toHaveLength(1);
+    expect(shape.textBody?.paragraphs[1]?.runs).toHaveLength(1);
     const run1 = shape.textBody?.paragraphs[0].runs[0];
-    const run2 = shape.textBody?.paragraphs[0].runs[1];
+    const run2 = shape.textBody?.paragraphs[1].runs[0];
     if (!run1 || run1.type !== "text") {throw new Error("Expected text run");}
     if (!run2 || run2.type !== "text") {throw new Error("Expected text run");}
     expect(run1.text).toBe("Line 1");
@@ -826,13 +816,10 @@ describe("convertGroupedTextToShape", () => {
 
     const shape = convertGroupedTextToShape(group, context, "1");
 
-    expect(shape.textBody?.paragraphs[0].runs).toHaveLength(2);
-    const run1 = shape.textBody?.paragraphs[0].runs[0];
-    const run2 = shape.textBody?.paragraphs[0].runs[1];
-    if (!run1 || run1.type !== "text") {throw new Error("Expected text run");}
-    if (!run2 || run2.type !== "text") {throw new Error("Expected text run");}
-    expect(run1.text).toBe("Hello ");
-    expect(run2.text).toBe("World");
+    expect(shape.textBody?.paragraphs[0].runs).toHaveLength(1);
+    const run = shape.textBody?.paragraphs[0].runs[0];
+    if (!run || run.type !== "text") {throw new Error("Expected text run");}
+    expect(run.text).toBe("Hello World");
   });
 
   it("throws when shapeId is empty", () => {

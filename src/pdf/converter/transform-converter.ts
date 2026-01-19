@@ -10,16 +10,35 @@ import { decomposeMatrix } from "../domain/coordinate/matrix";
 import type { Pixels } from "../../ooxml/domain/units";
 import { deg, px } from "../../ooxml/domain/units";
 import type { Transform } from "../../pptx/domain/geometry";
+import { PT_TO_PX } from "../domain/constants";
 
 export type ConversionContext = {
   /** PDFページ幅（ポイント） */
   readonly pdfWidth: number;
   /** PDFページ高さ（ポイント） */
   readonly pdfHeight: number;
-  /** ターゲットスライド幅（ピクセル） */
+  /** Effective slide content width (pixels) */
   readonly slideWidth: Pixels;
-  /** ターゲットスライド高さ（ピクセル） */
+  /** Effective slide content height (pixels) */
   readonly slideHeight: Pixels;
+  /** X offset within slide (centering for contain/cover) */
+  readonly offsetX: Pixels;
+  /** Y offset within slide (centering for contain/cover) */
+  readonly offsetY: Pixels;
+  /** X scale factor: PDF pt -> slide px */
+  readonly scaleX: number;
+  /** Y scale factor: PDF pt -> slide px */
+  readonly scaleY: number;
+  /**
+   * Font size scale factor: PDF pt -> PPTX pt.
+   *
+   * PPTX font sizes are stored in points but rendered in pixels as:
+   * `fontSizePx = fontSizePt * PT_TO_PX`.
+   *
+   * We need `fontSizePx` to follow the coordinate scaling (PDF pt -> slide px),
+   * therefore `fontSizePt = pdfFontSizePt * (scale / PT_TO_PX)`.
+   */
+  readonly fontSizeScale: number;
 };
 
 type TransformComponents = {
@@ -129,16 +148,16 @@ function getScale(context: ConversionContext): { readonly scaleX: number; readon
   if (!Number.isFinite(context.pdfHeight) || context.pdfHeight <= 0) {
     throw new Error(`Invalid pdfHeight: ${context.pdfHeight}`);
   }
-  if (!Number.isFinite(context.slideWidth as number) || (context.slideWidth as number) <= 0) {
-    throw new Error(`Invalid slideWidth: ${context.slideWidth as number}`);
+  if (!Number.isFinite(context.scaleX) || context.scaleX <= 0) {
+    throw new Error(`Invalid scaleX: ${context.scaleX}`);
   }
-  if (!Number.isFinite(context.slideHeight as number) || (context.slideHeight as number) <= 0) {
-    throw new Error(`Invalid slideHeight: ${context.slideHeight as number}`);
+  if (!Number.isFinite(context.scaleY) || context.scaleY <= 0) {
+    throw new Error(`Invalid scaleY: ${context.scaleY}`);
   }
 
   return {
-    scaleX: (context.slideWidth as number) / context.pdfWidth,
-    scaleY: (context.slideHeight as number) / context.pdfHeight,
+    scaleX: context.scaleX,
+    scaleY: context.scaleY,
   };
 }
 
@@ -152,8 +171,8 @@ export function convertPoint(
   const { scaleX, scaleY } = getScale(context);
 
   return {
-    x: px(point.x * scaleX),
-    y: px((context.pdfHeight - point.y) * scaleY),
+    x: px((context.offsetX as number) + point.x * scaleX),
+    y: px((context.offsetY as number) + (context.pdfHeight - point.y) * scaleY),
   };
 }
 
@@ -373,10 +392,6 @@ export function createFitContext(
   slideHeight: Pixels,
   fit: "contain" | "cover" | "stretch" = "contain"
 ): ConversionContext {
-  if (fit === "stretch") {
-    return { pdfWidth, pdfHeight, slideWidth, slideHeight };
-  }
-
   if (!Number.isFinite(pdfWidth) || pdfWidth <= 0) {
     throw new Error(`Invalid pdfWidth: ${pdfWidth}`);
   }
@@ -384,29 +399,65 @@ export function createFitContext(
     throw new Error(`Invalid pdfHeight: ${pdfHeight}`);
   }
 
-  const pdfAspect = pdfWidth / pdfHeight;
-  const slideAspect = (slideWidth as number) / (slideHeight as number);
+  const targetW = slideWidth as number;
+  const targetH = slideHeight as number;
+  if (!Number.isFinite(targetW) || targetW <= 0) {
+    throw new Error(`Invalid slideWidth: ${targetW}`);
+  }
+  if (!Number.isFinite(targetH) || targetH <= 0) {
+    throw new Error(`Invalid slideHeight: ${targetH}`);
+  }
 
-  const effective = { width: slideWidth as number, height: slideHeight as number };
+  if (fit === "stretch") {
+    const scaleX = targetW / pdfWidth;
+    const scaleY = targetH / pdfHeight;
+    const fontScale = Math.min(scaleX, scaleY) / PT_TO_PX;
+
+    return {
+      pdfWidth,
+      pdfHeight,
+      slideWidth,
+      slideHeight,
+      offsetX: px(0),
+      offsetY: px(0),
+      scaleX,
+      scaleY,
+      fontSizeScale: fontScale,
+    };
+  }
+
+  const pdfAspect = pdfWidth / pdfHeight;
+  const slideAspect = targetW / targetH;
+
+  const effective = { width: targetW, height: targetH };
 
   if (fit === "contain") {
     if (pdfAspect > slideAspect) {
-      effective.height = (slideWidth as number) / pdfAspect;
+      effective.height = targetW / pdfAspect;
     } else {
-      effective.width = (slideHeight as number) * pdfAspect;
+      effective.width = targetH * pdfAspect;
     }
   } else {
     if (pdfAspect > slideAspect) {
-      effective.width = (slideHeight as number) * pdfAspect;
+      effective.width = targetH * pdfAspect;
     } else {
-      effective.height = (slideWidth as number) / pdfAspect;
+      effective.height = targetW / pdfAspect;
     }
   }
+
+  const scaleX = effective.width / pdfWidth;
+  const scaleY = effective.height / pdfHeight;
+  const fontScale = Math.min(scaleX, scaleY) / PT_TO_PX;
 
   return {
     pdfWidth,
     pdfHeight,
     slideWidth: px(effective.width),
     slideHeight: px(effective.height),
+    offsetX: px((targetW - effective.width) / 2),
+    offsetY: px((targetH - effective.height) / 2),
+    scaleX,
+    scaleY,
+    fontSizeScale: fontScale,
   };
 }

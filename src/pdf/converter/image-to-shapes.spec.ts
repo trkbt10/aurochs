@@ -8,15 +8,11 @@ import { px } from "../../ooxml/domain/units";
 import { base64ArrayBuffer, base64ToArrayBuffer } from "../../buffer/base64";
 import { parseDataUrl, toDataUrl } from "../../buffer/data-url";
 import { convertImageToShape } from "./image-to-shapes";
+import { createFitContext } from "./transform-converter";
 
 const graphicsState = createDefaultGraphicsState();
 
-const context = {
-  pdfWidth: 100,
-  pdfHeight: 100,
-  slideWidth: px(100),
-  slideHeight: px(100),
-} as const;
+const context = createFitContext(100, 100, px(100), px(100), "stretch");
 
 describe("convertImageToShape", () => {
   it("creates a pic shape with data URL resourceId (PNG format)", () => {

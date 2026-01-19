@@ -5,6 +5,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { execFileSync } from "node:child_process";
 import { Resvg } from "@resvg/resvg-js";
 import pixelmatch from "pixelmatch";
 import { PNG } from "pngjs";
@@ -74,25 +75,65 @@ function savePng(png: PNG, filePath: string): void {
 
 /**
  * Resize PNG to match target dimensions
- * Uses simple nearest-neighbor for now
+ * Uses bilinear sampling (good default for downscale/upscale).
  */
 function resizePng(png: PNG, targetWidth: number, targetHeight: number): PNG {
   const resized = new PNG({ width: targetWidth, height: targetHeight });
 
-  const xRatio = png.width / targetWidth;
-  const yRatio = png.height / targetHeight;
+  if (targetWidth <= 0 || targetHeight <= 0) {
+    throw new Error(`Invalid target size: ${targetWidth}x${targetHeight}`);
+  }
+  if (png.width <= 0 || png.height <= 0) {
+    throw new Error(`Invalid source size: ${png.width}x${png.height}`);
+  }
+
+  const xScale = png.width / targetWidth;
+  const yScale = png.height / targetHeight;
+
+  const sample = (sx: number, sy: number): { r: number; g: number; b: number; a: number } => {
+    const x0 = Math.max(0, Math.min(png.width - 1, Math.floor(sx)));
+    const y0 = Math.max(0, Math.min(png.height - 1, Math.floor(sy)));
+    const x1 = Math.max(0, Math.min(png.width - 1, x0 + 1));
+    const y1 = Math.max(0, Math.min(png.height - 1, y0 + 1));
+
+    const tx = sx - x0;
+    const ty = sy - y0;
+
+    const idx00 = (y0 * png.width + x0) * 4;
+    const idx10 = (y0 * png.width + x1) * 4;
+    const idx01 = (y1 * png.width + x0) * 4;
+    const idx11 = (y1 * png.width + x1) * 4;
+
+    const lerp = (a: number, b: number, t: number): number => a + (b - a) * t;
+
+    const r0 = lerp(png.data[idx00], png.data[idx10], tx);
+    const r1 = lerp(png.data[idx01], png.data[idx11], tx);
+    const g0 = lerp(png.data[idx00 + 1], png.data[idx10 + 1], tx);
+    const g1 = lerp(png.data[idx01 + 1], png.data[idx11 + 1], tx);
+    const b0 = lerp(png.data[idx00 + 2], png.data[idx10 + 2], tx);
+    const b1 = lerp(png.data[idx01 + 2], png.data[idx11 + 2], tx);
+    const a0 = lerp(png.data[idx00 + 3], png.data[idx10 + 3], tx);
+    const a1 = lerp(png.data[idx01 + 3], png.data[idx11 + 3], tx);
+
+    return {
+      r: lerp(r0, r1, ty),
+      g: lerp(g0, g1, ty),
+      b: lerp(b0, b1, ty),
+      a: lerp(a0, a1, ty),
+    };
+  };
 
   for (let y = 0; y < targetHeight; y++) {
+    // sample at pixel center
+    const sy = (y + 0.5) * yScale - 0.5;
     for (let x = 0; x < targetWidth; x++) {
-      const srcX = Math.floor(x * xRatio);
-      const srcY = Math.floor(y * yRatio);
-      const srcIdx = (srcY * png.width + srcX) * 4;
+      const sx = (x + 0.5) * xScale - 0.5;
+      const c = sample(sx, sy);
       const dstIdx = (y * targetWidth + x) * 4;
-
-      resized.data[dstIdx] = png.data[srcIdx];
-      resized.data[dstIdx + 1] = png.data[srcIdx + 1];
-      resized.data[dstIdx + 2] = png.data[srcIdx + 2];
-      resized.data[dstIdx + 3] = png.data[srcIdx + 3];
+      resized.data[dstIdx] = Math.round(c.r);
+      resized.data[dstIdx + 1] = Math.round(c.g);
+      resized.data[dstIdx + 2] = Math.round(c.b);
+      resized.data[dstIdx + 3] = Math.round(c.a);
     }
   }
 
@@ -228,6 +269,209 @@ export type DetailedCompareResult = {
   width: number;
   height: number;
 } & CompareResult
+
+export type PdfBaselineOptions = {
+  readonly pdfPath: string;
+  /** 1-based page number */
+  readonly pageNumber: number;
+  /** Render DPI for `pdftoppm` (default: 144) */
+  readonly dpi?: number;
+  /** Target output dimensions (e.g. slide size) */
+  readonly targetWidth: number;
+  readonly targetHeight: number;
+  /**
+   * Oversampling factor for both baseline and actual before downscaling to target.
+   *
+   * This reduces false-positive diffs caused by different rasterization/downscale
+   * implementations between `pdftoppm` and `resvg`.
+   *
+   * Use `1` to disable.
+   */
+  readonly renderScale?: number;
+  /** Fit mode for baseline into target (default: contain) */
+  readonly fit?: "contain";
+  /** Background for the target canvas (default: white) */
+  readonly background?: { r: number; g: number; b: number; a: number };
+};
+
+function fileExists(p: string): boolean {
+  try {
+    fs.accessSync(p);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function renderPdfPageToPngPath(
+  pdfPath: string,
+  pageNumber: number,
+  dpi: number,
+  outPrefix: string,
+): string {
+  try {
+    execFileSync("pdftoppm", [
+      "-png",
+      "-r",
+      String(dpi),
+      "-f",
+      String(pageNumber),
+      "-l",
+      String(pageNumber),
+      "-singlefile",
+      pdfPath,
+      outPrefix,
+    ], { stdio: "ignore" });
+  } catch (err) {
+    throw new Error(`pdftoppm failed (install poppler). pdf=${pdfPath}`, { cause: err as Error });
+  }
+
+  const outPath = `${outPrefix}.png`;
+  if (!fileExists(outPath)) {
+    throw new Error(`pdftoppm did not produce output: ${outPath}`);
+  }
+  return outPath;
+}
+
+function fillPng(png: PNG, bg: { r: number; g: number; b: number; a: number }): void {
+  for (let y = 0; y < png.height; y++) {
+    for (let x = 0; x < png.width; x++) {
+      const i = (y * png.width + x) * 4;
+      png.data[i] = bg.r;
+      png.data[i + 1] = bg.g;
+      png.data[i + 2] = bg.b;
+      png.data[i + 3] = bg.a;
+    }
+  }
+}
+
+function blitPng(src: PNG, dst: PNG, dx: number, dy: number): void {
+  for (let y = 0; y < src.height; y++) {
+    const ty = y + dy;
+    if (ty < 0 || ty >= dst.height) {continue;}
+    for (let x = 0; x < src.width; x++) {
+      const tx = x + dx;
+      if (tx < 0 || tx >= dst.width) {continue;}
+      const si = (y * src.width + x) * 4;
+      const di = (ty * dst.width + tx) * 4;
+      dst.data[di] = src.data[si];
+      dst.data[di + 1] = src.data[si + 1];
+      dst.data[di + 2] = src.data[si + 2];
+      dst.data[di + 3] = src.data[si + 3];
+    }
+  }
+}
+
+function renderPdfBaselineToTarget(
+  pdfPng: PNG,
+  targetWidth: number,
+  targetHeight: number,
+  bg: { r: number; g: number; b: number; a: number },
+): PNG {
+  const canvas = new PNG({ width: targetWidth, height: targetHeight });
+  fillPng(canvas, bg);
+
+  const scale = Math.min(targetWidth / pdfPng.width, targetHeight / pdfPng.height);
+  const w = Math.max(1, Math.round(pdfPng.width * scale));
+  const h = Math.max(1, Math.round(pdfPng.height * scale));
+
+  const resized = resizePng(pdfPng, w, h);
+  const dx = Math.round((targetWidth - w) / 2);
+  const dy = Math.round((targetHeight - h) / 2);
+  blitPng(resized, canvas, dx, dy);
+  return canvas;
+}
+
+export type PdfCompareResult = {
+  baselinePath: string;
+} & Omit<DetailedCompareResult, "snapshotPath">
+
+/**
+ * Compare rendered SVG against a PDF page baseline (pdftoppm), fit to a target canvas.
+ *
+ * This avoids LibreOffice and compares directly to the original PDF page raster.
+ */
+export function compareSvgToPdfBaseline(
+  svg: string,
+  snapshotName: string,
+  slideNumber: number,
+  baseline: PdfBaselineOptions,
+  options: CompareOptions = {},
+): PdfCompareResult {
+  ensureDirs();
+
+  const { threshold = 0.1, maxDiffPercent = 0.1, includeAA = false } = options;
+  const dpi = baseline.dpi ?? 144;
+  const bg = baseline.background ?? { r: 255, g: 255, b: 255, a: 255 };
+  const renderScale = baseline.renderScale ?? 1;
+  if (!Number.isFinite(renderScale) || renderScale <= 0) {
+    throw new Error(`Invalid renderScale: ${renderScale}`);
+  }
+  const scaleInt = Math.max(1, Math.round(renderScale));
+  const scaledTargetWidth = Math.max(1, Math.round(baseline.targetWidth * scaleInt));
+  const scaledTargetHeight = Math.max(1, Math.round(baseline.targetHeight * scaleInt));
+
+  const pdfPngPath = renderPdfPageToPngPath(
+    baseline.pdfPath,
+    baseline.pageNumber,
+    dpi,
+    path.join(OUTPUT_DIR, `${snapshotName}-pdf-page-${baseline.pageNumber}-dpi${dpi}`),
+  );
+
+  const pdfPng = loadPng(pdfPngPath);
+  const fittedBaselineHigh = renderPdfBaselineToTarget(pdfPng, scaledTargetWidth, scaledTargetHeight, bg);
+  const fittedBaseline = scaleInt === 1
+    ? fittedBaselineHigh
+    : resizePng(fittedBaselineHigh, baseline.targetWidth, baseline.targetHeight);
+
+  const baselinePath = path.join(OUTPUT_DIR, `${snapshotName}-baseline.png`);
+  savePng(fittedBaseline, baselinePath);
+
+  const actualPngHigh = svgToPng(svg, scaledTargetWidth);
+  let actualHigh: PNG = PNG.sync.read(actualPngHigh);
+  if (actualHigh.width !== scaledTargetWidth || actualHigh.height !== scaledTargetHeight) {
+    actualHigh = resizePng(actualHigh, scaledTargetWidth, scaledTargetHeight);
+  }
+  const actual = scaleInt === 1 ? actualHigh : resizePng(actualHigh, baseline.targetWidth, baseline.targetHeight);
+
+  const actualPath = path.join(OUTPUT_DIR, `${snapshotName}-slide-${slideNumber}.png`);
+  savePng(actual, actualPath);
+
+  const diff = new PNG({ width: baseline.targetWidth, height: baseline.targetHeight });
+
+  const diffPixels = pixelmatch(
+    fittedBaseline.data,
+    actual.data,
+    diff.data,
+    baseline.targetWidth,
+    baseline.targetHeight,
+    { threshold, includeAA },
+  );
+
+  const totalPixels = baseline.targetWidth * baseline.targetHeight;
+  const diffPercent = (diffPixels / totalPixels) * 100;
+  const match = diffPercent <= maxDiffPercent;
+
+  let diffImagePath: string | null = null;
+  if (diffPixels > 0) {
+    diffImagePath = path.join(DIFF_DIR, `${snapshotName}-slide-${slideNumber}-diff.png`);
+    savePng(diff, diffImagePath);
+  }
+
+  return {
+    snapshotName,
+    slideNumber,
+    baselinePath,
+    actualPath,
+    width: baseline.targetWidth,
+    height: baseline.targetHeight,
+    match,
+    diffPixels,
+    diffPercent,
+    totalPixels,
+    diffImagePath,
+  };
+}
 
 /**
  * Compare SVG output against PDF-generated baseline with detailed reporting

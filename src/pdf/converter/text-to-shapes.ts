@@ -6,7 +6,7 @@ import type { PdfText } from "../domain";
 import type { SpShape } from "../../pptx/domain/shape";
 import type { Paragraph, TextBody, TextRun } from "../../pptx/domain/text";
 import type { Pixels, Points } from "../../ooxml/domain/units";
-import { deg, pct, pt, px } from "../../ooxml/domain/units";
+import { deg, pt, px } from "../../ooxml/domain/units";
 import type { ConversionContext } from "./transform-converter";
 import { convertPoint, convertSize } from "./transform-converter";
 import { convertFill } from "./color-converter";
@@ -86,7 +86,7 @@ export function convertTextToShape(
     size,
     context
   );
-  const textBody = createTextBody(pdfText);
+  const textBody = createTextBody(pdfText, context);
 
   return {
     type: "sp",
@@ -121,8 +121,8 @@ export function convertTextToShape(
  *
  * Sets insets to 0 for precise text positioning.
  */
-function createTextBody(pdfText: PdfText): TextBody {
-  const paragraph = createParagraph(pdfText);
+function createTextBody(pdfText: PdfText, context: ConversionContext): TextBody {
+  const paragraph = createParagraph(pdfText, context);
 
   return {
     bodyProperties: {
@@ -144,8 +144,8 @@ function createTextBody(pdfText: PdfText): TextBody {
 /**
  * Paragraphを構築
  */
-function createParagraph(pdfText: PdfText): Paragraph {
-  const textRun = createTextRun(pdfText);
+function createParagraph(pdfText: PdfText, context: ConversionContext): Paragraph {
+  const textRun = createPptxTextRunFromPdfText(pdfText, context);
 
   return {
     properties: {
@@ -213,11 +213,12 @@ function detectScriptTypeFromCIDOrdering(ordering: CIDOrdering | undefined): Scr
  *    - Analyzes text content to determine script type
  *    - Based on Unicode Standard character classifications
  */
-function createTextRun(pdfText: PdfText): TextRun {
+export function createPptxTextRunFromPdfText(pdfText: PdfText, context: ConversionContext): TextRun {
   const normalizedName = normalizeFontName(pdfText.fontName);
   const spacing = convertSpacing(
     pdfText.charSpacing,
-    pdfText.horizontalScaling
+    pdfText.horizontalScaling,
+    context
   );
 
   // Use isBold/isItalic from PdfText if available (from FontDescriptor),
@@ -240,7 +241,7 @@ function createTextRun(pdfText: PdfText): TextRun {
     type: "text",
     text: pdfText.text,
     properties: {
-      fontSize: convertFontSize(pdfText.fontSize),
+      fontSize: convertFontSize(pdfText.fontSize, context),
       // Always set a:latin as base font
       fontFamily: mappedFontName,
       // Set a:ea for East Asian fonts (ECMA-376 21.1.2.3.3)
@@ -265,11 +266,15 @@ function createTextRun(pdfText: PdfText): TextRun {
  * PDFとPPTXは共にポイント単位
  * 内部のPoints型は実際のポイント値を保持する
  */
-function convertFontSize(pdfFontSize: number): Points {
+function convertFontSize(pdfFontSize: number, context: ConversionContext): Points {
   if (!Number.isFinite(pdfFontSize) || pdfFontSize <= 0) {
     throw new Error(`Invalid pdfFontSize: ${pdfFontSize}`);
   }
-  return pt(pdfFontSize);
+  const scaled = pdfFontSize * context.fontSizeScale;
+  if (!Number.isFinite(scaled) || scaled <= 0) {
+    throw new Error(`Invalid scaled font size: ${scaled} (pdf=${pdfFontSize}, scale=${context.fontSizeScale})`);
+  }
+  return pt(scaled);
 }
 
 /**
@@ -305,7 +310,8 @@ const SPACING_MAX_PX = 1000 * PT_TO_PX;
  */
 function convertSpacing(
   charSpacing: number | undefined,
-  horizontalScaling: number | undefined
+  horizontalScaling: number | undefined,
+  context: ConversionContext,
 ): Pixels | undefined {
   // Early return if no charSpacing
   if (charSpacing === undefined || charSpacing === 0) {
@@ -321,8 +327,9 @@ function convertSpacing(
     return undefined;
   }
 
-  // Convert from PDF points to CSS pixels
-  const spacingPx = spacingPts * PT_TO_PX;
+  // Convert from PDF points to slide pixels
+  // (spacing is a horizontal property, so use the X scale factor)
+  const spacingPx = spacingPts * context.scaleX;
 
   return validateAndClampSpacing(spacingPx);
 }
@@ -373,30 +380,20 @@ function convertGroupedTextPosition(
 }
 
 /**
- * Threshold for paragraph break detection.
- * If extra space between lines exceeds this ratio of font size,
- * treat it as a new paragraph. Otherwise, flatten into same paragraph.
- */
-const PARAGRAPH_BREAK_THRESHOLD_RATIO = 0.5;
-
-
-/**
  * Create TextBody from grouped paragraphs.
  *
  * Sets insets to 0 to ensure text is positioned exactly at the TextBox origin.
  * PPTX default insets are 0.1 inch (~9.6px), which would cause visible offset.
  *
- * ## Text Wrapping Strategy
+ * ## Text Layout Strategy
  *
- * For text wrapping to work in PPTX, text must be in the SAME paragraph.
- * This function flattens consecutive lines that have normal line spacing
- * into a single PPTX paragraph, enabling proper text wrapping.
+ * PDF text is absolute-positioned, while PPTX text flows within a TextBox.
+ * To keep the layout stable (including after manual resize), we preserve PDF
+ * line breaks as explicit DrawingML breaks (a:br) rather than relying on PPTX
+ * auto-wrapping.
  *
- * Lines are considered part of the same paragraph if:
- * - extraSpace <= fontSize * PARAGRAPH_BREAK_THRESHOLD_RATIO
- *
- * A new paragraph is created only when:
- * - There's significant extra space (actual paragraph break in the PDF)
+ * Logical paragraph breaks are detected by extra vertical space:
+ * - extraSpace > fontSize * PARAGRAPH_BREAK_THRESHOLD_RATIO
  *
  * ## Alignment Strategy
  *
@@ -412,15 +409,15 @@ const PARAGRAPH_BREAK_THRESHOLD_RATIO = 0.5;
  * - Subsequent paragraphs have lower baselineY values
  * - baselineDistance = prevBaselineY - currentBaselineY
  */
-function createTextBodyFromGroup(group: GroupedText): TextBody {
-  // Flatten consecutive lines into logical paragraphs based on spacing
-  const logicalParagraphs = flattenToParagraphs(group.paragraphs);
+function createTextBodyFromGroup(group: GroupedText, context: ConversionContext): TextBody {
+  // Preserve PDF line placement as paragraph geometry (margins, tabs, spacing),
+  // rather than relying on PPTX auto-wrapping/reflow.
+  const logicalParagraphs = buildParagraphsFromSegmentedLines(group.paragraphs, group.bounds, context);
 
   return {
     bodyProperties: {
-      // Use "square" wrapping to enable text wrapping within TextBox bounds
-      // This improves editability in PPTX while maintaining layout from PDF
-      wrapping: "square",
+      wrapping: "none",
+      autoFit: { type: "none" },
       anchor: "top",
       anchorCenter: false,
       // Set all insets to 0 for precise positioning
@@ -437,129 +434,204 @@ function createTextBodyFromGroup(group: GroupedText): TextBody {
 }
 
 /**
- * Flatten GroupedParagraphs (PDF lines) into logical PPTX paragraphs.
+ * Build PPTX paragraphs from PDF lines/segments.
  *
- * Consecutive lines with normal line spacing are combined into one paragraph
- * to enable text wrapping. A new paragraph is created only when there's
- * significant extra space (indicating a real paragraph break).
- *
- * @param groupedParas - PDF paragraphs to flatten
+ * Strategy:
+ * - Reconstruct physical lines by clustering `baselineY`
+ * - Within a line, treat multiple segments (e.g. table columns) as tab-separated
+ * - Use paragraph `marL` for per-line x-offset, and `tabStops` for segment alignment
+ * - Use paragraph `spaceBefore` to preserve extra vertical gaps between baselines
  */
-function flattenToParagraphs(groupedParas: readonly GroupedParagraph[]): Paragraph[] {
+function buildParagraphsFromSegmentedLines(
+  groupedParas: readonly GroupedParagraph[],
+  bounds: { x: number; y: number; width: number; height: number },
+  context: ConversionContext,
+): Paragraph[] {
   if (groupedParas.length === 0) {return [];}
 
   const firstRun = groupedParas[0].runs[0];
   if (!firstRun) {return [];}
 
-  if (groupedParas.length === 1) {
-    return [createFlatParagraph(groupedParas[0].runs, undefined, groupedParas[0].lineSpacing)];
+  type Segment = { readonly paragraph: GroupedParagraph; readonly minX: number };
+  type LogicalLine = {
+    readonly baselineY: number;
+    readonly segments: readonly Segment[];
+    readonly minX: number;
+    readonly fontSize: number;
+  };
+
+  const estimateLineEps = (paras: readonly GroupedParagraph[]): number => {
+    const sizes: number[] = [];
+    for (const p of paras) {
+      const fs = p.runs[0]?.fontSize;
+      if (fs !== undefined && fs > 0) {sizes.push(fs);}
+    }
+    sizes.sort((a, b) => a - b);
+    const med = sizes.length > 0 ? sizes[Math.floor(sizes.length / 2)]! : 12;
+    return Math.max(0.5, med * 0.25);
+  };
+
+  const lineEps = estimateLineEps(groupedParas);
+
+  const sorted = [...groupedParas].sort((a, b) => b.baselineY - a.baselineY);
+
+  const lines: LogicalLine[] = [];
+  let current: { baselineY: number; segments: Segment[] } | null = null;
+
+  for (const p of sorted) {
+    const minX = Math.min(...p.runs.map((r) => r.x));
+    if (!current) {
+      current = { baselineY: p.baselineY, segments: [{ paragraph: p, minX }] };
+      continue;
+    }
+    if (Math.abs(p.baselineY - current.baselineY) <= lineEps) {
+      current.segments.push({ paragraph: p, minX });
+      continue;
+    }
+    // flush
+    const segs = [...current.segments].sort((a, b) => a.minX - b.minX);
+    const lineMinX = segs[0]?.minX ?? 0;
+    const lineFontSize = segs[0]?.paragraph.runs[0]?.fontSize ?? 12;
+    lines.push({ baselineY: current.baselineY, segments: segs, minX: lineMinX, fontSize: lineFontSize });
+    current = { baselineY: p.baselineY, segments: [{ paragraph: p, minX }] };
+  }
+  if (current) {
+    const segs = [...current.segments].sort((a, b) => a.minX - b.minX);
+    const lineMinX = segs[0]?.minX ?? 0;
+    const lineFontSize = segs[0]?.paragraph.runs[0]?.fontSize ?? 12;
+    lines.push({ baselineY: current.baselineY, segments: segs, minX: lineMinX, fontSize: lineFontSize });
   }
 
   const result: Paragraph[] = [];
-  const state: { currentRuns: PdfText[]; spaceBefore: number | undefined; currentLineSpacing: LineSpacingInfo | undefined } = {
-    currentRuns: [...groupedParas[0].runs],
-    spaceBefore: undefined,
-    currentLineSpacing: groupedParas[0].lineSpacing,
+
+  const buildTabStopsForLine = (line: LogicalLine): Paragraph["properties"]["tabStops"] => {
+    if (line.segments.length <= 1) {return undefined;}
+
+    const positionsPx = line.segments
+      .slice(1)
+      .map((s) => convertSize(s.minX - line.minX, 0, context).width)
+      .filter((p) => (p as number) >= 0);
+
+    // De-dupe close positions (within 1px)
+    const sortedPx = [...positionsPx].sort((a, b) => (a as number) - (b as number));
+    const out: { position: Pixels; alignment: "left" }[] = [];
+    for (const pos of sortedPx) {
+      const prev = out[out.length - 1]?.position;
+      if (prev !== undefined && Math.abs((pos as number) - (prev as number)) < 1) {
+        continue;
+      }
+      out.push({ position: pos, alignment: "left" });
+    }
+    return out.length > 0 ? out : undefined;
   };
 
-  for (let i = 1; i < groupedParas.length; i++) {
-    const prevPara = groupedParas[i - 1];
-    const currPara = groupedParas[i];
+  const buildRunsForLine = (line: LogicalLine): TextRun[] => {
+    const out: TextRun[] = [];
 
-    // Calculate spacing between lines using prevPara's lineSpacing info
-    const prevLineSpacing = prevPara.lineSpacing;
-    const baselineDistance = prevLineSpacing?.baselineDistance ?? (prevPara.baselineY - currPara.baselineY);
-    const prevFontSize = prevLineSpacing?.fontSize ?? prevPara.runs[0]?.fontSize;
+    for (let si = 0; si < line.segments.length; si++) {
+      const seg = line.segments[si]!;
 
-    if (prevFontSize === undefined) {
-      // Cannot determine paragraph break without font size
-      state.currentRuns.push(...currPara.runs);
-      continue;
-    }
+      if (si > 0) {
+        const ref = line.segments[si - 1]!.paragraph.runs.at(-1) ?? seg.paragraph.runs[0]!;
+        const tabText: PdfText = { ...ref, text: "\t", width: 0 };
+        out.push(createPptxTextRunFromPdfText(tabText, context));
+      }
 
-    const extraSpace = baselineDistance - prevFontSize;
-
-    // Check if this is a paragraph break (significant extra space)
-    const threshold = prevFontSize * PARAGRAPH_BREAK_THRESHOLD_RATIO;
-    const isParagraphBreak = extraSpace > threshold;
-
-    if (isParagraphBreak) {
-      // Finish current paragraph and start new one
-      result.push(createFlatParagraph(state.currentRuns, state.spaceBefore, state.currentLineSpacing));
-      state.currentRuns = [...currPara.runs];
-      // Set spaceBefore for the new paragraph
-      state.spaceBefore = extraSpace > 0 ? extraSpace : undefined;
-      state.currentLineSpacing = currPara.lineSpacing;
-    } else {
-      // Continue same paragraph - add runs from this line
-      state.currentRuns.push(...currPara.runs);
-      // Update line spacing if available
-      if (currPara.lineSpacing !== undefined) {
-        state.currentLineSpacing = currPara.lineSpacing;
+      const runs = [...seg.paragraph.runs].sort((a, b) => a.x - b.x);
+      for (let ri = 0; ri < runs.length; ri++) {
+        const run = runs[ri]!;
+        const prev = runs[ri - 1];
+        if (prev && shouldInsertSyntheticSpace(prev, run)) {
+          const spaceText: PdfText = { ...prev, text: " ", width: 0 };
+          out.push(createPptxTextRunFromPdfText(spaceText, context));
+        }
+        out.push(createPptxTextRunFromPdfText(run, context));
       }
     }
-  }
 
-  // Don't forget the last paragraph
-  if (state.currentRuns.length > 0) {
-    result.push(createFlatParagraph(state.currentRuns, state.spaceBefore, state.currentLineSpacing));
+    return mergeAdjacentTextRuns(out);
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+    const prev = lines[i - 1];
+
+    const baselineDistance = prev ? (prev.baselineY - line.baselineY) : undefined;
+    const extraSpace = (baselineDistance !== undefined) ? (baselineDistance - prev!.fontSize) : undefined;
+
+    const marginLeft = convertSize(line.minX - bounds.x, 0, context).width;
+
+    result.push({
+      properties: {
+        alignment: "left",
+        ...(marginLeft as number > 0 ? { marginLeft } : {}),
+        ...(extraSpace !== undefined && extraSpace > 0
+          ? { spaceBefore: { type: "points" as const, value: pt(extraSpace * context.fontSizeScale) } }
+          : {}),
+        tabStops: buildTabStopsForLine(line),
+      },
+      runs: buildRunsForLine(line),
+      endProperties: {},
+    });
   }
 
   return result;
 }
 
-/**
- * Create a flattened PPTX Paragraph from multiple runs.
- *
- * ## Line Spacing Conversion
- *
- * PDF baseline distance = fontSize + extra spacing
- * PPTX a:spcPct = percentage of font size (100% = single spacing)
- *
- * To match PDF layout:
- * lineSpacing% = (baseline distance / fontSize) * 100
- *
- * Example: 14pt baseline distance with 12pt font = 116.7% line spacing
- *
- * @param runs - Text runs for this paragraph
- * @param spaceBeforePts - Space before paragraph in PDF points
- * @param lineSpacing - Line spacing info with reference font size
- */
-function createFlatParagraph(
-  runs: readonly PdfText[],
-  spaceBeforePts: number | undefined,
-  lineSpacing: LineSpacingInfo | undefined
-): Paragraph {
-  const lineSpacingPercent = calculateLineSpacingPercent(lineSpacing);
+function shouldInsertSyntheticSpace(prev: PdfText, cur: PdfText): boolean {
+  if (prev.text.length === 0 || cur.text.length === 0) {return false;}
+  if (/\s$/.test(prev.text) || /^\s/.test(cur.text)) {return false;}
 
-  return {
-    properties: {
-      alignment: "left",
-      ...(spaceBeforePts !== undefined && spaceBeforePts > 0 && {
-        spaceBefore: { type: "points" as const, value: pt(spaceBeforePts) },
-      }),
-      ...(lineSpacingPercent !== undefined && {
-        lineSpacing: { type: "percent" as const, value: pct(lineSpacingPercent) },
-      }),
-    },
-    runs: runs.map(createTextRun),
-    endProperties: {},
-  };
+  const prevEnd = prev.x + prev.width;
+  const gap = cur.x - prevEnd;
+  if (!(gap > 0)) {return false;}
+
+  const prevCharWidth = prev.width / Math.max(1, prev.text.length);
+  const curCharWidth = cur.width / Math.max(1, cur.text.length);
+  const avgCharWidth = (prevCharWidth + curCharWidth) / 2;
+  const fontSize = Math.max(prev.fontSize, cur.fontSize, 1);
+
+  // Conservative space threshold:
+  // - relative to font size (PDF point units)
+  // - and relative to the typical character width of the line
+  const threshold = Math.max(fontSize * 0.2, avgCharWidth * 0.8);
+  return gap >= threshold;
 }
 
-function calculateLineSpacingPercent(lineSpacing: LineSpacingInfo | undefined): number | undefined {
-  if (!lineSpacing) {
-    return undefined;
+function mergeAdjacentTextRuns(runs: readonly TextRun[]): TextRun[] {
+  const out: TextRun[] = [];
+  for (const run of runs) {
+    const prev = out[out.length - 1];
+    if (!prev || prev.type !== "text" || run.type !== "text") {
+      out.push(run);
+      continue;
+    }
+
+    if (!areTextRunPropsEquivalent(prev.properties, run.properties)) {
+      out.push(run);
+      continue;
+    }
+
+    out[out.length - 1] = { ...prev, text: prev.text + run.text };
   }
-  if (lineSpacing.baselineDistance <= 0) {
-    return undefined;
-  }
-  if (lineSpacing.fontSize <= 0) {
-    return undefined;
-  }
-  // lineSpacing% = (baseline distance / fontSize) * 100
-  return (lineSpacing.baselineDistance / lineSpacing.fontSize) * 100;
+  return out;
 }
+
+function areTextRunPropsEquivalent(a: TextRun["properties"] | undefined, b: TextRun["properties"] | undefined): boolean {
+  if (a === undefined || b === undefined) {return a === b;}
+  return (
+    a.fontSize === b.fontSize &&
+    a.fontFamily === b.fontFamily &&
+    a.fontFamilyEastAsian === b.fontFamilyEastAsian &&
+    a.fontFamilyComplexScript === b.fontFamilyComplexScript &&
+    a.bold === b.bold &&
+    a.italic === b.italic &&
+    a.underline === b.underline &&
+    a.spacing === b.spacing &&
+    JSON.stringify(a.fill) === JSON.stringify(b.fill)
+  );
+}
+
 
 /**
  * Convert a GroupedText to a PPTX SpShape (TextBox).
@@ -582,7 +654,7 @@ export function convertGroupedTextToShape(
     size,
     context
   );
-  const textBody = createTextBodyFromGroup(group);
+  const textBody = createTextBodyFromGroup(group, context);
 
   return {
     type: "sp",

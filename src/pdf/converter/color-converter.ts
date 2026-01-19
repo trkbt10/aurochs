@@ -166,10 +166,15 @@ export function convertLine(
   dashArray: readonly number[],
   _dashPhase: number,
   alpha: number = 1,
+  widthScale: number = 1,
 ): Line {
+  if (!Number.isFinite(widthScale) || widthScale <= 0) {
+    throw new Error(`Invalid widthScale: ${widthScale}`);
+  }
+  const scaledWidth = lineWidth * widthScale;
   return {
     fill: convertFill(strokeColor, alpha),
-    width: px(lineWidth),
+    width: px(scaledWidth),
     cap: convertLineCap(lineCap),
     compound: "sng",
     alignment: "ctr",
@@ -236,9 +241,11 @@ function convertDashPattern(dashArray: readonly number[]): DashStyle {
 export function convertGraphicsStateToStyle(
   graphicsState: PdfGraphicsState,
   paintOp: "stroke" | "fill" | "fillStroke",
+  options: { readonly lineWidthScale?: number } = {},
 ): { fill: Fill | undefined; line: Line | undefined } {
   const style: { fill: Fill | undefined; line: Line | undefined } = { fill: undefined, line: undefined };
   const softMaskAlpha = graphicsState.softMaskAlpha ?? 1;
+  const lineWidthScale = options.lineWidthScale ?? 1;
 
   if (paintOp === "fill" || paintOp === "fillStroke") {
     style.fill = convertFill(graphicsState.fillColor, graphicsState.fillAlpha * softMaskAlpha);
@@ -257,6 +264,7 @@ export function convertGraphicsStateToStyle(
       graphicsState.dashArray,
       graphicsState.dashPhase,
       graphicsState.strokeAlpha * softMaskAlpha,
+      lineWidthScale,
     );
   }
 

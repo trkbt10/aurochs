@@ -19,6 +19,7 @@ import {
   translationMatrix,
 } from "../domain";
 import { px } from "../../ooxml/domain/units";
+import { createFitContext } from "./transform-converter";
 import {
   convertToPresetEllipse,
   convertToPresetRect,
@@ -45,12 +46,7 @@ import {
 
 const graphicsState = createDefaultGraphicsState();
 
-const context = {
-  pdfWidth: 100,
-  pdfHeight: 100,
-  slideWidth: px(100),
-  slideHeight: px(100),
-} as const;
+const context = createFitContext(100, 100, px(100), px(100), "stretch");
 
 const KAPPA = 0.5522847498307936;
 

@@ -26,12 +26,7 @@ function createConsoleWarnSpy(): Readonly<{
 
 describe("convertPoint", () => {
   it("flips Y-axis (PDF bottom-left → PPTX top-left)", () => {
-    const context = {
-      pdfWidth: 100,
-      pdfHeight: 1000,
-      slideWidth: px(100),
-      slideHeight: px(500),
-    } as const;
+    const context = createFitContext(100, 1000, px(100), px(500), "stretch");
 
     expect(convertPoint({ x: 0, y: 0 }, context)).toEqual({ x: px(0), y: px(500) });
     expect(convertPoint({ x: 0, y: 1000 }, context)).toEqual({ x: px(0), y: px(0) });
@@ -39,12 +34,7 @@ describe("convertPoint", () => {
   });
 
   it("scales X/Y based on page and slide sizes", () => {
-    const context = {
-      pdfWidth: 200,
-      pdfHeight: 400,
-      slideWidth: px(400),
-      slideHeight: px(800),
-    } as const;
+    const context = createFitContext(200, 400, px(400), px(800), "stretch");
 
     expect(convertPoint({ x: 50, y: 100 }, context)).toEqual({ x: px(100), y: px(600) });
   });
@@ -52,12 +42,7 @@ describe("convertPoint", () => {
 
 describe("convertSize", () => {
   it("scales width/height without flipping Y-axis", () => {
-    const context = {
-      pdfWidth: 200,
-      pdfHeight: 400,
-      slideWidth: px(400),
-      slideHeight: px(800),
-    } as const;
+    const context = createFitContext(200, 400, px(400), px(800), "stretch");
 
     expect(convertSize(10, 20, context)).toEqual({ width: px(20), height: px(40) });
   });
@@ -65,12 +50,7 @@ describe("convertSize", () => {
 
 describe("convertBBox", () => {
   it("converts a PDF bbox into PPTX bounds with normalization", () => {
-    const context = {
-      pdfWidth: 200,
-      pdfHeight: 400,
-      slideWidth: px(200),
-      slideHeight: px(400),
-    } as const;
+    const context = createFitContext(200, 400, px(200), px(400), "stretch");
 
     expect(convertBBox([10, 20, 110, 220], context)).toEqual({
       x: px(10),
@@ -86,23 +66,34 @@ describe("createFitContext", () => {
     const context = createFitContext(200, 100, px(300), px(300), "contain");
     expect(context.slideWidth).toBe(px(300));
     expect(context.slideHeight).toBe(px(150));
+    expect(context.offsetX).toBe(px(0));
+    expect(context.offsetY).toBe(px(75));
   });
 
   it("cover: expands by width when PDF is wider than slide", () => {
     const context = createFitContext(200, 100, px(300), px(300), "cover");
     expect(context.slideWidth).toBe(px(600));
     expect(context.slideHeight).toBe(px(300));
+    expect(context.offsetX).toBe(px(-150));
+    expect(context.offsetY).toBe(px(0));
   });
 
   it("stretch: keeps given slide dimensions", () => {
     const context = createFitContext(200, 100, px(300), px(300), "stretch");
     expect(context.slideWidth).toBe(px(300));
     expect(context.slideHeight).toBe(px(300));
+    expect(context.offsetX).toBe(px(0));
+    expect(context.offsetY).toBe(px(0));
   });
 
   it("throws for invalid PDF size", () => {
     expect(() => createFitContext(0, 100, px(300), px(300), "contain")).toThrow("Invalid pdfWidth");
     expect(() => createFitContext(100, 0, px(300), px(300), "contain")).toThrow("Invalid pdfHeight");
+  });
+
+  it("throws for invalid slide size", () => {
+    expect(() => createFitContext(100, 100, px(0), px(300), "contain")).toThrow("Invalid slideWidth");
+    expect(() => createFitContext(100, 100, px(300), px(0), "contain")).toThrow("Invalid slideHeight");
   });
 });
 
@@ -111,40 +102,47 @@ describe("conversion guards", () => {
     expect(() =>
       convertPoint(
         { x: 0, y: 0 },
-        { pdfWidth: 0, pdfHeight: 100, slideWidth: px(100), slideHeight: px(100) }
+        {
+          ...createFitContext(1, 1, px(1), px(1), "stretch"),
+          pdfWidth: 0,
+        },
       )
     ).toThrow("Invalid pdfWidth");
 
     expect(() =>
       convertPoint(
         { x: 0, y: 0 },
-        { pdfWidth: 100, pdfHeight: 0, slideWidth: px(100), slideHeight: px(100) }
+        {
+          ...createFitContext(1, 1, px(1), px(1), "stretch"),
+          pdfHeight: 0,
+        },
       )
     ).toThrow("Invalid pdfHeight");
 
     expect(() =>
       convertPoint(
         { x: 0, y: 0 },
-        { pdfWidth: 100, pdfHeight: 100, slideWidth: px(0), slideHeight: px(100) }
+        {
+          ...createFitContext(100, 100, px(100), px(100), "stretch"),
+          scaleX: 0,
+        },
       )
-    ).toThrow("Invalid slideWidth");
+    ).toThrow("Invalid scaleX");
 
     expect(() =>
       convertPoint(
         { x: 0, y: 0 },
-        { pdfWidth: 100, pdfHeight: 100, slideWidth: px(100), slideHeight: px(0) }
+        {
+          ...createFitContext(100, 100, px(100), px(100), "stretch"),
+          scaleY: 0,
+        },
       )
-    ).toThrow("Invalid slideHeight");
+    ).toThrow("Invalid scaleY");
   });
 });
 
 describe("convertMatrix", () => {
-  const context = {
-    pdfWidth: 800,
-    pdfHeight: 600,
-    slideWidth: px(800),
-    slideHeight: px(600),
-  } as const;
+  const context = createFitContext(800, 600, px(800), px(600), "stretch");
 
   type Point = { readonly x: number; readonly y: number };
 
@@ -353,12 +351,7 @@ describe("convertMatrix", () => {
   it("falls back when slide scaling introduces shear (scaleX ≠ scaleY with rotation)", () => {
     const warnSpy = createConsoleWarnSpy();
 
-    const scaledContext = {
-      pdfWidth: 400,
-      pdfHeight: 300,
-      slideWidth: px(800),
-      slideHeight: px(450),
-    } as const;
+    const scaledContext = createFitContext(400, 300, px(800), px(450), "stretch");
 
     const ctm = [100, 100, -50, 50, 100, 100] as const;
     const expected = getExpectedCorners(ctm, scaledContext);

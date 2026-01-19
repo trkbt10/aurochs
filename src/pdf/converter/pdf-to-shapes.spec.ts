@@ -296,12 +296,15 @@ describe("convertPageToShapes with spatialGrouping", () => {
     const sp = shapes[0];
     if (sp?.type !== "sp") {throw new Error("Expected sp shape");}
     expect(sp.textBody?.paragraphs).toHaveLength(1);
-    expect(sp.textBody?.paragraphs[0]?.runs).toHaveLength(2);
+    expect(sp.textBody?.paragraphs[0]?.runs).toHaveLength(1);
+    const run = sp.textBody?.paragraphs[0]?.runs[0];
+    if (!run || run.type !== "text") {throw new Error("Expected text run");}
+    expect(run.text).toBe("Hello World");
   });
 
-  it("groups multi-line text with same font into one TextBox with flattened paragraph", () => {
-    // Lines with normal spacing (small gap) are flattened into single paragraph
-    // for proper text wrapping in PPTX
+  it("groups multi-line text with same font into one TextBox preserving line structure", () => {
+    // Lines with normal spacing (small gap) are kept as separate paragraphs
+    // to avoid PPTX auto-reflow changing the layout on resize.
     const line1: PdfText = {
       type: "text",
       text: "Line 1",
@@ -338,14 +341,14 @@ describe("convertPageToShapes with spatialGrouping", () => {
       textGroupingFn: spatialGrouping,
     });
 
-    // Should create one TextBox with one flattened paragraph (for text wrapping)
+    // Should create one TextBox with separate paragraphs per line
     expect(shapes).toHaveLength(1);
 
     const sp = shapes[0];
     if (sp?.type !== "sp") {throw new Error("Expected sp shape");}
-    // Consecutive lines with normal spacing are flattened into 1 paragraph with 2 runs
-    expect(sp.textBody?.paragraphs).toHaveLength(1);
-    expect(sp.textBody?.paragraphs[0]?.runs).toHaveLength(2);
+    expect(sp.textBody?.paragraphs).toHaveLength(2);
+    expect(sp.textBody?.paragraphs[0]?.runs).toHaveLength(1);
+    expect(sp.textBody?.paragraphs[1]?.runs).toHaveLength(1);
   });
 
   it("creates separate TextBoxes for texts with different fonts", () => {

@@ -410,4 +410,81 @@ describe("createSpatialGrouping", () => {
       expect(groups).toHaveLength(2);
     });
   });
+
+  describe("baseline-aware line grouping", () => {
+    it("groups texts with the same baseline even if bottom-edge Y differs", () => {
+      const groupFn = createSpatialGrouping({ enableColumnSeparation: false, lineToleranceRatio: 0.25 });
+
+      // baseline = y - descender * fontSize / 1000
+      // t1: y=100, desc=-200, font=10 => baseline=102
+      // t2: y=99,  desc=-300, font=10 => baseline=102
+      const texts = [
+        createPdfText({
+          text: "A",
+          x: 0,
+          y: 100,
+          width: 10,
+          height: 10,
+          fontSize: 10,
+          fontMetrics: { ascender: 800, descender: -200 },
+        }),
+        createPdfText({
+          text: "B",
+          x: 20,
+          y: 99,
+          width: 10,
+          height: 10,
+          fontSize: 10,
+          fontMetrics: { ascender: 800, descender: -300 },
+        }),
+      ];
+
+      const groups = groupFn(texts);
+      expect(groups).toHaveLength(1);
+      expect(groups[0].paragraphs).toHaveLength(1);
+      expect(groups[0].paragraphs[0].runs.map((r) => r.text).join("")).toBe("AB");
+    });
+  });
+
+  describe("page-level column detection", () => {
+    it("avoids cross-column block merging even when bboxes slightly overlap", () => {
+      const groupFn = createSpatialGrouping({
+        enableColumnSeparation: true,
+        enablePageColumnDetection: true,
+        maxPageColumns: 2,
+      });
+
+      const pageWidth = 500;
+
+      const makeLine = (prefix: string, x: number, y: number, width: number): PdfText =>
+        createPdfText({ text: `${prefix}-${"x".repeat(40)}`, x, y, width, height: 12, fontSize: 12 });
+
+      const texts: PdfText[] = [];
+
+      // Build 5 rows; each row has a left and right column element on the same baseline.
+      // One left element intentionally has an overly-wide bbox that spills into the gutter.
+      for (let row = 0; row < 5; row++) {
+        const y = 500 - row * 16;
+        const spill = row === 2 ? 320 : 240; // one row intentionally overlaps the gutter
+
+        texts.push(makeLine(`L${row}`, 0, y, spill));
+        texts.push(makeLine(`R${row}`, 300, y, 180));
+      }
+
+      const groups = groupFn(texts, { pageWidth });
+
+      // Expect the left column content and right column content to end up in separate text boxes.
+      expect(groups.length).toBeGreaterThanOrEqual(2);
+
+      const contents = groups.map((g) =>
+        g.paragraphs.map((p) => p.runs.map((r) => r.text).join("")).join("\n")
+      );
+
+      const leftGroup = contents.find((c) => c.includes("L0") && c.includes("L4"));
+      const rightGroup = contents.find((c) => c.includes("R0") && c.includes("R4"));
+
+      expect(leftGroup).toBeDefined();
+      expect(rightGroup).toBeDefined();
+    });
+  });
 });

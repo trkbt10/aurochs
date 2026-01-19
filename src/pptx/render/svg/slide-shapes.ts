@@ -517,7 +517,7 @@ function renderGraphicFrameSvg(
       // Render at origin, transformAttr handles positioning (like chart)
       // Pass frame dimensions for scaling options (width/height only, not full Transform)
       const { table } = content.data;
-      return `<g${transformAttr}${ooxmlIdAttr}>${renderTableSvg(table, px(w), px(h), ctx.colorContext, ctx.options)}</g>`;
+      return `<g${transformAttr}${ooxmlIdAttr}>${renderTableSvg(table, px(w), px(h), ctx, defsCollector, ctx.options)}</g>`;
     }
 
     case "diagram": {

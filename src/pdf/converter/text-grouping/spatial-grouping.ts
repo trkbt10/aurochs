@@ -79,6 +79,29 @@ export type SpatialGroupingOptions = {
    * Gaps larger than this are considered column boundaries.
    */
   readonly columnGapRatio?: number;
+
+  /**
+   * Enable page-level column detection using `context.pageWidth`.
+   *
+   * This improves robustness for multi-column layouts where line-level
+   * splitting may be unreliable due to slightly varying baselines or
+   * overly-wide text bounding boxes that spill into the gutter.
+   * (default: true)
+   */
+  readonly enablePageColumnDetection?: boolean;
+
+  /**
+   * Maximum number of columns to infer when page-level column detection is enabled.
+   * (default: 3)
+   */
+  readonly maxPageColumns?: number;
+
+  /**
+   * Treat paragraphs wider than this ratio of page width as "full width"
+   * (headers/footers/title) and exclude them from gutter detection.
+   * (default: 0.85)
+   */
+  readonly fullWidthRatio?: number;
 };
 
 const DEFAULT_OPTIONS: Required<SpatialGroupingOptions> = {
@@ -89,6 +112,9 @@ const DEFAULT_OPTIONS: Required<SpatialGroupingOptions> = {
   fontSizeToleranceRatio: 0.1,
   enableColumnSeparation: true,
   columnGapRatio: 3.0,
+  enablePageColumnDetection: true,
+  maxPageColumns: 3,
+  fullWidthRatio: 0.85,
 };
 
 /** Default character width in 1/1000 em units for fallback */
@@ -98,6 +124,26 @@ const DEFAULT_CHAR_WIDTH_EM = 500;
 // Pure Helper Functions
 // =============================================================================
 
+function median(xs: readonly number[]): number {
+  if (xs.length === 0) {return 0;}
+  const sorted = [...xs].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  if (sorted.length % 2 === 1) {return sorted[mid]!;}
+  return (sorted[mid - 1]! + sorted[mid]!) / 2;
+}
+
+function quantile(xs: readonly number[], q: number): number {
+  if (xs.length === 0) {return 0;}
+  const sorted = [...xs].sort((a, b) => a - b);
+  const qq = Math.max(0, Math.min(1, q));
+  const pos = (sorted.length - 1) * qq;
+  const base = Math.floor(pos);
+  const rest = pos - base;
+  const next = sorted[base + 1];
+  if (next === undefined) {return sorted[base]!;}
+  return sorted[base]! + rest * (next - sorted[base]!);
+}
+
 /**
  * Estimate character width for a text element.
  *
@@ -105,16 +151,19 @@ const DEFAULT_CHAR_WIDTH_EM = 500;
  * from the text's width and length with a minimum bound.
  */
 function estimateCharWidth(text: PdfText): number {
-  // Use font metrics if available (in 1/1000 em units -> convert to points)
-  if (text.fontMetrics) {
-    const metricsWidth = DEFAULT_CHAR_WIDTH_EM; // 500 em units
-    return (metricsWidth * text.fontSize) / 1000;
+  // Estimate from actual text box width. This is the most reliable signal we have
+  // across PDFs because `fontMetrics` does not carry per-glyph width data here.
+  const length = Math.max(text.text.length, 1);
+  const estimatedWidth = text.width / length;
+
+  // Fallback: assume 0.5em when width is unavailable/unreliable.
+  const fallback = (DEFAULT_CHAR_WIDTH_EM * text.fontSize) / 1000;
+  const minWidth = text.fontSize * 0.3; // Minimum 30% of font size
+
+  if (!Number.isFinite(estimatedWidth) || estimatedWidth <= 0) {
+    return Math.max(fallback, minWidth);
   }
 
-  // Fallback: estimate from text width
-  // Ensure minimum width to avoid division issues with short texts
-  const estimatedWidth = text.width / Math.max(text.text.length, 1);
-  const minWidth = text.fontSize * 0.3; // Minimum 30% of font size
   return Math.max(estimatedWidth, minWidth);
 }
 
@@ -140,6 +189,144 @@ function calculateExpectedGap(prev: PdfText, curr: PdfText): number {
 
   // Apply horizontal scaling to spacing values
   return (baseCharWidth + charSpacing + wordSpacing) * hScale;
+}
+
+function getBaselineY(text: PdfText): number {
+  const descender = text.fontMetrics?.descender ?? -200;
+  return text.y - (descender * text.fontSize) / 1000;
+}
+
+function overlap1D(a0: number, a1: number, b0: number, b1: number): number {
+  const lo = Math.max(Math.min(a0, a1), Math.min(b0, b1));
+  const hi = Math.min(Math.max(a0, a1), Math.max(b0, b1));
+  return Math.max(0, hi - lo);
+}
+
+function clamp(x: number, lo: number, hi: number): number {
+  return Math.max(lo, Math.min(hi, x));
+}
+
+type Gutter = { x0: number; x1: number; score: number; xMid: number };
+
+function detectGuttersFromXRanges(
+  ranges: readonly { x0: number; x1: number; weight: number }[],
+  pageWidth: number,
+  options: Required<SpatialGroupingOptions>
+): Gutter[] {
+  const gutterOccThreshold = 0.08;
+  const minGutterWidthRatio = 0.018;
+  const gutterMaxCrossingRatio = 0.18;
+  const columnEdgeMarginRatio = 0.06;
+
+  const usable = ranges.filter((r) => (r.x1 - r.x0) < pageWidth * options.fullWidthRatio);
+  if (usable.length < 8) {return [];}
+
+  // Some PDFs report overly-wide text boxes that bleed into gutters.
+  // To make gutter detection more robust, cap the contributed span using
+  // the typical range width of the page (ignore upper outliers).
+  const widths = usable
+    .map((r) => r.x1 - r.x0)
+    .filter((w) => Number.isFinite(w) && w > 0);
+  const widthCap = widths.length > 0 ? Math.max(1, quantile(widths, 0.9) * 1.15) : pageWidth;
+
+  const bins = clamp(Math.round(pageWidth / 2), 200, 600);
+  const binSize = pageWidth / bins;
+  const occ = new Array<number>(bins).fill(0);
+
+  for (const r of usable) {
+    const x0 = clamp(r.x0, 0, pageWidth);
+    const x1 = clamp(Math.min(r.x1, r.x0 + widthCap), 0, pageWidth);
+    const b0 = clamp(Math.floor(x0 / binSize), 0, bins - 1);
+    const b1 = clamp(Math.ceil(x1 / binSize), 0, bins);
+    const w = Math.max(1, r.weight);
+    for (let i = b0; i < b1; i++) {occ[i] += w;}
+  }
+
+  const maxOcc = Math.max(...occ, 1);
+  const occN = occ.map((x) => x / maxOcc);
+
+  const edgeMarginBins = Math.round(bins * columnEdgeMarginRatio);
+  const minGutterBins = Math.max(2, Math.round((pageWidth * minGutterWidthRatio) / binSize));
+
+  const segments: { s: number; e: number; meanOcc: number }[] = [];
+  let s = -1;
+  let sum = 0;
+  let cnt = 0;
+
+  for (let i = edgeMarginBins; i < bins - edgeMarginBins; i++) {
+    const low = occN[i]! <= gutterOccThreshold;
+    if (low) {
+      if (s < 0) {s = i; sum = occN[i]!; cnt = 1;}
+      else {sum += occN[i]!; cnt++;}
+    } else if (s >= 0) {
+      const e = i;
+      if (e - s >= minGutterBins) {segments.push({ s, e, meanOcc: sum / Math.max(1, cnt) });}
+      s = -1;
+    }
+  }
+
+  if (s >= 0) {
+    const e = bins - edgeMarginBins;
+    if (e - s >= minGutterBins) {segments.push({ s, e, meanOcc: sum / Math.max(1, cnt) });}
+  }
+
+  if (segments.length === 0) {return [];}
+
+  const gutters: Gutter[] = [];
+  for (const seg of segments) {
+    const x0 = seg.s * binSize;
+    const x1 = seg.e * binSize;
+    const xMid = (x0 + x1) / 2;
+
+    let crossing = 0;
+    for (const r of usable) {
+      if (r.x0 <= xMid && xMid <= r.x1) {crossing++;}
+    }
+    const crossingRatio = crossing / usable.length;
+    if (crossingRatio > gutterMaxCrossingRatio) {continue;}
+
+    const width = x1 - x0;
+    const depth = 1 - seg.meanOcc;
+    gutters.push({ x0, x1, xMid, score: width * depth });
+  }
+
+  gutters.sort((a, b) => b.score - a.score);
+  const picked = gutters.slice(0, Math.max(0, options.maxPageColumns - 1));
+  picked.sort((a, b) => a.x0 - b.x0);
+  return picked;
+}
+
+function buildColumnIntervals(pageWidth: number, gutters: readonly Gutter[]): { x0: number; x1: number }[] {
+  if (gutters.length === 0) {return [{ x0: 0, x1: pageWidth }];}
+  const intervals: { x0: number; x1: number }[] = [];
+  let cur = 0;
+  for (const g of gutters) {
+    const leftEnd = Math.max(cur, g.x0);
+    if (leftEnd - cur > 1) {intervals.push({ x0: cur, x1: leftEnd });}
+    cur = Math.min(pageWidth, g.x1);
+  }
+  if (pageWidth - cur > 1) {intervals.push({ x0: cur, x1: pageWidth });}
+  return intervals.filter((iv) => (iv.x1 - iv.x0) > pageWidth * 0.08);
+}
+
+function assignXRangeToColumn(
+  x0: number,
+  x1: number,
+  intervals: readonly { x0: number; x1: number }[],
+  pageWidth: number,
+  options: Required<SpatialGroupingOptions>
+): number {
+  const w = x1 - x0;
+  if (w >= pageWidth * options.fullWidthRatio) {return -1;}
+
+  let best = 0;
+  let bestOv = -1;
+  for (let i = 0; i < intervals.length; i++) {
+    const iv = intervals[i]!;
+    const ov = overlap1D(x0, x1, iv.x0, iv.x1) / Math.max(1e-6, Math.min(w, iv.x1 - iv.x0));
+    if (ov > bestOv) {bestOv = ov; best = i;}
+  }
+  return best;
 }
 
 /**
@@ -195,6 +382,20 @@ function hasSameStyle(t1: PdfText, t2: PdfText, options: Required<SpatialGroupin
   }
 
   return true;
+}
+
+function hasSameSpacingProperties(t1: PdfText, t2: PdfText): boolean {
+  const c1 = t1.charSpacing ?? 0;
+  const c2 = t2.charSpacing ?? 0;
+  if (c1 !== c2) {return false;}
+
+  const w1 = t1.wordSpacing ?? 0;
+  const w2 = t2.wordSpacing ?? 0;
+  if (w1 !== w2) {return false;}
+
+  const s1 = t1.horizontalScaling ?? 100;
+  const s2 = t2.horizontalScaling ?? 100;
+  return s1 === s2;
 }
 
 /**
@@ -327,21 +528,6 @@ function hasBlockingZoneBetweenLines(
 }
 
 /**
- * Create a paragraph from texts.
- */
-function createParagraphFromTexts(texts: readonly PdfText[]): GroupedParagraph {
-  const firstText = texts[0];
-  const descender = firstText?.fontMetrics?.descender ?? -200;
-  const fontSize = firstText?.fontSize ?? 12;
-  const baseline = (firstText?.y ?? 0) - (descender * fontSize) / 1000;
-
-  return {
-    runs: texts,
-    baselineY: baseline,
-  };
-}
-
-/**
  * Width buffer ratio for TextBox bounds.
  *
  * PDF text width includes charSpacing/wordSpacing effects from the original rendering.
@@ -464,33 +650,18 @@ function createGroupedText(paragraphs: readonly GroupedParagraph[]): GroupedText
 // =============================================================================
 
 /**
- * Merge horizontally adjacent texts into runs.
+ * Merge horizontally adjacent texts into fewer runs.
+ *
+ * This function does NOT concatenate PdfText runs.
+ * It only orders and filters/group-safety checks happen before paragraph creation.
  */
 function mergeHorizontallyAdjacent(
   texts: readonly PdfText[],
   options: Required<SpatialGroupingOptions>
 ): PdfText[] {
-  if (texts.length <= 1) {return [...texts];}
-
-  const result: PdfText[] = [texts[0]];
-
-  for (let i = 1; i < texts.length; i++) {
-    const prev = texts[i - 1];
-    const curr = texts[i];
-
-    // Calculate actual gap
-    const gap = curr.x - (prev.x + prev.width);
-
-    // Calculate expected gap based on character width and spacing
-    const expectedGap = calculateExpectedGap(prev, curr);
-    const maxGap = expectedGap * options.horizontalGapRatio;
-
-    if (gap <= maxGap && hasSameStyle(prev, curr, options)) {
-      result.push(curr);
-    }
-  }
-
-  return result;
+  // Preserve original PdfText boundaries; order by X for stable PPTX run order.
+  // `options.horizontalGapRatio` is applied during line segmentation.
+  return [...texts].sort((a, b) => a.x - b.x);
 }
 
 /**
@@ -500,20 +671,19 @@ function createParagraph(
   texts: readonly PdfText[],
   options: Required<SpatialGroupingOptions>
 ): GroupedParagraph {
-  // Sort by X (left to right)
-  const sorted = [...texts].sort((a, b) => a.x - b.x);
+  if (texts.length === 0) {
+    throw new Error("createParagraph requires at least one PdfText");
+  }
 
-  // Filter out texts that are too far apart horizontally
-  const merged = mergeHorizontallyAdjacent(sorted, options);
-
-  // Calculate baseline from font metrics
-  const firstText = merged[0];
-  const descender = firstText?.fontMetrics?.descender ?? -200;
-  const fontSize = firstText?.fontSize ?? 12;
-  const baseline = (firstText?.y ?? 0) - (descender * fontSize) / 1000;
+  const runs = mergeHorizontallyAdjacent(texts, options);
+  const first = runs[0];
+  if (!first) {
+    throw new Error("createParagraph requires at least one PdfText");
+  }
+  const baseline = getBaselineY(first);
 
   return {
-    runs: merged,
+    runs,
     baselineY: baseline,
   };
 }
@@ -521,45 +691,108 @@ function createParagraph(
 /**
  * Group texts into lines based on Y proximity.
  */
-function groupIntoLines(
+function clusterIntoLines(
+  texts: readonly PdfText[],
+  options: Required<SpatialGroupingOptions>
+): PdfText[][] {
+  if (texts.length === 0) {return [];}
+
+  const items = texts
+    .map((t) => ({ t, baseline: getBaselineY(t) }))
+    .sort((a, b) => b.baseline - a.baseline);
+
+  const clusters: PdfText[][] = [];
+  let current: { texts: PdfText[]; meanBaseline: number; meanFontSize: number } | null = null;
+
+  for (const it of items) {
+    if (!current) {
+      current = { texts: [it.t], meanBaseline: it.baseline, meanFontSize: it.t.fontSize };
+      continue;
+    }
+
+    const refSize = Math.max(current.meanFontSize, it.t.fontSize);
+    const tolerance = Math.max(0.5, refSize * options.lineToleranceRatio);
+    const sameLine = Math.abs(it.baseline - current.meanBaseline) <= tolerance;
+
+    if (!sameLine) {
+      clusters.push(current.texts);
+      current = { texts: [it.t], meanBaseline: it.baseline, meanFontSize: it.t.fontSize };
+      continue;
+    }
+
+    current.texts.push(it.t);
+    current.meanBaseline = current.meanBaseline + (it.baseline - current.meanBaseline) / current.texts.length;
+    current.meanFontSize = current.meanFontSize + (it.t.fontSize - current.meanFontSize) / current.texts.length;
+  }
+
+  if (current) {clusters.push(current.texts);}
+  return clusters;
+}
+
+/**
+ * Estimate a "space-like" gap threshold from a line's positive gap distribution.
+ *
+ * This is used to derive an adaptive column boundary threshold for table-like
+ * structures, without hard-coding absolute point distances.
+ */
+function estimateSpaceGapThreshold(gaps: readonly number[], fontSize: number): number {
+  const pos = gaps.filter((g) => g > 0);
+  if (pos.length < 3) {return fontSize * 0.33;}
+
+  const q25 = quantile(pos, 0.25);
+  const q50 = quantile(pos, 0.50);
+  const q75 = quantile(pos, 0.75);
+
+  if (q75 > q25 * 2.5) {return (q25 + q75) / 2;}
+
+  return Math.max(q50 * 1.7, q75 * 0.9, fontSize * 0.33);
+}
+
+function splitIntoAdjacentGroups(
   texts: readonly PdfText[],
   options: Required<SpatialGroupingOptions>,
   blockingZones: readonly BlockingZone[] | undefined
-): GroupedParagraph[] {
-  const lines: GroupedParagraph[] = [];
-  const currentLine: PdfText[] = [];
-  const state = { currentY: texts[0]?.y ?? 0, referenceFontSize: texts[0]?.fontSize ?? 12 };
+): PdfText[][] {
+  if (texts.length === 0) {return [];}
+  if (texts.length === 1) {return [[texts[0]]];}
 
-  for (const text of texts) {
-    const tolerance = state.referenceFontSize * options.lineToleranceRatio;
-    const sameY = Math.abs(text.y - state.currentY) <= tolerance;
+  const sorted = [...texts].sort((a, b) => a.x - b.x);
+  const groups: PdfText[][] = [];
+  let current: PdfText[] = [sorted[0]!];
 
-    // Check if there's a blocking zone between the last text in current line and this text
-    const lastText = currentLine[currentLine.length - 1];
-    const blockedHorizontally = lastText !== undefined && hasBlockingZoneBetween(lastText, text, blockingZones);
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = current[current.length - 1]!;
+    const curr = sorted[i]!;
 
-    if (sameY && !blockedHorizontally) {
-      currentLine.push(text);
+    const gap = curr.x - (prev.x + prev.width);
+    const expectedGap = calculateExpectedGap(prev, curr);
+    const maxGap = expectedGap * options.horizontalGapRatio;
+
+    const blocked = hasBlockingZoneBetween(prev, curr, blockingZones);
+    const compatibleStyle = hasSameStyle(prev, curr, options) && hasSameSpacingProperties(prev, curr);
+    const sameSegment = !blocked && gap <= maxGap && compatibleStyle;
+
+    if (!sameSegment) {
+      groups.push(current);
+      current = [curr];
     } else {
-      if (currentLine.length > 0) {
-        lines.push(createParagraph(currentLine, options));
-      }
-      currentLine.length = 0;
-      currentLine.push(text);
-      state.currentY = text.y;
-      state.referenceFontSize = text.fontSize;
+      current.push(curr);
     }
   }
 
-  if (currentLine.length > 0) {
-    lines.push(createParagraph(currentLine, options));
-  }
-
-  return lines;
+  groups.push(current);
+  return groups;
 }
 
 /**
  * Split a line of texts into column groups based on horizontal gaps.
+ *
+ * Uses a hybrid threshold:
+ * - Fixed: avgCharWidth * columnGapRatio
+ * - Adaptive: inferred "space-like" gap * multiplier
+ *
+ * The adaptive component helps when font metrics are unreliable, or when
+ * the PDF generates unusually wide glyph boxes that distort char width estimates.
  */
 function splitIntoColumnGroups(
   texts: readonly PdfText[],
@@ -569,22 +802,32 @@ function splitIntoColumnGroups(
   if (texts.length === 0) {return [];}
   if (texts.length === 1) {return [[texts[0]]];}
 
-  // Sort by X position
   const sorted = [...texts].sort((a, b) => a.x - b.x);
+  const fontSize = median(sorted.map((t) => t.fontSize)) || 12;
+
+  const gaps: number[] = [];
+  const charWidths: number[] = [];
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = sorted[i - 1]!;
+    const curr = sorted[i]!;
+    gaps.push(curr.x - (prev.x + prev.width));
+    charWidths.push((estimateCharWidth(prev) + estimateCharWidth(curr)) / 2);
+  }
+
+  const avgCharWidth = median(charWidths) || (fontSize * 0.5);
+  const fixedTh = avgCharWidth * options.columnGapRatio;
+  const spaceTh = estimateSpaceGapThreshold(gaps, fontSize);
+  const adaptiveTh = spaceTh * 3.5;
+  const columnGapThreshold = Math.max(fixedTh, adaptiveTh);
 
   const groups: PdfText[][] = [];
-  const currentGroup: PdfText[] = [sorted[0]];
+  const currentGroup: PdfText[] = [sorted[0]!];
 
   for (let i = 1; i < sorted.length; i++) {
-    const prev = sorted[i - 1];
-    const curr = sorted[i];
+    const prev = sorted[i - 1]!;
+    const curr = sorted[i]!;
 
-    // Calculate gap
     const gap = curr.x - (prev.x + prev.width);
-    const avgCharWidth = (estimateCharWidth(prev) + estimateCharWidth(curr)) / 2;
-    const columnGapThreshold = avgCharWidth * options.columnGapRatio;
-
-    // Check if there's a blocking zone between texts
     const hasBlocker = hasBlockingZoneBetween(prev, curr, blockingZones);
 
     if (gap > columnGapThreshold || hasBlocker) {
@@ -596,10 +839,7 @@ function splitIntoColumnGroups(
     }
   }
 
-  if (currentGroup.length > 0) {
-    groups.push(currentGroup);
-  }
-
+  if (currentGroup.length > 0) {groups.push(currentGroup);}
   return groups;
 }
 
@@ -609,36 +849,75 @@ function splitIntoColumnGroups(
 function groupIntoLinesWithColumns(
   texts: readonly PdfText[],
   options: Required<SpatialGroupingOptions>,
-  blockingZones: readonly BlockingZone[] | undefined
+  blockingZones: readonly BlockingZone[] | undefined,
+  pageWidth: number | undefined
 ): GroupedParagraph[] {
+  const lineClusters = clusterIntoLines(texts, options);
   const paragraphs: GroupedParagraph[] = [];
-  const currentLine: PdfText[] = [];
-  const state = { currentY: texts[0]?.y ?? 0, referenceFontSize: texts[0]?.fontSize ?? 12 };
 
-  for (const text of texts) {
-    const tolerance = state.referenceFontSize * options.lineToleranceRatio;
+  const usePageColumns = options.enablePageColumnDetection && pageWidth !== undefined && pageWidth > 0;
+  const pageIntervals = (() => {
+    if (!usePageColumns) {return undefined;}
+    const ranges = texts.map((t) => ({ x0: t.x, x1: t.x + t.width, weight: t.height }));
+    const gutters = detectGuttersFromXRanges(ranges, pageWidth, options);
+    const intervals = buildColumnIntervals(pageWidth, gutters);
+    return intervals.length >= 2 ? intervals : undefined;
+  })();
 
-    if (Math.abs(text.y - state.currentY) <= tolerance) {
-      currentLine.push(text);
-    } else {
-      // Process current line and split into columns
-      if (currentLine.length > 0) {
-        const columnGroups = splitIntoColumnGroups(currentLine, options, blockingZones);
-        for (const group of columnGroups) {
-          paragraphs.push(createParagraphFromTexts(group));
+  for (const lineTexts of lineClusters) {
+    if (!pageIntervals) {
+      const columnGroups = splitIntoColumnGroups(lineTexts, options, blockingZones);
+      for (const group of columnGroups) {
+        paragraphs.push(createParagraph(group, options));
+      }
+      continue;
+    }
+
+    const byCol = new Map<number, PdfText[]>();
+    for (const t of lineTexts) {
+      const x0 = t.x;
+      const x1 = t.x + t.width;
+      const c = assignXRangeToColumn(x0, x1, pageIntervals, pageWidth!, options);
+      const arr = byCol.get(c) ?? [];
+      arr.push(t);
+      byCol.set(c, arr);
+    }
+
+    const colKeys = [...byCol.keys()].sort((a, b) => a - b);
+    for (const key of colKeys) {
+      const ts = byCol.get(key);
+      if (!ts || ts.length === 0) {continue;}
+      const columnGroups = splitIntoColumnGroups(ts, options, blockingZones);
+      for (const group of columnGroups) {
+        const adjacentGroups = splitIntoAdjacentGroups(group, options, blockingZones);
+        for (const seg of adjacentGroups) {
+          paragraphs.push(createParagraph(seg, options));
         }
       }
-      currentLine.length = 0;
-      currentLine.push(text);
-      state.currentY = text.y;
-      state.referenceFontSize = text.fontSize;
     }
   }
 
-  if (currentLine.length > 0) {
-    const columnGroups = splitIntoColumnGroups(currentLine, options, blockingZones);
-    for (const group of columnGroups) {
-      paragraphs.push(createParagraphFromTexts(group));
+  return paragraphs;
+}
+
+/**
+ * Group texts into lines based on baseline clustering.
+ *
+ * This mode does not split by large horizontal gaps (i.e. does not infer columns),
+ * but it still respects blocking zones as hard separators within the line.
+ */
+function groupIntoLines(
+  texts: readonly PdfText[],
+  options: Required<SpatialGroupingOptions>,
+  blockingZones: readonly BlockingZone[] | undefined
+): GroupedParagraph[] {
+  const lineClusters = clusterIntoLines(texts, options);
+  const paragraphs: GroupedParagraph[] = [];
+
+  for (const lineTexts of lineClusters) {
+    const segments = splitIntoAdjacentGroups(lineTexts, options, blockingZones);
+    for (const group of segments) {
+      paragraphs.push(createParagraph(group, options));
     }
   }
 
@@ -661,49 +940,35 @@ function shouldMergeLines(
   const text2 = line2.runs[0];
   if (!text1 || !text2) {return false;}
 
+  // This function assumes input is ordered top-to-bottom (descending baselineY).
+  // Never merge items on the same line or above.
+  const baselineDelta = line1.baselineY - line2.baselineY;
+  if (baselineDelta <= 0) {return false;}
+
   // Check font match
   if (!hasSameStyle(text1, text2, options)) {return false;}
 
+  if (options.enableColumnSeparation) {
+    const minX1 = Math.min(...line1.runs.map((r) => r.x));
+    const maxX1 = Math.max(...line1.runs.map((r) => r.x + r.width));
+    const minX2 = Math.min(...line2.runs.map((r) => r.x));
+    const maxX2 = Math.max(...line2.runs.map((r) => r.x + r.width));
+
+    const w1 = Math.max(1e-6, maxX1 - minX1);
+    const w2 = Math.max(1e-6, maxX2 - minX2);
+    const ov = overlap1D(minX1, maxX1, minX2, maxX2);
+    const ovRatio = ov / Math.min(w1, w2);
+
+    // No meaningful horizontal overlap → likely different column / unrelated block.
+    if (ovRatio < 0.05) {return false;}
+  }
+
   // Check vertical distance
   const lineHeight = Math.max(text1.height, text2.height);
-  const verticalGap = Math.abs(line1.baselineY - line2.baselineY) - lineHeight;
+  const verticalGap = baselineDelta - lineHeight;
   const maxGap = lineHeight * options.verticalGapRatio;
 
   return verticalGap <= maxGap;
-}
-
-/**
- * Check if two paragraphs should merge, considering column boundaries.
- */
-function shouldMergeLinesWithColumns(
-  para1: GroupedParagraph,
-  para2: GroupedParagraph,
-  options: Required<SpatialGroupingOptions>
-): boolean {
-  const text1 = para1.runs[0];
-  const text2 = para2.runs[0];
-  if (!text1 || !text2) {return false;}
-
-  // Check font match
-  if (!hasSameStyle(text1, text2, options)) {return false;}
-
-  // Check vertical distance
-  const lineHeight = Math.max(text1.height, text2.height);
-  const verticalGap = Math.abs(para1.baselineY - para2.baselineY) - lineHeight;
-  const maxVerticalGap = lineHeight * options.verticalGapRatio;
-
-  if (verticalGap > maxVerticalGap) {return false;}
-
-  // Check horizontal overlap (column alignment)
-  const para1MinX = Math.min(...para1.runs.map((r) => r.x));
-  const para1MaxX = Math.max(...para1.runs.map((r) => r.x + r.width));
-  const para2MinX = Math.min(...para2.runs.map((r) => r.x));
-  const para2MaxX = Math.max(...para2.runs.map((r) => r.x + r.width));
-
-  // Check if there's horizontal overlap
-  const hasOverlap = para1MinX < para2MaxX && para2MinX < para1MaxX;
-
-  return hasOverlap;
 }
 
 /**
@@ -717,11 +982,12 @@ function mergeAdjacentLines(
   if (lines.length === 0) {return [];}
 
   const blocks: GroupedText[] = [];
-  const currentParagraphs: GroupedParagraph[] = [lines[0]];
+  const sorted = [...lines].sort((a, b) => b.baselineY - a.baselineY);
+  const currentParagraphs: GroupedParagraph[] = [sorted[0]!];
 
-  for (let i = 1; i < lines.length; i++) {
-    const prevLine = lines[i - 1];
-    const currLine = lines[i];
+  for (let i = 1; i < sorted.length; i++) {
+    const prevLine = sorted[i - 1]!;
+    const currLine = sorted[i]!;
 
     // Check if there's a blocking zone between lines
     const hasBlocker = hasBlockingZoneBetweenLines(prevLine, currLine, blockingZones);
@@ -748,47 +1014,116 @@ function mergeAdjacentLines(
 function mergeAdjacentLinesWithColumns(
   paragraphs: readonly GroupedParagraph[],
   options: Required<SpatialGroupingOptions>,
-  blockingZones: readonly BlockingZone[] | undefined
+  blockingZones: readonly BlockingZone[] | undefined,
+  pageWidthFromContext: number | undefined
 ): GroupedText[] {
   if (paragraphs.length === 0) {return [];}
 
-  // Sort paragraphs by Y (top to bottom), then by X
-  const sorted = [...paragraphs].sort((a, b) => {
-    const yDiff = b.baselineY - a.baselineY; // Descending Y (top first)
-    if (Math.abs(yDiff) > 1) {return yDiff;}
-    // Same line - sort by X
-    const aX = a.runs[0]?.x ?? 0;
-    const bX = b.runs[0]?.x ?? 0;
-    return aX - bX;
-  });
+  const getParagraphBounds = (p: GroupedParagraph): { minX: number; maxX: number; minY: number; maxY: number } => {
+    const runs = p.runs;
+    const minX = Math.min(...runs.map((r) => r.x));
+    const maxX = Math.max(...runs.map((r) => r.x + r.width));
+    const minY = Math.min(...runs.map((r) => r.y));
+    const maxY = Math.max(...runs.map((r) => r.y + r.height));
+    return { minX, maxX, minY, maxY };
+  };
 
-  const blocks: GroupedText[] = [];
-  const used = new Set<number>();
+  const allBounds = paragraphs.map(getParagraphBounds);
+  const pageWidth = pageWidthFromContext;
 
-  for (let i = 0; i < sorted.length; i++) {
-    if (used.has(i)) {continue;}
+  // Without a known page width, page-level column inference is unreliable and can
+  // misclassify "full width" content. Fall back to simple sequential merging.
+  if (!pageWidth || pageWidth <= 0 || !options.enablePageColumnDetection) {
+    const sorted = [...paragraphs].sort((a, b) => {
+      const yDiff = b.baselineY - a.baselineY;
+      if (Math.abs(yDiff) > 1) {return yDiff;}
+      const aX = a.runs[0]?.x ?? 0;
+      const bX = b.runs[0]?.x ?? 0;
+      return aX - bX;
+    });
 
-    const block: GroupedParagraph[] = [sorted[i]];
-    used.add(i);
+    const blocks: GroupedText[] = [];
+    let current: GroupedParagraph[] = [];
 
-    // Find paragraphs that should merge with this one
-    for (let j = i + 1; j < sorted.length; j++) {
-      if (used.has(j)) {continue;}
-
-      const lastPara = block[block.length - 1];
-      const candidate = sorted[j];
-
-      // Check for blocking zones between paragraphs
-      const hasBlocker = hasBlockingZoneBetweenLines(lastPara, candidate, blockingZones);
-
-      if (shouldMergeLinesWithColumns(lastPara, candidate, options) && !hasBlocker) {
-        block.push(candidate);
-        used.add(j);
+    for (const p of sorted) {
+      if (current.length === 0) {
+        current = [p];
+        continue;
+      }
+      const prev = current[current.length - 1]!;
+      const hasBlocker = hasBlockingZoneBetweenLines(prev, p, blockingZones);
+      if (!hasBlocker && shouldMergeLines(prev, p, options)) {
+        current.push(p);
+      } else {
+        blocks.push(createGroupedText(current));
+        current = [p];
       }
     }
 
-    blocks.push(createGroupedText(block));
+    if (current.length > 0) {blocks.push(createGroupedText(current));}
+    return blocks;
   }
+
+  const ranges = allBounds.map((b) => ({ x0: b.minX, x1: b.maxX, weight: Math.max(1, b.maxY - b.minY) }));
+  const gutters = detectGuttersFromXRanges(ranges, pageWidth, options);
+  const intervals = buildColumnIntervals(pageWidth, gutters);
+
+  const withColumn = paragraphs.map((p) => {
+    const b = getParagraphBounds(p);
+    const column = assignXRangeToColumn(b.minX, b.maxX, intervals, pageWidth, options);
+    return { p, column, b };
+  });
+  const columns = new Map<number, { p: GroupedParagraph; b: { minX: number; maxX: number; minY: number; maxY: number } }[]>();
+
+  for (const it of withColumn) {
+    const arr = columns.get(it.column) ?? [];
+    arr.push({ p: it.p, b: it.b });
+    columns.set(it.column, arr);
+  }
+
+  const blocks: GroupedText[] = [];
+
+  const mergeColumn = (items: readonly { p: GroupedParagraph; b: { minX: number; maxX: number; minY: number; maxY: number } }[]): void => {
+    const sorted = [...items].sort((a, b) => {
+      const yDiff = b.p.baselineY - a.p.baselineY;
+      if (Math.abs(yDiff) > 1) {return yDiff;}
+      return a.b.minX - b.b.minX;
+    });
+
+    let current: GroupedParagraph[] = [];
+    for (const it of sorted) {
+      if (current.length === 0) {
+        current = [it.p];
+        continue;
+      }
+      const prev = current[current.length - 1]!;
+      const hasBlocker = hasBlockingZoneBetweenLines(prev, it.p, blockingZones);
+      if (!hasBlocker && shouldMergeLines(prev, it.p, options)) {
+        current.push(it.p);
+      } else {
+        blocks.push(createGroupedText(current));
+        current = [it.p];
+      }
+    }
+    if (current.length > 0) {blocks.push(createGroupedText(current));}
+  };
+
+  // Merge detected columns (0..N-1) and full-width (-1) separately.
+  const columnKeys = [...columns.keys()].sort((a, b) => a - b);
+  for (const key of columnKeys) {
+    const items = columns.get(key);
+    if (!items || items.length === 0) {continue;}
+    mergeColumn(items);
+  }
+
+  // Stable-ish output order: top-to-bottom, then left-to-right.
+  blocks.sort((a, b) => {
+    const aTop = a.bounds.y + a.bounds.height;
+    const bTop = b.bounds.y + b.bounds.height;
+    const yDiff = bTop - aTop;
+    if (Math.abs(yDiff) > 1) {return yDiff;}
+    return a.bounds.x - b.bounds.x;
+  });
 
   return blocks;
 }
@@ -803,10 +1138,11 @@ function mergeAdjacentLinesWithColumns(
 function groupTextsIntoLines(
   sorted: readonly PdfText[],
   options: Required<SpatialGroupingOptions>,
-  blockingZones: readonly BlockingZone[] | undefined
+  blockingZones: readonly BlockingZone[] | undefined,
+  pageWidth: number | undefined
 ): GroupedParagraph[] {
   if (options.enableColumnSeparation) {
-    return groupIntoLinesWithColumns(sorted, options, blockingZones);
+    return groupIntoLinesWithColumns(sorted, options, blockingZones, pageWidth);
   }
   return groupIntoLines(sorted, options, blockingZones);
 }
@@ -817,10 +1153,11 @@ function groupTextsIntoLines(
 function mergeLinesToBlocks(
   lines: readonly GroupedParagraph[],
   options: Required<SpatialGroupingOptions>,
-  blockingZones: readonly BlockingZone[] | undefined
+  blockingZones: readonly BlockingZone[] | undefined,
+  pageWidth: number | undefined
 ): GroupedText[] {
   if (options.enableColumnSeparation) {
-    return mergeAdjacentLinesWithColumns(lines, options, blockingZones);
+    return mergeAdjacentLinesWithColumns(lines, options, blockingZones, pageWidth);
   }
   return mergeAdjacentLines(lines, options, blockingZones);
 }
@@ -852,12 +1189,13 @@ export function createSpatialGrouping(userOptions: SpatialGroupingOptions = {}):
     // Step 1: Sort by Y (top to bottom in PDF coords = descending)
     const sorted = [...texts].sort((a, b) => b.y - a.y);
     const blockingZones = context?.blockingZones;
+    const pageWidth = context?.pageWidth;
 
     // Step 2: Group into lines, with column separation if enabled
-    const lines = groupTextsIntoLines(sorted, options, blockingZones);
+    const lines = groupTextsIntoLines(sorted, options, blockingZones, pageWidth);
 
     // Step 3: Merge adjacent lines into blocks
-    const blocks = mergeLinesToBlocks(lines, options, blockingZones);
+    const blocks = mergeLinesToBlocks(lines, options, blockingZones, pageWidth);
 
     return blocks;
   };

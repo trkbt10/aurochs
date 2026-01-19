@@ -25,6 +25,9 @@ import { convertImageToShape } from "./image-to-shapes";
 import { computePathBBox } from "../parser/path/path-builder";
 import type { BlockingZone, GroupingContext, TextGroupingFn } from "./text-grouping/types";
 import { spatialGrouping } from "./text-grouping/spatial-grouping";
+import { convertGroupedTextToTableShape } from "./table-to-shapes";
+import type { GroupedText } from "./text-grouping/types";
+import { inferTableFromGroupedText } from "./table-inference";
 
 export type ConversionOptions = {
   /** ターゲットスライド幅 */
@@ -197,10 +200,140 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
   const groupTexts = options.textGroupingFn ?? spatialGrouping;
   const groups = groupTexts(texts, groupingContext);
 
-  // Convert each group to a single TextBox shape
-  for (const group of groups) {
-    const shape = convertGroupedTextToShape(group, context, generateId());
-    shapes.push(shape);
+  // Convert each group to either a Table (graphicFrame) or a TextBox (sp).
+  // For tables, we try to absorb "header" groups that sit immediately above
+  // the table body so the table columns match the original document.
+  const groupArray = [...groups];
+  const consumed = new Set<number>();
+
+  const overlap1D = (a0: number, a1: number, b0: number, b1: number): number => {
+    const lo = Math.max(Math.min(a0, a1), Math.min(b0, b1));
+    const hi = Math.min(Math.max(a0, a1), Math.max(b0, b1));
+    return Math.max(0, hi - lo);
+  };
+
+  const mergeGroups = (indices: readonly number[]): { merged: GroupedText; mergedIndices: readonly number[] } => {
+    const picked = indices.map((i) => groupArray[i]!).filter(Boolean);
+    if (picked.length === 0) {throw new Error("mergeGroups: no groups");}
+
+    const x0 = Math.min(...picked.map((g) => g.bounds.x));
+    const y0 = Math.min(...picked.map((g) => g.bounds.y));
+    const x1 = Math.max(...picked.map((g) => g.bounds.x + g.bounds.width));
+    const y1 = Math.max(...picked.map((g) => g.bounds.y + g.bounds.height));
+
+    return {
+      merged: {
+        bounds: { x: x0, y: y0, width: x1 - x0, height: y1 - y0 },
+        paragraphs: picked.flatMap((g) => g.paragraphs),
+      },
+      mergedIndices: indices,
+    };
+  };
+
+  type TableCandidate = {
+    readonly index: number;
+    readonly bounds: { x: number; y: number; width: number; height: number };
+    readonly fontSize: number;
+    readonly area: number;
+  };
+
+  const tableCandidates: TableCandidate[] = groupArray
+    .map((g, index) => {
+      const inferred = inferTableFromGroupedText(g, { paths });
+      if (!inferred) {return null;}
+      const b = inferred.bounds;
+      return { index, bounds: b, fontSize: inferred.fontSize, area: b.width * b.height };
+    })
+    .filter((v): v is TableCandidate => v !== null);
+
+  // Group index -> table group index it should be absorbed into
+  const absorbedBy = new Map<number, number>();
+  const recordAbsorb = (groupIndex: number, tableIndex: number, tableArea: number): void => {
+    if (groupIndex === tableIndex) {return;}
+    const existing = absorbedBy.get(groupIndex);
+    if (existing === undefined) {
+      absorbedBy.set(groupIndex, tableIndex);
+      return;
+    }
+    const existingArea = tableCandidates.find((t) => t.index === existing)?.area ?? Infinity;
+    if (tableArea < existingArea) {
+      absorbedBy.set(groupIndex, tableIndex);
+    }
+  };
+
+  // Pre-pass: mark small groups that belong to a table (header labels, etc.) so they
+  // don't get emitted as standalone text boxes before the table is processed.
+  for (const table of tableCandidates) {
+    const pad = table.fontSize * 0.6;
+    const x0 = table.bounds.x - pad;
+    const x1 = table.bounds.x + table.bounds.width + pad;
+    const y0 = table.bounds.y - pad;
+    const y1 = table.bounds.y + table.bounds.height + pad;
+    const tableTop = table.bounds.y + table.bounds.height;
+    const headerWindow = table.fontSize * 3;
+
+    for (let j = 0; j < groupArray.length; j++) {
+      if (j === table.index) {continue;}
+      const other = groupArray[j]!;
+      if (other.paragraphs.length > 6) {continue;}
+
+      const cx = other.bounds.x + other.bounds.width / 2;
+      const cy = other.bounds.y + other.bounds.height / 2;
+      const inside = cx >= x0 && cx <= x1 && cy >= y0 && cy <= y1;
+      if (inside) {
+        recordAbsorb(j, table.index, table.area);
+        continue;
+      }
+
+      // Header labels can sit slightly above the table body group's top due to
+      // bbox/baseline differences. Absorb those too when they align horizontally,
+      // but only when the candidate looks like a short label (avoid swallowing
+      // surrounding paragraphs like section titles).
+      const otherBottom = other.bounds.y;
+      if (otherBottom < tableTop - table.fontSize * 1.0) {continue;}
+      if (otherBottom > tableTop + headerWindow) {continue;}
+
+      const otherTop = other.bounds.y + other.bounds.height;
+      if (otherTop > tableTop + table.fontSize * 1.2) {continue;}
+      if (other.bounds.height > table.fontSize * 1.8) {continue;}
+
+      const ov = overlap1D(x0, x1, other.bounds.x, other.bounds.x + other.bounds.width);
+      const denom = Math.max(1e-6, Math.min(x1 - x0, other.bounds.width));
+      const ovRatio = ov / denom;
+      if (ovRatio < 0.2) {continue;}
+
+      recordAbsorb(j, table.index, table.area);
+    }
+  }
+
+  for (let i = 0; i < groupArray.length; i++) {
+    if (consumed.has(i)) {continue;}
+    const absorbTarget = absorbedBy.get(i);
+    if (absorbTarget !== undefined && absorbTarget !== i) {
+      // This group will be merged into a table later.
+      continue;
+    }
+    const group = groupArray[i]!;
+
+    const inferred = inferTableFromGroupedText(group, { paths });
+    if (!inferred) {
+      const shapeId = generateId();
+      shapes.push(convertGroupedTextToShape(group, context, shapeId));
+      continue;
+    }
+
+    const absorbedIndices = [...absorbedBy.entries()]
+      .filter(([, t]) => t === i)
+      .map(([idx]) => idx);
+
+    const mergedIndices = [i, ...absorbedIndices].sort((a, b) => a - b);
+    const { merged, mergedIndices: usedIndices } = mergeGroups(mergedIndices);
+
+    for (const idx of usedIndices) {consumed.add(idx);}
+
+    const shapeId = generateId();
+    const table = convertGroupedTextToTableShape(merged, paths, context, shapeId);
+    shapes.push(table ?? convertGroupedTextToShape(merged, context, shapeId));
   }
 
   for (const image of images) {
@@ -274,7 +407,9 @@ function convertPath(path: PdfPath, context: ConversionContext, shapeId: string)
 
   const geometry = selectPathGeometry(path, context, usePresetOptimization);
 
-  const { fill, line } = convertGraphicsStateToStyle(path.graphicsState, path.paintOp);
+  const { fill, line } = convertGraphicsStateToStyle(path.graphicsState, path.paintOp, {
+    lineWidthScale: Math.min(context.scaleX, context.scaleY),
+  });
 
   const bbox = computePathBBox(path);
   const converted = convertBBox(bbox, context);

@@ -18,3 +18,6 @@ export {
   serializeRunProperties,
   serializeEndParaRunProperties,
 } from "./text-properties";
+
+// Phase 10: Table
+export { serializeDrawingTable } from "./table";

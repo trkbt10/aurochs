@@ -20,10 +20,10 @@ import { convertBBox, convertPoint } from "./transform-converter";
 import { computePathBBox } from "../parser/path/path-builder";
 
 type LocalConversionContext = ConversionContext & {
-  readonly offsetX: number;
-  readonly offsetY: number;
-  readonly width: number;
-  readonly height: number;
+  readonly localOffsetX: number;
+  readonly localOffsetY: number;
+  readonly localWidth: number;
+  readonly localHeight: number;
 };
 
 const pixelsToNumber = (value: Pixels): number => value as number;
@@ -37,10 +37,12 @@ export function convertPathToGeometry(pdfPath: PdfPath, context: ConversionConte
 
   const localContext: LocalConversionContext = {
     ...context,
-    offsetX: pixelsToNumber(converted.x),
-    offsetY: pixelsToNumber(converted.y),
-    width: pixelsToNumber(converted.width),
-    height: pixelsToNumber(converted.height),
+    // NOTE: keep ConversionContext.offsetX/offsetY (fit centering) intact.
+    // These locals represent the custom geometry's top-left origin in PPTX coords.
+    localOffsetX: pixelsToNumber(converted.x),
+    localOffsetY: pixelsToNumber(converted.y),
+    localWidth: pixelsToNumber(converted.width),
+    localHeight: pixelsToNumber(converted.height),
   };
 
   const commands = convertPathOps(pdfPath.operations, localContext);
@@ -163,8 +165,8 @@ function convertToLocal(
   const pptx = convertPoint(point, context);
 
   return {
-    x: px((pptx.x as number) - context.offsetX),
-    y: px((pptx.y as number) - context.offsetY),
+    x: px((pptx.x as number) - context.localOffsetX),
+    y: px((pptx.y as number) - context.localOffsetY),
   };
 }
 

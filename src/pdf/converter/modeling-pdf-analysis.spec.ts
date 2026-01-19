@@ -989,7 +989,7 @@ describe("Text Grouping analysis", () => {
     expect(groups.length).toBeGreaterThan(0);
   });
 
-  it("should verify paragraph flattening in converted shapes", async () => {
+  it("should verify paragraph structure in converted shapes", async () => {
     const pdfBytes = readFileSync(JP_PDF_PATH);
     const pdfDoc = await parsePdf(pdfBytes);
 
@@ -1007,7 +1007,7 @@ describe("Text Grouping analysis", () => {
     console.log("\n=== Paragraph Flattening Verification ===");
     console.log(`Total TextBoxes: ${textBoxes.length}`);
 
-    // Find the TextBox with most runs (should be flattened now)
+    // Find the TextBox with most runs (should preserve line structure)
     const maxRunsInfo = textBoxes.reduce<{ maxRuns: number; textBox: SpShape | null }>(
       (acc, shape) => {
         const tb = shape.textBody;
@@ -1038,8 +1038,8 @@ describe("Text Grouping analysis", () => {
         console.log(`  Para[${i}] (${para.runs.length} runs): "${runsText.slice(0, 60)}${runsText.length > 60 ? "..." : ""}"`);
       });
 
-      // Verify wrapping is enabled
-      expect(tb.bodyProperties.wrapping).toBe("square");
+      // Verify wrapping is disabled to preserve explicit PDF line breaks
+      expect(tb.bodyProperties.wrapping).toBe("none");
     }
 
     expect(textBoxes.length).toBeGreaterThan(0);

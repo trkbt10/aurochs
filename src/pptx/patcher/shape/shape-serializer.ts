@@ -1,8 +1,9 @@
 import { createElement, type XmlElement } from "../../../xml";
 import type { Shape, SpShape, GrpShape, PicShape, CxnShape, GraphicFrame, NonVisualProperties, Geometry, PresetGeometry, CustomGeometry, GeometryPath, PathCommand, ConnectionTarget, OleReference } from "../../domain";
 import type { Transform, GroupTransform } from "../../domain/geometry";
+import type { Table } from "../../domain/table/types";
 import { serializeTransform } from "../serializer/transform";
-import { serializeColor, serializeEffects, serializeFill, serializeLine, serializeTextBody } from "../serializer";
+import { serializeColor, serializeDrawingTable, serializeEffects, serializeFill, serializeLine, serializeTextBody } from "../serializer";
 import { ooxmlAngleUnits, ooxmlBool, ooxmlEmu, ooxmlPercent100k } from "../../../ooxml/serializer/units";
 
 /**
@@ -568,10 +569,6 @@ function serializeConnectionTarget(name: "a:stCxn" | "a:endCxn", target: Connect
  * @see ECMA-376 Part 1, Section 19.3.1.21 (p:graphicFrame)
  */
 export function serializeGraphicFrame(frame: GraphicFrame): XmlElement {
-  if (frame.content.type !== "oleObject") {
-    throw new Error(`serializeGraphicFrame: content type '${frame.content.type}' is not supported for serialization. Only oleObject is supported.`);
-  }
-
   const nvGraphicFramePr = createElement("p:nvGraphicFramePr", {}, [
     serializeGraphicFrameCNvPr(frame.nonVisual),
     createElement("p:cNvGraphicFramePr", {}, frame.nonVisual.graphicFrameLocks
@@ -585,7 +582,16 @@ export function serializeGraphicFrame(frame: GraphicFrame): XmlElement {
   const graphic = createElement("a:graphic", {
     xmlns: "http://schemas.openxmlformats.org/drawingml/2006/main",
   }, [
-    serializeOleObjectGraphicData(frame.content.data),
+    (() => {
+      switch (frame.content.type) {
+        case "oleObject":
+          return serializeOleObjectGraphicData(frame.content.data);
+        case "table":
+          return serializeTableGraphicData(frame.content.data.table);
+        default:
+          throw new Error(`serializeGraphicFrame: content type '${frame.content.type}' is not supported for serialization.`);
+      }
+    })(),
   ]);
 
   return createElement("p:graphicFrame", {}, [nvGraphicFramePr, xfrm, graphic]);
@@ -682,4 +688,12 @@ function serializeOleObjectGraphicData(oleRef: OleReference): XmlElement {
   return createElement("a:graphicData", {
     uri: "http://schemas.openxmlformats.org/presentationml/2006/ole",
   }, [oleObj]);
+}
+
+function serializeTableGraphicData(table: Table): XmlElement {
+  return createElement("a:graphicData", {
+    uri: "http://schemas.openxmlformats.org/drawingml/2006/table",
+  }, [
+    serializeDrawingTable(table),
+  ]);
 }

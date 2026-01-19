@@ -20,8 +20,11 @@ import {
 import type { Pixels } from "../../../ooxml/domain/units";
 import type { ColorContext } from "../../domain/color/context";
 import { renderFillToStyle, renderLineToStyle } from "./fill";
+import type { CoreRenderContext } from "../render-context";
 import type { RenderOptions } from "../render-options";
 import type { TableStyleList } from "../../parser/table/style-parser";
+import type { SvgDefsCollector } from "./slide-utils";
+import { renderTextSvg } from "./slide-text";
 
 // =============================================================================
 // Table Style Resolution
@@ -230,7 +233,8 @@ export function renderTableSvg(
   table: Table,
   frameWidth: Pixels,
   frameHeight: Pixels,
-  colorContext: ColorContext,
+  ctx: CoreRenderContext,
+  defsCollector: SvgDefsCollector,
   options?: RenderOptions,
   tableStyles?: TableStyleList,
 ): string {
@@ -264,7 +268,7 @@ export function renderTableSvg(
   const colCount = grid.columns.length;
 
   if (properties.fill) {
-    const fillStyle = renderFillToStyle(properties.fill, colorContext);
+    const fillStyle = renderFillToStyle(properties.fill, ctx.colorContext);
     elements.push(
       `<rect x="0" y="0" width="${totalWidth}" height="${totalHeight}" fill="${fillStyle.fill}"${
         fillStyle.fillOpacity !== undefined ? ` fill-opacity="${fillStyle.fillOpacity}"` : ""
@@ -302,7 +306,7 @@ export function renderTableSvg(
 
       const cellFillStyle = resolveCellFillStyle({
         cellProps,
-        colorContext,
+        colorContext: ctx.colorContext,
         positionContext,
         tableStyle,
       });
@@ -327,25 +331,25 @@ export function renderTableSvg(
         const { left, right, top, bottom, tlToBr, blToTr } = cellProps.borders;
 
         if (top) {
-          const lineStyle = renderLineToStyle(top, colorContext);
+          const lineStyle = renderLineToStyle(top, ctx.colorContext);
           elements.push(
             `<line x1="${cursor.x}" y1="${cursor.y}" x2="${cursor.x + spanWidth}" y2="${cursor.y}" stroke="${lineStyle.stroke}" stroke-width="${lineStyle.strokeWidth}"/>`,
           );
         }
         if (bottom) {
-          const lineStyle = renderLineToStyle(bottom, colorContext);
+          const lineStyle = renderLineToStyle(bottom, ctx.colorContext);
           elements.push(
             `<line x1="${cursor.x}" y1="${cursor.y + spanHeight}" x2="${cursor.x + spanWidth}" y2="${cursor.y + spanHeight}" stroke="${lineStyle.stroke}" stroke-width="${lineStyle.strokeWidth}"/>`,
           );
         }
         if (left) {
-          const lineStyle = renderLineToStyle(left, colorContext);
+          const lineStyle = renderLineToStyle(left, ctx.colorContext);
           elements.push(
             `<line x1="${cursor.x}" y1="${cursor.y}" x2="${cursor.x}" y2="${cursor.y + spanHeight}" stroke="${lineStyle.stroke}" stroke-width="${lineStyle.strokeWidth}"/>`,
           );
         }
         if (right) {
-          const lineStyle = renderLineToStyle(right, colorContext);
+          const lineStyle = renderLineToStyle(right, ctx.colorContext);
           elements.push(
             `<line x1="${cursor.x + spanWidth}" y1="${cursor.y}" x2="${cursor.x + spanWidth}" y2="${cursor.y + spanHeight}" stroke="${lineStyle.stroke}" stroke-width="${lineStyle.strokeWidth}"/>`,
           );
@@ -354,14 +358,14 @@ export function renderTableSvg(
         // Diagonal borders
         // tlToBr: Top-left to bottom-right diagonal
         if (tlToBr) {
-          const lineStyle = renderLineToStyle(tlToBr, colorContext);
+          const lineStyle = renderLineToStyle(tlToBr, ctx.colorContext);
           elements.push(
             `<line x1="${cursor.x}" y1="${cursor.y}" x2="${cursor.x + spanWidth}" y2="${cursor.y + spanHeight}" stroke="${lineStyle.stroke}" stroke-width="${lineStyle.strokeWidth}"/>`,
           );
         }
         // blToTr: Bottom-left to top-right diagonal
         if (blToTr) {
-          const lineStyle = renderLineToStyle(blToTr, colorContext);
+          const lineStyle = renderLineToStyle(blToTr, ctx.colorContext);
           elements.push(
             `<line x1="${cursor.x}" y1="${cursor.y + spanHeight}" x2="${cursor.x + spanWidth}" y2="${cursor.y}" stroke="${lineStyle.stroke}" stroke-width="${lineStyle.strokeWidth}"/>`,
           );
@@ -370,7 +374,7 @@ export function renderTableSvg(
         // No explicit cell borders - render inside borders from style if available
         // Top inside border (if not first row and insideH is defined)
         if (isNotFirstRow && styleBorders.insideH) {
-          const lineStyle = renderLineToStyle(styleBorders.insideH, colorContext);
+          const lineStyle = renderLineToStyle(styleBorders.insideH, ctx.colorContext);
           elements.push(
             `<line x1="${cursor.x}" y1="${cursor.y}" x2="${cursor.x + spanWidth}" y2="${cursor.y}" stroke="${lineStyle.stroke}" stroke-width="${lineStyle.strokeWidth}"/>`,
           );
@@ -378,7 +382,7 @@ export function renderTableSvg(
 
         // Bottom inside border (if not last row and insideH is defined)
         if (isNotLastRow && styleBorders.insideH) {
-          const lineStyle = renderLineToStyle(styleBorders.insideH, colorContext);
+          const lineStyle = renderLineToStyle(styleBorders.insideH, ctx.colorContext);
           elements.push(
             `<line x1="${cursor.x}" y1="${cursor.y + spanHeight}" x2="${cursor.x + spanWidth}" y2="${cursor.y + spanHeight}" stroke="${lineStyle.stroke}" stroke-width="${lineStyle.strokeWidth}"/>`,
           );
@@ -386,7 +390,7 @@ export function renderTableSvg(
 
         // Left inside border (if not first column and insideV is defined)
         if (isNotFirstCol && styleBorders.insideV) {
-          const lineStyle = renderLineToStyle(styleBorders.insideV, colorContext);
+          const lineStyle = renderLineToStyle(styleBorders.insideV, ctx.colorContext);
           elements.push(
             `<line x1="${cursor.x}" y1="${cursor.y}" x2="${cursor.x}" y2="${cursor.y + spanHeight}" stroke="${lineStyle.stroke}" stroke-width="${lineStyle.strokeWidth}"/>`,
           );
@@ -394,7 +398,7 @@ export function renderTableSvg(
 
         // Right inside border (if not last column and insideV is defined)
         if (isNotLastCol && styleBorders.insideV) {
-          const lineStyle = renderLineToStyle(styleBorders.insideV, colorContext);
+          const lineStyle = renderLineToStyle(styleBorders.insideV, ctx.colorContext);
           elements.push(
             `<line x1="${cursor.x + spanWidth}" y1="${cursor.y}" x2="${cursor.x + spanWidth}" y2="${cursor.y + spanHeight}" stroke="${lineStyle.stroke}" stroke-width="${lineStyle.strokeWidth}"/>`,
           );
@@ -402,13 +406,13 @@ export function renderTableSvg(
 
         // Diagonal borders from style
         if (styleBorders.tlToBr) {
-          const lineStyle = renderLineToStyle(styleBorders.tlToBr, colorContext);
+          const lineStyle = renderLineToStyle(styleBorders.tlToBr, ctx.colorContext);
           elements.push(
             `<line x1="${cursor.x}" y1="${cursor.y}" x2="${cursor.x + spanWidth}" y2="${cursor.y + spanHeight}" stroke="${lineStyle.stroke}" stroke-width="${lineStyle.strokeWidth}"/>`,
           );
         }
         if (styleBorders.blToTr) {
-          const lineStyle = renderLineToStyle(styleBorders.blToTr, colorContext);
+          const lineStyle = renderLineToStyle(styleBorders.blToTr, ctx.colorContext);
           elements.push(
             `<line x1="${cursor.x}" y1="${cursor.y + spanHeight}" x2="${cursor.x + spanWidth}" y2="${cursor.y}" stroke="${lineStyle.stroke}" stroke-width="${lineStyle.strokeWidth}"/>`,
           );
@@ -423,86 +427,30 @@ export function renderTableSvg(
       }
 
       if (cell.textBody && cell.textBody.paragraphs.length > 0) {
-        const para = cell.textBody.paragraphs[0];
-        const textParts: string[] = [];
+        const margins = cellProps.margins ?? { left: 9.6, right: 9.6, top: 9.6, bottom: 9.6 };
+        const innerW = Math.max(0, spanWidth - (margins.left as number) - (margins.right as number));
+        const innerH = Math.max(0, spanHeight - (margins.top as number) - (margins.bottom as number));
 
-        for (const run of para.runs) {
-          if (run.type === "text" && run.text) {
-            textParts.push(run.text);
-          } else if (run.type === "field" && run.text) {
-            textParts.push(run.text);
-          }
-        }
+        if (innerW > 0.1 && innerH > 0.1) {
+          const textBody = {
+            ...cell.textBody,
+            bodyProperties: {
+              ...cell.textBody.bodyProperties,
+              ...(cellProps.anchor ? { anchor: cellProps.anchor } : {}),
+              ...(cellProps.verticalType ? { verticalType: cellProps.verticalType } : {}),
+              overflow: (cellProps.horzOverflow === "clip" ? "clip" : cell.textBody.bodyProperties.overflow) as
+                | "clip"
+                | "overflow"
+                | undefined,
+              verticalOverflow: "clip" as const,
+            },
+          };
 
-        if (textParts.length > 0) {
-          const textContent = textParts.join("");
-          const fontSize = 12;
-
-          // Apply cell margins (default: 9.6px ≈ 91440 EMU / 9525)
-          const margins = cellProps.margins ?? { left: 9.6, right: 9.6, top: 9.6, bottom: 9.6 };
-
-          // Handle vertical text types
-          const verticalType = cellProps.verticalType ?? "horz";
-          const textFill = resolveTextFill(positionContext, tableStyle, colorContext);
-
-          if (verticalType === "vert" || verticalType === "eaVert") {
-            // Rotate 90 degrees clockwise
-            // Position text at right edge, center vertically, then rotate around that point
-            const textX = cursor.x + spanWidth - (margins.right as number) - fontSize / 2;
-            const textY = cursor.y + (margins.top as number);
-
-            elements.push(
-              `<text x="${textX}" y="${textY}" font-size="${fontSize}px" font-family="sans-serif" fill="${textFill}" transform="rotate(90, ${textX}, ${textY})">${escapeXmlText(textContent)}</text>`,
-            );
-          } else if (verticalType === "vert270") {
-            // Rotate 270 degrees (or -90 degrees)
-            // Position text at left edge, bottom, then rotate around that point
-            const textX = cursor.x + (margins.left as number) + fontSize / 2;
-            const textY = cursor.y + spanHeight - (margins.bottom as number);
-
-            elements.push(
-              `<text x="${textX}" y="${textY}" font-size="${fontSize}px" font-family="sans-serif" fill="${textFill}" transform="rotate(-90, ${textX}, ${textY})">${escapeXmlText(textContent)}</text>`,
-            );
-          } else if (verticalType === "wordArtVert" || verticalType === "mongolianVert") {
-            // Stack characters vertically (one per line)
-            // Each character is rendered separately with increasing Y offset
-            const chars = [...textContent];
-            const charSpacing = fontSize * 1.2;
-            const startX = cursor.x + spanWidth / 2;
-            const startY = cursor.y + (margins.top as number) + fontSize;
-
-            chars.forEach((char, idx) => {
-              const charY = startY + idx * charSpacing;
-              // Only render if within cell bounds
-              if (charY < cursor.y + spanHeight - (margins.bottom as number)) {
-                elements.push(
-                  `<text x="${startX}" y="${charY}" font-size="${fontSize}px" font-family="sans-serif" fill="${textFill}" text-anchor="middle">${escapeXmlText(char)}</text>`,
-                );
-              }
-            });
-          } else {
-            // Default horizontal text
-            const textX = cursor.x + (margins.left as number);
-
-            // Apply cell anchor (vertical alignment)
-            const anchor = cellProps.anchor ?? "center";
-            let textY: number;
-            switch (anchor) {
-              case "top":
-                textY = cursor.y + (margins.top as number) + fontSize;
-                break;
-              case "bottom":
-                textY = cursor.y + spanHeight - (margins.bottom as number);
-                break;
-              case "center":
-              default:
-                textY = cursor.y + spanHeight / 2 + fontSize / 3;
-                break;
-            }
-
-            elements.push(
-              `<text x="${textX}" y="${textY}" font-size="${fontSize}px" font-family="sans-serif" fill="${textFill}">${escapeXmlText(textContent)}</text>`,
-            );
+          const svg = renderTextSvg(textBody, ctx, innerW, innerH, defsCollector);
+          if (svg) {
+            const tx = cursor.x + (margins.left as number);
+            const ty = cursor.y + (margins.top as number);
+            elements.push(`<g transform="translate(${tx}, ${ty})">${svg}</g>`);
           }
         }
       }
@@ -513,18 +461,6 @@ export function renderTableSvg(
   });
 
   return `<g transform="scale(${scaleX}, ${scaleY})">${elements.join("\n")}</g>`;
-}
-
-/**
- * Escape XML special characters in text
- */
-function escapeXmlText(text: string): string {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
 }
 
 /**
@@ -579,32 +515,4 @@ function resolveCellFillStyle(
 
   const fill = rowIdx % 2 === 0 ? "#FFFFFF" : "#F2F2F2";
   return { fill, opacity: undefined };
-}
-
-/**
- * Resolve text fill color based on table style
- */
-function resolveTextFill(
-  positionContext: CellPositionContext,
-  tableStyle: TableStyle | undefined,
-  colorContext: ColorContext,
-): string {
-  if (tableStyle) {
-    const parts = getApplicablePartStyles(tableStyle, positionContext);
-    // Check for text properties with font reference color
-    for (let i = parts.length - 1; i >= 0; i--) {
-      const part = parts[i];
-      if (part.textProperties?.fontReference?.color) {
-        const fillStyle = renderFillToStyle(part.textProperties.fontReference.color, colorContext);
-        return fillStyle.fill;
-      }
-    }
-  }
-
-  // Fallback: white text for first row, black for others
-  const isFirstRowEnabled = isFlagEnabled(
-    positionContext.properties.firstRow,
-    positionContext.rowIdx === 0,
-  );
-  return isFirstRowEnabled ? "#FFFFFF" : "#000000";
 }

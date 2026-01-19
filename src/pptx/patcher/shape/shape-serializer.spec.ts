@@ -1,5 +1,5 @@
 import { isXmlElement, getChild } from "../../../xml";
-import type { SpShape, GrpShape, PicShape, CxnShape } from "../../domain/shape";
+import type { SpShape, GrpShape, PicShape, CxnShape, GraphicFrame } from "../../domain/shape";
 import type { TextBody } from "../../domain/text";
 import type { Effects, Line } from "../../domain";
 import { EMU_PER_PIXEL } from "../../domain";
@@ -211,5 +211,46 @@ describe("shape-serializer", () => {
     const nv = getChild(xml, "p:nvCxnSpPr");
     const cNv = nv ? getChild(nv, "p:cNvCxnSpPr") : undefined;
     expect(getChild(cNv!, "a:stCxn")?.attrs.id).toBe("2");
+  });
+
+  it("serializes a graphicFrame table", () => {
+    const frame: GraphicFrame = {
+      type: "graphicFrame",
+      nonVisual: { id: "100", name: "Table 100" },
+      transform: {
+        x: px(10),
+        y: px(20),
+        width: px(200),
+        height: px(100),
+        rotation: deg(0),
+        flipH: false,
+        flipV: false,
+      },
+      content: {
+        type: "table",
+        data: {
+          table: {
+            properties: {},
+            grid: { columns: [{ width: px(100) }, { width: px(100) }] },
+            rows: [
+              {
+                height: px(20),
+                cells: [
+                  { properties: {}, textBody: createTextBody("A") },
+                  { properties: {}, textBody: createTextBody("B") },
+                ],
+              },
+            ],
+          },
+        },
+      },
+    };
+
+    const xml = serializeShape(frame);
+    expect(xml.name).toBe("p:graphicFrame");
+    const graphic = getChild(xml, "a:graphic")!;
+    const graphicData = getChild(graphic, "a:graphicData")!;
+    expect(graphicData.attrs.uri).toBe("http://schemas.openxmlformats.org/drawingml/2006/table");
+    expect(getChild(graphicData, "a:tbl")).toBeDefined();
   });
 });

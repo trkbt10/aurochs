@@ -13,6 +13,7 @@ import type { Table } from "../../../../../domain/table/types";
 import { px } from "../../../../../../ooxml/domain/units";
 import { useRenderContext } from "../../../context";
 import { renderTableSvg } from "../../../../svg/table";
+import { createDefsCollector } from "../../../../svg/slide-utils";
 import type { SvgResult } from "../types";
 
 /**
@@ -32,24 +33,39 @@ export function useTableSvg(
   width: number,
   height: number,
 ): SvgResult {
-  // Extract only the required context properties
-  // This encapsulation prevents bugs where wrong properties are passed
-  const { colorContext, options, tableStyles } = useRenderContext();
+  const renderCtx = useRenderContext();
+  const { colorContext, options, tableStyles, resources, resourceStore, fontScheme, warnings, slideSize, resolvedBackground, layoutShapes } = renderCtx;
 
   return useMemo(() => {
     if (table === undefined) {
       return { svg: null, hasContent: false };
     }
 
+    const defsCollector = createDefsCollector();
     const svg = renderTableSvg(
       table,
       px(width),
       px(height),
-      colorContext,
-      options,
-      tableStyles,
+      renderCtx,
+      defsCollector,
+      renderCtx.options,
+      renderCtx.tableStyles,
     );
 
-    return { svg, hasContent: true };
-  }, [table, width, height, colorContext, options, tableStyles]);
+    return { svg: defsCollector.toDefsElement() + svg, hasContent: true };
+  }, [
+    table,
+    width,
+    height,
+    colorContext,
+    options,
+    tableStyles,
+    resources,
+    resourceStore,
+    fontScheme,
+    warnings,
+    slideSize,
+    resolvedBackground,
+    layoutShapes,
+  ]);
 }
