@@ -44,6 +44,7 @@ function createWorkbook(): XlsxWorkbook {
             cells: [{ address: createAddress(1, 1), value: { type: "string", value: "Hello" } }],
           },
         ],
+        mergeCells: [],
         xmlPath: "xl/worksheets/sheet1.xml",
       },
     ],
@@ -92,6 +93,78 @@ function CellValueDebugger() {
 }
 
 describe("XlsxSheetGrid", () => {
+  it("shows gridlines by default and hides them when sheetView.showGridLines=false", async () => {
+    const base: XlsxWorkbook = {
+      sheets: [
+        {
+          name: "Sheet1",
+          sheetId: 1,
+          state: "visible",
+          rows: [],
+          xmlPath: "xl/worksheets/sheet1.xml",
+        },
+      ],
+      styles: createDefaultStyleSheet(),
+      sharedStrings: [],
+    };
+
+    const { unmount } = render(
+      <XlsxWorkbookEditorProvider initialWorkbook={base}>
+        <div style={{ width: 320, height: 200 }}>
+          <XlsxSheetGrid
+            sheetIndex={0}
+            metrics={{
+              rowCount: 20,
+              colCount: 10,
+              rowHeightPx: 22,
+              colWidthPx: 120,
+              headerSizePx: 32,
+              overscanRows: 2,
+              overscanCols: 2,
+            }}
+          />
+        </div>
+      </XlsxWorkbookEditorProvider>,
+    );
+
+    act(() => {
+      triggerResizeObservers([createResizeObserverEntry(320, 200)]);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("xlsx-gridlines")).toBeDefined();
+    });
+
+    unmount();
+
+    render(
+      <XlsxWorkbookEditorProvider initialWorkbook={{ ...base, sheets: [{ ...base.sheets[0]!, sheetView: { showGridLines: false, showRowColHeaders: true } }] }}>
+        <div style={{ width: 320, height: 200 }}>
+          <XlsxSheetGrid
+            sheetIndex={0}
+            metrics={{
+              rowCount: 20,
+              colCount: 10,
+              rowHeightPx: 22,
+              colWidthPx: 120,
+              headerSizePx: 32,
+              overscanRows: 2,
+              overscanCols: 2,
+            }}
+          />
+        </div>
+      </XlsxWorkbookEditorProvider>,
+    );
+
+    act(() => {
+      triggerResizeObservers([createResizeObserverEntry(320, 200)]);
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("xlsx-gridlines")).toBeNull();
+    });
+  });
+
   it("dispatches SELECT_CELL on cell click", async () => {
     const workbook = createWorkbook();
 
@@ -168,6 +241,50 @@ describe("XlsxSheetGrid", () => {
     });
   });
 
+  it("extends column selection with Shift+click on headers", async () => {
+    const workbook = createWorkbook();
+
+    render(
+      <XlsxWorkbookEditorProvider initialWorkbook={workbook}>
+        <div style={{ width: 320, height: 200 }}>
+          <XlsxSheetGrid
+            sheetIndex={0}
+            metrics={{
+              rowCount: 20,
+              colCount: 10,
+              rowHeightPx: 22,
+              colWidthPx: 120,
+              headerSizePx: 32,
+              overscanRows: 2,
+              overscanCols: 2,
+            }}
+          />
+        </div>
+        <RangeDebugger />
+      </XlsxWorkbookEditorProvider>,
+    );
+
+    act(() => {
+      triggerResizeObservers([createResizeObserverEntry(320, 200)]);
+    });
+
+    act(() => {
+      fireEvent.mouseDown(screen.getByTestId("xlsx-col-header-2"));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("selectedRange").textContent).toBe("2,1-2,20");
+    });
+
+    act(() => {
+      fireEvent.mouseDown(screen.getByTestId("xlsx-col-header-4"), { shiftKey: true });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("selectedRange").textContent).toBe("2,1-4,20");
+    });
+  });
+
   it("selects a row by clicking its header", async () => {
     const workbook = createWorkbook();
 
@@ -201,6 +318,50 @@ describe("XlsxSheetGrid", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("selectedRange").textContent).toBe("1,1-10,1");
+    });
+  });
+
+  it("extends row selection with Shift+click on headers", async () => {
+    const workbook = createWorkbook();
+
+    render(
+      <XlsxWorkbookEditorProvider initialWorkbook={workbook}>
+        <div style={{ width: 320, height: 200 }}>
+          <XlsxSheetGrid
+            sheetIndex={0}
+            metrics={{
+              rowCount: 20,
+              colCount: 10,
+              rowHeightPx: 22,
+              colWidthPx: 120,
+              headerSizePx: 32,
+              overscanRows: 2,
+              overscanCols: 2,
+            }}
+          />
+        </div>
+        <RangeDebugger />
+      </XlsxWorkbookEditorProvider>,
+    );
+
+    act(() => {
+      triggerResizeObservers([createResizeObserverEntry(320, 200)]);
+    });
+
+    act(() => {
+      fireEvent.mouseDown(screen.getByTestId("xlsx-row-header-2"));
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("selectedRange").textContent).toBe("1,2-10,2");
+    });
+
+    act(() => {
+      fireEvent.mouseDown(screen.getByTestId("xlsx-row-header-4"), { shiftKey: true });
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("selectedRange").textContent).toBe("1,2-10,4");
     });
   });
 
@@ -281,6 +442,69 @@ describe("XlsxSheetGrid", () => {
 
     await waitFor(() => {
       expect(screen.getByText("42")).toBeDefined();
+    });
+  });
+
+  it("renders merged cells as a single cell and selects the merge range on click", async () => {
+    const workbook: XlsxWorkbook = {
+      sheets: [
+        {
+          name: "Sheet1",
+          sheetId: 1,
+          state: "visible",
+          rows: [
+            {
+              rowNumber: rowIdx(1),
+              cells: [
+                { address: createAddress(1, 1), value: { type: "string", value: "Hello" } },
+                { address: createAddress(2, 1), value: { type: "string", value: "IGNORED" } },
+              ],
+            },
+          ],
+          mergeCells: [{ start: createAddress(1, 1), end: createAddress(2, 1) }],
+          xmlPath: "xl/worksheets/sheet1.xml",
+        },
+      ],
+      styles: createDefaultStyleSheet(),
+      sharedStrings: [],
+    };
+
+    render(
+      <XlsxWorkbookEditorProvider initialWorkbook={workbook}>
+        <div style={{ width: 320, height: 200 }}>
+          <XlsxSheetGrid
+            sheetIndex={0}
+            metrics={{
+              rowCount: 20,
+              colCount: 10,
+              rowHeightPx: 22,
+              colWidthPx: 120,
+              headerSizePx: 32,
+              overscanRows: 2,
+              overscanCols: 2,
+            }}
+          />
+        </div>
+        <RangeDebugger />
+      </XlsxWorkbookEditorProvider>,
+    );
+
+    act(() => {
+      triggerResizeObservers([createResizeObserverEntry(320, 200)]);
+    });
+
+    expect(screen.queryByText("IGNORED")).toBeNull();
+
+    act(() => {
+      fireEvent.mouseDown(screen.getByText("Hello"));
+    });
+
+    act(() => {
+      fireEvent.mouseUp(window);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("selectedRange").textContent).toBe("1,1-2,1");
     });
   });
 

@@ -847,6 +847,77 @@ export function applyColumnOverride(
   return [...normalizeColumnDefs(sorted)];
 }
 
+/**
+ * Apply an override to a range of columns (inclusive).
+ *
+ * This is used by editor operations like applying a style to whole columns
+ * without iterating and re-normalizing per column.
+ */
+export function applyColumnRangeOverride(
+  columns: readonly XlsxColumnDef[] | undefined,
+  startCol: ColIndex,
+  endCol: ColIndex,
+  override: Partial<XlsxColumnDef>,
+): readonly XlsxColumnDef[] {
+  const min = Math.min(toColNumber(startCol), toColNumber(endCol));
+  const max = Math.max(toColNumber(startCol), toColNumber(endCol));
+
+  if (!columns || columns.length === 0) {
+    return [{ min: colIdx(min), max: colIdx(max), ...override }];
+  }
+
+  const sorted = [...columns].sort((a, b) => toColNumber(a.min) - toColNumber(b.min));
+  const next: XlsxColumnDef[] = [];
+  let cursor = min;
+
+  for (const def of sorted) {
+    const defMin = toColNumber(def.min);
+    const defMax = toColNumber(def.max);
+
+    if (defMax < min) {
+      next.push(def);
+      continue;
+    }
+
+    if (defMin > max) {
+      if (cursor <= max) {
+        next.push({ min: colIdx(cursor), max: colIdx(max), ...override });
+        cursor = max + 1;
+      }
+      next.push(def);
+      continue;
+    }
+
+    if (defMin < min) {
+      next.push({ ...def, max: colIdx(min - 1) });
+    }
+
+    if (cursor < defMin) {
+      const gapMax = Math.min(defMin - 1, max);
+      if (cursor <= gapMax) {
+        next.push({ min: colIdx(cursor), max: colIdx(gapMax), ...override });
+        cursor = gapMax + 1;
+      }
+    }
+
+    const overlapMin = Math.max(defMin, min);
+    const overlapMax = Math.min(defMax, max);
+    next.push({ ...def, ...override, min: colIdx(overlapMin), max: colIdx(overlapMax) });
+    cursor = Math.max(cursor, overlapMax + 1);
+
+    if (defMax > max) {
+      next.push({ ...def, min: colIdx(max + 1) });
+    }
+  }
+
+  if (cursor <= max) {
+    next.push({ min: colIdx(cursor), max: colIdx(max), ...override });
+  }
+
+  const normalized = [...normalizeColumnDefs(next.sort((a, b) => toColNumber(a.min) - toColNumber(b.min)))];
+  return normalized;
+}
+
 
 
 

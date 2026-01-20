@@ -34,12 +34,13 @@ function cellAt(
   col: number,
   row: number,
   value: CellValue,
-  opts?: { readonly styleId?: number },
+  opts?: { readonly styleId?: number; readonly formula?: string },
 ): Cell {
   return {
     address: addr(col, row),
     value,
     ...(opts?.styleId !== undefined ? { styleId: styleId(opts.styleId) } : {}),
+    ...(opts?.formula !== undefined ? { formula: opts.formula } : {}),
   };
 }
 
@@ -97,7 +98,7 @@ function createEditorState(
 describe("xlsx-editor/context/workbook/editor/reducer/clipboard-handlers", () => {
   it("COPY saves clipboard content with isCut=false", () => {
     const worksheet = createWorksheet("Sheet1", 1, [
-      cellAt(1, 1, { type: "string", value: "A1" }, { styleId: 10 }),
+      cellAt(1, 1, { type: "string", value: "A1" }, { styleId: 10, formula: "SUM(1,2)" }),
       cellAt(2, 2, { type: "string", value: "B2" }),
     ]);
     const workbook = createWorkbook([worksheet]);
@@ -112,9 +113,26 @@ describe("xlsx-editor/context/workbook/editor/reducer/clipboard-handlers", () =>
         [{ type: "string", value: "A1" }, { type: "empty" }],
         [{ type: "empty" }, { type: "string", value: "B2" }],
       ],
+      formulas: [["SUM(1,2)", undefined], [undefined, undefined]],
       styles: [[styleId(10), undefined], [undefined, undefined]],
     });
     expect(next?.workbookHistory).toBe(state.workbookHistory);
+  });
+
+  it("COPY normalizes sourceRange to top-left → bottom-right", () => {
+    const worksheet = createWorksheet("Sheet1", 1, [
+      cellAt(1, 1, { type: "string", value: "A1" }),
+      cellAt(2, 2, { type: "string", value: "B2" }),
+    ]);
+    const workbook = createWorkbook([worksheet]);
+    const state = createEditorState(workbook, 0, { range: range(2, 2, 1, 1) });
+
+    const next = clipboardHandlers.COPY?.(state, { type: "COPY" });
+    expect(next?.clipboard?.sourceRange).toEqual(range(1, 1, 2, 2));
+    expect(next?.clipboard?.values).toEqual([
+      [{ type: "string", value: "A1" }, { type: "empty" }],
+      [{ type: "empty" }, { type: "string", value: "B2" }],
+    ]);
   });
 
   it("CUT saves clipboard content with isCut=true and deletes source range (pushes history)", () => {
@@ -137,7 +155,7 @@ describe("xlsx-editor/context/workbook/editor/reducer/clipboard-handlers", () =>
     expect(getCellValue(nextSheet!, addr(5, 5))).toEqual({ type: "string", value: "keep" });
   });
 
-  it("PASTE writes clipboard values from active cell and pushes history", () => {
+  it("PASTE writes values/formulas/styles from active cell and pushes history", () => {
     const worksheet = createWorksheet("Sheet1", 1, [cellAt(9, 9, { type: "string", value: "keep" })]);
     const workbook = createWorkbook([worksheet]);
     const state: XlsxEditorState = {
@@ -150,7 +168,15 @@ describe("xlsx-editor/context/workbook/editor/reducer/clipboard-handlers", () =>
         isCut: false,
         values: [
           [{ type: "string", value: "A1" }, { type: "string", value: "B1" }],
-          [{ type: "string", value: "A2" }, { type: "string", value: "B2" }],
+          [{ type: "string", value: "A2" }, { type: "empty" }],
+        ],
+        formulas: [
+          [undefined, "A1+1"],
+          [undefined, undefined],
+        ],
+        styles: [
+          [styleId(2), undefined],
+          [undefined, styleId(7)],
         ],
       },
       editingCell: undefined,
@@ -162,9 +188,39 @@ describe("xlsx-editor/context/workbook/editor/reducer/clipboard-handlers", () =>
 
     const nextSheet = next?.workbookHistory.present.sheets[0];
     expect(getCellValue(nextSheet!, addr(3, 3))).toEqual({ type: "string", value: "A1" });
-    expect(getCellValue(nextSheet!, addr(4, 3))).toEqual({ type: "string", value: "B1" });
+    expect(getCell(nextSheet!, addr(3, 3))?.styleId).toEqual(styleId(2));
+
+    expect(getCellValue(nextSheet!, addr(4, 3))).toEqual({ type: "empty" });
+    expect(getCell(nextSheet!, addr(4, 3))?.formula).toBe("C3+1");
+
     expect(getCellValue(nextSheet!, addr(3, 4))).toEqual({ type: "string", value: "A2" });
-    expect(getCellValue(nextSheet!, addr(4, 4))).toEqual({ type: "string", value: "B2" });
+    expect(getCell(nextSheet!, addr(4, 4))?.value).toEqual({ type: "empty" });
+    expect(getCell(nextSheet!, addr(4, 4))?.styleId).toEqual(styleId(7));
     expect(getCellValue(nextSheet!, addr(9, 9))).toEqual({ type: "string", value: "keep" });
+  });
+
+  it("PASTE shifts relative references in formulas (keeps $ absolute refs)", () => {
+    const worksheet = createWorksheet("Sheet1", 1, []);
+    const workbook = createWorkbook([worksheet]);
+    const state: XlsxEditorState = {
+      workbookHistory: createHistory(workbook),
+      activeSheetIndex: 0,
+      cellSelection: createRangeSelection(range(3, 3, 3, 3), addr(3, 3)),
+      drag: createIdleDragState(),
+      clipboard: {
+        sourceRange: range(1, 1, 1, 1),
+        isCut: false,
+        values: [[{ type: "empty" }]],
+        formulas: [["A1+$A$1+A$1+$A1"]],
+        styles: [[undefined]],
+      },
+      editingCell: undefined,
+    };
+
+    const next = clipboardHandlers.PASTE?.(state, { type: "PASTE" });
+    expect(next).toBeDefined();
+
+    const nextSheet = next?.workbookHistory.present.sheets[0];
+    expect(getCell(nextSheet!, addr(3, 3))?.formula).toBe("C3+$A$1+C$1+$A3");
   });
 });

@@ -18,10 +18,11 @@ import type { XlsxWorksheet } from "../../xlsx/domain/workbook";
 import type { Cell } from "../../xlsx/domain/cell/types";
 import { colIdx, rowIdx, type ColIndex, type RowIndex } from "../../xlsx/domain/types";
 import { indexToColumnLetter, type CellAddress } from "../../xlsx/domain/cell/address";
+import type { XlsxStyleSheet } from "../../xlsx/domain/style/types";
 import { getCell } from "../cell/query";
 import { useXlsxWorkbookEditor } from "../context/workbook/XlsxWorkbookEditorContext";
 import { createFormulaEvaluator } from "../../xlsx/formula/evaluator";
-import { toDisplayText } from "../../xlsx/formula/types";
+import { resolveCellFormatCode, formatCellValueForDisplay, formatFormulaScalarForDisplay } from "../selectors/cell-display-text";
 import { resolveCellRenderStyle } from "../selectors/cell-render-style";
 import { buildBorderOverlayLines } from "../selectors/border-overlay";
 import {
@@ -68,6 +69,7 @@ const headerCellBaseStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
+  boxSizing: "border-box",
   fontSize: 12,
   color: `var(--text-secondary, ${colorTokens.text.secondary})`,
   backgroundColor: `var(--bg-tertiary, ${colorTokens.background.tertiary})`,
@@ -78,6 +80,7 @@ const headerCellBaseStyle: CSSProperties = {
 const cellBaseStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
+  boxSizing: "border-box",
   padding: `0 ${spacingTokens.xs}`,
   overflow: "hidden",
   whiteSpace: "nowrap",
@@ -99,6 +102,10 @@ const selectionFillStyle: CSSProperties = {
   pointerEvents: "none",
 };
 
+const headerCellSelectedStyle: CSSProperties = {
+  backgroundColor: `color-mix(in srgb, var(--accent, ${colorTokens.accent.primary}) 18%, var(--bg-tertiary, ${colorTokens.background.tertiary}))`,
+};
+
 type HeaderMenuState =
   | { readonly kind: "col"; readonly colIndex: ColIndex; readonly x: number; readonly y: number }
   | { readonly kind: "row"; readonly rowIndex: RowIndex; readonly x: number; readonly y: number };
@@ -106,6 +113,69 @@ type HeaderMenuState =
 type ResizeDragRef =
   | { readonly kind: "col"; readonly colIndex: ColIndex; readonly startX: number; readonly startWidthPx: number }
   | { readonly kind: "row"; readonly rowIndex: RowIndex; readonly startY: number; readonly startHeightPx: number };
+
+type NormalizedMergeRange = {
+  readonly key: string;
+  readonly range: { readonly start: CellAddress; readonly end: CellAddress };
+  readonly minRow: number;
+  readonly maxRow: number;
+  readonly minCol: number;
+  readonly maxCol: number;
+  readonly origin: CellAddress;
+};
+
+function normalizeMergeRange(range: { readonly start: CellAddress; readonly end: CellAddress }): NormalizedMergeRange {
+  const startRow = range.start.row as number;
+  const endRow = range.end.row as number;
+  const startCol = range.start.col as number;
+  const endCol = range.end.col as number;
+
+  const minRow = Math.min(startRow, endRow);
+  const maxRow = Math.max(startRow, endRow);
+  const minCol = Math.min(startCol, endCol);
+  const maxCol = Math.max(startCol, endCol);
+
+  const origin: CellAddress = { col: colIdx(minCol), row: rowIdx(minRow), colAbsolute: false, rowAbsolute: false };
+  const normalizedRange = {
+    start: origin,
+    end: { col: colIdx(maxCol), row: rowIdx(maxRow), colAbsolute: false, rowAbsolute: false },
+  };
+
+  return {
+    key: `${minCol},${minRow}-${maxCol},${maxRow}`,
+    range: normalizedRange,
+    minRow,
+    maxRow,
+    minCol,
+    maxCol,
+    origin,
+  };
+}
+
+function findMergeForCell(merges: readonly NormalizedMergeRange[], address: CellAddress): NormalizedMergeRange | undefined {
+  const col = address.col as number;
+  const row = address.row as number;
+  return merges.find((m) => col >= m.minCol && col <= m.maxCol && row >= m.minRow && row <= m.maxRow);
+}
+
+function getRangeBounds(range: { readonly start: CellAddress; readonly end: CellAddress }): {
+  readonly minRow: number;
+  readonly maxRow: number;
+  readonly minCol: number;
+  readonly maxCol: number;
+} {
+  const startRow = range.start.row as number;
+  const endRow = range.end.row as number;
+  const startCol = range.start.col as number;
+  const endCol = range.end.col as number;
+
+  return {
+    minRow: Math.min(startRow, endRow),
+    maxRow: Math.max(startRow, endRow),
+    minCol: Math.min(startCol, endCol),
+    maxCol: Math.max(startCol, endCol),
+  };
+}
 
 function getActiveCellRect(
   cell: CellAddress | undefined,
@@ -203,36 +273,22 @@ function createAddress(col: ColIndex, row: RowIndex): CellAddress {
   };
 }
 
-function formatCellValue(value: XlsxWorksheet["rows"][number]["cells"][number]["value"]): string {
-  switch (value.type) {
-    case "string":
-      return value.value;
-    case "number":
-      return String(value.value);
-    case "boolean":
-      return value.value ? "TRUE" : "FALSE";
-    case "error":
-      return value.value;
-    case "date":
-      return value.value.toISOString();
-    case "empty":
-      return "";
-  }
-}
-
 function getCellDisplayText(
   cell: Cell | undefined,
   sheetIndex: number,
   address: CellAddress,
   formulaEvaluator: ReturnType<typeof createFormulaEvaluator>,
+  sheet: XlsxWorksheet,
+  styles: XlsxStyleSheet,
 ): string {
   if (!cell) {
     return "";
   }
+  const formatCode = resolveCellFormatCode({ styles, sheet, address, cell });
   if (cell.formula) {
-    return toDisplayText(formulaEvaluator.evaluateCell(sheetIndex, address));
+    return formatFormulaScalarForDisplay(formulaEvaluator.evaluateCell(sheetIndex, address), formatCode);
   }
-  return formatCellValue(cell.value);
+  return formatCellValueForDisplay(cell.value, formatCode);
 }
 
 type GridLine = { readonly pos: number; readonly key: string };
@@ -291,8 +347,29 @@ function XlsxSheetGridLayers({
   const [headerMenu, setHeaderMenu] = useState<HeaderMenuState | null>(null);
   const resizeRef = useRef<ResizeDragRef | null>(null);
 
+  const normalizedMerges = useMemo(() => {
+    const merges = sheet.mergeCells ?? [];
+    if (merges.length === 0) {
+      return [];
+    }
+    return merges.map((m) => normalizeMergeRange(m));
+  }, [sheet.mergeCells]);
+
   const rowHeaderWidthPx = metrics.rowHeaderWidthPx ?? metrics.headerSizePx;
   const colHeaderHeightPx = metrics.colHeaderHeightPx ?? metrics.rowHeightPx;
+
+  const selectionBounds = useMemo(() => {
+    const range = selection.selectedRange;
+    return range ? getRangeBounds(range) : null;
+  }, [selection.selectedRange]);
+
+  const isWholeSheetSelected = Boolean(
+    selectionBounds &&
+      selectionBounds.minRow === 1 &&
+      selectionBounds.maxRow === metrics.rowCount &&
+      selectionBounds.minCol === 1 &&
+      selectionBounds.maxCol === metrics.colCount,
+  );
 
   const gridViewportWidth = Math.max(0, viewportWidth - rowHeaderWidthPx);
   const gridViewportHeight = Math.max(0, viewportHeight - colHeaderHeightPx);
@@ -349,6 +426,16 @@ function XlsxSheetGridLayers({
       defaultBorderColor: `var(--border-primary, ${colorTokens.border.primary})`,
     });
   }, [colRange, layout, metrics.colCount, metrics.rowCount, rowRange, scrollLeft, scrollTop, sheet, workbook.styles]);
+
+  const startRangeSelectFromCell = useCallback((address: CellAddress): void => {
+    const merge = normalizedMerges.length > 0 ? findMergeForCell(normalizedMerges, address) : undefined;
+    const startCell = merge ? merge.origin : address;
+    const currentCell = merge ? merge.range.end : address;
+
+    dispatch({ type: "START_RANGE_SELECT", startCell });
+    dispatch({ type: "PREVIEW_RANGE_SELECT", currentCell });
+    setIsMouseSelecting(true);
+  }, [dispatch, normalizedMerges]);
 
   useEffect(() => {
     if (!isMouseSelecting) {
@@ -431,8 +518,27 @@ function XlsxSheetGridLayers({
     if (!editingCell) {
       return null;
     }
+    const merge = normalizedMerges.length > 0 ? findMergeForCell(normalizedMerges, editingCell) : undefined;
+    if (merge && (editingCell.col as number) === merge.minCol && (editingCell.row as number) === merge.minRow) {
+      const leftPx = layout.cols.getBoundaryOffsetPx(merge.minCol - 1);
+      const rightPx = layout.cols.getBoundaryOffsetPx(merge.maxCol);
+      const topPx = layout.rows.getBoundaryOffsetPx(merge.minRow - 1);
+      const bottomPx = layout.rows.getBoundaryOffsetPx(merge.maxRow);
+      const width = Math.max(0, rightPx - leftPx);
+      const height = Math.max(0, bottomPx - topPx);
+      if (width === 0 || height === 0) {
+        return null;
+      }
+      return {
+        left: leftPx - scrollLeft,
+        top: topPx - scrollTop,
+        width,
+        height,
+      };
+    }
+
     return getActiveCellRect(editingCell, layout, scrollTop, scrollLeft);
-  }, [editingCell, layout, metrics, scrollLeft, scrollTop]);
+  }, [editingCell, layout, normalizedMerges, scrollLeft, scrollTop]);
 
   const handleCommitEdit = useCallback(
     (result: ParseCellUserInputResult): void => {
@@ -652,6 +758,7 @@ function XlsxSheetGridLayers({
         data-testid="xlsx-select-all"
         style={{
           ...headerCellBaseStyle,
+          ...(isWholeSheetSelected ? headerCellSelectedStyle : {}),
           position: "absolute",
           left: 0,
           top: 0,
@@ -691,12 +798,20 @@ function XlsxSheetGridLayers({
             if (width <= 0) {
               return null;
             }
+            const isColSelected = Boolean(
+              selectionBounds &&
+                selectionBounds.minRow === 1 &&
+                selectionBounds.maxRow === metrics.rowCount &&
+                col1 >= selectionBounds.minCol &&
+                col1 <= selectionBounds.maxCol,
+            );
             return (
               <div
                 key={`col-${col1}`}
                 data-testid={`xlsx-col-header-${col1}`}
                 style={{
                   ...headerCellBaseStyle,
+                  ...(isColSelected ? headerCellSelectedStyle : {}),
                   position: "absolute",
                   left: layout.cols.getOffsetPx(col0),
                   top: 0,
@@ -706,6 +821,19 @@ function XlsxSheetGridLayers({
                 onMouseDown={(e) => {
                   e.preventDefault();
                   focusGridRoot(e.target);
+                  if (e.shiftKey) {
+                    const anchorCol = selection.activeCell?.col as number | undefined;
+                    const startCol = Math.min(anchorCol ?? col1, col1);
+                    const endCol = Math.max(anchorCol ?? col1, col1);
+                    dispatch({
+                      type: "SELECT_RANGE",
+                      range: {
+                        start: createAddress(colIdx(startCol), rowIdx(1)),
+                        end: createAddress(colIdx(endCol), rowIdx(metrics.rowCount)),
+                      },
+                    });
+                    return;
+                  }
                   dispatch({
                     type: "SELECT_RANGE",
                     range: {
@@ -772,12 +900,20 @@ function XlsxSheetGridLayers({
             if (height <= 0) {
               return null;
             }
+            const isRowSelected = Boolean(
+              selectionBounds &&
+                selectionBounds.minCol === 1 &&
+                selectionBounds.maxCol === metrics.colCount &&
+                row1 >= selectionBounds.minRow &&
+                row1 <= selectionBounds.maxRow,
+            );
             return (
               <div
                 key={`row-${row1}`}
                 data-testid={`xlsx-row-header-${row1}`}
                 style={{
                   ...headerCellBaseStyle,
+                  ...(isRowSelected ? headerCellSelectedStyle : {}),
                   position: "absolute",
                   left: 0,
                   top: layout.rows.getOffsetPx(row0),
@@ -787,6 +923,19 @@ function XlsxSheetGridLayers({
                 onMouseDown={(e) => {
                   e.preventDefault();
                   focusGridRoot(e.target);
+                  if (e.shiftKey) {
+                    const anchorRow = selection.activeCell?.row as number | undefined;
+                    const startRow = Math.min(anchorRow ?? row1, row1);
+                    const endRow = Math.max(anchorRow ?? row1, row1);
+                    dispatch({
+                      type: "SELECT_RANGE",
+                      range: {
+                        start: createAddress(colIdx(1), rowIdx(startRow)),
+                        end: createAddress(colIdx(metrics.colCount), rowIdx(endRow)),
+                      },
+                    });
+                    return;
+                  }
                   dispatch({
                     type: "SELECT_RANGE",
                     range: {
@@ -880,71 +1029,134 @@ function XlsxSheetGridLayers({
         )}
 
         <div style={{ position: "absolute", transform: `translate(${-scrollLeft}px, ${-scrollTop}px)` }}>
-          {Array.from({ length: rowRange.end - rowRange.start + 1 }).map((_, r) => {
-            const row0 = rowRange.start + r;
-            const row1 = row0 + 1;
-            const rowIndex = rowIdx(row1);
-            const height = layout.rows.getSizePx(row0);
-            if (height <= 0) {
-              return null;
-            }
-            return Array.from({ length: colRange.end - colRange.start + 1 }).map((__, c) => {
-              const col0 = colRange.start + c;
-              const col1 = col0 + 1;
-              const colIndex = colIdx(col1);
-              const address = createAddress(colIndex, rowIndex);
-              const cell = getCell(sheet, address);
-              const text = getCellDisplayText(cell, sheetIndex, address, formulaEvaluator);
-              const cellRenderStyle = resolveCellRenderStyle({
-                styles: workbook.styles,
-                sheet,
-                address,
-                cell,
-              });
-              const width = layout.cols.getSizePx(col0);
-              if (width <= 0) {
+          {(() => {
+            const renderedMerges = new Set<string>();
+            return Array.from({ length: rowRange.end - rowRange.start + 1 }).map((_, r) => {
+              const row0 = rowRange.start + r;
+              const row1 = row0 + 1;
+              const rowIndex = rowIdx(row1);
+              const height = layout.rows.getSizePx(row0);
+              if (height <= 0) {
                 return null;
               }
-              return (
-                <div
-                  key={`cell-${col1}-${row1}`}
-                  style={{
-                    ...cellBaseStyle,
-                    ...cellRenderStyle,
-                    position: "absolute",
-                    left: layout.cols.getOffsetPx(col0),
-                    top: layout.rows.getOffsetPx(row0),
-                    width,
-                    height,
-                  }}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    focusGridRoot(e.target);
-                    if (e.shiftKey) {
-                      dispatch({ type: "SELECT_CELL", address, extend: true });
-                      return;
-                    }
-                    dispatch({ type: "START_RANGE_SELECT", startCell: address });
-                    setIsMouseSelecting(true);
-                  }}
-                  onMouseEnter={() => {
-                    if (!isMouseSelecting) {
-                      return;
-                    }
-                    dispatch({ type: "PREVIEW_RANGE_SELECT", currentCell: address });
-                  }}
-                  onDoubleClick={(e) => {
-                    e.preventDefault();
-                    focusGridRoot(e.target);
-                    dispatch({ type: "SELECT_CELL", address });
-                    dispatch({ type: "ENTER_CELL_EDIT", address });
-                  }}
-                >
-                  {text}
-                </div>
-              );
+              return Array.from({ length: colRange.end - colRange.start + 1 }).map((__, c) => {
+                const col0 = colRange.start + c;
+                const col1 = col0 + 1;
+                const colIndex = colIdx(col1);
+                const address = createAddress(colIndex, rowIndex);
+
+                const merge = normalizedMerges.length > 0 ? findMergeForCell(normalizedMerges, address) : undefined;
+                if (merge) {
+                  if (renderedMerges.has(merge.key)) {
+                    return null;
+                  }
+                  renderedMerges.add(merge.key);
+
+                  const originAddress = merge.origin;
+                  const originCell = getCell(sheet, originAddress);
+                  const text = getCellDisplayText(originCell, sheetIndex, originAddress, formulaEvaluator, sheet, workbook.styles);
+                  const cellRenderStyle = resolveCellRenderStyle({
+                    styles: workbook.styles,
+                    sheet,
+                    address: originAddress,
+                    cell: originCell,
+                  });
+
+                  const leftPx = layout.cols.getBoundaryOffsetPx(merge.minCol - 1);
+                  const rightPx = layout.cols.getBoundaryOffsetPx(merge.maxCol);
+                  const topPx = layout.rows.getBoundaryOffsetPx(merge.minRow - 1);
+                  const bottomPx = layout.rows.getBoundaryOffsetPx(merge.maxRow);
+                  const width = Math.max(0, rightPx - leftPx);
+                  const mergedHeight = Math.max(0, bottomPx - topPx);
+                  if (width === 0 || mergedHeight === 0) {
+                    return null;
+                  }
+
+                  return (
+                    <div
+                      key={`merge-${merge.key}`}
+                      style={{
+                        ...cellBaseStyle,
+                        ...cellRenderStyle,
+                        position: "absolute",
+                        left: leftPx,
+                        top: topPx,
+                        width,
+                        height: mergedHeight,
+                      }}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        focusGridRoot(e.target);
+                        if (e.shiftKey) {
+                          dispatch({ type: "SELECT_CELL", address: originAddress, extend: true });
+                          return;
+                        }
+                        startRangeSelectFromCell(originAddress);
+                      }}
+                      onDoubleClick={(e) => {
+                        e.preventDefault();
+                        focusGridRoot(e.target);
+                        dispatch({ type: "SELECT_RANGE", range: merge.range });
+                        dispatch({ type: "ENTER_CELL_EDIT", address: originAddress });
+                      }}
+                    >
+                      {text}
+                    </div>
+                  );
+                }
+
+                const cell = getCell(sheet, address);
+                const text = getCellDisplayText(cell, sheetIndex, address, formulaEvaluator, sheet, workbook.styles);
+                const cellRenderStyle = resolveCellRenderStyle({
+                  styles: workbook.styles,
+                  sheet,
+                  address,
+                  cell,
+                });
+                const width = layout.cols.getSizePx(col0);
+                if (width <= 0) {
+                  return null;
+                }
+                return (
+                    <div
+                      key={`cell-${col1}-${row1}`}
+                      style={{
+                        ...cellBaseStyle,
+                        ...cellRenderStyle,
+                      position: "absolute",
+                      left: layout.cols.getOffsetPx(col0),
+                      top: layout.rows.getOffsetPx(row0),
+                      width,
+                      height,
+                      }}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        focusGridRoot(e.target);
+                        if (e.shiftKey) {
+                          dispatch({ type: "SELECT_CELL", address, extend: true });
+                          return;
+                        }
+                        startRangeSelectFromCell(address);
+                      }}
+                      onMouseEnter={() => {
+                        if (!isMouseSelecting) {
+                          return;
+                        }
+                        dispatch({ type: "PREVIEW_RANGE_SELECT", currentCell: address });
+                    }}
+                    onDoubleClick={(e) => {
+                      e.preventDefault();
+                      focusGridRoot(e.target);
+                      dispatch({ type: "SELECT_CELL", address });
+                      dispatch({ type: "ENTER_CELL_EDIT", address });
+                    }}
+                  >
+                    {text}
+                  </div>
+                );
+              });
             });
-          })}
+          })()}
         </div>
 
         {borderLines.length > 0 && gridViewportWidth > 0 && gridViewportHeight > 0 && (

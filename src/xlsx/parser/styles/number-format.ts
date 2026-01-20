@@ -11,7 +11,7 @@
 import type { XmlElement } from "../../../xml";
 import { getChildren, getAttr } from "../../../xml";
 import type { XlsxNumberFormat } from "../../domain/style/number-format";
-import { BUILTIN_NUMBER_FORMATS } from "../../domain/style/number-format";
+import { resolveFormatCode as resolveFormatCodeFromDomain } from "../../domain/style/number-format";
 import type { NumFmtId } from "../../domain/types";
 import { numFmtId } from "../../domain/types";
 import { parseIntRequired } from "../primitive";
@@ -132,13 +132,5 @@ export function resolveFormatCode(
   numFmtIdValue: number,
   customFormats: readonly XlsxNumberFormat[],
 ): string {
-  // Check built-in formats first
-  const builtin = BUILTIN_NUMBER_FORMATS.get(numFmtIdValue);
-  if (builtin !== undefined) return builtin;
-
-  // Search custom formats
-  const custom = customFormats.find(
-    (f) => (f.numFmtId as number) === numFmtIdValue,
-  );
-  return custom?.formatCode ?? "General";
+  return resolveFormatCodeFromDomain(numFmtIdValue, customFormats);
 }

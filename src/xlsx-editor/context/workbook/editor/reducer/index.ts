@@ -17,6 +17,7 @@ import { clipboardHandlers } from "./clipboard-handlers";
 import { undoRedoHandlers } from "./undo-redo-handlers";
 import { editingHandlers } from "./editing-handlers";
 import { rowColHandlers } from "./row-col-handlers";
+import { formattingHandlers } from "./formatting-handlers";
 
 const handlers: HandlerMap = {
   ...cellHandlers,
@@ -24,6 +25,7 @@ const handlers: HandlerMap = {
   ...dragHandlers,
   ...sheetHandlers,
   ...rowColHandlers,
+  ...formattingHandlers,
   ...clipboardHandlers,
   ...undoRedoHandlers,
   ...editingHandlers,

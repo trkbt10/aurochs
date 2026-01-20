@@ -56,5 +56,11 @@ describe("parseFormula", () => {
       ],
     });
   });
-});
 
+  it("parses error literals", () => {
+    expect(parseFormula("#REF!")).toEqual({
+      type: "Literal",
+      value: { type: "error", value: "#REF!" },
+    });
+  });
+});

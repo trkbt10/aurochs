@@ -7,7 +7,7 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { Button, Input, spacingTokens } from "../../../office-editor-components";
 import { indexToColumnLetter, type CellAddress } from "../../../xlsx/domain/cell/address";
-import { colIdx, rowIdx } from "../../../xlsx/domain/types";
+import { colIdx, rowIdx, styleId } from "../../../xlsx/domain/types";
 import { parseCellUserInput } from "../cell-input/parse-cell-user-input";
 import { formatCellEditText } from "../cell-input/format-cell-edit-text";
 import { useXlsxWorkbookEditor } from "../../context/workbook/XlsxWorkbookEditorContext";
@@ -44,6 +44,16 @@ function getDefaultActiveCell(): CellAddress {
   return { col: colIdx(1), row: rowIdx(1), colAbsolute: false, rowAbsolute: false };
 }
 
+function getTargetRange(params: { readonly activeCell: CellAddress | undefined; readonly selectedRange: { readonly start: CellAddress; readonly end: CellAddress } | undefined }) {
+  if (params.selectedRange) {
+    return params.selectedRange;
+  }
+  if (params.activeCell) {
+    return { start: params.activeCell, end: params.activeCell };
+  }
+  return undefined;
+}
+
 export function XlsxWorkbookToolbar({ sheetIndex }: XlsxWorkbookToolbarProps) {
   const { dispatch, workbook, canUndo, canRedo, selection, state } = useXlsxWorkbookEditor();
   const sheet = workbook.sheets[sheetIndex];
@@ -57,6 +67,7 @@ export function XlsxWorkbookToolbar({ sheetIndex }: XlsxWorkbookToolbarProps) {
   }, [activeCell]);
 
   const [input, setInput] = useState("");
+  const [styleIdInput, setStyleIdInput] = useState<string>("");
 
   useEffect(() => {
     if (!activeCell) {
@@ -79,6 +90,17 @@ export function XlsxWorkbookToolbar({ sheetIndex }: XlsxWorkbookToolbarProps) {
   }, [activeCell, dispatch, input]);
 
   const disableInputs = state.editingCell !== undefined;
+  const targetRange = useMemo(() => getTargetRange({ activeCell, selectedRange: selection.selectedRange }), [activeCell, selection.selectedRange]);
+  const parsedStyleId = useMemo(() => {
+    if (styleIdInput.trim().length === 0) {
+      return undefined;
+    }
+    const n = Number.parseInt(styleIdInput, 10);
+    if (!Number.isFinite(n) || !Number.isInteger(n) || n < 0) {
+      return undefined;
+    }
+    return styleId(n);
+  }, [styleIdInput]);
 
   return (
     <div style={barStyle}>
@@ -104,6 +126,50 @@ export function XlsxWorkbookToolbar({ sheetIndex }: XlsxWorkbookToolbarProps) {
         onChange={() => undefined}
         style={addressInputStyle}
       />
+
+      <Input
+        value={styleIdInput}
+        placeholder="styleId"
+        disabled={disableInputs}
+        style={{ width: 90 }}
+        onChange={(value) => setStyleIdInput(String(value))}
+      />
+      <Button
+        size="sm"
+        disabled={!targetRange || !parsedStyleId || disableInputs}
+        onClick={() => {
+          if (!targetRange || !parsedStyleId) {
+            return;
+          }
+          dispatch({ type: "APPLY_STYLE", range: targetRange, styleId: parsedStyleId });
+        }}
+      >
+        Apply style
+      </Button>
+      <Button
+        size="sm"
+        disabled={!targetRange || disableInputs}
+        onClick={() => {
+          if (!targetRange) {
+            return;
+          }
+          dispatch({ type: "MERGE_CELLS", range: targetRange });
+        }}
+      >
+        Merge
+      </Button>
+      <Button
+        size="sm"
+        disabled={!targetRange || disableInputs}
+        onClick={() => {
+          if (!targetRange) {
+            return;
+          }
+          dispatch({ type: "UNMERGE_CELLS", range: targetRange });
+        }}
+      >
+        Unmerge
+      </Button>
 
       <Input
         value={input}

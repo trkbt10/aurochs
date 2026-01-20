@@ -108,3 +108,22 @@ export function isDateFormat(formatCode: string): boolean {
   const withoutQuoted = formatCode.replace(/"[^"]*"/g, "");
   return /[ymdhs]|AM\/PM/i.test(withoutQuoted);
 }
+
+/**
+ * Resolve the format code for a given numFmtId.
+ *
+ * Checks built-in formats first, then searches `styles.numberFormats`.
+ * Falls back to "General" when not found.
+ */
+export function resolveFormatCode(
+  numFmtIdValue: number,
+  customFormats: readonly XlsxNumberFormat[],
+): string {
+  const builtin = getBuiltinFormatCode(numFmtIdValue);
+  if (builtin !== undefined) {
+    return builtin;
+  }
+
+  const custom = customFormats.find((f) => (f.numFmtId as number) === numFmtIdValue);
+  return custom?.formatCode ?? "General";
+}

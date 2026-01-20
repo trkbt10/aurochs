@@ -7,11 +7,12 @@
 import type { HandlerMap } from "./handler-types";
 import type { XlsxClipboardContent, XlsxEditorState } from "../types";
 import type { CellAddress, CellRange } from "../../../../../xlsx/domain/cell/address";
-import type { CellValue } from "../../../../../xlsx/domain/cell/types";
+import type { Cell, CellValue } from "../../../../../xlsx/domain/cell/types";
 import type { XlsxWorksheet } from "../../../../../xlsx/domain/workbook";
 import { colIdx, rowIdx, type StyleId } from "../../../../../xlsx/domain/types";
+import { shiftFormulaReferences } from "../../../../../xlsx/formula/shift";
 import { getCellsInRange, getCellValuesInRange } from "../../../../cell/query";
-import { updateCell, deleteCellRange } from "../../../../cell/mutation";
+import { deleteCellRange, updateCellById } from "../../../../cell/mutation";
 import { pushHistory } from "../../state/history";
 import { replaceWorksheetInWorkbook } from "../../utils/worksheet-updater";
 
@@ -71,32 +72,48 @@ function buildClipboardContent(
   range: CellRange,
   isCut: boolean,
 ): XlsxClipboardContent {
-  const values = getCellValuesInRange(worksheet, range);
-
   const { minRow, maxRow, minCol, maxCol } = getRangeBounds(range);
+  const normalizedRange: CellRange = {
+    start: { col: colIdx(minCol), row: rowIdx(minRow), colAbsolute: false, rowAbsolute: false },
+    end: { col: colIdx(maxCol), row: rowIdx(maxRow), colAbsolute: false, rowAbsolute: false },
+  };
+
+  const values = getCellValuesInRange(worksheet, normalizedRange);
+
   const styleLookup = new Map<number, Map<number, StyleId | undefined>>();
-  for (const cell of getCellsInRange(worksheet, range)) {
+  const formulaLookup = new Map<number, Map<number, string | undefined>>();
+  for (const cell of getCellsInRange(worksheet, normalizedRange)) {
     const rowNumber = cell.address.row as number;
     const colNumber = cell.address.col as number;
     const rowStyles = styleLookup.get(rowNumber) ?? new Map<number, StyleId | undefined>();
     rowStyles.set(colNumber, cell.styleId);
     styleLookup.set(rowNumber, rowStyles);
+
+    const rowFormulas = formulaLookup.get(rowNumber) ?? new Map<number, string | undefined>();
+    rowFormulas.set(colNumber, cell.formula);
+    formulaLookup.set(rowNumber, rowFormulas);
   }
 
   const styles: (StyleId | undefined)[][] = [];
+  const formulas: (string | undefined)[][] = [];
   for (let row = minRow; row <= maxRow; row++) {
     const rowStyles: (StyleId | undefined)[] = [];
     const lookup = styleLookup.get(row);
+    const formulaRow: (string | undefined)[] = [];
+    const formulaRowLookup = formulaLookup.get(row);
     for (let col = minCol; col <= maxCol; col++) {
       rowStyles.push(lookup?.get(col));
+      formulaRow.push(formulaRowLookup?.get(col));
     }
     styles.push(rowStyles);
+    formulas.push(formulaRow);
   }
 
   return {
-    sourceRange: range,
+    sourceRange: normalizedRange,
     isCut,
     values,
+    formulas,
     styles,
   };
 }
@@ -113,38 +130,85 @@ function clearSourceIfCut(
 
 type NonEmptyCellValue = Exclude<CellValue, { readonly type: "empty" }>;
 
-type PasteUpdate = {
+type PasteCellPatch = {
   readonly address: CellAddress;
-  readonly value: NonEmptyCellValue;
+  readonly value: CellValue;
+  readonly formula: string | undefined;
+  readonly styleId: StyleId | undefined;
 };
 
 function isNonEmptyValue(value: CellValue | undefined): value is NonEmptyCellValue {
   return value !== undefined && value.type !== "empty";
 }
 
-function collectPasteUpdates(
+function shouldCreateCell(patch: Omit<PasteCellPatch, "address">): boolean {
+  if (patch.formula !== undefined) {
+    return true;
+  }
+  if (isNonEmptyValue(patch.value)) {
+    return true;
+  }
+  if (patch.styleId !== undefined && (patch.styleId as number) !== 0) {
+    return true;
+  }
+  return false;
+}
+
+function applyStylePatch(cell: Cell, styleIdValue: StyleId | undefined): Cell {
+  if (styleIdValue === undefined || (styleIdValue as number) === 0) {
+    const { styleId: removed, ...without } = cell;
+    void removed;
+    return without;
+  }
+  return { ...cell, styleId: styleIdValue };
+}
+
+function applyFormulaPatch(cell: Cell, formula: string | undefined): Cell {
+  if (formula === undefined) {
+    return cell;
+  }
+  const { formula: removed, ...withoutFormula } = cell;
+  void removed;
+  return { ...withoutFormula, value: { type: "empty" }, formula };
+}
+
+function applyValuePatch(cell: Cell, value: CellValue): Cell {
+  const { formula: removed, ...withoutFormula } = cell;
+  void removed;
+  return { ...withoutFormula, value };
+}
+
+function collectPastePatches(
   clipboard: XlsxClipboardContent,
   destinationStartCol: number,
   destinationStartRow: number,
-): readonly PasteUpdate[] {
-  return clipboard.values.flatMap((rowValues, r) => {
-    if (!rowValues) {
-      return [];
-    }
+): readonly PasteCellPatch[] {
+  const sourceStartCol = clipboard.sourceRange.start.col as number;
+  const sourceStartRow = clipboard.sourceRange.start.row as number;
+  const deltaCols = destinationStartCol - sourceStartCol;
+  const deltaRows = destinationStartRow - sourceStartRow;
+
+  const values = clipboard.values;
+  const formulas = clipboard.formulas;
+  const styles = clipboard.styles;
+
+  return values.flatMap((rowValues, r) => {
     return rowValues
-      .map((value, c): PasteUpdate | undefined => {
-        if (!isNonEmptyValue(value)) {
-          return undefined;
-        }
+      .map((value, c): PasteCellPatch | undefined => {
         const address: CellAddress = {
           col: colIdx(destinationStartCol + c),
           row: rowIdx(destinationStartRow + r),
           colAbsolute: false,
           rowAbsolute: false,
         };
-        return { address, value };
+        const rawFormula = formulas?.[r]?.[c];
+        const formula = rawFormula ? shiftFormulaReferences(rawFormula, deltaCols, deltaRows) : undefined;
+        const styleId = styles?.[r]?.[c];
+
+        const patch = { address, value, formula, styleId };
+        return shouldCreateCell(patch) ? patch : undefined;
       })
-      .filter((update): update is PasteUpdate => update !== undefined);
+      .filter((patch): patch is PasteCellPatch => patch !== undefined);
   });
 }
 
@@ -168,12 +232,18 @@ function pasteClipboardContent(
   );
 
   const clearedDestination = deleteCellRange(worksheet, destinationRange);
-  const updates = collectPasteUpdates(clipboard, destinationStartCol, destinationStartRow);
+  const patches = collectPastePatches(clipboard, destinationStartCol, destinationStartRow);
 
-  return updates.reduce(
-    (acc, { address, value }) => updateCell(acc, address, value),
-    clearedDestination,
-  );
+  return patches.reduce((acc, patch) => {
+    return updateCellById(acc, patch.address, (cell) => {
+      const base = cell ?? { address: patch.address, value: { type: "empty" } as const };
+      const withStyle = applyStylePatch(base, patch.styleId);
+      if (patch.formula !== undefined) {
+        return applyFormulaPatch(withStyle, patch.formula);
+      }
+      return applyValuePatch(withStyle, patch.value);
+    });
+  }, clearedDestination);
 }
 
 export const clipboardHandlers: HandlerMap = {

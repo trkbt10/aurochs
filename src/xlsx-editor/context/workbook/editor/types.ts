@@ -137,6 +137,8 @@ export type XlsxClipboardContent = {
   readonly isCut: boolean;
   /** Copied cell values (row-major order) */
   readonly values: readonly (readonly CellValue[])[];
+  /** Copied formulas (row-major order). `undefined` when the source cell has no formula. */
+  readonly formulas?: readonly (readonly (string | undefined)[])[];
   /** Copied cell styles (row-major order) */
   readonly styles?: readonly (readonly (StyleId | undefined)[])[];
 };

@@ -1,6 +1,8 @@
 import { parseRange } from "../domain/cell/address";
 import type { CellAddress, CellRange } from "../domain/cell/address";
+import type { ErrorValue } from "../domain/cell/types";
 import type { ComparatorOperator, FormulaAstNode } from "./ast";
+import type { FormulaError } from "./types";
 
 type OperatorToken = {
   readonly type: "operator";
@@ -32,6 +34,11 @@ type ReferenceToken = {
   readonly value: string;
 };
 
+type ErrorToken = {
+  readonly type: "error";
+  readonly value: ErrorValue;
+};
+
 type ParenthesisToken = {
   readonly type: "paren";
   readonly value: "(" | ")";
@@ -56,6 +63,7 @@ type Token =
   | StringToken
   | IdentifierToken
   | ReferenceToken
+  | ErrorToken
   | ParenthesisToken
   | CommaToken
   | ColonToken
@@ -73,6 +81,21 @@ function isLetter(character: string): boolean {
 
 function isWhitespace(character: string): boolean {
   return /\s/u.test(character);
+}
+
+function parseErrorValue(text: string): ErrorValue | undefined {
+  switch (text) {
+    case "#NULL!":
+    case "#DIV/0!":
+    case "#VALUE!":
+    case "#REF!":
+    case "#NAME?":
+    case "#NUM!":
+    case "#N/A":
+    case "#GETTING_DATA":
+      return text;
+  }
+  return undefined;
 }
 
 function readWhile(
@@ -121,6 +144,22 @@ function readStringToken(input: string, start: number): { readonly token: String
   }
 
   throw new Error("Unterminated string literal");
+}
+
+function isErrorBodyChar(char: string): boolean {
+  return isLetter(char) || isDigit(char) || char === "/" || char === "!" || char === "?" || char === "_";
+}
+
+function readErrorToken(input: string, start: number): { readonly token: ErrorToken; readonly next: number } {
+  const { value, next } = readWhile(input, start, (char) => isErrorBodyChar(char) || char === "#");
+  if (!value.startsWith("#")) {
+    throw new Error("Error token must start with '#'");
+  }
+  const parsed = parseErrorValue(value);
+  if (!parsed) {
+    throw new Error(`Unknown error literal "${value}"`);
+  }
+  return { token: { type: "error", value: parsed }, next };
 }
 
 function readCellLabel(input: string, start: number): { readonly label: string; readonly next: number } {
@@ -211,6 +250,13 @@ function tokenize(formula: string): readonly Token[] {
     const char = formula[index] ?? "";
     if (isWhitespace(char)) {
       index += 1;
+      continue;
+    }
+
+    if (char === "#") {
+      const { token, next } = readErrorToken(formula, index);
+      tokens.push(token);
+      index = next;
       continue;
     }
 
@@ -328,6 +374,11 @@ function parsePrimary(state: ParserState): FormulaAstNode {
   if (token.type === "string") {
     consume(state);
     return { type: "Literal", value: token.value };
+  }
+  if (token.type === "error") {
+    consume(state);
+    const error: FormulaError = { type: "error", value: token.value };
+    return { type: "Literal", value: error };
   }
   if (token.type === "reference") {
     consume(state);
