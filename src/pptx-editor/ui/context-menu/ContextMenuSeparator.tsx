@@ -1,20 +1,7 @@
 /**
- * @file Context menu separator component
- * Uses design tokens for consistent styling.
+ * @file ContextMenuSeparator re-export
  */
 
-import type { CSSProperties } from "react";
-import { colorTokens, spacingTokens } from "../../../office-editor-components/design-tokens";
+import { ContextMenuSeparator as OfficeContextMenuSeparator } from "../../../office-editor-components";
 
-const separatorStyle: CSSProperties = {
-  height: "1px",
-  backgroundColor: `var(--border-subtle, ${colorTokens.border.subtle})`,
-  margin: `${spacingTokens.xs} 0`,
-};
-
-/**
- * Visual separator between context menu items.
- */
-export function ContextMenuSeparator() {
-  return <div style={separatorStyle} />;
-}
+export const ContextMenuSeparator = OfficeContextMenuSeparator;

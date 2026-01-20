@@ -15,6 +15,8 @@ export type InputProps = {
   readonly suffix?: string;
   readonly placeholder?: string;
   readonly disabled?: boolean;
+  readonly readOnly?: boolean;
+  readonly onKeyDown?: (event: React.KeyboardEvent<HTMLInputElement>) => void;
   readonly className?: string;
   readonly style?: CSSProperties;
   readonly min?: number;
@@ -89,6 +91,8 @@ export function Input({
   suffix,
   placeholder,
   disabled,
+  readOnly,
+  onKeyDown,
   className,
   style,
   min,
@@ -120,8 +124,10 @@ export function Input({
         type={type}
         value={value}
         onChange={handleChange}
+        onKeyDown={onKeyDown}
         placeholder={placeholder}
         disabled={disabled}
+        readOnly={readOnly}
         min={min}
         max={max}
         step={step}

@@ -35,6 +35,7 @@ const containerStyle: CSSProperties = {
   display: "flex",
   flexDirection: "column",
   gap: spacingTokens.md,
+  minHeight: 0,
 };
 
 const tabListStyle: CSSProperties = {
@@ -43,6 +44,7 @@ const tabListStyle: CSSProperties = {
   backgroundColor: `var(--bg-tertiary, ${colorTokens.background.tertiary})`,
   borderRadius: `var(--radius-sm, ${radiusTokens.sm})`,
   padding: "2px",
+  flexShrink: 0,
 };
 
 function getTabTextColor(isActive: boolean, disabled: boolean): string {
@@ -90,6 +92,9 @@ function getTabButtonStyle(isActive: boolean, disabled: boolean, size: "sm" | "m
 
 const contentStyle: CSSProperties = {
   minHeight: 0,
+  flex: 1,
+  display: "flex",
+  flexDirection: "column",
 };
 
 /**

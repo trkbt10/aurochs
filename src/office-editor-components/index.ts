@@ -64,6 +64,43 @@ export {
   type ToggleProps,
 } from "./primitives";
 
+// Scroll / Virtualization
+export {
+  VirtualScroll,
+  useVirtualScroll,
+  useVirtualScrollContext,
+  type VirtualScrollProps,
+  type UseVirtualScrollOptions,
+  type UseVirtualScrollReturn,
+  type ViewportRect,
+} from "./scroll";
+
+// Context menu
+export {
+  ContextMenu,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuSubmenu,
+  type ContextMenuProps,
+  type ContextMenuItemProps,
+  type ContextMenuSubmenuProps,
+  type MenuItemId,
+  type MenuItem,
+  type MenuSubmenu,
+  type MenuSeparator,
+  type MenuEntry,
+  isSeparator,
+  isSubmenu,
+  isMenuItem,
+} from "./context-menu";
+
+// Grid
+export {
+  clampRange,
+  computePrefixSums,
+  findIndexAtOffset,
+} from "./grid";
+
 // Layout
 export {
   Accordion,

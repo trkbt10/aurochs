@@ -31,6 +31,7 @@ type Props = {
   readonly onDrawingMLTest?: () => void;
   readonly onGlyphTest?: () => void;
   readonly onDocxEditorTest?: () => void;
+  readonly onXlsxEditorTest?: () => void;
 };
 
 const ACCEPTED_EXTENSIONS = ".pptx,.pdf";
@@ -101,6 +102,7 @@ export function FileUploadPage({
   onDrawingMLTest,
   onGlyphTest,
   onDocxEditorTest,
+  onXlsxEditorTest,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -432,6 +434,24 @@ export function FileUploadPage({
             }}
           >
             DOCX Editor Test
+          </button>
+        )}
+        {onXlsxEditorTest && (
+          <button
+            className="xlsx-editor-test-link"
+            onClick={onXlsxEditorTest}
+            style={{
+              marginLeft: "8px",
+              padding: "4px 8px",
+              fontSize: "12px",
+              color: "var(--text-tertiary)",
+              background: "transparent",
+              border: "1px solid var(--border-subtle)",
+              borderRadius: "4px",
+              cursor: "pointer",
+            }}
+          >
+            XLSX Editor Test
           </button>
         )}
       </footer>
