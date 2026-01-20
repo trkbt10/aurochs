@@ -134,6 +134,17 @@ describe("createFormulaEvaluator", () => {
     expect(evaluator.evaluateCell(0, { col: colIdx(2), row: rowIdx(1), colAbsolute: false, rowAbsolute: false })).toBe(50);
   });
 
+  it("can return non-scalar results for preview (evaluateFormulaResult)", () => {
+    const sheet = makeWorksheet("Sheet1", 1, [
+      numberCell(1, 1, 10),
+      numberCell(1, 2, 20),
+      numberCell(1, 3, 30),
+    ]);
+    const evaluator = createFormulaEvaluator(makeWorkbook([sheet]));
+    const origin = { col: colIdx(1), row: rowIdx(1), colAbsolute: false, rowAbsolute: false };
+    expect(evaluator.evaluateFormulaResult(0, origin, "OFFSET(A1,0,0,2,1)")).toEqual([[10], [20]]);
+  });
+
   it("returns #REF! for unknown sheet names", () => {
     const sheet = makeWorksheet("Sheet1", 1, [formulaCell(1, 1, "NoSuchSheet!A1")]);
     const evaluator = createFormulaEvaluator(makeWorkbook([sheet]));

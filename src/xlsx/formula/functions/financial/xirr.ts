@@ -33,8 +33,9 @@ export const xirrFunction: FormulaFunctionEagerDefinition = {
   examples: ["XIRR(values, dates)", "XIRR(values, dates, guess)"],
   samples: [
     {
-      input: "XIRR({-10000, 3000, 4200, 6800}, {44562, 44652, 44743, 44926})",
-      output: 0.3733,
+      input:
+        "XIRR({-10000, 2750, 4250, 3250, 2750}, {\"2008-01-01\", \"2008-03-01\", \"2008-10-30\", \"2009-02-15\", \"2009-04-01\"})",
+      output: 0.3733625335188315,
       description: {
         en: "IRR for irregular cash flow dates",
         ja: "不規則な日付のキャッシュフローのIRR",
@@ -42,7 +43,7 @@ export const xirrFunction: FormulaFunctionEagerDefinition = {
     },
     {
       input: "XIRR({-1000, 500, 600}, {45000, 45100, 45200}, 0.1)",
-      output: 0.2586,
+      output: 0.2538601048765094,
       description: {
         en: "IRR with initial guess",
         ja: "初期推定値を指定したIRR",

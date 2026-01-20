@@ -40,7 +40,7 @@ export const irrFunction: FormulaFunctionEagerDefinition = {
   samples: [
     {
       input: "IRR({-10000, 3000, 4200, 6800})",
-      output: 0.2343,
+      output: 0.1634056006889892,
       description: {
         en: "IRR for investment with initial outlay and three returns",
         ja: "初期支出と3回のリターンがある投資のIRR",
@@ -48,7 +48,7 @@ export const irrFunction: FormulaFunctionEagerDefinition = {
     },
     {
       input: "IRR({-50000, 10000, 15000, 20000, 25000})",
-      output: 0.1851,
+      output: 0.12825726900167392,
       description: {
         en: "IRR for multi-period investment",
         ja: "複数期間の投資のIRR",
@@ -56,7 +56,7 @@ export const irrFunction: FormulaFunctionEagerDefinition = {
     },
     {
       input: "IRR({-100, 50, 60, 70}, 0.1)",
-      output: 0.3425,
+      output: 0.3387497097016258,
       description: {
         en: "IRR with initial guess",
         ja: "初期推定値を指定したIRR",

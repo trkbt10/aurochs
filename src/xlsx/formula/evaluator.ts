@@ -30,6 +30,10 @@ function toFormulaErrorScalar(value: ErrorValue): FormulaScalar {
   return { type: "error", value };
 }
 
+function isFormulaErrorScalar(value: unknown): value is Extract<FormulaScalar, { readonly type: "error" }> {
+  return typeof value === "object" && value !== null && "type" in value && (value as { readonly type?: unknown }).type === "error";
+}
+
 function cellValueToFormulaScalar(value: CellValue): FormulaScalar {
   switch (value.type) {
     case "empty":
@@ -261,6 +265,7 @@ function evaluateNode(node: FormulaAstNode, scope: EvalScope): EvalResult {
 export type FormulaEvaluator = {
   readonly evaluateCell: (sheetIndex: number, address: CellAddress) => FormulaScalar;
   readonly evaluateFormula: (sheetIndex: number, formula: string) => FormulaScalar;
+  readonly evaluateFormulaResult: (sheetIndex: number, origin: CellAddress, formula: string) => EvalResult | FormulaScalar;
 };
 
 export function createFormulaEvaluator(workbook: XlsxWorkbook): FormulaEvaluator {
@@ -284,7 +289,11 @@ export function createFormulaEvaluator(workbook: XlsxWorkbook): FormulaEvaluator
     }
   };
 
-  const evaluateFormulaInternal = (sheetIndex: number, origin: CellAddress, formula: string): FormulaScalar => {
+  const evaluateFormulaResultInternal = (
+    sheetIndex: number,
+    origin: CellAddress,
+    formula: string,
+  ): EvalResult | FormulaScalar => {
     const normalized = normalizeFormulaText(formula);
     const cacheKey = `${sheetIndex}|${normalized}`;
     const ast = getOrParseAst(cacheKey, normalized);
@@ -307,7 +316,19 @@ export function createFormulaEvaluator(workbook: XlsxWorkbook): FormulaEvaluator
     };
 
     try {
-      const evaluated = evaluateNode(ast, scope);
+      return evaluateNode(ast, scope);
+    } catch (error) {
+      const code = getErrorCodeFromError(error);
+      return toFormulaErrorScalar(code);
+    }
+  };
+
+  const evaluateFormulaInternal = (sheetIndex: number, origin: CellAddress, formula: string): FormulaScalar => {
+    const evaluated = evaluateFormulaResultInternal(sheetIndex, origin, formula);
+    if (isFormulaErrorScalar(evaluated)) {
+      return evaluated;
+    }
+    try {
       return formulaFunctionHelpers.coerceScalar(evaluated, "formula");
     } catch (error) {
       const code = getErrorCodeFromError(error);
@@ -374,5 +395,6 @@ export function createFormulaEvaluator(workbook: XlsxWorkbook): FormulaEvaluator
     evaluateCell: (sheetIndex, address) => resolveCellScalar(sheetIndex, address),
     evaluateFormula: (sheetIndex, formula) =>
       evaluateFormulaInternal(sheetIndex, { col: colIdx(1), row: rowIdx(1), colAbsolute: false, rowAbsolute: false }, formula),
+    evaluateFormulaResult: (sheetIndex, origin, formula) => evaluateFormulaResultInternal(sheetIndex, origin, formula),
   };
 }

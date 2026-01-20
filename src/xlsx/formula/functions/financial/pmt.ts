@@ -15,7 +15,7 @@ export const pmtFunction: FormulaFunctionEagerDefinition = {
   samples: [
     {
       input: "PMT(0.05/12, 60, 10000)",
-      output: -188.71,
+      output: -188.71233644010877,
       description: {
         en: "Monthly payment for $10,000 loan at 5% annual rate over 5 years",
         ja: "年利5%で5年間の10,000ドルのローンの月次支払額",
@@ -23,7 +23,7 @@ export const pmtFunction: FormulaFunctionEagerDefinition = {
     },
     {
       input: "PMT(0.08/12, 120, 50000)",
-      output: -606.64,
+      output: -606.6379717767879,
       description: {
         en: "Monthly payment for $50,000 loan at 8% annual rate over 10 years",
         ja: "年利8%で10年間の50,000ドルのローンの月次支払額",
@@ -31,7 +31,7 @@ export const pmtFunction: FormulaFunctionEagerDefinition = {
     },
     {
       input: "PMT(0.1/12, 36, 20000, 0, 1)",
-      output: -643.07,
+      output: -640.0103245058702,
       description: {
         en: "Monthly payment with payment at beginning of period",
         ja: "期初払いの月次支払額",

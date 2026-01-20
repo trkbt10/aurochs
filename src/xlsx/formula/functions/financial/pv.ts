@@ -15,7 +15,7 @@ export const pvFunction: FormulaFunctionEagerDefinition = {
   samples: [
     {
       input: "PV(0.05/12, 60, -200)",
-      output: 10614.47,
+      output: 10598.141264785496,
       description: {
         en: "Present value of $200 monthly payments at 5% for 5 years",
         ja: "年利5%で5年間、月額200ドルの現在価値",
@@ -23,7 +23,7 @@ export const pvFunction: FormulaFunctionEagerDefinition = {
     },
     {
       input: "PV(0.08/12, 120, -500, 10000)",
-      output: 34387.58,
+      output: 31210.74044669055,
       description: {
         en: "Present value with future value target",
         ja: "将来価値目標を含む現在価値",
@@ -31,7 +31,7 @@ export const pvFunction: FormulaFunctionEagerDefinition = {
     },
     {
       input: "PV(0.06/12, 36, -300, 0, 1)",
-      output: 9895.89,
+      output: 9910.611396138389,
       description: {
         en: "Present value with payments at beginning of period",
         ja: "期初払いの現在価値",

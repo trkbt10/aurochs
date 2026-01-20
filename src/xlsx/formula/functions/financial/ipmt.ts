@@ -15,7 +15,7 @@ export const ipmtFunction: FormulaFunctionEagerDefinition = {
   samples: [
     {
       input: "IPMT(0.05/12, 1, 60, 10000)",
-      output: -41.67,
+      output: -41.666666666666664,
       description: {
         en: "Interest portion of first payment on $10,000 loan",
         ja: "10,000ドルのローンの初回支払いの利息部分",
@@ -23,7 +23,7 @@ export const ipmtFunction: FormulaFunctionEagerDefinition = {
     },
     {
       input: "IPMT(0.08/12, 12, 120, 50000)",
-      output: -298.18,
+      output: -312.60937378758314,
       description: {
         en: "Interest portion of 12th payment",
         ja: "12回目の支払いの利息部分",
@@ -31,7 +31,7 @@ export const ipmtFunction: FormulaFunctionEagerDefinition = {
     },
     {
       input: "IPMT(0.06/12, 6, 36, 20000)",
-      output: -87.03,
+      output: -87.16128444806796,
       description: {
         en: "Interest portion of 6th payment",
         ja: "6回目の支払いの利息部分",

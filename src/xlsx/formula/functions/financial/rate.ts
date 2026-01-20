@@ -30,24 +30,24 @@ export const rateFunction: FormulaFunctionEagerDefinition = {
   examples: ["RATE(60, -188.71, 10000)", "RATE(nper, pmt, pv, fv, type, guess)"],
   samples: [
     {
-      input: "RATE(60, -188.71, 10000)",
-      output: 0.004167,
+      input: "RATE(60, PMT(0.05/12, 60, 10000), 10000)",
+      output: 0.004166666666666963,
       description: {
         en: "Monthly interest rate for a loan (approximately 5% annual)",
         ja: "ローンの月利（年利約5%）",
       },
     },
     {
-      input: "RATE(120, -606.64, 50000)",
-      output: 0.006667,
+      input: "RATE(120, PMT(0.08/12, 120, 50000), 50000)",
+      output: 0.006666666666666771,
       description: {
         en: "Monthly rate for 10-year loan",
         ja: "10年ローンの月利",
       },
     },
     {
-      input: "RATE(36, -300, 10000, 0, 0, 0.01)",
-      output: 0.005827,
+      input: "RATE(36, PMT(0.06/12, 36, 10000), 10000, 0, 0, 0.01)",
+      output: 0.005000000000000832,
       description: {
         en: "Rate with initial guess",
         ja: "初期推定値を指定した利率計算",
