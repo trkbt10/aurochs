@@ -13,7 +13,12 @@ import { DrawingMLTestPage } from "./pages/DrawingMLTestPage";
 import { GlyphTestPage } from "./pages/GlyphTestPage";
 import { TextEditorTestPage } from "./pages/TextEditorTestPage";
 import { DocxEditorTestPage } from "./pages/DocxEditorTestPage";
-import { XlsxEditorTestPage } from "./pages/XlsxEditorTestPage";
+import { XlsxEditorLayout } from "./pages/xlsx-editor/XlsxEditorLayout";
+import { XlsxEditorIndexPage } from "./pages/xlsx-editor/XlsxEditorIndexPage";
+import { XlsxWorkbookPage } from "./pages/xlsx-editor/XlsxWorkbookPage";
+import { XlsxFormulaCatalogLayout } from "./pages/xlsx-editor/formula/XlsxFormulaCatalogLayout";
+import { XlsxFormulaCatalogIndexPage } from "./pages/xlsx-editor/formula/XlsxFormulaCatalogIndexPage";
+import { XlsxFormulaFunctionPage } from "./pages/xlsx-editor/formula/XlsxFormulaFunctionPage";
 import { PresentationEditor } from "@lib/pptx-editor";
 import { convertToPresentationDocument, type PresentationDocument } from "@lib/pptx/app";
 import "./App.css";
@@ -107,7 +112,7 @@ export function App() {
   }, [navigate]);
 
   const handleXlsxEditorTest = useCallback(() => {
-    navigate("/xlsx-editor-test");
+    navigate("/xlsx-editor");
   }, [navigate]);
 
   const handleStartEditor = useCallback(() => {
@@ -271,7 +276,15 @@ export function App() {
       <Route path="/glyph-test" element={<GlyphTestPage onBack={handleGoHome} />} />
       <Route path="/text-editor-test" element={<TextEditorTestPage onBack={handleGoHome} />} />
       <Route path="/docx-editor-test" element={<DocxEditorTestPage onBack={handleGoHome} />} />
-      <Route path="/xlsx-editor-test" element={<XlsxEditorTestPage onBack={handleGoHome} />} />
+      <Route path="/xlsx-editor" element={<XlsxEditorLayout onBack={handleGoHome} />}>
+        <Route index element={<XlsxEditorIndexPage />} />
+        <Route path="workbook" element={<XlsxWorkbookPage />} />
+        <Route path="formula" element={<XlsxFormulaCatalogLayout />}>
+          <Route index element={<XlsxFormulaCatalogIndexPage />} />
+          <Route path=":category/:functionName" element={<XlsxFormulaFunctionPage />} />
+        </Route>
+      </Route>
+      <Route path="/xlsx-editor-test" element={<Navigate to="/xlsx-editor/workbook" replace />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

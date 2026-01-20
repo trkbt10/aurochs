@@ -451,7 +451,7 @@ export function FileUploadPage({
               cursor: "pointer",
             }}
           >
-            XLSX Editor Test
+            XLSX Editor
           </button>
         )}
       </footer>

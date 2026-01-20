@@ -1,5 +1,5 @@
 /**
- * @file XLSX Editor Test Page
+ * @file XLSX Editor Workbook Page
  */
 
 import { useCallback, useMemo, useState, type CSSProperties } from "react";
@@ -12,34 +12,6 @@ import { Button, Input } from "@lib/office-editor-components/primitives";
 import { parseXlsxWorkbook } from "@lib/xlsx/parser";
 import { exportXlsx } from "@lib/xlsx/exporter";
 import { createGetZipTextFileContentFromBytes } from "@lib/files/ooxml-zip";
-
-type XlsxEditorTestPageProps = {
-  readonly onBack: () => void;
-};
-
-const pageStyle: CSSProperties = {
-  height: "100vh",
-  minHeight: 0,
-  backgroundColor: "var(--bg-primary)",
-  color: "var(--text-primary)",
-  padding: "24px",
-  display: "flex",
-  flexDirection: "column",
-  gap: "16px",
-};
-
-const headerStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  paddingBottom: "16px",
-  borderBottom: "1px solid var(--border-subtle)",
-};
-
-const titleStyle: CSSProperties = {
-  fontSize: "24px",
-  fontWeight: 600,
-};
 
 const controlsStyle: CSSProperties = {
   display: "flex",
@@ -505,7 +477,7 @@ function createPatternWorkbook(): XlsxWorkbook {
   };
 }
 
-export function XlsxEditorTestPage({ onBack }: XlsxEditorTestPageProps) {
+export function XlsxWorkbookPage() {
   const [sourceName, setSourceName] = useState<string>("test-workbook.xlsx");
   const [workbookRevision, setWorkbookRevision] = useState(0);
   const [workbook, setWorkbook] = useState<XlsxWorkbook>(() => createPatternWorkbook());
@@ -564,14 +536,7 @@ export function XlsxEditorTestPage({ onBack }: XlsxEditorTestPageProps) {
   }, [currentWorkbook, defaultSaveName]);
 
   return (
-    <div style={pageStyle}>
-      <div style={headerStyle}>
-        <div style={titleStyle}>XLSX Editor Test</div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <Button onClick={onBack}>Back</Button>
-        </div>
-      </div>
-
+    <div style={{ display: "flex", flexDirection: "column", gap: 16, height: "100%", minHeight: 0 }}>
       <div style={controlsStyle}>
         <Button
           disabled={isBusy}
