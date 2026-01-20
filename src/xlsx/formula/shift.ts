@@ -82,6 +82,8 @@ function shiftAst(node: FormulaAstNode, deltaCols: number, deltaRows: number): F
       };
     case "Function":
       return { type: "Function", name: node.name, args: node.args.map((arg) => shiftAst(arg, deltaCols, deltaRows)) };
+    case "Array":
+      return { type: "Array", elements: node.elements.map((row) => row.map((el) => shiftAst(el, deltaCols, deltaRows))) };
   }
 }
 
@@ -100,4 +102,3 @@ export function shiftFormulaReferences(formula: string, deltaCols: number, delta
   const shifted = shiftAst(parsed, deltaCols, deltaRows);
   return formatFormula(shifted);
 }
-

@@ -1,11 +1,15 @@
 import type { CellAddress } from "../domain/cell/address";
+import { parseRange } from "../domain/cell/address";
 import type { CellValue, ErrorValue } from "../domain/cell/types";
 import type { XlsxWorkbook } from "../domain/workbook";
 import { colIdx, rowIdx } from "../domain/types";
 import type { FormulaAstNode } from "./ast";
 import { parseFormula } from "./parser";
-import type { EvalResult, FormulaArray, FormulaError, FormulaScalar } from "./types";
+import type { FormulaEvaluationResult, FormulaScalar } from "./types";
 import { isFormulaError } from "./types";
+import { formulaFunctionHelpers, getFormulaFunction } from "./functionRegistry";
+import type { EvalResult } from "./functions/helpers";
+import { createFormulaError, getErrorCodeFromError } from "./functions/helpers/errors";
 
 type FormulaCellData = {
   readonly value: CellValue;
@@ -22,11 +26,11 @@ type WorkbookMatrix = {
   readonly sheetIndexByName: ReadonlyMap<string, number>;
 };
 
-function toFormulaError(value: ErrorValue): FormulaError {
+function toFormulaErrorScalar(value: ErrorValue): FormulaScalar {
   return { type: "error", value };
 }
 
-function cellValueToScalar(value: CellValue): FormulaScalar {
+function cellValueToFormulaScalar(value: CellValue): FormulaScalar {
   switch (value.type) {
     case "empty":
       return null;
@@ -37,98 +41,25 @@ function cellValueToScalar(value: CellValue): FormulaScalar {
     case "boolean":
       return value.value;
     case "error":
-      return toFormulaError(value.value);
+      return toFormulaErrorScalar(value.value);
     case "date":
       return value.value.toISOString();
   }
 }
 
-function asArray(values: readonly (readonly FormulaScalar[])[]): FormulaArray {
-  return { type: "array", values };
-}
-
-function coerceScalar(value: EvalResult): FormulaScalar {
-  if (typeof value === "object" && value !== null && "type" in value && value.type === "array") {
-    return value.values[0]?.[0] ?? null;
+function asPrimitiveOrThrow(value: FormulaScalar): FormulaEvaluationResult {
+  if (isFormulaError(value)) {
+    throw createFormulaError(value.value);
   }
   return value;
 }
 
-function requireNumber(value: FormulaScalar, context: string): number | FormulaError {
-  if (isFormulaError(value)) {
-    return value;
+function normalizeFormulaText(formula: string): string {
+  const trimmed = formula.trim();
+  if (trimmed.startsWith("=")) {
+    return trimmed.slice(1).trim();
   }
-  if (value === null) {
-    return 0;
-  }
-  if (typeof value === "number") {
-    return value;
-  }
-  if (typeof value === "boolean") {
-    return value ? 1 : 0;
-  }
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (trimmed.length === 0) {
-      return 0;
-    }
-    const n = Number(trimmed);
-    if (Number.isFinite(n)) {
-      return n;
-    }
-  }
-  void context;
-  return toFormulaError("#VALUE!");
-}
-
-function flattenToScalars(value: EvalResult): readonly FormulaScalar[] {
-  if (typeof value === "object" && value !== null && "type" in value && value.type === "array") {
-    return value.values.flatMap((row) => [...row]);
-  }
-  return [value];
-}
-
-function compareScalars(left: FormulaScalar, right: FormulaScalar, op: string): FormulaScalar {
-  if (isFormulaError(left)) {
-    return left;
-  }
-  if (isFormulaError(right)) {
-    return right;
-  }
-  if (op === "=") {
-    return Object.is(left, right);
-  }
-  if (op === "<>") {
-    return !Object.is(left, right);
-  }
-  if (left === null || right === null) {
-    return toFormulaError("#VALUE!");
-  }
-  if (typeof left !== typeof right) {
-    return toFormulaError("#VALUE!");
-  }
-  if (typeof left === "boolean") {
-    return toFormulaError("#VALUE!");
-  }
-
-  const cmp = (() => {
-    if (typeof left === "number" && typeof right === "number") {
-      return left - right;
-    }
-    if (typeof left === "string" && typeof right === "string") {
-      return left.localeCompare(right);
-    }
-    return undefined;
-  })();
-  if (cmp === undefined) {
-    return toFormulaError("#VALUE!");
-  }
-
-  if (op === ">") return cmp > 0;
-  if (op === "<") return cmp < 0;
-  if (op === ">=") return cmp >= 0;
-  if (op === "<=") return cmp <= 0;
-  return toFormulaError("#NAME?");
+  return trimmed;
 }
 
 function buildWorkbookMatrix(workbook: XlsxWorkbook): WorkbookMatrix {
@@ -152,88 +83,88 @@ function buildWorkbookMatrix(workbook: XlsxWorkbook): WorkbookMatrix {
   return { sheets, sheetIndexByName };
 }
 
+function resolveSheetIndexByName(matrix: WorkbookMatrix, sheetName: string): number | undefined {
+  return matrix.sheetIndexByName.get(sheetName.trim().toUpperCase());
+}
+
+function parseSheetQualifiedCellReference(
+  reference: string,
+  defaultSheetName: string,
+): { readonly sheetName: string; readonly address: CellAddress } {
+  const parsed = parseRange(reference);
+  const isSingleCell =
+    parsed.start.col === parsed.end.col &&
+    parsed.start.row === parsed.end.row &&
+    parsed.start.colAbsolute === parsed.end.colAbsolute &&
+    parsed.start.rowAbsolute === parsed.end.rowAbsolute;
+  if (!isSingleCell) {
+    throw new Error("Expected single cell reference");
+  }
+  return {
+    sheetName: parsed.sheetName ?? defaultSheetName,
+    address: parsed.start,
+  };
+}
+
 type EvalScope = {
   readonly defaultSheetIndex: number;
+  readonly defaultSheetName: string;
   readonly resolveSheetIndexByName: (sheetName: string) => number | undefined;
-  readonly resolveCell: (sheetIndex: number, address: CellAddress) => FormulaScalar;
-  readonly resolveRange: (sheetIndex: number, range: { readonly start: CellAddress; readonly end: CellAddress }) => FormulaArray;
+  readonly resolveCell: (sheetIndex: number, address: CellAddress) => FormulaEvaluationResult;
+  readonly resolveRange: (sheetIndex: number, range: { readonly start: CellAddress; readonly end: CellAddress }) => FormulaEvaluationResult[][];
+  readonly origin: { readonly sheetName: string; readonly address: CellAddress };
 };
 
-function evaluateFunction(name: string, args: readonly EvalResult[]): FormulaScalar {
-  const upper = name.toUpperCase();
-
-  if (upper === "SUM") {
-    let sum = 0;
-    for (const arg of args) {
-      for (const scalar of flattenToScalars(arg)) {
-        const n = requireNumber(scalar, "SUM");
-        if (typeof n !== "number") {
-          return n;
-        }
-        sum += n;
-      }
-    }
-    return sum;
+function compareScalars(
+  left: FormulaEvaluationResult,
+  right: FormulaEvaluationResult,
+  op: string,
+): boolean {
+  if (op === "=") {
+    return formulaFunctionHelpers.comparePrimitiveEquality(left, right);
+  }
+  if (op === "<>") {
+    return !formulaFunctionHelpers.comparePrimitiveEquality(left, right);
   }
 
-  if (upper === "AVERAGE") {
-    const nums: number[] = [];
-    for (const arg of args) {
-      for (const scalar of flattenToScalars(arg)) {
-        const n = requireNumber(scalar, "AVERAGE");
-        if (typeof n !== "number") {
-          return n;
-        }
-        nums.push(n);
-      }
-    }
-    if (nums.length === 0) {
-      return toFormulaError("#DIV/0!");
-    }
-    return nums.reduce((a, b) => a + b, 0) / nums.length;
+  if (left === null || right === null) {
+    throw createFormulaError("#VALUE!");
+  }
+  if (typeof left !== typeof right) {
+    throw createFormulaError("#VALUE!");
+  }
+  if (typeof left === "boolean") {
+    throw createFormulaError("#VALUE!");
   }
 
-  if (upper === "MIN" || upper === "MAX") {
-    const nums: number[] = [];
-    for (const arg of args) {
-      for (const scalar of flattenToScalars(arg)) {
-        const n = requireNumber(scalar, upper);
-        if (typeof n !== "number") {
-          return n;
-        }
-        nums.push(n);
-      }
+  const cmp = (() => {
+    if (typeof left === "number" && typeof right === "number") {
+      return left - right;
     }
-    if (nums.length === 0) {
-      return 0;
+    if (typeof left === "string" && typeof right === "string") {
+      return left.localeCompare(right);
     }
-    return upper === "MIN" ? Math.min(...nums) : Math.max(...nums);
+    return undefined;
+  })();
+  if (cmp === undefined) {
+    throw createFormulaError("#VALUE!");
   }
 
-  if (upper === "IF") {
-    const cond = coerceScalar(args[0] ?? null);
-    const thenVal = coerceScalar(args[1] ?? null);
-    const elseVal = coerceScalar(args[2] ?? null);
-    if (isFormulaError(cond)) {
-      return cond;
-    }
-    const truthy = (() => {
-      if (cond === null) return false;
-      if (typeof cond === "boolean") return cond;
-      if (typeof cond === "number") return cond !== 0;
-      if (typeof cond === "string") return cond.length > 0;
-      return false;
-    })();
-    return truthy ? thenVal : elseVal;
-  }
-
-  return toFormulaError("#NAME?");
+  if (op === ">") return cmp > 0;
+  if (op === "<") return cmp < 0;
+  if (op === ">=") return cmp >= 0;
+  if (op === "<=") return cmp <= 0;
+  throw createFormulaError("#NAME?");
 }
 
 function evaluateNode(node: FormulaAstNode, scope: EvalScope): EvalResult {
   switch (node.type) {
-    case "Literal":
+    case "Literal": {
+      if (isFormulaError(node.value)) {
+        throw createFormulaError(node.value.value);
+      }
       return node.value;
+    }
     case "Reference": {
       const sheetIndex = (() => {
         if (!node.sheetName) {
@@ -242,7 +173,7 @@ function evaluateNode(node: FormulaAstNode, scope: EvalScope): EvalResult {
         return scope.resolveSheetIndexByName(node.sheetName);
       })();
       if (sheetIndex === undefined) {
-        return toFormulaError("#REF!");
+        throw createFormulaError("#REF!");
       }
       return scope.resolveCell(sheetIndex, node.reference);
     }
@@ -254,29 +185,32 @@ function evaluateNode(node: FormulaAstNode, scope: EvalScope): EvalResult {
         return scope.resolveSheetIndexByName(node.range.sheetName);
       })();
       if (sheetIndex === undefined) {
-        return toFormulaError("#REF!");
+        throw createFormulaError("#REF!");
       }
       return scope.resolveRange(sheetIndex, { start: node.range.start, end: node.range.end });
     }
-    case "Unary": {
-      const arg = coerceScalar(evaluateNode(node.argument, scope));
-      const n = requireNumber(arg, "unary");
-      if (typeof n !== "number") {
-        return n;
+    case "Array": {
+      const rows: FormulaEvaluationResult[][] = [];
+      for (const row of node.elements) {
+        const values: FormulaEvaluationResult[] = [];
+        for (const el of row) {
+          values.push(formulaFunctionHelpers.coerceScalar(evaluateNode(el, scope), "array literal"));
+        }
+        rows.push(values);
       }
+      return rows;
+    }
+    case "Unary": {
+      const value = evaluateNode(node.argument, scope);
+      const n = formulaFunctionHelpers.requireNumber(value, `unary ${node.operator}`);
       return node.operator === "-" ? -n : n;
     }
     case "Binary": {
-      const left = coerceScalar(evaluateNode(node.left, scope));
-      const right = coerceScalar(evaluateNode(node.right, scope));
-      const l = requireNumber(left, "binary");
-      if (typeof l !== "number") {
-        return l;
-      }
-      const r = requireNumber(right, "binary");
-      if (typeof r !== "number") {
-        return r;
-      }
+      const left = evaluateNode(node.left, scope);
+      const right = evaluateNode(node.right, scope);
+      const l = formulaFunctionHelpers.requireNumber(left, `binary ${node.operator}`);
+      const r = formulaFunctionHelpers.requireNumber(right, `binary ${node.operator}`);
+
       switch (node.operator) {
         case "+":
           return l + r;
@@ -285,26 +219,43 @@ function evaluateNode(node: FormulaAstNode, scope: EvalScope): EvalResult {
         case "*":
           return l * r;
         case "/":
-          return r === 0 ? toFormulaError("#DIV/0!") : l / r;
+          if (r === 0) {
+            throw createFormulaError("#DIV/0!");
+          }
+          return l / r;
         case "^":
-          return Math.pow(l, r);
+          return l ** r;
       }
-      return toFormulaError("#NAME?");
+      throw createFormulaError("#NAME?");
     }
     case "Compare": {
-      const left = coerceScalar(evaluateNode(node.left, scope));
-      const right = coerceScalar(evaluateNode(node.right, scope));
+      const left = formulaFunctionHelpers.coerceScalar(evaluateNode(node.left, scope), `comparator ${node.operator}`);
+      const right = formulaFunctionHelpers.coerceScalar(evaluateNode(node.right, scope), `comparator ${node.operator}`);
       return compareScalars(left, right, node.operator);
     }
     case "Function": {
+      const definition = getFormulaFunction(node.name);
+      if (!definition) {
+        throw new Error(`Unknown function "${node.name}"`);
+      }
+
+      if (definition.evaluateLazy) {
+        return definition.evaluateLazy([...node.args], {
+          evaluate: (child) => evaluateNode(child, scope),
+          helpers: formulaFunctionHelpers,
+          parseReference: (reference) => parseSheetQualifiedCellReference(reference, scope.origin.sheetName),
+          origin: scope.origin,
+        });
+      }
+
+      if (!definition.evaluate) {
+        throw new Error(`Formula function "${node.name}" must provide an eager evaluator`);
+      }
+
       const args = node.args.map((arg) => evaluateNode(arg, scope));
-      return evaluateFunction(node.name, args);
+      return definition.evaluate(args, formulaFunctionHelpers);
     }
   }
-}
-
-function resolveSheetIndexByName(matrix: WorkbookMatrix, sheetName: string): number | undefined {
-  return matrix.sheetIndexByName.get(sheetName.trim().toUpperCase());
 }
 
 export type FormulaEvaluator = {
@@ -314,13 +265,13 @@ export type FormulaEvaluator = {
 
 export function createFormulaEvaluator(workbook: XlsxWorkbook): FormulaEvaluator {
   const matrix = buildWorkbookMatrix(workbook);
-  const astCache = new Map<string, FormulaAstNode>();
+  const astCache = new Map<string, FormulaAstNode | null>();
   const valueCache = new Map<string, FormulaScalar>();
   const inProgress = new Set<string>();
 
-  const getOrParseAst = (cacheKey: string, formula: string): FormulaAstNode | undefined => {
+  const getOrParseAst = (cacheKey: string, formula: string): FormulaAstNode | null => {
     const cached = astCache.get(cacheKey);
-    if (cached) {
+    if (cached !== undefined) {
       return cached;
     }
     try {
@@ -328,31 +279,64 @@ export function createFormulaEvaluator(workbook: XlsxWorkbook): FormulaEvaluator
       astCache.set(cacheKey, parsed);
       return parsed;
     } catch {
-      return undefined;
+      astCache.set(cacheKey, null);
+      return null;
     }
   };
 
-  const resolveCell = (sheetIndex: number, address: CellAddress): FormulaScalar => {
+  const evaluateFormulaInternal = (sheetIndex: number, origin: CellAddress, formula: string): FormulaScalar => {
+    const normalized = normalizeFormulaText(formula);
+    const cacheKey = `${sheetIndex}|${normalized}`;
+    const ast = getOrParseAst(cacheKey, normalized);
+    if (!ast) {
+      return toFormulaErrorScalar("#NAME?");
+    }
+
+    const defaultSheetName = matrix.sheets[sheetIndex]?.sheetName;
+    if (!defaultSheetName) {
+      return toFormulaErrorScalar("#REF!");
+    }
+
+    const scope: EvalScope = {
+      defaultSheetIndex: sheetIndex,
+      defaultSheetName,
+      resolveSheetIndexByName: (sheetName) => resolveSheetIndexByName(matrix, sheetName),
+      resolveCell: (si, addr) => resolveCellPrimitive(si, addr),
+      resolveRange: (si, range) => resolveRangePrimitive(si, range),
+      origin: { sheetName: defaultSheetName, address: origin },
+    };
+
+    try {
+      const evaluated = evaluateNode(ast, scope);
+      return formulaFunctionHelpers.coerceScalar(evaluated, "formula");
+    } catch (error) {
+      const code = getErrorCodeFromError(error);
+      return toFormulaErrorScalar(code);
+    }
+  };
+
+  const resolveCellScalar = (sheetIndex: number, address: CellAddress): FormulaScalar => {
     const key = `${sheetIndex}|${address.col as number}:${address.row as number}`;
     const cached = valueCache.get(key);
     if (cached !== undefined) {
       return cached;
     }
     if (inProgress.has(key)) {
-      return toFormulaError("#REF!");
+      return toFormulaErrorScalar("#REF!");
     }
 
     inProgress.add(key);
 
     const sheet = matrix.sheets[sheetIndex];
     const cellData = sheet?.rows.get(address.row as number)?.get(address.col as number);
-    let result: FormulaScalar;
-    if (!cellData) {
-      result = null;
-    } else if (cellData.formula) {
-      result = evaluateFormula(sheetIndex, cellData.formula);
-    } else {
-      result = cellValueToScalar(cellData.value);
+
+    let result: FormulaScalar = null;
+    if (cellData) {
+      if (cellData.formula) {
+        result = evaluateFormulaInternal(sheetIndex, address, cellData.formula);
+      } else {
+        result = cellValueToFormulaScalar(cellData.value);
+      }
     }
 
     valueCache.set(key, result);
@@ -360,50 +344,35 @@ export function createFormulaEvaluator(workbook: XlsxWorkbook): FormulaEvaluator
     return result;
   };
 
-  const resolveRange = (sheetIndex: number, range: { readonly start: CellAddress; readonly end: CellAddress }): FormulaArray => {
+  const resolveCellPrimitive = (sheetIndex: number, address: CellAddress): FormulaEvaluationResult => {
+    return asPrimitiveOrThrow(resolveCellScalar(sheetIndex, address));
+  };
+
+  const resolveRangePrimitive = (
+    sheetIndex: number,
+    range: { readonly start: CellAddress; readonly end: CellAddress },
+  ): FormulaEvaluationResult[][] => {
     const minRow = Math.min(range.start.row as number, range.end.row as number);
     const maxRow = Math.max(range.start.row as number, range.end.row as number);
     const minCol = Math.min(range.start.col as number, range.end.col as number);
     const maxCol = Math.max(range.start.col as number, range.end.col as number);
 
-    const rows: FormulaScalar[][] = [];
+    const rows: FormulaEvaluationResult[][] = [];
     for (let r = minRow; r <= maxRow; r += 1) {
-      const rowValues: FormulaScalar[] = [];
+      const rowValues: FormulaEvaluationResult[] = [];
       for (let c = minCol; c <= maxCol; c += 1) {
-        rowValues.push(resolveCell(sheetIndex, { col: colIdx(c), row: rowIdx(r), colAbsolute: false, rowAbsolute: false }));
+        rowValues.push(
+          resolveCellPrimitive(sheetIndex, { col: colIdx(c), row: rowIdx(r), colAbsolute: false, rowAbsolute: false }),
+        );
       }
       rows.push(rowValues);
     }
-    return asArray(rows);
+    return rows;
   };
-
-  const evaluateFormula = (sheetIndex: number, formula: string): FormulaScalar => {
-    const cacheKey = `${sheetIndex}|${formula}`;
-    const ast = getOrParseAst(cacheKey, formula);
-
-    if (!ast) {
-      return toFormulaError("#NAME?");
-    }
-
-    const scope: EvalScope = {
-      defaultSheetIndex: sheetIndex,
-      resolveSheetIndexByName: (sheetName) => resolveSheetIndexByName(matrix, sheetName),
-      resolveCell,
-      resolveRange,
-    };
-
-    try {
-      const evaluated = evaluateNode(ast, scope);
-      return coerceScalar(evaluated);
-    } catch {
-      return toFormulaError("#VALUE!");
-    }
-  };
-
-  const evaluateCell = (sheetIndex: number, address: CellAddress): FormulaScalar => resolveCell(sheetIndex, address);
 
   return {
-    evaluateCell,
-    evaluateFormula: (sheetIndex, formula) => evaluateFormula(sheetIndex, formula),
+    evaluateCell: (sheetIndex, address) => resolveCellScalar(sheetIndex, address),
+    evaluateFormula: (sheetIndex, formula) =>
+      evaluateFormulaInternal(sheetIndex, { col: colIdx(1), row: rowIdx(1), colAbsolute: false, rowAbsolute: false }, formula),
   };
 }

@@ -11,4 +11,9 @@ describe("xlsx/formula/format", () => {
     const ast = parseFormula("'My Sheet'!A1+1");
     expect(formatFormula(ast)).toBe("'My Sheet'!A1+1");
   });
+
+  it("formats array literals", () => {
+    const ast = parseFormula('{1,"A";2,"B"}');
+    expect(formatFormula(ast)).toBe('{1,"A";2,"B"}');
+  });
 });

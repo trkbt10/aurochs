@@ -94,6 +94,46 @@ describe("createFormulaEvaluator", () => {
     expect(evaluator.evaluateCell(0, { col: colIdx(2), row: rowIdx(1), colAbsolute: false, rowAbsolute: false })).toBe(10);
   });
 
+  it("evaluates array literals", () => {
+    const sheet = makeWorksheet("Sheet1", 1, [formulaCell(1, 1, "SUM({1,2;3,4})")]);
+    const evaluator = createFormulaEvaluator(makeWorkbook([sheet]));
+    expect(evaluator.evaluateCell(0, { col: colIdx(1), row: rowIdx(1), colAbsolute: false, rowAbsolute: false })).toBe(10);
+  });
+
+  it("evaluates VLOOKUP over an array literal", () => {
+    const sheet = makeWorksheet("Sheet1", 1, [
+      formulaCell(1, 1, 'VLOOKUP(2,{1,"A";2,"B";3,"C"},2,FALSE)'),
+    ]);
+    const evaluator = createFormulaEvaluator(makeWorkbook([sheet]));
+    expect(evaluator.evaluateCell(0, { col: colIdx(1), row: rowIdx(1), colAbsolute: false, rowAbsolute: false })).toBe("B");
+  });
+
+  it("evaluates IFERROR by catching formula errors", () => {
+    const sheet = makeWorksheet("Sheet1", 1, [formulaCell(1, 1, "IFERROR(1/0,0)")]);
+    const evaluator = createFormulaEvaluator(makeWorkbook([sheet]));
+    expect(evaluator.evaluateCell(0, { col: colIdx(1), row: rowIdx(1), colAbsolute: false, rowAbsolute: false })).toBe(0);
+  });
+
+  it("evaluates INDIRECT", () => {
+    const sheet = makeWorksheet("Sheet1", 1, [
+      numberCell(1, 1, 5),
+      formulaCell(2, 1, 'INDIRECT("A1")+1'),
+    ]);
+    const evaluator = createFormulaEvaluator(makeWorkbook([sheet]));
+    expect(evaluator.evaluateCell(0, { col: colIdx(2), row: rowIdx(1), colAbsolute: false, rowAbsolute: false })).toBe(6);
+  });
+
+  it("evaluates OFFSET by constructing a displaced range", () => {
+    const sheet = makeWorksheet("Sheet1", 1, [
+      numberCell(1, 1, 10),
+      numberCell(1, 2, 20),
+      numberCell(1, 3, 30),
+      formulaCell(2, 1, "SUM(OFFSET(A1,1,0,2,1))"),
+    ]);
+    const evaluator = createFormulaEvaluator(makeWorkbook([sheet]));
+    expect(evaluator.evaluateCell(0, { col: colIdx(2), row: rowIdx(1), colAbsolute: false, rowAbsolute: false })).toBe(50);
+  });
+
   it("returns #REF! for unknown sheet names", () => {
     const sheet = makeWorksheet("Sheet1", 1, [formulaCell(1, 1, "NoSuchSheet!A1")]);
     const evaluator = createFormulaEvaluator(makeWorkbook([sheet]));
@@ -115,4 +155,3 @@ describe("createFormulaEvaluator", () => {
     });
   });
 });
-

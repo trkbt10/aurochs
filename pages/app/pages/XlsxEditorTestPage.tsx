@@ -155,6 +155,30 @@ function createTestWorkbook(): XlsxWorkbook {
               },
             ],
           },
+          {
+            rowNumber: rowIdx(6),
+            cells: [
+              { address: createAddress(colIdx(1), rowIdx(6)), value: { type: "string", value: "IFERROR(1/0,123)" } },
+              { address: createAddress(colIdx(2), rowIdx(6)), value: { type: "empty" }, formula: "IFERROR(1/0,123)" },
+              { address: createAddress(colIdx(3), rowIdx(6)), value: { type: "empty" }, formula: 'VLOOKUP(2,{1,"A";2,"B";3,"C"},2,FALSE)' },
+            ],
+          },
+          {
+            rowNumber: rowIdx(7),
+            cells: [
+              { address: createAddress(colIdx(1), rowIdx(7)), value: { type: "string", value: "OFFSET/INDIRECT demo" } },
+              { address: createAddress(colIdx(2), rowIdx(7)), value: { type: "empty" }, formula: "SUM(OFFSET(A8,0,0,2,1))" },
+              { address: createAddress(colIdx(3), rowIdx(7)), value: { type: "empty" }, formula: 'INDIRECT("A8")+1' },
+            ],
+          },
+          {
+            rowNumber: rowIdx(8),
+            cells: [{ address: createAddress(colIdx(1), rowIdx(8)), value: { type: "number", value: 20 } }],
+          },
+          {
+            rowNumber: rowIdx(9),
+            cells: [{ address: createAddress(colIdx(1), rowIdx(9)), value: { type: "number", value: 30 } }],
+          },
         ],
         xmlPath: "xl/worksheets/sheet1.xml",
       },

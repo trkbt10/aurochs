@@ -86,6 +86,7 @@ function precedence(node: FormulaAstNode): Prec {
     case "Reference":
     case "Range":
     case "Function":
+    case "Array":
       return 5;
   }
 }
@@ -122,6 +123,14 @@ function formatNode(node: FormulaAstNode, parentPrec: Prec, position: "left" | "
         return formatRangeWithSheet(node.range);
       case "Function":
         return `${node.name}(${node.args.map((arg) => formatNode(arg, 0, "left")).join(",")})`;
+      case "Array": {
+        const isEmpty = node.elements.length === 1 && (node.elements[0]?.length ?? 0) === 0;
+        if (isEmpty) {
+          return "{}";
+        }
+        const rows = node.elements.map((row) => row.map((el) => formatNode(el, 0, "left")).join(",")).join(";");
+        return `{${rows}}`;
+      }
       case "Unary": {
         const arg = formatNode(node.argument, selfPrec, "right", node.operator);
         let wrapped = arg;

@@ -1,18 +1,20 @@
 import type { ErrorValue } from "../domain/cell/types";
 
+export type FormulaPrimitiveValue = string | number | boolean | null;
+
+/**
+ * Primitive evaluation result for function implementations.
+ *
+ * Note: errors are represented via thrown exceptions in the function helper layer.
+ */
+export type FormulaEvaluationResult = FormulaPrimitiveValue;
+
 export type FormulaError = {
   readonly type: "error";
   readonly value: ErrorValue;
 };
 
-export type FormulaScalar = string | number | boolean | null | FormulaError;
-
-export type FormulaArray = {
-  readonly type: "array";
-  readonly values: readonly (readonly FormulaScalar[])[];
-};
-
-export type EvalResult = FormulaScalar | FormulaArray;
+export type FormulaScalar = FormulaPrimitiveValue | FormulaError;
 
 export function isFormulaError(value: FormulaScalar): value is FormulaError {
   return typeof value === "object" && value !== null && "type" in value && value.type === "error";
@@ -33,4 +35,3 @@ export function toDisplayText(value: FormulaScalar): string {
   }
   return value.value;
 }
-

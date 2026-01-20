@@ -20,4 +20,8 @@ describe("xlsx/formula/shift", () => {
   it("converts out-of-bounds references to #REF!", () => {
     expect(shiftFormulaReferences("A1", -1, 0)).toBe("#REF!");
   });
+
+  it("shifts references inside array literals", () => {
+    expect(shiftFormulaReferences("{A1,1;2,3}", 1, 1)).toBe("{B2,1;2,3}");
+  });
 });

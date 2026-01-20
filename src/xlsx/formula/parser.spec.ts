@@ -63,4 +63,25 @@ describe("parseFormula", () => {
       value: { type: "error", value: "#REF!" },
     });
   });
+
+  it("parses array literals", () => {
+    expect(parseFormula("{1,2;3,4}")).toEqual({
+      type: "Array",
+      elements: [
+        [
+          { type: "Literal", value: 1 },
+          { type: "Literal", value: 2 },
+        ],
+        [
+          { type: "Literal", value: 3 },
+          { type: "Literal", value: 4 },
+        ],
+      ],
+    });
+  });
+
+  it("parses NULL/NIL as null", () => {
+    expect(parseFormula("NULL")).toEqual({ type: "Literal", value: null });
+    expect(parseFormula("NIL")).toEqual({ type: "Literal", value: null });
+  });
 });

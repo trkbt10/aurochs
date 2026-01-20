@@ -46,6 +46,11 @@ export type FunctionNode = {
   readonly args: readonly FormulaAstNode[];
 };
 
+export type ArrayNode = {
+  readonly type: "Array";
+  readonly elements: readonly (readonly FormulaAstNode[])[];
+};
+
 export type FormulaAstNode =
   | LiteralNode
   | ReferenceNode
@@ -53,5 +58,5 @@ export type FormulaAstNode =
   | UnaryNode
   | BinaryNode
   | CompareNode
-  | FunctionNode;
-
+  | FunctionNode
+  | ArrayNode;

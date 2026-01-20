@@ -44,8 +44,17 @@ type ParenthesisToken = {
   readonly value: "(" | ")";
 };
 
+type BracketToken = {
+  readonly type: "bracket";
+  readonly value: "{" | "}";
+};
+
 type CommaToken = {
   readonly type: "comma";
+};
+
+type SemicolonToken = {
+  readonly type: "semicolon";
 };
 
 type ColonToken = {
@@ -65,7 +74,9 @@ type Token =
   | ReferenceToken
   | ErrorToken
   | ParenthesisToken
+  | BracketToken
   | CommaToken
+  | SemicolonToken
   | ColonToken
   | EndToken;
 
@@ -300,8 +311,18 @@ function tokenize(formula: string): readonly Token[] {
       index += 1;
       continue;
     }
+    if (char === "{" || char === "}") {
+      tokens.push({ type: "bracket", value: char });
+      index += 1;
+      continue;
+    }
     if (char === ",") {
       tokens.push({ type: "comma" });
+      index += 1;
+      continue;
+    }
+    if (char === ";") {
+      tokens.push({ type: "semicolon" });
       index += 1;
       continue;
     }
@@ -401,11 +422,49 @@ function parsePrimary(state: ParserState): FormulaAstNode {
     return { type: "Reference", reference: addr, sheetName: parsed.sheetName };
   }
 
+  if (token.type === "bracket" && token.value === "{") {
+    consume(state);
+    const rows: FormulaAstNode[][] = [];
+    let currentRow: FormulaAstNode[] = [];
+
+    const closingToken = peek(state);
+    if (closingToken.type === "bracket" && closingToken.value === "}") {
+      consume(state);
+      return { type: "Array", elements: [[]] };
+    }
+
+    while (true) {
+      currentRow.push(parseExpression(state));
+      const separator = peek(state);
+
+      if (separator.type === "comma") {
+        consume(state);
+        continue;
+      }
+      if (separator.type === "semicolon") {
+        consume(state);
+        rows.push(currentRow);
+        currentRow = [];
+        continue;
+      }
+      if (separator.type === "bracket" && separator.value === "}") {
+        consume(state);
+        rows.push(currentRow);
+        return { type: "Array", elements: rows };
+      }
+
+      throw new Error(`Unexpected token in array literal: ${separator.type}`);
+    }
+  }
+
   if (token.type === "identifier") {
     consume(state);
     const upper = token.value.toUpperCase();
     if (upper === "TRUE" || upper === "FALSE") {
       return { type: "Literal", value: upper === "TRUE" };
+    }
+    if (upper === "NULL" || upper === "NIL") {
+      return { type: "Literal", value: null };
     }
     if (peek(state).type === "paren" && (peek(state) as ParenthesisToken).value === "(") {
       consume(state);
