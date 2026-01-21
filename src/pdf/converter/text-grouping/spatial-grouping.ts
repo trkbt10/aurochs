@@ -769,8 +769,10 @@ function splitIntoAdjacentGroups(
     const maxGap = expectedGap * options.horizontalGapRatio;
 
     const blocked = hasBlockingZoneBetween(prev, curr, blockingZones);
-    const compatibleStyle = hasSameStyle(prev, curr, options) && hasSameSpacingProperties(prev, curr);
-    const sameSegment = !blocked && gap <= maxGap && compatibleStyle;
+    // Within a physical line, style changes (font/size/color) are common and should
+    // not force segmentation. Keep segments primarily as spatial groupings so that
+    // later text reconstruction can insert spaces based on gaps instead of using tabs.
+    const sameSegment = !blocked && gap <= maxGap;
 
     if (!sameSegment) {
       groups.push(current);
@@ -819,6 +821,20 @@ function splitIntoColumnGroups(
   const spaceTh = estimateSpaceGapThreshold(gaps, fontSize);
   const adaptiveTh = spaceTh * 3.5;
   const columnGapThreshold = Math.max(fixedTh, adaptiveTh);
+
+  // Avoid splitting simple "two-item lines" into columns unless the gap is clearly a
+  // column gutter. Many PDFs split sentences into multiple text runs with modest gaps,
+  // which should stay on the same line (handled later via synthetic spaces).
+  if (sorted.length === 2) {
+    const prev = sorted[0]!;
+    const curr = sorted[1]!;
+    const gap = curr.x - (prev.x + prev.width);
+    const hasBlocker = hasBlockingZoneBetween(prev, curr, blockingZones);
+    const strongGutter = gap > Math.max(columnGapThreshold * 1.8, fontSize * 6.0);
+    if (!hasBlocker && !strongGutter) {
+      return [sorted];
+    }
+  }
 
   const groups: PdfText[][] = [];
   const currentGroup: PdfText[] = [sorted[0]!];

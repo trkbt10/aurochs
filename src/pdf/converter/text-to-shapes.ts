@@ -129,6 +129,7 @@ function createTextBody(pdfText: PdfText, context: ConversionContext): TextBody 
       wrapping: "none",
       anchor: "top",
       anchorCenter: false,
+      forceAntiAlias: true,
       // Set all insets to 0 for precise positioning
       insets: {
         left: px(0),
@@ -214,7 +215,11 @@ function detectScriptTypeFromCIDOrdering(ordering: CIDOrdering | undefined): Scr
  *    - Based on Unicode Standard character classifications
  */
 export function createPptxTextRunFromPdfText(pdfText: PdfText, context: ConversionContext): TextRun {
-  const normalizedName = normalizeFontName(pdfText.fontName);
+  // Use BaseFont when available so embedded fonts can be matched correctly.
+  // PdfText.fontName is the *resource identifier* (e.g. "F1"), while BaseFont
+  // is the actual font name (often subset-tagged).
+  const effectiveFontName = pdfText.baseFont ?? pdfText.fontName;
+  const normalizedName = normalizeFontName(effectiveFontName);
   const spacing = convertSpacing(
     pdfText.charSpacing,
     pdfText.horizontalScaling,
@@ -226,7 +231,7 @@ export function createPptxTextRunFromPdfText(pdfText: PdfText, context: Conversi
   const bold = pdfText.isBold ?? isBoldFont(normalizedName);
   const italic = pdfText.isItalic ?? isItalicFont(normalizedName);
 
-  const mappedFontName = normalizeFontFamily(pdfText.fontName);
+  const mappedFontName = normalizeFontFamily(effectiveFontName);
 
   // Script type detection (spec-based):
   // 1. CIDOrdering from CIDSystemInfo (ISO 32000-1 Section 9.7.3)
@@ -341,8 +346,10 @@ function convertSpacing(
  * @returns Clamped spacing value in pixels, or undefined if too small to matter
  */
 function validateAndClampSpacing(spacingPx: number): Pixels | undefined {
-  // Skip negligible spacing (less than 0.1px ≈ 0.075pt)
-  if (Math.abs(spacingPx) < 0.1) {
+  // Skip small spacing: PDF charSpacing is frequently used as a subtle
+  // justification/hinting aid and does not round-trip well to PPTX/SVG.
+  // Keeping only clearly-visible spacing improves visual fidelity.
+  if (Math.abs(spacingPx) < 0.5) {
     return undefined;
   }
 

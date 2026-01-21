@@ -30,6 +30,15 @@ export type CompareOptions = {
   maxDiffPercent?: number;
   /** Include anti-aliased pixels in diff (default: false) */
   includeAA?: boolean;
+  /**
+   * Extra font files to load into resvg.
+   *
+   * resvg-js does not support @font-face sources inside SVG/CSS, so if your SVG
+   * depends on embedded or non-system fonts you must provide them explicitly.
+   */
+  resvgFontFiles?: readonly string[];
+  /** Whether to load system fonts (default: true). */
+  resvgLoadSystemFonts?: boolean;
 }
 
 /**
@@ -46,10 +55,19 @@ function ensureDirs(): void {
 /**
  * Convert SVG string to PNG buffer
  */
-export function svgToPng(svg: string, width?: number): Buffer {
-  const opts: { fitTo?: { mode: "width"; value: number } } = {};
+export function svgToPng(svg: string, width?: number, options: Pick<CompareOptions, "resvgFontFiles" | "resvgLoadSystemFonts"> = {}): Buffer {
+  const opts: {
+    fitTo?: { mode: "width"; value: number };
+    font?: { loadSystemFonts?: boolean; fontFiles?: string[] };
+  } = {};
   if (width !== undefined) {
     opts.fitTo = { mode: "width", value: width };
+  }
+  if (options.resvgFontFiles && options.resvgFontFiles.length > 0) {
+    opts.font = {
+      loadSystemFonts: options.resvgLoadSystemFonts ?? true,
+      fontFiles: [...options.resvgFontFiles],
+    };
   }
 
   const resvg = new Resvg(svg, opts);
@@ -167,7 +185,7 @@ export function compareSvgToSnapshot(
   const baseline = loadPng(snapshotPath);
 
   // Convert SVG to PNG at baseline dimensions
-  const actualPng = svgToPng(svg, baseline.width);
+  const actualPng = svgToPng(svg, baseline.width, options);
   let actual: PNG = PNG.sync.read(actualPng);
 
   // Save actual output for debugging
@@ -427,7 +445,7 @@ export function compareSvgToPdfBaseline(
   const baselinePath = path.join(OUTPUT_DIR, `${snapshotName}-baseline.png`);
   savePng(fittedBaseline, baselinePath);
 
-  const actualPngHigh = svgToPng(svg, scaledTargetWidth);
+  const actualPngHigh = svgToPng(svg, scaledTargetWidth, options);
   let actualHigh: PNG = PNG.sync.read(actualPngHigh);
   if (actualHigh.width !== scaledTargetWidth || actualHigh.height !== scaledTargetHeight) {
     actualHigh = resizePng(actualHigh, scaledTargetWidth, scaledTargetHeight);

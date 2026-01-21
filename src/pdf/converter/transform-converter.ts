@@ -445,17 +445,44 @@ export function createFitContext(
     }
   }
 
-  const scaleX = effective.width / pdfWidth;
-  const scaleY = effective.height / pdfHeight;
+  // Snap geometry in a way that matches common PDF rasterization pipelines.
+  //
+  // In particular, our visual regression baseline rasterizes the PDF page via poppler
+  // (`pdftoppm`) at a fixed DPI, then fits that raster to the target canvas using integer
+  // rounding. When we map PDF points directly to slide pixels, we can get 1px systematic
+  // shifts due to the intermediate raster rounding.
+  //
+  // To reduce that drift, we emulate:
+  // - raster size at BASELINE_DPI (rounded to integer pixels),
+  // - contain/cover fit in pixel space with integer rounding,
+  // - then map PDF points -> raster px -> slide px.
+  const BASELINE_DPI = 144;
+  const rasterW = Math.max(1, Math.round((pdfWidth / 72) * BASELINE_DPI));
+  const rasterH = Math.max(1, Math.round((pdfHeight / 72) * BASELINE_DPI));
+
+  const scaleRaster = fit === "contain"
+    ? Math.min(targetW / rasterW, targetH / rasterH)
+    : Math.max(targetW / rasterW, targetH / rasterH);
+
+  const fittedW = Math.max(1, Math.round(rasterW * scaleRaster));
+  const fittedH = Math.max(1, Math.round(rasterH * scaleRaster));
+
+  const offsetX = Math.round((targetW - fittedW) / 2);
+  const offsetY = Math.round((targetH - fittedH) / 2);
+
+  const rasterScaleToSlideX = fittedW / rasterW;
+  const rasterScaleToSlideY = fittedH / rasterH;
+  const scaleX = (BASELINE_DPI / 72) * rasterScaleToSlideX;
+  const scaleY = (BASELINE_DPI / 72) * rasterScaleToSlideY;
   const fontScale = Math.min(scaleX, scaleY) / PT_TO_PX;
 
   return {
     pdfWidth,
     pdfHeight,
-    slideWidth: px(effective.width),
-    slideHeight: px(effective.height),
-    offsetX: px((targetW - effective.width) / 2),
-    offsetY: px((targetH - effective.height) / 2),
+    slideWidth: px(fittedW),
+    slideHeight: px(fittedH),
+    offsetX: px(offsetX),
+    offsetY: px(offsetY),
     scaleX,
     scaleY,
     fontSizeScale: fontScale,

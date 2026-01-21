@@ -6,6 +6,7 @@ import { parsePdfNative } from "../core/pdf-parser.native";
 import { convertImageToShape } from "../../converter/image-to-shapes";
 import { parseDataUrl } from "../../../buffer/data-url";
 import { px } from "../../../ooxml/domain/units";
+import { createFitContext } from "../../converter/transform-converter";
 
 function buildMinimalPdfWithTriangleClipAndImage(): Uint8Array {
   const clip = "0 0 m 10 0 l 0 10 l h W n";
@@ -71,12 +72,7 @@ describe("clip paths (per-pixel mask, native)", () => {
     if (image.type !== "image") {throw new Error("Expected image");}
     expect(image.graphicsState.clipMask).toBeTruthy();
 
-    const context = {
-      pdfWidth: 100,
-      pdfHeight: 100,
-      slideWidth: px(100),
-      slideHeight: px(100),
-    } as const;
+    const context = createFitContext(100, 100, px(100), px(100), "contain");
 
     const shape = convertImageToShape(image, context, "1");
     if (!shape) {throw new Error("Expected shape");}

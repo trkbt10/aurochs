@@ -73,6 +73,7 @@ describe("convertTextToShape", () => {
         wrapping: "none",
         anchor: "top",
         anchorCenter: false,
+        forceAntiAlias: true,
         insets: {
           left: px(0),
           top: px(0),
@@ -677,7 +678,7 @@ describe("convertTextToShape", () => {
     const context = createContext(100, 100, 100, 100);
     const g = createGraphicsState({ colorSpace: "DeviceGray", components: [0] as const });
 
-    it("omits negligible spacing (less than 0.1px)", () => {
+    it("omits negligible spacing (less than 0.5px)", () => {
       const pdfText: PdfText = {
         type: "text",
         text: "Test",

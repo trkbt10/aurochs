@@ -21,6 +21,7 @@ import * as path from "node:path";
 import { px } from "../src/ooxml/domain/units";
 import { parsePdf, createDefaultGraphicsState, type PdfText } from "../src/pdf";
 import { convertTextToShape } from "../src/pdf/converter/text-to-shapes";
+import { createFitContext } from "../src/pdf/converter/transform-converter";
 import { buildSimplePdfBytes } from "../src/pdf/test-utils/simple-pdf";
 
 describe("CIDOrdering extraction from real PDFs", () => {
@@ -69,12 +70,7 @@ describe("CIDOrdering extraction from real PDFs", () => {
       cidOrdering: "Identity" as const, // Identity encoding - no script type info
     };
 
-    const context = {
-      pdfWidth: 100,
-      pdfHeight: 100,
-      slideWidth: px(200),
-      slideHeight: px(200),
-    };
+    const context = createFitContext(100, 100, px(200), px(200), "contain");
 
     const shape = convertTextToShape(pdfText, context, "1");
     const run = shape.textBody?.paragraphs[0]?.runs[0];
