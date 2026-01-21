@@ -12,7 +12,7 @@
  * @see ECMA-376 Part 4, Section 18.8.7 (cellStyle)
  */
 
-import type { XmlElement, XmlNode } from "../../xml";
+import type { XmlElement } from "../../xml";
 import { createElement } from "../../xml";
 import type {
   XlsxStyleSheet,

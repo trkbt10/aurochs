@@ -11,7 +11,6 @@
  * - Round-trip tests (export -> parse -> verify)
  */
 
-import { describe, it, expect } from "vitest";
 import JSZip from "jszip";
 import {
   exportXlsx,

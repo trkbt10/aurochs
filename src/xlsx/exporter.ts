@@ -13,8 +13,7 @@
 import JSZip from "jszip";
 import type { XmlElement, XmlNode } from "../xml";
 import { serializeElement, createElement } from "../xml";
-import type { XlsxWorkbook, XlsxWorksheet, XlsxRow } from "./domain/workbook";
-import type { Cell } from "./domain/cell/types";
+import type { XlsxWorkbook } from "./domain/workbook";
 import { serializeWorkbook, type XlsxRelationship, serializeRelationships } from "./serializer/workbook";
 import { serializeStyleSheet } from "./serializer/styles";
 import { serializeWorksheet } from "./serializer/worksheet";

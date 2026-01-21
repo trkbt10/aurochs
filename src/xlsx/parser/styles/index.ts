@@ -19,10 +19,6 @@ import type {
   XlsxCellStyle,
 } from "../../domain/style/types";
 import {
-  type NumFmtId,
-  type FontId,
-  type FillId,
-  type BorderId,
   numFmtId,
   fontId,
   fillId,

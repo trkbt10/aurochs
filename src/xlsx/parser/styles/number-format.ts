@@ -12,7 +12,6 @@ import type { XmlElement } from "../../../xml";
 import { getChildren, getAttr } from "../../../xml";
 import type { XlsxNumberFormat } from "../../domain/style/number-format";
 import { resolveFormatCode as resolveFormatCodeFromDomain } from "../../domain/style/number-format";
-import type { NumFmtId } from "../../domain/types";
 import { numFmtId } from "../../domain/types";
 import { parseIntRequired } from "../primitive";
 

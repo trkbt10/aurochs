@@ -15,7 +15,6 @@ import {
   isXmlElement,
   createElement,
   createText,
-  type XmlDocument,
   type XmlElement,
   type XmlNode,
 } from "../xml";

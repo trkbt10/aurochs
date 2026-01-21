@@ -10,7 +10,7 @@
  */
 
 import type { XlsxFont, XlsxColor } from "../domain/style/font";
-import type { XmlElement, XmlNode } from "../../xml";
+import type { XmlElement } from "../../xml";
 import { createElement } from "../../xml";
 
 // =============================================================================
