@@ -17,6 +17,7 @@ import type {
   XlsxPane,
   XlsxSelection,
 } from "../domain/workbook";
+import type { XlsxConditionalFormatting, XlsxConditionalFormattingRule } from "../domain/conditional-formatting";
 import type { CellRange } from "../domain/cell/address";
 import { parseCellRef, parseRange } from "../domain/cell/address";
 import type { Cell } from "../domain/cell/types";
@@ -27,7 +28,7 @@ import { parseCellWithAddress } from "./cell";
 import { expandSharedFormulas } from "./shared-formulas";
 import { parseBooleanAttr, parseFloatAttr, parseIntAttr } from "./primitive";
 import type { XmlElement } from "../../xml";
-import { getAttr, getChild, getChildren } from "../../xml";
+import { getAttr, getChild, getChildren, getTextContent } from "../../xml";
 
 // =============================================================================
 // Column Parsing
@@ -186,6 +187,45 @@ export function parseMergeCells(
 }
 
 // =============================================================================
+// Conditional Formatting Parsing
+// =============================================================================
+
+function parseSqrefRanges(sqref: string): readonly CellRange[] {
+  const tokens = sqref.trim().split(/\s+/u).filter((token) => token.length > 0);
+  return tokens.map(parseRange);
+}
+
+function parseConditionalFormattingRule(ruleElement: XmlElement): XlsxConditionalFormattingRule {
+  return {
+    type: getAttr(ruleElement, "type") ?? "",
+    dxfId: parseIntAttr(getAttr(ruleElement, "dxfId")),
+    priority: parseIntAttr(getAttr(ruleElement, "priority")),
+    operator: getAttr(ruleElement, "operator") ?? undefined,
+    stopIfTrue: parseBooleanAttr(getAttr(ruleElement, "stopIfTrue")),
+    formulas: getChildren(ruleElement, "formula").map((el) => getTextContent(el)),
+  };
+}
+
+function parseConditionalFormatting(element: XmlElement): XlsxConditionalFormatting {
+  const sqref = getAttr(element, "sqref") ?? "";
+  const ranges = sqref.length > 0 ? parseSqrefRanges(sqref) : [];
+  const rules = getChildren(element, "cfRule").map(parseConditionalFormattingRule);
+  return { sqref, ranges, rules };
+}
+
+/**
+ * Parse all conditional formatting definitions from a worksheet root element.
+ *
+ * @param worksheetElement - The worksheet root element (`<worksheet>`)
+ * @returns Conditional formatting definitions (may be empty)
+ *
+ * @see ECMA-376 Part 4, Section 18.3.1.18 (conditionalFormatting)
+ */
+export function parseConditionalFormattings(worksheetElement: XmlElement): readonly XlsxConditionalFormatting[] {
+  return getChildren(worksheetElement, "conditionalFormatting").map(parseConditionalFormatting);
+}
+
+// =============================================================================
 // Sheet View Parsing
 // =============================================================================
 
@@ -335,6 +375,7 @@ export function parseWorksheet(
   const sheetViewEl = getFirstSheetView(sheetViewsEl);
 
   const rows = expandSharedFormulas(parseOptionalSheetData(sheetDataEl, context, options));
+  const conditionalFormattings = parseConditionalFormattings(worksheetElement);
 
   return {
     name: sheetInfo.name,
@@ -345,6 +386,7 @@ export function parseWorksheet(
     columns: parseCols(colsEl),
     rows,
     mergeCells: parseMergeCells(mergeCellsEl),
+    conditionalFormattings: conditionalFormattings.length > 0 ? conditionalFormattings : undefined,
     xmlPath: sheetInfo.xmlPath,
   };
 }

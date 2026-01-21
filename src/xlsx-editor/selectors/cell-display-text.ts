@@ -10,6 +10,7 @@ import type { CellAddress } from "../../xlsx/domain/cell/address";
 import type { Cell, CellValue } from "../../xlsx/domain/cell/types";
 import type { XlsxWorksheet } from "../../xlsx/domain/workbook";
 import type { XlsxStyleSheet } from "../../xlsx/domain/style/types";
+import type { XlsxDifferentialFormat } from "../../xlsx/domain/style/dxf";
 import { isDateFormat, resolveFormatCode } from "../../xlsx/domain/style/number-format";
 import type { FormulaScalar } from "../../xlsx/formula/types";
 import { isFormulaError, toDisplayText } from "../../xlsx/formula/types";
@@ -253,7 +254,12 @@ export function resolveCellFormatCode(params: {
   readonly sheet: XlsxWorksheet;
   readonly address: CellAddress;
   readonly cell: Cell | undefined;
+  readonly conditionalFormat?: XlsxDifferentialFormat;
 }): string {
+  const conditionalNumFmt = params.conditionalFormat?.numFmt?.formatCode;
+  if (conditionalNumFmt) {
+    return conditionalNumFmt;
+  }
   const { styles, sheet, address, cell } = params;
   const { xf } = resolveCellXf({ styles, sheet, address, cell });
   return resolveFormatCode(xf.numFmtId as number, styles.numberFormats);

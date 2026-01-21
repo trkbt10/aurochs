@@ -14,6 +14,7 @@ import { colIdx, rowIdx } from "../../../xlsx/domain/types";
 import { getCell } from "../../cell/query";
 import { resolveCellRenderStyle } from "../../selectors/cell-render-style";
 import { formatCellValueForDisplay, formatFormulaScalarForDisplay, resolveCellFormatCode } from "../../selectors/cell-display-text";
+import { resolveCellConditionalDifferentialFormat } from "../../selectors/conditional-formatting";
 import { findMergeForCell, type NormalizedMergeRange } from "../../sheet/merge-range";
 import { spacingTokens, colorTokens } from "../../../office-editor-components";
 import type { XlsxEditorAction } from "../../context/workbook/editor/types";
@@ -85,13 +86,11 @@ function getCellDisplayText(
   sheetIndex: number,
   address: CellAddress,
   formulaEvaluator: ReturnType<typeof createFormulaEvaluator>,
-  sheet: XlsxWorksheet,
-  styles: XlsxStyleSheet,
+  formatCode: string,
 ): string {
   if (!cell) {
     return "";
   }
-  const formatCode = resolveCellFormatCode({ styles, sheet, address, cell });
   if (cell.formula) {
     return formatFormulaScalarForDisplay(formulaEvaluator.evaluateCell(sheetIndex, address), formatCode);
   }
@@ -177,8 +176,17 @@ export function XlsxSheetGridCellsLayer({
 
           const originAddress = merge.origin;
           const cell = getCell(sheet, originAddress);
-          const text = getCellDisplayText(cell, sheetIndex, originAddress, formulaEvaluator, sheet, styles);
-          const cellRenderStyle = resolveCellRenderStyle({ styles, sheet, address: originAddress, cell });
+          const conditionalFormat = resolveCellConditionalDifferentialFormat({
+            sheet,
+            styles,
+            sheetIndex,
+            address: originAddress,
+            cell,
+            formulaEvaluator,
+          });
+          const formatCode = resolveCellFormatCode({ styles, sheet, address: originAddress, cell, conditionalFormat });
+          const text = getCellDisplayText(cell, sheetIndex, originAddress, formulaEvaluator, formatCode);
+          const cellRenderStyle = resolveCellRenderStyle({ styles, sheet, address: originAddress, cell, conditionalFormat });
 
           const leftPx = layout.cols.getBoundaryOffsetPx(merge.minCol - 1);
           const rightPx = layout.cols.getBoundaryOffsetPx(merge.maxCol);
@@ -232,8 +240,17 @@ export function XlsxSheetGridCellsLayer({
         }
 
         const cell = getCell(sheet, address);
-        const text = getCellDisplayText(cell, sheetIndex, address, formulaEvaluator, sheet, styles);
-        const cellRenderStyle = resolveCellRenderStyle({ styles, sheet, address, cell });
+        const conditionalFormat = resolveCellConditionalDifferentialFormat({
+          sheet,
+          styles,
+          sheetIndex,
+          address,
+          cell,
+          formulaEvaluator,
+        });
+        const formatCode = resolveCellFormatCode({ styles, sheet, address, cell, conditionalFormat });
+        const text = getCellDisplayText(cell, sheetIndex, address, formulaEvaluator, formatCode);
+        const cellRenderStyle = resolveCellRenderStyle({ styles, sheet, address, cell, conditionalFormat });
         const width = layout.cols.getSizePx(col0);
         if (width <= 0) {
           continue;

@@ -24,6 +24,7 @@ import { createParseContext } from "./context";
 import type { XlsxParseOptions } from "./options";
 import { parseSharedStrings } from "./shared-strings";
 import { parseStyleSheet } from "./styles/index";
+import { parseComments } from "./comments";
 import { parseTable } from "./table";
 import { parseWorksheet } from "./worksheet";
 import { parseBooleanAttr, parseIntAttr } from "./primitive";
@@ -80,6 +81,24 @@ export function parseRelationships(relsElement: XmlElement): ReadonlyMap<string,
     }
   }
   return map;
+}
+
+type RelationshipInfo = {
+  readonly id: string;
+  readonly type: string;
+  readonly target: string;
+};
+
+function parseRelationshipInfos(relsElement: XmlElement): readonly RelationshipInfo[] {
+  return getChildren(relsElement, "Relationship").flatMap((rel): readonly RelationshipInfo[] => {
+    const id = getAttr(rel, "Id");
+    const target = getAttr(rel, "Target");
+    const type = getAttr(rel, "Type");
+    if (!id || !target || !type) {
+      return [];
+    }
+    return [{ id, target, type }];
+  });
 }
 
 // =============================================================================
@@ -263,6 +282,32 @@ function resolveTargetPath(partPath: string, target: string): string {
   return resolved.startsWith("/") ? resolved.slice(1) : resolved;
 }
 
+async function loadWorksheetComments(
+  getFileContent: (path: string) => Promise<string | undefined>,
+  worksheetXmlPath: string,
+  commentsTarget: string,
+): Promise<ReturnType<typeof parseComments>> {
+  const commentsPath = resolveTargetPath(worksheetXmlPath, commentsTarget);
+  const commentsXml = await getFileContent(commentsPath);
+  if (!commentsXml) {
+    throw new Error(`Comments part not found: ${commentsPath}`);
+  }
+  return parseComments(getDocumentRoot(parseXml(commentsXml)));
+}
+
+async function loadWorksheetCommentsFromRelationships(
+  getFileContent: (path: string) => Promise<string | undefined>,
+  worksheetXmlPath: string,
+  relationships: readonly RelationshipInfo[],
+): Promise<ReturnType<typeof parseComments> | undefined> {
+  const commentsTarget = relationships.find((rel) => rel.type.endsWith("/comments"))?.target;
+  if (!commentsTarget) {
+    return undefined;
+  }
+  const comments = await loadWorksheetComments(getFileContent, worksheetXmlPath, commentsTarget);
+  return comments.length > 0 ? comments : undefined;
+}
+
 function collectTableRelationshipIds(worksheetRoot: XmlElement): readonly string[] {
   const tablePartsEl = getChild(worksheetRoot, "tableParts");
   if (!tablePartsEl) {
@@ -345,18 +390,24 @@ export async function parseXlsxWorkbook(
       const sheetRoot = getDocumentRoot(sheetDoc);
       const tableRelIds = collectTableRelationshipIds(sheetRoot);
 
-      const worksheet = parseWorksheet(
+      const relsPath = resolveRelationshipsPathForPart(xmlPath);
+      const sheetRelsXml = await getFileContent(relsPath);
+      const rels = parseRelsOrEmpty(sheetRelsXml);
+      const relInfos = sheetRelsXml ? parseRelationshipInfos(getDocumentRoot(parseXml(sheetRelsXml))) : [];
+
+      const baseWorksheet = parseWorksheet(
         sheetRoot,
         context,
         options,
         { ...sheetInfo, xmlPath },
       );
+      const comments = await loadWorksheetCommentsFromRelationships(getFileContent, xmlPath, relInfos);
+
+      const worksheet = comments ? { ...baseWorksheet, comments } : baseWorksheet;
+      const sheetIndex = sheets.length;
       sheets.push(worksheet);
 
       if (tableRelIds.length > 0) {
-        const relsPath = resolveRelationshipsPathForPart(xmlPath);
-        const relsXml = await getFileContent(relsPath);
-        const rels = parseRelsOrEmpty(relsXml);
         for (const relId of tableRelIds) {
           const target = rels.get(relId);
           if (!target) {
@@ -368,7 +419,7 @@ export async function parseXlsxWorkbook(
             throw new Error(`Table part not found: ${tablePath}`);
           }
           const tableRoot = getDocumentRoot(parseXml(tableXml));
-          tables.push(parseTable(tableRoot, sheets.length - 1));
+          tables.push(parseTable(tableRoot, sheetIndex));
         }
       }
     }

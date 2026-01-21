@@ -14,6 +14,8 @@ import type { Cell } from "./cell/types";
 import type { XlsxStyleSheet } from "./style/types";
 import type { XlsxTable } from "./table/types";
 import type { RowIndex, ColIndex, StyleId } from "./types";
+import type { XlsxConditionalFormatting } from "./conditional-formatting";
+import type { XlsxComment } from "./comment";
 
 // =============================================================================
 // Column Definition
@@ -149,6 +151,10 @@ export type XlsxWorksheet = {
   readonly rows: readonly XlsxRow[];
   /** Merged cell ranges */
   readonly mergeCells?: readonly CellRange[];
+  /** Conditional formatting rules for this sheet */
+  readonly conditionalFormattings?: readonly XlsxConditionalFormatting[];
+  /** Cell comments (legacy comments) */
+  readonly comments?: readonly XlsxComment[];
   /** Path to the worksheet XML within the package (e.g., "xl/worksheets/sheet1.xml") */
   readonly xmlPath: string;
 };

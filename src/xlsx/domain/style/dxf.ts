@@ -13,7 +13,6 @@
 import type { XlsxFill } from "./fill";
 import type { XlsxBorder } from "./border";
 import type { XlsxNumberFormat } from "./number-format";
-import type { XlsxAlignment } from "./types";
 import type { XlsxColor, UnderlineStyle } from "./font";
 
 export type XlsxDxfFont = {
@@ -36,6 +35,4 @@ export type XlsxDifferentialFormat = {
   readonly fill?: XlsxFill;
   readonly border?: XlsxBorder;
   readonly numFmt?: XlsxNumberFormat;
-  readonly alignment?: XlsxAlignment;
 };
-

@@ -14,6 +14,7 @@ import type { XlsxFont } from "./font";
 import type { XlsxFill } from "./fill";
 import type { XlsxBorder } from "./border";
 import type { XlsxNumberFormat } from "./number-format";
+import type { XlsxDifferentialFormat } from "./dxf";
 import type { NumFmtId, FontId, FillId, BorderId } from "../types";
 
 // =============================================================================
@@ -188,6 +189,9 @@ export type XlsxStyleSheet = {
 
   /** Named cell styles */
   readonly cellStyles: readonly XlsxCellStyle[];
+
+  /** Differential formats used by conditional formatting rules */
+  readonly dxfs?: readonly XlsxDifferentialFormat[];
 };
 
 // =============================================================================

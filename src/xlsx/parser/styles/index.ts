@@ -28,6 +28,7 @@ import { parseFonts } from "./font";
 import { parseFills } from "./fill";
 import { parseBorders } from "./border";
 import { parseNumFmts } from "./number-format";
+import { parseDxfs } from "./dxf";
 import { parseBooleanAttr, parseIntAttr } from "../primitive";
 import type { XmlElement } from "../../../xml";
 import { getChild, getChildren, getAttr } from "../../../xml";
@@ -220,6 +221,8 @@ export function parseStyleSheet(styleSheetElement: XmlElement): XlsxStyleSheet {
   const cellStyleXfsEl = getChild(styleSheetElement, "cellStyleXfs");
   const cellXfsEl = getChild(styleSheetElement, "cellXfs");
   const cellStylesEl = getChild(styleSheetElement, "cellStyles");
+  const dxfsEl = getChild(styleSheetElement, "dxfs");
+  const dxfs = parseDxfs(dxfsEl);
 
   return {
     numberFormats: parseNumFmts(numFmtsEl),
@@ -229,5 +232,6 @@ export function parseStyleSheet(styleSheetElement: XmlElement): XlsxStyleSheet {
     cellStyleXfs: parseCellXfs(cellStyleXfsEl),
     cellXfs: parseCellXfs(cellXfsEl),
     cellStyles: parseCellStyles(cellStylesEl),
+    ...(dxfs.length > 0 ? { dxfs } : {}),
   };
 }

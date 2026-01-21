@@ -12,6 +12,7 @@ import { roundFunction } from "./functions/aggregate/round";
 import { roundUpFunction } from "./functions/aggregate/roundup";
 import { roundDownFunction } from "./functions/aggregate/rounddown";
 import { absFunction } from "./functions/aggregate/abs";
+import { isEvenFunction } from "./functions/aggregate/iseven";
 import { intFunction } from "./functions/aggregate/int";
 import { modFunction } from "./functions/aggregate/mod";
 import { quotientFunction } from "./functions/aggregate/quotient";
@@ -78,6 +79,7 @@ import { dStdevFunction, dStdevpFunction, dVarFunction, dVarpFunction } from "./
 import { vlookupFunction } from "./functions/lookup/vlookup";
 import { hlookupFunction } from "./functions/lookup/hlookup";
 import { lookupFunction } from "./functions/lookup/lookup";
+import { rowFunction } from "./functions/lookup/row";
 import { matchFunction } from "./functions/lookup/match";
 import { indexFunction } from "./functions/lookup/index";
 import { offsetFunction } from "./functions/lookup/offset";
@@ -219,6 +221,7 @@ const builtInFunctions: FormulaFunctionDefinition[] = [
   roundUpFunction,
   roundDownFunction,
   absFunction,
+  isEvenFunction,
   intFunction,
   modFunction,
   quotientFunction,
@@ -290,6 +293,7 @@ const builtInFunctions: FormulaFunctionDefinition[] = [
   vlookupFunction,
   hlookupFunction,
   lookupFunction,
+  rowFunction,
   matchFunction,
   indexFunction,
   offsetFunction,

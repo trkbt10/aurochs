@@ -18,6 +18,7 @@ import { getCell } from "../../src/xlsx-editor/cell/query";
 import { resolveCellRenderStyle } from "../../src/xlsx-editor/selectors/cell-render-style";
 import { resolveCellStyleDetails } from "../../src/xlsx-editor/selectors/cell-style-details";
 import { formatCellValueForDisplay, resolveCellFormatCode } from "../../src/xlsx-editor/selectors/cell-display-text";
+import { resolveCellConditionalDifferentialFormat } from "../../src/xlsx-editor/selectors/conditional-formatting";
 import { createSheetLayout } from "../../src/xlsx-editor/selectors/sheet-layout";
 import { buildBorderOverlayLines } from "../../src/xlsx-editor/selectors/border-overlay";
 import { createGetZipTextFileContentFromBytes } from "../../src/files/ooxml-zip";
@@ -221,6 +222,125 @@ describe("POI spreadsheet fixtures (parsing + formulas + style)", () => {
     expect(cell.formula.expression).toBe("SUM(\r\n1,2\r\n)");
     expect(evaluator.evaluateCell(0, address)).toBe(3);
     expect(evaluator.evaluateCell(0, address)).toEqual(toExpectedScalar(cell.value));
+  });
+
+  it("61060-conditional-number-formatting.xlsx: applies dxfs (fill + numFmt) via conditionalFormatting", async () => {
+    const workbook = await parseWorkbookFromFixture("61060-conditional-number-formatting.xlsx");
+    const sheet = workbook.sheets[0];
+    if (!sheet) {
+      throw new Error("sheet[0] is required");
+    }
+
+    const evaluator = createFormulaEvaluator(workbook);
+    const cases: ReadonlyArray<{
+      readonly address: CellAddress;
+      readonly expectedFormatCode: string;
+      readonly expectedBackground: string;
+    }> = [
+      { address: createAddress(1, 1), expectedFormatCode: "0.00", expectedBackground: "#DBEEF4" },
+      { address: createAddress(1, 2), expectedFormatCode: "0.00", expectedBackground: "#DBEEF4" },
+      { address: createAddress(1, 3), expectedFormatCode: "0.00E+00", expectedBackground: "#FDEADA" },
+      { address: createAddress(1, 5), expectedFormatCode: "\"$\"#,##0_);[Red]\\(\"$\"#,##0\\)", expectedBackground: "#F2DCDB" },
+    ];
+
+    for (const { address, expectedFormatCode, expectedBackground } of cases) {
+      const cell = getCell(sheet, address);
+      if (!cell) {
+        throw new Error("Expected cell to exist");
+      }
+      const conditionalFormat = resolveCellConditionalDifferentialFormat({
+        sheet,
+        styles: workbook.styles,
+        sheetIndex: 0,
+        address,
+        cell,
+        formulaEvaluator: evaluator,
+      });
+      if (!conditionalFormat) {
+        throw new Error("Expected conditional formatting to apply");
+      }
+
+      expect(resolveCellFormatCode({ styles: workbook.styles, sheet, address, cell, conditionalFormat })).toBe(expectedFormatCode);
+      const css = resolveCellRenderStyle({ styles: workbook.styles, sheet, address, cell, conditionalFormat });
+      expect(css.backgroundColor).toBe(expectedBackground);
+    }
+
+    const a4 = createAddress(1, 4);
+    const a4Cell = getCell(sheet, a4);
+    if (!a4Cell) {
+      throw new Error("A4 must exist");
+    }
+    expect(
+      resolveCellConditionalDifferentialFormat({
+        sheet,
+        styles: workbook.styles,
+        sheetIndex: 0,
+        address: a4,
+        cell: a4Cell,
+        formulaEvaluator: evaluator,
+      }),
+    ).toBeUndefined();
+  });
+
+  it("55406_Conditional_formatting_sample.xlsx: evaluates expression rules (ISEVEN(ROW())) and applies dxfs", async () => {
+    const workbook = await parseWorkbookFromFixture("55406_Conditional_formatting_sample.xlsx");
+    const sheet = workbook.sheets[0];
+    if (!sheet) {
+      throw new Error("sheet[0] is required");
+    }
+
+    const evaluator = createFormulaEvaluator(workbook);
+
+    const a1 = createAddress(1, 1);
+    const a2 = createAddress(1, 2);
+    const a1Cell = getCell(sheet, a1);
+    const a2Cell = getCell(sheet, a2);
+    if (!a1Cell || !a2Cell) {
+      throw new Error("A1 and A2 must exist");
+    }
+
+    const a1Format = resolveCellConditionalDifferentialFormat({
+      sheet,
+      styles: workbook.styles,
+      sheetIndex: 0,
+      address: a1,
+      cell: a1Cell,
+      formulaEvaluator: evaluator,
+    });
+    expect(a1Format).toBeUndefined();
+
+    const a2Format = resolveCellConditionalDifferentialFormat({
+      sheet,
+      styles: workbook.styles,
+      sheetIndex: 0,
+      address: a2,
+      cell: a2Cell,
+      formulaEvaluator: evaluator,
+    });
+    if (!a2Format) {
+      throw new Error("Expected conditional formatting to apply for A2");
+    }
+
+    const css = resolveCellRenderStyle({ styles: workbook.styles, sheet, address: a2, cell: a2Cell, conditionalFormat: a2Format });
+    expect(css.backgroundColor).toBe("#000000");
+  });
+
+  it("50795.xlsx: parses legacy comments and associates them to cells", async () => {
+    const workbook = await parseWorkbookFromFixture("50795.xlsx");
+    const sheet = workbook.sheets[0];
+    if (!sheet) {
+      throw new Error("sheet[0] is required");
+    }
+
+    const comments = sheet.comments;
+    if (!comments || comments.length === 0) {
+      throw new Error("Expected sheet comments to be parsed");
+    }
+    expect(comments).toHaveLength(1);
+    expect(comments[0]?.author).toBe("Автор");
+    expect(comments[0]?.address.col).toBe(1);
+    expect(comments[0]?.address.row).toBe(1);
+    expect(comments[0]?.text).toBe("Автор:\ncomment");
   });
 
   it("VLookupFullColumn.xlsx: evaluates VLOOKUP over full-column ranges and matches cached values", async () => {

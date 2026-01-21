@@ -9,6 +9,8 @@ import type { CellAddress } from "../../xlsx/domain/cell/address";
 import type { Cell } from "../../xlsx/domain/cell/types";
 import type { XlsxWorksheet } from "../../xlsx/domain/workbook";
 import type { XlsxStyleSheet, XlsxAlignment } from "../../xlsx/domain/style/types";
+import type { XlsxDifferentialFormat } from "../../xlsx/domain/style/dxf";
+import type { XlsxFill } from "../../xlsx/domain/style/fill";
 import { xlsxColorToCss, type XlsxColorLike } from "./xlsx-color";
 import { resolveCellXf } from "./cell-xf";
 
@@ -40,6 +42,17 @@ function applyAlignment(style: CSSProperties, alignment: XlsxAlignment | undefin
   if (alignment.wrapText === true) {
     style.whiteSpace = "normal";
   }
+}
+
+function resolveFillBackgroundColor(fill: XlsxFill | undefined): string | undefined {
+  if (!fill || fill.type !== "pattern") {
+    return undefined;
+  }
+  const fg = xlsxColorToCss(fill.pattern.fgColor as XlsxColorLike | undefined);
+  if (fg) {
+    return fg;
+  }
+  return xlsxColorToCss(fill.pattern.bgColor as XlsxColorLike | undefined);
 }
 
 type CssBorderStyle = "solid" | "dashed" | "dotted" | "double";
@@ -94,6 +107,7 @@ export function resolveCellRenderStyle(params: {
   readonly sheet: XlsxWorksheet;
   readonly address: CellAddress;
   readonly cell: Cell | undefined;
+  readonly conditionalFormat?: XlsxDifferentialFormat;
 }): CSSProperties {
   const { styles, sheet, address, cell } = params;
   const { xf: resolvedXf } = resolveCellXf({ styles, sheet, address, cell });
@@ -130,10 +144,15 @@ export function resolveCellRenderStyle(params: {
 
   const fill = styles.fills[resolvedXf.fillId as number];
   if (fill?.type === "pattern" && fill.pattern.patternType === "solid") {
-    const fg = xlsxColorToCss(fill.pattern.fgColor as XlsxColorLike | undefined);
-    if (fg) {
-      css.backgroundColor = fg;
+    const bg = resolveFillBackgroundColor(fill);
+    if (bg) {
+      css.backgroundColor = bg;
     }
+  }
+
+  const conditionalBg = resolveFillBackgroundColor(params.conditionalFormat?.fill);
+  if (conditionalBg) {
+    css.backgroundColor = conditionalBg;
   }
 
   applyAlignment(css, resolvedXf.alignment);
