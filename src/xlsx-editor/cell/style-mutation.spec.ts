@@ -19,6 +19,8 @@ function range(startCol: number, startRow: number, endCol: number, endRow: numbe
 }
 
 function createWorksheet(cells: readonly Cell[], opts?: Partial<XlsxWorksheet>): XlsxWorksheet {
+  const dateSystem = opts?.dateSystem ?? "1900";
+  const resolvedOpts = opts ? { ...opts, dateSystem } : undefined;
   const rowsByNumber = new Map<number, Cell[]>();
   for (const cell of cells) {
     const rowNumber = cell.address.row as number;
@@ -38,12 +40,13 @@ function createWorksheet(cells: readonly Cell[], opts?: Partial<XlsxWorksheet>):
     }));
 
   return {
+    dateSystem,
     name: "Sheet1",
     sheetId: 1,
     state: "visible",
     xmlPath: "xl/worksheets/sheet1.xml",
     rows,
-    ...opts,
+    ...resolvedOpts,
   };
 }
 
@@ -137,4 +140,3 @@ describe("xlsx-editor/cell/style-mutation", () => {
     expect(updated.rows).toEqual([{ rowNumber: rowIdx(10), cells: [], styleId: styleId(9) }]);
   });
 });
-

@@ -114,32 +114,47 @@ export function resolveCellRenderStyle(params: {
   const css: CSSProperties = {};
 
   const font = styles.fonts[resolvedXf.fontId as number];
-  if (font) {
-    css.fontFamily = font.name;
-    css.fontSize = pointsToCssPx(font.size);
-    if (font.bold) {
-      css.fontWeight = 700;
-    }
-    if (font.italic) {
-      css.fontStyle = "italic";
-    }
-    if (font.color) {
-      const color = xlsxColorToCss(font.color as XlsxColorLike);
-      if (color) {
-        css.color = color;
-      }
-    }
+  const dxfFont = params.conditionalFormat?.font;
+  const effectiveFontName = dxfFont?.name ?? font?.name;
+  const effectiveFontSize = dxfFont?.size ?? font?.size;
+  const effectiveBold = dxfFont?.bold ?? font?.bold;
+  const effectiveItalic = dxfFont?.italic ?? font?.italic;
+  const effectiveUnderline = dxfFont?.underline ?? font?.underline;
+  const effectiveStrike = dxfFont?.strikethrough ?? font?.strikethrough;
+  const effectiveColor = dxfFont?.color ?? font?.color;
 
-    const decorations: string[] = [];
-    if (font.underline && font.underline !== "none") {
-      decorations.push("underline");
+  if (effectiveFontName) {
+    css.fontFamily = effectiveFontName;
+  }
+  if (typeof effectiveFontSize === "number") {
+    css.fontSize = pointsToCssPx(effectiveFontSize);
+  }
+  if (effectiveBold === true) {
+    css.fontWeight = 700;
+  } else if (effectiveBold === false) {
+    css.fontWeight = 400;
+  }
+  if (effectiveItalic === true) {
+    css.fontStyle = "italic";
+  } else if (effectiveItalic === false) {
+    css.fontStyle = "normal";
+  }
+  if (effectiveColor) {
+    const color = xlsxColorToCss(effectiveColor as XlsxColorLike);
+    if (color) {
+      css.color = color;
     }
-    if (font.strikethrough) {
-      decorations.push("line-through");
-    }
-    if (decorations.length > 0) {
-      css.textDecorationLine = decorations.join(" ");
-    }
+  }
+
+  const decorations: string[] = [];
+  if (effectiveUnderline && effectiveUnderline !== "none") {
+    decorations.push("underline");
+  }
+  if (effectiveStrike) {
+    decorations.push("line-through");
+  }
+  if (decorations.length > 0) {
+    css.textDecorationLine = decorations.join(" ");
   }
 
   const fill = styles.fills[resolvedXf.fillId as number];

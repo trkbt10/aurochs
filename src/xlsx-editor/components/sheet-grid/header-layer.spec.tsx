@@ -13,6 +13,7 @@ import { XlsxSheetGridHeaderLayer } from "./header-layer";
 describe("xlsx-editor/components/sheet-grid/header-layer", () => {
   it("dispatches column selection on header click", () => {
     const sheet: XlsxWorksheet = {
+      dateSystem: "1900",
       name: "Sheet1",
       sheetId: 1,
       state: "visible",

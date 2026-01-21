@@ -20,6 +20,7 @@ function addr(col: number, row: number): CellAddress {
 
 function createWorksheet(name: string, sheetId: number): XlsxWorksheet {
   return {
+    dateSystem: "1900",
     name,
     sheetId,
     state: "visible",
@@ -30,6 +31,7 @@ function createWorksheet(name: string, sheetId: number): XlsxWorksheet {
 
 function createWorkbook(sheets: readonly XlsxWorksheet[]): XlsxWorkbook {
   return {
+    dateSystem: "1900",
     sheets,
     styles: createDefaultStyleSheet(),
     sharedStrings: [],

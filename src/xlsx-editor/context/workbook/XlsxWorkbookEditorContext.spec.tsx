@@ -26,8 +26,10 @@ function createAddress(col: number, row: number): CellAddress {
 
 function createEmptyWorkbook(): XlsxWorkbook {
   return {
+    dateSystem: "1900",
     sheets: [
       {
+        dateSystem: "1900",
         name: "Sheet1",
         sheetId: 1,
         state: "visible",
@@ -42,8 +44,10 @@ function createEmptyWorkbook(): XlsxWorkbook {
 
 function createWorkbookWithOneCell(): XlsxWorkbook {
   return {
+    dateSystem: "1900",
     sheets: [
       {
+        dateSystem: "1900",
         name: "Sheet1",
         sheetId: 1,
         state: "visible",
@@ -126,4 +130,3 @@ describe("XlsxWorkbookEditorContext", () => {
     expect(result.current).toBeNull();
   });
 });
-

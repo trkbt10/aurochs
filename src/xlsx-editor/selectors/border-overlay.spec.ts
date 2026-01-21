@@ -39,6 +39,7 @@ function createDemoStyles(): XlsxStyleSheet {
 function createSheet(styles: XlsxStyleSheet): XlsxWorksheet {
   void styles;
   return {
+    dateSystem: "1900",
     name: "Sheet1",
     sheetId: 1,
     state: "visible",
@@ -91,6 +92,7 @@ describe("buildBorderOverlayLines", () => {
   it("suppresses internal borders inside merged cells and uses the merge origin style for the whole region", () => {
     const styles = createDemoStyles();
     const sheet: XlsxWorksheet = {
+      dateSystem: "1900",
       name: "Sheet1",
       sheetId: 1,
       state: "visible",

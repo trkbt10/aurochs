@@ -4,6 +4,7 @@
 
 import type { FormulaAstNode } from "./ast";
 import type { CellAddress } from "../domain/cell/address";
+import type { XlsxDateSystem } from "../domain/date-system";
 import { formulaFunctionHelpers, type EvalResult, type FormulaFunctionHelpers } from "./functions/helpers";
 import { sumFunction } from "./functions/aggregate/sum";
 import { productFunction } from "./functions/aggregate/product";
@@ -108,6 +109,7 @@ import { replaceFunction } from "./functions/text/replace";
 import { substituteFunction } from "./functions/text/substitute";
 import { findFunction } from "./functions/text/find";
 import { searchFunction } from "./functions/text/search";
+import { textFunction } from "./functions/text/text";
 import {
   sinFunction,
   cosFunction,
@@ -134,6 +136,7 @@ export type FormulaFunctionLazyContext = {
   helpers: FormulaFunctionHelpers;
   parseReference: (reference: string) => { readonly sheetName: string; readonly address: CellAddress };
   origin: { readonly sheetName: string; readonly address: CellAddress };
+  dateSystem: XlsxDateSystem;
 };
 
 export type FormulaFunctionLazyEvaluator = (args: FormulaAstNode[], context: FormulaFunctionLazyContext) => EvalResult;
@@ -322,6 +325,7 @@ const builtInFunctions: FormulaFunctionDefinition[] = [
   substituteFunction,
   findFunction,
   searchFunction,
+  textFunction,
   sinFunction,
   cosFunction,
   tanFunction,

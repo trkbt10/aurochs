@@ -17,11 +17,13 @@
 import type { XlsxDifferentialFormat } from "../../domain/style/dxf";
 import type { XlsxNumberFormat } from "../../domain/style/number-format";
 import { numFmtId } from "../../domain/types";
-import { parseIntAttr } from "../primitive";
+import { parseBooleanAttr, parseFloatAttr, parseIntAttr } from "../primitive";
 import type { XmlElement } from "../../../xml";
 import { getAttr, getChild, getChildren } from "../../../xml";
 import { parseFill } from "./fill";
 import { parseBorder } from "./border";
+import { parseColor } from "./font";
+import type { UnderlineStyle } from "../../domain/style/font";
 
 function parseDxfNumberFormat(numFmtEl: XmlElement): XlsxNumberFormat {
   const id = parseIntAttr(getAttr(numFmtEl, "numFmtId")) ?? 0;
@@ -29,13 +31,57 @@ function parseDxfNumberFormat(numFmtEl: XmlElement): XlsxNumberFormat {
   return { numFmtId: numFmtId(id), formatCode };
 }
 
+function parseBoolElement(el: XmlElement | undefined): boolean | undefined {
+  if (!el) {
+    return undefined;
+  }
+  const val = getAttr(el, "val");
+  if (val === undefined) {
+    return true;
+  }
+  return parseBooleanAttr(val);
+}
+
+function parseUnderlineElement(uEl: XmlElement | undefined): UnderlineStyle | undefined {
+  if (!uEl) {
+    return undefined;
+  }
+  const uVal = getAttr(uEl, "val");
+  if (uVal === undefined) {
+    return "single";
+  }
+  return uVal as UnderlineStyle;
+}
+
+function parseDxfFont(fontEl: XmlElement) {
+  const nameEl = getChild(fontEl, "name");
+  const szEl = getChild(fontEl, "sz");
+  const bEl = getChild(fontEl, "b");
+  const iEl = getChild(fontEl, "i");
+  const uEl = getChild(fontEl, "u");
+  const strikeEl = getChild(fontEl, "strike");
+  const colorEl = getChild(fontEl, "color");
+
+  return {
+    name: nameEl ? getAttr(nameEl, "val") ?? undefined : undefined,
+    size: parseFloatAttr(szEl ? getAttr(szEl, "val") : undefined),
+    bold: parseBoolElement(bEl),
+    italic: parseBoolElement(iEl),
+    underline: parseUnderlineElement(uEl),
+    strikethrough: parseBoolElement(strikeEl),
+    color: colorEl ? parseColor(colorEl) : undefined,
+  };
+}
+
 function parseDxf(dxfEl: XmlElement): XlsxDifferentialFormat {
   const numFmtEl = getChild(dxfEl, "numFmt");
+  const fontEl = getChild(dxfEl, "font");
   const fillEl = getChild(dxfEl, "fill");
   const borderEl = getChild(dxfEl, "border");
 
   return {
     numFmt: numFmtEl ? parseDxfNumberFormat(numFmtEl) : undefined,
+    font: fontEl ? parseDxfFont(fontEl) : undefined,
     fill: fillEl ? parseFill(fillEl) : undefined,
     border: borderEl ? parseBorder(borderEl) : undefined,
   };
@@ -52,4 +98,3 @@ export function parseDxfs(dxfsEl: XmlElement | undefined): readonly XlsxDifferen
   }
   return getChildren(dxfsEl, "dxf").map(parseDxf);
 }
-

@@ -15,6 +15,7 @@
 import type { XlsxStyleSheet } from "../domain/style/types";
 import { createDefaultStyleSheet } from "../domain/style/types";
 import type { XlsxDefinedName } from "../domain/workbook";
+import type { XlsxDateSystem } from "../domain/date-system";
 
 // =============================================================================
 // Sheet Info
@@ -44,6 +45,7 @@ export type XlsxSheetInfo = {
 export type XlsxWorkbookInfo = {
   readonly sheets: readonly XlsxSheetInfo[];
   readonly definedNames?: readonly XlsxDefinedName[];
+  readonly dateSystem: XlsxDateSystem;
 };
 
 // =============================================================================
@@ -101,7 +103,7 @@ export function createDefaultParseContext(): XlsxParseContext {
   return {
     sharedStrings: [],
     styleSheet: createDefaultStyleSheet(),
-    workbookInfo: { sheets: [] },
+    workbookInfo: { sheets: [], dateSystem: "1900" },
     relationships: new Map(),
   };
 }

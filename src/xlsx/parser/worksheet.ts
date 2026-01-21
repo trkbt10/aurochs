@@ -18,6 +18,7 @@ import type {
   XlsxSelection,
 } from "../domain/workbook";
 import type { XlsxConditionalFormatting, XlsxConditionalFormattingRule } from "../domain/conditional-formatting";
+import type { XlsxHyperlink } from "../domain/hyperlink";
 import type { CellRange } from "../domain/cell/address";
 import { parseCellRef, parseRange } from "../domain/cell/address";
 import type { Cell } from "../domain/cell/types";
@@ -226,6 +227,37 @@ export function parseConditionalFormattings(worksheetElement: XmlElement): reado
 }
 
 // =============================================================================
+// Hyperlinks Parsing
+// =============================================================================
+
+function parseHyperlink(hyperlinkElement: XmlElement): XlsxHyperlink {
+  const ref = parseRange(getAttr(hyperlinkElement, "ref") ?? "A1");
+  return {
+    ref,
+    relationshipId: getAttr(hyperlinkElement, "r:id") ?? getAttr(hyperlinkElement, "rId") ?? undefined,
+    display: getAttr(hyperlinkElement, "display") ?? undefined,
+    location: getAttr(hyperlinkElement, "location") ?? undefined,
+    tooltip: getAttr(hyperlinkElement, "tooltip") ?? undefined,
+  };
+}
+
+/**
+ * Parse hyperlinks defined in a worksheet.
+ *
+ * @param worksheetElement - The worksheet root element (`<worksheet>`)
+ * @returns Hyperlink definitions (may be empty)
+ *
+ * @see ECMA-376 Part 4, Section 18.3.1.49 (hyperlinks)
+ */
+export function parseHyperlinks(worksheetElement: XmlElement): readonly XlsxHyperlink[] {
+  const hyperlinksEl = getChild(worksheetElement, "hyperlinks");
+  if (!hyperlinksEl) {
+    return [];
+  }
+  return getChildren(hyperlinksEl, "hyperlink").map(parseHyperlink);
+}
+
+// =============================================================================
 // Sheet View Parsing
 // =============================================================================
 
@@ -376,8 +408,10 @@ export function parseWorksheet(
 
   const rows = expandSharedFormulas(parseOptionalSheetData(sheetDataEl, context, options));
   const conditionalFormattings = parseConditionalFormattings(worksheetElement);
+  const hyperlinks = parseHyperlinks(worksheetElement);
 
   return {
+    dateSystem: context.workbookInfo.dateSystem,
     name: sheetInfo.name,
     sheetId: sheetInfo.sheetId,
     state: sheetInfo.state,
@@ -387,6 +421,7 @@ export function parseWorksheet(
     rows,
     mergeCells: parseMergeCells(mergeCellsEl),
     conditionalFormattings: conditionalFormattings.length > 0 ? conditionalFormattings : undefined,
+    hyperlinks: hyperlinks.length > 0 ? hyperlinks : undefined,
     xmlPath: sheetInfo.xmlPath,
   };
 }

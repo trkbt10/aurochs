@@ -52,6 +52,7 @@ function createWorksheet(cells: readonly Cell[]): XlsxWorksheet {
     }));
 
   return {
+    dateSystem: "1900",
     name: "Sheet1",
     sheetId: 1,
     state: "visible",
@@ -62,6 +63,7 @@ function createWorksheet(cells: readonly Cell[]): XlsxWorksheet {
 
 function createWorkbook(worksheet: XlsxWorksheet): XlsxWorkbook {
   return {
+    dateSystem: "1900",
     sheets: [worksheet],
     styles: createDefaultStyleSheet(),
     sharedStrings: [],

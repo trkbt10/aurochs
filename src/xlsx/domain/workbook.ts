@@ -16,6 +16,8 @@ import type { XlsxTable } from "./table/types";
 import type { RowIndex, ColIndex, StyleId } from "./types";
 import type { XlsxConditionalFormatting } from "./conditional-formatting";
 import type { XlsxComment } from "./comment";
+import type { XlsxHyperlink } from "./hyperlink";
+import type { XlsxDateSystem } from "./date-system";
 
 // =============================================================================
 // Column Definition
@@ -135,6 +137,8 @@ export type XlsxSheetView = {
  * @see ECMA-376 Part 4, Section 18.3.1.99 (worksheet)
  */
 export type XlsxWorksheet = {
+  /** Workbook date system (1900/1904) that affects date serial interpretation */
+  readonly dateSystem: XlsxDateSystem;
   /** Sheet name (tab name) */
   readonly name: string;
   /** Unique sheet identifier */
@@ -155,6 +159,8 @@ export type XlsxWorksheet = {
   readonly conditionalFormattings?: readonly XlsxConditionalFormatting[];
   /** Cell comments (legacy comments) */
   readonly comments?: readonly XlsxComment[];
+  /** Hyperlinks declared for this sheet */
+  readonly hyperlinks?: readonly XlsxHyperlink[];
   /** Path to the worksheet XML within the package (e.g., "xl/worksheets/sheet1.xml") */
   readonly xmlPath: string;
 };
@@ -207,6 +213,8 @@ export type XlsxCalcProperties = {
  * @see ECMA-376 Part 4, Section 18.2.28 (workbook)
  */
 export type XlsxWorkbook = {
+  /** Workbook date system (1900/1904) that affects date serial interpretation */
+  readonly dateSystem: XlsxDateSystem;
   /** All worksheets in the workbook */
   readonly sheets: readonly XlsxWorksheet[];
   /** Workbook styles */

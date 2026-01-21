@@ -14,8 +14,10 @@ import { dragHandlers } from "./drag-handlers";
 
 function createTestWorkbook(): XlsxWorkbook {
   return {
+    dateSystem: "1900",
     sheets: [
       {
+        dateSystem: "1900",
         name: "Sheet1",
         sheetId: 1,
         state: "visible",
@@ -166,8 +168,10 @@ describe("xlsx-editor/context/workbook/editor/reducer/drag-handlers", () => {
 
   it("COMMIT_FILL_DRAG: fills numeric series and pushes history", () => {
     const workbook: XlsxWorkbook = {
+      dateSystem: "1900",
       sheets: [
         {
+          dateSystem: "1900",
           name: "Sheet1",
           sheetId: 1,
           state: "visible",

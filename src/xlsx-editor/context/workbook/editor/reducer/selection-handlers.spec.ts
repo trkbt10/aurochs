@@ -13,8 +13,10 @@ import { selectionHandlers } from "./selection-handlers";
 
 function createTestWorkbook(): XlsxWorkbook {
   return {
+    dateSystem: "1900",
     sheets: [
       {
+        dateSystem: "1900",
         name: "Sheet1",
         sheetId: 1,
         state: "visible",

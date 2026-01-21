@@ -17,7 +17,10 @@ function cellAt(col: number, row: number, cell: Omit<Cell, "address">): Cell {
 }
 
 function createSheet(cells: readonly Cell[], opts?: Partial<XlsxWorksheet>): XlsxWorksheet {
+  const dateSystem = opts?.dateSystem ?? "1900";
+  const resolvedOpts = opts ? { ...opts, dateSystem } : undefined;
   return {
+    dateSystem,
     name: "Sheet1",
     sheetId: 1,
     state: "visible",
@@ -40,7 +43,7 @@ function createSheet(cells: readonly Cell[], opts?: Partial<XlsxWorksheet>): Xls
         cells: cells.filter((c) => (c.address.row as number) === 4),
       },
     ].filter((r) => r.cells.length > 0),
-    ...opts,
+    ...resolvedOpts,
   };
 }
 
@@ -123,4 +126,3 @@ describe("applyAutofillToWorksheet", () => {
     expect(getCell(updated, { col: colIdx(1), row: rowIdx(2), colAbsolute: false, rowAbsolute: false })?.styleId).toEqual(styleId(5));
   });
 });
-

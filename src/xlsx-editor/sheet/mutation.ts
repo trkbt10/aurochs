@@ -95,7 +95,7 @@ export function addSheet(
 
   const insertIndex = computeInsertIndex(workbook, afterIndex);
   const sheetId = getNextSheetId(workbook);
-  const sheet = createEmptyWorksheet(name, sheetId);
+  const sheet = createEmptyWorksheet(workbook.dateSystem, name, sheetId);
   const sheets = insertAt(workbook.sheets, insertIndex, sheet);
   return { ...workbook, sheets };
 }
@@ -172,11 +172,27 @@ export function duplicateSheet(workbook: XlsxWorkbook, sheetIndex: number): Xlsx
 /**
  * Create an empty worksheet
  */
-export function createEmptyWorksheet(name: string, sheetId: number): XlsxWorksheet {
+export function createEmptyWorksheet(name: string, sheetId: number): XlsxWorksheet;
+export function createEmptyWorksheet(dateSystem: XlsxWorkbook["dateSystem"], name: string, sheetId: number): XlsxWorksheet;
+export function createEmptyWorksheet(
+  nameOrDateSystem: string,
+  sheetIdOrName: number | string,
+  sheetIdMaybe?: number,
+): XlsxWorksheet {
+  const usesExplicitDateSystem = typeof sheetIdOrName === "string";
+  const dateSystem = usesExplicitDateSystem ? (nameOrDateSystem as XlsxWorkbook["dateSystem"]) : "1900";
+  const name = usesExplicitDateSystem ? sheetIdOrName : nameOrDateSystem;
+  const sheetId = usesExplicitDateSystem ? sheetIdMaybe : sheetIdOrName;
+
+  if (sheetId === undefined) {
+    throw new Error("sheetId is required");
+  }
+
   assertNonEmptyString(name, "name");
   assertPositiveInteger(sheetId, "sheetId");
 
   return {
+    dateSystem,
     name,
     sheetId,
     state: "visible",

@@ -22,6 +22,7 @@ import type { XlsxTable } from "../domain/table/types";
 import type { XlsxSheetInfo, XlsxWorkbookInfo } from "./context";
 import { createParseContext } from "./context";
 import type { XlsxParseOptions } from "./options";
+import { resolveXlsxDateSystem } from "../domain/date-system";
 import { parseSharedStrings } from "./shared-strings";
 import { parseStyleSheet } from "./styles/index";
 import { parseComments } from "./comments";
@@ -87,6 +88,7 @@ type RelationshipInfo = {
   readonly id: string;
   readonly type: string;
   readonly target: string;
+  readonly targetMode?: "External" | "Internal";
 };
 
 function parseRelationshipInfos(relsElement: XmlElement): readonly RelationshipInfo[] {
@@ -97,7 +99,8 @@ function parseRelationshipInfos(relsElement: XmlElement): readonly RelationshipI
     if (!id || !target || !type) {
       return [];
     }
-    return [{ id, target, type }];
+    const targetMode = getAttr(rel, "TargetMode") as RelationshipInfo["targetMode"];
+    return [{ id, target, type, targetMode }];
   });
 }
 
@@ -196,12 +199,14 @@ export function parseDefinedNames(definedNamesElement: XmlElement | undefined): 
  * @see ECMA-376 Part 4, Section 18.2.28 (workbook)
  */
 export function parseWorkbookXml(workbookElement: XmlElement): XlsxWorkbookInfo {
+  const workbookPrEl = getChild(workbookElement, "workbookPr");
   const sheetsEl = getChild(workbookElement, "sheets");
   const definedNamesEl = getChild(workbookElement, "definedNames");
 
   return {
     sheets: parseSheets(sheetsEl),
     definedNames: parseDefinedNames(definedNamesEl),
+    dateSystem: resolveXlsxDateSystem(workbookPrEl ? parseBooleanAttr(getAttr(workbookPrEl, "date1904")) : undefined),
   };
 }
 
@@ -308,6 +313,50 @@ async function loadWorksheetCommentsFromRelationships(
   return comments.length > 0 ? comments : undefined;
 }
 
+function resolveHyperlinkTarget(
+  worksheetXmlPath: string,
+  rel: RelationshipInfo,
+): { readonly target: string; readonly targetMode?: RelationshipInfo["targetMode"] } {
+  const raw = rel.target;
+  if (rel.targetMode === "External") {
+    return { target: raw, targetMode: rel.targetMode };
+  }
+  return { target: resolveTargetPath(worksheetXmlPath, raw), targetMode: rel.targetMode };
+}
+
+function resolveWorksheetHyperlinksFromRelationships(
+  worksheetXmlPath: string,
+  baseWorksheet: XlsxWorksheet,
+  relationships: readonly RelationshipInfo[],
+): XlsxWorksheet {
+  const baseHyperlinks = baseWorksheet.hyperlinks;
+  if (!baseHyperlinks || baseHyperlinks.length === 0) {
+    return baseWorksheet;
+  }
+
+  const byId = new Map<string, RelationshipInfo>();
+  for (const rel of relationships) {
+    if (rel.type.endsWith("/hyperlink")) {
+      byId.set(rel.id, rel);
+    }
+  }
+
+  const resolved = baseHyperlinks.map((link) => {
+    const rId = link.relationshipId;
+    if (!rId) {
+      return link;
+    }
+    const rel = byId.get(rId);
+    if (!rel) {
+      return link;
+    }
+    const { target, targetMode } = resolveHyperlinkTarget(worksheetXmlPath, rel);
+    return { ...link, target, targetMode };
+  });
+
+  return { ...baseWorksheet, hyperlinks: resolved };
+}
+
 function collectTableRelationshipIds(worksheetRoot: XmlElement): readonly string[] {
   const tablePartsEl = getChild(worksheetRoot, "tableParts");
   if (!tablePartsEl) {
@@ -403,7 +452,8 @@ export async function parseXlsxWorkbook(
       );
       const comments = await loadWorksheetCommentsFromRelationships(getFileContent, xmlPath, relInfos);
 
-      const worksheet = comments ? { ...baseWorksheet, comments } : baseWorksheet;
+      const worksheetWithComments = comments ? { ...baseWorksheet, comments } : baseWorksheet;
+      const worksheet = resolveWorksheetHyperlinksFromRelationships(xmlPath, worksheetWithComments, relInfos);
       const sheetIndex = sheets.length;
       sheets.push(worksheet);
 
@@ -426,6 +476,7 @@ export async function parseXlsxWorkbook(
   }
 
   return {
+    dateSystem: workbookInfo.dateSystem,
     sheets,
     styles: styleSheet,
     sharedStrings,

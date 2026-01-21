@@ -142,6 +142,7 @@ type EvalScope = {
     node: Extract<FormulaAstNode, { readonly type: "StructuredTableReference" }>,
   ) => EvalResult;
   readonly origin: { readonly sheetName: string; readonly address: CellAddress };
+  readonly dateSystem: XlsxWorkbook["dateSystem"];
 };
 
 function resolveScopeSheetIndex(scope: EvalScope, explicitSheetName: string | undefined): number | undefined {
@@ -460,6 +461,7 @@ function evaluateNode(node: FormulaAstNode, scope: EvalScope): EvalResult {
           helpers: formulaFunctionHelpers,
           parseReference: (reference) => parseSheetQualifiedCellReference(reference, scope.origin.sheetName),
           origin: scope.origin,
+          dateSystem: scope.dateSystem,
         });
       }
 
@@ -568,6 +570,7 @@ export function createFormulaEvaluator(workbook: XlsxWorkbook): FormulaEvaluator
       resolveName: (name) => resolveDefinedNameValue(scope, name),
       resolveStructuredTableReference: (node) => resolveStructuredTableReferenceValue(scope, node),
       origin: { sheetName: defaultSheetName, address: origin },
+      dateSystem: workbook.dateSystem,
     };
 
     try {

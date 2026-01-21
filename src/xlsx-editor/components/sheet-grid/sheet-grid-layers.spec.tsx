@@ -30,8 +30,10 @@ function createResizeObserverEntry(width: number, height: number): ResizeObserve
 describe("xlsx-editor/components/sheet-grid/sheet-grid-layers", () => {
   it("renders header + viewport layers under VirtualScroll", () => {
     const workbook: XlsxWorkbook = {
+      dateSystem: "1900",
       sheets: [
         {
+          dateSystem: "1900",
           name: "Sheet1",
           sheetId: 1,
           state: "visible",
@@ -80,4 +82,3 @@ describe("xlsx-editor/components/sheet-grid/sheet-grid-layers", () => {
     expect(screen.getByTestId("xlsx-gridlines")).toBeDefined();
   });
 });
-

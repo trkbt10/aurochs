@@ -58,6 +58,7 @@ function createDemoStyles(): XlsxStyleSheet {
 
 function createSheet(): XlsxWorksheet {
   return {
+    dateSystem: "1900",
     name: "Sheet1",
     sheetId: 1,
     state: "visible",
@@ -104,6 +105,7 @@ describe("resolveCellRenderStyle", () => {
     const styles = createDemoStyles();
     const address = createAddress(1, 1);
     const sheet: XlsxWorksheet = {
+      dateSystem: "1900",
       name: "Sheet1",
       sheetId: 1,
       state: "visible",
@@ -119,6 +121,7 @@ describe("resolveCellRenderStyle", () => {
     const styles = createDemoStyles();
     const address = createAddress(2, 3);
     const sheet: XlsxWorksheet = {
+      dateSystem: "1900",
       name: "Sheet1",
       sheetId: 1,
       state: "visible",

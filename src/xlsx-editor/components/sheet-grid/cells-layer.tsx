@@ -87,14 +87,15 @@ function getCellDisplayText(
   address: CellAddress,
   formulaEvaluator: ReturnType<typeof createFormulaEvaluator>,
   formatCode: string,
+  dateSystem: XlsxWorksheet["dateSystem"],
 ): string {
   if (!cell) {
     return "";
   }
   if (cell.formula) {
-    return formatFormulaScalarForDisplay(formulaEvaluator.evaluateCell(sheetIndex, address), formatCode);
+    return formatFormulaScalarForDisplay(formulaEvaluator.evaluateCell(sheetIndex, address), formatCode, { dateSystem });
   }
-  return formatCellValueForDisplay(cell.value, formatCode);
+  return formatCellValueForDisplay(cell.value, formatCode, { dateSystem });
 }
 
 /**
@@ -185,7 +186,7 @@ export function XlsxSheetGridCellsLayer({
             formulaEvaluator,
           });
           const formatCode = resolveCellFormatCode({ styles, sheet, address: originAddress, cell, conditionalFormat });
-          const text = getCellDisplayText(cell, sheetIndex, originAddress, formulaEvaluator, formatCode);
+          const text = getCellDisplayText(cell, sheetIndex, originAddress, formulaEvaluator, formatCode, sheet.dateSystem);
           const cellRenderStyle = resolveCellRenderStyle({ styles, sheet, address: originAddress, cell, conditionalFormat });
 
           const leftPx = layout.cols.getBoundaryOffsetPx(merge.minCol - 1);
@@ -249,7 +250,7 @@ export function XlsxSheetGridCellsLayer({
           formulaEvaluator,
         });
         const formatCode = resolveCellFormatCode({ styles, sheet, address, cell, conditionalFormat });
-        const text = getCellDisplayText(cell, sheetIndex, address, formulaEvaluator, formatCode);
+        const text = getCellDisplayText(cell, sheetIndex, address, formulaEvaluator, formatCode, sheet.dateSystem);
         const cellRenderStyle = resolveCellRenderStyle({ styles, sheet, address, cell, conditionalFormat });
         const width = layout.cols.getSizePx(col0);
         if (width <= 0) {

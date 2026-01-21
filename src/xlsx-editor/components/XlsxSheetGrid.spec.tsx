@@ -33,8 +33,10 @@ function createAddress(col: number, row: number): CellAddress {
 
 function createWorkbook(): XlsxWorkbook {
   return {
+    dateSystem: "1900",
     sheets: [
       {
+        dateSystem: "1900",
         name: "Sheet1",
         sheetId: 1,
         state: "visible",
@@ -101,8 +103,10 @@ function CellValueDebugger() {
 describe("XlsxSheetGrid", () => {
   it("shows gridlines by default and hides them when sheetView.showGridLines=false", async () => {
     const base: XlsxWorkbook = {
+      dateSystem: "1900",
       sheets: [
         {
+          dateSystem: "1900",
           name: "Sheet1",
           sheetId: 1,
           state: "visible",
@@ -212,8 +216,10 @@ describe("XlsxSheetGrid", () => {
 
   it("adds a range to selection via Ctrl/Cmd+Click", async () => {
     const workbook: XlsxWorkbook = {
+      dateSystem: "1900",
       sheets: [
         {
+          dateSystem: "1900",
           name: "Sheet1",
           sheetId: 1,
           state: "visible",
@@ -524,8 +530,10 @@ describe("XlsxSheetGrid", () => {
 
   it("renders merged cells as a single cell and selects the merge range on click", async () => {
     const workbook: XlsxWorkbook = {
+      dateSystem: "1900",
       sheets: [
         {
+          dateSystem: "1900",
           name: "Sheet1",
           sheetId: 1,
           state: "visible",

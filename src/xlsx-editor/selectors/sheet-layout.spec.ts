@@ -28,6 +28,7 @@ describe("xlsx-editor/selectors/sheet-layout", () => {
 
   it("creates layout arrays with row/col overrides", () => {
     const sheet: XlsxWorksheet = {
+      dateSystem: "1900",
       name: "Sheet1",
       sheetId: 1,
       state: "visible",

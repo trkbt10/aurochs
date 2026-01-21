@@ -52,6 +52,7 @@ export const invokeLazyFormulaFunction = (
   const context: FormulaFunctionLazyContext = {
     evaluate: defaultLazyEvaluate,
     helpers: formulaFunctionHelpers,
+    dateSystem: "1900",
     parseReference: (_reference) => {
       void _reference;
       return {

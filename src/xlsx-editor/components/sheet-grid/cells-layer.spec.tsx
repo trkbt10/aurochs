@@ -16,6 +16,7 @@ import { XlsxSheetGridCellsLayer } from "./cells-layer";
 describe("xlsx-editor/components/sheet-grid/cells-layer", () => {
   it("renders cell text in the visible range", () => {
     const sheet: XlsxWorksheet = {
+      dateSystem: "1900",
       name: "Sheet1",
       sheetId: 1,
       state: "visible",
@@ -28,6 +29,7 @@ describe("xlsx-editor/components/sheet-grid/cells-layer", () => {
       xmlPath: "xl/worksheets/sheet1.xml",
     };
     const workbook: XlsxWorkbook = {
+      dateSystem: "1900",
       sheets: [sheet],
       styles: createDefaultStyleSheet(),
       sharedStrings: [],
@@ -64,6 +66,7 @@ describe("xlsx-editor/components/sheet-grid/cells-layer", () => {
   it("renders very long text via canvas without inserting the full string into the DOM", () => {
     const long = "A".repeat(25_000);
     const sheet: XlsxWorksheet = {
+      dateSystem: "1900",
       name: "Sheet1",
       sheetId: 1,
       state: "visible",
@@ -76,6 +79,7 @@ describe("xlsx-editor/components/sheet-grid/cells-layer", () => {
       xmlPath: "xl/worksheets/sheet1.xml",
     };
     const workbook: XlsxWorkbook = {
+      dateSystem: "1900",
       sheets: [sheet],
       styles: createDefaultStyleSheet(),
       sharedStrings: [],

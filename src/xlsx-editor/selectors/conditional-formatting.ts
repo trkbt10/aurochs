@@ -16,14 +16,17 @@ import type { XlsxWorksheet } from "../../xlsx/domain/workbook";
 import type { XlsxStyleSheet } from "../../xlsx/domain/style/types";
 import type { XlsxDifferentialFormat } from "../../xlsx/domain/style/dxf";
 import type { XlsxConditionalFormattingRule } from "../../xlsx/domain/conditional-formatting";
+import { colIdx, rowIdx } from "../../xlsx/domain/types";
 import type { FormulaEvaluator } from "../../xlsx/formula/evaluator";
 import type { FormulaScalar } from "../../xlsx/formula/types";
 import { isFormulaError } from "../../xlsx/formula/types";
+import { shiftFormulaReferences } from "../../xlsx/formula/shift";
 
 type ResolvedRule = {
   readonly priority: number;
   readonly dxfId: number;
   readonly rule: XlsxConditionalFormattingRule;
+  readonly anchor: CellAddress;
 };
 
 function getRangeBounds(range: CellRange): { readonly minRow: number; readonly maxRow: number; readonly minCol: number; readonly maxCol: number } {
@@ -44,6 +47,22 @@ function rangeContainsAddress(range: CellRange, address: CellAddress): boolean {
   const row = address.row as number;
   const col = address.col as number;
   return bounds.minRow <= row && row <= bounds.maxRow && bounds.minCol <= col && col <= bounds.maxCol;
+}
+
+function createRangeAnchor(range: CellRange): CellAddress {
+  const bounds = getRangeBounds(range);
+  return {
+    col: colIdx(bounds.minCol),
+    row: rowIdx(bounds.minRow),
+    colAbsolute: false,
+    rowAbsolute: false,
+  };
+}
+
+function shiftConditionalFormula(formula: string, anchor: CellAddress, address: CellAddress): string {
+  const deltaCols = (address.col as number) - (anchor.col as number);
+  const deltaRows = (address.row as number) - (anchor.row as number);
+  return shiftFormulaReferences(formula, deltaCols, deltaRows);
 }
 
 function valueToScalar(value: CellValue): FormulaScalar {
@@ -147,6 +166,7 @@ function evaluateRuleMatchesCell(
   rule: XlsxConditionalFormattingRule,
   cell: Cell | undefined,
   sheetIndex: number,
+  anchor: CellAddress,
   address: CellAddress,
   formulaEvaluator: FormulaEvaluator,
 ): boolean {
@@ -157,7 +177,7 @@ function evaluateRuleMatchesCell(
       return false;
     }
     const left = getCellScalar(cell, sheetIndex, address, formulaEvaluator);
-    const evaluated = formulaEvaluator.evaluateFormulaResult(sheetIndex, address, criterion);
+    const evaluated = formulaEvaluator.evaluateFormulaResult(sheetIndex, address, shiftConditionalFormula(criterion, anchor, address));
     if (Array.isArray(evaluated)) {
       return false;
     }
@@ -173,16 +193,45 @@ function evaluateRuleMatchesCell(
     if (!expr) {
       return false;
     }
-    const evaluated = formulaEvaluator.evaluateFormulaResult(sheetIndex, address, expr);
+    const evaluated = formulaEvaluator.evaluateFormulaResult(sheetIndex, address, shiftConditionalFormula(expr, anchor, address));
     if (Array.isArray(evaluated)) {
       return false;
     }
     if (isFormulaError(evaluated)) {
       return false;
     }
-    return evaluated === true;
+    if (evaluated === null) {
+      return false;
+    }
+    if (typeof evaluated === "boolean") {
+      return evaluated;
+    }
+    if (typeof evaluated === "number") {
+      return Number.isFinite(evaluated) && evaluated !== 0;
+    }
+    return false;
   }
 
+  const expr = rule.formulas[0];
+  if (!expr) {
+    return false;
+  }
+  const evaluated = formulaEvaluator.evaluateFormulaResult(sheetIndex, address, shiftConditionalFormula(expr, anchor, address));
+  if (Array.isArray(evaluated)) {
+    return false;
+  }
+  if (isFormulaError(evaluated)) {
+    return false;
+  }
+  if (evaluated === null) {
+    return false;
+  }
+  if (typeof evaluated === "boolean") {
+    return evaluated;
+  }
+  if (typeof evaluated === "number") {
+    return Number.isFinite(evaluated) && evaluated !== 0;
+  }
   return false;
 }
 
@@ -195,19 +244,24 @@ function collectApplicableRules(sheet: XlsxWorksheet, address: CellAddress): rea
   const collected: ResolvedRule[] = [];
   for (const conditional of conditionals) {
     const ranges = conditional.ranges;
-    if (!ranges.some((range) => rangeContainsAddress(range, address))) {
+    const matching = ranges.filter((range) => rangeContainsAddress(range, address));
+    if (matching.length === 0) {
       continue;
     }
-    for (const rule of conditional.rules) {
-      const dxfId = rule.dxfId;
-      if (dxfId === undefined) {
-        continue;
+    for (const range of matching) {
+      const anchor = createRangeAnchor(range);
+      for (const rule of conditional.rules) {
+        const dxfId = rule.dxfId;
+        if (dxfId === undefined) {
+          continue;
+        }
+        collected.push({
+          priority: rule.priority ?? Number.POSITIVE_INFINITY,
+          dxfId,
+          rule,
+          anchor,
+        });
       }
-      collected.push({
-        priority: rule.priority ?? Number.POSITIVE_INFINITY,
-        dxfId,
-        rule,
-      });
     }
   }
   return [...collected].sort((a, b) => a.priority - b.priority);
@@ -231,7 +285,14 @@ export function resolveCellConditionalDifferentialFormat(params: {
 
   const rules = collectApplicableRules(params.sheet, params.address);
   for (const candidate of rules) {
-    const matches = evaluateRuleMatchesCell(candidate.rule, params.cell, params.sheetIndex, params.address, params.formulaEvaluator);
+    const matches = evaluateRuleMatchesCell(
+      candidate.rule,
+      params.cell,
+      params.sheetIndex,
+      candidate.anchor,
+      params.address,
+      params.formulaEvaluator,
+    );
     if (!matches) {
       continue;
     }

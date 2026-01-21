@@ -16,6 +16,7 @@ import { XlsxSheetGridCellViewport } from "./cell-viewport";
 describe("xlsx-editor/components/sheet-grid/cell-viewport", () => {
   it("shows gridlines by default when sheetView is omitted", () => {
     const sheet: XlsxWorksheet = {
+      dateSystem: "1900",
       name: "Sheet1",
       sheetId: 1,
       state: "visible",
@@ -23,6 +24,7 @@ describe("xlsx-editor/components/sheet-grid/cell-viewport", () => {
       xmlPath: "xl/worksheets/sheet1.xml",
     };
     const workbook: XlsxWorkbook = {
+      dateSystem: "1900",
       sheets: [sheet],
       styles: createDefaultStyleSheet(),
       sharedStrings: [],
@@ -62,6 +64,7 @@ describe("xlsx-editor/components/sheet-grid/cell-viewport", () => {
 
   it("renders selection overlays for multi-range selections", () => {
     const sheet: XlsxWorksheet = {
+      dateSystem: "1900",
       name: "Sheet1",
       sheetId: 1,
       state: "visible",
@@ -69,6 +72,7 @@ describe("xlsx-editor/components/sheet-grid/cell-viewport", () => {
       xmlPath: "xl/worksheets/sheet1.xml",
     };
     const workbook: XlsxWorkbook = {
+      dateSystem: "1900",
       sheets: [sheet],
       styles: createDefaultStyleSheet(),
       sharedStrings: [],
@@ -126,6 +130,7 @@ describe("xlsx-editor/components/sheet-grid/cell-viewport", () => {
 
   it("starts fill drag when dragging the selection fill handle", () => {
     const sheet: XlsxWorksheet = {
+      dateSystem: "1900",
       name: "Sheet1",
       sheetId: 1,
       state: "visible",
@@ -133,6 +138,7 @@ describe("xlsx-editor/components/sheet-grid/cell-viewport", () => {
       xmlPath: "xl/worksheets/sheet1.xml",
     };
     const workbook: XlsxWorkbook = {
+      dateSystem: "1900",
       sheets: [sheet],
       styles: createDefaultStyleSheet(),
       sharedStrings: [],
