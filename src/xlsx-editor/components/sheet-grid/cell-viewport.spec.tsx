@@ -174,7 +174,7 @@ describe("xlsx-editor/components/sheet-grid/cell-viewport", () => {
       </div>,
     );
 
-    fireEvent.mouseDown(screen.getByTestId("xlsx-selection-fill-handle"));
+    fireEvent.pointerDown(screen.getByTestId("xlsx-selection-fill-handle"), { pointerId: 1, button: 0 });
     expect(actions[0]).toEqual({
       type: "START_FILL_DRAG",
       sourceRange: {

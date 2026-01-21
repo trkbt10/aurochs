@@ -45,6 +45,7 @@ describe("xlsx-editor/components/sheet-grid/cells-layer", () => {
           sheet={sheet}
           styles={workbook.styles}
           layout={layout}
+          metrics={{ rowCount: 10, colCount: 10 }}
           rowRange={{ start: 0, end: 0 }}
           colRange={{ start: 0, end: 0 }}
           scrollTop={0}

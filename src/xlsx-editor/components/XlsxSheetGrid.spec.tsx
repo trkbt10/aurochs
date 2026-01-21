@@ -201,7 +201,8 @@ describe("XlsxSheetGrid", () => {
     expect(screen.getByTestId("activeCell").textContent).toBe("none");
 
     act(() => {
-      fireEvent.mouseDown(screen.getByText("Hello"));
+      fireEvent.pointerDown(screen.getByText("Hello"), { pointerId: 1, button: 0 });
+      fireEvent.pointerUp(window, { pointerId: 1 });
     });
 
     await waitFor(() => {
@@ -259,8 +260,8 @@ describe("XlsxSheetGrid", () => {
     });
 
     act(() => {
-      fireEvent.mouseDown(screen.getByText("A1"));
-      fireEvent.mouseUp(window);
+      fireEvent.pointerDown(screen.getByText("A1"), { pointerId: 1, button: 0 });
+      fireEvent.pointerUp(window, { pointerId: 1 });
     });
 
     await waitFor(() => {
@@ -269,8 +270,8 @@ describe("XlsxSheetGrid", () => {
     });
 
     act(() => {
-      fireEvent.mouseDown(screen.getByText("B1"), { ctrlKey: true });
-      fireEvent.mouseUp(window);
+      fireEvent.pointerDown(screen.getByText("B1"), { pointerId: 1, button: 0, ctrlKey: true });
+      fireEvent.pointerUp(window, { pointerId: 1 });
     });
 
     await waitFor(() => {
@@ -309,7 +310,7 @@ describe("XlsxSheetGrid", () => {
     expect(screen.getByTestId("selectedRange").textContent).toBe("none");
 
     act(() => {
-      fireEvent.mouseDown(screen.getByTestId("xlsx-col-header-1"));
+      fireEvent.pointerDown(screen.getByTestId("xlsx-col-header-1"), { pointerId: 1, button: 0 });
     });
 
     await waitFor(() => {
@@ -345,7 +346,7 @@ describe("XlsxSheetGrid", () => {
     });
 
     act(() => {
-      fireEvent.mouseDown(screen.getByTestId("xlsx-col-header-2"));
+      fireEvent.pointerDown(screen.getByTestId("xlsx-col-header-2"), { pointerId: 1, button: 0 });
     });
 
     await waitFor(() => {
@@ -353,7 +354,7 @@ describe("XlsxSheetGrid", () => {
     });
 
     act(() => {
-      fireEvent.mouseDown(screen.getByTestId("xlsx-col-header-4"), { shiftKey: true });
+      fireEvent.pointerDown(screen.getByTestId("xlsx-col-header-4"), { pointerId: 1, button: 0, shiftKey: true });
     });
 
     await waitFor(() => {
@@ -389,7 +390,7 @@ describe("XlsxSheetGrid", () => {
     });
 
     act(() => {
-      fireEvent.mouseDown(screen.getByTestId("xlsx-row-header-1"));
+      fireEvent.pointerDown(screen.getByTestId("xlsx-row-header-1"), { pointerId: 1, button: 0 });
     });
 
     await waitFor(() => {
@@ -425,7 +426,7 @@ describe("XlsxSheetGrid", () => {
     });
 
     act(() => {
-      fireEvent.mouseDown(screen.getByTestId("xlsx-row-header-2"));
+      fireEvent.pointerDown(screen.getByTestId("xlsx-row-header-2"), { pointerId: 1, button: 0 });
     });
 
     await waitFor(() => {
@@ -433,7 +434,7 @@ describe("XlsxSheetGrid", () => {
     });
 
     act(() => {
-      fireEvent.mouseDown(screen.getByTestId("xlsx-row-header-4"), { shiftKey: true });
+      fireEvent.pointerDown(screen.getByTestId("xlsx-row-header-4"), { pointerId: 1, button: 0, shiftKey: true });
     });
 
     await waitFor(() => {
@@ -469,7 +470,7 @@ describe("XlsxSheetGrid", () => {
     });
 
     act(() => {
-      fireEvent.mouseDown(screen.getByTestId("xlsx-select-all"));
+      fireEvent.pointerDown(screen.getByTestId("xlsx-select-all"), { pointerId: 1, button: 0 });
     });
 
     await waitFor(() => {
@@ -572,11 +573,11 @@ describe("XlsxSheetGrid", () => {
     expect(screen.queryByText("IGNORED")).toBeNull();
 
     act(() => {
-      fireEvent.mouseDown(screen.getByText("Hello"));
+      fireEvent.pointerDown(screen.getByText("Hello"), { pointerId: 1, button: 0 });
     });
 
     act(() => {
-      fireEvent.mouseUp(window);
+      fireEvent.pointerUp(window, { pointerId: 1 });
     });
 
     await waitFor(() => {

@@ -12,14 +12,16 @@ import {
   pointsToPixels,
 } from "../../selectors/sheet-layout";
 import type { RangeBounds } from "./selection-geometry";
+import { safeReleasePointerCapture, safeSetPointerCapture } from "./pointer-capture";
+import { startWindowPointerDrag } from "./window-pointer-drag";
 
 type HeaderMenuState =
   | { readonly kind: "col"; readonly colIndex: number; readonly x: number; readonly y: number }
   | { readonly kind: "row"; readonly rowIndex: number; readonly x: number; readonly y: number };
 
 type ResizeDragRef =
-  | { readonly kind: "col"; readonly colIndex: number; readonly startX: number; readonly startWidthPx: number }
-  | { readonly kind: "row"; readonly rowIndex: number; readonly startY: number; readonly startHeightPx: number };
+  | { readonly kind: "col"; readonly colIndex: number; readonly startX: number; readonly startWidthPx: number; readonly pointerId: number; readonly captureTarget: HTMLElement }
+  | { readonly kind: "row"; readonly rowIndex: number; readonly startY: number; readonly startHeightPx: number; readonly pointerId: number; readonly captureTarget: HTMLElement };
 
 export type XlsxSheetGridHeaderLayerProps = {
   readonly sheet: XlsxWorksheet;
@@ -251,23 +253,26 @@ export function XlsxSheetGridHeaderLayer({
       return;
     }
 
-    const onMouseMove = (e: MouseEvent): void => {
+    const onMove = (e: PointerEvent): void => {
       const deltaPx = e.clientX - current.startX;
       const nextPx = Math.max(0, current.startWidthPx + deltaPx);
       const nextChars = pixelsToColumnWidthChar(nextPx);
       dispatch({ type: "PREVIEW_COLUMN_RESIZE", newWidth: nextChars });
     };
-    const onMouseUp = (): void => {
+
+    const onUp = (): void => {
+      safeReleasePointerCapture(current.captureTarget, current.pointerId);
       dispatch({ type: "COMMIT_COLUMN_RESIZE" });
       resizeRef.current = null;
     };
 
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
-    return () => {
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
+    const onCancel = (): void => {
+      safeReleasePointerCapture(current.captureTarget, current.pointerId);
+      dispatch({ type: "END_DRAG" });
+      resizeRef.current = null;
     };
+
+    return startWindowPointerDrag({ pointerId: current.pointerId, onMove, onUp, onCancel });
   }, [dispatch, drag]);
 
   useEffect(() => {
@@ -279,23 +284,26 @@ export function XlsxSheetGridHeaderLayer({
       return;
     }
 
-    const onMouseMove = (e: MouseEvent): void => {
+    const onMove = (e: PointerEvent): void => {
       const deltaPx = e.clientY - current.startY;
       const nextPx = Math.max(0, current.startHeightPx + deltaPx);
       const nextPoints = pixelsToPoints(nextPx);
       dispatch({ type: "PREVIEW_ROW_RESIZE", newHeight: nextPoints });
     };
-    const onMouseUp = (): void => {
+
+    const onUp = (): void => {
+      safeReleasePointerCapture(current.captureTarget, current.pointerId);
       dispatch({ type: "COMMIT_ROW_RESIZE" });
       resizeRef.current = null;
     };
 
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
-    return () => {
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
+    const onCancel = (): void => {
+      safeReleasePointerCapture(current.captureTarget, current.pointerId);
+      dispatch({ type: "END_DRAG" });
+      resizeRef.current = null;
     };
+
+    return startWindowPointerDrag({ pointerId: current.pointerId, onMove, onUp, onCancel });
   }, [dispatch, drag]);
 
   const onSelectAll = useCallback(() => {
@@ -408,7 +416,10 @@ export function XlsxSheetGridHeaderLayer({
             width,
             height: colHeaderHeightPx,
           }}
-          onMouseDown={(e) => {
+          onPointerDown={(e) => {
+            if (e.button !== 0) {
+              return;
+            }
             e.preventDefault();
             focusGridRoot(e.target);
             selectColumn(col1, e.shiftKey);
@@ -425,20 +436,27 @@ export function XlsxSheetGridHeaderLayer({
               right: -3,
               top: 0,
               width: 6,
-              height: "100%",
-              cursor: "col-resize",
-            }}
-            onMouseDown={(e) => {
+            height: "100%",
+            cursor: "col-resize",
+            touchAction: "none",
+          }}
+            onPointerDown={(e) => {
+              if (e.button !== 0) {
+                return;
+              }
               e.preventDefault();
               e.stopPropagation();
               focusGridRoot(e.target);
               const currentDef = sheet.columns?.find((d) => (d.min as number) <= col1 && col1 <= (d.max as number));
               const widthChars = currentDef?.width ?? pixelsToColumnWidthChar(width);
+              safeSetPointerCapture(e.currentTarget, e.pointerId);
               resizeRef.current = {
                 kind: "col",
                 colIndex: col1,
                 startX: e.clientX,
                 startWidthPx: width,
+                pointerId: e.pointerId,
+                captureTarget: e.currentTarget,
               };
               dispatch({ type: "START_COLUMN_RESIZE", colIndex: colIdx(col1), startX: e.clientX, originalWidth: widthChars });
             }}
@@ -489,7 +507,10 @@ export function XlsxSheetGridHeaderLayer({
             width: rowHeaderWidthPx,
             height,
           }}
-          onMouseDown={(e) => {
+          onPointerDown={(e) => {
+            if (e.button !== 0) {
+              return;
+            }
             e.preventDefault();
             focusGridRoot(e.target);
             selectRow(row1, e.shiftKey);
@@ -508,19 +529,26 @@ export function XlsxSheetGridHeaderLayer({
               bottom: -3,
               height: 6,
               cursor: "row-resize",
+              touchAction: "none",
             }}
-            onMouseDown={(e) => {
+            onPointerDown={(e) => {
+              if (e.button !== 0) {
+                return;
+              }
               e.preventDefault();
               e.stopPropagation();
               focusGridRoot(e.target);
               const rowIndex = rowIdx(row1);
               const currentRow = sheet.rows.find((r) => r.rowNumber === rowIndex);
               const heightPoints = currentRow?.height ?? pixelsToPoints(height);
+              safeSetPointerCapture(e.currentTarget, e.pointerId);
               resizeRef.current = {
                 kind: "row",
                 rowIndex: row1,
                 startY: e.clientY,
                 startHeightPx: height,
+                pointerId: e.pointerId,
+                captureTarget: e.currentTarget,
               };
               dispatch({ type: "START_ROW_RESIZE", rowIndex, startY: e.clientY, originalHeight: heightPoints });
             }}
@@ -555,7 +583,10 @@ export function XlsxSheetGridHeaderLayer({
           width: rowHeaderWidthPx,
           height: colHeaderHeightPx,
         }}
-        onMouseDown={(e) => {
+        onPointerDown={(e) => {
+          if (e.button !== 0) {
+            return;
+          }
           e.preventDefault();
           focusGridRoot(e.target);
           onSelectAll();

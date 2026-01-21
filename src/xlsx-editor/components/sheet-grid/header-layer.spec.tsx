@@ -52,8 +52,7 @@ describe("xlsx-editor/components/sheet-grid/header-layer", () => {
       </div>,
     );
 
-    fireEvent.mouseDown(screen.getByTestId("xlsx-col-header-1"));
+    fireEvent.pointerDown(screen.getByTestId("xlsx-col-header-1"), { pointerId: 1, button: 0 });
     expect(actions[0]).toMatchObject({ type: "SELECT_RANGE" });
   });
 });
-

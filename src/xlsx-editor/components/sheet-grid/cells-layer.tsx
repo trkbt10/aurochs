@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, type CSSProperties, type ReactNode } from "react";
 import type { CellAddress } from "../../../xlsx/domain/cell/address";
 import type { Cell } from "../../../xlsx/domain/cell/types";
 import type { XlsxStyleSheet } from "../../../xlsx/domain/style/types";
@@ -12,12 +12,17 @@ import { findMergeForCell, type NormalizedMergeRange } from "../../sheet/merge-r
 import { spacingTokens, colorTokens } from "../../../office-editor-components";
 import type { XlsxEditorAction } from "../../context/workbook/editor/types";
 import { createSheetLayout } from "../../selectors/sheet-layout";
+import { startRangeSelectPointerDrag } from "./range-select-drag";
 
 export type XlsxSheetGridCellsLayerProps = {
   readonly sheetIndex: number;
   readonly sheet: XlsxWorksheet;
   readonly styles: XlsxStyleSheet;
   readonly layout: ReturnType<typeof createSheetLayout>;
+  readonly metrics: {
+    readonly rowCount: number;
+    readonly colCount: number;
+  };
   readonly rowRange: { readonly start: number; readonly end: number };
   readonly colRange: { readonly start: number; readonly end: number };
   readonly scrollTop: number;
@@ -72,6 +77,7 @@ export function XlsxSheetGridCellsLayer({
   sheet,
   styles,
   layout,
+  metrics,
   rowRange,
   colRange,
   scrollTop,
@@ -81,46 +87,44 @@ export function XlsxSheetGridCellsLayer({
   focusGridRoot,
   formulaEvaluator,
 }: XlsxSheetGridCellsLayerProps) {
-  const [isMouseSelecting, setIsMouseSelecting] = useState(false);
-  const endRangeSelectListener = useRef<(() => void) | null>(null);
+  const rangeSelectCleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     return () => {
-      const handler = endRangeSelectListener.current;
-      if (handler) {
-        window.removeEventListener("mouseup", handler);
+      const cleanup = rangeSelectCleanupRef.current;
+      if (cleanup) {
+        cleanup();
       }
-      endRangeSelectListener.current = null;
+      rangeSelectCleanupRef.current = null;
     };
   }, []);
 
-  const startRangeSelectFromCell = useCallback(
-    (address: CellAddress): void => {
-      const previous = endRangeSelectListener.current;
+  const startRangeSelectFromPointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>, address: CellAddress): void => {
+      const viewport = event.currentTarget.closest('[data-xlsx-grid-viewport="true"]');
+      if (!(viewport instanceof HTMLElement)) {
+        throw new Error("Expected xlsx grid viewport container");
+      }
+
+      const previous = rangeSelectCleanupRef.current;
       if (previous) {
-        window.removeEventListener("mouseup", previous);
         previous();
       }
 
-      const merge = normalizedMerges.length > 0 ? findMergeForCell(normalizedMerges, address) : undefined;
-      const startCell = merge ? merge.origin : address;
-      const currentCell = merge ? merge.range.end : address;
-
-      dispatch({ type: "START_RANGE_SELECT", startCell });
-      dispatch({ type: "PREVIEW_RANGE_SELECT", currentCell });
-      setIsMouseSelecting(true);
-
-      const onMouseUp = (): void => {
-        window.removeEventListener("mouseup", onMouseUp);
-        endRangeSelectListener.current = null;
-        setIsMouseSelecting(false);
-        dispatch({ type: "END_RANGE_SELECT" });
-      };
-
-      endRangeSelectListener.current = onMouseUp;
-      window.addEventListener("mouseup", onMouseUp);
+      rangeSelectCleanupRef.current = startRangeSelectPointerDrag({
+        pointerId: event.pointerId,
+        captureTarget: event.currentTarget,
+        container: viewport,
+        startAddress: address,
+        scrollLeft,
+        scrollTop,
+        layout,
+        metrics,
+        normalizedMerges,
+        dispatch,
+      });
     },
-    [dispatch, normalizedMerges],
+    [dispatch, layout, metrics, normalizedMerges, scrollLeft, scrollTop],
   );
 
   const cellNodes = useMemo(() => {
@@ -169,7 +173,10 @@ export function XlsxSheetGridCellsLayer({
                 width,
                 height: mergedHeight,
             }}
-            onMouseDown={(e) => {
+            onPointerDown={(e) => {
+              if (e.button !== 0) {
+                return;
+              }
               e.preventDefault();
               focusGridRoot(e.target);
               if (e.metaKey || e.ctrlKey) {
@@ -180,7 +187,7 @@ export function XlsxSheetGridCellsLayer({
                 dispatch({ type: "SELECT_CELL", address: originAddress, extend: true });
                 return;
               }
-              startRangeSelectFromCell(originAddress);
+              startRangeSelectFromPointerDown(e, originAddress);
               }}
               onDoubleClick={(e) => {
                 e.preventDefault();
@@ -215,7 +222,10 @@ export function XlsxSheetGridCellsLayer({
               width,
               height,
             }}
-            onMouseDown={(e) => {
+            onPointerDown={(e) => {
+              if (e.button !== 0) {
+                return;
+              }
               e.preventDefault();
               focusGridRoot(e.target);
               if (e.metaKey || e.ctrlKey) {
@@ -226,13 +236,7 @@ export function XlsxSheetGridCellsLayer({
                 dispatch({ type: "SELECT_CELL", address, extend: true });
                 return;
               }
-              startRangeSelectFromCell(address);
-            }}
-            onMouseEnter={() => {
-              if (!isMouseSelecting) {
-                return;
-              }
-              dispatch({ type: "PREVIEW_RANGE_SELECT", currentCell: address });
+              startRangeSelectFromPointerDown(e, address);
             }}
             onDoubleClick={(e) => {
               e.preventDefault();
@@ -253,15 +257,15 @@ export function XlsxSheetGridCellsLayer({
     dispatch,
     focusGridRoot,
     formulaEvaluator,
-    isMouseSelecting,
     layout.cols,
     layout.rows,
+    metrics,
     normalizedMerges,
     rowRange.end,
     rowRange.start,
     sheet,
     sheetIndex,
-    startRangeSelectFromCell,
+    startRangeSelectFromPointerDown,
     styles,
   ]);
 

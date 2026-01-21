@@ -3,15 +3,15 @@ import type { CellAddress } from "../../../xlsx/domain/cell/address";
 import type { XlsxStyleSheet } from "../../../xlsx/domain/style/types";
 import type { XlsxWorksheet } from "../../../xlsx/domain/workbook";
 import { colorTokens } from "../../../office-editor-components";
-import { colIdx, rowIdx } from "../../../xlsx/domain/types";
 import { XlsxCellEditorOverlay } from "../cell-input/XlsxCellEditorOverlay";
 import type { ParseCellUserInputResult } from "../cell-input/parse-cell-user-input";
 import { buildBorderOverlayLines } from "../../selectors/border-overlay";
 import { findMergeForCell, type NormalizedMergeRange } from "../../sheet/merge-range";
 import { getVisibleGridLineSegments } from "./gridline-geometry";
-import { clipRectToViewport, getActiveCellRect, getRangeBounds, getSelectedRangeRect } from "./selection-geometry";
+import { clipRectToViewport, getActiveCellRect, getSelectedRangeRect } from "./selection-geometry";
 import { createSheetLayout } from "../../selectors/sheet-layout";
 import type { XlsxEditorAction } from "../../context/workbook/editor/types";
+import { startFillHandlePointerDrag } from "./fill-handle-drag";
 
 const selectionOutlineStyle: CSSProperties = {
   position: "absolute",
@@ -51,6 +51,7 @@ const fillHandleStyle: CSSProperties = {
   boxSizing: "border-box",
   cursor: "crosshair",
   pointerEvents: "auto",
+  touchAction: "none",
 };
 
 export type XlsxSheetGridCellViewportProps = {
@@ -220,8 +221,11 @@ export function XlsxSheetGridCellViewport({
     [activeSheetIndex, dispatch, editingCell],
   );
 
-  const handleFillHandleMouseDown = useCallback(
-    (event: React.MouseEvent): void => {
+  const handleFillHandlePointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>): void => {
+      if (event.button !== 0) {
+        return;
+      }
       const activeRange = selection.activeRange;
       if (!activeRange) {
         return;
@@ -237,103 +241,31 @@ export function XlsxSheetGridCellViewport({
       event.preventDefault();
       event.stopPropagation();
 
-      const sourceBounds = getRangeBounds(activeRange);
-      dispatch({ type: "START_FILL_DRAG", sourceRange: activeRange });
-
       const cleanupPrevious = fillDragListener.current;
       if (cleanupPrevious) {
         cleanupPrevious();
       }
 
-      const getTargetAddress = (e: MouseEvent): CellAddress => {
-        const rect = container.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-
-        const sheetX = scrollLeft + x;
-        const sheetY = scrollTop + y;
-
-        const col0 = layout.cols.findIndexAtOffset(sheetX);
-        const row0 = layout.rows.findIndexAtOffset(sheetY);
-
-        const clampedCol0 = Math.max(0, Math.min(metrics.colCount - 1, col0));
-        const clampedRow0 = Math.max(0, Math.min(metrics.rowCount - 1, row0));
-
-        const address: CellAddress = {
-          col: colIdx(clampedCol0 + 1),
-          row: rowIdx(clampedRow0 + 1),
-          colAbsolute: false,
-          rowAbsolute: false,
-        };
-
-        const merge = normalizedMerges.length > 0 ? findMergeForCell(normalizedMerges, address) : undefined;
-        return merge ? merge.range.end : address;
-      };
-
-      const computeTargetRange = (target: CellAddress): { readonly start: CellAddress; readonly end: CellAddress } => {
-        const targetRow = target.row as number;
-        const targetCol = target.col as number;
-
-        const getDistanceOutside = (value: number, min: number, max: number): number => {
-          if (value < min) {
-            return min - value;
-          }
-          if (value > max) {
-            return value - max;
-          }
-          return 0;
-        };
-
-        const rowDist = getDistanceOutside(targetRow, sourceBounds.minRow, sourceBounds.maxRow);
-        const colDist = getDistanceOutside(targetCol, sourceBounds.minCol, sourceBounds.maxCol);
-
-        if (rowDist === 0 && colDist === 0) {
-          return activeRange;
-        }
-
-        if (rowDist >= colDist) {
-          const minRow = targetRow < sourceBounds.minRow ? targetRow : sourceBounds.minRow;
-          const maxRow = targetRow > sourceBounds.maxRow ? targetRow : sourceBounds.maxRow;
-          return {
-            start: { col: colIdx(sourceBounds.minCol), row: rowIdx(minRow), colAbsolute: false, rowAbsolute: false },
-            end: { col: colIdx(sourceBounds.maxCol), row: rowIdx(maxRow), colAbsolute: false, rowAbsolute: false },
-          };
-        }
-
-        const minCol = targetCol < sourceBounds.minCol ? targetCol : sourceBounds.minCol;
-        const maxCol = targetCol > sourceBounds.maxCol ? targetCol : sourceBounds.maxCol;
-        return {
-          start: { col: colIdx(minCol), row: rowIdx(sourceBounds.minRow), colAbsolute: false, rowAbsolute: false },
-          end: { col: colIdx(maxCol), row: rowIdx(sourceBounds.maxRow), colAbsolute: false, rowAbsolute: false },
-        };
-      };
-
-      const onMouseMove = (e: MouseEvent): void => {
-        const address = getTargetAddress(e);
-        dispatch({ type: "PREVIEW_FILL_DRAG", targetRange: computeTargetRange(address) });
-      };
-
-      const onMouseUp = (): void => {
-        window.removeEventListener("mousemove", onMouseMove);
-        window.removeEventListener("mouseup", onMouseUp);
-        fillDragListener.current = null;
-        dispatch({ type: "COMMIT_FILL_DRAG" });
-      };
-
-      window.addEventListener("mousemove", onMouseMove);
-      window.addEventListener("mouseup", onMouseUp);
-
-      fillDragListener.current = () => {
-        window.removeEventListener("mousemove", onMouseMove);
-        window.removeEventListener("mouseup", onMouseUp);
-      };
+      fillDragListener.current = startFillHandlePointerDrag({
+        pointerId: event.pointerId,
+        captureTarget: event.currentTarget,
+        container,
+        baseRange: activeRange,
+        scrollLeft,
+        scrollTop,
+        layout,
+        metrics: { rowCount: metrics.rowCount, colCount: metrics.colCount },
+        normalizedMerges,
+        dispatch,
+      });
     },
-    [dispatch, layout.cols, layout.rows, metrics.colCount, metrics.rowCount, normalizedMerges, scrollLeft, scrollTop, selection.activeRange, state.editingCell],
+    [dispatch, layout, metrics.colCount, metrics.rowCount, normalizedMerges, scrollLeft, scrollTop, selection.activeRange, state.editingCell],
   );
 
   return (
     <div
       ref={containerRef}
+      data-xlsx-grid-viewport="true"
       style={{
         position: "absolute",
         left: rowHeaderWidthPx,
@@ -466,7 +398,7 @@ export function XlsxSheetGridCellViewport({
             left: activeRangeRect.left + activeRangeRect.width - FILL_HANDLE_SIZE_PX,
             top: activeRangeRect.top + activeRangeRect.height - FILL_HANDLE_SIZE_PX,
           }}
-          onMouseDown={handleFillHandleMouseDown}
+          onPointerDown={handleFillHandlePointerDown}
         />
       )}
 

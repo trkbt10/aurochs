@@ -148,6 +148,7 @@ export function XlsxSheetGridLayers({
           sheet={sheet}
           styles={workbook.styles}
           layout={layout}
+          metrics={{ rowCount: metrics.rowCount, colCount: metrics.colCount }}
           rowRange={rowRange}
           colRange={colRange}
           scrollTop={scrollTop}

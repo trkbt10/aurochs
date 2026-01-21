@@ -8,6 +8,7 @@ import type { XlsxWorkbook } from "@lib/xlsx/domain/workbook";
 import { createDefaultStyleSheet } from "@lib/xlsx/domain/style/types";
 import { borderId, colIdx, fillId, fontId, numFmtId, rowIdx, styleId, type ColIndex, type RowIndex } from "@lib/xlsx/domain/types";
 import type { CellAddress } from "@lib/xlsx/domain/cell/address";
+import type { Formula } from "@lib/xlsx/domain/cell/formula";
 import { Button, Input } from "@lib/office-editor-components/primitives";
 import { parseXlsxWorkbook } from "@lib/xlsx/parser";
 import { exportXlsx } from "@lib/xlsx/exporter";
@@ -54,6 +55,10 @@ function createAddress(col: ColIndex, row: RowIndex): CellAddress {
   return { col, row, colAbsolute: false, rowAbsolute: false };
 }
 
+function createNormalFormula(expression: string): Formula {
+  return { type: "normal", expression };
+}
+
 function createTestWorkbook(): XlsxWorkbook {
   const styles = createDefaultStyleSheet();
 
@@ -93,22 +98,22 @@ function createTestWorkbook(): XlsxWorkbook {
             cells: [
               { address: createAddress(colIdx(1), rowIdx(1)), value: { type: "number", value: 10 }, styleId: styleId(1) },
               { address: createAddress(colIdx(2), rowIdx(1)), value: { type: "number", value: 20 }, styleId: styleId(2) },
-              { address: createAddress(colIdx(3), rowIdx(1)), value: { type: "empty" }, formula: "A1+B1", styleId: styleId(3) },
+              { address: createAddress(colIdx(3), rowIdx(1)), value: { type: "empty" }, formula: createNormalFormula("A1+B1"), styleId: styleId(3) },
             ],
           },
           {
             rowNumber: rowIdx(2),
             cells: [
               { address: createAddress(colIdx(1), rowIdx(2)), value: { type: "number", value: 1 } },
-              { address: createAddress(colIdx(2), rowIdx(2)), value: { type: "empty" }, formula: 'IF(A2>0,"OK","NG")' },
-              { address: createAddress(colIdx(3), rowIdx(2)), value: { type: "empty" }, formula: "SUM(A1:B1)" },
+              { address: createAddress(colIdx(2), rowIdx(2)), value: { type: "empty" }, formula: createNormalFormula('IF(A2>0,"OK","NG")') },
+              { address: createAddress(colIdx(3), rowIdx(2)), value: { type: "empty" }, formula: createNormalFormula("SUM(A1:B1)") },
             ],
           },
           {
             rowNumber: rowIdx(3),
             cells: [
               { address: createAddress(colIdx(1), rowIdx(3)), value: { type: "number", value: 1 } },
-              { address: createAddress(colIdx(2), rowIdx(3)), value: { type: "empty" }, formula: "SUM(A3:A4)" },
+              { address: createAddress(colIdx(2), rowIdx(3)), value: { type: "empty" }, formula: createNormalFormula("SUM(A3:A4)") },
             ],
           },
           {
@@ -118,8 +123,8 @@ function createTestWorkbook(): XlsxWorkbook {
           {
             rowNumber: rowIdx(5),
             cells: [
-              { address: createAddress(colIdx(1), rowIdx(5)), value: { type: "empty" }, formula: "Sheet2!A1+1" },
-              { address: createAddress(colIdx(2), rowIdx(5)), value: { type: "empty" }, formula: "NoSuchSheet!A1" },
+              { address: createAddress(colIdx(1), rowIdx(5)), value: { type: "empty" }, formula: createNormalFormula("Sheet2!A1+1") },
+              { address: createAddress(colIdx(2), rowIdx(5)), value: { type: "empty" }, formula: createNormalFormula("NoSuchSheet!A1") },
               {
                 address: createAddress(colIdx(3), rowIdx(5)),
                 value: { type: "string", value: "Long text wraps onto multiple lines if wrapText is applied." },
@@ -131,16 +136,16 @@ function createTestWorkbook(): XlsxWorkbook {
             rowNumber: rowIdx(6),
             cells: [
               { address: createAddress(colIdx(1), rowIdx(6)), value: { type: "string", value: "IFERROR(1/0,123)" } },
-              { address: createAddress(colIdx(2), rowIdx(6)), value: { type: "empty" }, formula: "IFERROR(1/0,123)" },
-              { address: createAddress(colIdx(3), rowIdx(6)), value: { type: "empty" }, formula: 'VLOOKUP(2,{1,"A";2,"B";3,"C"},2,FALSE)' },
+              { address: createAddress(colIdx(2), rowIdx(6)), value: { type: "empty" }, formula: createNormalFormula("IFERROR(1/0,123)") },
+              { address: createAddress(colIdx(3), rowIdx(6)), value: { type: "empty" }, formula: createNormalFormula('VLOOKUP(2,{1,"A";2,"B";3,"C"},2,FALSE)') },
             ],
           },
           {
             rowNumber: rowIdx(7),
             cells: [
               { address: createAddress(colIdx(1), rowIdx(7)), value: { type: "string", value: "OFFSET/INDIRECT demo" } },
-              { address: createAddress(colIdx(2), rowIdx(7)), value: { type: "empty" }, formula: "SUM(OFFSET(A8,0,0,2,1))" },
-              { address: createAddress(colIdx(3), rowIdx(7)), value: { type: "empty" }, formula: 'INDIRECT("A8")+1' },
+              { address: createAddress(colIdx(2), rowIdx(7)), value: { type: "empty" }, formula: createNormalFormula("SUM(OFFSET(A8,0,0,2,1))") },
+              { address: createAddress(colIdx(3), rowIdx(7)), value: { type: "empty" }, formula: createNormalFormula('INDIRECT("A8")+1') },
             ],
           },
           {
@@ -372,15 +377,15 @@ function createPatternWorkbook(): XlsxWorkbook {
             cells: [
               { address: createAddress(colIdx(1), rowIdx(1)), value: { type: "number", value: 10 } },
               { address: createAddress(colIdx(2), rowIdx(1)), value: { type: "number", value: 20 } },
-              { address: createAddress(colIdx(3), rowIdx(1)), value: { type: "empty" }, formula: "A1+B1", styleId: styleId(3) },
+              { address: createAddress(colIdx(3), rowIdx(1)), value: { type: "empty" }, formula: createNormalFormula("A1+B1"), styleId: styleId(3) },
             ],
           },
           {
             rowNumber: rowIdx(2),
             cells: [
               { address: createAddress(colIdx(1), rowIdx(2)), value: { type: "number", value: 1 } },
-              { address: createAddress(colIdx(2), rowIdx(2)), value: { type: "empty" }, formula: 'IF(A2>0,"OK","NG")' },
-              { address: createAddress(colIdx(3), rowIdx(2)), value: { type: "empty" }, formula: "SUM(A1:B1)" },
+              { address: createAddress(colIdx(2), rowIdx(2)), value: { type: "empty" }, formula: createNormalFormula('IF(A2>0,"OK","NG")') },
+              { address: createAddress(colIdx(3), rowIdx(2)), value: { type: "empty" }, formula: createNormalFormula("SUM(A1:B1)") },
             ],
           },
         ],
