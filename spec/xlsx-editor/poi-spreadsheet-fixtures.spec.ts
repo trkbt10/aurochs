@@ -11,11 +11,11 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { parseXlsxWorkbook, type XlsxParseOptions } from "../../src/xlsx/parser";
 import { createFormulaEvaluator } from "../../src/xlsx/formula/evaluator";
-import { colIdx, rowIdx } from "../../src/xlsx/domain/types";
+import { colIdx, rowIdx, styleId } from "../../src/xlsx/domain/types";
 import type { CellAddress } from "../../src/xlsx/domain/cell/address";
 import type { CellValue } from "../../src/xlsx/domain/cell/types";
 import { getCell } from "../../src/xlsx-editor/cell/query";
-import { resolveCellRenderStyle } from "../../src/xlsx-editor/selectors/cell-render-style";
+import { resolveCellBorderDecoration, resolveCellRenderStyle } from "../../src/xlsx-editor/selectors/cell-render-style";
 import { resolveCellStyleDetails } from "../../src/xlsx-editor/selectors/cell-style-details";
 import { formatCellValueForDisplay, resolveCellFormatCode } from "../../src/xlsx-editor/selectors/cell-display-text";
 import { resolveCellConditionalDifferentialFormat } from "../../src/xlsx-editor/selectors/conditional-formatting";
@@ -1584,6 +1584,82 @@ describe("POI spreadsheet fixtures (parsing + formulas + style)", () => {
     ).toBeUndefined();
   });
 
+  it("simple-table-named-range.xlsx: evaluates definedName referencing structured table references", async () => {
+    const workbook = await parseWorkbookFromFixture("simple-table-named-range.xlsx");
+    const sheetIndex = 0;
+    const sheet = workbook.sheets[sheetIndex];
+    if (!sheet) {
+      throw new Error("sheet[0] is required");
+    }
+
+    const tables = workbook.tables;
+    if (!tables) {
+      throw new Error("workbook.tables is required");
+    }
+    const table = tables.find((candidate) => candidate.name === "Table1");
+    if (!table) {
+      throw new Error('Expected table "Table1" to exist');
+    }
+    expect(table.columns.map((c) => c.name)).toEqual(["a", "b", "c"]);
+
+    const names = workbook.definedNames;
+    if (!names) {
+      throw new Error("workbook.definedNames is required");
+    }
+    const total = names.find((n) => n.name === "total");
+    if (!total) {
+      throw new Error('Expected definedName "total" to exist');
+    }
+    expect(total.formula).toBe("SUM(Table1[c])");
+
+    const evaluator = createFormulaEvaluator(workbook);
+
+    const b7 = createAddress(2, 7);
+    const b7Cell = getCell(sheet, b7);
+    if (!b7Cell?.formula) {
+      throw new Error("B7 must be a formula cell");
+    }
+    expect(b7Cell.formula.expression).toBe("total");
+    expect(evaluator.evaluateCell(sheetIndex, b7)).toEqual(toExpectedScalar(b7Cell.value));
+  });
+
+  it("SingleCellTable.xlsx: evaluates structured refs when table has no header row", async () => {
+    const workbook = await parseWorkbookFromFixture("SingleCellTable.xlsx");
+    const sheetIndex = 0;
+    const sheet = workbook.sheets[sheetIndex];
+    if (!sheet) {
+      throw new Error("sheet[0] is required");
+    }
+
+    const tables = workbook.tables;
+    if (!tables) {
+      throw new Error("workbook.tables is required");
+    }
+    const table = tables.find((candidate) => candidate.name === "Table3");
+    if (!table) {
+      throw new Error('Expected table "Table3" to exist');
+    }
+
+    expect(table.sheetIndex).toBe(sheetIndex);
+    expect(table.ref.start).toEqual(createAddress(1, 2)); // A2
+    expect(table.ref.end).toEqual(createAddress(1, 2)); // A2
+    expect(table.headerRowCount).toBe(0);
+    expect(table.totalsRowCount).toBe(0);
+    expect(table.columns.map((c) => c.name)).toEqual(["Column1"]);
+
+    const evaluator = createFormulaEvaluator(workbook);
+    expect(evaluator.evaluateFormula(sheetIndex, "SUM(Table3[Column1])")).toBe(99);
+
+    expect(
+      resolveCellTableStyleDifferentialFormat({
+        sheetIndex,
+        tables,
+        styles: workbook.styles,
+        address: createAddress(1, 2),
+      }),
+    ).toBeUndefined();
+  });
+
   it("table-sample.xlsx: parses table totals row and evaluates structured references (#This Row/#Totals)", async () => {
     const workbook = await parseWorkbookFromFixture("table-sample.xlsx");
     const sheetIndex = 0;
@@ -1972,6 +2048,52 @@ describe("POI spreadsheet fixtures (parsing + formulas + style)", () => {
     expect(css.backgroundColor).toBe("#CCFFFF");
   });
 
+  it("ShrinkToFit.xlsx: parses alignment.shrinkToFit and resolves a shrink-to-fit CSS hint", async () => {
+    const workbook = await parseWorkbookFromFixture("ShrinkToFit.xlsx");
+    const sheet = workbook.sheets[0];
+    if (!sheet) {
+      throw new Error("sheet[0] is required");
+    }
+
+    const xfIndex = workbook.styles.cellXfs.findIndex((xf) => xf.alignment?.shrinkToFit === true);
+    if (xfIndex === -1) {
+      throw new Error("Expected at least one cellXf with shrinkToFit");
+    }
+
+    const address = createAddress(1, 1);
+    const css = resolveCellRenderStyle({
+      styles: workbook.styles,
+      sheet,
+      address,
+      cell: { address, value: { type: "empty" }, styleId: styleId(xfIndex) },
+    });
+    expect(css.whiteSpace).toBe("nowrap");
+    expect(css.overflow).toBe("hidden");
+  });
+
+  it("picture.xlsx: parses alignment.textRotation and resolves CSS rotate transform", async () => {
+    const workbook = await parseWorkbookFromFixture("picture.xlsx");
+    const sheet = workbook.sheets[0];
+    if (!sheet) {
+      throw new Error("sheet[0] is required");
+    }
+
+    const xfIndex = workbook.styles.cellXfs.findIndex((xf) => xf.alignment?.textRotation === 90);
+    if (xfIndex === -1) {
+      throw new Error("Expected at least one cellXf with textRotation=90");
+    }
+
+    const address = createAddress(1, 1);
+    const css = resolveCellRenderStyle({
+      styles: workbook.styles,
+      sheet,
+      address,
+      cell: { address, value: { type: "empty" }, styleId: styleId(xfIndex) },
+    });
+    expect(css.transform).toBe("rotate(-90deg)");
+    expect(css.transformOrigin).toBe("center");
+  });
+
   it("styles.xlsx: resolves basic font/decoration/alignment/fill styles", async () => {
     const workbook = await parseWorkbookFromFixture("styles.xlsx");
     const sheet = workbook.sheets[0];
@@ -2035,6 +2157,61 @@ describe("POI spreadsheet fixtures (parsing + formulas + style)", () => {
     }
     const a11Css = resolveCellRenderStyle({ styles: workbook.styles, sheet, address: a11, cell: a11Cell });
     expect(a11Css.backgroundColor).toBe("#F5F4ED");
+  });
+
+  it("style-alternate-content.xlsx: parses merges and resolves border + font styles", async () => {
+    const workbook = await parseWorkbookFromFixture("style-alternate-content.xlsx");
+    const sheet = workbook.sheets[0];
+    if (!sheet) {
+      throw new Error("sheet[0] is required");
+    }
+
+    expect(sheet.name).toBe("Sheet2");
+    expect(sheet.columns?.length).toBe(9);
+    expect(sheet.mergeCells?.length).toBe(12);
+    expect(workbook.styles.dxfs?.length).toBe(7);
+
+    if (!sheet.mergeCells) {
+      throw new Error("sheet.mergeCells is required");
+    }
+    expect(sheet.mergeCells).toContainEqual({
+      start: createAddress(1, 1),
+      end: createAddress(3, 1),
+    });
+
+    const a4 = createAddress(1, 4);
+    const a4Cell = getCell(sheet, a4);
+    if (!a4Cell || a4Cell.value.type !== "string") {
+      throw new Error("A4 must be a string cell");
+    }
+    expect(a4Cell.value.value).toBe("1. 센터명");
+
+    const a4Css = resolveCellRenderStyle({ styles: workbook.styles, sheet, address: a4, cell: a4Cell });
+    expect(a4Css.fontFamily).toBe("맑은 고딕");
+    expect(a4Css.fontSize).toBe("14.666666666666666px");
+
+    const a4Border = resolveCellBorderDecoration({
+      styles: workbook.styles,
+      sheet,
+      address: a4,
+      cell: a4Cell,
+      defaultBorderColor: "#000000",
+    });
+    expect(a4Border).toEqual({
+      left: { width: 1, style: "solid", color: "#000000" },
+      right: { width: 1, style: "solid", color: "#000000" },
+      top: { width: 1, style: "solid", color: "#000000" },
+      bottom: { width: 1, style: "solid", color: "#000000" },
+    });
+
+    const b36 = createAddress(2, 36);
+    const b36Cell = getCell(sheet, b36);
+    if (!b36Cell) {
+      throw new Error("B36 must exist");
+    }
+    const b36Css = resolveCellRenderStyle({ styles: workbook.styles, sheet, address: b36, cell: b36Cell });
+    expect(b36Css.fontFamily).toBe("맑은 고딕");
+    expect(b36Css.fontSize).toBe("13.333333333333334px");
   });
 
   it("1_NoIden.xlsx: parses cols widths and merged cells", async () => {

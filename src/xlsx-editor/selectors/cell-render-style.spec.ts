@@ -52,6 +52,22 @@ function createDemoStyles(): XlsxStyleSheet {
         alignment: { wrapText: true, horizontal: "left", vertical: "top" },
         applyAlignment: true,
       },
+      {
+        numFmtId: numFmtId(0),
+        fontId: fontId(0),
+        fillId: fillId(0),
+        borderId: borderId(0),
+        alignment: { shrinkToFit: true, textRotation: 0 },
+        applyAlignment: true,
+      },
+      {
+        numFmtId: numFmtId(0),
+        fontId: fontId(0),
+        fillId: fillId(0),
+        borderId: borderId(0),
+        alignment: { textRotation: 90 },
+        applyAlignment: true,
+      },
     ],
   };
 }
@@ -132,6 +148,30 @@ describe("resolveCellRenderStyle", () => {
 
     const style = resolveCellRenderStyle({ styles, sheet, address, cell: { address, value: { type: "empty" } } });
     expect(style.backgroundColor).toBe("#FFFF00");
+  });
+
+  it("applies shrinkToFit and textRotation into CSS", () => {
+    const styles = createDemoStyles();
+    const sheet = createSheet();
+    const address = createAddress(1, 1);
+
+    const shrinkStyle = resolveCellRenderStyle({
+      styles,
+      sheet,
+      address,
+      cell: { address, value: { type: "empty" }, styleId: styleId(5) },
+    });
+    expect(shrinkStyle.whiteSpace).toBe("nowrap");
+    expect(shrinkStyle.overflow).toBe("hidden");
+
+    const rotateStyle = resolveCellRenderStyle({
+      styles,
+      sheet,
+      address,
+      cell: { address, value: { type: "empty" }, styleId: styleId(6) },
+    });
+    expect(rotateStyle.transform).toBe("rotate(-90deg)");
+    expect(rotateStyle.transformOrigin).toBe("center");
   });
 });
 

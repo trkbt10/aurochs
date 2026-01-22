@@ -23,6 +23,28 @@ function applyAlignment(style: CSSProperties, alignment: XlsxAlignment | undefin
     return;
   }
 
+  if (alignment.shrinkToFit === true && alignment.wrapText !== true) {
+    style.whiteSpace = "nowrap";
+    style.overflow = "hidden";
+    style.textOverflow = "clip";
+  }
+
+  const rotation = alignment.textRotation;
+  if (typeof rotation === "number") {
+    if (rotation === 255) {
+      style.writingMode = "vertical-rl";
+      style.textOrientation = "upright";
+    } else if (rotation >= 0 && rotation <= 90) {
+      if (rotation !== 0) {
+        style.transform = `rotate(${-rotation}deg)`;
+        style.transformOrigin = "center";
+      }
+    } else if (rotation >= 91 && rotation <= 180) {
+      style.transform = `rotate(${rotation - 90}deg)`;
+      style.transformOrigin = "center";
+    }
+  }
+
   if (alignment.horizontal === "left") {
     style.justifyContent = "flex-start";
   } else if (alignment.horizontal === "center" || alignment.horizontal === "centerContinuous") {
