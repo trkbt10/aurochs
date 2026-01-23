@@ -6,12 +6,12 @@
 
 import { useState, type CSSProperties } from "react";
 import type { XlsxWorkbook } from "../../xlsx/domain/workbook";
-import { Button, Tabs, spacingTokens } from "../../office-editor-components";
+import { spacingTokens } from "../../office-editor-components";
 import { XlsxWorkbookEditorProvider, useXlsxWorkbookEditor } from "../context/workbook/XlsxWorkbookEditorContext";
 import { XlsxSheetGrid, type XlsxGridMetrics } from "./XlsxSheetGrid";
 import { XlsxWorkbookToolbar } from "./toolbar/XlsxWorkbookToolbar";
-import { generateUniqueName } from "../sheet/mutation";
 import { XlsxCellFormatPanel } from "./format-panel/XlsxCellFormatPanel";
+import { XlsxSheetTabBar } from "./sheet-tab-bar";
 
 export type XlsxWorkbookEditorProps = {
   readonly workbook: XlsxWorkbook;
@@ -21,135 +21,32 @@ export type XlsxWorkbookEditorProps = {
 };
 
 function XlsxWorkbookEditorInner({ grid }: { readonly grid: XlsxGridMetrics }) {
-  const { workbook, activeSheetIndex, dispatch } = useXlsxWorkbookEditor();
+  const { workbook, activeSheetIndex } = useXlsxWorkbookEditor();
   const [isFormatPanelOpen, setIsFormatPanelOpen] = useState<boolean>(true);
 
-  const items = workbook.sheets.map((sheet, idx) => ({
-    id: String(idx),
-    label: sheet.name,
-    content: (
-      <div style={{ display: "flex", flexDirection: "column", gap: spacingTokens.sm, minHeight: 0, flex: 1 }}>
-        <XlsxWorkbookToolbar
-          sheetIndex={idx}
-          isFormatPanelOpen={isFormatPanelOpen}
-          onToggleFormatPanel={() => setIsFormatPanelOpen((v) => !v)}
-        />
-        <div style={{ flex: 1, minHeight: 0, display: "flex", gap: spacingTokens.sm }}>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <XlsxSheetGrid sheetIndex={idx} metrics={grid} />
-          </div>
-          {isFormatPanelOpen && (
-            <XlsxCellFormatPanel sheetIndex={idx} onClose={() => setIsFormatPanelOpen(false)} />
-          )}
-        </div>
-      </div>
-    ),
-    disabled: false,
-  }));
+  const activeSheet = activeSheetIndex !== undefined ? workbook.sheets[activeSheetIndex] : undefined;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: spacingTokens.sm, minHeight: 0, height: "100%" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: spacingTokens.sm }}>
-        <Button
-          size="sm"
-          onClick={() => {
-            const suggested = generateUniqueName(workbook, "Sheet");
-            const name = window.prompt("New sheet name", suggested);
-            if (!name) {
-              return;
-            }
-            dispatch({ type: "ADD_SHEET", name });
-          }}
-        >
-          Add sheet…
-        </Button>
-        <Button
-          size="sm"
-          disabled={activeSheetIndex === undefined}
-          onClick={() => {
-            if (activeSheetIndex === undefined) {
-              return;
-            }
-            const current = workbook.sheets[activeSheetIndex];
-            if (!current) {
-              throw new Error(`Sheet not found: index=${activeSheetIndex}`);
-            }
-            const name = window.prompt("Rename sheet", current.name);
-            if (!name) {
-              return;
-            }
-            dispatch({ type: "RENAME_SHEET", sheetIndex: activeSheetIndex, name });
-          }}
-        >
-          Rename…
-        </Button>
-        <Button
-          size="sm"
-          disabled={activeSheetIndex === undefined}
-          onClick={() => {
-            if (activeSheetIndex === undefined) {
-              return;
-            }
-            dispatch({ type: "DUPLICATE_SHEET", sheetIndex: activeSheetIndex });
-          }}
-        >
-          Duplicate
-        </Button>
-        <Button
-          size="sm"
-          disabled={activeSheetIndex === undefined || workbook.sheets.length <= 1}
-          onClick={() => {
-            if (activeSheetIndex === undefined) {
-              return;
-            }
-            const current = workbook.sheets[activeSheetIndex];
-            if (!current) {
-              throw new Error(`Sheet not found: index=${activeSheetIndex}`);
-            }
-            const ok = window.confirm(`Delete sheet "${current.name}"?`);
-            if (!ok) {
-              return;
-            }
-            dispatch({ type: "DELETE_SHEET", sheetIndex: activeSheetIndex });
-          }}
-        >
-          Delete
-        </Button>
-        <Button
-          size="sm"
-          disabled={activeSheetIndex === undefined || activeSheetIndex <= 0}
-          onClick={() => {
-            if (activeSheetIndex === undefined || activeSheetIndex <= 0) {
-              return;
-            }
-            dispatch({ type: "MOVE_SHEET", fromIndex: activeSheetIndex, toIndex: activeSheetIndex - 1 });
-          }}
-        >
-          Move left
-        </Button>
-        <Button
-          size="sm"
-          disabled={activeSheetIndex === undefined || activeSheetIndex >= workbook.sheets.length - 1}
-          onClick={() => {
-            if (activeSheetIndex === undefined || activeSheetIndex >= workbook.sheets.length - 1) {
-              return;
-            }
-            dispatch({ type: "MOVE_SHEET", fromIndex: activeSheetIndex, toIndex: activeSheetIndex + 1 });
-          }}
-        >
-          Move right
-        </Button>
-      </div>
+      <XlsxSheetTabBar />
 
-      <Tabs
-        items={items}
-        value={activeSheetIndex === undefined ? undefined : String(activeSheetIndex)}
-        onChange={(value) => {
-          dispatch({ type: "SELECT_SHEET", sheetIndex: Number.parseInt(value, 10) });
-        }}
-        size="sm"
-        style={{ flex: 1, minHeight: 0 }}
-      />
+      {activeSheet && activeSheetIndex !== undefined && (
+        <div style={{ display: "flex", flexDirection: "column", gap: spacingTokens.sm, minHeight: 0, flex: 1 }}>
+          <XlsxWorkbookToolbar
+            sheetIndex={activeSheetIndex}
+            isFormatPanelOpen={isFormatPanelOpen}
+            onToggleFormatPanel={() => setIsFormatPanelOpen((v) => !v)}
+          />
+          <div style={{ flex: 1, minHeight: 0, display: "flex", gap: spacingTokens.sm }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <XlsxSheetGrid sheetIndex={activeSheetIndex} metrics={grid} />
+            </div>
+            {isFormatPanelOpen && (
+              <XlsxCellFormatPanel sheetIndex={activeSheetIndex} onClose={() => setIsFormatPanelOpen(false)} />
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
