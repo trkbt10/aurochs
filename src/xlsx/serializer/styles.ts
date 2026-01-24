@@ -297,6 +297,15 @@ export function serializeCellStyles(cellStyles: readonly XlsxCellStyle[]): XmlEl
 // StyleSheet Serialization (Main Entry Point)
 // =============================================================================
 
+function serializeIndexedColors(indexedColors: readonly string[]): XmlElement | undefined {
+  if (indexedColors.length === 0) {
+    return undefined;
+  }
+
+  const children = indexedColors.map((rgb) => createElement("rgbColor", { rgb }));
+  return createElement("colors", {}, [createElement("indexedColors", {}, children)]);
+}
+
 /**
  * Serialize XlsxStyleSheet to an XML styleSheet element.
  *
@@ -308,7 +317,8 @@ export function serializeCellStyles(cellStyles: readonly XlsxCellStyle[]): XmlEl
  * 5. cellStyleXfs
  * 6. cellXfs
  * 7. cellStyles
- * (dxfs, tableStyles, colors, extLst are omitted in this implementation)
+ * 8. colors (optional - only if indexedColors exist)
+ * (dxfs, tableStyles, extLst are omitted in this implementation)
  *
  * @param styleSheet - The stylesheet to serialize
  * @returns XmlElement representing the styleSheet
@@ -348,6 +358,14 @@ export function serializeStyleSheet(styleSheet: XlsxStyleSheet): XmlElement {
 
   // 7. cellStyles
   children.push(serializeCellStyles(styleSheet.cellStyles));
+
+  // 8. colors (optional - only if indexedColors exist)
+  if (styleSheet.indexedColors) {
+    const colorsEl = serializeIndexedColors(styleSheet.indexedColors);
+    if (colorsEl) {
+      children.push(colorsEl);
+    }
+  }
 
   return createElement(
     "styleSheet",

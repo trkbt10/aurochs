@@ -128,6 +128,26 @@ export type XlsxSheetView = {
 };
 
 // =============================================================================
+// Sheet Format Properties
+// =============================================================================
+
+/**
+ * Worksheet default formatting properties.
+ *
+ * Corresponds to `worksheet/sheetFormatPr` in SpreadsheetML.
+ *
+ * @see ECMA-376 Part 4, Section 18.3.1.82 (sheetFormatPr)
+ */
+export type XlsxSheetFormatPr = {
+  /** Default row height in points */
+  readonly defaultRowHeight?: number;
+  /** Default column width in character units */
+  readonly defaultColWidth?: number;
+  /** Whether the default row height is zero */
+  readonly zeroHeight?: boolean;
+};
+
+// =============================================================================
 // Worksheet
 // =============================================================================
 
@@ -151,6 +171,8 @@ export type XlsxWorksheet = {
   readonly dimension?: CellRange;
   /** Sheet view configuration */
   readonly sheetView?: XlsxSheetView;
+  /** Default sheet formatting (sheetFormatPr) */
+  readonly sheetFormatPr?: XlsxSheetFormatPr;
   /**
    * Sheet tab color (from `worksheet/sheetPr/tabColor`).
    *

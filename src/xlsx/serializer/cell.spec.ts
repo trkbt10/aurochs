@@ -158,6 +158,18 @@ describe("serializeCellValue", () => {
     expect(result.v).toBe("42");
   });
 
+  it("should serialize non-finite number values as #NUM! errors", () => {
+    const sharedStrings = createMockSharedStrings();
+
+    const cases: number[] = [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY];
+    for (const v of cases) {
+      const value: CellValue = { type: "number", value: v };
+      const result = serializeCellValue(value, sharedStrings);
+      expect(result.t).toBe("e");
+      expect(result.v).toBe("#NUM!");
+    }
+  });
+
   it("should serialize float number value", () => {
     const value: CellValue = { type: "number", value: 3.14159 };
     const sharedStrings = createMockSharedStrings();
@@ -271,6 +283,17 @@ describe("serializeCell", () => {
     const element = serializeCell(cell, sharedStrings);
     const xml = serializeElement(element);
     expect(xml).toBe('<c r="A1"><v>42</v></c>');
+  });
+
+  it("should serialize cell with non-finite number value as #NUM! error", () => {
+    const cell: Cell = {
+      address: addr(1, 1),
+      value: { type: "number", value: Number.POSITIVE_INFINITY },
+    };
+    const sharedStrings = createMockSharedStrings();
+    const element = serializeCell(cell, sharedStrings);
+    const xml = serializeElement(element);
+    expect(xml).toBe('<c r="A1" t="e"><v>#NUM!</v></c>');
   });
 
   it("should serialize cell with string value", () => {

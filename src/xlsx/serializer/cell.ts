@@ -195,6 +195,9 @@ export function serializeCellValue(
 ): CellValueSerializeResult {
   switch (value.type) {
     case "number":
+      if (!Number.isFinite(value.value)) {
+        return { t: "e", v: "#NUM!" };
+      }
       // Number type: t attribute is omitted (default is "n")
       return { v: String(value.value) };
 

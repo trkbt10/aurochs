@@ -329,6 +329,33 @@ export function serializeMergeCells(
 }
 
 // =============================================================================
+// sheetFormatPr Serialization
+// =============================================================================
+
+function serializeSheetFormatPr(worksheet: XlsxWorksheet): XmlElement | undefined {
+  const pr = worksheet.sheetFormatPr;
+  if (!pr) {
+    return undefined;
+  }
+  if (pr.defaultRowHeight === undefined && pr.defaultColWidth === undefined && pr.zeroHeight === undefined) {
+    return undefined;
+  }
+
+  const attrs: Record<string, string> = {};
+  if (pr.defaultRowHeight !== undefined) {
+    attrs.defaultRowHeight = serializeFloat(pr.defaultRowHeight);
+  }
+  if (pr.defaultColWidth !== undefined) {
+    attrs.defaultColWidth = serializeFloat(pr.defaultColWidth);
+  }
+  if (pr.zeroHeight !== undefined) {
+    attrs.zeroHeight = serializeBoolean(pr.zeroHeight);
+  }
+
+  return { type: "element", name: "sheetFormatPr", attrs, children: [] };
+}
+
+// =============================================================================
 // Worksheet Serialization
 // =============================================================================
 
@@ -338,7 +365,7 @@ export function serializeMergeCells(
  * The child elements are ordered according to ECMA-376:
  * 1. dimension
  * 2. sheetViews (not implemented in this version)
- * 3. sheetFormatPr (not implemented in this version)
+ * 3. sheetFormatPr (optional)
  * 4. cols
  * 5. sheetData
  * ... (other elements)
@@ -360,6 +387,12 @@ export function serializeWorksheet(
 
   // 1. dimension
   children.push(serializeDimension(worksheet.rows));
+
+  // 3. sheetFormatPr (if present)
+  const sheetFormatPr = serializeSheetFormatPr(worksheet);
+  if (sheetFormatPr) {
+    children.push(sheetFormatPr);
+  }
 
   // 4. cols (if present)
   if (worksheet.columns && worksheet.columns.length > 0) {

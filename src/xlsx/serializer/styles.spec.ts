@@ -632,6 +632,23 @@ describe("serializeStyleSheet", () => {
     expect(cellXfsIdx).toBeLessThan(cellStylesIdx);
   });
 
+  it("should serialize indexedColors under colors when present", () => {
+    const styleSheet: XlsxStyleSheet = {
+      ...createDefaultStyleSheet(),
+      indexedColors: ["FF010203", "FFFF0010"],
+    };
+    const result = serializeElement(serializeStyleSheet(styleSheet));
+
+    expect(result).toContain("<colors>");
+    expect(result).toContain("<indexedColors>");
+    expect(result).toContain('<rgbColor rgb="FF010203"/>');
+    expect(result).toContain('<rgbColor rgb="FFFF0010"/>');
+
+    const cellStylesIdx = result.indexOf("<cellStyles");
+    const colorsIdx = result.indexOf("<colors");
+    expect(cellStylesIdx).toBeLessThan(colorsIdx);
+  });
+
   it("should serialize fonts correctly", () => {
     const styleSheet = createDefaultStyleSheet();
     const result = serializeElement(serializeStyleSheet(styleSheet));
