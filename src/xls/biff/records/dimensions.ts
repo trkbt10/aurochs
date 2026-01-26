@@ -13,20 +13,32 @@ export type DimensionsRecord = {
   readonly lastColExclusive: number;
 };
 
+/** Parse a BIFF DIMENSIONS (0x0200) record payload. */
 export function parseDimensionsRecord(data: Uint8Array): DimensionsRecord {
-  if (data.length !== 14) {
-    throw new Error(`Invalid DIMENSIONS payload length: ${data.length} (expected 14)`);
+  if (data.length !== 16 && data.length !== 14 && data.length !== 10 && data.length !== 8) {
+    throw new Error(`Invalid DIMENSIONS payload length: ${data.length} (expected 8, 10, 14, or 16)`);
   }
   const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
 
+  if (data.length === 14 || data.length === 16) {
+    return {
+      firstRow: view.getUint32(0, true),
+      lastRowExclusive: view.getUint32(4, true),
+      firstCol: view.getUint16(8, true),
+      lastColExclusive: view.getUint16(10, true),
+    };
+  }
+
+  // BIFF7 and earlier use 16-bit row indexes.
   return {
-    firstRow: view.getUint32(0, true),
-    lastRowExclusive: view.getUint32(4, true),
-    firstCol: view.getUint16(8, true),
-    lastColExclusive: view.getUint16(10, true),
+    firstRow: view.getUint16(0, true),
+    lastRowExclusive: view.getUint16(2, true),
+    firstCol: view.getUint16(4, true),
+    lastColExclusive: view.getUint16(6, true),
   };
 }
 
+/** Return true when DIMENSIONS fields indicate an empty sheet. */
 export function isEmptyDimensionsRecord(record: DimensionsRecord): boolean {
   return (
     record.firstRow === 0 &&
@@ -35,4 +47,3 @@ export function isEmptyDimensionsRecord(record: DimensionsRecord): boolean {
     record.lastColExclusive === 0
   );
 }
-

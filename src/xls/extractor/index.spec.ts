@@ -1,3 +1,7 @@
+/**
+ * @file XLS extractor tests
+ */
+
 import { BIFF_RECORD_TYPES } from "../biff/record-types";
 import { parseWorkbookStream } from "../biff/workbook-stream";
 import { extractXlsWorkbook } from "./index";
@@ -5,11 +9,10 @@ import { extractXlsWorkbook } from "./index";
 function concat(chunks: readonly Uint8Array[]): Uint8Array {
   const length = chunks.reduce((acc, c) => acc + c.length, 0);
   const out = new Uint8Array(length);
-  let offset = 0;
-  for (const c of chunks) {
-    out.set(c, offset);
-    offset += c.length;
-  }
+  chunks.reduce((offset, chunk) => {
+    out.set(chunk, offset);
+    return offset + chunk.length;
+  }, 0);
   return out;
 }
 
@@ -92,7 +95,7 @@ describe("extractXlsWorkbook", () => {
     const boundsheetAbsoluteOffset = bofGlobals.length + datemode.length + 4; // payload start of BOUNDSHEET within stream
     streamView.setUint32(boundsheetAbsoluteOffset, sheetStartOffset, true);
 
-    const parsed = parseWorkbookStream(stream);
+    const parsed = parseWorkbookStream(stream, { mode: "strict" });
     const xls = extractXlsWorkbook(parsed);
 
     expect(xls.dateSystem).toBe("1904");

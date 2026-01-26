@@ -3,6 +3,7 @@
  */
 
 import { parseMulblankRecord } from "./mulblank";
+import { createXlsWarningCollector } from "../../warnings";
 
 describe("xls/biff/records/mulblank", () => {
   it("parses row/col range and xfIndexes", () => {
@@ -26,14 +27,25 @@ describe("xls/biff/records/mulblank", () => {
     expect(() => parseMulblankRecord(new Uint8Array(7))).toThrow(/Invalid MULBLANK payload length/);
   });
 
-  it("throws on invalid column range", () => {
+  it("derives colLast from payload length when the colLast field is inconsistent", () => {
     const data = new Uint8Array(2 + 2 + 2 * 1 + 2);
     const view = new DataView(data.buffer);
     view.setUint16(0, 0, true);
     view.setUint16(2, 5, true);
     view.setUint16(4, 0, true);
     view.setUint16(6, 4, true);
-    expect(() => parseMulblankRecord(data)).toThrow(/Invalid MULBLANK column range/);
+    const collector = createXlsWarningCollector();
+    expect(parseMulblankRecord(data, { mode: "lenient", warn: collector.warn })).toMatchObject({ colFirst: 5, colLast: 5, xfIndexes: [0] });
+    expect(collector.warnings.map((w) => w.code)).toContain("MULBLANK_COLLAST_MISMATCH");
+  });
+
+  it("throws when the colLast field is inconsistent in strict mode", () => {
+    const data = new Uint8Array(2 + 2 + 2 * 1 + 2);
+    const view = new DataView(data.buffer);
+    view.setUint16(0, 0, true);
+    view.setUint16(2, 5, true);
+    view.setUint16(4, 0, true);
+    view.setUint16(6, 4, true);
+    expect(() => parseMulblankRecord(data, { mode: "strict" })).toThrow(/MULBLANK colLast mismatch/);
   });
 });
-

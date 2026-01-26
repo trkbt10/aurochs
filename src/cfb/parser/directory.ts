@@ -21,7 +21,9 @@ function parseDirectoryEntryType(v: number): CfbDirectoryEntryType {
 }
 
 function parseUtf16leName(bytes: Uint8Array, nameLenBytes: number): string {
-  if (nameLenBytes < 2) return "";
+  if (nameLenBytes < 2) {
+    return "";
+  }
   if (nameLenBytes > 64) {
     throw new CfbFormatError(`Invalid directory name length: ${nameLenBytes}`);
   }
@@ -32,6 +34,7 @@ function parseUtf16leName(bytes: Uint8Array, nameLenBytes: number): string {
   return decoder.decode(nameBytes);
 }
 
+/** Parse a CFB Directory stream (sequence of 128-byte directory entries). */
 export function parseDirectoryStream(directoryBytes: Uint8Array): readonly CfbDirectoryEntry[] {
   if (directoryBytes.length % 128 !== 0) {
     // Directory stream is sector-aligned; allow trailing bytes but keep parsing full entries only.
@@ -69,4 +72,3 @@ export function parseDirectoryStream(directoryBytes: Uint8Array): readonly CfbDi
 
   return entries;
 }
-

@@ -4,8 +4,10 @@
 
 import type { XlsxBorder, XlsxBorderStyle } from "../../xlsx/domain/style/border";
 import type { XlsXfBorderStyles } from "../domain/types";
+import type { XlsParseContext } from "../parse-context";
+import { warnOrThrow } from "../parse-context";
 
-function mapBorderStyle(v: number): XlsxBorderStyle {
+function mapBorderStyle(v: number, ctx: XlsParseContext): XlsxBorderStyle {
   switch (v) {
     case 0x00:
       return "none";
@@ -36,15 +38,25 @@ function mapBorderStyle(v: number): XlsxBorderStyle {
     case 0x0d:
       return "slantDashDot";
     default:
-      throw new Error(`Unsupported XLS border style: 0x${v.toString(16)}`);
+      try {
+        throw new Error(`Unsupported XLS border style: 0x${v.toString(16)}`);
+      } catch (err) {
+        warnOrThrow(
+          ctx,
+          { code: "BORDER_STYLE_UNSUPPORTED", where: "XF.border", message: `Unsupported XLS border style; using none: 0x${v.toString(16)}`, meta: { style: v } },
+          err instanceof Error ? err : new Error(String(err)),
+        );
+      }
+      return "none";
   }
 }
 
-export function convertXlsBorderStylesToXlsxBorder(border: XlsXfBorderStyles): XlsxBorder {
-  const left = mapBorderStyle(border.left);
-  const right = mapBorderStyle(border.right);
-  const top = mapBorderStyle(border.top);
-  const bottom = mapBorderStyle(border.bottom);
+/** Convert an XLS XF border structure into an XLSX border. */
+export function convertXlsBorderStylesToXlsxBorder(border: XlsXfBorderStyles, ctx: XlsParseContext = { mode: "strict" }): XlsxBorder {
+  const left = mapBorderStyle(border.left, ctx);
+  const right = mapBorderStyle(border.right, ctx);
+  const top = mapBorderStyle(border.top, ctx);
+  const bottom = mapBorderStyle(border.bottom, ctx);
 
   return {
     ...(left !== "none" ? { left: { style: left } } : {}),
@@ -53,4 +65,3 @@ export function convertXlsBorderStylesToXlsxBorder(border: XlsXfBorderStyles): X
     ...(bottom !== "none" ? { bottom: { style: bottom } } : {}),
   };
 }
-

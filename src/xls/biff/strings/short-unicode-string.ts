@@ -10,24 +10,18 @@ export type ShortUnicodeString = {
   readonly highByte: boolean;
 };
 
+const LATIN1_DECODER = new TextDecoder("latin1");
+const UTF16LE_DECODER = new TextDecoder("utf-16le");
+
 function decodeCompressedAscii(bytes: Uint8Array): string {
-  let out = "";
-  for (const b of bytes) {
-    out += String.fromCharCode(b);
-  }
-  return out;
+  return LATIN1_DECODER.decode(bytes);
 }
 
 function decodeUtf16Le(bytes: Uint8Array): string {
   if (bytes.length % 2 !== 0) {
     throw new Error(`Invalid UTF-16LE byte length: ${bytes.length}`);
   }
-  let out = "";
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  for (let offset = 0; offset < bytes.length; offset += 2) {
-    out += String.fromCharCode(view.getUint16(offset, true));
-  }
-  return out;
+  return UTF16LE_DECODER.decode(bytes);
 }
 
 /**
@@ -70,4 +64,3 @@ export function parseShortUnicodeString(payload: Uint8Array, cch: number): Short
 
   return { text, byteLength: totalLength, highByte };
 }
-

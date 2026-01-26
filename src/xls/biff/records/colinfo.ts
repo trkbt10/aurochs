@@ -13,9 +13,10 @@ export type ColinfoRecord = {
   readonly isCollapsed: boolean;
 };
 
+/** Parse a BIFF COLINFO (0x007D) record payload. */
 export function parseColinfoRecord(data: Uint8Array): ColinfoRecord {
-  if (data.length !== 12) {
-    throw new Error(`Invalid COLINFO payload length: ${data.length} (expected 12)`);
+  if (data.length < 10) {
+    throw new Error(`Invalid COLINFO payload length: ${data.length} (expected >= 10)`);
   }
   const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
 
@@ -24,10 +25,7 @@ export function parseColinfoRecord(data: Uint8Array): ColinfoRecord {
   const coldx = view.getUint16(4, true);
   const ixfe = view.getUint16(6, true);
   const grbit = view.getUint16(8, true);
-  const reserved = view.getUint16(10, true);
-  if (reserved !== 0) {
-    throw new Error(`Invalid COLINFO reserved field: ${reserved}`);
-  }
+  // Some XLS writers set reserved to non-zero; ignore for interoperability.
 
   return {
     colFirst,
@@ -39,4 +37,3 @@ export function parseColinfoRecord(data: Uint8Array): ColinfoRecord {
     isCollapsed: ((grbit >> 8) & 0x0010) !== 0,
   };
 }
-

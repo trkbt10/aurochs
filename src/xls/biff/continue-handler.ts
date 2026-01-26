@@ -17,14 +17,14 @@ export type ReadRecordWithContinuesResult = {
  */
 function concatUint8Arrays(chunks: Uint8Array[], totalLength: number): Uint8Array {
   const out = new Uint8Array(totalLength);
-  let writeOffset = 0;
-  for (const chunk of chunks) {
+  chunks.reduce((writeOffset, chunk) => {
     out.set(chunk, writeOffset);
-    writeOffset += chunk.length;
-  }
+    return writeOffset + chunk.length;
+  }, 0);
   return out;
 }
 
+/** Read a BIFF record and merge subsequent CONTINUE record payloads. */
 export function readRecordWithContinues(
   bytes: Uint8Array,
   offset: number,
@@ -34,32 +34,31 @@ export function readRecordWithContinues(
 
   const continues: BiffRecord[] = [];
   const chunks: Uint8Array[] = [first.data];
-  let mergedLength = first.length;
+  const merged = { length: first.length, nextOffset: offset + 4 + first.length };
 
-  let nextOffset = offset + 4 + first.length;
-  while (nextOffset < bytes.length) {
-    const next = readRecord(bytes, nextOffset, opts);
+  while (merged.nextOffset < bytes.length) {
+    const next = readRecord(bytes, merged.nextOffset, opts);
     if (next.type !== BIFF_RECORD_TYPES.CONTINUE) {
       break;
     }
 
     continues.push(next);
     chunks.push(next.data);
-    mergedLength += next.length;
-    nextOffset += 4 + next.length;
+    merged.length += next.length;
+    merged.nextOffset += 4 + next.length;
   }
 
   if (continues.length === 0) {
-    return { record: first, continues, nextOffset };
+    return { record: first, continues, nextOffset: merged.nextOffset };
   }
 
   return {
     record: {
       ...first,
-      length: mergedLength,
-      data: concatUint8Arrays(chunks, mergedLength),
+      length: merged.length,
+      data: concatUint8Arrays(chunks, merged.length),
     },
     continues,
-    nextOffset,
+    nextOffset: merged.nextOffset,
   };
 }

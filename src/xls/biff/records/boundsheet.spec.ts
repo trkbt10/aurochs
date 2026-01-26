@@ -3,6 +3,7 @@
  */
 
 import { parseBoundsheetRecord } from "./boundsheet";
+import { createXlsWarningCollector } from "../../warnings";
 
 function encodeShortUnicodeString(text: string, highByte: boolean): { cch: number; bytes: Uint8Array } {
   const cch = text.length;
@@ -125,7 +126,78 @@ describe("xls/biff/records/boundsheet", () => {
     expect(record.sheetType).toBe("vbModule");
   });
 
+  it("falls back to BIFF7-style sheet name when unicode parsing fails", () => {
+    const name = "Sheet";
+    const nameBytes = new Uint8Array([...Array.from(name).map((c) => c.charCodeAt(0))]); // no grbit byte
+
+    const data = new Uint8Array(7 + nameBytes.length);
+    const view = new DataView(data.buffer);
+    view.setUint32(0, 0, true);
+    view.setUint16(4, 0x0000, true);
+    data[6] = name.length;
+    data.set(nameBytes, 7);
+
+    const collector = createXlsWarningCollector();
+    const record = parseBoundsheetRecord(data, { mode: "lenient", warn: collector.warn });
+    expect(record.sheetName).toBe(name);
+    expect(collector.warnings.map((w) => w.code)).toContain("BOUNDSHEET_NAME_FALLBACK_LEGACY");
+  });
+
   it("throws on too-short payload", () => {
     expect(() => parseBoundsheetRecord(new Uint8Array(6))).toThrow(/too short/);
+  });
+
+  it("warns and defaults unknown sheet type in lenient mode", () => {
+    const nameBytes = new Uint8Array([0x00, 0x41]); // "A"
+    const data = new Uint8Array(7 + nameBytes.length);
+    const view = new DataView(data.buffer);
+    view.setUint32(0, 0, true);
+    // hsState=visible, dt=unknown
+    view.setUint16(4, (0xff << 8) | 0x00, true);
+    data[6] = 1;
+    data.set(nameBytes, 7);
+
+    const collector = createXlsWarningCollector();
+    const record = parseBoundsheetRecord(data, { mode: "lenient", warn: collector.warn });
+    expect(record.sheetType).toBe("worksheet");
+    expect(collector.warnings.map((w) => w.code)).toContain("BOUNDSHEET_UNKNOWN_TYPE");
+  });
+
+  it("throws on unknown sheet type in strict mode", () => {
+    const nameBytes = new Uint8Array([0x00, 0x41]); // "A"
+    const data = new Uint8Array(7 + nameBytes.length);
+    const view = new DataView(data.buffer);
+    view.setUint32(0, 0, true);
+    view.setUint16(4, (0xff << 8) | 0x00, true);
+    data[6] = 1;
+    data.set(nameBytes, 7);
+    expect(() => parseBoundsheetRecord(data, { mode: "strict" })).toThrow(/Unknown BOUNDSHEET type/);
+  });
+
+  it("warns and defaults unknown hidden state in lenient mode", () => {
+    const nameBytes = new Uint8Array([0x00, 0x41]); // "A"
+    const data = new Uint8Array(7 + nameBytes.length);
+    const view = new DataView(data.buffer);
+    view.setUint32(0, 0, true);
+    // hsState=unknown, dt=worksheet
+    view.setUint16(4, (0x00 << 8) | 0x03, true);
+    data[6] = 1;
+    data.set(nameBytes, 7);
+
+    const collector = createXlsWarningCollector();
+    const record = parseBoundsheetRecord(data, { mode: "lenient", warn: collector.warn });
+    expect(record.hiddenState).toBe("visible");
+    expect(collector.warnings.map((w) => w.code)).toContain("BOUNDSHEET_UNKNOWN_HIDDEN_STATE");
+  });
+
+  it("throws on unknown hidden state in strict mode", () => {
+    const nameBytes = new Uint8Array([0x00, 0x41]); // "A"
+    const data = new Uint8Array(7 + nameBytes.length);
+    const view = new DataView(data.buffer);
+    view.setUint32(0, 0, true);
+    view.setUint16(4, (0x00 << 8) | 0x03, true);
+    data[6] = 1;
+    data.set(nameBytes, 7);
+    expect(() => parseBoundsheetRecord(data, { mode: "strict" })).toThrow(/Unknown BOUNDSHEET hidden state/);
   });
 });

@@ -9,6 +9,7 @@ export type NumberRecord = {
   readonly value: number;
 };
 
+/** Parse a BIFF NUMBER (0x0203) record payload. */
 export function parseNumberRecord(data: Uint8Array): NumberRecord {
   if (data.length !== 14) {
     throw new Error(`Invalid NUMBER payload length: ${data.length} (expected 14)`);
@@ -22,4 +23,3 @@ export function parseNumberRecord(data: Uint8Array): NumberRecord {
     value: view.getFloat64(6, true),
   };
 }
-

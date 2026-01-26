@@ -1,3 +1,7 @@
+/**
+ * @file XLS-to-XLSX converter tests
+ */
+
 import { convertXlsToXlsx } from "./index";
 
 describe("convertXlsToXlsx", () => {
@@ -107,5 +111,52 @@ describe("convertXlsToXlsx", () => {
     const cell = wb.sheets[0]?.rows[0]?.cells[0];
     expect(cell?.value).toEqual({ type: "number", value: 11 });
     expect(cell?.formula).toEqual({ type: "normal", expression: "5+6" });
+  });
+
+  it("accepts cells that reference a style XF index by materializing a cellXf mapping", () => {
+    const wb = convertXlsToXlsx({
+      dateSystem: "1900",
+      sharedStrings: [],
+      fonts: [],
+      numberFormats: [],
+      // Only one XF and it is a style XF.
+      xfs: [
+        {
+          fontIndex: 0,
+          formatIndex: 0,
+          isStyle: true,
+          isLocked: false,
+          isHidden: false,
+          parentXfIndex: 0x0fff,
+          alignment: { horizontal: 0, vertical: 2, wrapText: false, rotation: 0, indent: 0, shrinkToFit: false },
+          attributes: {
+            hasNumberFormat: false,
+            hasFont: false,
+            hasAlignment: false,
+            hasBorder: false,
+            hasPattern: false,
+            hasProtection: false,
+          },
+          border: { left: 0, right: 0, top: 0, bottom: 0 },
+          raw: { borderColorsAndDiag: 0, fillPatternAndColors: 0 },
+        },
+      ],
+      styles: [],
+      sheets: [
+        {
+          name: "Sheet1",
+          state: "visible",
+          rows: [],
+          columns: [],
+          mergeCells: [],
+          cells: [{ row: 0, col: 0, xfIndex: 0, value: { type: "number", value: 1 } }],
+        },
+      ],
+    });
+
+    const cell = wb.sheets[0]?.rows[0]?.cells[0];
+    expect(cell?.value).toEqual({ type: "number", value: 1 });
+    expect(cell?.styleId).toBe(1);
+    expect(wb.styles.cellXfs.length).toBeGreaterThanOrEqual(2);
   });
 });

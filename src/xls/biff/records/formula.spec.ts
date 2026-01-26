@@ -1,4 +1,9 @@
+/**
+ * @file BIFF FORMULA record tests
+ */
+
 import { parseFormulaRecord } from "./formula";
+import { createXlsWarningCollector } from "../../warnings";
 
 function makeFormulaPayload(args: {
   readonly row: number;
@@ -43,6 +48,39 @@ describe("parseFormulaRecord", () => {
     });
   });
 
+  it("tolerates inconsistent cce by truncating tokens to available payload bytes", () => {
+    const numBytes = new Uint8Array(8);
+    new DataView(numBytes.buffer).setFloat64(0, 11, true);
+    const payload = makeFormulaPayload({
+      row: 0,
+      col: 0,
+      xfIndex: 0,
+      numBytes,
+      grbit: 0,
+      tokens: new Uint8Array([0xaa, 0xbb]),
+    });
+    // Overwrite cce with a larger value than available.
+    new DataView(payload.buffer).setUint16(20, 0xffff, true);
+    const collector = createXlsWarningCollector();
+    expect(parseFormulaRecord(payload, { mode: "lenient", warn: collector.warn }).tokens).toEqual(new Uint8Array([0xaa, 0xbb]));
+    expect(collector.warnings.map((w) => w.code)).toContain("FORMULA_CCE_TRUNCATED");
+  });
+
+  it("throws on inconsistent cce in strict mode", () => {
+    const numBytes = new Uint8Array(8);
+    new DataView(numBytes.buffer).setFloat64(0, 11, true);
+    const payload = makeFormulaPayload({
+      row: 0,
+      col: 0,
+      xfIndex: 0,
+      numBytes,
+      grbit: 0,
+      tokens: new Uint8Array([0xaa, 0xbb]),
+    });
+    new DataView(payload.buffer).setUint16(20, 0xffff, true);
+    expect(() => parseFormulaRecord(payload, { mode: "strict" })).toThrow(/Invalid FORMULA payload length/);
+  });
+
   it("parses string marker cached values", () => {
     const numBytes = new Uint8Array([0x00, 0, 0, 0, 0, 0, 0xff, 0xff]);
     const payload = makeFormulaPayload({
@@ -80,5 +118,18 @@ describe("parseFormulaRecord", () => {
       tokens: new Uint8Array([]),
     });
     expect(parseFormulaRecord(payload).cached).toEqual({ type: "error", value: "#DIV/0!" });
+  });
+
+  it("parses empty cached values", () => {
+    const numBytes = new Uint8Array([0x03, 0x00, 0x00, 0, 0, 0, 0xff, 0xff]);
+    const payload = makeFormulaPayload({
+      row: 0,
+      col: 0,
+      xfIndex: 0,
+      numBytes,
+      grbit: 0,
+      tokens: new Uint8Array([]),
+    });
+    expect(parseFormulaRecord(payload).cached).toEqual({ type: "empty" });
   });
 });

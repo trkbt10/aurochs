@@ -1,3 +1,7 @@
+/**
+ * @file BIFF helpers for generating XLS fixtures.
+ */
+
 export const BIFF_RECORD_TYPES = {
   // Foundation
   BOF: 0x0809,
@@ -34,29 +38,33 @@ export const BIFF_RECORD_TYPES = {
   STRING: 0x0207,
 } as const;
 
+/** Write a UInt16LE value into the given view. */
 export function u16le(view: DataView, offset: number, v: number): void {
   view.setUint16(offset, v, true);
 }
 
+/** Write a UInt32LE value into the given view. */
 export function u32le(view: DataView, offset: number, v: number): void {
   view.setUint32(offset, v >>> 0, true);
 }
 
+/** Write a UInt64LE value into the given view. */
 export function u64le(view: DataView, offset: number, v: bigint): void {
   view.setBigUint64(offset, v, true);
 }
 
+/** Concatenate multiple byte chunks into one Uint8Array. */
 export function concat(chunks: readonly Uint8Array[]): Uint8Array {
   const length = chunks.reduce((acc, c) => acc + c.length, 0);
   const out = new Uint8Array(length);
-  let offset = 0;
-  for (const c of chunks) {
-    out.set(c, offset);
-    offset += c.length;
-  }
+  chunks.reduce((offset, chunk) => {
+    out.set(chunk, offset);
+    return offset + chunk.length;
+  }, 0);
   return out;
 }
 
+/** Create a BIFF record: 4-byte header + payload. */
 export function makeRecordBytes(type: number, payload: Uint8Array): Uint8Array {
   const out = new Uint8Array(4 + payload.length);
   const view = new DataView(out.buffer);
@@ -66,6 +74,7 @@ export function makeRecordBytes(type: number, payload: Uint8Array): Uint8Array {
   return out;
 }
 
+/** Create a BOF record payload for the given substream type. */
 export function makeBofPayload(substreamType: number): Uint8Array {
   const out = new Uint8Array(16);
   const view = new DataView(out.buffer);
@@ -78,6 +87,7 @@ export function makeBofPayload(substreamType: number): Uint8Array {
   return out;
 }
 
+/** Create a BOUNDSHEET record payload. */
 export function makeBoundsheetPayload(args: {
   readonly lbPlyPos: number;
   readonly hiddenState: 0 | 1 | 2;
@@ -110,6 +120,7 @@ export function makeBoundsheetPayload(args: {
   return payload;
 }
 
+/** Create an SST record payload from a list of strings. */
 export function makeSstPayload(strings: readonly { readonly text: string; readonly highByte?: boolean }[]): Uint8Array {
   const header = new Uint8Array(8);
   const view = new DataView(header.buffer);
@@ -143,6 +154,7 @@ export function makeSstPayload(strings: readonly { readonly text: string; readon
   return concat([header, ...encoded]);
 }
 
+/** Create a LABELSST record payload. */
 export function makeLabelSstPayload(args: { readonly row: number; readonly col: number; readonly xfIndex: number; readonly sstIndex: number }): Uint8Array {
   const payload = new Uint8Array(10);
   const view = new DataView(payload.buffer);
@@ -153,6 +165,7 @@ export function makeLabelSstPayload(args: { readonly row: number; readonly col: 
   return payload;
 }
 
+/** Create a NUMBER record payload. */
 export function makeNumberPayload(args: { readonly row: number; readonly col: number; readonly xfIndex: number; readonly value: number }): Uint8Array {
   const payload = new Uint8Array(14);
   const view = new DataView(payload.buffer);
@@ -163,11 +176,13 @@ export function makeNumberPayload(args: { readonly row: number; readonly col: nu
   return payload;
 }
 
+/** Encode an RK value from an integer. */
 export function encodeRkFromInt(value: number, div100: boolean): number {
   const flags = 0x02 | (div100 ? 0x01 : 0x00);
   return ((value << 2) | flags) >>> 0;
 }
 
+/** Encode an RK value from a floating-point number (stored as IEEE 754 double). */
 export function encodeRkFromFloat(value: number, div100: boolean): number {
   const buffer = new ArrayBuffer(8);
   const view = new DataView(buffer);
@@ -176,6 +191,7 @@ export function encodeRkFromFloat(value: number, div100: boolean): number {
   return (highDword | (div100 ? 0x01 : 0x00)) >>> 0;
 }
 
+/** Create an RK record payload. */
 export function makeRkPayload(args: { readonly row: number; readonly col: number; readonly xfIndex: number; readonly rk: number }): Uint8Array {
   const payload = new Uint8Array(10);
   const view = new DataView(payload.buffer);
@@ -186,6 +202,7 @@ export function makeRkPayload(args: { readonly row: number; readonly col: number
   return payload;
 }
 
+/** Create a MULRK record payload. */
 export function makeMulrkPayload(args: { readonly row: number; readonly colFirst: number; readonly rkCells: readonly { readonly xfIndex: number; readonly rk: number }[] }): Uint8Array {
   const count = args.rkCells.length;
   if (count === 0) {
@@ -206,6 +223,7 @@ export function makeMulrkPayload(args: { readonly row: number; readonly colFirst
   return payload;
 }
 
+/** Create a BLANK record payload. */
 export function makeBlankPayload(args: { readonly row: number; readonly col: number; readonly xfIndex: number }): Uint8Array {
   const payload = new Uint8Array(6);
   const view = new DataView(payload.buffer);
@@ -215,6 +233,7 @@ export function makeBlankPayload(args: { readonly row: number; readonly col: num
   return payload;
 }
 
+/** Create a MULBLANK record payload. */
 export function makeMulblankPayload(args: { readonly row: number; readonly colFirst: number; readonly xfIndexes: readonly number[] }): Uint8Array {
   if (args.xfIndexes.length === 0) {
     throw new Error("MULBLANK requires at least 1 xfIndex");
@@ -231,6 +250,7 @@ export function makeMulblankPayload(args: { readonly row: number; readonly colFi
   return payload;
 }
 
+/** Create a BOOLERR record payload. */
 export function makeBoolerrPayload(args: {
   readonly row: number;
   readonly col: number;
@@ -248,6 +268,7 @@ export function makeBoolerrPayload(args: {
   return payload;
 }
 
+/** Create a FORMULA record payload (cached result + tokens). */
 export function makeFormulaPayload(args: {
   readonly row: number;
   readonly col: number;
@@ -287,6 +308,7 @@ export function makeFormulaPayload(args: {
   return out;
 }
 
+/** Create a STRING record payload. */
 export function makeStringPayload(text: string, highByte: boolean): Uint8Array {
   const cch = text.length;
   const payload = new Uint8Array(3 + (highByte ? cch * 2 : cch));
@@ -309,6 +331,7 @@ export function makeStringPayload(text: string, highByte: boolean): Uint8Array {
   return payload;
 }
 
+/** Create a DIMENSIONS record payload. */
 export function makeDimensionsPayload(args: { readonly firstRow: number; readonly lastRowExclusive: number; readonly firstCol: number; readonly lastColExclusive: number }): Uint8Array {
   const payload = new Uint8Array(14);
   const view = new DataView(payload.buffer);
@@ -320,6 +343,7 @@ export function makeDimensionsPayload(args: { readonly firstRow: number; readonl
   return payload;
 }
 
+/** Create a ROW record payload. */
 export function makeRowPayload(args: { readonly row: number; readonly colMic: number; readonly colMac: number; readonly miyRw: number; readonly xfIndex: number }): Uint8Array {
   const payload = new Uint8Array(16);
   const view = new DataView(payload.buffer);
@@ -333,6 +357,7 @@ export function makeRowPayload(args: { readonly row: number; readonly colMic: nu
   return payload;
 }
 
+/** Create a COLINFO record payload. */
 export function makeColinfoPayload(args: { readonly colFirst: number; readonly colLast: number; readonly width256: number; readonly xfIndex: number; readonly grbit: number }): Uint8Array {
   const payload = new Uint8Array(12);
   const view = new DataView(payload.buffer);
@@ -345,6 +370,7 @@ export function makeColinfoPayload(args: { readonly colFirst: number; readonly c
   return payload;
 }
 
+/** Create a DEFCOLWIDTH record payload. */
 export function makeDefcolwidthPayload(defaultCharWidth: number): Uint8Array {
   const payload = new Uint8Array(2);
   const view = new DataView(payload.buffer);
@@ -352,6 +378,7 @@ export function makeDefcolwidthPayload(defaultCharWidth: number): Uint8Array {
   return payload;
 }
 
+/** Create a DEFAULTROWHEIGHT record payload. */
 export function makeDefaultrowheightPayload(args: { readonly flags: number; readonly miyRw: number }): Uint8Array {
   const payload = new Uint8Array(4);
   const view = new DataView(payload.buffer);
@@ -360,6 +387,7 @@ export function makeDefaultrowheightPayload(args: { readonly flags: number; read
   return payload;
 }
 
+/** Create a MERGECELLS record payload. */
 export function makeMergecellsPayload(ranges: readonly { readonly firstRow: number; readonly lastRow: number; readonly firstCol: number; readonly lastCol: number }[]): Uint8Array {
   const payload = new Uint8Array(2 + ranges.length * 8);
   const view = new DataView(payload.buffer);
@@ -375,6 +403,7 @@ export function makeMergecellsPayload(ranges: readonly { readonly firstRow: numb
   return payload;
 }
 
+/** Create a DATEMODE record payload (1900/1904 date system). */
 export function makeDatemodePayload(use1904: boolean): Uint8Array {
   const payload = new Uint8Array(2);
   const view = new DataView(payload.buffer);
@@ -382,6 +411,7 @@ export function makeDatemodePayload(use1904: boolean): Uint8Array {
   return payload;
 }
 
+/** Create a PALETTE record payload. */
 export function makePalettePayload(rgbColors: readonly { readonly r: number; readonly g: number; readonly b: number }[]): Uint8Array {
   const payload = new Uint8Array(2 + rgbColors.length * 4);
   const view = new DataView(payload.buffer);
@@ -397,6 +427,7 @@ export function makePalettePayload(rgbColors: readonly { readonly r: number; rea
   return payload;
 }
 
+/** Create a FONT record payload (simple compressed ASCII font name). */
 export function makeFontPayload(name: string): Uint8Array {
   const nameBytes = new Uint8Array(1 + name.length);
   nameBytes[0] = 0x00; // compressed
@@ -424,6 +455,7 @@ export function makeFontPayload(name: string): Uint8Array {
   return out;
 }
 
+/** Create a FORMAT record payload (compressed ASCII format code). */
 export function makeFormatPayload(formatIndex: number, formatCode: string): Uint8Array {
   const bytes = new Uint8Array(Array.from(formatCode).map((c) => c.charCodeAt(0)));
   const out = new Uint8Array(5 + bytes.length);
@@ -435,6 +467,7 @@ export function makeFormatPayload(formatIndex: number, formatCode: string): Uint
   return out;
 }
 
+/** Create an XF record payload. */
 export function makeXfPayload(args: { readonly fontIndex: number; readonly formatIndex: number; readonly isStyle: boolean; readonly parentXfIndex: number }): Uint8Array {
   const out = new Uint8Array(20);
   const view = new DataView(out.buffer);
@@ -454,6 +487,7 @@ export function makeXfPayload(args: { readonly fontIndex: number; readonly forma
   return out;
 }
 
+/** Create a built-in STYLE record payload. */
 export function makeStylePayloadBuiltIn(args: { readonly styleXfIndex: number; readonly builtInStyleId: number; readonly outlineLevel: number }): Uint8Array {
   const out = new Uint8Array(4);
   const view = new DataView(out.buffer);

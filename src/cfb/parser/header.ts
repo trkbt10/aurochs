@@ -7,13 +7,18 @@ import { CfbFormatError, CfbUnsupportedError } from "../errors";
 import type { CfbHeader } from "../types";
 
 function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
-  if (a.length !== b.length) return false;
+  if (a.length !== b.length) {
+    return false;
+  }
   for (let i = 0; i < a.length; i++) {
-    if (a[i] !== b[i]) return false;
+    if (a[i] !== b[i]) {
+      return false;
+    }
   }
   return true;
 }
 
+/** Parse the 512-byte CFB header. */
 export function parseCfbHeader(bytes: Uint8Array, opts: { readonly strict: boolean }): CfbHeader {
   if (!(bytes instanceof Uint8Array)) {
     throw new CfbFormatError("openCfb: bytes must be a Uint8Array");
@@ -84,4 +89,3 @@ export function parseCfbHeader(bytes: Uint8Array, opts: { readonly strict: boole
     difat,
   };
 }
-

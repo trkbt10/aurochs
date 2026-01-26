@@ -1,4 +1,9 @@
+/**
+ * @file BIFF formula token conversion tests
+ */
+
 import { convertBiffRpnToFormulaExpression, tryConvertBiffRpnToFormulaExpression } from "./biff-rpn-to-expression";
+import { createXlsWarningCollector } from "../warnings";
 
 describe("convertBiffRpnToFormulaExpression", () => {
   it("converts a simple arithmetic formula (=5+6)", () => {
@@ -27,9 +32,25 @@ describe("convertBiffRpnToFormulaExpression", () => {
 });
 
 describe("tryConvertBiffRpnToFormulaExpression", () => {
-  it("returns undefined on unsupported tokens", () => {
-    const expr = tryConvertBiffRpnToFormulaExpression(new Uint8Array([0x7f]), { baseRow: 0, baseCol: 0 });
+  it("warns and returns undefined on unsupported tokens in lenient mode", () => {
+    const collector = createXlsWarningCollector();
+    const expr = tryConvertBiffRpnToFormulaExpression(
+      new Uint8Array([0x7f]),
+      { baseRow: 0, baseCol: 0 },
+      { mode: "lenient", warn: collector.warn },
+    );
     expect(expr).toBeUndefined();
+    expect(collector.warnings.map((w) => w.code)).toContain("FORMULA_CONVERSION_FAILED");
+  });
+
+  it("warns and returns undefined on unsupported tokens in strict mode when a warning sink is provided", () => {
+    const collector = createXlsWarningCollector();
+    const expr = tryConvertBiffRpnToFormulaExpression(
+      new Uint8Array([0x7f]),
+      { baseRow: 0, baseCol: 0 },
+      { mode: "strict", warn: collector.warn },
+    );
+    expect(expr).toBeUndefined();
+    expect(collector.warnings.map((w) => w.code)).toContain("FORMULA_CONVERSION_FAILED");
   });
 });
-

@@ -26,15 +26,38 @@ describe("xls/biff/records/colinfo", () => {
     expect(col.isCollapsed).toBe(true);
   });
 
-  it("throws when reserved field is not zero", () => {
+  it("tolerates a non-zero reserved field for interoperability", () => {
     const data = new Uint8Array(12);
     const view = new DataView(data.buffer);
+    view.setUint16(0, 0, true);
+    view.setUint16(2, 0, true);
+    view.setUint16(4, 0, true);
+    view.setUint16(6, 0, true);
+    view.setUint16(8, 0, true);
     view.setUint16(10, 1, true);
-    expect(() => parseColinfoRecord(data)).toThrow(/Invalid COLINFO reserved field/);
+    expect(parseColinfoRecord(data)).toEqual({
+      colFirst: 0,
+      colLast: 0,
+      width256: 0,
+      xfIndex: 0,
+      isHidden: false,
+      outlineLevel: 0,
+      isCollapsed: false,
+    });
   });
 
   it("throws on invalid payload length", () => {
-    expect(() => parseColinfoRecord(new Uint8Array(11))).toThrow(/Invalid COLINFO payload length/);
+    expect(() => parseColinfoRecord(new Uint8Array(9))).toThrow(/Invalid COLINFO payload length/);
+  });
+
+  it("accepts shorter payloads by ignoring the trailing reserved bytes", () => {
+    const data = new Uint8Array(11);
+    const view = new DataView(data.buffer);
+    view.setUint16(0, 0, true);
+    view.setUint16(2, 0, true);
+    view.setUint16(4, 0, true);
+    view.setUint16(6, 0, true);
+    view.setUint16(8, 0, true);
+    expect(parseColinfoRecord(data)).toMatchObject({ colFirst: 0, colLast: 0, width256: 0, xfIndex: 0 });
   });
 });
-

@@ -2,6 +2,9 @@
  * @file BIFF8 SST record parser (Shared String Table)
  */
 
+import type { XlsParseContext } from "../../parse-context";
+import { warnOrThrow } from "../../parse-context";
+
 export type SstRecord = {
   readonly totalCount: number;
   readonly uniqueCount: number;
@@ -66,8 +69,7 @@ function skipBytes(cursor: FragmentCursor, byteLength: number): void {
   if (!Number.isInteger(byteLength) || byteLength < 0) {
     throw new Error(`SST parse error: invalid skip length: ${byteLength}`);
   }
-  let remaining = byteLength;
-  while (remaining > 0) {
+  for (let remaining = byteLength; remaining > 0; ) {
     const available = remainingBytes(cursor);
     if (available === 0) {
       advanceFragment(cursor);
@@ -95,12 +97,10 @@ function readStringChars(cursor: FragmentCursor, cch: number, initialHighByte: b
     throw new Error(`SST parse error: invalid character count: ${cch}`);
   }
 
-  let highByte = initialHighByte;
-  let remainingChars = cch;
-  let out = "";
+  const state: { highByte: boolean; remainingChars: number; out: string } = { highByte: initialHighByte, remainingChars: cch, out: "" };
 
-  while (remainingChars > 0) {
-    const bytesPerChar = highByte ? 2 : 1;
+  while (state.remainingChars > 0) {
+    const bytesPerChar = state.highByte ? 2 : 1;
     const available = remainingBytes(cursor);
     const availableChars = Math.floor(available / bytesPerChar);
 
@@ -108,24 +108,24 @@ function readStringChars(cursor: FragmentCursor, cch: number, initialHighByte: b
       if (available !== 0) {
         throw new Error("SST parse error: string data split mid-code-unit");
       }
-      highByte = readContinuationEncodingFlag(cursor);
+      state.highByte = readContinuationEncodingFlag(cursor);
       continue;
     }
 
-    const toRead = Math.min(remainingChars, availableChars);
-    if (highByte) {
+    const toRead = Math.min(state.remainingChars, availableChars);
+    if (state.highByte) {
       for (let i = 0; i < toRead; i++) {
-        out += String.fromCharCode(readUint16LE(cursor));
+        state.out += String.fromCharCode(readUint16LE(cursor));
       }
     } else {
       for (let i = 0; i < toRead; i++) {
-        out += String.fromCharCode(readUint8(cursor));
+        state.out += String.fromCharCode(readUint8(cursor));
       }
     }
-    remainingChars -= toRead;
+    state.remainingChars -= toRead;
   }
 
-  return out;
+  return state.out;
 }
 
 function parseUnicodeString(cursor: FragmentCursor): string {
@@ -136,15 +136,8 @@ function parseUnicodeString(cursor: FragmentCursor): string {
   const fExtSt = (grbit & 0x04) !== 0;
   const fRichSt = (grbit & 0x08) !== 0;
 
-  let cRun = 0;
-  if (fRichSt) {
-    cRun = readUint16LE(cursor);
-  }
-
-  let cbExtRst = 0;
-  if (fExtSt) {
-    cbExtRst = readUint32LE(cursor);
-  }
+  const cRun = fRichSt ? readUint16LE(cursor) : 0;
+  const cbExtRst = fExtSt ? readUint32LE(cursor) : 0;
 
   const value = readStringChars(cursor, cch, fHighByte);
 
@@ -165,7 +158,19 @@ function parseUnicodeString(cursor: FragmentCursor): string {
  * @param data SST payload (starts at cstTotal)
  * @param continues CONTINUE payloads (each starts at its own payload offset 0)
  */
-export function parseSstRecord(data: Uint8Array, continues: readonly Uint8Array[]): SstRecord {
+export function parseSstRecord(data: Uint8Array, continues: readonly Uint8Array[], ctx: XlsParseContext = { mode: "strict" }): SstRecord {
+  if (data.length < 8) {
+    try {
+      throw new Error(`Invalid SST payload length: ${data.length} (expected >= 8)`);
+    } catch (err) {
+      warnOrThrow(
+        ctx,
+        { code: "SST_TRUNCATED", where: "SST", message: "SST header is truncated; treating shared strings as empty.", meta: { dataLength: data.length } },
+        err instanceof Error ? err : new Error(String(err)),
+      );
+    }
+    return { totalCount: 0, uniqueCount: 0, strings: [] };
+  }
   const fragments: Uint8Array[] = [data, ...continues];
   const cursor: FragmentCursor = { fragments, fragmentIndex: 0, offset: 0 };
 
@@ -174,7 +179,21 @@ export function parseSstRecord(data: Uint8Array, continues: readonly Uint8Array[
 
   const strings: string[] = [];
   for (let i = 0; i < uniqueCount; i++) {
-    strings.push(parseUnicodeString(cursor));
+    try {
+      strings.push(parseUnicodeString(cursor));
+    } catch (err) {
+      warnOrThrow(
+        ctx,
+        {
+          code: "SST_TRUNCATED",
+          where: "SST",
+          message: `SST is truncated; returning ${strings.length} strings out of declared uniqueCount=${uniqueCount}.`,
+          meta: { uniqueCount, parsed: strings.length },
+        },
+        err instanceof Error ? err : new Error(String(err)),
+      );
+      break;
+    }
   }
 
   return { totalCount, uniqueCount, strings };

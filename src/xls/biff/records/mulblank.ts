@@ -2,6 +2,9 @@
  * @file BIFF MULBLANK record parser
  */
 
+import type { XlsParseContext } from "../../parse-context";
+import { warnOrThrow } from "../../parse-context";
+
 export type MulblankRecord = {
   readonly row: number;
   readonly colFirst: number;
@@ -9,7 +12,8 @@ export type MulblankRecord = {
   readonly xfIndexes: readonly number[];
 };
 
-export function parseMulblankRecord(data: Uint8Array): MulblankRecord {
+/** Parse a BIFF MULBLANK (0x00BE) record payload. */
+export function parseMulblankRecord(data: Uint8Array, ctx: XlsParseContext = { mode: "strict" }): MulblankRecord {
   if (data.length < 8) {
     throw new Error(`Invalid MULBLANK payload length: ${data.length} (expected >= 8)`);
   }
@@ -17,15 +21,29 @@ export function parseMulblankRecord(data: Uint8Array): MulblankRecord {
   const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
   const row = view.getUint16(0, true);
   const colFirst = view.getUint16(2, true);
-  const colLast = view.getUint16(data.length - 2, true);
-  if (colLast < colFirst) {
-    throw new Error(`Invalid MULBLANK column range: ${colFirst}..${colLast}`);
-  }
+  const declaredColLast = view.getUint16(data.length - 2, true);
 
-  const count = colLast - colFirst + 1;
-  const expectedLength = 2 + 2 + count * 2 + 2;
-  if (data.length !== expectedLength) {
-    throw new Error(`Invalid MULBLANK payload length: ${data.length} (expected ${expectedLength})`);
+  const xfBytes = data.length - 6; // row(2) + colFirst(2) + colLast(2)
+  if (xfBytes < 2 || xfBytes % 2 !== 0) {
+    throw new Error(`Invalid MULBLANK payload length: ${data.length}`);
+  }
+  const count = xfBytes / 2;
+  const colLast = colFirst + count - 1;
+  if (declaredColLast !== colLast) {
+    try {
+      throw new Error(`MULBLANK colLast mismatch: declared=${declaredColLast}, derived=${colLast}`);
+    } catch (err) {
+      warnOrThrow(
+        ctx,
+        {
+          code: "MULBLANK_COLLAST_MISMATCH",
+          where: "MULBLANK",
+          message: `MULBLANK colLast mismatch; using payload-derived value: declared=${declaredColLast}, derived=${colLast}`,
+          meta: { declaredColLast, derivedColLast: colLast, colFirst, count },
+        },
+        err instanceof Error ? err : new Error(String(err)),
+      );
+    }
   }
 
   const xfIndexes = Array.from({ length: count }, (_unused, i) => {
@@ -35,4 +53,3 @@ export function parseMulblankRecord(data: Uint8Array): MulblankRecord {
 
   return { row, colFirst, colLast, xfIndexes };
 }
-

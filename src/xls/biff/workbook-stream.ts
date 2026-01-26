@@ -10,6 +10,8 @@ import { BIFF_RECORD_TYPES } from "./record-types";
 import { readRecord } from "./record-reader";
 import type { BiffRecord } from "./types";
 import type { ErrorValue } from "../../xlsx/domain/cell/types";
+import type { XlsParseContext } from "../parse-context";
+import { isStrict, warnOrThrow } from "../parse-context";
 import {
   parseBlankRecord,
   parseBofRecord,
@@ -81,6 +83,14 @@ export type ParsedFormulaCell =
       readonly row: number;
       readonly col: number;
       readonly xfIndex: number;
+      readonly resultKind: "empty";
+      readonly formula: ParsedFormula;
+    }
+  | {
+      readonly kind: "formula";
+      readonly row: number;
+      readonly col: number;
+      readonly xfIndex: number;
       readonly resultKind: "boolean";
       readonly value: boolean;
       readonly formula: ParsedFormula;
@@ -143,37 +153,97 @@ export type WorkbookStreamParseResult = {
   readonly sheets: readonly ParsedWorksheetSubstream[];
 };
 
-function readSubstreamRecords(bytes: Uint8Array, startOffset: number): readonly BiffRecord[] {
-  // eslint-disable-next-line no-restricted-syntax
-  let offset = startOffset;
-  // eslint-disable-next-line no-restricted-syntax
-  let bofDepth = 0;
+function tryReadRecordAtOffset(bytes: Uint8Array, offset: number, startOffset: number, ctx: XlsParseContext): BiffRecord | undefined {
+  try {
+    return readRecord(bytes, offset, { strict: isStrict(ctx) });
+  } catch (err) {
+    if (isStrict(ctx)) {
+      throw err;
+    }
+    warnOrThrow(
+      ctx,
+      { code: "BIFF_SUBSTREAM_TRUNCATED", where: "readSubstreamRecords", message: "BIFF record stream truncated; stopping early.", meta: { startOffset } },
+      err instanceof Error ? err : new Error(String(err)),
+    );
+    return undefined;
+  }
+}
+
+function collectContinueRecordPayloads(records: readonly BiffRecord[], startIndex: number, endIndexExclusive: number): { readonly payloads: readonly Uint8Array[]; readonly stopIndex: number } {
+  const payloads: Uint8Array[] = [];
+  for (let i = startIndex; i < endIndexExclusive; i++) {
+    const next = records[i];
+    if (!next || next.type !== BIFF_RECORD_TYPES.CONTINUE) {
+      return { payloads, stopIndex: i };
+    }
+    payloads.push(next.data);
+  }
+  return { payloads, stopIndex: endIndexExclusive };
+}
+
+function readSubstreamRecords(bytes: Uint8Array, startOffset: number, ctx: XlsParseContext): readonly BiffRecord[] {
   const records: BiffRecord[] = [];
 
-  while (offset < bytes.length) {
-    const record = readRecord(bytes, offset);
+  const cursor: { offset: number; bofDepth: number } = { offset: startOffset, bofDepth: 0 };
+  for (; cursor.offset < bytes.length; ) {
+    const record = tryReadRecordAtOffset(bytes, cursor.offset, startOffset, ctx);
+    if (!record) {
+      break;
+    }
     records.push(record);
-    offset += 4 + record.length;
+    cursor.offset += 4 + record.length;
 
     if (record.type === BIFF_RECORD_TYPES.BOF) {
-      bofDepth += 1;
+      cursor.bofDepth += 1;
     } else if (record.type === BIFF_RECORD_TYPES.EOF) {
-      bofDepth -= 1;
-      if (bofDepth === 0) {
+      cursor.bofDepth -= 1;
+      if (cursor.bofDepth === 0) {
         return records;
       }
     }
   }
 
-  throw new Error(`Unterminated BIFF substream starting at offset ${startOffset}`);
+  if (isStrict(ctx)) {
+    throw new Error(`Unterminated BIFF substream starting at offset ${startOffset}`);
+  }
+
+  if (cursor.bofDepth > 0) {
+    try {
+      throw new Error(`Unterminated BIFF substream starting at offset ${startOffset}`);
+    } catch (err) {
+      warnOrThrow(
+        ctx,
+        {
+          code: "BIFF_SUBSTREAM_TRUNCATED",
+          where: "readSubstreamRecords",
+          message: "BIFF substream ended without matching EOF; appending EOF record.",
+          meta: { startOffset },
+        },
+        err instanceof Error ? err : new Error(String(err)),
+      );
+    }
+    records.push({ type: BIFF_RECORD_TYPES.EOF, length: 0, data: new Uint8Array(), offset: Math.min(cursor.offset, bytes.length) });
+  }
+  return records;
 }
 
-function parseWorkbookGlobals(records: readonly BiffRecord[]): WorkbookGlobals {
+function normalizeFontTable(fontsRaw: readonly FontRecord[]): readonly FontRecord[] {
+  if (fontsRaw.length <= 4) {
+    return fontsRaw;
+  }
+  const placeholder = fontsRaw[0];
+  if (!placeholder) {
+    throw new Error("FONT table is missing required default font record (index 0)");
+  }
+  return [...fontsRaw.slice(0, 4), placeholder, ...fontsRaw.slice(4)];
+}
+
+function parseWorkbookGlobals(records: readonly BiffRecord[], ctx: XlsParseContext): WorkbookGlobals {
   const bofRecord = records[0];
   if (!bofRecord || bofRecord.type !== BIFF_RECORD_TYPES.BOF) {
     throw new Error("Workbook stream must start with BOF");
   }
-  const bof = parseBofRecord(bofRecord.data);
+  const bof = parseBofRecord(bofRecord.data, ctx);
   if (bof.substreamType !== "workbookGlobals") {
     throw new Error(`Expected workbookGlobals BOF, got: ${bof.substreamType}`);
   }
@@ -184,31 +254,34 @@ function parseWorkbookGlobals(records: readonly BiffRecord[]): WorkbookGlobals {
   const xfs: XfRecord[] = [];
   const styles: StyleRecord[] = [];
 
-  let palette: PaletteRecord | undefined;
-  let dateSystem: DatemodeRecord["dateSystem"] = "1900";
-  let sharedStrings: SstRecord | undefined;
+  const globals: { palette?: PaletteRecord; dateSystem: DatemodeRecord["dateSystem"]; sharedStrings?: SstRecord } = { dateSystem: "1900" };
 
   // Skip the first BOF and last EOF.
-  // eslint-disable-next-line no-restricted-syntax
   for (let i = 1; i < records.length - 1; i++) {
     const record = records[i];
-    if (!record) continue;
+    if (!record) {
+      continue;
+    }
 
     switch (record.type) {
       case BIFF_RECORD_TYPES.BOUNDSHEET: {
-        boundsheets.push(parseBoundsheetRecord(record.data));
+        boundsheets.push(parseBoundsheetRecord(record.data, ctx));
         break;
       }
       case BIFF_RECORD_TYPES.DATEMODE: {
-        dateSystem = parseDatemodeRecord(record.data).dateSystem;
+        globals.dateSystem = parseDatemodeRecord(record.data, ctx).dateSystem;
         break;
       }
       case BIFF_RECORD_TYPES.PALETTE: {
-        palette = parsePaletteRecord(record.data);
+        globals.palette = parsePaletteRecord(record.data, ctx);
         break;
       }
       case BIFF_RECORD_TYPES.FONT: {
-        fontsRaw.push(parseFontRecord(record.data));
+        fontsRaw.push(parseFontRecord(record.data, ctx));
+        break;
+      }
+      case BIFF_RECORD_TYPES.FONT_LEGACY: {
+        fontsRaw.push(parseFontRecord(record.data, ctx));
         break;
       }
       case BIFF_RECORD_TYPES.FORMAT: {
@@ -220,21 +293,13 @@ function parseWorkbookGlobals(records: readonly BiffRecord[]): WorkbookGlobals {
         break;
       }
       case BIFF_RECORD_TYPES.STYLE: {
-        styles.push(parseStyleRecord(record.data));
+        styles.push(parseStyleRecord(record.data, ctx));
         break;
       }
       case BIFF_RECORD_TYPES.SST: {
-        const continues: Uint8Array[] = [];
-        // eslint-disable-next-line no-restricted-syntax
-        let j = i + 1;
-        while (j < records.length - 1) {
-          const next = records[j];
-          if (!next || next.type !== BIFF_RECORD_TYPES.CONTINUE) break;
-          continues.push(next.data);
-          j += 1;
-        }
-        sharedStrings = parseSstRecord(record.data, continues);
-        i = j - 1;
+        const { payloads, stopIndex } = collectContinueRecordPayloads(records, i + 1, records.length - 1);
+        globals.sharedStrings = parseSstRecord(record.data, payloads, ctx);
+        i = stopIndex - 1;
         break;
       }
       default:
@@ -242,18 +307,9 @@ function parseWorkbookGlobals(records: readonly BiffRecord[]): WorkbookGlobals {
     }
   }
 
-  const fonts: FontRecord[] = (() => {
-    if (fontsRaw.length <= 4) {
-      return fontsRaw;
-    }
-    const placeholder = fontsRaw[0];
-    if (!placeholder) {
-      throw new Error("FONT table is missing required default font record (index 0)");
-    }
-    return [...fontsRaw.slice(0, 4), placeholder, ...fontsRaw.slice(4)];
-  })();
+  const fonts = normalizeFontTable(fontsRaw);
 
-  return { bof, dateSystem, boundsheets, sharedStrings, palette, fonts, formats, xfs, styles };
+  return { bof, dateSystem: globals.dateSystem, boundsheets, sharedStrings: globals.sharedStrings, palette: globals.palette, fonts, formats, xfs, styles };
 }
 
 function toParsedCellFromNumberRecord(record: NumberRecord): ParsedCell {
@@ -289,6 +345,8 @@ function toParsedCellFromFormulaRecord(record: FormulaRecord, stringValue?: stri
   switch (record.cached.type) {
     case "number":
       return { kind: "formula", row: record.row, col: record.col, xfIndex: record.xfIndex, resultKind: "number", value: record.cached.value, formula };
+    case "empty":
+      return { kind: "formula", row: record.row, col: record.col, xfIndex: record.xfIndex, resultKind: "empty", formula };
     case "boolean":
       return { kind: "formula", row: record.row, col: record.col, xfIndex: record.xfIndex, resultKind: "boolean", value: record.cached.value, formula };
     case "error":
@@ -302,13 +360,14 @@ function toParsedCellFromFormulaRecord(record: FormulaRecord, stringValue?: stri
   }
 }
 
-export function parseWorkbookStream(bytes: Uint8Array): WorkbookStreamParseResult {
+/** Parse a workbook-stream BIFF record sequence into workbook globals + worksheet substreams. */
+export function parseWorkbookStream(bytes: Uint8Array, ctx: XlsParseContext = { mode: "strict" }): WorkbookStreamParseResult {
   if (!(bytes instanceof Uint8Array)) {
     throw new Error("parseWorkbookStream: bytes must be a Uint8Array");
   }
 
-  const globalRecords = readSubstreamRecords(bytes, 0);
-  const globals = parseWorkbookGlobals(globalRecords);
+  const globalRecords = readSubstreamRecords(bytes, 0, ctx);
+  const globals = parseWorkbookGlobals(globalRecords, ctx);
 
   const sheets: ParsedWorksheetSubstream[] = [];
   const sharedStrings = globals.sharedStrings?.strings;
@@ -318,14 +377,14 @@ export function parseWorkbookStream(bytes: Uint8Array): WorkbookStreamParseResul
       continue;
     }
 
-    const sheetRecords = readSubstreamRecords(bytes, boundsheet.streamPosition);
+    const sheetRecords = readSubstreamRecords(bytes, boundsheet.streamPosition, ctx);
     const sheetBofRecord = sheetRecords[0];
     if (!sheetBofRecord || sheetBofRecord.type !== BIFF_RECORD_TYPES.BOF) {
       throw new Error(`Sheet substream must start with BOF at offset ${boundsheet.streamPosition}`);
     }
-    const sheetBof = parseBofRecord(sheetBofRecord.data);
+    const sheetBof = parseBofRecord(sheetBofRecord.data, ctx);
     if (sheetBof.substreamType !== "worksheet") {
-      throw new Error(`Expected worksheet BOF, got: ${sheetBof.substreamType}`);
+      continue;
     }
 
     const rows: RowRecord[] = [];
@@ -333,24 +392,42 @@ export function parseWorkbookStream(bytes: Uint8Array): WorkbookStreamParseResul
     const mergeCells: MergeCellRef[] = [];
     const cells: ParsedCell[] = [];
 
-    let dimensions: DimensionsRecord | undefined;
-    let defaultColumnWidth: DefcolwidthRecord | undefined;
-    let defaultRowHeight: DefaultrowheightRecord | undefined;
+    const sheetState: {
+      dimensions?: DimensionsRecord;
+      defaultColumnWidth?: DefcolwidthRecord;
+      defaultRowHeight?: DefaultrowheightRecord;
+      pendingFormulaString?: { readonly formula: FormulaRecord };
+    } = {};
 
-    let pendingFormulaString: { readonly formula: FormulaRecord } | undefined;
-
-    // eslint-disable-next-line no-restricted-syntax
     for (let i = 1; i < sheetRecords.length - 1; i++) {
       const record = sheetRecords[i];
-      if (!record) continue;
+      if (!record) {
+        continue;
+      }
 
-      if (pendingFormulaString && record.type !== BIFF_RECORD_TYPES.STRING) {
-        throw new Error("Expected STRING record after FORMULA (string result)");
+      if (sheetState.pendingFormulaString && record.type !== BIFF_RECORD_TYPES.STRING) {
+        // In BIFF8, STRING should follow FORMULA immediately when cached type is string.
+        // Some real-world files omit it; treat missing cached string as empty and continue.
+        try {
+          throw new Error("Expected STRING record after FORMULA (string result)");
+        } catch (err) {
+          warnOrThrow(
+            ctx,
+            {
+              code: "FORMULA_CACHED_STRING_MISSING_STRING_RECORD",
+              where: "WorksheetSubstream",
+              message: "FORMULA cached string result missing following STRING record; using empty string.",
+            },
+            err instanceof Error ? err : new Error(String(err)),
+          );
+        }
+        cells.push(toParsedCellFromFormulaRecord(sheetState.pendingFormulaString.formula, ""));
+        sheetState.pendingFormulaString = undefined;
       }
 
       switch (record.type) {
         case BIFF_RECORD_TYPES.DIMENSIONS: {
-          dimensions = parseDimensionsRecord(record.data);
+          sheetState.dimensions = parseDimensionsRecord(record.data);
           break;
         }
         case BIFF_RECORD_TYPES.ROW: {
@@ -362,16 +439,16 @@ export function parseWorkbookStream(bytes: Uint8Array): WorkbookStreamParseResul
           break;
         }
         case BIFF_RECORD_TYPES.MERGECELLS: {
-          const parsed = parseMergeCellsRecord(record.data);
+          const parsed = parseMergeCellsRecord(record.data, ctx);
           mergeCells.push(...parsed.refs);
           break;
         }
         case BIFF_RECORD_TYPES.DEFCOLWIDTH: {
-          defaultColumnWidth = parseDefcolwidthRecord(record.data);
+          sheetState.defaultColumnWidth = parseDefcolwidthRecord(record.data);
           break;
         }
         case BIFF_RECORD_TYPES.DEFAULTROWHEIGHT: {
-          defaultRowHeight = parseDefaultrowheightRecord(record.data);
+          sheetState.defaultRowHeight = parseDefaultrowheightRecord(record.data);
           break;
         }
 
@@ -384,7 +461,7 @@ export function parseWorkbookStream(bytes: Uint8Array): WorkbookStreamParseResul
           break;
         }
         case BIFF_RECORD_TYPES.MULRK: {
-          const parsed = parseMulrkRecord(record.data);
+          const parsed = parseMulrkRecord(record.data, ctx);
           parsed.cells.forEach((cell, idx) => {
             cells.push({
               kind: "number",
@@ -401,7 +478,7 @@ export function parseWorkbookStream(bytes: Uint8Array): WorkbookStreamParseResul
           break;
         }
         case BIFF_RECORD_TYPES.MULBLANK: {
-          const parsed = parseMulblankRecord(record.data);
+          const parsed = parseMulblankRecord(record.data, ctx);
           parsed.xfIndexes.forEach((xfIndex, idx) => {
             cells.push({
               kind: "empty",
@@ -417,32 +494,28 @@ export function parseWorkbookStream(bytes: Uint8Array): WorkbookStreamParseResul
           break;
         }
         case BIFF_RECORD_TYPES.FORMULA: {
-          const parsed = parseFormulaRecord(record.data);
+          const parsed = parseFormulaRecord(record.data, ctx);
           if (parsed.cached.type === "string") {
-            pendingFormulaString = { formula: parsed };
+            sheetState.pendingFormulaString = { formula: parsed };
             break;
           }
           cells.push(toParsedCellFromFormulaRecord(parsed));
           break;
         }
         case BIFF_RECORD_TYPES.STRING: {
-          if (!pendingFormulaString) {
-            throw new Error("STRING record encountered without preceding FORMULA string result");
+          if (!sheetState.pendingFormulaString) {
+            break;
           }
-          const parsed: StringRecord = parseStringRecord(record.data);
-          cells.push(toParsedCellFromFormulaRecord(pendingFormulaString.formula, parsed.text));
-          pendingFormulaString = undefined;
+          const { payloads, stopIndex } = collectContinueRecordPayloads(sheetRecords, i + 1, sheetRecords.length - 1);
+          const parsed: StringRecord = parseStringRecord(record.data, payloads, ctx);
+          cells.push(toParsedCellFromFormulaRecord(sheetState.pendingFormulaString.formula, parsed.text));
+          sheetState.pendingFormulaString = undefined;
+          i = stopIndex - 1;
           break;
         }
         case BIFF_RECORD_TYPES.LABELSST: {
-          if (!sharedStrings) {
-            throw new Error("LABELSST encountered but SST was not parsed");
-          }
           const parsed = parseLabelSstRecord(record.data);
-          const value = sharedStrings[parsed.sstIndex];
-          if (value === undefined) {
-            throw new Error(`Invalid SST index: ${parsed.sstIndex}`);
-          }
+          const value = sharedStrings?.[parsed.sstIndex] ?? "";
           cells.push({ kind: "string", row: parsed.row, col: parsed.col, xfIndex: parsed.xfIndex, value });
           break;
         }
@@ -451,19 +524,32 @@ export function parseWorkbookStream(bytes: Uint8Array): WorkbookStreamParseResul
       }
     }
 
-    if (pendingFormulaString) {
-      throw new Error("FORMULA cached string ended without a following STRING record");
+    if (sheetState.pendingFormulaString) {
+      try {
+        throw new Error("FORMULA cached string ended without a following STRING record");
+      } catch (err) {
+        warnOrThrow(
+          ctx,
+          {
+            code: "FORMULA_CACHED_STRING_MISSING_STRING_RECORD",
+            where: "WorksheetSubstream",
+            message: "FORMULA cached string result ended without following STRING record; using empty string.",
+          },
+          err instanceof Error ? err : new Error(String(err)),
+        );
+      }
+      cells.push(toParsedCellFromFormulaRecord(sheetState.pendingFormulaString.formula, ""));
     }
 
     sheets.push({
       boundsheet,
       bof: sheetBof,
-      dimensions,
+      dimensions: sheetState.dimensions,
       rows,
       columns,
       mergeCells,
-      defaultColumnWidth,
-      defaultRowHeight,
+      defaultColumnWidth: sheetState.defaultColumnWidth,
+      defaultRowHeight: sheetState.defaultRowHeight,
       cells,
     });
   }

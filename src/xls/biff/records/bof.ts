@@ -1,6 +1,9 @@
 /**
- * @file BIFF8 BOF record parser
+ * @file BOF record parser (BIFF5/7/8)
  */
+
+import type { XlsParseContext } from "../../parse-context";
+import { warnOrThrow } from "../../parse-context";
 
 export type BofSubstreamType =
   | "workbookGlobals" // 0x0005
@@ -39,31 +42,65 @@ function mapSubstreamType(dt: number): BofSubstreamType {
 }
 
 /**
- * Parse a BIFF8 BOF (0x0809) record data payload.
- *
- * - Expected BIFF8 version: 0x0600
- * - Expected payload length: 16 bytes
+ * Parse a BOF (0x0809) record data payload.
  */
-export function parseBofRecord(data: Uint8Array): BofRecord {
-  if (data.length !== 16) {
-    throw new Error(`Invalid BOF payload length: ${data.length} (expected 16)`);
+export function parseBofRecord(data: Uint8Array, ctx: XlsParseContext = { mode: "strict" }): BofRecord {
+  if (data.length !== 8 && data.length !== 16) {
+    throw new Error(`Invalid BOF payload length: ${data.length} (expected 8 or 16)`);
   }
 
   const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
-  const version = view.getUint16(0, true);
-  if (version !== 0x0600) {
-    throw new Error(`Unsupported BIFF version in BOF: 0x${version.toString(16)}`);
-  }
-
+  const rawVersion = view.getUint16(0, true);
+  const version = rawVersion & 0xff00;
   const dt = view.getUint16(2, true);
 
-  return {
-    version,
-    substreamType: mapSubstreamType(dt),
-    buildId: view.getUint16(4, true),
-    buildYear: view.getUint16(6, true),
-    fileHistoryFlags: view.getUint32(8, true),
-    lowestBiffVersion: view.getUint32(12, true),
-  };
-}
+  if (version === 0x0600) {
+    if (data.length === 8) {
+      try {
+        throw new Error(`Invalid BOF payload length for BIFF8: ${data.length} (expected 16)`);
+      } catch (err) {
+        warnOrThrow(
+          ctx,
+          {
+            code: "BOF_TRUNCATED",
+            where: "BOF",
+            message: "BOF payload is truncated (BIFF8 expected 16 bytes); proceeding with defaulted fields.",
+            meta: { dataLength: data.length },
+          },
+          err instanceof Error ? err : new Error(String(err)),
+        );
+      }
+    }
+    if (data.length === 16) {
+      return {
+        version,
+        substreamType: mapSubstreamType(dt),
+        buildId: view.getUint16(4, true),
+        buildYear: view.getUint16(6, true),
+        fileHistoryFlags: view.getUint32(8, true),
+        lowestBiffVersion: view.getUint32(12, true),
+      };
+    }
+    return {
+      version,
+      substreamType: mapSubstreamType(dt),
+      buildId: view.getUint16(4, true),
+      buildYear: view.getUint16(6, true),
+      fileHistoryFlags: 0,
+      lowestBiffVersion: version,
+    };
+  }
 
+  if (version === 0x0500) {
+    return {
+      version,
+      substreamType: mapSubstreamType(dt),
+      buildId: view.getUint16(4, true),
+      buildYear: view.getUint16(6, true),
+      fileHistoryFlags: 0,
+      lowestBiffVersion: version,
+    };
+  }
+
+  throw new Error(`Unsupported BIFF version in BOF: 0x${rawVersion.toString(16)}`);
+}

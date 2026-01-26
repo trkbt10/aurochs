@@ -19,12 +19,16 @@ import type {
 type EmptyProps = Record<string, never>;
 
 function dimensionsProps(dimensions: XlsWorksheet["dimensions"]): { readonly dimensions: NonNullable<XlsWorksheet["dimensions"]> } | EmptyProps {
-  if (!dimensions) return {};
+  if (!dimensions) {
+    return {};
+  }
   return { dimensions };
 }
 
 function defaultColumnWidthProps(defaultColumnWidthChars: number | undefined): { readonly defaultColumnWidthChars: number } | EmptyProps {
-  if (defaultColumnWidthChars === undefined) return {};
+  if (defaultColumnWidthChars === undefined) {
+    return {};
+  }
   return { defaultColumnWidthChars };
 }
 
@@ -32,10 +36,13 @@ function defaultRowHeightProps(
   defaultRowHeightTwips: number | undefined,
   defaultRowZeroHeight: boolean | undefined,
 ): { readonly defaultRowHeightTwips: number; readonly defaultRowZeroHeight: boolean } | EmptyProps {
-  if (defaultRowHeightTwips === undefined || defaultRowZeroHeight === undefined) return {};
+  if (defaultRowHeightTwips === undefined || defaultRowZeroHeight === undefined) {
+    return {};
+  }
   return { defaultRowHeightTwips, defaultRowZeroHeight };
 }
 
+/** Extract an `XlsWorkbook` domain model from parsed BIFF workbook stream records. */
 export function extractXlsWorkbook(parsed: WorkbookStreamParseResult): XlsWorkbook {
   if (!parsed) {
     throw new Error("extractXlsWorkbook: parsed must be provided");
@@ -90,6 +97,8 @@ export function extractXlsWorkbook(parsed: WorkbookStreamParseResult): XlsWorkbo
           switch (cell.resultKind) {
             case "number":
               return { row: cell.row, col: cell.col, xfIndex: cell.xfIndex, value: { type: "number", value: cell.value }, formula };
+            case "empty":
+              return { row: cell.row, col: cell.col, xfIndex: cell.xfIndex, value: { type: "empty" }, formula };
             case "boolean":
               return { row: cell.row, col: cell.col, xfIndex: cell.xfIndex, value: { type: "boolean", value: cell.value }, formula };
             case "error":

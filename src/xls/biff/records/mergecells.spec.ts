@@ -3,6 +3,7 @@
  */
 
 import { parseMergeCellsRecord } from "./mergecells";
+import { createXlsWarningCollector } from "../../warnings";
 
 describe("xls/biff/records/mergecells", () => {
   it("parses refs array", () => {
@@ -29,11 +30,19 @@ describe("xls/biff/records/mergecells", () => {
     ]);
   });
 
-  it("throws on invalid payload length", () => {
+  it("warns and truncates when refs are missing in lenient mode", () => {
     const data = new Uint8Array(3);
     const view = new DataView(data.buffer);
     view.setUint16(0, 1, true);
-    expect(() => parseMergeCellsRecord(data)).toThrow(/Invalid MERGECELLS payload length/);
+    const collector = createXlsWarningCollector();
+    expect(parseMergeCellsRecord(data, { mode: "lenient", warn: collector.warn })).toEqual({ refs: [] });
+    expect(collector.warnings.map((w) => w.code)).toContain("MERGECELLS_COUNT_MISMATCH");
+  });
+
+  it("throws when refs are missing in strict mode", () => {
+    const data = new Uint8Array(3);
+    const view = new DataView(data.buffer);
+    view.setUint16(0, 1, true);
+    expect(() => parseMergeCellsRecord(data, { mode: "strict" })).toThrow(/Invalid MERGECELLS payload length/);
   });
 });
-

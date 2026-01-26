@@ -11,6 +11,7 @@ export type DefaultrowheightRecord = {
   readonly heightTwips: number;
 };
 
+/** Parse a BIFF DEFAULTROWHEIGHT (0x0225) record payload. */
 export function parseDefaultrowheightRecord(data: Uint8Array): DefaultrowheightRecord {
   if (data.length !== 4) {
     throw new Error(`Invalid DEFAULTROWHEIGHT payload length: ${data.length} (expected 4)`);
@@ -27,4 +28,3 @@ export function parseDefaultrowheightRecord(data: Uint8Array): DefaultrowheightR
     heightTwips: miyRw,
   };
 }
-

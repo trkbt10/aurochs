@@ -36,9 +36,10 @@ function mapErrorCode(code: number): ErrorValue {
   }
 }
 
+/** Parse a BIFF BOOLERR (0x0205) record payload. */
 export function parseBoolerrRecord(data: Uint8Array): BoolerrRecord {
-  if (data.length !== 8) {
-    throw new Error(`Invalid BOOLERR payload length: ${data.length} (expected 8)`);
+  if (data.length < 8) {
+    throw new Error(`Invalid BOOLERR payload length: ${data.length} (expected >= 8)`);
   }
   const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
 

@@ -4,16 +4,15 @@
 
 import { BIFF_RECORD_TYPES } from "./record-types";
 import { parseWorkbookStream } from "./workbook-stream";
+import { createXlsWarningCollector } from "../warnings";
 
 function concat(chunks: readonly Uint8Array[]): Uint8Array {
   const length = chunks.reduce((acc, c) => acc + c.length, 0);
   const out = new Uint8Array(length);
-  // eslint-disable-next-line no-restricted-syntax
-  let offset = 0;
-  for (const c of chunks) {
-    out.set(c, offset);
-    offset += c.length;
-  }
+  chunks.reduce((offset, chunk) => {
+    out.set(chunk, offset);
+    return offset + chunk.length;
+  }, 0);
   return out;
 }
 
@@ -152,7 +151,7 @@ describe("xls/biff/workbook-stream", () => {
     const boundsheetAbsoluteOffset = bofGlobals.length + 4; // payload start of BOUNDSHEET within stream
     streamView.setUint32(boundsheetAbsoluteOffset, sheetStartOffset, true);
 
-    const parsed = parseWorkbookStream(stream);
+    const parsed = parseWorkbookStream(stream, { mode: "strict" });
     expect(parsed.globals.dateSystem).toBe("1900");
     expect(parsed.globals.boundsheets).toHaveLength(1);
     expect(parsed.globals.boundsheets[0]?.sheetName).toBe("Sheet1");
@@ -200,10 +199,25 @@ describe("xls/biff/workbook-stream", () => {
     streamView.setUint32(boundsheetChartOffset, 0, true);
     streamView.setUint32(boundsheetVbOffset, 0, true);
 
-    const parsed = parseWorkbookStream(stream);
+    const parsed = parseWorkbookStream(stream, { mode: "strict" });
     expect(parsed.globals.boundsheets.map((b) => b.sheetName)).toEqual(["Sheet1", "Chart1", "Module1"]);
     expect(parsed.sheets).toHaveLength(1);
     expect(parsed.sheets[0]?.boundsheet.sheetName).toBe("Sheet1");
+  });
+
+  it("parses FONT records even when they use the legacy record id (0x0031)", () => {
+    const bofGlobals = makeRecordBytes(BIFF_RECORD_TYPES.BOF, makeBofPayload(0x0005));
+    const eofGlobals = makeRecordBytes(BIFF_RECORD_TYPES.EOF, new Uint8Array());
+
+    const fontLegacy = makeRecordBytes(0x0031, makeFontPayload("Legacy"));
+    const fontNormal = makeRecordBytes(BIFF_RECORD_TYPES.FONT, makeFontPayload("Normal"));
+    const xf = makeRecordBytes(BIFF_RECORD_TYPES.XF, makeXfPayload({ fontIndex: 1, formatIndex: 0 }));
+
+    const globalsBytes = concat([bofGlobals, fontLegacy, fontNormal, xf, eofGlobals]);
+    const parsed = parseWorkbookStream(globalsBytes, { mode: "strict" });
+
+    expect(parsed.globals.fonts.map((f) => f.name)).toEqual(["Legacy", "Normal"]);
+    expect(parsed.globals.xfs[0]?.fontIndex).toBe(1);
   });
 
   it("parses multiple sheets and preserves hidden state from BOUNDSHEET", () => {
@@ -244,7 +258,7 @@ describe("xls/biff/workbook-stream", () => {
     streamView.setUint32(boundsheet1AbsoluteOffset, sheet1StartOffset, true);
     streamView.setUint32(boundsheet2AbsoluteOffset, sheet2StartOffset, true);
 
-    const parsed = parseWorkbookStream(stream);
+    const parsed = parseWorkbookStream(stream, { mode: "strict" });
     expect(parsed.sheets.map((s) => ({ name: s.boundsheet.sheetName, state: s.boundsheet.hiddenState }))).toEqual([
       { name: "Visible", state: "visible" },
       { name: "Hidden", state: "veryHidden" },
@@ -275,8 +289,7 @@ describe("xls/biff/workbook-stream", () => {
 
     const sheetBytesList: Uint8Array[] = [];
     const startOffsets: number[] = [];
-    let currentOffset = globalsBytes.length;
-    for (let i = 0; i < sheetCount; i++) {
+    for (let i = 0, currentOffset = globalsBytes.length; i < sheetCount; i++) {
       startOffsets.push(currentOffset);
       const sheetBytes = concat([
         makeRecordBytes(BIFF_RECORD_TYPES.BOF, makeBofPayload(0x0010)),
@@ -289,13 +302,12 @@ describe("xls/biff/workbook-stream", () => {
     const stream = concat([globalsBytes, ...sheetBytesList]);
     const streamView = new DataView(stream.buffer, stream.byteOffset, stream.byteLength);
 
-    let boundsheetOffset = bofGlobals.length + 4; // payload start of first BOUNDSHEET
-    for (let i = 0; i < sheetCount; i++) {
+    for (let i = 0, boundsheetOffset = bofGlobals.length + 4; i < sheetCount; i++) {
       streamView.setUint32(boundsheetOffset, startOffsets[i] ?? 0, true);
       boundsheetOffset += boundsheets[i]?.length ?? 0;
     }
 
-    const parsed = parseWorkbookStream(stream);
+    const parsed = parseWorkbookStream(stream, { mode: "strict" });
     expect(parsed.sheets).toHaveLength(sheetCount);
     expect(parsed.sheets[0]?.boundsheet.sheetName).toBe("S1");
     expect(parsed.sheets[sheetCount - 1]?.boundsheet.sheetName).toBe(`S${sheetCount}`);
@@ -327,7 +339,7 @@ describe("xls/biff/workbook-stream", () => {
     const boundsheetAbsoluteOffset = bofGlobals.length + 4;
     streamView.setUint32(boundsheetAbsoluteOffset, sheetStartOffset, true);
 
-    expect(() => parseWorkbookStream(stream)).toThrow(/Unterminated BIFF substream/);
+    expect(() => parseWorkbookStream(stream, { mode: "strict" })).toThrow(/Unterminated BIFF substream/);
   });
 
   it("handles Simple Save padding bytes after the last substream EOF", () => {
@@ -360,7 +372,7 @@ describe("xls/biff/workbook-stream", () => {
     const boundsheetAbsoluteOffset = bofGlobals.length + 4; // payload start of BOUNDSHEET within stream
     paddedView.setUint32(boundsheetAbsoluteOffset, sheetStartOffset, true);
 
-    const parsed = parseWorkbookStream(padded);
+    const parsed = parseWorkbookStream(padded, { mode: "strict" });
     expect(parsed.sheets).toHaveLength(1);
     expect(parsed.sheets[0]?.boundsheet.sheetName).toBe("Sheet1");
   });
@@ -390,7 +402,7 @@ describe("xls/biff/workbook-stream", () => {
     const boundsheetAbsoluteOffset = bofGlobals.length + 4; // payload start of BOUNDSHEET within stream
     streamView.setUint32(boundsheetAbsoluteOffset, sheetStartOffset, true);
 
-    const parsed = parseWorkbookStream(stream);
+    const parsed = parseWorkbookStream(stream, { mode: "strict" });
     expect(parsed.sheets).toHaveLength(1);
     expect(parsed.sheets[0]?.dimensions).toBeUndefined();
     expect(parsed.sheets[0]?.cells).toEqual([]);
@@ -449,7 +461,7 @@ describe("xls/biff/workbook-stream", () => {
     const boundsheetAbsoluteOffset = bofGlobals.length + 4; // payload start of BOUNDSHEET within stream
     streamView.setUint32(boundsheetAbsoluteOffset, sheetStartOffset, true);
 
-    const parsed = parseWorkbookStream(stream);
+    const parsed = parseWorkbookStream(stream, { mode: "strict" });
     expect(parsed.sheets[0]?.cells).toEqual([
       { kind: "string", row: 0, col: 0, xfIndex: 0, value: "" },
       { kind: "string", row: 0, col: 1, xfIndex: 0, value: "日本語" },
@@ -500,7 +512,7 @@ describe("xls/biff/workbook-stream", () => {
     const boundsheetAbsoluteOffset = bofGlobals.length + 4;
     streamView.setUint32(boundsheetAbsoluteOffset, sheetStartOffset, true);
 
-    const parsed = parseWorkbookStream(stream);
+    const parsed = parseWorkbookStream(stream, { mode: "strict" });
     expect(parsed.sheets[0]?.cells).toEqual([
       { kind: "boolean", row: 0, col: 0, xfIndex: 0, value: true },
       { kind: "error", row: 0, col: 1, xfIndex: 0, value: "#DIV/0!" },
@@ -561,11 +573,53 @@ describe("xls/biff/workbook-stream", () => {
     const boundsheetAbsoluteOffset = bofGlobals.length + 4;
     streamView.setUint32(boundsheetAbsoluteOffset, sheetStartOffset, true);
 
-    const parsed = parseWorkbookStream(stream);
+    const parsed = parseWorkbookStream(stream, { mode: "strict" });
     expect(parsed.sheets[0]?.cells).toMatchObject([
       { kind: "formula", row: 0, col: 0, xfIndex: 0, resultKind: "number", value: 11 },
       { kind: "formula", row: 0, col: 1, xfIndex: 0, resultKind: "string", value: "Hi" },
     ]);
+  });
+
+  it("tolerates missing STRING records after FORMULA string results", () => {
+    const bofGlobals = makeRecordBytes(BIFF_RECORD_TYPES.BOF, makeBofPayload(0x0005));
+    const sheetName = "Sheet1";
+    const nameBytes = new Uint8Array([0x00, ...Array.from(sheetName).map((c) => c.charCodeAt(0))]);
+    const boundsheetPayload = new Uint8Array(7 + nameBytes.length);
+    const boundsheetView = new DataView(boundsheetPayload.buffer);
+    boundsheetView.setUint32(0, 0, true); // lbPlyPos placeholder
+    boundsheetView.setUint16(4, 0x0000, true); // hsState=visible, dt=worksheet
+    boundsheetPayload[6] = sheetName.length;
+    boundsheetPayload.set(nameBytes, 7);
+    const boundsheetRecord = makeRecordBytes(BIFF_RECORD_TYPES.BOUNDSHEET, boundsheetPayload);
+    const eofGlobals = makeRecordBytes(BIFF_RECORD_TYPES.EOF, new Uint8Array());
+    const globalsBytes = concat([bofGlobals, boundsheetRecord, eofGlobals]);
+    const sheetStartOffset = globalsBytes.length;
+
+    const bofSheet = makeRecordBytes(BIFF_RECORD_TYPES.BOF, makeBofPayload(0x0010));
+
+    const strNumBytes = new Uint8Array([0x00, 0, 0, 0, 0, 0, 0xff, 0xff]);
+    const strFormulaPayload = new Uint8Array(22);
+    const strFormulaView = new DataView(strFormulaPayload.buffer);
+    strFormulaView.setUint16(0, 0, true);
+    strFormulaView.setUint16(2, 1, true);
+    strFormulaView.setUint16(4, 0, true);
+    strFormulaPayload.set(strNumBytes, 6);
+    strFormulaView.setUint16(14, 0, true);
+    strFormulaView.setUint32(16, 0, true);
+    strFormulaView.setUint16(20, 0, true);
+    const strFormulaRecord = makeRecordBytes(BIFF_RECORD_TYPES.FORMULA, strFormulaPayload);
+
+    const eofSheet = makeRecordBytes(BIFF_RECORD_TYPES.EOF, new Uint8Array());
+
+    const stream = concat([globalsBytes, bofSheet, strFormulaRecord, eofSheet]);
+    const streamView = new DataView(stream.buffer, stream.byteOffset, stream.byteLength);
+    const boundsheetAbsoluteOffset = bofGlobals.length + 4;
+    streamView.setUint32(boundsheetAbsoluteOffset, sheetStartOffset, true);
+
+    const collector = createXlsWarningCollector();
+    const parsed = parseWorkbookStream(stream, { mode: "lenient", warn: collector.warn });
+    expect(parsed.sheets[0]?.cells).toMatchObject([{ kind: "formula", row: 0, col: 1, xfIndex: 0, resultKind: "string", value: "" }]);
+    expect(collector.warnings.map((w) => w.code)).toContain("FORMULA_CACHED_STRING_MISSING_STRING_RECORD");
   });
 
   it("inserts a placeholder at ifnt=04h in the FONT table", () => {
@@ -581,7 +635,7 @@ describe("xls/biff/workbook-stream", () => {
     const eofGlobals = makeRecordBytes(BIFF_RECORD_TYPES.EOF, new Uint8Array());
 
     const stream = concat([bofGlobals, fonts, xf, eofGlobals]);
-    const parsed = parseWorkbookStream(stream);
+    const parsed = parseWorkbookStream(stream, { mode: "strict" });
 
     expect(parsed.globals.fonts).toHaveLength(6);
     expect(parsed.globals.fonts[4]?.name).toBe("F0");

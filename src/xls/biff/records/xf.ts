@@ -47,9 +47,10 @@ export type XfRecord = {
   };
 };
 
+/** Parse a BIFF XF (0x00E0) record payload. */
 export function parseXfRecord(data: Uint8Array): XfRecord {
-  if (data.length !== 20) {
-    throw new Error(`Invalid XF payload length: ${data.length} (expected 20)`);
+  if (data.length !== 20 && data.length !== 16) {
+    throw new Error(`Invalid XF payload length: ${data.length} (expected 16 or 20)`);
   }
 
   const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
@@ -60,7 +61,7 @@ export function parseXfRecord(data: Uint8Array): XfRecord {
   const indent = view.getUint16(8, true);
   const border = view.getUint16(10, true);
   const borderColorsAndDiag = view.getUint32(12, true);
-  const fillPatternAndColors = view.getUint32(16, true);
+  const fillPatternAndColors = data.length === 20 ? view.getUint32(16, true) : 0;
 
   const isLocked = (flags & 0x0001) !== 0;
   const isHidden = (flags & 0x0002) !== 0;
@@ -116,4 +117,3 @@ export function parseXfRecord(data: Uint8Array): XfRecord {
     raw: { borderColorsAndDiag, fillPatternAndColors },
   };
 }
-

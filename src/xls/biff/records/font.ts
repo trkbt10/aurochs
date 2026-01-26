@@ -3,6 +3,8 @@
  */
 
 import { parseShortUnicodeString } from "../strings/short-unicode-string";
+import type { XlsParseContext } from "../../parse-context";
+import { warnOrThrow } from "../../parse-context";
 
 export type FontRecord = {
   /** Height in 1/20th point (twips) */
@@ -23,9 +25,33 @@ export type FontRecord = {
   readonly name: string;
 };
 
-export function parseFontRecord(data: Uint8Array): FontRecord {
+/** Parse a BIFF FONT (0x0231) record payload. */
+export function parseFontRecord(data: Uint8Array, ctx: XlsParseContext = { mode: "strict" }): FontRecord {
   if (data.length < 16) {
     throw new Error(`Invalid FONT payload length: ${data.length} (expected >= 16)`);
+  }
+
+  const decodeLegacyFontName = (bytes: Uint8Array): string => new TextDecoder("latin1").decode(bytes);
+
+  function parseFontName(namePayload: Uint8Array, cch: number): { readonly name: string; readonly consumedBytes: number } {
+    try {
+      const parsed = parseShortUnicodeString(namePayload, cch);
+      return { name: parsed.text, consumedBytes: parsed.byteLength };
+    } catch (err) {
+      warnOrThrow(
+        ctx,
+        {
+          code: "FONT_NAME_FALLBACK_LEGACY",
+          where: "FONT",
+          message: "Failed to parse BIFF8 short unicode font name; falling back to legacy 8-bit name decoding.",
+          meta: { cch, payloadLength: namePayload.length },
+        },
+        err instanceof Error ? err : new Error(String(err)),
+      );
+      // BIFF5/7 store the font name as an 8-bit string (no unicode flags byte).
+      const byteLen = Math.min(cch, namePayload.length);
+      return { name: decodeLegacyFontName(namePayload.subarray(0, byteLen)), consumedBytes: byteLen };
+    }
   }
 
   const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
@@ -37,15 +63,12 @@ export function parseFontRecord(data: Uint8Array): FontRecord {
   const uls = data[10] ?? 0;
   const bFamily = data[11] ?? 0;
   const bCharSet = data[12] ?? 0;
-  const reserved = data[13] ?? 0;
-  if (reserved !== 0) {
-    throw new Error(`Invalid FONT reserved field: ${reserved}`);
-  }
   const cch = data[14] ?? 0;
 
-  const nameParsed = parseShortUnicodeString(data.subarray(15), cch);
-  if (data.length !== 15 + nameParsed.byteLength) {
-    throw new Error(`Invalid FONT payload length: ${data.length} (expected ${15 + nameParsed.byteLength})`);
+  const namePayload = data.subarray(15);
+  const { name, consumedBytes } = parseFontName(namePayload, cch);
+  if (data.length < 15 + consumedBytes) {
+    throw new Error(`Invalid FONT payload length: ${data.length} (need >= ${15 + consumedBytes})`);
   }
 
   return {
@@ -60,6 +83,6 @@ export function parseFontRecord(data: Uint8Array): FontRecord {
     underline: uls,
     family: bFamily,
     charset: bCharSet,
-    name: nameParsed.text,
+    name,
   };
 }

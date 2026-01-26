@@ -47,5 +47,21 @@ describe("xls/biff/records/xf", () => {
     expect(xf.isStyle).toBe(true);
     expect(xf.parentXfIndex).toBe(0x0fff);
   });
-});
 
+  it("parses BIFF7-style XF payloads (16 bytes) with missing fill fields", () => {
+    const data = new Uint8Array(16);
+    const view = new DataView(data.buffer);
+    view.setUint16(0, 1, true); // ifnt
+    view.setUint16(2, 2, true); // ifmt
+    view.setUint16(4, 0x0001 | (0x0123 << 4), true);
+    view.setUint16(6, 0x0002, true);
+    view.setUint16(8, 0x0000, true);
+    view.setUint16(10, 0x4321, true);
+    view.setUint32(12, 0x89abcdef, true);
+
+    const xf = parseXfRecord(data);
+    expect(xf.fontIndex).toBe(1);
+    expect(xf.formatIndex).toBe(2);
+    expect(xf.raw.fillPatternAndColors).toBe(0);
+  });
+});

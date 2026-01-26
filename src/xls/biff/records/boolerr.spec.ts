@@ -1,3 +1,7 @@
+/**
+ * @file BIFF BOOLERR record tests
+ */
+
 import { parseBoolerrRecord } from "./boolerr";
 
 describe("parseBoolerrRecord", () => {
@@ -25,6 +29,14 @@ describe("parseBoolerrRecord", () => {
 
   it("throws on invalid payload length", () => {
     expect(() => parseBoolerrRecord(new Uint8Array())).toThrow(/BOOLERR/);
+  });
+
+  it("tolerates trailing padding bytes", () => {
+    const data = new Uint8Array(9);
+    data[6] = 1;
+    data[7] = 0;
+    data[8] = 0;
+    expect(parseBoolerrRecord(data).value).toEqual({ type: "boolean", value: true });
   });
 
   it("throws on unknown error code", () => {

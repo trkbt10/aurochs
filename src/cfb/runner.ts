@@ -6,6 +6,7 @@ import { ENDOFCHAIN, NOSTREAM } from "./constants";
 import { CfbFormatError } from "./errors";
 import type { CfbDirectoryEntry, CfbFile, CfbHeader, CfbListEntry } from "./types";
 import { readStreamFromFat, readStreamFromMiniFat } from "./parser/streams";
+import type { CfbWarningSink } from "./warnings";
 
 function normalizeName(name: string): string {
   return name.toUpperCase();
@@ -24,7 +25,9 @@ function walkRbTreeInOrder(entries: readonly CfbDirectoryEntry[], rootId: number
   const visited = new Set<number>();
 
   function visit(id: number): void {
-    if (id === NOSTREAM) return;
+    if (id === NOSTREAM) {
+      return;
+    }
     if (visited.has(id)) {
       throw new CfbFormatError("Directory tree has a cycle");
     }
@@ -64,6 +67,7 @@ function buildChildIndex(entries: readonly CfbDirectoryEntry[], storageId: numbe
   return map;
 }
 
+/** Create a CFB runner that resolves paths and reads streams from parsed directory + FAT/MiniFAT data. */
 export function createCfbRunner(args: {
   readonly bytes: Uint8Array;
   readonly header: CfbHeader;
@@ -72,6 +76,7 @@ export function createCfbRunner(args: {
   readonly miniFat?: Uint32Array;
   readonly miniStreamBytes?: Uint8Array;
   readonly strict: boolean;
+  readonly onWarning?: CfbWarningSink;
 }): CfbFile {
   const childIndexByStorageId = new Map<number, ReadonlyMap<string, number>>();
 
@@ -81,7 +86,9 @@ export function createCfbRunner(args: {
 
   function getChildIndex(storageId: number): ReadonlyMap<string, number> {
     const cached = childIndexByStorageId.get(storageId);
-    if (cached) return cached;
+    if (cached) {
+      return cached;
+    }
     const built = buildChildIndex(args.directory, storageId);
     childIndexByStorageId.set(storageId, built);
     return built;
@@ -92,13 +99,13 @@ export function createCfbRunner(args: {
       throw new CfbFormatError("getEntry: path must be a non-empty string[]");
     }
 
-    let currentId = 0;
+    const cursor: { currentId: number } = { currentId: 0 };
     for (let i = 0; i < path.length; i++) {
       const part = path[i];
       if (!part) {
         throw new CfbFormatError("getEntry: path contains empty segment");
       }
-      const index = getChildIndex(currentId);
+      const index = getChildIndex(cursor.currentId);
       const nextId = index.get(normalizeName(part));
       if (nextId === undefined) {
         throw new CfbFormatError(`Path not found: ${path.join("/")}`);
@@ -108,9 +115,9 @@ export function createCfbRunner(args: {
       if (!isLast && entry.type !== "storage") {
         throw new CfbFormatError(`Path segment is not a storage: ${part}`);
       }
-      currentId = nextId;
+      cursor.currentId = nextId;
     }
-    return assertEntryId(args.directory, currentId, "getEntry");
+    return assertEntryId(args.directory, cursor.currentId, "getEntry");
   }
 
   function list(path?: readonly string[]): readonly CfbListEntry[] {
@@ -138,7 +145,7 @@ export function createCfbRunner(args: {
 
     const isMini = entry.streamSize < BigInt(args.header.miniStreamCutoffSize);
     if (!isMini) {
-      return readStreamFromFat(args.bytes, args.header, args.fat, entry.startingSector, entry.streamSize, { strict: args.strict });
+      return readStreamFromFat(args.bytes, args.header, args.fat, entry.startingSector, entry.streamSize, { strict: args.strict, ...(args.onWarning ? { onWarning: args.onWarning } : {}) });
     }
 
     if (!args.miniFat || !args.miniStreamBytes) {
@@ -147,7 +154,7 @@ export function createCfbRunner(args: {
     if (entry.startingSector === ENDOFCHAIN && entry.streamSize !== 0n) {
       throw new CfbFormatError("readStream: non-empty mini stream has ENDOFCHAIN as starting sector");
     }
-    return readStreamFromMiniFat(args.miniFat, args.miniStreamBytes, args.header, entry.startingSector, entry.streamSize, { strict: args.strict });
+    return readStreamFromMiniFat(args.miniFat, args.miniStreamBytes, args.header, entry.startingSector, entry.streamSize, { strict: args.strict, ...(args.onWarning ? { onWarning: args.onWarning } : {}) });
   }
 
   function readStream(path: readonly string[]): Uint8Array {
@@ -176,4 +183,3 @@ export function createCfbRunner(args: {
     readStreamText,
   };
 }
-

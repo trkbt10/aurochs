@@ -1,3 +1,7 @@
+/**
+ * @file XLS alignment conversion tests
+ */
+
 import { convertXlsXfAlignmentToXlsxAlignment } from "./alignment";
 
 describe("convertXlsXfAlignmentToXlsxAlignment", () => {
@@ -66,4 +70,3 @@ describe("convertXlsXfAlignmentToXlsxAlignment", () => {
     ).toBeUndefined();
   });
 });
-

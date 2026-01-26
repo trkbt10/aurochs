@@ -8,6 +8,8 @@
 
 import { colIdx, rowIdx } from "../../xlsx/domain/types";
 import { indexToColumnLetter } from "../../xlsx/domain/cell/address";
+import type { XlsParseContext } from "../parse-context";
+import { warnOrThrow } from "../parse-context";
 
 export type BiffFormulaContext = {
   /** Formula cell row (0-based) */
@@ -96,11 +98,14 @@ function unwrapOnce(expr: string): string {
   if (!expr.startsWith("(") || !expr.endsWith(")")) {
     return expr;
   }
-  let depth = 0;
-  for (let i = 0; i < expr.length; i++) {
+  for (let i = 0, depth = 0; i < expr.length; i++) {
     const ch = expr[i];
-    if (ch === "(") depth += 1;
-    if (ch === ")") depth -= 1;
+    if (ch === "(") {
+      depth += 1;
+    }
+    if (ch === ")") {
+      depth -= 1;
+    }
     if (depth === 0 && i !== expr.length - 1) {
       return expr;
     }
@@ -214,8 +219,7 @@ export function convertBiffRpnToFormulaExpression(tokens: Uint8Array, ctx: BiffF
   const view = new DataView(tokens.buffer, tokens.byteOffset, tokens.byteLength);
   const stack: string[] = [];
 
-  let offset = 0;
-  while (offset < tokens.length) {
+  for (let offset = 0; offset < tokens.length; ) {
     const ptg = tokens[offset];
     if (ptg === undefined) {
       throw new Error("convertBiffRpnToFormulaExpression: unexpected end of tokens");
@@ -292,10 +296,18 @@ export function convertBiffRpnToFormulaExpression(tokens: Uint8Array, ctx: BiffF
         if (!a) {
           throw new Error(`ptg ${ptg.toString(16)}: stack underflow`);
         }
-        if (ptg === PTG.UPLUS) stack.push(`(+${a})`);
-        if (ptg === PTG.UMINUS) stack.push(`(-${a})`);
-        if (ptg === PTG.PERCENT) stack.push(`(${a}%)`);
-        if (ptg === PTG.PAREN) stack.push(`(${a})`);
+        if (ptg === PTG.UPLUS) {
+          stack.push(`(+${a})`);
+        }
+        if (ptg === PTG.UMINUS) {
+          stack.push(`(-${a})`);
+        }
+        if (ptg === PTG.PERCENT) {
+          stack.push(`(${a}%)`);
+        }
+        if (ptg === PTG.PAREN) {
+          stack.push(`(${a})`);
+        }
         break;
       }
       case PTG.ADD:
@@ -337,12 +349,33 @@ export function convertBiffRpnToFormulaExpression(tokens: Uint8Array, ctx: BiffF
   return unwrapOnce(stack[0] ?? "");
 }
 
-export function tryConvertBiffRpnToFormulaExpression(tokens: Uint8Array, ctx: BiffFormulaContext): string | undefined {
+/**
+ * Convert BIFF formula tokens to an XLSX `<f>` expression, returning `undefined` on conversion failure.
+ *
+ * When `xlsCtx` is provided, failures are reported as warnings (and may throw in strict mode).
+ */
+export function tryConvertBiffRpnToFormulaExpression(
+  tokens: Uint8Array,
+  ctx: BiffFormulaContext,
+  xlsCtx?: XlsParseContext,
+): string | undefined {
   try {
     return convertBiffRpnToFormulaExpression(tokens, ctx);
   } catch (err) {
-    // Best-effort: if we can't translate tokens, omit the formula and keep cached value.
-    void err;
+    if (xlsCtx) {
+      const msg = err instanceof Error ? err.message : String(err);
+      const warning = {
+        code: "FORMULA_CONVERSION_FAILED" as const,
+        where: "Formula",
+        message: `Failed to convert BIFF formula tokens to expression; omitting formula and keeping cached value: ${msg}`,
+        meta: { baseRow: ctx.baseRow, baseCol: ctx.baseCol, tokensLength: tokens.length },
+      };
+      if (xlsCtx.mode === "strict") {
+        xlsCtx.warn?.(warning);
+      } else {
+        warnOrThrow(xlsCtx, warning, new Error(`Failed to convert BIFF formula tokens at r=${ctx.baseRow} c=${ctx.baseCol}: ${msg}`));
+      }
+    }
     return undefined;
   }
 }

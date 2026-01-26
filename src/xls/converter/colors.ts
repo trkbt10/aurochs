@@ -4,6 +4,7 @@
 
 import type { XlsxColor } from "../../xlsx/domain/style/font";
 
+/** Convert an XLS color index into an XLSX color reference. */
 export function convertXlsColorIndexToXlsxColor(colorIndex: number): XlsxColor {
   if (!Number.isInteger(colorIndex) || colorIndex < 0) {
     throw new Error(`convertXlsColorIndexToXlsxColor: invalid colorIndex: ${colorIndex}`);
@@ -13,4 +14,3 @@ export function convertXlsColorIndexToXlsxColor(colorIndex: number): XlsxColor {
   }
   return { type: "indexed", index: colorIndex };
 }
-

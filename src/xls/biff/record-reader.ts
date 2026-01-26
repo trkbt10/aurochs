@@ -13,6 +13,7 @@ function formatHex(value: number): string {
   return `0x${value.toString(16).padStart(4, "0")}`;
 }
 
+/** Read a BIFF record header and payload bytes from a raw stream. */
 export function readRecord(bytes: Uint8Array, offset: number, opts: ReadRecordOptions = {}): BiffRecord {
   if (!Number.isInteger(offset) || offset < 0) {
     throw new Error(`Invalid BIFF record offset: ${offset}`);

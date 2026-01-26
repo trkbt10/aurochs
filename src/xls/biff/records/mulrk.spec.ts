@@ -3,6 +3,7 @@
  */
 
 import { parseMulrkRecord } from "./mulrk";
+import { createXlsWarningCollector } from "../../warnings";
 
 function encodeRkFromInt(value: number, div100: boolean): number {
   const flags = 0x02 | (div100 ? 0x01 : 0x00);
@@ -39,7 +40,7 @@ describe("xls/biff/records/mulrk", () => {
     expect(() => parseMulrkRecord(new Uint8Array(11))).toThrow(/Invalid MULRK payload length/);
   });
 
-  it("throws on invalid column range", () => {
+  it("derives colLast from payload length when the colLast field is inconsistent", () => {
     const data = new Uint8Array(2 + 2 + 6 + 2);
     const view = new DataView(data.buffer);
     view.setUint16(0, 0, true);
@@ -48,6 +49,19 @@ describe("xls/biff/records/mulrk", () => {
     view.setUint16(4, 0, true);
     view.setUint32(6, 0, true);
     view.setUint16(10, 1, true); // colLast < colFirst
-    expect(() => parseMulrkRecord(data)).toThrow(/Invalid MULRK column range/);
+    const collector = createXlsWarningCollector();
+    expect(parseMulrkRecord(data, { mode: "lenient", warn: collector.warn })).toMatchObject({ colFirst: 2, colLast: 2, cells: [{ xfIndex: 0, value: 0 }] });
+    expect(collector.warnings.map((w) => w.code)).toContain("MULRK_COLLAST_MISMATCH");
+  });
+
+  it("throws when the colLast field is inconsistent in strict mode", () => {
+    const data = new Uint8Array(2 + 2 + 6 + 2);
+    const view = new DataView(data.buffer);
+    view.setUint16(0, 0, true);
+    view.setUint16(2, 2, true);
+    view.setUint16(4, 0, true);
+    view.setUint32(6, 0, true);
+    view.setUint16(10, 1, true);
+    expect(() => parseMulrkRecord(data, { mode: "strict" })).toThrow(/MULRK colLast mismatch/);
   });
 });

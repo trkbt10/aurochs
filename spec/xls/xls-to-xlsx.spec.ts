@@ -1,3 +1,7 @@
+/**
+ * @file XLS-to-XLSX end-to-end conversion tests
+ */
+
 import { parseXls } from "../../src/xls";
 import { CFB_SIGNATURE, ENDOFCHAIN, FATSECT, FREESECT, NOSTREAM } from "../../src/cfb/constants";
 import { BIFF_RECORD_TYPES } from "../../src/xls/biff/record-types";
@@ -20,11 +24,10 @@ function u64le(view: DataView, offset: number, v: bigint): void {
 function concat(chunks: readonly Uint8Array[]): Uint8Array {
   const length = chunks.reduce((acc, c) => acc + c.length, 0);
   const out = new Uint8Array(length);
-  let offset = 0;
-  for (const c of chunks) {
-    out.set(c, offset);
-    offset += c.length;
-  }
+  chunks.reduce((offset, chunk) => {
+    out.set(chunk, offset);
+    return offset + chunk.length;
+  }, 0);
   return out;
 }
 
@@ -231,12 +234,7 @@ function buildWorkbookStreamBytes(): Uint8Array {
 
   const fontRecord = makeRecordBytes(BIFF_RECORD_TYPES.FONT, makeFontPayload("Arial"));
   const formatRecord = makeRecordBytes(BIFF_RECORD_TYPES.FORMAT, makeFormatPayload(164, "0.00"));
-  const xfStyleRecord = makeRecordBytes(BIFF_RECORD_TYPES.XF, (() => {
-    const bytes = makeXfPayload({ fontIndex: 0, formatIndex: 0 });
-    const view = new DataView(bytes.buffer);
-    view.setUint16(4, 0x0005, true); // fLocked=1 + fStyle=1
-    return bytes;
-  })());
+  const xfStyleRecord = makeRecordBytes(BIFF_RECORD_TYPES.XF, makeStyleXfPayload({ fontIndex: 0, formatIndex: 0 }));
   const xfCellRecord = makeRecordBytes(BIFF_RECORD_TYPES.XF, makeXfPayload({ fontIndex: 0, formatIndex: 164 }));
 
   const stylePayload = new Uint8Array(4);
@@ -414,6 +412,13 @@ function buildWorkbookStreamBytes(): Uint8Array {
   paddedView.setUint32(boundsheet2Start + 4, sheet2StartOffset, true);
 
   return padded;
+}
+
+function makeStyleXfPayload(args: { readonly fontIndex: number; readonly formatIndex: number }): Uint8Array {
+  const bytes = makeXfPayload(args);
+  const view = new DataView(bytes.buffer);
+  view.setUint16(4, 0x0005, true); // fLocked=1 + fStyle=1
+  return bytes;
 }
 
 describe("XLS → XLSX (end-to-end)", () => {

@@ -1,3 +1,7 @@
+/**
+ * @file XLS color index conversion tests
+ */
+
 import { convertXlsColorIndexToXlsxColor } from "./colors";
 
 describe("convertXlsColorIndexToXlsxColor", () => {

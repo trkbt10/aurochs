@@ -3,6 +3,8 @@
  */
 
 import { parseShortUnicodeString } from "../strings/short-unicode-string";
+import type { XlsParseContext } from "../../parse-context";
+import { warnOrThrow } from "../../parse-context";
 
 export type BoundsheetType =
   | "worksheet" // 0x00
@@ -33,7 +35,7 @@ function mapSheetType(dt: number): BoundsheetType {
     case 0x06:
       return "vbModule";
     default:
-      throw new Error(`Unknown BOUNDSHEET sheet type: 0x${dt.toString(16)}`);
+      throw new Error(`Unknown BOUNDSHEET type: 0x${dt.toString(16)}`);
   }
 }
 
@@ -50,12 +52,65 @@ function mapHiddenState(hsState: number): BoundsheetHiddenState {
   }
 }
 
+function resolveSheetType(dt: number, ctx: XlsParseContext): BoundsheetType {
+  try {
+    return mapSheetType(dt);
+  } catch (err) {
+    warnOrThrow(
+      ctx,
+      { code: "BOUNDSHEET_UNKNOWN_TYPE", where: "BOUNDSHEET", message: `Unknown BOUNDSHEET type; defaulting to worksheet: 0x${dt.toString(16)}`, meta: { dt } },
+      err instanceof Error ? err : new Error(String(err)),
+    );
+    return "worksheet";
+  }
+}
+
+function resolveHiddenState(hsState: number, ctx: XlsParseContext): BoundsheetHiddenState {
+  try {
+    return mapHiddenState(hsState);
+  } catch (err) {
+    warnOrThrow(
+      ctx,
+      {
+        code: "BOUNDSHEET_UNKNOWN_HIDDEN_STATE",
+        where: "BOUNDSHEET",
+        message: `Unknown BOUNDSHEET hidden state; defaulting to visible: 0x${hsState.toString(16)}`,
+        meta: { hsState },
+      },
+      err instanceof Error ? err : new Error(String(err)),
+    );
+    return "visible";
+  }
+}
+
 /**
  * Parse a BIFF8 BOUNDSHEET (0x0085) record data payload.
  */
-export function parseBoundsheetRecord(data: Uint8Array): BoundsheetRecord {
+export function parseBoundsheetRecord(data: Uint8Array, ctx: XlsParseContext = { mode: "strict" }): BoundsheetRecord {
   if (data.length < 7) {
     throw new Error(`BOUNDSHEET payload is too short: ${data.length}`);
+  }
+
+  const decodeLegacySheetName = (bytes: Uint8Array): string => new TextDecoder("latin1").decode(bytes);
+
+  function parseSheetName(namePayload: Uint8Array, cch: number): string {
+    try {
+      return parseShortUnicodeString(namePayload, cch).text;
+    } catch (err) {
+      warnOrThrow(
+        ctx,
+        {
+          code: "BOUNDSHEET_NAME_FALLBACK_LEGACY",
+          where: "BOUNDSHEET",
+          message: "Failed to parse BIFF8 short unicode sheet name; falling back to legacy 8-bit name decoding.",
+          meta: { cch, payloadLength: namePayload.length },
+        },
+        err instanceof Error ? err : new Error(String(err)),
+      );
+      // BIFF7 stores the sheet name as an 8-bit string (no unicode flags byte).
+      const byteLen = Math.min(cch, namePayload.length);
+      return decodeLegacySheetName(namePayload.subarray(0, byteLen));
+    }
   }
 
   const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
@@ -67,13 +122,12 @@ export function parseBoundsheetRecord(data: Uint8Array): BoundsheetRecord {
 
   const cch = data[6];
   const namePayload = data.subarray(7);
-  const { text: sheetName } = parseShortUnicodeString(namePayload, cch);
+  const sheetName = parseSheetName(namePayload, cch);
 
   return {
     streamPosition,
-    sheetType: mapSheetType(dt),
-    hiddenState: mapHiddenState(hsState),
+    sheetType: resolveSheetType(dt, ctx),
+    hiddenState: resolveHiddenState(hsState, ctx),
     sheetName,
   };
 }
-

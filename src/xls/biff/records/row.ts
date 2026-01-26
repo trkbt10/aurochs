@@ -21,6 +21,7 @@ export type RowRecord = {
   readonly xfIndex?: number;
 };
 
+/** Parse a BIFF ROW (0x0208) record payload. */
 export function parseRowRecord(data: Uint8Array): RowRecord {
   if (data.length !== 16) {
     throw new Error(`Invalid ROW payload length: ${data.length} (expected 16)`);
@@ -57,4 +58,3 @@ export function parseRowRecord(data: Uint8Array): RowRecord {
     ...(hasDefaultFormat ? { xfIndex: ixfeRaw & 0x0fff } : {}),
   };
 }
-

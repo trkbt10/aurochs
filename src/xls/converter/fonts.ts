@@ -36,6 +36,7 @@ function mapScript(sss: number): XlsxFont["vertAlign"] | undefined {
   }
 }
 
+/** Convert XLS font records into XLSX font entries. */
 export function convertXlsFontsToXlsxFonts(fonts: readonly XlsFont[]): readonly XlsxFont[] {
   if (!Array.isArray(fonts)) {
     throw new Error("convertXlsFontsToXlsxFonts: fonts must be an array");
@@ -60,4 +61,3 @@ export function convertXlsFontsToXlsxFonts(fonts: readonly XlsFont[]): readonly 
     ...(f.colorIndex !== 0 ? { color: convertXlsColorIndexToXlsxColor(f.colorIndex) } : {}),
   }));
 }
-

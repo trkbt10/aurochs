@@ -3,6 +3,7 @@
  */
 
 import { parseSstRecord } from "./sst";
+import { createXlsWarningCollector } from "../../warnings";
 
 function u16le(value: number): number[] {
   return [value & 0xff, (value >> 8) & 0xff];
@@ -189,5 +190,31 @@ describe("xls/biff/records/sst", () => {
     const cont = new Uint8Array([1, 2, 3, 4, 5]);
     const sst = parseSstRecord(base, [cont]);
     expect(sst.strings).toEqual(["X"]);
+  });
+
+  it("warns and truncates when the SST ends early in lenient mode", () => {
+    const data = new Uint8Array([
+      ...u32le(2), // total
+      ...u32le(2), // unique (declared 2 strings)
+      ...u16le(1),
+      0x00,
+      0x41, // only one string: "A"
+    ]);
+
+    const collector = createXlsWarningCollector();
+    const sst = parseSstRecord(data, [], { mode: "lenient", warn: collector.warn });
+    expect(sst.strings).toEqual(["A"]);
+    expect(collector.warnings.map((w) => w.code)).toContain("SST_TRUNCATED");
+  });
+
+  it("throws when the SST ends early in strict mode", () => {
+    const data = new Uint8Array([
+      ...u32le(2),
+      ...u32le(2),
+      ...u16le(1),
+      0x00,
+      0x41,
+    ]);
+    expect(() => parseSstRecord(data, [], { mode: "strict" })).toThrow(/SST/);
   });
 });

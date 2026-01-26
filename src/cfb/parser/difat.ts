@@ -7,10 +7,13 @@ import { CfbFormatError } from "../errors";
 import type { CfbHeader } from "../types";
 import { readSector } from "./sector";
 
+/** Build the DIFAT (list of FAT sector numbers). */
 export function buildDifat(bytes: Uint8Array, header: CfbHeader, opts: { readonly strict: boolean }): readonly number[] {
   const fatSectors: number[] = [];
   for (const entry of header.difat) {
-    if (entry !== FREESECT) fatSectors.push(entry);
+    if (entry !== FREESECT) {
+      fatSectors.push(entry);
+    }
   }
 
   if (header.numberOfDifatSectors === 0) {
@@ -22,10 +25,11 @@ export function buildDifat(bytes: Uint8Array, header: CfbHeader, opts: { readonl
     return fatSectors;
   }
 
-  let nextDifatSector = header.firstDifatSector;
+  const chainState: { nextDifatSector: number } = { nextDifatSector: header.firstDifatSector };
   const seen = new Set<number>();
 
   for (let i = 0; i < header.numberOfDifatSectors; i++) {
+    const nextDifatSector = chainState.nextDifatSector;
     if (nextDifatSector === ENDOFCHAIN) {
       throw new CfbFormatError("DIFAT chain ended early");
     }
@@ -40,13 +44,15 @@ export function buildDifat(bytes: Uint8Array, header: CfbHeader, opts: { readonl
 
     for (let j = 0; j < entriesPerSector - 1; j++) {
       const v = view.getUint32(j * 4, true);
-      if (v !== FREESECT) fatSectors.push(v);
+      if (v !== FREESECT) {
+        fatSectors.push(v);
+      }
     }
 
-    nextDifatSector = view.getUint32((entriesPerSector - 1) * 4, true);
+    chainState.nextDifatSector = view.getUint32((entriesPerSector - 1) * 4, true);
   }
 
-  if (opts.strict && nextDifatSector !== ENDOFCHAIN) {
+  if (opts.strict && chainState.nextDifatSector !== ENDOFCHAIN) {
     throw new CfbFormatError("DIFAT chain did not end with ENDOFCHAIN");
   }
   if (opts.strict && fatSectors.length !== header.numberOfFatSectors) {
@@ -57,4 +63,3 @@ export function buildDifat(bytes: Uint8Array, header: CfbHeader, opts: { readonl
 
   return fatSectors;
 }
-

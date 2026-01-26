@@ -2,6 +2,9 @@
  * @file BIFF PALETTE record parser
  */
 
+import type { XlsParseContext } from "../../parse-context";
+import { warnOrThrow } from "../../parse-context";
+
 export type PaletteRecord = {
   /**
    * Custom palette entries, typically corresponding to indexed color slots 8..63.
@@ -23,16 +26,30 @@ function toArgbFF(rgbRed: number, rgbGreen: number, rgbBlue: number): string {
  * - ccv: 2 bytes
  * - rgch: ccv * 4 bytes (rgbRed, rgbGreen, rgbBlue, unused)
  */
-export function parsePaletteRecord(data: Uint8Array): PaletteRecord {
+export function parsePaletteRecord(data: Uint8Array, ctx: XlsParseContext = { mode: "strict" }): PaletteRecord {
   if (data.length < 2) {
     throw new Error(`Invalid PALETTE payload length: ${data.length} (expected >= 2)`);
   }
   const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
-  const ccv = view.getUint16(0, true);
-  const expected = 2 + ccv * 4;
-  if (data.length !== expected) {
-    throw new Error(`Invalid PALETTE payload length: ${data.length} (expected ${expected})`);
+  const declaredCount = view.getUint16(0, true);
+  const availableCount = Math.floor((data.length - 2) / 4);
+  if (declaredCount > availableCount) {
+    try {
+      throw new Error(`Invalid PALETTE payload length: ${data.length} (need ${2 + declaredCount * 4})`);
+    } catch (err) {
+      warnOrThrow(
+        ctx,
+        {
+          code: "PALETTE_COUNT_MISMATCH",
+          where: "PALETTE",
+          message: `PALETTE ccv exceeds available bytes; truncating: declared=${declaredCount}, available=${availableCount}`,
+          meta: { declaredCount, availableCount, dataLength: data.length },
+        },
+        err instanceof Error ? err : new Error(String(err)),
+      );
+    }
   }
+  const ccv = Math.min(declaredCount, availableCount);
 
   const colors: string[] = [];
   for (let i = 0; i < ccv; i++) {

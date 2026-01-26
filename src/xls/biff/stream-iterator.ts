@@ -16,9 +16,7 @@ export function* iterateRecords(
   bytes: Uint8Array,
   opts: IterateRecordsOptions = {},
 ): Generator<BiffRecord> {
-  // eslint-disable-next-line no-restricted-syntax
-  let offset = 0;
-  while (offset < bytes.length) {
+  for (let offset = 0; offset < bytes.length; ) {
     if (offset + 4 > bytes.length) {
       if (opts.allowTrailingBytes) {
         return;

@@ -1,3 +1,7 @@
+/**
+ * @file XLS styles conversion tests
+ */
+
 import { convertXlsStylesToXlsxStyles } from "./styles";
 
 describe("convertXlsStylesToXlsxStyles", () => {

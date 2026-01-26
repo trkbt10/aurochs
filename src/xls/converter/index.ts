@@ -7,6 +7,8 @@ import type { Cell, CellValue } from "../../xlsx/domain/cell/types";
 import type { XlsxWorkbook, XlsxWorksheet, XlsxRow, XlsxColumnDef } from "../../xlsx/domain/workbook";
 import { colIdx, rowIdx, styleId as createStyleId } from "../../xlsx/domain/types";
 import type { XlsCell, XlsCellRange, XlsDimensions, XlsWorkbook, XlsWorksheet } from "../domain/types";
+import type { XlsParseContext } from "../parse-context";
+import { warnOrThrow } from "../parse-context";
 import { convertXlsStylesToXlsxStyles } from "./styles";
 import { tryConvertBiffRpnToFormulaExpression } from "../formula/biff-rpn-to-expression";
 
@@ -14,12 +16,43 @@ function resolveStyleIdFromXfIndex(
   xfIndex: number,
   xfIndexToStyleId: readonly (ReturnType<typeof createStyleId> | undefined)[],
   where: string,
+  ctx: XlsParseContext,
 ): ReturnType<typeof createStyleId> {
+  if (!Number.isInteger(xfIndex) || xfIndex < 0 || xfIndex >= xfIndexToStyleId.length) {
+    try {
+      throw new Error(`${where}: XF index out of range: ${xfIndex} (known=${xfIndexToStyleId.length})`);
+    } catch (err) {
+      warnOrThrow(
+        ctx,
+        {
+          code: "XF_INDEX_OUT_OF_RANGE",
+          where,
+          message: `XF index out of range; using default styleId(0): ${xfIndex}`,
+          meta: { xfIndex, known: xfIndexToStyleId.length },
+        },
+        err instanceof Error ? err : new Error(String(err)),
+      );
+    }
+    return createStyleId(0);
+  }
   const resolved = xfIndexToStyleId[xfIndex];
   if (resolved === undefined) {
-    throw new Error(`${where}: XF index out of range: ${xfIndex} (known=${xfIndexToStyleId.length})`);
+    try {
+      throw new Error(`${where}: XF index has no mapped styleId: ${xfIndex} (known=${xfIndexToStyleId.length})`);
+    } catch (err) {
+      warnOrThrow(
+        ctx,
+        {
+          code: "XF_INDEX_OUT_OF_RANGE",
+          where,
+          message: `XF index has no mapped styleId; using default styleId(0): ${xfIndex}`,
+          meta: { xfIndex, known: xfIndexToStyleId.length },
+        },
+        err instanceof Error ? err : new Error(String(err)),
+      );
+    }
   }
-  return resolved;
+  return resolved ?? createStyleId(0);
 }
 
 function toCellValue(value: XlsCell["value"]): CellValue {
@@ -37,7 +70,7 @@ function toCellValue(value: XlsCell["value"]): CellValue {
   }
 }
 
-function toXlsxFormula(cell: XlsCell): Cell["formula"] | undefined {
+function toXlsxFormula(cell: XlsCell, ctx: XlsParseContext): Cell["formula"] | undefined {
   if (!cell.formula) {
     return undefined;
   }
@@ -45,7 +78,7 @@ function toXlsxFormula(cell: XlsCell): Cell["formula"] | undefined {
     return undefined;
   }
 
-  const expression = tryConvertBiffRpnToFormulaExpression(cell.formula.tokens, { baseRow: cell.row, baseCol: cell.col });
+  const expression = tryConvertBiffRpnToFormulaExpression(cell.formula.tokens, { baseRow: cell.row, baseCol: cell.col }, ctx);
   if (!expression) {
     return undefined;
   }
@@ -57,9 +90,13 @@ function toXlsxFormula(cell: XlsCell): Cell["formula"] | undefined {
   return { expression, type: "normal" };
 }
 
-function toXlsxCell(cell: XlsCell, xfIndexToStyleId: readonly (ReturnType<typeof createStyleId> | undefined)[]): Cell {
-  const style = resolveStyleIdFromXfIndex(cell.xfIndex, xfIndexToStyleId, "Cell");
-  const formula = toXlsxFormula(cell);
+function toXlsxCell(
+  cell: XlsCell,
+  xfIndexToStyleId: readonly (ReturnType<typeof createStyleId> | undefined)[],
+  ctx: XlsParseContext,
+): Cell {
+  const style = resolveStyleIdFromXfIndex(cell.xfIndex, xfIndexToStyleId, "Cell", ctx);
+  const formula = toXlsxFormula(cell, ctx);
   return {
     address: {
       row: rowIdx(cell.row + 1),
@@ -93,24 +130,31 @@ function toXlsxRange(r: XlsCellRange): CellRange {
 function toXlsxColumns(
   cols: XlsWorksheet["columns"],
   xfIndexToStyleId: readonly (ReturnType<typeof createStyleId> | undefined)[],
+  ctx: XlsParseContext,
 ): readonly XlsxColumnDef[] | undefined {
-  if (cols.length === 0) return undefined;
+  if (cols.length === 0) {
+    return undefined;
+  }
   return cols.map((c) => ({
     min: colIdx(c.colFirst + 1),
     max: colIdx(c.colLast + 1),
     width: c.width256 / 256,
     ...(c.hidden ? { hidden: true } : {}),
-    ...(c.xfIndex !== undefined ? { styleId: resolveStyleIdFromXfIndex(c.xfIndex, xfIndexToStyleId, "Column") } : {}),
+    ...(c.xfIndex !== undefined ? { styleId: resolveStyleIdFromXfIndex(c.xfIndex, xfIndexToStyleId, "Column", ctx) } : {}),
   }));
 }
 
-function toXlsxRows(sheet: XlsWorksheet, xfIndexToStyleId: readonly (ReturnType<typeof createStyleId> | undefined)[]): readonly XlsxRow[] {
+function toXlsxRows(
+  sheet: XlsWorksheet,
+  xfIndexToStyleId: readonly (ReturnType<typeof createStyleId> | undefined)[],
+  ctx: XlsParseContext,
+): readonly XlsxRow[] {
   const rowMap = new Map<number, XlsxRow>();
 
   for (const cell of sheet.cells) {
     const rowNumber = cell.row + 1;
     const current = rowMap.get(rowNumber);
-    const xlsxCell = toXlsxCell(cell, xfIndexToStyleId);
+    const xlsxCell = toXlsxCell(cell, xfIndexToStyleId, ctx);
     if (!current) {
       rowMap.set(rowNumber, { rowNumber: rowIdx(rowNumber), cells: [xlsxCell] });
     } else {
@@ -125,7 +169,7 @@ function toXlsxRows(sheet: XlsWorksheet, xfIndexToStyleId: readonly (ReturnType<
     const hidden = row.hidden ?? false;
     const height = row.heightTwips !== undefined ? row.heightTwips / 20 : undefined;
     const customHeight = row.heightTwips !== undefined ? true : undefined;
-    const rowStyleId = row.xfIndex !== undefined ? resolveStyleIdFromXfIndex(row.xfIndex, xfIndexToStyleId, "Row") : undefined;
+    const rowStyleId = row.xfIndex !== undefined ? resolveStyleIdFromXfIndex(row.xfIndex, xfIndexToStyleId, "Row", ctx) : undefined;
 
     rowMap.set(rowNumber, {
       ...current,
@@ -145,13 +189,14 @@ function toXlsxWorksheet(
   sheetId: number,
   dateSystem: XlsWorkbook["dateSystem"],
   xfIndexToStyleId: readonly (ReturnType<typeof createStyleId> | undefined)[],
+  ctx: XlsParseContext,
 ): XlsxWorksheet {
   const dimension = sheet.dimensions ? toXlsxRangeFromDimensions(sheet.dimensions) : undefined;
   const mergeCells = sheet.mergeCells.length ? sheet.mergeCells.map(toXlsxRange) : undefined;
-  const columns = toXlsxColumns(sheet.columns, xfIndexToStyleId);
-  const rows = toXlsxRows(sheet, xfIndexToStyleId);
+  const columns = toXlsxColumns(sheet.columns, xfIndexToStyleId, ctx);
+  const rows = toXlsxRows(sheet, xfIndexToStyleId, ctx);
 
-  const sheetFormatPr: NonNullable<XlsxWorksheet["sheetFormatPr"]> = {};
+  const sheetFormatPr: { defaultRowHeight?: number; defaultColWidth?: number; zeroHeight?: boolean } = {};
   if (sheet.defaultRowHeightTwips !== undefined) {
     sheetFormatPr.defaultRowHeight = sheet.defaultRowHeightTwips / 20;
   }
@@ -176,13 +221,14 @@ function toXlsxWorksheet(
   };
 }
 
-export function convertXlsToXlsx(xls: XlsWorkbook): XlsxWorkbook {
+/** Convert an `XlsWorkbook` domain model into an `XlsxWorkbook`. */
+export function convertXlsToXlsx(xls: XlsWorkbook, ctx: XlsParseContext = { mode: "strict" }): XlsxWorkbook {
   if (!xls) {
     throw new Error("convertXlsToXlsx: xls must be provided");
   }
 
-  const { styles, xfIndexToStyleId } = convertXlsStylesToXlsxStyles(xls);
-  const sheets: XlsxWorksheet[] = xls.sheets.map((s, idx) => toXlsxWorksheet(s, idx + 1, xls.dateSystem, xfIndexToStyleId));
+  const { styles, xfIndexToStyleId } = convertXlsStylesToXlsxStyles(xls, ctx);
+  const sheets: XlsxWorksheet[] = xls.sheets.map((s, idx) => toXlsxWorksheet(s, idx + 1, xls.dateSystem, xfIndexToStyleId, ctx));
   return {
     dateSystem: xls.dateSystem,
     sheets,

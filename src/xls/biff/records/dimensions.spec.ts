@@ -80,4 +80,14 @@ describe("xls/biff/records/dimensions", () => {
   it("throws on invalid payload length", () => {
     expect(() => parseDimensionsRecord(new Uint8Array(13))).toThrow(/Invalid DIMENSIONS payload length/);
   });
+
+  it("parses BIFF7-style dimensions with 16-bit row indexes", () => {
+    const data = new Uint8Array(10);
+    const view = new DataView(data.buffer);
+    view.setUint16(0, 2, true);
+    view.setUint16(2, 6, true);
+    view.setUint16(4, 1, true);
+    view.setUint16(6, 4, true);
+    expect(parseDimensionsRecord(data)).toEqual({ firstRow: 2, lastRowExclusive: 6, firstCol: 1, lastColExclusive: 4 });
+  });
 });

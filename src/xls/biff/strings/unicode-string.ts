@@ -8,24 +8,40 @@ export type UnicodeString = {
   readonly highByte: boolean;
 };
 
+const LATIN1_DECODER = new TextDecoder("latin1");
+const UTF16LE_DECODER = new TextDecoder("utf-16le");
+
 function decodeCompressedAscii(bytes: Uint8Array): string {
-  let out = "";
-  for (const b of bytes) {
-    out += String.fromCharCode(b);
-  }
-  return out;
+  return LATIN1_DECODER.decode(bytes);
 }
 
 function decodeUtf16Le(bytes: Uint8Array): string {
   if (bytes.length % 2 !== 0) {
     throw new Error(`Invalid UTF-16LE byte length: ${bytes.length}`);
   }
-  let out = "";
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-  for (let offset = 0; offset < bytes.length; offset += 2) {
-    out += String.fromCharCode(view.getUint16(offset, true));
+  return UTF16LE_DECODER.decode(bytes);
+}
+
+type OffsetCursor = { offset: number };
+
+function requireAvailable(data: Uint8Array, offset: number, byteLength: number, where: string): void {
+  if (data.length < offset + byteLength) {
+    throw new Error(`Unicode string payload is too short (${where})`);
   }
-  return out;
+}
+
+function readUint16LEAt(view: DataView, cursor: OffsetCursor, data: Uint8Array, where: string): number {
+  requireAvailable(data, cursor.offset, 2, where);
+  const value = view.getUint16(cursor.offset, true);
+  cursor.offset += 2;
+  return value;
+}
+
+function readUint32LEAt(view: DataView, cursor: OffsetCursor, data: Uint8Array, where: string): number {
+  requireAvailable(data, cursor.offset, 4, where);
+  const value = view.getUint32(cursor.offset, true);
+  cursor.offset += 4;
+  return value;
 }
 
 /**
@@ -53,40 +69,20 @@ export function parseUnicodeString(data: Uint8Array): UnicodeString {
   const hasExt = (grbit & 0x04) !== 0;
   const hasRich = (grbit & 0x08) !== 0;
 
-  let offset = 3;
-  let cRun = 0;
-  if (hasRich) {
-    if (data.length < offset + 2) {
-      throw new Error("Unicode string payload is too short (missing cRun)");
-    }
-    cRun = view.getUint16(offset, true);
-    offset += 2;
-  }
-
-  let cbExtRst = 0;
-  if (hasExt) {
-    if (data.length < offset + 4) {
-      throw new Error("Unicode string payload is too short (missing cbExtRst)");
-    }
-    cbExtRst = view.getUint32(offset, true);
-    offset += 4;
-  }
+  const cursor: OffsetCursor = { offset: 3 };
+  const cRun = hasRich ? readUint16LEAt(view, cursor, data, "missing cRun") : 0;
+  const cbExtRst = hasExt ? readUint32LEAt(view, cursor, data, "missing cbExtRst") : 0;
 
   const charByteLength = highByte ? cch * 2 : cch;
-  if (data.length < offset + charByteLength) {
-    throw new Error("Unicode string payload is too short (missing character data)");
-  }
+  requireAvailable(data, cursor.offset, charByteLength, "missing character data");
 
-  const charBytes = data.subarray(offset, offset + charByteLength);
+  const charBytes = data.subarray(cursor.offset, cursor.offset + charByteLength);
   const text = highByte ? decodeUtf16Le(charBytes) : decodeCompressedAscii(charBytes);
-  offset += charByteLength;
+  cursor.offset += charByteLength;
 
   const runByteLength = cRun * 4;
-  if (data.length < offset + runByteLength + cbExtRst) {
-    throw new Error("Unicode string payload is too short (missing rich/ext data)");
-  }
-  offset += runByteLength + cbExtRst;
+  requireAvailable(data, cursor.offset, runByteLength + cbExtRst, "missing rich/ext data");
+  cursor.offset += runByteLength + cbExtRst;
 
-  return { text, byteLength: offset, highByte };
+  return { text, byteLength: cursor.offset, highByte };
 }
-

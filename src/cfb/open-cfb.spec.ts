@@ -1,3 +1,7 @@
+/**
+ * @file CFB public API tests
+ */
+
 import { openCfb } from "./index";
 import { CFB_SIGNATURE, ENDOFCHAIN, FATSECT, FREESECT, NOSTREAM } from "./constants";
 

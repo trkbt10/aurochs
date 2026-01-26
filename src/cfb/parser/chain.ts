@@ -6,12 +6,12 @@ import { ENDOFCHAIN, FREESECT, MAXREGSECT } from "../constants";
 import { CfbFormatError } from "../errors";
 import { fatGet } from "./fat";
 
+/** Walk a FAT chain starting from `startSector` until ENDOFCHAIN or error. */
 export function walkFatChain(fat: Uint32Array, startSector: number, opts: { readonly maxSteps: number }): readonly number[] {
   const out: number[] = [];
   const visited = new Set<number>();
 
-  let current = startSector;
-  for (let steps = 0; steps < opts.maxSteps; steps++) {
+  for (let steps = 0, current = startSector; steps < opts.maxSteps; steps++) {
     if (current === ENDOFCHAIN) {
       return out;
     }
@@ -32,12 +32,12 @@ export function walkFatChain(fat: Uint32Array, startSector: number, opts: { read
   throw new CfbFormatError("FAT chain exceeded max steps");
 }
 
+/** Walk a MiniFAT chain starting from `startMiniSector` until ENDOFCHAIN or error. */
 export function walkMiniFatChain(miniFat: Uint32Array, startMiniSector: number, opts: { readonly maxSteps: number }): readonly number[] {
   const out: number[] = [];
   const visited = new Set<number>();
 
-  let current = startMiniSector;
-  for (let steps = 0; steps < opts.maxSteps; steps++) {
+  for (let steps = 0, current = startMiniSector; steps < opts.maxSteps; steps++) {
     if (current === ENDOFCHAIN) {
       return out;
     }
@@ -57,4 +57,3 @@ export function walkMiniFatChain(miniFat: Uint32Array, startMiniSector: number, 
 
   throw new CfbFormatError("MiniFAT chain exceeded max steps");
 }
-

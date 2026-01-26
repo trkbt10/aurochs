@@ -1,3 +1,7 @@
+/**
+ * @file XLS fill conversion tests
+ */
+
 import { convertXlsXfToXlsxFill, parseXlsXfFill } from "./fills";
 
 describe("parseXlsXfFill", () => {

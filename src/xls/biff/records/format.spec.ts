@@ -33,5 +33,15 @@ describe("xls/biff/records/format", () => {
     ]);
     expect(parseFormatRecord(data)).toEqual({ formatIndex: 0x00a5, formatCode: "いう" });
   });
-});
 
+  it("falls back to BIFF5/7-style 8-bit format strings when BIFF8 flags are not plausible", () => {
+    const data = new Uint8Array([
+      ...u16le(0x00a4),
+      3, // cch (1 byte)
+      0x30,
+      0x2e,
+      0x30, // "0.0"
+    ]);
+    expect(parseFormatRecord(data)).toEqual({ formatIndex: 0x00a4, formatCode: "0.0" });
+  });
+});

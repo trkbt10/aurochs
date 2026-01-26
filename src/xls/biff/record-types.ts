@@ -13,6 +13,11 @@ export const BIFF_RECORD_TYPES = {
   SST: 0x00fc,
   EXTSST: 0x00ff,
   FONT: 0x0231,
+  /**
+   * Legacy/alternate FONT record id seen in some XLS generators.
+   * Treated as FONT for parsing purposes.
+   */
+  FONT_LEGACY: 0x0031,
   FORMAT: 0x041e,
   XF: 0x00e0,
   STYLE: 0x0293,

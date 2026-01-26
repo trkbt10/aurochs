@@ -3,11 +3,14 @@
  */
 
 import type { ErrorValue } from "../../../xlsx/domain/cell/types";
+import type { XlsParseContext } from "../../parse-context";
+import { warnOrThrow } from "../../parse-context";
 
 export type FormulaCachedValue =
   | { readonly type: "number"; readonly value: number }
   | { readonly type: "boolean"; readonly value: boolean }
   | { readonly type: "error"; readonly value: ErrorValue }
+  | { readonly type: "empty" }
   | { readonly type: "string" };
 
 export type FormulaRecord = {
@@ -68,6 +71,8 @@ function parseCachedValue(numBytes: Uint8Array): FormulaCachedValue {
       const err = numBytes[2] ?? 0;
       return { type: "error", value: mapErrorCode(err) };
     }
+    case 3: // empty (observed in the wild; treat as blank cached result)
+      return { type: "empty" };
     default:
       throw new Error(`Unknown FORMULA num ot: ${ot}`);
   }
@@ -76,7 +81,7 @@ function parseCachedValue(numBytes: Uint8Array): FormulaCachedValue {
 /**
  * Parse a BIFF FORMULA (0x0006) record data payload.
  */
-export function parseFormulaRecord(data: Uint8Array): FormulaRecord {
+export function parseFormulaRecord(data: Uint8Array, ctx: XlsParseContext = { mode: "strict" }): FormulaRecord {
   if (data.length < 20) {
     throw new Error(`Invalid FORMULA payload length: ${data.length} (expected >= 20)`);
   }
@@ -91,13 +96,27 @@ export function parseFormulaRecord(data: Uint8Array): FormulaRecord {
 
   const grbit = view.getUint16(14, true);
   // chn is ignored for reads; writers must set 0.
-  const cce = view.getUint16(20, true);
   const tokensStart = 22;
-  const tokensEnd = tokensStart + cce;
-  if (data.length < tokensEnd) {
-    throw new Error(`Invalid FORMULA payload length: ${data.length} (need ${tokensEnd})`);
+  const declaredCce = data.length >= 22 ? view.getUint16(20, true) : 0;
+  const available = Math.max(0, data.length - tokensStart);
+  const cce = Math.min(declaredCce, available);
+  if (declaredCce > available) {
+    try {
+      throw new Error(`Invalid FORMULA payload length: ${data.length} (need ${tokensStart + declaredCce})`);
+    } catch (err) {
+      warnOrThrow(
+        ctx,
+        {
+          code: "FORMULA_CCE_TRUNCATED",
+          where: "FORMULA",
+          message: `FORMULA cce exceeds available bytes; truncating tokens: declared=${declaredCce}, available=${available}`,
+          meta: { declaredCce, available, dataLength: data.length },
+        },
+        err instanceof Error ? err : new Error(String(err)),
+      );
+    }
   }
-  const tokens = data.subarray(tokensStart, tokensEnd);
+  const tokens = data.subarray(tokensStart, tokensStart + cce);
 
   return {
     row,
@@ -112,4 +131,3 @@ export function parseFormulaRecord(data: Uint8Array): FormulaRecord {
     tokens,
   };
 }
-

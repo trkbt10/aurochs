@@ -9,6 +9,7 @@ export type LabelSstRecord = {
   readonly sstIndex: number;
 };
 
+/** Parse a BIFF LABELSST (0x00FD) record payload. */
 export function parseLabelSstRecord(data: Uint8Array): LabelSstRecord {
   if (data.length !== 10) {
     throw new Error(`Invalid LABELSST payload length: ${data.length} (expected 10)`);
@@ -22,4 +23,3 @@ export function parseLabelSstRecord(data: Uint8Array): LabelSstRecord {
     sstIndex: view.getUint32(6, true),
   };
 }
-

@@ -10,9 +10,8 @@ import { borderId, colIdx, fillId, fontId, numFmtId, rowIdx, styleId, type ColIn
 import type { CellAddress } from "@lib/xlsx/domain/cell/address";
 import type { Formula } from "@lib/xlsx/domain/cell/formula";
 import { Button, Input } from "@lib/office-editor-components/primitives";
-import { parseXlsxWorkbook } from "@lib/xlsx/parser";
+import { parseSpreadsheetFile, SpreadsheetParseError } from "@lib/spreadsheet";
 import { exportXlsx } from "@lib/xlsx/exporter";
-import { createGetZipTextFileContentFromBytes } from "@lib/files/ooxml-zip";
 
 const controlsStyle: CSSProperties = {
   display: "flex",
@@ -33,8 +32,7 @@ const editorFrameStyle: CSSProperties = {
 
 async function parseWorkbookFromFile(file: File): Promise<XlsxWorkbook> {
   const data = await file.arrayBuffer();
-  const getFileContent = await createGetZipTextFileContentFromBytes(data);
-  return parseXlsxWorkbook(getFileContent);
+  return parseSpreadsheetFile(data);
 }
 
 function downloadXlsx(bytes: Uint8Array, filename: string): void {
@@ -514,7 +512,11 @@ export function XlsxWorkbookPage() {
       setGridSize(computeInitialGridSize(parsed));
       setWorkbookRevision((v) => v + 1);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      if (e instanceof SpreadsheetParseError) {
+        setError(`Failed to load ${e.fileType.toUpperCase()} file: ${e.message}`);
+      } else {
+        setError(e instanceof Error ? e.message : String(e));
+      }
     } finally {
       setIsBusy(false);
     }
@@ -526,6 +528,9 @@ export function XlsxWorkbookPage() {
     }
     if (sourceName.toLowerCase().endsWith(".xlsm")) {
       return sourceName.replace(/\.xlsm$/i, ".xlsx");
+    }
+    if (sourceName.toLowerCase().endsWith(".xls")) {
+      return sourceName.replace(/\.xls$/i, ".xlsx");
     }
     return `${sourceName}.xlsx`;
   }, [sourceName]);
@@ -576,7 +581,7 @@ export function XlsxWorkbookPage() {
 
         <input
           type="file"
-          accept=".xlsx,.xlsm"
+          accept=".xlsx,.xlsm,.xls"
           disabled={isBusy}
           onChange={(e) => {
             const file = e.currentTarget.files?.[0];

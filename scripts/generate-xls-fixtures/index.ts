@@ -1,4 +1,8 @@
 #!/usr/bin/env bun
+/**
+ * @file Generate `.xls` fixture files for integration tests.
+ */
+
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { buildMinimalCfbWithWorkbookStream } from "./lib/cfb";
@@ -22,6 +26,7 @@ const FIXTURES: readonly FixtureWriter[] = [
   { fileName: "all-features.xls", buildWorkbookStream: buildAllFeaturesWorkbookStream },
 ];
 
+/** Generate `.xls` fixtures and return the written file paths. */
 export async function generateXlsFixtures(options: GenerateXlsFixturesOptions): Promise<readonly string[]> {
   fs.mkdirSync(options.outputDir, { recursive: true });
 

@@ -6,6 +6,7 @@ import type { XlsxNumberFormat } from "../../xlsx/domain/style/number-format";
 import { numFmtId } from "../../xlsx/domain/types";
 import type { XlsNumberFormat } from "../domain/types";
 
+/** Convert XLS FORMAT records into XLSX custom number format entries. */
 export function convertXlsNumberFormatsToXlsxNumberFormats(formats: readonly XlsNumberFormat[]): readonly XlsxNumberFormat[] {
   if (!Array.isArray(formats)) {
     throw new Error("convertXlsNumberFormatsToXlsxNumberFormats: formats must be an array");
@@ -16,4 +17,3 @@ export function convertXlsNumberFormatsToXlsxNumberFormats(formats: readonly Xls
     .filter((f) => f.formatIndex >= 164)
     .map((f) => ({ numFmtId: numFmtId(f.formatIndex), formatCode: f.formatCode }));
 }
-

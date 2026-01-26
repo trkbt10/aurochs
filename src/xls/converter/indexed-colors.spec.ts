@@ -1,3 +1,7 @@
+/**
+ * @file XLS indexed color mapping tests
+ */
+
 import { buildXlsxIndexedColorsFromXlsPalette } from "./indexed-colors";
 
 describe("buildXlsxIndexedColorsFromXlsPalette", () => {

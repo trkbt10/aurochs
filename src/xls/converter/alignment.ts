@@ -45,6 +45,7 @@ function mapVertical(v: number): XlsxAlignment["vertical"] | undefined {
   }
 }
 
+/** Convert an XLS XF alignment structure into an XLSX alignment object. */
 export function convertXlsXfAlignmentToXlsxAlignment(alignment: XlsXfAlignment): XlsxAlignment | undefined {
   const horizontal = mapHorizontal(alignment.horizontal);
   const vertical = mapVertical(alignment.vertical);
@@ -73,4 +74,3 @@ export function convertXlsXfAlignmentToXlsxAlignment(alignment: XlsXfAlignment):
     ...(indent !== undefined ? { indent } : {}),
   };
 }
-

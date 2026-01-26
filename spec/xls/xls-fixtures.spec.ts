@@ -31,7 +31,9 @@ describe("XLS fixtures (parseXls + exportXlsx)", () => {
     const xlsxBytes = await exportXlsx(wb);
     const zip = await JSZip.loadAsync(xlsxBytes);
     const sheetXml = await zip.file("xl/worksheets/sheet1.xml")?.async("string");
-    if (!sheetXml) throw new Error("sheet1.xml must exist");
+    if (!sheetXml) {
+      throw new Error("sheet1.xml must exist");
+    }
     expect(sheetXml).toContain("<v>0</v>");
 
     const parsed = await parseXlsxWorkbook((p) => {
@@ -50,7 +52,9 @@ describe("XLS fixtures (parseXls + exportXlsx)", () => {
     ]);
 
     const sheet1 = wb.sheets[0];
-    if (!sheet1) throw new Error("Sheet1 must exist");
+    if (!sheet1) {
+      throw new Error("Sheet1 must exist");
+    }
     expect(sheet1.sheetFormatPr).toEqual({ defaultRowHeight: 15, defaultColWidth: 12, zeroHeight: false });
 
     expect(sheet1.mergeCells).toEqual([
@@ -61,16 +65,22 @@ describe("XLS fixtures (parseXls + exportXlsx)", () => {
     ]);
 
     const row1 = sheet1.rows.find((r) => (r.rowNumber as number) === 1);
-    if (!row1) throw new Error("Row 1 must exist");
+    if (!row1) {
+      throw new Error("Row 1 must exist");
+    }
     const cellE1 = row1.cells.find((c) => (c.address.col as number) === 5);
-    if (!cellE1) throw new Error("E1 must exist");
+    if (!cellE1) {
+      throw new Error("E1 must exist");
+    }
     expect(cellE1.value).toEqual({ type: "number", value: 11 });
     expect(cellE1.formula).toEqual({ type: "normal", expression: "5+6" });
 
     const xlsxBytes = await exportXlsx(wb);
     const zip = await JSZip.loadAsync(xlsxBytes);
     const sheetXml = await zip.file("xl/worksheets/sheet1.xml")?.async("string");
-    if (!sheetXml) throw new Error("sheet1.xml must exist");
+    if (!sheetXml) {
+      throw new Error("sheet1.xml must exist");
+    }
     expect(sheetXml).toContain("<sheetFormatPr");
     expect(sheetXml).toContain("<mergeCells");
     expect(sheetXml).toContain("<f>5+6</f>");
