@@ -95,4 +95,43 @@ describe("VirtualScroll", () => {
       expect(getByTestId("scrollTop").textContent).toBe("920");
     });
   });
+
+  it("clamps scroll positions when content shrinks", async () => {
+    const { container, getByTestId, rerender } = render(
+      <VirtualScroll contentWidth={1000} contentHeight={1000}>
+        <Debugger />
+      </VirtualScroll>,
+    );
+
+    act(() => {
+      triggerResizeObservers([createResizeObserverEntry(100, 80)]);
+    });
+
+    const scrollRoot = container.firstElementChild as HTMLElement;
+    await waitFor(() => {
+      expect(getByTestId("maxScrollTop").textContent).toBe("920");
+    });
+
+    act(() => {
+      fireEvent.wheel(scrollRoot, { deltaX: 9999, deltaY: 9999, cancelable: true });
+    });
+
+    await waitFor(() => {
+      expect(getByTestId("scrollTop").textContent).toBe("920");
+      expect(getByTestId("scrollLeft").textContent).toBe("900");
+    });
+
+    rerender(
+      <VirtualScroll contentWidth={200} contentHeight={200}>
+        <Debugger />
+      </VirtualScroll>,
+    );
+
+    await waitFor(() => {
+      expect(getByTestId("maxScrollTop").textContent).toBe("120");
+      expect(getByTestId("maxScrollLeft").textContent).toBe("100");
+      expect(getByTestId("scrollTop").textContent).toBe("120");
+      expect(getByTestId("scrollLeft").textContent).toBe("100");
+    });
+  });
 });

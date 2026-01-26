@@ -6,6 +6,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, type CSSProperties } from "react";
 import type { CellAddress } from "../../../xlsx/domain/cell/address";
+import { colIdx, rowIdx } from "../../../xlsx/domain/types";
 import type { XlsxStyleSheet } from "../../../xlsx/domain/style/types";
 import type { XlsxWorksheet } from "../../../xlsx/domain/workbook";
 import { colorTokens } from "../../../office-editor-components";
@@ -18,6 +19,8 @@ import { clipRectToViewport, getActiveCellRect, getSelectedRangeRect } from "./s
 import { createSheetLayout } from "../../selectors/sheet-layout";
 import type { XlsxEditorAction } from "../../context/workbook/editor/types";
 import { startFillHandlePointerDrag } from "./fill-handle-drag";
+import { startRangeSelectPointerDrag } from "./range-select-drag";
+import { hitTestCellFromPointerEvent } from "./cell-hit-test";
 
 const selectionOutlineStyle: CSSProperties = {
   position: "absolute",
@@ -76,6 +79,9 @@ export type XlsxSheetGridCellViewportProps = {
   readonly scrollLeft: number;
   readonly viewportWidth: number;
   readonly viewportHeight: number;
+  /** Display zoom factor (1 = 100%). */
+  readonly zoom: number;
+  readonly focusGridRoot: (target: EventTarget) => void;
   readonly selection: {
     readonly selectedRanges: readonly { readonly start: CellAddress; readonly end: CellAddress }[];
     readonly activeRange: { readonly start: CellAddress; readonly end: CellAddress } | undefined;
@@ -107,6 +113,8 @@ export function XlsxSheetGridCellViewport({
   scrollLeft,
   viewportWidth,
   viewportHeight,
+  zoom,
+  focusGridRoot,
   selection,
   state,
   activeSheetIndex,
@@ -114,8 +122,12 @@ export function XlsxSheetGridCellViewport({
   dispatch,
   children,
 }: XlsxSheetGridCellViewportProps) {
+  if (!Number.isFinite(zoom) || zoom <= 0) {
+    throw new Error(`XlsxSheetGridCellViewport zoom must be a positive finite number: ${String(zoom)}`);
+  }
   const containerRef = useRef<HTMLDivElement | null>(null);
   const fillDragListener = useRef<(() => void) | null>(null);
+  const rangeSelectCleanupRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     return () => {
@@ -124,6 +136,16 @@ export function XlsxSheetGridCellViewport({
         cleanup();
       }
       fillDragListener.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      const cleanup = rangeSelectCleanupRef.current;
+      if (cleanup) {
+        cleanup();
+      }
+      rangeSelectCleanupRef.current = null;
     };
   }, []);
 
@@ -267,11 +289,116 @@ export function XlsxSheetGridCellViewport({
         scrollTop,
         layout,
         metrics: { rowCount: metrics.rowCount, colCount: metrics.colCount },
+        zoom,
         normalizedMerges,
         dispatch,
       });
     },
-    [dispatch, layout, metrics.colCount, metrics.rowCount, normalizedMerges, scrollLeft, scrollTop, selection.activeRange, state.editingCell],
+    [dispatch, layout, metrics.colCount, metrics.rowCount, normalizedMerges, scrollLeft, scrollTop, selection.activeRange, state.editingCell, zoom],
+  );
+
+  const hitTestViewportCell = useCallback(
+    (e: Pick<PointerEvent, "clientX" | "clientY">, container: HTMLElement): CellAddress => {
+      return hitTestCellFromPointerEvent({
+        e,
+        container,
+        scrollLeft,
+        scrollTop,
+        layout,
+        metrics: { rowCount: metrics.rowCount, colCount: metrics.colCount },
+        normalizedMerges,
+        zoom,
+      });
+    },
+    [layout, metrics.colCount, metrics.rowCount, normalizedMerges, scrollLeft, scrollTop, zoom],
+  );
+
+  const getCellAddressFromEventTarget = useCallback((target: EventTarget): CellAddress | null => {
+    const el =
+      target instanceof HTMLElement ? target : target instanceof Node ? (target.parentElement as HTMLElement | null) : null;
+    const cell = el?.closest("[data-xlsx-cell-col][data-xlsx-cell-row]") as HTMLElement | null;
+    if (!cell) {
+      return null;
+    }
+
+    const col = Number(cell.dataset.xlsxCellCol);
+    const row = Number(cell.dataset.xlsxCellRow);
+    if (!Number.isInteger(col) || !Number.isInteger(row) || col < 1 || row < 1) {
+      return null;
+    }
+
+    return { col: colIdx(col), row: rowIdx(row), colAbsolute: false, rowAbsolute: false };
+  }, []);
+
+  const handleViewportPointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>): void => {
+      if (event.button !== 0) {
+        return;
+      }
+      if (state.editingCell) {
+        return;
+      }
+
+      event.preventDefault();
+      focusGridRoot(event.currentTarget);
+
+      const address = getCellAddressFromEventTarget(event.target) ?? hitTestViewportCell(event.nativeEvent, event.currentTarget);
+      const merge = normalizedMerges.length > 0 ? findMergeForCell(normalizedMerges, address) : undefined;
+      const origin = merge?.origin ?? address;
+
+      if (event.metaKey || event.ctrlKey) {
+        dispatch({ type: "ADD_RANGE_TO_SELECTION", range: merge?.range ?? { start: origin, end: origin } });
+        return;
+      }
+      if (event.shiftKey) {
+        dispatch({ type: "SELECT_CELL", address: origin, extend: true });
+        return;
+      }
+
+      const previous = rangeSelectCleanupRef.current;
+      if (previous) {
+        previous();
+      }
+      rangeSelectCleanupRef.current = startRangeSelectPointerDrag({
+        pointerId: event.pointerId,
+        captureTarget: event.currentTarget,
+        container: event.currentTarget,
+        startAddress: origin,
+        scrollLeft,
+        scrollTop,
+        layout,
+        metrics: { rowCount: metrics.rowCount, colCount: metrics.colCount },
+        zoom,
+        normalizedMerges,
+        dispatch,
+      });
+    },
+    [dispatch, focusGridRoot, getCellAddressFromEventTarget, hitTestViewportCell, layout, metrics.colCount, metrics.rowCount, normalizedMerges, scrollLeft, scrollTop, state.editingCell, zoom],
+  );
+
+  const handleViewportDoubleClick = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>): void => {
+      if (state.editingCell) {
+        return;
+      }
+      event.preventDefault();
+      focusGridRoot(event.currentTarget);
+
+      const address =
+        getCellAddressFromEventTarget(event.target) ?? hitTestViewportCell(event.nativeEvent, event.currentTarget);
+      const merge = normalizedMerges.length > 0 ? findMergeForCell(normalizedMerges, address) : undefined;
+      const origin = merge?.origin ?? address;
+
+      if (merge) {
+        dispatch({ type: "SELECT_RANGE", range: merge.range });
+        dispatch({ type: "ENTER_CELL_EDIT", address: origin });
+        return;
+      }
+
+      dispatch({ type: "SELECT_CELL", address: origin });
+      dispatch({ type: "ENTER_CELL_EDIT", address: origin });
+    },
+    [dispatch, focusGridRoot, getCellAddressFromEventTarget, hitTestViewportCell, normalizedMerges, state.editingCell],
   );
 
   return (
@@ -287,6 +414,8 @@ export function XlsxSheetGridCellViewport({
         overflow: "hidden",
         backgroundColor: `var(--bg-primary, ${colorTokens.background.primary})`,
       }}
+      onPointerDown={handleViewportPointerDown}
+      onDoubleClick={handleViewportDoubleClick}
     >
       {sheet.sheetView?.showGridLines !== false && gridViewportWidth > 0 && gridViewportHeight > 0 && (
         <svg

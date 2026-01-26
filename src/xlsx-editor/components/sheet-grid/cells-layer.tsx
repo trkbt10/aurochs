@@ -1,10 +1,10 @@
 /**
  * @file Sheet grid cells layer
  *
- * Renders visible cell contents for the current viewport range and wires pointer-based selection.
+ * Renders visible cell contents for the current viewport range.
  */
 
-import { useCallback, useEffect, useMemo, useRef, type CSSProperties, type ReactNode } from "react";
+import { useMemo, type CSSProperties, type ReactNode } from "react";
 import type { CellAddress } from "../../../xlsx/domain/cell/address";
 import type { Cell } from "../../../xlsx/domain/cell/types";
 import type { XlsxStyleSheet } from "../../../xlsx/domain/style/types";
@@ -17,9 +17,7 @@ import { formatCellValueForDisplay, formatFormulaScalarForDisplay, resolveCellFo
 import { resolveCellConditionalDifferentialFormat } from "../../selectors/conditional-formatting";
 import { findMergeForCell, type NormalizedMergeRange } from "../../sheet/merge-range";
 import { spacingTokens, colorTokens } from "../../../office-editor-components";
-import type { XlsxEditorAction } from "../../context/workbook/editor/types";
 import { createSheetLayout } from "../../selectors/sheet-layout";
-import { startRangeSelectPointerDrag } from "./range-select-drag";
 import { XlsxCellCanvasText, type XlsxCellCanvasTextProps } from "./cell-text";
 
 export type XlsxSheetGridCellsLayerProps = {
@@ -27,23 +25,18 @@ export type XlsxSheetGridCellsLayerProps = {
   readonly sheet: XlsxWorksheet;
   readonly styles: XlsxStyleSheet;
   readonly layout: ReturnType<typeof createSheetLayout>;
-  readonly metrics: {
-    readonly rowCount: number;
-    readonly colCount: number;
-  };
   readonly rowRange: { readonly start: number; readonly end: number };
   readonly colRange: { readonly start: number; readonly end: number };
   readonly scrollTop: number;
   readonly scrollLeft: number;
   readonly normalizedMerges: readonly NormalizedMergeRange[];
-  readonly dispatch: (action: XlsxEditorAction) => void;
-  readonly focusGridRoot: (target: EventTarget) => void;
   readonly formulaEvaluator: ReturnType<typeof createFormulaEvaluator>;
 };
 
 const cellBaseStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
+  justifyContent: "flex-start",
   boxSizing: "border-box",
   paddingBlock: 0,
   paddingInlineStart: `calc(var(--xlsx-cell-padding-inline, ${spacingTokens.xs}) + var(--xlsx-cell-indent-start, 0px))`,
@@ -100,6 +93,35 @@ function getCellDisplayText(
   return formatCellValueForDisplay(cell.value, formatCode, { dateSystem });
 }
 
+function shouldRenderCellLayerItem(text: string, style: CSSProperties): boolean {
+  if (text !== "") {
+    return true;
+  }
+  return style.backgroundColor !== undefined;
+}
+
+function resolveConditionalFormatMaybe(params: {
+  readonly hasConditionalFormatting: boolean;
+  readonly sheet: XlsxWorksheet;
+  readonly styles: XlsxStyleSheet;
+  readonly sheetIndex: number;
+  readonly address: CellAddress;
+  readonly cell: Cell | undefined;
+  readonly formulaEvaluator: ReturnType<typeof createFormulaEvaluator>;
+}): ReturnType<typeof resolveCellConditionalDifferentialFormat> {
+  if (!params.hasConditionalFormatting) {
+    return undefined;
+  }
+  return resolveCellConditionalDifferentialFormat({
+    sheet: params.sheet,
+    styles: params.styles,
+    sheetIndex: params.sheetIndex,
+    address: params.address,
+    cell: params.cell,
+    formulaEvaluator: params.formulaEvaluator,
+  });
+}
+
 /**
  * Renders the visible cell grid region as positioned divs.
  */
@@ -108,58 +130,16 @@ export function XlsxSheetGridCellsLayer({
   sheet,
   styles,
   layout,
-  metrics,
   rowRange,
   colRange,
   scrollTop,
   scrollLeft,
   normalizedMerges,
-  dispatch,
-  focusGridRoot,
   formulaEvaluator,
 }: XlsxSheetGridCellsLayerProps) {
-  const rangeSelectCleanupRef = useRef<(() => void) | null>(null);
-
-  useEffect(() => {
-    return () => {
-      const cleanup = rangeSelectCleanupRef.current;
-      if (cleanup) {
-        cleanup();
-      }
-      rangeSelectCleanupRef.current = null;
-    };
-  }, []);
-
-  const startRangeSelectFromPointerDown = useCallback(
-    (event: React.PointerEvent<HTMLDivElement>, address: CellAddress): void => {
-      const viewport = event.currentTarget.closest('[data-xlsx-grid-viewport="true"]');
-      if (!(viewport instanceof HTMLElement)) {
-        throw new Error("Expected xlsx grid viewport container");
-      }
-
-      const previous = rangeSelectCleanupRef.current;
-      if (previous) {
-        previous();
-      }
-
-      rangeSelectCleanupRef.current = startRangeSelectPointerDrag({
-        pointerId: event.pointerId,
-        captureTarget: event.currentTarget,
-        container: viewport,
-        startAddress: address,
-        scrollLeft,
-        scrollTop,
-        layout,
-        metrics,
-        normalizedMerges,
-        dispatch,
-      });
-    },
-    [dispatch, layout, metrics, normalizedMerges, scrollLeft, scrollTop],
-  );
-
   const cellNodes = useMemo(() => {
     const nodes: ReactNode[] = [];
+    const hasConditionalFormatting = (sheet.conditionalFormattings?.length ?? 0) > 0;
     for (let row0 = rowRange.start; row0 <= rowRange.end; row0 += 1) {
       const row1 = row0 + 1;
       const height = layout.rows.getSizePx(row0);
@@ -179,7 +159,8 @@ export function XlsxSheetGridCellsLayer({
 
           const originAddress = merge.origin;
           const cell = getCell(sheet, originAddress);
-          const conditionalFormat = resolveCellConditionalDifferentialFormat({
+          const conditionalFormat = resolveConditionalFormatMaybe({
+            hasConditionalFormatting,
             sheet,
             styles,
             sheetIndex,
@@ -200,10 +181,15 @@ export function XlsxSheetGridCellsLayer({
           if (width <= 0 || mergedHeight <= 0) {
             continue;
           }
+          if (!shouldRenderCellLayerItem(text, cellRenderStyle)) {
+            continue;
+          }
 
           nodes.push(
             <div
               key={`merge-${merge.key}`}
+              data-xlsx-cell-col={originAddress.col as number}
+              data-xlsx-cell-row={originAddress.row as number}
               style={{
                 ...cellBaseStyle,
                 ...cellRenderStyle,
@@ -213,28 +199,6 @@ export function XlsxSheetGridCellsLayer({
                 width,
                 height: mergedHeight,
               }}
-              onPointerDown={(e) => {
-                if (e.button !== 0) {
-                  return;
-                }
-                e.preventDefault();
-                focusGridRoot(e.target);
-                if (e.metaKey || e.ctrlKey) {
-                  dispatch({ type: "ADD_RANGE_TO_SELECTION", range: merge.range });
-                  return;
-                }
-                if (e.shiftKey) {
-                  dispatch({ type: "SELECT_CELL", address: originAddress, extend: true });
-                  return;
-                }
-                startRangeSelectFromPointerDown(e, originAddress);
-              }}
-              onDoubleClick={(e) => {
-                e.preventDefault();
-                focusGridRoot(e.target);
-                dispatch({ type: "SELECT_RANGE", range: merge.range });
-                dispatch({ type: "ENTER_CELL_EDIT", address: originAddress });
-              }}
             >
               {renderCellText({ text, widthPx: width, heightPx: mergedHeight, style: cellRenderStyle })}
             </div>,
@@ -243,7 +207,8 @@ export function XlsxSheetGridCellsLayer({
         }
 
         const cell = getCell(sheet, address);
-        const conditionalFormat = resolveCellConditionalDifferentialFormat({
+        const conditionalFormat = resolveConditionalFormatMaybe({
+          hasConditionalFormatting,
           sheet,
           styles,
           sheetIndex,
@@ -258,10 +223,15 @@ export function XlsxSheetGridCellsLayer({
         if (width <= 0) {
           continue;
         }
+        if (!shouldRenderCellLayerItem(text, cellRenderStyle)) {
+          continue;
+        }
 
         nodes.push(
           <div
             key={`cell-${col1}-${row1}`}
+            data-xlsx-cell-col={col1}
+            data-xlsx-cell-row={row1}
             style={{
               ...cellBaseStyle,
               ...cellRenderStyle,
@@ -270,28 +240,6 @@ export function XlsxSheetGridCellsLayer({
               top: layout.rows.getOffsetPx(row0),
               width,
               height,
-            }}
-            onPointerDown={(e) => {
-              if (e.button !== 0) {
-                return;
-              }
-              e.preventDefault();
-              focusGridRoot(e.target);
-              if (e.metaKey || e.ctrlKey) {
-                dispatch({ type: "ADD_RANGE_TO_SELECTION", range: { start: address, end: address } });
-                return;
-              }
-              if (e.shiftKey) {
-                dispatch({ type: "SELECT_CELL", address, extend: true });
-                return;
-              }
-              startRangeSelectFromPointerDown(e, address);
-            }}
-            onDoubleClick={(e) => {
-              e.preventDefault();
-              focusGridRoot(e.target);
-              dispatch({ type: "SELECT_CELL", address });
-              dispatch({ type: "ENTER_CELL_EDIT", address });
             }}
           >
             {renderCellText({ text, widthPx: width, heightPx: height, style: cellRenderStyle })}
@@ -303,18 +251,14 @@ export function XlsxSheetGridCellsLayer({
   }, [
     colRange.end,
     colRange.start,
-    dispatch,
-    focusGridRoot,
     formulaEvaluator,
     layout.cols,
     layout.rows,
-    metrics,
     normalizedMerges,
     rowRange.end,
     rowRange.start,
     sheet,
     sheetIndex,
-    startRangeSelectFromPointerDown,
     styles,
   ]);
 

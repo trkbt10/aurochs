@@ -22,6 +22,7 @@ import { BorderSection } from "./sections/BorderSection";
 import { FillSection } from "./sections/FillSection";
 import { FontSection } from "./sections/FontSection";
 import { NumberSection } from "./sections/NumberSection";
+import { StyleSection } from "./sections/StyleSection";
 
 export type XlsxCellFormatPanelProps = {
   readonly sheetIndex: number;
@@ -179,6 +180,24 @@ export function XlsxCellFormatPanel({ sheetIndex, onClose }: XlsxCellFormatPanel
           </Button>
         </div>
       )}
+
+      <StyleSection
+        styles={workbook.styles}
+        currentStyleId={details.styleId}
+        disabled={disabled}
+        onStyleSelect={(cellStyleIndex) => {
+          dispatch({ type: "APPLY_NAMED_STYLE", range: targetRange, cellStyleIndex });
+        }}
+        onStyleCreate={(name) => {
+          if (!anchorCell) {
+            return;
+          }
+          dispatch({ type: "CREATE_NAMED_STYLE", name, baseCellAddress: anchorCell });
+        }}
+        onStyleDelete={(cellStyleIndex) => {
+          dispatch({ type: "DELETE_NAMED_STYLE", cellStyleIndex });
+        }}
+      />
 
       <FontSection
         disabled={disabled}

@@ -154,7 +154,7 @@ describe("resolveCellRenderStyle", () => {
     });
     expect(alignmentStyle.whiteSpace).toBe("normal");
     expect(alignmentStyle.alignItems).toBe("flex-start");
-    expect(alignmentStyle.justifyContent).toBe("flex-start");
+    expect(alignmentStyle.justifyContent).toBeUndefined();
   });
 
   it("aligns numeric cells to the right when horizontal is general", () => {
@@ -176,7 +176,7 @@ describe("resolveCellRenderStyle", () => {
       address,
       cell: { address, value: { type: "string", value: "abc" }, styleId: styleId(5) },
     });
-    expect(stringCell.justifyContent).toBe("flex-start");
+    expect(stringCell.justifyContent).toBeUndefined();
   });
 
   it("uses row styleId when the cell has no styleId", () => {
@@ -223,8 +223,8 @@ describe("resolveCellRenderStyle", () => {
       address,
       cell: { address, value: { type: "empty" }, styleId: styleId(6) },
     });
-    expect(shrinkStyle.whiteSpace).toBe("nowrap");
-    expect(shrinkStyle.overflow).toBe("hidden");
+    expect(shrinkStyle.whiteSpace).toBeUndefined();
+    expect(shrinkStyle.overflow).toBeUndefined();
 
     const rotateStyle = resolveCellRenderStyle({
       styles,

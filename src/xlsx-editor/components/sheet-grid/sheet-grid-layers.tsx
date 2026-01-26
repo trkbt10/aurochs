@@ -42,6 +42,8 @@ export type XlsxSheetGridLayersProps = {
   };
   readonly layout: SheetLayout;
   readonly formulaEvaluator: FormulaEvaluator;
+  /** Display zoom factor (1 = 100%). */
+  readonly zoom: number;
 };
 
 /**
@@ -53,20 +55,30 @@ export function XlsxSheetGridLayers({
   metrics,
   layout,
   formulaEvaluator,
+  zoom,
 }: XlsxSheetGridLayersProps) {
   const { dispatch, selection, state, activeSheetIndex, workbook } = useXlsxWorkbookEditor();
   const { scrollTop, scrollLeft, viewportWidth, viewportHeight } = useVirtualScrollContext();
 
+  if (!Number.isFinite(zoom) || zoom <= 0) {
+    throw new Error(`XlsxSheetGridLayers zoom must be a positive finite number: ${String(zoom)}`);
+  }
+
+  const scrollTopUnscaled = scrollTop / zoom;
+  const scrollLeftUnscaled = scrollLeft / zoom;
+  const viewportWidthUnscaled = viewportWidth / zoom;
+  const viewportHeightUnscaled = viewportHeight / zoom;
+
   const rowHeaderWidthPx = metrics.rowHeaderWidthPx ?? metrics.headerSizePx;
   const colHeaderHeightPx = metrics.colHeaderHeightPx ?? metrics.rowHeightPx;
 
-  const gridViewportWidth = Math.max(0, viewportWidth - rowHeaderWidthPx);
-  const gridViewportHeight = Math.max(0, viewportHeight - colHeaderHeightPx);
+  const gridViewportWidth = Math.max(0, viewportWidthUnscaled - rowHeaderWidthPx);
+  const gridViewportHeight = Math.max(0, viewportHeightUnscaled - colHeaderHeightPx);
 
-  const firstRow0 = layout.rows.findIndexAtOffset(scrollTop);
-  const lastRow0 = layout.rows.findIndexAtOffset(scrollTop + gridViewportHeight);
-  const firstCol0 = layout.cols.findIndexAtOffset(scrollLeft);
-  const lastCol0 = layout.cols.findIndexAtOffset(scrollLeft + gridViewportWidth);
+  const firstRow0 = layout.rows.findIndexAtOffset(scrollTopUnscaled);
+  const lastRow0 = layout.rows.findIndexAtOffset(scrollTopUnscaled + gridViewportHeight);
+  const firstCol0 = layout.cols.findIndexAtOffset(scrollLeftUnscaled);
+  const lastCol0 = layout.cols.findIndexAtOffset(scrollLeftUnscaled + gridViewportWidth);
 
   const rowRange = clampRange(firstRow0 - metrics.overscanRows, lastRow0 + metrics.overscanRows, 0, metrics.rowCount - 1);
   const colRange = clampRange(firstCol0 - metrics.overscanCols, lastCol0 + metrics.overscanCols, 0, metrics.colCount - 1);
@@ -104,74 +116,86 @@ export function XlsxSheetGridLayers({
 
   return (
     <div style={layerRootStyle}>
-      <XlsxSheetGridHeaderLayer
-        sheet={sheet}
-        layout={layout}
-        metrics={{
-          rowCount: metrics.rowCount,
-          colCount: metrics.colCount,
-          rowHeightPx: metrics.rowHeightPx,
-          colWidthPx: metrics.colWidthPx,
-          headerSizePx: metrics.headerSizePx,
-          rowHeaderWidthPx,
-          colHeaderHeightPx,
+      <div
+        style={{
+          position: "absolute",
+          left: 0,
+          top: 0,
+          width: viewportWidthUnscaled,
+          height: viewportHeightUnscaled,
+          transform: `scale(${zoom})`,
+          transformOrigin: "top left",
         }}
-        rowRange={rowRange}
-        colRange={colRange}
-        scrollTop={scrollTop}
-        scrollLeft={scrollLeft}
-        selectionBounds={selectionBounds}
-        isWholeSheetSelected={isWholeSheetSelected}
-        activeCell={selection.activeCell}
-        drag={state.drag}
-        dispatch={dispatch}
-        focusGridRoot={focusGridRoot}
-      />
-
-      <XlsxSheetGridCellViewport
-        sheet={sheet}
-        workbookStyles={workbook.styles}
-        layout={layout}
-        metrics={{
-          rowCount: metrics.rowCount,
-          colCount: metrics.colCount,
-          rowHeaderWidthPx,
-          colHeaderHeightPx,
-        }}
-        rowRange={rowRange}
-        colRange={colRange}
-        scrollTop={scrollTop}
-        scrollLeft={scrollLeft}
-        viewportWidth={viewportWidth}
-        viewportHeight={viewportHeight}
-        selection={{
-          selectedRanges,
-          activeRange: selection.selectedRange,
-          activeCell: selection.activeCell,
-        }}
-        state={{
-          editingCell: state.editingCell,
-        }}
-        activeSheetIndex={activeSheetIndex}
-        normalizedMerges={normalizedMerges}
-        dispatch={dispatch}
       >
-        <XlsxSheetGridCellsLayer
-          sheetIndex={sheetIndex}
+        <XlsxSheetGridHeaderLayer
           sheet={sheet}
-          styles={workbook.styles}
           layout={layout}
-          metrics={{ rowCount: metrics.rowCount, colCount: metrics.colCount }}
+          metrics={{
+            rowCount: metrics.rowCount,
+            colCount: metrics.colCount,
+            rowHeightPx: metrics.rowHeightPx,
+            colWidthPx: metrics.colWidthPx,
+            headerSizePx: metrics.headerSizePx,
+            rowHeaderWidthPx,
+            colHeaderHeightPx,
+          }}
           rowRange={rowRange}
           colRange={colRange}
-          scrollTop={scrollTop}
-          scrollLeft={scrollLeft}
-          normalizedMerges={normalizedMerges}
+          scrollTop={scrollTopUnscaled}
+          scrollLeft={scrollLeftUnscaled}
+          selectionBounds={selectionBounds}
+          isWholeSheetSelected={isWholeSheetSelected}
+          activeCell={selection.activeCell}
+          drag={state.drag}
           dispatch={dispatch}
           focusGridRoot={focusGridRoot}
-          formulaEvaluator={formulaEvaluator}
+          zoom={zoom}
         />
-      </XlsxSheetGridCellViewport>
+
+        <XlsxSheetGridCellViewport
+          sheet={sheet}
+          workbookStyles={workbook.styles}
+          layout={layout}
+          metrics={{
+            rowCount: metrics.rowCount,
+            colCount: metrics.colCount,
+            rowHeaderWidthPx,
+            colHeaderHeightPx,
+          }}
+          rowRange={rowRange}
+          colRange={colRange}
+          scrollTop={scrollTopUnscaled}
+          scrollLeft={scrollLeftUnscaled}
+          viewportWidth={viewportWidthUnscaled}
+          viewportHeight={viewportHeightUnscaled}
+          selection={{
+            selectedRanges,
+            activeRange: selection.selectedRange,
+            activeCell: selection.activeCell,
+          }}
+          state={{
+            editingCell: state.editingCell,
+          }}
+          activeSheetIndex={activeSheetIndex}
+          normalizedMerges={normalizedMerges}
+          dispatch={dispatch}
+          zoom={zoom}
+          focusGridRoot={focusGridRoot}
+        >
+          <XlsxSheetGridCellsLayer
+            sheetIndex={sheetIndex}
+            sheet={sheet}
+            styles={workbook.styles}
+            layout={layout}
+            rowRange={rowRange}
+            colRange={colRange}
+            scrollTop={scrollTopUnscaled}
+            scrollLeft={scrollLeftUnscaled}
+            normalizedMerges={normalizedMerges}
+            formulaEvaluator={formulaEvaluator}
+          />
+        </XlsxSheetGridCellViewport>
+      </div>
     </div>
   );
 }

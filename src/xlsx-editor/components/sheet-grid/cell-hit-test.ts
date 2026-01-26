@@ -30,19 +30,25 @@ function clampIndex(value: number, min: number, max: number): number {
  * - If the target is within a merged range, returns the merge end (so drags extend consistently)
  */
 export function hitTestCellFromPointerEvent(params: {
-  readonly e: PointerEvent;
+  readonly e: Pick<PointerEvent, "clientX" | "clientY">;
   readonly container: HTMLElement;
   readonly scrollLeft: number;
   readonly scrollTop: number;
   readonly layout: Layout;
   readonly metrics: GridMetrics;
   readonly normalizedMerges: readonly NormalizedMergeRange[];
+  /** Display zoom factor (1 = 100%). */
+  readonly zoom?: number;
 }): CellAddress {
   const { e, container, scrollLeft, scrollTop, layout, metrics, normalizedMerges } = params;
+  const zoom = params.zoom ?? 1;
+  if (!Number.isFinite(zoom) || zoom <= 0) {
+    throw new Error(`hitTestCellFromPointerEvent zoom must be a positive finite number: ${String(params.zoom)}`);
+  }
 
   const rect = container.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
+  const x = (e.clientX - rect.left) / zoom;
+  const y = (e.clientY - rect.top) / zoom;
 
   const sheetX = scrollLeft + x;
   const sheetY = scrollTop + y;

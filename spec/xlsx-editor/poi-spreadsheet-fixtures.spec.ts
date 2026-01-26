@@ -141,7 +141,7 @@ describe("POI spreadsheet fixtures (parsing + formulas + style)", () => {
 
     expect(css.backgroundColor).toBe("#CCFFCC");
     expect(css.justifyContent).toBe("center");
-    expect(css.alignItems).toBe("center");
+    expect(css.alignItems).toBeUndefined();
     expect(css.whiteSpace).toBe("normal");
   });
 
@@ -757,7 +757,7 @@ describe("POI spreadsheet fixtures (parsing + formulas + style)", () => {
     }
     const a3Css = resolveCellRenderStyle({ styles: workbook.styles, sheet, address: a3, cell: a3Cell, conditionalFormat: a3Format });
     expect(a3Css.color).toBe("#00B050");
-    expect(a3Css.fontStyle).toBe("normal");
+    expect(a3Css.fontStyle).toBeUndefined();
 
     const a4Format = resolveCellConditionalDifferentialFormat({
       sheet,
@@ -2144,8 +2144,8 @@ describe("POI spreadsheet fixtures (parsing + formulas + style)", () => {
       address,
       cell: { address, value: { type: "empty" }, styleId: styleId(xfIndex) },
     });
-    expect(css.whiteSpace).toBe("nowrap");
-    expect(css.overflow).toBe("hidden");
+    expect(css.whiteSpace).toBeUndefined();
+    expect(css.overflow).toBeUndefined();
 
     // The fixture's shrink-to-fit style uses horizontal="general"; numbers should align to the right.
     const numberCss = resolveCellRenderStyle({

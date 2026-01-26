@@ -36,10 +36,16 @@ export function startRangeSelectPointerDrag(params: {
   readonly scrollTop: number;
   readonly layout: Layout;
   readonly metrics: GridMetrics;
+  /** Display zoom factor (1 = 100%). */
+  readonly zoom: number;
   readonly normalizedMerges: readonly NormalizedMergeRange[];
   readonly dispatch: (action: XlsxEditorAction) => void;
 }): () => void {
-  const { pointerId, captureTarget, container, startAddress, scrollLeft, scrollTop, layout, metrics, normalizedMerges, dispatch } = params;
+  const { pointerId, captureTarget, container, startAddress, scrollLeft, scrollTop, layout, metrics, zoom, normalizedMerges, dispatch } = params;
+
+  if (!Number.isFinite(zoom) || zoom <= 0) {
+    throw new Error(`startRangeSelectPointerDrag zoom must be a positive finite number: ${String(zoom)}`);
+  }
 
   safeSetPointerCapture(captureTarget, pointerId);
 
@@ -51,7 +57,7 @@ export function startRangeSelectPointerDrag(params: {
   dispatch({ type: "PREVIEW_RANGE_SELECT", currentCell });
 
   const onMove = (e: PointerEvent): void => {
-    const address = hitTestCellFromPointerEvent({ e, container, scrollLeft, scrollTop, layout, metrics, normalizedMerges });
+    const address = hitTestCellFromPointerEvent({ e, container, scrollLeft, scrollTop, layout, metrics, normalizedMerges, zoom });
     dispatch({ type: "PREVIEW_RANGE_SELECT", currentCell: address });
   };
 

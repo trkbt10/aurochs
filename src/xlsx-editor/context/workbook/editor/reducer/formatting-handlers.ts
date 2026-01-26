@@ -22,12 +22,55 @@ import {
   useBuiltinNumberFormat,
 } from "../../../../../xlsx/domain/style/mutation";
 import type { StyleId } from "../../../../../xlsx/domain/types";
+import { isEqualCellXf } from "../../../../../xlsx/domain/style/mutation/equality";
+import type { XlsxCellStyle, XlsxStyleSheet } from "../../../../../xlsx/domain/style/types";
 
 type ApplyStyleAction = Extract<XlsxEditorAction, { type: "APPLY_STYLE" }>;
 type ApplyNamedStyleAction = Extract<XlsxEditorAction, { type: "APPLY_NAMED_STYLE" }>;
+type CreateNamedStyleAction = Extract<XlsxEditorAction, { type: "CREATE_NAMED_STYLE" }>;
+type DeleteNamedStyleAction = Extract<XlsxEditorAction, { type: "DELETE_NAMED_STYLE" }>;
 type SetSelectionFormatAction = Extract<XlsxEditorAction, { type: "SET_SELECTION_FORMAT" }>;
 type MergeCellsAction = Extract<XlsxEditorAction, { type: "MERGE_CELLS" }>;
 type UnmergeCellsAction = Extract<XlsxEditorAction, { type: "UNMERGE_CELLS" }>;
+
+/**
+ * Upsert a cellStyleXf entry (for named style base formats).
+ * Returns the xfId (index into cellStyleXfs).
+ */
+function upsertCellStyleXf(
+  styles: XlsxStyleSheet,
+  xf: XlsxCellXf,
+): { readonly styles: XlsxStyleSheet; readonly xfId: number } {
+  const existingIndex = styles.cellStyleXfs.findIndex((candidate) => isEqualCellXf(candidate, xf));
+  if (existingIndex >= 0) {
+    return { styles, xfId: existingIndex };
+  }
+  return {
+    styles: { ...styles, cellStyleXfs: [...styles.cellStyleXfs, xf] },
+    xfId: styles.cellStyleXfs.length,
+  };
+}
+
+/**
+ * Add a new cellStyle entry.
+ */
+function addCellStyle(
+  styles: XlsxStyleSheet,
+  cellStyle: XlsxCellStyle,
+): XlsxStyleSheet {
+  return { ...styles, cellStyles: [...styles.cellStyles, cellStyle] };
+}
+
+/**
+ * Remove a cellStyle entry by index.
+ */
+function removeCellStyleAtIndex(
+  styles: XlsxStyleSheet,
+  index: number,
+): XlsxStyleSheet {
+  const newCellStyles = styles.cellStyles.filter((_, i) => i !== index);
+  return { ...styles, cellStyles: newCellStyles };
+}
 
 function resolveNextAlignment(params: {
   readonly baseAlignment: XlsxCellXf["alignment"];
@@ -223,9 +266,109 @@ function handleSetSelectionFormat(
   };
 }
 
+/**
+ * Create a named style from the current cell's formatting.
+ *
+ * 1. Get the current cell's styleId
+ * 2. Look up the cellXf from cellXfs
+ * 3. Create a new cellStyleXf entry (upsert for deduplication)
+ * 4. Create a new cellStyle entry with the given name
+ */
+function handleCreateNamedStyle(
+  state: XlsxEditorState,
+  action: CreateNamedStyleAction,
+): XlsxEditorState {
+  const sheetIndex = state.activeSheetIndex;
+  if (sheetIndex === undefined) {
+    return state;
+  }
+
+  const currentWorkbook = state.workbookHistory.present;
+  const sheet = currentWorkbook.sheets[sheetIndex];
+  if (!sheet) {
+    return state;
+  }
+
+  // Get the cell and its style
+  const cell = getCell(sheet, action.baseCellAddress);
+  const cellStyleId = cell?.styleId ?? 0;
+  const cellXf = currentWorkbook.styles.cellXfs[cellStyleId as number];
+  if (!cellXf) {
+    return state;
+  }
+
+  // Create the base format for the named style (cellStyleXf)
+  // We strip the xfId since this will be a base style itself
+  const baseXf: XlsxCellXf = {
+    numFmtId: cellXf.numFmtId,
+    fontId: cellXf.fontId,
+    fillId: cellXf.fillId,
+    borderId: cellXf.borderId,
+    alignment: cellXf.alignment,
+    protection: cellXf.protection,
+    applyNumberFormat: cellXf.applyNumberFormat,
+    applyFont: cellXf.applyFont,
+    applyFill: cellXf.applyFill,
+    applyBorder: cellXf.applyBorder,
+    applyAlignment: cellXf.applyAlignment,
+    applyProtection: cellXf.applyProtection,
+  };
+
+  // Upsert the cellStyleXf
+  const xfResult = upsertCellStyleXf(currentWorkbook.styles, baseXf);
+
+  // Create the cellStyle entry
+  const newCellStyle: XlsxCellStyle = {
+    name: action.name,
+    xfId: xfResult.xfId,
+  };
+
+  const updatedStyles = addCellStyle(xfResult.styles, newCellStyle);
+  const updatedWorkbook = { ...currentWorkbook, styles: updatedStyles };
+
+  return {
+    ...state,
+    workbookHistory: pushHistory(state.workbookHistory, updatedWorkbook),
+  };
+}
+
+/**
+ * Delete a named style.
+ *
+ * Note: Built-in styles (builtinId !== undefined) should not be deleted.
+ */
+function handleDeleteNamedStyle(
+  state: XlsxEditorState,
+  action: DeleteNamedStyleAction,
+): XlsxEditorState {
+  const currentWorkbook = state.workbookHistory.present;
+  const { styles } = currentWorkbook;
+
+  // Validate the index
+  const cellStyle = styles.cellStyles[action.cellStyleIndex];
+  if (!cellStyle) {
+    return state;
+  }
+
+  // Don't delete built-in styles
+  if (cellStyle.builtinId !== undefined) {
+    return state;
+  }
+
+  const updatedStyles = removeCellStyleAtIndex(styles, action.cellStyleIndex);
+  const updatedWorkbook = { ...currentWorkbook, styles: updatedStyles };
+
+  return {
+    ...state,
+    workbookHistory: pushHistory(state.workbookHistory, updatedWorkbook),
+  };
+}
+
 export const formattingHandlers: HandlerMap = {
   APPLY_STYLE: handleApplyStyle,
   APPLY_NAMED_STYLE: handleApplyNamedStyle,
+  CREATE_NAMED_STYLE: handleCreateNamedStyle,
+  DELETE_NAMED_STYLE: handleDeleteNamedStyle,
   SET_SELECTION_FORMAT: handleSetSelectionFormat,
   MERGE_CELLS: (state: XlsxEditorState, action: MergeCellsAction) => {
     const sheetIndex = state.activeSheetIndex;

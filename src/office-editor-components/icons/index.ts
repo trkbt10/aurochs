@@ -38,6 +38,7 @@ export {
   Undo2 as UndoIcon,
   Redo2 as RedoIcon,
   Trash2 as TrashIcon,
+  Trash2 as DeleteIcon,
   Copy as CopyIcon,
   Clipboard as PasteIcon,
   Scissors as CutIcon,

@@ -47,6 +47,8 @@ describe("xlsx-editor/components/sheet-grid/cell-viewport", () => {
           scrollLeft={0}
           viewportWidth={320}
           viewportHeight={200}
+          zoom={1}
+          focusGridRoot={() => undefined}
           selection={{ selectedRanges: [], activeRange: undefined, activeCell: undefined }}
           state={{ editingCell: undefined }}
           activeSheetIndex={0}
@@ -95,6 +97,8 @@ describe("xlsx-editor/components/sheet-grid/cell-viewport", () => {
           scrollLeft={0}
           viewportWidth={320}
           viewportHeight={200}
+          zoom={1}
+          focusGridRoot={() => undefined}
           selection={{
             selectedRanges: [
               {
@@ -162,6 +166,8 @@ describe("xlsx-editor/components/sheet-grid/cell-viewport", () => {
           scrollLeft={0}
           viewportWidth={320}
           viewportHeight={200}
+          zoom={1}
+          focusGridRoot={() => undefined}
           selection={{
             selectedRanges: [],
             activeRange: {

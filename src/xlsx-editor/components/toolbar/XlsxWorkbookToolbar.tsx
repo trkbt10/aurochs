@@ -5,7 +5,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
-import { AlignCenterIcon, AlignLeftIcon, AlignRightIcon, Button, Input, ToggleButton, spacingTokens, MergeCellsIcon, UnmergeCellsIcon } from "../../../office-editor-components";
+import { AddIcon, AlignCenterIcon, AlignLeftIcon, AlignRightIcon, Button, Input, LineIcon, Select, ToggleButton, spacingTokens, MergeCellsIcon, UnmergeCellsIcon } from "../../../office-editor-components";
 import { indexToColumnLetter, type CellAddress, type CellRange } from "../../../xlsx/domain/cell/address";
 import { colIdx, rowIdx } from "../../../xlsx/domain/types";
 import { StylePicker } from "./StylePicker";
@@ -22,6 +22,8 @@ export type XlsxWorkbookToolbarProps = {
   readonly sheetIndex: number;
   readonly isFormatPanelOpen: boolean;
   readonly onToggleFormatPanel: () => void;
+  readonly zoom: number;
+  readonly onZoomChange: (next: number) => void;
 };
 
 const barStyle: CSSProperties = {
@@ -41,6 +43,23 @@ const formulaInputStyle: CSSProperties = {
   flex: 1,
   minWidth: 120,
 };
+
+const ZOOM_STEPS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3] as const;
+
+function getClosestZoomIndex(value: number): number {
+  return ZOOM_STEPS.reduce((bestIndex, step, index) => {
+    const bestDiff = Math.abs(ZOOM_STEPS[bestIndex] - value);
+    const nextDiff = Math.abs(step - value);
+    return nextDiff < bestDiff ? index : bestIndex;
+  }, 0);
+}
+
+function getNextZoomValue(value: number, direction: "in" | "out"): number {
+  const currentIndex = getClosestZoomIndex(value);
+  const delta = direction === "in" ? 1 : -1;
+  const nextIndex = Math.min(Math.max(currentIndex + delta, 0), ZOOM_STEPS.length - 1);
+  return ZOOM_STEPS[nextIndex];
+}
 
 function createA1AddressText(address: CellAddress): string {
   const col = indexToColumnLetter(colIdx(address.col as number));
@@ -91,7 +110,7 @@ function clearHorizontalAlignment(baseAlignment: XlsxAlignment | undefined): Xls
  *
  * Provides undo/redo and a simple formula/value bar bound to the current selection.
  */
-export function XlsxWorkbookToolbar({ sheetIndex, isFormatPanelOpen, onToggleFormatPanel }: XlsxWorkbookToolbarProps) {
+export function XlsxWorkbookToolbar({ sheetIndex, isFormatPanelOpen, onToggleFormatPanel, zoom, onZoomChange }: XlsxWorkbookToolbarProps) {
   const { dispatch, workbook, canUndo, canRedo, selection, state } = useXlsxWorkbookEditor();
   const sheet = workbook.sheets[sheetIndex];
   if (!sheet) {
@@ -152,6 +171,14 @@ export function XlsxWorkbookToolbar({ sheetIndex, isFormatPanelOpen, onToggleFor
   const alignLeftPressed = !horizontalMixed && horizontalValue === "left";
   const alignCenterPressed = !horizontalMixed && horizontalValue === "center";
   const alignRightPressed = !horizontalMixed && horizontalValue === "right";
+
+  const zoomSelectValue = String(Math.round(ZOOM_STEPS[getClosestZoomIndex(zoom)] * 100));
+  const zoomOptions = useMemo(() => {
+    return ZOOM_STEPS.map((step) => ({
+      value: String(Math.round(step * 100)),
+      label: `${Math.round(step * 100)}%`,
+    }));
+  }, []);
 
   return (
     <div style={barStyle}>
@@ -341,6 +368,35 @@ export function XlsxWorkbookToolbar({ sheetIndex, isFormatPanelOpen, onToggleFor
       >
         <UnmergeCellsIcon size={14} />
       </Button>
+
+      <div style={{ display: "flex", alignItems: "center", gap: spacingTokens.xs }}>
+        <Button
+          size="sm"
+          title="Zoom in"
+          onClick={() => onZoomChange(getNextZoomValue(zoom, "in"))}
+        >
+          <AddIcon size={14} />
+        </Button>
+        <Button
+          size="sm"
+          title="Zoom out"
+          onClick={() => onZoomChange(getNextZoomValue(zoom, "out"))}
+        >
+          <LineIcon size={14} />
+        </Button>
+        <div style={{ width: 90 }}>
+          <Select
+            value={zoomSelectValue}
+            options={zoomOptions}
+            onChange={(value) => {
+              const nextZoom = Number(value) / 100;
+              if (!Number.isNaN(nextZoom) && nextZoom > 0) {
+                onZoomChange(nextZoom);
+              }
+            }}
+          />
+        </div>
+      </div>
 
       <Input
         value={input}

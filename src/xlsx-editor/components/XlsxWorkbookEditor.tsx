@@ -23,6 +23,7 @@ export type XlsxWorkbookEditorProps = {
 function XlsxWorkbookEditorInner({ grid }: { readonly grid: XlsxGridMetrics }) {
   const { workbook, activeSheetIndex } = useXlsxWorkbookEditor();
   const [isFormatPanelOpen, setIsFormatPanelOpen] = useState<boolean>(true);
+  const [zoom, setZoom] = useState<number>(1);
 
   const activeSheet = activeSheetIndex !== undefined ? workbook.sheets[activeSheetIndex] : undefined;
 
@@ -34,10 +35,12 @@ function XlsxWorkbookEditorInner({ grid }: { readonly grid: XlsxGridMetrics }) {
             sheetIndex={activeSheetIndex}
             isFormatPanelOpen={isFormatPanelOpen}
             onToggleFormatPanel={() => setIsFormatPanelOpen((v) => !v)}
+            zoom={zoom}
+            onZoomChange={setZoom}
           />
           <div style={{ flex: 1, minHeight: 0, display: "flex", gap: spacingTokens.sm }}>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <XlsxSheetGrid sheetIndex={activeSheetIndex} metrics={grid} />
+              <XlsxSheetGrid sheetIndex={activeSheetIndex} metrics={grid} zoom={zoom} />
             </div>
             {isFormatPanelOpen && (
               <XlsxCellFormatPanel sheetIndex={activeSheetIndex} onClose={() => setIsFormatPanelOpen(false)} />

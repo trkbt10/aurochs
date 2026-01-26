@@ -68,6 +68,7 @@ describe("xlsx-editor/components/sheet-grid/sheet-grid-layers", () => {
               }}
               layout={layout}
               formulaEvaluator={formulaEvaluator}
+              zoom={1}
             />
           </VirtualScroll>
         </div>

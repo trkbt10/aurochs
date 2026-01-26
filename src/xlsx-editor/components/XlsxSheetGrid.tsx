@@ -43,14 +43,22 @@ const rootStyle: CSSProperties = {
 export function XlsxSheetGrid({
   sheetIndex,
   metrics,
+  zoom,
 }: {
   readonly sheetIndex: number;
   readonly metrics: XlsxGridMetrics;
+  /** Display zoom factor (1 = 100%). */
+  readonly zoom?: number;
 }) {
   const { dispatch, selection, state, workbook } = useXlsxWorkbookEditor();
   const sheet = workbook.sheets[sheetIndex];
   if (!sheet) {
     throw new Error(`Sheet not found: index=${sheetIndex}`);
+  }
+
+  const zoomFactor = zoom ?? 1;
+  if (!Number.isFinite(zoomFactor) || zoomFactor <= 0) {
+    throw new Error(`XlsxSheetGrid zoom must be a positive finite number: ${String(zoom)}`);
   }
 
   if (metrics.rowCount <= 0 || metrics.colCount <= 0) {
@@ -74,8 +82,8 @@ export function XlsxSheetGrid({
 
   const formulaEvaluator = useMemo(() => createFormulaEvaluator(workbook), [workbook]);
 
-  const contentWidth = rowHeaderWidthPx + layout.totalColsWidthPx;
-  const contentHeight = colHeaderHeightPx + layout.totalRowsHeightPx;
+  const contentWidth = (rowHeaderWidthPx + layout.totalColsWidthPx) * zoomFactor;
+  const contentHeight = (colHeaderHeightPx + layout.totalRowsHeightPx) * zoomFactor;
 
   const getCursorCell = (active: CellAddress, isExtend: boolean): CellAddress => {
     if (!isExtend) {
@@ -192,7 +200,7 @@ export function XlsxSheetGrid({
           }
         }}
       >
-        <XlsxSheetGridLayers sheetIndex={sheetIndex} sheet={sheet} metrics={metrics} layout={layout} formulaEvaluator={formulaEvaluator} />
+        <XlsxSheetGridLayers sheetIndex={sheetIndex} sheet={sheet} metrics={metrics} layout={layout} formulaEvaluator={formulaEvaluator} zoom={zoomFactor} />
       </VirtualScroll>
     </div>
   );

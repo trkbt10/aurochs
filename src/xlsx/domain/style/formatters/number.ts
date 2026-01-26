@@ -354,7 +354,7 @@ function formatExponentByTemplate(exponent: number, template: string, signMode: 
 
   const minDigits = placeholders.filter((ch) => ch === "0").length;
   const padded = digits.padStart(Math.max(minDigits, placeholderCount), "0");
-  const state = { digitIndex: padded.length - 1, signInserted: false };
+  const state = { digitIndex: 0, signInserted: false };
 
   const out: string[] = [];
   const templateState = { inQuoted: false };
@@ -393,8 +393,8 @@ function formatExponentByTemplate(exponent: number, template: string, signMode: 
       state.signInserted = true;
     }
 
-    const digit = state.digitIndex >= 0 ? padded[state.digitIndex] : undefined;
-    state.digitIndex -= 1;
+    const digit = state.digitIndex < padded.length ? padded[state.digitIndex] : undefined;
+    state.digitIndex += 1;
     if (digit !== undefined) {
       out.push(digit);
       continue;

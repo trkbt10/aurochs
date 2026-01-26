@@ -77,16 +77,22 @@ export function startFillHandlePointerDrag(params: {
   readonly scrollTop: number;
   readonly layout: Layout;
   readonly metrics: GridMetrics;
+  /** Display zoom factor (1 = 100%). */
+  readonly zoom: number;
   readonly normalizedMerges: readonly NormalizedMergeRange[];
   readonly dispatch: (action: XlsxEditorAction) => void;
 }): () => void {
-  const { pointerId, captureTarget, container, baseRange, scrollLeft, scrollTop, layout, metrics, normalizedMerges, dispatch } = params;
+  const { pointerId, captureTarget, container, baseRange, scrollLeft, scrollTop, layout, metrics, zoom, normalizedMerges, dispatch } = params;
+
+  if (!Number.isFinite(zoom) || zoom <= 0) {
+    throw new Error(`startFillHandlePointerDrag zoom must be a positive finite number: ${String(zoom)}`);
+  }
 
   safeSetPointerCapture(captureTarget, pointerId);
   dispatch({ type: "START_FILL_DRAG", sourceRange: baseRange });
 
   const onMove = (e: PointerEvent): void => {
-    const address = hitTestCellFromPointerEvent({ e, container, scrollLeft, scrollTop, layout, metrics, normalizedMerges });
+    const address = hitTestCellFromPointerEvent({ e, container, scrollLeft, scrollTop, layout, metrics, normalizedMerges, zoom });
     dispatch({ type: "PREVIEW_FILL_DRAG", targetRange: computeFillTargetRange(baseRange, address) });
   };
 

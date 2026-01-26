@@ -10,7 +10,6 @@ import { createDefaultStyleSheet } from "../../../xlsx/domain/style/types";
 import { colIdx, rowIdx } from "../../../xlsx/domain/types";
 import { createSheetLayout } from "../../selectors/sheet-layout";
 import { createFormulaEvaluator } from "../../../xlsx/formula/evaluator";
-import type { XlsxEditorAction } from "../../context/workbook/editor/types";
 import { XlsxSheetGridCellsLayer } from "./cells-layer";
 
 describe("xlsx-editor/components/sheet-grid/cells-layer", () => {
@@ -36,9 +35,6 @@ describe("xlsx-editor/components/sheet-grid/cells-layer", () => {
     };
     const formulaEvaluator = createFormulaEvaluator(workbook);
     const layout = createSheetLayout(sheet, { rowCount: 10, colCount: 10, defaultRowHeightPx: 20, defaultColWidthPx: 50 });
-    const dispatch = (action: XlsxEditorAction): void => {
-      void action;
-    };
 
     render(
       <div style={{ position: "relative", width: 200, height: 100 }}>
@@ -47,14 +43,11 @@ describe("xlsx-editor/components/sheet-grid/cells-layer", () => {
           sheet={sheet}
           styles={workbook.styles}
           layout={layout}
-          metrics={{ rowCount: 10, colCount: 10 }}
           rowRange={{ start: 0, end: 0 }}
           colRange={{ start: 0, end: 0 }}
           scrollTop={0}
           scrollLeft={0}
           normalizedMerges={[]}
-          dispatch={dispatch}
-          focusGridRoot={() => undefined}
           formulaEvaluator={formulaEvaluator}
         />
       </div>,
@@ -86,9 +79,6 @@ describe("xlsx-editor/components/sheet-grid/cells-layer", () => {
     };
     const formulaEvaluator = createFormulaEvaluator(workbook);
     const layout = createSheetLayout(sheet, { rowCount: 10, colCount: 10, defaultRowHeightPx: 20, defaultColWidthPx: 50 });
-    const dispatch = (action: XlsxEditorAction): void => {
-      void action;
-    };
 
     render(
       <div style={{ position: "relative", width: 200, height: 100 }}>
@@ -97,14 +87,11 @@ describe("xlsx-editor/components/sheet-grid/cells-layer", () => {
           sheet={sheet}
           styles={workbook.styles}
           layout={layout}
-          metrics={{ rowCount: 10, colCount: 10 }}
           rowRange={{ start: 0, end: 0 }}
           colRange={{ start: 0, end: 0 }}
           scrollTop={0}
           scrollLeft={0}
           normalizedMerges={[]}
-          dispatch={dispatch}
-          focusGridRoot={() => undefined}
           formulaEvaluator={formulaEvaluator}
         />
       </div>,

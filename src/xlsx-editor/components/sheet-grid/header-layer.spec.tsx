@@ -49,6 +49,7 @@ describe("xlsx-editor/components/sheet-grid/header-layer", () => {
             actions.push(action);
           }}
           focusGridRoot={() => undefined}
+          zoom={1}
         />
       </div>,
     );

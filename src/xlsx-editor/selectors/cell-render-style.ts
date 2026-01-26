@@ -28,11 +28,9 @@ function applyAlignment(style: XlsxCellRenderCssProperties, alignment: XlsxAlign
   if (horizontal === "general" || horizontal === undefined) {
     if (cell?.value.type === "number" || cell?.value.type === "date") {
       style.justifyContent = "flex-end";
-    } else {
-      style.justifyContent = "flex-start";
     }
   } else if (horizontal === "left") {
-    style.justifyContent = "flex-start";
+    // default
   } else if (horizontal === "center" || horizontal === "centerContinuous") {
     style.justifyContent = "center";
   } else if (horizontal === "right") {
@@ -47,12 +45,6 @@ function applyAlignment(style: XlsxCellRenderCssProperties, alignment: XlsxAlign
     style.direction = "ltr";
   } else if (alignment.readingOrder === 2) {
     style.direction = "rtl";
-  }
-
-  if (alignment.shrinkToFit === true && alignment.wrapText !== true) {
-    style.whiteSpace = "nowrap";
-    style.overflow = "hidden";
-    style.textOverflow = "clip";
   }
 
   const rotation = alignment.textRotation;
@@ -73,8 +65,6 @@ function applyAlignment(style: XlsxCellRenderCssProperties, alignment: XlsxAlign
 
   if (alignment.vertical === "top") {
     style.alignItems = "flex-start";
-  } else if (alignment.vertical === "center") {
-    style.alignItems = "center";
   } else if (alignment.vertical === "bottom") {
     style.alignItems = "flex-end";
   }
@@ -184,13 +174,9 @@ export function resolveCellRenderStyle(params: {
   }
   if (effectiveBold === true) {
     css.fontWeight = 700;
-  } else if (effectiveBold === false) {
-    css.fontWeight = 400;
   }
   if (effectiveItalic === true) {
     css.fontStyle = "italic";
-  } else if (effectiveItalic === false) {
-    css.fontStyle = "normal";
   }
   if (effectiveColor) {
     const color = xlsxColorToCss(effectiveColor as XlsxColorLike, { indexedColors: styles.indexedColors });

@@ -56,6 +56,16 @@ export function useVirtualScroll({
   const maxScrollTop = Math.max(0, contentHeight - viewportHeight);
   const maxScrollLeft = Math.max(0, contentWidth - viewportWidth);
 
+  // If content/viewport sizes change, ensure current scroll positions remain within bounds.
+  // This prevents "over-scrolling" into blank space when limits shrink.
+  useEffect(() => {
+    setScrollTop((prev) => Math.max(0, Math.min(maxScrollTop, prev)));
+  }, [maxScrollTop]);
+
+  useEffect(() => {
+    setScrollLeft((prev) => Math.max(0, Math.min(maxScrollLeft, prev)));
+  }, [maxScrollLeft]);
+
   const setScrollTopClamped = useCallback(
     (value: number | ((prev: number) => number)): void => {
       setScrollTop((prev) => {

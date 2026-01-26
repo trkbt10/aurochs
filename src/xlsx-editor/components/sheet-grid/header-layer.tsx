@@ -55,6 +55,8 @@ export type XlsxSheetGridHeaderLayerProps = {
   readonly drag: XlsxDragState;
   readonly dispatch: (action: XlsxEditorAction) => void;
   readonly focusGridRoot: (target: EventTarget) => void;
+  /** Display zoom factor (1 = 100%). */
+  readonly zoom: number;
 };
 
 const headerCellBaseStyle: CSSProperties = {
@@ -90,7 +92,11 @@ export function XlsxSheetGridHeaderLayer({
   drag,
   dispatch,
   focusGridRoot,
+  zoom,
 }: XlsxSheetGridHeaderLayerProps) {
+  if (!Number.isFinite(zoom) || zoom <= 0) {
+    throw new Error(`XlsxSheetGridHeaderLayer zoom must be a positive finite number: ${String(zoom)}`);
+  }
   const [headerMenu, setHeaderMenu] = useState<HeaderMenuState | null>(null);
   const resizeRef = useRef<ResizeDragRef | null>(null);
 
@@ -267,7 +273,7 @@ export function XlsxSheetGridHeaderLayer({
     }
 
     const onMove = (e: PointerEvent): void => {
-      const deltaPx = e.clientX - current.startX;
+      const deltaPx = (e.clientX - current.startX) / zoom;
       const nextPx = Math.max(0, current.startWidthPx + deltaPx);
       const nextChars = pixelsToColumnWidthChar(nextPx);
       dispatch({ type: "PREVIEW_COLUMN_RESIZE", newWidth: nextChars });
@@ -286,7 +292,7 @@ export function XlsxSheetGridHeaderLayer({
     };
 
     return startWindowPointerDrag({ pointerId: current.pointerId, onMove, onUp, onCancel });
-  }, [dispatch, drag]);
+  }, [dispatch, drag, zoom]);
 
   useEffect(() => {
     if (drag.type !== "rowResize") {
@@ -298,7 +304,7 @@ export function XlsxSheetGridHeaderLayer({
     }
 
     const onMove = (e: PointerEvent): void => {
-      const deltaPx = e.clientY - current.startY;
+      const deltaPx = (e.clientY - current.startY) / zoom;
       const nextPx = Math.max(0, current.startHeightPx + deltaPx);
       const nextPoints = pixelsToPoints(nextPx);
       dispatch({ type: "PREVIEW_ROW_RESIZE", newHeight: nextPoints });
@@ -317,7 +323,7 @@ export function XlsxSheetGridHeaderLayer({
     };
 
     return startWindowPointerDrag({ pointerId: current.pointerId, onMove, onUp, onCancel });
-  }, [dispatch, drag]);
+  }, [dispatch, drag, zoom]);
 
   const onSelectAll = useCallback(() => {
     dispatch({
