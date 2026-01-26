@@ -97,7 +97,7 @@ function shouldRenderCellLayerItem(text: string, style: CSSProperties): boolean 
   if (text !== "") {
     return true;
   }
-  return style.backgroundColor !== undefined;
+  return Object.keys(style).length > 0;
 }
 
 function resolveConditionalFormatMaybe(params: {
