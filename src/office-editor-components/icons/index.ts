@@ -56,6 +56,8 @@ export {
   // Objects
   Image as PictureIcon,
   Table as TableIcon,
+  TableCellsMerge as MergeCellsIcon,
+  TableCellsSplit as UnmergeCellsIcon,
   BarChart3 as ChartIcon,
   GitBranch as DiagramIcon,
   FileBox as OleObjectIcon,

@@ -5,9 +5,10 @@
  */
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
-import { AlignCenterIcon, AlignLeftIcon, AlignRightIcon, Button, Input, ToggleButton, spacingTokens } from "../../../office-editor-components";
+import { AlignCenterIcon, AlignLeftIcon, AlignRightIcon, Button, Input, ToggleButton, spacingTokens, MergeCellsIcon, UnmergeCellsIcon } from "../../../office-editor-components";
 import { indexToColumnLetter, type CellAddress, type CellRange } from "../../../xlsx/domain/cell/address";
 import { colIdx, rowIdx, styleId } from "../../../xlsx/domain/types";
+import { StylePicker } from "./StylePicker";
 import { parseCellUserInput } from "../cell-input/parse-cell-user-input";
 import { formatCellEditText } from "../cell-input/format-cell-edit-text";
 import { useXlsxWorkbookEditor } from "../../context/workbook/XlsxWorkbookEditorContext";
@@ -103,7 +104,6 @@ export function XlsxWorkbookToolbar({ sheetIndex, isFormatPanelOpen, onToggleFor
   }, [activeCell]);
 
   const [input, setInput] = useState("");
-  const [styleIdInput, setStyleIdInput] = useState<string>("");
 
   useEffect(() => {
     if (!activeCell) {
@@ -127,16 +127,6 @@ export function XlsxWorkbookToolbar({ sheetIndex, isFormatPanelOpen, onToggleFor
 
   const disableInputs = state.editingCell !== undefined;
   const targetRange = useMemo(() => getTargetRange({ activeCell, selectedRange: selection.selectedRange }), [activeCell, selection.selectedRange]);
-  const parsedStyleId = useMemo(() => {
-    if (styleIdInput.trim().length === 0) {
-      return undefined;
-    }
-    const n = Number.parseInt(styleIdInput, 10);
-    if (!Number.isFinite(n) || !Number.isInteger(n) || n < 0) {
-      return undefined;
-    }
-    return styleId(n);
-  }, [styleIdInput]);
 
   const styleDetails = useMemo(() => {
     if (!activeCell) {
@@ -313,25 +303,18 @@ export function XlsxWorkbookToolbar({ sheetIndex, isFormatPanelOpen, onToggleFor
         style={addressInputStyle}
       />
 
-      <Input
-        value={styleIdInput}
-        placeholder="styleId"
-        disabled={disableInputs}
-        style={{ width: 90 }}
-        onChange={(value) => setStyleIdInput(String(value))}
-      />
-      <Button
-        size="sm"
-        disabled={!targetRange || !parsedStyleId || disableInputs}
-        onClick={() => {
-          if (!targetRange || !parsedStyleId) {
+      <StylePicker
+        styles={workbook.styles}
+        currentStyleId={styleDetails?.styleId}
+        disabled={!targetRange || disableInputs}
+        onStyleSelect={(id) => {
+          if (!targetRange) {
             return;
           }
-          dispatch({ type: "APPLY_STYLE", range: targetRange, styleId: parsedStyleId });
+          dispatch({ type: "APPLY_STYLE", range: targetRange, styleId: styleId(id) });
         }}
-      >
-        Apply style
-      </Button>
+      />
+
       <Button
         size="sm"
         disabled={!targetRange || disableInputs}
@@ -341,8 +324,9 @@ export function XlsxWorkbookToolbar({ sheetIndex, isFormatPanelOpen, onToggleFor
           }
           dispatch({ type: "MERGE_CELLS", range: targetRange });
         }}
+        title="Merge cells"
       >
-        Merge
+        <MergeCellsIcon size={14} />
       </Button>
       <Button
         size="sm"
@@ -353,8 +337,9 @@ export function XlsxWorkbookToolbar({ sheetIndex, isFormatPanelOpen, onToggleFor
           }
           dispatch({ type: "UNMERGE_CELLS", range: targetRange });
         }}
+        title="Unmerge cells"
       >
-        Unmerge
+        <UnmergeCellsIcon size={14} />
       </Button>
 
       <Input
