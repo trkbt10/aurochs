@@ -39,6 +39,7 @@ export function createInitialTextState(): TextObjectState {
     textLineMatrix: IDENTITY_MATRIX,
     currentFont: "",
     currentBaseFont: undefined,
+    currentFontInfo: undefined,
     currentFontSize: 12,
     currentFontMetrics: DEFAULT_FONT_METRICS,
     currentCodeByteWidth: 1,
@@ -202,6 +203,7 @@ const handleSetFont: OperatorHandler = (ctx) => {
       currentFontMetrics: fontInfo?.metrics ?? DEFAULT_FONT_METRICS,
       currentCodeByteWidth: fontInfo?.codeByteWidth ?? 1,
       currentBaseFont: fontInfo?.baseFont,
+      currentFontInfo: fontInfo,
     },
   };
 };
@@ -388,7 +390,7 @@ export function createTextRun(
   }
 ): { run: TextRun; newTextMatrix: PdfMatrix } {
   const { ctm, textRise, charSpacing, wordSpacing, horizontalScaling, graphicsState } = gfxState;
-  const { textMatrix, currentFont, currentBaseFont, currentFontSize, currentFontMetrics, currentCodeByteWidth } = textState;
+  const { textMatrix, currentFont, currentBaseFont, currentFontInfo, currentFontSize, currentFontMetrics, currentCodeByteWidth } = textState;
 
   // Text matrix translation gives position in text space
   const [tmA, tmB, tmC, tmD, tmE, tmF] = textMatrix;
@@ -428,6 +430,7 @@ export function createTextRun(
     fontSize: currentFontSize,
     fontName: currentFont,
     baseFont: currentBaseFont,
+    fontInfo: currentFontInfo,
     endX: endPos.x,
     effectiveFontSize,
     textRise,

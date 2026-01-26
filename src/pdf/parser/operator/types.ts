@@ -20,6 +20,7 @@ import type {
   PdfImage,
   FontMappings,
   FontMetrics,
+  FontInfo,
 } from "../../domain";
 import type { ParsedNamedColorSpace } from "../color/color-space.native";
 import type { PdfPattern } from "../pattern/pattern.types";
@@ -107,6 +108,13 @@ export type TextRun = {
    * This is the real font name for rendering, used for @font-face matching.
    */
   readonly baseFont?: string;
+  /**
+   * Resolved font info for the current scope at the moment of the text run.
+   *
+   * This avoids ambiguity when the same BaseFont name appears in multiple
+   * resource scopes (e.g. Form XObjects) with different encodings.
+   */
+  readonly fontInfo?: FontInfo;
 
   /**
    * X coordinate where text ends (after last glyph).
@@ -192,6 +200,7 @@ export type TextObjectState = {
   readonly textLineMatrix: PdfMatrix;
   readonly currentFont: string;
   readonly currentBaseFont: string | undefined;
+  readonly currentFontInfo: FontInfo | undefined;
   readonly currentFontSize: number;
   readonly currentFontMetrics: FontMetrics;
   readonly currentCodeByteWidth: 1 | 2;

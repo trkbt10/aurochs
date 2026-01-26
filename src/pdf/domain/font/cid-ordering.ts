@@ -25,6 +25,7 @@
 
 import type { CIDOrdering } from "./types";
 import { JAPAN1_KANJI_MAPPINGS } from "./japan1-kanji-mappings";
+import { decodeAdobeJapan1CidToUnicode } from "./adobe-japan1-cid-to-unicode";
 
 /**
  * CID-to-Unicode fallback mapping
@@ -246,6 +247,13 @@ export function decodeCIDFallback(
   // CID 0 is .notdef (no glyph)
   if (cid === 0) {
     return null;
+  }
+
+  if (ordering === "Japan1") {
+    const mapped = decodeAdobeJapan1CidToUnicode(cid);
+    if (mapped) {
+      return mapped;
+    }
   }
 
   // Try ASCII range first (most common case)

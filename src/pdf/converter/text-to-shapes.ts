@@ -475,7 +475,10 @@ function buildParagraphsFromSegmentedLines(
     }
     sizes.sort((a, b) => a - b);
     const med = sizes.length > 0 ? sizes[Math.floor(sizes.length / 2)]! : 12;
-    return Math.max(0.5, med * 0.25);
+    // `GroupedParagraph.baselineY` is already clustered into lines by the text-grouping phase.
+    // Here we only want to merge paragraphs that are truly on the *same* physical line
+    // (e.g. table columns), so the tolerance must be tight.
+    return Math.max(0.5, med * 0.1);
   };
 
   const lineEps = estimateLineEps(groupedParas);

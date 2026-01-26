@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "src/pdf/**/*",
+    "spec/pdf-*.spec.ts",
+    "spec/integration/pdf-fixtures.spec.ts",
+    "spec/integration/pdfkit-fixtures.spec.ts",
+    "spec/visual-regression/pdf-import-panel2-pdf-baseline.spec.tsx",
+    "src/vite-env.d.ts"
+  ]
+}

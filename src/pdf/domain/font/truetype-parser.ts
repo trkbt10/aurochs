@@ -31,8 +31,8 @@ export function parseTrueTypeTableDirectory(fontData: Uint8Array): TableEntry[] 
 
   // Check magic (TrueType or OpenType)
   const magic = view.getUint32(0, false);
-  if (magic !== 0x00010000 && magic !== 0x4F54544F) {
-    // Not TrueType (0x00010000) or OpenType (OTTO)
+  if (magic !== 0x00010000 && magic !== 0x4F54544F && magic !== 0x74727565) {
+    // Not TrueType (0x00010000), OpenType (OTTO), or Apple TrueType ('true')
     return [];
   }
 

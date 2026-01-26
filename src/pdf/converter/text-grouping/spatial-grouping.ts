@@ -105,7 +105,7 @@ export type SpatialGroupingOptions = {
 };
 
 const DEFAULT_OPTIONS: Required<SpatialGroupingOptions> = {
-  lineToleranceRatio: 0.3,
+  lineToleranceRatio: 0.1,
   horizontalGapRatio: 1.5,
   verticalGapRatio: 1.2,
   colorMatching: "none",
@@ -702,30 +702,71 @@ function clusterIntoLines(
     .sort((a, b) => b.baseline - a.baseline);
 
   const clusters: PdfText[][] = [];
-  let current: { texts: PdfText[]; meanBaseline: number; meanFontSize: number } | null = null;
+  let current: {
+    texts: PdfText[];
+    meanBaseline: number;
+    meanFontSize: number;
+    meanBottom: number;
+    meanTop: number;
+  } | null = null;
 
   for (const it of items) {
+    const bottom = it.t.y;
+    const top = it.t.y + it.t.height;
+
     if (!current) {
-      current = { texts: [it.t], meanBaseline: it.baseline, meanFontSize: it.t.fontSize };
+      current = {
+        texts: [it.t],
+        meanBaseline: it.baseline,
+        meanFontSize: it.t.fontSize,
+        meanBottom: bottom,
+        meanTop: top,
+      };
       continue;
     }
 
     const refSize = Math.max(current.meanFontSize, it.t.fontSize);
     const tolerance = Math.max(0.5, refSize * options.lineToleranceRatio);
-    const sameLine = Math.abs(it.baseline - current.meanBaseline) <= tolerance;
+    const baselineNear = Math.abs(it.baseline - current.meanBaseline) <= tolerance;
+
+    // Additional guard: require meaningful vertical overlap between text boxes.
+    //
+    // Baseline-only clustering is prone to merging nearby-but-distinct lines,
+    // especially in diagrams where multiple text blocks share similar font sizes.
+    // This overlap check prevents catastrophic "interleaving" (e.g. Latin letters
+    // alternating with CJK text) when two separate lines are clustered as one.
+    const overlap = overlap1D(bottom, top, current.meanBottom, current.meanTop);
+    const denom = Math.min(
+      Math.max(1e-6, top - bottom),
+      Math.max(1e-6, current.meanTop - current.meanBottom),
+    );
+    const overlapRatio = overlap / denom;
+    const verticallyAligned = overlapRatio >= 0.15;
+
+    const sameLine = baselineNear && verticallyAligned;
 
     if (!sameLine) {
       clusters.push(current.texts);
-      current = { texts: [it.t], meanBaseline: it.baseline, meanFontSize: it.t.fontSize };
+      current = {
+        texts: [it.t],
+        meanBaseline: it.baseline,
+        meanFontSize: it.t.fontSize,
+        meanBottom: bottom,
+        meanTop: top,
+      };
       continue;
     }
 
     current.texts.push(it.t);
     current.meanBaseline = current.meanBaseline + (it.baseline - current.meanBaseline) / current.texts.length;
     current.meanFontSize = current.meanFontSize + (it.t.fontSize - current.meanFontSize) / current.texts.length;
+    current.meanBottom = current.meanBottom + (bottom - current.meanBottom) / current.texts.length;
+    current.meanTop = current.meanTop + (top - current.meanTop) / current.texts.length;
   }
 
-  if (current) {clusters.push(current.texts);}
+  if (current) {
+    clusters.push(current.texts);
+  }
   return clusters;
 }
 
@@ -881,7 +922,20 @@ function groupIntoLinesWithColumns(
   })();
 
   for (const lineTexts of lineClusters) {
-    if (!pageIntervals) {
+    // Page-level column assignment can be too aggressive for diagram-like PDFs:
+    // small labels that happen to cross an inferred gutter can get split into
+    // separate "column" segments (e.g. "ベ" | "クトル生成"). Avoid applying
+    // page columns for narrow lines.
+    const shouldUsePageIntervalsForLine = (() => {
+      if (!pageIntervals) {return false;}
+      if (!pageWidth) {return false;}
+      const minX = Math.min(...lineTexts.map((t) => t.x));
+      const maxX = Math.max(...lineTexts.map((t) => t.x + t.width));
+      const lineWidth = maxX - minX;
+      return lineWidth >= pageWidth * 0.25;
+    })();
+
+    if (!shouldUsePageIntervalsForLine) {
       const columnGroups = splitIntoColumnGroups(lineTexts, options, blockingZones);
       for (const group of columnGroups) {
         paragraphs.push(createParagraph(group, options));
@@ -889,11 +943,16 @@ function groupIntoLinesWithColumns(
       continue;
     }
 
+    const intervals = pageIntervals;
+    if (!intervals) {
+      throw new Error("groupIntoLinesWithColumns: pageIntervals is required when using page-level columns");
+    }
+
     const byCol = new Map<number, PdfText[]>();
     for (const t of lineTexts) {
       const x0 = t.x;
       const x1 = t.x + t.width;
-      const c = assignXRangeToColumn(x0, x1, pageIntervals, pageWidth!, options);
+      const c = assignXRangeToColumn(x0, x1, intervals, pageWidth!, options);
       const arr = byCol.get(c) ?? [];
       arr.push(t);
       byCol.set(c, arr);

@@ -365,7 +365,7 @@ export function renderTableSvg(
 
   if (properties.fill) {
     const fillStyle = renderFillToStyle(properties.fill, ctx.colorContext);
-    elements.push(
+    fillElements.push(
       `<rect x="0" y="0" width="${totalWidth}" height="${totalHeight}" fill="${fillStyle.fill}"${
         fillStyle.fillOpacity !== undefined ? ` fill-opacity="${fillStyle.fillOpacity}"` : ""
       }/>`,

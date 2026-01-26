@@ -69,16 +69,6 @@ export type PageStats = {
   readonly imageCount: number;
 };
 
-
-
-
-
-
-
-
-
-
-
 /** Error thrown when PDF import fails. */
 export class PdfImportError extends Error {
   constructor(
@@ -91,12 +81,7 @@ export class PdfImportError extends Error {
   }
 }
 
-export type PdfImportErrorCode =
-  | "INVALID_PDF"
-  | "ENCRYPTED_PDF"
-  | "PARSE_ERROR"
-  | "CONVERSION_ERROR"
-  | "FETCH_ERROR";
+export type PdfImportErrorCode = "INVALID_PDF" | "ENCRYPTED_PDF" | "PARSE_ERROR" | "CONVERSION_ERROR" | "FETCH_ERROR";
 
 /**
  * PDFをインポートしてPresentationDocumentを生成
@@ -165,10 +150,7 @@ export async function importPdf(
 /**
  * Fileオブジェクトからインポート
  */
-export async function importPdfFromFile(
-  file: File,
-  options: PdfImportOptions = {},
-): Promise<PdfImportResult> {
+export async function importPdfFromFile(file: File, options: PdfImportOptions = {}): Promise<PdfImportResult> {
   if (!file) {
     throw new PdfImportError("file is required", "PARSE_ERROR");
   }
@@ -183,10 +165,7 @@ export async function importPdfFromFile(
 /**
  * URLからインポート
  */
-export async function importPdfFromUrl(
-  url: string,
-  options: PdfImportOptions = {},
-): Promise<PdfImportResult> {
+export async function importPdfFromUrl(url: string, options: PdfImportOptions = {}): Promise<PdfImportResult> {
   if (typeof url !== "string" || url.length === 0) {
     throw new PdfImportError("url is required", "FETCH_ERROR");
   }
@@ -196,10 +175,7 @@ export async function importPdfFromUrl(
   });
 
   if (!response.ok) {
-    throw new PdfImportError(
-      `Failed to fetch PDF: ${response.status} ${response.statusText}`,
-      "FETCH_ERROR",
-    );
+    throw new PdfImportError(`Failed to fetch PDF: ${response.status} ${response.statusText}`, "FETCH_ERROR");
   }
 
   const buffer = await response.arrayBuffer().catch((error) => {
@@ -220,10 +196,7 @@ function determineSlideSizeOrThrow(firstPage: PdfPage, options: PdfImportOptions
   }
 }
 
-async function parsePdfOrThrow(
-  buffer: ArrayBuffer | Uint8Array,
-  options: PdfImportOptions,
-) {
+async function parsePdfOrThrow(buffer: ArrayBuffer | Uint8Array, options: PdfImportOptions) {
   try {
     return await parsePdf(buffer, options.pages ? { pages: options.pages } : {});
   } catch (error) {

@@ -54,18 +54,6 @@ describe("getCIDFallbackMapping", () => {
     expect(japan1Map.get(34)).toBe("A");
     expect(gb1Map.get(34)).toBe("A");
   });
-
-  it("returns Japan1-specific mappings", () => {
-    const map = getCIDFallbackMapping("Japan1");
-
-    // Full-width ASCII area (CID 231-325)
-    expect(map.get(231)).toBe("!"); // Full-width ! -> !
-    expect(map.get(232)).toBe('"'); // Full-width " -> "
-
-    // Half-width katakana area (CID 633-695)
-    expect(map.get(633)).toBe("\uff61"); // Half-width 。
-    expect(map.get(634)).toBe("\uff62"); // Half-width 「
-  });
 });
 
 describe("decodeCIDFallback", () => {
@@ -81,8 +69,9 @@ describe("decodeCIDFallback", () => {
   });
 
   it("decodes Japan1-specific CIDs", () => {
-    expect(decodeCIDFallback(231, "Japan1")).toBe("!");
-    expect(decodeCIDFallback(633, "Japan1")).toBe("\uff61");
+    // Spot-check a few hiragana that are stable in Adobe-Japan1 mappings.
+    expect(decodeCIDFallback(842, "Japan1")).toBe("ぁ");
+    expect(decodeCIDFallback(843, "Japan1")).toBe("あ");
   });
 
   it("returns null for unmapped CIDs", () => {

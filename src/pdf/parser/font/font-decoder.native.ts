@@ -7,7 +7,7 @@ import type { PdfArray, PdfDict, PdfName, PdfObject, PdfStream } from "../../nat
 import { decodePdfStream } from "../../native/stream/stream";
 import type { PdfMatrix } from "../../domain";
 import { tokenizeContentStream } from "../../domain/content-stream";
-import type { FontInfo, FontMappings, FontMetrics } from "../../domain/font";
+import type { CMapParseResult, FontInfo, FontMappings, FontMetrics } from "../../domain/font";
 import {
   DEFAULT_FONT_METRICS,
   detectCIDOrdering,
@@ -68,6 +68,36 @@ function parseToUnicodeFromStream(stream: PdfStream, cmapOptions?: CMapParserOpt
   const decoded = decodePdfStream(stream);
   const cmapData = new TextDecoder("latin1").decode(decoded);
   return parseToUnicodeCMap(cmapData, cmapOptions);
+}
+
+function inferCodeByteWidth(
+  page: NativePdfPage,
+  fontDict: PdfDict,
+  toUnicode: CMapParseResult | null,
+): 1 | 2 {
+  const fromToUnicode = toUnicode?.codeByteWidth;
+  if (fromToUnicode === 1 || fromToUnicode === 2) {
+    return fromToUnicode;
+  }
+
+  const subtype = asName(dictGet(fontDict, "Subtype"))?.value ?? "";
+  if (subtype !== "Type0") {
+    return 1;
+  }
+
+  // Type0 (composite) fonts are typically multi-byte. For the common Identity-H/V CMaps,
+  // character codes are 2 bytes (big-endian) and correspond to CIDs.
+  const encodingObj = resolve(page, dictGet(fontDict, "Encoding"));
+  if (encodingObj?.type === "name") {
+    const encName = encodingObj.value;
+    if (encName === "Identity-H" || encName === "Identity-V") {
+      return 2;
+    }
+  }
+
+  // Fallback: treat Type0 fonts as 2-byte. This enables CID-ordering fallback
+  // decoding when ToUnicode is missing (common in some Japanese PDFs).
+  return 2;
 }
 
 function findToUnicodeStream(page: NativePdfPage, fontDict: PdfDict): PdfStream | null {
@@ -513,10 +543,11 @@ export function extractFontMappingsFromResourcesNative(
     const encodingMap = extractEncodingMap(page, fontDict) ?? undefined;
 
     const { isBold, isItalic } = computeBoldItalic(baseFont, extractFontDescriptor(page, fontDict));
+    const codeByteWidth = inferCodeByteWidth(page, fontDict, toUnicode);
 
     const infoRaw: FontInfo = {
       mapping: toUnicode?.mapping ?? new Map(),
-      codeByteWidth: (toUnicode?.codeByteWidth ?? 1) as 1 | 2,
+      codeByteWidth,
       metrics,
       type3: extractType3Info(page, fontDict),
       ordering,

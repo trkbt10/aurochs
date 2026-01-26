@@ -4,7 +4,7 @@
 
 import type { PdfDocument, PdfElement, PdfEmbeddedFont, PdfImage, PdfPage, PdfPath, PdfText } from "../../domain";
 import { tokenizeContentStream } from "../../domain/content-stream";
-import { decodeText, type FontMappings } from "../../domain/font";
+import { decodeText, decodeTextWithFontInfo, type FontMappings } from "../../domain/font";
 import { createGraphicsStateStack, transformPoint, type PdfBBox, type PdfMatrix } from "../../domain";
 import type { NativePdfPage, PdfArray, PdfDict, PdfName, PdfObject, PdfStream } from "../../native";
 import { decodePdfStream } from "../../native/stream/stream";
@@ -769,9 +769,28 @@ function convertText(parsed: ParsedText, fontMappings: FontMappings): PdfText[] 
   const clipBBox = parsed.graphicsState.clipBBox;
 
   for (const run of parsed.runs) {
-    const fontKey = run.baseFont ?? run.fontName;
-    const fontInfo = getFontInfo(fontKey, fontMappings);
-    const decodedText = decodeText(run.text, fontKey, fontMappings);
+    // Prefer decoding/metrics by the font resource name (e.g. "/F1", "/TT0", "/C2_0").
+    // Some PDFs may include multiple font resources that share the same BaseFont
+    // name but differ in encoding/ToUnicode. Using BaseFont as the primary key can
+    // cause severe mojibake (e.g. mixing Type0/TrueType with different byte widths).
+    const primaryFontKey = run.fontName;
+    const fallbackFontKey = run.baseFont;
+
+    const fontInfo =
+      run.fontInfo ??
+      getFontInfo(primaryFontKey, fontMappings) ??
+      (fallbackFontKey ? getFontInfo(fallbackFontKey, fontMappings) : undefined);
+
+    const decodedText =
+      run.fontInfo
+        ? decodeTextWithFontInfo(run.text, run.fontInfo)
+        : (() => {
+            const primary = decodeText(run.text, primaryFontKey, fontMappings);
+            if (primary !== run.text || !fallbackFontKey || fallbackFontKey === primaryFontKey) {
+              return primary;
+            }
+            return decodeText(run.text, fallbackFontKey, fontMappings);
+          })();
 
     const metrics = fontInfo?.metrics;
     const ascender = metrics?.ascender ?? 800;

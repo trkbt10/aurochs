@@ -32,7 +32,7 @@ export {
 } from "./cmap-parser";
 
 // Text decoding
-export { decodeText } from "./text-decoder";
+export { decodeText, decodeTextWithFontInfo } from "./text-decoder";
 
 // CID ordering fallback
 export type { CIDFallbackMapping } from "./cid-ordering";
