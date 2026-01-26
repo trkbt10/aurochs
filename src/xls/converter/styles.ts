@@ -171,22 +171,25 @@ export function convertXlsStylesToXlsxStyles(xls: XlsWorkbook): XlsStyleConversi
 
   const stylesBase = createDefaultStyleSheet();
   const styleXfIndexToCellStyleXfId = new Map<number, number>();
-  const xlsxCellStyleXfs: readonly XlsxCellXf[] =
-    styleXfs.length > 0
-      ? styleXfs.map((entry, idx) => {
-          styleXfIndexToCellStyleXfId.set(entry.xfIndex, idx);
-          return convertXlsXfToXlsxCellXf({ xf: entry.xf, xfIndex: entry.xfIndex, fonts, getBorderId, getFillId });
-        })
-      : stylesBase.cellStyleXfs;
+  function buildCellStyleXfs(): readonly XlsxCellXf[] {
+    if (styleXfs.length === 0) return stylesBase.cellStyleXfs;
+    return styleXfs.map((entry, idx) => {
+      styleXfIndexToCellStyleXfId.set(entry.xfIndex, idx);
+      return convertXlsXfToXlsxCellXf({ xf: entry.xf, xfIndex: entry.xfIndex, fonts, getBorderId, getFillId });
+    });
+  }
 
-  const xlsxCellXfs: readonly XlsxCellXf[] =
-    cellXfs.length > 0
-      ? cellXfs.map((entry) => {
-          const parent = entry.xf.parentXfIndex;
-          const xfId = parent !== 0x0fff ? styleXfIndexToCellStyleXfId.get(parent) : undefined;
-          return convertXlsXfToXlsxCellXf({ xf: entry.xf, xfIndex: entry.xfIndex, fonts, getBorderId, getFillId, xfId });
-        })
-      : stylesBase.cellXfs;
+  function buildCellXfs(): readonly XlsxCellXf[] {
+    if (cellXfs.length === 0) return stylesBase.cellXfs;
+    return cellXfs.map((entry) => {
+      const parent = entry.xf.parentXfIndex;
+      const xfId = parent !== 0x0fff ? styleXfIndexToCellStyleXfId.get(parent) : undefined;
+      return convertXlsXfToXlsxCellXf({ xf: entry.xf, xfIndex: entry.xfIndex, fonts, getBorderId, getFillId, xfId });
+    });
+  }
+
+  const xlsxCellStyleXfs = buildCellStyleXfs();
+  const xlsxCellXfs = buildCellXfs();
 
   const xfIndexToStyleId: (ReturnType<typeof styleId> | undefined)[] = xls.xfs.map(() => undefined);
   for (let i = 0; i < cellXfs.length; i++) {

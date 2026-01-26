@@ -1,5 +1,3 @@
-import { describe, expect, it } from "vitest";
-
 import { parseDatemodeRecord } from "./datemode";
 
 describe("parseDatemodeRecord", () => {
@@ -19,4 +17,3 @@ describe("parseDatemodeRecord", () => {
     expect(() => parseDatemodeRecord(new Uint8Array([0x02, 0x00]))).toThrow(/Invalid DATEMODE value/);
   });
 });
-

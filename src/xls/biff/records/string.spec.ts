@@ -1,5 +1,3 @@
-import { describe, expect, it } from "vitest";
-
 import { parseStringRecord } from "./string";
 
 describe("parseStringRecord", () => {
@@ -23,4 +21,3 @@ describe("parseStringRecord", () => {
     expect(() => parseStringRecord(payload)).toThrow(/Unsupported STRING grbit/);
   });
 });
-

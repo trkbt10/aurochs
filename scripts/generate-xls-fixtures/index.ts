@@ -33,7 +33,7 @@ export async function generateXlsFixtures(options: GenerateXlsFixturesOptions): 
     paddedWorkbookStream.set(workbookStream, 0);
     const xlsBytes = buildMinimalCfbWithWorkbookStream(paddedWorkbookStream);
     const outPath = path.join(options.outputDir, fixture.fileName);
-    await Bun.write(outPath, xlsBytes);
+    await fs.promises.writeFile(outPath, xlsBytes);
     generated.push(outPath);
     if (options.log ?? true) {
       console.log(`Generated: ${fixture.fileName}`);

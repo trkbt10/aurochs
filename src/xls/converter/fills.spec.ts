@@ -1,5 +1,3 @@
-import { describe, expect, it } from "vitest";
-
 import { convertXlsXfToXlsxFill, parseXlsXfFill } from "./fills";
 
 describe("parseXlsXfFill", () => {
@@ -27,4 +25,3 @@ describe("convertXlsXfToXlsxFill", () => {
     ).toEqual({ type: "none" });
   });
 });
-

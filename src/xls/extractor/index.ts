@@ -16,6 +16,26 @@ import type {
   XlsXf,
 } from "../domain/types";
 
+type EmptyProps = Record<string, never>;
+
+function dimensionsProps(dimensions: XlsWorksheet["dimensions"]): { readonly dimensions: NonNullable<XlsWorksheet["dimensions"]> } | EmptyProps {
+  if (!dimensions) return {};
+  return { dimensions };
+}
+
+function defaultColumnWidthProps(defaultColumnWidthChars: number | undefined): { readonly defaultColumnWidthChars: number } | EmptyProps {
+  if (defaultColumnWidthChars === undefined) return {};
+  return { defaultColumnWidthChars };
+}
+
+function defaultRowHeightProps(
+  defaultRowHeightTwips: number | undefined,
+  defaultRowZeroHeight: boolean | undefined,
+): { readonly defaultRowHeightTwips: number; readonly defaultRowZeroHeight: boolean } | EmptyProps {
+  if (defaultRowHeightTwips === undefined || defaultRowZeroHeight === undefined) return {};
+  return { defaultRowHeightTwips, defaultRowZeroHeight };
+}
+
 export function extractXlsWorkbook(parsed: WorkbookStreamParseResult): XlsWorkbook {
   if (!parsed) {
     throw new Error("extractXlsWorkbook: parsed must be provided");
@@ -84,11 +104,9 @@ export function extractXlsWorkbook(parsed: WorkbookStreamParseResult): XlsWorkbo
     return {
       name: sheet.boundsheet.sheetName,
       state: sheet.boundsheet.hiddenState,
-      ...(sheet.dimensions ? { dimensions: sheet.dimensions } : {}),
-      ...(sheet.defaultColumnWidth ? { defaultColumnWidthChars: sheet.defaultColumnWidth.defaultCharWidth } : {}),
-      ...(sheet.defaultRowHeight
-        ? { defaultRowHeightTwips: sheet.defaultRowHeight.heightTwips, defaultRowZeroHeight: sheet.defaultRowHeight.isHeightZero }
-        : {}),
+      ...dimensionsProps(sheet.dimensions),
+      ...defaultColumnWidthProps(sheet.defaultColumnWidth?.defaultCharWidth),
+      ...defaultRowHeightProps(sheet.defaultRowHeight?.heightTwips, sheet.defaultRowHeight?.isHeightZero),
       rows,
       columns,
       mergeCells,

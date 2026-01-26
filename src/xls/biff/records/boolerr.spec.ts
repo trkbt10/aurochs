@@ -1,5 +1,3 @@
-import { describe, expect, it } from "vitest";
-
 import { parseBoolerrRecord } from "./boolerr";
 
 describe("parseBoolerrRecord", () => {
@@ -36,4 +34,3 @@ describe("parseBoolerrRecord", () => {
     expect(() => parseBoolerrRecord(data)).toThrow(/Unknown BOOLERR error code/);
   });
 });
-

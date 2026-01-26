@@ -151,14 +151,16 @@ function toXlsxWorksheet(
   const columns = toXlsxColumns(sheet.columns, xfIndexToStyleId);
   const rows = toXlsxRows(sheet, xfIndexToStyleId);
 
-  const sheetFormatPr =
-    sheet.defaultColumnWidthChars !== undefined || sheet.defaultRowHeightTwips !== undefined || sheet.defaultRowZeroHeight !== undefined
-      ? {
-          ...(sheet.defaultRowHeightTwips !== undefined ? { defaultRowHeight: sheet.defaultRowHeightTwips / 20 } : {}),
-          ...(sheet.defaultColumnWidthChars !== undefined ? { defaultColWidth: sheet.defaultColumnWidthChars } : {}),
-          ...(sheet.defaultRowZeroHeight !== undefined ? { zeroHeight: sheet.defaultRowZeroHeight } : {}),
-        }
-      : undefined;
+  const sheetFormatPr: NonNullable<XlsxWorksheet["sheetFormatPr"]> = {};
+  if (sheet.defaultRowHeightTwips !== undefined) {
+    sheetFormatPr.defaultRowHeight = sheet.defaultRowHeightTwips / 20;
+  }
+  if (sheet.defaultColumnWidthChars !== undefined) {
+    sheetFormatPr.defaultColWidth = sheet.defaultColumnWidthChars;
+  }
+  if (sheet.defaultRowZeroHeight !== undefined) {
+    sheetFormatPr.zeroHeight = sheet.defaultRowZeroHeight;
+  }
 
   return {
     dateSystem,
@@ -169,7 +171,7 @@ function toXlsxWorksheet(
     ...(columns ? { columns } : {}),
     rows,
     ...(mergeCells ? { mergeCells } : {}),
-    ...(sheetFormatPr ? { sheetFormatPr } : {}),
+    ...(Object.keys(sheetFormatPr).length ? { sheetFormatPr } : {}),
     xmlPath: `xl/worksheets/sheet${sheetId}.xml`,
   };
 }

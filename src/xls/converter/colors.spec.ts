@@ -1,5 +1,3 @@
-import { describe, expect, it } from "vitest";
-
 import { convertXlsColorIndexToXlsxColor } from "./colors";
 
 describe("convertXlsColorIndexToXlsxColor", () => {
@@ -11,4 +9,3 @@ describe("convertXlsColorIndexToXlsxColor", () => {
     expect(convertXlsColorIndexToXlsxColor(0x08)).toEqual({ type: "indexed", index: 8 });
   });
 });
-

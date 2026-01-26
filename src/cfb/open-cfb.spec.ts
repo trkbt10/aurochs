@@ -1,5 +1,3 @@
-import { describe, expect, it } from "vitest";
-
 import { openCfb } from "./index";
 import { CFB_SIGNATURE, ENDOFCHAIN, FATSECT, FREESECT, NOSTREAM } from "./constants";
 

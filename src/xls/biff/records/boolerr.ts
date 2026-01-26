@@ -51,11 +51,8 @@ export function parseBoolerrRecord(data: Uint8Array): BoolerrRecord {
     throw new Error(`Invalid BOOLERR fError: ${fError} (expected 0 or 1)`);
   }
 
-  const value: BoolerrValue =
-    fError === 0
-      ? { type: "boolean", value: bBoolErr !== 0 }
-      : { type: "error", value: mapErrorCode(bBoolErr) };
-
-  return { row, col, xfIndex, value };
+  if (fError === 0) {
+    return { row, col, xfIndex, value: { type: "boolean", value: bBoolErr !== 0 } };
+  }
+  return { row, col, xfIndex, value: { type: "error", value: mapErrorCode(bBoolErr) } };
 }
-
