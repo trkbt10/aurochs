@@ -138,26 +138,15 @@ function mapHiddenState(hsState: number): HiddenState {
 ## Test Cases
 
 ### Test XLS Generation
-```typescript
-// scripts/generate-xls-fixtures/boundsheet.ts
-import XLSX from 'xlsx';
+このリポジトリでは外部の XLS writer（例: SheetJS）は使わず、`scripts/generate-xls-fixtures/` の最小ジェネレータで `.xls` を生成する。
 
-const workbook = XLSX.utils.book_new();
-
-// Visible sheet
-const ws1 = XLSX.utils.aoa_to_sheet([["Sheet1"]]);
-XLSX.utils.book_append_sheet(workbook, ws1, "Visible");
-
-// Hidden sheet
-const ws2 = XLSX.utils.aoa_to_sheet([["Sheet2"]]);
-workbook.Workbook = workbook.Workbook || {};
-workbook.Workbook.Sheets = workbook.Workbook.Sheets || [];
-workbook.Workbook.Sheets.push({ Hidden: 1 });
-XLSX.utils.book_append_sheet(workbook, ws2, "Hidden");
-
-const xlsBytes = XLSX.write(workbook, { type: "buffer", bookType: "xls" });
-await Bun.write("fixtures/xls/multi-sheet.xls", xlsBytes);
+```bash
+bun run scripts/generate-xls-fixtures/index.ts
 ```
+
+生成物（BOUNDSHEET を含む）:
+- `spec/xls-fixtures/minimal.xls`（1枚の visible シート）
+- `spec/xls-fixtures/all-features.xls`（2枚目が `veryHidden`）
 
 ### Expected Result
 ```typescript

@@ -92,22 +92,15 @@ XLSXでも共有文字列テーブルを使用するため、SSTのインデッ�
 ## Test Cases
 
 ### Test XLS Generation
-```typescript
-// scripts/generate-xls-fixtures/labelsst.ts
-import XLSX from 'xlsx';
+このリポジトリでは外部の XLS writer（例: SheetJS）は使わず、`scripts/generate-xls-fixtures/` の最小ジェネレータで `.xls` を生成する。
 
-const workbook = XLSX.utils.book_new();
-const data = [
-  ["Hello", "World"],
-  ["Hello", "Again"],  // "Hello" is shared in SST
-  ["日本語", "テスト"],
-];
-const worksheet = XLSX.utils.aoa_to_sheet(data);
-XLSX.utils.book_append_sheet(workbook, worksheet, "Strings");
-
-const xlsBytes = XLSX.write(workbook, { type: "buffer", bookType: "xls" });
-await Bun.write("fixtures/xls/labelsst.xls", xlsBytes);
+```bash
+bun run scripts/generate-xls-fixtures/index.ts
 ```
+
+生成物（LABELSST を含む）:
+- `spec/xls-fixtures/minimal.xls`（A1 に "Hello"）
+- `spec/xls-fixtures/all-features.xls`（Sheet1: A2 に "Hello"）
 
 ### Expected Result
 ```typescript

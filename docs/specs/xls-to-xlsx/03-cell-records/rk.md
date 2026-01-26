@@ -114,22 +114,14 @@ NUMBER recordと同様:
 ## Test Cases
 
 ### Test XLS Generation
-```typescript
-// scripts/generate-xls-fixtures/rk-numbers.ts
-import XLSX from 'xlsx';
+このリポジトリでは外部の XLS writer（例: SheetJS）は使わず、`scripts/generate-xls-fixtures/` の最小ジェネレータで `.xls` を生成する。
 
-const workbook = XLSX.utils.book_new();
-const data = [
-  [1, 12345678],           // Integer RK
-  [1.23, 123456.78],       // Integer/100 RK
-  [0.01, 0.99],            // IEEE/100 RK
-];
-const worksheet = XLSX.utils.aoa_to_sheet(data);
-XLSX.utils.book_append_sheet(workbook, worksheet, "RK");
-
-const xlsBytes = XLSX.write(workbook, { type: "buffer", bookType: "xls" });
-await Bun.write("fixtures/xls/rk-numbers.xls", xlsBytes);
+```bash
+bun run scripts/generate-xls-fixtures/index.ts
 ```
+
+生成物（RK を含む）:
+- `spec/xls-fixtures/all-features.xls`
 
 ### Expected Result
 ```typescript

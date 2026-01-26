@@ -85,23 +85,14 @@ function numberRecordToCell(rec: NumberRecord): Cell {
 ## Test Cases
 
 ### Test XLS Generation
-```typescript
-// scripts/generate-xls-fixtures/numbers.ts
-import XLSX from 'xlsx';
+このリポジトリでは外部の XLS writer（例: SheetJS）は使わず、`scripts/generate-xls-fixtures/` の最小ジェネレータで `.xls` を生成する。
 
-const workbook = XLSX.utils.book_new();
-const data = [
-  [1, 2, 3],
-  [1.5, 2.5, 3.5],
-  [0.001, 1000000, -123.456],
-  [Math.PI, Math.E, Number.MAX_SAFE_INTEGER],
-];
-const worksheet = XLSX.utils.aoa_to_sheet(data);
-XLSX.utils.book_append_sheet(workbook, worksheet, "Numbers");
-
-const xlsBytes = XLSX.write(workbook, { type: "buffer", bookType: "xls" });
-await Bun.write("fixtures/xls/numbers.xls", xlsBytes);
+```bash
+bun run scripts/generate-xls-fixtures/index.ts
 ```
+
+生成物（NUMBER を含む）:
+- `spec/xls-fixtures/all-features.xls`
 
 ### Expected Result
 ```typescript

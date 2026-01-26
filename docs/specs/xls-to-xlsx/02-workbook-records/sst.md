@@ -133,22 +133,15 @@ function parseUnicodeString(data: Uint8Array): { value: string; bytesRead: numbe
 ## Test Cases
 
 ### Test XLS Generation
-```typescript
-// scripts/generate-xls-fixtures/strings.ts
-import XLSX from 'xlsx';
+このリポジトリでは外部の XLS writer（例: SheetJS）は使わず、`scripts/generate-xls-fixtures/` の最小ジェネレータで `.xls` を生成する。
 
-const workbook = XLSX.utils.book_new();
-const data = [
-  ["Hello", "World"],
-  ["Hello", "Excel"],  // "Hello" is shared
-  ["日本語", "文字列"],
-];
-const worksheet = XLSX.utils.aoa_to_sheet(data);
-XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
-
-const xlsBytes = XLSX.write(workbook, { type: "buffer", bookType: "xls" });
-await Bun.write("fixtures/xls/strings.xls", xlsBytes);
+```bash
+bun run scripts/generate-xls-fixtures/index.ts
 ```
+
+生成物（SST を含む）:
+- `spec/xls-fixtures/minimal.xls`（`["Hello"]`）
+- `spec/xls-fixtures/all-features.xls`（空文字列 / 日本語 / 複数エントリを含む）
 
 ### Expected Result
 ```typescript

@@ -103,26 +103,15 @@ function dimensionsToXlsx(dim: DimensionsRecord): CellRange {
 ## Test Cases
 
 ### Test XLS Generation
-```typescript
-// scripts/generate-xls-fixtures/dimensions.ts
-import XLSX from 'xlsx';
+このリポジトリでは外部の XLS writer（例: SheetJS）は使わず、`scripts/generate-xls-fixtures/` の最小ジェネレータで `.xls` を生成する。
 
-// 特定の範囲にデータを持つシート
-const workbook = XLSX.utils.book_new();
-const data = [
-  [null, null, null],
-  [null, null, null],
-  [null, "B3", "C3", "D3"],  // Row 3 starts at column B
-  [null, "B4", "C4", "D4"],
-  [null, "B5", "C5", "D5"],
-  [null, "B6", "C6", "D6"],
-];
-const worksheet = XLSX.utils.aoa_to_sheet(data);
-XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
-
-const xlsBytes = XLSX.write(workbook, { type: "buffer", bookType: "xls" });
-await Bun.write("fixtures/xls/dimensions.xls", xlsBytes);
+```bash
+bun run scripts/generate-xls-fixtures/index.ts
 ```
+
+生成物（DIMENSIONS を含む）:
+- `spec/xls-fixtures/minimal.xls`（1セルのみ）
+- `spec/xls-fixtures/all-features.xls`（複数列/複数行）
 
 ### Expected Result
 ```typescript

@@ -14,7 +14,7 @@
 
 ```typescript
 // src/xls/index.ts
-export { parseXls } from "./parser";
+export { parseXls, parseXlsWithReport, type ParseXlsOptions, type ParseXlsResult } from "./parser";
 export { convertXlsToXlsx } from "./converter";
 export { extractXlsWorkbook } from "./extractor";
 export type { XlsWorkbook } from "./domain/types";
@@ -24,29 +24,28 @@ export type { XlsWorkbook } from "./domain/types";
 
 ```typescript
 // src/xls/parser.ts
-import { CfbFormatError, openCfb } from "../cfb";
-import { parseWorkbookStream } from "./biff/workbook-stream";
-import { extractXlsWorkbook } from "./extractor";
-import { convertXlsToXlsx } from "./converter";
+import type { XlsxWorkbook } from "../xlsx/domain/workbook";
+import type { XlsParseMode } from "./parse-context";
+import type { XlsWarning, XlsWarningSink } from "./warnings";
 
-function readWorkbookStreamFromCfb(bytes: Uint8Array): Uint8Array {
-  const cfb = openCfb(bytes);
-  try {
-    return cfb.readStream(["Workbook"]);
-  } catch (err) {
-    if (err instanceof CfbFormatError && err.message.includes("Path not found")) {
-      return cfb.readStream(["Book"]);
-    }
-    throw err;
-  }
-}
+export type ParseXlsOptions = {
+  readonly mode?: XlsParseMode;
+  readonly onWarning?: XlsWarningSink;
+};
 
-export function parseXls(bytes: Uint8Array): XlsxWorkbook {
-  const workbookStreamBytes = readWorkbookStreamFromCfb(bytes);
-  const parsed = parseWorkbookStream(workbookStreamBytes);
-  const xls = extractXlsWorkbook(parsed);
-  return convertXlsToXlsx(xls);
-}
+export type ParseXlsResult = {
+  readonly workbook: XlsxWorkbook;
+  readonly warnings: readonly XlsWarning[];
+};
+
+// Implementation note:
+// - `parseXlsWithReport()` always collects warnings internally (createXlsWarningCollector()).
+// - `{ mode, warn }` context is passed into openCfb() / parseWorkbookStream() / convertXlsToXlsx().
+// - In strict mode, inconsistencies throw; in lenient mode, each fallback emits a warning.
+export declare function parseXlsWithReport(bytes: Uint8Array, options?: Omit<ParseXlsOptions, "onWarning">): ParseXlsResult;
+
+// NOTE: lenient mode requires `onWarning`; otherwise it throws on first fallback.
+export declare function parseXls(bytes: Uint8Array, options?: ParseXlsOptions): XlsxWorkbook;
 ```
 
 ## End-to-End Flow
@@ -114,6 +113,9 @@ bun run test -- src/cfb/
 
 # Integration tests
 bun run test -- spec/xls/
+
+# POI test-data smoke read (XLS, lenient mode)
+bun run test -- spec/xls/poi-test-data-spreadsheet-xls-read.spec.ts
 
 # Visual verification
 # Open output XLSX in Excel/LibreOffice and compare with original XLS

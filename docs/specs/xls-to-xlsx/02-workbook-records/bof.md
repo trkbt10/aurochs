@@ -125,19 +125,15 @@ function mapSubstreamType(dt: number): BofSubstreamType {
 ## Test Cases
 
 ### Test XLS Generation
-```typescript
-// scripts/generate-xls-fixtures/bof-eof.ts
-import XLSX from 'xlsx';
+このリポジトリでは外部の XLS writer（例: SheetJS）は使わず、`scripts/generate-xls-fixtures/` の最小ジェネレータで `.xls` を生成する。
 
-// 最小限のワークブックを作成
-const workbook = XLSX.utils.book_new();
-const worksheet = XLSX.utils.aoa_to_sheet([["Hello"]]);
-XLSX.utils.book_append_sheet(workbook, worksheet, "Sheet1");
-
-// XLS形式で書き出し
-const xlsBytes = XLSX.write(workbook, { type: "buffer", bookType: "xls" });
-await Bun.write("fixtures/xls/minimal.xls", xlsBytes);
+```bash
+bun run scripts/generate-xls-fixtures/index.ts
 ```
+
+生成物（BOF を含む）:
+- `spec/xls-fixtures/minimal.xls`（Workbook globals / Worksheet substream の BOF）
+- `spec/xls-fixtures/all-features.xls`（Workbook globals / 2 Worksheet substream の BOF）
 
 ### Expected Result
 ```typescript
