@@ -1,0 +1,259 @@
+{
+  "name": "@oxen/pptx",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "dependencies": {
+    "@oxen/buffer": "workspace:*",
+    "@oxen/color": "workspace:*",
+    "@oxen/files": "workspace:*",
+    "@oxen/ooxml": "workspace:*",
+    "@oxen/text": "workspace:*",
+    "@oxen/xlsx": "workspace:*",
+    "@oxen/xml": "workspace:*",
+    "@oxen/zip": "workspace:*"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./app": {
+      "types": "./src/app/index.ts",
+      "default": "./src/app/index.ts"
+    },
+    "./*": {
+      "types": "./src/*.ts",
+      "default": "./src/*.ts"
+    },
+    "./app/*": {
+      "types": "./src/app/*.ts",
+      "default": "./src/app/*.ts"
+    },
+    "./app/open-presentation": {
+      "types": "./src/app/open-presentation.ts",
+      "default": "./src/app/open-presentation.ts"
+    },
+    "./app/presentation-document": {
+      "types": "./src/app/presentation-document.ts",
+      "default": "./src/app/presentation-document.ts"
+    },
+    "./app/slide-context-adapter": {
+      "types": "./src/app/slide-context-adapter.ts",
+      "default": "./src/app/slide-context-adapter.ts"
+    },
+    "./app/types": {
+      "types": "./src/app/types.ts",
+      "default": "./src/app/types.ts"
+    },
+    "./domain": {
+      "types": "./src/domain/index.ts",
+      "default": "./src/domain/index.ts"
+    },
+    "./domain/*": {
+      "types": "./src/domain/*.ts",
+      "default": "./src/domain/*.ts"
+    },
+    "./domain/*/*": {
+      "types": "./src/domain/*/*.ts",
+      "default": "./src/domain/*/*.ts"
+    },
+    "./domain/defaults": {
+      "types": "./src/domain/defaults.ts",
+      "default": "./src/domain/defaults.ts"
+    },
+    "./domain/index": {
+      "types": "./src/domain/index.ts",
+      "default": "./src/domain/index.ts"
+    },
+    "./domain/types": {
+      "types": "./src/domain/types.ts",
+      "default": "./src/domain/types.ts"
+    },
+    "./domain/unit-conversion": {
+      "types": "./src/domain/unit-conversion.ts",
+      "default": "./src/domain/unit-conversion.ts"
+    },
+    "./domain/resolution": {
+      "types": "./src/domain/resolution.ts",
+      "default": "./src/domain/resolution.ts"
+    },
+    "./domain/animation": {
+      "types": "./src/domain/animation.ts",
+      "default": "./src/domain/animation.ts"
+    },
+    "./domain/chart": {
+      "types": "./src/domain/chart.ts",
+      "default": "./src/domain/chart.ts"
+    },
+    "./domain/effects": {
+      "types": "./src/domain/effects.ts",
+      "default": "./src/domain/effects.ts"
+    },
+    "./domain/geometry": {
+      "types": "./src/domain/geometry.ts",
+      "default": "./src/domain/geometry.ts"
+    },
+    "./domain/line": {
+      "types": "./src/domain/line.ts",
+      "default": "./src/domain/line.ts"
+    },
+    "./domain/relationships": {
+      "types": "./src/domain/relationships.ts",
+      "default": "./src/domain/relationships.ts"
+    },
+    "./domain/resource-resolver": {
+      "types": "./src/domain/resource-resolver.ts",
+      "default": "./src/domain/resource-resolver.ts"
+    },
+    "./domain/shape": {
+      "types": "./src/domain/shape.ts",
+      "default": "./src/domain/shape.ts"
+    },
+    "./domain/text": {
+      "types": "./src/domain/text.ts",
+      "default": "./src/domain/text.ts"
+    },
+    "./domain/three-d": {
+      "types": "./src/domain/three-d.ts",
+      "default": "./src/domain/three-d.ts"
+    },
+    "./domain/resource-store": {
+      "types": "./src/domain/resource-store.ts",
+      "default": "./src/domain/resource-store.ts"
+    },
+    "./domain/shape-utils": {
+      "types": "./src/domain/shape-utils.ts",
+      "default": "./src/domain/shape-utils.ts"
+    },
+    "./domain/slide/types": {
+      "types": "./src/domain/slide/types.ts",
+      "default": "./src/domain/slide/types.ts"
+    },
+    "./domain/shape-geometry/guide-engine": {
+      "types": "./src/domain/shape-geometry/guide-engine.ts",
+      "default": "./src/domain/shape-geometry/guide-engine.ts"
+    },
+    "./domain/table/types": {
+      "types": "./src/domain/table/types.ts",
+      "default": "./src/domain/table/types.ts"
+    },
+    "./domain/table/resolver": {
+      "types": "./src/domain/table/resolver.ts",
+      "default": "./src/domain/table/resolver.ts"
+    },
+    "./domain/color/context": {
+      "types": "./src/domain/color/context.ts",
+      "default": "./src/domain/color/context.ts"
+    },
+    "./domain/color/fill": {
+      "types": "./src/domain/color/fill.ts",
+      "default": "./src/domain/color/fill.ts"
+    },
+    "./domain/color/resolution": {
+      "types": "./src/domain/color/resolution.ts",
+      "default": "./src/domain/color/resolution.ts"
+    },
+    "./domain/color/types": {
+      "types": "./src/domain/color/types.ts",
+      "default": "./src/domain/color/types.ts"
+    },
+    "./domain/drawing-ml/background": {
+      "types": "./src/domain/drawing-ml/background.ts",
+      "default": "./src/domain/drawing-ml/background.ts"
+    },
+    "./domain/drawing-ml/text-effects": {
+      "types": "./src/domain/drawing-ml/text-effects.ts",
+      "default": "./src/domain/drawing-ml/text-effects.ts"
+    },
+    "./domain/drawing-ml/text-fill": {
+      "types": "./src/domain/drawing-ml/text-fill.ts",
+      "default": "./src/domain/drawing-ml/text-fill.ts"
+    },
+    "./exporter": {
+      "types": "./src/exporter/index.ts",
+      "default": "./src/exporter/index.ts"
+    },
+    "./exporter/*": {
+      "types": "./src/exporter/*.ts",
+      "default": "./src/exporter/*.ts"
+    },
+    "./opc": {
+      "types": "./src/opc/index.ts",
+      "default": "./src/opc/index.ts"
+    },
+    "./opc/*": {
+      "types": "./src/opc/*.ts",
+      "default": "./src/opc/*.ts"
+    },
+    "./opc/content-types": {
+      "types": "./src/opc/content-types.ts",
+      "default": "./src/opc/content-types.ts"
+    },
+    "./parser": {
+      "types": "./src/parser/index.ts",
+      "default": "./src/parser/index.ts"
+    },
+    "./parser/*": {
+      "types": "./src/parser/*.ts",
+      "default": "./src/parser/*.ts"
+    },
+    "./parser/*/*": {
+      "types": "./src/parser/*/*.ts",
+      "default": "./src/parser/*/*.ts"
+    },
+    "./parser/*/*/*": {
+      "types": "./src/parser/*/*/*.ts",
+      "default": "./src/parser/*/*/*.ts"
+    },
+    "./parser/context": {
+      "types": "./src/parser/context.ts",
+      "default": "./src/parser/context.ts"
+    },
+    "./parser/drawing-ml/index": {
+      "types": "./src/parser/drawing-ml/index.ts",
+      "default": "./src/parser/drawing-ml/index.ts"
+    },
+    "./parser/slide/context": {
+      "types": "./src/parser/slide/context.ts",
+      "default": "./src/parser/slide/context.ts"
+    },
+    "./parser/slide/external-content-loader": {
+      "types": "./src/parser/slide/external-content-loader.ts",
+      "default": "./src/parser/slide/external-content-loader.ts"
+    },
+    "./parser/slide/resource-adapters": {
+      "types": "./src/parser/slide/resource-adapters.ts",
+      "default": "./src/parser/slide/resource-adapters.ts"
+    },
+    "./parser/slide/slide-parser": {
+      "types": "./src/parser/slide/slide-parser.ts",
+      "default": "./src/parser/slide/slide-parser.ts"
+    },
+    "./parser/table/style-parser": {
+      "types": "./src/parser/table/style-parser.ts",
+      "default": "./src/parser/table/style-parser.ts"
+    },
+    "./patcher": {
+      "types": "./src/patcher/index.ts",
+      "default": "./src/patcher/index.ts"
+    },
+    "./patcher/*": {
+      "types": "./src/patcher/*.ts",
+      "default": "./src/patcher/*.ts"
+    },
+    "./patcher/*/*": {
+      "types": "./src/patcher/*/*.ts",
+      "default": "./src/patcher/*/*.ts"
+    },
+    "./patcher/*/*/*": {
+      "types": "./src/patcher/*/*/*.ts",
+      "default": "./src/patcher/*/*/*.ts"
+    }
+  }
+}

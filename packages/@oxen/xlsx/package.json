@@ -1,0 +1,183 @@
+{
+  "name": "@oxen/xlsx",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "dependencies": {
+    "@oxen/files": "workspace:*",
+    "@oxen/ooxml": "workspace:*",
+    "@oxen/xml": "workspace:*",
+    "@oxen/zip": "workspace:*"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./exporter": {
+      "types": "./src/exporter.ts",
+      "default": "./src/exporter.ts"
+    },
+    "./domain/types": {
+      "types": "./src/domain/types.ts",
+      "default": "./src/domain/types.ts"
+    },
+    "./domain/workbook": {
+      "types": "./src/domain/workbook.ts",
+      "default": "./src/domain/workbook.ts"
+    },
+    "./domain/date-system": {
+      "types": "./src/domain/date-system.ts",
+      "default": "./src/domain/date-system.ts"
+    },
+    "./domain/constants": {
+      "types": "./src/domain/constants.ts",
+      "default": "./src/domain/constants.ts"
+    },
+    "./domain/cell/types": {
+      "types": "./src/domain/cell/types.ts",
+      "default": "./src/domain/cell/types.ts"
+    },
+    "./domain/cell/address": {
+      "types": "./src/domain/cell/address.ts",
+      "default": "./src/domain/cell/address.ts"
+    },
+    "./domain/cell/formula": {
+      "types": "./src/domain/cell/formula.ts",
+      "default": "./src/domain/cell/formula.ts"
+    },
+    "./domain/table/types": {
+      "types": "./src/domain/table/types.ts",
+      "default": "./src/domain/table/types.ts"
+    },
+    "./domain/conditional-formatting": {
+      "types": "./src/domain/conditional-formatting.ts",
+      "default": "./src/domain/conditional-formatting.ts"
+    },
+    "./domain/style/border": {
+      "types": "./src/domain/style/border.ts",
+      "default": "./src/domain/style/border.ts"
+    },
+    "./domain/style/dxf": {
+      "types": "./src/domain/style/dxf.ts",
+      "default": "./src/domain/style/dxf.ts"
+    },
+    "./domain/style/fill": {
+      "types": "./src/domain/style/fill.ts",
+      "default": "./src/domain/style/fill.ts"
+    },
+    "./domain/style/font": {
+      "types": "./src/domain/style/font.ts",
+      "default": "./src/domain/style/font.ts"
+    },
+    "./domain/style/number-format": {
+      "types": "./src/domain/style/number-format.ts",
+      "default": "./src/domain/style/number-format.ts"
+    },
+    "./domain/style/table-style": {
+      "types": "./src/domain/style/table-style.ts",
+      "default": "./src/domain/style/table-style.ts"
+    },
+    "./domain/style/format-value": {
+      "types": "./src/domain/style/format-value.ts",
+      "default": "./src/domain/style/format-value.ts"
+    },
+    "./domain/style/mutation": {
+      "types": "./src/domain/style/mutation.ts",
+      "default": "./src/domain/style/mutation.ts"
+    },
+    "./domain/style/mutation/equality": {
+      "types": "./src/domain/style/mutation/equality.ts",
+      "default": "./src/domain/style/mutation/equality.ts"
+    },
+    "./domain/style/types": {
+      "types": "./src/domain/style/types.ts",
+      "default": "./src/domain/style/types.ts"
+    },
+    "./formula/evaluator": {
+      "types": "./src/formula/evaluator.ts",
+      "default": "./src/formula/evaluator.ts"
+    },
+    "./formula/functionRegistry": {
+      "types": "./src/formula/functionRegistry.ts",
+      "default": "./src/formula/functionRegistry.ts"
+    },
+    "./formula/shift": {
+      "types": "./src/formula/shift.ts",
+      "default": "./src/formula/shift.ts"
+    },
+    "./formula/types": {
+      "types": "./src/formula/types.ts",
+      "default": "./src/formula/types.ts"
+    },
+    "./workbook-parser": {
+      "types": "./src/workbook-parser.ts",
+      "default": "./src/workbook-parser.ts"
+    },
+    "./workbook-patcher": {
+      "types": "./src/workbook-patcher.ts",
+      "default": "./src/workbook-patcher.ts"
+    },
+    "./domain": {
+      "types": "./src/domain/index.ts",
+      "default": "./src/domain/index.ts"
+    },
+    "./domain/*": {
+      "types": "./src/domain/*.ts",
+      "default": "./src/domain/*.ts"
+    },
+    "./domain/*/*": {
+      "types": "./src/domain/*/*.ts",
+      "default": "./src/domain/*/*.ts"
+    },
+    "./domain/*/*/*": {
+      "types": "./src/domain/*/*/*.ts",
+      "default": "./src/domain/*/*/*.ts"
+    },
+    "./parser": {
+      "types": "./src/parser/index.ts",
+      "default": "./src/parser/index.ts"
+    },
+    "./parser/*": {
+      "types": "./src/parser/*.ts",
+      "default": "./src/parser/*.ts"
+    },
+    "./parser/*/*": {
+      "types": "./src/parser/*/*.ts",
+      "default": "./src/parser/*/*.ts"
+    },
+    "./parser/*/*/*": {
+      "types": "./src/parser/*/*/*.ts",
+      "default": "./src/parser/*/*/*.ts"
+    },
+    "./formula/*": {
+      "types": "./src/formula/*.ts",
+      "default": "./src/formula/*.ts"
+    },
+    "./formula/*/*": {
+      "types": "./src/formula/*/*.ts",
+      "default": "./src/formula/*/*.ts"
+    },
+    "./formula/*/*/*": {
+      "types": "./src/formula/*/*/*.ts",
+      "default": "./src/formula/*/*/*.ts"
+    },
+    "./serializer": {
+      "types": "./src/serializer/index.ts",
+      "default": "./src/serializer/index.ts"
+    },
+    "./serializer/*": {
+      "types": "./src/serializer/*.ts",
+      "default": "./src/serializer/*.ts"
+    },
+    "./serializer/*/*": {
+      "types": "./src/serializer/*/*.ts",
+      "default": "./src/serializer/*/*.ts"
+    }
+  }
+}

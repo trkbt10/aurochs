@@ -1,0 +1,45 @@
+{
+  "name": "@oxen/ooxml",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./domain/*": {
+      "types": "./src/domain/*.ts",
+      "default": "./src/domain/*.ts"
+    },
+    "./domain/drawing": {
+      "types": "./src/domain/drawing/index.ts",
+      "default": "./src/domain/drawing/index.ts"
+    },
+    "./domain/drawing/*": {
+      "types": "./src/domain/drawing/*.ts",
+      "default": "./src/domain/drawing/*.ts"
+    },
+    "./opc": {
+      "types": "./src/opc/index.ts",
+      "default": "./src/opc/index.ts"
+    },
+    "./opc/*": {
+      "types": "./src/opc/*.ts",
+      "default": "./src/opc/*.ts"
+    },
+    "./serializer": {
+      "types": "./src/serializer/index.ts",
+      "default": "./src/serializer/index.ts"
+    },
+    "./serializer/*": {
+      "types": "./src/serializer/*.ts",
+      "default": "./src/serializer/*.ts"
+    }
+  }
+}

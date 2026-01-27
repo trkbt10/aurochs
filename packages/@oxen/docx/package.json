@@ -1,0 +1,59 @@
+{
+  "name": "@oxen/docx",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "dependencies": {
+    "@oxen/ooxml": "workspace:*",
+    "@oxen/xml": "workspace:*",
+    "@oxen/zip": "workspace:*"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./constants": {
+      "types": "./src/constants.ts",
+      "default": "./src/constants.ts"
+    },
+    "./document-parser": {
+      "types": "./src/document-parser.ts",
+      "default": "./src/document-parser.ts"
+    },
+    "./exporter": {
+      "types": "./src/exporter.ts",
+      "default": "./src/exporter.ts"
+    },
+    "./domain": {
+      "types": "./src/domain/index.ts",
+      "default": "./src/domain/index.ts"
+    },
+    "./domain/*": {
+      "types": "./src/domain/*.ts",
+      "default": "./src/domain/*.ts"
+    },
+    "./parser": {
+      "types": "./src/parser/index.ts",
+      "default": "./src/parser/index.ts"
+    },
+    "./parser/*": {
+      "types": "./src/parser/*.ts",
+      "default": "./src/parser/*.ts"
+    },
+    "./serializer": {
+      "types": "./src/serializer/index.ts",
+      "default": "./src/serializer/index.ts"
+    },
+    "./serializer/*": {
+      "types": "./src/serializer/*.ts",
+      "default": "./src/serializer/*.ts"
+    }
+  }
+}
+

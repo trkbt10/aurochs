@@ -1,0 +1,835 @@
+/**
+ * @file src/pdf/parser/pdf-parser.native.ts
+ */
+
+import type { PdfDocument, PdfElement, PdfEmbeddedFont, PdfImage, PdfPage, PdfPath, PdfText } from "../../domain";
+import { tokenizeContentStream } from "../../domain/content-stream";
+import { decodeText, decodeTextWithFontInfo, type FontMappings } from "../../domain/font";
+import { createGraphicsStateStack, transformPoint, type PdfBBox, type PdfMatrix } from "../../domain";
+import type { NativePdfPage, PdfArray, PdfDict, PdfName, PdfObject, PdfStream } from "../../native";
+import { decodePdfStream } from "../../native/stream/stream";
+import { buildPath, builtPathToPdfPath } from "../path/path-builder";
+import {
+  parseContentStream,
+  createParser,
+  createGfxOpsFromStack,
+  type ParsedElement,
+  type ParsedImage,
+  type ParsedPath,
+  type ParsedText,
+} from "../operator";
+import { extractFontMappingsFromResourcesNative, extractFontMappingsNative } from "../font/font-decoder.native";
+import { extractImagesNative } from "../image/image-extractor.native";
+import { loadNativePdfDocumentForParser } from "./native-load";
+import { extractEmbeddedFontsFromNativePages } from "../../domain/font/font-extractor.native";
+import type { PdfLoadEncryption } from "./pdf-load-error";
+import {
+  extractExtGStateFromResourcesNative,
+  extractExtGStateNative,
+  type ExtGStateParams,
+} from "../graphics-state/ext-gstate.native";
+import { extractShadingFromResourcesNative, extractShadingNative } from "../shading/shading.native";
+import { extractPatternsFromResourcesNative, extractPatternsNative } from "../pattern/pattern.native";
+import { preprocessInlineImages } from "../image/inline-image.native";
+import { expandType3TextElementsNative } from "../type3/type3-expand.native";
+import { rasterizeSoftMaskedFillPath } from "../soft-mask/soft-mask-raster.native";
+import { applyGraphicsSoftMaskToPdfImage } from "../soft-mask/soft-mask-apply.native";
+import { rasterizeSoftMaskedText } from "../soft-mask/soft-mask-text-raster.native";
+import { applyGraphicsClipMaskToPdfImage, buildPageSpaceSoftMaskForClipMask } from "../clip/clip-mask-apply.native";
+import { rasterizeFormBBoxClipToMask } from "../clip/form-bbox-clip-mask.native";
+import type { PdfShading } from "../shading/shading.types";
+import type { PdfPattern } from "../pattern/pattern.types";
+import type { JpxDecodeFn } from "../jpeg2000/jpx-decoder";
+import { extractColorSpacesFromResourcesNative } from "../color/color-space.native";
+
+function extractExtGStateFromResourcesNativeOrEmpty(
+  page: NativePdfPage,
+  resources: PdfDict | null,
+  options: Readonly<{ readonly vectorSoftMaskMaxSize?: number; readonly shadingMaxSize: number; readonly jpxDecode?: JpxDecodeFn }>,
+): ReadonlyMap<string, ExtGStateParams> {
+  if (!resources) {
+    return new Map();
+  }
+  return extractExtGStateFromResourcesNative(page, resources, options);
+}
+
+export type PdfParserOptions = {
+  readonly pages?: readonly number[];
+  readonly minPathComplexity?: number;
+  readonly includeText?: boolean;
+  readonly includePaths?: boolean;
+  /**
+   * Optional decoder for `/JPXDecode` (JPEG2000) image streams.
+   *
+   * When a PDF contains `/JPXDecode` and this is not provided, the parser throws.
+   */
+  readonly jpxDecode?: JpxDecodeFn;
+  /**
+   * Enables rasterization for per-pixel `/SMask` groups that contain only vector
+   * paths (no images). This sets the maximum `{width,height}` of the generated
+   * mask grid.
+   *
+   * Set to `0` (default) to keep this feature disabled.
+   */
+  readonly softMaskVectorMaxSize?: number;
+  /**
+   * Enables rasterization for `sh` (shading fill) operators. This sets the
+   * maximum `{width,height}` of the generated shading raster.
+   *
+   * Set to `0` (default) to keep this feature disabled.
+   */
+  readonly shadingMaxSize?: number;
+  /**
+   * Enables per-pixel clip mask generation for `W`/`W*` clipping paths.
+   *
+   * The value is the maximum of `{width,height}` for the generated clip mask grid.
+   * Set to `0` (default) to keep bbox-only clipping.
+   */
+  readonly clipPathMaxSize?: number;
+  readonly encryption?: PdfLoadEncryption;
+};
+
+const DEFAULT_JPX_DECODE: JpxDecodeFn = () => {
+  throw new Error("/JPXDecode requires options.jpxDecode");
+};
+
+const DEFAULT_OPTIONS: Required<PdfParserOptions> = {
+  pages: [],
+  minPathComplexity: 0,
+  includeText: true,
+  includePaths: true,
+  jpxDecode: DEFAULT_JPX_DECODE,
+  softMaskVectorMaxSize: 0,
+  shadingMaxSize: 0,
+  clipPathMaxSize: 0,
+  encryption: { mode: "reject" },
+};
+
+
+
+
+
+
+
+
+
+
+
+/** Parse a PDF using the native loader (no `pdf-lib`). */
+export async function parsePdfNative(
+  data: Uint8Array | ArrayBuffer,
+  options: PdfParserOptions = {},
+): Promise<PdfDocument> {
+  const opts = { ...DEFAULT_OPTIONS, ...options };
+  if (!Number.isFinite(opts.softMaskVectorMaxSize) || opts.softMaskVectorMaxSize < 0) {
+    throw new Error(`softMaskVectorMaxSize must be >= 0 (got ${opts.softMaskVectorMaxSize})`);
+  }
+  if (!Number.isFinite(opts.shadingMaxSize) || opts.shadingMaxSize < 0) {
+    throw new Error(`shadingMaxSize must be >= 0 (got ${opts.shadingMaxSize})`);
+  }
+  if (!Number.isFinite(opts.clipPathMaxSize) || opts.clipPathMaxSize < 0) {
+    throw new Error(`clipPathMaxSize must be >= 0 (got ${opts.clipPathMaxSize})`);
+  }
+
+  const pdfDoc = await loadNativePdfDocumentForParser(data, {
+    purpose: "parse",
+    encryption: opts.encryption,
+    updateMetadata: false,
+  });
+
+  // Extract embedded fonts first to get accurate metrics (best-effort).
+  const embeddedFontsRaw = (() => {
+    try {
+      return extractEmbeddedFontsFromNativePages(pdfDoc.getPages());
+    } catch (error) {
+      console.warn("Failed to extract embedded fonts:", error);
+      return [];
+    }
+  })();
+
+  const embeddedFontMetrics = new Map<string, { ascender: number; descender: number }>();
+  for (const font of embeddedFontsRaw) {
+    if (font.metrics) {
+      embeddedFontMetrics.set(font.fontFamily, font.metrics);
+    }
+  }
+
+  const pdfPages = pdfDoc.getPages();
+  const pagesToParse = resolvePagesToParse(opts.pages, pdfPages.length);
+
+  const pages: PdfPage[] = [];
+  for (const pageNum of pagesToParse) {
+    const nativePage = pdfPages[pageNum - 1]!;
+    const parsedPage = await parsePage(nativePage, pageNum, opts, embeddedFontMetrics);
+    pages.push(parsedPage);
+  }
+
+  const metadata = pdfDoc.getMetadata();
+
+  const embeddedFonts = buildEmbeddedFonts(embeddedFontsRaw);
+
+  return { pages, metadata, embeddedFonts };
+}
+
+function resolvePagesToParse(requested: readonly number[], pageCount: number): readonly number[] {
+  if (requested.length > 0) {
+    return requested.filter((p) => p >= 1 && p <= pageCount);
+  }
+  return Array.from({ length: pageCount }, (_, i) => i + 1);
+}
+
+function buildEmbeddedFonts(
+  embeddedFontsRaw: readonly { readonly fontFamily: string; readonly format: PdfEmbeddedFont["format"]; readonly data: Uint8Array; readonly mimeType: string }[],
+): readonly PdfEmbeddedFont[] | undefined {
+  if (embeddedFontsRaw.length === 0) {
+    return undefined;
+  }
+  return embeddedFontsRaw.map((f) => ({
+    fontFamily: f.fontFamily,
+    format: f.format,
+    data: f.data,
+    mimeType: f.mimeType,
+  }));
+}
+
+async function parsePage(
+  page: NativePdfPage,
+  pageNumber: number,
+  opts: Required<PdfParserOptions>,
+  embeddedFontMetrics: Map<string, { ascender: number; descender: number }>,
+): Promise<PdfPage> {
+  const { width, height } = page.getSize();
+  const pageBBox: PdfBBox = [0, 0, width, height];
+
+  const resources = page.getResourcesDict();
+  const baseXObjects = resources ? resolveDict(page, dictGet(resources, "XObject")) : null;
+
+  const inlineId = { value: 0 };
+  const nextInlineId = (): number => {
+    inlineId.value += 1;
+    return inlineId.value;
+  };
+
+  const inlineXObjects = new Map<string, PdfStream>();
+  const usedNames = new Set<string>(baseXObjects ? [...baseXObjects.map.keys()] : []);
+  const processedStreams: string[] = [];
+
+  for (const b of page.getDecodedContentStreams()) {
+    const pre = preprocessInlineImages(b, { nextId: nextInlineId, existingNames: usedNames });
+    processedStreams.push(pre.content);
+    for (const [k, v] of pre.xObjects) {
+      inlineXObjects.set(k, v);
+      usedNames.add(k);
+    }
+  }
+
+  const contentStream = processedStreams.length === 0 ? null : processedStreams.join("\n");
+
+  if (!contentStream) {
+    return { pageNumber, width, height, elements: [] };
+  }
+
+  const fontMappings = extractFontMappingsNative(page);
+  mergeFontMetrics(fontMappings, embeddedFontMetrics);
+  const tokens = tokenizeContentStream(contentStream);
+  const extGState = extractExtGStateNative(page, {
+    vectorSoftMaskMaxSize: opts.softMaskVectorMaxSize > 0 ? opts.softMaskVectorMaxSize : undefined,
+    shadingMaxSize: opts.shadingMaxSize > 0 ? opts.shadingMaxSize : 0,
+    jpxDecode: opts.jpxDecode,
+  });
+  const shadings = extractShadingNative(page);
+  const patterns = extractPatternsNative(page);
+  const colorSpaces = extractColorSpacesFromResourcesNative(page, resources);
+  const parsedElements = [
+    ...parseContentStream(tokens, fontMappings, {
+      extGState,
+      shadings,
+      patterns,
+      colorSpaces,
+      shadingMaxSize: opts.shadingMaxSize,
+      clipPathMaxSize: opts.clipPathMaxSize,
+      pageBBox,
+    }),
+  ];
+
+  const registerType3XObjectStream = (stream: PdfStream): string => {
+    let name = "";
+    do {
+      name = `T3X${nextInlineId()}`;
+    } while (usedNames.has(name));
+    inlineXObjects.set(name, stream);
+    usedNames.add(name);
+    return name;
+  };
+
+  const parsedWithType3 = expandType3TextElementsNative({
+    page,
+    resources,
+    parsedElements,
+    fontMappings,
+    pageExtGState: extGState,
+    shadingMaxSize: opts.shadingMaxSize,
+    clipPathMaxSize: opts.clipPathMaxSize,
+    pageBBox,
+    registerXObjectStream: registerType3XObjectStream,
+  });
+
+  const mergedXObjects = mergeXObjects(baseXObjects, inlineXObjects);
+
+	  const { elements: expandedElements, imageGroups } = expandFormXObjectsNative(
+	    page,
+	    parsedWithType3,
+	    fontMappings,
+	    extGState,
+	    shadings,
+	    patterns,
+	    colorSpaces,
+	    opts.shadingMaxSize,
+	    opts.clipPathMaxSize,
+	    opts.softMaskVectorMaxSize,
+	    opts.jpxDecode,
+	    pageBBox,
+	    embeddedFontMetrics,
+	    mergedXObjects,
+	    nextInlineId,
+	  );
+
+  const images: PdfImage[] = [];
+  for (const [xObjects, group] of imageGroups) {
+    const extracted = await extractImagesNative(page, group, { pageHeight: height, jpxDecode: opts.jpxDecode }, xObjects);
+    images.push(...extracted);
+  }
+
+  const elements = convertElements(expandedElements, opts, height, images, fontMappings);
+
+  return { pageNumber, width, height, elements };
+}
+
+function asDict(obj: PdfObject | undefined): PdfDict | null {
+  return obj?.type === "dict" ? obj : null;
+}
+function asStream(obj: PdfObject | undefined): PdfStream | null {
+  return obj?.type === "stream" ? obj : null;
+}
+function asName(obj: PdfObject | undefined): PdfName | null {
+  return obj?.type === "name" ? obj : null;
+}
+function asArray(obj: PdfObject | undefined): PdfArray | null {
+  return obj?.type === "array" ? obj : null;
+}
+function asNumber(obj: PdfObject | undefined): number | null {
+  return obj?.type === "number" ? obj.value : null;
+}
+
+function dictGet(dict: PdfDict, key: string): PdfObject | undefined {
+  return dict.map.get(key);
+}
+
+function resolve(page: NativePdfPage, obj: PdfObject | undefined): PdfObject | undefined {
+  if (!obj) {return undefined;}
+  return page.lookup(obj);
+}
+
+function resolveDict(page: NativePdfPage, obj: PdfObject | undefined): PdfDict | null {
+  return asDict(resolve(page, obj));
+}
+
+function mergeXObjects(base: PdfDict | null, extra: ReadonlyMap<string, PdfStream>): PdfDict | null {
+  if ((!base || base.map.size === 0) && extra.size === 0) {return null;}
+  const merged = new Map<string, PdfObject>();
+  if (base) {
+    for (const [k, v] of base.map.entries()) {merged.set(k, v);}
+  }
+  for (const [k, v] of extra.entries()) {merged.set(k, v);}
+  return { type: "dict", map: merged };
+}
+
+function parseMatrix6(page: NativePdfPage, obj: PdfObject | undefined): PdfMatrix | null {
+  const resolved = resolve(page, obj);
+  const arr = asArray(resolved);
+  if (!arr || arr.items.length !== 6) {return null;}
+  const [i0, i1, i2, i3, i4, i5] = arr.items;
+  const n0 = asNumber(resolve(page, i0));
+  const n1 = asNumber(resolve(page, i1));
+  const n2 = asNumber(resolve(page, i2));
+  const n3 = asNumber(resolve(page, i3));
+  const n4 = asNumber(resolve(page, i4));
+  const n5 = asNumber(resolve(page, i5));
+  if (n0 == null || !Number.isFinite(n0)) {return null;}
+  if (n1 == null || !Number.isFinite(n1)) {return null;}
+  if (n2 == null || !Number.isFinite(n2)) {return null;}
+  if (n3 == null || !Number.isFinite(n3)) {return null;}
+  if (n4 == null || !Number.isFinite(n4)) {return null;}
+  if (n5 == null || !Number.isFinite(n5)) {return null;}
+  return [n0, n1, n2, n3, n4, n5];
+}
+
+function parseBBox4(page: NativePdfPage, obj: PdfObject | undefined): PdfBBox | null {
+  const resolved = resolve(page, obj);
+  const arr = asArray(resolved);
+  if (!arr || arr.items.length !== 4) {return null;}
+  const [i0, i1, i2, i3] = arr.items;
+  const n0 = asNumber(resolve(page, i0));
+  const n1 = asNumber(resolve(page, i1));
+  const n2 = asNumber(resolve(page, i2));
+  const n3 = asNumber(resolve(page, i3));
+  if (n0 == null || !Number.isFinite(n0)) {return null;}
+  if (n1 == null || !Number.isFinite(n1)) {return null;}
+  if (n2 == null || !Number.isFinite(n2)) {return null;}
+  if (n3 == null || !Number.isFinite(n3)) {return null;}
+  return [n0, n1, n2, n3];
+}
+
+function transformBBox(bbox: PdfBBox, ctm: PdfMatrix): PdfBBox {
+  const [x1, y1, x2, y2] = bbox;
+  const corners = [
+    transformPoint({ x: x1, y: y1 }, ctm),
+    transformPoint({ x: x2, y: y1 }, ctm),
+    transformPoint({ x: x2, y: y2 }, ctm),
+    transformPoint({ x: x1, y: y2 }, ctm),
+  ];
+  const bounds = { minX: corners[0]!.x, minY: corners[0]!.y, maxX: corners[0]!.x, maxY: corners[0]!.y };
+  for (const p of corners) {
+    bounds.minX = Math.min(bounds.minX, p.x);
+    bounds.minY = Math.min(bounds.minY, p.y);
+    bounds.maxX = Math.max(bounds.maxX, p.x);
+    bounds.maxY = Math.max(bounds.maxY, p.y);
+  }
+  return [bounds.minX, bounds.minY, bounds.maxX, bounds.maxY];
+}
+
+function bboxIntersects(a: PdfBBox, b: PdfBBox): boolean {
+  const [ax1, ay1, ax2, ay2] = a;
+  const [bx1, by1, bx2, by2] = b;
+  const aMinX = Math.min(ax1, ax2);
+  const aMinY = Math.min(ay1, ay2);
+  const aMaxX = Math.max(ax1, ax2);
+  const aMaxY = Math.max(ay1, ay2);
+  const bMinX = Math.min(bx1, bx2);
+  const bMinY = Math.min(by1, by2);
+  const bMaxX = Math.max(bx1, bx2);
+  const bMaxY = Math.max(by1, by2);
+  return aMaxX > bMinX && aMinX < bMaxX && aMaxY > bMinY && aMinY < bMaxY;
+}
+
+type ImageGroupMap = Map<PdfDict, ParsedImage[]>;
+
+function addImageToGroup(groups: ImageGroupMap, xObjects: PdfDict, img: ParsedImage): void {
+  const prev = groups.get(xObjects);
+  if (prev) {
+    prev.push(img);
+    return;
+  }
+  groups.set(xObjects, [img]);
+}
+
+function expandFormXObjectsNative(
+  page: NativePdfPage,
+  parsedElements: readonly ParsedElement[],
+  fontMappings: FontMappings,
+  extGState: ReadonlyMap<string, ExtGStateParams>,
+  shadings: ReadonlyMap<string, PdfShading>,
+  patterns: ReadonlyMap<string, PdfPattern>,
+  colorSpaces: ReadonlyMap<string, import("../color/color-space.native").ParsedNamedColorSpace>,
+  shadingMaxSize: number,
+  clipPathMaxSize: number,
+  softMaskVectorMaxSize: number,
+  jpxDecode: JpxDecodeFn,
+  pageBBox: PdfBBox,
+  embeddedFontMetrics: Map<string, { ascender: number; descender: number }>,
+  xObjectsOverride: PdfDict | null,
+  nextInlineId: () => number,
+): Readonly<{ elements: ParsedElement[]; imageGroups: ImageGroupMap }> {
+  const resources = page.getResourcesDict();
+  const xObjects = xObjectsOverride ?? (resources ? resolveDict(page, dictGet(resources, "XObject")) : null);
+  const outElements: ParsedElement[] = [];
+  const imageGroups: ImageGroupMap = new Map();
+
+  const mergeShadings = (base: ReadonlyMap<string, PdfShading>, local: ReadonlyMap<string, PdfShading>): ReadonlyMap<string, PdfShading> => {
+    if (base.size === 0 && local.size === 0) {return new Map();}
+    const merged = new Map<string, PdfShading>(base);
+    for (const [k, v] of local) {merged.set(k, v);}
+    return merged;
+  };
+
+  const mergePatterns = (base: ReadonlyMap<string, PdfPattern>, local: ReadonlyMap<string, PdfPattern>): ReadonlyMap<string, PdfPattern> => {
+    if (base.size === 0 && local.size === 0) {return new Map();}
+    const merged = new Map<string, PdfPattern>(base);
+    for (const [k, v] of local) {merged.set(k, v);}
+    return merged;
+  };
+
+  const mergeColorSpaces = (
+    base: ReadonlyMap<string, import("../color/color-space.native").ParsedNamedColorSpace>,
+    local: ReadonlyMap<string, import("../color/color-space.native").ParsedNamedColorSpace>,
+  ): ReadonlyMap<string, import("../color/color-space.native").ParsedNamedColorSpace> => {
+    if (base.size === 0 && local.size === 0) {return new Map();}
+    const merged = new Map(base);
+    for (const [k, v] of local) {merged.set(k, v);}
+    return merged;
+  };
+
+  const expandInScope = (
+    elements: readonly ParsedElement[],
+    scope: Readonly<{
+      readonly resources: PdfDict | null;
+      readonly xObjects: PdfDict | null;
+      readonly fontMappings: FontMappings;
+      readonly extGState: ReadonlyMap<string, ExtGStateParams>;
+      readonly shadings: ReadonlyMap<string, PdfShading>;
+      readonly patterns: ReadonlyMap<string, PdfPattern>;
+      readonly colorSpaces: ReadonlyMap<string, import("../color/color-space.native").ParsedNamedColorSpace>;
+    }>,
+    callStack: Set<string>,
+    depth: number,
+  ): void => {
+    if (depth > 16) {return;}
+
+    for (const elem of elements) {
+      if (elem.type !== "image") {
+        outElements.push(elem);
+        continue;
+      }
+
+      const xObjDict = scope.xObjects;
+      if (!xObjDict) {continue;}
+
+      const cleanName = elem.name.startsWith("/") ? elem.name.slice(1) : elem.name;
+      const refOrObj = dictGet(xObjDict, cleanName);
+      const stackKey = refOrObj?.type === "ref" ? `${refOrObj.obj} ${refOrObj.gen}` : null;
+      const resolved = resolve(page, refOrObj);
+      const stream = asStream(resolved);
+      if (!stream) {continue;}
+
+      const subtype = asName(dictGet(stream.dict, "Subtype"))?.value ?? "";
+      if (subtype === "Image") {
+        addImageToGroup(imageGroups, xObjDict, elem);
+        continue;
+      }
+
+      if (subtype !== "Form") {continue;}
+
+      if (stackKey && callStack.has(stackKey)) {continue;}
+      if (stackKey) {callStack.add(stackKey);}
+
+      const formResources = resolveDict(page, dictGet(stream.dict, "Resources")) ?? scope.resources;
+      const formXObjectsBase =
+        (formResources ? resolveDict(page, dictGet(formResources, "XObject")) : null) ?? scope.xObjects;
+
+      const scopedFonts = new Map(scope.fontMappings);
+      const formFonts = formResources ? extractFontMappingsFromResourcesNative(page, formResources) : new Map();
+      for (const [k, v] of formFonts) {scopedFonts.set(k, v);}
+      mergeFontMetrics(scopedFonts, embeddedFontMetrics);
+      for (const info of formFonts.values()) {
+        if (!info.baseFont) {continue;}
+        const key = normalizeBaseFontForMetricsLookup(info.baseFont);
+        if (!fontMappings.has(key)) {fontMappings.set(key, info);}
+      }
+      mergeFontMetrics(fontMappings, embeddedFontMetrics);
+
+      const vectorSoftMaskMaxSize = softMaskVectorMaxSize > 0 ? softMaskVectorMaxSize : undefined;
+      const localShadingMaxSize = shadingMaxSize > 0 ? shadingMaxSize : 0;
+      const localExt = extractExtGStateFromResourcesNativeOrEmpty(page, formResources, {
+        vectorSoftMaskMaxSize,
+        shadingMaxSize: localShadingMaxSize,
+        jpxDecode,
+      });
+      const mergedExt = new Map(scope.extGState);
+      for (const [k, v] of localExt) {mergedExt.set(k, v);}
+
+      const localShadings = formResources ? extractShadingFromResourcesNative(page, formResources) : new Map();
+      const mergedShadings = mergeShadings(scope.shadings, localShadings);
+
+      const localPatterns = formResources ? extractPatternsFromResourcesNative(page, formResources) : new Map();
+      const mergedPatterns = mergePatterns(scope.patterns, localPatterns);
+      const localColorSpaces = extractColorSpacesFromResourcesNative(page, formResources);
+      const mergedColorSpaces = mergeColorSpaces(scope.colorSpaces, localColorSpaces);
+
+      const matrix = parseMatrix6(page, dictGet(stream.dict, "Matrix")) ?? ([1, 0, 0, 1, 0, 0] as PdfMatrix);
+      const bbox = parseBBox4(page, dictGet(stream.dict, "BBox"));
+
+      const decoded = decodePdfStream(stream);
+      const pre = preprocessInlineImages(decoded, {
+        nextId: nextInlineId,
+        existingNames: new Set<string>(formXObjectsBase ? [...formXObjectsBase.map.keys()] : []),
+      });
+      const content = pre.content;
+      const formXObjects = mergeXObjects(formXObjectsBase, pre.xObjects);
+      if (!content) {
+        if (stackKey) {callStack.delete(stackKey);}
+        continue;
+      }
+
+      const gfxStack = createGraphicsStateStack(elem.graphicsState);
+      gfxStack.concatMatrix(matrix);
+      if (bbox) {
+        gfxStack.setClipBBox(transformBBox(bbox, gfxStack.get().ctm));
+        if (clipPathMaxSize > 0) {
+          const mask = rasterizeFormBBoxClipToMask(gfxStack.get(), bbox, { clipPathMaxSize });
+          if (mask) {
+            gfxStack.setClipMask(mask);
+          }
+        }
+      }
+      const gfxOps = createGfxOpsFromStack(gfxStack);
+      const tokens = tokenizeContentStream(content);
+      const parse = createParser(gfxOps, scopedFonts, {
+        extGState: mergedExt,
+        shadings: mergedShadings,
+        patterns: mergedPatterns,
+        colorSpaces: mergedColorSpaces,
+        shadingMaxSize,
+        clipPathMaxSize,
+        pageBBox,
+      });
+      const inner = parse(tokens);
+
+      expandInScope(
+        inner,
+        {
+          resources: formResources,
+          xObjects: formXObjects ?? scope.xObjects,
+          fontMappings: scopedFonts,
+          extGState: mergedExt,
+          shadings: mergedShadings,
+          patterns: mergedPatterns,
+          colorSpaces: mergedColorSpaces,
+        },
+        callStack,
+        depth + 1,
+      );
+
+      if (stackKey) {callStack.delete(stackKey);}
+    }
+  };
+
+  expandInScope(
+    parsedElements,
+    { resources, xObjects: xObjects ?? null, fontMappings, extGState, shadings, patterns, colorSpaces },
+    new Set(),
+    0,
+  );
+
+  return { elements: outElements, imageGroups };
+}
+
+function mergeFontMetrics(
+  fontMappings: FontMappings,
+  embeddedFontMetrics: Map<string, { ascender: number; descender: number }>,
+): void {
+  for (const [fontName, fontInfo] of fontMappings) {
+    const baseFont = fontInfo.baseFont;
+    if (!baseFont) {continue;}
+
+    const normalizedName = normalizeBaseFontForMetricsLookup(baseFont);
+    const embeddedMetrics = embeddedFontMetrics.get(normalizedName);
+    if (!embeddedMetrics) {continue;}
+
+    fontMappings.set(fontName, {
+      ...fontInfo,
+      metrics: {
+        ...fontInfo.metrics,
+        ascender: embeddedMetrics.ascender,
+        descender: embeddedMetrics.descender,
+      },
+    });
+  }
+}
+
+function normalizeBaseFontForMetricsLookup(baseFont: string): string {
+  const clean = baseFont.startsWith("/") ? baseFont.slice(1) : baseFont;
+  const plusIndex = clean.indexOf("+");
+  return plusIndex > 0 ? clean.slice(plusIndex + 1) : clean;
+}
+
+function convertElements(
+  parsed: ParsedElement[],
+  opts: Required<PdfParserOptions>,
+  _pageHeight: number,
+  extractedImages: PdfImage[],
+  fontMappings: FontMappings,
+): PdfElement[] {
+  const elements: PdfElement[] = [];
+  for (const elem of parsed) {
+    switch (elem.type) {
+      case "path":
+        if (opts.includePaths || (opts.includeText && elem.source === "type3")) {
+          const masked = rasterizeSoftMaskedFillPath(elem);
+          if (masked) {
+            const clipMasked = elem.graphicsState.clipMask ? applyGraphicsClipMaskToPdfImage(masked) : masked;
+            elements.push(clipMasked);
+            break;
+          }
+
+          const clipMask = elem.graphicsState.clipMask;
+          if (clipMask) {
+            const softMask = buildPageSpaceSoftMaskForClipMask(elem.graphicsState.ctm, clipMask);
+            if (softMask) {
+              const clipped = rasterizeSoftMaskedFillPath({
+                ...elem,
+                graphicsState: {
+                  ...elem.graphicsState,
+                  clipMask: undefined,
+                  softMaskAlpha: 1,
+                  softMask,
+                },
+              });
+              if (clipped) {
+                elements.push(clipped);
+                break;
+              }
+            }
+          }
+          const pdfPath = convertPath(elem, opts.minPathComplexity);
+          if (pdfPath) {elements.push(pdfPath);}
+        }
+        break;
+      case "text":
+        if (opts.includeText) {
+          const masked = rasterizeSoftMaskedText(elem, fontMappings);
+          if (masked) {
+            const clipMasked = elem.graphicsState.clipMask ? applyGraphicsClipMaskToPdfImage(masked) : masked;
+            elements.push(clipMasked);
+            break;
+          }
+
+          const clipMask = elem.graphicsState.clipMask;
+          if (clipMask) {
+            const softMask = buildPageSpaceSoftMaskForClipMask(elem.graphicsState.ctm, clipMask);
+            if (softMask) {
+              const clipped = rasterizeSoftMaskedText(
+                {
+                  ...elem,
+                  graphicsState: {
+                    ...elem.graphicsState,
+                    clipMask: undefined,
+                    softMaskAlpha: 1,
+                    softMask,
+                  },
+                },
+                fontMappings,
+              );
+              if (clipped) {
+                elements.push(clipped);
+                break;
+              }
+            }
+          }
+          const pdfTexts = convertText(elem, fontMappings);
+          elements.push(...pdfTexts);
+        }
+        break;
+      case "image":
+        break;
+      case "rasterImage":
+        elements.push(elem.image);
+        break;
+    }
+  }
+  elements.push(...extractedImages.map(applyGraphicsSoftMaskToPdfImage));
+  return elements;
+}
+
+function convertPath(parsed: ParsedPath, minComplexity: number): PdfPath | null {
+  if (parsed.paintOp === "none" || parsed.paintOp === "clip") {return null;}
+  const built = buildPath(parsed);
+  if (built.operations.length < minComplexity) {return null;}
+  const clipBBox = parsed.graphicsState.clipBBox;
+  if (clipBBox && !bboxIntersects(built.bounds, clipBBox)) {return null;}
+  return builtPathToPdfPath(built);
+}
+
+function getFontInfo(fontName: string, fontMappings: FontMappings) {
+  const cleanName = fontName.startsWith("/") ? fontName.slice(1) : fontName;
+  const state = { fontInfo: fontMappings.get(cleanName) };
+  if (!state.fontInfo) {
+    const plusIndex = cleanName.indexOf("+");
+    if (plusIndex > 0) {
+      state.fontInfo = fontMappings.get(cleanName.slice(plusIndex + 1));
+    }
+  }
+  if (!state.fontInfo) {
+    for (const [key, value] of fontMappings.entries()) {
+      if (cleanName.includes(key) || key.includes(cleanName)) {
+        state.fontInfo = value;
+        break;
+      }
+    }
+  }
+  return state.fontInfo;
+}
+
+function convertText(parsed: ParsedText, fontMappings: FontMappings): PdfText[] {
+  const mode = parsed.graphicsState.textRenderingMode;
+  if (mode === 3 || mode === 7) {
+    return [];
+  }
+
+  const results: PdfText[] = [];
+  const clipBBox = parsed.graphicsState.clipBBox;
+
+  for (const run of parsed.runs) {
+    // Prefer decoding/metrics by the font resource name (e.g. "/F1", "/TT0", "/C2_0").
+    // Some PDFs may include multiple font resources that share the same BaseFont
+    // name but differ in encoding/ToUnicode. Using BaseFont as the primary key can
+    // cause severe mojibake (e.g. mixing Type0/TrueType with different byte widths).
+    const primaryFontKey = run.fontName;
+    const fallbackFontKey = run.baseFont;
+
+    const fontInfo =
+      run.fontInfo ??
+      getFontInfo(primaryFontKey, fontMappings) ??
+      (fallbackFontKey ? getFontInfo(fallbackFontKey, fontMappings) : undefined);
+
+    const decodedText =
+      run.fontInfo
+        ? decodeTextWithFontInfo(run.text, run.fontInfo)
+        : (() => {
+            const primary = decodeText(run.text, primaryFontKey, fontMappings);
+            if (primary !== run.text || !fallbackFontKey || fallbackFontKey === primaryFontKey) {
+              return primary;
+            }
+            return decodeText(run.text, fallbackFontKey, fontMappings);
+          })();
+
+    const metrics = fontInfo?.metrics;
+    const ascender = metrics?.ascender ?? 800;
+    const descender = metrics?.descender ?? -200;
+
+    const effectiveSize = run.effectiveFontSize;
+    const textHeight = ((ascender - descender) * effectiveSize) / 1000;
+    const minY = run.y + (descender * effectiveSize) / 1000;
+    const width = Math.max(run.endX - run.x, 1);
+
+    if (clipBBox) {
+      const bbox: PdfBBox = [run.x, minY, run.x + width, minY + Math.max(textHeight, 1)];
+      if (!bboxIntersects(bbox, clipBBox)) {
+        continue;
+      }
+    }
+
+    const actualFontName = run.baseFont ?? fontInfo?.baseFont ?? run.fontName;
+
+    results.push({
+      type: "text" as const,
+      text: decodedText,
+      x: run.x,
+      y: minY,
+      width,
+      height: Math.max(textHeight, 1),
+      fontName: actualFontName,
+      baseFont: run.baseFont ?? fontInfo?.baseFont,
+      fontSize: effectiveSize,
+      graphicsState: parsed.graphicsState,
+      charSpacing: run.charSpacing,
+      wordSpacing: run.wordSpacing,
+      horizontalScaling: run.horizontalScaling,
+      fontMetrics: { ascender, descender },
+      isBold: fontInfo?.isBold,
+      isItalic: fontInfo?.isItalic,
+      cidOrdering: fontInfo?.ordering,
+    });
+  }
+
+  return results;
+}

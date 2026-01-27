@@ -1,0 +1,89 @@
+{
+  "name": "@oxen/pdf",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "dependencies": {
+    "@oxen/buffer": "workspace:*",
+    "@oxen/color": "workspace:*",
+    "@oxen/jpeg": "workspace:*",
+    "@oxen/ooxml": "workspace:*",
+    "@oxen/png": "workspace:*",
+    "@oxen/pptx": "workspace:*",
+    "@oxen/zip": "workspace:*",
+    "fflate": "^0.8.2",
+    "jpeg-js": "^0.4.4"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./converter": {
+      "types": "./src/converter/index.ts",
+      "default": "./src/converter/index.ts"
+    },
+    "./converter/*": {
+      "types": "./src/converter/*.ts",
+      "default": "./src/converter/*.ts"
+    },
+    "./converter/*/*": {
+      "types": "./src/converter/*/*.ts",
+      "default": "./src/converter/*/*.ts"
+    },
+    "./domain": {
+      "types": "./src/domain/index.ts",
+      "default": "./src/domain/index.ts"
+    },
+    "./domain/*": {
+      "types": "./src/domain/*.ts",
+      "default": "./src/domain/*.ts"
+    },
+    "./domain/*/*": {
+      "types": "./src/domain/*/*.ts",
+      "default": "./src/domain/*/*.ts"
+    },
+    "./importer": {
+      "types": "./src/importer/index.ts",
+      "default": "./src/importer/index.ts"
+    },
+    "./importer/*": {
+      "types": "./src/importer/*.ts",
+      "default": "./src/importer/*.ts"
+    },
+    "./native": {
+      "types": "./src/native/index.ts",
+      "default": "./src/native/index.ts"
+    },
+    "./native/*": {
+      "types": "./src/native/*.ts",
+      "default": "./src/native/*.ts"
+    },
+    "./native/*/*": {
+      "types": "./src/native/*/*.ts",
+      "default": "./src/native/*/*.ts"
+    },
+    "./parser": {
+      "types": "./src/parser/index.ts",
+      "default": "./src/parser/index.ts"
+    },
+    "./parser/*": {
+      "types": "./src/parser/*.ts",
+      "default": "./src/parser/*.ts"
+    },
+    "./parser/*/*": {
+      "types": "./src/parser/*/*.ts",
+      "default": "./src/parser/*/*.ts"
+    },
+    "./test-utils/*": {
+      "types": "./src/test-utils/*.ts",
+      "default": "./src/test-utils/*.ts"
+    }
+  }
+}
+
