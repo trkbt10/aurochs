@@ -13,7 +13,7 @@ import type { DocxParagraph } from "../../docx/domain/paragraph";
 import type { DocxRelId, HeaderFooterType } from "../../docx/domain/types";
 import type { DocxNumbering } from "../../docx/domain/numbering";
 import type { DocxStyles } from "../../docx/domain/styles";
-import type { LayoutParagraphInput, LayoutParagraphResult, HeaderFooterLayout } from "../types";
+import type { LayoutParagraphInput, HeaderFooterLayout } from "../types";
 import type { Pixels } from "../../ooxml/domain/units";
 import { px } from "../../ooxml/domain/units";
 import { paragraphToLayoutInput, createParagraphLayoutContext } from "./docx-adapter";

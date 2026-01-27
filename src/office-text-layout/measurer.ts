@@ -23,8 +23,11 @@ import { isMonospace } from "../text/fonts";
  * Shared canvas context for text measurement.
  * Created lazily and reused for performance.
  */
-let measurementCanvas: HTMLCanvasElement | undefined;
-let measurementContext: CanvasRenderingContext2D | undefined;
+const measurementState: {
+  canvas?: HTMLCanvasElement;
+  context?: CanvasRenderingContext2D;
+  lastInitError?: unknown;
+} = {};
 
 /**
  * Check if Canvas measurement is available.
@@ -33,14 +36,17 @@ function canUseCanvas(): boolean {
   if (typeof document === "undefined") {
     return false;
   }
-  if (measurementContext !== undefined) {
+  if (measurementState.context !== undefined) {
     return true;
   }
   try {
-    measurementCanvas = document.createElement("canvas");
-    measurementContext = measurementCanvas.getContext("2d") ?? undefined;
-    return measurementContext !== undefined;
-  } catch {
+    measurementState.canvas = document.createElement("canvas");
+    measurementState.context = measurementState.canvas.getContext("2d") ?? undefined;
+    return measurementState.context !== undefined;
+  } catch (error) {
+    measurementState.canvas = undefined;
+    measurementState.context = undefined;
+    measurementState.lastInitError = error;
     return false;
   }
 }
@@ -79,10 +85,11 @@ function measureWithCanvas(
   fontStyle: "normal" | "italic",
   letterSpacing: number,
 ): number | undefined {
-  if (!canUseCanvas() || measurementContext === undefined) {
+  if (!canUseCanvas() || measurementState.context === undefined) {
     return undefined;
   }
 
+  const ctx = measurementState.context;
   const fontString = buildFontString(fontSizePx, fontFamily, fontWeight, fontStyle);
   const cacheKey = `${fontString}|${letterSpacing}|${text}`;
 
@@ -92,10 +99,10 @@ function measureWithCanvas(
   }
 
   // Set font and letter spacing
-  measurementContext.font = fontString;
-  (measurementContext as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `${letterSpacing}px`;
+  ctx.font = fontString;
+  (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `${letterSpacing}px`;
 
-  const metrics = measurementContext.measureText(text);
+  const metrics = ctx.measureText(text);
   const width = metrics.width;
 
   // Maintain cache size
@@ -299,28 +306,33 @@ function applyTextTransform(
  * For inline images, uses the image width directly.
  */
 export function measureSpan(span: LayoutSpan): MeasuredSpan {
-  let width = px(0);
-
-  // Inline images use their configured width
-  if (span.inlineImage !== undefined) {
-    width = span.inlineImage.width;
-  } else if (span.breakType === "none") {
-    // Apply text transform before measuring (matches rendering)
-    const transformedText = applyTextTransform(span.text, span.textTransform);
-    width = measureTextWidth(
-      transformedText,
-      span.fontSize,
-      span.letterSpacing,
-      span.fontFamily,
-      span.fontWeight,
-      span.fontStyle,
-    );
-  }
+  const width = measureSpanWidth(span);
 
   return {
     ...span,
     width,
   };
+}
+
+function measureSpanWidth(span: LayoutSpan): Pixels {
+  // Inline images use their configured width
+  if (span.inlineImage !== undefined) {
+    return span.inlineImage.width;
+  }
+  if (span.breakType !== "none") {
+    return px(0);
+  }
+
+  // Apply text transform before measuring (matches rendering)
+  const transformedText = applyTextTransform(span.text, span.textTransform);
+  return measureTextWidth(
+    transformedText,
+    span.fontSize,
+    span.letterSpacing,
+    span.fontFamily,
+    span.fontWeight,
+    span.fontStyle,
+  );
 }
 
 /**
@@ -388,42 +400,51 @@ export function getCharIndexAtOffset(span: LayoutSpan, targetX: number): number 
   const chars = Array.from(transformedText);
 
   // Use binary search with Canvas measurement for efficiency
-  let low = 0;
-  let high = chars.length;
+  const index = findCharIndexAtOffset(chars, span, targetX, 0, chars.length);
+  return Math.min(index, chars.length);
+}
 
-  while (low < high) {
-    const mid = Math.floor((low + high) / 2);
-    const textUpToMid = chars.slice(0, mid + 1).join("");
-    const widthUpToMid = measureTextWidth(
-      textUpToMid,
-      span.fontSize,
-      span.letterSpacing,
-      span.fontFamily,
-      span.fontWeight,
-      span.fontStyle,
-    ) as number;
+function measureTextWidthAsNumber(text: string, span: LayoutSpan): number {
+  return measureTextWidth(
+    text,
+    span.fontSize,
+    span.letterSpacing,
+    span.fontFamily,
+    span.fontWeight,
+    span.fontStyle,
+  ) as number;
+}
 
-    // Get width up to previous character for midpoint calculation
-    const textUpToPrev = mid > 0 ? chars.slice(0, mid).join("") : "";
-    const widthUpToPrev = mid > 0 ? (measureTextWidth(
-      textUpToPrev,
-      span.fontSize,
-      span.letterSpacing,
-      span.fontFamily,
-      span.fontWeight,
-      span.fontStyle,
-    ) as number) : 0;
-
-    const charMidpoint = (widthUpToPrev + widthUpToMid) / 2;
-
-    if (targetX < charMidpoint) {
-      high = mid;
-    } else {
-      low = mid + 1;
-    }
+function findCharIndexAtOffset(
+  chars: readonly string[],
+  span: LayoutSpan,
+  targetX: number,
+  low: number,
+  high: number,
+): number {
+  if (low >= high) {
+    return low;
   }
 
-  return Math.min(low, chars.length);
+  const mid = Math.floor((low + high) / 2);
+  const textUpToMid = chars.slice(0, mid + 1).join("");
+  const widthUpToMid = measureTextWidthAsNumber(textUpToMid, span);
+
+  const widthUpToPrev = getWidthUpToPreviousChar(chars, mid, span);
+
+  const charMidpoint = (widthUpToPrev + widthUpToMid) / 2;
+  if (targetX < charMidpoint) {
+    return findCharIndexAtOffset(chars, span, targetX, low, mid);
+  }
+  return findCharIndexAtOffset(chars, span, targetX, mid + 1, high);
+}
+
+function getWidthUpToPreviousChar(chars: readonly string[], mid: number, span: LayoutSpan): number {
+  if (mid <= 0) {
+    return 0;
+  }
+  const textUpToPrev = chars.slice(0, mid).join("");
+  return measureTextWidthAsNumber(textUpToPrev, span);
 }
 
 // =============================================================================

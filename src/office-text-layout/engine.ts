@@ -65,16 +65,6 @@ function getInlineSize(textBox: TextBoxConfig, writingMode: WritingMode): Pixels
  * - horizontal-tb: block = height
  * - vertical-rl/vertical-lr: block = width
  */
-function getBlockSize(textBox: TextBoxConfig, writingMode: WritingMode): Pixels {
-  if (isVertical(writingMode)) {
-    return getContentWidth(textBox);
-  }
-  return getContentHeight(textBox);
-}
-
-/**
- * Calculate bullet width or return 0 if no bullet.
- */
 function getBulletWidth(bullet: BulletConfig | undefined): number {
   if (bullet === undefined) {
     return 0;

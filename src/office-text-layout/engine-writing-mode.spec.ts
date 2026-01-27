@@ -5,7 +5,6 @@
  * and passes it through to layout results.
  */
 
-import { describe, it, expect } from "bun:test";
 import { px, pt, pct } from "../ooxml/domain/units";
 import { layoutTextBody, layoutDocument } from "./engine";
 import type { LayoutInput, LayoutParagraphInput, TextBoxConfig } from "./types";

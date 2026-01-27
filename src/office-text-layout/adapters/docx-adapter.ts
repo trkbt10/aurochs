@@ -22,6 +22,7 @@ import type { DocxParagraph, DocxParagraphContent, DocxParagraphSpacing, DocxTab
 import type { DocxRun, DocxRunProperties, DocxRunContent } from "../../docx/domain/run";
 import type { DocxNumbering } from "../../docx/domain/numbering";
 import type { DocxStyles } from "../../docx/domain/styles";
+import type { DocxAnchorDrawing } from "../../docx/domain/drawing";
 import type { ParagraphAlignment } from "../../ooxml/domain/text";
 import {
   resolveBulletConfig,
@@ -178,21 +179,15 @@ function createFloatingImageConfig(
   const height = emuToPx(drawing.extent.cy as number);
 
   // Convert wrap type
-  const wrap: FloatingImageWrap = drawing.wrap !== undefined
-    ? convertWrapType(drawing.wrap)
-    : { type: "none" };
+  const wrap: FloatingImageWrap = drawing.wrap !== undefined ? convertWrapType(drawing.wrap) : { type: "none" };
 
   // Convert horizontal position
   const horizontalRef: FloatingImageHorizontalRef = drawing.positionH?.relativeFrom ?? "column";
-  const horizontalOffset = drawing.positionH?.posOffset !== undefined
-    ? emuToPx(drawing.positionH.posOffset)
-    : px(0);
+  const horizontalOffset = drawing.positionH?.posOffset !== undefined ? emuToPx(drawing.positionH.posOffset) : px(0);
 
   // Convert vertical position
   const verticalRef: FloatingImageVerticalRef = drawing.positionV?.relativeFrom ?? "paragraph";
-  const verticalOffset = drawing.positionV?.posOffset !== undefined
-    ? emuToPx(drawing.positionV.posOffset)
-    : px(0);
+  const verticalOffset = drawing.positionV?.posOffset !== undefined ? emuToPx(drawing.positionV.posOffset) : px(0);
 
   // Convert distances from text (EMUs to pixels)
   const distanceTop = drawing.distT !== undefined ? emuToPx(drawing.distT) : px(0);
@@ -227,7 +222,7 @@ function createFloatingImageConfig(
 /**
  * Convert DOCX wrap type to layout wrap type.
  */
-function convertWrapType(wrap: NonNullable<import("../../docx/domain/drawing").DocxAnchorDrawing["wrap"]>): FloatingImageWrap {
+function convertWrapType(wrap: NonNullable<DocxAnchorDrawing["wrap"]>): FloatingImageWrap {
   switch (wrap.type) {
     case "none":
       return { type: "none" };
@@ -486,6 +481,30 @@ export function createParagraphLayoutContext(
   };
 }
 
+type DocxParagraphProperties = DocxParagraph["properties"];
+type DocxParagraphIndentation = NonNullable<DocxParagraphProperties>["ind"];
+type DocxParagraphNumbering = NonNullable<DocxParagraphProperties>["numPr"];
+
+function resolveParagraphIndent(ind: DocxParagraphIndentation | undefined): Pixels {
+  if (ind?.firstLine !== undefined) {
+    return px((ind.firstLine / TWIPS_PER_POINT) * PT_TO_PX);
+  }
+  if (ind?.hanging !== undefined) {
+    return px((-ind.hanging / TWIPS_PER_POINT) * PT_TO_PX);
+  }
+  return px(0);
+}
+
+function resolveParagraphBullet(
+  numPr: DocxParagraphNumbering | undefined,
+  context: ParagraphLayoutContext | undefined,
+): BulletConfig | undefined {
+  if (numPr === undefined || context?.numbering === undefined) {
+    return undefined;
+  }
+  return resolveBulletConfig(numPr, context.numbering, context.numberingContext);
+}
+
 /**
  * Convert a DOCX paragraph to a layout paragraph input.
  *
@@ -518,12 +537,7 @@ export function paragraphToLayoutInput(
   const marginRight = ind?.right !== undefined ? px((ind.right / TWIPS_PER_POINT) * PT_TO_PX) : px(0);
 
   // First line indent (positive) or hanging indent (negative)
-  let indent = px(0);
-  if (ind?.firstLine !== undefined) {
-    indent = px((ind.firstLine / TWIPS_PER_POINT) * PT_TO_PX);
-  } else if (ind?.hanging !== undefined) {
-    indent = px((-ind.hanging / TWIPS_PER_POINT) * PT_TO_PX);
-  }
+  const indent = resolveParagraphIndent(ind as DocxParagraphIndentation | undefined);
 
   // Spacing
   const spacing = props?.spacing;
@@ -541,10 +555,7 @@ export function paragraphToLayoutInput(
     props?.rPr?.sz !== undefined ? pt(props.rPr.sz / 2) : pt(SPEC_DEFAULT_FONT_SIZE_PT);
 
   // Resolve bullet/numbering
-  let bullet: BulletConfig | undefined;
-  if (props?.numPr !== undefined && context?.numbering !== undefined) {
-    bullet = resolveBulletConfig(props.numPr, context.numbering, context.numberingContext);
-  }
+  const bullet = resolveParagraphBullet(props?.numPr as DocxParagraphNumbering | undefined, context);
 
   return {
     spans,

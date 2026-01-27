@@ -117,6 +117,25 @@ function toSvgDominantBaseline(fontAlignment: FontAlignment): string | undefined
   }
 }
 
+function toOptionalStyle(style: CSSProperties): CSSProperties | undefined {
+  if (Object.keys(style).length === 0) {
+    return undefined;
+  }
+  return style;
+}
+
+function getSpanTextStyle(span: PositionedSpan, isVerticalMode: boolean, writingMode: WritingMode): CSSProperties | undefined {
+  const style: CSSProperties = {};
+  if (span.linkId !== undefined) {
+    style.cursor = "pointer";
+  }
+  if (isVerticalMode) {
+    style.writingMode = writingMode;
+    style.textOrientation = "mixed";
+  }
+  return toOptionalStyle(style);
+}
+
 /**
  * Get text decoration value with hyperlink underline if applicable.
  * Hyperlinks should always show underline unless explicitly removed.
@@ -300,19 +319,8 @@ function renderSpan(
     }
   }
 
-  // Build style object
-  let textStyle: CSSProperties = {};
-  if (isHyperlink) {
-    textStyle.cursor = "pointer";
-  }
-
   // For vertical mode, apply CSS writing-mode and text-orientation
   if (isVerticalMode) {
-    textStyle = {
-      ...textStyle,
-      writingMode: writingMode === "vertical-rl" ? "vertical-rl" : "vertical-lr",
-      textOrientation: "mixed",
-    };
     // Position for vertical text: x is the right edge of the column
     textProps.x = x + (fontSizePx as number);
     textProps.y = lineY;
@@ -323,20 +331,13 @@ function renderSpan(
     textProps.dominantBaseline = dominantBaseline;
   }
 
-  const hasStyle = Object.keys(textStyle).length > 0;
-  const textElement = hasStyle ? (
+  const textStyle = getSpanTextStyle(span, isVerticalMode, writingMode);
+  elements.push(
     <text key={`text-${key}`} {...textProps} style={textStyle}>
       {textContent}
       {isHyperlink && span.linkTooltip !== undefined && <title>{span.linkTooltip}</title>}
-    </text>
-  ) : (
-    <text key={`text-${key}`} {...textProps}>
-      {textContent}
-      {isHyperlink && span.linkTooltip !== undefined && <title>{span.linkTooltip}</title>}
-    </text>
+    </text>,
   );
-
-  elements.push(textElement);
 
   return <g key={`span-${key}`}>{elements}</g>;
 }
@@ -360,45 +361,31 @@ function renderLine(
   lineIndex: number,
   writingMode: WritingMode = "horizontal-tb",
 ): ReactNode[] {
-  const elements: ReactNode[] = [];
   const dominantBaseline = toSvgDominantBaseline(fontAlignment);
   const isVerticalMode = isVertical(writingMode);
 
-  if (isVerticalMode) {
-    // Vertical mode: spans advance along Y axis
-    let cursorY = line.y as number;
-    const columnX = line.x as number;
+  const baseX = line.x as number;
+  const baseY = line.y as number;
+  const fixedPos = isVerticalMode ? baseX : baseY;
 
-    for (let spanIndex = 0; spanIndex < line.spans.length; spanIndex++) {
-      const span = line.spans[spanIndex];
+  const state = line.spans.reduce(
+    (acc, span, spanIndex) => {
       if (span.text.length === 0) {
-        continue;
+        return acc;
       }
 
       const key = `p${paragraphIndex}-l${lineIndex}-s${spanIndex}`;
-      const element = renderSpan(span, columnX, cursorY, dominantBaseline, key, writingMode);
-      elements.push(element);
+      const x = isVerticalMode ? fixedPos : acc.cursor;
+      const y = isVerticalMode ? acc.cursor : fixedPos;
+      acc.elements.push(renderSpan(span, x, y, dominantBaseline, key, writingMode));
       // In vertical mode, span.width is the inline extent (height in physical space)
-      cursorY += (span.width as number) + (span.dx as number);
-    }
-  } else {
-    // Horizontal mode: spans advance along X axis
-    let cursorX = line.x as number;
+      acc.cursor += (span.width as number) + (span.dx as number);
+      return acc;
+    },
+    { cursor: isVerticalMode ? baseY : baseX, elements: [] as ReactNode[] },
+  );
 
-    for (let spanIndex = 0; spanIndex < line.spans.length; spanIndex++) {
-      const span = line.spans[spanIndex];
-      if (span.text.length === 0) {
-        continue;
-      }
-
-      const key = `p${paragraphIndex}-l${lineIndex}-s${spanIndex}`;
-      const element = renderSpan(span, cursorX, line.y as number, dominantBaseline, key, writingMode);
-      elements.push(element);
-      cursorX += (span.width as number) + (span.dx as number);
-    }
-  }
-
-  return elements;
+  return state.elements;
 }
 
 // =============================================================================
@@ -421,12 +408,25 @@ function renderBullet(
 
   if (bullet.imageUrl !== undefined) {
     const imageSize = bulletFontSizePx as number;
+    if (isVerticalMode) {
+      return (
+        <image
+          key={`bullet-${key}`}
+          href={bullet.imageUrl}
+          x={bulletX}
+          y={bulletY}
+          width={imageSize}
+          height={imageSize}
+          preserveAspectRatio="xMidYMid meet"
+        />
+      );
+    }
     return (
       <image
         key={`bullet-${key}`}
         href={bullet.imageUrl}
         x={bulletX}
-        y={isVerticalMode ? bulletY : bulletBounds.topY as number}
+        y={bulletBounds.topY as number}
         width={imageSize}
         height={imageSize}
         preserveAspectRatio="xMidYMid meet"
@@ -434,29 +434,28 @@ function renderBullet(
     );
   }
 
-  // For vertical mode, apply writing-mode style
-  const bulletStyle: CSSProperties = isVerticalMode
-    ? {
-        writingMode: writingMode === "vertical-rl" ? "vertical-rl" : "vertical-lr",
-        textOrientation: "mixed",
-      }
-    : {};
-  const hasStyle = Object.keys(bulletStyle).length > 0;
+  if (isVerticalMode) {
+    const bulletStyle: CSSProperties = {
+      writingMode,
+      textOrientation: "mixed",
+    };
+    return (
+      <text
+        key={`bullet-${key}`}
+        x={bulletX + (bulletFontSizePx as number)}
+        y={bulletY}
+        fontSize={`${bulletFontSizePx as number}px`}
+        fill={bullet.color}
+        fontFamily={bullet.fontFamily}
+        dominantBaseline="text-before-edge"
+        style={bulletStyle}
+      >
+        {bullet.char}
+      </text>
+    );
+  }
 
-  return hasStyle ? (
-    <text
-      key={`bullet-${key}`}
-      x={bulletX + (bulletFontSizePx as number)}
-      y={bulletY}
-      fontSize={`${bulletFontSizePx as number}px`}
-      fill={bullet.color}
-      fontFamily={bullet.fontFamily}
-      dominantBaseline="text-before-edge"
-      style={bulletStyle}
-    >
-      {bullet.char}
-    </text>
-  ) : (
+  return (
     <text
       key={`bullet-${key}`}
       x={bulletX}
@@ -517,9 +516,11 @@ export function renderCursor(
     return null;
   }
 
-  const style: CSSProperties = isBlinking
-    ? { animation: "cursor-blink 1s step-end infinite" }
-    : {};
+  const style: CSSProperties = {};
+  if (isBlinking) {
+    style.animation = "cursor-blink 1s step-end infinite";
+  }
+  const cursorStyle = toOptionalStyle(style);
 
   return (
     <line
@@ -530,7 +531,7 @@ export function renderCursor(
       y2={(coords.y as number) + (coords.height as number)}
       stroke={cursorColor}
       strokeWidth={1}
-      style={style}
+      style={cursorStyle}
     />
   );
 }
@@ -545,6 +546,23 @@ export type TextOverlayProps = {
   readonly cursor?: CursorCoordinates;
   readonly showCursor?: boolean;
 };
+
+function getBulletPosition(
+  firstLine: LayoutLine,
+  bulletWidth: Pixels,
+  isVerticalMode: boolean,
+): { bulletX: number; bulletY: number } {
+  if (isVerticalMode) {
+    return {
+      bulletX: firstLine.x as number,
+      bulletY: (firstLine.y as number) - (bulletWidth as number),
+    };
+  }
+  return {
+    bulletX: (firstLine.x as number) - (bulletWidth as number),
+    bulletY: firstLine.y as number,
+  };
+}
 
 /**
  * Renders text from LayoutResult as SVG elements.
@@ -570,8 +588,7 @@ export function TextOverlay({
   }
 
   // Render paragraphs
-  for (let paragraphIndex = 0; paragraphIndex < layoutResult.paragraphs.length; paragraphIndex++) {
-    const para = layoutResult.paragraphs[paragraphIndex];
+  layoutResult.paragraphs.forEach((para, paragraphIndex) => {
 
     // Render bullet if present
     if (para.bullet !== undefined && para.lines.length > 0) {
@@ -580,23 +597,17 @@ export function TextOverlay({
       // Bullet position depends on writing mode:
       // - Horizontal: bullet is to the LEFT of the line (X - bulletWidth)
       // - Vertical: bullet is ABOVE the line (Y - bulletWidth)
-      const bulletX = isVerticalMode
-        ? firstLine.x as number
-        : (firstLine.x as number) - (para.bulletWidth as number);
-      const bulletY = isVerticalMode
-        ? (firstLine.y as number) - (para.bulletWidth as number)
-        : firstLine.y as number;
+      const { bulletX, bulletY } = getBulletPosition(firstLine, para.bulletWidth, isVerticalMode);
 
       elements.push(renderBullet(para.bullet, bulletX, bulletY, `p${paragraphIndex}`, writingMode));
     }
 
     // Render lines
-    for (let lineIndex = 0; lineIndex < para.lines.length; lineIndex++) {
-      const line = para.lines[lineIndex];
+    para.lines.forEach((line, lineIndex) => {
       const lineElements = renderLine(line, para.fontAlignment, paragraphIndex, lineIndex, writingMode);
       elements.push(...lineElements);
-    }
-  }
+    });
+  });
 
   // Render cursor last (on top)
   if (showCursor && cursor !== undefined) {

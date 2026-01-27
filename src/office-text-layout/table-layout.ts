@@ -151,15 +151,15 @@ function buildMergeGrid(
   // Process each row
   for (let rowIndex = 0; rowIndex < numRows; rowIndex++) {
     const row = table.rows[rowIndex];
-    let gridColIndex = 0;
+    const gridColIndexRef = { value: 0 };
 
     for (let cellIndex = 0; cellIndex < row.cells.length; cellIndex++) {
       // Skip columns that are already claimed by vertical merges
-      while (gridColIndex < numCols && grid[rowIndex][gridColIndex] !== null) {
-        gridColIndex++;
+      while (gridColIndexRef.value < numCols && grid[rowIndex][gridColIndexRef.value] !== null) {
+        gridColIndexRef.value++;
       }
 
-      if (gridColIndex >= numCols) {
+      if (gridColIndexRef.value >= numCols) {
         break;
       }
 
@@ -170,10 +170,10 @@ function buildMergeGrid(
       if (vMerge === "continue") {
         // This cell continues a vertical merge from above
         // Find the owning cell and extend it
-        const owningCell = grid[rowIndex - 1]?.[gridColIndex];
+        const owningCell = grid[rowIndex - 1]?.[gridColIndexRef.value];
         if (owningCell !== null) {
           // Mark this cell as owned by the same owner
-          for (let c = gridColIndex; c < gridColIndex + gridSpan && c < numCols; c++) {
+          for (let c = gridColIndexRef.value; c < gridColIndexRef.value + gridSpan && c < numCols; c++) {
             grid[rowIndex][c] = {
               ownerRow: owningCell.ownerRow,
               ownerCol: owningCell.ownerCol,
@@ -183,16 +183,16 @@ function buildMergeGrid(
         }
       } else {
         // This is an origin cell (restart or normal)
-        for (let c = gridColIndex; c < gridColIndex + gridSpan && c < numCols; c++) {
+        for (let c = gridColIndexRef.value; c < gridColIndexRef.value + gridSpan && c < numCols; c++) {
           grid[rowIndex][c] = {
             ownerRow: rowIndex,
             ownerCol: cellIndex,
-            isOrigin: c === gridColIndex,
+            isOrigin: c === gridColIndexRef.value,
           };
         }
       }
 
-      gridColIndex += gridSpan;
+      gridColIndexRef.value += gridSpan;
     }
   }
 
@@ -224,19 +224,19 @@ function calculateRowSpans(
       if (cell.isOrigin) {
         // Count how many rows this cell spans
         const key = `${cell.ownerRow},${cell.ownerCol}`;
-        let span = 1;
+        const spanRef = { value: 1 };
         for (let nextRow = r + 1; nextRow < numRows; nextRow++) {
           const nextCell = mergeGrid[nextRow][c];
           if (
             nextCell.ownerRow === cell.ownerRow &&
             nextCell.ownerCol === cell.ownerCol
           ) {
-            span++;
+            spanRef.value++;
           } else {
             break;
           }
         }
-        rowSpans.set(key, span);
+        rowSpans.set(key, spanRef.value);
       }
     }
   }
@@ -321,18 +321,18 @@ export function layoutTable(
     const row = table.rows[rowIndex];
     cellHeights[rowIndex] = [];
     cellResults[rowIndex] = [];
-    let gridColIndex = 0;
+    const gridColIndexRef = { value: 0 };
 
     for (let cellIndex = 0; cellIndex < row.cells.length; cellIndex++) {
       // Skip columns claimed by vertical merges from above
       while (
-        gridColIndex < columnWidths.length &&
-        mergeGrid[rowIndex][gridColIndex].ownerRow !== rowIndex
+        gridColIndexRef.value < columnWidths.length &&
+        mergeGrid[rowIndex][gridColIndexRef.value].ownerRow !== rowIndex
       ) {
-        gridColIndex++;
+        gridColIndexRef.value++;
       }
 
-      if (gridColIndex >= columnWidths.length) {
+      if (gridColIndexRef.value >= columnWidths.length) {
         break;
       }
 
@@ -342,12 +342,12 @@ export function layoutTable(
 
       // Skip continued merge cells - they don't contribute to height
       if (vMerge === "continue") {
-        gridColIndex += gridSpan;
+        gridColIndexRef.value += gridSpan;
         continue;
       }
 
       // Calculate cell width
-      const cellWidth = getCellWidth(gridColIndex, gridSpan, columnWidths, cellSpacing);
+      const cellWidth = getCellWidth(gridColIndexRef.value, gridSpan, columnWidths, cellSpacing);
       const contentWidth = px(
         (cellWidth as number) - (padding.left as number) - (padding.right as number),
       );
@@ -366,7 +366,7 @@ export function layoutTable(
       cellHeights[rowIndex].push(minHeight / rowSpan); // Distribute height across spanned rows
 
       // Calculate X position
-      const cellX = getCellX(gridColIndex, columnWidths, cellSpacing, tableX);
+      const cellX = getCellX(gridColIndexRef.value, columnWidths, cellSpacing, tableX);
 
       // Create partial result (Y and final height will be set later)
       cellResults[rowIndex].push({
@@ -383,7 +383,7 @@ export function layoutTable(
         rowSpan,
       });
 
-      gridColIndex += gridSpan;
+      gridColIndexRef.value += gridSpan;
     }
   }
 
@@ -407,42 +407,56 @@ export function layoutTable(
     }
   });
 
-  // Build final row results with correct Y positions
-  const rowResults: LayoutTableRowResult[] = [];
-  let currentY = startY as number;
-
-  for (let rowIndex = 0; rowIndex < table.rows.length; rowIndex++) {
-    const row = table.rows[rowIndex];
-    const rowHeight = rowHeights[rowIndex];
-
-    // Update cell Y positions and heights
-    const finalCells: LayoutTableCellResult[] = cellResults[rowIndex].map((cell) => {
-      // For cells that span multiple rows, calculate total height
-      const totalRowHeight =
-        cell.rowSpan > 1
-          ? rowHeights.slice(rowIndex, rowIndex + cell.rowSpan).reduce((sum, h) => sum + h, 0) +
-            (cell.rowSpan - 1) * cellSpacingValue
-          : rowHeight;
-
-      return {
-        ...cell,
-        y: px(currentY),
-        height: px(totalRowHeight),
-      };
-    });
-
-    rowResults.push({
-      y: px(currentY),
-      height: px(rowHeight),
-      cells: finalCells,
-      isHeader: row.isHeader,
-    });
-
-    currentY += rowHeight + cellSpacingValue;
+function getCellTotalRowHeight(
+  cell: LayoutTableCellResult,
+  rowIndex: number,
+  rowHeights: readonly number[],
+  rowHeight: number,
+  cellSpacingValue: number,
+): number {
+  if (cell.rowSpan <= 1) {
+    return rowHeight;
   }
 
+  const spannedHeights = rowHeights
+    .slice(rowIndex, rowIndex + cell.rowSpan)
+    .reduce((sum, h) => sum + h, 0);
+  return spannedHeights + (cell.rowSpan - 1) * cellSpacingValue;
+}
+
+  // Build final row results with correct Y positions
+  const rowLayout = table.rows.reduce(
+    (acc, row, rowIndex) => {
+      const rowHeight = rowHeights[rowIndex];
+      const currentY = acc.currentY;
+
+      // Update cell Y positions and heights
+      const finalCells: LayoutTableCellResult[] = cellResults[rowIndex].map((cell) => {
+        const totalRowHeight = getCellTotalRowHeight(cell, rowIndex, rowHeights, rowHeight, cellSpacingValue);
+        return {
+          ...cell,
+          y: px(currentY),
+          height: px(totalRowHeight),
+        };
+      });
+
+      acc.rows.push({
+        y: px(currentY),
+        height: px(rowHeight),
+        cells: finalCells,
+        isHeader: row.isHeader,
+      });
+
+      acc.currentY = currentY + rowHeight + cellSpacingValue;
+      return acc;
+    },
+    { rows: [] as LayoutTableRowResult[], currentY: startY as number },
+  );
+
+  const rowResults = rowLayout.rows;
+
   // Calculate total table height
-  const tableHeight = px(currentY - (startY as number) - cellSpacingValue);
+  const tableHeight = px(rowLayout.currentY - (startY as number) - cellSpacingValue);
 
   return {
     x: px(tableX),

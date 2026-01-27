@@ -50,17 +50,21 @@ function toUpperRoman(n: number): string {
     [1, "I"],
   ];
 
-  let result = "";
-  let remaining = n;
+  const converted = romanNumerals.reduce(
+    (acc, [value, numeral]) => {
+      const repeat = Math.floor(acc.remaining / value);
+      if (repeat <= 0) {
+        return acc;
+      }
+      return {
+        remaining: acc.remaining - repeat * value,
+        result: acc.result + numeral.repeat(repeat),
+      };
+    },
+    { remaining: n, result: "" },
+  );
 
-  for (const [value, numeral] of romanNumerals) {
-    while (remaining >= value) {
-      result += numeral;
-      remaining -= value;
-    }
-  }
-
-  return result;
+  return converted.result;
 }
 
 /**
@@ -74,16 +78,16 @@ function toLowerRoman(n: number): string {
  * Convert a number to uppercase letter (A, B, C, ..., Z, AA, AB, ...).
  */
 function toUpperLetter(n: number): string {
-  let result = "";
-  let remaining = n;
+  const convert = (remaining: number, result: string): string => {
+    if (remaining <= 0) {
+      return result;
+    }
+    const adjusted = remaining - 1;
+    const nextResult = String.fromCharCode(65 + (adjusted % 26)) + result;
+    return convert(Math.floor(adjusted / 26), nextResult);
+  };
 
-  while (remaining > 0) {
-    remaining--;
-    result = String.fromCharCode(65 + (remaining % 26)) + result;
-    remaining = Math.floor(remaining / 26);
-  }
-
-  return result;
+  return convert(n, "");
 }
 
 /**
@@ -216,20 +220,16 @@ export function substituteLevelText(
   counters: readonly number[],
   formats: readonly NumberFormat[],
 ): string {
-  let result = lvlText;
-
-  // Replace %1 through %9 with formatted counter values
-  for (let i = 0; i < 9; i++) {
+  return Array.from({ length: 9 }, (_, i) => i).reduce((result, i) => {
     const placeholder = `%${i + 1}`;
-    if (result.includes(placeholder)) {
-      const counterValue = counters[i] ?? 1;
-      const format = formats[i] ?? "decimal";
-      const formatted = formatNumber(counterValue, format);
-      result = result.replace(new RegExp(placeholder, "g"), formatted);
+    if (!result.includes(placeholder)) {
+      return result;
     }
-  }
-
-  return result;
+    const counterValue = counters[i] ?? 1;
+    const format = formats[i] ?? "decimal";
+    const formatted = formatNumber(counterValue, format);
+    return result.replace(new RegExp(placeholder, "g"), formatted);
+  }, lvlText);
 }
 
 // =============================================================================
@@ -270,15 +270,15 @@ function getCounters(
   levels: readonly DocxLevel[],
 ): number[] {
   const key = getCounterKey(numId);
-  let counters = context.counters.get(key);
-
-  if (counters === undefined) {
-    // Initialize counters with start values from each level
-    counters = levels.map((lvl) => lvl.start ?? 1);
-    (context.counters as Map<string, number[]>).set(key, counters);
+  const existing = context.counters.get(key);
+  if (existing !== undefined) {
+    return existing;
   }
 
-  return counters;
+  // Initialize counters with start values from each level
+  const initialized = levels.map((lvl) => lvl.start ?? 1);
+  (context.counters as Map<string, number[]>).set(key, initialized);
+  return initialized;
 }
 
 /**
@@ -293,10 +293,9 @@ function incrementCounter(
   counters[ilvl] = (counters[ilvl] ?? 0) + 1;
 
   // Reset all higher levels to their start values
-  for (let i = ilvl + 1; i < counters.length; i++) {
-    const level = levels[i];
-    counters[i] = level?.start ?? 1;
-  }
+  levels.slice(ilvl + 1, counters.length).forEach((level, offset) => {
+    counters[ilvl + 1 + offset] = level?.start ?? 1;
+  });
 }
 
 /**
@@ -343,12 +342,29 @@ function getLevelFormats(
   abstractNum: DocxAbstractNum,
   upToIlvl: number,
 ): NumberFormat[] {
-  const formats: NumberFormat[] = [];
-  for (let i = 0; i <= upToIlvl; i++) {
+  return Array.from({ length: upToIlvl + 1 }, (_, i) => {
     const level = abstractNum.lvl.find((l) => (l.ilvl as number) === i);
-    formats.push(level?.numFmt ?? "decimal");
+    return level?.numFmt ?? "decimal";
+  });
+}
+
+function resolveBulletChar(
+  level: DocxLevel,
+  counters: readonly number[],
+  formats: readonly NumberFormat[],
+  ilvl: number,
+): string {
+  const numFmt = level.numFmt ?? "decimal";
+  if (numFmt === "bullet") {
+    return level.lvlText?.val ?? "•";
   }
-  return formats;
+
+  if (level.lvlText?.val !== undefined) {
+    return substituteLevelText(level.lvlText.val, counters, formats);
+  }
+
+  const counterValue = counters[ilvl] ?? 1;
+  return formatNumber(counterValue, numFmt) + ".";
 }
 
 /**
@@ -386,32 +402,15 @@ export function resolveBulletConfig(
   const formats = getLevelFormats(abstractNum, ilvl as number);
 
   // Generate the bullet/number text
-  let bulletChar: string;
-  const numFmt = level.numFmt ?? "decimal";
-
-  if (numFmt === "bullet") {
-    // Bullet character from lvlText
-    bulletChar = level.lvlText?.val ?? "•";
-  } else if (level.lvlText?.val !== undefined) {
-    // Numbered list with lvlText pattern
-    bulletChar = substituteLevelText(level.lvlText.val, counters, formats);
-  } else {
-    // Default numbered format
-    const counterValue = counters[ilvl as number] ?? 1;
-    bulletChar = formatNumber(counterValue, numFmt) + ".";
-  }
+  const bulletChar = resolveBulletChar(level, counters, formats, ilvl as number);
 
   // Increment counter for next paragraph with same numbering
   incrementCounter(counters, ilvl as number, abstractNum.lvl);
 
   // Get font properties from level rPr
   const rPr = level.rPr;
-  const fontSize: Points = rPr?.sz !== undefined
-    ? pt(rPr.sz / 2)
-    : pt(SPEC_DEFAULT_FONT_SIZE_PT);
-  const color = rPr?.color?.val !== undefined
-    ? `#${rPr.color.val}`
-    : "#000000";
+  const fontSize: Points = rPr?.sz !== undefined ? pt(rPr.sz / 2) : pt(SPEC_DEFAULT_FONT_SIZE_PT);
+  const color = rPr?.color?.val !== undefined ? `#${rPr.color.val}` : "#000000";
   const fontFamily = rPr?.rFonts?.ascii ?? "sans-serif";
 
   return {

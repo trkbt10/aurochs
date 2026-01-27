@@ -2,7 +2,6 @@
  * @file Tests for DOCX Header/Footer Resolver
  */
 
-import { describe, it, expect } from "bun:test";
 import type { DocxSectionProperties } from "../../docx/domain/section";
 import type { DocxHeader, DocxFooter } from "../../docx/domain/document";
 import type { DocxRelId } from "../../docx/domain/types";

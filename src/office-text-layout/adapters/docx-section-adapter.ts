@@ -111,12 +111,10 @@ export function sectionPropertiesToPageConfig(
   const gutter = pgMar?.gutter !== undefined ? twipsToPx(pgMar.gutter) : px(0);
 
   // Add gutter to left margin by default, right if rtlGutter is set
-  const marginLeft = sectPr?.rtlGutter === true
-    ? baseLeftMargin
-    : px((baseLeftMargin as number) + (gutter as number));
-  const marginRight = sectPr?.rtlGutter === true
-    ? px((baseRightMargin as number) + (gutter as number))
-    : baseRightMargin;
+  const gutteredLeftMargin = px((baseLeftMargin as number) + (gutter as number));
+  const gutteredRightMargin = px((baseRightMargin as number) + (gutter as number));
+  const marginLeft = sectPr?.rtlGutter === true ? baseLeftMargin : gutteredLeftMargin;
+  const marginRight = sectPr?.rtlGutter === true ? gutteredRightMargin : baseRightMargin;
 
   // Convert columns configuration
   const columns = columnsToColumnConfig(sectPr?.cols);

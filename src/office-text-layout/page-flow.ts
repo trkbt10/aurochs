@@ -288,14 +288,22 @@ function transformParagraphForVertical(
     return paragraph;
   }
 
-  const transformLine = writingMode === "vertical-rl"
-    ? (line: LayoutLine) => transformLineToVerticalRl(line, config)
-    : (line: LayoutLine) => transformLineToVerticalLr(line, config);
+  const transformLine = getLineTransformerForVertical(writingMode, config);
 
   return {
     ...paragraph,
     lines: paragraph.lines.map(transformLine),
   };
+}
+
+function getLineTransformerForVertical(
+  writingMode: Exclude<WritingMode, "horizontal-tb">,
+  config: PageFlowConfig,
+): (line: LayoutLine) => LayoutLine {
+  if (writingMode === "vertical-rl") {
+    return (line) => transformLineToVerticalRl(line, config);
+  }
+  return (line) => transformLineToVerticalLr(line, config);
 }
 
 /**
@@ -382,11 +390,6 @@ function countLinesThatFit(
 /**
  * Get height of first N lines of a paragraph.
  */
-function getPartialParagraphHeight(paragraph: LayoutParagraphResult, lineCount: number): number {
-  return paragraph.lines
-    .slice(0, lineCount)
-    .reduce((sum, line) => sum + (line.height as number), 0);
-}
 
 // =============================================================================
 // Page Flow Algorithm
@@ -458,11 +461,10 @@ function getColumnXOffset(config: PageFlowConfig, columnIndex: number): number {
     return marginLeft;
   }
 
-  const accumulated = { offset: marginLeft };
-  for (let i = 0; i < columnIndex; i++) {
-    accumulated.offset += getColumnWidth(config, i) + (columns.space as number);
-  }
-  return accumulated.offset;
+  return Array.from({ length: columnIndex }, (_, i) => i).reduce(
+    (offset, i) => offset + getColumnWidth(config, i) + (columns.space as number),
+    marginLeft,
+  );
 }
 
 /**
@@ -630,15 +632,21 @@ function addParagraphToPage(
 /**
  * Add a paragraph with the given X offset, adjusting Y position.
  */
+function getOriginalFirstLineY(paragraph: LayoutParagraphResult): number {
+  const firstLine = paragraph.lines[0];
+  if (firstLine === undefined) {
+    return 0;
+  }
+  return (firstLine.y as number) - (firstLine.height as number) * 0.8;
+}
+
 function addParagraphWithOffset(
   state: FlowState,
   paragraph: LayoutParagraphResult,
   xOffset: number,
 ): void {
   const paragraphHeight = getParagraphHeight(paragraph);
-  const originalFirstLineY = paragraph.lines.length > 0
-    ? (paragraph.lines[0].y as number) - (paragraph.lines[0].height as number) * 0.8
-    : 0;
+  const originalFirstLineY = getOriginalFirstLineY(paragraph);
   const yOffset = state.currentPage.currentY - originalFirstLineY;
   const adjustedParagraph = adjustParagraphPosition(paragraph, xOffset, yOffset);
   state.currentPage.paragraphs.push(adjustedParagraph);
@@ -731,16 +739,21 @@ function findPageForParagraph(
   pages: readonly PageLayout[],
   paragraphIndex: number,
 ): number {
-  let globalParagraphIndex = 0;
-  for (let pageIndex = 0; pageIndex < pages.length; pageIndex++) {
-    const page = pages[pageIndex];
-    if (globalParagraphIndex + page.paragraphs.length > paragraphIndex) {
-      return pageIndex;
-    }
-    globalParagraphIndex += page.paragraphs.length;
-  }
-  // Default to last page
-  return Math.max(0, pages.length - 1);
+  const resolved = pages.reduce(
+    (acc, page, pageIndex) => {
+      if (acc.pageIndex !== undefined) {
+        return acc;
+      }
+      const nextParagraphCount = acc.paragraphCount + page.paragraphs.length;
+      if (nextParagraphCount > paragraphIndex) {
+        return { paragraphCount: nextParagraphCount, pageIndex };
+      }
+      return { paragraphCount: nextParagraphCount, pageIndex: undefined };
+    },
+    { paragraphCount: 0, pageIndex: undefined as number | undefined },
+  );
+
+  return resolved.pageIndex ?? Math.max(0, pages.length - 1);
 }
 
 /**
@@ -750,16 +763,10 @@ function getParagraphY(
   pages: readonly PageLayout[],
   paragraphIndex: number,
 ): number {
-  let globalParagraphIndex = 0;
-  for (const page of pages) {
-    for (const para of page.paragraphs) {
-      if (globalParagraphIndex === paragraphIndex && para.lines.length > 0) {
-        return para.lines[0].y as number;
-      }
-      globalParagraphIndex++;
-    }
-  }
-  return 0;
+  const paragraphs = pages.flatMap((page) => page.paragraphs);
+  const paragraph = paragraphs[paragraphIndex];
+  const firstLine = paragraph?.lines[0];
+  return firstLine !== undefined ? firstLine.y as number : 0;
 }
 
 /**
@@ -942,6 +949,25 @@ function positionFloatingImages(
   return imagesByPage;
 }
 
+function addFloatingImagesToPages(
+  pages: readonly PageLayout[],
+  floatingImages: readonly FloatingImageConfig[],
+  config: PageFlowConfig,
+): PageLayout[] {
+  const imagesByPage = positionFloatingImages(floatingImages, pages, config);
+  return pages.map((page, pageIndex) => {
+    const pageImages = imagesByPage.get(pageIndex);
+    if (pageImages === undefined) {
+      return page;
+    }
+    return {
+      ...page,
+      floatingImagesBehind: pageImages.behind.length > 0 ? pageImages.behind : undefined,
+      floatingImagesFront: pageImages.front.length > 0 ? pageImages.front : undefined,
+    };
+  });
+}
+
 /**
  * Split paragraphs into pages.
  */
@@ -961,8 +987,7 @@ export function flowIntoPages(input: PageFlowInput): PagedLayoutResult {
   };
 
   // Process each paragraph
-  for (let i = 0; i < paragraphs.length; i++) {
-    const paragraph = paragraphs[i];
+  paragraphs.forEach((paragraph, i) => {
     const hint = hints?.[i];
 
     // Handle page break before (from paragraph properties)
@@ -999,7 +1024,7 @@ export function flowIntoPages(input: PageFlowInput): PagedLayoutResult {
     if (hint?.sectionBreakAfter !== undefined) {
       handleSectionBreak(state, config, hint.sectionBreakAfter);
     }
-  }
+  });
 
   // Finalize last page
   if (state.currentPage.paragraphs.length > 0) {
@@ -1027,37 +1052,36 @@ export function flowIntoPages(input: PageFlowInput): PagedLayoutResult {
   const floatingImages = input.floatingImages ?? [];
   const writingMode = config.writingMode ?? "horizontal-tb";
 
-  // Get pages with floating images if present
-  let finalPages: PageLayout[] = state.pages;
-  if (floatingImages.length > 0) {
-    const imagesByPage = positionFloatingImages(floatingImages, state.pages, config);
-
-    // Add floating images to each page
-    finalPages = state.pages.map((page, pageIndex) => {
-      const pageImages = imagesByPage.get(pageIndex);
-      if (pageImages === undefined) {
-        return page;
-      }
-      return {
-        ...page,
-        floatingImagesBehind: pageImages.behind.length > 0 ? pageImages.behind : undefined,
-        floatingImagesFront: pageImages.front.length > 0 ? pageImages.front : undefined,
-      };
-    });
-  }
-
-  // Transform pages for vertical writing mode (ECMA-376 Section 17.18.93)
-  if (isVertical(writingMode)) {
-    finalPages = finalPages.map((page) =>
-      transformPageForVertical(page, writingMode, config)
-    );
-  }
+  const pagesWithImages = addFloatingImagesToPagesIfNeeded(state.pages, floatingImages, config);
+  const finalPages = transformPagesForWritingMode(pagesWithImages, writingMode, config);
 
   return {
     pages: finalPages,
     totalHeight: px(state.totalHeight),
     writingMode,
   };
+}
+
+function addFloatingImagesToPagesIfNeeded(
+  pages: readonly PageLayout[],
+  floatingImages: readonly FloatingImageConfig[],
+  config: PageFlowConfig,
+): PageLayout[] {
+  if (floatingImages.length === 0) {
+    return [...pages];
+  }
+  return addFloatingImagesToPages(pages, floatingImages, config);
+}
+
+function transformPagesForWritingMode(
+  pages: readonly PageLayout[],
+  writingMode: WritingMode,
+  config: PageFlowConfig,
+): PageLayout[] {
+  if (!isVertical(writingMode)) {
+    return [...pages];
+  }
+  return pages.map((page) => transformPageForVertical(page, writingMode, config));
 }
 
 // =============================================================================

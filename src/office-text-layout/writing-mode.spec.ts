@@ -5,7 +5,6 @@
  * coordinate systems for different writing modes.
  */
 
-import { describe, it, expect } from "bun:test";
 import { px } from "../ooxml/domain/units";
 import {
   textDirectionToWritingMode,
