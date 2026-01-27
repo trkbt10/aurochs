@@ -16,7 +16,7 @@
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts"
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@oxen/pptx/src'"
   },
   "exports": {
     ".": {
@@ -219,9 +219,17 @@
       "types": "./src/parser/drawing-ml/index.ts",
       "default": "./src/parser/drawing-ml/index.ts"
     },
+    "./parser/drawing-ml/theme": {
+      "types": "./src/parser/drawing-ml/theme.ts",
+      "default": "./src/parser/drawing-ml/theme.ts"
+    },
     "./parser/slide/context": {
       "types": "./src/parser/slide/context.ts",
       "default": "./src/parser/slide/context.ts"
+    },
+    "./parser/slide/layout-parser": {
+      "types": "./src/parser/slide/layout-parser.ts",
+      "default": "./src/parser/slide/layout-parser.ts"
     },
     "./parser/slide/external-content-loader": {
       "types": "./src/parser/slide/external-content-loader.ts",
@@ -254,6 +262,10 @@
     "./patcher/*/*/*": {
       "types": "./src/patcher/*/*/*.ts",
       "default": "./src/patcher/*/*/*.ts"
+    },
+    "./patcher/resources/ole-manager": {
+      "types": "./src/patcher/resources/ole-manager.ts",
+      "default": "./src/patcher/resources/ole-manager.ts"
     }
   }
 }

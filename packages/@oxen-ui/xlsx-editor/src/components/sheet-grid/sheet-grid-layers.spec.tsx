@@ -5,7 +5,7 @@
 // @vitest-environment jsdom
 
 import { act, render, screen } from "@testing-library/react";
-import { triggerResizeObservers } from "../../../../spec/test-utils/resize-observer";
+import { triggerResizeObservers } from "../../../../../../spec/test-utils/resize-observer";
 import type { XlsxWorkbook } from "@oxen/xlsx/domain/workbook";
 import { createDefaultStyleSheet } from "@oxen/xlsx/domain/style/types";
 import { VirtualScroll } from "@oxen-ui/ui-components";

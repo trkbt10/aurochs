@@ -5,7 +5,7 @@
 // @vitest-environment jsdom
 
 import { act, fireEvent, render, waitFor } from "@testing-library/react";
-import { triggerResizeObservers } from "../../../spec/test-utils/resize-observer";
+import { triggerResizeObservers } from "../../../../../spec/test-utils/resize-observer";
 import { VirtualScroll } from "./VirtualScroll";
 import { useVirtualScrollContext } from "./VirtualScrollContext";
 

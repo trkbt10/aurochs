@@ -13,7 +13,7 @@ import type { Fill, Line } from "@oxen/pptx/domain/color/types";
 import { px, deg } from "@oxen/ooxml/domain/units";
 import { type ShapeId } from "@oxen/pptx/domain/types";
 import { Accordion } from "@oxen-ui/ui-components/layout";
-import { Input } from "@oxen-ui/ui-components/primitives/index";
+import { Input } from "@oxen-ui/ui-components/primitives";
 import { FillEditor } from "../../editors/color/FillEditor";
 import { LineEditor } from "../../ui/line";
 import {

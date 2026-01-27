@@ -8,7 +8,7 @@ import type { PicShape } from "@oxen/pptx/domain/index";
 import type { Percent } from "@oxen/ooxml/domain/units";
 import { Accordion } from "@oxen-ui/ui-components/layout";
 import { FieldGroup, FieldRow } from "@oxen-ui/ui-components/layout";
-import { Toggle } from "@oxen-ui/ui-components/primitives/index";
+import { Toggle } from "@oxen-ui/ui-components/primitives";
 import {
   NonVisualPropertiesEditor,
   TransformEditor,

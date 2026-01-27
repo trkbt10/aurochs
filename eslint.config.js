@@ -72,6 +72,10 @@ export default [
         "custom/no-iife-in-anonymous": "error",
         // Prohibit deep re-exports that cross multiple directory levels
         "custom/no-deep-reexport": ["error", { maxParentDepth: 0 }],
+        // Prohibit @oxen/* packages from importing @oxen-ui/*
+        "custom/no-oxen-ui-import-in-oxen": "error",
+        // Prohibit re-exporting from other packages
+        "custom/no-cross-package-reexport": "error",
         // Spread from modular groups
         ...rulesJSDoc,
         ...rulesRestrictedSyntax,
