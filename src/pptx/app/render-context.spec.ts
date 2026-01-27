@@ -9,7 +9,6 @@
  * - Background resolution
  */
 
-import { describe, it, expect } from "vitest";
 import { createRenderContext } from "./render-context";
 import type { Slide as ApiSlide } from "./types";
 import type { XmlElement, XmlDocument } from "../../xml";
@@ -34,8 +33,12 @@ import { DEFAULT_RENDER_OPTIONS } from "../render/render-options";
  * - layout: XmlDocument (root) containing p:sldLayout element
  */
 // Helper to create XmlElement with type: "element"
-const elem = (name: string, attrs: Record<string, string>, children: XmlElement[]): XmlElement =>
-  ({ type: "element" as const, name, attrs, children });
+const elem = (name: string, attrs: Record<string, string>, children: XmlElement[]): XmlElement => ({
+  type: "element" as const,
+  name,
+  attrs,
+  children,
+});
 
 // Helper to create mock ResourceMap
 const mockResourceMap = (): ResourceMap => ({
@@ -93,20 +96,24 @@ function createMockApiSlide(): ApiSlide {
   const master = {
     children: [
       elem("p:sldMaster", {}, [
-        elem("p:clrMap", {
-          bg1: "lt1",
-          tx1: "dk1",
-          bg2: "lt2",
-          tx2: "dk2",
-          accent1: "accent1",
-          accent2: "accent2",
-          accent3: "accent3",
-          accent4: "accent4",
-          accent5: "accent5",
-          accent6: "accent6",
-          hlink: "hlink",
-          folHlink: "folHlink",
-        }, []),
+        elem(
+          "p:clrMap",
+          {
+            bg1: "lt1",
+            tx1: "dk1",
+            bg2: "lt2",
+            tx2: "dk2",
+            accent1: "accent1",
+            accent2: "accent2",
+            accent3: "accent3",
+            accent4: "accent4",
+            accent5: "accent5",
+            accent6: "accent6",
+            hlink: "hlink",
+            folHlink: "folHlink",
+          },
+          [],
+        ),
       ]),
     ],
   };
@@ -248,7 +255,6 @@ describe("createRenderContext output", () => {
 
     const ctx = createRenderContext(apiSlide, zip, slideSize);
     const colorContext = ctx.colorContext;
-
 
     // Create Color objects with spec structure
     // Color = { spec: SchemeColor { type: "scheme", value: "..." } }
