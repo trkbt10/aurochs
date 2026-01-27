@@ -12,6 +12,7 @@ import noDeepReexport from "./rules/no-deep-reexport.js";
 import noOxenUiImportInOxen from "./rules/no-oxen-ui-import-in-oxen.js";
 import noOxenOfficeImportInOxen from "./rules/no-oxen-office-import-in-oxen.js";
 import noCrossPackageReexport from "./rules/no-cross-package-reexport.js";
+import noExportStar from "./rules/no-export-star.js";
 
 export default {
   rules: {
@@ -26,5 +27,6 @@ export default {
     "no-oxen-ui-import-in-oxen": noOxenUiImportInOxen,
     "no-oxen-office-import-in-oxen": noOxenOfficeImportInOxen,
     "no-cross-package-reexport": noCrossPackageReexport,
+    "no-export-star": noExportStar,
   },
 };

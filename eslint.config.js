@@ -74,8 +74,12 @@ export default [
         "custom/no-deep-reexport": ["error", { maxParentDepth: 0 }],
         // Prohibit @oxen/* packages from importing @oxen-ui/*
         "custom/no-oxen-ui-import-in-oxen": "error",
+        // Prohibit @oxen/* packages from importing @oxen-office/*
+        "custom/no-oxen-office-import-in-oxen": "error",
         // Prohibit re-exporting from other packages
         "custom/no-cross-package-reexport": "error",
+        // Prohibit export * from (barrel exports)
+        "custom/no-export-star": "error",
         // Spread from modular groups
         ...rulesJSDoc,
         ...rulesRestrictedSyntax,
