@@ -6,7 +6,7 @@
 
 import { useCallback } from "react";
 import type { LoadedPresentation } from "@oxen/pptx/app";
-import { PresentationSlideshow } from "@lib/pptx-editor";
+import { PresentationSlideshow } from "@oxen-ui/pptx-editor";
 import { renderSlideToSvg } from "@oxen/pptx-render/svg";
 import { useSvgFontLoader } from "../fonts/useSvgFontLoader";
 

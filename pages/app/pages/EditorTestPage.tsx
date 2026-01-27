@@ -6,7 +6,7 @@
  */
 
 import { useState, type CSSProperties } from "react";
-import { Button } from "@lib/pptx-editor";
+import { Button } from "@oxen-ui/ui-components/primitives";
 import {
   ColorEditorsTest,
   PrimitiveEditorsTest,

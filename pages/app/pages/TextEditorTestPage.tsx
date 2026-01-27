@@ -5,10 +5,8 @@
  */
 
 import { useMemo, useState } from "react";
+import { Accordion, FieldGroup, Panel } from "@oxen-ui/ui-components/layout";
 import {
-  Panel,
-  Accordion,
-  FieldGroup,
   PixelsEditor,
   DegreesEditor,
   MixedRunPropertiesEditor,
@@ -20,26 +18,26 @@ import {
   createDefaultLine,
   createDefaultEffects,
   createDefaultTextBody,
-} from "@lib/pptx-editor";
+} from "@oxen-ui/pptx-editor";
 import type { Slide, TextBody, TextRun } from "@oxen/pptx/domain";
 import { px, deg, pt, type Pixels } from "@oxen/ooxml/domain/units";
 import { SlideRendererSvg } from "@oxen/pptx-render/react";
 import { layoutTextBody, toLayoutInput } from "@oxen/pptx-render/text-layout";
-import { TextEditController } from "@lib/pptx-editor/slide/text-edit";
-import type { TextSelection, CursorPosition, SelectionChangeEvent } from "@lib/pptx-editor/slide/text-edit";
+import { TextEditController } from "@oxen-ui/pptx-editor/slide/text-edit";
+import type { TextSelection, CursorPosition, SelectionChangeEvent } from "@oxen-ui/pptx-editor/slide/text-edit";
 import {
   applyRunPropertiesToSelection,
   applyParagraphPropertiesToSelection,
-} from "@lib/pptx-editor/slide/text-edit/input-support/run-formatting";
+} from "@oxen-ui/pptx-editor/slide/text-edit/input-support/run-formatting";
 import {
   extractTextProperties,
   getEffectiveRunPropertiesAtCursor,
   type TextSelectionContext,
-} from "@lib/pptx-editor/editors/text/text-property-extractor";
-import { getExtractionValue, isMixed } from "@lib/pptx-editor/editors/text/mixed-properties";
+} from "@oxen-ui/pptx-editor/editors/text/text-property-extractor";
+import { getExtractionValue, isMixed } from "@oxen-ui/pptx-editor/editors/text/mixed-properties";
 import { testSlideSize, testColorContext } from "../components/drawing-ml-tests";
 import "./DrawingMLTestPage.css";
-import "@lib/pptx-editor/preview/SlideshowPlayer.css";
+import "@oxen-ui/pptx-editor/preview/SlideshowPlayer.css";
 
 type TextEditorTestPageProps = {
   readonly onBack: () => void;

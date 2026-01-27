@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, mock 
 import { JSDOM } from "jsdom";
 import { px } from "@oxen/ooxml/domain/units";
 import { createEmptyResourceResolver } from "@oxen/pptx/domain/resource-resolver";
-import type { PresentationDocument } from "../../../src/pptx-editor/context/presentation/editor/types";
+import type { PresentationDocument } from "@oxen/pptx/app";
 import type { PdfImportOptions, PdfImportResult } from "@oxen/pdf/importer/pdf-importer";
 
 const importPdfFromFileMock = mock(async () => {

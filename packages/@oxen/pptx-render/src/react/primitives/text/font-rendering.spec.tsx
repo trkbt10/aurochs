@@ -10,9 +10,8 @@ import { SlideRendererSvg } from "../../SlideRenderer";
 import { px, pt, deg } from "@oxen/ooxml/domain/units";
 import type { Slide } from "@oxen/pptx/domain/slide/types";
 import type { SpShape } from "@oxen/pptx/domain/shape";
-import { convertTextToShape } from "../../../../../pdf/converter/text-to-shapes";
-import { createDefaultGraphicsState } from "../../../../../pdf/domain";
-import { createFitContext } from "../../../../../pdf/converter/transform-converter";
+import { createDefaultGraphicsState } from "@oxen/pdf/domain";
+import { convertTextToShape, createFitContext } from "@oxen/pdf/converter";
 
 // Mock getComputedTextLength for JSDOM (not supported natively)
 beforeAll(() => {
@@ -237,7 +236,7 @@ describe("PDF to SVG font rendering", () => {
     textElements.forEach((el) => {
       const fontFamily = el.getAttribute("font-family");
       console.log("PDF→SVG font-family:", fontFamily);
-      if (fontFamily?.includes("MS Gothic")) {
+      if (fontFamily?.includes("MSGothic") || fontFamily?.includes("MS Gothic")) {
         foundMSGothic = true;
       }
     });

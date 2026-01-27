@@ -6,7 +6,7 @@
 
 import { useMemo, useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import type { LoadedPresentation } from "@oxen/pptx/app";
-import { SlideList } from "@lib/pptx-editor/slide-list";
+import { SlideList } from "@oxen-ui/pptx-editor/slide-list";
 import type { SlideWithId } from "@oxen/pptx/app";
 import { useLazySvgCache, SvgContentRenderer } from "@oxen/pptx-render/react";
 import { renderSlideToSvg } from "@oxen/pptx-render/svg";

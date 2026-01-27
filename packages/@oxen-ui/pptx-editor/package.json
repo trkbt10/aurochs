@@ -1,0 +1,61 @@
+{
+  "name": "@oxen-ui/pptx-editor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "dependencies": {
+    "@oxen/pptx": "workspace:*",
+    "@oxen/pptx-render": "workspace:*",
+    "@oxen-ui/ui-components": "workspace:*",
+    "@oxen-ui/xlsx-editor": "workspace:*",
+    "react-panel-layout": "^0.6.1"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./slide-list": {
+      "types": "./src/slide-list/index.ts",
+      "default": "./src/slide-list/index.ts"
+    },
+    "./slide/text-edit": {
+      "types": "./src/slide/text-edit/index.ts",
+      "default": "./src/slide/text-edit/index.ts"
+    },
+    "./slide/text-edit/input-support/run-formatting": {
+      "types": "./src/slide/text-edit/input-support/run-formatting.ts",
+      "default": "./src/slide/text-edit/input-support/run-formatting.ts"
+    },
+    "./editors/text/text-property-extractor": {
+      "types": "./src/editors/text/text-property-extractor.ts",
+      "default": "./src/editors/text/text-property-extractor.ts"
+    },
+    "./editors/text/mixed-properties": {
+      "types": "./src/editors/text/mixed-properties.ts",
+      "default": "./src/editors/text/mixed-properties.ts"
+    },
+    "./editors/chart/data/xlsx-integration": {
+      "types": "./src/editors/chart/data/xlsx-integration.ts",
+      "default": "./src/editors/chart/data/xlsx-integration.ts"
+    },
+    "./panels/theme-editor": {
+      "types": "./src/panels/theme-editor/index.ts",
+      "default": "./src/panels/theme-editor/index.ts"
+    },
+    "./panels/theme-editor/types": {
+      "types": "./src/panels/theme-editor/types.ts",
+      "default": "./src/panels/theme-editor/types.ts"
+    },
+    "./preview/SlideshowPlayer.css": "./src/preview/SlideshowPlayer.css"
+  }
+}

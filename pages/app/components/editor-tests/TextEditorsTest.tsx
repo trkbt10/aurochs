@@ -16,7 +16,7 @@ import {
   createDefaultBulletStyle,
   createDefaultParagraphProperties,
   createDefaultTextBody,
-} from "@lib/pptx-editor";
+} from "@oxen-ui/pptx-editor";
 import type {
   RunProperties,
   LineSpacing,

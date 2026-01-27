@@ -14,7 +14,7 @@ import {
   createDefaultEffects,
   createDefaultGeometry,
   createDefaultShapeProperties,
-} from "@lib/pptx-editor";
+} from "@oxen-ui/pptx-editor";
 import type { NonVisualProperties, ShapeProperties, Geometry } from "@oxen/pptx/domain/shape";
 import type { Effects } from "@oxen/pptx/domain";
 

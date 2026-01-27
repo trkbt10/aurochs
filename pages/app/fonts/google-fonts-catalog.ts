@@ -5,7 +5,7 @@
  * - Loads requested fonts on demand using Google Fonts CSS2 endpoint.
  */
 
-import type { FontCatalog, FontCatalogFamilyRecord } from "@lib/pptx-editor";
+import type { FontCatalog, FontCatalogFamilyRecord } from "@oxen-ui/pptx-editor";
 
 export type GoogleFontsCatalogConfig = {
   /** e.g. "/fonts/google-fonts-families.json" */

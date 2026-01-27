@@ -6,7 +6,7 @@ import {
   type PdfImportOptions,
   type PdfImportResult,
 } from "@oxen/pdf/importer/pdf-importer";
-import type { PresentationDocument } from "../../../src/pptx-editor/context/presentation/editor/types";
+import type { PresentationDocument } from "@oxen/pptx/app";
 
 type PdfImportState = {
   /** インポート状態 */

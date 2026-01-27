@@ -5,13 +5,8 @@
  */
 
 import { useState, type CSSProperties } from "react";
-import {
-  Accordion,
-  FieldGroup,
-  FieldRow,
-  Toggle,
-  Input,
-} from "@lib/pptx-editor";
+import { Accordion, FieldGroup, FieldRow } from "@oxen-ui/ui-components/layout";
+import { Input, Toggle } from "@oxen-ui/ui-components/primitives";
 
 const cardStyle: CSSProperties = {
   backgroundColor: "var(--bg-secondary)",

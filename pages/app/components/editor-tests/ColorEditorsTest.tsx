@@ -12,7 +12,7 @@ import {
   createDefaultColor,
   createDefaultSolidFill,
   createDefaultLine,
-} from "@lib/pptx-editor";
+} from "@oxen-ui/pptx-editor";
 import type { Color, Fill, Line } from "@oxen/pptx/domain/color/types";
 
 const cardStyle: CSSProperties = {

@@ -1,0 +1,92 @@
+{
+  "name": "@oxen-ui/ui-components",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "dependencies": {
+    "lucide-react": "^0.562.0"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./types": {
+      "types": "./src/types/index.ts",
+      "default": "./src/types/index.ts"
+    },
+    "./design-tokens": {
+      "types": "./src/design-tokens/index.ts",
+      "default": "./src/design-tokens/index.ts"
+    },
+    "./icons": {
+      "types": "./src/icons/index.ts",
+      "default": "./src/icons/index.ts"
+    },
+    "./primitives": {
+      "types": "./src/primitives/index.ts",
+      "default": "./src/primitives/index.ts"
+    },
+    "./primitives/Button": {
+      "types": "./src/primitives/Button.tsx",
+      "default": "./src/primitives/Button.tsx"
+    },
+    "./primitives/Input": {
+      "types": "./src/primitives/Input.tsx",
+      "default": "./src/primitives/Input.tsx"
+    },
+    "./primitives/Popover": {
+      "types": "./src/primitives/Popover.tsx",
+      "default": "./src/primitives/Popover.tsx"
+    },
+    "./primitives/Select": {
+      "types": "./src/primitives/Select.tsx",
+      "default": "./src/primitives/Select.tsx"
+    },
+    "./primitives/SearchableSelect": {
+      "types": "./src/primitives/SearchableSelect.tsx",
+      "default": "./src/primitives/SearchableSelect.tsx"
+    },
+    "./primitives/Slider": {
+      "types": "./src/primitives/Slider.tsx",
+      "default": "./src/primitives/Slider.tsx"
+    },
+    "./primitives/Tabs": {
+      "types": "./src/primitives/Tabs.tsx",
+      "default": "./src/primitives/Tabs.tsx"
+    },
+    "./primitives/Toggle": {
+      "types": "./src/primitives/Toggle.tsx",
+      "default": "./src/primitives/Toggle.tsx"
+    },
+    "./primitives/ToggleButton": {
+      "types": "./src/primitives/ToggleButton.tsx",
+      "default": "./src/primitives/ToggleButton.tsx"
+    },
+    "./layout": {
+      "types": "./src/layout/index.ts",
+      "default": "./src/layout/index.ts"
+    },
+    "./scroll": {
+      "types": "./src/scroll/index.ts",
+      "default": "./src/scroll/index.ts"
+    },
+    "./context-menu": {
+      "types": "./src/context-menu/index.ts",
+      "default": "./src/context-menu/index.ts"
+    },
+    "./grid": {
+      "types": "./src/grid/index.ts",
+      "default": "./src/grid/index.ts"
+    }
+  }
+}

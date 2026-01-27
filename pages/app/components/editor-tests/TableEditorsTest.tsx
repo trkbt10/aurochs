@@ -14,7 +14,7 @@ import {
   createDefaultTableCell,
   createDefaultTableProperties,
   createTable,
-} from "@lib/pptx-editor";
+} from "@oxen-ui/pptx-editor";
 import type {
   TableCellProperties,
   TableCell,

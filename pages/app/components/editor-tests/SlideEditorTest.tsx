@@ -6,6 +6,7 @@
  */
 
 import { useReducer, useMemo, useCallback, useRef, useEffect, type CSSProperties } from "react";
+import { Panel } from "@oxen-ui/ui-components/layout";
 import {
   SlideCanvas,
   slideEditorReducer,
@@ -14,9 +15,8 @@ import {
   PropertyPanel,
   clientToSlideCoords,
   withUpdatedTransform,
-  Panel,
-} from "@lib/pptx-editor";
-import type { ResizeHandlePosition } from "@lib/pptx-editor";
+} from "@oxen-ui/pptx-editor";
+import type { ResizeHandlePosition } from "@oxen-ui/pptx-editor";
 import type { Slide, Shape } from "@oxen/pptx/domain";
 import type { SpShape, GrpShape, GraphicFrame, CxnShape } from "@oxen/pptx/domain/shape";
 import type { Line } from "@oxen/pptx/domain/color/types";

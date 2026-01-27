@@ -6,7 +6,7 @@
 
 import { useEffect } from "react";
 import { render, waitFor } from "@testing-library/react";
-import { EditorConfigProvider, type FontCatalog } from "@lib/pptx-editor";
+import { EditorConfigProvider, type FontCatalog } from "@oxen-ui/pptx-editor";
 import { useSvgFontLoader } from "./useSvgFontLoader";
 
 function Harness({ svg }: { readonly svg: string }) {
@@ -80,4 +80,3 @@ describe("useSvgFontLoader", () => {
     });
   });
 });
-

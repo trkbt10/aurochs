@@ -9,7 +9,7 @@ import {
   listFunctionCategories,
   type FormulaFunctionDefinition,
 } from "@oxen/xlsx/formula/functionRegistry";
-import { Input } from "@lib/office-editor-components/primitives";
+import { Input } from "@oxen-ui/ui-components/primitives";
 
 type NavItem = {
   readonly path: string;

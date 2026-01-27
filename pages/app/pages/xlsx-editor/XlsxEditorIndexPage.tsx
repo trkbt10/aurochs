@@ -4,7 +4,7 @@
 
 import { useCallback, type CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@lib/office-editor-components/primitives";
+import { Button } from "@oxen-ui/ui-components/primitives";
 
 const containerStyle: CSSProperties = {
   display: "flex",

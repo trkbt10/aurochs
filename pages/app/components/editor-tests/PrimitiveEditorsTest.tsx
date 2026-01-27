@@ -5,15 +5,15 @@
  */
 
 import { useState, type CSSProperties } from "react";
+import { FieldGroup } from "@oxen-ui/ui-components/layout";
 import {
   TransformEditor,
   PixelsEditor,
   DegreesEditor,
   PercentEditor,
   PointsEditor,
-  FieldGroup,
   createDefaultTransform,
-} from "@lib/pptx-editor";
+} from "@oxen-ui/pptx-editor";
 import type { Transform } from "@oxen/pptx/domain/geometry";
 import type { Pixels, Degrees, Percent, Points } from "@oxen/ooxml/domain/units";
 import { px, deg, pct, pt } from "@oxen/ooxml/domain/units";

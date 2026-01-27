@@ -16,7 +16,7 @@ import {
   createDefaultAxis,
   createDefaultChartSeries,
   createDefaultChart,
-} from "@lib/pptx-editor";
+} from "@oxen-ui/pptx-editor";
 import type { DataLabels, Legend, Axis, ChartSeries, Chart } from "@oxen/pptx/domain/chart";
 
 const cardStyle: CSSProperties = {

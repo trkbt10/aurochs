@@ -4,7 +4,7 @@
 
 import { type CSSProperties } from "react";
 import { NavLink, Outlet } from "react-router-dom";
-import { Button } from "@lib/office-editor-components/primitives";
+import { Button } from "@oxen-ui/ui-components/primitives";
 
 export type XlsxEditorLayoutProps = {
   readonly onBack: () => void;

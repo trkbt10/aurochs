@@ -6,7 +6,7 @@
  */
 
 import { useMemo, type CSSProperties } from "react";
-import { PresentationEditor } from "@lib/pptx-editor";
+import { PresentationEditor } from "@oxen-ui/pptx-editor";
 import type { PresentationDocument, SlideWithId } from "@oxen/pptx/app";
 import type { Slide, Presentation } from "@oxen/pptx/domain";
 import type { SpShape, GrpShape, GraphicFrame } from "@oxen/pptx/domain/shape";

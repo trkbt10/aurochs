@@ -8,7 +8,7 @@
  */
 
 import { useCallback, useEffect, useRef } from "react";
-import { useEditorConfig, type FontCatalog } from "@lib/pptx-editor";
+import { useEditorConfig, type FontCatalog } from "@oxen-ui/pptx-editor";
 
 const GENERIC_FAMILIES = new Set([
   "inherit",

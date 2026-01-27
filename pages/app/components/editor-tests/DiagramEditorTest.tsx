@@ -12,7 +12,7 @@ import {
   createDefaultDiagramDataModel,
   createDefaultDiagramPoint,
   createDefaultDiagramConnection,
-} from "@lib/pptx-editor";
+} from "@oxen-ui/pptx-editor";
 import type { DiagramDataModel, DiagramPoint, DiagramConnection } from "@oxen/pptx/domain/diagram";
 
 const cardStyle: CSSProperties = {

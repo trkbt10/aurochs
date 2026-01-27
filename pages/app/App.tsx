@@ -19,7 +19,7 @@ import { XlsxWorkbookPage } from "./pages/xlsx-editor/XlsxWorkbookPage";
 import { XlsxFormulaCatalogLayout } from "./pages/xlsx-editor/formula/XlsxFormulaCatalogLayout";
 import { XlsxFormulaCatalogIndexPage } from "./pages/xlsx-editor/formula/XlsxFormulaCatalogIndexPage";
 import { XlsxFormulaFunctionPage } from "./pages/xlsx-editor/formula/XlsxFormulaFunctionPage";
-import { PresentationEditor } from "@lib/pptx-editor";
+import { PresentationEditor } from "@oxen-ui/pptx-editor";
 import { convertToPresentationDocument, type PresentationDocument } from "@oxen/pptx/app";
 import "./App.css";
 

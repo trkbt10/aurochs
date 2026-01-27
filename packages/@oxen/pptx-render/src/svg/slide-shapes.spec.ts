@@ -7,7 +7,8 @@
  */
 import { openPresentation } from "@oxen/pptx/app";
 import { existsSync } from "node:fs";
-import { loadPptxFile } from "../../../../scripts/lib/pptx-loader";
+import { loadPptxFile } from "../../../../../scripts/lib/pptx-loader";
+import { resolveRepoPath } from "../test-utils/repo-paths";
 import { renderSlideToSvg } from "./index";
 
 /**
@@ -234,7 +235,7 @@ describe("calculateCroppedImageLayout - ECMA-376 20.1.8.55", () => {
  */
 describe("data-ooxml-id attribute for animation targeting", () => {
   // Use a test fixture with shapes
-  const testFile = "fixtures/animation/animations-demo.pptx";
+  const testFile = resolveRepoPath("fixtures/animation/animations-demo.pptx");
 
   it("should include data-ooxml-id attributes in SVG output", async () => {
     if (!existsSync(testFile)) {

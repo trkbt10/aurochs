@@ -12,7 +12,7 @@ import {
   createDefaultBackground,
   createDefaultTransition,
   createDefaultOleReference,
-} from "@lib/pptx-editor";
+} from "@oxen-ui/pptx-editor";
 import type { Background } from "@oxen/pptx/domain/slide/types";
 import type { SlideTransition } from "@oxen/pptx/domain/transition";
 import type { OleReference } from "@oxen/pptx/domain/shape";
