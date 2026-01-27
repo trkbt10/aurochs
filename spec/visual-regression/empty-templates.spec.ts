@@ -16,6 +16,7 @@ import * as fs from "node:fs";
 import { openPresentation, LIBREOFFICE_RENDER_OPTIONS } from "../../src/pptx";
 import { compareSvgToSnapshot, hasSnapshot, listSnapshots } from "./compare";
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
+import { renderSlideToSvg } from "../../src/pptx/render/svg";
 
 type EmptyTemplateTestCase = {
   name: string;
@@ -69,7 +70,7 @@ describe("Empty Template Visual Regression", () => {
           }
 
           const slide = presentation.getSlide(slideNum);
-          const svg = slide.renderSVG();
+          const { svg } = renderSlideToSvg(slide);
 
           const result = await compareSvgToSnapshot(svg, testCase.name, slideNum, {
             // Empty templates should have very low diff (essentially white vs white)

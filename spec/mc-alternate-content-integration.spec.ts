@@ -9,6 +9,7 @@
 import * as fs from "node:fs";
 import { openPresentation } from "../src/pptx";
 import { loadPptxFile } from "../scripts/lib/pptx-loader";
+import { renderSlideToSvg } from "../src/pptx/render/svg";
 
 describe("mc:AlternateContent Integration", () => {
   describe("2411-Performance_Up.pptx slide 5 (p:blipFill in mc:AlternateContent)", () => {
@@ -20,7 +21,7 @@ describe("mc:AlternateContent Integration", () => {
         const { presentationFile } = await loadPptxFile(pptxPath);
         const presentation = openPresentation(presentationFile);
         const slide = presentation.getSlide(5);
-        svg = slide.renderSVG();
+        svg = renderSlideToSvg(slide).svg;
       }
     });
 
@@ -41,7 +42,7 @@ describe("mc:AlternateContent Integration", () => {
         const { presentationFile } = await loadPptxFile(pptxPath);
         const presentation = openPresentation(presentationFile);
         const slide = presentation.getSlide(1);
-        svg = slide.renderSVG();
+        svg = renderSlideToSvg(slide).svg;
       }
     });
 
@@ -61,7 +62,7 @@ describe("mc:AlternateContent Integration", () => {
         const { presentationFile } = await loadPptxFile(pptxPath);
         const presentation = openPresentation(presentationFile);
         const slide = presentation.getSlide(1);
-        svg = slide.renderSVG();
+        svg = renderSlideToSvg(slide).svg;
       }
     });
 

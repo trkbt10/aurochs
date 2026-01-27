@@ -11,6 +11,7 @@ import { openPresentation } from "../../src/pptx";
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
 import { compareSvgToPdfBaseline } from "./compare";
 import { px } from "../../src/ooxml/domain/units";
+import { renderSlideToSvg } from "../../src/pptx/render/svg";
 
 function guessFontExtension(bytes: Uint8Array): "ttf" | "otf" {
   if (bytes.length >= 4) {
@@ -40,7 +41,7 @@ describe("PDF→PPTX visual regression: k-namingrule-dl.pdf", () => {
     const { presentationFile, zipPackage } = await loadPptxFile(outPptxPath);
     const presentation = openPresentation(presentationFile);
     const slide = presentation.getSlide(slideNumber);
-    const svg = slide.renderSVG();
+    const { svg } = renderSlideToSvg(slide);
 
     const fontEntries = zipPackage
       .listFiles()

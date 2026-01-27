@@ -6,6 +6,7 @@ import * as fs from "node:fs";
 import type { PresentationFile } from "../src/pptx";
 import { openPresentation } from "../src/pptx";
 import { loadPptxFile } from "../scripts/lib/pptx-loader";
+import { renderSlideToSvg } from "../src/pptx/render/svg";
 
 describe("Background integration tests", () => {
   describe("aptia.pptx - background from slideMaster", () => {
@@ -93,7 +94,7 @@ describe("Background integration tests", () => {
 
       // Verify background through the public renderSVG API
       // The SVG should contain the base64-encoded image
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       // The SVG should contain a background image element with the JPEG data
       expect(svg).toContain("<image");
@@ -108,7 +109,7 @@ describe("Background integration tests", () => {
 
       const presentation = openPresentation(presentationFile);
       const slide = presentation.getSlide(1);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       // The SVG should contain a background image element
       expect(svg).toContain("<image");
@@ -134,7 +135,7 @@ describe("Background integration tests", () => {
 
       const presentation = openPresentation(presentationFile);
       const slide = presentation.getSlide(4);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       // Slide 4 has a background image - should be rendered
       expect(svg).toContain("<image");
@@ -174,7 +175,7 @@ describe("Background integration tests", () => {
 
       const presentation = openPresentation(presentationFile);
       const slide = presentation.getSlide(1);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       // The SVG should NOT have a pure white background
       // It should resolve p:bgRef idx="1001" to theme fill with bg1 color
@@ -225,7 +226,7 @@ describe("Background integration tests", () => {
 
       const presentation = openPresentation(presentationFile);
       const slide = presentation.getSlide(1);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       // The SVG should contain 'g' elements with transform attributes
       // The placeholders should have positions inherited from the layout
@@ -268,7 +269,7 @@ describe("Background integration tests", () => {
 
       const presentation = openPresentation(presentationFile);
       const slide = presentation.getSlide(1);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       // Background should be white (bg1 = white in this theme)
       const rectMatch = svg.match(/<rect[^>]*fill="([^"]+)"[^>]*>/);
@@ -287,7 +288,7 @@ describe("Background integration tests", () => {
 
       const presentation = openPresentation(presentationFile);
       const slide = presentation.getSlide(1);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       // Even with empty text, shapes should have transforms from layout
       expect(svg.includes('transform="translate(')).toBe(true);
@@ -317,7 +318,7 @@ describe("Background integration tests", () => {
 
       const presentation = openPresentation(presentationFile);
       const slide = presentation.getSlide(1);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       // Verify background image is present
       expect(svg).toContain("<image");
@@ -336,7 +337,7 @@ describe("Background integration tests", () => {
 
       const presentation = openPresentation(presentationFile);
       const slide = presentation.getSlide(1);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       // Verify that the old incorrect behavior is not present
       // The background image should not use "xMidYMid slice" for stretch mode

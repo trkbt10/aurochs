@@ -8,6 +8,7 @@
 import { openPresentation } from "../../app";
 import { existsSync } from "node:fs";
 import { loadPptxFile } from "../../../../scripts/lib/pptx-loader";
+import { renderSlideToSvg } from "./index";
 
 /**
  * Re-implementation of calculateCroppedImageLayout for testing.
@@ -244,7 +245,7 @@ describe("data-ooxml-id attribute for animation targeting", () => {
     const { presentationFile: file } = await loadPptxFile(testFile);
     const pres = openPresentation(file);
     const slide = pres.getSlide(1);
-    const svg = slide.renderSVG();
+    const svg = renderSlideToSvg(slide).svg;
 
     // The SVG should contain data-ooxml-id attributes
     const matches = svg.match(/data-ooxml-id="[^"]+"/g);
@@ -263,7 +264,7 @@ describe("data-ooxml-id attribute for animation targeting", () => {
     const { presentationFile: file } = await loadPptxFile(testFile);
     const pres = openPresentation(file);
     const slide = pres.getSlide(1);
-    const svg = slide.renderSVG();
+    const svg = renderSlideToSvg(slide).svg;
 
     // IDs should be numeric (from OOXML shape IDs)
     const idMatches = svg.match(/data-ooxml-id="(\d+)"/g);

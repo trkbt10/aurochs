@@ -6,9 +6,12 @@
  */
 
 import type { PresentationDocument } from "../app/presentation-document";
-import type { PresentationFile } from "../domain";
+import type { PresentationFile, ZipFile } from "../domain";
 import type { XmlDocument } from "../../xml";
 import { exportPptx, exportPptxAsBuffer } from "./pptx-exporter";
+import { DEFAULT_RENDER_OPTIONS } from "../render/render-options";
+
+const mockZip: ZipFile = { file: () => null };
 
 describe("exportPptx", () => {
   describe("validation", () => {
@@ -132,8 +135,12 @@ describe("exportPptx", () => {
               },
               timing: undefined,
               transition: undefined,
-              renderHTML: () => "",
-              renderSVG: () => "",
+              themeOverrides: [],
+              zip: mockZip,
+              defaultTextStyle: null,
+              tableStyles: null,
+              slideSize: { width: 960, height: 540 },
+              renderOptions: DEFAULT_RENDER_OPTIONS,
             },
           },
         ],

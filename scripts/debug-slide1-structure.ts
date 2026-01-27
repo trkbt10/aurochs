@@ -3,8 +3,10 @@
  */
 
 import { openPresentation } from "../src/pptx";
+import { renderSlideToSvg } from "../src/pptx/render/svg";
 import { parseXml } from "../src/xml";
 import { loadPptxFile } from "./lib/pptx-loader";
+import * as fs from "node:fs";
 
 async function main() {
   const pptxPath = "fixtures/poi-test-data/test-data/slideshow/2411-Performance_Up.pptx";
@@ -96,7 +98,7 @@ async function main() {
   // For now, just log that we need to check the background module
 
   // Render SVG
-  const svg = slide.renderSVG();
+  const { svg } = renderSlideToSvg(slide);
   fs.writeFileSync("/tmp/slide1-debug.svg", svg);
   console.log("\n=== SVG saved to /tmp/slide1-debug.svg ===");
   console.log("SVG length:", svg.length);

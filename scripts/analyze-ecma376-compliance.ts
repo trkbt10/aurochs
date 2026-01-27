@@ -16,6 +16,7 @@
 
 import * as fs from "node:fs";
 import { openPresentation, LIBREOFFICE_RENDER_OPTIONS } from "../src/pptx";
+import { renderSlideToSvg } from "../src/pptx/render/svg";
 import { loadPptxFile } from "./lib/pptx-loader";
 
 type AnalysisResult = {
@@ -136,7 +137,7 @@ async function analyzeSlide(
   const presentationFile = await loadPptxFile(pptxPath);
   const presentation = openPresentation(presentationFile);
   const slide = presentation.getSlide(slideNumber);
-  const svg = slide.renderSVG();
+  const { svg } = renderSlideToSvg(slide);
 
   // Get XML content for analysis
   const slideXml = presentationFile.readText(`ppt/slides/slide${slideNumber}.xml`) ?? "";

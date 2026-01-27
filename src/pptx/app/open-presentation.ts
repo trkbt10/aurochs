@@ -132,6 +132,7 @@ function buildSlideFileInfoListFromPresentation(
  * ```typescript
  * import { openPresentation } from "web-pptx";
  * import { createPresentationFile } from "web-pptx/fflate";
+ * import { renderSlideToSvg } from "web-pptx/render/svg";
  *
  * const file = createPresentationFile(pptxBuffer);
  * const presentation = openPresentation(file);
@@ -139,7 +140,7 @@ function buildSlideFileInfoListFromPresentation(
  * console.log(`${presentation.count} slides, ${presentation.size.width}x${presentation.size.height}`);
  *
  * for (const slide of presentation.slides()) {
- *   const svg = slide.renderSVG();
+ *   const { svg } = renderSlideToSvg(slide);
  *   // ...
  * }
  * ```

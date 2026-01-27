@@ -9,6 +9,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { openPresentation } from "../../src/pptx";
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
+import { renderSlideToSvg } from "../../src/pptx/render/svg";
 
 // =============================================================================
 // Types
@@ -175,7 +176,7 @@ describe("Text Position Tests", () => {
       const { presentationFile } = await loadPptxFile(fullPath);
       const presentation = openPresentation(presentationFile);
       const slide = presentation.getSlide(PERFORMANCE_UP_SLIDE1.slideNumber);
-      svg = slide.renderSVG();
+      svg = renderSlideToSvg(slide).svg;
       textElements = extractTextElements(svg);
     });
 

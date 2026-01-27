@@ -12,6 +12,7 @@
  * - Gradients and images are rendered when present
  */
 import { openPresentation } from "../src/pptx";
+import { renderSlideToSvg } from "../src/pptx/render/svg";
 import * as fs from "node:fs";
 import { loadPptxFile } from "./lib/pptx-loader";
 
@@ -49,7 +50,7 @@ async function verifyPptxThemes(pptxPath: string): Promise<{ results: SlideResul
   for (let i = 1; i <= slideCount; i++) {
     try {
       const slide = presentation.getSlide(i);
-      const svg = slide.renderSVG();
+      const { svg } = renderSlideToSvg(slide);
 
       // Extract colors
       const colorPattern = /#([0-9a-fA-F]{6})\b/g;

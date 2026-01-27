@@ -17,6 +17,7 @@ import * as path from "node:path";
 import type { PresentationFile } from "../../src/pptx";
 import { openPresentation } from "../../src/pptx";
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
+import { renderSlideToSvg } from "../../src/pptx/render/svg";
 import {
   compareWithDetails,
   generateCompareReport,
@@ -87,7 +88,7 @@ describe("PDF Screenshot Comparison - Text Layout", () => {
 
           const presentation = openPresentation(presentationFile);
           const slide = presentation.getSlide(slideNum);
-          const svg = slide.renderSVG();
+          const svg = renderSlideToSvg(slide).svg;
 
           const result = compareWithDetails(svg, testCase.name, slideNum, {
             maxDiffPercent: testCase.maxDiffPercent,
@@ -134,7 +135,7 @@ export async function runFullComparison(
 
   for (const slideNum of slides) {
     const slide = presentation.getSlide(slideNum);
-    const svg = slide.renderSVG();
+    const svg = renderSlideToSvg(slide).svg;
     const result = compareWithDetails(svg, snapshotName, slideNum, options);
     results.push(result);
   }
@@ -161,7 +162,7 @@ export async function testSingleSlide(
   const { presentationFile } = await loadPptxFile(pptxPath);
   const presentation = openPresentation(presentationFile);
   const slide = presentation.getSlide(slideNumber);
-  const svg = slide.renderSVG();
+  const svg = renderSlideToSvg(slide).svg;
 
   const result = compareWithDetails(svg, snapshotName, slideNumber, options);
 

@@ -9,6 +9,7 @@
 
 import { openPresentation } from "../../src/pptx";
 import { createPresentationFile, THEMES_PPTX_PATH } from "./test-utils";
+import { renderSlideToSvg } from "../../src/pptx/render/svg";
 
 describe("Font Scheme Application", () => {
   /**
@@ -23,7 +24,7 @@ describe("Font Scheme Application", () => {
 
     // Slide 4 uses theme3 with Century Gothic as major font
     const slide4 = presentation.getSlide(4);
-    const svg4 = slide4.renderSVG();
+    const { svg: svg4 } = renderSlideToSvg(slide4);
 
     const hasMajorFont = [
       svg4.includes("Century Gothic"),
@@ -41,7 +42,7 @@ describe("Font Scheme Application", () => {
 
     // Slide 10 uses theme7
     const slide10 = presentation.getSlide(10);
-    const svg10 = slide10.renderSVG();
+    const { svg: svg10 } = renderSlideToSvg(slide10);
 
     // Major font: Arial Black (for titles)
     // Minor font: Candara (for body text)

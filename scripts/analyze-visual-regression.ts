@@ -7,6 +7,7 @@
  * Generates detailed report of what's different and why.
  */
 import { openPresentation } from "../src/pptx";
+import { renderSlideToSvg } from "../src/pptx/render/svg";
 import { compareSvgToSnapshot, compareWithDetails, generateCompareReport, printCompareReport } from "../spec/visual-regression/compare";
 import { loadPptxFile } from "./lib/pptx-loader";
 
@@ -28,7 +29,7 @@ async function analyzeVisualRegression(pptxPath: string, snapshotName: string) {
   for (let i = 1; i <= slideCount; i++) {
     try {
       const slide = presentation.getSlide(i);
-      const svg = slide.renderSVG();
+      const { svg } = renderSlideToSvg(slide);
 
       const result = compareWithDetails(svg, snapshotName, i, {
         threshold: 0.1,

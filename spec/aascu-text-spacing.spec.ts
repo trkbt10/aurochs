@@ -13,6 +13,7 @@ import * as path from "node:path";
 import type { PresentationFile } from "../src/pptx";
 import { openPresentation } from "../src/pptx";
 import { loadPptxFile } from "../scripts/lib/pptx-loader";
+import { renderSlideToSvg } from "../src/pptx/render/svg";
 
 const AASCU_FIXTURE = "fixtures/poi-test-data/test-data/slideshow/aascu.org_workarea_downloadasset.aspx_id=5864.pptx";
 
@@ -55,7 +56,7 @@ describe("AASCU text spacing - ECMA-376 compliance", () => {
     it("should render SVG with text content", () => {
       const presentation = openPresentation(presentationFile);
       const slide = presentation.getSlide(1);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       expect(svg).toContain("<svg");
       expect(svg).toContain("<text");
@@ -76,7 +77,7 @@ describe("AASCU text spacing - ECMA-376 compliance", () => {
     it("should render SVG with text content", () => {
       const presentation = openPresentation(presentationFile);
       const slide = presentation.getSlide(2);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       expect(svg).toContain("<svg");
       expect(svg).toContain("<text");
@@ -86,7 +87,7 @@ describe("AASCU text spacing - ECMA-376 compliance", () => {
     it("should have reasonable spacing between text lines", () => {
       const presentation = openPresentation(presentationFile);
       const slide = presentation.getSlide(2);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       const yPositions = extractTextYPositions(svg);
       expect(yPositions.length).toBeGreaterThan(3);
@@ -116,7 +117,7 @@ describe("AASCU text spacing - ECMA-376 compliance", () => {
     it("should render SVG with bullet content", () => {
       const presentation = openPresentation(presentationFile);
       const slide = presentation.getSlide(3);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       expect(svg).toContain("<svg");
       expect(svg).toContain("<text");
@@ -126,7 +127,7 @@ describe("AASCU text spacing - ECMA-376 compliance", () => {
     it("should render bullet characters", () => {
       const presentation = openPresentation(presentationFile);
       const slide = presentation.getSlide(3);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       // Bullet character should be present
       expect(svg).toContain("•");
@@ -135,7 +136,7 @@ describe("AASCU text spacing - ECMA-376 compliance", () => {
     it("should have consistent spacing between bullet points", () => {
       const presentation = openPresentation(presentationFile);
       const slide = presentation.getSlide(3);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       const yPositions = extractTextYPositions(svg);
       expect(yPositions.length).toBeGreaterThan(5);

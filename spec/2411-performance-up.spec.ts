@@ -15,6 +15,7 @@ import * as fs from "node:fs";
 import type { PresentationFile } from "../src/pptx";
 import { openPresentation, LIBREOFFICE_RENDER_OPTIONS } from "../src/pptx";
 import { loadPptxFile } from "../scripts/lib/pptx-loader";
+import { renderSlideToSvg } from "../src/pptx/render/svg";
 
 describe("2411-Performance_Up.pptx slide 1", () => {
   const pptxPath = "fixtures/poi-test-data/test-data/slideshow/2411-Performance_Up.pptx";
@@ -26,7 +27,7 @@ describe("2411-Performance_Up.pptx slide 1", () => {
       ({ presentationFile } = await loadPptxFile(pptxPath));
       const presentation = openPresentation(presentationFile);
       const slide = presentation.getSlide(1);
-      svg = slide.renderSVG();
+      svg = renderSlideToSvg(slide).svg;
     }
   });
 
@@ -170,7 +171,7 @@ describe("2411-Performance_Up.pptx - multiple slides", () => {
 
     for (const info of slideInfos) {
       const slide = presentation.getSlide(info.number);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
       expect(svg.length).toBeGreaterThan(0);
       expect(svg).toMatch(/^<svg/);
     }
@@ -192,7 +193,7 @@ describe("2411-Performance_Up.pptx - multiple slides", () => {
 
     for (const info of slideInfos) {
       const slide = presentation.getSlide(info.number);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
       expect(svg.length).toBeGreaterThan(0);
       expect(svg).toMatch(/^<svg/);
     }

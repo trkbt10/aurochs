@@ -17,6 +17,7 @@ import * as fs from "node:fs";
 import type { PresentationFile } from "../../src/pptx";
 import { openPresentation } from "../../src/pptx";
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
+import { renderSlideToSvg } from "../../src/pptx/render/svg";
 
 // =============================================================================
 // Test Helpers
@@ -36,7 +37,7 @@ describe("2411-Performance_Up.pptx Slide 7 - Text Style Inheritance", () => {
       ({ presentationFile } = await loadPptxFile(pptxPath));
       const presentation = openPresentation(presentationFile);
       const slide = presentation.getSlide(7);
-      svg = slide.renderSVG();
+      svg = renderSlideToSvg(slide).svg;
     }
   });
 

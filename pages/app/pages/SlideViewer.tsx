@@ -9,6 +9,7 @@ import type { LoadedPresentation } from "@lib/pptx/app";
 import { SlideList } from "@lib/pptx-editor/slide-list";
 import type { SlideWithId } from "@lib/pptx/app";
 import { useLazySvgCache, SvgContentRenderer } from "@lib/pptx/render/react";
+import { renderSlideToSvg } from "@lib/pptx/render/svg";
 import { useSlideNavigation, useViewerKeyboard } from "../hooks";
 import {
   ChevronLeftIcon,
@@ -319,7 +320,7 @@ export function SlideViewer({
 
   // Memoize main slide content (synchronous, no useEffect needed)
   const renderedContent = useMemo(
-    () => pres.getSlide(nav.currentSlide).renderSVG(),
+    () => renderSlideToSvg(pres.getSlide(nav.currentSlide)).svg,
     [pres, nav.currentSlide],
   );
 
@@ -341,7 +342,7 @@ export function SlideViewer({
       const slideNum = parseInt(slideWithId.id.replace("slide-", ""), 10);
       // Lazy generation: only renders when thumbnail becomes visible
       const svg = svgCache.getOrGenerate(slideWithId.id, () =>
-        pres.getSlide(slideNum).renderSVG(),
+        renderSlideToSvg(pres.getSlide(slideNum)).svg,
       );
       return (
         <SvgContentRenderer

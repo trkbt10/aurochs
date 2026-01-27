@@ -5,6 +5,7 @@
  */
 import * as fs from "node:fs";
 import { openPresentation } from "../src/pptx";
+import { renderSlideToSvg } from "../src/pptx/render/svg";
 import { loadPptxFile } from "./lib/pptx-loader";
 
 async function main() {
@@ -19,7 +20,7 @@ async function main() {
   const slide = presentation.getSlide(slideNum);
 
   // Generate SVG
-  const svg = slide.renderSVG();
+  const { svg } = renderSlideToSvg(slide);
 
   // Find all fill="#" occurrences
   const fillPattern = /fill="([^"]*)"/g;

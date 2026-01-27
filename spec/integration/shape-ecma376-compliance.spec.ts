@@ -13,6 +13,7 @@ import type { PresentationFile, Presentation } from "../../src/pptx";
 import { openPresentation } from "../../src/pptx";
 import { getByPath, getChild, getChildren, isXmlElement, getAttr, type XmlElement } from "../../src/xml";
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
+import { renderSlideToSvg } from "../../src/pptx/render/svg";
 
 const FIXTURE_PATH = "fixtures/poi-test-data/test-data/slideshow/shapes.pptx";
 
@@ -36,7 +37,7 @@ describe("shapes.pptx ECMA-376 compliance", () => {
      */
     it("should render TextBox with rect preset geometry", () => {
       const slide = presentation.getSlide(1);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       // TextBox "Learning PPTX" が描画されていること
       expect(svg).toContain("Learning PPTX");
@@ -52,7 +53,7 @@ describe("shapes.pptx ECMA-376 compliance", () => {
      */
     it("should render horizontal connector (cxnSp) with line preset", () => {
       const slide = presentation.getSlide(1);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       // 水平線のパスが存在すること (cy=0の場合)
       // M 0 0 L {cx} 0 または M 0 {h/2} L {w} {h/2} パターン
@@ -69,7 +70,7 @@ describe("shapes.pptx ECMA-376 compliance", () => {
      */
     it("should render custom geometry (Freeform) with correct scaling", () => {
       const slide = presentation.getSlide(1);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       // カスタムパスが存在すること
       // Cloud shape has many coordinates
@@ -97,7 +98,7 @@ describe("shapes.pptx ECMA-376 compliance", () => {
      */
     it("should render picture shape (p:pic) with image", () => {
       const slide = presentation.getSlide(1);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       // image要素が存在すること
       expect(svg).toContain("<image");
@@ -110,7 +111,7 @@ describe("shapes.pptx ECMA-376 compliance", () => {
      */
     it("should render table (graphicFrame with table)", () => {
       const slide = presentation.getSlide(1);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       // テーブルのヘッダーセルが描画されていること
       expect(svg).toContain("Column1");
@@ -131,7 +132,7 @@ describe("shapes.pptx ECMA-376 compliance", () => {
      */
     it("should render placeholder shapes (ctrTitle, subTitle)", () => {
       const slide = presentation.getSlide(2);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       // タイトルプレースホルダーのテキストが描画されていること
       expect(svg).toContain("PPTX");
@@ -149,7 +150,7 @@ describe("shapes.pptx ECMA-376 compliance", () => {
      */
     it("should resolve line style from style reference (a:lnRef)", () => {
       const slide = presentation.getSlide(2);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       // タイトルシェイプに線が適用されていること (stroke属性が存在)
       expect(svg).toMatch(/stroke="[^"]+"/);
@@ -164,7 +165,7 @@ describe("shapes.pptx ECMA-376 compliance", () => {
      */
     it("should render group shape (p:grpSp) with children", () => {
       const slide = presentation.getSlide(3);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       // グループ内のシェイプが描画されていること
       // rect (Rectangle 1) と ellipse (Oval 2) が含まれる
@@ -179,7 +180,7 @@ describe("shapes.pptx ECMA-376 compliance", () => {
      */
     it("should resolve fill from style reference (a:fillRef)", () => {
       const slide = presentation.getSlide(3);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       // テーマカラーの塗りつぶしが適用されていること
       // Slide 3には Rectangle 1 と Oval 2 がある
@@ -207,7 +208,7 @@ describe("shapes.pptx ECMA-376 compliance", () => {
      */
     it("should apply group coordinate transformation to children", () => {
       const slide = presentation.getSlide(3);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       // グループのtransformが適用されていること
       expect(svg).toMatch(/transform="translate\(\d+\.?\d*,?\s*\d+\.?\d*\)"/);
@@ -221,7 +222,7 @@ describe("shapes.pptx ECMA-376 compliance", () => {
      */
     it("should render ellipse preset correctly", () => {
       const slide = presentation.getSlide(3);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       // ellipse は A コマンドで描画される
       expect(svg).toMatch(/A\s+\d+\.?\d*\s+\d+\.?\d*\s+0\s+1\s+1/);

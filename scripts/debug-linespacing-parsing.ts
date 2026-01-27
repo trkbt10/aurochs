@@ -2,6 +2,7 @@
  * Debug: trace line spacing parsing
  */
 import { openPresentation, LIBREOFFICE_RENDER_OPTIONS, DEFAULT_RENDER_OPTIONS } from "../src/pptx";
+import { renderSlideToSvg } from "../src/pptx/render/svg";
 import { getEffectiveLineSpacing } from "../src/pptx/render/render-options";
 import { loadPptxFile } from "./lib/pptx-loader";
 
@@ -25,7 +26,7 @@ async function main() {
 
   // Extract text element count by shape
   const ecma = openPresentation(presentationFile, { renderOptions: DEFAULT_RENDER_OPTIONS });
-  const ecmaSvg = ecma.getSlide(2).renderSVG();
+  const { svg: ecmaSvg } = renderSlideToSvg(ecma.getSlide(2));
 
   // Count text elements per group (shape)
   const textCounts = ecmaSvg.match(/<text[^>]*>/g)?.length || 0;

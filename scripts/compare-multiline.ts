@@ -2,6 +2,7 @@
  * Compare multi-line text rendering between ECMA-376 and LibreOffice dialects
  */
 import { openPresentation, LIBREOFFICE_RENDER_OPTIONS, DEFAULT_RENDER_OPTIONS } from "../src/pptx";
+import { renderSlideToSvg } from "../src/pptx/render/svg";
 import { loadPptxFile } from "./lib/pptx-loader";
 
 async function main() {
@@ -13,11 +14,11 @@ async function main() {
 
   // ECMA-376
   const ecma = openPresentation(presentationFile, { renderOptions: DEFAULT_RENDER_OPTIONS });
-  const ecmaSvg = ecma.getSlide(7).renderSVG();
-  
+  const { svg: ecmaSvg } = renderSlideToSvg(ecma.getSlide(7));
+
   // LibreOffice
   const lo = openPresentation(presentationFile, { renderOptions: LIBREOFFICE_RENDER_OPTIONS });
-  const loSvg = lo.getSlide(7).renderSVG();
+  const { svg: loSvg } = renderSlideToSvg(lo.getSlide(7));
 
   // Extract all text element y positions
   const ecmaPositions = [...ecmaSvg.matchAll(/<text[^>]*y="([^"]+)"/g)].map(m => parseFloat(m[1]));

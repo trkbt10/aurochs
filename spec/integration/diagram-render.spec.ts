@@ -13,6 +13,7 @@ import * as path from "node:path";
 import type { PresentationFile } from "../../src/pptx";
 import { openPresentation } from "../../src/pptx";
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
+import { renderSlideToSvg } from "../../src/pptx/render/svg";
 
 // customGeo.pptx has a diagram on slide 7
 const CUSTOM_GEO_PATH = "fixtures/poi-test-data/test-data/slideshow/customGeo.pptx";
@@ -41,7 +42,7 @@ describe("Diagram rendering - customGeo.pptx", () => {
     it("should render diagram shapes (not placeholder)", () => {
       const presentation = openPresentation(presentationFile);
       const slide = presentation.getSlide(7);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       // Should NOT contain placeholder text
       expect(svg).not.toContain("[Diagram]");
@@ -50,7 +51,7 @@ describe("Diagram rendering - customGeo.pptx", () => {
     it("should render actual SVG path elements from diagram", () => {
       const presentation = openPresentation(presentationFile);
       const slide = presentation.getSlide(7);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       // Should contain path elements (shapes from diagram)
       const pathMatches = svg.match(/<path/g) ?? [];
@@ -60,7 +61,7 @@ describe("Diagram rendering - customGeo.pptx", () => {
     it("should render text content from diagram", () => {
       const presentation = openPresentation(presentationFile);
       const slide = presentation.getSlide(7);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       // Should contain text elements
       expect(svg).toContain("<text");
@@ -73,7 +74,7 @@ describe("Diagram rendering - customGeo.pptx", () => {
     it("should render multiple diagram shapes with fill colors", () => {
       const presentation = openPresentation(presentationFile);
       const slide = presentation.getSlide(7);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       // The diagram has multiple colored shapes:
       // Blue: #4F81BD, Purple: #8064A2, Red: #C0504D, Orange: #F79646, Green: #9BBB59
@@ -92,13 +93,13 @@ describe("Diagram rendering - customGeo.pptx", () => {
       const slide = presentation.getSlide(7);
 
       // Should not throw when rendering
-      expect(() => slide.renderSVG()).not.toThrow();
+      expect(() => renderSlideToSvg(slide).svg).not.toThrow();
     });
 
     it("should have diagram frame positioned correctly", () => {
       const presentation = openPresentation(presentationFile);
       const slide = presentation.getSlide(7);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       // Should have transform with translate for diagram frame position
       expect(svg).toContain("translate(");
@@ -107,7 +108,7 @@ describe("Diagram rendering - customGeo.pptx", () => {
     it("should render roundRect shapes (from diagram roundedRect preset)", () => {
       const presentation = openPresentation(presentationFile);
       const slide = presentation.getSlide(7);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       // roundRect shapes have Q (quadratic bezier) commands for corners
       expect(svg).toContain(" Q ");
@@ -116,7 +117,7 @@ describe("Diagram rendering - customGeo.pptx", () => {
     it("should render multiple text elements for multi-line text", () => {
       const presentation = openPresentation(presentationFile);
       const slide = presentation.getSlide(7);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       // The diagram has multi-line text, should have multiple text elements
       const textMatches = svg.match(/<text/g) ?? [];
@@ -131,8 +132,8 @@ describe("Diagram rendering - customGeo.pptx", () => {
       const slide1 = presentation.getSlide(1);
       const slide7 = presentation.getSlide(7);
 
-      const svg1 = slide1.renderSVG();
-      const svg7 = slide7.renderSVG();
+      const { svg: svg1 } = renderSlideToSvg(slide1);
+      const { svg: svg7 } = renderSlideToSvg(slide7);
 
       // Slide 1 and slide 7 should have different content
       expect(svg1).not.toBe(svg7);
@@ -165,7 +166,7 @@ describe("Diagram rendering - other PPTX files", () => {
     const slideCount = presentation.count;
     for (let i = 1; i <= slideCount; i++) {
       const slide = presentation.getSlide(i);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
       expect(svg).toContain("<svg");
     }
   });

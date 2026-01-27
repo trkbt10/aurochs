@@ -12,6 +12,7 @@ import { resolveColor } from "../../src/pptx/domain/color/resolution";
 import type { Color } from "../../src/ooxml/domain/color";
 import type { ColorContext } from "../../src/pptx/domain/color/context";
 import { createPresentationFile, THEMES_PPTX_PATH } from "./test-utils";
+import { renderSlideToSvg } from "../../src/pptx/render/svg";
 
 describe("Color Scheme Application", () => {
   /**
@@ -24,7 +25,7 @@ describe("Color Scheme Application", () => {
     const presentationFile = await createPresentationFile(THEMES_PPTX_PATH);
     const presentation = openPresentation(presentationFile);
     const slide = presentation.getSlide(1);
-    const svg = slide.renderSVG();
+    const svg = renderSlideToSvg(slide).svg;
 
     // Slide 1 uses accent1 color which should be #4F81BD from theme1
     const hasAccent1Color = svg.toLowerCase().includes("4f81bd");
@@ -38,7 +39,7 @@ describe("Color Scheme Application", () => {
     const presentationFile = await createPresentationFile(THEMES_PPTX_PATH);
     const presentation = openPresentation(presentationFile);
     const slide = presentation.getSlide(4);
-    const svg = slide.renderSVG();
+    const svg = renderSlideToSvg(slide).svg;
 
     // Slide 4 uses theme3, accent1 should be #94C600 (green)
     const hasAccent1Color = svg.toLowerCase().includes("94c600");
@@ -52,7 +53,7 @@ describe("Color Scheme Application", () => {
     const presentationFile = await createPresentationFile(THEMES_PPTX_PATH);
     const presentation = openPresentation(presentationFile);
     const slide = presentation.getSlide(10);
-    const svg = slide.renderSVG();
+    const svg = renderSlideToSvg(slide).svg;
 
     const hasGradient = [
       svg.includes("linearGradient"),
@@ -68,7 +69,7 @@ describe("Color Scheme Application", () => {
     const presentationFile = await createPresentationFile(THEMES_PPTX_PATH);
     const presentation = openPresentation(presentationFile);
     const slide = presentation.getSlide(1);
-    const svg = slide.renderSVG();
+    const svg = renderSlideToSvg(slide).svg;
 
     const hasLt1Color = [
       svg.toLowerCase().includes("ffffff"),
@@ -177,7 +178,7 @@ describe("Color Map Resolution", () => {
     const presentationFile = await createPresentationFile(THEMES_PPTX_PATH);
     const presentation = openPresentation(presentationFile);
     const slide = presentation.getSlide(1);
-    const svg = slide.renderSVG();
+    const svg = renderSlideToSvg(slide).svg;
 
     const hasDk1Color = [
       svg.toLowerCase().includes("000000"),
@@ -190,7 +191,7 @@ describe("Color Map Resolution", () => {
     const presentationFile = await createPresentationFile(THEMES_PPTX_PATH);
     const presentation = openPresentation(presentationFile);
     const slide = presentation.getSlide(1);
-    const svg = slide.renderSVG();
+    const svg = renderSlideToSvg(slide).svg;
 
     const hasLt1Color = [
       svg.toLowerCase().includes("ffffff"),
@@ -209,8 +210,8 @@ describe("Different Themes Produce Different Colors", () => {
     const presentationFile = await createPresentationFile(THEMES_PPTX_PATH);
     const presentation = openPresentation(presentationFile);
 
-    const svg1 = presentation.getSlide(1).renderSVG().toLowerCase();
-    const svg4 = presentation.getSlide(4).renderSVG().toLowerCase();
+    const svg1 = renderSlideToSvg(presentation.getSlide(1)).svg.toLowerCase();
+    const svg4 = renderSlideToSvg(presentation.getSlide(4)).svg.toLowerCase();
 
     // theme1 accent1: 4F81BD (blue)
     // theme3 accent1: 94C600 (green)

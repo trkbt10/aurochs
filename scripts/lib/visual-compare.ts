@@ -20,6 +20,7 @@
  */
 
 import { openPresentation, LIBREOFFICE_RENDER_OPTIONS } from "../../src/pptx";
+import { renderSlideToSvg } from "../../src/pptx/render/svg";
 import { compareSvgToSnapshot, type CompareOptions, type CompareResult } from "../../spec/visual-regression/compare";
 import { loadPptxFile } from "./pptx-loader";
 
@@ -45,7 +46,7 @@ export async function compareSlideToSnapshot(
     renderOptions: LIBREOFFICE_RENDER_OPTIONS,
   });
   const slide = presentation.getSlide(slideNumber);
-  const svg = slide.renderSVG();
+  const { svg } = renderSlideToSvg(slide);
 
   const result = compareSvgToSnapshot(svg, snapshotName, slideNumber, options);
 

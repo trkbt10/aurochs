@@ -13,6 +13,7 @@ import { createCoreRenderContext } from "../../render/render-context";
 import { openPresentation } from "../../index";
 import { px } from "../../../ooxml/domain/units";
 import type { ParseContext } from "../context";
+import { renderSlideToSvg } from "../../render/svg";
 
 function getRootElement(doc: XmlDocument): XmlElement {
   for (const child of doc.children) {
@@ -213,14 +214,14 @@ describe("table-parser", () => {
     expect(result.svg).toContain("scale("); // Table uses scale transform
   });
 
-  it("full integration: openPresentation.getSlide.renderSVG renders table", async () => {
+  it("full integration: openPresentation.getSlide.renderSlideToSvg renders table", async () => {
     const pptxPath = "fixtures/poi-test-data/test-data/slideshow/table_test.pptx";
     const { presentationFile } = await loadPptxFile(pptxPath);
 
     // Open presentation and render
     const presentation = openPresentation(presentationFile);
     const slide = presentation.getSlide(1);
-    const svg = slide.renderSVG();
+    const { svg } = renderSlideToSvg(slide);
 
     console.log("Full integration SVG length:", svg.length);
     // Native SVG table rendering (no foreignObject for resvg compatibility)

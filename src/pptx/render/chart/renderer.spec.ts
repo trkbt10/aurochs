@@ -26,6 +26,7 @@ import type {
 import { createCoreRenderContext } from "../render-context";
 import { pct, deg, px } from "../../../ooxml/domain/units";
 import { loadPptxFile } from "../../../../scripts/lib/pptx-loader";
+import { renderSlideToSvg } from "../svg";
 
 const AASCU_FIXTURE = "fixtures/poi-test-data/test-data/slideshow/aascu.org_workarea_downloadasset.aspx_id=5864.pptx";
 const presentationState: { file?: PresentationFile } = {};
@@ -53,7 +54,7 @@ describe("Chart rendering - ECMA-376 compliance", () => {
     it("should render SVG with chart content", () => {
       const presentation = openPresentation(getPresentationFile());
       const slide = presentation.getSlide(8);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       expect(svg).toContain("<svg");
       expect(svg).toContain("<rect"); // Bar chart should have rect elements
@@ -62,7 +63,7 @@ describe("Chart rendering - ECMA-376 compliance", () => {
     it("should have zero line positioned correctly for negative values", () => {
       const presentation = openPresentation(getPresentationFile());
       const slide = presentation.getSlide(8);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       // The chart should have bars that extend both above and below the zero line
       // We verify by checking that bars exist at different y positions
@@ -76,7 +77,7 @@ describe("Chart rendering - ECMA-376 compliance", () => {
     it("should include axis line for zero crossing", () => {
       const presentation = openPresentation(getPresentationFile());
       const slide = presentation.getSlide(8);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       // Chart should have line elements for axes
       expect(svg).toContain("<line");
@@ -85,7 +86,7 @@ describe("Chart rendering - ECMA-376 compliance", () => {
     it("should render legend with series names", () => {
       const presentation = openPresentation(getPresentationFile());
       const slide = presentation.getSlide(8);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       // Chart XML has c:legend with legendPos="r"
       // Legend should contain series names from the data
@@ -97,7 +98,7 @@ describe("Chart rendering - ECMA-376 compliance", () => {
     it("should render major gridlines", () => {
       const presentation = openPresentation(getPresentationFile());
       const slide = presentation.getSlide(8);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       // Chart XML has <c:majorGridlines/> on valAx
       // Should render horizontal gridlines with stroke="#ddd"
@@ -108,7 +109,7 @@ describe("Chart rendering - ECMA-376 compliance", () => {
     it("should render value axis labels", () => {
       const presentation = openPresentation(getPresentationFile());
       const slide = presentation.getSlide(8);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       // Chart XML has tickLblPos="nextTo" on valAx
       // Should render numeric labels with fill="#666"
@@ -122,7 +123,7 @@ describe("Chart rendering - ECMA-376 compliance", () => {
     it("should render bars with fill colors", () => {
       const presentation = openPresentation(getPresentationFile());
       const slide = presentation.getSlide(8);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       // Each bar should have a fill color (hex format)
       // Pattern: fill="#XXXXXX" where X is hex digit
@@ -145,7 +146,7 @@ describe("Chart rendering - ECMA-376 compliance", () => {
     it("should have legend positioned outside chart plot area", () => {
       const presentation = openPresentation(getPresentationFile());
       const slide = presentation.getSlide(8);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       // Legend position="r" means right side
       // Chart plot area should not overlap with legend

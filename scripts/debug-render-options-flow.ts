@@ -2,6 +2,7 @@
  * Debug: trace render options flow
  */
 import { openPresentation, LIBREOFFICE_RENDER_OPTIONS, DEFAULT_RENDER_OPTIONS } from "../src/pptx";
+import { renderSlideToSvg } from "../src/pptx/render/svg";
 import { loadPptxFile } from "./lib/pptx-loader";
 
 async function main() {
@@ -10,11 +11,11 @@ async function main() {
   
   console.log("=== ECMA-376 ===");
   const ecma = openPresentation(presentationFile, { renderOptions: DEFAULT_RENDER_OPTIONS });
-  const ecmaSvg = ecma.getSlide(2).renderSVG();
-  
+  const { svg: ecmaSvg } = renderSlideToSvg(ecma.getSlide(2));
+
   console.log("=== LibreOffice ===");
   const lo = openPresentation(presentationFile, { renderOptions: LIBREOFFICE_RENDER_OPTIONS });
-  const loSvg = lo.getSlide(2).renderSVG();
+  const { svg: loSvg } = renderSlideToSvg(lo.getSlide(2));
   
   // Compare specific text element positions
   console.log("\n=== Compare Y positions ===");

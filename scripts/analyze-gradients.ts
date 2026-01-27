@@ -7,6 +7,7 @@
  * Default: fixtures/poi-test-data/test-data/slideshow/themes.pptx all slides
  */
 import { openPresentation } from "../src/pptx";
+import { renderSlideToSvg } from "../src/pptx/render/svg";
 import * as fs from "node:fs";
 import { loadPptxFile } from "./lib/pptx-loader";
 
@@ -169,7 +170,7 @@ async function main() {
 
     // Get our SVG output
     const slide = presentation.getSlide(i);
-    const svg = slide.renderSVG();
+    const { svg } = renderSlideToSvg(slide);
 
     // Extract gradients from SVG
     const svgGradients = extractSvgGradients(svg);

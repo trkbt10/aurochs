@@ -2,6 +2,7 @@
  * Debug test to verify dialect is being applied
  */
 import { openPresentation, LIBREOFFICE_RENDER_OPTIONS, DEFAULT_RENDER_OPTIONS } from "../src/pptx";
+import { renderSlideToSvg } from "../src/pptx/render/svg";
 import { loadPptxFile } from "./lib/pptx-loader";
 
 async function main() {
@@ -11,7 +12,7 @@ async function main() {
   console.log("=== ECMA-376 (default) dialect ===");
   const ecma = openPresentation(presentationFile, { renderOptions: DEFAULT_RENDER_OPTIONS });
   const ecmaSlide = ecma.getSlide(1);
-  const ecmaSvg = ecmaSlide.renderSVG();
+  const { svg: ecmaSvg } = renderSlideToSvg(ecmaSlide);
 
   // Extract y positions from text elements
   const ecmaYPositions = [...ecmaSvg.matchAll(/<text[^>]*y="([^"]+)"/g)].map(m => parseFloat(m[1]));
@@ -20,7 +21,7 @@ async function main() {
   console.log("\n=== LibreOffice dialect ===");
   const lo = openPresentation(presentationFile, { renderOptions: LIBREOFFICE_RENDER_OPTIONS });
   const loSlide = lo.getSlide(1);
-  const loSvg = loSlide.renderSVG();
+  const { svg: loSvg } = renderSlideToSvg(loSlide);
 
   const loYPositions = [...loSvg.matchAll(/<text[^>]*y="([^"]+)"/g)].map(m => parseFloat(m[1]));
   console.log("Y positions (first 5):", loYPositions.slice(0, 5));

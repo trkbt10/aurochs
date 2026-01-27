@@ -3,6 +3,8 @@
  */
 
 import { openPresentation } from "./index";
+import { renderSlideToSvg } from "../render/svg";
+import { renderSlideToHtml } from "../render/html";
 import {
   createFakePresentationFile,
   createMinimalFakePresentationFile,
@@ -239,34 +241,30 @@ describe("openPresentation", () => {
   });
 
   describe("slide rendering", () => {
-    it("should have renderHTML method", () => {
+    it("should have rendering context properties", () => {
       const file = createMinimalFakePresentationFile();
       const presentation = openPresentation(file);
       const slide = presentation.getSlide(1);
-      expect(typeof slide.renderHTML).toBe("function");
-    });
-
-    it("should have renderSVG method", () => {
-      const file = createMinimalFakePresentationFile();
-      const presentation = openPresentation(file);
-      const slide = presentation.getSlide(1);
-      expect(typeof slide.renderSVG).toBe("function");
+      expect(slide.zip).toBeDefined();
+      expect(slide.slideSize).toBeDefined();
+      expect(slide.renderOptions).toBeDefined();
+      expect(slide.themeOverrides).toBeDefined();
     });
 
     it("should render HTML without throwing", () => {
       const file = createMinimalFakePresentationFile();
       const presentation = openPresentation(file);
       const slide = presentation.getSlide(1);
-      const html = slide.renderHTML();
+      const { html, styles } = renderSlideToHtml(slide);
       expect(typeof html).toBe("string");
-      expect(html).toContain("<style>");
+      expect(typeof styles).toBe("string");
     });
 
     it("should render SVG without throwing", () => {
       const file = createMinimalFakePresentationFile();
       const presentation = openPresentation(file);
       const slide = presentation.getSlide(1);
-      const svg = slide.renderSVG();
+      const { svg } = renderSlideToSvg(slide);
       expect(typeof svg).toBe("string");
       expect(svg).toContain("<svg");
     });

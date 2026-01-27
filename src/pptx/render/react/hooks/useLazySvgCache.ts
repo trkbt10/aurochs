@@ -58,12 +58,14 @@ export type UseLazySvgCacheResult = {
  *
  * @example
  * ```tsx
+ * import { renderSlideToSvg } from "../../../svg";
+ *
  * const cache = useLazySvgCache(100);
  *
  * const renderThumbnail = useCallback((slideId: string) => {
  *   const svg = cache.getOrGenerate(
  *     slideId,
- *     () => presentation.getSlide(slideNumber).renderSVG()
+ *     () => renderSlideToSvg(presentation.getSlide(slideNumber)).svg
  *   );
  *   return <SvgContentRenderer svg={svg} />;
  * }, [cache, presentation]);

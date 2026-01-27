@@ -75,9 +75,13 @@ const svgStyle: CSSProperties = {
  *
  * @example
  * ```tsx
+ * import { renderSlideToSvg } from "../svg";
+ *
+ * const { svg } = renderSlideToSvg(slide);
+ *
  * // Main slide display (full mode)
  * <SvgContentRenderer
- *   svg={slide.renderSVG()}
+ *   svg={svg}
  *   width={slideWidth}
  *   height={slideHeight}
  *   mode="full"
@@ -85,7 +89,7 @@ const svgStyle: CSSProperties = {
  *
  * // Thumbnail preview (inner mode)
  * <SvgContentRenderer
- *   svg={slide.renderSVG()}
+ *   svg={svg}
  *   width={slideWidth}
  *   height={slideHeight}
  *   mode="inner"

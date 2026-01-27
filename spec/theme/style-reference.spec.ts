@@ -10,6 +10,7 @@
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
 import { openPresentation } from "../../src/pptx";
 import { parseSlide } from "../../src/pptx/parser/slide/slide-parser";
+import { renderSlideToSvg } from "../../src/pptx/render/svg";
 import { resolveColor } from "../../src/pptx/domain/color/resolution";
 import { parseXml, getByPath } from "../../src/xml";
 import { createParseContext } from "../../src/pptx/parser/context";
@@ -35,7 +36,7 @@ describe("a:fontRef schemeClr application", () => {
     const presentationFile = await createPresentationFile(THEMES_PPTX_PATH);
     const presentation = openPresentation(presentationFile);
     const slide = presentation.getSlide(1);
-    const svg = slide.renderSVG();
+    const svg = renderSlideToSvg(slide).svg;
 
     const textPattern = /<text[^>]*fill="([^"]*)"[^>]*>([^<]*(?:Fill:|Text:)[^<]*)<\/text>/gi;
     const matches = [...svg.matchAll(textPattern)];
@@ -275,7 +276,7 @@ describe("a:fontRef schemeClr application", () => {
     const presentationFile = await createPresentationFile(THEMES_PPTX_PATH);
     const presentation = openPresentation(presentationFile);
     const slide = presentation.getSlide(4);
-    const svg = slide.renderSVG();
+    const svg = renderSlideToSvg(slide).svg;
 
     const hasWhiteText = [
       svg.includes('fill="#FFFFFF"'),
@@ -296,7 +297,7 @@ describe("a:fillRef schemeClr application", () => {
     const presentationFile = await createPresentationFile(THEMES_PPTX_PATH);
     const presentation = openPresentation(presentationFile);
     const slide = presentation.getSlide(1);
-    const svg = slide.renderSVG();
+    const svg = renderSlideToSvg(slide).svg;
 
     const hasAccent1Fill = svg.toLowerCase().includes("4f81bd");
     expect(hasAccent1Fill).toBe(true);
@@ -309,7 +310,7 @@ describe("a:fillRef schemeClr application", () => {
     const presentationFile = await createPresentationFile(THEMES_PPTX_PATH);
     const presentation = openPresentation(presentationFile);
     const slide = presentation.getSlide(4);
-    const svg = slide.renderSVG();
+    const svg = renderSlideToSvg(slide).svg;
 
     const hasAccent1Fill = svg.toLowerCase().includes("94c600");
     expect(hasAccent1Fill).toBe(true);

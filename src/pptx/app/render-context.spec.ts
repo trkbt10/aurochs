@@ -18,6 +18,7 @@ import type { IndexTables } from "../parser/slide/shape-tree-indexer";
 import { px } from "../../ooxml/domain/units";
 import type { ZipFile } from "../domain";
 import { resolveColor } from "../domain/color/resolution";
+import { DEFAULT_RENDER_OPTIONS } from "../render/render-options";
 
 // =============================================================================
 // Test Fixtures
@@ -138,8 +139,12 @@ function createMockApiSlide(): ApiSlide {
     diagramRelationships: mockResourceMap(),
     timing: undefined,
     transition: undefined,
-    renderHTML: () => "<div></div>",
-    renderSVG: () => "<svg></svg>",
+    themeOverrides: [],
+    zip: createMockZip(),
+    defaultTextStyle: null,
+    tableStyles: null,
+    slideSize: { width: 960, height: 540 },
+    renderOptions: DEFAULT_RENDER_OPTIONS,
   };
 }
 

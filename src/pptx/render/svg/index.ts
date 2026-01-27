@@ -53,3 +53,7 @@ export {
 
 // SVG utilities
 export { extractSvgContent } from "./svg-utils";
+
+// Slide rendering
+export type { SvgRenderResult } from "./slide-render";
+export { renderSlideToSvg } from "./slide-render";

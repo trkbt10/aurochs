@@ -7,6 +7,7 @@
  * Usage: bun run scripts/compare-slide-details.ts [pptx-path] [slide-number]
  */
 import { openPresentation } from "../src/pptx";
+import { renderSlideToSvg } from "../src/pptx/render/svg";
 import * as fs from "node:fs";
 import { loadPptxFile } from "./lib/pptx-loader";
 
@@ -115,7 +116,7 @@ async function main() {
 
   // Get our SVG output
   const slide = presentation.getSlide(slideNum);
-  const svg = slide.renderSVG();
+  const { svg } = renderSlideToSvg(slide);
 
   console.log("\n## Our SVG Output Analysis");
   console.log("-".repeat(40));

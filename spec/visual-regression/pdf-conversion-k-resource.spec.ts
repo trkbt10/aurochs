@@ -11,6 +11,7 @@ import { openPresentation } from "../../src/pptx";
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
 import { compareSvgToPdfBaseline } from "./compare";
 import { px } from "../../src/ooxml/domain/units";
+import { renderSlideToSvg } from "../../src/pptx/render/svg";
 
 function ensurePdfExists(pdfPath: string): boolean {
   if (fs.existsSync(pdfPath)) {return true;}
@@ -47,7 +48,7 @@ async function renderPdfPageToSvg(
   const { presentationFile, zipPackage } = await loadPptxFile(outPptxPath);
   const presentation = openPresentation(presentationFile);
   const slide = presentation.getSlide(1);
-  const svg = slide.renderSVG();
+  const { svg } = renderSlideToSvg(slide);
 
   const fontEntries = zipPackage
     .listFiles()

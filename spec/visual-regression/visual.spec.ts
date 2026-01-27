@@ -14,6 +14,7 @@ import type { PresentationFile } from "../../src/pptx";
 import { openPresentation, LIBREOFFICE_RENDER_OPTIONS } from "../../src/pptx";
 import { compareSvgToSnapshot, hasSnapshot, listSnapshots, type CompareOptions } from "./compare";
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
+import { renderSlideToSvg } from "../../src/pptx/render/svg";
 
 // Note: loadPptxFile is now imported from scripts/lib/pptx-loader.ts
 // This shared utility avoids duplicating JSZip loading logic across tests
@@ -222,7 +223,7 @@ describe("Visual Regression Tests", () => {
           const presentation = openPresentation(presentationFile, { renderOptions: LIBREOFFICE_RENDER_OPTIONS });
           const resolvedSlideNum = resolveSlideNumber(slideNum, visibleSlideNumbers);
           const slide = presentation.getSlide(resolvedSlideNum);
-          const svg = slide.renderSVG();
+          const svg = renderSlideToSvg(slide).svg;
 
           const result = compareSvgToSnapshot(svg, testCase.name, slideNum, testCase.options);
 
@@ -260,7 +261,7 @@ export async function testSlide(
   // Use LibreOffice dialect since baselines are generated with LibreOffice
   const presentation = openPresentation(presentationFile, { renderOptions: LIBREOFFICE_RENDER_OPTIONS });
   const slide = presentation.getSlide(slideNumber);
-  const svg = slide.renderSVG();
+  const svg = renderSlideToSvg(slide).svg;
 
   const result = compareSvgToSnapshot(svg, snapshotName, slideNumber, options);
 

@@ -12,6 +12,7 @@
 
 import { openPresentation } from "../../src/pptx";
 import { createPresentationFile, extractSvgColors, THEMES_PPTX_PATH } from "./test-utils";
+import { renderSlideToSvg } from "../../src/pptx/render/svg";
 
 /**
  * Check if colors include a light center (for gradient tests)
@@ -109,7 +110,7 @@ describe("End-to-end SVG Color Verification", () => {
   it("slide 3 SVG contains expected theme gradient colors", async () => {
     const presentationFile = await createPresentationFile(THEMES_PPTX_PATH);
     const presentation = openPresentation(presentationFile);
-    const svg = presentation.getSlide(3).renderSVG();
+    const { svg } = renderSlideToSvg(presentation.getSlide(3));
 
     const colors = extractSvgColors(svg);
 
@@ -125,7 +126,7 @@ describe("End-to-end SVG Color Verification", () => {
   it("slide 4 SVG contains theme3 accent1 (#94C600)", async () => {
     const presentationFile = await createPresentationFile(THEMES_PPTX_PATH);
     const presentation = openPresentation(presentationFile);
-    const svg = presentation.getSlide(4).renderSVG();
+    const { svg } = renderSlideToSvg(presentation.getSlide(4));
 
     const colors = extractSvgColors(svg);
     expect(colors.has("94c600")).toBe(true);
@@ -138,7 +139,7 @@ describe("End-to-end SVG Color Verification", () => {
   it("slide 5 SVG contains expected theme3 colors", async () => {
     const presentationFile = await createPresentationFile(THEMES_PPTX_PATH);
     const presentation = openPresentation(presentationFile);
-    const svg = presentation.getSlide(5).renderSVG();
+    const { svg } = renderSlideToSvg(presentation.getSlide(5));
 
     const colors = extractSvgColors(svg);
     const hasTheme3Colors = hasTheme3ExpectedColors(colors);
@@ -152,7 +153,7 @@ describe("End-to-end SVG Color Verification", () => {
   it("slide 6 SVG contains radial gradient from theme3", async () => {
     const presentationFile = await createPresentationFile(THEMES_PPTX_PATH);
     const presentation = openPresentation(presentationFile);
-    const svg = presentation.getSlide(6).renderSVG();
+    const { svg } = renderSlideToSvg(presentation.getSlide(6));
 
     expect(hasAnyGradient(svg)).toBe(true);
   });
@@ -164,7 +165,7 @@ describe("End-to-end SVG Color Verification", () => {
   it("slide 8 SVG contains theme5 colors (background gradient)", async () => {
     const presentationFile = await createPresentationFile(THEMES_PPTX_PATH);
     const presentation = openPresentation(presentationFile);
-    const svg = presentation.getSlide(8).renderSVG();
+    const { svg } = renderSlideToSvg(presentation.getSlide(8));
 
     const colors = extractSvgColors(svg);
     const hasExpected = hasTheme5ExpectedColors(colors);
@@ -178,7 +179,7 @@ describe("End-to-end SVG Color Verification", () => {
   it("slide 9 SVG contains expected theme5 colors", async () => {
     const presentationFile = await createPresentationFile(THEMES_PPTX_PATH);
     const presentation = openPresentation(presentationFile);
-    const svg = presentation.getSlide(9).renderSVG();
+    const { svg } = renderSlideToSvg(presentation.getSlide(9));
 
     const colors = extractSvgColors(svg);
     // Theme 5 (Trek) uses brown tones, not common black/white
@@ -192,7 +193,7 @@ describe("End-to-end SVG Color Verification", () => {
   it("slide 10 SVG contains theme7 colors with inverted colorMap", async () => {
     const presentationFile = await createPresentationFile(THEMES_PPTX_PATH);
     const presentation = openPresentation(presentationFile);
-    const svg = presentation.getSlide(10).renderSVG();
+    const { svg } = renderSlideToSvg(presentation.getSlide(10));
 
     const colors = extractSvgColors(svg);
 
@@ -249,7 +250,7 @@ describe("End-to-end SVG Color Verification", () => {
     };
 
     for (const exp of expectations) {
-      const svg = presentation.getSlide(exp.slide).renderSVG();
+      const { svg } = renderSlideToSvg(presentation.getSlide(exp.slide));
       const colors = extractSvgColors(svg);
       const hasExpected = checkExpectation(svg, colors, exp);
 

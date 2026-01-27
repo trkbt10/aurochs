@@ -8,6 +8,8 @@ import * as path from "node:path";
 import type { PresentationFile } from "../../src/pptx";
 import { openPresentation } from "../../src/pptx";
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
+import { renderSlideToSvg } from "../../src/pptx/render/svg";
+import { renderSlideToHtml } from "../../src/pptx/render/html";
 
 const FIXTURE_PATH = "fixtures/poi-test-data/test-data/slideshow/2411-Performance_Up.pptx";
 
@@ -32,7 +34,7 @@ describe("2411-Performance_Up.pptx", () => {
     it("should render slide 1 with content (not empty)", () => {
       const presentation = openPresentation(presentationFile);
       const slide = presentation.getSlide(1);
-      const html = slide.renderHTML();
+      const html = renderSlideToHtml(slide).html;
 
       // Should not be just an empty slide
       expect(html).toContain("slide");
@@ -43,7 +45,7 @@ describe("2411-Performance_Up.pptx", () => {
     it("should contain the title text 'Apache Performance Tuning'", () => {
       const presentation = openPresentation(presentationFile);
       const slide = presentation.getSlide(1);
-      const html = slide.renderHTML();
+      const html = renderSlideToHtml(slide).html;
 
       // Note: spaces are converted to &nbsp;
       expect(html).toContain("Apache");
@@ -54,7 +56,7 @@ describe("2411-Performance_Up.pptx", () => {
     it("should have background styling (not just white)", () => {
       const presentation = openPresentation(presentationFile);
       const slide = presentation.getSlide(1);
-      const html = slide.renderHTML();
+      const html = renderSlideToHtml(slide).html;
 
       // Should have some background color or gradient
       // The expected slide has a blue gradient background
@@ -66,7 +68,7 @@ describe("2411-Performance_Up.pptx", () => {
     it("should render SVG output", () => {
       const presentation = openPresentation(presentationFile);
       const slide = presentation.getSlide(1);
-      const svg = slide.renderSVG();
+      const svg = renderSlideToSvg(slide).svg;
 
       expect(svg).toContain("<svg");
       expect(svg).toContain("xmlns");

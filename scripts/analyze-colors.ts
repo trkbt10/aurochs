@@ -7,6 +7,7 @@
  * Usage: bun run scripts/analyze-colors.ts [pptx-path] [slide-number]
  */
 import { openPresentation } from "../src/pptx";
+import { renderSlideToSvg } from "../src/pptx/render/svg";
 import * as fs from "node:fs";
 import { loadPptxFile } from "./lib/pptx-loader";
 
@@ -122,7 +123,7 @@ async function main() {
 
   // Get SVG output
   const slide = presentation.getSlide(slideNum);
-  const svg = slide.renderSVG();
+  const { svg } = renderSlideToSvg(slide);
 
   console.log("\n[SVG Output] Colors used:");
   const svgColors = extractSvgColors(svg);

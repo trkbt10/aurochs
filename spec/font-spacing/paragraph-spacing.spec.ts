@@ -17,6 +17,7 @@ import type { PresentationFile } from "../../src/pptx";
 import { openPresentation, LIBREOFFICE_RENDER_OPTIONS } from "../../src/pptx";
 import { compareSvgToSnapshot, hasSnapshot, listSnapshots } from "../visual-regression/compare";
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
+import { renderSlideToSvg } from "../../src/pptx/render/svg";
 
 type TestCase = {
   name: string;
@@ -88,7 +89,7 @@ describe("Paragraph Spacing (a:spcBef, a:spcAft) - ECMA-376 21.1.2.2.18-19", () 
           renderOptions: LIBREOFFICE_RENDER_OPTIONS,
         });
         const slide = presentation.getSlide(1);
-        const svg = slide.renderSVG();
+        const { svg } = renderSlideToSvg(slide);
 
         const result = compareSvgToSnapshot(svg, testCase.name, 1, {
           maxDiffPercent: testCase.maxDiffPercent,

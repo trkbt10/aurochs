@@ -28,3 +28,7 @@ export { createHtmlRenderContext, createEmptyHtmlRenderContext } from "./context
 
 // HTML fill rendering
 export { resolvedFillToBackground, fillToBackground, resolvedLineToBorder, lineToBorder } from "./fill";
+
+// Slide rendering
+export type { HtmlRenderResult } from "./slide-render";
+export { renderSlideToHtml } from "./slide-render";

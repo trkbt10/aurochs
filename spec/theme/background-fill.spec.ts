@@ -8,6 +8,7 @@
 
 import { openPresentation } from "../../src/pptx";
 import { parseXml, type XmlElement } from "../../src/xml";
+import { renderSlideToSvg } from "../../src/pptx/render/svg";
 import { createColorMap } from "../../src/pptx/parser/slide/resource-adapters";
 import { parseFormatScheme, parseColorScheme } from "../../src/pptx/parser/drawing-ml";
 import { loadLayoutData, loadMasterData, loadThemeData } from "../../src/pptx/parser/slide/loader";
@@ -112,7 +113,7 @@ describe("Theme bgFillStyleLst - ECMA-376 compliance", () => {
     const presentationFile = await createPresentationFile(THEMES_PPTX_PATH);
     const presentation = openPresentation(presentationFile);
     const slide = presentation.getSlide(3);
-    const svg = slide.renderSVG();
+    const svg = renderSlideToSvg(slide).svg;
 
     const hasRadialGradient = svg.includes("radialGradient");
     expect(hasRadialGradient).toBe(true);

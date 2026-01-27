@@ -8,6 +8,7 @@ import { loadPptxFile } from "../../../../scripts/lib/pptx-loader";
 import { parseXml, getChild, getByPath } from "../../../xml";
 import { parseSlide } from "../../parser/slide/slide-parser";
 import { openPresentation } from "../../index";
+import { renderSlideToSvg } from "../svg";
 import type { ParseContext } from "../../parser/context";
 import type { SpShape } from "../../domain";
 import type { FieldRun, RegularRun } from "../../domain/text";
@@ -149,7 +150,7 @@ describe("text-centering-and-color", () => {
 
     const presentation = openPresentation(presentationFile);
     const slide = presentation.getSlide(1);
-    const svg = slide.renderSVG();
+    const svg = renderSlideToSvg(slide).svg;
 
     // The title text should have the inherited color #276288 from master titleStyle
     const hasBlueTitle = svg.includes('fill="#276288"');
@@ -162,7 +163,7 @@ describe("text-centering-and-color", () => {
 
     const presentation = openPresentation(presentationFile);
     const slide = presentation.getSlide(1);
-    const svg = slide.renderSVG();
+    const svg = renderSlideToSvg(slide).svg;
 
     // Check for text-anchor in SVG
     const hasTextAnchorMiddle = svg.includes('text-anchor="middle"');

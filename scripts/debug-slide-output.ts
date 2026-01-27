@@ -5,6 +5,7 @@
  * Default: fixtures/poi-test-data/test-data/slideshow/themes.pptx slide 4
  */
 import { openPresentation } from "../src/pptx";
+import { renderSlideToSvg } from "../src/pptx/render/svg";
 import * as fs from "node:fs";
 import { loadPptxFile } from "./lib/pptx-loader";
 
@@ -28,7 +29,7 @@ async function main() {
   }
 
   const slide = presentation.getSlide(slideNum);
-  const svg = slide.renderSVG();
+  const { svg } = renderSlideToSvg(slide);
 
   const outputPath = `debug-slide-output.svg`;
   fs.writeFileSync(outputPath, svg);

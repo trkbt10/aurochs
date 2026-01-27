@@ -1,94 +1,19 @@
 /**
  * @file Slide object factory
  *
- * Creates Slide objects with rendering capabilities from SlideData.
+ * Creates Slide objects from SlideData.
  * This is the API layer that builds the public Slide interface.
  */
 
 import type { Slide } from "./types";
 import type { ZipFile, SlideSize } from "../domain";
-import type { XmlElement, XmlDocument } from "../../xml";
-import { getByPath } from "../../xml";
+import type { XmlElement } from "../../xml";
 import type { SlideData } from "../parser/slide/data-types";
 import type { RenderOptions } from "../render/render-options";
-import type { SlideContext } from "../parser/slide/context";
-import { createSlideContext } from "../parser/slide/context";
 import type { TableStyleList } from "../parser/table/style-parser";
-import { createPlaceholderTable, createColorMap } from "../parser/slide/resource-adapters";
-import { parseTheme, parseMasterTextStyles } from "../parser/drawing-ml";
 import { DEFAULT_RENDER_OPTIONS } from "../render/render-options";
-import { renderSlideIntegrated, renderSlideSvgIntegrated } from "./slide-render";
 import { parseSlideTimingData } from "../parser/timing-parser";
 import { parseSlideTransitionData } from "../parser/slide/transition-parser";
-
-/**
- * Build SlideRenderContext directly from SlideData.
- *
- * This function coordinates parser and render layer utilities to build
- * the complete context needed for rendering.
- *
- * @param data - Complete slide data with all parsed XML
- * @param zip - ZipFile adapter for reading resources
- * @param defaultTextStyle - Default text style from presentation.xml
- * @param tableStyles - Table styles from ppt/tableStyles.xml
- * @param renderOptions - Optional render options for dialect-specific behavior
- * @returns SlideRenderContext for use in rendering
- */
-function buildSlideRenderContext(
-  data: SlideData,
-  zip: ZipFile,
-  defaultTextStyle: XmlElement | null,
-  tableStyles: TableStyleList | null,
-  renderOptions?: RenderOptions,
-): SlideContext {
-  // Extract color map from master
-  const masterClrMap = getByPath(data.master, ["p:sldMaster", "p:clrMap"]);
-
-  // Extract color map override from slide (if present)
-  const slideClrMapOvr = getByPath(data.content, ["p:sld", "p:clrMapOvr", "a:overrideClrMapping"]);
-
-  // Get slide content element
-  const slideContent = getByPath(data.content, ["p:sld"]);
-
-  const slide = {
-    content: slideContent as XmlElement,
-    resources: data.relationships,
-    colorMapOverride: slideClrMapOvr !== undefined ? createColorMap(slideClrMapOvr) : undefined,
-  };
-
-  // Get layout content element for background lookup
-  const layoutContent = getByPath(data.layout, ["p:sldLayout"]);
-
-  // Get master content element for background lookup
-  const masterContent = getByPath(data.master, ["p:sldMaster"]);
-
-  const layout = {
-    placeholders: createPlaceholderTable(data.layoutTables),
-    resources: data.layoutRelationships,
-    content: layoutContent as XmlElement | undefined,
-  };
-
-  const master = {
-    textStyles: parseMasterTextStyles(data.masterTextStyles),
-    placeholders: createPlaceholderTable(data.masterTables),
-    colorMap: createColorMap(masterClrMap),
-    resources: data.masterRelationships,
-    content: masterContent as XmlElement | undefined,
-  };
-
-  const theme = parseTheme(data.theme, data.themeOverrides);
-
-  const presentation = {
-    theme,
-    defaultTextStyle,
-    zip,
-    renderOptions: renderOptions ?? DEFAULT_RENDER_OPTIONS,
-    themeResources: data.themeRelationships,
-    tableStyles: tableStyles ?? undefined,
-  };
-
-  return createSlideContext(slide, layout, master, presentation);
-}
 
 /**
  * Create a Slide object from SlideData.
@@ -112,19 +37,6 @@ export function createSlide(
   slideSize: SlideSize,
   renderOptions?: RenderOptions,
 ): Slide {
-  const renderHTML = (): string => {
-    const slideRenderCtx = buildSlideRenderContext(data, zip, defaultTextStyle, tableStyles, renderOptions);
-    const result = renderSlideIntegrated(data.content as XmlDocument, slideRenderCtx, slideSize);
-    return `<style>${result.styles}</style>${result.html}`;
-  };
-
-  const renderSVG = (): string => {
-    // Use render for SVG output (text style inheritance now implemented)
-    const slideRenderCtx = buildSlideRenderContext(data, zip, defaultTextStyle, tableStyles, renderOptions);
-    const result = renderSlideSvgIntegrated(data.content as XmlDocument, slideRenderCtx, slideSize);
-    return result.svg;
-  };
-
   // Parse timing data (lazy, cached)
   const timing = parseSlideTimingData(data.content);
 
@@ -149,7 +61,12 @@ export function createSlide(
     diagramRelationships: data.diagramRelationships,
     timing,
     transition,
-    renderHTML,
-    renderSVG,
+    // New properties for standalone rendering
+    themeOverrides: data.themeOverrides,
+    zip,
+    defaultTextStyle,
+    tableStyles,
+    slideSize,
+    renderOptions: renderOptions ?? DEFAULT_RENDER_OPTIONS,
   };
 }

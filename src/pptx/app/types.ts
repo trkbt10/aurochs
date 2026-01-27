@@ -5,8 +5,7 @@
 
 import type { XmlDocument, XmlNode } from "../../xml";
 import type { IndexTables } from "../parser/slide/shape-tree-indexer";
-import type { ResourceMap } from "../opc";
-import type { SlideSize, SlideTransition } from "../domain";
+import type { ResourceMap, ZipFile, SlideSize, SlideTransition } from "../domain";
 import type { Timing } from "../domain/animation";
 import type { RenderOptions } from "../render/render-options";
 import type { TableStyleList } from "../parser/table/style-parser";
@@ -104,16 +103,40 @@ export type Slide = {
   readonly transition: SlideTransition | undefined;
 
   /**
-   * Render slide as HTML string
-   * @returns HTML representation of the slide
+   * Theme override documents.
+   * Contains override themes that apply to this slide.
    */
-  renderHTML(): string;
+  readonly themeOverrides: readonly XmlDocument[];
 
   /**
-   * Render slide as SVG string
-   * @returns SVG representation of the slide
+   * ZipFile adapter for resource access.
+   * Used to read embedded images and other resources during rendering.
    */
-  renderSVG(): string;
+  readonly zip: ZipFile;
+
+  /**
+   * Default text style from presentation.xml.
+   * Provides fallback text styling for slides.
+   */
+  readonly defaultTextStyle: XmlNode | null;
+
+  /**
+   * Table styles from ppt/tableStyles.xml.
+   * Provides table styling definitions.
+   */
+  readonly tableStyles: TableStyleList | null;
+
+  /**
+   * Slide dimensions in pixels.
+   * Width and height of the slide for rendering.
+   */
+  readonly slideSize: SlideSize;
+
+  /**
+   * Render options for dialect-specific behavior.
+   * Controls rendering behavior for different PPTX dialects.
+   */
+  readonly renderOptions: RenderOptions;
 };
 
 /**
