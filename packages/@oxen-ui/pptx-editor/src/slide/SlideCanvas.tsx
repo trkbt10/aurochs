@@ -12,8 +12,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 import type { Slide, Shape } from "@oxen-office/pptx/domain";
-import type { ColorContext } from "@oxen-office/pptx/domain/color/context";
-import type { FontScheme } from "@oxen-office/pptx/domain/resolution";
+import type { ColorContext } from "@oxen-office/ooxml/domain/color-context";
+import type { FontScheme } from "@oxen-office/ooxml/domain/font-scheme";
 import type { Pixels } from "@oxen-office/ooxml/domain/units";
 import type { ShapeId } from "@oxen-office/pptx/domain/types";
 import { px } from "@oxen-office/ooxml/domain/units";

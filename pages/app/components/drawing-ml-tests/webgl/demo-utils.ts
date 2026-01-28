@@ -11,7 +11,7 @@
 import { pt, px } from "@oxen-office/ooxml/domain/units";
 import type { TextBody, Paragraph, RegularRun, RunProperties } from "@oxen-office/pptx/domain/text";
 import type { SolidFill } from "@oxen-office/pptx/domain/color/types";
-import type { ColorContext } from "@oxen-office/pptx/domain/color/context";
+import type { ColorContext } from "@oxen-office/ooxml/domain/color-context";
 import type {
   Shape3d,
   Scene3d,

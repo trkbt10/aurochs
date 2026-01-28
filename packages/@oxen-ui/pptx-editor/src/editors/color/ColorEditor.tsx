@@ -13,8 +13,8 @@ import { ColorTransformEditor } from "./ColorTransformEditor";
 import { createDefaultSrgbColor } from "./ColorSpecEditor";
 import type { Color, ColorSpec, ColorTransform, SrgbColor, SchemeColor } from "@oxen-office/ooxml/domain/color";
 import type { EditorProps, SelectOption } from "@oxen-ui/ui-components/types";
-import type { ColorContext } from "@oxen-office/pptx/domain/color/context";
-import { resolveColor } from "@oxen-office/pptx/domain/color/resolution";
+import type { ColorContext } from "@oxen-office/ooxml/domain/color-context";
+import { resolveColor } from "@oxen-office/ooxml/domain/color-resolution";
 import { useEditorConfig } from "../../context/editor/EditorConfigContext";
 
 export type ColorEditorProps = EditorProps<Color> & {

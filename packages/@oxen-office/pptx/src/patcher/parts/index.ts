@@ -2,5 +2,4 @@
  * @file OPC part patching exports
  */
 
-export * from "./presentation";
-
+export { addSlideToList, removeSlideFromList, reorderSlideInList } from "./presentation";

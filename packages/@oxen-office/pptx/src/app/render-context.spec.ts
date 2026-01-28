@@ -16,7 +16,7 @@ import type { ResourceMap } from "../domain/opc";
 import type { IndexTables } from "../parser/slide/shape-tree-indexer";
 import { px } from "@oxen-office/ooxml/domain/units";
 import type { ZipFile } from "../domain";
-import { resolveColor } from "../domain/color/resolution";
+import { resolveColor } from "@oxen-office/ooxml/domain/color-resolution";
 import { DEFAULT_RENDER_OPTIONS } from "../render/render-options";
 
 // =============================================================================

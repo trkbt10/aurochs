@@ -5,9 +5,9 @@
  */
 
 import type { XmlElement } from "@oxen/xml";
-import type { ColorResolveContext } from "./domain/color/context";
+import type { ColorMap, ColorResolveContext, ColorScheme } from "@oxen-office/ooxml/domain/color-context";
 import type { SlideContext, ResourceContext } from "./parser/slide/context";
-import type { ColorMap, ColorScheme, PlaceholderTable, ResourceMap, ZipFile, FormatScheme, RawMasterTextStyles } from "./domain";
+import type { PlaceholderTable, ResourceMap, ZipFile, FormatScheme, RawMasterTextStyles } from "./domain";
 import { DEFAULT_RENDER_OPTIONS } from "./render/render-options";
 
 /**

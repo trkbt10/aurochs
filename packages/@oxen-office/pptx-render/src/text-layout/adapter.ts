@@ -7,13 +7,13 @@ import type { TextBody, Paragraph, TextRun, RunProperties, BulletStyle, AutoNumb
 import type { Pixels, Points } from "@oxen-office/ooxml/domain/units";
 import type { LayoutInput, LayoutParagraphInput, LayoutSpan, TextBoxConfig, BulletConfig, AutoFitConfig, TextOutlineConfig, FontAlignment, LayoutTabStop } from "./types";
 import type { RenderOptions } from "../render-options";
-import type { ColorContext } from "@oxen-office/pptx/domain/color/context";
-import type { FontScheme } from "@oxen-office/pptx/domain/resolution";
-import { resolveThemeFont } from "@oxen-office/pptx/domain/resolution";
+import type { ColorContext } from "@oxen-office/ooxml/domain/color-context";
+import type { FontScheme } from "@oxen-office/ooxml/domain/font-scheme";
+import { resolveThemeFont } from "@oxen-office/ooxml/domain/font-scheme";
 import type { Color } from "@oxen-office/ooxml/domain/color";
 import type { Line, Fill } from "@oxen-office/pptx/domain/color/types";
 
-import { resolveColor as resolveColorRaw } from "@oxen-office/pptx/domain/color/resolution";
+import { resolveColor as resolveColorRaw } from "@oxen-office/ooxml/domain/color-resolution";
 import { resolveTextFill, resolveTextEffects } from "@oxen-office/pptx/parser/drawing-ml/index";
 import type { ResourceResolver } from "@oxen-office/pptx/parser/drawing-ml/index";
 import { px, pt, pct } from "@oxen-office/ooxml/domain/units";

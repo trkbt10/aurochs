@@ -5,7 +5,7 @@
  */
 
 import type { PatternFill, PatternType } from "@oxen-office/ooxml/domain/fill";
-import type { ColorContext } from "@oxen-office/pptx/domain/color/context";
+import type { ColorContext } from "@oxen-office/ooxml/domain/color-context";
 import { resolvePatternFillForReact, isPatternSupported, getSupportedPatterns } from "./usePatternFill.js";
 
 // =============================================================================

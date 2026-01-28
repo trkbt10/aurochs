@@ -10,7 +10,7 @@
 
 import type { ChartLines, ChartShapeProperties } from "@oxen-office/pptx/domain/chart";
 import type { Fill } from "@oxen-office/pptx/domain/color/types";
-import { resolveColor } from "@oxen-office/pptx/domain/color/resolution";
+import { resolveColor } from "@oxen-office/ooxml/domain/color-resolution";
 
 // =============================================================================
 // Default Values

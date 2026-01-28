@@ -8,7 +8,7 @@
 
 import type { Effects, ShadowEffect, GlowEffect, SoftEdgeEffect, ReflectionEffect } from "../../domain/effects";
 import type { Color } from "@oxen-office/ooxml/domain/color";
-import type { ColorContext } from "../../domain/color/context";
+import type { ColorContext } from "@oxen-office/ooxml/domain/color-context";
 import type {
   TextEffectsConfig,
   TextShadowConfig,
@@ -16,7 +16,7 @@ import type {
   TextSoftEdgeConfig,
   TextReflectionConfig,
 } from "../../domain/drawing-ml/text-effects";
-import { resolveColor } from "../../domain/color/resolution";
+import { resolveColor } from "@oxen-office/ooxml/domain/color-resolution";
 
 // =============================================================================
 // Resolution Functions

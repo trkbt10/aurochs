@@ -15,9 +15,7 @@ export default defineConfig({
     port: 5174,
   },
   resolve: {
-    alias: {
-      "@lib": path.resolve(__dirname, "../src"),
-    },
+    alias: {},
   },
   build: {
     outDir: path.resolve(__dirname, "dist"),

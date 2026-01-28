@@ -8,7 +8,7 @@
 
 import { render } from "@testing-library/react";
 import type { Color } from "@oxen-office/ooxml/domain/color";
-import type { ColorContext } from "@oxen-office/pptx/domain/color/context";
+import type { ColorContext } from "@oxen-office/ooxml/domain/color-context";
 import type { SlideSize } from "@oxen-office/pptx/domain";
 import { px, pct } from "@oxen-office/ooxml/domain/units";
 import { RenderProvider } from "../../context";

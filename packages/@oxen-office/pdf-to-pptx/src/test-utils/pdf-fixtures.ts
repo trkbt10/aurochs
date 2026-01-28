@@ -1,10 +1,29 @@
 import path from "node:path";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
-const repoRootDir = path.resolve(process.cwd(), "../../..");
-if (!existsSync(path.join(repoRootDir, "package.json"))) {
-  throw new Error(`Expected repo root at ${repoRootDir} (run tests from packages/@oxen-office/pdf-to-pptx)`);
+function findRepoRootDir(startDir: string): string {
+  let dir = startDir;
+  for (let i = 0; i < 15; i++) {
+    const pkgPath = path.join(dir, "package.json");
+    if (existsSync(pkgPath)) {
+      try {
+        const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as { readonly name?: unknown };
+        if (pkg.name === "web-pptx") {
+          return dir;
+        }
+      } catch {
+        // ignore
+      }
+    }
+    const parent = path.dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+  throw new Error("Failed to locate repo root (package.json name=web-pptx).");
 }
+
+const repoRootDir = findRepoRootDir(path.dirname(fileURLToPath(import.meta.url)));
 
 export function getPdfFixturePath(basename: string): string {
   if (basename.includes("/") || basename.includes("\\") || basename.includes("..")) {
@@ -19,4 +38,3 @@ export function getSampleFixturePath(basename: string): string {
   }
   return path.join(repoRootDir, "fixtures", "samples", basename);
 }
-

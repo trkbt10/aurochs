@@ -2,9 +2,9 @@
  * @file Tests for color resolution transforms
  */
 
-import type { Color } from "@oxen-office/ooxml/domain/color";
-import { pct } from "@oxen-office/ooxml/domain/units";
-import { resolveColor } from "./resolution";
+import type { Color } from "./color";
+import { pct } from "./units";
+import { resolveColor } from "./color-resolution";
 
 describe("resolveColor", () => {
   it("applies blueMod transform (ECMA-376 Section 20.1.2.3.5)", () => {

@@ -8,10 +8,10 @@
 
 import type { Color } from "@oxen-office/ooxml/domain/color";
 import type { Fill } from "../../domain/color/types";
-import type { ColorContext } from "../../domain/color/context";
+import type { ColorContext } from "@oxen-office/ooxml/domain/color-context";
 import type { TextFillConfig } from "../../domain/drawing-ml/text-fill";
 import type { ResourceResolverFn } from "../../domain";
-import { resolveColor } from "../../domain/color/resolution";
+import { resolveColor } from "@oxen-office/ooxml/domain/color-resolution";
 
 // =============================================================================
 // Resource Resolver Type (re-exported from domain)

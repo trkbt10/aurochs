@@ -10,8 +10,8 @@
 import type { Color } from "@oxen-office/ooxml/domain/color";
 import type { PatternType } from "@oxen-office/ooxml/domain/fill";
 import type { Fill, Line, BlipFill } from "./types";
-import { resolveColor } from "./resolution";
-import type { ColorContext } from "./context";
+import { resolveColor } from "@oxen-office/ooxml/domain/color-resolution";
+import type { ColorContext } from "@oxen-office/ooxml/domain/color-context";
 import type { ResourceResolverFn } from "../resource-resolver";
 import { hexToRgb } from "@oxen/color";
 

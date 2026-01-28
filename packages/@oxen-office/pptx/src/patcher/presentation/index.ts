@@ -2,6 +2,6 @@
  * @file Presentation-level patching exports
  */
 
-export * from "./slide-id-manager";
-export * from "./slide-manager";
-
+export { generateSlideId, generateSlideRId } from "./slide-id-manager";
+export type { SlideAddResult, SlideDuplicateResult, SlideRemoveResult, SlideReorderResult } from "./slide-manager";
+export { addSlide, duplicateSlide, removeSlide, reorderSlide } from "./slide-manager";

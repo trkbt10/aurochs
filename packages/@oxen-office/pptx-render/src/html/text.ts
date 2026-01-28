@@ -6,7 +6,7 @@
 
 import type { BodyProperties, Paragraph, RunProperties, TextBody, TextRun, Transform } from "@oxen-office/pptx/domain/index";
 import type { CoreRenderContext } from "../render-context";
-import { resolveColor } from "@oxen-office/pptx/domain/color/resolution";
+import { resolveColor } from "@oxen-office/ooxml/domain/color-resolution";
 import {
   a,
   buildStyle,

@@ -7,7 +7,7 @@
  */
 
 import { createElement, getChild, isXmlElement, type XmlElement } from "@oxen/xml";
-import type { FontSpec } from "../../domain/resolution";
+import type { FontSpec } from "@oxen-office/ooxml/domain/font-scheme";
 
 function upsertTypeface(
   fontElement: XmlElement,

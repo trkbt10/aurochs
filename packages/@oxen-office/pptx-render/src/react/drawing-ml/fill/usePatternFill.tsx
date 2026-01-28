@@ -10,7 +10,7 @@ import { useMemo, type ReactNode } from "react";
 import type { PatternFill } from "@oxen-office/ooxml/domain/fill";
 import { useSvgDefs } from "../../hooks/useSvgDefs";
 import { useRenderContext } from "../../context";
-import { resolveColor } from "@oxen-office/pptx/domain/color/resolution";
+import { resolveColor } from "@oxen-office/ooxml/domain/color-resolution";
 import { PatternDef, isPatternSupported } from "./PatternDef";
 
 // =============================================================================

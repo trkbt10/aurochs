@@ -15,7 +15,7 @@
 
 import type { TextBody } from "@oxen-office/pptx/domain/text";
 import type { Color } from "@oxen-office/ooxml/domain/color";
-import type { ColorContext } from "@oxen-office/pptx/domain/color/context";
+import type { ColorContext } from "@oxen-office/ooxml/domain/color-context";
 import type { CoreRenderContext } from "../render-context";
 import type { SvgDefsCollector } from "./slide-utils";
 import type { LayoutResult, LayoutLine, LayoutSpan } from "../text-layout";

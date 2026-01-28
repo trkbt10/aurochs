@@ -11,13 +11,22 @@
 export { testSlideSize, testColorContext } from "./common";
 
 // Route definitions
-export * from "./routes";
+export type { Category, CategoryRoute, FeatureRoute } from "./routes";
+export { categories, findCategory, findFeature, getDefaultRoute } from "./routes";
 
 // Core DrawingML tests
-export * from "./core";
+export {
+  ColorTest,
+  FillTest,
+  LineEndTest,
+  LineTest,
+  EffectsTest,
+  ShapesTest,
+  CombinedTest,
+} from "./core";
 
 // SVG Mode tests
-export * from "./svg";
+export { SvgTextEffectsTest } from "./svg";
 
 // WebGL Mode tests
-export * from "./webgl";
+export { WebglTextEffectsTest, WordArtGallery } from "./webgl";

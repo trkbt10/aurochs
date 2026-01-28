@@ -29,7 +29,7 @@
  * @see ECMA-376 Part 1, Section 20.1.4.1.18 - CT_FontScheme
  */
 
-import type { FontSpec } from "@oxen-office/pptx/domain/resolution";
+import type { FontSpec } from "@oxen-office/ooxml/domain/font-scheme";
 import type { SchemeColorName } from "@oxen-office/ooxml/domain/color";
 
 // SchemeColorName is the ECMA-376 aligned type for color scheme slot names.

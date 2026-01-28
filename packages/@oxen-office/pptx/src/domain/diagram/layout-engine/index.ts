@@ -107,7 +107,7 @@ export {
 } from "./iteration";
 
 // Style and Color Resolution
-// Note: resolveColor should be imported directly from domain/color/resolution
+// Note: resolveColor should be imported directly from @oxen-office/ooxml/domain/color-resolution
 export {
   resolveNodeStyle,
   findStyleLabel,

@@ -5,7 +5,7 @@
  */
 
 import { useCallback, type CSSProperties } from "react";
-import type { ColorScheme } from "@oxen-office/pptx/domain/color/context";
+import type { ColorScheme } from "@oxen-office/ooxml/domain/color-context";
 import { ColorPickerPopover } from "../../ui/color/ColorPickerPopover";
 import { InspectorSection, Accordion } from "@oxen-ui/ui-components/layout";
 import { colorTokens, fontTokens, spacingTokens } from "@oxen-ui/ui-components/design-tokens";

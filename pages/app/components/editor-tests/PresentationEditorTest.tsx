@@ -12,7 +12,7 @@ import type { Slide, Presentation } from "@oxen-office/pptx/domain";
 import type { SpShape, GrpShape, GraphicFrame } from "@oxen-office/pptx/domain/shape";
 import type { Line } from "@oxen-office/pptx/domain/color/types";
 import type { Table, TableRow, TableCell } from "@oxen-office/pptx/domain/table/types";
-import type { ColorContext } from "@oxen-office/pptx/domain/color/context";
+import type { ColorContext } from "@oxen-office/ooxml/domain/color-context";
 import type { ResourceResolver } from "@oxen-office/pptx/domain/resource-resolver";
 import { px, deg, pt } from "@oxen-office/ooxml/domain/units";
 

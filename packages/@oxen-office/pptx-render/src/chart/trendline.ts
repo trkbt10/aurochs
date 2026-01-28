@@ -13,7 +13,7 @@ import type { SeriesData } from "./types";
 import { extractLineStyle, type ResolvedLineStyle } from "./line-style";
 import { resolveTextStyle, toSvgTextAttributes } from "./text-props";
 import { escapeHtml } from "../html/index";
-import { resolveColor } from "@oxen-office/pptx/domain/color/resolution";
+import { resolveColor } from "@oxen-office/ooxml/domain/color-resolution";
 
 // =============================================================================
 // Trendline Calculation Functions

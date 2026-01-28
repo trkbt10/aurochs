@@ -23,7 +23,7 @@ import type { Fill, Line } from "../../color/types";
 import type { ShapeStyle } from "../../shape";
 import type { TextBody } from "../../text";
 import type { DiagramTreeNode } from "./tree-builder";
-import type { ColorContext } from "../../color/context";
+import type { ColorContext } from "@oxen-office/ooxml/domain/color-context";
 import { px } from "@oxen-office/ooxml/domain/units";
 
 
@@ -73,7 +73,7 @@ export type ResolvedDiagramStyle = {
 /**
  * Context for style resolution
  *
- * Uses ColorContext from domain/resolution.ts for theme color resolution.
+ * Uses ColorContext from @oxen-office/ooxml/domain/color-context for theme color resolution.
  * No hardcoded defaults - if colors are not available, they remain undefined.
  */
 export type StyleResolverContext = {

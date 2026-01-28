@@ -11,8 +11,8 @@ import type { XmlDocument, XmlElement } from "@oxen/xml";
 import type {
   ColorScheme as ColorSchemeType,
   ColorMap as ColorMapType,
-} from "../color/context";
-import type { FontScheme as FontSchemeType } from "../resolution";
+} from "@oxen-office/ooxml/domain/color-context";
+import type { FontScheme as FontSchemeType } from "@oxen-office/ooxml/domain/font-scheme";
 
 // =============================================================================
 // Custom Color Types (ECMA-376 Part 1, Section 20.1.4.1.8)

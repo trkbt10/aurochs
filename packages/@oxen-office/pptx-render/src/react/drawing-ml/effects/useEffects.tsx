@@ -13,7 +13,7 @@ import { useSvgDefs } from "../../hooks/useSvgDefs";
 import { ShadowFilterDef, resolveShadowProps, type ResolvedShadowProps } from "./ShadowFilter";
 import { GlowFilterDef, resolveGlowProps, type ResolvedGlowProps } from "./GlowFilter";
 import { SoftEdgeFilterDef } from "./SoftEdgeFilter";
-import type { ColorContext } from "@oxen-office/pptx/domain/color/context";
+import type { ColorContext } from "@oxen-office/ooxml/domain/color-context";
 
 // =============================================================================
 // Types

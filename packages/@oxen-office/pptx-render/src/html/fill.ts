@@ -5,7 +5,7 @@
  */
 
 import type { Fill, Line } from "@oxen-office/pptx/domain";
-import type { ColorContext } from "@oxen-office/pptx/domain/color/context";
+import type { ColorContext } from "@oxen-office/ooxml/domain/color-context";
 import {
   formatRgba,
   resolveFill,

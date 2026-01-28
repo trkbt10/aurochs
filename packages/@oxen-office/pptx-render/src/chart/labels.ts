@@ -19,7 +19,7 @@ import { escapeHtml } from "../html/index";
 import { resolveTextStyle, toSvgTextAttributes } from "./text-props";
 import { formatDataValue } from "./number-format";
 import { extractDropLineStyle, toSvgStrokeAttributes } from "./line-style";
-import { resolveColor } from "@oxen-office/pptx/domain/color/resolution";
+import { resolveColor } from "@oxen-office/ooxml/domain/color-resolution";
 
 // =============================================================================
 // Shape Properties for Data Labels

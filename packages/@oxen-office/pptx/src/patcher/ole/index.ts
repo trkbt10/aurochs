@@ -1,2 +1,2 @@
-export * from "./ole-patcher";
-
+export type { OleChange } from "./ole-patcher";
+export { patchOleObject } from "./ole-patcher";

@@ -4,6 +4,10 @@
   "private": true,
   "type": "module",
   "sideEffects": false,
+  "dependencies": {
+    "@oxen/color": "workspace:*",
+    "@oxen/zip": "workspace:*"
+  },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@oxen-office/ooxml/src'"

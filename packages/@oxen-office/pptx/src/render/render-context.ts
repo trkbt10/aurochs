@@ -5,8 +5,8 @@
  */
 
 import type { SlideSize, Shape } from "../domain";
-import type { ColorContext } from "../domain/color/context";
-import type { FontScheme } from "../domain/resolution";
+import type { ColorContext } from "@oxen-office/ooxml/domain/color-context";
+import type { FontScheme } from "@oxen-office/ooxml/domain/font-scheme";
 import type { ResourceResolver } from "../domain/resource-resolver";
 import { createEmptyResourceResolver } from "../domain/resource-resolver";
 import type { ResourceStore } from "../domain/resource-store";
@@ -144,4 +144,3 @@ export function createEmptyCoreRenderContext(): CoreRenderContext {
     slideSize: { width: px(960), height: px(540) },
   });
 }
-

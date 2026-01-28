@@ -14,7 +14,7 @@ import { pushHistory } from "../../../slide/state";
 import type { PresentationDocument } from "@oxen-office/pptx/app";
 import type { ThemePreset } from "../../../../panels/theme-editor/types";
 import type { SchemeColorName } from "@oxen-office/ooxml/domain/color";
-import type { FontSpec } from "@oxen-office/pptx/domain/resolution";
+import type { FontSpec } from "@oxen-office/ooxml/domain/font-scheme";
 
 type SetEditorModeAction = Extract<
   PresentationEditorAction,

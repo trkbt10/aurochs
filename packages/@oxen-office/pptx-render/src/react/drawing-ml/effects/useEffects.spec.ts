@@ -5,7 +5,7 @@
  */
 
 import type { Effects, ShadowEffect, GlowEffect, SoftEdgeEffect } from "@oxen-office/pptx/domain/effects";
-import type { ColorContext } from "@oxen-office/pptx/domain/color/context";
+import type { ColorContext } from "@oxen-office/ooxml/domain/color-context";
 import { deg, px, pct } from "@oxen-office/ooxml/domain/units";
 import { resolveEffectsForReact } from "./useEffects.js";
 import { directionToOffset, resolveShadowProps } from "./ShadowFilter.js";

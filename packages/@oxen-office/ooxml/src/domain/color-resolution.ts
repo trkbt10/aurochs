@@ -7,8 +7,8 @@
  * @see ECMA-376 Part 1, Section 20.1.2.3 - Color Types
  */
 
-import type { Color, ColorTransform } from "@oxen-office/ooxml/domain/color";
-import type { ColorContext } from "./context";
+import type { Color, ColorTransform } from "./color";
+import type { ColorContext } from "./color-context";
 import { applySrgbGamma, applySrgbInvGamma, hexToRgb, hslToRgb, rgbToHex, rgbToHsl } from "@oxen/color";
 
 // =============================================================================

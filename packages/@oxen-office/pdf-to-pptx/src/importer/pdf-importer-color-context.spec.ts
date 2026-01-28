@@ -3,7 +3,7 @@
  */
 
 import type { Color } from "@oxen-office/ooxml/domain/color";
-import { resolveColor } from "@oxen-office/pptx/domain/color/resolution";
+import { resolveColor } from "@oxen-office/ooxml/domain/color-resolution";
 import {
   createDefaultColorContextForPdf,
   createEmptyColorContext,

@@ -287,26 +287,13 @@ export type {
 } from "./effects";
 
 // =============================================================================
-// Resolution Context Types (shared between parser and render)
-// =============================================================================
-
-export type {
-  ColorScheme,
-  ColorMap,
-  ColorContext,
-  ColorResolveContext,
-} from "./color/context";
-
-export type { FontSpec, FontScheme } from "./resolution";
-
-export { resolveThemeFont } from "./resolution";
-
-// =============================================================================
 // OOXML Shared Types - DO NOT RE-EXPORT
 // =============================================================================
+
 // Color types: import directly from "@/ooxml/domain/color"
 // Fill types: import directly from "@/ooxml/domain/fill"
 // Unit types: import directly from "@/ooxml/domain/units"
+// DrawingML shared types: import directly from "@/ooxml/domain/*"
 // =============================================================================
 
 // =============================================================================

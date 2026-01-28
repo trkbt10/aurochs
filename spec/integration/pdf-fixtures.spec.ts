@@ -3,7 +3,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parsePdf } from "@oxen/pdf";
-import { DEFAULT_PDF_FIXTURE_DIR, generatePdfFixtures } from "../../scripts/generate-pdf-fixtures";
+import { DEFAULT_PDF_FIXTURE_DIR, generatePdfFixtures } from "../../scripts/generate/generate-pdf-fixtures";
 
 type FixtureExpectation = {
   readonly fileName: string;

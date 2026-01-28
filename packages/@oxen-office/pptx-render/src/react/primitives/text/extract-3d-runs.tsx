@@ -7,9 +7,9 @@
  */
 
 import type { TextBody } from "@oxen-office/pptx/domain/text";
-import type { FontScheme } from "@oxen-office/pptx/domain/resolution";
+import type { FontScheme } from "@oxen-office/ooxml/domain/font-scheme";
 import type { RenderOptions } from "../../../render-options";
-import type { ColorContext } from "@oxen-office/pptx/domain/color/context";
+import type { ColorContext } from "@oxen-office/ooxml/domain/color-context";
 import type { Text3DRunConfig } from "../../../webgl/text3d";
 import { layoutTextBody, toLayoutInput } from "../../../text-layout";
 import { px } from "@oxen-office/ooxml/domain/units";

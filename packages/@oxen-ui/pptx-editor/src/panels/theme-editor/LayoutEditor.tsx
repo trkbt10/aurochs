@@ -7,7 +7,7 @@
 
 import { useCallback, useMemo, useEffect, type CSSProperties } from "react";
 import type { PresentationFile, SlideSize, Shape } from "@oxen-office/pptx/domain";
-import type { ColorScheme } from "@oxen-office/pptx/domain/color/context";
+import type { ColorScheme } from "@oxen-office/ooxml/domain/color-context";
 import type { SlideLayoutOption } from "@oxen-office/pptx/app";
 import { loadSlideLayoutBundle } from "@oxen-office/pptx/app";
 import { parseShapeTree } from "@oxen-office/pptx/parser";

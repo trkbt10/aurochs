@@ -8,8 +8,8 @@
 
 import { memo, type ReactNode } from "react";
 import type { ShadowEffect } from "@oxen-office/pptx/domain/effects";
-import type { ColorContext } from "@oxen-office/pptx/domain/color/context";
-import { resolveColor } from "@oxen-office/pptx/domain/color/resolution";
+import type { ColorContext } from "@oxen-office/ooxml/domain/color-context";
+import { resolveColor } from "@oxen-office/ooxml/domain/color-resolution";
 
 // =============================================================================
 // Types

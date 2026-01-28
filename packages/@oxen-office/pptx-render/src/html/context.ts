@@ -1,8 +1,8 @@
 /**
  * @file HTML render context
  *
- * For backward compatibility only.
- * Use RenderContext from ../context instead.
+ * Compatibility aliases for the core render context.
+ * Prefer importing from ../render-context.
  */
 
 import { px } from "@oxen-office/ooxml/domain/units";

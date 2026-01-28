@@ -6,7 +6,7 @@
 
 import type { XmlElement } from "@oxen/xml";
 import { isXmlElement, getChild, getChildren, getAttr, escapeXml } from "@oxen/xml";
-import type { ColorResolveContext } from "../../domain/color/context";
+import type { ColorResolveContext } from "@oxen-office/ooxml/domain/color-context";
 import type { ResourceContext } from "../slide/context";
 import { angleToDegrees } from "../../domain/unit-conversion";
 import { base64ArrayBuffer } from "@oxen/buffer";

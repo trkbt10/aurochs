@@ -10,7 +10,9 @@ import { borderId, colIdx, fillId, fontId, numFmtId, rowIdx, styleId, type ColIn
 import type { CellAddress } from "@oxen-office/xlsx/domain/cell/address";
 import type { Formula } from "@oxen-office/xlsx/domain/cell/formula";
 import { Button, Input } from "@oxen-ui/ui-components/primitives";
-import { parseSpreadsheetFile, SpreadsheetParseError } from "@lib/spreadsheet-parser";
+import { detectSpreadsheetFileType, parseXlsWithReport, type SpreadsheetFileType } from "@oxen-office/xls";
+import { createGetZipTextFileContentFromBytes } from "@oxen-office/ooxml/opc";
+import { parseXlsxWorkbook } from "@oxen-office/xlsx/parser";
 import { exportXlsx } from "@oxen-office/xlsx/exporter";
 
 const controlsStyle: CSSProperties = {
@@ -30,9 +32,47 @@ const editorFrameStyle: CSSProperties = {
   flexDirection: "column",
 };
 
+class SpreadsheetParseError extends Error {
+  constructor(
+    message: string,
+    public readonly fileType: SpreadsheetFileType,
+    public readonly cause?: unknown,
+  ) {
+    super(message);
+    this.name = "SpreadsheetParseError";
+  }
+}
+
 async function parseWorkbookFromFile(file: File): Promise<XlsxWorkbook> {
-  const data = await file.arrayBuffer();
-  return parseSpreadsheetFile(data);
+  const data = new Uint8Array(await file.arrayBuffer());
+  const fileType = detectSpreadsheetFileType(data);
+  if (fileType === "unknown") {
+    throw new SpreadsheetParseError("Unknown file format. Expected XLS or XLSX file.", fileType);
+  }
+
+  if (fileType === "xls") {
+    try {
+      const parsed = parseXlsWithReport(data, { mode: "lenient" });
+      return parsed.workbook;
+    } catch (cause) {
+      throw new SpreadsheetParseError(
+        `Failed to parse XLS file: ${cause instanceof Error ? cause.message : String(cause)}`,
+        fileType,
+        cause,
+      );
+    }
+  }
+
+  try {
+    const getFileContent = await createGetZipTextFileContentFromBytes(data);
+    return await parseXlsxWorkbook(getFileContent);
+  } catch (cause) {
+    throw new SpreadsheetParseError(
+      `Failed to parse XLSX file: ${cause instanceof Error ? cause.message : String(cause)}`,
+      fileType,
+      cause,
+    );
+  }
 }
 
 function downloadXlsx(bytes: Uint8Array, filename: string): void {

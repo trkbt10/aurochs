@@ -10,7 +10,7 @@
 import type { XmlElement } from "@oxen/xml";
 import { isXmlElement, getChild, getAttr } from "@oxen/xml";
 import { OOXML_PERCENT_FACTOR } from "../../domain/defaults";
-import type { ColorResolveContext } from "../../domain/color/context";
+import type { ColorResolveContext } from "@oxen-office/ooxml/domain/color-context";
 import {
   toHex,
   hslToRgb,

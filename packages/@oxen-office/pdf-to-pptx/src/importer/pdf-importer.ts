@@ -4,7 +4,7 @@
 
 import type { Pixels } from "@oxen-office/ooxml/domain/units";
 import type { ResourceResolver } from "@oxen-office/pptx/domain/resource-resolver";
-import type { ColorContext } from "@oxen-office/pptx/domain/color/context";
+import type { ColorContext } from "@oxen-office/ooxml/domain/color-context";
 import type { Presentation } from "@oxen-office/pptx/domain";
 import type { PresentationDocument, SlideWithId } from "@oxen-office/pptx/app/presentation-document";
 import type { Slide } from "@oxen-office/pptx/domain/slide/types";

@@ -22,8 +22,8 @@ import {
   feMergeNode,
 } from "./primitives";
 import { unsafeHtml } from "../html/primitives";
-import { resolveColor } from "@oxen-office/pptx/domain/color/resolution";
-import type { ColorContext } from "@oxen-office/pptx/domain/color/context";
+import { resolveColor } from "@oxen-office/ooxml/domain/color-resolution";
+import type { ColorContext } from "@oxen-office/ooxml/domain/color-context";
 
 // =============================================================================
 // Effect ID Generation

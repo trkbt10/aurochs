@@ -14,8 +14,8 @@ import { deg, pct } from "@oxen-office/ooxml/domain/units";
 import type { ColorSpec, SrgbColor, SchemeColor, SystemColor, PresetColor, HslColor } from "@oxen-office/ooxml/domain/color";
 import type { SolidFill } from "@oxen-office/ooxml/domain/fill";
 import type { EditorProps, SelectOption } from "@oxen-ui/ui-components/types";
-import type { ColorContext } from "@oxen-office/pptx/domain/color/context";
-import { resolveColor } from "@oxen-office/pptx/domain/color/resolution";
+import type { ColorContext } from "@oxen-office/ooxml/domain/color-context";
+import { resolveColor } from "@oxen-office/ooxml/domain/color-resolution";
 import { useEditorConfig } from "../../context/editor/EditorConfigContext";
 
 export type ColorSpecEditorProps = EditorProps<ColorSpec> & {

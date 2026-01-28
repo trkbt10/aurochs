@@ -15,8 +15,8 @@ import { openPresentation } from "@oxen-office/pptx";
 import { parseColorScheme, parseFontScheme, parseColorMap } from "@oxen-office/pptx/parser/drawing-ml/index";
 import { getByPath } from "@oxen/xml";
 import { getMimeTypeFromPath } from "@oxen-office/pptx/opc/utils";
-import type { ColorContext, ColorScheme, ColorMap } from "@oxen-office/pptx/domain/color/context";
-import type { FontScheme } from "@oxen-office/pptx/domain/resolution";
+import type { ColorContext, ColorScheme, ColorMap } from "@oxen-office/ooxml/domain/color-context";
+import type { FontScheme } from "@oxen-office/ooxml/domain/font-scheme";
 import type { ResourceResolver } from "@oxen-office/pptx/domain/resource-resolver";
 
 // Fixture path

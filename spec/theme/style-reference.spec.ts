@@ -11,7 +11,7 @@ import { loadPptxFile } from "../../scripts/lib/pptx-loader";
 import { openPresentation } from "@oxen-office/pptx";
 import { parseSlide } from "@oxen-office/pptx/parser/slide/slide-parser";
 import { renderSlideToSvg } from "@oxen-office/pptx-render/svg";
-import { resolveColor } from "@oxen-office/pptx/domain/color/resolution";
+import { resolveColor } from "@oxen-office/ooxml/domain/color-resolution";
 import { parseXml, getByPath } from "@oxen/xml";
 import { createParseContext } from "@oxen-office/pptx/parser/context";
 import { createSlideContext } from "@oxen-office/pptx/parser/slide/context";

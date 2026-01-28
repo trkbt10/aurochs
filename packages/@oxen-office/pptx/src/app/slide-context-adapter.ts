@@ -8,8 +8,8 @@
  */
 
 import type { SlideSize, Shape } from "../domain/index";
-import type { ColorContext } from "../domain/color/context";
-import type { FontScheme } from "../domain/resolution";
+import type { ColorContext } from "@oxen-office/ooxml/domain/color-context";
+import type { FontScheme } from "@oxen-office/ooxml/domain/font-scheme";
 import type { ResourceResolver } from "../domain/resource-resolver";
 import type { SlideContext } from "../parser/slide/context";
 import type { CoreRenderContext } from "../render/render-context";

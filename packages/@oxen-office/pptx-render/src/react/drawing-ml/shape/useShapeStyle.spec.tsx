@@ -9,7 +9,7 @@
 import { render } from "@testing-library/react";
 import type { Fill, Line, SlideSize } from "@oxen-office/pptx/domain";
 import type { Effects, ShadowEffect } from "@oxen-office/pptx/domain/effects";
-import type { ColorContext } from "@oxen-office/pptx/domain/color/context";
+import type { ColorContext } from "@oxen-office/ooxml/domain/color-context";
 import { px, deg, pct } from "@oxen-office/ooxml/domain/units";
 import { RenderProvider } from "../../context";
 import { SvgDefsProvider } from "../../hooks/useSvgDefs";

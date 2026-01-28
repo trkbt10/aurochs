@@ -5,7 +5,11 @@
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { exportXlsx } from "@oxen-office/xlsx/exporter";
-import { parseSpreadsheetFile } from "../../src/spreadsheet-parser";
+import { detectSpreadsheetFileType, parseXlsWithReport, type SpreadsheetFileType } from "@oxen-office/xls";
+import { createGetZipTextFileContentFromBytes } from "@oxen-office/ooxml/opc";
+import { createDefaultStyleSheet } from "@oxen-office/xlsx/domain/style/types";
+import { parseXlsxWorkbook } from "@oxen-office/xlsx/parser";
+import type { XlsxWorkbook } from "@oxen-office/xlsx/domain/workbook";
 
 const SPREADSHEET_DIR = path.join(process.cwd(), "fixtures", "poi-test-data", "test-data", "spreadsheet");
 
@@ -25,6 +29,47 @@ async function listSupportedSpreadsheetFiles(dir: string): Promise<readonly stri
   return files
     .filter((name) => forceTypeFromFileName(name) !== undefined)
     .sort((a, b) => a.localeCompare(b));
+}
+
+async function parseSpreadsheetFile(
+  bytes: Uint8Array,
+  options: { readonly forceType?: SpreadsheetFileType; readonly mode?: "strict" | "lenient" },
+): Promise<XlsxWorkbook> {
+  const fileType = options.forceType ?? detectSpreadsheetFileType(bytes);
+  const mode = options.mode ?? "strict";
+
+  if (fileType === "unknown") {
+    throw new Error("Unknown file format. Expected XLS or XLSX file.");
+  }
+
+  if (fileType === "xls") {
+    const parsed = parseXlsWithReport(bytes, { mode });
+    return parsed.workbook;
+  }
+
+  try {
+    const getFileContent = await createGetZipTextFileContentFromBytes(bytes);
+    return await parseXlsxWorkbook(getFileContent);
+  } catch (cause) {
+    if (mode === "lenient") {
+      return {
+        dateSystem: "1900",
+        sheets: [
+          {
+            dateSystem: "1900",
+            name: "Sheet1",
+            sheetId: 1,
+            state: "visible",
+            rows: [],
+            xmlPath: "xl/worksheets/sheet1.xml",
+          },
+        ],
+        styles: createDefaultStyleSheet(),
+        sharedStrings: [],
+      };
+    }
+    throw cause;
+  }
 }
 
 describe("POI spreadsheet fixtures: parse+export (all files)", () => {

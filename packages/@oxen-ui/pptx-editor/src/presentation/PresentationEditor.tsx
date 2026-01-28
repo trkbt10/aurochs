@@ -88,7 +88,7 @@ import { AssetPanel, LayoutInfoPanel, ThemeViewerPanel } from "../panels/inspect
 import { ThemeEditorTabs, ThemeEditorCanvas, extractThemeFromPptx } from "../panels/theme-editor";
 import type { ThemePreset } from "../panels/theme-editor/types";
 import type { SchemeColorName } from "@oxen-office/ooxml/domain/color";
-import type { FontSpec } from "@oxen-office/pptx/domain/resolution";
+import type { FontSpec } from "@oxen-office/ooxml/domain/font-scheme";
 import {
   editorContainerStyle,
   toolbarStyle,

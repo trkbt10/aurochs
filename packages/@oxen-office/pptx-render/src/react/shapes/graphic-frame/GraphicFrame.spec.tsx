@@ -12,7 +12,7 @@ import { render } from "@testing-library/react";
 import type { GraphicFrame as GraphicFrameType, Transform } from "@oxen-office/pptx/domain";
 import type { Table } from "@oxen-office/pptx/domain/table/types";
 import type { SlideSize } from "@oxen-office/pptx/domain";
-import type { ColorContext } from "@oxen-office/pptx/domain/color/context";
+import type { ColorContext } from "@oxen-office/ooxml/domain/color-context";
 import { createResourceStore, type ResourceStore } from "@oxen-office/pptx/domain/resource-store";
 import { px, deg } from "@oxen-office/ooxml/domain/units";
 import { RenderProvider } from "../../context";

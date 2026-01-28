@@ -8,7 +8,16 @@
 
 import type { XmlElement, XmlDocument } from "@oxen/xml";
 import { getAttr, getChild, getChildren, getByPath } from "@oxen/xml";
-import type { FontSpec, FontScheme, ColorScheme, ColorMap, FormatScheme, Theme, ObjectDefaults, CustomColor, ExtraColorScheme, RawMasterTextStyles } from "../../domain";
+import type { ColorMap, ColorScheme } from "@oxen-office/ooxml/domain/color-context";
+import type { FontScheme, FontSpec } from "@oxen-office/ooxml/domain/font-scheme";
+import type {
+  CustomColor,
+  ExtraColorScheme,
+  FormatScheme,
+  ObjectDefaults,
+  RawMasterTextStyles,
+  Theme,
+} from "../../domain";
 
 // =============================================================================
 // Font Scheme Parsing

@@ -7,8 +7,8 @@
 
 import type { Slide, Presentation, PresentationFile } from "../domain";
 import type { Pixels } from "@oxen-office/ooxml/domain/units";
-import type { ColorContext } from "../domain/color/context";
-import type { FontScheme } from "../domain/resolution";
+import type { ColorContext } from "@oxen-office/ooxml/domain/color-context";
+import type { FontScheme } from "@oxen-office/ooxml/domain/font-scheme";
 import type { ResourceResolver } from "../domain/resource-resolver";
 import type { ResolvedBackgroundFill } from "../render/background-fill";
 import type { Slide as ApiSlide } from "./types";

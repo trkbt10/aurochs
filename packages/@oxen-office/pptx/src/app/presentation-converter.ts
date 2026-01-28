@@ -9,8 +9,8 @@
 import type { LoadedPresentation } from "./pptx-loader";
 import type { PresentationDocument, SlideWithId } from "./presentation-document";
 import type { Presentation as DomainPresentation, PresentationFile } from "../domain";
-import type { ColorContext, ColorScheme, ColorMap } from "../domain/color/context";
-import type { FontScheme } from "../domain/resolution";
+import type { ColorContext, ColorScheme, ColorMap } from "@oxen-office/ooxml/domain/color-context";
+import type { FontScheme } from "@oxen-office/ooxml/domain/font-scheme";
 import type { ResourceResolver } from "../domain/resource-resolver";
 import type { Slide as ApiSlide } from "./types";
 import { parseSlide } from "../parser/slide/slide-parser";

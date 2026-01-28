@@ -8,7 +8,7 @@
 
 import { createElement, getChild, isXmlElement, type XmlDocument, type XmlElement } from "@oxen/xml";
 import type { Color, SchemeColorName } from "@oxen-office/ooxml/domain/color";
-import type { FontScheme } from "../../domain/resolution";
+import type { FontScheme } from "@oxen-office/ooxml/domain/font-scheme";
 import type { FormatScheme } from "../../domain/theme/types";
 import { replaceChildByName, updateDocumentRoot } from "../core/xml-mutator";
 import { patchSchemeColor } from "./color-scheme-patcher";

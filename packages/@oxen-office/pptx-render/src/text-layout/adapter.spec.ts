@@ -6,7 +6,7 @@
 
 import { toTextBoxConfig, toLayoutInput } from "./adapter";
 import type { TextBody, Paragraph, RunProperties, BulletStyle } from "@oxen-office/pptx/domain/text";
-import type { ColorContext } from "@oxen-office/pptx/domain/color/context";
+import type { ColorContext } from "@oxen-office/ooxml/domain/color-context";
 import type { Line, Fill } from "@oxen-office/pptx/domain/color/types";
 import { px, pt, deg, pct } from "@oxen-office/ooxml/domain/units";
 

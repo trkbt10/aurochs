@@ -1,2 +1,2 @@
-export * from "./diagram-patcher";
-
+export type { DiagramChange, DiagramFiles } from "./diagram-patcher";
+export { patchDiagram, patchDiagramNodeText } from "./diagram-patcher";

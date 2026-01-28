@@ -17,7 +17,7 @@ import { createTextGeometryWithShapesAsync, type TextGeometryResult } from "../g
 import { applyTextWarp } from "../geometry/text-warp";
 import type { TextWarp } from "@oxen-office/pptx/domain/text";
 // Color resolution (shared with React renderer)
-import { resolveColor } from "@oxen-office/pptx/domain/color/resolution";
+import { resolveColor } from "@oxen-office/ooxml/domain/color-resolution";
 // Effects imports
 import {
   applyAllEffects,

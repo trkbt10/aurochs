@@ -5,7 +5,7 @@
  */
 
 import { useCallback, type CSSProperties } from "react";
-import type { FontScheme, FontSpec } from "@oxen-office/pptx/domain/resolution";
+import type { FontScheme, FontSpec } from "@oxen-office/ooxml/domain/font-scheme";
 import { InspectorSection, Accordion, FieldGroup, FieldRow } from "@oxen-ui/ui-components/layout";
 import { Input } from "@oxen-ui/ui-components/primitives/Input";
 import { colorTokens, fontTokens, spacingTokens } from "@oxen-ui/ui-components/design-tokens";

@@ -11,7 +11,7 @@ import type {
 } from "../types";
 import type { Fill } from "../../color/types";
 import type { Color } from "@oxen-office/ooxml/domain/color";
-import type { ColorContext } from "../../color/context";
+import type { ColorContext } from "@oxen-office/ooxml/domain/color-context";
 import type { DiagramTreeNode } from "./tree-builder";
 import {
   resolveNodeStyle,
@@ -24,7 +24,7 @@ import {
   createEmptyColorContext,
   type StyleResolverContext,
 } from "./style-resolver";
-import { resolveColor } from "../../color/resolution";
+import { resolveColor } from "@oxen-office/ooxml/domain/color-resolution";
 
 // =============================================================================
 // Helper Functions for Testing Fill Types

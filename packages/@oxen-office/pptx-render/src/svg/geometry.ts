@@ -12,7 +12,7 @@ import { renderFillToStyle, renderLineToStyle } from "./fill";
 import { generateLineMarkers, type MarkerCollection } from "./marker";
 import { resolveFill, formatRgba } from "@oxen-office/pptx/domain/color/fill";
 import type { Fill, Line } from "@oxen-office/pptx/domain";
-import type { ColorContext } from "@oxen-office/pptx/domain/color/context";
+import type { ColorContext } from "@oxen-office/ooxml/domain/color-context";
 import { createGuideContext, evaluateGuides } from "@oxen-office/pptx/domain/shape-geometry/guide-engine";
 
 // =============================================================================

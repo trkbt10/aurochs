@@ -79,10 +79,6 @@
       "types": "./src/domain/unit-conversion.ts",
       "default": "./src/domain/unit-conversion.ts"
     },
-    "./domain/resolution": {
-      "types": "./src/domain/resolution.ts",
-      "default": "./src/domain/resolution.ts"
-    },
     "./domain/animation": {
       "types": "./src/domain/animation.ts",
       "default": "./src/domain/animation.ts"
@@ -147,17 +143,9 @@
       "types": "./src/domain/table/resolver.ts",
       "default": "./src/domain/table/resolver.ts"
     },
-    "./domain/color/context": {
-      "types": "./src/domain/color/context.ts",
-      "default": "./src/domain/color/context.ts"
-    },
     "./domain/color/fill": {
       "types": "./src/domain/color/fill.ts",
       "default": "./src/domain/color/fill.ts"
-    },
-    "./domain/color/resolution": {
-      "types": "./src/domain/color/resolution.ts",
-      "default": "./src/domain/color/resolution.ts"
     },
     "./domain/color/types": {
       "types": "./src/domain/color/types.ts",
