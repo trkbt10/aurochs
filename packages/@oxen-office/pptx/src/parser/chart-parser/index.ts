@@ -53,4 +53,13 @@ export { parseStockChart } from "./series/stock";
 export { parseSurfaceSeries, parseSurfaceChart } from "./series/surface";
 
 // Mapping
-export * from "./mapping";
+export type { ErrorBarDirection, ErrorBarType, ErrorValueType, TrendlineType } from "./mapping";
+export {
+  mapDataLabelPosition,
+  mapErrorBarDirection,
+  mapErrorBarType,
+  mapErrorValueType,
+  mapLegendPosition,
+  mapMarkerSymbol,
+  mapTrendlineType,
+} from "./mapping";

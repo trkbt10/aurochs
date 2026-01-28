@@ -16,31 +16,154 @@
  */
 
 // Core - Change detection and XML mutation
-export * from "./core";
+export type {
+  BlipFillChange,
+  EffectsChange,
+  FillChange,
+  GeometryChange,
+  LineChange,
+  PropertyChange,
+  ShapeAdded,
+  ShapeChange,
+  ShapeModified,
+  ShapeRemoved,
+  TextBodyChange,
+  TransformChange,
+} from "./core";
+export {
+  appendChild,
+  deepEqual,
+  detectShapePropertyChanges,
+  detectSlideChanges,
+  findElement,
+  findElements,
+  findShapeById,
+  getChangesByType,
+  getDocumentRoot,
+  getModifiedByProperty,
+  getShapeId,
+  getShapeIds,
+  hasChanges,
+  insertChildAt,
+  isEffectsEqual,
+  isFillEqual,
+  isGeometryEqual,
+  isLineEqual,
+  isTextBodyEqual,
+  isTransformEqual,
+  prependChild,
+  removeAttribute,
+  removeChildAt,
+  removeChildren,
+  removeShapeById,
+  replaceChild,
+  replaceChildAt,
+  replaceChildByName,
+  replaceShapeById,
+  setAttribute,
+  setAttributes,
+  setChildren,
+  updateAtPath,
+  updateChildByName,
+  updateDocumentRoot,
+} from "./core";
 
 // Slide - Slide-level patching
-export * from "./slide";
+export type { ShapeOperation } from "./slide";
+export { addShapeToTree, batchUpdateShapeTree, getSpTree, hasShapes, patchSlideXml, removeShapeFromTree } from "./slide";
 
 // Shape - Shape addition/serialization helpers
-export * from "./shape";
+export { extractShapeIds, generateShapeId, generateShapeName } from "./shape";
+export { serializeConnectionShape, serializeGroupShape, serializePicture, serializeShape } from "./shape";
 
 // Resources - media/relationships/content-types helpers (Phase 7)
-export * from "./resources/media-manager";
-export * from "./resources/relationship-manager";
-export * from "./resources/content-types-manager";
+export type { MediaType } from "./resources/media-manager";
+export { addMedia, findUnusedMedia, removeMediaReference } from "./resources/media-manager";
+
+export type { RelationshipInfo, RelationshipType } from "./resources/relationship-manager";
+export {
+  addRelationship,
+  ensureRelationshipsDocument,
+  generateRelationshipId,
+  listRelationships,
+  removeRelationship,
+} from "./resources/relationship-manager";
+
+export { addContentType, addOverride, removeUnusedContentTypes } from "./resources/content-types-manager";
 
 // Phase 9: Master / Layout / Theme
-export * from "./master";
-export * from "./theme";
+export type { BulletElementName, PlaceholderChange } from "./master";
+export {
+  patchBodyStyle,
+  patchDefaultTextStyle,
+  patchLayoutPlaceholders,
+  patchLayoutShapes,
+  patchMasterShapes,
+  patchTextStyleLevelByNumber,
+  patchTextStyleLevelElement,
+  patchTextStyleLevelsElement,
+  patchTitleStyle,
+} from "./master";
+
+export type { ColorSchemePatch, ThemeChange } from "./theme";
+export { patchMajorFont, patchMinorFont, patchSchemeColor, patchTheme } from "./theme";
 
 // Presentation - slide structure management
-export * from "./presentation";
+export type { SlideAddResult, SlideDuplicateResult, SlideRemoveResult, SlideReorderResult } from "./presentation";
+export { addSlide, duplicateSlide, generateSlideId, generateSlideRId, removeSlide, reorderSlide } from "./presentation";
 
 // Parts - shared XML part updaters
-export * from "./parts";
+export { addSlideToList, removeSlideFromList, reorderSlideInList } from "./parts";
 
 // Phase 10: Advanced elements (chart/table/diagram/OLE)
-export * from "./chart";
-export * from "./table";
-export * from "./diagram";
-export * from "./ole";
+export type {
+  CellAddress,
+  CellRange,
+  ChartChange,
+  ChartData,
+  ChartDataUpdate,
+  ChartExternalDataReference,
+  ChartPatchTarget,
+  ChartSeries,
+  ChartStyle,
+} from "./chart";
+export {
+  columnLetterToIndex,
+  composeFormula,
+  createRange,
+  expandRangeForItems,
+  extractChartDataFromWorkbook,
+  findExternalDataElement,
+  formatCellRef,
+  formatRange,
+  getRangeCellCount,
+  getRangeCells,
+  hasExternalData,
+  indexToColumnLetter,
+  isColumnRange,
+  isRowRange,
+  parseCellRef,
+  parseFormulaSheetName,
+  parseRange,
+  patchChart,
+  patchChartData,
+  patchChartElement,
+  patchChartStyle,
+  patchChartTitle,
+  patchChartTransform,
+  patchSeriesData,
+  quoteSheetName,
+  resolveChartExternalData,
+  resolveEmbeddedXlsxPath,
+  syncChartToWorkbook,
+  updateRangeForItemCount,
+} from "./chart";
+
+export type { TableChange } from "./table";
+export { addTableColumn, addTableRow, patchTable, patchTableCell, patchTableStyleId } from "./table";
+
+export type { DiagramChange, DiagramFiles } from "./diagram";
+export { patchDiagram, patchDiagramNodeText } from "./diagram";
+
+export type { OleChange } from "./ole";
+export { patchOleObject } from "./ole";

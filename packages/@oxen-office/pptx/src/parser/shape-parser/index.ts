@@ -8,13 +8,19 @@
 export { parseShapeElement, parseShapeTree } from "./parse-element";
 
 // Submodule exports
-export * from "./placeholder";
-export * from "./non-visual";
-export * from "./style";
-export * from "./properties";
-export * from "./alternate-content";
-export * from "./content-part";
-export * from "./sp";
+export type { ResolvedPlaceholders } from "./placeholder";
+export { getPlaceholderTypeFromNode, resolveLayoutAndMasterNodes, resolvePlaceholderType } from "./placeholder";
+export { parseNonVisualMedia, parseNonVisualProperties, parsePlaceholder } from "./non-visual";
+export { parseFontReference, parseShapeStyle, parseStyleReference } from "./style";
+export {
+  findFirstDefined,
+  parseGroupShapeProperties,
+  parseShapeProperties,
+  parseShapePropertiesWithInheritance,
+} from "./properties";
+export { getBlipFillElement, getOleObjElement, isChoiceSupported, processAlternateContent } from "./alternate-content";
+export { parseContentPartShape } from "./content-part";
+export { parseSpShape } from "./sp";
 export { parsePicShape, parseBlipFillProperties } from "./pic";
-export * from "./cxn";
-export * from "./graphic-frame";
+export { parseCxnShape } from "./cxn";
+export { parseGraphicFrame } from "./graphic-frame";
