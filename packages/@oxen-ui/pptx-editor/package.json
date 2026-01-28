@@ -7,6 +7,7 @@
   "dependencies": {
     "@oxen-office/pptx": "workspace:*",
     "@oxen-office/pptx-render": "workspace:*",
+    "@oxen-ui/editor-core": "workspace:*",
     "@oxen-ui/ui-components": "workspace:*",
     "@oxen-ui/xlsx-editor": "workspace:*",
     "react-panel-layout": "^0.6.1"
@@ -16,6 +17,7 @@
     "react-dom": "^18.0.0 || ^19.0.0"
   },
   "scripts": {
+    "lint": "eslint src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@oxen-ui/pptx-editor/src'"
   },

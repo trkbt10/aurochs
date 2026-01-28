@@ -1,26 +1,26 @@
 {
-  "name": "@oxen-office/text-layout",
+  "name": "@oxen-ui/editor-core",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "sideEffects": false,
-  "dependencies": {
-    "@oxen-office/docx": "workspace:*",
-    "@oxen-office/ooxml": "workspace:*",
-    "@oxen/text": "workspace:*"
-  },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0"
   },
   "scripts": {
     "lint": "eslint src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@oxen-office/text-layout/src'"
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@oxen-ui/editor-core/src'"
   },
   "exports": {
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./history": {
+      "types": "./src/history.ts",
+      "default": "./src/history.ts"
     }
   }
 }
+

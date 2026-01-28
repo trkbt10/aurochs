@@ -9,6 +9,7 @@
     "pngjs": "^7.0.0"
   },
   "scripts": {
+    "lint": "eslint src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@oxen/png/src'"
   },

@@ -12,6 +12,7 @@
     "jpeg-js": "^0.4.4"
   },
   "scripts": {
+    "lint": "eslint src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@oxen/pdf/src'"
   },
