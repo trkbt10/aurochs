@@ -177,6 +177,11 @@ function PathDetails({ glyph }: { glyph: GlyphContour }) {
 
 
 
+
+
+
+
+
 export function GlyphTestPage({ onBack }: GlyphTestPageProps) {
   const [inputText, setInputText] = useState(DEFAULT_CHARS);
   const [fontFamily, setFontFamily] = useState(DEFAULT_FONT);

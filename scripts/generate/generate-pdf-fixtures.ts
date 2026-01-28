@@ -35,6 +35,11 @@ const FIXTURES: readonly FixtureWriter[] = [
   { fileName: "mixed-content.pdf", generate: async ({ outputDir }) => copyFixtureToDir(outputDir, "mixed-content.pdf") },
 ];
 
+
+
+
+
+
 export async function generatePdfFixtures(
   options: GeneratePdfFixturesOptions,
 ): Promise<readonly string[]> {
@@ -60,11 +65,11 @@ function parseArgs(argv: readonly string[]): GeneratePdfFixturesOptions {
 
   while (args.length > 0) {
     const arg = args.shift();
-    if (!arg) break;
+    if (!arg) {break;}
 
     if (arg === "--outputDir") {
       const value = args.shift();
-      if (!value) throw new Error("--outputDir requires a value");
+      if (!value) {throw new Error("--outputDir requires a value");}
       outputDir = value;
       continue;
     }

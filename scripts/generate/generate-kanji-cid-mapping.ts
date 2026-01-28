@@ -29,17 +29,17 @@ function parseArgs(argv: readonly string[]): Args {
 
   while (args.length > 0) {
     const arg = args.shift();
-    if (!arg) break;
+    if (!arg) {break;}
 
     if (arg === "--cmapUrl") {
       const value = args.shift();
-      if (!value) throw new Error("--cmapUrl requires a value");
+      if (!value) {throw new Error("--cmapUrl requires a value");}
       cmapUrl = value;
       continue;
     }
     if (arg === "--output") {
       const value = args.shift();
-      if (!value) throw new Error("--output requires a value");
+      if (!value) {throw new Error("--output requires a value");}
       outputPath = value;
       continue;
     }

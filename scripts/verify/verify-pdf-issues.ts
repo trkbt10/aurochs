@@ -52,7 +52,7 @@ async function main() {
   // Show first 5 text contents
   let textCount = 0;
   for (const shape of textShapes) {
-    if (shape.type !== "sp" || !shape.textBody) continue;
+    if (shape.type !== "sp" || !shape.textBody) {continue;}
     for (const para of shape.textBody.paragraphs) {
       for (const run of para.runs) {
         if (run.type === "text" && textCount < 5) {

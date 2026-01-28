@@ -1,8 +1,18 @@
 import { existsSync } from "node:fs";
 
+
+
+
+
+
 export function usageError(message: string, usage: string): Error {
   return new Error(`${message}\n\nUsage:\n  ${usage}`);
 }
+
+
+
+
+
 
 export function requirePositionalArg(
   args: readonly string[],
@@ -17,6 +27,11 @@ export function requirePositionalArg(
   return value;
 }
 
+
+
+
+
+
 export function optionalIntArg(value: string | undefined, name: string, usage: string): number | undefined {
   if (value === undefined) {
     return undefined;
@@ -28,6 +43,11 @@ export function optionalIntArg(value: string | undefined, name: string, usage: s
   return parsed;
 }
 
+
+
+
+
+
 export function requireIntArg(value: string | undefined, name: string, usage: string): number {
   const parsed = optionalIntArg(value, name, usage);
   if (parsed === undefined) {
@@ -35,6 +55,11 @@ export function requireIntArg(value: string | undefined, name: string, usage: st
   }
   return parsed;
 }
+
+
+
+
+
 
 export function requireFileExists(filePath: string, usage: string): void {
   if (!existsSync(filePath)) {

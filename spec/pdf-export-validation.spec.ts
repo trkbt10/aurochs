@@ -103,7 +103,7 @@ describe("PDF Export Validation", () => {
     it("includes all OPC required files", async () => {
       const pdfPath = path.join(FIXTURES_DIR, "simple-rect.pdf");
       const pdfBuffer = readFixtureOrSkip(pdfPath);
-      if (!pdfBuffer) return;
+      if (!pdfBuffer) {return;}
 
       const { document } = await importPdf(pdfBuffer, {
         slideSize: { width: SLIDE_WIDTH, height: SLIDE_HEIGHT },
@@ -123,7 +123,7 @@ describe("PDF Export Validation", () => {
     it("includes all PPTX required files", async () => {
       const pdfPath = path.join(FIXTURES_DIR, "simple-rect.pdf");
       const pdfBuffer = readFixtureOrSkip(pdfPath);
-      if (!pdfBuffer) return;
+      if (!pdfBuffer) {return;}
 
       const { document } = await importPdf(pdfBuffer, {
         slideSize: { width: SLIDE_WIDTH, height: SLIDE_HEIGHT },
@@ -143,7 +143,7 @@ describe("PDF Export Validation", () => {
     it("includes slide files and their relationships", async () => {
       const pdfPath = path.join(FIXTURES_DIR, "simple-rect.pdf");
       const pdfBuffer = readFixtureOrSkip(pdfPath);
-      if (!pdfBuffer) return;
+      if (!pdfBuffer) {return;}
 
       const { document, pageCount } = await importPdf(pdfBuffer, {
         slideSize: { width: SLIDE_WIDTH, height: SLIDE_HEIGHT },
@@ -164,7 +164,7 @@ describe("PDF Export Validation", () => {
     it("_rels/.rels contains required relationships", async () => {
       const pdfPath = path.join(FIXTURES_DIR, "simple-rect.pdf");
       const pdfBuffer = readFixtureOrSkip(pdfPath);
-      if (!pdfBuffer) return;
+      if (!pdfBuffer) {return;}
 
       const { document } = await importPdf(pdfBuffer, {
         slideSize: { width: SLIDE_WIDTH, height: SLIDE_HEIGHT },
@@ -185,7 +185,7 @@ describe("PDF Export Validation", () => {
     it("multi-page PDF includes all required files", async () => {
       const pdfPath = path.join(SAMPLES_DIR, "modeling.pdf");
       const pdfBuffer = readFixtureOrSkip(pdfPath);
-      if (!pdfBuffer) return;
+      if (!pdfBuffer) {return;}
 
       const { document, pageCount } = await importPdf(pdfBuffer, {
         slideSize: { width: SLIDE_WIDTH, height: SLIDE_HEIGHT },
@@ -208,7 +208,7 @@ describe("PDF Export Validation", () => {
     it("exports a valid ZIP file", async () => {
       const pdfPath = path.join(FIXTURES_DIR, "simple-rect.pdf");
       const pdfBuffer = readFixtureOrSkip(pdfPath);
-      if (!pdfBuffer) return;
+      if (!pdfBuffer) {return;}
 
       const { document } = await importPdf(pdfBuffer, {
         slideSize: { width: SLIDE_WIDTH, height: SLIDE_HEIGHT },
@@ -237,7 +237,7 @@ describe("PDF Export Validation", () => {
     it("exports slides correctly", async () => {
       const pdfPath = path.join(FIXTURES_DIR, "simple-rect.pdf");
       const pdfBuffer = readFixtureOrSkip(pdfPath);
-      if (!pdfBuffer) return;
+      if (!pdfBuffer) {return;}
 
       const { document, pageCount } = await importPdf(pdfBuffer, {
         slideSize: { width: SLIDE_WIDTH, height: SLIDE_HEIGHT },
@@ -261,7 +261,7 @@ describe("PDF Export Validation", () => {
     it("exports valid Content_Types.xml", async () => {
       const pdfPath = path.join(FIXTURES_DIR, "simple-rect.pdf");
       const pdfBuffer = readFixtureOrSkip(pdfPath);
-      if (!pdfBuffer) return;
+      if (!pdfBuffer) {return;}
 
       const { document } = await importPdf(pdfBuffer, {
         slideSize: { width: SLIDE_WIDTH, height: SLIDE_HEIGHT },
@@ -283,7 +283,7 @@ describe("PDF Export Validation", () => {
     it("exports valid presentation.xml", async () => {
       const pdfPath = path.join(FIXTURES_DIR, "simple-rect.pdf");
       const pdfBuffer = readFixtureOrSkip(pdfPath);
-      if (!pdfBuffer) return;
+      if (!pdfBuffer) {return;}
 
       const { document } = await importPdf(pdfBuffer, {
         slideSize: { width: SLIDE_WIDTH, height: SLIDE_HEIGHT },
@@ -305,7 +305,7 @@ describe("PDF Export Validation", () => {
     it("exports valid slide XML with shapes", async () => {
       const pdfPath = path.join(FIXTURES_DIR, "simple-rect.pdf");
       const pdfBuffer = readFixtureOrSkip(pdfPath);
-      if (!pdfBuffer) return;
+      if (!pdfBuffer) {return;}
 
       const { document } = await importPdf(pdfBuffer, {
         slideSize: { width: SLIDE_WIDTH, height: SLIDE_HEIGHT },
@@ -332,7 +332,7 @@ describe("PDF Export Validation", () => {
     it("exports valid presentation relationships", async () => {
       const pdfPath = path.join(FIXTURES_DIR, "simple-rect.pdf");
       const pdfBuffer = readFixtureOrSkip(pdfPath);
-      if (!pdfBuffer) return;
+      if (!pdfBuffer) {return;}
 
       const { document } = await importPdf(pdfBuffer, {
         slideSize: { width: SLIDE_WIDTH, height: SLIDE_HEIGHT },
@@ -357,7 +357,7 @@ describe("PDF Export Validation", () => {
     it("exports valid slide relationships", async () => {
       const pdfPath = path.join(FIXTURES_DIR, "simple-rect.pdf");
       const pdfBuffer = readFixtureOrSkip(pdfPath);
-      if (!pdfBuffer) return;
+      if (!pdfBuffer) {return;}
 
       const { document } = await importPdf(pdfBuffer, {
         slideSize: { width: SLIDE_WIDTH, height: SLIDE_HEIGHT },
@@ -384,7 +384,7 @@ describe("PDF Export Validation", () => {
     it("exports PDF with images correctly", async () => {
       const pdfPath = path.join(SAMPLES_DIR, "modeling.pdf");
       const pdfBuffer = readFixtureOrSkip(pdfPath);
-      if (!pdfBuffer) return;
+      if (!pdfBuffer) {return;}
 
       const { document } = await importPdf(pdfBuffer, {
         slideSize: { width: SLIDE_WIDTH, height: SLIDE_HEIGHT },
@@ -424,7 +424,7 @@ describe("PDF Export Validation", () => {
     it("exports multi-page PDF correctly", async () => {
       const pdfPath = path.join(FIXTURES_DIR, "multi-page.pdf");
       const pdfBuffer = readFixtureOrSkip(pdfPath);
-      if (!pdfBuffer) return;
+      if (!pdfBuffer) {return;}
 
       const { document, pageCount } = await importPdf(pdfBuffer, {
         slideSize: { width: SLIDE_WIDTH, height: SLIDE_HEIGHT },
@@ -467,7 +467,7 @@ describe("PDF Export Validation", () => {
     it("exported PPTX can be reloaded with loadPptxFromBuffer", async () => {
       const pdfPath = path.join(FIXTURES_DIR, "simple-rect.pdf");
       const pdfBuffer = readFixtureOrSkip(pdfPath);
-      if (!pdfBuffer) return;
+      if (!pdfBuffer) {return;}
 
       // Import PDF
       const { document } = await importPdf(pdfBuffer, {
@@ -487,7 +487,7 @@ describe("PDF Export Validation", () => {
     it("complex PDF export can be reloaded", async () => {
       const pdfPath = path.join(SAMPLES_DIR, "modeling.pdf");
       const pdfBuffer = readFixtureOrSkip(pdfPath);
-      if (!pdfBuffer) return;
+      if (!pdfBuffer) {return;}
 
       const { document, pageCount } = await importPdf(pdfBuffer, {
         slideSize: { width: SLIDE_WIDTH, height: SLIDE_HEIGHT },

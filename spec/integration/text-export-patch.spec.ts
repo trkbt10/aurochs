@@ -66,7 +66,7 @@ describe("patchSlideXml (textBody) integration", () => {
     const patchedRoot = patched.children.find(isXmlElement)!;
     const patchedSpTree = getChild(getChild(patchedRoot, "p:cSld")!, "p:spTree")!;
     const patchedShape = patchedSpTree.children.find((c) => {
-      if (!isXmlElement(c) || c.name !== "p:sp") return false;
+      if (!isXmlElement(c) || c.name !== "p:sp") {return false;}
       const id = getChild(getChild(c, "p:nvSpPr")!, "p:cNvPr")?.attrs.id;
       return id === shapeId;
     });

@@ -91,9 +91,19 @@ export const categories: readonly CategoryRoute[] = [
 
 
 
+
+
+
+
+
 export function findCategory(categoryId: string): CategoryRoute | undefined {
   return categories.find((c) => c.id === categoryId);
 }
+
+
+
+
+
 
 
 
@@ -104,6 +114,11 @@ export function findFeature(categoryId: string, featureId: string): FeatureRoute
   const category = findCategory(categoryId);
   return category?.features.find((f) => f.id === featureId);
 }
+
+
+
+
+
 
 
 

@@ -28,11 +28,11 @@ function parseArgs(argv: readonly string[]): GeneratePdfkitFixturesOptions {
 
   while (args.length > 0) {
     const arg = args.shift();
-    if (!arg) break;
+    if (!arg) {break;}
 
     if (arg === "--outputDir") {
       const value = args.shift();
-      if (!value) throw new Error("--outputDir requires a value");
+      if (!value) {throw new Error("--outputDir requires a value");}
       outputDir = value;
       continue;
     }
@@ -221,11 +221,16 @@ const FIXTURES: readonly FixtureWriter[] = [
   },
 ];
 
+
+
+
+
+
 export async function generatePdfkitFixtures(
   options: GeneratePdfkitFixturesOptions,
 ): Promise<readonly string[]> {
-  if (!options) throw new Error("options is required");
-  if (!options.outputDir) throw new Error("options.outputDir is required");
+  if (!options) {throw new Error("options is required");}
+  if (!options.outputDir) {throw new Error("options.outputDir is required");}
 
   fs.mkdirSync(options.outputDir, { recursive: true });
 

@@ -45,6 +45,11 @@ const fillGradientStyle: CSSProperties = {
 
 
 
+
+
+
+
+
 export function ProgressBar({ progress, variant = "dark", className }: Props) {
   const trackStyle = trackStyles[variant];
   const barStyle = variant === "light" ? fillGradientStyle : fillStyle;
