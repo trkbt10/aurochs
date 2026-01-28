@@ -127,6 +127,11 @@ function parseCurveTag(tag: Uint8Array): IccCurve | null {
   return null;
 }
 
+
+
+
+
+
 export function evalIccCurve(curve: IccCurve, x01: number): number {
   const x = Math.min(1, Math.max(0, x01));
   if (curve.kind === "gamma") {
@@ -187,6 +192,11 @@ function invertMat3(m: readonly number[]): readonly number[] | null {
     (a11 * a00 - a01 * a10) * invDet,
   ];
 }
+
+
+
+
+
 
 export function makeBradfordAdaptationMatrix(args: {
   readonly srcWhitePoint: readonly [number, number, number];
@@ -361,6 +371,11 @@ function parseLutTag(tag: Uint8Array): IccLutTransform | null {
   };
 }
 
+
+
+
+
+
 export function evalIccLutToPcs01(profile: IccLutProfile, inputs01: readonly number[]): readonly [number, number, number] | null {
   const lut = profile.a2b0;
   if (lut.outChannels !== 3) {return null;}
@@ -442,6 +457,11 @@ export function evalIccLutToPcs01(profile: IccLutProfile, inputs01: readonly num
   const o2 = evalIccTable(lut.outputTables[2] ?? [], out[2]);
   return [o0, o1, o2] as const;
 }
+
+
+
+
+
 
 export function parseIccProfile(bytes: Uint8Array): ParsedIccProfile | null {
   if (!bytes) {throw new Error("bytes is required");}

@@ -37,6 +37,11 @@ function applyConstantAlphaToByte(a: number, mul: number): number {
   return Math.round(a * m);
 }
 
+
+
+
+
+
 export function applyGraphicsSoftMaskToPdfImage(image: PdfImage): PdfImage {
   const gs = image.graphicsState;
   const softMaskAlpha = gs.softMaskAlpha ?? 1;

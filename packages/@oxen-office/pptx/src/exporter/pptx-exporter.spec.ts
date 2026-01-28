@@ -45,7 +45,7 @@ describe("exportPptx", () => {
         },
         readBinary(path: string): ArrayBuffer | null {
           const text = files[path];
-          if (!text) return null;
+          if (!text) {return null;}
           const encoder = new TextEncoder();
           return encoder.encode(text).buffer;
         },

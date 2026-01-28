@@ -58,7 +58,7 @@ export const textEditHandlers: HandlerMap = {
     textEdit: createInitialTextEditState(),
   }),
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- action will be used in Phase 4
+   
   INSERT_TEXT: (state, _action) => {
     if (!state.textEdit.isEditing) {
       return state;
@@ -67,7 +67,7 @@ export const textEditHandlers: HandlerMap = {
     return state;
   },
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- action will be used in Phase 4
+   
   DELETE_TEXT: (state, _action) => {
     if (!state.textEdit.isEditing) {
       return state;

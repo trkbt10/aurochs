@@ -101,13 +101,13 @@ export function createResourceStore(): ResourceStore {
 
     toDataUrl(id: ResourceId): string | undefined {
       const entry = store.get(id);
-      if (!entry?.data || !entry.mimeType) return undefined;
+      if (!entry?.data || !entry.mimeType) {return undefined;}
       return toDataUrl(entry.data, entry.mimeType);
     },
 
     *getBySlide(slideId: string): Iterable<ResourceId> {
       for (const [id, entry] of store) {
-        if (entry.slideId === slideId) yield id;
+        if (entry.slideId === slideId) {yield id;}
       }
     },
 

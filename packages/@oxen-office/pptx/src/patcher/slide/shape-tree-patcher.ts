@@ -112,8 +112,8 @@ function getShapesStartIndex(container: XmlElement): number {
 function findDirectChildShapeIndexById(container: XmlElement, shapeId: string): number {
   for (let i = 0; i < container.children.length; i++) {
     const child = container.children[i];
-    if (!isXmlElement(child)) continue;
-    if (!isDirectShapeElement(child)) continue;
+    if (!isXmlElement(child)) {continue;}
+    if (!isDirectShapeElement(child)) {continue;}
     if (getNonVisualId(child) === shapeId) {
       return i;
     }
@@ -136,7 +136,7 @@ function getNonVisualId(shapeEl: XmlElement): string | undefined {
 
   for (const nvPrName of nvPrNames) {
     const nvPr = shapeEl.children.find((c): c is XmlElement => isXmlElement(c) && c.name === nvPrName);
-    if (!nvPr) continue;
+    if (!nvPr) {continue;}
     const cNvPr = nvPr.children.find((c): c is XmlElement => isXmlElement(c) && c.name === "p:cNvPr");
     if (cNvPr?.attrs.id) {
       return cNvPr.attrs.id;

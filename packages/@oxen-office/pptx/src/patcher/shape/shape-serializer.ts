@@ -397,10 +397,10 @@ function serializeNvPr(placeholder: SpShape["placeholder"]): XmlElement {
   const children: XmlElement[] = [];
   if (placeholder) {
     const attrs: Record<string, string> = {};
-    if (placeholder.type) attrs.type = placeholder.type;
-    if (placeholder.idx !== undefined) attrs.idx = String(placeholder.idx);
-    if (placeholder.size) attrs.sz = placeholder.size;
-    if (placeholder.hasCustomPrompt !== undefined) attrs.hasCustomPrompt = placeholder.hasCustomPrompt ? "1" : "0";
+    if (placeholder.type) {attrs.type = placeholder.type;}
+    if (placeholder.idx !== undefined) {attrs.idx = String(placeholder.idx);}
+    if (placeholder.size) {attrs.sz = placeholder.size;}
+    if (placeholder.hasCustomPrompt !== undefined) {attrs.hasCustomPrompt = placeholder.hasCustomPrompt ? "1" : "0";}
     children.push(createElement("p:ph", attrs));
   }
   return createElement("p:nvPr", {}, children);
@@ -411,8 +411,8 @@ function serializeGroupTransform(transform: GroupTransform): XmlElement {
   if (Number(transform.rotation) !== 0) {
     attrs.rot = ooxmlAngleUnits(transform.rotation);
   }
-  if (transform.flipH) attrs.flipH = "1";
-  if (transform.flipV) attrs.flipV = "1";
+  if (transform.flipH) {attrs.flipH = "1";}
+  if (transform.flipV) {attrs.flipV = "1";}
 
   return createElement("a:xfrm", attrs, [
     createElement("a:off", { x: ooxmlEmu(transform.x), y: ooxmlEmu(transform.y) }),
@@ -421,6 +421,11 @@ function serializeGroupTransform(transform: GroupTransform): XmlElement {
     createElement("a:chExt", { cx: ooxmlEmu(transform.childExtentWidth), cy: ooxmlEmu(transform.childExtentHeight) }),
   ]);
 }
+
+
+
+
+
 
 export function serializeGeometry(geometry: Geometry): XmlElement {
   switch (geometry.type) {
@@ -623,12 +628,12 @@ function serializeGraphicFrameCNvPr(nonVisual: GraphicFrame["nonVisual"]): XmlEl
  */
 function serializeGraphicFrameLocks(locks: NonNullable<GraphicFrame["nonVisual"]["graphicFrameLocks"]>): XmlElement {
   const attrs: Record<string, string> = {};
-  if (locks.noGrp !== undefined) attrs.noGrp = ooxmlBool(locks.noGrp);
-  if (locks.noDrilldown !== undefined) attrs.noDrilldown = ooxmlBool(locks.noDrilldown);
-  if (locks.noSelect !== undefined) attrs.noSelect = ooxmlBool(locks.noSelect);
-  if (locks.noChangeAspect !== undefined) attrs.noChangeAspect = ooxmlBool(locks.noChangeAspect);
-  if (locks.noMove !== undefined) attrs.noMove = ooxmlBool(locks.noMove);
-  if (locks.noResize !== undefined) attrs.noResize = ooxmlBool(locks.noResize);
+  if (locks.noGrp !== undefined) {attrs.noGrp = ooxmlBool(locks.noGrp);}
+  if (locks.noDrilldown !== undefined) {attrs.noDrilldown = ooxmlBool(locks.noDrilldown);}
+  if (locks.noSelect !== undefined) {attrs.noSelect = ooxmlBool(locks.noSelect);}
+  if (locks.noChangeAspect !== undefined) {attrs.noChangeAspect = ooxmlBool(locks.noChangeAspect);}
+  if (locks.noMove !== undefined) {attrs.noMove = ooxmlBool(locks.noMove);}
+  if (locks.noResize !== undefined) {attrs.noResize = ooxmlBool(locks.noResize);}
 
   return createElement("a:graphicFrameLocks", attrs);
 }
@@ -641,8 +646,8 @@ function serializeGraphicFrameTransform(transform: GraphicFrame["transform"]): X
   if (transform.rotation && Number(transform.rotation) !== 0) {
     attrs.rot = ooxmlAngleUnits(transform.rotation);
   }
-  if (transform.flipH) attrs.flipH = "1";
-  if (transform.flipV) attrs.flipV = "1";
+  if (transform.flipH) {attrs.flipH = "1";}
+  if (transform.flipV) {attrs.flipV = "1";}
 
   return createElement("p:xfrm", attrs, [
     createElement("a:off", { x: ooxmlEmu(transform.x), y: ooxmlEmu(transform.y) }),

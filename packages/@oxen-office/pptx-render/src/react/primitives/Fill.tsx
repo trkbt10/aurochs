@@ -234,7 +234,7 @@ export function useFillWithDefs(
     // 1. Check ResourceStore first
     if (resourceStore !== undefined) {
       const url = resourceStore.toDataUrl(resourceId);
-      if (url !== undefined) return url;
+      if (url !== undefined) {return url;}
     }
     // 2. Fall back to legacy resolver
     return resources.resolve(resourceId);
@@ -277,7 +277,7 @@ export function useFill(
     // 1. Check ResourceStore first
     if (resourceStore !== undefined) {
       const url = resourceStore.toDataUrl(resourceId);
-      if (url !== undefined) return url;
+      if (url !== undefined) {return url;}
     }
     // 2. Fall back to legacy resolver
     return resources.resolve(resourceId);

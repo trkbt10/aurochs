@@ -245,6 +245,11 @@ function computePathBBox(subpaths: readonly FlattenedSubpath[]): PdfBBox | null 
   return [minX, minY, maxX, maxY];
 }
 
+
+
+
+
+
 export function rasterizeShadingPatternFillPath(
   parsed: ParsedPath,
   pattern: PdfShadingPattern,

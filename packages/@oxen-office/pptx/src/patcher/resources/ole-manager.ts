@@ -242,7 +242,7 @@ function buildRelationshipTarget(sourcePart: string, targetPart: string): string
  */
 function getDirectory(path: string): string {
   const lastSlash = path.lastIndexOf("/");
-  if (lastSlash === -1) return "";
+  if (lastSlash === -1) {return "";}
   return path.slice(0, lastSlash);
 }
 

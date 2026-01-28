@@ -18,7 +18,7 @@ export type SaslprepOptions = Readonly<{
 }>;
 
 function inRange(value: number, rangeGroup: readonly number[]): boolean {
-  if (value < (rangeGroup[0] ?? 0)) return false;
+  if (value < (rangeGroup[0] ?? 0)) {return false;}
   let startRange = 0;
   let endRange = rangeGroup.length / 2;
   while (startRange <= endRange) {

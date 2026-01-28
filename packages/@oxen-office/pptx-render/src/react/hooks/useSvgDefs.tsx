@@ -218,6 +218,11 @@ type LinearGradientDefProps = {
 
 
 
+
+
+
+
+
 export function LinearGradientDef({
   id,
   x1 = "0%",
@@ -264,6 +269,11 @@ type RadialGradientDefProps = {
   readonly gradientUnits?: "userSpaceOnUse" | "objectBoundingBox";
   readonly children: ReactNode;
 };
+
+
+
+
+
 
 
 
@@ -324,6 +334,11 @@ type PatternDefProps = {
 
 
 
+
+
+
+
+
 export function PatternDef({
   id,
   x,
@@ -366,6 +381,11 @@ type ClipPathDefProps = {
   readonly clipPathUnits?: "userSpaceOnUse" | "objectBoundingBox";
   readonly children: ReactNode;
 };
+
+
+
+
+
 
 
 

@@ -108,6 +108,11 @@ function serializeTableCell(cell: TableCell): XmlElement {
   return createElement("a:tc", attrs, [txBody, tcPr]);
 }
 
+
+
+
+
+
 export function serializeDrawingTable(table: Table): XmlElement {
   const tblGrid = createElement(
     "a:tblGrid",

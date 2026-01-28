@@ -215,30 +215,30 @@ function serializeRunPropertiesElement(
 ): XmlElement {
   const attrs: Record<string, string> = {};
 
-  if (props.language !== undefined) attrs.lang = props.language;
-  if (props.altLanguage !== undefined) attrs.altLang = props.altLanguage;
-  if (props.bookmark !== undefined) attrs.bmk = props.bookmark;
+  if (props.language !== undefined) {attrs.lang = props.language;}
+  if (props.altLanguage !== undefined) {attrs.altLang = props.altLanguage;}
+  if (props.bookmark !== undefined) {attrs.bmk = props.bookmark;}
 
-  if (props.fontSize !== undefined) attrs.sz = ooxmlCentipoints(props.fontSize);
-  if (props.bold !== undefined) attrs.b = ooxmlBool(props.bold);
-  if (props.italic !== undefined) attrs.i = ooxmlBool(props.italic);
-  if (props.underline !== undefined) attrs.u = props.underline;
-  if (props.strike !== undefined) attrs.strike = props.strike;
-  if (props.caps !== undefined) attrs.cap = props.caps;
-  if (props.baseline !== undefined) attrs.baseline = String(Math.round(props.baseline));
-  if (props.spacing !== undefined) attrs.spc = ooxmlTextPointUnqualified(props.spacing);
-  if (props.kerning !== undefined) attrs.kern = ooxmlCentipoints(props.kerning);
+  if (props.fontSize !== undefined) {attrs.sz = ooxmlCentipoints(props.fontSize);}
+  if (props.bold !== undefined) {attrs.b = ooxmlBool(props.bold);}
+  if (props.italic !== undefined) {attrs.i = ooxmlBool(props.italic);}
+  if (props.underline !== undefined) {attrs.u = props.underline;}
+  if (props.strike !== undefined) {attrs.strike = props.strike;}
+  if (props.caps !== undefined) {attrs.cap = props.caps;}
+  if (props.baseline !== undefined) {attrs.baseline = String(Math.round(props.baseline));}
+  if (props.spacing !== undefined) {attrs.spc = ooxmlTextPointUnqualified(props.spacing);}
+  if (props.kerning !== undefined) {attrs.kern = ooxmlCentipoints(props.kerning);}
 
-  if (props.noProof !== undefined) attrs.noProof = ooxmlBool(props.noProof);
-  if (props.dirty !== undefined) attrs.dirty = ooxmlBool(props.dirty);
-  if (props.smartTagClean !== undefined) attrs.smtClean = ooxmlBool(props.smartTagClean);
-  if (props.error !== undefined) attrs.err = ooxmlBool(props.error);
-  if (props.kumimoji !== undefined) attrs.kumimoji = ooxmlBool(props.kumimoji);
-  if (props.normalizeHeights !== undefined) attrs.normalizeH = ooxmlBool(props.normalizeHeights);
-  if (props.smartTagId !== undefined) attrs.smtId = String(Math.round(props.smartTagId));
-  if (props.outline !== undefined) attrs.outline = ooxmlBool(props.outline);
-  if (props.shadow !== undefined) attrs.shadow = ooxmlBool(props.shadow);
-  if (props.emboss !== undefined) attrs.emboss = ooxmlBool(props.emboss);
+  if (props.noProof !== undefined) {attrs.noProof = ooxmlBool(props.noProof);}
+  if (props.dirty !== undefined) {attrs.dirty = ooxmlBool(props.dirty);}
+  if (props.smartTagClean !== undefined) {attrs.smtClean = ooxmlBool(props.smartTagClean);}
+  if (props.error !== undefined) {attrs.err = ooxmlBool(props.error);}
+  if (props.kumimoji !== undefined) {attrs.kumimoji = ooxmlBool(props.kumimoji);}
+  if (props.normalizeHeights !== undefined) {attrs.normalizeH = ooxmlBool(props.normalizeHeights);}
+  if (props.smartTagId !== undefined) {attrs.smtId = String(Math.round(props.smartTagId));}
+  if (props.outline !== undefined) {attrs.outline = ooxmlBool(props.outline);}
+  if (props.shadow !== undefined) {attrs.shadow = ooxmlBool(props.shadow);}
+  if (props.emboss !== undefined) {attrs.emboss = ooxmlBool(props.emboss);}
 
   const children: XmlElement[] = [];
 
@@ -278,7 +278,7 @@ function serializeRunPropertiesElement(
   }
   if (props.effects !== undefined) {
     const effectEl = serializeEffects(props.effects);
-    if (effectEl) children.push(effectEl);
+    if (effectEl) {children.push(effectEl);}
   }
 
   // Font families
@@ -312,18 +312,28 @@ function serializeRunPropertiesElement(
   }
 
   // Hyperlinks
-  if (props.hyperlink) children.push(serializeHyperlink(props.hyperlink));
-  if (props.hyperlinkMouseOver) children.push(serializeHyperlinkMouseOver(props.hyperlinkMouseOver));
+  if (props.hyperlink) {children.push(serializeHyperlink(props.hyperlink));}
+  if (props.hyperlinkMouseOver) {children.push(serializeHyperlinkMouseOver(props.hyperlinkMouseOver));}
 
   // RTL is represented by a child element, not an attribute.
-  if (props.rtl === true) children.push(createElement("a:rtl"));
+  if (props.rtl === true) {children.push(createElement("a:rtl"));}
 
   return createElement(elementName, attrs, children);
 }
 
+
+
+
+
+
 export function serializeRunProperties(props: RunProperties): XmlElement {
   return serializeRunPropertiesElement(props, "a:rPr");
 }
+
+
+
+
+
 
 export function serializeBodyProperties(props: BodyProperties): XmlElement {
   if (props.textWarp !== undefined) {
@@ -335,13 +345,13 @@ export function serializeBodyProperties(props: BodyProperties): XmlElement {
 
   const attrs: Record<string, string> = {};
 
-  if (props.rotation !== undefined) attrs.rot = ooxmlAngleUnits(props.rotation);
-  if (props.verticalType !== undefined) attrs.vert = props.verticalType;
-  if (props.wrapping !== undefined) attrs.wrap = props.wrapping;
-  if (props.anchor !== undefined) attrs.anchor = serializeBodyAnchor(props.anchor);
-  if (props.anchorCenter !== undefined) attrs.anchorCtr = ooxmlBool(props.anchorCenter);
-  if (props.overflow !== undefined) attrs.horzOverflow = props.overflow;
-  if (props.verticalOverflow !== undefined) attrs.vertOverflow = props.verticalOverflow;
+  if (props.rotation !== undefined) {attrs.rot = ooxmlAngleUnits(props.rotation);}
+  if (props.verticalType !== undefined) {attrs.vert = props.verticalType;}
+  if (props.wrapping !== undefined) {attrs.wrap = props.wrapping;}
+  if (props.anchor !== undefined) {attrs.anchor = serializeBodyAnchor(props.anchor);}
+  if (props.anchorCenter !== undefined) {attrs.anchorCtr = ooxmlBool(props.anchorCenter);}
+  if (props.overflow !== undefined) {attrs.horzOverflow = props.overflow;}
+  if (props.verticalOverflow !== undefined) {attrs.vertOverflow = props.verticalOverflow;}
 
   if (props.insets) {
     attrs.lIns = ooxmlEmu(props.insets.left);
@@ -350,15 +360,15 @@ export function serializeBodyProperties(props: BodyProperties): XmlElement {
     attrs.bIns = ooxmlEmu(props.insets.bottom);
   }
 
-  if (props.columns !== undefined) attrs.numCol = String(Math.round(props.columns));
-  if (props.columnSpacing !== undefined) attrs.spcCol = ooxmlEmu(props.columnSpacing);
+  if (props.columns !== undefined) {attrs.numCol = String(Math.round(props.columns));}
+  if (props.columnSpacing !== undefined) {attrs.spcCol = ooxmlEmu(props.columnSpacing);}
 
-  if (props.upright !== undefined) attrs.upright = ooxmlBool(props.upright);
-  if (props.compatibleLineSpacing !== undefined) attrs.compatLnSpc = ooxmlBool(props.compatibleLineSpacing);
-  if (props.rtlColumns !== undefined) attrs.rtlCol = ooxmlBool(props.rtlColumns);
-  if (props.spaceFirstLastPara !== undefined) attrs.spcFirstLastPara = ooxmlBool(props.spaceFirstLastPara);
-  if (props.forceAntiAlias !== undefined) attrs.forceAA = ooxmlBool(props.forceAntiAlias);
-  if (props.fromWordArt !== undefined) attrs.fromWordArt = ooxmlBool(props.fromWordArt);
+  if (props.upright !== undefined) {attrs.upright = ooxmlBool(props.upright);}
+  if (props.compatibleLineSpacing !== undefined) {attrs.compatLnSpc = ooxmlBool(props.compatibleLineSpacing);}
+  if (props.rtlColumns !== undefined) {attrs.rtlCol = ooxmlBool(props.rtlColumns);}
+  if (props.spaceFirstLastPara !== undefined) {attrs.spcFirstLastPara = ooxmlBool(props.spaceFirstLastPara);}
+  if (props.forceAntiAlias !== undefined) {attrs.forceAA = ooxmlBool(props.forceAntiAlias);}
+  if (props.fromWordArt !== undefined) {attrs.fromWordArt = ooxmlBool(props.fromWordArt);}
 
   const children: XmlElement[] = [];
   if (props.autoFit) {
@@ -385,29 +395,34 @@ export function serializeBodyProperties(props: BodyProperties): XmlElement {
   return createElement("a:bodyPr", attrs, children);
 }
 
+
+
+
+
+
 export function serializeParagraphProperties(props: ParagraphProperties): XmlElement {
   const attrs: Record<string, string> = {};
 
-  if (props.level !== undefined) attrs.lvl = String(Math.round(props.level));
-  if (props.alignment !== undefined) attrs.algn = serializeParagraphAlignment(props.alignment);
-  if (props.defaultTabSize !== undefined) attrs.defTabSz = ooxmlEmu(props.defaultTabSize);
-  if (props.marginLeft !== undefined) attrs.marL = ooxmlEmu(props.marginLeft);
-  if (props.marginRight !== undefined) attrs.marR = ooxmlEmu(props.marginRight);
-  if (props.indent !== undefined) attrs.indent = ooxmlEmu(props.indent);
-  if (props.rtl !== undefined) attrs.rtl = ooxmlBool(props.rtl);
-  if (props.fontAlignment !== undefined) attrs.fontAlgn = serializeFontAlignment(props.fontAlignment);
-  if (props.eaLineBreak !== undefined) attrs.eaLnBrk = ooxmlBool(props.eaLineBreak);
-  if (props.latinLineBreak !== undefined) attrs.latinLnBrk = ooxmlBool(props.latinLineBreak);
-  if (props.hangingPunctuation !== undefined) attrs.hangingPunct = ooxmlBool(props.hangingPunctuation);
+  if (props.level !== undefined) {attrs.lvl = String(Math.round(props.level));}
+  if (props.alignment !== undefined) {attrs.algn = serializeParagraphAlignment(props.alignment);}
+  if (props.defaultTabSize !== undefined) {attrs.defTabSz = ooxmlEmu(props.defaultTabSize);}
+  if (props.marginLeft !== undefined) {attrs.marL = ooxmlEmu(props.marginLeft);}
+  if (props.marginRight !== undefined) {attrs.marR = ooxmlEmu(props.marginRight);}
+  if (props.indent !== undefined) {attrs.indent = ooxmlEmu(props.indent);}
+  if (props.rtl !== undefined) {attrs.rtl = ooxmlBool(props.rtl);}
+  if (props.fontAlignment !== undefined) {attrs.fontAlgn = serializeFontAlignment(props.fontAlignment);}
+  if (props.eaLineBreak !== undefined) {attrs.eaLnBrk = ooxmlBool(props.eaLineBreak);}
+  if (props.latinLineBreak !== undefined) {attrs.latinLnBrk = ooxmlBool(props.latinLineBreak);}
+  if (props.hangingPunctuation !== undefined) {attrs.hangingPunct = ooxmlBool(props.hangingPunctuation);}
 
   const children: XmlElement[] = [];
 
-  if (props.lineSpacing) children.push(serializeLineSpacing(props.lineSpacing, "a:lnSpc"));
-  if (props.spaceBefore) children.push(serializeLineSpacing(props.spaceBefore, "a:spcBef"));
-  if (props.spaceAfter) children.push(serializeLineSpacing(props.spaceAfter, "a:spcAft"));
+  if (props.lineSpacing) {children.push(serializeLineSpacing(props.lineSpacing, "a:lnSpc"));}
+  if (props.spaceBefore) {children.push(serializeLineSpacing(props.spaceBefore, "a:spcBef"));}
+  if (props.spaceAfter) {children.push(serializeLineSpacing(props.spaceAfter, "a:spcAft"));}
 
-  if (props.bulletStyle) children.push(...serializeBulletStyle(props.bulletStyle));
-  if (props.tabStops && props.tabStops.length > 0) children.push(serializeTabStops(props.tabStops));
+  if (props.bulletStyle) {children.push(...serializeBulletStyle(props.bulletStyle));}
+  if (props.tabStops && props.tabStops.length > 0) {children.push(serializeTabStops(props.tabStops));}
 
   if (props.defaultRunProperties) {
     children.push(serializeRunPropertiesElement(props.defaultRunProperties, "a:defRPr"));
@@ -416,9 +431,19 @@ export function serializeParagraphProperties(props: ParagraphProperties): XmlEle
   return createElement("a:pPr", attrs, children);
 }
 
+
+
+
+
+
 export function serializeEndParaRunProperties(props: RunProperties): XmlElement {
   return serializeRunPropertiesElement(props, "a:endParaRPr");
 }
+
+
+
+
+
 
 export function serializeText(text: string): XmlElement {
   const needsPreserve = /(^\s|\s$|\s{2,}|\t)/.test(text);

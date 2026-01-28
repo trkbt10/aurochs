@@ -53,43 +53,43 @@ export const documentHandlers: HandlerMap = {
   // Paragraph Operations (implemented in Phase 4)
   // -------------------------------------------------------------------------
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- action will be used in Phase 4
+   
   INSERT_PARAGRAPH: (state, _action) => state,
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- action will be used in Phase 4
+   
   DELETE_PARAGRAPH: (state, _action) => state,
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- action will be used in Phase 4
+   
   MERGE_PARAGRAPHS: (state, _action) => state,
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- action will be used in Phase 4
+   
   SPLIT_PARAGRAPH: (state, _action) => state,
 
   // -------------------------------------------------------------------------
   // Table Operations (implemented in Phase 4)
   // -------------------------------------------------------------------------
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- action will be used in Phase 4
+   
   INSERT_TABLE: (state, _action) => state,
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- action will be used in Phase 4
+   
   DELETE_TABLE: (state, _action) => state,
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- action will be used in Phase 4
+   
   INSERT_TABLE_ROW: (state, _action) => state,
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- action will be used in Phase 4
+   
   DELETE_TABLE_ROW: (state, _action) => state,
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- action will be used in Phase 4
+   
   INSERT_TABLE_COLUMN: (state, _action) => state,
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- action will be used in Phase 4
+   
   DELETE_TABLE_COLUMN: (state, _action) => state,
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- action will be used in Phase 4
+   
   MERGE_TABLE_CELLS: (state, _action) => state,
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- action will be used in Phase 4
+   
   SPLIT_TABLE_CELL: (state, _action) => state,
 };

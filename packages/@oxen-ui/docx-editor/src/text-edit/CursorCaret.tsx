@@ -36,6 +36,11 @@ function useCursorBlink(isBlinking: boolean): boolean {
   return visible;
 }
 
+
+
+
+
+
 export function CursorCaret({
   x,
   y,

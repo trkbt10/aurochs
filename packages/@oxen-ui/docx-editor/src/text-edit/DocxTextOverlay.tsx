@@ -151,6 +151,11 @@ function resolveFontSpec(
   };
 }
 
+
+
+
+
+
 export function computeRunSvgStyles(
   runProperties: DocxRunProperties | undefined,
   defaultRunProperties: DocxRunProperties | undefined,
@@ -380,6 +385,11 @@ function findWrapIndex(text: string, maxWidth: number, font: FontSpec): number {
 // Layout
 // =============================================================================
 
+
+
+
+
+
 export function layoutParagraphText(
   paragraph: DocxParagraph,
   bounds: DOMRect,
@@ -421,7 +431,7 @@ export function layoutParagraphText(
     let remainingText = span.text;
     let textOffset = span.startOffset;
 
-    // eslint-disable-next-line no-restricted-syntax -- small loop for wrapping
+     
     while (remainingText.length > 0) {
       const availableWidth = maxWidth > 0 ? maxWidth - currentX : Number.POSITIVE_INFINITY;
       if (availableWidth <= 0 && currentSpans.length > 0) {
@@ -492,6 +502,11 @@ function clampRangeToSpan(
   }
   return [start, end];
 }
+
+
+
+
+
 
 export function computeSelectionRects(
   layout: LayoutResult,
@@ -739,6 +754,11 @@ function findCharOffsetInSpan(
 // =============================================================================
 // Component
 // =============================================================================
+
+
+
+
+
 
 export function DocxTextOverlay({
   paragraph,

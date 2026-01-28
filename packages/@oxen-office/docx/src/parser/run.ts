@@ -427,7 +427,7 @@ function parseCombineBrackets(value: string | undefined): "none" | "round" | "sq
  */
 export function parseRunProperties(
   element: XmlElement | undefined,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- context reserved for future style inheritance
+   
   _context?: DocxParseContext,
 ): DocxRunProperties | undefined {
   if (!element) {return undefined;}
@@ -512,7 +512,7 @@ function parseText(element: XmlElement): DocxText {
  *
  * @see ECMA-376 Part 1, Section 17.3.3.29 (tab)
  */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars -- element param for API consistency
+ 
 function parseTab(_element: XmlElement): DocxTab {
   return { type: "tab" };
 }

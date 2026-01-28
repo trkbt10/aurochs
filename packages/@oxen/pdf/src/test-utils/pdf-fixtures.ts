@@ -17,7 +17,7 @@ function findRepoRootDir(startDir: string): string {
       }
     }
     const parent = path.dirname(dir);
-    if (parent === dir) break;
+    if (parent === dir) {break;}
     dir = parent;
   }
   throw new Error("Failed to locate repo root (package.json name=web-pptx).");
@@ -25,12 +25,22 @@ function findRepoRootDir(startDir: string): string {
 
 const repoRootDir = findRepoRootDir(path.dirname(fileURLToPath(import.meta.url)));
 
+
+
+
+
+
 export function getPdfFixturePath(basename: string): string {
   if (basename.includes("/") || basename.includes("\\") || basename.includes("..")) {
     throw new Error(`basename must be a file name only: ${basename}`);
   }
   return path.join(repoRootDir, "spec", "fixtures", "pdf", basename);
 }
+
+
+
+
+
 
 export function getSampleFixturePath(basename: string): string {
   if (basename.includes("/") || basename.includes("\\") || basename.includes("..")) {

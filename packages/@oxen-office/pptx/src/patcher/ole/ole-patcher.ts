@@ -68,6 +68,11 @@ function patchOleProgId(oleFrame: XmlElement, progId: string): XmlElement {
   );
 }
 
+
+
+
+
+
 export function patchOleObject(oleFrame: XmlElement, changes: readonly OleChange[]): XmlElement {
   requireGraphicFrame(oleFrame);
 

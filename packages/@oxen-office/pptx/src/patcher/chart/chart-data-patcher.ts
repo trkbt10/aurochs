@@ -200,6 +200,11 @@ function patchOrCreateChildWithUpdater(
   return replaceChildByName(parent, name, updater(existing));
 }
 
+
+
+
+
+
 export function patchSeriesData(seriesElement: XmlElement, series: ChartSeries): XmlElement {
   if (seriesElement.name !== "c:ser") {
     throw new Error(`patchSeriesData: expected c:ser, got ${seriesElement.name}`);

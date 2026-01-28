@@ -20,6 +20,11 @@ const VIDEO_REL: RelationshipType =
 const AUDIO_REL: RelationshipType =
   "http://schemas.openxmlformats.org/officeDocument/2006/relationships/audio";
 
+
+
+
+
+
 export function addMedia(
   pkg: ZipPackage,
   mediaData: ArrayBuffer,
@@ -50,6 +55,11 @@ export function addMedia(
 
   return { path: mediaPath, rId };
 }
+
+
+
+
+
 
 export function removeMediaReference(
   pkg: ZipPackage,
@@ -95,6 +105,11 @@ export function removeMediaReference(
 
   updateContentTypesCleanup(pkg);
 }
+
+
+
+
+
 
 export function findUnusedMedia(pkg: ZipPackage): string[] {
   const allMedia = pkg
@@ -163,9 +178,9 @@ function collectUsedMediaTargets(pkg: ZipPackage): Set<string> {
   const used = new Set<string>();
   for (const partPath of parts) {
     const rels = loadRelationships(file, partPath);
-    for (const target of rels.getAllTargetsByType(IMAGE_REL)) used.add(target);
-    for (const target of rels.getAllTargetsByType(VIDEO_REL)) used.add(target);
-    for (const target of rels.getAllTargetsByType(AUDIO_REL)) used.add(target);
+    for (const target of rels.getAllTargetsByType(IMAGE_REL)) {used.add(target);}
+    for (const target of rels.getAllTargetsByType(VIDEO_REL)) {used.add(target);}
+    for (const target of rels.getAllTargetsByType(AUDIO_REL)) {used.add(target);}
   }
 
   return used;
@@ -257,7 +272,7 @@ function buildRelationshipTarget(sourcePart: string, targetPart: string): string
 
 function getDirectory(path: string): string {
   const lastSlash = path.lastIndexOf("/");
-  if (lastSlash === -1) return "";
+  if (lastSlash === -1) {return "";}
   return path.slice(0, lastSlash);
 }
 

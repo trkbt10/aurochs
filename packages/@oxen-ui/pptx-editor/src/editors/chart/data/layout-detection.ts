@@ -37,6 +37,11 @@ export type ChartDataLayout = {
 // Helper Functions
 // =============================================================================
 
+
+
+
+
+
 export function createAddress(col: number, row: number): CellAddress {
   return {
     col: colIdx(col),
@@ -45,6 +50,11 @@ export function createAddress(col: number, row: number): CellAddress {
     rowAbsolute: false,
   };
 }
+
+
+
+
+
 
 export function createCellRange(
   startCol: number,

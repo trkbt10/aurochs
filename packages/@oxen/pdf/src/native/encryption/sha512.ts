@@ -25,7 +25,7 @@ function add64_5(a: Word64, b: Word64, c: Word64, d: Word64, e: Word64): Word64 
 
 function rotr64(x: Word64, n: number): Word64 {
   const s = n & 63;
-  if (s === 0) return x;
+  if (s === 0) {return x;}
   if (s < 32) {
     const hi = ((x.hi >>> s) | (x.lo << (32 - s))) >>> 0;
     const lo = ((x.lo >>> s) | (x.hi << (32 - s))) >>> 0;
@@ -42,7 +42,7 @@ function rotr64(x: Word64, n: number): Word64 {
 
 function shr64(x: Word64, n: number): Word64 {
   const s = n & 63;
-  if (s === 0) return x;
+  if (s === 0) {return x;}
   if (s < 32) {
     const hi = (x.hi >>> s) >>> 0;
     const lo = ((x.lo >>> s) | (x.hi << (32 - s))) >>> 0;

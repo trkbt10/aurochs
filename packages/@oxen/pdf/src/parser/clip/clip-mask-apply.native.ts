@@ -27,6 +27,11 @@ function sampleMaskAlphaInPageSpace(mask: PdfSoftMask, x: number, y: number): nu
   return mask.alpha[row * mask.width + col] ?? 0;
 }
 
+
+
+
+
+
 export function applyGraphicsClipMaskToPdfImage(image: PdfImage): PdfImage {
   const gs = image.graphicsState;
   const clipMask = gs.clipMask;
@@ -71,6 +76,11 @@ export function applyGraphicsClipMaskToPdfImage(image: PdfImage): PdfImage {
     },
   };
 }
+
+
+
+
+
 
 export function buildPageSpaceSoftMaskForClipMask(gsCtm: PdfMatrix, clipMask: PdfSoftMask): PdfSoftMask | null {
   const ctmInv = invertMatrix(gsCtm);

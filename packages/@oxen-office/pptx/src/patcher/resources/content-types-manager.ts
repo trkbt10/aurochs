@@ -1,6 +1,11 @@
 import { createElement, isXmlElement, type XmlDocument, type XmlElement } from "@oxen/xml";
 import { getDocumentRoot, updateDocumentRoot } from "../core/xml-mutator";
 
+
+
+
+
+
 export function addContentType(
   contentTypesXml: XmlDocument,
   extension: string,
@@ -36,7 +41,7 @@ export function addContentType(
   });
 
   return updateDocumentRoot(contentTypesXml, (typesEl) => {
-    if (typesEl.name !== "Types") return typesEl;
+    if (typesEl.name !== "Types") {return typesEl;}
 
     const firstOverrideIndex = typesEl.children.findIndex(
       (child) => isXmlElement(child) && child.name === "Override",
@@ -47,6 +52,11 @@ export function addContentType(
     return { ...typesEl, children };
   });
 }
+
+
+
+
+
 
 export function addOverride(
   contentTypesXml: XmlDocument,
@@ -83,10 +93,15 @@ export function addOverride(
   });
 
   return updateDocumentRoot(contentTypesXml, (typesEl) => {
-    if (typesEl.name !== "Types") return typesEl;
+    if (typesEl.name !== "Types") {return typesEl;}
     return { ...typesEl, children: [...typesEl.children, overrideEl] };
   });
 }
+
+
+
+
+
 
 export function removeUnusedContentTypes(
   contentTypesXml: XmlDocument,
@@ -107,7 +122,7 @@ export function removeUnusedContentTypes(
   }
 
   return updateDocumentRoot(contentTypesXml, (typesEl) => {
-    if (typesEl.name !== "Types") return typesEl;
+    if (typesEl.name !== "Types") {return typesEl;}
 
     const nextChildren: (typeof typesEl.children)[number][] = [];
     for (const child of typesEl.children) {
@@ -163,9 +178,9 @@ function findOverride(typesEl: XmlElement, partName: string): XmlElement | undef
 
 function getExtension(path: string): string | null {
   const basename = path.split("/").pop();
-  if (!basename) return null;
+  if (!basename) {return null;}
   const dot = basename.lastIndexOf(".");
-  if (dot === -1) return null;
+  if (dot === -1) {return null;}
   const ext = basename.slice(dot + 1).toLowerCase();
   return ext.length > 0 ? ext : null;
 }

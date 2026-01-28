@@ -112,6 +112,11 @@ export const thumbnailWrapperStyle: CSSProperties = {
 
 
 
+
+
+
+
+
 export function getThumbnailStyle(aspectRatio: string): CSSProperties {
   return {
     width: "100%",
@@ -126,6 +131,11 @@ export function getThumbnailStyle(aspectRatio: string): CSSProperties {
     overflow: "hidden",
   };
 }
+
+
+
+
+
 
 
 

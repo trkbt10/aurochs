@@ -518,6 +518,11 @@ function parsePatternCellShapes(pattern: PdfTilingPattern): readonly CellShape[]
   return out;
 }
 
+
+
+
+
+
 export function rasterizeTilingPatternFillPath(
   parsed: ParsedPath,
   pattern: PdfTilingPattern,

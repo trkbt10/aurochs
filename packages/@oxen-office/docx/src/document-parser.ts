@@ -84,7 +84,7 @@ function getRelationshipByType(
  */
 function loadXmlPart(pkg: ZipPackage, path: string): XmlElement | undefined {
   const content = pkg.readText(path);
-  if (!content) return undefined;
+  if (!content) {return undefined;}
 
   const doc = parseXml(content);
   return getRootElement(doc);

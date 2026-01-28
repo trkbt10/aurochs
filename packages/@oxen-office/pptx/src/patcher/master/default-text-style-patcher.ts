@@ -141,13 +141,13 @@ function buildPatchedChildren(
 function buildRemovalSet(patch: ParagraphProperties): ReadonlySet<string> {
   const remove = new Set<string>();
 
-  if (patch.lineSpacing !== undefined) remove.add("a:lnSpc");
-  if (patch.spaceBefore !== undefined) remove.add("a:spcBef");
-  if (patch.spaceAfter !== undefined) remove.add("a:spcAft");
-  if (shouldPatchTabStops(patch)) remove.add("a:tabLst");
-  if (shouldPatchDefaultRunProperties(patch)) remove.add("a:defRPr");
+  if (patch.lineSpacing !== undefined) {remove.add("a:lnSpc");}
+  if (patch.spaceBefore !== undefined) {remove.add("a:spcBef");}
+  if (patch.spaceAfter !== undefined) {remove.add("a:spcAft");}
+  if (shouldPatchTabStops(patch)) {remove.add("a:tabLst");}
+  if (shouldPatchDefaultRunProperties(patch)) {remove.add("a:defRPr");}
   if (shouldPatchBulletStyle(patch)) {
-    for (const name of BULLET_ELEMENT_NAMES) remove.add(name);
+    for (const name of BULLET_ELEMENT_NAMES) {remove.add(name);}
   }
 
   return remove;

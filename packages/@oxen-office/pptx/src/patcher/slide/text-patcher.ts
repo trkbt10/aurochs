@@ -39,6 +39,11 @@ function coerceTxBodyElement(txBody: XmlElement): XmlElement {
   return createElement("p:txBody", { ...txBody.attrs }, txBody.children);
 }
 
+
+
+
+
+
 export function applyTextBodyChangeToShape(shape: XmlElement, change: TextBodyChange): XmlElement {
   const newTextBody = change.newValue;
 

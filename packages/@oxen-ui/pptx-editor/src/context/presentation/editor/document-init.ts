@@ -45,6 +45,11 @@ function assignSlideIds(slides: readonly Slide[]): SlideWithId[] {
 
 
 
+
+
+
+
+
 export function createDocumentFromPresentation(
   presentation: Presentation,
   slides: readonly Slide[],
@@ -62,6 +67,11 @@ export function createDocumentFromPresentation(
     resources,
   };
 }
+
+
+
+
+
 
 
 

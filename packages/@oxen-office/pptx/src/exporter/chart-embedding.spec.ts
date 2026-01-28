@@ -292,7 +292,7 @@ describe("updateEmbeddedXlsx", () => {
 </Relationships>`;
 
     const getFileContent = async (path: string) => {
-      if (path.endsWith(".rels")) return relsXml;
+      if (path.endsWith(".rels")) {return relsXml;}
       return undefined;
     };
     const setFileContent = vi.fn();
@@ -318,7 +318,7 @@ describe("updateEmbeddedXlsx", () => {
     const relsXml = createChartRelsXml("../embeddings/missing.xlsx");
 
     const getFileContent = async (path: string) => {
-      if (path.endsWith(".rels")) return relsXml;
+      if (path.endsWith(".rels")) {return relsXml;}
       return undefined;
     };
     const setFileContent = vi.fn();

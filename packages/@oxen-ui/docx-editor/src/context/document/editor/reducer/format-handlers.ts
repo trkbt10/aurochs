@@ -21,7 +21,7 @@ export const formatHandlers: HandlerMap = {
   // Run-level Formatting (implemented in Phase 4)
   // -------------------------------------------------------------------------
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- action will be used in Phase 4
+   
   APPLY_RUN_FORMAT: (state, _action) => state,
 
   TOGGLE_BOLD: (state) => state,
@@ -32,16 +32,16 @@ export const formatHandlers: HandlerMap = {
 
   TOGGLE_STRIKETHROUGH: (state) => state,
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- action will be used in Phase 4
+   
   SET_FONT_SIZE: (state, _action) => state,
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- action will be used in Phase 4
+   
   SET_FONT_FAMILY: (state, _action) => state,
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- action will be used in Phase 4
+   
   SET_TEXT_COLOR: (state, _action) => state,
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- action will be used in Phase 4
+   
   SET_HIGHLIGHT_COLOR: (state, _action) => state,
 
   CLEAR_FORMATTING: (state) => state,
@@ -50,16 +50,16 @@ export const formatHandlers: HandlerMap = {
   // Paragraph-level Formatting (implemented in Phase 4)
   // -------------------------------------------------------------------------
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- action will be used in Phase 4
+   
   APPLY_PARAGRAPH_FORMAT: (state, _action) => state,
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- action will be used in Phase 4
+   
   SET_PARAGRAPH_ALIGNMENT: (state, _action) => state,
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- action will be used in Phase 4
+   
   SET_LINE_SPACING: (state, _action) => state,
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- action will be used in Phase 4
+   
   SET_PARAGRAPH_INDENT: (state, _action) => state,
 
   // -------------------------------------------------------------------------
@@ -78,9 +78,9 @@ export const formatHandlers: HandlerMap = {
   // Table Formatting (implemented in Phase 4)
   // -------------------------------------------------------------------------
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- action will be used in Phase 4
+   
   APPLY_TABLE_FORMAT: (state, _action) => state,
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- action will be used in Phase 4
+   
   APPLY_TABLE_CELL_FORMAT: (state, _action) => state,
 };

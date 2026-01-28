@@ -218,12 +218,12 @@ function getAspectRatioText(ratio: number): string {
   // Check for common aspect ratios
   const tolerance = 0.01;
 
-  if (Math.abs(ratio - 16/9) < tolerance) return "16:9";
-  if (Math.abs(ratio - 16/10) < tolerance) return "16:10";
-  if (Math.abs(ratio - 4/3) < tolerance) return "4:3";
-  if (Math.abs(ratio - 3/2) < tolerance) return "3:2";
-  if (Math.abs(ratio - 1) < tolerance) return "1:1";
-  if (Math.abs(ratio - 21/9) < tolerance) return "21:9";
+  if (Math.abs(ratio - 16/9) < tolerance) {return "16:9";}
+  if (Math.abs(ratio - 16/10) < tolerance) {return "16:10";}
+  if (Math.abs(ratio - 4/3) < tolerance) {return "4:3";}
+  if (Math.abs(ratio - 3/2) < tolerance) {return "3:2";}
+  if (Math.abs(ratio - 1) < tolerance) {return "1:1";}
+  if (Math.abs(ratio - 21/9) < tolerance) {return "21:9";}
 
   // For other ratios, show decimal
   return ratio.toFixed(2) + ":1";

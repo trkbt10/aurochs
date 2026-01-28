@@ -244,6 +244,11 @@ type PathMeta = {
 
 
 
+
+
+
+
+
 export function pathsToShapes(paths: readonly ContourPath[]): THREE.Shape[] {
   if (!paths || !Array.isArray(paths)) {
     return [];
@@ -432,6 +437,11 @@ export function mergeExtrudeGeometries(
 // =============================================================================
 // Utility
 // =============================================================================
+
+
+
+
+
 
 
 

@@ -128,6 +128,11 @@ function parsePattern(page: NativePdfPage, obj: PdfObject | undefined): PdfPatte
   return null;
 }
 
+
+
+
+
+
 export function extractPatternsFromResourcesNative(page: NativePdfPage, resources: PdfDict | null): ReadonlyMap<string, PdfPattern> {
   if (!resources) {return new Map();}
 
@@ -143,6 +148,11 @@ export function extractPatternsFromResourcesNative(page: NativePdfPage, resource
   }
   return out;
 }
+
+
+
+
+
 
 export function extractPatternsNative(page: NativePdfPage): ReadonlyMap<string, PdfPattern> {
   return extractPatternsFromResourcesNative(page, page.getResourcesDict());

@@ -1039,6 +1039,11 @@ function buildTableFromInference(
   };
 }
 
+
+
+
+
+
 export function convertGroupedTextToTableShape(
   group: GroupedText,
   pagePaths: readonly PdfPath[],
@@ -1059,6 +1064,11 @@ export function convertGroupedTextToTableShape(
   const decoration = analyzeTableDecorationFromPaths(inferred, pagePaths, context);
   return convertInferredTableToShape(inferred, decoration, context, shapeId);
 }
+
+
+
+
+
 
 export function convertInferredTableToShape(
   inferred: InferredTable,

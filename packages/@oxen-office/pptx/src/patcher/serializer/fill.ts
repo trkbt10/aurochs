@@ -8,6 +8,11 @@ import type { BlipEffects, BlipFill, Fill, StretchFill, TileFill } from "../../d
 import { serializeColor } from "./color";
 import { ooxmlBool, ooxmlAngleUnits, ooxmlEmu, ooxmlPercent100k } from "@oxen-office/ooxml/serializer/units";
 
+
+
+
+
+
 export function serializeFill(fill: Fill): XmlElement {
   switch (fill.type) {
     case "noFill":
@@ -24,6 +29,11 @@ export function serializeFill(fill: Fill): XmlElement {
       return createElement("a:grpFill");
   }
 }
+
+
+
+
+
 
 export function serializeGradientFill(gradient: GradientFill): XmlElement {
   const attrs: Record<string, string> = {
@@ -86,12 +96,22 @@ function serializeGradientStop(stop: GradientStop): XmlElement {
   );
 }
 
+
+
+
+
+
 export function serializePatternFill(pattern: PatternFill): XmlElement {
   return createElement("a:pattFill", { prst: pattern.preset }, [
     createElement("a:fgClr", {}, [serializeColor(pattern.foregroundColor)]),
     createElement("a:bgClr", {}, [serializeColor(pattern.backgroundColor)]),
   ]);
 }
+
+
+
+
+
 
 export function serializeBlipFill(blip: BlipFill): XmlElement {
   if (blip.resourceId.startsWith("data:")) {

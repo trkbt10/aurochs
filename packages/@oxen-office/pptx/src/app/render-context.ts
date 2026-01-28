@@ -48,6 +48,11 @@ import type { CoreRenderContext } from "../render/render-context";
 export type RenderContext = CoreRenderContext & {
   readonly slideRenderContext: SlideContext;
 };
+
+
+
+
+
 export function createRenderContext(
   apiSlide: ApiSlide,
   zip: ZipFile,

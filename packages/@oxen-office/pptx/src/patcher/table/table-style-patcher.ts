@@ -22,6 +22,11 @@ function ensureTblPr(table: XmlElement): XmlElement {
   return setChildren(table, nextChildren);
 }
 
+
+
+
+
+
 export function patchTableStyleId(tableElement: XmlElement, styleId: string | undefined): XmlElement {
   requireTable(tableElement);
 

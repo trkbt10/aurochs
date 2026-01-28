@@ -111,6 +111,11 @@ function areSelectionsEqual(
 
 
 
+
+
+
+
+
 export function useTextEditInput({
   textareaRef,
   currentTextBody,

@@ -197,7 +197,7 @@ export function useExportPresentation(): UseExportPresentationResult {
   const exportAsBuffer = useCallback(
     async (options?: ExportOptions): Promise<ArrayBuffer | null> => {
       const blob = await exportAsBlob(options);
-      if (!blob) return null;
+      if (!blob) {return null;}
       return blob.arrayBuffer();
     },
     [exportAsBlob]

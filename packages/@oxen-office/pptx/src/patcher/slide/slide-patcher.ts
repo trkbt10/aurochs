@@ -72,10 +72,10 @@ function applyAddition(doc: XmlDocument, change: ShapeAdded): XmlDocument {
 
 	  return updateDocumentRoot(doc, (root) => {
 	    const cSld = getChild(root, "p:cSld");
-	    if (!cSld) return root;
+	    if (!cSld) {return root;}
 
 	    const spTree = getChild(cSld, "p:spTree");
-	    if (!spTree) return root;
+	    if (!spTree) {return root;}
 
 	    const afterId = change.afterId;
 	    const parentId = change.parentId;
@@ -128,10 +128,10 @@ function applyRemoval(doc: XmlDocument, shapeId: string): XmlDocument {
   return updateDocumentRoot(doc, (root) => {
     // Find p:cSld/p:spTree
     const cSld = getChild(root, "p:cSld");
-    if (!cSld) return root;
+    if (!cSld) {return root;}
 
     const spTree = getChild(cSld, "p:spTree");
-    if (!spTree) return root;
+    if (!spTree) {return root;}
 
     // Remove the shape
     const newSpTree = removeShapeById(spTree, shapeId);
@@ -158,14 +158,14 @@ function applyModification(
   return updateDocumentRoot(doc, (root) => {
     // Find p:cSld/p:spTree
     const cSld = getChild(root, "p:cSld");
-    if (!cSld) return root;
+    if (!cSld) {return root;}
 
     const spTree = getChild(cSld, "p:spTree");
-    if (!spTree) return root;
+    if (!spTree) {return root;}
 
     // Find the shape to modify
     const shape = findShapeById(spTree, shapeId);
-    if (!shape) return root;
+    if (!shape) {return root;}
 
     // Apply each change to the shape
     let modifiedShape = shape;
@@ -678,10 +678,10 @@ function mapXmlElement(el: XmlElement, mapper: (el: XmlElement) => XmlElement): 
  */
 export function getSpTree(doc: XmlDocument): XmlElement | null {
   const root = getDocumentRoot(doc);
-  if (!root) return null;
+  if (!root) {return null;}
 
   const cSld = getChild(root, "p:cSld");
-  if (!cSld) return null;
+  if (!cSld) {return null;}
 
   return getChild(cSld, "p:spTree") ?? null;
 }
@@ -691,7 +691,7 @@ export function getSpTree(doc: XmlDocument): XmlElement | null {
  */
 export function hasShapes(doc: XmlDocument): boolean {
   const spTree = getSpTree(doc);
-  if (!spTree) return false;
+  if (!spTree) {return false;}
 
   return spTree.children.some(
     (child) =>
@@ -747,7 +747,7 @@ function collectShapeIds(shape: ShapeAdded["shape"]): string[] {
   const ids: string[] = [];
   mapShapeTree(shape, (node) => {
     const id = getDomainShapeId(node);
-    if (id) ids.push(id);
+    if (id) {ids.push(id);}
     return node;
   });
   return ids;

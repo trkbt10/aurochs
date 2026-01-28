@@ -25,6 +25,11 @@ const CONTAINER_GAP = 8;
 
 
 
+
+
+
+
+
 export function getContainerStyle(
   orientation: SlideListOrientation
 ): CSSProperties {
@@ -48,6 +53,11 @@ export function getContainerStyle(
 
 
 
+
+
+
+
+
 export function getItemWrapperStyle(
   orientation: SlideListOrientation
 ): CSSProperties {
@@ -64,6 +74,11 @@ export function getItemWrapperStyle(
 // =============================================================================
 // Number badge styles (positioned outside slide)
 // =============================================================================
+
+
+
+
+
 
 
 
@@ -123,6 +138,11 @@ function getSelectionRing(
   }
   return "none";
 }
+
+
+
+
+
 
 
 
@@ -200,6 +220,11 @@ export const thumbnailFallbackStyle: CSSProperties = {
 
 
 
+
+
+
+
+
 export function getDeleteButtonStyle(visible: boolean): CSSProperties {
   return {
     position: "absolute",
@@ -226,6 +251,11 @@ export function getDeleteButtonStyle(visible: boolean): CSSProperties {
 // =============================================================================
 // Fx button styles
 // =============================================================================
+
+
+
+
+
 
 
 
@@ -268,6 +298,11 @@ const GAP_SIZE = 8;
 
 
 
+
+
+
+
+
 export function getGapStyle(
   orientation: SlideListOrientation
 ): CSSProperties {
@@ -297,6 +332,11 @@ export function getGapStyle(
     zIndex: 2,
   };
 }
+
+
+
+
+
 
 
 

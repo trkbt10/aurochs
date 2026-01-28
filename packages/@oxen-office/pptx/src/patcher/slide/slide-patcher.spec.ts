@@ -139,13 +139,13 @@ function pxToEmuString(valuePx: number): string {
 
 function getShapeById(doc: XmlDocument, id: string): XmlElement | null {
   const spTree = getSpTree(doc);
-  if (!spTree) return null;
+  if (!spTree) {return null;}
   return findShapeById(spTree, id);
 }
 
 function getXfrmFromShape(shape: XmlElement): XmlElement | null {
   const spPr = getChild(shape, "p:spPr");
-  if (!spPr) return null;
+  if (!spPr) {return null;}
   return getChild(spPr, "a:xfrm") ?? null;
 }
 

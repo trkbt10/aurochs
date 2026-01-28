@@ -84,6 +84,11 @@ function removeConnectionsForNode(cxnLst: XmlElement, nodeId: string): XmlElemen
   return setChildren(cxnLst, next);
 }
 
+
+
+
+
+
 export function patchDiagramNodeText(dataXml: XmlDocument, nodeId: string, text: string): XmlDocument {
   if (!nodeId) {
     throw new Error("patchDiagramNodeText: nodeId is required");
@@ -253,6 +258,11 @@ function setDiagramConnection(
     return setChildren(dataModel, nextChildren);
   });
 }
+
+
+
+
+
 
 export function patchDiagram(diagramFiles: DiagramFiles, changes: readonly DiagramChange[]): DiagramFiles {
   let nextData = diagramFiles.data;

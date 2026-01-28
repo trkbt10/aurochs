@@ -79,7 +79,7 @@ export function createChartDataEditor(
 
   const getActiveSheet = (): XlsxWorksheet | undefined => {
     const idx = state.activeSheetIndex;
-    if (idx === undefined) return undefined;
+    if (idx === undefined) {return undefined;}
     return state.workbookHistory.present.sheets[idx];
   };
 

@@ -27,6 +27,11 @@ export type ImageExtractorOptions = {
   readonly jpxDecode?: JpxDecodeFn;
 };
 
+
+
+
+
+
 export function decodeImageXObjectStreamNative(
   pdfPage: NativePdfPage,
   imageStream: PdfStream,

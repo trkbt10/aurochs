@@ -182,6 +182,11 @@ function splitByHorizontalWhitespace(
   return { top, bottom };
 }
 
+
+
+
+
+
 export function detectTableRegionsFromPaths(
   paths: readonly PdfPath[],
   page: { readonly width: number; readonly height: number },

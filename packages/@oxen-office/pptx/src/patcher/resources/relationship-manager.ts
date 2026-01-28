@@ -17,6 +17,11 @@ export type RelationshipInfo = {
   readonly targetMode?: RelationshipTargetMode;
 };
 
+
+
+
+
+
 export function listRelationships(relsXml: XmlDocument): RelationshipInfo[] {
   const root = getDocumentRoot(relsXml);
   if (!root || root.name !== "Relationships") {
@@ -43,11 +48,16 @@ export function listRelationships(relsXml: XmlDocument): RelationshipInfo[] {
   return relationships;
 }
 
+
+
+
+
+
 export function generateRelationshipId(existingIds: readonly string[]): string {
   const used = new Set<number>();
   for (const id of existingIds) {
     const match = /^rId(\d+)$/.exec(id);
-    if (!match) continue;
+    if (!match) {continue;}
     used.add(Number(match[1]));
   }
 
@@ -57,6 +67,11 @@ export function generateRelationshipId(existingIds: readonly string[]): string {
   }
   return `rId${next}`;
 }
+
+
+
+
+
 
 export function addRelationship(
   relsXml: XmlDocument,
@@ -96,7 +111,7 @@ export function addRelationship(
   const relationshipEl = createElement("Relationship", relationshipAttrs);
 
   const updated = updateDocumentRoot(relsXml, (rootEl) => {
-    if (rootEl.name !== "Relationships") return rootEl;
+    if (rootEl.name !== "Relationships") {return rootEl;}
     const nextAttrs = { ...rootEl.attrs };
     if (nextAttrs.xmlns === undefined) {
       nextAttrs.xmlns = RELATIONSHIPS_XMLNS;
@@ -110,6 +125,11 @@ export function addRelationship(
 
   return { updatedXml: updated, rId };
 }
+
+
+
+
+
 
 export function removeRelationship(relsXml: XmlDocument, rId: string): XmlDocument {
   if (!rId) {
@@ -133,6 +153,11 @@ export function removeRelationship(relsXml: XmlDocument, rId: string): XmlDocume
     };
   });
 }
+
+
+
+
+
 
 export function ensureRelationshipsDocument(relsXml: XmlDocument | null): XmlDocument {
   if (relsXml === null) {

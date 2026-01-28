@@ -729,6 +729,11 @@ function PresetCard({ preset, onSelect }: PresetCardProps) {
 // Main Component
 // =============================================================================
 
+
+
+
+
+
 export function ThemeEditorCanvas({
   colorScheme,
   fontScheme,

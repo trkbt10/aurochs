@@ -480,6 +480,11 @@ function findNotesSlideToSlideRelationshipId(notesRelsXml: XmlDocument): string 
   throw new Error("SlideManager: notesSlide .rels is missing the slide relationship");
 }
 
+
+
+
+
+
 export async function addSlide(
   doc: PresentationDocument,
   layoutPath: string,

@@ -29,7 +29,7 @@ describe("extractThemeFromPptx", () => {
     const result = await extractThemeFromPptx(officeThemeFile);
 
     expect(result.success).toBe(true);
-    if (!result.success) return;
+    if (!result.success) {return;}
 
     const { theme } = result;
 
@@ -55,7 +55,7 @@ describe("extractThemeFromPptx", () => {
     const result = await extractThemeFromPptx(officeThemeFile);
 
     expect(result.success).toBe(true);
-    if (!result.success) return;
+    if (!result.success) {return;}
 
     const { theme } = result;
 
@@ -68,7 +68,7 @@ describe("extractThemeFromPptx", () => {
     const result = await extractThemeFromPptx(officeThemeFile);
 
     expect(result.success).toBe(true);
-    if (!result.success) return;
+    if (!result.success) {return;}
 
     // File name is "Office.potx", so theme name should be "Office"
     expect(result.theme.name).toBe("Office");
@@ -88,7 +88,7 @@ describe("extractThemeFromPptx", () => {
     const result = await extractThemeFromPptx(customFile);
 
     expect(result.success).toBe(true);
-    if (!result.success) return;
+    if (!result.success) {return;}
 
     // Theme name comes from file name, not internal name
     expect(result.theme.name).toBe("My Custom Theme");

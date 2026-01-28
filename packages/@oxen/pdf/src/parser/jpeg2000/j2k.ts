@@ -43,6 +43,11 @@ function readNPasses(br: PacketBitReader): number {
   return 37 + b7;
 }
 
+
+
+
+
+
 export function decodeJ2kCodestreamToRgb(
   codestream: Uint8Array,
   options: Readonly<{ readonly expectedWidth: number; readonly expectedHeight: number }>,

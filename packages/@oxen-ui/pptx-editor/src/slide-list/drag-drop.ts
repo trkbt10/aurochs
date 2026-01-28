@@ -142,6 +142,11 @@ export function calculateGapIndexFromItemDragOver(
 
 
 
+
+
+
+
+
 export function getVerticalDropPosition(
   clientY: number,
   rectTop: number,
@@ -156,6 +161,11 @@ export function getVerticalDropPosition(
 
 
 
+
+
+
+
+
 export function getHorizontalDropPosition(
   clientX: number,
   rectLeft: number,
@@ -164,6 +174,11 @@ export function getHorizontalDropPosition(
   const mid = rectLeft + rectWidth / 2;
   return clientX < mid ? "before" : "after";
 }
+
+
+
+
+
 
 
 
@@ -185,12 +200,22 @@ export function calculateTargetIndex(
 
 
 
+
+
+
+
+
 export function isValidDrop(
   dragState: SlideDragState,
   _targetSlideId: SlideId
 ): boolean {
   return dragState.isDragging && dragState.draggingIds.length > 0;
 }
+
+
+
+
+
 
 
 
@@ -210,12 +235,22 @@ export function updateDragOverState(
 
 
 
+
+
+
+
+
 export function isDragTarget(
   _dragState: SlideDragState,
   _slideId: SlideId
 ): boolean {
   return false;
 }
+
+
+
+
+
 
 
 

@@ -230,7 +230,7 @@ export function ParagraphRenderer({
   // Check if paragraph is empty
   const isEmpty = paragraph.content.length === 0 ||
     paragraph.content.every((c) => {
-      if (c.type !== "run") return true;
+      if (c.type !== "run") {return true;}
       return c.content.length === 0 ||
         c.content.every((rc) => rc.type === "text" && rc.value === "");
     });

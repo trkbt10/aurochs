@@ -729,6 +729,11 @@ function resolveCellAlignment(
   return "left";
 }
 
+
+
+
+
+
 export function inferTableFromGroupedText(group: GroupedText, options: TableInferenceOptions = {}): InferredTable | null {
   const opts: Required<Omit<TableInferenceOptions, "paths">> & Pick<TableInferenceOptions, "paths"> = {
     ...DEFAULT_OPTS,

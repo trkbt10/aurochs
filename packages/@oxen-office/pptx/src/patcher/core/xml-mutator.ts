@@ -381,7 +381,7 @@ export function updateAtPath(
   let found = false;
 
   const newChildren = root.children.map((child) => {
-    if (found) return child;
+    if (found) {return child;}
     if (isXmlElement(child) && child.name === first) {
       found = true;
       return updateAtPath(child, rest, updater);

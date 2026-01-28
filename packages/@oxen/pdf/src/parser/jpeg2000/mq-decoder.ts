@@ -27,6 +27,11 @@ const MQ_SWITCH: readonly number[] = [
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 ];
 
+
+
+
+
+
 export class MqDecoder {
   private readonly data: Uint8Array;
   private bp: number;

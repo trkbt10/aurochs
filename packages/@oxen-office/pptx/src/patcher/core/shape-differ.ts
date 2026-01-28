@@ -526,8 +526,8 @@ export function isTransformEqual(
   a: Transform | undefined,
   b: Transform | undefined,
 ): boolean {
-  if (a === b) return true;
-  if (!a || !b) return false;
+  if (a === b) {return true;}
+  if (!a || !b) {return false;}
 
   return (
     a.x === b.x &&
@@ -548,8 +548,8 @@ export function isFillEqual(
   a: Fill | undefined,
   b: Fill | undefined,
 ): boolean {
-  if (a === b) return true;
-  if (!a || !b) return false;
+  if (a === b) {return true;}
+  if (!a || !b) {return false;}
 
   return deepEqual(a, b);
 }
@@ -561,8 +561,8 @@ export function isLineEqual(
   a: Line | undefined,
   b: Line | undefined,
 ): boolean {
-  if (a === b) return true;
-  if (!a || !b) return false;
+  if (a === b) {return true;}
+  if (!a || !b) {return false;}
 
   return deepEqual(a, b);
 }
@@ -574,8 +574,8 @@ export function isTextBodyEqual(
   a: TextBody | undefined,
   b: TextBody | undefined,
 ): boolean {
-  if (a === b) return true;
-  if (!a || !b) return false;
+  if (a === b) {return true;}
+  if (!a || !b) {return false;}
 
   return deepEqual(a, b);
 }
@@ -587,8 +587,8 @@ export function isEffectsEqual(
   a: Effects | undefined,
   b: Effects | undefined,
 ): boolean {
-  if (a === b) return true;
-  if (!a || !b) return false;
+  if (a === b) {return true;}
+  if (!a || !b) {return false;}
 
   return deepEqual(a, b);
 }
@@ -608,20 +608,20 @@ export function isGeometryEqual(
  * Handles nested objects, arrays, and primitives.
  */
 export function deepEqual(a: unknown, b: unknown): boolean {
-  if (a === b) return true;
+  if (a === b) {return true;}
 
-  if (typeof a !== typeof b) return false;
+  if (typeof a !== typeof b) {return false;}
 
   if (typeof a !== "object" || a === null || b === null) {
     return a === b;
   }
 
-  if (Array.isArray(a) !== Array.isArray(b)) return false;
+  if (Array.isArray(a) !== Array.isArray(b)) {return false;}
 
   if (Array.isArray(a) && Array.isArray(b)) {
-    if (a.length !== b.length) return false;
+    if (a.length !== b.length) {return false;}
     for (let i = 0; i < a.length; i++) {
-      if (!deepEqual(a[i], b[i])) return false;
+      if (!deepEqual(a[i], b[i])) {return false;}
     }
     return true;
   }
@@ -629,10 +629,10 @@ export function deepEqual(a: unknown, b: unknown): boolean {
   const keysA = Object.keys(a as Record<string, unknown>);
   const keysB = Object.keys(b as Record<string, unknown>);
 
-  if (keysA.length !== keysB.length) return false;
+  if (keysA.length !== keysB.length) {return false;}
 
   for (const key of keysA) {
-    if (!keysB.includes(key)) return false;
+    if (!keysB.includes(key)) {return false;}
     if (!deepEqual(
       (a as Record<string, unknown>)[key],
       (b as Record<string, unknown>)[key],

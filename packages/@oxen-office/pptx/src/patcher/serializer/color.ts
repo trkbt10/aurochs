@@ -6,6 +6,11 @@ import { createElement, type XmlElement } from "@oxen/xml";
 import type { Color, ColorTransform } from "@oxen-office/ooxml/domain/color";
 import { ooxmlAngleUnits, ooxmlPercent100k } from "@oxen-office/ooxml/serializer/units";
 
+
+
+
+
+
 export function serializeColor(color: Color): XmlElement {
   const children = serializeColorTransform(color.transform);
 

@@ -2,6 +2,11 @@
  * @file src/pdf/parser/jpeg2000/packet-bit-reader.ts
  */
 
+
+
+
+
+
 export class PacketBitReader {
   private readonly data: Uint8Array;
   private bytePos: number;

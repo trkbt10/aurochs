@@ -175,6 +175,11 @@ export function decodeText(
   return decodeTextWithFontInfo(rawText, fontInfo);
 }
 
+
+
+
+
+
 export function decodeTextWithFontInfo(rawText: string, fontInfo: FontInfo): string {
   const { mapping, codeByteWidth, ordering, encodingMap } = fontInfo;
 
