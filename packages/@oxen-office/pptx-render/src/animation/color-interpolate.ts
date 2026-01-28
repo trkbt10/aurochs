@@ -34,9 +34,6 @@ export type ParsedColor = {
   readonly alpha: number; // 0-1
 };
 
-// Re-export color types for convenience
-export type { RgbColor as RGBColor, HslColor as HSLColor };
-
 // =============================================================================
 // Color Parsing
 // =============================================================================

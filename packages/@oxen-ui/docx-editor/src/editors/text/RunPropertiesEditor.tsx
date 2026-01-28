@@ -8,10 +8,9 @@
 import { useCallback, type CSSProperties } from "react";
 import type { DocxRunProperties, DocxHighlightColor } from "@oxen-office/docx/domain/run";
 import type { HalfPoints } from "@oxen-office/docx/domain/types";
-import type { EditorProps } from "../../types";
 import { ToggleButton, Input, Select } from "@oxen-ui/ui-components/primitives";
 import { FieldGroup } from "@oxen-ui/ui-components/layout";
-import type { SelectOption } from "@oxen-ui/ui-components/types";
+import type { EditorProps, SelectOption } from "@oxen-ui/ui-components/types";
 import styles from "./RunPropertiesEditor.module.css";
 
 // =============================================================================

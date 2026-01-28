@@ -8,10 +8,9 @@
 import { useCallback, type CSSProperties } from "react";
 import type { DocxStyle, DocxStyleType } from "@oxen-office/docx/domain/styles";
 import type { DocxStyleId } from "@oxen-office/docx/domain/types";
-import type { EditorProps } from "../../types";
 import { Input, Select, Toggle } from "@oxen-ui/ui-components/primitives";
 import { FieldGroup } from "@oxen-ui/ui-components/layout";
-import type { SelectOption } from "@oxen-ui/ui-components/types";
+import type { EditorProps, SelectOption } from "@oxen-ui/ui-components/types";
 import styles from "./StyleEditor.module.css";
 
 // =============================================================================

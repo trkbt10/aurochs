@@ -7,7 +7,8 @@
 import { useState, useCallback, useMemo, type CSSProperties } from "react";
 import type { ColorScheme } from "@oxen-office/ooxml/domain/color-context";
 import type { FontScheme, FontSpec } from "@oxen-office/ooxml/domain/font-scheme";
-import type { ThemePreset, SchemeColorName } from "./types";
+import type { SchemeColorName } from "@oxen-office/ooxml/domain/color";
+import type { ThemePreset } from "./types";
 import { ColorSchemeEditor } from "./ColorSchemeEditor";
 import { FontSchemeEditor } from "./FontSchemeEditor";
 import { ThemePresetSelector } from "./ThemePresetSelector";

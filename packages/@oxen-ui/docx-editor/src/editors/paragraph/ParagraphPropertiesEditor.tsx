@@ -14,10 +14,9 @@ import type {
 } from "@oxen-office/docx/domain/paragraph";
 import type { ParagraphAlignment } from "@oxen-office/ooxml/domain/text";
 import type { Twips } from "@oxen-office/docx/domain/types";
-import type { EditorProps } from "../../types";
 import { ToggleButton, Input, Select, Toggle } from "@oxen-ui/ui-components/primitives";
 import { FieldGroup, FieldRow } from "@oxen-ui/ui-components/layout";
-import type { SelectOption } from "@oxen-ui/ui-components/types";
+import type { EditorProps, SelectOption } from "@oxen-ui/ui-components/types";
 import {
   AlignLeftIcon,
   AlignCenterIcon,

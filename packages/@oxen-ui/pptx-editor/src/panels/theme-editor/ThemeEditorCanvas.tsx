@@ -12,9 +12,10 @@
 import { useState, useCallback, useMemo, useRef, type CSSProperties, type ChangeEvent } from "react";
 import type { ColorScheme } from "@oxen-office/ooxml/domain/color-context";
 import type { FontScheme, FontSpec } from "@oxen-office/ooxml/domain/font-scheme";
+import type { SchemeColorName } from "@oxen-office/ooxml/domain/color";
 import type { PresentationFile, SlideSize } from "@oxen-office/pptx/domain";
 import type { SlideLayoutOption } from "@oxen-office/pptx/app";
-import type { SchemeColorName, ThemePreset } from "./types";
+import type { ThemePreset } from "./types";
 import { THEME_PRESETS, OFFICE_THEME } from "./presets";
 import { LayoutEditor } from "./LayoutEditor";
 import { ColorPickerPopover } from "../../ui/color/ColorPickerPopover";

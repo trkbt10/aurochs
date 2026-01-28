@@ -5,16 +5,6 @@
  * and defines DOCX-specific types.
  */
 
-// Re-export shared types
-export type {
-  EditorProps,
-  EditorState,
-  EditorAction,
-  InputType,
-  ButtonVariant,
-  SelectOption,
-} from "@oxen-ui/ui-components/types";
-
 // =============================================================================
 // DOCX-specific types
 // =============================================================================

@@ -126,7 +126,7 @@ export {
 
 // Color interpolation - RGB/HSL color animation
 // Note: Uses src/color for base conversion utilities (no duplication)
-export type { RGBColor, HSLColor, ParsedColor } from "./color-interpolate";
+export type { ParsedColor } from "./color-interpolate";
 export {
   parseColor,
   lerpRGB,

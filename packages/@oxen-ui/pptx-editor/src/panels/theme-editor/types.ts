@@ -32,12 +32,6 @@
 import type { FontSpec } from "@oxen-office/ooxml/domain/font-scheme";
 import type { SchemeColorName } from "@oxen-office/ooxml/domain/color";
 
-// SchemeColorName is the ECMA-376 aligned type for color scheme slot names.
-// Canonical definition: ooxml/domain/color.ts (ECMA-376 Part 1, Section 20.1.6.2)
-// Re-exported here for convenient access from theme editor components.
-// eslint-disable-next-line custom/no-deep-reexport -- legitimate API re-export
-export type { SchemeColorName } from "@oxen-office/ooxml/domain/color";
-
 // =============================================================================
 // Color Scheme Types
 // =============================================================================

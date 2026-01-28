@@ -11,10 +11,9 @@ import type {
   DocxTableLook,
 } from "@oxen-office/docx/domain/table";
 import type { TableAlignment, TableLayoutType, TableWidth } from "@oxen-office/ooxml/domain/table";
-import type { EditorProps } from "../../types";
 import { ToggleButton, Input, Select, Toggle } from "@oxen-ui/ui-components/primitives";
 import { FieldGroup } from "@oxen-ui/ui-components/layout";
-import type { SelectOption } from "@oxen-ui/ui-components/types";
+import type { EditorProps, SelectOption } from "@oxen-ui/ui-components/types";
 import { AlignLeftIcon, AlignCenterIcon, AlignRightIcon } from "@oxen-ui/ui-components/icons";
 import { iconTokens } from "@oxen-ui/ui-components/design-tokens";
 import styles from "./TablePropertiesEditor.module.css";

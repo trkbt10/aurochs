@@ -8,10 +8,9 @@
 import { useCallback, type CSSProperties, type ReactNode } from "react";
 import type { DocxTableCellProperties } from "@oxen-office/docx/domain/table";
 import type { TableCellVerticalAlignment } from "@oxen-office/ooxml/domain/table";
-import type { EditorProps } from "../../types";
 import { ToggleButton, Input, Select, Toggle, Button } from "@oxen-ui/ui-components/primitives";
 import { FieldGroup } from "@oxen-ui/ui-components/layout";
-import type { SelectOption } from "@oxen-ui/ui-components/types";
+import type { EditorProps, SelectOption } from "@oxen-ui/ui-components/types";
 import { AlignTopIcon, AlignMiddleIcon, AlignBottomIcon } from "@oxen-ui/ui-components/icons";
 import { iconTokens } from "@oxen-ui/ui-components/design-tokens";
 import styles from "./TableCellPropertiesEditor.module.css";

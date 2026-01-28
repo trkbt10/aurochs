@@ -118,6 +118,3 @@ export type RawMasterTextStyles = {
   readonly bodyStyle: XmlElement | undefined;
   readonly otherStyle: XmlElement | undefined;
 };
-
-// Re-export resolution types for convenience
-export type { ColorSchemeType as ColorScheme, ColorMapType as ColorMap, FontSchemeType as FontScheme };

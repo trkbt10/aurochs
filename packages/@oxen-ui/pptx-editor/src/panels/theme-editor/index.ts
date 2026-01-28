@@ -14,7 +14,6 @@ export type { ThemeExtractionResult } from "./theme-importer";
 export { exportThemeAsPotx, getThemeFileName } from "./theme-exporter";
 export type { ThemeExportOptions } from "./theme-exporter";
 export type {
-  SchemeColorName,
   ThemeColorScheme,
   ThemeFontScheme,
   ThemePreset,

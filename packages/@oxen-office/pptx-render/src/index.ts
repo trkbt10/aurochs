@@ -65,24 +65,6 @@ export { extractTransformData, buildCssTransform, buildCssPositionStyles, buildS
 // Types from domain (fill resolution)
 // =============================================================================
 
-export type {
-  ResolvedColor,
-  ResolvedFill,
-  ResolvedLine,
-  DashStyle,
-} from "@oxen-office/pptx/domain/color/fill";
-
-export { resolveFill, resolveLine, resolveColorWithAlpha, formatRgba, getDashArrayPattern } from "@oxen-office/pptx/domain/color/fill";
-
-// =============================================================================
-// Types from domain (resource resolver)
-// =============================================================================
-
-export type { ResourceResolver } from "@oxen-office/pptx/domain/resource-resolver";
-
-export { createEmptyResourceResolver } from "@oxen-office/pptx/domain/resource-resolver";
-
-
 // =============================================================================
 // HTML Utilities (backward compatibility)
 // =============================================================================

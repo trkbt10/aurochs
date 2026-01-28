@@ -73,6 +73,7 @@ export {
   PathElement,
   getGeometryPathData,
   TextRenderer,
+  extractText3DRuns,
   type SvgFillProps,
   type FillResult,
   type SvgStrokeProps,
