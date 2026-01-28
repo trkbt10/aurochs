@@ -1,33 +1,9 @@
 /**
- * @file Unit types and conversion constants for text measurement
+ * @file Unit conversion constants for text measurement
  *
- * Provides branded types for type-safe unit handling in text layout.
+ * This module provides unit conversion constants.
+ * For type-safe branded units (Pixels, Points), use @oxen-office/ooxml/domain/units.
  */
-
-declare const __brand: unique symbol;
-type Brand<K, T> = K & { readonly [__brand]: T };
-
-/**
- * Pixels unit type (branded number).
- * Represents measurements in screen pixels.
- */
-export type Pixels = Brand<number, "Pixels">;
-
-/**
- * Points unit type (branded number).
- * Represents typographic points (1pt = 1/72 inch).
- */
-export type Points = Brand<number, "Points">;
-
-/**
- * Create a Pixels value from a number.
- */
-export const px = (value: number): Pixels => value as Pixels;
-
-/**
- * Create a Points value from a number.
- */
-export const pt = (value: number): Points => value as Points;
 
 /**
  * Points to pixels conversion factor at 96 DPI.
@@ -45,13 +21,13 @@ export const PX_TO_PT = 72 / 96;
 /**
  * Convert points to pixels.
  */
-export function pointsToPixels(points: Points): Pixels {
-  return px((points as number) * PT_TO_PX);
+export function pointsToPixels(points: number): number {
+  return points * PT_TO_PX;
 }
 
 /**
  * Convert pixels to points.
  */
-export function pixelsToPoints(pixels: Pixels): Points {
-  return pt((pixels as number) * PX_TO_PT);
+export function pixelsToPoints(pixels: number): number {
+  return pixels * PX_TO_PT;
 }

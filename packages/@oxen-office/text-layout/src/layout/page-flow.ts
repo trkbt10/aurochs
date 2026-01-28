@@ -21,8 +21,8 @@ import type {
   WritingMode,
   FloatingImageConfig,
   PositionedFloatingImage,
-} from "./types";
-import { isVertical } from "./writing-mode";
+} from "../types";
+import { isVertical } from "../writing-mode";
 
 // =============================================================================
 // Types

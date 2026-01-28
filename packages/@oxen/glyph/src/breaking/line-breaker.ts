@@ -3,11 +3,10 @@
  *
  * Breaks text into lines based on available width.
  * Generic implementation that works with any span type extending BreakableSpan.
+ * All measurements use plain numbers (pixels for width, points for font size).
  */
 
 import type { BreakableSpan, LineFontInfo, LineBreakResult, TextWrapping } from "./types";
-import type { Pixels, Points } from "../measure/units";
-import { px, pt } from "../measure/units";
 import { measureTextWidth } from "../measure/measurer";
 import { isCjkCodePoint } from "../metrics/cjk";
 
@@ -76,13 +75,13 @@ function createOverflowSpan<T extends BreakableSpan>(span: T, overflowText: stri
  */
 function breakSpanAtWidth<T extends BreakableSpan>(
   span: T,
-  maxWidth: Pixels,
-  currentLineWidth: Pixels,
+  maxWidth: number,
+  currentLineWidth: number,
 ): { fits: T | null; overflow: T | null } {
-  const availableWidth = (maxWidth as number) - (currentLineWidth as number);
+  const availableWidth = maxWidth - currentLineWidth;
 
   // If the whole span fits, return it
-  if ((span.width as number) <= availableWidth) {
+  if (span.width <= availableWidth) {
     return { fits: span, overflow: null };
   }
 
@@ -97,8 +96,8 @@ function breakSpanAtWidth<T extends BreakableSpan>(
     // Use transformed character for width calculation
     const transformedChar = transformedText[i];
     const charWidth =
-      (measureTextWidth(transformedChar, span.fontSize, px(0), span.fontFamily, span.fontWeight) as number) +
-      (i > 0 ? (span.letterSpacing as number) : 0);
+      measureTextWidth(transformedChar, span.fontSize, 0, span.fontFamily, span.fontWeight) +
+      (i > 0 ? span.letterSpacing : 0);
 
     if (state.accumulatedWidth + charWidth > availableWidth && state.breakIndex >= 0) {
       // We've exceeded the width, break at the last good position
@@ -126,15 +125,15 @@ function breakSpanAtWidth<T extends BreakableSpan>(
 
   // If no break point found and we're at the start of a line, force break
   if (state.breakIndex <= 0) {
-    if ((currentLineWidth as number) === 0) {
+    if (currentLineWidth === 0) {
       // Force break - find where we exceed the width
       state.accumulatedWidth = 0;
       for (const i of Array.from({ length: text.length }, (_, index) => index)) {
         // Use transformed character for width calculation
         const transformedChar = transformedText[i];
         const charWidth =
-          (measureTextWidth(transformedChar, span.fontSize, px(0), span.fontFamily, span.fontWeight) as number) +
-          (i > 0 ? (span.letterSpacing as number) : 0);
+          measureTextWidth(transformedChar, span.fontSize, 0, span.fontFamily, span.fontWeight) +
+          (i > 0 ? span.letterSpacing : 0);
         if (state.accumulatedWidth + charWidth > availableWidth && i > 0) {
           state.breakIndex = i;
           break;
@@ -173,30 +172,30 @@ function breakSpanAtWidth<T extends BreakableSpan>(
  * Break spans into lines with word wrapping.
  *
  * @param spans - Array of measured spans to break
- * @param firstLineWidth - Maximum width for the first line
- * @param nextLineWidth - Maximum width for subsequent lines
+ * @param firstLineWidth - Maximum width for the first line (in pixels)
+ * @param nextLineWidth - Maximum width for subsequent lines (in pixels)
  * @param wrapMode - Text wrapping mode ("wrap" or "none")
- * @returns Line break result with lines, heights, and page break flags
+ * @returns Line break result with lines, heights (in points), and page break flags
  */
 export function breakIntoLines<T extends BreakableSpan>(
   spans: readonly T[],
-  firstLineWidth: Pixels,
-  nextLineWidth: Pixels,
+  firstLineWidth: number,
+  nextLineWidth: number,
   wrapMode: TextWrapping | "wrap",
 ): LineBreakResult<T> {
   const lines: T[][] = [];
-  const lineHeights: Points[] = [];
+  const lineHeights: number[] = [];
   const pageBreaksAfter: boolean[] = [];
 
   if (spans.length === 0) {
-    return { lines: [[] as T[]], lineHeights: [pt(0)], pageBreaksAfter: [false] };
+    return { lines: [[] as T[]], lineHeights: [0], pageBreaksAfter: [false] };
   }
 
   type State = {
     currentLine: T[];
     currentLineWidth: number;
     currentLineHeight: number;
-    currentMaxWidth: Pixels;
+    currentMaxWidth: number;
   };
 
   const state: State = {
@@ -215,7 +214,7 @@ export function breakIntoLines<T extends BreakableSpan>(
 
   const pushLine = (height: number, pageBreak: boolean = false) => {
     lines.push(state.currentLine);
-    lineHeights.push(pt(height));
+    lineHeights.push(height);
     pageBreaksAfter.push(pageBreak);
     resetLineState();
   };
@@ -232,8 +231,8 @@ export function breakIntoLines<T extends BreakableSpan>(
 
     if (wrapMode === "none") {
       state.currentLine.push(spanItem);
-      state.currentLineWidth += spanItem.width as number;
-      state.currentLineHeight = Math.max(state.currentLineHeight, spanItem.fontSize as number);
+      state.currentLineWidth += spanItem.width;
+      state.currentLineHeight = Math.max(state.currentLineHeight, spanItem.fontSize);
       continue;
     }
 
@@ -242,16 +241,16 @@ export function breakIntoLines<T extends BreakableSpan>(
       if (span === undefined) {
         continue;
       }
-      const { fits, overflow } = breakSpanAtWidth(span, state.currentMaxWidth, px(state.currentLineWidth));
+      const { fits, overflow } = breakSpanAtWidth(span, state.currentMaxWidth, state.currentLineWidth);
 
       if (fits !== null) {
         state.currentLine.push(fits);
-        state.currentLineWidth += fits.width as number;
-        state.currentLineHeight = Math.max(state.currentLineHeight, fits.fontSize as number);
+        state.currentLineWidth += fits.width;
+        state.currentLineHeight = Math.max(state.currentLineHeight, fits.fontSize);
       }
 
       if (overflow !== null) {
-        const height = state.currentLineHeight !== 0 ? state.currentLineHeight : (overflow.fontSize as number);
+        const height = state.currentLineHeight !== 0 ? state.currentLineHeight : overflow.fontSize;
         pushLine(height);
         pending.unshift(overflow);
       }
@@ -261,8 +260,8 @@ export function breakIntoLines<T extends BreakableSpan>(
   // Don't forget the last line
   if (state.currentLine.length > 0 || lines.length === 0) {
     lines.push(state.currentLine);
-    const fallbackFontSize = (spans[0]?.fontSize ?? pt(DEFAULT_FONT_SIZE_PT)) as number;
-    lineHeights.push(pt(state.currentLineHeight !== 0 ? state.currentLineHeight : fallbackFontSize));
+    const fallbackFontSize = spans[0]?.fontSize ?? DEFAULT_FONT_SIZE_PT;
+    lineHeights.push(state.currentLineHeight !== 0 ? state.currentLineHeight : fallbackFontSize);
     pageBreaksAfter.push(false); // Last line doesn't have a page break after it
   }
 
@@ -274,22 +273,20 @@ export function breakIntoLines<T extends BreakableSpan>(
 // =============================================================================
 
 /**
- * Calculate the total width of a line.
+ * Calculate the total width of a line (in pixels).
  */
-export function getLineWidth<T extends BreakableSpan>(spans: readonly T[]): Pixels {
-  const width = spans.reduce((sum, span) => sum + (span.width as number), 0);
-  return px(width);
+export function getLineWidth<T extends BreakableSpan>(spans: readonly T[]): number {
+  return spans.reduce((sum, span) => sum + span.width, 0);
 }
 
 /**
- * Get the maximum font size in a line.
+ * Get the maximum font size in a line (in points).
  */
-export function getLineMaxFontSize<T extends BreakableSpan>(spans: readonly T[]): Points {
+export function getLineMaxFontSize<T extends BreakableSpan>(spans: readonly T[]): number {
   if (spans.length === 0) {
-    return pt(DEFAULT_FONT_SIZE_PT);
+    return DEFAULT_FONT_SIZE_PT;
   }
-  const max = Math.max(...spans.map((s) => s.fontSize as number));
-  return pt(max);
+  return Math.max(...spans.map((s) => s.fontSize));
 }
 
 /**
@@ -298,11 +295,11 @@ export function getLineMaxFontSize<T extends BreakableSpan>(spans: readonly T[])
  */
 export function getLineMaxFontInfo<T extends BreakableSpan>(spans: readonly T[]): LineFontInfo {
   if (spans.length === 0) {
-    return { fontSize: pt(DEFAULT_FONT_SIZE_PT), fontFamily: "sans-serif" };
+    return { fontSize: DEFAULT_FONT_SIZE_PT, fontFamily: "sans-serif" };
   }
 
   const maxSpan = spans.reduce((current, span) => {
-    if ((span.fontSize as number) > (current.fontSize as number)) {
+    if (span.fontSize > current.fontSize) {
       return span;
     }
     return current;

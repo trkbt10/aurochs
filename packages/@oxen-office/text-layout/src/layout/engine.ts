@@ -20,12 +20,12 @@ import type {
   LineSpacing,
   TextAlign,
   WritingMode,
-} from "./types";
-import { isVertical } from "./writing-mode";
+} from "../types";
+import { isVertical } from "../writing-mode";
 import type { Pixels, Points } from "@oxen-office/ooxml/domain/units";
 import { px, pt, pct } from "@oxen-office/ooxml/domain/units";
-import { measureSpans, estimateBulletWidth, PT_TO_PX } from "./measurer";
-import { breakIntoLines, getLineWidth, DEFAULT_FONT_SIZE_PT } from "./line-breaker";
+import { measureSpans, estimateBulletWidth, PT_TO_PX } from "../measure/measurer";
+import { breakIntoLines, getLineWidth, DEFAULT_FONT_SIZE_PT } from "../measure/line-breaker";
 import { getAscenderRatio } from "@oxen/glyph";
 
 // =============================================================================

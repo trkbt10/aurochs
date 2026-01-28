@@ -4,11 +4,13 @@
  * Measures text width using Canvas API for accuracy with browser rendering.
  * Falls back to font-metrics estimation in non-browser environments.
  *
+ * All measurements use plain numbers (pixels for width, points for font size).
+ * For type-safe branded units, use @oxen-office/text-layout which wraps these functions.
+ *
  * @see ../metrics/font-metrics.ts - Font metrics data (fallback)
  */
 
-import type { Pixels, Points } from "./units";
-import { px, PT_TO_PX } from "./units";
+import { PT_TO_PX } from "./units";
 import { getCharWidth, getKerningAdjustment, isCjkCodePoint, isMonospace } from "../metrics";
 
 // =============================================================================
@@ -119,14 +121,15 @@ function measureWithCanvas(
 
 /**
  * Result of character width calculation with kerning.
+ * All values are in pixels.
  */
 export type CharWidthResult = {
   /** Character width in pixels */
-  readonly width: Pixels;
+  readonly width: number;
   /** Kerning adjustment from previous character (negative = tighter) */
-  readonly kerningAdjust: Pixels;
+  readonly kerningAdjust: number;
   /** Total width including kerning adjustment */
-  readonly totalWidth: Pixels;
+  readonly totalWidth: number;
 };
 
 /**
@@ -134,20 +137,20 @@ export type CharWidthResult = {
  *
  * @param char - Current character
  * @param prevChar - Previous character (for kerning)
- * @param fontSize - Font size in points
+ * @param fontSizePt - Font size in points
  * @param fontFamily - Font family name
  * @param fontWeight - Font weight (default: 400)
- * @returns Character width result with kerning adjustment
+ * @returns Character width result with kerning adjustment (all values in pixels)
  */
 export function calculateCharWidth(
   char: string,
   prevChar: string | undefined,
-  fontSize: Points,
+  fontSizePt: number,
   fontFamily: string,
   fontWeight: number = 400,
 ): CharWidthResult {
   const charCode = char.charCodeAt(0);
-  const fontSizePx = (fontSize as number) * PT_TO_PX;
+  const fontSizePx = fontSizePt * PT_TO_PX;
   const isCjk = isCjkCodePoint(charCode);
 
   // Get base character width from font metrics (with bold adjustment)
@@ -158,9 +161,9 @@ export function calculateCharWidth(
   const kerningAdjust = resolveKerningAdjust(prevChar, char, fontSizePx, fontFamily);
 
   return {
-    width: px(width),
-    kerningAdjust: px(kerningAdjust),
-    totalWidth: px(width + kerningAdjust),
+    width,
+    kerningAdjust,
+    totalWidth: width + kerningAdjust,
   };
 }
 
@@ -194,8 +197,8 @@ function resolveKerningAdjust(
  * Falls back to font-metrics estimation in non-browser environments.
  *
  * @param text - Text to measure
- * @param fontSize - Font size in points
- * @param letterSpacing - Additional letter spacing in pixels
+ * @param fontSizePt - Font size in points
+ * @param letterSpacingPx - Additional letter spacing in pixels
  * @param fontFamily - Font family for metrics lookup
  * @param fontWeight - Font weight (default: 400)
  * @param fontStyle - Font style (default: "normal")
@@ -203,23 +206,22 @@ function resolveKerningAdjust(
  */
 export function measureTextWidth(
   text: string,
-  fontSize: Points,
-  letterSpacing: Pixels,
+  fontSizePt: number,
+  letterSpacingPx: number,
   fontFamily: string,
   fontWeight: number = 400,
   fontStyle: "normal" | "italic" = "normal",
-): Pixels {
-  const fontSizePx = (fontSize as number) * PT_TO_PX;
-  const letterSpacingNum = letterSpacing as number;
+): number {
+  const fontSizePx = fontSizePt * PT_TO_PX;
 
   // Try Canvas measurement first (matches browser rendering)
-  const canvasWidth = measureWithCanvas(text, fontSizePx, fontFamily, fontWeight, fontStyle, letterSpacingNum);
+  const canvasWidth = measureWithCanvas(text, fontSizePx, fontFamily, fontWeight, fontStyle, letterSpacingPx);
   if (canvasWidth !== undefined) {
-    return px(canvasWidth);
+    return canvasWidth;
   }
 
   // Fallback to font-metrics estimation
-  return estimateTextWidthFallback(text, fontSize, letterSpacing, fontFamily, fontWeight);
+  return estimateTextWidthFallback(text, fontSizePt, letterSpacingPx, fontFamily, fontWeight);
 }
 
 /**
@@ -228,22 +230,21 @@ export function measureTextWidth(
  */
 export function estimateTextWidthFallback(
   text: string,
-  fontSize: Points,
-  letterSpacing: Pixels,
+  fontSizePt: number,
+  letterSpacingPx: number,
   fontFamily: string,
   fontWeight: number = 400,
-): Pixels {
+): number {
   const chars = Array.from(text);
-  const letterSpacingNum = letterSpacing as number;
 
   const width = chars.reduce((acc, char, index) => {
     const prevChar = index > 0 ? chars[index - 1] : undefined;
-    const charResult = calculateCharWidth(char, prevChar, fontSize, fontFamily, fontWeight);
-    const spacing = index > 0 ? letterSpacingNum : 0;
-    return acc + (charResult.totalWidth as number) + spacing;
+    const charResult = calculateCharWidth(char, prevChar, fontSizePt, fontFamily, fontWeight);
+    const spacing = index > 0 ? letterSpacingPx : 0;
+    return acc + charResult.totalWidth + spacing;
   }, 0);
 
-  return px(width);
+  return width;
 }
 
 // =============================================================================
@@ -252,14 +253,15 @@ export function estimateTextWidthFallback(
 
 /**
  * Detailed span measurement with per-character data.
+ * All values are in pixels.
  */
 export type DetailedMeasurement = {
   /** Total width in pixels */
-  readonly totalWidth: Pixels;
+  readonly totalWidth: number;
   /** Per-character width data */
   readonly charWidths: readonly CharWidthResult[];
-  /** Cumulative positions (x offset for each character) */
-  readonly positions: readonly Pixels[];
+  /** Cumulative positions (x offset for each character) in pixels */
+  readonly positions: readonly number[];
 };
 
 /**
@@ -267,38 +269,37 @@ export type DetailedMeasurement = {
  * Returns per-character width and position data for precise tspan placement.
  *
  * @param text - Text to measure
- * @param fontSize - Font size in points
- * @param letterSpacing - Additional letter spacing in pixels
+ * @param fontSizePt - Font size in points
+ * @param letterSpacingPx - Additional letter spacing in pixels
  * @param fontFamily - Font family for metrics lookup
  * @param fontWeight - Font weight (default: 400)
- * @returns Detailed measurement with per-character data
+ * @returns Detailed measurement with per-character data (all values in pixels)
  */
 export function measureTextDetailed(
   text: string,
-  fontSize: Points,
-  letterSpacing: Pixels,
+  fontSizePt: number,
+  letterSpacingPx: number,
   fontFamily: string,
   fontWeight: number = 400,
 ): DetailedMeasurement {
   const chars = Array.from(text);
-  const letterSpacingNum = letterSpacing as number;
 
   const measurement = chars.reduce(
     (acc, char, index) => {
       const prevChar = index > 0 ? chars[index - 1] : undefined;
-      const charResult = calculateCharWidth(char, prevChar, fontSize, fontFamily, fontWeight);
-      const spacing = index > 0 ? letterSpacingNum : 0;
+      const charResult = calculateCharWidth(char, prevChar, fontSizePt, fontFamily, fontWeight);
+      const spacing = index > 0 ? letterSpacingPx : 0;
 
-      acc.positions.push(px(acc.totalWidth));
+      acc.positions.push(acc.totalWidth);
       acc.charWidths.push(charResult);
-      acc.totalWidth += (charResult.totalWidth as number) + spacing;
+      acc.totalWidth += charResult.totalWidth + spacing;
       return acc;
     },
-    { totalWidth: 0, charWidths: [] as CharWidthResult[], positions: [] as Pixels[] },
+    { totalWidth: 0, charWidths: [] as CharWidthResult[], positions: [] as number[] },
   );
 
   return {
-    totalWidth: px(measurement.totalWidth),
+    totalWidth: measurement.totalWidth,
     charWidths: measurement.charWidths,
     positions: measurement.positions,
   };
@@ -317,8 +318,8 @@ export type TextMeasurer = {
    * Measure the width of a text string.
    *
    * @param text - Text to measure
-   * @param fontSize - Font size in points
-   * @param letterSpacing - Additional letter spacing in pixels
+   * @param fontSizePt - Font size in points
+   * @param letterSpacingPx - Additional letter spacing in pixels
    * @param fontFamily - Font family for metrics lookup
    * @param fontWeight - Font weight (default: 400)
    * @param fontStyle - Font style (default: "normal")
@@ -326,12 +327,12 @@ export type TextMeasurer = {
    */
   measureTextWidth(
     text: string,
-    fontSize: Points,
-    letterSpacing: Pixels,
+    fontSizePt: number,
+    letterSpacingPx: number,
     fontFamily: string,
     fontWeight?: number,
     fontStyle?: "normal" | "italic",
-  ): Pixels;
+  ): number;
 };
 
 /**

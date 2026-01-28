@@ -7,7 +7,7 @@
 
 import { px, pt, pct } from "@oxen-office/ooxml/domain/units";
 import { layoutTextBody, layoutDocument } from "./engine";
-import type { LayoutInput, LayoutParagraphInput, TextBoxConfig } from "./types";
+import type { LayoutInput, LayoutParagraphInput, TextBoxConfig } from "../types";
 
 // =============================================================================
 // Test Data Helpers

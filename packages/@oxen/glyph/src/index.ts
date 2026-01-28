@@ -2,6 +2,10 @@
  * @file Glyph module
  *
  * Character glyph contour extraction, text layout, and measurement.
+ *
+ * This module uses plain numbers for measurements.
+ * For type-safe branded units (Pixels, Points), use @oxen-office/text-layout
+ * which wraps these functions with OOXML-specific types.
  */
 
 // =============================================================================
@@ -55,11 +59,10 @@ export {
 export { getFontCategory, getFontMetrics, isMonospace } from "./metrics/fonts";
 
 // =============================================================================
-// Measurement (Canvas + fallback)
+// Measurement (Canvas + fallback, plain numbers)
 // =============================================================================
 
-export type { Pixels, Points } from "./measure/units";
-export { px, pt, PT_TO_PX, PX_TO_PT, pointsToPixels, pixelsToPoints } from "./measure/units";
+export { PT_TO_PX, PX_TO_PT, pointsToPixels, pixelsToPoints } from "./measure/units";
 export type { CharWidthResult, DetailedMeasurement, TextMeasurer } from "./measure/measurer";
 export {
   calculateCharWidth,
@@ -70,7 +73,7 @@ export {
 } from "./measure/measurer";
 
 // =============================================================================
-// Line Breaking
+// Line Breaking (plain numbers)
 // =============================================================================
 
 export type { BreakableSpan, TextWrapping, LineBreakResult, LineFontInfo } from "./breaking/types";

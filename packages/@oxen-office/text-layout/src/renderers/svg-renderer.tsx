@@ -17,7 +17,7 @@ import type {
   CursorCoordinates,
   WritingMode,
 } from "../types";
-import { PT_TO_PX } from "../measurer";
+import { PT_TO_PX } from "../measure/measurer";
 import { getAscenderRatio } from "@oxen/glyph";
 import { isVertical } from "../writing-mode";
 

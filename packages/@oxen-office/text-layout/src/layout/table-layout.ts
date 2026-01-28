@@ -13,7 +13,7 @@ import type {
   LayoutTableCellResult,
   LayoutParagraphInput,
   LayoutParagraphResult,
-} from "./types";
+} from "../types";
 import type { Pixels } from "@oxen-office/ooxml/domain/units";
 import { px } from "@oxen-office/ooxml/domain/units";
 import { layoutDocument } from "./engine";

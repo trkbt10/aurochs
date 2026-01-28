@@ -2,6 +2,10 @@
  * @file Line breaking module
  *
  * Provides line breaking and word wrapping for text layout.
+ * All measurements use plain numbers (pixels for width, points for font size).
+ *
+ * For type-safe branded units, use @oxen-office/text-layout which provides
+ * OOXML-specific wrappers.
  */
 
 // Types

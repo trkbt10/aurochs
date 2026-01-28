@@ -17,7 +17,7 @@ import type { LayoutParagraphInput, HeaderFooterLayout } from "../types";
 import type { Pixels } from "@oxen-office/ooxml/domain/units";
 import { px } from "@oxen-office/ooxml/domain/units";
 import { paragraphToLayoutInput, createParagraphLayoutContext } from "./docx-adapter";
-import { layoutDocument } from "../engine";
+import { layoutDocument } from "../layout/engine";
 
 // =============================================================================
 // Types

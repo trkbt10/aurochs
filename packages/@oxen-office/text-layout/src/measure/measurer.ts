@@ -1,125 +1,21 @@
 /**
- * @file Text width measurement
+ * @file Text width measurement for OOXML documents
  *
- * Measures text width using Canvas API for accuracy with browser rendering.
- * Falls back to font-metrics estimation in non-browser environments.
- * Shared implementation for PPTX and DOCX text layout.
+ * Wraps @oxen/glyph measurement functions with OOXML-specific types (Pixels, Points).
+ * Provides type-safe text measurement for PPTX and DOCX text layout.
  *
- * This module wraps the generic measurement functions from @oxen/glyph
- * with ooxml-specific types (Pixels, Points).
+ * @see @oxen/glyph/measure - Core measurement functions (plain numbers)
  */
 
-import type { LayoutSpan, MeasuredSpan } from "./types";
+import type { LayoutSpan, MeasuredSpan } from "../types";
 import type { Pixels, Points } from "@oxen-office/ooxml/domain/units";
 import { px } from "@oxen-office/ooxml/domain/units";
 import {
-  getCharWidth,
-  getKerningAdjustment,
-  isCjkCodePoint,
-  isMonospace,
+  measureTextWidth as glyphMeasureTextWidth,
+  calculateCharWidth as glyphCalculateCharWidth,
+  measureTextDetailed as glyphMeasureTextDetailed,
+  PT_TO_PX as GLYPH_PT_TO_PX,
 } from "@oxen/glyph";
-
-// =============================================================================
-// Canvas Measurement
-// =============================================================================
-
-/**
- * Shared canvas context for text measurement.
- * Created lazily and reused for performance.
- */
-const measurementState: {
-  canvas?: HTMLCanvasElement;
-  context?: CanvasRenderingContext2D;
-  lastInitError?: unknown;
-} = {};
-
-/**
- * Check if Canvas measurement is available.
- */
-function canUseCanvas(): boolean {
-  if (typeof document === "undefined") {
-    return false;
-  }
-  if (measurementState.context !== undefined) {
-    return true;
-  }
-  try {
-    measurementState.canvas = document.createElement("canvas");
-    measurementState.context = measurementState.canvas.getContext("2d") ?? undefined;
-    return measurementState.context !== undefined;
-  } catch (error) {
-    measurementState.canvas = undefined;
-    measurementState.context = undefined;
-    measurementState.lastInitError = error;
-    return false;
-  }
-}
-
-/**
- * Build a CSS font string for Canvas measurement.
- * Must match the format used by SVG rendering.
- */
-function buildFontString(
-  fontSizePx: number,
-  fontFamily: string,
-  fontWeight: number,
-  fontStyle: "normal" | "italic",
-): string {
-  const style = fontStyle === "italic" ? "italic " : "";
-  const weight = fontWeight !== 400 ? `${fontWeight} ` : "";
-  return `${style}${weight}${fontSizePx}px ${fontFamily}`;
-}
-
-/**
- * Measurement cache to avoid redundant Canvas calls.
- * Key format: "fontString|letterSpacing|text"
- */
-const measurementCache = new Map<string, number>();
-const MAX_CACHE_SIZE = 10000;
-
-/**
- * Measure text width using Canvas API.
- * Returns undefined if Canvas is not available.
- */
-function measureWithCanvas(
-  text: string,
-  fontSizePx: number,
-  fontFamily: string,
-  fontWeight: number,
-  fontStyle: "normal" | "italic",
-  letterSpacing: number,
-): number | undefined {
-  if (!canUseCanvas() || measurementState.context === undefined) {
-    return undefined;
-  }
-
-  const ctx = measurementState.context;
-  const fontString = buildFontString(fontSizePx, fontFamily, fontWeight, fontStyle);
-  const cacheKey = `${fontString}|${letterSpacing}|${text}`;
-
-  const cached = measurementCache.get(cacheKey);
-  if (cached !== undefined) {
-    return cached;
-  }
-
-  // Set font and letter spacing
-  ctx.font = fontString;
-  (ctx as CanvasRenderingContext2D & { letterSpacing?: string }).letterSpacing = `${letterSpacing}px`;
-
-  const metrics = ctx.measureText(text);
-  const width = metrics.width;
-
-  // Maintain cache size
-  if (measurementCache.size >= MAX_CACHE_SIZE) {
-    const firstKey = measurementCache.keys().next().value;
-    if (firstKey !== undefined) {
-      measurementCache.delete(firstKey);
-    }
-  }
-  measurementCache.set(cacheKey, width);
-
-  return width;
-}
 
 // =============================================================================
 // Constants
@@ -130,7 +26,7 @@ function measureWithCanvas(
  * 1 inch = 72 points (typographic standard)
  * At 96 DPI: 1pt = 96/72 px ≈ 1.333px
  */
-export const PT_TO_PX = 96 / 72;
+export const PT_TO_PX = GLYPH_PT_TO_PX;
 
 // =============================================================================
 // Character Width Calculation
@@ -165,42 +61,12 @@ export function calculateCharWidth(
   fontFamily: string,
   fontWeight: number = 400,
 ): CharWidthResult {
-  const charCode = char.charCodeAt(0);
-  const fontSizePx = (fontSize as number) * PT_TO_PX;
-  const isCjk = isCjkCodePoint(charCode);
-
-  // Get base character width from font metrics (with bold adjustment)
-  const widthRatio = getCharWidth(char, fontFamily, isCjk, fontWeight);
-  const width = fontSizePx * widthRatio;
-
-  // Calculate kerning adjustment
-  const kerningAdjust = resolveKerningAdjust(prevChar, char, fontSizePx, fontFamily);
-
+  const result = glyphCalculateCharWidth(char, prevChar, fontSize as number, fontFamily, fontWeight);
   return {
-    width: px(width),
-    kerningAdjust: px(kerningAdjust),
-    totalWidth: px(width + kerningAdjust),
+    width: px(result.width),
+    kerningAdjust: px(result.kerningAdjust),
+    totalWidth: px(result.totalWidth),
   };
-}
-
-/**
- * Resolve kerning adjustment for a character pair.
- */
-function resolveKerningAdjust(
-  prevChar: string | undefined,
-  char: string,
-  fontSizePx: number,
-  fontFamily: string,
-): number {
-  if (prevChar === undefined) {
-    return 0;
-  }
-  if (isMonospace(fontFamily)) {
-    return 0;
-  }
-  const pair = prevChar + char;
-  const kerningEm = getKerningAdjustment(pair, fontFamily);
-  return fontSizePx * kerningEm;
 }
 
 // =============================================================================
@@ -228,40 +94,14 @@ export function measureTextWidth(
   fontWeight: number = 400,
   fontStyle: "normal" | "italic" = "normal",
 ): Pixels {
-  const fontSizePx = (fontSize as number) * PT_TO_PX;
-  const letterSpacingNum = letterSpacing as number;
-
-  // Try Canvas measurement first (matches browser rendering)
-  const canvasWidth = measureWithCanvas(text, fontSizePx, fontFamily, fontWeight, fontStyle, letterSpacingNum);
-  if (canvasWidth !== undefined) {
-    return px(canvasWidth);
-  }
-
-  // Fallback to font-metrics estimation
-  return estimateTextWidthFallback(text, fontSize, letterSpacing, fontFamily, fontWeight);
-}
-
-/**
- * Fallback text width estimation using font metrics.
- * Used when Canvas is not available (e.g., server-side rendering).
- */
-function estimateTextWidthFallback(
-  text: string,
-  fontSize: Points,
-  letterSpacing: Pixels,
-  fontFamily: string,
-  fontWeight: number = 400,
-): Pixels {
-  const chars = Array.from(text);
-  const letterSpacingNum = letterSpacing as number;
-
-  const width = chars.reduce((acc, char, index) => {
-    const prevChar = index > 0 ? chars[index - 1] : undefined;
-    const charResult = calculateCharWidth(char, prevChar, fontSize, fontFamily, fontWeight);
-    const spacing = index > 0 ? letterSpacingNum : 0;
-    return acc + (charResult.totalWidth as number) + spacing;
-  }, 0);
-
+  const width = glyphMeasureTextWidth(
+    text,
+    fontSize as number,
+    letterSpacing as number,
+    fontFamily,
+    fontWeight,
+    fontStyle,
+  );
   return px(width);
 }
 
@@ -485,26 +325,20 @@ export function measureTextDetailed(
   fontFamily: string,
   fontWeight: number = 400,
 ): DetailedMeasurement {
-  const chars = Array.from(text);
-  const letterSpacingNum = letterSpacing as number;
-
-  const measurement = chars.reduce(
-    (acc, char, index) => {
-      const prevChar = index > 0 ? chars[index - 1] : undefined;
-      const charResult = calculateCharWidth(char, prevChar, fontSize, fontFamily, fontWeight);
-      const spacing = index > 0 ? letterSpacingNum : 0;
-
-      acc.positions.push(px(acc.totalWidth));
-      acc.charWidths.push(charResult);
-      acc.totalWidth += (charResult.totalWidth as number) + spacing;
-      return acc;
-    },
-    { totalWidth: 0, charWidths: [] as CharWidthResult[], positions: [] as Pixels[] },
+  const result = glyphMeasureTextDetailed(
+    text,
+    fontSize as number,
+    letterSpacing as number,
+    fontFamily,
+    fontWeight,
   );
-
   return {
-    totalWidth: px(measurement.totalWidth),
-    charWidths: measurement.charWidths,
-    positions: measurement.positions,
+    totalWidth: px(result.totalWidth),
+    charWidths: result.charWidths.map((cw) => ({
+      width: px(cw.width),
+      kerningAdjust: px(cw.kerningAdjust),
+      totalWidth: px(cw.totalWidth),
+    })),
+    positions: result.positions.map((p) => px(p)),
   };
 }

@@ -8,7 +8,7 @@
  */
 
 import type { DocxSectionProperties, DocxColumns } from "@oxen-office/docx/domain/section";
-import type { PageFlowConfig, ColumnConfig } from "../page-flow";
+import type { PageFlowConfig, ColumnConfig } from "../layout/page-flow";
 import type { WritingMode } from "../types";
 import type { Pixels } from "@oxen-office/ooxml/domain/units";
 import { px } from "@oxen-office/ooxml/domain/units";

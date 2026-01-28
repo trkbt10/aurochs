@@ -71,8 +71,8 @@ export {
   measureTextDetailed,
   measureSpanTextWidth,
   getCharIndexAtOffset,
-} from "./measurer";
-export type { CharWidthResult, DetailedMeasurement } from "./measurer";
+} from "./measure/measurer";
+export type { CharWidthResult, DetailedMeasurement } from "./measure/measurer";
 
 // Line breaker
 export {
@@ -82,11 +82,11 @@ export {
   getLineMaxFontSize,
   getLineMaxFontInfo,
   getLineTextLength,
-} from "./line-breaker";
-export type { LineBreakResult, LineFontInfo } from "./line-breaker";
+} from "./measure/line-breaker";
+export type { LineBreakResult, LineFontInfo } from "./measure/line-breaker";
 
 // Layout engine
-export { layoutTextBody, layoutDocument } from "./engine";
+export { layoutTextBody, layoutDocument } from "./layout/engine";
 
 // DOCX adapter
 export {
@@ -110,8 +110,8 @@ export {
 } from "./adapters/docx-table-adapter";
 
 // Table layout engine
-export { layoutTable } from "./table-layout";
-export type { TableLayoutConfig } from "./table-layout";
+export { layoutTable } from "./layout/table-layout";
+export type { TableLayoutConfig } from "./layout/table-layout";
 
 // Numbering resolver
 export {
@@ -193,5 +193,5 @@ export {
   flowIntoPages,
   createSinglePageLayout,
   DEFAULT_PAGE_FLOW_CONFIG,
-} from "./page-flow";
-export type { PageFlowConfig, PageBreakHint, PageFlowInput } from "./page-flow";
+} from "./layout/page-flow";
+export type { PageFlowConfig, PageBreakHint, PageFlowInput } from "./layout/page-flow";
