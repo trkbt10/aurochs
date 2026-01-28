@@ -205,4 +205,4 @@ export type {
   ContourConfig,
 } from "./effects";
 
-// Glyph types: import directly from "@oxen-office/pptx-render/glyph"
+// Glyph types: import directly from "@oxen/glyph"

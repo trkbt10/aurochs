@@ -1,10 +1,8 @@
 /**
- * @file Glyph module
+ * @file Re-export from @oxen/glyph
  *
- * Character glyph contour extraction and related types.
+ * @deprecated Import directly from "@oxen/glyph" instead.
+ * This re-export is maintained for backward compatibility.
  */
 
-export type { GlyphContour, GlyphStyleKey } from "./types";
-
-export { extractGlyphContour, extractGlyphContours } from "./extraction/glyph";
-
+export * from "@oxen/glyph";

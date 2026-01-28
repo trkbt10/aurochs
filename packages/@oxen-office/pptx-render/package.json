@@ -7,6 +7,7 @@
   "dependencies": {
     "@oxen/buffer": "workspace:*",
     "@oxen/color": "workspace:*",
+    "@oxen/glyph": "workspace:*",
     "@oxen-office/ooxml": "workspace:*",
     "@oxen-office/pptx": "workspace:*",
     "@oxen/text": "workspace:*",

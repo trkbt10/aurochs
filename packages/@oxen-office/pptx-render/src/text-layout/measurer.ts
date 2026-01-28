@@ -10,7 +10,7 @@ import type { Pixels, Points } from "@oxen-office/ooxml/domain/units";
 import { px } from "@oxen-office/ooxml/domain/units";
 import { PT_TO_PX } from "@oxen-office/pptx/domain/unit-conversion";
 import { getCharWidth, getKerningAdjustment, isCjkCodePoint, isMonospace } from "@oxen/text";
-import { measureTextWidth as measureGlyphTextWidth } from "../glyph/layout/text";
+import { measureTextWidth as measureGlyphTextWidth } from "@oxen/glyph/layout";
 
 // =============================================================================
 // Character Width Calculation

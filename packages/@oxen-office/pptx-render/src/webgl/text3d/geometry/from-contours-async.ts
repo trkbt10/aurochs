@@ -5,8 +5,8 @@
  */
 
 import * as THREE from "three";
-import type { ContourPath } from "../../../glyph/types";
-import { layoutTextAsync } from "../../../glyph/layout/text-async";
+import type { ContourPath } from "@oxen/glyph";
+import { layoutTextAsync } from "@oxen/glyph/layout";
 import { getBevelConfig, type AsymmetricBevelConfig } from "./bevel";
 import { mergeExtrudeGeometriesLegacy } from "./merge-geometries";
 import type { Bevel3d } from "@oxen-office/pptx/domain/three-d";

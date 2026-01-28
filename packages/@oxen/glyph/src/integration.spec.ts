@@ -62,18 +62,4 @@ describe("glyph integration", () => {
     });
   });
 
-  describe("geometry (WebGL)", () => {
-    it("should throw in non-browser environment", async () => {
-      const { createTextGeometryAsync } = await import("../webgl/text3d/geometry/from-contours-async");
-
-      await expect(createTextGeometryAsync({
-        text: "A",
-        fontFamily: "Arial",
-        fontSize: 24,
-        fontWeight: 400,
-        fontStyle: "normal",
-        extrusionDepth: 10,
-      })).rejects.toThrow();
-    });
-  });
 });
