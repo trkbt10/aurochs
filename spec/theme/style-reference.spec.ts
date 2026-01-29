@@ -10,7 +10,7 @@
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
 import { openPresentation } from "@oxen-office/pptx";
 import { parseSlide } from "@oxen-office/pptx/parser/slide/slide-parser";
-import { renderSlideToSvg } from "@oxen-office/pptx-render/svg";
+import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
 import { resolveColor } from "@oxen-office/ooxml/domain/color-resolution";
 import { parseXml, getByPath } from "@oxen/xml";
 import { createParseContext } from "@oxen-office/pptx/parser/context";
@@ -22,7 +22,7 @@ import {
 } from "@oxen-office/pptx/parser/slide/resource-adapters";
 import { createEmptyResourceMap } from "@oxen-office/pptx/domain/relationships";
 import { parseTheme, parseColorScheme, parseMasterTextStyles } from "@oxen-office/pptx/parser/drawing-ml/index";
-import { renderSlideSvgIntegrated } from "@oxen-office/pptx-render/slide-render";
+import { renderSlideSvgIntegrated } from "@oxen-renderer/pptx/slide-render";
 import type { Pixels } from "@oxen-office/ooxml/domain/units";
 import type { Color } from "@oxen-office/ooxml/domain/color";
 import type { SpShape } from "@oxen-office/pptx/domain";

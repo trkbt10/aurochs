@@ -13,7 +13,7 @@ import * as path from "node:path";
 import type { PresentationFile } from "@oxen-office/pptx";
 import { openPresentation } from "@oxen-office/pptx";
 import { loadPptxFile } from "../scripts/lib/pptx-loader";
-import { renderSlideToSvg } from "@oxen-office/pptx-render/svg";
+import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
 
 const AASCU_FIXTURE = "fixtures/poi-test-data/test-data/slideshow/aascu.org_workarea_downloadasset.aspx_id=5864.pptx";
 

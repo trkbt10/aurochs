@@ -7,7 +7,7 @@
 import type { Shape } from "@oxen-office/pptx/domain";
 import type { Bounds, ShapeId } from "@oxen-office/pptx/domain/types";
 import { px } from "@oxen-office/ooxml/domain/units";
-import { getShapeTransform } from "@oxen-office/pptx-render/svg";
+import { getShapeTransform } from "@oxen-renderer/pptx/svg";
 import { findShapeById } from "./query";
 import { getRotatedCorners } from "./rotate";
 

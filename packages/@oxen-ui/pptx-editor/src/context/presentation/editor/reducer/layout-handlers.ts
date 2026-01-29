@@ -27,7 +27,7 @@ import {
   getCombinedCenter,
 } from "../../../../shape/bounds";
 import { withUpdatedTransform } from "../../../../shape/transform";
-import { getShapeTransform } from "@oxen-office/pptx-render/svg";
+import { getShapeTransform } from "@oxen-renderer/pptx/svg";
 
 // =============================================================================
 // Action Types

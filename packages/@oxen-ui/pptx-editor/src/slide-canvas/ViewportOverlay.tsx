@@ -7,7 +7,7 @@
  */
 
 import type { ReactNode, CSSProperties, ReactElement } from "react";
-import type { ViewportTransform, ViewportSize } from "@oxen-office/pptx-render/svg-viewport";
+import type { ViewportTransform, ViewportSize } from "@oxen-renderer/pptx/svg-viewport";
 
 export type ViewportOverlayProps = {
   /** Current viewport transform */

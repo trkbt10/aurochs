@@ -15,7 +15,7 @@
  */
 
 import { openPresentation } from "@oxen-office/pptx";
-import { renderSlideToSvg } from "@oxen-office/pptx-render/svg";
+import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
 import { requireFileExists, requireIntArg, requirePositionalArg } from "../lib/cli";
 import { loadPptxFile } from "../lib/pptx-loader";
 

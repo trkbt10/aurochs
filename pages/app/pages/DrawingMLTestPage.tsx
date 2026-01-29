@@ -8,7 +8,7 @@
  */
 
 import { Routes, Route, Navigate, useParams, useNavigate } from "react-router-dom";
-import { RenderProvider, SvgDefsProvider } from "@oxen-office/pptx-render/react";
+import { RenderProvider, SvgDefsProvider } from "@oxen-renderer/pptx/react";
 import { testSlideSize, testColorContext } from "../components/drawing-ml-tests";
 import { categories, findCategory, findFeature, getDefaultRoute } from "../components/drawing-ml-tests/routes";
 import "./DrawingMLTestPage.css";

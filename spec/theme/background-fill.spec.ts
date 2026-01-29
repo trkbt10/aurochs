@@ -8,7 +8,7 @@
 
 import { openPresentation } from "@oxen-office/pptx";
 import { parseXml, type XmlElement } from "@oxen/xml";
-import { renderSlideToSvg } from "@oxen-office/pptx-render/svg";
+import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
 import { createColorMap } from "@oxen-office/pptx/parser/slide/resource-adapters";
 import { parseFormatScheme, parseColorScheme } from "@oxen-office/pptx/parser/drawing-ml/index";
 import { loadLayoutData, loadMasterData, loadThemeData } from "@oxen-office/pptx/parser/slide/loader";

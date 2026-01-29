@@ -1,9 +1,9 @@
 /**
- * @file Standalone SVG slide renderer
+ * @file Standalone HTML slide renderer
  *
- * Provides a pure function to render a Slide to SVG format.
- * This is the public API for SVG rendering, replacing the
- * Slide.renderSVG() method.
+ * Provides a pure function to render a Slide to HTML format.
+ * This is the public API for HTML rendering, replacing the
+ * Slide.renderHTML() method.
  *
  * @see ECMA-376 Part 1, Section 19.3 (PresentationML)
  */
@@ -11,18 +11,20 @@
 import type { Slide } from "@oxen-office/pptx/app/types";
 import type { XmlDocument, XmlElement } from "@oxen/xml";
 import { getByPath } from "@oxen/xml";
-import { renderSlideSvgIntegrated } from "../slide-render";
+import { renderSlideIntegrated } from "../slide-render";
 import { createSlideContext, type SlideContext } from "@oxen-office/pptx/parser/slide/context";
 import { createPlaceholderTable, createColorMap } from "@oxen-office/pptx/parser/slide/resource-adapters";
 import { parseTheme, parseMasterTextStyles } from "@oxen-office/pptx/parser/drawing-ml/index";
 import { DEFAULT_RENDER_OPTIONS } from "../render-options";
 
 /**
- * Result of rendering a slide to SVG.
+ * Result of rendering a slide to HTML.
  */
-export type SvgRenderResult = {
-  /** Complete SVG document string */
-  readonly svg: string;
+export type HtmlRenderResult = {
+  /** HTML string representing the slide content */
+  readonly html: string;
+  /** CSS styles for the slide */
+  readonly styles: string;
   /** Warnings generated during rendering */
   readonly warnings: readonly string[];
 };
@@ -87,27 +89,29 @@ function buildSlideContextFromSlide(slide: Slide): SlideContext {
 }
 
 /**
- * Render a slide to SVG format.
+ * Render a slide to HTML format.
  *
- * This is the public API for SVG rendering, replacing the Slide.renderSVG() method.
+ * This is the public API for HTML rendering, replacing the Slide.renderHTML() method.
  * The function takes a Slide object containing all necessary data and returns
- * a complete SVG document.
+ * HTML content with associated CSS styles.
  *
  * @param slide - Slide data with all rendering context
- * @returns SVG string and any warnings
+ * @returns HTML string, CSS styles, and any warnings
  *
  * @example
  * ```typescript
- * import { renderSlideToSvg } from "@oxen-office/pptx-render/svg";
+ * import { renderSlideToHtml } from "@oxen-renderer/pptx/html";
  *
- * const { svg, warnings } = renderSlideToSvg(slide);
+ * const { html, styles, warnings } = renderSlideToHtml(slide);
+ * const fullHtml = `<style>${styles}</style>${html}`;
  * ```
  */
-export function renderSlideToSvg(slide: Slide): SvgRenderResult {
+export function renderSlideToHtml(slide: Slide): HtmlRenderResult {
   const slideRenderCtx = buildSlideContextFromSlide(slide);
-  const result = renderSlideSvgIntegrated(slide.content as XmlDocument, slideRenderCtx, slide.slideSize);
+  const result = renderSlideIntegrated(slide.content as XmlDocument, slideRenderCtx, slide.slideSize);
   return {
-    svg: result.svg,
+    html: result.html,
+    styles: result.styles,
     warnings: result.warnings,
   };
 }

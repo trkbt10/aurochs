@@ -8,7 +8,7 @@ import type { Slide } from "@oxen-office/pptx/app/types";
 import { getBackgroundFillData, getSolidFill, getSchemeColorFromTheme, parseTheme, parseMasterTextStyles } from "@oxen-office/pptx/parser/drawing-ml/index";
 import { createSlideContext, type SlideContext } from "@oxen-office/pptx/parser/slide/context";
 import { createPlaceholderTable, createColorMap } from "@oxen-office/pptx/parser/slide/resource-adapters";
-import { toResolvedBackgroundFill } from "@oxen-office/pptx-render";
+import { toResolvedBackgroundFill } from "@oxen-renderer/pptx";
 import { getTextByPathList, getNode, getString } from "@oxen-office/pptx/parser/traverse";
 import { isXmlDocument, isXmlElement, getChild, getByPath, type XmlElement } from "@oxen/xml";
 import { requireFileExists, requireIntArg, requirePositionalArg } from "../lib/cli";

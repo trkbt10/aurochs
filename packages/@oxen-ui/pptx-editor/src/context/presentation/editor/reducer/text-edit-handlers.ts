@@ -14,7 +14,7 @@ import { findSlideById } from "../slide";
 import { pushHistory } from "../../../slide/state";
 import { findShapeById } from "../../../../shape/query";
 import { updateShapeById } from "../../../../shape/mutation";
-import { getShapeTransform } from "@oxen-office/pptx-render/svg";
+import { getShapeTransform } from "@oxen-renderer/pptx/svg";
 import {
   createInactiveTextEditState,
   createActiveTextEditState,

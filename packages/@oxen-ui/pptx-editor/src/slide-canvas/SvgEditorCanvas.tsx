@@ -28,7 +28,7 @@ import type { CreationMode } from "../context/presentation/editor/types";
 import { isPenMode, isPathMode } from "../context/presentation/editor/types";
 import type { ResourceResolver } from "@oxen-office/pptx/domain/resource-resolver";
 import type { ResourceStore } from "@oxen-office/pptx/domain/resource-store";
-import type { ResolvedBackgroundFill, RenderOptions } from "@oxen-office/pptx-render";
+import type { ResolvedBackgroundFill, RenderOptions } from "@oxen-renderer/pptx";
 import type { DrawingPath } from "../path-tools/types";
 import { PenToolOverlay } from "../path-tools/components/PenToolOverlay";
 import { PathEditOverlay } from "../path-tools/components/PathEditOverlay";
@@ -42,7 +42,7 @@ import { createBoundsFromDrag } from "../shape/factory";
 import type { ShapeBounds as CreationBounds } from "../shape/creation-bounds";
 import { SlideContextMenu, type ContextMenuActions } from "../slide/context-menu/SlideContextMenu";
 import { SelectionBox } from "../selection/SelectionBox";
-import { SlideRenderer } from "@oxen-office/pptx-render/react";
+import { SlideRenderer } from "@oxen-renderer/pptx/react";
 import {
   TextEditController,
   isTextEditActive,
@@ -53,7 +53,7 @@ import { colorTokens } from "@oxen-ui/ui-components/design-tokens";
 import { SvgRulers } from "./SvgRulers";
 import { ViewportOverlay } from "./ViewportOverlay";
 import { useSvgViewport } from "./use-svg-viewport";
-import { getTransformString, screenToSlideCoords, type ViewportTransform } from "@oxen-office/pptx-render/svg-viewport";
+import { getTransformString, screenToSlideCoords, type ViewportTransform } from "@oxen-renderer/pptx/svg-viewport";
 import type { ZoomMode } from "./canvas-controls";
 import { ASSET_DRAG_TYPE } from "../panels/inspector/AssetPanel";
 

@@ -15,7 +15,7 @@
 import { openPresentation } from "@oxen-office/pptx";
 import { compareSvgToSnapshot } from "../visual-regression/compare";
 import { createPresentationFile, THEMES_PPTX_PATH } from "./test-utils";
-import { renderSlideToSvg } from "@oxen-office/pptx-render/svg";
+import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
 
 const DIFF_THRESHOLD = 0.15; // 15% allowed difference
 

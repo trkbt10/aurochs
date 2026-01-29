@@ -7,7 +7,7 @@
 
 import type { TextBody } from "@oxen-office/pptx/domain";
 import type { Pixels } from "@oxen-office/ooxml/domain/units";
-import type { LayoutResult, LayoutLine } from "@oxen-office/pptx-render/text-layout";
+import type { LayoutResult, LayoutLine } from "@oxen-renderer/pptx/text-layout";
 import {
   getVisualBoundsForRange,
   getLineVisualBounds,

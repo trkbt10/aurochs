@@ -8,7 +8,7 @@
 import * as fs from "node:fs";
 import { render } from "@testing-library/react";
 import { importPdf } from "./pdf-importer";
-import { SlideRendererSvg } from "@oxen-office/pptx-render/react";
+import { SlideRendererSvg } from "@oxen-renderer/pptx/react";
 import { getPdfFixturePath } from "../test-utils/pdf-fixtures";
 
 // Mock getComputedTextLength for JSDOM

@@ -8,7 +8,7 @@ import type { GradientFill } from "@oxen-office/ooxml/domain/fill";
 import type { Effects } from "@oxen-office/pptx/domain/effects";
 import type { Pixels } from "@oxen-office/ooxml/domain/units";
 import { px, deg, pct } from "@oxen-office/ooxml/domain/units";
-import { useShapeStyle } from "@oxen-office/pptx-render/react";
+import { useShapeStyle } from "@oxen-renderer/pptx/react";
 
 // =============================================================================
 // Types

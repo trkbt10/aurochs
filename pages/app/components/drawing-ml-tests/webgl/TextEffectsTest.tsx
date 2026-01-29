@@ -10,8 +10,8 @@
 
 import { useState, useMemo } from "react";
 import { type CheckItem, TestSubsection } from "../common";
-import { Text3DRenderer } from "@oxen-office/pptx-render/webgl/text3d";
-import { extractText3DRuns } from "@oxen-office/pptx-render/react";
+import { Text3DRenderer } from "@oxen-renderer/pptx/webgl/text3d";
+import { extractText3DRuns } from "@oxen-renderer/pptx/react";
 import { WordArtGallery } from "./WordArtGallery";
 import { allDemoWordArtPresets } from "./wordart-demo-presets";
 import type { PresetCameraType, PresetMaterialType, BevelPresetType } from "@oxen-office/pptx/domain/three-d";

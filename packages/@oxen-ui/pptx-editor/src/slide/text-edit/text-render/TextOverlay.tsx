@@ -11,7 +11,7 @@ import type {
   LayoutResult,
   LayoutLine,
   PositionedSpan,
-} from "@oxen-office/pptx-render/text-layout";
+} from "@oxen-renderer/pptx/text-layout";
 import { fontSizeToPixels, getTextVisualBounds } from "./text-geometry";
 import {
   applyTextTransform,
@@ -19,7 +19,7 @@ import {
   buildFontFamily,
   toSvgDominantBaseline,
   createTextEffectsFilterDef,
-} from "@oxen-office/pptx-render/react";
+} from "@oxen-renderer/pptx/react";
 import type { CompositionState } from "../coordinator/types";
 
 // =============================================================================

@@ -5,7 +5,7 @@
  */
 
 import { useCallback, useLayoutEffect, useMemo, useRef, useState, type RefObject } from "react";
-import type { ViewportTransform, ViewportSize, SlideSize } from "@oxen-office/pptx-render/svg-viewport";
+import type { ViewportTransform, ViewportSize, SlideSize } from "@oxen-renderer/pptx/svg-viewport";
 import {
   INITIAL_VIEWPORT,
   getNextZoomValue,
@@ -14,7 +14,7 @@ import {
   clampViewport,
   createFittedViewport,
   screenToCanvasCoords,
-} from "@oxen-office/pptx-render/svg-viewport";
+} from "@oxen-renderer/pptx/svg-viewport";
 import { type ZoomMode, isFitMode } from "./canvas-controls";
 
 export type UseSvgViewportOptions = {

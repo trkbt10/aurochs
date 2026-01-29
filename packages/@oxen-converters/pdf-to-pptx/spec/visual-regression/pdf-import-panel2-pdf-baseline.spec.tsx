@@ -18,7 +18,7 @@ import { execFileSync } from "node:child_process";
 import { px } from "@oxen-office/ooxml/domain/units";
 import { importPdf } from "../../src/importer/pdf-importer";
 import { render } from "@testing-library/react";
-import { SlideRendererSvg } from "@oxen-office/pptx-render/react";
+import { SlideRendererSvg } from "@oxen-renderer/pptx/react";
 import { compareSvgToPdfBaseline } from "./compare";
 
 const ROOT_DIR = path.resolve(__dirname, "../../../../../");

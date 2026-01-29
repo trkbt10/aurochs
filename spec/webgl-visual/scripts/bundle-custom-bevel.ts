@@ -48,8 +48,8 @@ async function bundle(): Promise<void> {
     fs.mkdirSync(OUTPUT_DIR, { recursive: true });
   }
 
-  const bevelDir = path.join(ROOT_DIR, "packages/@oxen-office/pptx-render/src/webgl/text3d/geometry/bevel");
-  const customBevelPath = path.join(ROOT_DIR, "packages/@oxen-office/pptx-render/src/webgl/text3d/geometry/custom-bevel");
+  const bevelDir = path.join(ROOT_DIR, "packages/@oxen-renderer/pptx/src/webgl/text3d/geometry/bevel");
+  const customBevelPath = path.join(ROOT_DIR, "packages/@oxen-renderer/pptx/src/webgl/text3d/geometry/custom-bevel");
 
   // Create entry point that exports the custom bevel functions
   const entryContent = `

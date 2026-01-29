@@ -17,7 +17,7 @@ import {
 import { createPortal } from "react-dom";
 import type { SlideSize, SlideTransition } from "@oxen-office/pptx/domain";
 import type { Timing } from "@oxen-office/pptx/domain/animation";
-import { useSlideAnimation, useSlideTransition, SvgContentRenderer } from "@oxen-office/pptx-render/react";
+import { useSlideAnimation, useSlideTransition, SvgContentRenderer } from "@oxen-renderer/pptx/react";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,

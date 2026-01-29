@@ -11,7 +11,7 @@ import { openPresentation } from "@oxen-office/pptx";
 import { loadPptxFile } from "../../../../../scripts/lib/pptx-loader";
 import { compareSvgToPdfBaseline } from "./compare";
 import { px } from "@oxen-office/ooxml/domain/units";
-import { renderSlideToSvg } from "@oxen-office/pptx-render/svg";
+import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
 
 const ROOT_DIR = path.resolve(__dirname, "../../../../../");
 

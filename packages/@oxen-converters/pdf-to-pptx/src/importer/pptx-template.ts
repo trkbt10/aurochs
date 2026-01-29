@@ -5,7 +5,7 @@
 import type { Pixels } from "@oxen-office/ooxml/domain/units";
 import { ooxmlEmu } from "@oxen-office/ooxml/serializer/units";
 import type { PresentationFile } from "@oxen-office/pptx/domain";
-import { CONTENT_TYPES } from "@oxen-office/pptx/opc/content-types";
+import { CONTENT_TYPES } from "@oxen-office/pptx/domain/content-types";
 import { RELATIONSHIP_TYPES } from "@oxen-office/pptx/domain/relationships";
 import { createEmptyZipPackage } from "@oxen/zip";
 

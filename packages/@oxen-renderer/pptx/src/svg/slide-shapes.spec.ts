@@ -231,7 +231,7 @@ describe("calculateCroppedImageLayout - ECMA-376 20.1.8.55", () => {
  * The data-ooxml-id attribute is required for the animation player
  * to find and animate elements.
  *
- * @see packages/@oxen-office/pptx-render/src/react/hooks/useSlideAnimation.ts
+ * @see packages/@oxen-renderer/pptx/src/react/hooks/useSlideAnimation.ts
  */
 describe("data-ooxml-id attribute for animation targeting", () => {
   // Use a test fixture with shapes

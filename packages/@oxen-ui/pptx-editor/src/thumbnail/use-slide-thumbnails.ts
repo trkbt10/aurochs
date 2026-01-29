@@ -7,8 +7,8 @@
 import { useRef, useMemo, useCallback } from "react";
 import type { Pixels } from "@oxen-office/ooxml/domain/units";
 import type { ZipFile } from "@oxen-office/opc";
-import { renderSlideSvg } from "@oxen-office/pptx-render/svg";
-import { createCoreRenderContext } from "@oxen-office/pptx-render";
+import { renderSlideSvg } from "@oxen-renderer/pptx/svg";
+import { createCoreRenderContext } from "@oxen-renderer/pptx";
 import type { SlideWithId } from "@oxen-office/pptx/app";
 import { createRenderContext as createApiRenderContext } from "@oxen-office/pptx/app";
 import {

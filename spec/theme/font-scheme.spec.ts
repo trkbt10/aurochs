@@ -9,7 +9,7 @@
 
 import { openPresentation } from "@oxen-office/pptx";
 import { createPresentationFile, THEMES_PPTX_PATH } from "./test-utils";
-import { renderSlideToSvg } from "@oxen-office/pptx-render/svg";
+import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
 
 describe("Font Scheme Application", () => {
   /**

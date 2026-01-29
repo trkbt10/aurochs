@@ -21,8 +21,8 @@ import {
 } from "@oxen-ui/pptx-editor";
 import type { Slide, TextBody, TextRun } from "@oxen-office/pptx/domain";
 import { px, deg, pt, type Pixels } from "@oxen-office/ooxml/domain/units";
-import { SlideRendererSvg } from "@oxen-office/pptx-render/react";
-import { layoutTextBody, toLayoutInput } from "@oxen-office/pptx-render/text-layout";
+import { SlideRendererSvg } from "@oxen-renderer/pptx/react";
+import { layoutTextBody, toLayoutInput } from "@oxen-renderer/pptx/text-layout";
 import { TextEditController } from "@oxen-ui/pptx-editor/slide/text-edit";
 import type { TextSelection, CursorPosition, SelectionChangeEvent } from "@oxen-ui/pptx-editor/slide/text-edit";
 import {

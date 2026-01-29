@@ -15,7 +15,7 @@ import * as fs from "node:fs";
 import type { PresentationFile } from "@oxen-office/pptx";
 import { openPresentation, LIBREOFFICE_RENDER_OPTIONS } from "@oxen-office/pptx";
 import { loadPptxFile } from "../scripts/lib/pptx-loader";
-import { renderSlideToSvg } from "@oxen-office/pptx-render/svg";
+import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
 
 describe("2411-Performance_Up.pptx slide 1", () => {
   const pptxPath = "fixtures/poi-test-data/test-data/slideshow/2411-Performance_Up.pptx";

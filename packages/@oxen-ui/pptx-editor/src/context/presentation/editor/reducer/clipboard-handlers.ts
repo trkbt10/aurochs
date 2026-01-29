@@ -15,7 +15,7 @@ import { pushHistory } from "../../../slide/state";
 import { findShapeById } from "../../../../shape/query";
 import { generateShapeId } from "../../../../shape/mutation";
 import { withUpdatedTransform } from "../../../../shape/transform";
-import { getShapeTransform } from "@oxen-office/pptx-render/svg";
+import { getShapeTransform } from "@oxen-renderer/pptx/svg";
 
 // Note: CopyAction and PasteAction types not needed since handlers don't use action payload
 

@@ -35,7 +35,7 @@ import { extractSvgContent } from "./svg-utils";
  * Get data-ooxml-id attribute for animation targeting.
  * This attribute allows the animation player to find elements.
  *
- * @see packages/@oxen-office/pptx-render/src/react/hooks/useSlideAnimation.ts
+ * @see packages/@oxen-renderer/pptx/src/react/hooks/useSlideAnimation.ts
  */
 function getOoxmlIdAttr(shape: Shape): string {
   // ContentPartShape doesn't have nonVisual

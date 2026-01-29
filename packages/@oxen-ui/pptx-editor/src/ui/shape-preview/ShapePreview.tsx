@@ -6,7 +6,7 @@
  */
 
 import { type CSSProperties, useMemo } from "react";
-import { renderGeometryData } from "@oxen-office/pptx-render/svg";
+import { renderGeometryData } from "@oxen-renderer/pptx/svg";
 import type { PresetGeometry } from "@oxen-office/pptx/domain/shape";
 import { colorTokens } from "@oxen-ui/ui-components/design-tokens";
 

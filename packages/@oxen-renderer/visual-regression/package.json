@@ -7,7 +7,7 @@
   "description": "Visual regression test utilities and integration tests for @oxen-renderer packages",
   "dependencies": {
     "@oxen-office/pptx": "workspace:*",
-    "@oxen-office/pptx-render": "workspace:*",
+    "@oxen-renderer/pptx": "workspace:*",
     "@oxen-renderer/chart": "workspace:*",
     "@oxen-renderer/diagram": "workspace:*"
   },

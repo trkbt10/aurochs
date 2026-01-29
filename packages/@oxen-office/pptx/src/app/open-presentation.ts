@@ -146,7 +146,7 @@ function buildSlideFileInfoListFromPresentation(
  * ```typescript
  * import { openPresentation } from "web-pptx";
  * import { createPresentationFile } from "web-pptx/fflate";
- * import { renderSlideToSvg } from "@oxen-office/pptx-render/svg";
+ * import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
  *
  * const file = createPresentationFile(pptxBuffer);
  * const presentation = openPresentation(file);

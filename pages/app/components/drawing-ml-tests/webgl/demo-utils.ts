@@ -21,7 +21,7 @@ import type {
   PresetMaterialType,
   BevelPresetType,
 } from "@oxen-office/pptx/domain/three-d";
-import type { Material3DFill } from "@oxen-office/pptx-render/webgl/text3d";
+import type { Material3DFill } from "@oxen-renderer/pptx/webgl/text3d";
 import type { DemoWordArtPreset, DemoFill } from "./wordart-demo-presets";
 
 // =============================================================================

@@ -12,7 +12,7 @@ import { resolveColor } from "@oxen-office/ooxml/domain/color-resolution";
 import type { Color } from "@oxen-office/ooxml/domain/color";
 import type { ColorContext } from "@oxen-office/ooxml/domain/color-context";
 import { createPresentationFile, THEMES_PPTX_PATH } from "./test-utils";
-import { renderSlideToSvg } from "@oxen-office/pptx-render/svg";
+import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
 
 describe("Color Scheme Application", () => {
   /**

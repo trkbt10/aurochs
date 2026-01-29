@@ -17,7 +17,7 @@ import type { PresentationFile } from "@oxen-office/pptx";
 import { openPresentation, LIBREOFFICE_RENDER_OPTIONS } from "@oxen-office/pptx";
 import { compareSvgToSnapshot, hasSnapshot, listSnapshots } from "../visual-regression/compare";
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
-import { renderSlideToSvg } from "@oxen-office/pptx-render/svg";
+import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
 
 type TestCase = {
   name: string;

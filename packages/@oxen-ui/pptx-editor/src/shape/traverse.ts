@@ -6,7 +6,7 @@
 
 import type { Shape, GrpShape } from "@oxen-office/pptx/domain";
 import type { ShapeId } from "@oxen-office/pptx/domain/types";
-import { isShapeHidden } from "@oxen-office/pptx-render/svg";
+import { isShapeHidden } from "@oxen-renderer/pptx/svg";
 import { getAbsoluteBounds } from "./transform";
 import { getShapeId } from "./identity";
 import { getFillColor, getStrokeColor, getStrokeWidth } from "./render";

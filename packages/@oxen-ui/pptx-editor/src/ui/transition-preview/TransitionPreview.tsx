@@ -10,7 +10,7 @@ import type { TransitionType } from "@oxen-office/pptx/domain/transition";
 import {
   applyBrowserEffect,
   type BrowserEffectType,
-} from "@oxen-office/pptx-render/animation";
+} from "@oxen-renderer/pptx/animation";
 import { colorTokens } from "@oxen-ui/ui-components/design-tokens";
 
 // =============================================================================

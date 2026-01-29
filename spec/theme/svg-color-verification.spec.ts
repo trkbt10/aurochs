@@ -12,7 +12,7 @@
 
 import { openPresentation } from "@oxen-office/pptx";
 import { createPresentationFile, extractSvgColors, THEMES_PPTX_PATH } from "./test-utils";
-import { renderSlideToSvg } from "@oxen-office/pptx-render/svg";
+import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
 
 /**
  * Check if colors include a light center (for gradient tests)

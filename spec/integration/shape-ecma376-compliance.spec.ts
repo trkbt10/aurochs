@@ -13,7 +13,7 @@ import type { PresentationFile, Presentation } from "@oxen-office/pptx";
 import { openPresentation } from "@oxen-office/pptx";
 import { getByPath, getChild, getChildren, isXmlElement, getAttr, type XmlElement } from "@oxen/xml";
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
-import { renderSlideToSvg } from "@oxen-office/pptx-render/svg";
+import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
 
 const FIXTURE_PATH = "fixtures/poi-test-data/test-data/slideshow/shapes.pptx";
 

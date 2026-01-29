@@ -22,8 +22,8 @@ import { createInactiveTextEditState } from "../../slide/text-edit";
 import type { ZoomMode } from "../../slide-canvas/canvas-controls";
 import { usePresentationEditor } from "../../context/presentation/PresentationEditorContext";
 import { findShapeById } from "../../shape/query";
-import type { ViewportTransform } from "@oxen-office/pptx-render/svg-viewport";
-import { screenToSlideCoords } from "@oxen-office/pptx-render/svg-viewport";
+import type { ViewportTransform } from "@oxen-renderer/pptx/svg-viewport";
+import { screenToSlideCoords } from "@oxen-renderer/pptx/svg-viewport";
 
 // =============================================================================
 // Types

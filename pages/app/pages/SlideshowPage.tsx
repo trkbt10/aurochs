@@ -7,7 +7,7 @@
 import { useCallback } from "react";
 import type { LoadedPresentation } from "@oxen-office/pptx/app";
 import { PresentationSlideshow } from "@oxen-ui/pptx-editor";
-import { renderSlideToSvg } from "@oxen-office/pptx-render/svg";
+import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
 import { useSvgFontLoader } from "../fonts/useSvgFontLoader";
 
 type Props = {

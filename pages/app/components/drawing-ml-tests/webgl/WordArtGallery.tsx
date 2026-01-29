@@ -7,8 +7,8 @@
  */
 
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { Text3DRenderer } from "@oxen-office/pptx-render/webgl/text3d";
-import { extractText3DRuns } from "@oxen-office/pptx-render/react";
+import { Text3DRenderer } from "@oxen-renderer/pptx/webgl/text3d";
+import { extractText3DRuns } from "@oxen-renderer/pptx/react";
 import { demoWordArtPresetRows, type DemoWordArtPreset } from "./wordart-demo-presets";
 import {
   demoColorContext,

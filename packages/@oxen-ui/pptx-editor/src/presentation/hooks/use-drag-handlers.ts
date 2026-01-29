@@ -10,8 +10,8 @@ import type { Pixels } from "@oxen-office/ooxml/domain/units";
 import { px, deg } from "@oxen-office/ooxml/domain/units";
 import type { DragState, SelectionState } from "../../context/slide/state";
 import type { PresentationEditorAction } from "../../context/presentation/editor/types";
-import type { ViewportTransform } from "@oxen-office/pptx-render/svg-viewport";
-import { screenToSlideCoords } from "@oxen-office/pptx-render/svg-viewport";
+import type { ViewportTransform } from "@oxen-renderer/pptx/svg-viewport";
+import { screenToSlideCoords } from "@oxen-renderer/pptx/svg-viewport";
 import { snapValue } from "../../slide-canvas/canvas-controls";
 
 export type UseDragHandlersParams = {

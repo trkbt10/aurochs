@@ -15,8 +15,8 @@ import {
   useCallback,
   useEffect,
 } from "react";
-import { toLayoutInput, layoutTextBody } from "@oxen-office/pptx-render/text-layout";
-import { createLayoutParagraphMeasurer } from "@oxen-office/pptx-render/react";
+import { toLayoutInput, layoutTextBody } from "@oxen-renderer/pptx/text-layout";
+import { createLayoutParagraphMeasurer } from "@oxen-renderer/pptx/react";
 import {
   getPlainText,
   cursorPositionToOffset,

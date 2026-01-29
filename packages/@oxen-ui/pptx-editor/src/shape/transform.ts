@@ -11,7 +11,7 @@
 
 import type { Shape, Transform, GrpShape, GroupTransform } from "@oxen-office/pptx/domain";
 
-// getShapeTransform: import directly from "@oxen-office/pptx-render/svg"
+// getShapeTransform: import directly from "@oxen-renderer/pptx/svg"
 
 // =============================================================================
 // Types

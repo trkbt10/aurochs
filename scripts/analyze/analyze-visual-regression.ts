@@ -7,7 +7,7 @@
  * Generates detailed report of what's different and why.
  */
 import { openPresentation } from "@oxen-office/pptx";
-import { renderSlideToSvg } from "@oxen-office/pptx-render/svg";
+import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
 import { compareWithDetails, generateCompareReport, printCompareReport } from "../../spec/visual-regression/compare";
 import { requireFileExists, requirePositionalArg } from "../lib/cli";
 import { loadPptxFile } from "../lib/pptx-loader";

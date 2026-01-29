@@ -63,7 +63,7 @@ import { createZipAdapter } from "@oxen-office/pptx/domain";
 import { CanvasControls } from "../slide-canvas/CanvasControls";
 import type { ZoomMode } from "../slide-canvas/canvas-controls";
 import { SvgEditorCanvas, type AssetDropData } from "../slide-canvas/SvgEditorCanvas";
-import type { ViewportTransform } from "@oxen-office/pptx-render/svg-viewport";
+import type { ViewportTransform } from "@oxen-renderer/pptx/svg-viewport";
 import { TextEditContextProvider, useTextEditContextValue } from "../context/slide/TextEditContext";
 import { PresentationPreviewProvider, usePresentationPreview } from "../context/presentation/PresentationPreviewContext";
 import { Button } from "@oxen-ui/ui-components/primitives/Button";
@@ -104,8 +104,8 @@ import { usePanelCallbacks, useContextMenuActions, useKeyboardShortcuts, useDrag
 import type { TabContents } from "./hooks";
 import { ListViewIcon, PlayIcon, SettingsIcon } from "@oxen-ui/ui-components/icons";
 import { ExportButton } from "./components";
-import { renderSlideSvg } from "@oxen-office/pptx-render/svg";
-import { createCoreRenderContext } from "@oxen-office/pptx-render";
+import { renderSlideSvg } from "@oxen-renderer/pptx/svg";
+import { createCoreRenderContext } from "@oxen-renderer/pptx";
 
 // =============================================================================
 // Types

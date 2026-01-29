@@ -8,8 +8,8 @@ import { useMemo, useCallback, useEffect, useRef, useState, type CSSProperties }
 import type { LoadedPresentation } from "@oxen-office/pptx/app";
 import { SlideList } from "@oxen-ui/pptx-editor/slide-list";
 import type { SlideWithId } from "@oxen-office/pptx/app";
-import { useLazySvgCache, SvgContentRenderer } from "@oxen-office/pptx-render/react";
-import { renderSlideToSvg } from "@oxen-office/pptx-render/svg";
+import { useLazySvgCache, SvgContentRenderer } from "@oxen-renderer/pptx/react";
+import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
 import { useSlideNavigation, useViewerKeyboard } from "../hooks";
 import {
   ChevronLeftIcon,

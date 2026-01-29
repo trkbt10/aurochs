@@ -1,5 +1,5 @@
 /**
- * @file Import policy tests for @oxen-office/pptx-render/react
+ * @file Import policy tests for @oxen-renderer/pptx/react
  *
  * Ensures OOXML-shared types are imported from src/ooxml/domain/* instead of
  * re-export-like paths under src/pptx/domain/*.
@@ -65,7 +65,7 @@ function findImportViolations(
   return violations;
 }
 
-describe("@oxen-office/pptx-render/react import policy", () => {
+describe("@oxen-renderer/pptx/react import policy", () => {
   it("does not import OOXML unit types from src/pptx/domain/types", async () => {
     const files = await collectTsFiles(__dirname);
     const violations: ImportViolation[] = [];
@@ -78,7 +78,7 @@ describe("@oxen-office/pptx-render/react import policy", () => {
     if (violations.length > 0) {
       throw new Error(
         [
-          "Found disallowed imports in packages/@oxen-office/pptx-render/src/react:",
+          "Found disallowed imports in packages/@oxen-renderer/pptx/src/react:",
           ...violations.map((v) => `- ${v.file}: ${v.statement.replaceAll(/\s+/g, " ")}`),
         ].join("\n"),
       );

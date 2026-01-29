@@ -1,5 +1,5 @@
 {
-  "name": "@oxen-office/pptx-render",
+  "name": "@oxen-renderer/pptx",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -23,7 +23,7 @@
   "scripts": {
     "lint": "eslint src",
     "typecheck": "tsc -p tsconfig.json --noEmit --rootDir ../../..",
-    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@oxen-office/pptx-render/src'"
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@oxen-renderer/pptx/src'"
   },
   "exports": {
     ".": {
