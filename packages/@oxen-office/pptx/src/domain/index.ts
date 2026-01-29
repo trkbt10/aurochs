@@ -89,6 +89,18 @@ export type {
 export { createZipAdapter } from "./zip-adapter";
 
 // =============================================================================
+// Content Types (PPTX-specific)
+// =============================================================================
+
+export type { ContentTypes, SlideFileInfo } from "./content-types";
+export {
+  CONTENT_TYPES,
+  parseContentTypes,
+  extractSlideNumber,
+  buildSlideFileInfoList,
+} from "./content-types";
+
+// =============================================================================
 // Theme Types (with XmlElement references)
 // =============================================================================
 

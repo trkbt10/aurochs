@@ -12,7 +12,7 @@ import type { PresentationDocument, SlideWithId } from "../../app/presentation-d
 import type { Slide } from "../../domain/slide/types";
 import type { PresentationFile } from "../../domain/opc";
 import { createElement, getByPath, getChildren, isXmlElement, parseXml, serializeDocument, type XmlDocument, type XmlElement } from "@oxen/xml";
-import { CONTENT_TYPES } from "../../opc/content-types";
+import { CONTENT_TYPES } from "../../domain/content-types";
 import { RELATIONSHIP_TYPES } from "../../domain/relationships";
 import { getRelationshipPath } from "../../parser/relationships";
 import { createEmptyZipPackage, isBinaryFile, type ZipPackage } from "@oxen/zip";

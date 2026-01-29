@@ -17,7 +17,7 @@ import type { RenderOptions } from "../render/render-options";
 import { DEFAULT_RENDER_OPTIONS } from "../render/render-options";
 import type { ResolvedBackgroundFill } from "../render/background-fill";
 import { createWarningCollector } from "../render/warnings";
-import { getMimeTypeFromPath } from "../opc/utils";
+import { getMimeTypeFromPath } from "@oxen/files";
 import { toDataUrl } from "@oxen/buffer";
 
 // =============================================================================

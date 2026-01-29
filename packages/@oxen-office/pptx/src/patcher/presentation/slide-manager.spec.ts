@@ -6,7 +6,7 @@ import type { PresentationDocument } from "../../app/presentation-document";
 import { parseXml } from "@oxen/xml";
 import { getByPath, getChildren } from "@oxen/xml";
 import { createEmptyZipPackage } from "@oxen/zip";
-import { CONTENT_TYPES } from "../../opc/content-types";
+import { CONTENT_TYPES } from "../../domain/content-types";
 import { RELATIONSHIP_TYPES } from "../../domain/relationships";
 import { addSlide, duplicateSlide, removeSlide, reorderSlide } from "./slide-manager";
 

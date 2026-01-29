@@ -1,9 +1,10 @@
 /**
  * @file Content types parsing utilities
  *
- * Parsing and processing for [Content_Types].xml and related constants.
+ * PPTX-specific content type constants and parsing for [Content_Types].xml.
  *
- * @see ECMA-376 Part 2 (Open Packaging Conventions)
+ * @see ECMA-376 Part 1 (PresentationML)
+ * @see ECMA-376 Part 2, Section 10.1.2 (Content Types)
  */
 
 import type { XmlDocument } from "@oxen/xml";
@@ -44,6 +45,8 @@ export type SlideFileInfo = {
 
 /**
  * Content type constants for PPTX files
+ *
+ * @see ECMA-376 Part 1, Section 13.3 (PresentationML Content Types)
  */
 export const CONTENT_TYPES = {
   SLIDE: "application/vnd.openxmlformats-officedocument.presentationml.slide+xml",

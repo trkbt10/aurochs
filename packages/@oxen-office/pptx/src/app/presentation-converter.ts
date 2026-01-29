@@ -18,7 +18,7 @@ import { createParseContext } from "../parser/context";
 import { parseColorScheme, parseFontScheme, parseColorMap } from "../parser/drawing-ml";
 import { getByPath } from "@oxen/xml";
 import { createRenderContext } from "./render-context";
-import { getMimeTypeFromPath } from "../opc/utils";
+import { getMimeTypeFromPath } from "@oxen/files";
 import { createZipAdapter } from "../domain";
 import { toDataUrl } from "@oxen/buffer";
 

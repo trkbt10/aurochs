@@ -10,7 +10,7 @@
 import type { PresentationFile } from "../domain";
 import type { XmlDocument, XmlElement } from "@oxen/xml";
 import type { ResourceMap } from "@oxen-office/opc";
-import { parseContentTypes } from "../opc/content-types";
+import { parseContentTypes } from "../domain/content-types";
 import { getByPath } from "@oxen/xml";
 import { parseAppVersion } from "./presentation-info";
 import { readXml, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS } from "../parser/slide/xml-reader";

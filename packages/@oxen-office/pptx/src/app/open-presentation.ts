@@ -4,7 +4,7 @@
  */
 
 import type { Presentation, Slide, SlideInfo, ListOptions, PresentationOptions } from "./types";
-import type { SlideFileInfo } from "../opc/content-types";
+import type { SlideFileInfo } from "../domain/content-types";
 import type { SlideSize } from "../domain";
 import type { ZipFile } from "@oxen-office/opc";
 import { getBasename, getByPath, getChildren, type XmlDocument, type XmlElement } from "@oxen/xml";

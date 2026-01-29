@@ -1,6 +1,6 @@
 import type { ZipPackage } from "@oxen/zip";
 import { parseXml, serializeDocument } from "@oxen/xml";
-import { parseContentTypes } from "../../opc/content-types";
+import { parseContentTypes } from "../../domain/content-types";
 import { getRelationshipPath, loadRelationships, resolvePartPath } from "../../parser/relationships";
 import { addContentType, removeUnusedContentTypes } from "./content-types-manager";
 import { addRelationship, ensureRelationshipsDocument, listRelationships, removeRelationship, type RelationshipType } from "./relationship-manager";

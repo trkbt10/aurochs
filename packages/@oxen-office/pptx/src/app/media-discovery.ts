@@ -8,7 +8,7 @@
  */
 
 import type { PresentationFile } from "../domain";
-import { parseContentTypes } from "../opc/content-types";
+import { parseContentTypes } from "../domain/content-types";
 import { readXml, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS } from "../parser/slide/xml-reader";
 import { loadRelationships } from "../parser/relationships";
 import { RELATIONSHIP_TYPES } from "../domain/relationships";
