@@ -32,6 +32,11 @@ const AUDIO_REL: RelationshipType =
 
 
 
+
+
+
+
+
 export function addMedia(
   { pkg, mediaData, mediaType, referringPart }: AddMediaOptions,
 ): { readonly path: string; readonly rId: string } {
@@ -59,6 +64,11 @@ export function addMedia(
 
   return { path: mediaPath, rId };
 }
+
+
+
+
+
 
 
 
@@ -109,6 +119,11 @@ export function removeMediaReference(
 
   updateContentTypesCleanup(pkg);
 }
+
+
+
+
+
 
 
 

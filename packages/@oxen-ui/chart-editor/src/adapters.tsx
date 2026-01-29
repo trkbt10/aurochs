@@ -33,9 +33,19 @@ export type ChartEditorAdaptersProviderProps = {
   readonly children: ReactNode;
 };
 
+
+
+
+
+
 export function ChartEditorAdaptersProvider({ adapters, children }: ChartEditorAdaptersProviderProps) {
   return <ChartEditorAdaptersContext.Provider value={adapters}>{children}</ChartEditorAdaptersContext.Provider>;
 }
+
+
+
+
+
 
 export function useChartEditorAdapters(): ChartEditorAdapters | undefined {
   return useContext(ChartEditorAdaptersContext);
@@ -45,6 +55,11 @@ export type ChartEditorAdaptersBoundaryProps = {
   readonly adapters?: ChartEditorAdapters;
   readonly children: ReactNode;
 };
+
+
+
+
+
 
 export function ChartEditorAdaptersBoundary({ adapters, children }: ChartEditorAdaptersBoundaryProps) {
   const inherited = useChartEditorAdapters();

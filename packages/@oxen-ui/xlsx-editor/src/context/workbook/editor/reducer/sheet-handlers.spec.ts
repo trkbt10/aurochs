@@ -6,7 +6,7 @@ import type { XlsxWorkbook, XlsxWorksheet } from "@oxen-office/xlsx/domain/workb
 import { createDefaultStyleSheet } from "@oxen-office/xlsx/domain/style/types";
 import type { XlsxEditorState } from "../types";
 import { createEmptyCellSelection, createIdleDragState } from "../types";
-import { createHistory, pushHistory } from "../../state/history";
+import { createHistory, pushHistory } from "@oxen-ui/editor-core/history";
 import { sheetHandlers } from "./sheet-handlers";
 
 function createWorksheet(name: string, sheetId: number): XlsxWorksheet {

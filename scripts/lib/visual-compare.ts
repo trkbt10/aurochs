@@ -24,6 +24,13 @@ import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
 import { compareSvgToSnapshot, type CompareOptions, type CompareResult } from "../../spec/visual-regression/compare";
 import { loadPptxFile } from "./pptx-loader";
 
+type CompareSlideToSnapshotArgs = {
+  readonly pptxPath: string;
+  readonly snapshotName: string;
+  readonly slideNumber: number;
+  readonly options?: CompareOptions;
+};
+
 /**
  * Compare a slide rendering against LibreOffice snapshot.
  *
@@ -33,15 +40,8 @@ import { loadPptxFile } from "./pptx-loader";
  * @param options - Comparison options
  * @returns Comparison result with diff percentage and pixel count
  */
-export async function compareSlideToSnapshot(
-  ...args: readonly [
-    pptxPath: string,
-    snapshotName: string,
-    slideNumber: number,
-    options?: CompareOptions,
-  ]
-): Promise<CompareResult & { svg: string }> {
-  const [pptxPath, snapshotName, slideNumber, options] = args;
+export async function compareSlideToSnapshot(args: CompareSlideToSnapshotArgs): Promise<CompareResult & { svg: string }> {
+  const { pptxPath, snapshotName, slideNumber, options } = args;
   const { presentationFile } = await loadPptxFile(pptxPath);
   const presentation = openPresentation(presentationFile, {
     renderOptions: LIBREOFFICE_RENDER_OPTIONS,
@@ -49,7 +49,7 @@ export async function compareSlideToSnapshot(
   const slide = presentation.getSlide(slideNumber);
   const { svg } = renderSlideToSvg(slide);
 
-  const result = compareSvgToSnapshot(svg, snapshotName, slideNumber, options);
+  const result = compareSvgToSnapshot({ svg, snapshotName, slideNumber, options });
 
   return { ...result, svg };
 }

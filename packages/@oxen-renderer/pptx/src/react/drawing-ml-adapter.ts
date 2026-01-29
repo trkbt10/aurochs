@@ -8,6 +8,15 @@
 import type { DrawingMLRenderContext, WarningCollector } from "@oxen-renderer/drawing-ml/context";
 import type { ReactRenderContext } from "./context";
 
+function createResolveResource(
+  pptxContext: ReactRenderContext,
+): DrawingMLRenderContext["resolveResource"] {
+  if (!pptxContext.resources) {
+    return undefined;
+  }
+  return (resourceId: string) => pptxContext.resources.resolve(resourceId);
+}
+
 /**
  * Create a DrawingMLRenderContext from a PPTX ReactRenderContext.
  *
@@ -47,12 +56,7 @@ export function createDrawingMLContext(
   };
 
   // Create resource resolver that uses PPTX ResourceResolver
-  const resolveResource = pptxContext.resources
-    ? (resourceId: string) => {
-        // Use the resolve method which combines getTarget + readFile
-        return pptxContext.resources.resolve(resourceId);
-      }
-    : undefined;
+  const resolveResource = createResolveResource(pptxContext);
 
   // Create ID generator that uses PPTX's shape ID system
   // We use a local counter since shape IDs are different from def IDs

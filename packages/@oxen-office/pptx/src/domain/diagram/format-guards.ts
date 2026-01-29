@@ -5,6 +5,11 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object";
 }
 
+
+
+
+
+
 export function isTextBody(value: unknown): value is TextBody {
   if (!isObject(value)) {
     return false;
@@ -14,6 +19,11 @@ export function isTextBody(value: unknown): value is TextBody {
   }
   return "paragraphs" in value && Array.isArray(value.paragraphs);
 }
+
+
+
+
+
 
 export function isShapeStyle(value: unknown): value is ShapeStyle {
   if (!isObject(value)) {

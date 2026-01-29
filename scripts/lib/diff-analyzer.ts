@@ -27,8 +27,11 @@ export async function analyzeAllSlides(
 
   for (const slideNum of slideNumbers) {
     try {
-      const result = await compareSlideToSnapshot(pptxPath, snapshotName, slideNum, {
-        maxDiffPercent: 100,
+      const result = await compareSlideToSnapshot({
+        pptxPath,
+        snapshotName,
+        slideNumber: slideNum,
+        options: { maxDiffPercent: 100 },
       });
 
       results.push({

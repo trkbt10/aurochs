@@ -24,6 +24,11 @@ const fillTypeOptions: SelectOption<BaseFill["type"]>[] = [
   { value: "solidFill", label: "Solid" },
 ];
 
+
+
+
+
+
 export function BaseFillEditor({
   value,
   onChange,
@@ -84,6 +89,11 @@ export function BaseFillEditor({
     </div>
   );
 }
+
+
+
+
+
 
 export function createNoFill(): BaseFill {
   return { type: "noFill" };

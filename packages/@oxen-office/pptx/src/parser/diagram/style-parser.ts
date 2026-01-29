@@ -14,13 +14,28 @@ import {
 import { parseTextBody } from "../text/text-parser";
 import { parseShapeStyle } from "../shape-parser/style";
 
+
+
+
+
+
 export function parseDiagramStyleDefinition(doc: XmlDocument) {
   return parseDiagramStyleDefinitionBase(doc, { parseTextBody, parseShapeStyle });
 }
 
+
+
+
+
+
 export function parseDiagramStyleDefinitionHeader(...args: Parameters<typeof parseDiagramStyleDefinitionHeaderBase>) {
   return parseDiagramStyleDefinitionHeaderBase(...args);
 }
+
+
+
+
+
 
 export function parseDiagramStyleDefinitionHeaderList(...args: Parameters<typeof parseDiagramStyleDefinitionHeaderListBase>) {
   return parseDiagramStyleDefinitionHeaderListBase(...args);

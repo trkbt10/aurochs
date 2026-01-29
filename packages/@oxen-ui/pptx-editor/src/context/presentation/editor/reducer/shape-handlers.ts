@@ -17,7 +17,7 @@ import {
   updateActiveSlideInDocument,
   getPrimaryIdAfterDeletion,
 } from "./helpers";
-import { pushHistory } from "../../../slide/state";
+import { pushHistory } from "@oxen-ui/editor-core/history";
 import {
   updateShapeById,
   deleteShapesById,

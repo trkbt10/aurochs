@@ -6,6 +6,11 @@ import { getDocumentRoot, updateDocumentRoot } from "../core/xml-mutator";
 
 
 
+
+
+
+
+
 export function addContentType(
   contentTypesXml: XmlDocument,
   extension: string,
@@ -58,6 +63,11 @@ export function addContentType(
 
 
 
+
+
+
+
+
 export function addOverride(
   contentTypesXml: XmlDocument,
   partName: string,
@@ -97,6 +107,11 @@ export function addOverride(
     return { ...typesEl, children: [...typesEl.children, overrideEl] };
   });
 }
+
+
+
+
+
 
 
 

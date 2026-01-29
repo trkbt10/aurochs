@@ -8,11 +8,12 @@
  *   export * from '@oxen/core'
  *   export { Foo } from '@oxen-ui/components'
  *   import { Bar } from '@oxen/utils'; export { Bar }
+ *   import { Bar as Baz } from '@oxen/utils'; export const Bar = Baz;
  *
  * Allowed:
  *   export * from './local'        // re-export from same package
  *   export { foo } from '../utils' // relative re-export within same package
- *   import { Bar } from '@oxen/utils'; const baz = Bar; export { baz } // transform then export
+ *   import { Bar } from '@oxen/utils'; const transformed = transform(Bar); export { transformed }
  */
 
 /**
@@ -43,6 +44,9 @@ export default {
       noIndirectPackageReexport:
         "Re-exporting '{{name}}' that was imported from package '{{source}}' is not allowed. " +
         "Each package should expose only its own implementation.",
+      noAliasReexport:
+        "Exporting '{{exported}}' as an alias for '{{imported}}' from package '{{source}}' is not allowed. " +
+        "This is an indirect re-export that bypasses lint rules.",
     },
   },
 
@@ -103,12 +107,41 @@ export default {
       }
     }
 
+    function checkAliasReexport(node) {
+      // Check for: export const X = importedValue
+      const declaration = node.declaration;
+      if (!declaration || declaration.type !== "VariableDeclaration") return;
+
+      for (const declarator of declaration.declarations || []) {
+        // Only check simple assignments: const X = Y (not const X = transform(Y))
+        if (declarator.init?.type !== "Identifier") continue;
+
+        const initName = declarator.init.name;
+        const importInfo = packageImports.get(initName);
+        if (!importInfo) continue;
+
+        const exportedName = declarator.id?.name;
+        if (!exportedName) continue;
+
+        context.report({
+          node: declarator,
+          messageId: "noAliasReexport",
+          data: {
+            exported: exportedName,
+            imported: initName,
+            source: importInfo.source,
+          },
+        });
+      }
+    }
+
     return {
       ImportDeclaration: trackImport,
       ExportAllDeclaration: checkDirectReexport,
       ExportNamedDeclaration(node) {
         checkDirectReexport(node);
         checkIndirectReexport(node);
+        checkAliasReexport(node);
       },
     };
   },

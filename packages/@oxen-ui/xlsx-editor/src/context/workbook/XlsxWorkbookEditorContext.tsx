@@ -8,7 +8,7 @@ import { createContext, useContext, useEffect, useMemo, useReducer, type ReactNo
 import type { XlsxWorkbook, XlsxWorksheet } from "@oxen-office/xlsx/domain/workbook";
 import type { CellSelectionState, XlsxEditorAction, XlsxEditorState } from "./editor/types";
 import { xlsxEditorReducer, createInitialState } from "./editor/reducer";
-import { canRedo, canUndo } from "./state/history";
+import { canRedo, canUndo } from "@oxen-ui/editor-core/history";
 
 export type XlsxWorkbookEditorContextValue = {
   readonly state: XlsxEditorState;

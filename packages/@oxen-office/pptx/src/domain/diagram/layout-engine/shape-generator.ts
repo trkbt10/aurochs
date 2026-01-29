@@ -36,6 +36,11 @@ export type GenerateDiagramShapesOptions = {
   readonly config: ShapeGenerationConfig;
 };
 
+
+
+
+
+
 export function generateDiagramShapes(
   { dataModel, layoutDefinition, styleDefinition, colorDefinition, config }: GenerateDiagramShapesOptions,
 ): ShapeGenerationResult {

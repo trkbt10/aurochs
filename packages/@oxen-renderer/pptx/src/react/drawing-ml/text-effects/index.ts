@@ -12,12 +12,3 @@
 
 // PPTX-specific implementation (uses PPTX text effects types)
 export { createTextEffectsFilterDef } from "./TextEffectsFilter";
-
-// Re-export shared types from drawing-ml for convenience
-export type {
-  TextEffectsConfig as SharedTextEffectsConfig,
-  TextShadowConfig as SharedTextShadowConfig,
-  TextGlowConfig as SharedTextGlowConfig,
-  TextSoftEdgeConfig as SharedTextSoftEdgeConfig,
-  TextReflectionConfig as SharedTextReflectionConfig,
-} from "@oxen-renderer/drawing-ml/text-effects";

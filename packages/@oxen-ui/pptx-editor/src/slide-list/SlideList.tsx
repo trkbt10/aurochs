@@ -18,7 +18,7 @@ import {
   useSlideItemHover,
   useSlideContextMenu,
 } from "./hooks";
-import { ContextMenu } from "../ui/context-menu";
+import { ContextMenu } from "@oxen-ui/ui-components";
 import type { SlideTransition } from "@oxen-office/pptx/domain/transition";
 import type { SlideSelectionState } from "./types";
 

@@ -26,6 +26,11 @@ const capOptions: Array<{ value: BaseLine["cap"]; label: string }> = [
   { value: "square", label: "Square" },
 ];
 
+
+
+
+
+
 export function BaseLineEditor({
   value,
   onChange,
@@ -83,6 +88,11 @@ export function BaseLineEditor({
     </div>
   );
 }
+
+
+
+
+
 
 export function createDefaultBaseLine(): BaseLine {
   return {

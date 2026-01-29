@@ -14,12 +14,3 @@
 export { render3dTextEffects } from "./render-3d-effects";
 export { renderTextExtrusion, getExtrusionOffset } from "./extrusion";
 export { createTextBevelFilterDef, getBevelOffsets, type BevelConfig } from "./bevel-filter";
-
-// Re-export shared types from drawing-ml for convenience
-export type {
-  BevelConfig as SharedBevelConfig,
-  BevelOffsets as SharedBevelOffsets,
-  ExtrusionOffset as SharedExtrusionOffset,
-  Scene3d as SharedScene3d,
-  Shape3d as SharedShape3d,
-} from "@oxen-renderer/drawing-ml/text-3d";

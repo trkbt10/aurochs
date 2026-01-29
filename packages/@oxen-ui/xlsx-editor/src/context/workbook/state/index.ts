@@ -5,15 +5,6 @@
  */
 
 export {
-  createHistory,
-  pushHistory,
-  undoHistory,
-  redoHistory,
-  canUndo,
-  canRedo,
-} from "./history";
-
-export {
   createSingleCellSelection,
   createRangeSelection,
   extendSelection,

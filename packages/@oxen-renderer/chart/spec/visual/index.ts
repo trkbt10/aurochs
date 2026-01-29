@@ -68,5 +68,10 @@ export async function runChartTest(testCase: ChartTestCase): Promise<CompareResu
     maxDiffPercent: testCase.threshold,
   };
 
-  return compareSvgToSnapshot(svg, testCase.name, testCase.slideNumber, options);
+  return compareSvgToSnapshot({
+    svg,
+    snapshotName: testCase.name,
+    slideNumber: testCase.slideNumber,
+    options,
+  });
 }

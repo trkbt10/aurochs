@@ -8,8 +8,8 @@ import type { PresentationDocument } from "@oxen-office/pptx/app";
 import type { PresentationEditorState, PresentationEditorAction } from "../types";
 import { createSelectMode, createSlideEditorMode } from "../types";
 import type { HandlerMap, ActionHandler } from "./handler-types";
+import { createHistory } from "@oxen-ui/editor-core/history";
 import {
-  createHistory,
   createEmptySelection,
   createIdleDragState,
   createIdlePathDrawState,

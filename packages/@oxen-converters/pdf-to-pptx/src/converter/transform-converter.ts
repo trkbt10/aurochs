@@ -401,6 +401,11 @@ function computeRasterScale(
   return Math.max(targetW / rasterW, targetH / rasterH);
 }
 
+
+
+
+
+
 export function createFitContext(
   ...args: readonly [
     pdfWidth: number,

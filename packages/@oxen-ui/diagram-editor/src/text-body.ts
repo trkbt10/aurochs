@@ -9,6 +9,11 @@ export type DiagramTextRun = { readonly type: "text"; readonly text: string };
 export type DiagramTextParagraph = { readonly runs: readonly unknown[] };
 export type DiagramTextBody = { readonly paragraphs: readonly DiagramTextParagraph[] };
 
+
+
+
+
+
 export function extractPlainTextFromTextBody(textBody: unknown): string | undefined {
   if (!isDiagramTextBody(textBody)) {
     return undefined;

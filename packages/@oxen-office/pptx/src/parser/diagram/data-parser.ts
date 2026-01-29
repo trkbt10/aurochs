@@ -13,9 +13,19 @@ import {
 import { parseShapeProperties } from "../shape-parser/properties";
 import { parseTextBody } from "../text/text-parser";
 
+
+
+
+
+
 export function parseDiagramDataModel(doc: XmlDocument) {
   return parseDiagramDataModelBase(doc, { parseShapeProperties, parseTextBody });
 }
+
+
+
+
+
 
 export function parseDiagramDataModelElement(element: XmlElement | undefined) {
   return parseDiagramDataModelElementBase(element, { parseShapeProperties, parseTextBody });

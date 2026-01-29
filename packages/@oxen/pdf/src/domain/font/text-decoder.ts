@@ -206,6 +206,11 @@ export function decodeText(
 
 
 
+
+
+
+
+
 export function decodeTextWithFontInfo(rawText: string, fontInfo: FontInfo): string {
   const { mapping, codeByteWidth, ordering, encodingMap } = fontInfo;
 

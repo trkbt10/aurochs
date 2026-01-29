@@ -24,12 +24,12 @@ describe("Vertical Text Visual Regression", () => {
      * vert="vert" - 90 degree clockwise rotation
      */
     it("renders basic English vertical text", async () => {
-      const result = await compareSlideToSnapshot(
-        `${BASE_DIR}/vert-basic-english.pptx`,
-        "vert-basic-english",
-        1,
-        { maxDiffPercent: DIFF_THRESHOLD },
-      );
+      const result = await compareSlideToSnapshot({
+        pptxPath: `${BASE_DIR}/vert-basic-english.pptx`,
+        snapshotName: "vert-basic-english",
+        slideNumber: 1,
+        options: { maxDiffPercent: DIFF_THRESHOLD },
+      });
       printCompareResult(result, "vert-basic-english", 1);
       expect(result.diffPercent).toBeLessThanOrEqual(DIFF_THRESHOLD);
     });
@@ -39,12 +39,12 @@ describe("Vertical Text Visual Regression", () => {
      * vert="vert" - Standard vertical layout for Japanese
      */
     it("renders basic Japanese vertical text", async () => {
-      const result = await compareSlideToSnapshot(
-        `${BASE_DIR}/vert-basic-japanese.pptx`,
-        "vert-basic-japanese",
-        1,
-        { maxDiffPercent: DIFF_THRESHOLD },
-      );
+      const result = await compareSlideToSnapshot({
+        pptxPath: `${BASE_DIR}/vert-basic-japanese.pptx`,
+        snapshotName: "vert-basic-japanese",
+        slideNumber: 1,
+        options: { maxDiffPercent: DIFF_THRESHOLD },
+      });
       printCompareResult(result, "vert-basic-japanese", 1);
       expect(result.diffPercent).toBeLessThanOrEqual(DIFF_THRESHOLD);
     });
@@ -56,12 +56,12 @@ describe("Vertical Text Visual Regression", () => {
      * vert="eaVert" - CJK-specific vertical layout
      */
     it("renders Japanese with eaVert", async () => {
-      const result = await compareSlideToSnapshot(
-        `${BASE_DIR}/vert-eavert-japanese.pptx`,
-        "vert-eavert-japanese",
-        1,
-        { maxDiffPercent: DIFF_THRESHOLD },
-      );
+      const result = await compareSlideToSnapshot({
+        pptxPath: `${BASE_DIR}/vert-eavert-japanese.pptx`,
+        snapshotName: "vert-eavert-japanese",
+        slideNumber: 1,
+        options: { maxDiffPercent: DIFF_THRESHOLD },
+      });
       printCompareResult(result, "vert-eavert-japanese", 1);
       expect(result.diffPercent).toBeLessThanOrEqual(DIFF_THRESHOLD);
     });

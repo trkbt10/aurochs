@@ -45,11 +45,21 @@ const PERCENT_100000 = 100000;
 // Integer/Number Parsing
 // =============================================================================
 
+
+
+
+
+
 export function parseInt32(value: string | undefined): number | undefined {
   if (value === undefined) {return undefined;}
   const num = parseInt(value, 10);
   return Number.isNaN(num) ? undefined : num;
 }
+
+
+
+
+
 
 export function parseInt64(value: string | undefined): number | undefined {
   if (value === undefined) {return undefined;}
@@ -59,6 +69,11 @@ export function parseInt64(value: string | undefined): number | undefined {
   return num;
 }
 
+
+
+
+
+
 export function parseUnsignedInt(value: string | undefined): number | undefined {
   const num = parseInt64(value);
   if (num === undefined) {return undefined;}
@@ -66,13 +81,28 @@ export function parseUnsignedInt(value: string | undefined): number | undefined 
   return num;
 }
 
+
+
+
+
+
 export function parseIndex(value: string | undefined): number | undefined {
   return parseUnsignedInt(value);
 }
 
+
+
+
+
+
 export function parseInt32Or(value: string | undefined, defaultValue: number): number {
   return parseInt32(value) ?? defaultValue;
 }
+
+
+
+
+
 
 export function parseFloat64(value: string | undefined): number | undefined {
   if (value === undefined) {return undefined;}
@@ -97,6 +127,11 @@ export function parseBoolean(value: string | undefined): boolean | undefined {
   if (lower === "0" || lower === "false" || lower === "off") {return false;}
   return undefined;
 }
+
+
+
+
+
 
 export function parseBooleanOr(value: string | undefined, defaultValue: boolean): boolean {
   return parseBoolean(value) ?? defaultValue;
@@ -170,11 +205,21 @@ export function parsePercentage100k(value: string | undefined): Percent | undefi
   return pct((num / PERCENT_100000) * 100);
 }
 
+
+
+
+
+
 export function parsePositivePercentage(value: string | undefined): Percent | undefined {
   const p = parsePercentage(value);
   if (p === undefined || p < 0) {return undefined;}
   return p;
 }
+
+
+
+
+
 
 export function parseFixedPercentage(value: string | undefined): Percent | undefined {
   const p = parsePercentage100k(value);
@@ -220,40 +265,85 @@ export function parseSchemeColorValue(value: string | undefined): SchemeColorVal
 // Attribute Helpers
 // =============================================================================
 
+
+
+
+
+
 export function getEmuAttr(element: XmlElement, name: string): Pixels | undefined {
   return parseEmu(getAttr(element, name));
 }
 
+
+
+
+
+
 export function getAngleAttr(element: XmlElement, name: string): Degrees | undefined {
   return parseAngle(getAttr(element, name));
 }
+
+
+
+
+
 
 export function getBoolAttr(element: XmlElement | undefined, name: string): boolean | undefined {
   if (!element) {return undefined;}
   return parseBoolean(getAttr(element, name));
 }
 
+
+
+
+
+
 export function getBoolAttrOr(element: XmlElement, name: string, defaultValue: boolean): boolean {
   return parseBooleanOr(getAttr(element, name), defaultValue);
 }
+
+
+
+
+
 
 export function getIntAttr(element: XmlElement | undefined, name: string): number | undefined {
   if (!element) {return undefined;}
   return parseInt32(getAttr(element, name));
 }
 
+
+
+
+
+
 export function getIntAttrOr(element: XmlElement, name: string, defaultValue: number): number {
   return parseInt32Or(getAttr(element, name), defaultValue);
 }
+
+
+
+
+
 
 export function getFloatAttr(element: XmlElement | undefined, name: string): number | undefined {
   if (!element) {return undefined;}
   return parseFloat64(getAttr(element, name));
 }
 
+
+
+
+
+
 export function getPercentAttr(element: XmlElement, name: string): Percent | undefined {
   return parsePercentage(getAttr(element, name));
 }
+
+
+
+
+
 
 export function getPercent100kAttr(element: XmlElement, name: string): Percent | undefined {
   return parsePercentage100k(getAttr(element, name));

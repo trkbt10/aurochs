@@ -11,10 +11,10 @@ import { DocumentEditorTestProvider } from "../context/document/DocumentEditorCo
 import type { DocxEditorState } from "../context/document/editor/types";
 import { createInitialTextEditState } from "../context/document/editor/types";
 import type { DocxSelectionState } from "../context/document/state";
+import { createHistory } from "@oxen-ui/editor-core/history";
 import {
   createCursorSelection,
   createEmptyDocxSelection,
-  createHistory,
   createIdleDragState,
 } from "../context/document/state";
 import { DocumentToolbar } from "./DocumentToolbar";
@@ -196,4 +196,3 @@ describe("DocumentToolbar", () => {
     expect(indentInc.disabled).toBe(true);
   });
 });
-

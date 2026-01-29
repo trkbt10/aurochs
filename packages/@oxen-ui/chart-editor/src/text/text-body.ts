@@ -4,10 +4,20 @@
 
 import type { TextBody, TextRun } from "@oxen-office/chart/domain/text";
 
+
+
+
+
+
 export function getPlainText(textBody: TextBody): string {
   const lines = textBody.paragraphs.map((p) => runsToString(p.runs));
   return lines.join("\n");
 }
+
+
+
+
+
 
 export function createDefaultTextBody(text?: string): TextBody {
   return {
@@ -20,6 +30,11 @@ export function createDefaultTextBody(text?: string): TextBody {
     ],
   };
 }
+
+
+
+
+
 
 export function replacePlainText(textBody: TextBody, text: string): TextBody {
   const paragraphs = text.split("\n").map((line) => ({

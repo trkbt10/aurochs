@@ -9,5 +9,12 @@
  * - @oxen-renderer/diagram/spec/visual/ - Diagram visual tests
  */
 
-export * from "./compare";
-export * from "./types";
+export {
+  compareSvgToSnapshot,
+  svgToPng,
+  hasSnapshot,
+  listSnapshots,
+} from "./compare";
+
+export type { CompareOptions, CompareResult } from "./types";
+export { VISUAL_THRESHOLDS } from "./types";

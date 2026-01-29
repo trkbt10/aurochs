@@ -20,6 +20,11 @@ const containerStyle: CSSProperties = {
   gap: "12px",
 };
 
+
+
+
+
+
 export function ChartShapePropertiesEditor({
   value,
   onChange,
@@ -70,6 +75,11 @@ export function ChartShapePropertiesEditor({
     </ChartEditorAdaptersBoundary>
   );
 }
+
+
+
+
+
 
 export function createDefaultChartShapeProperties(): ChartShapeProperties {
   return {};

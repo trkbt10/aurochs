@@ -190,6 +190,11 @@ function useToolbarState(): ToolbarState {
 
 
 
+
+
+
+
+
 export function DocumentToolbar({ className, style }: DocumentToolbarProps) {
   const { dispatch, canUndo, canRedo } = useDocumentEditor();
   const { hasSelection, canEdit, runProperties, listFormat } = useToolbarState();

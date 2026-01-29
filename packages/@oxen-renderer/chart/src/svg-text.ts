@@ -4,6 +4,11 @@ function escapeAttr(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
 }
 
+
+
+
+
+
 export function toSvgTextAttributes(style: ResolvedTextStyle): string {
   const parts: string[] = [];
 

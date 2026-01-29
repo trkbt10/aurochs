@@ -33,6 +33,11 @@ const FILL_ELEMENT_NAMES = [
   "a:grpFill",
 ] as const;
 
+
+
+
+
+
 export function findFillElement(parent: XmlElement): XmlElement | undefined {
   return findChild(parent, (child) =>
     FILL_ELEMENT_NAMES.includes(child.name as typeof FILL_ELEMENT_NAMES[number]),
@@ -151,6 +156,11 @@ function parseGroupFill(): GroupFill {
   return { type: "groupFill" };
 }
 
+
+
+
+
+
 export function parseBaseFill(element: XmlElement | undefined): BaseFill | undefined {
   if (!element) {return undefined;}
 
@@ -172,6 +182,11 @@ export function parseBaseFill(element: XmlElement | undefined): BaseFill | undef
       return undefined;
   }
 }
+
+
+
+
+
 
 export function parseBaseFillFromParent(parent: XmlElement | undefined): BaseFill | undefined {
   if (!parent) {return undefined;}

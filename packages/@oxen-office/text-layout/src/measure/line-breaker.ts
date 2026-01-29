@@ -18,20 +18,6 @@ import {
   getLineTextLength as glyphGetLineTextLength,
 } from "@oxen/glyph";
 import type { BreakableSpan as GlyphBreakableSpan } from "@oxen/glyph";
-import { SPEC_DEFAULT_FONT_SIZE_PT } from "@oxen-office/docx/domain/ecma376-defaults";
-
-// =============================================================================
-// Constants
-// =============================================================================
-
-/**
- * Default font size in points when no span is available.
- * Uses ECMA-376 specification default (10pt).
- *
- * @deprecated Use SPEC_DEFAULT_FONT_SIZE_PT from ecma376-defaults.ts directly.
- *             This export is kept for backwards compatibility.
- */
-export const DEFAULT_FONT_SIZE_PT = SPEC_DEFAULT_FONT_SIZE_PT;
 
 // =============================================================================
 // Type Conversion

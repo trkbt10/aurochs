@@ -5,7 +5,7 @@
  */
 
 import type { HandlerMap } from "./handler-types";
-import { redoHistory, undoHistory } from "../../state/history";
+import { redoHistory, undoHistory } from "@oxen-ui/editor-core/history";
 import type { XlsxEditorState } from "../types";
 import { createEmptyCellSelection, createIdleDragState } from "../types";
 

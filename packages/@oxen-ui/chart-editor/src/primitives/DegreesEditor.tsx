@@ -15,6 +15,11 @@ export type DegreesEditorProps = EditorProps<Degrees> & {
   readonly slider?: boolean;
 };
 
+
+
+
+
+
 export function DegreesEditor({
   value,
   onChange,

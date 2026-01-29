@@ -150,13 +150,8 @@ export {
   // Diagram
   DiagramEditor,
   DiagramPointEditor,
-  DiagramConnectionEditor,
-  createDefaultDiagramDataModel,
-  createDefaultDiagramPoint,
-  createDefaultDiagramConnection,
   type DiagramEditorProps,
   type DiagramPointEditorProps,
-  type DiagramConnectionEditorProps,
   // Slide-level
   BackgroundEditor,
   TransitionEditor,
@@ -176,16 +171,11 @@ export type {
   SelectionState,
   ResizeHandlePosition,
   DragState,
-  UndoRedoHistory,
   ClipboardContent,
 } from "./context/slide/state";
 export {
   createEmptySelection,
   createIdleDragState,
-  createHistory,
-  pushHistory,
-  undoHistory,
-  redoHistory,
 } from "./context/slide/state";
 
 // Slide Editor Types

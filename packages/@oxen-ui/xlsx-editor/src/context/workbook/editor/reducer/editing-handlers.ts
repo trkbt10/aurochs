@@ -6,7 +6,7 @@
 
 import type { XlsxEditorAction, XlsxEditorState } from "../types";
 import type { HandlerMap } from "./handler-types";
-import { pushHistory } from "../../state/history";
+import { pushHistory } from "@oxen-ui/editor-core/history";
 import { updateCell } from "../../../../cell/mutation";
 import { updateWorksheetInWorkbook } from "../../utils/worksheet-updater";
 
@@ -58,4 +58,3 @@ export const editingHandlers: HandlerMap = {
   EXIT_CELL_EDIT: (state) => ({ ...state, editingCell: undefined }),
   COMMIT_CELL_EDIT: handleCommitCellEdit,
 };
-

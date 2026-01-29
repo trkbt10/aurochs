@@ -199,6 +199,11 @@ function truncateText(value: string, maxLength: number): string {
   return value.substring(0, maxLength) + "...";
 }
 
+
+
+
+
+
 export function createDefaultDiagramConnection(
   modelId?: string,
   sourceId?: string,

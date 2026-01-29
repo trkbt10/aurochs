@@ -5,7 +5,7 @@
 // @vitest-environment jsdom
 
 import { render, fireEvent } from "@testing-library/react";
-import { ContextMenuSubmenu } from "./ContextMenuSubmenu";
+import { ContextMenuSubmenu } from "@oxen-ui/ui-components";
 import type { MenuSubmenu } from "./types";
 
 describe("ContextMenuSubmenu", () => {

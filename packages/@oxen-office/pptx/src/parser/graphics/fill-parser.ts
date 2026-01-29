@@ -29,6 +29,11 @@ import { parseBlipCompression, parseRectAlignment } from "../primitive";
 // Shared Entry Points
 // =============================================================================
 
+
+
+
+
+
 export function findFillElement(parent: XmlElement): XmlElement | undefined {
   return findOoxmlFillElement(parent);
 }
@@ -250,6 +255,11 @@ function parseBlipFill(element: XmlElement): BlipFill | undefined {
 // Main Fill Parsing
 // =============================================================================
 
+
+
+
+
+
 export function parseFill(element: XmlElement | undefined): Fill | undefined {
   if (!element) {return undefined;}
 
@@ -260,6 +270,11 @@ export function parseFill(element: XmlElement | undefined): Fill | undefined {
   return parseOoxmlBaseFill(element) ?? undefined;
 }
 
+
+
+
+
+
 export function parseFillFromParent(parent: XmlElement | undefined): Fill | undefined {
   if (!parent) {return undefined;}
   const fillEl = findFillElement(parent);
@@ -269,6 +284,11 @@ export function parseFillFromParent(parent: XmlElement | undefined): Fill | unde
 // =============================================================================
 // Style Reference
 // =============================================================================
+
+
+
+
+
 
 export function resolveFillFromStyleReference(
   fillRef: StyleReference | undefined,

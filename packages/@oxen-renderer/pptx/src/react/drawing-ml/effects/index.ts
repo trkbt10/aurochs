@@ -40,11 +40,3 @@ export {
   EffectsWrapper,
   EffectsFilterDef,
 } from "./EffectsFilter";
-
-// Re-export shared types from drawing-ml for convenience
-export type {
-  Effects as SharedEffects,
-  ShadowEffect as SharedShadowEffect,
-  GlowEffect as SharedGlowEffect,
-  SoftEdgeEffect as SharedSoftEdgeEffect,
-} from "@oxen-renderer/drawing-ml/effects";

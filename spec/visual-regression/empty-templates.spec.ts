@@ -72,9 +72,14 @@ describe("Empty Template Visual Regression", () => {
           const slide = presentation.getSlide(slideNum);
           const { svg } = renderSlideToSvg(slide);
 
-          const result = await compareSvgToSnapshot(svg, testCase.name, slideNum, {
-            // Empty templates should have very low diff (essentially white vs white)
-            maxDiffPercent: 1,
+          const result = await compareSvgToSnapshot({
+            svg,
+            snapshotName: testCase.name,
+            slideNumber: slideNum,
+            options: {
+              // Empty templates should have very low diff (essentially white vs white)
+              maxDiffPercent: 1,
+            },
           });
 
           expect(result.match).toBe(true);

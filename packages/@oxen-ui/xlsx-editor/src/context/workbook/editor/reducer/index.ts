@@ -5,7 +5,7 @@
  */
 
 import type { XlsxWorkbook } from "@oxen-office/xlsx/domain/workbook";
-import { createHistory } from "../../state/history";
+import { createHistory } from "@oxen-ui/editor-core/history";
 import type { XlsxEditorState, XlsxEditorAction } from "../types";
 import { createEmptyCellSelection, createIdleDragState } from "../types";
 import type { HandlerMap } from "./handler-types";

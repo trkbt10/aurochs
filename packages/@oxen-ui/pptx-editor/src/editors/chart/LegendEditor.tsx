@@ -14,6 +14,11 @@ import { pptxChartEditorAdapters } from "./adapters";
 
 export type LegendEditorProps = CoreLegendEditorProps;
 
+
+
+
+
+
 export function LegendEditor(props: LegendEditorProps) {
   return (
     <ChartEditorAdaptersBoundary adapters={pptxChartEditorAdapters}>
@@ -21,6 +26,11 @@ export function LegendEditor(props: LegendEditorProps) {
     </ChartEditorAdaptersBoundary>
   );
 }
+
+
+
+
+
 
 export function createDefaultLegend() {
   return createDefaultLegendCore();

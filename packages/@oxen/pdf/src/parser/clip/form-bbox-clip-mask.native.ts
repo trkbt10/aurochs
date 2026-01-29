@@ -74,6 +74,11 @@ function sampleClipMaskAtPagePoint(mask: PdfSoftMask, pageX: number, pageY: numb
 
 
 
+
+
+
+
+
 export function rasterizeFormBBoxClipToMask(
   gs: PdfGraphicsState,
   formBBox: PdfBBox,

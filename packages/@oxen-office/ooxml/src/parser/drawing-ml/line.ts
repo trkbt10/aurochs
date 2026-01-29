@@ -126,6 +126,11 @@ function resolveLineJoin(element: XmlElement): BaseLine["join"] {
   return "round";
 }
 
+
+
+
+
+
 export function parseLine(element: XmlElement | undefined): BaseLine | undefined {
   if (!element) {return undefined;}
 
@@ -150,6 +155,11 @@ export function parseLine(element: XmlElement | undefined): BaseLine | undefined
     miterLimit,
   };
 }
+
+
+
+
+
 
 export function getLineFromProperties(spPr: XmlElement | undefined): BaseLine | undefined {
   if (!spPr) {return undefined;}

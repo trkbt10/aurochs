@@ -21,10 +21,3 @@ export {
   resolvePatternFillForReact,
   type PatternFillResult,
 } from "./usePatternFill";
-
-// Re-export shared components/types from drawing-ml for convenience
-export {
-  PatternDef as SharedPatternDef,
-  type PatternDefProps as SharedPatternDefProps,
-  type PatternFillResult as SharedPatternFillResult,
-} from "@oxen-renderer/drawing-ml/fill";

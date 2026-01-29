@@ -380,6 +380,11 @@ export type ApplyTextInsetsOptions = {
   readonly bIns?: number;
 };
 
+
+
+
+
+
 export function applyTextInsets(
   {
     textRect,

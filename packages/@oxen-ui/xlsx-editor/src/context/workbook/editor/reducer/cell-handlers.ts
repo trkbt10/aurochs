@@ -6,7 +6,7 @@
 
 import type { XlsxEditorAction, XlsxEditorState } from "../types";
 import type { HandlerMap } from "./handler-types";
-import { pushHistory } from "../../state/history";
+import { pushHistory } from "@oxen-ui/editor-core/history";
 import {
   updateCell,
   deleteCellRange,
@@ -167,4 +167,3 @@ export const cellHandlers: HandlerMap = {
   CLEAR_CELL_CONTENTS: handleClearCellContents,
   CLEAR_CELL_FORMATS: handleClearCellFormats,
 };
-

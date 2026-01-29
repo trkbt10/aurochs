@@ -13,6 +13,11 @@ import { ooxmlBool, ooxmlAngleUnits, ooxmlEmu, ooxmlPercent100k } from "@oxen-of
 
 
 
+
+
+
+
+
 export function serializeFill(fill: Fill): XmlElement {
   switch (fill.type) {
     case "noFill":
@@ -29,6 +34,11 @@ export function serializeFill(fill: Fill): XmlElement {
       return createElement("a:grpFill");
   }
 }
+
+
+
+
+
 
 
 
@@ -101,12 +111,22 @@ function serializeGradientStop(stop: GradientStop): XmlElement {
 
 
 
+
+
+
+
+
 export function serializePatternFill(pattern: PatternFill): XmlElement {
   return createElement("a:pattFill", { prst: pattern.preset }, [
     createElement("a:fgClr", {}, [serializeColor(pattern.foregroundColor)]),
     createElement("a:bgClr", {}, [serializeColor(pattern.backgroundColor)]),
   ]);
 }
+
+
+
+
+
 
 
 

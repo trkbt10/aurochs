@@ -156,6 +156,11 @@ function resolveFontSpec(
 
 
 
+
+
+
+
+
 export function computeRunSvgStyles(
   runProperties: DocxRunProperties | undefined,
   defaultRunProperties: DocxRunProperties | undefined,
@@ -390,6 +395,11 @@ function findWrapIndex(text: string, maxWidth: number, font: FontSpec): number {
 
 
 
+
+
+
+
+
 export function layoutParagraphText(
   paragraph: DocxParagraph,
   bounds: DOMRect,
@@ -502,6 +512,11 @@ function clampRangeToSpan(
   }
   return [start, end];
 }
+
+
+
+
+
 
 
 
@@ -755,6 +770,11 @@ function findCharOffsetInSpan(
 // =============================================================================
 // Component
 // =============================================================================
+
+
+
+
+
 
 
 

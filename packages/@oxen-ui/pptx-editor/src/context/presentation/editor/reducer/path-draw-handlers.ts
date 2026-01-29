@@ -17,7 +17,7 @@ import {
 import type { PathAnchorPoint, AnchorPointType, CapturedPoint } from "../../../../path-tools/types";
 import { createCustomGeometryShape, generateShapeId } from "../../../../shape/factory";
 import { drawingPathToCustomGeometry } from "../../../../path-tools/utils/path-commands";
-import { pushHistory } from "../../../slide/state";
+import { pushHistory } from "@oxen-ui/editor-core/history";
 
 // =============================================================================
 // Helper Functions

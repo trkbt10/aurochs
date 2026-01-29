@@ -63,7 +63,6 @@ export type {
 
 // Measurer
 export {
-  PT_TO_PX,
   calculateCharWidth,
   estimateTextWidth,
   measureSpan,
@@ -77,7 +76,6 @@ export type { CharWidthResult, DetailedMeasurement } from "./measure/measurer";
 
 // Line breaker
 export {
-  DEFAULT_FONT_SIZE_PT,
   breakIntoLines,
   getLineWidth,
   getLineMaxFontSize,

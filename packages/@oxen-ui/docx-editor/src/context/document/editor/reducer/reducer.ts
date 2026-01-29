@@ -16,10 +16,10 @@ import { textEditHandlers } from "./text-edit-handlers";
 import { formatHandlers } from "./format-handlers";
 import { documentHandlers } from "./document-handlers";
 import {
-  createHistory,
   createEmptyDocxSelection,
   createIdleDragState,
 } from "../../state";
+import { createHistory } from "@oxen-ui/editor-core/history";
 import { createInitialTextEditState } from "../types";
 
 // =============================================================================

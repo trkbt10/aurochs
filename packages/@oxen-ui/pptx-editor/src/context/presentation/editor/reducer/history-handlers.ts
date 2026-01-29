@@ -10,10 +10,8 @@ import type {
   PresentationEditorAction,
 } from "../types";
 import type { HandlerMap } from "./handler-types";
+import { pushHistory, redoHistory, undoHistory } from "@oxen-ui/editor-core/history";
 import {
-  pushHistory,
-  undoHistory,
-  redoHistory,
   createEmptySelection,
 } from "../../../slide/state";
 import { findSlideById } from "../slide";

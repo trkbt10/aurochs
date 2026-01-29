@@ -5,12 +5,8 @@
  */
 
 import type { HandlerMap } from "./handler-types";
-import {
-  createHistory,
-  pushHistory,
-  createEmptyDocxSelection,
-  createIdleDragState,
-} from "../../state";
+import { createHistory, pushHistory } from "@oxen-ui/editor-core/history";
+import { createEmptyDocxSelection, createIdleDragState } from "../../state";
 import { createInitialTextEditState } from "../types";
 
 // =============================================================================

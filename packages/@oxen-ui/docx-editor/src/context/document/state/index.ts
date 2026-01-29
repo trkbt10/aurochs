@@ -4,21 +4,6 @@
  * Re-exports all state types and utilities for the DOCX editor.
  */
 
-// History state
-export {
-  type UndoRedoHistory,
-  createHistory,
-  pushHistory,
-  undoHistory,
-  redoHistory,
-  canUndo,
-  canRedo,
-  undoCount,
-  redoCount,
-  clearHistory,
-  replacePresent,
-} from "./history";
-
 // Selection state
 export {
   type ElementId,

@@ -13,7 +13,8 @@ import type {
 } from "../types";
 import type { HandlerMap } from "./handler-types";
 import { getActiveSlide, updateActiveSlideInDocument } from "./helpers";
-import { pushHistory, createIdleDragState } from "../../../slide/state";
+import { pushHistory } from "@oxen-ui/editor-core/history";
+import { createIdleDragState } from "../../../slide/state";
 import { findShapeById } from "../../../../shape/query";
 import { updateShapeById } from "../../../../shape/mutation";
 import {

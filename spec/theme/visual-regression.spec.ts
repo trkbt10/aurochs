@@ -29,7 +29,12 @@ describe("Theme Visual Regression - themes.pptx", () => {
     const presentation = openPresentation(presentationFile);
     const slide = presentation.getSlide(1);
 
-    const result = compareSvgToSnapshot(renderSlideToSvg(slide).svg, "themes", 1, { maxDiffPercent: DIFF_THRESHOLD });
+    const result = compareSvgToSnapshot({
+      svg: renderSlideToSvg(slide).svg,
+      snapshotName: "themes",
+      slideNumber: 1,
+      options: { maxDiffPercent: DIFF_THRESHOLD },
+    });
 
     expect(result.diffPercent).toBeLessThanOrEqual(DIFF_THRESHOLD);
   });
@@ -43,7 +48,12 @@ describe("Theme Visual Regression - themes.pptx", () => {
     const presentation = openPresentation(presentationFile);
     const slide = presentation.getSlide(2);
 
-    const result = compareSvgToSnapshot(renderSlideToSvg(slide).svg, "themes", 2, { maxDiffPercent: DIFF_THRESHOLD });
+    const result = compareSvgToSnapshot({
+      svg: renderSlideToSvg(slide).svg,
+      snapshotName: "themes",
+      slideNumber: 2,
+      options: { maxDiffPercent: DIFF_THRESHOLD },
+    });
 
     expect(result.diffPercent).toBeLessThanOrEqual(DIFF_THRESHOLD);
   });
@@ -57,7 +67,12 @@ describe("Theme Visual Regression - themes.pptx", () => {
     const presentation = openPresentation(presentationFile);
     const slide = presentation.getSlide(3);
 
-    const result = compareSvgToSnapshot(renderSlideToSvg(slide).svg, "themes", 3, { maxDiffPercent: DIFF_THRESHOLD });
+    const result = compareSvgToSnapshot({
+      svg: renderSlideToSvg(slide).svg,
+      snapshotName: "themes",
+      slideNumber: 3,
+      options: { maxDiffPercent: DIFF_THRESHOLD },
+    });
 
     expect(result.diffPercent).toBeLessThanOrEqual(DIFF_THRESHOLD);
   });
@@ -71,7 +86,12 @@ describe("Theme Visual Regression - themes.pptx", () => {
     const presentation = openPresentation(presentationFile);
     const slide = presentation.getSlide(4);
 
-    const result = compareSvgToSnapshot(renderSlideToSvg(slide).svg, "themes", 4, { maxDiffPercent: DIFF_THRESHOLD });
+    const result = compareSvgToSnapshot({
+      svg: renderSlideToSvg(slide).svg,
+      snapshotName: "themes",
+      slideNumber: 4,
+      options: { maxDiffPercent: DIFF_THRESHOLD },
+    });
 
     expect(result.diffPercent).toBeLessThanOrEqual(DIFF_THRESHOLD);
   });
@@ -85,7 +105,12 @@ describe("Theme Visual Regression - themes.pptx", () => {
     const presentation = openPresentation(presentationFile);
     const slide = presentation.getSlide(5);
 
-    const result = compareSvgToSnapshot(renderSlideToSvg(slide).svg, "themes", 5, { maxDiffPercent: DIFF_THRESHOLD });
+    const result = compareSvgToSnapshot({
+      svg: renderSlideToSvg(slide).svg,
+      snapshotName: "themes",
+      slideNumber: 5,
+      options: { maxDiffPercent: DIFF_THRESHOLD },
+    });
 
     expect(result.diffPercent).toBeLessThanOrEqual(DIFF_THRESHOLD);
   });
@@ -99,7 +124,12 @@ describe("Theme Visual Regression - themes.pptx", () => {
     const presentation = openPresentation(presentationFile);
     const slide = presentation.getSlide(6);
 
-    const result = compareSvgToSnapshot(renderSlideToSvg(slide).svg, "themes", 6, { maxDiffPercent: DIFF_THRESHOLD });
+    const result = compareSvgToSnapshot({
+      svg: renderSlideToSvg(slide).svg,
+      snapshotName: "themes",
+      slideNumber: 6,
+      options: { maxDiffPercent: DIFF_THRESHOLD },
+    });
 
     expect(result.diffPercent).toBeLessThanOrEqual(DIFF_THRESHOLD);
   });
@@ -113,7 +143,12 @@ describe("Theme Visual Regression - themes.pptx", () => {
     const presentation = openPresentation(presentationFile);
     const slide = presentation.getSlide(7);
 
-    const result = compareSvgToSnapshot(renderSlideToSvg(slide).svg, "themes", 7, { maxDiffPercent: DIFF_THRESHOLD });
+    const result = compareSvgToSnapshot({
+      svg: renderSlideToSvg(slide).svg,
+      snapshotName: "themes",
+      slideNumber: 7,
+      options: { maxDiffPercent: DIFF_THRESHOLD },
+    });
 
     expect(result.diffPercent).toBeLessThanOrEqual(DIFF_THRESHOLD);
   });
@@ -127,7 +162,12 @@ describe("Theme Visual Regression - themes.pptx", () => {
     const presentation = openPresentation(presentationFile);
     const slide = presentation.getSlide(8);
 
-    const result = compareSvgToSnapshot(renderSlideToSvg(slide).svg, "themes", 8, { maxDiffPercent: DIFF_THRESHOLD });
+    const result = compareSvgToSnapshot({
+      svg: renderSlideToSvg(slide).svg,
+      snapshotName: "themes",
+      slideNumber: 8,
+      options: { maxDiffPercent: DIFF_THRESHOLD },
+    });
 
     expect(result.diffPercent).toBeLessThanOrEqual(DIFF_THRESHOLD);
   });
@@ -141,7 +181,12 @@ describe("Theme Visual Regression - themes.pptx", () => {
     const presentation = openPresentation(presentationFile);
     const slide = presentation.getSlide(9);
 
-    const result = compareSvgToSnapshot(renderSlideToSvg(slide).svg, "themes", 9, { maxDiffPercent: DIFF_THRESHOLD });
+    const result = compareSvgToSnapshot({
+      svg: renderSlideToSvg(slide).svg,
+      snapshotName: "themes",
+      slideNumber: 9,
+      options: { maxDiffPercent: DIFF_THRESHOLD },
+    });
 
     expect(result.diffPercent).toBeLessThanOrEqual(DIFF_THRESHOLD);
   });
@@ -155,7 +200,12 @@ describe("Theme Visual Regression - themes.pptx", () => {
     const presentation = openPresentation(presentationFile);
     const slide = presentation.getSlide(10);
 
-    const result = compareSvgToSnapshot(renderSlideToSvg(slide).svg, "themes", 10, { maxDiffPercent: DIFF_THRESHOLD });
+    const result = compareSvgToSnapshot({
+      svg: renderSlideToSvg(slide).svg,
+      snapshotName: "themes",
+      slideNumber: 10,
+      options: { maxDiffPercent: DIFF_THRESHOLD },
+    });
 
     expect(result.diffPercent).toBeLessThanOrEqual(DIFF_THRESHOLD);
   });

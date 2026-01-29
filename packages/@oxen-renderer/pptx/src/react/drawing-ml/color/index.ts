@@ -12,8 +12,3 @@ export { useColor, resolveColorForReact, type ResolvedColorResult } from "./useC
 
 // PPTX-specific components (use PPTX RenderContext via useColor)
 export { ColorSwatch, ColorSwatchRow, type ColorSwatchProps, type ColorSwatchRowProps } from "./ColorSwatch";
-
-// Re-export shared types from drawing-ml for convenience
-export type {
-  ResolvedColorResult as SharedResolvedColorResult,
-} from "@oxen-renderer/drawing-ml/color";

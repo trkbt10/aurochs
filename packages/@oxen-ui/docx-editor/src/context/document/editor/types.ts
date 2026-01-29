@@ -8,8 +8,8 @@ import type { DocxDocument } from "@oxen-office/docx/domain/document";
 import type { DocxParagraph, DocxParagraphProperties } from "@oxen-office/docx/domain/paragraph";
 import type { DocxRunProperties } from "@oxen-office/docx/domain/run";
 import type { DocxTableCellProperties, DocxTableProperties } from "@oxen-office/docx/domain/table";
+import type { UndoRedoHistory } from "@oxen-ui/editor-core/history";
 import type {
-  UndoRedoHistory,
   DocxSelectionState,
   DocxDragState,
   DocxClipboardContent,

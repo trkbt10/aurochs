@@ -16,8 +16,8 @@ import type {
   CursorCoordinates,
   SelectionRect,
 } from "@oxen-office/text-layout";
-import { getAscenderRatio } from "@oxen/glyph";
-import { PT_TO_PX, getLineTextLength } from "@oxen-office/text-layout";
+import { getAscenderRatio, PT_TO_PX } from "@oxen/glyph";
+import { getLineTextLength } from "@oxen-office/text-layout";
 
 // =============================================================================
 // Types

@@ -30,6 +30,11 @@ const CONTAINER_GAP = 8;
 
 
 
+
+
+
+
+
 export function getContainerStyle(
   orientation: SlideListOrientation
 ): CSSProperties {
@@ -58,6 +63,11 @@ export function getContainerStyle(
 
 
 
+
+
+
+
+
 export function getItemWrapperStyle(
   orientation: SlideListOrientation
 ): CSSProperties {
@@ -74,6 +84,11 @@ export function getItemWrapperStyle(
 // =============================================================================
 // Number badge styles (positioned outside slide)
 // =============================================================================
+
+
+
+
+
 
 
 
@@ -143,6 +158,11 @@ type ThumbnailContainerStyleOptions = {
   isPrimary: boolean;
   isActive: boolean;
 };
+
+
+
+
+
 
 
 
@@ -225,6 +245,11 @@ export const thumbnailFallbackStyle: CSSProperties = {
 
 
 
+
+
+
+
+
 export function getDeleteButtonStyle(visible: boolean): CSSProperties {
   return {
     position: "absolute",
@@ -251,6 +276,11 @@ export function getDeleteButtonStyle(visible: boolean): CSSProperties {
 // =============================================================================
 // Fx button styles
 // =============================================================================
+
+
+
+
+
 
 
 
@@ -290,6 +320,11 @@ export function getFxButtonStyle(visible: boolean): CSSProperties {
 // Gap styles (for add button and drop indicator)
 // =============================================================================
 
+
+
+
+
+
 export function getGapStyle(
   orientation: SlideListOrientation
 ): CSSProperties {
@@ -319,6 +354,11 @@ export function getGapStyle(
     zIndex: 2,
   };
 }
+
+
+
+
+
 
 
 

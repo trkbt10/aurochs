@@ -1082,6 +1082,11 @@ export type ConvertGroupedTextToTableShapeArgs = {
   readonly options?: TableConversionOptions;
 };
 
+
+
+
+
+
 export function convertGroupedTextToTableShape({
   group,
   pagePaths,
@@ -1114,6 +1119,11 @@ export type ConvertInferredTableToShapeArgs = {
   readonly context: ConversionContext;
   readonly shapeId: string;
 };
+
+
+
+
+
 
 export function convertInferredTableToShape({
   inferred,

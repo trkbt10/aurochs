@@ -8,15 +8,14 @@
 import type { Slide, Shape } from "@oxen-office/pptx/domain";
 import type { Pixels } from "@oxen-office/ooxml/domain/units";
 import type { ShapeId } from "@oxen-office/pptx/domain/types";
+import { createHistory, type UndoRedoHistory } from "@oxen-ui/editor-core/history";
 import type {
-  UndoRedoHistory,
   SelectionState,
   DragState,
   ClipboardContent,
   ResizeHandlePosition,
 } from "../state";
 import {
-  createHistory,
   createEmptySelection,
   createIdleDragState,
 } from "../state";

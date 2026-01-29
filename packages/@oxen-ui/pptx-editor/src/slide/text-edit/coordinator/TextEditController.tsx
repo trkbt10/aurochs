@@ -40,8 +40,9 @@ import type { TextEditControllerProps, CursorState, CompositionState } from "./t
 import { useTextEditInput } from "./use-text-edit-input";
 import { useTextComposition } from "./use-text-composition";
 import { useTextKeyHandlers } from "./use-text-key-handlers";
-import { ContextMenu } from "../../../ui/context-menu/ContextMenu";
+import { ContextMenu } from "@oxen-ui/ui-components";
 import type { MenuEntry } from "../../../ui/context-menu/types";
+
 const WORD_CHAR_REGEX = /[\p{L}\p{N}_]/u;
 
 function isWordChar(value: string): boolean {

@@ -24,9 +24,10 @@ import type {
 import { isVertical } from "../writing-mode";
 import type { Pixels, Points } from "@oxen-office/ooxml/domain/units";
 import { px, pt, pct } from "@oxen-office/ooxml/domain/units";
-import { measureSpans, estimateBulletWidth, PT_TO_PX } from "../measure/measurer";
-import { breakIntoLines, getLineWidth, DEFAULT_FONT_SIZE_PT } from "../measure/line-breaker";
-import { getAscenderRatio } from "@oxen/glyph";
+import { measureSpans, estimateBulletWidth } from "../measure/measurer";
+import { breakIntoLines, getLineWidth } from "../measure/line-breaker";
+import { getAscenderRatio, PT_TO_PX } from "@oxen/glyph";
+import { SPEC_DEFAULT_FONT_SIZE_PT } from "@oxen-office/docx/domain/ecma376-defaults";
 
 // =============================================================================
 // Text Box Utilities
@@ -79,7 +80,7 @@ function getLineFontSize(lineHeight: number, endParaFontSize: Points | undefined
   if (lineHeight > 0) {
     return pt(lineHeight);
   }
-  return endParaFontSize ?? pt(DEFAULT_FONT_SIZE_PT);
+  return endParaFontSize ?? pt(SPEC_DEFAULT_FONT_SIZE_PT);
 }
 
 /**

@@ -8,7 +8,7 @@ import type { CellAddress, CellRange } from "@oxen-office/xlsx/domain/cell/addre
 import { colIdx, rowIdx, styleId } from "@oxen-office/xlsx/domain/types";
 import { createDefaultStyleSheet } from "@oxen-office/xlsx/domain/style/types";
 import { getCell, getCellValue } from "../../../../cell/query";
-import { createHistory } from "../../state/history";
+import { createHistory } from "@oxen-ui/editor-core/history";
 import { createRangeSelection } from "../../state/selection";
 import { createIdleDragState } from "../types";
 import type { XlsxEditorState } from "../types";

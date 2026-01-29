@@ -13,6 +13,11 @@ export type RenderDiagramOptions<TShape> = {
   readonly ctx: DiagramRenderContext<TShape, string>;
 };
 
+
+
+
+
+
 export function renderDiagram<TShape>(options: RenderDiagramOptions<TShape>): string {
   const { diagram, width, height, ctx } = options;
 
@@ -35,6 +40,11 @@ export type RenderDiagramPlaceholderOptions = {
   readonly height: number;
   readonly message?: string;
 };
+
+
+
+
+
 
 export function renderDiagramPlaceholder(options: RenderDiagramPlaceholderOptions): string {
   const { width, height, message } = options;

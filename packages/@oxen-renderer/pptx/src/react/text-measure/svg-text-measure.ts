@@ -18,6 +18,11 @@ const NON_BREAKING_SPACE = "\u00A0";
 
 
 
+
+
+
+
+
 export function ensureSvgTextNode(): SVGTextElement | null {
   if (sharedTextNode) {
     return sharedTextNode;
@@ -55,9 +60,19 @@ export function ensureSvgTextNode(): SVGTextElement | null {
 
 
 
+
+
+
+
+
 export function normalizeSpaces(text: string): string {
   return text.includes(" ") ? text.replace(/ /g, NON_BREAKING_SPACE) : text;
 }
+
+
+
+
+
 
 
 

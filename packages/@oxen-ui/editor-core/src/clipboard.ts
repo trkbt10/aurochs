@@ -10,6 +10,11 @@ export type ClipboardContent<TPayload> = {
   readonly isCut: boolean;
 };
 
+
+
+
+
+
 export function createClipboardContent<TPayload>(params: {
   readonly payload: TPayload;
   readonly isCut?: boolean;
@@ -22,6 +27,11 @@ export function createClipboardContent<TPayload>(params: {
   };
 }
 
+
+
+
+
+
 export function incrementPasteCount<TPayload>(
   content: ClipboardContent<TPayload>,
 ): ClipboardContent<TPayload> {
@@ -31,11 +41,21 @@ export function incrementPasteCount<TPayload>(
   };
 }
 
+
+
+
+
+
 export function markAsCut<TPayload>(
   content: ClipboardContent<TPayload>,
 ): ClipboardContent<TPayload> {
   return { ...content, isCut: true };
 }
+
+
+
+
+
 
 export function markAsCopy<TPayload>(
   content: ClipboardContent<TPayload>,

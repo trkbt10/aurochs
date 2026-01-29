@@ -14,19 +14,7 @@ import {
   measureTextWidth as glyphMeasureTextWidth,
   calculateCharWidth as glyphCalculateCharWidth,
   measureTextDetailed as glyphMeasureTextDetailed,
-  PT_TO_PX as GLYPH_PT_TO_PX,
 } from "@oxen/glyph";
-
-// =============================================================================
-// Constants
-// =============================================================================
-
-/**
- * Points to pixels conversion factor at 96 DPI.
- * 1 inch = 72 points (typographic standard)
- * At 96 DPI: 1pt = 96/72 px ≈ 1.333px
- */
-export const PT_TO_PX = GLYPH_PT_TO_PX;
 
 // =============================================================================
 // Character Width Calculation

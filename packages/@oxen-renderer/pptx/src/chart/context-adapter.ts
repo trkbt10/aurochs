@@ -53,11 +53,21 @@ function resolveFillForChartRender(fill: BaseFill, ctx: CoreRenderContext): Reso
   }
 }
 
+
+
+
+
+
 export function createFillResolver(ctx: CoreRenderContext): FillResolver {
   return {
     resolve: (fill) => resolveFillForChartRender(fill, ctx),
   };
 }
+
+
+
+
+
 
 export function createChartRenderContext(ctx: CoreRenderContext): ChartRenderContext {
   return {

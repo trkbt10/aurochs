@@ -19,17 +19,37 @@ export type AxisEditorProps = EditorProps<Axis> & {
   readonly style?: CSSProperties;
 };
 
+
+
+
+
+
 export function AxisEditor(props: AxisEditorProps) {
   return <CoreAxisEditor {...props} adapters={pptxChartEditorAdapters} />;
 }
+
+
+
+
+
 
 export function createDefaultAxis() {
   return createDefaultAxisCore();
 }
 
+
+
+
+
+
 export function createDefaultCategoryAxis() {
   return createDefaultCategoryAxisCore();
 }
+
+
+
+
+
 
 export function createDefaultValueAxis() {
   return createDefaultValueAxisCore();

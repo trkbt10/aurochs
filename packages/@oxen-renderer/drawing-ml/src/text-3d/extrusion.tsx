@@ -117,13 +117,21 @@ function calculateLayerOpacity(layerIndex: number, totalLayers: number): number 
  * @param centerY - Center Y coordinate
  * @returns React elements for extrusion layers
  */
-export function renderTextExtrusion(
-  content: ReactNode,
-  extrusionHeight: number,
-  cameraPreset: string,
-  centerX: number,
-  centerY: number,
-): ReactNode {
+type RenderTextExtrusionArgs = {
+  readonly content: ReactNode;
+  readonly extrusionHeight: number;
+  readonly cameraPreset: string;
+  readonly centerX: number;
+  readonly centerY: number;
+};
+
+
+
+
+
+
+export function renderTextExtrusion(args: RenderTextExtrusionArgs): ReactNode {
+  const { content, extrusionHeight, cameraPreset, centerX, centerY } = args;
   const { offsetX, offsetY } = getExtrusionOffset(cameraPreset, extrusionHeight);
   const layers = calculateLayerCount(extrusionHeight);
   const elements: ReactNode[] = [];

@@ -7,7 +7,7 @@
 import type { DiagramDataModel, DiagramPoint, DiagramConnection } from "@oxen-office/diagram/domain";
 import type { BodyProperties } from "@oxen-office/pptx/domain/text";
 import { px } from "@oxen-office/ooxml/domain/units";
-import { createDefaultDiagramDataModel, createDefaultDiagramPoint, createDefaultDiagramConnection } from "./index";
+import { createDefaultDiagramDataModel, createDefaultDiagramPoint, createDefaultDiagramConnection } from "@oxen-ui/diagram-editor";
 
 const createDefaultBodyProperties = (): BodyProperties => ({
   verticalType: "horz",

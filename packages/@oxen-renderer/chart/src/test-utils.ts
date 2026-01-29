@@ -34,6 +34,11 @@ function resolvedFillToCssColor(fill: ResolvedFill): string | undefined {
   return undefined;
 }
 
+
+
+
+
+
 export function createTestFillResolver(colorContext?: ColorContext): FillResolver {
   return {
     resolve: (fill: BaseFill): ResolvedFill => {
@@ -60,6 +65,11 @@ export function createTestFillResolver(colorContext?: ColorContext): FillResolve
     },
   };
 }
+
+
+
+
+
 
 export function createTestChartRenderContext(options?: {
   readonly colorContext?: ColorContext;

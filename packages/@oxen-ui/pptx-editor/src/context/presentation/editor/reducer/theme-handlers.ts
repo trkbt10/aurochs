@@ -9,7 +9,7 @@ import type {
   PresentationEditorAction,
 } from "../types";
 import type { HandlerMap } from "./handler-types";
-import { pushHistory } from "../../../slide/state";
+import { pushHistory } from "@oxen-ui/editor-core/history";
 import type { PresentationDocument } from "@oxen-office/pptx/app";
 import type { ThemePreset } from "../../../../panels/theme-editor/types";
 import type { SchemeColorName } from "@oxen-office/ooxml/domain/color";

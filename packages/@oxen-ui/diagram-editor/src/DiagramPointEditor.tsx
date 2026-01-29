@@ -137,6 +137,11 @@ function PropertySetEditor({ propertySet, disabled, onChange }: PropertySetDispl
 // Main Component
 // =============================================================================
 
+
+
+
+
+
 export function DiagramPointEditor<TTextBody, TShapeProperties>({
   value,
   onChange,
@@ -230,6 +235,11 @@ export function DiagramPointEditor<TTextBody, TShapeProperties>({
     </div>
   );
 }
+
+
+
+
+
 
 export function createDefaultDiagramPoint(modelId?: string): DiagramPoint {
   return {

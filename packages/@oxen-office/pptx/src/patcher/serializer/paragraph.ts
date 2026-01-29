@@ -16,6 +16,11 @@ import {
 
 
 
+
+
+
+
+
 export function serializeTextRun(run: RegularRun): XmlElement {
   const children: XmlElement[] = [];
   if (run.properties) {
@@ -30,6 +35,11 @@ export function serializeTextRun(run: RegularRun): XmlElement {
 
 
 
+
+
+
+
+
 export function serializeLineBreak(lineBreak: LineBreakRun): XmlElement {
   const children: XmlElement[] = [];
   if (lineBreak.properties) {
@@ -37,6 +47,11 @@ export function serializeLineBreak(lineBreak: LineBreakRun): XmlElement {
   }
   return createElement("a:br", {}, children);
 }
+
+
+
+
+
 
 
 
@@ -57,6 +72,11 @@ export function serializeTextField(field: FieldRun): XmlElement {
 
 
 
+
+
+
+
+
 export function serializeRun(run: TextRun): XmlElement {
   switch (run.type) {
     case "text":
@@ -67,6 +87,11 @@ export function serializeRun(run: TextRun): XmlElement {
       return serializeTextField(run);
   }
 }
+
+
+
+
+
 
 
 

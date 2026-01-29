@@ -6,7 +6,6 @@
  */
 
 export {
-  PT_TO_PX,
   calculateCharWidth,
   estimateTextWidth,
   measureTextWidth,
@@ -20,7 +19,6 @@ export {
 export type { CharWidthResult, DetailedMeasurement } from "./measurer";
 
 export {
-  DEFAULT_FONT_SIZE_PT,
   breakIntoLines,
   getLineWidth,
   getLineMaxFontSize,

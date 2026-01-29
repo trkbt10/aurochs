@@ -108,6 +108,11 @@ function parseFunctionType2(page: NativePdfPage, obj: PdfObject | undefined): Pd
 
 
 
+
+
+
+
+
 export function parseShadingObjectNative(page: NativePdfPage, obj: PdfObject | undefined): PdfShading | null {
   const dict = resolveDictOrStreamDict(page, obj);
   if (!dict) {return null;}
@@ -169,6 +174,11 @@ export function parseShadingObjectNative(page: NativePdfPage, obj: PdfObject | u
 
 
 
+
+
+
+
+
 export function extractShadingFromResourcesNative(page: NativePdfPage, resources: PdfDict | null): ReadonlyMap<string, PdfShading> {
   if (!resources) {return new Map();}
 
@@ -184,6 +194,11 @@ export function extractShadingFromResourcesNative(page: NativePdfPage, resources
   }
   return out;
 }
+
+
+
+
+
 
 
 

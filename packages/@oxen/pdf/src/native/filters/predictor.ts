@@ -110,6 +110,11 @@ function decodePngPredictor(
 
 
 
+
+
+
+
+
 export function applyPredictorDecodeParms(decoded: Uint8Array, decodeParms: PdfObject | null | undefined): Uint8Array {
   if (!decodeParms || decodeParms.type !== "dict") {return decoded;}
 

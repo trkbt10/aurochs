@@ -20,7 +20,8 @@ import {
   updateSlide,
   updateSlideEntry,
 } from "../slide";
-import { pushHistory, createEmptySelection, createIdleDragState } from "../../../slide/state";
+import { pushHistory } from "@oxen-ui/editor-core/history";
+import { createEmptySelection, createIdleDragState } from "../../../slide/state";
 
 type AddSlideAction = Extract<PresentationEditorAction, { type: "ADD_SLIDE" }>;
 

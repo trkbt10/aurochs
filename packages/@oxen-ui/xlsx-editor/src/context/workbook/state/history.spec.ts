@@ -9,7 +9,7 @@ import {
   pushHistory,
   redoHistory,
   undoHistory,
-} from "./history";
+} from "@oxen-ui/editor-core/history";
 
 describe("createHistory", () => {
   it("creates history with initial value", () => {
@@ -117,4 +117,3 @@ describe("canUndo / canRedo", () => {
     expect(canRedo(undone)).toBe(true);
   });
 });
-

@@ -5,13 +5,10 @@
  */
 
 import { createSlideEditorState } from "./types";
+import { createHistory, pushHistory, redoHistory, undoHistory } from "@oxen-ui/editor-core/history";
 import {
   createEmptySelection,
   createIdleDragState,
-  createHistory,
-  pushHistory,
-  undoHistory,
-  redoHistory,
 } from "../state";
 import type { Slide } from "@oxen-office/pptx/domain";
 

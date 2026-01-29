@@ -22,6 +22,11 @@ export type RelationshipInfo = {
 
 
 
+
+
+
+
+
 export function listRelationships(relsXml: XmlDocument): RelationshipInfo[] {
   const root = getDocumentRoot(relsXml);
   if (!root || root.name !== "Relationships") {
@@ -53,6 +58,11 @@ export function listRelationships(relsXml: XmlDocument): RelationshipInfo[] {
 
 
 
+
+
+
+
+
 export function generateRelationshipId(existingIds: readonly string[]): string {
   const used = new Set<number>();
   for (const id of existingIds) {
@@ -67,6 +77,11 @@ export function generateRelationshipId(existingIds: readonly string[]): string {
   }
   return `rId${next}`;
 }
+
+
+
+
+
 
 
 
@@ -131,6 +146,11 @@ export function addRelationship(
 
 
 
+
+
+
+
+
 export function removeRelationship(relsXml: XmlDocument, rId: string): XmlDocument {
   if (!rId) {
     throw new Error("removeRelationship: rId is required");
@@ -153,6 +173,11 @@ export function removeRelationship(relsXml: XmlDocument, rId: string): XmlDocume
     };
   });
 }
+
+
+
+
+
 
 
 

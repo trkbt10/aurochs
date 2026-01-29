@@ -70,6 +70,11 @@ function countCharactersFromTable(table: DocxTable): number {
 
 
 
+
+
+
+
+
 export function calculateDocumentStats(document: DocxDocument): DocumentStats {
   let paragraphCount = 0;
   let tableCount = 0;
@@ -87,6 +92,11 @@ export function calculateDocumentStats(document: DocxDocument): DocumentStats {
 
   return { paragraphCount, tableCount, characterCount };
 }
+
+
+
+
+
 
 
 
@@ -284,6 +294,11 @@ function SectionPropertiesViewer({ section, onChange, disabled }: SectionPropert
 // =============================================================================
 // Component
 // =============================================================================
+
+
+
+
+
 
 
 

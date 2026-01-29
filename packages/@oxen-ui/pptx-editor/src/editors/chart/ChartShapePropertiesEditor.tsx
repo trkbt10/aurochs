@@ -17,9 +17,19 @@ export type ChartShapePropertiesEditorProps = EditorProps<ChartShapeProperties |
   readonly style?: CSSProperties;
 };
 
+
+
+
+
+
 export function ChartShapePropertiesEditor(props: ChartShapePropertiesEditorProps) {
   return <CoreChartShapePropertiesEditor {...props} adapters={pptxChartEditorAdapters} />;
 }
+
+
+
+
+
 
 export function createDefaultChartShapeProperties() {
   return createDefaultChartShapePropertiesCore();

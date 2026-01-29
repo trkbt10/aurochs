@@ -8,9 +8,19 @@ export type IdleDragState = {
   readonly type: "idle";
 };
 
+
+
+
+
+
 export function createIdleDragState(): IdleDragState {
   return { type: "idle" };
 }
+
+
+
+
+
 
 export function isDragIdle<TDrag extends { readonly type: string }>(
   drag: TDrag,

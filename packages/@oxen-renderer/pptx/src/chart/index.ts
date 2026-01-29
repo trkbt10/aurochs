@@ -14,6 +14,11 @@ import type { CoreRenderContext } from "../render-context";
 import { type HtmlString, unsafeHtml } from "../html/index";
 import { createChartRenderContext, createFillResolver } from "./context-adapter";
 
+
+
+
+
+
 export function renderChart(
   ...args: [
     chart: Chart,

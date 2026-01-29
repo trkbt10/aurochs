@@ -7,7 +7,7 @@ import type { CellAddress, CellRange } from "@oxen-office/xlsx/domain/cell/addre
 import type { Cell, CellValue } from "@oxen-office/xlsx/domain/cell/types";
 import type { XlsxWorkbook, XlsxWorksheet, XlsxRow } from "@oxen-office/xlsx/domain/workbook";
 import { createDefaultStyleSheet } from "@oxen-office/xlsx/domain/style/types";
-import { createHistory } from "../../state/history";
+import { createHistory } from "@oxen-ui/editor-core/history";
 import { getCellValue, hasCell } from "../../../../cell/query";
 import type { XlsxEditorAction, XlsxEditorState } from "../types";
 import { createEmptyCellSelection, createIdleDragState } from "../types";

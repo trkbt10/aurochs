@@ -7,7 +7,7 @@ import type { XlsxWorkbook, XlsxWorksheet } from "@oxen-office/xlsx/domain/workb
 import { createDefaultStyleSheet } from "@oxen-office/xlsx/domain/style/types";
 import { colIdx, rowIdx } from "@oxen-office/xlsx/domain/types";
 import { getCellValue } from "../../../../cell/query";
-import { createHistory, pushHistory } from "../../state/history";
+import { createHistory, pushHistory } from "@oxen-ui/editor-core/history";
 import { createEmptyCellSelection, createIdleDragState } from "../types";
 import type { XlsxEditorState } from "../types";
 import { createInitialState, xlsxEditorReducer } from "./index";

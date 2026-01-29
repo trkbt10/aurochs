@@ -17,9 +17,19 @@ export type ChartTitleEditorProps = EditorProps<ChartTitle | undefined> & {
   readonly style?: CSSProperties;
 };
 
+
+
+
+
+
 export function ChartTitleEditor(props: ChartTitleEditorProps) {
   return <CoreChartTitleEditor {...props} adapters={pptxChartEditorAdapters} />;
 }
+
+
+
+
+
 
 export function createDefaultChartTitle() {
   return createDefaultChartTitleCore();

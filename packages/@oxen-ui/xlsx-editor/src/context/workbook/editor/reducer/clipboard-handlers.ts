@@ -14,7 +14,7 @@ import { colIdx, rowIdx, type StyleId } from "@oxen-office/xlsx/domain/types";
 import { shiftFormulaReferences } from "@oxen-office/xlsx/formula/shift";
 import { getCellsInRange, getCellValuesInRange } from "../../../../cell/query";
 import { deleteCellRange, updateCellById } from "../../../../cell/mutation";
-import { pushHistory } from "../../state/history";
+import { pushHistory } from "@oxen-ui/editor-core/history";
 import { replaceWorksheetInWorkbook } from "../../utils/worksheet-updater";
 
 type RangeBounds = {

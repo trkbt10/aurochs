@@ -57,6 +57,11 @@ function toTextBody(result: LayoutShapeResult): TextBody | undefined {
   return applyStyleFillToTextBody(result.textBody, result.textFill);
 }
 
+
+
+
+
+
 export function convertLayoutResultToSpShape(result: LayoutShapeResult): SpShape {
   const geometry = toPresetGeometry(result.geometry);
 

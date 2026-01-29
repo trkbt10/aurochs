@@ -41,6 +41,13 @@ export type CompareOptions = {
   resvgLoadSystemFonts?: boolean;
 }
 
+type CompareSvgToSnapshotArgs = {
+  readonly svg: string;
+  readonly snapshotName: string;
+  readonly slideNumber: number;
+  readonly options?: CompareOptions;
+};
+
 /**
  * Ensure output directories exist
  */
@@ -162,14 +169,9 @@ function resizePng(png: PNG, targetWidth: number, targetHeight: number): PNG {
  * Compare SVG output against baseline PNG snapshot
  */
 export function compareSvgToSnapshot(
-  ...args: [
-    svg: string,
-    snapshotName: string,
-    slideNumber: number,
-    options?: CompareOptions,
-  ]
+  args: CompareSvgToSnapshotArgs
 ): CompareResult {
-  const [svg, snapshotName, slideNumber, options = {}] = args;
+  const { svg, snapshotName, slideNumber, options = {} } = args;
   ensureDirs();
 
   const { threshold = 0.1, maxDiffPercent = 0.1, includeAA = false } = options;

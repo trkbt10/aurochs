@@ -326,9 +326,19 @@ function serializeRunPropertiesElement(
 
 
 
+
+
+
+
+
 export function serializeRunProperties(props: RunProperties): XmlElement {
   return serializeRunPropertiesElement(props, "a:rPr");
 }
+
+
+
+
+
 
 
 
@@ -400,6 +410,11 @@ export function serializeBodyProperties(props: BodyProperties): XmlElement {
 
 
 
+
+
+
+
+
 export function serializeParagraphProperties(props: ParagraphProperties): XmlElement {
   const attrs: Record<string, string> = {};
 
@@ -436,9 +451,19 @@ export function serializeParagraphProperties(props: ParagraphProperties): XmlEle
 
 
 
+
+
+
+
+
 export function serializeEndParaRunProperties(props: RunProperties): XmlElement {
   return serializeRunPropertiesElement(props, "a:endParaRPr");
 }
+
+
+
+
+
 
 
 

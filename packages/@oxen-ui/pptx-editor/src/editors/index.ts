@@ -127,13 +127,8 @@ export {
 export {
   DiagramEditor,
   DiagramPointEditor,
-  DiagramConnectionEditor,
-  createDefaultDiagramDataModel,
-  createDefaultDiagramPoint,
-  createDefaultDiagramConnection,
   type DiagramEditorProps,
   type DiagramPointEditorProps,
-  type DiagramConnectionEditorProps,
 } from "./diagram";
 
 // Slide-level editors

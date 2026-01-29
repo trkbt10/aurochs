@@ -14,6 +14,11 @@ import { pptxChartEditorAdapters } from "./adapters";
 
 export type LayoutEditorProps = CoreLayoutEditorProps;
 
+
+
+
+
+
 export function LayoutEditor(props: LayoutEditorProps) {
   return (
     <ChartEditorAdaptersBoundary adapters={pptxChartEditorAdapters}>
@@ -21,6 +26,11 @@ export function LayoutEditor(props: LayoutEditorProps) {
     </ChartEditorAdaptersBoundary>
   );
 }
+
+
+
+
+
 
 export function createDefaultLayout() {
   return createDefaultLayoutCore();

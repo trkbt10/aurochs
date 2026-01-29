@@ -476,6 +476,11 @@ function rasterizeSoftMaskedFillPathInternal(parsed: ParsedPath): PdfImage | nul
 
 
 
+
+
+
+
+
 export function rasterizeSoftMaskedFillPath(parsed: ParsedPath): PdfImage | null {
   return rasterizeSoftMaskedFillPathInternal(parsed);
 }

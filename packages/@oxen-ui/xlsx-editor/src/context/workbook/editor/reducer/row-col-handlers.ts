@@ -6,7 +6,7 @@
 
 import type { XlsxEditorAction, XlsxEditorState } from "../types";
 import type { HandlerMap } from "./handler-types";
-import { pushHistory } from "../../state/history";
+import { pushHistory } from "@oxen-ui/editor-core/history";
 import {
   insertRows,
   deleteRows,
@@ -224,4 +224,3 @@ export const rowColHandlers: HandlerMap = {
   HIDE_COLUMNS: handleHideColumns,
   UNHIDE_COLUMNS: handleUnhideColumns,
 };
-

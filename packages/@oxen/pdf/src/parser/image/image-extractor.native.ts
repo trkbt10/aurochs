@@ -32,6 +32,11 @@ export type ImageExtractorOptions = {
 
 
 
+
+
+
+
+
 export function decodeImageXObjectStreamNative(
   ...args: [
     pdfPage: NativePdfPage,

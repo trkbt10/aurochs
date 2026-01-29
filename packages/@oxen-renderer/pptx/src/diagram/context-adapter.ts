@@ -12,6 +12,11 @@ export type CreateDiagramRenderContextOptions<TShape> = {
   readonly renderShape: (shape: TShape) => string;
 };
 
+
+
+
+
+
 export function createDiagramRenderContext<TShape>(
   options: CreateDiagramRenderContextOptions<TShape>
 ): DiagramRenderContext<TShape, string> {

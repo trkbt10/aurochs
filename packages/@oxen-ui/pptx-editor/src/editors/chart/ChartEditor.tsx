@@ -22,29 +22,64 @@ export type ChartEditorProps = EditorProps<Chart> & {
   readonly style?: CSSProperties;
 };
 
+
+
+
+
+
 export function ChartEditor(props: ChartEditorProps) {
   return <CoreChartEditor {...props} adapters={pptxChartEditorAdapters} />;
 }
+
+
+
+
+
 
 export function createDefaultChart() {
   return createDefaultChartCore();
 }
 
+
+
+
+
+
 export function createDefaultView3D() {
   return createDefaultView3DCore();
 }
+
+
+
+
+
 
 export function createDefaultChartSurface() {
   return createDefaultChartSurfaceCore();
 }
 
+
+
+
+
+
 export function createDefaultDataTable() {
   return createDefaultDataTableCore();
 }
 
+
+
+
+
+
 export function createDefaultChartProtection() {
   return createDefaultChartProtectionCore();
 }
+
+
+
+
+
 
 export function createDefaultPrintSettings() {
   return createDefaultPrintSettingsCore();

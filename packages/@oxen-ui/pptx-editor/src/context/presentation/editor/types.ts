@@ -13,8 +13,8 @@ import type { ShapeHierarchyTarget } from "../../../shape";
 import type { FontSpec } from "@oxen-office/ooxml/domain/font-scheme";
 import type { ThemePreset } from "../../../panels/theme-editor/types";
 import type { SchemeColorName } from "@oxen-office/ooxml/domain/color";
+import type { UndoRedoHistory } from "@oxen-ui/editor-core/history";
 import type {
-  UndoRedoHistory,
   SelectionState,
   DragState,
   ClipboardContent,

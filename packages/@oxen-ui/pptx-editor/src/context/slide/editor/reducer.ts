@@ -8,13 +8,10 @@ import type { Slide, Shape } from "@oxen-office/pptx/domain";
 import type { ShapeId } from "@oxen-office/pptx/domain/types";
 import { px, deg } from "@oxen-office/ooxml/domain/units";
 import type { SlideEditorState, SlideEditorAction } from "./types";
+import { createHistory, pushHistory, redoHistory, undoHistory } from "@oxen-ui/editor-core/history";
 import {
-  createHistory,
   createEmptySelection,
   createIdleDragState,
-  pushHistory,
-  undoHistory,
-  redoHistory,
 } from "../state";
 import { findShapeById } from "../../../shape/query";
 import {

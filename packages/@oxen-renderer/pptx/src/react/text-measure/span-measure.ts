@@ -39,6 +39,11 @@ function buildFontFamily(span: LayoutSpan): string {
 
 
 
+
+
+
+
+
 export function measureLayoutSpanTextWidth(span: LayoutSpan, text: string): ReturnType<typeof px> {
   const textNode = ensureSvgTextNode();
   if (!textNode) {

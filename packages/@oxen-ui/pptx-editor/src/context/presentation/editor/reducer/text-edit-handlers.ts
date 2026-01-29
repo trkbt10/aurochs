@@ -11,7 +11,7 @@ import type {
 import type { HandlerMap } from "./handler-types";
 import { updateActiveSlideInDocument } from "./helpers";
 import { findSlideById } from "../slide";
-import { pushHistory } from "../../../slide/state";
+import { pushHistory } from "@oxen-ui/editor-core/history";
 import { findShapeById } from "../../../../shape/query";
 import { updateShapeById } from "../../../../shape/mutation";
 import { getShapeTransform } from "@oxen-renderer/pptx/svg";

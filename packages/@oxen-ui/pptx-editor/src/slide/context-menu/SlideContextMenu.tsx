@@ -9,7 +9,8 @@
 
 import { useCallback, useMemo } from "react";
 import type { Shape } from "@oxen-office/pptx/domain";
-import { ContextMenu, type MenuEntry } from "../../ui/context-menu";
+import { ContextMenu } from "@oxen-ui/ui-components";
+import type { MenuEntry } from "../../ui/context-menu";
 import { getCommonMenuItems } from "./definitions/common";
 import { getZOrderMenuItems } from "./definitions/z-order";
 import { getGroupMenuItems } from "./definitions/group";

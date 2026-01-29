@@ -18,11 +18,3 @@ export {
   renderTextPatternContent,
 } from "./PatternDef";
 export { createTextImageFillDef } from "./ImageFillDef";
-
-// Re-export shared types and functions from drawing-ml for convenience
-export type {
-  TextFillConfig as SharedTextFillConfig,
-  TextGradientFillConfig as SharedTextGradientFillConfig,
-  TextPatternFillConfig as SharedTextPatternFillConfig,
-  TextImageFillConfig as SharedTextImageFillConfig,
-} from "@oxen-renderer/drawing-ml/text-fill";

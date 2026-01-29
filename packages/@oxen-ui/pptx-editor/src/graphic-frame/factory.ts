@@ -143,6 +143,11 @@ export type CreateTableGraphicFrameOptions = {
   readonly cols: number;
 };
 
+
+
+
+
+
 export function createTableGraphicFrame({ id, bounds, rows, cols }: CreateTableGraphicFrameOptions): GraphicFrame {
   return {
     type: "graphicFrame",
@@ -271,6 +276,11 @@ export type CreateOleGraphicFrameOptions = {
   readonly embedData: ArrayBuffer;
   readonly filename: string;
 };
+
+
+
+
+
 
 export function createOleGraphicFrame({ id, bounds, oleType, embedData, filename }: CreateOleGraphicFrameOptions): GraphicFrame {
   const typeInfo = OLE_TYPE_MAP[oleType];

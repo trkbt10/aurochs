@@ -8,11 +8,13 @@ import { useState, type CSSProperties } from "react";
 import {
   DiagramEditor,
   DiagramPointEditor,
+} from "@oxen-ui/pptx-editor";
+import {
   DiagramConnectionEditor,
   createDefaultDiagramDataModel,
   createDefaultDiagramPoint,
   createDefaultDiagramConnection,
-} from "@oxen-ui/pptx-editor";
+} from "@oxen-ui/diagram-editor";
 import type { DiagramDataModel, DiagramPoint, DiagramConnection } from "@oxen-office/diagram/domain";
 import type { TextBody } from "@oxen-office/pptx/domain/text";
 

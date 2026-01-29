@@ -14,7 +14,7 @@ import {
 import type { DocxDocument, DocxBlockContent } from "@oxen-office/docx/domain/document";
 import type { DocxEditorState, DocxEditorAction, TextEditState, EditorMode } from "./editor/types";
 import { reducer, createInitialState } from "./editor/reducer/reducer";
-import { canUndo as canUndoHistory, canRedo as canRedoHistory } from "./state/history";
+import { canUndo, canRedo } from "@oxen-ui/editor-core/history";
 
 // =============================================================================
 // Context Value Type
@@ -95,8 +95,8 @@ export function DocumentEditorProvider({
     return document.body.content[index];
   }, [document.body.content, state.selection.element.primaryId]);
 
-  const canUndo = canUndoHistory(state.documentHistory);
-  const canRedo = canRedoHistory(state.documentHistory);
+  const canUndoValue = canUndo(state.documentHistory);
+  const canRedoValue = canRedo(state.documentHistory);
   const textEdit = state.textEdit;
   const editorMode = state.mode;
 
@@ -107,12 +107,12 @@ export function DocumentEditorProvider({
       document,
       selectedElements,
       primaryElement,
-      canUndo,
-      canRedo,
+      canUndo: canUndoValue,
+      canRedo: canRedoValue,
       textEdit,
       editorMode,
     }),
-    [state, document, selectedElements, primaryElement, canUndo, canRedo, textEdit, editorMode]
+    [state, document, selectedElements, primaryElement, canUndoValue, canRedoValue, textEdit, editorMode]
   );
 
   return (

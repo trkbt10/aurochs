@@ -225,7 +225,12 @@ describe("Visual Regression Tests", () => {
           const slide = presentation.getSlide(resolvedSlideNum);
           const svg = renderSlideToSvg(slide).svg;
 
-          const result = compareSvgToSnapshot(svg, testCase.name, slideNum, testCase.options);
+          const result = compareSvgToSnapshot({
+            svg,
+            snapshotName: testCase.name,
+            slideNumber: slideNum,
+            options: testCase.options,
+          });
 
           if (!result.match) {
             console.log(`\nVisual diff detected for ${testCase.name} slide ${slideNum}:`);
@@ -249,24 +254,24 @@ describe("Visual Regression Tests", () => {
  *   const result = await testSlide('fixtures/path/to/file.pptx', 'snapshot-name', 1);
  */
 export async function testSlide(
-  ...args: readonly [
-    pptxPath: string,
-    snapshotName: string,
-    slideNumber: number,
-    options?: CompareOptions,
-  ]
+  args: {
+    readonly pptxPath: string;
+    readonly snapshotName: string;
+    readonly slideNumber: number;
+    readonly options?: CompareOptions;
+  }
 ): Promise<{
   svg: string;
   result: ReturnType<typeof compareSvgToSnapshot>;
 }> {
-  const [pptxPath, snapshotName, slideNumber, options] = args;
+  const { pptxPath, snapshotName, slideNumber, options } = args;
   const { presentationFile } = await loadPptxFile(pptxPath);
   // Use LibreOffice dialect since baselines are generated with LibreOffice
   const presentation = openPresentation(presentationFile, { renderOptions: LIBREOFFICE_RENDER_OPTIONS });
   const slide = presentation.getSlide(slideNumber);
   const svg = renderSlideToSvg(slide).svg;
 
-  const result = compareSvgToSnapshot(svg, snapshotName, slideNumber, options);
+  const result = compareSvgToSnapshot({ svg, snapshotName, slideNumber, options });
 
   return { svg, result };
 }

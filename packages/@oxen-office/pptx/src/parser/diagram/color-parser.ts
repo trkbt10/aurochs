@@ -10,13 +10,28 @@ import {
   parseDiagramColorsDefinitionHeaderList as parseDiagramColorsDefinitionHeaderListBase,
 } from "@oxen-office/diagram/parser/diagram/color-parser";
 
+
+
+
+
+
 export function parseDiagramColorsDefinition(...args: Parameters<typeof parseDiagramColorsDefinitionBase>) {
   return parseDiagramColorsDefinitionBase(...args);
 }
 
+
+
+
+
+
 export function parseDiagramColorsDefinitionHeader(...args: Parameters<typeof parseDiagramColorsDefinitionHeaderBase>) {
   return parseDiagramColorsDefinitionHeaderBase(...args);
 }
+
+
+
+
+
 
 export function parseDiagramColorsDefinitionHeaderList(
   ...args: Parameters<typeof parseDiagramColorsDefinitionHeaderListBase>

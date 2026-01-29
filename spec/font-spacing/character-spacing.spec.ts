@@ -97,8 +97,11 @@ describe("Character Spacing (a:spc) - ECMA-376 21.1.2.3.9", () => {
         const slide = presentation.getSlide(1);
         const { svg } = renderSlideToSvg(slide);
 
-        const result = compareSvgToSnapshot(svg, testCase.name, 1, {
-          maxDiffPercent: testCase.maxDiffPercent,
+        const result = compareSvgToSnapshot({
+          svg,
+          snapshotName: testCase.name,
+          slideNumber: 1,
+          options: { maxDiffPercent: testCase.maxDiffPercent },
         });
 
         if (!result.match) {

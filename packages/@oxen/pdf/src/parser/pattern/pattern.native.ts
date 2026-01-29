@@ -130,6 +130,11 @@ function parsePattern(page: NativePdfPage, obj: PdfObject | undefined): PdfPatte
 
 
 
+
+
+
+
+
 export function extractPatternsFromResourcesNative(page: NativePdfPage, resources: PdfDict | null): ReadonlyMap<string, PdfPattern> {
   if (!resources) {return new Map();}
 
@@ -145,6 +150,11 @@ export function extractPatternsFromResourcesNative(page: NativePdfPage, resource
   }
   return out;
 }
+
+
+
+
+
 
 
 

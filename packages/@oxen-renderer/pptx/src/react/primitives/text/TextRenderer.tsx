@@ -221,17 +221,15 @@ export function TextRenderer({ textBody, width, height }: TextRendererProps) {
   const content = renderLayoutResult(layoutResult, defs);
 
   // Apply transforms and effects
-  const finalContent = applyTextTransforms(
+  const finalContent = applyTextTransforms({
     content,
     textBody,
     width,
     height,
     scene3d,
     shape3d,
-    getNextId,
-    addDef,
-    hasDef,
-  );
+    defs,
+  });
 
   return <>{finalContent}</>;
 }
@@ -280,20 +278,22 @@ function renderWebGL3DText(...args: RenderWebGL3DTextArgs): React.ReactNode {
 /**
  * Apply all text transforms and effects.
  */
-type ApplyTextTransformsArgs = [
-  content: React.ReactNode,
-  textBody: TextBody,
-  width: number,
-  height: number,
-  scene3d: TextBody["bodyProperties"]["scene3d"],
-  shape3d: TextBody["bodyProperties"]["shape3d"],
-  getNextId: (prefix: string) => string,
-  addDef: (id: string, content: React.ReactNode) => void,
-  hasDef: (id: string) => boolean,
-];
+type ApplyTextTransformsArgs = {
+  readonly content: React.ReactNode;
+  readonly textBody: TextBody;
+  readonly width: number;
+  readonly height: number;
+  readonly scene3d: TextBody["bodyProperties"]["scene3d"];
+  readonly shape3d: TextBody["bodyProperties"]["shape3d"];
+  readonly defs: {
+    readonly getNextId: (prefix: string) => string;
+    readonly addDef: (id: string, content: React.ReactNode) => void;
+    readonly hasDef: (id: string) => boolean;
+  };
+};
 
-function applyTextTransforms(...args: ApplyTextTransformsArgs): React.ReactNode {
-  const [content, textBody, width, height, scene3d, shape3d, getNextId, addDef, hasDef] = args;
+function applyTextTransforms(args: ApplyTextTransformsArgs): React.ReactNode {
+  const { content, textBody, width, height, scene3d, shape3d, defs } = args;
   const bodyProps = textBody.bodyProperties;
 
   // Get body rotation
@@ -303,27 +303,23 @@ function applyTextTransforms(...args: ApplyTextTransformsArgs): React.ReactNode 
   const rotatedContent = applyBodyRotation(content, bodyRotation, width, height);
 
   // Apply 3D transforms (scene3d/shape3d) - uses SVG fallback if WebGL not used
-  const content3d = apply3dEffectsIfNeeded(
-    rotatedContent,
+  const content3d = apply3dEffectsIfNeeded({
+    content: rotatedContent,
     scene3d,
     shape3d,
     width,
     height,
-    getNextId,
-    addDef,
-    hasDef,
-  );
+    defs,
+  });
 
   // Apply overflow clip
-  const clippedContent = applyOverflowClipIfNeeded(
-    content3d,
+  const clippedContent = applyOverflowClipIfNeeded({
+    content: content3d,
     bodyProps,
     width,
     height,
-    getNextId,
-    addDef,
-    hasDef,
-  );
+    defs,
+  });
 
   // Apply force anti-alias
   const antiAliasedContent = applyAntiAliasIfNeeded(clippedContent, bodyProps);
@@ -337,41 +333,37 @@ function applyTextTransforms(...args: ApplyTextTransformsArgs): React.ReactNode 
 /**
  * Apply 3D effects if scene3d/shape3d are present.
  */
-type Apply3dEffectsIfNeededArgs = [
-  content: React.ReactNode,
-  scene3d: TextBody["bodyProperties"]["scene3d"],
-  shape3d: TextBody["bodyProperties"]["shape3d"],
-  width: number,
-  height: number,
-  getNextId: (prefix: string) => string,
-  addDef: (id: string, content: React.ReactNode) => void,
-  hasDef: (id: string) => boolean,
-];
+type Apply3dEffectsIfNeededArgs = {
+  readonly content: React.ReactNode;
+  readonly scene3d: TextBody["bodyProperties"]["scene3d"];
+  readonly shape3d: TextBody["bodyProperties"]["shape3d"];
+  readonly width: number;
+  readonly height: number;
+  readonly defs: ApplyTextTransformsArgs["defs"];
+};
 
-function apply3dEffectsIfNeeded(...args: Apply3dEffectsIfNeededArgs): React.ReactNode {
-  const [content, scene3d, shape3d, width, height, getNextId, addDef, hasDef] = args;
+function apply3dEffectsIfNeeded(args: Apply3dEffectsIfNeededArgs): React.ReactNode {
+  const { content, scene3d, shape3d, width, height, defs } = args;
   if (!has3dEffects(scene3d, shape3d)) {
     return content;
   }
 
-  return render3dTextEffects(content, scene3d, shape3d, width, height, getNextId, addDef, hasDef);
+  return render3dTextEffects({ content, scene3d, shape3d, width, height, defs });
 }
 
 /**
  * Apply overflow clip if needed.
  */
-type ApplyOverflowClipIfNeededArgs = [
-  content: React.ReactNode,
-  bodyProps: TextBody["bodyProperties"],
-  width: number,
-  height: number,
-  getNextId: (prefix: string) => string,
-  addDef: (id: string, content: React.ReactNode) => void,
-  hasDef: (id: string) => boolean,
-];
+type ApplyOverflowClipIfNeededArgs = {
+  readonly content: React.ReactNode;
+  readonly bodyProps: TextBody["bodyProperties"];
+  readonly width: number;
+  readonly height: number;
+  readonly defs: ApplyTextTransformsArgs["defs"];
+};
 
-function applyOverflowClipIfNeeded(...args: ApplyOverflowClipIfNeededArgs): React.ReactNode {
-  const [content, bodyProps, width, height, getNextId, addDef, hasDef] = args;
+function applyOverflowClipIfNeeded(args: ApplyOverflowClipIfNeededArgs): React.ReactNode {
+  const { content, bodyProps, width, height, defs } = args;
   const horzOverflow = bodyProps.overflow;
   const vertOverflow = bodyProps.verticalOverflow ?? "overflow";
 
@@ -379,7 +371,7 @@ function applyOverflowClipIfNeeded(...args: ApplyOverflowClipIfNeededArgs): Reac
     return content;
   }
 
-  return applyOverflowClip(content, width, height, getNextId("text-clip"), addDef, hasDef);
+  return applyOverflowClip(content, width, height, defs.getNextId("text-clip"), defs.addDef, defs.hasDef);
 }
 
 /**

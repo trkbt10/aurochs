@@ -9,7 +9,7 @@ import {
   redoHistory,
   canUndo,
   canRedo,
-} from "./history";
+} from "@oxen-ui/editor-core/history";
 
 describe("createHistory", () => {
   it("creates history with initial value", () => {

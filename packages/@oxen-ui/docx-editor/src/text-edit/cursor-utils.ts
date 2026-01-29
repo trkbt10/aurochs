@@ -21,13 +21,12 @@ import {
   isVertical,
   getLineTextLength,
   getLineMaxFontInfo,
-  PT_TO_PX,
   measureSpanTextWidth,
   getCharIndexAtOffset,
 } from "@oxen-office/text-layout";
 import { getParagraphPlainText } from "@oxen-office/docx/adapters";
 import { editorLayoutTokens } from "@oxen-ui/ui-components/design-tokens";
-import { getAscenderRatio } from "@oxen/glyph";
+import { getAscenderRatio, PT_TO_PX } from "@oxen/glyph";
 
 // =============================================================================
 // Text Position Mapping

@@ -26,6 +26,11 @@ const textareaStyle: CSSProperties = {
   fontFamily: "inherit",
 };
 
+
+
+
+
+
 export function ChartTextBodyEditor({
   value,
   onChange,

@@ -23,6 +23,11 @@ export type TextareaSelectionLike = {
   setSelectionRange(start: number, end: number, direction?: Exclude<TextSelectionDirection, null>): void;
 };
 
+
+
+
+
+
 export function isPrimaryPointerAction(event: PrimaryPointerEventLike): boolean {
   if (event.pointerType === "mouse") {
     return event.button === 0;
@@ -30,9 +35,19 @@ export function isPrimaryPointerAction(event: PrimaryPointerEventLike): boolean 
   return event.button === 0 || (event.buttons & 1) === 1;
 }
 
+
+
+
+
+
 export function isPrimaryMouseAction(event: PrimaryMouseEventLike): boolean {
   return event.button === 0;
 }
+
+
+
+
+
 
 export function getSelectionAnchor(textarea: TextareaSelectionLike): number {
   if (textarea.selectionDirection === "backward") {
@@ -40,6 +55,11 @@ export function getSelectionAnchor(textarea: TextareaSelectionLike): number {
   }
   return textarea.selectionStart ?? 0;
 }
+
+
+
+
+
 
 export function applySelectionRange(params: {
   readonly textarea: TextareaSelectionLike;

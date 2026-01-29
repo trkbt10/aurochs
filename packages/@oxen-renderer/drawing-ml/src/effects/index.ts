@@ -4,15 +4,6 @@
  * SVG filter components for DrawingML effects rendering.
  */
 
-// Re-export effect types from ooxml
-export type {
-  Effects,
-  ShadowEffect,
-  GlowEffect,
-  SoftEdgeEffect,
-  ReflectionEffect,
-} from "@oxen-office/ooxml/domain/effects";
-
 export {
   ShadowFilterDef,
   resolveShadowProps,
