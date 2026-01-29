@@ -2,10 +2,18 @@
  * @file Color module exports
  *
  * React hooks and components for DrawingML color resolution.
+ *
+ * Note: This module provides PPTX-specific hooks that use PPTX's RenderContext.
+ * For format-agnostic color utilities, use @oxen-renderer/drawing-ml/color directly.
  */
 
-// Hook
+// PPTX-specific hooks (use PPTX RenderContext)
 export { useColor, resolveColorForReact, type ResolvedColorResult } from "./useColor";
 
-// Components
+// PPTX-specific components (use PPTX RenderContext via useColor)
 export { ColorSwatch, ColorSwatchRow, type ColorSwatchProps, type ColorSwatchRowProps } from "./ColorSwatch";
+
+// Re-export shared types from drawing-ml for convenience
+export type {
+  ResolvedColorResult as SharedResolvedColorResult,
+} from "@oxen-renderer/drawing-ml/color";

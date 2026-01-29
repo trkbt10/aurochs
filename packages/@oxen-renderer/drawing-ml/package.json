@@ -1,0 +1,60 @@
+{
+  "name": "@oxen-renderer/drawing-ml",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "dependencies": {
+    "@oxen-office/ooxml": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0"
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit --rootDir ../../..",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@oxen-renderer/drawing-ml/src'"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./context": {
+      "types": "./src/context/index.ts",
+      "default": "./src/context/index.ts"
+    },
+    "./color": {
+      "types": "./src/color/index.ts",
+      "default": "./src/color/index.ts"
+    },
+    "./fill": {
+      "types": "./src/fill/index.ts",
+      "default": "./src/fill/index.ts"
+    },
+    "./gradient": {
+      "types": "./src/gradient/index.ts",
+      "default": "./src/gradient/index.ts"
+    },
+    "./effects": {
+      "types": "./src/effects/index.ts",
+      "default": "./src/effects/index.ts"
+    },
+    "./text-fill": {
+      "types": "./src/text-fill/index.ts",
+      "default": "./src/text-fill/index.ts"
+    },
+    "./text-effects": {
+      "types": "./src/text-effects/index.ts",
+      "default": "./src/text-effects/index.ts"
+    },
+    "./text-3d": {
+      "types": "./src/text-3d/index.ts",
+      "default": "./src/text-3d/index.ts"
+    },
+    "./hooks": {
+      "types": "./src/hooks/index.ts",
+      "default": "./src/hooks/index.ts"
+    }
+  }
+}

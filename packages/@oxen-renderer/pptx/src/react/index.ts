@@ -101,6 +101,12 @@ export {
   createTextEffectsFilterDef,
 } from "./drawing-ml";
 
+// DrawingML adapter for shared rendering
+export {
+  createDrawingMLContext,
+  getDrawingMLProviderProps,
+} from "./drawing-ml-adapter";
+
 // Shapes
 export {
   SpShapeRenderer,

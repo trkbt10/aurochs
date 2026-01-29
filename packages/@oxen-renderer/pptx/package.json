@@ -11,6 +11,7 @@
     "@oxen-office/chart": "workspace:*",
     "@oxen-renderer/chart": "workspace:*",
     "@oxen-renderer/diagram": "workspace:*",
+    "@oxen-renderer/drawing-ml": "workspace:*",
     "@oxen-office/ooxml": "workspace:*",
     "@oxen-office/pptx": "workspace:*",
     "@oxen/xml": "workspace:*"
