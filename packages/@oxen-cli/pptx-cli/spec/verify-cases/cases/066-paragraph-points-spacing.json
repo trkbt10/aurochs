@@ -1,0 +1,95 @@
+{
+  "name": "paragraph-points-spacing",
+  "description": "Verify paragraph spacing with point-based values",
+  "tags": ["text", "paragraph", "points"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/paragraph-points-spacing.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 50,
+            "width": 500,
+            "height": 180,
+            "fill": "FFFFFF",
+            "text": [
+              {
+                "runs": [{ "text": "18pt line spacing (fixed)", "fontSize": 16 }],
+                "lineSpacing": { "type": "points", "value": 18 }
+              },
+              {
+                "runs": [{ "text": "This is the second line with 18pt spacing", "fontSize": 16 }],
+                "lineSpacing": { "type": "points", "value": 18 }
+              },
+              {
+                "runs": [{ "text": "Third line also with 18pt spacing", "fontSize": 16 }],
+                "lineSpacing": { "type": "points", "value": 18 }
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 250,
+            "width": 500,
+            "height": 200,
+            "fill": "F3F4F6",
+            "text": [
+              {
+                "runs": [{ "text": "24pt line spacing (larger)", "fontSize": 16 }],
+                "lineSpacing": { "type": "points", "value": 24 }
+              },
+              {
+                "runs": [{ "text": "More space between these lines", "fontSize": 16 }],
+                "lineSpacing": { "type": "points", "value": 24 }
+              },
+              {
+                "runs": [{ "text": "Good for readability", "fontSize": 16 }],
+                "lineSpacing": { "type": "points", "value": 24 }
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 580,
+            "y": 50,
+            "width": 350,
+            "height": 200,
+            "fill": "1F2937",
+            "text": [
+              {
+                "runs": [{ "text": "Combined spacing:", "fontSize": 18, "color": "FFFFFF", "bold": true }],
+                "spaceAfter": 12
+              },
+              {
+                "runs": [{ "text": "30pt line height", "fontSize": 14, "color": "D1D5DB" }],
+                "lineSpacing": { "type": "points", "value": 30 },
+                "spaceBefore": 6
+              },
+              {
+                "runs": [{ "text": "With extra margin", "fontSize": 14, "color": "D1D5DB" }],
+                "lineSpacing": { "type": "points", "value": 30 }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -3, "type": "sp", "text": "18pt line spacing (fixed)\nThis is the second line with 18pt spacing\nThird line also with 18pt spacing" },
+          { "index": -2, "type": "sp", "text": "24pt line spacing (larger)\nMore space between these lines\nGood for readability" },
+          { "index": -1, "type": "sp", "text": "Combined spacing:\n30pt line height\nWith extra margin" }
+        ]
+      }
+    ]
+  }
+}

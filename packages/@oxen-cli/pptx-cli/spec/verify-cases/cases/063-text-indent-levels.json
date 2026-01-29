@@ -1,0 +1,85 @@
+{
+  "name": "text-indent-levels",
+  "description": "Verify paragraph indent levels for hierarchical lists",
+  "tags": ["text", "bullet", "level", "hierarchy"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/text-indent-levels.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 50,
+            "width": 600,
+            "height": 400,
+            "fill": "FFFFFF",
+            "text": [
+              {
+                "runs": [{ "text": "Project Overview", "fontSize": 24, "bold": true }],
+                "level": 0
+              },
+              {
+                "runs": [{ "text": "Phase 1: Research", "fontSize": 18 }],
+                "level": 0,
+                "bullet": { "type": "char", "char": "•" }
+              },
+              {
+                "runs": [{ "text": "Market analysis", "fontSize": 16 }],
+                "level": 1,
+                "bullet": { "type": "char", "char": "○" }
+              },
+              {
+                "runs": [{ "text": "Competitor review", "fontSize": 16 }],
+                "level": 1,
+                "bullet": { "type": "char", "char": "○" }
+              },
+              {
+                "runs": [{ "text": "Internal surveys", "fontSize": 14 }],
+                "level": 2,
+                "bullet": { "type": "char", "char": "■" }
+              },
+              {
+                "runs": [{ "text": "External interviews", "fontSize": 14 }],
+                "level": 2,
+                "bullet": { "type": "char", "char": "■" }
+              },
+              {
+                "runs": [{ "text": "Phase 2: Development", "fontSize": 18 }],
+                "level": 0,
+                "bullet": { "type": "char", "char": "•" }
+              },
+              {
+                "runs": [{ "text": "Design mockups", "fontSize": 16 }],
+                "level": 1,
+                "bullet": { "type": "char", "char": "○" }
+              },
+              {
+                "runs": [{ "text": "Implementation", "fontSize": 16 }],
+                "level": 1,
+                "bullet": { "type": "char", "char": "○" }
+              },
+              {
+                "runs": [{ "text": "Phase 3: Launch", "fontSize": 18 }],
+                "level": 0,
+                "bullet": { "type": "char", "char": "•" }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -1, "type": "sp", "text": "Project Overview\nPhase 1: Research\nMarket analysis\nCompetitor review\nInternal surveys\nExternal interviews\nPhase 2: Development\nDesign mockups\nImplementation\nPhase 3: Launch" }
+        ]
+      }
+    ]
+  }
+}

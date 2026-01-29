@@ -1,0 +1,161 @@
+{
+  "name": "bevel-presets",
+  "description": "Verify different 3D bevel presets",
+  "tags": ["shape", "3d", "bevel"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/bevel-presets.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 50,
+            "width": 150,
+            "height": 100,
+            "fill": "3B82F6",
+            "text": "Circle",
+            "shape3d": {
+              "bevelTop": { "preset": "circle", "width": 10, "height": 10 }
+            }
+          },
+          {
+            "type": "rectangle",
+            "x": 220,
+            "y": 50,
+            "width": 150,
+            "height": 100,
+            "fill": "10B981",
+            "text": "Angle",
+            "shape3d": {
+              "bevelTop": { "preset": "angle", "width": 10, "height": 10 }
+            }
+          },
+          {
+            "type": "rectangle",
+            "x": 390,
+            "y": 50,
+            "width": 150,
+            "height": 100,
+            "fill": "F59E0B",
+            "text": "Convex",
+            "shape3d": {
+              "bevelTop": { "preset": "convex", "width": 10, "height": 10 }
+            }
+          },
+          {
+            "type": "rectangle",
+            "x": 560,
+            "y": 50,
+            "width": 150,
+            "height": 100,
+            "fill": "EF4444",
+            "text": "SoftRound",
+            "shape3d": {
+              "bevelTop": { "preset": "softRound", "width": 10, "height": 10 }
+            }
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 180,
+            "width": 150,
+            "height": 100,
+            "fill": "8B5CF6",
+            "text": "HardEdge",
+            "shape3d": {
+              "bevelTop": { "preset": "hardEdge", "width": 8, "height": 8 }
+            }
+          },
+          {
+            "type": "rectangle",
+            "x": 220,
+            "y": 180,
+            "width": 150,
+            "height": 100,
+            "fill": "EC4899",
+            "text": "Riblet",
+            "shape3d": {
+              "bevelTop": { "preset": "riblet", "width": 8, "height": 8 }
+            }
+          },
+          {
+            "type": "rectangle",
+            "x": 390,
+            "y": 180,
+            "width": 150,
+            "height": 100,
+            "fill": "06B6D4",
+            "text": "ArtDeco",
+            "shape3d": {
+              "bevelTop": { "preset": "artDeco", "width": 12, "height": 12 }
+            }
+          },
+          {
+            "type": "rectangle",
+            "x": 560,
+            "y": 180,
+            "width": 150,
+            "height": 100,
+            "fill": "84CC16",
+            "text": "CoolSlant",
+            "shape3d": {
+              "bevelTop": { "preset": "coolSlant", "width": 8, "height": 8 }
+            }
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 310,
+            "width": 200,
+            "height": 120,
+            "fill": "1F2937",
+            "text": [
+              {
+                "runs": [{ "text": "Top + Bottom", "fontSize": 18, "color": "FFFFFF" }]
+              }
+            ],
+            "shape3d": {
+              "bevelTop": { "preset": "circle", "width": 10, "height": 10 },
+              "bevelBottom": { "preset": "angle", "width": 6, "height": 6 }
+            }
+          },
+          {
+            "type": "ellipse",
+            "x": 280,
+            "y": 310,
+            "width": 120,
+            "height": 120,
+            "fill": "FACC15",
+            "text": "3D Ball",
+            "shape3d": {
+              "bevelTop": { "preset": "circle", "width": 20, "height": 20 },
+              "material": "plastic"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -10, "type": "sp", "text": "Circle" },
+          { "index": -9, "type": "sp", "text": "Angle" },
+          { "index": -8, "type": "sp", "text": "Convex" },
+          { "index": -7, "type": "sp", "text": "SoftRound" },
+          { "index": -6, "type": "sp", "text": "HardEdge" },
+          { "index": -5, "type": "sp", "text": "Riblet" },
+          { "index": -4, "type": "sp", "text": "ArtDeco" },
+          { "index": -3, "type": "sp", "text": "CoolSlant" },
+          { "index": -2, "type": "sp", "text": "Top + Bottom" },
+          { "index": -1, "type": "sp", "text": "3D Ball" }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,139 @@
+{
+  "name": "shape-flip",
+  "description": "Verify shape horizontal and vertical flip",
+  "tags": ["shape", "transform", "flip"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/shape-flip.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "rightArrow",
+            "x": 100,
+            "y": 80,
+            "width": 150,
+            "height": 60,
+            "fill": "3B82F6",
+            "text": "Normal"
+          },
+          {
+            "type": "rightArrow",
+            "x": 300,
+            "y": 80,
+            "width": 150,
+            "height": 60,
+            "fill": "10B981",
+            "flipH": true,
+            "text": "Flip H"
+          },
+          {
+            "type": "triangle",
+            "x": 100,
+            "y": 180,
+            "width": 120,
+            "height": 100,
+            "fill": "F59E0B",
+            "text": "Normal"
+          },
+          {
+            "type": "triangle",
+            "x": 280,
+            "y": 180,
+            "width": 120,
+            "height": 100,
+            "fill": "EF4444",
+            "flipV": true,
+            "text": "Flip V"
+          },
+          {
+            "type": "triangle",
+            "x": 460,
+            "y": 180,
+            "width": 120,
+            "height": 100,
+            "fill": "8B5CF6",
+            "flipH": true,
+            "flipV": true,
+            "text": "Both"
+          },
+          {
+            "type": "chevron",
+            "x": 100,
+            "y": 320,
+            "width": 100,
+            "height": 80,
+            "fill": "06B6D4",
+            "text": "→"
+          },
+          {
+            "type": "chevron",
+            "x": 250,
+            "y": 320,
+            "width": 100,
+            "height": 80,
+            "fill": "06B6D4",
+            "flipH": true,
+            "text": "←"
+          },
+          {
+            "type": "chevron",
+            "x": 400,
+            "y": 320,
+            "width": 100,
+            "height": 80,
+            "fill": "EC4899",
+            "rotation": 90,
+            "text": "↓"
+          },
+          {
+            "type": "chevron",
+            "x": 550,
+            "y": 320,
+            "width": 100,
+            "height": 80,
+            "fill": "EC4899",
+            "rotation": 90,
+            "flipV": true,
+            "text": "↑"
+          },
+          {
+            "type": "rectangle",
+            "x": 100,
+            "y": 440,
+            "width": 200,
+            "height": 60,
+            "fill": "1F2937",
+            "text": [
+              {
+                "runs": [{ "text": "Rotated + Flipped", "fontSize": 16, "color": "FFFFFF" }]
+              }
+            ],
+            "rotation": 15,
+            "flipH": true
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -10, "type": "sp", "text": "Normal" },
+          { "index": -9, "type": "sp", "text": "Flip H" },
+          { "index": -8, "type": "sp", "text": "Normal" },
+          { "index": -7, "type": "sp", "text": "Flip V" },
+          { "index": -6, "type": "sp", "text": "Both" },
+          { "index": -5, "type": "sp", "text": "→" },
+          { "index": -4, "type": "sp", "text": "←" },
+          { "index": -3, "type": "sp", "text": "↓" },
+          { "index": -2, "type": "sp", "text": "↑" },
+          { "index": -1, "type": "sp", "text": "Rotated + Flipped" }
+        ]
+      }
+    ]
+  }
+}

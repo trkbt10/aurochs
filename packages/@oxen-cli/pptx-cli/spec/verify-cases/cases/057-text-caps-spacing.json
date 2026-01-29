@@ -1,0 +1,107 @@
+{
+  "name": "text-caps-spacing",
+  "description": "Verify text with capitalization and letter spacing",
+  "tags": ["text", "caps", "spacing"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/text-caps-spacing.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 50,
+            "width": 400,
+            "height": 70,
+            "fill": "FFFFFF",
+            "text": [
+              {
+                "runs": [
+                  {
+                    "text": "All Caps Text",
+                    "fontSize": 28,
+                    "caps": "all"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 140,
+            "width": 400,
+            "height": 70,
+            "fill": "FFFFFF",
+            "text": [
+              {
+                "runs": [
+                  {
+                    "text": "Small Caps Text",
+                    "fontSize": 28,
+                    "caps": "small"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 230,
+            "width": 500,
+            "height": 70,
+            "fill": "1F2937",
+            "text": [
+              {
+                "runs": [
+                  {
+                    "text": "WIDE SPACING",
+                    "fontSize": 24,
+                    "color": "FFFFFF",
+                    "letterSpacing": 5
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 320,
+            "width": 400,
+            "height": 70,
+            "fill": "374151",
+            "text": [
+              {
+                "runs": [
+                  {
+                    "text": "TIGHT SPACING",
+                    "fontSize": 24,
+                    "color": "FFFFFF",
+                    "letterSpacing": -1
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -4, "type": "sp", "text": "All Caps Text" },
+          { "index": -3, "type": "sp", "text": "Small Caps Text" },
+          { "index": -2, "type": "sp", "text": "WIDE SPACING" },
+          { "index": -1, "type": "sp", "text": "TIGHT SPACING" }
+        ]
+      }
+    ]
+  }
+}

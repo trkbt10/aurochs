@@ -1,0 +1,126 @@
+{
+  "name": "text-font-family",
+  "description": "Verify text with different font families",
+  "tags": ["text", "font"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/text-font-family.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 50,
+            "width": 500,
+            "height": 70,
+            "fill": "FFFFFF",
+            "text": [
+              {
+                "runs": [
+                  { "text": "Default Font (Calibri)", "fontSize": 24 }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 130,
+            "width": 500,
+            "height": 70,
+            "fill": "FFFFFF",
+            "text": [
+              {
+                "runs": [
+                  { "text": "Arial Font", "fontSize": 24, "fontFamily": "Arial" }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 210,
+            "width": 500,
+            "height": 70,
+            "fill": "F3F4F6",
+            "text": [
+              {
+                "runs": [
+                  { "text": "Times New Roman", "fontSize": 24, "fontFamily": "Times New Roman" }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 290,
+            "width": 500,
+            "height": 70,
+            "fill": "F3F4F6",
+            "text": [
+              {
+                "runs": [
+                  { "text": "Georgia Serif", "fontSize": 24, "fontFamily": "Georgia" }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 370,
+            "width": 600,
+            "height": 80,
+            "fill": "1F2937",
+            "text": [
+              {
+                "runs": [
+                  { "text": "Courier New (Monospace)", "fontSize": 22, "fontFamily": "Courier New", "color": "10B981" }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 460,
+            "width": 700,
+            "height": 80,
+            "fill": "E5E7EB",
+            "text": [
+              {
+                "runs": [
+                  { "text": "Mixed: ", "fontSize": 20 },
+                  { "text": "Arial", "fontSize": 20, "fontFamily": "Arial" },
+                  { "text": " + ", "fontSize": 20 },
+                  { "text": "Times", "fontSize": 20, "fontFamily": "Times New Roman" },
+                  { "text": " + ", "fontSize": 20 },
+                  { "text": "Courier", "fontSize": 20, "fontFamily": "Courier New", "bold": true }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -6, "type": "sp", "text": "Default Font (Calibri)" },
+          { "index": -5, "type": "sp", "text": "Arial Font" },
+          { "index": -4, "type": "sp", "text": "Times New Roman" },
+          { "index": -3, "type": "sp", "text": "Georgia Serif" },
+          { "index": -2, "type": "sp", "text": "Courier New (Monospace)" },
+          { "index": -1, "type": "sp", "text": "Mixed: Arial + Times + Courier" }
+        ]
+      }
+    ]
+  }
+}

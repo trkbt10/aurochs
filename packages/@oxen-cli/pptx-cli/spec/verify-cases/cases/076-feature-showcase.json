@@ -1,0 +1,181 @@
+{
+  "name": "feature-showcase",
+  "description": "Comprehensive showcase of all major features",
+  "tags": ["showcase", "comprehensive"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/feature-showcase.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "roundRect",
+            "x": 50,
+            "y": 30,
+            "width": 350,
+            "height": 60,
+            "fill": {
+              "type": "gradient",
+              "gradientType": "linear",
+              "angle": 0,
+              "stops": [
+                { "position": 0, "color": "3B82F6" },
+                { "position": 100, "color": "1D4ED8" }
+              ]
+            },
+            "text": [
+              {
+                "runs": [{ "text": "PPTX Feature Showcase", "fontSize": 24, "bold": true, "color": "FFFFFF" }],
+                "alignment": "center"
+              }
+            ],
+            "shape3d": {
+              "bevelTop": { "preset": "circle", "width": 6, "height": 6 }
+            }
+          },
+          {
+            "type": "star5",
+            "x": 450,
+            "y": 20,
+            "width": 80,
+            "height": 80,
+            "fill": "FACC15",
+            "rotation": 15,
+            "effects": {
+              "shadow": { "color": "000000", "blur": 8, "distance": 4, "direction": 135 }
+            },
+            "text": "★"
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 110,
+            "width": 220,
+            "height": 100,
+            "fill": {
+              "type": "pattern",
+              "preset": "diagCross",
+              "fgColor": "10B981",
+              "bgColor": "D1FAE5"
+            },
+            "lineColor": "047857",
+            "lineWidth": 2,
+            "text": "Pattern Fill"
+          },
+          {
+            "type": "ellipse",
+            "x": 290,
+            "y": 110,
+            "width": 120,
+            "height": 100,
+            "fill": "F59E0B",
+            "effects": {
+              "glow": { "color": "FCD34D", "radius": 10 }
+            },
+            "text": "Glow"
+          },
+          {
+            "type": "chevron",
+            "x": 430,
+            "y": 110,
+            "width": 120,
+            "height": 100,
+            "fill": "EF4444",
+            "flipH": true,
+            "text": "←"
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 230,
+            "width": 500,
+            "height": 120,
+            "fill": "1F2937",
+            "lineColor": "6B7280",
+            "lineWidth": 3,
+            "lineDash": "dash",
+            "text": [
+              {
+                "runs": [
+                  { "text": "Rich ", "fontSize": 18, "color": "FFFFFF" },
+                  { "text": "Text", "fontSize": 18, "color": "3B82F6", "bold": true },
+                  { "text": " with ", "fontSize": 18, "color": "FFFFFF" },
+                  { "text": "Styles", "fontSize": 18, "color": "10B981", "italic": true }
+                ],
+                "alignment": "center"
+              },
+              {
+                "runs": [
+                  { "text": "E=mc", "fontSize": 16, "color": "F59E0B" },
+                  { "text": "2", "fontSize": 12, "color": "F59E0B", "verticalPosition": "superscript" },
+                  { "text": "  •  H", "fontSize": 16, "color": "8B5CF6" },
+                  { "text": "2", "fontSize": 12, "color": "8B5CF6", "verticalPosition": "subscript" },
+                  { "text": "O", "fontSize": 16, "color": "8B5CF6" }
+                ],
+                "alignment": "center",
+                "spaceBefore": 8
+              }
+            ]
+          },
+          {
+            "type": "rightArrow",
+            "x": 50,
+            "y": 370,
+            "width": 150,
+            "height": 50,
+            "fill": "8B5CF6",
+            "lineColor": "6D28D9",
+            "lineWidth": 2,
+            "lineTailEnd": { "type": "triangle", "width": "lg", "length": "lg" },
+            "text": "Arrow"
+          },
+          {
+            "type": "hexagon",
+            "x": 220,
+            "y": 370,
+            "width": 100,
+            "height": 90,
+            "fill": "06B6D4",
+            "rotation": 30,
+            "shape3d": {
+              "bevelTop": { "preset": "softRound", "width": 8, "height": 8 },
+              "material": "plastic"
+            },
+            "text": "3D"
+          },
+          {
+            "type": "rectangle",
+            "x": 340,
+            "y": 370,
+            "width": 200,
+            "height": 90,
+            "fill": "FFFFFF",
+            "lineColor": "EC4899",
+            "lineWidth": 4,
+            "lineCompound": "double",
+            "text": "Double Line"
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -9, "type": "sp", "text": "PPTX Feature Showcase" },
+          { "index": -8, "type": "sp", "text": "★" },
+          { "index": -7, "type": "sp", "text": "Pattern Fill" },
+          { "index": -6, "type": "sp", "text": "Glow" },
+          { "index": -5, "type": "sp", "text": "←" },
+          { "index": -4, "type": "sp", "text": "Rich Text with Styles\nE=mc2  •  H2O" },
+          { "index": -3, "type": "sp", "text": "Arrow" },
+          { "index": -2, "type": "sp", "text": "3D" },
+          { "index": -1, "type": "sp", "text": "Double Line" }
+        ]
+      }
+    ]
+  }
+}

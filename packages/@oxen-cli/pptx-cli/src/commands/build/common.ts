@@ -193,6 +193,20 @@ export function buildLine(
 }
 
 /**
+ * Map underline style to OOXML values
+ * Based on ECMA-376 Part 1: §21.1.2.3.40 ST_TextUnderlineType
+ */
+const UNDERLINE_MAP: Record<string, string> = {
+  none: "none",
+  single: "sng",
+  double: "dbl",
+  heavy: "heavy",
+  dotted: "dotted",
+  dashed: "dash",
+  wavy: "wavy",
+};
+
+/**
  * Map strikethrough style to OOXML values
  */
 const STRIKE_MAP: Record<string, string> = {
@@ -202,22 +216,42 @@ const STRIKE_MAP: Record<string, string> = {
 };
 
 /**
+ * Map vertical position to baseline percentage
+ * Superscript: +30%, Subscript: -25%
+ */
+const VERTICAL_POSITION_MAP: Record<string, number> = {
+  normal: 0,
+  superscript: 30,
+  subscript: -25,
+};
+
+/**
  * Build run properties from spec
  */
 function buildRunProperties(spec: TextRunSpec): RunProperties | undefined {
   // Build run properties if any formatting is specified
   if (spec.bold !== undefined || spec.italic !== undefined || spec.underline !== undefined ||
-      spec.strikethrough !== undefined || spec.fontSize !== undefined || spec.fontFamily !== undefined ||
+      spec.strikethrough !== undefined || spec.caps !== undefined || spec.verticalPosition !== undefined ||
+      spec.letterSpacing !== undefined || spec.fontSize !== undefined || spec.fontFamily !== undefined ||
       spec.color !== undefined || spec.outline !== undefined || spec.effects !== undefined) {
     const properties: RunProperties = {};
 
     if (spec.bold !== undefined) (properties as { bold?: boolean }).bold = spec.bold;
     if (spec.italic !== undefined) (properties as { italic?: boolean }).italic = spec.italic;
     if (spec.underline && spec.underline !== "none") {
-      (properties as { underline?: string }).underline = spec.underline === "single" ? "sng" : spec.underline;
+      (properties as { underline?: string }).underline = UNDERLINE_MAP[spec.underline] ?? spec.underline;
     }
     if (spec.strikethrough && spec.strikethrough !== "none") {
-      (properties as { strikethrough?: string }).strikethrough = STRIKE_MAP[spec.strikethrough];
+      (properties as { strike?: string }).strike = STRIKE_MAP[spec.strikethrough];
+    }
+    if (spec.caps && spec.caps !== "none") {
+      (properties as { caps?: string }).caps = spec.caps;
+    }
+    if (spec.verticalPosition && spec.verticalPosition !== "normal") {
+      (properties as { baseline?: number }).baseline = VERTICAL_POSITION_MAP[spec.verticalPosition];
+    }
+    if (spec.letterSpacing !== undefined) {
+      (properties as { spacing?: Pixels }).spacing = spec.letterSpacing as Pixels;
     }
     if (spec.fontSize !== undefined) (properties as { fontSize?: number }).fontSize = spec.fontSize;
     if (spec.fontFamily !== undefined) (properties as { fontFamily?: string }).fontFamily = spec.fontFamily;
@@ -278,6 +312,37 @@ function buildParagraph(spec: TextParagraphSpec): Paragraph {
         fontFollowText: true,
       };
     }
+  }
+
+  // Paragraph spacing
+  if (spec.lineSpacing !== undefined) {
+    if (spec.lineSpacing.type === "percent") {
+      // Percent is stored as percentage * 1000 (e.g., 150% = 150000)
+      (properties as { lineSpacing?: object }).lineSpacing = {
+        type: "percent",
+        value: spec.lineSpacing.value * 1000,
+      };
+    } else {
+      // Points stored as points * 100 (centipoints)
+      (properties as { lineSpacing?: object }).lineSpacing = {
+        type: "points",
+        value: spec.lineSpacing.value * 100,
+      };
+    }
+  }
+  if (spec.spaceBefore !== undefined) {
+    // Points stored as points * 100 (centipoints)
+    (properties as { spaceBefore?: number }).spaceBefore = spec.spaceBefore * 100;
+  }
+  if (spec.spaceAfter !== undefined) {
+    // Points stored as points * 100 (centipoints)
+    (properties as { spaceAfter?: number }).spaceAfter = spec.spaceAfter * 100;
+  }
+  if (spec.indent !== undefined) {
+    (properties as { indent?: Pixels }).indent = spec.indent as Pixels;
+  }
+  if (spec.marginLeft !== undefined) {
+    (properties as { marginLeft?: Pixels }).marginLeft = spec.marginLeft as Pixels;
   }
 
   return { properties, runs };

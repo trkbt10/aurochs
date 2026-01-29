@@ -1,0 +1,112 @@
+{
+  "name": "paragraph-spacing",
+  "description": "Verify paragraph spacing properties (line height, space before/after)",
+  "tags": ["text", "paragraph", "spacing"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/paragraph-spacing.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 50,
+            "width": 400,
+            "height": 150,
+            "fill": "FFFFFF",
+            "text": [
+              {
+                "runs": [{ "text": "Line 1 - Normal spacing", "fontSize": 18 }]
+              },
+              {
+                "runs": [{ "text": "Line 2 - Normal spacing", "fontSize": 18 }]
+              },
+              {
+                "runs": [{ "text": "Line 3 - Normal spacing", "fontSize": 18 }]
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 220,
+            "width": 400,
+            "height": 150,
+            "fill": "F3F4F6",
+            "text": [
+              {
+                "runs": [{ "text": "Line 1 - 1.5x line height", "fontSize": 18 }],
+                "lineSpacing": { "type": "percent", "value": 150 }
+              },
+              {
+                "runs": [{ "text": "Line 2 - 1.5x line height", "fontSize": 18 }],
+                "lineSpacing": { "type": "percent", "value": 150 }
+              },
+              {
+                "runs": [{ "text": "Line 3 - 1.5x line height", "fontSize": 18 }],
+                "lineSpacing": { "type": "percent", "value": 150 }
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 500,
+            "y": 50,
+            "width": 400,
+            "height": 200,
+            "fill": "E5E7EB",
+            "text": [
+              {
+                "runs": [{ "text": "Paragraph with space before (12pt)", "fontSize": 16 }],
+                "spaceBefore": 12
+              },
+              {
+                "runs": [{ "text": "Paragraph with space after (12pt)", "fontSize": 16 }],
+                "spaceAfter": 12
+              },
+              {
+                "runs": [{ "text": "Both space before and after (8pt)", "fontSize": 16 }],
+                "spaceBefore": 8,
+                "spaceAfter": 8
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 500,
+            "y": 270,
+            "width": 400,
+            "height": 120,
+            "fill": "1F2937",
+            "text": [
+              {
+                "runs": [{ "text": "Double line spacing (2x)", "fontSize": 16, "color": "FFFFFF" }],
+                "lineSpacing": { "type": "percent", "value": 200 }
+              },
+              {
+                "runs": [{ "text": "With extra space", "fontSize": 16, "color": "FFFFFF" }],
+                "lineSpacing": { "type": "percent", "value": 200 },
+                "spaceBefore": 6
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -4, "type": "sp", "text": "Line 1 - Normal spacing\nLine 2 - Normal spacing\nLine 3 - Normal spacing" },
+          { "index": -3, "type": "sp", "text": "Line 1 - 1.5x line height\nLine 2 - 1.5x line height\nLine 3 - 1.5x line height" },
+          { "index": -2, "type": "sp", "text": "Paragraph with space before (12pt)\nParagraph with space after (12pt)\nBoth space before and after (8pt)" },
+          { "index": -1, "type": "sp", "text": "Double line spacing (2x)\nWith extra space" }
+        ]
+      }
+    ]
+  }
+}

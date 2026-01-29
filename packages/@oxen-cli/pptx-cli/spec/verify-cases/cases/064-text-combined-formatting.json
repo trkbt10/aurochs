@@ -1,0 +1,116 @@
+{
+  "name": "text-combined-formatting",
+  "description": "Verify combining multiple text formatting options",
+  "tags": ["text", "formatting", "combined"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/text-combined-formatting.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 50,
+            "width": 600,
+            "height": 100,
+            "fill": "1F2937",
+            "text": [
+              {
+                "runs": [
+                  {
+                    "text": "Bold + Italic + Color",
+                    "fontSize": 28,
+                    "bold": true,
+                    "italic": true,
+                    "color": "FACC15"
+                  }
+                ],
+                "alignment": "center"
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 170,
+            "width": 600,
+            "height": 100,
+            "fill": "FFFFFF",
+            "text": [
+              {
+                "runs": [
+                  {
+                    "text": "Underline + All Caps + Wide Spacing",
+                    "fontSize": 22,
+                    "underline": "single",
+                    "caps": "all",
+                    "letterSpacing": 3
+                  }
+                ],
+                "alignment": "center"
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 290,
+            "width": 600,
+            "height": 100,
+            "fill": "F3F4F6",
+            "text": [
+              {
+                "runs": [
+                  { "text": "Mixed: ", "fontSize": 20 },
+                  { "text": "Bold", "fontSize": 20, "bold": true },
+                  { "text": " + ", "fontSize": 20 },
+                  { "text": "Italic", "fontSize": 20, "italic": true },
+                  { "text": " + ", "fontSize": 20 },
+                  { "text": "Both", "fontSize": 20, "bold": true, "italic": true, "color": "DC2626" }
+                ],
+                "alignment": "center"
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 410,
+            "width": 600,
+            "height": 80,
+            "fill": "E5E7EB",
+            "text": [
+              {
+                "runs": [
+                  { "text": "x", "fontSize": 18 },
+                  { "text": "2", "fontSize": 14, "verticalPosition": "superscript" },
+                  { "text": " + y", "fontSize": 18 },
+                  { "text": "2", "fontSize": 14, "verticalPosition": "superscript" },
+                  { "text": " = r", "fontSize": 18 },
+                  { "text": "2", "fontSize": 14, "verticalPosition": "superscript" },
+                  { "text": "  (Circle equation)", "fontSize": 16, "italic": true, "color": "6B7280" }
+                ],
+                "alignment": "center"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -4, "type": "sp", "text": "Bold + Italic + Color" },
+          { "index": -3, "type": "sp", "text": "Underline + All Caps + Wide Spacing" },
+          { "index": -2, "type": "sp", "text": "Mixed: Bold + Italic + Both" },
+          { "index": -1, "type": "sp", "text": "x2 + y2 = r2  (Circle equation)" }
+        ]
+      }
+    ]
+  }
+}

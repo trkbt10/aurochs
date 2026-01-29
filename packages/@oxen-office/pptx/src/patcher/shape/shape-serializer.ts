@@ -3,7 +3,7 @@ import type { Shape, SpShape, GrpShape, PicShape, CxnShape, GraphicFrame, NonVis
 import type { Transform, GroupTransform } from "../../domain/geometry";
 import type { Table } from "../../domain/table/types";
 import { serializeTransform } from "../serializer/transform";
-import { serializeColor, serializeDrawingTable, serializeEffects, serializeFill, serializeLine, serializeTextBody } from "../serializer";
+import { serializeColor, serializeDrawingTable, serializeEffects, serializeFill, serializeLine, serializeTextBody, serializeShape3d } from "../serializer";
 import { ooxmlAngleUnits, ooxmlBool, ooxmlEmu, ooxmlPercent100k } from "@oxen-office/ooxml/serializer/units";
 
 /**
@@ -338,6 +338,10 @@ function serializeShapeStyleElements(properties: SpShape["properties"]): XmlElem
   const effects = properties.effects ? serializeEffects(properties.effects) : null;
   if (effects) {
     children.push(effects);
+  }
+  const sp3d = properties.shape3d ? serializeShape3d(properties.shape3d) : null;
+  if (sp3d) {
+    children.push(sp3d);
   }
 
   return children;

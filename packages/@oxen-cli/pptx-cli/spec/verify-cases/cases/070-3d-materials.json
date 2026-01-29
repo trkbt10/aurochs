@@ -1,0 +1,156 @@
+{
+  "name": "3d-materials",
+  "description": "Verify different 3D material presets",
+  "tags": ["shape", "3d", "material"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/3d-materials.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "roundRect",
+            "x": 50,
+            "y": 50,
+            "width": 150,
+            "height": 100,
+            "fill": "3B82F6",
+            "text": "Matte",
+            "shape3d": {
+              "bevelTop": { "preset": "circle", "width": 8, "height": 8 },
+              "material": "matte"
+            }
+          },
+          {
+            "type": "roundRect",
+            "x": 220,
+            "y": 50,
+            "width": 150,
+            "height": 100,
+            "fill": "3B82F6",
+            "text": "WarmMatte",
+            "shape3d": {
+              "bevelTop": { "preset": "circle", "width": 8, "height": 8 },
+              "material": "warmMatte"
+            }
+          },
+          {
+            "type": "roundRect",
+            "x": 390,
+            "y": 50,
+            "width": 150,
+            "height": 100,
+            "fill": "3B82F6",
+            "text": "Plastic",
+            "shape3d": {
+              "bevelTop": { "preset": "circle", "width": 8, "height": 8 },
+              "material": "plastic"
+            }
+          },
+          {
+            "type": "roundRect",
+            "x": 560,
+            "y": 50,
+            "width": 150,
+            "height": 100,
+            "fill": "6B7280",
+            "text": "Metal",
+            "shape3d": {
+              "bevelTop": { "preset": "circle", "width": 8, "height": 8 },
+              "material": "metal"
+            }
+          },
+          {
+            "type": "roundRect",
+            "x": 50,
+            "y": 180,
+            "width": 150,
+            "height": 100,
+            "fill": "F3F4F6",
+            "text": "Powder",
+            "shape3d": {
+              "bevelTop": { "preset": "circle", "width": 8, "height": 8 },
+              "material": "powder"
+            }
+          },
+          {
+            "type": "roundRect",
+            "x": 220,
+            "y": 180,
+            "width": 150,
+            "height": 100,
+            "fill": "10B981",
+            "text": "Flat",
+            "shape3d": {
+              "bevelTop": { "preset": "circle", "width": 8, "height": 8 },
+              "material": "flat"
+            }
+          },
+          {
+            "type": "roundRect",
+            "x": 390,
+            "y": 180,
+            "width": 150,
+            "height": 100,
+            "fill": "8B5CF6",
+            "text": "SoftEdge",
+            "shape3d": {
+              "bevelTop": { "preset": "circle", "width": 8, "height": 8 },
+              "material": "softEdge"
+            }
+          },
+          {
+            "type": "ellipse",
+            "x": 560,
+            "y": 180,
+            "width": 150,
+            "height": 100,
+            "fill": "06B6D4",
+            "text": "Clear",
+            "shape3d": {
+              "bevelTop": { "preset": "circle", "width": 8, "height": 8 },
+              "material": "clear"
+            }
+          },
+          {
+            "type": "rectangle",
+            "x": 150,
+            "y": 320,
+            "width": 300,
+            "height": 150,
+            "fill": "FACC15",
+            "text": [
+              {
+                "runs": [{ "text": "3D with Extrusion", "fontSize": 24, "bold": true }]
+              }
+            ],
+            "shape3d": {
+              "bevelTop": { "preset": "softRound", "width": 12, "height": 12 },
+              "material": "plastic",
+              "extrusionHeight": 20
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -9, "type": "sp", "text": "Matte" },
+          { "index": -8, "type": "sp", "text": "WarmMatte" },
+          { "index": -7, "type": "sp", "text": "Plastic" },
+          { "index": -6, "type": "sp", "text": "Metal" },
+          { "index": -5, "type": "sp", "text": "Powder" },
+          { "index": -4, "type": "sp", "text": "Flat" },
+          { "index": -3, "type": "sp", "text": "SoftEdge" },
+          { "index": -2, "type": "sp", "text": "Clear" },
+          { "index": -1, "type": "sp", "text": "3D with Extrusion" }
+        ]
+      }
+    ]
+  }
+}

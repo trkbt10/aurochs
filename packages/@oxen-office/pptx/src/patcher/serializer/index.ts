@@ -8,6 +8,7 @@ export { serializeFill, serializeGradientFill, serializePatternFill, serializeBl
 export { serializeLine } from "./line";
 export { serializeEffects } from "./effects";
 export { serializeTransform, patchTransformElement } from "./transform";
+export { serializeShape3d } from "./three-d";
 
 // Phase 5: TextBody
 export { serializeTextBody, patchTextBodyElement } from "./text";

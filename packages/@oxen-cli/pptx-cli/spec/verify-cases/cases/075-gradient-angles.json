@@ -1,0 +1,181 @@
+{
+  "name": "gradient-angles",
+  "description": "Verify gradient fill with different angles and stops",
+  "tags": ["shape", "fill", "gradient"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/gradient-angles.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 50,
+            "width": 180,
+            "height": 100,
+            "fill": {
+              "type": "gradient",
+              "gradientType": "linear",
+              "angle": 0,
+              "stops": [
+                { "position": 0, "color": "3B82F6" },
+                { "position": 100, "color": "1D4ED8" }
+              ]
+            },
+            "text": "0° (→)"
+          },
+          {
+            "type": "rectangle",
+            "x": 250,
+            "y": 50,
+            "width": 180,
+            "height": 100,
+            "fill": {
+              "type": "gradient",
+              "gradientType": "linear",
+              "angle": 45,
+              "stops": [
+                { "position": 0, "color": "10B981" },
+                { "position": 100, "color": "047857" }
+              ]
+            },
+            "text": "45° (↘)"
+          },
+          {
+            "type": "rectangle",
+            "x": 450,
+            "y": 50,
+            "width": 180,
+            "height": 100,
+            "fill": {
+              "type": "gradient",
+              "gradientType": "linear",
+              "angle": 90,
+              "stops": [
+                { "position": 0, "color": "F59E0B" },
+                { "position": 100, "color": "B45309" }
+              ]
+            },
+            "text": "90° (↓)"
+          },
+          {
+            "type": "rectangle",
+            "x": 650,
+            "y": 50,
+            "width": 180,
+            "height": 100,
+            "fill": {
+              "type": "gradient",
+              "gradientType": "linear",
+              "angle": 180,
+              "stops": [
+                { "position": 0, "color": "EF4444" },
+                { "position": 100, "color": "B91C1C" }
+              ]
+            },
+            "text": "180° (←)"
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 180,
+            "width": 250,
+            "height": 120,
+            "fill": {
+              "type": "gradient",
+              "gradientType": "linear",
+              "angle": 135,
+              "stops": [
+                { "position": 0, "color": "8B5CF6" },
+                { "position": 50, "color": "6D28D9" },
+                { "position": 100, "color": "4C1D95" }
+              ]
+            },
+            "text": "3 stops"
+          },
+          {
+            "type": "rectangle",
+            "x": 320,
+            "y": 180,
+            "width": 250,
+            "height": 120,
+            "fill": {
+              "type": "gradient",
+              "gradientType": "linear",
+              "angle": 90,
+              "stops": [
+                { "position": 0, "color": "EC4899" },
+                { "position": 25, "color": "F472B6" },
+                { "position": 75, "color": "BE185D" },
+                { "position": 100, "color": "831843" }
+              ]
+            },
+            "text": "4 stops"
+          },
+          {
+            "type": "ellipse",
+            "x": 590,
+            "y": 180,
+            "width": 200,
+            "height": 120,
+            "fill": {
+              "type": "gradient",
+              "gradientType": "radial",
+              "stops": [
+                { "position": 0, "color": "FACC15" },
+                { "position": 100, "color": "CA8A04" }
+              ]
+            },
+            "text": "Radial"
+          },
+          {
+            "type": "rectangle",
+            "x": 150,
+            "y": 330,
+            "width": 500,
+            "height": 150,
+            "fill": {
+              "type": "gradient",
+              "gradientType": "linear",
+              "angle": 0,
+              "stops": [
+                { "position": 0, "color": "EF4444" },
+                { "position": 17, "color": "F97316" },
+                { "position": 33, "color": "FACC15" },
+                { "position": 50, "color": "22C55E" },
+                { "position": 67, "color": "3B82F6" },
+                { "position": 83, "color": "8B5CF6" },
+                { "position": 100, "color": "EC4899" }
+              ]
+            },
+            "text": [
+              {
+                "runs": [{ "text": "Rainbow Gradient", "fontSize": 24, "bold": true }],
+                "alignment": "center"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -8, "type": "sp", "text": "0° (→)" },
+          { "index": -7, "type": "sp", "text": "45° (↘)" },
+          { "index": -6, "type": "sp", "text": "90° (↓)" },
+          { "index": -5, "type": "sp", "text": "180° (←)" },
+          { "index": -4, "type": "sp", "text": "3 stops" },
+          { "index": -3, "type": "sp", "text": "4 stops" },
+          { "index": -2, "type": "sp", "text": "Radial" },
+          { "index": -1, "type": "sp", "text": "Rainbow Gradient" }
+        ]
+      }
+    ]
+  }
+}

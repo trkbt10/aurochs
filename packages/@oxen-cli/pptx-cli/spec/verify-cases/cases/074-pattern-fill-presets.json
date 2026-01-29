@@ -1,0 +1,235 @@
+{
+  "name": "pattern-fill-presets",
+  "description": "Verify various pattern fill presets",
+  "tags": ["shape", "fill", "pattern"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/pattern-fill-presets.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 50,
+            "width": 150,
+            "height": 80,
+            "fill": {
+              "type": "pattern",
+              "preset": "pct10",
+              "fgColor": "1F2937",
+              "bgColor": "FFFFFF"
+            },
+            "text": "pct10"
+          },
+          {
+            "type": "rectangle",
+            "x": 220,
+            "y": 50,
+            "width": 150,
+            "height": 80,
+            "fill": {
+              "type": "pattern",
+              "preset": "pct25",
+              "fgColor": "3B82F6",
+              "bgColor": "FFFFFF"
+            },
+            "text": "pct25"
+          },
+          {
+            "type": "rectangle",
+            "x": 390,
+            "y": 50,
+            "width": 150,
+            "height": 80,
+            "fill": {
+              "type": "pattern",
+              "preset": "pct50",
+              "fgColor": "10B981",
+              "bgColor": "FFFFFF"
+            },
+            "text": "pct50"
+          },
+          {
+            "type": "rectangle",
+            "x": 560,
+            "y": 50,
+            "width": 150,
+            "height": 80,
+            "fill": {
+              "type": "pattern",
+              "preset": "pct75",
+              "fgColor": "F59E0B",
+              "bgColor": "FFFFFF"
+            },
+            "text": "pct75"
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 150,
+            "width": 150,
+            "height": 80,
+            "fill": {
+              "type": "pattern",
+              "preset": "horz",
+              "fgColor": "EF4444",
+              "bgColor": "FFFFFF"
+            },
+            "text": "horz"
+          },
+          {
+            "type": "rectangle",
+            "x": 220,
+            "y": 150,
+            "width": 150,
+            "height": 80,
+            "fill": {
+              "type": "pattern",
+              "preset": "vert",
+              "fgColor": "8B5CF6",
+              "bgColor": "FFFFFF"
+            },
+            "text": "vert"
+          },
+          {
+            "type": "rectangle",
+            "x": 390,
+            "y": 150,
+            "width": 150,
+            "height": 80,
+            "fill": {
+              "type": "pattern",
+              "preset": "cross",
+              "fgColor": "EC4899",
+              "bgColor": "FFFFFF"
+            },
+            "text": "cross"
+          },
+          {
+            "type": "rectangle",
+            "x": 560,
+            "y": 150,
+            "width": 150,
+            "height": 80,
+            "fill": {
+              "type": "pattern",
+              "preset": "diagCross",
+              "fgColor": "06B6D4",
+              "bgColor": "FFFFFF"
+            },
+            "text": "diagCross"
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 250,
+            "width": 150,
+            "height": 80,
+            "fill": {
+              "type": "pattern",
+              "preset": "dnDiag",
+              "fgColor": "84CC16",
+              "bgColor": "F3F4F6"
+            },
+            "text": "dnDiag"
+          },
+          {
+            "type": "rectangle",
+            "x": 220,
+            "y": 250,
+            "width": 150,
+            "height": 80,
+            "fill": {
+              "type": "pattern",
+              "preset": "upDiag",
+              "fgColor": "F97316",
+              "bgColor": "F3F4F6"
+            },
+            "text": "upDiag"
+          },
+          {
+            "type": "rectangle",
+            "x": 390,
+            "y": 250,
+            "width": 150,
+            "height": 80,
+            "fill": {
+              "type": "pattern",
+              "preset": "smCheck",
+              "fgColor": "14B8A6",
+              "bgColor": "FFFFFF"
+            },
+            "text": "smCheck"
+          },
+          {
+            "type": "rectangle",
+            "x": 560,
+            "y": 250,
+            "width": 150,
+            "height": 80,
+            "fill": {
+              "type": "pattern",
+              "preset": "lgCheck",
+              "fgColor": "A855F7",
+              "bgColor": "FFFFFF"
+            },
+            "text": "lgCheck"
+          },
+          {
+            "type": "ellipse",
+            "x": 150,
+            "y": 360,
+            "width": 200,
+            "height": 120,
+            "fill": {
+              "type": "pattern",
+              "preset": "sphere",
+              "fgColor": "3B82F6",
+              "bgColor": "BFDBFE"
+            },
+            "text": "sphere"
+          },
+          {
+            "type": "ellipse",
+            "x": 400,
+            "y": 360,
+            "width": 200,
+            "height": 120,
+            "fill": {
+              "type": "pattern",
+              "preset": "weave",
+              "fgColor": "F59E0B",
+              "bgColor": "FEF3C7"
+            },
+            "text": "weave"
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -14, "type": "sp", "text": "pct10" },
+          { "index": -13, "type": "sp", "text": "pct25" },
+          { "index": -12, "type": "sp", "text": "pct50" },
+          { "index": -11, "type": "sp", "text": "pct75" },
+          { "index": -10, "type": "sp", "text": "horz" },
+          { "index": -9, "type": "sp", "text": "vert" },
+          { "index": -8, "type": "sp", "text": "cross" },
+          { "index": -7, "type": "sp", "text": "diagCross" },
+          { "index": -6, "type": "sp", "text": "dnDiag" },
+          { "index": -5, "type": "sp", "text": "upDiag" },
+          { "index": -4, "type": "sp", "text": "smCheck" },
+          { "index": -3, "type": "sp", "text": "lgCheck" },
+          { "index": -2, "type": "sp", "text": "sphere" },
+          { "index": -1, "type": "sp", "text": "weave" }
+        ]
+      }
+    ]
+  }
+}

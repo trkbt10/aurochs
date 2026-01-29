@@ -1,0 +1,168 @@
+{
+  "name": "line-dash-all-styles",
+  "description": "Verify all line dash style variations",
+  "tags": ["shape", "line", "dash"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/line-dash-all-styles.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 30,
+            "width": 300,
+            "height": 40,
+            "fill": "FFFFFF",
+            "lineColor": "1F2937",
+            "lineWidth": 3,
+            "lineDash": "solid",
+            "text": "solid"
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 80,
+            "width": 300,
+            "height": 40,
+            "fill": "FFFFFF",
+            "lineColor": "3B82F6",
+            "lineWidth": 3,
+            "lineDash": "dash",
+            "text": "dash"
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 130,
+            "width": 300,
+            "height": 40,
+            "fill": "FFFFFF",
+            "lineColor": "10B981",
+            "lineWidth": 3,
+            "lineDash": "dot",
+            "text": "dot"
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 180,
+            "width": 300,
+            "height": 40,
+            "fill": "FFFFFF",
+            "lineColor": "F59E0B",
+            "lineWidth": 3,
+            "lineDash": "dashDot",
+            "text": "dashDot"
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 230,
+            "width": 300,
+            "height": 40,
+            "fill": "FFFFFF",
+            "lineColor": "EF4444",
+            "lineWidth": 3,
+            "lineDash": "lgDash",
+            "text": "lgDash"
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 280,
+            "width": 300,
+            "height": 40,
+            "fill": "FFFFFF",
+            "lineColor": "8B5CF6",
+            "lineWidth": 3,
+            "lineDash": "lgDashDot",
+            "text": "lgDashDot"
+          },
+          {
+            "type": "rectangle",
+            "x": 400,
+            "y": 30,
+            "width": 300,
+            "height": 40,
+            "fill": "FFFFFF",
+            "lineColor": "EC4899",
+            "lineWidth": 3,
+            "lineDash": "lgDashDotDot",
+            "text": "lgDashDotDot"
+          },
+          {
+            "type": "rectangle",
+            "x": 400,
+            "y": 80,
+            "width": 300,
+            "height": 40,
+            "fill": "FFFFFF",
+            "lineColor": "06B6D4",
+            "lineWidth": 3,
+            "lineDash": "sysDash",
+            "text": "sysDash"
+          },
+          {
+            "type": "rectangle",
+            "x": 400,
+            "y": 130,
+            "width": 300,
+            "height": 40,
+            "fill": "FFFFFF",
+            "lineColor": "84CC16",
+            "lineWidth": 3,
+            "lineDash": "sysDot",
+            "text": "sysDot"
+          },
+          {
+            "type": "rectangle",
+            "x": 400,
+            "y": 180,
+            "width": 300,
+            "height": 40,
+            "fill": "FFFFFF",
+            "lineColor": "F97316",
+            "lineWidth": 3,
+            "lineDash": "sysDashDot",
+            "text": "sysDashDot"
+          },
+          {
+            "type": "rectangle",
+            "x": 400,
+            "y": 230,
+            "width": 300,
+            "height": 40,
+            "fill": "FFFFFF",
+            "lineColor": "14B8A6",
+            "lineWidth": 3,
+            "lineDash": "sysDashDotDot",
+            "text": "sysDashDotDot"
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -11, "type": "sp", "text": "solid" },
+          { "index": -10, "type": "sp", "text": "dash" },
+          { "index": -9, "type": "sp", "text": "dot" },
+          { "index": -8, "type": "sp", "text": "dashDot" },
+          { "index": -7, "type": "sp", "text": "lgDash" },
+          { "index": -6, "type": "sp", "text": "lgDashDot" },
+          { "index": -5, "type": "sp", "text": "lgDashDotDot" },
+          { "index": -4, "type": "sp", "text": "sysDash" },
+          { "index": -3, "type": "sp", "text": "sysDot" },
+          { "index": -2, "type": "sp", "text": "sysDashDot" },
+          { "index": -1, "type": "sp", "text": "sysDashDotDot" }
+        ]
+      }
+    ]
+  }
+}

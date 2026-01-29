@@ -1,0 +1,133 @@
+{
+  "name": "text-numbered-lists",
+  "description": "Verify numbered list styles (auto-numbering)",
+  "tags": ["text", "bullet", "numbered"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/text-numbered-lists.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 50,
+            "width": 350,
+            "height": 180,
+            "fill": "FFFFFF",
+            "text": [
+              {
+                "runs": [{ "text": "Arabic Period (1. 2. 3.)", "fontSize": 18 }],
+                "bullet": { "type": "autoNum", "autoNumType": "arabicPeriod" }
+              },
+              {
+                "runs": [{ "text": "First item", "fontSize": 18 }],
+                "bullet": { "type": "autoNum", "autoNumType": "arabicPeriod" }
+              },
+              {
+                "runs": [{ "text": "Second item", "fontSize": 18 }],
+                "bullet": { "type": "autoNum", "autoNumType": "arabicPeriod" }
+              },
+              {
+                "runs": [{ "text": "Third item", "fontSize": 18 }],
+                "bullet": { "type": "autoNum", "autoNumType": "arabicPeriod" }
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 420,
+            "y": 50,
+            "width": 350,
+            "height": 180,
+            "fill": "F3F4F6",
+            "text": [
+              {
+                "runs": [{ "text": "Arabic Paren Right (1) 2) 3))", "fontSize": 18 }],
+                "bullet": { "type": "autoNum", "autoNumType": "arabicParenR" }
+              },
+              {
+                "runs": [{ "text": "Item one", "fontSize": 18 }],
+                "bullet": { "type": "autoNum", "autoNumType": "arabicParenR" }
+              },
+              {
+                "runs": [{ "text": "Item two", "fontSize": 18 }],
+                "bullet": { "type": "autoNum", "autoNumType": "arabicParenR" }
+              },
+              {
+                "runs": [{ "text": "Item three", "fontSize": 18 }],
+                "bullet": { "type": "autoNum", "autoNumType": "arabicParenR" }
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 250,
+            "width": 350,
+            "height": 180,
+            "fill": "E5E7EB",
+            "text": [
+              {
+                "runs": [{ "text": "Roman Upper Period (I. II. III.)", "fontSize": 18 }],
+                "bullet": { "type": "autoNum", "autoNumType": "romanUcPeriod" }
+              },
+              {
+                "runs": [{ "text": "Section one", "fontSize": 18 }],
+                "bullet": { "type": "autoNum", "autoNumType": "romanUcPeriod" }
+              },
+              {
+                "runs": [{ "text": "Section two", "fontSize": 18 }],
+                "bullet": { "type": "autoNum", "autoNumType": "romanUcPeriod" }
+              },
+              {
+                "runs": [{ "text": "Section three", "fontSize": 18 }],
+                "bullet": { "type": "autoNum", "autoNumType": "romanUcPeriod" }
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 420,
+            "y": 250,
+            "width": 350,
+            "height": 180,
+            "fill": "D1D5DB",
+            "text": [
+              {
+                "runs": [{ "text": "Alpha Lower Period (a. b. c.)", "fontSize": 18 }],
+                "bullet": { "type": "autoNum", "autoNumType": "alphaLcPeriod" }
+              },
+              {
+                "runs": [{ "text": "Option alpha", "fontSize": 18 }],
+                "bullet": { "type": "autoNum", "autoNumType": "alphaLcPeriod" }
+              },
+              {
+                "runs": [{ "text": "Option beta", "fontSize": 18 }],
+                "bullet": { "type": "autoNum", "autoNumType": "alphaLcPeriod" }
+              },
+              {
+                "runs": [{ "text": "Option gamma", "fontSize": 18 }],
+                "bullet": { "type": "autoNum", "autoNumType": "alphaLcPeriod" }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -4, "type": "sp", "text": "Arabic Period (1. 2. 3.)\nFirst item\nSecond item\nThird item" },
+          { "index": -3, "type": "sp", "text": "Arabic Paren Right (1) 2) 3))\nItem one\nItem two\nItem three" },
+          { "index": -2, "type": "sp", "text": "Roman Upper Period (I. II. III.)\nSection one\nSection two\nSection three" },
+          { "index": -1, "type": "sp", "text": "Alpha Lower Period (a. b. c.)\nOption alpha\nOption beta\nOption gamma" }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,145 @@
+{
+  "name": "line-cap-join",
+  "description": "Verify line cap and join style variations",
+  "tags": ["shape", "line", "cap", "join"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/line-cap-join.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 50,
+            "width": 200,
+            "height": 80,
+            "fill": "FFFFFF",
+            "lineColor": "3B82F6",
+            "lineWidth": 8,
+            "lineCap": "flat",
+            "text": "Cap: flat"
+          },
+          {
+            "type": "rectangle",
+            "x": 280,
+            "y": 50,
+            "width": 200,
+            "height": 80,
+            "fill": "FFFFFF",
+            "lineColor": "10B981",
+            "lineWidth": 8,
+            "lineCap": "round",
+            "text": "Cap: round"
+          },
+          {
+            "type": "rectangle",
+            "x": 510,
+            "y": 50,
+            "width": 200,
+            "height": 80,
+            "fill": "FFFFFF",
+            "lineColor": "F59E0B",
+            "lineWidth": 8,
+            "lineCap": "square",
+            "text": "Cap: square"
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 170,
+            "width": 200,
+            "height": 80,
+            "fill": "F3F4F6",
+            "lineColor": "EF4444",
+            "lineWidth": 6,
+            "lineJoin": "bevel",
+            "text": "Join: bevel"
+          },
+          {
+            "type": "rectangle",
+            "x": 280,
+            "y": 170,
+            "width": 200,
+            "height": 80,
+            "fill": "F3F4F6",
+            "lineColor": "8B5CF6",
+            "lineWidth": 6,
+            "lineJoin": "miter",
+            "text": "Join: miter"
+          },
+          {
+            "type": "rectangle",
+            "x": 510,
+            "y": 170,
+            "width": 200,
+            "height": 80,
+            "fill": "F3F4F6",
+            "lineColor": "EC4899",
+            "lineWidth": 6,
+            "lineJoin": "round",
+            "text": "Join: round"
+          },
+          {
+            "type": "star5",
+            "x": 100,
+            "y": 300,
+            "width": 150,
+            "height": 150,
+            "fill": "FACC15",
+            "lineColor": "1F2937",
+            "lineWidth": 5,
+            "lineCap": "round",
+            "lineJoin": "round",
+            "text": "Round"
+          },
+          {
+            "type": "star5",
+            "x": 300,
+            "y": 300,
+            "width": 150,
+            "height": 150,
+            "fill": "06B6D4",
+            "lineColor": "1F2937",
+            "lineWidth": 5,
+            "lineCap": "flat",
+            "lineJoin": "miter",
+            "text": "Miter"
+          },
+          {
+            "type": "star5",
+            "x": 500,
+            "y": 300,
+            "width": 150,
+            "height": 150,
+            "fill": "84CC16",
+            "lineColor": "1F2937",
+            "lineWidth": 5,
+            "lineCap": "square",
+            "lineJoin": "bevel",
+            "text": "Bevel"
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -9, "type": "sp", "text": "Cap: flat" },
+          { "index": -8, "type": "sp", "text": "Cap: round" },
+          { "index": -7, "type": "sp", "text": "Cap: square" },
+          { "index": -6, "type": "sp", "text": "Join: bevel" },
+          { "index": -5, "type": "sp", "text": "Join: miter" },
+          { "index": -4, "type": "sp", "text": "Join: round" },
+          { "index": -3, "type": "sp", "text": "Round" },
+          { "index": -2, "type": "sp", "text": "Miter" },
+          { "index": -1, "type": "sp", "text": "Bevel" }
+        ]
+      }
+    ]
+  }
+}

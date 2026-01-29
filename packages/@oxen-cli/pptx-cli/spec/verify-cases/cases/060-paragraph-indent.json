@@ -1,0 +1,92 @@
+{
+  "name": "paragraph-indent",
+  "description": "Verify paragraph indentation (first-line indent and left margin)",
+  "tags": ["text", "paragraph", "indent"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/paragraph-indent.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 50,
+            "width": 500,
+            "height": 120,
+            "fill": "FFFFFF",
+            "text": [
+              {
+                "runs": [{ "text": "No indentation - baseline paragraph", "fontSize": 16 }]
+              },
+              {
+                "runs": [{ "text": "First-line indent (20px) - This is a paragraph with the first line indented.", "fontSize": 16 }],
+                "indent": 20
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 190,
+            "width": 500,
+            "height": 120,
+            "fill": "F3F4F6",
+            "text": [
+              {
+                "runs": [{ "text": "Left margin (30px)", "fontSize": 16 }],
+                "marginLeft": 30
+              },
+              {
+                "runs": [{ "text": "Left margin (60px)", "fontSize": 16 }],
+                "marginLeft": 60
+              },
+              {
+                "runs": [{ "text": "Left margin (90px)", "fontSize": 16 }],
+                "marginLeft": 90
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 330,
+            "width": 500,
+            "height": 150,
+            "fill": "E5E7EB",
+            "text": [
+              {
+                "runs": [{ "text": "Combined: margin + indent + spacing", "fontSize": 16, "bold": true }]
+              },
+              {
+                "runs": [{ "text": "This paragraph has left margin (40px), first-line indent (25px), and space before (10pt).", "fontSize": 14 }],
+                "marginLeft": 40,
+                "indent": 25,
+                "spaceBefore": 10
+              },
+              {
+                "runs": [{ "text": "Another indented paragraph with the same formatting.", "fontSize": 14 }],
+                "marginLeft": 40,
+                "indent": 25,
+                "spaceBefore": 10
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -3, "type": "sp", "text": "No indentation - baseline paragraph\nFirst-line indent (20px) - This is a paragraph with the first line indented." },
+          { "index": -2, "type": "sp", "text": "Left margin (30px)\nLeft margin (60px)\nLeft margin (90px)" },
+          { "index": -1, "type": "sp", "text": "Combined: margin + indent + spacing\nThis paragraph has left margin (40px), first-line indent (25px), and space before (10pt).\nAnother indented paragraph with the same formatting." }
+        ]
+      }
+    ]
+  }
+}

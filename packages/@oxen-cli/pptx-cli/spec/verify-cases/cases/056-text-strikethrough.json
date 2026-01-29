@@ -1,0 +1,84 @@
+{
+  "name": "text-strikethrough",
+  "description": "Verify text with strikethrough styling",
+  "tags": ["text", "strikethrough"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/text-strikethrough.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 50,
+            "width": 400,
+            "height": 80,
+            "fill": "FFFFFF",
+            "text": [
+              {
+                "runs": [
+                  {
+                    "text": "Single Strikethrough",
+                    "fontSize": 28,
+                    "strikethrough": "single"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 150,
+            "width": 400,
+            "height": 80,
+            "fill": "FFFFFF",
+            "text": [
+              {
+                "runs": [
+                  {
+                    "text": "Double Strikethrough",
+                    "fontSize": 28,
+                    "strikethrough": "double"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 250,
+            "width": 500,
+            "height": 80,
+            "fill": "F3F4F6",
+            "text": [
+              {
+                "runs": [
+                  { "text": "Was: ", "fontSize": 24 },
+                  { "text": "$199.99", "fontSize": 24, "color": "999999", "strikethrough": "single" },
+                  { "text": "  Now: ", "fontSize": 24 },
+                  { "text": "$99.99", "fontSize": 24, "bold": true, "color": "DC2626" }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -3, "type": "sp", "text": "Single Strikethrough" },
+          { "index": -2, "type": "sp", "text": "Double Strikethrough" },
+          { "index": -1, "type": "sp", "text": "Was: $199.99  Now: $99.99" }
+        ]
+      }
+    ]
+  }
+}

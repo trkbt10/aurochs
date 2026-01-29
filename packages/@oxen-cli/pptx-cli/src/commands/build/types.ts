@@ -294,6 +294,17 @@ export type UnderlineStyle = "none" | "single" | "double" | "heavy" | "dotted" |
 export type StrikeStyle = "none" | "single" | "double";
 
 /**
+ * Text capitalization style
+ * Based on ECMA-376 Part 1: §21.1.2.1.6 ST_TextCapsType
+ */
+export type TextCapsStyle = "none" | "small" | "all";
+
+/**
+ * Text vertical position (superscript/subscript)
+ */
+export type TextVerticalPosition = "normal" | "superscript" | "subscript";
+
+/**
  * Bullet type
  */
 export type BulletType = "none" | "char" | "autoNum";
@@ -332,12 +343,22 @@ export type TextRunSpec = {
   readonly italic?: boolean;
   readonly underline?: UnderlineStyle;
   readonly strikethrough?: StrikeStyle;
+  readonly caps?: TextCapsStyle; // all caps, small caps
+  readonly verticalPosition?: TextVerticalPosition; // superscript, subscript
+  readonly letterSpacing?: number; // in pixels (can be negative)
   readonly fontSize?: number; // in points
   readonly fontFamily?: string;
   readonly color?: string; // hex color
   readonly outline?: TextOutlineSpec; // text stroke
   readonly effects?: TextEffectSpec;
 };
+
+/**
+ * Line spacing specification
+ */
+export type LineSpacingSpec =
+  | { readonly type: "percent"; readonly value: number } // e.g., 150 for 1.5x
+  | { readonly type: "points"; readonly value: number }; // e.g., 18 for 18pt
 
 /**
  * Text paragraph specification
@@ -347,6 +368,11 @@ export type TextParagraphSpec = {
   readonly alignment?: TextAlignment;
   readonly bullet?: BulletSpec;
   readonly level?: number; // indent level (0-8)
+  readonly lineSpacing?: LineSpacingSpec; // line height
+  readonly spaceBefore?: number; // points before paragraph
+  readonly spaceAfter?: number; // points after paragraph
+  readonly indent?: number; // first line indent in pixels
+  readonly marginLeft?: number; // left margin in pixels
 };
 
 /**

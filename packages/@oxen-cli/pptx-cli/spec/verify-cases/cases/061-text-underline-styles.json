@@ -1,0 +1,121 @@
+{
+  "name": "text-underline-styles",
+  "description": "Verify different underline text styles",
+  "tags": ["text", "underline"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/text-underline-styles.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 50,
+            "width": 400,
+            "height": 60,
+            "fill": "FFFFFF",
+            "text": [
+              {
+                "runs": [
+                  { "text": "Single Underline", "fontSize": 24, "underline": "single" }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 120,
+            "width": 400,
+            "height": 60,
+            "fill": "FFFFFF",
+            "text": [
+              {
+                "runs": [
+                  { "text": "Double Underline", "fontSize": 24, "underline": "double" }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 190,
+            "width": 400,
+            "height": 60,
+            "fill": "FFFFFF",
+            "text": [
+              {
+                "runs": [
+                  { "text": "Heavy Underline", "fontSize": 24, "underline": "heavy" }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 260,
+            "width": 400,
+            "height": 60,
+            "fill": "F3F4F6",
+            "text": [
+              {
+                "runs": [
+                  { "text": "Dotted Underline", "fontSize": 24, "underline": "dotted" }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 330,
+            "width": 400,
+            "height": 60,
+            "fill": "F3F4F6",
+            "text": [
+              {
+                "runs": [
+                  { "text": "Dashed Underline", "fontSize": 24, "underline": "dashed" }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 400,
+            "width": 400,
+            "height": 60,
+            "fill": "E5E7EB",
+            "text": [
+              {
+                "runs": [
+                  { "text": "Wavy Underline", "fontSize": 24, "underline": "wavy" }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -6, "type": "sp", "text": "Single Underline" },
+          { "index": -5, "type": "sp", "text": "Double Underline" },
+          { "index": -4, "type": "sp", "text": "Heavy Underline" },
+          { "index": -3, "type": "sp", "text": "Dotted Underline" },
+          { "index": -2, "type": "sp", "text": "Dashed Underline" },
+          { "index": -1, "type": "sp", "text": "Wavy Underline" }
+        ]
+      }
+    ]
+  }
+}

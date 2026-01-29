@@ -1,0 +1,98 @@
+{
+  "name": "text-superscript-subscript",
+  "description": "Verify text with superscript and subscript formatting",
+  "tags": ["text", "superscript", "subscript"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/text-superscript-subscript.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 50,
+            "width": 400,
+            "height": 80,
+            "fill": "FFFFFF",
+            "text": [
+              {
+                "runs": [
+                  { "text": "E = mc", "fontSize": 32 },
+                  { "text": "2", "fontSize": 24, "verticalPosition": "superscript" }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 150,
+            "width": 400,
+            "height": 80,
+            "fill": "FFFFFF",
+            "text": [
+              {
+                "runs": [
+                  { "text": "H", "fontSize": 32 },
+                  { "text": "2", "fontSize": 24, "verticalPosition": "subscript" },
+                  { "text": "O", "fontSize": 32 }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 250,
+            "width": 500,
+            "height": 80,
+            "fill": "F3F4F6",
+            "text": [
+              {
+                "runs": [
+                  { "text": "10", "fontSize": 28 },
+                  { "text": "th", "fontSize": 20, "verticalPosition": "superscript" },
+                  { "text": " Anniversary Edition", "fontSize": 28 }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 350,
+            "width": 400,
+            "height": 80,
+            "fill": "FFFFFF",
+            "text": [
+              {
+                "runs": [
+                  { "text": "CO", "fontSize": 32 },
+                  { "text": "2", "fontSize": 24, "verticalPosition": "subscript" },
+                  { "text": " + H", "fontSize": 32 },
+                  { "text": "2", "fontSize": 24, "verticalPosition": "subscript" },
+                  { "text": "O", "fontSize": 32 }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -4, "type": "sp", "text": "E = mc2" },
+          { "index": -3, "type": "sp", "text": "H2O" },
+          { "index": -2, "type": "sp", "text": "10th Anniversary Edition" },
+          { "index": -1, "type": "sp", "text": "CO2 + H2O" }
+        ]
+      }
+    ]
+  }
+}
