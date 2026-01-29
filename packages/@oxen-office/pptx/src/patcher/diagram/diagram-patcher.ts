@@ -58,12 +58,14 @@ function patchPointText(pt: XmlElement, text: string): XmlElement {
   return setChildren(pt, [...pt.children, nextT]);
 }
 
-function addConnection(
-  cxnLst: XmlElement,
-  srcId: string,
-  destId: string,
-  connectionType: string,
-): XmlElement {
+type AddConnectionOptions = {
+  readonly cxnLst: XmlElement;
+  readonly srcId: string;
+  readonly destId: string;
+  readonly connectionType: string;
+};
+
+function addConnection({ cxnLst, srcId, destId, connectionType }: AddConnectionOptions): XmlElement {
   const existing = getChildren(cxnLst, "dgm:cxn").some(
     (cxn) => cxn.attrs.srcId === srcId && cxn.attrs.destId === destId && cxn.attrs.type === connectionType,
   );
@@ -127,7 +129,14 @@ export function patchDiagramNodeText(dataXml: XmlDocument, nodeId: string, text:
   });
 }
 
-function addDiagramNode(dataXml: XmlDocument, parentId: string, nodeId: string, text: string): XmlDocument {
+type AddDiagramNodeOptions = {
+  readonly dataXml: XmlDocument;
+  readonly parentId: string;
+  readonly nodeId: string;
+  readonly text: string;
+};
+
+function addDiagramNode({ dataXml, parentId, nodeId, text }: AddDiagramNodeOptions): XmlDocument {
   if (!parentId) {
     throw new Error("addNode: parentId is required");
   }
@@ -153,7 +162,7 @@ function addDiagramNode(dataXml: XmlDocument, parentId: string, nodeId: string, 
 
     const pt = createElement("dgm:pt", { modelId: nodeId, type: "node" }, [createDiagramText(text)]);
     const nextPtLst = setChildren(ptLst, [...ptLst.children, pt]);
-    const nextCxnLst = addConnection(cxnLst, parentId, nodeId, "parOf");
+    const nextCxnLst = addConnection({ cxnLst, srcId: parentId, destId: nodeId, connectionType: "parOf" });
 
     const nextChildren: XmlNode[] = dataModel.children.map((c) => {
       if (!isXmlElement(c)) {
@@ -220,12 +229,14 @@ function removeDiagramNode(dataXml: XmlDocument, nodeId: string): XmlDocument {
   });
 }
 
-function setDiagramConnection(
-  dataXml: XmlDocument,
-  srcId: string,
-  destId: string,
-  connectionType: string,
-): XmlDocument {
+type SetDiagramConnectionOptions = {
+  readonly dataXml: XmlDocument;
+  readonly srcId: string;
+  readonly destId: string;
+  readonly connectionType: string;
+};
+
+function setDiagramConnection({ dataXml, srcId, destId, connectionType }: SetDiagramConnectionOptions): XmlDocument {
   if (!srcId || !destId) {
     throw new Error("setConnection: srcId and destId are required");
   }
@@ -244,7 +255,7 @@ function setDiagramConnection(
     }
 
     const cxnLst = getChild(dataModel, "dgm:cxnLst") ?? createElement("dgm:cxnLst");
-    const nextCxnLst = addConnection(cxnLst, srcId, destId, connectionType);
+    const nextCxnLst = addConnection({ cxnLst, srcId, destId, connectionType });
 
     const hasCxnLst = getChild(dataModel, "dgm:cxnLst") !== undefined;
     if (hasCxnLst) {
@@ -273,13 +284,13 @@ export function patchDiagram(diagramFiles: DiagramFiles, changes: readonly Diagr
         nextData = patchDiagramNodeText(nextData, change.nodeId, change.text);
         break;
       case "addNode":
-        nextData = addDiagramNode(nextData, change.parentId, change.nodeId, change.text);
+        nextData = addDiagramNode({ dataXml: nextData, parentId: change.parentId, nodeId: change.nodeId, text: change.text });
         break;
       case "removeNode":
         nextData = removeDiagramNode(nextData, change.nodeId);
         break;
       case "setConnection":
-        nextData = setDiagramConnection(nextData, change.srcId, change.destId, change.connectionType);
+        nextData = setDiagramConnection({ dataXml: nextData, srcId: change.srcId, destId: change.destId, connectionType: change.connectionType });
         break;
       default:
         ((_: never) => _)(change);

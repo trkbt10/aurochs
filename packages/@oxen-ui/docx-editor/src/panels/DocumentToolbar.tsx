@@ -65,11 +65,14 @@ function getParagraphAtIndex(document: DocxDocument, index: number): DocxParagra
 }
 
 function getSelectedParagraph(
-  document: DocxDocument,
-  selectionMode: "element" | "text",
-  elementPrimaryId: string | undefined,
-  textParagraphIndex: number | undefined,
+  ...args: [
+    document: DocxDocument,
+    selectionMode: "element" | "text",
+    elementPrimaryId: string | undefined,
+    textParagraphIndex: number | undefined,
+  ]
 ): DocxParagraph | undefined {
+  const [document, selectionMode, elementPrimaryId, textParagraphIndex] = args;
   if (selectionMode === "text") {
     return typeof textParagraphIndex === "number" ? getParagraphAtIndex(document, textParagraphIndex) : undefined;
   }
@@ -82,6 +85,31 @@ function getSelectedParagraph(
     return undefined;
   }
   return getParagraphAtIndex(document, index);
+}
+
+type ParagraphAlignment = "left" | "center" | "right" | "both";
+
+function getParagraphAlignment(paragraph: DocxParagraph | undefined): ParagraphAlignment | undefined {
+  const jc = paragraph?.properties?.jc;
+  if (jc === "left" || jc === "center" || jc === "right" || jc === "both") {
+    return jc;
+  }
+  return undefined;
+}
+
+function getRunPropertiesForSelection(args: {
+  paragraph: DocxParagraph | undefined;
+  selectionMode: "element" | "text";
+  charOffset: number | undefined;
+}): DocxRunProperties | undefined {
+  const { paragraph, selectionMode, charOffset } = args;
+  if (!paragraph) {
+    return undefined;
+  }
+  if (selectionMode === "text") {
+    return getRunPropertiesAtPosition(paragraph, charOffset ?? 0);
+  }
+  return getRunPropertiesAtPosition(paragraph, 0);
 }
 
 function getNumberFormatForParagraph(
@@ -126,27 +154,20 @@ function useToolbarState(): ToolbarState {
     const canEdit = editorMode === "editing";
 
     const textPosition = selection.text.cursor ?? selection.text.range?.start;
-    const paragraph = getSelectedParagraph(
-      document,
-      selection.mode,
-      selection.element.primaryId,
-      textPosition?.paragraphIndex,
-    );
+	    const paragraph = getSelectedParagraph(
+	      document,
+	      selection.mode,
+	      selection.element.primaryId,
+	      textPosition?.paragraphIndex,
+	    );
 
-    const runProperties =
-      paragraph && selection.mode === "text"
-        ? getRunPropertiesAtPosition(paragraph, textPosition?.charOffset ?? 0)
-        : paragraph
-          ? getRunPropertiesAtPosition(paragraph, 0)
-          : undefined;
+	    const runProperties = getRunPropertiesForSelection({
+	      paragraph,
+	      selectionMode: selection.mode,
+	      charOffset: textPosition?.charOffset,
+	    });
 
-    const paragraphAlignment =
-      paragraph?.properties?.jc === "left" ||
-      paragraph?.properties?.jc === "center" ||
-      paragraph?.properties?.jc === "right" ||
-      paragraph?.properties?.jc === "both"
-        ? paragraph.properties.jc
-        : undefined;
+	    const paragraphAlignment = getParagraphAlignment(paragraph);
 
     const listFormat = getNumberFormatForParagraph(document, paragraph?.properties?.numPr);
 

@@ -178,13 +178,6 @@ function resolveParagraphSpacing(
   return pt((defaultFontSize as number) * ((spacing.value as number) / 100));
 }
 
-function resolveAlpha(transform: Color["transform"] | undefined): number {
-  if (transform?.alpha !== undefined) {
-    return transform.alpha / 100;
-  }
-  return 1;
-}
-
 function resolveBulletColor(
   bulletStyle: BulletStyle,
   colorContext: ColorContext
@@ -196,15 +189,18 @@ function resolveBulletColor(
 }
 
 function resolveBulletConfig(
-  hasVisibleText: boolean,
-  bulletStyle: BulletStyle | undefined,
-  defaultFontSize: Points,
-  colorContext: ColorContext,
-  fontScheme: FontScheme | undefined,
-  textFontFamily: string,
-  autoNumberIndex: number,
-  resourceResolver?: ResourceResolver,
+  ...args: [
+    hasVisibleText: boolean,
+    bulletStyle: BulletStyle | undefined,
+    defaultFontSize: Points,
+    colorContext: ColorContext,
+    fontScheme: FontScheme | undefined,
+    textFontFamily: string,
+    autoNumberIndex: number,
+    resourceResolver?: ResourceResolver,
+  ]
 ): BulletConfig | undefined {
+  const [hasVisibleText, bulletStyle, defaultFontSize, colorContext, fontScheme, textFontFamily, autoNumberIndex, resourceResolver] = args;
   if (hasVisibleText) {
     return toBulletConfig(
       bulletStyle,
@@ -571,11 +567,14 @@ function toTextOutlineConfig(
  * @see ECMA-376 Part 1, Section 21.1.2.3.13 (a:r)
  */
 function textRunToSpan(
-  run: TextRun,
-  colorContext: ColorContext,
-  fontScheme: FontScheme | undefined,
-  resourceResolver?: ResourceResolver,
+  ...args: [
+    run: TextRun,
+    colorContext: ColorContext,
+    fontScheme: FontScheme | undefined,
+    resourceResolver?: ResourceResolver,
+  ]
 ): LayoutSpan {
+  const [run, colorContext, fontScheme, resourceResolver] = args;
   const props = resolveRunProperties(run.properties, colorContext, fontScheme);
 
   // Resolve text outline (a:ln on a:rPr)
@@ -651,14 +650,17 @@ function getAutoNumberChar(bullet: AutoNumberBullet, index: number): string {
  * @see ECMA-376 Part 1, Section 21.1.2.4 (Bullet properties)
  */
 function toBulletConfig(
-  bulletStyle: BulletStyle | undefined,
-  defaultFontSize: Points,
-  colorContext: ColorContext,
-  fontScheme: FontScheme | undefined,
-  textFontFamily: string,
-  autoNumberIndex: number,
-  resourceResolver?: ResourceResolver,
+  ...args: [
+    bulletStyle: BulletStyle | undefined,
+    defaultFontSize: Points,
+    colorContext: ColorContext,
+    fontScheme: FontScheme | undefined,
+    textFontFamily: string,
+    autoNumberIndex: number,
+    resourceResolver?: ResourceResolver,
+  ]
 ): BulletConfig | undefined {
+  const [bulletStyle, defaultFontSize, colorContext, fontScheme, textFontFamily, autoNumberIndex, resourceResolver] = args;
   if (bulletStyle === undefined) {
     return undefined;
   }
@@ -728,12 +730,15 @@ function toBulletConfig(
  * @returns LayoutParagraphInput for the layout engine
  */
 function paragraphToInput(
-  para: Paragraph,
-  colorContext: ColorContext,
-  fontScheme: FontScheme | undefined,
-  autoNumberIndex: number,
-  resourceResolver?: ResourceResolver,
+  ...args: [
+    para: Paragraph,
+    colorContext: ColorContext,
+    fontScheme: FontScheme | undefined,
+    autoNumberIndex: number,
+    resourceResolver?: ResourceResolver,
+  ]
 ): LayoutParagraphInput {
+  const [para, colorContext, fontScheme, autoNumberIndex, resourceResolver] = args;
   const { properties } = para;
 
   // Convert runs to spans

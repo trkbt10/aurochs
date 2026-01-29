@@ -14,6 +14,24 @@ import { parsePercentage100k, parseTextSpacingPoint } from "../../primitive";
 import { TYPE_TO_MASTER_STYLE } from "./constants";
 import { lookupPlaceholder } from "./placeholder";
 
+type SpacingResolutionContext = {
+  readonly directPPr: XmlElement | undefined;
+  readonly localLstStyle: XmlElement | undefined;
+  readonly lvl: number;
+  readonly ctx: TextStyleContext | undefined;
+};
+
+type GetSpacingFromMasterTextStylesOptions = {
+  readonly masterTextStyles: MasterTextStyles | undefined;
+  readonly placeholderType: string | undefined;
+  readonly lvl: number;
+  readonly spacingType: "a:spcBef" | "a:spcAft" | "a:lnSpc";
+};
+
+type ResolveSpacingOptions = SpacingResolutionContext & {
+  readonly spacingType: "a:spcBef" | "a:spcAft" | "a:lnSpc";
+};
+
 /**
  * Parse line spacing from spacing element (a:spcBef, a:spcAft, a:lnSpc).
  *
@@ -89,10 +107,7 @@ function getSpacingFromPlaceholder(
  * Get spacing from master text styles.
  */
 function getSpacingFromMasterTextStyles(
-  masterTextStyles: MasterTextStyles | undefined,
-  placeholderType: string | undefined,
-  lvl: number,
-  spacingType: "a:spcBef" | "a:spcAft" | "a:lnSpc",
+  { masterTextStyles, placeholderType, lvl, spacingType }: GetSpacingFromMasterTextStylesOptions,
 ): LineSpacing | undefined {
   if (masterTextStyles === undefined || placeholderType === undefined) {
     return undefined;
@@ -132,11 +147,7 @@ function getSpacingFromMasterTextStyles(
  * @see ECMA-376 Part 1, Section 21.1.2.2.5 (a:lnSpc)
  */
 function resolveSpacing(
-  directPPr: XmlElement | undefined,
-  localLstStyle: XmlElement | undefined,
-  lvl: number,
-  ctx: TextStyleContext | undefined,
-  spacingType: "a:spcBef" | "a:spcAft" | "a:lnSpc",
+  { directPPr, localLstStyle, lvl, ctx, spacingType }: ResolveSpacingOptions,
 ): LineSpacing | undefined {
   // Use 1-based level for lstStyle lookup
   const lvlKey = lvl + 1;
@@ -182,10 +193,7 @@ function resolveSpacing(
 
   // 5. Master text styles
   const masterStyleSpacing = getSpacingFromMasterTextStyles(
-    ctx.masterTextStyles,
-    ctx.placeholderType,
-    lvlKey,
-    spacingType,
+    { masterTextStyles: ctx.masterTextStyles, placeholderType: ctx.placeholderType, lvl: lvlKey, spacingType },
   );
   if (masterStyleSpacing !== undefined) {
     return masterStyleSpacing;
@@ -210,12 +218,9 @@ function resolveSpacing(
  * @see ECMA-376 Part 1, Section 21.1.2.2.18 (a:spcBef)
  */
 export function resolveSpaceBefore(
-  directPPr: XmlElement | undefined,
-  localLstStyle: XmlElement | undefined,
-  lvl: number,
-  ctx: TextStyleContext | undefined,
+  { directPPr, localLstStyle, lvl, ctx }: SpacingResolutionContext,
 ): LineSpacing | undefined {
-  return resolveSpacing(directPPr, localLstStyle, lvl, ctx, "a:spcBef");
+  return resolveSpacing({ directPPr, localLstStyle, lvl, ctx, spacingType: "a:spcBef" });
 }
 
 /**
@@ -224,12 +229,9 @@ export function resolveSpaceBefore(
  * @see ECMA-376 Part 1, Section 21.1.2.2.19 (a:spcAft)
  */
 export function resolveSpaceAfter(
-  directPPr: XmlElement | undefined,
-  localLstStyle: XmlElement | undefined,
-  lvl: number,
-  ctx: TextStyleContext | undefined,
+  { directPPr, localLstStyle, lvl, ctx }: SpacingResolutionContext,
 ): LineSpacing | undefined {
-  return resolveSpacing(directPPr, localLstStyle, lvl, ctx, "a:spcAft");
+  return resolveSpacing({ directPPr, localLstStyle, lvl, ctx, spacingType: "a:spcAft" });
 }
 
 /**
@@ -238,10 +240,7 @@ export function resolveSpaceAfter(
  * @see ECMA-376 Part 1, Section 21.1.2.2.5 (a:lnSpc)
  */
 export function resolveLineSpacing(
-  directPPr: XmlElement | undefined,
-  localLstStyle: XmlElement | undefined,
-  lvl: number,
-  ctx: TextStyleContext | undefined,
+  { directPPr, localLstStyle, lvl, ctx }: SpacingResolutionContext,
 ): LineSpacing | undefined {
-  return resolveSpacing(directPPr, localLstStyle, lvl, ctx, "a:lnSpc");
+  return resolveSpacing({ directPPr, localLstStyle, lvl, ctx, spacingType: "a:lnSpc" });
 }

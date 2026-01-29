@@ -4,9 +4,9 @@
  * Creates table/chart/diagram frames with default content.
  */
 
-import type { GraphicFrame, Table, TableRow, TableCell, TableColumn, Chart, ChartSeries, CategoryAxis, ValueAxis, DataReference, BarSeries, LineSeries, PieSeries } from "@oxen-office/pptx/domain";
+import type { GraphicFrame, Table, TableRow, TableCell, TableColumn } from "@oxen-office/pptx/domain";
 import type { ShapeId, ResourceId } from "@oxen-office/pptx/domain/types";
-import { deg, pct, px } from "@oxen-office/ooxml/domain/units";
+import { deg, px } from "@oxen-office/ooxml/domain/units";
 import type { CreationChartType, CreationDiagramType } from "../context/presentation/editor/types";
 import type { ShapeBounds } from "../shape/creation-bounds";
 import { type OleType, OLE_TYPE_MAP } from "@oxen-office/pptx/patcher/resources/ole-manager";
@@ -136,7 +136,14 @@ export function createTable(rows: number, cols: number): Table {
 /**
  * Create a table graphic frame
  */
-export function createTableGraphicFrame(id: ShapeId, bounds: ShapeBounds, rows: number, cols: number): GraphicFrame {
+export type CreateTableGraphicFrameOptions = {
+  readonly id: ShapeId;
+  readonly bounds: ShapeBounds;
+  readonly rows: number;
+  readonly cols: number;
+};
+
+export function createTableGraphicFrame({ id, bounds, rows, cols }: CreateTableGraphicFrameOptions): GraphicFrame {
   return {
     type: "graphicFrame",
     nonVisual: {
@@ -161,155 +168,13 @@ export function createTableGraphicFrame(id: ShapeId, bounds: ShapeBounds, rows: 
   };
 }
 
-// =============================================================================
-// Chart Creation
-// =============================================================================
-
-/**
- * Create default chart data for a given chart type
- *
- * Note: Chart structure is complex. This creates a minimal valid chart.
- * Full chart editing will require proper ChartEditor integration.
- */
-function createDefaultChart(chartType: CreationChartType): Chart {
-  const categories = createDefaultChartCategories();
-  const values = createDefaultChartValues();
-  const defaultSeries = createDefaultChartSeries(chartType, categories, values);
-
-  return {
-    plotArea: {
-      charts: [defaultSeries],
-      axes: chartType === "pie" ? [] : [createDefaultCategoryAxis(), createDefaultValueAxis()],
-    },
-    title: {
-      textBody: {
-        bodyProperties: {},
-        paragraphs: [
-          {
-            properties: {},
-            runs: [{ type: "text" as const, text: `New ${chartType} chart` }],
-          },
-        ],
-      },
-    },
-  };
-}
-
-function createDefaultChartCategories(): readonly string[] {
-  return ["A", "B", "C"];
-}
-
-function createDefaultChartValues(): readonly number[] {
-  return [30, 50, 20];
-}
-
-function createDefaultChartSeries(
-  chartType: CreationChartType,
-  categories: readonly string[],
-  values: readonly number[]
-): ChartSeries {
-  const categoriesRef: DataReference = {
-    strRef: {
-      formula: "Sheet1!$A$2:$A$4",
-      cache: {
-        count: categories.length,
-        points: categories.map((value, idx) => ({ idx, value })),
-      },
-    },
-  };
-
-  const valuesRef: DataReference = {
-    numRef: {
-      formula: "Sheet1!$B$2:$B$4",
-      cache: {
-        count: values.length,
-        points: values.map((value, idx) => ({ idx, value })),
-      },
-    },
-  };
-
-  const baseSeries = {
-    idx: 0,
-    order: 0,
-    tx: { value: "Series 1" },
-    categories: categoriesRef,
-    values: valuesRef,
-  };
-
-  if (chartType === "line") {
-    const lineSeries: LineSeries = baseSeries;
-    return {
-      type: "lineChart",
-      index: 0,
-      order: 0,
-      grouping: "standard",
-      marker: true,
-      smooth: false,
-      varyColors: false,
-      series: [lineSeries],
-    };
-  }
-
-  if (chartType === "pie") {
-    const pieSeries: PieSeries = baseSeries;
-    return {
-      type: "pieChart",
-      index: 0,
-      order: 0,
-      varyColors: true,
-      firstSliceAng: deg(0),
-      series: [pieSeries],
-    };
-  }
-
-  const barSeries: BarSeries = baseSeries;
-  return {
-    type: "barChart",
-    index: 0,
-    order: 0,
-    barDir: "col",
-    grouping: "clustered",
-    varyColors: false,
-    gapWidth: pct(150),
-    series: [barSeries],
-  };
-}
-
-function createDefaultCategoryAxis(): CategoryAxis {
-  return {
-    type: "catAx",
-    id: 1,
-    position: "b",
-    orientation: "minMax",
-    majorTickMark: "out",
-    minorTickMark: "none",
-    tickLabelPosition: "nextTo",
-    crossAxisId: 2,
-    crosses: "autoZero",
-  };
-}
-
-function createDefaultValueAxis(): ValueAxis {
-  return {
-    type: "valAx",
-    id: 2,
-    position: "l",
-    orientation: "minMax",
-    majorTickMark: "out",
-    minorTickMark: "none",
-    tickLabelPosition: "nextTo",
-    crossAxisId: 1,
-    crosses: "autoZero",
-  };
-}
-
 /**
  * Create a chart graphic frame
  */
 export function createChartGraphicFrame(
   id: ShapeId,
   bounds: ShapeBounds,
-  chartType: CreationChartType
+  _chartType: CreationChartType
 ): GraphicFrame {
   const chartResourceId = `chart-${id}` as ResourceId;
 
@@ -399,13 +264,15 @@ export function createDiagramGraphicFrame(
  * @param filename - Original filename for naming
  * @returns GraphicFrame with OLE object content
  */
-export function createOleGraphicFrame(
-  id: ShapeId,
-  bounds: ShapeBounds,
-  oleType: OleType,
-  embedData: ArrayBuffer,
-  filename: string,
-): GraphicFrame {
+export type CreateOleGraphicFrameOptions = {
+  readonly id: ShapeId;
+  readonly bounds: ShapeBounds;
+  readonly oleType: OleType;
+  readonly embedData: ArrayBuffer;
+  readonly filename: string;
+};
+
+export function createOleGraphicFrame({ id, bounds, oleType, embedData, filename }: CreateOleGraphicFrameOptions): GraphicFrame {
   const typeInfo = OLE_TYPE_MAP[oleType];
   const objectName = filename.replace(/\.[^/.]+$/, ""); // Remove extension
 

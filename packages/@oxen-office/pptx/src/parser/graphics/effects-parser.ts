@@ -9,6 +9,13 @@
 import type { Color } from "@oxen-office/ooxml/domain/color";
 import type { Effects, EffectContainerKind, AlphaBiLevelEffect, AlphaCeilingEffect, AlphaFloorEffect, AlphaInverseEffect, AlphaModulateEffect, AlphaModulateFixedEffect, AlphaOutsetEffect, AlphaReplaceEffect, BiLevelEffect, BlendEffect, BlendMode, ColorChangeEffect, ColorReplaceEffect, DuotoneEffect, EffectContainer, FillEffectType, FillOverlayEffect, GrayscaleEffect, PresetShadowEffect, PresetShadowValue, RelativeOffsetEffect, GlowEffect, ReflectionEffect, ShadowEffect, SoftEdgeEffect, StyleReference } from "../../domain/index";
 import { px, deg, pct } from "@oxen-office/ooxml/domain/units";
+import {
+  parseGlowEffect as parseGlowEffectShared,
+  parseInnerShadowEffect as parseInnerShadowEffectShared,
+  parseOuterShadowEffect as parseOuterShadowEffectShared,
+  parseReflectionEffect as parseReflectionEffectShared,
+  parseSoftEdgeEffect as parseSoftEdgeEffectShared,
+} from "@oxen-office/ooxml/parser";
 import { getAttr, getChild, type XmlElement } from "@oxen/xml";
 import { parseColor, parseColorFromParent } from "./color-parser";
 import { parseFill } from "./fill-parser";
@@ -16,7 +23,6 @@ import {
   getAngleAttr,
   getBoolAttrOr,
   getEmuAttr,
-  getPercent100kAttr,
   parseFixedPercentage,
   parsePositivePercentage,
   getPercentAttr,
@@ -26,48 +32,8 @@ import {
 // Shadow Parsing
 // =============================================================================
 
-/**
- * Get effect color, applying phClr override when provided.
- *
- * Per ECMA-376, phClr (placeholder color) is replaced with the actual color
- * from the style reference during rendering.
- */
-function getEffectColor(element: XmlElement, overrideColor?: Color): Color | undefined {
-  const color = parseColorFromParent(element);
-  if (!color) {
-    return overrideColor;
-  }
-
-  // phClr (placeholder color) should be replaced with the override color
-  if (color.spec.type === "scheme" && color.spec.value === "phClr" && overrideColor) {
-    return overrideColor;
-  }
-
-  return color;
-}
-
-/**
- * Parse outer shadow effect
- * @see ECMA-376 Part 1, Section 20.1.8.49
- */
 function parseOuterShadow(element: XmlElement, overrideColor?: Color): ShadowEffect | undefined {
-  const color = getEffectColor(element, overrideColor);
-
-  if (!color) {return undefined;}
-
-  return {
-    type: "outer",
-    color,
-    blurRadius: getEmuAttr(element, "blurRad") ?? px(0),
-    distance: getEmuAttr(element, "dist") ?? px(0),
-    direction: getAngleAttr(element, "dir") ?? deg(0),
-    scaleX: getPercent100kAttr(element, "sx"),
-    scaleY: getPercent100kAttr(element, "sy"),
-    skewX: getAngleAttr(element, "kx"),
-    skewY: getAngleAttr(element, "ky"),
-    alignment: getAttr(element, "algn"),
-    rotateWithShape: getBoolAttrOr(element, "rotWithShape", true),
-  };
+  return parseOuterShadowEffectShared(element, overrideColor);
 }
 
 /**
@@ -79,37 +45,11 @@ function parseOuterShadow(element: XmlElement, overrideColor?: Color): ShadowEff
  * @see ECMA-376 Part 1, Section 20.1.8.40
  */
 function parseInnerShadow(element: XmlElement, overrideColor?: Color): ShadowEffect | undefined {
-  const color = getEffectColor(element, overrideColor);
-
-  if (!color) {return undefined;}
-
-  return {
-    type: "inner",
-    color,
-    blurRadius: getEmuAttr(element, "blurRad") ?? px(0),
-    distance: getEmuAttr(element, "dist") ?? px(0),
-    direction: getAngleAttr(element, "dir") ?? deg(0),
-    // innerShdw does NOT have sx/sy/kx/ky/algn/rotWithShape - those are outerShdw only
-  };
+  return parseInnerShadowEffectShared(element, overrideColor);
 }
 
-// =============================================================================
-// Glow Parsing
-// =============================================================================
-
-/**
- * Parse glow effect
- * @see ECMA-376 Part 1, Section 20.1.8.32
- */
 function parseGlow(element: XmlElement, overrideColor?: Color): GlowEffect | undefined {
-  const color = getEffectColor(element, overrideColor);
-
-  if (!color) {return undefined;}
-
-  return {
-    color,
-    radius: getEmuAttr(element, "rad") ?? px(0),
-  };
+  return parseGlowEffectShared(element, overrideColor);
 }
 
 // =============================================================================
@@ -138,22 +78,7 @@ function parseGlow(element: XmlElement, overrideColor?: Color): GlowEffect | und
  * @see ECMA-376 Part 1, Section 20.1.8.50
  */
 function parseReflection(element: XmlElement): ReflectionEffect | undefined {
-  return {
-    blurRadius: getEmuAttr(element, "blurRad") ?? px(0),
-    startOpacity: getPercent100kAttr(element, "stA") ?? pct(100),
-    startPosition: getPercent100kAttr(element, "stPos") ?? pct(0),
-    endOpacity: getPercent100kAttr(element, "endA") ?? pct(0),
-    endPosition: getPercent100kAttr(element, "endPos") ?? pct(100),
-    distance: getEmuAttr(element, "dist") ?? px(0),
-    direction: getAngleAttr(element, "dir") ?? deg(0),
-    fadeDirection: getAngleAttr(element, "fadeDir") ?? deg(90), // ECMA-376 default is 5400000 = 90°
-    scaleX: getPercent100kAttr(element, "sx") ?? pct(100),
-    scaleY: getPercent100kAttr(element, "sy") ?? pct(100),
-    skewX: getAngleAttr(element, "kx"),
-    skewY: getAngleAttr(element, "ky"),
-    alignment: getAttr(element, "algn"),
-    rotateWithShape: getBoolAttrOr(element, "rotWithShape", true),
-  };
+  return parseReflectionEffectShared(element);
 }
 
 // =============================================================================
@@ -165,10 +90,7 @@ function parseReflection(element: XmlElement): ReflectionEffect | undefined {
  * @see ECMA-376 Part 1, Section 20.1.8.53
  */
 function parseSoftEdge(element: XmlElement): SoftEdgeEffect | undefined {
-  const radius = getEmuAttr(element, "rad");
-  if (radius === undefined) {return undefined;}
-
-  return { radius };
+  return parseSoftEdgeEffectShared(element);
 }
 
 // =============================================================================

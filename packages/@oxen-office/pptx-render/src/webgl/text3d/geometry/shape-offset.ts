@@ -14,7 +14,7 @@
  */
 
 import * as THREE from "three";
-import type { Point2D, ShapeData } from "./pure/types";
+import type { ShapeData } from "./pure/types";
 import { point2d, shapeWithHoles } from "./pure/types";
 import {
   expandShapeData,

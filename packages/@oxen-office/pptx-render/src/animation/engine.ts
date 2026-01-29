@@ -360,12 +360,15 @@ function toKebabCase(property: string): string {
  * Animate a single CSS property
  */
 export function animateStyle(
-  el: HTMLElement | SVGElement,
-  property: AnimatableCSSProperty,
-  from: number,
-  to: number,
-  options: Omit<AnimationOptions, "onUpdate"> & { unit?: string }
+  ...args: [
+    el: HTMLElement | SVGElement,
+    property: AnimatableCSSProperty,
+    from: number,
+    to: number,
+    options: Omit<AnimationOptions, "onUpdate"> & { unit?: string },
+  ]
 ): AnimationController {
+  const [el, property, from, to, options] = args;
   const unit = options.unit ?? "";
   const cssProperty = toKebabCase(property);
 
@@ -382,12 +385,15 @@ export function animateStyle(
  * Animate opacity
  */
 export function animateOpacity(
-  el: HTMLElement | SVGElement,
-  from: number,
-  to: number,
-  duration: number,
-  easing?: EasingFn | EasingName
+  ...args: [
+    el: HTMLElement | SVGElement,
+    from: number,
+    to: number,
+    duration: number,
+    easing?: EasingFn | EasingName,
+  ]
 ): AnimationController {
+  const [el, from, to, duration, easing] = args;
   // Set initial value immediately
   el.style.opacity = String(from);
 
@@ -404,15 +410,18 @@ export function animateOpacity(
  * Animate transform (translate)
  */
 export function animateTranslate(
-  el: HTMLElement | SVGElement,
-  fromX: number,
-  fromY: number,
-  toX: number,
-  toY: number,
-  duration: number,
-  easing?: EasingFn | EasingName,
-  unit: string = "%"
+  ...args: [
+    el: HTMLElement | SVGElement,
+    fromX: number,
+    fromY: number,
+    toX: number,
+    toY: number,
+    duration: number,
+    easing?: EasingFn | EasingName,
+    unit?: string,
+  ]
 ): AnimationController {
+  const [el, fromX, fromY, toX, toY, duration, easing, unit = "%"] = args;
   // Set initial value immediately
   el.style.transform = `translate(${fromX}${unit}, ${fromY}${unit})`;
 
@@ -431,12 +440,15 @@ export function animateTranslate(
  * Animate clip-path (inset)
  */
 export function animateClipInset(
-  el: HTMLElement | SVGElement,
-  from: { top: number; right: number; bottom: number; left: number },
-  to: { top: number; right: number; bottom: number; left: number },
-  duration: number,
-  easing?: EasingFn | EasingName
+  ...args: [
+    el: HTMLElement | SVGElement,
+    from: { top: number; right: number; bottom: number; left: number },
+    to: { top: number; right: number; bottom: number; left: number },
+    duration: number,
+    easing?: EasingFn | EasingName,
+  ]
 ): AnimationController {
+  const [el, from, to, duration, easing] = args;
   // Set initial value immediately
   el.style.clipPath = `inset(${from.top}% ${from.right}% ${from.bottom}% ${from.left}%)`;
 

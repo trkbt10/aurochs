@@ -2,7 +2,6 @@
  * @file History tests
  */
 
-import { describe, it, expect } from "vitest";
 import {
   createHistory,
   pushHistory,

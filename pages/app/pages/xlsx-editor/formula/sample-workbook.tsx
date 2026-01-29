@@ -5,6 +5,7 @@
  */
 
 import type { CellAddress } from "@oxen-office/xlsx/domain/cell/address";
+import type { Cell } from "@oxen-office/xlsx/domain/cell/types";
 import { colIdx, rowIdx } from "@oxen-office/xlsx/domain/types";
 import type { XlsxWorkbook } from "@oxen-office/xlsx/domain/workbook";
 import { createDefaultStyleSheet } from "@oxen-office/xlsx/domain/style/types";
@@ -22,7 +23,7 @@ export function createFormulaSampleWorkbook(): XlsxWorkbook {
 
   const rows = Array.from({ length: 10 }, (_, idx) => {
     const r = idx + 1;
-    const cells = [
+    const cells: Cell[] = [
       {
         address: { col: colIdx(1), row: rowIdx(r), colAbsolute: false, rowAbsolute: false },
         value: { type: "number" as const, value: r }, // A{r}
@@ -48,8 +49,10 @@ export function createFormulaSampleWorkbook(): XlsxWorkbook {
   });
 
   return {
+    dateSystem: "1900",
     sheets: [
       {
+        dateSystem: "1900",
         name: "Sheet1",
         sheetId: 1,
         state: "visible",
@@ -58,6 +61,7 @@ export function createFormulaSampleWorkbook(): XlsxWorkbook {
         xmlPath: "xl/worksheets/sheet1.xml",
       },
       {
+        dateSystem: "1900",
         name: "Sheet2",
         sheetId: 2,
         state: "visible",

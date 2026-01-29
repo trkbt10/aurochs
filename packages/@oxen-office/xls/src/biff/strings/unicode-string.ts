@@ -24,20 +24,29 @@ function decodeUtf16Le(bytes: Uint8Array): string {
 
 type OffsetCursor = { offset: number };
 
-function requireAvailable(data: Uint8Array, offset: number, byteLength: number, where: string): void {
+function requireAvailable(
+  ...args: readonly [data: Uint8Array, offset: number, byteLength: number, where: string]
+): void {
+  const [data, offset, byteLength, where] = args;
   if (data.length < offset + byteLength) {
     throw new Error(`Unicode string payload is too short (${where})`);
   }
 }
 
-function readUint16LEAt(view: DataView, cursor: OffsetCursor, data: Uint8Array, where: string): number {
+function readUint16LEAt(
+  ...args: readonly [view: DataView, cursor: OffsetCursor, data: Uint8Array, where: string]
+): number {
+  const [view, cursor, data, where] = args;
   requireAvailable(data, cursor.offset, 2, where);
   const value = view.getUint16(cursor.offset, true);
   cursor.offset += 2;
   return value;
 }
 
-function readUint32LEAt(view: DataView, cursor: OffsetCursor, data: Uint8Array, where: string): number {
+function readUint32LEAt(
+  ...args: readonly [view: DataView, cursor: OffsetCursor, data: Uint8Array, where: string]
+): number {
+  const [view, cursor, data, where] = args;
   requireAvailable(data, cursor.offset, 4, where);
   const value = view.getUint32(cursor.offset, true);
   cursor.offset += 4;

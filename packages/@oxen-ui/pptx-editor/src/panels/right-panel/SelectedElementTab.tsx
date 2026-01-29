@@ -14,7 +14,6 @@ import { PicShapePanel } from "../property/PicShapePanel";
 import { CxnShapePanel } from "../property/CxnShapePanel";
 import { GrpShapePanel } from "../property/GrpShapePanel";
 import { TableFramePanel } from "../property/TableFramePanel";
-import { ChartFramePanel } from "../property/ChartFramePanel";
 import { DiagramFramePanel } from "../property/DiagramFramePanel";
 import { OleFramePanel } from "../property/OleFramePanel";
 import { UnknownShapePanel } from "../property/UnknownShapePanel";

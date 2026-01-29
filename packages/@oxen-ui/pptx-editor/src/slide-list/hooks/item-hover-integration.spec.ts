@@ -5,7 +5,6 @@
  * These tests simulate the actual behavior in a SlideList with multiple items.
  */
 
-import { describe, it, expect } from "vitest";
 import {
   createInitialHoverState,
   hoverReducer,
@@ -41,35 +40,38 @@ function createListState(count: number): ListState {
   };
 }
 
-function mouseEnterSlide(state: ListState, slideId: string): ListState {
+function updateItemHoverState(
+  state: ListState,
+  slideId: string,
+  update: (hoverState: ItemHoverState) => ItemHoverState
+): ListState {
   return {
     ...state,
-    items: state.items.map((item) =>
-      item.id === slideId
-        ? { ...item, hoverState: hoverReducer(item.hoverState, { type: "mouseEnter" }) }
-        : item
-    ),
+    items: state.items.map((item) => {
+      if (item.id !== slideId) {
+        return item;
+      }
+      return { ...item, hoverState: update(item.hoverState) };
+    }),
   };
 }
 
+function mouseEnterSlide(state: ListState, slideId: string): ListState {
+  return updateItemHoverState(state, slideId, (hoverState) => hoverReducer(hoverState, { type: "mouseEnter" }));
+}
+
 function mouseLeaveSlide(state: ListState, slideId: string): ListState {
-  return {
-    ...state,
-    items: state.items.map((item) =>
-      item.id === slideId
-        ? { ...item, hoverState: hoverReducer(item.hoverState, { type: "mouseLeave" }) }
-        : item
-    ),
-  };
+  return updateItemHoverState(state, slideId, (hoverState) => hoverReducer(hoverState, { type: "mouseLeave" }));
 }
 
 function startDragSlide(state: ListState, slideId: string): ListState {
   // First, dragStart action on the dragged item
-  const itemsAfterDragStart = state.items.map((item) =>
-    item.id === slideId
-      ? { ...item, hoverState: hoverReducer(item.hoverState, { type: "dragStart" }) }
-      : item
-  );
+  const itemsAfterDragStart = state.items.map((item) => {
+    if (item.id !== slideId) {
+      return item;
+    }
+    return { ...item, hoverState: hoverReducer(item.hoverState, { type: "dragStart" }) };
+  });
 
   // Then, isAnyDragging becomes true, which should clear ALL hovers
   const itemsAfterDragStateChanged = itemsAfterDragStart.map((item) => ({

@@ -39,11 +39,9 @@ function addr(col: number, row: number): CellAddress {
  * Create a cell range
  */
 function range(
-  startCol: number,
-  startRow: number,
-  endCol: number,
-  endRow: number,
+  ...args: readonly [startCol: number, startRow: number, endCol: number, endRow: number]
 ): CellRange {
+  const [startCol, startRow, endCol, endRow] = args;
   return {
     start: addr(startCol, startRow),
     end: addr(endCol, endRow),

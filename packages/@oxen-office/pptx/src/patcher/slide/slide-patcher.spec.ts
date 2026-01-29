@@ -30,7 +30,10 @@ function createSlideDocument(shapes: XmlElement[]): XmlDocument {
   return { children: [root] };
 }
 
-function createShapeElement(id: string, x = 0, y = 0, width = 100, height = 100): XmlElement {
+type CreateShapeElementArgs = [id: string, x?: number, y?: number, width?: number, height?: number];
+
+function createShapeElement(...args: CreateShapeElementArgs): XmlElement {
+  const [id, x = 0, y = 0, width = 100, height = 100] = args;
   return createElement("p:sp", {}, [
     createElement("p:nvSpPr", {}, [
       createElement("p:cNvPr", { id, name: `Shape ${id}` }),
@@ -162,7 +165,7 @@ describe("patchSlideXml", () => {
       const result = patchSlideXml(doc, changes);
       expect(getShapeById(result, "3")).not.toBeNull();
 
-      const parsed = parseShapeTree(getSpTree(result) ?? undefined);
+      const parsed = parseShapeTree({ spTree: getSpTree(result) ?? undefined });
       const added = parsed.find((s): s is Extract<typeof s, { type: "sp" }> => s.type === "sp" && s.nonVisual.id === "3");
       expect(added?.properties.transform?.x).toBe(px(50));
     });
@@ -182,7 +185,7 @@ describe("patchSlideXml", () => {
       const changes: ShapeChange[] = [{ type: "added", shape }];
 
       const result = patchSlideXml(doc, changes);
-      const parsed = parseShapeTree(getSpTree(result) ?? undefined);
+      const parsed = parseShapeTree({ spTree: getSpTree(result) ?? undefined });
       const added = parsed.find((s): s is Extract<typeof s, { type: "sp" }> => s.type === "sp" && s.nonVisual.id === "3");
       const run = added?.textBody?.paragraphs[0]?.runs[0];
       expect(run && run.type === "text" ? run.text : undefined).toBe("Hello");
@@ -212,12 +215,11 @@ describe("patchSlideXml", () => {
       const updatedGroup = findShapeById(spTree, "10");
       expect(updatedGroup).not.toBeNull();
 
-      const hasChild3 = updatedGroup && updatedGroup.name === "p:grpSp"
-        ? updatedGroup.children.some((c) =>
-            isXmlElement(c) &&
-            c.name === "p:sp" &&
-            getChild(getChild(c, "p:nvSpPr")!, "p:cNvPr")!.attrs.id === "3")
-        : false;
+      const hasChild3 = (updatedGroup?.name === "p:grpSp" &&
+        updatedGroup?.children.some((c) =>
+          isXmlElement(c) &&
+          c.name === "p:sp" &&
+          getChild(getChild(c, "p:nvSpPr")!, "p:cNvPr")!.attrs.id === "3")) ?? false;
       expect(hasChild3).toBe(true);
     });
   });

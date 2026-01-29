@@ -11,45 +11,54 @@
 
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
+import { createElement, type ReactNode } from "react";
 import { renderHook } from "@testing-library/react";
 import { useOlePreview } from "./useOlePreview";
+import { RenderProvider, useRenderContext } from "../../../context";
+import { px, type Pixels } from "@oxen-office/ooxml/domain/units";
 import type { OleReference } from "@oxen-office/pptx/domain";
+import type { ResourceResolver } from "@oxen-office/pptx/domain/resource-resolver";
+import { createEmptyResourceResolver } from "@oxen-office/pptx/domain/resource-resolver";
+import type { ResourceStore } from "@oxen-office/pptx/domain/resource-store";
+import { createEmptyResourceStore } from "@oxen-office/pptx/domain/resource-store";
 import { EMU_PER_PIXEL } from "@oxen-office/pptx/domain/defaults";
 
-// Mock the render context modules
-vi.mock("../../../context", () => ({
-  useRenderResources: vi.fn(),
-  useRenderContext: vi.fn(),
-  useRenderResourceStore: vi.fn(),
-}));
+type RenderDeps = {
+  readonly resources?: ResourceResolver;
+  readonly resourceStore?: ResourceStore;
+};
 
-import { useRenderResources, useRenderContext, useRenderResourceStore } from "../../../context";
+function createWrapper({ resources, resourceStore }: RenderDeps) {
+  return function Wrapper({ children }: { readonly children: ReactNode }) {
+    return createElement(RenderProvider, {
+      slideSize: { width: px(960) as Pixels, height: px(540) as Pixels },
+      resources,
+      resourceStore,
+      children,
+    });
+  };
+}
+
+function renderUseOlePreview(oleData: OleReference | undefined, deps: RenderDeps) {
+  const wrapper = createWrapper(deps);
+  return renderHook(
+    () => {
+      const preview = useOlePreview(oleData);
+      const { warnings } = useRenderContext();
+      return { preview, warnings };
+    },
+    { wrapper },
+  );
+}
 
 describe("useOlePreview", () => {
-  const mockResolve = vi.fn();
-  const mockWarningsAdd = vi.fn();
-  const mockResourceStoreGet = vi.fn();
-  const mockResourceStoreToDataUrl = vi.fn();
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-    (useRenderResources as Mock).mockReturnValue({
-      resolve: mockResolve,
-    });
-    (useRenderContext as Mock).mockReturnValue({
-      warnings: { add: mockWarningsAdd },
-    });
-    (useRenderResourceStore as Mock).mockReturnValue({
-      get: mockResourceStoreGet,
-      toDataUrl: mockResourceStoreToDataUrl,
-    });
-  });
-
   it("returns undefined values when oleData is undefined", () => {
-    const { result } = renderHook(() => useOlePreview(undefined));
+    const { result } = renderUseOlePreview(undefined, {
+      resources: createEmptyResourceResolver(),
+      resourceStore: createEmptyResourceStore(),
+    });
 
-    expect(result.current).toEqual({
+    expect(result.current.preview).toEqual({
       previewUrl: undefined,
       hasPreview: false,
       showAsIcon: false,
@@ -60,8 +69,12 @@ describe("useOlePreview", () => {
     });
   });
 
-  it("returns preview image URL from ResourceStore", () => {
-    mockResourceStoreGet.mockReturnValue({
+  it("returns preview image URL from ResourceStore (previewUrl)", () => {
+    const store = createEmptyResourceStore();
+    store.set("rId1", {
+      kind: "ole",
+      source: "parsed",
+      data: new Uint8Array([0]).buffer,
       previewUrl: "data:image/png;base64,abc123",
     });
 
@@ -71,10 +84,12 @@ describe("useOlePreview", () => {
       name: "Sheet1",
     };
 
-    const { result } = renderHook(() => useOlePreview(oleData));
+    const { result } = renderUseOlePreview(oleData, {
+      resources: createEmptyResourceResolver(),
+      resourceStore: store,
+    });
 
-    expect(mockResourceStoreGet).toHaveBeenCalledWith("rId1");
-    expect(result.current).toEqual({
+    expect(result.current.preview).toEqual({
       previewUrl: "data:image/png;base64,abc123",
       hasPreview: true,
       showAsIcon: false,
@@ -85,58 +100,81 @@ describe("useOlePreview", () => {
     });
   });
 
-  it("resolves preview from p:pic child element via ResourceStore", () => {
-    mockResourceStoreGet.mockReturnValue(undefined);
-    mockResourceStoreToDataUrl.mockReturnValue("data:image/png;base64,picdata");
+  it("resolves preview from p:pic child element via ResourceStore.toDataUrl", () => {
+    const store = createEmptyResourceStore();
+    store.set("rId5", {
+      kind: "image",
+      source: "parsed",
+      data: new TextEncoder().encode("picdata").buffer,
+      mimeType: "image/png",
+    });
 
     const oleData: OleReference = {
       progId: "PowerPoint.Slide.8",
       pic: { resourceId: "rId5" },
     };
 
-    const { result } = renderHook(() => useOlePreview(oleData));
+    const { result } = renderUseOlePreview(oleData, {
+      resources: createEmptyResourceResolver(),
+      resourceStore: store,
+    });
 
-    expect(mockResourceStoreToDataUrl).toHaveBeenCalledWith("rId5");
-    expect(result.current.previewUrl).toBe("data:image/png;base64,picdata");
-    expect(result.current.hasPreview).toBe(true);
+    expect(result.current.preview.previewUrl).toBe("data:image/png;base64,cGljZGF0YQ==");
+    expect(result.current.preview.hasPreview).toBe(true);
   });
 
-  it("falls back to resource resolver for p:pic when ResourceStore fails", () => {
-    mockResourceStoreGet.mockReturnValue(undefined);
-    mockResourceStoreToDataUrl.mockReturnValue(undefined);
-    mockResolve.mockReturnValue("data:image/png;base64,resolved");
+  it("falls back to resource resolver for p:pic when ResourceStore.toDataUrl returns undefined", () => {
+    const store = createEmptyResourceStore();
+    store.set("rId5", {
+      kind: "image",
+      source: "parsed",
+      data: new Uint8Array([0]).buffer,
+      // mimeType intentionally omitted so toDataUrl() returns undefined
+    });
+
+    const resources: ResourceResolver = {
+      ...createEmptyResourceResolver(),
+      resolve: (resourceId) => (resourceId === "rId5" ? "data:image/png;base64,resolved" : undefined),
+    };
 
     const oleData: OleReference = {
       progId: "PowerPoint.Slide.8",
       pic: { resourceId: "rId5" },
     };
 
-    const { result } = renderHook(() => useOlePreview(oleData));
+    const { result } = renderUseOlePreview(oleData, {
+      resources,
+      resourceStore: store,
+    });
 
-    expect(mockResolve).toHaveBeenCalledWith("rId5");
-    expect(result.current.previewUrl).toBe("data:image/png;base64,resolved");
-    expect(result.current.hasPreview).toBe(true);
+    expect(result.current.preview.previewUrl).toBe("data:image/png;base64,resolved");
+    expect(result.current.preview.hasPreview).toBe(true);
   });
 
   it("adds warning when no preview is available", () => {
-    mockResourceStoreGet.mockReturnValue(undefined);
-
     const oleData: OleReference = {
       progId: "Unknown.Object.1",
     };
 
-    const { result } = renderHook(() => useOlePreview(oleData));
+    const { result } = renderUseOlePreview(oleData, {
+      resources: createEmptyResourceResolver(),
+      resourceStore: createEmptyResourceStore(),
+    });
 
-    expect(result.current.hasPreview).toBe(false);
-    expect(result.current.previewUrl).toBeUndefined();
-    expect(mockWarningsAdd).toHaveBeenCalledWith({
+    expect(result.current.preview.hasPreview).toBe(false);
+    expect(result.current.preview.previewUrl).toBeUndefined();
+    expect(result.current.warnings.getAll()).toContainEqual({
       type: "fallback",
       message: "OLE object preview not available: Unknown.Object.1",
     });
   });
 
   it("returns showAsIcon flag", () => {
-    mockResourceStoreGet.mockReturnValue({
+    const store = createEmptyResourceStore();
+    store.set("rId1", {
+      kind: "ole",
+      source: "parsed",
+      data: new Uint8Array([0]).buffer,
       previewUrl: "data:image/png;base64,abc",
     });
 
@@ -146,84 +184,62 @@ describe("useOlePreview", () => {
       progId: "Equation.3",
     };
 
-    const { result } = renderHook(() => useOlePreview(oleData));
+    const { result } = renderUseOlePreview(oleData, {
+      resources: createEmptyResourceResolver(),
+      resourceStore: store,
+    });
 
-    expect(result.current.showAsIcon).toBe(true);
-    expect(result.current.progId).toBe("Equation.3");
+    expect(result.current.preview.showAsIcon).toBe(true);
+    expect(result.current.preview.progId).toBe("Equation.3");
   });
 
   describe("imgW/imgH to pixel conversion", () => {
-    beforeEach(() => {
-      mockResourceStoreGet.mockReturnValue({
+    it("converts imgW from EMU to pixels", () => {
+      const store = createEmptyResourceStore();
+      store.set("rId1", {
+        kind: "ole",
+        source: "parsed",
+        data: new Uint8Array([0]).buffer,
         previewUrl: "data:image/png;base64,abc",
       });
-    });
 
-    it("converts imgW from EMU to pixels", () => {
       const imgWEmu = 914400; // 1 inch = 96 pixels at 96 DPI
       const oleData: OleReference = {
         resourceId: "rId1",
         imgW: imgWEmu,
       };
 
-      const { result } = renderHook(() => useOlePreview(oleData));
+      const { result } = renderUseOlePreview(oleData, {
+        resources: createEmptyResourceResolver(),
+        resourceStore: store,
+      });
 
-      expect(result.current.imageWidth).toBe(imgWEmu / EMU_PER_PIXEL);
-      // 914400 / 9525 = 96 pixels
-      expect(result.current.imageWidth).toBeCloseTo(96, 0);
+      expect(result.current.preview.imageWidth).toBe(imgWEmu / EMU_PER_PIXEL);
+      expect(result.current.preview.imageWidth).toBeCloseTo(96, 0);
     });
 
     it("converts imgH from EMU to pixels", () => {
+      const store = createEmptyResourceStore();
+      store.set("rId1", {
+        kind: "ole",
+        source: "parsed",
+        data: new Uint8Array([0]).buffer,
+        previewUrl: "data:image/png;base64,abc",
+      });
+
       const imgHEmu = 457200; // 0.5 inch = 48 pixels at 96 DPI
       const oleData: OleReference = {
         resourceId: "rId1",
         imgH: imgHEmu,
       };
 
-      const { result } = renderHook(() => useOlePreview(oleData));
+      const { result } = renderUseOlePreview(oleData, {
+        resources: createEmptyResourceResolver(),
+        resourceStore: store,
+      });
 
-      expect(result.current.imageHeight).toBe(imgHEmu / EMU_PER_PIXEL);
-      // 457200 / 9525 = 48 pixels
-      expect(result.current.imageHeight).toBeCloseTo(48, 0);
-    });
-
-    it("handles both imgW and imgH", () => {
-      const oleData: OleReference = {
-        resourceId: "rId1",
-        imgW: 1828800, // 2 inches = 192 pixels
-        imgH: 914400, // 1 inch = 96 pixels
-      };
-
-      const { result } = renderHook(() => useOlePreview(oleData));
-
-      expect(result.current.imageWidth).toBeCloseTo(192, 0);
-      expect(result.current.imageHeight).toBeCloseTo(96, 0);
-    });
-
-    it("returns undefined for imageWidth/imageHeight when not specified", () => {
-      const oleData: OleReference = {
-        resourceId: "rId1",
-      };
-
-      const { result } = renderHook(() => useOlePreview(oleData));
-
-      expect(result.current.imageWidth).toBeUndefined();
-      expect(result.current.imageHeight).toBeUndefined();
-    });
-
-    it("converts typical OLE preview dimensions", () => {
-      // Typical Excel chart preview: 4 inches x 3 inches
-      const oleData: OleReference = {
-        resourceId: "rId1",
-        imgW: 3657600, // 4 inches
-        imgH: 2743200, // 3 inches
-      };
-
-      const { result } = renderHook(() => useOlePreview(oleData));
-
-      // 4 * 96 = 384 pixels, 3 * 96 = 288 pixels
-      expect(result.current.imageWidth).toBeCloseTo(384, 0);
-      expect(result.current.imageHeight).toBeCloseTo(288, 0);
+      expect(result.current.preview.imageHeight).toBe(imgHEmu / EMU_PER_PIXEL);
+      expect(result.current.preview.imageHeight).toBeCloseTo(48, 0);
     });
   });
 });

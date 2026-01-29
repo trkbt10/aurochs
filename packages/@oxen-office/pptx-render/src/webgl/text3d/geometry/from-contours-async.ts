@@ -5,8 +5,7 @@
  */
 
 import * as THREE from "three";
-import type { ContourPath } from "@oxen/glyph";
-import { layoutTextAsync } from "@oxen/glyph/layout";
+import type { ContourPath, TextLayoutResult } from "@oxen/glyph";
 import { getBevelConfig, type AsymmetricBevelConfig } from "./bevel";
 import { mergeExtrudeGeometriesLegacy } from "./merge-geometries";
 import type { Bevel3d } from "@oxen-office/pptx/domain/three-d";
@@ -33,7 +32,26 @@ export type TextGeometryConfig = {
   readonly letterSpacing?: number;
   readonly enableKerning?: boolean;
   readonly opticalKerning?: boolean;
+  /**
+   * Injected layout function (for tests or non-worker environments).
+   *
+   * If not provided, this module dynamically imports `@oxen/glyph/layout`.
+   */
+  readonly layoutTextAsyncFn?: LayoutTextAsyncFn;
 };
+
+export type LayoutTextAsyncFn = (
+  text: string,
+  options: {
+    readonly fontFamily: string;
+    readonly fontSize: number;
+    readonly fontWeight: number;
+    readonly fontStyle: "normal" | "italic";
+    readonly letterSpacing?: number;
+    readonly enableKerning?: boolean;
+    readonly opticalKerning?: boolean;
+  },
+) => Promise<TextLayoutResult | undefined>;
 
 /**
  * Result of text geometry creation.
@@ -71,7 +89,8 @@ export async function createTextGeometryWithShapesAsync(
   config: TextGeometryConfig,
 ): Promise<TextGeometryResult> {
   // Layout text using worker
-  const layout = await layoutTextAsync(config.text, {
+  const layoutTextAsyncFn = config.layoutTextAsyncFn ?? (await import("@oxen/glyph/layout")).layoutTextAsync;
+  const layout = await layoutTextAsyncFn(config.text, {
     fontFamily: config.fontFamily,
     fontSize: config.fontSize,
     fontWeight: config.fontWeight,
@@ -120,20 +139,8 @@ export async function createTextGeometryWithShapesAsync(
 
   // Bevel spec for Three.js independent core
   const bevelSpec: AsymmetricBevelSpec = {
-    top: config.bevelTop
-      ? {
-          width: config.bevelTop.width as number,
-          height: config.bevelTop.height as number,
-          preset: config.bevelTop.preset,
-        }
-      : undefined,
-    bottom: config.bevelBottom
-      ? {
-          width: config.bevelBottom.width as number,
-          height: config.bevelBottom.height as number,
-          preset: config.bevelBottom.preset,
-        }
-      : undefined,
+    top: toBevelSpec(config.bevelTop),
+    bottom: toBevelSpec(config.bevelBottom),
   };
 
   // Create geometry using Three.js independent core
@@ -152,6 +159,17 @@ export async function createTextGeometryWithShapesAsync(
     shapes: validShapes,
     bevelConfig,
     extrusionDepth,
+  };
+}
+
+function toBevelSpec(bevel: Bevel3d | undefined): AsymmetricBevelSpec["top"] {
+  if (!bevel) {
+    return undefined;
+  }
+  return {
+    width: bevel.width as number,
+    height: bevel.height as number,
+    preset: bevel.preset,
   };
 }
 

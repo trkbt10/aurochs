@@ -2,7 +2,6 @@
  * @file Unit tests for text-property-extractor
  */
 
-import { describe, it, expect } from "vitest";
 import {
   getRunsInSelection,
   getParagraphsInSelection,
@@ -14,7 +13,7 @@ import {
 } from "./text-property-extractor";
 import type { TextBody, TextRun, Paragraph } from "@oxen-office/pptx/domain/text";
 import type { CursorPosition, TextSelection } from "../../slide/text-edit";
-import type { Points, Pixels } from "@oxen-office/ooxml/domain/units";
+import type { Points } from "@oxen-office/ooxml/domain/units";
 
 // =============================================================================
 // Test Fixtures

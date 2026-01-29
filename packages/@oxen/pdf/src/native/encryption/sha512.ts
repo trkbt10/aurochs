@@ -15,11 +15,15 @@ function add64(a: Word64, b: Word64): Word64 {
   return { hi, lo };
 }
 
-function add64_4(a: Word64, b: Word64, c: Word64, d: Word64): Word64 {
+function add64_4(...args: readonly [a: Word64, b: Word64, c: Word64, d: Word64]): Word64 {
+  const [a, b, c, d] = args;
   return add64(add64(add64(a, b), c), d);
 }
 
-function add64_5(a: Word64, b: Word64, c: Word64, d: Word64, e: Word64): Word64 {
+function add64_5(
+  ...args: readonly [a: Word64, b: Word64, c: Word64, d: Word64, e: Word64]
+): Word64 {
+  const [a, b, c, d, e] = args;
   return add64(add64_4(a, b, c, d), e);
 }
 
@@ -249,4 +253,3 @@ export function sha384(input: Uint8Array): Uint8Array {
   ]);
   return full.subarray(0, 48);
 }
-

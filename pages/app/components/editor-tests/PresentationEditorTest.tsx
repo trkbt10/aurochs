@@ -36,15 +36,19 @@ function createLine(color: string, widthVal = 2): Line {
 }
 
 const createSpShape = (
-  id: string,
-  name: string,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  fillColor: string,
-  rotation = 0
-): SpShape => ({
+  ...args: [
+    id: string,
+    name: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    fillColor: string,
+    rotation?: number,
+  ]
+): SpShape => {
+  const [id, name, x, y, width, height, fillColor, rotation = 0] = args;
+  return {
   type: "sp",
   nonVisual: { id, name },
   properties: {
@@ -64,18 +68,23 @@ const createSpShape = (
     line: createLine("333333", 2),
     geometry: { type: "preset", preset: "rect", adjustValues: [] },
   },
-});
+  };
+};
 
 const createTextBox = (
-  id: string,
-  name: string,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  text: string,
-  fontSize = 14
-): SpShape => ({
+  ...args: [
+    id: string,
+    name: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    text: string,
+    fontSize?: number,
+  ]
+): SpShape => {
+  const [id, name, x, y, width, height, text, fontSize = 14] = args;
+  return {
   type: "sp",
   nonVisual: { id, name, textBox: true },
   properties: {
@@ -105,16 +114,14 @@ const createTextBox = (
       },
     ],
   },
-});
+  };
+};
 
 const createTitle = (
-  id: string,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  text: string
-): SpShape => ({
+  ...args: [id: string, x: number, y: number, width: number, height: number, text: string]
+): SpShape => {
+  const [id, x, y, width, height, text] = args;
+  return {
   type: "sp",
   nonVisual: { id, name: "Title" },
   placeholder: { type: "title", idx: 0 },
@@ -146,7 +153,8 @@ const createTitle = (
       },
     ],
   },
-});
+  };
+};
 
 const createTableCell = (text: string): TableCell => ({
   textBody: {
@@ -177,12 +185,10 @@ const createTable = (headers: string[], rows: string[][]): Table => ({
 });
 
 const createTableFrame = (
-  id: string,
-  x: number,
-  y: number,
-  headers: string[],
-  rows: string[][]
-): GraphicFrame => ({
+  ...args: [id: string, x: number, y: number, headers: string[], rows: string[][]]
+): GraphicFrame => {
+  const [id, x, y, headers, rows] = args;
+  return {
   type: "graphicFrame",
   nonVisual: { id, name: "Table" },
   transform: {
@@ -198,14 +204,13 @@ const createTableFrame = (
     type: "table",
     data: { table: createTable(headers, rows) },
   },
-});
+  };
+};
 
 const createGroup = (
-  id: string,
-  x: number,
-  y: number,
-  children: SpShape[]
+  ...args: [id: string, x: number, y: number, children: SpShape[]]
 ): GrpShape => {
+  const [id, x, y, children] = args;
   const minX = Math.min(
     ...children.map((c) => (c.properties.transform?.x as number) || 0)
   );
@@ -380,6 +385,8 @@ const SLIDE_HEIGHT = 540;
  * Empty resource resolver for test purposes
  */
 const emptyResourceResolver: ResourceResolver = {
+  getTarget: () => undefined,
+  getType: () => undefined,
   resolve: () => undefined,
   getMimeType: () => undefined,
   getFilePath: () => undefined,

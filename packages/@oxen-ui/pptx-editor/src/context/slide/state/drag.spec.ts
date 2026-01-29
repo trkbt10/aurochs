@@ -2,7 +2,6 @@
  * @file Drag state tests
  */
 
-import { describe, it, expect } from "vitest";
 import { px, deg } from "@oxen-office/ooxml/domain/units";
 import {
   createIdleDragState,

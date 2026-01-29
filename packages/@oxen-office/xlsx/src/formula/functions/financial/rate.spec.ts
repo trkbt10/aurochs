@@ -20,7 +20,8 @@ const expectNumber = (value: unknown, label: string): number => {
   return value;
 };
 
-const computeBalance = (rate: number, periods: number, payment: number, pv: number): number => {
+const computeBalance = (...args: readonly [rate: number, periods: number, payment: number, pv: number]): number => {
+  const [rate, periods, payment, pv] = args;
   if (rate === 0) {
     return pv + payment * periods;
   }

@@ -10,8 +10,8 @@ import { getChild, isXmlElement } from "@oxen/xml";
 import type { Transform } from "../../domain/geometry";
 import { replaceChildByName, updateChildByName } from "../core/xml-mutator";
 import { patchTransformElement } from "../serializer/transform";
-import type { ChartData } from "./chart-data-patcher";
-import { patchChartData, patchChartStyle, patchChartTitle } from "./chart-data-patcher";
+import type { ChartData } from "@oxen-office/chart/patcher";
+import { patchChartData, patchChartStyle, patchChartTitle } from "@oxen-office/chart/patcher";
 
 export type ChartStyle = {
   readonly styleId: number;

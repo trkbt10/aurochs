@@ -168,11 +168,14 @@ function setCache(key: string, value: CachedFamilies): void {
 }
 
 function buildGoogleFontsCssUrl(
-  cssBaseUrl: string,
-  family: string,
-  weights: readonly number[],
-  display: GoogleFontsCatalogConfig["display"]
+  ...args: readonly [
+    cssBaseUrl: string,
+    family: string,
+    weights: readonly number[],
+    display: GoogleFontsCatalogConfig["display"],
+  ]
 ): string {
+  const [cssBaseUrl, family, weights, display] = args;
   const normalizedFamily = normalizeFamilyName(family);
   const familyParam = encodeURIComponent(normalizedFamily).replaceAll("%20", "+");
 

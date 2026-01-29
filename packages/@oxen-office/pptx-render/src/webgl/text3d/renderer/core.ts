@@ -19,16 +19,13 @@ import type { TextWarp } from "@oxen-office/pptx/domain/text";
 // Color resolution (shared with React renderer)
 import { resolveColor } from "@oxen-office/ooxml/domain/color-resolution";
 // Effects imports
-import {
-  applyAllEffects,
-  needsShadowMapping,
-  type ContourConfig,
-  type OutlineConfig,
-  type ShadowConfig,
-  type GlowConfig,
-  type ReflectionConfig,
-  type SoftEdgeConfig,
-} from "./apply-effects";
+import { applyAllEffects, needsShadowMapping } from "./apply-effects";
+import type { ContourConfig } from "../effects/contour";
+import type { OutlineConfig } from "../effects/outline";
+import type { ShadowConfig } from "../effects/shadow";
+import type { GlowConfig } from "../effects/glow";
+import type { ReflectionConfig } from "../effects/reflection";
+import type { SoftEdgeConfig } from "../effects/soft-edge";
 import { enableShadowMapping } from "../effects/shadow";
 // WebGL context management
 import { acquireRenderer, releaseRenderer } from "../utils/webgl-context";
@@ -493,12 +490,15 @@ const COORDINATE_SCALE = 1 / 96;
 /**
  * Process a single run with its geometry result, adding mesh to group.
  */
-function processRunWithGeometry(
+type ProcessRunWithGeometryArgs = [
   group: THREE.Group,
   run: Text3DRunConfig,
   geometryResult: TextGeometryResult,
   buildConfig: MeshBuildConfig,
-): void {
+];
+
+function processRunWithGeometry(...args: ProcessRunWithGeometryArgs): void {
+  const [group, run, geometryResult, buildConfig] = args;
   const { geometry, shapes, bevelConfig, extrusionDepth } = geometryResult;
 
   // Apply text warp if configured

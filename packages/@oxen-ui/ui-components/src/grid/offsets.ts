@@ -8,11 +8,9 @@
  * Clamp a (start, end) range to an inclusive [min, max] bounds.
  */
 export function clampRange(
-  start: number,
-  end: number,
-  min: number,
-  max: number,
+  ...args: readonly [start: number, end: number, min: number, max: number]
 ): { start: number; end: number } {
+  const [start, end, min, max] = args;
   return {
     start: Math.max(min, Math.min(max, start)),
     end: Math.max(min, Math.min(max, end)),

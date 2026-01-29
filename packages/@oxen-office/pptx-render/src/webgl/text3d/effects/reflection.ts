@@ -301,8 +301,9 @@ export function addReflectionToGroup(
 export function updateReflectionOpacity(
   reflection: THREE.Mesh | THREE.Group,
   startOpacity: number,
-  endOpacity: number,
+  _endOpacity: number,
 ): void {
+  void _endOpacity;
   if (reflection instanceof THREE.Group) {
     reflection.traverse((child) => {
       if (child instanceof THREE.Mesh) {

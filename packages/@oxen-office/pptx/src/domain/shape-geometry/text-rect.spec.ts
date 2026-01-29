@@ -308,7 +308,7 @@ describe("text-rect - ECMA-376 compliance", () => {
   describe("applyTextInsets (ECMA-376 21.1.2.1.2 bodyPr)", () => {
     it("applies insets to text rect", () => {
       const textRect = calculateTextRect(undefined, 100, 50);
-      const result = applyTextInsets(textRect, 10, 10, 5, 5);
+      const result = applyTextInsets({ textRect, lIns: 10, rIns: 10, tIns: 5, bIns: 5 });
 
       expect(result.left).toBe(10);
       expect(result.top).toBe(5);
@@ -320,7 +320,7 @@ describe("text-rect - ECMA-376 compliance", () => {
 
     it("handles asymmetric insets", () => {
       const textRect = calculateTextRect(undefined, 100, 100);
-      const result = applyTextInsets(textRect, 5, 15, 10, 20);
+      const result = applyTextInsets({ textRect, lIns: 5, rIns: 15, tIns: 10, bIns: 20 });
 
       expect(result.left).toBe(5);
       expect(result.top).toBe(10);
@@ -330,7 +330,7 @@ describe("text-rect - ECMA-376 compliance", () => {
 
     it("clamps to zero when insets exceed dimensions", () => {
       const textRect = calculateTextRect(undefined, 100, 50);
-      const result = applyTextInsets(textRect, 60, 60, 30, 30);
+      const result = applyTextInsets({ textRect, lIns: 60, rIns: 60, tIns: 30, bIns: 30 });
 
       expect(result.width).toBe(0);
       expect(result.height).toBe(0);
@@ -338,7 +338,7 @@ describe("text-rect - ECMA-376 compliance", () => {
 
     it("uses default zero insets", () => {
       const textRect = calculateTextRect(undefined, 100, 50);
-      const result = applyTextInsets(textRect);
+      const result = applyTextInsets({ textRect });
 
       expect(result.left).toBe(0);
       expect(result.top).toBe(0);

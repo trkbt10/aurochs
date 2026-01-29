@@ -42,20 +42,35 @@ export function threeGeometryToGeometryData(
   const uvAttr = geometry.attributes.uv;
   const indexAttr = geometry.index;
 
+  const positions = toFloat32Array(posAttr);
+  const normals = toFloat32Array(normalAttr);
+  const uvs = toFloat32Array(uvAttr);
+  const indices = toUint32Array(indexAttr);
+
   return {
-    positions: posAttr
-      ? new Float32Array(posAttr.array as Float32Array)
-      : new Float32Array(0),
-    normals: normalAttr
-      ? new Float32Array(normalAttr.array as Float32Array)
-      : new Float32Array(0),
-    uvs: uvAttr
-      ? new Float32Array(uvAttr.array as Float32Array)
-      : new Float32Array(0),
-    indices: indexAttr
-      ? new Uint32Array(indexAttr.array)
-      : new Uint32Array(0),
+    positions,
+    normals,
+    uvs,
+    indices,
   };
+}
+
+function toFloat32Array(
+  attr: THREE.BufferAttribute | THREE.InterleavedBufferAttribute | undefined,
+): Float32Array {
+  if (!attr) {
+    return new Float32Array(0);
+  }
+  return new Float32Array(attr.array as Float32Array);
+}
+
+function toUint32Array(
+  attr: THREE.BufferAttribute | THREE.InterleavedBufferAttribute | null,
+): Uint32Array {
+  if (!attr) {
+    return new Uint32Array(0);
+  }
+  return new Uint32Array(attr.array);
 }
 
 /**

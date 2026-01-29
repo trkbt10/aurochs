@@ -2,9 +2,8 @@
  * @file Tests for pure geometry merging
  */
 
-import { describe, it, expect } from "vitest";
 import { mergeGeometries, mergeExtendedGeometries } from "./merge";
-import { emptyGeometry, extendGeometry } from "./types";
+import { extendGeometry } from "./types";
 import type { GeometryData } from "./types";
 
 // =============================================================================

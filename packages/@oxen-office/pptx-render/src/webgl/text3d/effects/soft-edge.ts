@@ -81,11 +81,14 @@ export function createSoftEdgeMesh(
  * @param layers - Number of layers (default 3)
  */
 export function createLayeredSoftEdge(
-  geometry: THREE.BufferGeometry,
-  material: THREE.Material,
-  config: SoftEdgeConfig,
-  layers: number = 3,
+  ...args: [
+    geometry: THREE.BufferGeometry,
+    material: THREE.Material,
+    config: SoftEdgeConfig,
+    layers?: number,
+  ]
 ): THREE.Group {
+  const [geometry, material, config, layers = 3] = args;
   const group = new THREE.Group();
   group.name = "text-soft-edge-layers";
 

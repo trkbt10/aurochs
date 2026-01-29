@@ -100,10 +100,27 @@ function maybeNormalizeSingleByteRawText(rawText: string): string {
     shifted.push(bytesToString(b2));
   }
 
-  const sanitizeXml = (s: string): string => s.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, " ");
+  const sanitizeXmlText = (s: string): string => {
+    const out: string[] = [];
+    for (let i = 0; i < s.length; i++) {
+      const code = s.charCodeAt(i);
+      if (code === 0x00) {
+        continue;
+      }
+      // XML 1.0 forbids most C0 control characters inside text nodes.
+      // Keep \t/\n/\r as-is for readability; replace other controls with spaces.
+      const isForbidden =
+        (code >= 0x01 && code <= 0x08) ||
+        code === 0x0b ||
+        code === 0x0c ||
+        (code >= 0x0e && code <= 0x1f);
+      out.push(isForbidden ? " " : s[i]!);
+    }
+    return out.join("");
+  };
 
-  const all = [...candidates, ...shifted].map((s) => sanitizeXml(s.replace(/\u0000/g, "")));
-  let best = sanitizeXml(rawText.replace(/\u0000/g, ""));
+  const all = [...candidates, ...shifted].map((s) => sanitizeXmlText(s));
+  let best = sanitizeXmlText(rawText);
   let bestScore = scoreAsciiQuality(best);
   for (const s of all) {
     const score = scoreAsciiQuality(s);
@@ -117,13 +134,22 @@ function maybeNormalizeSingleByteRawText(rawText: string): string {
 }
 
 function sanitizeDecodedText(decoded: string): string {
-  // XML 1.0 forbids most C0 control characters inside text nodes.
-  // Replace them to keep downstream renderers (SVG/XML) robust.
-  //
-  // Keep \t/\n/\r as-is for readability; replace other controls with spaces.
-  return decoded
-    .replace(/\u0000/g, "")
-    .replace(/[\u0001-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, " ");
+  const out: string[] = [];
+  for (let i = 0; i < decoded.length; i++) {
+    const code = decoded.charCodeAt(i);
+    if (code === 0x00) {
+      continue;
+    }
+    const isKeepWhitespace = code === 0x09 || code === 0x0a || code === 0x0d;
+    const isForbiddenControl =
+      (code >= 0x01 && code <= 0x08) ||
+      code === 0x0b ||
+      code === 0x0c ||
+      (code >= 0x0e && code <= 0x1f) ||
+      code === 0x7f;
+    out.push(isForbiddenControl && !isKeepWhitespace ? " " : decoded[i]!);
+  }
+  return out.join("");
 }
 
 /**

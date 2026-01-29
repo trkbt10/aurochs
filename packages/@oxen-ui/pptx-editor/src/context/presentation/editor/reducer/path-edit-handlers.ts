@@ -8,8 +8,6 @@ import type { PresentationEditorState, PresentationEditorAction } from "../types
 import { createSelectMode } from "../types";
 import type { HandlerMap, ActionHandler } from "./handler-types";
 import type { ShapeId } from "@oxen-office/pptx/domain/types";
-import type { Pixels } from "@oxen-office/ooxml/domain/units";
-import { px } from "@oxen-office/ooxml/domain/units";
 import type { CustomGeometry, Shape, SpShape } from "@oxen-office/pptx/domain";
 import {
   createInactivePathEditState,
@@ -24,17 +22,12 @@ import {
   updateMovingHandle,
   returnToActiveState,
 } from "../../../slide/state";
-import type { PathPointSelection, PathElementId } from "../../../../path-tools/types";
+import type { PathPointSelection } from "../../../../path-tools/types";
 import {
   togglePointInSelection,
   addPointToSelection,
   createEmptyPathSelection,
 } from "../../../../path-tools/types";
-import { pushHistory } from "../../../slide/state";
-import {
-  customGeometryToDrawingPath,
-  drawingPathToCustomGeometry,
-} from "../../../../path-tools/utils/path-commands";
 
 // =============================================================================
 // Helper Functions
@@ -69,54 +62,6 @@ function findShapeById(
   return activeSlide.slide.shapes.find((s) => getShapeId(s) === shapeId);
 }
 
-/**
- * Update a shape in the active slide
- */
-function updateShapeInActiveSlide(
-  state: PresentationEditorState,
-  shapeId: ShapeId,
-  updater: (shape: Shape) => Shape
-): PresentationEditorState {
-  const document = state.documentHistory.present;
-  const activeSlide = document.slides.find((s) => s.id === state.activeSlideId);
-
-  if (!activeSlide) {
-    return state;
-  }
-
-  const shapeIndex = activeSlide.slide.shapes.findIndex(
-    (s) => getShapeId(s) === shapeId
-  );
-  if (shapeIndex === -1) {
-    return state;
-  }
-
-  const updatedShapes = [...activeSlide.slide.shapes];
-  updatedShapes[shapeIndex] = updater(updatedShapes[shapeIndex]);
-
-  const updatedSlide = {
-    ...activeSlide,
-    slide: {
-      ...activeSlide.slide,
-      shapes: updatedShapes,
-    },
-  };
-
-  const updatedSlides = document.slides.map((s) =>
-    s.id === state.activeSlideId ? updatedSlide : s
-  );
-
-  const updatedDocument = {
-    ...document,
-    slides: updatedSlides,
-  };
-
-  return {
-    ...state,
-    documentHistory: pushHistory(state.documentHistory, updatedDocument),
-  };
-}
-
 // =============================================================================
 // Enter/Exit Path Edit
 // =============================================================================
@@ -148,7 +93,7 @@ const handleEnterPathEdit: ActionHandler<Extract<PresentationEditorAction, { typ
  */
 const handleExitPathEdit: ActionHandler<Extract<PresentationEditorAction, { type: "EXIT_PATH_EDIT" }>> = (
   state,
-  action
+  _action
 ) => {
   // If not in path edit mode, nothing to do
   if (state.pathEdit.type === "inactive") {

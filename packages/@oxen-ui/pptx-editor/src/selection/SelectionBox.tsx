@@ -109,17 +109,25 @@ export function SelectionBox({
   const centerX = x + width / 2;
   const centerY = y + height / 2;
 
-  const transform = rotation !== 0
-    ? `rotate(${rotation}, ${centerX}, ${centerY})`
-    : undefined;
+  function getTransform(rotation: number, centerX: number, centerY: number): string | undefined {
+    if (rotation === 0) {
+      return undefined;
+    }
+    return `rotate(${rotation}, ${centerX}, ${centerY})`;
+  }
+
+  const transform = getTransform(rotation, centerX, centerY);
 
   // Determine if handles should be shown
-  const shouldShowResizeHandles = variant === "primary"
-    ? style.showHandles && showResizeHandles
-    : style.showHandles;
-  const shouldShowRotateHandle = variant === "primary"
-    ? style.showHandles && showRotateHandle
-    : style.showHandles;
+  function shouldShowHandle(variant: SelectionBoxVariant, showFlag: boolean): boolean {
+    if (variant !== "primary") {
+      return style.showHandles;
+    }
+    return style.showHandles && showFlag;
+  }
+
+  const shouldShowResizeHandles = shouldShowHandle(variant, showResizeHandles);
+  const shouldShowRotateHandle = shouldShowHandle(variant, showRotateHandle);
 
   return (
     <g transform={transform}>

@@ -6,9 +6,9 @@
  */
 
 import type { DocxParagraph } from "@oxen-office/docx/domain/paragraph";
-import type { DocxRun, DocxRunProperties } from "@oxen-office/docx/domain/run";
+import type { DocxRunProperties } from "@oxen-office/docx/domain/run";
 import { getParagraphPlainText } from "./run-plain-text";
-import { getBaseRunProperties, getRunPropertiesAtPosition } from "./run-properties";
+import { getBaseRunProperties } from "./run-properties";
 import {
   buildCharacterPropertiesMap,
   findCommonPrefixSuffix,
@@ -156,11 +156,14 @@ export function deleteTextRange(paragraph: DocxParagraph, start: number, end: nu
  * @returns A new paragraph with the text replaced
  */
 export function replaceTextRange(
-  paragraph: DocxParagraph,
-  start: number,
-  end: number,
-  replacement: string,
+  ...args: readonly [
+    paragraph: DocxParagraph,
+    start: number,
+    end: number,
+    replacement: string,
+  ]
 ): DocxParagraph {
+  const [paragraph, start, end, replacement] = args;
   const currentText = getParagraphPlainText(paragraph);
   const newText = currentText.slice(0, start) + replacement + currentText.slice(end);
 

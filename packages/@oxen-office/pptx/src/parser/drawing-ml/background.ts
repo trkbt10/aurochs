@@ -348,7 +348,8 @@ function tryGetPicFill(
 const PIC_FILL_BG_HANDLER: BackgroundFillHandler = {
   xmlKey: "a:blipFill",
   type: "PIC_FILL",
-  extractData: (fill, ctx, _phClr, fromTheme) => {
+  extractData: (...args: [fill: XmlElement, ctx: SlideContext, _phClr?: string, fromTheme?: boolean]) => {
+    const [fill, ctx, _phClr, fromTheme] = args;
     const blipFill = getChild(fill, "a:blipFill") ?? fill;
     const imgPath = tryGetPicFill(blipFill, ctx, fromTheme);
     if (imgPath === undefined) {

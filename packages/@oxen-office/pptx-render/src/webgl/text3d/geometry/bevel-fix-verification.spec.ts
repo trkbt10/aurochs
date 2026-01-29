@@ -11,12 +11,10 @@
  * when bevels are present.
  */
 
-import { describe, it, expect } from "vitest";
 import * as THREE from "three";
 import {
   createExtrudedGeometryWithBevel,
   threeShapeToShapeInput,
-  type AsymmetricBevelSpec,
 } from "./bevel/three-adapter";
 import { generateExtrusion } from "./bevel/extrusion";
 

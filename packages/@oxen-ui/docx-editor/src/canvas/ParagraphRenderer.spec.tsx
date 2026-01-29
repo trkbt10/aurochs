@@ -4,7 +4,6 @@
 
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import type { DocxParagraph } from "@oxen-office/docx/domain/paragraph";
 import { twips } from "@oxen-office/docx/domain/types";
@@ -186,8 +185,8 @@ describe("ParagraphRenderer", () => {
     elementId: "0",
     isSelected: false,
     isEditing: false,
-    onClick: vi.fn(),
-    onDoubleClick: vi.fn(),
+    onClick: () => {},
+    onDoubleClick: () => {},
   };
 
   it("renders paragraph text", () => {
@@ -240,7 +239,10 @@ describe("ParagraphRenderer", () => {
   });
 
   it("calls onClick when clicked", () => {
-    const onClick = vi.fn();
+    const calls: unknown[][] = [];
+    const onClick = (...args: unknown[]) => {
+      calls.push(args);
+    };
     const paragraph = createSimpleParagraph("Clickable");
 
     const { container } = render(
@@ -252,11 +254,14 @@ describe("ParagraphRenderer", () => {
     );
 
     fireEvent.click(container.firstChild as HTMLElement);
-    expect(onClick).toHaveBeenCalled();
+    expect(calls.length).toBe(1);
   });
 
   it("calls onDoubleClick when double-clicked", () => {
-    const onDoubleClick = vi.fn();
+    const calls: unknown[][] = [];
+    const onDoubleClick = (...args: unknown[]) => {
+      calls.push(args);
+    };
     const paragraph = createSimpleParagraph("Double Clickable");
 
     const { container } = render(
@@ -268,7 +273,7 @@ describe("ParagraphRenderer", () => {
     );
 
     fireEvent.doubleClick(container.firstChild as HTMLElement);
-    expect(onDoubleClick).toHaveBeenCalled();
+    expect(calls.length).toBe(1);
   });
 
   it("sets data-element-id attribute", () => {

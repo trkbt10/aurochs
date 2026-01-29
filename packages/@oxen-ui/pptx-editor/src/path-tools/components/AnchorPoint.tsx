@@ -62,6 +62,42 @@ const ANCHOR_COLORS = {
   },
 };
 
+function getAnchorSize(args: { readonly isSelected: boolean; readonly isHovered: boolean }): number {
+  const { isSelected, isHovered } = args;
+  if (isSelected) {
+    return ANCHOR_SIZE.selected;
+  }
+  if (isHovered) {
+    return ANCHOR_SIZE.hovered;
+  }
+  return ANCHOR_SIZE.default;
+}
+
+function getAnchorFill(args: { readonly isSelected: boolean; readonly isFirst: boolean; readonly isHovered: boolean }): string {
+  const { isSelected, isFirst, isHovered } = args;
+  if (isSelected) {
+    return ANCHOR_COLORS.fill.selected;
+  }
+  if (isFirst && isHovered) {
+    return ANCHOR_COLORS.fill.firstHovered;
+  }
+  if (isHovered) {
+    return ANCHOR_COLORS.fill.hovered;
+  }
+  return ANCHOR_COLORS.fill.default;
+}
+
+function getAnchorStroke(args: { readonly isSelected: boolean; readonly isFirst: boolean; readonly isHovered: boolean }): string {
+  const { isSelected, isFirst, isHovered } = args;
+  if (isFirst && isHovered) {
+    return ANCHOR_COLORS.stroke.firstHovered;
+  }
+  if (isSelected) {
+    return ANCHOR_COLORS.stroke.selected;
+  }
+  return ANCHOR_COLORS.stroke.default;
+}
+
 // =============================================================================
 // Component
 // =============================================================================
@@ -87,28 +123,13 @@ export function AnchorPoint({
   onPointerLeave,
 }: AnchorPointProps): React.ReactElement {
   // Determine size
-  const size = isSelected
-    ? ANCHOR_SIZE.selected
-    : isHovered
-      ? ANCHOR_SIZE.hovered
-      : ANCHOR_SIZE.default;
+  const size = getAnchorSize({ isSelected, isHovered });
   const halfSize = size / 2;
 
   // Determine colors
-  const fill = isSelected
-    ? ANCHOR_COLORS.fill.selected
-    : isFirst && isHovered
-      ? ANCHOR_COLORS.fill.firstHovered
-      : isHovered
-        ? ANCHOR_COLORS.fill.hovered
-        : ANCHOR_COLORS.fill.default;
+  const fill = getAnchorFill({ isSelected, isFirst, isHovered });
 
-  const stroke =
-    isFirst && isHovered
-      ? ANCHOR_COLORS.stroke.firstHovered
-      : isSelected
-        ? ANCHOR_COLORS.stroke.selected
-        : ANCHOR_COLORS.stroke.default;
+  const stroke = getAnchorStroke({ isSelected, isFirst, isHovered });
 
   // Rotation for smooth points (diamond shape)
   const rotation = pointType === "smooth" ? 45 : 0;

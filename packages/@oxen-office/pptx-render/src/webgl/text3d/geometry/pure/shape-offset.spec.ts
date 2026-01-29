@@ -2,7 +2,6 @@
  * @file Tests for pure shape offset/expansion
  */
 
-import { describe, it, expect } from "vitest";
 import {
   expandContourPoints,
   expandShapeData,

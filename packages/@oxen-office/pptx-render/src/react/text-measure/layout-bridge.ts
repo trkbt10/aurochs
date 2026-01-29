@@ -15,7 +15,6 @@ import type {
 import { createParagraphMeasurer } from "./paragraph-measure";
 import type {
   TextMeasureParagraph,
-  TextMeasureRunResult,
   TextMeasureParagraphResult,
 } from "./types";
 

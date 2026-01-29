@@ -7,7 +7,7 @@
  */
 
 import { useMemo } from "react";
-import type { Chart } from "@oxen-office/pptx/domain/chart";
+import type { Chart } from "@oxen-office/chart/domain";
 import type { ChartReference } from "@oxen-office/pptx/domain";
 import { useRenderContext, useRenderResourceStore } from "../../../context";
 import { renderChart } from "../../../../chart";

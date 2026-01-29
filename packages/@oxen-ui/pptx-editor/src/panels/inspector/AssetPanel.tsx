@@ -303,9 +303,7 @@ function handleAssetDragStart(e: React.DragEvent<HTMLDivElement>, asset: AssetIn
  */
 function AssetItem({ asset }: { asset: AssetInfo }) {
   const draggable = isAssetDraggable(asset);
-  const itemStyle = draggable
-    ? assetItemStyle
-    : { ...assetItemStyle, cursor: "default", opacity: 0.7 };
+  const itemStyle = draggable ? assetItemStyle : { ...assetItemStyle, cursor: "default", opacity: 0.7 };
 
   return (
     <div

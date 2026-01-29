@@ -4,11 +4,25 @@
 
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MixedTextBodyEditor } from "./MixedTextBodyEditor";
 import type { TextBody } from "@oxen-office/pptx/domain/text";
 import type { Points, Pixels } from "@oxen-office/ooxml/domain/units";
+
+type CallTracker<Args extends readonly unknown[]> = {
+  readonly fn: (...args: Args) => void;
+  readonly calls: Args[];
+};
+
+function createCallTracker<Args extends readonly unknown[]>(): CallTracker<Args> {
+  const calls: Args[] = [];
+  return {
+    fn: (...args) => {
+      calls.push(args);
+    },
+    calls,
+  };
+}
 
 // =============================================================================
 // Test Fixtures
@@ -89,10 +103,10 @@ describe("MixedTextBodyEditor", () => {
   describe("rendering", () => {
     it("renders summary with paragraph and character count", () => {
       const textBody = createSingleRunTextBody();
-      const onChange = vi.fn();
+      const onChange = createCallTracker<[TextBody]>();
 
       const { container } = render(
-        <MixedTextBodyEditor value={textBody} onChange={onChange} />
+        <MixedTextBodyEditor value={textBody} onChange={onChange.fn} />
       );
 
       // Should show "1 paragraph, 11 characters"
@@ -102,10 +116,10 @@ describe("MixedTextBodyEditor", () => {
 
     it("renders plural form for multiple paragraphs", () => {
       const textBody = createMixedTextBody();
-      const onChange = vi.fn();
+      const onChange = createCallTracker<[TextBody]>();
 
       const { container } = render(
-        <MixedTextBodyEditor value={textBody} onChange={onChange} />
+        <MixedTextBodyEditor value={textBody} onChange={onChange.fn} />
       );
 
       // Should show "2 paragraphs"
@@ -114,18 +128,18 @@ describe("MixedTextBodyEditor", () => {
 
     it("renders Character accordion", () => {
       const textBody = createSingleRunTextBody();
-      const onChange = vi.fn();
+      const onChange = createCallTracker<[TextBody]>();
 
-      render(<MixedTextBodyEditor value={textBody} onChange={onChange} />);
+      render(<MixedTextBodyEditor value={textBody} onChange={onChange.fn} />);
 
       expect(screen.getByText("Character")).toBeTruthy();
     });
 
     it("renders Paragraph accordion", () => {
       const textBody = createSingleRunTextBody();
-      const onChange = vi.fn();
+      const onChange = createCallTracker<[TextBody]>();
 
-      render(<MixedTextBodyEditor value={textBody} onChange={onChange} />);
+      render(<MixedTextBodyEditor value={textBody} onChange={onChange.fn} />);
 
       expect(screen.getByText("Paragraph")).toBeTruthy();
     });
@@ -134,9 +148,9 @@ describe("MixedTextBodyEditor", () => {
   describe("same values", () => {
     it("shows same bold value when all runs are bold", () => {
       const textBody = createSingleRunTextBody();
-      const onChange = vi.fn();
+      const onChange = createCallTracker<[TextBody]>();
 
-      render(<MixedTextBodyEditor value={textBody} onChange={onChange} />);
+      render(<MixedTextBodyEditor value={textBody} onChange={onChange.fn} />);
 
       const boldButton = screen.getByRole("button", { name: /bold/i });
       expect(boldButton.getAttribute("aria-pressed")).toBe("true");
@@ -146,9 +160,9 @@ describe("MixedTextBodyEditor", () => {
   describe("mixed values", () => {
     it("shows mixed bold indicator when runs have different bold values", () => {
       const textBody = createMixedTextBody();
-      const onChange = vi.fn();
+      const onChange = createCallTracker<[TextBody]>();
 
-      render(<MixedTextBodyEditor value={textBody} onChange={onChange} />);
+      render(<MixedTextBodyEditor value={textBody} onChange={onChange.fn} />);
 
       const boldButton = screen.getByRole("button", { name: /bold/i });
       // Mixed state is represented as "mixed" in aria-pressed
@@ -157,10 +171,10 @@ describe("MixedTextBodyEditor", () => {
 
     it("shows mixed font size when runs have different sizes", () => {
       const textBody = createMixedTextBody();
-      const onChange = vi.fn();
+      const onChange = createCallTracker<[TextBody]>();
 
       const { container } = render(
-        <MixedTextBodyEditor value={textBody} onChange={onChange} />
+        <MixedTextBodyEditor value={textBody} onChange={onChange.fn} />
       );
 
       // Should show "Size (Mixed)" or similar indicator
@@ -171,15 +185,15 @@ describe("MixedTextBodyEditor", () => {
   describe("applying properties", () => {
     it("applies bold to all runs when bold button is clicked", () => {
       const textBody = createMixedTextBody();
-      const onChange = vi.fn();
+      const onChange = createCallTracker<[TextBody]>();
 
-      render(<MixedTextBodyEditor value={textBody} onChange={onChange} />);
+      render(<MixedTextBodyEditor value={textBody} onChange={onChange.fn} />);
 
       const boldButton = screen.getByRole("button", { name: /bold/i });
       fireEvent.click(boldButton);
 
-      expect(onChange).toHaveBeenCalled();
-      const newTextBody = onChange.mock.calls[0][0] as TextBody;
+      expect(onChange.calls.length).toBeGreaterThan(0);
+      const newTextBody = onChange.calls[0]![0];
 
       // All runs should now have bold: true
       for (const para of newTextBody.paragraphs) {
@@ -193,10 +207,10 @@ describe("MixedTextBodyEditor", () => {
 
     it("applies alignment to all paragraphs when alignment is changed", () => {
       const textBody = createMixedTextBody();
-      const onChange = vi.fn();
+      const onChange = createCallTracker<[TextBody]>();
 
       const { container } = render(
-        <MixedTextBodyEditor value={textBody} onChange={onChange} />
+        <MixedTextBodyEditor value={textBody} onChange={onChange.fn} />
       );
 
       // Expand Paragraph accordion
@@ -220,8 +234,8 @@ describe("MixedTextBodyEditor", () => {
       if (alignmentSelect) {
         fireEvent.change(alignmentSelect, { target: { value: "right" } });
 
-        expect(onChange).toHaveBeenCalled();
-        const newTextBody = onChange.mock.calls[0][0] as TextBody;
+        expect(onChange.calls.length).toBeGreaterThan(0);
+        const newTextBody = onChange.calls[0]![0];
 
         // All paragraphs should now have alignment: right
         for (const para of newTextBody.paragraphs) {
@@ -234,28 +248,28 @@ describe("MixedTextBodyEditor", () => {
   describe("disabled state", () => {
     it("does not call onChange when disabled", () => {
       const textBody = createSingleRunTextBody();
-      const onChange = vi.fn();
+      const onChange = createCallTracker<[TextBody]>();
 
       render(
-        <MixedTextBodyEditor value={textBody} onChange={onChange} disabled />
+        <MixedTextBodyEditor value={textBody} onChange={onChange.fn} disabled />
       );
 
       const boldButton = screen.getByRole("button", { name: /bold/i });
       fireEvent.click(boldButton);
 
-      expect(onChange).not.toHaveBeenCalled();
+      expect(onChange.calls.length).toBe(0);
     });
   });
 
   describe("styling", () => {
     it("applies custom className", () => {
       const textBody = createSingleRunTextBody();
-      const onChange = vi.fn();
+      const onChange = createCallTracker<[TextBody]>();
 
       const { container } = render(
         <MixedTextBodyEditor
           value={textBody}
-          onChange={onChange}
+          onChange={onChange.fn}
           className="custom-editor"
         />
       );
@@ -267,12 +281,12 @@ describe("MixedTextBodyEditor", () => {
 
     it("applies custom style", () => {
       const textBody = createSingleRunTextBody();
-      const onChange = vi.fn();
+      const onChange = createCallTracker<[TextBody]>();
 
       const { container } = render(
         <MixedTextBodyEditor
           value={textBody}
-          onChange={onChange}
+          onChange={onChange.fn}
           style={{ backgroundColor: "red" }}
         />
       );

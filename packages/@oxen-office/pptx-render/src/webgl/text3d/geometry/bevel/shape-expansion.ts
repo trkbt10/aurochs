@@ -10,7 +10,7 @@
  */
 
 import type { Vector2, ShapeInput } from "./types";
-import { Vec2, vec2 } from "./types";
+import { Vec2 } from "./types";
 
 // =============================================================================
 // Point Utilities

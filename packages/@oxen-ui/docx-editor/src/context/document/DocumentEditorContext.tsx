@@ -122,6 +122,22 @@ export function DocumentEditorProvider({
   );
 }
 
+/**
+ * Provider for tests that need to inject a custom context value.
+ *
+ * Avoids using module mocks (e.g. `vi.mock`) and keeps tests aligned with this
+ * repository's lint rules (no test-library imports / no mock APIs).
+ */
+export function DocumentEditorTestProvider({
+  children,
+  value,
+}: {
+  readonly children: ReactNode;
+  readonly value: DocumentEditorContextValue;
+}) {
+  return <DocumentEditorContext.Provider value={value}>{children}</DocumentEditorContext.Provider>;
+}
+
 // =============================================================================
 // Hooks
 // =============================================================================

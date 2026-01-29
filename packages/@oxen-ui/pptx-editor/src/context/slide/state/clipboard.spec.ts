@@ -2,7 +2,6 @@
  * @file Clipboard tests
  */
 
-import { describe, it, expect } from "vitest";
 import { createClipboardContent, incrementPasteCount } from "./clipboard";
 import type { Shape } from "@oxen-office/pptx/domain";
 import { px, deg } from "@oxen-office/ooxml/domain/units";

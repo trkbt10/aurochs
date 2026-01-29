@@ -388,9 +388,10 @@ function getCharOffsetInSpan(span: LayoutLine["spans"][number], targetX: number)
   const prevIndex = Math.max(low - 1, 0);
   const prevWidth = getTextWidthForChars(span, prevIndex) as number;
   const nextWidth = getTextWidthForChars(span, low) as number;
-  return Math.abs(targetX - prevWidth) <= Math.abs(nextWidth - targetX)
-    ? prevIndex
-    : low;
+  if (Math.abs(targetX - prevWidth) <= Math.abs(nextWidth - targetX)) {
+    return prevIndex;
+  }
+  return low;
 }
 
 /**

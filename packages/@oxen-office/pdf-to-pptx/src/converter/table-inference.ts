@@ -378,11 +378,9 @@ function collectAxisAlignedRuleSegments(
 }
 
 function inferGridFromPaths(
-  paths: readonly PdfPath[],
-  approxBounds: InferredTable["bounds"],
-  fontSize: number,
-  targetCols: number,
+  ...args: [paths: readonly PdfPath[], approxBounds: InferredTable["bounds"], fontSize: number, targetCols: number]
 ): TableGridFromPaths | null {
+  const [paths, approxBounds, fontSize, targetCols] = args;
   if (paths.length === 0) {return null;}
 
   const pad = Math.max(2, fontSize * 0.9);
@@ -480,7 +478,6 @@ function inferGridFromPaths(
   };
 
   const clusterTol = Math.max(0.5, fontSize * 0.12);
-  const coverageW = Math.max(1, approxTableBounds.width);
   const coverageH = Math.max(1, approxTableBounds.height);
   const coverageRatioTh = 0.55;
 
@@ -852,10 +849,10 @@ export function inferTableFromGroupedText(group: GroupedText, options: TableInfe
   const headerishLines = sortedLines.filter(isHeaderish).filter((l) => l.segments.length === targetCols);
 
   const topWindow = Math.max(1, Math.floor(sortedLines.length * 0.25));
-  let trainingLines =
-    headerishLines.length > 0
-      ? headerishLines
-      : sortedLines.slice(0, topWindow).filter((l) => l.segments.length === targetCols);
+  let trainingLines = sortedLines.slice(0, topWindow).filter((l) => l.segments.length === targetCols);
+  if (headerishLines.length > 0) {
+    trainingLines = headerishLines;
+  }
 
   if (trainingLines.length === 0) {trainingLines = lineSegs.filter((l) => l.segments.length === targetCols);}
   // If we have grid-inferred x-boundaries, we can continue without training lines.
@@ -994,8 +991,15 @@ export function inferTableFromGroupedText(group: GroupedText, options: TableInfe
       rightNameRefSamples.push(computeGapCenter(segs[4]!, segs[5]!));
     }
 
-    const leftNameRefFromHeader = leftNameRefSamples.length > 0 ? median(leftNameRefSamples) : leftCodeNameBoundary + (blockSplitX - leftCodeNameBoundary) * 0.8;
-    const rightNameRefFromHeader = rightNameRefSamples.length > 0 ? median(rightNameRefSamples) : rightCodeNameBoundary + (boundsX1 - rightCodeNameBoundary) * 0.8;
+    let leftNameRefFromHeader = leftCodeNameBoundary + (blockSplitX - leftCodeNameBoundary) * 0.8;
+    if (leftNameRefSamples.length > 0) {
+      leftNameRefFromHeader = median(leftNameRefSamples);
+    }
+
+    let rightNameRefFromHeader = rightCodeNameBoundary + (boundsX1 - rightCodeNameBoundary) * 0.8;
+    if (rightNameRefSamples.length > 0) {
+      rightNameRefFromHeader = median(rightNameRefSamples);
+    }
 
     const leftNameRightQ90 = leftNameRight.length > 0 ? quantile(leftNameRight, 0.9) : leftNameRefFromHeader;
     const rightNameRightQ90 = rightNameRight.length > 0 ? quantile(rightNameRight, 0.9) : rightNameRefFromHeader;
@@ -1328,7 +1332,6 @@ export function inferTableFromGroupedText(group: GroupedText, options: TableInfe
     // Horizontal boundary presence per (row boundary below row, column)
     const hBoundaryPresentBelow: boolean[][] = Array.from({ length: Math.max(0, rowCount - 1) }, () => Array.from({ length: targetCols }, () => true));
     for (let ri = 0; ri < rowCount - 1; ri++) {
-      const yBoundary = yBounds[ri + 1]!;
       const segs = hBuckets[ri + 1] ?? [];
       if (segs.length === 0) {
         // No evidence of this boundary: assume it exists to avoid aggressive rowSpan merging.
@@ -1345,7 +1348,8 @@ export function inferTableFromGroupedText(group: GroupedText, options: TableInfe
 
     const coveredByRowSpan: boolean[][] = Array.from({ length: rowCount }, () => Array.from({ length: targetCols }, () => false));
 
-    const mergeAccForRegion = (r0: number, r1Exclusive: number, c0: number, c1Exclusive: number): CellAcc => {
+    const mergeAccForRegion = (...args: [r0: number, r1Exclusive: number, c0: number, c1Exclusive: number]): CellAcc => {
+      const [r0, r1Exclusive, c0, c1Exclusive] = args;
       const merged: CellAcc = { byBaseline: new Map<number, PdfText[]>(), x0: Infinity, x1: -Infinity };
       for (let rr = r0; rr < r1Exclusive; rr++) {
         const rowMap = rowsAcc[rr]!;

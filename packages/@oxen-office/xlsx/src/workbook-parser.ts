@@ -214,12 +214,15 @@ function parseRelsToMap(relsXml: XmlDocument | null): Map<string, string> {
  * Parse a single worksheet
  */
 function parseSheet(
-  pkg: ZipPackage,
-  name: string,
-  id: string,
-  xmlPath: string,
-  sharedStrings: readonly string[],
+  ...args: readonly [
+    pkg: ZipPackage,
+    name: string,
+    id: string,
+    xmlPath: string,
+    sharedStrings: readonly string[],
+  ]
 ): WorkbookSheet | undefined {
+  const [pkg, name, id, xmlPath, sharedStrings] = args;
   const sheetText = pkg.readText(xmlPath);
   if (!sheetText) {
     return undefined;
@@ -333,11 +336,14 @@ export function getCellValue(
  * @returns Array of values
  */
 export function getColumnValues(
-  sheet: WorkbookSheet,
-  col: string,
-  startRow: number,
-  endRow: number,
+  ...args: readonly [
+    sheet: WorkbookSheet,
+    col: string,
+    startRow: number,
+    endRow: number,
+  ]
 ): readonly (string | number | boolean | undefined)[] {
+  const [sheet, col, startRow, endRow] = args;
   const values: (string | number | boolean | undefined)[] = [];
   for (let row = startRow; row <= endRow; row++) {
     values.push(getCellValue(sheet, col, row));
@@ -355,11 +361,14 @@ export function getColumnValues(
  * @returns Array of values
  */
 export function getRowValues(
-  sheet: WorkbookSheet,
-  row: number,
-  startCol: string,
-  endCol: string,
+  ...args: readonly [
+    sheet: WorkbookSheet,
+    row: number,
+    startCol: string,
+    endCol: string,
+  ]
 ): readonly (string | number | boolean | undefined)[] {
+  const [sheet, row, startCol, endCol] = args;
   const startIndex = columnLetterToIndex(startCol) as number;
   const endIndex = columnLetterToIndex(endCol) as number;
 

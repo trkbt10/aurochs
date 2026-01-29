@@ -164,11 +164,14 @@ function binarySearchDescendingUpperBound(vector: LookupVector, lookup: number):
 }
 
 function findExactIndex(
-  vector: LookupVector,
-  lookupValue: FormulaEvaluationResult,
-  fromEnd: boolean,
-  compare: (a: FormulaEvaluationResult, b: FormulaEvaluationResult) => boolean,
+  ...args: readonly [
+    vector: LookupVector,
+    lookupValue: FormulaEvaluationResult,
+    fromEnd: boolean,
+    compare: (a: FormulaEvaluationResult, b: FormulaEvaluationResult) => boolean,
+  ]
 ): number | null {
+  const [vector, lookupValue, fromEnd, compare] = args;
   if (!fromEnd) {
     for (let i = 0; i < vector.length; i += 1) {
       if (compare(vector.at(i), lookupValue)) {
@@ -278,4 +281,3 @@ export const xlookupFunction: FormulaFunctionEagerDefinition = {
     return resolveReturnValue({ orientation: lookupVector.orientation, matchIndex, returnArray: args[2] });
   },
 };
-

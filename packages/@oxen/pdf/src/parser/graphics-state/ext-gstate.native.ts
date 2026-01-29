@@ -183,7 +183,8 @@ type OrientedBox = Readonly<{
   readonly aabb: BBox4;
 }>;
 
-function dot(ax: number, ay: number, bx: number, by: number): number {
+function dot(...args: readonly [ax: number, ay: number, bx: number, by: number]): number {
+  const [ax, ay, bx, by] = args;
   return ax * bx + ay * by;
 }
 
@@ -523,11 +524,6 @@ function parseSoftMaskBackdropRgb(
   return null;
 }
 
-function getNumberValue(page: NativePdfPage, dict: PdfDict, key: string): number | null {
-  const v = resolve(page, dictGet(dict, key));
-  return v?.type === "number" && Number.isFinite(v.value) ? v.value : null;
-}
-
 function getXObjectsDict(page: NativePdfPage, resources: PdfDict | null): PdfDict | null {
   if (!resources) {return null;}
   return asDict(resolve(page, dictGet(resources, "XObject")));
@@ -539,18 +535,33 @@ function resolveXObjectStreamByName(page: NativePdfPage, xObjects: PdfDict, name
 }
 
 function tryExtractPerPixelSoftMaskFromElements(
-  page: NativePdfPage,
-  elements: readonly ParsedElement[],
-  bbox: BBox4,
-  matrix: PdfMatrix,
-  kind: SoftMaskKind,
-  resources: PdfDict | null,
-  fontMappings: FontMappings,
-  options: ExtGStateExtractOptions,
-  groupKnockout: boolean,
-  groupIsolated: boolean,
-  backdropRgb: readonly [number, number, number] | null,
+  ...args: readonly [
+    page: NativePdfPage,
+    elements: readonly ParsedElement[],
+    bbox: BBox4,
+    matrix: PdfMatrix,
+    kind: SoftMaskKind,
+    resources: PdfDict | null,
+    fontMappings: FontMappings,
+    options: ExtGStateExtractOptions,
+    groupKnockout: boolean,
+    groupIsolated: boolean,
+    backdropRgb: readonly [number, number, number] | null,
+  ]
 ): PdfSoftMask | null {
+  const [
+    page,
+    elements,
+    bbox,
+    matrix,
+    kind,
+    resources,
+    fontMappings,
+    options,
+    groupKnockout,
+    groupIsolated,
+    backdropRgb,
+  ] = args;
   type MaskLayer =
     | Readonly<{
       readonly kind: "image";
@@ -591,12 +602,15 @@ function tryExtractPerPixelSoftMaskFromElements(
   const hasRasterImages = rasterImageElements.length > 0;
 
   const rasterizeTextElementToGrid = (
-    elem: ParsedText,
-    width: number,
-    height: number,
-    bbox: BBox4,
-    fontMappings: FontMappings,
+    ...args: readonly [
+      elem: ParsedText,
+      width: number,
+      height: number,
+      bbox: BBox4,
+      fontMappings: FontMappings,
+    ]
   ): RasterLayer | null | undefined => {
+    const [elem, width, height, bbox, fontMappings] = args;
     const gs = elem.graphicsState;
     if (gs.softMask) {return null;}
 

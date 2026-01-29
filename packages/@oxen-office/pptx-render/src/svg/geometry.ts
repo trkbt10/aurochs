@@ -91,11 +91,14 @@ export function renderGeometryPathData(geomPath: GeometryPath): string {
  * Render a geometry path to SVG path element
  */
 export function renderGeometryPath(
-  geomPath: GeometryPath,
-  fill: Fill | undefined,
-  line: Line | undefined,
-  transform?: Transform,
+  ...args: [
+    geomPath: GeometryPath,
+    fill: Fill | undefined,
+    line: Line | undefined,
+    transform?: Transform,
+  ]
 ): HtmlString {
+  const [geomPath, fill, line, transform] = args;
   const d = renderGeometryPathData(geomPath);
 
   const fillStyle = fill ? renderFillToStyle(fill) : undefined;
@@ -5236,7 +5239,10 @@ const PRESET_SHAPES: Record<string, (w: number, h: number, adj: Map<string, numb
 /**
  * Generate a star polygon path
  */
-function generateStar(w: number, h: number, points: number, innerRatio: number): string {
+function generateStar(
+  ...args: [w: number, h: number, points: number, innerRatio: number]
+): string {
+  const [w, h, points, innerRatio] = args;
   const cx = w / 2;
   const cy = h / 2;
   const outerR = Math.min(w, h) / 2;
@@ -5497,12 +5503,15 @@ export type GeometryPathWithMarkersResult = {
  * @see ECMA-376 Part 1, Section 20.1.8.57 (tailEnd)
  */
 export function renderGeometryPathWithMarkers(
-  geomPath: GeometryPath,
-  fill: Fill | undefined,
-  line: Line | undefined,
-  colorContext?: ColorContext,
-  transform?: Transform,
+  ...args: [
+    geomPath: GeometryPath,
+    fill: Fill | undefined,
+    line: Line | undefined,
+    colorContext?: ColorContext,
+    transform?: Transform,
+  ]
 ): GeometryPathWithMarkersResult {
+  const [geomPath, fill, line, colorContext, transform] = args;
   const d = renderGeometryPathData(geomPath);
 
   const fillStyle = fill ? renderFillToStyle(fill) : undefined;

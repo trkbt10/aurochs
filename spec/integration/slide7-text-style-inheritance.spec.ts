@@ -55,14 +55,6 @@ const BODY_STYLE = {
 } as const;
 
 /**
- * EMU to pixel conversion at 96 DPI.
- * @see ECMA-376 Part 1, Section 20.1.10.16 (ST_Coordinate)
- */
-function emuToPx(emu: number): number {
-  return (emu / 914400) * 96;
-}
-
-/**
  * Points to pixels conversion at 96 DPI (1pt = 96/72 px).
  */
 function ptToPx(pt: number): number {

@@ -21,7 +21,7 @@ import type {
   LineSeries,
   RadarSeries,
   BubbleSeries,
-} from "@oxen-office/pptx/domain/chart";
+} from "@oxen-office/chart/domain";
 import { createCoreRenderContext } from "../render-context";
 import { pct, deg, px } from "@oxen-office/ooxml/domain/units";
 import { loadPptxFile } from "../../../../../scripts/lib/pptx-loader";

@@ -6,7 +6,7 @@
  * @see ECMA-376 Part 1, Section 21.2 - DrawingML Charts
  */
 
-import type { ChartShapeProperties } from "@oxen-office/pptx/domain/chart";
+import type { ChartShapeProperties } from "@oxen-office/chart/domain";
 import type { CoreRenderContext } from "../render-context";
 import { resolveFill } from "@oxen-office/pptx/domain/color/fill";
 

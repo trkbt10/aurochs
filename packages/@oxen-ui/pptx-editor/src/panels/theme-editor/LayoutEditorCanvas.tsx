@@ -179,11 +179,14 @@ export function LayoutEditorCanvas({ slideSize, colorScheme }: LayoutEditorCanva
 
   const handleStartResize = useCallback(
     (
-      handle: ResizeHandlePosition,
-      startX: number,
-      startY: number,
-      aspectLocked: boolean
+      ...args: readonly [
+        handle: ResizeHandlePosition,
+        startX: number,
+        startY: number,
+        aspectLocked: boolean,
+      ]
     ) => {
+      const [handle, startX, startY, aspectLocked] = args;
       dispatch({
         type: "START_LAYOUT_RESIZE",
         handle,

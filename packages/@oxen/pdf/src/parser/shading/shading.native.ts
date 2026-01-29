@@ -9,7 +9,7 @@
  * - Function: FunctionType 2 (exponential interpolation)
  */
 
-import type { NativePdfPage, PdfArray, PdfBool, PdfDict, PdfName, PdfNumber, PdfObject, PdfStream } from "../../native";
+import type { NativePdfPage, PdfArray, PdfBool, PdfDict, PdfNumber, PdfObject, PdfStream } from "../../native";
 import type { PdfShading, PdfShadingFunctionType2 } from "./shading.types";
 
 function asDict(obj: PdfObject | undefined): PdfDict | null {
@@ -17,9 +17,6 @@ function asDict(obj: PdfObject | undefined): PdfDict | null {
 }
 function asStream(obj: PdfObject | undefined): PdfStream | null {
   return obj?.type === "stream" ? obj : null;
-}
-function asName(obj: PdfObject | undefined): PdfName | null {
-  return obj?.type === "name" ? obj : null;
 }
 function asNumber(obj: PdfObject | undefined): PdfNumber | null {
   return obj?.type === "number" ? obj : null;
@@ -98,9 +95,10 @@ function parseFunctionType2(page: NativePdfPage, obj: PdfObject | undefined): Pd
   if (n == null || !Number.isFinite(n)) {return null;}
 
   const domainNums = parseNumberArray(page, dictGet(dict, "Domain"), 2);
-  const domain: readonly [number, number] | undefined = domainNums
-    ? [domainNums[0] ?? 0, domainNums[1] ?? 1]
-    : undefined;
+  let domain: readonly [number, number] | undefined;
+  if (domainNums) {
+    domain = [domainNums[0] ?? 0, domainNums[1] ?? 1];
+  }
 
   return { type: "FunctionType2", c0, c1, n, domain };
 }

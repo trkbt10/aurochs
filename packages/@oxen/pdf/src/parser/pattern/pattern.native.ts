@@ -9,7 +9,7 @@
  *   - /Matrix: optional (defaults to identity)
  */
 
-import type { NativePdfPage, PdfArray, PdfDict, PdfName, PdfNumber, PdfObject, PdfStream } from "../../native";
+import type { NativePdfPage, PdfArray, PdfDict, PdfNumber, PdfObject, PdfStream } from "../../native";
 import type { PdfMatrix } from "../../domain";
 import type { PdfPattern, PdfShadingPattern, PdfTilingPattern } from "./pattern.types";
 import { parseShadingObjectNative } from "../shading/shading.native";
@@ -22,9 +22,6 @@ function asDict(obj: PdfObject | undefined): PdfDict | null {
 }
 function asStream(obj: PdfObject | undefined): PdfStream | null {
   return obj?.type === "stream" ? obj : null;
-}
-function asName(obj: PdfObject | undefined): PdfName | null {
-  return obj?.type === "name" ? obj : null;
 }
 function asNumber(obj: PdfObject | undefined): PdfNumber | null {
   return obj?.type === "number" ? obj : null;

@@ -145,12 +145,12 @@ describe("connection-site - ECMA-376 compliance", () => {
     it("returns site by index for preset geometry", () => {
       const geom: PresetGeometry = { type: "preset", preset: "rect", adjustValues: [] };
 
-      const site0 = getConnectionPoint(geom, 100, 50, 0);
+      const site0 = getConnectionPoint({ geometry: geom, width: 100, height: 50, siteIndex: 0 });
       expect(site0).toBeDefined();
       expect(site0!.x).toBe(50);
       expect(site0!.y).toBe(0);
 
-      const site1 = getConnectionPoint(geom, 100, 50, 1);
+      const site1 = getConnectionPoint({ geometry: geom, width: 100, height: 50, siteIndex: 1 });
       expect(site1).toBeDefined();
       expect(site1!.x).toBe(100);
       expect(site1!.y).toBe(25);
@@ -158,12 +158,12 @@ describe("connection-site - ECMA-376 compliance", () => {
 
     it("returns undefined for invalid index", () => {
       const geom: PresetGeometry = { type: "preset", preset: "rect", adjustValues: [] };
-      const site = getConnectionPoint(geom, 100, 50, 99);
+      const site = getConnectionPoint({ geometry: geom, width: 100, height: 50, siteIndex: 99 });
       expect(site).toBeUndefined();
     });
 
     it("returns default sites when geometry is undefined", () => {
-      const site = getConnectionPoint(undefined, 100, 50, 0);
+      const site = getConnectionPoint({ geometry: undefined, width: 100, height: 50, siteIndex: 0 });
       expect(site).toBeDefined();
       expect(site!.x).toBe(50);
       expect(site!.y).toBe(0);
@@ -172,34 +172,34 @@ describe("connection-site - ECMA-376 compliance", () => {
 
   describe("transformConnectionPoint", () => {
     it("translates to world coordinates without transforms", () => {
-      const result = transformConnectionPoint(
-        50,
-        0, // Site position
-        100,
-        200, // Shape position
-        100,
-        50, // Shape size
-        0, // No rotation
-        false,
-        false, // No flips
-      );
+      const result = transformConnectionPoint({
+        siteX: 50,
+        siteY: 0,
+        shapeX: 100,
+        shapeY: 200,
+        shapeWidth: 100,
+        shapeHeight: 50,
+        rotation: 0,
+        flipH: false,
+        flipV: false,
+      });
 
       expect(result.x).toBe(150); // 100 + 50
       expect(result.y).toBe(200); // 200 + 0
     });
 
     it("applies horizontal flip", () => {
-      const result = transformConnectionPoint(
-        0,
-        25, // Left center site
-        100,
-        200, // Shape position
-        100,
-        50, // Shape size
-        0, // No rotation
-        true,
-        false, // Flip H
-      );
+      const result = transformConnectionPoint({
+        siteX: 0,
+        siteY: 25,
+        shapeX: 100,
+        shapeY: 200,
+        shapeWidth: 100,
+        shapeHeight: 50,
+        rotation: 0,
+        flipH: true,
+        flipV: false,
+      });
 
       // Horizontal flip: x becomes (width - x) = 100 - 0 = 100
       expect(result.x).toBe(200); // 100 + 100
@@ -207,17 +207,17 @@ describe("connection-site - ECMA-376 compliance", () => {
     });
 
     it("applies vertical flip", () => {
-      const result = transformConnectionPoint(
-        50,
-        0, // Top center site
-        100,
-        200, // Shape position
-        100,
-        50, // Shape size
-        0, // No rotation
-        false,
-        true, // Flip V
-      );
+      const result = transformConnectionPoint({
+        siteX: 50,
+        siteY: 0,
+        shapeX: 100,
+        shapeY: 200,
+        shapeWidth: 100,
+        shapeHeight: 50,
+        rotation: 0,
+        flipH: false,
+        flipV: true,
+      });
 
       // Vertical flip: y becomes (height - y) = 50 - 0 = 50
       expect(result.x).toBe(150); // 100 + 50
@@ -225,17 +225,17 @@ describe("connection-site - ECMA-376 compliance", () => {
     });
 
     it("applies 90 degree rotation", () => {
-      const result = transformConnectionPoint(
-        50,
-        0, // Top center site
-        100,
-        200, // Shape position
-        100,
-        100, // Square shape
-        90, // 90 degree rotation
-        false,
-        false, // No flips
-      );
+      const result = transformConnectionPoint({
+        siteX: 50,
+        siteY: 0,
+        shapeX: 100,
+        shapeY: 200,
+        shapeWidth: 100,
+        shapeHeight: 100,
+        rotation: 90,
+        flipH: false,
+        flipV: false,
+      });
 
       // After 90° rotation around center (50, 50):
       // Point (50, 0) -> (100, 50)
@@ -244,17 +244,17 @@ describe("connection-site - ECMA-376 compliance", () => {
     });
 
     it("applies 180 degree rotation", () => {
-      const result = transformConnectionPoint(
-        50,
-        0, // Top center site
-        100,
-        200, // Shape position
-        100,
-        100, // Square shape
-        180, // 180 degree rotation
-        false,
-        false, // No flips
-      );
+      const result = transformConnectionPoint({
+        siteX: 50,
+        siteY: 0,
+        shapeX: 100,
+        shapeY: 200,
+        shapeWidth: 100,
+        shapeHeight: 100,
+        rotation: 180,
+        flipH: false,
+        flipV: false,
+      });
 
       // After 180° rotation around center (50, 50):
       // Point (50, 0) -> (50, 100)
@@ -263,17 +263,17 @@ describe("connection-site - ECMA-376 compliance", () => {
     });
 
     it("applies combined flip and rotation", () => {
-      const result = transformConnectionPoint(
-        0,
-        50, // Left center site
-        0,
-        0, // Shape at origin
-        100,
-        100, // Square shape
-        90, // 90 degree rotation
-        true,
-        false, // Flip H
-      );
+      const result = transformConnectionPoint({
+        siteX: 0,
+        siteY: 50,
+        shapeX: 0,
+        shapeY: 0,
+        shapeWidth: 100,
+        shapeHeight: 100,
+        rotation: 90,
+        flipH: true,
+        flipV: false,
+      });
 
       // First flip H: (0, 50) -> (100, 50)
       // Then rotate 90° around center (50, 50): (100, 50) -> (50, 100)

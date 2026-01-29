@@ -20,22 +20,30 @@ import {
   createMockTimeProvider,
   setTimeProvider,
   resetTimeProvider,
-  type AnimationController,
 } from "./engine";
 
 // =============================================================================
 // Test Helpers
 // =============================================================================
 
+function isHTMLElement(value: unknown): value is HTMLElement {
+  return typeof value === "object" && value !== null && "style" in value;
+}
+
 function createMockElement(): HTMLElement {
-  return {
+  const el: unknown = {
     style: {
       opacity: "",
       visibility: "",
       transform: "",
       clipPath: "",
     },
-  } as unknown as HTMLElement;
+    offsetHeight: 0,
+  };
+  if (!isHTMLElement(el)) {
+    throw new Error("createMockElement: invalid mock element shape");
+  }
+  return el;
 }
 
 // =============================================================================

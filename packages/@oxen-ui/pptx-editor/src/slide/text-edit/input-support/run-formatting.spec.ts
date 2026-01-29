@@ -2,7 +2,6 @@
  * @file Unit tests for run-formatting
  */
 
-import { describe, it, expect } from "vitest";
 import {
   applyRunPropertiesToSelection,
   applyParagraphPropertiesToSelection,

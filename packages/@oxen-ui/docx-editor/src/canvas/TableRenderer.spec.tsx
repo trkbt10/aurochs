@@ -4,11 +4,11 @@
 
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import type { DocxTable, DocxTableProperties } from "@oxen-office/docx/domain/table";
 import { gridSpan } from "@oxen-office/ooxml/domain/table";
 import { TableRenderer, computeTableStyles } from "./TableRenderer";
+import type { TableRendererProps } from "./TableRenderer";
 
 // =============================================================================
 // Test Fixtures
@@ -42,6 +42,14 @@ function createEmptyTable(): DocxTable {
     type: "table",
     rows: [],
   };
+}
+
+function createCallTracker<Args extends readonly unknown[]>() {
+  const calls: Args[] = [];
+  const fn = (...args: Args) => {
+    calls.push(args);
+  };
+  return { fn, calls };
 }
 
 // =============================================================================
@@ -142,10 +150,11 @@ describe("computeTableStyles", () => {
 // =============================================================================
 
 describe("TableRenderer", () => {
+  const noopOnClick: TableRendererProps["onClick"] = () => {};
   const defaultProps = {
     elementId: "0",
     isSelected: false,
-    onClick: vi.fn(),
+    onClick: noopOnClick,
   };
 
   it("renders table with cells", () => {
@@ -168,29 +177,35 @@ describe("TableRenderer", () => {
   });
 
   it("calls onClick when table is clicked", () => {
-    const onClick = vi.fn();
+    const onClick = createCallTracker<Parameters<TableRendererProps["onClick"]>>();
     const table = createSimpleTable(1, 1);
     const { container } = render(
-      <TableRenderer table={table} {...defaultProps} onClick={onClick} />
+      <TableRenderer table={table} {...defaultProps} onClick={onClick.fn} />
     );
 
     const div = container.firstChild as HTMLElement;
     fireEvent.click(div);
-    expect(onClick).toHaveBeenCalled();
+    expect(onClick.calls.length).toBe(1);
   });
 
   it("calls onCellClick when cell is clicked", () => {
-    const onCellClick = vi.fn();
+    const onCellClick = createCallTracker<
+      Parameters<NonNullable<TableRendererProps["onCellClick"]>>
+    >();
     const table = createSimpleTable(2, 2);
     const { container } = render(
-      <TableRenderer table={table} {...defaultProps} onCellClick={onCellClick} />
+      <TableRenderer
+        table={table}
+        {...defaultProps}
+        onCellClick={onCellClick.fn}
+      />
     );
 
     const cells = container.querySelectorAll("td");
     if (cells[3]) {
       fireEvent.click(cells[3]);
     }
-    expect(onCellClick).toHaveBeenCalled();
+    expect(onCellClick.calls.length).toBe(1);
   });
 
   it("sets data-element-id attribute", () => {

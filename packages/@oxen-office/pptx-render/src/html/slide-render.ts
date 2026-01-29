@@ -85,7 +85,7 @@ function buildSlideContextFromSlide(slide: Slide): SlideContext {
     tableStyles: slide.tableStyles ?? undefined,
   };
 
-  return createSlideContext(slideParams, layout, master, presentation);
+  return createSlideContext({ slide: slideParams, layout, master, presentation });
 }
 
 /**

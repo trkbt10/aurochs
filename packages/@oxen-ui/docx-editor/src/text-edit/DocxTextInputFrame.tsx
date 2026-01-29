@@ -52,9 +52,7 @@ function clampSelection(value: string, start: number, end: number): readonly [nu
   const max = value.length;
   const clampedStart = Math.max(0, Math.min(start, max));
   const clampedEnd = Math.max(0, Math.min(end, max));
-  return clampedStart <= clampedEnd
-    ? [clampedStart, clampedEnd]
-    : [clampedEnd, clampedStart];
+  return clampedStart <= clampedEnd ? [clampedStart, clampedEnd] : [clampedEnd, clampedStart];
 }
 
 

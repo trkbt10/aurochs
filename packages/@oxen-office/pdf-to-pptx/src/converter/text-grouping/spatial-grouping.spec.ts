@@ -456,8 +456,10 @@ describe("createSpatialGrouping", () => {
 
       const pageWidth = 500;
 
-      const makeLine = (prefix: string, x: number, y: number, width: number): PdfText =>
-        createPdfText({ text: `${prefix}-${"x".repeat(40)}`, x, y, width, height: 12, fontSize: 12 });
+      const makeLine = (...args: readonly [prefix: string, x: number, y: number, width: number]): PdfText => {
+        const [prefix, x, y, width] = args;
+        return createPdfText({ text: `${prefix}-${"x".repeat(40)}`, x, y, width, height: 12, fontSize: 12 });
+      };
 
       const texts: PdfText[] = [];
 

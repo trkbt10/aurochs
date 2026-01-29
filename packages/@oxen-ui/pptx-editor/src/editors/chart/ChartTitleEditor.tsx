@@ -1,115 +1,26 @@
 /**
- * @file ChartTitleEditor - Editor for ChartTitle type
+ * @file ChartTitleEditor (PPTX)
  *
- * Edits chart title including text, layout, overlay, and shape properties.
- * @see ECMA-376 Part 1, Section 21.2.2.211 (title)
+ * Wrapper around `@oxen-ui/chart-editor` with PPTX adapters injected.
  */
 
-import { useCallback, type CSSProperties } from "react";
-import { Toggle } from "@oxen-ui/ui-components/primitives";
-import { Accordion, FieldGroup, FieldRow } from "@oxen-ui/ui-components/layout";
-import { TextBodyEditor, createDefaultTextBody } from "../text";
-import { ChartShapePropertiesEditor } from "./ChartShapePropertiesEditor";
-import { LayoutEditor } from "./LayoutEditor";
-import type { ChartTitle, Layout, ChartShapeProperties } from "@oxen-office/pptx/domain/chart";
-import type { TextBody } from "@oxen-office/pptx/domain/text";
+import type { CSSProperties } from "react";
+import type { ChartTitle } from "@oxen-office/chart/domain";
 import type { EditorProps } from "@oxen-ui/ui-components/types";
+import {
+  ChartTitleEditor as CoreChartTitleEditor,
+  createDefaultChartTitle as createDefaultChartTitleCore,
+} from "@oxen-ui/chart-editor";
+import { pptxChartEditorAdapters } from "./adapters";
 
 export type ChartTitleEditorProps = EditorProps<ChartTitle | undefined> & {
   readonly style?: CSSProperties;
 };
 
-const containerStyle: CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  gap: "12px",
-};
-
-/**
- * Editor for chart titles.
- */
-export function ChartTitleEditor({
-  value,
-  onChange,
-  disabled,
-  className,
-  style,
-}: ChartTitleEditorProps) {
-  const title = value ?? {};
-
-  const updateField = useCallback(
-    <K extends keyof ChartTitle>(field: K, newValue: ChartTitle[K]) => {
-      onChange({ ...title, [field]: newValue });
-    },
-    [title, onChange]
-  );
-
-  const handleTextBodyChange = useCallback(
-    (textBody: TextBody) => {
-      updateField("textBody", textBody);
-    },
-    [updateField]
-  );
-
-  const handleLayoutChange = useCallback(
-    (layout: Layout | undefined) => {
-      updateField("layout", layout);
-    },
-    [updateField]
-  );
-
-  const handleShapePropertiesChange = useCallback(
-    (shapeProperties: ChartShapeProperties | undefined) => {
-      updateField("shapeProperties", shapeProperties);
-    },
-    [updateField]
-  );
-
-  return (
-    <div style={{ ...containerStyle, ...style }} className={className}>
-      <FieldRow>
-        <FieldGroup label="Overlay" style={{ flex: 1 }}>
-          <Toggle
-            checked={title.overlay ?? false}
-            onChange={(v) => updateField("overlay", v)}
-            disabled={disabled}
-          />
-        </FieldGroup>
-      </FieldRow>
-
-      <Accordion title="Text" defaultExpanded={false}>
-        <TextBodyEditor
-          value={title.textBody ?? createDefaultTextBody()}
-          onChange={handleTextBodyChange}
-          disabled={disabled}
-        />
-      </Accordion>
-
-      <Accordion title="Layout" defaultExpanded={false}>
-        <LayoutEditor
-          value={title.layout}
-          onChange={handleLayoutChange}
-          disabled={disabled}
-        />
-      </Accordion>
-
-      <Accordion title="Shape Properties" defaultExpanded={false}>
-        <ChartShapePropertiesEditor
-          value={title.shapeProperties}
-          onChange={handleShapePropertiesChange}
-          disabled={disabled}
-        />
-      </Accordion>
-    </div>
-  );
+export function ChartTitleEditor(props: ChartTitleEditorProps) {
+  return <CoreChartTitleEditor {...props} adapters={pptxChartEditorAdapters} />;
 }
 
-/**
- * Create default chart title
- */
-export function createDefaultChartTitle(): ChartTitle {
-  return {
-    textBody: createDefaultTextBody(),
-    overlay: false,
-  };
+export function createDefaultChartTitle() {
+  return createDefaultChartTitleCore();
 }

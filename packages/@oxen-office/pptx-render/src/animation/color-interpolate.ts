@@ -202,11 +202,14 @@ export function lerpRGB(from: RgbColor, to: RgbColor, t: number): RgbColor {
  * @returns Interpolated color
  */
 export function lerpHSL(
-  from: HslColor,
-  to: HslColor,
-  t: number,
-  direction: AnimateColorDirection = "cw"
+  ...args: [
+    from: HslColor,
+    to: HslColor,
+    t: number,
+    direction?: AnimateColorDirection,
+  ]
 ): HslColor {
+  const [from, to, t, direction = "cw"] = args;
   // Handle saturation and lightness linearly
   const s = lerp(from.s, to.s, t);
   const l = lerp(from.l, to.l, t);
@@ -245,12 +248,15 @@ export function lerpHSL(
  * @returns Interpolated color as CSS string
  */
 export function interpolateColor(
-  from: ParsedColor,
-  to: ParsedColor,
-  t: number,
-  colorSpace: AnimateColorSpace = "rgb",
-  direction: AnimateColorDirection = "cw"
+  ...args: [
+    from: ParsedColor,
+    to: ParsedColor,
+    t: number,
+    colorSpace?: AnimateColorSpace,
+    direction?: AnimateColorDirection,
+  ]
 ): string {
+  const [from, to, t, colorSpace = "rgb", direction = "cw"] = args;
   // Interpolate alpha
   const alpha = lerp(from.alpha, to.alpha, t);
 

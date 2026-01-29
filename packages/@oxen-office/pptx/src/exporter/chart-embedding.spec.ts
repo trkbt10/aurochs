@@ -9,14 +9,13 @@
  * - syncAllChartEmbeddings function
  */
 
-import { describe, it, expect, vi } from "vitest";
 import {
   getChartRelsPath,
   listEmbeddedXlsx,
   updateEmbeddedXlsx,
   syncAllChartEmbeddings,
 } from "./chart-embedding";
-import type { ChartDataUpdate } from "../patcher/chart/chart-workbook-syncer";
+import type { ChartDataUpdate } from "@oxen-office/chart/patcher";
 import { exportXlsx } from "@oxen-office/xlsx/exporter";
 import { loadZipPackage } from "@oxen/zip";
 import type { XlsxWorkbook, XlsxWorksheet, XlsxRow } from "@oxen-office/xlsx/domain/workbook";
@@ -27,6 +26,15 @@ import type { Cell } from "@oxen-office/xlsx/domain/cell/types";
 // =============================================================================
 // Test Helper Functions
 // =============================================================================
+
+function hasConsoleWarnContaining(
+  warnCalls: ReadonlyArray<ReadonlyArray<unknown>>,
+  substring: string,
+): boolean {
+  return warnCalls.some((args) =>
+    args.some((arg) => typeof arg === "string" && arg.includes(substring)),
+  );
+}
 
 /**
  * Create a simple test cell with a number value.
@@ -240,12 +248,7 @@ describe("updateEmbeddedXlsx", () => {
     };
 
     // Update
-    await updateEmbeddedXlsx(
-      getFileContent,
-      setFileContent,
-      "ppt/charts/chart1.xml",
-      newChartData,
-    );
+    await updateEmbeddedXlsx({ getFileContent, setFileContent, chartPath: "ppt/charts/chart1.xml", chartData: newChartData });
 
     // Verify the xlsx was updated
     const updatedXlsx = files["ppt/embeddings/Microsoft_Excel_Worksheet1.xlsx"];
@@ -263,28 +266,34 @@ describe("updateEmbeddedXlsx", () => {
   });
 
   it("logs warning and skips when rels file is missing", async () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const originalWarn = console.warn;
+    const warnCalls: unknown[][] = [];
+    console.warn = (...args: unknown[]) => {
+      warnCalls.push(args);
+    };
 
     const getFileContent = async () => undefined;
-    const setFileContent = vi.fn();
+    const setFileContentCalls: Array<[string, Uint8Array]> = [];
+    const setFileContent = (path: string, content: Uint8Array) => {
+      setFileContentCalls.push([path, content]);
+    };
 
-    await updateEmbeddedXlsx(
-      getFileContent,
-      setFileContent,
-      "ppt/charts/chart1.xml",
-      { categories: [], series: [] },
-    );
+    try {
+      await updateEmbeddedXlsx({ getFileContent, setFileContent, chartPath: "ppt/charts/chart1.xml", chartData: { categories: [], series: [] } });
+    } finally {
+      console.warn = originalWarn;
+    }
 
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("No rels file found"),
-    );
-    expect(setFileContent).not.toHaveBeenCalled();
-
-    warnSpy.mockRestore();
+    expect(hasConsoleWarnContaining(warnCalls, "No rels file found")).toBe(true);
+    expect(setFileContentCalls).toHaveLength(0);
   });
 
   it("logs warning and skips when embedded xlsx path not in rels", async () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const originalWarn = console.warn;
+    const warnCalls: unknown[][] = [];
+    console.warn = (...args: unknown[]) => {
+      warnCalls.push(args);
+    };
 
     // Rels XML without package relationship
     const relsXml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -295,25 +304,27 @@ describe("updateEmbeddedXlsx", () => {
       if (path.endsWith(".rels")) {return relsXml;}
       return undefined;
     };
-    const setFileContent = vi.fn();
+    const setFileContentCalls: Array<[string, Uint8Array]> = [];
+    const setFileContent = (path: string, content: Uint8Array) => {
+      setFileContentCalls.push([path, content]);
+    };
 
-    await updateEmbeddedXlsx(
-      getFileContent,
-      setFileContent,
-      "ppt/charts/chart1.xml",
-      { categories: [], series: [] },
-    );
+    try {
+      await updateEmbeddedXlsx({ getFileContent, setFileContent, chartPath: "ppt/charts/chart1.xml", chartData: { categories: [], series: [] } });
+    } finally {
+      console.warn = originalWarn;
+    }
 
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("No embedded xlsx found"),
-    );
-    expect(setFileContent).not.toHaveBeenCalled();
-
-    warnSpy.mockRestore();
+    expect(hasConsoleWarnContaining(warnCalls, "No embedded xlsx found")).toBe(true);
+    expect(setFileContentCalls).toHaveLength(0);
   });
 
   it("logs warning and skips when embedded xlsx file is missing", async () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const originalWarn = console.warn;
+    const warnCalls: unknown[][] = [];
+    console.warn = (...args: unknown[]) => {
+      warnCalls.push(args);
+    };
 
     const relsXml = createChartRelsXml("../embeddings/missing.xlsx");
 
@@ -321,25 +332,27 @@ describe("updateEmbeddedXlsx", () => {
       if (path.endsWith(".rels")) {return relsXml;}
       return undefined;
     };
-    const setFileContent = vi.fn();
+    const setFileContentCalls: Array<[string, Uint8Array]> = [];
+    const setFileContent = (path: string, content: Uint8Array) => {
+      setFileContentCalls.push([path, content]);
+    };
 
-    await updateEmbeddedXlsx(
-      getFileContent,
-      setFileContent,
-      "ppt/charts/chart1.xml",
-      { categories: [], series: [] },
-    );
+    try {
+      await updateEmbeddedXlsx({ getFileContent, setFileContent, chartPath: "ppt/charts/chart1.xml", chartData: { categories: [], series: [] } });
+    } finally {
+      console.warn = originalWarn;
+    }
 
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("Embedded xlsx not found"),
-    );
-    expect(setFileContent).not.toHaveBeenCalled();
-
-    warnSpy.mockRestore();
+    expect(hasConsoleWarnContaining(warnCalls, "Embedded xlsx not found")).toBe(true);
+    expect(setFileContentCalls).toHaveLength(0);
   });
 
   it("maintains original file on parse error", async () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const originalWarn = console.warn;
+    const warnCalls: unknown[][] = [];
+    console.warn = (...args: unknown[]) => {
+      warnCalls.push(args);
+    };
 
     const relsXml = createChartRelsXml("../embeddings/invalid.xlsx");
     const invalidXlsx = new Uint8Array([0, 1, 2, 3]); // Not a valid ZIP
@@ -350,22 +363,19 @@ describe("updateEmbeddedXlsx", () => {
     };
 
     const getFileContent = async (path: string) => files[path];
-    const setFileContent = vi.fn();
+    const setFileContentCalls: Array<[string, Uint8Array]> = [];
+    const setFileContent = (path: string, content: Uint8Array) => {
+      setFileContentCalls.push([path, content]);
+    };
 
-    await updateEmbeddedXlsx(
-      getFileContent,
-      setFileContent,
-      "ppt/charts/chart1.xml",
-      { categories: ["Q1"], series: [{ name: "Sales", values: [100] }] },
-    );
+    try {
+      await updateEmbeddedXlsx({ getFileContent, setFileContent, chartPath: "ppt/charts/chart1.xml", chartData: { categories: ["Q1"], series: [{ name: "Sales", values: [100] }] } });
+    } finally {
+      console.warn = originalWarn;
+    }
 
-    expect(warnSpy).toHaveBeenCalledWith(
-      expect.stringContaining("Failed to update embedded xlsx"),
-      expect.anything(),
-    );
-    expect(setFileContent).not.toHaveBeenCalled();
-
-    warnSpy.mockRestore();
+    expect(hasConsoleWarnContaining(warnCalls, "Failed to update embedded xlsx")).toBe(true);
+    expect(setFileContentCalls).toHaveLength(0);
   });
 });
 
@@ -435,8 +445,15 @@ describe("syncAllChartEmbeddings", () => {
   });
 
   it("handles empty chart updates map", async () => {
-    const getFileContent = vi.fn();
-    const setFileContent = vi.fn();
+    const getFileContentCalls: string[] = [];
+    const getFileContent = async (path: string) => {
+      getFileContentCalls.push(path);
+      return undefined;
+    };
+    const setFileContentCalls: Array<[string, Uint8Array]> = [];
+    const setFileContent = (path: string, content: Uint8Array) => {
+      setFileContentCalls.push([path, content]);
+    };
 
     await syncAllChartEmbeddings(
       getFileContent,
@@ -444,12 +461,16 @@ describe("syncAllChartEmbeddings", () => {
       new Map(),
     );
 
-    expect(getFileContent).not.toHaveBeenCalled();
-    expect(setFileContent).not.toHaveBeenCalled();
+    expect(getFileContentCalls).toHaveLength(0);
+    expect(setFileContentCalls).toHaveLength(0);
   });
 
   it("continues processing other charts when one fails", async () => {
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const originalWarn = console.warn;
+    const warnCalls: unknown[][] = [];
+    console.warn = (...args: unknown[]) => {
+      warnCalls.push(args);
+    };
 
     // Valid workbook for chart2
     const workbook2 = createChartWorkbook(
@@ -484,10 +505,14 @@ describe("syncAllChartEmbeddings", () => {
       }],
     ]);
 
-    await syncAllChartEmbeddings(getFileContent, setFileContent, chartUpdates);
+    try {
+      await syncAllChartEmbeddings(getFileContent, setFileContent, chartUpdates);
+    } finally {
+      console.warn = originalWarn;
+    }
 
     // Chart1 should have logged a warning
-    expect(warnSpy).toHaveBeenCalled();
+    expect(warnCalls.length).toBeGreaterThan(0);
 
     // Chart2 should still have been updated
     const zip2 = await loadZipPackage(files["ppt/embeddings/workbook2.xlsx"] as Uint8Array);
@@ -495,6 +520,6 @@ describe("syncAllChartEmbeddings", () => {
     expect(ss2).not.toBeNull();
     expect(ss2).toContain("Z"); // New category from chart2 update
 
-    warnSpy.mockRestore();
+    expect(warnCalls.length).toBeGreaterThan(0);
   });
 });

@@ -10,10 +10,32 @@ import { withUpdatedTransform, hasEditableTransform } from "./transform";
 // Test Fixtures
 // =============================================================================
 
-const createSpShape = (x: number, y: number, width: number, height: number): SpShape => ({
-  type: "sp",
-  nonVisual: { id: "sp1", name: "Test Shape" },
-  properties: {
+const createSpShape = (...args: readonly [x: number, y: number, width: number, height: number]): SpShape => {
+  const [x, y, width, height] = args;
+  return {
+    type: "sp",
+    nonVisual: { id: "sp1", name: "Test Shape" },
+    properties: {
+      transform: {
+        x: px(x),
+        y: px(y),
+        width: px(width),
+        height: px(height),
+        rotation: deg(0),
+        flipH: false,
+        flipV: false,
+      },
+    },
+  };
+};
+
+const createGraphicFrame = (
+  ...args: readonly [x: number, y: number, width: number, height: number]
+): GraphicFrame => {
+  const [x, y, width, height] = args;
+  return {
+    type: "graphicFrame",
+    nonVisual: { id: "gf1", name: "Test Table" },
     transform: {
       x: px(x),
       y: px(y),
@@ -23,32 +45,18 @@ const createSpShape = (x: number, y: number, width: number, height: number): SpS
       flipH: false,
       flipV: false,
     },
-  },
-});
-
-const createGraphicFrame = (x: number, y: number, width: number, height: number): GraphicFrame => ({
-  type: "graphicFrame",
-  nonVisual: { id: "gf1", name: "Test Table" },
-  transform: {
-    x: px(x),
-    y: px(y),
-    width: px(width),
-    height: px(height),
-    rotation: deg(0),
-    flipH: false,
-    flipV: false,
-  },
-  content: {
-    type: "table",
-    data: {
-      table: {
-        grid: { columns: [] },
-        rows: [],
-        properties: {},
+    content: {
+      type: "table",
+      data: {
+        table: {
+          grid: { columns: [] },
+          rows: [],
+          properties: {},
+        },
       },
     },
-  },
-});
+  };
+};
 
 const createGrpShape = (x: number, y: number): GrpShape => ({
   type: "grpSp",

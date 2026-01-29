@@ -9,7 +9,6 @@
  * Contour width should be constant around the entire geometry.
  */
 
-import { describe, it, expect } from "vitest";
 import * as THREE from "three";
 import { createContourMesh, createContourMeshExpanded, createContourFromShapes } from "./contour";
 import { getBevelConfig, type BevelConfig } from "../geometry/bevel";

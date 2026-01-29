@@ -4,6 +4,7 @@
  * Displays property editors for GraphicFrame elements containing OLE objects.
  */
 
+import type { ReactNode } from "react";
 import type { GraphicFrame } from "@oxen-office/pptx/domain/index";
 import type { OleReference } from "@oxen-office/pptx/domain/shape";
 import { Accordion } from "@oxen-ui/ui-components/layout";
@@ -51,6 +52,24 @@ export function OleFramePanel({ shape, onChange }: OleFramePanelProps) {
     });
   };
 
+  let oleContent: ReactNode;
+  if (oleData) {
+    oleContent = <OleObjectEditor value={oleData} onChange={handleOleDataChange} />;
+  } else {
+    oleContent = (
+      <div
+        style={{
+          padding: "12px",
+          textAlign: "center",
+          color: "var(--text-tertiary, #737373)",
+          fontSize: "12px",
+        }}
+      >
+        OLE object data not available
+      </div>
+    );
+  }
+
   return (
     <>
       <Accordion title="Identity" defaultExpanded={false}>
@@ -70,20 +89,7 @@ export function OleFramePanel({ shape, onChange }: OleFramePanelProps) {
       </Accordion>
 
       <Accordion title="OLE Object" defaultExpanded>
-        {oleData ? (
-          <OleObjectEditor value={oleData} onChange={handleOleDataChange} />
-        ) : (
-          <div
-            style={{
-              padding: "12px",
-              textAlign: "center",
-              color: "var(--text-tertiary, #737373)",
-              fontSize: "12px",
-            }}
-          >
-            OLE object data not available
-          </div>
-        )}
+        {oleContent}
       </Accordion>
     </>
   );

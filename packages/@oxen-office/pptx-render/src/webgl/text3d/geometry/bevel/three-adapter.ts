@@ -8,16 +8,13 @@
  */
 
 import * as THREE from "three";
-import { ShapeUtils } from "three";
 import type {
   Vector2,
   ShapeInput,
   BevelGeometryData,
   BevelMeshConfig,
-  BevelProfile,
 } from "./types";
 import { vec2 } from "./types";
-import { generateExtrusion, mergeExtrusionGeometries, generateCapAtZ } from "./extrusion";
 import { extractBevelPathsFromShape } from "./path-extraction";
 import { generateBevelMesh, mergeBevelGeometries, extractInnerRingFromBevelPaths } from "./mesh-generation";
 import { getBevelProfile } from "./profiles";
@@ -415,16 +412,19 @@ function computeSignedAreaLocal(points: readonly Vector2[]): number {
 
 // Local helper: generate side walls
 function generateSideWallsLocal(
-  outer: readonly Vector2[],
-  holes: readonly (readonly Vector2[])[],
-  depth: number,
-  vertexOffset: number,
+  ...args: [
+    outer: readonly Vector2[],
+    holes: readonly (readonly Vector2[])[],
+    depth: number,
+    vertexOffset: number,
+  ]
 ): {
   positions: number[];
   normals: number[];
   uvs: number[];
   indices: number[];
 } {
+  const [outer, holes, depth, vertexOffset] = args;
   const positions: number[] = [];
   const normals: number[] = [];
   const uvs: number[] = [];
@@ -660,12 +660,8 @@ export function createExtrudedGeometryWithBevel(
   const maxBevelRatio = bevel.top && bevel.bottom ? 0.45 : 0.9;
   const maxBevelHeight = extrusionDepth * maxBevelRatio;
 
-  const topBevelHeight = bevel.top
-    ? Math.min(bevel.top.height, maxBevelHeight)
-    : 0;
-  const bottomBevelHeight = bevel.bottom
-    ? Math.min(bevel.bottom.height, maxBevelHeight)
-    : 0;
+  const topBevelHeight = bevel.top ? Math.min(bevel.top.height, maxBevelHeight) : 0;
+  const bottomBevelHeight = bevel.bottom ? Math.min(bevel.bottom.height, maxBevelHeight) : 0;
 
   // Process each shape
   for (const shape of shapes) {

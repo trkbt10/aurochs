@@ -1101,7 +1101,8 @@ export function LayerPanel({
   );
 
   const handleDragOver = useCallback(
-    (shape: Shape, parentId: ShapeId | null, displayIndex: number, event: DragEvent) => {
+    (...args: readonly [shape: Shape, parentId: ShapeId | null, displayIndex: number, event: DragEvent]) => {
+      const [shape, parentId, displayIndex, event] = args;
       event.stopPropagation();
       event.preventDefault();
       if (!draggingId) {

@@ -6,7 +6,7 @@
  * @see ECMA-376 Part 1, Section 21.1.2 - Text
  */
 
-import type { AutoFit, AutoNumberBullet, BlipBullet, BodyProperties, Bullet, BulletStyle, CharBullet, FieldRun, Hyperlink, HyperlinkMouseOver, LineBreakRun, LineSpacing, NoBullet, Paragraph, ParagraphProperties, RegularRun, RunProperties, Scene3d, Shape3d, StrikeStyle, TabStop, TextBody, TextRun, TextVerticalOverflow, TextWarp, TextWarpAdjustValue, UnderlineStyle } from "../../domain/index";
+import type { AutoFit, AutoNumberBullet, BlipBullet, BodyProperties, Bullet, BulletStyle, CharBullet, FieldRun, Hyperlink, HyperlinkMouseOver, LineBreakRun, LineSpacing, NoBullet, Paragraph, ParagraphProperties, RegularRun, RunProperties, StrikeStyle, TabStop, TextBody, TextRun, TextVerticalOverflow, TextWarp, TextWarpAdjustValue, UnderlineStyle } from "../../domain/index";
 import { parseScene3d, parseShape3d } from "../shape-parser/three-d";
 import { px, pt } from "@oxen-office/ooxml/domain/units";
 import {
@@ -581,12 +581,22 @@ function parseHyperlinkMouseOver(rPr: XmlElement): HyperlinkMouseOver | undefine
   };
 }
 
+type ResolveUnderlineColorOptions = {
+  readonly underlineColor: ReturnType<typeof parseColorFromParent> | undefined;
+  readonly underlineLineFollowText: boolean;
+  readonly underlineFillFollowText: boolean;
+  readonly textColor: ReturnType<typeof parseColorFromParent> | undefined;
+  readonly underlineFillFromText: ReturnType<typeof parseFillFromParent> | undefined;
+};
+
 function resolveUnderlineColor(
-  underlineColor: ReturnType<typeof parseColorFromParent> | undefined,
-  underlineLineFollowText: boolean,
-  underlineFillFollowText: boolean,
-  textColor: ReturnType<typeof parseColorFromParent> | undefined,
-  underlineFillFromText: ReturnType<typeof parseFillFromParent> | undefined,
+  {
+    underlineColor,
+    underlineLineFollowText,
+    underlineFillFollowText,
+    textColor,
+    underlineFillFromText,
+  }: ResolveUnderlineColorOptions,
 ): ReturnType<typeof parseColorFromParent> | undefined {
   if (underlineColor) {return underlineColor;}
   const followText = underlineLineFollowText ? true : underlineFillFollowText;
@@ -652,13 +662,13 @@ export function parseRunProperties(rPr: XmlElement | undefined): RunProperties |
   const underlineLineFollowText = uLnTx !== undefined;
   const underlineFillFromText = fill ?? (color ? { type: "solidFill", color } : undefined);
   const underlineFill = uFill ? parseFillFromParent(uFill) : underlineFillFollowText ? underlineFillFromText : undefined;
-  const underlineColor = resolveUnderlineColor(
-    uLn ? parseColorFromParent(uLn) : undefined,
+  const underlineColor = resolveUnderlineColor({
+    underlineColor: uLn ? parseColorFromParent(uLn) : undefined,
     underlineLineFollowText,
     underlineFillFollowText,
-    color,
+    textColor: color,
     underlineFillFromText,
-  );
+  });
 
   return {
     fontSize: getFontSizeAttr(rPr, "sz"),
@@ -853,11 +863,19 @@ export function parseTextBody(
  * Parse a text run, resolving styles from inheritance chain when context provided.
  */
 function parseTextRun(
-  runElement: XmlElement,
-  rPr: XmlElement | undefined,
-  localLstStyle: XmlElement | undefined,
-  lvl: number,
-  ctx: TextStyleContext | undefined,
+  {
+    runElement,
+    rPr,
+    localLstStyle,
+    lvl,
+    ctx,
+  }: {
+    readonly runElement: XmlElement;
+    readonly rPr: XmlElement | undefined;
+    readonly localLstStyle: XmlElement | undefined;
+    readonly lvl: number;
+    readonly ctx: TextStyleContext | undefined;
+  },
 ): TextRun {
   const runProps = parseRunProperties(rPr);
 
@@ -902,10 +920,17 @@ function parseTextRun(
  * Parse text runs from a paragraph with style resolution.
  */
 function parseTextRunsFromParagraph(
-  paragraph: XmlElement,
-  localLstStyle: XmlElement | undefined,
-  lvl: number,
-  ctx: TextStyleContext | undefined,
+  {
+    paragraph,
+    localLstStyle,
+    lvl,
+    ctx,
+  }: {
+    readonly paragraph: XmlElement;
+    readonly localLstStyle: XmlElement | undefined;
+    readonly lvl: number;
+    readonly ctx: TextStyleContext | undefined;
+  },
 ): TextRun[] {
   const runs: TextRun[] = [];
 
@@ -914,7 +939,7 @@ function parseTextRunsFromParagraph(
 
     if (child.name === "a:r" || child.name === "a:br" || child.name === "a:fld") {
       const rPr = getChild(child, "a:rPr");
-      runs.push(parseTextRun(child, rPr, localLstStyle, lvl, ctx));
+      runs.push(parseTextRun({ runElement: child, rPr, localLstStyle, lvl, ctx }));
     }
   }
 
@@ -950,15 +975,15 @@ function parseTextParagraph(
 
   // Resolve paragraph spacing with inheritance chain
   // @see ECMA-376 Part 1, Section 21.1.2.2.18-19 (a:spcBef, a:spcAft)
-  const resolvedSpaceBefore = props.spaceBefore ?? resolveSpaceBefore(pPr, localLstStyle, lvl, ctx);
-  const resolvedSpaceAfter = props.spaceAfter ?? resolveSpaceAfter(pPr, localLstStyle, lvl, ctx);
-  const resolvedLineSpacing = props.lineSpacing ?? resolveLineSpacing(pPr, localLstStyle, lvl, ctx);
+  const resolvedSpaceBefore = props.spaceBefore ?? resolveSpaceBefore({ directPPr: pPr, localLstStyle, lvl, ctx });
+  const resolvedSpaceAfter = props.spaceAfter ?? resolveSpaceAfter({ directPPr: pPr, localLstStyle, lvl, ctx });
+  const resolvedLineSpacing = props.lineSpacing ?? resolveLineSpacing({ directPPr: pPr, localLstStyle, lvl, ctx });
 
   // Resolve margins with inheritance chain
   // @see ECMA-376 Part 1, Section 21.1.2.2.7 (a:pPr marL, marR, indent)
-  const resolvedMarginLeft = props.marginLeft ?? resolveMarginLeft(pPr, localLstStyle, lvl, ctx);
-  const resolvedMarginRight = props.marginRight ?? resolveMarginRight(pPr, localLstStyle, lvl, ctx);
-  const resolvedIndent = props.indent ?? resolveIndent(pPr, localLstStyle, lvl, ctx);
+  const resolvedMarginLeft = props.marginLeft ?? resolveMarginLeft({ directPPr: pPr, localLstStyle, lvl, ctx });
+  const resolvedMarginRight = props.marginRight ?? resolveMarginRight({ directPPr: pPr, localLstStyle, lvl, ctx });
+  const resolvedIndent = props.indent ?? resolveIndent({ directPPr: pPr, localLstStyle, lvl, ctx });
 
   return {
     properties: {
@@ -972,7 +997,7 @@ function parseTextParagraph(
       marginRight: resolvedMarginRight,
       indent: resolvedIndent,
     },
-    runs: parseTextRunsFromParagraph(element, localLstStyle, lvl, ctx),
+    runs: parseTextRunsFromParagraph({ paragraph: element, localLstStyle, lvl, ctx }),
     endProperties: parseRunProperties(endParaRPr),
   };
 }

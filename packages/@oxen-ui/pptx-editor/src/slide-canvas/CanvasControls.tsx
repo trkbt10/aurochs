@@ -80,9 +80,10 @@ export function CanvasControls({
   onSnapStepChange,
 }: CanvasControlsProps) {
   // Determine the select value based on zoom mode
-  const zoomSelectValue = isFitMode(zoomMode)
-    ? FIT_ZOOM_VALUE
-    : `${Math.round(ZOOM_STEPS[getClosestZoomIndex(zoomMode)] * 100)}`;
+  let zoomSelectValue = FIT_ZOOM_VALUE;
+  if (!isFitMode(zoomMode)) {
+    zoomSelectValue = `${Math.round(ZOOM_STEPS[getClosestZoomIndex(zoomMode)] * 100)}`;
+  }
   const zoomOptions = useMemo(() => getZoomOptions(true), []);
   const snapOptions = useMemo(() => getSnapOptions(), []);
 

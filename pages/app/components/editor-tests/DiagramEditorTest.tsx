@@ -13,7 +13,8 @@ import {
   createDefaultDiagramPoint,
   createDefaultDiagramConnection,
 } from "@oxen-ui/pptx-editor";
-import type { DiagramDataModel, DiagramPoint, DiagramConnection } from "@oxen-office/pptx/domain/diagram";
+import type { DiagramDataModel, DiagramPoint, DiagramConnection } from "@oxen-office/diagram/domain";
+import type { TextBody } from "@oxen-office/pptx/domain/text";
 
 const cardStyle: CSSProperties = {
   backgroundColor: "var(--bg-secondary)",
@@ -55,11 +56,19 @@ const gridStyle: CSSProperties = {
  * Diagram editors test component
  */
 export function DiagramEditorTest() {
+  const sampleTextBody: TextBody = {
+    bodyProperties: {},
+    paragraphs: [
+      {
+        properties: {},
+        runs: [{ type: "text", text: "Sample Node" }],
+      },
+    ],
+  };
+
   const [diagramPoint, setDiagramPoint] = useState<DiagramPoint>(() => ({
     ...createDefaultDiagramPoint(),
-    textBody: {
-      paragraphs: [{ runs: [{ text: "Sample Node" }] }],
-    },
+    textBody: sampleTextBody,
   }));
 
   const [diagramConnection, setDiagramConnection] = useState<DiagramConnection>(() => ({
@@ -73,9 +82,9 @@ export function DiagramEditorTest() {
     return {
       ...defaultModel,
       points: [
-        { modelId: "1", type: "node", textBody: { paragraphs: [{ runs: [{ text: "Root" }] }] } },
-        { modelId: "2", type: "node", textBody: { paragraphs: [{ runs: [{ text: "Child 1" }] }] } },
-        { modelId: "3", type: "asst", textBody: { paragraphs: [{ runs: [{ text: "Assistant" }] }] } },
+        { modelId: "1", type: "node", textBody: { ...sampleTextBody, paragraphs: [{ properties: {}, runs: [{ type: "text", text: "Root" }] }] } },
+        { modelId: "2", type: "node", textBody: { ...sampleTextBody, paragraphs: [{ properties: {}, runs: [{ type: "text", text: "Child 1" }] }] } },
+        { modelId: "3", type: "asst", textBody: { ...sampleTextBody, paragraphs: [{ properties: {}, runs: [{ type: "text", text: "Assistant" }] }] } },
       ],
       connections: [
         { modelId: "c1", type: "parOf", sourceId: "1", destinationId: "2" },
@@ -96,11 +105,7 @@ export function DiagramEditorTest() {
       {/* DiagramPoint Editor */}
       <div style={cardStyle}>
         <h2 style={cardTitleStyle}>Diagram Point Editor</h2>
-        <DiagramPointEditor
-          value={diagramPoint}
-          onChange={setDiagramPoint}
-          index={0}
-        />
+        <DiagramPointEditor value={diagramPoint} onChange={setDiagramPoint} />
         <div style={valueDisplayStyle}>{JSON.stringify(diagramPoint, null, 2)}</div>
       </div>
 

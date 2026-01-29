@@ -28,11 +28,14 @@ type AddSlideAction = Extract<PresentationEditorAction, { type: "ADD_SLIDE" }>;
  * Get new active slide ID after deletion
  */
 function getActiveSlideAfterDelete(
-  currentActiveId: SlideId | undefined,
-  deletedSlideId: SlideId,
-  deletedIndex: number,
-  newDoc: PresentationDocument
+  ...args: readonly [
+    currentActiveId: SlideId | undefined,
+    deletedSlideId: SlideId,
+    deletedIndex: number,
+    newDoc: PresentationDocument,
+  ]
 ): SlideId | undefined {
+  const [currentActiveId, deletedSlideId, deletedIndex, newDoc] = args;
   if (currentActiveId !== deletedSlideId) {
     return currentActiveId;
   }

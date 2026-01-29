@@ -222,7 +222,10 @@ function buildSlideFromPageOrThrow(page: PdfPage, slideSize: SlideSize, options:
   }
 }
 
-function addPageNumberIfEnabled(slide: Slide, pageNumber: number, slideSize: SlideSize, enabled: boolean): Slide {
+function addPageNumberIfEnabled(
+  ...args: readonly [slide: Slide, pageNumber: number, slideSize: SlideSize, enabled: boolean]
+): Slide {
+  const [slide, pageNumber, slideSize, enabled] = args;
   if (!enabled) {
     return slide;
   }

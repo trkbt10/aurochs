@@ -41,13 +41,16 @@ function getBorderDashArray(style: LayoutBorderStyle["style"]): string | undefin
  * Render a cell border edge.
  */
 function renderBorderEdge(
-  x1: number,
-  y1: number,
-  x2: number,
-  y2: number,
-  border: LayoutBorderStyle | undefined,
-  key: string,
+  ...args: readonly [
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    border: LayoutBorderStyle | undefined,
+    key: string,
+  ]
 ): ReactNode {
+  const [x1, y1, x2, y2, border, key] = args;
   if (border === undefined || border.style === "none") {
     return null;
   }

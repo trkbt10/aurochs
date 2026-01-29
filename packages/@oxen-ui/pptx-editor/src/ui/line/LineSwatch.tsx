@@ -94,24 +94,24 @@ function getBorderStyle(selected: boolean): string {
 // =============================================================================
 
 const containerStyle = (
-  size: number,
-  hasOnClick: boolean,
-  disabled: boolean,
-  selected: boolean
-): CSSProperties => ({
-  position: "relative",
-  width: `${size}px`,
-  height: `${size}px`,
-  borderRadius: "4px",
-  overflow: "hidden",
-  cursor: hasOnClick && !disabled ? "pointer" : "default",
-  border: getBorderStyle(selected),
-  boxSizing: "border-box",
-  opacity: disabled ? 0.5 : 1,
-  transition: "border-color 150ms ease, box-shadow 150ms ease",
-  flexShrink: 0,
-  backgroundColor: "var(--bg-tertiary, #222)",
-});
+  ...args: readonly [size: number, hasOnClick: boolean, disabled: boolean, selected: boolean]
+): CSSProperties => {
+  const [size, hasOnClick, disabled, selected] = args;
+  return {
+    position: "relative",
+    width: `${size}px`,
+    height: `${size}px`,
+    borderRadius: "4px",
+    overflow: "hidden",
+    cursor: hasOnClick && !disabled ? "pointer" : "default",
+    border: getBorderStyle(selected),
+    boxSizing: "border-box",
+    opacity: disabled ? 0.5 : 1,
+    transition: "border-color 150ms ease, box-shadow 150ms ease",
+    flexShrink: 0,
+    backgroundColor: "var(--bg-tertiary, #222)",
+  };
+};
 
 // =============================================================================
 // Component

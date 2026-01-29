@@ -8,6 +8,12 @@ import {
 } from "@oxen-office/pdf-to-pptx/importer/pdf-importer";
 import type { PresentationDocument } from "@oxen-office/pptx/app";
 
+type PdfImportDeps = {
+  readonly importPdfFromFile: typeof importPdfFromFile;
+  readonly importPdfFromUrl: typeof importPdfFromUrl;
+  readonly PdfImportError: typeof PdfImportError;
+};
+
 type PdfImportState = {
   /** インポート状態 */
   readonly status: "idle" | "loading" | "success" | "error";
@@ -33,12 +39,31 @@ type UsePdfImportReturn = {
   readonly reset: () => void;
 };
 
+function toPdfImportError(args: {
+  readonly err: unknown;
+  readonly code: "PARSE_ERROR" | "FETCH_ERROR";
+  readonly PdfImportErrorCtor: typeof PdfImportError;
+}): PdfImportError {
+  const { err, code, PdfImportErrorCtor } = args;
+  if (err instanceof PdfImportErrorCtor) {
+    return err;
+  }
+  const message = err instanceof Error ? err.message : String(err);
+  return new PdfImportErrorCtor(message, code);
+}
 
 
 
 
 
-function usePdfImport(): UsePdfImportReturn {
+
+function usePdfImport(deps: Partial<PdfImportDeps> = {}): UsePdfImportReturn {
+  const {
+    importPdfFromFile: importPdfFromFileImpl = importPdfFromFile,
+    importPdfFromUrl: importPdfFromUrlImpl = importPdfFromUrl,
+    PdfImportError: PdfImportErrorCtor = PdfImportError,
+  } = deps;
+
   const [state, setState] = useState<PdfImportState>({
     status: "idle",
     result: null,
@@ -65,7 +90,7 @@ function usePdfImport(): UsePdfImportReturn {
       });
 
       try {
-        const result = await importPdfFromFile(file, options);
+        const result = await importPdfFromFileImpl(file, options);
 
         setState({
           status: "success",
@@ -76,10 +101,7 @@ function usePdfImport(): UsePdfImportReturn {
 
         return result.document;
       } catch (err) {
-        const error =
-          err instanceof PdfImportError
-            ? err
-            : new PdfImportError(err instanceof Error ? err.message : String(err), "PARSE_ERROR");
+        const error = toPdfImportError({ err, code: "PARSE_ERROR", PdfImportErrorCtor });
 
         setState({
           status: "error",
@@ -104,7 +126,7 @@ function usePdfImport(): UsePdfImportReturn {
       });
 
       try {
-        const result = await importPdfFromUrl(url, options);
+        const result = await importPdfFromUrlImpl(url, options);
 
         setState({
           status: "success",
@@ -115,10 +137,7 @@ function usePdfImport(): UsePdfImportReturn {
 
         return result.document;
       } catch (err) {
-        const error =
-          err instanceof PdfImportError
-            ? err
-            : new PdfImportError(err instanceof Error ? err.message : String(err), "FETCH_ERROR");
+        const error = toPdfImportError({ err, code: "FETCH_ERROR", PdfImportErrorCtor });
 
         setState({
           status: "error",

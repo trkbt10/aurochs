@@ -101,11 +101,15 @@ function ChildShapeButton({
   readonly index: number;
   readonly onSelect: (childId: string, addToSelection: boolean, toggle?: boolean) => void;
 }) {
+  function getChildName(child: Shape, index: number): string {
+    if ("nonVisual" in child) {
+      return child.nonVisual.name || `Shape ${index + 1}`;
+    }
+    return `Shape ${index + 1}`;
+  }
+
   const childId = "nonVisual" in child ? child.nonVisual.id : undefined;
-  const childName =
-    "nonVisual" in child
-      ? child.nonVisual.name || `Shape ${index + 1}`
-      : `Shape ${index + 1}`;
+  const childName = getChildName(child, index);
   const typeLabel = getShapeTypeLabel(child);
 
   const handleClick = (e: React.MouseEvent) => {
@@ -173,18 +177,23 @@ export function GrpShapePanel({
 }: GrpShapePanelProps) {
   const baseTransform = extractBaseTransform(shape.properties.transform);
 
+  function mergeTransform(
+    existing: GrpShape["properties"]["transform"],
+    next: Transform,
+  ): GrpShape["properties"]["transform"] {
+    if (!existing) {
+      return undefined;
+    }
+    return { ...existing, ...next };
+  }
+
   const handleTransformChange = (newTransform: Transform) => {
     const existingGroupTransform = shape.properties.transform;
     onChange({
       ...shape,
       properties: {
         ...shape.properties,
-        transform: existingGroupTransform
-          ? {
-              ...existingGroupTransform,
-              ...newTransform,
-            }
-          : undefined,
+        transform: mergeTransform(existingGroupTransform, newTransform),
       },
     });
   };

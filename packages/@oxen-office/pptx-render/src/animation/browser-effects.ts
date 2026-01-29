@@ -603,11 +603,14 @@ export function animateCheckerboard(
  * @see MS-OE376 Part 4 Section 4.6.3
  */
 export function applyBrowserEffect(
-  el: HTMLElement | SVGElement,
-  type: BrowserEffectType,
-  duration: number,
-  direction: string
+  ...args: [
+    el: HTMLElement | SVGElement,
+    type: BrowserEffectType,
+    duration: number,
+    direction: string,
+  ]
 ): Promise<void> {
+  const [el, type, duration, direction] = args;
   const effectMap: Record<BrowserEffectType, (el: HTMLElement | SVGElement, d: number, dir: string) => Promise<void>> = {
     fade: animateFade,
     slide: animateSlide,

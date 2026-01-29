@@ -7,9 +7,10 @@
  * @see ECMA-376 Part 1, Section 21.4 - DrawingML Diagrams
  */
 
-import { memo, useMemo } from "react";
+import { memo } from "react";
 import type { DiagramReference, Shape } from "@oxen-office/pptx/domain";
 import type { ShapeId } from "@oxen-office/pptx/domain/types";
+import { DiagramContainer } from "@oxen-office/diagram-render/react";
 import { useRenderResourceStore } from "../../../context";
 import { ShapeRenderer } from "../../../ShapeRenderer";
 import { Placeholder } from "../shared";
@@ -18,14 +19,6 @@ import type { ContentProps } from "../types";
 /**
  * Parsed diagram data structure from ResourceStore
  */
-type ParsedDiagramData = {
-  readonly shapes: readonly Shape[];
-  readonly dataModel?: unknown;
-  readonly layoutDefinition?: unknown;
-  readonly styleDefinition?: unknown;
-  readonly colorsDefinition?: unknown;
-};
-
 /**
  * Props for DiagramContent component
  */
@@ -47,30 +40,23 @@ export const DiagramContent = memo(function DiagramContent({
   editingShapeId,
 }: DiagramContentProps) {
   const resourceStore = useRenderResourceStore();
-
-  // Get shapes from ResourceStore
-  const shapes = useMemo(() => {
-    if (resourceStore === undefined || data.dataResourceId === undefined) {
-      return undefined;
-    }
-    const entry = resourceStore.get<ParsedDiagramData>(data.dataResourceId);
-    return entry?.parsed?.shapes;
-  }, [resourceStore, data.dataResourceId]);
-
-  if (shapes === undefined || shapes.length === 0) {
-    return <Placeholder width={width} height={height} label="Diagram" />;
-  }
+  const getResource = <TParsed,>(resourceId: string) => resourceStore?.get<TParsed>(resourceId);
 
   return (
-    <g data-diagram-content="true">
-      {shapes.map((shape: Shape, index: number) => (
+    <DiagramContainer<Shape>
+      dataResourceId={data.dataResourceId}
+      width={width}
+      height={height}
+      getResource={getResource}
+      placeholder={<Placeholder width={width} height={height} label="Diagram" />}
+      renderShape={(shape: Shape, index: number) => (
         <ShapeRenderer
           key={getShapeKey(shape, index)}
           shape={shape}
           editingShapeId={editingShapeId}
         />
-      ))}
-    </g>
+      )}
+    />
   );
 });
 

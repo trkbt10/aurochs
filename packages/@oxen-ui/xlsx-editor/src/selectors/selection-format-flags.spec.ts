@@ -14,7 +14,10 @@ function createAddress(col: number, row: number): CellAddress {
   return { col: colIdx(col), row: rowIdx(row), colAbsolute: false, rowAbsolute: false };
 }
 
-function createRange(startCol: number, startRow: number, endCol: number, endRow: number): CellRange {
+function createRange(
+  ...args: readonly [startCol: number, startRow: number, endCol: number, endRow: number]
+): CellRange {
+  const [startCol, startRow, endCol, endRow] = args;
   return { start: createAddress(startCol, startRow), end: createAddress(endCol, endRow) };
 }
 

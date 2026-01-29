@@ -12,7 +12,6 @@ import { getChild, getChildren } from "@oxen/xml";
 import type {
   CommonSlideViewProperties,
   CommonViewProperties,
-  Direction,
   GridSpacing,
   Guide,
   GuideList,

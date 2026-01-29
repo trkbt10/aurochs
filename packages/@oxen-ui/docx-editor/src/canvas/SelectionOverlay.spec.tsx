@@ -4,7 +4,6 @@
 
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { useRef } from "react";
 import type { DocxSelectionState } from "../context/document/state/selection";
@@ -90,7 +89,7 @@ describe("SelectionOverlay", () => {
     expect(screen.getByTestId("selection-overlay")).toBeDefined();
   });
 
-  it("renders multiple selection boxes for multi-select", () => {
+	  it("renders multiple selection boxes for multi-select", () => {
     const selection: DocxSelectionState = {
       element: createMultiElementSelection(["0", "1"], "1"),
       text: { range: undefined, cursor: undefined, isCollapsed: true },
@@ -98,9 +97,7 @@ describe("SelectionOverlay", () => {
     };
     const textEdit = createEmptyTextEditState();
 
-    const { container } = render(
-      <TestWrapper selection={selection} textEdit={textEdit} />
-    );
+	    render(<TestWrapper selection={selection} textEdit={textEdit} />);
 
     // Should have selection overlay
     const overlay = screen.getByTestId("selection-overlay");
@@ -149,8 +146,8 @@ describe("SelectionOverlay", () => {
     // (just empty overlay for text mode)
   });
 
-  describe("element selection", () => {
-    it("distinguishes primary from secondary selection", () => {
+	  describe("element selection", () => {
+	    it("distinguishes primary from secondary selection", () => {
       const selection: DocxSelectionState = {
         element: createMultiElementSelection(["0", "1"], "1"),
         text: { range: undefined, cursor: undefined, isCollapsed: true },
@@ -158,9 +155,7 @@ describe("SelectionOverlay", () => {
       };
       const textEdit = createEmptyTextEditState();
 
-      const { container } = render(
-        <TestWrapper selection={selection} textEdit={textEdit} />
-      );
+	      render(<TestWrapper selection={selection} textEdit={textEdit} />);
 
       const overlay = screen.getByTestId("selection-overlay");
       // The component differentiates primary/secondary via border style

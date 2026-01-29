@@ -5,6 +5,13 @@ import { getRelationshipPath, loadRelationships, resolvePartPath } from "../../p
 import { addContentType, removeUnusedContentTypes } from "./content-types-manager";
 import { addRelationship, ensureRelationshipsDocument, listRelationships, removeRelationship, type RelationshipType } from "./relationship-manager";
 
+export type AddMediaOptions = {
+  readonly pkg: ZipPackage;
+  readonly mediaData: ArrayBuffer;
+  readonly mediaType: MediaType;
+  readonly referringPart: string;
+};
+
 export type MediaType =
   | "image/png"
   | "image/jpeg"
@@ -26,10 +33,7 @@ const AUDIO_REL: RelationshipType =
 
 
 export function addMedia(
-  pkg: ZipPackage,
-  mediaData: ArrayBuffer,
-  mediaType: MediaType,
-  referringPart: string,
+  { pkg, mediaData, mediaType, referringPart }: AddMediaOptions,
 ): { readonly path: string; readonly rId: string } {
   if (!mediaData) {
     throw new Error("addMedia: mediaData is required");
@@ -51,7 +55,7 @@ export function addMedia(
   }
 
   updateContentTypesForMedia(pkg, extension, mediaType);
-  const rId = addMediaRelationship(pkg, referringPart, mediaPath, relationshipType);
+  const rId = addMediaRelationship({ pkg, referringPart, mediaPath, relationshipType });
 
   return { path: mediaPath, rId };
 }
@@ -143,11 +147,15 @@ function updateContentTypesCleanup(pkg: ZipPackage): void {
   pkg.writeText("[Content_Types].xml", serializeXml(updated));
 }
 
+type AddMediaRelationshipOptions = {
+  readonly pkg: ZipPackage;
+  readonly referringPart: string;
+  readonly mediaPath: string;
+  readonly relationshipType: RelationshipType;
+};
+
 function addMediaRelationship(
-  pkg: ZipPackage,
-  referringPart: string,
-  mediaPath: string,
-  relationshipType: RelationshipType,
+  { pkg, referringPart, mediaPath, relationshipType }: AddMediaRelationshipOptions,
 ): string {
   const relsPath = getRelationshipPath(referringPart);
   const relsXml = (() => {

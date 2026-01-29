@@ -5,7 +5,6 @@
  * The visual appearance should be identical except for interactive elements.
  */
 
-import { describe, it, expect } from "vitest";
 import {
   getContainerStyle,
   getItemWrapperStyle,
@@ -53,11 +52,11 @@ describe("Layout Consistency: Editable vs Readonly", () => {
     });
   });
 
-  describe("Thumbnail container style", () => {
-    it("has consistent dimensions regardless of selection state", () => {
-      const unselected = getThumbnailContainerStyle("1.78", false, false, false);
-      const selected = getThumbnailContainerStyle("1.78", true, true, false);
-      const active = getThumbnailContainerStyle("1.78", false, false, true);
+	  describe("Thumbnail container style", () => {
+	    it("has consistent dimensions regardless of selection state", () => {
+	      const unselected = getThumbnailContainerStyle({ aspectRatio: "1.78", isSelected: false, isPrimary: false, isActive: false });
+	      const selected = getThumbnailContainerStyle({ aspectRatio: "1.78", isSelected: true, isPrimary: true, isActive: false });
+	      const active = getThumbnailContainerStyle({ aspectRatio: "1.78", isSelected: false, isPrimary: false, isActive: true });
 
       // Width and height should be the same
       expect(unselected.width).toBe(selected.width);

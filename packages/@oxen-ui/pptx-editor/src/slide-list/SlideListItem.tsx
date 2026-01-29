@@ -157,17 +157,17 @@ const handleFxOpenChange = (open: boolean) => {
         onPointerEnter={handlePointerEnter}
         onPointerLeave={handlePointerLeave}
       >
-        {/* Thumbnail */}
-        <div
-          style={getThumbnailContainerStyle(
-            aspectRatio,
-            isSelected,
-            isPrimary,
-            isActive
-          )}
-          onClick={handleClick}
-          onContextMenu={isEditable ? handleContextMenu : undefined}
-          role="button"
+	        {/* Thumbnail */}
+	        <div
+	          style={getThumbnailContainerStyle({
+	            aspectRatio,
+	            isSelected,
+	            isPrimary,
+	            isActive,
+	          })}
+	          onClick={handleClick}
+	          onContextMenu={isEditable ? handleContextMenu : undefined}
+	          role="button"
           tabIndex={0}
           onKeyDown={handleKeyDown}
           aria-label={`Slide ${index + 1}`}

@@ -159,15 +159,18 @@ export function noFill(): Fill {
  * PDF線スタイルをPPTX Lineに変換
  */
 export function convertLine(
-  strokeColor: PdfColor,
-  lineWidth: number,
-  lineCap: PdfLineCap,
-  lineJoin: PdfLineJoin,
-  dashArray: readonly number[],
-  _dashPhase: number,
-  alpha: number = 1,
-  widthScale: number = 1,
+  ...args: readonly [
+    strokeColor: PdfColor,
+    lineWidth: number,
+    lineCap: PdfLineCap,
+    lineJoin: PdfLineJoin,
+    dashArray: readonly number[],
+    _dashPhase: number,
+    alpha?: number,
+    widthScale?: number,
+  ]
 ): Line {
+  const [strokeColor, lineWidth, lineCap, lineJoin, dashArray, _dashPhase, alpha = 1, widthScale = 1] = args;
   if (!Number.isFinite(widthScale) || widthScale <= 0) {
     throw new Error(`Invalid widthScale: ${widthScale}`);
   }

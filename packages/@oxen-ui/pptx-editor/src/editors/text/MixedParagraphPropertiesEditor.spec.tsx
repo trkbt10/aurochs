@@ -6,15 +6,23 @@
 
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MixedParagraphPropertiesEditor } from "./MixedParagraphPropertiesEditor";
+import type { MixedParagraphPropertiesEditorProps } from "./MixedParagraphPropertiesEditor";
 import type { MixedParagraphProperties } from "./mixed-properties";
 import type { Pixels } from "@oxen-office/ooxml/domain/units";
 
 // =============================================================================
 // Test Helpers
 // =============================================================================
+
+function createCallTracker<Args extends readonly unknown[]>() {
+  const calls: Args[] = [];
+  const fn = (...args: Args) => {
+    calls.push(args);
+  };
+  return { fn, calls };
+}
 
 function createAllSameProperties(): MixedParagraphProperties {
   return {
@@ -111,10 +119,11 @@ function findRtlToggle(container: HTMLElement): HTMLElement | null {
 // =============================================================================
 
 describe("MixedParagraphPropertiesEditor", () => {
-  let onChange: ReturnType<typeof vi.fn>;
+  type OnChangeArgs = Parameters<MixedParagraphPropertiesEditorProps["onChange"]>;
+  let onChange: ReturnType<typeof createCallTracker<OnChangeArgs>>;
 
   beforeEach(() => {
-    onChange = vi.fn();
+    onChange = createCallTracker<OnChangeArgs>();
   });
 
   describe("rendering", () => {
@@ -122,7 +131,7 @@ describe("MixedParagraphPropertiesEditor", () => {
       const { container } = render(
         <MixedParagraphPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
           showIndentation={false}
           showSpacing={false}
         />
@@ -138,7 +147,7 @@ describe("MixedParagraphPropertiesEditor", () => {
       const { container } = render(
         <MixedParagraphPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
           disabled
           showIndentation={false}
           showSpacing={false}
@@ -154,7 +163,7 @@ describe("MixedParagraphPropertiesEditor", () => {
       const { container } = render(
         <MixedParagraphPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
           showIndentation={true}
           showSpacing={false}
         />
@@ -169,7 +178,7 @@ describe("MixedParagraphPropertiesEditor", () => {
       const { container } = render(
         <MixedParagraphPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
           showIndentation={false}
           showSpacing={false}
         />
@@ -183,7 +192,7 @@ describe("MixedParagraphPropertiesEditor", () => {
       const { container } = render(
         <MixedParagraphPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
           showSpacing={true}
           showIndentation={false}
         />
@@ -198,7 +207,7 @@ describe("MixedParagraphPropertiesEditor", () => {
       const { container } = render(
         <MixedParagraphPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
           showSpacing={false}
           showIndentation={false}
         />
@@ -212,7 +221,7 @@ describe("MixedParagraphPropertiesEditor", () => {
       const { container } = render(
         <MixedParagraphPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
           showIndentation={false}
           showSpacing={false}
         />
@@ -227,7 +236,7 @@ describe("MixedParagraphPropertiesEditor", () => {
       render(
         <MixedParagraphPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
           showIndentation={false}
           showSpacing={false}
         />
@@ -241,7 +250,7 @@ describe("MixedParagraphPropertiesEditor", () => {
       const { container } = render(
         <MixedParagraphPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
           showIndentation={false}
           showSpacing={false}
         />
@@ -256,7 +265,7 @@ describe("MixedParagraphPropertiesEditor", () => {
       const { container } = render(
         <MixedParagraphPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
           showIndentation={false}
           showSpacing={false}
         />
@@ -273,7 +282,7 @@ describe("MixedParagraphPropertiesEditor", () => {
       const { container } = render(
         <MixedParagraphPropertiesEditor
           value={createMixedProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
           showIndentation={false}
           showSpacing={false}
         />
@@ -286,7 +295,7 @@ describe("MixedParagraphPropertiesEditor", () => {
       const { container } = render(
         <MixedParagraphPropertiesEditor
           value={createMixedProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
           showIndentation={false}
           showSpacing={false}
         />
@@ -299,7 +308,7 @@ describe("MixedParagraphPropertiesEditor", () => {
       const { container } = render(
         <MixedParagraphPropertiesEditor
           value={createMixedProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
           showIndentation={false}
           showSpacing={false}
         />
@@ -315,7 +324,7 @@ describe("MixedParagraphPropertiesEditor", () => {
       const { container } = render(
         <MixedParagraphPropertiesEditor
           value={createMixedProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
           showIndentation={true}
           showSpacing={false}
         />
@@ -330,7 +339,7 @@ describe("MixedParagraphPropertiesEditor", () => {
       const { container } = render(
         <MixedParagraphPropertiesEditor
           value={createMixedProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
           showSpacing={true}
           showIndentation={false}
         />
@@ -345,7 +354,7 @@ describe("MixedParagraphPropertiesEditor", () => {
       const { container } = render(
         <MixedParagraphPropertiesEditor
           value={createMixedProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
           showIndentation={false}
           showSpacing={false}
         />
@@ -360,7 +369,7 @@ describe("MixedParagraphPropertiesEditor", () => {
       render(
         <MixedParagraphPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
           showIndentation={false}
           showSpacing={false}
         />
@@ -369,14 +378,15 @@ describe("MixedParagraphPropertiesEditor", () => {
       const alignSelect = screen.getByRole("combobox");
       fireEvent.change(alignSelect, { target: { value: "center" } });
 
-      expect(onChange).toHaveBeenCalledWith({ alignment: "center" });
+      expect(onChange.calls.length).toBe(1);
+      expect(onChange.calls[0]?.[0]).toEqual({ alignment: "center" });
     });
 
     it("calls onChange with correct value when alignment is set to justify", () => {
       render(
         <MixedParagraphPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
           showIndentation={false}
           showSpacing={false}
         />
@@ -385,7 +395,8 @@ describe("MixedParagraphPropertiesEditor", () => {
       const alignSelect = screen.getByRole("combobox");
       fireEvent.change(alignSelect, { target: { value: "justify" } });
 
-      expect(onChange).toHaveBeenCalledWith({ alignment: "justify" });
+      expect(onChange.calls.length).toBe(1);
+      expect(onChange.calls[0]?.[0]).toEqual({ alignment: "justify" });
     });
   });
 
@@ -394,7 +405,7 @@ describe("MixedParagraphPropertiesEditor", () => {
       const { container } = render(
         <MixedParagraphPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
           showIndentation={false}
           showSpacing={false}
         />
@@ -404,14 +415,15 @@ describe("MixedParagraphPropertiesEditor", () => {
       expect(levelInput).toBeTruthy();
       fireEvent.change(levelInput!, { target: { value: "2" } });
 
-      expect(onChange).toHaveBeenCalledWith({ level: 2 });
+      expect(onChange.calls.length).toBe(1);
+      expect(onChange.calls[0]?.[0]).toEqual({ level: 2 });
     });
 
     it("clamps level to 0-8 range (max)", () => {
       const { container } = render(
         <MixedParagraphPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
           showIndentation={false}
           showSpacing={false}
         />
@@ -421,14 +433,15 @@ describe("MixedParagraphPropertiesEditor", () => {
       expect(levelInput).toBeTruthy();
       fireEvent.change(levelInput!, { target: { value: "10" } });
 
-      expect(onChange).toHaveBeenCalledWith({ level: 8 });
+      expect(onChange.calls.length).toBe(1);
+      expect(onChange.calls[0]?.[0]).toEqual({ level: 8 });
     });
 
     it("clamps level to 0-8 range (min)", () => {
       const { container } = render(
         <MixedParagraphPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
           showIndentation={false}
           showSpacing={false}
         />
@@ -438,14 +451,15 @@ describe("MixedParagraphPropertiesEditor", () => {
       expect(levelInput).toBeTruthy();
       fireEvent.change(levelInput!, { target: { value: "-1" } });
 
-      expect(onChange).toHaveBeenCalledWith({ level: 0 });
+      expect(onChange.calls.length).toBe(1);
+      expect(onChange.calls[0]?.[0]).toEqual({ level: 0 });
     });
 
     it("handles invalid level input", () => {
       const { container } = render(
         <MixedParagraphPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
           showIndentation={false}
           showSpacing={false}
         />
@@ -455,7 +469,8 @@ describe("MixedParagraphPropertiesEditor", () => {
       expect(levelInput).toBeTruthy();
       fireEvent.change(levelInput!, { target: { value: "abc" } });
 
-      expect(onChange).toHaveBeenCalledWith({ level: 0 });
+      expect(onChange.calls.length).toBe(1);
+      expect(onChange.calls[0]?.[0]).toEqual({ level: 0 });
     });
   });
 
@@ -464,7 +479,7 @@ describe("MixedParagraphPropertiesEditor", () => {
       const { container } = render(
         <MixedParagraphPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
           showIndentation={false}
           showSpacing={false}
         />
@@ -474,7 +489,8 @@ describe("MixedParagraphPropertiesEditor", () => {
       expect(rtlToggle).toBeTruthy();
       fireEvent.click(rtlToggle!);
 
-      expect(onChange).toHaveBeenCalledWith({ rtl: true });
+      expect(onChange.calls.length).toBe(1);
+      expect(onChange.calls[0]?.[0]).toEqual({ rtl: true });
     });
 
     it("calls onChange with undefined when RTL is toggled off", () => {
@@ -486,7 +502,7 @@ describe("MixedParagraphPropertiesEditor", () => {
       const { container } = render(
         <MixedParagraphPropertiesEditor
           value={props}
-          onChange={onChange}
+          onChange={onChange.fn}
           showIndentation={false}
           showSpacing={false}
         />
@@ -496,7 +512,8 @@ describe("MixedParagraphPropertiesEditor", () => {
       expect(rtlToggle).toBeTruthy();
       fireEvent.click(rtlToggle!);
 
-      expect(onChange).toHaveBeenCalledWith({ rtl: undefined });
+      expect(onChange.calls.length).toBe(1);
+      expect(onChange.calls[0]?.[0]).toEqual({ rtl: undefined });
     });
   });
 
@@ -505,7 +522,7 @@ describe("MixedParagraphPropertiesEditor", () => {
       render(
         <MixedParagraphPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
           disabled
           showIndentation={false}
           showSpacing={false}
@@ -520,7 +537,7 @@ describe("MixedParagraphPropertiesEditor", () => {
       const { container } = render(
         <MixedParagraphPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
           disabled
           showIndentation={false}
           showSpacing={false}
@@ -538,7 +555,7 @@ describe("MixedParagraphPropertiesEditor", () => {
       const { container } = render(
         <MixedParagraphPropertiesEditor
           value={createPartiallyMixedProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
           showIndentation={false}
           showSpacing={false}
         />
@@ -564,7 +581,7 @@ describe("MixedParagraphPropertiesEditor", () => {
       const { container } = render(
         <MixedParagraphPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
           className="custom-class"
           showIndentation={false}
           showSpacing={false}
@@ -578,7 +595,7 @@ describe("MixedParagraphPropertiesEditor", () => {
       const { container } = render(
         <MixedParagraphPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
           style={{ backgroundColor: "red" }}
           showIndentation={false}
           showSpacing={false}

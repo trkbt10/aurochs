@@ -89,7 +89,8 @@ export function rgbToRgbBytes(r: number, g: number, b: number): RgbColor {
  * @param k - Key/Black (0-1)
  * @returns RGB tuple (0-255)
  */
-export function cmykToRgb(c: number, m: number, y: number, k: number): RgbColor {
+export function cmykToRgb(...args: readonly [c: number, m: number, y: number, k: number]): RgbColor {
+  const [c, m, y, k] = args;
   const cc = clamp01(c);
   const mm = clamp01(m);
   const yy = clamp01(y);

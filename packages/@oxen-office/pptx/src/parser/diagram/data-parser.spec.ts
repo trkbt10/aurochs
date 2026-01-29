@@ -4,6 +4,7 @@
 
 import { parseDiagramDataModel } from "./data-parser";
 import { parseXml } from "@oxen/xml";
+import { isTextBody } from "../../domain/diagram/format-guards";
 
 const XMLNS = {
   dgm: "http://schemas.openxmlformats.org/drawingml/2006/diagram",
@@ -64,7 +65,13 @@ describe("parseDiagramDataModel", () => {
     expect(point?.propertySet?.customFlipHorizontal).toBe(true);
     expect(point?.propertySet?.customScaleX).toBe(50);
     expect(point?.propertySet?.customLinearFactorNeighborX).toBe(25);
-    expect(point?.textBody?.paragraphs[0].runs[0].type).toBe("text");
+    if (!point) {
+      throw new Error("Expected point to be defined");
+    }
+    if (!isTextBody(point.textBody)) {
+      throw new Error("Expected point.textBody to be a TextBody");
+    }
+    expect(point.textBody.paragraphs[0].runs[0].type).toBe("text");
   });
 
   it("parses connection types", () => {

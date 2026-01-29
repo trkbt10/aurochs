@@ -30,9 +30,7 @@ describe("patchSlideXml (textBody) integration", () => {
     const spTree = cSld ? getChild(cSld, "p:spTree") : undefined;
     expect(spTree).toBeDefined();
 
-    const firstShape = spTree
-      ? spTree.children.find((c) => isXmlElement(c) && c.name === "p:sp")
-      : undefined;
+    const firstShape = spTree?.children.find((c) => isXmlElement(c) && c.name === "p:sp");
     expect(firstShape && isXmlElement(firstShape)).toBe(true);
     if (!firstShape || !isXmlElement(firstShape)) {
       throw new Error("Expected first shape to be a p:sp element");

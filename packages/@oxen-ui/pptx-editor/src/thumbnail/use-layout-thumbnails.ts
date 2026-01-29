@@ -75,7 +75,7 @@ function loadLayoutShapes(file: PresentationFile, layoutPath: string): readonly 
       return [];
     }
 
-    return parseShapeTree(spTree);
+    return parseShapeTree({ spTree });
   } catch {
     return [];
   }

@@ -34,7 +34,8 @@ const S4 = [6, 10, 15, 21] as const;
 
 type RoundParams = { fn: number; gIdx: number; s: number };
 
-function getRoundParams(n: number, bb: number, cc: number, dd: number): RoundParams {
+function getRoundParams(...args: readonly [n: number, bb: number, cc: number, dd: number]): RoundParams {
+  const [n, bb, cc, dd] = args;
   if (n < 16) {
     return { fn: f(bb, cc, dd), gIdx: n, s: S1[n % 4]! };
   }

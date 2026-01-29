@@ -233,12 +233,15 @@ function lineStyleToSvgAttrs(lineStyle: ReturnType<typeof renderLineToStyle>): s
 }
 
 function renderAxisAlignedLineAsRect(
-  x1: number,
-  y1: number,
-  x2: number,
-  y2: number,
-  lineStyle: ReturnType<typeof renderLineToStyle>,
+  ...args: [
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+    lineStyle: ReturnType<typeof renderLineToStyle>,
+  ]
 ): string | null {
+  const [x1, y1, x2, y2, lineStyle] = args;
   // Only for solid, axis-aligned lines. Dashes and diagonals must remain strokes.
   if (lineStyle.stroke === "none") {return null;}
   if (lineStyle.strokeDasharray !== undefined) {return null;}
@@ -324,14 +327,17 @@ function pickPreferredBorderSegment(a: BorderSegment, b: BorderSegment): BorderS
  * @see ECMA-376 Part 1, Section 21.1.3.16 (a:tr)
  */
 export function renderTableSvg(
-  table: Table,
-  frameWidth: Pixels,
-  frameHeight: Pixels,
-  ctx: CoreRenderContext,
-  defsCollector: SvgDefsCollector,
-  options?: RenderOptions,
-  tableStyles?: TableStyleList,
+  ...args: [
+    table: Table,
+    frameWidth: Pixels,
+    frameHeight: Pixels,
+    ctx: CoreRenderContext,
+    defsCollector: SvgDefsCollector,
+    options?: RenderOptions,
+    tableStyles?: TableStyleList,
+  ]
 ): string {
+  const [table, frameWidth, frameHeight, ctx, defsCollector, options, tableStyles] = args;
   const { properties, grid, rows } = table;
 
   const columnWidths = grid.columns.map((c) => c.width as number);
@@ -344,13 +350,13 @@ export function renderTableSvg(
   const xfrmWidth = frameWidth as number;
   const xfrmHeight = frameHeight as number;
   const tableScalingMode = options?.tableScalingMode ?? "natural";
-  const { scaleX, scaleY } = resolveTableScale(
-    tableScalingMode,
+  const { scaleX, scaleY } = resolveTableScale({
+    mode: tableScalingMode,
     totalWidth,
     totalHeight,
-    xfrmWidth,
-    xfrmHeight,
-  );
+    frameWidth: xfrmWidth,
+    frameHeight: xfrmHeight,
+  });
 
   const fillElements: string[] = [];
   const textElements: string[] = [];
@@ -388,8 +394,8 @@ export function renderTableSvg(
 
       const colSpan = resolveSpanCount(cellProps.colSpan);
       const rowSpan = resolveSpanCount(cellProps.rowSpan);
-      const spanWidth = resolveSpanWidth(columnWidths, colIdx, colSpan, cellWidth);
-      const spanHeight = resolveSpanHeight(rowHeights, rowIdx, rowSpan, rowHeight);
+      const spanWidth = resolveSpanWidth({ columnWidths, colIdx, span: colSpan, fallbackWidth: cellWidth });
+      const spanHeight = resolveSpanHeight({ rowHeights, rowIdx, span: rowSpan, fallbackHeight: rowHeight });
 
       // Create position context for style resolution
       const positionContext: CellPositionContext = {
@@ -423,7 +429,14 @@ export function renderTableSvg(
       const isNotFirstRow = rowIdx > 0;
       const isNotFirstCol = colIdx > 0;
 
-      const addBorder = (x1: number, y1: number, x2: number, y2: number, lineStyle: ReturnType<typeof renderLineToStyle>) => {
+      const addBorder = (...args: [
+        x1: number,
+        y1: number,
+        x2: number,
+        y2: number,
+        lineStyle: ReturnType<typeof renderLineToStyle>,
+      ]) => {
+        const [x1, y1, x2, y2, lineStyle] = args;
         if (lineStyle.stroke === "none") {return;}
         const seg: BorderSegment = { x1, y1, x2, y2, style: lineStyle };
         const key = borderSegmentKey(seg);

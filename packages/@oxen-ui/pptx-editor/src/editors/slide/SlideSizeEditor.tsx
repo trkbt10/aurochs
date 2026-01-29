@@ -8,7 +8,7 @@
 
 import { useCallback, type CSSProperties } from "react";
 import type { SlideSize, SlideSizeType } from "@oxen-office/pptx/domain";
-import { px, type Pixels } from "@oxen-office/ooxml/domain/units";
+import { px } from "@oxen-office/ooxml/domain/units";
 import type { EditorProps, SelectOption } from "@oxen-ui/ui-components/types";
 import { FieldGroup, FieldRow } from "@oxen-ui/ui-components/layout";
 import { Input, Select } from "@oxen-ui/ui-components/primitives";

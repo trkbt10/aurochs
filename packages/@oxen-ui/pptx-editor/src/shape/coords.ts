@@ -26,12 +26,15 @@
  * @returns Slide coordinates
  */
 export function clientToSlideCoords(
-  clientX: number,
-  clientY: number,
-  containerRect: DOMRect,
-  slideWidth: number,
-  slideHeight: number
+  ...args: readonly [
+    clientX: number,
+    clientY: number,
+    containerRect: DOMRect,
+    slideWidth: number,
+    slideHeight: number,
+  ]
 ): { x: number; y: number } {
+  const [clientX, clientY, containerRect, slideWidth, slideHeight] = args;
   const scaleX = slideWidth / containerRect.width;
   const scaleY = slideHeight / containerRect.height;
 

@@ -68,17 +68,22 @@ function idxOf(x: number, y: number, width: number): number {
   return y * width + x;
 }
 
-function hasSig(significant: Uint8Array, x: number, y: number, width: number, height: number): boolean {
+function hasSig(...args: [significant: Uint8Array, x: number, y: number, width: number, height: number]): boolean {
+  const [significant, x, y, width, height] = args;
   if (x < 0 || y < 0 || x >= width || y >= height) {return false;}
   return (significant[idxOf(x, y, width)] ?? 0) !== 0;
 }
 
-function signNeg(significant: Uint8Array, sign: Uint8Array, x: number, y: number, width: number, height: number): boolean {
+function signNeg(
+  ...args: [significant: Uint8Array, sign: Uint8Array, x: number, y: number, width: number, height: number]
+): boolean {
+  const [significant, sign, x, y, width, height] = args;
   if (!hasSig(significant, x, y, width, height)) {return false;}
   return (sign[idxOf(x, y, width)] ?? 0) !== 0;
 }
 
-function zcContext0(significant: Uint8Array, x: number, y: number, width: number, height: number): number {
+function zcContext0(...args: [significant: Uint8Array, x: number, y: number, width: number, height: number]): number {
+  const [significant, x, y, width, height] = args;
   // LUT index uses 9-bit neighborhood (NW..SE with THIS at bit4 = 0), plus orientation offset (0 for LL).
   const sigNW = hasSig(significant, x - 1, y - 1, width, height) ? 1 : 0;
   const sigN = hasSig(significant, x, y - 1, width, height) ? 1 : 0;
@@ -104,7 +109,10 @@ function zcContext0(significant: Uint8Array, x: number, y: number, width: number
   return T1_CTXNO_ZC + ctx;
 }
 
-function hasAnySigNeighbor(significant: Uint8Array, x: number, y: number, width: number, height: number): boolean {
+function hasAnySigNeighbor(
+  ...args: [significant: Uint8Array, x: number, y: number, width: number, height: number]
+): boolean {
+  const [significant, x, y, width, height] = args;
   return (
     hasSig(significant, x - 1, y - 1, width, height) ||
     hasSig(significant, x, y - 1, width, height) ||
@@ -122,7 +130,10 @@ function magContext(hasSigNeighbor0: boolean, refinedBefore: boolean): number {
   return T1_CTXNO_MAG + (refinedBefore ? 2 : 1);
 }
 
-function scIndex(significant: Uint8Array, sign: Uint8Array, x: number, y: number, width: number, height: number): number {
+function scIndex(
+  ...args: [significant: Uint8Array, sign: Uint8Array, x: number, y: number, width: number, height: number]
+): number {
+  const [significant, sign, x, y, width, height] = args;
   // Bits follow T1_LUT_* from ISO/IEC 15444-1 (OpenJPEG naming):
   // 0: SGN_W, 1: SIG_N, 2: SGN_E, 3: SIG_W, 4: SGN_N, 5: SIG_E, 6: SGN_S, 7: SIG_S
   let idx = 0;
@@ -208,15 +219,18 @@ export function tier1DecodeLlCodeblock(mq: MqDecoder, params: Tier1DecodeParams)
 }
 
 function decodeSigPropPass(
-  mq: MqDecoder,
-  width: number,
-  height: number,
-  bp: number,
-  significant: Uint8Array,
-  sign: Uint8Array,
-  data: Int32Array,
-  pi: Uint8Array,
+  ...args: [
+    mq: MqDecoder,
+    width: number,
+    height: number,
+    bp: number,
+    significant: Uint8Array,
+    sign: Uint8Array,
+    data: Int32Array,
+    pi: Uint8Array,
+  ]
 ): void {
+  const [mq, width, height, bp, significant, sign, data, pi] = args;
   const poshalf = 1 << bp;
   const oneplushalf = (poshalf << 1) + poshalf;
   for (let y = 0; y < height; y += 1) {
@@ -243,15 +257,18 @@ function decodeSigPropPass(
 }
 
 function decodeMagRefPass(
-  mq: MqDecoder,
-  width: number,
-  height: number,
-  bp: number,
-  significant: Uint8Array,
-  data: Int32Array,
-  pi: Uint8Array,
-  refined: Uint8Array,
+  ...args: [
+    mq: MqDecoder,
+    width: number,
+    height: number,
+    bp: number,
+    significant: Uint8Array,
+    data: Int32Array,
+    pi: Uint8Array,
+    refined: Uint8Array,
+  ]
 ): void {
+  const [mq, width, height, bp, significant, data, pi, refined] = args;
   const poshalf = 1 << bp;
   for (let y = 0; y < height; y += 1) {
     for (let x = 0; x < width; x += 1) {
@@ -270,15 +287,18 @@ function decodeMagRefPass(
 }
 
 function decodeCleanupPass(
-  mq: MqDecoder,
-  width: number,
-  height: number,
-  bp: number,
-  significant: Uint8Array,
-  sign: Uint8Array,
-  data: Int32Array,
-  pi: Uint8Array,
+  ...args: [
+    mq: MqDecoder,
+    width: number,
+    height: number,
+    bp: number,
+    significant: Uint8Array,
+    sign: Uint8Array,
+    data: Int32Array,
+    pi: Uint8Array,
+  ]
 ): void {
+  const [mq, width, height, bp, significant, sign, data, pi] = args;
   const poshalf = 1 << bp;
   const oneplushalf = (poshalf << 1) + poshalf;
   for (let stripeY = 0; stripeY < height; stripeY += 4) {
@@ -346,13 +366,9 @@ function decodeCleanupPass(
 }
 
 function canUseRlc(
-  significant: Uint8Array,
-  pi: Uint8Array,
-  width: number,
-  height: number,
-  x: number,
-  stripeY: number,
+  ...args: [significant: Uint8Array, pi: Uint8Array, width: number, height: number, x: number, stripeY: number]
 ): boolean {
+  const [significant, pi, width, height, x, stripeY] = args;
   for (let dy = 0; dy < 4; dy += 1) {
     const y = stripeY + dy;
     const idx = idxOf(x, y, width);

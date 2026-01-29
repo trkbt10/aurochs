@@ -91,13 +91,16 @@ function triangulatePolygon(points: readonly Vector2[]): number[] {
 /**
  * Check if vertex at index `curr` is an ear.
  */
-function isEar(
+type IsEarArgs = [
   points: readonly Vector2[],
   remaining: readonly number[],
   prev: number,
   curr: number,
   next: number,
-): boolean {
+];
+
+function isEar(...args: IsEarArgs): boolean {
+  const [points, remaining, prev, curr, next] = args;
   const a = points[prev];
   const b = points[curr];
   const c = points[next];
@@ -124,12 +127,10 @@ function isEar(
 /**
  * Check if point P is inside triangle ABC.
  */
-function isPointInTriangle(
-  p: Vector2,
-  a: Vector2,
-  b: Vector2,
-  c: Vector2,
-): boolean {
+type IsPointInTriangleArgs = [p: Vector2, a: Vector2, b: Vector2, c: Vector2];
+
+function isPointInTriangle(...args: IsPointInTriangleArgs): boolean {
+  const [p, a, b, c] = args;
   const sign = (p1: Vector2, p2: Vector2, p3: Vector2): number =>
     (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
 
@@ -436,9 +437,7 @@ export function generateExtrusion(
 
   // Ensure outer contour is CCW
   const signedArea = computeSignedArea(shape.points);
-  const outerPoints = signedArea < 0
-    ? [...shape.points].reverse()
-    : [...shape.points];
+  const outerPoints = signedArea < 0 ? [...shape.points].reverse() : [...shape.points];
 
   // Ensure holes are CW
   const holes = shape.holes.map((hole) => {
@@ -518,16 +517,19 @@ export function generateExtrusion(
  * Generate side walls for extrusion.
  */
 function generateSideWalls(
-  outer: readonly Vector2[],
-  holes: readonly (readonly Vector2[])[],
-  depth: number,
-  vertexOffset: number,
+  ...args: [
+    outer: readonly Vector2[],
+    holes: readonly (readonly Vector2[])[],
+    depth: number,
+    vertexOffset: number,
+  ]
 ): {
   positions: number[];
   normals: number[];
   uvs: number[];
   indices: number[];
 } {
+  const [outer, holes, depth, vertexOffset] = args;
   const positions: number[] = [];
   const normals: number[] = [];
   const uvs: number[] = [];
@@ -650,9 +652,7 @@ export function generateCapAtZ(
 
   // Ensure outer contour is CCW
   const signedArea = computeSignedArea(shape.points);
-  const outerPoints = signedArea < 0
-    ? [...shape.points].reverse()
-    : [...shape.points];
+  const outerPoints = signedArea < 0 ? [...shape.points].reverse() : [...shape.points];
 
   // Ensure holes are CW
   const holes = shape.holes.map((hole) => {
@@ -726,11 +726,6 @@ export function mergeExtrusionGeometries(
     (acc, g) => acc + g.uvs.length,
     0,
   );
-  const totalIndices = geometries.reduce(
-    (acc, g) => acc + g.indices.length,
-    0,
-  );
-
   const positions = new Float32Array(totalPositions);
   const normals = new Float32Array(totalNormals);
   const uvs = new Float32Array(totalUvs);

@@ -167,9 +167,7 @@ function parseTransitionAttributes(
     const spkCnt = getAttr(element, "spkCnt");
     const count = spkCnt ? parseInt(spkCnt, 10) : 1;
     const validSpokes: (1 | 2 | 3 | 4 | 8)[] = [1, 2, 3, 4, 8];
-    const spokesVal = validSpokes.includes(count as 1 | 2 | 3 | 4 | 8)
-      ? (count as 1 | 2 | 3 | 4 | 8)
-      : 1;
+    const spokesVal = validSpokes.includes(count as 1 | 2 | 3 | 4 | 8) ? (count as 1 | 2 | 3 | 4 | 8) : 1;
     return {
       direction: undefined,
       orientation: undefined,
@@ -402,7 +400,7 @@ export function parseSlide(
 
   return {
     background: parseBackground(bg),
-    shapes: parseShapeTree(spTree, placeholderCtx, masterStylesInfo, formatScheme),
+    shapes: parseShapeTree({ spTree, ctx: placeholderCtx, masterStylesInfo, formatScheme }),
     colorMapOverride: parseColorMapOverride(clrMapOvr),
     customerData: parseCustomerDataList(custDataLst),
     transition: parseTransition(transition),
@@ -443,17 +441,17 @@ export function parseSlideLayout(
   return {
     type: (getAttr(sldLayout, "type") as SlideLayoutType) ?? "blank",
     name: getAttr(cSld, "name"),
-    matchingName: getAttr(sldLayout, "matchingName"),
-    background: parseBackground(bg),
-    shapes: parseShapeTree(spTree),
-    colorMapOverride: parseColorMapOverride(clrMapOvr),
-    customerData: parseCustomerDataList(custDataLst),
-    transition: parseTransition(transition),
-    showMasterShapes: getBoolAttr(sldLayout, "showMasterSp"),
-    showMasterPhAnim: getBoolAttr(sldLayout, "showMasterPhAnim"),
-    preserve: getBoolAttr(sldLayout, "preserve"),
-    userDrawn: getBoolAttr(sldLayout, "userDrawn"),
-  };
+	    matchingName: getAttr(sldLayout, "matchingName"),
+	    background: parseBackground(bg),
+	    shapes: parseShapeTree({ spTree }),
+	    colorMapOverride: parseColorMapOverride(clrMapOvr),
+	    customerData: parseCustomerDataList(custDataLst),
+	    transition: parseTransition(transition),
+	    showMasterShapes: getBoolAttr(sldLayout, "showMasterSp"),
+	    showMasterPhAnim: getBoolAttr(sldLayout, "showMasterPhAnim"),
+	    preserve: getBoolAttr(sldLayout, "preserve"),
+	    userDrawn: getBoolAttr(sldLayout, "userDrawn"),
+	  };
 }
 
 /**
@@ -500,7 +498,7 @@ export function parseSlideMaster(
 
   return {
     background: parseBackground(bg),
-    shapes: parseShapeTree(spTree),
+    shapes: parseShapeTree({ spTree }),
     colorMap: clrMap ? parseColorMapping(clrMap) : {},
     slideLayoutIds: sldLayoutIdLst ? parseSlideLayoutIdList(sldLayoutIdLst) : undefined,
     customerData: parseCustomerDataList(custDataLst),
@@ -539,7 +537,7 @@ export function parseHandoutMaster(
 
   return {
     background: parseBackground(bg),
-    shapes: parseShapeTree(spTree),
+    shapes: parseShapeTree({ spTree }),
     colorMap: clrMap ? parseColorMapping(clrMap) : {},
     customerData: parseCustomerDataList(custDataLst),
     preserve: getBoolAttr(handoutMaster, "preserve"),
@@ -577,7 +575,7 @@ export function parseNotesMaster(
 
   return {
     background: parseBackground(bg),
-    shapes: parseShapeTree(spTree),
+    shapes: parseShapeTree({ spTree }),
     colorMap: clrMap ? parseColorMapping(clrMap) : {},
     customerData: parseCustomerDataList(custDataLst),
     notesStyle: parseTextStyleLevels(notesStyle),

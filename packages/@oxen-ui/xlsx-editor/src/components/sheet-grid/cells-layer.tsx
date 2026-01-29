@@ -77,13 +77,16 @@ function createAddress(col: number, row: number): CellAddress {
 }
 
 function getCellDisplayText(
-  cell: Cell | undefined,
-  sheetIndex: number,
-  address: CellAddress,
-  formulaEvaluator: ReturnType<typeof createFormulaEvaluator>,
-  formatCode: string,
-  dateSystem: XlsxWorksheet["dateSystem"],
+  ...args: readonly [
+    cell: Cell | undefined,
+    sheetIndex: number,
+    address: CellAddress,
+    formulaEvaluator: ReturnType<typeof createFormulaEvaluator>,
+    formatCode: string,
+    dateSystem: XlsxWorksheet["dateSystem"],
+  ]
 ): string {
+  const [cell, sheetIndex, address, formulaEvaluator, formatCode, dateSystem] = args;
   if (!cell) {
     return "";
   }

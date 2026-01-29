@@ -4,7 +4,6 @@
  * Tests for style consistency between editable and readonly modes
  */
 
-import { describe, it, expect } from "vitest";
 import {
   getThumbnailContainerStyle,
   getDeleteButtonStyle,
@@ -20,14 +19,14 @@ import {
 describe("getThumbnailContainerStyle", () => {
   const aspectRatio = "1.7778"; // 16:9
 
-  describe("selection ring behavior (uses box-shadow to prevent layout shift)", () => {
-    it("has no selection ring when not selected or active", () => {
-      const style = getThumbnailContainerStyle(
-        aspectRatio,
-        false, // isSelected
-        false, // isPrimary
-        false  // isActive
-      );
+	describe("selection ring behavior (uses box-shadow to prevent layout shift)", () => {
+	  it("has no selection ring when not selected or active", () => {
+	      const style = getThumbnailContainerStyle({
+	        aspectRatio,
+	        isSelected: false,
+	        isPrimary: false,
+	        isActive: false,
+	      });
 
       // No border - uses box-shadow only
       expect(style.border).toBeUndefined();
@@ -35,58 +34,58 @@ describe("getThumbnailContainerStyle", () => {
       expect(style.boxShadow).not.toContain("inset");
     });
 
-    it("has inset box-shadow ring when selected", () => {
-      const style = getThumbnailContainerStyle(
-        aspectRatio,
-        true,  // isSelected
-        true,  // isPrimary
-        false  // isActive
-      );
+	    it("has inset box-shadow ring when selected", () => {
+	      const style = getThumbnailContainerStyle({
+	        aspectRatio,
+	        isSelected: true,
+	        isPrimary: true,
+	        isActive: false,
+	      });
 
       // Uses inset box-shadow for selection (no layout shift)
       expect(style.boxShadow).toContain("inset");
     });
 
-    it("has inset box-shadow ring when active (current slide)", () => {
-      const style = getThumbnailContainerStyle(
-        aspectRatio,
-        false, // isSelected
-        false, // isPrimary
-        true   // isActive
-      );
+	    it("has inset box-shadow ring when active (current slide)", () => {
+	      const style = getThumbnailContainerStyle({
+	        aspectRatio,
+	        isSelected: false,
+	        isPrimary: false,
+	        isActive: true,
+	      });
 
       // Uses inset box-shadow for active state (no layout shift)
       expect(style.boxShadow).toContain("inset");
     });
   });
 
-  describe("consistent appearance", () => {
-    it("has white background", () => {
-      const style = getThumbnailContainerStyle(aspectRatio, false, false, false);
-      expect(style.backgroundColor).toBe("#fff");
-    });
+	  describe("consistent appearance", () => {
+	    it("has white background", () => {
+	      const style = getThumbnailContainerStyle({ aspectRatio, isSelected: false, isPrimary: false, isActive: false });
+	      expect(style.backgroundColor).toBe("#fff");
+	    });
 
-    it("has correct aspect ratio", () => {
-      const style = getThumbnailContainerStyle(aspectRatio, false, false, false);
-      expect(style.aspectRatio).toBe(aspectRatio);
-    });
+	    it("has correct aspect ratio", () => {
+	      const style = getThumbnailContainerStyle({ aspectRatio, isSelected: false, isPrimary: false, isActive: false });
+	      expect(style.aspectRatio).toBe(aspectRatio);
+	    });
 
-    it("has box shadow", () => {
-      const style = getThumbnailContainerStyle(aspectRatio, false, false, false);
-      expect(style.boxShadow).toBeDefined();
-      expect(style.boxShadow).not.toBe("none");
-    });
+	    it("has box shadow", () => {
+	      const style = getThumbnailContainerStyle({ aspectRatio, isSelected: false, isPrimary: false, isActive: false });
+	      expect(style.boxShadow).toBeDefined();
+	      expect(style.boxShadow).not.toBe("none");
+	    });
 
-    it("has overflow hidden", () => {
-      const style = getThumbnailContainerStyle(aspectRatio, false, false, false);
-      expect(style.overflow).toBe("hidden");
-    });
-  });
+	    it("has overflow hidden", () => {
+	      const style = getThumbnailContainerStyle({ aspectRatio, isSelected: false, isPrimary: false, isActive: false });
+	      expect(style.overflow).toBe("hidden");
+	    });
+	  });
 
-  describe("layout stability", () => {
-    it("produces same layout properties regardless of selection state", () => {
-      const notSelected = getThumbnailContainerStyle(aspectRatio, false, false, false);
-      const selected = getThumbnailContainerStyle(aspectRatio, true, true, false);
+	  describe("layout stability", () => {
+	    it("produces same layout properties regardless of selection state", () => {
+	      const notSelected = getThumbnailContainerStyle({ aspectRatio, isSelected: false, isPrimary: false, isActive: false });
+	      const selected = getThumbnailContainerStyle({ aspectRatio, isSelected: true, isPrimary: true, isActive: false });
 
       // Layout properties should be identical (no layout shift)
       expect(notSelected.width).toBe(selected.width);

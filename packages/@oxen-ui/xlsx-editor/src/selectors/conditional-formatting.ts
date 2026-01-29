@@ -83,11 +83,14 @@ function valueToScalar(value: CellValue): FormulaScalar {
 }
 
 function getCellScalar(
-  cell: Cell | undefined,
-  sheetIndex: number,
-  address: CellAddress,
-  formulaEvaluator: FormulaEvaluator,
+  ...args: readonly [
+    cell: Cell | undefined,
+    sheetIndex: number,
+    address: CellAddress,
+    formulaEvaluator: FormulaEvaluator,
+  ]
 ): FormulaScalar {
+  const [cell, sheetIndex, address, formulaEvaluator] = args;
   if (!cell) {
     return null;
   }
@@ -163,13 +166,16 @@ function compareScalars(left: FormulaScalar, right: FormulaScalar, op: "<" | "<=
 }
 
 function evaluateRuleMatchesCell(
-  rule: XlsxConditionalFormattingRule,
-  cell: Cell | undefined,
-  sheetIndex: number,
-  anchor: CellAddress,
-  address: CellAddress,
-  formulaEvaluator: FormulaEvaluator,
+  ...args: readonly [
+    rule: XlsxConditionalFormattingRule,
+    cell: Cell | undefined,
+    sheetIndex: number,
+    anchor: CellAddress,
+    address: CellAddress,
+    formulaEvaluator: FormulaEvaluator,
+  ]
 ): boolean {
+  const [rule, cell, sheetIndex, anchor, address, formulaEvaluator] = args;
   if (rule.type === "cellIs") {
     const compareOp = asCompareOperator(rule.operator);
     const criterion = rule.formulas[0];

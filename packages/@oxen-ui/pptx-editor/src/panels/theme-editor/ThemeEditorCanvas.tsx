@@ -779,24 +779,96 @@ export function ThemeEditorCanvas({
     [onThemeImport]
   );
 
-  const renderColorSection = (title: string, colors: readonly ColorConfig[]) => (
-    <div style={sectionStyle}>
-      <div style={sectionTitleStyle}>{title}</div>
-      {colorViewMode === "tile" ? (
+  const renderColorItems = (colors: readonly ColorConfig[]) => {
+    if (colorViewMode === "tile") {
+      return (
         <div style={colorTileGridStyle}>
           {colors.map((config) => (
             <ColorTile key={config.name} config={config} color={colorScheme[config.name]} onChange={onColorChange} />
           ))}
         </div>
-      ) : (
-        <div style={colorListStyle}>
-          {colors.map((config) => (
-            <ColorListItem key={config.name} config={config} color={colorScheme[config.name]} onChange={onColorChange} />
-          ))}
-        </div>
-      )}
+      );
+    }
+
+    return (
+      <div style={colorListStyle}>
+        {colors.map((config) => (
+          <ColorListItem key={config.name} config={config} color={colorScheme[config.name]} onChange={onColorChange} />
+        ))}
+      </div>
+    );
+  };
+
+  const renderColorSection = (title: string, colors: readonly ColorConfig[]) => (
+    <div style={sectionStyle}>
+      <div style={sectionTitleStyle}>{title}</div>
+      {renderColorItems(colors)}
     </div>
   );
+
+  const renderMainContent = () => {
+    if (activeTab === "colors") {
+      return (
+        <div style={mainContentStyle}>
+          {/* Left Panel: Colors */}
+          <div style={leftPanelStyle}>
+            <div style={panelHeaderStyle}>
+              <span style={panelTitleStyle}>Colors</span>
+              <ViewModePivot mode={colorViewMode} onModeChange={setColorViewMode} />
+            </div>
+            <div style={panelContentStyle}>
+              {renderColorSection("Base", baseColors)}
+              {renderColorSection("Accent", accentColors)}
+              {renderColorSection("Links", linkColors)}
+            </div>
+          </div>
+
+          {/* Center: Preview */}
+          <div style={centerPanelStyle}>
+            <div style={{ ...panelTitleStyle, marginBottom: spacingTokens.md }}>Live Preview</div>
+            <div style={previewContainerStyle}>
+              <SampleSlidePreview colorScheme={colorScheme} fontScheme={fontScheme} />
+            </div>
+          </div>
+
+          {/* Right Panel: Fonts & Presets */}
+          <div style={rightPanelStyle}>
+            <div style={panelHeaderStyle}>
+              <span style={panelTitleStyle}>Fonts & Presets</span>
+            </div>
+            <div style={panelContentStyle}>
+              <div style={sectionStyle}>
+                <div style={sectionTitleStyle}>Fonts</div>
+                <FontEditor title="Major Font (Headings)" fontSpec={fontScheme?.majorFont} onChange={onMajorFontChange} />
+                <FontEditor title="Minor Font (Body)" fontSpec={fontScheme?.minorFont} onChange={onMinorFontChange} />
+              </div>
+
+              <div style={sectionStyle}>
+                <div style={sectionTitleStyle}>Theme Presets</div>
+                <div style={presetGridStyle}>
+                  {THEME_PRESETS.map((preset) => (
+                    <PresetCard key={preset.id} preset={preset} onSelect={onPresetSelect} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <LayoutEditor
+        presentationFile={presentationFile}
+        layoutOptions={layoutOptions}
+        currentLayoutPath={currentLayoutPath}
+        slideSize={slideSize}
+        onLayoutSelect={onLayoutSelect}
+        onImportTemplate={onThemeImport ? handleFileImportClick : undefined}
+        colorScheme={colorScheme}
+      />
+    );
+  };
 
   return (
     <div style={containerStyle}>
@@ -861,63 +933,7 @@ export function ThemeEditorCanvas({
       </div>
 
       {/* Main Content - Conditional based on active tab */}
-      {activeTab === "colors" ? (
-        <div style={mainContentStyle}>
-          {/* Left Panel: Colors */}
-          <div style={leftPanelStyle}>
-            <div style={panelHeaderStyle}>
-              <span style={panelTitleStyle}>Colors</span>
-              <ViewModePivot mode={colorViewMode} onModeChange={setColorViewMode} />
-            </div>
-            <div style={panelContentStyle}>
-              {renderColorSection("Base", baseColors)}
-              {renderColorSection("Accent", accentColors)}
-              {renderColorSection("Links", linkColors)}
-            </div>
-          </div>
-
-          {/* Center: Preview */}
-          <div style={centerPanelStyle}>
-            <div style={{ ...panelTitleStyle, marginBottom: spacingTokens.md }}>Live Preview</div>
-            <div style={previewContainerStyle}>
-              <SampleSlidePreview colorScheme={colorScheme} fontScheme={fontScheme} />
-            </div>
-          </div>
-
-          {/* Right Panel: Fonts & Presets */}
-          <div style={rightPanelStyle}>
-            <div style={panelHeaderStyle}>
-              <span style={panelTitleStyle}>Fonts & Presets</span>
-            </div>
-            <div style={panelContentStyle}>
-              <div style={sectionStyle}>
-                <div style={sectionTitleStyle}>Fonts</div>
-                <FontEditor title="Major Font (Headings)" fontSpec={fontScheme?.majorFont} onChange={onMajorFontChange} />
-                <FontEditor title="Minor Font (Body)" fontSpec={fontScheme?.minorFont} onChange={onMinorFontChange} />
-              </div>
-
-              <div style={sectionStyle}>
-                <div style={sectionTitleStyle}>Theme Presets</div>
-                <div style={presetGridStyle}>
-                  {THEME_PRESETS.map((preset) => (
-                    <PresetCard key={preset.id} preset={preset} onSelect={onPresetSelect} />
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : (
-        <LayoutEditor
-          presentationFile={presentationFile}
-          layoutOptions={layoutOptions}
-          currentLayoutPath={currentLayoutPath}
-          slideSize={slideSize}
-          onLayoutSelect={onLayoutSelect}
-          onImportTemplate={onThemeImport ? handleFileImportClick : undefined}
-          colorScheme={colorScheme}
-        />
-      )}
+      {renderMainContent()}
     </div>
   );
 }

@@ -4,7 +4,6 @@
  *
  * Verifies font-family attribute is correctly set in SVG output
  */
-import { describe, it, expect, beforeAll } from "vitest";
 import { render } from "@testing-library/react";
 import { SlideRendererSvg } from "../../SlideRenderer";
 import { px, pt, deg } from "@oxen-office/ooxml/domain/units";

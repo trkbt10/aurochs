@@ -160,18 +160,10 @@ export function resolveTextEffects(
     return undefined;
   }
 
-  const shadow = effects.shadow
-    ? resolveShadow(effects.shadow, colorContext)
-    : undefined;
-  const glow = effects.glow
-    ? resolveGlow(effects.glow, colorContext)
-    : undefined;
-  const softEdge = effects.softEdge
-    ? resolveSoftEdge(effects.softEdge)
-    : undefined;
-  const reflection = effects.reflection
-    ? resolveReflection(effects.reflection)
-    : undefined;
+  const shadow = effects.shadow ? resolveShadow(effects.shadow, colorContext) : undefined;
+  const glow = effects.glow ? resolveGlow(effects.glow, colorContext) : undefined;
+  const softEdge = effects.softEdge ? resolveSoftEdge(effects.softEdge) : undefined;
+  const reflection = effects.reflection ? resolveReflection(effects.reflection) : undefined;
 
   // Only return config if at least one effect is present
   if (

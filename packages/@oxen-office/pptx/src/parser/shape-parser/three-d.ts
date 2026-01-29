@@ -108,10 +108,6 @@ function isPresetMaterialType(value: string | undefined): value is PresetMateria
   }
 }
 
-function parsePresetMaterialType(value: string | undefined): PresetMaterialType | undefined {
-  return isPresetMaterialType(value) ? value : undefined;
-}
-
 function parsePresetCameraType(value: string | undefined): PresetCameraType | undefined {
   return isPresetCameraType(value) ? value : undefined;
 }

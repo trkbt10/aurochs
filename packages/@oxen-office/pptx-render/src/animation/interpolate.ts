@@ -314,12 +314,15 @@ export function mapAttributeToCSS(attribute: string): string {
  * @param slideHeight - Slide height in pixels (for coordinate conversion)
  */
 export function applyAnimatedValue(
-  element: HTMLElement | SVGElement,
-  attribute: string,
-  value: AnimateValue,
-  slideWidth: number = 960,
-  slideHeight: number = 540
+  ...args: [
+    element: HTMLElement | SVGElement,
+    attribute: string,
+    value: AnimateValue,
+    slideWidth?: number,
+    slideHeight?: number,
+  ]
 ): void {
+  const [element, attribute, value, slideWidth = 960, slideHeight = 540] = args;
   const cssProperty = mapAttributeToCSS(attribute);
   const parsed = parseAnimateValue(value);
 
@@ -436,11 +439,14 @@ function updateTransform(
  * @returns Animation update function (progress: 0-1) => void
  */
 export function createAnimateFunction(
-  behavior: AnimateBehavior,
-  element: HTMLElement | SVGElement,
-  slideWidth: number = 960,
-  slideHeight: number = 540
+  ...args: [
+    behavior: AnimateBehavior,
+    element: HTMLElement | SVGElement,
+    slideWidth?: number,
+    slideHeight?: number,
+  ]
 ): (progress: number) => void {
+  const [behavior, element, slideWidth = 960, slideHeight = 540] = args;
   const { attribute, from, to, by, keyframes, calcMode } = behavior;
 
   // Keyframe animation

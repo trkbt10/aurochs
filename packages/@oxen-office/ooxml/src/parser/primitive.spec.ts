@@ -1,10 +1,12 @@
 import {
   getAngleAttr,
+  getBoolAttr,
   getEmuAttr,
   getPercent100kAttr,
   parseAngle,
   parseBoolean,
   parseEmu,
+  parseLineWidth,
   parseFixedPercentage,
   parsePercentage,
   parsePercentage100k,
@@ -26,6 +28,13 @@ describe("ooxml/parser/primitive", () => {
 
   it("parseEmu converts EMU to pixels (914400 => 96px)", () => {
     expect(parseEmu("914400")).toBe(96);
+  });
+
+  it("parseLineWidth enforces bounds", () => {
+    expect(parseLineWidth("0")).toBe(0);
+    expect(parseLineWidth("20116800")).toBe(2112);
+    expect(parseLineWidth("-1")).toBeUndefined();
+    expect(parseLineWidth("20116801")).toBeUndefined();
   });
 
   it("parseAngle converts OOXML angle units (60000 => 1deg)", () => {
@@ -58,7 +67,7 @@ describe("ooxml/parser/primitive", () => {
   it("attribute helpers parse values", () => {
     const xml = parseXml(`
       <a:root xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"
-        emu="914400" ang="5400000" pct="50000" />`);
+        emu="914400" ang="5400000" pct="50000" flag="1" />`);
     const el = getByPath(xml, ["a:root"]);
     expect(el).toBeTruthy();
     if (!el) {throw new Error("missing a:root");}
@@ -66,5 +75,6 @@ describe("ooxml/parser/primitive", () => {
     expect(getEmuAttr(el, "emu")).toBe(96);
     expect(getAngleAttr(el, "ang")).toBe(90);
     expect(getPercent100kAttr(el, "pct")).toBe(50);
+    expect(getBoolAttr(el, "flag")).toBe(true);
   });
 });

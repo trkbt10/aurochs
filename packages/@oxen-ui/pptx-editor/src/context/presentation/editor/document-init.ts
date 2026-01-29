@@ -51,13 +51,23 @@ function assignSlideIds(slides: readonly Slide[]): SlideWithId[] {
 
 
 export function createDocumentFromPresentation(
-  presentation: Presentation,
-  slides: readonly Slide[],
-  slideWidth: Pixels,
-  slideHeight: Pixels,
-  colorContext: ColorContext = EMPTY_COLOR_CONTEXT,
-  resources: ResourceResolver = EMPTY_RESOURCE_RESOLVER
+  ...args: readonly [
+    presentation: Presentation,
+    slides: readonly Slide[],
+    slideWidth: Pixels,
+    slideHeight: Pixels,
+    colorContext?: ColorContext,
+    resources?: ResourceResolver,
+  ]
 ): PresentationDocument {
+  const [
+    presentation,
+    slides,
+    slideWidth,
+    slideHeight,
+    colorContext = EMPTY_COLOR_CONTEXT,
+    resources = EMPTY_RESOURCE_RESOLVER,
+  ] = args;
   return {
     presentation,
     slides: assignSlideIds(slides),

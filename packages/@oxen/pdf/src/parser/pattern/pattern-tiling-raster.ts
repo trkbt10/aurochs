@@ -91,7 +91,8 @@ function colorToRgbBytes(color: PdfColor): readonly [number, number, number] {
 type Poly = readonly PdfPoint[];
 type FlattenedSubpath = Readonly<{ readonly points: Poly; readonly closed: boolean }>;
 
-function cubicAt(p0: number, p1: number, p2: number, p3: number, t: number): number {
+function cubicAt(...args: readonly [p0: number, p1: number, p2: number, p3: number, t: number]): number {
+  const [p0, p1, p2, p3, t] = args;
   const mt = 1 - t;
   return (
     mt * mt * mt * p0 +
@@ -219,7 +220,10 @@ function pointInSubpathsEvenOdd(x: number, y: number, subpaths: readonly Flatten
   return inside;
 }
 
-function isLeft(ax: number, ay: number, bx: number, by: number, px: number, py: number): number {
+function isLeft(
+  ...args: readonly [ax: number, ay: number, bx: number, by: number, px: number, py: number]
+): number {
+  const [ax, ay, bx, by, px, py] = args;
   return (bx - ax) * (py - ay) - (px - ax) * (by - ay);
 }
 
@@ -253,7 +257,15 @@ function pointInSubpathsNonZero(x: number, y: number, subpaths: readonly Flatten
   return winding !== 0;
 }
 
-function pointInSubpaths(x: number, y: number, subpaths: readonly FlattenedSubpath[], fillRule: ParsedPath["fillRule"]): boolean {
+function pointInSubpaths(
+  ...args: readonly [
+    x: number,
+    y: number,
+    subpaths: readonly FlattenedSubpath[],
+    fillRule: ParsedPath["fillRule"],
+  ]
+): boolean {
+  const [x, y, subpaths, fillRule] = args;
   if (fillRule === "evenodd") {
     return pointInSubpathsEvenOdd(x, y, subpaths);
   }
@@ -338,7 +350,8 @@ function parsePatternCellShapes(pattern: PdfTilingPattern): readonly CellShape[]
   const setFillRgb = (r: number, g: number, b: number): void => {
     gs = { ...gs, fillColor: { colorSpace: "DeviceRGB", components: [r, g, b] } };
   };
-  const setFillCmyk = (c: number, m: number, y: number, k: number): void => {
+  const setFillCmyk = (...args: readonly [c: number, m: number, y: number, k: number]): void => {
+    const [c, m, y, k] = args;
     gs = { ...gs, fillColor: { colorSpace: "DeviceCMYK", components: [c, m, y, k] } };
   };
 

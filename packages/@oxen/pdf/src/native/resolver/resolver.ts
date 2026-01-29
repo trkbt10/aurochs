@@ -142,7 +142,7 @@ export function createPdfResolver(
     if (!decrypter) {return value;}
     const skip = options.skipDecryptObjectNums;
     if (skip?.has(objNum)) {return value;}
-    return decryptPdfObject(value, objNum, gen, decrypter);
+    return decryptPdfObject({ value, ctx: { objNum, gen, decrypter } });
   };
 
   const getCompressedObject = (objStmNum: number, index: number): PdfObject => {

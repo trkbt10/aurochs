@@ -117,11 +117,14 @@ function findRunAtOffset(
  * Get all runs that intersect with a selection range within a paragraph.
  */
 function getRunRangesInParagraph(
-  paragraph: Paragraph,
-  paragraphIndex: number,
-  startOffset: number,
-  endOffset: number
+  ...args: readonly [
+    paragraph: Paragraph,
+    paragraphIndex: number,
+    startOffset: number,
+    endOffset: number,
+  ]
 ): RunRange[] {
+  const [paragraph, paragraphIndex, startOffset, endOffset] = args;
   const ranges: RunRange[] = [];
   // eslint-disable-next-line no-restricted-syntax -- performance-critical iteration
   let currentOffset = 0;

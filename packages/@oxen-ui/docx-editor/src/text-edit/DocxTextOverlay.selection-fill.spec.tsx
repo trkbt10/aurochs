@@ -4,34 +4,16 @@
 
 // @vitest-environment jsdom
 
-import { describe, it, expect } from "vitest";
-import { JSDOM } from "jsdom";
 import { render } from "@testing-library/react";
 import type { DocxParagraph } from "@oxen-office/docx/domain/paragraph";
 import { DocxTextOverlay } from "./DocxTextOverlay";
-
-function ensureDom(): void {
-  if (typeof document !== "undefined") {
-    return;
-  }
-
-  const dom = new JSDOM("<!doctype html><html><body></body></html>", { url: "http://localhost" });
-  const jsdomWindow = dom.window as unknown as Window & typeof globalThis;
-
-  Object.defineProperty(globalThis, "window", { value: jsdomWindow, writable: true });
-  Object.defineProperty(globalThis, "document", { value: jsdomWindow.document, writable: true });
-  Object.defineProperty(globalThis, "self", { value: jsdomWindow, writable: true });
-  Object.defineProperty(globalThis, "HTMLElement", { value: jsdomWindow.HTMLElement, writable: true });
-  Object.defineProperty(globalThis, "getComputedStyle", { value: jsdomWindow.getComputedStyle, writable: true });
-}
-
-ensureDom();
 
 /**
  * Create a DOMRect-like object for testing.
  * jsdom doesn't have DOMRect constructor, so we create a compatible object.
  */
-function createBounds(left: number, top: number, width: number, height: number): DOMRect {
+function createBounds(...args: readonly [left: number, top: number, width: number, height: number]): DOMRect {
+  const [left, top, width, height] = args;
   return {
     x: left,
     y: top,
@@ -78,4 +60,3 @@ describe("DocxTextOverlay selection fill", () => {
     );
   });
 });
-

@@ -2,10 +2,9 @@
  * @file Tests for bevel mesh generation (Three.js independent)
  */
 
-import { describe, it, expect } from "vitest";
 import { generateBevelMesh, mergeBevelGeometries } from "./mesh-generation";
 import type { BevelPath, BevelMeshConfig, BevelGeometryData } from "./types";
-import { vec2, emptyGeometryData } from "./types";
+import { vec2 } from "./types";
 import { ANGLE_PROFILE, CIRCLE_PROFILE } from "./profiles";
 
 // =============================================================================

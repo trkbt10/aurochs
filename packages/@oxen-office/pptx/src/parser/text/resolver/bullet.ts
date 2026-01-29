@@ -287,10 +287,9 @@ function mergeBulletProperties(
  */
 export function resolveBulletStyle(
   directPPr: XmlElement | undefined,
-  localLstStyle: XmlElement | undefined,
-  lvl: number,
-  ctx: TextStyleContext | undefined,
+  ...rest: [localLstStyle: XmlElement | undefined, lvl: number, ctx: TextStyleContext | undefined]
 ): BulletStyle | undefined {
+  const [localLstStyle, lvl, ctx] = rest;
   // Use 1-based level for lstStyle lookup
   const lvlKey = lvl + 1;
 

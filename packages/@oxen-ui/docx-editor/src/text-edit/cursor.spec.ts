@@ -2,7 +2,6 @@
  * @file cursor.ts unit tests
  */
 
-import { describe, it, expect } from "vitest";
 import type { DocxDocument, DocxBlockContent } from "@oxen-office/docx/domain/document";
 import type { DocxParagraph } from "@oxen-office/docx/domain/paragraph";
 import {

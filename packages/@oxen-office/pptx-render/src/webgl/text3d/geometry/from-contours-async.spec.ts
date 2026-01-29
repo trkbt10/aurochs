@@ -4,18 +4,9 @@
  * Ensures merged geometries preserve UV attributes for textured materials.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import * as THREE from "three";
 import type { TextLayoutResult, ContourPath } from "@oxen/glyph";
-
-// Mock only the glyph module for layoutTextAsync
-// Note: Do NOT mock ./bevel - it causes test isolation issues
-vi.mock("@oxen/glyph/layout", () => ({
-  layoutTextAsync: vi.fn(),
-}));
-
-import { layoutTextAsync } from "@oxen/glyph/layout";
-import { pathsToShapes } from "./from-contours-async";
+import { createTextGeometryAsync, mergeExtrudeGeometries, pathsToShapes, scaleGeometryToFit } from "./from-contours-async";
 
 /**
  * Calculate signed area of a polygon using shoelace formula.
@@ -29,12 +20,6 @@ function calculateShapeArea(points: THREE.Vector2[]): number {
 }
 
 describe("from-contours-async", () => {
-  const mockLayoutTextAsync = layoutTextAsync as ReturnType<typeof vi.fn>;
-
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("merges UV attributes when combining multiple shapes", async () => {
     const pathA: ContourPath = {
       points: [
@@ -55,15 +40,13 @@ describe("from-contours-async", () => {
       isHole: false,
     };
 
-    mockLayoutTextAsync.mockResolvedValue({
+    const layoutTextAsyncFn = async (): Promise<TextLayoutResult> => ({
       glyphs: [],
       totalWidth: 50,
       ascent: 30,
       descent: 0,
       combinedPaths: [pathA, pathB],
-    } as TextLayoutResult);
-
-    const { createTextGeometryAsync } = await import("./from-contours-async");
+    });
 
     const geometry = await createTextGeometryAsync({
       text: "AB",
@@ -72,6 +55,7 @@ describe("from-contours-async", () => {
       fontWeight: 400,
       fontStyle: "normal",
       extrusionDepth: 10,
+      layoutTextAsyncFn,
     });
 
     const position = geometry.getAttribute("position");
@@ -84,15 +68,13 @@ describe("from-contours-async", () => {
   });
 
   it("throws when no paths are returned for non-empty text", async () => {
-    mockLayoutTextAsync.mockResolvedValue({
+    const layoutTextAsyncFn = async (): Promise<TextLayoutResult> => ({
       glyphs: [],
       totalWidth: 0,
       ascent: 0,
       descent: 0,
       combinedPaths: [],
-    } as TextLayoutResult);
-
-    const { createTextGeometryAsync } = await import("./from-contours-async");
+    });
 
     await expect(createTextGeometryAsync({
       text: "A",
@@ -101,12 +83,11 @@ describe("from-contours-async", () => {
       fontWeight: 400,
       fontStyle: "normal",
       extrusionDepth: 10,
+      layoutTextAsyncFn,
     })).rejects.toThrow("No contour paths were generated for non-empty text.");
   });
 
   it("merges geometry attributes with mergeExtrudeGeometries", async () => {
-    const { mergeExtrudeGeometries } = await import("./from-contours-async");
-
     const shapeA = new THREE.Shape()
       .moveTo(0, 0)
       .lineTo(10, 0)
@@ -133,8 +114,6 @@ describe("from-contours-async", () => {
   });
 
   it("scales geometry to fit within bounds", async () => {
-    const { scaleGeometryToFit } = await import("./from-contours-async");
-
     const geometry = new THREE.BoxGeometry(10, 20, 5);
     scaleGeometryToFit(geometry, 5, 10);
 

@@ -78,7 +78,7 @@ export function TextEditorsTest() {
       {/* RunProperties Editor */}
       <div style={cardStyle}>
         <h2 style={cardTitleStyle}>Run Properties Editor</h2>
-        <RunPropertiesEditor value={runProperties} onChange={setRunProperties} compact />
+        <RunPropertiesEditor value={runProperties} onChange={setRunProperties} showSpacing={false} />
         <div style={valueDisplayStyle}>{JSON.stringify(runProperties, null, 2)}</div>
       </div>
 

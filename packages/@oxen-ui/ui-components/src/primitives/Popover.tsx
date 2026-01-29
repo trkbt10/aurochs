@@ -109,11 +109,9 @@ const arrowConfigs: Record<PopoverSide, ArrowConfig> = {
 };
 
 function buildArrowStyle(
-  side: PopoverSide,
-  offset: number,
-  size: number,
-  color: string
+  ...args: readonly [side: PopoverSide, offset: number, size: number, color: string]
 ): CSSProperties {
+  const [side, offset, size, color] = args;
   const config = arrowConfigs[side];
   const style: Record<string, string | number> = {
     position: "absolute",

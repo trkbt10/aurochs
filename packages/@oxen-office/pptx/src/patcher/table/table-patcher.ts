@@ -364,11 +364,19 @@ function patchMergeCell(
 }
 
 function applyMergeRange(
-  table: XmlElement,
-  startRow: number,
-  startCol: number,
-  rowSpan: number,
-  colSpan: number,
+  {
+    table,
+    startRow,
+    startCol,
+    rowSpan,
+    colSpan,
+  }: {
+    readonly table: XmlElement;
+    readonly startRow: number;
+    readonly startCol: number;
+    readonly rowSpan: number;
+    readonly colSpan: number;
+  },
 ): XmlElement {
   const rows = getTableRows(table);
   if (rowSpan < 1 || colSpan < 1) {
@@ -428,11 +436,19 @@ function applyMergeRange(
 }
 
 function applySplitRange(
-  table: XmlElement,
-  startRow: number,
-  startCol: number,
-  rowSpan: number,
-  colSpan: number,
+  {
+    table,
+    startRow,
+    startCol,
+    rowSpan,
+    colSpan,
+  }: {
+    readonly table: XmlElement;
+    readonly startRow: number;
+    readonly startCol: number;
+    readonly rowSpan: number;
+    readonly colSpan: number;
+  },
 ): XmlElement {
   const rows = getTableRows(table);
   if (rowSpan < 1 || colSpan < 1) {
@@ -525,10 +541,10 @@ export function patchTable(tableElement: XmlElement, changes: readonly TableChan
         next = removeColumn(next, change.colIndex);
         break;
       case "merge":
-        next = applyMergeRange(next, change.startRow, change.startCol, change.rowSpan, change.colSpan);
+        next = applyMergeRange({ table: next, startRow: change.startRow, startCol: change.startCol, rowSpan: change.rowSpan, colSpan: change.colSpan });
         break;
       case "split":
-        next = applySplitRange(next, change.startRow, change.startCol, change.rowSpan, change.colSpan);
+        next = applySplitRange({ table: next, startRow: change.startRow, startCol: change.startCol, rowSpan: change.rowSpan, colSpan: change.colSpan });
         break;
       default:
         ((_: never) => _)(change);

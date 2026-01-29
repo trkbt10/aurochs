@@ -2,7 +2,6 @@
  * @file src/pdf/parser/jpeg2000/jpx-decode.native.spec.ts
  */
 
-import { describe, expect, it } from "vitest";
 import { base64ToArrayBuffer } from "@oxen/buffer";
 import { decodeJpxNative } from "./jpx-decode.native";
 

@@ -32,8 +32,12 @@ import {
 // Test Helpers
 // =============================================================================
 
-function createMockElement(): HTMLElement & { style: Record<string, string> } {
-  return {
+function isHTMLElement(value: unknown): value is HTMLElement {
+  return typeof value === "object" && value !== null && "style" in value;
+}
+
+function createMockElement(): HTMLElement {
+  const el: unknown = {
     style: {
       opacity: "",
       visibility: "",
@@ -46,7 +50,12 @@ function createMockElement(): HTMLElement & { style: Record<string, string> } {
       maskRepeat: "",
       transformOrigin: "",
     },
-  } as unknown as HTMLElement & { style: Record<string, string> };
+    offsetHeight: 0,
+  };
+  if (!isHTMLElement(el)) {
+    throw new Error("createMockElement: invalid mock element shape");
+  }
+  return el;
 }
 
 // =============================================================================

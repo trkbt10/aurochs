@@ -107,10 +107,9 @@ function getAlignmentFromMasterTextStyles(
  */
 export function resolveAlignment(
   directAlgn: string | undefined,
-  localLstStyle: XmlElement | undefined,
-  lvl: number,
-  ctx: TextStyleContext | undefined,
+  ...rest: [localLstStyle: XmlElement | undefined, lvl: number, ctx: TextStyleContext | undefined]
 ): TextAlignment {
+  const [localLstStyle, lvl, ctx] = rest;
   // Use 1-based level for lstStyle lookup
   const lvlKey = lvl + 1;
 

@@ -91,7 +91,8 @@ function buildSolidRgbData(width: number, height: number, rgb: readonly [number,
 type Poly = readonly PdfPoint[];
 type FlattenedSubpath = Readonly<{ readonly points: Poly; readonly closed: boolean }>;
 
-function cubicAt(p0: number, p1: number, p2: number, p3: number, t: number): number {
+function cubicAt(...args: [p0: number, p1: number, p2: number, p3: number, t: number]): number {
+  const [p0, p1, p2, p3, t] = args;
   const mt = 1 - t;
   return (
     mt * mt * mt * p0 +
@@ -222,7 +223,8 @@ function pointInSubpathsEvenOdd(x: number, y: number, subpaths: readonly Flatten
   return inside;
 }
 
-function isLeft(ax: number, ay: number, bx: number, by: number, px: number, py: number): number {
+function isLeft(...args: [ax: number, ay: number, bx: number, by: number, px: number, py: number]): number {
+  const [ax, ay, bx, by, px, py] = args;
   return (bx - ax) * (py - ay) - (px - ax) * (by - ay);
 }
 
@@ -256,7 +258,10 @@ function pointInSubpathsNonZero(x: number, y: number, subpaths: readonly Flatten
   return winding !== 0;
 }
 
-function pointInSubpaths(x: number, y: number, subpaths: readonly FlattenedSubpath[], fillRule: ParsedPath["fillRule"]): boolean {
+function pointInSubpaths(
+  ...args: [x: number, y: number, subpaths: readonly FlattenedSubpath[], fillRule: ParsedPath["fillRule"]]
+): boolean {
+  const [x, y, subpaths, fillRule] = args;
   if (fillRule === "evenodd") {
     return pointInSubpathsEvenOdd(x, y, subpaths);
   }
@@ -303,7 +308,10 @@ function distancePointToSegmentButt(p: PdfPoint, a: PdfPoint, b: PdfPoint): numb
   return Math.sqrt(dx * dx + dy * dy);
 }
 
-function distancePointToSegment(p: PdfPoint, a: PdfPoint, b: PdfPoint, cap: 0 | 1 | 2, halfW: number): number {
+function distancePointToSegment(
+  ...args: [p: PdfPoint, a: PdfPoint, b: PdfPoint, cap: 0 | 1 | 2, halfW: number]
+): number {
+  const [p, a, b, cap, halfW] = args;
   if (cap === 1) {
     return distancePointToSegmentRound(p, a, b);
   }
@@ -321,7 +329,10 @@ function distancePointToSegment(p: PdfPoint, a: PdfPoint, b: PdfPoint, cap: 0 | 
   return distancePointToSegmentButt(p, a, b);
 }
 
-function pointInStroke(p: PdfPoint, subpaths: readonly FlattenedSubpath[], halfW: number, cap: 0 | 1 | 2): boolean {
+function pointInStroke(
+  ...args: [p: PdfPoint, subpaths: readonly FlattenedSubpath[], halfW: number, cap: 0 | 1 | 2]
+): boolean {
+  const [p, subpaths, halfW, cap] = args;
   if (!(halfW > 0)) {return false;}
   let minDist = Infinity;
   for (const s of subpaths) {
@@ -396,12 +407,10 @@ function rasterizeSoftMaskedFillPathInternal(parsed: ParsedPath): PdfImage | nul
       }
 
       const fillRule = parsed.fillRule ?? "nonzero";
-      const fillCov = parsed.paintOp === "fill" || parsed.paintOp === "fillStroke"
-        ? pointInSubpaths(pagePoint.x, pagePoint.y, subpaths, fillRule)
-        : false;
-      const strokeCov = parsed.paintOp === "stroke" || parsed.paintOp === "fillStroke"
-        ? pointInStroke(pagePoint, subpaths, halfW, cap)
-        : false;
+      const shouldFill = parsed.paintOp === "fill" || parsed.paintOp === "fillStroke";
+      const shouldStroke = parsed.paintOp === "stroke" || parsed.paintOp === "fillStroke";
+      const fillCov = shouldFill && pointInSubpaths(pagePoint.x, pagePoint.y, subpaths, fillRule);
+      const strokeCov = shouldStroke && pointInStroke(pagePoint, subpaths, halfW, cap);
 
       const fillA = fillCov ? Math.round(maskByte * fillMul) : 0;
       const strokeA = strokeCov ? Math.round(maskByte * strokeMul) : 0;

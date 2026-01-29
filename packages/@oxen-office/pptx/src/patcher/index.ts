@@ -115,49 +115,7 @@ export { addSlide, duplicateSlide, generateSlideId, generateSlideRId, removeSlid
 // Parts - shared XML part updaters
 export { addSlideToList, removeSlideFromList, reorderSlideInList } from "./parts";
 
-// Phase 10: Advanced elements (chart/table/diagram/OLE)
-export type {
-  CellAddress,
-  CellRange,
-  ChartChange,
-  ChartData,
-  ChartDataUpdate,
-  ChartExternalDataReference,
-  ChartPatchTarget,
-  ChartSeries,
-  ChartStyle,
-} from "./chart";
-export {
-  columnLetterToIndex,
-  composeFormula,
-  createRange,
-  expandRangeForItems,
-  extractChartDataFromWorkbook,
-  findExternalDataElement,
-  formatCellRef,
-  formatRange,
-  getRangeCellCount,
-  getRangeCells,
-  hasExternalData,
-  indexToColumnLetter,
-  isColumnRange,
-  isRowRange,
-  parseCellRef,
-  parseFormulaSheetName,
-  parseRange,
-  patchChart,
-  patchChartData,
-  patchChartElement,
-  patchChartStyle,
-  patchChartTitle,
-  patchChartTransform,
-  patchSeriesData,
-  quoteSheetName,
-  resolveChartExternalData,
-  resolveEmbeddedXlsxPath,
-  syncChartToWorkbook,
-  updateRangeForItemCount,
-} from "./chart";
+// Phase 10: Advanced elements (table/diagram/OLE)
 
 export type { TableChange } from "./table";
 export { addTableColumn, addTableRow, patchTable, patchTableCell, patchTableStyleId } from "./table";

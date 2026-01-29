@@ -52,12 +52,20 @@ function parseGroupLocksFromParent(parent: XmlElement | undefined): GroupLocks |
 }
 
 // Forward declaration - will be imported from index.ts to avoid circular dependencies
-type ParseShapeElementFn = (
-  element: XmlElement,
-  ctx?: PlaceholderContext,
-  masterStylesInfo?: MasterStylesInfo,
-  formatScheme?: FormatScheme,
-) => Shape | undefined;
+type ParseShapeElementFn = (options: {
+  readonly element: XmlElement;
+  readonly ctx?: PlaceholderContext;
+  readonly masterStylesInfo?: MasterStylesInfo;
+  readonly formatScheme?: FormatScheme;
+}) => Shape | undefined;
+
+type ParseGrpShapeOptions = {
+  readonly element: XmlElement;
+  readonly ctx: PlaceholderContext | undefined;
+  readonly masterStylesInfo: MasterStylesInfo | undefined;
+  readonly formatScheme: FormatScheme | undefined;
+  readonly parseShapeElement: ParseShapeElementFn;
+};
 
 /**
  * Parse group shape (p:grpSp)
@@ -67,11 +75,7 @@ type ParseShapeElementFn = (
  * @see ECMA-376 Part 1, Section 19.3.1.22
  */
 export function parseGrpShape(
-  element: XmlElement,
-  ctx: PlaceholderContext | undefined,
-  masterStylesInfo: MasterStylesInfo | undefined,
-  formatScheme: FormatScheme | undefined,
-  parseShapeElement: ParseShapeElementFn,
+  { element, ctx, masterStylesInfo, formatScheme, parseShapeElement }: ParseGrpShapeOptions,
 ): GrpShape | undefined {
   const nvGrpSpPr = getChild(element, "p:nvGrpSpPr");
   const cNvPr = nvGrpSpPr ? getChild(nvGrpSpPr, "p:cNvPr") : undefined;
@@ -86,7 +90,7 @@ export function parseGrpShape(
     if (!isXmlElement(child)) {
       continue;
     }
-    const shape = parseShapeElement(child, ctx, masterStylesInfo, formatScheme);
+    const shape = parseShapeElement({ element: child, ctx, masterStylesInfo, formatScheme });
     if (shape) {
       children.push(shape);
     }

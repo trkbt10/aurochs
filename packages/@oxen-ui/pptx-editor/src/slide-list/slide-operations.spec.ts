@@ -4,7 +4,6 @@
  * Tests for slide operations: delete, duplicate, move
  */
 
-import { describe, it, expect } from "vitest";
 import type { SlideWithId } from "@oxen-office/pptx/app";
 
 // =============================================================================
@@ -16,6 +15,13 @@ function createTestSlides(count: number): readonly SlideWithId[] {
     id: `slide-${i + 1}`,
     slide: { shapes: [] },
   }));
+}
+
+function getIdsToDelete(selectedIds: readonly string[], clickedSlideId: string): readonly string[] {
+  if (selectedIds.includes(clickedSlideId)) {
+    return selectedIds;
+  }
+  return [clickedSlideId];
 }
 
 // =============================================================================
@@ -115,14 +121,14 @@ describe("delete slides", () => {
       expect(showDeleteButton).toBe(false);
     });
 
-    it("delete button visibility is NOT based on selection", () => {
-      const isEditable = true;
-      const canDelete = true;
-      const isHovered = false;
-      const isSelected = true; // selection should not matter
+	    it("delete button visibility is NOT based on selection", () => {
+	      const isEditable = true;
+	      const canDelete = true;
+	      const isHovered = false;
+	      const _isSelected = true; // selection should not matter
 
-      // Delete button visibility is based on hover, NOT selection
-      const showDeleteButton = isEditable && canDelete && isHovered;
+	      // Delete button visibility is based on hover, NOT selection
+	      const showDeleteButton = isEditable && canDelete && isHovered;
 
       expect(showDeleteButton).toBe(false);
     });
@@ -133,41 +139,37 @@ describe("delete slides", () => {
 // Delete with selection
 // =============================================================================
 
-describe("delete with selection", () => {
-  it("deletes all selected when clicking delete on selected slide", () => {
-    const selectedIds = ["slide-2", "slide-3"];
-    const clickedSlideId = "slide-2"; // is in selection
+	describe("delete with selection", () => {
+	  it("deletes all selected when clicking delete on selected slide", () => {
+	    const selectedIds = ["slide-2", "slide-3"];
+	    const clickedSlideId = "slide-2"; // is in selection
 
-    const idsToDelete = selectedIds.includes(clickedSlideId)
-      ? selectedIds
-      : [clickedSlideId];
+	    const idsToDelete = getIdsToDelete(selectedIds, clickedSlideId);
 
-    expect(idsToDelete).toEqual(["slide-2", "slide-3"]);
-  });
+	    expect(idsToDelete).toEqual(["slide-2", "slide-3"]);
+	  });
 
-  it("deletes only clicked slide when not in selection", () => {
-    const selectedIds = ["slide-2", "slide-3"];
-    const clickedSlideId = "slide-4"; // not in selection
+	  it("deletes only clicked slide when not in selection", () => {
+	    const selectedIds = ["slide-2", "slide-3"];
+	    const clickedSlideId = "slide-4"; // not in selection
 
-    const idsToDelete = selectedIds.includes(clickedSlideId)
-      ? selectedIds
-      : [clickedSlideId];
+	    const idsToDelete = getIdsToDelete(selectedIds, clickedSlideId);
 
-    expect(idsToDelete).toEqual(["slide-4"]);
-  });
-});
+	    expect(idsToDelete).toEqual(["slide-4"]);
+	  });
+	});
 
 // =============================================================================
 // Move operations (via D&D)
 // =============================================================================
 
-describe("move slides", () => {
-  it("moves single slide to new position", () => {
-    const slides = createTestSlides(5);
-    // Move slide-2 to index 4 (after slide-5)
-    const slideToMove = "slide-2";
-    const fromIndex = 1;
-    const toIndex = 4;
+	describe("move slides", () => {
+	  it("moves single slide to new position", () => {
+	    const slides = createTestSlides(5);
+	    // Move slide-2 to index 4 (after slide-5)
+	    const _slideToMove = "slide-2";
+	    const fromIndex = 1;
+	    const toIndex = 4;
 
     // Simulate move: remove from old position, insert at new
     const mutable = [...slides];
@@ -183,12 +185,12 @@ describe("move slides", () => {
     ]);
   });
 
-  it("moves slide backwards", () => {
-    const slides = createTestSlides(5);
-    // Move slide-4 to index 1 (before slide-2)
-    const slideToMove = "slide-4";
-    const fromIndex = 3;
-    const toIndex = 1;
+	  it("moves slide backwards", () => {
+	    const slides = createTestSlides(5);
+	    // Move slide-4 to index 1 (before slide-2)
+	    const _slideToMove = "slide-4";
+	    const fromIndex = 3;
+	    const toIndex = 1;
 
     const mutable = [...slides];
     const [removed] = mutable.splice(fromIndex, 1);

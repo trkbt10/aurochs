@@ -76,12 +76,17 @@ export const OLE_TYPE_MAP: Record<OleType, OleTypeInfo> = {
  * @param referringPart - The slide/layout/master path that references this object
  * @returns The path and relationship ID of the embedded object
  */
-export function addOleObject(
+type AddOleObjectArgs = [
   pkg: ZipPackage,
   oleData: ArrayBuffer,
   oleType: OleType,
   referringPart: string,
+];
+
+export function addOleObject(
+  ...args: AddOleObjectArgs
 ): { readonly path: string; readonly rId: string; readonly progId: string } {
+  const [pkg, oleData, oleType, referringPart] = args;
   if (!oleData) {
     throw new Error("addOleObject: oleData is required");
   }

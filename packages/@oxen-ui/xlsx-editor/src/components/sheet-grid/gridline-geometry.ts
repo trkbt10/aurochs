@@ -34,11 +34,14 @@ function mergeIfContiguous(
 }
 
 function getMergeKeyForCell(
-  merges: readonly NormalizedMergeRange[],
-  cache: Map<string, string | null>,
-  col0: number,
-  row0: number,
+  ...args: readonly [
+    merges: readonly NormalizedMergeRange[],
+    cache: Map<string, string | null>,
+    col0: number,
+    row0: number,
+  ]
 ): string | undefined {
+  const [merges, cache, col0, row0] = args;
   if (merges.length === 0) {
     return undefined;
   }

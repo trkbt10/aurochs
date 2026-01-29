@@ -40,12 +40,15 @@ export type TextOverlayProps = {
  * Render a single text span with all its styling.
  */
 function renderSpan(
-  span: PositionedSpan,
-  x: number,
-  lineY: number,
-  dominantBaseline: string | undefined,
-  key: number,
+  ...args: readonly [
+    span: PositionedSpan,
+    x: number,
+    lineY: number,
+    dominantBaseline: string | undefined,
+    key: number,
+  ]
 ): ReactNode {
+  const [span, x, lineY, dominantBaseline, key] = args;
   const fontSizePx = fontSizeToPixels(span.fontSize);
   const bounds = getTextVisualBounds(lineY as Pixels, span.fontSize, span.fontFamily);
   const elements: ReactNode[] = [];
@@ -179,12 +182,15 @@ function renderLine(
  * Render a bullet (text or image) for a paragraph.
  */
 function renderBullet(
-  bullet: NonNullable<LayoutResult["paragraphs"][number]["bullet"]>,
-  bulletX: number,
-  bulletY: number,
-  bulletWidth: number,
-  key: number,
+  ...args: readonly [
+    bullet: NonNullable<LayoutResult["paragraphs"][number]["bullet"]>,
+    bulletX: number,
+    bulletY: number,
+    bulletWidth: number,
+    key: number,
+  ]
 ): ReactNode {
+  const [bullet, bulletX, bulletY, _bulletWidth, key] = args;
   const bulletFontSizePx = fontSizeToPixels(bullet.fontSize);
   const bulletBounds = getTextVisualBounds(bulletY as Pixels, bullet.fontSize, bullet.fontFamily);
 

@@ -5,7 +5,6 @@
  * Each operation has invariants that must always hold.
  */
 
-import { describe, it, expect } from "vitest";
 import {
   createInitialHoverState,
   hoverReducer,
@@ -57,22 +56,24 @@ describe("Hover Operation Invariants", () => {
   function mouseEnter(list: HoverableList, index: number): HoverableList {
     return {
       ...list,
-      items: list.items.map((item, i) =>
-        i === index
-          ? { ...item, hover: hoverReducer(item.hover, { type: "mouseEnter" }) }
-          : item
-      ),
+      items: list.items.map((item, i) => {
+        if (i !== index) {
+          return item;
+        }
+        return { ...item, hover: hoverReducer(item.hover, { type: "mouseEnter" }) };
+      }),
     };
   }
 
   function mouseLeave(list: HoverableList, index: number): HoverableList {
     return {
       ...list,
-      items: list.items.map((item, i) =>
-        i === index
-          ? { ...item, hover: hoverReducer(item.hover, { type: "mouseLeave" }) }
-          : item
-      ),
+      items: list.items.map((item, i) => {
+        if (i !== index) {
+          return item;
+        }
+        return { ...item, hover: hoverReducer(item.hover, { type: "mouseLeave" }) };
+      }),
     };
   }
 

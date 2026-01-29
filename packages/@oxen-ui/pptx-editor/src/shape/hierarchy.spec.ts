@@ -2,7 +2,6 @@
  * @file Unit tests for shape/hierarchy.ts
  */
 
-import { describe, expect, it } from "vitest";
 import type { Shape, GrpShape, SpShape } from "@oxen-office/pptx/domain";
 import { px, deg } from "@oxen-office/ooxml/domain/units";
 import { moveShapeInHierarchy } from "./hierarchy";
@@ -23,26 +22,31 @@ const createShape = (id: string, x: number, y: number): SpShape => ({
   },
 });
 
-const createGroup = (id: string, x: number, y: number, children: Shape[]): GrpShape => ({
-  type: "grpSp",
-  nonVisual: { id, name: `Group ${id}` },
-  properties: {
-    transform: {
-      x: px(x),
-      y: px(y),
-      width: px(200),
-      height: px(200),
-      rotation: deg(0),
-      flipH: false,
-      flipV: false,
-      childOffsetX: px(0),
-      childOffsetY: px(0),
-      childExtentWidth: px(200),
-      childExtentHeight: px(200),
+const createGroup = (
+  ...args: readonly [id: string, x: number, y: number, children: Shape[]]
+): GrpShape => {
+  const [id, x, y, children] = args;
+  return {
+    type: "grpSp",
+    nonVisual: { id, name: `Group ${id}` },
+    properties: {
+      transform: {
+        x: px(x),
+        y: px(y),
+        width: px(200),
+        height: px(200),
+        rotation: deg(0),
+        flipH: false,
+        flipV: false,
+        childOffsetX: px(0),
+        childOffsetY: px(0),
+        childExtentWidth: px(200),
+        childExtentHeight: px(200),
+      },
     },
-  },
-  children,
-});
+    children,
+  };
+};
 
 describe("moveShapeInHierarchy", () => {
   it("moves a top-level shape into a group and adjusts coordinates", () => {

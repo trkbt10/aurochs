@@ -150,12 +150,21 @@ function flattenTextBody(textBody: TextBody): TextCharEntry[] {
 }
 
 function applySingleReplaceEdit(
-  originalEntries: TextCharEntry[],
-  newText: string,
-  defaultProps: RunProperties | undefined,
-  fallbackParagraphProperties: ParagraphProperties,
-  fallbackParagraphEndProperties?: RunProperties,
+  ...args: readonly [
+    originalEntries: TextCharEntry[],
+    newText: string,
+    defaultProps: RunProperties | undefined,
+    fallbackParagraphProperties: ParagraphProperties,
+    fallbackParagraphEndProperties?: RunProperties,
+  ]
 ): TextCharEntry[] {
+  const [
+    originalEntries,
+    newText,
+    defaultProps,
+    fallbackParagraphProperties,
+    fallbackParagraphEndProperties,
+  ] = args;
   const oldText = originalEntries.map((entry) => entry.char).join("");
   const oldLength = oldText.length;
   const newLength = newText.length;

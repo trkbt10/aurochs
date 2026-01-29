@@ -4,7 +4,7 @@
  * Integration tests combining fill + stroke + effects.
  */
 
-import type { PatternType } from "@oxen-office/pptx/domain";
+import type { PatternType } from "@oxen-office/ooxml/domain/fill";
 import { px, deg, pct } from "@oxen-office/ooxml/domain/units";
 import { CombinedPreview, makeGradient } from "../common";
 

@@ -16,7 +16,10 @@ import { px, deg } from "@oxen-office/ooxml/domain/units";
 // Test Helpers
 // =============================================================================
 
-function createTransform(x: number, y: number, width: number, height: number): Transform {
+function createTransform(
+  ...args: [x: number, y: number, width: number, height: number]
+): Transform {
+  const [x, y, width, height] = args;
   return {
     x: px(x),
     y: px(y),

@@ -4,7 +4,7 @@
  * Manages context menu state and actions for slides.
  */
 
-import { useCallback, useState, useMemo } from "react";
+import { useCallback, useState } from "react";
 import type { SlideId, SlideWithId } from "@oxen-office/pptx/app";
 import type { SlideContextMenuState } from "../types";
 import type { MenuEntry } from "../../ui/context-menu/types";
@@ -147,12 +147,8 @@ export function useSlideContextMenu(
     const canMoveDown = maxIndex < slides.length - 1;
     const canDelete = slides.length > count;
 
-    const duplicateLabel = isMultiple
-      ? `Duplicate ${count} Slides`
-      : "Duplicate Slide";
-    const deleteLabel = isMultiple
-      ? `Delete ${count} Slides`
-      : "Delete Slide";
+    const duplicateLabel = isMultiple ? `Duplicate ${count} Slides` : "Duplicate Slide";
+    const deleteLabel = isMultiple ? `Delete ${count} Slides` : "Delete Slide";
 
     return [
       { id: SLIDE_LIST_MENU_ACTIONS.DUPLICATE, label: duplicateLabel },

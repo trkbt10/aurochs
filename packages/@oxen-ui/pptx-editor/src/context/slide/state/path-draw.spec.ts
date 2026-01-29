@@ -2,7 +2,6 @@
  * @file Path drawing state tests
  */
 
-import { describe, it, expect } from "vitest";
 import { px } from "@oxen-office/ooxml/domain/units";
 import {
   createIdlePathDrawState,
@@ -45,4 +44,3 @@ describe("setPreviewPoint", () => {
     expect(next.previewPoint).toEqual({ x: px(10), y: px(20) });
   });
 });
-

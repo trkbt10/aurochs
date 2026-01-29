@@ -2,7 +2,6 @@
  * @file Regression test: text decoding for KJ00006456532.pdf (Japan1 CID fonts)
  */
 
-import { describe, expect, it } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { parsePdf, type PdfText } from "@oxen/pdf";

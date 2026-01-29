@@ -58,7 +58,7 @@ export function parseDiagramDrawing(drawingDoc: XmlDocument): DiagramContent {
   const drawingSpTree = getByPath(drawingDoc, ["p:drawing", "p:spTree"]);
   if (drawingSpTree) {
     return {
-      shapes: parseShapeTree(drawingSpTree as XmlElement),
+      shapes: parseShapeTree({ spTree: drawingSpTree as XmlElement }),
     };
   }
 
@@ -102,7 +102,7 @@ function parseDiagramShapeTree(spTree: XmlElement): readonly Shape[] {
     // Map diagram-specific element names to standard names
     const mappedElement = mapDiagramElement(child);
     if (mappedElement) {
-      const shape = parseShapeElement(mappedElement);
+      const shape = parseShapeElement({ element: mappedElement });
       if (shape) {
         // Add diagram-specific attributes for SpShape
         const enrichedShape = addDiagramAttributes(shape, child);

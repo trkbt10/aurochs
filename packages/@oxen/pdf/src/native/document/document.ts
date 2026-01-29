@@ -374,11 +374,9 @@ export function createNativePdfDocument(
 }
 
 function createPdfResolverWithEncryption(
-  bytes: Uint8Array,
-  xref: XRefTable,
-  trailer: PdfDict,
-  options: NativePdfLoadOptions,
+  ...args: readonly [bytes: Uint8Array, xref: XRefTable, trailer: PdfDict, options: NativePdfLoadOptions]
 ): PdfResolver {
+  const [bytes, xref, trailer, options] = args;
   const encryptRef = asRef(dictGet(trailer, "Encrypt"));
   if (!encryptRef) {
     return createPdfResolver(bytes, xref);

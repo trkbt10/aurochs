@@ -193,11 +193,14 @@ function buildEmbeddedFonts(
 }
 
 async function parsePage(
-  page: NativePdfPage,
-  pageNumber: number,
-  opts: Required<PdfParserOptions>,
-  embeddedFontMetrics: Map<string, { ascender: number; descender: number }>,
+  ...args: [
+    page: NativePdfPage,
+    pageNumber: number,
+    opts: Required<PdfParserOptions>,
+    embeddedFontMetrics: Map<string, { ascender: number; descender: number }>,
+  ]
 ): Promise<PdfPage> {
+  const [page, pageNumber, opts, embeddedFontMetrics] = args;
   const { width, height } = page.getSize();
   const pageBBox: PdfBBox = [0, 0, width, height];
 
@@ -424,22 +427,41 @@ function addImageToGroup(groups: ImageGroupMap, xObjects: PdfDict, img: ParsedIm
 }
 
 function expandFormXObjectsNative(
-  page: NativePdfPage,
-  parsedElements: readonly ParsedElement[],
-  fontMappings: FontMappings,
-  extGState: ReadonlyMap<string, ExtGStateParams>,
-  shadings: ReadonlyMap<string, PdfShading>,
-  patterns: ReadonlyMap<string, PdfPattern>,
-  colorSpaces: ReadonlyMap<string, import("../color/color-space.native").ParsedNamedColorSpace>,
-  shadingMaxSize: number,
-  clipPathMaxSize: number,
-  softMaskVectorMaxSize: number,
-  jpxDecode: JpxDecodeFn,
-  pageBBox: PdfBBox,
-  embeddedFontMetrics: Map<string, { ascender: number; descender: number }>,
-  xObjectsOverride: PdfDict | null,
-  nextInlineId: () => number,
+  ...args: [
+    page: NativePdfPage,
+    parsedElements: readonly ParsedElement[],
+    fontMappings: FontMappings,
+    extGState: ReadonlyMap<string, ExtGStateParams>,
+    shadings: ReadonlyMap<string, PdfShading>,
+    patterns: ReadonlyMap<string, PdfPattern>,
+    colorSpaces: ReadonlyMap<string, import("../color/color-space.native").ParsedNamedColorSpace>,
+    shadingMaxSize: number,
+    clipPathMaxSize: number,
+    softMaskVectorMaxSize: number,
+    jpxDecode: JpxDecodeFn,
+    pageBBox: PdfBBox,
+    embeddedFontMetrics: Map<string, { ascender: number; descender: number }>,
+    xObjectsOverride: PdfDict | null,
+    nextInlineId: () => number,
+  ]
 ): Readonly<{ elements: ParsedElement[]; imageGroups: ImageGroupMap }> {
+  const [
+    page,
+    parsedElements,
+    fontMappings,
+    extGState,
+    shadings,
+    patterns,
+    colorSpaces,
+    shadingMaxSize,
+    clipPathMaxSize,
+    softMaskVectorMaxSize,
+    jpxDecode,
+    pageBBox,
+    embeddedFontMetrics,
+    xObjectsOverride,
+    nextInlineId,
+  ] = args;
   const resources = page.getResourcesDict();
   const xObjects = xObjectsOverride ?? (resources ? resolveDict(page, dictGet(resources, "XObject")) : null);
   const outElements: ParsedElement[] = [];
@@ -470,19 +492,22 @@ function expandFormXObjectsNative(
   };
 
   const expandInScope = (
-    elements: readonly ParsedElement[],
-    scope: Readonly<{
-      readonly resources: PdfDict | null;
-      readonly xObjects: PdfDict | null;
-      readonly fontMappings: FontMappings;
-      readonly extGState: ReadonlyMap<string, ExtGStateParams>;
-      readonly shadings: ReadonlyMap<string, PdfShading>;
-      readonly patterns: ReadonlyMap<string, PdfPattern>;
-      readonly colorSpaces: ReadonlyMap<string, import("../color/color-space.native").ParsedNamedColorSpace>;
-    }>,
-    callStack: Set<string>,
-    depth: number,
+    ...args: [
+      elements: readonly ParsedElement[],
+      scope: Readonly<{
+        readonly resources: PdfDict | null;
+        readonly xObjects: PdfDict | null;
+        readonly fontMappings: FontMappings;
+        readonly extGState: ReadonlyMap<string, ExtGStateParams>;
+        readonly shadings: ReadonlyMap<string, PdfShading>;
+        readonly patterns: ReadonlyMap<string, PdfPattern>;
+        readonly colorSpaces: ReadonlyMap<string, import("../color/color-space.native").ParsedNamedColorSpace>;
+      }>,
+      callStack: Set<string>,
+      depth: number,
+    ]
   ): void => {
+    const [elements, scope, callStack, depth] = args;
     if (depth > 16) {return;}
 
     for (const elem of elements) {
@@ -643,12 +668,15 @@ function normalizeBaseFontForMetricsLookup(baseFont: string): string {
 }
 
 function convertElements(
-  parsed: ParsedElement[],
-  opts: Required<PdfParserOptions>,
-  _pageHeight: number,
-  extractedImages: PdfImage[],
-  fontMappings: FontMappings,
+  ...args: [
+    parsed: ParsedElement[],
+    opts: Required<PdfParserOptions>,
+    _pageHeight: number,
+    extractedImages: PdfImage[],
+    fontMappings: FontMappings,
+  ]
 ): PdfElement[] {
+  const [parsed, opts, _pageHeight, extractedImages, fontMappings] = args;
   const elements: PdfElement[] = [];
   for (const elem of parsed) {
     switch (elem.type) {
@@ -776,21 +804,29 @@ function convertText(parsed: ParsedText, fontMappings: FontMappings): PdfText[] 
     const primaryFontKey = run.fontName;
     const fallbackFontKey = run.baseFont;
 
+    function decodeRunText(args: {
+      readonly run: typeof run;
+      readonly primaryFontKey: string;
+      readonly fallbackFontKey: string | undefined;
+      readonly fontMappings: FontMappings;
+    }): string {
+      const { run, primaryFontKey, fallbackFontKey, fontMappings } = args;
+      if (run.fontInfo) {
+        return decodeTextWithFontInfo(run.text, run.fontInfo);
+      }
+      const primary = decodeText(run.text, primaryFontKey, fontMappings);
+      if (primary !== run.text || !fallbackFontKey || fallbackFontKey === primaryFontKey) {
+        return primary;
+      }
+      return decodeText(run.text, fallbackFontKey, fontMappings);
+    }
+
     const fontInfo =
       run.fontInfo ??
       getFontInfo(primaryFontKey, fontMappings) ??
       (fallbackFontKey ? getFontInfo(fallbackFontKey, fontMappings) : undefined);
 
-    const decodedText =
-      run.fontInfo
-        ? decodeTextWithFontInfo(run.text, run.fontInfo)
-        : (() => {
-            const primary = decodeText(run.text, primaryFontKey, fontMappings);
-            if (primary !== run.text || !fallbackFontKey || fallbackFontKey === primaryFontKey) {
-              return primary;
-            }
-            return decodeText(run.text, fallbackFontKey, fontMappings);
-          })();
+    const decodedText = decodeRunText({ run, primaryFontKey, fallbackFontKey, fontMappings });
 
     const metrics = fontInfo?.metrics;
     const ascender = metrics?.ascender ?? 800;

@@ -14,7 +14,7 @@ import type {
   PdfPath,
 } from "../../domain";
 import { transformPoint } from "../../domain";
-import type { ParsedPath } from "../core/operator-parser";
+import type { ParsedPath } from "../operator";
 
 // =============================================================================
 // Built Path Types

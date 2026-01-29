@@ -33,13 +33,16 @@ export type UseDragHandlersParams = {
 type Delta = { readonly dx: number; readonly dy: number };
 
 function calculateMoveDelta(
-  dx: number,
-  dy: number,
-  drag: DragState,
-  selection: SelectionState,
-  snapEnabled: boolean,
-  snapStep: number,
+  ...args: readonly [
+    dx: number,
+    dy: number,
+    drag: DragState,
+    selection: SelectionState,
+    snapEnabled: boolean,
+    snapStep: number,
+  ]
 ): Delta {
+  const [dx, dy, drag, selection, snapEnabled, snapStep] = args;
   if (!snapEnabled || snapStep <= 0 || drag.type !== "move") {
     return { dx, dy };
   }
@@ -58,7 +61,16 @@ function calculateMoveDelta(
   return { dx: snappedX - (initial.x as number), dy: snappedY - (initial.y as number) };
 }
 
-function calculateResizeDelta(dx: number, dy: number, drag: DragState, snapEnabled: boolean, snapStep: number): Delta {
+function calculateResizeDelta(
+  ...args: readonly [
+    dx: number,
+    dy: number,
+    drag: DragState,
+    snapEnabled: boolean,
+    snapStep: number,
+  ]
+): Delta {
+  const [dx, dy, drag, snapEnabled, snapStep] = args;
   if (!snapEnabled || snapStep <= 0 || drag.type !== "resize") {
     return { dx, dy };
   }
@@ -86,13 +98,16 @@ function calculateResizeDelta(dx: number, dy: number, drag: DragState, snapEnabl
 }
 
 function calculateSnappedDx(
-  handle: string,
-  westEdge: number,
-  eastEdge: number,
-  baseX: number,
-  baseWidth: number,
-  dx: number,
+  ...args: readonly [
+    handle: string,
+    westEdge: number,
+    eastEdge: number,
+    baseX: number,
+    baseWidth: number,
+    dx: number,
+  ]
 ): number {
+  const [handle, westEdge, eastEdge, baseX, baseWidth, dx] = args;
   if (handle.includes("w")) {
     return westEdge - baseX;
   }
@@ -103,13 +118,16 @@ function calculateSnappedDx(
 }
 
 function calculateSnappedDy(
-  handle: string,
-  northEdge: number,
-  southEdge: number,
-  baseY: number,
-  baseHeight: number,
-  dy: number,
+  ...args: readonly [
+    handle: string,
+    northEdge: number,
+    southEdge: number,
+    baseY: number,
+    baseHeight: number,
+    dy: number,
+  ]
 ): number {
+  const [handle, northEdge, southEdge, baseY, baseHeight, dy] = args;
   if (handle.includes("n")) {
     return northEdge - baseY;
   }

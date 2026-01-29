@@ -177,11 +177,9 @@ function getTextColor(span: PositionedSpan): string {
  * Render an inline image span.
  */
 function renderInlineImage(
-  span: PositionedSpan,
-  x: number,
-  lineY: number,
-  key: string,
+  ...args: readonly [span: PositionedSpan, x: number, lineY: number, key: string]
 ): ReactNode {
+  const [span, x, lineY, key] = args;
   const image = span.inlineImage;
   if (image === undefined) {
     return null;
@@ -216,13 +214,17 @@ function renderInlineImage(
  * - CJK characters remain upright, Latin characters rotate
  */
 function renderSpan(
-  span: PositionedSpan,
-  x: number,
-  lineY: number,
-  dominantBaseline: string | undefined,
-  key: string,
-  writingMode: WritingMode = "horizontal-tb",
+  ...args: readonly [
+    span: PositionedSpan,
+    x: number,
+    lineY: number,
+    dominantBaseline: string | undefined,
+    key: string,
+    writingMode?: WritingMode,
+  ]
 ): ReactNode {
+  const [span, x, lineY, dominantBaseline, key, writingMode = "horizontal-tb"] =
+    args;
   // Handle inline images
   if (span.inlineImage !== undefined) {
     return renderInlineImage(span, x, lineY, key);
@@ -356,12 +358,21 @@ function renderSpan(
  * - Spans advance along Y axis (inline direction)
  */
 function renderLine(
-  line: LayoutLine,
-  fontAlignment: FontAlignment,
-  paragraphIndex: number,
-  lineIndex: number,
-  writingMode: WritingMode = "horizontal-tb",
+  ...args: readonly [
+    line: LayoutLine,
+    fontAlignment: FontAlignment,
+    paragraphIndex: number,
+    lineIndex: number,
+    writingMode?: WritingMode,
+  ]
 ): ReactNode[] {
+  const [
+    line,
+    fontAlignment,
+    paragraphIndex,
+    lineIndex,
+    writingMode = "horizontal-tb",
+  ] = args;
   const dominantBaseline = toSvgDominantBaseline(fontAlignment);
   const isVerticalMode = isVertical(writingMode);
 
@@ -397,12 +408,15 @@ function renderLine(
  * Render a bullet (text or image) for a paragraph.
  */
 function renderBullet(
-  bullet: BulletConfig,
-  bulletX: number,
-  bulletY: number,
-  key: string,
-  writingMode: WritingMode = "horizontal-tb",
+  ...args: readonly [
+    bullet: BulletConfig,
+    bulletX: number,
+    bulletY: number,
+    key: string,
+    writingMode?: WritingMode,
+  ]
 ): ReactNode {
+  const [bullet, bulletX, bulletY, key, writingMode = "horizontal-tb"] = args;
   const bulletFontSizePx = fontSizeToPixels(bullet.fontSize);
   const bulletBounds = getTextVisualBounds(bulletY as Pixels, bullet.fontSize, bullet.fontFamily);
   const isVerticalMode = isVertical(writingMode);

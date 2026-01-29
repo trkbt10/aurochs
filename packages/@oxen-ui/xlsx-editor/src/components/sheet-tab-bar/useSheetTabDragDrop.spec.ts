@@ -9,12 +9,15 @@
  * If the target gap is adjacent to the dragging tab, it's a no-op.
  */
 function calculateFinalPosition(
-  draggingIndex: number,
-  targetTabIndex: number,
-  clientX: number,
-  rectLeft: number,
-  rectWidth: number,
+  ...args: readonly [
+    draggingIndex: number,
+    targetTabIndex: number,
+    clientX: number,
+    rectLeft: number,
+    rectWidth: number,
+  ]
 ): { position: number; gapIndex: number } | undefined {
+  const [draggingIndex, targetTabIndex, clientX, rectLeft, rectWidth] = args;
   if (draggingIndex === targetTabIndex) {
     return undefined;
   }

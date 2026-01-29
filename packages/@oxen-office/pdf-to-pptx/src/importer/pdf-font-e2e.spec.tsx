@@ -6,7 +6,6 @@
  * to verify font-family is correctly propagated.
  */
 import * as fs from "node:fs";
-import * as path from "node:path";
 import { render } from "@testing-library/react";
 import { importPdf } from "./pdf-importer";
 import { SlideRendererSvg } from "@oxen-office/pptx-render/react";

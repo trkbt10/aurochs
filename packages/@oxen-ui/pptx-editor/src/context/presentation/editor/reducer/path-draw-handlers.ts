@@ -7,8 +7,6 @@
 import type { PresentationEditorState, PresentationEditorAction } from "../types";
 import { createSelectMode } from "../types";
 import type { HandlerMap, ActionHandler } from "./handler-types";
-import type { Pixels } from "@oxen-office/ooxml/domain/units";
-import { px } from "@oxen-office/ooxml/domain/units";
 import {
   createDrawingPathDrawState,
   createIdlePathDrawState,
@@ -313,17 +311,15 @@ const handleAddPencilPoint: ActionHandler<Extract<PresentationEditorAction, { ty
   const timeDelta = lastPreviewPoint ? action.timestamp - lastPreviewPoint.timestamp : 33;
   const shouldUpdatePreview = timeDelta >= 33;
 
-  return {
-    ...state,
-    pathDraw: {
-      ...state.pathDraw,
-      rawPoints: [...state.pathDraw.rawPoints, newPoint],
-      previewPoints: shouldUpdatePreview
-        ? [...state.pathDraw.previewPoints, newPoint]
-        : state.pathDraw.previewPoints,
-    },
-  };
-};
+	  return {
+	    ...state,
+	    pathDraw: {
+	      ...state.pathDraw,
+	      rawPoints: [...state.pathDraw.rawPoints, newPoint],
+	      previewPoints: shouldUpdatePreview ? [...state.pathDraw.previewPoints, newPoint] : state.pathDraw.previewPoints,
+	    },
+	  };
+	};
 
 /**
  * End pencil drawing

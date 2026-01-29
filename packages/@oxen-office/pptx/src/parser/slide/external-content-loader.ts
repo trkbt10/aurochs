@@ -7,13 +7,19 @@
  * The enrichment happens in the integration layer, bridging parser and render.
  */
 
-import type { BlipFill, BlipFillProperties, DiagramColorsDefinition, DiagramDataModel, DiagramLayoutDefinition, DiagramStyleDefinition, Fill, GraphicFrame, OleReference, PicShape, Shape, Slide, SpShape } from "../../domain/index";
+import type { BlipFill, BlipFillProperties, Fill, GraphicFrame, OleReference, PicShape, Shape, Slide, SpShape } from "../../domain/index";
+import type {
+  DiagramColorsDefinition,
+  DiagramDataModel,
+  DiagramLayoutDefinition,
+  DiagramStyleDefinition,
+} from "@oxen-office/diagram/domain";
 import {
   generateDiagramShapes,
   type ShapeGenerationConfig,
 } from "../../domain/diagram/layout-engine";
 import { parseXml } from "@oxen/xml";
-import { parseChart } from "../chart-parser/index";
+import { parseChart } from "@oxen-office/chart/parser";
 import { parseDiagramDrawing } from "../diagram/diagram-parser";
 import { parseDiagramColorsDefinition } from "../diagram/color-parser";
 import { parseDiagramDataModel } from "../diagram/data-parser";
@@ -48,6 +54,20 @@ export type FileReader = {
 type EnrichmentContext = {
   readonly fileReader: FileReader;
   readonly resourceStore?: ResourceStore;
+};
+
+type TryGenerateDiagramShapesOptions = {
+  readonly frame: GraphicFrame;
+  readonly dataModel: DiagramDataModel | undefined;
+  readonly layoutDefinition: DiagramLayoutDefinition | undefined;
+  readonly styleDefinition: DiagramStyleDefinition | undefined;
+  readonly colorsDefinition: DiagramColorsDefinition | undefined;
+};
+
+type DiagramResourceResolverContext = {
+  readonly resources: ResourceMap;
+  readonly baseDir: string;
+  readonly fileReader: FileReader;
 };
 
 /**
@@ -204,7 +224,7 @@ function enrichDiagramFrame(frame: GraphicFrame, ctx: EnrichmentContext): Graphi
 
   // If no pre-rendered shapes, fall back to dynamic generation using layout engine
   if (shapes === undefined || shapes.length === 0) {
-    shapes = tryGenerateDiagramShapes(frame, dataModel, layoutDefinition, styleDefinition, colorsDefinition);
+    shapes = tryGenerateDiagramShapes({ frame, dataModel, layoutDefinition, styleDefinition, colorsDefinition });
   }
 
   // Register diagram data in ResourceStore
@@ -264,12 +284,7 @@ function tryParseDiagramDrawing(frame: GraphicFrame, fileReader: FileReader): re
   const diagramResources = loadDiagramResources(diagramRelsData, diagramPath);
 
   // Resolve blipFill resourceIds in diagram shapes using diagram relationships
-  return resolveDiagramShapeResources(
-    parsedContent.shapes,
-    diagramResources,
-    diagramPath,
-    fileReader,
-  );
+  return resolveDiagramShapeResources({ shapes: parsedContent.shapes, diagramResources, diagramPath, fileReader });
 }
 
 /**
@@ -278,11 +293,7 @@ function tryParseDiagramDrawing(frame: GraphicFrame, fileReader: FileReader): re
  * This is used as a fallback when no pre-rendered diagram drawing is available.
  */
 function tryGenerateDiagramShapes(
-  frame: GraphicFrame,
-  dataModel: DiagramDataModel | undefined,
-  layoutDefinition: DiagramLayoutDefinition | undefined,
-  styleDefinition: DiagramStyleDefinition | undefined,
-  colorsDefinition: DiagramColorsDefinition | undefined,
+  { frame, dataModel, layoutDefinition, styleDefinition, colorsDefinition }: TryGenerateDiagramShapesOptions,
 ): readonly Shape[] | undefined {
   // Need at least data model to generate shapes
   if (dataModel === undefined) {
@@ -306,13 +317,13 @@ function tryGenerateDiagramShapes(
   };
 
   try {
-    const result = generateDiagramShapes(
+    const result = generateDiagramShapes({
       dataModel,
       layoutDefinition,
       styleDefinition,
-      colorsDefinition,
+      colorDefinition: colorsDefinition,
       config,
-    );
+    });
     return result.shapes;
   } catch (error) {
     // Log error for debugging purposes but continue gracefully
@@ -414,35 +425,40 @@ function loadDiagramResourceXml(resourceId: string | undefined, fileReader: File
  * This function walks all shapes and converts resourceIds to data URLs.
  */
 function resolveDiagramShapeResources(
-  shapes: readonly Shape[],
-  diagramResources: ResourceMap,
-  diagramPath: string,
-  fileReader: FileReader,
+  {
+    shapes,
+    diagramResources,
+    diagramPath,
+    fileReader,
+  }: {
+    readonly shapes: readonly Shape[];
+    readonly diagramResources: ResourceMap;
+    readonly diagramPath: string;
+    readonly fileReader: FileReader;
+  },
 ): readonly Shape[] {
   // Get the base directory for resolving relative paths
   const diagramDir = diagramPath.substring(0, diagramPath.lastIndexOf("/") + 1);
 
-  return shapes.map((shape) => resolveShapeResources(shape, diagramResources, diagramDir, fileReader));
+  const ctx: DiagramResourceResolverContext = { resources: diagramResources, baseDir: diagramDir, fileReader };
+  return shapes.map((shape) => resolveShapeResources({ shape, ...ctx }));
 }
 
 /**
  * Resolve resource IDs in a single shape recursively.
  */
 function resolveShapeResources(
-  shape: Shape,
-  resources: ResourceMap,
-  baseDir: string,
-  fileReader: FileReader,
+  { shape, resources, baseDir, fileReader }: { readonly shape: Shape } & DiagramResourceResolverContext,
 ): Shape {
   switch (shape.type) {
     case "sp":
-      return resolveSpShapeResources(shape, resources, baseDir, fileReader);
+      return resolveSpShapeResources({ shape, resources, baseDir, fileReader });
     case "pic":
-      return resolvePicShapeResources(shape, resources, baseDir, fileReader);
+      return resolvePicShapeResources({ shape, resources, baseDir, fileReader });
     case "grpSp":
       return {
         ...shape,
-        children: shape.children.map((child) => resolveShapeResources(child, resources, baseDir, fileReader)),
+        children: shape.children.map((child) => resolveShapeResources({ shape: child, resources, baseDir, fileReader })),
       };
     default:
       return shape;
@@ -453,17 +469,14 @@ function resolveShapeResources(
  * Resolve blipFill in SpShape properties.
  */
 function resolveSpShapeResources(
-  shape: SpShape,
-  resources: ResourceMap,
-  baseDir: string,
-  fileReader: FileReader,
+  { shape, resources, baseDir, fileReader }: { readonly shape: SpShape } & DiagramResourceResolverContext,
 ): SpShape {
   const fill = shape.properties?.fill;
   if (fill?.type !== "blipFill") {
     return shape;
   }
 
-  const resolvedFill = resolveBlipFill(fill, resources, baseDir, fileReader);
+  const resolvedFill = resolveBlipFill({ fill, resources, baseDir, fileReader });
   if (resolvedFill === fill) {
     return shape;
   }
@@ -481,12 +494,9 @@ function resolveSpShapeResources(
  * Resolve blipFill in PicShape.
  */
 function resolvePicShapeResources(
-  shape: PicShape,
-  resources: ResourceMap,
-  baseDir: string,
-  fileReader: FileReader,
+  { shape, resources, baseDir, fileReader }: { readonly shape: PicShape } & DiagramResourceResolverContext,
 ): PicShape {
-  const resolved = resolveBlipFillProperties(shape.blipFill, resources, baseDir, fileReader);
+  const resolved = resolveBlipFillProperties({ blipFill: shape.blipFill, resources, baseDir, fileReader });
   if (resolved === shape.blipFill) {
     return shape;
   }
@@ -500,8 +510,10 @@ function resolvePicShapeResources(
 /**
  * Resolve a BlipFill's resourceId to a data URL.
  */
-function resolveBlipFill(fill: BlipFill, resources: ResourceMap, baseDir: string, fileReader: FileReader): Fill {
-  const resolved = resolveResourceToDataUrl(fill.resourceId, resources, baseDir, fileReader);
+function resolveBlipFill(
+  { fill, resources, baseDir, fileReader }: { readonly fill: BlipFill } & DiagramResourceResolverContext,
+): Fill {
+  const resolved = resolveResourceToDataUrl({ resourceId: fill.resourceId, resources, baseDir, fileReader });
 
   if (resolved === undefined) {
     return fill;
@@ -517,12 +529,9 @@ function resolveBlipFill(fill: BlipFill, resources: ResourceMap, baseDir: string
  * Resolve BlipFillProperties's resourceId to a data URL.
  */
 function resolveBlipFillProperties(
-  blipFill: BlipFillProperties,
-  resources: ResourceMap,
-  baseDir: string,
-  fileReader: FileReader,
+  { blipFill, resources, baseDir, fileReader }: { readonly blipFill: BlipFillProperties } & DiagramResourceResolverContext,
 ): BlipFillProperties {
-  const resolved = resolveResourceToDataUrl(blipFill.resourceId, resources, baseDir, fileReader);
+  const resolved = resolveResourceToDataUrl({ resourceId: blipFill.resourceId, resources, baseDir, fileReader });
 
   if (resolved === undefined) {
     return blipFill;
@@ -544,10 +553,7 @@ function resolveBlipFillProperties(
  * @returns Data URL if resolved, undefined if not found
  */
 function resolveResourceToDataUrl(
-  resourceId: string,
-  resources: ResourceMap,
-  baseDir: string,
-  fileReader: FileReader,
+  { resourceId, resources, baseDir, fileReader }: { readonly resourceId: string } & DiagramResourceResolverContext,
 ): string | undefined {
   // Skip if already a data URL
   if (resourceId.startsWith("data:")) {

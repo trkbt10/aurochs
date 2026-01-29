@@ -104,11 +104,14 @@ export function EditorResourceProvider({ children }: { readonly children: ReactN
       },
 
       registerCreated: (
-        data: ArrayBuffer,
-        kind: ResourceKind,
-        mimeType?: string,
-        filename?: string
+        ...args: readonly [
+          data: ArrayBuffer,
+          kind: ResourceKind,
+          mimeType?: string,
+          filename?: string,
+        ]
       ): ResourceId => {
+        const [data, kind, mimeType, filename] = args;
         const id = generateId();
         store.set(id, {
           kind,

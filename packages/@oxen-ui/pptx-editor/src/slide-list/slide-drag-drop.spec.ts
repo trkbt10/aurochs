@@ -6,7 +6,6 @@
  * - Drop targets are gaps, not slides
  */
 
-import { describe, it, expect } from "vitest";
 import type { SlideWithId } from "@oxen-office/pptx/app";
 import { createIdleDragState } from "./types";
 import {

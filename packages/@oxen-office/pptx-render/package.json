@@ -8,6 +8,9 @@
     "@oxen/buffer": "workspace:*",
     "@oxen/color": "workspace:*",
     "@oxen/glyph": "workspace:*",
+    "@oxen-office/chart": "workspace:*",
+    "@oxen-office/chart-render": "workspace:*",
+    "@oxen-office/diagram-render": "workspace:*",
     "@oxen-office/ooxml": "workspace:*",
     "@oxen-office/pptx": "workspace:*",
     "@oxen/xml": "workspace:*"
@@ -19,7 +22,7 @@
   },
   "scripts": {
     "lint": "eslint src",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit --rootDir ../../..",
     "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@oxen-office/pptx-render/src'"
   },
   "exports": {
@@ -46,10 +49,6 @@
     "./svg-viewport": {
       "types": "./src/svg-viewport/index.ts",
       "default": "./src/svg-viewport/index.ts"
-    },
-    "./glyph": {
-      "types": "./src/glyph/index.ts",
-      "default": "./src/glyph/index.ts"
     },
     "./text-layout": {
       "types": "./src/text-layout/index.ts",

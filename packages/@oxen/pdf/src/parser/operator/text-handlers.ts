@@ -71,15 +71,19 @@ export function getGlyphWidth(charCode: number, metrics: FontMetrics): number {
  * @param tjAdjustment - Optional TJ adjustment in 1/1000 em (default 0)
  */
 export function calculateTextDisplacement(
-  text: string,
-  fontSize: number,
-  charSpacing: number,
-  wordSpacing: number,
-  horizontalScaling: number,
-  metrics: FontMetrics,
-  codeByteWidth: 1 | 2,
-  tjAdjustment: number = 0
+  ...args: readonly [
+    text: string,
+    fontSize: number,
+    charSpacing: number,
+    wordSpacing: number,
+    horizontalScaling: number,
+    metrics: FontMetrics,
+    codeByteWidth: 1 | 2,
+    tjAdjustment?: number,
+  ]
 ): number {
+  const [text, fontSize, charSpacing, wordSpacing, horizontalScaling, metrics, codeByteWidth, tjAdjustment = 0] =
+    args;
   const Th = horizontalScaling / 100;
   const totalDisplacement = { value: 0 };
 

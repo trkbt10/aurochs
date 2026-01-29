@@ -51,6 +51,14 @@
       "types": "./src/parser/*/*.ts",
       "default": "./src/parser/*/*.ts"
     },
+    "./parser/drawing-ml": {
+      "types": "./src/parser/drawing-ml/index.ts",
+      "default": "./src/parser/drawing-ml/index.ts"
+    },
+    "./parser/drawing-ml/*": {
+      "types": "./src/parser/drawing-ml/*.ts",
+      "default": "./src/parser/drawing-ml/*.ts"
+    },
     "./serializer": {
       "types": "./src/serializer/index.ts",
       "default": "./src/serializer/index.ts"

@@ -5,7 +5,6 @@
  */
 
 import type { ViewportTransform, ViewportSize, SlideSize } from "./types";
-import { INITIAL_VIEWPORT } from "./types";
 
 /**
  * Generates an SVG transform string from a ViewportTransform.
@@ -46,11 +45,9 @@ export function getNextZoomValue(currentZoom: number, direction: "in" | "out"): 
  * Calculates the viewport transform to center the slide in the viewport.
  */
 export function getCenteredViewport(
-  viewportSize: ViewportSize,
-  slideSize: SlideSize,
-  scale: number,
-  rulerThickness: number
+  ...args: [viewportSize: ViewportSize, slideSize: SlideSize, scale: number, rulerThickness: number]
 ): ViewportTransform {
+  const [viewportSize, slideSize, scale, rulerThickness] = args;
   const availableWidth = viewportSize.width - rulerThickness;
   const availableHeight = viewportSize.height - rulerThickness;
 
@@ -71,11 +68,9 @@ export function getCenteredViewport(
  * Calculates the fit-to-view scale for a slide.
  */
 export function getFitScale(
-  viewportSize: ViewportSize,
-  slideSize: SlideSize,
-  rulerThickness: number,
-  padding: number = 40
+  ...args: [viewportSize: ViewportSize, slideSize: SlideSize, rulerThickness: number, padding?: number]
 ): number {
+  const [viewportSize, slideSize, rulerThickness, padding = 40] = args;
   const availableWidth = viewportSize.width - rulerThickness - padding * 2;
   const availableHeight = viewportSize.height - rulerThickness - padding * 2;
 
@@ -90,11 +85,9 @@ export function getFitScale(
  * Returns the new viewport transform.
  */
 export function zoomTowardCursor(
-  viewport: ViewportTransform,
-  cursorX: number,
-  cursorY: number,
-  newScale: number
+  ...args: [viewport: ViewportTransform, cursorX: number, cursorY: number, newScale: number]
 ): ViewportTransform {
+  const [viewport, cursorX, cursorY, newScale] = args;
   const scaleRatio = newScale / viewport.scale;
 
   // Adjust translation to keep cursor position fixed
@@ -123,12 +116,15 @@ export function panViewport(viewport: ViewportTransform, dx: number, dy: number)
  * Clamps viewport to prevent slide from going too far off-screen.
  */
 export function clampViewport(
-  viewport: ViewportTransform,
-  viewportSize: ViewportSize,
-  slideSize: SlideSize,
-  rulerThickness: number,
-  margin: number = 100
+  ...args: [
+    viewport: ViewportTransform,
+    viewportSize: ViewportSize,
+    slideSize: SlideSize,
+    rulerThickness: number,
+    margin?: number,
+  ]
 ): ViewportTransform {
+  const [viewport, viewportSize, slideSize, rulerThickness, margin = 100] = args;
   const scaledWidth = slideSize.width * viewport.scale;
   const scaledHeight = slideSize.height * viewport.scale;
 

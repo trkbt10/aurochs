@@ -119,6 +119,19 @@ function updateGroupTransform(
   };
 }
 
+function getShapeTransform(shape: Shape): Transform | undefined {
+  switch (shape.type) {
+    case "graphicFrame":
+      return shape.transform;
+    case "sp":
+    case "pic":
+    case "cxnSp":
+      return shape.properties.transform;
+    default:
+      return undefined;
+  }
+}
+
 function mapShapeToSlideCoords(shape: Shape, parentTransform?: GroupTransform): Shape {
   if (parentTransform === undefined) {
     return shape;
@@ -137,9 +150,7 @@ function mapShapeToSlideCoords(shape: Shape, parentTransform?: GroupTransform): 
     return shape;
   }
 
-  const shapeTransform = shape.type === "graphicFrame"
-    ? shape.transform
-    : shape.properties.transform;
+  const shapeTransform = getShapeTransform(shape);
 
   if (!shapeTransform) {
     return shape;
@@ -167,9 +178,7 @@ function mapShapeToChildCoords(shape: Shape, parentTransform?: GroupTransform): 
     return shape;
   }
 
-  const shapeTransform = shape.type === "graphicFrame"
-    ? shape.transform
-    : shape.properties.transform;
+  const shapeTransform = getShapeTransform(shape);
 
   if (!shapeTransform) {
     return shape;
@@ -270,7 +279,7 @@ export function moveShapeInHierarchy(
 
   const targetParent = getTargetGroup(removedResult.shapes, target.parentId);
   const targetSiblings = targetParent ? targetParent.children : removedResult.shapes;
-  const targetLength = targetSiblings.length;
+  void targetSiblings;
 
   let targetIndex = target.index;
   if (sourceParent?.nonVisual.id === targetParent?.nonVisual.id) {

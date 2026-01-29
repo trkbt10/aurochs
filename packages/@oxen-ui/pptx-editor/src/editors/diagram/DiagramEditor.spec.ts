@@ -4,7 +4,7 @@
  * Tests the DiagramEditor handles diagram data model correctly.
  */
 
-import type { DiagramDataModel, DiagramPoint, DiagramConnection } from "@oxen-office/pptx/domain/diagram";
+import type { DiagramDataModel, DiagramPoint, DiagramConnection } from "@oxen-office/diagram/domain";
 import type { BodyProperties } from "@oxen-office/pptx/domain/text";
 import { px } from "@oxen-office/ooxml/domain/units";
 import { createDefaultDiagramDataModel, createDefaultDiagramPoint, createDefaultDiagramConnection } from "./index";
@@ -103,7 +103,12 @@ describe("DiagramEditor: Data model handling", () => {
       };
 
       expect(point.textBody).toBeDefined();
-      expect(point.textBody!.paragraphs[0].runs[0]).toMatchObject({ type: "text", text: "Node text" });
+      const textBody = point.textBody;
+      expect(isTextBodyWithParagraphs(textBody)).toBe(true);
+      if (!isTextBodyWithParagraphs(textBody)) {
+        throw new Error("expected textBody to have paragraphs");
+      }
+      expect(textBody.paragraphs[0].runs[0]).toMatchObject({ type: "text", text: "Node text" });
     });
 
     it("handles connection types", () => {
@@ -119,3 +124,19 @@ describe("DiagramEditor: Data model handling", () => {
     });
   });
 });
+
+function isTextBodyWithParagraphs(
+  value: unknown,
+): value is { readonly paragraphs: readonly { readonly runs: readonly unknown[] }[] } {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+  if (!("paragraphs" in value)) {
+    return false;
+  }
+  const paragraphs = (value as { readonly paragraphs?: unknown }).paragraphs;
+  if (!Array.isArray(paragraphs)) {
+    return false;
+  }
+  return paragraphs.every((p) => typeof p === "object" && p !== null && "runs" in p && Array.isArray((p as { runs?: unknown }).runs));
+}

@@ -255,11 +255,14 @@ function analyzeExtendedGeometries(
  * Merge a custom attribute from all geometries
  */
 function mergeCustomAttribute(
-  geometries: readonly ExtendedGeometryData[],
-  attrName: string,
-  totalVertices: number,
-  componentSize: number,
+  ...args: [
+    geometries: readonly ExtendedGeometryData[],
+    attrName: string,
+    totalVertices: number,
+    componentSize: number,
+  ]
 ): Float32Array {
+  const [geometries, attrName, totalVertices, componentSize] = args;
   const merged = new Float32Array(totalVertices * componentSize);
   let offset = 0;
 

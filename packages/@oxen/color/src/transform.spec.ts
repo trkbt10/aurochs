@@ -8,14 +8,10 @@
  * @see MS-ODRAWXML Section 2.1.1410 (shade), 2.1.1432 (tint)
  */
 
-import { describe, it, expect } from "vitest";
 import {
   applyShade,
   applyTint,
-  applyLumMod,
-  applyLumOff,
   applySatMod,
-  applyHueMod,
 } from "./transform";
 
 describe("applyShade - ECMA-376/MS-ODRAWXML compliance", () => {

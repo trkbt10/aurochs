@@ -2,7 +2,6 @@
  * @file Unit tests for shape/group.ts
  */
 
-import { describe, expect, it } from "vitest";
 import type { SpShape, GrpShape, Shape, GroupTransform, Transform } from "@oxen-office/pptx/domain";
 import { px, deg } from "@oxen-office/ooxml/domain/units";
 import {
@@ -25,14 +24,9 @@ import {
 // Test Fixtures
 // =============================================================================
 
-const createTestShape = (
-  id: string,
-  x: number,
-  y: number,
-  width: number,
-  height: number
-): SpShape =>
-  ({
+const createTestShape = (...args: [id: string, x: number, y: number, width: number, height: number]): SpShape => {
+  const [id, x, y, width, height] = args;
+  return {
     type: "sp",
     nonVisual: { id, name: `Shape ${id}` },
     properties: {
@@ -46,16 +40,14 @@ const createTestShape = (
         flipV: false,
       },
     },
-  }) as SpShape;
+  } satisfies SpShape;
+};
 
 const createTestGroup = (
-  id: string,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  children: Shape[]
-): GrpShape => ({
+  ...args: [id: string, x: number, y: number, width: number, height: number, children: Shape[]]
+): GrpShape => {
+  const [id, x, y, width, height, children] = args;
+  return {
   type: "grpSp",
   nonVisual: { id, name: `Group ${id}` },
   properties: {
@@ -74,7 +66,8 @@ const createTestGroup = (
     },
   },
   children,
-});
+  };
+};
 
 // =============================================================================
 // getScaleFactor Tests
@@ -370,7 +363,7 @@ describe("getTransformedChildren", () => {
   });
 
   it("handles shapes without properties", () => {
-    const shapeWithoutProps = { type: "contentPart" } as unknown as Shape;
+    const shapeWithoutProps: Shape = { type: "contentPart", contentPart: { id: "rId1" } };
     const group = createTestGroup("g1", 0, 0, 100, 100, [shapeWithoutProps]);
 
     const result = getTransformedChildren(group);
@@ -415,7 +408,7 @@ describe("extractChildIds", () => {
   it("skips shapes without nonVisual", () => {
     const children: Shape[] = [
       createTestShape("1", 0, 0, 50, 50),
-      { type: "contentPart" } as unknown as Shape,
+      { type: "contentPart", contentPart: { id: "rId1" } },
     ];
 
     const ids = extractChildIds(children);

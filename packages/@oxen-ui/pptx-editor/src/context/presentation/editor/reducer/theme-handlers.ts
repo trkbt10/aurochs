@@ -7,7 +7,6 @@
 import type {
   PresentationEditorState,
   PresentationEditorAction,
-  EditorMode,
 } from "../types";
 import type { HandlerMap } from "./handler-types";
 import { pushHistory } from "../../../slide/state";

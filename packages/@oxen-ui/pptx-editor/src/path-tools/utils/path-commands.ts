@@ -210,12 +210,12 @@ export function commandsToDrawingPath(commands: readonly PathCommand[]): Drawing
           const lastCmd = commands[i - 1];
           if (lastCmd && lastCmd.type === "cubicBezierTo") {
             // The first point might need handleIn from the closing bezier
+            const shouldBeSmooth = isSmooth(lastCmd.control2, { x: points[0].x, y: points[0].y }, commands[1]);
+            const smoothType = shouldBeSmooth ? "smooth" : points[0].type;
             points[0] = {
               ...points[0],
               handleIn: lastCmd.control2,
-              type: isSmooth(lastCmd.control2, { x: points[0].x, y: points[0].y }, commands[1])
-                ? "smooth"
-                : points[0].type,
+              type: smoothType,
             };
           }
         }
@@ -402,23 +402,27 @@ export function drawingPathToCustomGeometry(
   // Calculate bounds from the path
   const rawBounds = calculatePathBounds(path);
 
+  function translatePoint(p: Point): Point {
+    return {
+      x: px((p.x as number) - (rawBounds.x as number)),
+      y: px((p.y as number) - (rawBounds.y as number)),
+    };
+  }
+
+  function translateOptionalHandle(handle: Point | undefined): Point | undefined {
+    if (!handle) {
+      return undefined;
+    }
+    return translatePoint(handle);
+  }
+
   // Translate points to be relative to the bounding box origin
   const translatedPoints = path.points.map((point) => ({
     ...point,
     x: px((point.x as number) - (rawBounds.x as number)),
     y: px((point.y as number) - (rawBounds.y as number)),
-    handleIn: point.handleIn
-      ? {
-          x: px((point.handleIn.x as number) - (rawBounds.x as number)),
-          y: px((point.handleIn.y as number) - (rawBounds.y as number)),
-        }
-      : undefined,
-    handleOut: point.handleOut
-      ? {
-          x: px((point.handleOut.x as number) - (rawBounds.x as number)),
-          y: px((point.handleOut.y as number) - (rawBounds.y as number)),
-        }
-      : undefined,
+    handleIn: translateOptionalHandle(point.handleIn),
+    handleOut: translateOptionalHandle(point.handleOut),
   }));
 
   const translatedPath: DrawingPath = {

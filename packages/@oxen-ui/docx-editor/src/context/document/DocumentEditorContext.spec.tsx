@@ -4,7 +4,6 @@
 
 // @vitest-environment jsdom
 
-import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { renderHook } from "@testing-library/react";
 import type { DocxDocument } from "@oxen-office/docx/domain/document";

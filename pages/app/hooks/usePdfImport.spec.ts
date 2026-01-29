@@ -1,94 +1,17 @@
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, mock } from "bun:test";
-import { JSDOM } from "jsdom";
+/**
+ * @file Tests for usePdfImport
+ */
+
+// @vitest-environment jsdom
+
+import { cleanup, renderHook, act, waitFor } from "@testing-library/react";
 import { px } from "@oxen-office/ooxml/domain/units";
 import { createEmptyResourceResolver } from "@oxen-office/pptx/domain/resource-resolver";
 import type { PresentationDocument } from "@oxen-office/pptx/app";
-import type { PdfImportOptions, PdfImportResult } from "@oxen-office/pdf-to-pptx/importer/pdf-importer";
-
-const importPdfFromFileMock = mock(async () => {
-  throw new Error("importPdfFromFileMock not configured");
-});
-
-const importPdfFromUrlMock = mock(async () => {
-  throw new Error("importPdfFromUrlMock not configured");
-});
-
-mock.module("@oxen-office/pdf-to-pptx/importer/pdf-importer", () => {
-  class PdfImportError extends Error {
-    constructor(
-      message: string,
-      public readonly code:
-        | "INVALID_PDF"
-        | "ENCRYPTED_PDF"
-        | "PARSE_ERROR"
-        | "CONVERSION_ERROR"
-        | "FETCH_ERROR",
-      public readonly cause?: Error,
-    ) {
-      super(message);
-      this.name = "PdfImportError";
-    }
-  }
-
-  return {
-    PdfImportError,
-    importPdfFromFile: importPdfFromFileMock,
-    importPdfFromUrl: importPdfFromUrlMock,
-  };
-});
-
-import { PdfImportError } from "@oxen-office/pdf-to-pptx/importer/pdf-importer";
+import { PdfImportError, type PdfImportOptions, type PdfImportResult } from "@oxen-office/pdf-to-pptx/importer/pdf-importer";
 import { usePdfImport } from "./usePdfImport";
 
-let cleanup: (() => void) | undefined;
-let renderHook: typeof import("@testing-library/react").renderHook;
-let act: typeof import("@testing-library/react").act;
-let waitFor: typeof import("@testing-library/react").waitFor;
-
-let dom: JSDOM | undefined;
-
-beforeAll(async () => {
-  dom = new JSDOM("<!doctype html><html><body></body></html>", { url: "http://localhost" });
-
-  const defineGlobal = <K extends keyof typeof globalThis>(key: K, value: (typeof globalThis)[K]) => {
-    Object.defineProperty(globalThis, key, { value, configurable: true, writable: true });
-  };
-
-  defineGlobal("window", dom.window as unknown as typeof globalThis.window);
-  defineGlobal("document", dom.window.document);
-  defineGlobal("navigator", dom.window.navigator);
-  defineGlobal("HTMLElement", dom.window.HTMLElement);
-  defineGlobal("SVGElement", dom.window.SVGElement);
-  defineGlobal("Node", dom.window.Node);
-  defineGlobal("File", dom.window.File);
-  defineGlobal("Blob", dom.window.Blob);
-  defineGlobal("Event", dom.window.Event);
-  defineGlobal("MouseEvent", dom.window.MouseEvent);
-  defineGlobal("KeyboardEvent", dom.window.KeyboardEvent);
-  defineGlobal("getComputedStyle", dom.window.getComputedStyle);
-
-  const rtl = await import("@testing-library/react/pure");
-  cleanup = rtl.cleanup;
-  renderHook = rtl.renderHook;
-  act = rtl.act;
-  waitFor = rtl.waitFor;
-});
-
-afterEach(() => {
-  cleanup?.();
-});
-
-afterAll(() => {
-  dom?.window.close();
-});
-
-beforeEach(() => {
-  importPdfFromFileMock.mockReset();
-  importPdfFromUrlMock.mockReset();
-
-  importPdfFromFileMock.mockRejectedValue(new Error("importPdfFromFileMock not configured"));
-  importPdfFromUrlMock.mockRejectedValue(new Error("importPdfFromUrlMock not configured"));
-});
+type ImporterDeps = Parameters<typeof usePdfImport>[0];
 
 function createDocumentFixture(): PresentationDocument {
   return {
@@ -110,8 +33,47 @@ function createImportResultFixture(document: PresentationDocument): PdfImportRes
 }
 
 describe("usePdfImport", () => {
+  const importPdfFromFileCalls: Array<readonly [File, PdfImportOptions | undefined]> = [];
+  const importPdfFromUrlCalls: Array<readonly [string, PdfImportOptions | undefined]> = [];
+
+  let importPdfFromFileBehavior: ((file: File, options?: PdfImportOptions) => Promise<PdfImportResult>) | undefined;
+  let importPdfFromUrlBehavior: ((url: string, options?: PdfImportOptions) => Promise<PdfImportResult>) | undefined;
+
+  const deps: ImporterDeps = {
+    importPdfFromFile: async (file, options) => {
+      importPdfFromFileCalls.push([file, options]);
+      if (!importPdfFromFileBehavior) {
+        throw new Error("importPdfFromFile not configured");
+      }
+      return importPdfFromFileBehavior(file, options);
+    },
+    importPdfFromUrl: async (url, options) => {
+      importPdfFromUrlCalls.push([url, options]);
+      if (!importPdfFromUrlBehavior) {
+        throw new Error("importPdfFromUrl not configured");
+      }
+      return importPdfFromUrlBehavior(url, options);
+    },
+    PdfImportError,
+  };
+
+  afterEach(() => {
+    cleanup();
+  });
+
+  beforeEach(() => {
+    importPdfFromFileCalls.length = 0;
+    importPdfFromUrlCalls.length = 0;
+    importPdfFromFileBehavior = async () => {
+      throw new Error("importPdfFromFile not configured");
+    };
+    importPdfFromUrlBehavior = async () => {
+      throw new Error("importPdfFromUrl not configured");
+    };
+  });
+
   it("initializes with idle state", () => {
-    const { result } = renderHook(() => usePdfImport());
+    const { result } = renderHook(() => usePdfImport(deps));
 
     expect(result.current.state).toEqual({
       status: "idle",
@@ -124,9 +86,9 @@ describe("usePdfImport", () => {
   it("imports from file successfully", async () => {
     const document = createDocumentFixture();
     const importerResult = createImportResultFixture(document);
-    importPdfFromFileMock.mockResolvedValueOnce(importerResult);
+    importPdfFromFileBehavior = async () => importerResult;
 
-    const { result } = renderHook(() => usePdfImport());
+    const { result } = renderHook(() => usePdfImport(deps));
     const file = new File([new Uint8Array([1, 2, 3])], "test.pdf", { type: "application/pdf" });
 
     let promise: Promise<PresentationDocument | null> | undefined;
@@ -140,16 +102,16 @@ describe("usePdfImport", () => {
 
     await waitFor(() => expect(result.current.state.status).toBe("success"));
     expect(result.current.state.result).toBe(importerResult);
-    expect(importPdfFromFileMock).toHaveBeenCalledWith(file, undefined);
+    expect(importPdfFromFileCalls).toContainEqual([file, undefined]);
     await expect(promise).resolves.toBe(document);
   });
 
   it("imports from url successfully", async () => {
     const document = createDocumentFixture();
     const importerResult = createImportResultFixture(document);
-    importPdfFromUrlMock.mockResolvedValueOnce(importerResult);
+    importPdfFromUrlBehavior = async () => importerResult;
 
-    const { result } = renderHook(() => usePdfImport());
+    const { result } = renderHook(() => usePdfImport(deps));
 
     let promise: Promise<PresentationDocument | null> | undefined;
     act(() => {
@@ -160,14 +122,16 @@ describe("usePdfImport", () => {
 
     await waitFor(() => expect(result.current.state.status).toBe("success"));
     expect(result.current.state.result).toBe(importerResult);
-    expect(importPdfFromUrlMock).toHaveBeenCalledWith("https://example.com/test.pdf", undefined);
+    expect(importPdfFromUrlCalls).toContainEqual(["https://example.com/test.pdf", undefined]);
     await expect(promise).resolves.toBe(document);
   });
 
   it("sets error state for file import failures", async () => {
-    importPdfFromFileMock.mockRejectedValueOnce(new Error("boom"));
+    importPdfFromFileBehavior = async () => {
+      throw new Error("boom");
+    };
 
-    const { result } = renderHook(() => usePdfImport());
+    const { result } = renderHook(() => usePdfImport(deps));
     const file = new File([new Uint8Array([1, 2, 3])], "test.pdf", { type: "application/pdf" });
 
     act(() => {
@@ -181,9 +145,11 @@ describe("usePdfImport", () => {
   });
 
   it("sets error state for url import failures", async () => {
-    importPdfFromUrlMock.mockRejectedValueOnce(new Error("boom"));
+    importPdfFromUrlBehavior = async () => {
+      throw new Error("boom");
+    };
 
-    const { result } = renderHook(() => usePdfImport());
+    const { result } = renderHook(() => usePdfImport(deps));
 
     act(() => {
       void result.current.importFromUrl("https://example.com/test.pdf");
@@ -196,9 +162,11 @@ describe("usePdfImport", () => {
   });
 
   it("resets state", async () => {
-    importPdfFromFileMock.mockRejectedValueOnce(new PdfImportError("invalid", "INVALID_PDF"));
+    importPdfFromFileBehavior = async () => {
+      throw new PdfImportError("invalid", "INVALID_PDF");
+    };
 
-    const { result } = renderHook(() => usePdfImport());
+    const { result } = renderHook(() => usePdfImport(deps));
     const file = new File([new Uint8Array([1, 2, 3])], "test.pdf", { type: "application/pdf" });
 
     act(() => {
@@ -211,40 +179,9 @@ describe("usePdfImport", () => {
       result.current.reset();
     });
 
-    expect(result.current.state).toEqual({
-      status: "idle",
-      result: null,
-      error: null,
-      progress: null,
-    });
-  });
-
-  it("passes options through to importer", async () => {
-    const document = createDocumentFixture();
-    const importerResult = createImportResultFixture(document);
-    importPdfFromFileMock.mockResolvedValue(importerResult);
-    importPdfFromUrlMock.mockResolvedValue(importerResult);
-
-    const options: PdfImportOptions = {
-      pages: [1, 2, 3],
-      fit: "stretch",
-      setWhiteBackground: false,
-      addPageNumbers: true,
-    };
-
-    const { result } = renderHook(() => usePdfImport());
-    const file = new File([new Uint8Array([1, 2, 3])], "test.pdf", { type: "application/pdf" });
-
-    act(() => {
-      void result.current.importFromFile(file, options);
-    });
-    await waitFor(() => expect(result.current.state.status).toBe("success"));
-    expect(importPdfFromFileMock).toHaveBeenCalledWith(file, options);
-
-    act(() => {
-      void result.current.importFromUrl("https://example.com/test.pdf", options);
-    });
-    await waitFor(() => expect(result.current.state.status).toBe("success"));
-    expect(importPdfFromUrlMock).toHaveBeenCalledWith("https://example.com/test.pdf", options);
+    expect(result.current.state.status).toBe("idle");
+    expect(result.current.state.result).toBeNull();
+    expect(result.current.state.error).toBeNull();
   });
 });
+

@@ -8,6 +8,7 @@ export {
   parseBoolean,
   parseBooleanOr,
   parseEmu,
+  parseLineWidth,
   parseAngle,
   parsePercentage,
   parsePercentage100k,
@@ -16,6 +17,7 @@ export {
   parseSchemeColorValue,
   getEmuAttr,
   getAngleAttr,
+  getBoolAttr,
   getBoolAttrOr,
   getIntAttr,
   getIntAttrOr,
@@ -33,3 +35,20 @@ export {
   parseRelationshipsFromText,
   loadRelationships,
 } from "./relationships";
+
+export {
+  findColorElement,
+  parseColor,
+  parseColorFromParent,
+  findFillElement,
+  parseBaseFill,
+  parseBaseFillFromParent,
+  parseLine,
+  getLineFromProperties,
+  parseEffects,
+  parseOuterShadowEffect,
+  parseInnerShadowEffect,
+  parseGlowEffect,
+  parseReflectionEffect,
+  parseSoftEdgeEffect,
+} from "./drawing-ml";

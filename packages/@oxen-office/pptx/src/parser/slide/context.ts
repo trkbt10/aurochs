@@ -375,10 +375,17 @@ export type SlideContext = {
  * @param presentation - Presentation context
  */
 export function createSlideContext(
-  slide: SlideParams,
-  layout: SlideLayoutParams,
-  master: SlideMasterParams,
-  presentation: PresentationContext,
+  {
+    slide,
+    layout,
+    master,
+    presentation,
+  }: {
+    readonly slide: SlideParams;
+    readonly layout: SlideLayoutParams;
+    readonly master: SlideMasterParams;
+    readonly presentation: PresentationContext;
+  },
 ): SlideContext {
   const self: SlideContext = {
     slide,

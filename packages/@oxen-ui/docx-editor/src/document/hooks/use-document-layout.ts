@@ -28,7 +28,6 @@ import {
 } from "@oxen-office/text-layout";
 import {
   sectionPropertiesToPageConfig,
-  getSectionContentWidth,
 } from "@oxen-office/text-layout";
 
 // =============================================================================

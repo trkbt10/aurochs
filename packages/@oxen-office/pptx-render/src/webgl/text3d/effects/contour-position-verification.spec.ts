@@ -7,7 +7,6 @@
  * The contour should uniformly expand the shape by contourWidth in X/Y.
  */
 
-import { describe, it, expect } from "vitest";
 import * as THREE from "three";
 import { createContourFromShapes, type ContourFromShapesConfig } from "./contour";
 import {

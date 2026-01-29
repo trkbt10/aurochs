@@ -6,7 +6,6 @@
  * @see ECMA-376 Part 1, Section 20.1.7.5 (grpSpPr)
  */
 
-import { describe, it, expect } from "vitest";
 import { buildGroupTransformAttr, buildTransformAttr, createDefsCollector } from "./slide-utils";
 import type { GroupTransform, Transform } from "@oxen-office/pptx/domain/types";
 import { px, deg } from "@oxen-office/ooxml/domain/units";

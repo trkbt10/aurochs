@@ -12,16 +12,13 @@ import path from "node:path";
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
 import { openPresentation } from "@oxen-office/pptx";
 import { createElement, parseXml, serializeDocument, type XmlDocument, type XmlElement, isXmlElement } from "@oxen/xml";
-import { patchChartData, patchChartTitle } from "@oxen-office/pptx/patcher/chart/chart-data-patcher";
-import { parseChart } from "@oxen-office/pptx/parser/chart-parser/index";
-import type { DataReference } from "@oxen-office/pptx/domain/chart";
-import { patchTable } from "@oxen-office/pptx/patcher/table/table-patcher";
-import { parseTable } from "@oxen-office/pptx/parser/table/table-parser";
-import { patchDiagramNodeText } from "@oxen-office/pptx/patcher/diagram/diagram-patcher";
-import { parseDiagramDataModel } from "@oxen-office/pptx/parser/diagram/data-parser";
-import { patchOleObject } from "@oxen-office/pptx/patcher/ole/ole-patcher";
-import { parseGraphicFrame } from "@oxen-office/pptx/parser/shape-parser/graphic-frame";
+import { patchChartData, patchChartTitle } from "@oxen-office/chart/patcher";
+import { parseChart } from "@oxen-office/chart/parser";
+import type { DataReference } from "@oxen-office/chart/domain";
+import { patchTable, patchDiagramNodeText, patchOleObject } from "@oxen-office/pptx/patcher";
+import { parseTable, parseDiagramDataModel, parseGraphicFrame } from "@oxen-office/pptx/parser";
 import { deg, px } from "@oxen-office/ooxml/domain/units";
+import type { TextBody } from "@oxen-office/pptx/domain/text";
 
 const FIXTURES_DIR = path.resolve(process.cwd(), "fixtures/poi-test-data/test-data/slideshow");
 
@@ -60,6 +57,20 @@ function getDocRoot(doc: XmlDocument): XmlElement {
     throw new Error("xml doc has no root element");
   }
   return root;
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object";
+}
+
+function isPptxTextBody(value: unknown): value is TextBody {
+  if (!isObject(value)) {
+    return false;
+  }
+  if (!("bodyProperties" in value) || !isObject(value.bodyProperties)) {
+    return false;
+  }
+  return "paragraphs" in value && Array.isArray(value.paragraphs);
 }
 
 function replaceElementByReference(doc: XmlDocument, target: XmlElement, replacement: XmlElement): XmlDocument {
@@ -246,9 +257,15 @@ describe("Phase 10 - Advanced elements", () => {
       throw new Error("expected parseDiagramDataModel to succeed");
     }
 
-    const pointWithText = model.points.find((p) =>
-      p.textBody?.paragraphs?.some((para) => para.runs.some((run) => run.type === "text" && run.text.length > 0)),
-    );
+    const pointWithText = model.points.find((p) => {
+      const tb = p.textBody;
+      if (!isPptxTextBody(tb)) {
+        return false;
+      }
+      return tb.paragraphs.some((para) =>
+        para.runs.some((run) => run.type === "text" && run.text.length > 0),
+      );
+    });
     if (!pointWithText) {
       throw new Error("expected diagram to contain a point with text");
     }
@@ -262,7 +279,11 @@ describe("Phase 10 - Advanced elements", () => {
     }
 
     const updatedNode = reloaded.points.find((p) => p.modelId === pointWithText.modelId);
-    const updatedText = updatedNode?.textBody?.paragraphs?.[0]?.runs?.[0];
+    const updatedTextBody = updatedNode?.textBody;
+    if (!isPptxTextBody(updatedTextBody)) {
+      throw new Error("expected updated node to have text body");
+    }
+    const updatedText = updatedTextBody.paragraphs[0]?.runs[0];
     if (!updatedText || updatedText.type !== "text") {
       throw new Error("expected updated node to have text body");
     }

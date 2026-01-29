@@ -23,8 +23,6 @@ import type { Line } from "@oxen-office/pptx/domain/color/types";
 import type { Table, TableRow, TableCell } from "@oxen-office/pptx/domain/table/types";
 import type { ShapeId } from "@oxen-office/pptx/domain";
 import { px, deg, pt } from "@oxen-office/ooxml/domain/units";
-import { createCoreRenderContext } from "@oxen-office/pptx-render";
-import { renderSlideSvg } from "@oxen-office/pptx-render/svg";
 
 // =============================================================================
 // Fixture Helpers
@@ -46,15 +44,19 @@ function createLine(color: string, widthVal = 2): Line {
 }
 
 const createSpShape = (
-  id: string,
-  name: string,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  fillColor: string,
-  rotation = 0
-): SpShape => ({
+  ...args: [
+    id: string,
+    name: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    fillColor: string,
+    rotation?: number,
+  ]
+): SpShape => {
+  const [id, name, x, y, width, height, fillColor, rotation = 0] = args;
+  return {
   type: "sp",
   nonVisual: { id, name, description: `Test shape: ${name}` },
   properties: {
@@ -74,18 +76,23 @@ const createSpShape = (
     line: createLine("333333", 2),
     geometry: { type: "preset", preset: "rect", adjustValues: [] },
   },
-});
+  };
+};
 
 const createTextBox = (
-  id: string,
-  name: string,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  text: string,
-  fontSize = 14
-): SpShape => ({
+  ...args: [
+    id: string,
+    name: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    text: string,
+    fontSize?: number,
+  ]
+): SpShape => {
+  const [id, name, x, y, width, height, text, fontSize = 14] = args;
+  return {
   type: "sp",
   nonVisual: { id, name, textBox: true },
   properties: {
@@ -115,16 +122,14 @@ const createTextBox = (
       },
     ],
   },
-});
+  };
+};
 
 const createTitle = (
-  id: string,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  text: string
-): SpShape => ({
+  ...args: [id: string, x: number, y: number, width: number, height: number, text: string]
+): SpShape => {
+  const [id, x, y, width, height, text] = args;
+  return {
   type: "sp",
   nonVisual: { id, name: "Title" },
   placeholder: { type: "title", idx: 0 },
@@ -152,14 +157,13 @@ const createTitle = (
       },
     ],
   },
-});
+  };
+};
 
 const createGroup = (
-  id: string,
-  x: number,
-  y: number,
-  children: SpShape[]
+  ...args: [id: string, x: number, y: number, children: SpShape[]]
 ): GrpShape => {
+  const [id, x, y, children] = args;
   const minX = Math.min(
     ...children.map((c) => (c.properties.transform?.x as number) || 0)
   );
@@ -206,11 +210,10 @@ const createGroup = (
 };
 
 const createCxnShape = (
-  id: string,
-  x: number,
-  y: number,
-  width: number
-): CxnShape => ({
+  ...args: [id: string, x: number, y: number, width: number]
+): CxnShape => {
+  const [id, x, y, width] = args;
+  return {
   type: "cxnSp",
   nonVisual: { id, name: "Connector" },
   properties: {
@@ -226,7 +229,8 @@ const createCxnShape = (
     geometry: { type: "preset", preset: "line", adjustValues: [] },
     line: createLine("000000", 2),
   },
-});
+  };
+};
 
 const createTableCell = (text: string): TableCell => ({
   textBody: {
@@ -458,18 +462,6 @@ export function SlideEditorTest() {
     return findShapeById(slide.shapes, selection.primaryId);
   }, [slide.shapes, selection.primaryId]);
 
-  // Render context for SVG
-  const renderContext = useMemo(
-    () => createCoreRenderContext({ slideSize: { width, height } }),
-    [width, height]
-  );
-
-  // Rendered SVG content
-  const svgContent = useMemo(() => {
-    const result = renderSlideSvg(slide, renderContext);
-    return result.svg;
-  }, [slide, renderContext]);
-
   // ==========================================================================
   // Drag handlers
   // ==========================================================================
@@ -529,11 +521,15 @@ export function SlideEditorTest() {
   // ==========================================================================
 
   const handleSelect = useCallback(
-    (shapeId: ShapeId, addToSelection: boolean) => {
+    (shapeId: ShapeId, addToSelection: boolean, _toggle?: boolean) => {
       dispatch({ type: "SELECT", shapeId, addToSelection });
     },
     []
   );
+
+  const handleSelectMultiple = useCallback((shapeIds: readonly ShapeId[]) => {
+    dispatch({ type: "SELECT_MULTIPLE", shapeIds });
+  }, []);
 
   const handleClearSelection = useCallback(() => {
     dispatch({ type: "CLEAR_SELECTION" });
@@ -547,7 +543,8 @@ export function SlideEditorTest() {
   );
 
   const handleStartResize = useCallback(
-    (handle: ResizeHandlePosition, startX: number, startY: number, aspectLocked: boolean) => {
+    (...args: [handle: ResizeHandlePosition, startX: number, startY: number, aspectLocked: boolean]) => {
+      const [handle, startX, startY, aspectLocked] = args;
       dispatch({ type: "START_RESIZE", handle, startX: px(startX), startY: px(startY), aspectLocked });
     },
     []
@@ -635,13 +632,13 @@ export function SlideEditorTest() {
               slide={slide}
               selection={selection}
               drag={drag}
-              svgContent={svgContent}
               width={width}
               height={height}
               primaryShape={primaryShape}
               selectedShapes={selectedShapes}
               contextMenuActions={contextMenuActions}
               onSelect={handleSelect}
+              onSelectMultiple={handleSelectMultiple}
               onClearSelection={handleClearSelection}
               onStartMove={handleStartMove}
               onStartResize={handleStartResize}
@@ -655,12 +652,15 @@ export function SlideEditorTest() {
           <Panel title="Properties">
             <PropertyPanel
               slide={slide}
+              layoutOptions={[]}
               selectedShapes={selectedShapes}
               primaryShape={primaryShape}
               onShapeChange={handleShapeChange}
               onSlideChange={handleSlideChange}
               onUngroup={handleUngroup}
-              onSelect={(id) => handleSelect(id, false)}
+              onSelect={handleSelect}
+              onLayoutAttributesChange={() => {}}
+              onLayoutChange={() => {}}
             />
           </Panel>
         </div>

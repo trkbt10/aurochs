@@ -246,11 +246,9 @@ const EDGE_INTERPOLATORS: readonly EdgeInterpolator[] = [
  * Extract contours using Marching Squares with linear interpolation.
  */
 function marchingSquares(
-  gray: Float32Array,
-  width: number,
-  height: number,
-  threshold: number,
+  ...args: [gray: Float32Array, width: number, height: number, threshold: number]
 ): RawContour[] {
+  const [gray, width, height, threshold] = args;
   const visitedEdges = new Set<string>();
   const contours: RawContour[] = [];
 
@@ -298,12 +296,9 @@ function marchingSquares(
  * Corners: 0=TL, 1=TR, 2=BR, 3=BL
  */
 function getCellCase(
-  gray: Float32Array,
-  width: number,
-  cx: number,
-  cy: number,
-  threshold: number,
+  ...args: [gray: Float32Array, width: number, cx: number, cy: number, threshold: number]
 ): number {
+  const [gray, width, cx, cy, threshold] = args;
   const tl = gray[cy * width + cx] >= threshold ? 1 : 0;
   const tr = gray[cy * width + cx + 1] >= threshold ? 1 : 0;
   const br = gray[(cy + 1) * width + cx + 1] >= threshold ? 1 : 0;
@@ -316,11 +311,9 @@ function getCellCase(
  * Get corner values for a cell.
  */
 function getCellCorners(
-  gray: Float32Array,
-  width: number,
-  cx: number,
-  cy: number,
+  ...args: [gray: Float32Array, width: number, cx: number, cy: number]
 ): [number, number, number, number] {
+  const [gray, width, cx, cy] = args;
   return [
     gray[cy * width + cx],
     gray[cy * width + cx + 1],
@@ -333,12 +326,9 @@ function getCellCorners(
  * Interpolate edge crossing point with subpixel precision.
  */
 function interpolateEdge(
-  cx: number,
-  cy: number,
-  edge: number,
-  corners: readonly number[],
-  threshold: number,
+  ...args: [cx: number, cy: number, edge: number, corners: readonly number[], threshold: number]
 ): Point {
+  const [cx, cy, edge, corners, threshold] = args;
   const e = EDGE_INTERPOLATORS[edge];
   const v1 = corners[e.corner1];
   const v2 = corners[e.corner2];
@@ -389,15 +379,18 @@ function getNextCell(
  * Trace a single contour starting from a given cell and edge.
  */
 function traceContour(
-  gray: Float32Array,
-  width: number,
-  height: number,
-  threshold: number,
-  startCx: number,
-  startCy: number,
-  startEdge: number,
-  visitedEdges: Set<string>,
+  ...args: [
+    gray: Float32Array,
+    width: number,
+    height: number,
+    threshold: number,
+    startCx: number,
+    startCy: number,
+    startEdge: number,
+    visitedEdges: Set<string>,
+  ]
 ): RawContour {
+  const [gray, width, height, threshold, startCx, startCy, startEdge, visitedEdges] = args;
   const contour: RawContour = [];
   const maxIterations = (width + height) * 4;
 

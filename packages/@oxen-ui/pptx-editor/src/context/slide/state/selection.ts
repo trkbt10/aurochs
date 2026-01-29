@@ -5,6 +5,16 @@
  */
 
 import type { ShapeId } from "@oxen-office/pptx/domain/types";
+import type { SelectionState as CoreSelectionState } from "@oxen-ui/editor-core/selection";
+import {
+  createEmptySelection as createEmptyCoreSelection,
+  createMultiSelection as createCoreMultiSelection,
+  createSingleSelection as createCoreSingleSelection,
+  isSelected as isCoreSelected,
+  isSelectionEmpty as isCoreSelectionEmpty,
+  removeFromSelection as removeFromCoreSelection,
+  toggleSelection as toggleCoreSelection,
+} from "@oxen-ui/editor-core/selection";
 
 // =============================================================================
 // Types
@@ -13,12 +23,7 @@ import type { ShapeId } from "@oxen-office/pptx/domain/types";
 /**
  * Selection state for shape editors
  */
-export type SelectionState = {
-  /** Currently selected shape IDs */
-  readonly selectedIds: readonly ShapeId[];
-  /** Primary selection (first selected or last clicked in multi-select) */
-  readonly primaryId: ShapeId | undefined;
-};
+export type SelectionState = CoreSelectionState<ShapeId>;
 
 // =============================================================================
 // Functions
@@ -28,20 +33,14 @@ export type SelectionState = {
  * Create empty selection state
  */
 export function createEmptySelection(): SelectionState {
-  return {
-    selectedIds: [],
-    primaryId: undefined,
-  };
+  return createEmptyCoreSelection<ShapeId>();
 }
 
 /**
  * Create selection with single shape
  */
 export function createSingleSelection(shapeId: ShapeId): SelectionState {
-  return {
-    selectedIds: [shapeId],
-    primaryId: shapeId,
-  };
+  return createCoreSingleSelection(shapeId);
 }
 
 /**
@@ -51,10 +50,14 @@ export function createMultiSelection(
   shapeIds: readonly ShapeId[],
   primaryId?: ShapeId
 ): SelectionState {
-  return {
+  const actualPrimaryId = primaryId ?? shapeIds[0];
+  if (!actualPrimaryId) {
+    throw new Error("createMultiSelection shapeIds must not be empty");
+  }
+  return createCoreMultiSelection({
     selectedIds: shapeIds,
-    primaryId: primaryId ?? shapeIds[0],
-  };
+    primaryId: actualPrimaryId,
+  });
 }
 
 /**
@@ -80,14 +83,11 @@ export function removeFromSelection(
   selection: SelectionState,
   shapeId: ShapeId
 ): SelectionState {
-  const newSelectedIds = selection.selectedIds.filter((id) => id !== shapeId);
-  return {
-    selectedIds: newSelectedIds,
-    primaryId:
-      selection.primaryId === shapeId
-        ? newSelectedIds[0]
-        : selection.primaryId,
-  };
+  return removeFromCoreSelection({
+    selection,
+    id: shapeId,
+    primaryFallback: "first",
+  });
 }
 
 /**
@@ -98,7 +98,11 @@ export function toggleSelection(
   shapeId: ShapeId
 ): SelectionState {
   if (selection.selectedIds.includes(shapeId)) {
-    return removeFromSelection(selection, shapeId);
+    return toggleCoreSelection({
+      selection,
+      id: shapeId,
+      primaryFallback: "first",
+    });
   }
   return addToSelection(selection, shapeId);
 }
@@ -110,12 +114,12 @@ export function isSelected(
   selection: SelectionState,
   shapeId: ShapeId
 ): boolean {
-  return selection.selectedIds.includes(shapeId);
+  return isCoreSelected(selection, shapeId);
 }
 
 /**
  * Check if selection is empty
  */
 export function isSelectionEmpty(selection: SelectionState): boolean {
-  return selection.selectedIds.length === 0;
+  return isCoreSelectionEmpty(selection);
 }

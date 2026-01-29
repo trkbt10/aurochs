@@ -13,74 +13,79 @@
  * - GraphicFrame (table, chart, diagram, oleObject)
  */
 
-import type { Slide, SpShape, PicShape, CxnShape, GrpShape, GraphicFrame, Shape } from "@oxen-office/pptx/domain";
+import type { Slide, SpShape, PicShape, CxnShape, GrpShape, GraphicFrame } from "@oxen-office/pptx/domain";
 import type { PresetGeometry } from "@oxen-office/pptx/domain/shape";
-import type { Table, TableRow, TableCell, TableGrid } from "@oxen-office/pptx/domain/table/types";
-import { px, deg, pct } from "@oxen-office/ooxml/domain/units";
+import type { Table, TableRow, TableCell } from "@oxen-office/pptx/domain/table/types";
+import { px, deg } from "@oxen-office/ooxml/domain/units";
 
 // =============================================================================
 // Test Fixtures (same as SlideEditorTest.tsx)
 // =============================================================================
 
 const createTestShape = (
-  id: string,
-  name: string,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  fillColor: string,
-  rotation = 0
-): SpShape => ({
-  type: "sp",
-  nonVisual: {
-    id,
-    name,
-    description: `Test shape: ${name}`,
-  },
-  properties: {
-    transform: {
-      x: px(x),
-      y: px(y),
-      width: px(width),
-      height: px(height),
-      rotation: deg(rotation),
-      flipH: false,
-      flipV: false,
+  ...args: readonly [
+    id: string,
+    name: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    fillColor: string,
+    rotation?: number,
+  ]
+): SpShape => {
+  const [id, name, x, y, width, height, fillColor, rotation = 0] = args;
+  return {
+    type: "sp",
+    nonVisual: {
+      id,
+      name,
+      description: `Test shape: ${name}`,
     },
-    fill: {
-      type: "solidFill",
-      color: {
-        spec: {
-          type: "srgb",
-          value: fillColor,
-        },
+    properties: {
+      transform: {
+        x: px(x),
+        y: px(y),
+        width: px(width),
+        height: px(height),
+        rotation: deg(rotation),
+        flipH: false,
+        flipV: false,
       },
-    },
-    line: {
-      width: px(2),
-      cap: "flat",
-      compound: "sng",
-      alignment: "ctr",
-      dash: "solid",
-      join: "round",
       fill: {
         type: "solidFill",
         color: {
           spec: {
             type: "srgb",
-            value: "333333",
+            value: fillColor,
           },
         },
       },
+      line: {
+        width: px(2),
+        cap: "flat",
+        compound: "sng",
+        alignment: "ctr",
+        dash: "solid",
+        join: "round",
+        fill: {
+          type: "solidFill",
+          color: {
+            spec: {
+              type: "srgb",
+              value: "333333",
+            },
+          },
+        },
+      },
+      geometry: {
+        type: "preset",
+        preset: "rect",
+        adjustValues: [],
+      },
     },
-    geometry: {
-      type: "preset",
-      preset: "rect",
-      adjustValues: [],
-    },
-  },
-});
+  };
+};
 
 const createTestSlide = (): Slide => ({
   shapes: [

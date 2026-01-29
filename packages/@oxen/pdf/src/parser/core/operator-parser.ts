@@ -15,21 +15,8 @@
  * For new code, prefer importing from "../operator" directly.
  */
 
-// Re-export all types and functions from the new implementation
-export type {
-  ParsedPath,
-  ParsedText,
-  ParsedImage,
-  ParsedElement,
-  TextRun,
-} from "../operator";
-
-export {
-  parseContentStream,
-  createParser,
-  getSupportedOperators,
-  OPERATOR_HANDLERS,
-} from "../operator";
+import { parseContentStream } from "../operator";
+import type { ParsedElement } from "../operator";
 
 // =============================================================================
 // Legacy Class Wrapper (for backwards compatibility during migration)
@@ -37,8 +24,6 @@ export {
 
 import type { PdfToken } from "../../domain/content-stream";
 import type { FontMappings } from "../../domain";
-import { parseContentStream } from "../operator";
-import type { ParsedElement } from "../operator";
 
 /**
  * @deprecated Use `parseContentStream` function instead.

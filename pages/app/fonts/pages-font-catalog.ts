@@ -32,7 +32,9 @@ export function createPagesFontCatalog(): FontCatalog {
     timeoutMs: 10_000,
   });
 
-  return {
+  const listFamilyRecords = catalog.listFamilyRecords;
+
+  const baseCatalog: FontCatalog = {
     label: catalog.label,
     async listFamilies() {
       try {
@@ -42,20 +44,24 @@ export function createPagesFontCatalog(): FontCatalog {
         throw error;
       }
     },
-    ...(catalog.listFamilyRecords
-      ? {
-          async listFamilyRecords() {
-            try {
-              return await Promise.resolve(catalog.listFamilyRecords());
-            } catch (error) {
-              console.warn("createPagesFontCatalog: failed to load Google Fonts family records", error);
-              throw error;
-            }
-          },
-        }
-      : {}),
     async ensureFamilyLoaded(family: string) {
       return await catalog.ensureFamilyLoaded(family);
+    },
+  };
+
+  if (!listFamilyRecords) {
+    return baseCatalog;
+  }
+
+  return {
+    ...baseCatalog,
+    async listFamilyRecords() {
+      try {
+        return await Promise.resolve(listFamilyRecords());
+      } catch (error) {
+        console.warn("createPagesFontCatalog: failed to load Google Fonts family records", error);
+        throw error;
+      }
     },
   };
 }

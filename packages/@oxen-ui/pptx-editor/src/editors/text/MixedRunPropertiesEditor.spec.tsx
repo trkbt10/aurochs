@@ -6,15 +6,30 @@
 
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MixedRunPropertiesEditor } from "./MixedRunPropertiesEditor";
+import type { MixedRunPropertiesEditorProps } from "./MixedRunPropertiesEditor";
 import type { MixedRunProperties } from "./mixed-properties";
 import type { Points, Pixels } from "@oxen-office/ooxml/domain/units";
 
 // =============================================================================
 // Test Helpers
 // =============================================================================
+
+type CallTracker<Args extends readonly unknown[]> = {
+  readonly calls: Args[];
+  readonly fn: (...args: Args) => void;
+};
+
+function createCallTracker<Args extends readonly unknown[]>(): CallTracker<Args> {
+  const calls: Args[] = [];
+  return {
+    calls,
+    fn: (...args) => {
+      calls.push(args);
+    },
+  };
+}
 
 function createAllSameProperties(): MixedRunProperties {
   return {
@@ -105,10 +120,10 @@ function createPartiallyMixedProperties(): MixedRunProperties {
 // =============================================================================
 
 describe("MixedRunPropertiesEditor", () => {
-  let onChange: ReturnType<typeof vi.fn>;
+  let onChange: CallTracker<Parameters<MixedRunPropertiesEditorProps["onChange"]>>;
 
   beforeEach(() => {
-    onChange = vi.fn();
+    onChange = createCallTracker<Parameters<MixedRunPropertiesEditorProps["onChange"]>>();
     const fakeFonts = Object.assign(
       [{ family: "Arial" }, { family: "Helvetica" }],
       { ready: Promise.resolve(), status: "loaded" }
@@ -128,7 +143,7 @@ describe("MixedRunPropertiesEditor", () => {
       render(
         <MixedRunPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
         />
       );
 
@@ -147,7 +162,7 @@ describe("MixedRunPropertiesEditor", () => {
       render(
         <MixedRunPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
           disabled
         />
       );
@@ -160,7 +175,7 @@ describe("MixedRunPropertiesEditor", () => {
       const { container } = render(
         <MixedRunPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
           showSpacing={false}
         />
       );
@@ -177,7 +192,7 @@ describe("MixedRunPropertiesEditor", () => {
       render(
         <MixedRunPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
         />
       );
 
@@ -189,7 +204,7 @@ describe("MixedRunPropertiesEditor", () => {
       render(
         <MixedRunPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
         />
       );
 
@@ -201,7 +216,7 @@ describe("MixedRunPropertiesEditor", () => {
       render(
         <MixedRunPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
         />
       );
 
@@ -215,7 +230,7 @@ describe("MixedRunPropertiesEditor", () => {
       render(
         <MixedRunPropertiesEditor
           value={createMixedProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
         />
       );
 
@@ -227,7 +242,7 @@ describe("MixedRunPropertiesEditor", () => {
       render(
         <MixedRunPropertiesEditor
           value={createMixedProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
         />
       );
 
@@ -239,7 +254,7 @@ describe("MixedRunPropertiesEditor", () => {
       render(
         <MixedRunPropertiesEditor
           value={createMixedProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
         />
       );
 
@@ -251,7 +266,7 @@ describe("MixedRunPropertiesEditor", () => {
       const { container } = render(
         <MixedRunPropertiesEditor
           value={createMixedProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
         />
       );
 
@@ -264,7 +279,7 @@ describe("MixedRunPropertiesEditor", () => {
       render(
         <MixedRunPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
         />
       );
 
@@ -272,14 +287,15 @@ describe("MixedRunPropertiesEditor", () => {
       fireEvent.click(fontSelect);
       fireEvent.click(screen.getByText("Helvetica"));
 
-      expect(onChange).toHaveBeenCalledWith({ fontFamily: "Helvetica" });
+      expect(onChange.calls.length).toBe(1);
+      expect(onChange.calls[0]?.[0]).toEqual({ fontFamily: "Helvetica" });
     });
 
     it("calls onChange with undefined when font family is cleared", () => {
       render(
         <MixedRunPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
         />
       );
 
@@ -287,14 +303,15 @@ describe("MixedRunPropertiesEditor", () => {
       fireEvent.click(fontSelect);
       fireEvent.click(screen.getByText("Default"));
 
-      expect(onChange).toHaveBeenCalledWith({ fontFamily: undefined });
+      expect(onChange.calls.length).toBe(1);
+      expect(onChange.calls[0]?.[0]).toEqual({ fontFamily: undefined });
     });
 
     it("calls onChange when bold button is clicked (toggle off)", () => {
       render(
         <MixedRunPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
         />
       );
 
@@ -302,14 +319,15 @@ describe("MixedRunPropertiesEditor", () => {
       fireEvent.click(boldButton);
 
       // When pressed (true) is clicked, it toggles to false (undefined)
-      expect(onChange).toHaveBeenCalledWith({ bold: undefined });
+      expect(onChange.calls.length).toBe(1);
+      expect(onChange.calls[0]?.[0]).toEqual({ bold: undefined });
     });
 
     it("calls onChange when italic button is clicked (toggle on)", () => {
       render(
         <MixedRunPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
         />
       );
 
@@ -317,14 +335,15 @@ describe("MixedRunPropertiesEditor", () => {
       fireEvent.click(italicButton);
 
       // When not pressed (false) is clicked, it toggles to true
-      expect(onChange).toHaveBeenCalledWith({ italic: true });
+      expect(onChange.calls.length).toBe(1);
+      expect(onChange.calls[0]?.[0]).toEqual({ italic: true });
     });
 
     it("calls onChange with true when mixed bold button is clicked", () => {
       render(
         <MixedRunPropertiesEditor
           value={createMixedProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
         />
       );
 
@@ -332,14 +351,15 @@ describe("MixedRunPropertiesEditor", () => {
       fireEvent.click(boldButton);
 
       // When mixed, clicking always sets to true
-      expect(onChange).toHaveBeenCalledWith({ bold: true });
+      expect(onChange.calls.length).toBe(1);
+      expect(onChange.calls[0]?.[0]).toEqual({ bold: true });
     });
 
     it("does not call onChange when disabled", () => {
       render(
         <MixedRunPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
           disabled
         />
       );
@@ -347,7 +367,7 @@ describe("MixedRunPropertiesEditor", () => {
       const boldButton = screen.getByRole("button", { name: /bold/i });
       fireEvent.click(boldButton);
 
-      expect(onChange).not.toHaveBeenCalled();
+      expect(onChange.calls.length).toBe(0);
     });
   });
 
@@ -356,7 +376,7 @@ describe("MixedRunPropertiesEditor", () => {
       const { container } = render(
         <MixedRunPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
         />
       );
 
@@ -383,7 +403,7 @@ describe("MixedRunPropertiesEditor", () => {
       const { container } = render(
         <MixedRunPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
         />
       );
 
@@ -402,7 +422,8 @@ describe("MixedRunPropertiesEditor", () => {
 
       if (underlineSelect) {
         fireEvent.change(underlineSelect, { target: { value: "dbl" } });
-        expect(onChange).toHaveBeenCalledWith({ underline: "dbl" });
+        expect(onChange.calls.length).toBe(1);
+        expect(onChange.calls[0]?.[0]).toEqual({ underline: "dbl" });
       }
     });
 
@@ -410,7 +431,7 @@ describe("MixedRunPropertiesEditor", () => {
       const { container } = render(
         <MixedRunPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
         />
       );
 
@@ -429,7 +450,8 @@ describe("MixedRunPropertiesEditor", () => {
 
       if (underlineSelect) {
         fireEvent.change(underlineSelect, { target: { value: "none" } });
-        expect(onChange).toHaveBeenCalledWith({ underline: undefined });
+        expect(onChange.calls.length).toBe(1);
+        expect(onChange.calls[0]?.[0]).toEqual({ underline: undefined });
       }
     });
   });
@@ -439,7 +461,7 @@ describe("MixedRunPropertiesEditor", () => {
       const { container } = render(
         <MixedRunPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
         />
       );
 
@@ -464,7 +486,7 @@ describe("MixedRunPropertiesEditor", () => {
       const { container } = render(
         <MixedRunPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
         />
       );
 
@@ -483,7 +505,8 @@ describe("MixedRunPropertiesEditor", () => {
 
       if (capsSelect) {
         fireEvent.change(capsSelect, { target: { value: "small" } });
-        expect(onChange).toHaveBeenCalledWith({ caps: "small" });
+        expect(onChange.calls.length).toBe(1);
+        expect(onChange.calls[0]?.[0]).toEqual({ caps: "small" });
       }
     });
   });
@@ -493,7 +516,7 @@ describe("MixedRunPropertiesEditor", () => {
       render(
         <MixedRunPropertiesEditor
           value={createPartiallyMixedProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
         />
       );
 
@@ -516,7 +539,7 @@ describe("MixedRunPropertiesEditor", () => {
       render(
         <MixedRunPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
         />
       );
 
@@ -530,7 +553,7 @@ describe("MixedRunPropertiesEditor", () => {
       render(
         <MixedRunPropertiesEditor
           value={createAllSameProperties()}
-          onChange={onChange}
+          onChange={onChange.fn}
         />
       );
 

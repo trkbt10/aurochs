@@ -140,16 +140,26 @@ function getEffectiveLineSpacing(baseMultiplier: number, renderOptions: RenderOp
  * Layout a single paragraph
  */
 function layoutParagraph(
-  para: LayoutParagraphInput,
-  contentWidth: Pixels,
-  startY: number,
-  wrapMode: TextBoxConfig["wrapMode"],
-  renderOptions: RenderOptions = DEFAULT_RENDER_OPTIONS,
-  measureParagraphFn: (paragraph: LayoutParagraphInput) => {
-    readonly spans: readonly MeasuredSpan[];
-    readonly bulletWidth?: Pixels;
-  },
+  ...args: [
+    para: LayoutParagraphInput,
+    contentWidth: Pixels,
+    startY: number,
+    wrapMode: TextBoxConfig["wrapMode"],
+    renderOptions: RenderOptions | undefined,
+    measureParagraphFn: (paragraph: LayoutParagraphInput) => {
+      readonly spans: readonly MeasuredSpan[];
+      readonly bulletWidth?: Pixels;
+    },
+  ]
 ): { paragraph: LayoutParagraphResult; endY: number } {
+  const [
+    para,
+    contentWidth,
+    startY,
+    wrapMode,
+    renderOptions = DEFAULT_RENDER_OPTIONS,
+    measureParagraphFn,
+  ] = args;
   // Calculate margins
   const marginLeft = para.marginLeft as number;
   const marginRight = para.marginRight as number;
@@ -256,13 +266,16 @@ function layoutParagraph(
  * - Text position = marL
  */
 function calculateLineX(
-  alignment: TextAlign,
-  marginLeft: number,
-  lineWidth: number,
-  availableWidth: number,
-  indent: number,
-  bulletWidth: number,
+  ...args: [
+    alignment: TextAlign,
+    marginLeft: number,
+    lineWidth: number,
+    availableWidth: number,
+    indent: number,
+    bulletWidth: number,
+  ]
 ): number {
+  const [alignment, marginLeft, lineWidth, availableWidth, indent, bulletWidth] = args;
   // ECMA-376: First line starts at marL + indent + bulletWidth
   // indent can be negative (hanging indent), bulletWidth is added for text after bullet
   const baseX = marginLeft + indent + bulletWidth;
@@ -311,11 +324,14 @@ function calculateYOffset(totalHeight: number, textBox: TextBoxConfig): number {
 }
 
 function getAnchorYOffset(
-  anchor: TextBoxConfig["anchor"],
-  insetTop: number,
-  contentHeight: number,
-  totalHeight: number,
+  ...args: [
+    anchor: TextBoxConfig["anchor"],
+    insetTop: number,
+    contentHeight: number,
+    totalHeight: number,
+  ]
 ): number {
+  const [anchor, insetTop, contentHeight, totalHeight] = args;
   switch (anchor) {
     case "center":
       return insetTop + (contentHeight - totalHeight) / 2;

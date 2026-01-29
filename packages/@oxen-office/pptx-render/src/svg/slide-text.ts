@@ -40,12 +40,15 @@ import { ooxmlAngleToSvgLinearGradient, getRadialGradientCoords } from "./gradie
  * @returns SVG string for text content
  */
 export function renderTextSvg(
-  textBody: TextBody,
-  ctx: CoreRenderContext,
-  boxWidth: number,
-  boxHeight: number,
-  defsCollector: SvgDefsCollector,
+  ...args: [
+    textBody: TextBody,
+    ctx: CoreRenderContext,
+    boxWidth: number,
+    boxHeight: number,
+    defsCollector: SvgDefsCollector,
+  ]
 ): string {
+  const [textBody, ctx, boxWidth, boxHeight, defsCollector] = args;
   if (textBody.paragraphs.length === 0) {
     return "";
   }
@@ -83,11 +86,14 @@ export function renderTextSvg(
 }
 
 function applyBodyRotation(
-  textSvg: string,
-  rotation: number,
-  boxWidth: number,
-  boxHeight: number
+  ...args: [
+    textSvg: string,
+    rotation: number,
+    boxWidth: number,
+    boxHeight: number,
+  ]
 ): string {
+  const [textSvg, rotation, boxWidth, boxHeight] = args;
   if (rotation === 0) {
     return textSvg;
   }
@@ -97,12 +103,15 @@ function applyBodyRotation(
 }
 
 function applyOverflowClip(
-  textSvg: string,
-  textBody: TextBody,
-  defsCollector: SvgDefsCollector,
-  boxWidth: number,
-  boxHeight: number
+  ...args: [
+    textSvg: string,
+    textBody: TextBody,
+    defsCollector: SvgDefsCollector,
+    boxWidth: number,
+    boxHeight: number,
+  ]
 ): string {
+  const [textSvg, textBody, defsCollector, boxWidth, boxHeight] = args;
   const horzOverflow = textBody.bodyProperties.overflow;
   const vertOverflow = textBody.bodyProperties.verticalOverflow ?? "overflow";
   if (horzOverflow !== "clip" && vertOverflow !== "clip") {
@@ -147,11 +156,14 @@ function applyForceAntiAlias(textSvg: string, textBody: TextBody): string {
  * @see ECMA-376 Part 1, Section 21.1.2.1.39 (ST_TextVerticalType)
  */
 function applyVerticalTextTransform(
-  textSvg: string,
-  textBody: TextBody,
-  boxWidth: number,
-  boxHeight: number,
+  ...args: [
+    textSvg: string,
+    textBody: TextBody,
+    boxWidth: number,
+    boxHeight: number,
+  ]
 ): string {
+  const [textSvg, textBody, boxWidth, boxHeight] = args;
   const verticalType = textBody.bodyProperties.verticalType ?? "horz";
 
   if (verticalType === "horz") {

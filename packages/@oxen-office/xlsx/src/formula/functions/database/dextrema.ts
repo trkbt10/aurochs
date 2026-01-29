@@ -11,17 +11,20 @@ import {
 } from "./common";
 
 const evaluateExtremum = (
-  args: Parameters<FormulaFunctionEagerDefinition["evaluate"]>[0],
-  helpers: Parameters<FormulaFunctionEagerDefinition["evaluate"]>[1],
-  functionName: string,
-  reducer: (values: number[]) => number,
-  emptyErrorMessage: string,
+  ...params: readonly [
+    formulaArgs: Parameters<FormulaFunctionEagerDefinition["evaluate"]>[0],
+    helpers: Parameters<FormulaFunctionEagerDefinition["evaluate"]>[1],
+    functionName: string,
+    reducer: (values: number[]) => number,
+    emptyErrorMessage: string,
+  ]
 ) => {
-  if (args.length !== 3) {
+  const [formulaArgs, helpers, functionName, reducer, emptyErrorMessage] = params;
+  if (formulaArgs.length !== 3) {
     throw new Error(`${functionName} expects exactly three arguments`);
   }
 
-  const [databaseArg, fieldArg, criteriaArg] = args;
+  const [databaseArg, fieldArg, criteriaArg] = formulaArgs;
   const database = parseDatabaseArgument(databaseArg, functionName);
   const fieldValue = helpers.coerceScalar(fieldArg, `${functionName} field`);
   const fieldIndex = resolveFieldIndex(fieldValue, database, functionName);

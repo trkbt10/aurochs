@@ -10,6 +10,20 @@
 import type { Degrees, Percent, Pixels, Points } from "@oxen-office/ooxml/domain/units";
 import type { SchemeColorValue } from "@oxen-office/ooxml/domain/color";
 import type { BlipCompression } from "@oxen-office/ooxml/domain/drawing";
+import {
+  parseAngle as parseAngleShared,
+  parseEmu as parseEmuShared,
+  parseFixedPercentage as parseFixedPercentageShared,
+  parseFloat64 as parseFloat64Shared,
+  parseIndex as parseIndexShared,
+  parseInt32 as parseInt32Shared,
+  parseInt32Or as parseInt32OrShared,
+  parseInt64 as parseInt64Shared,
+  parsePercentage as parsePercentageShared,
+  parsePercentage100k as parsePercentage100kShared,
+  parsePositivePercentage as parsePositivePercentageShared,
+  parseUnsignedInt as parseUnsignedIntShared,
+} from "@oxen-office/ooxml/parser";
 import type { BlackWhiteMode, ColorSchemeIndex, FontCollectionIndex, OnOffStyleType, RectAlignment, ShapeId, StyleMatrixColumnIndex, TextShapeType, AlignH, AlignV, RelFromH, RelFromV, WrapText, EditAs } from "../domain";
 import { px, deg, pct, pt } from "@oxen-office/ooxml/domain/units";
 import { getAttr, getChild, type XmlElement } from "@oxen/xml";
@@ -38,7 +52,6 @@ const ANGLE_UNITS_PER_DEGREE = 60000;
 
 /** Percent units per percent (1000 for some, 100000 for others) */
 const PERCENT_1000 = 1000;
-const PERCENT_100000 = 100000;
 
 // =============================================================================
 // Integer/Number Parsing
@@ -48,30 +61,21 @@ const PERCENT_100000 = 100000;
  * Parse integer from string
  */
 export function parseInt32(value: string | undefined): number | undefined {
-  if (value === undefined) {return undefined;}
-  const num = parseInt(value, 10);
-  return isNaN(num) ? undefined : num;
+  return parseInt32Shared(value);
 }
 
 /**
  * Parse 64-bit integer from string (within JS safe range)
  */
 export function parseInt64(value: string | undefined): number | undefined {
-  if (value === undefined) {return undefined;}
-  const num = parseInt(value, 10);
-  if (isNaN(num)) {return undefined;}
-  if (!Number.isSafeInteger(num)) {return undefined;}
-  return num;
+  return parseInt64Shared(value);
 }
 
 /**
  * Parse unsigned 32-bit integer from string
  */
 export function parseUnsignedInt(value: string | undefined): number | undefined {
-  const num = parseInt64(value);
-  if (num === undefined) {return undefined;}
-  if (num < 0 || num > 4294967295) {return undefined;}
-  return num;
+  return parseUnsignedIntShared(value);
 }
 
 /**
@@ -79,24 +83,21 @@ export function parseUnsignedInt(value: string | undefined): number | undefined 
  * @see ECMA-376 Part 1, Section 19.7.3 (ST_Index)
  */
 export function parseIndex(value: string | undefined): number | undefined {
-  return parseUnsignedInt(value);
+  return parseIndexShared(value);
 }
 
 /**
  * Parse integer with default value
  */
 export function parseInt32Or(value: string | undefined, defaultValue: number): number {
-  const num = parseInt32(value);
-  return num ?? defaultValue;
+  return parseInt32OrShared(value, defaultValue);
 }
 
 /**
  * Parse float from string
  */
 export function parseFloat64(value: string | undefined): number | undefined {
-  if (value === undefined) {return undefined;}
-  const num = parseFloat(value);
-  return isNaN(num) ? undefined : num;
+  return parseFloat64Shared(value);
 }
 
 // =============================================================================
@@ -132,9 +133,7 @@ export function parseBooleanOr(value: string | undefined, defaultValue: boolean)
  * @see ECMA-376 Part 1, Section 20.1.10.16 (ST_Coordinate)
  */
 export function parseEmu(value: string | undefined): Pixels | undefined {
-  const num = parseInt32(value);
-  if (num === undefined) {return undefined;}
-  return px(num * EMU_TO_PX);
+  return parseEmuShared(value);
 }
 
 /**
@@ -267,9 +266,7 @@ export function parsePositiveEmu(value: string | undefined): Pixels | undefined 
  * @see ECMA-376 Part 1, Section 20.1.10.3 (ST_Angle)
  */
 export function parseAngle(value: string | undefined): Degrees | undefined {
-  const num = parseInt32(value);
-  if (num === undefined) {return undefined;}
-  return deg(num / ANGLE_UNITS_PER_DEGREE);
+  return parseAngleShared(value);
 }
 
 /**
@@ -321,9 +318,7 @@ export function parseFovAngle(value: string | undefined): Degrees | undefined {
  * @see ECMA-376 Part 1, Section 20.1.10.40 (ST_Percentage)
  */
 export function parsePercentage(value: string | undefined): Percent | undefined {
-  const num = parseInt32(value);
-  if (num === undefined) {return undefined;}
-  return pct(num / PERCENT_1000);
+  return parsePercentageShared(value);
 }
 
 /**
@@ -331,9 +326,7 @@ export function parsePercentage(value: string | undefined): Percent | undefined 
  * Used for color transforms, etc.
  */
 export function parsePercentage100k(value: string | undefined): Percent | undefined {
-  const num = parseInt32(value);
-  if (num === undefined) {return undefined;}
-  return pct(num / PERCENT_100000 * 100);
+  return parsePercentage100kShared(value);
 }
 
 /**
@@ -341,9 +334,7 @@ export function parsePercentage100k(value: string | undefined): Percent | undefi
  * @see ECMA-376 Part 1, Section 20.1.10.45 (ST_PositivePercentage)
  */
 export function parsePositivePercentage(value: string | undefined): Percent | undefined {
-  const pct = parsePercentage(value);
-  if (pct === undefined || pct < 0) {return undefined;}
-  return pct;
+  return parsePositivePercentageShared(value);
 }
 
 /**
@@ -351,9 +342,7 @@ export function parsePositivePercentage(value: string | undefined): Percent | un
  * @see ECMA-376 Part 1, Section 20.1.10.24 (ST_FixedPercentage)
  */
 export function parseFixedPercentage(value: string | undefined): Percent | undefined {
-  const pct = parsePercentage100k(value);
-  if (pct === undefined || pct < 0 || pct > 100) {return undefined;}
-  return pct;
+  return parseFixedPercentageShared(value);
 }
 
 /**

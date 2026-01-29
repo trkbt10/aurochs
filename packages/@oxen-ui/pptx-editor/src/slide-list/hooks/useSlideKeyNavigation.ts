@@ -30,6 +30,14 @@ export type UseSlideKeyNavigationResult = {
   readonly handleKeyDown: (event: React.KeyboardEvent) => void;
 };
 
+type KeyDownEventLike = {
+  readonly key: string;
+  readonly metaKey: boolean;
+  readonly ctrlKey: boolean;
+  readonly shiftKey: boolean;
+  preventDefault: () => void;
+};
+
 /**
  * Get current index from selection
  */
@@ -80,8 +88,8 @@ export function useSlideKeyNavigation(
     containerRef,
   } = options;
 
-  const handleKeyDown = useCallback(
-    (event: React.KeyboardEvent) => {
+  const handleKey = useCallback(
+    (event: KeyDownEventLike) => {
       if (!enabled || slides.length === 0) {return;}
 
       const { isNext, isPrev } = isNavigationKey(event.key, orientation);
@@ -121,9 +129,7 @@ export function useSlideKeyNavigation(
       event.preventDefault();
 
       const currentIndex = getCurrentIndex(slides, selection);
-      const newIndex = isNext
-        ? Math.min(currentIndex + 1, slides.length - 1)
-        : Math.max(currentIndex - 1, 0);
+      const newIndex = isNext ? Math.min(currentIndex + 1, slides.length - 1) : Math.max(currentIndex - 1, 0);
 
       if (newIndex === currentIndex) {return;}
 
@@ -146,6 +152,11 @@ export function useSlideKeyNavigation(
     ]
   );
 
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent) => handleKey(event),
+    [handleKey]
+  );
+
   // Global keyboard listener when container is focused
   useEffect(() => {
     if (!enabled || !containerRef?.current) {return;}
@@ -164,13 +175,13 @@ export function useSlideKeyNavigation(
         event.key === "End";
 
       if (isNavKey) {
-        handleKeyDown(event as unknown as React.KeyboardEvent);
+        handleKey(event);
       }
     }
 
     window.addEventListener("keydown", handleGlobalKeyDown);
     return () => window.removeEventListener("keydown", handleGlobalKeyDown);
-  }, [enabled, containerRef, orientation, handleKeyDown]);
+  }, [enabled, containerRef, orientation, handleKey]);
 
   return { handleKeyDown };
 }

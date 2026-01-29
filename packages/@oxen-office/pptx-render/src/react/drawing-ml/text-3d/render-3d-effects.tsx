@@ -53,11 +53,14 @@ const DEFAULT_LIGHT_DIRECTION = "tl";
  * @returns Transformed content
  */
 function applyCameraTransform(
-  content: ReactNode,
-  cameraTransform: string,
-  centerX: number,
-  centerY: number,
+  ...args: [
+    content: ReactNode,
+    cameraTransform: string,
+    centerX: number,
+    centerY: number,
+  ]
 ): ReactNode {
+  const [content, cameraTransform, centerX, centerY] = args;
   if (cameraTransform === "") {
     return content;
   }
@@ -79,11 +82,14 @@ function applyCameraTransform(
  * @returns Content with bevel filter applied
  */
 function applyBevelEffect(
-  content: ReactNode,
-  bevel: NonNullable<Shape3d["bevelTop"]>,
-  lightDirection: string,
-  defs: DefsManager,
+  ...args: [
+    content: ReactNode,
+    bevel: NonNullable<Shape3d["bevelTop"]>,
+    lightDirection: string,
+    defs: DefsManager,
+  ]
 ): ReactNode {
+  const [content, bevel, lightDirection, defs] = args;
   const bevelFilterId = defs.getNextId("text-bevel");
 
   if (!defs.hasDef(bevelFilterId)) {
@@ -116,15 +122,18 @@ function applyBevelEffect(
  * @see ECMA-376 Part 1, Section 20.1.5 (3D Properties)
  */
 export function render3dTextEffects(
-  content: ReactNode,
-  scene3d: Scene3d | undefined,
-  shape3d: Shape3d | undefined,
-  width: number,
-  height: number,
-  getNextId: (prefix: string) => string,
-  addDef: (id: string, content: ReactNode) => void,
-  hasDef: (id: string) => boolean,
+  ...args: [
+    content: ReactNode,
+    scene3d: Scene3d | undefined,
+    shape3d: Shape3d | undefined,
+    width: number,
+    height: number,
+    getNextId: (prefix: string) => string,
+    addDef: (id: string, content: ReactNode) => void,
+    hasDef: (id: string) => boolean,
+  ]
 ): ReactNode {
+  const [content, scene3d, shape3d, width, height, getNextId, addDef, hasDef] = args;
   const centerX = width / 2;
   const centerY = height / 2;
   const elements: ReactNode[] = [];
@@ -170,11 +179,14 @@ export function render3dTextEffects(
  * @see ECMA-376 Part 1, Section 20.1.5.1 (bevelT - top/front face bevel)
  */
 function applyBevelEffectIfNeeded(
-  content: ReactNode,
-  shape3d: Shape3d | undefined,
-  lightDirection: string,
-  defs: DefsManager,
+  ...args: [
+    content: ReactNode,
+    shape3d: Shape3d | undefined,
+    lightDirection: string,
+    defs: DefsManager,
+  ]
 ): ReactNode {
+  const [content, shape3d, lightDirection, defs] = args;
   // Use bevelTop (front face) for 2D SVG rendering
   const bevel = shape3d?.bevelTop;
   if (bevel === undefined) {

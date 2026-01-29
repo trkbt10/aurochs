@@ -193,12 +193,15 @@ export function setPreviewPoint(
  * Start handle drag
  */
 export function startHandleDrag(
-  path: DrawingPath,
-  pointIndex: number,
-  handleSide: "in" | "out",
-  x: Pixels,
-  y: Pixels
+  ...args: readonly [
+    path: DrawingPath,
+    pointIndex: number,
+    handleSide: "in" | "out",
+    x: Pixels,
+    y: Pixels,
+  ]
 ): HandleDragPathDrawState {
+  const [path, pointIndex, handleSide, x, y] = args;
   return {
     type: "dragging-handle",
     path,
@@ -231,9 +234,7 @@ export function addPencilPoint(
   shouldUpdatePreview: boolean
 ): PencilDrawingPathDrawState {
   const newRawPoints = [...state.rawPoints, point];
-  const newPreviewPoints = shouldUpdatePreview
-    ? [...state.previewPoints, point]
-    : state.previewPoints;
+  const newPreviewPoints = shouldUpdatePreview ? [...state.previewPoints, point] : state.previewPoints;
 
   return {
     ...state,

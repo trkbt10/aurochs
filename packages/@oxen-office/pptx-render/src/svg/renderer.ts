@@ -76,9 +76,7 @@ export function renderSlideSvg(slide: Slide, ctx: CoreRenderContext): SvgSlideRe
   const backgroundSvg = renderSlideBackgroundSvg(slide, ctx, defsCollector);
 
   // Render layout shapes first (decorative, behind slide content)
-  const layoutShapesSvg = ctx.layoutShapes !== undefined && ctx.layoutShapes.length > 0
-    ? renderShapesSvg(ctx.layoutShapes, ctx, defsCollector)
-    : "";
+  const layoutShapesSvg = renderLayoutShapesSvg(ctx, defsCollector);
 
   // Render slide shapes
   const contentSvg = renderShapesSvg(slide.shapes, ctx, defsCollector);
@@ -97,6 +95,16 @@ ${contentSvg}
     svg,
     warnings: ctx.warnings.getAll(),
   };
+}
+
+function renderLayoutShapesSvg(
+  ctx: CoreRenderContext,
+  defsCollector: ReturnType<typeof createDefsCollector>,
+): string {
+  if (ctx.layoutShapes === undefined || ctx.layoutShapes.length === 0) {
+    return "";
+  }
+  return renderShapesSvg(ctx.layoutShapes, ctx, defsCollector);
 }
 
 function renderSlideBackgroundSvg(

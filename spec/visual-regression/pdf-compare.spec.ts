@@ -151,14 +151,17 @@ export async function runFullComparison(
  * Test a single slide and get detailed comparison result
  */
 export async function testSingleSlide(
-  pptxPath: string,
-  snapshotName: string,
-  slideNumber: number,
-  options: CompareOptions = {},
+  ...args: readonly [
+    pptxPath: string,
+    snapshotName: string,
+    slideNumber: number,
+    options?: CompareOptions,
+  ]
 ): Promise<{
   svg: string;
   result: DetailedCompareResult;
 }> {
+  const [pptxPath, snapshotName, slideNumber, options = {}] = args;
   const { presentationFile } = await loadPptxFile(pptxPath);
   const presentation = openPresentation(presentationFile);
   const slide = presentation.getSlide(slideNumber);

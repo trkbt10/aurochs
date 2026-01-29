@@ -303,25 +303,27 @@ function convertBevelConfigToSpec(
     return { top: undefined, bottom: undefined };
   }
 
+  return {
+    top: convertSingleBevelConfigToSpec(bevel.top),
+    bottom: convertSingleBevelConfigToSpec(bevel.bottom),
+  };
+}
+
+type SingleBevelConfig = NonNullable<AsymmetricBevelConfig["top"]>;
+type SingleBevelSpec = NonNullable<AsymmetricBevelSpec["top"]>;
+
+function convertSingleBevelConfigToSpec(bevel: SingleBevelConfig | undefined): SingleBevelSpec | undefined {
+  if (!bevel) {
+    return undefined;
+  }
   // Note: BevelConfig has { thickness, size, segments }
   // BevelSpec expects { width, height, preset }
   // Since we don't have the original preset, we approximate using "circle"
   // and use the thickness as height, size as width
   return {
-    top: bevel.top
-      ? {
-          width: bevel.top.size,
-          height: bevel.top.thickness,
-          preset: "circle", // Default preset
-        }
-      : undefined,
-    bottom: bevel.bottom
-      ? {
-          width: bevel.bottom.size,
-          height: bevel.bottom.thickness,
-          preset: "circle",
-        }
-      : undefined,
+    width: bevel.size,
+    height: bevel.thickness,
+    preset: "circle",
   };
 }
 

@@ -13,7 +13,7 @@
  */
 
 import { memo, type ReactNode } from "react";
-import type { GraphicFrame, GraphicContent } from "@oxen-office/pptx/domain";
+import type { GraphicContent } from "@oxen-office/pptx/domain";
 import { buildTransformAttr } from "../transform";
 import { ChartContent } from "./chart";
 import { TableContent } from "./table";

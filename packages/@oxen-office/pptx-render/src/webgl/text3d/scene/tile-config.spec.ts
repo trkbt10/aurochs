@@ -4,7 +4,6 @@
  * Tests ECMA-376 compliant tile configuration utilities.
  */
 
-import { describe, it, expect } from "vitest";
 import * as THREE from "three";
 import type { Percent, Pixels } from "@oxen-office/ooxml/domain/units";
 import {

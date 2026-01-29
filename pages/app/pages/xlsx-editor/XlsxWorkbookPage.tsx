@@ -5,7 +5,7 @@
 import { useCallback, useMemo, useState, type CSSProperties } from "react";
 import { XlsxWorkbookEditor } from "@oxen-ui/xlsx-editor";
 import type { XlsxWorkbook } from "@oxen-office/xlsx/domain/workbook";
-import { createDefaultStyleSheet } from "@oxen-office/xlsx/domain/style/types";
+import { createDefaultStyleSheet, type XlsxCellXf } from "@oxen-office/xlsx/domain/style/types";
 import { borderId, colIdx, fillId, fontId, numFmtId, rowIdx, styleId, type ColIndex, type RowIndex } from "@oxen-office/xlsx/domain/types";
 import type { CellAddress } from "@oxen-office/xlsx/domain/cell/address";
 import type { Formula } from "@oxen-office/xlsx/domain/cell/formula";
@@ -76,7 +76,8 @@ async function parseWorkbookFromFile(file: File): Promise<XlsxWorkbook> {
 }
 
 function downloadXlsx(bytes: Uint8Array, filename: string): void {
-  const blob = new Blob([bytes], {
+  const data = new Uint8Array(bytes);
+  const blob = new Blob([data], {
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   });
   const url = URL.createObjectURL(blob);
@@ -104,7 +105,7 @@ function createTestWorkbook(): XlsxWorkbook {
   const yellowFillIndex = styles.fills.length;
   const thinBorderIndex = styles.borders.length;
 
-  const cellXfs = [
+  const cellXfs: readonly XlsxCellXf[] = [
     ...styles.cellXfs,
     // styleId(1): yellow fill
     { numFmtId: numFmtId(0), fontId: fontId(0), fillId: fillId(yellowFillIndex), borderId: borderId(0), applyFill: true },
@@ -124,8 +125,10 @@ function createTestWorkbook(): XlsxWorkbook {
   ];
 
   return {
+    dateSystem: "1900",
     sheets: [
       {
+        dateSystem: "1900",
         name: "Sheet1",
         sheetId: 1,
         state: "visible",
@@ -198,6 +201,7 @@ function createTestWorkbook(): XlsxWorkbook {
         xmlPath: "xl/worksheets/sheet1.xml",
       },
       {
+        dateSystem: "1900",
         name: "Sheet2",
         sheetId: 2,
         state: "visible",
@@ -250,7 +254,7 @@ function createPatternWorkbook(): XlsxWorkbook {
   const dashedBlueBorderIndex = styles.borders.length + 1;
   const doubleRedBorderIndex = styles.borders.length + 2;
 
-  const cellXfs = [
+  const cellXfs: readonly XlsxCellXf[] = [
     ...styles.cellXfs,
     // styleId(1): yellow fill
     { numFmtId: numFmtId(0), fontId: fontId(0), fillId: fillId(yellowFillIndex), borderId: borderId(0), applyFill: true },
@@ -300,8 +304,10 @@ function createPatternWorkbook(): XlsxWorkbook {
   ];
 
   return {
+    dateSystem: "1900",
     sheets: [
       {
+        dateSystem: "1900",
         name: "CellTypes",
         sheetId: 1,
         state: "visible",
@@ -321,6 +327,7 @@ function createPatternWorkbook(): XlsxWorkbook {
         xmlPath: "xl/worksheets/sheet1.xml",
       },
       {
+        dateSystem: "1900",
         name: "Styles",
         sheetId: 2,
         state: "visible",
@@ -346,6 +353,7 @@ function createPatternWorkbook(): XlsxWorkbook {
         xmlPath: "xl/worksheets/sheet2.xml",
       },
       {
+        dateSystem: "1900",
         name: "Borders",
         sheetId: 3,
         state: "visible",
@@ -373,6 +381,7 @@ function createPatternWorkbook(): XlsxWorkbook {
         xmlPath: "xl/worksheets/sheet3.xml",
       },
       {
+        dateSystem: "1900",
         name: "Merges",
         sheetId: 4,
         state: "visible",
@@ -405,6 +414,7 @@ function createPatternWorkbook(): XlsxWorkbook {
         xmlPath: "xl/worksheets/sheet4.xml",
       },
       {
+        dateSystem: "1900",
         name: "Formulas",
         sheetId: 5,
         state: "visible",
@@ -430,6 +440,7 @@ function createPatternWorkbook(): XlsxWorkbook {
         xmlPath: "xl/worksheets/sheet5.xml",
       },
       {
+        dateSystem: "1900",
         name: "NumberFormats",
         sheetId: 6,
         state: "visible",

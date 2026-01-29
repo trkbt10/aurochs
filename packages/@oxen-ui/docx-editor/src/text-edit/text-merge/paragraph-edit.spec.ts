@@ -2,7 +2,6 @@
  * @file paragraph-edit.ts unit tests
  */
 
-import { describe, it, expect } from "vitest";
 import type { DocxParagraph } from "@oxen-office/docx/domain/paragraph";
 import type { DocxRun, DocxRunProperties } from "@oxen-office/docx/domain/run";
 import {
@@ -35,16 +34,6 @@ function getTextFromParagraph(paragraph: DocxParagraph): string {
     .flatMap((r) => r.content)
     .map((c) => (c.type === "text" ? c.value : ""))
     .join("");
-}
-
-function getRunTexts(paragraph: DocxParagraph): string[] {
-  return paragraph.content
-    .filter((c): c is DocxRun => c.type === "run")
-    .map((run) =>
-      run.content
-        .map((c) => (c.type === "text" ? c.value : ""))
-        .join(""),
-    );
 }
 
 // =============================================================================

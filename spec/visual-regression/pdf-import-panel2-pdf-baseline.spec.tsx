@@ -12,7 +12,6 @@
  * @vitest-environment jsdom
  */
 
-import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import * as path from "node:path";
 import { execFileSync } from "node:child_process";
@@ -26,7 +25,7 @@ function hasPdftoppm(): boolean {
   try {
     execFileSync("pdftoppm", ["-v"], { stdio: "ignore" });
     return true;
-  } catch (_error) {
+  } catch {
     return false;
   }
 }

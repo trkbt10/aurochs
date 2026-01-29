@@ -53,10 +53,9 @@ function processContent(text: string, appVersion: number, isSlideContent: boolea
 export function readXml(
   file: PresentationFile,
   path: string,
-  appVersion: number = 16,
-  isSlideContent: boolean = false,
-  markupCompatibility: MarkupCompatibilityOptions,
+  ...rest: [appVersion?: number, isSlideContent?: boolean, markupCompatibility?: MarkupCompatibilityOptions]
 ): XmlDocument | null {
+  const [appVersion = 16, isSlideContent = false, markupCompatibility] = rest;
   if (!markupCompatibility) {
     throw new Error("Markup compatibility options are required.");
   }

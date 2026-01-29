@@ -13,7 +13,7 @@ import { convertFill } from "./color-converter";
 import type { CIDOrdering } from "@oxen/pdf/domain/font";
 import { normalizeFontFamily, isBoldFont, isItalicFont, normalizeFontName } from "@oxen/pdf/domain/font";
 import { PT_TO_PX } from "@oxen/pdf/domain/constants";
-import type { GroupedText, GroupedParagraph, LineSpacingInfo } from "./text-grouping/types";
+import type { GroupedText, GroupedParagraph } from "./text-grouping/types";
 import { detectScriptFromText, type ScriptType } from "./unicode-script";
 
 /**
@@ -571,18 +571,16 @@ function buildParagraphsFromSegmentedLines(
 
     const marginLeft = convertSize(line.minX - bounds.x, 0, context).width;
 
-    result.push({
-      properties: {
-        alignment: "left",
-        ...(marginLeft as number > 0 ? { marginLeft } : {}),
-        ...(extraSpace !== undefined && extraSpace > 0
-          ? { spaceBefore: { type: "points" as const, value: pt(extraSpace * context.fontSizeScale) } }
-          : {}),
-        tabStops: buildTabStopsForLine(line),
-      },
-      runs: buildRunsForLine(line),
-      endProperties: {},
-    });
+        result.push({
+          properties: {
+            alignment: "left",
+            ...(marginLeft as number > 0 ? { marginLeft } : {}),
+            ...getExtraSpaceBeforeProperties(extraSpace, context),
+            tabStops: buildTabStopsForLine(line),
+          },
+          runs: buildRunsForLine(line),
+          endProperties: {},
+        });
   }
 
   return result;
@@ -606,6 +604,16 @@ function shouldInsertSyntheticSpace(prev: PdfText, cur: PdfText): boolean {
   // - and relative to the typical character width of the line
   const threshold = Math.max(fontSize * 0.2, avgCharWidth * 0.8);
   return gap >= threshold;
+}
+
+function getExtraSpaceBeforeProperties(
+  extraSpace: number | undefined,
+  context: ConversionContext,
+): Partial<NonNullable<Paragraph["properties"]>> {
+  if (extraSpace === undefined || !(extraSpace > 0)) {
+    return {};
+  }
+  return { spaceBefore: { type: "points", value: pt(extraSpace * context.fontSizeScale) } };
 }
 
 function mergeAdjacentTextRuns(runs: readonly TextRun[]): TextRun[] {

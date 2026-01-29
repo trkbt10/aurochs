@@ -145,11 +145,14 @@ function breakSpanAtWidth(
  * Break spans into lines with word wrapping
  */
 export function breakIntoLines(
-  spans: readonly MeasuredSpan[],
-  firstLineWidth: Pixels,
-  nextLineWidth: Pixels,
-  wrapMode: TextBoxConfig["wrapMode"],
+  ...args: [
+    spans: readonly MeasuredSpan[],
+    firstLineWidth: Pixels,
+    nextLineWidth: Pixels,
+    wrapMode: TextBoxConfig["wrapMode"],
+  ]
 ): LineBreakResult {
+  const [spans, firstLineWidth, nextLineWidth, wrapMode] = args;
   const lines: MeasuredSpan[][] = [];
   const lineHeights: Points[] = [];
 

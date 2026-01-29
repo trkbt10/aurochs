@@ -44,11 +44,14 @@ const SIZE_MAP = {
 } as const;
 
 function getButtonStyle(
-  size: "tiny" | "sm" | "md" | "lg",
-  active: boolean,
-  disabled: boolean,
-  hovered: boolean
+  ...args: readonly [
+    size: "tiny" | "sm" | "md" | "lg",
+    active: boolean,
+    disabled: boolean,
+    hovered: boolean,
+  ]
 ): CSSProperties {
+  const [size, active, disabled, hovered] = args;
   const sizeConfig = SIZE_MAP[size];
 
   const base: CSSProperties = {

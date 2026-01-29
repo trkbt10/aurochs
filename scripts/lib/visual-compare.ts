@@ -34,11 +34,14 @@ import { loadPptxFile } from "./pptx-loader";
  * @returns Comparison result with diff percentage and pixel count
  */
 export async function compareSlideToSnapshot(
-  pptxPath: string,
-  snapshotName: string,
-  slideNumber: number,
-  options?: CompareOptions,
+  ...args: readonly [
+    pptxPath: string,
+    snapshotName: string,
+    slideNumber: number,
+    options?: CompareOptions,
+  ]
 ): Promise<CompareResult & { svg: string }> {
+  const [pptxPath, snapshotName, slideNumber, options] = args;
   const { presentationFile } = await loadPptxFile(pptxPath);
   const presentation = openPresentation(presentationFile, {
     renderOptions: LIBREOFFICE_RENDER_OPTIONS,

@@ -156,7 +156,7 @@ function getXPositionInLine(line: LayoutLine, charOffset: number): number {
  * @param targetInline - Target coordinate in inline direction (X for horizontal, Y for vertical)
  * @param writingMode - Writing mode for coordinate interpretation
  */
-function getCharOffsetInLine(line: LayoutLine, targetInline: number, writingMode: WritingMode = "horizontal-tb"): number {
+function getCharOffsetInLine(line: LayoutLine, targetInline: number, _writingMode: WritingMode = "horizontal-tb"): number {
   if (line.spans.length === 0) {
     return 0;
   }
@@ -285,11 +285,14 @@ export function cursorPositionToCoordinates(
  * @param writingMode - Writing mode for coordinate interpretation
  */
 function findCursorCoordinatesInParagraph(
-  paragraph: PagedLayoutResult["pages"][number]["paragraphs"][number],
-  charOffset: number,
-  pageYOffset: number,
-  writingMode: WritingMode,
+  ...args: [
+    paragraph: PagedLayoutResult["pages"][number]["paragraphs"][number],
+    charOffset: number,
+    pageYOffset: number,
+    writingMode: WritingMode,
+  ]
 ): CursorCoordinates {
+  const [paragraph, charOffset, pageYOffset, writingMode] = args;
   type AccumulatorState = {
     readonly remainingOffset: number;
     readonly found: CursorCoordinates | undefined;
@@ -334,11 +337,9 @@ function findCursorCoordinatesInParagraph(
  * @param writingMode - Writing mode for coordinate interpretation
  */
 function lineToCoordinates(
-  line: LayoutLine,
-  offsetInLine: number,
-  pageYOffset: number,
-  writingMode: WritingMode,
+  ...args: [line: LayoutLine, offsetInLine: number, pageYOffset: number, writingMode: WritingMode]
 ): CursorCoordinates {
+  const [line, offsetInLine, pageYOffset, writingMode] = args;
   const { fontSize, fontFamily } = getLineMaxFontInfo(line.spans);
   const fontSizePx = (fontSize as number) * PT_TO_PX;
 
@@ -391,13 +392,10 @@ type LineCandidate = {
  * @param writingMode - Writing mode for coordinate interpretation
  */
 function calculateLineDistance(
-  blockCoord: number,
-  line: LayoutLine,
-  pageYOffset: number,
-  writingMode: WritingMode,
+  ...args: [blockCoord: number, line: LayoutLine, pageYOffset: number, writingMode: WritingMode]
 ): number {
+  const [blockCoord, line, pageYOffset, writingMode] = args;
   const { fontSize, fontFamily } = getLineMaxFontInfo(line.spans);
-  const fontSizePx = (fontSize as number) * PT_TO_PX;
 
   if (isVertical(writingMode)) {
     // Vertical text: block direction is X
@@ -518,12 +516,9 @@ export function coordinatesToCursorPosition(
  * - Selection rect extends vertically (inline direction)
  */
 function createLineSelectionRect(
-  line: LayoutLine,
-  selStart: number,
-  selEnd: number,
-  pageYOffset: number,
-  writingMode: WritingMode = "horizontal-tb",
+  ...args: [line: LayoutLine, selStart: number, selEnd: number, pageYOffset: number, writingMode?: WritingMode]
 ): SelectionRect {
+  const [line, selStart, selEnd, pageYOffset, writingMode = "horizontal-tb"] = args;
   const startInline = getXPositionInLine(line, selStart);
   const endInline = getXPositionInLine(line, selEnd);
   const { fontSize, fontFamily } = getLineMaxFontInfo(line.spans);
@@ -563,12 +558,15 @@ function createLineSelectionRect(
  * Get selection rects for a single paragraph.
  */
 function getParagraphSelectionRects(
-  paragraph: PagedLayoutResult["pages"][number]["paragraphs"][number],
-  pageYOffset: number,
-  paraStartOffset: number,
-  paraEndOffset: number,
-  writingMode: WritingMode = "horizontal-tb",
+  ...args: [
+    paragraph: PagedLayoutResult["pages"][number]["paragraphs"][number],
+    pageYOffset: number,
+    paraStartOffset: number,
+    paraEndOffset: number,
+    writingMode?: WritingMode,
+  ]
 ): readonly SelectionRect[] {
+  const [paragraph, pageYOffset, paraStartOffset, paraEndOffset, writingMode = "horizontal-tb"] = args;
   type LineAccumulator = {
     readonly lineStartOffset: number;
     readonly rects: readonly SelectionRect[];
@@ -737,11 +735,14 @@ function findCurrentLineIndex(
  * @returns New cursor position and the X position at that line (for future movements)
  */
 export function moveCursorVertically(
-  pagedLayout: PagedLayoutResult,
-  currentPosition: ContinuousCursorPosition,
-  direction: "up" | "down",
-  preferredX?: number,
+  ...args: [
+    pagedLayout: PagedLayoutResult,
+    currentPosition: ContinuousCursorPosition,
+    direction: "up" | "down",
+    preferredX?: number,
+  ]
 ): { position: ContinuousCursorPosition; xPosition: number } | undefined {
+  const [pagedLayout, currentPosition, direction, preferredX] = args;
   const flatLines = buildFlatLineList(pagedLayout);
   if (flatLines.length === 0) {
     return undefined;

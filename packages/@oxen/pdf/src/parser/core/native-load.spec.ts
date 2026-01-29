@@ -64,12 +64,15 @@ function buildPdfWithEncryptTrailer(options: { readonly includeRoot: boolean }):
 }
 
 function buildEncryptTrailerXref(
-  includeRoot: boolean,
-  size: number,
-  offset1: number,
-  offset2: number,
-  offset3: number,
+  ...args: readonly [
+    includeRoot: boolean,
+    size: number,
+    offset1: number,
+    offset2: number,
+    offset3: number,
+  ]
 ): string {
+  const [includeRoot, size, offset1, offset2, offset3] = args;
   if (!includeRoot) {
     return "xref\n0 1\n0000000000 65535 f \n";
   }
@@ -91,14 +94,17 @@ function buildEncryptTrailerTrailer(includeRoot: boolean, size: number, xrefOffs
 }
 
 function buildEncryptTrailerBytes(
-  includeRoot: boolean,
-  header: string,
-  obj1: string,
-  obj2: string,
-  obj3: string,
-  xref: string,
-  trailer: string,
+  ...args: readonly [
+    includeRoot: boolean,
+    header: string,
+    obj1: string,
+    obj2: string,
+    obj3: string,
+    xref: string,
+    trailer: string,
+  ]
 ): Uint8Array {
+  const [includeRoot, header, obj1, obj2, obj3, xref, trailer] = args;
   const encoder = new TextEncoder();
   if (includeRoot) {
     return new Uint8Array([

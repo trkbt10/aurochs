@@ -6,6 +6,11 @@
 
 import type { Pixels, Degrees } from "@oxen-office/ooxml/domain/units";
 import type { Bounds, ShapeId } from "@oxen-office/pptx/domain/types";
+import type { IdleDragState as CoreIdleDragState } from "@oxen-ui/editor-core/drag-state";
+import {
+  createIdleDragState as createCoreIdleDragState,
+  isDragIdle as isCoreDragIdle,
+} from "@oxen-ui/editor-core/drag-state";
 
 // =============================================================================
 // Types
@@ -27,9 +32,7 @@ export type ResizeHandlePosition =
 /**
  * Idle state - no drag operation in progress
  */
-export type IdleDragState = {
-  readonly type: "idle";
-};
+export type IdleDragState = CoreIdleDragState;
 
 /**
  * Preview delta for move/resize operations
@@ -125,14 +128,14 @@ export type DragState =
  * Create idle drag state
  */
 export function createIdleDragState(): IdleDragState {
-  return { type: "idle" };
+  return createCoreIdleDragState();
 }
 
 /**
  * Check if drag state is idle
  */
 export function isDragIdle(drag: DragState): drag is IdleDragState {
-  return drag.type === "idle";
+  return isCoreDragIdle(drag);
 }
 
 /**

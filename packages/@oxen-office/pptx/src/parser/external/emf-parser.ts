@@ -114,6 +114,60 @@ type EmfState = {
   transform: { m11: number; m12: number; m21: number; m22: number; dx: number; dy: number };
 };
 
+type ProcessRecordOptions = {
+  readonly view: DataView;
+  readonly offset: number;
+  readonly recordType: number;
+  readonly recordSize: number;
+  readonly state: EmfState;
+};
+
+type ProcessPolygonOptions = {
+  readonly view: DataView;
+  readonly offset: number;
+  readonly recordSize: number;
+  readonly state: EmfState;
+  readonly isPolyline: boolean;
+};
+
+type ReadPointListOptions = {
+  readonly startOffset: number;
+  readonly endOffset: number;
+  readonly count: number;
+  readonly stride: number;
+  readonly readPoint: (pointOffset: number) => Point;
+};
+
+type ReadPolygonCountsOptions = {
+  readonly view: DataView;
+  readonly startOffset: number;
+  readonly endOffset: number;
+  readonly count: number;
+};
+
+type BuildPolyPolygonPathOptions = {
+  readonly startOffset: number;
+  readonly endOffset: number;
+  readonly polygonCounts: readonly number[];
+  readonly stride: number;
+  readonly readPoint: (pointOffset: number) => Point;
+};
+
+type ExtractDibToPngOptions = {
+  readonly view: DataView;
+  readonly bmiOffset: number;
+  readonly bmiSize: number;
+  readonly bitsOffset: number;
+  readonly bitsSize: number;
+};
+
+type ProcessExtTextOutWOptions = {
+  readonly view: DataView;
+  readonly offset: number;
+  readonly recordSize: number;
+  readonly state: EmfState;
+};
+
 // =============================================================================
 // Parser
 // =============================================================================
@@ -182,7 +236,7 @@ export function emfToSvg(data: Uint8Array): string | null {
       break;
     }
 
-    const element = processRecord(view, offset, recordType, recordSize, state);
+    const element = processRecord({ view, offset, recordType, recordSize, state });
     if (element !== null) {
       elements.push(element);
     }
@@ -245,13 +299,7 @@ function parseHeader(view: DataView, offset: number): EmfHeader | null {
 /**
  * Process a single EMF record
  */
-function processRecord(
-  view: DataView,
-  offset: number,
-  recordType: number,
-  recordSize: number,
-  state: EmfState,
-): string | null {
+function processRecord({ view, offset, recordType, recordSize, state }: ProcessRecordOptions): string | null {
   switch (recordType) {
     case EMR_HEADER:
       return null;
@@ -317,22 +365,22 @@ function processRecord(
       return processEllipse(view, offset, state);
 
     case EMR_POLYGON:
-      return processPolygon(view, offset, recordSize, state, false);
+      return processPolygon({ view, offset, recordSize, state, isPolyline: false });
 
     case EMR_POLYGON16:
-      return processPolygon16(view, offset, recordSize, state, false);
+      return processPolygon16({ view, offset, recordSize, state, isPolyline: false });
 
     case EMR_POLYLINE:
-      return processPolygon(view, offset, recordSize, state, true);
+      return processPolygon({ view, offset, recordSize, state, isPolyline: true });
 
     case EMR_POLYLINE16:
-      return processPolygon16(view, offset, recordSize, state, true);
+      return processPolygon16({ view, offset, recordSize, state, isPolyline: true });
 
     case EMR_POLYPOLYGON:
-      return processPolyPolygon(view, offset, recordSize, state);
+      return processPolyPolygon({ view, offset, recordSize, state });
 
     case EMR_POLYPOLYGON16:
-      return processPolyPolygon16(view, offset, recordSize, state);
+      return processPolyPolygon16({ view, offset, recordSize, state });
 
     case EMR_CREATEPEN:
       return processCreatePen(view, offset, state);
@@ -341,7 +389,7 @@ function processRecord(
       return processCreateBrush(view, offset, state);
 
     case EMR_EXTCREATEFONTINDIRECTW:
-      return processCreateFont(view, offset, recordSize, state);
+      return processCreateFont({ view, offset, recordSize, state });
 
     case EMR_SELECTOBJECT:
       return processSelectObject(view, offset, state);
@@ -378,7 +426,7 @@ function processRecord(
       return processBitBlt(view, offset);
 
     case EMR_EXTTEXTOUTW:
-      return processExtTextOutW(view, offset, recordSize, state);
+      return processExtTextOutW({ view, offset, recordSize, state });
 
     case EMR_COMMENT:
       // EMF+ records are embedded in comments
@@ -442,50 +490,43 @@ function processEllipse(view: DataView, offset: number, state: EmfState): string
   return `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${fill}" stroke="${state.currentPen.color}" stroke-width="${state.currentPen.width}"/>`;
 }
 
-function processPolygon(
-  view: DataView,
-  offset: number,
-  recordSize: number,
-  state: EmfState,
-  isPolyline: boolean,
-): string | null {
+function processPolygon({ view, offset, recordSize, state, isPolyline }: ProcessPolygonOptions): string | null {
   const count = view.getUint32(offset + 24, true);
   if (count < 2) {return null;}
 
-  const points = readPointList(view, offset + 28, offset + recordSize, count, 8, (pointOffset) => ({
-    x: view.getInt32(pointOffset, true),
-    y: view.getInt32(pointOffset + 4, true),
-  }));
+  const points = readPointList({
+    startOffset: offset + 28,
+    endOffset: offset + recordSize,
+    count,
+    stride: 8,
+    readPoint: (pointOffset) => ({
+      x: view.getInt32(pointOffset, true),
+      y: view.getInt32(pointOffset + 4, true),
+    }),
+  });
 
   return renderPolygon(points, state, isPolyline);
 }
 
-function processPolygon16(
-  view: DataView,
-  offset: number,
-  recordSize: number,
-  state: EmfState,
-  isPolyline: boolean,
-): string | null {
+function processPolygon16({ view, offset, recordSize, state, isPolyline }: ProcessPolygonOptions): string | null {
   const count = view.getUint32(offset + 24, true);
   if (count < 2) {return null;}
 
-  const points = readPointList(view, offset + 28, offset + recordSize, count, 4, (pointOffset) => ({
-    x: view.getInt16(pointOffset, true),
-    y: view.getInt16(pointOffset + 2, true),
-  }));
+  const points = readPointList({
+    startOffset: offset + 28,
+    endOffset: offset + recordSize,
+    count,
+    stride: 4,
+    readPoint: (pointOffset) => ({
+      x: view.getInt16(pointOffset, true),
+      y: view.getInt16(pointOffset + 2, true),
+    }),
+  });
 
   return renderPolygon(points, state, isPolyline);
 }
 
-function readPointList(
-  view: DataView,
-  startOffset: number,
-  endOffset: number,
-  count: number,
-  stride: number,
-  readPoint: (pointOffset: number) => Point,
-): Point[] {
+function readPointList({ startOffset, endOffset, count, stride, readPoint }: ReadPointListOptions): Point[] {
   const points: Point[] = [];
   const offsetState = { value: startOffset };
   range(count).some(() => {
@@ -505,58 +546,61 @@ function renderPolygon(points: Point[], state: EmfState, isPolyline: boolean): s
   return `<path d="${d}${closePath}" fill="${fill}" fill-rule="${fillRule}" stroke="${state.currentPen.color}" stroke-width="${state.currentPen.width}"/>`;
 }
 
-function processPolyPolygon(view: DataView, offset: number, recordSize: number, state: EmfState): string | null {
+function processPolyPolygon({ view, offset, recordSize, state }: { readonly view: DataView; readonly offset: number; readonly recordSize: number; readonly state: EmfState }): string | null {
   const numPolygons = view.getUint32(offset + 24, true);
   const totalPoints = view.getUint32(offset + 28, true);
   if (numPolygons === 0 || totalPoints === 0) {return null;}
 
-  const { counts: polygonCounts, nextOffset } = readPolygonCounts(view, offset + 32, offset + recordSize, numPolygons);
-  const d = buildPolyPolygonPath(
+  const { counts: polygonCounts, nextOffset } = readPolygonCounts({
     view,
-    nextOffset,
-    offset + recordSize,
+    startOffset: offset + 32,
+    endOffset: offset + recordSize,
+    count: numPolygons,
+  });
+  const d = buildPolyPolygonPath({
+    startOffset: nextOffset,
+    endOffset: offset + recordSize,
     polygonCounts,
-    8,
-    (pointOffset) => ({
+    stride: 8,
+    readPoint: (pointOffset) => ({
       x: view.getInt32(pointOffset, true),
       y: view.getInt32(pointOffset + 4, true),
     }),
-  );
+  });
 
   const fill = state.currentBrush.style === 1 ? "none" : state.currentBrush.color;
   const fillRule = state.polyFillMode === 1 ? "evenodd" : "nonzero";
   return `<path d="${d}" fill="${fill}" fill-rule="${fillRule}" stroke="${state.currentPen.color}" stroke-width="${state.currentPen.width}"/>`;
 }
 
-function processPolyPolygon16(view: DataView, offset: number, recordSize: number, state: EmfState): string | null {
+function processPolyPolygon16({ view, offset, recordSize, state }: { readonly view: DataView; readonly offset: number; readonly recordSize: number; readonly state: EmfState }): string | null {
   const numPolygons = view.getUint32(offset + 24, true);
   const totalPoints = view.getUint32(offset + 28, true);
   if (numPolygons === 0 || totalPoints === 0) {return null;}
 
-  const { counts: polygonCounts, nextOffset } = readPolygonCounts(view, offset + 32, offset + recordSize, numPolygons);
-  const d = buildPolyPolygonPath(
+  const { counts: polygonCounts, nextOffset } = readPolygonCounts({
     view,
-    nextOffset,
-    offset + recordSize,
+    startOffset: offset + 32,
+    endOffset: offset + recordSize,
+    count: numPolygons,
+  });
+  const d = buildPolyPolygonPath({
+    startOffset: nextOffset,
+    endOffset: offset + recordSize,
     polygonCounts,
-    4,
-    (pointOffset) => ({
+    stride: 4,
+    readPoint: (pointOffset) => ({
       x: view.getInt16(pointOffset, true),
       y: view.getInt16(pointOffset + 2, true),
     }),
-  );
+  });
 
   const fill = state.currentBrush.style === 1 ? "none" : state.currentBrush.color;
   const fillRule = state.polyFillMode === 1 ? "evenodd" : "nonzero";
   return `<path d="${d}" fill="${fill}" fill-rule="${fillRule}" stroke="${state.currentPen.color}" stroke-width="${state.currentPen.width}"/>`;
 }
 
-function readPolygonCounts(
-  view: DataView,
-  startOffset: number,
-  endOffset: number,
-  count: number,
-): { counts: number[]; nextOffset: number } {
+function readPolygonCounts({ view, startOffset, endOffset, count }: ReadPolygonCountsOptions): { counts: number[]; nextOffset: number } {
   const counts: number[] = [];
   const offsetState = { value: startOffset };
   range(count).some(() => {
@@ -568,14 +612,7 @@ function readPolygonCounts(
   return { counts, nextOffset: offsetState.value };
 }
 
-function buildPolyPolygonPath(
-  view: DataView,
-  startOffset: number,
-  endOffset: number,
-  polygonCounts: readonly number[],
-  stride: number,
-  readPoint: (pointOffset: number) => Point,
-): string {
+function buildPolyPolygonPath({ startOffset, endOffset, polygonCounts, stride, readPoint }: BuildPolyPolygonPathOptions): string {
   const offsetState = { value: startOffset };
   const segments: string[] = [];
   polygonCounts.forEach((count) => {
@@ -614,7 +651,7 @@ function processCreateBrush(view: DataView, offset: number, state: EmfState): nu
   return null;
 }
 
-function processCreateFont(view: DataView, offset: number, recordSize: number, state: EmfState): null {
+function processCreateFont({ view, offset, recordSize, state }: { readonly view: DataView; readonly offset: number; readonly recordSize: number; readonly state: EmfState }): null {
   const index = view.getUint32(offset + 8, true);
 
   const height = view.getInt32(offset + 12, true);
@@ -747,7 +784,13 @@ function processStretchDIBits(view: DataView, offset: number): string | null {
   }
 
   // Extract DIB data and convert to PNG data URL
-  const dibData = extractDIBToPng(view, offset + bmiOffset, bmiSize, offset + bitsOffset, bitsSize);
+  const dibData = extractDIBToPng({
+    view,
+    bmiOffset: offset + bmiOffset,
+    bmiSize,
+    bitsOffset: offset + bitsOffset,
+    bitsSize,
+  });
   if (dibData === null) {
     return null;
   }
@@ -770,7 +813,13 @@ function processBitBlt(view: DataView, offset: number): string | null {
   const destW = view.getInt32(offset + 16, true);
   const destH = view.getInt32(offset + 20, true);
 
-  const dibData = extractDIBToPng(view, offset + bmiOffset, bmiSize, offset + bitsOffset, bitsSize);
+  const dibData = extractDIBToPng({
+    view,
+    bmiOffset: offset + bmiOffset,
+    bmiSize,
+    bitsOffset: offset + bitsOffset,
+    bitsSize,
+  });
   if (dibData === null) {
     return null;
   }
@@ -778,13 +827,7 @@ function processBitBlt(view: DataView, offset: number): string | null {
   return `<image href="${dibData}" x="${destX}" y="${destY}" width="${destW}" height="${destH}" preserveAspectRatio="none"/>`;
 }
 
-function extractDIBToPng(
-  view: DataView,
-  bmiOffset: number,
-  bmiSize: number,
-  bitsOffset: number,
-  bitsSize: number,
-): string | null {
+function extractDIBToPng({ view, bmiOffset, bmiSize, bitsOffset, bitsSize }: ExtractDibToPngOptions): string | null {
   // Read BITMAPINFOHEADER
   const biCompression = view.getUint32(bmiOffset + 16, true);
 
@@ -809,12 +852,7 @@ function extractDIBToPng(
   return `data:image/bmp;base64,${base64}`;
 }
 
-function processExtTextOutW(
-  view: DataView,
-  offset: number,
-  recordSize: number,
-  state: EmfState,
-): string | null {
+function processExtTextOutW({ view, offset, recordSize, state }: ProcessExtTextOutWOptions): string | null {
   const x = view.getInt32(offset + 24, true);
   const y = view.getInt32(offset + 28, true);
   const stringLen = view.getUint32(offset + 32, true);

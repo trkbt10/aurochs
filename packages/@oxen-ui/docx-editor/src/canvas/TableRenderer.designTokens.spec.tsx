@@ -4,10 +4,10 @@
 
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi } from "vitest";
 import { render } from "@testing-library/react";
 import type { DocxTable, DocxTableProperties } from "@oxen-office/docx/domain/table";
 import { computeTableStyles, TableRenderer } from "./TableRenderer";
+import type { TableRendererProps } from "./TableRenderer";
 
 function createMinimalTable(): DocxTable {
   return {
@@ -29,12 +29,13 @@ function createMinimalTable(): DocxTable {
 describe("TableRenderer (design tokens)", () => {
   it("uses design tokens for selection outline and margin", () => {
     const table = createMinimalTable();
+    const noopOnClick: TableRendererProps["onClick"] = () => {};
     const { container } = render(
       <TableRenderer
         table={table}
         elementId="0"
         isSelected={true}
-        onClick={vi.fn()}
+        onClick={noopOnClick}
       />
     );
 

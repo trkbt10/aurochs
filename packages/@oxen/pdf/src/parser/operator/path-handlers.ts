@@ -164,11 +164,14 @@ const handleRectangle: OperatorHandler = (ctx) => {
  * Creates a ParsedPath element if path has operations, clears current path.
  */
 function finishPath(
-  ctx: ParserContext,
-  gfxOps: GraphicsStateOps,
-  paintOp: PdfPaintOp,
-  fillRule?: ParsedPath["fillRule"],
+  ...args: readonly [
+    ctx: ParserContext,
+    gfxOps: GraphicsStateOps,
+    paintOp: PdfPaintOp,
+    fillRule?: ParsedPath["fillRule"],
+  ]
 ): ParserStateUpdate {
+  const [ctx, gfxOps, paintOp, fillRule] = args;
   if (ctx.currentPath.length === 0) {
     return {};
   }
@@ -216,11 +219,14 @@ function finishPath(
  * Close path then finish with paint operation.
  */
 function closeAndFinishPath(
-  ctx: ParserContext,
-  gfxOps: GraphicsStateOps,
-  paintOp: PdfPaintOp,
-  fillRule?: ParsedPath["fillRule"],
+  ...args: readonly [
+    ctx: ParserContext,
+    gfxOps: GraphicsStateOps,
+    paintOp: PdfPaintOp,
+    fillRule?: ParsedPath["fillRule"],
+  ]
 ): ParserStateUpdate {
+  const [ctx, gfxOps, paintOp, fillRule] = args;
   const closeOp: PdfPathOp = { type: "closePath" };
   const closedPath = [...ctx.currentPath, closeOp];
 
@@ -400,11 +406,14 @@ function sampleMaskAlpha(mask: PdfSoftMask, x: number, y: number): number {
 }
 
 function rasterizeClipPathToMask(
-  ctx: ParserContext,
-  gfxOps: GraphicsStateOps,
-  fillRule: "nonzero" | "evenodd",
-  bbox: PdfBBox,
+  ...args: readonly [
+    ctx: ParserContext,
+    gfxOps: GraphicsStateOps,
+    fillRule: "nonzero" | "evenodd",
+    bbox: PdfBBox,
+  ]
 ): PdfSoftMask | null {
+  const [ctx, gfxOps, fillRule, bbox] = args;
   const maxSize = ctx.clipPathMaxSize;
   if (!(maxSize > 0)) {return null;}
   if (!Number.isFinite(maxSize) || maxSize <= 0) {throw new Error(`clipPathMaxSize must be > 0 (got ${maxSize})`);}

@@ -2,7 +2,6 @@
  * @file Unit tests for shape/bounds.ts
  */
 
-import { describe, expect, it } from "vitest";
 import type { SpShape, Shape } from "@oxen-office/pptx/domain";
 import { px, deg } from "@oxen-office/ooxml/domain/units";
 import {
@@ -18,14 +17,9 @@ import {
 // Test Fixtures
 // =============================================================================
 
-const createTestShape = (
-  id: string,
-  x: number,
-  y: number,
-  width: number,
-  height: number
-): SpShape =>
-  ({
+const createTestShape = (...args: [id: string, x: number, y: number, width: number, height: number]): SpShape => {
+  const [id, x, y, width, height] = args;
+  const shape = {
     type: "sp",
     nonVisual: { id, name: `Shape ${id}` },
     properties: {
@@ -39,7 +33,26 @@ const createTestShape = (
         flipV: false,
       },
     },
-  }) as SpShape;
+  } satisfies SpShape;
+  return shape;
+};
+
+const createShapeWithoutTransform = (id: string): SpShape => {
+  const shape = {
+    type: "sp",
+    nonVisual: { id, name: `Shape ${id}` },
+    properties: {},
+  } satisfies SpShape;
+  return shape;
+};
+
+const createContentPartShape = (resourceId: string): Shape => {
+  const shape = {
+    type: "contentPart",
+    contentPart: { id: resourceId },
+  } satisfies Shape;
+  return shape;
+};
 
 // =============================================================================
 // getShapeBounds Tests
@@ -58,21 +71,13 @@ describe("getShapeBounds", () => {
   });
 
   it("returns undefined for shape without transform", () => {
-    const shape = {
-      type: "sp",
-      nonVisual: { id: "1", name: "Shape 1" },
-      properties: {},
-    } as unknown as Shape;
-
+    const shape = createShapeWithoutTransform("1");
     const bounds = getShapeBounds(shape);
     expect(bounds).toBeUndefined();
   });
 
   it("returns undefined for shape without properties", () => {
-    const shape = {
-      type: "contentPart",
-    } as unknown as Shape;
-
+    const shape = createContentPartShape("rId1");
     const bounds = getShapeBounds(shape);
     expect(bounds).toBeUndefined();
   });
@@ -129,11 +134,7 @@ describe("getCombinedBounds", () => {
 
   it("skips shapes without valid bounds", () => {
     const validShape = createTestShape("1", 10, 20, 100, 50);
-    const invalidShape = {
-      type: "sp",
-      nonVisual: { id: "2", name: "Shape 2" },
-      properties: {},
-    } as unknown as Shape;
+    const invalidShape = createShapeWithoutTransform("2");
 
     const bounds = getCombinedBounds([validShape, invalidShape]);
 
@@ -144,12 +145,8 @@ describe("getCombinedBounds", () => {
 
   it("returns undefined when all shapes lack bounds", () => {
     const shapes = [
-      { type: "contentPart" } as unknown as Shape,
-      {
-        type: "sp",
-        nonVisual: { id: "1", name: "Shape 1" },
-        properties: {},
-      } as unknown as Shape,
+      createContentPartShape("rId1"),
+      createShapeWithoutTransform("1"),
     ];
     const bounds = getCombinedBounds(shapes);
     expect(bounds).toBeUndefined();
@@ -197,11 +194,7 @@ describe("collectBoundsForIds", () => {
 
   it("skips shapes without valid bounds", () => {
     const validShape = createTestShape("1", 10, 20, 100, 50);
-    const invalidShape = {
-      type: "sp",
-      nonVisual: { id: "2", name: "Shape 2" },
-      properties: {},
-    } as unknown as Shape;
+    const invalidShape = createShapeWithoutTransform("2");
 
     const boundsMap = collectBoundsForIds(
       [validShape, invalidShape],

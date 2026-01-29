@@ -149,11 +149,13 @@ export type ColorTransform = {
   readonly lumOff?: Percent;
   readonly gamma?: boolean;
   readonly invGamma?: boolean;
+  readonly blue?: Percent;
   readonly blueMod?: Percent;
   readonly blueOff?: Percent;
   readonly green?: Percent;
   readonly greenMod?: Percent;
   readonly greenOff?: Percent;
+  readonly red?: Percent;
   readonly redMod?: Percent;
   readonly redOff?: Percent;
   readonly shade?: Percent;

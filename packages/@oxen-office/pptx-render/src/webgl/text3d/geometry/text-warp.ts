@@ -32,13 +32,15 @@ type BoundingBox = {
 /**
  * Warp transformation function signature
  */
-type WarpTransformFn = (
+type WarpTransformArgs = [
   x: number,
   y: number,
   z: number,
   bounds: BoundingBox,
   adjustValues: readonly TextWarpAdjustValue[],
-) => [number, number, number];
+];
+
+type WarpTransformFn = (...args: WarpTransformArgs) => [number, number, number];
 
 // =============================================================================
 // Helper Functions
@@ -104,7 +106,8 @@ const warpNoShape: WarpTransformFn = (x, y, z) => [x, y, z];
  * Text curves upward in an arc
  * @see ECMA-376 Part 1, Section 20.1.10.76
  */
-const warpArchUp: WarpTransformFn = (x, y, z, bounds, adjustValues) => {
+const warpArchUp: WarpTransformFn = (...args) => {
+  const [x, y, z, bounds, adjustValues] = args;
   // adj: amount of arch (default 50000 = 0.5)
   const adj = getAdjustValue(adjustValues, "adj", 50000) / 100000;
 
@@ -121,7 +124,8 @@ const warpArchUp: WarpTransformFn = (x, y, z, bounds, adjustValues) => {
  * Arch Down warp (textArchDown)
  * Text curves downward in an arc
  */
-const warpArchDown: WarpTransformFn = (x, y, z, bounds, adjustValues) => {
+const warpArchDown: WarpTransformFn = (...args) => {
+  const [x, y, z, bounds, adjustValues] = args;
   const adj = getAdjustValue(adjustValues, "adj", 50000) / 100000;
   const nx = normalize(x, bounds.minX, bounds.maxX) * 2 - 1;
   const archOffset = -adj * bounds.height * (1 - nx * nx);
@@ -133,7 +137,8 @@ const warpArchDown: WarpTransformFn = (x, y, z, bounds, adjustValues) => {
  * Circle warp (textCircle)
  * Text arranged in a circle
  */
-const warpCircle: WarpTransformFn = (x, y, z, bounds, adjustValues) => {
+const warpCircle: WarpTransformFn = (...args) => {
+  const [x, y, z, bounds, adjustValues] = args;
   const adj = getAdjustValue(adjustValues, "adj", 50000) / 100000;
 
   // Normalize x to 0..2π
@@ -158,7 +163,8 @@ const warpCircle: WarpTransformFn = (x, y, z, bounds, adjustValues) => {
  * Wave 1 warp (textWave1)
  * Single sine wave distortion
  */
-const warpWave1: WarpTransformFn = (x, y, z, bounds, adjustValues) => {
+const warpWave1: WarpTransformFn = (...args) => {
+  const [x, y, z, bounds, adjustValues] = args;
   const adj = getAdjustValue(adjustValues, "adj", 12500) / 100000;
 
   // Normalize x
@@ -174,7 +180,8 @@ const warpWave1: WarpTransformFn = (x, y, z, bounds, adjustValues) => {
  * Wave 2 warp (textWave2)
  * Double sine wave distortion (opposite phase)
  */
-const warpWave2: WarpTransformFn = (x, y, z, bounds, adjustValues) => {
+const warpWave2: WarpTransformFn = (...args) => {
+  const [x, y, z, bounds, adjustValues] = args;
   const adj = getAdjustValue(adjustValues, "adj", 12500) / 100000;
 
   const nx = normalize(x, bounds.minX, bounds.maxX);
@@ -191,7 +198,8 @@ const warpWave2: WarpTransformFn = (x, y, z, bounds, adjustValues) => {
  * Double Wave 1 warp (textDoubleWave1)
  * Two complete sine waves
  */
-const warpDoubleWave1: WarpTransformFn = (x, y, z, bounds, adjustValues) => {
+const warpDoubleWave1: WarpTransformFn = (...args) => {
+  const [x, y, z, bounds, adjustValues] = args;
   const adj = getAdjustValue(adjustValues, "adj", 12500) / 100000;
 
   const nx = normalize(x, bounds.minX, bounds.maxX);
@@ -204,7 +212,8 @@ const warpDoubleWave1: WarpTransformFn = (x, y, z, bounds, adjustValues) => {
  * Inflate warp (textInflate)
  * Text bulges in the center
  */
-const warpInflate: WarpTransformFn = (x, y, z, bounds, adjustValues) => {
+const warpInflate: WarpTransformFn = (...args) => {
+  const [x, y, z, bounds, adjustValues] = args;
   const adj = getAdjustValue(adjustValues, "adj", 25000) / 100000;
 
   // Normalize to -1..1
@@ -228,7 +237,8 @@ const warpInflate: WarpTransformFn = (x, y, z, bounds, adjustValues) => {
  * Deflate warp (textDeflate)
  * Text pinches in the center
  */
-const warpDeflate: WarpTransformFn = (x, y, z, bounds, adjustValues) => {
+const warpDeflate: WarpTransformFn = (...args) => {
+  const [x, y, z, bounds, adjustValues] = args;
   const adj = getAdjustValue(adjustValues, "adj", 25000) / 100000;
 
   const nx = normalize(x, bounds.minX, bounds.maxX) * 2 - 1;
@@ -247,7 +257,8 @@ const warpDeflate: WarpTransformFn = (x, y, z, bounds, adjustValues) => {
  * Curve Up warp (textCurveUp)
  * Text curves upward
  */
-const warpCurveUp: WarpTransformFn = (x, y, z, bounds, adjustValues) => {
+const warpCurveUp: WarpTransformFn = (...args) => {
+  const [x, y, z, bounds, adjustValues] = args;
   const adj = getAdjustValue(adjustValues, "adj", 45000) / 100000;
 
   const nx = normalize(x, bounds.minX, bounds.maxX) * 2 - 1;
@@ -260,7 +271,8 @@ const warpCurveUp: WarpTransformFn = (x, y, z, bounds, adjustValues) => {
  * Curve Down warp (textCurveDown)
  * Text curves downward
  */
-const warpCurveDown: WarpTransformFn = (x, y, z, bounds, adjustValues) => {
+const warpCurveDown: WarpTransformFn = (...args) => {
+  const [x, y, z, bounds, adjustValues] = args;
   const adj = getAdjustValue(adjustValues, "adj", 45000) / 100000;
 
   const nx = normalize(x, bounds.minX, bounds.maxX) * 2 - 1;
@@ -273,7 +285,8 @@ const warpCurveDown: WarpTransformFn = (x, y, z, bounds, adjustValues) => {
  * Triangle warp (textTriangle)
  * Text forms a triangle shape (wider at bottom)
  */
-const warpTriangle: WarpTransformFn = (x, y, z, bounds, adjustValues) => {
+const warpTriangle: WarpTransformFn = (...args) => {
+  const [x, y, z, bounds, adjustValues] = args;
   const adj = getAdjustValue(adjustValues, "adj", 50000) / 100000;
 
   const ny = normalize(y, bounds.minY, bounds.maxY);
@@ -289,7 +302,8 @@ const warpTriangle: WarpTransformFn = (x, y, z, bounds, adjustValues) => {
  * Triangle Inverted warp (textTriangleInverted)
  * Text forms inverted triangle (wider at top)
  */
-const warpTriangleInverted: WarpTransformFn = (x, y, z, bounds, adjustValues) => {
+const warpTriangleInverted: WarpTransformFn = (...args) => {
+  const [x, y, z, bounds, adjustValues] = args;
   const adj = getAdjustValue(adjustValues, "adj", 50000) / 100000;
 
   const ny = normalize(y, bounds.minY, bounds.maxY);
@@ -303,7 +317,8 @@ const warpTriangleInverted: WarpTransformFn = (x, y, z, bounds, adjustValues) =>
  * Chevron warp (textChevron)
  * Text forms chevron shape (V pointing up)
  */
-const warpChevron: WarpTransformFn = (x, y, z, bounds, adjustValues) => {
+const warpChevron: WarpTransformFn = (...args) => {
+  const [x, y, z, bounds, adjustValues] = args;
   const adj = getAdjustValue(adjustValues, "adj", 25000) / 100000;
 
   const nx = normalize(x, bounds.minX, bounds.maxX) * 2 - 1;
@@ -316,7 +331,8 @@ const warpChevron: WarpTransformFn = (x, y, z, bounds, adjustValues) => {
  * Chevron Inverted warp (textChevronInverted)
  * Text forms inverted chevron (V pointing down)
  */
-const warpChevronInverted: WarpTransformFn = (x, y, z, bounds, adjustValues) => {
+const warpChevronInverted: WarpTransformFn = (...args) => {
+  const [x, y, z, bounds, adjustValues] = args;
   const adj = getAdjustValue(adjustValues, "adj", 25000) / 100000;
 
   const nx = normalize(x, bounds.minX, bounds.maxX) * 2 - 1;
@@ -329,7 +345,8 @@ const warpChevronInverted: WarpTransformFn = (x, y, z, bounds, adjustValues) => 
  * Stop sign warp (textStop)
  * Text forms octagon shape
  */
-const warpStop: WarpTransformFn = (x, y, z, bounds, adjustValues) => {
+const warpStop: WarpTransformFn = (...args) => {
+  const [x, y, z, bounds, adjustValues] = args;
   const adj = getAdjustValue(adjustValues, "adj", 25000) / 100000;
 
   const nx = normalize(x, bounds.minX, bounds.maxX) * 2 - 1;
@@ -355,7 +372,8 @@ const warpStop: WarpTransformFn = (x, y, z, bounds, adjustValues) => {
  * Button warp (textButton)
  * Text forms button shape with curved top and bottom
  */
-const warpButton: WarpTransformFn = (x, y, z, bounds, adjustValues) => {
+const warpButton: WarpTransformFn = (...args) => {
+  const [x, y, z, bounds, adjustValues] = args;
   const adj = getAdjustValue(adjustValues, "adj", 10000) / 100000;
 
   const nx = normalize(x, bounds.minX, bounds.maxX) * 2 - 1;
@@ -372,7 +390,8 @@ const warpButton: WarpTransformFn = (x, y, z, bounds, adjustValues) => {
  * Can Up warp (textCanUp)
  * Text curves like a 3D cylinder viewed from above
  */
-const warpCanUp: WarpTransformFn = (x, y, z, bounds, adjustValues) => {
+const warpCanUp: WarpTransformFn = (...args) => {
+  const [x, y, z, bounds, adjustValues] = args;
   const adj = getAdjustValue(adjustValues, "adj", 25000) / 100000;
 
   const nx = normalize(x, bounds.minX, bounds.maxX) * 2 - 1;
@@ -388,7 +407,8 @@ const warpCanUp: WarpTransformFn = (x, y, z, bounds, adjustValues) => {
  * Can Down warp (textCanDown)
  * Text curves like a 3D cylinder viewed from below
  */
-const warpCanDown: WarpTransformFn = (x, y, z, bounds, adjustValues) => {
+const warpCanDown: WarpTransformFn = (...args) => {
+  const [x, y, z, bounds, adjustValues] = args;
   const adj = getAdjustValue(adjustValues, "adj", 25000) / 100000;
 
   const nx = normalize(x, bounds.minX, bounds.maxX) * 2 - 1;

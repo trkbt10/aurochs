@@ -4,7 +4,6 @@
 
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi } from "vitest";
 import { render, fireEvent } from "@testing-library/react";
 import type { Slide } from "@oxen-office/pptx/domain";
 import { px } from "@oxen-office/ooxml/domain/units";
@@ -12,6 +11,21 @@ import { createIdleDragState, createEmptySelection } from "../context/slide/stat
 import type { CreationMode } from "../context/presentation/editor/types";
 import type { ShapeBounds } from "../shape/creation-bounds";
 import { SlideCanvas } from "./SlideCanvas";
+
+type CallTracker<Args extends readonly unknown[]> = {
+  readonly calls: Args[];
+  readonly fn: (...args: Args) => void;
+};
+
+function createCallTracker<Args extends readonly unknown[]>(): CallTracker<Args> {
+  const calls: Args[] = [];
+  return {
+    calls,
+    fn: (...args) => {
+      calls.push(args);
+    },
+  };
+}
 
 function setSvgClientRect(svg: SVGSVGElement, width: number, height: number): void {
   const rect = {
@@ -130,14 +144,14 @@ describe("SlideCanvas creation drag", () => {
 
   it("does not start creation drag for pen mode", () => {
     const mode: CreationMode = { type: "pen" };
-    const onCreateFromDrag = vi.fn();
+    const onCreateFromDrag = createCallTracker<Parameters<(bounds: ShapeBounds) => void>>();
 
-    const { svg } = renderSlideCanvas(mode, onCreateFromDrag);
+    const { svg } = renderSlideCanvas(mode, onCreateFromDrag.fn);
 
     fireEvent.pointerDown(svg, { clientX: 50, clientY: 50, button: 0 });
     fireEvent.pointerMove(window, { clientX: 120, clientY: 80 });
     fireEvent.pointerUp(window);
 
-    expect(onCreateFromDrag).not.toHaveBeenCalled();
+    expect(onCreateFromDrag.calls.length).toBe(0);
   });
 });

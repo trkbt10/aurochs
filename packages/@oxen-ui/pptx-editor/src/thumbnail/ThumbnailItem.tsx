@@ -4,7 +4,7 @@
  * Individual slide thumbnail with drag-and-drop support.
  */
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import type { ThumbnailItemProps } from "./types";
 import {
   thumbnailWrapperStyle,
@@ -39,6 +39,17 @@ export function ThumbnailItem({
   const thumbnailStyle = getThumbnailStyle(aspectRatio);
   const thumbnailActiveStyle = getThumbnailActiveStyle(aspectRatio);
 
+  let thumbnailContent: ReactNode;
+  if (renderThumbnail) {
+    thumbnailContent = renderThumbnail(slideWithId, index);
+  } else {
+    thumbnailContent = (
+      <span style={{ color: "#999", fontSize: "11px" }}>
+        {slideWithId.slide.shapes.length} shapes
+      </span>
+    );
+  }
+
   return (
     <div
       ref={itemRef}
@@ -70,13 +81,7 @@ export function ThumbnailItem({
         aria-label={`Slide ${index + 1}`}
         aria-selected={isActive}
       >
-        {renderThumbnail ? (
-          renderThumbnail(slideWithId, index)
-        ) : (
-          <span style={{ color: "#999", fontSize: "11px" }}>
-            {slideWithId.slide.shapes.length} shapes
-          </span>
-        )}
+        {thumbnailContent}
         <span style={thumbnailNumberStyle}>{index + 1}</span>
         {totalSlides > 1 && (
           <button

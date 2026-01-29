@@ -212,7 +212,8 @@ export function convertToPresetRect(pdfPath: PdfPath): PresetGeometry {
  * Check if 4 points form an axis-aligned rectangle.
  * Uses floating-point epsilon for near-zero comparison (IEEE 754 precision consideration).
  */
-function isAxisAlignedRectangle(p1: PdfPoint, p2: PdfPoint, p3: PdfPoint, p4: PdfPoint): boolean {
+function isAxisAlignedRectangle(...args: readonly [p1: PdfPoint, p2: PdfPoint, p3: PdfPoint, p4: PdfPoint]): boolean {
+  const [p1, p2, p3, p4] = args;
   // Floating-point epsilon for near-zero comparison (IEEE 754 precision consideration)
   const FLOAT_EPSILON = 1e-10;
 

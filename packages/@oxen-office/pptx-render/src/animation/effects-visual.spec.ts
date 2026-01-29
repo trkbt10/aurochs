@@ -22,7 +22,6 @@ import {
   parseFilterToEffectType,
   parseFilterDirection,
 } from "./effects";
-import type { EffectConfig } from "./types";
 
 // =============================================================================
 // Test Helpers
@@ -31,8 +30,16 @@ import type { EffectConfig } from "./types";
 /**
  * Create mock element with all required style properties
  */
+function isHTMLElement(value: unknown): value is HTMLElement {
+  return typeof value === "object" && value !== null && "style" in value;
+}
+
+function isSVGElement(value: unknown): value is SVGElement {
+  return typeof value === "object" && value !== null && "style" in value;
+}
+
 function createMockElement(): HTMLElement {
-  return {
+  const el: unknown = {
     style: {
       transition: "",
       opacity: "",
@@ -46,7 +53,12 @@ function createMockElement(): HTMLElement {
       maskPosition: "",
       maskRepeat: "",
     },
-  } as unknown as HTMLElement;
+    offsetHeight: 0,
+  };
+  if (!isHTMLElement(el)) {
+    throw new Error("createMockElement: invalid mock element shape");
+  }
+  return el;
 }
 
 // =============================================================================
@@ -372,7 +384,7 @@ describe("SVG Element Compatibility", () => {
    */
 
   function createMockSVGElement(): SVGElement {
-    return {
+    const el: unknown = {
       style: {
         transition: "",
         opacity: "",
@@ -386,7 +398,11 @@ describe("SVG Element Compatibility", () => {
         maskPosition: "",
         maskRepeat: "",
       },
-    } as unknown as SVGElement;
+    };
+    if (!isSVGElement(el)) {
+      throw new Error("createMockSVGElement: invalid mock element shape");
+    }
+    return el;
   }
 
   // Helper to wait for raf callback (setTimeout in non-browser env)

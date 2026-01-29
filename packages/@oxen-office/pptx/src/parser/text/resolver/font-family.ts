@@ -119,10 +119,9 @@ function getFontFamilyFromMasterTextStyles(
  */
 export function resolveFontFamily(
   directRPr: XmlElement | undefined,
-  localLstStyle: XmlElement | undefined,
-  lvl: number,
-  ctx: TextStyleContext | undefined,
+  ...rest: [localLstStyle: XmlElement | undefined, lvl: number, ctx: TextStyleContext | undefined]
 ): FontFamilyResult | undefined {
+  const [localLstStyle, lvl, ctx] = rest;
   // Use 1-based level for lstStyle lookup
   const lvlKey = lvl + 1;
 

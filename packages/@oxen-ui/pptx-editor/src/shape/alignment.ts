@@ -80,12 +80,9 @@ function getCenterY(b: Bounds): number {
 }
 
 function createUpdate(
-  id: ShapeId,
-  x: number,
-  y: number,
-  width: number,
-  height: number
+  ...args: readonly [id: ShapeId, x: number, y: number, width: number, height: number]
 ): AlignmentUpdate {
+  const [id, x, y, width, height] = args;
   return {
     id,
     bounds: {

@@ -39,7 +39,7 @@ type PathBevelResult = {
  * @param vertexOffset - Starting vertex index for this path
  * @returns Raw geometry arrays for this path
  */
-function generatePathBevel(
+function _generatePathBevel(
   path: BevelPath,
   config: BevelMeshConfig,
   vertexOffset: number,
@@ -253,11 +253,14 @@ function calculateSafeHoleInsetRatio(
  * Generate bevel geometry for a single path with optional width scaling.
  */
 function generatePathBevelWithScale(
-  path: BevelPath,
-  config: BevelMeshConfig,
-  vertexOffset: number,
-  widthScale: number,
+  ...args: [
+    path: BevelPath,
+    config: BevelMeshConfig,
+    vertexOffset: number,
+    widthScale: number,
+  ]
 ): PathBevelResult {
+  const [path, config, vertexOffset, widthScale] = args;
   const { points: pathPoints, isHole, isClosed } = path;
   const { width, height, profile, zPosition, zDirection } = config;
   const profilePoints = profile.points;
@@ -482,9 +485,8 @@ export function extractInnerRingFromBevelPaths(
   }
 
   // Calculate outer bounds for hole collision detection
-  const outerBounds = outerPath
-    ? calculateInsetBounds(outerPath, width)
-    : { minX: -Infinity, maxX: Infinity, minY: -Infinity, maxY: Infinity };
+  const UNBOUNDED_BOUNDS = { minX: -Infinity, maxX: Infinity, minY: -Infinity, maxY: Infinity };
+  const outerBounds = outerPath ? calculateInsetBounds(outerPath, width) : UNBOUNDED_BOUNDS;
 
   // Generate hole rings with same safe ratio as used in bevel mesh generation
   const finalHoles: { x: number; y: number }[][] = [];
@@ -514,7 +516,7 @@ export function extractInnerRingFromBevelPaths(
 /**
  * Compute axis-aligned bounding box of a polygon.
  */
-function computeBounds(points: readonly { x: number; y: number }[]): {
+function _computeBounds(points: readonly { x: number; y: number }[]): {
   minX: number;
   maxX: number;
   minY: number;

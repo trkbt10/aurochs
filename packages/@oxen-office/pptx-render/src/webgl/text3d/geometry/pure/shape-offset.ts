@@ -237,14 +237,17 @@ export function reverseWinding(points: readonly Point2D[]): Point2D[] {
  */
 export function normalizeShapeWinding(shape: ShapeData): ShapeData {
   // Ensure outer contour is CCW
-  const outerPoints = isValidWinding(shape.points, false)
-    ? [...shape.points]
-    : reverseWinding(shape.points);
+  const outerPoints = normalizeWinding(shape.points, false);
 
   // Ensure holes are CW
-  const normalizedHoles = shape.holes.map(hole =>
-    isValidWinding(hole, true) ? [...hole] : reverseWinding(hole)
-  );
+  const normalizedHoles = shape.holes.map((hole) => normalizeWinding(hole, true));
 
   return shapeWithHoles(outerPoints, normalizedHoles);
+}
+
+function normalizeWinding(points: readonly Point2D[], isHole: boolean): Point2D[] {
+  if (isValidWinding(points, isHole)) {
+    return [...points];
+  }
+  return reverseWinding(points);
 }

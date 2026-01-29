@@ -150,6 +150,12 @@ export function parseColorMap(clrMapElement: XmlElement | undefined): ColorMap {
 // Format Scheme Parsing
 // =============================================================================
 
+function filterElementChildren(children: ReadonlyArray<unknown>): XmlElement[] {
+  return children.filter(
+    (child): child is XmlElement => typeof child === "object" && child !== null && "name" in child,
+  );
+}
+
 /**
  * Parse FormatScheme from theme content.
  *
@@ -177,19 +183,9 @@ export function parseFormatScheme(themeContent: XmlDocument | null): FormatSchem
 
   return {
     lineStyles: lnStyleLst !== undefined ? getChildren(lnStyleLst, "a:ln") : [],
-    fillStyles: fillStyleLst !== undefined
-      ? fillStyleLst.children.filter(
-          (c): c is XmlElement => typeof c === "object" && "name" in c
-        )
-      : [],
-    effectStyles: effectStyleLst !== undefined
-      ? getChildren(effectStyleLst, "a:effectStyle")
-      : [],
-    bgFillStyles: bgFillStyleLst !== undefined
-      ? bgFillStyleLst.children.filter(
-          (c): c is XmlElement => typeof c === "object" && "name" in c
-        )
-      : [],
+    fillStyles: fillStyleLst !== undefined ? filterElementChildren(fillStyleLst.children) : [],
+    effectStyles: effectStyleLst !== undefined ? getChildren(effectStyleLst, "a:effectStyle") : [],
+    bgFillStyles: bgFillStyleLst !== undefined ? filterElementChildren(bgFillStyleLst.children) : [],
   };
 }
 

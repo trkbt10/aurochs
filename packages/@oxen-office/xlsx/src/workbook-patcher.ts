@@ -129,12 +129,15 @@ export async function patchWorkbook(
  * Patch a single sheet's XML with cell updates.
  */
 function patchSheetXml(
-  pkg: ZipPackage,
-  sheet: WorkbookSheet,
-  cells: readonly CellUpdate[],
-  sharedStrings: readonly string[],
-  dimension?: string,
+  ...args: readonly [
+    pkg: ZipPackage,
+    sheet: WorkbookSheet,
+    cells: readonly CellUpdate[],
+    sharedStrings: readonly string[],
+    dimension?: string,
+  ]
 ): void {
+  const [pkg, sheet, cells, sharedStrings, dimension] = args;
   const sheetText = pkg.readText(sheet.xmlPath);
   if (!sheetText) {
     throw new Error(`patchSheetXml: sheet XML not found at ${sheet.xmlPath}`);
@@ -240,11 +243,14 @@ function applyCellUpdates(
  * Apply updates to a single row.
  */
 function applyRowUpdates(
-  existingRow: XmlElement | undefined,
-  rowNum: number,
-  updates: readonly CellUpdate[],
-  sharedStrings: readonly string[],
+  ...args: readonly [
+    existingRow: XmlElement | undefined,
+    rowNum: number,
+    updates: readonly CellUpdate[],
+    sharedStrings: readonly string[],
+  ]
 ): XmlElement {
+  const [existingRow, rowNum, updates, sharedStrings] = args;
   // Get existing cells
   const cellMap = new Map<string, XmlElement>();
   if (existingRow) {
@@ -390,13 +396,17 @@ function columnLetterToIndex(col: string): number {
  * @returns Updated xlsx buffer
  */
 export async function updateChartDataInWorkbook(
-  workbook: Workbook,
-  sheetName: string,
-  categories: readonly string[],
-  seriesData: readonly (readonly number[])[],
-  headerRow: number = 1,
-  seriesNames?: readonly string[],
+  ...args: readonly [
+    workbook: Workbook,
+    sheetName: string,
+    categories: readonly string[],
+    seriesData: readonly (readonly number[])[],
+    headerRow?: number,
+    seriesNames?: readonly string[],
+  ]
 ): Promise<ArrayBuffer> {
+  const [workbook, sheetName, categories, seriesData, headerRow = 1, seriesNames] =
+    args;
   const cells: CellUpdate[] = [];
   const startRow = headerRow + 1;
 

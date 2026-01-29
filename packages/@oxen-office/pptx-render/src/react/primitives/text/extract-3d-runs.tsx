@@ -38,14 +38,17 @@ import { PT_TO_PX } from "@oxen-office/pptx/domain/unit-conversion";
  * @returns Array of text runs for 3D rendering
  */
 export function extractText3DRuns(
-  textBody: TextBody,
-  width: number,
-  height: number,
-  colorContext: ColorContext,
-  fontScheme: FontScheme | undefined,
-  options: RenderOptions | undefined,
-  resourceResolver: (resourceId: string) => string | undefined,
+  ...args: [
+    textBody: TextBody,
+    width: number,
+    height: number,
+    colorContext: ColorContext,
+    fontScheme: FontScheme | undefined,
+    options: RenderOptions | undefined,
+    resourceResolver: (resourceId: string) => string | undefined,
+  ]
 ): Text3DRunConfig[] {
+  const [textBody, width, height, colorContext, fontScheme, options, resourceResolver] = args;
   // Use the same layout engine as SVG rendering
   const layoutInput = toLayoutInput({
     body: textBody,

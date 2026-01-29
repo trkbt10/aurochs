@@ -31,11 +31,14 @@ const DEFAULT_BOLD_WIDTH_SCALE = 1.05;
  * @returns Width ratio relative to font size
  */
 export function getCharWidth(
-  char: string,
-  fontFamily: string | undefined,
-  isCjk: boolean,
-  fontWeight: number = 400,
+  ...args: readonly [
+    char: string,
+    fontFamily: string | undefined,
+    isCjk: boolean,
+    fontWeight?: number,
+  ]
 ): number {
+  const [char, fontFamily, isCjk, fontWeight = 400] = args;
   const metrics = getFontMetrics(fontFamily);
   const scale = metrics.widthScale ?? 1.0;
   const isBold = fontWeight >= 700;

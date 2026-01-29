@@ -249,14 +249,17 @@ describe("Visual Regression Tests", () => {
  *   const result = await testSlide('fixtures/path/to/file.pptx', 'snapshot-name', 1);
  */
 export async function testSlide(
-  pptxPath: string,
-  snapshotName: string,
-  slideNumber: number,
-  options?: CompareOptions,
+  ...args: readonly [
+    pptxPath: string,
+    snapshotName: string,
+    slideNumber: number,
+    options?: CompareOptions,
+  ]
 ): Promise<{
   svg: string;
   result: ReturnType<typeof compareSvgToSnapshot>;
 }> {
+  const [pptxPath, snapshotName, slideNumber, options] = args;
   const { presentationFile } = await loadPptxFile(pptxPath);
   // Use LibreOffice dialect since baselines are generated with LibreOffice
   const presentation = openPresentation(presentationFile, { renderOptions: LIBREOFFICE_RENDER_OPTIONS });

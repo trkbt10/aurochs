@@ -124,11 +124,14 @@ function normalizeDocumentPath(target: string): string {
  * Load styles from document relationships.
  */
 function loadStyles(
-  pkg: ZipPackage,
-  documentPath: string,
-  relationships: DocxRelationships,
-  shouldParse: boolean,
+  ...args: readonly [
+    pkg: ZipPackage,
+    documentPath: string,
+    relationships: DocxRelationships,
+    shouldParse: boolean,
+  ]
 ): DocxStyles | undefined {
+  const [pkg, documentPath, relationships, shouldParse] = args;
   if (!shouldParse) {return undefined;}
   const rel = getRelationshipByType(relationships, RELATIONSHIP_TYPES.styles);
   if (!rel) {return undefined;}
@@ -142,11 +145,14 @@ function loadStyles(
  * Load numbering from document relationships.
  */
 function loadNumbering(
-  pkg: ZipPackage,
-  documentPath: string,
-  relationships: DocxRelationships,
-  shouldParse: boolean,
+  ...args: readonly [
+    pkg: ZipPackage,
+    documentPath: string,
+    relationships: DocxRelationships,
+    shouldParse: boolean,
+  ]
 ): DocxNumbering | undefined {
+  const [pkg, documentPath, relationships, shouldParse] = args;
   if (!shouldParse) {return undefined;}
   const rel = getRelationshipByType(relationships, RELATIONSHIP_TYPES.numbering);
   if (!rel) {return undefined;}
@@ -168,11 +174,14 @@ function loadDocumentRelationships(pkg: ZipPackage, path: string): DocxRelations
  * Load all headers from document relationships.
  */
 function loadHeaders(
-  pkg: ZipPackage,
-  documentPath: string,
-  relationships: DocxRelationships,
-  context?: ReturnType<typeof createParseContext>,
+  ...args: readonly [
+    pkg: ZipPackage,
+    documentPath: string,
+    relationships: DocxRelationships,
+    context?: ReturnType<typeof createParseContext>,
+  ]
 ): ReadonlyMap<DocxRelId, DocxHeader> {
+  const [pkg, documentPath, relationships, context] = args;
   const headers = new Map<DocxRelId, DocxHeader>();
 
   const headerRels = relationships.relationship.filter(
@@ -194,11 +203,14 @@ function loadHeaders(
  * Load all footers from document relationships.
  */
 function loadFooters(
-  pkg: ZipPackage,
-  documentPath: string,
-  relationships: DocxRelationships,
-  context?: ReturnType<typeof createParseContext>,
+  ...args: readonly [
+    pkg: ZipPackage,
+    documentPath: string,
+    relationships: DocxRelationships,
+    context?: ReturnType<typeof createParseContext>,
+  ]
 ): ReadonlyMap<DocxRelId, DocxFooter> {
+  const [pkg, documentPath, relationships, context] = args;
   const footers = new Map<DocxRelId, DocxFooter>();
 
   const footerRels = relationships.relationship.filter(

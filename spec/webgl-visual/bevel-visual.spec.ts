@@ -8,7 +8,6 @@
  *   bun run spec/webgl-visual/scripts/generate-baselines.ts --all
  */
 
-import { describe, it, expect, afterAll } from "vitest";
 import {
   captureWebGLScreenshot,
   compareToBaseline,
@@ -33,28 +32,37 @@ const DEFAULT_OPTIONS: CompareOptions = {
   includeAA: false,
 };
 
+type CompareResult = Awaited<ReturnType<typeof compareToBaseline>>;
+
+function buildFailureMessage(result: CompareResult): string {
+  if (result.diffPixels === -1) {
+    return `Baseline not found: ${result.snapshotPath}`;
+  }
+
+  const diffImageLine = result.diffImagePath ? `  Diff: ${result.diffImagePath}` : "";
+  return (
+    `Visual difference: ${result.diffPercent.toFixed(2)}% (${result.diffPixels} pixels)\n` +
+    `  Expected: ${result.snapshotPath}\n` +
+    `  Actual: ${result.actualPath}\n` +
+    diffImageLine
+  );
+}
+
 // Helper to run visual test
 async function runVisualTest(
   config: BevelTestConfig,
   options: CompareOptions = DEFAULT_OPTIONS,
 ): Promise<void> {
   const buffer = await captureWebGLScreenshot(config.renderConfig);
-  const result = await compareToBaseline(
-    buffer,
-    SNAPSHOT_NAME,
-    config.name,
+  const result = await compareToBaseline({
+    actualBuffer: buffer,
+    snapshotName: SNAPSHOT_NAME,
+    testName: config.name,
     options,
-  );
+  });
 
   if (!result.match) {
-    const message = result.diffPixels === -1
-      ? `Baseline not found: ${result.snapshotPath}`
-      : `Visual difference: ${result.diffPercent.toFixed(2)}% (${result.diffPixels} pixels)\n` +
-        `  Expected: ${result.snapshotPath}\n` +
-        `  Actual: ${result.actualPath}\n` +
-        (result.diffImagePath ? `  Diff: ${result.diffImagePath}` : "");
-
-    expect.fail(message);
+    expect.fail(buildFailureMessage(result));
   }
 }
 

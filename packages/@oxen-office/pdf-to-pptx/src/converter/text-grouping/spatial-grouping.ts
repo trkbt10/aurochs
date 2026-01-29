@@ -196,7 +196,8 @@ function getBaselineY(text: PdfText): number {
   return text.y - (descender * text.fontSize) / 1000;
 }
 
-function overlap1D(a0: number, a1: number, b0: number, b1: number): number {
+function overlap1D(...args: [a0: number, a1: number, b0: number, b1: number]): number {
+  const [a0, a1, b0, b1] = args;
   const lo = Math.max(Math.min(a0, a1), Math.min(b0, b1));
   const hi = Math.min(Math.max(a0, a1), Math.max(b0, b1));
   return Math.max(0, hi - lo);
@@ -310,12 +311,15 @@ function buildColumnIntervals(pageWidth: number, gutters: readonly Gutter[]): { 
 }
 
 function assignXRangeToColumn(
-  x0: number,
-  x1: number,
-  intervals: readonly { x0: number; x1: number }[],
-  pageWidth: number,
-  options: Required<SpatialGroupingOptions>
+  ...args: [
+    x0: number,
+    x1: number,
+    intervals: readonly { x0: number; x1: number }[],
+    pageWidth: number,
+    options: Required<SpatialGroupingOptions>,
+  ]
 ): number {
+  const [x0, x1, intervals, pageWidth, options] = args;
   const w = x1 - x0;
   if (w >= pageWidth * options.fullWidthRatio) {return -1;}
 
@@ -382,20 +386,6 @@ function hasSameStyle(t1: PdfText, t2: PdfText, options: Required<SpatialGroupin
   }
 
   return true;
-}
-
-function hasSameSpacingProperties(t1: PdfText, t2: PdfText): boolean {
-  const c1 = t1.charSpacing ?? 0;
-  const c2 = t2.charSpacing ?? 0;
-  if (c1 !== c2) {return false;}
-
-  const w1 = t1.wordSpacing ?? 0;
-  const w2 = t2.wordSpacing ?? 0;
-  if (w1 !== w2) {return false;}
-
-  const s1 = t1.horizontalScaling ?? 100;
-  const s2 = t2.horizontalScaling ?? 100;
-  return s1 === s2;
 }
 
 /**
@@ -657,7 +647,7 @@ function createGroupedText(paragraphs: readonly GroupedParagraph[]): GroupedText
  */
 function mergeHorizontallyAdjacent(
   texts: readonly PdfText[],
-  options: Required<SpatialGroupingOptions>
+  _options: Required<SpatialGroupingOptions>
 ): PdfText[] {
   // Preserve original PdfText boundaries; order by X for stable PPTX run order.
   // `options.horizontalGapRatio` is applied during line segmentation.
@@ -904,11 +894,14 @@ function splitIntoColumnGroups(
  * Group texts into lines with column separation.
  */
 function groupIntoLinesWithColumns(
-  texts: readonly PdfText[],
-  options: Required<SpatialGroupingOptions>,
-  blockingZones: readonly BlockingZone[] | undefined,
-  pageWidth: number | undefined
+  ...args: [
+    texts: readonly PdfText[],
+    options: Required<SpatialGroupingOptions>,
+    blockingZones: readonly BlockingZone[] | undefined,
+    pageWidth: number | undefined,
+  ]
 ): GroupedParagraph[] {
+  const [texts, options, blockingZones, pageWidth] = args;
   const lineClusters = clusterIntoLines(texts, options);
   const paragraphs: GroupedParagraph[] = [];
 
@@ -1087,11 +1080,14 @@ function mergeAdjacentLines(
  * Merge adjacent lines into blocks, respecting column boundaries.
  */
 function mergeAdjacentLinesWithColumns(
-  paragraphs: readonly GroupedParagraph[],
-  options: Required<SpatialGroupingOptions>,
-  blockingZones: readonly BlockingZone[] | undefined,
-  pageWidthFromContext: number | undefined
+  ...args: [
+    paragraphs: readonly GroupedParagraph[],
+    options: Required<SpatialGroupingOptions>,
+    blockingZones: readonly BlockingZone[] | undefined,
+    pageWidthFromContext: number | undefined,
+  ]
 ): GroupedText[] {
+  const [paragraphs, options, blockingZones, pageWidthFromContext] = args;
   if (paragraphs.length === 0) {return [];}
 
   const getParagraphBounds = (p: GroupedParagraph): { minX: number; maxX: number; minY: number; maxY: number } => {
@@ -1211,11 +1207,14 @@ function mergeAdjacentLinesWithColumns(
  * Group texts into lines based on options.
  */
 function groupTextsIntoLines(
-  sorted: readonly PdfText[],
-  options: Required<SpatialGroupingOptions>,
-  blockingZones: readonly BlockingZone[] | undefined,
-  pageWidth: number | undefined
+  ...args: [
+    sorted: readonly PdfText[],
+    options: Required<SpatialGroupingOptions>,
+    blockingZones: readonly BlockingZone[] | undefined,
+    pageWidth: number | undefined,
+  ]
 ): GroupedParagraph[] {
+  const [sorted, options, blockingZones, pageWidth] = args;
   if (options.enableColumnSeparation) {
     return groupIntoLinesWithColumns(sorted, options, blockingZones, pageWidth);
   }
@@ -1226,11 +1225,14 @@ function groupTextsIntoLines(
  * Merge lines into blocks based on options.
  */
 function mergeLinesToBlocks(
-  lines: readonly GroupedParagraph[],
-  options: Required<SpatialGroupingOptions>,
-  blockingZones: readonly BlockingZone[] | undefined,
-  pageWidth: number | undefined
+  ...args: [
+    lines: readonly GroupedParagraph[],
+    options: Required<SpatialGroupingOptions>,
+    blockingZones: readonly BlockingZone[] | undefined,
+    pageWidth: number | undefined,
+  ]
 ): GroupedText[] {
+  const [lines, options, blockingZones, pageWidth] = args;
   if (options.enableColumnSeparation) {
     return mergeAdjacentLinesWithColumns(lines, options, blockingZones, pageWidth);
   }

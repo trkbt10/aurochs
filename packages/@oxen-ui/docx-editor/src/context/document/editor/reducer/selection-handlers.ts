@@ -41,11 +41,14 @@ function getTextEditOnSelect(currentTextEdit: TextEditState, elementId: ElementI
  * Compute new element selection based on action flags.
  */
 function computeElementSelection(
-  current: ElementSelectionState,
-  elementId: ElementId,
-  toggle?: boolean,
-  addToSelection?: boolean,
+  ...args: readonly [
+    current: ElementSelectionState,
+    elementId: ElementId,
+    toggle?: boolean,
+    addToSelection?: boolean,
+  ]
 ): ElementSelectionState {
+  const [current, elementId, toggle, addToSelection] = args;
   if (toggle) {
     return toggleElementSelection(current, elementId);
   }

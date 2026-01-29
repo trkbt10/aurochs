@@ -2,7 +2,6 @@
  * @file Unit tests for shape/alignment.ts
  */
 
-import { describe, expect, it } from "vitest";
 import { px } from "@oxen-office/ooxml/domain/units";
 import {
   alignHorizontal,
@@ -18,20 +17,19 @@ import {
 // =============================================================================
 
 const createBounds = (
-  id: string,
-  x: number,
-  y: number,
-  width: number,
-  height: number
-): ShapeBoundsWithId => ({
-  id,
-  bounds: {
-    x: px(x),
-    y: px(y),
-    width: px(width),
-    height: px(height),
-  },
-});
+  ...args: readonly [id: string, x: number, y: number, width: number, height: number]
+): ShapeBoundsWithId => {
+  const [id, x, y, width, height] = args;
+  return {
+    id,
+    bounds: {
+      x: px(x),
+      y: px(y),
+      width: px(width),
+      height: px(height),
+    },
+  };
+};
 
 // =============================================================================
 // alignHorizontal Tests

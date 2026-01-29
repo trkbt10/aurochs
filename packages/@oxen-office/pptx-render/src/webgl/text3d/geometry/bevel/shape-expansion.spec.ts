@@ -2,7 +2,6 @@
  * @file Tests for shape-expansion.ts
  */
 
-import { describe, it, expect } from "vitest";
 import { expandShape, expandShapesForContour, shrinkShape, calculateMinWallThickness, calculateSafeBevelWidth } from "./shape-expansion";
 import type { ShapeInput, Vector2 } from "./types";
 

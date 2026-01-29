@@ -162,11 +162,14 @@ function resizePng(png: PNG, targetWidth: number, targetHeight: number): PNG {
  * Compare SVG output against baseline PNG snapshot
  */
 export function compareSvgToSnapshot(
-  svg: string,
-  snapshotName: string,
-  slideNumber: number,
-  options: CompareOptions = {}
+  ...args: [
+    svg: string,
+    snapshotName: string,
+    slideNumber: number,
+    options?: CompareOptions,
+  ]
 ): CompareResult {
+  const [svg, snapshotName, slideNumber, options = {}] = args;
   ensureDirs();
 
   const { threshold = 0.1, maxDiffPercent = 0.1, includeAA = false } = options;
@@ -322,11 +325,14 @@ function fileExists(p: string): boolean {
 }
 
 function renderPdfPageToPngPath(
-  pdfPath: string,
-  pageNumber: number,
-  dpi: number,
-  outPrefix: string,
+  ...args: [
+    pdfPath: string,
+    pageNumber: number,
+    dpi: number,
+    outPrefix: string,
+  ]
 ): string {
+  const [pdfPath, pageNumber, dpi, outPrefix] = args;
   try {
     execFileSync("pdftoppm", [
       "-png",
@@ -363,7 +369,8 @@ function fillPng(png: PNG, bg: { r: number; g: number; b: number; a: number }): 
   }
 }
 
-function blitPng(src: PNG, dst: PNG, dx: number, dy: number): void {
+function blitPng(...args: [src: PNG, dst: PNG, dx: number, dy: number]): void {
+  const [src, dst, dx, dy] = args;
   for (let y = 0; y < src.height; y++) {
     const ty = y + dy;
     if (ty < 0 || ty >= dst.height) {continue;}
@@ -381,11 +388,14 @@ function blitPng(src: PNG, dst: PNG, dx: number, dy: number): void {
 }
 
 function renderPdfBaselineToTarget(
-  pdfPng: PNG,
-  targetWidth: number,
-  targetHeight: number,
-  bg: { r: number; g: number; b: number; a: number },
+  ...args: [
+    pdfPng: PNG,
+    targetWidth: number,
+    targetHeight: number,
+    bg: { r: number; g: number; b: number; a: number },
+  ]
 ): PNG {
+  const [pdfPng, targetWidth, targetHeight, bg] = args;
   const canvas = new PNG({ width: targetWidth, height: targetHeight });
   fillPng(canvas, bg);
 
@@ -410,12 +420,15 @@ export type PdfCompareResult = {
  * This avoids LibreOffice and compares directly to the original PDF page raster.
  */
 export function compareSvgToPdfBaseline(
-  svg: string,
-  snapshotName: string,
-  slideNumber: number,
-  baseline: PdfBaselineOptions,
-  options: CompareOptions = {},
+  ...args: [
+    svg: string,
+    snapshotName: string,
+    slideNumber: number,
+    baseline: PdfBaselineOptions,
+    options?: CompareOptions,
+  ]
 ): PdfCompareResult {
+  const [svg, snapshotName, slideNumber, baseline, options = {}] = args;
   ensureDirs();
 
   const { threshold = 0.1, maxDiffPercent = 0.1, includeAA = false } = options;
@@ -438,9 +451,7 @@ export function compareSvgToPdfBaseline(
 
   const pdfPng = loadPng(pdfPngPath);
   const fittedBaselineHigh = renderPdfBaselineToTarget(pdfPng, scaledTargetWidth, scaledTargetHeight, bg);
-  const fittedBaseline = scaleInt === 1
-    ? fittedBaselineHigh
-    : resizePng(fittedBaselineHigh, baseline.targetWidth, baseline.targetHeight);
+  const fittedBaseline = scaleInt === 1 ? fittedBaselineHigh : resizePng(fittedBaselineHigh, baseline.targetWidth, baseline.targetHeight);
 
   const baselinePath = path.join(OUTPUT_DIR, `${snapshotName}-baseline.png`);
   savePng(fittedBaseline, baselinePath);
@@ -495,11 +506,14 @@ export function compareSvgToPdfBaseline(
  * Compare SVG output against PDF-generated baseline with detailed reporting
  */
 export function compareWithDetails(
-  svg: string,
-  snapshotName: string,
-  slideNumber: number,
-  options: CompareOptions = {}
+  ...args: [
+    svg: string,
+    snapshotName: string,
+    slideNumber: number,
+    options?: CompareOptions,
+  ]
 ): DetailedCompareResult {
+  const [svg, snapshotName, slideNumber, options = {}] = args;
   ensureDirs();
 
   const { threshold = 0.1, maxDiffPercent = 0.1, includeAA = false } = options;

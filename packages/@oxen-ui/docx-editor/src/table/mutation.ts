@@ -282,11 +282,14 @@ function updateRowCells(
  * Set a cell at specific coordinates.
  */
 export function setCell(
-  table: DocxTable,
-  rowIndex: number,
-  colIndex: number,
-  cell: DocxTableCell,
+  ...args: readonly [
+    table: DocxTable,
+    rowIndex: number,
+    colIndex: number,
+    cell: DocxTableCell,
+  ]
 ): DocxTable {
+  const [table, rowIndex, colIndex, cell] = args;
   return {
     ...table,
     rows: table.rows.map((row, ri) => {
@@ -434,11 +437,14 @@ export function setTableGrid(table: DocxTable, grid: DocxTableGrid): DocxTable {
  * Merges cells from startCol to endCol (inclusive) in the specified row.
  */
 export function mergeCellsHorizontally(
-  table: DocxTable,
-  rowIndex: number,
-  startCol: number,
-  endCol: number,
+  ...args: readonly [
+    table: DocxTable,
+    rowIndex: number,
+    startCol: number,
+    endCol: number,
+  ]
 ): DocxTable {
+  const [table, rowIndex, startCol, endCol] = args;
   const row = table.rows[rowIndex];
   if (!row || startCol >= endCol || startCol < 0 || endCol >= row.cells.length) {
     return table;
@@ -460,11 +466,14 @@ export function mergeCellsHorizontally(
  * Start or continue vertical merge.
  */
 export function setCellVerticalMerge(
-  table: DocxTable,
-  rowIndex: number,
-  colIndex: number,
-  merge: "restart" | "continue" | undefined,
+  ...args: readonly [
+    table: DocxTable,
+    rowIndex: number,
+    colIndex: number,
+    merge: "restart" | "continue" | undefined,
+  ]
 ): DocxTable {
+  const [table, rowIndex, colIndex, merge] = args;
   const cell = getCell(table, rowIndex, colIndex);
   if (!cell) {
     return table;
@@ -494,11 +503,14 @@ function getUpdatedCellForVerticalMerge(
  * Merges cells from startRow to endRow (inclusive) in the specified column.
  */
 export function mergeCellsVertically(
-  table: DocxTable,
-  colIndex: number,
-  startRow: number,
-  endRow: number,
+  ...args: readonly [
+    table: DocxTable,
+    colIndex: number,
+    startRow: number,
+    endRow: number,
+  ]
 ): DocxTable {
+  const [table, colIndex, startRow, endRow] = args;
   if (startRow >= endRow || startRow < 0 || endRow >= table.rows.length) {
     return table;
   }

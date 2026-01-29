@@ -194,15 +194,18 @@ function applyMovePreview(
 }
 
 function calculateResizedDimensions(
-  handle: ResizeHandlePosition,
-  baseW: number,
-  baseH: number,
-  baseX: number,
-  baseY: number,
-  dx: number,
-  dy: number,
-  aspectLocked: boolean
+  ...args: readonly [
+    handle: ResizeHandlePosition,
+    baseW: number,
+    baseH: number,
+    baseX: number,
+    baseY: number,
+    dx: number,
+    dy: number,
+    aspectLocked: boolean,
+  ]
 ): { newWidth: number; newHeight: number; newX: number; newY: number } {
+  const [handle, baseW, baseH, baseX, baseY, dx, dy, aspectLocked] = args;
   const widthDelta = handle.includes("e") ? dx : handle.includes("w") ? -dx : 0;
   const heightDelta = handle.includes("s") ? dy : handle.includes("n") ? -dy : 0;
   const xDelta = handle.includes("w") ? dx : 0;

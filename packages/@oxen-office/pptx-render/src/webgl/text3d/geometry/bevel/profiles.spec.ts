@@ -2,7 +2,6 @@
  * @file Tests for bevel profiles (Three.js independent)
  */
 
-import { describe, it, expect } from "vitest";
 import {
   ANGLE_PROFILE,
   CIRCLE_PROFILE,

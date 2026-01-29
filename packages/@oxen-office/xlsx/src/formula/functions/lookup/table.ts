@@ -44,11 +44,14 @@ export const toLookupTable = (range: EvalResult, description: string): LookupTab
 };
 
 export const readTableCell = (
-  table: LookupTable,
-  rowIndex: number,
-  columnIndex: number,
-  description: string,
+  ...args: readonly [
+    table: LookupTable,
+    rowIndex: number,
+    columnIndex: number,
+    description: string,
+  ]
 ): FormulaEvaluationResult => {
+  const [table, rowIndex, columnIndex, description] = args;
   const row = table[rowIndex];
   if (!row) {
     throw new Error(`${description} failed: missing row in range`);

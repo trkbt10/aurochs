@@ -111,19 +111,23 @@ describe("extractShapeIds", () => {
   });
 
   it("returns empty array for null timing", () => {
-    const ids = extractShapeIds(null as unknown as Timing);
+    const ids = extractShapeIds(null);
     expect(ids).toEqual([]);
   });
 
   it("returns empty array for timing without rootTimeNode", () => {
-    const ids = extractShapeIds({} as Timing);
+    const ids = extractShapeIds({});
     expect(ids).toEqual([]);
   });
 });
 
 describe("createPlayer", () => {
+  function isHTMLElement(value: unknown): value is HTMLElement {
+    return typeof value === "object" && value !== null && "style" in value;
+  }
+
   function createMockElement(): HTMLElement {
-    return {
+    const el: unknown = {
       style: {
         transition: "",
         opacity: "",
@@ -137,7 +141,12 @@ describe("createPlayer", () => {
         maskPosition: "",
         maskRepeat: "",
       },
-    } as unknown as HTMLElement;
+      offsetHeight: 0,
+    };
+    if (!isHTMLElement(el)) {
+      throw new Error("createMockElement: invalid mock element shape");
+    }
+    return el;
   }
 
   it("creates player instance", () => {
@@ -272,7 +281,7 @@ describe("createPlayer", () => {
       onLog: (msg) => logs.push(msg),
     });
 
-    await player.play(null as unknown as Timing);
+    await player.play(null);
 
     expect(logs.some((l) => l.includes("No timing data"))).toBe(true);
   });

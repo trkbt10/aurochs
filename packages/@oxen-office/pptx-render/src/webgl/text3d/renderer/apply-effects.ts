@@ -99,11 +99,14 @@ export type ShapeContext = {
  * Otherwise falls back to scaling method (less accurate but works without shapes).
  */
 export function createContour(
-  geometry: THREE.BufferGeometry,
-  config: ContourConfig,
-  position: THREE.Vector3,
-  shapeContext?: ShapeContext,
+  ...args: [
+    geometry: THREE.BufferGeometry,
+    config: ContourConfig,
+    position: THREE.Vector3,
+    shapeContext?: ShapeContext,
+  ]
 ): THREE.Mesh {
+  const [geometry, config, position, shapeContext] = args;
   // Use shape-based contour when shapes are available (more accurate)
   if (shapeContext && shapeContext.shapes.length > 0) {
     const shapeConfig: ContourFromShapesConfig = {
@@ -196,11 +199,14 @@ export function createGlow(
  * Create reflection effect for text
  */
 export function createReflection(
-  geometry: THREE.BufferGeometry,
-  material: THREE.Material,
-  config: ReflectionConfig,
-  position: THREE.Vector3,
+  ...args: [
+    geometry: THREE.BufferGeometry,
+    material: THREE.Material,
+    config: ReflectionConfig,
+    position: THREE.Vector3,
+  ]
 ): THREE.Mesh {
+  const [geometry, material, config, position] = args;
   const reflectionMesh = createReflectionMesh(geometry, material, config);
   reflectionMesh.position.x = position.x;
   reflectionMesh.position.y = position.y;
@@ -223,13 +229,16 @@ export function createReflection(
  * @returns Applied effect objects for later manipulation
  */
 export function applyAllEffects(
-  group: THREE.Group,
-  mesh: THREE.Mesh,
-  geometry: THREE.BufferGeometry,
-  material: THREE.Material,
-  effects: TextRunEffects,
-  shapeContext?: ShapeContext,
+  ...args: [
+    group: THREE.Group,
+    mesh: THREE.Mesh,
+    geometry: THREE.BufferGeometry,
+    material: THREE.Material,
+    effects: TextRunEffects,
+    shapeContext?: ShapeContext,
+  ]
 ): AppliedEffects {
+  const [group, mesh, geometry, material, effects, shapeContext] = args;
   const result: AppliedEffects = {};
 
   // Apply soft edge first (modifies material)
@@ -308,12 +317,5 @@ export function needsShadowMapping(runs: readonly TextRunEffects[]): boolean {
   return runs.some((run) => run.shadow !== undefined);
 }
 
-// Re-export types for convenience
-export type {
-  ContourConfig,
-  OutlineConfig,
-  ShadowConfig,
-  GlowConfig,
-  ReflectionConfig,
-  SoftEdgeConfig,
-};
+// NOTE: Do not re-export effect config types here.
+// Import types directly from their source modules to satisfy lint rules.

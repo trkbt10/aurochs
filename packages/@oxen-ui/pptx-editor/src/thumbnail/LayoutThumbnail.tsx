@@ -161,7 +161,10 @@ function renderShapeWireframe(shape: Shape, slideSize: SlideSize): string {
   return rect + labelSvg;
 }
 
-function buildLabelSvg(label: string, textSize: number, cx: number, cy: number, color: string): string {
+function buildLabelSvg(
+  ...args: readonly [label: string, textSize: number, cx: number, cy: number, color: string]
+): string {
+  const [label, textSize, cx, cy, color] = args;
   const showLabel = label && textSize > 8;
   if (!showLabel) {
     return "";

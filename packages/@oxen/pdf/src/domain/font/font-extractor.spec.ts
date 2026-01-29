@@ -7,7 +7,6 @@
  * @see ISO 32000-1:2008 Section 9.9 (Embedded Font Programs)
  */
 import * as fs from "node:fs";
-import * as path from "node:path";
 import { loadNativePdfDocument } from "../../native";
 import { extractEmbeddedFonts } from "./font-extractor";
 import { getPdfFixturePath } from "../../test-utils/pdf-fixtures";

@@ -50,7 +50,8 @@ function intersects(a: BBox, b: BBox): boolean {
   return a.x1 > b.x0 && a.x0 < b.x1 && a.y1 > b.y0 && a.y0 < b.y1;
 }
 
-function overlap1D(a0: number, a1: number, b0: number, b1: number): number {
+function overlap1D(...args: [a0: number, a1: number, b0: number, b1: number]): number {
+  const [a0, a1, b0, b1] = args;
   const lo = Math.max(Math.min(a0, a1), Math.min(b0, b1));
   const hi = Math.min(Math.max(a0, a1), Math.max(b0, b1));
   return Math.max(0, hi - lo);
@@ -597,14 +598,33 @@ function convertBoundsToTransform(
   return convertBBox([bounds.x, bounds.y, bounds.x + bounds.width, bounds.y + bounds.height], context);
 }
 
-function buildCellTextBodyFromLines(
-  runsByLine: readonly (readonly PdfText[])[],
-  baselineYsByLine: readonly number[],
-  alignment: "left" | "center" | "right",
-  context: ConversionContext,
-): TextBody | undefined {
+type BuildCellTextBodyFromLinesArgs = {
+  readonly runsByLine: readonly (readonly PdfText[])[];
+  readonly baselineYsByLine: readonly number[];
+  readonly alignment: "left" | "center" | "right";
+  readonly context: ConversionContext;
+};
+
+function buildCellTextBodyFromLines({
+  runsByLine,
+  baselineYsByLine,
+  alignment,
+  context,
+}: BuildCellTextBodyFromLinesArgs): TextBody | undefined {
   const containsCjk = (s: string): boolean => /[\u3040-\u30FF\u3400-\u9FFF]/.test(s);
-  const isAsciiToken = (s: string): boolean => /^[\u0000-\u007F]+$/.test(s);
+
+  const isAsciiToken = (s: string): boolean => {
+    if (s.length === 0) {
+      return false;
+    }
+    for (let i = 0; i < s.length; i++) {
+      if (s.charCodeAt(i) > 0x7f) {
+        return false;
+      }
+    }
+    return true;
+  };
+
   const startsWithWordish = (s: string): boolean => /^[A-Za-z0-9]/.test(s);
   const endsWithWordish = (s: string): boolean => /[A-Za-z0-9]$/.test(s);
 
@@ -834,12 +854,8 @@ function buildTableFromInference(
     return sizes;
   };
 
-  const xBoundsPdf = inferred.columns.length > 0
-    ? [inferred.columns[0]!.x0, ...inferred.columns.map((c) => c.x1)]
-    : [];
-  const yBoundsPdf = inferred.rows.length > 0
-    ? [inferred.rows[0]!.y1, ...inferred.rows.map((r) => r.y0)]
-    : [];
+  const xBoundsPdf = getTableXBoundaries(inferred);
+  const yBoundsPdf = getTableYBoundaries(inferred);
 
   const tableLeftPxAbs = tableBoxPx.x as number;
   const tableTopPxAbs = tableBoxPx.y as number;
@@ -848,15 +864,24 @@ function buildTableFromInference(
   const yBoundsPxLocal = yBoundsPdf.map((y) => (convertPoint({ x: 0, y }, context).y as number) - tableTopPxAbs);
 
   // Fallback to width/height based conversion if we can't compute stable boundaries.
-  const colWidthsPx =
-    xBoundsPxLocal.length === inferred.columns.length + 1
-      ? computeSizesFromBoundaries(xBoundsPxLocal, frameWidthPx)
-      : inferred.columns.map((_, i) => convertSize(colWidthsPdf[i] ?? 0, 0, context).width as number);
+  const fallbackColWidthsPx = inferred.columns.map(
+    (_, i) => convertSize(colWidthsPdf[i] ?? 0, 0, context).width as number,
+  );
+  const fallbackRowHeightsPx = inferred.rows.map(
+    (_, i) => convertSize(0, rowHeightsPdf[i] ?? 0, context).height as number,
+  );
 
-  const rowHeightsPx =
-    yBoundsPxLocal.length === inferred.rows.length + 1
-      ? computeSizesFromBoundaries(yBoundsPxLocal, frameHeightPx)
-      : inferred.rows.map((_, i) => convertSize(0, rowHeightsPdf[i] ?? 0, context).height as number);
+  const hasStableColBounds = xBoundsPxLocal.length === inferred.columns.length + 1;
+  let colWidthsPx: number[] = fallbackColWidthsPx;
+  if (hasStableColBounds) {
+    colWidthsPx = computeSizesFromBoundaries(xBoundsPxLocal, frameWidthPx);
+  }
+
+  const hasStableRowBounds = yBoundsPxLocal.length === inferred.rows.length + 1;
+  let rowHeightsPx: number[] = fallbackRowHeightsPx;
+  if (hasStableRowBounds) {
+    rowHeightsPx = computeSizesFromBoundaries(yBoundsPxLocal, frameHeightPx);
+  }
 
   const columns = inferred.columns.map((_, i) => ({
     width: px(colWidthsPx[i] ?? 0),
@@ -880,7 +905,8 @@ function buildTableFromInference(
     }
   }
 
-  const resolveMergedCellFill = (ri: number, ci: number, rowSpan: number, colSpan: number): Fill => {
+  const resolveMergedCellFill = (...args: [ri: number, ci: number, rowSpan: number, colSpan: number]): Fill => {
+    const [ri, ci, rowSpan, colSpan] = args;
     if (!decoration) {return noFill();}
     const direct = decoration.cellFills.get(`${ri},${ci}`);
     if (direct && !isNearWhiteFill(direct)) {return direct;}
@@ -926,31 +952,34 @@ function buildTableFromInference(
       const rowSpan = Math.max(1, seg?.rowSpan ?? 1);
       const colSpan = Math.max(1, seg?.colSpan ?? 1);
 
-      const borders = (() => {
-        if (!decoration) {return undefined;}
+      let borders:
+        | { top?: Line; left?: Line; right?: Line; bottom?: Line }
+        | undefined;
+      if (decoration) {
         const v = decoration.verticalBorders;
-        const hBorders = decoration.horizontalBorders;
-        const top = ri === 0 ? hBorders[0] : undefined;
+        const h = decoration.horizontalBorders;
+        const top = ri === 0 ? h[0] : undefined;
         const left = ci === 0 ? v[0] : undefined;
         const right = v[Math.min(colCount, ci + colSpan)];
-        const bottom = hBorders[Math.min(rowCount, ri + rowSpan)];
+        const bottom = h[Math.min(rowCount, ri + rowSpan)];
+
         const out = {
           ...(top ? { top } : {}),
           ...(left ? { left } : {}),
           ...(right ? { right } : {}),
           ...(bottom ? { bottom } : {}),
         };
-        return Object.keys(out).length > 0 ? out : undefined;
-      })();
-
-      const fill = (() => {
-        if (!seg) {
-          if (!decoration) {return noFill();}
-          const key = `${ri},${ci}`;
-          return decoration.cellFills.get(key) ?? noFill();
+        if (Object.keys(out).length > 0) {
+          borders = out;
         }
-        return resolveMergedCellFill(ri, ci, rowSpan, colSpan);
-      })();
+      }
+
+      let fill: Fill;
+      if (seg) {
+        fill = resolveMergedCellFill(ri, ci, rowSpan, colSpan);
+      } else {
+        fill = decoration?.cellFills.get(`${ri},${ci}`) ?? noFill();
+      }
 
       if (!seg) {
         cells.push({
@@ -971,62 +1000,63 @@ function buildTableFromInference(
       const rightSlackPdf = Math.max(0, col.x1 - seg.x1);
 
       // Use explicit margins so rendering doesn't depend on viewer defaults.
-      const margins = (() => {
-        const colWidthPdf = colWidthsPdf[ci] ?? 0;
-        const maxSidePdf = Math.max(0, Math.min(colWidthPdf * 0.45, inferred.fontSize * 2.0));
-        const leftPdf = seg.alignment === "left" ? Math.min(leftSlackPdf, maxSidePdf) : 0;
-        const rightPdf = seg.alignment === "right" ? Math.min(rightSlackPdf, maxSidePdf) : 0;
-        const left = leftPdf > 0 ? convertSize(leftPdf, 0, context).width : px(0);
-        const right = rightPdf > 0 ? convertSize(rightPdf, 0, context).width : px(0);
-        const rowHeightPdf = rowHeightsPdf[ri] ?? 0;
-        const maxVertPdf = Math.max(0, Math.min(inferred.fontSize * 1.2, rowHeightPdf * 0.45));
+      const colWidthPdf = colWidthsPdf[ci] ?? 0;
+      const maxSidePdf = Math.max(0, Math.min(colWidthPdf * 0.45, inferred.fontSize * 2.0));
+      const leftPdf = seg.alignment === "left" ? Math.min(leftSlackPdf, maxSidePdf) : 0;
+      const rightPdf = seg.alignment === "right" ? Math.min(rightSlackPdf, maxSidePdf) : 0;
+      const left = leftPdf > 0 ? convertSize(leftPdf, 0, context).width : px(0);
+      const right = rightPdf > 0 ? convertSize(rightPdf, 0, context).width : px(0);
 
-        let topSlackPdf = 0;
-        let bottomSlackPdf = 0;
-        if (seg.runsByLine.length > 0) {
-          let minY = Infinity;
-          let maxY = -Infinity;
-          for (const line of seg.runsByLine) {
-            for (const run of line) {
-              if (run.text.trim().length === 0) {continue;}
-              minY = Math.min(minY, run.y);
-              maxY = Math.max(maxY, run.y + run.height);
-            }
-          }
-          if (Number.isFinite(minY) && Number.isFinite(maxY)) {
-            topSlackPdf = Math.max(0, r.y1 - maxY);
-            bottomSlackPdf = Math.max(0, minY - r.y0);
+      const rowHeightPdf = rowHeightsPdf[ri] ?? 0;
+      const maxVertPdf = Math.max(0, Math.min(inferred.fontSize * 1.2, rowHeightPdf * 0.45));
+
+      let topSlackPdf = 0;
+      let bottomSlackPdf = 0;
+      if (seg.runsByLine.length > 0) {
+        let minY = Infinity;
+        let maxY = -Infinity;
+        for (const line of seg.runsByLine) {
+          for (const run of line) {
+            if (run.text.trim().length === 0) {continue;}
+            minY = Math.min(minY, run.y);
+            maxY = Math.max(maxY, run.y + run.height);
           }
         }
+        if (Number.isFinite(minY) && Number.isFinite(maxY)) {
+          topSlackPdf = Math.max(0, r.y1 - maxY);
+          bottomSlackPdf = Math.max(0, minY - r.y0);
+        }
+      }
 
-        const topPdf = Math.min(topSlackPdf, maxVertPdf);
-        const bottomPdf = Math.min(bottomSlackPdf, maxVertPdf);
-        const top = topPdf > 0 ? convertSize(0, topPdf, context).height : px(0);
-        const bottom = bottomPdf > 0 ? convertSize(0, bottomPdf, context).height : px(0);
+      const topPdf = Math.min(topSlackPdf, maxVertPdf);
+      const bottomPdf = Math.min(bottomSlackPdf, maxVertPdf);
+      const top = topPdf > 0 ? convertSize(0, topPdf, context).height : px(0);
+      const bottom = bottomPdf > 0 ? convertSize(0, bottomPdf, context).height : px(0);
 
-        return {
-          left,
-          right,
-          top,
-          bottom,
-        };
-      })();
+      const margins = { left, right, top, bottom };
 
-      cells.push({
-        properties: {
-          ...(colSpan > 1 ? { colSpan } : {}),
-          ...(rowSpan > 1 ? { rowSpan } : {}),
-          ...(borders ? { borders } : {}),
-          fill,
-          anchor: seg.runsByLine.length > 1 ? "top" : "center",
-          anchorCenter: false,
-          horzOverflow: "clip",
-          margins,
-        },
-        ...(seg.runsByLine.length > 0
-          ? { textBody: buildCellTextBodyFromLines(seg.runsByLine, seg.baselineYsByLine, seg.alignment, context) }
-          : {}),
-      });
+      let textBody: TextBody | undefined;
+      if (seg.runsByLine.length > 0) {
+        textBody = buildCellTextBodyFromLines({
+          runsByLine: seg.runsByLine,
+          baselineYsByLine: seg.baselineYsByLine,
+          alignment: seg.alignment,
+          context,
+        });
+      }
+
+      const properties: TableCell["properties"] = {
+        ...(colSpan > 1 ? { colSpan } : {}),
+        ...(rowSpan > 1 ? { rowSpan } : {}),
+        ...(borders ? { borders } : {}),
+        fill,
+        anchor: seg.runsByLine.length > 1 ? "top" : "center",
+        anchorCenter: false,
+        horzOverflow: "clip",
+        margins,
+      };
+
+      cells.push(textBody ? { properties, textBody } : { properties });
     }
 
     return { height: heightPx, cells };
@@ -1044,13 +1074,21 @@ function buildTableFromInference(
 
 
 
-export function convertGroupedTextToTableShape(
-  group: GroupedText,
-  pagePaths: readonly PdfPath[],
-  context: ConversionContext,
-  shapeId: string,
-  options: TableConversionOptions = {},
-): GraphicFrame | null {
+export type ConvertGroupedTextToTableShapeArgs = {
+  readonly group: GroupedText;
+  readonly pagePaths: readonly PdfPath[];
+  readonly context: ConversionContext;
+  readonly shapeId: string;
+  readonly options?: TableConversionOptions;
+};
+
+export function convertGroupedTextToTableShape({
+  group,
+  pagePaths,
+  context,
+  shapeId,
+  options = {},
+}: ConvertGroupedTextToTableShapeArgs): GraphicFrame | null {
   if (shapeId.length === 0) {
     throw new Error("shapeId is required");
   }
@@ -1062,7 +1100,7 @@ export function convertGroupedTextToTableShape(
   if (!inferred) {return null;}
 
   const decoration = analyzeTableDecorationFromPaths(inferred, pagePaths, context);
-  return convertInferredTableToShape(inferred, decoration, context, shapeId);
+  return convertInferredTableToShape({ inferred, decoration, context, shapeId });
 }
 
 
@@ -1070,12 +1108,19 @@ export function convertGroupedTextToTableShape(
 
 
 
-export function convertInferredTableToShape(
-  inferred: InferredTable,
-  decoration: TableDecorationAnalysis | null,
-  context: ConversionContext,
-  shapeId: string,
-): GraphicFrame {
+export type ConvertInferredTableToShapeArgs = {
+  readonly inferred: InferredTable;
+  readonly decoration: TableDecorationAnalysis | null;
+  readonly context: ConversionContext;
+  readonly shapeId: string;
+};
+
+export function convertInferredTableToShape({
+  inferred,
+  decoration,
+  context,
+  shapeId,
+}: ConvertInferredTableToShapeArgs): GraphicFrame {
   if (shapeId.length === 0) {
     throw new Error("shapeId is required");
   }

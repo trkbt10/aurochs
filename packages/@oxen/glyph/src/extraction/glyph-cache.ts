@@ -68,11 +68,9 @@ export function getCachedGlyph(
  * Set cached glyph contour
  */
 export function setCachedGlyph(
-  fontFamily: string,
-  char: string,
-  style: GlyphStyleKey,
-  glyph: GlyphContour,
+  ...args: readonly [fontFamily: string, char: string, style: GlyphStyleKey, glyph: GlyphContour]
 ): void {
+  const [fontFamily, char, style, glyph] = args;
   const fontCache = getOrCreateFontCache(fontFamily);
   const existingCharCache = fontCache.get(char);
   const charCache = existingCharCache ?? new Map<string, GlyphContour>();

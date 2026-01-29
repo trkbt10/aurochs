@@ -2,7 +2,6 @@
  * @file Unit tests for shape/rotate.ts
  */
 
-import { describe, expect, it } from "vitest";
 import {
   normalizeAngle,
   degreesToRadians,

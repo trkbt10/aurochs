@@ -6,8 +6,11 @@
   "sideEffects": false,
   "dependencies": {
     "@oxen/glyph": "workspace:*",
+    "@oxen-ui/chart-editor": "workspace:*",
+    "@oxen-office/chart": "workspace:*",
     "@oxen-office/pptx": "workspace:*",
     "@oxen-office/pptx-render": "workspace:*",
+    "@oxen-ui/diagram-editor": "workspace:*",
     "@oxen-ui/editor-core": "workspace:*",
     "@oxen-ui/ui-components": "workspace:*",
     "@oxen-ui/xlsx-editor": "workspace:*",

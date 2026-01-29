@@ -4,9 +4,7 @@
 
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, fireEvent } from "@testing-library/react";
-import { JSDOM } from "jsdom";
 import type { DocxDocument } from "@oxen-office/docx/domain/document";
 import type { DocxParagraph } from "@oxen-office/docx/domain/paragraph";
 import type { DocxTable } from "@oxen-office/docx/domain/table";
@@ -14,28 +12,7 @@ import type { DocumentEditorContextValue } from "../context/document/DocumentEdi
 import { createInitialState } from "../context/document/editor";
 import { createEmptyDocxSelection, createIdleDragState } from "../context/document/state";
 import { SelectedElementPanel } from "./SelectedElementPanel";
-import { useDocumentEditor } from "../context/document/DocumentEditorContext";
-
-vi.mock("../context/document/DocumentEditorContext", async () => {
-  return {
-    useDocumentEditor: vi.fn(),
-  };
-});
-
-if (typeof document === "undefined") {
-  const dom = new JSDOM("<!doctype html><html><body></body></html>");
-  const win = dom.window as unknown as Window &
-    typeof globalThis & {
-      readonly HTMLElement: typeof HTMLElement;
-      readonly Node: typeof Node;
-    };
-  globalThis.window = win;
-  globalThis.document = win.document;
-  globalThis.navigator = win.navigator;
-  globalThis.HTMLElement = win.HTMLElement;
-  globalThis.Node = win.Node;
-  globalThis.getComputedStyle = win.getComputedStyle.bind(win);
-}
+import { DocumentEditorTestProvider } from "../context/document/DocumentEditorContext";
 
 function createParagraph(text: string, props?: DocxParagraph["properties"]): DocxParagraph {
   return {
@@ -101,24 +78,12 @@ function createContextValue(
 }
 
 describe("SelectedElementPanel", () => {
-  const mockUseDocumentEditor = useDocumentEditor as unknown as {
-    readonly mockReset: () => void;
-    readonly mockReturnValue: (value: DocumentEditorContextValue) => void;
-  };
-
-  beforeEach(() => {
-    mockUseDocumentEditor.mockReset();
-  });
-
   it("shows empty state when there is no selection", () => {
-    mockUseDocumentEditor.mockReturnValue(
-      createContextValue({
-        primaryElement: undefined,
-        selectedElements: [],
-      })
+    const { getByTestId, getByText } = render(
+      <DocumentEditorTestProvider value={createContextValue({ primaryElement: undefined, selectedElements: [] })}>
+        <SelectedElementPanel />
+      </DocumentEditorTestProvider>
     );
-
-    const { getByTestId, getByText } = render(<SelectedElementPanel />);
     const empty = getByTestId("docx-selected-element-panel-empty");
     expect(empty).toBeTruthy();
     expect(getByText("No selection")).toBeTruthy();
@@ -131,14 +96,11 @@ describe("SelectedElementPanel", () => {
   it("shows run and paragraph editors for paragraph selection", () => {
     const paragraph = createParagraph("Hello", { rPr: { b: true } });
 
-    mockUseDocumentEditor.mockReturnValue(
-      createContextValue({
-        primaryElement: paragraph,
-        selectedElements: [paragraph],
-      })
+    const { getByText, container } = render(
+      <DocumentEditorTestProvider value={createContextValue({ primaryElement: paragraph, selectedElements: [paragraph] })}>
+        <SelectedElementPanel />
+      </DocumentEditorTestProvider>
     );
-
-    const { getByText, container } = render(<SelectedElementPanel />);
     expect(getByText("Formatting")).toBeTruthy();
     expect(getByText("Alignment")).toBeTruthy();
 
@@ -153,14 +115,11 @@ describe("SelectedElementPanel", () => {
   it("shows table and cell editors for table selection", () => {
     const table = createSimpleTable();
 
-    mockUseDocumentEditor.mockReturnValue(
-      createContextValue({
-        primaryElement: table,
-        selectedElements: [table],
-      })
+    const { getByText, container } = render(
+      <DocumentEditorTestProvider value={createContextValue({ primaryElement: table, selectedElements: [table] })}>
+        <SelectedElementPanel />
+      </DocumentEditorTestProvider>
     );
-
-    const { getByText, container } = render(<SelectedElementPanel />);
     expect(getByText("Table Width")).toBeTruthy();
     expect(getByText("Cell Width")).toBeTruthy();
 
@@ -174,26 +133,25 @@ describe("SelectedElementPanel", () => {
 
   it("dispatches formatting actions when properties change", () => {
     const paragraph = createParagraph("Hello", { rPr: {} });
-    const dispatch = vi.fn();
+    const dispatchCalls: unknown[] = [];
+    const dispatch: DocumentEditorContextValue["dispatch"] = (action) => {
+      dispatchCalls.push(action);
+    };
 
-    mockUseDocumentEditor.mockReturnValue(
-      createContextValue({
-        primaryElement: paragraph,
-        selectedElements: [paragraph],
-        dispatch,
-      })
+    const { getByLabelText } = render(
+      <DocumentEditorTestProvider value={createContextValue({ primaryElement: paragraph, selectedElements: [paragraph], dispatch })}>
+        <SelectedElementPanel />
+      </DocumentEditorTestProvider>
     );
 
-    const { getByLabelText } = render(<SelectedElementPanel />);
-
     fireEvent.click(getByLabelText("Bold"));
-    expect(dispatch).toHaveBeenCalledWith({
+    expect(dispatchCalls).toContainEqual({
       type: "APPLY_RUN_FORMAT",
       format: { b: true },
     });
 
     fireEvent.click(getByLabelText("Center"));
-    expect(dispatch).toHaveBeenCalledWith({
+    expect(dispatchCalls).toContainEqual({
       type: "APPLY_PARAGRAPH_FORMAT",
       format: { jc: "center" },
     });
@@ -203,14 +161,11 @@ describe("SelectedElementPanel", () => {
     const p1 = createParagraph("A", { rPr: { b: true } });
     const p2 = createParagraph("B", { rPr: { b: false } });
 
-    mockUseDocumentEditor.mockReturnValue(
-      createContextValue({
-        primaryElement: p1,
-        selectedElements: [p1, p2],
-      })
+    const { getByLabelText } = render(
+      <DocumentEditorTestProvider value={createContextValue({ primaryElement: p1, selectedElements: [p1, p2] })}>
+        <SelectedElementPanel />
+      </DocumentEditorTestProvider>
     );
-
-    const { getByLabelText } = render(<SelectedElementPanel />);
     expect(getByLabelText("Bold").getAttribute("aria-pressed")).toBe("mixed");
   });
 });

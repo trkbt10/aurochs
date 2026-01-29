@@ -260,7 +260,8 @@ export function createGraphicsStateStack(initial?: PdfGraphicsState): GraphicsSt
     };
   };
 
-  const setFillCmyk = (c: number, m: number, y: number, k: number): void => {
+  const setFillCmyk = (...args: readonly [c: number, m: number, y: number, k: number]): void => {
+    const [c, m, y, k] = args;
     current.value = {
       ...current.value,
       fillPatternName: undefined,
@@ -272,7 +273,8 @@ export function createGraphicsStateStack(initial?: PdfGraphicsState): GraphicsSt
     };
   };
 
-  const setStrokeCmyk = (c: number, m: number, y: number, k: number): void => {
+  const setStrokeCmyk = (...args: readonly [c: number, m: number, y: number, k: number]): void => {
+    const [c, m, y, k] = args;
     current.value = {
       ...current.value,
       strokePatternName: undefined,
@@ -458,12 +460,15 @@ function cloneBBox(bbox: PdfBBox): PdfBBox {
 }
 
 function intersectBBoxOrDefault(
-  prev: PdfBBox | undefined,
-  minX: number,
-  minY: number,
-  maxX: number,
-  maxY: number,
+  ...args: readonly [
+    prev: PdfBBox | undefined,
+    minX: number,
+    minY: number,
+    maxX: number,
+    maxY: number,
+  ]
 ): PdfBBox {
+  const [prev, minX, minY, maxX, maxY] = args;
   if (!prev) {
     return [minX, minY, maxX, maxY];
   }

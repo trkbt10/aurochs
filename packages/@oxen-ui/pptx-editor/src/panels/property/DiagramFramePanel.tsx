@@ -5,7 +5,7 @@
  */
 
 import type { GraphicFrame } from "@oxen-office/pptx/domain/index";
-import type { DiagramDataModel } from "@oxen-office/pptx/domain/diagram";
+import type { DiagramDataModel } from "@oxen-office/diagram/domain";
 import type { Shape } from "@oxen-office/pptx/domain/index";
 import { Accordion } from "@oxen-ui/ui-components/layout";
 import {

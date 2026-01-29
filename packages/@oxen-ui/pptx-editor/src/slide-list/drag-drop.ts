@@ -17,9 +17,10 @@ export function getDraggingIds(
 ): readonly SlideId[] {
   // If dragging a selected item, drag all selected
   // If dragging unselected item, drag only that item
-  return selectedIds.includes(draggedSlideId)
-    ? [...selectedIds]
-    : [draggedSlideId];
+  if (selectedIds.includes(draggedSlideId)) {
+    return [...selectedIds];
+  }
+  return [draggedSlideId];
 }
 
 /**
@@ -121,12 +122,15 @@ export function isGapDragTarget(
  * Uses cursor position relative to item center to determine before/after.
  */
 export function calculateGapIndexFromItemDragOver(
-  itemIndex: number,
-  orientation: "vertical" | "horizontal",
-  clientX: number,
-  clientY: number,
-  itemRect: DOMRect
+  ...args: readonly [
+    itemIndex: number,
+    orientation: "vertical" | "horizontal",
+    clientX: number,
+    clientY: number,
+    itemRect: DOMRect,
+  ]
 ): number {
+  const [itemIndex, orientation, clientX, clientY, itemRect] = args;
   if (orientation === "vertical") {
     const mid = itemRect.top + itemRect.height / 2;
     return clientY < mid ? itemIndex : itemIndex + 1;
@@ -186,11 +190,14 @@ export function getHorizontalDropPosition(
 
 
 export function calculateTargetIndex(
-  slides: readonly SlideWithId[],
-  draggingIds: readonly SlideId[],
-  dropIndex: number,
-  position: "before" | "after"
+  ...args: readonly [
+    slides: readonly SlideWithId[],
+    draggingIds: readonly SlideId[],
+    dropIndex: number,
+    position: "before" | "after",
+  ]
 ): number {
+  const [slides, draggingIds, dropIndex, position] = args;
   const gapIndex = position === "after" ? dropIndex + 1 : dropIndex;
   return calculateTargetIndexFromGap(slides, draggingIds, gapIndex);
 }

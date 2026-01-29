@@ -47,11 +47,9 @@ function getActiveWorksheet(state: XlsxEditorState): XlsxWorksheet | undefined {
 }
 
 function getDestinationRange(
-  startCol: number,
-  startRow: number,
-  height: number,
-  width: number,
+  ...args: readonly [startCol: number, startRow: number, height: number, width: number]
 ): CellRange {
+  const [startCol, startRow, height, width] = args;
   return {
     start: {
       col: colIdx(startCol),
@@ -69,10 +67,13 @@ function getDestinationRange(
 }
 
 function buildClipboardContent(
-  worksheet: XlsxWorksheet,
-  range: CellRange,
-  isCut: boolean,
+  ...args: readonly [
+    worksheet: XlsxWorksheet,
+    range: CellRange,
+    isCut: boolean,
+  ]
 ): XlsxClipboardContent {
+  const [worksheet, range, isCut] = args;
   const { minRow, maxRow, minCol, maxCol } = getRangeBounds(range);
   const normalizedRange: CellRange = {
     start: { col: colIdx(minCol), row: rowIdx(minRow), colAbsolute: false, rowAbsolute: false },
@@ -215,11 +216,14 @@ function collectPastePatches(
 }
 
 function pasteClipboardContent(
-  worksheet: XlsxWorksheet,
-  destinationStartCol: number,
-  destinationStartRow: number,
-  clipboard: XlsxClipboardContent,
+  ...args: readonly [
+    worksheet: XlsxWorksheet,
+    destinationStartCol: number,
+    destinationStartRow: number,
+    clipboard: XlsxClipboardContent,
+  ]
 ): XlsxWorksheet {
+  const [worksheet, destinationStartCol, destinationStartRow, clipboard] = args;
   const height = clipboard.values.length;
   const width = clipboard.values[0]?.length ?? 0;
   if (height === 0 || width === 0) {

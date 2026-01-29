@@ -75,12 +75,15 @@ export function renderBullet(para: LayoutParagraphResult, key: number): ReactNod
  * @see ECMA-376 Part 1, Section 21.1.2.4.3 (buBlip)
  */
 function renderPictureBullet(
-  x: number,
-  y: number,
-  size: number,
-  imageUrl: string,
-  key: number,
+  ...args: [
+    x: number,
+    y: number,
+    size: number,
+    imageUrl: string,
+    key: number,
+  ]
 ): ReactNode {
+  const [x, y, size, imageUrl, key] = args;
   const imageY = y - size * IMAGE_BULLET_OFFSET_FACTOR;
 
   return (
@@ -102,14 +105,17 @@ function renderPictureBullet(
  * @see ECMA-376 Part 1, Section 21.1.2.4.4 (buChar)
  */
 function renderCharacterBullet(
-  x: number,
-  y: number,
-  fontSize: number,
-  char: string,
-  color: string,
-  fontFamily: string,
-  key: number,
+  ...args: [
+    x: number,
+    y: number,
+    fontSize: number,
+    char: string,
+    color: string,
+    fontFamily: string,
+    key: number,
+  ]
 ): ReactNode {
+  const [x, y, fontSize, char, color, fontFamily, key] = args;
   return (
     <text
       key={`bullet-${key}`}

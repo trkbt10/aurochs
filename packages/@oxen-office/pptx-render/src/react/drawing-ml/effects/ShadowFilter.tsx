@@ -142,9 +142,7 @@ export function resolveShadowProps(
   // Parse alignment - default is "b" (bottom) for outerShdw per ECMA-376
   const alignmentStr = shadow.alignment ?? "b";
   const validAlignments = ["tl", "t", "tr", "l", "ctr", "r", "bl", "b", "br"] as const;
-  const alignment = validAlignments.includes(alignmentStr as ShadowAlignment)
-    ? (alignmentStr as ShadowAlignment)
-    : "b";
+  const alignment = resolveShadowAlignment(alignmentStr, validAlignments);
 
   return {
     blurRadius: shadow.blurRadius as number,
@@ -160,6 +158,16 @@ export function resolveShadowProps(
     skewY: (shadow.skewY as number | undefined) ?? 0,
     alignment,
   };
+}
+
+function resolveShadowAlignment(
+  alignment: string,
+  validAlignments: readonly ShadowAlignment[],
+): ShadowAlignment {
+  if (validAlignments.includes(alignment as ShadowAlignment)) {
+    return alignment as ShadowAlignment;
+  }
+  return "b";
 }
 
 /**

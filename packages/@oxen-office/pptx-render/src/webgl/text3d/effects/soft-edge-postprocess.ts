@@ -219,12 +219,15 @@ export function createSoftEdgeComposer(
  * @param outputTarget - Target to render final result (null for screen)
  */
 export function applySoftEdgePostProcess(
-  renderer: THREE.WebGLRenderer,
-  scene: THREE.Scene,
-  camera: THREE.Camera,
-  state: SoftEdgeComposerState,
-  outputTarget: THREE.WebGLRenderTarget | null = null,
+  ...args: [
+    renderer: THREE.WebGLRenderer,
+    scene: THREE.Scene,
+    camera: THREE.Camera,
+    state: SoftEdgeComposerState,
+    outputTarget?: THREE.WebGLRenderTarget | null,
+  ]
 ): void {
+  const [renderer, scene, camera, state, outputTarget = null] = args;
   if (!state.enabled || state.radius <= 0) {
     // No blur needed, render directly
     renderer.setRenderTarget(outputTarget);

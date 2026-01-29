@@ -214,9 +214,12 @@ export function rasterizeShadingFill(
       const xClamped = clampToDomain(x, shading.fn.domain);
 
       const componentCount = shading.colorSpace === "DeviceRGB" ? 3 : 1;
-      const comps = shading.fn.type === "FunctionType2"
-        ? evaluateFunctionType2(shading.fn, xClamped, componentCount)
-        : new Array(componentCount).fill(0);
+      let comps: readonly number[];
+      if (shading.fn.type === "FunctionType2") {
+        comps = evaluateFunctionType2(shading.fn, xClamped, componentCount);
+      } else {
+        comps = new Array(componentCount).fill(0);
+      }
 
       const [r, g, b] = shadingColorToRgbBytes(shading, comps);
       const o = idx * 3;

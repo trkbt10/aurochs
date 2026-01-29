@@ -372,12 +372,22 @@ export function isInsideTextRect(
  *
  * @see ECMA-376 Part 1, Section 21.1.2.1.2 (bodyPr insets)
  */
+export type ApplyTextInsetsOptions = {
+  readonly textRect: ResolvedTextRect;
+  readonly lIns?: number;
+  readonly rIns?: number;
+  readonly tIns?: number;
+  readonly bIns?: number;
+};
+
 export function applyTextInsets(
-  textRect: ResolvedTextRect,
-  lIns: number = 0,
-  rIns: number = 0,
-  tIns: number = 0,
-  bIns: number = 0,
+  {
+    textRect,
+    lIns = 0,
+    rIns = 0,
+    tIns = 0,
+    bIns = 0,
+  }: ApplyTextInsetsOptions,
 ): ResolvedTextRect {
   const left = textRect.left + lIns;
   const top = textRect.top + tIns;

@@ -8,8 +8,9 @@
     "@oxen/buffer": "workspace:*",
     "@oxen/color": "workspace:*",
     "@oxen/files": "workspace:*",
+    "@oxen-office/chart": "workspace:*",
+    "@oxen-office/diagram": "workspace:*",
     "@oxen-office/ooxml": "workspace:*",
-    "@oxen/text": "workspace:*",
     "@oxen-office/xlsx": "workspace:*",
     "@oxen/xml": "workspace:*",
     "@oxen/zip": "workspace:*"
@@ -83,10 +84,6 @@
     "./domain/animation": {
       "types": "./src/domain/animation.ts",
       "default": "./src/domain/animation.ts"
-    },
-    "./domain/chart": {
-      "types": "./src/domain/chart.ts",
-      "default": "./src/domain/chart.ts"
     },
     "./domain/effects": {
       "types": "./src/domain/effects.ts",
@@ -163,6 +160,10 @@
     "./domain/drawing-ml/text-fill": {
       "types": "./src/domain/drawing-ml/text-fill.ts",
       "default": "./src/domain/drawing-ml/text-fill.ts"
+    },
+    "./domain/diagram/format-guards": {
+      "types": "./src/domain/diagram/format-guards.ts",
+      "default": "./src/domain/diagram/format-guards.ts"
     },
     "./exporter": {
       "types": "./src/exporter/index.ts",

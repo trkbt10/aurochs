@@ -17,12 +17,15 @@ import type { ViewportTransform } from "./types";
  * @returns Coordinates in slide space
  */
 export function screenToSlideCoords(
-  clientX: number,
-  clientY: number,
-  svgRect: DOMRect,
-  viewport: ViewportTransform,
-  rulerThickness: number
+  ...args: [
+    clientX: number,
+    clientY: number,
+    svgRect: DOMRect,
+    viewport: ViewportTransform,
+    rulerThickness: number,
+  ]
 ): { x: number; y: number } {
+  const [clientX, clientY, svgRect, viewport, rulerThickness] = args;
   // Convert from client to SVG-local coordinates
   const svgX = clientX - svgRect.left;
   const svgY = clientY - svgRect.top;
@@ -49,12 +52,15 @@ export function screenToSlideCoords(
  * @returns Coordinates in client space
  */
 export function slideToScreenCoords(
-  slideX: number,
-  slideY: number,
-  svgRect: DOMRect,
-  viewport: ViewportTransform,
-  rulerThickness: number
+  ...args: [
+    slideX: number,
+    slideY: number,
+    svgRect: DOMRect,
+    viewport: ViewportTransform,
+    rulerThickness: number,
+  ]
 ): { x: number; y: number } {
+  const [slideX, slideY, svgRect, viewport, rulerThickness] = args;
   // Apply viewport transform: canvasPoint = slidePoint * scale + translate
   const canvasX = slideX * viewport.scale + viewport.translateX;
   const canvasY = slideY * viewport.scale + viewport.translateY;
@@ -81,11 +87,14 @@ export function slideToScreenCoords(
  * @returns Coordinates relative to the canvas area origin
  */
 export function screenToCanvasCoords(
-  clientX: number,
-  clientY: number,
-  svgRect: DOMRect,
-  rulerThickness: number
+  ...args: [
+    clientX: number,
+    clientY: number,
+    svgRect: DOMRect,
+    rulerThickness: number,
+  ]
 ): { x: number; y: number } {
+  const [clientX, clientY, svgRect, rulerThickness] = args;
   const svgX = clientX - svgRect.left;
   const svgY = clientY - svgRect.top;
 
@@ -99,11 +108,14 @@ export function screenToCanvasCoords(
  * Checks if a point in screen coordinates is within the canvas area.
  */
 export function isPointInCanvasArea(
-  clientX: number,
-  clientY: number,
-  svgRect: DOMRect,
-  rulerThickness: number
+  ...args: [
+    clientX: number,
+    clientY: number,
+    svgRect: DOMRect,
+    rulerThickness: number,
+  ]
 ): boolean {
+  const [clientX, clientY, svgRect, rulerThickness] = args;
   const svgX = clientX - svgRect.left;
   const svgY = clientY - svgRect.top;
 
@@ -119,11 +131,14 @@ export function isPointInCanvasArea(
  * Checks if a point in screen coordinates is within the ruler area.
  */
 export function isPointInRulerArea(
-  clientX: number,
-  clientY: number,
-  svgRect: DOMRect,
-  rulerThickness: number
+  ...args: [
+    clientX: number,
+    clientY: number,
+    svgRect: DOMRect,
+    rulerThickness: number,
+  ]
 ): { horizontal: boolean; vertical: boolean; corner: boolean } {
+  const [clientX, clientY, svgRect, rulerThickness] = args;
   const svgX = clientX - svgRect.left;
   const svgY = clientY - svgRect.top;
 

@@ -5,7 +5,7 @@
  */
 
 import type { CSSProperties } from "react";
-import type { SlideListOrientation, SlideListMode } from "./types";
+import type { SlideListOrientation } from "./types";
 import {
   colorTokens,
   radiusTokens,
@@ -128,9 +128,7 @@ function getSelectionRing(
   isActive: boolean
 ): string {
   if (isSelected) {
-    const color = isPrimary
-      ? colorTokens.selection.primary
-      : colorTokens.selection.secondary;
+    const color = isPrimary ? colorTokens.selection.primary : colorTokens.selection.secondary;
     return `inset 0 0 0 2px ${color}`;
   }
   if (isActive) {
@@ -138,6 +136,13 @@ function getSelectionRing(
   }
   return "none";
 }
+
+type ThumbnailContainerStyleOptions = {
+  aspectRatio: string;
+  isSelected: boolean;
+  isPrimary: boolean;
+  isActive: boolean;
+};
 
 
 
@@ -150,10 +155,7 @@ function getSelectionRing(
 
 
 export function getThumbnailContainerStyle(
-  aspectRatio: string,
-  isSelected: boolean,
-  isPrimary: boolean,
-  isActive: boolean
+  { aspectRatio, isSelected, isPrimary, isActive }: ThumbnailContainerStyleOptions
 ): CSSProperties {
   const selectionRing = getSelectionRing(isSelected, isPrimary, isActive);
   // Subtle shadow for depth on dark backgrounds
@@ -166,9 +168,7 @@ export function getThumbnailContainerStyle(
     // Slide content is white (PowerPoint slides)
     backgroundColor: "#fff",
     borderRadius: radiusTokens.sm,
-    boxShadow: selectionRing !== "none"
-      ? `${selectionRing}, ${baseShadow}`
-      : baseShadow,
+    boxShadow: selectionRing !== "none" ? `${selectionRing}, ${baseShadow}` : baseShadow,
     transition: "box-shadow 0.12s ease",
     position: "relative",
     overflow: "hidden",
@@ -289,19 +289,6 @@ export function getFxButtonStyle(visible: boolean): CSSProperties {
 // =============================================================================
 // Gap styles (for add button and drop indicator)
 // =============================================================================
-
-/** Fixed gap size - matches CONTAINER_GAP */
-const GAP_SIZE = 8;
-
-
-
-
-
-
-
-
-
-
 
 export function getGapStyle(
   orientation: SlideListOrientation
@@ -448,9 +435,7 @@ export function getAddButtonStyle(
     height: `${size}px`,
     borderRadius: radiusTokens.sm,
     // Subtle appearance - matches design system
-    backgroundColor: visible
-      ? colorTokens.accent.primary
-      : "transparent",
+    backgroundColor: visible ? colorTokens.accent.primary : "transparent",
     color: colorTokens.text.primary,
     border: "none",
     cursor: "pointer",
@@ -467,9 +452,7 @@ export function getAddButtonStyle(
     transition: "opacity 0.12s ease, transform 0.12s ease, background-color 0.12s ease",
     transform: visible ? "scale(1)" : "scale(0.85)",
     // Subtle shadow when visible
-    boxShadow: visible
-      ? "0 1px 4px rgba(0, 0, 0, 0.15)"
-      : "none",
+    boxShadow: visible ? "0 1px 4px rgba(0, 0, 0, 0.15)" : "none",
     // Prevent text selection
     userSelect: "none",
     // Prevent shrinking in flex container

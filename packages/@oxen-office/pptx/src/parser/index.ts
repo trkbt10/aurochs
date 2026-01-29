@@ -189,6 +189,13 @@ export {
 // =============================================================================
 
 export { parseShapeElement, parseShapeTree } from "./shape-parser";
+export { parseGraphicFrame } from "./shape-parser/graphic-frame";
+
+// =============================================================================
+// Table Parsing
+// =============================================================================
+
+export { parseTable } from "./table/table-parser";
 
 // =============================================================================
 // Diagram Parsing

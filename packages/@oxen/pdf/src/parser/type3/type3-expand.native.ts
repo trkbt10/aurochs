@@ -127,11 +127,14 @@ function resolveXObjectStreamByName(page: NativePdfPage, xObjects: PdfDict, name
 }
 
 function remapType3ImageXObjects(
-  page: NativePdfPage,
-  elements: readonly ParsedElement[],
-  xObjects: PdfDict | null,
-  registerXObjectStream: (stream: PdfStream) => string,
+  ...args: readonly [
+    page: NativePdfPage,
+    elements: readonly ParsedElement[],
+    xObjects: PdfDict | null,
+    registerXObjectStream: (stream: PdfStream) => string,
+  ]
 ): ParsedElement[] {
+  const [page, elements, xObjects, registerXObjectStream] = args;
   if (!xObjects) {return [...elements];}
   const out: ParsedElement[] = [];
 

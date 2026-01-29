@@ -16,6 +16,8 @@ import type { XlsxFill } from "@oxen-office/xlsx/domain/style/fill";
 import type { XlsxBorder } from "@oxen-office/xlsx/domain/style/border";
 import type { ColIndex, RowIndex, StyleId } from "@oxen-office/xlsx/domain/types";
 import type { UndoRedoHistory as CoreUndoRedoHistory } from "@oxen-ui/editor-core/history";
+import type { IdleDragState as CoreIdleDragState } from "@oxen-ui/editor-core/drag-state";
+import { createIdleDragState as createCoreIdleDragState } from "@oxen-ui/editor-core/drag-state";
 
 // =============================================================================
 // Undo/Redo History (shared with pptx-editor)
@@ -59,9 +61,7 @@ export function createEmptyCellSelection(): CellSelectionState {
 /**
  * Idle drag state
  */
-type IdleDragState = {
-  readonly type: "idle";
-};
+type IdleDragState = CoreIdleDragState;
 
 /**
  * Range selection drag (clicking and dragging to select cells)
@@ -115,7 +115,7 @@ export type XlsxDragState =
  * Create idle drag state
  */
 export function createIdleDragState(): XlsxDragState {
-  return { type: "idle" };
+  return createCoreIdleDragState();
 }
 
 // =============================================================================

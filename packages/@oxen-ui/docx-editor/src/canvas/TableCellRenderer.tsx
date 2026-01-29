@@ -6,7 +6,6 @@
 
 import type { CSSProperties, ReactNode, MouseEvent } from "react";
 import type { DocxTableCell, DocxTableCellProperties, DocxCellBorders } from "@oxen-office/docx/domain/table";
-import type { DocxParagraph } from "@oxen-office/docx/domain/paragraph";
 import { ParagraphRenderer } from "./ParagraphRenderer";
 
 // =============================================================================
@@ -202,6 +201,46 @@ export function computeCellStyles(
 // Component
 // =============================================================================
 
+function renderCellContents(cell: DocxTableCell, rowIndex: number, colIndex: number): ReactNode {
+  if (cell.content.length === 0) {
+    return <p style={{ margin: 0, minHeight: "1em" }}>{"\u00A0"}</p>;
+  }
+
+  return cell.content.map((content, index) => {
+    if (content.type === "paragraph") {
+      return (
+        <ParagraphRenderer
+          key={index}
+          paragraph={content}
+          elementId={`${rowIndex}-${colIndex}-${index}`}
+          isSelected={false}
+          isEditing={false}
+          onClick={() => {}}
+          onDoubleClick={() => {}}
+        />
+      );
+    }
+    // Nested table - render as placeholder for now
+    if (content.type === "table") {
+      return (
+        <div
+          key={index}
+          style={{
+            border: "1px dashed var(--border-strong)",
+            padding: "var(--spacing-xs)",
+            textAlign: "center",
+            color: "var(--text-secondary)",
+            fontSize: "var(--font-size-md)",
+          }}
+        >
+          [Nested table]
+        </div>
+      );
+    }
+    return null;
+  });
+}
+
 /**
  * Render a table cell with its content.
  */
@@ -248,43 +287,7 @@ export function TableCellRenderer({
       data-row={rowIndex}
       data-col={colIndex}
     >
-      {cell.content.length === 0 ? (
-        <p style={{ margin: 0, minHeight: "1em" }}>{"\u00A0"}</p>
-      ) : (
-        cell.content.map((content, index) => {
-          if (content.type === "paragraph") {
-            return (
-              <ParagraphRenderer
-                key={index}
-                paragraph={content}
-                elementId={`${rowIndex}-${colIndex}-${index}`}
-                isSelected={false}
-                isEditing={false}
-                onClick={() => {}}
-                onDoubleClick={() => {}}
-              />
-            );
-          }
-          // Nested table - render as placeholder for now
-          if (content.type === "table") {
-            return (
-              <div
-                key={index}
-                style={{
-                  border: "1px dashed var(--border-strong)",
-                  padding: "var(--spacing-xs)",
-                  textAlign: "center",
-                  color: "var(--text-secondary)",
-                  fontSize: "var(--font-size-md)",
-                }}
-              >
-                [Nested table]
-              </div>
-            );
-          }
-          return null;
-        })
-      )}
+      {renderCellContents(cell, rowIndex, colIndex)}
     </td>
   );
 }

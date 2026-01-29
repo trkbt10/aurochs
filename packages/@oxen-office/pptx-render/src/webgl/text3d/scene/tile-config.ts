@@ -137,17 +137,20 @@ export function applyTileRect(texture: THREE.Texture, tileRect: TileRect): void 
  * @param textureHeight - Original texture height
  */
 export function calculateTileFillTransform(
-  config: TileFill,
-  geometryWidth: number,
-  geometryHeight: number,
-  textureWidth: number,
-  textureHeight: number,
+  ...args: [
+    config: TileFill,
+    geometryWidth: number,
+    geometryHeight: number,
+    textureWidth: number,
+    textureHeight: number,
+  ]
 ): {
   repeatX: number;
   repeatY: number;
   offsetX: number;
   offsetY: number;
 } {
+  const [config, geometryWidth, geometryHeight, textureWidth, textureHeight] = args;
   // Scale factors (Percent to decimal)
   const scaleX = (config.sx as number) / 100;
   const scaleY = (config.sy as number) / 100;
@@ -179,12 +182,15 @@ export function calculateTileFillTransform(
  * Get alignment offset based on RectAlignment.
  */
 function getAlignmentOffset(
-  alignment: TileFill["alignment"],
-  geoWidth: number,
-  geoHeight: number,
-  tileWidth: number,
-  tileHeight: number,
+  ...args: [
+    alignment: TileFill["alignment"],
+    geoWidth: number,
+    geoHeight: number,
+    tileWidth: number,
+    tileHeight: number,
+  ]
 ): { alignOffsetX: number; alignOffsetY: number } {
+  const [alignment, geoWidth, geoHeight, tileWidth, tileHeight] = args;
   const alignmentOffsets: Record<TileFill["alignment"], { x: number; y: number }> = {
     tl: { x: 0, y: 0 },
     t: { x: (geoWidth - tileWidth) / 2, y: 0 },
@@ -212,13 +218,16 @@ function getAlignmentOffset(
  * @param textureHeight - Original texture height
  */
 export function applyTileFillConfig(
-  texture: THREE.Texture,
-  config: TileFill,
-  geometryWidth: number,
-  geometryHeight: number,
-  textureWidth: number,
-  textureHeight: number,
+  ...args: [
+    texture: THREE.Texture,
+    config: TileFill,
+    geometryWidth: number,
+    geometryHeight: number,
+    textureWidth: number,
+    textureHeight: number,
+  ]
 ): void {
+  const [texture, config, geometryWidth, geometryHeight, textureWidth, textureHeight] = args;
   // Apply flip mode
   applyTileFlipMode(texture, config.flip);
 

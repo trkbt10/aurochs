@@ -131,14 +131,17 @@ function calculateLineHeight(baseFontSize: Points, lineSpacing: LineSpacing | un
  * Layout a single paragraph.
  */
 function layoutParagraph(
-  para: LayoutParagraphInput,
-  contentWidth: Pixels,
-  startY: number,
-  measureParagraphFn: (paragraph: LayoutParagraphInput) => {
-    readonly spans: readonly MeasuredSpan[];
-    readonly bulletWidth?: Pixels;
-  },
+  ...args: readonly [
+    para: LayoutParagraphInput,
+    contentWidth: Pixels,
+    startY: number,
+    measureParagraphFn: (paragraph: LayoutParagraphInput) => {
+      readonly spans: readonly MeasuredSpan[];
+      readonly bulletWidth?: Pixels;
+    },
+  ]
 ): { paragraph: LayoutParagraphResult; endY: number } {
+  const [para, contentWidth, startY, measureParagraphFn] = args;
   // Calculate margins
   const marginLeft = para.marginLeft as number;
   const marginRight = para.marginRight as number;
@@ -234,13 +237,17 @@ function layoutParagraph(
  * Calculate line X position based on alignment.
  */
 function calculateLineX(
-  alignment: TextAlign,
-  marginLeft: number,
-  lineWidth: number,
-  availableWidth: number,
-  indent: number,
-  bulletWidth: number,
+  ...args: readonly [
+    alignment: TextAlign,
+    marginLeft: number,
+    lineWidth: number,
+    availableWidth: number,
+    indent: number,
+    bulletWidth: number,
+  ]
 ): number {
+  const [alignment, marginLeft, lineWidth, availableWidth, indent, bulletWidth] =
+    args;
   // First line starts at marL + indent + bulletWidth
   const baseX = marginLeft + indent + bulletWidth;
 
@@ -308,12 +315,15 @@ function findWordBoundaries(
  * @param isLastLine - Whether this is the last line of the paragraph
  */
 function positionSpans(
-  spans: readonly MeasuredSpan[],
-  alignment: TextAlign,
-  lineWidth: number,
-  availableWidth: number,
-  isLastLine: boolean,
+  ...args: readonly [
+    spans: readonly MeasuredSpan[],
+    alignment: TextAlign,
+    lineWidth: number,
+    availableWidth: number,
+    isLastLine: boolean,
+  ]
 ): PositionedSpan[] {
+  const [spans, alignment, lineWidth, availableWidth, isLastLine] = args;
   // Apply justification for justify alignment on non-last lines
   // For distributed alignment, also justify the last line
   // @see ECMA-376-1:2016 Section 17.3.1.13 (jc - distribute)
@@ -397,11 +407,14 @@ function calculateYOffset(totalHeight: number, textBox: TextBoxConfig): number {
 }
 
 function getAnchorYOffset(
-  anchor: TextBoxConfig["anchor"],
-  insetTop: number,
-  contentHeight: number,
-  totalHeight: number,
+  ...args: readonly [
+    anchor: TextBoxConfig["anchor"],
+    insetTop: number,
+    contentHeight: number,
+    totalHeight: number,
+  ]
 ): number {
+  const [anchor, insetTop, contentHeight, totalHeight] = args;
   switch (anchor) {
     case "center":
       return insetTop + (contentHeight - totalHeight) / 2;

@@ -20,7 +20,22 @@
     "./history": {
       "types": "./src/history.ts",
       "default": "./src/history.ts"
+    },
+    "./selection": {
+      "types": "./src/selection.ts",
+      "default": "./src/selection.ts"
+    },
+    "./clipboard": {
+      "types": "./src/clipboard.ts",
+      "default": "./src/clipboard.ts"
+    },
+    "./drag-state": {
+      "types": "./src/drag-state.ts",
+      "default": "./src/drag-state.ts"
+    },
+    "./pointer-utils": {
+      "types": "./src/pointer-utils.ts",
+      "default": "./src/pointer-utils.ts"
     }
   }
 }
-

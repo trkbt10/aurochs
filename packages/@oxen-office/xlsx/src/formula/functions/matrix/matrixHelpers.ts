@@ -8,11 +8,9 @@ import { toLookupTable } from "../lookup/table";
 export type NumericMatrix = number[][];
 
 const ensureNumericEntry = (
-  value: unknown,
-  description: string,
-  rowIndex: number,
-  columnIndex: number,
+  ...args: readonly [value: unknown, description: string, rowIndex: number, columnIndex: number]
 ): number => {
+  const [value, description, rowIndex, columnIndex] = args;
   if (typeof value !== "number" || Number.isNaN(value)) {
     throw new Error(`${description} requires numeric values (row ${rowIndex + 1}, column ${columnIndex + 1})`);
   }

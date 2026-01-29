@@ -5,37 +5,20 @@
  * @see ECMA-376 Part 1, Section 20.1.9 - DrawingML Shapes
  */
 
-import type { Chart } from "./chart";
 import type { Fill, Line } from "./color/types";
-import type {
-  DiagramColorsDefinition,
-  DiagramDataModel,
-  DiagramLayoutDefinition,
-  DiagramStyleDefinition,
-} from "./diagram";
 import type { Table } from "./table/types";
 import type { TextBody } from "./text";
 import type { Degrees, Percent, Pixels } from "@oxen-office/ooxml/domain/units";
 import type { Point, Transform, GroupTransform } from "./geometry";
 import type { Effects } from "./effects";
-import type { Hyperlink, ResourceId, ResolvedBlipResource } from "./resource";
+import type { Hyperlink, ResourceId } from "./resource";
 import type { GroupLocks, PictureLocks, ShapeLocks } from "./shape-locks";
 import type { ContentPart } from "./anchor";
 import type { BlipCompression } from "@oxen-office/ooxml/domain/drawing";
 import type { FontCollectionIndex, StyleMatrixColumnIndex, ShapeId } from "./style-ref";
 import type {
-  LightRigDirection,
-  LightRigType,
-  PresetCameraType,
-  PresetMaterialType,
-  BevelPresetType,
   Scene3d,
   Shape3d,
-  Camera3d,
-  Rotation3d,
-  LightRig,
-  Backdrop3d,
-  Bevel3d,
 } from "./three-d";
 
 // =============================================================================

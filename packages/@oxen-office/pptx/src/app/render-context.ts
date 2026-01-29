@@ -53,12 +53,22 @@ export type RenderContext = CoreRenderContext & {
 
 
 
+export type CreateRenderContextOptions = {
+  readonly apiSlide: ApiSlide;
+  readonly zip: ZipFile;
+  readonly slideSize: SlideSize;
+  readonly defaultTextStyle?: XmlElement | null;
+  readonly renderOptions?: RenderOptions;
+};
+
 export function createRenderContext(
-  apiSlide: ApiSlide,
-  zip: ZipFile,
-  slideSize: SlideSize,
-  defaultTextStyle: XmlElement | null = null,
-  renderOptions?: RenderOptions,
+  {
+    apiSlide,
+    zip,
+    slideSize,
+    defaultTextStyle = null,
+    renderOptions,
+  }: CreateRenderContextOptions,
 ): RenderContext {
   // Build SlideRenderContext
   const slideRenderCtx = (() => {
@@ -107,7 +117,7 @@ export function createRenderContext(
       themeResources: apiSlide.themeRelationships,
     };
 
-    return createSlideContext(slide, layout, master, presentation);
+    return createSlideContext({ slide, layout, master, presentation });
   })();
 
   // Resolve background from hierarchy
@@ -177,6 +187,6 @@ export function getLayoutNonPlaceholderShapes(apiSlide: ApiSlide): readonly Shap
     return [];
   }
 
-  const layoutShapes = parseShapeTree(spTree);
+  const layoutShapes = parseShapeTree({ spTree });
   return layoutShapes.filter((shape) => !isPlaceholder(shape));
 }

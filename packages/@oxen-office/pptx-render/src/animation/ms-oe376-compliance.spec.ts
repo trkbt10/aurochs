@@ -29,15 +29,18 @@ import {
   parseFilterToEffectType,
   parseFilterDirection,
 } from "./effects";
-import type { EffectType, EffectDirection } from "@oxen-office/pptx/domain/animation";
-import type { EffectConfig } from "./types";
+import type { EffectType } from "@oxen-office/pptx/domain/animation";
 
 // =============================================================================
 // Test Helpers
 // =============================================================================
 
-function createMockElement(): HTMLElement & { style: Record<string, string> } {
-  return {
+function isHTMLElement(value: unknown): value is HTMLElement {
+  return typeof value === "object" && value !== null && "style" in value;
+}
+
+function createMockElement(): HTMLElement {
+  const el: unknown = {
     style: {
       transition: "",
       opacity: "",
@@ -51,7 +54,12 @@ function createMockElement(): HTMLElement & { style: Record<string, string> } {
       maskPosition: "",
       maskRepeat: "",
     },
-  } as unknown as HTMLElement & { style: Record<string, string> };
+    offsetHeight: 0,
+  };
+  if (!isHTMLElement(el)) {
+    throw new Error("createMockElement: invalid mock element shape");
+  }
+  return el;
 }
 
 // =============================================================================

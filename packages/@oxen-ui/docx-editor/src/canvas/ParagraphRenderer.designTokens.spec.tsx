@@ -4,10 +4,10 @@
 
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import type { DocxParagraph } from "@oxen-office/docx/domain/paragraph";
 import { ParagraphRenderer } from "./ParagraphRenderer";
+import type { ParagraphRendererProps } from "./ParagraphRenderer";
 
 function createSimpleParagraph(text: string): DocxParagraph {
   return {
@@ -22,12 +22,14 @@ function createSimpleParagraph(text: string): DocxParagraph {
 }
 
 describe("ParagraphRenderer (design tokens)", () => {
+  const noopOnClick: ParagraphRendererProps["onClick"] = () => {};
+  const noopOnDoubleClick: ParagraphRendererProps["onDoubleClick"] = () => {};
   const defaultProps = {
     elementId: "0",
     isSelected: false,
     isEditing: false,
-    onClick: vi.fn(),
-    onDoubleClick: vi.fn(),
+    onClick: noopOnClick,
+    onDoubleClick: noopOnDoubleClick,
   };
 
   it("uses selection design tokens for outline and background", () => {
@@ -90,4 +92,3 @@ describe("ParagraphRenderer (design tokens)", () => {
     expect(anchor?.style.color).toBe("var(--accent-secondary)");
   });
 });
-

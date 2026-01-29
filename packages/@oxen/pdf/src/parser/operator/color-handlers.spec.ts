@@ -44,8 +44,8 @@ function createMockGfxOps() {
       setStrokeGray: (g: number) => calls.push({ method: "setStrokeGray", args: [g] }),
       setFillRgb: (r: number, g: number, b: number) => calls.push({ method: "setFillRgb", args: [r, g, b] }),
       setStrokeRgb: (r: number, g: number, b: number) => calls.push({ method: "setStrokeRgb", args: [r, g, b] }),
-      setFillCmyk: (c: number, m: number, y: number, k: number) => calls.push({ method: "setFillCmyk", args: [c, m, y, k] }),
-      setStrokeCmyk: (c: number, m: number, y: number, k: number) => calls.push({ method: "setStrokeCmyk", args: [c, m, y, k] }),
+      setFillCmyk: (...args: [c: number, m: number, y: number, k: number]) => calls.push({ method: "setFillCmyk", args }),
+      setStrokeCmyk: (...args: [c: number, m: number, y: number, k: number]) => calls.push({ method: "setStrokeCmyk", args }),
       setFillAlpha: () => {},
       setStrokeAlpha: () => {},
       setCharSpacing: () => {},
@@ -462,7 +462,7 @@ describe("color-handlers", () => {
       ctx = { ...ctx, ...colorHandlers.handleFillColorSpace(ctx, ops) };
 
       ctx = { ...ctx, operandStack: [0.5, 0, 0] };
-      ctx = { ...ctx, ...colorHandlers.handleFillColorN(ctx, ops) };
+      void colorHandlers.handleFillColorN(ctx, ops);
 
       const gs = stack.get();
       expect(gs.fillColor.colorSpace).toBe("DeviceRGB");
@@ -495,7 +495,7 @@ describe("color-handlers", () => {
       ctx = { ...ctx, ...colorHandlers.handleFillColorSpace(ctx, ops) };
 
       ctx = { ...ctx, operandStack: [0, 1, 1, 0] };
-      ctx = { ...ctx, ...colorHandlers.handleFillColorN(ctx, ops) };
+      void colorHandlers.handleFillColorN(ctx, ops);
 
       const gs = stack.get();
       expect(gs.fillColor.colorSpace).toBe("DeviceRGB");
@@ -514,7 +514,7 @@ describe("color-handlers", () => {
       expect(stack.get().fillColorSpaceName).toBe("CS1");
 
       ctx = { ...ctx, operandStack: [1, 0, 0] };
-      ctx = { ...ctx, ...colorHandlers.handleFillRgb(ctx, ops) };
+      void colorHandlers.handleFillRgb(ctx, ops);
       expect(stack.get().fillColorSpaceName).toBe("DeviceRGB");
     });
   });

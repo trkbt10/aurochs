@@ -8,7 +8,6 @@
  */
 
 import type {
-  Timing,
   TimeNode,
   AnimateBehavior,
   AnimateMotionBehavior,
@@ -21,7 +20,6 @@ import type {
   SequenceTimeNode,
   ExclusiveTimeNode,
   AnimationTarget,
-  ShapeTarget,
 } from "@oxen-office/pptx/domain/animation";
 import type { EffectConfig, PlayerOptions, PlayerState } from "./types";
 import type { AnimationController, EasingName } from "./engine";
@@ -118,7 +116,7 @@ export type AnimationPlayerInstance = {
   /** Get current player state */
   readonly getState: () => PlayerState;
   /** Play animations from timing data */
-  readonly play: (timing: Timing) => Promise<void>;
+  readonly play: (timing: TimingLike | null) => Promise<void>;
   /** Stop current animation */
   readonly stop: () => void;
   /** Reset all animated elements */
@@ -489,7 +487,7 @@ export function createPlayer(options: PlayerOptions): AnimationPlayerInstance {
       return state.status;
     },
 
-    async play(timing: Timing): Promise<void> {
+    async play(timing: TimingLike | null): Promise<void> {
       if (!timing?.rootTimeNode) {
         log("No timing data to play");
         return;
@@ -565,10 +563,14 @@ export function createPlayer(options: PlayerOptions): AnimationPlayerInstance {
 // Utility Functions
 // =============================================================================
 
+export type TimingLike = {
+  readonly rootTimeNode?: TimeNode;
+};
+
 /**
  * Extract all shape IDs from timing tree.
  */
-export function extractShapeIds(timing: Timing): string[] {
+export function extractShapeIds(timing: TimingLike | null): string[] {
   const ids = new Set<string>();
 
   function traverse(node: TimeNode): void {

@@ -30,7 +30,10 @@ function toRgba64x64(image: {
   return convertToRgba(image.data, image.width, image.height, image.colorSpace, image.bitsPerComponent, { decode: image.decode });
 }
 
-function pixelGray(rgba: Uint8ClampedArray, x: number, y: number, width: number): number {
+function pixelGray(
+  ...args: readonly [rgba: Uint8ClampedArray, x: number, y: number, width: number]
+): number {
+  const [rgba, x, y, width] = args;
   const idx = (y * width + x) * 4;
   return rgba[idx] ?? 0;
 }

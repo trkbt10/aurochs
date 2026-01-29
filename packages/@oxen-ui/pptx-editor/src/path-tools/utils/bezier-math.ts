@@ -5,7 +5,6 @@
  */
 
 import type { Point } from "@oxen-office/pptx/domain";
-import type { Pixels } from "@oxen-office/ooxml/domain/units";
 import type { Bounds } from "@oxen-office/pptx/domain/types";
 import { px } from "@oxen-office/ooxml/domain/units";
 
@@ -72,12 +71,9 @@ export function normalizeVector(x: number, y: number): { x: number; y: number } 
  * @returns Point on curve at t
  */
 export function evaluateCubicBezier(
-  p0: Point,
-  p1: Point,
-  p2: Point,
-  p3: Point,
-  t: number
+  ...args: [p0: Point, p1: Point, p2: Point, p3: Point, t: number]
 ): Point {
+  const [p0, p1, p2, p3, t] = args;
   const t2 = t * t;
   const t3 = t2 * t;
   const mt = 1 - t;
@@ -111,12 +107,9 @@ export function evaluateCubicBezier(
  * @returns Tangent vector at t
  */
 export function evaluateCubicBezierDerivative(
-  p0: Point,
-  p1: Point,
-  p2: Point,
-  p3: Point,
-  t: number
+  ...args: [p0: Point, p1: Point, p2: Point, p3: Point, t: number]
 ): { x: number; y: number } {
+  const [p0, p1, p2, p3, t] = args;
   const t2 = t * t;
   const mt = 1 - t;
   const mt2 = mt * mt;
@@ -158,12 +151,9 @@ export type CubicBezierSegment = {
  * @returns Two bezier segments
  */
 export function subdivideCubicBezier(
-  p0: Point,
-  p1: Point,
-  p2: Point,
-  p3: Point,
-  t: number
+  ...args: [p0: Point, p1: Point, p2: Point, p3: Point, t: number]
 ): { left: CubicBezierSegment; right: CubicBezierSegment } {
+  const [p0, p1, p2, p3, t] = args;
   // First level
   const q0 = lerpPoint(p0, p1, t);
   const q1 = lerpPoint(p1, p2, t);
@@ -206,11 +196,9 @@ export function subdivideCubicBezier(
  * @returns Bounding box
  */
 export function cubicBezierBounds(
-  p0: Point,
-  p1: Point,
-  p2: Point,
-  p3: Point
+  ...args: [p0: Point, p1: Point, p2: Point, p3: Point]
 ): Bounds {
+  const [p0, p1, p2, p3] = args;
   // Start with endpoints
   let minX = Math.min(p0.x as number, p3.x as number);
   let maxX = Math.max(p0.x as number, p3.x as number);
@@ -295,13 +283,9 @@ function solveQuadratic(a: number, b: number, c: number): number[] {
  * @returns Nearest point info: { t, point, distance }
  */
 export function nearestPointOnCubicBezier(
-  p0: Point,
-  p1: Point,
-  p2: Point,
-  p3: Point,
-  target: Point,
-  tolerance: number = 0.5
+  ...args: [p0: Point, p1: Point, p2: Point, p3: Point, target: Point, tolerance?: number]
 ): { t: number; point: Point; distance: number } {
+  const [p0, p1, p2, p3, target, tolerance = 0.5] = args;
   // Sample the curve at regular intervals
   const samples = 10;
   let bestT = 0;

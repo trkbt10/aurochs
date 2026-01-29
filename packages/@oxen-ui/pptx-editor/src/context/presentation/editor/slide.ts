@@ -103,18 +103,30 @@ function insertSlideAt(
 
 
 
-export function addSlide(
+function getInsertIndexForAddSlide(
   document: PresentationDocument,
-  slide: Slide,
-  afterSlideId?: SlideId,
-  atIndex?: number
+  afterSlideId: SlideId | undefined,
+  atIndex: number | undefined,
+): number {
+  if (atIndex !== undefined) {
+    return Math.max(0, Math.min(atIndex, document.slides.length));
+  }
+  return getInsertIndex(document, afterSlideId);
+}
+
+export function addSlide(
+  ...args: readonly [
+    document: PresentationDocument,
+    slide: Slide,
+    afterSlideId?: SlideId,
+    atIndex?: number,
+  ]
 ): { document: PresentationDocument; newSlideId: SlideId } {
+  const [document, slide, afterSlideId, atIndex] = args;
   const newSlideId = generateSlideId(document);
   const newSlideWithId: SlideWithId = { id: newSlideId, slide };
   // atIndex takes precedence over afterSlideId
-  const insertIndex = atIndex !== undefined
-    ? Math.max(0, Math.min(atIndex, document.slides.length))
-    : getInsertIndex(document, afterSlideId);
+  const insertIndex = getInsertIndexForAddSlide(document, afterSlideId, atIndex);
   const newSlides = insertSlideAt(document.slides, newSlideWithId, insertIndex);
 
   return {

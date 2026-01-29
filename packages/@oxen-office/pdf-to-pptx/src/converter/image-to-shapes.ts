@@ -174,11 +174,14 @@ function createImageTransform(ctm: PdfMatrix, clippedBBox: PdfBBox | null, conte
 }
 
 function warpTransformedImageToPngDataUrl(
-  image: PdfImage,
-  context: ConversionContext,
-  bbox: PdfBBox,
-  options: Readonly<{ readonly clipMask?: PdfSoftMask }> = {},
+  ...args: readonly [
+    image: PdfImage,
+    context: ConversionContext,
+    bbox: PdfBBox,
+    options?: Readonly<{ readonly clipMask?: PdfSoftMask }>,
+  ]
 ): Readonly<{ readonly bbox: PdfBBox; readonly dataUrl: string }> | null {
+  const [image, context, bbox, options = {}] = args;
   const format = detectImageFormat(image.data);
   if (format !== "raw") {
     return null;
@@ -295,13 +298,16 @@ function encodeRawToPngDataUrl(image: PdfImage): string {
 }
 
 function applySoftMaskMatteInPlace(
-  rgbaData: Uint8ClampedArray,
-  alpha: Uint8Array | undefined,
-  matte: readonly number[] | undefined,
-  colorSpace: PdfColorSpace,
-  width: number,
-  height: number,
+  ...args: readonly [
+    rgbaData: Uint8ClampedArray,
+    alpha: Uint8Array | undefined,
+    matte: readonly number[] | undefined,
+    colorSpace: PdfColorSpace,
+    width: number,
+    height: number,
+  ]
 ): void {
+  const [rgbaData, alpha, matte, colorSpace, width, height] = args;
   if (!alpha || !matte) {return;}
 
   const pixelCount = width * height;
@@ -371,11 +377,14 @@ function toMatteRgbBytes(matte: readonly number[], colorSpace: PdfColorSpace): r
 }
 
 function applyAlphaMaskInPlace(
-  rgbaData: Uint8ClampedArray,
-  alpha: Uint8Array | undefined,
-  width: number,
-  height: number
+  ...args: readonly [
+    rgbaData: Uint8ClampedArray,
+    alpha: Uint8Array | undefined,
+    width: number,
+    height: number,
+  ]
 ): void {
+  const [rgbaData, alpha, width, height] = args;
   if (!alpha) {return;}
 
   const expectedLength = width * height;

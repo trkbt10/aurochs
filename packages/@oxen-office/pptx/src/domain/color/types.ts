@@ -8,7 +8,6 @@
 import type { Brand, Degrees, Percent, Pixels } from "@oxen-office/ooxml/domain/units";
 import type { BlipCompression, TileFlipMode } from "@oxen-office/ooxml/domain/drawing";
 import type { RectAlignment, ResourceId } from "../types";
-import type { ResolvedBlipResource } from "../resource";
 
 // =============================================================================
 // OOXML types - DO NOT RE-EXPORT

@@ -30,6 +30,12 @@ import { TextOverlay } from "../text-render/TextOverlay";
 import { CursorCaret } from "../text-render/CursorCaret";
 import { EMPTY_COLOR_CONTEXT } from "../input-support/color-context";
 import { TextEditInputFrame } from "../input-field/TextEditInputFrame";
+import {
+  applySelectionRange,
+  getSelectionAnchor,
+  isPrimaryMouseAction,
+  isPrimaryPointerAction,
+} from "@oxen-ui/editor-core/pointer-utils";
 import type { TextEditControllerProps, CursorState, CompositionState } from "./types";
 import { useTextEditInput } from "./use-text-edit-input";
 import { useTextComposition } from "./use-text-composition";
@@ -88,31 +94,6 @@ const INITIAL_CURSOR_STATE: CursorState = {
 // =============================================================================
 // Selection Helpers
 // =============================================================================
-
-function getSelectionAnchor(textarea: HTMLTextAreaElement): number {
-  if (textarea.selectionDirection === "backward") {
-    return textarea.selectionEnd ?? 0;
-  }
-  return textarea.selectionStart ?? 0;
-}
-
-function applySelectionRange(
-  textarea: HTMLTextAreaElement,
-  anchorOffset: number,
-  focusOffset: number,
-) {
-  const start = Math.min(anchorOffset, focusOffset);
-  const end = Math.max(anchorOffset, focusOffset);
-  const direction = focusOffset < anchorOffset ? "backward" : "forward";
-  textarea.setSelectionRange(start, end, direction);
-}
-
-function isPrimaryPointerAction(event: React.PointerEvent<SVGSVGElement>): boolean {
-  if (event.pointerType === "mouse") {
-    return event.button === 0;
-  }
-  return event.button === 0 || (event.buttons & 1) === 1;
-}
 
 // =============================================================================
 // Component
@@ -301,7 +282,7 @@ export function TextEditController({
 
       const anchorOffset = event.shiftKey ? getSelectionAnchor(textarea) : offset;
       dragAnchorRef.current = anchorOffset;
-      applySelectionRange(textarea, anchorOffset, offset);
+      applySelectionRange({ textarea, anchorOffset, focusOffset: offset });
       updateCursorPosition();
 
       event.currentTarget.setPointerCapture(event.pointerId);
@@ -329,7 +310,7 @@ export function TextEditController({
       }
 
       const anchorOffset = dragAnchorRef.current ?? getSelectionAnchor(textarea);
-      applySelectionRange(textarea, anchorOffset, offset);
+      applySelectionRange({ textarea, anchorOffset, focusOffset: offset });
       updateCursorPosition();
       event.preventDefault();
     },
@@ -359,7 +340,7 @@ export function TextEditController({
       if (event.detail < 3) {
         return;
       }
-      if (!isPrimaryPointerAction(event as React.PointerEvent<SVGSVGElement>)) {
+      if (!isPrimaryMouseAction(event)) {
         event.preventDefault();
         return;
       }
@@ -381,7 +362,7 @@ export function TextEditController({
 
       const startOffset = cursorPositionToOffset(currentTextBody, lineRange.start);
       const endOffset = cursorPositionToOffset(currentTextBody, lineRange.end);
-      applySelectionRange(textarea, startOffset, endOffset);
+      applySelectionRange({ textarea, anchorOffset: startOffset, focusOffset: endOffset });
       updateCursorPosition();
       event.preventDefault();
     },
@@ -390,7 +371,7 @@ export function TextEditController({
 
   const handleSvgDoubleClick = useCallback(
     (event: React.MouseEvent<SVGSVGElement>) => {
-      if (!isPrimaryPointerAction(event as React.PointerEvent<SVGSVGElement>)) {
+      if (!isPrimaryMouseAction(event)) {
         event.preventDefault();
         return;
       }
@@ -405,7 +386,7 @@ export function TextEditController({
       }
 
       const range = getWordRange(currentText, offset);
-      applySelectionRange(textarea, range.start, range.end);
+      applySelectionRange({ textarea, anchorOffset: range.start, focusOffset: range.end });
       updateCursorPosition();
       event.preventDefault();
     },

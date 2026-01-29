@@ -119,12 +119,15 @@ export function updateCellById(
 }
 
 function processRowForDeletion(
-  row: XlsxRow,
-  minRow: number,
-  maxRow: number,
-  minCol: number,
-  maxCol: number,
+  ...args: readonly [
+    row: XlsxRow,
+    minRow: number,
+    maxRow: number,
+    minCol: number,
+    maxCol: number,
+  ]
 ): { readonly row: XlsxRow; readonly changed: boolean } {
+  const [row, minRow, maxRow, minCol, maxCol] = args;
   const rowNumber = row.rowNumber as number;
   if (rowNumber < minRow || rowNumber > maxRow) {
     return { row, changed: false };
@@ -182,12 +185,15 @@ function clearCellContentInRange(
 }
 
 function processRowForContentClear(
-  row: XlsxRow,
-  minRow: number,
-  maxRow: number,
-  minCol: number,
-  maxCol: number,
+  ...args: readonly [
+    row: XlsxRow,
+    minRow: number,
+    maxRow: number,
+    minCol: number,
+    maxCol: number,
+  ]
 ): { readonly row: XlsxRow; readonly changed: boolean } {
+  const [row, minRow, maxRow, minCol, maxCol] = args;
   const rowNumber = row.rowNumber as number;
   if (rowNumber < minRow || rowNumber > maxRow) {
     return { row, changed: false };
@@ -246,12 +252,15 @@ function clearCellFormatInRange(
 }
 
 function processRowForFormatClear(
-  row: XlsxRow,
-  minRow: number,
-  maxRow: number,
-  minCol: number,
-  maxCol: number,
+  ...args: readonly [
+    row: XlsxRow,
+    minRow: number,
+    maxRow: number,
+    minCol: number,
+    maxCol: number,
+  ]
 ): { readonly row: XlsxRow; readonly changed: boolean } {
+  const [row, minRow, maxRow, minCol, maxCol] = args;
   const rowNumber = row.rowNumber as number;
   if (rowNumber < minRow || rowNumber > maxRow) {
     return { row, changed: false };

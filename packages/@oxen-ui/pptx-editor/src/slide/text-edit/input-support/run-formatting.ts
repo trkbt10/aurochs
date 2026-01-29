@@ -13,7 +13,7 @@ import type {
   ParagraphProperties,
   RegularRun,
 } from "@oxen-office/pptx/domain/text";
-import type { TextSelection, CursorPosition } from "./cursor";
+import type { TextSelection } from "./cursor";
 import { normalizeSelection, isSamePosition } from "./cursor";
 import { mergeRunProperties, areRunPropertiesEqual } from "../../../editors/text/mixed-properties";
 
@@ -63,13 +63,16 @@ function getParagraphLength(paragraph: Paragraph): number {
  * Returns up to 3 parts: before, selected, after.
  */
 function splitTextRunAtSelection(
-  run: RegularRun,
-  runStart: number,
-  runEnd: number,
-  selStart: number,
-  selEnd: number,
-  propertyUpdate: Partial<RunProperties>
+  ...args: [
+    run: RegularRun,
+    runStart: number,
+    runEnd: number,
+    selStart: number,
+    selEnd: number,
+    propertyUpdate: Partial<RunProperties>,
+  ]
 ): TextRun[] {
+  const [run, runStart, _runEnd, selStart, selEnd, propertyUpdate] = args;
   const result: TextRun[] = [];
   const text = run.text;
 
@@ -113,13 +116,16 @@ function splitTextRunAtSelection(
  * Apply formatting to a single run based on selection overlap.
  */
 function applyFormatToRun(
-  run: TextRun,
-  runStart: number,
-  runEnd: number,
-  selStart: number,
-  selEnd: number,
-  propertyUpdate: Partial<RunProperties>
+  ...args: [
+    run: TextRun,
+    runStart: number,
+    runEnd: number,
+    selStart: number,
+    selEnd: number,
+    propertyUpdate: Partial<RunProperties>,
+  ]
 ): TextRun[] {
+  const [run, runStart, runEnd, selStart, selEnd, propertyUpdate] = args;
   // Case 1: Run entirely before selection
   if (runEnd <= selStart) {
     return [run];
@@ -225,11 +231,14 @@ export function mergeAdjacentRuns(runs: readonly TextRun[]): TextRun[] {
  * Apply formatting to runs within a paragraph.
  */
 function applyFormatToParagraphRuns(
-  paragraph: Paragraph,
-  selStart: number,
-  selEnd: number,
-  propertyUpdate: Partial<RunProperties>
+  ...args: [
+    paragraph: Paragraph,
+    selStart: number,
+    selEnd: number,
+    propertyUpdate: Partial<RunProperties>,
+  ]
 ): Paragraph {
+  const [paragraph, selStart, selEnd, propertyUpdate] = args;
   const newRuns: TextRun[] = [];
   // eslint-disable-next-line no-restricted-syntax -- tracking offset
   let currentOffset = 0;
@@ -266,11 +275,14 @@ function applyFormatToParagraphRuns(
  * Process a single paragraph for formatting application.
  */
 function processParagraphForFormat(
-  paragraph: Paragraph,
-  paragraphIndex: number,
-  selection: TextSelection,
-  propertyUpdate: Partial<RunProperties>
+  ...args: [
+    paragraph: Paragraph,
+    paragraphIndex: number,
+    selection: TextSelection,
+    propertyUpdate: Partial<RunProperties>,
+  ]
 ): Paragraph {
+  const [paragraph, paragraphIndex, selection, propertyUpdate] = args;
   const { start, end } = selection;
 
   // Check if paragraph is affected
@@ -401,11 +413,14 @@ export function normalizeTextBody(textBody: TextBody): TextBody {
  * @returns New TextBody with toggled property
  */
 export function toggleRunProperty(
-  textBody: TextBody,
-  selection: TextSelection,
-  propertyKey: keyof RunProperties,
-  currentValue: boolean | undefined
+  ...args: [
+    textBody: TextBody,
+    selection: TextSelection,
+    propertyKey: keyof RunProperties,
+    currentValue: boolean | undefined,
+  ]
 ): TextBody {
+  const [textBody, selection, propertyKey, currentValue] = args;
   // If current value is true, turn it off; otherwise turn it on
   const newValue = currentValue === true ? undefined : true;
 

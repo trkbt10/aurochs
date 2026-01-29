@@ -2,7 +2,6 @@
  * @file src/pdf/parser/icc-profile.native.spec.ts
  */
 
-import { describe, it, expect } from "vitest";
 import { evalIccCurve, evalIccLutToPcs01, makeBradfordAdaptationMatrix, parseIccProfile } from "./icc-profile.native";
 
 function writeAscii4(dst: Uint8Array, offset: number, s: string): void {

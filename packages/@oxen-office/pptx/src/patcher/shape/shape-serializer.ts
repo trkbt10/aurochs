@@ -576,9 +576,7 @@ function serializeConnectionTarget(name: "a:stCxn" | "a:endCxn", target: Connect
 export function serializeGraphicFrame(frame: GraphicFrame): XmlElement {
   const nvGraphicFramePr = createElement("p:nvGraphicFramePr", {}, [
     serializeGraphicFrameCNvPr(frame.nonVisual),
-    createElement("p:cNvGraphicFramePr", {}, frame.nonVisual.graphicFrameLocks
-      ? [serializeGraphicFrameLocks(frame.nonVisual.graphicFrameLocks)]
-      : []),
+    createElement("p:cNvGraphicFramePr", {}, frame.nonVisual.graphicFrameLocks ? [serializeGraphicFrameLocks(frame.nonVisual.graphicFrameLocks)] : []),
     createElement("p:nvPr"),
   ]);
 

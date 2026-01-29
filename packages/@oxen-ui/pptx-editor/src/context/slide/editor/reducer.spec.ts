@@ -24,27 +24,32 @@ import {
 
 // Cast to SpShape since we're creating minimal test fixtures
 const createTestShape = (
-  id: string,
-  name: string,
-  x: number = 0,
-  y: number = 0,
-  width: number = 100,
-  height: number = 100
-): SpShape => ({
-  type: "sp",
-  nonVisual: { id, name },
-  properties: {
-    transform: {
-      x: px(x),
-      y: px(y),
-      width: px(width),
-      height: px(height),
-      rotation: deg(0),
-      flipH: false,
-      flipV: false,
+  ...args: readonly [
+    id: string,
+    name: string,
+    x?: number,
+    y?: number,
+    width?: number,
+    height?: number,
+  ]
+): SpShape => {
+  const [id, name, x = 0, y = 0, width = 100, height = 100] = args;
+  return {
+    type: "sp",
+    nonVisual: { id, name },
+    properties: {
+      transform: {
+        x: px(x),
+        y: px(y),
+        width: px(width),
+        height: px(height),
+        rotation: deg(0),
+        flipH: false,
+        flipV: false,
+      },
     },
-  },
-} as SpShape);
+  } as SpShape;
+};
 
 const createTestSlide = (shapeCount: number = 0): Slide => ({
   shapes: Array.from({ length: shapeCount }, (_, i) =>

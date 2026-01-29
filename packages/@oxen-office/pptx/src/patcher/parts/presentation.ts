@@ -42,12 +42,15 @@ function getSldIdElements(sldIdLst: XmlElement): XmlElement[] {
 /**
  * Add a slide to <p:sldIdLst>.
  */
-export function addSlideToList(
+type AddSlideToListArgs = [
   presentationXml: XmlDocument,
   slideId: number,
   rId: string,
   position?: number,
-): XmlDocument {
+];
+
+export function addSlideToList(...args: AddSlideToListArgs): XmlDocument {
+  const [presentationXml, slideId, rId, position] = args;
   if (!Number.isInteger(slideId) || slideId <= 0) {
     throw new Error(`addSlideToList: invalid slideId: ${slideId}`);
   }
@@ -136,4 +139,3 @@ export function reorderSlideInList(
     return replaceChildByName(pres, "p:sldIdLst", updatedSldIdLst);
   });
 }
-

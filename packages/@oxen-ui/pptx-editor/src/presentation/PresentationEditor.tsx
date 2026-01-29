@@ -357,13 +357,13 @@ function EditorContent({
           }
           const embedData = bytes.buffer;
 
-          const newFrame = createOleGraphicFrame(
-            generateShapeId(),
+          const newFrame = createOleGraphicFrame({
+            id: generateShapeId(),
             bounds,
             oleType,
             embedData,
-            assetData.name,
-          );
+            filename: assetData.name,
+          });
           dispatch({ type: "CREATE_SHAPE", shape: newFrame });
         }
       }
@@ -697,7 +697,7 @@ function EditorContent({
       const slideTiming = slideWithId.apiSlide?.timing;
 
       if (slideWithId.apiSlide && document.presentationFile) {
-        const renderCtx = createRenderContext(slideWithId.apiSlide, zipFile, previewSlideSize);
+        const renderCtx = createRenderContext({ apiSlide: slideWithId.apiSlide, zip: zipFile, slideSize: previewSlideSize });
         const svg = renderSlideSvg(slideWithId.slide, renderCtx).svg;
         return { svg, timing: slideTiming, transition: slideTransition };
       }
@@ -740,7 +740,7 @@ function EditorContent({
   const renderContext = useMemo(() => {
     const apiSlide = activeSlide?.apiSlide;
     if (apiSlide && zipFile) {
-      return createRenderContext(apiSlide, zipFile, { width, height });
+      return createRenderContext({ apiSlide, zip: zipFile, slideSize: { width, height } });
     }
     return undefined;
   }, [width, height, activeSlide?.apiSlide, zipFile]);

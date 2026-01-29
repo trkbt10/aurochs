@@ -24,10 +24,9 @@ import type { DocxRunProperties } from "@oxen-office/docx/domain/run";
 import type { DocxParagraphProperties, DocxParagraph } from "@oxen-office/docx/domain/paragraph";
 import type { DocxStyle } from "@oxen-office/docx/domain/styles";
 import type { DocxLevel, DocxNumbering, DocxAbstractNum, DocxNum } from "@oxen-office/docx/domain/numbering";
-import { docxAbstractNumId, docxNumId, docxIlvl } from "@oxen-office/docx/domain/types";
+import { docxAbstractNumId, docxNumId, docxIlvl, docxStyleId, halfPoints } from "@oxen-office/docx/domain/types";
 import type { DocxTableProperties, DocxTableCellProperties } from "@oxen-office/docx/domain/table";
 import { Button } from "@oxen-ui/ui-components/primitives";
-import { px } from "@oxen-office/ooxml/domain/units";
 
 type DocxEditorTestPageProps = {
   readonly onBack: () => void;
@@ -308,12 +307,12 @@ function ParagraphPropertiesTest() {
 }
 
 function StyleEditorTest() {
-  const [value, setValue] = useState<DocxStyle>(createDefaultStyle("custom1", "paragraph"));
+  const [value, setValue] = useState<DocxStyle>(createDefaultStyle(docxStyleId("custom1"), "paragraph"));
 
   const availableStyles = [
-    { id: "Normal" as const, name: "Normal", type: "paragraph" as const },
-    { id: "Heading1" as const, name: "Heading 1", type: "paragraph" as const },
-    { id: "Heading2" as const, name: "Heading 2", type: "paragraph" as const },
+    { id: docxStyleId("Normal"), name: "Normal", type: "paragraph" as const },
+    { id: docxStyleId("Heading1"), name: "Heading 1", type: "paragraph" as const },
+    { id: docxStyleId("Heading2"), name: "Heading 2", type: "paragraph" as const },
   ];
 
   return (
@@ -336,7 +335,7 @@ function StyleEditorTest() {
 }
 
 function NumberingLevelTest() {
-  const [value, setValue] = useState<DocxLevel>(createDefaultLevel(0));
+  const [value, setValue] = useState<DocxLevel>(createDefaultLevel(docxIlvl(0)));
 
   return (
     <div style={contentStyle}>
@@ -421,7 +420,7 @@ function createDemoParagraph(
         properties: {
           b: options?.bold,
           i: options?.italic,
-          sz: options?.fontSize,
+          sz: options?.fontSize !== undefined ? halfPoints(options.fontSize * 2) : undefined,
         },
         content: [{ type: "text", value: text }],
       },
@@ -461,7 +460,7 @@ function createCompoundParagraph(runs: readonly RunSpec[]): DocxParagraph {
         i: spec.i,
         u: spec.u ? { val: "single" as const } : undefined,
         strike: spec.strike,
-        sz: spec.sz,
+        sz: spec.sz !== undefined ? halfPoints(spec.sz) : undefined,
         color: spec.color ? { val: spec.color } : undefined,
         highlight: spec.highlight,
         vertAlign: spec.vertAlign,

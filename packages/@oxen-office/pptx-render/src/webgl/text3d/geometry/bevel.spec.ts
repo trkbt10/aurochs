@@ -7,7 +7,6 @@
  * @see ECMA-376 Part 1, Section 20.1.5.1 (bevelT/bevelB)
  */
 
-import { describe, it, expect } from "vitest";
 import { getBevelConfig, getAsymmetricBevelConfig } from "./bevel";
 import type { Pixels } from "@oxen-office/ooxml/domain/units";
 import type { Bevel3d, BevelPresetType, Shape3d } from "@oxen-office/pptx/domain/index";

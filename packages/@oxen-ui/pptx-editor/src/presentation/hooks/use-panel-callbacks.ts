@@ -91,7 +91,15 @@ export function usePanelCallbacks({ dispatch, document }: UsePanelCallbacksParam
   );
 
   const handleStartResize = useCallback(
-    (handle: ResizeHandlePosition, startX: number, startY: number, aspectLocked: boolean): void => {
+    (
+      ...args: readonly [
+        handle: ResizeHandlePosition,
+        startX: number,
+        startY: number,
+        aspectLocked: boolean,
+      ]
+    ): void => {
+      const [handle, startX, startY, aspectLocked] = args;
       dispatch({ type: "START_RESIZE", handle, startX: px(startX), startY: px(startY), aspectLocked });
     },
     [dispatch],

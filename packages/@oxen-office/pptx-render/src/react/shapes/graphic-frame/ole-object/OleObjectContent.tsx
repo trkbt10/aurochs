@@ -173,14 +173,8 @@ export const OleObjectContent = memo(function OleObjectContent({
 
   // Calculate centering offset when using specified image dimensions
   // that differ from the frame dimensions
-  const offsetX =
-    imageWidth !== undefined && imageWidth < width
-      ? (width - imageWidth) / 2
-      : 0;
-  const offsetY =
-    imageHeight !== undefined && imageHeight < height
-      ? (height - imageHeight) / 2
-      : 0;
+  const offsetX = calculateCenterOffset(imageWidth, width);
+  const offsetY = calculateCenterOffset(imageHeight, height);
 
   return (
     <image
@@ -193,3 +187,13 @@ export const OleObjectContent = memo(function OleObjectContent({
     />
   );
 });
+
+function calculateCenterOffset(imageSize: number | undefined, frameSize: number): number {
+  if (imageSize === undefined) {
+    return 0;
+  }
+  if (imageSize >= frameSize) {
+    return 0;
+  }
+  return (frameSize - imageSize) / 2;
+}

@@ -6,13 +6,9 @@ import type { FormulaFunctionEagerDefinition } from "../../functionRegistry";
 import { FINANCE_EPSILON, FINANCE_MAX_ITERATIONS } from "../helpers";
 
 const evaluateBalance = (
-  rate: number,
-  periods: number,
-  payment: number,
-  pv: number,
-  fv: number,
-  type: number,
+  ...args: readonly [rate: number, periods: number, payment: number, pv: number, fv: number, type: number]
 ): number => {
+  const [rate, periods, payment, pv, fv, type] = args;
   if (rate === 0) {
     return pv + payment * periods + fv;
   }

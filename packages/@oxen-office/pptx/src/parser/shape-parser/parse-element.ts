@@ -64,6 +64,22 @@ function mapLockedCanvasElement(newName: string, source: XmlElement): XmlElement
   };
 }
 
+export type ParseShapeElementOptions = {
+  readonly element: XmlElement;
+  readonly ctx?: PlaceholderContext;
+  readonly masterStylesInfo?: MasterStylesInfo;
+  readonly formatScheme?: FormatScheme;
+  readonly resourceContext?: ResourceContext;
+};
+
+export type ParseShapeTreeOptions = {
+  readonly spTree: XmlElement | undefined;
+  readonly ctx?: PlaceholderContext;
+  readonly masterStylesInfo?: MasterStylesInfo;
+  readonly formatScheme?: FormatScheme;
+  readonly resourceContext?: ResourceContext;
+};
+
 // =============================================================================
 // Main Shape Parsing
 // =============================================================================
@@ -72,18 +88,14 @@ function mapLockedCanvasElement(newName: string, source: XmlElement): XmlElement
  * Parse shape element to Shape domain object
  */
 export function parseShapeElement(
-  element: XmlElement,
-  ctx?: PlaceholderContext,
-  masterStylesInfo?: MasterStylesInfo,
-  formatScheme?: FormatScheme,
-  resourceContext?: ResourceContext,
+  { element, ctx, masterStylesInfo, formatScheme, resourceContext }: ParseShapeElementOptions,
 ): Shape | undefined {
   switch (element.name) {
     case "p:sp":
-      return parseSpShape(element, ctx, masterStylesInfo, formatScheme);
+      return parseSpShape({ element, ctx, masterStylesInfo, formatScheme });
     case "a:txSp": {
       const mapped = mapLockedCanvasElement("p:sp", element);
-      const parsed = parseSpShape(mapped, ctx, masterStylesInfo, formatScheme);
+      const parsed = parseSpShape({ element: mapped, ctx, masterStylesInfo, formatScheme });
       if (parsed?.type !== "sp") {
         return parsed;
       }
@@ -93,9 +105,14 @@ export function parseShapeElement(
     case "p:pic":
       return parsePicShape(element, formatScheme, resourceContext);
     case "p:grpSp":
-      return parseGrpShape(element, ctx, masterStylesInfo, formatScheme, (el, c, m, f) =>
-        parseShapeElement(el, c, m, f, resourceContext),
-      );
+      return parseGrpShape({
+        element,
+        ctx,
+        masterStylesInfo,
+        formatScheme,
+        parseShapeElement: ({ element: el, ctx: c, masterStylesInfo: m, formatScheme: f }) =>
+          parseShapeElement({ element: el, ctx: c, masterStylesInfo: m, formatScheme: f, resourceContext }),
+      });
     case "p:cxnSp":
       return parseCxnShape(element, formatScheme);
     case "p:graphicFrame":
@@ -104,9 +121,14 @@ export function parseShapeElement(
       return parseContentPartShape(element);
     case "lc:lockedCanvas": {
       const mapped = mapLockedCanvasElement("p:grpSp", element);
-      return parseGrpShape(mapped, ctx, masterStylesInfo, formatScheme, (el, c, m, f) =>
-        parseShapeElement(el, c, m, f, resourceContext),
-      );
+      return parseGrpShape({
+        element: mapped,
+        ctx,
+        masterStylesInfo,
+        formatScheme,
+        parseShapeElement: ({ element: el, ctx: c, masterStylesInfo: m, formatScheme: f }) =>
+          parseShapeElement({ element: el, ctx: c, masterStylesInfo: m, formatScheme: f, resourceContext }),
+      });
     }
     case "mc:AlternateContent": {
       // Process mc:AlternateContent per ECMA-376 Part 3, Section 10.2.1
@@ -118,7 +140,7 @@ export function parseShapeElement(
         if (isChoiceSupported(requires)) {
           for (const child of choice.children) {
             if (isXmlElement(child)) {
-              const shape = parseShapeElement(child, ctx, masterStylesInfo, formatScheme, resourceContext);
+              const shape = parseShapeElement({ element: child, ctx, masterStylesInfo, formatScheme, resourceContext });
               if (shape) {
                 return shape;
               }
@@ -131,7 +153,7 @@ export function parseShapeElement(
       if (fallback) {
         for (const child of fallback.children) {
           if (isXmlElement(child)) {
-            const shape = parseShapeElement(child, ctx, masterStylesInfo, formatScheme, resourceContext);
+            const shape = parseShapeElement({ element: child, ctx, masterStylesInfo, formatScheme, resourceContext });
             if (shape) {
               return shape;
             }
@@ -156,11 +178,7 @@ export function parseShapeElement(
  * @returns Array of parsed Shape domain objects
  */
 export function parseShapeTree(
-  spTree: XmlElement | undefined,
-  ctx?: PlaceholderContext,
-  masterStylesInfo?: MasterStylesInfo,
-  formatScheme?: FormatScheme,
-  resourceContext?: ResourceContext,
+  { spTree, ctx, masterStylesInfo, formatScheme, resourceContext }: ParseShapeTreeOptions,
 ): readonly Shape[] {
   if (!spTree) {
     return [];
@@ -177,7 +195,7 @@ export function parseShapeTree(
       continue;
     }
 
-    const shape = parseShapeElement(child, ctx, masterStylesInfo, formatScheme, resourceContext);
+    const shape = parseShapeElement({ element: child, ctx, masterStylesInfo, formatScheme, resourceContext });
     if (shape) {
       shapes.push(shape);
     }

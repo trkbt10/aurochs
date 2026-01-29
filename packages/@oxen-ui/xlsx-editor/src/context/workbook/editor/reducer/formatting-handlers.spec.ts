@@ -36,7 +36,10 @@ function wholeRowRange(row: number): CellRange {
   };
 }
 
-function range(startCol: number, startRow: number, endCol: number, endRow: number): CellRange {
+function range(
+  ...args: readonly [startCol: number, startRow: number, endCol: number, endRow: number]
+): CellRange {
+  const [startCol, startRow, endCol, endRow] = args;
   return {
     start: { col: colIdx(startCol), row: rowIdx(startRow), colAbsolute: false, rowAbsolute: false },
     end: { col: colIdx(endCol), row: rowIdx(endRow), colAbsolute: false, rowAbsolute: false },

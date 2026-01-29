@@ -38,12 +38,15 @@ export const computeXNPV = (rate: number, cashflows: number[], dayDifferences: n
 };
 
 export const calculatePayment = (
-  rate: number,
-  periods: number,
-  presentValue: number,
-  futureValue: number,
-  type: number,
+  ...args: readonly [
+    rate: number,
+    periods: number,
+    presentValue: number,
+    futureValue: number,
+    type: number,
+  ]
 ): number => {
+  const [rate, periods, presentValue, futureValue, type] = args;
   if (periods <= 0 || !Number.isFinite(periods)) {
     throw new Error("Payment periods must be a finite positive number");
   }
@@ -59,14 +62,17 @@ export const calculatePayment = (
 };
 
 export const calculateInterestPayment = (
-  rate: number,
-  periods: number,
-  payment: number,
-  presentValue: number,
-  futureValue: number,
-  type: number,
-  targetPeriod: number,
+  ...args: readonly [
+    rate: number,
+    periods: number,
+    payment: number,
+    presentValue: number,
+    futureValue: number,
+    type: number,
+    targetPeriod: number,
+  ]
 ): number => {
+  const [rate, periods, payment, presentValue, _futureValue, type, targetPeriod] = args;
   if (targetPeriod < 1 || targetPeriod > periods) {
     throw new Error("Target period is out of range");
   }

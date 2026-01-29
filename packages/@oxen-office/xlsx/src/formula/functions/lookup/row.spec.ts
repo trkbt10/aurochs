@@ -14,7 +14,10 @@ function createReferenceNode(row: number, col: number): FormulaAstNode {
   };
 }
 
-function createRangeNode(startRow: number, startCol: number, endRow: number, endCol: number): FormulaAstNode {
+function createRangeNode(
+  ...args: readonly [startRow: number, startCol: number, endRow: number, endCol: number]
+): FormulaAstNode {
+  const [startRow, startCol, endRow, endCol] = args;
   return {
     type: "Range",
     range: {
@@ -40,4 +43,3 @@ describe("ROW", () => {
     expect(invokeLazyFormulaFunction(rowFunction, [createRangeNode(3, 2, 4, 3)])).toBe(3);
   });
 });
-

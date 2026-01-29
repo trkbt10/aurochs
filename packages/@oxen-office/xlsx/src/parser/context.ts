@@ -79,11 +79,14 @@ export type XlsxParseContext = {
  * @returns A fully populated parse context
  */
 export function createParseContext(
-  sharedStrings: readonly string[],
-  styleSheet: XlsxStyleSheet,
-  workbookInfo: XlsxWorkbookInfo,
-  relationships: ReadonlyMap<string, string>,
+  ...args: readonly [
+    sharedStrings: readonly string[],
+    styleSheet: XlsxStyleSheet,
+    workbookInfo: XlsxWorkbookInfo,
+    relationships: ReadonlyMap<string, string>,
+  ]
 ): XlsxParseContext {
+  const [sharedStrings, styleSheet, workbookInfo, relationships] = args;
   return {
     sharedStrings,
     styleSheet,

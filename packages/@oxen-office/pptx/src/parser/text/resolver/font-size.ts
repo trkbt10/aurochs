@@ -106,10 +106,9 @@ function getFontSizeFromMasterTextStyles(
  */
 export function resolveFontSize(
   directRPr: XmlElement | undefined,
-  localLstStyle: XmlElement | undefined,
-  lvl: number,
-  ctx: TextStyleContext | undefined,
+  ...rest: [localLstStyle: XmlElement | undefined, lvl: number, ctx: TextStyleContext | undefined]
 ): Points {
+  const [localLstStyle, lvl, ctx] = rest;
   // Use 1-based level for lstStyle lookup (a:lvl1pPr, a:lvl2pPr, etc.)
   const lvlKey = lvl + 1;
 

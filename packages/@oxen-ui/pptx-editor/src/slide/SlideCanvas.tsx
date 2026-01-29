@@ -168,15 +168,18 @@ function applyMovePreview(
 }
 
 function calculateResizedDimensions(
-  handle: ResizeHandlePosition,
-  baseW: number,
-  baseH: number,
-  baseX: number,
-  baseY: number,
-  dx: number,
-  dy: number,
-  aspectLocked: boolean
+  ...args: [
+    handle: ResizeHandlePosition,
+    baseW: number,
+    baseH: number,
+    baseX: number,
+    baseY: number,
+    dx: number,
+    dy: number,
+    aspectLocked: boolean,
+  ]
 ): { newWidth: number; newHeight: number; newX: number; newY: number } {
+  const [handle, baseW, baseH, baseX, baseY, dx, dy, aspectLocked] = args;
   const widthDelta = handle.includes("e") ? dx : handle.includes("w") ? -dx : 0;
   const heightDelta = handle.includes("s") ? dy : handle.includes("n") ? -dy : 0;
   const xDelta = handle.includes("w") ? dx : 0;
@@ -794,25 +797,22 @@ export function SlideCanvas({
     cursor: drag.type !== "idle" ? "grabbing" : "default",
   };
 
-  const selectionRect =
-    marquee === null
-      ? null
-      : {
-          x: Math.min(marquee.startX, marquee.currentX),
-          y: Math.min(marquee.startY, marquee.currentY),
-          width: Math.abs(marquee.currentX - marquee.startX),
-          height: Math.abs(marquee.currentY - marquee.startY),
-        };
+  type RectDrag = Readonly<{ startX: number; startY: number; currentX: number; currentY: number }>;
 
-  const creationRect =
-    creationDrag === null
-      ? null
-      : {
-          x: Math.min(creationDrag.startX, creationDrag.currentX),
-          y: Math.min(creationDrag.startY, creationDrag.currentY),
-          width: Math.abs(creationDrag.currentX - creationDrag.startX),
-          height: Math.abs(creationDrag.currentY - creationDrag.startY),
-        };
+  function toRect(drag: RectDrag | null): { x: number; y: number; width: number; height: number } | null {
+    if (drag === null) {
+      return null;
+    }
+    return {
+      x: Math.min(drag.startX, drag.currentX),
+      y: Math.min(drag.startY, drag.currentY),
+      width: Math.abs(drag.currentX - drag.startX),
+      height: Math.abs(drag.currentY - drag.startY),
+    };
+  }
+
+  const selectionRect = toRect(marquee);
+  const creationRect = toRect(creationDrag);
 
   return (
     <div className={className} style={containerStyle} onClick={handleContainerClick}>

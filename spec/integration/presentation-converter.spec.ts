@@ -5,7 +5,6 @@
  * from PPTX files for the editor.
  */
 
-import { describe, it, expect, beforeAll } from "vitest";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
@@ -17,7 +16,6 @@ import { getByPath } from "@oxen/xml";
 import { getMimeTypeFromPath } from "@oxen-office/pptx/opc/utils";
 import type { ColorContext, ColorScheme, ColorMap } from "@oxen-office/ooxml/domain/color-context";
 import type { FontScheme } from "@oxen-office/ooxml/domain/font-scheme";
-import type { ResourceResolver } from "@oxen-office/pptx/domain/resource-resolver";
 
 // Fixture path
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

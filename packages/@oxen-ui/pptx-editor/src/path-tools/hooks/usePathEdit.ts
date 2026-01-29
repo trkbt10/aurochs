@@ -5,15 +5,11 @@
  */
 
 import { useCallback, useState, useRef } from "react";
-import type { Pixels } from "@oxen-office/ooxml/domain/units";
 import type { Point } from "@oxen-office/pptx/domain/types";
 import { px } from "@oxen-office/ooxml/domain/units";
 import type {
   DrawingPath,
-  PathAnchorPoint,
-  AnchorPointType,
   ModifierKeys,
-  PathPointSelection,
 } from "../types";
 import { updatePointInPath, getModifierKeys } from "../types";
 import { constrainVectorTo45Degrees, mirrorHandle } from "../utils/bezier-math";
@@ -87,8 +83,6 @@ export type UsePathEditReturn = {
 // =============================================================================
 // Constants
 // =============================================================================
-
-const POINT_HIT_RADIUS = 8;
 
 // =============================================================================
 // Hook
@@ -178,22 +172,14 @@ export function usePathEdit(callbacks: PathEditCallbacks): UsePathEditReturn {
           if (point) {
             const initial = initialPositionsRef.current.get(index);
             if (initial) {
+              const handleIn = translateMovedHandle(point.handleIn, dx, dy, point, initial);
+              const handleOut = translateMovedHandle(point.handleOut, dx, dy, point, initial);
               newPoints[index] = {
                 ...point,
                 x: px(initial.x + dx),
                 y: px(initial.y + dy),
-                handleIn: point.handleIn
-                  ? {
-                      x: px((point.handleIn.x as number) + dx - ((point.x as number) - initial.x)),
-                      y: px((point.handleIn.y as number) + dy - ((point.y as number) - initial.y)),
-                    }
-                  : undefined,
-                handleOut: point.handleOut
-                  ? {
-                      x: px((point.handleOut.x as number) + dx - ((point.x as number) - initial.x)),
-                      y: px((point.handleOut.y as number) + dy - ((point.y as number) - initial.y)),
-                    }
-                  : undefined,
+                handleIn,
+                handleOut,
               };
             }
           }
@@ -206,7 +192,8 @@ export function usePathEdit(callbacks: PathEditCallbacks): UsePathEditReturn {
 
   // Move a handle
   const moveHandle = useCallback(
-    (pointIndex: number, side: "in" | "out", x: number, y: number, modifiers: ModifierKeys) => {
+    (...args: [pointIndex: number, side: "in" | "out", x: number, y: number, modifiers: ModifierKeys]) => {
+      const [pointIndex, side, x, y, modifiers] = args;
       setPath((p) =>
         updatePointInPath(p, pointIndex, (point) => {
           let handleX = x;
@@ -223,20 +210,30 @@ export function usePathEdit(callbacks: PathEditCallbacks): UsePathEditReturn {
           }
 
           const newHandle: Point = { x: px(handleX), y: px(handleY) };
+          const shouldMirrorHandle = point.type === "smooth" && !modifiers.alt;
+
+          function getMirroredHandle(
+            ...args: readonly [
+              point: Point,
+              newHandle: Point,
+              existing: Point | undefined,
+              shouldMirrorHandle: boolean,
+            ]
+          ): Point | undefined {
+            const [point, newHandle, existing, shouldMirrorHandle] = args;
+            if (!shouldMirrorHandle) {
+              return existing;
+            }
+            return mirrorHandle({ x: point.x, y: point.y }, newHandle);
+          }
 
           if (side === "in") {
             // If smooth point, mirror the handle
-            const handleOut =
-              point.type === "smooth" && !modifiers.alt
-                ? mirrorHandle({ x: point.x, y: point.y }, newHandle)
-                : point.handleOut;
+            const handleOut = getMirroredHandle(point, newHandle, point.handleOut, shouldMirrorHandle);
             return { ...point, handleIn: newHandle, handleOut };
           } else {
             // If smooth point, mirror the handle
-            const handleIn =
-              point.type === "smooth" && !modifiers.alt
-                ? mirrorHandle({ x: point.x, y: point.y }, newHandle)
-                : point.handleIn;
+            const handleIn = getMirroredHandle(point, newHandle, point.handleIn, shouldMirrorHandle);
             return { ...point, handleIn, handleOut: newHandle };
           }
         })
@@ -278,6 +275,29 @@ export function usePathEdit(callbacks: PathEditCallbacks): UsePathEditReturn {
     },
     [isDraggingPoint, isDraggingHandle, draggingHandleSide, moveSelectedPoints, moveHandle]
   );
+
+function translateMovedHandle(
+  ...args: readonly [
+    handle: Point | undefined,
+    dx: number,
+    dy: number,
+    point: { readonly x: number; readonly y: number },
+    initial: { readonly x: number; readonly y: number },
+  ]
+): Point | undefined {
+  const [handle, dx, dy, point, initial] = args;
+  if (!handle) {
+    return undefined;
+  }
+
+  const pointDx = (point.x as number) - initial.x;
+  const pointDy = (point.y as number) - initial.y;
+
+  return {
+    x: px((handle.x as number) + dx - pointDx),
+    y: px((handle.y as number) + dy - pointDy),
+  };
+}
 
   // Handle canvas pointer up
   const onCanvasPointerUp = useCallback(() => {

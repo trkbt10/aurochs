@@ -12,6 +12,24 @@ import { parseTextIndent, parseTextMargin } from "../../primitive";
 import { TYPE_TO_MASTER_STYLE } from "./constants";
 import { lookupPlaceholder } from "./placeholder";
 
+type MarginResolutionContext = {
+  readonly directPPr: XmlElement | undefined;
+  readonly localLstStyle: XmlElement | undefined;
+  readonly lvl: number;
+  readonly ctx: TextStyleContext | undefined;
+};
+
+type GetMarginFromMasterTextStylesOptions = {
+  readonly masterTextStyles: MasterTextStyles | undefined;
+  readonly placeholderType: string | undefined;
+  readonly lvl: number;
+  readonly attrName: "marL" | "marR" | "indent";
+};
+
+type ResolveMarginOptions = MarginResolutionContext & {
+  readonly attrName: "marL" | "marR" | "indent";
+};
+
 /**
  * Get margin/indent from paragraph properties (a:pPr).
  *
@@ -60,10 +78,7 @@ function getMarginFromPlaceholder(
  * Get margin/indent from master text styles.
  */
 function getMarginFromMasterTextStyles(
-  masterTextStyles: MasterTextStyles | undefined,
-  placeholderType: string | undefined,
-  lvl: number,
-  attrName: "marL" | "marR" | "indent",
+  { masterTextStyles, placeholderType, lvl, attrName }: GetMarginFromMasterTextStylesOptions,
 ): Pixels | undefined {
   if (masterTextStyles === undefined || placeholderType === undefined) {
     return undefined;
@@ -101,11 +116,7 @@ function getMarginFromMasterTextStyles(
  * @see ECMA-376 Part 1, Section 21.1.2.2.7 (a:pPr)
  */
 function resolveMargin(
-  directPPr: XmlElement | undefined,
-  localLstStyle: XmlElement | undefined,
-  lvl: number,
-  ctx: TextStyleContext | undefined,
-  attrName: "marL" | "marR" | "indent",
+  { directPPr, localLstStyle, lvl, ctx, attrName }: ResolveMarginOptions,
 ): Pixels | undefined {
   // Use 1-based level for lstStyle lookup
   const lvlKey = lvl + 1;
@@ -151,10 +162,7 @@ function resolveMargin(
 
   // 5. Master text styles
   const masterStyleMargin = getMarginFromMasterTextStyles(
-    ctx.masterTextStyles,
-    ctx.placeholderType,
-    lvlKey,
-    attrName,
+    { masterTextStyles: ctx.masterTextStyles, placeholderType: ctx.placeholderType, lvl: lvlKey, attrName },
   );
   if (masterStyleMargin !== undefined) {
     return masterStyleMargin;
@@ -179,12 +187,9 @@ function resolveMargin(
  * @see ECMA-376 Part 1, Section 21.1.2.2.7 (a:pPr marL attribute)
  */
 export function resolveMarginLeft(
-  directPPr: XmlElement | undefined,
-  localLstStyle: XmlElement | undefined,
-  lvl: number,
-  ctx: TextStyleContext | undefined,
+  { directPPr, localLstStyle, lvl, ctx }: MarginResolutionContext,
 ): Pixels | undefined {
-  return resolveMargin(directPPr, localLstStyle, lvl, ctx, "marL");
+  return resolveMargin({ directPPr, localLstStyle, lvl, ctx, attrName: "marL" });
 }
 
 /**
@@ -193,12 +198,9 @@ export function resolveMarginLeft(
  * @see ECMA-376 Part 1, Section 21.1.2.2.7 (a:pPr marR attribute)
  */
 export function resolveMarginRight(
-  directPPr: XmlElement | undefined,
-  localLstStyle: XmlElement | undefined,
-  lvl: number,
-  ctx: TextStyleContext | undefined,
+  { directPPr, localLstStyle, lvl, ctx }: MarginResolutionContext,
 ): Pixels | undefined {
-  return resolveMargin(directPPr, localLstStyle, lvl, ctx, "marR");
+  return resolveMargin({ directPPr, localLstStyle, lvl, ctx, attrName: "marR" });
 }
 
 /**
@@ -207,10 +209,7 @@ export function resolveMarginRight(
  * @see ECMA-376 Part 1, Section 21.1.2.2.7 (a:pPr indent attribute)
  */
 export function resolveIndent(
-  directPPr: XmlElement | undefined,
-  localLstStyle: XmlElement | undefined,
-  lvl: number,
-  ctx: TextStyleContext | undefined,
+  { directPPr, localLstStyle, lvl, ctx }: MarginResolutionContext,
 ): Pixels | undefined {
-  return resolveMargin(directPPr, localLstStyle, lvl, ctx, "indent");
+  return resolveMargin({ directPPr, localLstStyle, lvl, ctx, attrName: "indent" });
 }

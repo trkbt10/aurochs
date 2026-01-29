@@ -13,11 +13,14 @@ import { convertXlsStylesToXlsxStyles } from "./styles";
 import { tryConvertBiffRpnToFormulaExpression } from "../formula/biff-rpn-to-expression";
 
 function resolveStyleIdFromXfIndex(
-  xfIndex: number,
-  xfIndexToStyleId: readonly (ReturnType<typeof createStyleId> | undefined)[],
-  where: string,
-  ctx: XlsParseContext,
+  ...args: readonly [
+    xfIndex: number,
+    xfIndexToStyleId: readonly (ReturnType<typeof createStyleId> | undefined)[],
+    where: string,
+    ctx: XlsParseContext,
+  ]
 ): ReturnType<typeof createStyleId> {
+  const [xfIndex, xfIndexToStyleId, where, ctx] = args;
   if (!Number.isInteger(xfIndex) || xfIndex < 0 || xfIndex >= xfIndexToStyleId.length) {
     try {
       throw new Error(`${where}: XF index out of range: ${xfIndex} (known=${xfIndexToStyleId.length})`);
@@ -185,12 +188,15 @@ function toXlsxRows(
 }
 
 function toXlsxWorksheet(
-  sheet: XlsWorksheet,
-  sheetId: number,
-  dateSystem: XlsWorkbook["dateSystem"],
-  xfIndexToStyleId: readonly (ReturnType<typeof createStyleId> | undefined)[],
-  ctx: XlsParseContext,
+  ...args: readonly [
+    sheet: XlsWorksheet,
+    sheetId: number,
+    dateSystem: XlsWorkbook["dateSystem"],
+    xfIndexToStyleId: readonly (ReturnType<typeof createStyleId> | undefined)[],
+    ctx: XlsParseContext,
+  ]
 ): XlsxWorksheet {
+  const [sheet, sheetId, dateSystem, xfIndexToStyleId, ctx] = args;
   const dimension = sheet.dimensions ? toXlsxRangeFromDimensions(sheet.dimensions) : undefined;
   const mergeCells = sheet.mergeCells.length ? sheet.mergeCells.map(toXlsxRange) : undefined;
   const columns = toXlsxColumns(sheet.columns, xfIndexToStyleId, ctx);

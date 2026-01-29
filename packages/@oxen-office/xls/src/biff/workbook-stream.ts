@@ -153,7 +153,10 @@ export type WorkbookStreamParseResult = {
   readonly sheets: readonly ParsedWorksheetSubstream[];
 };
 
-function tryReadRecordAtOffset(bytes: Uint8Array, offset: number, startOffset: number, ctx: XlsParseContext): BiffRecord | undefined {
+function tryReadRecordAtOffset(
+  ...args: readonly [bytes: Uint8Array, offset: number, startOffset: number, ctx: XlsParseContext]
+): BiffRecord | undefined {
+  const [bytes, offset, startOffset, ctx] = args;
   try {
     return readRecord(bytes, offset, { strict: isStrict(ctx) });
   } catch (err) {

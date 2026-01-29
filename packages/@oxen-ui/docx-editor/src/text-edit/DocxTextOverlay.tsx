@@ -509,11 +509,14 @@ function clampRangeToSpan(
 
 
 export function computeSelectionRects(
-  layout: LayoutResult,
-  selectionStart: number,
-  selectionEnd: number,
-  defaultRunProperties: DocxRunProperties | undefined,
+  ...args: readonly [
+    layout: LayoutResult,
+    selectionStart: number,
+    selectionEnd: number,
+    defaultRunProperties: DocxRunProperties | undefined,
+  ]
 ): readonly SelectionRect[] {
+  const [layout, selectionStart, selectionEnd, defaultRunProperties] = args;
   const rangeStart = Math.min(selectionStart, selectionEnd);
   const rangeEnd = Math.max(selectionStart, selectionEnd);
   if (rangeStart === rangeEnd) {
@@ -569,10 +572,7 @@ export function getCursorCoordinates(
   defaultRunProperties?: DocxRunProperties,
 ): CursorCoordinates | undefined {
   if (layout.lines.length === 0) {
-    const defaultFontSizePx =
-      defaultRunProperties?.sz !== undefined
-        ? halfPointsToPx(defaultRunProperties.sz)
-        : DEFAULT_FONT_SIZE_PX;
+    const defaultFontSizePx = defaultRunProperties?.sz !== undefined ? halfPointsToPx(defaultRunProperties.sz) : DEFAULT_FONT_SIZE_PX;
     const height = defaultFontSizePx * LINE_HEIGHT_MULTIPLIER;
     return { x: 0, y: 0, height };
   }
@@ -640,11 +640,14 @@ export function getCursorCoordinates(
  * Used for click position to cursor position conversion.
  */
 export function coordinatesToOffset(
-  layout: LayoutResult,
-  x: number,
-  y: number,
-  defaultRunProperties?: DocxRunProperties,
+  ...args: readonly [
+    layout: LayoutResult,
+    x: number,
+    y: number,
+    defaultRunProperties?: DocxRunProperties,
+  ]
 ): number {
+  const [layout, x, y, defaultRunProperties] = args;
   if (layout.lines.length === 0) {
     return 0;
   }
@@ -746,9 +749,7 @@ function findCharOffsetInSpan(
   const nextWidth = measureTextWidthPx(text.slice(0, low + 1), font);
 
   // Return the closer boundary
-  return Math.abs(relativeX - prevWidth) <= Math.abs(nextWidth - relativeX)
-    ? low
-    : Math.min(low + 1, text.length);
+  return Math.abs(relativeX - prevWidth) <= Math.abs(nextWidth - relativeX) ? low : Math.min(low + 1, text.length);
 }
 
 // =============================================================================

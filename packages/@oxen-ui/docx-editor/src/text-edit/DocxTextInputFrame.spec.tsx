@@ -4,9 +4,23 @@
 
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi } from "vitest";
 import { JSDOM } from "jsdom";
 import type { DocxTextInputFrameProps } from "./DocxTextInputFrame";
+
+type CallTracker<TArgs extends readonly unknown[]> = {
+  readonly calls: readonly TArgs[];
+  readonly fn: (...args: TArgs) => void;
+};
+
+function createCallTracker<TArgs extends readonly unknown[]>(): CallTracker<TArgs> {
+  const calls: TArgs[] = [];
+  return {
+    calls,
+    fn: (...args) => {
+      calls.push(args);
+    },
+  };
+}
 
 function ensureDom(): void {
   if (typeof document !== "undefined") {
@@ -14,7 +28,7 @@ function ensureDom(): void {
   }
 
   const dom = new JSDOM("<!doctype html><html><body></body></html>", { url: "http://localhost" });
-  const jsdomWindow = dom.window as unknown as Window & typeof globalThis;
+  const jsdomWindow = dom.window;
 
   Object.defineProperty(globalThis, "window", { value: jsdomWindow, writable: true });
   Object.defineProperty(globalThis, "document", { value: jsdomWindow.document, writable: true });
@@ -48,10 +62,10 @@ function ensureDom(): void {
 
   // React may hit old-IE input polyfill paths depending on environment feature detection.
   // Provide no-op stubs so event wiring doesn't crash under Bun's runtime.
-  const htmlElementProto = jsdomWindow.HTMLElement.prototype as unknown as {
+  const htmlElementProto: {
     attachEvent?: (name: string, handler: EventListenerOrEventListenerObject) => void;
     detachEvent?: (name: string, handler: EventListenerOrEventListenerObject) => void;
-  };
+  } = jsdomWindow.HTMLElement.prototype;
   htmlElementProto.attachEvent ??= () => {};
   htmlElementProto.detachEvent ??= () => {};
 }
@@ -64,18 +78,24 @@ const { DocxTextInputFrame } = await import("./DocxTextInputFrame");
 describe("DocxTextInputFrame", () => {
   function renderFrame(overrides?: Partial<DocxTextInputFrameProps>) {
     const textareaRef = React.createRef<HTMLTextAreaElement>();
+    const onChange = createCallTracker<[React.ChangeEvent<HTMLTextAreaElement>]>();
+    const onSelect = createCallTracker<[React.SyntheticEvent<HTMLTextAreaElement>]>();
+    const onKeyDown = createCallTracker<[React.KeyboardEvent<HTMLTextAreaElement>]>();
+    const onCompositionStart = createCallTracker<[React.CompositionEvent<HTMLTextAreaElement>]>();
+    const onCompositionEnd = createCallTracker<[React.CompositionEvent<HTMLTextAreaElement>]>();
+    const onBlur = createCallTracker<[React.FocusEvent<HTMLTextAreaElement>]>();
 
     const utils = render(
       <DocxTextInputFrame
         value="Hello"
         selectionStart={0}
         selectionEnd={0}
-        onChange={vi.fn()}
-        onSelect={vi.fn()}
-        onKeyDown={vi.fn()}
-        onCompositionStart={vi.fn()}
-        onCompositionEnd={vi.fn()}
-        onBlur={vi.fn()}
+        onChange={onChange.fn}
+        onSelect={onSelect.fn}
+        onKeyDown={onKeyDown.fn}
+        onCompositionStart={onCompositionStart.fn}
+        onCompositionEnd={onCompositionEnd.fn}
+        onBlur={onBlur.fn}
         textareaRef={textareaRef}
         {...overrides}
       />
@@ -116,40 +136,43 @@ describe("DocxTextInputFrame", () => {
   });
 
   it("calls onChange when text is entered", async () => {
-    const onChange = vi.fn();
-    const { textarea } = renderFrame({ onChange });
+    const onChange = createCallTracker<[React.ChangeEvent<HTMLTextAreaElement>]>();
+    const { textarea } = renderFrame({ onChange: onChange.fn });
 
     fireEvent.change(textarea, { target: { value: "Hello!" } });
-    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange.calls.length).toBe(1);
   });
 
   it("calls onSelect when selection changes", () => {
-    const onSelect = vi.fn();
-    const { textarea } = renderFrame({ onSelect });
+    const onSelect = createCallTracker<[React.SyntheticEvent<HTMLTextAreaElement>]>();
+    const { textarea } = renderFrame({ onSelect: onSelect.fn });
 
     textarea.setSelectionRange(1, 3);
     fireEvent.select(textarea);
 
-    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect.calls.length).toBe(1);
   });
 
   it("calls composition start/end callbacks", () => {
-    const onCompositionStart = vi.fn();
-    const onCompositionEnd = vi.fn();
-    const { textarea } = renderFrame({ onCompositionStart, onCompositionEnd });
+    const onCompositionStart = createCallTracker<[React.CompositionEvent<HTMLTextAreaElement>]>();
+    const onCompositionEnd = createCallTracker<[React.CompositionEvent<HTMLTextAreaElement>]>();
+    const { textarea } = renderFrame({
+      onCompositionStart: onCompositionStart.fn,
+      onCompositionEnd: onCompositionEnd.fn,
+    });
 
     fireEvent.compositionStart(textarea);
     fireEvent.compositionEnd(textarea);
 
-    expect(onCompositionStart).toHaveBeenCalledTimes(1);
-    expect(onCompositionEnd).toHaveBeenCalledTimes(1);
+    expect(onCompositionStart.calls.length).toBe(1);
+    expect(onCompositionEnd.calls.length).toBe(1);
   });
 
   it("calls onBlur when focus is lost", () => {
-    const onBlur = vi.fn();
-    const { textarea } = renderFrame({ onBlur });
+    const onBlur = createCallTracker<[React.FocusEvent<HTMLTextAreaElement>]>();
+    const { textarea } = renderFrame({ onBlur: onBlur.fn });
 
     fireEvent.blur(textarea);
-    expect(onBlur).toHaveBeenCalledTimes(1);
+    expect(onBlur.calls.length).toBe(1);
   });
 });

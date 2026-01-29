@@ -103,8 +103,13 @@ describe("a:fontRef schemeClr application", () => {
     const masterDoc = parseXml(masterXmlStr!);
     const theme = parseTheme(themeDoc);
 
+    const slideContent = getByPath(parseXml("<p:sld></p:sld>"), ["p:sld"]);
+    if (slideContent === undefined) {
+      throw new Error("expected <p:sld> root");
+    }
+
     const slide = {
-      content: parseXml("<p:sld></p:sld>"),
+      content: slideContent,
       resources: createEmptyResourceMap(),
       colorMapOverride: undefined,
     };
@@ -128,15 +133,16 @@ describe("a:fontRef schemeClr application", () => {
       theme,
       defaultTextStyle: null,
       zip: { file: () => null } as ZipFile,
-      renderOptions: { dialect: "powerpoint" as const },
+      renderOptions: {
+        dialect: "powerpoint" as const,
+        lineSpacingMode: "fontSizeMultiplier" as const,
+        baselineMode: "svgBaseline" as const,
+        libreofficeLineSpacingFactor: 0.75,
+        tableScalingMode: "stretchToFit" as const,
+      },
     };
 
-    const ctx = createSlideContext(
-      slide as Parameters<typeof createSlideContext>[0],
-      layout as Parameters<typeof createSlideContext>[1],
-      master as Parameters<typeof createSlideContext>[2],
-      presentation as Parameters<typeof createSlideContext>[3],
-    );
+    const ctx = createSlideContext({ slide, layout, master, presentation });
 
     const colorContext = createParseContext(ctx).colorContext;
 
@@ -174,8 +180,13 @@ describe("a:fontRef schemeClr application", () => {
 
     const theme = parseTheme(themeDoc);
 
+    const slideContent = getByPath(slideDoc, ["p:sld"]);
+    if (slideContent === undefined) {
+      throw new Error("slide XML: missing p:sld root");
+    }
+
     const slide = {
-      content: getByPath(slideDoc, ["p:sld"]),
+      content: slideContent,
       resources: createEmptyResourceMap(),
       colorMapOverride: undefined,
     };
@@ -201,15 +212,16 @@ describe("a:fontRef schemeClr application", () => {
       theme,
       defaultTextStyle: null,
       zip: { file: () => null } as ZipFile,
-      renderOptions: { dialect: "powerpoint" as const },
+      renderOptions: {
+        dialect: "powerpoint" as const,
+        lineSpacingMode: "fontSizeMultiplier" as const,
+        baselineMode: "svgBaseline" as const,
+        libreofficeLineSpacingFactor: 0.75,
+        tableScalingMode: "stretchToFit" as const,
+      },
     };
 
-    const slideRenderCtx = createSlideContext(
-      slide as Parameters<typeof createSlideContext>[0],
-      layout as Parameters<typeof createSlideContext>[1],
-      master as Parameters<typeof createSlideContext>[2],
-      presentation as Parameters<typeof createSlideContext>[3],
-    );
+    const slideRenderCtx = createSlideContext({ slide, layout, master, presentation });
 
     const result = renderSlideSvgIntegrated(slideDoc, slideRenderCtx, { width: 960 as Pixels, height: 540 as Pixels });
     const hasWhiteTextFill = result.svg.toLowerCase().includes('fill="#ffffff"');

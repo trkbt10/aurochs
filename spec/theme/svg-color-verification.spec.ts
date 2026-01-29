@@ -39,16 +39,6 @@ function hasDarkEdgeColor(colors: Set<string>): boolean {
 }
 
 /**
- * Check if colors include common colors (black, white, gray)
- */
-function hasCommonColors(colors: Set<string>): boolean {
-  if (colors.has("ffffff")) {return true;}
-  if (colors.has("000000")) {return true;}
-  if (colors.has("3f3f3f")) {return true;}
-  return false;
-}
-
-/**
  * Check if colors include brown tones (for theme5)
  */
 function hasBrownTones(colors: Set<string>): boolean {

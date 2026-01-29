@@ -237,11 +237,14 @@ export function renderFillToSvgDef(fill: Fill, gradientId: string, colorContext?
  * @returns SVG pattern definition string
  */
 export function renderImageFillToSvgDef(
-  imageFill: ResolvedImageFill,
-  patternId: string,
-  width: number,
-  height: number,
+  ...args: [
+    imageFill: ResolvedImageFill,
+    patternId: string,
+    width: number,
+    height: number,
+  ]
 ): string {
+  const [imageFill, patternId, width, height] = args;
   // Use preserveAspectRatio="xMidYMid slice" to fill the shape while maintaining aspect ratio
   return (
     `<pattern id="${patternId}" patternUnits="objectBoundingBox" width="1" height="1">` +

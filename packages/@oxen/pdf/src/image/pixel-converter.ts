@@ -108,13 +108,16 @@ function applyDecodeIfPresent(
  * - 16-bit: downsampled to 8-bit by taking the high byte
  */
 export function convertToRgba(
-  data: Uint8Array,
-  width: number,
-  height: number,
-  colorSpace: PdfColorSpace,
-  bitsPerComponent: number,
-  options: Readonly<{ readonly decode?: readonly number[] }> = {},
+  ...args: readonly [
+    data: Uint8Array,
+    width: number,
+    height: number,
+    colorSpace: PdfColorSpace,
+    bitsPerComponent: number,
+    options?: Readonly<{ readonly decode?: readonly number[] }>,
+  ]
 ): Uint8ClampedArray {
+  const [data, width, height, colorSpace, bitsPerComponent, options = {}] = args;
   const pixelCount = width * height;
   const rgba = new Uint8ClampedArray(pixelCount * 4);
 

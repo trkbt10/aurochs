@@ -81,14 +81,17 @@ function sameEdge(a: CellBorderEdgeDecoration, b: CellBorderEdgeDecoration): boo
 }
 
 function emitLine(
-  lines: SvgBorderLine[],
-  baseKey: string,
-  edge: CellBorderEdgeDecoration,
-  x1: number,
-  y1: number,
-  x2: number,
-  y2: number,
+  ...args: readonly [
+    lines: SvgBorderLine[],
+    baseKey: string,
+    edge: CellBorderEdgeDecoration,
+    x1: number,
+    y1: number,
+    x2: number,
+    y2: number,
+  ]
 ): void {
+  const [lines, baseKey, edge, x1, y1, x2, y2] = args;
   const dash = dasharrayForBorderStyle(edge.style);
 
   if (edge.style === "double") {

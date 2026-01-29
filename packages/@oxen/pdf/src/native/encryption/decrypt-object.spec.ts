@@ -142,7 +142,7 @@ describe("decryptPdfObject() /EFF behavior", () => {
       data: encrypted,
     } as const;
 
-    const decrypted = decryptPdfObject(embeddedFileStream, objNum, gen, decrypter);
+    const decrypted = decryptPdfObject({ value: embeddedFileStream, ctx: { objNum, gen, decrypter } });
     if (decrypted.type !== "stream") {throw new Error("expected stream");}
     expect(new TextDecoder().decode(decrypted.data)).toBe("embedded payload");
   });
@@ -197,7 +197,7 @@ describe("decryptPdfObject() /EFF behavior", () => {
       data: encrypted,
     } as const;
 
-    const decrypted = decryptPdfObject(normalStream, objNum, gen, decrypter);
+    const decrypted = decryptPdfObject({ value: normalStream, ctx: { objNum, gen, decrypter } });
     if (decrypted.type !== "stream") {throw new Error("expected stream");}
     expect(toHex(decrypted.data)).toBe(toHex(encrypted));
   });

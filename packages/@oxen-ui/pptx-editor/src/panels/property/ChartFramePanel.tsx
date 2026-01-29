@@ -5,7 +5,7 @@
  */
 
 import type { GraphicFrame } from "@oxen-office/pptx/domain/index";
-import type { Chart } from "@oxen-office/pptx/domain/chart";
+import type { Chart } from "@oxen-office/chart/domain";
 import { Accordion } from "@oxen-ui/ui-components/layout";
 import {
   NonVisualPropertiesEditor,

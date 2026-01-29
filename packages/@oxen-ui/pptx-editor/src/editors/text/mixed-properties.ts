@@ -18,7 +18,7 @@ import type {
 } from "@oxen-office/pptx/domain/text";
 import type { Color } from "@oxen-office/ooxml/domain/color";
 import type { Fill, Line } from "@oxen-office/pptx/domain/color/types";
-import type { Pixels, Points, Percent } from "@oxen-office/ooxml/domain/units";
+import type { Pixels, Points } from "@oxen-office/ooxml/domain/units";
 
 // =============================================================================
 // Property Extraction Types

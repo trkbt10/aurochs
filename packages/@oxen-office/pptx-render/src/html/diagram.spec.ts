@@ -153,7 +153,7 @@ describe("renderDiagram", () => {
       const diagram: DiagramContent = { shapes: [] };
       const ctx = createEmptyCoreRenderContext();
 
-      const result = renderDiagram(diagram, 500, 300, ctx);
+      const result = renderDiagram({ diagram, width: 500, height: 300, ctx });
 
       // Should return EMPTY_HTML (empty string)
       expect(result).toBe("");
@@ -168,7 +168,7 @@ describe("renderDiagram", () => {
       const diagram: DiagramContent = { shapes: [shape] };
       const ctx = createEmptyCoreRenderContext();
 
-      const result = renderDiagram(diagram, 500, 300, ctx);
+      const result = renderDiagram({ diagram, width: 500, height: 300, ctx });
 
       // Should contain diagram-content class
       expect(result).toContain('class="diagram-content"');
@@ -183,7 +183,7 @@ describe("renderDiagram", () => {
       const diagram: DiagramContent = { shapes: [shape1, shape2] };
       const ctx = createEmptyCoreRenderContext();
 
-      const result = renderDiagram(diagram, 600, 400, ctx);
+      const result = renderDiagram({ diagram, width: 600, height: 400, ctx });
 
       // Should contain both shapes (via shape wrapper classes)
       expect(result).toContain("diagram-content");
@@ -198,7 +198,7 @@ describe("renderDiagram", () => {
       const diagram: DiagramContent = { shapes: [shape] };
       const ctx = createEmptyCoreRenderContext();
 
-      const result = renderDiagram(diagram, 200, 150, ctx);
+      const result = renderDiagram({ diagram, width: 200, height: 150, ctx });
 
       expect(result).toContain("position: relative");
     });
@@ -208,7 +208,7 @@ describe("renderDiagram", () => {
       const diagram: DiagramContent = { shapes: [shape] };
       const ctx = createEmptyCoreRenderContext();
 
-      const result = renderDiagram(diagram, 800, 600, ctx);
+      const result = renderDiagram({ diagram, width: 800, height: 600, ctx });
 
       expect(result).toContain("width: 800px");
       expect(result).toContain("height: 600px");
@@ -223,7 +223,7 @@ describe("renderDiagram", () => {
       const diagram: DiagramContent = { shapes: [shape] };
       const ctx = createEmptyCoreRenderContext();
 
-      const result = renderDiagram(diagram, 500, 300, ctx);
+      const result = renderDiagram({ diagram, width: 500, height: 300, ctx });
 
       // Shape should be rendered
       expect(result).toContain("diagram-content");
@@ -239,7 +239,7 @@ describe("renderDiagram", () => {
       const diagram: DiagramContent = { shapes: [shape] };
       const ctx = createEmptyCoreRenderContext();
 
-      const result = renderDiagram(diagram, 500, 300, ctx);
+      const result = renderDiagram({ diagram, width: 500, height: 300, ctx });
 
       // Shape should be rendered with text (may be wrapped)
       expect(result).toContain("Diagram");
@@ -256,7 +256,7 @@ describe("renderDiagram", () => {
       const diagram: DiagramContent = { shapes: [shape] };
       const ctx = createEmptyCoreRenderContext();
 
-      const result = renderDiagram(diagram, 500, 300, ctx);
+      const result = renderDiagram({ diagram, width: 500, height: 300, ctx });
 
       expect(result).toContain("diagram-content");
       // Text may be wrapped across multiple lines
@@ -269,7 +269,7 @@ describe("renderDiagram", () => {
 describe("renderDiagramPlaceholder", () => {
   describe("Basic placeholder rendering", () => {
     it("should render placeholder with dimensions", () => {
-      const result = renderDiagramPlaceholder(400, 300);
+      const result = renderDiagramPlaceholder({ width: 400, height: 300 });
 
       expect(result).toContain('class="diagram-placeholder"');
       expect(result).toContain("width: 400px");
@@ -277,13 +277,13 @@ describe("renderDiagramPlaceholder", () => {
     });
 
     it("should display default message", () => {
-      const result = renderDiagramPlaceholder(400, 300);
+      const result = renderDiagramPlaceholder({ width: 400, height: 300 });
 
       expect(result).toContain("SmartArt Diagram");
     });
 
     it("should display custom message when provided", () => {
-      const result = renderDiagramPlaceholder(400, 300, "Custom Message");
+      const result = renderDiagramPlaceholder({ width: 400, height: 300, message: "Custom Message" });
 
       expect(result).toContain("Custom Message");
     });
@@ -291,7 +291,7 @@ describe("renderDiagramPlaceholder", () => {
 
   describe("Placeholder styling", () => {
     it("should apply flex centering", () => {
-      const result = renderDiagramPlaceholder(200, 100);
+      const result = renderDiagramPlaceholder({ width: 200, height: 100 });
 
       expect(result).toContain("display: flex");
       expect(result).toContain("align-items: center");
@@ -299,19 +299,19 @@ describe("renderDiagramPlaceholder", () => {
     });
 
     it("should have background color", () => {
-      const result = renderDiagramPlaceholder(200, 100);
+      const result = renderDiagramPlaceholder({ width: 200, height: 100 });
 
       expect(result).toContain("background: #f5f5f5");
     });
 
     it("should have border", () => {
-      const result = renderDiagramPlaceholder(200, 100);
+      const result = renderDiagramPlaceholder({ width: 200, height: 100 });
 
       expect(result).toContain("border: 1px solid #ddd");
     });
 
     it("should have muted text color", () => {
-      const result = renderDiagramPlaceholder(200, 100);
+      const result = renderDiagramPlaceholder({ width: 200, height: 100 });
 
       expect(result).toContain("color: #999");
     });

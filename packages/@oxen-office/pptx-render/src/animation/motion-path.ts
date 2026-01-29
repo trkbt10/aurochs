@@ -219,7 +219,10 @@ export function parsePathCommands(pathString: string): PathCommand[] {
 /**
  * Calculate the length of a line segment.
  */
-function lineLength(x1: number, y1: number, x2: number, y2: number): number {
+type LineLengthArgs = [x1: number, y1: number, x2: number, y2: number];
+
+function lineLength(...args: LineLengthArgs): number {
+  const [x1, y1, x2, y2] = args;
   const dx = x2 - x1;
   const dy = y2 - y1;
   return Math.sqrt(dx * dx + dy * dy);
@@ -229,13 +232,16 @@ function lineLength(x1: number, y1: number, x2: number, y2: number): number {
  * Calculate approximate length of a cubic bezier curve.
  * Uses subdivision for accuracy.
  */
-function cubicBezierLength(
+type CubicBezierLengthArgs = [
   x0: number, y0: number,
   x1: number, y1: number,
   x2: number, y2: number,
   x3: number, y3: number,
-  subdivisions: number = 10
-): number {
+  subdivisions?: number,
+];
+
+function cubicBezierLength(...args: CubicBezierLengthArgs): number {
+  const [x0, y0, x1, y1, x2, y2, x3, y3, subdivisions = 10] = args;
   let length = 0;
   let prevX = x0;
   let prevY = y0;
@@ -254,12 +260,15 @@ function cubicBezierLength(
 /**
  * Calculate approximate length of a quadratic bezier curve.
  */
-function quadraticBezierLength(
+type QuadraticBezierLengthArgs = [
   x0: number, y0: number,
   x1: number, y1: number,
   x2: number, y2: number,
-  subdivisions: number = 10
-): number {
+  subdivisions?: number,
+];
+
+function quadraticBezierLength(...args: QuadraticBezierLengthArgs): number {
+  const [x0, y0, x1, y1, x2, y2, subdivisions = 10] = args;
   let length = 0;
   let prevX = x0;
   let prevY = y0;
@@ -282,13 +291,16 @@ function quadraticBezierLength(
 /**
  * Calculate point on cubic bezier curve at parameter t.
  */
-function cubicBezierPoint(
+type CubicBezierPointArgs = [
   x0: number, y0: number,
   x1: number, y1: number,
   x2: number, y2: number,
   x3: number, y3: number,
-  t: number
-): Point {
+  t: number,
+];
+
+function cubicBezierPoint(...args: CubicBezierPointArgs): Point {
+  const [x0, y0, x1, y1, x2, y2, x3, y3, t] = args;
   const mt = 1 - t;
   const mt2 = mt * mt;
   const mt3 = mt2 * mt;
@@ -304,12 +316,15 @@ function cubicBezierPoint(
 /**
  * Calculate point on quadratic bezier curve at parameter t.
  */
-function quadraticBezierPoint(
+type QuadraticBezierPointArgs = [
   x0: number, y0: number,
   x1: number, y1: number,
   x2: number, y2: number,
-  t: number
-): Point {
+  t: number,
+];
+
+function quadraticBezierPoint(...args: QuadraticBezierPointArgs): Point {
+  const [x0, y0, x1, y1, x2, y2, t] = args;
   const mt = 1 - t;
   const mt2 = mt * mt;
   const t2 = t * t;
@@ -382,9 +397,11 @@ export function parseMotionPath(pathString: string): MotionPath {
 
       case "Z":
         // Find starting point (last M command)
-        const startCmd = commands.find(c => c.type === "M");
-        endPoint = startCmd ? { x: startCmd.x, y: startCmd.y } : { x: 0, y: 0 };
-        length = lineLength(startPoint.x, startPoint.y, endPoint.x, endPoint.y);
+        {
+          const startCmd = commands.find((c) => c.type === "M");
+          endPoint = startCmd ? { x: startCmd.x, y: startCmd.y } : { x: 0, y: 0 };
+          length = lineLength(startPoint.x, startPoint.y, endPoint.x, endPoint.y);
+        }
         break;
 
       default:
@@ -450,9 +467,7 @@ export function getPointAtProgress(path: MotionPath, progress: number): Point {
   }
 
   // Calculate local progress within segment
-  const localProgress = segment.length > 0
-    ? (targetLength - segment.cumulativeLength) / segment.length
-    : 0;
+  const localProgress = getLocalProgress(segment, targetLength);
 
   // Interpolate based on segment type
   const cmd = segment.command;
@@ -504,12 +519,15 @@ export function getPointAtProgress(path: MotionPath, progress: number): Point {
  * @returns Animation update function (progress: 0-1) => void
  */
 export function createMotionPathFunction(
-  behavior: AnimateMotionBehavior,
-  element: HTMLElement | SVGElement,
-  slideWidth: number = 960,
-  slideHeight: number = 540
+  ...args: [
+    behavior: AnimateMotionBehavior,
+    element: HTMLElement | SVGElement,
+    slideWidth?: number,
+    slideHeight?: number,
+  ]
 ): (progress: number) => void {
-  const { path, from, to, by, origin } = behavior;
+  const [behavior, element, slideWidth = 960, slideHeight = 540] = args;
+  const { path, from, to, by, origin: _origin } = behavior;
 
   // If we have a path string, use path-based animation
   if (path) {
@@ -543,16 +561,31 @@ export function createMotionPathFunction(
   }
 
   // Fall back to from/to/by point animation
-  const fromPoint = from || { x: 0, y: 0 };
-  const toPoint = to || by
-    ? { x: fromPoint.x + (by?.x || 0), y: fromPoint.y + (by?.y || 0) }
-    : fromPoint;
+  const fromPoint = from ?? { x: 0, y: 0 };
+  const toPoint = resolveToPoint(fromPoint, to, by);
 
   return (progress: number) => {
     const x = lerp(fromPoint.x, toPoint.x, progress) * slideWidth;
     const y = lerp(fromPoint.y, toPoint.y, progress) * slideHeight;
     element.style.transform = `translate(${x}px, ${y}px)`;
   };
+}
+
+function getLocalProgress(segment: PathSegment, targetLength: number): number {
+  if (segment.length <= 0) {
+    return 0;
+  }
+  return (targetLength - segment.cumulativeLength) / segment.length;
+}
+
+function resolveToPoint(fromPoint: Point, to?: Point, by?: Point): Point {
+  if (to !== undefined) {
+    return to;
+  }
+  if (by !== undefined) {
+    return { x: fromPoint.x + by.x, y: fromPoint.y + by.y };
+  }
+  return fromPoint;
 }
 
 /**

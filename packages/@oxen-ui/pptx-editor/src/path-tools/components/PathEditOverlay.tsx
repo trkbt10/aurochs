@@ -6,12 +6,42 @@
 
 import React, { useCallback, useEffect } from "react";
 import { px } from "@oxen-office/ooxml/domain/units";
-import type { DrawingPath, ModifierKeys } from "../types";
+import type { DrawingPath } from "../types";
 import { getModifierKeys } from "../types";
 import { AnchorPoint } from "./AnchorPoint";
 import { HandlePair } from "./ControlHandle";
 import { PathPreview } from "./PathPreview";
 import { usePathEdit } from "../hooks/usePathEdit";
+
+type PathPoint = DrawingPath["points"][number];
+type PathHandle = NonNullable<PathPoint["handleIn"]>;
+
+function shiftHandle(args: { readonly handle: PathHandle; readonly dx: number; readonly dy: number }): PathHandle {
+  const { handle, dx, dy } = args;
+  return {
+    x: px((handle.x as number) + dx),
+    y: px((handle.y as number) + dy),
+  };
+}
+
+function shiftOptionalHandle(args: { readonly handle: PathHandle | undefined; readonly dx: number; readonly dy: number }): PathHandle | undefined {
+  const { handle, dx, dy } = args;
+  if (!handle) {
+    return undefined;
+  }
+  return shiftHandle({ handle, dx, dy });
+}
+
+function shiftPathPoint(args: { readonly point: PathPoint; readonly dx: number; readonly dy: number }): PathPoint {
+  const { point, dx, dy } = args;
+  return {
+    ...point,
+    x: px((point.x as number) + dx),
+    y: px((point.y as number) + dy),
+    handleIn: shiftOptionalHandle({ handle: point.handleIn, dx, dy }),
+    handleOut: shiftOptionalHandle({ handle: point.handleOut, dx, dy }),
+  };
+}
 
 // =============================================================================
 // Types
@@ -58,6 +88,17 @@ export function PathEditOverlay({
   onCancel,
   isActive,
 }: PathEditOverlayProps): React.ReactElement | null {
+  const handleCommit = useCallback(
+    (editedPath: DrawingPath) => {
+      const unoffsetPath: DrawingPath = {
+        ...editedPath,
+        points: editedPath.points.map((point) => shiftPathPoint({ point, dx: -offsetX, dy: -offsetY })),
+      };
+      onCommit(unoffsetPath);
+    },
+    [offsetX, offsetY, onCommit],
+  );
+
   const {
     state,
     initializePath,
@@ -69,7 +110,7 @@ export function PathEditOverlay({
     onAnchorHover,
     onKeyDown,
   } = usePathEdit({
-    onCommit,
+    onCommit: handleCommit,
     onCancel,
   });
 
@@ -81,23 +122,7 @@ export function PathEditOverlay({
       // Offset the path points by the shape position
       const offsetPath: DrawingPath = {
         ...initialPath,
-        points: initialPath.points.map((point) => ({
-          ...point,
-          x: px((point.x as number) + offsetX),
-          y: px((point.y as number) + offsetY),
-          handleIn: point.handleIn
-            ? {
-                x: px((point.handleIn.x as number) + offsetX),
-                y: px((point.handleIn.y as number) + offsetY),
-              }
-            : undefined,
-          handleOut: point.handleOut
-            ? {
-                x: px((point.handleOut.x as number) + offsetX),
-                y: px((point.handleOut.y as number) + offsetY),
-              }
-            : undefined,
-        })),
+        points: initialPath.points.map((point) => shiftPathPoint({ point, dx: offsetX, dy: offsetY })),
       };
       initializePath(offsetPath);
     }
@@ -160,34 +185,6 @@ export function PathEditOverlay({
       onKeyDown(e);
     },
     [isActive, onKeyDown]
-  );
-
-  // Handle commit - remove offset before returning
-  const handleCommit = useCallback(
-    (editedPath: DrawingPath) => {
-      const unoffsetPath: DrawingPath = {
-        ...editedPath,
-        points: editedPath.points.map((point) => ({
-          ...point,
-          x: px((point.x as number) - offsetX),
-          y: px((point.y as number) - offsetY),
-          handleIn: point.handleIn
-            ? {
-                x: px((point.handleIn.x as number) - offsetX),
-                y: px((point.handleIn.y as number) - offsetY),
-              }
-            : undefined,
-          handleOut: point.handleOut
-            ? {
-                x: px((point.handleOut.x as number) - offsetX),
-                y: px((point.handleOut.y as number) - offsetY),
-              }
-            : undefined,
-        })),
-      };
-      onCommit(unoffsetPath);
-    },
-    [offsetX, offsetY, onCommit]
   );
 
   if (!isActive) {

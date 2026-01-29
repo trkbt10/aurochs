@@ -79,7 +79,7 @@ function applyAddition(doc: XmlDocument, change: ShapeAdded): XmlDocument {
 
 	    const afterId = change.afterId;
 	    const parentId = change.parentId;
-	    const updatedSpTree = getUpdatedSpTreeForAddition(spTree, parentId, shapeXml, afterId);
+		    const updatedSpTree = getUpdatedSpTreeForAddition({ spTree, parentId, shapeXml, afterId });
 
 	    return updateChildByName(root, "p:cSld", (cSldEl) =>
 	      replaceChildByName(cSldEl, "p:spTree", updatedSpTree),
@@ -88,22 +88,36 @@ function applyAddition(doc: XmlDocument, change: ShapeAdded): XmlDocument {
 	}
 
 function getUpdatedSpTreeForAddition(
-  spTree: XmlElement,
-  parentId: string | undefined,
-  shapeXml: XmlElement,
-  afterId: string | undefined,
+  {
+    spTree,
+    parentId,
+    shapeXml,
+    afterId,
+  }: {
+    readonly spTree: XmlElement;
+    readonly parentId: string | undefined;
+    readonly shapeXml: XmlElement;
+    readonly afterId: string | undefined;
+  },
 ): XmlElement {
   if (!parentId) {
     return addShapeToTree(spTree, shapeXml, afterId);
   }
-  return addShapeToGroupTree(spTree, parentId, shapeXml, afterId);
+  return addShapeToGroupTree({ spTree, parentId, shapeXml, afterId });
 }
 
 function addShapeToGroupTree(
-  spTree: XmlElement,
-  parentId: string,
-  shapeXml: XmlElement,
-  afterId: string | undefined,
+  {
+    spTree,
+    parentId,
+    shapeXml,
+    afterId,
+  }: {
+    readonly spTree: XmlElement;
+    readonly parentId: string;
+    readonly shapeXml: XmlElement;
+    readonly afterId: string | undefined;
+  },
 ): XmlElement {
   const parent = findShapeById(spTree, parentId);
   if (!parent) {

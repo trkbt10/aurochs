@@ -385,13 +385,32 @@ function getPossibleFlips(detNegative: boolean): ReadonlyArray<{ readonly flipH:
 /**
  * アスペクト比を保持しながらスライドにフィット
  */
+function computeRasterScale(
+  ...args: readonly [
+    fit: "contain" | "cover",
+    targetW: number,
+    targetH: number,
+    rasterW: number,
+    rasterH: number,
+  ]
+): number {
+  const [fit, targetW, targetH, rasterW, rasterH] = args;
+  if (fit === "contain") {
+    return Math.min(targetW / rasterW, targetH / rasterH);
+  }
+  return Math.max(targetW / rasterW, targetH / rasterH);
+}
+
 export function createFitContext(
-  pdfWidth: number,
-  pdfHeight: number,
-  slideWidth: Pixels,
-  slideHeight: Pixels,
-  fit: "contain" | "cover" | "stretch" = "contain"
+  ...args: readonly [
+    pdfWidth: number,
+    pdfHeight: number,
+    slideWidth: Pixels,
+    slideHeight: Pixels,
+    fit?: "contain" | "cover" | "stretch",
+  ]
 ): ConversionContext {
+  const [pdfWidth, pdfHeight, slideWidth, slideHeight, fit = "contain"] = args;
   if (!Number.isFinite(pdfWidth) || pdfWidth <= 0) {
     throw new Error(`Invalid pdfWidth: ${pdfWidth}`);
   }
@@ -460,9 +479,7 @@ export function createFitContext(
   const rasterW = Math.max(1, Math.round((pdfWidth / 72) * BASELINE_DPI));
   const rasterH = Math.max(1, Math.round((pdfHeight / 72) * BASELINE_DPI));
 
-  const scaleRaster = fit === "contain"
-    ? Math.min(targetW / rasterW, targetH / rasterH)
-    : Math.max(targetW / rasterW, targetH / rasterH);
+  const scaleRaster = computeRasterScale(fit, targetW, targetH, rasterW, rasterH);
 
   const fittedW = Math.max(1, Math.round(rasterW * scaleRaster));
   const fittedH = Math.max(1, Math.round(rasterH * scaleRaster));

@@ -178,11 +178,14 @@ function breakSpanAtWidth<T extends BreakableSpan>(
  * @returns Line break result with lines, heights (in points), and page break flags
  */
 export function breakIntoLines<T extends BreakableSpan>(
-  spans: readonly T[],
-  firstLineWidth: number,
-  nextLineWidth: number,
-  wrapMode: TextWrapping | "wrap",
+  ...args: readonly [
+    spans: readonly T[],
+    firstLineWidth: number,
+    nextLineWidth: number,
+    wrapMode: TextWrapping | "wrap",
+  ]
 ): LineBreakResult<T> {
+  const [spans, firstLineWidth, nextLineWidth, wrapMode] = args;
   const lines: T[][] = [];
   const lineHeights: number[] = [];
   const pageBreaksAfter: boolean[] = [];

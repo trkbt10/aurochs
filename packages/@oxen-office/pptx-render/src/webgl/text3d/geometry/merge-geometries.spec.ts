@@ -10,13 +10,11 @@
  * @see ECMA-376 Part 1, Section 20.1.8.33 (gradFill - requires proper UVs)
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
 import * as THREE from "three";
 
 // Import the function we'll create
 import {
   mergeBufferGeometries,
-  type MergeGeometriesOptions,
 } from "./merge-geometries";
 
 // =============================================================================
@@ -344,27 +342,38 @@ describe("mergeBufferGeometries", () => {
       const geomA = createTestBoxGeometry();
       const geomB = createTestBoxGeometry();
 
-      // Spy on dispose
-      const disposeA = vi.spyOn(geomA, "dispose");
-      const disposeB = vi.spyOn(geomB, "dispose");
+      let disposedA = false;
+      let disposedB = false;
+      geomA.dispose = () => {
+        disposedA = true;
+      };
+      geomB.dispose = () => {
+        disposedB = true;
+      };
 
       mergeBufferGeometries([geomA, geomB], { disposeInputs: true });
 
-      expect(disposeA).toHaveBeenCalled();
-      expect(disposeB).toHaveBeenCalled();
+      expect(disposedA).toBe(true);
+      expect(disposedB).toBe(true);
     });
 
     it("should not dispose input geometries by default", () => {
       const geomA = createTestBoxGeometry();
       const geomB = createTestBoxGeometry();
 
-      const disposeA = vi.spyOn(geomA, "dispose");
-      const disposeB = vi.spyOn(geomB, "dispose");
+      let disposedA = false;
+      let disposedB = false;
+      geomA.dispose = () => {
+        disposedA = true;
+      };
+      geomB.dispose = () => {
+        disposedB = true;
+      };
 
       mergeBufferGeometries([geomA, geomB]);
 
-      expect(disposeA).not.toHaveBeenCalled();
-      expect(disposeB).not.toHaveBeenCalled();
+      expect(disposedA).toBe(false);
+      expect(disposedB).toBe(false);
     });
 
     it("should preserve custom attributes when preserveCustomAttributes is true", () => {
@@ -509,8 +518,3 @@ describe("mergeBufferGeometries", () => {
     });
   });
 });
-
-// =============================================================================
-// Import vi for spying
-// =============================================================================
-import { vi } from "vitest";

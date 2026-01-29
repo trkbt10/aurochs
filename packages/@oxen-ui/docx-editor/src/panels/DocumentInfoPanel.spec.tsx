@@ -4,9 +4,7 @@
 
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, fireEvent } from "@testing-library/react";
-import { JSDOM } from "jsdom";
 import type { DocxDocument } from "@oxen-office/docx/domain/document";
 import type { DocxParagraph } from "@oxen-office/docx/domain/paragraph";
 import type { DocxTable } from "@oxen-office/docx/domain/table";
@@ -14,29 +12,8 @@ import type { DocumentEditorContextValue } from "../context/document/DocumentEdi
 import { createInitialState } from "../context/document/editor";
 import { createEmptyDocxSelection, createIdleDragState } from "../context/document/state";
 import { DocumentInfoPanel, calculateDocumentStats } from "./DocumentInfoPanel";
-import { useDocumentEditor } from "../context/document/DocumentEditorContext";
+import { DocumentEditorTestProvider } from "../context/document/DocumentEditorContext";
 import { docxStyleId } from "@oxen-office/docx/domain/types";
-
-vi.mock("../context/document/DocumentEditorContext", async () => {
-  return {
-    useDocumentEditor: vi.fn(),
-  };
-});
-
-if (typeof document === "undefined") {
-  const dom = new JSDOM("<!doctype html><html><body></body></html>");
-  const win = dom.window as unknown as Window &
-    typeof globalThis & {
-      readonly HTMLElement: typeof HTMLElement;
-      readonly Node: typeof Node;
-    };
-  globalThis.window = win;
-  globalThis.document = win.document;
-  globalThis.navigator = win.navigator;
-  globalThis.HTMLElement = win.HTMLElement;
-  globalThis.Node = win.Node;
-  globalThis.getComputedStyle = win.getComputedStyle.bind(win);
-}
 
 function createParagraph(text: string, props?: DocxParagraph["properties"]): DocxParagraph {
   return {
@@ -100,15 +77,6 @@ function createContextValue(
 }
 
 describe("DocumentInfoPanel", () => {
-  const mockUseDocumentEditor = useDocumentEditor as unknown as {
-    readonly mockReset: () => void;
-    readonly mockReturnValue: (value: DocumentEditorContextValue) => void;
-  };
-
-  beforeEach(() => {
-    mockUseDocumentEditor.mockReset();
-  });
-
   it("calculates document stats including table text", () => {
     const doc = {
       body: {
@@ -130,13 +98,11 @@ describe("DocumentInfoPanel", () => {
       },
     } satisfies DocxDocument;
 
-    mockUseDocumentEditor.mockReturnValue(
-      createContextValue({
-        document: doc,
-      })
+    const { getAllByText } = render(
+      <DocumentEditorTestProvider value={createContextValue({ document: doc })}>
+        <DocumentInfoPanel />
+      </DocumentEditorTestProvider>
     );
-
-    const { getAllByText } = render(<DocumentInfoPanel />);
     expect(getAllByText("0").length).toBeGreaterThanOrEqual(3);
   });
 
@@ -157,19 +123,20 @@ describe("DocumentInfoPanel", () => {
       },
     } satisfies DocxDocument;
 
-    mockUseDocumentEditor.mockReturnValue(
-      createContextValue({
-        document: doc,
-      })
+    const { getByText } = render(
+      <DocumentEditorTestProvider value={createContextValue({ document: doc })}>
+        <DocumentInfoPanel />
+      </DocumentEditorTestProvider>
     );
-
-    const { getByText } = render(<DocumentInfoPanel />);
     expect(getByText("Heading 1")).toBeTruthy();
   });
 
   it("dispatches an apply-style action when a style is selected", () => {
     const heading1Id = docxStyleId("Heading1");
-    const dispatch = vi.fn();
+    const dispatchCalls: unknown[] = [];
+    const dispatch: DocumentEditorContextValue["dispatch"] = (action) => {
+      dispatchCalls.push(action);
+    };
 
     const doc = {
       body: {
@@ -186,18 +153,14 @@ describe("DocumentInfoPanel", () => {
       },
     } satisfies DocxDocument;
 
-    mockUseDocumentEditor.mockReturnValue(
-      createContextValue({
-        document: doc,
-        dispatch,
-        editorMode: "editing",
-      })
+    const { getByText } = render(
+      <DocumentEditorTestProvider value={createContextValue({ document: doc, dispatch, editorMode: "editing" })}>
+        <DocumentInfoPanel />
+      </DocumentEditorTestProvider>
     );
-
-    const { getByText } = render(<DocumentInfoPanel />);
     fireEvent.click(getByText("Heading 1"));
 
-    expect(dispatch).toHaveBeenCalledWith({
+    expect(dispatchCalls).toContainEqual({
       type: "APPLY_PARAGRAPH_FORMAT",
       format: { pStyle: heading1Id },
     });

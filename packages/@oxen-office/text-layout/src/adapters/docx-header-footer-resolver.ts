@@ -63,11 +63,9 @@ export type HeaderFooterContext = {
  * @see ECMA-376-1:2016 Section 17.10.1 (Header/Footer Overview)
  */
 function getHeaderFooterType(
-  pageIndex: number,
-  isFirstPage: boolean,
-  titlePg: boolean,
-  evenAndOddHeaders: boolean,
+  ...args: readonly [pageIndex: number, isFirstPage: boolean, titlePg: boolean, evenAndOddHeaders: boolean]
 ): HeaderFooterType {
+  const [pageIndex, isFirstPage, titlePg, evenAndOddHeaders] = args;
   // First page of section with titlePg enabled
   if (isFirstPage && titlePg) {
     return "first";

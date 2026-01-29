@@ -97,12 +97,14 @@ export function removeFromSelection(
     return currentSelection; // Not in selection
   }
 
+  let primaryId = currentSelection.primaryId;
+  if (primaryId === slideId) {
+    primaryId = newIds[newIds.length - 1];
+  }
+
   return {
     selectedIds: newIds,
-    primaryId:
-      currentSelection.primaryId === slideId
-        ? newIds[newIds.length - 1]
-        : currentSelection.primaryId,
+    primaryId,
     anchorIndex: newIds.length > 0 ? currentSelection.anchorIndex : undefined,
   };
 }
@@ -143,13 +145,16 @@ export function selectAll(slides: readonly SlideWithId[]): SlideSelectionState {
  * Handle click with modifier key support
  */
 export function handleSelectionClick(
-  slides: readonly SlideWithId[],
-  currentSelection: SlideSelectionState,
-  slideId: SlideId,
-  index: number,
-  shiftKey: boolean,
-  metaOrCtrlKey: boolean
+  ...args: readonly [
+    slides: readonly SlideWithId[],
+    currentSelection: SlideSelectionState,
+    slideId: SlideId,
+    index: number,
+    shiftKey: boolean,
+    metaOrCtrlKey: boolean,
+  ]
 ): SlideSelectionState {
+  const [slides, currentSelection, slideId, index, shiftKey, metaOrCtrlKey] = args;
   if (shiftKey && currentSelection.anchorIndex !== undefined) {
     return selectRange(slides, currentSelection.anchorIndex, index);
   }

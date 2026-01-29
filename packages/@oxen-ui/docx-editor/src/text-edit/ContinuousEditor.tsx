@@ -10,22 +10,21 @@
 
 import type { ReactNode, CSSProperties, PointerEvent as ReactPointerEvent } from "react";
 import { useState, useCallback, useRef, useEffect } from "react";
+import { applySelectionRange, getSelectionAnchor, isPrimaryPointerAction } from "@oxen-ui/editor-core/pointer-utils";
 import type { DocxParagraph } from "@oxen-office/docx/domain/paragraph";
-import type { DocxSectionProperties } from "@oxen-office/docx/domain/section";
-import type { DocxNumbering } from "@oxen-office/docx/domain/numbering";
-import type { Pixels } from "@oxen-office/ooxml/domain/units";
-import { px } from "@oxen-office/ooxml/domain/units";
+	import type { DocxSectionProperties } from "@oxen-office/docx/domain/section";
+	import type { DocxNumbering } from "@oxen-office/docx/domain/numbering";
+	import type { Pixels } from "@oxen-office/ooxml/domain/units";
 import type {
   ContinuousCursorPosition,
   ContinuousSelection,
   PageFlowConfig,
   SelectionRect,
   CursorCoordinates,
-} from "@oxen-office/text-layout";
-import {
-  DEFAULT_PAGE_FLOW_CONFIG,
-  getDocumentPlainText,
-} from "@oxen-office/text-layout";
+	} from "@oxen-office/text-layout";
+	import {
+	  getDocumentPlainText,
+	} from "@oxen-office/text-layout";
 import { useDocumentLayout } from "../document/hooks/use-document-layout";
 import {
   coordinatesToCursorPosition,
@@ -105,40 +104,18 @@ const hiddenTextareaStyle: CSSProperties = {
 // Helpers
 // =============================================================================
 
-function isPrimaryPointerAction(event: ReactPointerEvent<SVGSVGElement>): boolean {
-  if (event.pointerType === "mouse") {
-    return event.button === 0;
-  }
-  return event.button === 0 || (event.buttons & 1) === 1;
-}
-
-function getSelectionAnchor(textarea: HTMLTextAreaElement): number {
-  if (textarea.selectionDirection === "backward") {
-    return textarea.selectionEnd ?? 0;
-  }
-  return textarea.selectionStart ?? 0;
-}
-
-function applySelectionRange(
-  textarea: HTMLTextAreaElement,
-  anchorOffset: number,
-  focusOffset: number,
-): void {
-  const start = Math.min(anchorOffset, focusOffset);
-  const end = Math.max(anchorOffset, focusOffset);
-  const direction = focusOffset < anchorOffset ? "backward" : "forward";
-  textarea.setSelectionRange(start, end, direction);
-}
-
 /**
  * Compute selection rectangles for a given range.
  */
 function computeSelectionRects(
-  start: number,
-  end: number,
-  paragraphs: readonly DocxParagraph[],
-  pagedLayout: Parameters<typeof selectionToRects>[0],
+  ...args: [
+    start: number,
+    end: number,
+    paragraphs: readonly DocxParagraph[],
+    pagedLayout: Parameters<typeof selectionToRects>[0],
+  ]
 ): readonly SelectionRect[] {
+  const [start, end, paragraphs, pagedLayout] = args;
   if (start === end) {
     return [];
   }
@@ -305,7 +282,7 @@ export function ContinuousEditor({
 
       const anchorOffset = event.shiftKey ? getSelectionAnchor(textarea) : offset;
       dragAnchorRef.current = anchorOffset;
-      applySelectionRange(textarea, anchorOffset, offset);
+      applySelectionRange({ textarea, anchorOffset, focusOffset: offset });
       pauseBlinking();
       updateCursorPosition();
 
@@ -328,7 +305,7 @@ export function ContinuousEditor({
       }
 
       const anchorOffset = dragAnchorRef.current ?? getSelectionAnchor(textarea);
-      applySelectionRange(textarea, anchorOffset, offset);
+      applySelectionRange({ textarea, anchorOffset, focusOffset: offset });
       pauseBlinking();
       updateCursorPosition();
       event.preventDefault();
@@ -376,22 +353,26 @@ export function ContinuousEditor({
     updateCursorPosition();
   }, [updateCursorPosition]);
 
-  const handleTextareaKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      const textarea = textareaRef.current;
-      if (!textarea) {
-        return;
-      }
+	  const handleTextareaKeyDown = useCallback(
+	    (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+	      const textarea = textareaRef.current;
+	      if (!textarea) {
+	        return;
+	      }
 
-      const key = event.key;
+	      const resolveSelectionCursorOffset = (textarea: HTMLTextAreaElement): number => {
+	        const start = textarea.selectionStart ?? 0;
+	        const end = textarea.selectionEnd ?? 0;
+	        return textarea.selectionDirection === "backward" ? start : end;
+	      };
+
+	      const key = event.key;
 
       // Handle vertical cursor movement (up/down arrows)
-      if (key === "ArrowUp" || key === "ArrowDown") {
-        const direction = key === "ArrowUp" ? "up" : "down";
-        const cursorOffset = textarea.selectionDirection === "backward"
-          ? textarea.selectionStart ?? 0
-          : textarea.selectionEnd ?? 0;
-        const currentPosition = offsetToCursorPosition(internalParagraphs, cursorOffset);
+	      if (key === "ArrowUp" || key === "ArrowDown") {
+	        const direction = key === "ArrowUp" ? "up" : "down";
+	        const cursorOffset = resolveSelectionCursorOffset(textarea);
+	        const currentPosition = offsetToCursorPosition(internalParagraphs, cursorOffset);
 
         const result = moveCursorVertically(
           pagedLayout,
@@ -407,7 +388,7 @@ export function ContinuousEditor({
           if (event.shiftKey) {
             // Extend selection
             const anchorOffset = getSelectionAnchor(textarea);
-            applySelectionRange(textarea, anchorOffset, newOffset);
+            applySelectionRange({ textarea, anchorOffset, focusOffset: newOffset });
           } else {
             // Move cursor
             textarea.setSelectionRange(newOffset, newOffset);

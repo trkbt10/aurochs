@@ -4,11 +4,11 @@
 
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import type { DocxTableCell, DocxTableCellProperties } from "@oxen-office/docx/domain/table";
 import { gridSpan } from "@oxen-office/ooxml/domain/table";
 import { TableCellRenderer, computeCellStyles } from "./TableCellRenderer";
+import type { TableCellRendererProps } from "./TableCellRenderer";
 
 // =============================================================================
 // Test Fixtures
@@ -38,8 +38,17 @@ function createEmptyCell(): DocxTableCell {
   };
 }
 
+function createCallTracker<Args extends readonly unknown[]>() {
+  const calls: Args[] = [];
+  const fn = (...args: Args) => {
+    calls.push(args);
+  };
+  return { fn, calls };
+}
+
 // Helper to render cell inside table structure
 function renderCell(cell: DocxTableCell, props?: Partial<Parameters<typeof TableCellRenderer>[0]>) {
+  const noopOnClick: TableCellRendererProps["onClick"] = () => {};
   return render(
     <table>
       <tbody>
@@ -49,7 +58,7 @@ function renderCell(cell: DocxTableCell, props?: Partial<Parameters<typeof Table
             rowIndex={0}
             colIndex={0}
             isSelected={false}
-            onClick={vi.fn()}
+            onClick={noopOnClick}
             {...props}
           />
         </tr>
@@ -157,15 +166,15 @@ describe("TableCellRenderer", () => {
   });
 
   it("calls onClick when clicked", () => {
-    const onClick = vi.fn();
+    const onClick = createCallTracker<Parameters<TableCellRendererProps["onClick"]>>();
     const cell = createSimpleCell("Clickable");
-    const { container } = renderCell(cell, { onClick });
+    const { container } = renderCell(cell, { onClick: onClick.fn });
 
     const td = container.querySelector("td");
     if (td) {
       fireEvent.click(td);
     }
-    expect(onClick).toHaveBeenCalled();
+    expect(onClick.calls.length).toBe(1);
   });
 
   it("applies colspan from gridSpan", () => {
@@ -194,6 +203,7 @@ describe("TableCellRenderer", () => {
 
   it("sets data attributes for row and col", () => {
     const cell = createSimpleCell("Test");
+    const noopOnClick: TableCellRendererProps["onClick"] = () => {};
     const { container } = render(
       <table>
         <tbody>
@@ -203,7 +213,7 @@ describe("TableCellRenderer", () => {
               rowIndex={2}
               colIndex={3}
               isSelected={false}
-              onClick={vi.fn()}
+              onClick={noopOnClick}
             />
           </tr>
         </tbody>

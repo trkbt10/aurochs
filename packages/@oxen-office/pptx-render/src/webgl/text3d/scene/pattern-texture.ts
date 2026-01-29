@@ -60,13 +60,16 @@ export const DEFAULT_PATTERN_TILE: PatternTileConfig = {
   flip: "none",
 };
 
-function getPatternCacheKey(
+type GetPatternCacheKeyArgs = [
   preset: PatternPreset,
   fgColor: string,
   bgColor: string,
   size: number,
   tileConfig?: PatternTileConfig,
-): string {
+];
+
+function getPatternCacheKey(...args: GetPatternCacheKeyArgs): string {
+  const [preset, fgColor, bgColor, size, tileConfig] = args;
   return `${preset}-${fgColor}-${bgColor}-${size}-${JSON.stringify(tileConfig)}`;
 }
 
@@ -74,12 +77,17 @@ function getPatternCacheKey(
 // Pattern Drawing Functions
 // =============================================================================
 
-type PatternDrawer = (ctx: CanvasRenderingContext2D, fg: string, bg: string, size: number) => void;
+type PatternDrawerArgs = [ctx: CanvasRenderingContext2D, fg: string, bg: string, size: number];
+
+type PatternDrawer = (...args: PatternDrawerArgs) => void;
 
 /**
  * Draw percentage pattern (dotted)
  */
-function drawPercentPattern(ctx: CanvasRenderingContext2D, fg: string, bg: string, size: number, pct: number): void {
+type DrawPercentPatternArgs = [...PatternDrawerArgs, pct: number];
+
+function drawPercentPattern(...args: DrawPercentPatternArgs): void {
+  const [ctx, fg, bg, size, pct] = args;
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, size, size);
   ctx.fillStyle = fg;
@@ -102,7 +110,10 @@ function drawPercentPattern(ctx: CanvasRenderingContext2D, fg: string, bg: strin
 /**
  * Draw horizontal line pattern
  */
-function drawHorizontalPattern(ctx: CanvasRenderingContext2D, fg: string, bg: string, size: number, lineWidth: number, spacing: number): void {
+type DrawHorizontalPatternArgs = [...PatternDrawerArgs, lineWidth: number, spacing: number];
+
+function drawHorizontalPattern(...args: DrawHorizontalPatternArgs): void {
+  const [ctx, fg, bg, size, lineWidth, spacing] = args;
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, size, size);
   ctx.fillStyle = fg;
@@ -114,7 +125,10 @@ function drawHorizontalPattern(ctx: CanvasRenderingContext2D, fg: string, bg: st
 /**
  * Draw vertical line pattern
  */
-function drawVerticalPattern(ctx: CanvasRenderingContext2D, fg: string, bg: string, size: number, lineWidth: number, spacing: number): void {
+type DrawVerticalPatternArgs = [...PatternDrawerArgs, lineWidth: number, spacing: number];
+
+function drawVerticalPattern(...args: DrawVerticalPatternArgs): void {
+  const [ctx, fg, bg, size, lineWidth, spacing] = args;
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, size, size);
   ctx.fillStyle = fg;
@@ -126,7 +140,10 @@ function drawVerticalPattern(ctx: CanvasRenderingContext2D, fg: string, bg: stri
 /**
  * Draw diagonal line pattern
  */
-function drawDiagonalPattern(ctx: CanvasRenderingContext2D, fg: string, bg: string, size: number, lineWidth: number, up: boolean): void {
+type DrawDiagonalPatternArgs = [...PatternDrawerArgs, lineWidth: number, up: boolean];
+
+function drawDiagonalPattern(...args: DrawDiagonalPatternArgs): void {
+  const [ctx, fg, bg, size, lineWidth, up] = args;
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, size, size);
   ctx.strokeStyle = fg;
@@ -148,7 +165,10 @@ function drawDiagonalPattern(ctx: CanvasRenderingContext2D, fg: string, bg: stri
 /**
  * Draw cross pattern
  */
-function drawCrossPattern(ctx: CanvasRenderingContext2D, fg: string, bg: string, size: number, lineWidth: number): void {
+type DrawCrossPatternArgs = [...PatternDrawerArgs, lineWidth: number];
+
+function drawCrossPattern(...args: DrawCrossPatternArgs): void {
+  const [ctx, fg, bg, size, lineWidth] = args;
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, size, size);
   ctx.strokeStyle = fg;
@@ -173,7 +193,10 @@ function drawCrossPattern(ctx: CanvasRenderingContext2D, fg: string, bg: string,
 /**
  * Draw checker pattern
  */
-function drawCheckerPattern(ctx: CanvasRenderingContext2D, fg: string, bg: string, size: number, cellSize: number): void {
+type DrawCheckerPatternArgs = [...PatternDrawerArgs, cellSize: number];
+
+function drawCheckerPattern(...args: DrawCheckerPatternArgs): void {
+  const [ctx, fg, bg, size, cellSize] = args;
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, size, size);
   ctx.fillStyle = fg;
@@ -191,7 +214,10 @@ function drawCheckerPattern(ctx: CanvasRenderingContext2D, fg: string, bg: strin
 /**
  * Draw grid pattern
  */
-function drawGridPattern(ctx: CanvasRenderingContext2D, fg: string, bg: string, size: number, cellSize: number): void {
+type DrawGridPatternArgs = [...PatternDrawerArgs, cellSize: number];
+
+function drawGridPattern(...args: DrawGridPatternArgs): void {
+  const [ctx, fg, bg, size, cellSize] = args;
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, size, size);
   ctx.strokeStyle = fg;
@@ -214,7 +240,10 @@ function drawGridPattern(ctx: CanvasRenderingContext2D, fg: string, bg: string, 
 /**
  * Draw dotted grid pattern
  */
-function drawDotGridPattern(ctx: CanvasRenderingContext2D, fg: string, bg: string, size: number, spacing: number): void {
+type DrawDotGridPatternArgs = [...PatternDrawerArgs, spacing: number];
+
+function drawDotGridPattern(...args: DrawDotGridPatternArgs): void {
+  const [ctx, fg, bg, size, spacing] = args;
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, size, size);
   ctx.fillStyle = fg;
@@ -231,7 +260,10 @@ function drawDotGridPattern(ctx: CanvasRenderingContext2D, fg: string, bg: strin
 /**
  * Draw confetti pattern
  */
-function drawConfettiPattern(ctx: CanvasRenderingContext2D, fg: string, bg: string, size: number, dotSize: number): void {
+type DrawConfettiPatternArgs = [...PatternDrawerArgs, dotSize: number];
+
+function drawConfettiPattern(...args: DrawConfettiPatternArgs): void {
+  const [ctx, fg, bg, size, dotSize] = args;
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, size, size);
   ctx.fillStyle = fg;
@@ -247,7 +279,10 @@ function drawConfettiPattern(ctx: CanvasRenderingContext2D, fg: string, bg: stri
 /**
  * Draw brick pattern
  */
-function drawBrickPattern(ctx: CanvasRenderingContext2D, fg: string, bg: string, size: number, horizontal: boolean): void {
+type DrawBrickPatternArgs = [...PatternDrawerArgs, horizontal: boolean];
+
+function drawBrickPattern(...args: DrawBrickPatternArgs): void {
+  const [ctx, fg, bg, size, horizontal] = args;
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, size, size);
   ctx.strokeStyle = fg;
@@ -300,7 +335,10 @@ function drawBrickPattern(ctx: CanvasRenderingContext2D, fg: string, bg: string,
 /**
  * Draw diamond pattern
  */
-function drawDiamondPattern(ctx: CanvasRenderingContext2D, fg: string, bg: string, size: number, solid: boolean): void {
+type DrawDiamondPatternArgs = [...PatternDrawerArgs, solid: boolean];
+
+function drawDiamondPattern(...args: DrawDiamondPatternArgs): void {
+  const [ctx, fg, bg, size, solid] = args;
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, size, size);
 
@@ -326,7 +364,8 @@ function drawDiamondPattern(ctx: CanvasRenderingContext2D, fg: string, bg: strin
 /**
  * Draw wave pattern
  */
-function drawWavePattern(ctx: CanvasRenderingContext2D, fg: string, bg: string, size: number): void {
+function drawWavePattern(...args: PatternDrawerArgs): void {
+  const [ctx, fg, bg, size] = args;
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, size, size);
   ctx.strokeStyle = fg;
@@ -348,7 +387,8 @@ function drawWavePattern(ctx: CanvasRenderingContext2D, fg: string, bg: string, 
 /**
  * Draw trellis pattern
  */
-function drawTrellisPattern(ctx: CanvasRenderingContext2D, fg: string, bg: string, size: number): void {
+function drawTrellisPattern(...args: PatternDrawerArgs): void {
+  const [ctx, fg, bg, size] = args;
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, size, size);
   ctx.strokeStyle = fg;
@@ -371,7 +411,8 @@ function drawTrellisPattern(ctx: CanvasRenderingContext2D, fg: string, bg: strin
 /**
  * Draw zigzag pattern
  */
-function drawZigZagPattern(ctx: CanvasRenderingContext2D, fg: string, bg: string, size: number): void {
+function drawZigZagPattern(...args: PatternDrawerArgs): void {
+  const [ctx, fg, bg, size] = args;
   ctx.fillStyle = bg;
   ctx.fillRect(0, 0, size, size);
   ctx.strokeStyle = fg;
@@ -394,27 +435,85 @@ function drawZigZagPattern(ctx: CanvasRenderingContext2D, fg: string, bg: string
 // Pattern Preset Map
 // =============================================================================
 
+function makePercentDrawer(pct: number): PatternDrawer {
+  return (...args) => drawPercentPattern(...args, pct);
+}
+
+function makeInvertedPercentDrawer(pct: number): PatternDrawer {
+  return (...args) => {
+    const [ctx, fg, bg, size] = args;
+    drawPercentPattern(ctx, bg, fg, size, pct);
+  };
+}
+
+function makeHorizontalDrawer(lineWidth: number, spacing: number): PatternDrawer {
+  return (...args) => drawHorizontalPattern(...args, lineWidth, spacing);
+}
+
+function makeVerticalDrawer(lineWidth: number, spacing: number): PatternDrawer {
+  return (...args) => drawVerticalPattern(...args, lineWidth, spacing);
+}
+
+function makeCrossDrawer(lineWidth: number): PatternDrawer {
+  return (...args) => drawCrossPattern(...args, lineWidth);
+}
+
+function makeDiagonalDrawer(lineWidth: number, up: boolean): PatternDrawer {
+  return (...args) => drawDiagonalPattern(...args, lineWidth, up);
+}
+
+function makeCheckerDrawer(divisor: number): PatternDrawer {
+  return (...args) => {
+    const [ctx, fg, bg, size] = args;
+    drawCheckerPattern(ctx, fg, bg, size, size / divisor);
+  };
+}
+
+function makeGridDrawer(divisor: number): PatternDrawer {
+  return (...args) => {
+    const [ctx, fg, bg, size] = args;
+    drawGridPattern(ctx, fg, bg, size, size / divisor);
+  };
+}
+
+function makeDotGridDrawer(spacing: number): PatternDrawer {
+  return (...args) => drawDotGridPattern(...args, spacing);
+}
+
+function makeConfettiDrawer(dotSize: number): PatternDrawer {
+  return (...args) => drawConfettiPattern(...args, dotSize);
+}
+
+function makeBrickDrawer(horizontal: boolean): PatternDrawer {
+  return (...args) => drawBrickPattern(...args, horizontal);
+}
+
+function makeDiamondDrawer(solid: boolean): PatternDrawer {
+  return (...args) => drawDiamondPattern(...args, solid);
+}
+
 const patternDrawers: Record<PatternPreset, PatternDrawer> = {
   // Percentage patterns
-  pct5: (ctx, fg, bg, size) => drawPercentPattern(ctx, fg, bg, size, 5),
-  pct10: (ctx, fg, bg, size) => drawPercentPattern(ctx, fg, bg, size, 10),
-  pct20: (ctx, fg, bg, size) => drawPercentPattern(ctx, fg, bg, size, 20),
-  pct25: (ctx, fg, bg, size) => drawPercentPattern(ctx, fg, bg, size, 25),
-  pct30: (ctx, fg, bg, size) => drawPercentPattern(ctx, fg, bg, size, 30),
-  pct40: (ctx, fg, bg, size) => drawPercentPattern(ctx, fg, bg, size, 40),
-  pct50: (ctx, fg, bg, size) => drawCheckerPattern(ctx, fg, bg, size, size / 8),
-  pct60: (ctx, fg, bg, size) => drawPercentPattern(ctx, bg, fg, size, 40),
-  pct70: (ctx, fg, bg, size) => drawPercentPattern(ctx, bg, fg, size, 30),
-  pct75: (ctx, fg, bg, size) => drawPercentPattern(ctx, bg, fg, size, 25),
-  pct80: (ctx, fg, bg, size) => drawPercentPattern(ctx, bg, fg, size, 20),
-  pct90: (ctx, fg, bg, size) => drawPercentPattern(ctx, bg, fg, size, 10),
+  pct5: makePercentDrawer(5),
+  pct10: makePercentDrawer(10),
+  pct20: makePercentDrawer(20),
+  pct25: makePercentDrawer(25),
+  pct30: makePercentDrawer(30),
+  pct40: makePercentDrawer(40),
+  pct50: makeCheckerDrawer(8),
+  pct60: makeInvertedPercentDrawer(40),
+  pct70: makeInvertedPercentDrawer(30),
+  pct75: makeInvertedPercentDrawer(25),
+  pct80: makeInvertedPercentDrawer(20),
+  pct90: makeInvertedPercentDrawer(10),
 
   // Horizontal patterns
-  horz: (ctx, fg, bg, size) => drawHorizontalPattern(ctx, fg, bg, size, 2, 4),
-  ltHorz: (ctx, fg, bg, size) => drawHorizontalPattern(ctx, fg, bg, size, 1, 4),
-  dkHorz: (ctx, fg, bg, size) => drawHorizontalPattern(ctx, fg, bg, size, 2, 3),
-  narHorz: (ctx, fg, bg, size) => drawHorizontalPattern(ctx, fg, bg, size, 1, 2),
-  dashHorz: (ctx, fg, bg, size) => {
+  horz: makeHorizontalDrawer(2, 4),
+  ltHorz: makeHorizontalDrawer(1, 4),
+  dkHorz: makeHorizontalDrawer(2, 3),
+  narHorz: makeHorizontalDrawer(1, 2),
+  dashHorz: (...args) => {
+    const [ctx, fg, bg, size] = args;
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, size, size);
     ctx.fillStyle = fg;
@@ -426,11 +525,12 @@ const patternDrawers: Record<PatternPreset, PatternDrawer> = {
   },
 
   // Vertical patterns
-  vert: (ctx, fg, bg, size) => drawVerticalPattern(ctx, fg, bg, size, 2, 4),
-  ltVert: (ctx, fg, bg, size) => drawVerticalPattern(ctx, fg, bg, size, 1, 4),
-  dkVert: (ctx, fg, bg, size) => drawVerticalPattern(ctx, fg, bg, size, 2, 3),
-  narVert: (ctx, fg, bg, size) => drawVerticalPattern(ctx, fg, bg, size, 1, 2),
-  dashVert: (ctx, fg, bg, size) => {
+  vert: makeVerticalDrawer(2, 4),
+  ltVert: makeVerticalDrawer(1, 4),
+  dkVert: makeVerticalDrawer(2, 3),
+  narVert: makeVerticalDrawer(1, 2),
+  dashVert: (...args) => {
+    const [ctx, fg, bg, size] = args;
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, size, size);
     ctx.fillStyle = fg;
@@ -442,18 +542,19 @@ const patternDrawers: Record<PatternPreset, PatternDrawer> = {
   },
 
   // Cross patterns
-  cross: (ctx, fg, bg, size) => drawCrossPattern(ctx, fg, bg, size, 1),
+  cross: makeCrossDrawer(1),
 
   // Diagonal patterns
-  dnDiag: (ctx, fg, bg, size) => drawDiagonalPattern(ctx, fg, bg, size, 1, false),
-  upDiag: (ctx, fg, bg, size) => drawDiagonalPattern(ctx, fg, bg, size, 1, true),
-  ltDnDiag: (ctx, fg, bg, size) => drawDiagonalPattern(ctx, fg, bg, size, 0.5, false),
-  ltUpDiag: (ctx, fg, bg, size) => drawDiagonalPattern(ctx, fg, bg, size, 0.5, true),
-  dkDnDiag: (ctx, fg, bg, size) => drawDiagonalPattern(ctx, fg, bg, size, 2, false),
-  dkUpDiag: (ctx, fg, bg, size) => drawDiagonalPattern(ctx, fg, bg, size, 2, true),
-  wdDnDiag: (ctx, fg, bg, size) => drawDiagonalPattern(ctx, fg, bg, size, 3, false),
-  wdUpDiag: (ctx, fg, bg, size) => drawDiagonalPattern(ctx, fg, bg, size, 3, true),
-  dashDnDiag: (ctx, fg, bg, size) => {
+  dnDiag: makeDiagonalDrawer(1, false),
+  upDiag: makeDiagonalDrawer(1, true),
+  ltDnDiag: makeDiagonalDrawer(0.5, false),
+  ltUpDiag: makeDiagonalDrawer(0.5, true),
+  dkDnDiag: makeDiagonalDrawer(2, false),
+  dkUpDiag: makeDiagonalDrawer(2, true),
+  wdDnDiag: makeDiagonalDrawer(3, false),
+  wdUpDiag: makeDiagonalDrawer(3, true),
+  dashDnDiag: (...args) => {
+    const [ctx, fg, bg, size] = args;
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, size, size);
     ctx.strokeStyle = fg;
@@ -462,7 +563,8 @@ const patternDrawers: Record<PatternPreset, PatternDrawer> = {
     drawDiagonalPattern(ctx, fg, bg, size, 1, false);
     ctx.setLineDash([]);
   },
-  dashUpDiag: (ctx, fg, bg, size) => {
+  dashUpDiag: (...args) => {
+    const [ctx, fg, bg, size] = args;
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, size, size);
     ctx.strokeStyle = fg;
@@ -471,32 +573,34 @@ const patternDrawers: Record<PatternPreset, PatternDrawer> = {
     drawDiagonalPattern(ctx, fg, bg, size, 1, true);
     ctx.setLineDash([]);
   },
-  diagCross: (ctx, fg, bg, size) => {
+  diagCross: (...args) => {
+    const [ctx, fg, bg, size] = args;
     drawDiagonalPattern(ctx, fg, bg, size, 1, false);
     drawDiagonalPattern(ctx, fg, bg, size, 1, true);
   },
 
   // Checker patterns
-  smCheck: (ctx, fg, bg, size) => drawCheckerPattern(ctx, fg, bg, size, size / 8),
-  lgCheck: (ctx, fg, bg, size) => drawCheckerPattern(ctx, fg, bg, size, size / 4),
+  smCheck: makeCheckerDrawer(8),
+  lgCheck: makeCheckerDrawer(4),
 
   // Grid patterns
-  smGrid: (ctx, fg, bg, size) => drawGridPattern(ctx, fg, bg, size, size / 8),
-  lgGrid: (ctx, fg, bg, size) => drawGridPattern(ctx, fg, bg, size, size / 4),
-  dotGrid: (ctx, fg, bg, size) => drawDotGridPattern(ctx, fg, bg, size, 4),
+  smGrid: makeGridDrawer(8),
+  lgGrid: makeGridDrawer(4),
+  dotGrid: makeDotGridDrawer(4),
 
   // Confetti patterns
-  smConfetti: (ctx, fg, bg, size) => drawConfettiPattern(ctx, fg, bg, size, 1),
-  lgConfetti: (ctx, fg, bg, size) => drawConfettiPattern(ctx, fg, bg, size, 2),
+  smConfetti: makeConfettiDrawer(1),
+  lgConfetti: makeConfettiDrawer(2),
 
   // Brick patterns
-  horzBrick: (ctx, fg, bg, size) => drawBrickPattern(ctx, fg, bg, size, true),
-  diagBrick: (ctx, fg, bg, size) => drawBrickPattern(ctx, fg, bg, size, false),
+  horzBrick: makeBrickDrawer(true),
+  diagBrick: makeBrickDrawer(false),
 
   // Diamond patterns
-  solidDmnd: (ctx, fg, bg, size) => drawDiamondPattern(ctx, fg, bg, size, true),
-  openDmnd: (ctx, fg, bg, size) => drawDiamondPattern(ctx, fg, bg, size, false),
-  dotDmnd: (ctx, fg, bg, size) => {
+  solidDmnd: makeDiamondDrawer(true),
+  openDmnd: makeDiamondDrawer(false),
+  dotDmnd: (...args) => {
+    const [ctx, fg, bg, size] = args;
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, size, size);
     ctx.fillStyle = fg;
@@ -509,13 +613,15 @@ const patternDrawers: Record<PatternPreset, PatternDrawer> = {
   },
 
   // Complex patterns
-  plaid: (ctx, fg, bg, size) => {
+  plaid: (...args) => {
+    const [ctx, fg, bg, size] = args;
     drawHorizontalPattern(ctx, fg, bg, size, 2, 8);
     ctx.globalAlpha = 0.5;
     drawVerticalPattern(ctx, fg, bg, size, 2, 8);
     ctx.globalAlpha = 1;
   },
-  sphere: (ctx, fg, bg, size) => {
+  sphere: (...args) => {
+    const [ctx, fg, bg, size] = args;
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, size, size);
     const grd = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
@@ -526,7 +632,8 @@ const patternDrawers: Record<PatternPreset, PatternDrawer> = {
     ctx.arc(size / 2, size / 2, size / 2 - 2, 0, Math.PI * 2);
     ctx.fill();
   },
-  weave: (ctx, fg, bg, size) => {
+  weave: (...args) => {
+    const [ctx, fg, bg, size] = args;
     drawCheckerPattern(ctx, fg, bg, size, size / 4);
     ctx.strokeStyle = bg;
     ctx.lineWidth = 1;
@@ -537,7 +644,8 @@ const patternDrawers: Record<PatternPreset, PatternDrawer> = {
       ctx.stroke();
     }
   },
-  divot: (ctx, fg, bg, size) => {
+  divot: (...args) => {
+    const [ctx, fg, bg, size] = args;
     ctx.fillStyle = bg;
     ctx.fillRect(0, 0, size, size);
     ctx.fillStyle = fg;
@@ -546,10 +654,10 @@ const patternDrawers: Record<PatternPreset, PatternDrawer> = {
     ctx.arc(size * 3 / 4, size * 3 / 4, 2, 0, Math.PI * 2);
     ctx.fill();
   },
-  shingle: (ctx, fg, bg, size) => drawBrickPattern(ctx, fg, bg, size, true),
-  wave: (ctx, fg, bg, size) => drawWavePattern(ctx, fg, bg, size),
-  trellis: (ctx, fg, bg, size) => drawTrellisPattern(ctx, fg, bg, size),
-  zigZag: (ctx, fg, bg, size) => drawZigZagPattern(ctx, fg, bg, size),
+  shingle: makeBrickDrawer(true),
+  wave: drawWavePattern,
+  trellis: drawTrellisPattern,
+  zigZag: drawZigZagPattern,
 };
 
 // =============================================================================
@@ -569,14 +677,17 @@ const patternDrawers: Record<PatternPreset, PatternDrawer> = {
  * @see ECMA-376 Part 1, Section 20.1.8.47 (pattFill)
  */
 export function createPatternTextureFromResolved(
-  preset: PatternPreset,
-  fgColor: string,
-  bgColor: string,
-  options?: {
+  ...args: [
+    preset: PatternPreset,
+    fgColor: string,
+    bgColor: string,
+    options?: {
     readonly size?: number;
     readonly tileConfig?: PatternTileConfig;
-  },
+    },
+  ]
 ): THREE.CanvasTexture {
+  const [preset, fgColor, bgColor, options] = args;
   const size = options?.size ?? 64;
   const tileConfig = options?.tileConfig ?? DEFAULT_PATTERN_TILE;
 

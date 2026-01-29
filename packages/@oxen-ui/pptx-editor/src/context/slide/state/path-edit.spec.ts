@@ -2,7 +2,6 @@
  * @file Path editing state tests
  */
 
-import { describe, it, expect } from "vitest";
 import { px } from "@oxen-office/ooxml/domain/units";
 import type { CustomGeometry } from "@oxen-office/pptx/domain";
 import {

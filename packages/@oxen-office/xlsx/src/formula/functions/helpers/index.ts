@@ -134,27 +134,8 @@ export const discountSeries = (rate: number, cashflows: number[]): number => {
   return discountSeriesInternal(rate, cashflows);
 };
 
-export const calculatePayment = (
-  rate: number,
-  periods: number,
-  presentValue: number,
-  futureValue: number,
-  type: number,
-): number => {
-  return calculatePaymentInternal(rate, periods, presentValue, futureValue, type);
-};
-
-export const calculateInterestPayment = (
-  rate: number,
-  periods: number,
-  payment: number,
-  presentValue: number,
-  futureValue: number,
-  type: number,
-  targetPeriod: number,
-): number => {
-  return calculateInterestPaymentInternal(rate, periods, payment, presentValue, futureValue, type, targetPeriod);
-};
+export const calculatePayment = calculatePaymentInternal;
+export const calculateInterestPayment = calculateInterestPaymentInternal;
 
 export { type FormulaErrorCode } from "./errors";
 

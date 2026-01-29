@@ -26,7 +26,10 @@ function addr(col: number, row: number): CellAddress {
   };
 }
 
-function range(startCol: number, startRow: number, endCol: number, endRow: number): CellRange {
+function range(
+  ...args: readonly [startCol: number, startRow: number, endCol: number, endRow: number]
+): CellRange {
+  const [startCol, startRow, endCol, endRow] = args;
   return { start: addr(startCol, startRow), end: addr(endCol, endRow) };
 }
 
@@ -215,4 +218,3 @@ describe("clearSelection", () => {
     });
   });
 });
-

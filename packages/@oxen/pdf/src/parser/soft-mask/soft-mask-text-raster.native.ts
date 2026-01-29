@@ -123,7 +123,8 @@ type OrientedBox = Readonly<{
   readonly aabb: PdfBBox;
 }>;
 
-function dot(ax: number, ay: number, bx: number, by: number): number {
+function dot(...args: [ax: number, ay: number, bx: number, by: number]): number {
+  const [ax, ay, bx, by] = args;
   return ax * bx + ay * by;
 }
 
@@ -146,7 +147,8 @@ function computeOrientedBoxForRun(run: TextRun, fontMappings: FontMappings): Ori
   const metrics = fontInfo?.metrics ?? DEFAULT_FONT_METRICS;
   const codeByteWidth = fontInfo?.codeByteWidth ?? 1;
 
-  const [tmA, tmB, tmC, tmD, tmE, tmF] = run.textMatrix;
+  const tmE = run.textMatrix[4] ?? 0;
+  const tmF = run.textMatrix[5] ?? 0;
   const textSpaceY = tmF + run.textRise;
 
   const displacement = calculateTextDisplacement(
@@ -288,6 +290,7 @@ export function rasterizeSoftMaskedText(parsed: ParsedText, fontMappings: FontMa
   const lineWidth = gs.lineWidth * ((scale.scaleX + scale.scaleY) / 2);
   const halfW = lineWidth / 2;
 
+  const shouldFill = paintOp === "fill" || paintOp === "fillStroke";
   const needsStroke = paintOp === "stroke" || paintOp === "fillStroke";
 
   for (let row = 0; row < softMask.height; row += 1) {
@@ -303,13 +306,8 @@ export function rasterizeSoftMaskedText(parsed: ParsedText, fontMappings: FontMa
         continue;
       }
 
-      const fillCov = paintOp === "fill" || paintOp === "fillStroke"
-        ? runBoxes.some((b) => pointInOrientedBox(pagePoint, b, 0))
-        : false;
-
-      const strokeCov = needsStroke
-        ? runBoxes.some((b) => pointInOrientedBox(pagePoint, b, halfW))
-        : false;
+      const fillCov = shouldFill && runBoxes.some((b) => pointInOrientedBox(pagePoint, b, 0));
+      const strokeCov = needsStroke && runBoxes.some((b) => pointInOrientedBox(pagePoint, b, halfW));
 
       const fillA = fillCov ? Math.round(maskByte * fillMul) : 0;
       const strokeA = strokeCov ? Math.round(maskByte * strokeMul) : 0;

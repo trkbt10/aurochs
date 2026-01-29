@@ -7,7 +7,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import puppeteer, { type Browser, type Page } from "puppeteer";
+import puppeteer, { type Browser } from "puppeteer";
 import pixelmatch from "pixelmatch";
 import { PNG } from "pngjs";
 
@@ -200,17 +200,18 @@ export async function captureWebGLScreenshot(config: RenderConfig): Promise<Buff
 
     // Wait for render to complete (max 10 seconds)
     await page.waitForFunction(
-      () => (window as unknown as { renderComplete: boolean }).renderComplete === true ||
-            (window as unknown as { renderError: string | null }).renderError !== null,
+      () => {
+        const renderComplete = Reflect.get(window, "renderComplete");
+        const renderError = Reflect.get(window, "renderError");
+        return renderComplete === true || (renderError !== null && renderError !== undefined);
+      },
       { timeout: 10000 },
     );
 
     // Check for render error
-    const renderError = await page.evaluate(
-      () => (window as unknown as { renderError: string | null }).renderError,
-    );
-    if (renderError) {
-      throw new Error(`WebGL render error: ${renderError}`);
+    const renderError = await page.evaluate(() => Reflect.get(window, "renderError"));
+    if (renderError !== null && renderError !== undefined) {
+      throw new Error(`WebGL render error: ${String(renderError)}`);
     }
 
     // Capture screenshot
@@ -278,12 +279,19 @@ function resizePng(png: PNG, targetWidth: number, targetHeight: number): PNG {
  * @param options - Comparison options
  * @returns Comparison result
  */
-export async function compareToBaseline(
-  actualBuffer: Buffer,
-  snapshotName: string,
-  testName: string,
-  options: CompareOptions = {},
-): Promise<CompareResult> {
+export type CompareToBaselineArgs = {
+  readonly actualBuffer: Buffer;
+  readonly snapshotName: string;
+  readonly testName: string;
+  readonly options?: CompareOptions;
+};
+
+export async function compareToBaseline({
+  actualBuffer,
+  snapshotName,
+  testName,
+  options = {},
+}: CompareToBaselineArgs): Promise<CompareResult> {
   ensureDirs();
 
   const {
@@ -398,11 +406,6 @@ export function createBevelRenderScript(params: {
     cameraPosition = [0, 0, 100],
     lightIntensity = 1,
   } = params;
-
-  const bevelConfig = JSON.stringify({
-    top: bevelTop,
-    bottom: bevelBottom,
-  });
 
   return `
     const container = document.getElementById('container');
@@ -607,21 +610,21 @@ export async function captureCustomBevelScreenshot(
 
     // Wait for render to complete (max 10 seconds)
     await page.waitForFunction(
-      () =>
-        (window as unknown as { renderComplete: boolean }).renderComplete === true ||
-        (window as unknown as { renderError: string | null }).renderError !== null,
+      () => {
+        const renderComplete = Reflect.get(window, "renderComplete");
+        const renderError = Reflect.get(window, "renderError");
+        return renderComplete === true || (renderError !== null && renderError !== undefined);
+      },
       { timeout: 10000 },
     );
 
     // Check for render error
-    const renderError = await page.evaluate(
-      () => (window as unknown as { renderError: string | null }).renderError,
-    );
-    if (renderError) {
+    const renderError = await page.evaluate(() => Reflect.get(window, "renderError"));
+    if (renderError !== null && renderError !== undefined) {
       if (debug) {
         console.log("Console logs:", consoleLogs.join("\n"));
       }
-      throw new Error(`WebGL render error: ${renderError}`);
+      throw new Error(`WebGL render error: ${String(renderError)}`);
     }
 
     // Log console messages if debug mode
@@ -661,8 +664,12 @@ export function createCustomBevelRenderScript(params: CustomBevelRenderParams): 
   });
 
   // Use contour expansion if specified
-  const contourCode = contourWidth
-    ? `
+  const buildContourCode = (): string => {
+    if (!contourWidth) {
+      return "const shapesToExtrude = [shape];";
+    }
+
+    return `
     // Expand shape for contour effect
     const expandedShape = expandShape(
       threeShapeToShapeInput(shape),
@@ -671,8 +678,9 @@ export function createCustomBevelRenderScript(params: CustomBevelRenderParams): 
     const shapesToExtrude = expandedShape
       ? [shapeInputToThreeShape(expandedShape)]
       : [shape];
-    `
-    : `const shapesToExtrude = [shape];`;
+    `;
+  };
+  const contourCode = buildContourCode();
 
   return `
     const container = document.getElementById('container');

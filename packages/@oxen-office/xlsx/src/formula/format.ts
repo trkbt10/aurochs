@@ -120,10 +120,26 @@ function needsParens(params: {
   return false;
 }
 
-function formatNode(node: FormulaAstNode, parentPrec: Prec, position: "left" | "right", parentOperator?: string): string {
+function formatNode(
+  ...args: readonly [
+    node: FormulaAstNode,
+    parentPrec: Prec,
+    position: "left" | "right",
+    parentOperator?: string,
+  ]
+): string {
+  const [node, parentPrec, position, parentOperator] = args;
   const selfPrec = precedence(node);
 
-  const wrapIfNeeded = (text: string, child: FormulaAstNode, childPosition: "left" | "right", operator?: string): string => {
+  const wrapIfNeeded = (
+    ...wrapArgs: readonly [
+      text: string,
+      child: FormulaAstNode,
+      childPosition: "left" | "right",
+      operator?: string,
+    ]
+  ): string => {
+    const [text, child, childPosition, operator] = wrapArgs;
     if (needsParens({ child, parentPrec: selfPrec, position: childPosition, parentOperator: operator })) {
       return `(${text})`;
     }

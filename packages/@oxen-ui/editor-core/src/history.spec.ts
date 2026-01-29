@@ -2,7 +2,6 @@
  * @file History tests
  */
 
-import { describe, it, expect } from "vitest";
 import {
   canRedo,
   canUndo,
@@ -98,4 +97,3 @@ describe("undoCount / redoCount / clearHistory / replacePresent", () => {
     expect(replaced.future).toEqual([]);
   });
 });
-

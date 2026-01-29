@@ -295,15 +295,27 @@ export async function layoutTextAsync(
 }
 
 function calculateKerningForIndex(
-  index: number,
-  glyph: GlyphContour,
-  glyphContours: readonly GlyphContour[],
-  chars: readonly string[],
-  fontFamily: string,
-  letterSpacing: number,
-  useOpticalKerning: boolean,
-  useFontKerning: boolean,
+  ...args: readonly [
+    index: number,
+    glyph: GlyphContour,
+    glyphContours: readonly GlyphContour[],
+    chars: readonly string[],
+    fontFamily: string,
+    letterSpacing: number,
+    useOpticalKerning: boolean,
+    useFontKerning: boolean,
+  ]
 ): number {
+  const [
+    index,
+    glyph,
+    glyphContours,
+    chars,
+    fontFamily,
+    letterSpacing,
+    useOpticalKerning,
+    useFontKerning,
+  ] = args;
   if (index === 0) {
     return 0;
   }

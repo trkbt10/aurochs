@@ -169,12 +169,12 @@ export async function exportPptx(
       const slidePath = `ppt/slides/${slideWithId.apiSlide.filename}.xml`;
 
       // Get the updated XML with editor changes applied (including media embedding)
-      const updatedXml = applySlideEditsWithMedia(
-        slideWithId.apiSlide.content,
-        slideWithId.slide,
+      const updatedXml = applySlideEditsWithMedia({
+        originalXml: slideWithId.apiSlide.content,
+        editedSlide: slideWithId.slide,
         slidePath,
         pkg,
-      );
+      });
 
       const xml = serializeDocument(updatedXml, {
         declaration: true,
@@ -267,12 +267,12 @@ export async function exportPptxAsBuffer(
       const slidePath = `ppt/slides/${slideWithId.apiSlide.filename}.xml`;
 
       // Get the updated XML with editor changes applied (including media embedding)
-      const updatedXml = applySlideEditsWithMedia(
-        slideWithId.apiSlide.content,
-        slideWithId.slide,
+      const updatedXml = applySlideEditsWithMedia({
+        originalXml: slideWithId.apiSlide.content,
+        editedSlide: slideWithId.slide,
         slidePath,
         pkg,
-      );
+      });
 
       const xml = serializeDocument(updatedXml, {
         declaration: true,
@@ -383,11 +383,15 @@ function copyPresentationFileToPackage(file: PresentationFile): ZipPackage {
  * @param pkg - ZipPackage for media embedding
  * @returns Updated XML document with changes applied
  */
+type ApplySlideEditsWithMediaOptions = {
+  readonly originalXml: XmlDocument;
+  readonly editedSlide: Slide;
+  readonly slidePath: string;
+  readonly pkg: ZipPackage;
+};
+
 function applySlideEditsWithMedia(
-  originalXml: XmlDocument,
-  editedSlide: Slide,
-  slidePath: string,
-  pkg: ZipPackage,
+  { originalXml, editedSlide, slidePath, pkg }: ApplySlideEditsWithMediaOptions,
 ): XmlDocument {
   // Parse the original XML to get the original domain slide
   const originalSlide = parseSlide(originalXml);
@@ -576,7 +580,7 @@ function isDataUrl(value: string): boolean {
 function embedDataUrlMedia(pkg: ZipPackage, slidePath: string, dataUrl: string): string {
   const { mimeType, data } = parseDataUrl(dataUrl);
   const mediaType = mimeTypeToMediaType(mimeType);
-  const result = addMedia(pkg, data, mediaType, slidePath);
+  const result = addMedia({ pkg, mediaData: data, mediaType, referringPart: slidePath });
   return result.rId;
 }
 

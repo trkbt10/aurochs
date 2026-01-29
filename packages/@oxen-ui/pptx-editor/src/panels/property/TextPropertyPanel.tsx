@@ -111,9 +111,7 @@ export function TextPropertyPanel({ className, style }: TextPropertyPanelProps) 
   } = textEditContext;
 
   // Get extracted properties from context
-  const extractedProperties = textEditContext.selectionContext.type !== "none"
-    ? getExtractedProperties(textEditContext)
-    : null;
+  const extractedProperties = selectionContext.type !== "none" ? getExtractedProperties(textEditContext) : null;
 
   // Handle run property changes
   const handleRunPropertiesChange = (update: Partial<RunProperties>) => {

@@ -170,10 +170,7 @@ export function resolveTextFill(
       }
 
       const mode = fill.tile !== undefined ? "tile" : "stretch";
-      const tileScale =
-        fill.tile !== undefined
-          ? { x: (fill.tile.sx as number) / 100000, y: (fill.tile.sy as number) / 100000 }
-          : undefined;
+      const tileScale = fill.tile !== undefined ? { x: (fill.tile.sx as number) / 100000, y: (fill.tile.sy as number) / 100000 } : undefined;
 
       return {
         type: "image",

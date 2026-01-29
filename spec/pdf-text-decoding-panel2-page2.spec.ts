@@ -2,7 +2,6 @@
  * @file Regression test: text decoding for panel2.pdf page 2 (Form XObject font scopes)
  */
 
-import { describe, expect, it } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { parsePdf, type PdfText } from "@oxen/pdf";

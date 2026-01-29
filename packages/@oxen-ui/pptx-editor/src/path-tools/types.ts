@@ -218,12 +218,13 @@ export function togglePointInSelection(
     const filtered = selection.selectedElements.filter(
       (e) => !pathElementIdsEqual(e, element)
     );
+    let primaryElement = selection.primaryElement;
+    if (primaryElement && pathElementIdsEqual(primaryElement, element)) {
+      primaryElement = filtered[0];
+    }
     return {
       selectedElements: filtered,
-      primaryElement:
-        selection.primaryElement && pathElementIdsEqual(selection.primaryElement, element)
-          ? filtered[0]
-          : selection.primaryElement,
+      primaryElement,
     };
   }
   // Add to selection

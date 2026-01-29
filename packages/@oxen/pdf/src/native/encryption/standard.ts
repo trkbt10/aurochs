@@ -21,6 +21,8 @@ export type PdfDecrypter = Readonly<{
   ) => Uint8Array;
 }>;
 
+type DecryptBytesOptions = Parameters<PdfDecrypter["decryptBytes"]>[3];
+
 const PASSWORD_PADDING = new Uint8Array([
   0x28, 0xbf, 0x4e, 0x5e, 0x4e, 0x75, 0x8a, 0x41,
   0x64, 0x00, 0x4e, 0x56, 0xff, 0xfa, 0x01, 0x08,
@@ -114,9 +116,20 @@ function computeFileKeyR3(args: {
   readonly keyLengthBytes: number;
   readonly encryptMetadata: boolean;
 }): Uint8Array {
-  const seed = args.encryptMetadata
-    ? concatBytes(args.password32, args.o, int32le(args.p), args.id0)
-    : concatBytes(args.password32, args.o, int32le(args.p), args.id0, int32le(-1));
+  function buildSeed(args: {
+    readonly password32: Uint8Array;
+    readonly o: Uint8Array;
+    readonly p: number;
+    readonly id0: Uint8Array;
+    readonly encryptMetadata: boolean;
+  }): Uint8Array {
+    if (args.encryptMetadata) {
+      return concatBytes(args.password32, args.o, int32le(args.p), args.id0);
+    }
+    return concatBytes(args.password32, args.o, int32le(args.p), args.id0, int32le(-1));
+  }
+
+  const seed = buildSeed(args);
   const state = { digest: md5(seed).slice(0, args.keyLengthBytes) };
   for (let i = 0; i < 50; i += 1) {
     state.digest = md5(state.digest).slice(0, args.keyLengthBytes);
@@ -462,9 +475,10 @@ export function createStandardDecrypter(args: {
       throw new Error(`Invalid password for encrypted PDF (U starts with ${JSON.stringify(preview)})`);
     }
 
-    return {
-      decryptBytes: (objNum, gen, bytes, options) => {
-        if (!options) {throw new Error("decrypt options are required for V=4/R=4");}
+	    return {
+	      decryptBytes: (...args: [objNum: number, gen: number, bytes: Uint8Array, options: DecryptBytesOptions]) => {
+	        const [objNum, gen, bytes, options] = args;
+	        if (!options) {throw new Error("decrypt options are required for V=4/R=4");}
 
         const kind = options.kind;
         if (kind !== "string" && kind !== "stream" && kind !== "embeddedFile") {throw new Error("Invalid decrypt kind");}
@@ -558,9 +572,10 @@ export function createStandardDecrypter(args: {
       throw new Error(`Invalid password for encrypted PDF (U starts with ${JSON.stringify(preview)})`);
     }
 
-    return {
-      decryptBytes: (objNum, gen, bytes, options) => {
-        if (!options) {throw new Error("decrypt options are required for V=5/R=5");}
+	    return {
+	      decryptBytes: (...args: [objNum: number, gen: number, bytes: Uint8Array, options: DecryptBytesOptions]) => {
+	        const [objNum, gen, bytes, options] = args;
+	        if (!options) {throw new Error("decrypt options are required for V=5/R=5");}
         void objNum;
         void gen;
 
@@ -651,9 +666,10 @@ export function createStandardDecrypter(args: {
       throw new Error(`Invalid password for encrypted PDF (U starts with ${JSON.stringify(preview)})`);
     }
 
-    return {
-      decryptBytes: (objNum, gen, bytes, options) => {
-        if (!options) {throw new Error("decrypt options are required for V=5/R=6");}
+	    return {
+	      decryptBytes: (...args: [objNum: number, gen: number, bytes: Uint8Array, options: DecryptBytesOptions]) => {
+	        const [objNum, gen, bytes, options] = args;
+	        if (!options) {throw new Error("decrypt options are required for V=5/R=6");}
         void objNum;
         void gen;
 

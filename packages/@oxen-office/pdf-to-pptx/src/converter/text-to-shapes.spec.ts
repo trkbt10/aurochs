@@ -9,7 +9,8 @@ import { convertTextToShape, convertGroupedTextToShape } from "./text-to-shapes"
 import type { GroupedText } from "./text-grouping/types";
 import { createFitContext } from "./transform-converter";
 
-function createContext(pdfWidth: number, pdfHeight: number, slideWidth: number, slideHeight: number) {
+function createContext(...args: readonly [pdfWidth: number, pdfHeight: number, slideWidth: number, slideHeight: number]) {
+  const [pdfWidth, pdfHeight, slideWidth, slideHeight] = args;
   return createFitContext(pdfWidth, pdfHeight, px(slideWidth), px(slideHeight), "stretch");
 }
 

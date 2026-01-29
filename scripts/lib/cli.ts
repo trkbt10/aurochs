@@ -15,11 +15,9 @@ export function usageError(message: string, usage: string): Error {
 
 
 export function requirePositionalArg(
-  args: readonly string[],
-  index: number,
-  name: string,
-  usage: string,
+  ...params: readonly [args: readonly string[], index: number, name: string, usage: string]
 ): string {
+  const [args, index, name, usage] = params;
   const value = args[index];
   if (!value) {
     throw usageError(`Missing required argument: ${name}`, usage);
@@ -66,4 +64,3 @@ export function requireFileExists(filePath: string, usage: string): void {
     throw usageError(`File not found: ${filePath}`, usage);
   }
 }
-

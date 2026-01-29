@@ -109,13 +109,16 @@ export function createCanvas2D(options: CanvasOptions): Canvas2DResult {
 
   // Try OffscreenCanvas first if preferred and supported
   if (preferOffscreen && isOffscreenCanvas2dSupported()) {
-    const canvas = new OffscreenCanvas(width, height);
-    const ctx = canvas.getContext("2d", contextOptions);
+    const canvas: unknown = new OffscreenCanvas(width, height);
+    if (typeof canvas !== "object" || canvas === null || !("getContext" in canvas)) {
+      throw new Error("Invalid OffscreenCanvas instance");
+    }
+    const ctx = (canvas as HTMLCanvasElement).getContext("2d", contextOptions);
     if (ctx) {
       // Cast for Three.js compatibility (CanvasTexture accepts both at runtime)
       return {
-        canvas: canvas as unknown as HTMLCanvasElement,
-        ctx: ctx as unknown as CanvasRenderingContext2D,
+        canvas: canvas as HTMLCanvasElement,
+        ctx,
         isOffscreen: true,
       };
     }

@@ -30,11 +30,14 @@ function requireWarningSink(opts: { readonly strict: boolean; readonly onWarning
 }
 
 function readFatChainOrFallback(
-  fat: Uint32Array,
-  startSector: number,
-  requiredSectors: number,
-  opts: { readonly strict: boolean; readonly onWarning?: CfbWarningSink },
+  ...args: [
+    fat: Uint32Array,
+    startSector: number,
+    requiredSectors: number,
+    opts: { readonly strict: boolean; readonly onWarning?: CfbWarningSink },
+  ]
 ): readonly number[] {
+  const [fat, startSector, requiredSectors, opts] = args;
   try {
     return walkFatChain(fat, startSector, { maxSteps: requiredSectors + 10_000 });
   } catch (err) {
@@ -53,11 +56,14 @@ function readFatChainOrFallback(
 }
 
 function readMiniFatChainOrFallback(
-  miniFat: Uint32Array,
-  startMiniSector: number,
-  requiredSectors: number,
-  opts: { readonly strict: boolean; readonly onWarning?: CfbWarningSink },
+  ...args: [
+    miniFat: Uint32Array,
+    startMiniSector: number,
+    requiredSectors: number,
+    opts: { readonly strict: boolean; readonly onWarning?: CfbWarningSink },
+  ]
 ): readonly number[] {
+  const [miniFat, startMiniSector, requiredSectors, opts] = args;
   try {
     return walkMiniFatChain(miniFat, startMiniSector, { maxSteps: requiredSectors + 10_000 });
   } catch (err) {
@@ -82,13 +88,16 @@ function readMiniFatChainOrFallback(
  * zero-filled/truncated stream to allow higher layers to attempt recovery.
  */
 export function readStreamFromFat(
-  bytes: Uint8Array,
-  header: CfbHeader,
-  fat: Uint32Array,
-  startSector: number,
-  streamSize: bigint,
-  opts: { readonly strict: boolean; readonly onWarning?: CfbWarningSink },
+  ...args: [
+    bytes: Uint8Array,
+    header: CfbHeader,
+    fat: Uint32Array,
+    startSector: number,
+    streamSize: bigint,
+    opts: { readonly strict: boolean; readonly onWarning?: CfbWarningSink },
+  ]
 ): Uint8Array {
+  const [bytes, header, fat, startSector, streamSize, opts] = args;
   const size = assertSafeSize(streamSize, "readStreamFromFat");
   if (size === 0) {
     return new Uint8Array();
@@ -181,13 +190,16 @@ export function readDirectoryStreamBytes(bytes: Uint8Array, header: CfbHeader, f
  * zero-filled/truncated stream to allow higher layers to attempt recovery.
  */
 export function readStreamFromMiniFat(
-  miniFat: Uint32Array,
-  miniStreamBytes: Uint8Array,
-  header: CfbHeader,
-  startMiniSector: number,
-  streamSize: bigint,
-  opts: { readonly strict: boolean; readonly onWarning?: CfbWarningSink },
+  ...args: [
+    miniFat: Uint32Array,
+    miniStreamBytes: Uint8Array,
+    header: CfbHeader,
+    startMiniSector: number,
+    streamSize: bigint,
+    opts: { readonly strict: boolean; readonly onWarning?: CfbWarningSink },
+  ]
 ): Uint8Array {
+  const [miniFat, miniStreamBytes, header, startMiniSector, streamSize, opts] = args;
   const size = assertSafeSize(streamSize, "readStreamFromMiniFat");
   if (size === 0) {
     return new Uint8Array();

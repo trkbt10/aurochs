@@ -57,11 +57,14 @@ const HIDDEN_TEXTAREA_STYLE: CSSProperties = {
 };
 
 function buildContainerStyle(
-  bounds: TextEditBounds,
-  slideWidth: number,
-  slideHeight: number,
-  showFrameOutline: boolean,
+  ...args: readonly [
+    bounds: TextEditBounds,
+    slideWidth: number,
+    slideHeight: number,
+    showFrameOutline: boolean,
+  ]
 ): CSSProperties {
+  const [bounds, slideWidth, slideHeight, showFrameOutline] = args;
   const left = ((bounds.x as number) / slideWidth) * 100;
   const top = ((bounds.y as number) / slideHeight) * 100;
   const width = ((bounds.width as number) / slideWidth) * 100;

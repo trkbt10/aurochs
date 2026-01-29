@@ -6,7 +6,6 @@
  * overlap with bevel surfaces.
  */
 
-import { describe, it, expect } from "vitest";
 import { generateExtrusion, mergeExtrusionGeometries, generateCapAtZ } from "./extrusion";
 import type { ShapeInput } from "./types";
 

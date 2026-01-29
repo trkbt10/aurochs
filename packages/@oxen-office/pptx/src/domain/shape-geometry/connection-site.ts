@@ -296,10 +296,17 @@ export function calculateConnectionSites(
  * @see ECMA-376 Part 1, Section 19.3.1.12 (stCxn/endCxn)
  */
 export function getConnectionPoint(
-  geometry: Geometry | undefined,
-  width: number,
-  height: number,
-  siteIndex: number,
+  {
+    geometry,
+    width,
+    height,
+    siteIndex,
+  }: {
+    readonly geometry: Geometry | undefined;
+    readonly width: number;
+    readonly height: number;
+    readonly siteIndex: number;
+  },
 ): { x: Pixels; y: Pixels; angle: Degrees } | undefined {
   const lookup = calculateConnectionSites(geometry, width, height);
   const site = lookup.getSite(siteIndex);
@@ -335,15 +342,27 @@ export function getConnectionPoint(
  * @see ECMA-376 Part 1, Section 20.1.7.5 (xfrm)
  */
 export function transformConnectionPoint(
-  siteX: number,
-  siteY: number,
-  shapeX: number,
-  shapeY: number,
-  shapeWidth: number,
-  shapeHeight: number,
-  rotation: number = 0,
-  flipH: boolean = false,
-  flipV: boolean = false,
+  {
+    siteX,
+    siteY,
+    shapeX,
+    shapeY,
+    shapeWidth,
+    shapeHeight,
+    rotation = 0,
+    flipH = false,
+    flipV = false,
+  }: {
+    readonly siteX: number;
+    readonly siteY: number;
+    readonly shapeX: number;
+    readonly shapeY: number;
+    readonly shapeWidth: number;
+    readonly shapeHeight: number;
+    readonly rotation?: number;
+    readonly flipH?: boolean;
+    readonly flipV?: boolean;
+  },
 ): { x: Pixels; y: Pixels } {
   // Apply flip transforms
   let x = flipH ? shapeWidth - siteX : siteX;

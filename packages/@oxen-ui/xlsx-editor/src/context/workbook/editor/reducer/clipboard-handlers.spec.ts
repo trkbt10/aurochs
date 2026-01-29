@@ -23,7 +23,8 @@ function addr(col: number, row: number): CellAddress {
   };
 }
 
-function range(startCol: number, startRow: number, endCol: number, endRow: number): CellRange {
+function range(...args: readonly [startCol: number, startRow: number, endCol: number, endRow: number]): CellRange {
+  const [startCol, startRow, endCol, endRow] = args;
   return {
     start: addr(startCol, startRow),
     end: addr(endCol, endRow),
@@ -31,11 +32,14 @@ function range(startCol: number, startRow: number, endCol: number, endRow: numbe
 }
 
 function cellAt(
-  col: number,
-  row: number,
-  value: CellValue,
-  opts?: { readonly styleId?: number; readonly formula?: string },
+  ...args: readonly [
+    col: number,
+    row: number,
+    value: CellValue,
+    opts?: { readonly styleId?: number; readonly formula?: string },
+  ]
 ): Cell {
+  const [col, row, value, opts] = args;
   return {
     address: addr(col, row),
     value,

@@ -206,11 +206,14 @@ describe("Master/Layout/Theme export", () => {
  * Used to verify that the modified XML is written to the exported PPTX.
  */
 function addMarkerAttribute(
-  doc: XmlDocument,
-  expectedRootName: string,
-  attrName: string,
-  attrValue: string,
+  ...args: readonly [
+    doc: XmlDocument,
+    expectedRootName: string,
+    attrName: string,
+    attrValue: string,
+  ]
 ): XmlDocument {
+  const [doc, expectedRootName, attrName, attrValue] = args;
   const root = doc.children.find(
     (child) => child.type === "element" && child.name === expectedRootName,
   );

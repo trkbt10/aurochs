@@ -48,11 +48,6 @@ const presetCardSelectedStyle: CSSProperties = {
   borderWidth: "2px",
 };
 
-const presetCardHoverStyle: CSSProperties = {
-  borderColor: `var(--border-focus, ${colorTokens.border.subtle})`,
-  backgroundColor: `var(--bg-tertiary, ${colorTokens.background.tertiary})`,
-};
-
 const presetNameStyle: CSSProperties = {
   fontSize: fontTokens.size.sm,
   fontWeight: fontTokens.weight.medium,

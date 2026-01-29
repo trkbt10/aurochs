@@ -109,14 +109,17 @@ const buildCriteriaColumns = (
 };
 
 const buildCriteriaGroups = (
-  rows: FormulaEvaluationResult[][],
-  criteriaColumns: CriteriaColumn[],
-  helpers: FormulaFunctionHelpers,
-  functionName: string,
+  ...args: readonly [
+    rows: FormulaEvaluationResult[][],
+    criteriaColumns: CriteriaColumn[],
+    helpers: FormulaFunctionHelpers,
+    functionName: string,
+  ]
 ): {
   groups: CriteriaCondition[][];
   hasUnconditionalRow: boolean;
 } => {
+  const [rows, criteriaColumns, helpers, functionName] = args;
   const conditionsByRow = rows.map((row, rowIndex) => {
     return criteriaColumns.reduce<CriteriaCondition[]>((conditions, column, columnIndex) => {
       const cellValue = row[columnIndex];
@@ -145,11 +148,14 @@ const buildCriteriaGroups = (
 };
 
 const createCriteriaFilter = (
-  criteriaArg: EvalResult,
-  database: DatabaseTable,
-  helpers: FormulaFunctionHelpers,
-  functionName: string,
+  ...args: readonly [
+    criteriaArg: EvalResult,
+    database: DatabaseTable,
+    helpers: FormulaFunctionHelpers,
+    functionName: string,
+  ]
 ): ((row: FormulaEvaluationResult[]) => boolean) => {
+  const [criteriaArg, database, helpers, functionName] = args;
   const criteriaTable = toLookupTable(criteriaArg, `${functionName} criteria`);
   const headerRow = criteriaTable[0];
   if (!headerRow) {
@@ -175,11 +181,14 @@ const createCriteriaFilter = (
 };
 
 export const filterDatabaseRows = (
-  database: DatabaseTable,
-  criteriaArg: EvalResult,
-  helpers: FormulaFunctionHelpers,
-  functionName: string,
+  ...args: readonly [
+    database: DatabaseTable,
+    criteriaArg: EvalResult,
+    helpers: FormulaFunctionHelpers,
+    functionName: string,
+  ]
 ): FormulaEvaluationResult[][] => {
+  const [database, criteriaArg, helpers, functionName] = args;
   const predicate = createCriteriaFilter(criteriaArg, database, helpers, functionName);
   return database.rows.filter((row) => predicate(row));
 };

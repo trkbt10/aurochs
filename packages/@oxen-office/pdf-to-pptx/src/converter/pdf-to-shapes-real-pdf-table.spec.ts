@@ -175,11 +175,10 @@ describe("convertPageToShapes (real PDF) - table inference", () => {
 
     expect(tableFrames.length).toBeGreaterThanOrEqual(1);
 
-    const table = (() => {
-      const frame = tableFrames[0]!;
-      if (frame.content.type !== "table") {throw new Error("Expected table graphicFrame");}
-      return frame.content.data.table;
-    })();
+    const frame = tableFrames[0];
+    if (!frame) {throw new Error("Expected table graphicFrame");}
+    if (frame.content.type !== "table") {throw new Error("Expected table graphicFrame");}
+    const table = frame.content.data.table;
 
     expect(table.grid.columns.length).toBe(5);
     expect(table.rows.length).toBeGreaterThanOrEqual(5);

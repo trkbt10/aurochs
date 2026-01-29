@@ -72,13 +72,16 @@ export function renderTable(
  * Render a table row to HTML
  */
 function renderTableRow(
-  row: TableRow,
-  rowIdx: number,
-  _totalRows: number,
-  columnWidths: number[],
-  tableProperties: Table["properties"],
-  ctx: HtmlRenderContext,
+  ...args: [
+    row: TableRow,
+    rowIdx: number,
+    _totalRows: number,
+    columnWidths: number[],
+    tableProperties: Table["properties"],
+    ctx: HtmlRenderContext,
+  ]
 ): HtmlString {
+  const [row, rowIdx, _totalRows, columnWidths, tableProperties, ctx] = args;
   const rowStyles: Record<string, string> = {};
 
   if (row.height !== undefined && (row.height as number) > 0) {
@@ -116,15 +119,18 @@ function renderTableRow(
  * Render a table cell to HTML
  */
 function renderTableCell(
-  cell: TableCell,
-  rowIdx: number,
-  colIdx: number,
-  _totalCols: number,
-  width: number,
-  rowHeight: number | undefined,
-  tableProperties: Table["properties"],
-  ctx: HtmlRenderContext,
+  ...args: [
+    cell: TableCell,
+    rowIdx: number,
+    colIdx: number,
+    _totalCols: number,
+    width: number,
+    rowHeight: number | undefined,
+    tableProperties: Table["properties"],
+    ctx: HtmlRenderContext,
+  ]
 ): HtmlString {
+  const [cell, rowIdx, colIdx, _totalCols, width, rowHeight, tableProperties, ctx] = args;
   const { properties, textBody } = cell;
 
   if (properties.horizontalMerge || properties.verticalMerge) {
@@ -210,11 +216,14 @@ function renderTableCell(
 }
 
 function renderTableCellContent(
-  textBody: TableCell["textBody"],
-  width: number,
-  rowHeight: number | undefined,
-  ctx: HtmlRenderContext,
+  ...args: [
+    textBody: TableCell["textBody"],
+    width: number,
+    rowHeight: number | undefined,
+    ctx: HtmlRenderContext,
+  ]
 ): HtmlString {
+  const [textBody, width, rowHeight, ctx] = args;
   if (!textBody) {
     return EMPTY_HTML;
   }

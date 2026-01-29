@@ -29,13 +29,17 @@ import { parseSlideTransitionData } from "../parser/slide/transition-parser";
  * @param renderOptions - Optional render options for dialect-specific behavior
  * @returns A Slide object with rendering methods
  */
+export type CreateSlideOptions = {
+  readonly data: SlideData;
+  readonly zip: ZipFile;
+  readonly defaultTextStyle: XmlElement | null;
+  readonly tableStyles: TableStyleList | null;
+  readonly slideSize: SlideSize;
+  readonly renderOptions?: RenderOptions;
+};
+
 export function createSlide(
-  data: SlideData,
-  zip: ZipFile,
-  defaultTextStyle: XmlElement | null,
-  tableStyles: TableStyleList | null,
-  slideSize: SlideSize,
-  renderOptions?: RenderOptions,
+  { data, zip, defaultTextStyle, tableStyles, slideSize, renderOptions }: CreateSlideOptions,
 ): Slide {
   // Parse timing data (lazy, cached)
   const timing = parseSlideTimingData(data.content);

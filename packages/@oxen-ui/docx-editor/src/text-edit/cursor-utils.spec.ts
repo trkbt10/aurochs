@@ -9,7 +9,6 @@
  * tested through integration tests with the full layout pipeline.
  */
 
-import { describe, it, expect } from "vitest";
 import type { DocxParagraph } from "@oxen-office/docx/domain/paragraph";
 import {
   offsetToCursorPosition,

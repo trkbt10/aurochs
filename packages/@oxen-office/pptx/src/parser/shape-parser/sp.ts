@@ -117,12 +117,16 @@ function resolveShapePropertiesWithStyle(
   return resolveShapePropertiesWithEffects(withFill, shapeStyle, formatScheme);
 }
 
+type BuildTextStyleContextOptions = {
+  readonly ctx: PlaceholderContext | undefined;
+  readonly resolvedPlaceholderType: string | undefined;
+  readonly placeholderIdx: number | undefined;
+  readonly masterStylesInfo: MasterStylesInfo | undefined;
+  readonly shapeStyle: ReturnType<typeof parseShapeStyle>;
+};
+
 function buildTextStyleContext(
-  ctx: PlaceholderContext | undefined,
-  resolvedPlaceholderType: string | undefined,
-  placeholderIdx: number | undefined,
-  masterStylesInfo: MasterStylesInfo | undefined,
-  shapeStyle: ReturnType<typeof parseShapeStyle>,
+  { ctx, resolvedPlaceholderType, placeholderIdx, masterStylesInfo, shapeStyle }: BuildTextStyleContextOptions,
 ): TextStyleContext | undefined {
   const shapeFontReferenceColor = getShapeFontReferenceColor(shapeStyle);
 
@@ -169,10 +173,17 @@ function getShapeFontReferenceColor(
  * @see ECMA-376 Part 1, Section 19.3.1.43
  */
 export function parseSpShape(
-  element: XmlElement,
-  ctx: PlaceholderContext | undefined,
-  masterStylesInfo?: MasterStylesInfo,
-  formatScheme?: FormatScheme,
+  {
+    element,
+    ctx,
+    masterStylesInfo,
+    formatScheme,
+  }: {
+    readonly element: XmlElement;
+    readonly ctx: PlaceholderContext | undefined;
+    readonly masterStylesInfo?: MasterStylesInfo;
+    readonly formatScheme?: FormatScheme;
+  },
 ): SpShape | undefined {
   const nvSpPr = getChild(element, "p:nvSpPr");
   const cNvPr = nvSpPr ? getChild(nvSpPr, "p:cNvPr") : undefined;
@@ -192,7 +203,7 @@ export function parseSpShape(
   );
 
   // Parse properties with inheritance if placeholders exist
-  const baseProperties = getShapePropertiesWithOptionalInheritance(ctx, spPr, layout, master);
+  const baseProperties = getShapePropertiesWithOptionalInheritance({ ctx, spPr, layout, master });
 
   // Parse shape style for style references
   const shapeStyle = parseShapeStyle(style);
@@ -223,13 +234,13 @@ export function parseSpShape(
   // Even when no parse context is available, we still create a minimal
   // text style context if shapeFontReferenceColor is present, so that
   // the fontRef color can be applied as a fallback.
-  const textStyleCtx = buildTextStyleContext(
+  const textStyleCtx = buildTextStyleContext({
     ctx,
     resolvedPlaceholderType,
-    placeholder?.idx,
+    placeholderIdx: placeholder?.idx,
     masterStylesInfo,
     shapeStyle,
-  );
+  });
 
   return {
     type: "sp",
@@ -246,10 +257,17 @@ export function parseSpShape(
 }
 
 function getShapePropertiesWithOptionalInheritance(
-  ctx: PlaceholderContext | undefined,
-  spPr: XmlElement | undefined,
-  layout: XmlElement | undefined,
-  master: XmlElement | undefined,
+  {
+    ctx,
+    spPr,
+    layout,
+    master,
+  }: {
+    readonly ctx: PlaceholderContext | undefined;
+    readonly spPr: XmlElement | undefined;
+    readonly layout: XmlElement | undefined;
+    readonly master: XmlElement | undefined;
+  },
 ): ReturnType<typeof parseShapeProperties> {
   if (ctx !== undefined) {
     return parseShapePropertiesWithInheritance(spPr, layout, master);

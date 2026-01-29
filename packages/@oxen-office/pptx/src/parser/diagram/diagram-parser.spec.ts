@@ -100,17 +100,20 @@ function createPDrawing(shapeElements: readonly XmlElement[]): XmlDocument {
 function createDspShape(
   id: string,
   name: string,
-  preset: string,
-  options?: {
-    modelId?: string;
-    fill?: XmlElement;
-    line?: XmlElement;
-    text?: XmlElement;
-    txBody?: XmlElement;
-    style?: XmlElement;
-    txXfrm?: XmlElement;
-  }
+  ...rest: [
+    preset: string,
+    options?: {
+      modelId?: string;
+      fill?: XmlElement;
+      line?: XmlElement;
+      text?: XmlElement;
+      txBody?: XmlElement;
+      style?: XmlElement;
+      txXfrm?: XmlElement;
+    },
+  ]
 ): XmlElement {
+  const [preset, options] = rest;
   const children: XmlElement[] = [
     {
       type: "element",

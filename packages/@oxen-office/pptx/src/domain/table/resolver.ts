@@ -32,6 +32,28 @@ export type TableScaleResult = {
  */
 export type TableScalingMode = "natural" | "stretchToFit" | "uniformFit";
 
+export type ResolveTableScaleOptions = {
+  readonly mode: TableScalingMode;
+  readonly totalWidth: number;
+  readonly totalHeight: number;
+  readonly frameWidth: number;
+  readonly frameHeight: number;
+};
+
+export type ResolveSpanWidthOptions = {
+  readonly columnWidths: readonly number[];
+  readonly colIdx: number;
+  readonly span: number;
+  readonly fallbackWidth: number;
+};
+
+export type ResolveSpanHeightOptions = {
+  readonly rowHeights: readonly number[];
+  readonly rowIdx: number;
+  readonly span: number;
+  readonly fallbackHeight: number;
+};
+
 // =============================================================================
 // Row Height Resolution
 // =============================================================================
@@ -76,11 +98,7 @@ export function resolveSvgRowHeight(row: TableRow, defaultHeight: number): numbe
  * - uniformFit: Scales uniformly to fit xfrm (preserves aspect ratio)
  */
 export function resolveTableScale(
-  mode: TableScalingMode,
-  totalWidth: number,
-  totalHeight: number,
-  frameWidth: number,
-  frameHeight: number
+  { mode, totalWidth, totalHeight, frameWidth, frameHeight }: ResolveTableScaleOptions,
 ): TableScaleResult {
   if (mode === "stretchToFit") {
     const scaleX = totalWidth > 0 ? frameWidth / totalWidth : 1;
@@ -118,10 +136,7 @@ export function resolveSpanCount(span: number | undefined): number {
  * Calculate total width for a cell spanning multiple columns
  */
 export function resolveSpanWidth(
-  columnWidths: readonly number[],
-  colIdx: number,
-  span: number,
-  fallbackWidth: number
+  { columnWidths, colIdx, span, fallbackWidth }: ResolveSpanWidthOptions,
 ): number {
   const spanWidths = columnWidths.slice(colIdx, colIdx + span);
   const summed = spanWidths.reduce((total, width) => total + width, 0);
@@ -135,10 +150,7 @@ export function resolveSpanWidth(
  * Calculate total height for a cell spanning multiple rows
  */
 export function resolveSpanHeight(
-  rowHeights: readonly number[],
-  rowIdx: number,
-  span: number,
-  fallbackHeight: number
+  { rowHeights, rowIdx, span, fallbackHeight }: ResolveSpanHeightOptions,
 ): number {
   const spanHeights = rowHeights.slice(rowIdx, rowIdx + span);
   const summed = spanHeights.reduce((total, height) => total + height, 0);

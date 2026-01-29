@@ -135,15 +135,18 @@ export function layoutText(
 }
 
 function calculateKerningForGlyph(
-  index: number,
-  glyph: GlyphContour,
-  glyphs: readonly PositionedGlyph[],
-  chars: readonly string[],
-  fontFamily: string,
-  letterSpacing: number,
-  useOpticalKerning: boolean,
-  useFontKerning: boolean,
+  ...args: readonly [
+    index: number,
+    glyph: GlyphContour,
+    glyphs: readonly PositionedGlyph[],
+    chars: readonly string[],
+    fontFamily: string,
+    letterSpacing: number,
+    useOpticalKerning: boolean,
+    useFontKerning: boolean,
+  ]
 ): number {
+  const [index, glyph, glyphs, chars, fontFamily, letterSpacing, useOpticalKerning, useFontKerning] = args;
   if (index === 0) {
     return 0;
   }
@@ -241,15 +244,18 @@ export function measureTextWidth(
 }
 
 function calculateMeasureKerning(
-  index: number,
-  prevGlyph: GlyphContour | null,
-  currentGlyph: GlyphContour,
-  chars: readonly string[],
-  fontFamily: string,
-  letterSpacing: number,
-  useOpticalKerning: boolean,
-  useFontKerning: boolean,
+  ...args: readonly [
+    index: number,
+    prevGlyph: GlyphContour | null,
+    currentGlyph: GlyphContour,
+    chars: readonly string[],
+    fontFamily: string,
+    letterSpacing: number,
+    useOpticalKerning: boolean,
+    useFontKerning: boolean,
+  ]
 ): number {
+  const [index, prevGlyph, currentGlyph, chars, fontFamily, letterSpacing, useOpticalKerning, useFontKerning] = args;
   if (index === 0 || prevGlyph === null) {
     return 0;
   }

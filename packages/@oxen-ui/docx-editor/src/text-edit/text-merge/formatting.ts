@@ -28,11 +28,14 @@ import { getRunPropertiesAtPosition } from "./run-properties";
  * @returns A new paragraph with the formatting applied
  */
 export function applyFormatToRange(
-  paragraph: DocxParagraph,
-  start: number,
-  end: number,
-  properties: Partial<DocxRunProperties>,
+  ...args: readonly [
+    paragraph: DocxParagraph,
+    start: number,
+    end: number,
+    properties: Partial<DocxRunProperties>,
+  ]
 ): DocxParagraph {
+  const [paragraph, start, end, properties] = args;
   const text = getParagraphPlainText(paragraph);
   const beforeText = text.slice(0, start);
   const selectedText = text.slice(start, end);
@@ -89,11 +92,14 @@ export function applyFormatToRange(
  * @returns A new paragraph with the formatting toggled
  */
 export function toggleFormatOnRange(
-  paragraph: DocxParagraph,
-  start: number,
-  end: number,
-  property: "b" | "i" | "strike" | "caps" | "smallCaps",
+  ...args: readonly [
+    paragraph: DocxParagraph,
+    start: number,
+    end: number,
+    property: "b" | "i" | "strike" | "caps" | "smallCaps",
+  ]
 ): DocxParagraph {
+  const [paragraph, start, end, property] = args;
   const currentProps = getRunPropertiesAtPosition(paragraph, start);
   const currentValue = currentProps?.[property];
 

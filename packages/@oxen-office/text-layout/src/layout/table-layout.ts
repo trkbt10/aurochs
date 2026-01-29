@@ -91,11 +91,14 @@ function calculateColumnWidths(
  * Get the width of a cell spanning multiple grid columns.
  */
 function getCellWidth(
-  gridColIndex: number,
-  gridSpan: number,
-  columnWidths: readonly Pixels[],
-  cellSpacing: Pixels,
+  ...args: readonly [
+    gridColIndex: number,
+    gridSpan: number,
+    columnWidths: readonly Pixels[],
+    cellSpacing: Pixels,
+  ]
 ): Pixels {
+  const [gridColIndex, gridSpan, columnWidths, cellSpacing] = args;
   const cellSpacingValue = cellSpacing as number;
   const totalWidth = columnWidths
     .slice(gridColIndex, gridColIndex + gridSpan)
@@ -111,11 +114,14 @@ function getCellWidth(
  * Get the X position of a cell.
  */
 function getCellX(
-  gridColIndex: number,
-  columnWidths: readonly Pixels[],
-  cellSpacing: Pixels,
-  tableX: number,
+  ...args: readonly [
+    gridColIndex: number,
+    columnWidths: readonly Pixels[],
+    cellSpacing: Pixels,
+    tableX: number,
+  ]
 ): number {
+  const [gridColIndex, columnWidths, cellSpacing, tableX] = args;
   const cellSpacingValue = cellSpacing as number;
   const widthBefore = columnWidths
     .slice(0, gridColIndex)
@@ -408,12 +414,15 @@ export function layoutTable(
   });
 
 function getCellTotalRowHeight(
-  cell: LayoutTableCellResult,
-  rowIndex: number,
-  rowHeights: readonly number[],
-  rowHeight: number,
-  cellSpacingValue: number,
+  ...args: readonly [
+    cell: LayoutTableCellResult,
+    rowIndex: number,
+    rowHeights: readonly number[],
+    rowHeight: number,
+    cellSpacingValue: number,
+  ]
 ): number {
+  const [cell, rowIndex, rowHeights, rowHeight, cellSpacingValue] = args;
   if (cell.rowSpan <= 1) {
     return rowHeight;
   }
@@ -472,11 +481,14 @@ function getCellTotalRowHeight(
  * Calculate table X position based on alignment.
  */
 function calculateTableX(
-  alignment: "left" | "center" | "right",
-  indent: number,
-  availableWidth: number,
-  tableWidth: number,
+  ...args: readonly [
+    alignment: "left" | "center" | "right",
+    indent: number,
+    availableWidth: number,
+    tableWidth: number,
+  ]
 ): number {
+  const [alignment, indent, availableWidth, tableWidth] = args;
   switch (alignment) {
     case "center":
       return indent + (availableWidth - tableWidth) / 2;

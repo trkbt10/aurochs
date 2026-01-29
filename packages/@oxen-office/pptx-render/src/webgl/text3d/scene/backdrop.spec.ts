@@ -6,7 +6,6 @@
  * @see ECMA-376 Part 1, Section 20.1.5.3 (backdrop)
  */
 
-import { describe, it, expect } from "vitest";
 import * as THREE from "three";
 import {
   createBackdropMesh,

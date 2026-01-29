@@ -40,7 +40,15 @@ function extractBaseFontRaw(page: NativePdfPage, fontDict: PdfDict): string | nu
   return null;
 }
 
-function detectFontFormat(fontFile: PdfObject | undefined, fontFile2: PdfObject | undefined, fontFile3: PdfObject | undefined, subtype: string | undefined): FontFormat {
+function detectFontFormat(
+  ...args: readonly [
+    fontFile: PdfObject | undefined,
+    fontFile2: PdfObject | undefined,
+    fontFile3: PdfObject | undefined,
+    subtype: string | undefined,
+  ]
+): FontFormat {
+  const [fontFile, fontFile2, fontFile3, subtype] = args;
   if (fontFile2) {return "truetype";}
   if (fontFile) {return "type1";}
   if (fontFile3) {

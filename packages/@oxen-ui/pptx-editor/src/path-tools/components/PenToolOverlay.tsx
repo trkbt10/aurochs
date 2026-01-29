@@ -57,7 +57,6 @@ export function PenToolOverlay({
     onAnchorPointerDown,
     onAnchorHover,
     onKeyDown,
-    hasActivePath,
   } = usePenTool({
     onCommit,
     onCancel,

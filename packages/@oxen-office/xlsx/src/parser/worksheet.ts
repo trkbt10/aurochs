@@ -89,11 +89,14 @@ export function parseCols(
  * @see ECMA-376 Part 4, Section 18.3.1.73 (row)
  */
 export function parseRow(
-  rowElement: XmlElement,
-  context: XlsxParseContext,
-  options: XlsxParseOptions | undefined,
-  fallbackRowNumber?: number,
+  ...args: readonly [
+    rowElement: XmlElement,
+    context: XlsxParseContext,
+    options: XlsxParseOptions | undefined,
+    fallbackRowNumber?: number,
+  ]
 ): XlsxRow {
+  const [rowElement, context, options, fallbackRowNumber] = args;
   const rowNumberAttr = parseIntAttr(getAttr(rowElement, "r"));
   const cellElements = getChildren(rowElement, "c");
   const firstCell = cellElements[0];
@@ -473,16 +476,19 @@ function parseColorElement(colorElement: XmlElement | undefined): XlsxColor | un
  * @see ECMA-376 Part 4, Section 18.3.1.99 (worksheet)
  */
 export function parseWorksheet(
-  worksheetElement: XmlElement,
-  context: XlsxParseContext,
-  options: XlsxParseOptions | undefined,
-  sheetInfo: {
-    name: string;
-    sheetId: number;
-    state: "visible" | "hidden" | "veryHidden";
-    xmlPath: string;
-  },
+  ...args: readonly [
+    worksheetElement: XmlElement,
+    context: XlsxParseContext,
+    options: XlsxParseOptions | undefined,
+    sheetInfo: {
+      name: string;
+      sheetId: number;
+      state: "visible" | "hidden" | "veryHidden";
+      xmlPath: string;
+    },
+  ]
 ): XlsxWorksheet {
+  const [worksheetElement, context, options, sheetInfo] = args;
   const sheetPrEl = getChild(worksheetElement, "sheetPr");
   const tabColor = parseColorElement(sheetPrEl ? getChild(sheetPrEl, "tabColor") : undefined);
   const dimensionEl = getChild(worksheetElement, "dimension");

@@ -21,7 +21,21 @@
  * @see ECMA-376 Part 1, Section 19.3.1
  */
 
-import { parseShapeElement, parseShapeTree } from "./index";
+import { parseShapeElement as parseShapeElementInternal, parseShapeTree as parseShapeTreeInternal } from "./index";
+
+type ParseShapeElementOptions = Parameters<typeof parseShapeElementInternal>[0];
+type ParseShapeTreeOptions = Parameters<typeof parseShapeTreeInternal>[0];
+
+function parseShapeElement(
+  element: ParseShapeElementOptions["element"],
+  formatScheme?: ParseShapeElementOptions["formatScheme"],
+): ReturnType<typeof parseShapeElementInternal> {
+  return parseShapeElementInternal({ element, formatScheme });
+}
+
+function parseShapeTree(spTree: ParseShapeTreeOptions["spTree"]): ReturnType<typeof parseShapeTreeInternal> {
+  return parseShapeTreeInternal({ spTree });
+}
 
 type MutableXmlText = {
   type: "text";
@@ -465,7 +479,7 @@ describe("parseShapeElement - p:sp (ECMA-376 Section 19.3.1.43)", () => {
           ]),
         ],
       };
-      const result = parseShapeElement(sp, undefined, undefined, formatScheme);
+      const result = parseShapeElement(sp, formatScheme);
 
       if (result?.type === "sp") {
         // Color is resolved from phClr (placeholder color) to the effectRef color (FF0000)

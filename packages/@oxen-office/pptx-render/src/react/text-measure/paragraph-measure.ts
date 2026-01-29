@@ -95,11 +95,14 @@ function getNextTabStop(
 }
 
 function measureTextWithTabs(
-  textNode: SVGTextElement,
-  text: string,
-  paragraph: TextMeasureParagraph,
-  startX: number,
+  ...args: [
+    textNode: SVGTextElement,
+    text: string,
+    paragraph: TextMeasureParagraph,
+    startX: number,
+  ]
 ): { width: number; endX: number } {
+  const [textNode, text, paragraph, startX] = args;
   if (!text.includes("\t")) {
     const width = measureTextSegment(textNode, text);
     return { width, endX: startX + width };
@@ -126,11 +129,14 @@ function measureTextWithTabs(
 }
 
 function measureRunWithSvg(
-  run: TextMeasureRun,
-  textNode: SVGTextElement,
-  paragraph: TextMeasureParagraph,
-  startX: number,
+  ...args: [
+    run: TextMeasureRun,
+    textNode: SVGTextElement,
+    paragraph: TextMeasureParagraph,
+    startX: number,
+  ]
 ): { result: TextMeasureRunResult; endX: number } {
+  const [run, textNode, paragraph, startX] = args;
   if (run.isBreak || run.text.length === 0) {
     return { result: { ...run, width: px(0) }, endX: startX };
   }

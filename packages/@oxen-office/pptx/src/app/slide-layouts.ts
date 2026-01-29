@@ -155,24 +155,14 @@ export function loadSlideLayoutBundle(
   const layoutTables = indexShapeTreeNodes(layout);
 
   const masterPath = findMasterPath(layoutRelationships);
-  const master = masterPath
-    ? readXml(file, masterPath, appVersion, false, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS)
-    : null;
-  const masterRelationships = masterPath
-    ? loadRelationships(file, masterPath)
-    : createEmptyResourceMap();
+  const master = masterPath ? readXml(file, masterPath, appVersion, false, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS) : null;
+  const masterRelationships = masterPath ? loadRelationships(file, masterPath) : createEmptyResourceMap();
   const masterTables = indexShapeTreeNodes(master);
-  const masterTextStyles = master
-    ? getByPath(master, ["p:sldMaster", "p:txStyles"])
-    : undefined;
+  const masterTextStyles = master ? getByPath(master, ["p:sldMaster", "p:txStyles"]) : undefined;
 
   const themePath = masterPath ? findThemePath(masterRelationships) : undefined;
-  const theme = themePath
-    ? readXml(file, themePath, appVersion, false, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS)
-    : null;
-  const themeRelationships = themePath
-    ? loadRelationships(file, themePath)
-    : createEmptyResourceMap();
+  const theme = themePath ? readXml(file, themePath, appVersion, false, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS) : null;
+  const themeRelationships = themePath ? loadRelationships(file, themePath) : createEmptyResourceMap();
 
   return {
     layout,

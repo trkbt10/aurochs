@@ -101,13 +101,7 @@ function getLayoutNonPlaceholderShapes(ctx: SlideContext): readonly Shape[] {
     ctx.readFile.bind(ctx),
   );
 
-  const layoutShapes = parseShapeTree(
-    spTree,
-    undefined, // PlaceholderContext
-    undefined, // MasterStylesInfo
-    undefined, // FormatScheme
-    layoutResourceContext,
-  );
+  const layoutShapes = parseShapeTree({ spTree, resourceContext: layoutResourceContext });
   return getNonPlaceholderShapes(layoutShapes);
 }
 

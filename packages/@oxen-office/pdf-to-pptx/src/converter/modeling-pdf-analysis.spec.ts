@@ -17,7 +17,6 @@
  */
 
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { parsePdf } from "@oxen/pdf/parser/core/pdf-parser";
 import type { PdfText, PdfPath, PdfImage, PdfElement } from "@oxen/pdf/domain";
 import { spatialGrouping } from "./text-grouping/spatial-grouping";

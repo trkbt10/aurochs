@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import type { BlipFill } from "./types";
 import { formatRgba, resolveBlipFill, resolveFill } from "./fill";
 
@@ -59,4 +58,3 @@ describe("pptx/domain/color/fill", () => {
     });
   });
 });
-

@@ -14,6 +14,10 @@ import type {
 } from "@oxen-office/ooxml/domain/color-context";
 import type { FontScheme as FontSchemeType } from "@oxen-office/ooxml/domain/font-scheme";
 
+export type ColorScheme = ColorSchemeType;
+export type ColorMap = ColorMapType;
+export type FontScheme = FontSchemeType;
+
 // =============================================================================
 // Custom Color Types (ECMA-376 Part 1, Section 20.1.4.1.8)
 // =============================================================================

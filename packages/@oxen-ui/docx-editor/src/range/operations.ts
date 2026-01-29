@@ -145,11 +145,14 @@ export function deleteRange(document: DocxDocument, range: TextRange): DocxDocum
  * @returns Updated document and new cursor position.
  */
 export function insertTextAtPosition(
-  document: DocxDocument,
-  position: TextPosition,
-  text: string,
-  properties?: DocxRunProperties,
+  ...args: readonly [
+    document: DocxDocument,
+    position: TextPosition,
+    text: string,
+    properties?: DocxRunProperties,
+  ]
 ): { document: DocxDocument; newPosition: TextPosition } {
+  const [document, position, text, properties] = args;
   const clampedPosition = clampPosition(document, position);
   const paragraph = getParagraphAtIndex(document, clampedPosition.paragraphIndex);
 
@@ -235,11 +238,14 @@ export function insertTextAtPosition(
  * @returns Updated document and new cursor position.
  */
 export function replaceRange(
-  document: DocxDocument,
-  range: TextRange,
-  text: string,
-  properties?: DocxRunProperties,
+  ...args: readonly [
+    document: DocxDocument,
+    range: TextRange,
+    text: string,
+    properties?: DocxRunProperties,
+  ]
 ): { document: DocxDocument; newPosition: TextPosition } {
+  const [document, range, text, properties] = args;
   const normalized = normalizeRange(range);
 
   // Delete existing content

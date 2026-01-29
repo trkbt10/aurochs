@@ -202,7 +202,7 @@ export function LayoutEditor({
         }
 
         // Parse shapes
-        const shapes = parseShapeTree(spTree);
+        const shapes = parseShapeTree({ spTree });
 
         // Dispatch loaded shapes
         dispatch({

@@ -6,6 +6,17 @@
  * selection (character ranges within paragraphs).
  */
 
+import {
+  addToSelection as addToCoreSelection,
+  createEmptySelection as createEmptyCoreSelection,
+  createMultiSelection as createMultiCoreSelection,
+  createSingleSelection as createSingleCoreSelection,
+  isSelected as isCoreSelected,
+  removeFromSelection as removeFromCoreSelection,
+  toggleSelection as toggleCoreSelection,
+} from "@oxen-ui/editor-core/selection";
+import type { SelectionState as CoreSelectionState } from "@oxen-ui/editor-core/selection";
+
 // =============================================================================
 // Types
 // =============================================================================
@@ -42,12 +53,7 @@ export type TextRange = {
  *
  * Used for selecting whole elements like paragraphs or tables.
  */
-export type ElementSelectionState = {
-  /** Selected element IDs (in selection order) */
-  readonly selectedIds: readonly ElementId[];
-  /** Primary element (last selected, used for focused editing) */
-  readonly primaryId: ElementId | undefined;
-};
+export type ElementSelectionState = CoreSelectionState<ElementId>;
 
 /**
  * Text-level selection state.
@@ -83,20 +89,14 @@ export type DocxSelectionState = {
  * Create an empty element selection.
  */
 export function createEmptyElementSelection(): ElementSelectionState {
-  return {
-    selectedIds: [],
-    primaryId: undefined,
-  };
+  return createEmptyCoreSelection<ElementId>();
 }
 
 /**
  * Create a single element selection.
  */
 export function createSingleElementSelection(elementId: ElementId): ElementSelectionState {
-  return {
-    selectedIds: [elementId],
-    primaryId: elementId,
-  };
+  return createSingleCoreSelection(elementId);
 }
 
 /**
@@ -106,10 +106,14 @@ export function createMultiElementSelection(
   elementIds: readonly ElementId[],
   primaryId?: ElementId,
 ): ElementSelectionState {
-  return {
+  const actualPrimaryId = primaryId ?? elementIds[elementIds.length - 1];
+  if (!actualPrimaryId) {
+    throw new Error("createMultiElementSelection elementIds must not be empty");
+  }
+  return createMultiCoreSelection({
     selectedIds: elementIds,
-    primaryId: primaryId ?? elementIds[elementIds.length - 1],
-  };
+    primaryId: actualPrimaryId,
+  });
 }
 
 // =============================================================================
@@ -123,31 +127,7 @@ export function addToElementSelection(
   selection: ElementSelectionState,
   elementId: ElementId,
 ): ElementSelectionState {
-  if (selection.selectedIds.includes(elementId)) {
-    return {
-      ...selection,
-      primaryId: elementId,
-    };
-  }
-
-  return {
-    selectedIds: [...selection.selectedIds, elementId],
-    primaryId: elementId,
-  };
-}
-
-/**
- * Get new primary ID after removing an element.
- */
-function getPrimaryIdAfterRemove(
-  removedId: ElementId,
-  currentPrimaryId: ElementId | undefined,
-  remainingIds: readonly ElementId[],
-): ElementId | undefined {
-  if (currentPrimaryId === removedId) {
-    return remainingIds[remainingIds.length - 1];
-  }
-  return currentPrimaryId;
+  return addToCoreSelection(selection, elementId);
 }
 
 /**
@@ -157,13 +137,11 @@ export function removeFromElementSelection(
   selection: ElementSelectionState,
   elementId: ElementId,
 ): ElementSelectionState {
-  const newSelectedIds = selection.selectedIds.filter((id) => id !== elementId);
-  const newPrimaryId = getPrimaryIdAfterRemove(elementId, selection.primaryId, newSelectedIds);
-
-  return {
-    selectedIds: newSelectedIds,
-    primaryId: newPrimaryId,
-  };
+  return removeFromCoreSelection({
+    selection,
+    id: elementId,
+    primaryFallback: "last",
+  });
 }
 
 /**
@@ -173,10 +151,11 @@ export function toggleElementSelection(
   selection: ElementSelectionState,
   elementId: ElementId,
 ): ElementSelectionState {
-  if (selection.selectedIds.includes(elementId)) {
-    return removeFromElementSelection(selection, elementId);
-  }
-  return addToElementSelection(selection, elementId);
+  return toggleCoreSelection({
+    selection,
+    id: elementId,
+    primaryFallback: "last",
+  });
 }
 
 /**
@@ -199,7 +178,7 @@ export function isElementSelected(
   selection: ElementSelectionState,
   elementId: ElementId,
 ): boolean {
-  return selection.selectedIds.includes(elementId);
+  return isCoreSelected(selection, elementId);
 }
 
 /**

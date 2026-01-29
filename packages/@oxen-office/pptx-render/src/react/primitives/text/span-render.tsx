@@ -167,13 +167,16 @@ function applyTextOutline(props: TextProps, span: PositionedSpan): void {
  * Render highlight background for span.
  */
 function renderHighlight(
-  x: number,
-  lineY: number,
-  fontSizePx: number,
-  spanWidth: number,
-  highlightColor: string,
-  key: number,
+  ...args: [
+    x: number,
+    lineY: number,
+    fontSizePx: number,
+    spanWidth: number,
+    highlightColor: string,
+    key: number,
+  ]
 ): ReactNode {
+  const [x, lineY, fontSizePx, spanWidth, highlightColor, key] = args;
   return (
     <rect
       key={`highlight-${key}`}
@@ -222,13 +225,16 @@ function wrapWithLink(
  * @returns React elements for the span
  */
 export function renderSpan(
-  span: PositionedSpan,
-  x: number,
-  lineY: number,
-  dominantBaseline: string | undefined,
-  key: number,
-  defs: DefsManager,
+  ...args: [
+    span: PositionedSpan,
+    x: number,
+    lineY: number,
+    dominantBaseline: string | undefined,
+    key: number,
+    defs: DefsManager,
+  ]
 ): ReactNode {
+  const [span, x, lineY, dominantBaseline, key, defs] = args;
   const fontSizePx = (span.fontSize as number) * PT_TO_PX;
   const elements: ReactNode[] = [];
 
@@ -308,11 +314,14 @@ function getEffectsFilterUrl(span: PositionedSpan, defs: DefsManager): string | 
  * @returns Array of React elements for the line
  */
 export function renderLine(
-  line: LayoutLine,
-  fontAlignment: "auto" | "top" | "center" | "base" | "bottom",
-  startKey: number,
-  defs: DefsManager,
+  ...args: [
+    line: LayoutLine,
+    fontAlignment: "auto" | "top" | "center" | "base" | "bottom",
+    startKey: number,
+    defs: DefsManager,
+  ]
 ): ReactNode[] {
+  const [line, fontAlignment, startKey, defs] = args;
   const elements: ReactNode[] = [];
   const dominantBaseline = toSvgDominantBaseline(fontAlignment);
 

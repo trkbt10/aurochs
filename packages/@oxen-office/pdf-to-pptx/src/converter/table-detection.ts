@@ -73,11 +73,14 @@ function cluster1D(values: readonly number[], eps: number): number[] {
 }
 
 function computeRegionMeta(
-  boxIndices: readonly number[],
-  boxes: readonly BBox[],
-  spanMin: number,
-  thicknessMax: number,
+  ...args: readonly [
+    boxIndices: readonly number[],
+    boxes: readonly BBox[],
+    spanMin: number,
+    thicknessMax: number,
+  ]
 ): { bbox: BBox; ruleCount: number; xLines: number[]; yLines: number[]; colCountHint: number | null; rowCountHint: number | null } | null {
+  const [boxIndices, boxes, spanMin, thicknessMax] = args;
   if (boxIndices.length === 0) {return null;}
   let bb = boxes[boxIndices[0]!]!;
   const vertCenters: number[] = [];
@@ -204,7 +207,8 @@ export function detectTableRegionsFromPaths(
     const half = lineWidth / 2;
 
     let cur: { x: number; y: number } | null = null;
-    const pushRect = (x0: number, y0: number, x1: number, y1: number, thickness: number, span: number): void => {
+    const pushRect = (...args: readonly [x0: number, y0: number, x1: number, y1: number, thickness: number, span: number]): void => {
+      const [x0, y0, x1, y1, thickness, span] = args;
       if (span < spanMin) {return;}
       const aspect = span / Math.max(0.1, thickness);
       if (aspect < 10) {return;}

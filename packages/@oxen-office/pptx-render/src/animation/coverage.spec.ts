@@ -30,8 +30,12 @@ import type { EffectConfig } from "./types";
 // Test Helpers
 // =============================================================================
 
+function isHTMLElement(value: unknown): value is HTMLElement {
+  return typeof value === "object" && value !== null && "style" in value;
+}
+
 function createMockElement(): HTMLElement {
-  return {
+  const el: unknown = {
     style: {
       transition: "",
       opacity: "",
@@ -45,7 +49,12 @@ function createMockElement(): HTMLElement {
       maskPosition: "",
       maskRepeat: "",
     },
-  } as unknown as HTMLElement;
+    offsetHeight: 0,
+  };
+  if (!isHTMLElement(el)) {
+    throw new Error("createMockElement: invalid mock element shape");
+  }
+  return el;
 }
 
 // =============================================================================
@@ -204,6 +213,40 @@ describe("Effect Implementations - ECMA-376 19.5.3", () => {
       applyWheel(el, { type: "wheel", duration: 1000, entrance: true });
 
       expect(el.style.transform).toContain("rotate");
+    });
+  });
+
+  describe("applyBlinds", () => {
+    it("uses mask for blinds effect", () => {
+      const el = createMockElement();
+      applyBlinds(el, { type: "blinds", duration: 1000, direction: "horizontal", entrance: true });
+
+      expect(el.style.maskImage).toContain("repeating-linear-gradient");
+    });
+
+    it("updates mask size after raf", async () => {
+      const el = createMockElement();
+      applyBlinds(el, { type: "blinds", duration: 1000, direction: "horizontal", entrance: true });
+
+      await nextTick();
+      expect(el.style.maskSize).toBe("100% 20px");
+    });
+  });
+
+  describe("applyBox", () => {
+    it("uses clip-path for box effect", () => {
+      const el = createMockElement();
+      applyBox(el, { type: "box", duration: 1000, direction: "in", entrance: true });
+
+      expect(el.style.clipPath).toContain("inset(");
+    });
+
+    it("updates clip-path after raf", async () => {
+      const el = createMockElement();
+      applyBox(el, { type: "box", duration: 1000, direction: "in", entrance: true });
+
+      await nextTick();
+      expect(el.style.clipPath).toBe("inset(0 0 0 0)");
     });
   });
 

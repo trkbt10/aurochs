@@ -6,6 +6,11 @@
  */
 
 import type { ElementId, TextPosition } from "./selection";
+import type { IdleDragState as CoreIdleDragState } from "@oxen-ui/editor-core/drag-state";
+import {
+  createIdleDragState as createCoreIdleDragState,
+  isDragIdle as isCoreDragIdle,
+} from "@oxen-ui/editor-core/drag-state";
 
 // =============================================================================
 // Types
@@ -22,9 +27,7 @@ export type Point = {
 /**
  * Idle drag state (no drag in progress).
  */
-export type IdleDragState = {
-  readonly type: "idle";
-};
+export type IdleDragState = CoreIdleDragState;
 
 /**
  * Text selection drag state.
@@ -114,7 +117,7 @@ export type DocxDragState =
  * Create idle drag state.
  */
 export function createIdleDragState(): IdleDragState {
-  return { type: "idle" };
+  return createCoreIdleDragState();
 }
 
 /**
@@ -148,11 +151,14 @@ export function createElementMoveDragState(
  * Create table resize drag state.
  */
 export function createTableResizeDragState(
-  tableId: ElementId,
-  direction: "column" | "row",
-  index: number,
-  startSize: number,
+  ...args: readonly [
+    tableId: ElementId,
+    direction: "column" | "row",
+    index: number,
+    startSize: number,
+  ]
 ): TableResizeDragState {
+  const [tableId, direction, index, startSize] = args;
   return {
     type: "tableResize",
     tableId,
@@ -167,12 +173,15 @@ export function createTableResizeDragState(
  * Create image resize drag state.
  */
 export function createImageResizeDragState(
-  imageId: ElementId,
-  handle: ImageResizeDragState["handle"],
-  startWidth: number,
-  startHeight: number,
-  preserveAspectRatio: boolean = true,
+  ...args: readonly [
+    imageId: ElementId,
+    handle: ImageResizeDragState["handle"],
+    startWidth: number,
+    startHeight: number,
+    preserveAspectRatio?: boolean,
+  ]
 ): ImageResizeDragState {
+  const [imageId, handle, startWidth, startHeight, preserveAspectRatio = true] = args;
   return {
     type: "imageResize",
     imageId,
@@ -253,7 +262,7 @@ export function updateImageResizeDrag(
  * Check if drag state is idle.
  */
 export function isDragIdle(state: DocxDragState): state is IdleDragState {
-  return state.type === "idle";
+  return isCoreDragIdle(state);
 }
 
 /**

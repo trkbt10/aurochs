@@ -57,11 +57,9 @@ export function createAddress(col: number, row: number): CellAddress {
 
 
 export function createCellRange(
-  startCol: number,
-  startRow: number,
-  endCol: number,
-  endRow: number,
+  ...args: readonly [startCol: number, startRow: number, endCol: number, endRow: number]
 ): CellRange {
+  const [startCol, startRow, endCol, endRow] = args;
   return {
     start: createAddress(startCol, startRow),
     end: createAddress(endCol, endRow),

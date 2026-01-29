@@ -5,7 +5,7 @@ import { addMedia, findUnusedMedia, removeMediaReference } from "./media-manager
 function minimalContentTypes(slideCount: number): string {
   const overrides = Array.from({ length: slideCount }, (_, i) => {
     const n = i + 1;
-    return `<Override PartName=\"/ppt/slides/slide${n}.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.presentationml.slide+xml\"/>`;
+    return `<Override PartName="/ppt/slides/slide${n}.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/>`;
   }).join("");
   return (
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
@@ -31,7 +31,7 @@ describe("media-manager", () => {
     pkg.writeText("ppt/slides/slide1.xml", "<p:sld/>");
 
     const data = new Uint8Array([1, 2, 3, 4]).buffer;
-    const result = addMedia(pkg, data, "image/png", "ppt/slides/slide1.xml");
+    const result = addMedia({ pkg, mediaData: data, mediaType: "image/png", referringPart: "ppt/slides/slide1.xml" });
     expect(result.path).toBe("ppt/media/image1.png");
     expect(pkg.exists("ppt/media/image1.png")).toBe(true);
 
@@ -58,8 +58,8 @@ describe("media-manager", () => {
     pkg.writeText("ppt/slides/slide2.xml", "<p:sld/>");
 
     const data = new Uint8Array([9, 9, 9]).buffer;
-    const r1 = addMedia(pkg, data, "image/png", "ppt/slides/slide1.xml");
-    const r2 = addMedia(pkg, data, "image/png", "ppt/slides/slide2.xml");
+    const r1 = addMedia({ pkg, mediaData: data, mediaType: "image/png", referringPart: "ppt/slides/slide1.xml" });
+    const r2 = addMedia({ pkg, mediaData: data, mediaType: "image/png", referringPart: "ppt/slides/slide2.xml" });
     expect(r1.path).toBe("ppt/media/image1.png");
     expect(r2.path).toBe("ppt/media/image1.png");
     expect(r2.rId).toBe("rId1");
@@ -71,7 +71,7 @@ describe("media-manager", () => {
     pkg.writeText("ppt/slides/slide1.xml", "<p:sld/>");
 
     const data = new Uint8Array([7, 7]).buffer;
-    addMedia(pkg, data, "image/png", "ppt/slides/slide1.xml");
+    addMedia({ pkg, mediaData: data, mediaType: "image/png", referringPart: "ppt/slides/slide1.xml" });
 
     removeMediaReference(pkg, "ppt/media/image1.png", "ppt/slides/slide1.xml");
     expect(pkg.exists("ppt/media/image1.png")).toBe(false);

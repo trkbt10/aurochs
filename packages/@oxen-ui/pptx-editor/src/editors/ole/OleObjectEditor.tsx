@@ -41,22 +41,6 @@ const labelStyle: CSSProperties = {
   fontSize: "11px",
 };
 
-const previewContainerStyle: CSSProperties = {
-  padding: "12px",
-  backgroundColor: "var(--bg-tertiary, #111111)",
-  borderRadius: "6px",
-  display: "flex",
-  justifyContent: "center",
-  alignItems: "center",
-};
-
-const previewImageStyle: CSSProperties = {
-  maxWidth: "100%",
-  maxHeight: "150px",
-  objectFit: "contain",
-  borderRadius: "4px",
-};
-
 // =============================================================================
 // Constants
 // =============================================================================

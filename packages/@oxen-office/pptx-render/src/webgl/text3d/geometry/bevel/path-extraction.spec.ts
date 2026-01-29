@@ -2,14 +2,13 @@
  * @file Tests for bevel path extraction (Three.js independent)
  */
 
-import { describe, it, expect } from "vitest";
 import {
   computeSignedArea,
   extractPathPointsWithNormals,
   extractBevelPathsFromShape,
 } from "./path-extraction";
 import type { Vector2, ShapeInput } from "./types";
-import { vec2, Vec2 } from "./types";
+import { vec2 } from "./types";
 
 describe("computeSignedArea", () => {
   it("returns positive for CCW square", () => {

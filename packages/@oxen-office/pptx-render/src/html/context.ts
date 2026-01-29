@@ -5,7 +5,6 @@
  * Prefer importing from ../render-context.
  */
 
-import { px } from "@oxen-office/ooxml/domain/units";
 import type { CoreRenderContext, CoreRenderContextConfig } from "../render-context";
 import { createCoreRenderContext, createEmptyCoreRenderContext } from "../render-context";
 

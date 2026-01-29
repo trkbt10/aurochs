@@ -62,7 +62,7 @@ describe("mc:AlternateContent handling", () => {
         ]),
       ]);
 
-      const shapes = parseShapeTree(spTree);
+      const shapes = parseShapeTree({ spTree });
 
       expect(shapes.length).toBe(1);
       expect(shapes[0].type).toBe("sp");
@@ -110,7 +110,7 @@ describe("mc:AlternateContent handling", () => {
         ]),
       ]);
 
-      const shapes = parseShapeTree(spTree);
+      const shapes = parseShapeTree({ spTree });
 
       expect(shapes.length).toBe(1);
       expect(shapes[0].type).toBe("sp");
@@ -140,7 +140,7 @@ describe("mc:AlternateContent handling", () => {
         ]),
       ]);
 
-      const shapes = parseShapeTree(spTree);
+      const shapes = parseShapeTree({ spTree });
 
       expect(shapes.length).toBe(1);
       if (shapes[0]?.type === "sp") {
@@ -178,7 +178,7 @@ describe("mc:AlternateContent handling", () => {
         ]),
       ]);
 
-      const shapes = parseShapeTree(spTree);
+      const shapes = parseShapeTree({ spTree });
 
       expect(shapes.length).toBe(1);
       expect(shapes[0].type).toBe("pic");
@@ -240,7 +240,7 @@ describe("mc:AlternateContent handling", () => {
         ]),
       ]);
 
-      const shapes = parseShapeTree(spTree);
+      const shapes = parseShapeTree({ spTree });
 
       expect(shapes.length).toBe(1);
       expect(shapes[0].type).toBe("graphicFrame");

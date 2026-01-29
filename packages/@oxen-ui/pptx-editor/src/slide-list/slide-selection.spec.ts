@@ -4,7 +4,6 @@
  * Tests for slide selection logic: single, range (Shift+click), toggle (Ctrl+click)
  */
 
-import { describe, it, expect } from "vitest";
 import type { SlideWithId } from "@oxen-office/pptx/app";
 import {
   createEmptySlideSelection,

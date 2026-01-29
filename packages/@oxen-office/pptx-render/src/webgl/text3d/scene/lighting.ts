@@ -8,7 +8,7 @@
  */
 
 import * as THREE from "three";
-import type { LightRigType, LightRigDirection, LightRig, Rotation3d } from "@oxen-office/pptx/domain/index";
+import type { LightRigDirection, LightRig, Rotation3d } from "@oxen-office/pptx/domain/index";
 
 // =============================================================================
 // Lighting Configuration Types

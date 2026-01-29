@@ -291,8 +291,10 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
   const filterNestedTableRegions = (regions: readonly TableRegion[]): TableRegion[] => {
     const area = (r: { x0: number; y0: number; x1: number; y1: number }): number =>
       Math.max(0, r.x1 - r.x0) * Math.max(0, r.y1 - r.y0);
-    const overlap1D = (a0: number, a1: number, b0: number, b1: number): number =>
-      Math.max(0, Math.min(a1, b1) - Math.max(a0, b0));
+    const overlap1D = (...args: [a0: number, a1: number, b0: number, b1: number]): number => {
+      const [a0, a1, b0, b1] = args;
+      return Math.max(0, Math.min(a1, b1) - Math.max(a0, b0));
+    };
     const overlapArea = (a: { x0: number; y0: number; x1: number; y1: number }, b: { x0: number; y0: number; x1: number; y1: number }): number =>
       overlap1D(a.x0, a.x1, b.x0, b.x1) * overlap1D(a.y0, a.y1, b.y0, b.y1);
 
@@ -410,10 +412,13 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
 
       if (planned.length > 0) {
         const remainingTexts = texts.filter((_, idx) => !consumedTextIndices.has(idx));
-        const groupTexts =
-          options.textGroupingFn || options.grouping?.text
-            ? groupingStrategy.textGroupingFn
-            : createSpatialGrouping({ enableColumnSeparation: false, enablePageColumnDetection: false });
+        const resolveTextGroupingFn = (): typeof groupingStrategy.textGroupingFn => {
+          if (options.textGroupingFn || options.grouping?.text) {
+            return groupingStrategy.textGroupingFn;
+          }
+          return createSpatialGrouping({ enableColumnSeparation: false, enablePageColumnDetection: false });
+        };
+        const groupTexts = resolveTextGroupingFn();
         const groups = groupTexts(remainingTexts, groupingContext);
 
         for (const g of groups) {
@@ -436,7 +441,7 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
             shapes.push(convertGroupedTextToShape(p.group, context, shapeId));
             continue;
           }
-          shapes.push(convertInferredTableToShape(p.inferred, p.decoration, context, shapeId));
+          shapes.push(convertInferredTableToShape({ inferred: p.inferred, decoration: p.decoration, context, shapeId }));
         }
 
         for (const image of images) {
@@ -675,7 +680,8 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
   const groupArray = [...groups];
   const consumedGroupIndices = new Set<number>();
 
-  const overlap1D = (a0: number, a1: number, b0: number, b1: number): number => {
+  const overlap1D = (...args: [a0: number, a1: number, b0: number, b1: number]): number => {
+    const [a0, a1, b0, b1] = args;
     const lo = Math.max(Math.min(a0, a1), Math.min(b0, b1));
     const hi = Math.min(Math.max(a0, a1), Math.max(b0, b1));
     return Math.max(0, hi - lo);
@@ -843,7 +849,6 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
       // This group will be merged into a table later.
       continue;
     }
-    const group = groupArray[i]!;
 
     const absorbedIndices = [...absorbedBy.entries()]
       .filter(([, t]) => t === i)
@@ -860,9 +865,13 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
       continue;
     }
 
-    const inferredTables = shouldSplitIntoRepeated3ColTables(inferred0)
-      ? splitInferredTableByColumn(inferred0, 3)
-      : [inferred0];
+    const resolveInferredTables = (inferred: InferredTable): readonly InferredTable[] => {
+      if (shouldSplitIntoRepeated3ColTables(inferred)) {
+        return splitInferredTableByColumn(inferred, 3);
+      }
+      return [inferred];
+    };
+    const inferredTables = resolveInferredTables(inferred0);
 
     const tables: Array<{ readonly inferred: InferredTable; readonly decoration: TableDecorationAnalysis | null }> = [];
     for (const inferred of inferredTables) {
@@ -1095,9 +1104,13 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
       })();
       if (!inferred0) {continue;}
 
-      const inferredTables = shouldSplitIntoRepeated3ColTables(inferred0)
-        ? splitInferredTableByColumn(inferred0, 3)
-        : [inferred0];
+      const resolveInferredTables = (inferred: InferredTable): readonly InferredTable[] => {
+        if (shouldSplitIntoRepeated3ColTables(inferred)) {
+          return splitInferredTableByColumn(inferred, 3);
+        }
+        return [inferred];
+      };
+      const inferredTables = resolveInferredTables(inferred0);
 
       const tables: Array<{ readonly inferred: InferredTable; readonly decoration: TableDecorationAnalysis | null }> = [];
       for (const inferred of inferredTables) {
@@ -1156,9 +1169,13 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
         const inferred0 = inferTableFromGroupedText(bandGroup, { paths, minRows: 2, minCols: 2 });
         if (!inferred0) {continue;}
 
-        const inferredTables = shouldSplitIntoRepeated3ColTables(inferred0)
-          ? splitInferredTableByColumn(inferred0, 3)
-          : [inferred0];
+        const resolveInferredTables = (inferred: InferredTable): readonly InferredTable[] => {
+          if (shouldSplitIntoRepeated3ColTables(inferred)) {
+            return splitInferredTableByColumn(inferred, 3);
+          }
+          return [inferred];
+        };
+        const inferredTables = resolveInferredTables(inferred0);
 
         const tables: Array<{ readonly inferred: InferredTable; readonly decoration: TableDecorationAnalysis | null }> = [];
         for (const inferred of inferredTables) {
@@ -1204,7 +1221,7 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
 
     for (const tbl of plan.tables) {
       const shapeId = generateId();
-      shapes.push(convertInferredTableToShape(tbl.inferred, tbl.decoration, context, shapeId));
+      shapes.push(convertInferredTableToShape({ inferred: tbl.inferred, decoration: tbl.decoration, context, shapeId }));
     }
   }
 

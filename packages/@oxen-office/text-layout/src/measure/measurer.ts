@@ -55,12 +55,15 @@ export type CharWidthResult = {
  * @returns Character width result with kerning adjustment
  */
 export function calculateCharWidth(
-  char: string,
-  prevChar: string | undefined,
-  fontSize: Points,
-  fontFamily: string,
-  fontWeight: number = 400,
+  ...args: [
+    char: string,
+    prevChar: string | undefined,
+    fontSize: Points,
+    fontFamily: string,
+    fontWeight?: number,
+  ]
 ): CharWidthResult {
+  const [char, prevChar, fontSize, fontFamily, fontWeight = 400] = args;
   const result = glyphCalculateCharWidth(char, prevChar, fontSize as number, fontFamily, fontWeight);
   return {
     width: px(result.width),
@@ -87,13 +90,16 @@ export function calculateCharWidth(
  * @returns Width in pixels
  */
 export function measureTextWidth(
-  text: string,
-  fontSize: Points,
-  letterSpacing: Pixels,
-  fontFamily: string,
-  fontWeight: number = 400,
-  fontStyle: "normal" | "italic" = "normal",
+  ...args: [
+    text: string,
+    fontSize: Points,
+    letterSpacing: Pixels,
+    fontFamily: string,
+    fontWeight?: number,
+    fontStyle?: "normal" | "italic",
+  ]
 ): Pixels {
+  const [text, fontSize, letterSpacing, fontFamily, fontWeight = 400, fontStyle = "normal"] = args;
   const width = glyphMeasureTextWidth(
     text,
     fontSize as number,
@@ -109,12 +115,9 @@ export function measureTextWidth(
  * @deprecated Use measureTextWidth instead
  */
 export function estimateTextWidth(
-  text: string,
-  fontSize: Points,
-  letterSpacing: Pixels,
-  fontFamily: string,
-  fontWeight: number = 400,
+  ...args: [text: string, fontSize: Points, letterSpacing: Pixels, fontFamily: string, fontWeight?: number]
 ): Pixels {
+  const [text, fontSize, letterSpacing, fontFamily, fontWeight = 400] = args;
   return measureTextWidth(text, fontSize, letterSpacing, fontFamily, fontWeight);
 }
 
@@ -260,12 +263,9 @@ function measureTextWidthAsNumber(text: string, span: LayoutSpan): number {
 }
 
 function findCharIndexAtOffset(
-  chars: readonly string[],
-  span: LayoutSpan,
-  targetX: number,
-  low: number,
-  high: number,
+  ...args: [chars: readonly string[], span: LayoutSpan, targetX: number, low: number, high: number]
 ): number {
+  const [chars, span, targetX, low, high] = args;
   if (low >= high) {
     return low;
   }
@@ -319,12 +319,9 @@ export type DetailedMeasurement = {
  * @returns Detailed measurement with per-character data
  */
 export function measureTextDetailed(
-  text: string,
-  fontSize: Points,
-  letterSpacing: Pixels,
-  fontFamily: string,
-  fontWeight: number = 400,
+  ...args: [text: string, fontSize: Points, letterSpacing: Pixels, fontFamily: string, fontWeight?: number]
 ): DetailedMeasurement {
+  const [text, fontSize, letterSpacing, fontFamily, fontWeight = 400] = args;
   const result = glyphMeasureTextDetailed(
     text,
     fontSize as number,

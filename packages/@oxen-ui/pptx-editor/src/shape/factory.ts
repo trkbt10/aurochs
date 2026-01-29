@@ -171,6 +171,18 @@ export function createCustomGeometryShape(
   const pathFill = geometry.paths[0]?.fill;
   const isFillEnabled = pathFill !== "none";
 
+  function getCustomGeometryFill(isFillEnabled: boolean): SpShape["properties"]["fill"] {
+    if (!isFillEnabled) {
+      return { type: "noFill" };
+    }
+    return {
+      type: "solidFill",
+      color: {
+        spec: { type: "srgb", value: DEFAULT_FILL_COLOR },
+      },
+    };
+  }
+
   return {
     type: "sp",
     nonVisual: {
@@ -188,14 +200,7 @@ export function createCustomGeometryShape(
         flipV: false,
       },
       geometry,
-      fill: isFillEnabled
-        ? {
-            type: "solidFill",
-            color: {
-              spec: { type: "srgb", value: DEFAULT_FILL_COLOR },
-            },
-          }
-        : { type: "noFill" },
+      fill: getCustomGeometryFill(isFillEnabled),
       line: {
         width: px(2),
         cap: "round",
@@ -329,7 +334,10 @@ export function getDefaultBoundsForMode(mode: CreationMode, centerX: Pixels, cen
 /**
  * Create bounds from drag start/end coordinates
  */
-export function createBoundsFromDrag(startX: Pixels, startY: Pixels, endX: Pixels, endY: Pixels): ShapeBounds {
+export function createBoundsFromDrag(
+  ...args: readonly [startX: Pixels, startY: Pixels, endX: Pixels, endY: Pixels]
+): ShapeBounds {
+  const [startX, startY, endX, endY] = args;
   const x1 = startX as number;
   const y1 = startY as number;
   const x2 = endX as number;
@@ -366,7 +374,7 @@ export function createShapeFromMode(mode: CreationMode, bounds: ShapeBounds): Sh
     case "connector":
       return createConnector(id, bounds);
     case "table":
-      return createTableGraphicFrame(id, bounds, mode.rows, mode.cols);
+      return createTableGraphicFrame({ id, bounds, rows: mode.rows, cols: mode.cols });
     case "chart":
       return createChartGraphicFrame(id, bounds, mode.chartType);
     case "diagram":

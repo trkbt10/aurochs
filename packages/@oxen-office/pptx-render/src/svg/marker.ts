@@ -163,11 +163,14 @@ function generateOvalShape(
  * @see ECMA-376 Part 1, Section 20.1.10.55 (arrow)
  */
 function generateArrowShape(
-  width: number,
-  height: number,
-  color: string,
-  strokeWidth: number,
+  ...args: [
+    width: number,
+    height: number,
+    color: string,
+    strokeWidth: number,
+  ]
 ): HtmlString {
+  const [width, height, color, strokeWidth] = args;
   // Open arrow: V-shape, stroke only
   const points = `0,0 ${width},${height / 2} 0,${height}`;
   return polyline({
@@ -197,12 +200,15 @@ export type MarkerResult = {
  * Generate shape element for a specific line end type.
  */
 function generateShapeForType(
-  type: LineEnd["type"],
-  markerWidth: number,
-  markerHeight: number,
-  colorHex: string,
-  strokeWidth: number,
+  ...args: [
+    type: LineEnd["type"],
+    markerWidth: number,
+    markerHeight: number,
+    colorHex: string,
+    strokeWidth: number,
+  ]
 ): HtmlString {
+  const [type, markerWidth, markerHeight, colorHex, strokeWidth] = args;
   switch (type) {
     case "triangle":
       return generateTriangleShape(markerWidth, markerHeight, colorHex);
@@ -234,11 +240,14 @@ function generateShapeForType(
  * @see ECMA-376 Part 1, Section 20.1.8.57 (tailEnd)
  */
 export function generateMarkerDef(
-  lineEnd: LineEnd,
-  strokeWidth: number,
-  colorHex: string,
-  position: "head" | "tail",
+  ...args: [
+    lineEnd: LineEnd,
+    strokeWidth: number,
+    colorHex: string,
+    position: "head" | "tail",
+  ]
 ): MarkerResult {
+  const [lineEnd, strokeWidth, colorHex, position] = args;
   const id = generateMarkerId(lineEnd, colorHex, position);
 
   // Calculate marker dimensions based on line width
@@ -332,11 +341,14 @@ function generateTailMarkerResult(
  * @returns Collection of marker definitions and attributes
  */
 export function generateLineMarkers(
-  headEnd: LineEnd | undefined,
-  tailEnd: LineEnd | undefined,
-  strokeWidth: number,
-  colorHex: string,
+  ...args: [
+    headEnd: LineEnd | undefined,
+    tailEnd: LineEnd | undefined,
+    strokeWidth: number,
+    colorHex: string,
+  ]
 ): MarkerCollection {
+  const [headEnd, tailEnd, strokeWidth, colorHex] = args;
   const headResult = generateHeadMarkerResult(headEnd, strokeWidth, colorHex);
   const tailResult = generateTailMarkerResult(tailEnd, strokeWidth, colorHex);
 

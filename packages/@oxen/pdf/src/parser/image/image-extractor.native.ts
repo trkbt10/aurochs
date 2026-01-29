@@ -8,7 +8,7 @@ import { decodePdfStream } from "../../native/stream/stream";
 import type { PdfColorSpace, PdfGraphicsState, PdfImage } from "../../domain";
 import { clamp01, getColorSpaceComponents } from "../../domain";
 import { cmykToRgb, grayToRgb, rgbToRgbBytes } from "../../domain/color";
-import type { ParsedImage } from "../core/operator-parser";
+import type { ParsedImage } from "../operator";
 import { decodeCcittFax, type CcittFaxDecodeParms } from "./ccitt-fax-decode";
 import { decodeJpegToRgb } from "./jpeg-decode";
 import {
@@ -33,11 +33,14 @@ export type ImageExtractorOptions = {
 
 
 export function decodeImageXObjectStreamNative(
-  pdfPage: NativePdfPage,
-  imageStream: PdfStream,
-  graphicsState: PdfGraphicsState,
-  options: Readonly<Pick<ImageExtractorOptions, "maxDimension" | "jpxDecode">> = {},
+  ...args: [
+    pdfPage: NativePdfPage,
+    imageStream: PdfStream,
+    graphicsState: PdfGraphicsState,
+    options?: Readonly<Pick<ImageExtractorOptions, "maxDimension" | "jpxDecode">>,
+  ]
 ): PdfImage | null {
+  const [pdfPage, imageStream, graphicsState, options = {}] = args;
   const maxDimension = options.maxDimension ?? 4096;
 
   const dict = imageStream.dict;
@@ -473,11 +476,9 @@ export function decodeImageXObjectStreamNative(
 }
 
 function decodeMaskSamplesToAlpha8(
-  data: Uint8Array,
-  width: number,
-  height: number,
-  bitsPerComponent: number,
+  ...args: [data: Uint8Array, width: number, height: number, bitsPerComponent: number]
 ): Uint8Array {
+  const [data, width, height, bitsPerComponent] = args;
   const pixelCount = width * height;
 
   switch (bitsPerComponent) {
@@ -601,11 +602,9 @@ function shouldInvertSoftMaskDecode(page: NativePdfPage, dict: PdfDict): boolean
 }
 
 function decodeCcittFaxStreamToPacked1bpp(
-  page: NativePdfPage,
-  stream: PdfStream,
-  width: number,
-  height: number,
+  ...args: [page: NativePdfPage, stream: PdfStream, width: number, height: number]
 ): Uint8Array {
+  const [page, stream, width, height] = args;
   const dict = stream.dict;
   const filters = getFilterNames(page, dict);
   if (!filters.includes("CCITTFaxDecode")) {
@@ -642,12 +641,15 @@ function extractNumberArray(page: NativePdfPage, arr: PdfArray): readonly number
 }
 
 function getSoftMaskInfo(
-  page: NativePdfPage,
-  imageDict: PdfDict,
-  width: number,
-  height: number,
-  options: Readonly<{ readonly jpxDecode?: JpxDecodeFn }>,
+  ...args: [
+    page: NativePdfPage,
+    imageDict: PdfDict,
+    width: number,
+    height: number,
+    options: Readonly<{ readonly jpxDecode?: JpxDecodeFn }>,
+  ]
 ): SoftMaskInfo | null {
+  const [page, imageDict, width, height, options] = args;
   try {
     const smaskObj = resolve(page, dictGet(imageDict, "SMask"));
     const smaskStream = asStream(smaskObj);
@@ -858,7 +860,10 @@ function getOptionalDecodePair(decode: readonly number[] | undefined): readonly 
   return [d0, d1];
 }
 
-function decodeExplicitMaskAlpha8(page: NativePdfPage, maskStream: PdfStream, width: number, height: number): Uint8Array {
+function decodeExplicitMaskAlpha8(
+  ...args: [page: NativePdfPage, maskStream: PdfStream, width: number, height: number]
+): Uint8Array {
+  const [page, maskStream, width, height] = args;
   const dict = maskStream.dict;
   const subtype = asName(dictGet(dict, "Subtype"))?.value ?? "";
   if (subtype.length > 0 && subtype !== "Image") {
@@ -900,12 +905,9 @@ function decodeExplicitMaskAlpha8(page: NativePdfPage, maskStream: PdfStream, wi
 }
 
 function decodeExplicitMaskStreamToPacked1bpp(
-  page: NativePdfPage,
-  maskStream: PdfStream,
-  filters: readonly string[],
-  width: number,
-  height: number,
+  ...args: [page: NativePdfPage, maskStream: PdfStream, filters: readonly string[], width: number, height: number]
 ): Uint8Array {
+  const [page, maskStream, filters, width, height] = args;
   if (filters.includes("CCITTFaxDecode")) {
     return decodeCcittFaxStreamToPacked1bpp(page, maskStream, width, height);
   }
@@ -1087,12 +1089,9 @@ function iccBasedToRgbBytes(args: {
 }
 
 function getCcittDecodeParms(
-  page: NativePdfPage,
-  dict: PdfDict,
-  filters: readonly string[],
-  width: number,
-  height: number,
+  ...args: [page: NativePdfPage, dict: PdfDict, filters: readonly string[], width: number, height: number]
 ): CcittFaxDecodeParms {
+  const [page, dict, filters, width, height] = args;
   const index = filters.findIndex((f) => f === "CCITTFaxDecode");
   if (index < 0) {throw new Error("getCcittDecodeParms: missing /CCITTFaxDecode filter");}
 
@@ -1610,7 +1609,10 @@ function getDecodeArray(page: NativePdfPage, dict: PdfDict): readonly number[] |
   return nums;
 }
 
-function unpackIndexedSamples(data: Uint8Array, width: number, height: number, bitsPerComponent: number): Uint8Array {
+function unpackIndexedSamples(
+  ...args: [data: Uint8Array, width: number, height: number, bitsPerComponent: number]
+): Uint8Array {
+  const [data, width, height, bitsPerComponent] = args;
   const pixelCount = width * height;
   if (bitsPerComponent === 8) {
     if (data.length !== pixelCount) {
@@ -1742,12 +1744,9 @@ function expandImageMaskToRgbAlpha(args: {
 }
 
 function reversePngPredictor(
-  data: Uint8Array,
-  width: number,
-  height: number,
-  components: number,
-  decodeParms: DecodeParms | null,
+  ...args: [data: Uint8Array, width: number, height: number, components: number, decodeParms: DecodeParms | null]
 ): Uint8Array {
+  const [data, width, height, components, decodeParms] = args;
   if (!decodeParms) {return data;}
 
   const bytesPerPixel = components;
@@ -1830,11 +1829,9 @@ function paethPredictor(a: number, b: number, c: number): number {
 
 /** Extract images referenced by parsed XObject `/Do` calls (native parser). */
 export async function extractImagesNative(
-  pdfPage: NativePdfPage,
-  parsedImages: readonly ParsedImage[],
-  options: ImageExtractorOptions,
-  xObjectsOverride?: PdfDict,
+  ...args: [pdfPage: NativePdfPage, parsedImages: readonly ParsedImage[], options: ImageExtractorOptions, xObjectsOverride?: PdfDict]
 ): Promise<PdfImage[]> {
+  const [pdfPage, parsedImages, options, xObjectsOverride] = args;
   const { extractImages = true, maxDimension = 4096 } = options;
   if (!extractImages) {return [];}
 

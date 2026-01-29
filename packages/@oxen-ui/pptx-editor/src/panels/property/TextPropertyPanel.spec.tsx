@@ -6,7 +6,6 @@
 
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { TextPropertyPanel } from "./TextPropertyPanel";
 import { TextEditContextProvider } from "../../context/slide/TextEditContext";
@@ -17,6 +16,21 @@ import type { TextEditState } from "../../slide/text-edit";
 // =============================================================================
 // Test Helpers
 // =============================================================================
+
+type CallTracker = {
+  readonly calls: readonly unknown[][];
+  readonly fn: (...args: readonly unknown[]) => void;
+};
+
+function createCallTracker(): CallTracker {
+  const calls: unknown[][] = [];
+  return {
+    calls,
+    fn: (...args) => {
+      calls.push([...args]);
+    },
+  };
+}
 
 function createTestTextBody(): TextBody {
   return {
@@ -60,17 +74,22 @@ function createActiveTextEditState(): TextEditState {
 function createTestContextValue(
   overrides: Partial<TextEditContextValue> = {}
 ): TextEditContextValue {
+  const applyRunProperties = createCallTracker();
+  const applyParagraphProperties = createCallTracker();
+  const toggleRunProperty = createCallTracker();
+  const setStickyFormatting = createCallTracker();
+  const clearStickyFormatting = createCallTracker();
   const defaultValue: TextEditContextValue = {
     textEditState: createActiveTextEditState(),
     currentTextBody: createTestTextBody(),
     selectionContext: { type: "shape" },
     cursorState: undefined,
-    applyRunProperties: vi.fn(),
-    applyParagraphProperties: vi.fn(),
-    toggleRunProperty: vi.fn(),
+    applyRunProperties: applyRunProperties.fn,
+    applyParagraphProperties: applyParagraphProperties.fn,
+    toggleRunProperty: toggleRunProperty.fn,
     stickyFormatting: undefined,
-    setStickyFormatting: vi.fn(),
-    clearStickyFormatting: vi.fn(),
+    setStickyFormatting: setStickyFormatting.fn,
+    clearStickyFormatting: clearStickyFormatting.fn,
   };
 
   return { ...defaultValue, ...overrides };
@@ -215,10 +234,10 @@ describe("TextPropertyPanel", () => {
 
   describe("property application", () => {
     it("calls applyRunProperties when character property is changed", () => {
-      const applyRunProperties = vi.fn();
+      const applyRunProperties = createCallTracker();
       const contextValue = createTestContextValue({
         selectionContext: { type: "shape" },
-        applyRunProperties,
+        applyRunProperties: applyRunProperties.fn,
       });
 
       renderWithContext(contextValue);
@@ -232,14 +251,14 @@ describe("TextPropertyPanel", () => {
       fireEvent.click(boldButton);
 
       // applyRunProperties should have been called
-      expect(applyRunProperties).toHaveBeenCalled();
+      expect(applyRunProperties.calls.length).toBeGreaterThan(0);
     });
 
     it("calls applyParagraphProperties when paragraph property is changed", () => {
-      const applyParagraphProperties = vi.fn();
+      const applyParagraphProperties = createCallTracker();
       const contextValue = createTestContextValue({
         selectionContext: { type: "shape" },
-        applyParagraphProperties,
+        applyParagraphProperties: applyParagraphProperties.fn,
       });
 
       const { container } = renderWithContext(contextValue);
@@ -265,7 +284,7 @@ describe("TextPropertyPanel", () => {
 
       if (alignmentSelect) {
         fireEvent.change(alignmentSelect, { target: { value: "center" } });
-        expect(applyParagraphProperties).toHaveBeenCalled();
+        expect(applyParagraphProperties.calls.length).toBeGreaterThan(0);
       } else {
         // Fail if no alignment select found
         expect(alignmentSelect).toBeTruthy();
@@ -379,12 +398,12 @@ describe("TextPropertyPanel with multi-run text body", () => {
       currentTextBody: mixedTextBody,
       selectionContext: { type: "shape" },
       cursorState: undefined,
-      applyRunProperties: vi.fn(),
-      applyParagraphProperties: vi.fn(),
-      toggleRunProperty: vi.fn(),
+      applyRunProperties: createCallTracker().fn,
+      applyParagraphProperties: createCallTracker().fn,
+      toggleRunProperty: createCallTracker().fn,
       stickyFormatting: undefined,
-      setStickyFormatting: vi.fn(),
-      clearStickyFormatting: vi.fn(),
+      setStickyFormatting: createCallTracker().fn,
+      clearStickyFormatting: createCallTracker().fn,
     };
 
     render(
@@ -438,12 +457,12 @@ describe("TextPropertyPanel with multi-run text body", () => {
       currentTextBody: mixedTextBody,
       selectionContext: { type: "shape" },
       cursorState: undefined,
-      applyRunProperties: vi.fn(),
-      applyParagraphProperties: vi.fn(),
-      toggleRunProperty: vi.fn(),
+      applyRunProperties: createCallTracker().fn,
+      applyParagraphProperties: createCallTracker().fn,
+      toggleRunProperty: createCallTracker().fn,
       stickyFormatting: undefined,
-      setStickyFormatting: vi.fn(),
-      clearStickyFormatting: vi.fn(),
+      setStickyFormatting: createCallTracker().fn,
+      clearStickyFormatting: createCallTracker().fn,
     };
 
     const { container } = render(
@@ -491,12 +510,12 @@ describe("TextPropertyPanel with multi-paragraph text body", () => {
       currentTextBody: multiParaTextBody,
       selectionContext: { type: "shape" },
       cursorState: undefined,
-      applyRunProperties: vi.fn(),
-      applyParagraphProperties: vi.fn(),
-      toggleRunProperty: vi.fn(),
+      applyRunProperties: createCallTracker().fn,
+      applyParagraphProperties: createCallTracker().fn,
+      toggleRunProperty: createCallTracker().fn,
       stickyFormatting: undefined,
-      setStickyFormatting: vi.fn(),
-      clearStickyFormatting: vi.fn(),
+      setStickyFormatting: createCallTracker().fn,
+      clearStickyFormatting: createCallTracker().fn,
     };
 
     const { container } = render(

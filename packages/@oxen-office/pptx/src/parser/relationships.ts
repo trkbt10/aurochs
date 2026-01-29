@@ -19,7 +19,7 @@ import {
   getRelationshipPath as getRelationshipPathShared,
   parseRelationshipsFromText as parseRelationshipsFromTextShared,
   resolvePartPath as resolvePartPathShared,
-} from "@oxen-office/ooxml/parser/relationships";
+} from "@oxen-office/ooxml/parser";
 
 /**
  * Resolve a relative URI reference against a base path.

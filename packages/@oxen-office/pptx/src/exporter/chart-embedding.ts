@@ -21,8 +21,8 @@
  * @see src/xlsx/exporter.ts - XLSX serialization
  */
 
-import type { ChartDataUpdate } from "../patcher/chart/chart-workbook-syncer";
-import { resolveEmbeddedXlsxPath, syncChartToWorkbook } from "../patcher/chart/chart-workbook-syncer";
+import type { ChartDataUpdate } from "@oxen-office/chart/patcher";
+import { resolveEmbeddedXlsxPath, syncChartToWorkbook } from "@oxen-office/chart/patcher";
 import { parseXlsxWorkbook } from "@oxen-office/xlsx/parser";
 import { exportXlsx } from "@oxen-office/xlsx/exporter";
 import { resolveRelationshipTargetPath } from "@oxen-office/ooxml/opc";
@@ -85,11 +85,15 @@ export function getChartRelsPath(chartPath: string): string {
  * );
  * ```
  */
+export type UpdateEmbeddedXlsxOptions = {
+  readonly getFileContent: GetFileContent;
+  readonly setFileContent: SetFileContent;
+  readonly chartPath: string;
+  readonly chartData: ChartDataUpdate;
+};
+
 export async function updateEmbeddedXlsx(
-  getFileContent: GetFileContent,
-  setFileContent: SetFileContent,
-  chartPath: string,
-  chartData: ChartDataUpdate,
+  { getFileContent, setFileContent, chartPath, chartData }: UpdateEmbeddedXlsxOptions,
 ): Promise<void> {
   // 1. Get the chart rels file
   const relsPath = getChartRelsPath(chartPath);
@@ -100,9 +104,7 @@ export async function updateEmbeddedXlsx(
     return;
   }
 
-  const relsXml = typeof relsContent === "string"
-    ? relsContent
-    : new TextDecoder().decode(relsContent);
+  const relsXml = typeof relsContent === "string" ? relsContent : new TextDecoder().decode(relsContent);
 
   // 2. Resolve the embedded XLSX path
   const relativeXlsxPath = resolveEmbeddedXlsxPath(relsXml);
@@ -120,9 +122,7 @@ export async function updateEmbeddedXlsx(
     return;
   }
 
-  const xlsxBuffer = xlsxContent instanceof Uint8Array
-    ? xlsxContent
-    : new TextEncoder().encode(xlsxContent);
+  const xlsxBuffer = xlsxContent instanceof Uint8Array ? xlsxContent : new TextEncoder().encode(xlsxContent);
 
  try {
     // 4. Parse the XLSX using ZipPackage
@@ -185,7 +185,7 @@ export async function syncAllChartEmbeddings(
 
   for (const [chartPath, chartData] of chartUpdates) {
     updatePromises.push(
-      updateEmbeddedXlsx(getFileContent, setFileContent, chartPath, chartData),
+      updateEmbeddedXlsx({ getFileContent, setFileContent, chartPath, chartData }),
     );
   }
 
@@ -226,4 +226,4 @@ export function listEmbeddedXlsx(
 // Re-exports for convenience
 // =============================================================================
 
-export type { ChartDataUpdate } from "../patcher/chart/chart-workbook-syncer";
+export type ChartDataUpdate = import("@oxen-office/chart/patcher").ChartDataUpdate;

@@ -349,11 +349,14 @@ function getLevelFormats(
 }
 
 function resolveBulletChar(
-  level: DocxLevel,
-  counters: readonly number[],
-  formats: readonly NumberFormat[],
-  ilvl: number,
+  ...args: readonly [
+    level: DocxLevel,
+    counters: readonly number[],
+    formats: readonly NumberFormat[],
+    ilvl: number,
+  ]
 ): string {
+  const [level, counters, formats, ilvl] = args;
   const numFmt = level.numFmt ?? "decimal";
   if (numFmt === "bullet") {
     return level.lvlText?.val ?? "•";

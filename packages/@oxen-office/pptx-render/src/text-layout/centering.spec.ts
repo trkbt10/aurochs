@@ -226,9 +226,7 @@ describe("text-centering-and-color", () => {
     console.log(`\nLayout alignment attributes: ${JSON.stringify(layoutAlgnMatches)}`);
 
     // Find master via layout relationships
-    const layoutRelsPath = layoutPath
-      ? layoutPath.replace(".xml", ".xml.rels").replace("slideLayouts/", "slideLayouts/_rels/")
-      : undefined;
+    const layoutRelsPath = toLayoutRelsPath(layoutPath);
     const layoutRels = layoutRelsPath ? zipPackage.readText(layoutRelsPath) : undefined;
     const masterMatch = layoutRels?.match(/Target="([^"]+slideMaster[^"]+)"/);
     console.log(`Master: ${masterMatch?.[1]}`);
@@ -333,3 +331,12 @@ describe("text-centering-and-color", () => {
     }
   });
 });
+
+function toLayoutRelsPath(layoutPath: string | undefined): string | undefined {
+  if (!layoutPath) {
+    return undefined;
+  }
+  return layoutPath
+    .replace(".xml", ".xml.rels")
+    .replace("slideLayouts/", "slideLayouts/_rels/");
+}

@@ -56,15 +56,42 @@ function uniqueFamilies(families: readonly string[]): readonly string[] {
   return result;
 }
 
+function getCatalogTagFilter(catalogHasCategories: boolean) {
+  if (!catalogHasCategories) {
+    return undefined;
+  }
+  return {
+    tags: [
+      { id: "sans-serif", label: "Sans" },
+      { id: "serif", label: "Serif" },
+      { id: "display", label: "Display" },
+      { id: "handwriting", label: "Handwriting" },
+      { id: "monospace", label: "Mono" },
+    ],
+    allLabel: "All",
+  };
+}
+
 function buildFontFamilyOptions(
-  loadedFamilies: readonly string[],
-  catalogRecords: readonly FontCatalogFamilyRecord[],
-  currentValue: string,
-  catalogLabel: string,
-  showCatalogHint: boolean,
-  catalogStatus: "idle" | "loading" | "loaded" | "error",
-  catalogErrorMessage: string | null
+  ...args: readonly [
+    loadedFamilies: readonly string[],
+    catalogRecords: readonly FontCatalogFamilyRecord[],
+    currentValue: string,
+    catalogLabel: string,
+    showCatalogHint: boolean,
+    catalogStatus: "idle" | "loading" | "loaded" | "error",
+    catalogErrorMessage: string | null,
+  ]
 ): SearchableSelectOption<FontFamilySelectValue>[] {
+  const [
+    loadedFamilies,
+    catalogRecords,
+    currentValue,
+    catalogLabel,
+    showCatalogHint,
+    catalogStatus,
+    catalogErrorMessage,
+  ] = args;
   const categoryLabels: Record<string, string> = {
     "sans-serif": "Sans Serif",
     serif: "Serif",
@@ -356,20 +383,7 @@ export function FontFamilySelect({
       style={style}
       dropdownWidth={360}
       virtualization={{ itemHeight: 44, headerHeight: 22, overscan: 10 }}
-      tagFilter={
-        catalogHasCategories
-          ? {
-              tags: [
-                { id: "sans-serif", label: "Sans" },
-                { id: "serif", label: "Serif" },
-                { id: "display", label: "Display" },
-                { id: "handwriting", label: "Handwriting" },
-                { id: "monospace", label: "Mono" },
-              ],
-              allLabel: "All",
-            }
-          : undefined
-      }
+      tagFilter={getCatalogTagFilter(catalogHasCategories)}
       renderItem={renderFontItem(sampleText)}
       renderValue={renderFontValue}
     />

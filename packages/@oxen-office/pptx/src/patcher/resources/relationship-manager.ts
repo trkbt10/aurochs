@@ -1,4 +1,4 @@
-import { createElement, isXmlElement, type XmlDocument, type XmlElement } from "@oxen/xml";
+import { createElement, isXmlElement, type XmlDocument } from "@oxen/xml";
 import { getDocumentRoot, updateDocumentRoot } from "../core/xml-mutator";
 import { createRelationshipsDocument, RELATIONSHIPS_XMLNS, type RelationshipTargetMode } from "../parts/relationships";
 

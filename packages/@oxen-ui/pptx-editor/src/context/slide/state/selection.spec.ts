@@ -2,7 +2,6 @@
  * @file Selection tests
  */
 
-import { describe, it, expect } from "vitest";
 import {
   createEmptySelection,
   createSingleSelection,

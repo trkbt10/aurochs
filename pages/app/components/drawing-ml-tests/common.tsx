@@ -3,7 +3,8 @@
  */
 
 import type { ReactNode } from "react";
-import type { Fill, Line, GradientFill, SchemeColorValue } from "@oxen-office/pptx/domain";
+import type { Fill, Line, SchemeColorValue } from "@oxen-office/pptx/domain";
+import type { GradientFill } from "@oxen-office/ooxml/domain/fill";
 import type { Effects } from "@oxen-office/pptx/domain/effects";
 import type { Pixels } from "@oxen-office/ooxml/domain/units";
 import { px, deg, pct } from "@oxen-office/ooxml/domain/units";

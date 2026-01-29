@@ -3,7 +3,12 @@
  */
 
 import { useCallback, useRef, useState, useEffect } from "react";
-import { importPdfFromFile, PdfImportError } from "@oxen-office/pdf-to-pptx/importer/pdf-importer";
+import {
+  importPdfFromFile as importPdfFromFileDefault,
+  PdfImportError,
+  type PdfImportOptions,
+  type PdfImportResult,
+} from "@oxen-office/pdf-to-pptx/importer/pdf-importer";
 import type { PresentationDocument } from "@oxen-office/pptx/app";
 import {
   UploadIcon,
@@ -26,6 +31,7 @@ type Props = {
   readonly onFileSelect: (result: FileSelectResult) => void;
   readonly onDemoLoad: () => void;
   readonly isLoading?: boolean;
+  readonly importPdfFromFileFn?: (file: File, options?: PdfImportOptions) => Promise<PdfImportResult>;
   readonly onEditorTest?: () => void;
   readonly onTextEditorTest?: () => void;
   readonly onDrawingMLTest?: () => void;
@@ -101,6 +107,7 @@ export function FileUploadPage({
   onFileSelect,
   onDemoLoad,
   isLoading,
+  importPdfFromFileFn,
   onEditorTest,
   onTextEditorTest,
   onDrawingMLTest,
@@ -116,6 +123,8 @@ export function FileUploadPage({
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  const importPdfFromFile = importPdfFromFileFn ?? importPdfFromFileDefault;
 
   const validateFile = useCallback((file: File): boolean => {
     return detectFileType(file) !== null;
@@ -139,7 +148,7 @@ export function FileUploadPage({
         setImportState({ status: "error", error: getErrorMessage(error) });
       }
     },
-    [onFileSelect]
+    [importPdfFromFile, onFileSelect]
   );
 
   const handleFileSelect = useCallback(

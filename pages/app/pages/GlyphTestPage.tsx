@@ -5,9 +5,9 @@
  * Tests hole detection for characters like 門, O, A, B, D.
  */
 
-import { useState, useMemo, useCallback } from "react";
-import { extractGlyphContour } from "@oxen-office/pptx-render/glyph";
-import type { GlyphContour, GlyphStyleKey } from "@oxen-office/pptx-render/glyph";
+import { useState, useMemo, useCallback, type ReactElement } from "react";
+import { extractGlyphContour } from "@oxen/glyph";
+import type { GlyphContour, GlyphStyleKey } from "@oxen/glyph";
 import "./GlyphTestPage.css";
 
 // =============================================================================
@@ -320,22 +320,29 @@ export function GlyphTestPage({ onBack }: GlyphTestPageProps) {
 
       {/* Glyph Grid */}
       <div className="glyph-grid">
-        {glyphs.map(({ char, glyph, error }) => (
-          <div
-            key={char}
-            className={`glyph-card ${error ? "error" : ""} ${selectedChar === char ? "selected" : ""}`}
-            onClick={() => handleCharClick(char)}
-          >
-            {glyph ? (
-              <GlyphDisplay glyph={glyph} scale={2} />
-            ) : (
+        {glyphs.map(({ char, glyph, error }) => {
+          let cardContent: ReactElement;
+          if (glyph) {
+            cardContent = <GlyphDisplay glyph={glyph} scale={2} />;
+          } else {
+            cardContent = (
               <div className="glyph-error">
                 <div className="error-char">{char}</div>
                 <div className="error-msg">{error}</div>
               </div>
-            )}
-          </div>
-        ))}
+            );
+          }
+
+          return (
+            <div
+              key={char}
+              className={`glyph-card ${error ? "error" : ""} ${selectedChar === char ? "selected" : ""}`}
+              onClick={() => handleCharClick(char)}
+            >
+              {cardContent}
+            </div>
+          );
+        })}
       </div>
 
       {/* Selected Glyph Details */}

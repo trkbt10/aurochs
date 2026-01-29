@@ -30,7 +30,7 @@ import {
   isRoundedRectangle,
   isSimpleRectangle,
 } from "./path-to-geometry";
-import type { ParsedPath } from "@oxen/pdf/parser/core/operator-parser";
+import type { ParsedPath } from "@oxen/pdf/parser/operator";
 import {
   buildPath,
   buildPaths,
@@ -559,16 +559,13 @@ describe("isRoundedRectangle", () => {
    * Create a rounded rectangle path.
    * Structure: moveTo, then alternating lineTo/curveTo for edges and corners.
    */
-  function createRoundedRectPath(
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    radius: number
-  ): PdfPath {
-    const r = radius;
-    // Start at top-left, after the corner curve ends
-    const ops = [
+	  function createRoundedRectPath(
+	    ...args: readonly [x: number, y: number, width: number, height: number, radius: number]
+	  ): PdfPath {
+	    const [x, y, width, height, radius] = args;
+	    const r = radius;
+	    // Start at top-left, after the corner curve ends
+	    const ops = [
       // Start on top edge after top-left corner
       { type: "moveTo" as const, point: { x: x + r, y: y + height } },
       // Top edge

@@ -8,6 +8,7 @@ import {
   parseDiagramStyleDefinitionHeaderList,
 } from "./style-parser";
 import { parseXml } from "@oxen/xml";
+import { isShapeStyle } from "../../domain/diagram/format-guards";
 
 const XMLNS = {
   dgm: "http://schemas.openxmlformats.org/drawingml/2006/diagram",
@@ -47,7 +48,14 @@ describe("parseDiagramStyleDefinition", () => {
     expect(style?.uniqueId).toBe("style-1");
     expect(style?.categories?.[0].type).toBe("simple");
     expect(style?.styleLabels?.[0].name).toBe("node0");
-    expect(style?.styleLabels?.[0].style?.lineReference?.index).toBe(2);
+    const label = style?.styleLabels?.[0];
+    if (!label) {
+      throw new Error("Expected style label to be defined");
+    }
+    if (!isShapeStyle(label.style)) {
+      throw new Error("Expected label.style to be a ShapeStyle");
+    }
+    expect(label.style.lineReference?.index).toBe(2);
   });
 });
 

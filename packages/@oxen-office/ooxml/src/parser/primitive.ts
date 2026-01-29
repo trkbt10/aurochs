@@ -117,6 +117,18 @@ export function parseEmu(value: string | undefined): Pixels | undefined {
   return px(num * EMU_TO_PX);
 }
 
+/**
+ * Parse line width (0 to 20116800 EMU) to pixels.
+ *
+ * @see ECMA-376 Part 1, Section 20.1.10.35 (ST_LineWidth)
+ */
+export function parseLineWidth(value: string | undefined): Pixels | undefined {
+  const num = parseInt32(value);
+  if (num === undefined) {return undefined;}
+  if (num < 0 || num > 20116800) {return undefined;}
+  return px(num * EMU_TO_PX);
+}
+
 // =============================================================================
 // Angle Parsing
 // =============================================================================
@@ -216,6 +228,11 @@ export function getAngleAttr(element: XmlElement, name: string): Degrees | undef
   return parseAngle(getAttr(element, name));
 }
 
+export function getBoolAttr(element: XmlElement | undefined, name: string): boolean | undefined {
+  if (!element) {return undefined;}
+  return parseBoolean(getAttr(element, name));
+}
+
 export function getBoolAttrOr(element: XmlElement, name: string, defaultValue: boolean): boolean {
   return parseBooleanOr(getAttr(element, name), defaultValue);
 }
@@ -253,4 +270,3 @@ export function pointsToPixels(points: number): Pixels {
   const PT_TO_PX = STANDARD_DPI / POINTS_PER_INCH;
   return px(points * PT_TO_PX);
 }
-

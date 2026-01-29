@@ -18,12 +18,15 @@ import type { PdfShading } from "../shading/shading.types";
 type Type3Info = NonNullable<FontInfo["type3"]>;
 
 function computeType3GlyphToUserMatrix(
-  textMatrix: PdfMatrix,
-  type3: Type3Info,
-  fontSize: number,
-  horizontalScaling: number,
-  textRise: number,
+  ...args: readonly [
+    textMatrix: PdfMatrix,
+    type3: Type3Info,
+    fontSize: number,
+    horizontalScaling: number,
+    textRise: number,
+  ]
 ): PdfMatrix {
+  const [textMatrix, type3, fontSize, horizontalScaling, textRise] = args;
   const Th = horizontalScaling / 100;
   const scale: PdfMatrix = [fontSize * Th, 0, 0, fontSize, 0, 0];
   const rise: PdfMatrix = [1, 0, 0, 1, 0, textRise];
@@ -36,13 +39,17 @@ function advanceTextMatrixX(textMatrix: PdfMatrix, dx: number): PdfMatrix {
 }
 
 function computeGlyphDx(
-  charCode: number,
-  fontInfo: FontInfo,
-  fontSize: number,
-  charSpacing: number,
-  wordSpacing: number,
-  horizontalScaling: number,
+  ...args: readonly [
+    charCode: number,
+    fontInfo: FontInfo,
+    fontSize: number,
+    charSpacing: number,
+    wordSpacing: number,
+    horizontalScaling: number,
+  ]
 ): number {
+  const [charCode, fontInfo, fontSize, charSpacing, wordSpacing, horizontalScaling] =
+    args;
   const Th = horizontalScaling / 100;
   const w0 = fontInfo.metrics.widths.get(charCode) ?? fontInfo.metrics.defaultWidth;
   const glyphWidth = (w0 * fontSize) / 1000;
@@ -62,20 +69,23 @@ function decodeCharProcBytes(bytes: Uint8Array): string {
  * and for mapping `/Do` names to the correct `/Resources` scope.
  */
 export function renderType3TextRun(
-  run: TextRun,
-  fontInfo: FontInfo,
-  type3: Type3Info,
-  fontMappings: FontMappings,
-  options: Readonly<{
-    readonly extGState: ReadonlyMap<string, ExtGStateParams>;
-    readonly shadings: ReadonlyMap<string, PdfShading>;
-    readonly patterns: ReadonlyMap<string, PdfPattern>;
-    readonly colorSpaces: ReadonlyMap<string, import("../color/color-space.native").ParsedNamedColorSpace>;
-    readonly shadingMaxSize: number;
-    readonly clipPathMaxSize: number;
-    readonly pageBBox: PdfBBox;
-  }>,
+  ...args: readonly [
+    run: TextRun,
+    fontInfo: FontInfo,
+    type3: Type3Info,
+    fontMappings: FontMappings,
+    options: Readonly<{
+      readonly extGState: ReadonlyMap<string, ExtGStateParams>;
+      readonly shadings: ReadonlyMap<string, PdfShading>;
+      readonly patterns: ReadonlyMap<string, PdfPattern>;
+      readonly colorSpaces: ReadonlyMap<string, import("../color/color-space.native").ParsedNamedColorSpace>;
+      readonly shadingMaxSize: number;
+      readonly clipPathMaxSize: number;
+      readonly pageBBox: PdfBBox;
+    }>,
+  ]
 ): readonly ParsedElement[] {
+  const [run, fontInfo, type3, fontMappings, options] = args;
   if (fontInfo.codeByteWidth !== 1) {return [];}
 
   const out: ParsedElement[] = [];

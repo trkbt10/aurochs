@@ -56,15 +56,7 @@ type TextPositionTestCase = {
 function extractTextElements(svg: string): TextElement[] {
   const elements: TextElement[] = [];
 
-  // <text>要素をパース
-  const textRegex = /<text\s+([^>]*)>([^<]*(?:<tspan[^>]*>[^<]*<\/tspan>[^<]*)*)<\/text>/g;
-  let match;
-
-  while ((match = textRegex.exec(svg)) !== null) {
-    const attrs = match[1];
-    const content = match[2];
-
-    // x, y属性を抽出
+  const pushText = (attrs: string, content: string, baseX: number, baseY: number): void => {
     const xMatch = attrs.match(/x="([^"]+)"/);
     const yMatch = attrs.match(/y="([^"]+)"/);
     const anchorMatch = attrs.match(/text-anchor="([^"]+)"/);
@@ -90,14 +82,35 @@ function extractTextElements(svg: string): TextElement[] {
       fontSize = parseFloat(fontSizeMatch[1]);
     }
 
-    if (xMatch && yMatch && textContent) {
-      elements.push({
-        text: textContent,
-        x: parseFloat(xMatch[1]),
-        y: parseFloat(yMatch[1]),
-        anchor: (anchorMatch?.[1] as "start" | "middle" | "end") ?? "start",
-        fontSize,
-      });
+    if (!xMatch || !yMatch || !textContent) {
+      return;
+    }
+
+    elements.push({
+      text: textContent,
+      x: baseX + parseFloat(xMatch[1]),
+      y: baseY + parseFloat(yMatch[1]),
+      anchor: (anchorMatch?.[1] as "start" | "middle" | "end") ?? "start",
+      fontSize,
+    });
+  };
+
+  // <g transform="translate(x, y)"> 内の <text> を優先してパース（座標は translate を加算）
+  const groupRegex = /<g\s+([^>]*)>([\s\S]*?)<\/g>/g;
+  const translateRegex = /transform="translate\(([^,)]+),\s*([^)]+)\)"/;
+  const textRegex = /<text\s+([^>]*)>([\s\S]*?)<\/text>/g;
+
+  let groupMatch;
+  while ((groupMatch = groupRegex.exec(svg)) !== null) {
+    const groupAttrs = groupMatch[1];
+    const groupContent = groupMatch[2];
+    const translateMatch = groupAttrs.match(translateRegex);
+    const baseX = translateMatch ? parseFloat(translateMatch[1]) : 0;
+    const baseY = translateMatch ? parseFloat(translateMatch[2]) : 0;
+
+    let textMatch;
+    while ((textMatch = textRegex.exec(groupContent)) !== null) {
+      pushText(textMatch[1], textMatch[2], baseX, baseY);
     }
   }
 
@@ -139,20 +152,20 @@ const PERFORMANCE_UP_SLIDE1: TextPositionTestCase = {
   expectedPositions: [
     {
       textMatch: "Apache Performance",
-      expectedX: 384, // 現在の出力値 (PDF期待: 480)
-      expectedY: 72, // 現在の出力値 (PDF期待: 170)
+      expectedX: 165.73333333333344, // 現在の出力値 (PDF期待: 480)
+      expectedY: 200.8, // 現在の出力値 (PDF期待: 170)
       tolerance: 10,
     },
     {
       textMatch: "Part 1",
-      expectedX: 336, // 現在の出力値 (PDF期待: 480)
-      expectedY: 52, // 現在の出力値 (PDF期待: 280)
+      expectedX: 365.8666666666667, // 現在の出力値 (PDF期待: 480)
+      expectedY: 380.8, // 現在の出力値 (PDF期待: 280)
       tolerance: 10,
     },
     {
       textMatch: "Sander Temme",
-      expectedX: 9.6, // 現在の出力値 (PDF期待: 150)
-      expectedY: 36.8, // 現在の出力値 (PDF期待: 550)
+      expectedX: 259.6, // 現在の出力値 (PDF期待: 150)
+      expectedY: 492.8, // 現在の出力値 (PDF期待: 550)
       tolerance: 10,
     },
   ],

@@ -4,7 +4,6 @@
  * Tests for list-level hover state management.
  */
 
-import { describe, it, expect } from "vitest";
 import type { SlideItemHoverState } from "./useSlideItemHover";
 
 // =============================================================================
@@ -28,9 +27,7 @@ function hoverReducer(
       return { hoveredSlideId: action.slideId };
     case "leave":
       // Only clear if leaving the currently hovered item
-      return state.hoveredSlideId === action.slideId
-        ? { hoveredSlideId: null }
-        : state;
+      return state.hoveredSlideId === action.slideId ? { hoveredSlideId: null } : state;
     case "clear":
       return { hoveredSlideId: null };
   }

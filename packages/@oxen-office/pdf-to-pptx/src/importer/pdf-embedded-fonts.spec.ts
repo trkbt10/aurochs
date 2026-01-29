@@ -5,7 +5,6 @@
  * in the import result for use in rendering.
  */
 import * as fs from "node:fs";
-import * as path from "node:path";
 import { importPdf } from "./pdf-importer";
 import { getPdfFixturePath } from "../test-utils/pdf-fixtures";
 

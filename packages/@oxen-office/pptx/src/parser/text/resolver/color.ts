@@ -107,10 +107,9 @@ function getColorFromMasterTextStyles(
  */
 export function resolveTextColor(
   directRPr: XmlElement | undefined,
-  localLstStyle: XmlElement | undefined,
-  lvl: number,
-  ctx: TextStyleContext | undefined,
+  ...rest: [localLstStyle: XmlElement | undefined, lvl: number, ctx: TextStyleContext | undefined]
 ): Color | undefined {
+  const [localLstStyle, lvl, ctx] = rest;
   // Use 1-based level for lstStyle lookup
   const lvlKey = lvl + 1;
 

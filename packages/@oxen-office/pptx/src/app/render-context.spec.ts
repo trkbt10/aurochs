@@ -174,7 +174,7 @@ describe("createRenderContext", () => {
     const zip = createMockZip();
     const slideSize = { width: px(960), height: px(540) };
 
-    const ctx = createRenderContext(apiSlide, zip, slideSize);
+    const ctx = createRenderContext({ apiSlide, zip, slideSize });
 
     expect(ctx.slideRenderContext).toBeDefined();
     expect(ctx.slideRenderContext.master).toBeDefined();
@@ -187,7 +187,7 @@ describe("createRenderContext", () => {
     const zip = createMockZip();
     const slideSize = { width: px(960), height: px(540) };
 
-    const ctx = createRenderContext(apiSlide, zip, slideSize);
+    const ctx = createRenderContext({ apiSlide, zip, slideSize });
     const colorScheme = ctx.slideRenderContext.presentation.theme.colorScheme;
 
     // Verify color scheme has expected colors
@@ -202,7 +202,7 @@ describe("createRenderContext", () => {
     const zip = createMockZip();
     const slideSize = { width: px(960), height: px(540) };
 
-    const ctx = createRenderContext(apiSlide, zip, slideSize);
+    const ctx = createRenderContext({ apiSlide, zip, slideSize });
     const colorMap = ctx.slideRenderContext.master.colorMap;
 
     // Verify color map mappings
@@ -218,7 +218,7 @@ describe("createRenderContext output", () => {
     const zip = createMockZip();
     const slideSize = { width: px(960), height: px(540) };
 
-    const ctx = createRenderContext(apiSlide, zip, slideSize);
+    const ctx = createRenderContext({ apiSlide, zip, slideSize });
 
     expect(ctx).toBeDefined();
     expect(ctx.colorContext).toBeDefined();
@@ -231,7 +231,7 @@ describe("createRenderContext output", () => {
     const zip = createMockZip();
     const slideSize = { width: px(960), height: px(540) };
 
-    const ctx = createRenderContext(apiSlide, zip, slideSize);
+    const ctx = createRenderContext({ apiSlide, zip, slideSize });
     const colorContext = ctx.colorContext;
 
     // Create Color objects with spec structure
@@ -258,7 +258,7 @@ describe("createRenderContext output", () => {
     const zip = createMockZip();
     const slideSize = { width: px(960), height: px(540) };
 
-    const ctx = createRenderContext(apiSlide, zip, slideSize);
+    const ctx = createRenderContext({ apiSlide, zip, slideSize });
     const { colorScheme } = ctx.colorContext;
 
     // Theme colors should be populated
@@ -273,7 +273,7 @@ describe("createRenderContext output", () => {
     const zip = createMockZip();
     const slideSize = { width: px(960), height: px(540) };
 
-    const ctx = createRenderContext(apiSlide, zip, slideSize);
+    const ctx = createRenderContext({ apiSlide, zip, slideSize });
     const { colorMap } = ctx.colorContext;
 
     // Color map should have proper mappings
@@ -287,7 +287,7 @@ describe("createRenderContext output", () => {
     const zip = createMockZip();
     const slideSize = { width: px(960), height: px(540) };
 
-    const ctx = createRenderContext(apiSlide, zip, slideSize);
+    const ctx = createRenderContext({ apiSlide, zip, slideSize });
 
     expect(ctx.fontScheme).toBeDefined();
     expect(ctx.fontScheme?.majorFont.latin).toBe("Calibri Light");
@@ -299,7 +299,7 @@ describe("createRenderContext output", () => {
     const zip = createMockZip();
     const slideSize = { width: px(960), height: px(540) };
 
-    const ctx = createRenderContext(apiSlide, zip, slideSize);
+    const ctx = createRenderContext({ apiSlide, zip, slideSize });
 
     expect(ctx.resources).toBeDefined();
     expect(typeof ctx.resources.resolve).toBe("function");

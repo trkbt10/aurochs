@@ -141,7 +141,8 @@ function createMsbBitReader(data: Uint8Array): MsbBitReader {
 // Huffman Tries (T.4 Modified Huffman)
 // =============================================================================
 
-function addToTrie<T>(root: TrieNode<T>, bits: number, code: number, value: T): TrieNode<T> {
+function addToTrie<T>(...args: readonly [root: TrieNode<T>, bits: number, code: number, value: T]): TrieNode<T> {
+  const [root, bits, code, value] = args;
   const state = { node: root };
   for (let i = bits - 1; i >= 0; i -= 1) {
     const bit = (code >> i) & 1;
@@ -497,12 +498,15 @@ function clearRangeInRow(row: Uint8Array, startX: number, endX: number): void {
 }
 
 function writeRunsToBitmapRow(
-  out: Uint8Array,
-  outOffset: number,
-  rowBytes: number,
-  width: number,
-  runs: readonly number[],
+  ...args: readonly [
+    out: Uint8Array,
+    outOffset: number,
+    rowBytes: number,
+    width: number,
+    runs: readonly number[],
+  ]
 ): void {
+  const [out, outOffset, rowBytes, width, runs] = args;
   // Start with all white (1 bits). Black runs (odd index) clear bits to 0.
   out.fill(0xff, outOffset, outOffset + rowBytes);
   for (let i = 0, x = 0; i < runs.length && x < width; i += 1) {

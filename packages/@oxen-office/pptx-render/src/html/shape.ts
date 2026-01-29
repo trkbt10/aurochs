@@ -16,7 +16,6 @@ import {
   getDashArrayPattern,
 } from "@oxen-office/pptx/domain/color/fill";
 import { extractTransformData, buildCssPositionStyles } from "../transform";
-import type { ResolvedImageFill } from "@oxen-office/pptx/domain/color/fill";
 import { renderTextBody } from "./text";
 import { renderChart } from "../chart/index";
 import { renderDiagram, renderDiagramPlaceholder } from "./diagram";
@@ -50,13 +49,16 @@ type SvgPaintStyle = {
   readonly fillOpacity?: number;
 };
 
-function buildShapeFill(
+type BuildShapeFillArgs = [
   fill: Fill | undefined,
   width: number,
   height: number,
   ctx: CoreRenderContext,
   defsCollector: ReturnType<typeof createDefsCollector>,
-): SvgPaintStyle {
+];
+
+function buildShapeFill(...args: BuildShapeFillArgs): SvgPaintStyle {
+  const [fill, width, height, ctx, defsCollector] = args;
   if (!fill || fill.type === "noFill") {
     return { fill: "none" };
   }
@@ -255,13 +257,16 @@ export function renderPicShape(shape: PicShape, ctx: CoreRenderContext): HtmlStr
   );
 }
 
-function renderCroppedPicture(
+type RenderCroppedPictureArgs = [
   shape: PicShape,
   transform: Transform,
   positionStyles: Record<string, string>,
   shapeId: string,
   imageSrc: string,
-): HtmlString | undefined {
+];
+
+function renderCroppedPicture(...args: RenderCroppedPictureArgs): HtmlString | undefined {
+  const [shape, transform, positionStyles, shapeId, imageSrc] = args;
   const srcRect = shape.blipFill.sourceRect;
   if (!srcRect) {
     return undefined;
@@ -552,9 +557,12 @@ function renderConnectorSvg(
  * Uses chart data from ResourceStore if available (populated by integration layer).
  * This allows render to render charts without directly calling parser.
  */
-function renderChartContent(chartRef: ChartReference, width: number, height: number, ctx: CoreRenderContext): HtmlString {
+function renderChartContent(
+  ...args: [chartRef: ChartReference, width: number, height: number, ctx: CoreRenderContext]
+): HtmlString {
+  const [chartRef, width, height, ctx] = args;
   // Get chart data from ResourceStore
-  const entry = ctx.resourceStore?.get<import("@oxen-office/pptx/domain/chart").Chart>(chartRef.resourceId);
+  const entry = ctx.resourceStore?.get<import("@oxen-office/chart/domain").Chart>(chartRef.resourceId);
   const parsedChart = entry?.parsed;
   if (parsedChart !== undefined) {
     return renderChart(parsedChart, width, height, ctx);
@@ -578,22 +586,20 @@ function renderChartContent(chartRef: ChartReference, width: number, height: num
  * This allows render to render diagrams without directly calling parser.
  */
 function renderDiagramContent(
-  diagramRef: DiagramReference,
-  width: number,
-  height: number,
-  ctx: CoreRenderContext,
+  ...args: [diagramRef: DiagramReference, width: number, height: number, ctx: CoreRenderContext]
 ): HtmlString {
+  const [diagramRef, width, height, ctx] = args;
   // Get diagram content from ResourceStore
   if (diagramRef.dataResourceId !== undefined) {
     const entry = ctx.resourceStore?.get<{ readonly shapes: readonly import("@oxen-office/pptx/domain").Shape[] }>(diagramRef.dataResourceId);
     const parsedContent = entry?.parsed;
     if (parsedContent !== undefined && parsedContent.shapes.length > 0) {
-      return renderDiagram(parsedContent, width, height, ctx);
+      return renderDiagram({ diagram: parsedContent, width, height, ctx });
     }
   }
 
   // Return placeholder if diagram content not available
-  return renderDiagramPlaceholder(width, height);
+  return renderDiagramPlaceholder({ width, height });
 }
 
 /**

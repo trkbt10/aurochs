@@ -162,15 +162,22 @@ function parseBlipFill(element: XmlElement | undefined): DrawingBlipFill | undef
   const stretchEl = getChildByLocalName(element, "stretch");
   const srcRectEl = getChildByLocalName(element, "srcRect");
 
+  function parseSrcRect(el: XmlElement | undefined): DrawingBlipFill["srcRect"] | undefined {
+    if (!el) {
+      return undefined;
+    }
+    return {
+      l: parseIntAttr(el, "l"),
+      t: parseIntAttr(el, "t"),
+      r: parseIntAttr(el, "r"),
+      b: parseIntAttr(el, "b"),
+    };
+  }
+
   return {
     blip: parseBlip(blipEl),
     stretch: stretchEl !== undefined,
-    srcRect: srcRectEl !== undefined ? {
-      l: parseIntAttr(srcRectEl, "l"),
-      t: parseIntAttr(srcRectEl, "t"),
-      r: parseIntAttr(srcRectEl, "r"),
-      b: parseIntAttr(srcRectEl, "b"),
-    } : undefined,
+    srcRect: parseSrcRect(srcRectEl),
   };
 }
 
@@ -189,12 +196,19 @@ function parseSpPr(element: XmlElement | undefined): DrawingShapeProperties | un
   const xfrmEl = getChildByLocalName(element, "xfrm");
   const prstGeomEl = getChildByLocalName(element, "prstGeom");
 
+  function parseXfrm(el: XmlElement | undefined): DrawingShapeProperties["xfrm"] | undefined {
+    if (!el) {
+      return undefined;
+    }
+    return {
+      rot: parseIntAttr(el, "rot"),
+      flipH: parseBoolAttr(el, "flipH"),
+      flipV: parseBoolAttr(el, "flipV"),
+    };
+  }
+
   return {
-    xfrm: xfrmEl !== undefined ? {
-      rot: parseIntAttr(xfrmEl, "rot"),
-      flipH: parseBoolAttr(xfrmEl, "flipH"),
-      flipV: parseBoolAttr(xfrmEl, "flipV"),
-    } : undefined,
+    xfrm: parseXfrm(xfrmEl),
     prstGeom: prstGeomEl?.attrs.prst,
   };
 }
@@ -216,10 +230,21 @@ function parsePicture(element: XmlElement | undefined): DrawingPicture | undefin
   const blipFillEl = getChildByLocalName(element, "blipFill");
   const spPrEl = getChildByLocalName(element, "spPr");
 
-  return {
-    nvPicPr: nvPicPrEl !== undefined ? {
+  function parseNvPicPr(args: {
+    readonly nvPicPrEl: XmlElement | undefined;
+    readonly cNvPrEl: XmlElement | undefined;
+  }): DrawingPicture["nvPicPr"] | undefined {
+    const { nvPicPrEl, cNvPrEl } = args;
+    if (!nvPicPrEl) {
+      return undefined;
+    }
+    return {
       cNvPr: cNvPrEl !== undefined ? parseDocPr(cNvPrEl) : undefined,
-    } : undefined,
+    };
+  }
+
+  return {
+    nvPicPr: parseNvPicPr({ nvPicPrEl, cNvPrEl }),
     blipFill: parseBlipFill(blipFillEl),
     spPr: parseSpPr(spPrEl),
   };

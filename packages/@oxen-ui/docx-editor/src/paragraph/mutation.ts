@@ -167,11 +167,14 @@ export function getParagraphLength(paragraph: DocxParagraph): number {
  * Insert text at a character position in the paragraph.
  */
 export function insertText(
-  paragraph: DocxParagraph,
-  charOffset: number,
-  text: string,
-  properties?: DocxRunProperties,
+  ...args: readonly [
+    paragraph: DocxParagraph,
+    charOffset: number,
+    text: string,
+    properties?: DocxRunProperties,
+  ]
 ): DocxParagraph {
+  const [paragraph, charOffset, text, properties] = args;
   const runs = getParagraphRuns(paragraph);
 
   if (runs.length === 0) {
@@ -679,11 +682,14 @@ export function mergeParagraphs(
  * Apply run properties to a character range in the paragraph.
  */
 export function applyFormattingToRange(
-  paragraph: DocxParagraph,
-  startOffset: number,
-  endOffset: number,
-  properties: Partial<DocxRunProperties>,
+  ...args: readonly [
+    paragraph: DocxParagraph,
+    startOffset: number,
+    endOffset: number,
+    properties: Partial<DocxRunProperties>,
+  ]
 ): DocxParagraph {
+  const [paragraph, startOffset, endOffset, properties] = args;
   if (startOffset >= endOffset) {
     return paragraph;
   }

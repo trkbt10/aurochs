@@ -17,6 +17,12 @@ import {
   type ChangeEvent,
   type KeyboardEvent,
 } from "react";
+import {
+  applySelectionRange,
+  getSelectionAnchor,
+  isPrimaryMouseAction,
+  isPrimaryPointerAction,
+} from "@oxen-ui/editor-core/pointer-utils";
 import type { DocxParagraph } from "@oxen-office/docx/domain/paragraph";
 import type { DocxRunProperties } from "@oxen-office/docx/domain/run";
 import type { DocxStyles } from "@oxen-office/docx/domain/styles";
@@ -152,41 +158,15 @@ function createInitialState(
   };
 }
 
-function getSelectionAnchor(textarea: HTMLTextAreaElement): number {
-  if (textarea.selectionDirection === "backward") {
-    return textarea.selectionEnd ?? 0;
-  }
-  return textarea.selectionStart ?? 0;
-}
-
-function applySelectionRange(
-  textarea: HTMLTextAreaElement,
-  anchorOffset: number,
-  focusOffset: number,
-): void {
-  const start = Math.min(anchorOffset, focusOffset);
-  const end = Math.max(anchorOffset, focusOffset);
-  const direction = focusOffset < anchorOffset ? "backward" : "forward";
-  textarea.setSelectionRange(start, end, direction);
-}
-
-function isPrimaryPointerAction(event: React.PointerEvent<SVGSVGElement>): boolean {
-  if (event.pointerType === "mouse") {
-    return event.button === 0;
-  }
-  return event.button === 0 || (event.buttons & 1) === 1;
-}
-
-function isPrimaryMouseAction(event: React.MouseEvent<SVGSVGElement>): boolean {
-  return event.button === 0;
-}
-
 function computeSelectionRectsIfRange(
-  layout: LayoutResult,
-  start: number,
-  end: number,
-  defaultRunProperties: DocxRunProperties | undefined,
+  ...args: readonly [
+    layout: LayoutResult,
+    start: number,
+    end: number,
+    defaultRunProperties: DocxRunProperties | undefined,
+  ]
 ): readonly SelectionRect[] {
+  const [layout, start, end, defaultRunProperties] = args;
   if (start === end) {
     return [];
   }
@@ -419,7 +399,7 @@ export function DocxTextEditController({
 
       const anchorOffset = event.shiftKey ? getSelectionAnchor(textarea) : offset;
       dragAnchorRef.current = anchorOffset;
-      applySelectionRange(textarea, anchorOffset, offset);
+      applySelectionRange({ textarea, anchorOffset, focusOffset: offset });
       updateCursorPosition();
 
       event.currentTarget.setPointerCapture(event.pointerId);
@@ -441,7 +421,7 @@ export function DocxTextEditController({
       }
 
       const anchorOffset = dragAnchorRef.current ?? getSelectionAnchor(textarea);
-      applySelectionRange(textarea, anchorOffset, offset);
+      applySelectionRange({ textarea, anchorOffset, focusOffset: offset });
       updateCursorPosition();
       event.preventDefault();
     },
@@ -505,7 +485,7 @@ export function DocxTextEditController({
       }
 
       const range = getWordRange(state.currentText, offset);
-      applySelectionRange(textarea, range.start, range.end);
+      applySelectionRange({ textarea, anchorOffset: range.start, focusOffset: range.end });
       updateCursorPosition();
       event.preventDefault();
     },

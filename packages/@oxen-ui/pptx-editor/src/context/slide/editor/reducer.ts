@@ -5,7 +5,7 @@
  */
 
 import type { Slide, Shape } from "@oxen-office/pptx/domain";
-import type { Bounds, ShapeId } from "@oxen-office/pptx/domain/types";
+import type { ShapeId } from "@oxen-office/pptx/domain/types";
 import { px, deg } from "@oxen-office/ooxml/domain/units";
 import type { SlideEditorState, SlideEditorAction } from "./types";
 import {

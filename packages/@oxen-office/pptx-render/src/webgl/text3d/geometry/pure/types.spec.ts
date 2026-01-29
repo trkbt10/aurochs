@@ -2,7 +2,6 @@
  * @file Tests for pure geometry types
  */
 
-import { describe, it, expect } from "vitest";
 import {
   point2d,
   point3d,

@@ -6,6 +6,22 @@ import type { PdfArray, PdfDict, PdfObject, PdfStream, PdfString } from "../core
 import { decodePdfStringBytes } from "../core/encoding";
 import type { PdfDecrypter } from "./standard";
 
+type DecryptCtx = {
+  readonly objNum: number;
+  readonly gen: number;
+  readonly decrypter: PdfDecrypter;
+};
+
+function isEmbeddedFileStreamType(streamType: PdfObject | undefined): boolean {
+  if (streamType?.type === "name") {
+    return streamType.value === "EmbeddedFile";
+  }
+  if (streamType?.type === "string") {
+    return streamType.text === "EmbeddedFile";
+  }
+  return false;
+}
+
 function getCryptFilterName(dict: PdfDict): string | null {
   const filter = dict.map.get("Filter");
   if (!filter) {return null;}
@@ -94,8 +110,9 @@ function streamHasCryptIdentity(dict: PdfDict): boolean {
   return false;
 }
 
-function decryptString(value: PdfString, objNum: number, gen: number, decrypter: PdfDecrypter): PdfString {
-  const bytes = decrypter.decryptBytes(objNum, gen, value.bytes, { kind: "string" });
+function decryptString(args: { readonly value: PdfString; readonly ctx: DecryptCtx }): PdfString {
+  const { value, ctx } = args;
+  const bytes = ctx.decrypter.decryptBytes(ctx.objNum, ctx.gen, value.bytes, { kind: "string" });
   return {
     type: "string",
     bytes,
@@ -103,35 +120,37 @@ function decryptString(value: PdfString, objNum: number, gen: number, decrypter:
   };
 }
 
-function decryptArray(value: PdfArray, objNum: number, gen: number, decrypter: PdfDecrypter): PdfArray {
-  const items = value.items.map((item) => decryptPdfObject(item, objNum, gen, decrypter));
+function decryptArray(args: { readonly value: PdfArray; readonly ctx: DecryptCtx }): PdfArray {
+  const { value, ctx } = args;
+  const items = value.items.map((item) => decryptPdfObject({ value: item, ctx }));
   return { type: "array", items };
 }
 
-function decryptDict(value: PdfDict, objNum: number, gen: number, decrypter: PdfDecrypter): PdfDict {
+function decryptDict(args: { readonly value: PdfDict; readonly ctx: DecryptCtx }): PdfDict {
+  const { value, ctx } = args;
   const out = new Map<string, PdfObject>();
   for (const [k, v] of value.map.entries()) {
-    out.set(k, decryptPdfObject(v, objNum, gen, decrypter));
+    out.set(k, decryptPdfObject({ value: v, ctx }));
   }
   return { type: "dict", map: out };
 }
 
-function decryptStream(value: PdfStream, objNum: number, gen: number, decrypter: PdfDecrypter): PdfStream {
-  const dict = decryptDict(value.dict, objNum, gen, decrypter);
-  const streamType = value.dict.map.get("Type");
-  const isEmbeddedFile = streamType?.type === "name"
-    ? streamType.value === "EmbeddedFile"
-    : streamType?.type === "string"
-      ? streamType.text === "EmbeddedFile"
-      : false;
-  const data = streamHasCryptIdentity(value.dict)
-    ? value.data
-    : decrypter.decryptBytes(
-      objNum,
-      gen,
-      value.data,
-      { kind: isEmbeddedFile ? "embeddedFile" : "stream", cryptFilterName: getCryptFilterName(value.dict) ?? undefined },
-    );
+function decryptStream(args: { readonly value: PdfStream; readonly ctx: DecryptCtx }): PdfStream {
+  const { value, ctx } = args;
+  const dict = decryptDict({ value: value.dict, ctx });
+
+  const data = (() => {
+    if (streamHasCryptIdentity(value.dict)) {
+      return value.data;
+    }
+
+    const streamType = value.dict.map.get("Type");
+    const isEmbeddedFile = isEmbeddedFileStreamType(streamType);
+    const kind = isEmbeddedFile ? "embeddedFile" : "stream";
+    const cryptFilterName = getCryptFilterName(value.dict) ?? undefined;
+    return ctx.decrypter.decryptBytes(ctx.objNum, ctx.gen, value.data, { kind, cryptFilterName });
+  })();
+
   return { type: "stream", dict, data };
 }
 
@@ -146,16 +165,22 @@ function decryptStream(value: PdfStream, objNum: number, gen: number, decrypter:
 
 
 /** Decrypt a PDF object (including stream bytes) using the provided decrypter. */
-export function decryptPdfObject(value: PdfObject, objNum: number, gen: number, decrypter: PdfDecrypter): PdfObject {
+export type DecryptPdfObjectArgs = {
+  readonly value: PdfObject;
+  readonly ctx: DecryptCtx;
+};
+
+/** Decrypt a PDF object (including stream bytes) using the provided decrypter. */
+export function decryptPdfObject({ value, ctx }: DecryptPdfObjectArgs): PdfObject {
   switch (value.type) {
     case "string":
-      return decryptString(value, objNum, gen, decrypter);
+      return decryptString({ value, ctx });
     case "array":
-      return decryptArray(value, objNum, gen, decrypter);
+      return decryptArray({ value, ctx });
     case "dict":
-      return decryptDict(value, objNum, gen, decrypter);
+      return decryptDict({ value, ctx });
     case "stream":
-      return decryptStream(value, objNum, gen, decrypter);
+      return decryptStream({ value, ctx });
     default:
       return value;
   }

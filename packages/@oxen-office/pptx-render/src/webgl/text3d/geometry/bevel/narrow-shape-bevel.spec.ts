@@ -10,8 +10,7 @@
  * @see Issue: "Rainbow 3D Alt" preset shows bevel collision issues
  */
 
-import { describe, it, expect } from "vitest";
-import { shrinkShape, expandShape } from "./shape-expansion";
+import { shrinkShape } from "./shape-expansion";
 import { extractBevelPathsFromShape } from "./path-extraction";
 import { generateBevelMesh } from "./mesh-generation";
 import { getBevelProfile } from "./profiles";
@@ -181,16 +180,14 @@ describe("extractBevelPathsFromShape with narrow shapes", () => {
 
   it("caps miter factor at sharp corners", () => {
     // Star shape has very sharp corners
+    const points: { x: number; y: number }[] = [];
+    for (let i = 0; i <= 10; i++) {
+      const r = i % 2 === 0 ? 24 : 10;
+      const angle = (i * Math.PI) / 5 - Math.PI / 2;
+      points.push({ x: Math.cos(angle) * r, y: Math.sin(angle) * r });
+    }
     const starShape: ShapeInput = {
-      points: (() => {
-        const points: { x: number; y: number }[] = [];
-        for (let i = 0; i <= 10; i++) {
-          const r = i % 2 === 0 ? 24 : 10;
-          const angle = (i * Math.PI) / 5 - Math.PI / 2;
-          points.push({ x: Math.cos(angle) * r, y: Math.sin(angle) * r });
-        }
-        return points;
-      })(),
+      points,
       holes: [],
     };
 
@@ -396,7 +393,6 @@ describe("createExtrudedGeometryWithBevel with narrow shapes", () => {
 describe("bevel and shrinkShape alignment", () => {
   it("bevel inner edge aligns with shrunk shape for simple rectangle", () => {
     const bevelWidth = 5;
-    const paths = extractBevelPathsFromShape(RECTANGLE_SHAPE);
     const shrunk = shrinkShape(RECTANGLE_SHAPE, bevelWidth);
 
     expect(shrunk).not.toBeNull();

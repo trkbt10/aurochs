@@ -5,13 +5,12 @@
  * in the bevel geometry generation pipeline.
  */
 
-import { describe, it, expect } from "vitest";
 import * as THREE from "three";
 import { extractBevelPathsFromShape } from "./bevel/path-extraction";
 import { generateBevelMesh } from "./bevel/mesh-generation";
 import { getBevelProfile } from "./bevel/profiles";
 import { threeShapeToShapeInput } from "./bevel/three-adapter";
-import type { BevelPath, BevelGeometryData } from "./bevel/types";
+import type { BevelGeometryData } from "./bevel/types";
 
 // =============================================================================
 // Test Utilities
@@ -40,6 +39,15 @@ type FaceDiagnostics = {
   readonly avgVertexNormal: { x: number; y: number; z: number };
   readonly normalDot: number;
 };
+
+type Vec3 = { x: number; y: number; z: number };
+
+function normalizeOrDefault(vec: Vec3, length: number, defaultVec: Vec3): Vec3 {
+  if (length > 0.0001) {
+    return { x: vec.x / length, y: vec.y / length, z: vec.z / length };
+  }
+  return defaultVec;
+}
 
 function analyzeBevelGeometry(data: BevelGeometryData): {
   readonly vertexCount: number;
@@ -93,10 +101,7 @@ function analyzeBevelGeometry(data: BevelGeometryData): {
     const area = crossLength / 2;
 
     // Compute face normal
-    const faceNormal =
-      crossLength > 0.0001
-        ? { x: cross.x / crossLength, y: cross.y / crossLength, z: cross.z / crossLength }
-        : { x: 0, y: 0, z: 1 };
+    const faceNormal = normalizeOrDefault(cross, crossLength, { x: 0, y: 0, z: 1 });
 
     // Compute average vertex normal
     const n0 = {
@@ -120,10 +125,7 @@ function analyzeBevelGeometry(data: BevelGeometryData): {
       z: (n0.z + n1.z + n2.z) / 3,
     };
     const avgNLength = Math.sqrt(avgN.x ** 2 + avgN.y ** 2 + avgN.z ** 2);
-    const avgVertexNormal =
-      avgNLength > 0.0001
-        ? { x: avgN.x / avgNLength, y: avgN.y / avgNLength, z: avgN.z / avgNLength }
-        : { x: 0, y: 0, z: 1 };
+    const avgVertexNormal = normalizeOrDefault(avgN, avgNLength, { x: 0, y: 0, z: 1 });
 
     // Dot product between face normal and average vertex normal
     const normalDot =

@@ -202,7 +202,7 @@ export function convertToPresentationDocument(loaded: LoadedPresentation): Prese
     const apiSlide = presentation.getSlide(i);
 
     // Build SlideRenderContext for proper parsing with style inheritance
-    const renderContext = createRenderContext(apiSlide, zipFile, slideSize);
+    const renderContext = createRenderContext({ apiSlide, zip: zipFile, slideSize });
 
     // Create ParseContext with placeholder tables, master styles, format scheme
     const parseCtx = createParseContext(renderContext.slideRenderContext);

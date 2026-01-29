@@ -54,11 +54,14 @@ const MAX_CANVAS_SIZE = 512;
  * @returns Glyph contour data
  */
 export function extractGlyphCore(
-  char: string,
-  fontFamily: string,
-  style: GlyphStyleKey,
-  createCanvas: CanvasFactory,
+  ...args: readonly [
+    char: string,
+    fontFamily: string,
+    style: GlyphStyleKey,
+    createCanvas: CanvasFactory,
+  ]
 ): GlyphContour {
+  const [char, fontFamily, style, createCanvas] = args;
   const scaledSize = style.fontSize * RENDER_SCALE;
 
   // Calculate required canvas size based on font size
@@ -131,11 +134,14 @@ export function extractGlyphCore(
  * No contour extraction needed - just metrics.
  */
 export function createWhitespaceGlyphCore(
-  char: string,
-  fontFamily: string,
-  style: GlyphStyleKey,
-  createCanvas: CanvasFactory,
+  ...args: readonly [
+    char: string,
+    fontFamily: string,
+    style: GlyphStyleKey,
+    createCanvas: CanvasFactory,
+  ]
 ): GlyphContour {
+  const [char, fontFamily, style, createCanvas] = args;
   const { ctx } = createCanvas(64, 64);
 
   const fontString = `${style.fontStyle} ${style.fontWeight} ${style.fontSize}px ${formatFontFamily(fontFamily, GENERIC_FONT_FAMILIES)}`;

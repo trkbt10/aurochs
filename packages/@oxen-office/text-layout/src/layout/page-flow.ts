@@ -528,11 +528,14 @@ function startNextColumn(
  * - If these constraints can't be met, the entire paragraph moves to the next page
  */
 function addParagraphToPage(
-  state: FlowState,
-  paragraph: LayoutParagraphResult,
-  config: PageFlowConfig,
-  hint?: PageBreakHint,
+  ...args: readonly [
+    state: FlowState,
+    paragraph: LayoutParagraphResult,
+    config: PageFlowConfig,
+    hint?: PageBreakHint,
+  ]
 ): void {
+  const [state, paragraph, config, hint] = args;
   const contentHeight = getContentHeight(config);
   const paragraphHeight = getParagraphHeight(paragraph);
 
@@ -1098,11 +1101,14 @@ function transformPagesForWritingMode(
  * @param config - Optional page config for vertical text transformation
  */
 export function createSinglePageLayout(
-  paragraphs: readonly LayoutParagraphResult[],
-  pageWidth: Pixels,
-  totalHeight: Pixels,
-  config?: PageFlowConfig,
+  ...args: readonly [
+    paragraphs: readonly LayoutParagraphResult[],
+    pageWidth: Pixels,
+    totalHeight: Pixels,
+    config?: PageFlowConfig,
+  ]
 ): PagedLayoutResult {
+  const [paragraphs, pageWidth, totalHeight, config] = args;
   const writingMode = config?.writingMode ?? "horizontal-tb";
 
   // For vertical mode, transform coordinates and swap dimensions

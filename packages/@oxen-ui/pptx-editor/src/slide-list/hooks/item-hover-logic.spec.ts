@@ -4,7 +4,6 @@
  * Comprehensive tests for hover state logic (pure functions).
  */
 
-import { describe, it, expect } from "vitest";
 import {
   createInitialHoverState,
   hoverReducer,

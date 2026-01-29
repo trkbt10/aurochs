@@ -83,11 +83,14 @@ export type LineBreakResult = {
  * Break spans into lines with word wrapping.
  */
 export function breakIntoLines(
-  spans: readonly MeasuredSpan[],
-  firstLineWidth: Pixels,
-  nextLineWidth: Pixels,
-  wrapMode: TextWrapping | "wrap",
+  ...args: readonly [
+    spans: readonly MeasuredSpan[],
+    firstLineWidth: Pixels,
+    nextLineWidth: Pixels,
+    wrapMode: TextWrapping | "wrap",
+  ]
 ): LineBreakResult {
+  const [spans, firstLineWidth, nextLineWidth, wrapMode] = args;
   if (spans.length === 0) {
     return { lines: [[]], lineHeights: [pt(0)], pageBreaksAfter: [false] };
   }

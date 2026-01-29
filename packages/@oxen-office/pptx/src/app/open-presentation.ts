@@ -23,15 +23,28 @@ import { RELATIONSHIP_TYPES } from "../domain/relationships";
 /**
  * Parse a slide from file
  */
+type ParseSlideOptions = {
+  readonly file: PresentationFile;
+  readonly slideInfo: SlideFileInfo;
+  readonly appVersion: number;
+  readonly zipAdapter: ZipFile;
+  readonly defaultTextStyle: XmlElement | null;
+  readonly tableStyles: TableStyleList | null;
+  readonly slideSize: SlideSize;
+  readonly renderOptions?: RenderOptions;
+};
+
 function parseSlide(
-  file: PresentationFile,
-  slideInfo: SlideFileInfo,
-  appVersion: number,
-  zipAdapter: ZipFile,
-  defaultTextStyle: XmlElement | null,
-  tableStyles: TableStyleList | null,
-  slideSize: SlideSize,
-  renderOptions?: RenderOptions,
+  {
+    file,
+    slideInfo,
+    appVersion,
+    zipAdapter,
+    defaultTextStyle,
+    tableStyles,
+    slideSize,
+    renderOptions,
+  }: ParseSlideOptions,
 ): Slide {
   // Read slide content
   const content = readXml(file, slideInfo.path, appVersion, true, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS);
@@ -73,7 +86,7 @@ function parseSlide(
     diagramRelationships: diagramData.diagramRelationships,
   };
 
-  return createSlide(data, zipAdapter, defaultTextStyle, tableStyles, slideSize, renderOptions);
+  return createSlide({ data, zip: zipAdapter, defaultTextStyle, tableStyles, slideSize, renderOptions });
 }
 
 function buildSlideFileInfoListFromPresentation(
@@ -204,13 +217,13 @@ export function openPresentation(file: PresentationFile, options?: PresentationO
     if (slideInfo === undefined) {
       throw new Error(`Slide ${slideNumber} not found`);
     }
-    return parseSlide(file, slideInfo, appVersion ?? 16, zipAdapter, defaultTextStyle, tableStyles, size, renderOptions);
+    return parseSlide({ file, slideInfo, appVersion: appVersion ?? 16, zipAdapter, defaultTextStyle, tableStyles, slideSize: size, renderOptions });
   };
 
   // Create slides generator function
   function* slidesGenerator(): IterableIterator<Slide> {
     for (const slideInfo of slideFiles) {
-      yield parseSlide(file, slideInfo, appVersion ?? 16, zipAdapter, defaultTextStyle, tableStyles, size, renderOptions);
+      yield parseSlide({ file, slideInfo, appVersion: appVersion ?? 16, zipAdapter, defaultTextStyle, tableStyles, slideSize: size, renderOptions });
     }
   }
 

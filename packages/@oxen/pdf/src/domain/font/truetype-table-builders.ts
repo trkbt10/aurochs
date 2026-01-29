@@ -201,12 +201,15 @@ function buildFormat4Subtable(segments: Segment[]): Uint8Array {
 }
 
 function readUint16FromTableOrDefault(
-  view: DataView,
-  dataLength: number,
-  table: TableEntry | undefined,
-  fieldOffset: number,
-  defaultValue: number,
+  ...args: readonly [
+    view: DataView,
+    dataLength: number,
+    table: TableEntry | undefined,
+    fieldOffset: number,
+    defaultValue: number,
+  ]
 ): number {
+  const [view, dataLength, table, fieldOffset, defaultValue] = args;
   if (!table) {return defaultValue;}
   const start = table.offset + fieldOffset;
   if (start + 2 > dataLength) {return defaultValue;}
@@ -214,12 +217,15 @@ function readUint16FromTableOrDefault(
 }
 
 function readInt16FromTableOrDefault(
-  view: DataView,
-  dataLength: number,
-  table: TableEntry | undefined,
-  fieldOffset: number,
-  defaultValue: number,
+  ...args: readonly [
+    view: DataView,
+    dataLength: number,
+    table: TableEntry | undefined,
+    fieldOffset: number,
+    defaultValue: number,
+  ]
 ): number {
+  const [view, dataLength, table, fieldOffset, defaultValue] = args;
   if (!table) {return defaultValue;}
   const start = table.offset + fieldOffset;
   if (start + 2 > dataLength) {return defaultValue;}

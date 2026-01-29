@@ -10,7 +10,7 @@
 
 import { pt, px } from "@oxen-office/ooxml/domain/units";
 import type { TextBody, Paragraph, RegularRun, RunProperties } from "@oxen-office/pptx/domain/text";
-import type { SolidFill } from "@oxen-office/pptx/domain/color/types";
+import type { SolidFill } from "@oxen-office/ooxml/domain/fill";
 import type { ColorContext } from "@oxen-office/ooxml/domain/color-context";
 import type {
   Shape3d,
@@ -126,7 +126,7 @@ export function createParagraph(runs: RegularRun[]): Paragraph {
  */
 export function createTextBody(paragraphs: Paragraph[]): TextBody {
   return {
-    bodyProperties: { wrap: "square", anchor: "t" },
+    bodyProperties: { wrapping: "square", anchor: "top" },
     paragraphs,
   };
 }
@@ -157,12 +157,13 @@ type Shape3dParams = {
  * Automatically wraps values with proper branded types (px).
  */
 export function buildShape3d(params: Shape3dParams): Shape3d {
-  const hasContour = params.contourWidth !== undefined && params.contourWidth > 0;
   const extrusionHeight = params.extrusionHeight !== undefined ? px(params.extrusionHeight) : undefined;
   const bevelTop = buildBevelFromParams(params.bevelTop);
   const bevelBottom = buildBevelFromParams(params.bevelBottom);
-  const contourWidth = hasContour ? px(params.contourWidth) : undefined;
-  const contourColor = hasContour && params.contourColor ? createSolidFill(params.contourColor) : undefined;
+  const contourWidth =
+    params.contourWidth !== undefined && params.contourWidth > 0 ? px(params.contourWidth) : undefined;
+  const contourColor =
+    contourWidth !== undefined && params.contourColor ? createSolidFill(params.contourColor) : undefined;
 
   return {
     extrusionHeight,

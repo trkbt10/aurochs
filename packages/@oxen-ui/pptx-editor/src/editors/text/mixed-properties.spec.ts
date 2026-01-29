@@ -2,7 +2,6 @@
  * @file Unit tests for mixed-properties
  */
 
-import { describe, it, expect } from "vitest";
 import {
   extractCommonProperty,
   extractMixedRunProperties,
@@ -15,7 +14,7 @@ import {
   areRunPropertiesEqual,
 } from "./mixed-properties";
 import type { RunProperties, ParagraphProperties } from "@oxen-office/pptx/domain/text";
-import type { Points, Pixels } from "@oxen-office/ooxml/domain/units";
+import type { Points } from "@oxen-office/ooxml/domain/units";
 
 describe("extractCommonProperty", () => {
   it("returns notApplicable for empty array", () => {

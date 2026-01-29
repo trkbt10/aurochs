@@ -54,11 +54,14 @@ function canUseCanvas(): boolean {
  * Must match the format used by SVG rendering.
  */
 function buildFontString(
-  fontSizePx: number,
-  fontFamily: string,
-  fontWeight: number,
-  fontStyle: "normal" | "italic",
+  ...args: [
+    fontSizePx: number,
+    fontFamily: string,
+    fontWeight: number,
+    fontStyle: "normal" | "italic",
+  ]
 ): string {
+  const [fontSizePx, fontFamily, fontWeight, fontStyle] = args;
   const style = fontStyle === "italic" ? "italic " : "";
   const weight = fontWeight !== 400 ? `${fontWeight} ` : "";
   return `${style}${weight}${fontSizePx}px ${fontFamily}`;
@@ -76,13 +79,16 @@ const MAX_CACHE_SIZE = 10000;
  * Returns undefined if Canvas is not available.
  */
 function measureWithCanvas(
-  text: string,
-  fontSizePx: number,
-  fontFamily: string,
-  fontWeight: number,
-  fontStyle: "normal" | "italic",
-  letterSpacing: number,
+  ...args: [
+    text: string,
+    fontSizePx: number,
+    fontFamily: string,
+    fontWeight: number,
+    fontStyle: "normal" | "italic",
+    letterSpacing: number,
+  ]
 ): number | undefined {
+  const [text, fontSizePx, fontFamily, fontWeight, fontStyle, letterSpacing] = args;
   if (!canUseCanvas() || measurementState.context === undefined) {
     return undefined;
   }
@@ -143,12 +149,15 @@ export type CharWidthResult = {
  * @returns Character width result with kerning adjustment (all values in pixels)
  */
 export function calculateCharWidth(
-  char: string,
-  prevChar: string | undefined,
-  fontSizePt: number,
-  fontFamily: string,
-  fontWeight: number = 400,
+  ...args: [
+    char: string,
+    prevChar: string | undefined,
+    fontSizePt: number,
+    fontFamily: string,
+    fontWeight?: number,
+  ]
 ): CharWidthResult {
+  const [char, prevChar, fontSizePt, fontFamily, fontWeight = 400] = args;
   const charCode = char.charCodeAt(0);
   const fontSizePx = fontSizePt * PT_TO_PX;
   const isCjk = isCjkCodePoint(charCode);
@@ -171,11 +180,14 @@ export function calculateCharWidth(
  * Resolve kerning adjustment for a character pair.
  */
 function resolveKerningAdjust(
-  prevChar: string | undefined,
-  char: string,
-  fontSizePx: number,
-  fontFamily: string,
+  ...args: [
+    prevChar: string | undefined,
+    char: string,
+    fontSizePx: number,
+    fontFamily: string,
+  ]
 ): number {
+  const [prevChar, char, fontSizePx, fontFamily] = args;
   if (prevChar === undefined) {
     return 0;
   }
@@ -205,13 +217,16 @@ function resolveKerningAdjust(
  * @returns Width in pixels
  */
 export function measureTextWidth(
-  text: string,
-  fontSizePt: number,
-  letterSpacingPx: number,
-  fontFamily: string,
-  fontWeight: number = 400,
-  fontStyle: "normal" | "italic" = "normal",
+  ...args: [
+    text: string,
+    fontSizePt: number,
+    letterSpacingPx: number,
+    fontFamily: string,
+    fontWeight?: number,
+    fontStyle?: "normal" | "italic",
+  ]
 ): number {
+  const [text, fontSizePt, letterSpacingPx, fontFamily, fontWeight = 400, fontStyle = "normal"] = args;
   const fontSizePx = fontSizePt * PT_TO_PX;
 
   // Try Canvas measurement first (matches browser rendering)
@@ -229,12 +244,15 @@ export function measureTextWidth(
  * Used when Canvas is not available (e.g., server-side rendering).
  */
 export function estimateTextWidthFallback(
-  text: string,
-  fontSizePt: number,
-  letterSpacingPx: number,
-  fontFamily: string,
-  fontWeight: number = 400,
+  ...args: [
+    text: string,
+    fontSizePt: number,
+    letterSpacingPx: number,
+    fontFamily: string,
+    fontWeight?: number,
+  ]
 ): number {
+  const [text, fontSizePt, letterSpacingPx, fontFamily, fontWeight = 400] = args;
   const chars = Array.from(text);
 
   const width = chars.reduce((acc, char, index) => {
@@ -276,12 +294,15 @@ export type DetailedMeasurement = {
  * @returns Detailed measurement with per-character data (all values in pixels)
  */
 export function measureTextDetailed(
-  text: string,
-  fontSizePt: number,
-  letterSpacingPx: number,
-  fontFamily: string,
-  fontWeight: number = 400,
+  ...args: [
+    text: string,
+    fontSizePt: number,
+    letterSpacingPx: number,
+    fontFamily: string,
+    fontWeight?: number,
+  ]
 ): DetailedMeasurement {
+  const [text, fontSizePt, letterSpacingPx, fontFamily, fontWeight = 400] = args;
   const chars = Array.from(text);
 
   const measurement = chars.reduce(

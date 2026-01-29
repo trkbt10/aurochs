@@ -854,11 +854,14 @@ export function applyColumnOverride(
  * without iterating and re-normalizing per column.
  */
 export function applyColumnRangeOverride(
-  columns: readonly XlsxColumnDef[] | undefined,
-  startCol: ColIndex,
-  endCol: ColIndex,
-  override: Partial<XlsxColumnDef>,
+  ...args: readonly [
+    columns: readonly XlsxColumnDef[] | undefined,
+    startCol: ColIndex,
+    endCol: ColIndex,
+    override: Partial<XlsxColumnDef>,
+  ]
 ): readonly XlsxColumnDef[] {
+  const [columns, startCol, endCol, override] = args;
   const min = Math.min(toColNumber(startCol), toColNumber(endCol));
   const max = Math.max(toColNumber(startCol), toColNumber(endCol));
 

@@ -7,7 +7,6 @@
  * @see ECMA-376 Part 1, Section 20.1.10.9 (ST_BevelPresetType)
  */
 
-import { describe, it, expect } from "vitest";
 import * as THREE from "three";
 import {
   createCustomBevelGeometry,

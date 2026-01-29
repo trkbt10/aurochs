@@ -38,11 +38,14 @@ export type CharWidthResult = {
  * @returns Character width result with kerning adjustment
  */
 export function calculateCharWidth(
-  char: string,
-  prevChar: string | undefined,
-  fontSize: Points,
-  fontFamily: string,
+  ...args: [
+    char: string,
+    prevChar: string | undefined,
+    fontSize: Points,
+    fontFamily: string,
+  ]
 ): CharWidthResult {
+  const [char, prevChar, fontSize, fontFamily] = args;
   const charCode = char.charCodeAt(0);
   const fontSizePx = (fontSize as number) * PT_TO_PX;
   const isCjk = isCjkCodePoint(charCode);
@@ -75,11 +78,14 @@ export function calculateCharWidth(
  * @returns Width in pixels
  */
 export function estimateTextWidth(
-  text: string,
-  fontSize: Points,
-  letterSpacing: Pixels,
-  fontFamily: string,
+  ...args: [
+    text: string,
+    fontSize: Points,
+    letterSpacing: Pixels,
+    fontFamily: string,
+  ]
 ): Pixels {
+  const [text, fontSize, letterSpacing, fontFamily] = args;
   const chars = Array.from(text);
   const letterSpacingNum = letterSpacing as number;
 
@@ -185,11 +191,14 @@ export type DetailedMeasurement = {
  * @returns Detailed measurement with per-character data
  */
 export function measureTextDetailed(
-  text: string,
-  fontSize: Points,
-  letterSpacing: Pixels,
-  fontFamily: string,
+  ...args: [
+    text: string,
+    fontSize: Points,
+    letterSpacing: Pixels,
+    fontFamily: string,
+  ]
 ): DetailedMeasurement {
+  const [text, fontSize, letterSpacing, fontFamily] = args;
   const chars = Array.from(text);
   const letterSpacingNum = letterSpacing as number;
 
@@ -215,11 +224,14 @@ export function measureTextDetailed(
 }
 
 function resolveKerningAdjust(
-  prevChar: string | undefined,
-  char: string,
-  fontSizePx: number,
-  fontFamily: string
+  ...args: [
+    prevChar: string | undefined,
+    char: string,
+    fontSizePx: number,
+    fontFamily: string,
+  ]
 ): number {
+  const [prevChar, char, fontSizePx, fontFamily] = args;
   if (prevChar === undefined) {
     return 0;
   }

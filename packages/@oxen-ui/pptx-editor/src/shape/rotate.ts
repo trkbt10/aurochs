@@ -60,11 +60,9 @@ export function radiansToDegrees(radians: number): number {
  * Calculate the angle (in degrees) from a center point to another point.
  */
 export function calculateAngleFromCenter(
-  centerX: number,
-  centerY: number,
-  pointX: number,
-  pointY: number
+  ...args: [centerX: number, centerY: number, pointX: number, pointY: number]
 ): number {
+  const [centerX, centerY, pointX, pointY] = args;
   return radiansToDegrees(Math.atan2(pointY - centerY, pointX - centerX));
 }
 
@@ -139,11 +137,9 @@ export function rotatePointAroundCenter(
  * Calculate the center point of a shape given its bounds.
  */
 export function calculateShapeCenter(
-  x: number,
-  y: number,
-  width: number,
-  height: number
+  ...args: [x: number, y: number, width: number, height: number]
 ): Point {
+  const [x, y, width, height] = args;
   return {
     x: x + width / 2,
     y: y + height / 2,
@@ -157,12 +153,9 @@ export function calculateShapeCenter(
  * after rotation around the rectangle's center.
  */
 export function getRotatedCorners(
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  rotation: number
+  ...args: [x: number, y: number, width: number, height: number, rotation: number]
 ): readonly Point[] {
+  const [x, y, width, height, rotation] = args;
   const center = calculateShapeCenter(x, y, width, height);
   const rad = degreesToRadians(rotation);
 
@@ -200,12 +193,9 @@ export function getSvgRotationTransform(
  * @returns SVG rotate transform string, or undefined if rotation is 0
  */
 export function getSvgRotationTransformForBounds(
-  rotation: number,
-  x: number,
-  y: number,
-  width: number,
-  height: number
+  ...args: [rotation: number, x: number, y: number, width: number, height: number]
 ): string | undefined {
+  const [rotation, x, y, width, height] = args;
   if (rotation === 0) {
     return undefined;
   }
@@ -233,15 +223,27 @@ export function getSvgRotationTransformForBounds(
  * @returns New position and rotation for the shape
  */
 export function rotateShapeAroundCenter(
-  shapeX: number,
-  shapeY: number,
-  shapeWidth: number,
-  shapeHeight: number,
-  initialRotation: number,
-  combinedCenterX: number,
-  combinedCenterY: number,
-  deltaAngleDeg: number
+  ...args: [
+    shapeX: number,
+    shapeY: number,
+    shapeWidth: number,
+    shapeHeight: number,
+    initialRotation: number,
+    combinedCenterX: number,
+    combinedCenterY: number,
+    deltaAngleDeg: number,
+  ]
 ): RotationResult {
+  const [
+    shapeX,
+    shapeY,
+    shapeWidth,
+    shapeHeight,
+    initialRotation,
+    combinedCenterX,
+    combinedCenterY,
+    deltaAngleDeg,
+  ] = args;
   // Calculate shape center
   const shapeCenter = calculateShapeCenter(shapeX, shapeY, shapeWidth, shapeHeight);
 
@@ -278,12 +280,9 @@ export function rotateShapeAroundCenter(
  * @returns Delta angle in degrees
  */
 export function calculateRotationDelta(
-  centerX: number,
-  centerY: number,
-  currentX: number,
-  currentY: number,
-  startAngle: number
+  ...args: [centerX: number, centerY: number, currentX: number, currentY: number, startAngle: number]
 ): number {
+  const [centerX, centerY, currentX, currentY, startAngle] = args;
   const currentAngle = calculateAngleFromCenter(centerX, centerY, currentX, currentY);
   return currentAngle - startAngle;
 }

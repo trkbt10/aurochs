@@ -6,7 +6,6 @@
  */
 
 import type { ReactNode, CSSProperties } from "react";
-import type { Pixels } from "@oxen-office/ooxml/domain/units";
 import { px } from "@oxen-office/ooxml/domain/units";
 import type {
   LayoutResult,

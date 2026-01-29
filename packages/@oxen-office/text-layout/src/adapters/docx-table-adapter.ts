@@ -258,11 +258,14 @@ function convertCellMargins(
  * Convert a DOCX table cell to layout input.
  */
 function convertTableCell(
-  cell: DocxTableCell,
-  cellProps: DocxTableCellProperties | undefined,
-  tableProps: DocxTableProperties | undefined,
-  context: TableConversionContext,
+  ...args: readonly [
+    cell: DocxTableCell,
+    cellProps: DocxTableCellProperties | undefined,
+    tableProps: DocxTableProperties | undefined,
+    context: TableConversionContext,
+  ]
 ): LayoutTableCellInput {
+  const [cell, cellProps, tableProps, context] = args;
   const props = cellProps ?? {};
 
   // Convert paragraphs within the cell
@@ -367,11 +370,14 @@ type TableConversionContext = {
  * @param styles Optional style definitions for text formatting
  */
 export function tableToLayoutInput(
-  table: DocxTable,
-  containerWidth: Pixels,
-  numbering?: DocxNumbering,
-  styles?: DocxStyles,
+  ...args: readonly [
+    table: DocxTable,
+    containerWidth: Pixels,
+    numbering?: DocxNumbering,
+    styles?: DocxStyles,
+  ]
 ): LayoutTableInput {
+  const [table, containerWidth, numbering, styles] = args;
   const props = table.properties;
 
   // Create paragraph context for cell content

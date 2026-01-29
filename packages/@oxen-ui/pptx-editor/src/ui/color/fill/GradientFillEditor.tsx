@@ -49,21 +49,22 @@ const trackStyle: CSSProperties = {
 };
 
 const handleSize = 14;
-const handleStyle = (position: number, isSelected: boolean, hex: string): CSSProperties => ({
-  position: "absolute",
-  left: `${position}%`,
-  top: "50%",
-  width: `${handleSize}px`,
-  height: `${handleSize}px`,
-  transform: "translate(-50%, -50%)",
-  borderRadius: "50%",
-  backgroundColor: `#${hex}`,
-  border: isSelected
-    ? "2px solid var(--border-strong, #fff)"
-    : "1px solid var(--border-subtle, rgba(255, 255, 255, 0.4))",
-  boxShadow: isSelected ? "0 0 0 2px rgba(0, 0, 0, 0.35)" : "0 0 0 1px rgba(0, 0, 0, 0.25)",
-  cursor: "grab",
-});
+const handleStyle = (position: number, isSelected: boolean, hex: string): CSSProperties => {
+  const border = isSelected ? "2px solid var(--border-strong, #fff)" : "1px solid var(--border-subtle, rgba(255, 255, 255, 0.4))";
+  return {
+    position: "absolute",
+    left: `${position}%`,
+    top: "50%",
+    width: `${handleSize}px`,
+    height: `${handleSize}px`,
+    transform: "translate(-50%, -50%)",
+    borderRadius: "50%",
+    backgroundColor: `#${hex}`,
+    border,
+    boxShadow: isSelected ? "0 0 0 2px rgba(0, 0, 0, 0.35)" : "0 0 0 1px rgba(0, 0, 0, 0.25)",
+    cursor: "grab",
+  };
+};
 
 const minStopCount = 2;
 

@@ -9,8 +9,12 @@ import { createPlayer, extractShapeIds } from "./player";
 import type { Timing } from "@oxen-office/pptx/domain/animation";
 
 describe("Animation Integration", () => {
+  function isHTMLElement(value: unknown): value is HTMLElement {
+    return typeof value === "object" && value !== null && "style" in value;
+  }
+
   function createMockElement(): HTMLElement {
-    return {
+    const el: unknown = {
       style: {
         transition: "",
         opacity: "",
@@ -24,7 +28,12 @@ describe("Animation Integration", () => {
         maskPosition: "",
         maskRepeat: "",
       },
-    } as unknown as HTMLElement;
+      offsetHeight: 0,
+    };
+    if (!isHTMLElement(el)) {
+      throw new Error("createMockElement: invalid mock element shape");
+    }
+    return el;
   }
 
   describe("keyframes.pptx slide 1 structure", () => {

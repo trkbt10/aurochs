@@ -4,7 +4,6 @@
  * Tests for ChartDataEditor and workbook integration.
  */
 
-import { describe, expect, it } from "vitest";
 import type { XlsxWorkbook, XlsxWorksheet, XlsxRow } from "@oxen-office/xlsx/domain/workbook";
 import type { Cell, CellValue } from "@oxen-office/xlsx/domain/cell/types";
 import type { CellAddress } from "@oxen-office/xlsx/domain/cell/address";

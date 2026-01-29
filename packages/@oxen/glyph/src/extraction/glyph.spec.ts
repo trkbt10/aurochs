@@ -44,11 +44,9 @@ function fillRect(image: ImageDataLike, rect: Rect, value: number): void {
 }
 
 function createHoledRectImage(
-  width: number,
-  height: number,
-  outer: Rect,
-  holes: readonly Rect[],
+  ...args: readonly [width: number, height: number, outer: Rect, holes: readonly Rect[]]
 ): ImageDataLike {
+  const [width, height, outer, holes] = args;
   const image = createImage(width, height, BLACK);
   fillRect(image, outer, WHITE);
   for (const hole of holes) {

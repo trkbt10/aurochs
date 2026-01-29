@@ -5,6 +5,11 @@
  */
 
 import type { Shape } from "@oxen-office/pptx/domain";
+import type { ClipboardContent as CoreClipboardContent } from "@oxen-ui/editor-core/clipboard";
+import {
+  createClipboardContent as createCoreClipboardContent,
+  incrementPasteCount as incrementCorePasteCount,
+} from "@oxen-ui/editor-core/clipboard";
 
 // =============================================================================
 // Types
@@ -30,10 +35,7 @@ export type ClipboardContent = {
 export function createClipboardContent(
   shapes: readonly Shape[]
 ): ClipboardContent {
-  return {
-    shapes,
-    pasteCount: 0,
-  };
+  return fromCoreClipboard(createCoreClipboardContent({ payload: shapes }));
 }
 
 /**
@@ -42,8 +44,20 @@ export function createClipboardContent(
 export function incrementPasteCount(
   clipboard: ClipboardContent
 ): ClipboardContent {
+  return fromCoreClipboard(incrementCorePasteCount(toCoreClipboard(clipboard)));
+}
+
+function toCoreClipboard(clipboard: ClipboardContent): CoreClipboardContent<readonly Shape[]> {
   return {
-    ...clipboard,
-    pasteCount: clipboard.pasteCount + 1,
+    payload: clipboard.shapes,
+    pasteCount: clipboard.pasteCount,
+    isCut: false,
+  };
+}
+
+function fromCoreClipboard(core: CoreClipboardContent<readonly Shape[]>): ClipboardContent {
+  return {
+    shapes: core.payload,
+    pasteCount: core.pasteCount,
   };
 }

@@ -68,11 +68,14 @@ type ResolvedGradientConfig = ResolvedLinearGradient | ResolvedRadialGradient;
 const textureCache = new Map<string, THREE.CanvasTexture>();
 
 function getGradientCacheKey(
-  config: ResolvedGradientConfig,
-  width: number,
-  height: number,
-  tileRect?: TileRect,
+  ...args: [
+    config: ResolvedGradientConfig,
+    width: number,
+    height: number,
+    tileRect?: TileRect,
+  ]
 ): string {
+  const [config, width, height, tileRect] = args;
   return JSON.stringify({ config, width, height, tileRect });
 }
 
@@ -208,11 +211,14 @@ function createGradientTexture(
  * @internal This function uses internal resolved types.
  */
 function createGradientTextureInternal(
-  config: ResolvedGradientConfig,
-  width: number = DEFAULT_TEXTURE_SIZE,
-  height: number = DEFAULT_TEXTURE_SIZE,
-  tileRect?: TileRect,
+  ...args: [
+    config: ResolvedGradientConfig,
+    width?: number,
+    height?: number,
+    tileRect?: TileRect,
+  ]
 ): THREE.CanvasTexture {
+  const [config, width = DEFAULT_TEXTURE_SIZE, height = DEFAULT_TEXTURE_SIZE, tileRect] = args;
   const cacheKey = getGradientCacheKey(config, width, height, tileRect);
   const cached = textureCache.get(cacheKey);
   if (cached) {

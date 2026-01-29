@@ -9,7 +9,6 @@
  * @see docs/plans/pdf-import/phase-6/t6-1-roundtrip-tests.md
  */
 
-import { describe, it, expect } from "vitest";
 import * as fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -465,7 +464,7 @@ describe("PDF Import Roundtrip", () => {
 
       // Get all text content and strip null bytes (UTF-16BE encoding artifacts)
       const rawTextContent = getTextContent(shapes).join("");
-      const textContent = rawTextContent.replace(/\u0000/g, "");
+      const textContent = rawTextContent.split("\u0000").join("");
 
       // Verify text was decoded (should contain readable English, not garbled characters)
       expect(textContent).toContain("Web");

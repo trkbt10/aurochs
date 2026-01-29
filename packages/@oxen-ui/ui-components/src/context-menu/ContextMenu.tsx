@@ -40,11 +40,9 @@ const menuBaseStyle: CSSProperties = {
 };
 
 function getAdjustedHorizontalPosition(
-  x: number,
-  menuWidth: number,
-  viewportWidth: number,
-  padding: number,
+  ...args: readonly [x: number, menuWidth: number, viewportWidth: number, padding: number]
 ): number {
+  const [x, menuWidth, viewportWidth, padding] = args;
   if (x + menuWidth + padding > viewportWidth) {
     const shifted = x - menuWidth;
     return shifted < padding ? padding : shifted;
@@ -53,11 +51,9 @@ function getAdjustedHorizontalPosition(
 }
 
 function getAdjustedVerticalPosition(
-  y: number,
-  menuHeight: number,
-  viewportHeight: number,
-  padding: number,
+  ...args: readonly [y: number, menuHeight: number, viewportHeight: number, padding: number]
 ): number {
+  const [y, menuHeight, viewportHeight, padding] = args;
   if (y + menuHeight + padding > viewportHeight) {
     const shifted = y - menuHeight;
     return shifted < padding ? padding : shifted;
@@ -66,11 +62,9 @@ function getAdjustedVerticalPosition(
 }
 
 function getAdjustedPosition(
-  x: number,
-  y: number,
-  menuWidth: number,
-  menuHeight: number,
+  ...args: readonly [x: number, y: number, menuWidth: number, menuHeight: number]
 ): { left: number; top: number } {
+  const [x, y, menuWidth, menuHeight] = args;
   const padding = 8;
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;

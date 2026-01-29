@@ -6,7 +6,6 @@
  * @see ECMA-376 Part 1, Section 20.1.8.52/53 (softEdge)
  */
 
-import { describe, it, expect } from "vitest";
 import * as THREE from "three";
 import {
   createSoftEdgeComposer,
@@ -25,8 +24,22 @@ import {
  * Note: Full WebGL tests require a browser environment.
  */
 function createMockRenderer(): THREE.WebGLRenderer {
+  const isHtmlCanvasElement = (value: unknown): value is HTMLCanvasElement => {
+    return typeof value === "object" && value !== null && "getContext" in value;
+  };
+
+  const isWebGLRenderer = (value: unknown): value is THREE.WebGLRenderer => {
+    return (
+      typeof value === "object" &&
+      value !== null &&
+      "getSize" in value &&
+      "setRenderTarget" in value &&
+      "render" in value
+    );
+  };
+
   // Create a minimal canvas context mock
-  const canvas = {
+  const canvas: unknown = {
     getContext: () => ({
       getExtension: () => null,
       getParameter: () => 0,
@@ -59,20 +72,28 @@ function createMockRenderer(): THREE.WebGLRenderer {
     style: {},
     addEventListener: () => {},
     removeEventListener: () => {},
-  } as unknown as HTMLCanvasElement;
+  };
+
+  if (!isHtmlCanvasElement(canvas)) {
+    throw new Error("createMockRenderer: invalid mock canvas shape");
+  }
 
   try {
     return new THREE.WebGLRenderer({ canvas });
   } catch {
     // If WebGL context fails (in Node.js), return a mock
-    return {
+    const renderer: unknown = {
       getSize: () => new THREE.Vector2(800, 600),
       setRenderTarget: () => {},
       render: () => {},
       getContext: () => ({
         getExtension: () => null,
       }),
-    } as unknown as THREE.WebGLRenderer;
+    };
+    if (!isWebGLRenderer(renderer)) {
+      throw new Error("createMockRenderer: invalid mock renderer shape");
+    }
+    return renderer;
   }
 }
 

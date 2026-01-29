@@ -347,12 +347,15 @@ export function resolveRunProperties(
  * @returns Fully resolved properties
  */
 export function resolveRunPropertiesWithStyles(
-  resolveStyle: (styleId: string | undefined) => ResolvedRunProperties,
-  styleId: string | undefined,
-  paragraphStyleId: string | undefined,
-  paragraphRPr: DocxRunProperties | undefined,
-  runProps: DocxRunProperties | undefined,
+  ...args: readonly [
+    resolveStyle: (styleId: string | undefined) => ResolvedRunProperties,
+    styleId: string | undefined,
+    paragraphStyleId: string | undefined,
+    paragraphRPr: DocxRunProperties | undefined,
+    runProps: DocxRunProperties | undefined,
+  ]
 ): ResolvedRunProperties {
+  const [resolveStyle, styleId, paragraphStyleId, paragraphRPr, runProps] = args;
   // Start with paragraph style
   const baseParagraphStyle = resolveStyle(paragraphStyleId);
 
