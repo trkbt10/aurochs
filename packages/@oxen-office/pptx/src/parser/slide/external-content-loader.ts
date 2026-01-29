@@ -25,7 +25,7 @@ import { parseDiagramColorsDefinition } from "../diagram/color-parser";
 import { parseDiagramDataModel } from "../diagram/data-parser";
 import { parseDiagramLayoutDefinition } from "../diagram/layout-parser";
 import { parseDiagramStyleDefinition } from "../diagram/style-parser";
-import type { ResourceMap } from "../../domain/opc";
+import type { ResourceMap } from "@oxen-office/opc";
 import { RELATIONSHIP_TYPES } from "../../domain/relationships";
 import { getMimeTypeFromPath } from "../../opc/utils";
 import { toDataUrl } from "@oxen/buffer";

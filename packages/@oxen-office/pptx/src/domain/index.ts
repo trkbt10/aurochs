@@ -83,9 +83,6 @@ export {
 
 export type {
   PresentationFile,
-  ZipFile,
-  ZipEntry,
-  ResourceMap,
   PlaceholderTable,
 } from "./opc";
 

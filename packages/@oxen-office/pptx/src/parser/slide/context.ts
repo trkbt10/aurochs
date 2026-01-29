@@ -20,7 +20,8 @@ import { getChild, getByPath } from "@oxen/xml";
 import type { RenderOptions } from "../../render/render-options";
 
 // Import domain types from canonical sources
-import type { ZipFile, ResourceMap, PlaceholderTable, Theme, RawMasterTextStyles, ResolvedBlipResource } from "../../domain/index";
+import type { PlaceholderTable, Theme, RawMasterTextStyles, ResolvedBlipResource } from "../../domain/index";
+import type { ZipFile, ResourceMap } from "@oxen-office/opc";
 import type { TableStyleList } from "../table/style-parser";
 import type { ColorMap, ColorResolveContext } from "@oxen-office/ooxml/domain/color-context";
 import { getMimeType } from "@oxen/files";

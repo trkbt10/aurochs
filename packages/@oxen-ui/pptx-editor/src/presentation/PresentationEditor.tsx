@@ -12,7 +12,8 @@
 
 import { useRef, useMemo, useCallback, useState, useEffect, type CSSProperties } from "react";
 import { GridLayout } from "react-panel-layout";
-import type { Shape, RunProperties, ParagraphProperties, ZipFile, TextBody } from "@oxen-office/pptx/domain";
+import type { Shape, RunProperties, ParagraphProperties, TextBody } from "@oxen-office/pptx/domain";
+import type { ZipFile } from "@oxen-office/opc";
 import type { ShapeId } from "@oxen-office/pptx/domain/types";
 import { px } from "@oxen-office/ooxml/domain/units";
 import type { PresentationDocument, SlideWithId } from "@oxen-office/pptx/app";

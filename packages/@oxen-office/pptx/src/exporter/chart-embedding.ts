@@ -222,8 +222,3 @@ export function listEmbeddedXlsx(
   );
 }
 
-// =============================================================================
-// Re-exports for convenience
-// =============================================================================
-
-export type ChartDataUpdate = import("@oxen-office/chart/patcher").ChartDataUpdate;

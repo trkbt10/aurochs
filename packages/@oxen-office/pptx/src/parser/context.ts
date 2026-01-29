@@ -5,7 +5,7 @@
  */
 
 import type { XmlDocument, XmlElement } from "@oxen/xml";
-import type { ResourceMap } from "../domain/opc";
+import type { ResourceMap } from "@oxen-office/opc";
 import type { Color } from "@oxen-office/ooxml/domain/color";
 import type { ColorContext } from "@oxen-office/ooxml/domain/color-context";
 import type { FontScheme } from "@oxen-office/ooxml/domain/font-scheme";

@@ -6,7 +6,8 @@
  */
 
 import type { PresentationDocument } from "../app/presentation-document";
-import type { PresentationFile, ZipFile } from "../domain";
+import type { PresentationFile } from "../domain";
+import type { ZipFile } from "@oxen-office/opc";
 import type { XmlDocument } from "@oxen/xml";
 import { exportPptx, exportPptxAsBuffer } from "./pptx-exporter";
 import { DEFAULT_RENDER_OPTIONS } from "../render/render-options";

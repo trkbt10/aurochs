@@ -6,7 +6,7 @@
 
 import { useRef, useMemo, useCallback } from "react";
 import type { Pixels } from "@oxen-office/ooxml/domain/units";
-import type { ZipFile } from "@oxen-office/pptx/domain";
+import type { ZipFile } from "@oxen-office/opc";
 import { renderSlideSvg } from "@oxen-office/pptx-render/svg";
 import { createCoreRenderContext } from "@oxen-office/pptx-render";
 import type { SlideWithId } from "@oxen-office/pptx/app";

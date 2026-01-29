@@ -5,7 +5,8 @@
 
 import type { XmlDocument, XmlNode } from "@oxen/xml";
 import type { IndexTables } from "../parser/slide/shape-tree-indexer";
-import type { ResourceMap, ZipFile, SlideSize, SlideTransition } from "../domain";
+import type { SlideSize, SlideTransition } from "../domain";
+import type { ResourceMap, ZipFile } from "@oxen-office/opc";
 import type { Timing } from "../domain/animation";
 import type { RenderOptions } from "../render/render-options";
 import type { TableStyleList } from "../parser/table/style-parser";

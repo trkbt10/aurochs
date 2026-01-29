@@ -5,7 +5,7 @@
 
 import type { PresentationFile } from "../../domain";
 import type { XmlDocument } from "@oxen/xml";
-import type { ResourceMap } from "../../domain/opc";
+import type { ResourceMap } from "@oxen-office/opc";
 import { stripCdata, parseXml, applyMarkupCompatibility, type MarkupCompatibilityOptions } from "@oxen/xml";
 import { loadRelationships } from "../relationships";
 

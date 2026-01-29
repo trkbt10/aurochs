@@ -3,7 +3,8 @@
  * Creates a ZipFile interface adapter from PresentationFile
  */
 
-import type { PresentationFile, ZipFile } from "./opc";
+import type { PresentationFile } from "./opc";
+import type { ZipFile } from "@oxen-office/opc";
 
 /**
  * Create a ZipFile adapter from PresentationFile

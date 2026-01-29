@@ -4,7 +4,7 @@
  */
 
 import type { PresentationFile } from "../../domain";
-import type { ResourceMap } from "../../domain/opc";
+import type { ResourceMap } from "@oxen-office/opc";
 import type { LayoutData, MasterData, ThemeData, DiagramData } from "./data-types";
 import {
   loadRelationships,

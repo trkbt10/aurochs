@@ -9,7 +9,6 @@
 // Domain types - Units
 export type { Brand, Pixels, Degrees, Percent, Points, EMU } from "./domain/units";
 export { px, deg, pct, pt, emu } from "./domain/units";
-export type { ResourceMap } from "./domain/opc";
 
 // Domain types - Border
 export type {

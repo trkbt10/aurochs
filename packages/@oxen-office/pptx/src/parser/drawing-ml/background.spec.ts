@@ -4,9 +4,9 @@
 
 import type { XmlElement } from "@oxen/xml";
 import { DEFAULT_RENDER_OPTIONS } from "../../render/render-options";
-import type { Theme } from "../../domain/theme/types";
-import type { ResourceMap, PlaceholderTable, ZipFile } from "../../domain/opc";
-import type { RawMasterTextStyles, ColorMap } from "../../domain/theme/types";
+import type { Theme, RawMasterTextStyles, ColorMap } from "../../domain/theme/types";
+import type { PlaceholderTable } from "../../domain/opc";
+import type { ResourceMap, ZipFile } from "@oxen-office/opc";
 import type { SlideContext } from "../slide/context";
 import { getBackgroundElement, getBgPrFromElement, getBgRefFromElement, resolveBgRefToXmlElement } from "./background";
 

@@ -8,7 +8,8 @@
  * @see RFC 3986, Section 5.2 (Relative Resolution)
  */
 
-import type { PresentationFile, ResourceMap } from "../domain/opc";
+import type { PresentationFile } from "../domain/opc";
+import type { ResourceMap } from "@oxen-office/opc";
 import {
   RELATIONSHIP_TYPES,
   createEmptyResourceMap,

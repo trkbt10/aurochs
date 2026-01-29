@@ -9,7 +9,7 @@
 
 import type { PresentationFile } from "../domain";
 import type { XmlDocument, XmlElement } from "@oxen/xml";
-import type { ResourceMap } from "../domain/opc";
+import type { ResourceMap } from "@oxen-office/opc";
 import { parseContentTypes } from "../opc/content-types";
 import { getByPath } from "@oxen/xml";
 import { parseAppVersion } from "./presentation-info";

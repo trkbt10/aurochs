@@ -8,7 +8,7 @@
 
 import type { XmlDocument, XmlElement } from "@oxen/xml";
 import type { IndexTables } from "./shape-tree-indexer";
-import type { ResourceMap } from "../../domain/opc";
+import type { ResourceMap } from "@oxen-office/opc";
 
 /**
  * Complete slide data for creating Slide objects

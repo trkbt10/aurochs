@@ -6,7 +6,8 @@
  */
 
 import type { Slide } from "./types";
-import type { ZipFile, SlideSize } from "../domain";
+import type { SlideSize } from "../domain";
+import type { ZipFile } from "@oxen-office/opc";
 import type { XmlElement } from "@oxen/xml";
 import type { SlideData } from "../parser/slide/data-types";
 import type { RenderOptions } from "../render/render-options";

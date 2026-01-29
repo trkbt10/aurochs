@@ -17,7 +17,8 @@ import { toResolvedBackgroundFill } from "../render/background-fill";
 import { parseShapeTree } from "../parser/shape-parser";
 import type { XmlElement, XmlDocument } from "@oxen/xml";
 import { getByPath, getChild } from "@oxen/xml";
-import type { SlideSize, Shape, SpShape, ZipFile } from "../domain";
+import type { SlideSize, Shape, SpShape } from "../domain";
+import type { ZipFile } from "@oxen-office/opc";
 import type { CoreRenderContext } from "../render/render-context";
 
 // =============================================================================

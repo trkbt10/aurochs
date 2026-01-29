@@ -11,7 +11,6 @@ export type { Presentation, Slide, SlideInfo, ListOptions, PresentationOptions }
 
 // Core types needed by consumers
 export type { IndexTables } from "./parser/slide/shape-tree-indexer";
-export type { ResourceMap } from "./domain";
 export type { SlideSize } from "./domain";
 
 // Render options for dialect-specific behavior

@@ -7,7 +7,7 @@
  * @see ECMA-376 Part 2, Section 9.3 (Relationships)
  */
 
-import type { ResourceMap } from "./opc";
+import type { ResourceMap } from "@oxen-office/opc";
 
 // =============================================================================
 // Relationship Type Constants
