@@ -15,7 +15,7 @@ import * as fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { importPdf } from "@oxen-office/pdf-to-pptx/importer/pdf-importer";
+import { importPdf } from "../../src/importer/pdf-importer";
 import { exportPptx } from "@oxen-office/pptx/exporter";
 import { loadPptxFromBuffer } from "@oxen-office/pptx/app/pptx-loader";
 import { px } from "@oxen-office/ooxml/domain/units";
@@ -23,9 +23,9 @@ import { parseXml } from "@oxen/xml";
 import { loadZipPackage } from "@oxen/zip";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const FIXTURES_DIR = path.join(__dirname, "fixtures", "pdf");
-const SAMPLES_DIR = path.join(__dirname, "..", "fixtures", "samples");
-const OUTPUT_DIR = path.join(__dirname, "..", "tmp");
+const FIXTURES_DIR = path.join(__dirname, "..", "fixtures", "pdf");
+const SAMPLES_DIR = path.resolve(__dirname, "../../../../../fixtures/samples");
+const OUTPUT_DIR = path.resolve(__dirname, "../../../../../tmp");
 
 const SLIDE_WIDTH = px(960);
 const SLIDE_HEIGHT = px(540);

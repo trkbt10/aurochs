@@ -34,7 +34,7 @@ export function getPdfFixturePath(basename: string): string {
   if (basename.includes("/") || basename.includes("\\") || basename.includes("..")) {
     throw new Error(`basename must be a file name only: ${basename}`);
   }
-  return path.join(repoRootDir, "spec", "fixtures", "pdf", basename);
+  return path.join(repoRootDir, "packages", "@oxen-converters", "pdf-to-pptx", "spec", "fixtures", "pdf", basename);
 }
 
 

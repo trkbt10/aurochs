@@ -5,7 +5,7 @@ import {
   PdfImportError,
   type PdfImportOptions,
   type PdfImportResult,
-} from "@oxen-office/pdf-to-pptx/importer/pdf-importer";
+} from "@oxen-converters/pdf-to-pptx/importer/pdf-importer";
 import type { PresentationDocument } from "@oxen-office/pptx/app";
 
 type PdfImportDeps = {

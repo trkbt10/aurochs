@@ -38,3 +38,23 @@ export type { GetZipTextFileContent } from "./zip";
 
 export { resolveRelationshipTargetPath } from "./relationship-target";
 
+// Export utilities
+export {
+  XML_DECLARATION,
+  CONTENT_TYPES_NAMESPACE,
+  RELATIONSHIPS_NAMESPACE,
+  OPC_CONTENT_TYPES,
+  OPC_RELATIONSHIP_TYPES,
+  serializeWithDeclaration,
+  serializeRelationships,
+  serializeContentTypes,
+  STANDARD_CONTENT_TYPE_DEFAULTS,
+  createRelationshipIdGenerator,
+} from "./export";
+export type {
+  OpcRelationship,
+  ContentTypeDefault,
+  ContentTypeOverride,
+  ContentTypeEntry,
+} from "./export";
+

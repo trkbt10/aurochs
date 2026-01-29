@@ -13,7 +13,7 @@ import * as fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { importPdf } from "@oxen-office/pdf-to-pptx/importer/pdf-importer";
+import { importPdf } from "../../src/importer/pdf-importer";
 import { exportPptx } from "@oxen-office/pptx/exporter";
 import { convertToPresentationDocument, loadPptxFromBuffer } from "@oxen-office/pptx/app";
 import { px } from "@oxen-office/ooxml/domain/units";
@@ -29,8 +29,8 @@ import type {
 } from "@oxen-office/pptx/domain/shape";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const FIXTURES_DIR = path.join(__dirname, "fixtures", "pdf");
-const SAMPLES_DIR = path.join(__dirname, "..", "fixtures", "samples");
+const FIXTURES_DIR = path.join(__dirname, "..", "fixtures", "pdf");
+const SAMPLES_DIR = path.resolve(__dirname, "../../../../../fixtures/samples");
 
 const SLIDE_WIDTH = px(960);
 const SLIDE_HEIGHT = px(540);

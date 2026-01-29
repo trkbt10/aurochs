@@ -5,7 +5,7 @@ import type { ComponentProps } from "react";
 import { px } from "@oxen-office/ooxml/domain/units";
 import { createEmptyResourceResolver } from "@oxen-office/pptx/domain/resource-resolver";
 import type { PresentationDocument } from "@oxen-office/pptx/app";
-import { PdfImportError, type PdfImportOptions, type PdfImportResult } from "@oxen-office/pdf-to-pptx/importer/pdf-importer";
+import { PdfImportError, type PdfImportOptions, type PdfImportResult } from "@oxen-converters/pdf-to-pptx/importer/pdf-importer";
 import { FileUploadPage } from "./FileUploadPage";
 
 type FileUploadPageProps = ComponentProps<typeof FileUploadPage>;

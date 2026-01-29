@@ -6,7 +6,8 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { parsePdf, type PdfText } from "@oxen/pdf";
 
-const PDF_PATH = path.resolve("fixtures/samples/panel2.pdf");
+const ROOT_DIR = path.resolve(__dirname, "../../../../../");
+const PDF_PATH = path.join(ROOT_DIR, "fixtures/samples/panel2.pdf");
 
 function buildLines(texts: readonly PdfText[]): string[] {
   const bucketed = new Map<number, PdfText[]>();

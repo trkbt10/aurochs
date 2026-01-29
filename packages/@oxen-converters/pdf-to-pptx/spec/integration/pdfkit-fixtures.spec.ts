@@ -1,9 +1,17 @@
+/**
+ * @file PDFKit fixtures validation tests
+ */
+
 import { spawnSync } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parsePdf } from "@oxen/pdf";
 import type { PdfParserOptions } from "@oxen/pdf";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const ROOT_DIR = path.resolve(__dirname, "../../../../../");
+const FIXTURES_DIR = path.join(__dirname, "..", "fixtures", "pdfkit");
 
 type FixtureExpectation = Readonly<{
   readonly fileName: string;
@@ -59,8 +67,6 @@ const FIXTURES: readonly FixtureExpectation[] = [
   },
 ];
 
-const DEFAULT_PDFKIT_FIXTURE_DIR = path.resolve("spec", "fixtures", "pdfkit");
-
 function isValidPdf(bytes: Uint8Array): boolean {
   const header = new TextDecoder("latin1").decode(bytes.slice(0, 8));
   const trailer = new TextDecoder("latin1").decode(bytes.slice(Math.max(0, bytes.length - 32)));
@@ -72,7 +78,6 @@ function normalizeTextForIncludes(text: string): string {
 }
 
 function createTempDir(): string {
-  const __dirname = path.dirname(fileURLToPath(import.meta.url));
   const base = path.resolve(__dirname, "../.tmp/pdfkit-fixtures");
   fs.mkdirSync(base, { recursive: true });
   const tmp = path.join(base, `${Date.now()}-${Math.random().toString(16).slice(2)}`);
@@ -83,8 +88,8 @@ function createTempDir(): string {
 function generateFixturesWithBun(outputDir: string): void {
   const result = spawnSync(
     "bun",
-    ["run", "scripts/generate-pdfkit-fixtures.ts", "--outputDir", outputDir, "--no-log"],
-    { cwd: path.resolve("."), encoding: "utf8" },
+    ["run", "scripts/generate/generate-pdfkit-fixtures.ts", "--outputDir", outputDir, "--no-log"],
+    { cwd: ROOT_DIR, encoding: "utf8" },
   );
   if (result.status !== 0) {
     throw new Error(result.stderr || result.stdout || "bun fixture generation failed");
@@ -94,7 +99,7 @@ function generateFixturesWithBun(outputDir: string): void {
 describe("PDFKit fixtures", () => {
   it("checked-in fixtures exist, are valid PDFs, and match expected content", async () => {
     for (const fixture of FIXTURES) {
-      const filePath = path.join(DEFAULT_PDFKIT_FIXTURE_DIR, fixture.fileName);
+      const filePath = path.join(FIXTURES_DIR, fixture.fileName);
       expect(fs.existsSync(filePath)).toBe(true);
 
       const bytes = fs.readFileSync(filePath);
@@ -154,7 +159,7 @@ describe("PDFKit fixtures", () => {
 
       for (const fixture of FIXTURES) {
         const generated = fs.readFileSync(path.join(tmpDir, fixture.fileName));
-        const expected = fs.readFileSync(path.join(DEFAULT_PDFKIT_FIXTURE_DIR, fixture.fileName));
+        const expected = fs.readFileSync(path.join(FIXTURES_DIR, fixture.fileName));
         expect(generated.equals(expected)).toBe(true);
         expect(generated.equals(firstRun.get(fixture.fileName)!)).toBe(true);
       }

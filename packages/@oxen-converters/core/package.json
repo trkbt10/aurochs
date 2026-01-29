@@ -1,17 +1,13 @@
 {
-  "name": "@oxen-office/opc",
+  "name": "@oxen-converters/core",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "sideEffects": false,
-  "dependencies": {
-    "@oxen/xml": "workspace:*",
-    "@oxen/zip": "workspace:*"
-  },
   "scripts": {
     "lint": "eslint src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@oxen-office/opc/src'"
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@oxen-converters/core/src'"
   },
   "exports": {
     ".": {
@@ -20,4 +16,3 @@
     }
   }
 }
-

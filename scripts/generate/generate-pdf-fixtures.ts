@@ -2,7 +2,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-export const DEFAULT_PDF_FIXTURE_DIR = path.resolve("spec", "fixtures", "pdf");
+export const DEFAULT_PDF_FIXTURE_DIR = path.resolve("packages/@oxen-converters/pdf-to-pptx/spec/fixtures/pdf");
 
 export type GeneratePdfFixturesOptions = {
   readonly outputDir: string;

@@ -1,10 +1,11 @@
 {
-  "name": "@oxen-office/pdf-to-pptx",
+  "name": "@oxen-converters/pdf-to-pptx",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "sideEffects": false,
   "dependencies": {
+    "@oxen-converters/core": "workspace:*",
     "@oxen/buffer": "workspace:*",
     "@oxen/jpeg": "workspace:*",
     "@oxen/pdf": "workspace:*",
@@ -22,9 +23,10 @@
     "react-dom": "^18.0.0 || ^19.0.0"
   },
   "scripts": {
-    "lint": "eslint src",
+    "lint": "eslint src spec",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@oxen-office/pdf-to-pptx/src'"
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@oxen-converters/pdf-to-pptx/src'",
+    "test:all": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@oxen-converters/pdf-to-pptx/src' '../../../packages/@oxen-converters/pdf-to-pptx/spec'"
   },
   "exports": {
     ".": {
@@ -53,4 +55,3 @@
     }
   }
 }
-

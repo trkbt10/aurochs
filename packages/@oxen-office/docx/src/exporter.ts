@@ -10,79 +10,22 @@
  * @see ECMA-376 Part 1, Section 17 (WordprocessingML)
  */
 
-import type { XmlElement, XmlNode } from "@oxen/xml";
-import { serializeElement, createElement } from "@oxen/xml";
+import type { XmlElement } from "@oxen/xml";
 import { createEmptyZipPackage } from "@oxen/zip";
+import {
+  serializeWithDeclaration,
+  serializeRelationships,
+  serializeContentTypes,
+  STANDARD_CONTENT_TYPE_DEFAULTS,
+  createRelationshipIdGenerator,
+  type OpcRelationship,
+  type ContentTypeEntry,
+} from "@oxen-office/opc";
 import type { DocxDocument } from "./domain/document";
 import { serializeDocument } from "./serializer/document";
 import { serializeStyles } from "./serializer/styles";
 import { serializeNumbering } from "./serializer/numbering";
 import { CONTENT_TYPES, RELATIONSHIP_TYPES } from "./constants";
-
-// =============================================================================
-// Constants
-// =============================================================================
-
-/**
- * XML declaration for all XML files
- */
-const XML_DECLARATION = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
-
-/**
- * OPC content types namespace
- */
-const CT_NAMESPACE = "http://schemas.openxmlformats.org/package/2006/content-types";
-
-/**
- * OPC relationships namespace
- */
-const RELS_NAMESPACE = "http://schemas.openxmlformats.org/package/2006/relationships";
-
-// =============================================================================
-// Helper Functions
-// =============================================================================
-
-/**
- * Serialize an XmlElement to string with XML declaration.
- */
-function serializeWithDeclaration(element: XmlElement): string {
-  return XML_DECLARATION + serializeElement(element);
-}
-
-// =============================================================================
-// Relationships Serialization
-// =============================================================================
-
-/**
- * Relationship structure for serialization.
- */
-type RelationshipEntry = {
-  readonly id: string;
-  readonly type: string;
-  readonly target: string;
-  readonly targetMode?: "External";
-};
-
-/**
- * Serialize relationships to XML element.
- *
- * @see ECMA-376 Part 2, Section 9.3 (Relationships)
- */
-function serializeRelationships(relationships: readonly RelationshipEntry[]): XmlElement {
-  const children = relationships.map((rel) => {
-    const attrs: Record<string, string> = {
-      Id: rel.id,
-      Type: rel.type,
-      Target: rel.target,
-    };
-    if (rel.targetMode) {
-      attrs.TargetMode = rel.targetMode;
-    }
-    return createElement("Relationship", attrs);
-  });
-
-  return createElement("Relationships", { xmlns: RELS_NAMESPACE }, children);
-}
 
 // =============================================================================
 // Content Types Generation
@@ -94,51 +37,24 @@ function serializeRelationships(relationships: readonly RelationshipEntry[]): Xm
  * @see ECMA-376 Part 2, Section 10.1.2.1 (Content Types)
  */
 function generateContentTypes(document: DocxDocument): XmlElement {
-  const children: XmlNode[] = [];
-
-  // Default extensions
-  children.push(
-    createElement("Default", {
-      Extension: "rels",
-      ContentType: "application/vnd.openxmlformats-package.relationships+xml",
-    }),
-  );
-  children.push(
-    createElement("Default", {
-      Extension: "xml",
-      ContentType: "application/xml",
-    }),
-  );
-
-  // Override for main document
-  children.push(
-    createElement("Override", {
-      PartName: "/word/document.xml",
-      ContentType: CONTENT_TYPES.document,
-    }),
-  );
+  const entries: ContentTypeEntry[] = [
+    // Standard defaults (rels, xml)
+    ...STANDARD_CONTENT_TYPE_DEFAULTS,
+    // Main document
+    { kind: "override", partName: "/word/document.xml", contentType: CONTENT_TYPES.document },
+  ];
 
   // Override for styles if present
   if (document.styles) {
-    children.push(
-      createElement("Override", {
-        PartName: "/word/styles.xml",
-        ContentType: CONTENT_TYPES.styles,
-      }),
-    );
+    entries.push({ kind: "override", partName: "/word/styles.xml", contentType: CONTENT_TYPES.styles });
   }
 
   // Override for numbering if present
   if (document.numbering) {
-    children.push(
-      createElement("Override", {
-        PartName: "/word/numbering.xml",
-        ContentType: CONTENT_TYPES.numbering,
-      }),
-    );
+    entries.push({ kind: "override", partName: "/word/numbering.xml", contentType: CONTENT_TYPES.numbering });
   }
 
-  return createElement("Types", { xmlns: CT_NAMESPACE }, children);
+  return serializeContentTypes(entries);
 }
 
 // =============================================================================
@@ -151,7 +67,7 @@ function generateContentTypes(document: DocxDocument): XmlElement {
  * @see ECMA-376 Part 2, Section 9.3 (Relationships)
  */
 function generateRootRels(): XmlElement {
-  const relationships: RelationshipEntry[] = [
+  const relationships: OpcRelationship[] = [
     {
       id: "rId1",
       type: RELATIONSHIP_TYPES.officeDocument,
@@ -172,27 +88,25 @@ function generateRootRels(): XmlElement {
  * @see ECMA-376 Part 2, Section 9.2 (Relationships)
  */
 function generateDocumentRels(document: DocxDocument): XmlElement {
-  const relationships: RelationshipEntry[] = [];
-  const rIdCounter = { value: 1 };
+  const relationships: OpcRelationship[] = [];
+  const nextId = createRelationshipIdGenerator();
 
   // Relationship for styles
   if (document.styles) {
     relationships.push({
-      id: `rId${rIdCounter.value}`,
+      id: nextId(),
       type: RELATIONSHIP_TYPES.styles,
       target: "styles.xml",
     });
-    rIdCounter.value++;
   }
 
   // Relationship for numbering
   if (document.numbering) {
     relationships.push({
-      id: `rId${rIdCounter.value}`,
+      id: nextId(),
       type: RELATIONSHIP_TYPES.numbering,
       target: "numbering.xml",
     });
-    rIdCounter.value++;
   }
 
   // Add any existing relationships from the document

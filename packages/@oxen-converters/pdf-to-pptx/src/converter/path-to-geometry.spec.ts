@@ -30,7 +30,7 @@ import {
   isRoundedRectangle,
   isSimpleRectangle,
 } from "./path-to-geometry";
-import type { ParsedPath } from "@oxen/pdf/parser/operator";
+import type { ParsedPath } from "@oxen/pdf/parser/operator/index";
 import {
   buildPath,
   buildPaths,

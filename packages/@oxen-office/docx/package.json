@@ -5,6 +5,7 @@
   "type": "module",
   "sideEffects": false,
   "dependencies": {
+    "@oxen-office/opc": "workspace:*",
     "@oxen-office/ooxml": "workspace:*",
     "@oxen/xml": "workspace:*",
     "@oxen/zip": "workspace:*"

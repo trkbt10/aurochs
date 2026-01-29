@@ -5,13 +5,15 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
-import { importPdf } from "@oxen-office/pdf-to-pptx/importer/pdf-importer";
+import { importPdf } from "../../src/importer/pdf-importer";
 import { exportPptxAsBuffer } from "@oxen-office/pptx/exporter";
 import { openPresentation } from "@oxen-office/pptx";
-import { loadPptxFile } from "../../scripts/lib/pptx-loader";
+import { loadPptxFile } from "../../../../../scripts/lib/pptx-loader";
 import { compareSvgToPdfBaseline } from "./compare";
 import { px } from "@oxen-office/ooxml/domain/units";
 import { renderSlideToSvg } from "@oxen-office/pptx-render/svg";
+
+const ROOT_DIR = path.resolve(__dirname, "../../../../../");
 
 function guessFontExtension(bytes: Uint8Array): "ttf" | "otf" {
   if (bytes.length >= 4) {
@@ -22,7 +24,7 @@ function guessFontExtension(bytes: Uint8Array): "ttf" | "otf" {
 }
 
 describe("PDF→PPTX visual regression: k-namingrule-dl.pdf", () => {
-  const pdfPath = path.resolve("fixtures/samples/k-namingrule-dl.pdf");
+  const pdfPath = path.join(ROOT_DIR, "fixtures/samples/k-namingrule-dl.pdf");
   const slideNumber = 1;
   const renderPdfPageToSvg = async (pageNumber: number, outPptxPath: string): Promise<{ svg: string; fontFiles: readonly string[]; cleanupFonts: () => void }> => {
     const pdfBytes = fs.readFileSync(pdfPath);
@@ -82,7 +84,7 @@ describe("PDF→PPTX visual regression: k-namingrule-dl.pdf", () => {
     }
 
     const snapshotName = `k-namingrule-dl-page${pageNumber}-vs-pdf`;
-    const outPptxPath = path.resolve(`spec/visual-regression/__output__/k-namingrule-dl-page${pageNumber}.pptx`);
+    const outPptxPath = path.join(__dirname, `__output__/k-namingrule-dl-page${pageNumber}.pptx`);
     const { svg, fontFiles, cleanupFonts } = await renderPdfPageToSvg(pageNumber, outPptxPath);
 
     let compare: ReturnType<typeof compareSvgToPdfBaseline>;

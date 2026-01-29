@@ -5,13 +5,15 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
-import { importPdf } from "@oxen-office/pdf-to-pptx/importer/pdf-importer";
+import { importPdf } from "../../src/importer/pdf-importer";
 import { exportPptxAsBuffer } from "@oxen-office/pptx/exporter";
 import { openPresentation } from "@oxen-office/pptx";
-import { loadPptxFile } from "../../scripts/lib/pptx-loader";
+import { loadPptxFile } from "../../../../../scripts/lib/pptx-loader";
 import { compareSvgToPdfBaseline } from "./compare";
 import { px } from "@oxen-office/ooxml/domain/units";
 import { renderSlideToSvg } from "@oxen-office/pptx-render/svg";
+
+const ROOT_DIR = path.resolve(__dirname, "../../../../../");
 
 function ensurePdfExists(pdfPath: string): boolean {
   if (fs.existsSync(pdfPath)) {return true;}
@@ -83,13 +85,13 @@ async function renderPdfPageToSvg(
 }
 
 describe("PDF→PPTX visual regression: k-resource-dl.pdf", () => {
-  const pdfPath = path.resolve("fixtures/samples/k-resource-dl.pdf");
+  const pdfPath = path.join(ROOT_DIR, "fixtures/samples/k-resource-dl.pdf");
 
   it("matches PDF baseline snapshot (page 2)", async () => {
     if (!ensurePdfExists(pdfPath)) {return;}
 
     const snapshotName = "k-resource-dl-page2-vs-pdf";
-    const outPptxPath = path.resolve("spec/visual-regression/__output__/k-resource-dl-page2.pptx");
+    const outPptxPath = path.join(__dirname, "__output__/k-resource-dl-page2.pptx");
     const { svg, fontFiles, cleanupFonts } = await renderPdfPageToSvg(pdfPath, 2, outPptxPath);
 
     let compare: ReturnType<typeof compareSvgToPdfBaseline>;
@@ -137,7 +139,7 @@ describe("PDF→PPTX visual regression: k-resource-dl.pdf", () => {
     if (!ensurePdfExists(pdfPath)) {return;}
 
     const snapshotName = "k-resource-dl-page4-vs-pdf";
-    const outPptxPath = path.resolve("spec/visual-regression/__output__/k-resource-dl-page4.pptx");
+    const outPptxPath = path.join(__dirname, "__output__/k-resource-dl-page4.pptx");
     const { svg, fontFiles, cleanupFonts } = await renderPdfPageToSvg(pdfPath, 4, outPptxPath);
 
     let compare: ReturnType<typeof compareSvgToPdfBaseline>;
@@ -185,7 +187,7 @@ describe("PDF→PPTX visual regression: k-resource-dl.pdf", () => {
     if (!ensurePdfExists(pdfPath)) {return;}
 
     const snapshotName = "k-resource-dl-page5-vs-pdf";
-    const outPptxPath = path.resolve("spec/visual-regression/__output__/k-resource-dl-page5.pptx");
+    const outPptxPath = path.join(__dirname, "__output__/k-resource-dl-page5.pptx");
     const { svg, fontFiles, cleanupFonts } = await renderPdfPageToSvg(pdfPath, 5, outPptxPath);
 
     let compare: ReturnType<typeof compareSvgToPdfBaseline>;

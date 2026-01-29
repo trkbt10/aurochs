@@ -1,8 +1,15 @@
+/**
+ * @file PDF fixtures validation tests
+ */
+
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { parsePdf } from "@oxen/pdf";
-import { DEFAULT_PDF_FIXTURE_DIR, generatePdfFixtures } from "../../scripts/generate/generate-pdf-fixtures";
+import { generatePdfFixtures } from "../../../../../scripts/generate/generate-pdf-fixtures";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const FIXTURES_DIR = path.join(__dirname, "..", "fixtures", "pdf");
 
 type FixtureExpectation = {
   readonly fileName: string;
@@ -58,7 +65,6 @@ function isValidPdf(bytes: Uint8Array): boolean {
 }
 
 function createTempDir(): string {
-  const __dirname = path.dirname(fileURLToPath(import.meta.url));
   const base = path.resolve(__dirname, "../.tmp/pdf-fixtures");
   fs.mkdirSync(base, { recursive: true });
   const tmp = path.join(base, `${Date.now()}-${Math.random().toString(16).slice(2)}`);
@@ -69,7 +75,7 @@ function createTempDir(): string {
 describe("PDF fixtures", () => {
   it("checked-in fixtures exist, are valid PDFs, and match expected content", async () => {
     for (const fixture of FIXTURES) {
-      const filePath = path.join(DEFAULT_PDF_FIXTURE_DIR, fixture.fileName);
+      const filePath = path.join(FIXTURES_DIR, fixture.fileName);
       expect(fs.existsSync(filePath)).toBe(true);
 
       const bytes = fs.readFileSync(filePath);
@@ -132,7 +138,7 @@ describe("PDF fixtures", () => {
 
       for (const fixture of FIXTURES) {
         const generated = fs.readFileSync(path.join(tmpDir, fixture.fileName));
-        const expected = fs.readFileSync(path.join(DEFAULT_PDF_FIXTURE_DIR, fixture.fileName));
+        const expected = fs.readFileSync(path.join(FIXTURES_DIR, fixture.fileName));
         expect(generated.equals(expected)).toBe(true);
         expect(generated.equals(firstRun.get(fixture.fileName)!)).toBe(true);
       }

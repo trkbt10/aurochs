@@ -20,8 +20,8 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { px } from "@oxen-office/ooxml/domain/units";
 import { parsePdf, createDefaultGraphicsState, type PdfText } from "@oxen/pdf";
-import { convertTextToShape } from "@oxen-office/pdf-to-pptx/converter/text-to-shapes";
-import { createFitContext } from "@oxen-office/pdf-to-pptx/converter/transform-converter";
+import { convertTextToShape } from "@oxen-converters/pdf-to-pptx/converter/text-to-shapes";
+import { createFitContext } from "@oxen-converters/pdf-to-pptx/converter/transform-converter";
 import { buildSimplePdfBytes } from "@oxen/pdf/test-utils/simple-pdf";
 
 describe("CIDOrdering extraction from real PDFs", () => {

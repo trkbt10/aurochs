@@ -4,7 +4,7 @@
  * Usage: bun run scripts/verify/verify-pdf-issues.ts <pdf-path> <output-pptx-path>
  */
 import * as fs from "node:fs";
-import { importPdf } from "@oxen-office/pdf-to-pptx/importer/pdf-importer";
+import { importPdf } from "@oxen-converters/pdf-to-pptx/importer/pdf-importer";
 import { exportPptx } from "@oxen-office/pptx/exporter";
 import { px } from "@oxen-office/ooxml/domain/units";
 import { loadZipPackage } from "@oxen/zip";

@@ -18,6 +18,14 @@
       "types": "./src/index.ts",
       "default": "./src/index.ts"
     },
+    "./converter": {
+      "types": "./src/converter/index.ts",
+      "default": "./src/converter/index.ts"
+    },
+    "./converter/*": {
+      "types": "./src/converter/*.ts",
+      "default": "./src/converter/*.ts"
+    },
     "./*": {
       "types": "./src/*.ts",
       "default": "./src/*.ts"

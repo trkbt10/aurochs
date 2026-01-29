@@ -11,10 +11,19 @@
  */
 
 import type { XmlElement, XmlNode } from "@oxen/xml";
-import { serializeElement, createElement } from "@oxen/xml";
+import { createElement } from "@oxen/xml";
 import { createEmptyZipPackage } from "@oxen/zip";
+import {
+  serializeWithDeclaration,
+  serializeRelationships as serializeOpcRelationships,
+  serializeContentTypes,
+  STANDARD_CONTENT_TYPE_DEFAULTS,
+  createRelationshipIdGenerator,
+  type OpcRelationship,
+  type ContentTypeEntry,
+} from "@oxen-office/opc";
 import type { XlsxWorkbook } from "./domain/workbook";
-import { serializeWorkbook, type XlsxRelationship, serializeRelationships } from "./serializer/workbook";
+import { serializeWorkbook } from "./serializer/workbook";
 import { serializeStyleSheet } from "./serializer/styles";
 import { serializeWorksheet } from "./serializer/worksheet";
 import type { SharedStringTable } from "./serializer/cell";
@@ -24,17 +33,9 @@ import type { SharedStringTable } from "./serializer/cell";
 // =============================================================================
 
 /**
- * XML declaration for all XML files
+ * SpreadsheetML-specific content types.
  */
-const XML_DECLARATION = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
-
-/**
- * Content type namespaces and types
- */
-const CONTENT_TYPES = {
-  namespace: "http://schemas.openxmlformats.org/package/2006/content-types",
-  rels: "application/vnd.openxmlformats-package.relationships+xml",
-  xml: "application/xml",
+const XLSX_CONTENT_TYPES = {
   workbook: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml",
   worksheet: "application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml",
   styles: "application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml",
@@ -42,9 +43,9 @@ const CONTENT_TYPES = {
 } as const;
 
 /**
- * Relationship type URIs
+ * SpreadsheetML-specific relationship type URIs.
  */
-const RELATIONSHIP_TYPES = {
+const XLSX_RELATIONSHIP_TYPES = {
   officeDocument: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
   worksheet: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet",
   styles: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles",
@@ -55,17 +56,6 @@ const RELATIONSHIP_TYPES = {
  * SpreadsheetML namespace URI
  */
 const SPREADSHEETML_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
-
-// =============================================================================
-// Helper Functions
-// =============================================================================
-
-/**
- * Serialize an XmlElement to string with XML declaration.
- */
-function serializeWithDeclaration(element: XmlElement): string {
-  return XML_DECLARATION + serializeElement(element);
-}
 
 // =============================================================================
 // Shared String Table Builder
@@ -139,61 +129,24 @@ export function collectSharedStrings(
  * @see ECMA-376 Part 2, Section 10.1.2.1 (Content Types)
  */
 export function generateContentTypes(workbook: XlsxWorkbook): XmlElement {
-  const children: XmlNode[] = [];
+  const entries: ContentTypeEntry[] = [
+    // Standard defaults (rels, xml)
+    ...STANDARD_CONTENT_TYPE_DEFAULTS,
+    // Workbook
+    { kind: "override", partName: "/xl/workbook.xml", contentType: XLSX_CONTENT_TYPES.workbook },
+    // Worksheets
+    ...workbook.sheets.map((_, index): ContentTypeEntry => ({
+      kind: "override",
+      partName: `/xl/worksheets/sheet${index + 1}.xml`,
+      contentType: XLSX_CONTENT_TYPES.worksheet,
+    })),
+    // Styles
+    { kind: "override", partName: "/xl/styles.xml", contentType: XLSX_CONTENT_TYPES.styles },
+    // Shared strings
+    { kind: "override", partName: "/xl/sharedStrings.xml", contentType: XLSX_CONTENT_TYPES.sharedStrings },
+  ];
 
-  // Default extensions
-  children.push(
-    createElement("Default", {
-      Extension: "rels",
-      ContentType: CONTENT_TYPES.rels,
-    }),
-  );
-  children.push(
-    createElement("Default", {
-      Extension: "xml",
-      ContentType: CONTENT_TYPES.xml,
-    }),
-  );
-
-  // Override for workbook
-  children.push(
-    createElement("Override", {
-      PartName: "/xl/workbook.xml",
-      ContentType: CONTENT_TYPES.workbook,
-    }),
-  );
-
-  // Override for each worksheet
-  workbook.sheets.forEach((_, index) => {
-    children.push(
-      createElement("Override", {
-        PartName: `/xl/worksheets/sheet${index + 1}.xml`,
-        ContentType: CONTENT_TYPES.worksheet,
-      }),
-    );
-  });
-
-  // Override for styles
-  children.push(
-    createElement("Override", {
-      PartName: "/xl/styles.xml",
-      ContentType: CONTENT_TYPES.styles,
-    }),
-  );
-
-  // Override for sharedStrings
-  children.push(
-    createElement("Override", {
-      PartName: "/xl/sharedStrings.xml",
-      ContentType: CONTENT_TYPES.sharedStrings,
-    }),
-  );
-
-  return createElement(
-    "Types",
-    { xmlns: CONTENT_TYPES.namespace },
-    children,
-  );
+  return serializeContentTypes(entries);
 }
 
 // =============================================================================
@@ -208,15 +161,15 @@ export function generateContentTypes(workbook: XlsxWorkbook): XmlElement {
  * @see ECMA-376 Part 2, Section 9.3 (Relationships)
  */
 export function generateRootRels(): XmlElement {
-  const relationships: XlsxRelationship[] = [
+  const relationships: OpcRelationship[] = [
     {
       id: "rId1",
-      type: RELATIONSHIP_TYPES.officeDocument,
+      type: XLSX_RELATIONSHIP_TYPES.officeDocument,
       target: "xl/workbook.xml",
     },
   ];
 
-  return serializeRelationships(relationships);
+  return serializeOpcRelationships(relationships);
 }
 
 // =============================================================================
@@ -232,38 +185,33 @@ export function generateRootRels(): XmlElement {
  * @see ECMA-376 Part 2, Section 9.2 (Relationships)
  */
 export function generateWorkbookRels(workbook: XlsxWorkbook): XmlElement {
-  const relationships: XlsxRelationship[] = [];
-  const state = { rIdCounter: 1 };
-  const nextRelationshipId = (): string => {
-    const id = `rId${state.rIdCounter}`;
-    state.rIdCounter += 1;
-    return id;
-  };
+  const relationships: OpcRelationship[] = [];
+  const nextId = createRelationshipIdGenerator();
 
   // Relationships for each worksheet
   for (let i = 0; i < workbook.sheets.length; i++) {
     relationships.push({
-      id: nextRelationshipId(),
-      type: RELATIONSHIP_TYPES.worksheet,
+      id: nextId(),
+      type: XLSX_RELATIONSHIP_TYPES.worksheet,
       target: `worksheets/sheet${i + 1}.xml`,
     });
   }
 
   // Relationship for styles
   relationships.push({
-    id: nextRelationshipId(),
-    type: RELATIONSHIP_TYPES.styles,
+    id: nextId(),
+    type: XLSX_RELATIONSHIP_TYPES.styles,
     target: "styles.xml",
   });
 
   // Relationship for sharedStrings
   relationships.push({
-    id: nextRelationshipId(),
-    type: RELATIONSHIP_TYPES.sharedStrings,
+    id: nextId(),
+    type: XLSX_RELATIONSHIP_TYPES.sharedStrings,
     target: "sharedStrings.xml",
   });
 
-  return serializeRelationships(relationships);
+  return serializeOpcRelationships(relationships);
 }
 
 // =============================================================================

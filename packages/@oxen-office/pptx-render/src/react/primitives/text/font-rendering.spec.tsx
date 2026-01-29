@@ -10,7 +10,7 @@ import { px, pt, deg } from "@oxen-office/ooxml/domain/units";
 import type { Slide } from "@oxen-office/pptx/domain/slide/types";
 import type { SpShape } from "@oxen-office/pptx/domain/shape";
 import { createDefaultGraphicsState } from "@oxen/pdf/domain";
-import { convertTextToShape, createFitContext } from "@oxen-office/pdf-to-pptx/converter";
+import { convertTextToShape, createFitContext } from "@oxen-converters/pdf-to-pptx/converter";
 
 // Mock getComputedTextLength for JSDOM (not supported natively)
 beforeAll(() => {

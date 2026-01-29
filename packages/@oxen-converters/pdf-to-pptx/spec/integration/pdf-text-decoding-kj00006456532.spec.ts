@@ -6,7 +6,8 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { parsePdf, type PdfText } from "@oxen/pdf";
 
-const PDF_PATH = path.resolve("fixtures/samples/KJ00006456532.pdf");
+const ROOT_DIR = path.resolve(__dirname, "../../../../../");
+const PDF_PATH = path.join(ROOT_DIR, "fixtures/samples/KJ00006456532.pdf");
 
 describe("PDF text decoding (KJ00006456532.pdf)", () => {
   it("decodes Japan1 CID text without replacement characters", async () => {
