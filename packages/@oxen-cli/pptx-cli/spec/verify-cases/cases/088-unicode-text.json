@@ -1,0 +1,177 @@
+{
+  "name": "unicode-text",
+  "description": "Verify Unicode and international text support",
+  "tags": ["text", "unicode", "i18n"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/unicode-text.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 50,
+            "width": 350,
+            "height": 70,
+            "fill": "FFFFFF",
+            "lineColor": "E5E7EB",
+            "lineWidth": 1,
+            "text": [
+              {
+                "runs": [{ "text": "English: Hello World!", "fontSize": 20 }]
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 130,
+            "width": 350,
+            "height": 70,
+            "fill": "FFFFFF",
+            "lineColor": "E5E7EB",
+            "lineWidth": 1,
+            "text": [
+              {
+                "runs": [{ "text": "日本語: こんにちは世界", "fontSize": 20 }]
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 210,
+            "width": 350,
+            "height": 70,
+            "fill": "FFFFFF",
+            "lineColor": "E5E7EB",
+            "lineWidth": 1,
+            "text": [
+              {
+                "runs": [{ "text": "中文: 你好世界", "fontSize": 20 }]
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 290,
+            "width": 350,
+            "height": 70,
+            "fill": "FFFFFF",
+            "lineColor": "E5E7EB",
+            "lineWidth": 1,
+            "text": [
+              {
+                "runs": [{ "text": "한국어: 안녕하세요", "fontSize": 20 }]
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 420,
+            "y": 50,
+            "width": 350,
+            "height": 70,
+            "fill": "F3F4F6",
+            "text": [
+              {
+                "runs": [{ "text": "Emoji: 🎉 🚀 ⭐ 💡 🔥", "fontSize": 24 }],
+                "alignment": "center"
+              }
+            ],
+            "textBody": { "anchor": "center" }
+          },
+          {
+            "type": "rectangle",
+            "x": 420,
+            "y": 130,
+            "width": 350,
+            "height": 70,
+            "fill": "F3F4F6",
+            "text": [
+              {
+                "runs": [{ "text": "Symbols: © ® ™ § ¶ † ‡ • ‣", "fontSize": 20 }],
+                "alignment": "center"
+              }
+            ],
+            "textBody": { "anchor": "center" }
+          },
+          {
+            "type": "rectangle",
+            "x": 420,
+            "y": 210,
+            "width": 350,
+            "height": 70,
+            "fill": "F3F4F6",
+            "text": [
+              {
+                "runs": [{ "text": "Math: α β γ δ ∑ ∫ √ ∞ ≠ ≤ ≥", "fontSize": 18 }],
+                "alignment": "center"
+              }
+            ],
+            "textBody": { "anchor": "center" }
+          },
+          {
+            "type": "rectangle",
+            "x": 420,
+            "y": 290,
+            "width": 350,
+            "height": 70,
+            "fill": "F3F4F6",
+            "text": [
+              {
+                "runs": [{ "text": "Arrows: ← → ↑ ↓ ↔ ↕ ⇐ ⇒ ⇑ ⇓", "fontSize": 20 }],
+                "alignment": "center"
+              }
+            ],
+            "textBody": { "anchor": "center" }
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 380,
+            "width": 720,
+            "height": 100,
+            "fill": "1F2937",
+            "text": [
+              {
+                "runs": [
+                  { "text": "Mixed: ", "fontSize": 18, "color": "FFFFFF" },
+                  { "text": "Hello ", "fontSize": 18, "color": "3B82F6" },
+                  { "text": "世界 ", "fontSize": 18, "color": "10B981" },
+                  { "text": "🌍 ", "fontSize": 18, "color": "FFFFFF" },
+                  { "text": "مرحبا ", "fontSize": 18, "color": "F59E0B" },
+                  { "text": "Мир ", "fontSize": 18, "color": "EF4444" },
+                  { "text": "🎊", "fontSize": 18, "color": "FFFFFF" }
+                ],
+                "alignment": "center"
+              }
+            ],
+            "textBody": { "anchor": "center" }
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -9, "type": "sp", "text": "English: Hello World!" },
+          { "index": -8, "type": "sp", "text": "日本語: こんにちは世界" },
+          { "index": -7, "type": "sp", "text": "中文: 你好世界" },
+          { "index": -6, "type": "sp", "text": "한국어: 안녕하세요" },
+          { "index": -5, "type": "sp", "text": "Emoji: 🎉 🚀 ⭐ 💡 🔥" },
+          { "index": -4, "type": "sp", "text": "Symbols: © ® ™ § ¶ † ‡ • ‣" },
+          { "index": -3, "type": "sp", "text": "Math: α β γ δ ∑ ∫ √ ∞ ≠ ≤ ≥" },
+          { "index": -2, "type": "sp", "text": "Arrows: ← → ↑ ↓ ↔ ↕ ⇐ ⇒ ⇑ ⇓" },
+          { "index": -1, "type": "sp", "text": "Mixed: Hello 世界 🌍 مرحبا Мир 🎊" }
+        ]
+      }
+    ]
+  }
+}

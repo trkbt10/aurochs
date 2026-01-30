@@ -1,0 +1,108 @@
+{
+  "name": "nested-groups",
+  "description": "Verify nested group structures",
+  "tags": ["group", "nested"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/nested-groups.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addGroups": [
+          {
+            "type": "group",
+            "x": 50,
+            "y": 50,
+            "width": 400,
+            "height": 300,
+            "children": [
+              {
+                "type": "rectangle",
+                "x": 0,
+                "y": 0,
+                "width": 180,
+                "height": 80,
+                "fill": "3B82F6",
+                "text": "Outer-A"
+              },
+              {
+                "type": "rectangle",
+                "x": 200,
+                "y": 0,
+                "width": 180,
+                "height": 80,
+                "fill": "3B82F6",
+                "text": "Outer-B"
+              },
+              {
+                "type": "group",
+                "x": 50,
+                "y": 100,
+                "width": 300,
+                "height": 180,
+                "children": [
+                  {
+                    "type": "ellipse",
+                    "x": 0,
+                    "y": 0,
+                    "width": 100,
+                    "height": 80,
+                    "fill": "10B981",
+                    "text": "Inner-1"
+                  },
+                  {
+                    "type": "ellipse",
+                    "x": 120,
+                    "y": 0,
+                    "width": 100,
+                    "height": 80,
+                    "fill": "10B981",
+                    "text": "Inner-2"
+                  },
+                  {
+                    "type": "triangle",
+                    "x": 60,
+                    "y": 100,
+                    "width": 100,
+                    "height": 80,
+                    "fill": "F59E0B",
+                    "text": "Inner-3"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "group",
+            "x": 500,
+            "y": 50,
+            "width": 200,
+            "height": 200,
+            "children": [
+              {
+                "type": "star5",
+                "x": 50,
+                "y": 50,
+                "width": 100,
+                "height": 100,
+                "fill": "EF4444",
+                "text": "Star"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -2, "type": "grpSp" },
+          { "index": -1, "type": "grpSp" }
+        ]
+      }
+    ]
+  }
+}

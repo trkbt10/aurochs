@@ -1,0 +1,104 @@
+{
+  "name": "long-text",
+  "description": "Verify shapes with long text content",
+  "tags": ["text", "edge", "long"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/long-text.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 50,
+            "width": 700,
+            "height": 150,
+            "fill": "FFFFFF",
+            "lineColor": "E5E7EB",
+            "lineWidth": 1,
+            "text": [
+              {
+                "runs": [{ "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.", "fontSize": 12 }]
+              }
+            ],
+            "textBody": {
+              "anchor": "top",
+              "wrapping": "square",
+              "insetLeft": 10,
+              "insetTop": 10,
+              "insetRight": 10,
+              "insetBottom": 10
+            }
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 220,
+            "width": 700,
+            "height": 200,
+            "fill": "F3F4F6",
+            "text": [
+              {
+                "runs": [{ "text": "Multi-Paragraph Document", "fontSize": 18, "bold": true }],
+                "alignment": "center",
+                "spaceAfter": 12
+              },
+              {
+                "runs": [{ "text": "This is the first paragraph with substantial content. It demonstrates how text flows within a shape when there are multiple paragraphs with different formatting options applied.", "fontSize": 11 }],
+                "spaceBefore": 6,
+                "spaceAfter": 6
+              },
+              {
+                "runs": [{ "text": "The second paragraph continues with more content. Each paragraph can have its own alignment, spacing, and formatting rules applied independently.", "fontSize": 11 }],
+                "spaceBefore": 6,
+                "spaceAfter": 6
+              },
+              {
+                "runs": [{ "text": "Finally, the third paragraph wraps up the content with a conclusion. This tests how the system handles multiple paragraphs with spacing between them.", "fontSize": 11 }],
+                "spaceBefore": 6
+              }
+            ],
+            "textBody": {
+              "anchor": "top",
+              "insetLeft": 15,
+              "insetTop": 15,
+              "insetRight": 15,
+              "insetBottom": 15
+            }
+          },
+          {
+            "type": "roundRect",
+            "x": 50,
+            "y": 440,
+            "width": 700,
+            "height": 60,
+            "fill": "1F2937",
+            "text": [
+              {
+                "runs": [
+                  { "text": "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz!@#$%^&*()_+-=[]{}|;':\",./<>?", "fontSize": 10, "color": "FFFFFF" }
+                ],
+                "alignment": "center"
+              }
+            ],
+            "textBody": { "anchor": "center" }
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -3, "type": "sp", "text": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur." },
+          { "index": -2, "type": "sp", "text": "Multi-Paragraph Document\nThis is the first paragraph with substantial content. It demonstrates how text flows within a shape when there are multiple paragraphs with different formatting options applied.\nThe second paragraph continues with more content. Each paragraph can have its own alignment, spacing, and formatting rules applied independently.\nFinally, the third paragraph wraps up the content with a conclusion. This tests how the system handles multiple paragraphs with spacing between them." },
+          { "index": -1, "type": "sp", "text": "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789abcdefghijklmnopqrstuvwxyz!@#$%^&*()_+-=[]{}|;':\",./<>?" }
+        ]
+      }
+    ]
+  }
+}

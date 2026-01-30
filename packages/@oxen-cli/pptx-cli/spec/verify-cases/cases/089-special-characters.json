@@ -1,0 +1,145 @@
+{
+  "name": "special-characters",
+  "description": "Verify special characters and escape sequences",
+  "tags": ["text", "special", "escape"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/special-characters.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 50,
+            "width": 400,
+            "height": 60,
+            "fill": "FFFFFF",
+            "lineColor": "E5E7EB",
+            "lineWidth": 1,
+            "text": "Quotes: \"double\" and 'single'"
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 120,
+            "width": 400,
+            "height": 60,
+            "fill": "FFFFFF",
+            "lineColor": "E5E7EB",
+            "lineWidth": 1,
+            "text": "Ampersand: Tom & Jerry"
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 190,
+            "width": 400,
+            "height": 60,
+            "fill": "FFFFFF",
+            "lineColor": "E5E7EB",
+            "lineWidth": 1,
+            "text": "Angle brackets: <html> tags </html>"
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 260,
+            "width": 400,
+            "height": 60,
+            "fill": "FFFFFF",
+            "lineColor": "E5E7EB",
+            "lineWidth": 1,
+            "text": "Currency: $100 €50 £30 ¥5000"
+          },
+          {
+            "type": "rectangle",
+            "x": 500,
+            "y": 50,
+            "width": 300,
+            "height": 60,
+            "fill": "F3F4F6",
+            "text": "Percent: 50% off!"
+          },
+          {
+            "type": "rectangle",
+            "x": 500,
+            "y": 120,
+            "width": 300,
+            "height": 60,
+            "fill": "F3F4F6",
+            "text": "Hash: #trending #code"
+          },
+          {
+            "type": "rectangle",
+            "x": 500,
+            "y": 190,
+            "width": 300,
+            "height": 60,
+            "fill": "F3F4F6",
+            "text": "At: email@example.com"
+          },
+          {
+            "type": "rectangle",
+            "x": 500,
+            "y": 260,
+            "width": 300,
+            "height": 60,
+            "fill": "F3F4F6",
+            "text": "Path: C:\\Users\\Documents"
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 340,
+            "width": 750,
+            "height": 80,
+            "fill": "1F2937",
+            "text": [
+              {
+                "runs": [{ "text": "All together: \"Hello\" & <World> @2024 #test $99 50% C:\\path", "fontSize": 16, "color": "FFFFFF" }],
+                "alignment": "center"
+              }
+            ],
+            "textBody": { "anchor": "center" }
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 440,
+            "width": 750,
+            "height": 60,
+            "fill": "3B82F6",
+            "text": [
+              {
+                "runs": [{ "text": "Punctuation: . , ; : ! ? - _ + = * / ~ ` ^ | \\ [ ] { } ( )", "fontSize": 14, "color": "FFFFFF" }],
+                "alignment": "center"
+              }
+            ],
+            "textBody": { "anchor": "center" }
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -10, "type": "sp", "text": "Quotes: \"double\" and 'single'" },
+          { "index": -9, "type": "sp", "text": "Ampersand: Tom & Jerry" },
+          { "index": -8, "type": "sp", "text": "Angle brackets: <html> tags </html>" },
+          { "index": -7, "type": "sp", "text": "Currency: $100 €50 £30 ¥5000" },
+          { "index": -6, "type": "sp", "text": "Percent: 50% off!" },
+          { "index": -5, "type": "sp", "text": "Hash: #trending #code" },
+          { "index": -4, "type": "sp", "text": "At: email@example.com" },
+          { "index": -3, "type": "sp", "text": "Path: C:\\Users\\Documents" },
+          { "index": -2, "type": "sp", "text": "All together: \"Hello\" & <World> @2024 #test $99 50% C:\\path" },
+          { "index": -1, "type": "sp", "text": "Punctuation: . , ; : ! ? - _ + = * / ~ ` ^ | \\ [ ] { } ( )" }
+        ]
+      }
+    ]
+  }
+}

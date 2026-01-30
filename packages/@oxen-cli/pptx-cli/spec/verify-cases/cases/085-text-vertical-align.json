@@ -1,0 +1,141 @@
+{
+  "name": "text-vertical-align",
+  "description": "Verify text vertical alignment (anchor) in shapes",
+  "tags": ["text", "body", "anchor", "alignment"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/text-vertical-align.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 50,
+            "width": 200,
+            "height": 120,
+            "fill": "3B82F6",
+            "text": [
+              {
+                "runs": [{ "text": "Top Aligned", "fontSize": 18, "color": "FFFFFF" }],
+                "alignment": "center"
+              }
+            ],
+            "textBody": {
+              "anchor": "top"
+            }
+          },
+          {
+            "type": "rectangle",
+            "x": 280,
+            "y": 50,
+            "width": 200,
+            "height": 120,
+            "fill": "10B981",
+            "text": [
+              {
+                "runs": [{ "text": "Center Aligned", "fontSize": 18, "color": "FFFFFF" }],
+                "alignment": "center"
+              }
+            ],
+            "textBody": {
+              "anchor": "center"
+            }
+          },
+          {
+            "type": "rectangle",
+            "x": 510,
+            "y": 50,
+            "width": 200,
+            "height": 120,
+            "fill": "F59E0B",
+            "text": [
+              {
+                "runs": [{ "text": "Bottom Aligned", "fontSize": 18, "color": "FFFFFF" }],
+                "alignment": "center"
+              }
+            ],
+            "textBody": {
+              "anchor": "bottom"
+            }
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 200,
+            "width": 300,
+            "height": 150,
+            "fill": "1F2937",
+            "text": [
+              {
+                "runs": [{ "text": "Center with Insets", "fontSize": 20, "color": "FFFFFF", "bold": true }],
+                "alignment": "center"
+              },
+              {
+                "runs": [{ "text": "20px insets on all sides", "fontSize": 14, "color": "9CA3AF" }],
+                "alignment": "center"
+              }
+            ],
+            "textBody": {
+              "anchor": "center",
+              "insetLeft": 20,
+              "insetTop": 20,
+              "insetRight": 20,
+              "insetBottom": 20
+            }
+          },
+          {
+            "type": "rectangle",
+            "x": 380,
+            "y": 200,
+            "width": 120,
+            "height": 200,
+            "fill": "8B5CF6",
+            "text": [
+              {
+                "runs": [{ "text": "Vertical", "fontSize": 16, "color": "FFFFFF" }]
+              }
+            ],
+            "textBody": {
+              "anchor": "center",
+              "verticalType": "vert"
+            }
+          },
+          {
+            "type": "rectangle",
+            "x": 530,
+            "y": 200,
+            "width": 120,
+            "height": 200,
+            "fill": "EC4899",
+            "text": [
+              {
+                "runs": [{ "text": "Vert 270", "fontSize": 16, "color": "FFFFFF" }]
+              }
+            ],
+            "textBody": {
+              "anchor": "center",
+              "verticalType": "vert270"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -6, "type": "sp", "text": "Top Aligned" },
+          { "index": -5, "type": "sp", "text": "Center Aligned" },
+          { "index": -4, "type": "sp", "text": "Bottom Aligned" },
+          { "index": -3, "type": "sp", "text": "Center with Insets\n20px insets on all sides" },
+          { "index": -2, "type": "sp", "text": "Vertical" },
+          { "index": -1, "type": "sp", "text": "Vert 270" }
+        ]
+      }
+    ]
+  }
+}

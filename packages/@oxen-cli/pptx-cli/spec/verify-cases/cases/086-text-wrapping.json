@@ -1,0 +1,118 @@
+{
+  "name": "text-wrapping",
+  "description": "Verify text wrapping options in shapes",
+  "tags": ["text", "body", "wrapping"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/text-wrapping.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 50,
+            "width": 300,
+            "height": 100,
+            "fill": "FFFFFF",
+            "lineColor": "D1D5DB",
+            "lineWidth": 1,
+            "text": [
+              {
+                "runs": [{ "text": "Wrap: square (default) - This is a longer text that should wrap to multiple lines within the shape boundaries.", "fontSize": 14 }]
+              }
+            ],
+            "textBody": {
+              "wrapping": "square",
+              "anchor": "top"
+            }
+          },
+          {
+            "type": "rectangle",
+            "x": 400,
+            "y": 50,
+            "width": 300,
+            "height": 100,
+            "fill": "F3F4F6",
+            "lineColor": "D1D5DB",
+            "lineWidth": 1,
+            "text": [
+              {
+                "runs": [{ "text": "Wrap: none - This text will not wrap and may extend beyond the shape.", "fontSize": 14 }]
+              }
+            ],
+            "textBody": {
+              "wrapping": "none",
+              "anchor": "top"
+            }
+          },
+          {
+            "type": "roundRect",
+            "x": 50,
+            "y": 180,
+            "width": 350,
+            "height": 150,
+            "fill": "3B82F6",
+            "text": [
+              {
+                "runs": [{ "text": "Centered with Padding", "fontSize": 20, "color": "FFFFFF", "bold": true }],
+                "alignment": "center"
+              },
+              {
+                "runs": [{ "text": "This shape has text centered both horizontally and vertically, with generous padding around the text.", "fontSize": 14, "color": "BFDBFE" }],
+                "alignment": "center"
+              }
+            ],
+            "textBody": {
+              "anchor": "center",
+              "anchorCenter": true,
+              "insetLeft": 25,
+              "insetTop": 15,
+              "insetRight": 25,
+              "insetBottom": 15
+            }
+          },
+          {
+            "type": "roundRect",
+            "x": 430,
+            "y": 180,
+            "width": 350,
+            "height": 150,
+            "fill": "10B981",
+            "text": [
+              {
+                "runs": [{ "text": "Bottom Aligned", "fontSize": 20, "color": "FFFFFF", "bold": true }],
+                "alignment": "right"
+              },
+              {
+                "runs": [{ "text": "Text aligned to bottom-right corner with minimal padding.", "fontSize": 14, "color": "A7F3D0" }],
+                "alignment": "right"
+              }
+            ],
+            "textBody": {
+              "anchor": "bottom",
+              "insetLeft": 10,
+              "insetTop": 10,
+              "insetRight": 10,
+              "insetBottom": 10
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -4, "type": "sp", "text": "Wrap: square (default) - This is a longer text that should wrap to multiple lines within the shape boundaries." },
+          { "index": -3, "type": "sp", "text": "Wrap: none - This text will not wrap and may extend beyond the shape." },
+          { "index": -2, "type": "sp", "text": "Centered with Padding\nThis shape has text centered both horizontally and vertically, with generous padding around the text." },
+          { "index": -1, "type": "sp", "text": "Bottom Aligned\nText aligned to bottom-right corner with minimal padding." }
+        ]
+      }
+    ]
+  }
+}

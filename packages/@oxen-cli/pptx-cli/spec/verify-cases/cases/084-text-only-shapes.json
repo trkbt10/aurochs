@@ -1,0 +1,95 @@
+{
+  "name": "text-only-shapes",
+  "description": "Verify shapes with text but minimal styling",
+  "tags": ["text", "minimal"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/text-only-shapes.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 50,
+            "width": 400,
+            "height": 60,
+            "text": "Simple text in rectangle"
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 130,
+            "width": 600,
+            "height": 100,
+            "text": [
+              {
+                "runs": [{ "text": "Title", "fontSize": 28, "bold": true }],
+                "alignment": "center"
+              },
+              {
+                "runs": [{ "text": "Subtitle text below the title", "fontSize": 16 }],
+                "alignment": "center"
+              }
+            ]
+          },
+          {
+            "type": "ellipse",
+            "x": 50,
+            "y": 260,
+            "width": 200,
+            "height": 100,
+            "text": "Ellipse text"
+          },
+          {
+            "type": "roundRect",
+            "x": 280,
+            "y": 260,
+            "width": 300,
+            "height": 120,
+            "text": [
+              {
+                "runs": [
+                  { "text": "Formatted ", "fontSize": 18 },
+                  { "text": "text", "fontSize": 18, "bold": true },
+                  { "text": " in ", "fontSize": 18 },
+                  { "text": "round rect", "fontSize": 18, "italic": true }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 400,
+            "width": 500,
+            "height": 80,
+            "lineColor": "D1D5DB",
+            "lineWidth": 1,
+            "text": [
+              {
+                "runs": [{ "text": "Shape with only border, no fill", "fontSize": 16 }],
+                "alignment": "center"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -5, "type": "sp", "text": "Simple text in rectangle" },
+          { "index": -4, "type": "sp", "text": "Title\nSubtitle text below the title" },
+          { "index": -3, "type": "sp", "text": "Ellipse text" },
+          { "index": -2, "type": "sp", "text": "Formatted text in round rect" },
+          { "index": -1, "type": "sp", "text": "Shape with only border, no fill" }
+        ]
+      }
+    ]
+  }
+}

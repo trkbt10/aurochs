@@ -1,0 +1,112 @@
+{
+  "name": "all-element-types",
+  "description": "Verify all element types on single slide (shapes, connectors, groups, tables)",
+  "tags": ["comprehensive", "mixed"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/all-element-types.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 50,
+            "width": 150,
+            "height": 80,
+            "fill": "3B82F6",
+            "text": "Shape 1"
+          },
+          {
+            "type": "ellipse",
+            "x": 250,
+            "y": 50,
+            "width": 120,
+            "height": 80,
+            "fill": "10B981",
+            "text": "Shape 2"
+          }
+        ],
+        "addConnectors": [
+          {
+            "type": "connector",
+            "preset": "straightConnector1",
+            "x": 200,
+            "y": 90,
+            "width": 50,
+            "height": 0,
+            "lineColor": "1F2937",
+            "lineWidth": 2
+          }
+        ],
+        "addGroups": [
+          {
+            "type": "group",
+            "x": 420,
+            "y": 50,
+            "width": 200,
+            "height": 100,
+            "children": [
+              {
+                "type": "triangle",
+                "x": 0,
+                "y": 0,
+                "width": 80,
+                "height": 80,
+                "fill": "F59E0B",
+                "text": "G1"
+              },
+              {
+                "type": "star5",
+                "x": 100,
+                "y": 0,
+                "width": 80,
+                "height": 80,
+                "fill": "EF4444",
+                "text": "G2"
+              }
+            ]
+          }
+        ],
+        "addTables": [
+          {
+            "type": "table",
+            "x": 50,
+            "y": 180,
+            "width": 300,
+            "height": 150,
+            "rows": [
+              [
+                { "text": "Col A" },
+                { "text": "Col B" }
+              ],
+              [
+                { "text": "Row 1" },
+                { "text": "Data 1" }
+              ],
+              [
+                { "text": "Row 2" },
+                { "text": "Data 2" }
+              ]
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -5, "type": "sp", "text": "Shape 1" },
+          { "index": -4, "type": "sp", "text": "Shape 2" },
+          { "index": -3, "type": "cxnSp" },
+          { "index": -2, "type": "grpSp" },
+          { "index": -1, "type": "graphicFrame" }
+        ]
+      }
+    ]
+  }
+}

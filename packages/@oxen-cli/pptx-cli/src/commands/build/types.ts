@@ -385,6 +385,37 @@ export type RichTextSpec = readonly TextParagraphSpec[];
  */
 export type TextSpec = string | RichTextSpec;
 
+/**
+ * Vertical text anchor
+ * Based on ECMA-376 Part 1: §21.1.2.1.3 ST_TextAnchoringType
+ */
+export type TextAnchor = "top" | "center" | "bottom";
+
+/**
+ * Text vertical type (rotation)
+ * Based on ECMA-376 Part 1: §21.1.2.1.39 ST_TextVerticalType
+ */
+export type TextVerticalType = "horz" | "vert" | "vert270" | "wordArtVert" | "eaVert";
+
+/**
+ * Text wrapping mode
+ */
+export type TextWrapping = "none" | "square";
+
+/**
+ * Text body properties specification
+ */
+export type TextBodyPropertiesSpec = {
+  readonly anchor?: TextAnchor; // vertical alignment: top, center, bottom
+  readonly verticalType?: TextVerticalType; // text orientation
+  readonly wrapping?: TextWrapping;
+  readonly anchorCenter?: boolean; // center text horizontally
+  readonly insetLeft?: number; // left margin in pixels
+  readonly insetTop?: number; // top margin in pixels
+  readonly insetRight?: number; // right margin in pixels
+  readonly insetBottom?: number; // bottom margin in pixels
+};
+
 // =============================================================================
 // Shape Specification
 // =============================================================================
@@ -400,6 +431,8 @@ export type ShapeSpec = {
   readonly height: number;
   // Text - can be simple string or rich text paragraphs
   readonly text?: TextSpec;
+  // Text body properties (vertical alignment, orientation, margins)
+  readonly textBody?: TextBodyPropertiesSpec;
   // Transform properties
   readonly rotation?: number; // degrees 0-360
   readonly flipH?: boolean;

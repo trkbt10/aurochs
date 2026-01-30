@@ -1,0 +1,67 @@
+{
+  "name": "glow-variations",
+  "description": "Verify different glow effect configurations",
+  "tags": ["effects", "glow"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/glow-variations.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "ellipse", "x": 50, "y": 80, "width": 150, "height": 150, "fill": "EF4444",
+            "effects": { "glow": { "color": "FCA5A5", "radius": 5 } },
+            "text": [{ "runs": [{ "text": "5px", "color": "FFFFFF", "fontSize": 18 }], "alignment": "center" }],
+            "textBody": { "anchor": "center" }
+          },
+          {
+            "type": "ellipse", "x": 230, "y": 80, "width": 150, "height": 150, "fill": "F59E0B",
+            "effects": { "glow": { "color": "FCD34D", "radius": 10 } },
+            "text": [{ "runs": [{ "text": "10px", "color": "FFFFFF", "fontSize": 18 }], "alignment": "center" }],
+            "textBody": { "anchor": "center" }
+          },
+          {
+            "type": "ellipse", "x": 410, "y": 80, "width": 150, "height": 150, "fill": "10B981",
+            "effects": { "glow": { "color": "6EE7B7", "radius": 15 } },
+            "text": [{ "runs": [{ "text": "15px", "color": "FFFFFF", "fontSize": 18 }], "alignment": "center" }],
+            "textBody": { "anchor": "center" }
+          },
+          {
+            "type": "ellipse", "x": 590, "y": 80, "width": 150, "height": 150, "fill": "3B82F6",
+            "effects": { "glow": { "color": "93C5FD", "radius": 20 } },
+            "text": [{ "runs": [{ "text": "20px", "color": "FFFFFF", "fontSize": 18 }], "alignment": "center" }],
+            "textBody": { "anchor": "center" }
+          },
+          {
+            "type": "star5", "x": 150, "y": 280, "width": 200, "height": 200, "fill": "FACC15",
+            "effects": { "glow": { "color": "FEF08A", "radius": 12 } },
+            "text": [{ "runs": [{ "text": "★", "fontSize": 32 }], "alignment": "center" }],
+            "textBody": { "anchor": "center" }
+          },
+          {
+            "type": "star5", "x": 450, "y": 280, "width": 200, "height": 200, "fill": "8B5CF6",
+            "effects": { "glow": { "color": "C4B5FD", "radius": 18 } },
+            "text": [{ "runs": [{ "text": "★", "fontSize": 32, "color": "FFFFFF" }], "alignment": "center" }],
+            "textBody": { "anchor": "center" }
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -6, "type": "sp", "text": "5px" },
+          { "index": -5, "type": "sp", "text": "10px" },
+          { "index": -4, "type": "sp", "text": "15px" },
+          { "index": -3, "type": "sp", "text": "20px" },
+          { "index": -2, "type": "sp", "text": "★" },
+          { "index": -1, "type": "sp", "text": "★" }
+        ]
+      }
+    ]
+  }
+}

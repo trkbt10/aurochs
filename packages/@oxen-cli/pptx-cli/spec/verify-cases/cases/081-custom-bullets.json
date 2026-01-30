@@ -1,0 +1,117 @@
+{
+  "name": "custom-bullets",
+  "description": "Verify custom bullet characters",
+  "tags": ["text", "bullet", "custom"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/custom-bullets.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 50,
+            "width": 350,
+            "height": 200,
+            "fill": "FFFFFF",
+            "text": [
+              {
+                "runs": [{ "text": "Standard Bullets", "fontSize": 18, "bold": true }]
+              },
+              {
+                "runs": [{ "text": "Default bullet point", "fontSize": 16 }],
+                "bullet": { "type": "char", "char": "•" }
+              },
+              {
+                "runs": [{ "text": "Dash bullet", "fontSize": 16 }],
+                "bullet": { "type": "char", "char": "–" }
+              },
+              {
+                "runs": [{ "text": "Arrow bullet", "fontSize": 16 }],
+                "bullet": { "type": "char", "char": "→" }
+              },
+              {
+                "runs": [{ "text": "Check bullet", "fontSize": 16 }],
+                "bullet": { "type": "char", "char": "✓" }
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 420,
+            "y": 50,
+            "width": 350,
+            "height": 200,
+            "fill": "F3F4F6",
+            "text": [
+              {
+                "runs": [{ "text": "Symbol Bullets", "fontSize": 18, "bold": true }]
+              },
+              {
+                "runs": [{ "text": "Star bullet", "fontSize": 16 }],
+                "bullet": { "type": "char", "char": "★" }
+              },
+              {
+                "runs": [{ "text": "Diamond bullet", "fontSize": 16 }],
+                "bullet": { "type": "char", "char": "◆" }
+              },
+              {
+                "runs": [{ "text": "Square bullet", "fontSize": 16 }],
+                "bullet": { "type": "char", "char": "■" }
+              },
+              {
+                "runs": [{ "text": "Circle bullet", "fontSize": 16 }],
+                "bullet": { "type": "char", "char": "○" }
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 280,
+            "width": 500,
+            "height": 200,
+            "fill": "1F2937",
+            "text": [
+              {
+                "runs": [{ "text": "Task List Style", "fontSize": 20, "bold": true, "color": "FFFFFF" }],
+                "spaceBefore": 4
+              },
+              {
+                "runs": [{ "text": "Completed task", "fontSize": 16, "color": "10B981" }],
+                "bullet": { "type": "char", "char": "✔" },
+                "spaceBefore": 8
+              },
+              {
+                "runs": [{ "text": "In progress task", "fontSize": 16, "color": "F59E0B" }],
+                "bullet": { "type": "char", "char": "◐" }
+              },
+              {
+                "runs": [{ "text": "Pending task", "fontSize": 16, "color": "6B7280" }],
+                "bullet": { "type": "char", "char": "○" }
+              },
+              {
+                "runs": [{ "text": "Important task", "fontSize": 16, "color": "EF4444" }],
+                "bullet": { "type": "char", "char": "!" }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -3, "type": "sp", "text": "Standard Bullets\nDefault bullet point\nDash bullet\nArrow bullet\nCheck bullet" },
+          { "index": -2, "type": "sp", "text": "Symbol Bullets\nStar bullet\nDiamond bullet\nSquare bullet\nCircle bullet" },
+          { "index": -1, "type": "sp", "text": "Task List Style\nCompleted task\nIn progress task\nPending task\nImportant task" }
+        ]
+      }
+    ]
+  }
+}

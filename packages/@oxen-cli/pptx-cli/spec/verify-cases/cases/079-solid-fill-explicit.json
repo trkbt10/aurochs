@@ -1,0 +1,97 @@
+{
+  "name": "solid-fill-explicit",
+  "description": "Verify explicit solid fill specification (object form)",
+  "tags": ["shape", "fill", "solid"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/solid-fill-explicit.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 50,
+            "width": 200,
+            "height": 100,
+            "fill": "3B82F6",
+            "text": "String form"
+          },
+          {
+            "type": "rectangle",
+            "x": 280,
+            "y": 50,
+            "width": 200,
+            "height": 100,
+            "fill": {
+              "type": "solid",
+              "color": "3B82F6"
+            },
+            "text": "Object form"
+          },
+          {
+            "type": "ellipse",
+            "x": 510,
+            "y": 50,
+            "width": 150,
+            "height": 100,
+            "fill": {
+              "type": "solid",
+              "color": "10B981"
+            },
+            "text": "Green"
+          },
+          {
+            "type": "roundRect",
+            "x": 50,
+            "y": 180,
+            "width": 300,
+            "height": 120,
+            "fill": {
+              "type": "solid",
+              "color": "F59E0B"
+            },
+            "lineColor": "B45309",
+            "lineWidth": 3,
+            "text": [
+              {
+                "runs": [{ "text": "Solid + Line", "fontSize": 24, "bold": true }],
+                "alignment": "center"
+              }
+            ]
+          },
+          {
+            "type": "star5",
+            "x": 400,
+            "y": 180,
+            "width": 150,
+            "height": 150,
+            "fill": {
+              "type": "solid",
+              "color": "EF4444"
+            },
+            "effects": {
+              "shadow": { "color": "000000", "blur": 6, "distance": 4, "direction": 135 }
+            },
+            "text": "★"
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -5, "type": "sp", "text": "String form" },
+          { "index": -4, "type": "sp", "text": "Object form" },
+          { "index": -3, "type": "sp", "text": "Green" },
+          { "index": -2, "type": "sp", "text": "Solid + Line" },
+          { "index": -1, "type": "sp", "text": "★" }
+        ]
+      }
+    ]
+  }
+}

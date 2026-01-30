@@ -1,0 +1,48 @@
+{
+  "name": "font-sizes",
+  "description": "Verify different font size values",
+  "tags": ["text", "font", "size"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/font-sizes.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 50,
+            "width": 700,
+            "height": 400,
+            "fill": "FFFFFF",
+            "lineColor": "E5E7EB",
+            "lineWidth": 1,
+            "text": [
+              { "runs": [{ "text": "8pt font size", "fontSize": 8 }] },
+              { "runs": [{ "text": "10pt font size", "fontSize": 10 }] },
+              { "runs": [{ "text": "12pt font size", "fontSize": 12 }] },
+              { "runs": [{ "text": "14pt font size", "fontSize": 14 }] },
+              { "runs": [{ "text": "16pt font size", "fontSize": 16 }] },
+              { "runs": [{ "text": "18pt font size", "fontSize": 18 }] },
+              { "runs": [{ "text": "24pt font size", "fontSize": 24 }] },
+              { "runs": [{ "text": "32pt font size", "fontSize": 32 }] },
+              { "runs": [{ "text": "48pt", "fontSize": 48 }] }
+            ],
+            "textBody": { "anchor": "top", "insetLeft": 15, "insetTop": 15 }
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -1, "type": "sp", "text": "8pt font size\n10pt font size\n12pt font size\n14pt font size\n16pt font size\n18pt font size\n24pt font size\n32pt font size\n48pt" }
+        ]
+      }
+    ]
+  }
+}

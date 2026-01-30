@@ -1,0 +1,67 @@
+{
+  "name": "shadow-variations",
+  "description": "Verify different shadow effect configurations",
+  "tags": ["effects", "shadow"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/shadow-variations.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "roundRect", "x": 50, "y": 50, "width": 180, "height": 100, "fill": "3B82F6",
+            "effects": { "shadow": { "color": "1E3A8A", "blur": 4, "distance": 2, "direction": 135 } },
+            "text": [{ "runs": [{ "text": "Subtle", "color": "FFFFFF", "fontSize": 16 }], "alignment": "center" }],
+            "textBody": { "anchor": "center" }
+          },
+          {
+            "type": "roundRect", "x": 260, "y": 50, "width": 180, "height": 100, "fill": "10B981",
+            "effects": { "shadow": { "color": "064E3B", "blur": 8, "distance": 4, "direction": 135 } },
+            "text": [{ "runs": [{ "text": "Medium", "color": "FFFFFF", "fontSize": 16 }], "alignment": "center" }],
+            "textBody": { "anchor": "center" }
+          },
+          {
+            "type": "roundRect", "x": 470, "y": 50, "width": 180, "height": 100, "fill": "F59E0B",
+            "effects": { "shadow": { "color": "78350F", "blur": 16, "distance": 8, "direction": 135 } },
+            "text": [{ "runs": [{ "text": "Strong", "color": "FFFFFF", "fontSize": 16 }], "alignment": "center" }],
+            "textBody": { "anchor": "center" }
+          },
+          {
+            "type": "rectangle", "x": 50, "y": 180, "width": 180, "height": 100, "fill": "EF4444",
+            "effects": { "shadow": { "color": "000000", "blur": 10, "distance": 5, "direction": 0 } },
+            "text": [{ "runs": [{ "text": "Right", "color": "FFFFFF", "fontSize": 16 }], "alignment": "center" }],
+            "textBody": { "anchor": "center" }
+          },
+          {
+            "type": "rectangle", "x": 260, "y": 180, "width": 180, "height": 100, "fill": "8B5CF6",
+            "effects": { "shadow": { "color": "000000", "blur": 10, "distance": 5, "direction": 90 } },
+            "text": [{ "runs": [{ "text": "Bottom", "color": "FFFFFF", "fontSize": 16 }], "alignment": "center" }],
+            "textBody": { "anchor": "center" }
+          },
+          {
+            "type": "rectangle", "x": 470, "y": 180, "width": 180, "height": 100, "fill": "EC4899",
+            "effects": { "shadow": { "color": "000000", "blur": 10, "distance": 5, "direction": 180 } },
+            "text": [{ "runs": [{ "text": "Left", "color": "FFFFFF", "fontSize": 16 }], "alignment": "center" }],
+            "textBody": { "anchor": "center" }
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -6, "type": "sp", "text": "Subtle" },
+          { "index": -5, "type": "sp", "text": "Medium" },
+          { "index": -4, "type": "sp", "text": "Strong" },
+          { "index": -3, "type": "sp", "text": "Right" },
+          { "index": -2, "type": "sp", "text": "Bottom" },
+          { "index": -1, "type": "sp", "text": "Left" }
+        ]
+      }
+    ]
+  }
+}

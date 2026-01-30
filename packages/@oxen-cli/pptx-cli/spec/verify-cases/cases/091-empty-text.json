@@ -1,0 +1,94 @@
+{
+  "name": "empty-text",
+  "description": "Verify shapes with empty or minimal text",
+  "tags": ["text", "edge", "empty"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/empty-text.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 50,
+            "width": 200,
+            "height": 100,
+            "fill": "3B82F6",
+            "text": ""
+          },
+          {
+            "type": "rectangle",
+            "x": 280,
+            "y": 50,
+            "width": 200,
+            "height": 100,
+            "fill": "10B981",
+            "text": " "
+          },
+          {
+            "type": "rectangle",
+            "x": 510,
+            "y": 50,
+            "width": 200,
+            "height": 100,
+            "fill": "F59E0B",
+            "text": "A"
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 180,
+            "width": 200,
+            "height": 100,
+            "fill": "EF4444"
+          },
+          {
+            "type": "rectangle",
+            "x": 280,
+            "y": 180,
+            "width": 200,
+            "height": 100,
+            "fill": "8B5CF6",
+            "text": [
+              {
+                "runs": [{ "text": "", "fontSize": 16 }]
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 510,
+            "y": 180,
+            "width": 200,
+            "height": 100,
+            "fill": "06B6D4",
+            "text": [
+              {
+                "runs": [{ "text": "Has text", "fontSize": 16, "color": "FFFFFF" }],
+                "alignment": "center"
+              }
+            ],
+            "textBody": { "anchor": "center" }
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -6, "type": "sp" },
+          { "index": -5, "type": "sp" },
+          { "index": -4, "type": "sp", "text": "A" },
+          { "index": -3, "type": "sp" },
+          { "index": -2, "type": "sp" },
+          { "index": -1, "type": "sp", "text": "Has text" }
+        ]
+      }
+    ]
+  }
+}

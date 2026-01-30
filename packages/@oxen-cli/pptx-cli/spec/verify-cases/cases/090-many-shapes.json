@@ -1,0 +1,85 @@
+{
+  "name": "many-shapes",
+  "description": "Stress test with many shapes on a single slide",
+  "tags": ["stress", "performance", "many"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/many-shapes.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          { "type": "rectangle", "x": 50, "y": 50, "width": 80, "height": 50, "fill": "EF4444", "text": "1" },
+          { "type": "rectangle", "x": 140, "y": 50, "width": 80, "height": 50, "fill": "F97316", "text": "2" },
+          { "type": "rectangle", "x": 230, "y": 50, "width": 80, "height": 50, "fill": "F59E0B", "text": "3" },
+          { "type": "rectangle", "x": 320, "y": 50, "width": 80, "height": 50, "fill": "EAB308", "text": "4" },
+          { "type": "rectangle", "x": 410, "y": 50, "width": 80, "height": 50, "fill": "84CC16", "text": "5" },
+          { "type": "rectangle", "x": 500, "y": 50, "width": 80, "height": 50, "fill": "22C55E", "text": "6" },
+          { "type": "rectangle", "x": 590, "y": 50, "width": 80, "height": 50, "fill": "10B981", "text": "7" },
+          { "type": "rectangle", "x": 680, "y": 50, "width": 80, "height": 50, "fill": "14B8A6", "text": "8" },
+          { "type": "ellipse", "x": 50, "y": 110, "width": 80, "height": 50, "fill": "06B6D4", "text": "9" },
+          { "type": "ellipse", "x": 140, "y": 110, "width": 80, "height": 50, "fill": "0EA5E9", "text": "10" },
+          { "type": "ellipse", "x": 230, "y": 110, "width": 80, "height": 50, "fill": "3B82F6", "text": "11" },
+          { "type": "ellipse", "x": 320, "y": 110, "width": 80, "height": 50, "fill": "6366F1", "text": "12" },
+          { "type": "ellipse", "x": 410, "y": 110, "width": 80, "height": 50, "fill": "8B5CF6", "text": "13" },
+          { "type": "ellipse", "x": 500, "y": 110, "width": 80, "height": 50, "fill": "A855F7", "text": "14" },
+          { "type": "ellipse", "x": 590, "y": 110, "width": 80, "height": 50, "fill": "D946EF", "text": "15" },
+          { "type": "ellipse", "x": 680, "y": 110, "width": 80, "height": 50, "fill": "EC4899", "text": "16" },
+          { "type": "roundRect", "x": 50, "y": 170, "width": 80, "height": 50, "fill": "F43F5E", "text": "17" },
+          { "type": "roundRect", "x": 140, "y": 170, "width": 80, "height": 50, "fill": "E11D48", "text": "18" },
+          { "type": "roundRect", "x": 230, "y": 170, "width": 80, "height": 50, "fill": "BE185D", "text": "19" },
+          { "type": "roundRect", "x": 320, "y": 170, "width": 80, "height": 50, "fill": "9D174D", "text": "20" },
+          { "type": "triangle", "x": 410, "y": 170, "width": 80, "height": 50, "fill": "7C3AED", "text": "21" },
+          { "type": "triangle", "x": 500, "y": 170, "width": 80, "height": 50, "fill": "6D28D9", "text": "22" },
+          { "type": "triangle", "x": 590, "y": 170, "width": 80, "height": 50, "fill": "5B21B6", "text": "23" },
+          { "type": "triangle", "x": 680, "y": 170, "width": 80, "height": 50, "fill": "4C1D95", "text": "24" },
+          { "type": "star5", "x": 50, "y": 230, "width": 60, "height": 60, "fill": "FACC15", "text": "25" },
+          { "type": "star5", "x": 120, "y": 230, "width": 60, "height": 60, "fill": "FDE047", "text": "26" },
+          { "type": "star5", "x": 190, "y": 230, "width": 60, "height": 60, "fill": "FEF08A", "text": "27" },
+          { "type": "hexagon", "x": 260, "y": 230, "width": 60, "height": 60, "fill": "A3E635", "text": "28" },
+          { "type": "hexagon", "x": 330, "y": 230, "width": 60, "height": 60, "fill": "BEF264", "text": "29" },
+          { "type": "hexagon", "x": 400, "y": 230, "width": 60, "height": 60, "fill": "D9F99D", "text": "30" }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -30, "type": "sp", "text": "1" },
+          { "index": -29, "type": "sp", "text": "2" },
+          { "index": -28, "type": "sp", "text": "3" },
+          { "index": -27, "type": "sp", "text": "4" },
+          { "index": -26, "type": "sp", "text": "5" },
+          { "index": -25, "type": "sp", "text": "6" },
+          { "index": -24, "type": "sp", "text": "7" },
+          { "index": -23, "type": "sp", "text": "8" },
+          { "index": -22, "type": "sp", "text": "9" },
+          { "index": -21, "type": "sp", "text": "10" },
+          { "index": -20, "type": "sp", "text": "11" },
+          { "index": -19, "type": "sp", "text": "12" },
+          { "index": -18, "type": "sp", "text": "13" },
+          { "index": -17, "type": "sp", "text": "14" },
+          { "index": -16, "type": "sp", "text": "15" },
+          { "index": -15, "type": "sp", "text": "16" },
+          { "index": -14, "type": "sp", "text": "17" },
+          { "index": -13, "type": "sp", "text": "18" },
+          { "index": -12, "type": "sp", "text": "19" },
+          { "index": -11, "type": "sp", "text": "20" },
+          { "index": -10, "type": "sp", "text": "21" },
+          { "index": -9, "type": "sp", "text": "22" },
+          { "index": -8, "type": "sp", "text": "23" },
+          { "index": -7, "type": "sp", "text": "24" },
+          { "index": -6, "type": "sp", "text": "25" },
+          { "index": -5, "type": "sp", "text": "26" },
+          { "index": -4, "type": "sp", "text": "27" },
+          { "index": -3, "type": "sp", "text": "28" },
+          { "index": -2, "type": "sp", "text": "29" },
+          { "index": -1, "type": "sp", "text": "30" }
+        ]
+      }
+    ]
+  }
+}

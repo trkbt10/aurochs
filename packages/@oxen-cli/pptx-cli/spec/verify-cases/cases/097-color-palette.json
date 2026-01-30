@@ -1,0 +1,57 @@
+{
+  "name": "color-palette",
+  "description": "Verify various color values",
+  "tags": ["color", "fill"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/color-palette.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          { "type": "rectangle", "x": 50, "y": 50, "width": 80, "height": 60, "fill": "000000", "text": [{ "runs": [{ "text": "#000", "fontSize": 10, "color": "FFFFFF" }] }] },
+          { "type": "rectangle", "x": 140, "y": 50, "width": 80, "height": 60, "fill": "FFFFFF", "lineColor": "E5E7EB", "lineWidth": 1, "text": [{ "runs": [{ "text": "#FFF", "fontSize": 10 }] }] },
+          { "type": "rectangle", "x": 230, "y": 50, "width": 80, "height": 60, "fill": "FF0000", "text": [{ "runs": [{ "text": "Red", "fontSize": 10, "color": "FFFFFF" }] }] },
+          { "type": "rectangle", "x": 320, "y": 50, "width": 80, "height": 60, "fill": "00FF00", "text": [{ "runs": [{ "text": "Green", "fontSize": 10 }] }] },
+          { "type": "rectangle", "x": 410, "y": 50, "width": 80, "height": 60, "fill": "0000FF", "text": [{ "runs": [{ "text": "Blue", "fontSize": 10, "color": "FFFFFF" }] }] },
+          { "type": "rectangle", "x": 500, "y": 50, "width": 80, "height": 60, "fill": "FFFF00", "text": [{ "runs": [{ "text": "Yellow", "fontSize": 10 }] }] },
+          { "type": "rectangle", "x": 590, "y": 50, "width": 80, "height": 60, "fill": "FF00FF", "text": [{ "runs": [{ "text": "Magenta", "fontSize": 10, "color": "FFFFFF" }] }] },
+          { "type": "rectangle", "x": 680, "y": 50, "width": 80, "height": 60, "fill": "00FFFF", "text": [{ "runs": [{ "text": "Cyan", "fontSize": 10 }] }] },
+          { "type": "rectangle", "x": 50, "y": 120, "width": 80, "height": 60, "fill": "EF4444", "text": [{ "runs": [{ "text": "Red 500", "fontSize": 9, "color": "FFFFFF" }] }] },
+          { "type": "rectangle", "x": 140, "y": 120, "width": 80, "height": 60, "fill": "F97316", "text": [{ "runs": [{ "text": "Orange", "fontSize": 9, "color": "FFFFFF" }] }] },
+          { "type": "rectangle", "x": 230, "y": 120, "width": 80, "height": 60, "fill": "F59E0B", "text": [{ "runs": [{ "text": "Amber", "fontSize": 9, "color": "FFFFFF" }] }] },
+          { "type": "rectangle", "x": 320, "y": 120, "width": 80, "height": 60, "fill": "10B981", "text": [{ "runs": [{ "text": "Emerald", "fontSize": 9, "color": "FFFFFF" }] }] },
+          { "type": "rectangle", "x": 410, "y": 120, "width": 80, "height": 60, "fill": "3B82F6", "text": [{ "runs": [{ "text": "Blue 500", "fontSize": 9, "color": "FFFFFF" }] }] },
+          { "type": "rectangle", "x": 500, "y": 120, "width": 80, "height": 60, "fill": "8B5CF6", "text": [{ "runs": [{ "text": "Violet", "fontSize": 9, "color": "FFFFFF" }] }] },
+          { "type": "rectangle", "x": 590, "y": 120, "width": 80, "height": 60, "fill": "EC4899", "text": [{ "runs": [{ "text": "Pink", "fontSize": 9, "color": "FFFFFF" }] }] },
+          { "type": "rectangle", "x": 680, "y": 120, "width": 80, "height": 60, "fill": "6B7280", "text": [{ "runs": [{ "text": "Gray", "fontSize": 9, "color": "FFFFFF" }] }] }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -16, "type": "sp", "text": "#000" },
+          { "index": -15, "type": "sp", "text": "#FFF" },
+          { "index": -14, "type": "sp", "text": "Red" },
+          { "index": -13, "type": "sp", "text": "Green" },
+          { "index": -12, "type": "sp", "text": "Blue" },
+          { "index": -11, "type": "sp", "text": "Yellow" },
+          { "index": -10, "type": "sp", "text": "Magenta" },
+          { "index": -9, "type": "sp", "text": "Cyan" },
+          { "index": -8, "type": "sp", "text": "Red 500" },
+          { "index": -7, "type": "sp", "text": "Orange" },
+          { "index": -6, "type": "sp", "text": "Amber" },
+          { "index": -5, "type": "sp", "text": "Emerald" },
+          { "index": -4, "type": "sp", "text": "Blue 500" },
+          { "index": -3, "type": "sp", "text": "Violet" },
+          { "index": -2, "type": "sp", "text": "Pink" },
+          { "index": -1, "type": "sp", "text": "Gray" }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "name": "table-large",
+  "description": "Verify larger table with multiple rows and columns",
+  "tags": ["table", "large"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/table-large.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addTables": [
+          {
+            "type": "table",
+            "x": 50,
+            "y": 50,
+            "width": 700,
+            "height": 400,
+            "rows": [
+              [
+                { "text": "Feature" },
+                { "text": "Q1" },
+                { "text": "Q2" },
+                { "text": "Q3" },
+                { "text": "Q4" }
+              ],
+              [
+                { "text": "Revenue" },
+                { "text": "$100K" },
+                { "text": "$125K" },
+                { "text": "$150K" },
+                { "text": "$200K" }
+              ],
+              [
+                { "text": "Users" },
+                { "text": "1,000" },
+                { "text": "2,500" },
+                { "text": "5,000" },
+                { "text": "10,000" }
+              ],
+              [
+                { "text": "Conversion" },
+                { "text": "2.5%" },
+                { "text": "3.0%" },
+                { "text": "3.5%" },
+                { "text": "4.0%" }
+              ],
+              [
+                { "text": "Retention" },
+                { "text": "75%" },
+                { "text": "78%" },
+                { "text": "82%" },
+                { "text": "85%" }
+              ],
+              [
+                { "text": "NPS Score" },
+                { "text": "42" },
+                { "text": "48" },
+                { "text": "55" },
+                { "text": "62" }
+              ]
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -1, "type": "graphicFrame" }
+        ]
+      }
+    ]
+  }
+}

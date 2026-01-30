@@ -24,7 +24,9 @@ import type {
   EffectsSpec,
   Shape3dSpec,
   BevelSpec,
+  TextBodyPropertiesSpec,
 } from "./types";
+import type { BodyProperties } from "@oxen-office/pptx/domain/text";
 import type { Shape3d, Bevel3d } from "@oxen-office/pptx/domain/three-d";
 
 /**
@@ -356,19 +358,54 @@ function isRichText(text: TextSpec): text is RichTextSpec {
 }
 
 /**
+ * Build body properties from spec
+ */
+function buildBodyProperties(spec?: TextBodyPropertiesSpec): BodyProperties {
+  if (!spec) return {};
+
+  const props: BodyProperties = {};
+
+  if (spec.anchor !== undefined) {
+    (props as { anchor?: string }).anchor = spec.anchor;
+  }
+  if (spec.verticalType !== undefined) {
+    (props as { verticalType?: string }).verticalType = spec.verticalType;
+  }
+  if (spec.wrapping !== undefined) {
+    (props as { wrapping?: string }).wrapping = spec.wrapping;
+  }
+  if (spec.anchorCenter !== undefined) {
+    (props as { anchorCenter?: boolean }).anchorCenter = spec.anchorCenter;
+  }
+  if (spec.insetLeft !== undefined || spec.insetTop !== undefined ||
+      spec.insetRight !== undefined || spec.insetBottom !== undefined) {
+    (props as { insets?: object }).insets = {
+      left: (spec.insetLeft ?? 0) as Pixels,
+      top: (spec.insetTop ?? 0) as Pixels,
+      right: (spec.insetRight ?? 0) as Pixels,
+      bottom: (spec.insetBottom ?? 0) as Pixels,
+    };
+  }
+
+  return props;
+}
+
+/**
  * Build a text body object from simple string or rich text spec
  */
-export function buildTextBody(text: TextSpec): TextBody {
+export function buildTextBody(text: TextSpec, bodyPropertiesSpec?: TextBodyPropertiesSpec): TextBody {
+  const bodyProperties = buildBodyProperties(bodyPropertiesSpec);
+
   if (isRichText(text)) {
     return {
-      bodyProperties: {},
+      bodyProperties,
       paragraphs: text.map(buildParagraph),
     };
   }
 
   // Simple string - single paragraph with single run
   return {
-    bodyProperties: {},
+    bodyProperties,
     paragraphs: [{ properties: {}, runs: [{ type: "text", text }] }],
   };
 }

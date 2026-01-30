@@ -1,0 +1,41 @@
+{
+  "name": "line-widths",
+  "description": "Verify different line width values",
+  "tags": ["line", "width"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/line-widths.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          { "type": "rectangle", "x": 50, "y": 50, "width": 150, "height": 60, "fill": "FFFFFF", "lineColor": "1F2937", "lineWidth": 1, "text": "1px" },
+          { "type": "rectangle", "x": 220, "y": 50, "width": 150, "height": 60, "fill": "FFFFFF", "lineColor": "1F2937", "lineWidth": 2, "text": "2px" },
+          { "type": "rectangle", "x": 390, "y": 50, "width": 150, "height": 60, "fill": "FFFFFF", "lineColor": "1F2937", "lineWidth": 3, "text": "3px" },
+          { "type": "rectangle", "x": 560, "y": 50, "width": 150, "height": 60, "fill": "FFFFFF", "lineColor": "1F2937", "lineWidth": 4, "text": "4px" },
+          { "type": "rectangle", "x": 50, "y": 130, "width": 150, "height": 60, "fill": "FFFFFF", "lineColor": "3B82F6", "lineWidth": 5, "text": "5px" },
+          { "type": "rectangle", "x": 220, "y": 130, "width": 150, "height": 60, "fill": "FFFFFF", "lineColor": "3B82F6", "lineWidth": 6, "text": "6px" },
+          { "type": "rectangle", "x": 390, "y": 130, "width": 150, "height": 60, "fill": "FFFFFF", "lineColor": "3B82F6", "lineWidth": 8, "text": "8px" },
+          { "type": "rectangle", "x": 560, "y": 130, "width": 150, "height": 60, "fill": "FFFFFF", "lineColor": "3B82F6", "lineWidth": 10, "text": "10px" }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -8, "type": "sp", "text": "1px" },
+          { "index": -7, "type": "sp", "text": "2px" },
+          { "index": -6, "type": "sp", "text": "3px" },
+          { "index": -5, "type": "sp", "text": "4px" },
+          { "index": -4, "type": "sp", "text": "5px" },
+          { "index": -3, "type": "sp", "text": "6px" },
+          { "index": -2, "type": "sp", "text": "8px" },
+          { "index": -1, "type": "sp", "text": "10px" }
+        ]
+      }
+    ]
+  }
+}

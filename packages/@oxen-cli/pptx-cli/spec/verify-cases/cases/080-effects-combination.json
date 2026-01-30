@@ -1,0 +1,142 @@
+{
+  "name": "effects-combination",
+  "description": "Verify combining multiple shape effects",
+  "tags": ["shape", "effects", "combined"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/effects-combination.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "roundRect",
+            "x": 50,
+            "y": 50,
+            "width": 250,
+            "height": 120,
+            "fill": "3B82F6",
+            "effects": {
+              "shadow": { "color": "1E3A8A", "blur": 10, "distance": 6, "direction": 135 },
+              "glow": { "color": "93C5FD", "radius": 8 }
+            },
+            "text": [
+              {
+                "runs": [{ "text": "Shadow + Glow", "fontSize": 18, "color": "FFFFFF" }],
+                "alignment": "center"
+              }
+            ]
+          },
+          {
+            "type": "ellipse",
+            "x": 350,
+            "y": 50,
+            "width": 200,
+            "height": 120,
+            "fill": "10B981",
+            "effects": {
+              "shadow": { "color": "064E3B", "blur": 8, "distance": 4, "direction": 120 },
+              "softEdge": { "radius": 5 }
+            },
+            "text": [
+              {
+                "runs": [{ "text": "Shadow + Soft Edge", "fontSize": 16, "color": "FFFFFF" }],
+                "alignment": "center"
+              }
+            ]
+          },
+          {
+            "type": "rectangle",
+            "x": 600,
+            "y": 50,
+            "width": 200,
+            "height": 120,
+            "fill": "F59E0B",
+            "effects": {
+              "glow": { "color": "FCD34D", "radius": 12 },
+              "softEdge": { "radius": 4 }
+            },
+            "text": [
+              {
+                "runs": [{ "text": "Glow + Soft Edge", "fontSize": 16, "color": "1F2937" }],
+                "alignment": "center"
+              }
+            ]
+          },
+          {
+            "type": "star5",
+            "x": 150,
+            "y": 220,
+            "width": 180,
+            "height": 180,
+            "fill": "EF4444",
+            "effects": {
+              "shadow": { "color": "7F1D1D", "blur": 12, "distance": 8, "direction": 150 },
+              "glow": { "color": "FCA5A5", "radius": 10 },
+              "softEdge": { "radius": 3 }
+            },
+            "text": "All 3"
+          },
+          {
+            "type": "hexagon",
+            "x": 400,
+            "y": 220,
+            "width": 180,
+            "height": 160,
+            "fill": "8B5CF6",
+            "effects": {
+              "shadow": { "color": "4C1D95", "blur": 15, "distance": 10, "direction": 180 }
+            },
+            "shape3d": {
+              "bevelTop": { "preset": "circle", "width": 8, "height": 8 },
+              "material": "plastic"
+            },
+            "text": "Shadow + 3D"
+          },
+          {
+            "type": "roundRect",
+            "x": 630,
+            "y": 220,
+            "width": 180,
+            "height": 160,
+            "fill": {
+              "type": "gradient",
+              "gradientType": "linear",
+              "angle": 90,
+              "stops": [
+                { "position": 0, "color": "06B6D4" },
+                { "position": 100, "color": "0891B2" }
+              ]
+            },
+            "effects": {
+              "glow": { "color": "67E8F9", "radius": 8 }
+            },
+            "lineColor": "0E7490",
+            "lineWidth": 2,
+            "text": [
+              {
+                "runs": [{ "text": "Gradient + Glow", "fontSize": 16, "color": "FFFFFF" }],
+                "alignment": "center"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -6, "type": "sp", "text": "Shadow + Glow" },
+          { "index": -5, "type": "sp", "text": "Shadow + Soft Edge" },
+          { "index": -4, "type": "sp", "text": "Glow + Soft Edge" },
+          { "index": -3, "type": "sp", "text": "All 3" },
+          { "index": -2, "type": "sp", "text": "Shadow + 3D" },
+          { "index": -1, "type": "sp", "text": "Gradient + Glow" }
+        ]
+      }
+    ]
+  }
+}

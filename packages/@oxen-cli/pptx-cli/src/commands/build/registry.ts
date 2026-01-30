@@ -90,7 +90,7 @@ function buildSpShape(spec: ShapeSpec, id: string): SpShape {
       effects: spec.effects ? buildEffects(spec.effects) : undefined,
       shape3d: spec.shape3d ? buildShape3d(spec.shape3d) : undefined,
     },
-    textBody: spec.text ? buildTextBody(spec.text) : undefined,
+    textBody: spec.text ? buildTextBody(spec.text, spec.textBody) : undefined,
   };
 }
 
