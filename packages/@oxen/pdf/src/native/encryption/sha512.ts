@@ -181,13 +181,21 @@ function sha512Like(input: Uint8Array, initial: readonly Word64[]): Uint8Array {
       w[t] = add64_4({ a: w[t - 16]!, b: s0, c: w[t - 7]!, d: s1 });
     }
 
+    // eslint-disable-next-line no-restricted-syntax
     let a = h[0]!;
+    // eslint-disable-next-line no-restricted-syntax
     let b = h[1]!;
+    // eslint-disable-next-line no-restricted-syntax
     let c = h[2]!;
+    // eslint-disable-next-line no-restricted-syntax
     let d = h[3]!;
+    // eslint-disable-next-line no-restricted-syntax
     let e = h[4]!;
+    // eslint-disable-next-line no-restricted-syntax
     let f = h[5]!;
+    // eslint-disable-next-line no-restricted-syntax
     let g = h[6]!;
+    // eslint-disable-next-line no-restricted-syntax
     let hh = h[7]!;
 
     for (let t = 0; t < 80; t += 1) {

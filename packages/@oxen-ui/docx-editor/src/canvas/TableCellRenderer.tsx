@@ -55,43 +55,43 @@ function computeBorderStyle(
   const color = edge.color ? `#${edge.color}` : DEFAULT_BORDER_COLOR;
 
   // Map border style
-  let style = "solid";
-  switch (edge.val) {
-    case "none":
-    case "nil":
-      return "none";
-    case "dotted":
-      style = "dotted";
-      break;
-    case "dashed":
-    case "dashDotStroked":
-      style = "dashed";
-      break;
-    case "double":
-      style = "double";
-      break;
-    case "triple":
-    case "thinThickSmallGap":
-    case "thickThinSmallGap":
-    case "thinThickThinSmallGap":
-    case "thinThickMediumGap":
-    case "thickThinMediumGap":
-    case "thinThickThinMediumGap":
-    case "thinThickLargeGap":
-    case "thickThinLargeGap":
-    case "thinThickThinLargeGap":
-      style = "double";
-      break;
-    case "dotDash":
-    case "dotDotDash":
-      style = "dashed";
-      break;
-    case "wave":
-    case "doubleWave":
-      style = "solid"; // CSS doesn't support wave
-      break;
-    default:
-      style = "solid";
+  const computeStyle = (): string => {
+    switch (edge.val) {
+      case "none":
+      case "nil":
+        return "none";
+      case "dotted":
+        return "dotted";
+      case "dashed":
+      case "dashDotStroked":
+        return "dashed";
+      case "double":
+        return "double";
+      case "triple":
+      case "thinThickSmallGap":
+      case "thickThinSmallGap":
+      case "thinThickThinSmallGap":
+      case "thinThickMediumGap":
+      case "thickThinMediumGap":
+      case "thinThickThinMediumGap":
+      case "thinThickLargeGap":
+      case "thickThinLargeGap":
+      case "thinThickThinLargeGap":
+        return "double";
+      case "dotDash":
+      case "dotDotDash":
+        return "dashed";
+      case "wave":
+      case "doubleWave":
+        return "solid"; // CSS doesn't support wave
+      default:
+        return "solid";
+    }
+  };
+
+  const style = computeStyle();
+  if (style === "none") {
+    return "none";
   }
 
   return `${width} ${style} ${color}`;

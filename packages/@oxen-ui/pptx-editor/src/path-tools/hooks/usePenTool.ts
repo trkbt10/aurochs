@@ -164,17 +164,21 @@ export function usePenTool(callbacks: PenToolCallbacks): UsePenToolReturn {
       const pointType: AnchorPointType = modifiers.alt ? "corner" : "smooth";
 
       // Constrain position if shift is held
-      let finalX = x;
-      let finalY = y;
-      if (modifiers.shift && path.points.length > 0) {
-        const lastPoint = path.points[path.points.length - 1];
-        const constrained = constrainVectorTo45Degrees(
-          x - (lastPoint.x as number),
-          y - (lastPoint.y as number)
-        );
-        finalX = (lastPoint.x as number) + constrained.dx;
-        finalY = (lastPoint.y as number) + constrained.dy;
-      }
+      const computeFinalPosition = (): { finalX: number; finalY: number } => {
+        if (modifiers.shift && path.points.length > 0) {
+          const lastPoint = path.points[path.points.length - 1];
+          const constrained = constrainVectorTo45Degrees(
+            x - (lastPoint.x as number),
+            y - (lastPoint.y as number)
+          );
+          return {
+            finalX: (lastPoint.x as number) + constrained.dx,
+            finalY: (lastPoint.y as number) + constrained.dy,
+          };
+        }
+        return { finalX: x, finalY: y };
+      };
+      const { finalX, finalY } = computeFinalPosition();
 
       // Add the point
       addPoint(finalX, finalY, pointType);
@@ -192,15 +196,13 @@ export function usePenTool(callbacks: PenToolCallbacks): UsePenToolReturn {
       if (isDraggingHandle && dragStartRef.current) {
         // Dragging to create handles
         const { pointIndex } = dragStartRef.current;
-        let dx = x - dragStartRef.current.x;
-        let dy = y - dragStartRef.current.y;
+        const rawDx = x - dragStartRef.current.x;
+        const rawDy = y - dragStartRef.current.y;
 
         // Constrain if shift is held
-        if (modifiers.shift) {
-          const constrained = constrainVectorTo45Degrees(dx, dy);
-          dx = constrained.dx;
-          dy = constrained.dy;
-        }
+        const { dx, dy } = modifiers.shift
+          ? constrainVectorTo45Degrees(rawDx, rawDy)
+          : { dx: rawDx, dy: rawDy };
 
         // Only create handles if we've moved enough
         if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
@@ -214,19 +216,21 @@ export function usePenTool(callbacks: PenToolCallbacks): UsePenToolReturn {
         }
       } else {
         // Update preview point
-        let finalX = x;
-        let finalY = y;
-
-        // Constrain if shift is held and we have points
-        if (modifiers.shift && path.points.length > 0) {
-          const lastPoint = path.points[path.points.length - 1];
-          const constrained = constrainVectorTo45Degrees(
-            x - (lastPoint.x as number),
-            y - (lastPoint.y as number)
-          );
-          finalX = (lastPoint.x as number) + constrained.dx;
-          finalY = (lastPoint.y as number) + constrained.dy;
-        }
+        const computePreviewPosition = (): { finalX: number; finalY: number } => {
+          if (modifiers.shift && path.points.length > 0) {
+            const lastPoint = path.points[path.points.length - 1];
+            const constrained = constrainVectorTo45Degrees(
+              x - (lastPoint.x as number),
+              y - (lastPoint.y as number)
+            );
+            return {
+              finalX: (lastPoint.x as number) + constrained.dx,
+              finalY: (lastPoint.y as number) + constrained.dy,
+            };
+          }
+          return { finalX: x, finalY: y };
+        };
+        const { finalX, finalY } = computePreviewPosition();
 
         setPreviewPoint({ x: finalX, y: finalY });
 

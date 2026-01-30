@@ -319,7 +319,9 @@ function computeClipBBoxFromPath(ops: readonly PdfPathOp[], ctm: PdfMatrix): Pdf
   };
   const addTransformed = (p: PdfPoint): void => addPoint(transformPoint(p, ctm));
 
+  // eslint-disable-next-line no-restricted-syntax
   let currentPoint: PdfPoint = { x: 0, y: 0 };
+  // eslint-disable-next-line no-restricted-syntax
   let subpathStartPoint: PdfPoint = { x: 0, y: 0 };
 
   for (const op of ops) {

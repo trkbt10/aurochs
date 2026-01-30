@@ -145,6 +145,7 @@ export function buildDiagramTree(dataModel: DiagramDataModel): DiagramTreeBuildR
 
   // Build tree recursively
   const nodeMap = new Map<string, DiagramTreeNode>();
+  // eslint-disable-next-line no-restricted-syntax
   let maxDepth = 0;
 
   // eslint-disable-next-line custom/max-params -- Recursive helper is clearer with positional args.
@@ -268,6 +269,7 @@ export function countNodes(
   roots: readonly DiagramTreeNode[],
   predicate: (node: DiagramTreeNode) => boolean
 ): number {
+  // eslint-disable-next-line no-restricted-syntax
   let count = 0;
   traverseTree(roots, (node) => {
     if (predicate(node)) {
@@ -335,6 +337,7 @@ export function getNodeTextWith(
  */
 export function getAncestors(node: DiagramTreeNode): DiagramTreeNode[] {
   const ancestors: DiagramTreeNode[] = [];
+  // eslint-disable-next-line no-restricted-syntax
   let current = node.parent;
   while (current) {
     ancestors.push(current);
@@ -422,6 +425,7 @@ export function getSiblings(node: DiagramTreeNode): readonly DiagramTreeNode[] {
  * @see ECMA-376 Part 1, Section 21.4.7.6 - ST_AxisType "root"
  */
 export function getRoot(node: DiagramTreeNode): DiagramTreeNode {
+  // eslint-disable-next-line no-restricted-syntax
   let current = node;
   while (current.parent) {
     current = current.parent;
@@ -433,6 +437,7 @@ export function getRoot(node: DiagramTreeNode): DiagramTreeNode {
  * Calculate max depth of a tree.
  */
 export function calculateMaxDepth(nodes: readonly DiagramTreeNode[]): number {
+  // eslint-disable-next-line no-restricted-syntax
   let max = 0;
   function traverse(node: DiagramTreeNode): void {
     if (node.depth > max) {

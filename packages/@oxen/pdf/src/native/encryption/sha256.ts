@@ -113,13 +113,21 @@ export function sha256(input: Uint8Array): Uint8Array {
       w[t] = add(add(add(w[t - 16] ?? 0, s0), w[t - 7] ?? 0), s1);
     }
 
+    // eslint-disable-next-line no-restricted-syntax
     let a = h[0] ?? 0;
+    // eslint-disable-next-line no-restricted-syntax
     let b = h[1] ?? 0;
+    // eslint-disable-next-line no-restricted-syntax
     let c = h[2] ?? 0;
+    // eslint-disable-next-line no-restricted-syntax
     let d = h[3] ?? 0;
+    // eslint-disable-next-line no-restricted-syntax
     let e = h[4] ?? 0;
+    // eslint-disable-next-line no-restricted-syntax
     let f = h[5] ?? 0;
+    // eslint-disable-next-line no-restricted-syntax
     let g = h[6] ?? 0;
+    // eslint-disable-next-line no-restricted-syntax
     let hh = h[7] ?? 0;
 
     for (let t = 0; t < 64; t += 1) {

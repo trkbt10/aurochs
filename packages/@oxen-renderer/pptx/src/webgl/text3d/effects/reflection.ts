@@ -79,25 +79,21 @@ export function createReflectionMesh(
   );
 
   // Clone and modify material for reflection
-  let reflectionMaterial: THREE.Material;
-
-  if (material instanceof THREE.MeshStandardMaterial) {
-    reflectionMaterial = new THREE.MeshStandardMaterial({
-      color: material.color,
-      roughness: material.roughness,
-      metalness: material.metalness,
-      transparent: true,
-      opacity: config.startOpacity / 100,
-      side: THREE.DoubleSide,
-    });
-  } else {
-    reflectionMaterial = new THREE.MeshBasicMaterial({
-      color: (material as THREE.MeshBasicMaterial).color ?? 0x888888,
-      transparent: true,
-      opacity: config.startOpacity / 100,
-      side: THREE.DoubleSide,
-    });
-  }
+  const reflectionMaterial: THREE.Material = material instanceof THREE.MeshStandardMaterial
+    ? new THREE.MeshStandardMaterial({
+        color: material.color,
+        roughness: material.roughness,
+        metalness: material.metalness,
+        transparent: true,
+        opacity: config.startOpacity / 100,
+        side: THREE.DoubleSide,
+      })
+    : new THREE.MeshBasicMaterial({
+        color: (material as THREE.MeshBasicMaterial).color ?? 0x888888,
+        transparent: true,
+        opacity: config.startOpacity / 100,
+        side: THREE.DoubleSide,
+      });
 
   // Create reflection mesh
   const reflectionMesh = new THREE.Mesh(reflectionGeometry, reflectionMaterial);
@@ -143,10 +139,9 @@ export function createGradientReflection(
   );
 
   // Get base color from material
-  let baseColor = new THREE.Color(0x888888);
-  if ("color" in material) {
-    baseColor = (material as THREE.MeshStandardMaterial).color.clone();
-  }
+  const baseColor = "color" in material
+    ? (material as THREE.MeshStandardMaterial).color.clone()
+    : new THREE.Color(0x888888);
 
   // Create reflection material with vertex colors for gradient
   const reflectionMaterial = new THREE.MeshBasicMaterial({

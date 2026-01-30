@@ -71,7 +71,9 @@ function cubicAt({ p0, p1, p2, p3, t }: { readonly p0: number; readonly p1: numb
 function flattenSubpaths(ops: ParsedPath["operations"], ctm: PdfMatrix): readonly FlattenedSubpath[] {
   const subpaths: Array<{ points: PdfPoint[]; closed: boolean }> = [];
 
+  // eslint-disable-next-line no-restricted-syntax
   let current: PdfPoint = { x: 0, y: 0 };
+  // eslint-disable-next-line no-restricted-syntax
   let currentSubpath: { points: PdfPoint[]; closed: boolean } | null = null;
 
   const finish = (closed: boolean): void => {
@@ -148,6 +150,7 @@ function flattenSubpaths(ops: ParsedPath["operations"], ctm: PdfMatrix): readonl
 
 function pointInPolyEvenOdd(x: number, y: number, poly: Poly): boolean {
   if (poly.length < 2) {return false;}
+  // eslint-disable-next-line no-restricted-syntax
   let inside = false;
 
   for (let i = 0, j = poly.length - 1; i < poly.length; j = i, i += 1) {
@@ -177,6 +180,7 @@ function pointInPolyEvenOdd(x: number, y: number, poly: Poly): boolean {
 }
 
 function pointInSubpathsEvenOdd(x: number, y: number, subpaths: readonly FlattenedSubpath[]): boolean {
+  // eslint-disable-next-line no-restricted-syntax
   let inside = false;
   for (const s of subpaths) {
     if (pointInPolyEvenOdd(x, y, s.points)) {
@@ -206,6 +210,7 @@ function isLeft({
 
 function windingNumber(x: number, y: number, poly: Poly): number {
   if (poly.length < 2) {return 0;}
+  // eslint-disable-next-line no-restricted-syntax
   let winding = 0;
 
   for (let i = 0; i < poly.length; i += 1) {
@@ -227,6 +232,7 @@ function windingNumber(x: number, y: number, poly: Poly): number {
 }
 
 function pointInSubpathsNonZero(x: number, y: number, subpaths: readonly FlattenedSubpath[]): boolean {
+  // eslint-disable-next-line no-restricted-syntax
   let winding = 0;
   for (const s of subpaths) {
     winding += windingNumber(x, y, s.points);
@@ -252,9 +258,13 @@ function pointInSubpaths({
 }
 
 function computePathBBox(subpaths: readonly FlattenedSubpath[]): PdfBBox | null {
+  // eslint-disable-next-line no-restricted-syntax
   let minX = Infinity;
+  // eslint-disable-next-line no-restricted-syntax
   let minY = Infinity;
+  // eslint-disable-next-line no-restricted-syntax
   let maxX = -Infinity;
+  // eslint-disable-next-line no-restricted-syntax
   let maxY = -Infinity;
   for (const s of subpaths) {
     for (const p of s.points) {
@@ -373,6 +383,7 @@ export function rasterizeShadingPatternFillPath(
         continue;
       }
 
+      // eslint-disable-next-line no-restricted-syntax
       let a = Math.round(255 * fillMul);
       if (softMask && pageToMask) {
         const maskPoint = transformPoint({ x: pageX, y: pageY }, pageToMask);

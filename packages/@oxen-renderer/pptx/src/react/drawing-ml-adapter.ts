@@ -72,6 +72,7 @@ export function createDrawingMLContext(
 
   // Create ID generator that uses PPTX's shape ID system
   // We use a local counter since shape IDs are different from def IDs
+  // eslint-disable-next-line no-restricted-syntax -- Closure state: unique ID counter for SVG defs
   let defIdCounter = 0;
   const getNextId = (prefix: string): string => {
     return `${prefix}-${defIdCounter++}`;

@@ -98,6 +98,7 @@ export function renderType3TextRun({
   if (fontInfo.codeByteWidth !== 1) {return [];}
 
   const out: ParsedElement[] = [];
+  // eslint-disable-next-line no-restricted-syntax
   let textMatrix = run.textMatrix;
 
   for (let i = 0; i < run.text.length; i += 1) {

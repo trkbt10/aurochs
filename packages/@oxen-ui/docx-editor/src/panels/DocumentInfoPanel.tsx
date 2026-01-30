@@ -50,19 +50,19 @@ function countCharactersFromParagraph(paragraph: DocxParagraph): number {
 }
 
 function countCharactersFromTable(table: DocxTable): number {
-  let count = 0;
-  for (const row of table.rows) {
-    for (const cell of row.cells) {
-      for (const cellContent of cell.content) {
+  return table.rows.reduce((rowTotal, row) => {
+    return row.cells.reduce((cellTotal, cell) => {
+      return cell.content.reduce((contentTotal, cellContent) => {
         if (cellContent.type === "paragraph") {
-          count += countCharactersFromParagraph(cellContent);
-        } else if (cellContent.type === "table") {
-          count += countCharactersFromTable(cellContent);
+          return contentTotal + countCharactersFromParagraph(cellContent);
         }
-      }
-    }
-  }
-  return count;
+        if (cellContent.type === "table") {
+          return contentTotal + countCharactersFromTable(cellContent);
+        }
+        return contentTotal;
+      }, cellTotal);
+    }, rowTotal);
+  }, 0);
 }
 
 
@@ -96,21 +96,26 @@ function countCharactersFromTable(table: DocxTable): number {
 
 
 export function calculateDocumentStats(document: DocxDocument): DocumentStats {
-  let paragraphCount = 0;
-  let tableCount = 0;
-  let characterCount = 0;
-
-  for (const content of document.body.content) {
-    if (content.type === "paragraph") {
-      paragraphCount++;
-      characterCount += countCharactersFromParagraph(content);
-    } else if (content.type === "table") {
-      tableCount++;
-      characterCount += countCharactersFromTable(content);
-    }
-  }
-
-  return { paragraphCount, tableCount, characterCount };
+  return document.body.content.reduce(
+    (acc, content) => {
+      if (content.type === "paragraph") {
+        return {
+          paragraphCount: acc.paragraphCount + 1,
+          tableCount: acc.tableCount,
+          characterCount: acc.characterCount + countCharactersFromParagraph(content),
+        };
+      }
+      if (content.type === "table") {
+        return {
+          paragraphCount: acc.paragraphCount,
+          tableCount: acc.tableCount + 1,
+          characterCount: acc.characterCount + countCharactersFromTable(content),
+        };
+      }
+      return acc;
+    },
+    { paragraphCount: 0, tableCount: 0, characterCount: 0 }
+  );
 }
 
 

@@ -8,8 +8,12 @@ describe("XmlLexer", () => {
   function tokenize(input: string): Token[] {
     const lexer = new XmlLexer(input);
     const tokens: Token[] = [];
-    let token: Token;
-    while ((token = lexer.nextToken()).type !== TokenType.EOF) {
+    for (
+      // eslint-disable-next-line no-restricted-syntax -- loop variable pattern
+      let token = lexer.nextToken();
+      token.type !== TokenType.EOF;
+      token = lexer.nextToken()
+    ) {
       tokens.push(token);
     }
     return tokens;

@@ -328,6 +328,7 @@ describe("Standard Security Handler (V=5/R=5, AESV3)", () => {
 });
 
 function mod3BigEndian(bytes: Uint8Array): 0 | 1 | 2 {
+  // eslint-disable-next-line no-restricted-syntax
   let r = 0;
   for (const b of bytes) {
     r = (r * 256 + (b & 0xff)) % 3;
@@ -349,7 +350,9 @@ function computeR6HardenedHashNode(args: {
   readonly userKey?: Uint8Array;
 }): Uint8Array {
   const u = args.userKey ?? new Uint8Array(0);
+  // eslint-disable-next-line no-restricted-syntax
   let k = createHash("sha256").update(Buffer.from(args.passwordBytes)).update(Buffer.from(args.salt)).update(Buffer.from(u)).digest();
+  // eslint-disable-next-line no-restricted-syntax
   let e = Buffer.alloc(0);
   for (let i = 0; ; i += 1) {
     const k1 = Buffer.concat([Buffer.from(args.passwordBytes), k, Buffer.from(u)]);

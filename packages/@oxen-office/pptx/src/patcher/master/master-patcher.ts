@@ -108,10 +108,8 @@ export function patchDefaultTextStyle(
       return upsertDirectChild(current, containerName, patched);
     };
 
-    let updated = txStyles;
-    updated = patchContainer(updated, "p:titleStyle");
-    updated = patchContainer(updated, "p:bodyStyle");
-    updated = patchContainer(updated, "p:otherStyle");
-    return updated;
+    const afterTitle = patchContainer(txStyles, "p:titleStyle");
+    const afterBody = patchContainer(afterTitle, "p:bodyStyle");
+    return patchContainer(afterBody, "p:otherStyle");
   });
 }

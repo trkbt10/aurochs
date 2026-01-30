@@ -329,6 +329,7 @@ function isProbablyIdentityMat3(m: readonly number[]): boolean {
 function safePowInt(base: number, exp: number, limit: number): number | null {
   if (!Number.isFinite(base) || !Number.isFinite(exp)) {return null;}
   if (base <= 0 || exp < 0) {return null;}
+  // eslint-disable-next-line no-restricted-syntax
   let out = 1;
   for (let i = 0; i < exp; i += 1) {
     out *= base;
@@ -373,6 +374,7 @@ function parseLutTag(tag: Uint8Array): IccLutTransform | null {
   const total = 52 + inputTableBytes + clutBytes + outputTableBytes;
   if (total > tag.length) {return null;}
 
+  // eslint-disable-next-line no-restricted-syntax
   let cursor = 52;
   const inputTablesBytes = tag.slice(cursor, cursor + inputTableBytes);
   cursor += inputTableBytes;
@@ -501,7 +503,9 @@ export function evalIccLutToPcs01(profile: IccLutProfile, inputs01: readonly num
 
   const getIndex = (coords: readonly number[]): number => {
     // First input channel varies fastest.
+    // eslint-disable-next-line no-restricted-syntax
     let mul = 1;
+    // eslint-disable-next-line no-restricted-syntax
     let index = 0;
     for (let c = 0; c < lut.inChannels; c += 1) {
       index += (coords[c] ?? 0) * mul;
@@ -514,6 +518,7 @@ export function evalIccLutToPcs01(profile: IccLutProfile, inputs01: readonly num
   const corners = 1 << lut.inChannels;
   const coords = new Array<number>(lut.inChannels).fill(0);
   for (let mask = 0; mask < corners; mask += 1) {
+    // eslint-disable-next-line no-restricted-syntax
     let w = 1;
     for (let c = 0; c < lut.inChannels; c += 1) {
       const use1 = ((mask >> c) & 1) === 1;

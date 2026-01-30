@@ -95,6 +95,7 @@ function parseFunctionType2(page: NativePdfPage, obj: PdfObject | undefined): Pd
   if (n == null || !Number.isFinite(n)) {return null;}
 
   const domainNums = parseNumberArray(page, dictGet(dict, "Domain"), 2);
+  // eslint-disable-next-line no-restricted-syntax
   let domain: readonly [number, number] | undefined;
   if (domainNums) {
     domain = [domainNums[0] ?? 0, domainNums[1] ?? 1];

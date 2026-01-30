@@ -135,6 +135,7 @@ const hiddenInputStyle: CSSProperties = {
 const ACCEPTED_FILE_TYPES = ".png,.jpg,.jpeg,.gif,.svg,.mp4,.mp3,.xlsx,.docx,.pptx";
 
 /** Generate unique ID for uploaded assets */
+// eslint-disable-next-line no-restricted-syntax
 let uploadedAssetCounter = 0;
 function generateUploadedAssetId(): string {
   uploadedAssetCounter += 1;
@@ -262,10 +263,7 @@ function isAssetDraggable(asset: AssetInfo): boolean {
  */
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
-  let binary = "";
-  for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
+  const binary = Array.from(bytes, (byte) => String.fromCharCode(byte)).join("");
   return btoa(binary);
 }
 

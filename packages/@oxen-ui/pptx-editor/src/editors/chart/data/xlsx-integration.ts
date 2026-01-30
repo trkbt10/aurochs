@@ -70,6 +70,7 @@ export function createChartDataEditor(
   workbook: XlsxWorkbook,
   sheetIndex: number = 0,
 ): ChartDataEditor {
+  // eslint-disable-next-line no-restricted-syntax -- mutable state pattern for reducer dispatch
   let state = createInitialState(workbook);
   state = { ...state, activeSheetIndex: sheetIndex };
 
@@ -224,19 +225,21 @@ export function editorToSheetUpdates(
       const colNum = cell.address.col as number;
       const colLetter = indexToColumnLetter(colIdx(colNum));
 
-      let value: string | number;
-      switch (cell.value.type) {
-        case "number":
-          value = cell.value.value;
-          break;
-        case "string":
-          value = cell.value.value;
-          break;
-        case "boolean":
-          value = cell.value.value ? 1 : 0;
-          break;
-        default:
-          continue; // Skip empty and error cells
+      const computeValue = (): { skip: boolean; value: string | number } => {
+        switch (cell.value.type) {
+          case "number":
+            return { skip: false, value: cell.value.value };
+          case "string":
+            return { skip: false, value: cell.value.value };
+          case "boolean":
+            return { skip: false, value: cell.value.value ? 1 : 0 };
+          default:
+            return { skip: true, value: 0 };
+        }
+      };
+      const { skip, value } = computeValue();
+      if (skip) {
+        continue;
       }
 
       cells.push({ col: colLetter, row: rowNum, value });

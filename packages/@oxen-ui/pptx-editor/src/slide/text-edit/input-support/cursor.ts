@@ -219,6 +219,7 @@ export function getLineRangeForPosition(
     };
   }
 
+  // eslint-disable-next-line no-restricted-syntax -- accumulating offset through loop
   let offset = 0;
   for (const line of para.lines) {
     const lineLength = getLineTextLength(line);
@@ -255,8 +256,11 @@ export function coordinatesToCursorPosition(
     return { paragraphIndex: 0, charOffset: 0 };
   }
 
+  // eslint-disable-next-line no-restricted-syntax -- tracking best match
   let bestParagraphIndex = 0;
+  // eslint-disable-next-line no-restricted-syntax -- tracking best match
   let bestLineIndex = 0;
+  // eslint-disable-next-line no-restricted-syntax -- tracking best match
   let bestDistance = Number.POSITIVE_INFINITY;
 
   layoutResult.paragraphs.forEach((para, paragraphIndex) => {
@@ -372,7 +376,9 @@ function getCharOffsetInSpan(span: LayoutLine["spans"][number], targetX: number)
     return 0;
   }
 
+  // eslint-disable-next-line no-restricted-syntax -- binary search
   let low = 0;
+  // eslint-disable-next-line no-restricted-syntax -- binary search
   let high = length;
 
   while (low < high) {

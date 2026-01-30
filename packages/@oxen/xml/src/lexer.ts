@@ -171,12 +171,9 @@ export class XmlLexer {
    */
   private readText(): Token {
     const startPos = this.pos;
-    let text = "";
-
-    while (this.pos < this.input.length && this.input[this.pos] !== "<") {
-      text += this.input[this.pos];
-      this.pos++;
-    }
+    const endPos = this.input.indexOf("<", this.pos);
+    const text = endPos === -1 ? this.input.slice(this.pos) : this.input.slice(this.pos, endPos);
+    this.pos = endPos === -1 ? this.input.length : endPos;
 
     return { type: TokenType.TEXT, value: decodeEntities(text), pos: startPos };
   }
@@ -321,12 +318,11 @@ export class XmlLexer {
    */
   private readName(): Token {
     const startPos = this.pos;
-    let name = "";
 
     while (this.pos < this.input.length && isNameChar(this.input[this.pos])) {
-      name += this.input[this.pos];
       this.pos++;
     }
+    const name = this.input.slice(startPos, this.pos);
 
     // Determine if this is a tag name or attribute name
     // If we just entered the tag, it's a tag name
@@ -346,15 +342,10 @@ export class XmlLexer {
    * Peek at next non-whitespace character without advancing position.
    */
   private peekNextNonWhitespace(): string {
-    let tempPos = this.pos;
-    while (tempPos < this.input.length && isWhitespace(this.input[tempPos])) {
-      tempPos++;
-    }
-    const char = this.input[tempPos];
-    if (char === undefined) {
-      return "";
-    }
-    return char;
+    const remaining = this.input.slice(this.pos);
+    const match = remaining.match(/^\s*/);
+    const skipCount = match?.[0].length ?? 0;
+    return this.input[this.pos + skipCount] ?? "";
   }
 
   /**
@@ -364,13 +355,10 @@ export class XmlLexer {
     const startPos = this.pos;
     this.pos++; // Skip opening quote
 
-    let value = "";
-    while (this.pos < this.input.length && this.input[this.pos] !== quote) {
-      value += this.input[this.pos];
-      this.pos++;
-    }
+    const endPos = this.input.indexOf(quote, this.pos);
+    const value = endPos === -1 ? this.input.slice(this.pos) : this.input.slice(this.pos, endPos);
+    this.pos = endPos === -1 ? this.input.length : endPos + 1;
 
-    this.pos++; // Skip closing quote
     return { type: TokenType.ATTR_VALUE, value: decodeEntities(value), pos: startPos };
   }
 }

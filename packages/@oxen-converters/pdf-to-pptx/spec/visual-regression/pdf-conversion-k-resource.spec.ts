@@ -94,6 +94,7 @@ describe("PDF→PPTX visual regression: k-resource-dl.pdf", () => {
     const outPptxPath = path.join(__dirname, "__output__/k-resource-dl-page2.pptx");
     const { svg, fontFiles, cleanupFonts } = await renderPdfPageToSvg(pdfPath, 2, outPptxPath);
 
+    // eslint-disable-next-line no-restricted-syntax
     let compare: ReturnType<typeof compareSvgToPdfBaseline>;
     try {
       compare = compareSvgToPdfBaseline({
@@ -142,6 +143,7 @@ describe("PDF→PPTX visual regression: k-resource-dl.pdf", () => {
     const outPptxPath = path.join(__dirname, "__output__/k-resource-dl-page4.pptx");
     const { svg, fontFiles, cleanupFonts } = await renderPdfPageToSvg(pdfPath, 4, outPptxPath);
 
+    // eslint-disable-next-line no-restricted-syntax
     let compare: ReturnType<typeof compareSvgToPdfBaseline>;
     try {
       compare = compareSvgToPdfBaseline({
@@ -190,6 +192,7 @@ describe("PDF→PPTX visual regression: k-resource-dl.pdf", () => {
     const outPptxPath = path.join(__dirname, "__output__/k-resource-dl-page5.pptx");
     const { svg, fontFiles, cleanupFonts } = await renderPdfPageToSvg(pdfPath, 5, outPptxPath);
 
+    // eslint-disable-next-line no-restricted-syntax
     let compare: ReturnType<typeof compareSvgToPdfBaseline>;
     try {
       compare = compareSvgToPdfBaseline({

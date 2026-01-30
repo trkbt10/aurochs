@@ -87,6 +87,7 @@ describe("PDF→PPTX visual regression: k-namingrule-dl.pdf", () => {
     const outPptxPath = path.join(__dirname, `__output__/k-namingrule-dl-page${pageNumber}.pptx`);
     const { svg, fontFiles, cleanupFonts } = await renderPdfPageToSvg(pageNumber, outPptxPath);
 
+    // eslint-disable-next-line no-restricted-syntax
     let compare: ReturnType<typeof compareSvgToPdfBaseline>;
     try {
       compare = compareSvgToPdfBaseline({

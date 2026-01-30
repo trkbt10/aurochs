@@ -59,12 +59,14 @@ export function extractJp2Codestream(jpxBytes: Uint8Array): Uint8Array {
     }
   }
 
+  // eslint-disable-next-line no-restricted-syntax
   let pos = 12;
   while (pos + 8 <= jpxBytes.length) {
     const lbox = readU32BE(jpxBytes, pos);
     const tbox = readAscii4(jpxBytes, pos + 4);
     pos += 8;
 
+    // eslint-disable-next-line no-restricted-syntax
     let boxSize = lbox;
     if (boxSize === 1) {
       // XLBox (64-bit). We only support sizes that fit in 32-bit for now.

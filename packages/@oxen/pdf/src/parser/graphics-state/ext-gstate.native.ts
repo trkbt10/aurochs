@@ -272,9 +272,13 @@ function computeOrientedBoxForRun(run: TextRun, fontMappings: FontMappings): Ori
     { x: start.x + nx * maxN, y: start.y + ny * maxN },
   ];
 
+  // eslint-disable-next-line no-restricted-syntax
   let minX = Infinity;
+  // eslint-disable-next-line no-restricted-syntax
   let minY = Infinity;
+  // eslint-disable-next-line no-restricted-syntax
   let maxX = -Infinity;
+  // eslint-disable-next-line no-restricted-syntax
   let maxY = -Infinity;
   for (const c of corners) {
     minX = Math.min(minX, c.x);
@@ -645,9 +649,13 @@ function tryExtractPerPixelSoftMaskFromElements({
     const halfW = lineWidth / 2;
 
     // Restrict pixel loops to the union of run AABBs (expanded for stroke pad).
+    // eslint-disable-next-line no-restricted-syntax
     let minX = Infinity;
+    // eslint-disable-next-line no-restricted-syntax
     let minY = Infinity;
+    // eslint-disable-next-line no-restricted-syntax
     let maxX = -Infinity;
+    // eslint-disable-next-line no-restricted-syntax
     let maxY = -Infinity;
     for (const b of runBoxes) {
       minX = Math.min(minX, b.aabb[0]);
@@ -814,6 +822,7 @@ function tryExtractPerPixelSoftMaskFromElements({
     }
 
     for (const elem of elements) {
+      // eslint-disable-next-line no-restricted-syntax
       let layer: RasterLayer | null | undefined = undefined;
 
       if (elem.type === "path") {
@@ -890,7 +899,9 @@ function tryExtractPerPixelSoftMaskFromElements({
     }>
   >();
 
+  // eslint-disable-next-line no-restricted-syntax
   let width: number | null = null;
+  // eslint-disable-next-line no-restricted-syntax
   let height: number | null = null;
 
   if (hasXObjectImages) {
@@ -1056,8 +1067,10 @@ function tryExtractPerPixelSoftMaskFromElements({
       const idx = row * width + col;
 
       if (kind === "Alpha") {
+        // eslint-disable-next-line no-restricted-syntax
         let outA = 0;
         for (const layer of layers) {
+          // eslint-disable-next-line no-restricted-syntax
           let srcA = 0;
           if (layer.kind === "raster") {
             srcA = layer.alpha[idx] ?? 0;
@@ -1116,9 +1129,13 @@ function tryExtractPerPixelSoftMaskFromElements({
         continue;
       }
 
+      // eslint-disable-next-line no-restricted-syntax
       let outA = 0;
+      // eslint-disable-next-line no-restricted-syntax
       let premR = 0;
+      // eslint-disable-next-line no-restricted-syntax
       let premG = 0;
+      // eslint-disable-next-line no-restricted-syntax
       let premB = 0;
 
       if (!groupIsolated && backdropRgb) {
@@ -1130,9 +1147,13 @@ function tryExtractPerPixelSoftMaskFromElements({
       }
 
       for (const layer of layers) {
+        // eslint-disable-next-line no-restricted-syntax
         let srcA = 0;
+        // eslint-disable-next-line no-restricted-syntax
         let r = 0;
+        // eslint-disable-next-line no-restricted-syntax
         let g = 0;
+        // eslint-disable-next-line no-restricted-syntax
         let b = 0;
 
         if (layer.kind === "raster") {

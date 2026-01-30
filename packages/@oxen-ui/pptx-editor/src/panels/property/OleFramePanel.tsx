@@ -52,23 +52,20 @@ export function OleFramePanel({ shape, onChange }: OleFramePanelProps) {
     });
   };
 
-  let oleContent: ReactNode;
-  if (oleData) {
-    oleContent = <OleObjectEditor value={oleData} onChange={handleOleDataChange} />;
-  } else {
-    oleContent = (
-      <div
-        style={{
-          padding: "12px",
-          textAlign: "center",
-          color: "var(--text-tertiary, #737373)",
-          fontSize: "12px",
-        }}
-      >
-        OLE object data not available
-      </div>
-    );
-  }
+  const oleContent: ReactNode = oleData ? (
+    <OleObjectEditor value={oleData} onChange={handleOleDataChange} />
+  ) : (
+    <div
+      style={{
+        padding: "12px",
+        textAlign: "center",
+        color: "var(--text-tertiary, #737373)",
+        fontSize: "12px",
+      }}
+    >
+      OLE object data not available
+    </div>
+  );
 
   return (
     <>

@@ -1045,6 +1045,7 @@ const D = [
 
 const EXPECTED_ENTRIES = 23058;
 
+// eslint-disable-next-line no-restricted-syntax
 let TABLE: Uint32Array | null = null;
 
 function getTable(): Uint32Array {

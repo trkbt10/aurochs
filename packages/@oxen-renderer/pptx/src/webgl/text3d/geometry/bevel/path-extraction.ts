@@ -22,6 +22,7 @@ import { vec2, Vec2 } from "./types";
  * - Negative = Clockwise (CW)
  */
 export function computeSignedArea(points: readonly Vector2[]): number {
+  // eslint-disable-next-line no-restricted-syntax -- Algorithm: accumulator for shoelace formula
   let area = 0;
   for (let i = 0; i < points.length; i++) {
     const curr = points[i];
@@ -160,7 +161,9 @@ export function extractPathPointsWithNormals(
     const bisectorSum = Vec2.add(normal1, normal2);
     const bisectorLength = Vec2.length(bisectorSum);
 
+    // eslint-disable-next-line no-restricted-syntax -- Geometry: computed based on bisector
     let normal: Vector2;
+    // eslint-disable-next-line no-restricted-syntax -- Geometry: computed based on corner angle
     let miterFactor: number;
 
     if (bisectorLength < 0.001) {

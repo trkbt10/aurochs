@@ -12,7 +12,7 @@
 
 import type { ZipPackage } from "@oxen/zip";
 import type { EmbeddedFontData } from "../../app/presentation-document";
-import { parseXml, serializeDocument, createElement, type XmlDocument } from "@oxen/xml";
+import { parseXml, serializeDocument, createElement } from "@oxen/xml";
 import { getDocumentRoot, updateDocumentRoot } from "../core/xml-mutator";
 import { addContentType } from "./content-types-manager";
 import { addRelationship, ensureRelationshipsDocument, type RelationshipType } from "./relationship-manager";
@@ -104,10 +104,13 @@ function addFontContentType(pkg: ZipPackage): void {
  * Generate unique font path.
  */
 function generateFontPath(pkg: ZipPackage): string {
-  let index = 1;
-  while (pkg.exists(`ppt/fonts/font${index}.fntdata`)) {
-    index++;
-  }
+  const findAvailableIndex = (start: number): number => {
+    if (!pkg.exists(`ppt/fonts/font${start}.fntdata`)) {
+      return start;
+    }
+    return findAvailableIndex(start + 1);
+  };
+  const index = findAvailableIndex(1);
   return `ppt/fonts/font${index}.fntdata`;
 }
 
@@ -118,13 +121,10 @@ function addFontRelationship(pkg: ZipPackage, fontPath: string): string {
   const relsPath = getRelationshipPath(PRESENTATION_PATH);
 
   // Read or create relationships document
-  let relsXml: XmlDocument;
   const existingRels = pkg.readText(relsPath);
-  if (existingRels) {
-    relsXml = ensureRelationshipsDocument(parseXml(existingRels));
-  } else {
-    relsXml = ensureRelationshipsDocument(null);
-  }
+  const relsXml = existingRels
+    ? ensureRelationshipsDocument(parseXml(existingRels))
+    : ensureRelationshipsDocument(null);
 
   // Relative target from ppt/ directory
   const relTarget = fontPath.replace("ppt/", "");
@@ -212,9 +212,7 @@ function findInsertionIndex(children: readonly unknown[]): number {
     "p:notesSz",
   ];
 
-  let lastFoundIndex = -1;
-  for (let i = 0; i < children.length; i++) {
-    const child = children[i];
+  const lastIndex = children.reduce<number>((lastIdx, child, i) => {
     if (
       typeof child === "object" &&
       child !== null &&
@@ -222,9 +220,10 @@ function findInsertionIndex(children: readonly unknown[]): number {
       typeof (child as { name: unknown }).name === "string" &&
       beforeElements.includes((child as { name: string }).name)
     ) {
-      lastFoundIndex = i;
+      return i;
     }
-  }
+    return lastIdx;
+  }, -1);
 
-  return lastFoundIndex;
+  return lastIndex;
 }

@@ -44,10 +44,9 @@ export function createSoftEdgeMesh(
   const softGeometry = geometry.clone();
 
   // Get color from material
-  let color = new THREE.Color(0x888888);
-  if ("color" in material) {
-    color = (material as THREE.MeshStandardMaterial).color.clone();
-  }
+  const color = "color" in material
+    ? (material as THREE.MeshStandardMaterial).color.clone()
+    : new THREE.Color(0x888888);
 
   // Calculate edge softness based on radius
   // Higher radius = more transparency/softness
@@ -55,7 +54,7 @@ export function createSoftEdgeMesh(
 
   // Create material with soft edges using alpha
   const softMaterial = new THREE.MeshStandardMaterial({
-    color: color,
+    color,
     roughness: (material as THREE.MeshStandardMaterial).roughness ?? 0.5,
     metalness: (material as THREE.MeshStandardMaterial).metalness ?? 0,
     transparent: true,
@@ -95,10 +94,9 @@ export function createLayeredSoftEdge({
   group.name = "text-soft-edge-layers";
 
   // Get color from material
-  let color = new THREE.Color(0x888888);
-  if ("color" in material) {
-    color = (material as THREE.MeshStandardMaterial).color.clone();
-  }
+  const color = "color" in material
+    ? (material as THREE.MeshStandardMaterial).color.clone()
+    : new THREE.Color(0x888888);
 
   const baseRadius = config.radius / 100;
 
@@ -110,7 +108,7 @@ export function createLayeredSoftEdge({
     layerGeometry.scale(layerScale, layerScale, layerScale);
 
     const layerMaterial = new THREE.MeshBasicMaterial({
-      color: color,
+      color,
       transparent: true,
       opacity: layerOpacity * 0.5,
       side: THREE.FrontSide,

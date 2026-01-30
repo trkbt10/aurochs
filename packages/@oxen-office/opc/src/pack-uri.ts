@@ -49,6 +49,7 @@ function normalizePackageIriForComparison(packageIri: string): string | null {
     const hostname = url.hostname.toLowerCase();
     const username = url.username;
     const password = url.password;
+    // eslint-disable-next-line no-restricted-syntax
     let port = url.port;
     if ((scheme === "http:" && port === "80") || (scheme === "https:" && port === "443")) {
       port = "";

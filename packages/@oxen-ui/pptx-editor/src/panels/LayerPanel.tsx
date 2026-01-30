@@ -1125,15 +1125,16 @@ export function LayerPanel({
       }
 
       const position = getDropPosition(event, shape.type === "grpSp");
-      let targetParentId = parentId;
-      let targetIndex = displayIndex;
-
-      if (position === "inside" && shape.type === "grpSp") {
-        targetParentId = shapeId;
-        targetIndex = getDisplayOrder(shape.children).length;
-      } else if (position === "after") {
-        targetIndex = displayIndex + 1;
-      }
+      const computeDropTarget = (): { targetParentId: ShapeId | null; targetIndex: number } => {
+        if (position === "inside" && shape.type === "grpSp") {
+          return { targetParentId: shapeId, targetIndex: getDisplayOrder(shape.children).length };
+        }
+        if (position === "after") {
+          return { targetParentId: parentId, targetIndex: displayIndex + 1 };
+        }
+        return { targetParentId: parentId, targetIndex: displayIndex };
+      };
+      const { targetParentId, targetIndex } = computeDropTarget();
 
       if (isDropForbidden(targetParentId)) {
         setDropTarget(null);

@@ -8,6 +8,7 @@ import { sha384, sha512 } from "./sha512";
 import { aes128CbcEncryptNoPadWithIv } from "./aes";
 
 function mod3OfBigEndian(bytes: Uint8Array): 0 | 1 | 2 {
+  // eslint-disable-next-line no-restricted-syntax
   let r = 0;
   for (const b of bytes) {
     r = (r * 256 + (b & 0xff)) % 3;
@@ -47,7 +48,9 @@ export function computeR6HardenedHash(args: {
 
   const u = args.userKey ?? new Uint8Array(0);
 
+  // eslint-disable-next-line no-restricted-syntax
   let k: Uint8Array = sha256(concatBytes(args.passwordBytes, args.salt, u));
+  // eslint-disable-next-line no-restricted-syntax
   let e: Uint8Array = new Uint8Array(0);
 
   for (let i = 0; ; i += 1) {

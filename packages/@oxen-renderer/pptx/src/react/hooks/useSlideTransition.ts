@@ -267,6 +267,7 @@ export function useSlideTransition(
     // Fallback: use requestAnimationFrame-based timing for accuracy
     // This is more accurate than setTimeout as it's tied to frame timing
     const startTime = performance.now();
+    // eslint-disable-next-line no-restricted-syntax -- RAF lifecycle: ID needed for cleanup
     let rafId: number;
 
     const checkEnd = () => {

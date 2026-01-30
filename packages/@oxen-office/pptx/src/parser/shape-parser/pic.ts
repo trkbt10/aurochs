@@ -43,6 +43,7 @@ export function parseBlipFillProperties(
   }
 
   // Resolve image at parse time if context is available
+  // eslint-disable-next-line no-restricted-syntax
   let resolvedResource: ResolvedBlipResource | undefined;
   if (resourceContext !== undefined && !resourceId.startsWith("data:")) {
     resolvedResource = resourceContext.resolveBlipFill(resourceId);

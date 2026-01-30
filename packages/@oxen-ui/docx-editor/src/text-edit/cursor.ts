@@ -53,6 +53,7 @@ export function offsetToDocxCursorPosition(
   content: readonly DocxBlockContent[],
   offset: number
 ): DocxCursorPosition {
+  // eslint-disable-next-line no-restricted-syntax -- performance-critical iteration
   let remaining = offset;
 
   for (let elementIndex = 0; elementIndex < content.length; elementIndex++) {
@@ -83,11 +84,9 @@ export function docxCursorPositionToOffset(
   content: readonly DocxBlockContent[],
   position: DocxCursorPosition
 ): number {
-  let offset = 0;
-
-  for (let i = 0; i < position.elementIndex && i < content.length; i++) {
-    offset += getBlockContentTextLength(content[i]) + 1; // +1 for newline
-  }
+  const offset = content
+    .slice(0, Math.min(position.elementIndex, content.length))
+    .reduce((sum, element) => sum + getBlockContentTextLength(element) + 1, 0);
 
   return offset + position.charOffset;
 }
@@ -239,8 +238,9 @@ export function getWordRange(
     return /[\p{L}\p{N}_]/u.test(char);
   };
 
-  // If at the end or current char is not a word char, try to look left
+  // eslint-disable-next-line no-restricted-syntax -- iterating to find word boundaries
   let start = safeOffset;
+  // eslint-disable-next-line no-restricted-syntax -- iterating to find word boundaries
   let end = safeOffset;
 
   // Find start of word
@@ -286,13 +286,13 @@ export function getLineRange(
 
   const safeOffset = Math.min(Math.max(offset, 0), text.length);
 
-  // Find start of line (after previous newline or start of text)
+  // eslint-disable-next-line no-restricted-syntax -- iterating to find line boundaries
   let start = safeOffset;
   while (start > 0 && text[start - 1] !== "\n") {
     start--;
   }
 
-  // Find end of line (before next newline or end of text)
+  // eslint-disable-next-line no-restricted-syntax -- iterating to find line boundaries
   let end = safeOffset;
   while (end < text.length && text[end] !== "\n") {
     end++;

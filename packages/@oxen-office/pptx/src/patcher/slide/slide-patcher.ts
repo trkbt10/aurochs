@@ -42,6 +42,7 @@ export function patchSlideXml(
   slideXml: XmlDocument,
   changes: readonly ShapeChange[],
 ): XmlDocument {
+  // eslint-disable-next-line no-restricted-syntax
   let result = slideXml;
 
   for (const change of changes) {
@@ -182,10 +183,10 @@ function applyModification(
     if (!shape) {return root;}
 
     // Apply each change to the shape
-    let modifiedShape = shape;
-    for (const change of changes) {
-      modifiedShape = applyPropertyChange(modifiedShape, change);
-    }
+    const modifiedShape = changes.reduce(
+      (currentShape, change) => applyPropertyChange(currentShape, change),
+      shape,
+    );
 
     // Replace the shape in spTree
     const newSpTree = replaceShapeById(spTree, shapeId, modifiedShape);
@@ -351,13 +352,12 @@ function applyFillChange(
   }
 
   const fillElement = serializeFill(newFill);
-  let insertIndex = 0;
+  // eslint-disable-next-line no-restricted-syntax
+  let insertIndex: number;
   if (firstFillIndex === -1) {
     insertIndex = findInsertIndexByName(keptChildren, ["a:ln", "a:effectLst", "a:effectDag"]);
   } else {
-    insertIndex = originalChildren
-      .slice(0, firstFillIndex)
-      .filter((c) => !(isXmlElement(c) && fillNames.has(c.name))).length;
+    insertIndex = originalChildren.slice(0, firstFillIndex).filter((c) => !(isXmlElement(c) && fillNames.has(c.name))).length;
   }
 
   const newSpPr = {
@@ -409,13 +409,12 @@ function applyLineChange(
   }
 
   const lnElement = serializeLine(newLine);
-  let insertIndex = 0;
+  // eslint-disable-next-line no-restricted-syntax
+  let insertIndex: number;
   if (existingLnIndex === -1) {
     insertIndex = findInsertIndexByName(keptChildren, ["a:effectLst", "a:effectDag"]);
   } else {
-    insertIndex = originalChildren
-      .slice(0, existingLnIndex)
-      .filter((c) => !(isXmlElement(c) && c.name === "a:ln")).length;
+    insertIndex = originalChildren.slice(0, existingLnIndex).filter((c) => !(isXmlElement(c) && c.name === "a:ln")).length;
   }
 
   const newSpPr = {
@@ -479,13 +478,12 @@ function applyEffectsChange(
     return replaceChildByName(shape, spPrName, newSpPr);
   }
 
-  let insertIndex = 0;
+  // eslint-disable-next-line no-restricted-syntax
+  let insertIndex: number;
   if (firstEffectIndex === -1) {
     insertIndex = keptChildren.length;
   } else {
-    insertIndex = originalChildren
-      .slice(0, firstEffectIndex)
-      .filter((c) => !(isXmlElement(c) && effectNames.has(c.name))).length;
+    insertIndex = originalChildren.slice(0, firstEffectIndex).filter((c) => !(isXmlElement(c) && effectNames.has(c.name))).length;
   }
 
   const newSpPr = {
@@ -505,17 +503,8 @@ function findInsertIndexByName(children: readonly unknown[], names: readonly str
     return children.length;
   }
 
-  for (let i = 0; i < children.length; i += 1) {
-    const child = children[i];
-    if (!isXmlElement(child)) {
-      continue;
-    }
-    if (names.includes(child.name)) {
-      return i;
-    }
-  }
-
-  return children.length;
+  const foundIndex = children.findIndex((child) => isXmlElement(child) && names.includes(child.name));
+  return foundIndex === -1 ? children.length : foundIndex;
 }
 
 // =============================================================================
@@ -567,7 +556,7 @@ function applyGeometryChange(
       attrs: { prst: "rect" },
       children: [{ type: "element", name: "a:avLst", attrs: {}, children: [] }],
     };
-    const insertIndex = existingGeomIndex !== -1 ? existingGeomIndex : findGeometryInsertIndex(keptChildren);
+    const insertIndex = existingGeomIndex !== -1 ? existingGeomIndex : findGeometryInsertIndex(keptChildren);  // eslint-disable-line custom/ternary-length
     const newSpPr = {
       ...spPr,
       children: [
@@ -583,15 +572,9 @@ function applyGeometryChange(
   const geomElement = serializeGeometry(newGeometry);
 
   // Find insert position (geometry should come after a:xfrm)
-  let insertIndex = 0;
-  if (existingGeomIndex !== -1) {
-    // Use same position as existing geometry
-    insertIndex = originalChildren
-      .slice(0, existingGeomIndex)
-      .filter((c) => !(isXmlElement(c) && geometryNames.has(c.name))).length;
-  } else {
-    insertIndex = findGeometryInsertIndex(keptChildren);
-  }
+  const insertIndex = existingGeomIndex !== -1
+    ? originalChildren.slice(0, existingGeomIndex).filter((c) => !(isXmlElement(c) && geometryNames.has(c.name))).length
+    : findGeometryInsertIndex(keptChildren);
 
   const newSpPr = {
     ...spPr,
@@ -611,14 +594,8 @@ function applyGeometryChange(
  */
 function findGeometryInsertIndex(children: readonly unknown[]): number {
   // Find a:xfrm and insert after it
-  for (let i = 0; i < children.length; i++) {
-    const child = children[i];
-    if (isXmlElement(child) && child.name === "a:xfrm") {
-      return i + 1;
-    }
-  }
-  // If no xfrm, insert at start
-  return 0;
+  const xfrmIndex = children.findIndex((child) => isXmlElement(child) && child.name === "a:xfrm");
+  return xfrmIndex === -1 ? 0 : xfrmIndex + 1;
 }
 
 // =============================================================================
@@ -831,15 +808,11 @@ function updateConnectorRefs(
   const startConnection = conn.nonVisual.startConnection;
   const endConnection = conn.nonVisual.endConnection;
 
-  let updatedStart = startConnection;
-  if (startConnection && idMap.has(startConnection.shapeId)) {
-    updatedStart = { ...startConnection, shapeId: idMap.get(startConnection.shapeId)! };
-  }
+  const hasNewStartId = startConnection && idMap.has(startConnection.shapeId);
+  const updatedStart = hasNewStartId ? { ...startConnection, shapeId: idMap.get(startConnection.shapeId)! } : startConnection;
 
-  let updatedEnd = endConnection;
-  if (endConnection && idMap.has(endConnection.shapeId)) {
-    updatedEnd = { ...endConnection, shapeId: idMap.get(endConnection.shapeId)! };
-  }
+  const hasNewEndId = endConnection && idMap.has(endConnection.shapeId);
+  const updatedEnd = hasNewEndId ? { ...endConnection, shapeId: idMap.get(endConnection.shapeId)! } : endConnection;
 
   if (updatedStart === startConnection && updatedEnd === endConnection) {
     return conn;

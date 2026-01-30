@@ -218,10 +218,8 @@ export function togglePointInSelection(
     const filtered = selection.selectedElements.filter(
       (e) => !pathElementIdsEqual(e, element)
     );
-    let primaryElement = selection.primaryElement;
-    if (primaryElement && pathElementIdsEqual(primaryElement, element)) {
-      primaryElement = filtered[0];
-    }
+    const shouldRemovePrimary = selection.primaryElement && pathElementIdsEqual(selection.primaryElement, element);
+    const primaryElement = shouldRemovePrimary ? filtered[0] : selection.primaryElement;
     return {
       selectedElements: filtered,
       primaryElement,

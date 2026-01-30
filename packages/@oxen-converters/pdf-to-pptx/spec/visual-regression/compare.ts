@@ -189,6 +189,7 @@ export function compareSvgToSnapshot(
 
   // Convert SVG to PNG at baseline dimensions
   const actualPng = svgToPng(svg, baseline.width, options);
+  // eslint-disable-next-line no-restricted-syntax
   let actual: PNG = PNG.sync.read(actualPng);
 
   // Save actual output for debugging
@@ -220,12 +221,10 @@ export function compareSvgToSnapshot(
   const match = diffPercent <= maxDiffPercent;
 
   // Save diff image if there are differences
-  let diffImagePath: string | null = null;
-  if (diffPixels > 0) {
-    diffImagePath = path.join(
-      DIFF_DIR,
-      `${snapshotName}-slide-${slideNumber}-diff.png`
-    );
+  const diffImagePath: string | null = diffPixels > 0
+    ? path.join(DIFF_DIR, `${snapshotName}-slide-${slideNumber}-diff.png`)
+    : null;
+  if (diffImagePath) {
     savePng(diff, diffImagePath);
   }
 
@@ -457,6 +456,7 @@ export function compareSvgToPdfBaseline(
   savePng(fittedBaseline, baselinePath);
 
   const actualPngHigh = svgToPng(svg, scaledTargetWidth, options);
+  // eslint-disable-next-line no-restricted-syntax
   let actualHigh: PNG = PNG.sync.read(actualPngHigh);
   if (actualHigh.width !== scaledTargetWidth || actualHigh.height !== scaledTargetHeight) {
     actualHigh = resizePng(actualHigh, scaledTargetWidth, scaledTargetHeight);
@@ -481,9 +481,10 @@ export function compareSvgToPdfBaseline(
   const diffPercent = (diffPixels / totalPixels) * 100;
   const match = diffPercent <= maxDiffPercent;
 
-  let diffImagePath: string | null = null;
-  if (diffPixels > 0) {
-    diffImagePath = path.join(DIFF_DIR, `${snapshotName}-slide-${slideNumber}-diff.png`);
+  const diffImagePath: string | null = diffPixels > 0
+    ? path.join(DIFF_DIR, `${snapshotName}-slide-${slideNumber}-diff.png`)
+    : null;
+  if (diffImagePath) {
     savePng(diff, diffImagePath);
   }
 
@@ -533,6 +534,7 @@ export function compareWithDetails(
 
   // Convert SVG to PNG at baseline dimensions
   const actualPng = svgToPng(svg, baseline.width);
+  // eslint-disable-next-line no-restricted-syntax
   let actual: PNG = PNG.sync.read(actualPng);
 
   // Save actual output for debugging
@@ -564,12 +566,10 @@ export function compareWithDetails(
   const match = diffPercent <= maxDiffPercent;
 
   // Save diff image if there are differences
-  let diffImagePath: string | null = null;
-  if (diffPixels > 0) {
-    diffImagePath = path.join(
-      DIFF_DIR,
-      `${snapshotName}-slide-${slideNumber}-diff.png`
-    );
+  const diffImagePath: string | null = diffPixels > 0
+    ? path.join(DIFF_DIR, `${snapshotName}-slide-${slideNumber}-diff.png`)
+    : null;
+  if (diffImagePath) {
     savePng(diff, diffImagePath);
   }
 

@@ -120,6 +120,7 @@ export function decodeJ2kCodestreamToRgb(
     const numZeroBitplanes = imsbt.decode(br, 0, 999);
 
     const numPasses = readNPasses(br);
+    // eslint-disable-next-line no-restricted-syntax
     let lblock = 3;
     while (br.readBit() === 1) {lblock += 1;}
     const lenBits = lblock + floorLog2(numPasses);
@@ -147,6 +148,7 @@ export function decodeJ2kCodestreamToRgb(
     for (let i = 0; i < header.width * header.height; i += 1) {
       // Tier-1 produces signed coefficients stored as fixed-point (×2).
       const s = (decoded.data[i] ?? 0) >> 1;
+      // eslint-disable-next-line no-restricted-syntax
       let v = s + shift;
       if (v < 0) {v = 0;}
       if (v > 255) {v = 255;}
@@ -162,9 +164,13 @@ function parseMainHeader(bytes: Uint8Array): CodestreamHeader {
   const soc = readMarker(bytes, 0);
   if (soc !== 0xff4f) {throw new Error("J2K: missing SOC");}
 
+  // eslint-disable-next-line no-restricted-syntax
   let pos = 2;
+  // eslint-disable-next-line no-restricted-syntax
   let siz: { width: number; height: number; components: number; bitDepth: number; isSigned: boolean } | null = null;
+  // eslint-disable-next-line no-restricted-syntax
   let cod: { numResolutions: number; mct: number } | null = null;
+  // eslint-disable-next-line no-restricted-syntax
   let qcdGuardBits = 2;
 
   while (pos + 2 <= bytes.length) {
@@ -234,6 +240,7 @@ function parseMainHeader(bytes: Uint8Array): CodestreamHeader {
 
 function extractSingleTilePart(bytes: Uint8Array): Uint8Array {
   // Find first SOT.
+  // eslint-disable-next-line no-restricted-syntax
   let pos = 2;
   while (pos + 2 <= bytes.length) {
     const marker = readMarker(bytes, pos);

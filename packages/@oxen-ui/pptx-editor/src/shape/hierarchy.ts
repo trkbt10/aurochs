@@ -27,31 +27,30 @@ type RemoveResult = {
 };
 
 function removeShapeById(shapes: readonly Shape[], id: ShapeId): RemoveResult {
-  let removed: Shape | undefined;
-
-  const nextShapes: Shape[] = [];
-  for (const shape of shapes) {
-    if (hasShapeId(shape) && shape.nonVisual.id === id) {
-      removed = shape;
-      continue;
-    }
-
-    if (shape.type === "grpSp") {
-      const childResult = removeShapeById(shape.children, id);
-      if (childResult.removed) {
-        removed = childResult.removed;
-        nextShapes.push({
-          ...shape,
-          children: childResult.shapes,
-        });
-        continue;
+  return shapes.reduce<RemoveResult>(
+    (acc, shape) => {
+      if (acc.removed) {
+        return { shapes: [...acc.shapes, shape], removed: acc.removed };
       }
-    }
 
-    nextShapes.push(shape);
-  }
+      if (hasShapeId(shape) && shape.nonVisual.id === id) {
+        return { shapes: acc.shapes, removed: shape };
+      }
 
-  return { shapes: nextShapes, removed };
+      if (shape.type === "grpSp") {
+        const childResult = removeShapeById(shape.children, id);
+        if (childResult.removed) {
+          return {
+            shapes: [...acc.shapes, { ...shape, children: childResult.shapes }],
+            removed: childResult.removed,
+          };
+        }
+      }
+
+      return { shapes: [...acc.shapes, shape], removed: undefined };
+    },
+    { shapes: [], removed: undefined }
+  );
 }
 
 function getDisplayIndex(length: number, internalIndex: number): number {
@@ -306,14 +305,19 @@ export function moveShapeInHierarchy(
   const targetSiblings = targetParent ? targetParent.children : removedResult.shapes;
   void targetSiblings;
 
-  let targetIndex = target.index;
-  if (sourceParent?.nonVisual.id === targetParent?.nonVisual.id) {
-    if (targetIndex > sourceDisplayIndex) {
-      targetIndex -= 1;
+  const computeTargetIndex = (): number | null => {
+    if (sourceParent?.nonVisual.id === targetParent?.nonVisual.id) {
+      const adjusted = target.index > sourceDisplayIndex ? target.index - 1 : target.index;
+      if (adjusted === sourceDisplayIndex) {
+        return null; // No change needed
+      }
+      return adjusted;
     }
-    if (targetIndex === sourceDisplayIndex) {
-      return shapes;
-    }
+    return target.index;
+  };
+  const targetIndex = computeTargetIndex();
+  if (targetIndex === null) {
+    return shapes;
   }
 
   const nextShape = adjustShapeTransformForMove(

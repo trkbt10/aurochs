@@ -61,12 +61,10 @@ function patchFormatSchemeElement(fmtScheme: XmlElement, scheme: FormatScheme): 
     };
   };
 
-  let updated = fmtScheme;
-  updated = upsertChildBeforeExtLst(updated, "a:fillStyleLst", buildStyleList("a:fillStyleLst", scheme.fillStyles));
-  updated = upsertChildBeforeExtLst(updated, "a:lnStyleLst", buildStyleList("a:lnStyleLst", scheme.lineStyles));
-  updated = upsertChildBeforeExtLst(updated, "a:effectStyleLst", buildStyleList("a:effectStyleLst", scheme.effectStyles));
-  updated = upsertChildBeforeExtLst(updated, "a:bgFillStyleLst", buildStyleList("a:bgFillStyleLst", scheme.bgFillStyles));
-  return updated;
+  const withFill = upsertChildBeforeExtLst(fmtScheme, "a:fillStyleLst", buildStyleList("a:fillStyleLst", scheme.fillStyles));
+  const withLine = upsertChildBeforeExtLst(withFill, "a:lnStyleLst", buildStyleList("a:lnStyleLst", scheme.lineStyles));
+  const withEffect = upsertChildBeforeExtLst(withLine, "a:effectStyleLst", buildStyleList("a:effectStyleLst", scheme.effectStyles));
+  return upsertChildBeforeExtLst(withEffect, "a:bgFillStyleLst", buildStyleList("a:bgFillStyleLst", scheme.bgFillStyles));
 }
 
 function applyColorScheme(themeElements: XmlElement, scheme: ColorSchemePatch): XmlElement {
@@ -75,13 +73,13 @@ function applyColorScheme(themeElements: XmlElement, scheme: ColorSchemePatch): 
     throw new Error("patchTheme: missing a:clrScheme.");
   }
 
-  let updatedClrScheme = clrScheme;
-  for (const [name, color] of Object.entries(scheme) as Array<[SchemeColorName, Color]>) {
+  const entries = Object.entries(scheme) as Array<[SchemeColorName, Color]>;
+  const updatedClrScheme = entries.reduce((current, [name, color]) => {
     if (!color) {
-      continue;
+      return current;
     }
-    updatedClrScheme = patchSchemeColor(updatedClrScheme, name, color);
-  }
+    return patchSchemeColor(current, name, color);
+  }, clrScheme);
 
   return replaceChildByName(themeElements, "a:clrScheme", updatedClrScheme);
 }
@@ -91,9 +89,8 @@ function applyFontScheme(themeElements: XmlElement, scheme: FontScheme): XmlElem
   if (!fontScheme) {
     throw new Error("patchTheme: missing a:fontScheme.");
   }
-  let updated = fontScheme;
-  updated = patchMajorFont(updated, scheme.majorFont);
-  updated = patchMinorFont(updated, scheme.minorFont);
+  const withMajor = patchMajorFont(fontScheme, scheme.majorFont);
+  const updated = patchMinorFont(withMajor, scheme.minorFont);
   return replaceChildByName(themeElements, "a:fontScheme", updated);
 }
 
@@ -117,31 +114,25 @@ export function patchTheme(themeXml: XmlDocument, changes: readonly ThemeChange[
     throw new Error("patchTheme requires changes.");
   }
 
-  let result = themeXml;
-
-  for (const change of changes) {
-    result = updateDocumentRoot(result, (root) => {
+  return changes.reduce((current, change) => {
+    return updateDocumentRoot(current, (root) => {
       if (root.name !== "a:theme") {
         throw new Error(`patchTheme: unexpected root element: ${root.name}`);
       }
 
       const themeElements = requireThemeElements(root);
-      let updatedThemeElements = themeElements;
-      switch (change.type) {
-        case "colorScheme":
-          updatedThemeElements = applyColorScheme(themeElements, change.scheme);
-          break;
-        case "fontScheme":
-          updatedThemeElements = applyFontScheme(themeElements, change.scheme);
-          break;
-        case "formatScheme":
-          updatedThemeElements = applyFormatScheme(themeElements, change.scheme);
-          break;
-      }
+      const updatedThemeElements = (() => {
+        switch (change.type) {
+          case "colorScheme":
+            return applyColorScheme(themeElements, change.scheme);
+          case "fontScheme":
+            return applyFontScheme(themeElements, change.scheme);
+          case "formatScheme":
+            return applyFormatScheme(themeElements, change.scheme);
+        }
+      })();
 
       return replaceChildByName(root, "a:themeElements", updatedThemeElements);
     });
-  }
-
-  return result;
+  }, themeXml);
 }

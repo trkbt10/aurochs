@@ -64,6 +64,7 @@ export function findCommonPrefixSuffix(
   modified: string,
 ): { prefixLen: number; suffixLen: number } {
   // Find common prefix
+  // eslint-disable-next-line no-restricted-syntax -- iterating to find prefix length
   let prefixLen = 0;
   const minLen = Math.min(original.length, modified.length);
   while (prefixLen < minLen && original[prefixLen] === modified[prefixLen]) {
@@ -71,6 +72,7 @@ export function findCommonPrefixSuffix(
   }
 
   // Find common suffix (but don't overlap with prefix)
+  // eslint-disable-next-line no-restricted-syntax -- iterating to find suffix length
   let suffixLen = 0;
   const maxSuffixLen = minLen - prefixLen;
   while (
@@ -108,7 +110,9 @@ export function createRunsFromPropertiesMap(
   }
 
   const runs: DocxRun[] = [];
+  // eslint-disable-next-line no-restricted-syntax -- accumulating text for current run
   let currentText = "";
+  // eslint-disable-next-line no-restricted-syntax -- tracking current properties
   let currentProps: DocxRunProperties | undefined = propertiesMap[0] ?? defaultProperties;
 
   for (let i = 0; i < text.length; i++) {

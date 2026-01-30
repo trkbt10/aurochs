@@ -42,12 +42,8 @@ export type CellRange = {
  * columnLetterToIndex("AZ") // => 52
  */
 export function columnLetterToIndex(col: string): number {
-  let index = 0;
   const upper = col.toUpperCase();
-  for (let i = 0; i < upper.length; i++) {
-    index = index * 26 + (upper.charCodeAt(i) - 64);
-  }
-  return index;
+  return [...upper].reduce((index, char) => index * 26 + (char.charCodeAt(0) - 64), 0);
 }
 
 /**
@@ -63,14 +59,14 @@ export function columnLetterToIndex(col: string): number {
  * indexToColumnLetter(52) // => "AZ"
  */
 export function indexToColumnLetter(index: number): string {
-  let result = "";
-  let n = index;
-  while (n > 0) {
-    n--;
-    result = String.fromCharCode((n % 26) + 65) + result;
-    n = Math.floor(n / 26);
-  }
-  return result;
+  const buildLetter = (n: number, acc: string): string => {
+    if (n <= 0) {
+      return acc;
+    }
+    const adjusted = n - 1;
+    return buildLetter(Math.floor(adjusted / 26), String.fromCharCode((adjusted % 26) + 65) + acc);
+  };
+  return buildLetter(index, "");
 }
 
 /**

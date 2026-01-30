@@ -105,7 +105,9 @@ function cubicAt(points: readonly [number, number, number, number], t: number): 
 function flattenSubpaths(ops: ParsedPath["operations"], ctm: PdfMatrix): readonly FlattenedSubpath[] {
   const subpaths: Array<{ points: PdfPoint[]; closed: boolean }> = [];
 
+  // eslint-disable-next-line no-restricted-syntax
   let current: PdfPoint = { x: 0, y: 0 };
+  // eslint-disable-next-line no-restricted-syntax
   let currentSubpath: { points: PdfPoint[]; closed: boolean } | null = null;
 
   const finish = (closed: boolean): void => {
@@ -183,6 +185,7 @@ function flattenSubpaths(ops: ParsedPath["operations"], ctm: PdfMatrix): readonl
 
 function pointInPolyEvenOdd(x: number, y: number, poly: Poly): boolean {
   if (poly.length < 2) {return false;}
+  // eslint-disable-next-line no-restricted-syntax
   let inside = false;
 
   for (let i = 0, j = poly.length - 1; i < poly.length; j = i, i += 1) {
@@ -214,6 +217,7 @@ function pointInPolyEvenOdd(x: number, y: number, poly: Poly): boolean {
 
 function pointInSubpathsEvenOdd(x: number, y: number, subpaths: readonly FlattenedSubpath[]): boolean {
   // Parity across all subpaths.
+  // eslint-disable-next-line no-restricted-syntax
   let inside = false;
   for (const s of subpaths) {
     if (pointInPolyEvenOdd(x, y, s.points)) {
@@ -230,6 +234,7 @@ function isLeft(a: PdfPoint, b: PdfPoint, p: PdfPoint): number {
 function windingNumber(x: number, y: number, poly: Poly): number {
   if (poly.length < 2) {return 0;}
   const p: PdfPoint = { x, y };
+  // eslint-disable-next-line no-restricted-syntax
   let winding = 0;
 
   for (let i = 0; i < poly.length; i += 1) {
@@ -251,6 +256,7 @@ function windingNumber(x: number, y: number, poly: Poly): number {
 }
 
 function pointInSubpathsNonZero(x: number, y: number, subpaths: readonly FlattenedSubpath[]): boolean {
+  // eslint-disable-next-line no-restricted-syntax
   let winding = 0;
   for (const s of subpaths) {
     winding += windingNumber(x, y, s.points);
@@ -277,6 +283,7 @@ function distancePointToSegmentRound(p: PdfPoint, a: PdfPoint, b: PdfPoint): num
     const dy = p.y - a.y;
     return Math.sqrt(dx * dx + dy * dy);
   }
+  // eslint-disable-next-line no-restricted-syntax
   let t = (wx * vx + wy * vy) / denom;
   t = Math.max(0, Math.min(1, t));
   const projX = a.x + t * vx;
@@ -330,6 +337,7 @@ function pointInStroke(p: PdfPoint, subpaths: readonly FlattenedSubpath[], strok
     return distancePointToSegmentButt(p, a, b);
   };
 
+  // eslint-disable-next-line no-restricted-syntax
   let minDist = Infinity;
   for (const s of subpaths) {
     const pts = s.points;

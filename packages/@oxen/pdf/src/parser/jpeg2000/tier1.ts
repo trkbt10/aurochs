@@ -151,6 +151,7 @@ function scIndex(
 ): number {
   // Bits follow T1_LUT_* from ISO/IEC 15444-1 (OpenJPEG naming):
   // 0: SGN_W, 1: SIG_N, 2: SGN_E, 3: SIG_W, 4: SGN_N, 5: SIG_E, 6: SGN_S, 7: SIG_S
+  // eslint-disable-next-line no-restricted-syntax
   let idx = 0;
 
   const sigW = hasSig(grid, x - 1, y);
@@ -233,7 +234,9 @@ export function tier1DecodeLlCodeblock(mq: MqDecoder, params: Tier1DecodeParams)
   const refined = new Uint8Array(sampleCount);
 
   // MSB bitplane: cleanup pass only.
+  // eslint-disable-next-line no-restricted-syntax
   let pass = 0;
+  // eslint-disable-next-line no-restricted-syntax
   let bp = params.startBitplane;
   decodeCleanupPass({ mq, width, height, bp, significant, sign, data, pi });
   pass += 1;

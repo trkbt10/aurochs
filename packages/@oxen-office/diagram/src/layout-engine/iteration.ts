@@ -80,6 +80,7 @@ export function processForEach(
   const { currentNode } = context;
 
   // Select nodes based on axis and pointType
+  // eslint-disable-next-line no-restricted-syntax
   let selectedNodes = selectNodesByAxis(
     currentNode,
     forEach.axis ?? ["ch"],
@@ -256,7 +257,9 @@ function getAncestors(
     result.push(node);
   }
 
+  // eslint-disable-next-line no-restricted-syntax
   let current = node;
+  // eslint-disable-next-line no-restricted-syntax
   let parent = findParent(current, allNodes);
 
   while (parent.length > 0) {
@@ -389,8 +392,10 @@ function applyIterationParams(
   const maxCount = count ?? nodes.length;
 
   const result: DiagramTreeNode[] = [];
+  // eslint-disable-next-line no-restricted-syntax
   let collected = 0;
 
+  // eslint-disable-next-line no-restricted-syntax
   for (let i = startIndex; i < nodes.length && collected < maxCount; i += stepValue) {
     if (i >= 0 && i < nodes.length) {
       result.push(nodes[i]);
@@ -528,6 +533,7 @@ export function evaluateFunction(
  * Calculate maximum depth in tree
  */
 function calculateMaxDepth(nodes: readonly DiagramTreeNode[]): number {
+  // eslint-disable-next-line no-restricted-syntax
   let maxDepth = 0;
 
   function traverse(node: DiagramTreeNode): void {

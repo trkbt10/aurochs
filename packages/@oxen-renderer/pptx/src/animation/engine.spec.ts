@@ -51,6 +51,7 @@ function createMockElement(): HTMLElement {
 // =============================================================================
 
 describe("Animation Engine Core", () => {
+  // eslint-disable-next-line no-restricted-syntax -- Test setup requires reassignment in beforeEach
   let mockTime: ReturnType<typeof createMockTimeProvider>;
 
   beforeEach(() => {
@@ -104,6 +105,7 @@ describe("Animation Engine Core", () => {
     });
 
     it("calls onComplete when animation finishes", () => {
+      // eslint-disable-next-line no-restricted-syntax -- Test assertion flag
       let completed = false;
 
       animate({
@@ -172,6 +174,7 @@ describe("Animation Engine Core", () => {
     });
 
     it("calls onCancel callback", () => {
+      // eslint-disable-next-line no-restricted-syntax -- Test assertion flag
       let cancelled = false;
 
       const anim = animate({
@@ -337,7 +340,9 @@ describe("lerp()", () => {
 // =============================================================================
 
 describe("animateOpacity()", () => {
+  // eslint-disable-next-line no-restricted-syntax -- Test setup requires reassignment in beforeEach
   let mockTime: ReturnType<typeof createMockTimeProvider>;
+  // eslint-disable-next-line no-restricted-syntax -- Test setup requires reassignment in beforeEach
   let el: HTMLElement;
 
   beforeEach(() => {
@@ -380,7 +385,9 @@ describe("animateOpacity()", () => {
 });
 
 describe("animateTranslate()", () => {
+  // eslint-disable-next-line no-restricted-syntax -- Test setup requires reassignment in beforeEach
   let mockTime: ReturnType<typeof createMockTimeProvider>;
+  // eslint-disable-next-line no-restricted-syntax -- Test setup requires reassignment in beforeEach
   let el: HTMLElement;
 
   beforeEach(() => {
@@ -413,7 +420,9 @@ describe("animateTranslate()", () => {
 });
 
 describe("animateClipInset()", () => {
+  // eslint-disable-next-line no-restricted-syntax -- Test setup requires reassignment in beforeEach
   let mockTime: ReturnType<typeof createMockTimeProvider>;
+  // eslint-disable-next-line no-restricted-syntax -- Test setup requires reassignment in beforeEach
   let el: HTMLElement;
 
   beforeEach(() => {
@@ -456,6 +465,7 @@ describe("animateClipInset()", () => {
 // =============================================================================
 
 describe("animateParallel()", () => {
+  // eslint-disable-next-line no-restricted-syntax -- Test setup requires reassignment in beforeEach
   let mockTime: ReturnType<typeof createMockTimeProvider>;
 
   beforeEach(() => {
@@ -533,6 +543,7 @@ describe("animateParallel()", () => {
 });
 
 describe("delay()", () => {
+  // eslint-disable-next-line no-restricted-syntax -- Test setup requires reassignment in beforeEach
   let mockTime: ReturnType<typeof createMockTimeProvider>;
 
   beforeEach(() => {
@@ -564,7 +575,9 @@ describe("delay()", () => {
 // =============================================================================
 
 describe("PPTX Effect Animations", () => {
+  // eslint-disable-next-line no-restricted-syntax -- Test setup requires reassignment in beforeEach
   let mockTime: ReturnType<typeof createMockTimeProvider>;
+  // eslint-disable-next-line no-restricted-syntax -- Test setup requires reassignment in beforeEach
   let el: HTMLElement;
 
   beforeEach(() => {

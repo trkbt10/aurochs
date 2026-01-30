@@ -53,23 +53,26 @@ function computeBorderStyle(
   const color = edge.color ? `#${edge.color}` : DEFAULT_BORDER_COLOR;
 
   // Map border style
-  let style = "solid";
-  switch (edge.val) {
-    case "none":
-    case "nil":
-      return "none";
-    case "dotted":
-      style = "dotted";
-      break;
-    case "dashed":
-    case "dashDotStroked":
-      style = "dashed";
-      break;
-    case "double":
-      style = "double";
-      break;
-    default:
-      style = "solid";
+  const computeStyle = (): string => {
+    switch (edge.val) {
+      case "none":
+      case "nil":
+        return "none";
+      case "dotted":
+        return "dotted";
+      case "dashed":
+      case "dashDotStroked":
+        return "dashed";
+      case "double":
+        return "double";
+      default:
+        return "solid";
+    }
+  };
+
+  const style = computeStyle();
+  if (style === "none") {
+    return "none";
   }
 
   return `${width} ${style} ${color}`;
@@ -227,15 +230,16 @@ export function TableRenderer({
               rowStyle.display = "none";
             }
 
-            // Track actual column index accounting for colSpan
-            let actualColIndex = 0;
+            // Precompute column indices for each cell
+            const colIndices = row.cells.reduce<number[]>((indices, cell, i) => {
+              const currentIndex = i === 0 ? 0 : indices[i - 1] + (row.cells[i - 1].properties?.gridSpan ?? 1);
+              return [...indices, currentIndex];
+            }, []);
 
             return (
               <tr key={rowIndex} style={rowStyle}>
                 {row.cells.map((cell, cellIndex) => {
-                  const currentColIndex = actualColIndex;
-                  const colSpan = cell.properties?.gridSpan ?? 1;
-                  actualColIndex += colSpan;
+                  const currentColIndex = colIndices[cellIndex];
 
                   // Skip cells that are vertically merged continuations
                   if (cell.properties?.vMerge === "continue") {

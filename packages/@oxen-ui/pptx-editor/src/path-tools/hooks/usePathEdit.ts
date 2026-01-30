@@ -207,18 +207,20 @@ export function usePathEdit(callbacks: PathEditCallbacks): UsePathEditReturn {
     }) => {
       setPath((p) =>
         updatePointInPath(p, pointIndex, (point) => {
-          let handleX = x;
-          let handleY = y;
-
-          // Constrain to 45 degrees if shift is held
-          if (modifiers.shift) {
-            const constrained = constrainVectorTo45Degrees(
-              x - (point.x as number),
-              y - (point.y as number)
-            );
-            handleX = (point.x as number) + constrained.dx;
-            handleY = (point.y as number) + constrained.dy;
-          }
+          const computeHandlePosition = (): { handleX: number; handleY: number } => {
+            if (modifiers.shift) {
+              const constrained = constrainVectorTo45Degrees(
+                x - (point.x as number),
+                y - (point.y as number)
+              );
+              return {
+                handleX: (point.x as number) + constrained.dx,
+                handleY: (point.y as number) + constrained.dy,
+              };
+            }
+            return { handleX: x, handleY: y };
+          };
+          const { handleX, handleY } = computeHandlePosition();
 
           const newHandle: Point = { x: px(handleX), y: px(handleY) };
           const shouldMirrorHandle = point.type === "smooth" && !modifiers.alt;
@@ -273,13 +275,12 @@ export function usePathEdit(callbacks: PathEditCallbacks): UsePathEditReturn {
         const dx = x - dragStartRef.current.x;
         const dy = y - dragStartRef.current.y;
 
-        let finalDx = dx;
-        let finalDy = dy;
-        if (modifiers.shift) {
-          const constrained = constrainVectorTo45Degrees(dx, dy);
-          finalDx = constrained.dx;
-          finalDy = constrained.dy;
-        }
+        const { finalDx, finalDy } = modifiers.shift
+          ? (() => {
+              const constrained = constrainVectorTo45Degrees(dx, dy);
+              return { finalDx: constrained.dx, finalDy: constrained.dy };
+            })()
+          : { finalDx: dx, finalDy: dy };
 
         moveSelectedPoints(finalDx, finalDy);
       } else if (isDraggingHandle && dragStartRef.current && draggingHandleSide) {

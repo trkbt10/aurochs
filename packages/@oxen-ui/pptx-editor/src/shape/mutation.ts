@@ -120,21 +120,23 @@ export function moveShapeToIndex(
 /**
  * Generate unique shape ID
  */
-export function generateShapeId(shapes: readonly Shape[]): ShapeId {
-  let maxId = 0;
-  const collectIds = (s: readonly Shape[]) => {
-    for (const shape of s) {
-      if ("nonVisual" in shape) {
-        const numId = parseInt(shape.nonVisual.id, 10);
-        if (!isNaN(numId) && numId > maxId) {
-          maxId = numId;
-        }
-      }
-      if (shape.type === "grpSp") {
-        collectIds(shape.children);
-      }
+function collectMaxId(shapes: readonly Shape[]): number {
+  return shapes.reduce((maxId, shape) => {
+    const shapeMax = "nonVisual" in shape
+      ? (() => {
+          const numId = parseInt(shape.nonVisual.id, 10);
+          return isNaN(numId) ? maxId : Math.max(maxId, numId);
+        })()
+      : maxId;
+
+    if (shape.type === "grpSp") {
+      return Math.max(shapeMax, collectMaxId(shape.children));
     }
-  };
-  collectIds(shapes);
+    return shapeMax;
+  }, 0);
+}
+
+export function generateShapeId(shapes: readonly Shape[]): ShapeId {
+  const maxId = collectMaxId(shapes);
   return String(maxId + 1);
 }

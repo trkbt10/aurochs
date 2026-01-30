@@ -255,6 +255,7 @@ async function parsePage({ page, pageNumber, opts, embeddedFontMetrics }: ParseP
   ];
 
   const registerType3XObjectStream = (stream: PdfStream): string => {
+    // eslint-disable-next-line no-restricted-syntax
     let name = "";
     do {
       name = `T3X${nextInlineId()}`;

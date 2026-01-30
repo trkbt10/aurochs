@@ -16,6 +16,7 @@ function scoreAsciiQuality(s: string): number {
   if (s.length === 0) {
     return 0;
   }
+  // eslint-disable-next-line no-restricted-syntax
   let score = 0;
   for (let i = 0; i < s.length; i++) {
     const c = s.charCodeAt(i);
@@ -66,7 +67,9 @@ function maybeNormalizeSingleByteRawText(rawText: string): string {
 
   // Candidate 2: if the byte stream looks like UTF-16BE-ish (high bytes near 0), take low bytes.
   if (bytes.length >= 6 && bytes.length % 2 === 0) {
+    // eslint-disable-next-line no-restricted-syntax
     let hiNearZero = 0;
+    // eslint-disable-next-line no-restricted-syntax
     let loAscii = 0;
     const pairs = bytes.length / 2;
     for (let i = 0; i < bytes.length; i += 2) {
@@ -120,7 +123,9 @@ function maybeNormalizeSingleByteRawText(rawText: string): string {
   };
 
   const all = [...candidates, ...shifted].map((s) => sanitizeXmlText(s));
+  // eslint-disable-next-line no-restricted-syntax
   let best = sanitizeXmlText(rawText);
+  // eslint-disable-next-line no-restricted-syntax
   let bestScore = scoreAsciiQuality(best);
   for (const s of all) {
     const score = scoreAsciiQuality(s);

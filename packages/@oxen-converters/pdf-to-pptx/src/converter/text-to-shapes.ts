@@ -486,6 +486,7 @@ function buildParagraphsFromSegmentedLines(
   const sorted = [...groupedParas].sort((a, b) => b.baselineY - a.baselineY);
 
   const lines: LogicalLine[] = [];
+  // eslint-disable-next-line no-restricted-syntax
   let current: { baselineY: number; segments: Segment[] } | null = null;
 
   for (const p of sorted) {

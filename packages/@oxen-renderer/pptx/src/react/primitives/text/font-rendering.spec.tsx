@@ -107,12 +107,9 @@ describe("font rendering in SVG output", () => {
     expect(textElements.length).toBeGreaterThan(0);
 
     // Check font-family contains MS Gothic
-    let foundMSGothic = false;
-    textElements.forEach((el) => {
+    const foundMSGothic = Array.from(textElements).some((el) => {
       const fontFamily = el.getAttribute("font-family");
-      if (fontFamily?.includes("MS Gothic")) {
-        foundMSGothic = true;
-      }
+      return fontFamily?.includes("MS Gothic");
     });
 
     expect(foundMSGothic).toBe(true);
@@ -141,12 +138,9 @@ describe("font rendering in SVG output", () => {
     const textElements = container.querySelectorAll("text, tspan");
     expect(textElements.length).toBeGreaterThan(0);
 
-    let foundArabic = false;
-    textElements.forEach((el) => {
+    const foundArabic = Array.from(textElements).some((el) => {
       const fontFamily = el.getAttribute("font-family");
-      if (fontFamily?.includes("Arabic Typesetting")) {
-        foundArabic = true;
-      }
+      return fontFamily?.includes("Arabic Typesetting");
     });
 
     expect(foundArabic).toBe(true);
@@ -175,12 +169,9 @@ describe("font rendering in SVG output", () => {
     const textElements = container.querySelectorAll("text, tspan");
     expect(textElements.length).toBeGreaterThan(0);
 
-    let foundHelvetica = false;
-    textElements.forEach((el) => {
+    const foundHelvetica = Array.from(textElements).some((el) => {
       const fontFamily = el.getAttribute("font-family");
-      if (fontFamily === "Helvetica") {
-        foundHelvetica = true;
-      }
+      return fontFamily === "Helvetica";
     });
 
     expect(foundHelvetica).toBe(true);
@@ -231,13 +222,10 @@ describe("PDF to SVG font rendering", () => {
     const textElements = container.querySelectorAll("text, tspan");
     expect(textElements.length).toBeGreaterThan(0);
 
-    let foundMSGothic = false;
-    textElements.forEach((el) => {
+    const foundMSGothic = Array.from(textElements).some((el) => {
       const fontFamily = el.getAttribute("font-family");
       console.log("PDF→SVG font-family:", fontFamily);
-      if (fontFamily?.includes("MSGothic") || fontFamily?.includes("MS Gothic")) {
-        foundMSGothic = true;
-      }
+      return fontFamily?.includes("MSGothic") || fontFamily?.includes("MS Gothic");
     });
 
     expect(foundMSGothic).toBe(true);
@@ -279,13 +267,10 @@ describe("PDF to SVG font rendering", () => {
     );
 
     const textElements = container.querySelectorAll("text, tspan");
-    let foundSimSun = false;
-    textElements.forEach((el) => {
+    const foundSimSun = Array.from(textElements).some((el) => {
       const fontFamily = el.getAttribute("font-family");
       console.log("Chinese PDF→SVG font-family:", fontFamily);
-      if (fontFamily?.includes("SimSun")) {
-        foundSimSun = true;
-      }
+      return fontFamily?.includes("SimSun");
     });
 
     expect(foundSimSun).toBe(true);

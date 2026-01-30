@@ -147,13 +147,10 @@ function createElementNameMatcher(name: string): (childName: string) => boolean 
  * Concatenates all text children.
  */
 export function getTextContent(element: XmlElement): string {
-  let result = "";
-  for (const child of element.children) {
-    if (isXmlText(child)) {
-      result += child.value;
-    }
-  }
-  return result;
+  return element.children
+    .filter(isXmlText)
+    .map((child) => child.value)
+    .join("");
 }
 
 /**
@@ -192,8 +189,6 @@ export function getByPath(
     return undefined;
   }
 
-  let current: XmlElement | undefined;
-
   // Handle XmlDocument (has children but no type property)
   if ("children" in element && !("type" in element)) {
     // XmlDocument - find first matching child
@@ -210,22 +205,17 @@ export function getByPath(
     if (!firstChild) {
       return undefined;
     }
-    current = firstChild;
-    path = path.slice(1);
-  } else if (isXmlElement(element as XmlNode)) {
-    current = element as XmlElement;
-  } else {
+    return getByPath(firstChild, path.slice(1));
+  }
+
+  if (!isXmlElement(element as XmlNode)) {
     return undefined;
   }
 
-  for (const name of path) {
-    if (!current) {
-      return undefined;
-    }
-    current = getChild(current, name);
-  }
-
-  return current;
+  return path.reduce<XmlElement | undefined>(
+    (current, name) => (current ? getChild(current, name) : undefined),
+    element as XmlElement,
+  );
 }
 
 /**

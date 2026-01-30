@@ -119,6 +119,7 @@ export type TimeProvider = {
  */
 type FallbackRafHandle = ReturnType<typeof setTimeout> | number;
 
+// eslint-disable-next-line no-restricted-syntax -- Module state: monotonically increasing RAF ID counter
 let fallbackRafId = 0;
 const fallbackRafCallbacks = new Map<number, FallbackRafHandle>();
 
@@ -157,8 +158,10 @@ export function createMockTimeProvider(): TimeProvider & {
   tick(ms: number): void;
   advance(ms: number): void;
 } {
+  // eslint-disable-next-line no-restricted-syntax -- Mock state: simulated clock for testing
   let currentTime = 0;
   const callbacks: Map<number, FrameRequestCallback> = new Map();
+  // eslint-disable-next-line no-restricted-syntax -- Mock state: RAF ID counter for testing
   let nextId = 1;
 
   return {
@@ -195,6 +198,7 @@ export function createMockTimeProvider(): TimeProvider & {
 // Core Animation Engine
 // =============================================================================
 
+// eslint-disable-next-line no-restricted-syntax -- Module state: injectable time provider for testing
 let globalTimeProvider: TimeProvider = defaultTimeProvider;
 
 /**
@@ -231,14 +235,22 @@ export function animate(options: AnimationOptions): AnimationController {
   const { duration, easing, onUpdate, onComplete, onCancel } = options;
   const easingFn = getEasing(easing);
 
+  // eslint-disable-next-line no-restricted-syntax -- Animation state: tracks animation start timestamp
   let startTime: number | null = null;
+  // eslint-disable-next-line no-restricted-syntax -- Animation state: tracks pending RAF frame
   let rafId: number | null = null;
+  // eslint-disable-next-line no-restricted-syntax -- Animation state: tracks cancellation
   let cancelled = false;
+  // eslint-disable-next-line no-restricted-syntax -- Animation state: tracks pause state
   let paused = false;
+  // eslint-disable-next-line no-restricted-syntax -- Animation state: tracks progress when paused
   let pausedProgress = 0;
+  // eslint-disable-next-line no-restricted-syntax -- Animation state: tracks current animation progress
   let currentProgress = 0;
 
+  // eslint-disable-next-line no-restricted-syntax -- Promise resolver: set in Promise constructor
   let resolveFinished: () => void;
+  // eslint-disable-next-line no-restricted-syntax -- Promise rejecter: set in Promise constructor
   let rejectFinished: (reason?: unknown) => void;
 
   const finished = new Promise<void>((resolve, reject) => {

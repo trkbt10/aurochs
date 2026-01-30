@@ -75,7 +75,9 @@ export function parsePathCommands(pathString: string): PathCommand[] {
   }
 
   const commands: PathCommand[] = [];
+  // eslint-disable-next-line no-restricted-syntax -- Path parsing state machine: tracks current X position
   let currentX = 0;
+  // eslint-disable-next-line no-restricted-syntax -- Path parsing state machine: tracks current Y position
   let currentY = 0;
 
   // Normalize path string - split on command letters
@@ -85,6 +87,7 @@ export function parsePathCommands(pathString: string): PathCommand[] {
     .trim();
 
   const tokens = normalized.split(/\s+/).filter(Boolean);
+  // eslint-disable-next-line no-restricted-syntax -- Token iterator index
   let i = 0;
 
   while (i < tokens.length) {
@@ -242,8 +245,11 @@ type CubicBezierLengthArgs = [
 
 function cubicBezierLength(...args: CubicBezierLengthArgs): number {
   const [x0, y0, x1, y1, x2, y2, x3, y3, subdivisions = 10] = args;
+  // eslint-disable-next-line no-restricted-syntax -- Performance: accumulator for curve length calculation
   let length = 0;
+  // eslint-disable-next-line no-restricted-syntax -- Performance: previous point tracking for distance calculation
   let prevX = x0;
+  // eslint-disable-next-line no-restricted-syntax -- Performance: previous point tracking for distance calculation
   let prevY = y0;
 
   for (let i = 1; i <= subdivisions; i++) {
@@ -269,8 +275,11 @@ type QuadraticBezierLengthArgs = [
 
 function quadraticBezierLength(...args: QuadraticBezierLengthArgs): number {
   const [x0, y0, x1, y1, x2, y2, subdivisions = 10] = args;
+  // eslint-disable-next-line no-restricted-syntax -- Performance: accumulator for curve length calculation
   let length = 0;
+  // eslint-disable-next-line no-restricted-syntax -- Performance: previous point tracking for distance calculation
   let prevX = x0;
+  // eslint-disable-next-line no-restricted-syntax -- Performance: previous point tracking for distance calculation
   let prevY = y0;
 
   for (let i = 1; i <= subdivisions; i++) {
@@ -357,12 +366,16 @@ export function parseMotionPath(pathString: string): MotionPath {
   }
 
   const segments: PathSegment[] = [];
+  // eslint-disable-next-line no-restricted-syntax -- Path state: tracks current drawing position
   let currentPoint: Point = { x: 0, y: 0 };
+  // eslint-disable-next-line no-restricted-syntax -- Path state: accumulates total path length
   let cumulativeLength = 0;
 
   for (const cmd of commands) {
     const startPoint = { ...currentPoint };
+    // eslint-disable-next-line no-restricted-syntax -- Computed in switch cases
     let endPoint: Point;
+    // eslint-disable-next-line no-restricted-syntax -- Computed in switch cases
     let length: number;
 
     switch (cmd.type) {
@@ -454,17 +467,10 @@ export function getPointAtProgress(path: MotionPath, progress: number): Point {
   const targetLength = progress * path.totalLength;
 
   // Find the segment containing this point
-  let segment: PathSegment | undefined;
-  for (const seg of path.segments) {
-    if (seg.cumulativeLength + seg.length >= targetLength) {
-      segment = seg;
-      break;
-    }
-  }
-
-  if (!segment) {
-    segment = path.segments[path.segments.length - 1];
-  }
+  const foundSegment = path.segments.find(
+    (seg) => seg.cumulativeLength + seg.length >= targetLength
+  );
+  const segment = foundSegment ?? path.segments[path.segments.length - 1];
 
   // Calculate local progress within segment
   const localProgress = getLocalProgress(segment, targetLength);

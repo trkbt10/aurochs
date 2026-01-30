@@ -14,13 +14,8 @@
  * this function still starts from 256 to match common expectations.
  */
 export function generateSlideId(existingIds: readonly number[]): number {
-  let maxId = 255;
-  for (const id of existingIds) {
-    if (!Number.isFinite(id)) {
-      continue;
-    }
-    maxId = Math.max(maxId, id);
-  }
+  const validIds = existingIds.filter(Number.isFinite);
+  const maxId = validIds.length > 0 ? Math.max(255, ...validIds) : 255;
   return maxId + 1;
 }
 
@@ -30,17 +25,14 @@ export function generateSlideId(existingIds: readonly number[]): number {
  * Commonly uses "rId1", "rId2", ...; we pick max numeric suffix + 1.
  */
 export function generateSlideRId(existingRIds: readonly string[]): string {
-  let max = 0;
-  for (const rId of existingRIds) {
-    const match = /^rId(\d+)$/i.exec(rId);
-    if (!match) {
-      continue;
-    }
-    const n = Number.parseInt(match[1] ?? "", 10);
-    if (Number.isFinite(n)) {
-      max = Math.max(max, n);
-    }
-  }
+  const numbers = existingRIds
+    .map((rId) => {
+      const match = /^rId(\d+)$/i.exec(rId);
+      if (!match) {return 0;}
+      const n = Number.parseInt(match[1] ?? "", 10);
+      return Number.isFinite(n) ? n : 0;
+    });
+  const max = numbers.length > 0 ? Math.max(...numbers) : 0;
   return `rId${max + 1}`;
 }
 

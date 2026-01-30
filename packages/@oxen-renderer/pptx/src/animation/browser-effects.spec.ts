@@ -157,6 +157,7 @@ describe("parseFilter - MS-OE376 Part 4 Section 4.6.3", () => {
 // =============================================================================
 
 describe("Browser Animation Effects", () => {
+  // eslint-disable-next-line no-restricted-syntax -- Test setup requires reassignment in beforeEach
   let mockTime: ReturnType<typeof createMockTimeProvider>;
 
   beforeEach(() => {
@@ -523,6 +524,7 @@ describe("Browser Animation Effects", () => {
 // =============================================================================
 
 describe("applyBrowserEffect - Effect Dispatcher", () => {
+  // eslint-disable-next-line no-restricted-syntax -- Test setup requires reassignment in beforeEach
   let mockTime: ReturnType<typeof createMockTimeProvider>;
 
   beforeEach(() => {

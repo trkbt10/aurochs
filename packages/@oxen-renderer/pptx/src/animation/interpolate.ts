@@ -170,22 +170,23 @@ export function interpolateKeyframes(
     return keyframes[0].value;
   }
 
-  // Find surrounding keyframes
-  let prevKeyframe = keyframes[0];
-  let nextKeyframe = keyframes[keyframes.length - 1];
+  // Find surrounding keyframes using reduce
+  const initialPrev = keyframes[0];
+  const initialNext = keyframes[keyframes.length - 1];
 
-  for (let i = 0; i < keyframes.length; i++) {
-    const kf = keyframes[i];
-    const kfTime = typeof kf.time === "number" ? kf.time : 0;
-
-    if (kfTime <= timePercent) {
-      prevKeyframe = kf;
-    }
-    if (kfTime >= timePercent && nextKeyframe === keyframes[keyframes.length - 1]) {
-      nextKeyframe = kf;
-      break;
-    }
-  }
+  const { prevKeyframe, nextKeyframe } = keyframes.reduce(
+    (acc, kf) => {
+      const kfTime = typeof kf.time === "number" ? kf.time : 0;
+      if (kfTime <= timePercent) {
+        acc.prevKeyframe = kf;
+      }
+      if (kfTime >= timePercent && acc.nextKeyframe === initialNext) {
+        acc.nextKeyframe = kf;
+      }
+      return acc;
+    },
+    { prevKeyframe: initialPrev, nextKeyframe: initialNext }
+  );
 
   // Same keyframe - return its value
   if (prevKeyframe === nextKeyframe) {
@@ -401,8 +402,7 @@ function updateTransform(
   // Parse existing transform functions
   const transforms = new Map<string, string>();
   const regex = /(\w+)\(([^)]+)\)/g;
-  let match;
-  while ((match = regex.exec(current)) !== null) {
+  for (const match of current.matchAll(regex)) {
     transforms.set(match[1], match[2]);
   }
 
@@ -492,12 +492,10 @@ export function createAnimateFunction({
   // To only (animate to target from current)
   if (to !== undefined) {
     // Get current value as from
-    let fromValue: AnimateValue = 0;
     const cssProperty = mapAttributeToCSS(attribute);
-
-    if (cssProperty === "opacity") {
-      fromValue = parseFloat(element.style.opacity) || 1;
-    }
+    const fromValue: AnimateValue = cssProperty === "opacity"
+      ? parseFloat(element.style.opacity) || 1
+      : 0;
 
     return (progress: number) => {
       const value = interpolateValues(fromValue, to, progress);

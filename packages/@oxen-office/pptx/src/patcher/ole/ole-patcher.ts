@@ -55,11 +55,11 @@ function patchOleProgId(oleFrame: XmlElement, progId: string): XmlElement {
       }
       return patchTree(c);
     });
-    let next: XmlElement = createElement(node.name, { ...node.attrs }, nextChildren);
-    if (next.name === "p:oleObj") {
-      next = setAttribute(next, "progId", progId);
+    const rebuilt: XmlElement = createElement(node.name, { ...node.attrs }, nextChildren);
+    if (rebuilt.name === "p:oleObj") {
+      return setAttribute(rebuilt, "progId", progId);
     }
-    return next;
+    return rebuilt;
   };
 
   const nextGraphicData = patchTree(graphicData);
@@ -101,6 +101,7 @@ function patchOleProgId(oleFrame: XmlElement, progId: string): XmlElement {
 export function patchOleObject(oleFrame: XmlElement, changes: readonly OleChange[]): XmlElement {
   requireGraphicFrame(oleFrame);
 
+  // eslint-disable-next-line no-restricted-syntax
   let next = oleFrame;
   for (const change of changes) {
     switch (change.type) {

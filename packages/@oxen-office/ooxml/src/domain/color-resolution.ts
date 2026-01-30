@@ -332,25 +332,38 @@ function applyColorTransforms(hex: string, transform: ColorTransform): string {
   // Convert to HSL for HSL-based transforms (hue, sat, lum modifications)
   // Base rgbToHsl returns s/l in 0-1 scale, convert to 0-100 for this function
   const hslBase = rgbToHsl(r, g, b);
-  let hue = hslBase.h,
-    sat = hslBase.s * 100,
-    lum = hslBase.l * 100;
 
   // Apply HSL transforms
-  if (transform.hue !== undefined) {hue = transform.hue;}
-  if (transform.hueMod !== undefined) {hue = (hue * transform.hueMod) / 100;}
-  if (transform.hueOff !== undefined) {hue = (hue + transform.hueOff) % 360;}
+  const computedHue = (() => {
+    // eslint-disable-next-line no-restricted-syntax
+    let h = hslBase.h;
+    if (transform.hue !== undefined) {h = transform.hue;}
+    if (transform.hueMod !== undefined) {h = (h * transform.hueMod) / 100;}
+    if (transform.hueOff !== undefined) {h = (h + transform.hueOff) % 360;}
+    return h;
+  })();
 
-  if (transform.sat !== undefined) {sat = transform.sat;}
-  if (transform.satMod !== undefined) {sat = (sat * transform.satMod) / 100;}
-  if (transform.satOff !== undefined) {sat = Math.max(0, Math.min(100, sat + transform.satOff));}
+  const computedSat = (() => {
+    // eslint-disable-next-line no-restricted-syntax
+    let s = hslBase.s * 100;
+    if (transform.sat !== undefined) {s = transform.sat;}
+    if (transform.satMod !== undefined) {s = (s * transform.satMod) / 100;}
+    if (transform.satOff !== undefined) {s = Math.max(0, Math.min(100, s + transform.satOff));}
+    return s;
+  })();
 
-  if (transform.lum !== undefined) {lum = transform.lum;}
-  if (transform.lumMod !== undefined) {lum = (lum * transform.lumMod) / 100;}
-  if (transform.lumOff !== undefined) {lum = Math.max(0, Math.min(100, lum + transform.lumOff));}
+  const computedLum = (() => {
+    // eslint-disable-next-line no-restricted-syntax
+    let l = hslBase.l * 100;
+    if (transform.lum !== undefined) {l = transform.lum;}
+    if (transform.lumMod !== undefined) {l = (l * transform.lumMod) / 100;}
+    if (transform.lumOff !== undefined) {l = Math.max(0, Math.min(100, l + transform.lumOff));}
+    return l;
+  })();
 
   // Convert back to RGB after HSL transforms
-  let result = hslToHex(hue, sat, lum);
+  // eslint-disable-next-line no-restricted-syntax
+  let result = hslToHex(computedHue, computedSat, computedLum);
 
   if (transform.gamma) {
     const c = hexToRgb(result);

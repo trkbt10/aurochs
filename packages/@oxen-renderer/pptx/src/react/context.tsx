@@ -183,6 +183,7 @@ export function useRenderResourceStore(): ResourceStore | undefined {
  * Create a default render context for testing.
  */
 export function createDefaultReactRenderContext(): ReactRenderContext {
+  // eslint-disable-next-line no-restricted-syntax -- Closure state: unique ID counter for shapes
   let shapeId = 0;
   return {
     slideSize: { width: px(960) as Pixels, height: px(540) as Pixels },

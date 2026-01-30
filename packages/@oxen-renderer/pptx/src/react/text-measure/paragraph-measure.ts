@@ -111,23 +111,28 @@ function measureTextWithTabs({
   }
 
   const segments = text.split("\t");
-  let currentX = startX;
-  let totalWidth = 0;
 
-  segments.forEach((segment, index) => {
-    const segmentWidth = measureTextSegment(textNode, segment);
-    currentX += segmentWidth;
-    totalWidth += segmentWidth;
+  const result = segments.reduce(
+    (acc, segment, index) => {
+      const segmentWidth = measureTextSegment(textNode, segment);
+      const newX = acc.currentX + segmentWidth;
+      const newWidth = acc.totalWidth + segmentWidth;
 
-    if (index < segments.length - 1) {
-      const nextStop = getNextTabStop(currentX, paragraph);
-      const tabAdvance = Math.max(0, nextStop - currentX);
-      currentX += tabAdvance;
-      totalWidth += tabAdvance;
-    }
-  });
+      if (index < segments.length - 1) {
+        const nextStop = getNextTabStop(newX, paragraph);
+        const tabAdvance = Math.max(0, nextStop - newX);
+        return {
+          currentX: newX + tabAdvance,
+          totalWidth: newWidth + tabAdvance,
+        };
+      }
 
-  return { width: totalWidth, endX: currentX };
+      return { currentX: newX, totalWidth: newWidth };
+    },
+    { currentX: startX, totalWidth: 0 }
+  );
+
+  return { width: result.totalWidth, endX: result.currentX };
 }
 
 function measureRunWithSvg({
@@ -225,14 +230,15 @@ export function createParagraphMeasurer(): ParagraphMeasurer | null {
   }
 
   return (paragraph: TextMeasureParagraph): TextMeasureParagraphResult => {
-    const results: TextMeasureRunResult[] = [];
-    let currentX = 0;
-
-    for (const run of paragraph.runs) {
-      const { result, endX } = measureRunWithSvg({ run, textNode, paragraph, startX: currentX });
-      results.push(result);
-      currentX = run.isBreak ? 0 : endX;
-    }
+    const { results } = paragraph.runs.reduce(
+      (acc, run) => {
+        const { result, endX } = measureRunWithSvg({ run, textNode, paragraph, startX: acc.currentX });
+        acc.results.push(result);
+        acc.currentX = run.isBreak ? 0 : endX;
+        return acc;
+      },
+      { results: [] as TextMeasureRunResult[], currentX: 0 }
+    );
 
     const bulletWidth = measureBulletWidth(textNode, paragraph);
     return { runs: results, bulletWidth: bulletWidth !== undefined ? px(bulletWidth) : undefined };

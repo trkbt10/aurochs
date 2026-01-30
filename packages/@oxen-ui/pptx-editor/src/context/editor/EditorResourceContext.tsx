@@ -83,6 +83,7 @@ const EditorResourceContext = createContext<EditorResourceContextValue | undefin
 export function EditorResourceProvider({ children }: { readonly children: ReactNode }) {
   const value = useMemo<EditorResourceContextValue>(() => {
     const store = createResourceStore();
+    // eslint-disable-next-line no-restricted-syntax
     let nextId = 1;
 
     const generateId = (): ResourceId => `uploaded-${nextId++}`;

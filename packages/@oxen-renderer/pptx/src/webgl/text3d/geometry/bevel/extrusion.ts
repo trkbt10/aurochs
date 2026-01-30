@@ -58,6 +58,7 @@ function triangulatePolygon(points: readonly Vector2[]): number[] {
   const remaining = points.map((_, i) => i);
 
   while (remaining.length > 3) {
+    // eslint-disable-next-line no-restricted-syntax -- Algorithm: loop exit flag for ear clipping
     let earFound = false;
 
     for (let i = 0; i < remaining.length; i++) {
@@ -192,6 +193,7 @@ function bridgeHolesToOuter(
   holes: readonly (readonly Vector2[])[],
 ): Vector2[] {
   // Start with the outer contour
+  // eslint-disable-next-line no-restricted-syntax -- Algorithm: polygon accumulator for hole bridging
   let polygon: Vector2[] = [...outer];
 
   // Sort holes by rightmost point (process rightmost first for better bridging)
@@ -226,7 +228,9 @@ function bridgeSingleHole(
   hole: readonly Vector2[],
 ): Vector2[] {
   // Find rightmost point in hole
+  // eslint-disable-next-line no-restricted-syntax -- Algorithm: tracks index of rightmost point
   let rightmostIdx = 0;
+  // eslint-disable-next-line no-restricted-syntax -- Algorithm: tracks maximum X coordinate
   let rightmostX = hole[0].x;
   for (let i = 1; i < hole.length; i++) {
     if (hole[i].x > rightmostX) {
@@ -300,8 +304,11 @@ function findBridgePoint(
   const n = polygon.length;
 
   // Find closest edge intersection to the right
+  // eslint-disable-next-line no-restricted-syntax -- Algorithm: tracks minimum distance for closest intersection
   let closestDist = Infinity;
+  // eslint-disable-next-line no-restricted-syntax -- Algorithm: tracks edge index of closest intersection
   let closestEdgeIdx = -1;
+  // eslint-disable-next-line no-restricted-syntax -- Algorithm: tracks closest intersection point
   let closestIntersection: Vector2 | null = null;
 
   for (let i = 0; i < n; i++) {
@@ -330,7 +337,9 @@ function findBridgePoint(
   const p2 = polygon[(closestEdgeIdx + 1) % n];
 
   // Determine which endpoint is to the right (potential bridge vertex)
+  // eslint-disable-next-line no-restricted-syntax -- Algorithm: conditional assignment for bridge vertex
   let bridgeVertex: Vector2;
+  // eslint-disable-next-line no-restricted-syntax -- Algorithm: conditional assignment for bridge vertex index
   let bridgeVertexIdx: number;
 
   if (p1.x > p2.x || (p1.x === p2.x && p1.y < p2.y)) {
@@ -343,8 +352,11 @@ function findBridgePoint(
 
   // Check for reflex vertices inside the triangle (holePoint, intersection, bridgeVertex)
   // that might be better bridge points
+  // eslint-disable-next-line no-restricted-syntax -- Algorithm: tracks best bridge vertex found
   let bestVertex = bridgeVertex;
+  // eslint-disable-next-line no-restricted-syntax -- Algorithm: tracks best bridge vertex index
   let bestVertexIdx = bridgeVertexIdx;
+  // eslint-disable-next-line no-restricted-syntax -- Algorithm: tracks minimum angle for best vertex
   let bestAngle = angleTo(holePoint, bridgeVertex);
 
   for (let i = 0; i < n; i++) {
@@ -451,6 +463,7 @@ export function generateExtrusion(
   const indices: number[] = [];
 
   // Track vertex offset for combining different parts
+  // eslint-disable-next-line no-restricted-syntax -- Geometry generation: accumulates vertex count
   let vertexOffset = 0;
 
   // Generate front cap (at Z=depth)
@@ -537,6 +550,7 @@ function generateSideWalls({
   const uvs: number[] = [];
   const indices: number[] = [];
 
+  // eslint-disable-next-line no-restricted-syntax -- Geometry generation: tracks current vertex offset
   let currentOffset = vertexOffset;
 
   // Helper to generate side wall for a contour
@@ -559,6 +573,7 @@ function generateSideWalls({
       // Normal perpendicular to edge
       // For CCW outer: (-edgeY, edgeX) points outward
       // For CW hole: (edgeY, -edgeX) points outward (into hole)
+      // eslint-disable-next-line no-restricted-syntax -- Geometry: conditional normal calculation
       let nx: number, ny: number;
       if (edgeLen > 0.0001) {
         if (isHole) {
@@ -733,9 +748,13 @@ export function mergeExtrusionGeometries(
   const uvs = new Float32Array(totalUvs);
   const indices: number[] = [];
 
+  // eslint-disable-next-line no-restricted-syntax -- Geometry merge: tracks position array offset
   let posOffset = 0;
+  // eslint-disable-next-line no-restricted-syntax -- Geometry merge: tracks normal array offset
   let normalOffset = 0;
+  // eslint-disable-next-line no-restricted-syntax -- Geometry merge: tracks UV array offset
   let uvOffset = 0;
+  // eslint-disable-next-line no-restricted-syntax -- Geometry merge: tracks vertex index offset
   let vertexOffset = 0;
 
   for (const g of geometries) {

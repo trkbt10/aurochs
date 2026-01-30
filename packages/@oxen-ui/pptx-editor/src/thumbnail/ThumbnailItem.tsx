@@ -39,16 +39,13 @@ export function ThumbnailItem({
   const thumbnailStyle = getThumbnailStyle(aspectRatio);
   const thumbnailActiveStyle = getThumbnailActiveStyle(aspectRatio);
 
-  let thumbnailContent: ReactNode;
-  if (renderThumbnail) {
-    thumbnailContent = renderThumbnail(slideWithId, index);
-  } else {
-    thumbnailContent = (
-      <span style={{ color: "#999", fontSize: "11px" }}>
-        {slideWithId.slide.shapes.length} shapes
-      </span>
-    );
-  }
+  const thumbnailContent: ReactNode = renderThumbnail
+    ? renderThumbnail(slideWithId, index)
+    : (
+        <span style={{ color: "#999", fontSize: "11px" }}>
+          {slideWithId.slide.shapes.length} shapes
+        </span>
+      );
 
   return (
     <div

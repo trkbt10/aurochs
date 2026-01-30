@@ -131,17 +131,14 @@ function applyParagraphPropertiesToAll(
  */
 function getTextSummary(textBody: TextBody): string {
   const paragraphCount = textBody.paragraphs.length;
-  let charCount = 0;
-
-  for (const paragraph of textBody.paragraphs) {
-    for (const run of paragraph.runs) {
-      if (run.type === "text") {
-        charCount += run.text.length;
-      } else if (run.type === "field") {
-        charCount += run.text.length;
+  const charCount = textBody.paragraphs.reduce((total, paragraph) => {
+    return paragraph.runs.reduce((runTotal, run) => {
+      if (run.type === "text" || run.type === "field") {
+        return runTotal + run.text.length;
       }
-    }
-  }
+      return runTotal;
+    }, total);
+  }, 0);
 
   const paraText = paragraphCount === 1 ? "paragraph" : "paragraphs";
   const charText = charCount === 1 ? "character" : "characters";

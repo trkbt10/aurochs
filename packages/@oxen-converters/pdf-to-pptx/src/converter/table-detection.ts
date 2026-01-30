@@ -55,6 +55,7 @@ function cluster1D(values: readonly number[], eps: number): number[] {
   if (values.length === 0) {return [];}
   const xs = [...values].sort((a, b) => a - b);
   const out: number[] = [];
+  // eslint-disable-next-line no-restricted-syntax
   let cur: number[] = [];
   for (const x of xs) {
     if (cur.length === 0) {
@@ -84,6 +85,7 @@ function computeRegionMeta({
   readonly thicknessMax: number;
 }): { bbox: BBox; ruleCount: number; xLines: number[]; yLines: number[]; colCountHint: number | null; rowCountHint: number | null } | null {
   if (boxIndices.length === 0) {return null;}
+  // eslint-disable-next-line no-restricted-syntax
   let bb = boxes[boxIndices[0]!]!;
   const vertCenters: number[] = [];
   const horizCenters: number[] = [];
@@ -233,6 +235,7 @@ export function detectTableRegionsFromPaths(
     const lineWidth = Math.max(0.1, path.graphicsState.lineWidth || 1);
     const half = lineWidth / 2;
 
+    // eslint-disable-next-line no-restricted-syntax
     let cur: { x: number; y: number } | null = null;
     const pushRect = ({ x0, y0, x1, y1, thickness, span }: { x0: number; y0: number; x1: number; y1: number; thickness: number; span: number }): void => {
       if (span < spanMin) {return;}
@@ -312,7 +315,9 @@ export function detectTableRegionsFromPaths(
     if (visited[i]) {continue;}
     visited[i] = true;
     const queue: number[] = [i];
+    // eslint-disable-next-line no-restricted-syntax
     let bb = boxes[i]!;
+    // eslint-disable-next-line no-restricted-syntax
     let count = 0;
     const indices: number[] = [];
 

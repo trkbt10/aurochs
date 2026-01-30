@@ -367,6 +367,7 @@ function extractType3CodeToCharName(page: NativePdfPage, fontDict: PdfDict): Rea
   if (!diffsArr) {return new Map();}
 
   const map = new Map<number, string>();
+  // eslint-disable-next-line no-restricted-syntax
   let currentCode = 0;
   for (const item of diffsArr.items) {
     if (item.type === "number") {

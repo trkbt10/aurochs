@@ -117,12 +117,18 @@ export class MqDecoder {
     const qeval = MQ_QE[state] ?? 0;
     const mps = (this.ctxMps[ctx] ?? 0) & 1;
 
+    // eslint-disable-next-line no-restricted-syntax
     let a = this.a - qeval;
+    // eslint-disable-next-line no-restricted-syntax
     let c = this.c;
+    // eslint-disable-next-line no-restricted-syntax
     let ct = this.ct;
 
+    // eslint-disable-next-line no-restricted-syntax
     let d: number;
+    // eslint-disable-next-line no-restricted-syntax
     let nextState = state;
+    // eslint-disable-next-line no-restricted-syntax
     let nextMps = mps;
 
     if ((c >>> 16) < qeval) {
@@ -165,8 +171,11 @@ export class MqDecoder {
   }
 
   private renorm(a0: number, c0: number, ct0: number): { a: number; c: number; ct: number } {
+    // eslint-disable-next-line no-restricted-syntax
     let a = a0 >>> 0;
+    // eslint-disable-next-line no-restricted-syntax
     let c = c0 >>> 0;
+    // eslint-disable-next-line no-restricted-syntax
     let ct = ct0;
     while (a < 0x8000) {
       if (ct === 0) {

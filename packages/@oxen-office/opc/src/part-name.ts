@@ -27,7 +27,9 @@ function isUnreservedAscii(code: number): boolean {
 }
 
 function toAsciiLower(value: string): string {
+  // eslint-disable-next-line no-restricted-syntax
   let result = "";
+  // eslint-disable-next-line no-restricted-syntax
   for (let i = 0; i < value.length; i += 1) {
     const code = value.charCodeAt(i);
     if (code >= 0x41 && code <= 0x5a) {

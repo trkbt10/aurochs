@@ -167,7 +167,9 @@ function calculateInsetBounds(
   path: BevelPath,
   width: number,
 ): { minX: number; maxX: number; minY: number; maxY: number } {
+  // eslint-disable-next-line no-restricted-syntax -- Bounds calculation: tracks min/max X
   let minX = Infinity, maxX = -Infinity;
+  // eslint-disable-next-line no-restricted-syntax -- Bounds calculation: tracks min/max Y
   let minY = Infinity, maxY = -Infinity;
 
   for (const pathPoint of path.points) {
@@ -199,7 +201,9 @@ function calculateSafeHoleInsetRatio(
   width: number,
 ): number {
   // Check how much the hole can expand before exceeding outer bounds
+  // eslint-disable-next-line no-restricted-syntax -- Algorithm: tracks minimum safe inset ratio
   let minRatio = 1.0;
+  // eslint-disable-next-line no-restricted-syntax -- Algorithm: tracks collision state
   let collisionDetected = false;
 
   for (const pathPoint of holePath.points) {
@@ -370,6 +374,7 @@ export function generateBevelMesh(
   const holePaths = paths.filter((p) => p.isHole);
 
   // Calculate combined outer bounds at full inset (union of all outer paths)
+  // eslint-disable-next-line no-restricted-syntax -- Bounds union: accumulated from multiple paths
   let combinedOuterBounds = { minX: Infinity, maxX: -Infinity, minY: Infinity, maxY: -Infinity };
   for (const outerPath of outerPaths) {
     const bounds = calculateInsetBounds(outerPath, width);
@@ -524,7 +529,9 @@ function _computeBounds(points: readonly { x: number; y: number }[]): {
   minY: number;
   maxY: number;
 } {
+  // eslint-disable-next-line no-restricted-syntax -- Bounds calculation: tracks min/max X
   let minX = Infinity, maxX = -Infinity;
+  // eslint-disable-next-line no-restricted-syntax -- Bounds calculation: tracks min/max Y
   let minY = Infinity, maxY = -Infinity;
 
   for (const p of points) {

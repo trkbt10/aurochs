@@ -242,23 +242,23 @@ export function distributeHorizontal(
   const gapSize = gapSpace / (sorted.length - 1);
 
   // Calculate new positions
-  const updates: AlignmentUpdate[] = [];
-  let currentX = startX;
+  const updates = sorted.reduce<{ updates: AlignmentUpdate[]; currentX: number }>(
+    (acc, s) => {
+      acc.updates.push(
+        createUpdate({
+          id: s.id,
+          x: acc.currentX,
+          y: getTop(s.bounds),
+          width: getWidth(s.bounds),
+          height: getHeight(s.bounds),
+        })
+      );
+      return { updates: acc.updates, currentX: acc.currentX + getWidth(s.bounds) + gapSize };
+    },
+    { updates: [], currentX: startX }
+  );
 
-  for (const s of sorted) {
-    updates.push(
-      createUpdate({
-        id: s.id,
-        x: currentX,
-        y: getTop(s.bounds),
-        width: getWidth(s.bounds),
-        height: getHeight(s.bounds),
-      })
-    );
-    currentX += getWidth(s.bounds) + gapSize;
-  }
-
-  return updates;
+  return updates.updates;
 }
 
 /**
@@ -288,23 +288,23 @@ export function distributeVertical(
   const gapSize = gapSpace / (sorted.length - 1);
 
   // Calculate new positions
-  const updates: AlignmentUpdate[] = [];
-  let currentY = startY;
+  const updates = sorted.reduce<{ updates: AlignmentUpdate[]; currentY: number }>(
+    (acc, s) => {
+      acc.updates.push(
+        createUpdate({
+          id: s.id,
+          x: getLeft(s.bounds),
+          y: acc.currentY,
+          width: getWidth(s.bounds),
+          height: getHeight(s.bounds),
+        })
+      );
+      return { updates: acc.updates, currentY: acc.currentY + getHeight(s.bounds) + gapSize };
+    },
+    { updates: [], currentY: startY }
+  );
 
-  for (const s of sorted) {
-    updates.push(
-      createUpdate({
-        id: s.id,
-        x: getLeft(s.bounds),
-        y: currentY,
-        width: getWidth(s.bounds),
-        height: getHeight(s.bounds),
-      })
-    );
-    currentY += getHeight(s.bounds) + gapSize;
-  }
-
-  return updates;
+  return updates.updates;
 }
 
 // =============================================================================
@@ -382,26 +382,23 @@ export function calculateAlignedBounds(
     return result;
   }
 
-  let updates: readonly AlignmentUpdate[] = [];
-
-  switch (alignment) {
-    case "left":
-    case "center":
-    case "right":
-      updates = alignHorizontal(selectedBounds, alignment);
-      break;
-    case "top":
-    case "middle":
-    case "bottom":
-      updates = alignVertical(selectedBounds, alignment);
-      break;
-    case "distributeH":
-      updates = distributeHorizontal(selectedBounds);
-      break;
-    case "distributeV":
-      updates = distributeVertical(selectedBounds);
-      break;
-  }
+  const computeUpdates = (): readonly AlignmentUpdate[] => {
+    switch (alignment) {
+      case "left":
+      case "center":
+      case "right":
+        return alignHorizontal(selectedBounds, alignment);
+      case "top":
+      case "middle":
+      case "bottom":
+        return alignVertical(selectedBounds, alignment);
+      case "distributeH":
+        return distributeHorizontal(selectedBounds);
+      case "distributeV":
+        return distributeVertical(selectedBounds);
+    }
+  };
+  const updates = computeUpdates();
 
   for (const update of updates) {
     result.set(update.id, {

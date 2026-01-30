@@ -342,6 +342,7 @@ function aes128CbcEncryptNoPad(key: Uint8Array, iv: Uint8Array, plaintext: Uint8
   const expandedKey = expandKeyAes128(key);
   const out = new Uint8Array(plaintext.length);
 
+  // eslint-disable-next-line no-restricted-syntax
   let prev = iv;
   for (let off = 0; off < plaintext.length; off += 16) {
     const block = plaintext.subarray(off, off + 16);
@@ -370,6 +371,7 @@ function aes128CbcDecryptNoPad(key: Uint8Array, iv: Uint8Array, ciphertext: Uint
   const expandedKey = expandKeyAes128(key);
   const out = new Uint8Array(ciphertext.length);
 
+  // eslint-disable-next-line no-restricted-syntax
   let prev = iv;
   for (let off = 0; off < ciphertext.length; off += 16) {
     const block = ciphertext.subarray(off, off + 16);
@@ -390,6 +392,7 @@ function aes256CbcDecryptNoPad(key: Uint8Array, iv: Uint8Array, ciphertext: Uint
   const expandedKey = expandKeyAes256(key);
   const out = new Uint8Array(ciphertext.length);
 
+  // eslint-disable-next-line no-restricted-syntax
   let prev = iv;
   for (let off = 0; off < ciphertext.length; off += 16) {
     const block = ciphertext.subarray(off, off + 16);

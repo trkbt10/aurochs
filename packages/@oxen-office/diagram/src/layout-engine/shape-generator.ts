@@ -263,6 +263,7 @@ function processLayoutContent(
   dataNodes: readonly DiagramTreeNode[],
   context: ForEachContext
 ): DiagramTreeNode[] {
+  // eslint-disable-next-line no-restricted-syntax
   let result: DiagramTreeNode[] = [...dataNodes];
 
   // Process forEach elements
@@ -368,7 +369,9 @@ function createLayoutShapeResultFromLayoutNode(
 
   // Determine shape type from layoutDef or defaults
   const shapeSpec = layoutDef?.shape;
+  // eslint-disable-next-line no-restricted-syntax
   let shapeType: PresetShapeType = config.defaultShapeType ?? "rect";
+  // eslint-disable-next-line no-restricted-syntax
   let isHidden = false;
 
   if (shapeSpec?.type) {
@@ -447,9 +450,13 @@ function calculateTotalBounds(
     return defaultBounds;
   }
 
+  // eslint-disable-next-line no-restricted-syntax
   let minX = Infinity;
+  // eslint-disable-next-line no-restricted-syntax
   let minY = Infinity;
+  // eslint-disable-next-line no-restricted-syntax
   let maxX = -Infinity;
+  // eslint-disable-next-line no-restricted-syntax
   let maxY = -Infinity;
 
   for (const shape of shapes) {

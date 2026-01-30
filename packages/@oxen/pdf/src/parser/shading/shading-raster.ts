@@ -214,6 +214,7 @@ export function rasterizeShadingFill(
 
       const userPoint = pageToUser ? transformPoint(pagePoint, pageToUser) : pagePoint;
 
+      // eslint-disable-next-line no-restricted-syntax
       let t = 0;
       if (shading.shadingType === 2) {
         t = computeAxialT(shading.coords, userPoint);
@@ -239,6 +240,7 @@ export function rasterizeShadingFill(
       const xClamped = clampToDomain(x, shading.fn.domain);
 
       const componentCount = shading.colorSpace === "DeviceRGB" ? 3 : 1;
+      // eslint-disable-next-line no-restricted-syntax
       let comps: readonly number[];
       if (shading.fn.type === "FunctionType2") {
         comps = evaluateFunctionType2(shading.fn, xClamped, componentCount);
@@ -252,6 +254,7 @@ export function rasterizeShadingFill(
       data[o + 1] = g;
       data[o + 2] = b;
 
+      // eslint-disable-next-line no-restricted-syntax
       let a = Math.round(255 * fillMul);
       if (gs.softMask && pageToMask) {
         const maskPoint = transformPoint(pagePoint, pageToMask);

@@ -19,7 +19,9 @@ export type SaslprepOptions = Readonly<{
 
 function inRange(value: number, rangeGroup: readonly number[]): boolean {
   if (value < (rangeGroup[0] ?? 0)) {return false;}
+  // eslint-disable-next-line no-restricted-syntax
   let startRange = 0;
+  // eslint-disable-next-line no-restricted-syntax
   let endRange = rangeGroup.length / 2;
   while (startRange <= endRange) {
     const middleRange = Math.floor((startRange + endRange) / 2);

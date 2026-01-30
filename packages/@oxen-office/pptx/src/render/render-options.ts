@@ -184,17 +184,16 @@ export function createRenderOptions(
   dialect: RenderDialect = "ecma376",
   overrides?: Partial<RenderOptions>,
 ): RenderOptions {
-  let base: RenderOptions;
-  switch (dialect) {
-    case "libreoffice":
-      base = LIBREOFFICE_RENDER_OPTIONS;
-      break;
-    case "powerpoint":
-      base = POWERPOINT_RENDER_OPTIONS;
-      break;
-    default:
-      base = DEFAULT_RENDER_OPTIONS;
-  }
+  const base = (() => {
+    switch (dialect) {
+      case "libreoffice":
+        return LIBREOFFICE_RENDER_OPTIONS;
+      case "powerpoint":
+        return POWERPOINT_RENDER_OPTIONS;
+      default:
+        return DEFAULT_RENDER_OPTIONS;
+    }
+  })();
 
   if (overrides === undefined) {
     return { ...base, dialect };

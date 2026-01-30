@@ -130,23 +130,21 @@ function replaceCellAt(row: XmlElement, colIndex: number, newCell: XmlElement): 
     throw new Error(`replaceCellAt: colIndex out of range: ${colIndex}`);
   }
 
+  const cells = getChildren(row, "a:tc");
+  if (colIndex >= cells.length) {
+    throw new Error(`replaceCellAt: colIndex out of range: ${colIndex}`);
+  }
+
+  // eslint-disable-next-line no-restricted-syntax
   let current = -1;
-  let replaced = false;
   const nextChildren = row.children.map((child) => {
     if (!isXmlElement(child) || child.name !== "a:tc") {
       return child;
     }
     current += 1;
-    if (current !== colIndex) {
-      return child;
-    }
-    replaced = true;
-    return newCell;
+    return current === colIndex ? newCell : child;
   });
 
-  if (!replaced) {
-    throw new Error(`replaceCellAt: colIndex out of range: ${colIndex}`);
-  }
   return setChildren(row, nextChildren);
 }
 
@@ -156,7 +154,9 @@ function insertCellAt(row: XmlElement, position: number, newCell: XmlElement): X
   }
 
   const nextChildren: XmlNode[] = [];
+  // eslint-disable-next-line no-restricted-syntax
   let cellIdx = 0;
+  // eslint-disable-next-line no-restricted-syntax
   let inserted = false;
   for (const child of row.children) {
     if (isXmlElement(child) && child.name === "a:tc" && cellIdx === position) {
@@ -182,23 +182,21 @@ function removeCellAt(row: XmlElement, colIndex: number): XmlElement {
     throw new Error(`removeCellAt: colIndex out of range: ${colIndex}`);
   }
 
+  const cells = getChildren(row, "a:tc");
+  if (colIndex >= cells.length) {
+    throw new Error(`removeCellAt: colIndex out of range: ${colIndex}`);
+  }
+
+  // eslint-disable-next-line no-restricted-syntax
   let current = -1;
-  let removed = false;
   const nextChildren = row.children.filter((child) => {
     if (!isXmlElement(child) || child.name !== "a:tc") {
       return true;
     }
     current += 1;
-    if (current !== colIndex) {
-      return true;
-    }
-    removed = true;
-    return false;
+    return current !== colIndex;
   });
 
-  if (!removed) {
-    throw new Error(`removeCellAt: colIndex out of range: ${colIndex}`);
-  }
   return setChildren(row, nextChildren);
 }
 
@@ -208,6 +206,7 @@ function replaceRowAt(table: XmlElement, rowIndex: number, newRow: XmlElement): 
     throw new Error(`patchTable: rowIndex out of range: ${rowIndex}`);
   }
 
+  // eslint-disable-next-line no-restricted-syntax
   let currentRowIndex = -1;
   const nextChildren = table.children.map((child) => {
     if (!isXmlElement(child) || child.name !== "a:tr") {
@@ -227,10 +226,8 @@ function insertRowAt(table: XmlElement, newRow: XmlElement, position: number): X
 
   const children: XmlNode[] = [...table.children];
   // Insert among existing a:tr nodes, but keep tblPr/tblGrid before rows.
-  let firstRowIndex = children.findIndex((c) => isXmlElement(c) && c.name === "a:tr");
-  if (firstRowIndex < 0) {
-    firstRowIndex = children.length;
-  }
+  const rawFirstRowIndex = children.findIndex((c) => isXmlElement(c) && c.name === "a:tr");
+  const firstRowIndex = rawFirstRowIndex < 0 ? children.length : rawFirstRowIndex;
   children.splice(firstRowIndex + position, 0, newRow);
   return setChildren(table, children);
 }
@@ -349,6 +346,7 @@ function removeRow(table: XmlElement, rowIndex: number): XmlElement {
     throw new Error(`removeRow: rowIndex out of range: ${rowIndex}`);
   }
 
+  // eslint-disable-next-line no-restricted-syntax
   let currentRowIndex = -1;
   const nextChildren = table.children.filter((child) => {
     if (!isXmlElement(child) || child.name !== "a:tr") {
@@ -402,15 +400,13 @@ function patchMergeCell(
   const withTcPr = ensureTcPr(cell);
   const tcPr = requireChild(withTcPr, "a:tcPr", "patchMergeCell");
 
-  let next = tcPr;
-  for (const [k, v] of Object.entries(attrs)) {
+  const updated = Object.entries(attrs).reduce((current, [k, v]) => {
     if (v === undefined) {
-      next = removeAttribute(next, k);
-    } else {
-      next = setAttribute(next, k, v);
+      return removeAttribute(current, k);
     }
-  }
-  return replaceChildByName(withTcPr, "a:tcPr", next);
+    return setAttribute(current, k, v);
+  }, tcPr);
+  return replaceChildByName(withTcPr, "a:tcPr", updated);
 }
 
 function applyMergeRange(
@@ -444,12 +440,11 @@ function applyMergeRange(
     throw new Error("merge: column range out of bounds");
   }
 
-  let nextTable = table;
-
-  for (let r = 0; r < rowSpan; r += 1) {
+  const processRow = (currentTable: XmlElement, r: number): XmlElement => {
     const rowIndex = startRow + r;
     const rowEl = rows[rowIndex] as XmlElement;
     const rowChildren: XmlNode[] = [];
+    // eslint-disable-next-line no-restricted-syntax
     let cellIdx = 0;
     for (const child of rowEl.children) {
       if (isXmlElement(child) && child.name === "a:tc") {
@@ -479,10 +474,11 @@ function applyMergeRange(
       rowChildren.push(child);
     }
 
-    nextTable = replaceRowAt(nextTable, rowIndex, setChildren(rowEl, rowChildren));
-  }
+    return replaceRowAt(currentTable, rowIndex, setChildren(rowEl, rowChildren));
+  };
 
-  return nextTable;
+  const rowIndices = Array.from({ length: rowSpan }, (_, i) => i);
+  return rowIndices.reduce(processRow, table);
 }
 
 function applySplitRange(
@@ -515,14 +511,13 @@ function applySplitRange(
     throw new Error("split: column range out of bounds");
   }
 
-  let nextTable = table;
-
-  for (let r = 0; r < rowSpan; r += 1) {
+  const processRow = (currentTable: XmlElement, r: number): XmlElement => {
     const rowIndex = startRow + r;
     const rowEl = rows[rowIndex] as XmlElement;
     const cells = getRowCells(rowEl);
 
     const rowChildren: XmlNode[] = [];
+    // eslint-disable-next-line no-restricted-syntax
     let cellIdx = 0;
     for (const child of rowEl.children) {
       if (isXmlElement(child) && child.name === "a:tc") {
@@ -548,10 +543,11 @@ function applySplitRange(
       rowChildren.push(child);
     }
 
-    nextTable = replaceRowAt(nextTable, rowIndex, setChildren(rowEl, rowChildren));
-  }
+    return replaceRowAt(currentTable, rowIndex, setChildren(rowEl, rowChildren));
+  };
 
-  return nextTable;
+  const rowIndices = Array.from({ length: rowSpan }, (_, i) => i);
+  return rowIndices.reduce(processRow, table);
 }
 
 /**
@@ -560,6 +556,7 @@ function applySplitRange(
 export function patchTable(tableElement: XmlElement, changes: readonly TableChange[]): XmlElement {
   requireTable(tableElement);
 
+  // eslint-disable-next-line no-restricted-syntax
   let next = tableElement;
   for (const change of changes) {
     switch (change.type) {

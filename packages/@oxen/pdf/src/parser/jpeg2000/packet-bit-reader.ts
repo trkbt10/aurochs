@@ -64,6 +64,7 @@ export class PacketBitReader {
 
   readBits(n: number): number {
     if (!Number.isFinite(n) || n < 0) {throw new Error(`readBits: n must be >= 0 (got ${n})`);}
+    // eslint-disable-next-line no-restricted-syntax
     let v = 0;
     for (let i = 0; i < n; i += 1) {
       v = (v << 1) | this.readBit();

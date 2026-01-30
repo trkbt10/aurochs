@@ -97,10 +97,9 @@ export function removeFromSelection(
     return currentSelection; // Not in selection
   }
 
-  let primaryId = currentSelection.primaryId;
-  if (primaryId === slideId) {
-    primaryId = newIds[newIds.length - 1];
-  }
+  const primaryId = currentSelection.primaryId === slideId
+    ? newIds[newIds.length - 1]
+    : currentSelection.primaryId;
 
   return {
     selectedIds: newIds,

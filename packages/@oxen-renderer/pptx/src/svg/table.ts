@@ -182,28 +182,16 @@ type ResolvedBorders = {
  * Includes inside borders (insideH, insideV) and diagonal borders (tlToBr, blToTr).
  */
 function resolveBordersFromParts(parts: readonly TablePartStyle[]): ResolvedBorders {
-  let insideH: Line | undefined;
-  let insideV: Line | undefined;
-  let tlToBr: Line | undefined;
-  let blToTr: Line | undefined;
-
   // Iterate in order (later has higher priority)
-  for (const part of parts) {
-    if (part.borders?.insideH) {
-      insideH = part.borders.insideH;
-    }
-    if (part.borders?.insideV) {
-      insideV = part.borders.insideV;
-    }
-    if (part.borders?.tlToBr) {
-      tlToBr = part.borders.tlToBr;
-    }
-    if (part.borders?.blToTr) {
-      blToTr = part.borders.blToTr;
-    }
-  }
-
-  return { insideH, insideV, tlToBr, blToTr };
+  return parts.reduce<ResolvedBorders>(
+    (acc, part) => ({
+      insideH: part.borders?.insideH ?? acc.insideH,
+      insideV: part.borders?.insideV ?? acc.insideV,
+      tlToBr: part.borders?.tlToBr ?? acc.tlToBr,
+      blToTr: part.borders?.blToTr ?? acc.blToTr,
+    }),
+    { insideH: undefined, insideV: undefined, tlToBr: undefined, blToTr: undefined }
+  );
 }
 
 function lineStyleToSvgAttrs(lineStyle: ReturnType<typeof renderLineToStyle>): string {

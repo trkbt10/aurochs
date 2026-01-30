@@ -161,12 +161,10 @@ class XmlParser {
     while (!this.isAtElementEnd()) {
       if (this.currentToken.type === TokenType.ATTR_NAME) {
         const attrName = this.currentToken.value;
-        let valueToken = this.advance();
+        const tokenAfterName = this.advance();
 
-        // Expect =
-        if (valueToken.type === TokenType.ATTR_EQ) {
-          valueToken = this.advance();
-        }
+        // Skip = if present
+        const valueToken = tokenAfterName.type === TokenType.ATTR_EQ ? this.advance() : tokenAfterName;
 
         // Expect value
         if (valueToken.type === TokenType.ATTR_VALUE) {

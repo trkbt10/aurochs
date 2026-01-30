@@ -124,19 +124,21 @@ const handleSelectPathElement: ActionHandler<Extract<PresentationEditorAction, {
     return state;
   }
 
+  const activePathEdit = state.pathEdit;
   const { element, addToSelection, toggle } = action;
-  let newSelection: PathPointSelection;
-
-  if (toggle) {
-    newSelection = togglePointInSelection(state.pathEdit.selection, element);
-  } else if (addToSelection) {
-    newSelection = addPointToSelection(state.pathEdit.selection, element);
-  } else {
-    newSelection = {
+  const computeNewSelection = (): PathPointSelection => {
+    if (toggle) {
+      return togglePointInSelection(activePathEdit.selection, element);
+    }
+    if (addToSelection) {
+      return addPointToSelection(activePathEdit.selection, element);
+    }
+    return {
       selectedElements: [element],
       primaryElement: element,
     };
-  }
+  };
+  const newSelection = computeNewSelection();
 
   return {
     ...state,

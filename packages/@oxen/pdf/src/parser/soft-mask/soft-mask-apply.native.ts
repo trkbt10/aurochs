@@ -95,6 +95,7 @@ export function applyGraphicsSoftMaskToPdfImage(image: PdfImage): PdfImage {
       const idx = row * image.width + col;
 
       const base = baseAlphaOk ? (image.alpha![idx] ?? 255) : 255;
+      // eslint-disable-next-line no-restricted-syntax
       let a = applyConstantAlphaToByte(base, softMaskAlpha);
 
       if (softMask && pageToMask) {

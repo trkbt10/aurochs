@@ -187,9 +187,13 @@ function computeOrientedBoxForRun(run: TextRun, fontMappings: FontMappings): Ori
     { x: start.x + nx * maxN, y: start.y + ny * maxN },
   ];
 
+  // eslint-disable-next-line no-restricted-syntax
   let minX = Infinity;
+  // eslint-disable-next-line no-restricted-syntax
   let minY = Infinity;
+  // eslint-disable-next-line no-restricted-syntax
   let maxX = -Infinity;
+  // eslint-disable-next-line no-restricted-syntax
   let maxY = -Infinity;
   for (const c of corners) {
     minX = Math.min(minX, c.x);

@@ -56,6 +56,7 @@ function removeDuplicateClosingPoint(points: readonly Vector2[]): readonly Vecto
  * @returns Minimum distance to any edge of the polygon
  */
 function pointToPolygonDistance(point: Vector2, polygon: readonly Vector2[]): number {
+  // eslint-disable-next-line no-restricted-syntax -- Algorithm: tracks minimum distance to polygon
   let minDist = Infinity;
   const n = polygon.length;
 
@@ -109,6 +110,7 @@ export function calculateMinWallThickness(shape: ShapeInput): number {
     return calculateMinShapeWidth(shape.points);
   }
 
+  // eslint-disable-next-line no-restricted-syntax -- Algorithm: tracks minimum wall thickness
   let minThickness = Infinity;
 
   // For each point on the outer contour, find minimum distance to any hole

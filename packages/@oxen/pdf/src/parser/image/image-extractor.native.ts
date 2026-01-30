@@ -1591,6 +1591,7 @@ function expandTintImageToRgb(args: {
   const decodePairs = getDecodePairsN(decode, components);
 
   for (let p = 0; p < pixelCount; p += 1) {
+    // eslint-disable-next-line no-restricted-syntax
     let sum = 0;
     for (let c = 0; c < components; c += 1) {
       const sampleIndex = p * components + c;

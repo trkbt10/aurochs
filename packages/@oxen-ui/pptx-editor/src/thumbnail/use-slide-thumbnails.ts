@@ -80,10 +80,9 @@ export function useSlideThumbnails(
 
       // Build render context with full theme/master/layout context if available
       // Layout shapes are now included in context and rendered by renderSlideSvg
-      let ctx = createCoreRenderContext({ slideSize });
-      if (apiSlide) {
-        ctx = createApiRenderContext({ apiSlide, zip: zipFile, slideSize });
-      }
+      const ctx = apiSlide
+        ? createApiRenderContext({ apiSlide, zip: zipFile, slideSize })
+        : createCoreRenderContext({ slideSize });
 
       // Render the edited domain slide and cache
       const result = renderSlideSvg(slide, ctx);

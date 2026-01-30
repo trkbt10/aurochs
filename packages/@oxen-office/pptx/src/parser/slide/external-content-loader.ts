@@ -220,6 +220,7 @@ function enrichDiagramFrame(frame: GraphicFrame, ctx: EnrichmentContext): Graphi
   const colorsDefinition = loadDiagramColorsDefinition(diagramRef.colorResourceId, fileReader);
 
   // Try to get pre-rendered shapes from diagram drawing file
+  // eslint-disable-next-line no-restricted-syntax
   let shapes = tryParseDiagramDrawing(frame, fileReader);
 
   // If no pre-rendered shapes, fall back to dynamic generation using layout engine

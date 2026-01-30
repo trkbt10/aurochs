@@ -378,15 +378,13 @@ export function updateAtPath(
   }
 
   const [first, ...rest] = path;
-  let found = false;
+  const firstIndex = root.children.findIndex((child) => isXmlElement(child) && child.name === first);
 
-  const newChildren = root.children.map((child) => {
-    if (found) {return child;}
-    if (isXmlElement(child) && child.name === first) {
-      found = true;
-      return updateAtPath(child, rest, updater);
+  const newChildren = root.children.map((child, index) => {
+    if (index !== firstIndex) {
+      return child;
     }
-    return child;
+    return updateAtPath(child as XmlElement, rest, updater);
   });
 
   return {
@@ -476,21 +474,16 @@ export function removeShapeById(spTree: XmlElement, shapeId: string): XmlElement
       "p:nvGraphicFramePr",
     ];
 
-    let hasTargetId = false;
-    for (const nvPrName of nvPrNames) {
+    const hasTargetId = nvPrNames.some((nvPrName) => {
       const nvPr = child.children.find(
         (c): c is XmlElement => isXmlElement(c) && c.name === nvPrName,
       );
-      if (nvPr) {
-        const cNvPr = nvPr.children.find(
-          (c): c is XmlElement => isXmlElement(c) && c.name === "p:cNvPr",
-        );
-        if (cNvPr && cNvPr.attrs.id === shapeId) {
-          hasTargetId = true;
-        }
-        break;
-      }
-    }
+      if (!nvPr) {return false;}
+      const cNvPr = nvPr.children.find(
+        (c): c is XmlElement => isXmlElement(c) && c.name === "p:cNvPr",
+      );
+      return cNvPr && cNvPr.attrs.id === shapeId;
+    });
 
     if (hasTargetId) {
       // Skip this child (remove it)

@@ -79,7 +79,9 @@ function toRomanLower(num: number): string {
     [1, "i"],
   ];
 
+  // eslint-disable-next-line no-restricted-syntax -- Algorithm: accumulator for building Roman numeral string
   let result = "";
+  // eslint-disable-next-line no-restricted-syntax -- Algorithm: tracks remaining value to convert
   let remaining = num;
   for (const [value, numeral] of romanNumerals) {
     while (remaining >= value) {
@@ -105,7 +107,9 @@ function toAlphaLower(num: number): string {
     return num.toString();
   }
 
+  // eslint-disable-next-line no-restricted-syntax -- Algorithm: accumulator for building alphabetic string
   let result = "";
+  // eslint-disable-next-line no-restricted-syntax -- Algorithm: tracks remaining value to convert
   let n = num;
   while (n > 0) {
     n--; // Convert to 0-based
@@ -155,17 +159,16 @@ function toBlackCircledNumber(num: number): string {
  */
 function toDoubleByteArabic(num: number): string {
   const str = num.toString();
-  let result = "";
-  for (const char of str) {
-    const code = char.charCodeAt(0);
-    if (code >= 48 && code <= 57) {
-      // 0-9 -> full-width 0-9 (U+FF10 - U+FF19)
-      result += String.fromCharCode(0xff10 + (code - 48));
-    } else {
-      result += char;
-    }
-  }
-  return result;
+  return Array.from(str)
+    .map((char) => {
+      const code = char.charCodeAt(0);
+      if (code >= 48 && code <= 57) {
+        // 0-9 -> full-width 0-9 (U+FF10 - U+FF19)
+        return String.fromCharCode(0xff10 + (code - 48));
+      }
+      return char;
+    })
+    .join("");
 }
 
 /**

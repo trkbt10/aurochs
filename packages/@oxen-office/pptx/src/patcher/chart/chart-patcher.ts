@@ -52,6 +52,7 @@ export function patchChartElement(graphicFrame: XmlElement, changes: readonly Ch
     throw new Error(`patchChartElement: expected p:graphicFrame, got ${graphicFrame.name}`);
   }
 
+  // eslint-disable-next-line no-restricted-syntax
   let next = graphicFrame;
   for (const change of changes) {
     switch (change.type) {
@@ -93,6 +94,7 @@ export function patchChartTransform(graphicFrame: XmlElement, transform: Transfo
  */
 export function patchChart(target: ChartPatchTarget, changes: readonly ChartChange[]): ChartPatchTarget {
   const nextFrame = patchChartElement(target.graphicFrame, changes);
+  // eslint-disable-next-line no-restricted-syntax
   let nextChartXml = target.chartXml;
 
   for (const change of changes) {

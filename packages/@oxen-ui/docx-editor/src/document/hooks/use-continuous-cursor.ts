@@ -101,7 +101,9 @@ function getTextVisualBounds(
  * Get X position at a character offset within a line.
  */
 function getXPositionInLine(line: LayoutLine, charOffset: number): number {
+  // eslint-disable-next-line no-restricted-syntax -- tracking position through spans
   let x = line.x as number;
+  // eslint-disable-next-line no-restricted-syntax -- tracking remaining offset
   let remaining = charOffset;
 
   for (const span of line.spans) {
@@ -130,7 +132,9 @@ function getCharOffsetInLine(line: LayoutLine, targetX: number): number {
     return 0;
   }
 
+  // eslint-disable-next-line no-restricted-syntax -- tracking position through spans
   let currentX = lineStartX;
+  // eslint-disable-next-line no-restricted-syntax -- tracking character offset
   let charOffset = 0;
 
   for (const span of line.spans) {
@@ -179,6 +183,7 @@ export function useContinuousCursor({
       }
 
       // Find the line containing the cursor
+      // eslint-disable-next-line no-restricted-syntax -- tracking remaining offset through lines
       let remainingOffset = charOffset;
       for (let lineIndex = 0; lineIndex < paragraph.lines.length; lineIndex++) {
         const line = paragraph.lines[lineIndex];
@@ -230,8 +235,11 @@ export function useContinuousCursor({
       }
 
       // Find closest line on this page
+      // eslint-disable-next-line no-restricted-syntax -- tracking best match
       let bestLocalParagraphIndex = 0;
+      // eslint-disable-next-line no-restricted-syntax -- tracking best match
       let bestLineIndex = 0;
+      // eslint-disable-next-line no-restricted-syntax -- tracking best match
       let bestDistance = Number.POSITIVE_INFINITY;
 
       for (let pIdx = 0; pIdx < page.paragraphs.length; pIdx++) {
@@ -255,6 +263,7 @@ export function useContinuousCursor({
       }
 
       // Calculate global paragraph index
+      // eslint-disable-next-line no-restricted-syntax -- accumulating paragraph count
       let globalParagraphIndex = 0;
       for (let i = 0; i < pageIndex; i++) {
         globalParagraphIndex += pagedLayout.pages[i].paragraphs.length;
@@ -343,6 +352,7 @@ export function useContinuousCursor({
         const paraEndOffset =
           pIdx === endPara ? normalized.focus.charOffset : getParagraphTextLength(paragraph);
 
+        // eslint-disable-next-line no-restricted-syntax -- tracking line offset
         let lineStartOffset = 0;
         for (let lIdx = 0; lIdx < paragraph.lines.length; lIdx++) {
           const line = paragraph.lines[lIdx];

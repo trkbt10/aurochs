@@ -198,20 +198,19 @@ function updateRelationshipTarget(relsXml: XmlDocument, rId: string, target: str
       throw new Error(`SlideManager: expected Relationships root, got ${root.name}`);
     }
     const relationships = getChildren(root, "Relationship");
-    let found = false;
-    const next = relationships.map((rel) => {
-      if (rel.attrs.Id !== rId) {
+    const index = relationships.findIndex((rel) => rel.attrs.Id === rId);
+    if (index === -1) {
+      throw new Error(`SlideManager: relationship not found: ${rId}`);
+    }
+    const next = relationships.map((rel, i) => {
+      if (i !== index) {
         return rel;
       }
-      found = true;
       return createElement("Relationship", {
         ...rel.attrs,
         Target: target,
       });
     });
-    if (!found) {
-      throw new Error(`SlideManager: relationship not found: ${rId}`);
-    }
     return setChildren(root, next);
   });
 }
@@ -283,13 +282,8 @@ function extractExistingPartNumbers(pkg: ZipPackage, prefixPath: string, basenam
 }
 
 function nextPartNumber(existing: readonly number[]): number {
-  let max = 0;
-  for (const n of existing) {
-    if (!Number.isFinite(n)) {
-      continue;
-    }
-    max = Math.max(max, n);
-  }
+  const validNums = existing.filter(Number.isFinite);
+  const max = validNums.length > 0 ? Math.max(...validNums) : 0;
   return max + 1;
 }
 
@@ -381,11 +375,13 @@ function slideTargetToPartPath(target: string): string {
 
 function generateDocumentSlideId(existing: readonly SlideWithId[]): string {
   const used = new Set(existing.map((s) => s.id));
-  let i = existing.length + 1;
-  while (used.has(`slide-${i}`)) {
-    i++;
-  }
-  return `slide-${i}`;
+  const findUnused = (start: number): string => {
+    if (!used.has(`slide-${start}`)) {
+      return `slide-${start}`;
+    }
+    return findUnused(start + 1);
+  };
+  return findUnused(existing.length + 1);
 }
 
 function createEmptyDomainSlide(): Slide {
@@ -446,17 +442,16 @@ function updateSlideRelsNotesTarget(slideRelsXml: XmlDocument, notesTarget: stri
       throw new Error(`SlideManager: expected Relationships root, got ${root.name}`);
     }
     const relationships = getChildren(root, "Relationship");
-    let updated = false;
-    const next = relationships.map((rel) => {
-      if (rel.attrs.Type !== RELATIONSHIP_TYPES.NOTES) {
-        return rel;
-      }
-      updated = true;
-      return createElement("Relationship", { ...rel.attrs, Target: notesTarget });
-    });
-    if (!updated) {
+    const index = relationships.findIndex((rel) => rel.attrs.Type === RELATIONSHIP_TYPES.NOTES);
+    if (index === -1) {
       throw new Error("SlideManager: notes relationship not found to update");
     }
+    const next = relationships.map((rel, i) => {
+      if (i !== index) {
+        return rel;
+      }
+      return createElement("Relationship", { ...rel.attrs, Target: notesTarget });
+    });
     return setChildren(root, next);
   });
 }
@@ -618,6 +613,7 @@ export function removeSlide(doc: PresentationDocument, slideIndex: number): Slid
   const updatedPresentationXml = removeSlideFromList(presentationXml, entry.slideId);
   const updatedPresentationRelsXml = removeRelationshipById(presentationRelsXml, entry.rId);
 
+  // eslint-disable-next-line no-restricted-syntax
   let updatedContentTypesXml = removeOverride(contentTypesXml, `/${slidePath}`);
 
   pkg.remove(slidePath);
@@ -760,6 +756,7 @@ export async function duplicateSlide(
   pkg.writeText(slidePath, sourceSlideXml);
   pkg.writeText(getRelationshipPath(slidePath), sourceSlideRelsText);
 
+  // eslint-disable-next-line no-restricted-syntax
   let notesSlidePath: string | undefined;
   const slideRelsXml = parseXml(sourceSlideRelsText);
   const notesRel = findNotesRelationship(slideRelsXml);
@@ -804,18 +801,14 @@ export async function duplicateSlide(
     target: `slides/${slideFilename}.xml`,
   });
 
-  let updatedContentTypesXml = addOverride(
+  const withSlideOverride = addOverride(
     contentTypesXml,
     `/ppt/slides/${slideFilename}.xml`,
     CONTENT_TYPES.SLIDE,
   );
-  if (notesSlidePath) {
-    updatedContentTypesXml = addOverride(
-      updatedContentTypesXml,
-      `/${notesSlidePath}`,
-      CONTENT_TYPES.NOTES,
-    );
-  }
+  const updatedContentTypesXml = notesSlidePath
+    ? addOverride(withSlideOverride, `/${notesSlidePath}`, CONTENT_TYPES.NOTES)
+    : withSlideOverride;
 
   writeXml(pkg, PRESENTATION_XML_PATH, updatedPresentationXml);
   writeXml(pkg, PRESENTATION_RELS_PATH, updatedPresentationRelsXml);

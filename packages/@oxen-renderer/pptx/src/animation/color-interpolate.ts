@@ -220,20 +220,18 @@ export function lerpHSL({
   const fromH = ((from.h % 360) + 360) % 360;
   const toH = ((to.h % 360) + 360) % 360;
 
-  let delta = toH - fromH;
-
-  if (direction === "cw") {
-    // Clockwise: positive direction
-    if (delta < 0) {
-      delta += 360;
+  const computeDelta = (): number => {
+    const baseDelta = toH - fromH;
+    if (direction === "cw") {
+      // Clockwise: positive direction
+      return baseDelta < 0 ? baseDelta + 360 : baseDelta;
+    } else {
+      // Counter-clockwise: negative direction
+      return baseDelta > 0 ? baseDelta - 360 : baseDelta;
     }
-  } else {
-    // Counter-clockwise: negative direction
-    if (delta > 0) {
-      delta -= 360;
-    }
-  }
+  };
 
+  const delta = computeDelta();
   const h = ((fromH + delta * t) % 360 + 360) % 360;
 
   return { h, s, l };
@@ -265,23 +263,20 @@ export function interpolateColor({
   // Interpolate alpha
   const alpha = lerp(from.alpha, to.alpha, t);
 
-  let rgb: RgbColor;
-
-  if (colorSpace === "hsl") {
-    // Convert to HSL using existing utility
-    const fromHsl = rgbToHsl(from.rgb.r, from.rgb.g, from.rgb.b);
-    const toHsl = rgbToHsl(to.rgb.r, to.rgb.g, to.rgb.b);
-    const hsl = lerpHSL({ from: fromHsl, to: toHsl, t, direction });
-    const converted = hslToRgb(hsl.h, hsl.s, hsl.l);
-    rgb = {
-      r: Math.round(converted.r),
-      g: Math.round(converted.g),
-      b: Math.round(converted.b),
-    };
-  } else {
-    // RGB interpolation
-    rgb = lerpRGB(from.rgb, to.rgb, t);
-  }
+  const rgb: RgbColor = colorSpace === "hsl"
+    ? (() => {
+        // Convert to HSL using existing utility
+        const fromHsl = rgbToHsl(from.rgb.r, from.rgb.g, from.rgb.b);
+        const toHsl = rgbToHsl(to.rgb.r, to.rgb.g, to.rgb.b);
+        const hsl = lerpHSL({ from: fromHsl, to: toHsl, t, direction });
+        const converted = hslToRgb(hsl.h, hsl.s, hsl.l);
+        return {
+          r: Math.round(converted.r),
+          g: Math.round(converted.g),
+          b: Math.round(converted.b),
+        };
+      })()
+    : lerpRGB(from.rgb, to.rgb, t);
 
   // Return CSS color string
   if (alpha < 1) {
@@ -317,13 +312,10 @@ export function createColorAnimationFunction(
 
   // Parse colors
   const fromColor = parseColor(from);
-  let toColor = parseColor(to);
+  const parsedToColor = parseColor(to);
 
   // Handle "by" for relative color change
-  if (!toColor && by && fromColor) {
-    // Parse by as color adjustment (simplified - treat as target color)
-    toColor = parseColor(by);
-  }
+  const toColor = parsedToColor ?? (by && fromColor ? parseColor(by) : undefined);
 
   // If we can't parse colors, return no-op
   if (!fromColor || !toColor) {
@@ -331,16 +323,19 @@ export function createColorAnimationFunction(
   }
 
   // Determine CSS property from attribute
-  let cssProperty: string;
-  if (attribute.includes("fill") || attribute === "fillcolor") {
-    cssProperty = element instanceof SVGElement ? "fill" : "background-color";
-  } else if (attribute.includes("stroke")) {
-    cssProperty = element instanceof SVGElement ? "stroke" : "border-color";
-  } else if (attribute.includes("color")) {
-    cssProperty = "color";
-  } else {
-    cssProperty = "background-color";
-  }
+  const resolveCssProperty = (): string => {
+    if (attribute.includes("fill") || attribute === "fillcolor") {
+      return element instanceof SVGElement ? "fill" : "background-color";
+    }
+    if (attribute.includes("stroke")) {
+      return element instanceof SVGElement ? "stroke" : "border-color";
+    }
+    if (attribute.includes("color")) {
+      return "color";
+    }
+    return "background-color";
+  };
+  const cssProperty = resolveCssProperty();
 
   return (progress: number) => {
     const color = interpolateColor({

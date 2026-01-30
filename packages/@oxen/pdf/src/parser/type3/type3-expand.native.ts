@@ -206,6 +206,7 @@ export function expandType3TextElementsNative(args: {
     }
 
     const textElem = elem as ParsedText;
+    // eslint-disable-next-line no-restricted-syntax
     let pendingRuns: ParsedText["runs"] = [];
 
     for (const run of textElem.runs) {

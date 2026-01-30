@@ -95,8 +95,11 @@ export function commandsToDrawingPath(commands: readonly PathCommand[]): Drawing
   }
 
   const points: PathAnchorPoint[] = [];
+  // eslint-disable-next-line no-restricted-syntax -- tracking current position through commands
   let currentX: Pixels = px(0);
+  // eslint-disable-next-line no-restricted-syntax -- tracking current position through commands
   let currentY: Pixels = px(0);
+  // eslint-disable-next-line no-restricted-syntax -- tracking closed state
   let isClosed = false;
 
   for (let i = 0; i < commands.length; i++) {
@@ -239,6 +242,7 @@ function isSmooth(
     return false;
   }
 
+  // eslint-disable-next-line no-restricted-syntax -- computed from next command
   let handleOut: Point | undefined;
   if (nextCmd.type === "cubicBezierTo") {
     handleOut = nextCmd.control1;
@@ -281,9 +285,13 @@ export function calculatePathBounds(path: DrawingPath): Bounds {
     return { x: px(0), y: px(0), width: px(0), height: px(0) };
   }
 
+  // eslint-disable-next-line no-restricted-syntax -- tracking bounds
   let minX = Number.POSITIVE_INFINITY;
+  // eslint-disable-next-line no-restricted-syntax -- tracking bounds
   let minY = Number.POSITIVE_INFINITY;
+  // eslint-disable-next-line no-restricted-syntax -- tracking bounds
   let maxX = Number.NEGATIVE_INFINITY;
+  // eslint-disable-next-line no-restricted-syntax -- tracking bounds
   let maxY = Number.NEGATIVE_INFINITY;
 
   for (const point of path.points) {

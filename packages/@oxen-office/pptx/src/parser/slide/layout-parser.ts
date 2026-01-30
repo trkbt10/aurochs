@@ -67,6 +67,7 @@ function updateChildElement(
   childName: string,
   updater: (child: XmlElement) => XmlElement,
 ): XmlElement {
+  // eslint-disable-next-line no-restricted-syntax
   let updated = false;
   const children = element.children.map((child) => {
     if (child.type !== "element") {

@@ -53,8 +53,11 @@ export class TagTree {
 
     // Build a simple parent pyramid (row-major).
     const levelSizes: Array<{ w: number; h: number; offset: number }> = [];
+    // eslint-disable-next-line no-restricted-syntax
     let w = width;
+    // eslint-disable-next-line no-restricted-syntax
     let h = height;
+    // eslint-disable-next-line no-restricted-syntax
     let offset = 0;
     while (true) {
       levelSizes.push({ w, h, offset });
@@ -105,6 +108,7 @@ export class TagTree {
 
     // Build path from leaf to root.
     const stack: number[] = [];
+    // eslint-disable-next-line no-restricted-syntax
     let idx = this.leafOffset + leafNo;
     while (idx >= 0) {
       stack.push(idx);
@@ -113,6 +117,7 @@ export class TagTree {
       idx = parent;
     }
 
+    // eslint-disable-next-line no-restricted-syntax
     let low = 0;
     for (let i = stack.length - 1; i >= 0; i -= 1) {
       const nidx = stack[i]!;

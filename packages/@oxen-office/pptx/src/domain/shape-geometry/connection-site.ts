@@ -261,18 +261,20 @@ export function calculateConnectionSites(
   width: number,
   height: number,
 ): ConnectionSiteLookup {
-  let sites: readonly ResolvedConnectionSite[];
-
-  if (!geometry) {
-    // No geometry - use default rectangle sites
-    sites = getPresetConnectionSites("rect", width, height);
-  } else if (geometry.type === "preset") {
-    // Preset geometry - use predefined sites
-    sites = getPresetConnectionSites(geometry.preset, width, height);
-  } else {
+  const resolveSites = (): readonly ResolvedConnectionSite[] => {
+    if (!geometry) {
+      // No geometry - use default rectangle sites
+      return getPresetConnectionSites("rect", width, height);
+    }
+    if (geometry.type === "preset") {
+      // Preset geometry - use predefined sites
+      return getPresetConnectionSites(geometry.preset, width, height);
+    }
     // Custom geometry - resolve using guide engine
-    sites = resolveCustomConnectionSites(geometry, width, height);
-  }
+    return resolveCustomConnectionSites(geometry, width, height);
+  };
+
+  const sites = resolveSites();
 
   return {
     sites,
@@ -365,7 +367,9 @@ export function transformConnectionPoint(
   },
 ): { x: Pixels; y: Pixels } {
   // Apply flip transforms
+  // eslint-disable-next-line no-restricted-syntax
   let x = flipH ? shapeWidth - siteX : siteX;
+  // eslint-disable-next-line no-restricted-syntax
   let y = flipV ? shapeHeight - siteY : siteY;
 
   // Apply rotation around shape center

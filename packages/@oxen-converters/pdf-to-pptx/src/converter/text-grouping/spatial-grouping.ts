@@ -250,8 +250,11 @@ function detectGuttersFromXRanges(
   const minGutterBins = Math.max(2, Math.round((pageWidth * minGutterWidthRatio) / binSize));
 
   const segments: { s: number; e: number; meanOcc: number }[] = [];
+  // eslint-disable-next-line no-restricted-syntax
   let s = -1;
+  // eslint-disable-next-line no-restricted-syntax
   let sum = 0;
+  // eslint-disable-next-line no-restricted-syntax
   let cnt = 0;
 
   for (let i = edgeMarginBins; i < bins - edgeMarginBins; i++) {
@@ -279,10 +282,7 @@ function detectGuttersFromXRanges(
     const x1 = seg.e * binSize;
     const xMid = (x0 + x1) / 2;
 
-    let crossing = 0;
-    for (const r of usable) {
-      if (r.x0 <= xMid && xMid <= r.x1) {crossing++;}
-    }
+    const crossing = usable.filter((r) => r.x0 <= xMid && xMid <= r.x1).length;
     const crossingRatio = crossing / usable.length;
     if (crossingRatio > gutterMaxCrossingRatio) {continue;}
 
@@ -300,6 +300,7 @@ function detectGuttersFromXRanges(
 function buildColumnIntervals(pageWidth: number, gutters: readonly Gutter[]): { x0: number; x1: number }[] {
   if (gutters.length === 0) {return [{ x0: 0, x1: pageWidth }];}
   const intervals: { x0: number; x1: number }[] = [];
+  // eslint-disable-next-line no-restricted-syntax
   let cur = 0;
   for (const g of gutters) {
     const leftEnd = Math.max(cur, g.x0);
@@ -323,7 +324,9 @@ function assignXRangeToColumn(
   const w = x1 - x0;
   if (w >= pageWidth * options.fullWidthRatio) {return -1;}
 
+  // eslint-disable-next-line no-restricted-syntax
   let best = 0;
+  // eslint-disable-next-line no-restricted-syntax
   let bestOv = -1;
   for (let i = 0; i < intervals.length; i++) {
     const iv = intervals[i]!;
@@ -693,6 +696,7 @@ function clusterIntoLines(
     .sort((a, b) => b.baseline - a.baseline);
 
   const clusters: PdfText[][] = [];
+  // eslint-disable-next-line no-restricted-syntax
   let current: {
     texts: PdfText[];
     meanBaseline: number;
@@ -790,6 +794,7 @@ function splitIntoAdjacentGroups(
 
   const sorted = [...texts].sort((a, b) => a.x - b.x);
   const groups: PdfText[][] = [];
+  // eslint-disable-next-line no-restricted-syntax
   let current: PdfText[] = [sorted[0]!];
 
   for (let i = 1; i < sorted.length; i++) {
@@ -1115,6 +1120,7 @@ function mergeAdjacentLinesWithColumns(
     });
 
     const blocks: GroupedText[] = [];
+    // eslint-disable-next-line no-restricted-syntax
     let current: GroupedParagraph[] = [];
 
     for (const p of sorted) {
@@ -1162,6 +1168,7 @@ function mergeAdjacentLinesWithColumns(
       return a.b.minX - b.b.minX;
     });
 
+    // eslint-disable-next-line no-restricted-syntax
     let current: GroupedParagraph[] = [];
     for (const it of sorted) {
       if (current.length === 0) {

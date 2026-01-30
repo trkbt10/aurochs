@@ -245,7 +245,9 @@ describe("createPlayer", () => {
   });
 
   it("calls onStart and onComplete callbacks", async () => {
+    // eslint-disable-next-line no-restricted-syntax -- Test assertion flag
     let started = false;
+    // eslint-disable-next-line no-restricted-syntax -- Test assertion flag
     let completed = false;
 
     const player = createPlayer({

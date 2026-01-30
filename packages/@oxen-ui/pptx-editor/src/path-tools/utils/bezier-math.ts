@@ -199,11 +199,6 @@ export function cubicBezierBounds(
   args: { readonly p0: Point; readonly p1: Point; readonly p2: Point; readonly p3: Point }
 ): Bounds {
   const { p0, p1, p2, p3 } = args;
-  // Start with endpoints
-  let minX = Math.min(p0.x as number, p3.x as number);
-  let maxX = Math.max(p0.x as number, p3.x as number);
-  let minY = Math.min(p0.y as number, p3.y as number);
-  let maxY = Math.max(p0.y as number, p3.y as number);
 
   // Find extrema by solving derivative = 0
   // Bezier derivative coefficients
@@ -215,25 +210,32 @@ export function cubicBezierBounds(
   const by = 6 * (p0.y as number) - 12 * (p1.y as number) + 6 * (p2.y as number);
   const cy = -3 * (p0.y as number) + 3 * (p1.y as number);
 
-  // Solve quadratic for x
+  // Solve quadratic for x and y
   const txRoots = solveQuadratic(ax, bx, cx);
+  const tyRoots = solveQuadratic(ay, by, cy);
+
+  // Collect all extreme X values
+  const xValues = [p0.x as number, p3.x as number];
   for (const t of txRoots) {
     if (t > 0 && t < 1) {
       const pt = evaluateCubicBezier({ p0, p1, p2, p3, t });
-      minX = Math.min(minX, pt.x as number);
-      maxX = Math.max(maxX, pt.x as number);
+      xValues.push(pt.x as number);
     }
   }
 
-  // Solve quadratic for y
-  const tyRoots = solveQuadratic(ay, by, cy);
+  // Collect all extreme Y values
+  const yValues = [p0.y as number, p3.y as number];
   for (const t of tyRoots) {
     if (t > 0 && t < 1) {
       const pt = evaluateCubicBezier({ p0, p1, p2, p3, t });
-      minY = Math.min(minY, pt.y as number);
-      maxY = Math.max(maxY, pt.y as number);
+      yValues.push(pt.y as number);
     }
   }
+
+  const minX = Math.min(...xValues);
+  const maxX = Math.max(...xValues);
+  const minY = Math.min(...yValues);
+  const maxY = Math.max(...yValues);
 
   return {
     x: px(minX),
@@ -288,23 +290,25 @@ export function nearestPointOnCubicBezier(
   const { p0, p1, p2, p3, target, tolerance = 0.5 } = args;
   // Sample the curve at regular intervals
   const samples = 10;
-  let bestT = 0;
-  let bestDist = Number.POSITIVE_INFINITY;
-  let bestPoint = p0;
 
-  for (let i = 0; i <= samples; i++) {
+  // Find initial best from samples
+  const initialBest = Array.from({ length: samples + 1 }, (_, i) => {
     const t = i / samples;
     const pt = evaluateCubicBezier({ p0, p1, p2, p3, t });
-    const dist = distance(pt, target);
-    if (dist < bestDist) {
-      bestDist = dist;
-      bestT = t;
-      bestPoint = pt;
-    }
-  }
+    return { t, point: pt, distance: distance(pt, target) };
+  }).reduce((best, current) => (current.distance < best.distance ? current : best));
+
+  // eslint-disable-next-line no-restricted-syntax -- tracking best during refinement
+  let bestT = initialBest.t;
+  // eslint-disable-next-line no-restricted-syntax -- tracking best during refinement
+  let bestDist = initialBest.distance;
+  // eslint-disable-next-line no-restricted-syntax -- tracking best during refinement
+  let bestPoint = initialBest.point;
 
   // Refine using binary search
+  // eslint-disable-next-line no-restricted-syntax -- ternary search refinement
   let lo = Math.max(0, bestT - 1 / samples);
+  // eslint-disable-next-line no-restricted-syntax -- ternary search refinement
   let hi = Math.min(1, bestT + 1 / samples);
 
   while (hi - lo > tolerance / 100) {
@@ -438,13 +442,17 @@ export function mirrorHandle(
   const dx = (handle.x as number) - (anchor.x as number);
   const dy = (handle.y as number) - (anchor.y as number);
 
-  let scale = 1;
-  if (preserveLength !== undefined) {
+  const computeScale = (): number => {
+    if (preserveLength === undefined) {
+      return 1;
+    }
     const currentLen = vectorLength(dx, dy);
     if (currentLen > 1e-10) {
-      scale = preserveLength / currentLen;
+      return preserveLength / currentLen;
     }
-  }
+    return 1;
+  };
+  const scale = computeScale();
 
   return {
     x: px((anchor.x as number) - dx * scale),

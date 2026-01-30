@@ -5,6 +5,7 @@
  * measurement across paragraph and span paths.
  */
 
+// eslint-disable-next-line no-restricted-syntax -- Module state: cached SVG text node for measurement
 let sharedTextNode: SVGTextElement | null = null;
 const NON_BREAKING_SPACE = "\u00A0";
 

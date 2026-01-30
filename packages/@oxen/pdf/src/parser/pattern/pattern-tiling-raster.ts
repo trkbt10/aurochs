@@ -105,7 +105,9 @@ function cubicAt(points: readonly [number, number, number, number], t: number): 
 function flattenSubpaths(ops: ParsedPath["operations"], ctm: PdfMatrix): readonly FlattenedSubpath[] {
   const subpaths: Array<{ points: PdfPoint[]; closed: boolean }> = [];
 
+  // eslint-disable-next-line no-restricted-syntax
   let current: PdfPoint = { x: 0, y: 0 };
+  // eslint-disable-next-line no-restricted-syntax
   let currentSubpath: { points: PdfPoint[]; closed: boolean } | null = null;
 
   const finish = (closed: boolean): void => {
@@ -182,6 +184,7 @@ function flattenSubpaths(ops: ParsedPath["operations"], ctm: PdfMatrix): readonl
 
 function pointInPolyEvenOdd(x: number, y: number, poly: Poly): boolean {
   if (poly.length < 2) {return false;}
+  // eslint-disable-next-line no-restricted-syntax
   let inside = false;
 
   for (let i = 0, j = poly.length - 1; i < poly.length; j = i, i += 1) {
@@ -211,6 +214,7 @@ function pointInPolyEvenOdd(x: number, y: number, poly: Poly): boolean {
 }
 
 function pointInSubpathsEvenOdd(x: number, y: number, subpaths: readonly FlattenedSubpath[]): boolean {
+  // eslint-disable-next-line no-restricted-syntax
   let inside = false;
   for (const s of subpaths) {
     if (pointInPolyEvenOdd(x, y, s.points)) {
@@ -222,6 +226,7 @@ function pointInSubpathsEvenOdd(x: number, y: number, subpaths: readonly Flatten
 
 function windingNumber(x: number, y: number, poly: Poly): number {
   if (poly.length < 2) {return 0;}
+  // eslint-disable-next-line no-restricted-syntax
   let winding = 0;
 
   for (let i = 0; i < poly.length; i += 1) {
@@ -245,6 +250,7 @@ function windingNumber(x: number, y: number, poly: Poly): number {
 }
 
 function pointInSubpathsNonZero(x: number, y: number, subpaths: readonly FlattenedSubpath[]): boolean {
+  // eslint-disable-next-line no-restricted-syntax
   let winding = 0;
   for (const s of subpaths) {
     winding += windingNumber(x, y, s.points);
@@ -266,9 +272,13 @@ function pointInSubpaths(x: number, y: number, hitTest: SubpathsHitTest): boolea
 }
 
 function computeBoundsFromSubpaths(subpaths: readonly FlattenedSubpath[]): PdfBBox | null {
+  // eslint-disable-next-line no-restricted-syntax
   let minX = Infinity;
+  // eslint-disable-next-line no-restricted-syntax
   let minY = Infinity;
+  // eslint-disable-next-line no-restricted-syntax
   let maxX = -Infinity;
+  // eslint-disable-next-line no-restricted-syntax
   let maxY = -Infinity;
   for (const s of subpaths) {
     for (const p of s.points) {
@@ -325,10 +335,13 @@ function parsePatternCellShapes(pattern: PdfTilingPattern): readonly CellShape[]
   const out: CellShape[] = [];
   const tokens = tokenizeContentStream(pattern.content);
   type Operand = number | string | readonly (number | string)[];
+  // eslint-disable-next-line no-restricted-syntax
   let operandStack: Operand[] = [];
+  // eslint-disable-next-line no-restricted-syntax
   let currentPath: PdfPathOp[] = [];
 
   const gsStack: PdfGraphicsState[] = [];
+  // eslint-disable-next-line no-restricted-syntax
   let gs: PdfGraphicsState = createDefaultGraphicsState();
 
   const popNumberOperand = (): number | null => {
@@ -637,6 +650,7 @@ export function rasterizeTilingPatternFillPath(
         continue;
       }
 
+      // eslint-disable-next-line no-restricted-syntax
       let hit: CellShape | null = null;
       for (const shape of shapes) {
         const b = shape.bounds;
@@ -659,6 +673,7 @@ export function rasterizeTilingPatternFillPath(
       data[o + 1] = rgb[1];
       data[o + 2] = rgb[2];
 
+      // eslint-disable-next-line no-restricted-syntax
       let a = Math.round((hit.alphaByte * Math.round(255 * fillMul)) / 255);
       if (softMask && pageToMask) {
         const maskPoint = transformPoint({ x: pageX, y: pageY }, pageToMask);

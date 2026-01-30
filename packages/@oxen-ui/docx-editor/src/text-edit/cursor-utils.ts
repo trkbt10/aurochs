@@ -684,6 +684,7 @@ function buildFlatLineList(pagedLayout: PagedLayoutResult): FlatLineInfo[] {
 
   for (let pIdx = 0; pIdx < flatParagraphs.length; pIdx++) {
     const { paragraph, pageYOffset } = flatParagraphs[pIdx];
+    // eslint-disable-next-line no-restricted-syntax -- accumulating offset through lines
     let charOffsetInParagraph = 0;
 
     for (let lIdx = 0; lIdx < paragraph.lines.length; lIdx++) {
@@ -709,6 +710,7 @@ function findCurrentLineIndex(
   flatLines: readonly FlatLineInfo[],
   position: ContinuousCursorPosition,
 ): number {
+  // eslint-disable-next-line no-restricted-syntax -- tracking index through iteration
   let currentLineIndex = 0;
 
   for (let i = 0; i < flatLines.length; i++) {
