@@ -1,4 +1,7 @@
-import { describe, it, expect } from "vitest";
+/**
+ * @file XML builder utility tests
+ */
+
 import {
   createElement,
   setChildren,

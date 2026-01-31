@@ -4,7 +4,7 @@
  * Updates <p:sldIdLst> for slide insert/remove/reorder.
  */
 
-import { createElement, isXmlElement, type XmlDocument, type XmlElement } from "@oxen/xml";
+import { createElement, isXmlElement, type XmlDocument, type XmlElement, type XmlNode } from "@oxen/xml";
 
 // =============================================================================
 // XML Mutator Helpers (inline to avoid circular dependencies)
@@ -17,7 +17,7 @@ function getDocumentRoot(doc: XmlDocument): XmlElement | null {
 
 function setChildren(
   parent: XmlElement,
-  children: readonly (XmlElement | import("@oxen/xml").XmlNode)[],
+  children: readonly (XmlElement | XmlNode)[],
 ): XmlElement {
   return {
     ...parent,

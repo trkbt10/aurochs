@@ -1,4 +1,7 @@
-import { describe, it, expect } from "vitest";
+/**
+ * @file Solid fill builder tests
+ */
+
 import { buildColor, buildSolidFill, buildSolidFillFromSpec, buildThemeFill } from "./solid-fill";
 
 describe("solid-fill", () => {

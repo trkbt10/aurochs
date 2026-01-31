@@ -11,7 +11,7 @@
 import type { PresentationDocument, SlideWithId } from "@oxen-office/pptx/app/presentation-document";
 import type { Slide } from "@oxen-office/pptx/domain/slide/types";
 import type { PresentationFile } from "@oxen-office/pptx/domain/opc";
-import { createElement, getByPath, getChildren, isXmlElement, parseXml, serializeDocument, type XmlDocument, type XmlElement } from "@oxen/xml";
+import { createElement, getByPath, getChildren, isXmlElement, parseXml, serializeDocument, type XmlDocument, type XmlElement, type XmlNode } from "@oxen/xml";
 import { CONTENT_TYPES, RELATIONSHIP_TYPES } from "@oxen-office/pptx/domain";
 import { createEmptyZipPackage, isBinaryFile, type ZipPackage } from "@oxen/zip";
 import { addSlideToList, removeSlideFromList, reorderSlideInList } from "./parts/presentation";
@@ -86,7 +86,7 @@ const RELS_XMLNS = "http://schemas.openxmlformats.org/package/2006/relationships
 
 function setChildren(
   parent: XmlElement,
-  children: readonly (XmlElement | import("@oxen/xml").XmlNode)[],
+  children: readonly (XmlElement | XmlNode)[],
 ): XmlElement {
   return {
     ...parent,
@@ -635,7 +635,7 @@ export function removeSlide(doc: PresentationDocument, slideIndex: number): Slid
   const updatedPresentationXml = removeSlideFromList(presentationXml, entry.slideId);
   const updatedPresentationRelsXml = removeRelationshipById(presentationRelsXml, entry.rId);
 
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- let is needed for conditional reassignment below
   let updatedContentTypesXml = removeOverride(contentTypesXml, `/${slidePath}`);
 
   pkg.remove(slidePath);
@@ -778,7 +778,7 @@ export async function duplicateSlide(
   pkg.writeText(slidePath, sourceSlideXml);
   pkg.writeText(getRelationshipPath(slidePath), sourceSlideRelsText);
 
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- let is needed for conditional assignment in if block
   let notesSlidePath: string | undefined;
   const slideRelsXml = parseXml(sourceSlideRelsText);
   const notesRel = findNotesRelationship(slideRelsXml);

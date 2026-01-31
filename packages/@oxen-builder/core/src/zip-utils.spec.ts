@@ -1,4 +1,7 @@
-import { describe, it, expect } from "vitest";
+/**
+ * @file ZIP utilities tests
+ */
+
 import {
   getRelationshipsPath,
   normalizePath,
