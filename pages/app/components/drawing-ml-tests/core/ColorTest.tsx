@@ -5,7 +5,7 @@
  */
 
 import { pct } from "@oxen-office/ooxml/domain/units";
-import { ColorSwatch, ColorSwatchRow } from "@oxen-renderer/pptx/react";
+import { ColorSwatch, ColorSwatchRow } from "@oxen-renderer/drawing-ml";
 import { type CheckItem, TestSubsection } from "../common";
 
 /**

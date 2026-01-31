@@ -18,8 +18,8 @@ import {
   applyVerticalAlign,
   buildFontFamily,
   toSvgDominantBaseline,
-  createTextEffectsFilterDef,
 } from "@oxen-renderer/pptx/react";
+import { createTextEffectsFilterDef } from "@oxen-renderer/drawing-ml";
 import type { CompositionState } from "../coordinator/types";
 
 // =============================================================================

@@ -93,13 +93,8 @@ export { createLayoutParagraphMeasurer } from "./text-measure/layout-bridge";
 export { measureLayoutSpanTextWidth } from "./text-measure/span-measure";
 
 // DrawingML helpers used by editor/tests
-// Import directly from @oxen-renderer/drawing-ml
-export {
-  ColorSwatch,
-  ColorSwatchRow,
-  getSupportedPatterns,
-  createTextEffectsFilterDef,
-} from "@oxen-renderer/drawing-ml";
+// NOTE: For ColorSwatch, ColorSwatchRow, getSupportedPatterns, createTextEffectsFilterDef,
+// import directly from @oxen-renderer/drawing-ml
 
 // PPTX-specific shape style hook
 export {

@@ -3,7 +3,8 @@
  *
  * Usage: bun run scripts/debug/debug-linespacing-parsing.ts <pptx-path> <slide-number> <base-multiplier>
  */
-import { openPresentation, LIBREOFFICE_RENDER_OPTIONS, DEFAULT_RENDER_OPTIONS } from "@oxen-office/pptx";
+import { openPresentation } from "@oxen-office/pptx";
+import { LIBREOFFICE_RENDER_OPTIONS, DEFAULT_RENDER_OPTIONS } from "@oxen-renderer/pptx/render-options";
 import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
 import { getEffectiveLineSpacing } from "@oxen-renderer/pptx/render-options";
 import { requireFileExists, requireIntArg, requirePositionalArg } from "../lib/cli";

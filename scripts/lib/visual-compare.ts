@@ -19,7 +19,8 @@
  * ```
  */
 
-import { openPresentation, LIBREOFFICE_RENDER_OPTIONS } from "@oxen-office/pptx";
+import { openPresentation } from "@oxen-office/pptx";
+import { LIBREOFFICE_RENDER_OPTIONS } from "@oxen-renderer/pptx/render-options";
 import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
 import { compareSvgToSnapshot, type CompareOptions, type CompareResult } from "../../spec/visual-regression/compare";
 import { loadPptxFile } from "./pptx-loader";
