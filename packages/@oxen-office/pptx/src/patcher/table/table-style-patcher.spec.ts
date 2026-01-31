@@ -1,3 +1,4 @@
+/** @file Unit tests for table style patching */
 import { createElement, getChild, getTextByPath } from "@oxen/xml";
 import { patchTableStyleId } from "./table-style-patcher";
 

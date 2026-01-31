@@ -75,6 +75,7 @@ function assignSlideIds(slides: readonly Slide[]): SlideWithId[] {
 
 
 
+/** Create a PresentationDocument from a parsed presentation and slides */
 export function createDocumentFromPresentation({
   presentation,
   slides,
@@ -135,6 +136,7 @@ export function createDocumentFromPresentation({
 
 
 
+/** Create an empty document with a single blank slide */
 export function createEmptyDocument(
   slideWidth: Pixels,
   slideHeight: Pixels

@@ -1,3 +1,4 @@
+/** @file Type guard functions for diagram format types */
 import type { TextBody } from "../text";
 import type { ShapeStyle } from "../shape";
 
@@ -30,6 +31,7 @@ function isObject(value: unknown): value is Record<string, unknown> {
 
 
 
+/** Type guard to check if a value is a valid TextBody */
 export function isTextBody(value: unknown): value is TextBody {
   if (!isObject(value)) {
     return false;
@@ -65,6 +67,7 @@ export function isTextBody(value: unknown): value is TextBody {
 
 
 
+/** Type guard to check if a value is a valid ShapeStyle */
 export function isShapeStyle(value: unknown): value is ShapeStyle {
   if (!isObject(value)) {
     return false;

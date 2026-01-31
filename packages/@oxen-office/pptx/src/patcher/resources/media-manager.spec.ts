@@ -1,3 +1,4 @@
+/** @file Unit tests for media manager */
 import { parseXml, getByPath, getChildren } from "@oxen/xml";
 import { createEmptyZipPackage } from "@oxen/zip";
 import { addMedia, findUnusedMedia, removeMediaReference } from "./media-manager";

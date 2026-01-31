@@ -1,3 +1,4 @@
+/** @file Media resource manager for adding and removing images/videos/audio */
 import type { ZipPackage } from "@oxen/zip";
 import { parseXml, serializeDocument } from "@oxen/xml";
 import { parseContentTypes } from "../../domain/content-types";
@@ -57,6 +58,7 @@ const AUDIO_REL: RelationshipType =
 
 
 
+/** Add media to the package and return its path and relationship ID */
 export function addMedia(
   { pkg, mediaData, mediaType, referringPart }: AddMediaOptions,
 ): { readonly path: string; readonly rId: string } {
@@ -115,6 +117,7 @@ export function addMedia(
 
 
 
+/** Remove a media reference and clean up unused media files */
 export function removeMediaReference(
   pkg: ZipPackage,
   mediaPath: string,
@@ -190,6 +193,7 @@ export function removeMediaReference(
 
 
 
+/** Find media files that are no longer referenced */
 export function findUnusedMedia(pkg: ZipPackage): string[] {
   const allMedia = pkg
     .listFiles()

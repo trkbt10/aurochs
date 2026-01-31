@@ -1,3 +1,7 @@
+/**
+ * @file Test for OOXML import policy in SVG modules
+ */
+
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";

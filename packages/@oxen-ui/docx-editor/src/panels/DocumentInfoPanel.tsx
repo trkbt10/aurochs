@@ -95,6 +95,9 @@ function countCharactersFromTable(table: DocxTable): number {
 
 
 
+/**
+ * Calculate document statistics (paragraph count, table count, character count).
+ */
 export function calculateDocumentStats(document: DocxDocument): DocumentStats {
   return document.body.content.reduce(
     (acc, content) => {
@@ -148,6 +151,9 @@ export function calculateDocumentStats(document: DocxDocument): DocumentStats {
 
 
 
+/**
+ * Hook to compute document statistics with memoization.
+ */
 export function useDocumentStats(document: DocxDocument): DocumentStats {
   return useMemo(() => calculateDocumentStats(document), [document]);
 }
@@ -370,6 +376,9 @@ function SectionPropertiesViewer({ section, onChange, disabled }: SectionPropert
 
 
 
+/**
+ * Panel displaying document-level information including statistics, styles, and section properties.
+ */
 export function DocumentInfoPanel({ className, style }: DocumentInfoPanelProps) {
   const { document, dispatch, editorMode } = useDocumentEditor();
 

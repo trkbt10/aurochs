@@ -1,6 +1,4 @@
-/**
- * Transform types shared across OOXML formats.
- */
+/** @file Transform types shared across OOXML formats. */
 
 import type { EMU } from "../units";
 

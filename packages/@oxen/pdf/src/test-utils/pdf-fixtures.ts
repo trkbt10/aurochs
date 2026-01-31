@@ -1,3 +1,4 @@
+/** @file Utilities for locating PDF test fixture files */
 import path from "node:path";
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -56,6 +57,7 @@ const repoRootDir = findRepoRootDir(path.dirname(fileURLToPath(import.meta.url))
 
 
 
+/** Get the absolute path to a PDF fixture file by its basename. */
 export function getPdfFixturePath(basename: string): string {
   if (basename.includes("/") || basename.includes("\\") || basename.includes("..")) {
     throw new Error(`basename must be a file name only: ${basename}`);
@@ -93,6 +95,7 @@ export function getPdfFixturePath(basename: string): string {
 
 
 
+/** Get the absolute path to a sample fixture file by its basename. */
 export function getSampleFixturePath(basename: string): string {
   if (basename.includes("/") || basename.includes("\\") || basename.includes("..")) {
     throw new Error(`basename must be a file name only: ${basename}`);

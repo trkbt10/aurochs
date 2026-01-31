@@ -1,3 +1,4 @@
+/** @file Unit tests for diagram shape generator */
 import type { DiagramColorsDefinition, DiagramDataModel } from "@oxen-office/diagram/domain";
 import type { TextBody } from "../../text";
 import { generateDiagramShapes } from "./shape-generator";

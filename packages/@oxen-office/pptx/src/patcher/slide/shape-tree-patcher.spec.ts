@@ -1,3 +1,4 @@
+/** @file Unit tests for shape tree patching operations */
 import { createElement, isXmlElement, getChild, type XmlElement } from "@oxen/xml";
 import { addShapeToTree, batchUpdateShapeTree, removeShapeFromTree } from "./shape-tree-patcher";
 

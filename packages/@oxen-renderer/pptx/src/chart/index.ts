@@ -39,6 +39,9 @@ import { createChartRenderContext, createFillResolver } from "./context-adapter"
 
 
 
+/**
+ * Render a chart as SVG HTML string.
+ */
 export function renderChart({
   chart,
   width,

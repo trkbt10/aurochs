@@ -1,3 +1,4 @@
+/** @file Unit tests for paragraph serialization */
 import { getChild, getChildren, getTextContent, isXmlElement } from "@oxen/xml";
 import { pt } from "@oxen-office/ooxml/domain/units";
 import type { Paragraph } from "../../domain/text";

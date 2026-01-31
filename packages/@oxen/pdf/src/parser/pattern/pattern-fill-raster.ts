@@ -309,6 +309,7 @@ function computePathBBox(subpaths: readonly FlattenedSubpath[]): PdfBBox | null 
 
 
 
+/** Rasterize a path fill with a shading pattern to a PDF image. */
 export function rasterizeShadingPatternFillPath(
   parsed: ParsedPath,
   pattern: PdfShadingPattern,

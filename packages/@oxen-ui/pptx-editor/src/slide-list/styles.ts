@@ -55,6 +55,7 @@ const CONTAINER_GAP = 8;
 
 
 
+/** Get container style for slide list based on orientation */
 export function getContainerStyle(
   orientation: SlideListOrientation
 ): CSSProperties {
@@ -108,6 +109,7 @@ export function getContainerStyle(
 
 
 
+/** Get item wrapper style for slide list based on orientation */
 export function getItemWrapperStyle(
   orientation: SlideListOrientation
 ): CSSProperties {
@@ -160,6 +162,7 @@ export function getItemWrapperStyle(
 
 
 
+/** Get number badge style for slide list based on orientation */
 export function getNumberBadgeStyle(
   orientation: SlideListOrientation
 ): CSSProperties {
@@ -254,6 +257,7 @@ type ThumbnailContainerStyleOptions = {
 
 
 
+/** Get thumbnail container style with selection ring */
 export function getThumbnailContainerStyle(
   { aspectRatio, isSelected, isPrimary, isActive }: ThumbnailContainerStyleOptions
 ): CSSProperties {
@@ -350,6 +354,7 @@ export const thumbnailFallbackStyle: CSSProperties = {
 
 
 
+/** Get delete button style based on visibility */
 export function getDeleteButtonStyle(visible: boolean): CSSProperties {
   return {
     position: "absolute",
@@ -412,6 +417,7 @@ export function getDeleteButtonStyle(visible: boolean): CSSProperties {
 
 
 
+/** Get Fx button style based on visibility */
 export function getFxButtonStyle(visible: boolean): CSSProperties {
   return {
     position: "absolute",
@@ -465,6 +471,7 @@ export function getFxButtonStyle(visible: boolean): CSSProperties {
 
 
 
+/** Get gap style for slide list based on orientation */
 export function getGapStyle(
   orientation: SlideListOrientation
 ): CSSProperties {
@@ -530,6 +537,7 @@ export function getGapStyle(
 
 
 
+/** Get drop indicator style for gap based on orientation */
 export function getGapDropIndicatorStyle(
   orientation: SlideListOrientation
 ): CSSProperties {

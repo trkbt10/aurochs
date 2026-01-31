@@ -262,6 +262,7 @@ function insertRowAt(table: XmlElement, newRow: XmlElement, position: number): X
 
 
 
+/** Add a row to a table at the specified position */
 export function addTableRow(table: XmlElement, row: TableRow, position?: number): XmlElement {
   requireTable(table);
 
@@ -307,6 +308,7 @@ export function addTableRow(table: XmlElement, row: TableRow, position?: number)
 
 
 
+/** Add a column to a table at the specified position */
 export function addTableColumn(table: XmlElement, column: TableColumn, position?: number): XmlElement {
   requireTable(table);
 

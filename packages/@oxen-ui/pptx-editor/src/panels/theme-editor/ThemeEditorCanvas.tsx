@@ -759,6 +759,7 @@ function PresetCard({ preset, onSelect }: PresetCardProps) {
 
 
 
+/** Graphical theme editor canvas with color palette, fonts, and presets */
 export function ThemeEditorCanvas({
   colorScheme,
   fontScheme,

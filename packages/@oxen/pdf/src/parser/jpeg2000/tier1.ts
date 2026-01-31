@@ -211,6 +211,7 @@ function scIndex(
 
 
 
+/** Decode a JPEG 2000 LL codeblock using tier-1 decoding with MQ arithmetic decoder. */
 export function tier1DecodeLlCodeblock(mq: MqDecoder, params: Tier1DecodeParams): Tier1DecodedBlock {
   if (!mq) {throw new Error("mq is required");}
   if (!params) {throw new Error("params is required");}

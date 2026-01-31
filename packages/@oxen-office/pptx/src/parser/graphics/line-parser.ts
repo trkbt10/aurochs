@@ -53,6 +53,7 @@ function convertBaseLineToPptxLine(line: BaseLine): Line {
 
 
 
+/** Parse line properties from XML element */
 export function parseLine(element: XmlElement | undefined): Line | undefined {
   const parsed = parseOoxmlLine(element);
   if (!parsed) {return undefined;}
@@ -84,6 +85,7 @@ export function parseLine(element: XmlElement | undefined): Line | undefined {
 
 
 
+/** Get line properties from shape properties element */
 export function getLineFromProperties(spPr: XmlElement | undefined): Line | undefined {
   const parsed = getOoxmlLineFromProperties(spPr);
   if (!parsed) {return undefined;}

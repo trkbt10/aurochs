@@ -42,6 +42,7 @@ export type ChartTitleEditorProps = EditorProps<ChartTitle | undefined> & {
 
 
 
+/** PPTX chart title editor component */
 export function ChartTitleEditor(props: ChartTitleEditorProps) {
   return <CoreChartTitleEditor {...props} adapters={pptxChartEditorAdapters} />;
 }
@@ -71,6 +72,7 @@ export function ChartTitleEditor(props: ChartTitleEditorProps) {
 
 
 
+/** Create default chart title configuration */
 export function createDefaultChartTitle() {
   return createDefaultChartTitleCore();
 }

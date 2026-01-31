@@ -1,6 +1,4 @@
-/**
- * Shape/outline types shared across OOXML formats.
- */
+/** @file Shape/outline types shared across OOXML formats. */
 
 import type { EMU } from "../units";
 import type { DrawingTransform } from "./transform";

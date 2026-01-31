@@ -40,6 +40,9 @@ export type DegreesEditorProps = EditorProps<Degrees> & {
 
 
 
+/**
+ * Editor component for Degrees values with optional slider mode.
+ */
 export function DegreesEditor({
   value,
   onChange,

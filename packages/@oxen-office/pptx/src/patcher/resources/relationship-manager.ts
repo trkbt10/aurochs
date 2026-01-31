@@ -1,3 +1,4 @@
+/** @file Relationship manager for .rels file manipulation */
 import { createElement, isXmlElement, type XmlDocument } from "@oxen/xml";
 import { getDocumentRoot, updateDocumentRoot } from "../core/xml-mutator";
 import { createRelationshipsDocument, RELATIONSHIPS_XMLNS, type RelationshipTargetMode } from "../parts/relationships";
@@ -48,6 +49,7 @@ export type RelationshipInfo = {
 
 
 
+/** List all relationships in a rels document */
 export function listRelationships(relsXml: XmlDocument): RelationshipInfo[] {
   const root = getDocumentRoot(relsXml);
   if (!root || root.name !== "Relationships") {
@@ -104,6 +106,7 @@ export function listRelationships(relsXml: XmlDocument): RelationshipInfo[] {
 
 
 
+/** Generate a unique relationship ID */
 export function generateRelationshipId(existingIds: readonly string[]): string {
   const used = new Set<number>();
   for (const id of existingIds) {
@@ -149,6 +152,7 @@ export function generateRelationshipId(existingIds: readonly string[]): string {
 
 
 
+/** Add a relationship to a rels document */
 export function addRelationship(
   relsXml: XmlDocument,
   target: string,
@@ -232,6 +236,7 @@ export function addRelationship(
 
 
 
+/** Remove a relationship by ID from a rels document */
 export function removeRelationship(relsXml: XmlDocument, rId: string): XmlDocument {
   if (!rId) {
     throw new Error("removeRelationship: rId is required");
@@ -285,6 +290,7 @@ export function removeRelationship(relsXml: XmlDocument, rId: string): XmlDocume
 
 
 
+/** Ensure a valid rels document exists, creating an empty one if needed */
 export function ensureRelationshipsDocument(relsXml: XmlDocument | null): XmlDocument {
   if (relsXml === null) {
     return createRelationshipsDocument();

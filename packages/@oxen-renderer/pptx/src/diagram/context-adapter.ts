@@ -37,6 +37,9 @@ export type CreateDiagramRenderContextOptions<TShape> = {
 
 
 
+/**
+ * Create a DiagramRenderContext from a PPTX CoreRenderContext.
+ */
 export function createDiagramRenderContext<TShape>(
   options: CreateDiagramRenderContextOptions<TShape>
 ): DiagramRenderContext<TShape, string> {

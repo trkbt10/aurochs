@@ -66,6 +66,9 @@ function useCursorBlink(isBlinking: boolean): boolean {
 
 
 
+/**
+ * Render a blinking cursor caret as an SVG line.
+ */
 export function CursorCaret({
   x,
   y,

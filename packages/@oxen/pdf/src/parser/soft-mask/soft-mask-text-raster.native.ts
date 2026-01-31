@@ -264,6 +264,7 @@ function getFontInfo(fontKey: string, fontMappings: FontMappings) {
 
 
 
+/** Rasterize text with soft mask applied as a PDF image. */
 export function rasterizeSoftMaskedText(parsed: ParsedText, fontMappings: FontMappings): PdfImage | null {
   if (!fontMappings) {throw new Error("fontMappings is required");}
 

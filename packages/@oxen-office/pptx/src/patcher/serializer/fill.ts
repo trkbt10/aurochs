@@ -38,6 +38,7 @@ import { ooxmlBool, ooxmlAngleUnits, ooxmlEmu, ooxmlPercent100k } from "@oxen-of
 
 
 
+/** Serialize a fill to its XML element representation */
 export function serializeFill(fill: Fill): XmlElement {
   switch (fill.type) {
     case "noFill":
@@ -85,6 +86,7 @@ export function serializeFill(fill: Fill): XmlElement {
 
 
 
+/** Serialize a gradient fill */
 export function serializeGradientFill(gradient: GradientFill): XmlElement {
   const attrs: Record<string, string> = {
     rotWithShape: ooxmlBool(gradient.rotWithShape),
@@ -176,6 +178,7 @@ function serializeGradientStop(stop: GradientStop): XmlElement {
 
 
 
+/** Serialize a pattern fill */
 export function serializePatternFill(pattern: PatternFill): XmlElement {
   return createElement("a:pattFill", { prst: pattern.preset }, [
     createElement("a:fgClr", {}, [serializeColor(pattern.foregroundColor)]),
@@ -213,6 +216,7 @@ export function serializePatternFill(pattern: PatternFill): XmlElement {
 
 
 
+/** Serialize a blip (image) fill */
 export function serializeBlipFill(blip: BlipFill): XmlElement {
   if (blip.resourceId.startsWith("data:")) {
     throw new Error("serializeBlipFill: data: resourceId requires Phase 7 media embedding");

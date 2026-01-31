@@ -41,6 +41,7 @@ export type DiagramPointEditorProps = EditorProps<DiagramPoint> & {
 
 
 
+/** PPTX diagram point editor component */
 export function DiagramPointEditor(props: DiagramPointEditorProps) {
   return <CoreDiagramPointEditor {...props} adapters={pptxDiagramEditorAdapters} />;
 }

@@ -1,3 +1,4 @@
+/** @file Line serializer for a:ln element */
 import { createElement, type XmlElement } from "@oxen/xml";
 import type { CustomDash, Line, LineEnd } from "../../domain";
 import { serializeFill } from "./fill";
@@ -33,6 +34,7 @@ import { ooxmlEmu, ooxmlPercent100k } from "@oxen-office/ooxml/serializer/units"
 
 
 
+/** Serialize line properties to a:ln element */
 export function serializeLine(line: Line): XmlElement {
   const attrs: Record<string, string> = {
     w: ooxmlEmu(line.width),

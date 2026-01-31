@@ -1,3 +1,7 @@
+/**
+ * @file Chart patcher exports
+ */
+
 export type { ChartData, ChartSeries } from "./chart-data-patcher";
 export { patchChartData, patchChartStyle, patchChartTitle, patchSeriesData } from "./chart-data-patcher";
 

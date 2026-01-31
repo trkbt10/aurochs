@@ -1,3 +1,4 @@
+/** @file Unit tests for resource store implementation */
 import {
   createResourceStore,
   createEmptyResourceStore,

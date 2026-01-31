@@ -58,6 +58,9 @@ export type ChartEditorAdaptersProviderProps = {
 
 
 
+/**
+ * Provider component for chart editor adapters context.
+ */
 export function ChartEditorAdaptersProvider({ adapters, children }: ChartEditorAdaptersProviderProps) {
   return <ChartEditorAdaptersContext.Provider value={adapters}>{children}</ChartEditorAdaptersContext.Provider>;
 }
@@ -87,6 +90,9 @@ export function ChartEditorAdaptersProvider({ adapters, children }: ChartEditorA
 
 
 
+/**
+ * Hook to access chart editor adapters from context.
+ */
 export function useChartEditorAdapters(): ChartEditorAdapters | undefined {
   return useContext(ChartEditorAdaptersContext);
 }
@@ -121,6 +127,9 @@ export type ChartEditorAdaptersBoundaryProps = {
 
 
 
+/**
+ * Boundary component that uses provided adapters or inherits from parent context.
+ */
 export function ChartEditorAdaptersBoundary({ adapters, children }: ChartEditorAdaptersBoundaryProps) {
   const inherited = useChartEditorAdapters();
   return <ChartEditorAdaptersProvider adapters={adapters ?? inherited}>{children}</ChartEditorAdaptersProvider>;

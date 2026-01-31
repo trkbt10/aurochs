@@ -1,3 +1,7 @@
+/**
+ * @file Simple PDF builder for tests
+ */
+
 export type SimplePdfPageSpec = Readonly<{
   readonly width: number;
   readonly height: number;

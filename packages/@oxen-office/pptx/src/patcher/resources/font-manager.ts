@@ -122,9 +122,7 @@ function addFontRelationship(pkg: ZipPackage, fontPath: string): string {
 
   // Read or create relationships document
   const existingRels = pkg.readText(relsPath);
-  const relsXml = existingRels
-    ? ensureRelationshipsDocument(parseXml(existingRels))
-    : ensureRelationshipsDocument(null);
+  const relsXml = ensureRelationshipsDocument(existingRels ? parseXml(existingRels) : null);
 
   // Relative target from ppt/ directory
   const relTarget = fontPath.replace("ppt/", "");

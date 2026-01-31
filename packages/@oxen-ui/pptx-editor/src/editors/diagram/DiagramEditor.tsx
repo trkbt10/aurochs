@@ -41,6 +41,7 @@ export type DiagramEditorProps = EditorProps<DiagramDataModel> & {
 
 
 
+/** PPTX diagram editor component */
 export function DiagramEditor(props: DiagramEditorProps) {
   return <CoreDiagramEditor {...props} adapters={pptxDiagramEditorAdapters} />;
 }

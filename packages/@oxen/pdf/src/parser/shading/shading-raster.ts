@@ -171,6 +171,7 @@ function resolvePaintBBox(gs: PdfGraphicsState, pageBBox: PdfBBox): PdfBBox | nu
 
 
 
+/** Rasterize a shading fill operator (sh) to a PDF image. */
 export function rasterizeShadingFill(
   shading: PdfShading,
   gs: PdfGraphicsState,

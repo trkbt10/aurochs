@@ -1,3 +1,4 @@
+/** @file Unit tests for table patching operations */
 import { createElement, createText, getChild, getChildren, getTextByPath, isXmlElement, type XmlElement } from "@oxen/xml";
 import { px } from "@oxen-office/ooxml/domain/units";
 import type { TextBody } from "../../domain/text";

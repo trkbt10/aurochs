@@ -47,6 +47,7 @@ export type ChartEditorProps = EditorProps<Chart> & {
 
 
 
+/** PPTX chart editor component */
 export function ChartEditor(props: ChartEditorProps) {
   return <CoreChartEditor {...props} adapters={pptxChartEditorAdapters} />;
 }
@@ -76,6 +77,7 @@ export function ChartEditor(props: ChartEditorProps) {
 
 
 
+/** Create default chart configuration */
 export function createDefaultChart() {
   return createDefaultChartCore();
 }
@@ -105,6 +107,7 @@ export function createDefaultChart() {
 
 
 
+/** Create default 3D view configuration */
 export function createDefaultView3D() {
   return createDefaultView3DCore();
 }
@@ -134,6 +137,7 @@ export function createDefaultView3D() {
 
 
 
+/** Create default chart surface configuration */
 export function createDefaultChartSurface() {
   return createDefaultChartSurfaceCore();
 }
@@ -163,6 +167,7 @@ export function createDefaultChartSurface() {
 
 
 
+/** Create default data table configuration */
 export function createDefaultDataTable() {
   return createDefaultDataTableCore();
 }
@@ -192,6 +197,7 @@ export function createDefaultDataTable() {
 
 
 
+/** Create default chart protection configuration */
 export function createDefaultChartProtection() {
   return createDefaultChartProtectionCore();
 }
@@ -221,6 +227,7 @@ export function createDefaultChartProtection() {
 
 
 
+/** Create default print settings configuration */
 export function createDefaultPrintSettings() {
   return createDefaultPrintSettingsCore();
 }

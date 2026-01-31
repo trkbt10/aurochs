@@ -39,6 +39,7 @@ export type DataLabelsEditorProps = CoreDataLabelsEditorProps;
 
 
 
+/** PPTX chart data labels editor component */
 export function DataLabelsEditor(props: DataLabelsEditorProps) {
   return (
     <ChartEditorAdaptersBoundary adapters={pptxChartEditorAdapters}>
@@ -72,6 +73,7 @@ export function DataLabelsEditor(props: DataLabelsEditorProps) {
 
 
 
+/** Create default data labels configuration */
 export function createDefaultDataLabels() {
   return createDefaultDataLabelsCore();
 }

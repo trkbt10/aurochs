@@ -430,6 +430,9 @@ function computeRasterScale({
 
 
 
+/**
+ * Create a conversion context for fitting PDF content to slide dimensions.
+ */
 export function createFitContext({
   pdfWidth,
   pdfHeight,

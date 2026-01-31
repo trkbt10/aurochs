@@ -73,6 +73,7 @@ function readNPasses(br: PacketBitReader): number {
 
 
 
+/** Decode a JPEG 2000 codestream to RGB pixel data. */
 export function decodeJ2kCodestreamToRgb(
   codestream: Uint8Array,
   options: Readonly<{ readonly expectedWidth: number; readonly expectedHeight: number }>,

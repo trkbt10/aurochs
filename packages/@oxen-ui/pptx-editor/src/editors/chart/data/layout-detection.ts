@@ -67,6 +67,7 @@ export type ChartDataLayout = {
 
 
 
+/** Create a cell address from column and row indices */
 export function createAddress(col: number, row: number): CellAddress {
   return {
     col: colIdx(col),
@@ -106,6 +107,7 @@ export function createAddress(col: number, row: number): CellAddress {
 
 
 
+/** Create a cell range from start and end coordinates */
 export function createCellRange({
   startCol,
   startRow,

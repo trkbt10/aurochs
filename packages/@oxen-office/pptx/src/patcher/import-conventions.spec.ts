@@ -1,9 +1,4 @@
-/**
- * Regression test for PPTX patcher import conventions.
- *
- * P1-004: PPTX patcher files should import OOXML/XML helpers (createElement/createText and Xml* types)
- * directly from `@oxen/xml`, not via `patcher/core` barrel exports.
- */
+/** @file Regression tests for PPTX patcher import conventions */
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";

@@ -39,6 +39,9 @@ export type TextBodyEditorProps = EditorProps<TextBody> & {
 
 
 
+/**
+ * Adapter-aware TextBody editor that delegates to container-specific editors.
+ */
 export function TextBodyEditor(props: TextBodyEditorProps): ReactNode {
   const adapters = useChartEditorAdapters();
   const textBodyAdapter = adapters?.textBody;

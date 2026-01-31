@@ -58,6 +58,7 @@ const FILL_ELEMENT_NAMES = [
 
 
 
+/** Find the first fill element child (noFill, solidFill, gradFill, etc.) in a parent element. */
 export function findFillElement(parent: XmlElement): XmlElement | undefined {
   return findChild(parent, (child) =>
     FILL_ELEMENT_NAMES.includes(child.name as typeof FILL_ELEMENT_NAMES[number]),
@@ -201,6 +202,7 @@ function parseGroupFill(): GroupFill {
 
 
 
+/** Parse a fill element into a BaseFill domain object. */
 export function parseBaseFill(element: XmlElement | undefined): BaseFill | undefined {
   if (!element) {return undefined;}
 
@@ -248,6 +250,7 @@ export function parseBaseFill(element: XmlElement | undefined): BaseFill | undef
 
 
 
+/** Find and parse a fill element from a parent element. */
 export function parseBaseFillFromParent(parent: XmlElement | undefined): BaseFill | undefined {
   if (!parent) {return undefined;}
   const fillEl = findFillElement(parent);

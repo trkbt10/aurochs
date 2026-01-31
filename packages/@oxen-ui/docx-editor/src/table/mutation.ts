@@ -308,6 +308,9 @@ export type SetCellOptions = {
 
 
 
+/**
+ * Set a cell at specific coordinates in the table.
+ */
 export function setCell({ table, rowIndex, colIndex, cell }: SetCellOptions): DocxTable {
   return {
     ...table,
@@ -482,6 +485,9 @@ export type MergeCellsHorizontallyOptions = {
 
 
 
+/**
+ * Merge cells horizontally from startCol to endCol in the specified row.
+ */
 export function mergeCellsHorizontally({ table, rowIndex, startCol, endCol }: MergeCellsHorizontallyOptions): DocxTable {
   const row = table.rows[rowIndex];
   if (!row || startCol >= endCol || startCol < 0 || endCol >= row.cells.length) {
@@ -530,6 +536,9 @@ export type SetCellVerticalMergeOptions = {
 
 
 
+/**
+ * Set or clear vertical merge on a cell.
+ */
 export function setCellVerticalMerge({ table, rowIndex, colIndex, merge }: SetCellVerticalMergeOptions): DocxTable {
   const cell = getCell(table, rowIndex, colIndex);
   if (!cell) {
@@ -586,6 +595,9 @@ export type MergeCellsVerticallyOptions = {
 
 
 
+/**
+ * Merge cells vertically from startRow to endRow in the specified column.
+ */
 export function mergeCellsVertically({ table, colIndex, startRow, endRow }: MergeCellsVerticallyOptions): DocxTable {
   if (startRow >= endRow || startRow < 0 || endRow >= table.rows.length) {
     return table;

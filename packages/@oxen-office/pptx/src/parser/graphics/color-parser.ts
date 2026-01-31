@@ -35,6 +35,7 @@ import {
 
 
 
+/** Find color element in parent element */
 export function findColorElement(...args: Parameters<typeof findColorElementBase>) {
   return findColorElementBase(...args);
 }
@@ -64,6 +65,7 @@ export function findColorElement(...args: Parameters<typeof findColorElementBase
 
 
 
+/** Parse color from XML element */
 export function parseColor(...args: Parameters<typeof parseColorBase>) {
   return parseColorBase(...args);
 }
@@ -93,6 +95,7 @@ export function parseColor(...args: Parameters<typeof parseColorBase>) {
 
 
 
+/** Parse color from parent element by finding color child */
 export function parseColorFromParent(...args: Parameters<typeof parseColorFromParentBase>) {
   return parseColorFromParentBase(...args);
 }

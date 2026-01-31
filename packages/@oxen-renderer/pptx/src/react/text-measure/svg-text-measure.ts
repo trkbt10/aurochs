@@ -44,6 +44,9 @@ const NON_BREAKING_SPACE = "\u00A0";
 
 
 
+/**
+ * Get or create a shared SVG text node for text measurement.
+ */
 export function ensureSvgTextNode(): SVGTextElement | null {
   if (sharedTextNode) {
     return sharedTextNode;
@@ -106,6 +109,9 @@ export function ensureSvgTextNode(): SVGTextElement | null {
 
 
 
+/**
+ * Replace regular spaces with non-breaking spaces for accurate measurement.
+ */
 export function normalizeSpaces(text: string): string {
   return text.includes(" ") ? text.replace(/ /g, NON_BREAKING_SPACE) : text;
 }
@@ -145,6 +151,9 @@ export function normalizeSpaces(text: string): string {
 
 
 
+/**
+ * Set multiple attributes on an SVG text element.
+ */
 export function setTextAttributes(
   textNode: SVGTextElement,
   attributes: Record<string, string>,

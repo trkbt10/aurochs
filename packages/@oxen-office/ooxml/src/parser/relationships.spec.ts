@@ -1,3 +1,5 @@
+/** @file Unit tests for OOXML relationship parsing utilities */
+
 import { getRelationshipPath, parseRelationshipsFromText, resolvePartPath } from "./relationships";
 
 describe("ooxml/parser/relationships", () => {

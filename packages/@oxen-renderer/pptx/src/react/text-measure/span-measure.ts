@@ -64,6 +64,9 @@ function buildFontFamily(span: LayoutSpan): string {
 
 
 
+/**
+ * Measure the width of text in a layout span using SVG text rendering.
+ */
 export function measureLayoutSpanTextWidth(span: LayoutSpan, text: string): ReturnType<typeof px> {
   const textNode = ensureSvgTextNode();
   if (!textNode) {

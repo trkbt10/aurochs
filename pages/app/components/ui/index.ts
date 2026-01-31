@@ -1,3 +1,4 @@
+/** @file UI component exports for the application */
 export {
   ArrowRightIcon,
   ChevronLeftIcon,

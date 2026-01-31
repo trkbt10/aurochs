@@ -35,6 +35,7 @@ import {
 
 
 
+/** Parse diagram colors definition from XML */
 export function parseDiagramColorsDefinition(...args: Parameters<typeof parseDiagramColorsDefinitionBase>) {
   return parseDiagramColorsDefinitionBase(...args);
 }
@@ -64,6 +65,7 @@ export function parseDiagramColorsDefinition(...args: Parameters<typeof parseDia
 
 
 
+/** Parse diagram colors definition header from XML */
 export function parseDiagramColorsDefinitionHeader(...args: Parameters<typeof parseDiagramColorsDefinitionHeaderBase>) {
   return parseDiagramColorsDefinitionHeaderBase(...args);
 }
@@ -93,6 +95,7 @@ export function parseDiagramColorsDefinitionHeader(...args: Parameters<typeof pa
 
 
 
+/** Parse list of diagram colors definition headers from XML */
 export function parseDiagramColorsDefinitionHeaderList(
   ...args: Parameters<typeof parseDiagramColorsDefinitionHeaderListBase>
 ) {

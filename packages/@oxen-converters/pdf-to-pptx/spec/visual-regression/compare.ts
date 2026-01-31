@@ -1,6 +1,7 @@
 /**
- * Visual regression test utilities
- * Provides image comparison functionality for PPTX rendering tests
+ * @file Visual regression test utilities
+ *
+ * Provides image comparison functionality for PPTX rendering tests.
  */
 
 import * as fs from "node:fs";
@@ -221,9 +222,7 @@ export function compareSvgToSnapshot(
   const match = diffPercent <= maxDiffPercent;
 
   // Save diff image if there are differences
-  const diffImagePath: string | null = diffPixels > 0
-    ? path.join(DIFF_DIR, `${snapshotName}-slide-${slideNumber}-diff.png`)
-    : null;
+  const diffImagePath = diffPixels > 0 ? path.join(DIFF_DIR, `${snapshotName}-slide-${slideNumber}-diff.png`) : null;
   if (diffImagePath) {
     savePng(diff, diffImagePath);
   }
@@ -566,9 +565,7 @@ export function compareWithDetails(
   const match = diffPercent <= maxDiffPercent;
 
   // Save diff image if there are differences
-  const diffImagePath: string | null = diffPixels > 0
-    ? path.join(DIFF_DIR, `${snapshotName}-slide-${slideNumber}-diff.png`)
-    : null;
+  const diffImagePath = diffPixels > 0 ? path.join(DIFF_DIR, `${snapshotName}-slide-${slideNumber}-diff.png`) : null;
   if (diffImagePath) {
     savePng(diff, diffImagePath);
   }
@@ -639,6 +636,9 @@ export type CompareReport = {
 
 
 
+/**
+ * Generate a comparison report from visual comparison results.
+ */
 export function generateCompareReport(
   results: DetailedCompareResult[]
 ): CompareReport {

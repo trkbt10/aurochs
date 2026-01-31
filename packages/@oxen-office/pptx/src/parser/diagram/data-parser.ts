@@ -38,6 +38,7 @@ import { parseTextBody } from "../text/text-parser";
 
 
 
+/** Parse diagram data model from XML document */
 export function parseDiagramDataModel(doc: XmlDocument) {
   return parseDiagramDataModelBase(doc, { parseShapeProperties, parseTextBody });
 }
@@ -67,6 +68,7 @@ export function parseDiagramDataModel(doc: XmlDocument) {
 
 
 
+/** Parse diagram data model from XML element */
 export function parseDiagramDataModelElement(element: XmlElement | undefined) {
   return parseDiagramDataModelElementBase(element, { parseShapeProperties, parseTextBody });
 }

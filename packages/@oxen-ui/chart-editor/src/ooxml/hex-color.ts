@@ -29,6 +29,9 @@ import type { Color } from "@oxen-office/ooxml/domain/color";
 
 
 
+/**
+ * Create a Color object from a 6-digit hex string.
+ */
 export function createSrgbColor(hex6: string): Color {
   const normalized = normalizeHex6(hex6);
   return {
@@ -64,6 +67,9 @@ export function createSrgbColor(hex6: string): Color {
 
 
 
+/**
+ * Normalize a hex color string to uppercase 6-digit format.
+ */
 export function normalizeHex6(value: string): string {
   const raw = value.trim().replace(/^#/, "").toUpperCase();
   if (isValidHex6(raw)) {

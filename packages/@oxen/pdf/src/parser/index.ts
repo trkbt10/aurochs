@@ -1,3 +1,4 @@
+/** @file PDF parser public API exports */
 export type { PdfParserOptions } from "./core/pdf-parser";
 export { getPdfPageCount, getPdfPageDimensions, parsePdf } from "./core/pdf-parser";
 

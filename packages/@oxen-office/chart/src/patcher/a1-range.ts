@@ -324,6 +324,9 @@ export type CreateRangeOptions = {
 
 
 
+/**
+ * Create a range from start cell and item count.
+ */
 export function createRange(options: CreateRangeOptions): CellRange {
   const { startCol, startRow, itemCount, direction } = options;
   const absolute = options.absolute ?? true;

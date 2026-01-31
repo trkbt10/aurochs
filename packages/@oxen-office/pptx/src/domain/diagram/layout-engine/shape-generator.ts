@@ -61,6 +61,7 @@ export type GenerateDiagramShapesOptions = {
 
 
 
+/** Generate PPTX SpShape array from diagram definitions */
 export function generateDiagramShapes(
   { dataModel, layoutDefinition, styleDefinition, colorDefinition, config }: GenerateDiagramShapesOptions,
 ): ShapeGenerationResult {

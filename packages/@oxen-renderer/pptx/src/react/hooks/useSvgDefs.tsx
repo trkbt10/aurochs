@@ -248,6 +248,9 @@ type LinearGradientDefProps = {
 
 
 
+/**
+ * Register a linear gradient def.
+ */
 export function LinearGradientDef({
   id,
   x1 = "0%",
@@ -330,6 +333,9 @@ type RadialGradientDefProps = {
 
 
 
+/**
+ * Register a radial gradient def.
+ */
 export function RadialGradientDef({
   id,
   cx = "50%",
@@ -414,6 +420,9 @@ type PatternDefProps = {
 
 
 
+/**
+ * Register a pattern def.
+ */
 export function PatternDef({
   id,
   x,
@@ -492,6 +501,9 @@ type ClipPathDefProps = {
 
 
 
+/**
+ * Register a clipPath def.
+ */
 export function ClipPathDef({ id, clipPathUnits, children }: ClipPathDefProps) {
   const { addDef, hasDef } = useSvgDefs();
 

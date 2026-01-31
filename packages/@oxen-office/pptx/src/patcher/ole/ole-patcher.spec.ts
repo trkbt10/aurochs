@@ -1,3 +1,4 @@
+/** @file Unit tests for OLE object patching operations */
 import { getChild, parseXml } from "@oxen/xml";
 import { deg, px } from "@oxen-office/ooxml/domain/units";
 import { patchOleObject } from "./ole-patcher";

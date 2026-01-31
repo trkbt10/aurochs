@@ -1,3 +1,4 @@
+/** @file Unit tests for text body patching */
 import { createElement, getChild, getChildren, getTextContent, isXmlElement } from "@oxen/xml";
 import type { TextBody } from "../../domain/text";
 import type { TextBodyChange } from "../core/shape-differ";

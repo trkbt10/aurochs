@@ -36,6 +36,7 @@ import { ooxmlAngleUnits, ooxmlPercent100k } from "@oxen-office/ooxml/serializer
 
 
 
+/** Serialize a color to its XML element representation */
 export function serializeColor(color: Color): XmlElement {
   const children = serializeColorTransform(color.transform);
 

@@ -51,6 +51,9 @@ const textareaStyle: CSSProperties = {
 
 
 
+/**
+ * Simple textarea-based editor for chart TextBody content.
+ */
 export function ChartTextBodyEditor({
   value,
   onChange,

@@ -39,6 +39,7 @@ export type LegendEditorProps = CoreLegendEditorProps;
 
 
 
+/** PPTX chart legend editor component */
 export function LegendEditor(props: LegendEditorProps) {
   return (
     <ChartEditorAdaptersBoundary adapters={pptxChartEditorAdapters}>
@@ -72,6 +73,7 @@ export function LegendEditor(props: LegendEditorProps) {
 
 
 
+/** Create default legend configuration */
 export function createDefaultLegend() {
   return createDefaultLegendCore();
 }

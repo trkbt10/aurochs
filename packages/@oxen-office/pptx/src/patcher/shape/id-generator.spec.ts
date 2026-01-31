@@ -1,3 +1,4 @@
+/** @file Unit tests for shape ID and name generation */
 import { createElement, type XmlDocument, type XmlElement } from "@oxen/xml";
 import { extractShapeIds, generateShapeId, generateShapeName } from "./id-generator";
 

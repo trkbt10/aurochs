@@ -116,6 +116,7 @@ function removeConnectionsForNode(cxnLst: XmlElement, nodeId: string): XmlElemen
 
 
 
+/** Patch a diagram node's text content */
 export function patchDiagramNodeText(dataXml: XmlDocument, nodeId: string, text: string): XmlDocument {
   if (!nodeId) {
     throw new Error("patchDiagramNodeText: nodeId is required");
@@ -325,6 +326,7 @@ function setDiagramConnection({ dataXml, srcId, destId, connectionType }: SetDia
 
 
 
+/** Apply diagram changes to diagram files */
 export function patchDiagram(diagramFiles: DiagramFiles, changes: readonly DiagramChange[]): DiagramFiles {
   let nextData = diagramFiles.data;
 

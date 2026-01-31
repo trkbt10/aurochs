@@ -1,6 +1,4 @@
-/**
- * Extent (size) types shared across OOXML formats.
- */
+/** @file Extent (size) types shared across OOXML formats. */
 
 import type { EMU } from "../units";
 

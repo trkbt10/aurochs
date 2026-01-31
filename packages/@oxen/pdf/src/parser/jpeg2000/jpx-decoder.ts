@@ -46,6 +46,7 @@ export type JpxDecodeFn = (
 
 
 
+/** Downsample 16-bit per component JPX image data to 8-bit. */
 export function downsampleJpxTo8Bit(decoded: JpxDecodedImage): Readonly<{ data: Uint8Array; bitsPerComponent: 8 }> {
   if (!decoded) {throw new Error("decoded is required");}
   if (!decoded.data) {throw new Error("decoded.data is required");}

@@ -99,6 +99,7 @@ function sampleClipMaskAtPagePoint(mask: PdfSoftMask, pageX: number, pageY: numb
 
 
 
+/** Rasterize a Form XObject bounding box as a clip mask for soft masking. */
 export function rasterizeFormBBoxClipToMask(
   gs: PdfGraphicsState,
   formBBox: PdfBBox,

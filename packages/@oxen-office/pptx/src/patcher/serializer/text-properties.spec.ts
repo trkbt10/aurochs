@@ -1,3 +1,4 @@
+/** @file Unit tests for text property serialization */
 import { getChild, getTextContent, isXmlElement } from "@oxen/xml";
 import { pct, pt, px } from "@oxen-office/ooxml/domain/units";
 import type { BulletStyle, ParagraphProperties, RunProperties } from "../../domain/text";

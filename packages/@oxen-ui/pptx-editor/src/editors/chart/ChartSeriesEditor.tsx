@@ -49,6 +49,7 @@ export type ChartSeriesEditorProps = CoreChartSeriesEditorProps;
 
 
 
+/** PPTX chart series editor component */
 export function ChartSeriesEditor(props: ChartSeriesEditorProps) {
   return (
     <ChartEditorAdaptersBoundary adapters={pptxChartEditorAdapters}>
@@ -82,6 +83,7 @@ export function ChartSeriesEditor(props: ChartSeriesEditorProps) {
 
 
 
+/** Create default chart series configuration */
 export function createDefaultChartSeries() {
   return createDefaultChartSeriesCore();
 }
@@ -111,6 +113,7 @@ export function createDefaultChartSeries() {
 
 
 
+/** Create default bar chart series configuration */
 export function createDefaultBarChartSeries() {
   return createDefaultBarChartSeriesCore();
 }
@@ -140,6 +143,7 @@ export function createDefaultBarChartSeries() {
 
 
 
+/** Create default line chart series configuration */
 export function createDefaultLineChartSeries() {
   return createDefaultLineChartSeriesCore();
 }
@@ -169,6 +173,7 @@ export function createDefaultLineChartSeries() {
 
 
 
+/** Create default pie chart series configuration */
 export function createDefaultPieChartSeries() {
   return createDefaultPieChartSeriesCore();
 }
@@ -198,6 +203,7 @@ export function createDefaultPieChartSeries() {
 
 
 
+/** Create default area chart series configuration */
 export function createDefaultAreaChartSeries() {
   return createDefaultAreaChartSeriesCore();
 }
@@ -227,6 +233,7 @@ export function createDefaultAreaChartSeries() {
 
 
 
+/** Create default scatter chart series configuration */
 export function createDefaultScatterChartSeries() {
   return createDefaultScatterChartSeriesCore();
 }
@@ -256,6 +263,7 @@ export function createDefaultScatterChartSeries() {
 
 
 
+/** Create default radar chart series configuration */
 export function createDefaultRadarChartSeries() {
   return createDefaultRadarChartSeriesCore();
 }
@@ -285,6 +293,7 @@ export function createDefaultRadarChartSeries() {
 
 
 
+/** Create default bubble chart series configuration */
 export function createDefaultBubbleChartSeries() {
   return createDefaultBubbleChartSeriesCore();
 }
@@ -314,6 +323,7 @@ export function createDefaultBubbleChartSeries() {
 
 
 
+/** Create default pie-of-pie chart series configuration */
 export function createDefaultOfPieChartSeries() {
   return createDefaultOfPieChartSeriesCore();
 }
@@ -343,6 +353,7 @@ export function createDefaultOfPieChartSeries() {
 
 
 
+/** Create default stock chart series configuration */
 export function createDefaultStockChartSeries() {
   return createDefaultStockChartSeriesCore();
 }
@@ -372,6 +383,7 @@ export function createDefaultStockChartSeries() {
 
 
 
+/** Create default surface chart series configuration */
 export function createDefaultSurfaceChartSeries() {
   return createDefaultSurfaceChartSeriesCore();
 }

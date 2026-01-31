@@ -42,6 +42,7 @@ export type ChartShapePropertiesEditorProps = EditorProps<ChartShapeProperties |
 
 
 
+/** PPTX chart shape properties editor component */
 export function ChartShapePropertiesEditor(props: ChartShapePropertiesEditorProps) {
   return <CoreChartShapePropertiesEditor {...props} adapters={pptxChartEditorAdapters} />;
 }
@@ -71,6 +72,7 @@ export function ChartShapePropertiesEditor(props: ChartShapePropertiesEditorProp
 
 
 
+/** Create default chart shape properties configuration */
 export function createDefaultChartShapeProperties() {
   return createDefaultChartShapePropertiesCore();
 }

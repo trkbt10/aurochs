@@ -1,3 +1,7 @@
+/**
+ * @file Repository path utilities for tests
+ */
+
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -36,6 +40,9 @@ export const REPO_ROOT_DIR = path.resolve(__dirname, "../../../../..");
 
 
 
+/**
+ * Resolve a relative path from repository root and verify it exists.
+ */
 export function resolveRepoPath(relativePath: string): string {
   if (!relativePath) {
     throw new Error("relativePath is required");

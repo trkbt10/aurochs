@@ -161,6 +161,9 @@ function PointGrid({ points, selectedIndex, disabled, onSelect }: PointGridProps
 
 
 
+/**
+ * Editor for DiagramDataModel (points and connections).
+ */
 export function DiagramEditor<TTextBody, TShapeProperties>({
   value,
   onChange,
@@ -328,6 +331,9 @@ function getPointDisplayText(point: DiagramPoint): string {
 
 
 
+/**
+ * Create an empty default DiagramDataModel.
+ */
 export function createDefaultDiagramDataModel(): DiagramDataModel {
   return {
     points: [],

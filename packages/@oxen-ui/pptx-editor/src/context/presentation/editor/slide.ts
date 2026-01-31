@@ -53,6 +53,7 @@ function findMaxNumericId(slides: readonly SlideWithId[]): number {
 
 
 
+/** Generate a unique slide ID for the document */
 export function generateSlideId(document: PresentationDocument): SlideId {
   return String(findMaxNumericId(document.slides) + 1);
 }
@@ -96,6 +97,7 @@ export function generateSlideId(document: PresentationDocument): SlideId {
 
 
 
+/** Find a slide by its ID in the document */
 export function findSlideById(
   document: PresentationDocument,
   slideId: SlideId
@@ -138,6 +140,7 @@ export function findSlideById(
 
 
 
+/** Get the index of a slide by its ID in the document */
 export function getSlideIndex(
   document: PresentationDocument,
   slideId: SlideId
@@ -214,6 +217,7 @@ function getInsertIndexForAddSlide(
 
 
 
+/** Add a new slide to the document at the specified position */
 export function addSlide({
   document,
   slide,
@@ -272,6 +276,7 @@ export function addSlide({
 
 
 
+/** Delete a slide from the document by its ID */
 export function deleteSlide(
   document: PresentationDocument,
   slideId: SlideId
@@ -329,6 +334,7 @@ function createDuplicatedSlide(
 
 
 
+/** Duplicate an existing slide in the document */
 export function duplicateSlide(
   document: PresentationDocument,
   slideId: SlideId
@@ -401,6 +407,7 @@ function moveElementInArray<T>(
 
 
 
+/** Move a slide to a new position in the document */
 export function moveSlide(
   document: PresentationDocument,
   slideId: SlideId,
@@ -450,6 +457,7 @@ export function moveSlide(
 
 
 
+/** Update a slide in the document using an updater function */
 export function updateSlide(
   document: PresentationDocument,
   slideId: SlideId,
@@ -496,6 +504,7 @@ export function updateSlide(
 
 
 
+/** Update a slide entry in the document using an updater function */
 export function updateSlideEntry(
   document: PresentationDocument,
   slideId: SlideId,

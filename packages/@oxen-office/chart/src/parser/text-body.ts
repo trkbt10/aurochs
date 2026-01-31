@@ -66,6 +66,9 @@ function mapParagraphAlignment(algn: string | undefined): ParagraphProperties["a
 
 
 
+/**
+ * Parse run properties (a:rPr) from an XML element.
+ */
 export function parseRunProperties(rPr: XmlElement | undefined): RunProperties | undefined {
   if (!rPr) {return undefined;}
 
@@ -122,6 +125,9 @@ export function parseRunProperties(rPr: XmlElement | undefined): RunProperties |
 
 
 
+/**
+ * Parse paragraph properties (a:pPr) from an XML element.
+ */
 export function parseParagraphProperties(pPr: XmlElement | undefined): ParagraphProperties {
   if (!pPr) {return {};}
 
@@ -189,6 +195,9 @@ function parseTextRun(child: XmlElement): TextRun | undefined {
 
 
 
+/**
+ * Parse a paragraph element (a:p) from an XML element.
+ */
 export function parseParagraph(element: XmlElement): Paragraph {
   const pPr = getChild(element, "a:pPr");
   const endParaRPr = getChild(element, "a:endParaRPr");
@@ -232,6 +241,9 @@ export function parseParagraph(element: XmlElement): Paragraph {
 
 
 
+/**
+ * Parse a text body element (c:tx/c:rich or similar) from an XML element.
+ */
 export function parseTextBody(txBody: XmlElement | undefined): TextBody | undefined {
   if (!txBody) {return undefined;}
 

@@ -134,6 +134,7 @@ function parseFunctionType2(page: NativePdfPage, obj: PdfObject | undefined): Pd
 
 
 
+/** Parse a shading dictionary or stream into a PdfShading object. */
 export function parseShadingObjectNative(page: NativePdfPage, obj: PdfObject | undefined): PdfShading | null {
   const dict = resolveDictOrStreamDict(page, obj);
   if (!dict) {return null;}
@@ -220,6 +221,7 @@ export function parseShadingObjectNative(page: NativePdfPage, obj: PdfObject | u
 
 
 
+/** Extract shading definitions from PDF page resources. */
 export function extractShadingFromResourcesNative(page: NativePdfPage, resources: PdfDict | null): ReadonlyMap<string, PdfShading> {
   if (!resources) {return new Map();}
 
@@ -266,6 +268,7 @@ export function extractShadingFromResourcesNative(page: NativePdfPage, resources
 
 
 
+/** Extract all shadings from a PDF page's default resources. */
 export function extractShadingNative(page: NativePdfPage): ReadonlyMap<string, PdfShading> {
   return extractShadingFromResourcesNative(page, page.getResourcesDict());
 }

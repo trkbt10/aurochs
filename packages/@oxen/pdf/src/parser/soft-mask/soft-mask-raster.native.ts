@@ -505,6 +505,7 @@ function rasterizeSoftMaskedFillPathInternal(parsed: ParsedPath): PdfImage | nul
 
 
 
+/** Rasterize a fill path with soft mask applied as a PDF image. */
 export function rasterizeSoftMaskedFillPath(parsed: ParsedPath): PdfImage | null {
   return rasterizeSoftMaskedFillPathInternal(parsed);
 }

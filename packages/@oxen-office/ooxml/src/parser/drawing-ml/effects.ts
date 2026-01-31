@@ -51,6 +51,7 @@ function getEffectColor(element: XmlElement, overrideColor?: Color): Color | und
 
 
 
+/** Parse an outer shadow effect (a:outerShdw) element. */
 export function parseOuterShadowEffect(element: XmlElement, overrideColor?: Color): ShadowEffect | undefined {
   const color = getEffectColor(element, overrideColor);
   if (!color) {return undefined;}
@@ -95,6 +96,7 @@ export function parseOuterShadowEffect(element: XmlElement, overrideColor?: Colo
 
 
 
+/** Parse an inner shadow effect (a:innerShdw) element. */
 export function parseInnerShadowEffect(element: XmlElement, overrideColor?: Color): ShadowEffect | undefined {
   const color = getEffectColor(element, overrideColor);
   if (!color) {return undefined;}
@@ -133,6 +135,7 @@ export function parseInnerShadowEffect(element: XmlElement, overrideColor?: Colo
 
 
 
+/** Parse a glow effect (a:glow) element. */
 export function parseGlowEffect(element: XmlElement, overrideColor?: Color): GlowEffect | undefined {
   const color = getEffectColor(element, overrideColor);
   if (!color) {return undefined;}
@@ -168,6 +171,7 @@ export function parseGlowEffect(element: XmlElement, overrideColor?: Color): Glo
 
 
 
+/** Parse a reflection effect (a:reflection) element. */
 export function parseReflectionEffect(element: XmlElement): ReflectionEffect | undefined {
   return {
     blurRadius: getEmuAttr(element, "blurRad") ?? px(0),
@@ -212,6 +216,7 @@ export function parseReflectionEffect(element: XmlElement): ReflectionEffect | u
 
 
 
+/** Parse a soft edge effect (a:softEdge) element. */
 export function parseSoftEdgeEffect(element: XmlElement): SoftEdgeEffect | undefined {
   const radius = getEmuAttr(element, "rad");
   if (radius === undefined) {return undefined;}
@@ -244,6 +249,7 @@ export function parseSoftEdgeEffect(element: XmlElement): SoftEdgeEffect | undef
 
 
 
+/** Parse effects from shape properties (a:effectLst or a:effectDag). */
 export function parseEffects(spPr: XmlElement | undefined, overrideColor?: Color): Effects | undefined {
   if (!spPr) {return undefined;}
 

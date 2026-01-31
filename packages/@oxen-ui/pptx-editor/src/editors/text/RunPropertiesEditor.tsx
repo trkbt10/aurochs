@@ -60,6 +60,7 @@ export type RunPropertiesEditorProps = EditorProps<RunProperties> & {
 
 
 
+/** Editor component for text run properties */
 export function RunPropertiesEditor({
   value,
   onChange,

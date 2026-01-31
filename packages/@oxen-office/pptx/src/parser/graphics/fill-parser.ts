@@ -54,6 +54,7 @@ import { parseBlipCompression, parseRectAlignment } from "../primitive";
 
 
 
+/** Find fill element in parent element */
 export function findFillElement(parent: XmlElement): XmlElement | undefined {
   return findOoxmlFillElement(parent);
 }
@@ -300,6 +301,7 @@ function parseBlipFill(element: XmlElement): BlipFill | undefined {
 
 
 
+/** Parse fill from XML element including PPTX-specific BlipFill */
 export function parseFill(element: XmlElement | undefined): Fill | undefined {
   if (!element) {return undefined;}
 
@@ -335,6 +337,7 @@ export function parseFill(element: XmlElement | undefined): Fill | undefined {
 
 
 
+/** Parse fill from parent element by finding fill child */
 export function parseFillFromParent(parent: XmlElement | undefined): Fill | undefined {
   if (!parent) {return undefined;}
   const fillEl = findFillElement(parent);
@@ -370,6 +373,7 @@ export function parseFillFromParent(parent: XmlElement | undefined): Fill | unde
 
 
 
+/** Resolve fill from style reference using theme fill styles */
 export function resolveFillFromStyleReference(
   fillRef: StyleReference | undefined,
   fillStyles: readonly XmlElement[],

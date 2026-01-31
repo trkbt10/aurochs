@@ -1,3 +1,5 @@
+/** @file Unit tests for OOXML primitive parsing utilities */
+
 import {
   getAngleAttr,
   getBoolAttr,

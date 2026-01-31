@@ -1,3 +1,4 @@
+/** @file Shape tree patching utilities for spTree manipulation */
 import type { XmlElement } from "@oxen/xml";
 import { isXmlElement } from "@oxen/xml";
 import { insertChildAt, removeChildAt, replaceChildAt } from "../core/xml-mutator";

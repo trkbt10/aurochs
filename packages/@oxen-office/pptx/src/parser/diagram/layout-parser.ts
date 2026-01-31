@@ -38,6 +38,7 @@ import { parseTextBody } from "../text/text-parser";
 
 
 
+/** Parse diagram layout definition from XML document */
 export function parseDiagramLayoutDefinition(doc: XmlDocument) {
   return parseDiagramLayoutDefinitionBase(doc, { parseShapeProperties, parseTextBody });
 }
@@ -67,6 +68,7 @@ export function parseDiagramLayoutDefinition(doc: XmlDocument) {
 
 
 
+/** Parse diagram layout definition header from XML */
 export function parseDiagramLayoutDefinitionHeader(...args: Parameters<typeof parseDiagramLayoutDefinitionHeaderBase>) {
   return parseDiagramLayoutDefinitionHeaderBase(...args);
 }
@@ -96,6 +98,7 @@ export function parseDiagramLayoutDefinitionHeader(...args: Parameters<typeof pa
 
 
 
+/** Parse list of diagram layout definition headers from XML */
 export function parseDiagramLayoutDefinitionHeaderList(...args: Parameters<typeof parseDiagramLayoutDefinitionHeaderListBase>) {
   return parseDiagramLayoutDefinitionHeaderListBase(...args);
 }

@@ -1,3 +1,4 @@
+/** @file Converts diagram layout results to PPTX shape format */
 import type { LayoutShapeResult } from "@oxen-office/diagram/domain/layout-shape-result";
 import { deg, px } from "@oxen-office/ooxml/domain/units";
 import type { Fill } from "../domain/color/types";
@@ -82,6 +83,7 @@ function toTextBody(result: LayoutShapeResult): TextBody | undefined {
 
 
 
+/** Convert a diagram layout result to a PPTX SpShape */
 export function convertLayoutResultToSpShape(result: LayoutShapeResult): SpShape {
   const geometry = toPresetGeometry(result.geometry);
 

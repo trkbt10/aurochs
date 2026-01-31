@@ -85,6 +85,9 @@ function clampSelection(value: string, start: number, end: number): readonly [nu
 
 
 
+/**
+ * Hidden textarea for capturing native text input/IME events.
+ */
 export function DocxTextInputFrame({
   value,
   selectionStart,

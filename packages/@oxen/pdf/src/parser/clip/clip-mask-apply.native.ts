@@ -57,6 +57,7 @@ function sampleMaskAlphaInPageSpace(mask: PdfSoftMask, x: number, y: number): nu
 
 
 
+/** Apply the graphics state clip mask to a PDF image by modulating its alpha channel. */
 export function applyGraphicsClipMaskToPdfImage(image: PdfImage): PdfImage {
   const gs = image.graphicsState;
   const clipMask = gs.clipMask;
@@ -132,6 +133,7 @@ export function applyGraphicsClipMaskToPdfImage(image: PdfImage): PdfImage {
 
 
 
+/** Build a page-space soft mask from a clip mask with appropriate matrix transformation. */
 export function buildPageSpaceSoftMaskForClipMask(gsCtm: PdfMatrix, clipMask: PdfSoftMask): PdfSoftMask | null {
   const ctmInv = invertMatrix(gsCtm);
   if (!ctmInv) {return null;}

@@ -128,3 +128,35 @@ export { patchChart, patchChartElement, patchChartTransform } from "./chart/char
 
 export type { OleChange } from "./ole";
 export { patchOleObject } from "./ole";
+
+// Serializers
+export {
+  serializeColor,
+  serializeFill,
+  serializeGradientFill,
+  serializePatternFill,
+  serializeBlipFill,
+  serializeBlipEffects,
+  serializeLine,
+  serializeEffects,
+  serializeTransform,
+  patchTransformElement,
+  serializeShape3d,
+  serializeTextBody,
+  patchTextBodyElement,
+  serializeParagraph,
+  serializeBodyProperties,
+  serializeParagraphProperties,
+  serializeRunProperties,
+  serializeEndParaRunProperties,
+  serializeDrawingTable,
+  isTransitionType,
+  serializeSlideTransition,
+  TRANSITION_TYPES,
+  serializeCustomGeometry,
+  serializeGeometryPath,
+  serializePathCommand,
+} from "./serializer";
+
+// Re-export parseXml from @oxen/xml for convenience
+export { parseXml } from "@oxen/xml";

@@ -1,3 +1,4 @@
+/** @file Theme patcher exports */
 export { patchSchemeColor } from "./color-scheme-patcher";
 
 export { patchMajorFont, patchMinorFont } from "./font-scheme-patcher";

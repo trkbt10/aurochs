@@ -1,9 +1,4 @@
-/**
- * Regression test for domain type import conventions.
- *
- * P1-008: PPTX domain files should import OOXML `Color` directly, not via
- * `domain/color/types.ts`.
- */
+/** @file Regression tests for domain type import conventions */
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";

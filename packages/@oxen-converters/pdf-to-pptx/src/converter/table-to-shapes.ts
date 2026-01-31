@@ -37,6 +37,34 @@ export type TableDecorationAnalysis = {
   readonly cellFills: ReadonlyMap<string, Fill>;
 };
 
+function computeCellBorders(
+  decoration: TableDecorationAnalysis | null | undefined,
+  ri: number,
+  ci: number,
+  rowSpan: number,
+  colSpan: number,
+  rowCount: number,
+  colCount: number,
+): { top?: Line; left?: Line; right?: Line; bottom?: Line } | undefined {
+  if (!decoration) {
+    return undefined;
+  }
+  const v = decoration.verticalBorders;
+  const h = decoration.horizontalBorders;
+  const top = ri === 0 ? h[0] : undefined;
+  const left = ci === 0 ? v[0] : undefined;
+  const right = v[Math.min(colCount, ci + colSpan)];
+  const bottom = h[Math.min(rowCount, ri + rowSpan)];
+
+  const out = {
+    ...(top ? { top } : {}),
+    ...(left ? { left } : {}),
+    ...(right ? { right } : {}),
+    ...(bottom ? { bottom } : {}),
+  };
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
 function normalizeBBox(b: BBox): BBox {
   return {
     x0: Math.min(b.x0, b.x1),
@@ -958,23 +986,7 @@ function buildTableFromInference(
       const rowSpan = Math.max(1, seg?.rowSpan ?? 1);
       const colSpan = Math.max(1, seg?.colSpan ?? 1);
 
-      const borders: { top?: Line; left?: Line; right?: Line; bottom?: Line } | undefined = (() => {
-        if (!decoration) {return undefined;}
-        const v = decoration.verticalBorders;
-        const h = decoration.horizontalBorders;
-        const top = ri === 0 ? h[0] : undefined;
-        const left = ci === 0 ? v[0] : undefined;
-        const right = v[Math.min(colCount, ci + colSpan)];
-        const bottom = h[Math.min(rowCount, ri + rowSpan)];
-
-        const out = {
-          ...(top ? { top } : {}),
-          ...(left ? { left } : {}),
-          ...(right ? { right } : {}),
-          ...(bottom ? { bottom } : {}),
-        };
-        return Object.keys(out).length > 0 ? out : undefined;
-      })();
+      const borders = computeCellBorders(decoration, ri, ci, rowSpan, colSpan, rowCount, colCount);
 
       const fill: Fill = seg ? resolveMergedCellFill({ ri, ci, rowSpan, colSpan }) : (decoration?.cellFills.get(`${ri},${ci}`) ?? noFill());
 

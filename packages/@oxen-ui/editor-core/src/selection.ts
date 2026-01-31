@@ -44,6 +44,9 @@ export type SelectionPrimaryFallback = "first" | "last";
 
 
 
+/**
+ * Create an empty selection state with no selected items.
+ */
 export function createEmptySelection<TId>(): SelectionState<TId> {
   return {
     selectedIds: [],
@@ -76,6 +79,9 @@ export function createEmptySelection<TId>(): SelectionState<TId> {
 
 
 
+/**
+ * Create a selection state with a single selected item.
+ */
 export function createSingleSelection<TId>(id: TId): SelectionState<TId> {
   return {
     selectedIds: [id],
@@ -108,6 +114,9 @@ export function createSingleSelection<TId>(id: TId): SelectionState<TId> {
 
 
 
+/**
+ * Create a selection state with multiple selected items.
+ */
 export function createMultiSelection<TId>(params: {
   readonly selectedIds: readonly TId[];
   readonly primaryId: TId;
@@ -151,6 +160,9 @@ export function createMultiSelection<TId>(params: {
 
 
 
+/**
+ * Add an item to the selection, making it the primary item.
+ */
 export function addToSelection<TId>(
   selection: SelectionState<TId>,
   id: TId,
@@ -189,6 +201,9 @@ export function addToSelection<TId>(
 
 
 
+/**
+ * Remove an item from the selection.
+ */
 export function removeFromSelection<TId>(params: {
   readonly selection: SelectionState<TId>;
   readonly id: TId;
@@ -236,6 +251,9 @@ export function removeFromSelection<TId>(params: {
 
 
 
+/**
+ * Toggle an item in the selection (add if not present, remove if present).
+ */
 export function toggleSelection<TId>(params: {
   readonly selection: SelectionState<TId>;
   readonly id: TId;
@@ -277,6 +295,9 @@ export function toggleSelection<TId>(params: {
 
 
 
+/**
+ * Check if an item is selected.
+ */
 export function isSelected<TId>(selection: SelectionState<TId>, id: TId): boolean {
   return selection.selectedIds.includes(id);
 }
@@ -306,6 +327,9 @@ export function isSelected<TId>(selection: SelectionState<TId>, id: TId): boolea
 
 
 
+/**
+ * Check if the selection is empty.
+ */
 export function isSelectionEmpty<TId>(selection: SelectionState<TId>): boolean {
   return selection.selectedIds.length === 0;
 }

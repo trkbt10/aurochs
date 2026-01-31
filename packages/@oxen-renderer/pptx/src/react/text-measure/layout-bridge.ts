@@ -161,6 +161,9 @@ function applyMeasuredWidths(
 
 
 
+/**
+ * Create a paragraph measurer for text layout that bridges to SVG measurement.
+ */
 export function createLayoutParagraphMeasurer():
   | ((paragraph: LayoutParagraphInput) => { spans: MeasuredSpan[]; bulletWidth?: MeasuredSpan["width"] })
   | null {

@@ -38,6 +38,7 @@ const JP2_SIGNATURE = new Uint8Array([0x0d, 0x0a, 0x87, 0x0a]);
 
 
 
+/** Extract the JPEG 2000 codestream from a JP2 file container. */
 export function extractJp2Codestream(jpxBytes: Uint8Array): Uint8Array {
   if (!jpxBytes) {throw new Error("jpxBytes is required");}
   if (jpxBytes.length < 12) {throw new Error("JP2: input too short");}

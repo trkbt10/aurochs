@@ -1,3 +1,4 @@
+/** @file Relationship document creation utilities */
 import { createElement, type XmlDocument, type XmlElement } from "@oxen/xml";
 
 export const RELATIONSHIPS_XMLNS = "http://schemas.openxmlformats.org/package/2006/relationships";
@@ -41,6 +42,7 @@ export type RelationshipDefinition = {
 
 
 
+/** Create a relationships XML document from relationship definitions */
 export function createRelationshipsDocument(
   relationships: readonly RelationshipDefinition[] = [],
 ): XmlDocument {

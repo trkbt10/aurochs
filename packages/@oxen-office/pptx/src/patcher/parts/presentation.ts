@@ -74,6 +74,7 @@ type AddSlideToListArgs = [
 
 
 
+/** Add a slide reference to the presentation's slide list */
 export function addSlideToList(...args: AddSlideToListArgs): XmlDocument {
   const [presentationXml, slideId, rId, position] = args;
   if (!Number.isInteger(slideId) || slideId <= 0) {

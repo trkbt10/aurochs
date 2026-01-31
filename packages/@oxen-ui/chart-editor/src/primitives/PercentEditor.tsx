@@ -40,6 +40,9 @@ export type PercentEditorProps = EditorProps<Percent> & {
 
 
 
+/**
+ * Editor component for Percent values with optional slider mode.
+ */
 export function PercentEditor({
   value,
   onChange,

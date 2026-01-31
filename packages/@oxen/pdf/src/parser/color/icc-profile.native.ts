@@ -157,6 +157,7 @@ function parseCurveTag(tag: Uint8Array): IccCurve | null {
 
 
 
+/** Evaluate an ICC tone reproduction curve at a normalized input value. */
 export function evalIccCurve(curve: IccCurve, x01: number): number {
   const x = Math.min(1, Math.max(0, x01));
   if (curve.kind === "gamma") {
@@ -248,6 +249,7 @@ function invertMat3(m: readonly number[]): readonly number[] | null {
 
 
 
+/** Create a Bradford chromatic adaptation matrix to convert between white points. */
 export function makeBradfordAdaptationMatrix(args: {
   readonly srcWhitePoint: readonly [number, number, number];
   readonly dstWhitePoint?: readonly [number, number, number];
@@ -453,6 +455,7 @@ function parseLutTag(tag: Uint8Array): IccLutTransform | null {
 
 
 
+/** Evaluate an ICC LUT-based profile's A2B0 tag to convert device values to PCS. */
 export function evalIccLutToPcs01(profile: IccLutProfile, inputs01: readonly number[]): readonly [number, number, number] | null {
   const lut = profile.a2b0;
   if (lut.outChannels !== 3) {return null;}
@@ -568,6 +571,7 @@ export function evalIccLutToPcs01(profile: IccLutProfile, inputs01: readonly num
 
 
 
+/** Parse an ICC color profile from raw bytes. */
 export function parseIccProfile(bytes: Uint8Array): ParsedIccProfile | null {
   if (!bytes) {throw new Error("bytes is required");}
   if (bytes.length < 132) {return null;}

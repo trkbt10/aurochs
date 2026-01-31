@@ -168,6 +168,7 @@ export type CreateTableGraphicFrameOptions = {
 
 
 
+/** Create a table graphic frame with the specified dimensions */
 export function createTableGraphicFrame({ id, bounds, rows, cols }: CreateTableGraphicFrameOptions): GraphicFrame {
   return {
     type: "graphicFrame",
@@ -322,6 +323,7 @@ export type CreateOleGraphicFrameOptions = {
 
 
 
+/** Create an OLE object graphic frame for embedding external documents */
 export function createOleGraphicFrame({ id, bounds, oleType, embedData, filename }: CreateOleGraphicFrameOptions): GraphicFrame {
   const typeInfo = OLE_TYPE_MAP[oleType];
   const objectName = filename.replace(/\.[^/.]+$/, ""); // Remove extension

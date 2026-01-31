@@ -1,3 +1,4 @@
+/** @file Master slide patcher exports */
 export type { BulletElementName } from "./default-text-style-patcher";
 export {
   patchTextStyleLevelByNumber,

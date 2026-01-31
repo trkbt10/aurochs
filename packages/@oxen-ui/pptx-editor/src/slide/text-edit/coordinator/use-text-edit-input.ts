@@ -141,6 +141,7 @@ function areSelectionsEqual(
 
 
 
+/** Hook for managing text input, selection, and save-on-unmount */
 export function useTextEditInput({
   textareaRef,
   currentTextBody,

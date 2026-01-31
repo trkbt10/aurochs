@@ -108,6 +108,7 @@ function patchFont(
 
 
 
+/** Patch the major font in a font scheme element */
 export function patchMajorFont(fontScheme: XmlElement, fontFamily: FontSpec): XmlElement {
   if (!fontScheme) {
     throw new Error("patchMajorFont requires fontScheme.");
@@ -148,6 +149,7 @@ export function patchMajorFont(fontScheme: XmlElement, fontFamily: FontSpec): Xm
 
 
 
+/** Patch the minor font in a font scheme element */
 export function patchMinorFont(fontScheme: XmlElement, fontFamily: FontSpec): XmlElement {
   if (!fontScheme) {
     throw new Error("patchMinorFont requires fontScheme.");

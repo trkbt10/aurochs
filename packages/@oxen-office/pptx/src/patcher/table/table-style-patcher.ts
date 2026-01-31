@@ -52,6 +52,7 @@ function ensureTblPr(table: XmlElement): XmlElement {
 
 
 
+/** Patch the table style ID reference on a table element */
 export function patchTableStyleId(tableElement: XmlElement, styleId: string | undefined): XmlElement {
   requireTable(tableElement);
 

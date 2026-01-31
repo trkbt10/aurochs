@@ -44,6 +44,7 @@ export type AxisEditorProps = EditorProps<Axis> & {
 
 
 
+/** PPTX chart axis editor component */
 export function AxisEditor(props: AxisEditorProps) {
   return <CoreAxisEditor {...props} adapters={pptxChartEditorAdapters} />;
 }
@@ -73,6 +74,7 @@ export function AxisEditor(props: AxisEditorProps) {
 
 
 
+/** Create default axis configuration */
 export function createDefaultAxis() {
   return createDefaultAxisCore();
 }
@@ -102,6 +104,7 @@ export function createDefaultAxis() {
 
 
 
+/** Create default category axis configuration */
 export function createDefaultCategoryAxis() {
   return createDefaultCategoryAxisCore();
 }
@@ -131,6 +134,7 @@ export function createDefaultCategoryAxis() {
 
 
 
+/** Create default value axis configuration */
 export function createDefaultValueAxis() {
   return createDefaultValueAxisCore();
 }

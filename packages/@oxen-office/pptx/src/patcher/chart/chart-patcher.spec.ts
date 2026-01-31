@@ -1,3 +1,4 @@
+/** @file Unit tests for chart patching operations */
 import { getByPath, getChild, getChildren, getTextByPath, parseXml } from "@oxen/xml";
 import { deg, px } from "@oxen-office/ooxml/domain/units";
 import { patchChart, patchChartTransform } from "./chart-patcher";

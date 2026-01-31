@@ -1,3 +1,7 @@
+/**
+ * @file Chart render context adapter for PPTX rendering
+ */
+
 import type { ChartRenderContext, FillResolver, ResolvedFill, ResolvedTextStyle } from "@oxen-renderer/chart";
 import type { GenericTextBody } from "@oxen-renderer/chart";
 import type { BaseFill } from "@oxen-office/ooxml/domain/fill";
@@ -78,6 +82,9 @@ function resolveFillForChartRender(fill: BaseFill, ctx: CoreRenderContext): Reso
 
 
 
+/**
+ * Create a FillResolver that adapts PPTX fill resolution to chart renderer.
+ */
 export function createFillResolver(ctx: CoreRenderContext): FillResolver {
   return {
     resolve: (fill) => resolveFillForChartRender(fill, ctx),
@@ -109,6 +116,9 @@ export function createFillResolver(ctx: CoreRenderContext): FillResolver {
 
 
 
+/**
+ * Create a ChartRenderContext from a PPTX CoreRenderContext.
+ */
 export function createChartRenderContext(ctx: CoreRenderContext): ChartRenderContext {
   return {
     getSeriesColor: (index: number, explicit?: BaseFill): string => {

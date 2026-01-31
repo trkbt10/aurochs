@@ -236,6 +236,7 @@ export function decodeText(
 
 
 
+/** Decode raw PDF text string using font encoding and mapping information. */
 export function decodeTextWithFontInfo(rawText: string, fontInfo: FontInfo): string {
   const { mapping, codeByteWidth, ordering, encodingMap } = fontInfo;
 

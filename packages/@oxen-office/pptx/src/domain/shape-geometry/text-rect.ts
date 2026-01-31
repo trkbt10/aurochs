@@ -405,6 +405,7 @@ export type ApplyTextInsetsOptions = {
 
 
 
+/** Apply text insets to a text rectangle and return the adjusted bounds */
 export function applyTextInsets(
   {
     textRect,

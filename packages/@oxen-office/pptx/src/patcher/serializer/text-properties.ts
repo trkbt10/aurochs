@@ -351,6 +351,7 @@ function serializeRunPropertiesElement(
 
 
 
+/** Serialize run properties to a:rPr element */
 export function serializeRunProperties(props: RunProperties): XmlElement {
   return serializeRunPropertiesElement(props, "a:rPr");
 }
@@ -385,6 +386,7 @@ export function serializeRunProperties(props: RunProperties): XmlElement {
 
 
 
+/** Serialize body properties to a:bodyPr element */
 export function serializeBodyProperties(props: BodyProperties): XmlElement {
   if (props.textWarp !== undefined) {
     throw new Error("a:bodyPr serialization does not support textWarp yet");
@@ -475,6 +477,7 @@ export function serializeBodyProperties(props: BodyProperties): XmlElement {
 
 
 
+/** Serialize paragraph properties to a:pPr element */
 export function serializeParagraphProperties(props: ParagraphProperties): XmlElement {
   const attrs: Record<string, string> = {};
 
@@ -536,6 +539,7 @@ export function serializeParagraphProperties(props: ParagraphProperties): XmlEle
 
 
 
+/** Serialize end paragraph run properties to a:endParaRPr element */
 export function serializeEndParaRunProperties(props: RunProperties): XmlElement {
   return serializeRunPropertiesElement(props, "a:endParaRPr");
 }
@@ -570,6 +574,7 @@ export function serializeEndParaRunProperties(props: RunProperties): XmlElement 
 
 
 
+/** Serialize text content to a:t element */
 export function serializeText(text: string): XmlElement {
   const needsPreserve = /(^\s|\s$|\s{2,}|\t)/.test(text);
   const attrs: Record<string, string> = needsPreserve ? { "xml:space": "preserve" } : {};

@@ -54,6 +54,7 @@ export type DecodeImageXObjectStreamNativeArgs = {
 
 
 
+/** Decode an Image XObject stream into a PdfImage with pixel data. */
 export function decodeImageXObjectStreamNative(
   args: DecodeImageXObjectStreamNativeArgs
 ): PdfImage | null {

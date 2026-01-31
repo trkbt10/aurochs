@@ -505,6 +505,7 @@ function findNotesSlideToSlideRelationshipId(notesRelsXml: XmlDocument): string 
 
 
 
+/** Add a new slide to the presentation using the specified layout */
 export async function addSlide(
   doc: PresentationDocument,
   layoutPath: string,
@@ -806,9 +807,7 @@ export async function duplicateSlide(
     `/ppt/slides/${slideFilename}.xml`,
     CONTENT_TYPES.SLIDE,
   );
-  const updatedContentTypesXml = notesSlidePath
-    ? addOverride(withSlideOverride, `/${notesSlidePath}`, CONTENT_TYPES.NOTES)
-    : withSlideOverride;
+  const updatedContentTypesXml = notesSlidePath ? addOverride(withSlideOverride, `/${notesSlidePath}`, CONTENT_TYPES.NOTES) : withSlideOverride;
 
   writeXml(pkg, PRESENTATION_XML_PATH, updatedPresentationXml);
   writeXml(pkg, PRESENTATION_RELS_PATH, updatedPresentationRelsXml);

@@ -108,6 +108,7 @@ type AddOleObjectArgs = [
 
 
 
+/** Add an OLE object to the package embeddings folder */
 export function addOleObject(
   ...args: AddOleObjectArgs
 ): { readonly path: string; readonly rId: string; readonly progId: string } {

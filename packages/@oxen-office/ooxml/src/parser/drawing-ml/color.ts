@@ -63,6 +63,7 @@ const COLOR_ELEMENT_NAMES = [
 
 
 
+/** Find the first color element child (srgbClr, schemeClr, etc.) in a parent element. */
 export function findColorElement(parent: XmlElement): XmlElement | undefined {
   return findChild(parent, (child) =>
     COLOR_ELEMENT_NAMES.includes(child.name as typeof COLOR_ELEMENT_NAMES[number]),
@@ -302,6 +303,7 @@ function parseColorTransforms(element: XmlElement): ColorTransform | undefined {
 
 
 
+/** Parse a color element into a Color domain object with optional transforms. */
 export function parseColor(element: XmlElement | undefined): Color | undefined {
   if (!element) {return undefined;}
 
@@ -338,6 +340,7 @@ export function parseColor(element: XmlElement | undefined): Color | undefined {
 
 
 
+/** Find and parse a color element from a parent element. */
 export function parseColorFromParent(parent: XmlElement | undefined): Color | undefined {
   if (!parent) {return undefined;}
   const colorEl = findColorElement(parent);

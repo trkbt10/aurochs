@@ -151,6 +151,7 @@ function resolveLineJoin(element: XmlElement): BaseLine["join"] {
 
 
 
+/** Parse a line element (a:ln) into a BaseLine domain object. */
 export function parseLine(element: XmlElement | undefined): BaseLine | undefined {
   if (!element) {return undefined;}
 
@@ -201,6 +202,7 @@ export function parseLine(element: XmlElement | undefined): BaseLine | undefined
 
 
 
+/** Get and parse the line element from shape properties. */
 export function getLineFromProperties(spPr: XmlElement | undefined): BaseLine | undefined {
   if (!spPr) {return undefined;}
   return parseLine(getChild(spPr, "a:ln"));

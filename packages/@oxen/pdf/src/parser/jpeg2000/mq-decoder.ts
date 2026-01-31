@@ -57,6 +57,7 @@ const MQ_SWITCH: readonly number[] = [
 
 
 
+/** MQ arithmetic decoder for JPEG 2000 entropy coding. */
 export class MqDecoder {
   private readonly data: Uint8Array;
   private bp: number;

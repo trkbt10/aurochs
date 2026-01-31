@@ -1101,6 +1101,7 @@ function getTable(): Uint32Array {
 
 
 
+/** Decode an Adobe-Japan1 CID to its corresponding Unicode string. */
 export function decodeAdobeJapan1CidToUnicode(cid: number): string | null {
   if (!Number.isFinite(cid)) {return null;}
   const idx = Math.trunc(cid);

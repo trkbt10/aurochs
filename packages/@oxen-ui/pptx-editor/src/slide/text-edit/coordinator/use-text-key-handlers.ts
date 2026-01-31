@@ -51,6 +51,7 @@ type UseTextKeyHandlersResult = {
 
 
 
+/** Hook for handling key interactions (confirm/cancel) in text editor */
 export function useTextKeyHandlers({
   isComposing,
   onCancel,

@@ -1,3 +1,4 @@
+/** @file Shape serialization to PresentationML elements */
 import { createElement, type XmlElement } from "@oxen/xml";
 import type { Shape, SpShape, GrpShape, PicShape, CxnShape, GraphicFrame, NonVisualProperties, Geometry, PresetGeometry, CustomGeometry, GeometryPath, PathCommand, ConnectionTarget, OleReference } from "../../domain";
 import type { Transform, GroupTransform } from "../../domain/geometry";
@@ -508,6 +509,7 @@ function serializeGroupTransform(transform: GroupTransform): XmlElement {
 
 
 
+/** Serialize geometry to preset or custom geometry element */
 export function serializeGeometry(geometry: Geometry): XmlElement {
   switch (geometry.type) {
     case "preset":

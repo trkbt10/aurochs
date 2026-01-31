@@ -271,6 +271,7 @@ function getTargetGroup(
 
 
 
+/** Move a shape to a new position in the hierarchy while preserving visual position */
 export function moveShapeInHierarchy(
   shapes: readonly Shape[],
   shapeId: ShapeId,

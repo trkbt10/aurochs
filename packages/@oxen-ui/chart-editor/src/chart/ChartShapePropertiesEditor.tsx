@@ -45,6 +45,9 @@ const containerStyle: CSSProperties = {
 
 
 
+/**
+ * Editor component for ChartShapeProperties.
+ */
 export function ChartShapePropertiesEditor({
   value,
   onChange,
@@ -121,6 +124,9 @@ export function ChartShapePropertiesEditor({
 
 
 
+/**
+ * Create a default ChartShapeProperties object.
+ */
 export function createDefaultChartShapeProperties(): ChartShapeProperties {
   return {};
 }

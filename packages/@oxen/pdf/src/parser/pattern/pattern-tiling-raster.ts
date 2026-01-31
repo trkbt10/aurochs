@@ -566,6 +566,7 @@ function parsePatternCellShapes(pattern: PdfTilingPattern): readonly CellShape[]
 
 
 
+/** Rasterize a path fill with a tiling pattern to a PDF image. */
 export function rasterizeTilingPatternFillPath(
   parsed: ParsedPath,
   pattern: PdfTilingPattern,

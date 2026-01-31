@@ -70,6 +70,7 @@ const PERCENT_100000 = 100000;
 
 
 
+/** Parse a string to a 32-bit signed integer. */
 export function parseInt32(value: string | undefined): number | undefined {
   if (value === undefined) {return undefined;}
   const num = parseInt(value, 10);
@@ -101,6 +102,7 @@ export function parseInt32(value: string | undefined): number | undefined {
 
 
 
+/** Parse a string to a 64-bit safe integer (JavaScript number range). */
 export function parseInt64(value: string | undefined): number | undefined {
   if (value === undefined) {return undefined;}
   const num = parseInt(value, 10);
@@ -134,6 +136,7 @@ export function parseInt64(value: string | undefined): number | undefined {
 
 
 
+/** Parse a string to an unsigned 32-bit integer (0 to 4294967295). */
 export function parseUnsignedInt(value: string | undefined): number | undefined {
   const num = parseInt64(value);
   if (num === undefined) {return undefined;}
@@ -166,6 +169,7 @@ export function parseUnsignedInt(value: string | undefined): number | undefined 
 
 
 
+/** Parse a string to an index value (unsigned 32-bit integer). */
 export function parseIndex(value: string | undefined): number | undefined {
   return parseUnsignedInt(value);
 }
@@ -195,6 +199,7 @@ export function parseIndex(value: string | undefined): number | undefined {
 
 
 
+/** Parse a string to a 32-bit signed integer with a default fallback. */
 export function parseInt32Or(value: string | undefined, defaultValue: number): number {
   return parseInt32(value) ?? defaultValue;
 }
@@ -224,6 +229,7 @@ export function parseInt32Or(value: string | undefined, defaultValue: number): n
 
 
 
+/** Parse a string to a 64-bit floating-point number. */
 export function parseFloat64(value: string | undefined): number | undefined {
   if (value === undefined) {return undefined;}
   const num = parseFloat(value);
@@ -273,6 +279,7 @@ export function parseBoolean(value: string | undefined): boolean | undefined {
 
 
 
+/** Parse an OOXML boolean value with a default fallback. */
 export function parseBooleanOr(value: string | undefined, defaultValue: boolean): boolean {
   return parseBoolean(value) ?? defaultValue;
 }
@@ -370,6 +377,7 @@ export function parsePercentage100k(value: string | undefined): Percent | undefi
 
 
 
+/** Parse a percentage that must be non-negative (in 1000ths). */
 export function parsePositivePercentage(value: string | undefined): Percent | undefined {
   const p = parsePercentage(value);
   if (p === undefined || p < 0) {return undefined;}
@@ -401,6 +409,7 @@ export function parsePositivePercentage(value: string | undefined): Percent | un
 
 
 
+/** Parse a fixed percentage (0-100%, in 100000ths scale). */
 export function parseFixedPercentage(value: string | undefined): Percent | undefined {
   const p = parsePercentage100k(value);
   if (p === undefined || p < 0 || p > 100) {return undefined;}
@@ -470,6 +479,7 @@ export function parseSchemeColorValue(value: string | undefined): SchemeColorVal
 
 
 
+/** Get an EMU attribute and convert it to pixels. */
 export function getEmuAttr(element: XmlElement, name: string): Pixels | undefined {
   return parseEmu(getAttr(element, name));
 }
@@ -499,6 +509,7 @@ export function getEmuAttr(element: XmlElement, name: string): Pixels | undefine
 
 
 
+/** Get an angle attribute and convert it to degrees. */
 export function getAngleAttr(element: XmlElement, name: string): Degrees | undefined {
   return parseAngle(getAttr(element, name));
 }
@@ -528,6 +539,7 @@ export function getAngleAttr(element: XmlElement, name: string): Degrees | undef
 
 
 
+/** Get a boolean attribute from an element. */
 export function getBoolAttr(element: XmlElement | undefined, name: string): boolean | undefined {
   if (!element) {return undefined;}
   return parseBoolean(getAttr(element, name));
@@ -558,6 +570,7 @@ export function getBoolAttr(element: XmlElement | undefined, name: string): bool
 
 
 
+/** Get a boolean attribute with a default fallback. */
 export function getBoolAttrOr(element: XmlElement, name: string, defaultValue: boolean): boolean {
   return parseBooleanOr(getAttr(element, name), defaultValue);
 }
@@ -587,6 +600,7 @@ export function getBoolAttrOr(element: XmlElement, name: string, defaultValue: b
 
 
 
+/** Get an integer attribute from an element. */
 export function getIntAttr(element: XmlElement | undefined, name: string): number | undefined {
   if (!element) {return undefined;}
   return parseInt32(getAttr(element, name));
@@ -617,6 +631,7 @@ export function getIntAttr(element: XmlElement | undefined, name: string): numbe
 
 
 
+/** Get an integer attribute with a default fallback. */
 export function getIntAttrOr(element: XmlElement, name: string, defaultValue: number): number {
   return parseInt32Or(getAttr(element, name), defaultValue);
 }
@@ -646,6 +661,7 @@ export function getIntAttrOr(element: XmlElement, name: string, defaultValue: nu
 
 
 
+/** Get a floating-point attribute from an element. */
 export function getFloatAttr(element: XmlElement | undefined, name: string): number | undefined {
   if (!element) {return undefined;}
   return parseFloat64(getAttr(element, name));
@@ -676,6 +692,7 @@ export function getFloatAttr(element: XmlElement | undefined, name: string): num
 
 
 
+/** Get a percentage attribute (1000ths scale) and convert to percent. */
 export function getPercentAttr(element: XmlElement, name: string): Percent | undefined {
   return parsePercentage(getAttr(element, name));
 }
@@ -705,6 +722,7 @@ export function getPercentAttr(element: XmlElement, name: string): Percent | und
 
 
 
+/** Get a percentage attribute (100000ths scale) and convert to percent. */
 export function getPercent100kAttr(element: XmlElement, name: string): Percent | undefined {
   return parsePercentage100k(getAttr(element, name));
 }

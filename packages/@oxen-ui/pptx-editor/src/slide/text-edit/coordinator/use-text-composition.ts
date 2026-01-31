@@ -53,6 +53,7 @@ type UseTextCompositionResult = {
 
 
 
+/** Hook for managing IME composition lifecycle in text editor */
 export function useTextComposition({
   setComposition,
   initialCompositionState,

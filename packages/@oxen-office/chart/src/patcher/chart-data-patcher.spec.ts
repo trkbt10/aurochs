@@ -1,3 +1,7 @@
+/**
+ * @file Tests for chart data patcher
+ */
+
 import { getByPath, getChild, getChildren, getTextByPath, parseXml } from "@oxen/xml";
 import { patchChartData } from "./chart-data-patcher";
 

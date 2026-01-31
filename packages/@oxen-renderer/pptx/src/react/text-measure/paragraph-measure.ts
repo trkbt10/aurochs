@@ -223,6 +223,9 @@ function measureBulletWidth(
 
 
 
+/**
+ * Create a paragraph measurer using SVG text rendering.
+ */
 export function createParagraphMeasurer(): ParagraphMeasurer | null {
   const textNode = ensureSvgTextNode();
   if (!textNode) {

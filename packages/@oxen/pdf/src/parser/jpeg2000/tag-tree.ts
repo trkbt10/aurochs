@@ -38,6 +38,7 @@ type TagTreeNode = { value: number; low: number };
 
 
 
+/** Tag tree structure for JPEG 2000 packet header coding. */
 export class TagTree {
   private readonly width: number;
   private readonly height: number;

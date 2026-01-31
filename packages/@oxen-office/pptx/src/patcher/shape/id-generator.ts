@@ -1,3 +1,4 @@
+/** @file Shape ID and name generation utilities */
 import type { XmlDocument } from "@oxen/xml";
 import { getChild, isXmlElement } from "@oxen/xml";
 import { getShapeIds } from "../core/xml-mutator";

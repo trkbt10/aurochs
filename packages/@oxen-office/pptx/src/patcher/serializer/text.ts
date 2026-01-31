@@ -43,6 +43,7 @@ function createEmptyParagraph(): XmlElement {
 
 
 
+/** Serialize a text body to p:txBody element */
 export function serializeTextBody(textBody: TextBody): XmlElement {
   const paragraphs: XmlElement[] = [];
   if (textBody.paragraphs.length > 0) {
@@ -88,6 +89,7 @@ export function serializeTextBody(textBody: TextBody): XmlElement {
 
 
 
+/** Serialize a text body to a:txBody element (for tables) */
 export function serializeDrawingTextBody(textBody: TextBody): XmlElement {
   const paragraphs: XmlElement[] = [];
   if (textBody.paragraphs.length > 0) {

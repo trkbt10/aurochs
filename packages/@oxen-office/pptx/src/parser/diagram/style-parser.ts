@@ -39,6 +39,7 @@ import { parseShapeStyle } from "../shape-parser/style";
 
 
 
+/** Parse diagram style definition from XML document */
 export function parseDiagramStyleDefinition(doc: XmlDocument) {
   return parseDiagramStyleDefinitionBase(doc, { parseTextBody, parseShapeStyle });
 }
@@ -68,6 +69,7 @@ export function parseDiagramStyleDefinition(doc: XmlDocument) {
 
 
 
+/** Parse diagram style definition header from XML */
 export function parseDiagramStyleDefinitionHeader(...args: Parameters<typeof parseDiagramStyleDefinitionHeaderBase>) {
   return parseDiagramStyleDefinitionHeaderBase(...args);
 }
@@ -97,6 +99,7 @@ export function parseDiagramStyleDefinitionHeader(...args: Parameters<typeof par
 
 
 
+/** Parse list of diagram style definition headers from XML */
 export function parseDiagramStyleDefinitionHeaderList(...args: Parameters<typeof parseDiagramStyleDefinitionHeaderListBase>) {
   return parseDiagramStyleDefinitionHeaderListBase(...args);
 }

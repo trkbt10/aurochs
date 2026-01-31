@@ -33,6 +33,9 @@ export type IdleDragState = {
 
 
 
+/**
+ * Create an idle drag state.
+ */
 export function createIdleDragState(): IdleDragState {
   return { type: "idle" };
 }
@@ -62,6 +65,9 @@ export function createIdleDragState(): IdleDragState {
 
 
 
+/**
+ * Check if a drag state is idle.
+ */
 export function isDragIdle<TDrag extends { readonly type: string }>(
   drag: TDrag,
 ): drag is Extract<TDrag, IdleDragState> {

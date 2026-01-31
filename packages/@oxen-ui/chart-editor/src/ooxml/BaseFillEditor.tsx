@@ -49,6 +49,9 @@ const fillTypeOptions: SelectOption<BaseFill["type"]>[] = [
 
 
 
+/**
+ * Editor component for BaseFill (noFill or solidFill).
+ */
 export function BaseFillEditor({
   value,
   onChange,
@@ -135,6 +138,9 @@ export function BaseFillEditor({
 
 
 
+/**
+ * Create a noFill value.
+ */
 export function createNoFill(): BaseFill {
   return { type: "noFill" };
 }

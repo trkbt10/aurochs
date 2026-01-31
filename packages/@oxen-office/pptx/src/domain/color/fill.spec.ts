@@ -1,3 +1,4 @@
+/** @file Unit tests for fill resolution functions */
 import type { BlipFill } from "./types";
 import { formatRgba, resolveBlipFill, resolveFill } from "./fill";
 

@@ -162,6 +162,9 @@ function PropertySetEditor({ propertySet, disabled, onChange }: PropertySetDispl
 
 
 
+/**
+ * Editor for individual DiagramPoint (modelId, type, textBody, properties).
+ */
 export function DiagramPointEditor<TTextBody, TShapeProperties>({
   value,
   onChange,
@@ -281,6 +284,9 @@ export function DiagramPointEditor<TTextBody, TShapeProperties>({
 
 
 
+/**
+ * Create a default DiagramPoint with optional modelId.
+ */
 export function createDefaultDiagramPoint(modelId?: string): DiagramPoint {
   return {
     modelId: modelId ?? `point-${Date.now()}`,

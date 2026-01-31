@@ -35,6 +35,9 @@ export type ClipboardContent<TPayload> = {
 
 
 
+/**
+ * Create a new clipboard content object with a payload.
+ */
 export function createClipboardContent<TPayload>(params: {
   readonly payload: TPayload;
   readonly isCut?: boolean;
@@ -72,6 +75,9 @@ export function createClipboardContent<TPayload>(params: {
 
 
 
+/**
+ * Increment the paste count of clipboard content.
+ */
 export function incrementPasteCount<TPayload>(
   content: ClipboardContent<TPayload>,
 ): ClipboardContent<TPayload> {
@@ -106,6 +112,9 @@ export function incrementPasteCount<TPayload>(
 
 
 
+/**
+ * Mark clipboard content as cut (will be removed on paste).
+ */
 export function markAsCut<TPayload>(
   content: ClipboardContent<TPayload>,
 ): ClipboardContent<TPayload> {
@@ -137,6 +146,9 @@ export function markAsCut<TPayload>(
 
 
 
+/**
+ * Mark clipboard content as copy (will not be removed on paste).
+ */
 export function markAsCopy<TPayload>(
   content: ClipboardContent<TPayload>,
 ): ClipboardContent<TPayload> {

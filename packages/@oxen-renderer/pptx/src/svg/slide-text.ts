@@ -67,6 +67,9 @@ export type RenderTextSvgOptions = {
 
 
 
+/**
+ * Render text content to SVG using the text-layout engine.
+ */
 export function renderTextSvg({ textBody, ctx, boxWidth, boxHeight, defsCollector }: RenderTextSvgOptions): string {
   if (textBody.paragraphs.length === 0) {
     return "";

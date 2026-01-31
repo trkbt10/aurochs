@@ -572,9 +572,13 @@ function applyGeometryChange(
   const geomElement = serializeGeometry(newGeometry);
 
   // Find insert position (geometry should come after a:xfrm)
-  const insertIndex = existingGeomIndex !== -1
-    ? originalChildren.slice(0, existingGeomIndex).filter((c) => !(isXmlElement(c) && geometryNames.has(c.name))).length
-    : findGeometryInsertIndex(keptChildren);
+  // eslint-disable-next-line no-restricted-syntax
+  let insertIndex: number;
+  if (existingGeomIndex !== -1) {
+    insertIndex = originalChildren.slice(0, existingGeomIndex).filter((c) => !(isXmlElement(c) && geometryNames.has(c.name))).length;
+  } else {
+    insertIndex = findGeometryInsertIndex(keptChildren);
+  }
 
   const newSpPr = {
     ...spPr,

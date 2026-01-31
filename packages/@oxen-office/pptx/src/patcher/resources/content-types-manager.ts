@@ -1,3 +1,4 @@
+/** @file Content types manager for [Content_Types].xml manipulation */
 import { createElement, isXmlElement, type XmlDocument, type XmlElement } from "@oxen/xml";
 import { getDocumentRoot, updateDocumentRoot } from "../core/xml-mutator";
 
@@ -31,6 +32,7 @@ import { getDocumentRoot, updateDocumentRoot } from "../core/xml-mutator";
 
 
 
+/** Add a default content type for a file extension */
 export function addContentType(
   contentTypesXml: XmlDocument,
   extension: string,
@@ -108,6 +110,7 @@ export function addContentType(
 
 
 
+/** Add an override content type for a specific part */
 export function addOverride(
   contentTypesXml: XmlDocument,
   partName: string,
@@ -178,6 +181,7 @@ export function addOverride(
 
 
 
+/** Remove content type entries for parts no longer in use */
 export function removeUnusedContentTypes(
   contentTypesXml: XmlDocument,
   usedParts: readonly string[],

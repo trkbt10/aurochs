@@ -1,3 +1,4 @@
+/** @file Unit tests for diagram patching operations */
 import { getByPath, getChildren, getTextByPath, parseXml } from "@oxen/xml";
 import { patchDiagram } from "./diagram-patcher";
 

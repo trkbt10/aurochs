@@ -32,6 +32,7 @@
 
 
 
+/** Bit-level reader for JPEG 2000 packet headers. */
 export class PacketBitReader {
   private readonly data: Uint8Array;
   private bytePos: number;

@@ -1,3 +1,4 @@
+/** @file Unit tests for shape serialization */
 import { isXmlElement, getChild } from "@oxen/xml";
 import type { SpShape, GrpShape, PicShape, CxnShape, GraphicFrame } from "../../domain/shape";
 import type { TextBody } from "../../domain/text";

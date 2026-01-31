@@ -1,6 +1,4 @@
-/**
- * Relationship reference types shared across OOXML formats.
- */
+/** @file Relationship reference types shared across OOXML formats. */
 
 /**
  * Relationship ID for embedded or linked resources.

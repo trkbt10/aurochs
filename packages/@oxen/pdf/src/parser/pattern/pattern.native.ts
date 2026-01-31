@@ -155,6 +155,7 @@ function parsePattern(page: NativePdfPage, obj: PdfObject | undefined): PdfPatte
 
 
 
+/** Extract pattern definitions from PDF page resources. */
 export function extractPatternsFromResourcesNative(page: NativePdfPage, resources: PdfDict | null): ReadonlyMap<string, PdfPattern> {
   if (!resources) {return new Map();}
 
@@ -201,6 +202,7 @@ export function extractPatternsFromResourcesNative(page: NativePdfPage, resource
 
 
 
+/** Extract all patterns from a PDF page's default resources. */
 export function extractPatternsNative(page: NativePdfPage): ReadonlyMap<string, PdfPattern> {
   return extractPatternsFromResourcesNative(page, page.getResourcesDict());
 }

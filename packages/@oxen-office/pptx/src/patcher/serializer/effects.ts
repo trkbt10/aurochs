@@ -127,6 +127,7 @@ export function serializeEffects(effects: Effects): XmlElement | null {
 
 
 
+/** Serialize a shadow effect (outer or inner) */
 export function serializeShadow(shadow: ShadowEffect): XmlElement {
   const name = shadow.type === "outer" ? "a:outerShdw" : "a:innerShdw";
 
@@ -190,6 +191,7 @@ export function serializeShadow(shadow: ShadowEffect): XmlElement {
 
 
 
+/** Serialize a glow effect */
 export function serializeGlow(glow: GlowEffect): XmlElement {
   return createElement(
     "a:glow",
@@ -228,6 +230,7 @@ export function serializeGlow(glow: GlowEffect): XmlElement {
 
 
 
+/** Serialize a reflection effect */
 export function serializeReflection(reflection: ReflectionEffect): XmlElement {
   const attrs: Record<string, string> = {
     blurRad: ooxmlEmu(reflection.blurRadius),
@@ -288,6 +291,7 @@ export function serializeReflection(reflection: ReflectionEffect): XmlElement {
 
 
 
+/** Serialize a soft edge effect */
 export function serializeSoftEdge(softEdge: SoftEdgeEffect): XmlElement {
   return createElement("a:softEdge", { rad: ooxmlEmu(softEdge.radius) });
 }
@@ -322,6 +326,7 @@ export function serializeSoftEdge(softEdge: SoftEdgeEffect): XmlElement {
 
 
 
+/** Serialize an alpha bi-level effect */
 export function serializeAlphaBiLevel(effect: AlphaBiLevelEffect): XmlElement {
   return createElement("a:alphaBiLevel", { thresh: ooxmlPercent100k(effect.threshold) });
 }
@@ -356,6 +361,7 @@ export function serializeAlphaBiLevel(effect: AlphaBiLevelEffect): XmlElement {
 
 
 
+/** Serialize an alpha ceiling effect */
 export function serializeAlphaCeiling(effect: AlphaCeilingEffect): XmlElement {
   void effect;
   return createElement("a:alphaCeiling");
@@ -391,6 +397,7 @@ export function serializeAlphaCeiling(effect: AlphaCeilingEffect): XmlElement {
 
 
 
+/** Serialize an alpha floor effect */
 export function serializeAlphaFloor(effect: AlphaFloorEffect): XmlElement {
   void effect;
   return createElement("a:alphaFloor");
@@ -426,6 +433,7 @@ export function serializeAlphaFloor(effect: AlphaFloorEffect): XmlElement {
 
 
 
+/** Serialize an alpha inverse effect */
 export function serializeAlphaInv(effect: AlphaInverseEffect): XmlElement {
   void effect;
   return createElement("a:alphaInv");
@@ -461,6 +469,7 @@ export function serializeAlphaInv(effect: AlphaInverseEffect): XmlElement {
 
 
 
+/** Serialize an alpha modulate effect */
 export function serializeAlphaMod(effect: AlphaModulateEffect): XmlElement {
   return createElement("a:alphaMod", {}, [serializeEffectContainer(effect.container, effect)]);
 }
@@ -495,6 +504,7 @@ export function serializeAlphaMod(effect: AlphaModulateEffect): XmlElement {
 
 
 
+/** Serialize an alpha modulate fixed effect */
 export function serializeAlphaModFix(effect: AlphaModulateFixedEffect): XmlElement {
   return createElement("a:alphaModFix", { amt: ooxmlPercent1000(effect.amount) });
 }
@@ -529,6 +539,7 @@ export function serializeAlphaModFix(effect: AlphaModulateFixedEffect): XmlEleme
 
 
 
+/** Serialize an alpha outset effect */
 export function serializeAlphaOutset(effect: AlphaOutsetEffect): XmlElement {
   return createElement("a:alphaOutset", { rad: ooxmlEmu(effect.radius) });
 }
@@ -563,6 +574,7 @@ export function serializeAlphaOutset(effect: AlphaOutsetEffect): XmlElement {
 
 
 
+/** Serialize an alpha replace effect */
 export function serializeAlphaRepl(effect: AlphaReplaceEffect): XmlElement {
   return createElement("a:alphaRepl", { a: ooxmlPercent100k(effect.alpha) });
 }
@@ -597,6 +609,7 @@ export function serializeAlphaRepl(effect: AlphaReplaceEffect): XmlElement {
 
 
 
+/** Serialize a bi-level effect */
 export function serializeBiLevel(effect: BiLevelEffect): XmlElement {
   return createElement("a:biLevel", { thresh: ooxmlPercent100k(effect.threshold) });
 }
@@ -631,6 +644,7 @@ export function serializeBiLevel(effect: BiLevelEffect): XmlElement {
 
 
 
+/** Serialize a blend effect */
 export function serializeBlend(effect: BlendEffect): XmlElement {
   return createElement("a:blend", { blend: effect.blend }, [serializeEffectContainer(effect.container, effect)]);
 }
@@ -665,6 +679,7 @@ export function serializeBlend(effect: BlendEffect): XmlElement {
 
 
 
+/** Serialize a color change effect */
 export function serializeColorChange(effect: ColorChangeEffect): XmlElement {
   return createElement(
     "a:clrChange",
@@ -706,6 +721,7 @@ export function serializeColorChange(effect: ColorChangeEffect): XmlElement {
 
 
 
+/** Serialize a color replace effect */
 export function serializeColorReplace(effect: ColorReplaceEffect): XmlElement {
   return createElement("a:clrRepl", {}, [serializeColor(effect.color)]);
 }
@@ -740,6 +756,7 @@ export function serializeColorReplace(effect: ColorReplaceEffect): XmlElement {
 
 
 
+/** Serialize a duotone effect */
 export function serializeDuotone(effect: DuotoneEffect): XmlElement {
   return createElement("a:duotone", {}, [
     serializeColor(effect.colors[0]),
@@ -777,6 +794,7 @@ export function serializeDuotone(effect: DuotoneEffect): XmlElement {
 
 
 
+/** Serialize a fill overlay effect */
 export function serializeFillOverlay(effect: FillOverlayEffect): XmlElement {
   const fillChild = effect.fill ? serializeFill(effect.fill) : serializeFillOverlayChild(effect);
 
@@ -817,6 +835,7 @@ export function serializeFillOverlay(effect: FillOverlayEffect): XmlElement {
 
 
 
+/** Serialize a grayscale effect */
 export function serializeGrayscale(effect: GrayscaleEffect): XmlElement {
   void effect;
   return createElement("a:grayscl");
@@ -852,6 +871,7 @@ export function serializeGrayscale(effect: GrayscaleEffect): XmlElement {
 
 
 
+/** Serialize a preset shadow effect */
 export function serializePresetShadow(effect: PresetShadowEffect): XmlElement {
   return createElement(
     "a:prstShdw",
@@ -894,6 +914,7 @@ export function serializePresetShadow(effect: PresetShadowEffect): XmlElement {
 
 
 
+/** Serialize a relative offset effect */
 export function serializeRelativeOffset(effect: RelativeOffsetEffect): XmlElement {
   return createElement("a:relOff", {
     tx: ooxmlPercent1000(effect.offsetX),

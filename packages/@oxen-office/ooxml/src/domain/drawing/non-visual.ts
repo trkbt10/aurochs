@@ -1,6 +1,4 @@
-/**
- * Non-visual drawing properties shared across OOXML formats.
- */
+/** @file Non-visual drawing properties shared across OOXML formats. */
 
 /**
  * Non-visual drawing properties.

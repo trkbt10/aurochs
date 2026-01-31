@@ -64,6 +64,9 @@ export type CalculateCharWidthOptions = {
 
 
 
+/**
+ * Calculate the width of a single character with kerning context.
+ */
 export function calculateCharWidth({ char, prevChar, fontSize, fontFamily }: CalculateCharWidthOptions): CharWidthResult {
   const charCode = char.charCodeAt(0);
   const fontSizePx = (fontSize as number) * PT_TO_PX;
@@ -123,6 +126,9 @@ export type EstimateTextWidthOptions = {
 
 
 
+/**
+ * Estimate the width of a text string with font-aware metrics and kerning.
+ */
 export function estimateTextWidth({ text, fontSize, letterSpacing, fontFamily }: EstimateTextWidthOptions): Pixels {
   const chars = Array.from(text);
   const letterSpacingNum = letterSpacing as number;
@@ -260,6 +266,9 @@ export type MeasureTextDetailedOptions = {
 
 
 
+/**
+ * Calculate detailed character measurements for a text span.
+ */
 export function measureTextDetailed({ text, fontSize, letterSpacing, fontFamily }: MeasureTextDetailedOptions): DetailedMeasurement {
   const chars = Array.from(text);
   const letterSpacingNum = letterSpacing as number;

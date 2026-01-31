@@ -29,6 +29,9 @@ import type { TextBody, TextRun } from "@oxen-office/chart/domain/text";
 
 
 
+/**
+ * Extract plain text from a TextBody, joining paragraphs with newlines.
+ */
 export function getPlainText(textBody: TextBody): string {
   const lines = textBody.paragraphs.map((p) => runsToString(p.runs));
   return lines.join("\n");
@@ -59,6 +62,9 @@ export function getPlainText(textBody: TextBody): string {
 
 
 
+/**
+ * Create a default TextBody with optional initial text.
+ */
 export function createDefaultTextBody(text?: string): TextBody {
   return {
     bodyProperties: {},
@@ -96,6 +102,9 @@ export function createDefaultTextBody(text?: string): TextBody {
 
 
 
+/**
+ * Replace the content of a TextBody with plain text.
+ */
 export function replacePlainText(textBody: TextBody, text: string): TextBody {
   const paragraphs = text.split("\n").map((line) => ({
     properties: {},

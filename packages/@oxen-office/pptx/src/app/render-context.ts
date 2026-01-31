@@ -87,6 +87,7 @@ export type CreateRenderContextOptions = {
 
 
 
+/** Create a RenderContext from API slide data with full theme context */
 export function createRenderContext(
   {
     apiSlide,

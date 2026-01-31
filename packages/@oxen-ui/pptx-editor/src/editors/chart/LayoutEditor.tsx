@@ -39,6 +39,7 @@ export type LayoutEditorProps = CoreLayoutEditorProps;
 
 
 
+/** PPTX chart layout editor component */
 export function LayoutEditor(props: LayoutEditorProps) {
   return (
     <ChartEditorAdaptersBoundary adapters={pptxChartEditorAdapters}>
@@ -72,6 +73,7 @@ export function LayoutEditor(props: LayoutEditorProps) {
 
 
 
+/** Create default layout configuration */
 export function createDefaultLayout() {
   return createDefaultLayoutCore();
 }

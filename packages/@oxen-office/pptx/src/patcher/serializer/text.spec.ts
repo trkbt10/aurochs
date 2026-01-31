@@ -1,3 +1,4 @@
+/** @file Unit tests for text body serialization */
 import { createElement, getChild, getChildren, getTextContent } from "@oxen/xml";
 import type { TextBody } from "../../domain/text";
 import { patchTextBodyElement, serializeTextBody } from "./text";

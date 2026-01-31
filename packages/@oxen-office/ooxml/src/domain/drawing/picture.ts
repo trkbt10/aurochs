@@ -1,6 +1,4 @@
-/**
- * Picture types shared across OOXML formats.
- */
+/** @file Picture types shared across OOXML formats. */
 
 import type { DrawingBlipFill } from "./blip";
 import type { NonVisualPictureProps } from "./non-visual";

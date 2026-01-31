@@ -142,6 +142,7 @@ export const thumbnailWrapperStyle: CSSProperties = {
 
 
 
+/** Get style for thumbnail container with aspect ratio */
 export function getThumbnailStyle(aspectRatio: string): CSSProperties {
   return {
     width: "100%",
@@ -192,6 +193,7 @@ export function getThumbnailStyle(aspectRatio: string): CSSProperties {
 
 
 
+/** Get style for active thumbnail with selection highlight */
 export function getThumbnailActiveStyle(aspectRatio: string): CSSProperties {
   return {
     ...getThumbnailStyle(aspectRatio),

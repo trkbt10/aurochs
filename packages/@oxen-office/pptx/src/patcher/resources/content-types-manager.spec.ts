@@ -1,3 +1,4 @@
+/** @file Unit tests for content types manager */
 import { parseXml, getByPath, getChildren } from "@oxen/xml";
 import { addContentType, addOverride, removeUnusedContentTypes } from "./content-types-manager";
 

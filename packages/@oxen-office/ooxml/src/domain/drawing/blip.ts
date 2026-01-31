@@ -1,6 +1,4 @@
-/**
- * Blip (image reference), cropping, and tiling types shared across OOXML formats.
- */
+/** @file Blip (image reference), cropping, and tiling types shared across OOXML formats. */
 
 import type { EMU } from "../units";
 import type { RelationshipId } from "./relationship";

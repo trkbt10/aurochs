@@ -22,3 +22,9 @@ export {
 
 // Phase 10: Table
 export { serializeDrawingTable } from "./table";
+
+// Transitions
+export { isTransitionType, serializeSlideTransition, TRANSITION_TYPES } from "./transition";
+
+// Custom Geometry
+export { serializeCustomGeometry, serializeGeometryPath, serializePathCommand } from "./custom-geometry";

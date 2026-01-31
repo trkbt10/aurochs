@@ -41,6 +41,7 @@ import {
 
 
 
+/** Serialize a text run to a:r element */
 export function serializeTextRun(run: RegularRun): XmlElement {
   const children: XmlElement[] = [];
   if (run.properties) {
@@ -80,6 +81,7 @@ export function serializeTextRun(run: RegularRun): XmlElement {
 
 
 
+/** Serialize a line break to a:br element */
 export function serializeLineBreak(lineBreak: LineBreakRun): XmlElement {
   const children: XmlElement[] = [];
   if (lineBreak.properties) {
@@ -118,6 +120,7 @@ export function serializeLineBreak(lineBreak: LineBreakRun): XmlElement {
 
 
 
+/** Serialize a text field to a:fld element */
 export function serializeTextField(field: FieldRun): XmlElement {
   const children: XmlElement[] = [];
   if (field.properties) {
@@ -157,6 +160,7 @@ export function serializeTextField(field: FieldRun): XmlElement {
 
 
 
+/** Serialize a text run of any type */
 export function serializeRun(run: TextRun): XmlElement {
   switch (run.type) {
     case "text":
@@ -198,6 +202,7 @@ export function serializeRun(run: TextRun): XmlElement {
 
 
 
+/** Serialize a paragraph to a:p element */
 export function serializeParagraph(paragraph: Paragraph): XmlElement {
   const children: XmlElement[] = [];
 

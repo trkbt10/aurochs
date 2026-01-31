@@ -67,6 +67,7 @@ function applyConstantAlphaToByte(a: number, mul: number): number {
 
 
 
+/** Apply graphics state soft mask and constant alpha to a PDF image. */
 export function applyGraphicsSoftMaskToPdfImage(image: PdfImage): PdfImage {
   const gs = image.graphicsState;
   const softMaskAlpha = gs.softMaskAlpha ?? 1;

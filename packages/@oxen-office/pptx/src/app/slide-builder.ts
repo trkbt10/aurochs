@@ -64,6 +64,7 @@ export type CreateSlideOptions = {
 
 
 
+/** Create a Slide object from SlideData with rendering capabilities */
 export function createSlide(
   { data, zip, defaultTextStyle, tableStyles, slideSize, renderOptions }: CreateSlideOptions,
 ): Slide {

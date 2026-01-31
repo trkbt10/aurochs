@@ -1,3 +1,5 @@
+/** @file OOXML parser public exports */
+
 export {
   parseInt32,
   parseInt64,

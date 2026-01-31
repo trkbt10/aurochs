@@ -177,6 +177,7 @@ export function calculateGapIndexFromItemDragOver({
 
 
 
+/** Determine drop position (before/after) based on vertical cursor position */
 export function getVerticalDropPosition(
   clientY: number,
   rectTop: number,
@@ -221,6 +222,7 @@ export function getVerticalDropPosition(
 
 
 
+/** Determine drop position (before/after) based on horizontal cursor position */
 export function getHorizontalDropPosition(
   clientX: number,
   rectLeft: number,
@@ -272,6 +274,7 @@ type CalculateTargetIndexInput = {
 
 
 
+/** Calculate the target index for a drop based on position */
 export function calculateTargetIndex({
   slides, draggingIds, dropIndex, position,
 }: CalculateTargetIndexInput): number {
@@ -314,6 +317,7 @@ export function calculateTargetIndex({
 
 
 
+/** Check if a drop is valid for the current drag state */
 export function isValidDrop(
   dragState: SlideDragState,
   _targetSlideId: SlideId
@@ -356,6 +360,7 @@ export function isValidDrop(
 
 
 
+/** Update drag state when hovering over a target (legacy) */
 export function updateDragOverState(
   currentState: SlideDragState,
   _targetSlideId: SlideId,
@@ -399,6 +404,7 @@ export function updateDragOverState(
 
 
 
+/** Check if a slide is the current drag target (legacy, always false) */
 export function isDragTarget(
   _dragState: SlideDragState,
   _slideId: SlideId
@@ -441,6 +447,7 @@ export function isDragTarget(
 
 
 
+/** Get drag position for a slide (legacy, always null) */
 export function getDragPositionForSlide(
   _dragState: SlideDragState,
   _slideId: SlideId

@@ -181,6 +181,9 @@ function resolveFontSpec(
 
 
 
+/**
+ * Compute SVG styles from DOCX run properties.
+ */
 export function computeRunSvgStyles(
   runProperties: DocxRunProperties | undefined,
   defaultRunProperties: DocxRunProperties | undefined,
@@ -446,6 +449,9 @@ function findWrapIndex(text: string, maxWidth: number, font: FontSpec): number {
 
 
 
+/**
+ * Layout DOCX paragraph text with line wrapping.
+ */
 export function layoutParagraphText(
   paragraph: DocxParagraph,
   bounds: DOMRect,
@@ -595,6 +601,9 @@ function clampRangeToSpan(
 
 
 
+/**
+ * Compute selection highlight rectangles from layout and selection range.
+ */
 export function computeSelectionRects({
   layout,
   selectionStart,
@@ -877,6 +886,9 @@ function findCharOffsetInSpan(
 
 
 
+/**
+ * Render DOCX paragraph text as SVG overlay with selection highlighting.
+ */
 export function DocxTextOverlay({
   paragraph,
   bounds,

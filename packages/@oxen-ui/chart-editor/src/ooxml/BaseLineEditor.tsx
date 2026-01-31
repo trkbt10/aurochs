@@ -51,6 +51,9 @@ const capOptions: Array<{ value: BaseLine["cap"]; label: string }> = [
 
 
 
+/**
+ * Editor component for BaseLine properties.
+ */
 export function BaseLineEditor({
   value,
   onChange,
@@ -134,6 +137,9 @@ export function BaseLineEditor({
 
 
 
+/**
+ * Create a default BaseLine with standard values.
+ */
 export function createDefaultBaseLine(): BaseLine {
   return {
     width: px(1),
