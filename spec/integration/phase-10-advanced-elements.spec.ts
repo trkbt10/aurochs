@@ -16,7 +16,10 @@ import { patchChartData, patchChartTitle } from "@oxen-office/chart/patcher";
 import { parseChart } from "@oxen-office/chart/parser";
 import type { DataReference } from "@oxen-office/chart/domain";
 import { patchTable, patchDiagramNodeText, patchOleObject } from "@oxen-office/pptx/patcher";
-import { parseTable, parseDiagramDataModel, parseGraphicFrame } from "@oxen-office/pptx/parser";
+import { parseTable, parseGraphicFrame } from "@oxen-office/pptx/parser";
+import { parseDiagramDataModel } from "@oxen-office/diagram/parser/diagram/data-parser";
+import { parseShapeProperties } from "@oxen-office/pptx/parser/shape-parser/properties";
+import { parseTextBody } from "@oxen-office/pptx/parser/text/text-parser";
 import { deg, px } from "@oxen-office/ooxml/domain/units";
 import type { TextBody } from "@oxen-office/pptx/domain/text";
 
@@ -252,7 +255,7 @@ describe("Phase 10 - Advanced elements", () => {
     }
 
     const dataDoc = readXml(zipPackage, dataPath);
-    const model = parseDiagramDataModel(dataDoc);
+    const model = parseDiagramDataModel(dataDoc, { parseShapeProperties, parseTextBody });
     if (!model) {
       throw new Error("expected parseDiagramDataModel to succeed");
     }
@@ -273,7 +276,7 @@ describe("Phase 10 - Advanced elements", () => {
     const updated = patchDiagramNodeText(dataDoc, pointWithText.modelId, "Phase10 Node");
     writeXml(zipPackage, dataPath, updated);
 
-    const reloaded = parseDiagramDataModel(readXml(zipPackage, dataPath));
+    const reloaded = parseDiagramDataModel(readXml(zipPackage, dataPath), { parseShapeProperties, parseTextBody });
     if (!reloaded) {
       throw new Error("expected parseDiagramDataModel to succeed after patch");
     }
