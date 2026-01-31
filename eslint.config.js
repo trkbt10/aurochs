@@ -75,6 +75,8 @@ export default [
         "custom/no-oxen-ui-import-in-oxen": "error",
         // Prohibit @oxen/* packages from importing @oxen-office/*
         "custom/no-oxen-office-import-in-oxen": "error",
+        // Prohibit @oxen-office/* packages from importing @oxen-builder/*
+        "custom/no-oxen-builder-import-in-oxen-office": "error",
         // Prohibit re-exporting from other packages
         "custom/no-cross-package-reexport": "error",
         // Prohibit export * from (barrel exports)
