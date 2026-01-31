@@ -5,38 +5,28 @@
  * This enables proper rendering with full theme/master/layout context.
  */
 
-import type { Slide as ApiSlide } from "./types";
-import type { SlideContext } from "../parser/slide/context";
-import { createSlideContext } from "../parser/slide/context";
-import { createPlaceholderTable, createColorMap } from "../parser/slide/resource-adapters";
-import { parseTheme, parseMasterTextStyles } from "../parser/drawing-ml";
-import { DEFAULT_RENDER_OPTIONS, type RenderOptions } from "../render/render-options";
-import { createRenderContextFromSlideContext } from "./slide-context-adapter";
-import { getBackgroundFillData } from "../parser/drawing-ml";
-import { toResolvedBackgroundFill } from "../render/background-fill";
-import { parseShapeTree } from "../parser/shape-parser";
+import type { Slide as ApiSlide } from "@oxen-office/pptx/app/types";
+import type { SlideContext } from "@oxen-office/pptx/parser/slide/context";
+import { createSlideContext } from "@oxen-office/pptx/parser/slide/context";
+import { createPlaceholderTable, createColorMap } from "@oxen-office/pptx/parser/slide/resource-adapters";
+import { parseTheme, parseMasterTextStyles, getBackgroundFillData } from "@oxen-office/pptx/parser/drawing-ml/index";
+import { parseShapeTree } from "@oxen-office/pptx/parser";
 import type { XmlElement, XmlDocument } from "@oxen/xml";
 import { getByPath, getChild } from "@oxen/xml";
-import type { SlideSize, Shape, SpShape } from "../domain";
+import type { SlideSize, Shape, SpShape } from "@oxen-office/pptx/domain";
 import type { ZipFile } from "@oxen-office/opc";
-import type { CoreRenderContext } from "../render/render-context";
+import type { CoreRenderContext } from "../render-context";
+import type { RenderOptions } from "../render-options";
+import { DEFAULT_RENDER_OPTIONS } from "../render-options";
+import { toResolvedBackgroundFill } from "../background-fill";
+import { createRenderContextFromSlideContext } from "./slide-context-adapter";
 
 // =============================================================================
-// SlideRenderContext Builder
-// =============================================================================
-
-/**
- * Build SlideRenderContext from API Slide and ZipFile.
- *
- * This replicates the logic in slide-builder.ts's buildSlideRenderContext,
- * but works with API Slide (which has the same structure as SlideData).
- */
-// =============================================================================
-// Full Render Context Builder
+// Types
 // =============================================================================
 
 /**
- * Create a RenderContext from API Slide.
+ * Extended RenderContext with SlideContext for advanced usage.
  *
  * This is the main function for the editor to use when rendering edited slides.
  * It includes:
@@ -50,10 +40,9 @@ export type RenderContext = CoreRenderContext & {
   readonly slideRenderContext: SlideContext;
 };
 
-
-
-
-
+/**
+ * Options for creating a RenderContext from API slide data.
+ */
 export type CreateRenderContextOptions = {
   readonly apiSlide: ApiSlide;
   readonly zip: ZipFile;
@@ -62,30 +51,9 @@ export type CreateRenderContextOptions = {
   readonly renderOptions?: RenderOptions;
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+// =============================================================================
+// Factory Function
+// =============================================================================
 
 /** Create a RenderContext from API slide data with full theme context */
 export function createRenderContext(
@@ -215,5 +183,5 @@ export function getLayoutNonPlaceholderShapes(apiSlide: ApiSlide): readonly Shap
   }
 
   const layoutShapes = parseShapeTree({ spTree });
-  return layoutShapes.filter((shape) => !isPlaceholder(shape));
+  return layoutShapes.filter((shape: Shape) => !isPlaceholder(shape));
 }

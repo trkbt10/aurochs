@@ -9,7 +9,7 @@ import type { ColorMap, ColorResolveContext, ColorScheme } from "@oxen-office/oo
 import type { SlideContext, ResourceContext } from "./parser/slide/context";
 import type { PlaceholderTable, FormatScheme, RawMasterTextStyles } from "./domain";
 import type { ResourceMap, ZipFile } from "@oxen-office/opc";
-import { DEFAULT_RENDER_OPTIONS } from "./render/render-options";
+import { DEFAULT_RENDER_OPTIONS } from "@oxen-renderer/pptx";
 
 /**
  * Create an empty XML element for testing

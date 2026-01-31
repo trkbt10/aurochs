@@ -198,30 +198,6 @@ export { parseGraphicFrame } from "./shape-parser/graphic-frame";
 export { parseTable } from "./table/table-parser";
 
 // =============================================================================
-// Diagram Parsing
-// =============================================================================
-
-export { parseDiagramDataModel, parseDiagramDataModelElement } from "./diagram/data-parser";
-
-export {
-  parseDiagramLayoutDefinition,
-  parseDiagramLayoutDefinitionHeader,
-  parseDiagramLayoutDefinitionHeaderList,
-} from "./diagram/layout-parser";
-
-export {
-  parseDiagramStyleDefinition,
-  parseDiagramStyleDefinitionHeader,
-  parseDiagramStyleDefinitionHeaderList,
-} from "./diagram/style-parser";
-
-export {
-  parseDiagramColorsDefinition,
-  parseDiagramColorsDefinitionHeader,
-  parseDiagramColorsDefinitionHeaderList,
-} from "./diagram/color-parser";
-
-// =============================================================================
 // Slide Parsing
 // =============================================================================
 

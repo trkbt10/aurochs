@@ -18,7 +18,7 @@ import { parseShapeTree } from "@oxen-office/pptx/parser";
 import { createParseContext } from "@oxen-office/pptx/parser/context";
 import { renderSlide, createEmptySlideHtml } from "./html/slide";
 import { renderSlideSvg, createEmptySlideSvg } from "./svg/renderer";
-import { createRenderContextFromSlideContext } from "@oxen-office/pptx/app/slide-context-adapter";
+import { createRenderContextFromSlideContext } from "./context/slide-context-adapter";
 import { toResolvedBackgroundFill } from "./background-fill";
 import { getBackgroundFillData } from "@oxen-office/pptx/parser/drawing-ml/index";
 import { enrichSlideContent, type FileReader } from "@oxen-office/pptx/parser/slide/external-content-loader";

@@ -9,7 +9,7 @@ import type { SlideSize } from "../domain";
 import type { ZipFile } from "@oxen-office/opc";
 import { getBasename, getByPath, getChildren, type XmlDocument, type XmlElement } from "@oxen/xml";
 import type { SlideData } from "../parser/slide/data-types";
-import type { RenderOptions } from "../render/render-options";
+import type { RenderOptions } from "@oxen-renderer/pptx";
 import type { TableStyleList } from "../parser/table/style-parser";
 import { parseSlideSizeFromXml, parseDefaultTextStyle, parseAppVersion } from "./presentation-info";
 import { parseTableStyleList } from "../parser/table/style-parser";

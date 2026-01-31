@@ -10,7 +10,7 @@ import type { PresentationFile } from "../domain";
 import type { ZipFile } from "@oxen-office/opc";
 import type { XmlDocument } from "@oxen/xml";
 import { exportPptx, exportPptxAsBuffer } from "./pptx-exporter";
-import { DEFAULT_RENDER_OPTIONS } from "../render/render-options";
+import { DEFAULT_RENDER_OPTIONS } from "@oxen-renderer/pptx";
 import { px } from "@oxen-office/ooxml/domain/units";
 
 const mockZip: ZipFile = { file: () => null };

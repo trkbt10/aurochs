@@ -8,7 +8,7 @@
  */
 
 // Uses global describe/it/expect from test runner
-import { parseDiagramDrawing } from "./diagram-parser";
+import { parseDiagramDrawing } from "./diagram-drawing-parser";
 import type { XmlDocument, XmlElement } from "@oxen/xml";
 
 // =============================================================================

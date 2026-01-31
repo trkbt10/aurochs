@@ -17,7 +17,7 @@ import { RELATIONSHIP_TYPES } from "../../domain/relationships";
 import { createEmptyResourceMap } from "../../domain/relationships";
 import { getByPath } from "@oxen/xml";
 import { indexShapeTreeNodes } from "./shape-tree-indexer";
-import { transformDiagramNamespace } from "../diagram/transform";
+import { transformDiagramNamespace } from "./diagram-transform";
 import { readXml, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS } from "./xml-reader";
 
 /**

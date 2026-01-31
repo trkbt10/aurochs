@@ -2,6 +2,7 @@
  * @file Render warnings and collection utilities
  *
  * Types and utilities for collecting warnings during rendering.
+ * Shared across all OOXML renderers (PPTX, XLSX, DOCX).
  */
 
 // =============================================================================
@@ -44,4 +45,3 @@ export function createWarningCollector(): WarningCollector {
     hasErrors: () => warnings.some((w) => w.type === "error"),
   };
 }
-

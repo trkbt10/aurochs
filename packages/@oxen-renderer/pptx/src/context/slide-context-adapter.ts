@@ -7,16 +7,16 @@
  * @see ECMA-376 Part 1 (Fundamentals and Markup Language Reference)
  */
 
-import type { SlideSize, Shape } from "../domain/index";
+import type { SlideSize, Shape } from "@oxen-office/pptx/domain";
 import type { ColorContext } from "@oxen-office/ooxml/domain/color-context";
 import type { FontScheme } from "@oxen-office/ooxml/domain/font-scheme";
-import type { ResourceResolver } from "../domain/resource-resolver";
-import type { SlideContext } from "../parser/slide/context";
-import type { CoreRenderContext } from "../render/render-context";
-import type { RenderOptions } from "../render/render-options";
-import { DEFAULT_RENDER_OPTIONS } from "../render/render-options";
-import type { ResolvedBackgroundFill } from "../render/background-fill";
-import { createWarningCollector } from "../render/warnings";
+import type { ResourceResolver } from "@oxen-office/pptx/domain/resource-resolver";
+import type { SlideContext } from "@oxen-office/pptx/parser/slide/context";
+import type { CoreRenderContext } from "../render-context";
+import type { RenderOptions } from "../render-options";
+import { DEFAULT_RENDER_OPTIONS } from "../render-options";
+import type { ResolvedBackgroundFill } from "../background-fill";
+import { createWarningCollector } from "../warnings";
 import { getMimeTypeFromPath } from "@oxen/files";
 import { toDataUrl } from "@oxen/buffer";
 

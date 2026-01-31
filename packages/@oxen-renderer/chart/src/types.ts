@@ -2,6 +2,9 @@
 import type { BaseFill } from "@oxen-office/ooxml/domain/fill";
 import type { Color } from "@oxen-office/ooxml/domain/color";
 import type { Points } from "@oxen-office/ooxml/domain/units";
+import type { RenderWarning, WarningCollector } from "@oxen-office/ooxml";
+
+export type { RenderWarning, WarningCollector };
 
 export type GenericRunProperties = {
   readonly fontSize?: Points;
@@ -36,19 +39,6 @@ export type GenericParagraph = {
 export type GenericTextBody = {
   readonly bodyProperties: object;
   readonly paragraphs: readonly GenericParagraph[];
-};
-
-export type RenderWarning = {
-  readonly type: "unsupported" | "fallback" | "error";
-  readonly message: string;
-  readonly element?: string;
-  readonly details?: string;
-};
-
-export type WarningCollector = {
-  readonly add: (warning: RenderWarning) => void;
-  readonly getAll: () => readonly RenderWarning[];
-  readonly hasErrors: () => boolean;
 };
 
 export type ResolvedColor = {

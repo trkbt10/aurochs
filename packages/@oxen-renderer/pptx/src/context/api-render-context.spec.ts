@@ -9,15 +9,15 @@
  * - Background resolution
  */
 
-import { createRenderContext } from "./render-context";
-import type { Slide as ApiSlide } from "./types";
+import { createRenderContext } from "./api-render-context";
+import type { Slide as ApiSlide } from "@oxen-office/pptx/app/types";
 import type { XmlElement, XmlDocument } from "@oxen/xml";
 import type { ResourceMap } from "@oxen-office/opc";
-import type { IndexTables } from "../parser/slide/shape-tree-indexer";
+import type { IndexTables } from "@oxen-office/pptx/parser/slide/shape-tree-indexer";
 import { px } from "@oxen-office/ooxml/domain/units";
 import type { ZipFile } from "@oxen-office/opc";
 import { resolveColor } from "@oxen-office/ooxml/domain/color-resolution";
-import { DEFAULT_RENDER_OPTIONS } from "../render/render-options";
+import { DEFAULT_RENDER_OPTIONS } from "../render-options";
 
 // =============================================================================
 // Test Fixtures

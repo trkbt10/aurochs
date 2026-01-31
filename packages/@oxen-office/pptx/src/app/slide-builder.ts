@@ -10,9 +10,9 @@ import type { SlideSize } from "../domain";
 import type { ZipFile } from "@oxen-office/opc";
 import type { XmlElement } from "@oxen/xml";
 import type { SlideData } from "../parser/slide/data-types";
-import type { RenderOptions } from "../render/render-options";
+import type { RenderOptions } from "@oxen-renderer/pptx";
 import type { TableStyleList } from "../parser/table/style-parser";
-import { DEFAULT_RENDER_OPTIONS } from "../render/render-options";
+import { DEFAULT_RENDER_OPTIONS } from "@oxen-renderer/pptx";
 import { parseSlideTimingData } from "../parser/timing-parser";
 import { parseSlideTransitionData } from "../parser/slide/transition-parser";
 

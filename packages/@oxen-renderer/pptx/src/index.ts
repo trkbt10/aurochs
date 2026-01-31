@@ -33,9 +33,15 @@ export { createCoreRenderContext, createEmptyCoreRenderContext } from "./render-
 // Types from render-options
 // =============================================================================
 
-export type { RenderDialect, LineSpacingMode, BaselineMode, RenderOptions } from "./render-options";
+export type { RenderDialect, LineSpacingMode, BaselineMode, TableScalingMode, RenderOptions } from "./render-options";
 
-export { DEFAULT_RENDER_OPTIONS } from "./render-options";
+export {
+  DEFAULT_RENDER_OPTIONS,
+  LIBREOFFICE_RENDER_OPTIONS,
+  POWERPOINT_RENDER_OPTIONS,
+  createRenderOptions,
+  getEffectiveLineSpacing,
+} from "./render-options";
 
 // =============================================================================
 // Types from warnings
@@ -198,3 +204,15 @@ export { renderTableSvg } from "./svg/table";
 export type { SlideRenderResult } from "./html/slide";
 
 export { renderSlide, renderSlides, renderSlideStandalone } from "./html/slide";
+
+// =============================================================================
+// Context Adapters
+// =============================================================================
+
+export type { RenderContextFromSlideOptions } from "./context/slide-context-adapter";
+
+export { createRenderContextFromSlideContext } from "./context/slide-context-adapter";
+
+export type { RenderContext, CreateRenderContextOptions } from "./context/api-render-context";
+
+export { createRenderContext, getLayoutNonPlaceholderShapes } from "./context/api-render-context";

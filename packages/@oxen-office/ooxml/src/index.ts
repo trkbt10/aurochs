@@ -96,6 +96,10 @@ export type {
   ResolvedLine,
 } from "./domain/resolved-fill";
 
+// Domain types - Warnings
+export type { RenderWarning, WarningCollector } from "./domain/warnings";
+export { createWarningCollector } from "./domain/warnings";
+
 // Serializer utilities
 export {
   ooxmlBool,

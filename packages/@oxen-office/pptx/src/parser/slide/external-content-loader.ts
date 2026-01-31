@@ -20,11 +20,14 @@ import {
 } from "../../domain/diagram/layout-engine";
 import { parseXml } from "@oxen/xml";
 import { parseChart } from "@oxen-office/chart/parser";
-import { parseDiagramDrawing } from "../diagram/diagram-parser";
-import { parseDiagramColorsDefinition } from "../diagram/color-parser";
-import { parseDiagramDataModel } from "../diagram/data-parser";
-import { parseDiagramLayoutDefinition } from "../diagram/layout-parser";
-import { parseDiagramStyleDefinition } from "../diagram/style-parser";
+import { parseDiagramDrawing } from "./diagram-drawing-parser";
+import { parseDiagramColorsDefinition } from "@oxen-office/diagram/parser/diagram/color-parser";
+import { parseDiagramDataModel } from "@oxen-office/diagram/parser/diagram/data-parser";
+import { parseDiagramLayoutDefinition } from "@oxen-office/diagram/parser/diagram/layout-parser";
+import { parseDiagramStyleDefinition } from "@oxen-office/diagram/parser/diagram/style-parser";
+import { parseShapeProperties } from "../shape-parser/properties";
+import { parseTextBody } from "../text/text-parser";
+import { parseShapeStyle } from "../shape-parser/style";
 import type { ResourceMap } from "@oxen-office/opc";
 import { RELATIONSHIP_TYPES } from "../../domain/relationships";
 import { getMimeTypeFromPath } from "@oxen/files";
@@ -362,7 +365,7 @@ function loadDiagramDataModel(resourceId: string | undefined, fileReader: FileRe
   if (!doc) {
     return undefined;
   }
-  return parseDiagramDataModel(doc);
+  return parseDiagramDataModel(doc, { parseShapeProperties, parseTextBody });
 }
 
 function loadDiagramLayoutDefinition(
@@ -373,7 +376,7 @@ function loadDiagramLayoutDefinition(
   if (!doc) {
     return undefined;
   }
-  return parseDiagramLayoutDefinition(doc);
+  return parseDiagramLayoutDefinition(doc, { parseShapeProperties, parseTextBody });
 }
 
 function loadDiagramStyleDefinition(
@@ -384,7 +387,7 @@ function loadDiagramStyleDefinition(
   if (!doc) {
     return undefined;
   }
-  return parseDiagramStyleDefinition(doc);
+  return parseDiagramStyleDefinition(doc, { parseTextBody, parseShapeStyle });
 }
 
 function loadDiagramColorsDefinition(

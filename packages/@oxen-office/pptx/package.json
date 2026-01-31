@@ -46,10 +46,6 @@
       "types": "./src/app/presentation-document.ts",
       "default": "./src/app/presentation-document.ts"
     },
-    "./app/slide-context-adapter": {
-      "types": "./src/app/slide-context-adapter.ts",
-      "default": "./src/app/slide-context-adapter.ts"
-    },
     "./app/types": {
       "types": "./src/app/types.ts",
       "default": "./src/app/types.ts"

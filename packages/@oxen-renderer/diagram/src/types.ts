@@ -2,18 +2,9 @@
  * @file Diagram renderer shared types
  */
 
-export type RenderWarning = {
-  readonly type: "unsupported" | "fallback" | "error";
-  readonly message: string;
-  readonly element?: string;
-  readonly details?: string;
-};
+import type { RenderWarning, WarningCollector } from "@oxen-office/ooxml";
 
-export type WarningCollector = {
-  readonly add: (warning: RenderWarning) => void;
-  readonly getAll: () => readonly RenderWarning[];
-  readonly hasErrors: () => boolean;
-};
+export type { RenderWarning, WarningCollector };
 
 export type DiagramContent<TShape> = {
   readonly shapes: readonly TShape[];

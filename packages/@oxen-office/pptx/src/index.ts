@@ -13,6 +13,6 @@ export type { Presentation, Slide, SlideInfo, ListOptions, PresentationOptions }
 export type { IndexTables } from "./parser/slide/shape-tree-indexer";
 export type { SlideSize } from "./domain";
 
-// Render options for dialect-specific behavior
-export type { RenderOptions, RenderDialect, LineSpacingMode, BaselineMode } from "./render/render-options";
-export { DEFAULT_RENDER_OPTIONS, LIBREOFFICE_RENDER_OPTIONS, createRenderOptions } from "./render/render-options";
+// Render options re-exported from @oxen-renderer/pptx
+export type { RenderOptions, RenderDialect, LineSpacingMode, BaselineMode } from "@oxen-renderer/pptx";
+export { DEFAULT_RENDER_OPTIONS, LIBREOFFICE_RENDER_OPTIONS, createRenderOptions } from "@oxen-renderer/pptx";

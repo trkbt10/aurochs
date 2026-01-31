@@ -17,7 +17,7 @@
 
 import type { XmlElement } from "@oxen/xml";
 import { getChild, getByPath } from "@oxen/xml";
-import type { RenderOptions } from "../../render/render-options";
+import type { RenderOptions } from "@oxen-renderer/pptx";
 
 // Import domain types from canonical sources
 import type { PlaceholderTable, Theme, RawMasterTextStyles, ResolvedBlipResource } from "../../domain/index";
