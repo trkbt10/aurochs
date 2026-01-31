@@ -18,8 +18,9 @@
  * @see ECMA-376 Part 1, Section 21.2 (DrawingML - Charts)
  */
 
-import type { ChartDataUpdate } from "@oxen-office/chart/patcher";
-import { resolveEmbeddedXlsxPath, syncChartToWorkbook } from "@oxen-office/chart/patcher";
+import type { ChartDataUpdate } from "@oxen-office/chart/reader";
+import { resolveEmbeddedXlsxPath } from "@oxen-office/chart/reader";
+import { syncChartToWorkbook } from "@oxen-builder/chart/patcher";
 import { parseXlsxWorkbook } from "@oxen-office/xlsx/parser";
 import { exportXlsx } from "@oxen-builder/xlsx/exporter";
 import { resolveRelationshipTargetPath } from "@oxen-office/opc";

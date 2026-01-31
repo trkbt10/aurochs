@@ -9,6 +9,7 @@
     "@oxen-builder/drawing-ml": "workspace:*",
     "@oxen-office/chart": "workspace:*",
     "@oxen-office/ooxml": "workspace:*",
+    "@oxen-office/xlsx": "workspace:*",
     "@oxen/xml": "workspace:*"
   },
   "scripts": {
@@ -20,6 +21,14 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./patcher": {
+      "types": "./src/patcher/index.ts",
+      "default": "./src/patcher/index.ts"
+    },
+    "./formula": {
+      "types": "./src/formula/formula-builder.ts",
+      "default": "./src/formula/formula-builder.ts"
     }
   }
 }

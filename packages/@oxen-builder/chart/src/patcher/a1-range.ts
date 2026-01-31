@@ -299,31 +299,6 @@ export type CreateRangeOptions = {
   readonly absolute?: boolean;
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /**
  * Create a range from start cell and item count.
  */

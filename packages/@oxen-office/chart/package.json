@@ -39,17 +39,13 @@
       "types": "./src/parser/*/*.ts",
       "default": "./src/parser/*/*.ts"
     },
-    "./patcher": {
-      "types": "./src/patcher/index.ts",
-      "default": "./src/patcher/index.ts"
+    "./reader": {
+      "types": "./src/reader/index.ts",
+      "default": "./src/reader/index.ts"
     },
-    "./patcher/*": {
-      "types": "./src/patcher/*.ts",
-      "default": "./src/patcher/*.ts"
-    },
-    "./patcher/*/*": {
-      "types": "./src/patcher/*/*.ts",
-      "default": "./src/patcher/*/*.ts"
+    "./reader/*": {
+      "types": "./src/reader/*.ts",
+      "default": "./src/reader/*.ts"
     }
   }
 }

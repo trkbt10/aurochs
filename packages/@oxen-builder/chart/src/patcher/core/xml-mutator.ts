@@ -536,4 +536,3 @@ export function getDocumentRoot(doc: XmlDocument): XmlElement | null {
   const root = doc.children.find(isXmlElement);
   return root ?? null;
 }
-

@@ -1,5 +1,5 @@
 /**
- * @file Chart data patcher (Phase 10)
+ * @file Chart data patcher
  *
  * Updates embedded chart data caches inside a chart XML part (chartN.xml).
  *
@@ -9,17 +9,8 @@
  */
 
 import { createElement, createText, getByPath, getChild, getChildren, isXmlElement, type XmlDocument, type XmlElement, type XmlNode } from "@oxen/xml";
+import type { ChartDataSpec, ChartSeriesSpec } from "../types";
 import { findElements, replaceChildByName, setChildren, updateDocumentRoot } from "./core/xml-mutator";
-
-export type ChartSeries = {
-  readonly name: string;
-  readonly values: readonly number[];
-};
-
-export type ChartData = {
-  readonly categories: readonly string[];
-  readonly series: readonly ChartSeries[];
-};
 
 function cloneNode(node: XmlNode): XmlNode {
   if (!isXmlElement(node)) {
@@ -61,7 +52,7 @@ function getSeriesContainers(plotArea: XmlElement): readonly XmlElement[] {
 function patchPlotAreaSeriesContainers(
   plotArea: XmlElement,
   containers: readonly XmlElement[],
-  data: ChartData,
+  data: ChartDataSpec,
 ): XmlElement {
   const patchedContainers = new Map<string, XmlElement>();
   for (const container of containers) {
@@ -202,40 +193,10 @@ function patchOrCreateChildWithUpdater(options: PatchOrCreateChildWithUpdaterOpt
   return replaceChildByName(options.parent, options.name, options.updater(existing));
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /**
  * Patch a single series element with new data.
  */
-export function patchSeriesData(seriesElement: XmlElement, series: ChartSeries): XmlElement {
+export function patchSeriesData(seriesElement: XmlElement, series: ChartSeriesSpec): XmlElement {
   if (seriesElement.name !== "c:ser") {
     throw new Error(`patchSeriesData: expected c:ser, got ${seriesElement.name}`);
   }
@@ -306,7 +267,7 @@ function ensureSeriesCount(
 
 function patchContainerSeries(
   container: XmlElement,
-  data: ChartData,
+  data: ChartDataSpec,
 ): XmlElement {
   const next = ensureSeriesCount(container, data.series.length);
 
@@ -376,7 +337,7 @@ function patchAllSeriesCategories(
   return replaceChildByName(chartSpace, "c:chart", nextChart);
 }
 
-function validateChartData(data: ChartData): void {
+function validateChartData(data: ChartDataSpec): void {
   if (!Array.isArray(data.categories)) {
     throw new Error("patchChartData: data.categories must be an array");
   }
@@ -398,7 +359,7 @@ function validateChartData(data: ChartData): void {
 /**
  * Update chart cached categories + series values and names.
  */
-export function patchChartData(chartXml: XmlDocument, data: ChartData): XmlDocument {
+export function patchChartData(chartXml: XmlDocument, data: ChartDataSpec): XmlDocument {
   validateChartData(data);
 
   return updateDocumentRoot(chartXml, (root) => {

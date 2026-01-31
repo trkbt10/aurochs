@@ -10,8 +10,8 @@ import { getChild, isXmlElement } from "@oxen/xml";
 import type { Transform } from "@oxen-office/pptx/domain/geometry";
 import { replaceChildByName, updateChildByName } from "../core/xml-mutator";
 import { patchTransformElement } from "../serializer/transform";
-import type { ChartData } from "@oxen-office/chart/patcher";
-import { patchChartData, patchChartStyle, patchChartTitle } from "@oxen-office/chart/patcher";
+import type { ChartDataSpec } from "@oxen-builder/chart";
+import { patchChartData, patchChartStyle, patchChartTitle } from "@oxen-builder/chart/patcher";
 
 export type ChartStyle = {
   readonly styleId: number;
@@ -19,7 +19,7 @@ export type ChartStyle = {
 
 export type ChartChange =
   | { readonly type: "title"; readonly value: string }
-  | { readonly type: "data"; readonly data: ChartData }
+  | { readonly type: "data"; readonly data: ChartDataSpec }
   | { readonly type: "style"; readonly style: ChartStyle };
 
 export type ChartPatchTarget = {
