@@ -21,14 +21,17 @@ import type { ZipPackage } from "@oxen/zip";
 import type { SpShape, GraphicFrame, PicShape, CxnShape, GrpShape, Shape } from "@oxen-office/pptx/domain/shape";
 import type { Table, TableRow, TableCell } from "@oxen-office/pptx/domain/table/types";
 import type { GroupTransform } from "@oxen-office/pptx/domain/geometry";
+import type { TextBody } from "@oxen-office/pptx/domain/text";
+import type { Shape3d } from "@oxen-office/pptx/domain/three-d";
 import type { Pixels, Degrees } from "@oxen-office/ooxml/domain/units";
-import type { ShapeSpec, ImageSpec, ConnectorSpec, GroupSpec, TableSpec, TableCellSpec, TextSpec } from "../types";
+import type { ShapeSpec, ImageSpec, ConnectorSpec, GroupSpec, TableSpec, TableCellSpec } from "../types";
+import type { TextSpec } from "@oxen-builder/drawing-ml";
 import { PRESET_MAP } from "./presets";
 import { generateShapeId } from "./id-generator";
 import { buildFill } from "@oxen-builder/drawing-ml/fill";
-import { buildLine } from "./line-builder";
-import { buildTextBody, collectHyperlinks } from "./text-builder";
-import { buildEffects, buildShape3d } from "./effects-builder";
+import { buildLine } from "@oxen-builder/drawing-ml/line";
+import { buildTextBody, collectHyperlinks } from "@oxen-builder/drawing-ml/text";
+import { buildEffects, buildShape3d } from "@oxen-builder/drawing-ml/effect";
 import { parseXml, serializeDocument, isXmlElement } from "@oxen/xml";
 import { buildBlipEffectsFromSpec } from "./blip-effects-builder";
 import { buildCustomGeometryFromSpec } from "./custom-geometry-builder";
@@ -119,9 +122,11 @@ function buildSpShape(spec: ShapeSpec, id: string): SpShape {
       fill: spec.fill ? buildFill(spec.fill) : undefined,
       line: buildLineFromShapeSpec(spec),
       effects: spec.effects ? buildEffects(spec.effects) : undefined,
-      shape3d: spec.shape3d ? buildShape3d(spec.shape3d) : undefined,
+      // Type assertion: drawing-ml Shape3d is structurally compatible with pptx Shape3d
+      shape3d: spec.shape3d ? (buildShape3d(spec.shape3d) as Shape3d) : undefined,
     },
-    textBody: spec.text ? buildTextBody(spec.text, spec.textBody) : undefined,
+    // Type assertion: drawing-ml TextBody is structurally compatible with pptx TextBody
+    textBody: spec.text ? (buildTextBody(spec.text, spec.textBody) as TextBody) : undefined,
   };
 }
 

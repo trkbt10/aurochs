@@ -22,7 +22,7 @@ import { exportPptxAsBuffer } from "@oxen-builder/pptx/export";
 import { getBasename, getByPath, getChildren, parseXml } from "@oxen/xml";
 import { CONTENT_TYPES, RELATIONSHIP_TYPES } from "@oxen-office/pptx/domain";
 import { getRelationshipPath } from "@oxen-office/pptx/parser/relationships";
-import { addSlide, duplicateSlide, removeSlide, reorderSlide } from "@oxen-office/pptx/patcher";
+import { addSlide, duplicateSlide, removeSlide, reorderSlide } from "@oxen-builder/pptx/slide-ops";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURE_DIR = path.resolve(__dirname, "../../fixtures");

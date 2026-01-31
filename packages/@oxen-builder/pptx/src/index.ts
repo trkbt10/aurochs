@@ -55,21 +55,16 @@ export {
 // Builders
 // For fill builders (buildColor, buildFill, buildGradientFill, etc.),
 // import directly from @oxen-builder/drawing-ml/fill
+// For line builders (buildLine, buildLineEnd, buildLineFromSpec),
+// import directly from @oxen-builder/drawing-ml/line
+// For effects builders (buildEffects, buildBevel, buildShape3d),
+// import directly from @oxen-builder/drawing-ml/effect
+// For text builders (buildTextBody, buildParagraph, buildTextRun, collectHyperlinks, HyperlinkInfo),
+// import directly from @oxen-builder/drawing-ml/text
 export {
   generateShapeId,
   setChildren,
   PRESET_MAP,
-  buildLine,
-  buildLineEnd,
-  buildLineFromSpec,
-  buildBevel,
-  buildEffects,
-  buildShape3d,
-  buildParagraph,
-  buildTextBody,
-  buildTextRun,
-  collectHyperlinks,
-  type HyperlinkInfo,
   buildBlipEffectsFromSpec,
   buildCustomGeometryFromSpec,
   buildMediaReferenceFromSpec,
@@ -106,37 +101,9 @@ export {
 } from "./builders";
 
 // Types
+// NOTE: Common types (Color, Fill, Line, Effects, Text, 3D) should be imported directly from @oxen-builder/drawing-ml
+// PPTX-specific types are exported below
 export {
-  isThemeColor,
-  type LineEndSpec,
-  type ThemeColorSpec,
-  type ColorSpec,
-  type GradientStopSpec,
-  type GradientFillSpec,
-  type PatternFillSpec,
-  type SolidFillSpec,
-  type ThemeFillSpec,
-  type FillSpec,
-  type ShadowEffectSpec,
-  type GlowEffectSpec,
-  type SoftEdgeEffectSpec,
-  type ReflectionEffectSpec,
-  type EffectsSpec,
-  type BevelSpec,
-  type Shape3dSpec,
-  type TextVerticalPosition,
-  type BulletType,
-  type BulletSpec,
-  type TextEffectSpec,
-  type TextOutlineSpec,
-  type HyperlinkSpec,
-  type TextRunSpec,
-  type LineSpacingSpec,
-  type TextParagraphSpec,
-  type RichTextSpec,
-  type TextSpec,
-  type TextWrapping,
-  type TextBodyPropertiesSpec,
   type PlaceholderSpec,
   type ShapeSpec,
   type CustomGeometrySpec,

@@ -4,7 +4,8 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { runBuild, type BuildSpec } from "./build";
+import { runBuild } from "./build";
+import type { BuildSpec } from "@oxen-builder/pptx/types";
 import { runShow } from "./show";
 import { success, error, type Result } from "../output/json-output";
 import type { ShapeJson, BoundsJson, GeometryJson, FillJson, LineJson, EffectsJson, Shape3dJson, GraphicContentJson, TableJson } from "../serializers/shape-serializer";

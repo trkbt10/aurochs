@@ -4,7 +4,7 @@
 
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
-import { exportXlsx } from "@oxen-office/xlsx/exporter";
+import { exportXlsx } from "@oxen-builder/xlsx/exporter";
 import { detectSpreadsheetFileType, parseXlsWithReport, type SpreadsheetFileType } from "@oxen-office/xls";
 import { createGetZipTextFileContentFromBytes } from "@oxen-office/opc";
 import { createDefaultStyleSheet } from "@oxen-office/xlsx/domain/style/types";

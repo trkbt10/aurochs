@@ -7,7 +7,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { parseXls } from "@oxen-office/xls";
-import { exportXlsx } from "@oxen-office/xlsx/exporter";
+import { exportXlsx } from "@oxen-builder/xlsx/exporter";
 import { parseXlsxWorkbook } from "@oxen-office/xlsx/parser";
 import { loadZipPackage } from "@oxen/zip";
 

@@ -7,7 +7,7 @@ import type { ListData, SlideListItem } from "../commands/list";
 import type { ShowData } from "../commands/show";
 import type { ExtractData } from "../commands/extract";
 import type { ThemeData } from "../commands/theme";
-import type { BuildData } from "../commands/build";
+import type { BuildData } from "@oxen-builder/pptx/types";
 import type { VerifyData } from "../commands/verify";
 
 function getSlideFlags(slide: SlideListItem): string[] {

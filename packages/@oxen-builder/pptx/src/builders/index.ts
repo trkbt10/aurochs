@@ -16,20 +16,14 @@ export { PRESET_MAP } from "./presets";
 // For fill builders (buildColor, buildFill, buildGradientFill, etc.),
 // import directly from @oxen-builder/drawing-ml/fill
 
-// Line builders
-export { buildLine, buildLineEnd, buildLineFromSpec } from "./line-builder";
+// For line builders (buildLine, buildLineEnd, buildLineFromSpec),
+// import directly from @oxen-builder/drawing-ml/line
 
-// Effects builders
-export { buildBevel, buildEffects, buildShape3d } from "./effects-builder";
+// For effects builders (buildEffects, buildBevel, buildShape3d),
+// import directly from @oxen-builder/drawing-ml/effect
 
-// Text builders
-export {
-  buildParagraph,
-  buildTextBody,
-  buildTextRun,
-  collectHyperlinks,
-  type HyperlinkInfo,
-} from "./text-builder";
+// For text builders (buildTextBody, buildParagraph, buildTextRun, collectHyperlinks),
+// import directly from @oxen-builder/drawing-ml/text
 
 // Blip effects builders
 export { buildBlipEffectsFromSpec } from "./blip-effects-builder";

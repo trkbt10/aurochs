@@ -6,9 +6,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
 import { parseXml, getChild, getChildren, getTextContent, isXmlElement } from "@oxen/xml";
-import { patchSlideXml } from "@oxen-office/pptx/patcher";
+import { patchSlideXml } from "@oxen-builder/pptx/patcher";
 import { parseTextBody } from "@oxen-office/pptx/parser/text/text-parser";
-import type { ShapeChange } from "@oxen-office/pptx/patcher/core/shape-differ";
+import type { ShapeChange } from "@oxen-builder/pptx/patcher/core/shape-differ";
 import type { TextBody } from "@oxen-office/pptx/domain/text";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));

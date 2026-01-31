@@ -5,7 +5,7 @@
 import { parseXls } from "@oxen-office/xls";
 import { CFB_SIGNATURE, ENDOFCHAIN, FATSECT, FREESECT, NOSTREAM } from "@oxen-office/cfb";
 import { BIFF_RECORD_TYPES } from "@oxen-office/xls/biff/record-types";
-import { exportXlsx } from "@oxen-office/xlsx/exporter";
+import { exportXlsx } from "@oxen-builder/xlsx/exporter";
 import { parseXlsxWorkbook } from "@oxen-office/xlsx/parser";
 import { loadZipPackage } from "@oxen/zip";
 

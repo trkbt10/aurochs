@@ -1,21 +1,48 @@
 /**
  * @file Build specification type definitions
  *
- * This module defines spec types for the PPTX builder.
- * Types are imported from @oxen-office packages and used internally.
+ * This module defines PPTX-specific spec types for the builder.
+ * Common types (Color, Fill, Line, Effects, Text) are imported from @oxen-builder/drawing-ml.
  *
- * NOTE: This module does NOT re-export types from @oxen-office packages.
- * Consumers should import domain types directly from:
- * - @oxen-office/chart: BuildableChartType, Grouping, BarGrouping, ScatterStyle, RadarStyle, OfPieType
- * - @oxen-office/ooxml: SchemeColorValue, PatternType
- * - @oxen-office/pptx/domain: LineEndType, LineEndSize, LineCap, LineJoin, CompoundLine, DashStyle,
- *   TextAlign, TextAnchor, TextVerticalType, UnderlineStyle, StrikeStyle, TextCaps,
- *   PresetShapeType, PlaceholderType, BevelPresetType, PresetMaterialType, TransitionType
- * - @oxen-builder/pptx/patcher: AnimationTrigger, AnimationDirection, SimpleCommentSpec, SimpleNotesSpec
+ * NOTE: Consumers should import common types directly from @oxen-builder/drawing-ml:
+ * - Color types: ColorSpec, ThemeColorSpec, isThemeColor
+ * - Fill types: FillSpec, SolidFillSpec, GradientFillSpec, PatternFillSpec, ThemeFillSpec, GradientStopSpec
+ * - Line types: LineEndSpec, LineSpec, DashStyle, LineCap, LineJoin, CompoundLine
+ * - Effect types: EffectsSpec, ShadowEffectSpec, GlowEffectSpec, SoftEdgeEffectSpec, ReflectionEffectSpec
+ * - 3D types: BevelSpec, Shape3dSpec, BevelPresetType, PresetMaterialType
+ * - Text types: TextSpec, TextRunSpec, TextParagraphSpec, RichTextSpec, TextBodyPropertiesSpec, etc.
  */
 
 // =============================================================================
-// Imports from @oxen-office packages (for internal use)
+// Imports from @oxen-builder/drawing-ml (shared DrawingML types)
+// =============================================================================
+
+import type {
+  // Color types
+  ColorSpec,
+  // Fill types
+  FillSpec,
+  GradientStopSpec,
+  // Line types
+  LineEndSpec,
+  DashStyle,
+  LineCap,
+  LineJoin,
+  CompoundLine,
+  // Effect types
+  EffectsSpec,
+  // 3D types
+  BevelSpec,
+  Shape3dSpec,
+  // Text types
+  TextSpec,
+  TextBodyPropertiesSpec,
+  TextAnchor,
+  TextVerticalType,
+} from "@oxen-builder/drawing-ml";
+
+// =============================================================================
+// Imports from @oxen-office packages (PPTX-specific domain types)
 // =============================================================================
 
 // Chart types from @oxen-builder/chart
@@ -28,32 +55,10 @@ import type {
   OfPieType,
 } from "@oxen-builder/chart";
 
-// Color/Fill types from @oxen-office/ooxml
-import type { SchemeColorValue, PatternType } from "@oxen-office/ooxml";
-
-// Domain types from @oxen-office/pptx/domain
+// Shape types from @oxen-office/pptx/domain
 import type {
-  // Line types
-  LineEndType,
-  LineEndSize,
-  LineCap,
-  LineJoin,
-  CompoundLine,
-  DashStyle,
-  // Text types
-  TextAlign,
-  TextAnchor,
-  TextVerticalType,
-  UnderlineStyle,
-  StrikeStyle,
-  TextCaps,
-  // Shape types
   PresetShapeType,
   PlaceholderType,
-  // 3D types
-  BevelPresetType,
-  PresetMaterialType,
-  // Transition types
   TransitionType,
 } from "@oxen-office/pptx/domain";
 
@@ -64,301 +69,6 @@ import type {
   SimpleCommentSpec,
   SimpleNotesSpec,
 } from "@oxen-builder/pptx/patcher";
-
-// =============================================================================
-// Line Spec Types
-// =============================================================================
-
-/**
- * Line end specification
- */
-export type LineEndSpec = {
-  readonly type: LineEndType;
-  readonly width?: LineEndSize;
-  readonly length?: LineEndSize;
-};
-
-// =============================================================================
-// Color Types (simplified color specs)
-// =============================================================================
-
-/**
- * Theme color specification with optional luminance modifiers
- */
-export type ThemeColorSpec = {
-  readonly theme: SchemeColorValue;
-  readonly lumMod?: number; // luminance modulate (0-100, percentage)
-  readonly lumOff?: number; // luminance offset (-100 to 100, percentage)
-  readonly tint?: number;   // tint (0-100, percentage)
-  readonly shade?: number;  // shade (0-100, percentage)
-};
-
-/**
- * Color specification - can be hex string or theme color reference
- */
-export type ColorSpec = string | ThemeColorSpec;
-
-/**
- * Check if a color spec is a theme color
- */
-export function isThemeColor(color: ColorSpec): color is ThemeColorSpec {
-  return typeof color === "object" && "theme" in color;
-}
-
-// =============================================================================
-// Fill Types (simplified fill specs)
-// =============================================================================
-
-/**
- * Gradient stop specification
- */
-export type GradientStopSpec = {
-  readonly position: number; // 0-100 percentage
-  readonly color: ColorSpec; // hex color or theme color
-};
-
-/**
- * Gradient fill specification
- */
-export type GradientFillSpec = {
-  readonly type: "gradient";
-  readonly gradientType: "linear" | "radial" | "path";
-  readonly angle?: number; // degrees for linear gradient
-  readonly stops: readonly GradientStopSpec[];
-};
-
-/**
- * Pattern fill specification
- */
-export type PatternFillSpec = {
-  readonly type: "pattern";
-  readonly preset: PatternType;
-  readonly fgColor: ColorSpec; // foreground color (hex or theme)
-  readonly bgColor: ColorSpec; // background color (hex or theme)
-};
-
-/**
- * Solid fill specification (explicit)
- */
-export type SolidFillSpec = {
-  readonly type: "solid";
-  readonly color: ColorSpec; // hex color or theme color
-};
-
-/**
- * Theme fill specification (shorthand for solid theme color fill)
- */
-export type ThemeFillSpec = {
-  readonly type: "theme";
-  readonly theme: SchemeColorValue;
-  readonly lumMod?: number;
-  readonly lumOff?: number;
-  readonly tint?: number;
-  readonly shade?: number;
-};
-
-/**
- * Fill specification union type
- */
-export type FillSpec = string | SolidFillSpec | GradientFillSpec | PatternFillSpec | ThemeFillSpec;
-
-// =============================================================================
-// Effect Types
-// =============================================================================
-
-/**
- * Shadow effect specification
- * Based on ECMA-376 Part 1: §20.1.8.49 (outerShdw)
- */
-export type ShadowEffectSpec = {
-  readonly color: string; // hex color
-  readonly blur?: number; // blur radius in pixels
-  readonly distance?: number; // distance in pixels
-  readonly direction?: number; // direction in degrees (0-360)
-};
-
-/**
- * Glow effect specification
- * Based on ECMA-376 Part 1: §20.1.8.32 (glow)
- */
-export type GlowEffectSpec = {
-  readonly color: string; // hex color
-  readonly radius: number; // radius in pixels
-};
-
-/**
- * Soft edge effect specification
- * Based on ECMA-376 Part 1: §20.1.8.53 (softEdge)
- */
-export type SoftEdgeEffectSpec = {
-  readonly radius: number; // radius in pixels
-};
-
-/**
- * Reflection effect specification
- * Based on ECMA-376 Part 1: §20.1.8.50 (reflection)
- */
-export type ReflectionEffectSpec = {
-  readonly blurRadius?: number; // blur radius in pixels (default: 0)
-  readonly startOpacity?: number; // start opacity 0-100 (default: 100)
-  readonly endOpacity?: number; // end opacity 0-100 (default: 0)
-  readonly distance?: number; // distance in pixels (default: 0)
-  readonly direction?: number; // direction in degrees (default: 0)
-  readonly fadeDirection?: number; // fade direction in degrees (default: 90)
-  readonly scaleX?: number; // horizontal scale 0-100 (default: 100)
-  readonly scaleY?: number; // vertical scale 0-100 (default: -100 for mirror)
-};
-
-/**
- * Combined effects specification
- */
-export type EffectsSpec = {
-  readonly shadow?: ShadowEffectSpec;
-  readonly glow?: GlowEffectSpec;
-  readonly softEdge?: SoftEdgeEffectSpec;
-  readonly reflection?: ReflectionEffectSpec;
-};
-
-// =============================================================================
-// 3D Types
-// =============================================================================
-
-/**
- * Bevel specification
- */
-export type BevelSpec = {
-  readonly preset?: BevelPresetType;
-  readonly width?: number; // in pixels
-  readonly height?: number; // in pixels
-};
-
-/**
- * 3D shape properties specification
- */
-export type Shape3dSpec = {
-  readonly bevelTop?: BevelSpec;
-  readonly bevelBottom?: BevelSpec;
-  readonly material?: PresetMaterialType;
-  readonly extrusionHeight?: number; // depth in pixels
-};
-
-// =============================================================================
-// Text Types
-// =============================================================================
-
-/**
- * Text vertical position (superscript/subscript)
- */
-export type TextVerticalPosition = "normal" | "superscript" | "subscript";
-
-/**
- * Bullet type
- */
-export type BulletType = "none" | "char" | "autoNum";
-
-/**
- * Bullet specification
- */
-export type BulletSpec = {
-  readonly type: BulletType;
-  readonly char?: string; // for char bullet type
-  readonly autoNumType?: string; // for autoNum type (e.g., "arabicPeriod", "romanUcPeriod")
-};
-
-/**
- * Text effect specification (shadow, glow for text)
- */
-export type TextEffectSpec = {
-  readonly shadow?: ShadowEffectSpec;
-  readonly glow?: GlowEffectSpec;
-};
-
-/**
- * Text outline specification
- */
-export type TextOutlineSpec = {
-  readonly color: string; // hex color
-  readonly width?: number; // in pixels
-};
-
-/**
- * Hyperlink specification
- */
-export type HyperlinkSpec = {
-  readonly url: string;
-  readonly tooltip?: string;
-};
-
-/**
- * Text run specification - a portion of text with specific formatting
- */
-export type TextRunSpec = {
-  readonly text: string;
-  readonly bold?: boolean;
-  readonly italic?: boolean;
-  readonly underline?: UnderlineStyle;
-  readonly strikethrough?: StrikeStyle;
-  readonly caps?: TextCaps;
-  readonly verticalPosition?: TextVerticalPosition; // superscript, subscript
-  readonly letterSpacing?: number; // in pixels (can be negative)
-  readonly fontSize?: number; // in points
-  readonly fontFamily?: string;
-  readonly color?: string; // hex color
-  readonly outline?: TextOutlineSpec; // text stroke
-  readonly effects?: TextEffectSpec;
-  readonly hyperlink?: HyperlinkSpec; // clickable hyperlink
-};
-
-/**
- * Line spacing specification
- */
-export type LineSpacingSpec =
-  | { readonly type: "percent"; readonly value: number } // e.g., 150 for 1.5x
-  | { readonly type: "points"; readonly value: number }; // e.g., 18 for 18pt
-
-/**
- * Text paragraph specification
- */
-export type TextParagraphSpec = {
-  readonly runs: readonly TextRunSpec[];
-  readonly alignment?: TextAlign;
-  readonly bullet?: BulletSpec;
-  readonly level?: number; // indent level (0-8)
-  readonly lineSpacing?: LineSpacingSpec; // line height
-  readonly spaceBefore?: number; // points before paragraph
-  readonly spaceAfter?: number; // points after paragraph
-  readonly indent?: number; // first line indent in pixels
-  readonly marginLeft?: number; // left margin in pixels
-};
-
-/**
- * Rich text body specification - array of paragraphs
- */
-export type RichTextSpec = readonly TextParagraphSpec[];
-
-/**
- * Text specification - can be simple string or rich text
- */
-export type TextSpec = string | RichTextSpec;
-
-/**
- * Text wrapping mode
- */
-export type TextWrapping = "none" | "square";
-
-/**
- * Text body properties specification
- */
-export type TextBodyPropertiesSpec = {
-  readonly anchor?: TextAnchor; // vertical alignment: top, center, bottom
-  readonly verticalType?: TextVerticalType; // text orientation
-  readonly wrapping?: TextWrapping;
-  readonly anchorCenter?: boolean; // center text horizontally
-  readonly insetLeft?: number; // left margin in pixels
-  readonly insetTop?: number; // top margin in pixels
-  readonly insetRight?: number; // right margin in pixels
-  readonly insetBottom?: number; // bottom margin in pixels
-};
 
 // =============================================================================
 // Shape Specification

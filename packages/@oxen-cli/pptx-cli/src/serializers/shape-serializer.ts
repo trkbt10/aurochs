@@ -4,6 +4,7 @@
 
 import type {
   Shape,
+  PicShape,
   Placeholder,
   GraphicContent,
   TableReference,
@@ -393,7 +394,7 @@ function serializeParagraph(paragraph: Paragraph): ParagraphJson {
 }
 
 function serializeMedia(
-  media: Shape["media"],
+  media: PicShape["media"],
 ): ShapeJson["media"] | undefined {
   if (!media) {
     return undefined;

@@ -5,7 +5,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { parseXlsxWorkbook } from "@oxen-office/xlsx/parser";
-import { exportXlsx } from "@oxen-office/xlsx/exporter";
+import { exportXlsx } from "@oxen-builder/xlsx/exporter";
 import { colIdx, rowIdx } from "@oxen-office/xlsx/domain/types";
 import type { CellAddress } from "@oxen-office/xlsx/domain/cell/address";
 import type { XlsxWorkbook } from "@oxen-office/xlsx/domain/workbook";

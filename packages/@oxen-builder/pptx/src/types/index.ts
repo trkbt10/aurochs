@@ -1,48 +1,19 @@
 /**
  * @file Type definitions for PPTX builder
  *
- * This module provides type definitions for build specifications.
+ * This module provides PPTX-specific type definitions for build specifications.
+ *
+ * NOTE: Common types should be imported directly from @oxen-builder/drawing-ml:
+ * - Color types: ColorSpec, ThemeColorSpec, isThemeColor
+ * - Fill types: FillSpec, SolidFillSpec, GradientFillSpec, PatternFillSpec, ThemeFillSpec, GradientStopSpec
+ * - Line types: LineEndSpec, LineSpec, DashStyle, LineCap, LineJoin, CompoundLine
+ * - Effect types: EffectsSpec, ShadowEffectSpec, GlowEffectSpec, SoftEdgeEffectSpec, ReflectionEffectSpec
+ * - 3D types: BevelSpec, Shape3dSpec, BevelPresetType, PresetMaterialType
+ * - Text types: TextSpec, TextRunSpec, TextParagraphSpec, RichTextSpec, TextBodyPropertiesSpec, etc.
  */
 
-// Spec types for building PPTX presentations
+// PPTX-specific spec types
 export {
-  // Type guard
-  isThemeColor,
-  // Line types
-  type LineEndSpec,
-  // Color types
-  type ThemeColorSpec,
-  type ColorSpec,
-  // Fill types
-  type GradientStopSpec,
-  type GradientFillSpec,
-  type PatternFillSpec,
-  type SolidFillSpec,
-  type ThemeFillSpec,
-  type FillSpec,
-  // Effect types
-  type ShadowEffectSpec,
-  type GlowEffectSpec,
-  type SoftEdgeEffectSpec,
-  type ReflectionEffectSpec,
-  type EffectsSpec,
-  // 3D types
-  type BevelSpec,
-  type Shape3dSpec,
-  // Text types
-  type TextVerticalPosition,
-  type BulletType,
-  type BulletSpec,
-  type TextEffectSpec,
-  type TextOutlineSpec,
-  type HyperlinkSpec,
-  type TextRunSpec,
-  type LineSpacingSpec,
-  type TextParagraphSpec,
-  type RichTextSpec,
-  type TextSpec,
-  type TextWrapping,
-  type TextBodyPropertiesSpec,
   // Shape types
   type PlaceholderSpec,
   type ShapeSpec,
