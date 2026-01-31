@@ -5,7 +5,6 @@
   "type": "module",
   "sideEffects": false,
   "dependencies": {
-    "@oxen-builder/core": "workspace:*",
     "@oxen-office/opc": "workspace:*",
     "@oxen-office/ooxml": "workspace:*",
     "@oxen/xml": "workspace:*",
@@ -164,18 +163,6 @@
     "./formula/*/*/*": {
       "types": "./src/formula/*/*/*.ts",
       "default": "./src/formula/*/*/*.ts"
-    },
-    "./serializer": {
-      "types": "./src/serializer/index.ts",
-      "default": "./src/serializer/index.ts"
-    },
-    "./serializer/*": {
-      "types": "./src/serializer/*.ts",
-      "default": "./src/serializer/*.ts"
-    },
-    "./serializer/*/*": {
-      "types": "./src/serializer/*/*.ts",
-      "default": "./src/serializer/*/*.ts"
     }
   }
 }
