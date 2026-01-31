@@ -14,13 +14,13 @@ import {
   parseXml,
   updateAtPath,
   updateDocumentRoot,
-} from "@oxen-office/pptx/patcher";
+} from "@oxen-builder/pptx/patcher";
 import type { ZipPackage } from "@oxen/zip";
 import type { Degrees, Pixels } from "@oxen-office/ooxml/domain/units";
 import { patchChartData, patchChartStyle, patchChartTitle } from "@oxen-office/chart/patcher";
 import { buildChartSpaceDocument } from "@oxen-builder/chart";
 import type { ChartAddSpec, ChartDataSpec } from "../types";
-import { patchChartTransform } from "@oxen-office/pptx/patcher";
+import { patchChartTransform } from "@oxen-builder/pptx/patcher";
 import type { Transform } from "@oxen-office/pptx/domain/geometry";
 import { generateShapeId } from "./id-generator";
 

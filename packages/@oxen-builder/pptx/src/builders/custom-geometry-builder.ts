@@ -2,7 +2,7 @@
  * @file Build CustomGeometry domain object from CustomGeometrySpec
  *
  * This module converts CLI spec types to domain types.
- * For XML serialization, use serializeCustomGeometry from @oxen-office/pptx/patcher.
+ * For XML serialization, use serializeCustomGeometry from @oxen-builder/pptx/patcher.
  */
 
 import type { CustomGeometry, GeometryPath, PathCommand } from "@oxen-office/pptx/domain/shape";

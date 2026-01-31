@@ -9,7 +9,7 @@ import type { ShapeId, ResourceId } from "@oxen-office/pptx/domain/types";
 import { deg, px } from "@oxen-office/ooxml/domain/units";
 import type { CreationChartType, CreationDiagramType } from "../context/presentation/editor/types";
 import type { ShapeBounds } from "../shape/creation-bounds";
-import { type OleType, OLE_TYPE_MAP } from "@oxen-office/pptx/patcher/resources/ole-manager";
+import { type OleType, OLE_TYPE_MAP } from "@oxen-builder/pptx/patcher/resources/ole-manager";
 
 // =============================================================================
 // Defaults

@@ -36,7 +36,7 @@ import {
   createPicShape,
 } from "../shape/factory";
 import { createOleGraphicFrame } from "../graphic-frame/factory";
-import { getOleTypeFromFile } from "@oxen-office/pptx/patcher/resources/ole-manager";
+import { getOleTypeFromFile } from "@oxen-builder/pptx/patcher/resources/ole-manager";
 import type { ShapeBounds } from "../shape/creation-bounds";
 import { drawingPathToCustomGeometry } from "../path-tools/utils/path-commands";
 import {

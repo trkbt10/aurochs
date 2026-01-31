@@ -34,7 +34,7 @@ import {
   type ShapeChange,
   type PropertyChange,
   type MediaType,
-} from "@oxen-office/pptx/patcher";
+} from "@oxen-builder/pptx/patcher";
 
 // =============================================================================
 // Types

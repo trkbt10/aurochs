@@ -9,7 +9,7 @@ import {
   isTransitionType as coreIsTransitionType,
   serializeSlideTransition,
   updateDocumentRoot,
-} from "@oxen-office/pptx/patcher";
+} from "@oxen-builder/pptx/patcher";
 import type { SlideTransition } from "@oxen-office/pptx/domain/transition";
 import type { TransitionType } from "@oxen-office/pptx/domain";
 import type { SlideTransitionSpec } from "../types";

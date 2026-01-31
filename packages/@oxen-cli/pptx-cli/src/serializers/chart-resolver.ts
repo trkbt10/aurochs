@@ -3,7 +3,7 @@
  */
 
 import { parseXml } from "@oxen/xml";
-import { listRelationships } from "@oxen-office/pptx/patcher";
+import { listRelationships } from "@oxen-builder/pptx/patcher";
 import { resolveRelationshipTargetPath } from "@oxen-office/opc";
 import { parseChart } from "@oxen-office/chart/parser";
 import { summarizeChart, type ChartSummaryJson } from "./chart-serializer";

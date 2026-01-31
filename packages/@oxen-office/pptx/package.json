@@ -225,26 +225,6 @@
     "./parser/table/style-parser": {
       "types": "./src/parser/table/style-parser.ts",
       "default": "./src/parser/table/style-parser.ts"
-    },
-    "./patcher": {
-      "types": "./src/patcher/index.ts",
-      "default": "./src/patcher/index.ts"
-    },
-    "./patcher/*": {
-      "types": "./src/patcher/*.ts",
-      "default": "./src/patcher/*.ts"
-    },
-    "./patcher/*/*": {
-      "types": "./src/patcher/*/*.ts",
-      "default": "./src/patcher/*/*.ts"
-    },
-    "./patcher/*/*/*": {
-      "types": "./src/patcher/*/*/*.ts",
-      "default": "./src/patcher/*/*/*.ts"
-    },
-    "./patcher/resources/ole-manager": {
-      "types": "./src/patcher/resources/ole-manager.ts",
-      "default": "./src/patcher/resources/ole-manager.ts"
     }
   }
 }

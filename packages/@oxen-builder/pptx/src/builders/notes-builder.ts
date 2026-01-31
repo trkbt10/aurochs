@@ -5,7 +5,7 @@
  */
 
 import type { ZipPackage } from "@oxen/zip";
-import { setSlideNotes } from "@oxen-office/pptx/patcher";
+import { setSlideNotes } from "@oxen-builder/pptx/patcher";
 import type { NotesSpec } from "../types";
 
 /**

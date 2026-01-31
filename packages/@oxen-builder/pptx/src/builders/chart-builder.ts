@@ -7,8 +7,8 @@
  */
 
 import { getByPath, isXmlElement, parseXml, serializeDocument, type XmlDocument, type XmlElement } from "@oxen/xml";
-import { updateDocumentRoot, updateAtPath, patchChart, patchChartTransform, type ChartChange } from "@oxen-office/pptx/patcher";
-import { listRelationships } from "@oxen-office/pptx/patcher";
+import { updateDocumentRoot, updateAtPath, patchChart, patchChartTransform, type ChartChange } from "@oxen-builder/pptx/patcher";
+import { listRelationships } from "@oxen-builder/pptx/patcher";
 import { resolveRelationshipTargetPath } from "@oxen-office/opc";
 import type { ZipPackage } from "@oxen/zip";
 import type { ChartUpdateSpec } from "../types";

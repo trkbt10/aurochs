@@ -40,6 +40,22 @@
     "./types": {
       "types": "./src/types/index.ts",
       "default": "./src/types/index.ts"
+    },
+    "./patcher": {
+      "types": "./src/patcher/index.ts",
+      "default": "./src/patcher/index.ts"
+    },
+    "./patcher/*": {
+      "types": "./src/patcher/*.ts",
+      "default": "./src/patcher/*.ts"
+    },
+    "./patcher/*/*": {
+      "types": "./src/patcher/*/*.ts",
+      "default": "./src/patcher/*/*.ts"
+    },
+    "./patcher/*/*/*": {
+      "types": "./src/patcher/*/*/*.ts",
+      "default": "./src/patcher/*/*/*.ts"
     }
   }
 }

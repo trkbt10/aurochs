@@ -11,7 +11,7 @@ import {
   isXmlElement,
 } from "@oxen/xml";
 import type { ZipPackage } from "@oxen/zip";
-import { patchDiagram, type DiagramChange, type DiagramFiles } from "@oxen-office/pptx/patcher";
+import { patchDiagram, type DiagramChange, type DiagramFiles } from "@oxen-builder/pptx/patcher";
 import type { SmartArtUpdateSpec, DiagramChangeSpec } from "../types";
 
 /**

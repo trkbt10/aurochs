@@ -11,7 +11,7 @@
  * - @oxen-office/pptx/domain: LineEndType, LineEndSize, LineCap, LineJoin, CompoundLine, DashStyle,
  *   TextAlign, TextAnchor, TextVerticalType, UnderlineStyle, StrikeStyle, TextCaps,
  *   PresetShapeType, PlaceholderType, BevelPresetType, PresetMaterialType, TransitionType
- * - @oxen-office/pptx/patcher: AnimationTrigger, AnimationDirection, SimpleCommentSpec, SimpleNotesSpec
+ * - @oxen-builder/pptx/patcher: AnimationTrigger, AnimationDirection, SimpleCommentSpec, SimpleNotesSpec
  */
 
 // =============================================================================
@@ -57,13 +57,13 @@ import type {
   TransitionType,
 } from "@oxen-office/pptx/domain";
 
-// Animation types from @oxen-office/pptx/patcher
+// Animation types from @oxen-builder/pptx/patcher
 import type {
   AnimationTrigger,
   AnimationDirection,
   SimpleCommentSpec,
   SimpleNotesSpec,
-} from "@oxen-office/pptx/patcher";
+} from "@oxen-builder/pptx/patcher";
 
 // =============================================================================
 // Line Spec Types
@@ -812,7 +812,7 @@ export type AnimationSpec = {
 
 /**
  * Comment specification for adding to slides.
- * Alias for SimpleCommentSpec from @oxen-office/pptx/patcher.
+ * Alias for SimpleCommentSpec from @oxen-builder/pptx/patcher.
  */
 export type CommentSpec = SimpleCommentSpec;
 
@@ -822,7 +822,7 @@ export type CommentSpec = SimpleCommentSpec;
 
 /**
  * Speaker notes specification.
- * Alias for SimpleNotesSpec from @oxen-office/pptx/patcher.
+ * Alias for SimpleNotesSpec from @oxen-builder/pptx/patcher.
  */
 export type NotesSpec = SimpleNotesSpec;
 

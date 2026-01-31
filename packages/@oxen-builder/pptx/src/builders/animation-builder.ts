@@ -5,7 +5,7 @@
  */
 
 import type { XmlDocument } from "@oxen/xml";
-import { addAnimationsToSlide, type SimpleAnimationSpec } from "@oxen-office/pptx/patcher";
+import { addAnimationsToSlide, type SimpleAnimationSpec } from "@oxen-builder/pptx/patcher";
 import type { AnimationSpec } from "../types";
 
 /**

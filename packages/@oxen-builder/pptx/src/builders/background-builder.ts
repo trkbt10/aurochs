@@ -8,10 +8,10 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { createElement, type XmlElement, type XmlDocument } from "@oxen/xml";
-import { updateDocumentRoot, replaceChildByName } from "@oxen-office/pptx/patcher/core/xml-mutator";
+import { updateDocumentRoot, replaceChildByName } from "@oxen-builder/pptx/patcher/core/xml-mutator";
 import { getChild, isXmlElement } from "@oxen/xml";
-import { serializeFill } from "@oxen-office/pptx/patcher/serializer/fill";
-import { addMedia } from "@oxen-office/pptx/patcher/resources/media-manager";
+import { serializeFill } from "@oxen-builder/pptx/patcher/serializer/fill";
+import { addMedia } from "@oxen-builder/pptx/patcher/resources/media-manager";
 import type { Fill } from "@oxen-office/pptx/domain/color/types";
 import type { ZipPackage } from "@oxen/zip";
 import type { Degrees, Percent } from "@oxen-office/ooxml/domain/units";

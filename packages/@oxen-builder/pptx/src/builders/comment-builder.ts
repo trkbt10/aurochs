@@ -5,7 +5,7 @@
  */
 
 import type { ZipPackage } from "@oxen/zip";
-import { addCommentToSlide } from "@oxen-office/pptx/patcher";
+import { addCommentToSlide } from "@oxen-builder/pptx/patcher";
 import type { CommentSpec } from "../types";
 
 /**

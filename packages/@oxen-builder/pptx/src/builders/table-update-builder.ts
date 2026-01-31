@@ -15,7 +15,7 @@ import {
   patchTable,
   patchTableStyleId,
   type TableChange,
-} from "@oxen-office/pptx/patcher";
+} from "@oxen-builder/pptx/patcher";
 import type { TextBody, Paragraph, TextRun, ParagraphProperties } from "@oxen-office/pptx/domain/text";
 import type { TableColumn, TableRow, TableCell, TableCellProperties } from "@oxen-office/pptx/domain/table/types";
 import type { Pixels, Points } from "@oxen-office/ooxml/domain/units";

@@ -3,7 +3,7 @@
  */
 
 import type { MediaReference } from "@oxen-office/pptx/domain/shape";
-import type { MediaType } from "@oxen-office/pptx/patcher/resources/media-manager";
+import type { MediaType } from "@oxen-builder/pptx/patcher/resources/media-manager";
 import type { MediaEmbedSpec } from "../types";
 
 /**

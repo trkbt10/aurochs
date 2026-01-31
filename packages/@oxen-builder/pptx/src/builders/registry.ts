@@ -16,7 +16,7 @@ import {
   serializeShape as domainToXml,
   updateAtPath,
   updateDocumentRoot,
-} from "@oxen-office/pptx/patcher";
+} from "@oxen-builder/pptx/patcher";
 import type { ZipPackage } from "@oxen/zip";
 import type { SpShape, GraphicFrame, PicShape, CxnShape, GrpShape, Shape } from "@oxen-office/pptx/domain/shape";
 import type { Table, TableRow, TableCell } from "@oxen-office/pptx/domain/table/types";
