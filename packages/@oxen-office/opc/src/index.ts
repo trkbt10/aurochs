@@ -23,8 +23,8 @@ export {
 } from "./pack-uri";
 export type { PackResource } from "./pack-uri";
 
-export { createEmptyResourceMap, createResourceMap } from "./relationships";
-export type { ResourceEntry } from "./relationships";
+export { createEmptyResourceMap, createResourceMap, listRelationships } from "./relationships";
+export type { ResourceEntry, RelationshipInfo, RelationshipTargetMode } from "./relationships";
 
 export {
   basenamePosixPath,

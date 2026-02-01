@@ -7,7 +7,7 @@ import { formatCellRef, columnLetterToIndex } from "@oxen-office/xlsx/domain/cel
 import { colIdx, rowIdx } from "@oxen-office/xlsx/domain/types";
 import type { CellValue } from "@oxen-office/xlsx/domain/cell/types";
 import { loadXlsxWorkbook } from "../utils/xlsx-loader";
-import { getSheetRange } from "../serializers/sheet-serializer";
+import { getSheetRange } from "@oxen-office/xlsx/domain/sheet-utils";
 import { formatCellValue } from "../serializers/cell-serializer";
 
 // =============================================================================

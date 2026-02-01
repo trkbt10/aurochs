@@ -1,7 +1,8 @@
 /** @file Unit tests for relationship manager */
 import { parseXml, getByPath, getChildren } from "@oxen/xml";
+import { listRelationships } from "@oxen-office/opc";
 import { createRelationshipsDocument } from "../parts/relationships";
-import { addRelationship, generateRelationshipId, listRelationships, removeRelationship } from "./relationship-manager";
+import { addRelationship, generateRelationshipId, removeRelationship } from "./relationship-manager";
 
 describe("relationship-manager", () => {
   it("generates next rId", () => {

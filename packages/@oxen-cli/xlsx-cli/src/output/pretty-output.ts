@@ -256,6 +256,9 @@ export function formatTablesPretty(data: TablesData): string {
   return lines.join("\n").trim();
 }
 
+/**
+ * Format cell comments for pretty display.
+ */
 export function formatCommentsPretty(data: CommentsData): string {
   if (data.totalCount === 0) {
     return "No comments found";

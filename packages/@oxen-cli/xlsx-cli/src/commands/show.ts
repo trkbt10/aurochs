@@ -6,7 +6,7 @@ import { success, error, type Result } from "@oxen-cli/cli-core";
 import { formatCellRef, columnLetterToIndex, indexToColumnLetter } from "@oxen-office/xlsx/domain/cell/address";
 import { colIdx, rowIdx } from "@oxen-office/xlsx/domain/types";
 import { loadXlsxWorkbook } from "../utils/xlsx-loader";
-import { getSheetRange } from "../serializers/sheet-serializer";
+import { getSheetRange, type SheetRange } from "@oxen-office/xlsx/domain/sheet-utils";
 import { serializeCell, type CellJson } from "../serializers/cell-serializer";
 
 // =============================================================================
@@ -62,7 +62,7 @@ function parseRange(range: string): ParsedRange | undefined {
   return { startCol, startRow, endCol, endRow };
 }
 
-function sheetRangeToParsedRange(sheetRange: ReturnType<typeof getSheetRange>): ParsedRange | undefined {
+function sheetRangeToParsedRange(sheetRange: SheetRange | undefined): ParsedRange | undefined {
   if (!sheetRange) {
     return undefined;
   }

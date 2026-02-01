@@ -1,27 +1,49 @@
 /**
- * @file Chart serialization helpers for CLI output
+ * @file Chart summary utilities
+ *
+ * Pure domain utilities for creating lightweight chart summaries.
+ * These operate only on domain types and have no I/O dependencies.
  */
 
-import type { Chart, DataReference } from "@oxen-office/chart/domain/types";
+import type { Chart, DataReference } from "./types";
 
-export type ChartDataRefJson = {
+// =============================================================================
+// Summary Types
+// =============================================================================
+
+/**
+ * Serialized data reference for chart summary.
+ */
+export type ChartDataRef = {
   readonly formula?: string;
   readonly values?: readonly (string | number)[];
 };
 
-export type ChartSeriesItemJson = {
+/**
+ * Serialized series item for chart summary.
+ */
+export type ChartSeriesItem = {
   readonly name?: string;
-  readonly categories?: ChartDataRefJson;
-  readonly values?: ChartDataRefJson;
+  readonly categories?: ChartDataRef;
+  readonly values?: ChartDataRef;
 };
 
-export type ChartSummaryJson = {
+/**
+ * Lightweight chart summary.
+ *
+ * Intended for inspection/debugging; not a full ChartML JSON representation.
+ */
+export type ChartSummary = {
   readonly types: readonly string[];
   readonly series: readonly {
     readonly type: string;
-    readonly items: readonly ChartSeriesItemJson[];
+    readonly items: readonly ChartSeriesItem[];
   }[];
 };
+
+// =============================================================================
+// Helper Functions
+// =============================================================================
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -34,7 +56,7 @@ function pointsToDenseArray<T extends string | number>(
   return sorted.map((p) => p.value);
 }
 
-function serializeDataReference(ref: DataReference): ChartDataRefJson | undefined {
+function serializeDataReference(ref: DataReference): ChartDataRef | undefined {
   if (ref.strLit?.points) {
     return {
       values: pointsToDenseArray(ref.strLit.points),
@@ -74,12 +96,19 @@ function isSeriesItemLike(value: unknown): value is SeriesItemLike {
   return "categories" in value && "values" in value;
 }
 
+// =============================================================================
+// Summary Function
+// =============================================================================
+
 /**
- * Create a light-weight summary of a parsed Chart.
+ * Create a lightweight summary of a parsed Chart.
  *
  * Intended for inspection/debugging; not a full ChartML JSON representation.
+ *
+ * @param chart - The parsed chart object
+ * @returns A lightweight summary of the chart
  */
-export function summarizeChart(chart: Chart): ChartSummaryJson {
+export function summarizeChart(chart: Chart): ChartSummary {
   const plotCharts = chart.plotArea.charts;
 
   const series = plotCharts.map((s) => {

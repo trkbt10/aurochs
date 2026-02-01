@@ -18,6 +18,9 @@ export {
   type Assertion,
 } from "./commands/verify";
 
+// Sheet utilities (from @oxen-office/xlsx)
+export { getSheetRange, type SheetRange } from "@oxen-office/xlsx/domain/sheet-utils";
+
 // Serializers
 export {
   serializeCell,
@@ -27,7 +30,6 @@ export {
 export {
   serializeSheetSummary,
   serializeSheetData,
-  getSheetRange,
   type RowJson,
   type SheetSummaryJson,
   type SheetDataJson,

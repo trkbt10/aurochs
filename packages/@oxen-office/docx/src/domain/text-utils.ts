@@ -1,9 +1,13 @@
 /**
  * @file Text extraction utilities for DOCX documents
+ *
+ * Pure domain utilities for extracting plain text from domain objects.
+ * These operate only on domain types and have no I/O dependencies.
  */
 
-import type { DocxDocument, DocxBlockContent, DocxBody } from "@oxen-office/docx";
-import type { DocxParagraph, DocxParagraphContent, DocxRun, DocxRunContent } from "@oxen-office/docx";
+import type { DocxDocument, DocxBlockContent, DocxBody } from "./document";
+import type { DocxParagraph, DocxParagraphContent } from "./paragraph";
+import type { DocxRun, DocxRunContent } from "./run";
 
 /**
  * Extract text from a run content item.

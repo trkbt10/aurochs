@@ -3,10 +3,10 @@
  */
 
 import { parseXml } from "@oxen/xml";
-import { listRelationships } from "@oxen-builder/pptx/patcher";
+import { listRelationships } from "@oxen-office/opc";
 import { resolveRelationshipTargetPath } from "@oxen-office/opc";
 import { parseChart } from "@oxen-office/chart/parser";
-import { summarizeChart, type ChartSummaryJson } from "./chart-serializer";
+import { summarizeChart, type ChartSummary } from "@oxen-office/chart/domain/summary";
 
 type ZipPackageLike = {
   readText(path: string): string | null;
@@ -15,7 +15,7 @@ type ZipPackageLike = {
 export type ResolvedChartJson = {
   readonly resourceId: string;
   readonly partPath?: string;
-  readonly chart?: ChartSummaryJson;
+  readonly chart?: ChartSummary;
   readonly error?: string;
 };
 

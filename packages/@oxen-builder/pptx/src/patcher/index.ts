@@ -85,12 +85,11 @@ export { addOleObject, getOleTypeFromFile, OLE_TYPE_MAP } from "./resources/ole-
 
 export { embedFonts } from "./resources/font-manager";
 
-export type { RelationshipInfo, RelationshipType } from "./resources/relationship-manager";
+export type { RelationshipType } from "./resources/relationship-manager";
 export {
   addRelationship,
   ensureRelationshipsDocument,
   generateRelationshipId,
-  listRelationships,
   removeRelationship,
 } from "./resources/relationship-manager";
 

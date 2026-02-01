@@ -7,7 +7,74 @@
  * @see ECMA-376 Part 2, Section 9.3 (Relationships)
  */
 
+import { isXmlElement, type XmlDocument } from "@oxen/xml";
 import type { ResourceMap } from "./types";
+
+// =============================================================================
+// Relationship Types
+// =============================================================================
+
+/**
+ * Target mode for relationships.
+ * "External" indicates the target is outside the package.
+ */
+export type RelationshipTargetMode = "External";
+
+/**
+ * Information about a single relationship entry.
+ */
+export type RelationshipInfo = {
+  readonly id: string;
+  readonly type: string;
+  readonly target: string;
+  readonly targetMode?: RelationshipTargetMode;
+};
+
+// =============================================================================
+// Relationship Reading
+// =============================================================================
+
+/**
+ * List all relationships from a .rels XML document.
+ *
+ * This is a pure read operation that parses relationship entries
+ * from an OPC relationships XML document.
+ *
+ * @param relsXml - Parsed XML document of a .rels file
+ * @returns Array of relationship entries
+ *
+ * @example
+ * ```typescript
+ * const relsDoc = parseXml(relsXmlText);
+ * const rels = listRelationships(relsDoc);
+ * const chartRel = rels.find(r => r.type.includes("chart"));
+ * ```
+ */
+export function listRelationships(relsXml: XmlDocument): RelationshipInfo[] {
+  const root = relsXml.children.find(isXmlElement);
+  if (!root || root.name !== "Relationships") {
+    return [];
+  }
+
+  const relationships: RelationshipInfo[] = [];
+  for (const child of root.children) {
+    if (!isXmlElement(child) || child.name !== "Relationship") {
+      continue;
+    }
+    const id = child.attrs.Id;
+    const target = child.attrs.Target;
+    if (!id || !target) {
+      continue;
+    }
+    relationships.push({
+      id,
+      type: child.attrs.Type ?? "",
+      target,
+      targetMode: child.attrs.TargetMode as RelationshipTargetMode | undefined,
+    });
+  }
+  return relationships;
+}
 
 // =============================================================================
 // Internal Types

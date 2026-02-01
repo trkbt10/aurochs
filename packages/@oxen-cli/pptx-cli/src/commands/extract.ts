@@ -8,7 +8,7 @@ import { openPresentation } from "@oxen-office/pptx";
 import { parseSlide } from "@oxen-office/pptx/parser/slide/slide-parser";
 import { success, error, type Result } from "@oxen-cli/cli-core";
 import type { Shape } from "@oxen-office/pptx/domain/shape";
-import { extractTextFromShape } from "../serializers/text-serializer";
+import { extractTextFromShape } from "@oxen-office/pptx/domain/text-utils";
 
 export type SlideTextItem = {
   readonly number: number;

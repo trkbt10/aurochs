@@ -4,7 +4,8 @@ import { parseXml, serializeDocument } from "@oxen/xml";
 import { parseContentTypes } from "@oxen-office/pptx/domain/content-types";
 import { getRelationshipPath, loadRelationships, resolvePartPath } from "@oxen-office/pptx/parser/relationships";
 import { addContentType, removeUnusedContentTypes } from "./content-types-manager";
-import { addRelationship, ensureRelationshipsDocument, listRelationships, removeRelationship, type RelationshipType } from "./relationship-manager";
+import { listRelationships } from "@oxen-office/opc";
+import { addRelationship, ensureRelationshipsDocument, removeRelationship, type RelationshipType } from "./relationship-manager";
 
 export type AddMediaOptions = {
   readonly pkg: ZipPackage;

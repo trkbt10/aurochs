@@ -24,7 +24,7 @@ import type { Color } from "@oxen-office/drawing-ml/domain/color";
 import type { BlipEffects } from "@oxen-office/pptx/domain/color/types";
 import type { Effects } from "@oxen-office/pptx/domain/effects";
 import type { Shape3d } from "@oxen-office/pptx/domain/three-d";
-import { extractTextFromShape, extractTextFromParagraph, extractTextFromBody } from "./text-serializer";
+import { extractTextFromShape, extractTextFromParagraph, extractTextFromBody } from "@oxen-office/pptx/domain/text-utils";
 
 // =============================================================================
 // Base Types

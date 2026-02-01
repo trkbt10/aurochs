@@ -5,7 +5,7 @@
 import * as fs from "node:fs/promises";
 import { loadDocx, type DocxBlockContent } from "@oxen-office/docx";
 import { success, error, type Result } from "@oxen-cli/cli-core";
-import { extractTextFromBlockContent } from "../serializers/text-serializer";
+import { extractTextFromBlockContent } from "@oxen-office/docx/domain/text-utils";
 
 export type SectionTextItem = {
   readonly number: number;

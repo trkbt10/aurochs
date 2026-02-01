@@ -1,5 +1,6 @@
 /** @file Relationship manager for .rels file manipulation */
 import { createElement, isXmlElement, type XmlDocument } from "@oxen/xml";
+import { listRelationships } from "@oxen-office/opc";
 import { getDocumentRoot, updateDocumentRoot } from "../core/xml-mutator";
 import { createRelationshipsDocument, RELATIONSHIPS_XMLNS, type RelationshipTargetMode } from "../parts/relationships";
 
@@ -11,100 +12,6 @@ export type RelationshipType =
   | "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"
   | "http://schemas.openxmlformats.org/officeDocument/2006/relationships/oleObject"
   | "http://schemas.openxmlformats.org/officeDocument/2006/relationships/font";
-
-export type RelationshipInfo = {
-  readonly id: string;
-  readonly type: string;
-  readonly target: string;
-  readonly targetMode?: RelationshipTargetMode;
-};
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/** List all relationships in a rels document */
-export function listRelationships(relsXml: XmlDocument): RelationshipInfo[] {
-  const root = getDocumentRoot(relsXml);
-  if (!root || root.name !== "Relationships") {
-    return [];
-  }
-
-  const relationships: RelationshipInfo[] = [];
-  for (const child of root.children) {
-    if (!isXmlElement(child) || child.name !== "Relationship") {
-      continue;
-    }
-    const id = child.attrs.Id;
-    const target = child.attrs.Target;
-    if (!id || !target) {
-      continue;
-    }
-    relationships.push({
-      id,
-      type: child.attrs.Type ?? "",
-      target,
-      targetMode: child.attrs.TargetMode as RelationshipTargetMode | undefined,
-    });
-  }
-  return relationships;
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 /** Generate a unique relationship ID */
 export function generateRelationshipId(existingIds: readonly string[]): string {
@@ -121,36 +28,6 @@ export function generateRelationshipId(existingIds: readonly string[]): string {
   }
   return `rId${next}`;
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 /** Add a relationship to a rels document */
 export function addRelationship(
@@ -206,36 +83,6 @@ export function addRelationship(
   return { updatedXml: updated, rId };
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /** Remove a relationship by ID from a rels document */
 export function removeRelationship(relsXml: XmlDocument, rId: string): XmlDocument {
   if (!rId) {
@@ -259,36 +106,6 @@ export function removeRelationship(relsXml: XmlDocument, rId: string): XmlDocume
     };
   });
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 /** Ensure a valid rels document exists, creating an empty one if needed */
 export function ensureRelationshipsDocument(relsXml: XmlDocument | null): XmlDocument {

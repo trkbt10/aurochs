@@ -21,13 +21,15 @@ export {
   type Assertion,
 } from "./commands/verify";
 
-// Serializers
+// Text extraction (from @oxen-office/pptx)
 export {
   extractTextFromBody,
   extractTextFromParagraph,
   extractTextFromRun,
   extractTextFromShape,
-} from "./serializers/text-serializer";
+} from "@oxen-office/pptx/domain/text-utils";
+
+// Serializers
 export {
   serializeShape,
   type ShapeJson,

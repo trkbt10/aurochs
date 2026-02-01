@@ -4,9 +4,9 @@
 
 import { success, error, type Result } from "@oxen-cli/cli-core";
 import { loadXlsxWorkbook } from "../utils/xlsx-loader";
-import { getSheetRange } from "../serializers/sheet-serializer";
+import { getSheetRange, type SheetRange } from "@oxen-office/xlsx/domain/sheet-utils";
 
-function formatRangeString(range: ReturnType<typeof getSheetRange>): string | undefined {
+function formatRangeString(range: SheetRange | undefined): string | undefined {
   if (!range) {
     return undefined;
   }

@@ -5,7 +5,7 @@
 import * as fs from "node:fs/promises";
 import { loadDocx, twipsToPoints, type DocxBlockContent, type DocxParagraph, type Twips } from "@oxen-office/docx";
 import { success, error, type Result } from "@oxen-cli/cli-core";
-import { extractTextFromParagraph } from "../serializers/text-serializer";
+import { extractTextFromParagraph } from "@oxen-office/docx/domain/text-utils";
 
 export type SectionListItem = {
   readonly number: number;

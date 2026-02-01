@@ -18,15 +18,18 @@ export {
   type Assertion,
 } from "./commands/verify";
 
-// Serializers
+// Text extraction (from @oxen-office/docx)
 export {
   extractTextFromRunContent,
   extractTextFromRun,
   extractTextFromParagraph,
+  extractTextFromParagraphContent,
   extractTextFromBlockContent,
   extractTextFromBody,
   extractTextFromDocument,
-} from "./serializers/text-serializer";
+} from "@oxen-office/docx/domain/text-utils";
+
+// Serializers
 export {
   serializeParagraph,
   type ParagraphJson,

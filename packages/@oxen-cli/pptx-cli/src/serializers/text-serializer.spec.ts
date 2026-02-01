@@ -7,7 +7,7 @@ import {
   extractTextFromParagraph,
   extractTextFromRun,
   extractTextFromShape,
-} from "./text-serializer";
+} from "@oxen-office/pptx/domain/text-utils";
 import type { TextBody, Paragraph, TextRun } from "@oxen-office/pptx/domain/text";
 import type { SpShape } from "@oxen-office/pptx/domain/shape";
 
