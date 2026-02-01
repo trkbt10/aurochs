@@ -230,7 +230,37 @@ export type PresentationEditorAction =
     }
   | { readonly type: "CLEAR_SHAPE_SELECTION" }
 
-  // Drag operations
+  // Drag operations (pending - waiting for threshold)
+  | {
+      readonly type: "START_PENDING_MOVE";
+      readonly startX: Pixels;
+      readonly startY: Pixels;
+      readonly startClientX: number;
+      readonly startClientY: number;
+    }
+  | {
+      readonly type: "START_PENDING_RESIZE";
+      readonly handle: ResizeHandlePosition;
+      readonly startX: Pixels;
+      readonly startY: Pixels;
+      readonly startClientX: number;
+      readonly startClientY: number;
+      readonly aspectLocked: boolean;
+    }
+  | {
+      readonly type: "START_PENDING_ROTATE";
+      readonly startX: Pixels;
+      readonly startY: Pixels;
+      readonly startClientX: number;
+      readonly startClientY: number;
+    }
+
+  // Drag confirmation (threshold exceeded, transition to active drag)
+  | { readonly type: "CONFIRM_MOVE" }
+  | { readonly type: "CONFIRM_RESIZE" }
+  | { readonly type: "CONFIRM_ROTATE" }
+
+  // Legacy drag operations (kept for backward compatibility, will be removed)
   | { readonly type: "START_MOVE"; readonly startX: Pixels; readonly startY: Pixels }
   | {
       readonly type: "START_RESIZE";
@@ -241,6 +271,33 @@ export type PresentationEditorAction =
     }
   | { readonly type: "START_ROTATE"; readonly startX: Pixels; readonly startY: Pixels }
   | { readonly type: "END_DRAG" }
+
+  // Marquee selection
+  | {
+      readonly type: "START_MARQUEE";
+      readonly startX: Pixels;
+      readonly startY: Pixels;
+      readonly additive: boolean;
+    }
+  | {
+      readonly type: "UPDATE_MARQUEE";
+      readonly currentX: Pixels;
+      readonly currentY: Pixels;
+    }
+  | { readonly type: "END_MARQUEE" }
+
+  // Creation drag (drawing new shape)
+  | {
+      readonly type: "START_CREATE_DRAG";
+      readonly startX: Pixels;
+      readonly startY: Pixels;
+    }
+  | {
+      readonly type: "UPDATE_CREATE_DRAG";
+      readonly currentX: Pixels;
+      readonly currentY: Pixels;
+    }
+  | { readonly type: "END_CREATE_DRAG" }
 
   // Drag preview (updates visual state without adding to history)
   | { readonly type: "PREVIEW_MOVE"; readonly dx: Pixels; readonly dy: Pixels }

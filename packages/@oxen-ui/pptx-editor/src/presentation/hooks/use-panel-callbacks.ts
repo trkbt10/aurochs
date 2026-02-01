@@ -27,13 +27,33 @@ export type CanvasCallbacks = {
   readonly handleSelectMultiple: (shapeIds: readonly ShapeId[], primaryId?: ShapeId) => void;
   readonly handleClearSelection: () => void;
   readonly handleStartMove: (startX: number, startY: number) => void;
+  readonly handleStartPendingMove: (args: {
+    readonly startX: number;
+    readonly startY: number;
+    readonly startClientX: number;
+    readonly startClientY: number;
+  }) => void;
   readonly handleStartResize: (args: {
     readonly handle: ResizeHandlePosition;
     readonly startX: number;
     readonly startY: number;
     readonly aspectLocked: boolean;
   }) => void;
+  readonly handleStartPendingResize: (args: {
+    readonly handle: ResizeHandlePosition;
+    readonly startX: number;
+    readonly startY: number;
+    readonly startClientX: number;
+    readonly startClientY: number;
+    readonly aspectLocked: boolean;
+  }) => void;
   readonly handleStartRotate: (startX: number, startY: number) => void;
+  readonly handleStartPendingRotate: (args: {
+    readonly startX: number;
+    readonly startY: number;
+    readonly startClientX: number;
+    readonly startClientY: number;
+  }) => void;
 };
 
 export type ShapeCallbacks = {
@@ -90,6 +110,24 @@ export function usePanelCallbacks({ dispatch, document }: UsePanelCallbacksParam
     [dispatch],
   );
 
+  const handleStartPendingMove = useCallback(
+    ({ startX, startY, startClientX, startClientY }: {
+      startX: number;
+      startY: number;
+      startClientX: number;
+      startClientY: number;
+    }): void => {
+      dispatch({
+        type: "START_PENDING_MOVE",
+        startX: px(startX),
+        startY: px(startY),
+        startClientX,
+        startClientY,
+      });
+    },
+    [dispatch],
+  );
+
   const handleStartResize = useCallback(
     ({ handle, startX, startY, aspectLocked }: { handle: ResizeHandlePosition; startX: number; startY: number; aspectLocked: boolean }): void => {
       dispatch({ type: "START_RESIZE", handle, startX: px(startX), startY: px(startY), aspectLocked });
@@ -97,9 +135,49 @@ export function usePanelCallbacks({ dispatch, document }: UsePanelCallbacksParam
     [dispatch],
   );
 
+  const handleStartPendingResize = useCallback(
+    ({ handle, startX, startY, startClientX, startClientY, aspectLocked }: {
+      handle: ResizeHandlePosition;
+      startX: number;
+      startY: number;
+      startClientX: number;
+      startClientY: number;
+      aspectLocked: boolean;
+    }): void => {
+      dispatch({
+        type: "START_PENDING_RESIZE",
+        handle,
+        startX: px(startX),
+        startY: px(startY),
+        startClientX,
+        startClientY,
+        aspectLocked,
+      });
+    },
+    [dispatch],
+  );
+
   const handleStartRotate = useCallback(
     (startX: number, startY: number): void => {
       dispatch({ type: "START_ROTATE", startX: px(startX), startY: px(startY) });
+    },
+    [dispatch],
+  );
+
+  const handleStartPendingRotate = useCallback(
+    ({ startX, startY, startClientX, startClientY }: {
+      startX: number;
+      startY: number;
+      startClientX: number;
+      startClientY: number;
+    }): void => {
+      dispatch({
+        type: "START_PENDING_ROTATE",
+        startX: px(startX),
+        startY: px(startY),
+        startClientX,
+        startClientY,
+      });
     },
     [dispatch],
   );
@@ -249,8 +327,11 @@ export function usePanelCallbacks({ dispatch, document }: UsePanelCallbacksParam
       handleSelectMultiple,
       handleClearSelection,
       handleStartMove,
+      handleStartPendingMove,
       handleStartResize,
+      handleStartPendingResize,
       handleStartRotate,
+      handleStartPendingRotate,
     },
     shape: {
       handleShapeChange,

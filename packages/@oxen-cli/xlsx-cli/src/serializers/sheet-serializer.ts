@@ -82,6 +82,15 @@ export function serializeSheetData(sheet: XlsxWorksheet): SheetDataJson {
 }
 
 /**
+ * Format a CellRange as a string (e.g., "A1:C10").
+ */
+export function formatRange(range: { start: { row: number; col: number }; end: { row: number; col: number } }): string {
+  const startCol = indexToColumnLetter(colIdx(range.start.col as number));
+  const endCol = indexToColumnLetter(colIdx(range.end.col as number));
+  return `${startCol}${range.start.row}:${endCol}${range.end.row}`;
+}
+
+/**
  * Get the used range of a sheet.
  */
 export function getSheetRange(sheet: XlsxWorksheet): { startRow: number; endRow: number; startCol: string; endCol: string } | undefined {

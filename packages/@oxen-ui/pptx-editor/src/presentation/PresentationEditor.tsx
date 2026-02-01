@@ -1004,8 +1004,11 @@ function EditorContent({
           onSelectMultiple={canvas.handleSelectMultiple}
           onClearSelection={canvas.handleClearSelection}
           onStartMove={canvas.handleStartMove}
+          onStartPendingMove={canvas.handleStartPendingMove}
           onStartResize={canvas.handleStartResize}
+          onStartPendingResize={canvas.handleStartPendingResize}
           onStartRotate={canvas.handleStartRotate}
+          onStartPendingRotate={canvas.handleStartPendingRotate}
           onDoubleClick={handleDoubleClick}
           onCreate={handleCanvasCreate}
           onCreateFromDrag={handleCanvasCreateFromDrag}

@@ -10,6 +10,9 @@ import type { BuildData } from "../commands/build";
 import type { VerifyData } from "../commands/verify";
 import type { StringsData, RichTextRunJson } from "../commands/strings";
 import type { FormulasData } from "../commands/formulas";
+import type { NamesData } from "../commands/names";
+import type { TablesData } from "../commands/tables";
+import type { CommentsData } from "../commands/comments";
 
 export function formatInfoPretty(data: InfoData): string {
   const lines = [
@@ -154,4 +157,77 @@ export function formatVerifyPretty(data: VerifyData): string {
   }
 
   return lines.join("\n");
+}
+
+export function formatNamesPretty(data: NamesData): string {
+  if (data.count === 0) {
+    return "No defined names found";
+  }
+
+  const lines = [`Defined Names: ${data.count}`];
+  lines.push("");
+
+  for (const name of data.names) {
+    const parts = [`${name.name}`];
+    if (name.scope) {
+      parts.push(`(scope: ${name.scope})`);
+    }
+    if (name.hidden) {
+      parts.push("[hidden]");
+    }
+    lines.push(parts.join(" "));
+    lines.push(`  = ${name.formula}`);
+  }
+
+  return lines.join("\n");
+}
+
+export function formatTablesPretty(data: TablesData): string {
+  if (data.count === 0) {
+    return "No tables found";
+  }
+
+  const lines = [`Tables: ${data.count}`];
+  lines.push("");
+
+  for (const table of data.tables) {
+    lines.push(`${table.name} (${table.ref})`);
+    lines.push(`  Sheet: ${table.sheetName}`);
+    if (table.displayName && table.displayName !== table.name) {
+      lines.push(`  Display Name: ${table.displayName}`);
+    }
+    lines.push(`  Columns: ${table.columns.map((c) => c.name).join(", ")}`);
+    if (table.headerRowCount !== 1) {
+      lines.push(`  Header Rows: ${table.headerRowCount}`);
+    }
+    if (table.totalsRowCount > 0) {
+      lines.push(`  Totals Rows: ${table.totalsRowCount}`);
+    }
+    if (table.styleInfo) {
+      lines.push(`  Style: ${table.styleInfo.name}`);
+    }
+    lines.push("");
+  }
+
+  return lines.join("\n").trim();
+}
+
+export function formatCommentsPretty(data: CommentsData): string {
+  if (data.totalCount === 0) {
+    return "No comments found";
+  }
+
+  const lines = [`Total Comments: ${data.totalCount}`];
+  lines.push("");
+
+  for (const sheet of data.sheets) {
+    lines.push(`Sheet: ${sheet.sheetName}`);
+    for (const comment of sheet.comments) {
+      const author = comment.author ? ` (${comment.author})` : "";
+      lines.push(`  ${comment.ref}${author}: ${comment.text}`);
+    }
+    lines.push("");
+  }
+
+  return lines.join("\n").trim();
 }

@@ -31,6 +31,11 @@ export {
   isDragResize,
   isDragRotate,
   isDragCreate,
+  isDragMarquee,
+  isDragPendingMove,
+  isDragPendingResize,
+  isDragPendingRotate,
+  isDragPending,
 } from "./drag";
 export type {
   ResizeHandlePosition,
@@ -40,6 +45,10 @@ export type {
   ResizeDragState,
   RotateDragState,
   CreateDragState,
+  MarqueeDragState,
+  PendingMoveDragState,
+  PendingResizeDragState,
+  PendingRotateDragState,
   DragState,
 } from "./drag";
 

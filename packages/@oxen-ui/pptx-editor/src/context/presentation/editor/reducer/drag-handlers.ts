@@ -37,6 +37,34 @@ type StartRotateAction = Extract<
   PresentationEditorAction,
   { type: "START_ROTATE" }
 >;
+type StartPendingMoveAction = Extract<
+  PresentationEditorAction,
+  { type: "START_PENDING_MOVE" }
+>;
+type StartPendingResizeAction = Extract<
+  PresentationEditorAction,
+  { type: "START_PENDING_RESIZE" }
+>;
+type StartPendingRotateAction = Extract<
+  PresentationEditorAction,
+  { type: "START_PENDING_ROTATE" }
+>;
+type StartMarqueeAction = Extract<
+  PresentationEditorAction,
+  { type: "START_MARQUEE" }
+>;
+type UpdateMarqueeAction = Extract<
+  PresentationEditorAction,
+  { type: "UPDATE_MARQUEE" }
+>;
+type StartCreateDragAction = Extract<
+  PresentationEditorAction,
+  { type: "START_CREATE_DRAG" }
+>;
+type UpdateCreateDragAction = Extract<
+  PresentationEditorAction,
+  { type: "UPDATE_CREATE_DRAG" }
+>;
 // Note: EndDragAction type not needed since handler doesn't use action payload
 type PreviewMoveAction = Extract<
   PresentationEditorAction,
@@ -503,8 +531,13 @@ function handleCommitDrag(
   state: PresentationEditorState
 ): PresentationEditorState {
   const { drag } = state;
-  if (drag.type === "idle" || drag.type === "create") {
+  if (drag.type === "idle" || drag.type === "create" || drag.type === "marquee") {
     return state;
+  }
+
+  // Pending states should be ended without commit
+  if (drag.type === "pending-move" || drag.type === "pending-resize" || drag.type === "pending-rotate") {
+    return { ...state, drag: createIdleDragState() };
   }
 
   switch (drag.type) {
@@ -519,14 +552,374 @@ function handleCommitDrag(
   }
 }
 
+// =============================================================================
+// Pending Drag Handlers
+// =============================================================================
+
+function handleStartPendingMove(
+  state: PresentationEditorState,
+  action: StartPendingMoveAction
+): PresentationEditorState {
+  const activeSlide = getActiveSlide(state);
+  if (!activeSlide || state.shapeSelection.selectedIds.length === 0) {
+    return state;
+  }
+
+  const initialBounds = collectBoundsForIds(
+    activeSlide.slide.shapes,
+    state.shapeSelection.selectedIds
+  );
+
+  return {
+    ...state,
+    drag: {
+      type: "pending-move",
+      startX: action.startX,
+      startY: action.startY,
+      startClientX: action.startClientX,
+      startClientY: action.startClientY,
+      shapeIds: state.shapeSelection.selectedIds,
+      initialBounds,
+    },
+  };
+}
+
+function handleStartPendingResize(
+  state: PresentationEditorState,
+  action: StartPendingResizeAction
+): PresentationEditorState {
+  const activeSlide = getActiveSlide(state);
+  if (!activeSlide || state.shapeSelection.selectedIds.length === 0) {
+    return state;
+  }
+
+  const selectedIds = state.shapeSelection.selectedIds;
+  const initialBoundsMap = collectBoundsForIds(
+    activeSlide.slide.shapes,
+    selectedIds
+  );
+  const combinedBounds = getCombinedBounds(
+    selectedIds
+      .map((id) => findShapeById(activeSlide.slide.shapes, id))
+      .filter((s): s is Shape => s !== undefined)
+  );
+
+  if (!combinedBounds) {
+    return state;
+  }
+
+  const primaryId = state.shapeSelection.primaryId ?? selectedIds[0];
+  const primaryBounds = initialBoundsMap.get(primaryId);
+
+  return {
+    ...state,
+    drag: {
+      type: "pending-resize",
+      handle: action.handle,
+      startX: action.startX,
+      startY: action.startY,
+      startClientX: action.startClientX,
+      startClientY: action.startClientY,
+      shapeIds: selectedIds,
+      initialBoundsMap,
+      combinedBounds,
+      aspectLocked: action.aspectLocked,
+      shapeId: primaryId,
+      initialBounds: primaryBounds ?? combinedBounds,
+    },
+  };
+}
+
+function handleStartPendingRotate(
+  state: PresentationEditorState,
+  action: StartPendingRotateAction
+): PresentationEditorState {
+  const activeSlide = getActiveSlide(state);
+  if (!activeSlide || state.shapeSelection.selectedIds.length === 0) {
+    return state;
+  }
+
+  const selectedIds = state.shapeSelection.selectedIds;
+  const initialBoundsMap = collectBoundsForIds(
+    activeSlide.slide.shapes,
+    selectedIds
+  );
+  const centerResult = getCombinedCenter(initialBoundsMap);
+
+  if (!centerResult) {
+    return state;
+  }
+
+  const initialRotationsMap = new Map<string, Degrees>();
+  for (const id of selectedIds) {
+    const shape = findShapeById(activeSlide.slide.shapes, id);
+    if (shape) {
+      const transform = getShapeTransform(shape);
+      initialRotationsMap.set(id, transform?.rotation ?? deg(0));
+    }
+  }
+
+  const primaryId = state.shapeSelection.primaryId ?? selectedIds[0];
+  const primaryShape = findShapeById(activeSlide.slide.shapes, primaryId);
+  const primaryTransform = getPrimaryTransform(primaryShape);
+
+  // Calculate start angle from mouse position relative to center
+  const dxAngle = (action.startX as number) - centerResult.centerX;
+  const dyAngle = (action.startY as number) - centerResult.centerY;
+  const startAngle = deg(Math.atan2(dyAngle, dxAngle) * (180 / Math.PI));
+
+  return {
+    ...state,
+    drag: {
+      type: "pending-rotate",
+      startX: action.startX,
+      startY: action.startY,
+      startClientX: action.startClientX,
+      startClientY: action.startClientY,
+      startAngle,
+      shapeIds: selectedIds,
+      initialRotationsMap,
+      initialBoundsMap,
+      centerX: px(centerResult.centerX),
+      centerY: px(centerResult.centerY),
+      shapeId: primaryId,
+      initialRotation: primaryTransform?.rotation ?? deg(0),
+    },
+  };
+}
+
+function handleConfirmMove(
+  state: PresentationEditorState
+): PresentationEditorState {
+  if (state.drag.type !== "pending-move") {
+    return state;
+  }
+
+  const { startX, startY, shapeIds, initialBounds } = state.drag;
+
+  return {
+    ...state,
+    drag: {
+      type: "move",
+      startX,
+      startY,
+      shapeIds,
+      initialBounds,
+      previewDelta: { dx: px(0), dy: px(0) },
+    },
+  };
+}
+
+function handleConfirmResize(
+  state: PresentationEditorState
+): PresentationEditorState {
+  if (state.drag.type !== "pending-resize") {
+    return state;
+  }
+
+  const {
+    handle,
+    startX,
+    startY,
+    shapeIds,
+    initialBoundsMap,
+    combinedBounds,
+    aspectLocked,
+    shapeId,
+    initialBounds,
+  } = state.drag;
+
+  return {
+    ...state,
+    drag: {
+      type: "resize",
+      handle,
+      startX,
+      startY,
+      shapeIds,
+      initialBoundsMap,
+      combinedBounds,
+      aspectLocked,
+      shapeId,
+      initialBounds,
+      previewDelta: { dx: px(0), dy: px(0) },
+    },
+  };
+}
+
+function handleConfirmRotate(
+  state: PresentationEditorState
+): PresentationEditorState {
+  if (state.drag.type !== "pending-rotate") {
+    return state;
+  }
+
+  const {
+    startAngle,
+    shapeIds,
+    initialRotationsMap,
+    initialBoundsMap,
+    centerX,
+    centerY,
+    shapeId,
+    initialRotation,
+  } = state.drag;
+
+  return {
+    ...state,
+    drag: {
+      type: "rotate",
+      startAngle,
+      shapeIds,
+      initialRotationsMap,
+      initialBoundsMap,
+      centerX,
+      centerY,
+      shapeId,
+      initialRotation,
+      previewAngleDelta: deg(0),
+    },
+  };
+}
+
+// =============================================================================
+// Marquee Selection Handlers
+// =============================================================================
+
+function handleStartMarquee(
+  state: PresentationEditorState,
+  action: StartMarqueeAction
+): PresentationEditorState {
+  return {
+    ...state,
+    drag: {
+      type: "marquee",
+      startX: action.startX,
+      startY: action.startY,
+      currentX: action.startX,
+      currentY: action.startY,
+      additive: action.additive,
+      confirmed: false,
+    },
+  };
+}
+
+function handleUpdateMarquee(
+  state: PresentationEditorState,
+  action: UpdateMarqueeAction
+): PresentationEditorState {
+  if (state.drag.type !== "marquee") {
+    return state;
+  }
+
+  return {
+    ...state,
+    drag: {
+      ...state.drag,
+      currentX: action.currentX,
+      currentY: action.currentY,
+      confirmed: true, // Mark as confirmed once we start moving
+    },
+  };
+}
+
+function handleEndMarquee(
+  state: PresentationEditorState
+): PresentationEditorState {
+  if (state.drag.type !== "marquee") {
+    return state;
+  }
+
+  // Selection logic is handled externally based on the marquee bounds
+  return {
+    ...state,
+    drag: createIdleDragState(),
+  };
+}
+
+// =============================================================================
+// Creation Drag Handlers
+// =============================================================================
+
+function handleStartCreateDrag(
+  state: PresentationEditorState,
+  action: StartCreateDragAction
+): PresentationEditorState {
+  return {
+    ...state,
+    drag: {
+      type: "create",
+      startX: action.startX,
+      startY: action.startY,
+      currentX: action.startX,
+      currentY: action.startY,
+      confirmed: false,
+    },
+  };
+}
+
+function handleUpdateCreateDrag(
+  state: PresentationEditorState,
+  action: UpdateCreateDragAction
+): PresentationEditorState {
+  if (state.drag.type !== "create") {
+    return state;
+  }
+
+  return {
+    ...state,
+    drag: {
+      ...state.drag,
+      currentX: action.currentX,
+      currentY: action.currentY,
+      confirmed: true, // Mark as confirmed once we start moving
+    },
+  };
+}
+
+function handleEndCreateDrag(
+  state: PresentationEditorState
+): PresentationEditorState {
+  if (state.drag.type !== "create") {
+    return state;
+  }
+
+  // Shape creation is handled externally based on the create bounds
+  return {
+    ...state,
+    drag: createIdleDragState(),
+  };
+}
+
 /**
  * Drag operation handlers
  */
 export const DRAG_HANDLERS: HandlerMap = {
+  // Legacy handlers (kept for backward compatibility)
   START_MOVE: handleStartMove,
   START_RESIZE: handleStartResize,
   START_ROTATE: handleStartRotate,
   END_DRAG: handleEndDrag,
+
+  // Pending drag handlers (with threshold support)
+  START_PENDING_MOVE: handleStartPendingMove,
+  START_PENDING_RESIZE: handleStartPendingResize,
+  START_PENDING_ROTATE: handleStartPendingRotate,
+  CONFIRM_MOVE: handleConfirmMove,
+  CONFIRM_RESIZE: handleConfirmResize,
+  CONFIRM_ROTATE: handleConfirmRotate,
+
+  // Marquee selection handlers
+  START_MARQUEE: handleStartMarquee,
+  UPDATE_MARQUEE: handleUpdateMarquee,
+  END_MARQUEE: handleEndMarquee,
+
+  // Creation drag handlers
+  START_CREATE_DRAG: handleStartCreateDrag,
+  UPDATE_CREATE_DRAG: handleUpdateCreateDrag,
+  END_CREATE_DRAG: handleEndCreateDrag,
+
+  // Preview and commit handlers
   PREVIEW_MOVE: handlePreviewMove,
   PREVIEW_RESIZE: handlePreviewResize,
   PREVIEW_ROTATE: handlePreviewRotate,

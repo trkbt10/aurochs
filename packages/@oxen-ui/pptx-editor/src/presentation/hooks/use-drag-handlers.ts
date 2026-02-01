@@ -2,6 +2,7 @@
  * @file Drag handlers hook
  *
  * Handles move, resize, and rotate operations with snapping support.
+ * Also handles pending drag states with threshold detection.
  */
 
 import { useCallback, useEffect, type RefObject } from "react";
@@ -13,6 +14,7 @@ import type { PresentationEditorAction } from "../../context/presentation/editor
 import type { ViewportTransform } from "@oxen-renderer/pptx/svg-viewport";
 import { screenToSlideCoords } from "@oxen-renderer/pptx/svg-viewport";
 import { snapValue } from "../../slide-canvas/canvas-controls";
+import { isDragThresholdExceeded } from "../../drag";
 
 export type UseDragHandlersParams = {
   readonly drag: DragState;
@@ -174,6 +176,41 @@ export function useDragHandlers({
       const vp = viewport ?? { translateX: 0, translateY: 0, scale: 1 };
       const coords = screenToSlideCoords({ clientX: e.clientX, clientY: e.clientY, svgRect: rect, viewport: vp, rulerThickness });
 
+      // Handle pending states - check threshold and transition to active
+      if (drag.type === "pending-move") {
+        if (isDragThresholdExceeded(drag.startClientX, drag.startClientY, e.clientX, e.clientY)) {
+          dispatch({ type: "CONFIRM_MOVE" });
+        }
+        return;
+      }
+
+      if (drag.type === "pending-resize") {
+        if (isDragThresholdExceeded(drag.startClientX, drag.startClientY, e.clientX, e.clientY)) {
+          dispatch({ type: "CONFIRM_RESIZE" });
+        }
+        return;
+      }
+
+      if (drag.type === "pending-rotate") {
+        if (isDragThresholdExceeded(drag.startClientX, drag.startClientY, e.clientX, e.clientY)) {
+          dispatch({ type: "CONFIRM_ROTATE" });
+        }
+        return;
+      }
+
+      // Handle marquee selection
+      if (drag.type === "marquee") {
+        dispatch({ type: "UPDATE_MARQUEE", currentX: px(coords.x), currentY: px(coords.y) });
+        return;
+      }
+
+      // Handle creation drag
+      if (drag.type === "create") {
+        dispatch({ type: "UPDATE_CREATE_DRAG", currentX: px(coords.x), currentY: px(coords.y) });
+        return;
+      }
+
+      // Handle active drag states
       if (drag.type === "move") {
         const deltaX = coords.x - (drag.startX as number);
         const deltaY = coords.y - (drag.startY as number);
@@ -193,6 +230,25 @@ export function useDragHandlers({
     };
 
     const handlePointerUp = (): void => {
+      // Handle pending states - end without commit (just selection)
+      if (drag.type === "pending-move" || drag.type === "pending-resize" || drag.type === "pending-rotate") {
+        dispatch({ type: "END_DRAG" });
+        return;
+      }
+
+      // Handle marquee selection
+      if (drag.type === "marquee") {
+        dispatch({ type: "END_MARQUEE" });
+        return;
+      }
+
+      // Handle creation drag
+      if (drag.type === "create") {
+        dispatch({ type: "END_CREATE_DRAG" });
+        return;
+      }
+
+      // Handle active drag states
       dispatch({ type: "COMMIT_DRAG" });
     };
 

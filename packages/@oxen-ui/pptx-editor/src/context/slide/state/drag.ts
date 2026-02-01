@@ -108,16 +108,90 @@ export type CreateDragState = {
   readonly startY: Pixels;
   readonly currentX: Pixels;
   readonly currentY: Pixels;
+  /** Whether the drag has exceeded the threshold (confirmed as intentional drag) */
+  readonly confirmed: boolean;
 };
 
 /**
- * Drag state - idle, moving, resizing, rotating, or creating
+ * Marquee selection drag state - selecting shapes by drawing a rectangle
+ */
+export type MarqueeDragState = {
+  readonly type: "marquee";
+  readonly startX: Pixels;
+  readonly startY: Pixels;
+  readonly currentX: Pixels;
+  readonly currentY: Pixels;
+  /** Whether to add to existing selection (shift/ctrl held) */
+  readonly additive: boolean;
+  /** Whether the drag has exceeded the threshold (confirmed as intentional drag) */
+  readonly confirmed: boolean;
+};
+
+/**
+ * Pending move drag state - waiting for threshold before confirming move
+ */
+export type PendingMoveDragState = {
+  readonly type: "pending-move";
+  readonly startX: Pixels;
+  readonly startY: Pixels;
+  /** Client coordinates for threshold checking */
+  readonly startClientX: number;
+  readonly startClientY: number;
+  readonly shapeIds: readonly ShapeId[];
+  readonly initialBounds: ReadonlyMap<ShapeId, Bounds>;
+};
+
+/**
+ * Pending resize drag state - waiting for threshold before confirming resize
+ */
+export type PendingResizeDragState = {
+  readonly type: "pending-resize";
+  readonly handle: ResizeHandlePosition;
+  readonly startX: Pixels;
+  readonly startY: Pixels;
+  /** Client coordinates for threshold checking */
+  readonly startClientX: number;
+  readonly startClientY: number;
+  readonly shapeIds: readonly ShapeId[];
+  readonly initialBoundsMap: ReadonlyMap<ShapeId, Bounds>;
+  readonly combinedBounds: Bounds;
+  readonly aspectLocked: boolean;
+  readonly shapeId: ShapeId;
+  readonly initialBounds: Bounds;
+};
+
+/**
+ * Pending rotate drag state - waiting for threshold before confirming rotate
+ */
+export type PendingRotateDragState = {
+  readonly type: "pending-rotate";
+  readonly startX: Pixels;
+  readonly startY: Pixels;
+  /** Client coordinates for threshold checking */
+  readonly startClientX: number;
+  readonly startClientY: number;
+  readonly startAngle: Degrees;
+  readonly shapeIds: readonly ShapeId[];
+  readonly initialRotationsMap: ReadonlyMap<ShapeId, Degrees>;
+  readonly initialBoundsMap: ReadonlyMap<ShapeId, Bounds>;
+  readonly centerX: Pixels;
+  readonly centerY: Pixels;
+  readonly shapeId: ShapeId;
+  readonly initialRotation: Degrees;
+};
+
+/**
+ * Drag state - idle, pending, active, or creating
  */
 export type DragState =
   | IdleDragState
+  | PendingMoveDragState
+  | PendingResizeDragState
+  | PendingRotateDragState
   | MoveDragState
   | ResizeDragState
   | RotateDragState
+  | MarqueeDragState
   | CreateDragState;
 
 // =============================================================================
@@ -164,4 +238,45 @@ export function isDragRotate(drag: DragState): drag is RotateDragState {
  */
 export function isDragCreate(drag: DragState): drag is CreateDragState {
   return drag.type === "create";
+}
+
+/**
+ * Check if drag state is marquee selection
+ */
+export function isDragMarquee(drag: DragState): drag is MarqueeDragState {
+  return drag.type === "marquee";
+}
+
+/**
+ * Check if drag state is pending move
+ */
+export function isDragPendingMove(drag: DragState): drag is PendingMoveDragState {
+  return drag.type === "pending-move";
+}
+
+/**
+ * Check if drag state is pending resize
+ */
+export function isDragPendingResize(drag: DragState): drag is PendingResizeDragState {
+  return drag.type === "pending-resize";
+}
+
+/**
+ * Check if drag state is pending rotate
+ */
+export function isDragPendingRotate(drag: DragState): drag is PendingRotateDragState {
+  return drag.type === "pending-rotate";
+}
+
+/**
+ * Check if drag state is any pending state
+ */
+export function isDragPending(
+  drag: DragState
+): drag is PendingMoveDragState | PendingResizeDragState | PendingRotateDragState {
+  return (
+    drag.type === "pending-move" ||
+    drag.type === "pending-resize" ||
+    drag.type === "pending-rotate"
+  );
 }

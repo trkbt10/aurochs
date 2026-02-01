@@ -8,6 +8,7 @@ import type { ShowData } from "../commands/show";
 import type { ExtractData } from "../commands/extract";
 import type { BuildData } from "../commands/build";
 import type { VerifyData } from "../commands/verify";
+import type { StylesData } from "../commands/styles";
 
 export function formatInfoPretty(data: InfoData): string {
   const lines = [
@@ -137,4 +138,48 @@ export function formatVerifyPretty(data: VerifyData): string {
   }
 
   return lines.join("\n");
+}
+
+export function formatStylesPretty(data: StylesData): string {
+  if (data.totalCount === 0) {
+    return "No styles found";
+  }
+
+  const lines = [
+    `Total Styles: ${data.totalCount}`,
+    `  Paragraph: ${data.paragraphCount}`,
+    `  Character: ${data.characterCount}`,
+    `  Table: ${data.tableCount}`,
+    `  Numbering: ${data.numberingCount}`,
+    "",
+  ];
+
+  // Group by type
+  const byType = new Map<string, typeof data.styles>();
+  for (const style of data.styles) {
+    const list = byType.get(style.type) ?? [];
+    byType.set(style.type, [...list, style]);
+  }
+
+  for (const [type, styles] of byType) {
+    lines.push(`${type.charAt(0).toUpperCase() + type.slice(1)} Styles:`);
+    for (const style of styles) {
+      const flags: string[] = [];
+      if (style.default) flags.push("default");
+      if (style.customStyle) flags.push("custom");
+      if (style.qFormat) flags.push("qFormat");
+      if (style.semiHidden) flags.push("hidden");
+
+      const name = style.name ?? style.styleId;
+      const flagStr = flags.length > 0 ? ` [${flags.join(", ")}]` : "";
+      lines.push(`  ${style.styleId}: ${name}${flagStr}`);
+
+      if (style.basedOn) {
+        lines.push(`    Based on: ${style.basedOn}`);
+      }
+    }
+    lines.push("");
+  }
+
+  return lines.join("\n").trim();
 }

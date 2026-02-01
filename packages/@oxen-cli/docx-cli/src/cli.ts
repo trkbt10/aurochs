@@ -18,6 +18,7 @@ import { runShow } from "./commands/show";
 import { runExtract } from "./commands/extract";
 import { runBuild } from "./commands/build";
 import { runVerify } from "./commands/verify";
+import { runStyles } from "./commands/styles";
 import { output, type OutputMode } from "@oxen-cli/cli-core";
 import {
   formatInfoPretty,
@@ -26,6 +27,7 @@ import {
   formatExtractPretty,
   formatBuildPretty,
   formatVerifyPretty,
+  formatStylesPretty,
 } from "./output/pretty-output";
 
 const program = new Command();
@@ -103,6 +105,18 @@ program
     const mode = program.opts().output as OutputMode;
     const result = await runVerify(specPath, options);
     output(result, mode, formatVerifyPretty);
+  });
+
+program
+  .command("styles")
+  .description("Display document styles")
+  .argument("<file>", "DOCX file path")
+  .option("--type <type>", "Filter by style type (paragraph|character|table|numbering)")
+  .option("--all", "Include semi-hidden styles")
+  .action(async (file: string, options: { type?: string; all?: boolean }) => {
+    const mode = program.opts().output as OutputMode;
+    const result = await runStyles(file, options);
+    output(result, mode, formatStylesPretty);
   });
 
 program.parse();

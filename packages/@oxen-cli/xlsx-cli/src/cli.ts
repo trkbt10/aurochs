@@ -20,6 +20,9 @@ import { runBuild } from "./commands/build";
 import { runVerify } from "./commands/verify";
 import { runStrings } from "./commands/strings";
 import { runFormulas } from "./commands/formulas";
+import { runNames } from "./commands/names";
+import { runTables } from "./commands/tables";
+import { runComments } from "./commands/comments";
 import { output, type OutputMode } from "@oxen-cli/cli-core";
 import {
   formatInfoPretty,
@@ -30,6 +33,9 @@ import {
   formatVerifyPretty,
   formatStringsPretty,
   formatFormulasPretty,
+  formatNamesPretty,
+  formatTablesPretty,
+  formatCommentsPretty,
 } from "./output/pretty-output";
 
 const program = new Command();
@@ -127,6 +133,37 @@ program
     const mode = program.opts().output as OutputMode;
     const result = await runFormulas(file, { sheet: options.sheet, evaluate: options.evaluate });
     output(result, mode, formatFormulasPretty);
+  });
+
+program
+  .command("names")
+  .description("Display defined names (named ranges)")
+  .argument("<file>", "XLSX file path")
+  .action(async (file: string) => {
+    const mode = program.opts().output as OutputMode;
+    const result = await runNames(file);
+    output(result, mode, formatNamesPretty);
+  });
+
+program
+  .command("tables")
+  .description("Display table definitions (ListObjects)")
+  .argument("<file>", "XLSX file path")
+  .action(async (file: string) => {
+    const mode = program.opts().output as OutputMode;
+    const result = await runTables(file);
+    output(result, mode, formatTablesPretty);
+  });
+
+program
+  .command("comments")
+  .description("Display cell comments")
+  .argument("<file>", "XLSX file path")
+  .option("--sheet <name>", "Filter by sheet name")
+  .action(async (file: string, options: { sheet?: string }) => {
+    const mode = program.opts().output as OutputMode;
+    const result = await runComments(file, options);
+    output(result, mode, formatCommentsPretty);
   });
 
 program.parse();

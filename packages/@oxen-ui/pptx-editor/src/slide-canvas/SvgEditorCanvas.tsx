@@ -91,13 +91,36 @@ export type SvgEditorCanvasProps = {
   readonly onSelectMultiple: (shapeIds: readonly ShapeId[]) => void;
   readonly onClearSelection: () => void;
   readonly onStartMove: (startX: number, startY: number) => void;
+  /** Start pending move (with threshold support). If provided, used instead of onStartMove. */
+  readonly onStartPendingMove?: (args: {
+    readonly startX: number;
+    readonly startY: number;
+    readonly startClientX: number;
+    readonly startClientY: number;
+  }) => void;
   readonly onStartResize: (args: {
     readonly handle: ResizeHandlePosition;
     readonly startX: number;
     readonly startY: number;
     readonly aspectLocked: boolean;
   }) => void;
+  /** Start pending resize (with threshold support). If provided, used instead of onStartResize. */
+  readonly onStartPendingResize?: (args: {
+    readonly handle: ResizeHandlePosition;
+    readonly startX: number;
+    readonly startY: number;
+    readonly startClientX: number;
+    readonly startClientY: number;
+    readonly aspectLocked: boolean;
+  }) => void;
   readonly onStartRotate: (startX: number, startY: number) => void;
+  /** Start pending rotate (with threshold support). If provided, used instead of onStartRotate. */
+  readonly onStartPendingRotate?: (args: {
+    readonly startX: number;
+    readonly startY: number;
+    readonly startClientX: number;
+    readonly startClientY: number;
+  }) => void;
   readonly onDoubleClick: (shapeId: ShapeId) => void;
   readonly onCreate: (x: number, y: number) => void;
   readonly onCreateFromDrag?: (bounds: CreationBounds) => void;
@@ -342,8 +365,11 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
     onSelectMultiple,
     onClearSelection,
     onStartMove,
+    onStartPendingMove,
     onStartResize,
+    onStartPendingResize,
     onStartRotate,
+    onStartPendingRotate,
     onDoubleClick,
     onCreate,
     onCreateFromDrag,
@@ -798,25 +824,57 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
       }
 
       const coords = clientToSlide(e.clientX, e.clientY);
-      onStartMove(coords.x, coords.y);
+      // Use pending move if available (supports threshold), otherwise fall back to legacy
+      if (onStartPendingMove) {
+        onStartPendingMove({
+          startX: coords.x,
+          startY: coords.y,
+          startClientX: e.clientX,
+          startClientY: e.clientY,
+        });
+      } else {
+        onStartMove(coords.x, coords.y);
+      }
     },
-    [isSelected, onSelect, onStartMove, clientToSlide]
+    [isSelected, onSelect, onStartMove, onStartPendingMove, clientToSlide]
   );
 
   const handleResizeStart = useCallback(
     (handle: ResizeHandlePosition, e: React.PointerEvent) => {
       const coords = clientToSlide(e.clientX, e.clientY);
-      onStartResize({ handle, startX: coords.x, startY: coords.y, aspectLocked: e.shiftKey });
+      // Use pending resize if available (supports threshold), otherwise fall back to legacy
+      if (onStartPendingResize) {
+        onStartPendingResize({
+          handle,
+          startX: coords.x,
+          startY: coords.y,
+          startClientX: e.clientX,
+          startClientY: e.clientY,
+          aspectLocked: e.shiftKey,
+        });
+      } else {
+        onStartResize({ handle, startX: coords.x, startY: coords.y, aspectLocked: e.shiftKey });
+      }
     },
-    [onStartResize, clientToSlide]
+    [onStartResize, onStartPendingResize, clientToSlide]
   );
 
   const handleRotateStart = useCallback(
     (e: React.PointerEvent) => {
       const coords = clientToSlide(e.clientX, e.clientY);
-      onStartRotate(coords.x, coords.y);
+      // Use pending rotate if available (supports threshold), otherwise fall back to legacy
+      if (onStartPendingRotate) {
+        onStartPendingRotate({
+          startX: coords.x,
+          startY: coords.y,
+          startClientX: e.clientX,
+          startClientY: e.clientY,
+        });
+      } else {
+        onStartRotate(coords.x, coords.y);
+      }
     },
-    [onStartRotate, clientToSlide]
+    [onStartRotate, onStartPendingRotate, clientToSlide]
   );
 
   const handleContextMenu = useCallback(
