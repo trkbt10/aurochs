@@ -81,7 +81,7 @@ export type { MediaType } from "./resources/media-manager";
 export { addMedia, findUnusedMedia, removeMediaReference } from "./resources/media-manager";
 
 export type { OleType } from "./resources/ole-manager";
-export { addOleObject, getOleTypeFromFile } from "./resources/ole-manager";
+export { addOleObject, getOleTypeFromFile, OLE_TYPE_MAP } from "./resources/ole-manager";
 
 export { embedFonts } from "./resources/font-manager";
 

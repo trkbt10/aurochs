@@ -83,6 +83,14 @@
       "types": "./src/domain/animation.ts",
       "default": "./src/domain/animation.ts"
     },
+    "./domain/comment": {
+      "types": "./src/domain/comment.ts",
+      "default": "./src/domain/comment.ts"
+    },
+    "./domain/content-types": {
+      "types": "./src/domain/content-types.ts",
+      "default": "./src/domain/content-types.ts"
+    },
     "./domain/effects": {
       "types": "./src/domain/effects.ts",
       "default": "./src/domain/effects.ts"
@@ -94,6 +102,10 @@
     "./domain/line": {
       "types": "./src/domain/line.ts",
       "default": "./src/domain/line.ts"
+    },
+    "./domain/opc": {
+      "types": "./src/domain/opc.ts",
+      "default": "./src/domain/opc.ts"
     },
     "./domain/relationships": {
       "types": "./src/domain/relationships.ts",
@@ -114,6 +126,10 @@
     "./domain/three-d": {
       "types": "./src/domain/three-d.ts",
       "default": "./src/domain/three-d.ts"
+    },
+    "./domain/transition": {
+      "types": "./src/domain/transition.ts",
+      "default": "./src/domain/transition.ts"
     },
     "./domain/resource-store": {
       "types": "./src/domain/resource-store.ts",
@@ -155,6 +171,10 @@
       "types": "./src/domain/diagram/format-guards.ts",
       "default": "./src/domain/diagram/format-guards.ts"
     },
+    "./domain/theme/types": {
+      "types": "./src/domain/theme/types.ts",
+      "default": "./src/domain/theme/types.ts"
+    },
     "./opc": {
       "types": "./src/opc/index.ts",
       "default": "./src/opc/index.ts"
@@ -187,6 +207,10 @@
       "types": "./src/parser/context.ts",
       "default": "./src/parser/context.ts"
     },
+    "./parser/relationships": {
+      "types": "./src/parser/relationships.ts",
+      "default": "./src/parser/relationships.ts"
+    },
     "./parser/slide/theme-parser": {
       "types": "./src/parser/slide/theme-parser.ts",
       "default": "./src/parser/slide/theme-parser.ts"
@@ -202,6 +226,34 @@
     "./parser/graphics/fill-resolver": {
       "types": "./src/parser/graphics/fill-resolver.ts",
       "default": "./src/parser/graphics/fill-resolver.ts"
+    },
+    "./parser/graphics/fill-parser": {
+      "types": "./src/parser/graphics/fill-parser.ts",
+      "default": "./src/parser/graphics/fill-parser.ts"
+    },
+    "./parser/graphics/effects-parser": {
+      "types": "./src/parser/graphics/effects-parser.ts",
+      "default": "./src/parser/graphics/effects-parser.ts"
+    },
+    "./parser/graphics/line-parser": {
+      "types": "./src/parser/graphics/line-parser.ts",
+      "default": "./src/parser/graphics/line-parser.ts"
+    },
+    "./parser/graphics/color-parser": {
+      "types": "./src/parser/graphics/color-parser.ts",
+      "default": "./src/parser/graphics/color-parser.ts"
+    },
+    "./parser/metadata/comment-parser": {
+      "types": "./src/parser/metadata/comment-parser.ts",
+      "default": "./src/parser/metadata/comment-parser.ts"
+    },
+    "./parser/shape-parser/index": {
+      "types": "./src/parser/shape-parser/index.ts",
+      "default": "./src/parser/shape-parser/index.ts"
+    },
+    "./parser/text/text-parser": {
+      "types": "./src/parser/text/text-parser.ts",
+      "default": "./src/parser/text/text-parser.ts"
     },
     "./parser/text/text-fill": {
       "types": "./src/parser/text/text-fill.ts",
