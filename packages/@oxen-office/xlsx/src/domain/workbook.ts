@@ -21,6 +21,17 @@ import type { XlsxDateSystem } from "./date-system";
 import type { XlsxColor } from "./style/font";
 import type { XlsxDataValidation } from "./data-validation";
 import type { XlsxAutoFilter } from "./auto-filter";
+import type {
+  XlsxPageSetup,
+  XlsxPageMargins,
+  XlsxHeaderFooter,
+  XlsxPrintOptions,
+} from "./page-setup";
+import type { XlsxWorkbookProtection, XlsxSheetProtection } from "./protection";
+import type { XlsxDrawing } from "./drawing/types";
+import type { Chart } from "@oxen-office/chart/domain/types";
+import type { XlsxPivotTable } from "./pivot/types";
+import type { XlsxPivotCacheDefinition } from "./pivot/cache-types";
 import type { SharedStringItem } from "../parser/shared-strings";
 
 // =============================================================================
@@ -198,6 +209,42 @@ export type XlsxWorksheet = {
   readonly hyperlinks?: readonly XlsxHyperlink[];
   /** Auto filter configuration for this sheet */
   readonly autoFilter?: XlsxAutoFilter;
+  /**
+   * Page setup configuration for printing.
+   *
+   * @see ECMA-376 Part 4, Section 18.3.1.64 (pageSetup)
+   */
+  readonly pageSetup?: XlsxPageSetup;
+  /**
+   * Page margins for printing.
+   *
+   * @see ECMA-376 Part 4, Section 18.3.1.63 (pageMargins)
+   */
+  readonly pageMargins?: XlsxPageMargins;
+  /**
+   * Header and footer content for printing.
+   *
+   * @see ECMA-376 Part 4, Section 18.3.1.46 (headerFooter)
+   */
+  readonly headerFooter?: XlsxHeaderFooter;
+  /**
+   * Print options.
+   *
+   * @see ECMA-376 Part 4, Section 18.3.1.70 (printOptions)
+   */
+  readonly printOptions?: XlsxPrintOptions;
+  /**
+   * Sheet protection settings.
+   *
+   * @see ECMA-376 Part 4, Section 18.3.1.85 (sheetProtection)
+   */
+  readonly sheetProtection?: XlsxSheetProtection;
+  /**
+   * Drawing objects (images, shapes, charts) in this worksheet.
+   *
+   * @see ECMA-376 Part 4, Section 20.5 (SpreadsheetML Drawings)
+   */
+  readonly drawing?: XlsxDrawing;
   /** Path to the worksheet XML within the package (e.g., "xl/worksheets/sheet1.xml") */
   readonly xmlPath: string;
 };
@@ -269,4 +316,47 @@ export type XlsxWorkbook = {
   readonly tables?: readonly XlsxTable[];
   /** Calculation settings */
   readonly calcProperties?: XlsxCalcProperties;
+  /**
+   * Workbook protection settings.
+   *
+   * @see ECMA-376 Part 4, Section 18.2.29 (workbookProtection)
+   */
+  readonly workbookProtection?: XlsxWorkbookProtection;
+  /**
+   * Charts embedded in this workbook.
+   * Each chart is indexed by its sheet index and relationship ID.
+   *
+   * @see ECMA-376 Part 1, Section 21.2 - DrawingML Charts
+   */
+  readonly charts?: readonly XlsxWorkbookChart[];
+  /**
+   * Pivot tables in this workbook.
+   *
+   * @see ECMA-376 Part 4, Section 18.10 (Pivot Tables)
+   */
+  readonly pivotTables?: readonly XlsxPivotTable[];
+  /**
+   * Pivot cache definitions for this workbook.
+   *
+   * @see ECMA-376 Part 4, Section 18.10 (Pivot Tables)
+   */
+  readonly pivotCaches?: readonly XlsxPivotCacheDefinition[];
+};
+
+// =============================================================================
+// Workbook Chart
+// =============================================================================
+
+/**
+ * A chart embedded in a workbook.
+ */
+export type XlsxWorkbookChart = {
+  /** Index of the sheet containing this chart */
+  readonly sheetIndex: number;
+  /** Relationship ID used to reference this chart */
+  readonly relId: string;
+  /** Path to the chart XML within the package */
+  readonly chartPath: string;
+  /** Parsed chart data */
+  readonly chart: Chart;
 };

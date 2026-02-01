@@ -9,6 +9,9 @@ import type { ExtractData } from "../commands/extract";
 import type { BuildData } from "../commands/build";
 import type { VerifyData } from "../commands/verify";
 import type { StylesData } from "../commands/styles";
+import type { NumberingData } from "../commands/numbering";
+import type { HeadersFootersData } from "../commands/headers-footers";
+import type { TablesData } from "../commands/tables";
 
 /**
  * Format document info for pretty display.
@@ -208,6 +211,116 @@ export function formatStylesPretty(data: StylesData): string {
       }
     }
     lines.push("");
+  }
+
+  return lines.join("\n").trim();
+}
+
+/**
+ * Format numbering definitions for pretty display.
+ */
+export function formatNumberingPretty(data: NumberingData): string {
+  if (data.abstractNumCount === 0 && data.numCount === 0) {
+    return "No numbering definitions found";
+  }
+
+  const lines = [
+    `Abstract Numberings: ${data.abstractNumCount}`,
+    `Numbering Instances: ${data.numCount}`,
+    "",
+  ];
+
+  if (data.abstractNums.length > 0) {
+    lines.push("Abstract Numberings:");
+    for (const an of data.abstractNums) {
+      lines.push(`  [${an.abstractNumId}] ${an.multiLevelType ?? "unknown"}`);
+      for (const lvl of an.levels) {
+        const parts = [`    Level ${lvl.ilvl}:`];
+        if (lvl.numFmt) {
+          parts.push(`fmt=${lvl.numFmt}`);
+        }
+        if (lvl.lvlText) {
+          parts.push(`text="${lvl.lvlText}"`);
+        }
+        if (lvl.start !== undefined) {
+          parts.push(`start=${lvl.start}`);
+        }
+        lines.push(parts.join(" "));
+      }
+    }
+    lines.push("");
+  }
+
+  if (data.nums.length > 0) {
+    lines.push("Numbering Instances:");
+    for (const num of data.nums) {
+      const override = num.hasOverrides ? " [has overrides]" : "";
+      lines.push(`  numId=${num.numId} -> abstractNumId=${num.abstractNumId}${override}`);
+    }
+  }
+
+  return lines.join("\n").trim();
+}
+
+/**
+ * Format headers and footers for pretty display.
+ */
+export function formatHeadersFootersPretty(data: HeadersFootersData): string {
+  if (data.headerCount === 0 && data.footerCount === 0) {
+    return "No headers or footers found";
+  }
+
+  const lines = [
+    `Headers: ${data.headerCount}`,
+    `Footers: ${data.footerCount}`,
+    "",
+  ];
+
+  const headers = data.items.filter((i) => i.kind === "header");
+  const footers = data.items.filter((i) => i.kind === "footer");
+
+  if (headers.length > 0) {
+    lines.push("Headers:");
+    for (const h of headers) {
+      lines.push(`  ${h.relId}: ${h.paragraphCount} paragraphs`);
+      if (h.preview) {
+        lines.push(`    "${h.preview}"`);
+      }
+    }
+    lines.push("");
+  }
+
+  if (footers.length > 0) {
+    lines.push("Footers:");
+    for (const f of footers) {
+      lines.push(`  ${f.relId}: ${f.paragraphCount} paragraphs`);
+      if (f.preview) {
+        lines.push(`    "${f.preview}"`);
+      }
+    }
+  }
+
+  return lines.join("\n").trim();
+}
+
+/**
+ * Format tables for pretty display.
+ */
+export function formatTablesPretty(data: TablesData): string {
+  if (data.count === 0) {
+    return "No tables found";
+  }
+
+  const lines = [`Tables: ${data.count}`, ""];
+
+  for (const table of data.tables) {
+    lines.push(`Table ${table.index + 1}: ${table.rowCount} rows × ${table.colCount} cols`);
+    if (table.style) {
+      lines.push(`  Style: ${table.style}`);
+    }
+    if (table.firstCellPreview) {
+      lines.push(`  First cell: "${table.firstCellPreview}"`);
+    }
   }
 
   return lines.join("\n").trim();

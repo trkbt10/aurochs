@@ -29,6 +29,14 @@ import { parseComments } from "./comments";
 import { parseTable } from "./table";
 import { parseWorksheet } from "./worksheet";
 import { parseBooleanAttr, parseIntAttr } from "./primitive";
+import { parseWorkbookProtection } from "./protection";
+import { parseDrawing } from "./drawing";
+import { collectChartRelIds, resolveCharts, updateDrawingWithChartPaths } from "./chart-resolver";
+import { parsePivotTable } from "./pivot/pivot-table";
+import { parsePivotCacheDefinition } from "./pivot/pivot-cache";
+import type { XlsxWorkbookChart } from "../domain/workbook";
+import type { XlsxPivotTable } from "../domain/pivot/types";
+import type { XlsxPivotCacheDefinition } from "../domain/pivot/cache-types";
 import type { XmlElement, XmlDocument } from "@oxen/xml";
 import { parseXml, getAttr, getChild, getChildren, getTextContent, isXmlElement } from "@oxen/xml";
 import { basenamePosixPath, dirnamePosixPath, joinPosixPath, normalizePosixPath } from "@oxen-office/opc";
@@ -382,6 +390,123 @@ function collectTableRelationshipIds(worksheetRoot: XmlElement): readonly string
   return ids;
 }
 
+type DrawingWithCharts = {
+  readonly drawing: ReturnType<typeof parseDrawing> | undefined;
+  readonly charts: readonly XlsxWorkbookChart[];
+  readonly drawingPath?: string;
+};
+
+async function loadWorksheetDrawingFromRelationships(
+  getFileContent: (path: string) => Promise<string | undefined>,
+  worksheetXmlPath: string,
+  relationships: readonly RelationshipInfo[],
+  sheetIndex: number,
+): Promise<DrawingWithCharts> {
+  const drawingRel = relationships.find((rel) => rel.type.endsWith("/drawing"));
+  if (!drawingRel) {
+    return { drawing: undefined, charts: [] };
+  }
+  const drawingPath = resolveTargetPath(worksheetXmlPath, drawingRel.target);
+  const drawingXml = await getFileContent(drawingPath);
+  if (!drawingXml) {
+    return { drawing: undefined, charts: [] };
+  }
+  let drawing = parseDrawing(getDocumentRoot(parseXml(drawingXml)));
+  if (drawing.anchors.length === 0) {
+    return { drawing: undefined, charts: [] };
+  }
+
+  // Collect chart relationship IDs from drawing
+  const chartRelIds = collectChartRelIds(drawing);
+  if (chartRelIds.length === 0) {
+    return { drawing, charts: [], drawingPath };
+  }
+
+  // Load drawing relationships for chart resolution
+  const drawingRelsPath = resolveRelationshipsPathForPart(drawingPath);
+  const drawingRelsXml = await getFileContent(drawingRelsPath);
+  const drawingRels = parseRelsOrEmpty(drawingRelsXml);
+
+  // Resolve charts
+  const resolvedCharts = await resolveCharts(getFileContent, drawingPath, drawingRels, chartRelIds);
+  const charts: XlsxWorkbookChart[] = resolvedCharts.map((c) => ({
+    sheetIndex,
+    relId: c.relId,
+    chartPath: c.chartPath,
+    chart: c.chart,
+  }));
+
+  // Update drawing with chart paths
+  const chartPathMap = new Map(resolvedCharts.map((c) => [c.relId, c.chartPath]));
+  drawing = updateDrawingWithChartPaths(drawing, chartPathMap);
+
+  return { drawing, charts, drawingPath };
+}
+
+async function loadWorksheetPivotTables(
+  getFileContent: (path: string) => Promise<string | undefined>,
+  worksheetXmlPath: string,
+  relationships: readonly RelationshipInfo[],
+): Promise<readonly XlsxPivotTable[]> {
+  const pivotTableRels = relationships.filter((rel) => rel.type.endsWith("/pivotTable"));
+  if (pivotTableRels.length === 0) {
+    return [];
+  }
+
+  const pivotTables: XlsxPivotTable[] = [];
+  for (const rel of pivotTableRels) {
+    const pivotTablePath = resolveTargetPath(worksheetXmlPath, rel.target);
+    const pivotTableXml = await getFileContent(pivotTablePath);
+    if (!pivotTableXml) {
+      continue;
+    }
+
+    try {
+      const pivotTableRoot = getDocumentRoot(parseXml(pivotTableXml));
+      const pivotTable = parsePivotTable(pivotTableRoot, pivotTablePath);
+      pivotTables.push(pivotTable);
+    } catch {
+      // Skip pivot tables that fail to parse
+      continue;
+    }
+  }
+
+  return pivotTables;
+}
+
+async function loadPivotCaches(
+  getFileContent: (path: string) => Promise<string | undefined>,
+  workbookRelationships: ReadonlyMap<string, string>,
+): Promise<readonly XlsxPivotCacheDefinition[]> {
+  const pivotCaches: XlsxPivotCacheDefinition[] = [];
+
+  for (const [relId, target] of workbookRelationships) {
+    if (!target.includes("pivotCache") || !target.endsWith(".xml")) {
+      continue;
+    }
+
+    const cachePath = target.startsWith("xl/") ? target : `xl/${target}`;
+    const cacheXml = await getFileContent(cachePath);
+    if (!cacheXml) {
+      continue;
+    }
+
+    try {
+      const cacheRoot = getDocumentRoot(parseXml(cacheXml));
+      // Extract cacheId from relId (e.g., "rId5" -> 5)
+      const cacheIdMatch = relId.match(/\d+/u);
+      const cacheId = cacheIdMatch ? parseInt(cacheIdMatch[0], 10) : 0;
+      const pivotCache = parsePivotCacheDefinition(cacheRoot, cacheId, cachePath);
+      pivotCaches.push(pivotCache);
+    } catch {
+      // Skip caches that fail to parse
+      continue;
+    }
+  }
+
+  return pivotCaches;
+}
+
 // =============================================================================
 // Main Workbook Parser
 // =============================================================================
@@ -434,7 +559,12 @@ export async function parseXlsxWorkbook(
   if (!workbookXml) {
     throw new Error("workbook.xml not found");
   }
-  const workbookInfo = parseWorkbookXml(getDocumentRoot(parseXml(workbookXml)));
+  const workbookRoot = getDocumentRoot(parseXml(workbookXml));
+  const workbookInfo = parseWorkbookXml(workbookRoot);
+
+  // 4.1 Parse workbook protection
+  const workbookProtectionEl = getChild(workbookRoot, "workbookProtection");
+  const workbookProtection = parseWorkbookProtection(workbookProtectionEl);
 
   // 5. Create context
   const context = createParseContext({ sharedStrings, styleSheet, workbookInfo, relationships });
@@ -442,6 +572,8 @@ export async function parseXlsxWorkbook(
   // 6. Parse each worksheet
   const sheets: XlsxWorksheet[] = [];
   const tables: XlsxTable[] = [];
+  const allCharts: XlsxWorkbookChart[] = [];
+  const allPivotTables: XlsxPivotTable[] = [];
   for (const sheetInfo of workbookInfo.sheets) {
     const xmlPath = resolveSheetPath(sheetInfo.rId, relationships);
     const sheetXml = await getFileContent(xmlPath);
@@ -455,6 +587,8 @@ export async function parseXlsxWorkbook(
       const rels = parseRelsOrEmpty(sheetRelsXml);
       const relInfos = sheetRelsXml ? parseRelationshipInfos(getDocumentRoot(parseXml(sheetRelsXml))) : [];
 
+      const sheetIndex = sheets.length;
+
       const baseWorksheet = parseWorksheet({
         worksheetElement: sheetRoot,
         context,
@@ -462,10 +596,16 @@ export async function parseXlsxWorkbook(
         sheetInfo: { ...sheetInfo, xmlPath },
       });
       const comments = await loadWorksheetCommentsFromRelationships(getFileContent, xmlPath, relInfos);
+      const { drawing, charts } = await loadWorksheetDrawingFromRelationships(getFileContent, xmlPath, relInfos, sheetIndex);
+      const sheetPivotTables = await loadWorksheetPivotTables(getFileContent, xmlPath, relInfos);
+
+      // Collect charts and pivot tables from this worksheet
+      allCharts.push(...charts);
+      allPivotTables.push(...sheetPivotTables);
 
       const worksheetWithComments = comments ? { ...baseWorksheet, comments } : baseWorksheet;
-      const worksheet = resolveWorksheetHyperlinksFromRelationships(xmlPath, worksheetWithComments, relInfos);
-      const sheetIndex = sheets.length;
+      const worksheetWithDrawing = drawing ? { ...worksheetWithComments, drawing } : worksheetWithComments;
+      const worksheet = resolveWorksheetHyperlinksFromRelationships(xmlPath, worksheetWithDrawing, relInfos);
       sheets.push(worksheet);
 
       if (tableRelIds.length > 0) {
@@ -486,6 +626,9 @@ export async function parseXlsxWorkbook(
     }
   }
 
+  // 7. Parse pivot caches
+  const pivotCaches = await loadPivotCaches(getFileContent, relationships);
+
   return {
     dateSystem: workbookInfo.dateSystem,
     sheets,
@@ -494,6 +637,10 @@ export async function parseXlsxWorkbook(
     ...(sharedStringsRich && { sharedStringsRich }),
     definedNames: workbookInfo.definedNames,
     tables: tables.length > 0 ? tables : undefined,
+    workbookProtection,
+    charts: allCharts.length > 0 ? allCharts : undefined,
+    pivotTables: allPivotTables.length > 0 ? allPivotTables : undefined,
+    pivotCaches: pivotCaches.length > 0 ? pivotCaches : undefined,
   };
 }
 

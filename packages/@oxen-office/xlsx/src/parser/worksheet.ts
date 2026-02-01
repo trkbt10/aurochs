@@ -41,6 +41,8 @@ import type { XlsxParseOptions } from "./options";
 import { parseCellWithAddress } from "./cell";
 import { expandSharedFormulas } from "./shared-formulas";
 import { parseBooleanAttr, parseFloatAttr, parseIntAttr } from "./primitive";
+import { parsePageSetup, parsePageMargins, parseHeaderFooter, parsePrintOptions } from "./page-setup";
+import { parseSheetProtection } from "./protection";
 import type { XmlElement } from "@oxen/xml";
 import { getAttr, getChild, getChildren, getTextContent } from "@oxen/xml";
 
@@ -687,6 +689,21 @@ export function parseWorksheet(params: {
   const autoFilterEl = getChild(worksheetElement, "autoFilter");
   const autoFilter = parseAutoFilter(autoFilterEl);
 
+  // Parse page setup elements
+  const pageSetupEl = getChild(worksheetElement, "pageSetup");
+  const pageMarginsEl = getChild(worksheetElement, "pageMargins");
+  const headerFooterEl = getChild(worksheetElement, "headerFooter");
+  const printOptionsEl = getChild(worksheetElement, "printOptions");
+
+  const pageSetup = parsePageSetup(pageSetupEl);
+  const pageMargins = parsePageMargins(pageMarginsEl);
+  const headerFooter = parseHeaderFooter(headerFooterEl);
+  const printOptions = parsePrintOptions(printOptionsEl);
+
+  // Parse sheet protection
+  const sheetProtectionEl = getChild(worksheetElement, "sheetProtection");
+  const sheetProtection = parseSheetProtection(sheetProtectionEl);
+
   return {
     dateSystem: context.workbookInfo.dateSystem,
     name: sheetInfo.name,
@@ -702,6 +719,11 @@ export function parseWorksheet(params: {
     dataValidations: dataValidations.length > 0 ? dataValidations : undefined,
     hyperlinks: hyperlinks.length > 0 ? hyperlinks : undefined,
     autoFilter,
+    pageSetup,
+    pageMargins,
+    headerFooter,
+    printOptions,
+    sheetProtection,
     xmlPath: sheetInfo.xmlPath,
   };
 }

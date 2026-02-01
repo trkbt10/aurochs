@@ -19,6 +19,9 @@ import { runExtract } from "./commands/extract";
 import { runBuild } from "./commands/build";
 import { runVerify } from "./commands/verify";
 import { runStyles } from "./commands/styles";
+import { runNumbering } from "./commands/numbering";
+import { runHeadersFooters } from "./commands/headers-footers";
+import { runTables } from "./commands/tables";
 import { output, type OutputMode } from "@oxen-cli/cli-core";
 import {
   formatInfoPretty,
@@ -28,6 +31,9 @@ import {
   formatBuildPretty,
   formatVerifyPretty,
   formatStylesPretty,
+  formatNumberingPretty,
+  formatHeadersFootersPretty,
+  formatTablesPretty,
 } from "./output/pretty-output";
 
 const program = new Command();
@@ -117,6 +123,36 @@ program
     const mode = program.opts().output as OutputMode;
     const result = await runStyles(file, options);
     output(result, mode, formatStylesPretty);
+  });
+
+program
+  .command("numbering")
+  .description("Display numbering definitions")
+  .argument("<file>", "DOCX file path")
+  .action(async (file: string) => {
+    const mode = program.opts().output as OutputMode;
+    const result = await runNumbering(file);
+    output(result, mode, formatNumberingPretty);
+  });
+
+program
+  .command("headers-footers")
+  .description("Display headers and footers")
+  .argument("<file>", "DOCX file path")
+  .action(async (file: string) => {
+    const mode = program.opts().output as OutputMode;
+    const result = await runHeadersFooters(file);
+    output(result, mode, formatHeadersFootersPretty);
+  });
+
+program
+  .command("tables")
+  .description("Display table information")
+  .argument("<file>", "DOCX file path")
+  .action(async (file: string) => {
+    const mode = program.opts().output as OutputMode;
+    const result = await runTables(file);
+    output(result, mode, formatTablesPretty);
   });
 
 program.parse();

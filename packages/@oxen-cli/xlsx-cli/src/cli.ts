@@ -23,6 +23,10 @@ import { runFormulas } from "./commands/formulas";
 import { runNames } from "./commands/names";
 import { runTables } from "./commands/tables";
 import { runComments } from "./commands/comments";
+import { runAutofilter } from "./commands/autofilter";
+import { runValidation } from "./commands/validation";
+import { runConditional } from "./commands/conditional";
+import { runHyperlinks } from "./commands/hyperlinks";
 import { output, type OutputMode } from "@oxen-cli/cli-core";
 import {
   formatInfoPretty,
@@ -36,6 +40,10 @@ import {
   formatNamesPretty,
   formatTablesPretty,
   formatCommentsPretty,
+  formatAutofilterPretty,
+  formatValidationPretty,
+  formatConditionalPretty,
+  formatHyperlinksPretty,
 } from "./output/pretty-output";
 
 const program = new Command();
@@ -164,6 +172,50 @@ program
     const mode = program.opts().output as OutputMode;
     const result = await runComments(file, options);
     output(result, mode, formatCommentsPretty);
+  });
+
+program
+  .command("autofilter")
+  .description("Display auto filter configurations")
+  .argument("<file>", "XLSX file path")
+  .option("--sheet <name>", "Filter by sheet name")
+  .action(async (file: string, options: { sheet?: string }) => {
+    const mode = program.opts().output as OutputMode;
+    const result = await runAutofilter(file, options);
+    output(result, mode, formatAutofilterPretty);
+  });
+
+program
+  .command("validation")
+  .description("Display data validation rules")
+  .argument("<file>", "XLSX file path")
+  .option("--sheet <name>", "Filter by sheet name")
+  .action(async (file: string, options: { sheet?: string }) => {
+    const mode = program.opts().output as OutputMode;
+    const result = await runValidation(file, options);
+    output(result, mode, formatValidationPretty);
+  });
+
+program
+  .command("conditional")
+  .description("Display conditional formatting rules")
+  .argument("<file>", "XLSX file path")
+  .option("--sheet <name>", "Filter by sheet name")
+  .action(async (file: string, options: { sheet?: string }) => {
+    const mode = program.opts().output as OutputMode;
+    const result = await runConditional(file, options);
+    output(result, mode, formatConditionalPretty);
+  });
+
+program
+  .command("hyperlinks")
+  .description("Display hyperlinks")
+  .argument("<file>", "XLSX file path")
+  .option("--sheet <name>", "Filter by sheet name")
+  .action(async (file: string, options: { sheet?: string }) => {
+    const mode = program.opts().output as OutputMode;
+    const result = await runHyperlinks(file, options);
+    output(result, mode, formatHyperlinksPretty);
   });
 
 program.parse();

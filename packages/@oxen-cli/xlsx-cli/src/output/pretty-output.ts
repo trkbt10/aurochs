@@ -13,6 +13,10 @@ import type { FormulasData } from "../commands/formulas";
 import type { NamesData } from "../commands/names";
 import type { TablesData } from "../commands/tables";
 import type { CommentsData } from "../commands/comments";
+import type { AutofilterData } from "../commands/autofilter";
+import type { ValidationData } from "../commands/validation";
+import type { ConditionalData } from "../commands/conditional";
+import type { HyperlinksData } from "../commands/hyperlinks";
 
 /**
  * Format workbook info for pretty display.
@@ -272,6 +276,173 @@ export function formatCommentsPretty(data: CommentsData): string {
     for (const comment of sheet.comments) {
       const author = comment.author ? ` (${comment.author})` : "";
       lines.push(`  ${comment.ref}${author}: ${comment.text}`);
+    }
+    lines.push("");
+  }
+
+  return lines.join("\n").trim();
+}
+
+/**
+ * Format auto filter configurations for pretty display.
+ */
+export function formatAutofilterPretty(data: AutofilterData): string {
+  if (data.totalCount === 0) {
+    return "No auto filters found";
+  }
+
+  const lines = [`Auto Filters: ${data.totalCount}`];
+  lines.push("");
+
+  for (const sheet of data.sheets) {
+    lines.push(`Sheet: ${sheet.sheetName}`);
+    lines.push(`  Range: ${sheet.ref}`);
+
+    if (sheet.filterColumns.length > 0) {
+      lines.push(`  Filter Columns:`);
+      for (const col of sheet.filterColumns) {
+        const parts = [`    Column ${col.colId}: ${col.filterType}`];
+        if (col.values && col.values.length > 0) {
+          const valuesStr = col.values.slice(0, 5).join(", ");
+          const suffix = col.values.length > 5 ? ` ... (${col.values.length} total)` : "";
+          parts.push(`      Values: ${valuesStr}${suffix}`);
+        }
+        if (col.conditions) {
+          for (const cond of col.conditions) {
+            parts.push(`      ${cond.operator ?? "equal"} "${cond.val ?? ""}"`);
+          }
+        }
+        if (col.dynamicType) {
+          parts.push(`      Type: ${col.dynamicType}`);
+        }
+        if (col.top10) {
+          const dir = col.top10.top ? "top" : "bottom";
+          const unit = col.top10.percent ? "%" : "";
+          parts.push(`      ${dir} ${col.top10.val}${unit}`);
+        }
+        lines.push(parts.join("\n"));
+      }
+    }
+
+    if (sheet.sortState) {
+      lines.push(`  Sort State: ${sheet.sortState.ref}`);
+      if (sheet.sortState.conditions) {
+        for (const cond of sheet.sortState.conditions) {
+          const dir = cond.descending ? "descending" : "ascending";
+          lines.push(`    ${cond.ref}: ${dir}`);
+        }
+      }
+    }
+
+    lines.push("");
+  }
+
+  return lines.join("\n").trim();
+}
+
+/**
+ * Format data validation rules for pretty display.
+ */
+export function formatValidationPretty(data: ValidationData): string {
+  if (data.totalCount === 0) {
+    return "No data validations found";
+  }
+
+  const lines = [`Data Validations: ${data.totalCount}`];
+  lines.push("");
+
+  for (const sheet of data.sheets) {
+    lines.push(`Sheet: ${sheet.sheetName}`);
+    for (const v of sheet.validations) {
+      lines.push(`  ${v.sqref}: ${v.type ?? "any"}`);
+      if (v.operator) {
+        lines.push(`    Operator: ${v.operator}`);
+      }
+      if (v.formula1) {
+        lines.push(`    Formula1: ${v.formula1}`);
+      }
+      if (v.formula2) {
+        lines.push(`    Formula2: ${v.formula2}`);
+      }
+      if (v.errorStyle) {
+        lines.push(`    Error Style: ${v.errorStyle}`);
+      }
+      if (v.promptTitle || v.prompt) {
+        lines.push(`    Prompt: ${v.promptTitle ?? ""} - ${v.prompt ?? ""}`);
+      }
+      if (v.errorTitle || v.error) {
+        lines.push(`    Error: ${v.errorTitle ?? ""} - ${v.error ?? ""}`);
+      }
+    }
+    lines.push("");
+  }
+
+  return lines.join("\n").trim();
+}
+
+/**
+ * Format conditional formatting rules for pretty display.
+ */
+export function formatConditionalPretty(data: ConditionalData): string {
+  if (data.totalCount === 0) {
+    return "No conditional formatting found";
+  }
+
+  const lines = [`Conditional Formatting: ${data.totalCount}`];
+  lines.push("");
+
+  for (const sheet of data.sheets) {
+    lines.push(`Sheet: ${sheet.sheetName}`);
+    for (const cf of sheet.formattings) {
+      lines.push(`  Range: ${cf.sqref}`);
+      for (const rule of cf.rules) {
+        const parts = [`    [${rule.priority ?? "-"}] ${rule.type}`];
+        if (rule.operator) {
+          parts[0] += ` (${rule.operator})`;
+        }
+        if (rule.dxfId !== undefined) {
+          parts.push(`      DXF ID: ${rule.dxfId}`);
+        }
+        if (rule.stopIfTrue) {
+          parts.push(`      Stop If True: yes`);
+        }
+        if (rule.formulas.length > 0) {
+          parts.push(`      Formulas: ${rule.formulas.join(", ")}`);
+        }
+        lines.push(parts.join("\n"));
+      }
+    }
+    lines.push("");
+  }
+
+  return lines.join("\n").trim();
+}
+
+/**
+ * Format hyperlinks for pretty display.
+ */
+export function formatHyperlinksPretty(data: HyperlinksData): string {
+  if (data.totalCount === 0) {
+    return "No hyperlinks found";
+  }
+
+  const lines = [`Hyperlinks: ${data.totalCount}`];
+  lines.push("");
+
+  for (const sheet of data.sheets) {
+    lines.push(`Sheet: ${sheet.sheetName}`);
+    for (const h of sheet.hyperlinks) {
+      const target = h.target ?? h.location ?? "(no target)";
+      lines.push(`  ${h.ref}: ${target}`);
+      if (h.display && h.display !== h.target) {
+        lines.push(`    Display: ${h.display}`);
+      }
+      if (h.tooltip) {
+        lines.push(`    Tooltip: ${h.tooltip}`);
+      }
+      if (h.targetMode) {
+        lines.push(`    Mode: ${h.targetMode}`);
+      }
     }
     lines.push("");
   }
