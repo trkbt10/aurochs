@@ -97,6 +97,9 @@ function serializeColumns(cols: DocxColumns): ColumnsJson {
   return result;
 }
 
+/**
+ * Serialize DOCX section properties to JSON format.
+ */
 export function serializeSection(sectPr: DocxSectionProperties): SectionJson {
   const result: SectionJson = {};
 

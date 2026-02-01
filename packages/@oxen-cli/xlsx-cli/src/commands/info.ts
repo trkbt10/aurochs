@@ -27,19 +27,16 @@ export async function runInfo(filePath: string): Promise<Result<InfoData>> {
     const workbook = await loadXlsxWorkbook(filePath);
 
     const sheetNames = workbook.sheets.map((sheet) => sheet.name);
-    let totalRows = 0;
-    let totalCells = 0;
-    let mergedCellCount = 0;
 
-    for (const sheet of workbook.sheets) {
-      totalRows += sheet.rows.length;
-      for (const row of sheet.rows) {
-        totalCells += row.cells.length;
-      }
-      if (sheet.mergeCells) {
-        mergedCellCount += sheet.mergeCells.length;
-      }
-    }
+    const totalRows = workbook.sheets.reduce((sum, sheet) => sum + sheet.rows.length, 0);
+    const totalCells = workbook.sheets.reduce(
+      (sum, sheet) => sum + sheet.rows.reduce((rowSum, row) => rowSum + row.cells.length, 0),
+      0,
+    );
+    const mergedCellCount = workbook.sheets.reduce(
+      (sum, sheet) => sum + (sheet.mergeCells?.length ?? 0),
+      0,
+    );
 
     const styles = workbook.styles;
     const hasStyles = styles.cellXfs.length > 1 || styles.fonts.length > 1;

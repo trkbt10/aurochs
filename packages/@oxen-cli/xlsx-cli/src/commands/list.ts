@@ -7,7 +7,9 @@ import { loadXlsxWorkbook } from "../utils/xlsx-loader";
 import { getSheetRange } from "../serializers/sheet-serializer";
 
 function formatRangeString(range: ReturnType<typeof getSheetRange>): string | undefined {
-  if (!range) return undefined;
+  if (!range) {
+    return undefined;
+  }
   return `${range.startCol}${range.startRow}:${range.endCol}${range.endRow}`;
 }
 
@@ -33,17 +35,11 @@ export async function runList(filePath: string): Promise<Result<ListData>> {
     const workbook = await loadXlsxWorkbook(filePath);
 
     const sheets: SheetListItem[] = workbook.sheets.map((sheet) => {
-      let cellCount = 0;
-      let formulaCount = 0;
-
-      for (const row of sheet.rows) {
-        cellCount += row.cells.length;
-        for (const cell of row.cells) {
-          if (cell.formula) {
-            formulaCount++;
-          }
-        }
-      }
+      const cellCount = sheet.rows.reduce((sum, row) => sum + row.cells.length, 0);
+      const formulaCount = sheet.rows.reduce(
+        (sum, row) => sum + row.cells.filter((cell) => cell.formula).length,
+        0,
+      );
 
       const rangeStr = formatRangeString(getSheetRange(sheet));
 

@@ -4,7 +4,7 @@
 
 import { success, error, type Result } from "@oxen-cli/cli-core";
 import { loadXlsxWorkbook } from "../utils/xlsx-loader";
-import { createFormulaEvaluator, type FormulaEvaluator } from "@oxen-office/xlsx/formula/evaluator";
+import { createFormulaEvaluator } from "@oxen-office/xlsx/formula/evaluator";
 import { formatCellRef } from "@oxen-office/xlsx/domain/cell/address";
 import type { FormulaScalar } from "@oxen-office/xlsx/formula/types";
 
@@ -39,7 +39,9 @@ export type FormulasOptions = {
 // =============================================================================
 
 function formatScalarValue(value: FormulaScalar): string | number | boolean | null {
-  if (value === null) return null;
+  if (value === null) {
+    return null;
+  }
   if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
     return value;
   }
@@ -75,59 +77,55 @@ function formatCellValue(value: { type: string; value?: unknown }): string | num
 /**
  * Display formulas from an XLSX file with optional evaluation.
  */
+function evaluateFormula(
+  evaluator: ReturnType<typeof createFormulaEvaluator> | undefined,
+  sheetIndex: number,
+  address: { col: number; row: number },
+): string | number | boolean | null | undefined {
+  if (!evaluator) {
+    return undefined;
+  }
+  try {
+    const result = evaluator.evaluateCell(sheetIndex, address);
+    return formatScalarValue(result);
+    // eslint-disable-next-line no-restricted-syntax -- Formula evaluation can fail for many reasons (missing references, unsupported functions, etc.)
+  } catch {
+    return "#ERROR!";
+  }
+}
+
+/**
+ * Display formulas from an XLSX file with optional evaluation.
+ */
 export async function runFormulas(filePath: string, options: FormulasOptions = {}): Promise<Result<FormulasData>> {
   try {
     const workbook = await loadXlsxWorkbook(filePath);
 
     const evaluator = options.evaluate ? createFormulaEvaluator(workbook) : undefined;
 
-    const sheets: SheetFormulasJson[] = [];
-    let totalCount = 0;
+    const sheets: SheetFormulasJson[] = workbook.sheets
+      .map((sheet, sheetIndex) => ({ sheet, sheetIndex }))
+      .filter(({ sheet }) => !options.sheet || sheet.name === options.sheet)
+      .map(({ sheet, sheetIndex }) => {
+        const formulas: FormulaItemJson[] = sheet.rows.flatMap((row) =>
+          row.cells
+            .filter((cell) => cell.formula)
+            .map((cell) => {
+              const calculatedValue = evaluateFormula(evaluator, sheetIndex, cell.address);
+              return {
+                ref: formatCellRef(cell.address),
+                formula: cell.formula!.expression,
+                storedValue: formatCellValue(cell.value),
+                ...(calculatedValue !== undefined && { calculatedValue }),
+              };
+            }),
+        );
 
-    for (let sheetIndex = 0; sheetIndex < workbook.sheets.length; sheetIndex++) {
-      const sheet = workbook.sheets[sheetIndex];
+        return { sheetName: sheet.name, formulas };
+      })
+      .filter(({ formulas }) => formulas.length > 0);
 
-      // Filter by sheet name if specified
-      if (options.sheet && sheet.name !== options.sheet) {
-        continue;
-      }
-
-      const formulas: FormulaItemJson[] = [];
-
-      for (const row of sheet.rows) {
-        for (const cell of row.cells) {
-          if (cell.formula) {
-            const ref = formatCellRef(cell.address);
-            const storedValue = formatCellValue(cell.value);
-
-            let calculatedValue: string | number | boolean | null | undefined;
-            if (evaluator) {
-              try {
-                const result = evaluator.evaluateCell(sheetIndex, cell.address);
-                calculatedValue = formatScalarValue(result);
-              } catch {
-                calculatedValue = "#ERROR!";
-              }
-            }
-
-            formulas.push({
-              ref,
-              formula: cell.formula.expression,
-              storedValue,
-              ...(calculatedValue !== undefined && { calculatedValue }),
-            });
-          }
-        }
-      }
-
-      if (formulas.length > 0) {
-        totalCount += formulas.length;
-        sheets.push({
-          sheetName: sheet.name,
-          formulas,
-        });
-      }
-    }
+    const totalCount = sheets.reduce((sum, s) => sum + s.formulas.length, 0);
 
     return success({
       totalCount,

@@ -1,10 +1,8 @@
 /**
  * @file Tests for paragraph serialization
  */
-
-import { describe, it, expect } from "vitest";
-import type { DocxRun, DocxParagraph, DocxRunContent, DocxParagraphContent } from "@oxen-office/docx";
-import { halfPoints } from "@oxen-office/docx";
+import type { DocxRun, DocxParagraph, DocxParagraphContent } from "@oxen-office/docx";
+import { halfPoints, docxStyleId, docxNumId, docxIlvl } from "@oxen-office/docx";
 import { serializeParagraph } from "./paragraph-serializer";
 
 describe("paragraph-serializer", () => {
@@ -53,11 +51,11 @@ describe("paragraph-serializer", () => {
       const paragraph: DocxParagraph = {
         type: "paragraph",
         properties: {
-          pStyle: "Heading1" as any,
+          pStyle: docxStyleId("Heading1"),
           jc: "center",
           numPr: {
-            numId: 1 as any,
-            ilvl: 0 as any,
+            numId: docxNumId(1),
+            ilvl: docxIlvl(0),
           },
         },
         content: [

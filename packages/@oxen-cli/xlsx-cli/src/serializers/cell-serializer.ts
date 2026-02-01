@@ -38,6 +38,9 @@ function cellValueToJson(value: CellValue): { type: CellJson["type"]; value: Cel
   }
 }
 
+/**
+ * Serialize an XLSX cell to JSON format.
+ */
 export function serializeCell(cell: Cell): CellJson {
   const { type, value } = cellValueToJson(cell.value);
 

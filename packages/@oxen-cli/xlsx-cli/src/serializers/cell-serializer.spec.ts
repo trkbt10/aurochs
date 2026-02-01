@@ -1,8 +1,6 @@
 /**
  * @file Tests for cell serialization
  */
-
-import { describe, it, expect } from "vitest";
 import type { Cell, CellValue } from "@oxen-office/xlsx/domain/cell/types";
 import { colIdx, rowIdx, styleId } from "@oxen-office/xlsx/domain/types";
 import { serializeCell, formatCellValue } from "./cell-serializer";

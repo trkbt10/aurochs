@@ -42,7 +42,9 @@ export type StringsOptions = {
 // =============================================================================
 
 function formatColor(color: RichTextProperties["color"]): string | undefined {
-  if (!color) return undefined;
+  if (!color) {
+    return undefined;
+  }
   switch (color.type) {
     case "rgb":
       return `#${color.value}`;

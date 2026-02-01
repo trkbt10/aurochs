@@ -97,6 +97,9 @@ function serializeParagraphContent(content: DocxParagraphContent): ParagraphCont
   }
 }
 
+/**
+ * Serialize a DOCX paragraph to JSON format.
+ */
 export function serializeParagraph(paragraph: DocxParagraph): ParagraphJson {
   const props = paragraph.properties;
   const content = paragraph.content

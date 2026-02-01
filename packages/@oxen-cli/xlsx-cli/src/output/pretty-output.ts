@@ -14,6 +14,9 @@ import type { NamesData } from "../commands/names";
 import type { TablesData } from "../commands/tables";
 import type { CommentsData } from "../commands/comments";
 
+/**
+ * Format workbook info for pretty display.
+ */
 export function formatInfoPretty(data: InfoData): string {
   const lines = [
     `Sheets: ${data.sheetCount}`,
@@ -26,6 +29,9 @@ export function formatInfoPretty(data: InfoData): string {
   return lines.join("\n");
 }
 
+/**
+ * Format sheet list for pretty display.
+ */
 export function formatListPretty(data: ListData): string {
   if (data.sheets.length === 0) {
     return "No sheets found";
@@ -57,6 +63,9 @@ export function formatListPretty(data: ListData): string {
     .join("\n\n");
 }
 
+/**
+ * Format sheet content for pretty display.
+ */
 export function formatShowPretty(data: ShowData): string {
   const lines = [`Sheet: ${data.sheetName}`];
 
@@ -78,27 +87,50 @@ export function formatShowPretty(data: ShowData): string {
   return lines.join("\n");
 }
 
+/**
+ * Format extracted data for pretty display.
+ */
 export function formatExtractPretty(data: ExtractData): string {
   const header = `Sheet: ${data.sheetName} (${data.format.toUpperCase()})`;
   return `${header}\n${"=".repeat(header.length)}\n${data.content}`;
 }
 
+/**
+ * Format build result for pretty display.
+ */
 export function formatBuildPretty(data: BuildData): string {
   return `Built: ${data.outputPath}`;
 }
 
 function formatRunProps(run: RichTextRunJson): string {
   const props: string[] = [];
-  if (run.bold) props.push("bold");
-  if (run.italic) props.push("italic");
-  if (run.underline) props.push("underline");
-  if (run.strike) props.push("strike");
-  if (run.fontSize) props.push(`size:${run.fontSize}`);
-  if (run.fontName) props.push(`font:${run.fontName}`);
-  if (run.color) props.push(`color:${run.color}`);
+  if (run.bold) {
+    props.push("bold");
+  }
+  if (run.italic) {
+    props.push("italic");
+  }
+  if (run.underline) {
+    props.push("underline");
+  }
+  if (run.strike) {
+    props.push("strike");
+  }
+  if (run.fontSize) {
+    props.push(`size:${run.fontSize}`);
+  }
+  if (run.fontName) {
+    props.push(`font:${run.fontName}`);
+  }
+  if (run.color) {
+    props.push(`color:${run.color}`);
+  }
   return props.length > 0 ? ` [${props.join(", ")}]` : "";
 }
 
+/**
+ * Format shared strings for pretty display.
+ */
 export function formatStringsPretty(data: StringsData): string {
   const lines = [`Shared Strings: ${data.count}`];
   lines.push("");
@@ -120,6 +152,9 @@ export function formatStringsPretty(data: StringsData): string {
   return lines.join("\n");
 }
 
+/**
+ * Format formulas for pretty display.
+ */
 export function formatFormulasPretty(data: FormulasData): string {
   const lines = [`Total Formulas: ${data.totalCount}`];
   lines.push("");
@@ -141,6 +176,9 @@ export function formatFormulasPretty(data: FormulasData): string {
   return lines.join("\n");
 }
 
+/**
+ * Format verification results for pretty display.
+ */
 export function formatVerifyPretty(data: VerifyData): string {
   const lines = [`Results: ${data.passed} passed, ${data.failed} failed`];
   lines.push("");
@@ -159,6 +197,9 @@ export function formatVerifyPretty(data: VerifyData): string {
   return lines.join("\n");
 }
 
+/**
+ * Format defined names for pretty display.
+ */
 export function formatNamesPretty(data: NamesData): string {
   if (data.count === 0) {
     return "No defined names found";
@@ -182,6 +223,9 @@ export function formatNamesPretty(data: NamesData): string {
   return lines.join("\n");
 }
 
+/**
+ * Format table definitions for pretty display.
+ */
 export function formatTablesPretty(data: TablesData): string {
   if (data.count === 0) {
     return "No tables found";

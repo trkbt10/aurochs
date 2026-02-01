@@ -10,6 +10,9 @@ import type { BuildData } from "../commands/build";
 import type { VerifyData } from "../commands/verify";
 import type { StylesData } from "../commands/styles";
 
+/**
+ * Format document info for pretty display.
+ */
 export function formatInfoPretty(data: InfoData): string {
   const lines = [
     `Paragraphs: ${data.paragraphCount}`,
@@ -46,6 +49,9 @@ export function formatInfoPretty(data: InfoData): string {
   return lines.join("\n");
 }
 
+/**
+ * Format section list for pretty display.
+ */
 export function formatListPretty(data: ListData): string {
   if (data.sections.length === 0) {
     return "No sections found";
@@ -77,6 +83,9 @@ export function formatListPretty(data: ListData): string {
     .join("\n\n");
 }
 
+/**
+ * Format section content for pretty display.
+ */
 export function formatShowPretty(data: ShowData): string {
   const lines = [`Section ${data.sectionNumber}:`];
 
@@ -112,16 +121,25 @@ export function formatShowPretty(data: ShowData): string {
   return lines.join("\n");
 }
 
+/**
+ * Format extracted text for pretty display.
+ */
 export function formatExtractPretty(data: ExtractData): string {
   return data.sections
     .map((section) => `--- Section ${section.number} ---\n${section.text || "(empty)"}`)
     .join("\n\n");
 }
 
+/**
+ * Format build result for pretty display.
+ */
 export function formatBuildPretty(data: BuildData): string {
   return `Built: ${data.outputPath}`;
 }
 
+/**
+ * Format verification results for pretty display.
+ */
 export function formatVerifyPretty(data: VerifyData): string {
   const lines = [`Results: ${data.passed} passed, ${data.failed} failed`];
   lines.push("");
@@ -140,6 +158,9 @@ export function formatVerifyPretty(data: VerifyData): string {
   return lines.join("\n");
 }
 
+/**
+ * Format document styles for pretty display.
+ */
 export function formatStylesPretty(data: StylesData): string {
   if (data.totalCount === 0) {
     return "No styles found";
@@ -165,10 +186,18 @@ export function formatStylesPretty(data: StylesData): string {
     lines.push(`${type.charAt(0).toUpperCase() + type.slice(1)} Styles:`);
     for (const style of styles) {
       const flags: string[] = [];
-      if (style.default) flags.push("default");
-      if (style.customStyle) flags.push("custom");
-      if (style.qFormat) flags.push("qFormat");
-      if (style.semiHidden) flags.push("hidden");
+      if (style.default) {
+        flags.push("default");
+      }
+      if (style.customStyle) {
+        flags.push("custom");
+      }
+      if (style.qFormat) {
+        flags.push("qFormat");
+      }
+      if (style.semiHidden) {
+        flags.push("hidden");
+      }
 
       const name = style.name ?? style.styleId;
       const flagStr = flags.length > 0 ? ` [${flags.join(", ")}]` : "";

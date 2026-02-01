@@ -47,6 +47,38 @@ function countSections(content: readonly { type: string }[]): number {
   return sectionBreaks + 1;
 }
 
+function buildPageSize(pgSz: { w: number; h: number; orient?: "portrait" | "landscape" } | undefined): InfoData["pageSize"] {
+  if (!pgSz) {
+    return undefined;
+  }
+  return {
+    width: twipsToPoints(pgSz.w),
+    height: twipsToPoints(pgSz.h),
+    widthTwips: pgSz.w,
+    heightTwips: pgSz.h,
+    orientation: pgSz.orient,
+  };
+}
+
+type SettingsInput = {
+  trackRevisions?: boolean;
+  defaultTabStop?: number;
+  zoom?: { percent?: number };
+  documentProtection?: { edit?: string };
+};
+
+function buildSettingsInfo(settings: SettingsInput | undefined): SettingsInfo | undefined {
+  if (!settings) {
+    return undefined;
+  }
+  return {
+    ...(settings.trackRevisions !== undefined && { trackRevisions: settings.trackRevisions }),
+    ...(settings.defaultTabStop !== undefined && { defaultTabStop: settings.defaultTabStop }),
+    ...(settings.zoom?.percent !== undefined && { zoom: settings.zoom.percent }),
+    ...(settings.documentProtection?.edit && { protection: settings.documentProtection.edit }),
+  };
+}
+
 /**
  * Get document metadata from a DOCX file.
  */
@@ -56,25 +88,9 @@ export async function runInfo(filePath: string): Promise<Result<InfoData>> {
     const doc = await loadDocx(buffer);
 
     const sectPr = doc.body.sectPr;
-    const pageSize = sectPr?.pgSz
-      ? {
-          width: twipsToPoints(sectPr.pgSz.w),
-          height: twipsToPoints(sectPr.pgSz.h),
-          widthTwips: sectPr.pgSz.w,
-          heightTwips: sectPr.pgSz.h,
-          orientation: sectPr.pgSz.orient,
-        }
-      : undefined;
+    const pageSize = buildPageSize(sectPr?.pgSz);
 
-    const settings = doc.settings;
-    const settingsInfo: SettingsInfo | undefined = settings
-      ? {
-          ...(settings.trackRevisions !== undefined && { trackRevisions: settings.trackRevisions }),
-          ...(settings.defaultTabStop !== undefined && { defaultTabStop: settings.defaultTabStop }),
-          ...(settings.zoom?.percent !== undefined && { zoom: settings.zoom.percent }),
-          ...(settings.documentProtection?.edit && { protection: settings.documentProtection.edit }),
-        }
-      : undefined;
+    const settingsInfo = buildSettingsInfo(doc.settings);
 
     return success({
       paragraphCount: countParagraphs(doc.body.content),

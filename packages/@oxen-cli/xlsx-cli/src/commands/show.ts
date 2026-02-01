@@ -63,7 +63,9 @@ function parseRange(range: string): ParsedRange | undefined {
 }
 
 function sheetRangeToParsedRange(sheetRange: ReturnType<typeof getSheetRange>): ParsedRange | undefined {
-  if (!sheetRange) return undefined;
+  if (!sheetRange) {
+    return undefined;
+  }
   return {
     startCol: columnLetterToIndex(sheetRange.startCol) as number,
     startRow: sheetRange.startRow,

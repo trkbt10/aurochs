@@ -44,15 +44,14 @@ function serializeRow(row: XlsxRow): RowJson {
   };
 }
 
+/**
+ * Serialize an XLSX worksheet to summary JSON format.
+ */
 export function serializeSheetSummary(sheet: XlsxWorksheet): SheetSummaryJson {
-  let formulaCount = 0;
-  for (const row of sheet.rows) {
-    for (const cell of row.cells) {
-      if (cell.formula) {
-        formulaCount++;
-      }
-    }
-  }
+  const formulaCount = sheet.rows.reduce(
+    (sum, row) => sum + row.cells.filter((cell) => cell.formula).length,
+    0,
+  );
 
   return {
     name: sheet.name,
@@ -63,6 +62,9 @@ export function serializeSheetSummary(sheet: XlsxWorksheet): SheetSummaryJson {
   };
 }
 
+/**
+ * Serialize an XLSX worksheet to detailed JSON format.
+ */
 export function serializeSheetData(sheet: XlsxWorksheet): SheetDataJson {
   const rows = sheet.rows.map(serializeRow);
   // Sort rows by row number
@@ -111,27 +113,38 @@ export function getSheetRange(sheet: XlsxWorksheet): { startRow: number; endRow:
   }
 
   // Calculate from row data
-  let minRow = Number.MAX_SAFE_INTEGER;
-  let maxRow = 0;
-  let minCol = Number.MAX_SAFE_INTEGER;
-  let maxCol = 0;
-
-  for (const row of sheet.rows) {
-    const rowNum = row.rowNumber as number;
-    minRow = Math.min(minRow, rowNum);
-    maxRow = Math.max(maxRow, rowNum);
-
-    for (const cell of row.cells) {
-      const colNum = cell.address.col as number;
-      minCol = Math.min(minCol, colNum);
-      maxCol = Math.max(maxCol, colNum);
-    }
-  }
+  const bounds = sheet.rows.reduce(
+    (acc, row) => {
+      const rowNum = row.rowNumber as number;
+      const rowBounds = row.cells.reduce(
+        (cellAcc, cell) => {
+          const colNum = cell.address.col as number;
+          return {
+            minCol: Math.min(cellAcc.minCol, colNum),
+            maxCol: Math.max(cellAcc.maxCol, colNum),
+          };
+        },
+        { minCol: acc.minCol, maxCol: acc.maxCol },
+      );
+      return {
+        minRow: Math.min(acc.minRow, rowNum),
+        maxRow: Math.max(acc.maxRow, rowNum),
+        minCol: rowBounds.minCol,
+        maxCol: rowBounds.maxCol,
+      };
+    },
+    {
+      minRow: Number.MAX_SAFE_INTEGER,
+      maxRow: 0,
+      minCol: Number.MAX_SAFE_INTEGER,
+      maxCol: 0,
+    },
+  );
 
   return {
-    startRow: minRow,
-    endRow: maxRow,
-    startCol: indexToColumnLetter(colIdx(minCol)),
-    endCol: indexToColumnLetter(colIdx(maxCol)),
+    startRow: bounds.minRow,
+    endRow: bounds.maxRow,
+    startCol: indexToColumnLetter(colIdx(bounds.minCol)),
+    endCol: indexToColumnLetter(colIdx(bounds.maxCol)),
   };
 }
