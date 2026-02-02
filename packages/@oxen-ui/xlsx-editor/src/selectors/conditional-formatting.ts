@@ -170,6 +170,11 @@ function evaluateRuleMatchesCell({ rule, cell, sheetIndex, anchor, address, form
   readonly address: CellAddress;
   readonly formulaEvaluator: FormulaEvaluator;
 }): boolean {
+  // Color scale, data bar, and icon set rules are always "matching" -
+  // their visual effect depends on cell value relative to other cells
+  if (rule.type === "colorScale" || rule.type === "dataBar" || rule.type === "iconSet") {
+    return true;
+  }
   if (rule.type === "cellIs") {
     const compareOp = asCompareOperator(rule.operator);
     const criterion = rule.formulas[0];
@@ -251,6 +256,10 @@ function collectApplicableRules(sheet: XlsxWorksheet, address: CellAddress): rea
     for (const range of matching) {
       const anchor = createRangeAnchor(range);
       for (const rule of conditional.rules) {
+        // colorScale, dataBar, and iconSet rules don't use dxfId - they render directly
+        if (rule.type === "colorScale" || rule.type === "dataBar" || rule.type === "iconSet") {
+          continue;
+        }
         const dxfId = rule.dxfId;
         if (dxfId === undefined) {
           continue;

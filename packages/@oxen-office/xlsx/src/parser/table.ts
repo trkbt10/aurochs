@@ -11,7 +11,7 @@ import { parseRange } from "../domain/cell/address";
 import type { XlsxTable, XlsxTableColumn, XlsxTableStyleInfo } from "../domain/table/types";
 import { parseBooleanAttr, parseIntAttr } from "./primitive";
 import type { XmlElement } from "@oxen/xml";
-import { getAttr, getChild, getChildren } from "@oxen/xml";
+import { getAttr, getChild, getChildren, getTextContent } from "@oxen/xml";
 
 function requireAttr(element: XmlElement, name: string): string {
   const value = getAttr(element, name);
@@ -32,7 +32,31 @@ function parseTableColumns(tableElement: XmlElement): readonly XlsxTableColumn[]
       throw new Error('tableColumn missing required attribute "id"');
     }
     const name = requireAttr(col, "name");
-    return { id, name };
+    // Extract calculated column formula from child element
+    const calculatedColumnFormulaEl = getChild(col, "calculatedColumnFormula");
+    const calculatedColumnFormula = calculatedColumnFormulaEl
+      ? getTextContent(calculatedColumnFormulaEl) || undefined
+      : undefined;
+    // Extract totals row attributes
+    const totalsRowFormula = getAttr(col, "totalsRowFunction") !== "custom"
+      ? undefined
+      : (() => {
+          const totalsEl = getChild(col, "totalsRowFormula");
+          return totalsEl
+            ? getTextContent(totalsEl) || undefined
+            : undefined;
+        })();
+    const totalsRowLabel = getAttr(col, "totalsRowLabel") ?? undefined;
+    const dataDxfId = parseIntAttr(getAttr(col, "dataDxfId"));
+
+    return {
+      id,
+      name,
+      calculatedColumnFormula,
+      totalsRowFormula,
+      totalsRowLabel,
+      dataDxfId,
+    };
   });
 }
 

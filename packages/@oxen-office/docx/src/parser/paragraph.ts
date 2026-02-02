@@ -25,6 +25,24 @@ import type {
   DocxBookmarkEnd,
   DocxSimpleField,
 } from "../domain/paragraph";
+import type {
+  DocxRevisionInfo,
+  DocxInsertedContent,
+  DocxDeletedContent,
+  DocxMoveFromContent,
+  DocxMoveToContent,
+  DocxMoveFromRangeStart,
+  DocxMoveFromRangeEnd,
+  DocxMoveToRangeStart,
+  DocxMoveToRangeEnd,
+} from "../domain/revision";
+import type {
+  DocxInlineSdt,
+  DocxSdtProperties,
+  DocxSdtLock,
+  DocxSdtListItem,
+} from "../domain/sdt";
+import { parseOfficeMath, parseOfficeMathPara } from "./math";
 import type { ParagraphAlignment, TabStopAlignment, TabStopLeader } from "@oxen-office/ooxml/domain/text";
 import type { WordBorderStyle } from "@oxen-office/ooxml/domain/border";
 import type { DocxThemeColor } from "../domain/run";
@@ -624,6 +642,230 @@ function parseSimpleField(element: XmlElement, context?: DocxParseContext): Docx
   };
 }
 
+// =============================================================================
+// Revision Content Parsing
+// =============================================================================
+
+/**
+ * Parse revision info from an element.
+ */
+function parseRevisionInfo(element: XmlElement): DocxRevisionInfo {
+  return {
+    id: getAttr(element, "id") ?? "",
+    author: getAttr(element, "author") ?? undefined,
+    date: getAttr(element, "date") ?? undefined,
+  };
+}
+
+/**
+ * Parse revision content runs.
+ */
+function parseRevisionRuns(element: XmlElement, context?: DocxParseContext): readonly DocxRun[] {
+  const runs = [];
+  for (const child of getChildren(element, "r")) {
+    runs.push(parseRun(child, context));
+  }
+  return runs;
+}
+
+/**
+ * Parse inserted content.
+ *
+ * @see ECMA-376 Part 1, Section 17.13.5.18 (ins)
+ */
+function parseInsertedContent(element: XmlElement, context?: DocxParseContext): DocxInsertedContent {
+  return {
+    type: "ins",
+    revision: parseRevisionInfo(element),
+    content: parseRevisionRuns(element, context),
+  };
+}
+
+/**
+ * Parse deleted content.
+ *
+ * @see ECMA-376 Part 1, Section 17.13.5.14 (del)
+ */
+function parseDeletedContent(element: XmlElement, context?: DocxParseContext): DocxDeletedContent {
+  return {
+    type: "del",
+    revision: parseRevisionInfo(element),
+    content: parseRevisionRuns(element, context),
+  };
+}
+
+/**
+ * Parse move-from content.
+ *
+ * @see ECMA-376 Part 1, Section 17.13.5.22 (moveFrom)
+ */
+function parseMoveFromContent(element: XmlElement, context?: DocxParseContext): DocxMoveFromContent {
+  return {
+    type: "moveFrom",
+    revision: parseRevisionInfo(element),
+    content: parseRevisionRuns(element, context),
+  };
+}
+
+/**
+ * Parse move-to content.
+ *
+ * @see ECMA-376 Part 1, Section 17.13.5.28 (moveTo)
+ */
+function parseMoveToContent(element: XmlElement, context?: DocxParseContext): DocxMoveToContent {
+  return {
+    type: "moveTo",
+    revision: parseRevisionInfo(element),
+    content: parseRevisionRuns(element, context),
+  };
+}
+
+/**
+ * Parse move-from range start.
+ *
+ * @see ECMA-376 Part 1, Section 17.13.5.23 (moveFromRangeStart)
+ */
+function parseMoveFromRangeStart(element: XmlElement): DocxMoveFromRangeStart | undefined {
+  const id = parseInt32(getAttr(element, "id"));
+  if (id === undefined) {return undefined;}
+
+  return {
+    type: "moveFromRangeStart",
+    id,
+    name: getAttr(element, "name") ?? undefined,
+  };
+}
+
+/**
+ * Parse move-from range end.
+ *
+ * @see ECMA-376 Part 1, Section 17.13.5.21 (moveFromRangeEnd)
+ */
+function parseMoveFromRangeEnd(element: XmlElement): DocxMoveFromRangeEnd | undefined {
+  const id = parseInt32(getAttr(element, "id"));
+  if (id === undefined) {return undefined;}
+
+  return {
+    type: "moveFromRangeEnd",
+    id,
+  };
+}
+
+/**
+ * Parse move-to range start.
+ *
+ * @see ECMA-376 Part 1, Section 17.13.5.27 (moveToRangeStart)
+ */
+function parseMoveToRangeStart(element: XmlElement): DocxMoveToRangeStart | undefined {
+  const id = parseInt32(getAttr(element, "id"));
+  if (id === undefined) {return undefined;}
+
+  return {
+    type: "moveToRangeStart",
+    id,
+    name: getAttr(element, "name") ?? undefined,
+  };
+}
+
+/**
+ * Parse move-to range end.
+ *
+ * @see ECMA-376 Part 1, Section 17.13.5.26 (moveToRangeEnd)
+ */
+function parseMoveToRangeEnd(element: XmlElement): DocxMoveToRangeEnd | undefined {
+  const id = parseInt32(getAttr(element, "id"));
+  if (id === undefined) {return undefined;}
+
+  return {
+    type: "moveToRangeEnd",
+    id,
+  };
+}
+
+// =============================================================================
+// SDT Parsing
+// =============================================================================
+
+/**
+ * Parse SDT lock type.
+ */
+function parseSdtLock(value: string | undefined): DocxSdtLock | undefined {
+  switch (value) {
+    case "sdtLocked":
+    case "contentLocked":
+    case "sdtContentLocked":
+    case "unlocked":
+      return value;
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * Parse SDT list item.
+ */
+function parseSdtListItem(element: XmlElement): DocxSdtListItem {
+  return {
+    displayText: getAttr(element, "displayText") ?? undefined,
+    value: getAttr(element, "value") ?? "",
+  };
+}
+
+/**
+ * Parse SDT properties.
+ *
+ * @see ECMA-376 Part 1, Section 17.5.2.38 (sdtPr)
+ */
+function parseSdtProperties(element: XmlElement | undefined): DocxSdtProperties | undefined {
+  if (!element) {return undefined;}
+
+  const dropDownListEl = getChild(element, "dropDownList");
+  const comboBoxEl = getChild(element, "comboBox");
+
+  return {
+    alias: getChildVal(element, "alias") ?? undefined,
+    tag: getChildVal(element, "tag") ?? undefined,
+    id: parseInt32(getChildVal(element, "id")),
+    lock: parseSdtLock(getChildVal(element, "lock")),
+    showingPlcHdr: parseBoolean(getChildVal(element, "showingPlcHdr")),
+    temporary: parseBoolean(getChildVal(element, "temporary")),
+    checked: parseBoolean(getChildVal(element, "checked")),
+    dropDownList: dropDownListEl
+      ? getChildren(dropDownListEl, "listItem").map(parseSdtListItem)
+      : undefined,
+    comboBox: comboBoxEl
+      ? getChildren(comboBoxEl, "listItem").map(parseSdtListItem)
+      : undefined,
+  };
+}
+
+/**
+ * Parse inline SDT element.
+ *
+ * @see ECMA-376 Part 1, Section 17.5.2.31 (sdt)
+ */
+function parseInlineSdt(element: XmlElement, context?: DocxParseContext): DocxInlineSdt {
+  const sdtPr = getChild(element, "sdtPr");
+  const sdtContent = getChild(element, "sdtContent");
+
+  const content = [];
+  if (sdtContent) {
+    for (const child of getChildren(sdtContent, "r")) {
+      content.push(parseRun(child, context));
+    }
+  }
+
+  return {
+    type: "sdt",
+    properties: parseSdtProperties(sdtPr),
+    content,
+  };
+}
+
+// =============================================================================
+// Paragraph Content Parsing
+// =============================================================================
+
 /**
  * Parse paragraph content element.
  */
@@ -641,6 +883,32 @@ function parseParagraphContent(element: XmlElement, context?: DocxParseContext):
       return parseBookmarkEnd(element);
     case "fldSimple":
       return parseSimpleField(element, context);
+    // Revision content
+    case "ins":
+      return parseInsertedContent(element, context);
+    case "del":
+      return parseDeletedContent(element, context);
+    case "moveFrom":
+      return parseMoveFromContent(element, context);
+    case "moveTo":
+      return parseMoveToContent(element, context);
+    // Revision range markers
+    case "moveFromRangeStart":
+      return parseMoveFromRangeStart(element);
+    case "moveFromRangeEnd":
+      return parseMoveFromRangeEnd(element);
+    case "moveToRangeStart":
+      return parseMoveToRangeStart(element);
+    case "moveToRangeEnd":
+      return parseMoveToRangeEnd(element);
+    // SDT
+    case "sdt":
+      return parseInlineSdt(element, context);
+    // Office Math
+    case "oMath":
+      return parseOfficeMath(element, context);
+    case "oMathPara":
+      return parseOfficeMathPara(element, context);
     default:
       return undefined;
   }

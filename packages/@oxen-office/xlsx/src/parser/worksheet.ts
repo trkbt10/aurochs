@@ -17,7 +17,20 @@ import type {
   XlsxPane,
   XlsxSelection,
 } from "../domain/workbook";
-import type { XlsxConditionalFormatting, XlsxConditionalFormattingRule } from "../domain/conditional-formatting";
+import type { XlsxPageBreaks, XlsxPageBreak } from "../domain/page-breaks";
+import type { XlsxSparklineGroup, XlsxSparkline, XlsxSparklineType } from "../domain/sparkline";
+import type {
+  XlsxConditionalFormatting,
+  XlsxConditionalFormattingRule,
+  XlsxCfvo,
+  XlsxCfvoType,
+  XlsxColorScaleRule,
+  XlsxDataBarRule,
+  XlsxIconSetRule,
+  XlsxIconSetName,
+  XlsxStandardRule,
+  XlsxCustomIcon,
+} from "../domain/conditional-formatting";
 import type { XlsxHyperlink } from "../domain/hyperlink";
 import type { CellRange } from "../domain/cell/address";
 import { parseCellRef, parseRange } from "../domain/cell/address";
@@ -47,6 +60,203 @@ import type { XmlElement } from "@oxen/xml";
 import { getAttr, getChild, getChildren, getTextContent } from "@oxen/xml";
 
 // =============================================================================
+// Page Breaks Parsing
+// =============================================================================
+
+/**
+ * Parse a single page break element.
+ *
+ * @param brkElement - The <brk> element
+ * @returns Parsed page break
+ *
+ * @see ECMA-376 Part 4, Section 18.3.1.9 (brk)
+ */
+function parseBreak(brkElement: XmlElement): XlsxPageBreak {
+  return {
+    id: parseIntAttr(getAttr(brkElement, "id")) ?? 0,
+    max: parseIntAttr(getAttr(brkElement, "max")),
+    min: parseIntAttr(getAttr(brkElement, "min")),
+    manual: parseBooleanAttr(getAttr(brkElement, "man")),
+    pt: parseBooleanAttr(getAttr(brkElement, "pt")),
+  };
+}
+
+/**
+ * Parse page breaks from a worksheet element.
+ *
+ * @param worksheetElement - The worksheet element
+ * @returns Parsed page breaks, or undefined if none
+ *
+ * @see ECMA-376 Part 4, Section 18.3.1.72 (rowBreaks)
+ * @see ECMA-376 Part 4, Section 18.3.1.14 (colBreaks)
+ */
+function parsePageBreaks(worksheetElement: XmlElement): XlsxPageBreaks | undefined {
+  const rowBreaksEl = getChild(worksheetElement, "rowBreaks");
+  const colBreaksEl = getChild(worksheetElement, "colBreaks");
+
+  if (!rowBreaksEl && !colBreaksEl) {
+    return undefined;
+  }
+
+  const rowBreaks = rowBreaksEl
+    ? getChildren(rowBreaksEl, "brk").map(parseBreak)
+    : [];
+  const colBreaks = colBreaksEl
+    ? getChildren(colBreaksEl, "brk").map(parseBreak)
+    : [];
+
+  if (rowBreaks.length === 0 && colBreaks.length === 0) {
+    return undefined;
+  }
+
+  return { rowBreaks, colBreaks };
+}
+
+// =============================================================================
+// Sparkline Parsing
+// =============================================================================
+
+/**
+ * Parse sparkline groups from worksheet extLst.
+ *
+ * Sparklines are stored in x14:sparklineGroups within extLst/ext elements.
+ *
+ * @param worksheetElement - The worksheet element
+ * @returns Parsed sparkline groups, or undefined if none
+ */
+function parseSparklineGroups(worksheetElement: XmlElement): readonly XlsxSparklineGroup[] | undefined {
+  const extLstEl = getChild(worksheetElement, "extLst");
+  if (!extLstEl) {
+    return undefined;
+  }
+
+  // Find the extension element containing sparklineGroups
+  const extElements = getChildren(extLstEl, "ext");
+  for (const extEl of extElements) {
+    // Look for sparklineGroups element (x14 namespace)
+    const sparklineGroupsEl = extEl.children.find(
+      (child) => child.type === "element" && child.name.endsWith(":sparklineGroups")
+    ) as XmlElement | undefined;
+
+    if (!sparklineGroupsEl) {
+      // Also try without namespace prefix
+      const altSparklineGroupsEl = getChild(extEl, "sparklineGroups");
+      if (altSparklineGroupsEl) {
+        return parseSparklineGroupsElement(altSparklineGroupsEl);
+      }
+      continue;
+    }
+
+    return parseSparklineGroupsElement(sparklineGroupsEl);
+  }
+
+  return undefined;
+}
+
+function parseSparklineGroupsElement(sparklineGroupsEl: XmlElement): readonly XlsxSparklineGroup[] {
+  const groups: XlsxSparklineGroup[] = [];
+
+  // Find all sparklineGroup elements (may have x14 prefix)
+  const groupElements = sparklineGroupsEl.children.filter(
+    (child) => child.type === "element" && (child.name === "sparklineGroup" || child.name.endsWith(":sparklineGroup"))
+  ) as XmlElement[];
+
+  for (const groupEl of groupElements) {
+    const group = parseSparklineGroup(groupEl);
+    if (group) {
+      groups.push(group);
+    }
+  }
+
+  return groups.length > 0 ? groups : [];
+}
+
+function parseSparklineGroup(groupEl: XmlElement): XlsxSparklineGroup | undefined {
+  const typeAttr = getAttr(groupEl, "type");
+  const type: XlsxSparklineType = typeAttr === "column" ? "column" : typeAttr === "stacked" ? "stacked" : "line";
+
+  // Find sparklines container
+  const sparklinesEl = groupEl.children.find(
+    (child) => child.type === "element" && (child.name === "sparklines" || child.name.endsWith(":sparklines"))
+  ) as XmlElement | undefined;
+
+  if (!sparklinesEl) {
+    return undefined;
+  }
+
+  const sparklines: XlsxSparkline[] = [];
+  const sparklineElements = sparklinesEl.children.filter(
+    (child) => child.type === "element" && (child.name === "sparkline" || child.name.endsWith(":sparkline"))
+  ) as XmlElement[];
+
+  for (const sparklineEl of sparklineElements) {
+    // Get formula (f) and cell reference (sqref) elements
+    const fEl = sparklineEl.children.find(
+      (child) => child.type === "element" && (child.name === "f" || child.name.endsWith(":f"))
+    ) as XmlElement | undefined;
+    const sqrefEl = sparklineEl.children.find(
+      (child) => child.type === "element" && (child.name === "sqref" || child.name.endsWith(":sqref"))
+    ) as XmlElement | undefined;
+
+    const f = fEl ? getTextContent(fEl) : undefined;
+    const sqref = sqrefEl ? getTextContent(sqrefEl) : undefined;
+
+    if (f && sqref) {
+      sparklines.push({ f, sqref });
+    }
+  }
+
+  if (sparklines.length === 0) {
+    return undefined;
+  }
+
+  // Parse color elements
+  const colorSeries = parseSparklineColor(groupEl, "colorSeries");
+  const colorNegative = parseSparklineColor(groupEl, "colorNegative");
+  const colorAxis = parseSparklineColor(groupEl, "colorAxis");
+  const colorMarkers = parseSparklineColor(groupEl, "colorMarkers");
+  const colorFirst = parseSparklineColor(groupEl, "colorFirst");
+  const colorLast = parseSparklineColor(groupEl, "colorLast");
+  const colorHigh = parseSparklineColor(groupEl, "colorHigh");
+  const colorLow = parseSparklineColor(groupEl, "colorLow");
+
+  return {
+    type,
+    sparklines,
+    colorSeries,
+    colorNegative,
+    colorAxis,
+    colorMarkers,
+    colorFirst,
+    colorLast,
+    colorHigh,
+    colorLow,
+    first: parseBooleanAttr(getAttr(groupEl, "first")),
+    last: parseBooleanAttr(getAttr(groupEl, "last")),
+    high: parseBooleanAttr(getAttr(groupEl, "high")),
+    low: parseBooleanAttr(getAttr(groupEl, "low")),
+    negative: parseBooleanAttr(getAttr(groupEl, "negative")),
+    markers: parseBooleanAttr(getAttr(groupEl, "markers")),
+    lineWeight: parseFloatAttr(getAttr(groupEl, "lineWeight")),
+    displayEmptyCellsAs: getAttr(groupEl, "displayEmptyCellsAs") as "gap" | "zero" | "span" | undefined,
+    displayHidden: parseBooleanAttr(getAttr(groupEl, "displayHidden")),
+    dateAxis: getAttr(groupEl, "dateAxis") ?? undefined,
+  };
+}
+
+function parseSparklineColor(groupEl: XmlElement, colorName: string): XlsxColor | undefined {
+  const colorEl = groupEl.children.find(
+    (child) => child.type === "element" && (child.name === colorName || child.name.endsWith(`:${colorName}`))
+  ) as XmlElement | undefined;
+
+  if (!colorEl) {
+    return undefined;
+  }
+
+  return parseColorElement(colorEl);
+}
+
+// =============================================================================
 // Column Parsing
 // =============================================================================
 
@@ -67,6 +277,8 @@ export function parseColumn(colElement: XmlElement): XlsxColumnDef {
     hidden: parseBooleanAttr(getAttr(colElement, "hidden")),
     bestFit: parseBooleanAttr(getAttr(colElement, "bestFit")),
     styleId: styleAttr !== undefined ? styleId(styleAttr) : undefined,
+    outlineLevel: parseIntAttr(getAttr(colElement, "outlineLevel")),
+    collapsed: parseBooleanAttr(getAttr(colElement, "collapsed")),
   };
 }
 
@@ -145,6 +357,8 @@ export function parseRow(params: {
     hidden: parseBooleanAttr(getAttr(rowElement, "hidden")),
     customHeight: parseBooleanAttr(getAttr(rowElement, "customHeight")),
     styleId: styleAttr !== undefined ? styleId(styleAttr) : undefined,
+    outlineLevel: parseIntAttr(getAttr(rowElement, "outlineLevel")),
+    collapsed: parseBooleanAttr(getAttr(rowElement, "collapsed")),
   };
 }
 
@@ -212,15 +426,159 @@ function parseSqrefRanges(sqref: string): readonly CellRange[] {
   return tokens.map(parseRange);
 }
 
-function parseConditionalFormattingRule(ruleElement: XmlElement): XlsxConditionalFormattingRule {
+/**
+ * Parse a cfvo (conditional formatting value object) element.
+ */
+function parseCfvo(cfvoElement: XmlElement): XlsxCfvo {
   return {
-    type: getAttr(ruleElement, "type") ?? "",
+    type: (getAttr(cfvoElement, "type") ?? "num") as XlsxCfvoType,
+    val: getAttr(cfvoElement, "val") ?? undefined,
+    gte: parseBooleanAttr(getAttr(cfvoElement, "gte")),
+  };
+}
+
+/**
+ * Parse a colorScale rule.
+ */
+function parseColorScaleRule(ruleElement: XmlElement): XlsxColorScaleRule | undefined {
+  const colorScaleEl = getChild(ruleElement, "colorScale");
+  if (!colorScaleEl) {
+    return undefined;
+  }
+
+  const cfvoElements = getChildren(colorScaleEl, "cfvo");
+  const colorElements = getChildren(colorScaleEl, "color");
+
+  if (cfvoElements.length < 2 || colorElements.length < 2) {
+    return undefined;
+  }
+
+  return {
+    type: "colorScale",
+    priority: parseIntAttr(getAttr(ruleElement, "priority")),
+    stopIfTrue: parseBooleanAttr(getAttr(ruleElement, "stopIfTrue")),
+    cfvo: cfvoElements.map(parseCfvo),
+    colors: colorElements.map(parseColorElement).filter((c): c is XlsxColor => c !== undefined),
+  };
+}
+
+/**
+ * Parse a dataBar rule.
+ */
+function parseDataBarRule(ruleElement: XmlElement): XlsxDataBarRule | undefined {
+  const dataBarEl = getChild(ruleElement, "dataBar");
+  if (!dataBarEl) {
+    return undefined;
+  }
+
+  const cfvoElements = getChildren(dataBarEl, "cfvo");
+  const colorEl = getChild(dataBarEl, "color");
+  const fillColorEl = getChild(dataBarEl, "fillColor");
+  const borderColorEl = getChild(dataBarEl, "borderColor");
+  const negativeFillColorEl = getChild(dataBarEl, "negativeFillColor");
+  const negativeBorderColorEl = getChild(dataBarEl, "negativeBorderColor");
+  const axisColorEl = getChild(dataBarEl, "axisColor");
+
+  return {
+    type: "dataBar",
+    priority: parseIntAttr(getAttr(ruleElement, "priority")),
+    stopIfTrue: parseBooleanAttr(getAttr(ruleElement, "stopIfTrue")),
+    cfvo: cfvoElements.map(parseCfvo),
+    color: colorEl ? parseColorElement(colorEl) : (fillColorEl ? parseColorElement(fillColorEl) : undefined),
+    showValue: parseBooleanAttr(getAttr(dataBarEl, "showValue")) ?? true,
+    minLength: parseIntAttr(getAttr(dataBarEl, "minLength")),
+    maxLength: parseIntAttr(getAttr(dataBarEl, "maxLength")),
+    gradient: parseBooleanAttr(getAttr(dataBarEl, "gradient")),
+    borderColor: borderColorEl ? parseColorElement(borderColorEl) : undefined,
+    negativeFillColor: negativeFillColorEl ? parseColorElement(negativeFillColorEl) : undefined,
+    negativeBorderColor: negativeBorderColorEl ? parseColorElement(negativeBorderColorEl) : undefined,
+    axisColor: axisColorEl ? parseColorElement(axisColorEl) : undefined,
+    axisPosition: getAttr(dataBarEl, "axisPosition") as "automatic" | "middle" | "none" | undefined,
+    direction: getAttr(dataBarEl, "direction") as "context" | "leftToRight" | "rightToLeft" | undefined,
+  };
+}
+
+/**
+ * Parse an iconSet rule.
+ */
+function parseIconSetRule(ruleElement: XmlElement): XlsxIconSetRule | undefined {
+  const iconSetEl = getChild(ruleElement, "iconSet");
+  if (!iconSetEl) {
+    return undefined;
+  }
+
+  const cfvoElements = getChildren(iconSetEl, "cfvo");
+  const iconSetName = (getAttr(iconSetEl, "iconSet") ?? "3TrafficLights1") as XlsxIconSetName;
+
+  // Parse custom icons if present
+  const cfIconElements = getChildren(iconSetEl, "cfIcon");
+  const customIcons: XlsxCustomIcon[] = cfIconElements.map((iconEl) => ({
+    iconSet: (getAttr(iconEl, "iconSet") ?? iconSetName) as XlsxIconSetName,
+    iconId: parseIntAttr(getAttr(iconEl, "iconId")) ?? 0,
+  }));
+
+  return {
+    type: "iconSet",
+    priority: parseIntAttr(getAttr(ruleElement, "priority")),
+    stopIfTrue: parseBooleanAttr(getAttr(ruleElement, "stopIfTrue")),
+    iconSet: iconSetName,
+    cfvo: cfvoElements.map(parseCfvo),
+    showValue: parseBooleanAttr(getAttr(iconSetEl, "showValue")),
+    reverse: parseBooleanAttr(getAttr(iconSetEl, "reverse")),
+    iconOnly: parseBooleanAttr(getAttr(iconSetEl, "iconOnly")),
+    customIcons: customIcons.length > 0 ? customIcons : undefined,
+  };
+}
+
+/**
+ * Parse a standard conditional formatting rule (cellIs, expression, etc.).
+ */
+function parseStandardRule(ruleElement: XmlElement): XlsxStandardRule {
+  return {
+    type: (getAttr(ruleElement, "type") ?? "expression") as XlsxStandardRule["type"],
     dxfId: parseIntAttr(getAttr(ruleElement, "dxfId")),
     priority: parseIntAttr(getAttr(ruleElement, "priority")),
     operator: getAttr(ruleElement, "operator") ?? undefined,
     stopIfTrue: parseBooleanAttr(getAttr(ruleElement, "stopIfTrue")),
     formulas: getChildren(ruleElement, "formula").map((el) => getTextContent(el)),
+    text: getAttr(ruleElement, "text") ?? undefined,
+    timePeriod: getAttr(ruleElement, "timePeriod") ?? undefined,
+    rank: parseIntAttr(getAttr(ruleElement, "rank")),
+    percent: parseBooleanAttr(getAttr(ruleElement, "percent")),
+    bottom: parseBooleanAttr(getAttr(ruleElement, "bottom")),
+    stdDev: parseIntAttr(getAttr(ruleElement, "stdDev")),
+    equalAverage: parseBooleanAttr(getAttr(ruleElement, "equalAverage")),
+    aboveAverage: parseBooleanAttr(getAttr(ruleElement, "aboveAverage")),
   };
+}
+
+function parseConditionalFormattingRule(ruleElement: XmlElement): XlsxConditionalFormattingRule {
+  const type = getAttr(ruleElement, "type");
+
+  // Check for colorScale, dataBar, or iconSet rules
+  if (type === "colorScale") {
+    const colorScaleRule = parseColorScaleRule(ruleElement);
+    if (colorScaleRule) {
+      return colorScaleRule;
+    }
+  }
+
+  if (type === "dataBar") {
+    const dataBarRule = parseDataBarRule(ruleElement);
+    if (dataBarRule) {
+      return dataBarRule;
+    }
+  }
+
+  if (type === "iconSet") {
+    const iconSetRule = parseIconSetRule(ruleElement);
+    if (iconSetRule) {
+      return iconSetRule;
+    }
+  }
+
+  // Fall back to standard rule parsing
+  return parseStandardRule(ruleElement);
 }
 
 function parseConditionalFormatting(element: XmlElement): XlsxConditionalFormatting {
@@ -700,6 +1058,12 @@ export function parseWorksheet(params: {
   const headerFooter = parseHeaderFooter(headerFooterEl);
   const printOptions = parsePrintOptions(printOptionsEl);
 
+  // Parse page breaks
+  const pageBreaks = parsePageBreaks(worksheetElement);
+
+  // Parse sparklines from extLst
+  const sparklineGroups = parseSparklineGroups(worksheetElement);
+
   // Parse sheet protection
   const sheetProtectionEl = getChild(worksheetElement, "sheetProtection");
   const sheetProtection = parseSheetProtection(sheetProtectionEl);
@@ -723,6 +1087,8 @@ export function parseWorksheet(params: {
     pageMargins,
     headerFooter,
     printOptions,
+    pageBreaks,
+    sparklineGroups,
     sheetProtection,
     xmlPath: sheetInfo.xmlPath,
   };

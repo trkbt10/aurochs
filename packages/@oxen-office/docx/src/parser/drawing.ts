@@ -26,7 +26,14 @@ import type {
   DocxPositionH,
   DocxPositionV,
   DocxWrapType,
+  DocxWordprocessingShape,
+  DocxTextBoxContent,
+  DocxShapeStyle,
+  DocxBodyProperties,
+  DocxChart,
 } from "../domain/drawing";
+import { parseParagraph } from "./paragraph";
+import type { DocxParseContext } from "./context";
 
 // =============================================================================
 // Helper Functions
@@ -323,21 +330,144 @@ function parseWrap(inlineEl: XmlElement): DocxWrapType | undefined {
 }
 
 // =============================================================================
+// Shape Parsing
+// =============================================================================
+
+/**
+ * Parse body properties element (wps:bodyPr).
+ */
+function parseBodyPr(element: XmlElement | undefined): DocxBodyProperties | undefined {
+  if (element === undefined) {
+    return undefined;
+  }
+
+  return {
+    rot: parseIntAttr(element, "rot"),
+    wrap: element.attrs.wrap as DocxBodyProperties["wrap"],
+    lIns: parseIntAttr(element, "lIns"),
+    tIns: parseIntAttr(element, "tIns"),
+    rIns: parseIntAttr(element, "rIns"),
+    bIns: parseIntAttr(element, "bIns"),
+    anchor: element.attrs.anchor as DocxBodyProperties["anchor"],
+    anchorCtr: parseBoolAttr(element, "anchorCtr"),
+    vert: element.attrs.vert as DocxBodyProperties["vert"],
+    upright: parseBoolAttr(element, "upright"),
+  };
+}
+
+/**
+ * Parse shape style element (wps:style).
+ */
+function parseShapeStyle(element: XmlElement | undefined): DocxShapeStyle | undefined {
+  if (element === undefined) {
+    return undefined;
+  }
+
+  const lnRefEl = getChildByLocalName(element, "lnRef");
+  const fillRefEl = getChildByLocalName(element, "fillRef");
+  const effectRefEl = getChildByLocalName(element, "effectRef");
+  const fontRefEl = getChildByLocalName(element, "fontRef");
+
+  return {
+    lnRef: lnRefEl !== undefined ? parseIntAttr(lnRefEl, "idx") : undefined,
+    fillRef: fillRefEl !== undefined ? parseIntAttr(fillRefEl, "idx") : undefined,
+    effectRef: effectRefEl !== undefined ? parseIntAttr(effectRefEl, "idx") : undefined,
+    fontRef: fontRefEl !== undefined ? parseIntAttr(fontRefEl, "idx") : undefined,
+  };
+}
+
+/**
+ * Parse text box content element (wps:txbx).
+ */
+function parseTextBoxContent(element: XmlElement | undefined, context?: DocxParseContext): DocxTextBoxContent | undefined {
+  if (element === undefined) {
+    return undefined;
+  }
+
+  // The txbx contains a txbxContent element which contains paragraphs
+  const txbxContentEl = getChildByLocalName(element, "txbxContent");
+  if (txbxContentEl === undefined) {
+    return undefined;
+  }
+
+  const paragraphs = [];
+  for (const child of txbxContentEl.children) {
+    if (isXmlElement(child) && getLocalName(child.name) === "p") {
+      paragraphs.push(parseParagraph(child, context));
+    }
+  }
+
+  return { content: paragraphs };
+}
+
+/**
+ * Parse WordprocessingML Shape element (wps:wsp).
+ */
+function parseWordprocessingShape(element: XmlElement | undefined, context?: DocxParseContext): DocxWordprocessingShape | undefined {
+  if (element === undefined) {
+    return undefined;
+  }
+
+  const cNvPrEl = getChildByLocalName(element, "cNvPr");
+  const spPrEl = getChildByLocalName(element, "spPr");
+  const styleEl = getChildByLocalName(element, "style");
+  const txbxEl = getChildByLocalName(element, "txbx");
+  const bodyPrEl = getChildByLocalName(element, "bodyPr");
+
+  return {
+    cNvPr: cNvPrEl !== undefined ? parseDocPr(cNvPrEl) : undefined,
+    spPr: parseSpPr(spPrEl),
+    style: parseShapeStyle(styleEl),
+    txbx: parseTextBoxContent(txbxEl, context),
+    bodyPr: parseBodyPr(bodyPrEl),
+  };
+}
+
+// =============================================================================
+// Chart Parsing
+// =============================================================================
+
+/**
+ * Parse chart element (c:chart).
+ *
+ * Charts are referenced by relationship ID. The actual chart data
+ * is stored in a separate part (word/charts/chartN.xml).
+ */
+function parseChart(element: XmlElement | undefined): DocxChart | undefined {
+  if (element === undefined) {
+    return undefined;
+  }
+
+  // The r:id attribute contains the relationship ID
+  const rId = element.attrs["r:id"] ?? element.attrs.id;
+  if (rId === undefined) {
+    return undefined;
+  }
+
+  return {
+    type: "chart",
+    rId,
+  };
+}
+
+// =============================================================================
 // Inline Drawing Parsing
 // =============================================================================
 
 /**
  * Parse inline drawing element (wp:inline).
  */
-function parseInlineDrawing(element: XmlElement): DocxInlineDrawing {
+function parseInlineDrawing(element: XmlElement, context?: DocxParseContext): DocxInlineDrawing {
   const extentEl = getChildByLocalName(element, "extent");
   const effectExtentEl = getChildByLocalName(element, "effectExtent");
   const docPrEl = getChildByLocalName(element, "docPr");
 
-  // Find the graphic element and extract the picture
+  // Find the graphic element and extract the picture, shape, or chart
   const graphicEl = getChildByLocalName(element, "graphic");
   const graphicDataEl = graphicEl !== undefined ? getChildByLocalName(graphicEl, "graphicData") : undefined;
   const picEl = graphicDataEl !== undefined ? getChildByLocalName(graphicDataEl, "pic") : undefined;
+  const wspEl = graphicDataEl !== undefined ? getChildByLocalName(graphicDataEl, "wsp") : undefined;
+  const chartEl = graphicDataEl !== undefined ? getChildByLocalName(graphicDataEl, "chart") : undefined;
 
   return {
     type: "inline",
@@ -349,6 +479,8 @@ function parseInlineDrawing(element: XmlElement): DocxInlineDrawing {
     effectExtent: parseEffectExtent(effectExtentEl),
     docPr: parseDocPr(docPrEl),
     pic: parsePicture(picEl),
+    wsp: parseWordprocessingShape(wspEl, context),
+    chart: parseChart(chartEl),
   };
 }
 
@@ -359,17 +491,19 @@ function parseInlineDrawing(element: XmlElement): DocxInlineDrawing {
 /**
  * Parse anchor drawing element (wp:anchor).
  */
-function parseAnchorDrawing(element: XmlElement): DocxAnchorDrawing {
+function parseAnchorDrawing(element: XmlElement, context?: DocxParseContext): DocxAnchorDrawing {
   const extentEl = getChildByLocalName(element, "extent");
   const effectExtentEl = getChildByLocalName(element, "effectExtent");
   const docPrEl = getChildByLocalName(element, "docPr");
   const positionHEl = getChildByLocalName(element, "positionH");
   const positionVEl = getChildByLocalName(element, "positionV");
 
-  // Find the graphic element and extract the picture
+  // Find the graphic element and extract the picture, shape, or chart
   const graphicEl = getChildByLocalName(element, "graphic");
   const graphicDataEl = graphicEl !== undefined ? getChildByLocalName(graphicEl, "graphicData") : undefined;
   const picEl = graphicDataEl !== undefined ? getChildByLocalName(graphicDataEl, "pic") : undefined;
+  const wspEl = graphicDataEl !== undefined ? getChildByLocalName(graphicDataEl, "wsp") : undefined;
+  const chartEl = graphicDataEl !== undefined ? getChildByLocalName(graphicDataEl, "chart") : undefined;
 
   return {
     type: "anchor",
@@ -390,6 +524,8 @@ function parseAnchorDrawing(element: XmlElement): DocxAnchorDrawing {
     wrap: parseWrap(element),
     docPr: parseDocPr(docPrEl),
     pic: parsePicture(picEl),
+    wsp: parseWordprocessingShape(wspEl, context),
+    chart: parseChart(chartEl),
   };
 }
 
@@ -401,9 +537,10 @@ function parseAnchorDrawing(element: XmlElement): DocxAnchorDrawing {
  * Parse drawing element (w:drawing).
  *
  * @param element - The w:drawing XML element
+ * @param context - Optional parse context
  * @returns The parsed drawing, or undefined if invalid
  */
-export function parseDrawing(element: XmlElement): DocxDrawing | undefined {
+export function parseDrawing(element: XmlElement, context?: DocxParseContext): DocxDrawing | undefined {
   // Find inline or anchor child
   for (const child of element.children) {
     if (!isXmlElement(child)) {
@@ -413,11 +550,11 @@ export function parseDrawing(element: XmlElement): DocxDrawing | undefined {
     const localName = getLocalName(child.name);
 
     if (localName === "inline") {
-      return parseInlineDrawing(child);
+      return parseInlineDrawing(child, context);
     }
 
     if (localName === "anchor") {
-      return parseAnchorDrawing(child);
+      return parseAnchorDrawing(child, context);
     }
   }
 

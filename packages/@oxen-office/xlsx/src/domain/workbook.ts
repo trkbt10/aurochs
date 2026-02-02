@@ -34,6 +34,8 @@ import type { XlsxPivotTable } from "./pivot/types";
 import type { XlsxPivotCacheDefinition } from "./pivot/cache-types";
 import type { SharedStringItem } from "../parser/shared-strings";
 import type { XlsxTheme } from "./theme";
+import type { XlsxPageBreaks } from "./page-breaks";
+import type { XlsxSparklineGroup } from "./sparkline";
 
 // =============================================================================
 // Column Definition
@@ -59,6 +61,18 @@ export type XlsxColumnDef = {
   readonly bestFit?: boolean;
   /** Default style for cells in this column */
   readonly styleId?: StyleId;
+  /**
+   * Outline grouping level (0-7).
+   *
+   * @see ECMA-376 Part 4, Section 18.3.1.13 (col)
+   */
+  readonly outlineLevel?: number;
+  /**
+   * Whether this column group is collapsed.
+   *
+   * @see ECMA-376 Part 4, Section 18.3.1.13 (col)
+   */
+  readonly collapsed?: boolean;
 };
 
 // =============================================================================
@@ -83,6 +97,18 @@ export type XlsxRow = {
   readonly customHeight?: boolean;
   /** Default style for cells in this row */
   readonly styleId?: StyleId;
+  /**
+   * Outline grouping level (0-7).
+   *
+   * @see ECMA-376 Part 4, Section 18.3.1.73 (row)
+   */
+  readonly outlineLevel?: number;
+  /**
+   * Whether this row group is collapsed.
+   *
+   * @see ECMA-376 Part 4, Section 18.3.1.73 (row)
+   */
+  readonly collapsed?: boolean;
 };
 
 // =============================================================================
@@ -235,11 +261,26 @@ export type XlsxWorksheet = {
    */
   readonly printOptions?: XlsxPrintOptions;
   /**
+   * Page breaks for printing.
+   *
+   * @see ECMA-376 Part 4, Section 18.3.1.72 (rowBreaks)
+   * @see ECMA-376 Part 4, Section 18.3.1.14 (colBreaks)
+   */
+  readonly pageBreaks?: XlsxPageBreaks;
+  /**
    * Sheet protection settings.
    *
    * @see ECMA-376 Part 4, Section 18.3.1.85 (sheetProtection)
    */
   readonly sheetProtection?: XlsxSheetProtection;
+  /**
+   * Sparkline groups in this worksheet.
+   *
+   * Sparklines are stored in extLst/ext elements using the x14 extension namespace.
+   *
+   * @see MS-XLSX Extension (x14:sparklineGroups)
+   */
+  readonly sparklineGroups?: readonly XlsxSparklineGroup[];
   /**
    * Drawing objects (images, shapes, charts) in this worksheet.
    *

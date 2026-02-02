@@ -15,6 +15,30 @@ export type XlsxTableColumn = {
   readonly id: number;
   /** Display name used in structured references */
   readonly name: string;
+  /**
+   * Formula applied to all data rows in this column.
+   *
+   * @see ECMA-376 Part 4, Section 18.5.1.4 (tableColumn)
+   */
+  readonly calculatedColumnFormula?: string;
+  /**
+   * Formula for the totals row cell in this column.
+   *
+   * @see ECMA-376 Part 4, Section 18.5.1.4 (tableColumn)
+   */
+  readonly totalsRowFormula?: string;
+  /**
+   * Label text for the totals row cell in this column.
+   *
+   * @see ECMA-376 Part 4, Section 18.5.1.4 (tableColumn)
+   */
+  readonly totalsRowLabel?: string;
+  /**
+   * Data number format ID for cells in this column.
+   *
+   * @see ECMA-376 Part 4, Section 18.5.1.4 (tableColumn)
+   */
+  readonly dataDxfId?: number;
 };
 
 /**

@@ -19,7 +19,9 @@ import type {
   DrawingEffectExtent,
   NonVisualDrawingProps,
   DrawingPicture,
+  DrawingShapeProperties,
 } from "@oxen-office/ooxml/domain/drawing";
+import type { DocxParagraph } from "./paragraph";
 
 /**
  * Inline drawing element (wp:inline).
@@ -43,6 +45,10 @@ export type DocxInlineDrawing = {
   readonly docPr: NonVisualDrawingProps;
   /** Picture content */
   readonly pic?: DrawingPicture;
+  /** Shape content */
+  readonly wsp?: DocxWordprocessingShape;
+  /** Chart reference */
+  readonly chart?: DocxChart;
 };
 
 // =============================================================================
@@ -129,6 +135,106 @@ export type DocxAnchorDrawing = {
   readonly docPr: NonVisualDrawingProps;
   /** Picture content */
   readonly pic?: DrawingPicture;
+  /** Shape content */
+  readonly wsp?: DocxWordprocessingShape;
+  /** Chart reference */
+  readonly chart?: DocxChart;
+};
+
+// =============================================================================
+// Chart Types
+// =============================================================================
+
+/**
+ * Chart reference within a drawing.
+ *
+ * Charts in DOCX are stored as separate parts and referenced by relationship ID.
+ * The actual chart data is in word/charts/chartN.xml.
+ *
+ * @see ECMA-376 Part 1, Section 21.2 (DrawingML - Charts)
+ */
+export type DocxChart = {
+  readonly type: "chart";
+  /** Relationship ID to chart part */
+  readonly rId: string;
+};
+
+// =============================================================================
+// Shape Types
+// =============================================================================
+
+/**
+ * Text box content within a shape.
+ *
+ * @see ECMA-376 Part 1, Section 20.4.2.24 (txbxContent - wps:txbx)
+ */
+export type DocxTextBoxContent = {
+  /** Paragraphs within the text box */
+  readonly content: readonly DocxParagraph[];
+};
+
+/**
+ * WordprocessingML Shape (wps:wsp).
+ *
+ * Represents a shape drawn in a document.
+ *
+ * @see ECMA-376 Part 1, Section 20.4.2.19 (wsp)
+ */
+export type DocxWordprocessingShape = {
+  /** Non-visual shape properties */
+  readonly cNvPr?: NonVisualDrawingProps;
+  /** Shape properties (geometry, fill, outline, etc.) */
+  readonly spPr?: DrawingShapeProperties;
+  /** Shape style (reference to theme style) */
+  readonly style?: DocxShapeStyle;
+  /** Text body within the shape */
+  readonly txbx?: DocxTextBoxContent;
+  /** Body properties (text layout within shape) */
+  readonly bodyPr?: DocxBodyProperties;
+};
+
+/**
+ * Shape style reference.
+ *
+ * @see ECMA-376 Part 1, Section 21.3.2.24 (style)
+ */
+export type DocxShapeStyle = {
+  /** Line reference index */
+  readonly lnRef?: number;
+  /** Fill reference index */
+  readonly fillRef?: number;
+  /** Effect reference index */
+  readonly effectRef?: number;
+  /** Font reference index */
+  readonly fontRef?: number;
+};
+
+/**
+ * Body properties for text within a shape.
+ *
+ * @see ECMA-376 Part 1, Section 21.1.2.1.1 (bodyPr)
+ */
+export type DocxBodyProperties = {
+  /** Rotation angle in 60000ths of a degree */
+  readonly rot?: number;
+  /** Text wrapping within shape */
+  readonly wrap?: "none" | "square";
+  /** Left inset in EMUs */
+  readonly lIns?: number;
+  /** Top inset in EMUs */
+  readonly tIns?: number;
+  /** Right inset in EMUs */
+  readonly rIns?: number;
+  /** Bottom inset in EMUs */
+  readonly bIns?: number;
+  /** Vertical anchor */
+  readonly anchor?: "t" | "ctr" | "b" | "just" | "dist";
+  /** Anchor center */
+  readonly anchorCtr?: boolean;
+  /** Vertical text */
+  readonly vert?: "horz" | "vert" | "vert270" | "wordArtVert" | "eaVert" | "mongolianVert" | "wordArtVertRtl";
+  /** Text direction */
+  readonly upright?: boolean;
 };
 
 // =============================================================================

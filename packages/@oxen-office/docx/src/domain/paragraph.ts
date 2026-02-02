@@ -12,6 +12,12 @@ import type { WordBorderStyle, EighthPoints } from "@oxen-office/ooxml/domain/bo
 import type { DocxStyleId, DocxNumId, DocxIlvl, Twips, DocxRelId } from "./types";
 import type { DocxRunProperties, DocxRun, DocxShading, DocxThemeColor } from "./run";
 import type { DocxSectionProperties } from "./section";
+import type {
+  DocxRevisionContent,
+  DocxRevisionRangeMarker,
+} from "./revision";
+import type { DocxInlineSdt } from "./sdt";
+import type { DocxOfficeMath, DocxOfficeMathPara } from "./math";
 
 // =============================================================================
 // Paragraph Spacing
@@ -446,7 +452,12 @@ export type DocxParagraphContent =
   | DocxBookmarkEnd
   | DocxCommentRangeStart
   | DocxCommentRangeEnd
-  | DocxSimpleField;
+  | DocxSimpleField
+  | DocxRevisionContent
+  | DocxRevisionRangeMarker
+  | DocxInlineSdt
+  | DocxOfficeMath
+  | DocxOfficeMathPara;
 
 // =============================================================================
 // Paragraph Type
