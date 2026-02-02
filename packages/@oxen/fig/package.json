@@ -1,0 +1,25 @@
+{
+  "name": "@oxen/fig",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@oxen/fig/src'"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  },
+  "dependencies": {
+    "pako": "^2.1.0",
+    "fzstd": "^0.1.1"
+  },
+  "devDependencies": {
+    "@types/pako": "^2.0.3"
+  }
+}
