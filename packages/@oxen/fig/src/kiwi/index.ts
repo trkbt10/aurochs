@@ -38,3 +38,14 @@ export type {
   StreamingEncoderOptions,
   MessageHeader,
 } from "./stream";
+
+// Test helpers (for spec files)
+export {
+  createTestSchema,
+  createTestNode,
+  createTestMessage,
+  encodeFigSchema,
+  buildTestFigFile,
+  createSampleFigFile,
+  IDENTITY_MATRIX,
+} from "./test-helpers";

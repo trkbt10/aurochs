@@ -74,6 +74,14 @@ export {
   StreamingFigEncoder,
   streamNodeChanges,
   processNodeChanges,
+  // Test helpers
+  createTestSchema,
+  createTestNode,
+  createTestMessage,
+  encodeFigSchema,
+  buildTestFigFile,
+  createSampleFigFile,
+  IDENTITY_MATRIX,
 } from "./kiwi";
 
 export type {

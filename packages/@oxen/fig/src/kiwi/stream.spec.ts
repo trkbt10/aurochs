@@ -2,8 +2,6 @@
  * @file Streaming encoder/decoder unit tests
  */
 
-import * as fs from "node:fs";
-import * as path from "node:path";
 import { inflateRaw } from "pako";
 import {
   StreamingFigDecoder,
@@ -13,19 +11,19 @@ import {
 } from "./stream";
 import { decodeFigSchema, splitFigChunks } from "./decoder";
 import { parseFigHeader, getPayload } from "../parser";
+import {
+  createTestSchema,
+  createTestNode,
+  createSampleFigFile,
+  buildTestFigFile,
+} from "./test-helpers";
 
 describe("StreamingFigDecoder", () => {
-  const figPath = path.join(__dirname, "../../example.canvas.fig");
-
   it("yields node changes one at a time", () => {
-    if (!fs.existsSync(figPath)) {
-      console.log("Skipping: example.canvas.fig not found");
-      return;
-    }
+    const { file, expectedNodes } = createSampleFigFile();
 
-    const data = new Uint8Array(fs.readFileSync(figPath));
-    const header = parseFigHeader(data);
-    const payload = getPayload(data);
+    const header = parseFigHeader(file);
+    const payload = getPayload(file);
     const chunks = splitFigChunks(payload, header.payloadSize);
     const schemaData = inflateRaw(chunks.schema);
     const msgData = inflateRaw(chunks.data);
@@ -36,30 +34,25 @@ describe("StreamingFigDecoder", () => {
 
     for (const { node, index, total } of decoder.decodeNodeChanges(msgData)) {
       expect(index).toBe(nodes.length);
-      expect(total).toBe(6);
+      expect(total).toBe(expectedNodes.length);
       nodes.push(node);
     }
 
-    expect(nodes.length).toBe(6);
+    expect(nodes.length).toBe(expectedNodes.length);
 
-    // Check first node is Document
-    expect(nodes[0].name).toBe("Document");
-    const docType = nodes[0].type as { name: string };
-    expect(docType.name).toBe("DOCUMENT");
-
-    // Check other nodes
-    expect(nodes[1].name).toBe("Page 1");
-    expect(nodes[2].name).toBe("Internal Only Canvas");
+    // Check nodes match expected
+    for (const [i, expected] of expectedNodes.entries()) {
+      expect(nodes[i].name).toBe(expected.name);
+      const nodeType = nodes[i].type as { name: string };
+      expect(nodeType.name).toBe(expected.type);
+    }
   });
 
   it("decodes header separately", () => {
-    if (!fs.existsSync(figPath)) {
-      return;
-    }
+    const { file } = createSampleFigFile();
 
-    const data = new Uint8Array(fs.readFileSync(figPath));
-    const header = parseFigHeader(data);
-    const payload = getPayload(data);
+    const header = parseFigHeader(file);
+    const payload = getPayload(file);
     const chunks = splitFigChunks(payload, header.payloadSize);
     const schemaData = inflateRaw(chunks.schema);
     const msgData = inflateRaw(chunks.data);
@@ -71,21 +64,32 @@ describe("StreamingFigDecoder", () => {
     expect(msgHeader.type).toBeDefined();
     const msgType = msgHeader.type as { name: string };
     expect(msgType.name).toBe("NODE_CHANGES");
-    expect(msgHeader.nodeChangesCount).toBe(6);
+    expect(msgHeader.nodeChangesCount).toBe(5);
+  });
+
+  it("handles empty node list", () => {
+    const schema = createTestSchema();
+    const encoder = new StreamingFigEncoder({ schema });
+    encoder.writeHeader({ type: { value: 1 }, sessionID: 0, ackID: 0 });
+    const messageData = encoder.finalize();
+
+    const decoder = new StreamingFigDecoder({ schema });
+    const nodes: Record<string, unknown>[] = [];
+
+    for (const { node } of decoder.decodeNodeChanges(messageData)) {
+      nodes.push(node);
+    }
+
+    expect(nodes.length).toBe(0);
   });
 });
 
 describe("streamNodeChanges helper", () => {
-  const figPath = path.join(__dirname, "../../example.canvas.fig");
-
   it("streams node changes with generator", () => {
-    if (!fs.existsSync(figPath)) {
-      return;
-    }
+    const { file, expectedNodes } = createSampleFigFile();
 
-    const data = new Uint8Array(fs.readFileSync(figPath));
-    const header = parseFigHeader(data);
-    const payload = getPayload(data);
+    const header = parseFigHeader(file);
+    const payload = getPayload(file);
     const chunks = splitFigChunks(payload, header.payloadSize);
     const schemaData = inflateRaw(chunks.schema);
     const msgData = inflateRaw(chunks.data);
@@ -96,28 +100,16 @@ describe("streamNodeChanges helper", () => {
       names.push(node.name as string);
     }
 
-    expect(names).toEqual([
-      "Document",
-      "Page 1",
-      "Internal Only Canvas",
-      "esbuild",
-      "Vector",
-      "Ellipse",
-    ]);
+    expect(names).toEqual(expectedNodes.map((n) => n.name));
   });
 });
 
 describe("processNodeChanges helper", () => {
-  const figPath = path.join(__dirname, "../../example.canvas.fig");
-
   it("processes nodes with callback", () => {
-    if (!fs.existsSync(figPath)) {
-      return;
-    }
+    const { file, expectedNodes } = createSampleFigFile();
 
-    const data = new Uint8Array(fs.readFileSync(figPath));
-    const header = parseFigHeader(data);
-    const payload = getPayload(data);
+    const header = parseFigHeader(file);
+    const payload = getPayload(file);
     const chunks = splitFigChunks(payload, header.payloadSize);
     const schemaData = inflateRaw(chunks.schema);
     const msgData = inflateRaw(chunks.data);
@@ -132,62 +124,22 @@ describe("processNodeChanges helper", () => {
       };
     });
 
-    expect(results.length).toBe(6);
-    expect(results[0]).toEqual({
-      index: 0,
-      total: 6,
-      name: "Document",
-      type: "DOCUMENT",
-    });
-    expect(results[1]).toEqual({
-      index: 1,
-      total: 6,
-      name: "Page 1",
-      type: "CANVAS",
-    });
+    expect(results.length).toBe(expectedNodes.length);
+
+    for (const [i, expected] of expectedNodes.entries()) {
+      expect(results[i]).toEqual({
+        index: i,
+        total: expectedNodes.length,
+        name: expected.name,
+        type: expected.type,
+      });
+    }
   });
 });
 
 describe("StreamingFigEncoder", () => {
   it("encodes nodes one at a time", () => {
-    // Simple schema for testing
-    const schema = {
-      definitions: [
-        {
-          name: "MessageType",
-          kind: "ENUM" as const,
-          fields: [
-            { name: "NODE_CHANGES", type: "uint", typeId: -4, isArray: false, value: 1 },
-          ],
-        },
-        {
-          name: "GUID",
-          kind: "STRUCT" as const,
-          fields: [
-            { name: "sessionID", type: "uint", typeId: -4, isArray: false, value: 1 },
-            { name: "localID", type: "uint", typeId: -4, isArray: false, value: 2 },
-          ],
-        },
-        {
-          name: "NodeChange",
-          kind: "MESSAGE" as const,
-          fields: [
-            { name: "guid", type: "GUID", typeId: 1, isArray: false, value: 1 },
-            { name: "name", type: "string", typeId: -6, isArray: false, value: 5 },
-          ],
-        },
-        {
-          name: "Message",
-          kind: "MESSAGE" as const,
-          fields: [
-            { name: "type", type: "MessageType", typeId: 0, isArray: false, value: 1 },
-            { name: "sessionID", type: "uint", typeId: -4, isArray: false, value: 2 },
-            { name: "nodeChanges", type: "NodeChange", typeId: 2, isArray: true, value: 4 },
-          ],
-        },
-      ],
-    };
-
+    const schema = createTestSchema();
     const encoder = new StreamingFigEncoder({ schema });
 
     encoder.writeHeader({
@@ -195,15 +147,12 @@ describe("StreamingFigEncoder", () => {
       sessionID: 0,
     });
 
-    encoder.writeNodeChange({
-      guid: { sessionID: 0, localID: 0 },
-      name: "Test Node 1",
-    });
-
-    encoder.writeNodeChange({
-      guid: { sessionID: 0, localID: 1 },
-      name: "Test Node 2",
-    });
+    encoder.writeNodeChange(
+      createTestNode({ localID: 0, type: 1, name: "Test Node 1" })
+    );
+    encoder.writeNodeChange(
+      createTestNode({ localID: 1, type: 2, name: "Test Node 2" })
+    );
 
     const result = encoder.finalize();
     expect(result.length).toBeGreaterThan(0);
@@ -219,5 +168,107 @@ describe("StreamingFigEncoder", () => {
     expect(nodes.length).toBe(2);
     expect(nodes[0].name).toBe("Test Node 1");
     expect(nodes[1].name).toBe("Test Node 2");
+  });
+
+  it("encodes with various node types", () => {
+    const schema = createTestSchema();
+    const encoder = new StreamingFigEncoder({ schema });
+
+    encoder.writeHeader({ type: { value: 1 }, sessionID: 0 });
+
+    const testNodes = [
+      createTestNode({ localID: 0, type: 1, name: "Document" }),
+      createTestNode({ localID: 1, type: 2, name: "Canvas" }),
+      createTestNode({ localID: 2, type: 3, name: "Frame", size: { x: 200, y: 150 } }),
+      createTestNode({ localID: 3, type: 6, name: "Text", visible: false }),
+      createTestNode({ localID: 4, type: 7, name: "Ellipse", opacity: 0.5 }),
+    ];
+
+    for (const node of testNodes) {
+      encoder.writeNodeChange(node);
+    }
+
+    const result = encoder.finalize();
+
+    // Decode and verify all nodes
+    const decoder = new StreamingFigDecoder({ schema });
+    const decoded: Record<string, unknown>[] = [];
+
+    for (const { node } of decoder.decodeNodeChanges(result)) {
+      decoded.push(node);
+    }
+
+    expect(decoded.length).toBe(5);
+    expect(decoded[0].name).toBe("Document");
+    expect(decoded[2].name).toBe("Frame");
+    expect(decoded[3].visible).toBe(false);
+    expect(decoded[4].opacity).toBeCloseTo(0.5);
+  });
+
+  it("throws when finalized twice", () => {
+    const schema = createTestSchema();
+    const encoder = new StreamingFigEncoder({ schema });
+    encoder.writeHeader({ type: { value: 1 } });
+    encoder.finalize();
+
+    expect(() => encoder.finalize()).toThrow("already finalized");
+  });
+
+  it("throws when writing node before header", () => {
+    const schema = createTestSchema();
+    const encoder = new StreamingFigEncoder({ schema });
+
+    expect(() =>
+      encoder.writeNodeChange(createTestNode({ localID: 0, type: 1, name: "Test" }))
+    ).toThrow("writeHeader");
+  });
+});
+
+describe("Full fig file roundtrip", () => {
+  it("creates and parses a complete fig file", () => {
+    const schema = createTestSchema();
+
+    const originalNodes = [
+      createTestNode({ localID: 0, type: 1, name: "My Document" }),
+      createTestNode({ localID: 1, type: 2, name: "My Page" }),
+      createTestNode({ localID: 2, type: 8, name: "Rectangle", size: { x: 50, y: 50 } }),
+    ];
+
+    // Encode message
+    const encoder = new StreamingFigEncoder({ schema });
+    encoder.writeHeader({ type: { value: 1 }, sessionID: 42, ackID: 0 });
+    for (const node of originalNodes) {
+      encoder.writeNodeChange(node);
+    }
+    const messageData = encoder.finalize();
+
+    // Build complete fig file
+    const figFile = buildTestFigFile(schema, messageData);
+
+    // Parse it back
+    const header = parseFigHeader(figFile);
+    expect(header.magic).toBe("fig-kiwi");
+
+    const payload = getPayload(figFile);
+    const chunks = splitFigChunks(payload, header.payloadSize);
+
+    const decodedSchemaData = inflateRaw(chunks.schema);
+    const decodedMsgData = inflateRaw(chunks.data);
+
+    const decodedSchema = decodeFigSchema(decodedSchemaData);
+    expect(decodedSchema.definitions.length).toBe(schema.definitions.length);
+
+    // Decode nodes
+    const decoder = new StreamingFigDecoder({ schema: decodedSchema });
+    const decodedNodes: Record<string, unknown>[] = [];
+
+    for (const { node } of decoder.decodeNodeChanges(decodedMsgData)) {
+      decodedNodes.push(node);
+    }
+
+    expect(decodedNodes.length).toBe(3);
+    expect(decodedNodes[0].name).toBe("My Document");
+    expect(decodedNodes[1].name).toBe("My Page");
+    expect(decodedNodes[2].name).toBe("Rectangle");
   });
 });
