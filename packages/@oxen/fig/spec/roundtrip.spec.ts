@@ -4,6 +4,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { inflateRaw } from "pako";
 import {
   isFigFile,
   parseFigHeader,
@@ -13,64 +14,56 @@ import {
   decodeFigSchema,
   decodeFigMessage,
   splitFigChunks,
+  createTestSchema,
+  createTestNode,
+  buildTestFigFile,
+  createSampleFigFile,
+  StreamingFigEncoder,
 } from "../src";
 
-describe("fig file parsing", () => {
-  const figPath = path.join(__dirname, "../example.canvas.fig");
-
+describe("fig file parsing (generated data)", () => {
   it("validates header", () => {
-    if (!fs.existsSync(figPath)) {
-      console.log("Skipping: example.canvas.fig not found");
-      return;
-    }
+    const { file } = createSampleFigFile();
 
-    const data = new Uint8Array(fs.readFileSync(figPath));
-    expect(isFigFile(data)).toBe(true);
+    expect(isFigFile(file)).toBe(true);
 
-    const header = parseFigHeader(data);
+    const header = parseFigHeader(file);
     expect(header.magic).toBe("fig-kiwi");
     expect(header.version).toBe("0");
-    expect(header.payloadSize).toBe(15606);
+    expect(header.payloadSize).toBeGreaterThan(0);
   });
 
   it("rebuilds header correctly", () => {
-    if (!fs.existsSync(figPath)) {
-      return;
-    }
-
-    const data = new Uint8Array(fs.readFileSync(figPath));
-    const header = parseFigHeader(data);
+    const { file } = createSampleFigFile();
+    const header = parseFigHeader(file);
 
     const rebuiltHeader = buildFigHeader(header.payloadSize, header.version);
-    expect(rebuiltHeader).toEqual(data.slice(0, 16));
+    expect(rebuiltHeader).toEqual(file.slice(0, 16));
   });
 
   it("decompresses payload with inflateRaw", () => {
-    if (!fs.existsSync(figPath)) {
-      return;
-    }
+    const { file } = createSampleFigFile();
+    const header = parseFigHeader(file);
+    const payload = getPayload(file);
 
-    const data = new Uint8Array(fs.readFileSync(figPath));
-    const payload = getPayload(data);
+    const chunks = splitFigChunks(payload, header.payloadSize);
+    const decompressedSchema = decompressDeflateRaw(chunks.schema);
+    const decompressedData = decompressDeflateRaw(chunks.data);
 
-    expect(payload.length).toBe(17909);
-
-    const decompressed = decompressDeflateRaw(payload);
-    expect(decompressed.length).toBe(37018);
+    expect(decompressedSchema.length).toBeGreaterThan(0);
+    expect(decompressedData.length).toBeGreaterThan(0);
   });
 
   it("decodes schema from decompressed data", () => {
-    if (!fs.existsSync(figPath)) {
-      return;
-    }
-
-    const data = new Uint8Array(fs.readFileSync(figPath));
-    const payload = getPayload(data);
-    const decompressed = decompressDeflateRaw(payload);
+    const { file, schema: expectedSchema } = createSampleFigFile();
+    const header = parseFigHeader(file);
+    const payload = getPayload(file);
+    const chunks = splitFigChunks(payload, header.payloadSize);
+    const decompressed = decompressDeflateRaw(chunks.schema);
 
     const schema = decodeFigSchema(decompressed);
 
-    expect(schema.definitions.length).toBe(307);
+    expect(schema.definitions.length).toBe(expectedSchema.definitions.length);
 
     // Check some known definitions
     const messageType = schema.definitions[0];
@@ -91,18 +84,11 @@ describe("fig file parsing", () => {
   });
 });
 
-describe("fig message decoding", () => {
-  const figPath = path.join(__dirname, "../example.canvas.fig");
-
+describe("fig message decoding (generated data)", () => {
   it("decodes message data with correct structure", () => {
-    if (!fs.existsSync(figPath)) {
-      console.log("Skipping: example.canvas.fig not found");
-      return;
-    }
-
-    const data = new Uint8Array(fs.readFileSync(figPath));
-    const header = parseFigHeader(data);
-    const payload = getPayload(data);
+    const { file, expectedNodes } = createSampleFigFile();
+    const header = parseFigHeader(file);
+    const payload = getPayload(file);
 
     // Split into schema and data chunks
     const chunks = splitFigChunks(payload, header.payloadSize);
@@ -130,49 +116,36 @@ describe("fig message decoding", () => {
     // Check node changes
     expect(message.nodeChanges).toBeDefined();
     const nodeChanges = message.nodeChanges as Record<string, unknown>[];
-    expect(nodeChanges.length).toBe(6);
+    expect(nodeChanges.length).toBe(expectedNodes.length);
 
-    // Check Document node
-    const docNode = nodeChanges[0];
-    expect(docNode.name).toBe("Document");
-    const docType = docNode.type as { value: number; name: string };
-    expect(docType.name).toBe("DOCUMENT");
-
-    // Check Page 1 canvas
-    const page1 = nodeChanges[1];
-    expect(page1.name).toBe("Page 1");
-    const page1Type = page1.type as { value: number; name: string };
-    expect(page1Type.name).toBe("CANVAS");
-
-    // Check other nodes exist
-    const names = nodeChanges.map((n) => n.name);
-    expect(names).toContain("esbuild");
-    expect(names).toContain("Vector");
-    expect(names).toContain("Ellipse");
+    // Check nodes match expected
+    for (const [i, expected] of expectedNodes.entries()) {
+      const node = nodeChanges[i];
+      expect(node.name).toBe(expected.name);
+      const nodeType = node.type as { name: string };
+      expect(nodeType.name).toBe(expected.type);
+    }
   });
 });
 
-describe("fig file structure", () => {
-  const figPath = path.join(__dirname, "../example.canvas.fig");
-
+describe("fig file structure (generated data)", () => {
   it("reports file statistics", () => {
-    if (!fs.existsSync(figPath)) {
-      console.log("Skipping: example.canvas.fig not found");
-      return;
-    }
+    const { file, schema: expectedSchema } = createSampleFigFile();
 
-    const data = new Uint8Array(fs.readFileSync(figPath));
-    const header = parseFigHeader(data);
-    const payload = getPayload(data);
-    const decompressed = decompressDeflateRaw(payload);
-    const schema = decodeFigSchema(decompressed);
+    const header = parseFigHeader(file);
+    const payload = getPayload(file);
+    const chunks = splitFigChunks(payload, header.payloadSize);
+    const decompressedSchema = decompressDeflateRaw(chunks.schema);
+    const decompressedData = decompressDeflateRaw(chunks.data);
+    const schema = decodeFigSchema(decompressedSchema);
 
-    console.log("=== File Statistics ===");
-    console.log(`File size: ${data.length} bytes`);
+    console.log("=== Generated File Statistics ===");
+    console.log(`File size: ${file.length} bytes`);
     console.log(`Header: ${header.magic} v${header.version}`);
-    console.log(`Payload (compressed): ${payload.length} bytes`);
-    console.log(`Payload (decompressed): ${decompressed.length} bytes`);
-    console.log(`Compression ratio: ${(payload.length / decompressed.length * 100).toFixed(1)}%`);
+    console.log(`Schema chunk (compressed): ${chunks.schema.length} bytes`);
+    console.log(`Schema chunk (decompressed): ${decompressedSchema.length} bytes`);
+    console.log(`Data chunk (compressed): ${chunks.data.length} bytes`);
+    console.log(`Data chunk (decompressed): ${decompressedData.length} bytes`);
     console.log(`Schema definitions: ${schema.definitions.length}`);
 
     // Count by kind
@@ -185,5 +158,96 @@ describe("fig file structure", () => {
     console.log(`  ENUM: ${counts.ENUM}`);
     console.log(`  STRUCT: ${counts.STRUCT}`);
     console.log(`  MESSAGE: ${counts.MESSAGE}`);
+
+    // Verify structure
+    expect(schema.definitions.length).toBe(expectedSchema.definitions.length);
+  });
+});
+
+describe("fig roundtrip (encode -> build -> parse -> decode)", () => {
+  it("preserves data through full roundtrip", () => {
+    const schema = createTestSchema();
+
+    // Create test nodes
+    const originalNodes = [
+      createTestNode({ localID: 0, type: 1, name: "Test Document" }),
+      createTestNode({ localID: 1, type: 2, name: "Test Page", visible: true }),
+      createTestNode({ localID: 2, type: 6, name: "Hello", opacity: 0.8 }),
+    ];
+
+    // Encode
+    const encoder = new StreamingFigEncoder({ schema });
+    encoder.writeHeader({ type: { value: 1 }, sessionID: 123, ackID: 0 });
+    for (const node of originalNodes) {
+      encoder.writeNodeChange(node);
+    }
+    const messageData = encoder.finalize();
+
+    // Build fig file
+    const figFile = buildTestFigFile(schema, messageData);
+
+    // Verify it's a valid fig file
+    expect(isFigFile(figFile)).toBe(true);
+
+    // Parse back
+    const header = parseFigHeader(figFile);
+    const payload = getPayload(figFile);
+    const chunks = splitFigChunks(payload, header.payloadSize);
+
+    const parsedSchemaData = inflateRaw(chunks.schema);
+    const parsedMsgData = inflateRaw(chunks.data);
+
+    const parsedSchema = decodeFigSchema(parsedSchemaData);
+    const parsedMessage = decodeFigMessage(parsedSchema, parsedMsgData, "Message") as Record<string, unknown>;
+
+    // Verify message
+    const msgType = parsedMessage.type as { name: string };
+    expect(msgType.name).toBe("NODE_CHANGES");
+
+    // Verify nodes
+    const nodeChanges = parsedMessage.nodeChanges as Record<string, unknown>[];
+    expect(nodeChanges.length).toBe(3);
+
+    expect(nodeChanges[0].name).toBe("Test Document");
+    expect(nodeChanges[1].name).toBe("Test Page");
+    expect(nodeChanges[2].name).toBe("Hello");
+
+    // Verify numeric values preserved
+    expect(nodeChanges[2].opacity).toBeCloseTo(0.8);
+  });
+});
+
+// Optional: Test with real example.canvas.fig if available
+describe("fig file parsing (real file)", () => {
+  const figPath = path.join(__dirname, "../example.canvas.fig");
+
+  it("parses real example file if available", () => {
+    if (!fs.existsSync(figPath)) {
+      console.log("Skipping: example.canvas.fig not found (this is OK)");
+      return;
+    }
+
+    const data = new Uint8Array(fs.readFileSync(figPath));
+    expect(isFigFile(data)).toBe(true);
+
+    const header = parseFigHeader(data);
+    expect(header.magic).toBe("fig-kiwi");
+
+    const payload = getPayload(data);
+    const chunks = splitFigChunks(payload, header.payloadSize);
+    const schemaData = decompressDeflateRaw(chunks.schema);
+    const msgData = decompressDeflateRaw(chunks.data);
+
+    const schema = decodeFigSchema(schemaData);
+    expect(schema.definitions.length).toBe(307);
+
+    const message = decodeFigMessage(schema, msgData, "Message") as Record<string, unknown>;
+    const nodeChanges = message.nodeChanges as Record<string, unknown>[];
+    expect(nodeChanges.length).toBe(6);
+
+    console.log("=== Real File Statistics ===");
+    console.log(`File size: ${data.length} bytes`);
+    console.log(`Schema definitions: ${schema.definitions.length}`);
+    console.log(`Node changes: ${nodeChanges.length}`);
   });
 });
