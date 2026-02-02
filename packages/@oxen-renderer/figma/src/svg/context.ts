@@ -41,6 +41,7 @@ export function createFigSvgRenderContext(
     canvasSize: config?.canvasSize ?? DEFAULT_CANVAS_SIZE,
     blobs: config?.blobs ?? [],
     images: config?.images ?? new Map(),
+    showHiddenNodes: config?.showHiddenNodes ?? false,
   };
 }
 

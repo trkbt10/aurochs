@@ -107,6 +107,8 @@ export type FigSvgRenderOptions = {
   readonly images?: ReadonlyMap<string, FigImage>;
   /** Normalize root transform to (0, 0) - useful when rendering a single frame */
   readonly normalizeRootTransform?: boolean;
+  /** Show hidden nodes (visible: false) - useful for viewing style definitions */
+  readonly showHiddenNodes?: boolean;
 };
 
 // =============================================================================
@@ -131,6 +133,7 @@ export function renderFigToSvg(
     canvasSize: { width, height },
     blobs: options?.blobs ?? [],
     images: options?.images ?? new Map(),
+    showHiddenNodes: options?.showHiddenNodes,
   });
 
   const warnings: string[] = [];
@@ -275,7 +278,7 @@ function renderChildrenWithMasks(
 
   const finalState = children.reduce((state, child) => {
     const nodeData = child as Record<string, unknown>;
-    if (nodeData.visible === false) {
+    if (nodeData.visible === false && !ctx.showHiddenNodes) {
       return state;
     }
     const params: ProcessNodeParams = { child, state, ctx, warnings };
@@ -304,9 +307,9 @@ function renderNode(
 ): SvgString {
   const nodeType = getNodeType(node);
 
-  // Check visibility
+  // Check visibility (skip if showHiddenNodes is enabled)
   const nodeData = node as Record<string, unknown>;
-  if (nodeData.visible === false) {
+  if (nodeData.visible === false && !ctx.showHiddenNodes) {
     return EMPTY_SVG;
   }
 

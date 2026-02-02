@@ -4,12 +4,26 @@
 
 import { useMemo, useState } from "react";
 import type { ParsedFigFile } from "@oxen/fig/parser";
+import { buildNodeTree, findNodesByType } from "@oxen/fig/parser";
 import type { FigNode } from "@oxen/fig/types";
-import { renderFigToSvg } from "../../src/svg/renderer";
+import { renderCanvas } from "../../src/svg/renderer";
 
 type Props = {
   readonly parsedFile: ParsedFigFile;
   readonly onClose: () => void;
+};
+
+type CanvasInfo = {
+  node: FigNode;
+  name: string;
+  frames: FrameInfo[];
+};
+
+type FrameInfo = {
+  node: FigNode;
+  name: string;
+  width: number;
+  height: number;
 };
 
 const styles = {
@@ -17,7 +31,7 @@ const styles = {
     flex: 1,
     display: "flex",
     flexDirection: "column" as const,
-    gap: "20px",
+    gap: "16px",
   },
   header: {
     display: "flex",
@@ -45,63 +59,112 @@ const styles = {
     borderRadius: "8px",
     cursor: "pointer",
   },
+  selectors: {
+    display: "flex",
+    gap: "16px",
+    alignItems: "center",
+    flexWrap: "wrap" as const,
+  },
+  selectorGroup: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+  },
+  selectorLabel: {
+    fontSize: "14px",
+    color: "#94a3b8",
+  },
+  select: {
+    padding: "8px 12px",
+    fontSize: "14px",
+    color: "#fff",
+    background: "#1e293b",
+    border: "1px solid #334155",
+    borderRadius: "8px",
+    cursor: "pointer",
+    minWidth: "200px",
+  },
   content: {
     flex: 1,
     display: "flex",
     gap: "20px",
+    minHeight: 0,
   },
   preview: {
-    flex: 2,
+    flex: 1,
     background: "#fff",
     borderRadius: "12px",
     overflow: "auto",
     padding: "20px",
-  },
-  svgContainer: {
     display: "flex",
     justifyContent: "center",
     alignItems: "flex-start",
   },
+  svgContainer: {
+    maxWidth: "100%",
+    overflow: "auto",
+  },
   sidebar: {
-    flex: 1,
-    maxWidth: "400px",
+    width: "300px",
+    flexShrink: 0,
     display: "flex",
     flexDirection: "column" as const,
     gap: "16px",
   },
-  nodeList: {
+  frameList: {
     background: "rgba(255, 255, 255, 0.05)",
     borderRadius: "12px",
     padding: "16px",
-    maxHeight: "500px",
+    maxHeight: "400px",
     overflowY: "auto" as const,
   },
-  nodeListTitle: {
+  frameListTitle: {
     fontSize: "14px",
     fontWeight: 600,
     marginBottom: "12px",
     color: "#94a3b8",
   },
-  nodeItem: {
-    padding: "8px 12px",
+  frameItem: {
+    padding: "10px 12px",
     marginBottom: "4px",
     background: "rgba(255, 255, 255, 0.03)",
     borderRadius: "6px",
     fontSize: "13px",
-    display: "flex",
-    justifyContent: "space-between",
+    cursor: "pointer",
+    border: "1px solid transparent",
+    transition: "all 0.15s ease",
   },
-  nodeName: {
+  frameItemActive: {
+    background: "rgba(99, 102, 241, 0.2)",
+    borderColor: "#6366f1",
+  },
+  frameName: {
     color: "#e2e8f0",
+    marginBottom: "4px",
   },
-  nodeType: {
-    color: "#6366f1",
-    fontSize: "12px",
+  frameSize: {
+    color: "#64748b",
+    fontSize: "11px",
+  },
+  checkbox: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    cursor: "pointer",
+    fontSize: "14px",
+    color: "#94a3b8",
+  },
+  checkboxInput: {
+    width: "16px",
+    height: "16px",
+    cursor: "pointer",
   },
   warnings: {
     background: "rgba(251, 191, 36, 0.1)",
     borderRadius: "12px",
     padding: "16px",
+    maxHeight: "200px",
+    overflowY: "auto" as const,
   },
   warningsTitle: {
     fontSize: "14px",
@@ -117,66 +180,94 @@ const styles = {
     fontSize: "12px",
     color: "#fbbf24",
   },
-  tabs: {
-    display: "flex",
-    gap: "8px",
-    marginBottom: "16px",
-  },
-  tab: {
-    padding: "8px 16px",
-    fontSize: "14px",
-    border: "none",
-    borderRadius: "8px",
-    cursor: "pointer",
-    background: "rgba(255, 255, 255, 0.05)",
-    color: "#94a3b8",
-  },
-  tabActive: {
-    background: "#6366f1",
-    color: "#fff",
+  emptyState: {
+    padding: "40px",
+    textAlign: "center" as const,
+    color: "#64748b",
   },
 };
 
 export function FigPreview({ parsedFile, onClose }: Props) {
-  const [selectedTab, setSelectedTab] = useState<"preview" | "nodes">("preview");
+  const [selectedCanvasIndex, setSelectedCanvasIndex] = useState(0);
+  const [selectedFrameIndex, setSelectedFrameIndex] = useState(0);
+  const [showHiddenNodes, setShowHiddenNodes] = useState(false);
 
-  const renderResult = useMemo(() => {
-    // Find canvas nodes (pages)
-    const canvasNodes = parsedFile.nodeChanges.filter(
-      (n) => getNodeType(n) === "CANVAS"
-    );
+  // Build node tree and extract canvas/frame info
+  const { canvases, nodeCount, typeCount } = useMemo(() => {
+    const { roots } = buildNodeTree(parsedFile.nodeChanges);
+    const canvasNodes = findNodesByType(roots, "CANVAS");
 
-    // If we have canvases, render the first one's children
-    if (canvasNodes.length > 0) {
-      const firstCanvas = canvasNodes[0];
-      // For now, render all nodes since they're flat from nodeChanges
-      return renderFigToSvg(parsedFile.nodeChanges, {
-        width: 800,
-        height: 600,
-        backgroundColor: "#f5f5f5",
-      });
-    }
-
-    // Otherwise render all nodes
-    return renderFigToSvg(parsedFile.nodeChanges, {
-      width: 800,
-      height: 600,
-      backgroundColor: "#f5f5f5",
+    const canvases: CanvasInfo[] = canvasNodes.map((canvas) => {
+      const frames: FrameInfo[] = [];
+      for (const child of canvas.children ?? []) {
+        const childData = child as Record<string, unknown>;
+        const size = childData.size as { x?: number; y?: number } | undefined;
+        frames.push({
+          node: child,
+          name: child.name ?? "Unnamed Frame",
+          width: size?.x ?? 100,
+          height: size?.y ?? 100,
+        });
+      }
+      return {
+        node: canvas,
+        name: canvas.name ?? "Unnamed Page",
+        frames,
+      };
     });
+
+    return {
+      canvases,
+      nodeCount: parsedFile.nodeChanges.length,
+      typeCount: countNodeTypes(parsedFile.nodeChanges),
+    };
   }, [parsedFile]);
 
-  const nodeCount = parsedFile.nodeChanges.length;
-  const typeCount = countNodeTypes(parsedFile.nodeChanges);
+  // Get current selection
+  const currentCanvas = canvases[selectedCanvasIndex];
+  const currentFrame = currentCanvas?.frames[selectedFrameIndex];
+
+  // Render the selected frame
+  const renderResult = useMemo(() => {
+    if (!currentFrame) {
+      return { svg: "", warnings: [] };
+    }
+
+    // Create a wrapper canvas with just the selected frame
+    const wrapperCanvas: FigNode = {
+      type: "CANVAS",
+      name: currentFrame.name,
+      children: [currentFrame.node],
+    };
+
+    return renderCanvas(wrapperCanvas, {
+      width: currentFrame.width,
+      height: currentFrame.height,
+      blobs: parsedFile.blobs,
+      images: parsedFile.images,
+      showHiddenNodes,
+    });
+  }, [currentFrame, parsedFile.blobs, parsedFile.images, showHiddenNodes]);
+
+  // Handle canvas change
+  const handleCanvasChange = (index: number) => {
+    setSelectedCanvasIndex(index);
+    setSelectedFrameIndex(0);
+  };
 
   return (
     <div style={styles.container}>
+      {/* Header */}
       <div style={styles.header}>
         <div style={styles.info}>
           <div style={styles.stat}>
-            <strong>{nodeCount}</strong> nodes
+            <strong>{canvases.length}</strong> pages
           </div>
           <div style={styles.stat}>
-            <strong>{typeCount}</strong> types
+            <strong>{currentCanvas?.frames.length ?? 0}</strong> frames
+          </div>
+          <div style={styles.stat}>
+            <strong>{nodeCount}</strong> nodes
           </div>
           {renderResult.warnings.length > 0 && (
             <div style={styles.stat}>
@@ -189,51 +280,97 @@ export function FigPreview({ parsedFile, onClose }: Props) {
         </button>
       </div>
 
-      <div style={styles.tabs}>
-        <button
-          style={{
-            ...styles.tab,
-            ...(selectedTab === "preview" ? styles.tabActive : {}),
-          }}
-          onClick={() => setSelectedTab("preview")}
-        >
-          Preview
-        </button>
-        <button
-          style={{
-            ...styles.tab,
-            ...(selectedTab === "nodes" ? styles.tabActive : {}),
-          }}
-          onClick={() => setSelectedTab("nodes")}
-        >
-          Nodes
-        </button>
-      </div>
+      {/* Page/Frame Selectors */}
+      {canvases.length > 0 && (
+        <div style={styles.selectors}>
+          <div style={styles.selectorGroup}>
+            <span style={styles.selectorLabel}>Page:</span>
+            <select
+              style={styles.select}
+              value={selectedCanvasIndex}
+              onChange={(e) => handleCanvasChange(Number(e.target.value))}
+            >
+              {canvases.map((canvas, index) => (
+                <option key={index} value={index}>
+                  {canvas.name} ({canvas.frames.length} frames)
+                </option>
+              ))}
+            </select>
+          </div>
 
+          {currentCanvas && currentCanvas.frames.length > 0 && (
+            <div style={styles.selectorGroup}>
+              <span style={styles.selectorLabel}>Frame:</span>
+              <select
+                style={styles.select}
+                value={selectedFrameIndex}
+                onChange={(e) => setSelectedFrameIndex(Number(e.target.value))}
+              >
+                {currentCanvas.frames.map((frame, index) => (
+                  <option key={index} value={index}>
+                    {frame.name} ({frame.width}×{frame.height})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          <label style={styles.checkbox}>
+            <input
+              type="checkbox"
+              style={styles.checkboxInput}
+              checked={showHiddenNodes}
+              onChange={(e) => setShowHiddenNodes(e.target.checked)}
+            />
+            Show hidden nodes (styles)
+          </label>
+        </div>
+      )}
+
+      {/* Content */}
       <div style={styles.content}>
-        {selectedTab === "preview" ? (
-          <div style={styles.preview}>
+        {/* Preview */}
+        <div style={styles.preview}>
+          {currentFrame ? (
             <div
               style={styles.svgContainer}
               dangerouslySetInnerHTML={{ __html: renderResult.svg }}
             />
-          </div>
-        ) : (
-          <div style={styles.sidebar}>
-            <div style={styles.nodeList}>
-              <div style={styles.nodeListTitle}>Node Tree</div>
-              {parsedFile.nodeChanges.map((node, index) => (
-                <div key={index} style={styles.nodeItem}>
-                  <span style={styles.nodeName}>{node.name ?? `Node ${index}`}</span>
-                  <span style={styles.nodeType}>{getNodeType(node)}</span>
+          ) : (
+            <div style={styles.emptyState}>
+              No frames found in this file
+            </div>
+          )}
+        </div>
+
+        {/* Sidebar */}
+        <div style={styles.sidebar}>
+          {/* Frame List */}
+          {currentCanvas && currentCanvas.frames.length > 0 && (
+            <div style={styles.frameList}>
+              <div style={styles.frameListTitle}>
+                Frames in "{currentCanvas.name}"
+              </div>
+              {currentCanvas.frames.map((frame, index) => (
+                <div
+                  key={index}
+                  style={{
+                    ...styles.frameItem,
+                    ...(index === selectedFrameIndex ? styles.frameItemActive : {}),
+                  }}
+                  onClick={() => setSelectedFrameIndex(index)}
+                >
+                  <div style={styles.frameName}>{frame.name}</div>
+                  <div style={styles.frameSize}>
+                    {frame.width} × {frame.height}
+                  </div>
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          )}
 
-        {renderResult.warnings.length > 0 && selectedTab === "preview" && (
-          <div style={{ ...styles.sidebar, flex: "none", width: "300px" }}>
+          {/* Warnings */}
+          {renderResult.warnings.length > 0 && (
             <div style={styles.warnings}>
               <div style={styles.warningsTitle}>Render Warnings</div>
               {renderResult.warnings.slice(0, 10).map((warning, index) => (
@@ -247,8 +384,8 @@ export function FigPreview({ parsedFile, onClose }: Props) {
                 </div>
               )}
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
@@ -279,3 +416,6 @@ function countNodeTypes(nodes: readonly FigNode[]): number {
   const types = new Set(nodes.map((n) => getNodeType(n)));
   return types.size;
 }
+
+// Re-export getNodeType for use in tree building
+export { getNodeType };

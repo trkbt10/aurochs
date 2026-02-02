@@ -75,11 +75,20 @@ export type FillAttrs = {
 };
 
 /**
+ * Options for getFillAttrs
+ */
+export type GetFillAttrsOptions = {
+  /** Element size for image pattern sizing */
+  readonly elementSize?: { width: number; height: number };
+};
+
+/**
  * Get fill attributes from Figma paints
  */
 export function getFillAttrs(
   paints: readonly FigPaint[] | undefined,
-  ctx: FigSvgRenderContext
+  ctx: FigSvgRenderContext,
+  options?: GetFillAttrsOptions
 ): FillAttrs {
   if (!paints || paints.length === 0) {
     return { fill: "none" };
@@ -91,7 +100,7 @@ export function getFillAttrs(
     return { fill: "none" };
   }
 
-  return paintToFillAttrs(visiblePaint, ctx);
+  return paintToFillAttrs(visiblePaint, ctx, options?.elementSize);
 }
 
 /**
@@ -104,10 +113,12 @@ function buildFillWithOpacity(fill: string, opacity: number): FillAttrs {
   return { fill };
 }
 
+type ElementSize = { width: number; height: number };
+
 /**
  * Convert a single paint to fill attributes
  */
-function paintToFillAttrs(paint: FigPaint, ctx: FigSvgRenderContext): FillAttrs {
+function paintToFillAttrs(paint: FigPaint, ctx: FigSvgRenderContext, elementSize?: ElementSize): FillAttrs {
   const opacity = paint.opacity ?? 1;
   const paintType = getPaintType(paint);
 
@@ -136,9 +147,9 @@ function paintToFillAttrs(paint: FigPaint, ctx: FigSvgRenderContext): FillAttrs 
 
     case "IMAGE": {
       const imagePaint = paint as FigImagePaint;
-      const gradientId = createImagePattern(imagePaint, ctx);
-      if (gradientId) {
-        return buildFillWithOpacity(`url(#${gradientId})`, opacity);
+      const patternId = createImagePattern(imagePaint, ctx, elementSize);
+      if (patternId) {
+        return buildFillWithOpacity(`url(#${patternId})`, opacity);
       }
       // Fallback to placeholder if no image found
       return { fill: "#cccccc" };
@@ -413,7 +424,8 @@ function getImageRef(paint: FigImagePaint): string | null {
  */
 function createImagePattern(
   paint: FigImagePaint,
-  ctx: FigSvgRenderContext
+  ctx: FigSvgRenderContext,
+  elementSize?: ElementSize
 ): string | null {
   const imageRef = getImageRef(paint);
   if (!imageRef) {
@@ -426,26 +438,51 @@ function createImagePattern(
     return null;
   }
 
-  return createPatternFromImage(figImage, paint, ctx);
+  return createPatternFromImage({ figImage, paint, ctx, elementSize });
 }
+
+type CreatePatternParams = {
+  readonly figImage: { data: Uint8Array; mimeType: string };
+  readonly paint: FigImagePaint;
+  readonly ctx: FigSvgRenderContext;
+  readonly elementSize?: ElementSize;
+};
 
 /**
  * Create a pattern element from an image
  */
-function createPatternFromImage(
-  figImage: { data: Uint8Array; mimeType: string },
-  paint: FigImagePaint,
-  ctx: FigSvgRenderContext
-): string {
+function createPatternFromImage(params: CreatePatternParams): string {
+  const { figImage, paint, ctx, elementSize } = params;
   const id = ctx.defs.generateId("img");
 
   // Convert image data to base64 data URI
   const base64 = uint8ArrayToBase64(figImage.data);
   const dataUri = `data:${figImage.mimeType};base64,${base64}`;
 
-  // Create pattern with image
-  // Use patternContentUnits="objectBoundingBox" so image coordinates are normalized (0-1)
-  // This means width/height of 1 fills the entire pattern space
+  // If element size is provided, use userSpaceOnUse for correct aspect ratio
+  if (elementSize && elementSize.width > 0 && elementSize.height > 0) {
+    const patternDef = pattern(
+      {
+        id,
+        patternUnits: "userSpaceOnUse",
+        width: elementSize.width,
+        height: elementSize.height,
+      },
+      image({
+        href: dataUri,
+        x: 0,
+        y: 0,
+        width: elementSize.width,
+        height: elementSize.height,
+        preserveAspectRatio: getPreserveAspectRatio(paint),
+      })
+    );
+
+    ctx.defs.add(patternDef);
+    return id;
+  }
+
+  // Fallback: use objectBoundingBox (may distort non-square images)
   const patternDef = pattern(
     {
       id,

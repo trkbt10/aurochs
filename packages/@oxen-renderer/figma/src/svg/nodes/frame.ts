@@ -68,7 +68,7 @@ export function renderFrameNode(
   }
 
   const transformStr = buildTransformAttr(transform);
-  const fillAttrs = getFillAttrs(fillPaints, ctx);
+  const fillAttrs = getFillAttrs(fillPaints, ctx, { elementSize: { width: size.x, height: size.y } });
   const strokeAttrs = getStrokeAttrs({ paints: strokePaints, strokeWeight });
 
   const elements: SvgString[] = [];

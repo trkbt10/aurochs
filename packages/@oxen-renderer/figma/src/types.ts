@@ -34,6 +34,8 @@ export type FigSvgRenderContext = {
   readonly blobs: readonly FigBlob[];
   /** Images extracted from .fig file (keyed by imageRef) */
   readonly images: ReadonlyMap<string, FigImage>;
+  /** Whether to render hidden nodes (visible: false) */
+  readonly showHiddenNodes: boolean;
 };
 
 /**
@@ -43,6 +45,8 @@ export type FigSvgRenderContextConfig = {
   readonly canvasSize?: { width: number; height: number };
   readonly blobs?: readonly FigBlob[];
   readonly images?: ReadonlyMap<string, FigImage>;
+  /** Whether to render hidden nodes (visible: false) */
+  readonly showHiddenNodes?: boolean;
 };
 
 /**
