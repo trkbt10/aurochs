@@ -26,8 +26,8 @@ import { CreationToolbar } from "../panels/CreationToolbar";
 import { EditorModePivot } from "../panels/EditorModePivot";
 import type { CreationMode, EditorMode } from "../context/presentation/editor/types";
 import { createSelectMode } from "../context/presentation/editor/types";
-import type { DrawingPath } from "../path-tools/types";
-import { isCustomGeometry } from "../path-tools/utils/path-commands";
+import type { DrawingPath } from "@oxen-ui/path-tools";
+import { isCustomGeometry } from "../path-tools/adapters";
 import {
   createShapeFromMode,
   getDefaultBoundsForMode,
@@ -38,7 +38,7 @@ import {
 import { createOleGraphicFrame } from "../graphic-frame/factory";
 import { getOleTypeFromFile } from "@oxen-builder/pptx/patcher";
 import type { ShapeBounds } from "../shape/creation-bounds";
-import { drawingPathToCustomGeometry } from "../path-tools/utils/path-commands";
+import { drawingPathToCustomGeometry } from "../path-tools/adapters";
 import {
   isTextEditActive,
   mergeTextIntoBody,

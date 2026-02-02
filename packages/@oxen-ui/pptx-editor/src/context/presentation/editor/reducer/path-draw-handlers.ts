@@ -14,9 +14,9 @@ import {
   isPathDrawDrawing,
   isPathDrawPencil,
 } from "../../../slide/state/path-draw";
-import type { PathAnchorPoint, AnchorPointType, CapturedPoint } from "../../../../path-tools/types";
+import type { PathAnchorPoint, AnchorPointType, CapturedPoint } from "@oxen-ui/path-tools";
 import { createCustomGeometryShape, generateShapeId } from "../../../../shape/factory";
-import { drawingPathToCustomGeometry } from "../../../../path-tools/utils/path-commands";
+import { drawingPathToCustomGeometry } from "../../../../path-tools/adapters";
 import { pushHistory } from "@oxen-ui/editor-core/history";
 
 // =============================================================================

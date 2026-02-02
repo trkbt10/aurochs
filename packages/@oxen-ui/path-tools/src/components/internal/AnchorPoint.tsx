@@ -2,10 +2,11 @@
  * @file Anchor point component
  *
  * Renders an anchor point for path editing with selection and hover states.
+ * Internal component - not exported from the public API.
  */
 
 import React from "react";
-import type { AnchorPointType } from "../types";
+import type { AnchorPointType } from "../../types";
 import { colorTokens } from "@oxen-ui/ui-components/design-tokens";
 
 // =============================================================================

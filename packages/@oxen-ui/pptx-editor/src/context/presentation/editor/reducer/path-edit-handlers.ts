@@ -22,12 +22,12 @@ import {
   updateMovingHandle,
   returnToActiveState,
 } from "../../../slide/state";
-import type { PathPointSelection } from "../../../../path-tools/types";
+import type { PathPointSelection } from "../../../../path-tools/adapters";
 import {
   togglePointInSelection,
   addPointToSelection,
   createEmptyPathSelection,
-} from "../../../../path-tools/types";
+} from "../../../../path-tools/adapters";
 
 // =============================================================================
 // Helper Functions

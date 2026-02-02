@@ -7,12 +7,12 @@
 import type { Pixels } from "@oxen-office/drawing-ml/domain/units";
 import type { ShapeId } from "@oxen-office/pptx/domain/types";
 import type { CustomGeometry } from "@oxen-office/pptx/domain";
+import type { AnchorPointType } from "@oxen-ui/path-tools";
 import type {
   PathPointSelection,
   PathElementId,
-  AnchorPointType,
-} from "../../../path-tools/types";
-import { createEmptyPathSelection } from "../../../path-tools/types";
+} from "../../../path-tools/adapters";
+import { createEmptyPathSelection } from "../../../path-tools/adapters";
 
 // =============================================================================
 // Path Edit State Types

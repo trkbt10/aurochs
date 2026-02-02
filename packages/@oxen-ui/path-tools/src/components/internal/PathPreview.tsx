@@ -2,10 +2,11 @@
  * @file Path preview component
  *
  * Renders SVG path preview for the drawing in progress.
+ * Internal component - not exported from the public API.
  */
 
 import React from "react";
-import type { DrawingPath, PathAnchorPoint } from "../types";
+import type { DrawingPath, PathAnchorPoint } from "../../types";
 import { colorTokens } from "@oxen-ui/ui-components/design-tokens";
 
 // =============================================================================
@@ -167,8 +168,8 @@ export function PreviewSegment({
   // Otherwise, show a straight line preview
   return (
     <line
-      x1={from.x as number}
-      y1={from.y as number}
+      x1={from.x}
+      y1={from.y}
       x2={to.x}
       y2={to.y}
       stroke={strokeColor}

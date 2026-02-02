@@ -5,13 +5,12 @@
  */
 
 import { useCallback, useState, useRef, useEffect } from "react";
-import type { Pixels } from "@oxen-office/drawing-ml/domain/units";
-import { px } from "@oxen-office/drawing-ml/domain/units";
 import type {
   DrawingPath,
   PathAnchorPoint,
   AnchorPointType,
   ModifierKeys,
+  Point,
 } from "../types";
 import {
   createEmptyDrawingPath,
@@ -20,7 +19,7 @@ import {
   closeDrawingPath,
   getModifierKeys,
 } from "../types";
-import { constrainVectorTo45Degrees, distance, mirrorHandle } from "../utils/bezier-math";
+import { constrainVectorTo45Degrees, distance, mirrorHandle } from "../internal/bezier-math";
 
 // =============================================================================
 // Types
@@ -111,8 +110,8 @@ export function usePenTool(callbacks: PenToolCallbacks): UsePenToolReturn {
   const addPoint = useCallback(
     (x: number, y: number, pointType: AnchorPointType) => {
       const newPoint: PathAnchorPoint = {
-        x: px(x),
-        y: px(y),
+        x,
+        y,
         type: pointType,
         handleIn: undefined,
         handleOut: undefined,
@@ -126,8 +125,8 @@ export function usePenTool(callbacks: PenToolCallbacks): UsePenToolReturn {
   const updatePointHandles = useCallback(
     (
       pointIndex: number,
-      handleIn?: { x: Pixels; y: Pixels },
-      handleOut?: { x: Pixels; y: Pixels }
+      handleIn?: Point,
+      handleOut?: Point
     ) => {
       setPath((p) =>
         updatePointInPath(p, pointIndex, (point) => ({
@@ -148,7 +147,7 @@ export function usePenTool(callbacks: PenToolCallbacks): UsePenToolReturn {
       if (path.points.length > 2) {
         const firstPoint = path.points[0];
         const dist = distance(
-          { x: px(x), y: px(y) },
+          { x, y },
           { x: firstPoint.x, y: firstPoint.y }
         );
         if (dist < CLOSE_PATH_THRESHOLD) {
@@ -168,12 +167,12 @@ export function usePenTool(callbacks: PenToolCallbacks): UsePenToolReturn {
         if (modifiers.shift && path.points.length > 0) {
           const lastPoint = path.points[path.points.length - 1];
           const constrained = constrainVectorTo45Degrees(
-            x - (lastPoint.x as number),
-            y - (lastPoint.y as number)
+            x - lastPoint.x,
+            y - lastPoint.y
           );
           return {
-            finalX: (lastPoint.x as number) + constrained.dx,
-            finalY: (lastPoint.y as number) + constrained.dy,
+            finalX: lastPoint.x + constrained.dx,
+            finalY: lastPoint.y + constrained.dy,
           };
         }
         return { finalX: x, finalY: y };
@@ -206,9 +205,9 @@ export function usePenTool(callbacks: PenToolCallbacks): UsePenToolReturn {
 
         // Only create handles if we've moved enough
         if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
-          const handleOut = { x: px(dragStartRef.current.x + dx), y: px(dragStartRef.current.y + dy) };
+          const handleOut: Point = { x: dragStartRef.current.x + dx, y: dragStartRef.current.y + dy };
           const handleIn = mirrorHandle(
-            { x: px(dragStartRef.current.x), y: px(dragStartRef.current.y) },
+            { x: dragStartRef.current.x, y: dragStartRef.current.y },
             handleOut
           );
 
@@ -220,12 +219,12 @@ export function usePenTool(callbacks: PenToolCallbacks): UsePenToolReturn {
           if (modifiers.shift && path.points.length > 0) {
             const lastPoint = path.points[path.points.length - 1];
             const constrained = constrainVectorTo45Degrees(
-              x - (lastPoint.x as number),
-              y - (lastPoint.y as number)
+              x - lastPoint.x,
+              y - lastPoint.y
             );
             return {
-              finalX: (lastPoint.x as number) + constrained.dx,
-              finalY: (lastPoint.y as number) + constrained.dy,
+              finalX: lastPoint.x + constrained.dx,
+              finalY: lastPoint.y + constrained.dy,
             };
           }
           return { finalX: x, finalY: y };
@@ -237,7 +236,7 @@ export function usePenTool(callbacks: PenToolCallbacks): UsePenToolReturn {
         // Check for hover on first point (for close path indicator)
         if (path.points.length > 2) {
           const firstPoint = path.points[0];
-          const dist = distance({ x: px(x), y: px(y) }, { x: firstPoint.x, y: firstPoint.y });
+          const dist = distance({ x, y }, { x: firstPoint.x, y: firstPoint.y });
           setHoverPointIndex(dist < CLOSE_PATH_THRESHOLD ? 0 : undefined);
         }
       }

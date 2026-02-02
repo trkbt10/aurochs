@@ -1,12 +1,31 @@
 /**
  * @file Path tools type definitions
  *
- * Core types for pen tool, pencil tool, and path editing functionality.
+ * Generic types for pen tool, pencil tool, and path editing functionality.
+ * These types are PPTX/OOXML independent.
  */
 
-import type { Pixels } from "@oxen-office/drawing-ml/domain/units";
-import type { ShapeId } from "@oxen-office/pptx/domain/types";
-import type { Point } from "@oxen-office/pptx/domain";
+// =============================================================================
+// Basic Geometry Types
+// =============================================================================
+
+/**
+ * A 2D point with x and y coordinates
+ */
+export type Point = {
+  readonly x: number;
+  readonly y: number;
+};
+
+/**
+ * A bounding rectangle
+ */
+export type Bounds = {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+};
 
 // =============================================================================
 // Anchor Point Types
@@ -23,10 +42,10 @@ export type AnchorPointType = "smooth" | "corner";
  * A single anchor point in a path being drawn or edited
  */
 export type PathAnchorPoint = {
-  /** X coordinate in slide coordinates */
-  readonly x: Pixels;
-  /** Y coordinate in slide coordinates */
-  readonly y: Pixels;
+  /** X coordinate */
+  readonly x: number;
+  /** Y coordinate */
+  readonly y: number;
   /** Point type (smooth or corner) */
   readonly type: AnchorPointType;
   /** Handle for curve entering this point (control2 of incoming cubic bezier) */
@@ -40,7 +59,7 @@ export type PathAnchorPoint = {
 // =============================================================================
 
 /**
- * In-progress path data (before committing to shape)
+ * Path data structure for editing
  */
 export type DrawingPath = {
   /** Anchor points in the path */
@@ -105,10 +124,10 @@ export function closeDrawingPath(path: DrawingPath): DrawingPath {
  * Includes pressure and timing data for smoothing
  */
 export type CapturedPoint = {
-  /** X coordinate in slide coordinates */
-  readonly x: Pixels;
-  /** Y coordinate in slide coordinates */
-  readonly y: Pixels;
+  /** X coordinate */
+  readonly x: number;
+  /** Y coordinate */
+  readonly y: number;
   /** Pressure value from 0 to 1 (from PointerEvent.pressure) */
   readonly pressure: number;
   /** Timestamp in milliseconds (from performance.now()) */
@@ -133,123 +152,6 @@ export type SmoothingOptions = {
   /** Minimum distance between sampled points */
   readonly minSamplingDistance: number;
 };
-
-// =============================================================================
-// Path Element Selection Types
-// =============================================================================
-
-/**
- * Selectable path element types
- */
-export type PathElementType =
-  | "anchor" // Main anchor point
-  | "handleIn" // Incoming bezier handle
-  | "handleOut"; // Outgoing bezier handle
-
-/**
- * Unique identifier for a path element
- */
-export type PathElementId = {
-  /** Shape containing the path */
-  readonly shapeId: ShapeId;
-  /** Which path in CustomGeometry.paths */
-  readonly pathIndex: number;
-  /** Which point in the path (command index for anchors) */
-  readonly pointIndex: number;
-  /** Type of element */
-  readonly elementType: PathElementType;
-};
-
-/**
- * Path point selection state
- */
-export type PathPointSelection = {
-  /** Selected element IDs */
-  readonly selectedElements: readonly PathElementId[];
-  /** Primary selected element (for single-element operations) */
-  readonly primaryElement: PathElementId | undefined;
-};
-
-/**
- * Create empty path point selection
- */
-export function createEmptyPathSelection(): PathPointSelection {
-  return {
-    selectedElements: [],
-    primaryElement: undefined,
-  };
-}
-
-/**
- * Check if a path element is selected
- */
-export function isPathElementSelected(
-  selection: PathPointSelection,
-  element: PathElementId
-): boolean {
-  return selection.selectedElements.some((e) => pathElementIdsEqual(e, element));
-}
-
-/**
- * Add a point to selection (without toggle)
- */
-export function addPointToSelection(
-  selection: PathPointSelection,
-  element: PathElementId
-): PathPointSelection {
-  if (isPathElementSelected(selection, element)) {
-    return selection;
-  }
-  return {
-    selectedElements: [...selection.selectedElements, element],
-    primaryElement: selection.primaryElement ?? element,
-  };
-}
-
-/**
- * Toggle a point in selection
- */
-export function togglePointInSelection(
-  selection: PathPointSelection,
-  element: PathElementId
-): PathPointSelection {
-  if (isPathElementSelected(selection, element)) {
-    // Remove from selection
-    const filtered = selection.selectedElements.filter(
-      (e) => !pathElementIdsEqual(e, element)
-    );
-    const shouldRemovePrimary = selection.primaryElement && pathElementIdsEqual(selection.primaryElement, element);
-    const primaryElement = shouldRemovePrimary ? filtered[0] : selection.primaryElement;
-    return {
-      selectedElements: filtered,
-      primaryElement,
-    };
-  }
-  // Add to selection
-  return addPointToSelection(selection, element);
-}
-
-/**
- * Create a path element ID string for use as map keys
- */
-export function pathElementIdToString(id: PathElementId): string {
-  return `${id.shapeId}:${id.pathIndex}:${id.pointIndex}:${id.elementType}`;
-}
-
-/**
- * Check if two path element IDs are equal
- */
-export function pathElementIdsEqual(
-  a: PathElementId,
-  b: PathElementId
-): boolean {
-  return (
-    a.shapeId === b.shapeId &&
-    a.pathIndex === b.pathIndex &&
-    a.pointIndex === b.pointIndex &&
-    a.elementType === b.elementType
-  );
-}
 
 // =============================================================================
 // Modifier Keys State

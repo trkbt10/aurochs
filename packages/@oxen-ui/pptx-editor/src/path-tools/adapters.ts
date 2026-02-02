@@ -1,14 +1,79 @@
 /**
- * @file Path command conversion utilities
+ * @file PPTX path adapters
  *
- * Converts between DrawingPath (for editing) and PathCommand[] (for storage).
+ * Converts between generic DrawingPath and PPTX-specific PathCommand/CustomGeometry.
+ * This module bridges the generic @oxen-ui/path-tools types with PPTX domain types.
  */
 
 import type { Point, PathCommand, GeometryPath, CustomGeometry, Geometry } from "@oxen-office/pptx/domain";
-import type { Pixels } from "@oxen-office/drawing-ml/domain/units";
-import type { Bounds } from "@oxen-office/pptx/domain/types";
+import type { Bounds, ShapeId } from "@oxen-office/pptx/domain/types";
 import { px } from "@oxen-office/drawing-ml/domain/units";
-import type { DrawingPath, PathAnchorPoint } from "../types";
+import type { Pixels } from "@oxen-office/drawing-ml/domain/units";
+import type {
+  DrawingPath as GenericDrawingPath,
+  PathAnchorPoint as GenericPathAnchorPoint,
+  Point as GenericPoint,
+  Bounds as GenericBounds,
+} from "@oxen-ui/path-tools";
+
+// =============================================================================
+// PPTX-specific DrawingPath Types (with branded Pixels)
+// =============================================================================
+
+/**
+ * PPTX-specific anchor point with branded Pixels coordinates
+ */
+export type PptxPathAnchorPoint = {
+  readonly x: Pixels;
+  readonly y: Pixels;
+  readonly type: "smooth" | "corner";
+  readonly handleIn?: Point;
+  readonly handleOut?: Point;
+};
+
+/**
+ * PPTX-specific drawing path with branded Pixels coordinates
+ */
+export type PptxDrawingPath = {
+  readonly points: readonly PptxPathAnchorPoint[];
+  readonly isClosed: boolean;
+};
+
+// =============================================================================
+// Type Conversion: Generic <-> PPTX
+// =============================================================================
+
+/**
+ * Convert generic DrawingPath (from @oxen-ui/path-tools) to PPTX DrawingPath (with Pixels)
+ */
+export function toPixelsPath(path: GenericDrawingPath): PptxDrawingPath {
+  return {
+    ...path,
+    points: path.points.map((point) => ({
+      x: px(point.x),
+      y: px(point.y),
+      type: point.type,
+      handleIn: point.handleIn ? { x: px(point.handleIn.x), y: px(point.handleIn.y) } : undefined,
+      handleOut: point.handleOut ? { x: px(point.handleOut.x), y: px(point.handleOut.y) } : undefined,
+    })),
+  };
+}
+
+/**
+ * Convert PPTX DrawingPath (with Pixels) to generic DrawingPath (with numbers)
+ */
+export function fromPixelsPath(path: PptxDrawingPath): GenericDrawingPath {
+  return {
+    ...path,
+    points: path.points.map((point) => ({
+      x: point.x as number,
+      y: point.y as number,
+      type: point.type,
+      handleIn: point.handleIn ? { x: point.handleIn.x as number, y: point.handleIn.y as number } : undefined,
+      handleOut: point.handleOut ? { x: point.handleOut.x as number, y: point.handleOut.y as number } : undefined,
+    })),
+  };
+}
 
 // =============================================================================
 // Drawing Path to Path Commands
@@ -17,10 +82,10 @@ import type { DrawingPath, PathAnchorPoint } from "../types";
 /**
  * Convert a DrawingPath to PathCommand array for CustomGeometry
  *
- * @param path - The drawing path to convert
+ * @param path - The drawing path to convert (generic or PPTX)
  * @returns Array of path commands
  */
-export function drawingPathToCommands(path: DrawingPath): readonly PathCommand[] {
+export function drawingPathToCommands(path: GenericDrawingPath | PptxDrawingPath): readonly PathCommand[] {
   const { points, isClosed } = path;
   if (points.length === 0) {
     return [];
@@ -31,7 +96,7 @@ export function drawingPathToCommands(path: DrawingPath): readonly PathCommand[]
   // Start with moveTo
   commands.push({
     type: "moveTo",
-    point: { x: points[0].x, y: points[0].y },
+    point: { x: px(points[0].x as number), y: px(points[0].y as number) },
   });
 
   // Add segments between points
@@ -61,21 +126,28 @@ export function drawingPathToCommands(path: DrawingPath): readonly PathCommand[]
 /**
  * Create a segment command between two anchor points
  */
-function createSegmentCommand(from: PathAnchorPoint, to: PathAnchorPoint): PathCommand {
+function createSegmentCommand(
+  from: GenericPathAnchorPoint | PptxPathAnchorPoint,
+  to: GenericPathAnchorPoint | PptxPathAnchorPoint
+): PathCommand {
   // If either point has handles, use cubic bezier
   if (from.handleOut || to.handleIn) {
     return {
       type: "cubicBezierTo",
-      control1: from.handleOut ?? { x: from.x, y: from.y },
-      control2: to.handleIn ?? { x: to.x, y: to.y },
-      end: { x: to.x, y: to.y },
+      control1: from.handleOut
+        ? { x: px(from.handleOut.x as number), y: px(from.handleOut.y as number) }
+        : { x: px(from.x as number), y: px(from.y as number) },
+      control2: to.handleIn
+        ? { x: px(to.handleIn.x as number), y: px(to.handleIn.y as number) }
+        : { x: px(to.x as number), y: px(to.y as number) },
+      end: { x: px(to.x as number), y: px(to.y as number) },
     };
   }
 
   // Otherwise, straight line
   return {
     type: "lineTo",
-    point: { x: to.x, y: to.y },
+    point: { x: px(to.x as number), y: px(to.y as number) },
   };
 }
 
@@ -87,18 +159,18 @@ function createSegmentCommand(from: PathAnchorPoint, to: PathAnchorPoint): PathC
  * Convert PathCommand array back to DrawingPath for editing
  *
  * @param commands - The path commands to convert
- * @returns Drawing path suitable for editing
+ * @returns Drawing path suitable for editing (generic number-based)
  */
-export function commandsToDrawingPath(commands: readonly PathCommand[]): DrawingPath {
+export function commandsToDrawingPath(commands: readonly PathCommand[]): GenericDrawingPath {
   if (commands.length === 0) {
     return { points: [], isClosed: false };
   }
 
-  const points: PathAnchorPoint[] = [];
+  const points: GenericPathAnchorPoint[] = [];
   // eslint-disable-next-line no-restricted-syntax -- tracking current position through commands
-  let currentX: Pixels = px(0);
+  let currentX = 0;
   // eslint-disable-next-line no-restricted-syntax -- tracking current position through commands
-  let currentY: Pixels = px(0);
+  let currentY = 0;
   // eslint-disable-next-line no-restricted-syntax -- tracking closed state
   let isClosed = false;
 
@@ -108,8 +180,8 @@ export function commandsToDrawingPath(commands: readonly PathCommand[]): Drawing
     switch (cmd.type) {
       case "moveTo": {
         // Start a new point
-        currentX = cmd.point.x;
-        currentY = cmd.point.y;
+        currentX = cmd.point.x as number;
+        currentY = cmd.point.y as number;
         points.push({
           x: currentX,
           y: currentY,
@@ -122,8 +194,8 @@ export function commandsToDrawingPath(commands: readonly PathCommand[]): Drawing
 
       case "lineTo": {
         // Add a corner point
-        currentX = cmd.point.x;
-        currentY = cmd.point.y;
+        currentX = cmd.point.x as number;
+        currentY = cmd.point.y as number;
         points.push({
           x: currentX,
           y: currentY,
@@ -140,15 +212,15 @@ export function commandsToDrawingPath(commands: readonly PathCommand[]): Drawing
           const prevIndex = points.length - 1;
           points[prevIndex] = {
             ...points[prevIndex],
-            handleOut: cmd.control1,
+            handleOut: { x: cmd.control1.x as number, y: cmd.control1.y as number },
           };
         }
 
         // Add a new point with handleIn
-        currentX = cmd.end.x;
-        currentY = cmd.end.y;
+        currentX = cmd.end.x as number;
+        currentY = cmd.end.y as number;
         const isSmoothPoint = isSmooth(
-          cmd.control2,
+          { x: cmd.control2.x as number, y: cmd.control2.y as number },
           { x: currentX, y: currentY },
           commands[i + 1]
         );
@@ -157,7 +229,7 @@ export function commandsToDrawingPath(commands: readonly PathCommand[]): Drawing
           x: currentX,
           y: currentY,
           type: isSmoothPoint ? "smooth" : "corner",
-          handleIn: cmd.control2,
+          handleIn: { x: cmd.control2.x as number, y: cmd.control2.y as number },
           handleOut: undefined,
         });
         break;
@@ -167,13 +239,13 @@ export function commandsToDrawingPath(commands: readonly PathCommand[]): Drawing
         // Convert quadratic to cubic approximation
         const prevX = currentX;
         const prevY = currentY;
-        const ctrl1: Point = {
-          x: px((prevX as number) + (2 / 3) * ((cmd.control.x as number) - (prevX as number))),
-          y: px((prevY as number) + (2 / 3) * ((cmd.control.y as number) - (prevY as number))),
+        const ctrl1: GenericPoint = {
+          x: prevX + (2 / 3) * ((cmd.control.x as number) - prevX),
+          y: prevY + (2 / 3) * ((cmd.control.y as number) - prevY),
         };
-        const ctrl2: Point = {
-          x: px((cmd.end.x as number) + (2 / 3) * ((cmd.control.x as number) - (cmd.end.x as number))),
-          y: px((cmd.end.y as number) + (2 / 3) * ((cmd.control.y as number) - (cmd.end.y as number))),
+        const ctrl2: GenericPoint = {
+          x: (cmd.end.x as number) + (2 / 3) * ((cmd.control.x as number) - (cmd.end.x as number)),
+          y: (cmd.end.y as number) + (2 / 3) * ((cmd.control.y as number) - (cmd.end.y as number)),
         };
 
         // Update previous point's handleOut
@@ -185,8 +257,8 @@ export function commandsToDrawingPath(commands: readonly PathCommand[]): Drawing
           };
         }
 
-        currentX = cmd.end.x;
-        currentY = cmd.end.y;
+        currentX = cmd.end.x as number;
+        currentY = cmd.end.y as number;
         points.push({
           x: currentX,
           y: currentY,
@@ -213,11 +285,15 @@ export function commandsToDrawingPath(commands: readonly PathCommand[]): Drawing
           const lastCmd = commands[i - 1];
           if (lastCmd && lastCmd.type === "cubicBezierTo") {
             // The first point might need handleIn from the closing bezier
-            const shouldBeSmooth = isSmooth(lastCmd.control2, { x: points[0].x, y: points[0].y }, commands[1]);
+            const shouldBeSmooth = isSmooth(
+              { x: lastCmd.control2.x as number, y: lastCmd.control2.y as number },
+              { x: points[0].x, y: points[0].y },
+              commands[1]
+            );
             const smoothType = shouldBeSmooth ? "smooth" : points[0].type;
             points[0] = {
               ...points[0],
-              handleIn: lastCmd.control2,
+              handleIn: { x: lastCmd.control2.x as number, y: lastCmd.control2.y as number },
               type: smoothType,
             };
           }
@@ -234,8 +310,8 @@ export function commandsToDrawingPath(commands: readonly PathCommand[]): Drawing
  * Check if a point should be considered smooth based on handle alignment
  */
 function isSmooth(
-  handleIn: Point | undefined,
-  anchor: Point,
+  handleIn: GenericPoint | undefined,
+  anchor: GenericPoint,
   nextCmd: PathCommand | undefined
 ): boolean {
   if (!handleIn || !nextCmd) {
@@ -243,9 +319,9 @@ function isSmooth(
   }
 
   // eslint-disable-next-line no-restricted-syntax -- computed from next command
-  let handleOut: Point | undefined;
+  let handleOut: GenericPoint | undefined;
   if (nextCmd.type === "cubicBezierTo") {
-    handleOut = nextCmd.control1;
+    handleOut = { x: nextCmd.control1.x as number, y: nextCmd.control1.y as number };
   } else if (nextCmd.type === "lineTo" || nextCmd.type === "moveTo") {
     return false;
   }
@@ -255,14 +331,8 @@ function isSmooth(
   }
 
   // Check if handles are roughly collinear (within 10 degrees)
-  const inAngle = Math.atan2(
-    (anchor.y as number) - (handleIn.y as number),
-    (anchor.x as number) - (handleIn.x as number)
-  );
-  const outAngle = Math.atan2(
-    (handleOut.y as number) - (anchor.y as number),
-    (handleOut.x as number) - (anchor.x as number)
-  );
+  const inAngle = Math.atan2(anchor.y - handleIn.y, anchor.x - handleIn.x);
+  const outAngle = Math.atan2(handleOut.y - anchor.y, handleOut.x - anchor.x);
 
   const angleDiff = Math.abs(inAngle - outAngle);
   const normalizedDiff = Math.min(angleDiff, Math.PI * 2 - angleDiff);
@@ -278,9 +348,9 @@ function isSmooth(
  * Calculate the bounding box of a drawing path
  *
  * @param path - The drawing path
- * @returns Bounding box
+ * @returns Bounding box with Pixels
  */
-export function calculatePathBounds(path: DrawingPath): Bounds {
+export function calculatePathBounds(path: GenericDrawingPath | PptxDrawingPath): Bounds {
   if (path.points.length === 0) {
     return { x: px(0), y: px(0), width: px(0), height: px(0) };
   }
@@ -333,7 +403,7 @@ export function calculatePathBounds(path: DrawingPath): Bounds {
  * @returns GeometryPath for CustomGeometry
  */
 export function createGeometryPath(
-  path: DrawingPath,
+  path: GenericDrawingPath | PptxDrawingPath,
   width: Pixels,
   height: Pixels
 ): GeometryPath {
@@ -373,7 +443,7 @@ export function customGeometryToDrawingPath(
   geometry: CustomGeometry,
   shapeWidth: number,
   shapeHeight: number
-): DrawingPath | undefined {
+): GenericDrawingPath | undefined {
   if (geometry.paths.length === 0) {
     return undefined;
   }
@@ -403,21 +473,21 @@ export function customGeometryToDrawingPath(
  * @returns CustomGeometry ready for the shape
  */
 export function drawingPathToCustomGeometry(
-  path: DrawingPath,
+  path: GenericDrawingPath | PptxDrawingPath,
   offsetX: number = 0,
   offsetY: number = 0
 ): { geometry: CustomGeometry; bounds: Bounds } {
   // Calculate bounds from the path
   const rawBounds = calculatePathBounds(path);
 
-  function translatePoint(p: Point): Point {
+  function translatePoint(p: GenericPoint | Point): Point {
     return {
       x: px((p.x as number) - (rawBounds.x as number)),
       y: px((p.y as number) - (rawBounds.y as number)),
     };
   }
 
-  function translateOptionalHandle(handle: Point | undefined): Point | undefined {
+  function translateOptionalHandle(handle: GenericPoint | Point | undefined): Point | undefined {
     if (!handle) {
       return undefined;
     }
@@ -433,7 +503,7 @@ export function drawingPathToCustomGeometry(
     handleOut: translateOptionalHandle(point.handleOut),
   }));
 
-  const translatedPath: DrawingPath = {
+  const translatedPath: PptxDrawingPath = {
     points: translatedPoints,
     isClosed: path.isClosed,
   };
@@ -525,4 +595,121 @@ function scaleCommand(cmd: PathCommand, scaleX: number, scaleY: number): PathCom
     case "close":
       return { type: "close" };
   }
+}
+
+// =============================================================================
+// Path Element Selection Types (PPTX-specific, uses ShapeId)
+// =============================================================================
+
+/**
+ * Selectable path element types
+ */
+export type PathElementType =
+  | "anchor" // Main anchor point
+  | "handleIn" // Incoming bezier handle
+  | "handleOut"; // Outgoing bezier handle
+
+/**
+ * Unique identifier for a path element
+ */
+export type PathElementId = {
+  /** Shape containing the path */
+  readonly shapeId: ShapeId;
+  /** Which path in CustomGeometry.paths */
+  readonly pathIndex: number;
+  /** Which point in the path (command index for anchors) */
+  readonly pointIndex: number;
+  /** Type of element */
+  readonly elementType: PathElementType;
+};
+
+/**
+ * Path point selection state
+ */
+export type PathPointSelection = {
+  /** Selected element IDs */
+  readonly selectedElements: readonly PathElementId[];
+  /** Primary selected element (for single-element operations) */
+  readonly primaryElement: PathElementId | undefined;
+};
+
+/**
+ * Create empty path point selection
+ */
+export function createEmptyPathSelection(): PathPointSelection {
+  return {
+    selectedElements: [],
+    primaryElement: undefined,
+  };
+}
+
+/**
+ * Check if a path element is selected
+ */
+export function isPathElementSelected(
+  selection: PathPointSelection,
+  element: PathElementId
+): boolean {
+  return selection.selectedElements.some((e) => pathElementIdsEqual(e, element));
+}
+
+/**
+ * Add a point to selection (without toggle)
+ */
+export function addPointToSelection(
+  selection: PathPointSelection,
+  element: PathElementId
+): PathPointSelection {
+  if (isPathElementSelected(selection, element)) {
+    return selection;
+  }
+  return {
+    selectedElements: [...selection.selectedElements, element],
+    primaryElement: selection.primaryElement ?? element,
+  };
+}
+
+/**
+ * Toggle a point in selection
+ */
+export function togglePointInSelection(
+  selection: PathPointSelection,
+  element: PathElementId
+): PathPointSelection {
+  if (isPathElementSelected(selection, element)) {
+    // Remove from selection
+    const filtered = selection.selectedElements.filter(
+      (e) => !pathElementIdsEqual(e, element)
+    );
+    const shouldRemovePrimary = selection.primaryElement && pathElementIdsEqual(selection.primaryElement, element);
+    const primaryElement = shouldRemovePrimary ? filtered[0] : selection.primaryElement;
+    return {
+      selectedElements: filtered,
+      primaryElement,
+    };
+  }
+  // Add to selection
+  return addPointToSelection(selection, element);
+}
+
+/**
+ * Create a path element ID string for use as map keys
+ */
+export function pathElementIdToString(id: PathElementId): string {
+  return `${id.shapeId}:${id.pathIndex}:${id.pointIndex}:${id.elementType}`;
+}
+
+/**
+ * Check if two path element IDs are equal
+ */
+export function pathElementIdsEqual(
+  a: PathElementId,
+  b: PathElementId
+): boolean {
+  return (
+    a.shapeId === b.shapeId &&
+    a.pathIndex === b.pathIndex &&
+    a.pointIndex === b.pointIndex &&
+    a.elementType === b.elementType
+  );
 }

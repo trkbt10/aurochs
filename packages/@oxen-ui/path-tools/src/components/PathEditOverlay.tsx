@@ -1,16 +1,15 @@
 /**
  * @file Path edit overlay component
  *
- * Overlay component for editing existing custom geometry paths.
+ * Overlay component for editing existing paths.
  */
 
 import React, { useCallback, useEffect } from "react";
-import { px } from "@oxen-office/drawing-ml/domain/units";
-import type { DrawingPath } from "../types";
+import type { DrawingPath, Point, ModifierKeys } from "../types";
 import { getModifierKeys } from "../types";
-import { AnchorPoint } from "./AnchorPoint";
-import { HandlePair } from "./ControlHandle";
-import { PathPreview } from "./PathPreview";
+import { AnchorPoint } from "./internal/AnchorPoint";
+import { HandlePair } from "./internal/ControlHandle";
+import { PathPreview } from "./internal/PathPreview";
 import { usePathEdit } from "../hooks/usePathEdit";
 
 type PathPoint = DrawingPath["points"][number];
@@ -19,8 +18,8 @@ type PathHandle = NonNullable<PathPoint["handleIn"]>;
 function shiftHandle(args: { readonly handle: PathHandle; readonly dx: number; readonly dy: number }): PathHandle {
   const { handle, dx, dy } = args;
   return {
-    x: px((handle.x as number) + dx),
-    y: px((handle.y as number) + dy),
+    x: handle.x + dx,
+    y: handle.y + dy,
   };
 }
 
@@ -36,8 +35,8 @@ function shiftPathPoint(args: { readonly point: PathPoint; readonly dx: number; 
   const { point, dx, dy } = args;
   return {
     ...point,
-    x: px((point.x as number) + dx),
-    y: px((point.y as number) + dy),
+    x: point.x + dx,
+    y: point.y + dy,
     handleIn: shiftOptionalHandle({ handle: point.handleIn, dx, dy }),
     handleOut: shiftOptionalHandle({ handle: point.handleOut, dx, dy }),
   };
@@ -151,7 +150,9 @@ export function PathEditOverlay({
   // Handle pointer down on the overlay
   const handlePointerDown = useCallback(
     (e: React.PointerEvent) => {
-      if (!isActive) {return;}
+      if (!isActive) {
+        return;
+      }
       e.preventDefault();
       e.stopPropagation();
 
@@ -167,7 +168,9 @@ export function PathEditOverlay({
   // Handle pointer move on the overlay
   const handlePointerMove = useCallback(
     (e: React.PointerEvent) => {
-      if (!isActive) {return;}
+      if (!isActive) {
+        return;
+      }
 
       const rect = e.currentTarget.getBoundingClientRect();
       const { x, y } = clientToSlideCoords(e.clientX, e.clientY, rect);
@@ -181,7 +184,9 @@ export function PathEditOverlay({
   // Handle key down
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (!isActive) {return;}
+      if (!isActive) {
+        return;
+      }
       onKeyDown(e);
     },
     [isActive, onKeyDown]
@@ -220,18 +225,18 @@ export function PathEditOverlay({
         <React.Fragment key={index}>
           {/* Handles for this point */}
           <HandlePair
-            anchorX={point.x as number}
-            anchorY={point.y as number}
-            handleIn={point.handleIn ? { x: point.handleIn.x as number, y: point.handleIn.y as number } : undefined}
-            handleOut={point.handleOut ? { x: point.handleOut.x as number, y: point.handleOut.y as number } : undefined}
+            anchorX={point.x}
+            anchorY={point.y}
+            handleIn={point.handleIn ? { x: point.handleIn.x, y: point.handleIn.y } : undefined}
+            handleOut={point.handleOut ? { x: point.handleOut.x, y: point.handleOut.y } : undefined}
             onHandleInPointerDown={(e) => onHandlePointerDown(index, "in", e)}
             onHandleOutPointerDown={(e) => onHandlePointerDown(index, "out", e)}
           />
 
           {/* Anchor point */}
           <AnchorPoint
-            x={point.x as number}
-            y={point.y as number}
+            x={point.x}
+            y={point.y}
             index={index}
             pointType={point.type}
             isSelected={selectedPoints.includes(index)}
@@ -252,8 +257,151 @@ export function PathEditOverlay({
         fontSize={12}
         style={{ pointerEvents: "none" }}
       >
-        Enter: 確定 | Escape: キャンセル | Delete: 選択ポイント削除 | Alt+クリック: スムーズ/コーナー切替
+        Enter: Commit | Escape: Cancel | Delete: Remove selected | Alt+Click: Toggle smooth/corner
       </text>
+    </svg>
+  );
+}
+
+/**
+ * Controlled path edit overlay for use in reducer-based state management
+ *
+ * This version takes state and callbacks as props instead of using the hook internally.
+ */
+export function PathEditOverlayControlled({
+  path,
+  selectedPoints,
+  hoverPointIndex,
+  slideWidth,
+  slideHeight,
+  isActive,
+  onPointerDown,
+  onPointerMove,
+  onPointerUp,
+  onAnchorPointerDown,
+  onHandlePointerDown,
+  onAnchorHover,
+}: {
+  readonly path: DrawingPath;
+  readonly selectedPoints: readonly number[];
+  readonly hoverPointIndex: number | undefined;
+  readonly slideWidth: number;
+  readonly slideHeight: number;
+  readonly isActive: boolean;
+  readonly onPointerDown: (x: number, y: number, modifiers: ModifierKeys) => void;
+  readonly onPointerMove: (x: number, y: number, modifiers: ModifierKeys) => void;
+  readonly onPointerUp: () => void;
+  readonly onAnchorPointerDown: (index: number, e: React.PointerEvent) => void;
+  readonly onHandlePointerDown: (index: number, side: "in" | "out", e: React.PointerEvent) => void;
+  readonly onAnchorHover: (index: number | undefined) => void;
+}): React.ReactElement | null {
+  // Convert client coordinates to SVG/slide coordinates
+  const clientToSlideCoords = useCallback(
+    (clientX: number, clientY: number, rect: DOMRect) => {
+      const scaleX = slideWidth / rect.width;
+      const scaleY = slideHeight / rect.height;
+      const scale = Math.min(scaleX, scaleY);
+
+      const scaledWidth = slideWidth / scale;
+      const scaledHeight = slideHeight / scale;
+      const offsetXCalc = (rect.width - scaledWidth) / 2;
+      const offsetYCalc = (rect.height - scaledHeight) / 2;
+
+      const x = (clientX - rect.left - offsetXCalc) * scale;
+      const y = (clientY - rect.top - offsetYCalc) * scale;
+
+      return { x, y };
+    },
+    [slideWidth, slideHeight]
+  );
+
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      if (!isActive) {
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+
+      const rect = e.currentTarget.getBoundingClientRect();
+      const { x, y } = clientToSlideCoords(e.clientX, e.clientY, rect);
+      const modifiers = getModifierKeys(e);
+
+      onPointerDown(x, y, modifiers);
+    },
+    [isActive, onPointerDown, clientToSlideCoords]
+  );
+
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      if (!isActive) {
+        return;
+      }
+
+      const rect = e.currentTarget.getBoundingClientRect();
+      const { x, y } = clientToSlideCoords(e.clientX, e.clientY, rect);
+      const modifiers = getModifierKeys(e);
+
+      onPointerMove(x, y, modifiers);
+    },
+    [isActive, onPointerMove, clientToSlideCoords]
+  );
+
+  if (!isActive) {
+    return null;
+  }
+
+  return (
+    <svg
+      viewBox={`0 0 ${slideWidth} ${slideHeight}`}
+      preserveAspectRatio="xMidYMid meet"
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        width: "100%",
+        height: "100%",
+        cursor: "default",
+        pointerEvents: "all",
+      }}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={onPointerUp}
+      tabIndex={0}
+    >
+      {/* Path preview */}
+      {path.points.length > 1 && (
+        <PathPreview path={path} isDashed={false} />
+      )}
+
+      {/* Anchor points and handles */}
+      {path.points.map((point, index) => (
+        <React.Fragment key={index}>
+          {/* Handles for this point */}
+          <HandlePair
+            anchorX={point.x}
+            anchorY={point.y}
+            handleIn={point.handleIn ? { x: point.handleIn.x, y: point.handleIn.y } : undefined}
+            handleOut={point.handleOut ? { x: point.handleOut.x, y: point.handleOut.y } : undefined}
+            onHandleInPointerDown={(e) => onHandlePointerDown(index, "in", e)}
+            onHandleOutPointerDown={(e) => onHandlePointerDown(index, "out", e)}
+          />
+
+          {/* Anchor point */}
+          <AnchorPoint
+            x={point.x}
+            y={point.y}
+            index={index}
+            pointType={point.type}
+            isSelected={selectedPoints.includes(index)}
+            isFirst={index === 0}
+            isHovered={hoverPointIndex === index}
+            onPointerDown={(e) => onAnchorPointerDown(index, e)}
+            onPointerEnter={() => onAnchorHover(index)}
+            onPointerLeave={() => onAnchorHover(undefined)}
+          />
+        </React.Fragment>
+      ))}
     </svg>
   );
 }

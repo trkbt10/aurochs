@@ -2,6 +2,7 @@
  * @file Control handle component
  *
  * Renders a bezier control handle with direction line from anchor to handle.
+ * Internal component - not exported from the public API.
  */
 
 import React from "react";

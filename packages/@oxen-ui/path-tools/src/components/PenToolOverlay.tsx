@@ -8,9 +8,9 @@
 import React, { useCallback } from "react";
 import type { DrawingPath, ModifierKeys } from "../types";
 import { getModifierKeys } from "../types";
-import { AnchorPoint, PreviewAnchorPoint } from "./AnchorPoint";
-import { HandlePair } from "./ControlHandle";
-import { PathPreview, PreviewSegment } from "./PathPreview";
+import { AnchorPoint, PreviewAnchorPoint } from "./internal/AnchorPoint";
+import { HandlePair } from "./internal/ControlHandle";
+import { PathPreview, PreviewSegment } from "./internal/PathPreview";
 import { usePenTool } from "../hooks/usePenTool";
 
 // =============================================================================
@@ -179,16 +179,16 @@ export function PenToolOverlay({
         <React.Fragment key={index}>
           {/* Handles for this point */}
           <HandlePair
-            anchorX={point.x as number}
-            anchorY={point.y as number}
-            handleIn={point.handleIn ? { x: point.handleIn.x as number, y: point.handleIn.y as number } : undefined}
-            handleOut={point.handleOut ? { x: point.handleOut.x as number, y: point.handleOut.y as number } : undefined}
+            anchorX={point.x}
+            anchorY={point.y}
+            handleIn={point.handleIn ? { x: point.handleIn.x, y: point.handleIn.y } : undefined}
+            handleOut={point.handleOut ? { x: point.handleOut.x, y: point.handleOut.y } : undefined}
           />
 
           {/* Anchor point */}
           <AnchorPoint
-            x={point.x as number}
-            y={point.y as number}
+            x={point.x}
+            y={point.y}
             index={index}
             pointType={point.type}
             isSelected={index === path.points.length - 1}
@@ -335,16 +335,16 @@ export function PenToolOverlayControlled({
         <React.Fragment key={index}>
           {/* Handles for this point */}
           <HandlePair
-            anchorX={point.x as number}
-            anchorY={point.y as number}
-            handleIn={point.handleIn ? { x: point.handleIn.x as number, y: point.handleIn.y as number } : undefined}
-            handleOut={point.handleOut ? { x: point.handleOut.x as number, y: point.handleOut.y as number } : undefined}
+            anchorX={point.x}
+            anchorY={point.y}
+            handleIn={point.handleIn ? { x: point.handleIn.x, y: point.handleIn.y } : undefined}
+            handleOut={point.handleOut ? { x: point.handleOut.x, y: point.handleOut.y } : undefined}
           />
 
           {/* Anchor point */}
           <AnchorPoint
-            x={point.x as number}
-            y={point.y as number}
+            x={point.x}
+            y={point.y}
             index={index}
             pointType={point.type}
             isSelected={index === path.points.length - 1}

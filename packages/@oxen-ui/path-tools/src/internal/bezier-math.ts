@@ -2,11 +2,10 @@
  * @file Bezier math utilities
  *
  * Mathematical functions for working with bezier curves.
+ * Internal module - not exported from the public API.
  */
 
-import type { Point } from "@oxen-office/pptx/domain";
-import type { Bounds } from "@oxen-office/pptx/domain/types";
-import { px } from "@oxen-office/drawing-ml/domain/units";
+import type { Point, Bounds } from "../types";
 
 // =============================================================================
 // Basic Math Utilities
@@ -24,8 +23,8 @@ export function lerp(a: number, b: number, t: number): number {
  */
 export function lerpPoint(p0: Point, p1: Point, t: number): Point {
   return {
-    x: px(lerp(p0.x as number, p1.x as number, t)),
-    y: px(lerp(p0.y as number, p1.y as number, t)),
+    x: lerp(p0.x, p1.x, t),
+    y: lerp(p0.y, p1.y, t),
   };
 }
 
@@ -33,8 +32,8 @@ export function lerpPoint(p0: Point, p1: Point, t: number): Point {
  * Calculate distance between two points
  */
 export function distance(p0: Point, p1: Point): number {
-  const dx = (p1.x as number) - (p0.x as number);
-  const dy = (p1.y as number) - (p0.y as number);
+  const dx = p1.x - p0.x;
+  const dy = p1.y - p0.y;
   return Math.sqrt(dx * dx + dy * dy);
 }
 
@@ -70,9 +69,13 @@ export function normalizeVector(x: number, y: number): { x: number; y: number } 
  * @param t - Parameter (0 to 1)
  * @returns Point on curve at t
  */
-export function evaluateCubicBezier(
-  args: { readonly p0: Point; readonly p1: Point; readonly p2: Point; readonly p3: Point; readonly t: number }
-): Point {
+export function evaluateCubicBezier(args: {
+  readonly p0: Point;
+  readonly p1: Point;
+  readonly p2: Point;
+  readonly p3: Point;
+  readonly t: number;
+}): Point {
   const { p0, p1, p2, p3, t } = args;
   const t2 = t * t;
   const t3 = t2 * t;
@@ -81,18 +84,8 @@ export function evaluateCubicBezier(
   const mt3 = mt2 * mt;
 
   return {
-    x: px(
-      mt3 * (p0.x as number) +
-        3 * mt2 * t * (p1.x as number) +
-        3 * mt * t2 * (p2.x as number) +
-        t3 * (p3.x as number)
-    ),
-    y: px(
-      mt3 * (p0.y as number) +
-        3 * mt2 * t * (p1.y as number) +
-        3 * mt * t2 * (p2.y as number) +
-        t3 * (p3.y as number)
-    ),
+    x: mt3 * p0.x + 3 * mt2 * t * p1.x + 3 * mt * t2 * p2.x + t3 * p3.x,
+    y: mt3 * p0.y + 3 * mt2 * t * p1.y + 3 * mt * t2 * p2.y + t3 * p3.y,
   };
 }
 
@@ -106,9 +99,13 @@ export function evaluateCubicBezier(
  * @param t - Parameter (0 to 1)
  * @returns Tangent vector at t
  */
-export function evaluateCubicBezierDerivative(
-  args: { readonly p0: Point; readonly p1: Point; readonly p2: Point; readonly p3: Point; readonly t: number }
-): { x: number; y: number } {
+export function evaluateCubicBezierDerivative(args: {
+  readonly p0: Point;
+  readonly p1: Point;
+  readonly p2: Point;
+  readonly p3: Point;
+  readonly t: number;
+}): { x: number; y: number } {
   const { p0, p1, p2, p3, t } = args;
   const t2 = t * t;
   const mt = 1 - t;
@@ -116,13 +113,13 @@ export function evaluateCubicBezierDerivative(
 
   return {
     x:
-      3 * mt2 * ((p1.x as number) - (p0.x as number)) +
-      6 * mt * t * ((p2.x as number) - (p1.x as number)) +
-      3 * t2 * ((p3.x as number) - (p2.x as number)),
+      3 * mt2 * (p1.x - p0.x) +
+      6 * mt * t * (p2.x - p1.x) +
+      3 * t2 * (p3.x - p2.x),
     y:
-      3 * mt2 * ((p1.y as number) - (p0.y as number)) +
-      6 * mt * t * ((p2.y as number) - (p1.y as number)) +
-      3 * t2 * ((p3.y as number) - (p2.y as number)),
+      3 * mt2 * (p1.y - p0.y) +
+      6 * mt * t * (p2.y - p1.y) +
+      3 * t2 * (p3.y - p2.y),
   };
 }
 
@@ -150,9 +147,13 @@ export type CubicBezierSegment = {
  * @param t - Parameter (0 to 1)
  * @returns Two bezier segments
  */
-export function subdivideCubicBezier(
-  args: { readonly p0: Point; readonly p1: Point; readonly p2: Point; readonly p3: Point; readonly t: number }
-): { left: CubicBezierSegment; right: CubicBezierSegment } {
+export function subdivideCubicBezier(args: {
+  readonly p0: Point;
+  readonly p1: Point;
+  readonly p2: Point;
+  readonly p3: Point;
+  readonly t: number;
+}): { left: CubicBezierSegment; right: CubicBezierSegment } {
   const { p0, p1, p2, p3, t } = args;
   // First level
   const q0 = lerpPoint(p0, p1, t);
@@ -195,40 +196,43 @@ export function subdivideCubicBezier(
  * @param p3 - End point
  * @returns Bounding box
  */
-export function cubicBezierBounds(
-  args: { readonly p0: Point; readonly p1: Point; readonly p2: Point; readonly p3: Point }
-): Bounds {
+export function cubicBezierBounds(args: {
+  readonly p0: Point;
+  readonly p1: Point;
+  readonly p2: Point;
+  readonly p3: Point;
+}): Bounds {
   const { p0, p1, p2, p3 } = args;
 
   // Find extrema by solving derivative = 0
   // Bezier derivative coefficients
-  const ax = -3 * (p0.x as number) + 9 * (p1.x as number) - 9 * (p2.x as number) + 3 * (p3.x as number);
-  const bx = 6 * (p0.x as number) - 12 * (p1.x as number) + 6 * (p2.x as number);
-  const cx = -3 * (p0.x as number) + 3 * (p1.x as number);
+  const ax = -3 * p0.x + 9 * p1.x - 9 * p2.x + 3 * p3.x;
+  const bx = 6 * p0.x - 12 * p1.x + 6 * p2.x;
+  const cx = -3 * p0.x + 3 * p1.x;
 
-  const ay = -3 * (p0.y as number) + 9 * (p1.y as number) - 9 * (p2.y as number) + 3 * (p3.y as number);
-  const by = 6 * (p0.y as number) - 12 * (p1.y as number) + 6 * (p2.y as number);
-  const cy = -3 * (p0.y as number) + 3 * (p1.y as number);
+  const ay = -3 * p0.y + 9 * p1.y - 9 * p2.y + 3 * p3.y;
+  const by = 6 * p0.y - 12 * p1.y + 6 * p2.y;
+  const cy = -3 * p0.y + 3 * p1.y;
 
   // Solve quadratic for x and y
   const txRoots = solveQuadratic(ax, bx, cx);
   const tyRoots = solveQuadratic(ay, by, cy);
 
   // Collect all extreme X values
-  const xValues = [p0.x as number, p3.x as number];
+  const xValues = [p0.x, p3.x];
   for (const t of txRoots) {
     if (t > 0 && t < 1) {
       const pt = evaluateCubicBezier({ p0, p1, p2, p3, t });
-      xValues.push(pt.x as number);
+      xValues.push(pt.x);
     }
   }
 
   // Collect all extreme Y values
-  const yValues = [p0.y as number, p3.y as number];
+  const yValues = [p0.y, p3.y];
   for (const t of tyRoots) {
     if (t > 0 && t < 1) {
       const pt = evaluateCubicBezier({ p0, p1, p2, p3, t });
-      yValues.push(pt.y as number);
+      yValues.push(pt.y);
     }
   }
 
@@ -238,10 +242,10 @@ export function cubicBezierBounds(
   const maxY = Math.max(...yValues);
 
   return {
-    x: px(minX),
-    y: px(minY),
-    width: px(maxX - minX),
-    height: px(maxY - minY),
+    x: minX,
+    y: minY,
+    width: maxX - minX,
+    height: maxY - minY,
   };
 }
 
@@ -284,9 +288,14 @@ function solveQuadratic(a: number, b: number, c: number): number[] {
  * @param tolerance - Distance tolerance for subdivision
  * @returns Nearest point info: { t, point, distance }
  */
-export function nearestPointOnCubicBezier(
-  args: { readonly p0: Point; readonly p1: Point; readonly p2: Point; readonly p3: Point; readonly target: Point; readonly tolerance?: number }
-): { t: number; point: Point; distance: number } {
+export function nearestPointOnCubicBezier(args: {
+  readonly p0: Point;
+  readonly p1: Point;
+  readonly p2: Point;
+  readonly p3: Point;
+  readonly target: Point;
+  readonly tolerance?: number;
+}): { t: number; point: Point; distance: number } {
   const { p0, p1, p2, p3, target, tolerance = 0.5 } = args;
   // Sample the curve at regular intervals
   const samples = 10;
@@ -387,10 +396,7 @@ export function constrainVectorTo45Degrees(
  * @returns Angle in radians
  */
 export function angleFromTo(from: Point, to: Point): number {
-  return Math.atan2(
-    (to.y as number) - (from.y as number),
-    (to.x as number) - (from.x as number)
-  );
+  return Math.atan2(to.y - from.y, to.x - from.x);
 }
 
 /**
@@ -439,8 +445,8 @@ export function mirrorHandle(
   handle: Point,
   preserveLength?: number
 ): Point {
-  const dx = (handle.x as number) - (anchor.x as number);
-  const dy = (handle.y as number) - (anchor.y as number);
+  const dx = handle.x - anchor.x;
+  const dy = handle.y - anchor.y;
 
   const computeScale = (): number => {
     if (preserveLength === undefined) {
@@ -455,7 +461,7 @@ export function mirrorHandle(
   const scale = computeScale();
 
   return {
-    x: px((anchor.x as number) - dx * scale),
-    y: px((anchor.y as number) - dy * scale),
+    x: anchor.x - dx * scale,
+    y: anchor.y - dy * scale,
   };
 }

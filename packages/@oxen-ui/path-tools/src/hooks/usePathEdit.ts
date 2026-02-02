@@ -1,18 +1,17 @@
 /**
  * @file Path edit hook
  *
- * Manages path editing interactions for existing custom geometry shapes.
+ * Manages path editing interactions for existing paths.
  */
 
 import { useCallback, useState, useRef } from "react";
-import type { Point } from "@oxen-office/pptx/domain/types";
-import { px } from "@oxen-office/drawing-ml/domain/units";
 import type {
   DrawingPath,
   ModifierKeys,
+  Point,
 } from "../types";
 import { updatePointInPath, getModifierKeys } from "../types";
-import { constrainVectorTo45Degrees, mirrorHandle } from "../utils/bezier-math";
+import { constrainVectorTo45Degrees, mirrorHandle } from "../internal/bezier-math";
 
 // =============================================================================
 // Types
@@ -81,10 +80,6 @@ export type UsePathEditReturn = {
 };
 
 // =============================================================================
-// Constants
-// =============================================================================
-
-// =============================================================================
 // Hook
 // =============================================================================
 
@@ -139,7 +134,9 @@ export function usePathEdit(callbacks: PathEditCallbacks): UsePathEditReturn {
 
   // Delete selected points
   const deleteSelectedPoints = useCallback(() => {
-    if (selectedPoints.length === 0) {return;}
+    if (selectedPoints.length === 0) {
+      return;
+    }
     if (path.points.length - selectedPoints.length < 2) {
       // Can't have a path with less than 2 points
       return;
@@ -176,8 +173,8 @@ export function usePathEdit(callbacks: PathEditCallbacks): UsePathEditReturn {
               const handleOut = translateMovedHandle({ handle: point.handleOut, dx, dy, point, initial });
               newPoints[index] = {
                 ...point,
-                x: px(initial.x + dx),
-                y: px(initial.y + dy),
+                x: initial.x + dx,
+                y: initial.y + dy,
                 handleIn,
                 handleOut,
               };
@@ -210,19 +207,19 @@ export function usePathEdit(callbacks: PathEditCallbacks): UsePathEditReturn {
           const computeHandlePosition = (): { handleX: number; handleY: number } => {
             if (modifiers.shift) {
               const constrained = constrainVectorTo45Degrees(
-                x - (point.x as number),
-                y - (point.y as number)
+                x - point.x,
+                y - point.y
               );
               return {
-                handleX: (point.x as number) + constrained.dx,
-                handleY: (point.y as number) + constrained.dy,
+                handleX: point.x + constrained.dx,
+                handleY: point.y + constrained.dy,
               };
             }
             return { handleX: x, handleY: y };
           };
           const { handleX, handleY } = computeHandlePosition();
 
-          const newHandle: Point = { x: px(handleX), y: px(handleY) };
+          const newHandle: Point = { x: handleX, y: handleY };
           const shouldMirrorHandle = point.type === "smooth" && !modifiers.alt;
 
           function getMirroredHandle({
@@ -259,7 +256,7 @@ export function usePathEdit(callbacks: PathEditCallbacks): UsePathEditReturn {
 
   // Handle canvas pointer down
   const onCanvasPointerDown = useCallback(
-    (x: number, y: number, modifiers: ModifierKeys) => {
+    (_x: number, _y: number, modifiers: ModifierKeys) => {
       // Check if clicking on empty space
       if (!modifiers.shift) {
         setSelectedPoints([]);
@@ -289,32 +286,6 @@ export function usePathEdit(callbacks: PathEditCallbacks): UsePathEditReturn {
     },
     [isDraggingPoint, isDraggingHandle, draggingHandleSide, moveSelectedPoints, moveHandle]
   );
-
-function translateMovedHandle({
-  handle,
-  dx,
-  dy,
-  point,
-  initial,
-}: {
-  handle: Point | undefined;
-  dx: number;
-  dy: number;
-  point: { readonly x: number; readonly y: number };
-  initial: { readonly x: number; readonly y: number };
-}): Point | undefined {
-  if (!handle) {
-    return undefined;
-  }
-
-  const pointDx = (point.x as number) - initial.x;
-  const pointDy = (point.y as number) - initial.y;
-
-  return {
-    x: px((handle.x as number) + dx - pointDx),
-    y: px((handle.y as number) + dy - pointDy),
-  };
-}
 
   // Handle canvas pointer up
   const onCanvasPointerUp = useCallback(() => {
@@ -358,8 +329,8 @@ function translateMovedHandle({
           const point = path.points[idx];
           if (point) {
             initialPositionsRef.current.set(idx, {
-              x: point.x as number,
-              y: point.y as number,
+              x: point.x,
+              y: point.y,
             });
           }
         }
@@ -442,5 +413,31 @@ function translateMovedHandle({
     deleteSelectedPoints,
     togglePointType,
     hasChanges,
+  };
+}
+
+function translateMovedHandle({
+  handle,
+  dx,
+  dy,
+  point,
+  initial,
+}: {
+  handle: Point | undefined;
+  dx: number;
+  dy: number;
+  point: { readonly x: number; readonly y: number };
+  initial: { readonly x: number; readonly y: number };
+}): Point | undefined {
+  if (!handle) {
+    return undefined;
+  }
+
+  const pointDx = point.x - initial.x;
+  const pointDy = point.y - initial.y;
+
+  return {
+    x: handle.x + dx - pointDx,
+    y: handle.y + dy - pointDy,
   };
 }

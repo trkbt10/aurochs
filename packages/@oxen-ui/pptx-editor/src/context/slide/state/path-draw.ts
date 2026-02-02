@@ -9,8 +9,8 @@ import type {
   DrawingPath,
   CapturedPoint,
   AnchorPointType,
-} from "../../../path-tools/types";
-import { createEmptyDrawingPath } from "../../../path-tools/types";
+} from "@oxen-ui/path-tools";
+import { createEmptyDrawingPath } from "@oxen-ui/path-tools";
 
 // =============================================================================
 // Path Draw State Types
