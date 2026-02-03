@@ -2,7 +2,6 @@
  * @file Paint builder unit tests
  */
 
-import { describe, it, expect } from "vitest";
 import {
   solidPaint,
   solidPaintHex,
@@ -12,14 +11,12 @@ import {
   diamondGradient,
   imagePaint,
   stroke,
-  PAINT_TYPE_VALUES,
-  BLEND_MODE_VALUES,
-  SCALE_MODE_VALUES,
 } from "./paint-builder";
+import { PAINT_TYPE_VALUES, BLEND_MODE_VALUES, SCALE_MODE_VALUES } from "../constants";
 
 describe("SolidPaintBuilder", () => {
-  it("creates solid paint with RGB values", () => {
-    const result = solidPaint(1, 0, 0).build();
+  it("creates solid paint with Color object", () => {
+    const result = solidPaint({ r: 1, g: 0, b: 0, a: 1 }).build();
 
     expect(result.type).toEqual({ value: PAINT_TYPE_VALUES.SOLID, name: "SOLID" });
     expect(result.color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
@@ -28,33 +25,33 @@ describe("SolidPaintBuilder", () => {
     expect(result.blendMode).toEqual({ value: BLEND_MODE_VALUES.NORMAL, name: "NORMAL" });
   });
 
-  it("creates solid paint with RGBA values", () => {
-    const result = solidPaint(0, 1, 0, 0.5).build();
+  it("creates solid paint with alpha", () => {
+    const result = solidPaint({ r: 0, g: 1, b: 0, a: 0.5 }).build();
 
     expect(result.color).toEqual({ r: 0, g: 1, b: 0, a: 0.5 });
   });
 
   it("sets opacity", () => {
-    const result = solidPaint(0, 0, 1).opacity(0.7).build();
+    const result = solidPaint({ r: 0, g: 0, b: 1, a: 1 }).opacity(0.7).build();
 
     expect(result.opacity).toBe(0.7);
   });
 
   it("sets visibility", () => {
-    const result = solidPaint(0, 0, 0).visible(false).build();
+    const result = solidPaint({ r: 0, g: 0, b: 0, a: 1 }).visible(false).build();
 
     expect(result.visible).toBe(false);
   });
 
   it("sets blend mode", () => {
-    const result = solidPaint(1, 1, 1).blendMode("MULTIPLY").build();
+    const result = solidPaint({ r: 1, g: 1, b: 1, a: 1 }).blendMode("MULTIPLY").build();
 
     expect(result.blendMode).toEqual({ value: BLEND_MODE_VALUES.MULTIPLY, name: "MULTIPLY" });
   });
 
   it("clamps opacity to 0-1 range", () => {
-    expect(solidPaint(0, 0, 0).opacity(-0.5).build().opacity).toBe(0);
-    expect(solidPaint(0, 0, 0).opacity(1.5).build().opacity).toBe(1);
+    expect(solidPaint({ r: 0, g: 0, b: 0, a: 1 }).opacity(-0.5).build().opacity).toBe(0);
+    expect(solidPaint({ r: 0, g: 0, b: 0, a: 1 }).opacity(1.5).build().opacity).toBe(1);
   });
 });
 
@@ -112,9 +109,9 @@ describe("LinearGradientBuilder", () => {
 
   it("adds stops and sorts by position", () => {
     const result = linearGradient()
-      .addStop(1, 0, 0, 0)
-      .addStop(0, 0, 1, 1)
-      .addStop(0, 1, 0, 0.5)
+      .addStop({ color: { r: 1, g: 0, b: 0, a: 1 }, position: 0 })
+      .addStop({ color: { r: 0, g: 0, b: 1, a: 1 }, position: 1 })
+      .addStop({ color: { r: 0, g: 1, b: 0, a: 1 }, position: 0.5 })
       .build();
 
     expect(result.gradientStops).toHaveLength(5); // 2 defaults + 3 added
@@ -122,7 +119,7 @@ describe("LinearGradientBuilder", () => {
   });
 
   it("sets custom direction", () => {
-    const result = linearGradient().direction(0, 0, 1, 1).build();
+    const result = linearGradient().direction({ startX: 0, startY: 0, endX: 1, endY: 1 }).build();
 
     expect(result.gradientHandlePositions![0]).toEqual({ x: 0, y: 0 });
     expect(result.gradientHandlePositions![1]).toEqual({ x: 1, y: 1 });
@@ -264,7 +261,7 @@ describe("StrokeBuilder", () => {
   });
 
   it("creates stroke with color", () => {
-    const result = stroke(1, 0, 0).build();
+    const result = stroke({ r: 1, g: 0, b: 0, a: 1 }).build();
 
     expect(result.paints[0].color).toEqual({ r: 1, g: 0, b: 0, a: 1 });
   });
@@ -328,8 +325,8 @@ describe("Paint builder chaining", () => {
   it("chains multiple methods on linear gradient", () => {
     const result = linearGradient()
       .angle(45)
-      .addStop(1, 0, 0, 0)
-      .addStop(0, 0, 1, 1)
+      .addStop({ color: { r: 1, g: 0, b: 0, a: 1 }, position: 0 })
+      .addStop({ color: { r: 0, g: 0, b: 1, a: 1 }, position: 1 })
       .opacity(0.8)
       .blendMode("OVERLAY")
       .build();
@@ -340,7 +337,7 @@ describe("Paint builder chaining", () => {
   });
 
   it("chains multiple methods on stroke", () => {
-    const result = stroke(0, 0, 0)
+    const result = stroke({ r: 0, g: 0, b: 0, a: 1 })
       .weight(2)
       .cap("SQUARE")
       .join("ROUND")

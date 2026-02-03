@@ -4,7 +4,6 @@
  * Tests TextNodeBuilder and FrameNodeBuilder including AutoLayout support.
  */
 
-import { describe, it, expect } from "vitest";
 import { textNode, frameNode, TextNodeBuilder, FrameNodeBuilder } from "./text-builder";
 
 describe("TextNodeBuilder", () => {
@@ -28,7 +27,7 @@ describe("TextNodeBuilder", () => {
       .font("Roboto", "Bold")
       .size(200, 50)
       .position(100, 100)
-      .color(1, 0, 0)
+      .color({ r: 1, g: 0, b: 0, a: 1 })
       .build();
 
     expect(node.name).toBe("Title");
@@ -97,7 +96,7 @@ describe("FrameNodeBuilder", () => {
       .name("Container")
       .size(300, 200)
       .position(50, 50)
-      .background(0.9, 0.9, 0.9)
+      .background({ r: 0.9, g: 0.9, b: 0.9, a: 1 })
       .clipsContent(false)
       .cornerRadius(8)
       .build();
@@ -157,7 +156,7 @@ describe("FrameNodeBuilder", () => {
     it("sets individual padding", () => {
       const node = frameNode(1, 0)
         .autoLayout("VERTICAL")
-        .padding(10, 20, 30, 40)
+        .padding({ top: 10, right: 20, bottom: 30, left: 40 })
         .build();
 
       expect(node.stackPadding).toEqual({
@@ -171,7 +170,7 @@ describe("FrameNodeBuilder", () => {
     it("sets two-value padding (vertical, horizontal)", () => {
       const node = frameNode(1, 0)
         .autoLayout("HORIZONTAL")
-        .padding(10, 20)
+        .padding({ top: 10, right: 20, bottom: 10, left: 20 })
         .build();
 
       expect(node.stackPadding).toEqual({

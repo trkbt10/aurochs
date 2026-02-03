@@ -9,7 +9,50 @@ import {
   findNodesByType,
   findNodeByGuid,
 } from "./tree-builder";
-import type { FigNode } from "../types";
+import type { FigNode, FigNodeType, KiwiEnumValue, FigGuid, FigParentIndex } from "../types";
+
+// Test helper options
+type TestNodeOptions = {
+  readonly typeName: FigNodeType;
+  readonly typeValue: number;
+  readonly guid: FigGuid;
+  readonly name?: string;
+  readonly parentIndex?: FigParentIndex;
+  readonly children?: readonly FigNode[];
+};
+
+// Test helper to create minimal FigNode for tests
+function createTestNode(options: TestNodeOptions): FigNode {
+  return {
+    guid: options.guid,
+    phase: { value: 0, name: "CREATED" },
+    type: { value: options.typeValue, name: options.typeName } as KiwiEnumValue<FigNodeType>,
+    name: options.name,
+    parentIndex: options.parentIndex,
+    children: options.children,
+  };
+}
+
+// Create a test node without type (for edge case testing)
+function createNodeWithoutType(guid: FigGuid): FigNode {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const node: any = {
+    guid,
+    phase: { value: 0, name: "CREATED" },
+  };
+  return node;
+}
+
+// Create a test node with legacy string type (for backwards compat testing)
+function createLegacyStringTypeNode(stringType: string, guid: FigGuid): FigNode {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const node: any = {
+    type: stringType,
+    guid,
+    phase: { value: 0, name: "CREATED" },
+  };
+  return node;
+}
 
 describe("tree-builder", () => {
   describe("guidToString", () => {
@@ -25,29 +68,28 @@ describe("tree-builder", () => {
   describe("buildNodeTree", () => {
     it("builds tree from flat nodes", () => {
       const nodes: FigNode[] = [
-        {
-          type: "DOCUMENT",
-          name: "Doc",
-          guid: { sessionID: 0, localID: 0 },
-        } as FigNode,
-        {
-          type: "CANVAS",
-          name: "Page 1",
+        createTestNode({ typeName: "DOCUMENT", typeValue: 1, guid: { sessionID: 0, localID: 0 }, name: "Doc" }),
+        createTestNode({
+          typeName: "CANVAS",
+          typeValue: 2,
           guid: { sessionID: 0, localID: 1 },
-          parentIndex: { guid: { sessionID: 0, localID: 0 } },
-        } as FigNode,
-        {
-          type: "FRAME",
-          name: "Frame A",
+          name: "Page 1",
+          parentIndex: { guid: { sessionID: 0, localID: 0 }, position: "!" },
+        }),
+        createTestNode({
+          typeName: "FRAME",
+          typeValue: 4,
           guid: { sessionID: 0, localID: 2 },
-          parentIndex: { guid: { sessionID: 0, localID: 1 } },
-        } as FigNode,
-        {
-          type: "RECTANGLE",
-          name: "Rect",
+          name: "Frame A",
+          parentIndex: { guid: { sessionID: 0, localID: 1 }, position: "!" },
+        }),
+        createTestNode({
+          typeName: "RECTANGLE",
+          typeValue: 10,
           guid: { sessionID: 0, localID: 3 },
-          parentIndex: { guid: { sessionID: 0, localID: 2 } },
-        } as FigNode,
+          name: "Rect",
+          parentIndex: { guid: { sessionID: 0, localID: 2 }, position: "!" },
+        }),
       ];
 
       const result = buildNodeTree(nodes);
@@ -64,8 +106,8 @@ describe("tree-builder", () => {
 
     it("handles multiple roots", () => {
       const nodes: FigNode[] = [
-        { type: "DOCUMENT", name: "Doc1", guid: { sessionID: 0, localID: 0 } } as FigNode,
-        { type: "DOCUMENT", name: "Doc2", guid: { sessionID: 1, localID: 0 } } as FigNode,
+        createTestNode({ typeName: "DOCUMENT", typeValue: 1, guid: { sessionID: 0, localID: 0 }, name: "Doc1" }),
+        createTestNode({ typeName: "DOCUMENT", typeValue: 1, guid: { sessionID: 1, localID: 0 }, name: "Doc2" }),
       ];
 
       const result = buildNodeTree(nodes);
@@ -74,7 +116,7 @@ describe("tree-builder", () => {
 
     it("handles nodes without children", () => {
       const nodes: FigNode[] = [
-        { type: "DOCUMENT", name: "Doc", guid: { sessionID: 0, localID: 0 } } as FigNode,
+        createTestNode({ typeName: "DOCUMENT", typeValue: 1, guid: { sessionID: 0, localID: 0 }, name: "Doc" }),
       ];
 
       const result = buildNodeTree(nodes);
@@ -84,19 +126,19 @@ describe("tree-builder", () => {
   });
 
   describe("getNodeType", () => {
-    it("returns string type", () => {
-      const node = { type: "FRAME" } as FigNode;
+    it("returns string type from legacy format", () => {
+      // Test backwards compatibility with string type
+      const node = createLegacyStringTypeNode("FRAME", { sessionID: 0, localID: 0 });
       expect(getNodeType(node)).toBe("FRAME");
     });
 
     it("returns name from object type", () => {
-      // Figma sometimes uses enum objects for type
-      const node = { type: { name: "RECTANGLE", value: 10 } } as unknown as FigNode;
+      const node = createTestNode({ typeName: "RECTANGLE", typeValue: 10, guid: { sessionID: 0, localID: 0 } });
       expect(getNodeType(node)).toBe("RECTANGLE");
     });
 
     it("returns UNKNOWN for missing type", () => {
-      const node = {} as FigNode;
+      const node = createNodeWithoutType({ sessionID: 0, localID: 0 });
       expect(getNodeType(node)).toBe("UNKNOWN");
     });
   });
@@ -104,21 +146,25 @@ describe("tree-builder", () => {
   describe("findNodesByType", () => {
     it("finds all nodes of given type", () => {
       const tree: FigNode[] = [
-        {
-          type: "DOCUMENT",
+        createTestNode({
+          typeName: "DOCUMENT",
+          typeValue: 1,
+          guid: { sessionID: 0, localID: 0 },
           name: "Doc",
           children: [
-            {
-              type: "CANVAS",
+            createTestNode({
+              typeName: "CANVAS",
+              typeValue: 2,
+              guid: { sessionID: 0, localID: 1 },
               name: "Page",
               children: [
-                { type: "FRAME", name: "F1" } as FigNode,
-                { type: "FRAME", name: "F2" } as FigNode,
-                { type: "TEXT", name: "T1" } as FigNode,
+                createTestNode({ typeName: "FRAME", typeValue: 4, guid: { sessionID: 0, localID: 2 }, name: "F1" }),
+                createTestNode({ typeName: "FRAME", typeValue: 4, guid: { sessionID: 0, localID: 3 }, name: "F2" }),
+                createTestNode({ typeName: "TEXT", typeValue: 13, guid: { sessionID: 0, localID: 4 }, name: "T1" }),
               ],
-            } as FigNode,
+            }),
           ],
-        } as FigNode,
+        }),
       ];
 
       const frames = findNodesByType(tree, "FRAME");
@@ -130,7 +176,7 @@ describe("tree-builder", () => {
   describe("findNodeByGuid", () => {
     it("finds node by guid string", () => {
       const nodes: FigNode[] = [
-        { type: "FRAME", name: "Target", guid: { sessionID: 1, localID: 42 } } as FigNode,
+        createTestNode({ typeName: "FRAME", typeValue: 4, guid: { sessionID: 1, localID: 42 }, name: "Target" }),
       ];
 
       const { nodeMap } = buildNodeTree(nodes);

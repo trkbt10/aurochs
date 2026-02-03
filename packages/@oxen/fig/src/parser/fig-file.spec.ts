@@ -5,26 +5,26 @@
 import {
   parseFigFile,
   parseFigFileSync,
-  isValidFigFile,
   isFigmaZipFile,
 } from "./fig-file";
+import { isFigFile } from "./header";
 import { createSampleFigFile } from "../kiwi/test-helpers";
 
 describe("fig-file", () => {
-  describe("isValidFigFile", () => {
+  describe("isFigFile", () => {
     it("returns true for valid fig-kiwi data", () => {
       const { file } = createSampleFigFile();
-      expect(isValidFigFile(file)).toBe(true);
+      expect(isFigFile(file)).toBe(true);
     });
 
     it("returns false for non-fig data", () => {
       const data = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8]);
-      expect(isValidFigFile(data)).toBe(false);
+      expect(isFigFile(data)).toBe(false);
     });
 
     it("returns false for ZIP data", () => {
       const zipMagic = new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0, 0, 0, 0]);
-      expect(isValidFigFile(zipMagic)).toBe(false);
+      expect(isFigFile(zipMagic)).toBe(false);
     });
   });
 

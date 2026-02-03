@@ -2,7 +2,6 @@
  * @file Shape builder unit tests
  */
 
-import { describe, it, expect } from "vitest";
 import {
   ellipseNode,
   lineNode,
@@ -10,8 +9,8 @@ import {
   polygonNode,
   vectorNode,
   roundedRectNode,
-  SHAPE_NODE_TYPES,
 } from "./shape-builder";
+import { SHAPE_NODE_TYPES } from "../constants";
 
 describe("EllipseNodeBuilder", () => {
   it("creates basic ellipse with defaults", () => {
@@ -33,7 +32,7 @@ describe("EllipseNodeBuilder", () => {
       .name("Circle")
       .size(80, 80)
       .position(10, 20)
-      .fill(1, 0, 0) // red
+      .fill({ r: 1, g: 0, b: 0, a: 1 }) // red
       .build();
 
     expect(result.name).toBe("Circle");
@@ -64,7 +63,7 @@ describe("EllipseNodeBuilder", () => {
   it("creates ellipse with stroke", () => {
     const result = ellipseNode(5, 1)
       .noFill()
-      .stroke(0, 0, 1) // blue
+      .stroke({ r: 0, g: 0, b: 1, a: 1 }) // blue
       .strokeWeight(2)
       .strokeCap("ROUND")
       .build();
@@ -93,7 +92,7 @@ describe("LineNodeBuilder", () => {
       .name("Divider")
       .length(200)
       .position(50, 100)
-      .stroke(0.5, 0.5, 0.5)
+      .stroke({ r: 0.5, g: 0.5, b: 0.5, a: 1 })
       .strokeWeight(2)
       .dashPattern([5, 3])
       .build();
@@ -131,7 +130,7 @@ describe("StarNodeBuilder", () => {
       .points(8)
       .innerRadius(0.4)
       .size(120, 120)
-      .fill(1, 1, 0) // yellow
+      .fill({ r: 1, g: 1, b: 0, a: 1 }) // yellow
       .build();
 
     expect(result.name).toBe("8-Point Star");
@@ -178,7 +177,7 @@ describe("PolygonNodeBuilder", () => {
   it("creates octagon with stroke", () => {
     const result = polygonNode(3, 1)
       .sides(8)
-      .stroke(0, 0, 0)
+      .stroke({ r: 0, g: 0, b: 0, a: 1 })
       .strokeWeight(2)
       .strokeJoin("BEVEL")
       .build();
@@ -243,7 +242,7 @@ describe("RoundedRectangleNodeBuilder", () => {
 
   it("creates rectangle with individual corner radii", () => {
     const result = roundedRectNode(3, 1)
-      .corners(4, 8, 12, 16)
+      .corners([4, 8, 12, 16])
       .build();
 
     expect(result.cornerRadius).toBeUndefined();
@@ -253,7 +252,7 @@ describe("RoundedRectangleNodeBuilder", () => {
   it("individual corners override uniform radius", () => {
     const result = roundedRectNode(4, 1)
       .cornerRadius(8)
-      .corners(0, 8, 0, 8)
+      .corners([0, 8, 0, 8])
       .build();
 
     expect(result.cornerRadius).toBeUndefined();
@@ -297,7 +296,7 @@ describe("Shape builder common features", () => {
 
   it("applies stroke align", () => {
     const result = polygonNode(1, 0)
-      .stroke(0, 0, 0)
+      .stroke({ r: 0, g: 0, b: 0, a: 1 })
       .strokeWeight(4)
       .strokeAlign("OUTSIDE")
       .build();

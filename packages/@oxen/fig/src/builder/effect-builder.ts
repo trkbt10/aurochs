@@ -9,21 +9,12 @@
  */
 
 import type { Color } from "./text-builder";
-import type { BlendMode } from "./paint-builder";
-import { BLEND_MODE_VALUES } from "./paint-builder";
-
-// =============================================================================
-// Effect Type Values
-// =============================================================================
-
-export const EFFECT_TYPE_VALUES = {
-  DROP_SHADOW: 0,
-  INNER_SHADOW: 1,
-  LAYER_BLUR: 2,
-  BACKGROUND_BLUR: 3,
-} as const;
-
-export type EffectType = keyof typeof EFFECT_TYPE_VALUES;
+import {
+  EFFECT_TYPE_VALUES,
+  BLEND_MODE_VALUES,
+  type EffectType,
+  type BlendMode,
+} from "../constants";
 
 // =============================================================================
 // Effect Data Types
@@ -77,8 +68,8 @@ export class DropShadowBuilder {
   /**
    * Set shadow color (RGBA, 0-1)
    */
-  color(r: number, g: number, b: number, a: number = 0.25): this {
-    this._color = { r, g, b, a };
+  color(c: Color): this {
+    this._color = c;
     return this;
   }
 
@@ -171,8 +162,8 @@ export class InnerShadowBuilder {
   /**
    * Set shadow color (RGBA, 0-1)
    */
-  color(r: number, g: number, b: number, a: number = 0.25): this {
-    this._color = { r, g, b, a };
+  color(c: Color): this {
+    this._color = c;
     return this;
   }
 

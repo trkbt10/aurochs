@@ -9,7 +9,8 @@ import {
   decodeFigMessage,
   splitFigChunks,
 } from "../kiwi/decoder";
-import { decompressDeflateRaw, decompressZstd, detectCompression } from "./decompress";
+import { decompressDeflateRaw, decompressZstd } from "./decompress";
+import { detectCompression } from "../compression";
 import { loadZipPackage } from "@oxen/zip";
 import type { FigBlob } from "./blob-decoder";
 
@@ -275,13 +276,6 @@ export function parseFigFileSync(data: Uint8Array): ParsedFigFile {
     );
   }
   return parseRawFigData(data);
-}
-
-/**
- * Check if data is a valid .fig file (raw fig-kiwi format)
- */
-export function isValidFigFile(data: Uint8Array): boolean {
-  return isFigFile(data);
 }
 
 /**

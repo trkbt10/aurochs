@@ -2,7 +2,7 @@
  * @file Streaming Kiwi encoder/decoder for fig files
  */
 
-import type { KiwiSchema } from "../types";
+import type { KiwiSchema, KiwiField } from "../types";
 import { ByteBuffer } from "./byte-buffer";
 import { FigParseError } from "../errors";
 
@@ -167,7 +167,7 @@ export class StreamingFigEncoder {
   private finalized: boolean = false;
   private readonly valueEncoder: ValueEncoder;
   // Fields to write after nodeChanges (e.g., blobs)
-  private deferredFields: Array<{ field: typeof this.schema.definitions[0]["fields"][0]; value: unknown }> = [];
+  private deferredFields: Array<{ field: KiwiField; value: unknown }> = [];
 
   constructor(options: StreamingEncoderOptions) {
     this.schema = options.schema;

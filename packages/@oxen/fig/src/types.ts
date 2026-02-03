@@ -2,6 +2,8 @@
  * @file Fig format types
  */
 
+import type { CompressionType } from "./compression";
+
 // =============================================================================
 // File Header Types
 // =============================================================================
@@ -21,16 +23,6 @@ export const FIG_HEADER_SIZE = 16;
 
 /** Magic header string */
 export const FIG_MAGIC = "fig-kiwi";
-
-// =============================================================================
-// Compression Types
-// =============================================================================
-
-/** Compression type used in payload */
-export type CompressionType = "deflate" | "zstd" | "none";
-
-/** Zstandard magic bytes */
-export const ZSTD_MAGIC = new Uint8Array([0x28, 0xb5, 0x2f, 0xfd]);
 
 // =============================================================================
 // Kiwi Schema Types
@@ -91,18 +83,87 @@ export type FigFile = {
   readonly resources: readonly FigResource[];
 };
 
-/** Fig document tree */
-export type FigDocument = {
-  readonly type: string;
+// =============================================================================
+// Raw Kiwi Node Types (matching binary format)
+// =============================================================================
+
+/** Enum value as stored in Kiwi binary format */
+export type KiwiEnumValue<T extends string = string> = {
+  readonly value: number;
+  readonly name: T;
+};
+
+/** GUID as stored in Kiwi binary format */
+export type FigGuid = {
+  readonly sessionID: number;
+  readonly localID: number;
+};
+
+/** Parent index as stored in Kiwi binary format */
+export type FigParentIndex = {
+  readonly guid: FigGuid;
+  readonly position: string;
+};
+
+/** Transform matrix as stored in Kiwi binary format */
+export type FigTransform = {
+  readonly m00: number;
+  readonly m01: number;
+  readonly m02: number;
+  readonly m10: number;
+  readonly m11: number;
+  readonly m12: number;
+};
+
+/** Size vector as stored in Kiwi binary format */
+export type FigSize = {
+  readonly x: number;
+  readonly y: number;
+};
+
+/** Paint as stored in Kiwi binary format */
+export type FigKiwiPaint = {
+  readonly type: KiwiEnumValue;
+  readonly color?: FigColor;
+  readonly opacity: number;
+  readonly visible: boolean;
+  readonly blendMode: KiwiEnumValue;
+};
+
+/**
+ * Fig node as decoded from Kiwi binary format.
+ * This represents the raw structure, not a high-level API.
+ */
+export type FigNode = {
+  readonly guid: FigGuid;
+  readonly phase: KiwiEnumValue;
+  readonly type: KiwiEnumValue<FigNodeType>;
+  readonly name?: string;
+  readonly visible?: boolean;
+  readonly opacity?: number;
+  readonly parentIndex?: FigParentIndex;
+  readonly transform?: FigTransform;
+  readonly size?: FigSize;
+  readonly fillPaints?: readonly FigKiwiPaint[];
+  readonly strokeWeight?: number;
+  readonly strokeAlign?: KiwiEnumValue;
+  readonly strokeJoin?: KiwiEnumValue;
+  readonly strokeCap?: KiwiEnumValue;
+  readonly cornerRadius?: number;
+  readonly frameMaskDisabled?: boolean;
+  readonly backgroundColor?: FigColor;
+  readonly backgroundEnabled?: boolean;
+  readonly backgroundOpacity?: number;
+  readonly documentColorProfile?: KiwiEnumValue;
+  /** Children (added by tree-builder, not present in raw Kiwi format) */
   readonly children?: readonly FigNode[];
+  /** Additional fields (Kiwi schema has many optional fields) */
   readonly [key: string]: unknown;
 };
 
-/** Fig node (generic) */
-export type FigNode = {
-  readonly type: string;
-  readonly id?: string;
-  readonly name?: string;
+/** Fig document tree (high-level, for tree building) */
+export type FigDocument = {
+  readonly type: KiwiEnumValue<FigNodeType>;
   readonly children?: readonly FigNode[];
   readonly [key: string]: unknown;
 };

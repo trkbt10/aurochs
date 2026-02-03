@@ -7,7 +7,6 @@ export {
   decompressDeflate,
   decompressDeflateRaw,
   decompressZstd,
-  detectCompression,
 } from "./decompress";
 
 export { isFigFile, parseFigHeader, getPayload } from "./header";
@@ -15,7 +14,6 @@ export { isFigFile, parseFigHeader, getPayload } from "./header";
 export {
   parseFigFile,
   parseFigFileSync,
-  isValidFigFile,
   isFigmaZipFile,
 } from "./fig-file";
 

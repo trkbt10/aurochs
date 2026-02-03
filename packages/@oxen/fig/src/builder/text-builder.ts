@@ -5,24 +5,47 @@
  * including AutoLayout support.
  */
 
+// Import and re-export types from constants for backwards compatibility
+import {
+  TEXT_ALIGN_H_VALUES,
+  TEXT_ALIGN_V_VALUES,
+  TEXT_AUTO_RESIZE_VALUES,
+  TEXT_DECORATION_VALUES,
+  TEXT_CASE_VALUES,
+  NUMBER_UNITS_VALUES,
+  STACK_MODE_VALUES,
+  STACK_ALIGN_VALUES,
+  STACK_POSITIONING_VALUES,
+  STACK_SIZING_VALUES,
+  CONSTRAINT_TYPE_VALUES,
+  IMAGE_TYPE_VALUES,
+  EXPORT_CONSTRAINT_VALUES,
+  EXPORT_COLOR_PROFILE_VALUES,
+  SVG_ID_MODE_VALUES,
+  toEnumValue,
+  type TextAlignHorizontal,
+  type TextAlignVertical,
+  type TextAutoResize,
+  type TextDecoration,
+  type TextCase,
+  type NumberUnits,
+  type StackMode,
+  type StackAlign,
+  type StackPositioning,
+  type StackSizing,
+  type ConstraintType,
+  type ImageType,
+  type ExportConstraintType,
+  type ExportColorProfile,
+  type ExportSVGIDMode,
+} from "../constants";
+
+// Note: Types like TextAlignHorizontal, StackMode, etc. should be imported
+// directly from "@oxen/fig/constants" by consumers.
+
 // =============================================================================
 // Types
 // =============================================================================
-
-// Text-specific types
-export type TextAlignHorizontal = "LEFT" | "CENTER" | "RIGHT" | "JUSTIFIED";
-export type TextAlignVertical = "TOP" | "CENTER" | "BOTTOM";
-export type TextAutoResize = "NONE" | "WIDTH_AND_HEIGHT" | "HEIGHT";
-export type TextDecoration = "NONE" | "UNDERLINE" | "STRIKETHROUGH";
-export type TextCase = "ORIGINAL" | "UPPER" | "LOWER" | "TITLE" | "SMALL_CAPS";
-export type NumberUnits = "RAW" | "PIXELS" | "PERCENT";
-
-// AutoLayout types
-export type StackMode = "NONE" | "HORIZONTAL" | "VERTICAL" | "WRAP";
-export type StackAlign = "MIN" | "CENTER" | "MAX" | "STRETCH" | "BASELINE" | "SPACE_BETWEEN";
-export type StackPositioning = "AUTO" | "ABSOLUTE";
-export type StackSizing = "FIXED" | "FILL" | "HUG";
-export type ConstraintType = "MIN" | "CENTER" | "MAX" | "STRETCH" | "SCALE";
 
 export type StackPadding = {
   readonly top: number;
@@ -83,85 +106,6 @@ export type TextNodeData = {
   readonly fillPaints: readonly Paint[];
   readonly visible: boolean;
   readonly opacity: number;
-};
-
-// =============================================================================
-// Enum Value Maps
-// =============================================================================
-
-const TEXT_ALIGN_H_VALUES: Record<TextAlignHorizontal, number> = {
-  LEFT: 0,
-  CENTER: 1,
-  RIGHT: 2,
-  JUSTIFIED: 3,
-};
-
-const TEXT_ALIGN_V_VALUES: Record<TextAlignVertical, number> = {
-  TOP: 0,
-  CENTER: 1,
-  BOTTOM: 2,
-};
-
-const TEXT_AUTO_RESIZE_VALUES: Record<TextAutoResize, number> = {
-  NONE: 0,
-  WIDTH_AND_HEIGHT: 1,
-  HEIGHT: 2,
-};
-
-const TEXT_DECORATION_VALUES: Record<TextDecoration, number> = {
-  NONE: 0,
-  UNDERLINE: 1,
-  STRIKETHROUGH: 2,
-};
-
-const TEXT_CASE_VALUES: Record<TextCase, number> = {
-  ORIGINAL: 0,
-  UPPER: 1,
-  LOWER: 2,
-  TITLE: 3,
-  SMALL_CAPS: 4,
-};
-
-const NUMBER_UNITS_VALUES: Record<NumberUnits, number> = {
-  RAW: 0,
-  PIXELS: 1,
-  PERCENT: 2,
-};
-
-// AutoLayout value maps
-const STACK_MODE_VALUES: Record<StackMode, number> = {
-  NONE: 0,
-  HORIZONTAL: 1,
-  VERTICAL: 2,
-  WRAP: 3,
-};
-
-const STACK_ALIGN_VALUES: Record<StackAlign, number> = {
-  MIN: 0,
-  CENTER: 1,
-  MAX: 2,
-  STRETCH: 3,
-  BASELINE: 4,
-  SPACE_BETWEEN: 5,
-};
-
-const STACK_POSITIONING_VALUES: Record<StackPositioning, number> = {
-  AUTO: 0,
-  ABSOLUTE: 1,
-};
-
-const STACK_SIZING_VALUES: Record<StackSizing, number> = {
-  FIXED: 0,
-  FILL: 1,
-  HUG: 2,
-};
-
-const CONSTRAINT_TYPE_VALUES: Record<ConstraintType, number> = {
-  MIN: 0,
-  CENTER: 1,
-  MAX: 2,
-  STRETCH: 3,
-  SCALE: 4,
 };
 
 // =============================================================================
@@ -308,8 +252,8 @@ export class TextNodeBuilder {
     return this;
   }
 
-  color(r: number, g: number, b: number, a: number = 1): this {
-    this._fillColor = { r, g, b, a };
+  color(c: Color): this {
+    this._fillColor = c;
     return this;
   }
 
@@ -344,20 +288,12 @@ export class TextNodeBuilder {
         m11: 1,
         m12: this._y,
       },
-      textAlignHorizontal: this._textAlignH
-        ? { value: TEXT_ALIGN_H_VALUES[this._textAlignH], name: this._textAlignH }
-        : undefined,
-      textAlignVertical: this._textAlignV
-        ? { value: TEXT_ALIGN_V_VALUES[this._textAlignV], name: this._textAlignV }
-        : undefined,
+      textAlignHorizontal: toEnumValue(this._textAlignH, TEXT_ALIGN_H_VALUES),
+      textAlignVertical: toEnumValue(this._textAlignV, TEXT_ALIGN_V_VALUES),
       // Always include these with defaults (Figma's "Auto")
       textAutoResize: { value: TEXT_AUTO_RESIZE_VALUES[this._autoResize], name: this._autoResize },
-      textDecoration: this._decoration
-        ? { value: TEXT_DECORATION_VALUES[this._decoration], name: this._decoration }
-        : undefined,
-      textCase: this._textCase
-        ? { value: TEXT_CASE_VALUES[this._textCase], name: this._textCase }
-        : undefined,
+      textDecoration: toEnumValue(this._decoration, TEXT_DECORATION_VALUES),
+      textCase: toEnumValue(this._textCase, TEXT_CASE_VALUES),
       // Always include lineHeight and letterSpacing (defaults = Figma's "Auto")
       lineHeight: {
         value: this._lineHeight.value,
@@ -396,11 +332,6 @@ export class TextNodeBuilder {
 // Export Settings Types
 // =============================================================================
 
-export type ImageType = "PNG" | "JPEG" | "SVG" | "PDF";
-export type ExportConstraintType = "CONTENT_SCALE" | "CONTENT_WIDTH" | "CONTENT_HEIGHT";
-export type ExportColorProfile = "DOCUMENT" | "SRGB" | "DISPLAY_P3_V4";
-export type ExportSVGIDMode = "IF_NEEDED" | "ALWAYS";
-
 export type ExportSettings = {
   readonly suffix: string;
   readonly imageType: { value: number; name: ImageType };
@@ -416,30 +347,6 @@ export type ExportSettings = {
   readonly useAbsoluteBounds: boolean;
   readonly colorProfile: { value: number; name: ExportColorProfile };
   readonly useBicubicSampler: boolean;
-};
-
-const IMAGE_TYPE_VALUES: Record<ImageType, number> = {
-  PNG: 0,
-  JPEG: 1,
-  SVG: 2,
-  PDF: 3,
-};
-
-const EXPORT_CONSTRAINT_VALUES: Record<ExportConstraintType, number> = {
-  CONTENT_SCALE: 0,
-  CONTENT_WIDTH: 1,
-  CONTENT_HEIGHT: 2,
-};
-
-const EXPORT_COLOR_PROFILE_VALUES: Record<ExportColorProfile, number> = {
-  DOCUMENT: 0,
-  SRGB: 1,
-  DISPLAY_P3_V4: 2,
-};
-
-const SVG_ID_MODE_VALUES: Record<ExportSVGIDMode, number> = {
-  IF_NEEDED: 0,
-  ALWAYS: 1,
 };
 
 /**
@@ -565,8 +472,8 @@ export class FrameNodeBuilder {
     return this;
   }
 
-  background(r: number, g: number, b: number, a: number = 1): this {
-    this._fillColor = { r, g, b, a };
+  background(c: Color): this {
+    this._fillColor = c;
     return this;
   }
 
@@ -601,19 +508,15 @@ export class FrameNodeBuilder {
   }
 
   /**
-   * Set padding (uniform or individual)
-   * @param top Top padding (or uniform padding if other values are omitted)
-   * @param right Right padding (defaults to top)
-   * @param bottom Bottom padding (defaults to top)
-   * @param left Left padding (defaults to right)
+   * Set padding (uniform value or full padding object)
+   * @param value Uniform padding or StackPadding object
    */
-  padding(top: number, right?: number, bottom?: number, left?: number): this {
-    this._stackPadding = {
-      top,
-      right: right ?? top,
-      bottom: bottom ?? top,
-      left: left ?? right ?? top,
-    };
+  padding(value: number | StackPadding): this {
+    if (typeof value === "number") {
+      this._stackPadding = { top: value, right: value, bottom: value, left: value };
+    } else {
+      this._stackPadding = value;
+    }
     return this;
   }
 
@@ -789,40 +692,22 @@ export class FrameNodeBuilder {
       exportSettings: this._exportSettings.length > 0 ? this._exportSettings : undefined,
 
       // AutoLayout - frame level
-      stackMode: this._stackMode
-        ? { value: STACK_MODE_VALUES[this._stackMode], name: this._stackMode }
-        : undefined,
+      stackMode: toEnumValue(this._stackMode, STACK_MODE_VALUES),
       stackSpacing: this._stackSpacing,
       stackPadding: this._stackPadding,
-      stackPrimaryAlignItems: this._stackPrimaryAlignItems
-        ? { value: STACK_ALIGN_VALUES[this._stackPrimaryAlignItems], name: this._stackPrimaryAlignItems }
-        : undefined,
-      stackCounterAlignItems: this._stackCounterAlignItems
-        ? { value: STACK_ALIGN_VALUES[this._stackCounterAlignItems], name: this._stackCounterAlignItems }
-        : undefined,
-      stackPrimaryAlignContent: this._stackPrimaryAlignContent
-        ? { value: STACK_ALIGN_VALUES[this._stackPrimaryAlignContent], name: this._stackPrimaryAlignContent }
-        : undefined,
+      stackPrimaryAlignItems: toEnumValue(this._stackPrimaryAlignItems, STACK_ALIGN_VALUES),
+      stackCounterAlignItems: toEnumValue(this._stackCounterAlignItems, STACK_ALIGN_VALUES),
+      stackPrimaryAlignContent: toEnumValue(this._stackPrimaryAlignContent, STACK_ALIGN_VALUES),
       stackWrap: this._stackWrap,
       stackCounterSpacing: this._stackCounterSpacing,
       itemReverseZIndex: this._itemReverseZIndex,
 
       // AutoLayout - child level
-      stackPositioning: this._stackPositioning
-        ? { value: STACK_POSITIONING_VALUES[this._stackPositioning], name: this._stackPositioning }
-        : undefined,
-      stackPrimarySizing: this._stackPrimarySizing
-        ? { value: STACK_SIZING_VALUES[this._stackPrimarySizing], name: this._stackPrimarySizing }
-        : undefined,
-      stackCounterSizing: this._stackCounterSizing
-        ? { value: STACK_SIZING_VALUES[this._stackCounterSizing], name: this._stackCounterSizing }
-        : undefined,
-      horizontalConstraint: this._horizontalConstraint
-        ? { value: CONSTRAINT_TYPE_VALUES[this._horizontalConstraint], name: this._horizontalConstraint }
-        : undefined,
-      verticalConstraint: this._verticalConstraint
-        ? { value: CONSTRAINT_TYPE_VALUES[this._verticalConstraint], name: this._verticalConstraint }
-        : undefined,
+      stackPositioning: toEnumValue(this._stackPositioning, STACK_POSITIONING_VALUES),
+      stackPrimarySizing: toEnumValue(this._stackPrimarySizing, STACK_SIZING_VALUES),
+      stackCounterSizing: toEnumValue(this._stackCounterSizing, STACK_SIZING_VALUES),
+      horizontalConstraint: toEnumValue(this._horizontalConstraint, CONSTRAINT_TYPE_VALUES),
+      verticalConstraint: toEnumValue(this._verticalConstraint, CONSTRAINT_TYPE_VALUES),
     };
   }
 }

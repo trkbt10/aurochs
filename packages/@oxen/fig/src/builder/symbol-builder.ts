@@ -4,57 +4,49 @@
  * Provides builders for SYMBOL (component definition) and INSTANCE (component instance) nodes.
  */
 
-import type {
-  Color,
-  Paint,
-  StackMode,
-  StackAlign,
-  StackPositioning,
-  StackSizing,
-  ConstraintType,
-  StackPadding,
-  ExportSettings,
-} from "./text-builder";
+import type { Color, Paint, StackPadding, ExportSettings } from "./text-builder";
 import { DEFAULT_SVG_EXPORT_SETTINGS } from "./text-builder";
+import {
+  STACK_MODE_VALUES,
+  STACK_ALIGN_VALUES,
+  STACK_POSITIONING_VALUES,
+  STACK_SIZING_VALUES,
+  CONSTRAINT_TYPE_VALUES,
+  toEnumValue,
+  type StackMode,
+  type StackAlign,
+  type StackPositioning,
+  type StackSizing,
+  type ConstraintType,
+} from "../constants";
 
-// =============================================================================
-// Value Maps (duplicated from text-builder for encapsulation)
-// =============================================================================
+type SymbolID = { sessionID: number; localID: number };
 
-const STACK_MODE_VALUES: Record<StackMode, number> = {
-  NONE: 0,
-  HORIZONTAL: 1,
-  VERTICAL: 2,
-  WRAP: 3,
-};
+function normalizeSymbolID(symbolID: number | SymbolID): SymbolID {
+  if (typeof symbolID === "number") {
+    return { sessionID: 1, localID: symbolID };
+  }
+  return symbolID;
+}
 
-const STACK_ALIGN_VALUES: Record<StackAlign, number> = {
-  MIN: 0,
-  CENTER: 1,
-  MAX: 2,
-  STRETCH: 3,
-  BASELINE: 4,
-  SPACE_BETWEEN: 5,
-};
+function buildFillPaintsOverride(fillColor: Color | undefined): Paint[] | undefined {
+  if (!fillColor) {
+    return undefined;
+  }
+  return [
+    {
+      type: { value: 0, name: "SOLID" },
+      color: fillColor,
+      opacity: 1,
+      visible: true,
+      blendMode: { value: 1, name: "NORMAL" },
+    },
+  ];
+}
 
-const STACK_POSITIONING_VALUES: Record<StackPositioning, number> = {
-  AUTO: 0,
-  ABSOLUTE: 1,
-};
-
-const STACK_SIZING_VALUES: Record<StackSizing, number> = {
-  FIXED: 0,
-  FILL: 1,
-  HUG: 2,
-};
-
-const CONSTRAINT_TYPE_VALUES: Record<ConstraintType, number> = {
-  MIN: 0,
-  CENTER: 1,
-  MAX: 2,
-  STRETCH: 3,
-  SCALE: 4,
-};
+function optionalArray<T>(arr: readonly T[]): readonly T[] | undefined {
+  return arr.length > 0 ? arr : undefined;
+}
 
 // =============================================================================
 // Symbol Node Data
@@ -153,8 +145,8 @@ export class SymbolNodeBuilder {
     return this;
   }
 
-  background(r: number, g: number, b: number, a: number = 1): this {
-    this._fillColor = { r, g, b, a };
+  background(c: Color): this {
+    this._fillColor = c;
     return this;
   }
 
@@ -192,13 +184,12 @@ export class SymbolNodeBuilder {
     return this;
   }
 
-  padding(top: number, right?: number, bottom?: number, left?: number): this {
-    this._stackPadding = {
-      top,
-      right: right ?? top,
-      bottom: bottom ?? top,
-      left: left ?? right ?? top,
-    };
+  padding(value: number | StackPadding): this {
+    if (typeof value === "number") {
+      this._stackPadding = { top: value, right: value, bottom: value, left: value };
+    } else {
+      this._stackPadding = value;
+    }
     return this;
   }
 
@@ -283,20 +274,12 @@ export class SymbolNodeBuilder {
       exportSettings: this._exportSettings.length > 0 ? this._exportSettings : undefined,
 
       // AutoLayout
-      stackMode: this._stackMode
-        ? { value: STACK_MODE_VALUES[this._stackMode], name: this._stackMode }
-        : undefined,
+      stackMode: toEnumValue(this._stackMode, STACK_MODE_VALUES),
       stackSpacing: this._stackSpacing,
       stackPadding: this._stackPadding,
-      stackPrimaryAlignItems: this._stackPrimaryAlignItems
-        ? { value: STACK_ALIGN_VALUES[this._stackPrimaryAlignItems], name: this._stackPrimaryAlignItems }
-        : undefined,
-      stackCounterAlignItems: this._stackCounterAlignItems
-        ? { value: STACK_ALIGN_VALUES[this._stackCounterAlignItems], name: this._stackCounterAlignItems }
-        : undefined,
-      stackPrimaryAlignContent: this._stackPrimaryAlignContent
-        ? { value: STACK_ALIGN_VALUES[this._stackPrimaryAlignContent], name: this._stackPrimaryAlignContent }
-        : undefined,
+      stackPrimaryAlignItems: toEnumValue(this._stackPrimaryAlignItems, STACK_ALIGN_VALUES),
+      stackCounterAlignItems: toEnumValue(this._stackCounterAlignItems, STACK_ALIGN_VALUES),
+      stackPrimaryAlignContent: toEnumValue(this._stackPrimaryAlignContent, STACK_ALIGN_VALUES),
       stackWrap: this._stackWrap,
       stackCounterSpacing: this._stackCounterSpacing,
       itemReverseZIndex: this._itemReverseZIndex,
@@ -371,10 +354,7 @@ export class InstanceNodeBuilder {
   ) {
     this._localID = localID;
     this._parentID = parentID;
-    this._symbolID =
-      typeof symbolID === "number"
-        ? { sessionID: 1, localID: symbolID }
-        : symbolID;
+    this._symbolID = normalizeSymbolID(symbolID);
     this._name = "Instance";
     this._width = 100;
     this._height = 100;
@@ -418,8 +398,8 @@ export class InstanceNodeBuilder {
   /**
    * Override the background color of this instance
    */
-  overrideBackground(r: number, g: number, b: number, a: number = 1): this {
-    this._fillColor = { r, g, b, a };
+  overrideBackground(c: Color): this {
+    this._fillColor = c;
     return this;
   }
 
@@ -483,38 +463,15 @@ export class InstanceNodeBuilder {
       opacity: this._opacity,
 
       // Overrides
-      fillPaints: this._fillColor
-        ? [
-            {
-              type: { value: 0, name: "SOLID" },
-              color: this._fillColor,
-              opacity: 1,
-              visible: true,
-              blendMode: { value: 1, name: "NORMAL" },
-            },
-          ]
-        : undefined,
-      componentPropertyReferences:
-        this._componentPropertyRefs.length > 0
-          ? this._componentPropertyRefs
-          : undefined,
+      fillPaints: buildFillPaintsOverride(this._fillColor),
+      componentPropertyReferences: optionalArray(this._componentPropertyRefs),
 
       // Child constraints
-      stackPositioning: this._stackPositioning
-        ? { value: STACK_POSITIONING_VALUES[this._stackPositioning], name: this._stackPositioning }
-        : undefined,
-      stackPrimarySizing: this._stackPrimarySizing
-        ? { value: STACK_SIZING_VALUES[this._stackPrimarySizing], name: this._stackPrimarySizing }
-        : undefined,
-      stackCounterSizing: this._stackCounterSizing
-        ? { value: STACK_SIZING_VALUES[this._stackCounterSizing], name: this._stackCounterSizing }
-        : undefined,
-      horizontalConstraint: this._horizontalConstraint
-        ? { value: CONSTRAINT_TYPE_VALUES[this._horizontalConstraint], name: this._horizontalConstraint }
-        : undefined,
-      verticalConstraint: this._verticalConstraint
-        ? { value: CONSTRAINT_TYPE_VALUES[this._verticalConstraint], name: this._verticalConstraint }
-        : undefined,
+      stackPositioning: toEnumValue(this._stackPositioning, STACK_POSITIONING_VALUES),
+      stackPrimarySizing: toEnumValue(this._stackPrimarySizing, STACK_SIZING_VALUES),
+      stackCounterSizing: toEnumValue(this._stackCounterSizing, STACK_SIZING_VALUES),
+      horizontalConstraint: toEnumValue(this._horizontalConstraint, CONSTRAINT_TYPE_VALUES),
+      verticalConstraint: toEnumValue(this._verticalConstraint, CONSTRAINT_TYPE_VALUES),
     };
   }
 }

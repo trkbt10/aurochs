@@ -3,17 +3,18 @@
  *
  * Loads an existing .fig file, allows modification, and saves back
  * using the original schema for compatibility.
+ *
+ * This is primarily for validation and testing, not for building new files.
  */
 
-import { deflateRaw } from "pako";
+import { compressZstd } from "../compression";
+import { decompressDeflateRaw, decompressZstd, detectCompression } from "../compression";
 import type { KiwiSchema, FigNode } from "../types";
-import { ByteBuffer } from "../kiwi/byte-buffer";
 import { StreamingFigEncoder } from "../kiwi/stream";
 import { parseFigHeader, getPayload } from "../parser/header";
 import { splitFigChunks, decodeFigSchema, decodeFigMessage } from "../kiwi/decoder";
-import { decompressDeflateRaw, detectCompression, decompressZstd } from "../parser/decompress";
 import { loadZipPackage, createEmptyZipPackage } from "@oxen/zip";
-import { buildFigHeader } from "./header";
+import { buildFigHeader } from "../builder/header";
 
 // =============================================================================
 // Types
@@ -52,7 +53,7 @@ export type LoadedFigFile = {
   readonly compressedSchema: Uint8Array;
   /** Header version character */
   readonly version: string;
-  /** Node changes */
+  /** Node changes (raw Kiwi format) */
   readonly nodeChanges: FigNode[];
   /** Blobs */
   readonly blobs: readonly FigBlob[];
@@ -71,7 +72,9 @@ export type LoadedFigFile = {
 // =============================================================================
 
 function isZipFile(data: Uint8Array): boolean {
-  if (data.length < 4) return false;
+  if (data.length < 4) {
+    return false;
+  }
   return (
     data[0] === ZIP_MAGIC[0] &&
     data[1] === ZIP_MAGIC[1] &&
@@ -82,96 +85,125 @@ function isZipFile(data: Uint8Array): boolean {
 
 function decompressFigChunk(data: Uint8Array): Uint8Array {
   const compressionType = detectCompression(data);
-  if (compressionType === "zstd") {
-    return decompressZstd(data);
-  }
-  return decompressDeflateRaw(data);
+  return compressionType === "zstd" ? decompressZstd(data) : decompressDeflateRaw(data);
 }
 
 function getMimeTypeFromContent(data: Uint8Array): string {
-  if (data.length >= 8 && data[0] === 0x89 && data[1] === 0x50 && data[2] === 0x4e && data[3] === 0x47) {
+  const isPng =
+    data.length >= 8 && data[0] === 0x89 && data[1] === 0x50 && data[2] === 0x4e && data[3] === 0x47;
+  if (isPng) {
     return "image/png";
   }
-  if (data.length >= 3 && data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff) {
+  const isJpeg = data.length >= 3 && data[0] === 0xff && data[1] === 0xd8 && data[2] === 0xff;
+  if (isJpeg) {
     return "image/jpeg";
   }
   return "application/octet-stream";
+}
+
+type ExtractedZipData = {
+  readonly data: Uint8Array;
+  readonly metadata: FigMetadata | null;
+  readonly thumbnail: Uint8Array | null;
+  readonly images: Map<string, FigImage>;
+};
+
+async function extractZipContents(data: Uint8Array): Promise<ExtractedZipData> {
+  const images = new Map<string, FigImage>();
+  const zipPackage = await loadZipPackage(data);
+  const files = zipPackage.listFiles();
+
+  // Find canvas.fig
+  const canvasContent = zipPackage.readBinary("canvas.fig");
+  if (!canvasContent) {
+    throw new Error(`Could not find canvas.fig in ZIP. Available: ${files.join(", ")}`);
+  }
+
+  // Extract metadata
+  const metaContent = zipPackage.readText("meta.json");
+  const metadata = metaContent ? parseMetadata(metaContent) : null;
+
+  // Extract thumbnail
+  const thumbnailContent = zipPackage.readBinary("thumbnail.png");
+  const thumbnail = thumbnailContent ? new Uint8Array(thumbnailContent) : null;
+
+  // Extract images
+  for (const file of files) {
+    if (file.startsWith("images/") && file.length > 7) {
+      const imageData = zipPackage.readBinary(file);
+      if (imageData) {
+        const ref = file.substring(7);
+        const imgBytes = new Uint8Array(imageData);
+        images.set(ref, {
+          ref,
+          data: imgBytes,
+          mimeType: getMimeTypeFromContent(imgBytes),
+        });
+      }
+    }
+  }
+
+  return { data: new Uint8Array(canvasContent), metadata, thumbnail, images };
+}
+
+function parseClientMeta(
+  raw: Record<string, unknown>
+): FigMetadata["clientMeta"] | undefined {
+  const clientMeta = raw.client_meta as Record<string, unknown> | undefined;
+  if (!clientMeta) {
+    return undefined;
+  }
+  return {
+    backgroundColor: clientMeta.background_color as FigMetadata["clientMeta"] extends { backgroundColor?: infer T } ? T : never,
+    thumbnailSize: clientMeta.thumbnail_size as FigMetadata["clientMeta"] extends { thumbnailSize?: infer T } ? T : never,
+    renderCoordinates: clientMeta.render_coordinates as FigMetadata["clientMeta"] extends { renderCoordinates?: infer T } ? T : never,
+  };
+}
+
+function parseMetadata(content: string): FigMetadata | null {
+  try {
+    const raw = JSON.parse(content) as Record<string, unknown>;
+    return {
+      clientMeta: parseClientMeta(raw),
+      fileName: raw.file_name as string | undefined,
+      developerRelatedLinks: raw.developer_related_links as readonly string[] | undefined,
+      exportedAt: raw.exported_at as string | undefined,
+    };
+  } catch (error: unknown) {
+    // JSON parse failed - metadata is invalid or corrupt
+    if (process.env.NODE_ENV === "development" && error instanceof Error) {
+      console.warn("Failed to parse fig metadata:", error.message);
+    }
+    return null;
+  }
 }
 
 // =============================================================================
 // Load Function
 // =============================================================================
 
+async function extractFigData(data: Uint8Array): Promise<ExtractedZipData> {
+  if (isZipFile(data)) {
+    return extractZipContents(data);
+  }
+  return {
+    data,
+    metadata: null,
+    thumbnail: null,
+    images: new Map<string, FigImage>(),
+  };
+}
+
 /**
  * Load a .fig file for roundtrip editing.
  * Preserves the original schema and metadata for compatibility.
  */
 export async function loadFigFile(data: Uint8Array): Promise<LoadedFigFile> {
-  let canvasData: Uint8Array;
-  const images = new Map<string, FigImage>();
-  let metadata: FigMetadata | null = null;
-  let thumbnail: Uint8Array | null = null;
-
-  // Handle ZIP wrapper
-  if (isZipFile(data)) {
-    const zipPackage = await loadZipPackage(data);
-    const files = zipPackage.listFiles();
-
-    // Find canvas.fig
-    const canvasContent = zipPackage.readBinary("canvas.fig");
-    if (!canvasContent) {
-      throw new Error(`Could not find canvas.fig in ZIP. Available: ${files.join(", ")}`);
-    }
-    canvasData = new Uint8Array(canvasContent);
-
-    // Extract metadata
-    const metaContent = zipPackage.readText("meta.json");
-    if (metaContent) {
-      try {
-        const raw = JSON.parse(metaContent);
-        metadata = {
-          clientMeta: raw.client_meta ? {
-            backgroundColor: raw.client_meta.background_color,
-            thumbnailSize: raw.client_meta.thumbnail_size,
-            renderCoordinates: raw.client_meta.render_coordinates,
-          } : undefined,
-          fileName: raw.file_name,
-          developerRelatedLinks: raw.developer_related_links,
-          exportedAt: raw.exported_at,
-        };
-      } catch {
-        // Ignore parse errors
-      }
-    }
-
-    // Extract thumbnail
-    const thumbnailContent = zipPackage.readBinary("thumbnail.png");
-    if (thumbnailContent) {
-      thumbnail = new Uint8Array(thumbnailContent);
-    }
-
-    // Extract images
-    for (const file of files) {
-      if (file.startsWith("images/") && file.length > 7) {
-        const imageData = zipPackage.readBinary(file);
-        if (imageData) {
-          const ref = file.substring(7);
-          const imgBytes = new Uint8Array(imageData);
-          images.set(ref, {
-            ref,
-            data: imgBytes,
-            mimeType: getMimeTypeFromContent(imgBytes),
-          });
-        }
-      }
-    }
-  } else {
-    canvasData = data;
-  }
+  const extracted = await extractFigData(data);
 
   // Parse header
-  const header = parseFigHeader(canvasData);
-  const payload = getPayload(canvasData);
+  const header = parseFigHeader(extracted.data);
+  const payload = getPayload(extracted.data);
 
   // Split chunks and keep compressed schema for exact roundtrip
   const chunks = splitFigChunks(payload, header.payloadSize);
@@ -203,9 +235,9 @@ export async function loadFigFile(data: Uint8Array): Promise<LoadedFigFile> {
     version: header.version,
     nodeChanges,
     blobs,
-    images,
-    metadata,
-    thumbnail,
+    images: extracted.images,
+    metadata: extracted.metadata,
+    thumbnail: extracted.thumbnail,
     messageHeader,
   };
 }
@@ -223,6 +255,28 @@ export type SaveFigOptions = {
   /** Additional images to include */
   readonly images?: ReadonlyMap<string, FigImage>;
 };
+
+function buildClientMeta(
+  clientMeta: FigMetadata["clientMeta"]
+): Record<string, unknown> | undefined {
+  if (!clientMeta) {
+    return undefined;
+  }
+  return {
+    background_color: clientMeta.backgroundColor,
+    thumbnail_size: clientMeta.thumbnailSize,
+    render_coordinates: clientMeta.renderCoordinates,
+  };
+}
+
+function buildMetaJson(metadata: Partial<FigMetadata>): Record<string, unknown> {
+  return {
+    client_meta: buildClientMeta(metadata.clientMeta),
+    file_name: metadata.fileName,
+    developer_related_links: metadata.developerRelatedLinks ?? [],
+    exported_at: metadata.exportedAt ?? new Date().toISOString(),
+  };
+}
 
 /**
  * Save a loaded .fig file back to bytes.
@@ -255,7 +309,8 @@ export async function saveFigFile(
   }
 
   const messageData = encoder.finalize();
-  const compressedMessage = deflateRaw(messageData);
+  // Use zstd compression for message data (Figma's expected format)
+  const compressedMessage = await compressZstd(messageData, 3);
 
   // Build data chunk with 4-byte LE size prefix
   const dataChunk = new Uint8Array(4 + compressedMessage.length);
@@ -276,22 +331,9 @@ export async function saveFigFile(
   zip.writeBinary("canvas.fig", canvasData);
 
   // Add metadata
-  const mergedMetadata = {
-    ...loaded.metadata,
-    ...options?.metadata,
-  };
+  const mergedMetadata = { ...loaded.metadata, ...options?.metadata };
   if (mergedMetadata.fileName || mergedMetadata.exportedAt) {
-    const metaJson = {
-      client_meta: mergedMetadata.clientMeta ? {
-        background_color: mergedMetadata.clientMeta.backgroundColor,
-        thumbnail_size: mergedMetadata.clientMeta.thumbnailSize,
-        render_coordinates: mergedMetadata.clientMeta.renderCoordinates,
-      } : undefined,
-      file_name: mergedMetadata.fileName,
-      developer_related_links: mergedMetadata.developerRelatedLinks ?? [],
-      exported_at: mergedMetadata.exportedAt ?? new Date().toISOString(),
-    };
-    zip.writeText("meta.json", JSON.stringify(metaJson));
+    zip.writeText("meta.json", JSON.stringify(buildMetaJson(mergedMetadata)));
   }
 
   // Add thumbnail
@@ -326,40 +368,27 @@ export async function saveFigFile(
 export function cloneFigFile(loaded: LoadedFigFile): LoadedFigFile {
   return {
     ...loaded,
-    nodeChanges: loaded.nodeChanges.map(n => ({ ...n })),
+    nodeChanges: loaded.nodeChanges.map((n) => ({ ...n })),
   };
 }
 
 /**
  * Add a node change to a loaded file.
  */
-export function addNodeChange(
-  loaded: LoadedFigFile,
-  node: FigNode
-): void {
+export function addNodeChange(loaded: LoadedFigFile, node: FigNode): void {
   loaded.nodeChanges.push(node);
 }
 
 /**
  * Find a node by name.
  */
-export function findNodeByName(
-  loaded: LoadedFigFile,
-  name: string
-): FigNode | undefined {
-  return loaded.nodeChanges.find(n => n.name === name);
+export function findNodeByName(loaded: LoadedFigFile, name: string): FigNode | undefined {
+  return loaded.nodeChanges.find((n) => n.name === name);
 }
 
 /**
  * Find nodes by type.
  */
-export function findNodesByType(
-  loaded: LoadedFigFile,
-  typeName: string
-): FigNode[] {
-  return loaded.nodeChanges.filter(n => {
-    const nodeData = n as Record<string, unknown>;
-    const type = nodeData.type as { name?: string } | undefined;
-    return type?.name === typeName;
-  });
+export function findNodesByType(loaded: LoadedFigFile, typeName: string): FigNode[] {
+  return loaded.nodeChanges.filter((n) => n.type?.name === typeName);
 }

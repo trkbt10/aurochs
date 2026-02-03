@@ -6,10 +6,11 @@
  */
 
 import { deflateRaw } from "pako";
+import { compressZstd } from "../compression";
 import type { KiwiSchema } from "../types";
 import { ByteBuffer } from "../kiwi/byte-buffer";
 import { StreamingFigEncoder } from "../kiwi/stream";
-import { createTextSchema } from "./text-schema";
+import figmaSchemaJson from "./figma-schema.json";
 import type { TextNodeData, FrameNodeData, StackPadding } from "./text-builder";
 import type { SymbolNodeData, InstanceNodeData } from "./symbol-builder";
 import type {
@@ -22,53 +23,9 @@ import type {
   Stroke,
   ArcData,
 } from "./shape-builder";
-import { SHAPE_NODE_TYPES } from "./shape-builder";
+import { SHAPE_NODE_TYPES, NODE_TYPE_VALUES } from "../constants";
 import { buildFigHeader } from "./header";
 import { createEmptyZipPackage } from "@oxen/zip";
-
-// =============================================================================
-// Types
-// =============================================================================
-
-export type NodeTypeMap = {
-  DOCUMENT: 1;
-  CANVAS: 2;
-  FRAME: 3;
-  VECTOR: 5;
-  BOOLEAN_OPERATION: 6;
-  STAR: 7;
-  LINE: 8;
-  ELLIPSE: 9;
-  REGULAR_POLYGON: 10;
-  RECTANGLE: 11;
-  ROUNDED_RECTANGLE: 12;
-  TEXT: 13;
-  SYMBOL: 15;
-  INSTANCE: 16;
-};
-
-const NODE_TYPE_VALUES: NodeTypeMap = {
-  DOCUMENT: 1,
-  CANVAS: 2,
-  FRAME: 3,
-  VECTOR: 5,
-  BOOLEAN_OPERATION: 6,
-  STAR: 7,
-  LINE: 8,
-  ELLIPSE: 9,
-  REGULAR_POLYGON: 10,
-  RECTANGLE: 11,
-  ROUNDED_RECTANGLE: 12,
-  TEXT: 13,
-  SYMBOL: 15,
-  INSTANCE: 16,
-};
-
-type BaseNode = {
-  readonly localID: number;
-  readonly parentID: number;
-  readonly name: string;
-};
 
 // =============================================================================
 // Schema Encoder (fig-kiwi format)
@@ -115,10 +72,11 @@ export class FigFileBuilder {
   private sessionID: number;
 
   constructor() {
-    this.schema = createTextSchema();
+    // Use the actual Figma schema extracted from a working file
+    this.schema = figmaSchemaJson as KiwiSchema;
     this.nodes = [];
     this.nextLocalID = 0;
-    this.sessionID = 1;
+    this.sessionID = 0;  // Use 0 for Figma compatibility
   }
 
   /**
@@ -133,12 +91,19 @@ export class FigFileBuilder {
    */
   addDocument(name: string = "Document"): number {
     const localID = this.getNextID();
-    this.nodes.push(this.createNodeChange({
+    const node = this.createNodeChange({
       localID,
       parentID: -1,
       type: NODE_TYPE_VALUES.DOCUMENT,
       name,
-    }));
+    });
+    // Add required Document fields for Figma compatibility
+    node.transform = { m00: 1, m01: 0, m02: 0, m10: 0, m11: 1, m12: 0 };
+    node.strokeWeight = 0;
+    node.strokeAlign = { value: 0, name: "CENTER" };
+    node.strokeJoin = { value: 1, name: "BEVEL" };
+    node.documentColorProfile = { value: 1, name: "SRGB" };
+    this.nodes.push(node);
     return localID;
   }
 
@@ -147,12 +112,18 @@ export class FigFileBuilder {
    */
   addCanvas(parentID: number, name: string = "Page 1"): number {
     const localID = this.getNextID();
-    this.nodes.push(this.createNodeChange({
+    const node = this.createNodeChange({
       localID,
       parentID,
       type: NODE_TYPE_VALUES.CANVAS,
       name,
-    }));
+    });
+    // Add Canvas-specific fields for Figma compatibility
+    node.transform = { m00: 1, m01: 0, m02: 0, m10: 0, m11: 1, m12: 0 };
+    node.backgroundOpacity = 1;
+    node.backgroundColor = { r: 0.9607843160629272, g: 0.9607843160629272, b: 0.9607843160629272, a: 1 };
+    node.backgroundEnabled = true;
+    this.nodes.push(node);
     return localID;
   }
 
@@ -566,7 +537,10 @@ export class FigFileBuilder {
       name: data.name,
       visible: data.visible ?? true,
       opacity: data.opacity ?? 1,
-      blendMode: { value: 1, name: "NORMAL" },
+      // Required stroke defaults for Figma compatibility
+      strokeWeight: 0,
+      strokeAlign: { value: 0, name: "CENTER" },
+      strokeJoin: { value: 1, name: "BEVEL" },
     };
 
     // Parent index
@@ -596,6 +570,10 @@ export class FigFileBuilder {
     }
     if (data.cornerRadius !== undefined) {
       node.cornerRadius = data.cornerRadius;
+    }
+    // Add frameMaskDisabled for FRAME type (required by Figma)
+    if (data.type === NODE_TYPE_VALUES.FRAME) {
+      node.frameMaskDisabled = false;
     }
 
     // AutoLayout - frame level (for FRAME and SYMBOL)
@@ -739,33 +717,26 @@ export class FigFileBuilder {
 
   private generatePosition(): string {
     // Figma uses a fractional index system
-    // We'll use a simple incrementing character
-    return String.fromCharCode(33 + (this.positionCounter++ % 93));
+    // From observation: "!" for first child, then ASCII incrementing ("\"", "#", "$", etc.)
+    const base = 33; // ASCII '!'
+    return String.fromCharCode(base + (this.positionCounter++ % 93));
   }
 
   private getTypeName(type: number): string {
-    const names: Record<number, string> = {
-      1: "DOCUMENT",
-      2: "CANVAS",
-      3: "FRAME",
-      5: "VECTOR",
-      6: "BOOLEAN_OPERATION",
-      7: "STAR",
-      8: "LINE",
-      9: "ELLIPSE",
-      10: "REGULAR_POLYGON",
-      11: "RECTANGLE",
-      12: "ROUNDED_RECTANGLE",
-      13: "TEXT",
-      15: "SYMBOL",
-      16: "INSTANCE",
-    };
-    return names[type] ?? "UNKNOWN";
+    // Reverse lookup from NODE_TYPE_VALUES
+    for (const [name, value] of Object.entries(NODE_TYPE_VALUES)) {
+      if (value === type) {
+        return name;
+      }
+    }
+    return "UNKNOWN";
   }
 
   /**
    * Build the raw fig-kiwi data (without ZIP wrapping)
    * Use this for internal testing or when you need the raw format.
+   * Note: This uses deflate-raw compression. For Figma compatibility,
+   * use buildRawAsync() which uses zstd compression.
    */
   buildRaw(): Uint8Array {
     // Encode schema
@@ -795,7 +766,52 @@ export class FigFileBuilder {
     dataChunk.set(compressedMessage, 4);
 
     // Build header
-    const header = buildFigHeader(compressedSchema.length, "0");
+    const header = buildFigHeader(compressedSchema.length, "e");
+
+    // Combine all parts
+    const totalSize = header.length + compressedSchema.length + dataChunk.length;
+    const result = new Uint8Array(totalSize);
+    result.set(header, 0);
+    result.set(compressedSchema, header.length);
+    result.set(dataChunk, header.length + compressedSchema.length);
+
+    return result;
+  }
+
+  /**
+   * Build the raw fig-kiwi data with zstd compression (async).
+   * This is the format that Figma expects.
+   */
+  async buildRawAsync(): Promise<Uint8Array> {
+    // Encode schema
+    const schemaData = encodeFigSchema(this.schema);
+    const compressedSchema = deflateRaw(schemaData);
+
+    // Encode message using streaming encoder
+    const encoder = new StreamingFigEncoder({ schema: this.schema });
+
+    encoder.writeHeader({
+      type: { value: 1 },
+      sessionID: this.sessionID,
+      ackID: 0,
+    });
+
+    for (const node of this.nodes) {
+      encoder.writeNodeChange(node);
+    }
+
+    const messageData = encoder.finalize();
+    // Use zstd compression for message data (Figma's expected format)
+    const compressedMessage = await compressZstd(messageData, 3);
+
+    // Build data chunk with 4-byte LE size prefix
+    const dataChunk = new Uint8Array(4 + compressedMessage.length);
+    const dataView = new DataView(dataChunk.buffer);
+    dataView.setUint32(0, compressedMessage.length, true);
+    dataChunk.set(compressedMessage, 4);
+
+    // Build header
+    const header = buildFigHeader(compressedSchema.length, "e");
 
     // Combine all parts
     const totalSize = header.length + compressedSchema.length + dataChunk.length;
@@ -828,7 +844,7 @@ export class FigFileBuilder {
   async buildAsync(options?: {
     fileName?: string;
   }): Promise<Uint8Array> {
-    const rawData = this.buildRaw();
+    const rawData = await this.buildRawAsync();
 
     // Create ZIP package with canvas.fig inside
     const zip = createEmptyZipPackage();

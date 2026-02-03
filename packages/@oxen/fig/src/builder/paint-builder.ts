@@ -12,64 +12,23 @@
  */
 
 import type { Color, Paint } from "./text-builder";
-import type { Stroke, StrokeCap, StrokeJoin, StrokeAlign } from "./shape-builder";
+import type { Stroke } from "./shape-builder";
+import {
+  PAINT_TYPE_VALUES,
+  BLEND_MODE_VALUES,
+  SCALE_MODE_VALUES,
+  STROKE_CAP_VALUES,
+  STROKE_JOIN_VALUES,
+  STROKE_ALIGN_VALUES,
+  type BlendMode,
+  type ScaleMode,
+  type StrokeCap,
+  type StrokeJoin,
+  type StrokeAlign,
+} from "../constants";
 
-// =============================================================================
-// Paint Type Values
-// =============================================================================
-
-export const PAINT_TYPE_VALUES = {
-  SOLID: 0,
-  GRADIENT_LINEAR: 1,
-  GRADIENT_RADIAL: 2,
-  GRADIENT_ANGULAR: 3,
-  GRADIENT_DIAMOND: 4,
-  IMAGE: 5,
-  EMOJI: 6,
-} as const;
-
-export type PaintType = keyof typeof PAINT_TYPE_VALUES;
-
-// =============================================================================
-// Scale Mode Values (for image fills)
-// =============================================================================
-
-export const SCALE_MODE_VALUES = {
-  FILL: 0,
-  FIT: 1,
-  CROP: 2,
-  TILE: 3,
-} as const;
-
-export type ScaleMode = keyof typeof SCALE_MODE_VALUES;
-
-// =============================================================================
-// Blend Mode Values
-// =============================================================================
-
-export const BLEND_MODE_VALUES = {
-  PASS_THROUGH: 0,
-  NORMAL: 1,
-  DARKEN: 2,
-  MULTIPLY: 3,
-  LINEAR_BURN: 4,
-  COLOR_BURN: 5,
-  LIGHTEN: 6,
-  SCREEN: 7,
-  LINEAR_DODGE: 8,
-  COLOR_DODGE: 9,
-  OVERLAY: 10,
-  SOFT_LIGHT: 11,
-  HARD_LIGHT: 12,
-  DIFFERENCE: 13,
-  EXCLUSION: 14,
-  HUE: 15,
-  SATURATION: 16,
-  COLOR: 17,
-  LUMINOSITY: 18,
-} as const;
-
-export type BlendMode = keyof typeof BLEND_MODE_VALUES;
+// Note: PaintType, BlendMode, ScaleMode and their value maps should be imported
+// directly from "@oxen/fig/constants" by consumers.
 
 // =============================================================================
 // Gradient Stop
@@ -133,8 +92,8 @@ export class SolidPaintBuilder {
   private _visible: boolean;
   private _blendMode: BlendMode;
 
-  constructor(r: number, g: number, b: number, a: number = 1) {
-    this._color = { r, g, b, a };
+  constructor(color: Color) {
+    this._color = color;
     this._opacity = 1;
     this._visible = true;
     this._blendMode = "NORMAL";
@@ -206,8 +165,8 @@ export class LinearGradientBuilder {
   /**
    * Add a gradient stop
    */
-  addStop(r: number, g: number, b: number, position: number, a: number = 1): this {
-    this._stops.push({ color: { r, g, b, a }, position });
+  addStop(stop: GradientStop): this {
+    this._stops.push(stop);
     this._stops.sort((a, b) => a.position - b.position);
     return this;
   }
@@ -230,11 +189,11 @@ export class LinearGradientBuilder {
   /**
    * Set gradient direction from point to point (0-1 coordinates)
    */
-  direction(startX: number, startY: number, endX: number, endY: number): this {
-    this._startX = startX;
-    this._startY = startY;
-    this._endX = endX;
-    this._endY = endY;
+  direction(points: { startX: number; startY: number; endX: number; endY: number }): this {
+    this._startX = points.startX;
+    this._startY = points.startY;
+    this._endX = points.endX;
+    this._endY = points.endY;
     return this;
   }
 
@@ -301,8 +260,8 @@ export class RadialGradientBuilder {
     return this;
   }
 
-  addStop(r: number, g: number, b: number, position: number, a: number = 1): this {
-    this._stops.push({ color: { r, g, b, a }, position });
+  addStop(stop: GradientStop): this {
+    this._stops.push(stop);
     this._stops.sort((a, b) => a.position - b.position);
     return this;
   }
@@ -403,8 +362,8 @@ export class AngularGradientBuilder {
     return this;
   }
 
-  addStop(r: number, g: number, b: number, position: number, a: number = 1): this {
-    this._stops.push({ color: { r, g, b, a }, position });
+  addStop(stop: GradientStop): this {
+    this._stops.push(stop);
     this._stops.sort((a, b) => a.position - b.position);
     return this;
   }
@@ -490,8 +449,8 @@ export class DiamondGradientBuilder {
     return this;
   }
 
-  addStop(r: number, g: number, b: number, position: number, a: number = 1): this {
-    this._stops.push({ color: { r, g, b, a }, position });
+  addStop(stop: GradientStop): this {
+    this._stops.push(stop);
     this._stops.sort((a, b) => a.position - b.position);
     return this;
   }
@@ -619,26 +578,6 @@ export class ImagePaintBuilder {
 // Stroke Builder
 // =============================================================================
 
-const STROKE_CAP_VALUES: Record<StrokeCap, number> = {
-  NONE: 0,
-  ROUND: 1,
-  SQUARE: 2,
-  ARROW_LINES: 3,
-  ARROW_EQUILATERAL: 4,
-};
-
-const STROKE_JOIN_VALUES: Record<StrokeJoin, number> = {
-  MITER: 0,
-  BEVEL: 1,
-  ROUND: 2,
-};
-
-const STROKE_ALIGN_VALUES: Record<StrokeAlign, number> = {
-  CENTER: 0,
-  INSIDE: 1,
-  OUTSIDE: 2,
-};
-
 export type StrokeData = {
   readonly paints: readonly Stroke[];
   readonly weight: number;
@@ -661,8 +600,8 @@ export class StrokeBuilder {
   private _visible: boolean;
   private _blendMode: BlendMode;
 
-  constructor(r: number = 0, g: number = 0, b: number = 0, a: number = 1) {
-    this._color = { r, g, b, a };
+  constructor(color: Color = { r: 0, g: 0, b: 0, a: 1 }) {
+    this._color = color;
     this._weight = 1;
     this._cap = "NONE";
     this._join = "MITER";
@@ -673,8 +612,8 @@ export class StrokeBuilder {
     this._blendMode = "NORMAL";
   }
 
-  color(r: number, g: number, b: number, a: number = 1): this {
-    this._color = { r, g, b, a };
+  color(c: Color): this {
+    this._color = c;
     return this;
   }
 
@@ -751,8 +690,8 @@ export class StrokeBuilder {
 /**
  * Create a solid color paint
  */
-export function solidPaint(r: number, g: number, b: number, a: number = 1): SolidPaintBuilder {
-  return new SolidPaintBuilder(r, g, b, a);
+export function solidPaint(color: Color): SolidPaintBuilder {
+  return new SolidPaintBuilder(color);
 }
 
 /**
@@ -761,13 +700,14 @@ export function solidPaint(r: number, g: number, b: number, a: number = 1): Soli
 export function solidPaintHex(hex: string): SolidPaintBuilder {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   if (!result) {
-    return new SolidPaintBuilder(0, 0, 0);
+    return new SolidPaintBuilder({ r: 0, g: 0, b: 0, a: 1 });
   }
-  return new SolidPaintBuilder(
-    parseInt(result[1], 16) / 255,
-    parseInt(result[2], 16) / 255,
-    parseInt(result[3], 16) / 255
-  );
+  return new SolidPaintBuilder({
+    r: parseInt(result[1], 16) / 255,
+    g: parseInt(result[2], 16) / 255,
+    b: parseInt(result[3], 16) / 255,
+    a: 1,
+  });
 }
 
 /**
@@ -808,6 +748,6 @@ export function imagePaint(imageRef: string): ImagePaintBuilder {
 /**
  * Create a stroke
  */
-export function stroke(r: number = 0, g: number = 0, b: number = 0, a: number = 1): StrokeBuilder {
-  return new StrokeBuilder(r, g, b, a);
+export function stroke(color?: Color): StrokeBuilder {
+  return new StrokeBuilder(color);
 }

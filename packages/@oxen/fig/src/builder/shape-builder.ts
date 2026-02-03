@@ -5,44 +5,40 @@
  * - ELLIPSE (type 9) - Circles and ellipses
  * - LINE (type 8) - Line segments
  * - STAR (type 7) - Star shapes
- * - REGULAR_POLYGON (type 10) - Regular polygons
- * - VECTOR (type 5) - Custom vector paths
+ * - REGULAR_POLYGON (type 11) - Regular polygons
+ * - VECTOR (type 6) - Custom vector paths
  *
  * Node type values from Figma's schema:
- * VECTOR = 5, BOOLEAN_OPERATION = 6, STAR = 7, LINE = 8,
- * ELLIPSE = 9, REGULAR_POLYGON = 10, RECTANGLE = 11, ROUNDED_RECTANGLE = 12
+ * BOOLEAN_OPERATION = 5, VECTOR = 6, STAR = 7, LINE = 8,
+ * ELLIPSE = 9, RECTANGLE = 10, REGULAR_POLYGON = 11, ROUNDED_RECTANGLE = 12
  */
 
-import type {
-  Color,
-  Paint,
-  StackPositioning,
-  StackSizing,
-  ConstraintType,
-} from "./text-builder";
+import type { Color, Paint } from "./text-builder";
+import {
+  SHAPE_NODE_TYPES,
+  STROKE_CAP_VALUES,
+  STROKE_JOIN_VALUES,
+  STROKE_ALIGN_VALUES,
+  WINDING_RULE_VALUES,
+  STACK_POSITIONING_VALUES,
+  STACK_SIZING_VALUES,
+  CONSTRAINT_TYPE_VALUES,
+  toEnumValue,
+  type StrokeCap,
+  type StrokeJoin,
+  type StrokeAlign,
+  type WindingRule,
+  type StackPositioning,
+  type StackSizing,
+  type ConstraintType,
+} from "../constants";
 
-// =============================================================================
-// Node Type Values
-// =============================================================================
-
-export const SHAPE_NODE_TYPES = {
-  VECTOR: 5,
-  BOOLEAN_OPERATION: 6,
-  STAR: 7,
-  LINE: 8,
-  ELLIPSE: 9,
-  REGULAR_POLYGON: 10,
-  RECTANGLE: 11,
-  ROUNDED_RECTANGLE: 12,
-} as const;
+// Note: StrokeCap, StrokeJoin, StrokeAlign, SHAPE_NODE_TYPES should be imported
+// directly from "@oxen/fig/constants" by consumers.
 
 // =============================================================================
 // Stroke Types
 // =============================================================================
-
-export type StrokeCap = "NONE" | "ROUND" | "SQUARE" | "ARROW_LINES" | "ARROW_EQUILATERAL";
-export type StrokeJoin = "MITER" | "BEVEL" | "ROUND";
-export type StrokeAlign = "CENTER" | "INSIDE" | "OUTSIDE";
 
 export type Stroke = {
   readonly type: { value: number; name: string };
@@ -50,26 +46,6 @@ export type Stroke = {
   readonly opacity: number;
   readonly visible: boolean;
   readonly blendMode: { value: number; name: string };
-};
-
-const STROKE_CAP_VALUES: Record<StrokeCap, number> = {
-  NONE: 0,
-  ROUND: 1,
-  SQUARE: 2,
-  ARROW_LINES: 3,
-  ARROW_EQUILATERAL: 4,
-};
-
-const STROKE_JOIN_VALUES: Record<StrokeJoin, number> = {
-  MITER: 0,
-  BEVEL: 1,
-  ROUND: 2,
-};
-
-const STROKE_ALIGN_VALUES: Record<StrokeAlign, number> = {
-  CENTER: 0,
-  INSIDE: 1,
-  OUTSIDE: 2,
 };
 
 // =============================================================================
@@ -82,39 +58,6 @@ export type ArcData = {
   readonly innerRadius: number; // 0-1 ratio (0 = full ellipse, >0 = donut)
 };
 
-// =============================================================================
-// Vector Data (for VECTOR nodes)
-// =============================================================================
-
-export type WindingRule = "NONZERO" | "EVENODD";
-
-const WINDING_RULE_VALUES: Record<WindingRule, number> = {
-  NONZERO: 0,
-  EVENODD: 1,
-};
-
-// =============================================================================
-// Constraint Value Maps
-// =============================================================================
-
-const STACK_POSITIONING_VALUES: Record<StackPositioning, number> = {
-  AUTO: 0,
-  ABSOLUTE: 1,
-};
-
-const STACK_SIZING_VALUES: Record<StackSizing, number> = {
-  FIXED: 0,
-  FILL: 1,
-  HUG: 2,
-};
-
-const CONSTRAINT_TYPE_VALUES: Record<ConstraintType, number> = {
-  MIN: 0,
-  CENTER: 1,
-  MAX: 2,
-  STRETCH: 3,
-  SCALE: 4,
-};
 
 // =============================================================================
 // Base Shape Node Data
@@ -182,7 +125,7 @@ export type StarNodeData = BaseShapeNodeData & {
 // =============================================================================
 
 export type PolygonNodeData = BaseShapeNodeData & {
-  readonly nodeType: 10;
+  readonly nodeType: 11;
   readonly pointCount: number;
 };
 
@@ -191,7 +134,7 @@ export type PolygonNodeData = BaseShapeNodeData & {
 // =============================================================================
 
 export type VectorNodeData = BaseShapeNodeData & {
-  readonly nodeType: 5;
+  readonly nodeType: 6;
   readonly vectorData?: {
     readonly vectorNetworkBlob?: number;
     readonly normalizedSize?: { x: number; y: number };
@@ -263,8 +206,8 @@ abstract class BaseShapeBuilder<TData extends BaseShapeNodeData> {
     return this;
   }
 
-  fill(r: number, g: number, b: number, a: number = 1): this {
-    this._fillColor = { r, g, b, a };
+  fill(color: Color): this {
+    this._fillColor = color;
     return this;
   }
 
@@ -273,8 +216,8 @@ abstract class BaseShapeBuilder<TData extends BaseShapeNodeData> {
     return this;
   }
 
-  stroke(r: number, g: number, b: number, a: number = 1): this {
-    this._strokeColor = { r, g, b, a };
+  stroke(color: Color): this {
+    this._strokeColor = color;
     return this;
   }
 
@@ -423,33 +366,17 @@ abstract class BaseShapeBuilder<TData extends BaseShapeNodeData> {
       fillPaints: this.buildFillPaints(),
       strokePaints: this.buildStrokePaints(),
       strokeWeight: this._strokeWeight,
-      strokeCap: this._strokeCap
-        ? { value: STROKE_CAP_VALUES[this._strokeCap], name: this._strokeCap }
-        : undefined,
-      strokeJoin: this._strokeJoin
-        ? { value: STROKE_JOIN_VALUES[this._strokeJoin], name: this._strokeJoin }
-        : undefined,
-      strokeAlign: this._strokeAlign
-        ? { value: STROKE_ALIGN_VALUES[this._strokeAlign], name: this._strokeAlign }
-        : undefined,
+      strokeCap: toEnumValue(this._strokeCap, STROKE_CAP_VALUES),
+      strokeJoin: toEnumValue(this._strokeJoin, STROKE_JOIN_VALUES),
+      strokeAlign: toEnumValue(this._strokeAlign, STROKE_ALIGN_VALUES),
       dashPattern: this._dashPattern,
       visible: this._visible,
       opacity: this._opacity,
-      stackPositioning: this._stackPositioning
-        ? { value: STACK_POSITIONING_VALUES[this._stackPositioning], name: this._stackPositioning }
-        : undefined,
-      stackPrimarySizing: this._stackPrimarySizing
-        ? { value: STACK_SIZING_VALUES[this._stackPrimarySizing], name: this._stackPrimarySizing }
-        : undefined,
-      stackCounterSizing: this._stackCounterSizing
-        ? { value: STACK_SIZING_VALUES[this._stackCounterSizing], name: this._stackCounterSizing }
-        : undefined,
-      horizontalConstraint: this._horizontalConstraint
-        ? { value: CONSTRAINT_TYPE_VALUES[this._horizontalConstraint], name: this._horizontalConstraint }
-        : undefined,
-      verticalConstraint: this._verticalConstraint
-        ? { value: CONSTRAINT_TYPE_VALUES[this._verticalConstraint], name: this._verticalConstraint }
-        : undefined,
+      stackPositioning: toEnumValue(this._stackPositioning, STACK_POSITIONING_VALUES),
+      stackPrimarySizing: toEnumValue(this._stackPrimarySizing, STACK_SIZING_VALUES),
+      stackCounterSizing: toEnumValue(this._stackCounterSizing, STACK_SIZING_VALUES),
+      horizontalConstraint: toEnumValue(this._horizontalConstraint, CONSTRAINT_TYPE_VALUES),
+      verticalConstraint: toEnumValue(this._verticalConstraint, CONSTRAINT_TYPE_VALUES),
     };
   }
 
@@ -493,21 +420,26 @@ export class EllipseNodeBuilder extends BaseShapeBuilder<EllipseNodeData> {
     return this;
   }
 
-  build(): EllipseNodeData {
-    const base = this.buildBaseData();
-    const arcData: ArcData | undefined =
-      this._arcStartAngle !== undefined || this._arcEndAngle !== undefined || this._innerRadius > 0
-        ? {
-            startingAngle: this._arcStartAngle ?? 0,
-            endingAngle: this._arcEndAngle ?? Math.PI * 2,
-            innerRadius: this._innerRadius,
-          }
-        : undefined;
-
+  private buildArcData(): ArcData | undefined {
+    const hasArcData =
+      this._arcStartAngle !== undefined ||
+      this._arcEndAngle !== undefined ||
+      this._innerRadius > 0;
+    if (!hasArcData) {
+      return undefined;
+    }
     return {
-      ...base,
+      startingAngle: this._arcStartAngle ?? 0,
+      endingAngle: this._arcEndAngle ?? Math.PI * 2,
+      innerRadius: this._innerRadius,
+    };
+  }
+
+  build(): EllipseNodeData {
+    return {
+      ...this.buildBaseData(),
       nodeType: SHAPE_NODE_TYPES.ELLIPSE,
-      arcData,
+      arcData: this.buildArcData(),
     };
   }
 }
@@ -657,17 +589,21 @@ export class VectorNodeBuilder extends BaseShapeBuilder<VectorNodeData> {
     return this;
   }
 
-  build(): VectorNodeData {
-    const base = this.buildBaseData();
+  private buildVectorData(): VectorNodeData["vectorData"] {
+    if (this._vectorNetworkBlob === undefined) {
+      return undefined;
+    }
     return {
-      ...base,
+      vectorNetworkBlob: this._vectorNetworkBlob,
+      normalizedSize: { x: this._width, y: this._height },
+    };
+  }
+
+  build(): VectorNodeData {
+    return {
+      ...this.buildBaseData(),
       nodeType: SHAPE_NODE_TYPES.VECTOR,
-      vectorData: this._vectorNetworkBlob !== undefined
-        ? {
-            vectorNetworkBlob: this._vectorNetworkBlob,
-            normalizedSize: { x: this._width, y: this._height },
-          }
-        : undefined,
+      vectorData: this.buildVectorData(),
       handleMirroring: { value: WINDING_RULE_VALUES[this._windingRule], name: this._windingRule },
     };
   }
@@ -706,8 +642,8 @@ export class RoundedRectangleNodeBuilder extends BaseShapeBuilder<RoundedRectang
   /**
    * Set individual corner radii [topLeft, topRight, bottomRight, bottomLeft]
    */
-  corners(topLeft: number, topRight: number, bottomRight: number, bottomLeft: number): this {
-    this._cornerRadii = [topLeft, topRight, bottomRight, bottomLeft];
+  corners(radii: [number, number, number, number]): this {
+    this._cornerRadii = radii;
     this._cornerRadius = undefined;
     return this;
   }

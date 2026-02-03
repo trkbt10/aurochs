@@ -38,6 +38,20 @@ function getParentGuid(node: FigNode): FigGuid | undefined {
 }
 
 /**
+ * Build a node with its children attached
+ */
+function buildNodeWithChildren(
+  node: FigNode,
+  children: FigNode[],
+  buildFn: (n: FigNode) => FigNode
+): FigNode {
+  if (children.length === 0) {
+    return node;
+  }
+  return { ...node, children: children.map(buildFn) };
+}
+
+/**
  * Result of building the node tree
  */
 export type NodeTreeResult = {
@@ -95,10 +109,7 @@ export function buildNodeTree(nodeChanges: readonly FigNode[]): NodeTreeResult {
     const children = childrenMap.get(guidStr) ?? [];
 
     // Build node with children
-    const builtNode: FigNode =
-      children.length > 0
-        ? { ...node, children: children.map(buildNode) }
-        : node;
+    const builtNode = buildNodeWithChildren(node, children, buildNode);
 
     builtMap.set(guidStr, builtNode);
     return builtNode;

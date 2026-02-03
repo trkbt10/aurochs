@@ -12,8 +12,8 @@ import {
   getPayload,
   decompressDeflateRaw,
   decompressZstd,
-  detectCompression,
 } from "../src/parser";
+import { detectCompression } from "../src/compression";
 import { buildFigHeader } from "../src/builder";
 import {
   decodeFigSchema,
@@ -253,10 +253,9 @@ describe("fig file parsing (sample-file.fig)", () => {
     // Schema uses raw deflate, data may use ZSTD or raw deflate
     const schemaData = decompressDeflateRaw(chunks.schema);
     const dataCompression = detectCompression(chunks.data);
-    const msgData =
-      dataCompression === "zstd"
-        ? decompressZstd(chunks.data)
-        : decompressDeflateRaw(chunks.data);
+    const decompressChunkData = (data: Uint8Array, compression: string): Uint8Array =>
+      compression === "zstd" ? decompressZstd(data) : decompressDeflateRaw(data);
+    const msgData = decompressChunkData(chunks.data, dataCompression);
 
     expect(schemaData.length).toBeGreaterThan(0);
     expect(msgData.length).toBeGreaterThan(0);

@@ -4,7 +4,6 @@
  * Tests SymbolNodeBuilder and InstanceNodeBuilder.
  */
 
-import { describe, it, expect } from "vitest";
 import {
   symbolNode,
   instanceNode,
@@ -30,7 +29,7 @@ describe("SymbolNodeBuilder", () => {
       .name("Button")
       .size(120, 40)
       .position(50, 50)
-      .background(0.2, 0.5, 1)
+      .background({ r: 0.2, g: 0.5, b: 1, a: 1 })
       .cornerRadius(8)
       .build();
 
@@ -47,7 +46,7 @@ describe("SymbolNodeBuilder", () => {
       const node = symbolNode(1, 0)
         .autoLayout("HORIZONTAL")
         .gap(8)
-        .padding(12, 16)
+        .padding({ top: 12, right: 16, bottom: 12, left: 16 })
         .primaryAlign("CENTER")
         .counterAlign("CENTER")
         .build();
@@ -159,7 +158,7 @@ describe("InstanceNodeBuilder", () => {
   describe("Overrides", () => {
     it("overrides background color", () => {
       const node = instanceNode(2, 0, 1)
-        .overrideBackground(1, 0, 0)
+        .overrideBackground({ r: 1, g: 0, b: 0, a: 1 })
         .build();
 
       expect(node.fillPaints).toBeDefined();

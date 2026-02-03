@@ -1,50 +1,16 @@
 /**
- * @file Decompression utilities for fig files
- */
-
-import { inflate, inflateRaw } from "pako";
-import { decompress as zstdDecompress } from "fzstd";
-import type { CompressionType } from "../types";
-import { ZSTD_MAGIC } from "../types";
-import { FigDecompressError } from "../errors";
-
-/**
- * Detect compression type from data by checking magic bytes.
+ * @file Decompression utilities for fig files (parser wrapper)
  *
- * @param data - Data to analyze
- * @returns Detected compression type
+ * Re-exports from the compression module with parser-specific error handling.
  */
-export function detectCompression(data: Uint8Array): CompressionType {
-  if (data.length < 4) {
-    return "none";
-  }
 
-  // Check for Zstandard magic: 0x28 0xB5 0x2F 0xFD
-  if (
-    data[0] === ZSTD_MAGIC[0] &&
-    data[1] === ZSTD_MAGIC[1] &&
-    data[2] === ZSTD_MAGIC[2] &&
-    data[3] === ZSTD_MAGIC[3]
-  ) {
-    return "zstd";
-  }
-
-  // Check for zlib/deflate header
-  // CMF (Compression Method and Flags) byte:
-  // - Low 4 bits (CM): 8 = deflate
-  // - High 4 bits (CINFO): window size
-  // FLG (Flags) byte follows
-  // (CMF * 256 + FLG) must be divisible by 31
-  const cmf = data[0];
-  const flg = data[1];
-  const cm = cmf & 0x0f;
-
-  if (cm === 8 && (cmf * 256 + flg) % 31 === 0) {
-    return "deflate";
-  }
-
-  return "none";
-}
+import {
+  decompress as baseDecompress,
+  decompressDeflate as baseDecompressDeflate,
+  decompressDeflateRaw as baseDecompressDeflateRaw,
+  decompressZstd as baseDecompressZstd,
+} from "../compression";
+import { FigDecompressError } from "../errors";
 
 /**
  * Decompress data using pako zlib (with header).
@@ -55,7 +21,7 @@ export function detectCompression(data: Uint8Array): CompressionType {
  */
 export function decompressDeflate(data: Uint8Array): Uint8Array {
   try {
-    return inflate(data);
+    return baseDecompressDeflate(data);
   } catch (error) {
     throw new FigDecompressError(
       "Failed to decompress deflate data",
@@ -74,7 +40,7 @@ export function decompressDeflate(data: Uint8Array): Uint8Array {
  */
 export function decompressDeflateRaw(data: Uint8Array): Uint8Array {
   try {
-    return inflateRaw(data);
+    return baseDecompressDeflateRaw(data);
   } catch (error) {
     throw new FigDecompressError(
       "Failed to decompress raw deflate data",
@@ -92,7 +58,7 @@ export function decompressDeflateRaw(data: Uint8Array): Uint8Array {
  */
 export function decompressZstd(data: Uint8Array): Uint8Array {
   try {
-    return zstdDecompress(data);
+    return baseDecompressZstd(data);
   } catch (error) {
     throw new FigDecompressError(
       "Failed to decompress zstd data",
@@ -110,14 +76,12 @@ export function decompressZstd(data: Uint8Array): Uint8Array {
  * @throws FigDecompressError if decompression fails
  */
 export function decompress(data: Uint8Array): Uint8Array {
-  const type = detectCompression(data);
-
-  switch (type) {
-    case "deflate":
-      return decompressDeflate(data);
-    case "zstd":
-      return decompressZstd(data);
-    case "none":
-      return data;
+  try {
+    return baseDecompress(data);
+  } catch (error) {
+    throw new FigDecompressError(
+      "Failed to decompress data",
+      error instanceof Error ? error : undefined
+    );
   }
 }

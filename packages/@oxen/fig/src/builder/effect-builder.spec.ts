@@ -2,16 +2,14 @@
  * @file Effect builder unit tests
  */
 
-import { describe, it, expect } from "vitest";
 import {
   dropShadow,
   innerShadow,
   layerBlur,
   backgroundBlur,
   effects,
-  EFFECT_TYPE_VALUES,
 } from "./effect-builder";
-import { BLEND_MODE_VALUES } from "./paint-builder";
+import { EFFECT_TYPE_VALUES, BLEND_MODE_VALUES } from "../constants";
 
 describe("DropShadowBuilder", () => {
   it("creates drop shadow with defaults", () => {
@@ -27,7 +25,7 @@ describe("DropShadowBuilder", () => {
   });
 
   it("sets custom color", () => {
-    const result = dropShadow().color(1, 0, 0, 0.5).build();
+    const result = dropShadow().color({ r: 1, g: 0, b: 0, a: 0.5 }).build();
 
     expect(result.color).toEqual({ r: 1, g: 0, b: 0, a: 0.5 });
   });
@@ -76,7 +74,7 @@ describe("DropShadowBuilder", () => {
 
   it("chains all methods", () => {
     const result = dropShadow()
-      .color(0, 0, 1, 0.3)
+      .color({ r: 0, g: 0, b: 1, a: 0.3 })
       .offset(5, 10)
       .blur(6)
       .spread(1)
@@ -103,7 +101,7 @@ describe("InnerShadowBuilder", () => {
   });
 
   it("sets custom color", () => {
-    const result = innerShadow().color(0.5, 0.5, 0.5, 0.4).build();
+    const result = innerShadow().color({ r: 0.5, g: 0.5, b: 0.5, a: 0.4 }).build();
 
     expect(result.color).toEqual({ r: 0.5, g: 0.5, b: 0.5, a: 0.4 });
   });

@@ -1,8 +1,10 @@
 /**
  * @file Builder module exports
+ *
+ * Note: For compression utilities, import from "@oxen/fig/compression"
+ * Note: For constants and types, import from "@oxen/fig/constants"
  */
 
-export { compress, compressDeflate, compressZstd } from "./compress";
 export { buildFigHeader, buildFigFile } from "./header";
 export { createTextSchema, TEXT_SCHEMA_INDICES } from "./text-schema";
 export {
@@ -15,33 +17,15 @@ export {
   DEFAULT_LETTER_SPACING,
   DEFAULT_AUTO_RESIZE,
   DEFAULT_SVG_EXPORT_SETTINGS,
-  // Text types
+  // Types defined in text-builder
   type TextNodeData,
   type FrameNodeData,
-  type TextAlignHorizontal,
-  type TextAlignVertical,
-  type TextAutoResize,
-  type TextDecoration,
-  type TextCase,
-  type NumberUnits,
   type ValueWithUnits,
-  // AutoLayout types
-  type StackMode,
-  type StackAlign,
-  type StackPositioning,
-  type StackSizing,
-  type ConstraintType,
   type StackPadding,
-  // Common types
   type Color,
   type Paint,
   type FontName,
-  // Export settings types
   type ExportSettings,
-  type ImageType,
-  type ExportConstraintType,
-  type ExportColorProfile,
-  type ExportSVGIDMode,
 } from "./text-builder";
 
 // Symbol and Instance builders
@@ -67,10 +51,7 @@ export {
   layerBlur,
   backgroundBlur,
   effects,
-  // Constants
-  EFFECT_TYPE_VALUES,
   // Types
-  type EffectType,
   type EffectData,
   type ShadowEffectData,
   type BlurEffectData,
@@ -96,19 +77,12 @@ export {
   diamondGradient,
   imagePaint,
   stroke,
-  // Constants
-  PAINT_TYPE_VALUES,
-  BLEND_MODE_VALUES,
-  SCALE_MODE_VALUES,
   // Types
   type GradientStop,
   type GradientHandles,
   type GradientPaint,
   type ImagePaint,
   type StrokeData,
-  type PaintType,
-  type ScaleMode,
-  type BlendMode,
 } from "./paint-builder";
 
 // Shape builders
@@ -127,8 +101,6 @@ export {
   polygonNode,
   vectorNode,
   roundedRectNode,
-  // Constants
-  SHAPE_NODE_TYPES,
   // Types
   type EllipseNodeData,
   type LineNodeData,
@@ -139,25 +111,11 @@ export {
   type BaseShapeNodeData,
   type ArcData,
   type Stroke,
-  type StrokeCap,
-  type StrokeJoin,
-  type StrokeAlign,
-  type WindingRule,
 } from "./shape-builder";
 
 export { FigFileBuilder, createFigFile } from "./fig-builder";
 
-// Roundtrip editing (load → modify → save)
-export {
-  loadFigFile,
-  saveFigFile,
-  cloneFigFile,
-  addNodeChange,
-  findNodeByName,
-  findNodesByType,
-  type LoadedFigFile,
-  type FigMetadata,
-  type FigImage,
-  type FigBlob,
-  type SaveFigOptions,
-} from "./fig-roundtrip";
+// Note: Constants and enum types should be imported from "@oxen/fig/constants"
+// Examples:
+//   import { PAINT_TYPE_VALUES, type PaintType } from "@oxen/fig/constants";
+//   import { STACK_MODE_VALUES, type StackMode } from "@oxen/fig/constants";
