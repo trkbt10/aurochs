@@ -2,7 +2,41 @@
 
 Figma ファイル (.fig) のパーサー・ビルダー
 
-## ファイルフォーマット解析
+## 概要
+
+このパッケージは Figma の `.fig` ファイル形式の読み書きを提供する。
+
+- **パーサー**: `.fig` ファイルをパースしてノードツリーを取得
+- **ビルダー**: プログラムから `.fig` ファイルを生成
+- **ラウンドトリップ**: 既存ファイルの読み込み・修正・保存
+
+## ZIPパッケージ構造
+
+`.fig` ファイルは **ZIPアーカイブ** であり、以下のファイルを含む：
+
+| ファイル | 必須 | 説明 |
+|---------|------|------|
+| `canvas.fig` | ✓ | メインデータ（fig-kiwi形式） |
+| `meta.json` | ✓ | メタデータ（ファイル名、背景色等） |
+| `thumbnail.png` | △ | サムネイル画像（推奨） |
+| `images/*` | - | 埋め込み画像 |
+
+### meta.json 構造
+
+```json
+{
+  "client_meta": {
+    "background_color": { "r": 0.96, "g": 0.96, "b": 0.96, "a": 1 },
+    "thumbnail_size": { "width": 400, "height": 300 },
+    "render_coordinates": { "x": 0, "y": 0, "width": 800, "height": 600 }
+  },
+  "file_name": "My Design",
+  "developer_related_links": [],
+  "exported_at": "2026-02-03T10:00:00.000Z"
+}
+```
+
+## canvas.fig フォーマット
 
 ### ヘッダー構造 (16バイト)
 
@@ -193,6 +227,162 @@ Document (DOCUMENT)
 - `fillPaints`: 塗りのリスト (Paint[])
 - `strokePaints`: 線のリスト (Paint[])
 - `fillGeometry` / `strokeGeometry`: ジオメトリデータ
+
+## 圧縮形式
+
+fig-kiwiでは2種類の圧縮形式が使用される：
+
+| 形式 | 用途 | 検出方法 |
+|------|------|----------|
+| **Deflate Raw** | スキーマチャンク | マジックバイトなし |
+| **Zstd** | メッセージチャンク（新形式） | `0x28 0xb5 0x2f 0xfd` |
+
+ビルダーは互換性のため両形式をサポートする必要がある。
+
+## Blob（ジオメトリデータ）
+
+### 概要
+
+図形のパスデータは `blobs` 配列にバイナリ形式で格納され、ノードの `fillGeometry` / `strokeGeometry` から参照される。
+
+### fillGeometry 構造
+
+```typescript
+{
+  windingRule: { value: 0, name: "NONZERO" },  // 0=NONZERO, 1=EVENODD
+  commandsBlob: 0,  // blobs配列へのインデックス
+  styleID: 0
+}
+```
+
+### Blob バイナリフォーマット
+
+パスコマンドの連続。各コマンドは1バイトのタイプ + 座標データ。
+
+| コマンド | 値 | 座標 |
+|----------|-----|------|
+| MOVE_TO | `0x01` | x, y (float32 LE × 2) |
+| LINE_TO | `0x02` | x, y (float32 LE × 2) |
+| CUBIC_TO | `0x04` | c1x, c1y, c2x, c2y, x, y (float32 LE × 6) |
+| CLOSE | `0x06` | なし |
+
+**注意**: Figmaは `CLOSE` コマンドを使わず、始点への `LINE_TO` で閉じる。
+
+### 矩形 (140×140) の例
+
+```
+01 00 00 00 00 00 00 00 00   # MOVE_TO (0, 0)
+02 00 00 0c 43 00 00 00 00   # LINE_TO (140, 0)
+02 00 00 0c 43 00 00 0c 43   # LINE_TO (140, 140)
+02 00 00 00 00 00 00 0c 43   # LINE_TO (0, 140)
+02 00 00 00 00 00 00 00 00   # LINE_TO (0, 0) - 閉じる
+00                           # 終端
+```
+
+## SessionID パターン
+
+ノードの `guid` は `{ sessionID, localID }` で構成される。
+
+| sessionID | 用途 | 例 |
+|-----------|------|-----|
+| `0` | システムノード | DOCUMENT, CANVAS（ページ）, Internal Only Canvas |
+| `1` | ユーザーノード | FRAME, RECTANGLE, TEXT など |
+
+### 例
+
+```
+DOCUMENT         guid=0:0
+├── Page 1       guid=0:1  (CANVAS)
+├── Internal     guid=0:2  (CANVAS, internalOnly=true)
+└── Frame        guid=1:2  (FRAME, user-created)
+    └── Rect     guid=1:3  (RECTANGLE)
+```
+
+## Internal Only Canvas
+
+Figmaファイルには **Internal Only Canvas** が必須。これは非表示の内部用キャンバス。
+
+```typescript
+{
+  guid: { sessionID: 0, localID: 2 },
+  phase: { value: 0, name: "CREATED" },
+  parentIndex: {
+    guid: { sessionID: 0, localID: 0 },  // DOCUMENTを指す
+    position: "~"  // 常に最後に配置
+  },
+  type: { value: 2, name: "CANVAS" },
+  name: "Internal Only Canvas",
+  visible: false,
+  internalOnly: true,
+  // ... 他のフィールド
+}
+```
+
+## ビルダーの使用
+
+### 基本的な使用例
+
+```typescript
+import { FigFileBuilder, createRectBlob, createFillGeometry } from "@oxen/fig";
+
+const builder = new FigFileBuilder();
+
+// Blob（ジオメトリ）を追加
+const blobIndex = builder.addBlob(createRectBlob(100, 80));
+
+// ドキュメント構造を作成
+const docID = builder.addDocument("My Design");
+const canvasID = builder.addCanvas(docID, "Page 1");
+builder.addInternalCanvas(docID);  // 必須
+
+// フレームを追加
+builder.addFrame({
+  localID: builder.getNextID(),
+  parentID: canvasID,
+  name: "Frame",
+  size: { x: 100, y: 80 },
+  transform: { m00: 1, m01: 0, m02: 50, m10: 0, m11: 1, m12: 50 },
+  fillPaints: [{
+    type: { value: 0, name: "SOLID" },
+    color: { r: 1, g: 1, b: 1, a: 1 },
+    opacity: 1,
+    visible: true,
+    blendMode: { value: 1, name: "PASS_THROUGH" },
+  }],
+  fillGeometry: [createFillGeometry(blobIndex)],
+});
+
+// ファイル生成
+const data = await builder.buildAsync({ fileName: "my-design" });
+```
+
+### 有効なファイルの要件
+
+1. **DOCUMENT** ノード（ルート）
+2. **CANVAS** ノード（ページ、1つ以上）
+3. **Internal Only Canvas**（`internalOnly: true`, `position: "~"`）
+4. **meta.json**（ファイル名、背景色等）
+5. **thumbnail.png**（推奨）
+
+## ラウンドトリップ
+
+既存ファイルの読み込み・修正・保存：
+
+```typescript
+import { loadFigFile, saveFigFile } from "@oxen/fig";
+
+// 読み込み
+const loaded = await loadFigFile(fileData);
+
+// ノードを変更
+loaded.nodeChanges[0].name = "Updated Name";
+
+// 保存（元のスキーマを維持）
+const saved = await saveFigFile(loaded);
+
+// スキーマも再エンコード（検証用）
+const saved = await saveFigFile(loaded, { reencodeSchema: true });
+```
 
 ## 参考資料
 
