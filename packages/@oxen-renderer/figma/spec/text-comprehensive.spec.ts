@@ -20,7 +20,9 @@ import {
   type FigImage,
 } from "@oxen/fig/parser";
 import type { FigNode } from "@oxen/fig/types";
-import { renderCanvas } from "../src/svg/renderer";
+import { renderCanvasAsync } from "../src/svg/renderer";
+import { createNodeFontLoaderWithFontsource } from "../src/svg/nodes/text/font/node-loader";
+import { CachingFontLoader } from "../src/svg/nodes/text/font/loader";
 
 // =============================================================================
 // Paths
@@ -235,22 +237,34 @@ function getActualSvgFiles(): string[] {
     .map((f) => f.replace(".svg", ""));
 }
 
-function renderFrame(
+// Shared font loader instance
+let fontLoader: CachingFontLoader | null = null;
+
+function getFontLoader(): CachingFontLoader {
+  if (!fontLoader) {
+    const baseLoader = createNodeFontLoaderWithFontsource();
+    fontLoader = new CachingFontLoader(baseLoader);
+  }
+  return fontLoader;
+}
+
+async function renderFrame(
   frame: FrameInfo,
   blobs: readonly FigBlob[],
   symbolMap?: ReadonlyMap<string, FigNode>
-): string {
+): Promise<string> {
   const canvas: FigNode = {
     type: "CANVAS",
     name: frame.name,
     children: [frame.node],
   };
 
-  const result = renderCanvas(canvas, {
+  const result = await renderCanvasAsync(canvas, {
     width: frame.size.width,
     height: frame.size.height,
     blobs,
     symbolMap,
+    fontLoader: getFontLoader(),
   });
 
   return result.svg;
@@ -288,7 +302,7 @@ describe("text-comprehensive visual comparison", () => {
         if (!frame) return;
 
         const actualSvg = fs.readFileSync(path.join(ACTUAL_SVG_DIR, `${alignment}.svg`), "utf-8");
-        const renderedSvg = renderFrame(frame, data.blobs, data.nodeMap);
+        const renderedSvg = await renderFrame(frame, data.blobs, data.nodeMap);
         const result = compareSvgs(actualSvg, renderedSvg, alignment, { maxDiffPercent: 10 });
 
         console.log(`  ${alignment}: ${result.diffPercent.toFixed(2)}% diff`);
@@ -308,7 +322,7 @@ describe("text-comprehensive visual comparison", () => {
         if (!frame) return;
 
         const actualSvg = fs.readFileSync(path.join(ACTUAL_SVG_DIR, `${lh}.svg`), "utf-8");
-        const renderedSvg = renderFrame(frame, data.blobs, data.nodeMap);
+        const renderedSvg = await renderFrame(frame, data.blobs, data.nodeMap);
         const result = compareSvgs(actualSvg, renderedSvg, lh, { maxDiffPercent: 10 });
 
         console.log(`  ${lh}: ${result.diffPercent.toFixed(2)}% diff`);
@@ -328,7 +342,7 @@ describe("text-comprehensive visual comparison", () => {
         if (!frame) return;
 
         const actualSvg = fs.readFileSync(path.join(ACTUAL_SVG_DIR, `${ls}.svg`), "utf-8");
-        const renderedSvg = renderFrame(frame, data.blobs, data.nodeMap);
+        const renderedSvg = await renderFrame(frame, data.blobs, data.nodeMap);
         const result = compareSvgs(actualSvg, renderedSvg, ls, { maxDiffPercent: 10 });
 
         console.log(`  ${ls}: ${result.diffPercent.toFixed(2)}% diff`);
@@ -348,7 +362,7 @@ describe("text-comprehensive visual comparison", () => {
         if (!frame) return;
 
         const actualSvg = fs.readFileSync(path.join(ACTUAL_SVG_DIR, `${color}.svg`), "utf-8");
-        const renderedSvg = renderFrame(frame, data.blobs, data.nodeMap);
+        const renderedSvg = await renderFrame(frame, data.blobs, data.nodeMap);
         const result = compareSvgs(actualSvg, renderedSvg, color, { maxDiffPercent: 10 });
 
         console.log(`  ${color}: ${result.diffPercent.toFixed(2)}% diff`);
@@ -368,7 +382,7 @@ describe("text-comprehensive visual comparison", () => {
         if (!frame) return;
 
         const actualSvg = fs.readFileSync(path.join(ACTUAL_SVG_DIR, `${size}.svg`), "utf-8");
-        const renderedSvg = renderFrame(frame, data.blobs, data.nodeMap);
+        const renderedSvg = await renderFrame(frame, data.blobs, data.nodeMap);
         const result = compareSvgs(actualSvg, renderedSvg, size, { maxDiffPercent: 15, saveDiff: true });
 
         console.log(`  ${size}: ${result.diffPercent.toFixed(2)}% diff`);
@@ -388,7 +402,7 @@ describe("text-comprehensive visual comparison", () => {
         if (!frame) return;
 
         const actualSvg = fs.readFileSync(path.join(ACTUAL_SVG_DIR, `${ml}.svg`), "utf-8");
-        const renderedSvg = renderFrame(frame, data.blobs, data.nodeMap);
+        const renderedSvg = await renderFrame(frame, data.blobs, data.nodeMap);
         const result = compareSvgs(actualSvg, renderedSvg, ml, { maxDiffPercent: 10 });
 
         console.log(`  ${ml}: ${result.diffPercent.toFixed(2)}% diff`);
@@ -407,7 +421,7 @@ describe("text-comprehensive visual comparison", () => {
         if (!frame) return;
 
         const actualSvg = fs.readFileSync(path.join(ACTUAL_SVG_DIR, `${ec}.svg`), "utf-8");
-        const renderedSvg = renderFrame(frame, data.blobs, data.nodeMap);
+        const renderedSvg = await renderFrame(frame, data.blobs, data.nodeMap);
         const result = compareSvgs(actualSvg, renderedSvg, ec, { maxDiffPercent: 15, saveDiff: true });
 
         console.log(`  ${ec}: ${result.diffPercent.toFixed(2)}% diff`);
@@ -424,7 +438,7 @@ describe("text-comprehensive visual comparison", () => {
       if (!frame) continue;
 
       const actualSvg = fs.readFileSync(path.join(ACTUAL_SVG_DIR, `${fileName}.svg`), "utf-8");
-      const renderedSvg = renderFrame(frame, data.blobs, data.nodeMap);
+      const renderedSvg = await renderFrame(frame, data.blobs, data.nodeMap);
       const result = compareSvgs(actualSvg, renderedSvg, fileName);
       results.push(result);
     }

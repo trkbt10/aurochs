@@ -11,6 +11,7 @@ import type {
   TextAlignHorizontal,
   TextAlignVertical,
   TextAutoResize,
+  TextDecoration,
 } from "./types";
 import { getFontWeightFromStyle, isItalicStyle } from "./font";
 
@@ -122,6 +123,12 @@ export function extractTextProps(node: FigNode): ExtractedTextProps {
     "WIDTH_AND_HEIGHT"
   );
 
+  // Text decoration (underline, strikethrough)
+  const textDecoration = getEnumName<TextDecoration>(
+    nodeData.textDecoration,
+    "NONE"
+  );
+
   return {
     transform: nodeData.transform as FigMatrix | undefined,
     characters: characters ?? "",
@@ -136,6 +143,7 @@ export function extractTextProps(node: FigNode): ExtractedTextProps {
     textAlignHorizontal,
     textAlignVertical,
     textAutoResize,
+    textDecoration,
     size,
   };
 }

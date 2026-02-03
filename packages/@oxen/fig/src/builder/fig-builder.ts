@@ -10,7 +10,8 @@ import type { KiwiSchema } from "../types";
 import { ByteBuffer } from "../kiwi/byte-buffer";
 import { StreamingFigEncoder } from "../kiwi/stream";
 import { createTextSchema } from "./text-schema";
-import type { TextNodeData, FrameNodeData } from "./text-builder";
+import type { TextNodeData, FrameNodeData, StackPadding } from "./text-builder";
+import type { SymbolNodeData, InstanceNodeData } from "./symbol-builder";
 import { buildFigHeader } from "./header";
 import { createEmptyZipPackage } from "@oxen/zip";
 
@@ -23,6 +24,8 @@ export type NodeTypeMap = {
   CANVAS: 2;
   FRAME: 3;
   TEXT: 13;
+  SYMBOL: 15;
+  INSTANCE: 16;
 };
 
 const NODE_TYPE_VALUES: NodeTypeMap = {
@@ -30,6 +33,8 @@ const NODE_TYPE_VALUES: NodeTypeMap = {
   CANVAS: 2,
   FRAME: 3,
   TEXT: 13,
+  SYMBOL: 15,
+  INSTANCE: 16,
 };
 
 type BaseNode = {
@@ -125,7 +130,7 @@ export class FigFileBuilder {
   }
 
   /**
-   * Add a FRAME node
+   * Add a FRAME node (with AutoLayout support)
    */
   addFrame(data: FrameNodeData): number {
     const node = this.createNodeChange({
@@ -139,6 +144,82 @@ export class FigFileBuilder {
       visible: data.visible,
       opacity: data.opacity,
       clipsContent: data.clipsContent,
+      cornerRadius: data.cornerRadius,
+      // AutoLayout - frame level
+      stackMode: data.stackMode,
+      stackSpacing: data.stackSpacing,
+      stackPadding: data.stackPadding,
+      stackPrimaryAlignItems: data.stackPrimaryAlignItems,
+      stackCounterAlignItems: data.stackCounterAlignItems,
+      stackPrimaryAlignContent: data.stackPrimaryAlignContent,
+      stackWrap: data.stackWrap,
+      stackCounterSpacing: data.stackCounterSpacing,
+      itemReverseZIndex: data.itemReverseZIndex,
+      // AutoLayout - child level
+      stackPositioning: data.stackPositioning,
+      stackPrimarySizing: data.stackPrimarySizing,
+      stackCounterSizing: data.stackCounterSizing,
+      horizontalConstraint: data.horizontalConstraint,
+      verticalConstraint: data.verticalConstraint,
+    });
+    this.nodes.push(node);
+    return data.localID;
+  }
+
+  /**
+   * Add a SYMBOL node (component definition, with AutoLayout support)
+   */
+  addSymbol(data: SymbolNodeData): number {
+    const node = this.createNodeChange({
+      localID: data.localID,
+      parentID: data.parentID,
+      type: NODE_TYPE_VALUES.SYMBOL,
+      name: data.name,
+      size: data.size,
+      transform: data.transform,
+      fillPaints: data.fillPaints,
+      visible: data.visible,
+      opacity: data.opacity,
+      clipsContent: data.clipsContent,
+      cornerRadius: data.cornerRadius,
+      // AutoLayout - frame level
+      stackMode: data.stackMode,
+      stackSpacing: data.stackSpacing,
+      stackPadding: data.stackPadding,
+      stackPrimaryAlignItems: data.stackPrimaryAlignItems,
+      stackCounterAlignItems: data.stackCounterAlignItems,
+      stackPrimaryAlignContent: data.stackPrimaryAlignContent,
+      stackWrap: data.stackWrap,
+      stackCounterSpacing: data.stackCounterSpacing,
+      itemReverseZIndex: data.itemReverseZIndex,
+    });
+    this.nodes.push(node);
+    return data.localID;
+  }
+
+  /**
+   * Add an INSTANCE node (component instance)
+   */
+  addInstance(data: InstanceNodeData): number {
+    const node = this.createNodeChange({
+      localID: data.localID,
+      parentID: data.parentID,
+      type: NODE_TYPE_VALUES.INSTANCE,
+      name: data.name,
+      size: data.size,
+      transform: data.transform,
+      visible: data.visible,
+      opacity: data.opacity,
+      fillPaints: data.fillPaints,
+      // Symbol reference
+      symbolID: data.symbolID,
+      componentPropertyReferences: data.componentPropertyReferences,
+      // Child constraints
+      stackPositioning: data.stackPositioning,
+      stackPrimarySizing: data.stackPrimarySizing,
+      stackCounterSizing: data.stackCounterSizing,
+      horizontalConstraint: data.horizontalConstraint,
+      verticalConstraint: data.verticalConstraint,
     });
     this.nodes.push(node);
     return data.localID;
@@ -195,6 +276,7 @@ export class FigFileBuilder {
     };
     visible?: boolean;
     opacity?: number;
+    // Text fields
     fontSize?: number;
     fontName?: { family: string; style: string; postscript: string };
     textAlignHorizontal?: { value: number; name: string };
@@ -205,6 +287,7 @@ export class FigFileBuilder {
     lineHeight?: { value: number; units: { value: number; name: string } };
     letterSpacing?: { value: number; units: { value: number; name: string } };
     textData?: { characters: string; characterStyleIDs: number[] };
+    // Paint fields
     fillPaints?: readonly {
       type: { value: number; name: string };
       color?: { r: number; g: number; b: number; a: number };
@@ -212,7 +295,28 @@ export class FigFileBuilder {
       visible: boolean;
       blendMode: { value: number; name: string };
     }[];
+    // Frame fields
     clipsContent?: boolean;
+    cornerRadius?: number;
+    // AutoLayout - frame level
+    stackMode?: { value: number; name: string };
+    stackSpacing?: number;
+    stackPadding?: StackPadding;
+    stackPrimaryAlignItems?: { value: number; name: string };
+    stackCounterAlignItems?: { value: number; name: string };
+    stackPrimaryAlignContent?: { value: number; name: string };
+    stackWrap?: boolean;
+    stackCounterSpacing?: number;
+    itemReverseZIndex?: boolean;
+    // AutoLayout - child level
+    stackPositioning?: { value: number; name: string };
+    stackPrimarySizing?: { value: number; name: string };
+    stackCounterSizing?: { value: number; name: string };
+    horizontalConstraint?: { value: number; name: string };
+    verticalConstraint?: { value: number; name: string };
+    // Symbol/Instance fields
+    symbolID?: { sessionID: number; localID: number };
+    componentPropertyReferences?: readonly string[];
   }): Record<string, unknown> {
     const typeName = this.getTypeName(data.type);
 
@@ -250,6 +354,63 @@ export class FigFileBuilder {
     // Frame-specific
     if (data.clipsContent !== undefined) {
       node.clipsContent = data.clipsContent;
+    }
+    if (data.cornerRadius !== undefined) {
+      node.cornerRadius = data.cornerRadius;
+    }
+
+    // AutoLayout - frame level (for FRAME and SYMBOL)
+    if (data.stackMode) {
+      node.stackMode = data.stackMode;
+    }
+    if (data.stackSpacing !== undefined) {
+      node.stackSpacing = data.stackSpacing;
+    }
+    if (data.stackPadding) {
+      node.stackPadding = data.stackPadding;
+    }
+    if (data.stackPrimaryAlignItems) {
+      node.stackPrimaryAlignItems = data.stackPrimaryAlignItems;
+    }
+    if (data.stackCounterAlignItems) {
+      node.stackCounterAlignItems = data.stackCounterAlignItems;
+    }
+    if (data.stackPrimaryAlignContent) {
+      node.stackPrimaryAlignContent = data.stackPrimaryAlignContent;
+    }
+    if (data.stackWrap !== undefined) {
+      node.stackWrap = data.stackWrap;
+    }
+    if (data.stackCounterSpacing !== undefined) {
+      node.stackCounterSpacing = data.stackCounterSpacing;
+    }
+    if (data.itemReverseZIndex !== undefined) {
+      node.itemReverseZIndex = data.itemReverseZIndex;
+    }
+
+    // AutoLayout - child level (for any node inside auto-layout)
+    if (data.stackPositioning) {
+      node.stackPositioning = data.stackPositioning;
+    }
+    if (data.stackPrimarySizing) {
+      node.stackPrimarySizing = data.stackPrimarySizing;
+    }
+    if (data.stackCounterSizing) {
+      node.stackCounterSizing = data.stackCounterSizing;
+    }
+    if (data.horizontalConstraint) {
+      node.horizontalConstraint = data.horizontalConstraint;
+    }
+    if (data.verticalConstraint) {
+      node.verticalConstraint = data.verticalConstraint;
+    }
+
+    // Symbol/Instance fields
+    if (data.symbolID) {
+      node.symbolID = data.symbolID;
+    }
+    if (data.componentPropertyReferences && data.componentPropertyReferences.length > 0) {
+      node.componentPropertyReferences = data.componentPropertyReferences;
     }
 
     // Text-specific fields
@@ -303,6 +464,8 @@ export class FigFileBuilder {
       2: "CANVAS",
       3: "FRAME",
       13: "TEXT",
+      15: "SYMBOL",
+      16: "INSTANCE",
     };
     return names[type] ?? "UNKNOWN";
   }

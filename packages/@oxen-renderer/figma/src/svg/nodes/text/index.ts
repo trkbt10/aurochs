@@ -60,3 +60,11 @@ export {
   calculateBaselineOffset,
   type PathRenderContext,
 } from "./path-render";
+
+// Derived path rendering (uses pre-computed paths from .fig files)
+export {
+  renderTextNodeFromDerivedData,
+  renderTextNodeWithDerivedFallback,
+  hasDerivedPathData,
+  type DerivedPathRenderContext,
+} from "./derived-path-render";

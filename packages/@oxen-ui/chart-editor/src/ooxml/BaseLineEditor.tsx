@@ -26,41 +26,10 @@ const capOptions: Array<{ value: BaseLine["cap"]; label: string }> = [
   { value: "square", label: "Square" },
 ];
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /**
  * Editor component for BaseLine properties.
  */
-export function BaseLineEditor({
-  value,
-  onChange,
-  disabled,
-  className,
-  style,
-}: BaseLineEditorProps) {
+export function BaseLineEditor({ value, onChange, disabled, className, style }: BaseLineEditorProps) {
   const handleWidthChange = useCallback(
     (v: string | number) => {
       const num = typeof v === "number" ? v : parseFloat(v);
@@ -83,21 +52,10 @@ export function BaseLineEditor({
     <div style={{ ...containerStyle, ...style }} className={className}>
       <FieldRow>
         <FieldGroup label="Width (px)" style={{ flex: 1 }}>
-          <Input
-            type="number"
-            value={value.width}
-            onChange={handleWidthChange}
-            disabled={disabled}
-            min={0}
-          />
+          <Input type="number" value={value.width} onChange={handleWidthChange} disabled={disabled} min={0} />
         </FieldGroup>
         <FieldGroup label="Cap" style={{ flex: 1 }}>
-          <Select
-            value={value.cap}
-            onChange={handleCapChange}
-            options={capOptions}
-            disabled={disabled}
-          />
+          <Select value={value.cap} onChange={handleCapChange} options={capOptions} disabled={disabled} />
         </FieldGroup>
       </FieldRow>
 
@@ -111,31 +69,6 @@ export function BaseLineEditor({
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 /**
  * Create a default BaseLine with standard values.

@@ -15,31 +15,6 @@ export type PercentEditorProps = EditorProps<Percent> & {
   readonly slider?: boolean;
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /**
  * Editor component for Percent values with optional slider mode.
  */
@@ -94,4 +69,3 @@ export function PercentEditor({
     />
   );
 }
-

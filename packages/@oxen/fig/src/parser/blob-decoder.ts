@@ -15,7 +15,10 @@ const CMD_MOVE_TO = 0x01;
 /** LineTo command (L x y) */
 const CMD_LINE_TO = 0x02;
 
-/** Cubic bezier command (C cp1x cp1y cp2x cp2y x y) */
+/** Smooth cubic bezier command (S cp2x cp2y x y) - cp1 is reflected from previous */
+const CMD_SMOOTH_CUBIC = 0x03;
+
+/** Full cubic bezier command (C cp1x cp1y cp2x cp2y x y) */
 const CMD_CUBIC_TO = 0x04;
 
 /** Quadratic bezier command (Q cpx cpy x y) */
@@ -91,9 +94,33 @@ export function decodePathCommands(blob: FigBlob): readonly PathCommand[] {
         commands.push({ type: "L", x, y });
         break;
       }
+      case CMD_SMOOTH_CUBIC: {
+        // Smooth cubic bezier (S command) - 4 coordinates
+        // cp1 is reflected from the previous command's cp2 (or equals start point)
+        const cp2x = readFloat32();
+        const cp2y = readFloat32();
+        const x = readFloat32();
+        const y = readFloat32();
+        // To convert to full cubic, we need the previous end point and cp2
+        // For simplicity, we'll make cp1 equal to start of this segment
+        // This creates a smooth curve when chained
+        const prevCmd = commands[commands.length - 1];
+        let cp1x = cp2x;
+        let cp1y = cp2y;
+        if (prevCmd && prevCmd.type === "C") {
+          // Reflect cp2 of previous curve across the end point
+          cp1x = 2 * prevCmd.x - prevCmd.cp2x;
+          cp1y = 2 * prevCmd.y - prevCmd.cp2y;
+        } else if (prevCmd && (prevCmd.type === "M" || prevCmd.type === "L")) {
+          cp1x = prevCmd.x;
+          cp1y = prevCmd.y;
+        }
+        commands.push({ type: "C", cp1x, cp1y, cp2x, cp2y, x, y });
+        break;
+      }
       case CMD_CUBIC_TO:
       case 0x13: {
-        // 0x13 appears to be another form of cubic bezier
+        // Full cubic bezier (C command) - 6 coordinates
         const cp1x = readFloat32();
         const cp1y = readFloat32();
         const cp2x = readFloat32();
@@ -138,7 +165,7 @@ export function decodePathCommands(blob: FigBlob): readonly PathCommand[] {
         let found = false;
         for (let i = offset; i < Math.min(offset + 30, bytes.length); i++) {
           const b = bytes[i];
-          if (b === CMD_MOVE_TO || b === CMD_LINE_TO || b === CMD_CUBIC_TO || b === CMD_QUAD_TO || b === CMD_CLOSE || b === 0x13) {
+          if (b === CMD_MOVE_TO || b === CMD_LINE_TO || b === CMD_SMOOTH_CUBIC || b === CMD_CUBIC_TO || b === CMD_QUAD_TO || b === CMD_CLOSE || b === 0x13) {
             offset = i;
             found = true;
             break;

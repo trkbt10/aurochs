@@ -13,7 +13,8 @@ import { buildTransformAttr } from "../../transform";
 import { extractTextProps } from "./props";
 import { getFillColorAndOpacity } from "./fill";
 import { getAlignedX, getAlignedYWithMetrics } from "./alignment";
-import type { FontLoader } from "./font/loader";
+import type { FontLoader, LoadedFont } from "./font/loader";
+import { fontHasGlyph, isCJKCharacter } from "./font/loader";
 import type { ExtractedTextProps } from "./types";
 
 /**
@@ -143,9 +144,6 @@ export async function renderTextNodeAsPath(
 ): Promise<SvgString> {
   const props = extractTextProps(node);
 
-  // Debug
-  console.log(`[path-render] characters: "${props.characters}", fontSize: ${props.fontSize}, fontFamily: ${props.fontFamily}`);
-
   if (!props.characters) {
     return EMPTY_SVG;
   }
@@ -163,8 +161,15 @@ export async function renderTextNodeAsPath(
     return EMPTY_SVG;
   }
 
-  // Debug
-  console.log(`[path-render] loaded font: ${loadedFont.family}, weight: ${loadedFont.weight}, unitsPerEm: ${loadedFont.font.unitsPerEm}`);
+  // Try to load a fallback font for CJK characters
+  let fallbackFont: LoadedFont | undefined;
+  if (ctx.fontLoader.loadFallbackFont) {
+    fallbackFont = await ctx.fontLoader.loadFallbackFont({
+      family: props.fontFamily,
+      weight: props.fontWeight,
+      style: props.fontStyle === "italic" ? "italic" : "normal",
+    });
+  }
 
   const transformStr = buildTransformAttr(props.transform);
   const { color: fillColor, opacity: fillOpacity } = getFillColorAndOpacity(props.fillPaints);
@@ -175,6 +180,9 @@ export async function renderTextNodeAsPath(
 
   // Calculate the natural line height from font metrics
   // Figma's 100% line height = fontSize * (ascender + |descender|) / unitsPerEm
+  // Note: There may be small differences (~0.2px at 64px) due to Figma's internal
+  // line height calculation, but the main source of visual diff is glyph outline
+  // differences between font versions (e.g., @fontsource vs system fonts).
   const naturalLineHeight = props.fontSize * (font.ascender + Math.abs(font.descender)) / font.unitsPerEm;
 
   // If props.lineHeight equals fontSize, it was set to 100% in Figma
@@ -185,9 +193,6 @@ export async function renderTextNodeAsPath(
 
   // Get lines with text wrapping applied
   const lines = getTextLinesForPath(props, font);
-
-  // Debug
-  console.log(`[path-render] lines: ${JSON.stringify(lines)}, lineCount: ${lines.length}`);
 
   // Calculate text position using actual font metrics
   const x = getAlignedX(props.textAlignHorizontal, props.size?.width);
@@ -200,29 +205,25 @@ export async function renderTextNodeAsPath(
     ascenderRatio,
   });
 
-  // Debug
-  console.log(`[path-render] baseY: ${baseY}, x: ${x}, ascenderRatio: ${ascenderRatio}, lineHeight: ${lineHeight}, naturalLineHeight: ${naturalLineHeight}, verticalAlign: ${props.textAlignVertical}`);
-  console.log(`[path-render] size: ${JSON.stringify(props.size)}`);
-
   // Render each line as a path
   const pathElements: SvgString[] = [];
+  const underlinePaths: string[] = [];
 
   for (let i = 0; i < lines.length; i++) {
     const lineText = lines[i];
     if (!lineText) continue;
 
     const y = baseY + i * lineHeight;
-    console.log(`[path-render] line ${i}: "${lineText}" at y=${y}`);
-    const linePath = renderLineAsPath(
+    const linePath = renderLineAsPathWithFallback(
       lineText,
       font,
+      fallbackFont?.font,
       props.fontSize,
       x,
       y,
       props.textAlignHorizontal,
       props.letterSpacing
     );
-    console.log(`[path-render] linePath snippet: ${linePath?.slice(0, 100)}...`);
 
     if (linePath) {
       pathElements.push(
@@ -233,6 +234,33 @@ export async function renderTextNodeAsPath(
         })
       );
     }
+
+    // Render underline if needed
+    if (props.textDecoration === "UNDERLINE") {
+      const underlinePath = renderUnderlinePath(
+        lineText,
+        font,
+        props.fontSize,
+        x,
+        y,
+        props.textAlignHorizontal,
+        props.letterSpacing
+      );
+      if (underlinePath) {
+        underlinePaths.push(underlinePath);
+      }
+    }
+  }
+
+  // Combine all underlines into a single path element
+  if (underlinePaths.length > 0) {
+    pathElements.push(
+      path({
+        d: underlinePaths.join(""),
+        fill: fillColor,
+        "fill-opacity": fillOpacity < 1 ? fillOpacity : undefined,
+      })
+    );
   }
 
   if (pathElements.length === 0) {
@@ -251,6 +279,85 @@ export async function renderTextNodeAsPath(
   }
 
   return pathElements[0];
+}
+
+/**
+ * Text segment with associated font
+ */
+type TextSegment = {
+  text: string;
+  font: Font;
+  useFallback: boolean;
+};
+
+/**
+ * Segment text by font capability
+ *
+ * Groups consecutive characters that can be rendered by the same font.
+ */
+function segmentTextByFont(
+  text: string,
+  primaryFont: Font,
+  fallbackFont: Font | undefined
+): readonly TextSegment[] {
+  if (!fallbackFont) {
+    // No fallback - use primary for everything
+    return [{ text, font: primaryFont, useFallback: false }];
+  }
+
+  const segments: TextSegment[] = [];
+  let currentText = "";
+  let currentUseFallback = false;
+
+  for (const char of text) {
+    const needsFallback = isCJKCharacter(char) && !fontHasGlyph(primaryFont, char);
+
+    if (segments.length === 0 && currentText === "") {
+      // First character
+      currentUseFallback = needsFallback;
+      currentText = char;
+    } else if (needsFallback === currentUseFallback) {
+      // Same font as current segment
+      currentText += char;
+    } else {
+      // Different font - save current segment and start new one
+      segments.push({
+        text: currentText,
+        font: currentUseFallback ? fallbackFont : primaryFont,
+        useFallback: currentUseFallback,
+      });
+      currentText = char;
+      currentUseFallback = needsFallback;
+    }
+  }
+
+  // Add final segment
+  if (currentText) {
+    segments.push({
+      text: currentText,
+      font: currentUseFallback ? fallbackFont : primaryFont,
+      useFallback: currentUseFallback,
+    });
+  }
+
+  return segments;
+}
+
+/**
+ * Calculate width of a text segment
+ */
+function calculateSegmentWidth(text: string, font: Font, fontSize: number, letterSpacing?: number): number {
+  const scale = fontSize / font.unitsPerEm;
+  let width = 0;
+  for (let i = 0; i < text.length; i++) {
+    const glyph = font.charToGlyph(text[i]);
+    const advanceWidth = glyph.advanceWidth ?? 0;
+    width += advanceWidth * scale;
+    if (letterSpacing && i < text.length - 1) {
+      width += letterSpacing;
+    }
+  }
+  return width;
 }
 
 /**
@@ -291,8 +398,198 @@ function renderLineAsPath(
     letterSpacing: letterSpacing ?? 0,
   });
 
-  const pathData = openTypePath.toPathData(2);
+  // Convert quadratic beziers (Q) to cubic beziers (C) to match Figma's export format
+  // Figma exports TrueType fonts with cubic curves for better compatibility
+  const pathData = convertQuadraticToCubic(openTypePath, 5);
   return pathData || null;
+}
+
+/**
+ * Render a single line of text as SVG path data with font fallback
+ */
+function renderLineAsPathWithFallback(
+  text: string,
+  primaryFont: Font,
+  fallbackFont: Font | undefined,
+  fontSize: number,
+  x: number,
+  y: number,
+  align: "LEFT" | "CENTER" | "RIGHT" | "JUSTIFIED",
+  letterSpacing?: number
+): string | null {
+  const segments = segmentTextByFont(text, primaryFont, fallbackFont);
+
+  if (segments.length === 0) {
+    return null;
+  }
+
+  // Calculate total width for alignment
+  let totalWidth = 0;
+  for (const segment of segments) {
+    totalWidth += calculateSegmentWidth(segment.text, segment.font, fontSize, letterSpacing);
+  }
+
+  // Adjust starting X for alignment
+  let adjustedX = x;
+  if (align === "CENTER") {
+    adjustedX = x - totalWidth / 2;
+  } else if (align === "RIGHT") {
+    adjustedX = x - totalWidth;
+  }
+
+  // Render each segment
+  const paths: string[] = [];
+  let currentX = adjustedX;
+
+  for (const segment of segments) {
+    const openTypePath = segment.font.getPath(segment.text, currentX, y, fontSize, {
+      letterSpacing: letterSpacing ?? 0,
+    });
+
+    const pathData = convertQuadraticToCubic(openTypePath, 5);
+    if (pathData) {
+      paths.push(pathData);
+    }
+
+    // Move to next position
+    currentX += calculateSegmentWidth(segment.text, segment.font, fontSize, letterSpacing);
+  }
+
+  return paths.join("") || null;
+}
+
+/**
+ * Render underline as SVG path data
+ *
+ * Figma renders underlines as rectangles positioned below the text baseline.
+ * The underline thickness and position are calculated based on font metrics.
+ */
+function renderUnderlinePath(
+  text: string,
+  font: Font,
+  fontSize: number,
+  x: number,
+  y: number,
+  align: "LEFT" | "CENTER" | "RIGHT" | "JUSTIFIED",
+  letterSpacing?: number
+): string | null {
+  if (!text.trim()) {
+    return null;
+  }
+
+  const scale = fontSize / font.unitsPerEm;
+
+  // Calculate text width for the underline
+  let totalWidth = 0;
+  for (let i = 0; i < text.length; i++) {
+    const glyph = font.charToGlyph(text[i]);
+    const advanceWidth = glyph.advanceWidth ?? 0;
+    totalWidth += advanceWidth * scale;
+    if (letterSpacing && i < text.length - 1) {
+      totalWidth += letterSpacing;
+    }
+  }
+
+  // Calculate underline position and thickness
+  // Figma positions underline at approximately fontSize * 0.19 below baseline
+  // Underline thickness is approximately fontSize * 0.068
+  const underlineOffset = fontSize * 0.19;
+  const underlineThickness = fontSize * 0.068;
+
+  // Round to match Figma's precision
+  const round = (n: number) => Math.round(n * 10000) / 10000;
+
+  // Calculate underline X position based on alignment
+  let underlineX = x;
+  if (align === "CENTER") {
+    underlineX = x - totalWidth / 2;
+  } else if (align === "RIGHT") {
+    underlineX = x - totalWidth;
+  }
+
+  // Calculate underline Y position (below baseline)
+  const underlineY = y + underlineOffset;
+
+  // Create rectangle path for underline
+  // M x y H (x+width) V (y+height) H x V y Z
+  return `M${round(underlineX)} ${round(underlineY)}H${round(underlineX + totalWidth)}V${round(underlineY + underlineThickness)}H${round(underlineX)}V${round(underlineY)}Z`;
+}
+
+/**
+ * Convert path with quadratic beziers to cubic beziers
+ *
+ * Figma exports all curves as cubic beziers even for TrueType fonts.
+ * This conversion matches Figma's behavior.
+ *
+ * Mathematical conversion:
+ * Q(P0, P1, P2) → C(P0, P0 + 2/3*(P1-P0), P2 + 2/3*(P1-P2), P2)
+ */
+function convertQuadraticToCubic(
+  path: { commands: ReadonlyArray<{ type: string; x?: number; y?: number; x1?: number; y1?: number; x2?: number; y2?: number }> },
+  precision: number
+): string {
+  const parts: string[] = [];
+  let currentX = 0;
+  let currentY = 0;
+
+  const round = (n: number) => {
+    const factor = Math.pow(10, precision);
+    return Math.round(n * factor) / factor;
+  };
+
+  for (const cmd of path.commands) {
+    switch (cmd.type) {
+      case "M":
+        currentX = cmd.x ?? 0;
+        currentY = cmd.y ?? 0;
+        parts.push(`M${round(currentX)} ${round(currentY)}`);
+        break;
+
+      case "L":
+        currentX = cmd.x ?? 0;
+        currentY = cmd.y ?? 0;
+        parts.push(`L${round(currentX)} ${round(currentY)}`);
+        break;
+
+      case "Q": {
+        // Convert quadratic to cubic
+        // P0 = current point, P1 = (x1, y1), P2 = (x, y)
+        const p0x = currentX;
+        const p0y = currentY;
+        const p1x = cmd.x1 ?? 0;
+        const p1y = cmd.y1 ?? 0;
+        const p2x = cmd.x ?? 0;
+        const p2y = cmd.y ?? 0;
+
+        // Cubic control points:
+        // CP1 = P0 + 2/3 * (P1 - P0)
+        // CP2 = P2 + 2/3 * (P1 - P2)
+        const cp1x = p0x + (2 / 3) * (p1x - p0x);
+        const cp1y = p0y + (2 / 3) * (p1y - p0y);
+        const cp2x = p2x + (2 / 3) * (p1x - p2x);
+        const cp2y = p2y + (2 / 3) * (p1y - p2y);
+
+        parts.push(`C${round(cp1x)} ${round(cp1y)} ${round(cp2x)} ${round(cp2y)} ${round(p2x)} ${round(p2y)}`);
+
+        currentX = p2x;
+        currentY = p2y;
+        break;
+      }
+
+      case "C":
+        // Already cubic, keep as is
+        parts.push(`C${round(cmd.x1 ?? 0)} ${round(cmd.y1 ?? 0)} ${round(cmd.x2 ?? 0)} ${round(cmd.y2 ?? 0)} ${round(cmd.x ?? 0)} ${round(cmd.y ?? 0)}`);
+        currentX = cmd.x ?? 0;
+        currentY = cmd.y ?? 0;
+        break;
+
+      case "Z":
+        parts.push("Z");
+        break;
+    }
+  }
+
+  return parts.join("");
 }
 
 /**

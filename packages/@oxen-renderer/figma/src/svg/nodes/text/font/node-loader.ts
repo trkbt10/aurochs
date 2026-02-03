@@ -9,6 +9,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { parse as parseFont, type Font } from "opentype.js";
 import type { FontLoader, FontLoadOptions, LoadedFont } from "./loader";
+import { CJK_FALLBACK_FONTS } from "./loader";
 
 /**
  * Font file metadata from scanning
@@ -140,6 +141,11 @@ export class NodeFontLoader implements FontLoader {
 
   /**
    * Check if file is a font file
+   *
+   * Note: .ttc (TrueType Collection) files are NOT supported by opentype.js
+   * so they are excluded. This affects CJK fallback on macOS which uses TTC files
+   * for Hiragino and other system fonts. Consider installing @fontsource CJK
+   * font packages for CJK support.
    */
   private isFontFile(filename: string): boolean {
     const ext = path.extname(filename).toLowerCase();
@@ -217,12 +223,17 @@ export class NodeFontLoader implements FontLoader {
 
     // Sort by match quality
     const sorted = [...variants].sort((a, b) => {
-      // Style match is primary
+      // Prefer latin subset (most common use case)
+      const aIsLatin = a.path.includes("-latin-") ? 0 : 1;
+      const bIsLatin = b.path.includes("-latin-") ? 0 : 1;
+      if (aIsLatin !== bIsLatin) return aIsLatin - bIsLatin;
+
+      // Style match is secondary
       const aStyleMatch = a.style === targetStyle ? 0 : 1;
       const bStyleMatch = b.style === targetStyle ? 0 : 1;
       if (aStyleMatch !== bStyleMatch) return aStyleMatch - bStyleMatch;
 
-      // Weight distance is secondary
+      // Weight distance is tertiary
       return weightDistance(targetWeight, a.weight) - weightDistance(targetWeight, b.weight);
     });
 
@@ -275,6 +286,29 @@ export class NodeFontLoader implements FontLoader {
       const existing = index.get(familyLower) ?? [];
       index.set(familyLower, [...existing, info]);
     }
+  }
+
+  /**
+   * Load a fallback font for CJK characters
+   *
+   * Tries CJK fallback fonts in order until one is found.
+   */
+  async loadFallbackFont(options: FontLoadOptions): Promise<LoadedFont | undefined> {
+    const platform = process.platform as keyof typeof CJK_FALLBACK_FONTS;
+    const fallbackFonts = CJK_FALLBACK_FONTS[platform] ?? [];
+
+    for (const family of fallbackFonts) {
+      const font = await this.loadFont({
+        family,
+        weight: options.weight,
+        style: options.style,
+      });
+      if (font) {
+        return font;
+      }
+    }
+
+    return undefined;
   }
 }
 

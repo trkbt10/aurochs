@@ -18,6 +18,12 @@ export type FigSymbolData = {
 };
 
 /**
+ * Derived symbol data structure for transform overrides
+ * This contains computed transforms for INSTANCE child nodes
+ */
+export type FigDerivedSymbolData = readonly FigSymbolOverride[];
+
+/**
  * Symbol override entry
  */
 export type FigSymbolOverride = {
@@ -70,15 +76,23 @@ function deepCloneNode(node: FigNode): FigNode {
 }
 
 /**
+ * Options for cloning symbol children
+ */
+export type CloneSymbolChildrenOptions = {
+  readonly symbolOverrides?: readonly FigSymbolOverride[];
+  readonly derivedSymbolData?: FigDerivedSymbolData;
+};
+
+/**
  * Clone SYMBOL children for INSTANCE rendering
  *
  * @param symbolNode - The SYMBOL node to clone children from
- * @param symbolOverrides - Optional overrides to apply
+ * @param options - Optional overrides and derived data to apply
  * @returns Cloned children with overrides applied
  */
 export function cloneSymbolChildren(
   symbolNode: FigNode,
-  symbolOverrides?: readonly FigSymbolOverride[]
+  options?: CloneSymbolChildrenOptions
 ): readonly FigNode[] {
   const children = symbolNode.children ?? [];
   if (children.length === 0) {
@@ -88,9 +102,14 @@ export function cloneSymbolChildren(
   // Deep clone children
   const cloned = children.map((child) => deepCloneNode(child));
 
-  // Apply overrides if present
-  if (symbolOverrides && symbolOverrides.length > 0) {
-    applyOverrides(cloned, symbolOverrides);
+  // Apply symbol overrides (property overrides)
+  if (options?.symbolOverrides && options.symbolOverrides.length > 0) {
+    applyOverrides(cloned, options.symbolOverrides);
+  }
+
+  // Apply derived symbol data (transform overrides from INSTANCE sizing)
+  if (options?.derivedSymbolData && options.derivedSymbolData.length > 0) {
+    applyOverrides(cloned, options.derivedSymbolData);
   }
 
   return cloned;

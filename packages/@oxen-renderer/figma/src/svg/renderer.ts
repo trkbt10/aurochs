@@ -15,7 +15,10 @@ import {
   renderVectorNode,
   renderTextNode,
 } from "./nodes";
-import { resolveSymbol, cloneSymbolChildren, type FigSymbolData } from "./symbol-resolver";
+import { renderTextNodeAsPath, type PathRenderContext } from "./nodes/text/path-render";
+import { renderTextNodeFromDerivedData, hasDerivedPathData, type DerivedPathRenderContext } from "./nodes/text/derived-path-render";
+import { resolveSymbol, cloneSymbolChildren, type FigSymbolData, type FigDerivedSymbolData } from "./symbol-resolver";
+import type { FontLoader } from "./nodes/text/font/loader";
 
 // =============================================================================
 // Transform Normalization
@@ -112,6 +115,8 @@ export type FigSvgRenderOptions = {
   readonly showHiddenNodes?: boolean;
   /** Symbol map for INSTANCE node resolution (from buildNodeTree) */
   readonly symbolMap?: ReadonlyMap<string, FigNode>;
+  /** Font loader for path-based text rendering (enables high-precision text) */
+  readonly fontLoader?: FontLoader;
 };
 
 // =============================================================================
@@ -138,6 +143,7 @@ export function renderFigToSvg(
     images: options?.images ?? new Map(),
     showHiddenNodes: options?.showHiddenNodes,
     symbolMap: options?.symbolMap,
+    fontLoader: options?.fontLoader,
   });
 
   const warnings: string[] = [];
@@ -338,8 +344,14 @@ function resolveInstanceChildren(
     return directChildren;
   }
 
+  // Get derivedSymbolData for transform overrides (from INSTANCE sizing)
+  const derivedSymbolData = nodeData.derivedSymbolData as FigDerivedSymbolData | undefined;
+
   // Clone SYMBOL children with overrides applied
-  return cloneSymbolChildren(symbolNode, symbolData.symbolOverrides);
+  return cloneSymbolChildren(symbolNode, {
+    symbolOverrides: symbolData.symbolOverrides,
+    derivedSymbolData,
+  });
 }
 
 /**
@@ -487,6 +499,233 @@ export function renderCanvas(
     width: options?.width ?? bounds.width,
     height: options?.height ?? bounds.height,
     // Normalize root transforms by default when rendering a canvas
+    normalizeRootTransform: options?.normalizeRootTransform ?? true,
+  });
+}
+
+// =============================================================================
+// Async Rendering (with path-based text support)
+// =============================================================================
+
+/**
+ * Render a single Figma node to SVG (async version for path-based text)
+ */
+async function renderNodeAsync(
+  node: FigNode,
+  ctx: FigSvgRenderContext,
+  warnings: string[]
+): Promise<SvgString> {
+  const nodeType = getNodeType(node);
+
+  const nodeData = node as Record<string, unknown>;
+  if (nodeData.visible === false && !ctx.showHiddenNodes) {
+    return EMPTY_SVG;
+  }
+
+  const resolvedChildren = resolveInstanceChildren(node, nodeType, nodeData, ctx, warnings);
+  const renderedChildren = await renderChildrenWithMasksAsync(resolvedChildren, ctx, warnings);
+
+  switch (nodeType) {
+    case "DOCUMENT":
+      return g({}, ...renderedChildren);
+
+    case "CANVAS":
+      return g({}, ...renderedChildren);
+
+    case "FRAME":
+    case "COMPONENT":
+    case "COMPONENT_SET":
+    case "INSTANCE":
+    case "SYMBOL":
+      return renderFrameNode(node, ctx, renderedChildren);
+
+    case "GROUP":
+    case "BOOLEAN_OPERATION":
+      return renderGroupNode(node, ctx, renderedChildren);
+
+    case "RECTANGLE":
+    case "ROUNDED_RECTANGLE":
+      return renderRectangleNode(node, ctx);
+
+    case "ELLIPSE":
+      return renderEllipseNode(node, ctx);
+
+    case "VECTOR":
+    case "LINE":
+    case "STAR":
+    case "REGULAR_POLYGON":
+      return renderVectorNode(node, ctx);
+
+    case "TEXT":
+      // Prefer derived path rendering (exact match with Figma export)
+      if (hasDerivedPathData(node)) {
+        const derivedCtx: DerivedPathRenderContext = {
+          ...ctx,
+          blobs: ctx.blobs,
+        };
+        return renderTextNodeFromDerivedData(node, derivedCtx);
+      }
+      // Fallback to opentype.js path rendering if fontLoader is available
+      if (ctx.fontLoader) {
+        const pathCtx: PathRenderContext = {
+          ...ctx,
+          fontLoader: ctx.fontLoader,
+        };
+        return renderTextNodeAsPath(node, pathCtx);
+      }
+      return renderTextNode(node, ctx);
+
+    default:
+      if (renderedChildren.length > 0) {
+        return g({}, ...renderedChildren);
+      }
+      warnings.push(`Unknown node type: ${nodeType}`);
+      return EMPTY_SVG;
+  }
+}
+
+/**
+ * Process children with mask support (async version)
+ */
+async function renderChildrenWithMasksAsync(
+  children: readonly FigNode[],
+  ctx: FigSvgRenderContext,
+  warnings: string[]
+): Promise<readonly SvgString[]> {
+  const result: SvgString[] = [];
+  let currentMaskId: string | null = null;
+  let maskedContent: SvgString[] = [];
+
+  for (const child of children) {
+    const nodeData = child as Record<string, unknown>;
+    if (nodeData.visible === false && !ctx.showHiddenNodes) {
+      continue;
+    }
+
+    if (isMaskNode(child)) {
+      // Flush existing masked content
+      if (currentMaskId && maskedContent.length > 0) {
+        result.push(g({ mask: `url(#${currentMaskId})` }, ...maskedContent));
+        maskedContent = [];
+      }
+
+      const maskContent = await renderNodeAsync(child, ctx, warnings);
+      if (maskContent !== EMPTY_SVG) {
+        const maskId = ctx.defs.generateId("mask");
+        const maskDef = mask(
+          { id: maskId, style: "mask-type:luminance" },
+          g({ fill: "white" }, maskContent)
+        );
+        ctx.defs.add(maskDef);
+        currentMaskId = maskId;
+      }
+    } else {
+      const rendered = await renderNodeAsync(child, ctx, warnings);
+      if (rendered !== EMPTY_SVG) {
+        if (currentMaskId) {
+          maskedContent.push(rendered);
+        } else {
+          result.push(rendered);
+        }
+      }
+    }
+  }
+
+  // Final flush
+  if (currentMaskId && maskedContent.length > 0) {
+    result.push(g({ mask: `url(#${currentMaskId})` }, ...maskedContent));
+  }
+
+  return result;
+}
+
+/**
+ * Render Figma nodes to SVG (async version with path-based text support)
+ *
+ * Use this version when fontLoader is provided for high-precision text rendering.
+ */
+export async function renderFigToSvgAsync(
+  nodes: readonly FigNode[],
+  options?: FigSvgRenderOptions
+): Promise<FigSvgRenderResult> {
+  const width = options?.width ?? 800;
+  const height = options?.height ?? 600;
+
+  const ctx = createFigSvgRenderContext({
+    canvasSize: { width, height },
+    blobs: options?.blobs ?? [],
+    images: options?.images ?? new Map(),
+    showHiddenNodes: options?.showHiddenNodes,
+    symbolMap: options?.symbolMap,
+    fontLoader: options?.fontLoader,
+  });
+
+  const warnings: string[] = [];
+  const nodesToRender = getNodesToRender(nodes, options?.normalizeRootTransform);
+
+  const renderedNodes: SvgString[] = [];
+  for (const node of nodesToRender) {
+    try {
+      const rendered = await renderNodeAsync(node, ctx, warnings);
+      renderedNodes.push(rendered);
+    } catch (error) {
+      warnings.push(`Failed to render node "${node.name ?? "unknown"}": ${error}`);
+      renderedNodes.push(EMPTY_SVG);
+    }
+  }
+
+  const content: SvgString[] = [];
+
+  if (ctx.defs.hasAny()) {
+    content.push(defs(...(ctx.defs.getAll() as SvgString[])));
+  }
+
+  if (options?.backgroundColor) {
+    content.push(
+      rect({
+        x: 0,
+        y: 0,
+        width,
+        height,
+        fill: options.backgroundColor,
+      })
+    );
+  }
+
+  content.push(...renderedNodes);
+
+  const svgOutput = svg(
+    {
+      width,
+      height,
+      viewBox: `0 0 ${width} ${height}`,
+    },
+    ...content
+  );
+
+  return {
+    svg: svgOutput,
+    warnings,
+  };
+}
+
+/**
+ * Render a single canvas (page) from Figma nodes (async version)
+ */
+export async function renderCanvasAsync(
+  canvasNode: FigNode,
+  options?: FigSvgRenderOptions
+): Promise<FigSvgRenderResult> {
+  const children = canvasNode.children ?? [];
+
+  const defaultWidth = options?.width ?? 800;
+  const defaultHeight = options?.height ?? 600;
+  const bounds = calculateCanvasBounds(children, defaultWidth, defaultHeight);
+
+  return renderFigToSvgAsync(children, {
+    ...options,
+    width: options?.width ?? bounds.width,
+    height: options?.height ?? bounds.height,
     normalizeRootTransform: options?.normalizeRootTransform ?? true,
   });
 }

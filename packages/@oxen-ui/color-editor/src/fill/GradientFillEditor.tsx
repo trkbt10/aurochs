@@ -50,7 +50,9 @@ const trackStyle: CSSProperties = {
 
 const handleSize = 14;
 const handleStyle = (position: number, isSelected: boolean, hex: string): CSSProperties => {
-  const border = isSelected ? "2px solid var(--border-strong, #fff)" : "1px solid var(--border-subtle, rgba(255, 255, 255, 0.4))";
+  const border = isSelected
+    ? "2px solid var(--border-strong, #fff)"
+    : "1px solid var(--border-subtle, rgba(255, 255, 255, 0.4))";
   return {
     position: "absolute",
     left: `${position}%`,
@@ -119,7 +121,7 @@ export function GradientFillEditor({ value, onChange }: GradientFillEditorProps)
         linear: nextLinear,
       });
     },
-    [value, onChange]
+    [value, onChange],
   );
 
   const positionFromClientX = useCallback((clientX: number) => {
@@ -140,7 +142,7 @@ export function GradientFillEditor({ value, onChange }: GradientFillEditorProps)
       setSelectedStopIndex(index);
       focusRoot();
     },
-    [focusRoot]
+    [focusRoot],
   );
 
   const handleStopColorChange = useCallback(
@@ -149,7 +151,7 @@ export function GradientFillEditor({ value, onChange }: GradientFillEditorProps)
       newStops[index] = { ...newStops[index], color: createDefaultColor(hex) };
       onChange({ ...value, stops: newStops });
     },
-    [value, onChange]
+    [value, onChange],
   );
 
   const handleStopPositionChange = useCallback(
@@ -158,7 +160,7 @@ export function GradientFillEditor({ value, onChange }: GradientFillEditorProps)
       newStops[index] = { ...newStops[index], position: pct(clampPercent(position)) };
       onChange({ ...value, stops: newStops });
     },
-    [value, onChange]
+    [value, onChange],
   );
 
   const handleTrackClick = useCallback(
@@ -178,7 +180,7 @@ export function GradientFillEditor({ value, onChange }: GradientFillEditorProps)
       setSelectedStopIndex(newStops.length - 1);
       focusRoot();
     },
-    [positionFromClientX, value, onChange, focusRoot]
+    [positionFromClientX, value, onChange, focusRoot],
   );
 
   const handleStopPointerDown = useCallback(
@@ -190,7 +192,7 @@ export function GradientFillEditor({ value, onChange }: GradientFillEditorProps)
       focusRoot();
       event.currentTarget.setPointerCapture(event.pointerId);
     },
-    [focusRoot]
+    [focusRoot],
   );
 
   const handleStopPointerMove = useCallback(
@@ -201,7 +203,7 @@ export function GradientFillEditor({ value, onChange }: GradientFillEditorProps)
       const position = positionFromClientX(event.clientX);
       handleStopPositionChange(index, position);
     },
-    [draggingStopIndex, positionFromClientX, handleStopPositionChange]
+    [draggingStopIndex, positionFromClientX, handleStopPositionChange],
   );
 
   const handleStopPointerUp = useCallback(
@@ -212,7 +214,7 @@ export function GradientFillEditor({ value, onChange }: GradientFillEditorProps)
       setDraggingStopIndex(null);
       event.currentTarget.releasePointerCapture(event.pointerId);
     },
-    [draggingStopIndex]
+    [draggingStopIndex],
   );
 
   const handleKeyDown = useCallback(
@@ -234,32 +236,18 @@ export function GradientFillEditor({ value, onChange }: GradientFillEditorProps)
       setSelectedStopIndex(Math.max(0, selectedStopIndex - 1));
       event.preventDefault();
     },
-    [value, onChange, selectedStopIndex]
+    [value, onChange, selectedStopIndex],
   );
 
-  const gradientCss = useMemo(
-    () => buildGradientCss(angle, value.stops),
-    [angle, value.stops]
-  );
+  const gradientCss = useMemo(() => buildGradientCss(angle, value.stops), [angle, value.stops]);
 
   return (
     <div ref={rootRef} tabIndex={0} onKeyDown={handleKeyDown}>
       <div style={previewStyle(angle, gradientCss)} />
 
-      <LabeledSlider
-        label="°"
-        value={angle}
-        onChange={handleAngleChange}
-        min={0}
-        max={360}
-        suffix="°"
-      />
+      <LabeledSlider label="°" value={angle} onChange={handleAngleChange} min={0} max={360} suffix="°" />
 
-      <div
-        ref={trackRef}
-        style={{ ...trackStyle, background: gradientCss }}
-        onClick={handleTrackClick}
-      >
+      <div ref={trackRef} style={{ ...trackStyle, background: gradientCss }} onClick={handleTrackClick}>
         {value.stops.map((stop, index) => {
           const hex = getStopHex(stop);
           return (

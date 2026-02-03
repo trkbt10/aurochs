@@ -50,6 +50,11 @@ export type TextAlignVertical = "TOP" | "CENTER" | "BOTTOM";
 export type TextAutoResize = "WIDTH_AND_HEIGHT" | "HEIGHT" | "NONE" | "TRUNCATE";
 
 /**
+ * Text decoration
+ */
+export type TextDecoration = "NONE" | "UNDERLINE" | "STRIKETHROUGH";
+
+/**
  * Size of text box
  */
 export type TextBoxSize = {
@@ -74,6 +79,7 @@ export type ExtractedTextProps = {
   readonly textAlignHorizontal: TextAlignHorizontal;
   readonly textAlignVertical: TextAlignVertical;
   readonly textAutoResize: TextAutoResize;
+  readonly textDecoration: TextDecoration;
   readonly size: TextBoxSize | undefined;
 };
 

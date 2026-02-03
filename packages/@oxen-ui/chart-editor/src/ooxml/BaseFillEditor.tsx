@@ -24,41 +24,10 @@ const fillTypeOptions: SelectOption<BaseFill["type"]>[] = [
   { value: "solidFill", label: "Solid" },
 ];
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /**
  * Editor component for BaseFill (noFill or solidFill).
  */
-export function BaseFillEditor({
-  value,
-  onChange,
-  disabled,
-  className,
-  style,
-}: BaseFillEditorProps) {
+export function BaseFillEditor({ value, onChange, disabled, className, style }: BaseFillEditorProps) {
   const handleTypeChange = useCallback(
     (v: string) => {
       if (v === "solidFill") {
@@ -88,24 +57,14 @@ export function BaseFillEditor({
     <div style={{ ...containerStyle, ...style }} className={className}>
       <FieldRow>
         <FieldGroup label="Type" style={{ flex: 1 }}>
-          <Select
-            value={value.type}
-            onChange={handleTypeChange}
-            options={fillTypeOptions}
-            disabled={disabled}
-          />
+          <Select value={value.type} onChange={handleTypeChange} options={fillTypeOptions} disabled={disabled} />
         </FieldGroup>
       </FieldRow>
 
       {value.type === "solidFill" && value.color.spec.type === "srgb" && (
         <FieldRow>
           <FieldGroup label="Color (hex)" style={{ flex: 1 }}>
-            <Input
-              value={value.color.spec.value}
-              onChange={handleHexChange}
-              disabled={disabled}
-              placeholder="RRGGBB"
-            />
+            <Input value={value.color.spec.value} onChange={handleHexChange} disabled={disabled} placeholder="RRGGBB" />
           </FieldGroup>
         </FieldRow>
       )}
@@ -113,35 +72,9 @@ export function BaseFillEditor({
   );
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /**
  * Create a noFill value.
  */
 export function createNoFill(): BaseFill {
   return { type: "noFill" };
 }
-

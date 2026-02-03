@@ -206,15 +206,6 @@ ${pathSvg}
       fontLoader: loader,
     };
 
-    // Debug: log text node data
-    const textData = frame.textNode as Record<string, unknown>;
-    const rawChars = (textData.textData as Record<string, unknown> | undefined)?.characters as string;
-    console.log(`Text raw characters (escaped): ${JSON.stringify(rawChars)}`);
-    console.log(`Text autoResize: ${JSON.stringify(textData.textAutoResize)}`);
-    console.log(`Text size: ${JSON.stringify(textData.size)}`);
-    console.log(`Text lineHeight: ${JSON.stringify(textData.lineHeight)}`);
-    console.log(`Text fontSize: ${textData.fontSize}`);
-
     const pathSvg = await renderTextNodeAsPath(frame.textNode, pathCtx);
 
     const renderedSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${frame.size.width}" height="${frame.size.height}" viewBox="0 0 ${frame.size.width} ${frame.size.height}">
@@ -229,10 +220,106 @@ ${pathSvg}
     const result = comparePngs(actualPng, renderedPng);
 
     console.log(`size-64 path-based diff: ${result.diffPercent.toFixed(2)}%`);
-    console.log(`Frame size: ${frame.size.width}x${frame.size.height}`);
-    console.log(`Rendered SVG:\n${renderedSvg.slice(0, 1000)}...`);
 
     // Record result (may still have diff due to baseline calculation)
     expect(result.diffPercent).toBeDefined();
   });
+
+  // Test multiple alignment frames
+  const alignmentFrames = [
+    "LEFT-TOP", "LEFT-CENTER", "LEFT-BOTTOM",
+    "CENTER-TOP", "CENTER-CENTER", "CENTER-BOTTOM",
+    "RIGHT-TOP", "RIGHT-CENTER", "RIGHT-BOTTOM"
+  ];
+
+  for (const frameName of alignmentFrames) {
+    it(`renders ${frameName} with path-based approach`, async () => {
+      const frame = data.frames.get(frameName);
+      if (!frame || !frame.textNode) {
+        console.log(`Skipping ${frameName}: frame or textNode not found`);
+        return;
+      }
+
+      const actualPath = path.join(ACTUAL_SVG_DIR, `${frameName}.svg`);
+      if (!fs.existsSync(actualPath)) {
+        console.log(`Skipping ${frameName}: actual SVG not found`);
+        return;
+      }
+
+      const ctx = createFigSvgRenderContext({
+        canvasSize: { width: frame.size.width, height: frame.size.height },
+        blobs: data.blobs,
+      });
+
+      const pathCtx: PathRenderContext = {
+        ...ctx,
+        fontLoader: loader,
+      };
+
+      const pathSvg = await renderTextNodeAsPath(frame.textNode, pathCtx);
+
+      const renderedSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${frame.size.width}" height="${frame.size.height}" viewBox="0 0 ${frame.size.width} ${frame.size.height}">
+<rect width="${frame.size.width}" height="${frame.size.height}" fill="white"/>
+${pathSvg}
+</svg>`;
+
+      const actualSvg = fs.readFileSync(actualPath, "utf-8");
+      const actualPng = svgToPng(actualSvg);
+      const renderedPng = svgToPng(renderedSvg);
+
+      const result = comparePngs(actualPng, renderedPng);
+
+      console.log(`${frameName} path-based diff: ${result.diffPercent.toFixed(2)}%`);
+
+      // Target: <5% for now, aiming for <1%
+      expect(result.diffPercent).toBeLessThan(5);
+    });
+  }
+
+  // Test font size frames
+  const sizeFrames = ["size-10", "size-12", "size-14", "size-16", "size-24", "size-32", "size-48"];
+
+  for (const frameName of sizeFrames) {
+    it(`renders ${frameName} with path-based approach`, async () => {
+      const frame = data.frames.get(frameName);
+      if (!frame || !frame.textNode) {
+        console.log(`Skipping ${frameName}: frame or textNode not found`);
+        return;
+      }
+
+      const actualPath = path.join(ACTUAL_SVG_DIR, `${frameName}.svg`);
+      if (!fs.existsSync(actualPath)) {
+        console.log(`Skipping ${frameName}: actual SVG not found`);
+        return;
+      }
+
+      const ctx = createFigSvgRenderContext({
+        canvasSize: { width: frame.size.width, height: frame.size.height },
+        blobs: data.blobs,
+      });
+
+      const pathCtx: PathRenderContext = {
+        ...ctx,
+        fontLoader: loader,
+      };
+
+      const pathSvg = await renderTextNodeAsPath(frame.textNode, pathCtx);
+
+      const renderedSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${frame.size.width}" height="${frame.size.height}" viewBox="0 0 ${frame.size.width} ${frame.size.height}">
+<rect width="${frame.size.width}" height="${frame.size.height}" fill="white"/>
+${pathSvg}
+</svg>`;
+
+      const actualSvg = fs.readFileSync(actualPath, "utf-8");
+      const actualPng = svgToPng(actualSvg);
+      const renderedPng = svgToPng(renderedSvg);
+
+      const result = comparePngs(actualPng, renderedPng);
+
+      console.log(`${frameName} path-based diff: ${result.diffPercent.toFixed(2)}%`);
+
+      // Target: <5% for now
+      expect(result.diffPercent).toBeLessThan(5);
+    });
+  }
 });

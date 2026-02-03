@@ -15,6 +15,7 @@ export {
   DEFAULT_LETTER_SPACING,
   DEFAULT_AUTO_RESIZE,
   DEFAULT_SVG_EXPORT_SETTINGS,
+  // Text types
   type TextNodeData,
   type FrameNodeData,
   type TextAlignHorizontal,
@@ -24,6 +25,17 @@ export {
   type TextCase,
   type NumberUnits,
   type ValueWithUnits,
+  // AutoLayout types
+  type StackMode,
+  type StackAlign,
+  type StackPositioning,
+  type StackSizing,
+  type ConstraintType,
+  type StackPadding,
+  // Common types
+  type Color,
+  type Paint,
+  type FontName,
   // Export settings types
   type ExportSettings,
   type ImageType,
@@ -31,6 +43,17 @@ export {
   type ExportColorProfile,
   type ExportSVGIDMode,
 } from "./text-builder";
+
+// Symbol and Instance builders
+export {
+  SymbolNodeBuilder,
+  InstanceNodeBuilder,
+  symbolNode,
+  instanceNode,
+  type SymbolNodeData,
+  type InstanceNodeData,
+} from "./symbol-builder";
+
 export { FigFileBuilder, createFigFile } from "./fig-builder";
 
 // Roundtrip editing (load → modify → save)

@@ -1,19 +1,35 @@
 /**
- * @file Text node builder with fluent API
+ * @file Text and Frame node builders with fluent API
  *
- * Provides a convenient way to create TEXT nodes for testing.
+ * Provides a convenient way to create TEXT and FRAME nodes for testing,
+ * including AutoLayout support.
  */
 
 // =============================================================================
 // Types
 // =============================================================================
 
+// Text-specific types
 export type TextAlignHorizontal = "LEFT" | "CENTER" | "RIGHT" | "JUSTIFIED";
 export type TextAlignVertical = "TOP" | "CENTER" | "BOTTOM";
 export type TextAutoResize = "NONE" | "WIDTH_AND_HEIGHT" | "HEIGHT";
 export type TextDecoration = "NONE" | "UNDERLINE" | "STRIKETHROUGH";
 export type TextCase = "ORIGINAL" | "UPPER" | "LOWER" | "TITLE" | "SMALL_CAPS";
 export type NumberUnits = "RAW" | "PIXELS" | "PERCENT";
+
+// AutoLayout types
+export type StackMode = "NONE" | "HORIZONTAL" | "VERTICAL" | "WRAP";
+export type StackAlign = "MIN" | "CENTER" | "MAX" | "STRETCH" | "BASELINE" | "SPACE_BETWEEN";
+export type StackPositioning = "AUTO" | "ABSOLUTE";
+export type StackSizing = "FIXED" | "FILL" | "HUG";
+export type ConstraintType = "MIN" | "CENTER" | "MAX" | "STRETCH" | "SCALE";
+
+export type StackPadding = {
+  readonly top: number;
+  readonly right: number;
+  readonly bottom: number;
+  readonly left: number;
+};
 
 export type ValueWithUnits = {
   readonly value: number;
@@ -110,6 +126,42 @@ const NUMBER_UNITS_VALUES: Record<NumberUnits, number> = {
   RAW: 0,
   PIXELS: 1,
   PERCENT: 2,
+};
+
+// AutoLayout value maps
+const STACK_MODE_VALUES: Record<StackMode, number> = {
+  NONE: 0,
+  HORIZONTAL: 1,
+  VERTICAL: 2,
+  WRAP: 3,
+};
+
+const STACK_ALIGN_VALUES: Record<StackAlign, number> = {
+  MIN: 0,
+  CENTER: 1,
+  MAX: 2,
+  STRETCH: 3,
+  BASELINE: 4,
+  SPACE_BETWEEN: 5,
+};
+
+const STACK_POSITIONING_VALUES: Record<StackPositioning, number> = {
+  AUTO: 0,
+  ABSOLUTE: 1,
+};
+
+const STACK_SIZING_VALUES: Record<StackSizing, number> = {
+  FIXED: 0,
+  FILL: 1,
+  HUG: 2,
+};
+
+const CONSTRAINT_TYPE_VALUES: Record<ConstraintType, number> = {
+  MIN: 0,
+  CENTER: 1,
+  MAX: 2,
+  STRETCH: 3,
+  SCALE: 4,
 };
 
 // =============================================================================
@@ -431,7 +483,26 @@ export type FrameNodeData = {
   readonly visible: boolean;
   readonly opacity: number;
   readonly clipsContent: boolean;
+  readonly cornerRadius?: number;
   readonly exportSettings?: readonly ExportSettings[];
+
+  // AutoLayout - frame level
+  readonly stackMode?: { value: number; name: StackMode };
+  readonly stackSpacing?: number;
+  readonly stackPadding?: StackPadding;
+  readonly stackPrimaryAlignItems?: { value: number; name: StackAlign };
+  readonly stackCounterAlignItems?: { value: number; name: StackAlign };
+  readonly stackPrimaryAlignContent?: { value: number; name: StackAlign };
+  readonly stackWrap?: boolean;
+  readonly stackCounterSpacing?: number;
+  readonly itemReverseZIndex?: boolean;
+
+  // AutoLayout - child level (constraints)
+  readonly stackPositioning?: { value: number; name: StackPositioning };
+  readonly stackPrimarySizing?: { value: number; name: StackSizing };
+  readonly stackCounterSizing?: { value: number; name: StackSizing };
+  readonly horizontalConstraint?: { value: number; name: ConstraintType };
+  readonly verticalConstraint?: { value: number; name: ConstraintType };
 };
 
 export class FrameNodeBuilder {
@@ -444,7 +515,26 @@ export class FrameNodeBuilder {
   private _y: number;
   private _fillColor: Color;
   private _clipsContent: boolean;
+  private _cornerRadius?: number;
   private _exportSettings: ExportSettings[] = [];
+
+  // AutoLayout - frame level
+  private _stackMode?: StackMode;
+  private _stackSpacing?: number;
+  private _stackPadding?: StackPadding;
+  private _stackPrimaryAlignItems?: StackAlign;
+  private _stackCounterAlignItems?: StackAlign;
+  private _stackPrimaryAlignContent?: StackAlign;
+  private _stackWrap?: boolean;
+  private _stackCounterSpacing?: number;
+  private _itemReverseZIndex?: boolean;
+
+  // AutoLayout - child level (constraints)
+  private _stackPositioning?: StackPositioning;
+  private _stackPrimarySizing?: StackSizing;
+  private _stackCounterSizing?: StackSizing;
+  private _horizontalConstraint?: ConstraintType;
+  private _verticalConstraint?: ConstraintType;
 
   constructor(localID: number, parentID: number) {
     this._localID = localID;
@@ -485,6 +575,147 @@ export class FrameNodeBuilder {
     return this;
   }
 
+  cornerRadius(radius: number): this {
+    this._cornerRadius = radius;
+    return this;
+  }
+
+  // ===========================================================================
+  // AutoLayout Methods - Frame Level
+  // ===========================================================================
+
+  /**
+   * Set the auto-layout mode (direction)
+   */
+  autoLayout(mode: StackMode): this {
+    this._stackMode = mode;
+    return this;
+  }
+
+  /**
+   * Set gap between items (main axis spacing)
+   */
+  gap(spacing: number): this {
+    this._stackSpacing = spacing;
+    return this;
+  }
+
+  /**
+   * Set padding (uniform or individual)
+   * @param top Top padding (or uniform padding if other values are omitted)
+   * @param right Right padding (defaults to top)
+   * @param bottom Bottom padding (defaults to top)
+   * @param left Left padding (defaults to right)
+   */
+  padding(top: number, right?: number, bottom?: number, left?: number): this {
+    this._stackPadding = {
+      top,
+      right: right ?? top,
+      bottom: bottom ?? top,
+      left: left ?? right ?? top,
+    };
+    return this;
+  }
+
+  /**
+   * Set primary axis alignment (justify-content equivalent)
+   */
+  primaryAlign(align: StackAlign): this {
+    this._stackPrimaryAlignItems = align;
+    return this;
+  }
+
+  /**
+   * Set counter axis alignment (align-items equivalent)
+   */
+  counterAlign(align: StackAlign): this {
+    this._stackCounterAlignItems = align;
+    return this;
+  }
+
+  /**
+   * Set content alignment for wrap mode (align-content equivalent)
+   */
+  contentAlign(align: StackAlign): this {
+    this._stackPrimaryAlignContent = align;
+    return this;
+  }
+
+  /**
+   * Enable wrap mode (auto-wrap items)
+   */
+  wrap(enabled: boolean = true): this {
+    this._stackWrap = enabled;
+    if (enabled && !this._stackMode) {
+      this._stackMode = "WRAP";
+    }
+    return this;
+  }
+
+  /**
+   * Set counter axis spacing (for wrap mode)
+   */
+  counterGap(spacing: number): this {
+    this._stackCounterSpacing = spacing;
+    return this;
+  }
+
+  /**
+   * Reverse z-index order of items
+   */
+  reverseZIndex(enabled: boolean = true): this {
+    this._itemReverseZIndex = enabled;
+    return this;
+  }
+
+  // ===========================================================================
+  // AutoLayout Methods - Child Level (Constraints)
+  // ===========================================================================
+
+  /**
+   * Set positioning mode when inside auto-layout parent
+   */
+  positioning(mode: StackPositioning): this {
+    this._stackPositioning = mode;
+    return this;
+  }
+
+  /**
+   * Set sizing along primary axis (when inside auto-layout parent)
+   */
+  primarySizing(sizing: StackSizing): this {
+    this._stackPrimarySizing = sizing;
+    return this;
+  }
+
+  /**
+   * Set sizing along counter axis (when inside auto-layout parent)
+   */
+  counterSizing(sizing: StackSizing): this {
+    this._stackCounterSizing = sizing;
+    return this;
+  }
+
+  /**
+   * Set horizontal constraint (for non-auto-layout or absolute positioning)
+   */
+  horizontalConstraint(constraint: ConstraintType): this {
+    this._horizontalConstraint = constraint;
+    return this;
+  }
+
+  /**
+   * Set vertical constraint (for non-auto-layout or absolute positioning)
+   */
+  verticalConstraint(constraint: ConstraintType): this {
+    this._verticalConstraint = constraint;
+    return this;
+  }
+
+  // ===========================================================================
+  // Export Settings Methods
+  // ===========================================================================
+
   /**
    * Add export settings (can be called multiple times for multiple exports)
    */
@@ -524,6 +755,10 @@ export class FrameNodeBuilder {
     return this;
   }
 
+  // ===========================================================================
+  // Build
+  // ===========================================================================
+
   build(): FrameNodeData {
     return {
       localID: this._localID,
@@ -550,7 +785,44 @@ export class FrameNodeBuilder {
       visible: true,
       opacity: 1,
       clipsContent: this._clipsContent,
+      cornerRadius: this._cornerRadius,
       exportSettings: this._exportSettings.length > 0 ? this._exportSettings : undefined,
+
+      // AutoLayout - frame level
+      stackMode: this._stackMode
+        ? { value: STACK_MODE_VALUES[this._stackMode], name: this._stackMode }
+        : undefined,
+      stackSpacing: this._stackSpacing,
+      stackPadding: this._stackPadding,
+      stackPrimaryAlignItems: this._stackPrimaryAlignItems
+        ? { value: STACK_ALIGN_VALUES[this._stackPrimaryAlignItems], name: this._stackPrimaryAlignItems }
+        : undefined,
+      stackCounterAlignItems: this._stackCounterAlignItems
+        ? { value: STACK_ALIGN_VALUES[this._stackCounterAlignItems], name: this._stackCounterAlignItems }
+        : undefined,
+      stackPrimaryAlignContent: this._stackPrimaryAlignContent
+        ? { value: STACK_ALIGN_VALUES[this._stackPrimaryAlignContent], name: this._stackPrimaryAlignContent }
+        : undefined,
+      stackWrap: this._stackWrap,
+      stackCounterSpacing: this._stackCounterSpacing,
+      itemReverseZIndex: this._itemReverseZIndex,
+
+      // AutoLayout - child level
+      stackPositioning: this._stackPositioning
+        ? { value: STACK_POSITIONING_VALUES[this._stackPositioning], name: this._stackPositioning }
+        : undefined,
+      stackPrimarySizing: this._stackPrimarySizing
+        ? { value: STACK_SIZING_VALUES[this._stackPrimarySizing], name: this._stackPrimarySizing }
+        : undefined,
+      stackCounterSizing: this._stackCounterSizing
+        ? { value: STACK_SIZING_VALUES[this._stackCounterSizing], name: this._stackCounterSizing }
+        : undefined,
+      horizontalConstraint: this._horizontalConstraint
+        ? { value: CONSTRAINT_TYPE_VALUES[this._horizontalConstraint], name: this._horizontalConstraint }
+        : undefined,
+      verticalConstraint: this._verticalConstraint
+        ? { value: CONSTRAINT_TYPE_VALUES[this._verticalConstraint], name: this._verticalConstraint }
+        : undefined,
     };
   }
 }

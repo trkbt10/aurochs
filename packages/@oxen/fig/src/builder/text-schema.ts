@@ -1,7 +1,7 @@
 /**
- * @file Extended schema definitions for TEXT nodes
+ * @file Extended schema definitions for TEXT nodes and AutoLayout
  *
- * This extends the base test schema with text-specific types.
+ * This extends the base test schema with text-specific and AutoLayout types.
  */
 
 import type { KiwiSchema, KiwiDefinition } from "../types";
@@ -50,7 +50,7 @@ function createStructDef(
 // =============================================================================
 
 /**
- * Create a schema that supports TEXT nodes with all properties.
+ * Create a schema that supports TEXT nodes and AutoLayout with all properties.
  *
  * Definition indices:
  * 0: MessageType
@@ -72,8 +72,16 @@ function createStructDef(
  * 16: Paint
  * 17: PaintType
  * 18: StrokeAlign
- * 19: NodeChange
- * 20: Message
+ * 19: TextData
+ * 20: StackMode (AutoLayout)
+ * 21: StackAlign (AutoLayout)
+ * 22: StackPositioning (AutoLayout)
+ * 23: StackSizing (AutoLayout)
+ * 24: ConstraintType
+ * 25: StackPadding
+ * 26: NodeChange
+ * 27: Message
+ * 28: ParentIndex
  */
 export function createTextSchema(): KiwiSchema {
   return {
@@ -274,14 +282,71 @@ export function createTextSchema(): KiwiSchema {
         ],
       },
 
-      // 20: NodeChange message (extended for TEXT)
+      // =============================================================================
+      // AutoLayout Enums (20-25)
+      // =============================================================================
+
+      // 20: StackMode enum (AutoLayout direction)
+      createEnumDef("StackMode", [
+        ["NONE", 0],
+        ["HORIZONTAL", 1],
+        ["VERTICAL", 2],
+        ["WRAP", 3],
+      ]),
+
+      // 21: StackAlign enum (for primary/counter axis alignment)
+      createEnumDef("StackAlign", [
+        ["MIN", 0],
+        ["CENTER", 1],
+        ["MAX", 2],
+        ["STRETCH", 3],
+        ["BASELINE", 4],
+        ["SPACE_BETWEEN", 5],
+      ]),
+
+      // 22: StackPositioning enum (for child nodes)
+      createEnumDef("StackPositioning", [
+        ["AUTO", 0],
+        ["ABSOLUTE", 1],
+      ]),
+
+      // 23: StackSizing enum (for child nodes)
+      createEnumDef("StackSizing", [
+        ["FIXED", 0],
+        ["FILL", 1],
+        ["HUG", 2],
+      ]),
+
+      // 24: ConstraintType enum (for non-AutoLayout constraints)
+      createEnumDef("ConstraintType", [
+        ["MIN", 0],
+        ["CENTER", 1],
+        ["MAX", 2],
+        ["STRETCH", 3],
+        ["SCALE", 4],
+      ]),
+
+      // 25: StackPadding struct
+      createStructDef("StackPadding", [
+        { name: "top", type: "float", typeId: KIWI_TYPE.FLOAT },
+        { name: "right", type: "float", typeId: KIWI_TYPE.FLOAT },
+        { name: "bottom", type: "float", typeId: KIWI_TYPE.FLOAT },
+        { name: "left", type: "float", typeId: KIWI_TYPE.FLOAT },
+      ]),
+
+      // =============================================================================
+      // Core Message Types (26-28)
+      // =============================================================================
+
+      // 26: NodeChange message (extended for TEXT and AutoLayout)
       {
         name: "NodeChange",
         kind: "MESSAGE",
         fields: [
+          // Base node fields (1-15)
           { name: "guid", type: "GUID", typeId: 4, isArray: false, value: 1 },
           { name: "phase", type: "NodePhase", typeId: 2, isArray: false, value: 2 },
-          { name: "parentIndex", type: "ParentIndex", typeId: 22, isArray: false, value: 3 },
+          { name: "parentIndex", type: "ParentIndex", typeId: 28, isArray: false, value: 3 },
           { name: "type", type: "NodeType", typeId: 1, isArray: false, value: 4 },
           { name: "name", type: "string", typeId: KIWI_TYPE.STRING, isArray: false, value: 5 },
           { name: "visible", type: "bool", typeId: KIWI_TYPE.BOOL, isArray: false, value: 6 },
@@ -289,7 +354,10 @@ export function createTextSchema(): KiwiSchema {
           { name: "blendMode", type: "BlendMode", typeId: 3, isArray: false, value: 9 },
           { name: "size", type: "Vector", typeId: 5, isArray: false, value: 11 },
           { name: "transform", type: "Matrix", typeId: 6, isArray: false, value: 12 },
-          // Text-specific fields
+          { name: "clipsContent", type: "bool", typeId: KIWI_TYPE.BOOL, isArray: false, value: 13 },
+          { name: "cornerRadius", type: "float", typeId: KIWI_TYPE.FLOAT, isArray: false, value: 14 },
+
+          // Text-specific fields (20-33)
           { name: "fontSize", type: "float", typeId: KIWI_TYPE.FLOAT, isArray: false, value: 20 },
           { name: "fontName", type: "FontName", typeId: 15, isArray: false, value: 21 },
           { name: "textAlignHorizontal", type: "TextAlignHorizontal", typeId: 8, isArray: false, value: 22 },
@@ -303,10 +371,33 @@ export function createTextSchema(): KiwiSchema {
           { name: "fillPaints", type: "Paint", typeId: 16, isArray: true, value: 30 },
           { name: "strokeWeight", type: "float", typeId: KIWI_TYPE.FLOAT, isArray: false, value: 31 },
           { name: "strokeAlign", type: "StrokeAlign", typeId: 18, isArray: false, value: 32 },
+          { name: "strokePaints", type: "Paint", typeId: 16, isArray: true, value: 33 },
+
+          // AutoLayout fields - frame level (40-49)
+          { name: "stackMode", type: "StackMode", typeId: 20, isArray: false, value: 40 },
+          { name: "stackSpacing", type: "float", typeId: KIWI_TYPE.FLOAT, isArray: false, value: 41 },
+          { name: "stackPadding", type: "StackPadding", typeId: 25, isArray: false, value: 42 },
+          { name: "stackPrimaryAlignItems", type: "StackAlign", typeId: 21, isArray: false, value: 43 },
+          { name: "stackCounterAlignItems", type: "StackAlign", typeId: 21, isArray: false, value: 44 },
+          { name: "stackPrimaryAlignContent", type: "StackAlign", typeId: 21, isArray: false, value: 45 },
+          { name: "stackWrap", type: "bool", typeId: KIWI_TYPE.BOOL, isArray: false, value: 46 },
+          { name: "stackCounterSpacing", type: "float", typeId: KIWI_TYPE.FLOAT, isArray: false, value: 47 },
+          { name: "itemReverseZIndex", type: "bool", typeId: KIWI_TYPE.BOOL, isArray: false, value: 48 },
+
+          // AutoLayout fields - child level (50-59)
+          { name: "stackPositioning", type: "StackPositioning", typeId: 22, isArray: false, value: 50 },
+          { name: "stackPrimarySizing", type: "StackSizing", typeId: 23, isArray: false, value: 51 },
+          { name: "stackCounterSizing", type: "StackSizing", typeId: 23, isArray: false, value: 52 },
+          { name: "horizontalConstraint", type: "ConstraintType", typeId: 24, isArray: false, value: 53 },
+          { name: "verticalConstraint", type: "ConstraintType", typeId: 24, isArray: false, value: 54 },
+
+          // Symbol/Instance fields (60-69)
+          { name: "symbolID", type: "GUID", typeId: 4, isArray: false, value: 60 },
+          { name: "componentPropertyReferences", type: "string", typeId: KIWI_TYPE.STRING, isArray: true, value: 61 },
         ],
       },
 
-      // 21: Message (root type)
+      // 27: Message (root type)
       {
         name: "Message",
         kind: "MESSAGE",
@@ -314,11 +405,11 @@ export function createTextSchema(): KiwiSchema {
           { name: "type", type: "MessageType", typeId: 0, isArray: false, value: 1 },
           { name: "sessionID", type: "uint", typeId: KIWI_TYPE.UINT, isArray: false, value: 2 },
           { name: "ackID", type: "uint", typeId: KIWI_TYPE.UINT, isArray: false, value: 3 },
-          { name: "nodeChanges", type: "NodeChange", typeId: 20, isArray: true, value: 4 },
+          { name: "nodeChanges", type: "NodeChange", typeId: 26, isArray: true, value: 4 },
         ],
       },
 
-      // 22: ParentIndex struct
+      // 28: ParentIndex struct
       createStructDef("ParentIndex", [
         { name: "guid", type: "GUID", typeId: 4 },
         { name: "position", type: "string", typeId: KIWI_TYPE.STRING },
@@ -352,7 +443,13 @@ export const TEXT_SCHEMA_INDICES = {
   PaintType: 17,
   StrokeAlign: 18,
   TextData: 19,
-  NodeChange: 20,
-  Message: 21,
-  ParentIndex: 22,
+  StackMode: 20,
+  StackAlign: 21,
+  StackPositioning: 22,
+  StackSizing: 23,
+  ConstraintType: 24,
+  StackPadding: 25,
+  NodeChange: 26,
+  Message: 27,
+  ParentIndex: 28,
 } as const;
