@@ -11,6 +11,9 @@ import {
   feOffset,
   feGaussianBlur,
   feBlend,
+  feComposite,
+  feMerge,
+  feMergeNode,
   type SvgString,
 } from "./primitives";
 
@@ -205,6 +208,452 @@ export function createDropShadowFilter(
   return { id, def: filterDef };
 }
 
+// =============================================================================
+// Inner Shadow Filter
+// =============================================================================
+
+/**
+ * Check if effects array has visible inner shadows
+ */
+export function hasInnerShadow(effects: readonly FigEffect[] | undefined): boolean {
+  if (!effects || effects.length === 0) {
+    return false;
+  }
+  return effects.some(
+    (e) => e.visible !== false && getEffectType(e) === "INNER_SHADOW"
+  );
+}
+
+/**
+ * Get inner shadows from effects array
+ */
+export function getInnerShadows(effects: readonly FigEffect[] | undefined): readonly FigEffect[] {
+  if (!effects || effects.length === 0) {
+    return [];
+  }
+  return effects.filter(
+    (e) => e.visible !== false && getEffectType(e) === "INNER_SHADOW"
+  );
+}
+
+/**
+ * Create an inner shadow filter definition
+ *
+ * Inner shadow is created by:
+ * 1. Creating a shadow from the inverted alpha of the source
+ * 2. Clipping it to the original shape
+ */
+export function createInnerShadowFilter(
+  shadows: readonly FigEffect[],
+  ctx: FigSvgRenderContext,
+  bounds: { x: number; y: number; width: number; height: number }
+): { id: string; def: SvgString } | null {
+  if (shadows.length === 0) {
+    return null;
+  }
+
+  const id = ctx.defs.generateId("inner-shadow");
+
+  // Calculate filter region
+  const { expandX, expandY } = shadows.reduce(
+    (acc, shadow) => {
+      const offsetX = Math.abs(shadow.offset?.x ?? 0);
+      const offsetY = Math.abs(shadow.offset?.y ?? 0);
+      const blur = (shadow.radius ?? 0) * 1.5;
+      return {
+        expandX: Math.max(acc.expandX, offsetX + blur),
+        expandY: Math.max(acc.expandY, offsetY + blur),
+      };
+    },
+    { expandX: 0, expandY: 0 }
+  );
+
+  const primitives: SvgString[] = [];
+
+  // Process each inner shadow
+  shadows.forEach((shadow, i) => {
+    const effectNum = i + 1;
+    const prefix = "effect" + effectNum + "_innerShadow_";
+
+    // Get shadow color
+    const color = shadow.color ?? { r: 0, g: 0, b: 0, a: 0.25 };
+    const stdDeviation = (shadow.radius ?? 0) / 2;
+
+    // Create flood with shadow color
+    primitives.push(
+      feFlood({
+        "flood-color": `rgb(${Math.round(color.r * 255)}, ${Math.round(color.g * 255)}, ${Math.round(color.b * 255)})`,
+        "flood-opacity": color.a ?? 0.25,
+        result: prefix + "flood",
+      })
+    );
+
+    // Composite flood with source alpha to get colored shape
+    primitives.push(
+      feComposite({
+        in: prefix + "flood",
+        in2: "SourceAlpha",
+        operator: "in",
+        result: prefix + "colored",
+      })
+    );
+
+    // Offset the colored shape (opposite direction for inner shadow)
+    primitives.push(
+      feOffset({
+        in: prefix + "colored",
+        dx: shadow.offset?.x ?? 0,
+        dy: shadow.offset?.y ?? 0,
+        result: prefix + "offset",
+      })
+    );
+
+    // Blur the offset shape
+    primitives.push(
+      feGaussianBlur({
+        in: prefix + "offset",
+        stdDeviation,
+        result: prefix + "blur",
+      })
+    );
+
+    // Create the inner shadow by subtracting from SourceAlpha
+    // First, invert and clip to create inner edge
+    primitives.push(
+      feComposite({
+        in: prefix + "blur",
+        in2: "SourceAlpha",
+        operator: "out",
+        result: prefix + "inner",
+      })
+    );
+  });
+
+  // Merge all inner shadows with source graphic
+  const mergeNodes: SvgString[] = [feMergeNode({ in: "SourceGraphic" })];
+  shadows.forEach((_, i) => {
+    const effectNum = i + 1;
+    mergeNodes.push(feMergeNode({ in: "effect" + effectNum + "_innerShadow_inner" }));
+  });
+  primitives.push(feMerge({}, ...mergeNodes));
+
+  const filterDef = filter(
+    {
+      id,
+      x: bounds.x - expandX,
+      y: bounds.y - expandY,
+      width: bounds.width + expandX * 2,
+      height: bounds.height + expandY * 2,
+      filterUnits: "userSpaceOnUse",
+      "color-interpolation-filters": "sRGB",
+    },
+    ...primitives
+  );
+
+  return { id, def: filterDef };
+}
+
+// =============================================================================
+// Layer Blur Filter
+// =============================================================================
+
+/**
+ * Check if effects array has visible layer blur
+ */
+export function hasLayerBlur(effects: readonly FigEffect[] | undefined): boolean {
+  if (!effects || effects.length === 0) {
+    return false;
+  }
+  return effects.some(
+    (e) => e.visible !== false && getEffectType(e) === "LAYER_BLUR"
+  );
+}
+
+/**
+ * Get layer blur effect from effects array
+ */
+export function getLayerBlur(effects: readonly FigEffect[] | undefined): FigEffect | undefined {
+  if (!effects || effects.length === 0) {
+    return undefined;
+  }
+  return effects.find(
+    (e) => e.visible !== false && getEffectType(e) === "LAYER_BLUR"
+  );
+}
+
+/**
+ * Create a layer blur filter definition
+ */
+export function createLayerBlurFilter(
+  blur: FigEffect,
+  ctx: FigSvgRenderContext,
+  bounds: { x: number; y: number; width: number; height: number }
+): { id: string; def: SvgString } | null {
+  const radius = blur.radius ?? 0;
+  if (radius <= 0) {
+    return null;
+  }
+
+  const id = ctx.defs.generateId("layer-blur");
+  const stdDeviation = radius / 2;
+  const expand = radius * 1.5;
+
+  const primitives: SvgString[] = [
+    feGaussianBlur({
+      in: "SourceGraphic",
+      stdDeviation,
+      result: "blur",
+    }),
+  ];
+
+  const filterDef = filter(
+    {
+      id,
+      x: bounds.x - expand,
+      y: bounds.y - expand,
+      width: bounds.width + expand * 2,
+      height: bounds.height + expand * 2,
+      filterUnits: "userSpaceOnUse",
+      "color-interpolation-filters": "sRGB",
+    },
+    ...primitives
+  );
+
+  return { id, def: filterDef };
+}
+
+// =============================================================================
+// Background Blur Filter
+// =============================================================================
+
+/**
+ * Check if effects array has visible background blur
+ */
+export function hasBackgroundBlur(effects: readonly FigEffect[] | undefined): boolean {
+  if (!effects || effects.length === 0) {
+    return false;
+  }
+  return effects.some(
+    (e) => e.visible !== false && getEffectType(e) === "BACKGROUND_BLUR"
+  );
+}
+
+/**
+ * Get background blur effect from effects array
+ * Note: Background blur in SVG is limited - it cannot truly blur content behind
+ * the element like CSS backdrop-filter. This creates a placeholder filter.
+ */
+export function getBackgroundBlur(effects: readonly FigEffect[] | undefined): FigEffect | undefined {
+  if (!effects || effects.length === 0) {
+    return undefined;
+  }
+  return effects.find(
+    (e) => e.visible !== false && getEffectType(e) === "BACKGROUND_BLUR"
+  );
+}
+
+// =============================================================================
+// Combined Filter Creation
+// =============================================================================
+
+/**
+ * Create a combined filter for all effects on a node
+ */
+export function createCombinedFilter(
+  effects: readonly FigEffect[],
+  ctx: FigSvgRenderContext,
+  bounds: { x: number; y: number; width: number; height: number }
+): { id: string; def: SvgString } | null {
+  const dropShadows = getDropShadows(effects);
+  const innerShadows = getInnerShadows(effects);
+  const layerBlur = getLayerBlur(effects);
+
+  // If no effects, return null
+  if (dropShadows.length === 0 && innerShadows.length === 0 && !layerBlur) {
+    return null;
+  }
+
+  const id = ctx.defs.generateId("effects");
+
+  // Calculate combined filter region
+  const allEffects = [...dropShadows, ...innerShadows];
+  if (layerBlur) {
+    allEffects.push(layerBlur);
+  }
+
+  const { expandX, expandY } = allEffects.reduce(
+    (acc, effect) => {
+      const offsetX = Math.abs(effect.offset?.x ?? 0);
+      const offsetY = Math.abs(effect.offset?.y ?? 0);
+      const blur = (effect.radius ?? 0) * 1.5;
+      return {
+        expandX: Math.max(acc.expandX, offsetX + blur),
+        expandY: Math.max(acc.expandY, offsetY + blur),
+      };
+    },
+    { expandX: 0, expandY: 0 }
+  );
+
+  const primitives: SvgString[] = [];
+  let lastResult = "SourceGraphic";
+
+  // Apply layer blur first (if present)
+  if (layerBlur && (layerBlur.radius ?? 0) > 0) {
+    const stdDeviation = (layerBlur.radius ?? 0) / 2;
+    primitives.push(
+      feGaussianBlur({
+        in: lastResult,
+        stdDeviation,
+        result: "layerBlur",
+      })
+    );
+    lastResult = "layerBlur";
+  }
+
+  // Apply drop shadows
+  if (dropShadows.length > 0) {
+    primitives.push(
+      feFlood({ "flood-opacity": 0, result: "BackgroundImageFix" })
+    );
+
+    let shadowResult = "BackgroundImageFix";
+    dropShadows.forEach((shadow, i) => {
+      const effectNum = i + 1;
+      const currentResult = "effect" + effectNum + "_dropShadow";
+
+      primitives.push(
+        feColorMatrix({
+          in: "SourceAlpha",
+          type: "matrix",
+          values: "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0",
+          result: "hardAlpha",
+        })
+      );
+
+      primitives.push(
+        feOffset({
+          dy: shadow.offset?.y ?? 0,
+          dx: shadow.offset?.x ?? 0,
+        })
+      );
+
+      const stdDeviation = (shadow.radius ?? 0) / 2;
+      primitives.push(
+        feGaussianBlur({ stdDeviation })
+      );
+
+      const color = shadow.color ?? { r: 0, g: 0, b: 0, a: 0.25 };
+      primitives.push(
+        feColorMatrix({
+          type: "matrix",
+          values: "0 0 0 0 " + color.r + " 0 0 0 0 " + color.g + " 0 0 0 0 " + color.b + " 0 0 0 0 " + (color.a ?? 0.25) + " 0",
+        })
+      );
+
+      primitives.push(
+        feBlend({
+          mode: "normal",
+          in2: shadowResult,
+          result: currentResult,
+        })
+      );
+
+      shadowResult = currentResult;
+    });
+
+    primitives.push(
+      feBlend({
+        mode: "normal",
+        in: lastResult,
+        in2: shadowResult,
+        result: "dropShadowResult",
+      })
+    );
+    lastResult = "dropShadowResult";
+  }
+
+  // Apply inner shadows
+  if (innerShadows.length > 0) {
+    innerShadows.forEach((shadow, i) => {
+      const effectNum = i + 1;
+      const prefix = "innerShadow" + effectNum + "_";
+
+      const color = shadow.color ?? { r: 0, g: 0, b: 0, a: 0.25 };
+      const stdDeviation = (shadow.radius ?? 0) / 2;
+
+      primitives.push(
+        feFlood({
+          "flood-color": `rgb(${Math.round(color.r * 255)}, ${Math.round(color.g * 255)}, ${Math.round(color.b * 255)})`,
+          "flood-opacity": color.a ?? 0.25,
+          result: prefix + "flood",
+        })
+      );
+
+      primitives.push(
+        feComposite({
+          in: prefix + "flood",
+          in2: "SourceAlpha",
+          operator: "in",
+          result: prefix + "colored",
+        })
+      );
+
+      primitives.push(
+        feOffset({
+          in: prefix + "colored",
+          dx: shadow.offset?.x ?? 0,
+          dy: shadow.offset?.y ?? 0,
+          result: prefix + "offset",
+        })
+      );
+
+      primitives.push(
+        feGaussianBlur({
+          in: prefix + "offset",
+          stdDeviation,
+          result: prefix + "blur",
+        })
+      );
+
+      primitives.push(
+        feComposite({
+          in: prefix + "blur",
+          in2: "SourceAlpha",
+          operator: "out",
+          result: prefix + "inner",
+        })
+      );
+
+      // Blend inner shadow onto current result
+      primitives.push(
+        feBlend({
+          mode: "normal",
+          in: prefix + "inner",
+          in2: lastResult,
+          result: prefix + "result",
+        })
+      );
+
+      lastResult = prefix + "result";
+    });
+  }
+
+  const filterDef = filter(
+    {
+      id,
+      x: bounds.x - expandX,
+      y: bounds.y - expandY,
+      width: bounds.width + expandX * 2,
+      height: bounds.height + expandY * 2,
+      filterUnits: "userSpaceOnUse",
+      "color-interpolation-filters": "sRGB",
+    },
+    ...primitives
+  );
+
+  return { id, def: filterDef };
+}
+
 /**
  * Get filter attribute from effects
  */
@@ -213,16 +662,59 @@ export function getFilterAttr(
   ctx: FigSvgRenderContext,
   bounds: { x: number; y: number; width: number; height: number }
 ): string | undefined {
-  const shadows = getDropShadows(effects);
-  if (shadows.length === 0) {
+  if (!effects || effects.length === 0) {
     return undefined;
   }
 
-  const result = createDropShadowFilter(shadows, ctx, bounds);
-  if (!result) {
-    return undefined;
+  // Use combined filter if multiple effect types
+  const dropShadows = getDropShadows(effects);
+  const innerShadows = getInnerShadows(effects);
+  const layerBlur = getLayerBlur(effects);
+
+  // Count how many effect types we have
+  const effectTypes = [
+    dropShadows.length > 0,
+    innerShadows.length > 0,
+    !!layerBlur,
+  ].filter(Boolean).length;
+
+  // If multiple effect types, use combined filter
+  if (effectTypes > 1) {
+    const result = createCombinedFilter(effects, ctx, bounds);
+    if (!result) {
+      return undefined;
+    }
+    ctx.defs.add(result.def);
+    return "url(#" + result.id + ")";
   }
 
-  ctx.defs.add(result.def);
-  return "url(#" + result.id + ")";
+  // Single effect type - use specialized filters
+  if (dropShadows.length > 0) {
+    const result = createDropShadowFilter(dropShadows, ctx, bounds);
+    if (!result) {
+      return undefined;
+    }
+    ctx.defs.add(result.def);
+    return "url(#" + result.id + ")";
+  }
+
+  if (innerShadows.length > 0) {
+    const result = createInnerShadowFilter(innerShadows, ctx, bounds);
+    if (!result) {
+      return undefined;
+    }
+    ctx.defs.add(result.def);
+    return "url(#" + result.id + ")";
+  }
+
+  if (layerBlur) {
+    const result = createLayerBlurFilter(layerBlur, ctx, bounds);
+    if (!result) {
+      return undefined;
+    }
+    ctx.defs.add(result.def);
+    return "url(#" + result.id + ")";
+  }
+
+  return undefined;
 }

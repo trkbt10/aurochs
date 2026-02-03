@@ -518,3 +518,20 @@ export function feMergeNode(attrs: { in?: string }): SvgString {
   const attrStr = buildAttrs(attrs);
   return unsafeSvg(`<feMergeNode ${attrStr}/>`);
 }
+
+/**
+ * Create an feComposite element
+ */
+export function feComposite(attrs: {
+  in?: string;
+  in2?: string;
+  operator?: "over" | "in" | "out" | "atop" | "xor" | "lighter" | "arithmetic";
+  k1?: number;
+  k2?: number;
+  k3?: number;
+  k4?: number;
+  result?: string;
+}): SvgString {
+  const attrStr = buildAttrs(attrs);
+  return unsafeSvg(`<feComposite ${attrStr}/>`);
+}
