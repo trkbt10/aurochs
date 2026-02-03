@@ -85,34 +85,6 @@ export type DerivedPathRenderContext = FigSvgRenderContext & {
 };
 
 /**
- * Compute the Y offset needed to convert from glyph position to actual baseline
- *
- * In the .fig file:
- * - glyph.position.y is at the ascender line (top of the em box)
- * - The actual baseline in Figma's export is offset by: fontSize * (1 - ascender_ratio)
- *
- * The ascender_ratio can be computed from the first baseline's data:
- * - ascender_ratio = (baselines[0].position.y - baselines[0].lineY) / fontSize
- *
- * @param baselines - Baseline data from derivedTextData
- * @param fontSize - Font size of the text
- * @returns Y offset to add to position.y to get actual baseline
- */
-function computeYOffset(baselines: readonly DerivedBaseline[] | undefined, fontSize: number): number {
-  if (!baselines || baselines.length === 0) {
-    return 0;
-  }
-
-  const firstBaseline = baselines[0];
-  // Ascender position relative to line top = position.y - lineY
-  const ascenderRelative = firstBaseline.position.y - firstBaseline.lineY;
-  // Ascender ratio = ascender / fontSize
-  const ascenderRatio = ascenderRelative / fontSize;
-  // Offset = fontSize * (1 - ascender_ratio)
-  return fontSize * (1 - ascenderRatio);
-}
-
-/**
  * Transform normalized path commands to screen coordinates
  *
  * The blob paths are stored in normalized coordinates (0-1 range).
@@ -120,31 +92,31 @@ function computeYOffset(baselines: readonly DerivedBaseline[] | undefined, fontS
  *
  * Coordinate transformation:
  * - x_screen = position.x + (normalized_x * fontSize)
- * - y_screen = (position.y + yOffset) - (normalized_y * fontSize)
+ * - y_screen = baseline - (normalized_y * fontSize)
  *
  * The y-axis is flipped because in the normalized space, y increases upward
  * (from baseline), but in screen space, y increases downward.
  *
- * The yOffset corrects for the difference between glyph.position.y (ascender line)
- * and the actual baseline position in Figma's export.
+ * The baseline is computed as round(position.y) because Figma's SVG export
+ * uses rounded baseline values for better pixel alignment.
  */
 function transformPathCommands(
   commands: readonly PathCommand[],
   position: { x: number; y: number },
   fontSize: number,
-  yOffset: number,
   precision: number = 5
 ): string {
   const parts: string[] = [];
 
-  const round = (n: number) => {
+  const roundPrecision = (n: number) => {
     const factor = Math.pow(10, precision);
     return Math.round(n * factor) / factor;
   };
 
-  const baselineY = position.y + yOffset;
-  const transformX = (x: number) => round(position.x + x * fontSize);
-  const transformY = (y: number) => round(baselineY - y * fontSize);
+  // Use rounded position.y as baseline for pixel-perfect alignment
+  const baselineY = Math.round(position.y);
+  const transformX = (x: number) => roundPrecision(position.x + x * fontSize);
+  const transformY = (y: number) => roundPrecision(baselineY - y * fontSize);
 
   for (const cmd of commands) {
     switch (cmd.type) {
@@ -214,7 +186,6 @@ function renderDecorationPaths(
 function renderGlyphPath(
   glyph: DerivedGlyph,
   blobs: readonly FigBlob[],
-  yOffset: number,
   precision: number = 5
 ): string | null {
   if (glyph.commandsBlob === undefined || glyph.commandsBlob >= blobs.length) {
@@ -233,7 +204,7 @@ function renderGlyphPath(
   }
 
   // Transform to screen coordinates
-  return transformPathCommands(commands, glyph.position, glyph.fontSize, yOffset, precision);
+  return transformPathCommands(commands, glyph.position, glyph.fontSize, precision);
 }
 
 /**
@@ -262,16 +233,12 @@ export function renderTextNodeFromDerivedData(
   const transformStr = buildTransformAttr(props.transform);
   const { color: fillColor, opacity: fillOpacity } = getFillColorAndOpacity(props.fillPaints);
 
-  // Compute Y offset to correct baseline position
-  // The glyph.position.y is at the ascender, but we need the actual baseline
-  const firstGlyph = derivedTextData.glyphs[0];
-  const yOffset = computeYOffset(derivedTextData.baselines, firstGlyph?.fontSize ?? props.fontSize);
-
   // Render all glyphs as a single combined path
+  // The baseline is computed as round(position.y) for pixel-perfect alignment
   const glyphPaths: string[] = [];
 
   for (const glyph of derivedTextData.glyphs) {
-    const glyphPath = renderGlyphPath(glyph, ctx.blobs, yOffset);
+    const glyphPath = renderGlyphPath(glyph, ctx.blobs);
     if (glyphPath) {
       glyphPaths.push(glyphPath);
     }

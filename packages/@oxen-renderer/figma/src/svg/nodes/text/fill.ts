@@ -3,7 +3,7 @@
  */
 
 import type { FigPaint, FigColor } from "@oxen/fig/types";
-import { figColorToHex, getPaintType, isPlaceholderColor } from "../../fill";
+import { figColorToHex, getPaintType } from "../../fill";
 import type { FillColorResult } from "./types";
 
 /**
@@ -37,12 +37,6 @@ export function getFillColorAndOpacity(
   }
 
   const solidPaint = firstPaint as FigPaint & { color: FigColor };
-
-  // Check for placeholder color (unresolved external style reference)
-  // Figma uses pure red (r:1, g:0, b:0) as a placeholder
-  if (isPlaceholderColor(solidPaint.color)) {
-    return DEFAULT_FILL;
-  }
 
   return {
     color: figColorToHex(solidPaint.color),
