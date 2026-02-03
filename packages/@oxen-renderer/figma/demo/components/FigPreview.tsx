@@ -2,11 +2,13 @@
  * @file Figma file preview component
  */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ParsedFigFile } from "@oxen/fig/parser";
 import { buildNodeTree, findNodesByType } from "@oxen/fig/parser";
 import type { FigNode } from "@oxen/fig/types";
-import { renderCanvas } from "../../src/svg/renderer";
+import { renderCanvasAsync } from "../../src/svg/renderer";
+import { BrowserFontLoader } from "../../src/font-drivers/browser";
+import { CachingFontLoader } from "../../src/font";
 
 type Props = {
   readonly parsedFile: ParsedFigFile;
@@ -187,10 +189,18 @@ const styles = {
   },
 };
 
+// Create a singleton font loader instance
+const browserFontLoader = new BrowserFontLoader();
+const fontLoader = new CachingFontLoader(browserFontLoader);
+
 export function FigPreview({ parsedFile, onClose }: Props) {
   const [selectedCanvasIndex, setSelectedCanvasIndex] = useState(0);
   const [selectedFrameIndex, setSelectedFrameIndex] = useState(0);
   const [showHiddenNodes, setShowHiddenNodes] = useState(false);
+  const [fontAccessGranted, setFontAccessGranted] = useState(false);
+  const [fontAccessSupported] = useState(() => BrowserFontLoader.isSupported());
+  const [renderResult, setRenderResult] = useState<{ svg: string; warnings: readonly string[] }>({ svg: "", warnings: [] });
+  const [isRendering, setIsRendering] = useState(false);
 
   // Build node tree and extract canvas/frame info
   const { canvases, nodeCount, typeCount } = useMemo(() => {
@@ -227,11 +237,15 @@ export function FigPreview({ parsedFile, onClose }: Props) {
   const currentCanvas = canvases[selectedCanvasIndex];
   const currentFrame = currentCanvas?.frames[selectedFrameIndex];
 
-  // Render the selected frame
-  const renderResult = useMemo(() => {
+  // Render the selected frame (async)
+  useEffect(() => {
     if (!currentFrame) {
-      return { svg: "", warnings: [] };
+      setRenderResult({ svg: "", warnings: [] });
+      return;
     }
+
+    let cancelled = false;
+    setIsRendering(true);
 
     // Create a wrapper canvas with just the selected frame
     const wrapperCanvas: FigNode = {
@@ -240,14 +254,36 @@ export function FigPreview({ parsedFile, onClose }: Props) {
       children: [currentFrame.node],
     };
 
-    return renderCanvas(wrapperCanvas, {
+    renderCanvasAsync(wrapperCanvas, {
       width: currentFrame.width,
       height: currentFrame.height,
       blobs: parsedFile.blobs,
       images: parsedFile.images,
       showHiddenNodes,
+      fontLoader: fontAccessGranted ? fontLoader : undefined,
+    }).then((result) => {
+      if (!cancelled) {
+        setRenderResult(result);
+        setIsRendering(false);
+      }
     });
-  }, [currentFrame, parsedFile.blobs, parsedFile.images, showHiddenNodes]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentFrame, parsedFile.blobs, parsedFile.images, showHiddenNodes, fontAccessGranted]);
+
+  // Request font access
+  const handleRequestFontAccess = async () => {
+    try {
+      // Calling listFontFamilies will trigger permission prompt
+      await fontLoader.isFontAvailable("Arial");
+      setFontAccessGranted(browserFontLoader.hasPermission());
+    } catch {
+      // Permission denied or error
+      setFontAccessGranted(false);
+    }
+  };
 
   // Handle canvas change
   const handleCanvasChange = (index: number) => {
@@ -324,6 +360,25 @@ export function FigPreview({ parsedFile, onClose }: Props) {
             />
             Show hidden nodes (styles)
           </label>
+
+          {/* Font Access Button */}
+          {fontAccessSupported && (
+            fontAccessGranted ? (
+              <span style={{ ...styles.selectorLabel, color: "#22c55e" }}>
+                Local fonts enabled
+              </span>
+            ) : (
+              <button
+                style={{
+                  ...styles.closeButton,
+                  background: "#6366f1",
+                }}
+                onClick={handleRequestFontAccess}
+              >
+                Enable Local Fonts
+              </button>
+            )
+          )}
         </div>
       )}
 
@@ -331,7 +386,9 @@ export function FigPreview({ parsedFile, onClose }: Props) {
       <div style={styles.content}>
         {/* Preview */}
         <div style={styles.preview}>
-          {currentFrame ? (
+          {isRendering ? (
+            <div style={styles.emptyState}>Rendering...</div>
+          ) : currentFrame ? (
             <div
               style={styles.svgContainer}
               dangerouslySetInnerHTML={{ __html: renderResult.svg }}
