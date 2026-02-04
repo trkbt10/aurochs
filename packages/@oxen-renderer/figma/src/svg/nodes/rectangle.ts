@@ -10,11 +10,12 @@ import type {
   FigStrokeWeight,
 } from "@oxen/fig/types";
 import type { FigSvgRenderContext } from "../../types";
-import { rect, g, type SvgString } from "../primitives";
+import { rect, g, path, type SvgString } from "../primitives";
 import { buildTransformAttr } from "../transform";
 import { getFillAttrs } from "../fill";
 import { getStrokeAttrs } from "../stroke";
 import { getFilterAttr, type FigEffect } from "../effects";
+import { decodePathsFromGeometry, mapWindingRule, type FigFillGeometry } from "../geometry-path";
 
 // =============================================================================
 // Rectangle Node
@@ -28,6 +29,8 @@ function extractRectProps(node: FigNode): {
   transform: FigMatrix | undefined;
   cornerRadius: number | undefined;
   cornerRadii: readonly number[] | undefined;
+  fillGeometry: readonly FigFillGeometry[] | undefined;
+  strokeGeometry: readonly FigFillGeometry[] | undefined;
   fillPaints: readonly FigPaint[] | undefined;
   strokePaints: readonly FigPaint[] | undefined;
   strokeWeight: FigStrokeWeight | undefined;
@@ -41,6 +44,8 @@ function extractRectProps(node: FigNode): {
     transform: nodeData.transform as FigMatrix | undefined,
     cornerRadius: nodeData.cornerRadius as number | undefined,
     cornerRadii: nodeData.rectangleCornerRadii as readonly number[] | undefined,
+    fillGeometry: nodeData.fillGeometry as readonly FigFillGeometry[] | undefined,
+    strokeGeometry: nodeData.strokeGeometry as readonly FigFillGeometry[] | undefined,
     fillPaints: nodeData.fillPaints as readonly FigPaint[] | undefined,
     strokePaints: nodeData.strokePaints as readonly FigPaint[] | undefined,
     strokeWeight: nodeData.strokeWeight as FigStrokeWeight | undefined,
@@ -100,15 +105,12 @@ export function renderRectangleNode(
   node: FigNode,
   ctx: FigSvgRenderContext
 ): SvgString {
-  const { size, transform, cornerRadius, cornerRadii, fillPaints, strokePaints, strokeWeight, effects, opacity } =
+  const { size, transform, cornerRadius, cornerRadii, fillGeometry, strokeGeometry, fillPaints, strokePaints, strokeWeight, effects, opacity } =
     extractRectProps(node);
 
   const transformStr = buildTransformAttr(transform);
   const fillAttrs = getFillAttrs(fillPaints, ctx, { elementSize: { width: size.x, height: size.y } });
   const strokeAttrs = getStrokeAttrs({ paints: strokePaints, strokeWeight });
-
-  // Determine corner radius
-  const { rx, ry } = calculateCornerRadius(cornerRadii, cornerRadius, size);
 
   // Calculate bounds for filter region
   const tx = transform?.m02 ?? 0;
@@ -117,6 +119,53 @@ export function renderRectangleNode(
 
   // Get filter attribute if effects are present
   const filterAttr = getFilterAttr(effects, ctx, bounds);
+
+  const geometry = fillGeometry && fillGeometry.length > 0 ? fillGeometry : strokeGeometry;
+  if (geometry && geometry.length > 0) {
+    const paths = decodePathsFromGeometry(geometry, ctx.blobs);
+    if (paths.length > 0) {
+      if (paths.length === 1) {
+        const { data, windingRule } = paths[0];
+        const singlePath = path({
+          d: data,
+          "fill-rule": mapWindingRule(windingRule),
+          transform: transformStr || undefined,
+          opacity: opacity < 1 ? opacity : undefined,
+          ...fillAttrs,
+          ...strokeAttrs,
+        });
+        if (filterAttr) {
+          return g({ filter: filterAttr }, singlePath);
+        }
+        return singlePath;
+      }
+
+      const pathElements = paths.map(({ data, windingRule }) =>
+        path({
+          d: data,
+          "fill-rule": mapWindingRule(windingRule),
+          ...fillAttrs,
+          ...strokeAttrs,
+        })
+      );
+
+      const group = g(
+        {
+          transform: transformStr || undefined,
+          opacity: opacity < 1 ? opacity : undefined,
+        },
+        ...pathElements
+      );
+
+      if (filterAttr) {
+        return g({ filter: filterAttr }, group);
+      }
+      return group;
+    }
+  }
+
+  // Determine corner radius
+  const { rx, ry } = calculateCornerRadius(cornerRadii, cornerRadius, size);
 
   // If we have a filter, wrap in a group with the filter applied
   const rectElement = rect({

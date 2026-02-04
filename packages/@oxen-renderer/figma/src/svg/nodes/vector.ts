@@ -8,12 +8,13 @@ import type {
   FigPaint,
   FigStrokeWeight,
 } from "@oxen/fig/types";
-import { decodeBlobToSvgPath, type FigBlob } from "@oxen/fig/parser";
+import type { FigBlob } from "@oxen/fig/parser";
 import type { FigSvgRenderContext } from "../../types";
 import { path, g, type SvgString, EMPTY_SVG } from "../primitives";
 import { buildTransformAttr } from "../transform";
 import { getFillAttrs } from "../fill";
 import { getStrokeAttrs } from "../stroke";
+import { decodePathsFromGeometry, mapWindingRule, type FigFillGeometry } from "../geometry-path";
 
 // =============================================================================
 // Vector Path Types
@@ -25,15 +26,6 @@ import { getStrokeAttrs } from "../stroke";
 type FigVectorPath = {
   readonly windingRule?: "NONZERO" | "EVENODD" | "ODD";
   readonly data?: string;
-};
-
-/**
- * Figma fill geometry (references commandsBlob)
- */
-type FigFillGeometry = {
-  readonly windingRule?: { value: number; name: string } | string;
-  readonly commandsBlob?: number;
-  readonly styleID?: number;
 };
 
 // =============================================================================
@@ -67,49 +59,6 @@ function extractVectorProps(node: FigNode): {
   };
 }
 
-/**
- * Get winding rule from FigFillGeometry
- */
-function getGeometryWindingRule(geom: FigFillGeometry): "NONZERO" | "EVENODD" | "ODD" | undefined {
-  if (!geom.windingRule) {
-    return undefined;
-  }
-  if (typeof geom.windingRule === "string") {
-    return geom.windingRule as "NONZERO" | "EVENODD" | "ODD";
-  }
-  return geom.windingRule.name as "NONZERO" | "EVENODD" | "ODD";
-}
-
-type WindingRule = "NONZERO" | "EVENODD" | "ODD";
-type PathData = { data: string; windingRule?: WindingRule };
-
-/**
- * Decode path data from fillGeometry using blobs
- */
-function decodePathsFromGeometry(
-  fillGeometry: readonly FigFillGeometry[],
-  blobs: readonly FigBlob[]
-): PathData[] {
-  const paths: PathData[] = [];
-
-  for (const geom of fillGeometry) {
-    if (geom.commandsBlob !== undefined && geom.commandsBlob < blobs.length) {
-      const blob = blobs[geom.commandsBlob];
-      if (blob) {
-        const data = decodeBlobToSvgPath(blob);
-        if (data) {
-          paths.push({
-            data,
-            windingRule: getGeometryWindingRule(geom),
-          });
-        }
-      }
-    }
-  }
-
-  return paths;
-}
-
 type PathSources = {
   readonly vectorPaths: readonly FigVectorPath[] | undefined;
   readonly fillGeometry: readonly FigFillGeometry[] | undefined;
@@ -120,7 +69,7 @@ type PathSources = {
 /**
  * Get paths to render from various sources
  */
-function getPathsToRender(sources: PathSources): PathData[] {
+function getPathsToRender(sources: PathSources): readonly { data: string; windingRule?: "NONZERO" | "EVENODD" | "ODD" }[] {
   const { vectorPaths, fillGeometry, strokeGeometry, blobs } = sources;
 
   // Try vectorPaths first (if available)
@@ -200,21 +149,4 @@ export function renderVectorNode(
     },
     ...pathElements
   );
-}
-
-/**
- * Map Figma winding rule to SVG fill-rule
- */
-function mapWindingRule(
-  rule: "NONZERO" | "EVENODD" | "ODD" | undefined
-): "nonzero" | "evenodd" | undefined {
-  switch (rule) {
-    case "NONZERO":
-      return "nonzero";
-    case "EVENODD":
-    case "ODD":
-      return "evenodd";
-    default:
-      return undefined;
-  }
 }
