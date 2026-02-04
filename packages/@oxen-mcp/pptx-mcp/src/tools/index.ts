@@ -3,13 +3,14 @@
  */
 
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { mkdir, writeFile } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { z } from "zod";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const DEFAULT_TEMPLATE_PATH = join(__dirname, "..", "..", "templates", "blank.pptx");
+/** Pre-read blank template at module init — the only file I/O this module performs. */
+const BLANK_TEMPLATE = new Uint8Array(readFileSync(join(__dirname, "..", "..", "templates", "blank.pptx")));
 import type {
   PresentationSession,
   ShapeSpec,
@@ -26,7 +27,6 @@ import type {
 // =============================================================================
 
 const createPresentationSchema = z.object({
-  template_path: z.string().optional().describe("Absolute path to a .pptx template file. If omitted, uses the built-in blank template."),
   title: z.string().optional().describe("Presentation title."),
 });
 
@@ -118,7 +118,8 @@ const addTextBoxSchema = z.object({
 const addImageSchema = z.object({
   slide_number: z.number().int().min(1),
   image: z.object({
-    path: z.string().describe("Path to the image file."),
+    data: z.string().describe("Base64-encoded image data."),
+    mime_type: z.string().describe("MIME type (e.g. 'image/png', 'image/jpeg')."),
     x: z.number(),
     y: z.number(),
     width: z.number(),
@@ -237,15 +238,23 @@ const modifySlideSchema = z.object({
   add_tables: z.array(z.any()).optional(),
 });
 
-const exportSchema = z.object({
-  output_path: z.string().describe("Output file path"),
-});
+const buildSchema = z.object({});
 
 const getInfoSchema = z.object({});
 
 const renderSlideSchema = z.object({
   slide_number: z.number().int().min(1),
 });
+
+// =============================================================================
+// Shared UI Metadata
+// =============================================================================
+
+/** Tool _meta for associating the preview UI with each tool. Both formats for host compat. */
+const UI_META = {
+  ui: { resourceUri: "ui://pptx/preview" },
+  "ui/resourceUri": "ui://pptx/preview",
+};
 
 // =============================================================================
 // Helpers
@@ -274,12 +283,10 @@ export function coerceShapeSpec(shape: Record<string, unknown>): Record<string, 
   return shape;
 }
 
-async function loadPresentation(
-  session: PresentationSession,
-  templatePath: string | undefined,
-  title: string | undefined,
-) {
-  return session.load(templatePath ?? DEFAULT_TEMPLATE_PATH, title);
+/** Build full presentation metadata for UI _meta. */
+function presentationMeta(session: PresentationSession): { slideCount: number; width: number; height: number } {
+  const info = session.getInfo()!;
+  return { slideCount: info.slideCount, width: info.width, height: info.height };
 }
 
 // =============================================================================
@@ -290,11 +297,11 @@ async function loadPresentation(
 export function registerTools(server: McpServer, session: PresentationSession): void {
   server.registerTool(
     "pptx_create_presentation",
-    { title: "Create Presentation", description: "Create a new presentation.", inputSchema: createPresentationSchema },
+    { title: "Create Presentation", description: "Create a new presentation.", inputSchema: createPresentationSchema, _meta: UI_META },
     async (args) => {
-      const { template_path, title } = args;
+      const { title } = args;
       try {
-        const info = await loadPresentation(session, template_path, title);
+        const info = await session.loadFromBuffer(BLANK_TEMPLATE.buffer.slice(0), undefined, title);
         return {
           content: [{ type: "text" as const, text: JSON.stringify({ success: true, slide_count: info.slideCount, size: { width: info.width, height: info.height } }) }],
           _meta: { ui: { resourceUri: "ui://pptx/preview" }, presentation: { slideCount: info.slideCount, width: info.width, height: info.height } },
@@ -307,7 +314,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
 
   server.registerTool(
     "pptx_add_slide",
-    { title: "Add Slide", description: "Add a slide.", inputSchema: addSlideSchema },
+    { title: "Add Slide", description: "Add a slide.", inputSchema: addSlideSchema, _meta: UI_META },
     async (args) => {
       if (!session.isActive()) {
         return { content: [{ type: "text" as const, text: "No active presentation." }], isError: true };
@@ -317,7 +324,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
         const result = await session.addSlide(layout, position);
         return {
           content: [{ type: "text" as const, text: JSON.stringify({ success: true, slide_number: result.slideNumber, total_slides: session.getSlideCount() }) }],
-          _meta: { ui: { resourceUri: "ui://pptx/preview" }, presentation: { slideCount: session.getSlideCount() } },
+          _meta: { ui: { resourceUri: "ui://pptx/preview" }, presentation: presentationMeta(session) },
         };
       } catch (err) {
         return { content: [{ type: "text" as const, text: (err as Error).message }], isError: true };
@@ -327,7 +334,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
 
   server.registerTool(
     "pptx_remove_slide",
-    { title: "Remove Slide", description: "Remove a slide.", inputSchema: removeSlideSchema },
+    { title: "Remove Slide", description: "Remove a slide.", inputSchema: removeSlideSchema, _meta: UI_META },
     async (args) => {
       if (!session.isActive()) {
         return { content: [{ type: "text" as const, text: "No active presentation." }], isError: true };
@@ -337,7 +344,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
         const result = await session.removeSlide(slide_number);
         return {
           content: [{ type: "text" as const, text: JSON.stringify({ success: true, removed_slide: result.removedSlideNumber, total_slides: result.newSlideCount }) }],
-          _meta: { ui: { resourceUri: "ui://pptx/preview" }, presentation: { slideCount: result.newSlideCount } },
+          _meta: { ui: { resourceUri: "ui://pptx/preview" }, presentation: presentationMeta(session) },
         };
       } catch (err) {
         return { content: [{ type: "text" as const, text: (err as Error).message }], isError: true };
@@ -347,7 +354,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
 
   server.registerTool(
     "pptx_reorder_slide",
-    { title: "Reorder Slide", description: "Move a slide to a different position.", inputSchema: reorderSlideSchema },
+    { title: "Reorder Slide", description: "Move a slide to a different position.", inputSchema: reorderSlideSchema, _meta: UI_META },
     async (args) => {
       if (!session.isActive()) {
         return { content: [{ type: "text" as const, text: "No active presentation." }], isError: true };
@@ -357,7 +364,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
         const result = await session.reorderSlide(from_position, to_position);
         return {
           content: [{ type: "text" as const, text: JSON.stringify({ success: true, from: result.fromPosition, to: result.toPosition }) }],
-          _meta: { ui: { resourceUri: "ui://pptx/preview" }, presentation: { slideCount: session.getSlideCount() } },
+          _meta: { ui: { resourceUri: "ui://pptx/preview" }, presentation: presentationMeta(session) },
         };
       } catch (err) {
         return { content: [{ type: "text" as const, text: (err as Error).message }], isError: true };
@@ -367,7 +374,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
 
   server.registerTool(
     "pptx_duplicate_slide",
-    { title: "Duplicate Slide", description: "Clone an existing slide.", inputSchema: duplicateSlideSchema },
+    { title: "Duplicate Slide", description: "Clone an existing slide.", inputSchema: duplicateSlideSchema, _meta: UI_META },
     async (args) => {
       if (!session.isActive()) {
         return { content: [{ type: "text" as const, text: "No active presentation." }], isError: true };
@@ -378,7 +385,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
         const svg = session.renderSlide(result.newSlideNumber);
         return {
           content: [{ type: "text" as const, text: JSON.stringify({ success: true, source: result.sourceSlideNumber, new_slide: result.newSlideNumber, total_slides: session.getSlideCount() }) }],
-          _meta: { ui: { resourceUri: "ui://pptx/preview" }, presentation: { slideCount: session.getSlideCount() }, slideData: { number: result.newSlideNumber, svg: svg.svg } },
+          _meta: { ui: { resourceUri: "ui://pptx/preview" }, presentation: presentationMeta(session), slideData: { number: result.newSlideNumber, svg: svg.svg } },
         };
       } catch (err) {
         return { content: [{ type: "text" as const, text: (err as Error).message }], isError: true };
@@ -388,7 +395,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
 
   server.registerTool(
     "pptx_add_shape",
-    { title: "Add Shape", description: "Add a shape.", inputSchema: addShapeSchema },
+    { title: "Add Shape", description: "Add a shape.", inputSchema: addShapeSchema, _meta: UI_META },
     async (args) => {
       if (!session.isActive()) {
         return { content: [{ type: "text" as const, text: "No active presentation." }], isError: true };
@@ -399,7 +406,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
         const svg = session.renderSlide(slide_number);
         return {
           content: [{ type: "text" as const, text: JSON.stringify({ success: true, shape_id: result.shapeId }) }],
-          _meta: { ui: { resourceUri: "ui://pptx/preview" }, slideData: { number: slide_number, svg: svg.svg } },
+          _meta: { ui: { resourceUri: "ui://pptx/preview" }, presentation: presentationMeta(session), slideData: { number: slide_number, svg: svg.svg } },
         };
       } catch (err) {
         return { content: [{ type: "text" as const, text: (err as Error).message }], isError: true };
@@ -409,7 +416,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
 
   server.registerTool(
     "pptx_add_text_box",
-    { title: "Add Text Box", description: "Add a text box.", inputSchema: addTextBoxSchema },
+    { title: "Add Text Box", description: "Add a text box.", inputSchema: addTextBoxSchema, _meta: UI_META },
     async (args) => {
       if (!session.isActive()) {
         return { content: [{ type: "text" as const, text: "No active presentation." }], isError: true };
@@ -420,7 +427,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
         const svg = session.renderSlide(slide_number);
         return {
           content: [{ type: "text" as const, text: JSON.stringify({ success: true, shape_id: result.shapeId }) }],
-          _meta: { ui: { resourceUri: "ui://pptx/preview" }, slideData: { number: slide_number, svg: svg.svg } },
+          _meta: { ui: { resourceUri: "ui://pptx/preview" }, presentation: presentationMeta(session), slideData: { number: slide_number, svg: svg.svg } },
         };
       } catch (err) {
         return { content: [{ type: "text" as const, text: (err as Error).message }], isError: true };
@@ -430,19 +437,20 @@ export function registerTools(server: McpServer, session: PresentationSession): 
 
   server.registerTool(
     "pptx_add_image",
-    { title: "Add Image", description: "Add an image to a slide.", inputSchema: addImageSchema },
+    { title: "Add Image", description: "Add an image to a slide.", inputSchema: addImageSchema, _meta: UI_META },
     async (args) => {
       if (!session.isActive()) {
         return { content: [{ type: "text" as const, text: "No active presentation." }], isError: true };
       }
       const { slide_number, image } = args;
       try {
-        const spec = { path: image.path, x: image.x, y: image.y, width: image.width, height: image.height };
+        const bytes = Uint8Array.from(atob(image.data), (c) => c.charCodeAt(0));
+        const spec = { data: bytes, mimeType: image.mime_type, x: image.x, y: image.y, width: image.width, height: image.height };
         const result = await session.addImage(slide_number, spec);
         const svg = session.renderSlide(slide_number);
         return {
           content: [{ type: "text" as const, text: JSON.stringify({ success: true, image_id: result.imageId }) }],
-          _meta: { ui: { resourceUri: "ui://pptx/preview" }, slideData: { number: slide_number, svg: svg.svg } },
+          _meta: { ui: { resourceUri: "ui://pptx/preview" }, presentation: presentationMeta(session), slideData: { number: slide_number, svg: svg.svg } },
         };
       } catch (err) {
         return { content: [{ type: "text" as const, text: (err as Error).message }], isError: true };
@@ -452,7 +460,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
 
   server.registerTool(
     "pptx_add_connector",
-    { title: "Add Connector", description: "Add a connector line.", inputSchema: addConnectorSchema },
+    { title: "Add Connector", description: "Add a connector line.", inputSchema: addConnectorSchema, _meta: UI_META },
     async (args) => {
       if (!session.isActive()) {
         return { content: [{ type: "text" as const, text: "No active presentation." }], isError: true };
@@ -476,7 +484,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
         const svg = session.renderSlide(slide_number);
         return {
           content: [{ type: "text" as const, text: JSON.stringify({ success: true, connector_id: result.connectorId }) }],
-          _meta: { ui: { resourceUri: "ui://pptx/preview" }, slideData: { number: slide_number, svg: svg.svg } },
+          _meta: { ui: { resourceUri: "ui://pptx/preview" }, presentation: presentationMeta(session), slideData: { number: slide_number, svg: svg.svg } },
         };
       } catch (err) {
         return { content: [{ type: "text" as const, text: (err as Error).message }], isError: true };
@@ -486,7 +494,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
 
   server.registerTool(
     "pptx_add_table",
-    { title: "Add Table", description: "Add a table to a slide.", inputSchema: addTableSchema },
+    { title: "Add Table", description: "Add a table to a slide.", inputSchema: addTableSchema, _meta: UI_META },
     async (args) => {
       if (!session.isActive()) {
         return { content: [{ type: "text" as const, text: "No active presentation." }], isError: true };
@@ -497,7 +505,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
         const svg = session.renderSlide(slide_number);
         return {
           content: [{ type: "text" as const, text: JSON.stringify({ success: true, table_id: result.tableId }) }],
-          _meta: { ui: { resourceUri: "ui://pptx/preview" }, slideData: { number: slide_number, svg: svg.svg } },
+          _meta: { ui: { resourceUri: "ui://pptx/preview" }, presentation: presentationMeta(session), slideData: { number: slide_number, svg: svg.svg } },
         };
       } catch (err) {
         return { content: [{ type: "text" as const, text: (err as Error).message }], isError: true };
@@ -507,7 +515,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
 
   server.registerTool(
     "pptx_add_group",
-    { title: "Add Group", description: "Add a group of shapes.", inputSchema: addGroupSchema },
+    { title: "Add Group", description: "Add a group of shapes.", inputSchema: addGroupSchema, _meta: UI_META },
     async (args) => {
       if (!session.isActive()) {
         return { content: [{ type: "text" as const, text: "No active presentation." }], isError: true };
@@ -522,7 +530,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
         const svg = session.renderSlide(slide_number);
         return {
           content: [{ type: "text" as const, text: JSON.stringify({ success: true, group_id: result.groupId }) }],
-          _meta: { ui: { resourceUri: "ui://pptx/preview" }, slideData: { number: slide_number, svg: svg.svg } },
+          _meta: { ui: { resourceUri: "ui://pptx/preview" }, presentation: presentationMeta(session), slideData: { number: slide_number, svg: svg.svg } },
         };
       } catch (err) {
         return { content: [{ type: "text" as const, text: (err as Error).message }], isError: true };
@@ -532,7 +540,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
 
   server.registerTool(
     "pptx_update_table",
-    { title: "Update Table", description: "Update an existing table.", inputSchema: updateTableSchema },
+    { title: "Update Table", description: "Update an existing table.", inputSchema: updateTableSchema, _meta: UI_META },
     async (args) => {
       if (!session.isActive()) {
         return { content: [{ type: "text" as const, text: "No active presentation." }], isError: true };
@@ -544,7 +552,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
         const svg = session.renderSlide(slide_number);
         return {
           content: [{ type: "text" as const, text: JSON.stringify({ success: true, updated: result.updated }) }],
-          _meta: { ui: { resourceUri: "ui://pptx/preview" }, slideData: { number: slide_number, svg: svg.svg } },
+          _meta: { ui: { resourceUri: "ui://pptx/preview" }, presentation: presentationMeta(session), slideData: { number: slide_number, svg: svg.svg } },
         };
       } catch (err) {
         return { content: [{ type: "text" as const, text: (err as Error).message }], isError: true };
@@ -554,7 +562,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
 
   server.registerTool(
     "pptx_set_transition",
-    { title: "Set Transition", description: "Set slide transition effect.", inputSchema: setTransitionSchema },
+    { title: "Set Transition", description: "Set slide transition effect.", inputSchema: setTransitionSchema, _meta: UI_META },
     async (args) => {
       if (!session.isActive()) {
         return { content: [{ type: "text" as const, text: "No active presentation." }], isError: true };
@@ -571,7 +579,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
         const result = await session.setTransition(slide_number, spec);
         return {
           content: [{ type: "text" as const, text: JSON.stringify({ success: true, applied: result.applied }) }],
-          _meta: { ui: { resourceUri: "ui://pptx/preview" }, presentation: { slideCount: session.getSlideCount() } },
+          _meta: { ui: { resourceUri: "ui://pptx/preview" }, presentation: presentationMeta(session) },
         };
       } catch (err) {
         return { content: [{ type: "text" as const, text: (err as Error).message }], isError: true };
@@ -581,7 +589,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
 
   server.registerTool(
     "pptx_add_animations",
-    { title: "Add Animations", description: "Add animations to shapes on a slide.", inputSchema: addAnimationsSchema },
+    { title: "Add Animations", description: "Add animations to shapes on a slide.", inputSchema: addAnimationsSchema, _meta: UI_META },
     async (args) => {
       if (!session.isActive()) {
         return { content: [{ type: "text" as const, text: "No active presentation." }], isError: true };
@@ -600,7 +608,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
         const result = await session.addAnimations(slide_number, specs);
         return {
           content: [{ type: "text" as const, text: JSON.stringify({ success: true, animations_added: result.animationsAdded }) }],
-          _meta: { ui: { resourceUri: "ui://pptx/preview" }, presentation: { slideCount: session.getSlideCount() } },
+          _meta: { ui: { resourceUri: "ui://pptx/preview" }, presentation: presentationMeta(session) },
         };
       } catch (err) {
         return { content: [{ type: "text" as const, text: (err as Error).message }], isError: true };
@@ -610,7 +618,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
 
   server.registerTool(
     "pptx_add_comments",
-    { title: "Add Comments", description: "Add comments to a slide.", inputSchema: addCommentsSchema },
+    { title: "Add Comments", description: "Add comments to a slide.", inputSchema: addCommentsSchema, _meta: UI_META },
     async (args) => {
       if (!session.isActive()) {
         return { content: [{ type: "text" as const, text: "No active presentation." }], isError: true };
@@ -627,7 +635,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
         const result = await session.addComments(slide_number, specs);
         return {
           content: [{ type: "text" as const, text: JSON.stringify({ success: true, comments_added: result.commentsAdded }) }],
-          _meta: { ui: { resourceUri: "ui://pptx/preview" }, presentation: { slideCount: session.getSlideCount() } },
+          _meta: { ui: { resourceUri: "ui://pptx/preview" }, presentation: presentationMeta(session) },
         };
       } catch (err) {
         return { content: [{ type: "text" as const, text: (err as Error).message }], isError: true };
@@ -637,7 +645,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
 
   server.registerTool(
     "pptx_set_speaker_notes",
-    { title: "Set Speaker Notes", description: "Set speaker notes for a slide.", inputSchema: setSpeakerNotesSchema },
+    { title: "Set Speaker Notes", description: "Set speaker notes for a slide.", inputSchema: setSpeakerNotesSchema, _meta: UI_META },
     async (args) => {
       if (!session.isActive()) {
         return { content: [{ type: "text" as const, text: "No active presentation." }], isError: true };
@@ -648,7 +656,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
         const result = await session.setSpeakerNotes(slide_number, spec);
         return {
           content: [{ type: "text" as const, text: JSON.stringify({ success: true, applied: result.applied }) }],
-          _meta: { ui: { resourceUri: "ui://pptx/preview" }, presentation: { slideCount: session.getSlideCount() } },
+          _meta: { ui: { resourceUri: "ui://pptx/preview" }, presentation: presentationMeta(session) },
         };
       } catch (err) {
         return { content: [{ type: "text" as const, text: (err as Error).message }], isError: true };
@@ -658,7 +666,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
 
   server.registerTool(
     "pptx_modify_slide",
-    { title: "Modify Slide", description: "Modify a slide.", inputSchema: modifySlideSchema },
+    { title: "Modify Slide", description: "Modify a slide.", inputSchema: modifySlideSchema, _meta: UI_META },
     async (args) => {
       if (!session.isActive()) {
         return { content: [{ type: "text" as const, text: "No active presentation." }], isError: true };
@@ -676,7 +684,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
         const svg = session.renderSlide(slide_number);
         return {
           content: [{ type: "text" as const, text: JSON.stringify({ success: true, elements_added: result.elementsAdded }) }],
-          _meta: { ui: { resourceUri: "ui://pptx/preview" }, slideData: { number: slide_number, svg: svg.svg } },
+          _meta: { ui: { resourceUri: "ui://pptx/preview" }, presentation: presentationMeta(session), slideData: { number: slide_number, svg: svg.svg } },
         };
       } catch (err) {
         return { content: [{ type: "text" as const, text: (err as Error).message }], isError: true };
@@ -685,19 +693,26 @@ export function registerTools(server: McpServer, session: PresentationSession): 
   );
 
   server.registerTool(
-    "pptx_export",
-    { title: "Export", description: "Export to PPTX.", inputSchema: exportSchema },
-    async (args) => {
+    "pptx_build",
+    { title: "Build", description: "Build the presentation and return the PPTX as a base64 blob.", inputSchema: buildSchema, _meta: UI_META },
+    async () => {
       if (!session.isActive()) {
         return { content: [{ type: "text" as const, text: "No active presentation." }], isError: true };
       }
-      const { output_path } = args;
       try {
         const buffer = await session.exportBuffer();
-        // Ensure parent directory exists
-        await mkdir(dirname(output_path), { recursive: true });
-        await writeFile(output_path, Buffer.from(buffer));
-        return { content: [{ type: "text" as const, text: JSON.stringify({ success: true, output_path, size_bytes: buffer.byteLength }) }] };
+        const bytes = new Uint8Array(buffer);
+        const blob = btoa(String.fromCharCode(...bytes));
+        return {
+          content: [{
+            type: "resource" as const,
+            resource: {
+              uri: "pptx://presentation/export",
+              mimeType: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+              blob,
+            },
+          }],
+        };
       } catch (err) {
         return { content: [{ type: "text" as const, text: (err as Error).message }], isError: true };
       }
@@ -706,7 +721,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
 
   server.registerTool(
     "pptx_get_info",
-    { title: "Get Info", description: "Get presentation info.", inputSchema: getInfoSchema },
+    { title: "Get Info", description: "Get presentation info.", inputSchema: getInfoSchema, _meta: UI_META },
     async () => {
       const info = session.getInfo();
       if (!info) {
@@ -718,7 +733,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
 
   server.registerTool(
     "pptx_render_slide",
-    { title: "Render Slide", description: "Render slide to SVG. Returns the SVG markup in the response.", inputSchema: renderSlideSchema },
+    { title: "Render Slide", description: "Render slide to SVG. Returns the SVG markup in the response.", inputSchema: renderSlideSchema, _meta: UI_META },
     async (args) => {
       if (!session.isActive()) {
         return { content: [{ type: "text" as const, text: "No active presentation." }], isError: true };
@@ -728,7 +743,7 @@ export function registerTools(server: McpServer, session: PresentationSession): 
         const result = session.renderSlide(slide_number);
         return {
           content: [{ type: "text" as const, text: result.svg }],
-          _meta: { ui: { resourceUri: "ui://pptx/preview" }, slideData: { number: slide_number, svg: result.svg } },
+          _meta: { ui: { resourceUri: "ui://pptx/preview" }, presentation: presentationMeta(session), slideData: { number: slide_number, svg: result.svg } },
         };
       } catch (err) {
         return { content: [{ type: "text" as const, text: (err as Error).message }], isError: true };

@@ -1,0 +1,7 @@
+{"_meta":{"name":"error-recovery","description":"Negative tests: operations before create, invalid inputs, then recovery"}}
+{"id":1,"method":"tools/call","params":{"name":"pptx_add_shape","arguments":{"slide_number":1,"shape":{"type":"rect","x":0,"y":0,"width":100,"height":100}}},"assert":{"isError":true,"errorContains":"No active"}}
+{"id":2,"method":"tools/call","params":{"name":"pptx_render_slide","arguments":{"slide_number":1}},"assert":{"isError":true,"errorContains":"No active"}}
+{"id":3,"method":"tools/call","params":{"name":"pptx_add_slide","arguments":{}},"assert":{"isError":true,"errorContains":"No active"}}
+{"id":4,"method":"tools/call","params":{"name":"pptx_create_presentation","arguments":{"title":"Recovery Test"}},"assert":{"hasPresentation":true}}
+{"id":5,"method":"tools/call","params":{"name":"pptx_add_shape","arguments":{"slide_number":1,"shape":{"type":"rect","x":50,"y":50,"width":200,"height":100,"fill":"#22C55E","text":"Recovered!"}}},"assert":{"hasSlideData":true}}
+{"id":6,"method":"tools/call","params":{"name":"pptx_render_slide","arguments":{"slide_number":1}},"assert":{"hasSlideData":true,"svgContains":"<svg"}}

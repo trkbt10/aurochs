@@ -6,13 +6,12 @@
  * default template handling.
  */
 
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { mkdir, rm, writeFile, access } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import { createServer } from "../src/server";
-import { registerTools } from "../src/tools/index";
 
 const execAsync = promisify(exec);
 
@@ -260,11 +259,10 @@ describe("MCP Server Integration Tests", () => {
         0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, // IEND chunk
         0xae, 0x42, 0x60, 0x82,
       ]);
-      const testImagePath = join(TEST_OUTPUT_DIR, "test-image.png");
-      await writeFile(testImagePath, pngBuffer);
 
       const result = await session.addImage(1, {
-        path: testImagePath,
+        data: pngBuffer,
+        mimeType: "image/png",
         x: 100,
         y: 100,
         width: 200,
@@ -869,7 +867,7 @@ describe("MCP Server Integration Tests", () => {
       expect(svg).toContain("陰謀論者の主張");
     });
 
-    it("should export to non-existent directory (mkdir -p)", async () => {
+    it("should build presentation as in-memory buffer", async () => {
       const { session } = createServer();
       await session.load(TEMPLATE_PATH);
 
@@ -878,12 +876,12 @@ describe("MCP Server Integration Tests", () => {
       });
 
       const buffer = await session.exportBuffer();
-      const deepPath = join(TEST_OUTPUT_DIR, "nested", "deep", "export-test.pptx");
-      await mkdir(dirname(deepPath), { recursive: true });
-      await writeFile(deepPath, new Uint8Array(buffer));
+      expect(buffer.byteLength).toBeGreaterThan(0);
 
-      const result = await access(deepPath).then(() => true).catch(() => false);
-      expect(result).toBe(true);
+      // Verify ZIP signature (PK)
+      const view = new Uint8Array(buffer);
+      expect(view[0]).toBe(0x50);
+      expect(view[1]).toBe(0x4b);
     });
   });
 

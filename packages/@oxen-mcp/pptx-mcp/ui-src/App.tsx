@@ -3,8 +3,9 @@
  */
 
 import { useState, useEffect, type ReactElement } from "react";
+import { useHostStyles } from "@modelcontextprotocol/ext-apps/react";
 import { tokens, injectCSSVariables } from "@oxen-ui/ui-components";
-import { bridge, type ToolResult } from "./mcp-bridge";
+import { app, connectApp, type ToolResultMeta } from "./mcp-bridge";
 import { SlideCanvas } from "./components/SlideCanvas";
 import { Thumbnails } from "./components/Thumbnails";
 import { BuildProgress } from "./components/BuildProgress";
@@ -20,7 +21,7 @@ type PresentationData = {
   readonly height: number;
 };
 
-// Inject CSS variables on load
+// Inject CSS variables on load (fallback when host doesn't send styles)
 injectCSSVariables();
 
 function formatPresentationStatus(presentation: PresentationData | null): string {
@@ -40,8 +41,17 @@ export function App(): ReactElement {
   const [lastAction, setLastAction] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsubscribe = bridge.onToolResult((result: ToolResult) => {
-      const meta = result._meta;
+    // Set ALL handlers before connecting (per ext-apps spec)
+
+    app.ontoolinput = () => {
+      setIsBuilding(true);
+      setLastAction(null);
+    };
+
+    app.ontoolresult = (params) => {
+      setIsBuilding(false);
+
+      const meta = params._meta as ToolResultMeta | undefined;
       if (!meta) {
         return;
       }
@@ -74,35 +84,51 @@ export function App(): ReactElement {
         setSlides((prev) => {
           const updated = [...prev];
           const idx = meta.slideData!.number - 1;
-          if (idx >= 0 && idx < updated.length) {
-            updated[idx] = meta.slideData!;
+          // Grow array if needed (slide data may arrive before presentation meta)
+          while (updated.length <= idx) {
+            updated.push({ number: updated.length + 1 });
           }
+          updated[idx] = meta.slideData!;
           return updated;
         });
       }
 
       // Update last action
-      if (result.content?.[0]?.text) {
-        try {
-          const data = JSON.parse(result.content[0].text);
-          setLastAction(data.message || null);
-        } catch (parseError) {
-          // Content may not be JSON, this is expected for non-JSON responses
-          console.debug("Tool result content is not JSON:", parseError);
+      if (params.content?.[0]) {
+        const block = params.content[0];
+        if (block.type === "text" && "text" in block) {
+          try {
+            const data = JSON.parse(block.text);
+            setLastAction(data.message || null);
+          } catch {
+            // Content may not be JSON
+          }
         }
       }
-
-      setIsBuilding(false);
-    });
-
-    return () => {
-      unsubscribe();
     };
+
+    app.ontoolcancelled = () => {
+      setIsBuilding(false);
+      setLastAction("Tool cancelled");
+    };
+
+    app.onteardown = async () => {
+      return {};
+    };
+
+    connectApp();
   }, []);
+
+  // Apply host theming (CSS variables, theme, fonts) from MCP Apps spec
+  useHostStyles(app, app.getHostContext());
 
   const handleSlideSelect = (index: number): void => {
     setCurrentSlide(index);
-    bridge.notifyInteraction("slideSelect", { slideNumber: index + 1 });
+    app.updateModelContext({
+      content: [{ type: "text", text: `User is viewing slide ${index + 1}` }],
+    }).catch(() => {
+      // Host may not support updateModelContext
+    });
   };
 
   const { color, spacing, font, radius } = tokens;
@@ -110,7 +136,7 @@ export function App(): ReactElement {
   return (
     <div
       style={{
-        fontFamily: "system-ui, -apple-system, sans-serif",
+        fontFamily: "var(--font-sans, system-ui, -apple-system, sans-serif)",
         background: color.background.primary,
         color: color.text.primary,
         height: "100vh",

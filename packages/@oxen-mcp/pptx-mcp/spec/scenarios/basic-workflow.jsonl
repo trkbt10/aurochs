@@ -1,0 +1,8 @@
+{"_meta":{"name":"basic-workflow","description":"Core happy path: create, add slides/shapes, render, export"}}
+{"id":1,"method":"tools/call","params":{"name":"pptx_create_presentation","arguments":{"title":"Basic Workflow Test"}},"assert":{"hasPresentation":true,"contentContains":"success"}}
+{"id":2,"method":"tools/call","params":{"name":"pptx_add_slide","arguments":{}},"assert":{"hasPresentation":true}}
+{"id":3,"method":"tools/call","params":{"name":"pptx_add_shape","arguments":{"slide_number":1,"shape":{"type":"rect","x":100,"y":80,"width":300,"height":150,"fill":"#3B82F6","text":"Hello World"}}},"assert":{"hasSlideData":true}}
+{"id":4,"method":"tools/call","params":{"name":"pptx_add_text_box","arguments":{"slide_number":2,"text":"Slide 2 Content","x":50,"y":50,"width":400,"height":60}},"assert":{"hasSlideData":true}}
+{"id":5,"method":"tools/call","params":{"name":"pptx_render_slide","arguments":{"slide_number":1}},"assert":{"hasSlideData":true,"svgContains":"<svg"}}
+{"id":6,"method":"tools/call","params":{"name":"pptx_get_info","arguments":{}},"assert":{"skipMeta":true,"contentContains":"slide_count"}}
+{"id":7,"method":"tools/call","params":{"name":"pptx_build","arguments":{}},"assert":{"skipMeta":true}}

@@ -1,0 +1,11 @@
+{"_meta":{"name":"slide-operations","description":"Slide structure: add, duplicate, reorder, remove"}}
+{"id":1,"method":"tools/call","params":{"name":"pptx_create_presentation","arguments":{}},"assert":{"hasPresentation":true}}
+{"id":2,"method":"tools/call","params":{"name":"pptx_add_slide","arguments":{}},"assert":{"hasPresentation":true}}
+{"id":3,"method":"tools/call","params":{"name":"pptx_add_slide","arguments":{}},"assert":{"hasPresentation":true}}
+{"id":4,"method":"tools/call","params":{"name":"pptx_add_slide","arguments":{}},"assert":{"hasPresentation":true}}
+{"id":5,"method":"tools/call","params":{"name":"pptx_add_shape","arguments":{"slide_number":1,"shape":{"type":"rect","x":50,"y":50,"width":200,"height":100,"fill":"#EF4444","text":"Slide 1 marker"}}},"assert":{"hasSlideData":true}}
+{"id":6,"method":"tools/call","params":{"name":"pptx_duplicate_slide","arguments":{"source_slide_number":1}},"assert":{"hasSlideData":true}}
+{"id":7,"method":"tools/call","params":{"name":"pptx_reorder_slide","arguments":{"from_position":4,"to_position":2}},"assert":{"hasPresentation":true}}
+{"id":8,"method":"tools/call","params":{"name":"pptx_remove_slide","arguments":{"slide_number":3}},"assert":{"hasPresentation":true}}
+{"id":9,"method":"tools/call","params":{"name":"pptx_render_slide","arguments":{"slide_number":1}},"assert":{"hasSlideData":true,"svgContains":"<svg"}}
+{"id":10,"method":"tools/call","params":{"name":"pptx_render_slide","arguments":{"slide_number":2}},"assert":{"hasSlideData":true,"svgContains":"<svg"}}

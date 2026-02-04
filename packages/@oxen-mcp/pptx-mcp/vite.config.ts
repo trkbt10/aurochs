@@ -4,10 +4,11 @@
 
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { viteSingleFile } from "vite-plugin-singlefile";
 import { resolve } from "node:path";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), viteSingleFile()],
   root: resolve(__dirname, "ui-src"),
   build: {
     outDir: resolve(__dirname, "ui-dist"),

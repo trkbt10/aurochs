@@ -1,13 +1,15 @@
 /**
  * @file UI resource for MCP Apps
  *
- * Serves the interactive preview UI as an MCP resource.
+ * Serves the interactive preview UI as an MCP App resource using
+ * the official @modelcontextprotocol/ext-apps SDK.
  */
 
 import { readFileSync, existsSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { registerAppResource, RESOURCE_MIME_TYPE } from "@modelcontextprotocol/ext-apps/server";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
@@ -201,17 +203,19 @@ function loadUiHtml(): string {
  * Register UI resource for MCP Apps.
  */
 export function registerUiResource(server: McpServer): void {
-  server.resource(
-    "ui://pptx/preview",
+  registerAppResource(
+    server,
     "PPTX Live Preview",
-    async () => {
+    "ui://pptx/preview",
+    { description: "Interactive PPTX slide preview" },
+    async (uri) => {
       const html = loadUiHtml();
 
       return {
         contents: [
           {
-            uri: "ui://pptx/preview",
-            mimeType: "text/html",
+            uri: uri.href,
+            mimeType: RESOURCE_MIME_TYPE,
             text: html,
           },
         ],

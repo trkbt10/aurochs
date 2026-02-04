@@ -1,0 +1,14 @@
+{"_meta":{"name":"rich-content","description":"All element types: shapes, text, table, group, connector, modify"}}
+{"id":1,"method":"tools/call","params":{"name":"pptx_create_presentation","arguments":{"title":"Rich Content Test"}},"assert":{"hasPresentation":true}}
+{"id":2,"method":"tools/call","params":{"name":"pptx_add_shape","arguments":{"slide_number":1,"shape":{"type":"rect","x":50,"y":50,"width":200,"height":100,"fill":"#3B82F6"}}},"assert":{"hasSlideData":true}}
+{"id":3,"method":"tools/call","params":{"name":"pptx_add_shape","arguments":{"slide_number":1,"shape":{"type":"ellipse","x":300,"y":50,"width":150,"height":150,"fill":"#10B981"}}},"assert":{"hasSlideData":true}}
+{"id":4,"method":"tools/call","params":{"name":"pptx_add_shape","arguments":{"slide_number":1,"shape":{"type":"roundRect","x":500,"y":50,"width":200,"height":100,"fill":"#F59E0B"}}},"assert":{"hasSlideData":true}}
+{"id":5,"method":"tools/call","params":{"name":"pptx_add_shape","arguments":{"slide_number":1,"shape":{"type":"triangle","x":50,"y":250,"width":150,"height":130,"fill":"#EF4444"}}},"assert":{"hasSlideData":true}}
+{"id":6,"method":"tools/call","params":{"name":"pptx_add_text_box","arguments":{"slide_number":1,"text":"Caption Text","x":250,"y":300,"width":300,"height":40}},"assert":{"hasSlideData":true}}
+{"id":7,"method":"tools/call","params":{"name":"pptx_add_table","arguments":{"slide_number":1,"table":{"x":500,"y":250,"width":300,"height":150,"rows":[[{"text":"A1"},{"text":"B1"},{"text":"C1"}],[{"text":"A2"},{"text":"B2"},{"text":"C2"}]]}}},"assert":{"hasSlideData":true}}
+{"id":8,"method":"tools/call","params":{"name":"pptx_add_group","arguments":{"slide_number":1,"group":{"x":50,"y":420,"width":300,"height":100,"children":[{"type":"rect","x":0,"y":0,"width":140,"height":100,"fill":"#6366F1"},{"type":"rect","x":160,"y":0,"width":140,"height":100,"fill":"#8B5CF6"}]}}},"assert":{"hasSlideData":true}}
+{"id":9,"method":"tools/call","params":{"name":"pptx_add_connector","arguments":{"slide_number":1,"connector":{"x":400,"y":420,"width":200,"height":0,"line_color":"#000000","line_width":2}}},"assert":{"hasSlideData":true}}
+{"id":10,"method":"tools/call","params":{"name":"pptx_add_slide","arguments":{}},"assert":{"hasPresentation":true}}
+{"id":11,"method":"tools/call","params":{"name":"pptx_modify_slide","arguments":{"slide_number":2,"background":"#1E293B","add_shapes":[{"type":"rect","x":50,"y":50,"width":300,"height":200,"fill":"#FFFFFF","text":"Modified Slide"}]}},"assert":{"hasSlideData":true}}
+{"id":12,"method":"tools/call","params":{"name":"pptx_render_slide","arguments":{"slide_number":1}},"assert":{"hasSlideData":true,"svgContains":"<svg"}}
+{"id":13,"method":"tools/call","params":{"name":"pptx_build","arguments":{}},"assert":{"skipMeta":true}}

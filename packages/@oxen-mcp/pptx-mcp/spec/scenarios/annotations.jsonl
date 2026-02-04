@@ -1,0 +1,8 @@
+{"_meta":{"name":"annotations","description":"Metadata features: transitions, animations, comments, speaker notes"}}
+{"id":1,"method":"tools/call","params":{"name":"pptx_create_presentation","arguments":{"title":"Annotations Test"}},"assert":{"hasPresentation":true}}
+{"id":2,"method":"tools/call","params":{"name":"pptx_add_shape","arguments":{"slide_number":1,"shape":{"type":"rect","x":100,"y":100,"width":300,"height":200,"fill":"#3B82F6","text":"Animated Shape"}}},"assert":{"hasSlideData":true,"contentContains":"shape_id"}}
+{"id":3,"method":"tools/call","params":{"name":"pptx_set_transition","arguments":{"slide_number":1,"transition":{"type":"fade","duration":500}}},"assert":{"hasPresentation":true,"contentContains":"success"}}
+{"id":4,"method":"tools/call","params":{"name":"pptx_add_animations","arguments":{"slide_number":1,"animations":[{"shape_id":"shape-1","class":"entrance","effect":"fade","duration":1000}]}},"assert":{"hasPresentation":true,"contentContains":"success"}}
+{"id":5,"method":"tools/call","params":{"name":"pptx_add_comments","arguments":{"slide_number":1,"comments":[{"author_name":"Reviewer","author_initials":"R","text":"Looks good!","x":100,"y":100}]}},"assert":{"hasPresentation":true,"contentContains":"success"}}
+{"id":6,"method":"tools/call","params":{"name":"pptx_set_speaker_notes","arguments":{"slide_number":1,"notes":{"text":"Remember to emphasize the key points here."}}},"assert":{"hasPresentation":true,"contentContains":"success"}}
+{"id":7,"method":"tools/call","params":{"name":"pptx_build","arguments":{}},"assert":{"skipMeta":true}}

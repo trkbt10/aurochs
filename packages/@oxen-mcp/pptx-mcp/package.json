@@ -19,7 +19,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.11.2",
+    "@modelcontextprotocol/ext-apps": "^1.0.1",
+    "@modelcontextprotocol/sdk": "^1.24.0",
     "@oxen-cli/pptx-cli": "workspace:*",
     "@oxen-ui/ui-components": "workspace:*",
     "hono": "^4.11.1",
@@ -27,6 +28,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.5.2",
-    "vite": "^7.1.5"
+    "vite": "^7.1.5",
+    "vite-plugin-singlefile": "^2.3.0"
   }
 }
