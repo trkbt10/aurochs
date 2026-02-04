@@ -166,7 +166,7 @@ describe("Effect Rendering", () => {
         children: [layer.node],
       };
 
-      const result = renderCanvas(wrapperCanvas, {
+      const result = await renderCanvas(wrapperCanvas, {
         width: actualSize.width,
         height: actualSize.height,
         blobs: data.blobs,
@@ -299,7 +299,7 @@ describe("Effect Type Coverage", () => {
       children: [layer.node],
     };
 
-    const result = renderCanvas(wrapperCanvas, {
+    const result = await renderCanvas(wrapperCanvas, {
       width: layer.size.width,
       height: layer.size.height,
       blobs: data.blobs,
@@ -333,7 +333,7 @@ describe("Effect Type Coverage", () => {
       children: [layer.node],
     };
 
-    const result = renderCanvas(wrapperCanvas, {
+    const result = await renderCanvas(wrapperCanvas, {
       width: layer.size.width,
       height: layer.size.height,
       blobs: data.blobs,

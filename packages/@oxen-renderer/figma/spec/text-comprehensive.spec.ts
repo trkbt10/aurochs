@@ -20,7 +20,7 @@ import {
   type FigImage,
 } from "@oxen/fig/parser";
 import type { FigNode } from "@oxen/fig/types";
-import { renderCanvasAsync } from "../src/svg/renderer";
+import { renderCanvas } from "../src/svg/renderer";
 import { createNodeFontLoaderWithFontsource } from "../src/font-drivers/node";
 import { CachingFontLoader } from "../src/font";
 
@@ -259,7 +259,7 @@ async function renderFrame(
     children: [frame.node],
   };
 
-  const result = await renderCanvasAsync(canvas, {
+  const result = await renderCanvas(canvas, {
     width: frame.size.width,
     height: frame.size.height,
     blobs,

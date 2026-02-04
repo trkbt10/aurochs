@@ -3,19 +3,9 @@
  */
 
 import { decodeBlobToSvgPath, type FigBlob } from "@oxen/fig/parser";
+import type { FigFillGeometry } from "@oxen/fig/types";
 
-// =============================================================================
-// Geometry Types
-// =============================================================================
-
-/**
- * Figma fill geometry (references commandsBlob)
- */
-export type FigFillGeometry = {
-  readonly windingRule?: { value: number; name: string } | string;
-  readonly commandsBlob?: number;
-  readonly styleID?: number;
-};
+export type { FigFillGeometry };
 
 type WindingRule = "NONZERO" | "EVENODD" | "ODD";
 

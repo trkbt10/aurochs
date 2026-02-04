@@ -105,34 +105,12 @@ export type FigParentIndex = {
   readonly position: string;
 };
 
-/** Transform matrix as stored in Kiwi binary format */
-export type FigTransform = {
-  readonly m00: number;
-  readonly m01: number;
-  readonly m02: number;
-  readonly m10: number;
-  readonly m11: number;
-  readonly m12: number;
-};
-
-/** Size vector as stored in Kiwi binary format */
-export type FigSize = {
-  readonly x: number;
-  readonly y: number;
-};
-
-/** Paint as stored in Kiwi binary format */
-export type FigKiwiPaint = {
-  readonly type: KiwiEnumValue;
-  readonly color?: FigColor;
-  readonly opacity: number;
-  readonly visible: boolean;
-  readonly blendMode: KiwiEnumValue;
-};
-
 /**
  * Fig node as decoded from Kiwi binary format.
  * This represents the raw structure, not a high-level API.
+ *
+ * Typed fields cover the most commonly accessed properties.
+ * The index signature provides access to additional Kiwi schema fields.
  */
 export type FigNode = {
   readonly guid: FigGuid;
@@ -142,14 +120,22 @@ export type FigNode = {
   readonly visible?: boolean;
   readonly opacity?: number;
   readonly parentIndex?: FigParentIndex;
-  readonly transform?: FigTransform;
-  readonly size?: FigSize;
-  readonly fillPaints?: readonly FigKiwiPaint[];
-  readonly strokeWeight?: number;
+  readonly transform?: FigMatrix;
+  readonly size?: FigVector;
+  readonly fillPaints?: readonly FigPaint[];
+  readonly strokePaints?: readonly FigPaint[];
+  readonly strokeWeight?: FigStrokeWeight;
   readonly strokeAlign?: KiwiEnumValue;
   readonly strokeJoin?: KiwiEnumValue;
   readonly strokeCap?: KiwiEnumValue;
   readonly cornerRadius?: number;
+  readonly rectangleCornerRadii?: readonly number[];
+  readonly fillGeometry?: readonly FigFillGeometry[];
+  readonly strokeGeometry?: readonly FigFillGeometry[];
+  readonly vectorPaths?: readonly FigVectorPath[];
+  readonly effects?: readonly FigEffect[];
+  readonly mask?: boolean;
+  readonly clipsContent?: boolean;
   readonly frameMaskDisabled?: boolean;
   readonly backgroundColor?: FigColor;
   readonly backgroundEnabled?: boolean;
@@ -292,12 +278,15 @@ export type FigGradientStop = {
 
 /**
  * Base paint interface
+ *
+ * The type and blendMode fields accept both string literals (API format)
+ * and KiwiEnumValue objects (binary .fig format).
  */
 export type FigPaintBase = {
-  readonly type: FigPaintType;
+  readonly type: FigPaintType | KiwiEnumValue;
   readonly visible?: boolean;
   readonly opacity?: number;
-  readonly blendMode?: string;
+  readonly blendMode?: string | KiwiEnumValue;
 };
 
 /**
@@ -374,3 +363,52 @@ export type FigStrokeJoin = "MITER" | "BEVEL" | "ROUND";
  * Stroke align type
  */
 export type FigStrokeAlign = "INSIDE" | "OUTSIDE" | "CENTER";
+
+// =============================================================================
+// Figma Geometry Path Types
+// =============================================================================
+
+/**
+ * Fill/stroke geometry as stored in Kiwi binary format.
+ * References a commandsBlob index into the blobs array.
+ */
+export type FigFillGeometry = {
+  readonly windingRule?: KiwiEnumValue | string;
+  readonly commandsBlob?: number;
+  readonly styleID?: number;
+};
+
+/**
+ * Vector path as stored in Kiwi binary format.
+ */
+export type FigVectorPath = {
+  readonly windingRule?: "NONZERO" | "EVENODD" | "ODD";
+  readonly data?: string;
+};
+
+// =============================================================================
+// Figma Effect Types
+// =============================================================================
+
+/**
+ * Effect type enum
+ */
+export type FigEffectType =
+  | "INNER_SHADOW"
+  | "DROP_SHADOW"
+  | "LAYER_BLUR"
+  | "BACKGROUND_BLUR";
+
+/**
+ * Figma effect as stored in Kiwi binary format.
+ */
+export type FigEffect = {
+  readonly type: FigEffectType | KiwiEnumValue<FigEffectType>;
+  readonly visible?: boolean;
+  readonly color?: FigColor;
+  readonly offset?: FigVector;
+  readonly radius?: number;
+  readonly spread?: number;
+  readonly blendMode?: string | KiwiEnumValue;
+  readonly showShadowBehindNode?: boolean;
+};

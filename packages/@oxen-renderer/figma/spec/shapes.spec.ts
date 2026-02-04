@@ -180,7 +180,7 @@ describe("Shape Rendering", () => {
         children: [layer.node],
       };
 
-      const result = renderCanvas(wrapperCanvas, {
+      const result = await renderCanvas(wrapperCanvas, {
         width: actualSize.width,
         height: actualSize.height,
         blobs: data.blobs,

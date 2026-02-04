@@ -129,7 +129,7 @@ async function generateSnapshots(scope: string) {
     };
 
     // Render full page
-    const pageResult = renderCanvas(canvas, { width: 1200, height: 800, blobs, symbolMap: nodeMap });
+    const pageResult = await renderCanvas(canvas, { width: 1200, height: 800, blobs, symbolMap: nodeMap });
     const pageSvgPath = path.join(outDir, `${pageFilename}.svg`);
     fs.writeFileSync(pageSvgPath, pageResult.svg);
     console.log(`  -> ${pageFilename}.svg (${pageResult.warnings.length} warnings)`);
@@ -152,7 +152,7 @@ async function generateSnapshots(scope: string) {
         children: [child],
       };
 
-      const elemResult = renderCanvas(wrapperCanvas, {
+      const elemResult = await renderCanvas(wrapperCanvas, {
         width: Math.max(size.width, 100),
         height: Math.max(size.height, 100),
         blobs,

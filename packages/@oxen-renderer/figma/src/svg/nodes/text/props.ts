@@ -2,7 +2,8 @@
  * @file Text property extraction from Figma nodes
  */
 
-import type { FigNode, FigMatrix, FigPaint } from "@oxen/fig/types";
+import type { FigNode, FigPaint } from "@oxen/fig/types";
+import { extractBaseProps } from "../extract-props";
 import type {
   ExtractedTextProps,
   FigFontName,
@@ -85,6 +86,7 @@ function getEnumName<T extends string>(enumObj: unknown, defaultValue: T): T {
  * @returns Extracted text properties
  */
 export function extractTextProps(node: FigNode): ExtractedTextProps {
+  const { transform, opacity } = extractBaseProps(node);
   const nodeData = node as Record<string, unknown>;
   const characters = getCharacters(nodeData);
 
@@ -130,7 +132,7 @@ export function extractTextProps(node: FigNode): ExtractedTextProps {
   );
 
   return {
-    transform: nodeData.transform as FigMatrix | undefined,
+    transform,
     characters: characters ?? "",
     fontSize,
     fontFamily,
@@ -139,7 +141,7 @@ export function extractTextProps(node: FigNode): ExtractedTextProps {
     letterSpacing: letterSpacing !== 0 ? letterSpacing : undefined,
     lineHeight,
     fillPaints: nodeData.fillPaints as readonly FigPaint[] | undefined,
-    opacity: (nodeData.opacity as number) ?? 1,
+    opacity,
     textAlignHorizontal,
     textAlignVertical,
     textAutoResize,

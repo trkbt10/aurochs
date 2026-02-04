@@ -2,31 +2,15 @@
  * @file Group node renderer
  */
 
-import type { FigNode, FigMatrix } from "@oxen/fig/types";
+import type { FigNode } from "@oxen/fig/types";
 import type { FigSvgRenderContext } from "../../types";
 import { g, type SvgString, EMPTY_SVG } from "../primitives";
 import { buildTransformAttr } from "../transform";
+import { extractBaseProps } from "./extract-props";
 
 // =============================================================================
 // Group Node
 // =============================================================================
-
-/**
- * Extract group properties from a Figma node
- */
-function extractGroupProps(node: FigNode): {
-  transform: FigMatrix | undefined;
-  opacity: number;
-  visible: boolean;
-} {
-  const nodeData = node as Record<string, unknown>;
-
-  return {
-    transform: nodeData.transform as FigMatrix | undefined,
-    opacity: (nodeData.opacity as number) ?? 1,
-    visible: (nodeData.visible as boolean) ?? true,
-  };
-}
 
 /**
  * Render a GROUP node to SVG
@@ -40,7 +24,7 @@ export function renderGroupNode(
   ctx: FigSvgRenderContext,
   renderedChildren: readonly SvgString[]
 ): SvgString {
-  const { transform, opacity, visible } = extractGroupProps(node);
+  const { transform, opacity, visible } = extractBaseProps(node);
 
   if (!visible) {
     return EMPTY_SVG;

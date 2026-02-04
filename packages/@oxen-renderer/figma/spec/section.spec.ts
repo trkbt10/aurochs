@@ -152,7 +152,7 @@ describe("Section Parsing", () => {
             children: [sectionChild],
           };
 
-          const result = renderCanvas(wrapperCanvas, {
+          const result = await renderCanvas(wrapperCanvas, {
             width: w,
             height: h,
             blobs: data.blobs,

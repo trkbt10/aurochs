@@ -3,54 +3,24 @@
  */
 
 import { getNodeType } from "@oxen/fig/parser";
-import type { FigNode, FigMatrix, FigPaint, FigVector, FigStrokeWeight } from "@oxen/fig/types";
+import type { FigNode, FigVector } from "@oxen/fig/types";
 import type { FigSvgRenderContext } from "../../types";
 import { g, rect, clipPath, path, type SvgString, EMPTY_SVG } from "../primitives";
 import { buildTransformAttr } from "../transform";
 import { getFillAttrs } from "../fill";
 import { getStrokeAttrs } from "../stroke";
 import { decodePathsFromGeometry, mapWindingRule, type FigFillGeometry } from "../geometry-path";
-
-// =============================================================================
-// Frame Node
-// =============================================================================
-
-/**
- * Extract frame properties from a Figma node
- */
-function extractFrameProps(node: FigNode): {
-  size: FigVector;
-  transform: FigMatrix | undefined;
-  cornerRadius: number | undefined;
-  fillPaints: readonly FigPaint[] | undefined;
-  strokePaints: readonly FigPaint[] | undefined;
-  strokeWeight: FigStrokeWeight | undefined;
-  opacity: number;
-  visible: boolean;
-  clipsContent: boolean;
-  fillGeometry: readonly FigFillGeometry[] | undefined;
-  strokeGeometry: readonly FigFillGeometry[] | undefined;
-} {
-  const nodeData = node as Record<string, unknown>;
-
-  return {
-    size: nodeData.size as FigVector,
-    transform: nodeData.transform as FigMatrix | undefined,
-    cornerRadius: nodeData.cornerRadius as number | undefined,
-    fillPaints: nodeData.fillPaints as readonly FigPaint[] | undefined,
-    strokePaints: nodeData.strokePaints as readonly FigPaint[] | undefined,
-    strokeWeight: nodeData.strokeWeight as FigStrokeWeight | undefined,
-    opacity: (nodeData.opacity as number) ?? 1,
-    visible: (nodeData.visible as boolean) ?? true,
-    clipsContent: resolveClipsContent(node),
-    fillGeometry: nodeData.fillGeometry as readonly FigFillGeometry[] | undefined,
-    strokeGeometry: nodeData.strokeGeometry as readonly FigFillGeometry[] | undefined,
-  };
-}
+import { buildPathElements } from "../render-paths";
+import {
+  extractBaseProps,
+  extractSizeProps,
+  extractPaintProps,
+  extractGeometryProps,
+  extractCornerRadiusProps,
+} from "./extract-props";
 
 function resolveClipsContent(node: FigNode): boolean {
-  const nodeData = node as Record<string, unknown>;
-  const raw = nodeData.clipsContent;
+  const raw = node.clipsContent;
   if (raw === true) return true;
   if (raw === false) return false;
 
@@ -75,29 +45,6 @@ function selectGeometry(
     return strokeGeometry;
   }
   return undefined;
-}
-
-function buildGeometryElements(
-  geometry: readonly FigFillGeometry[] | undefined,
-  ctx: FigSvgRenderContext,
-  fillAttrs: Record<string, unknown>,
-  strokeAttrs: Record<string, unknown>,
-): readonly SvgString[] {
-  if (!geometry) {
-    return [];
-  }
-  const paths = decodePathsFromGeometry(geometry, ctx.blobs);
-  if (paths.length === 0) {
-    return [];
-  }
-  return paths.map(({ data, windingRule }) =>
-    path({
-      d: data,
-      "fill-rule": mapWindingRule(windingRule),
-      ...fillAttrs,
-      ...strokeAttrs,
-    }),
-  );
 }
 
 function buildClipShapes(
@@ -140,8 +87,12 @@ export function renderFrameNode(
   ctx: FigSvgRenderContext,
   renderedChildren: readonly SvgString[],
 ): SvgString {
-  const { size, transform, cornerRadius, fillPaints, strokePaints, strokeWeight, opacity, visible, clipsContent, fillGeometry, strokeGeometry } =
-    extractFrameProps(node);
+  const { transform, opacity, visible } = extractBaseProps(node);
+  const { size } = extractSizeProps(node);
+  const { fillPaints, strokePaints, strokeWeight } = extractPaintProps(node);
+  const { fillGeometry, strokeGeometry } = extractGeometryProps(node);
+  const { cornerRadius } = extractCornerRadiusProps(node);
+  const clipsContent = resolveClipsContent(node);
 
   if (!visible) {
     return EMPTY_SVG;
@@ -154,9 +105,9 @@ export function renderFrameNode(
   const elements: SvgString[] = [];
 
   const geometry = selectGeometry(fillGeometry, strokeGeometry);
-  const geometryElements = buildGeometryElements(geometry, ctx, fillAttrs, strokeAttrs);
-  if (geometryElements.length > 0) {
-    elements.push(...geometryElements);
+  const decodedPaths = geometry ? decodePathsFromGeometry(geometry, ctx.blobs) : [];
+  if (decodedPaths.length > 0) {
+    elements.push(...buildPathElements(decodedPaths, fillAttrs, strokeAttrs));
   } else {
     const bgRect = rect({
       x: 0,

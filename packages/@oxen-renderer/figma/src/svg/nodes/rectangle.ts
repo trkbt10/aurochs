@@ -2,57 +2,24 @@
  * @file Rectangle node renderer
  */
 
-import type {
-  FigNode,
-  FigMatrix,
-  FigPaint,
-  FigVector,
-  FigStrokeWeight,
-} from "@oxen/fig/types";
+import type { FigNode, FigVector } from "@oxen/fig/types";
+
 import type { FigSvgRenderContext } from "../../types";
-import { rect, g, path, type SvgString } from "../primitives";
+import { rect, g, type SvgString } from "../primitives";
 import { buildTransformAttr } from "../transform";
 import { getFillAttrs } from "../fill";
 import { getStrokeAttrs } from "../stroke";
-import { getFilterAttr, type FigEffect } from "../effects";
-import { decodePathsFromGeometry, mapWindingRule, type FigFillGeometry } from "../geometry-path";
-
-// =============================================================================
-// Rectangle Node
-// =============================================================================
-
-/**
- * Extract rectangle properties from a Figma node
- */
-function extractRectProps(node: FigNode): {
-  size: FigVector;
-  transform: FigMatrix | undefined;
-  cornerRadius: number | undefined;
-  cornerRadii: readonly number[] | undefined;
-  fillGeometry: readonly FigFillGeometry[] | undefined;
-  strokeGeometry: readonly FigFillGeometry[] | undefined;
-  fillPaints: readonly FigPaint[] | undefined;
-  strokePaints: readonly FigPaint[] | undefined;
-  strokeWeight: FigStrokeWeight | undefined;
-  effects: readonly FigEffect[] | undefined;
-  opacity: number;
-} {
-  const nodeData = node as Record<string, unknown>;
-
-  return {
-    size: (nodeData.size as FigVector) ?? { x: 100, y: 100 },
-    transform: nodeData.transform as FigMatrix | undefined,
-    cornerRadius: nodeData.cornerRadius as number | undefined,
-    cornerRadii: nodeData.rectangleCornerRadii as readonly number[] | undefined,
-    fillGeometry: nodeData.fillGeometry as readonly FigFillGeometry[] | undefined,
-    strokeGeometry: nodeData.strokeGeometry as readonly FigFillGeometry[] | undefined,
-    fillPaints: nodeData.fillPaints as readonly FigPaint[] | undefined,
-    strokePaints: nodeData.strokePaints as readonly FigPaint[] | undefined,
-    strokeWeight: nodeData.strokeWeight as FigStrokeWeight | undefined,
-    effects: nodeData.effects as readonly FigEffect[] | undefined,
-    opacity: (nodeData.opacity as number) ?? 1,
-  };
-}
+import { getFilterAttr } from "../effects";
+import { decodePathsFromGeometry } from "../geometry-path";
+import { renderPaths } from "../render-paths";
+import {
+  extractBaseProps,
+  extractSizeProps,
+  extractPaintProps,
+  extractGeometryProps,
+  extractEffectsProps,
+  extractCornerRadiusProps,
+} from "./extract-props";
 
 /**
  * Calculate corner radius from corner radii array or single value
@@ -105,8 +72,13 @@ export function renderRectangleNode(
   node: FigNode,
   ctx: FigSvgRenderContext
 ): SvgString {
-  const { size, transform, cornerRadius, cornerRadii, fillGeometry, strokeGeometry, fillPaints, strokePaints, strokeWeight, effects, opacity } =
-    extractRectProps(node);
+  const { transform, opacity } = extractBaseProps(node);
+  const { size } = extractSizeProps(node);
+  const { fillPaints, strokePaints, strokeWeight } = extractPaintProps(node);
+  const { fillGeometry, strokeGeometry } = extractGeometryProps(node);
+  const { effects } = extractEffectsProps(node);
+  const { cornerRadius } = extractCornerRadiusProps(node);
+  const cornerRadii = node.rectangleCornerRadii;
 
   const transformStr = buildTransformAttr(transform);
   const fillAttrs = getFillAttrs(fillPaints, ctx, { elementSize: { width: size.x, height: size.y } });
@@ -124,43 +96,14 @@ export function renderRectangleNode(
   if (geometry && geometry.length > 0) {
     const paths = decodePathsFromGeometry(geometry, ctx.blobs);
     if (paths.length > 0) {
-      if (paths.length === 1) {
-        const { data, windingRule } = paths[0];
-        const singlePath = path({
-          d: data,
-          "fill-rule": mapWindingRule(windingRule),
-          transform: transformStr || undefined,
-          opacity: opacity < 1 ? opacity : undefined,
-          ...fillAttrs,
-          ...strokeAttrs,
-        });
-        if (filterAttr) {
-          return g({ filter: filterAttr }, singlePath);
-        }
-        return singlePath;
-      }
-
-      const pathElements = paths.map(({ data, windingRule }) =>
-        path({
-          d: data,
-          "fill-rule": mapWindingRule(windingRule),
-          ...fillAttrs,
-          ...strokeAttrs,
-        })
-      );
-
-      const group = g(
-        {
-          transform: transformStr || undefined,
-          opacity: opacity < 1 ? opacity : undefined,
-        },
-        ...pathElements
-      );
-
-      if (filterAttr) {
-        return g({ filter: filterAttr }, group);
-      }
-      return group;
+      return renderPaths({
+        paths,
+        fillAttrs,
+        strokeAttrs,
+        transform: transformStr,
+        opacity,
+        filter: filterAttr,
+      });
     }
   }
 

@@ -2,7 +2,7 @@
  * @file Effect rendering for Figma nodes (shadows, blur, etc.)
  */
 
-import type { FigColor, FigVector } from "@oxen/fig/types";
+import type { FigEffect, FigEffectType } from "@oxen/fig/types";
 import type { FigSvgRenderContext } from "../types";
 import {
   filter,
@@ -17,32 +17,7 @@ import {
   type SvgString,
 } from "./primitives";
 
-// =============================================================================
-// Effect Types
-// =============================================================================
-
-/**
- * Figma effect type enum
- */
-export type FigEffectType =
-  | "INNER_SHADOW"
-  | "DROP_SHADOW"
-  | "LAYER_BLUR"
-  | "BACKGROUND_BLUR";
-
-/**
- * Figma effect interface
- */
-export type FigEffect = {
-  readonly type: FigEffectType | { value: number; name: FigEffectType };
-  readonly visible?: boolean;
-  readonly color?: FigColor;
-  readonly offset?: FigVector;
-  readonly radius?: number;
-  readonly spread?: number;
-  readonly blendMode?: string | { value: number; name: string };
-  readonly showShadowBehindNode?: boolean;
-};
+export type { FigEffect, FigEffectType };
 
 // =============================================================================
 // Effect Helpers

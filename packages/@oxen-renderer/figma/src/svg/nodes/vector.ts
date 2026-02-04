@@ -2,62 +2,20 @@
  * @file Vector node renderer
  */
 
-import type {
-  FigNode,
-  FigMatrix,
-  FigPaint,
-  FigStrokeWeight,
-} from "@oxen/fig/types";
+import type { FigNode, FigVectorPath, FigFillGeometry } from "@oxen/fig/types";
 import type { FigBlob } from "@oxen/fig/parser";
 import type { FigSvgRenderContext } from "../../types";
-import { path, g, type SvgString, EMPTY_SVG } from "../primitives";
+import { type SvgString, EMPTY_SVG } from "../primitives";
 import { buildTransformAttr } from "../transform";
 import { getFillAttrs } from "../fill";
 import { getStrokeAttrs } from "../stroke";
-import { decodePathsFromGeometry, mapWindingRule, type FigFillGeometry } from "../geometry-path";
+import { decodePathsFromGeometry } from "../geometry-path";
+import { renderPaths } from "../render-paths";
+import { extractBaseProps, extractPaintProps, extractGeometryProps } from "./extract-props";
 
 // =============================================================================
 // Vector Path Types
 // =============================================================================
-
-/**
- * Figma vector path (from vectorPaths property)
- */
-type FigVectorPath = {
-  readonly windingRule?: "NONZERO" | "EVENODD" | "ODD";
-  readonly data?: string;
-};
-
-// =============================================================================
-// Vector Node
-// =============================================================================
-
-/**
- * Extract vector properties from a Figma node
- */
-function extractVectorProps(node: FigNode): {
-  transform: FigMatrix | undefined;
-  vectorPaths: readonly FigVectorPath[] | undefined;
-  fillGeometry: readonly FigFillGeometry[] | undefined;
-  strokeGeometry: readonly FigFillGeometry[] | undefined;
-  fillPaints: readonly FigPaint[] | undefined;
-  strokePaints: readonly FigPaint[] | undefined;
-  strokeWeight: FigStrokeWeight | undefined;
-  opacity: number;
-} {
-  const nodeData = node as Record<string, unknown>;
-
-  return {
-    transform: nodeData.transform as FigMatrix | undefined,
-    vectorPaths: nodeData.vectorPaths as readonly FigVectorPath[] | undefined,
-    fillGeometry: nodeData.fillGeometry as readonly FigFillGeometry[] | undefined,
-    strokeGeometry: nodeData.strokeGeometry as readonly FigFillGeometry[] | undefined,
-    fillPaints: nodeData.fillPaints as readonly FigPaint[] | undefined,
-    strokePaints: nodeData.strokePaints as readonly FigPaint[] | undefined,
-    strokeWeight: nodeData.strokeWeight as FigStrokeWeight | undefined,
-    opacity: (nodeData.opacity as number) ?? 1,
-  };
-}
 
 type PathSources = {
   readonly vectorPaths: readonly FigVectorPath[] | undefined;
@@ -105,8 +63,10 @@ export function renderVectorNode(
   node: FigNode,
   ctx: FigSvgRenderContext
 ): SvgString {
-  const { transform, vectorPaths, fillGeometry, strokeGeometry, fillPaints, strokePaints, strokeWeight, opacity } =
-    extractVectorProps(node);
+  const { transform, opacity } = extractBaseProps(node);
+  const { fillPaints, strokePaints, strokeWeight } = extractPaintProps(node);
+  const { fillGeometry, strokeGeometry } = extractGeometryProps(node);
+  const vectorPaths = node.vectorPaths;
 
   const transformStr = buildTransformAttr(transform);
   const fillAttrs = getFillAttrs(fillPaints, ctx);
@@ -119,34 +79,11 @@ export function renderVectorNode(
     return EMPTY_SVG;
   }
 
-  // Single path
-  if (pathsToRender.length === 1) {
-    const { data, windingRule } = pathsToRender[0];
-    return path({
-      d: data,
-      "fill-rule": mapWindingRule(windingRule),
-      transform: transformStr || undefined,
-      opacity: opacity < 1 ? opacity : undefined,
-      ...fillAttrs,
-      ...strokeAttrs,
-    });
-  }
-
-  // Multiple paths - wrap in group
-  const pathElements = pathsToRender.map(({ data, windingRule }) =>
-    path({
-      d: data,
-      "fill-rule": mapWindingRule(windingRule),
-      ...fillAttrs,
-      ...strokeAttrs,
-    })
-  );
-
-  return g(
-    {
-      transform: transformStr || undefined,
-      opacity: opacity < 1 ? opacity : undefined,
-    },
-    ...pathElements
-  );
+  return renderPaths({
+    paths: pathsToRender,
+    fillAttrs,
+    strokeAttrs,
+    transform: transformStr,
+    opacity,
+  });
 }
