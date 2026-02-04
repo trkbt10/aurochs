@@ -4,11 +4,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { ParsedFigFile } from "@oxen/fig/parser";
-import { buildNodeTree, findNodesByType } from "@oxen/fig/parser";
+import { buildNodeTree, findNodesByType, getNodeType } from "@oxen/fig/parser";
 import type { FigNode } from "@oxen/fig/types";
+import { preResolveSymbols } from "../../src/symbols/symbol-pre-resolver";
 import { renderCanvasAsync } from "../../src/svg/renderer";
 import { BrowserFontLoader } from "../../src/font-drivers/browser";
 import { CachingFontLoader } from "../../src/font";
+import { InspectorView } from "./InspectorView";
 
 type Props = {
   readonly parsedFile: ParsedFigFile;
@@ -187,6 +189,18 @@ const styles = {
     textAlign: "center" as const,
     color: "#64748b",
   },
+  modeToggle: {
+    display: "flex",
+    gap: "4px",
+  },
+  modeButton: {
+    padding: "6px 14px",
+    fontSize: "13px",
+    color: "#fff",
+    border: "none",
+    borderRadius: "6px",
+    cursor: "pointer",
+  },
 };
 
 // Create a singleton font loader instance
@@ -201,10 +215,11 @@ export function FigPreview({ parsedFile, onClose }: Props) {
   const [fontAccessSupported] = useState(() => BrowserFontLoader.isSupported());
   const [renderResult, setRenderResult] = useState<{ svg: string; warnings: readonly string[] }>({ svg: "", warnings: [] });
   const [isRendering, setIsRendering] = useState(false);
+  const [viewMode, setViewMode] = useState<"preview" | "inspector">("preview");
 
   // Build node tree and extract canvas/frame info
-  const { canvases, nodeCount, typeCount } = useMemo(() => {
-    const { roots } = buildNodeTree(parsedFile.nodeChanges);
+  const { canvases, nodeCount, typeCount, symbolMap, resolvedSymbolCache, symbolResolveWarnings } = useMemo(() => {
+    const { roots, nodeMap } = buildNodeTree(parsedFile.nodeChanges);
     const canvasNodes = findNodesByType(roots, "CANVAS");
 
     const canvases: CanvasInfo[] = canvasNodes.map((canvas) => {
@@ -226,12 +241,22 @@ export function FigPreview({ parsedFile, onClose }: Props) {
       };
     });
 
+    const warnings: string[] = [];
+    const resolvedSymbolCache = preResolveSymbols(nodeMap, { warnings });
+
     return {
       canvases,
       nodeCount: parsedFile.nodeChanges.length,
       typeCount: countNodeTypes(parsedFile.nodeChanges),
+      symbolMap: nodeMap,
+      resolvedSymbolCache,
+      symbolResolveWarnings: warnings,
     };
   }, [parsedFile]);
+  const combinedWarnings = useMemo(
+    () => [...symbolResolveWarnings, ...renderResult.warnings],
+    [symbolResolveWarnings, renderResult.warnings]
+  );
 
   // Get current selection
   const currentCanvas = canvases[selectedCanvasIndex];
@@ -260,6 +285,8 @@ export function FigPreview({ parsedFile, onClose }: Props) {
       blobs: parsedFile.blobs,
       images: parsedFile.images,
       showHiddenNodes,
+      symbolMap,
+      resolvedSymbolCache,
       fontLoader: fontAccessGranted ? fontLoader : undefined,
     }).then((result) => {
       if (!cancelled) {
@@ -305,9 +332,9 @@ export function FigPreview({ parsedFile, onClose }: Props) {
           <div style={styles.stat}>
             <strong>{nodeCount}</strong> nodes
           </div>
-          {renderResult.warnings.length > 0 && (
+          {combinedWarnings.length > 0 && (
             <div style={styles.stat}>
-              <strong>{renderResult.warnings.length}</strong> warnings
+              <strong>{combinedWarnings.length}</strong> warnings
             </div>
           )}
         </div>
@@ -351,6 +378,28 @@ export function FigPreview({ parsedFile, onClose }: Props) {
             </div>
           )}
 
+          {/* Mode Toggle */}
+          <div style={styles.modeToggle}>
+            <button
+              style={{
+                ...styles.modeButton,
+                background: viewMode === "preview" ? "#6366f1" : "#334155",
+              }}
+              onClick={() => setViewMode("preview")}
+            >
+              Preview
+            </button>
+            <button
+              style={{
+                ...styles.modeButton,
+                background: viewMode === "inspector" ? "#6366f1" : "#334155",
+              }}
+              onClick={() => setViewMode("inspector")}
+            >
+              Inspector
+            </button>
+          </div>
+
           <label style={styles.checkbox}>
             <input
               type="checkbox"
@@ -384,86 +433,83 @@ export function FigPreview({ parsedFile, onClose }: Props) {
 
       {/* Content */}
       <div style={styles.content}>
-        {/* Preview */}
-        <div style={styles.preview}>
-          {isRendering ? (
-            <div style={styles.emptyState}>Rendering...</div>
-          ) : currentFrame ? (
-            <div
-              style={styles.svgContainer}
-              dangerouslySetInnerHTML={{ __html: renderResult.svg }}
-            />
-          ) : (
-            <div style={styles.emptyState}>
-              No frames found in this file
-            </div>
-          )}
-        </div>
-
-        {/* Sidebar */}
-        <div style={styles.sidebar}>
-          {/* Frame List */}
-          {currentCanvas && currentCanvas.frames.length > 0 && (
-            <div style={styles.frameList}>
-              <div style={styles.frameListTitle}>
-                Frames in "{currentCanvas.name}"
-              </div>
-              {currentCanvas.frames.map((frame, index) => (
+        {viewMode === "preview" ? (
+          <>
+            {/* Preview */}
+            <div style={styles.preview}>
+              {isRendering ? (
+                <div style={styles.emptyState}>Rendering...</div>
+              ) : currentFrame ? (
                 <div
-                  key={index}
-                  style={{
-                    ...styles.frameItem,
-                    ...(index === selectedFrameIndex ? styles.frameItemActive : {}),
-                  }}
-                  onClick={() => setSelectedFrameIndex(index)}
-                >
-                  <div style={styles.frameName}>{frame.name}</div>
-                  <div style={styles.frameSize}>
-                    {frame.width} × {frame.height}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Warnings */}
-          {renderResult.warnings.length > 0 && (
-            <div style={styles.warnings}>
-              <div style={styles.warningsTitle}>Render Warnings</div>
-              {renderResult.warnings.slice(0, 10).map((warning, index) => (
-                <div key={index} style={styles.warning}>
-                  {warning}
-                </div>
-              ))}
-              {renderResult.warnings.length > 10 && (
-                <div style={styles.warning}>
-                  ...and {renderResult.warnings.length - 10} more
+                  style={styles.svgContainer}
+                  dangerouslySetInnerHTML={{ __html: renderResult.svg }}
+                />
+              ) : (
+                <div style={styles.emptyState}>
+                  No frames found in this file
                 </div>
               )}
             </div>
-          )}
-        </div>
+
+            {/* Sidebar */}
+            <div style={styles.sidebar}>
+              {/* Frame List */}
+              {currentCanvas && currentCanvas.frames.length > 0 && (
+                <div style={styles.frameList}>
+                  <div style={styles.frameListTitle}>
+                    Frames in "{currentCanvas.name}"
+                  </div>
+                  {currentCanvas.frames.map((frame, index) => (
+                    <div
+                      key={index}
+                      style={{
+                        ...styles.frameItem,
+                        ...(index === selectedFrameIndex ? styles.frameItemActive : {}),
+                      }}
+                      onClick={() => setSelectedFrameIndex(index)}
+                    >
+                      <div style={styles.frameName}>{frame.name}</div>
+                      <div style={styles.frameSize}>
+                        {frame.width} × {frame.height}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Warnings */}
+              {combinedWarnings.length > 0 && (
+                <div style={styles.warnings}>
+                  <div style={styles.warningsTitle}>Render Warnings</div>
+                  {combinedWarnings.slice(0, 10).map((warning, index) => (
+                    <div key={index} style={styles.warning}>
+                      {warning}
+                    </div>
+                  ))}
+                  {combinedWarnings.length > 10 && (
+                    <div style={styles.warning}>
+                      ...and {combinedWarnings.length - 10} more
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </>
+        ) : currentFrame ? (
+          <InspectorView
+            frameNode={currentFrame.node}
+            frameWidth={currentFrame.width}
+            frameHeight={currentFrame.height}
+            showHiddenNodes={showHiddenNodes}
+          />
+        ) : (
+          <div style={styles.emptyState}>
+            No frames found in this file
+          </div>
+        )}
       </div>
     </div>
   );
-}
-
-/**
- * Get node type as string
- */
-function getNodeType(node: FigNode): string {
-  const nodeData = node as Record<string, unknown>;
-  const type = nodeData.type;
-
-  if (typeof type === "string") {
-    return type;
-  }
-
-  if (type && typeof type === "object" && "name" in type) {
-    return (type as { name: string }).name;
-  }
-
-  return "UNKNOWN";
 }
 
 /**
@@ -473,6 +519,3 @@ function countNodeTypes(nodes: readonly FigNode[]): number {
   const types = new Set(nodes.map((n) => getNodeType(n)));
   return types.size;
 }
-
-// Re-export getNodeType for use in tree building
-export { getNodeType };
