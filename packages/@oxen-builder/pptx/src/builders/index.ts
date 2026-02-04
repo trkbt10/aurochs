@@ -4,6 +4,12 @@
  * This module provides builders for shapes, images, tables, charts, etc.
  */
 
+// File I/O utilities
+export { detectImageMimeType, readFileToArrayBuffer, uint8ArrayToArrayBuffer } from "./file-utils";
+
+// Relationship path utilities
+export { getSlideRelsPath } from "./rels-utils";
+
 // ID generation
 export { generateShapeId } from "./id-generator";
 

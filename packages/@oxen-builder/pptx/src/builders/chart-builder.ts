@@ -14,6 +14,7 @@ import type { ZipPackage } from "@oxen/zip";
 import type { ChartUpdateSpec } from "../types";
 import type { Transform } from "@oxen-office/pptx/domain/geometry";
 import type { Degrees, Pixels } from "@oxen-office/drawing-ml/domain/units";
+import { getSlideRelsPath } from "./rels-utils";
 
 type UpdateContext = {
   readonly zipPackage: ZipPackage;
@@ -25,10 +26,6 @@ function requireXmlText(value: string | null, context: string): string {
     throw new Error(context);
   }
   return value;
-}
-
-function getSlideRelsPath(slidePath: string): string {
-  return slidePath.replace(/\/([^/]+)\.xml$/, "/_rels/$1.xml.rels");
 }
 
 function getGraphicFrameId(frame: XmlElement): string | undefined {

@@ -20,7 +20,12 @@ export type MediaType =
   | "image/gif"
   | "image/svg+xml"
   | "video/mp4"
-  | "audio/mpeg";
+  | "video/webm"
+  | "video/quicktime"
+  | "audio/mpeg"
+  | "audio/wav"
+  | "audio/mp4"
+  | "audio/ogg";
 
 const IMAGE_REL: RelationshipType =
   "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image";
@@ -290,8 +295,18 @@ function inferMediaInfo(mediaType: MediaType): {
       return { extension: "svg", relationshipType: IMAGE_REL, prefix: "image" };
     case "video/mp4":
       return { extension: "mp4", relationshipType: VIDEO_REL, prefix: "video" };
+    case "video/webm":
+      return { extension: "webm", relationshipType: VIDEO_REL, prefix: "video" };
+    case "video/quicktime":
+      return { extension: "mov", relationshipType: VIDEO_REL, prefix: "video" };
     case "audio/mpeg":
       return { extension: "mp3", relationshipType: AUDIO_REL, prefix: "audio" };
+    case "audio/wav":
+      return { extension: "wav", relationshipType: AUDIO_REL, prefix: "audio" };
+    case "audio/mp4":
+      return { extension: "m4a", relationshipType: AUDIO_REL, prefix: "audio" };
+    case "audio/ogg":
+      return { extension: "ogg", relationshipType: AUDIO_REL, prefix: "audio" };
   }
 }
 

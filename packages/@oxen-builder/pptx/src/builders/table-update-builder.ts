@@ -60,7 +60,7 @@ function paragraphSpecToParagraph(spec: TableParagraphSpec): Paragraph {
   };
 }
 
-function contentToTextBody(content: string | TableTextBodySpec): TextBody {
+export function contentToTextBody(content: string | TableTextBodySpec): TextBody {
   if (typeof content === "string") {
     return {
       bodyProperties: {},

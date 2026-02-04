@@ -5,9 +5,9 @@
  * the image data should be passed directly instead of file paths.
  */
 
-import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { createElement, type XmlElement, type XmlDocument } from "@oxen/xml";
+import { detectImageMimeType, readFileToArrayBuffer, uint8ArrayToArrayBuffer } from "./file-utils";
 import { updateDocumentRoot, replaceChildByName } from "@oxen-builder/pptx/patcher/core/xml-mutator";
 import { getChild, isXmlElement } from "@oxen/xml";
 import { serializeFill } from "@oxen-builder/pptx/patcher/serializer/fill";
@@ -19,9 +19,10 @@ import type { BackgroundFillSpec, BackgroundGradientSpec, BackgroundImageSpec } 
 import { buildColor } from "@oxen-builder/drawing-ml/fill";
 
 /**
- * Build a Fill from BackgroundFillSpec
+ * Build a Fill from a non-image BackgroundFillSpec.
+ * Image backgrounds require async handling via applyImageBackground.
  */
-function buildBackgroundFill(spec: BackgroundFillSpec): Fill {
+function buildBackgroundFill(spec: Exclude<BackgroundFillSpec, BackgroundImageSpec>): Fill {
   if (typeof spec === "string") {
     // Solid fill from hex color
     return {
@@ -38,10 +39,6 @@ function buildBackgroundFill(spec: BackgroundFillSpec): Fill {
       };
     case "gradient":
       return buildGradientFill(spec);
-    case "image":
-      // Image fill requires async handling and relationship creation
-      // Return a placeholder that will be handled separately
-      throw new Error("Image background requires async handling");
     default:
       throw new Error(`Unknown background fill type: ${(spec as { type: string }).type}`);
   }
@@ -153,14 +150,19 @@ export async function applyImageBackground(
   spec: BackgroundImageSpec,
   ctx: { specDir: string; zipPackage: ZipPackage; slidePath: string },
 ): Promise<XmlDocument> {
-  const imagePath = path.resolve(ctx.specDir, spec.path);
-  const imageBuffer = await fs.readFile(imagePath);
-  const mimeType = detectMimeType(imagePath);
+  let arrayBuffer: ArrayBuffer;
+  let mimeType: ReturnType<typeof detectImageMimeType>;
 
-  // Create a proper ArrayBuffer copy from the buffer
-  const arrayBuffer = new ArrayBuffer(imageBuffer.length);
-  const view = new Uint8Array(arrayBuffer);
-  view.set(imageBuffer);
+  if (spec.data) {
+    arrayBuffer = uint8ArrayToArrayBuffer(spec.data);
+    mimeType = (spec.mimeType ?? "image/png") as typeof mimeType;
+  } else if (spec.path) {
+    const imagePath = path.resolve(ctx.specDir, spec.path);
+    mimeType = detectImageMimeType(imagePath);
+    arrayBuffer = await readFileToArrayBuffer(imagePath);
+  } else {
+    throw new Error("BackgroundImageSpec requires either 'path' or 'data'");
+  }
 
   const { rId } = addMedia({
     pkg: ctx.zipPackage,
@@ -187,26 +189,6 @@ export async function applyImageBackground(
 
     return replaceChildByName(root, "p:cSld", newCsld);
   });
-}
-
-/**
- * Detect MIME type from file path
- */
-function detectMimeType(filePath: string): "image/png" | "image/jpeg" | "image/gif" | "image/svg+xml" {
-  const ext = path.extname(filePath).toLowerCase();
-  switch (ext) {
-    case ".png":
-      return "image/png";
-    case ".jpg":
-    case ".jpeg":
-      return "image/jpeg";
-    case ".gif":
-      return "image/gif";
-    case ".svg":
-      return "image/svg+xml";
-    default:
-      return "image/png";
-  }
 }
 
 /**

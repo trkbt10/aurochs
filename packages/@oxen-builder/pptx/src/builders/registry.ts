@@ -5,7 +5,6 @@
  * the image/media data should be passed directly instead of file paths.
  */
 
-import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import {
   addMedia,
@@ -19,13 +18,15 @@ import {
 } from "@oxen-builder/pptx/patcher";
 import type { ZipPackage } from "@oxen/zip";
 import type { SpShape, GraphicFrame, PicShape, CxnShape, GrpShape, Shape } from "@oxen-office/pptx/domain/shape";
-import type { Table, TableRow, TableCell } from "@oxen-office/pptx/domain/table/types";
+import type { Table, TableRow, TableCell, TableCellProperties, CellMargin, CellBorders, CellAnchor } from "@oxen-office/pptx/domain/table/types";
 import type { GroupTransform } from "@oxen-office/pptx/domain/geometry";
 import type { TextBody } from "@oxen-office/pptx/domain/text";
 import type { Shape3d } from "@oxen-office/pptx/domain/three-d";
 import type { Pixels, Degrees } from "@oxen-office/drawing-ml/domain/units";
 import type { ShapeSpec, ImageSpec, ConnectorSpec, GroupSpec, TableSpec, TableCellSpec } from "../types";
 import type { TextSpec } from "@oxen-builder/drawing-ml";
+import type { Line } from "@oxen-office/pptx/domain/color/types";
+import { contentToTextBody } from "./table-update-builder";
 import { PRESET_MAP } from "./presets";
 import { generateShapeId } from "./id-generator";
 import { buildFill } from "@oxen-builder/drawing-ml/fill";
@@ -36,6 +37,9 @@ import { parseXml, serializeDocument, isXmlElement } from "@oxen/xml";
 import { buildBlipEffectsFromSpec } from "./blip-effects-builder";
 import { buildCustomGeometryFromSpec } from "./custom-geometry-builder";
 import { buildMediaReferenceFromSpec, detectEmbeddedMediaType } from "./media-embed-builder";
+import type { MediaType } from "@oxen-builder/pptx/patcher/resources/media-manager";
+import { detectImageMimeType, readFileToArrayBuffer, uint8ArrayToArrayBuffer } from "./file-utils";
+import { getSlideRelsPath } from "./rels-utils";
 
 // =============================================================================
 // Context Types
@@ -102,7 +106,10 @@ export type AsyncBuilder<TSpec> = (spec: TSpec, id: string, ctx: BuildContext) =
 // =============================================================================
 
 function buildSpShape(spec: ShapeSpec, id: string): SpShape {
-  const preset = PRESET_MAP[spec.type] ?? "rect";
+  const preset = PRESET_MAP[spec.type];
+  if (!preset) {
+    throw new Error(`Unknown shape type: "${spec.type}". Use a valid PresetShapeType.`);
+  }
 
   return {
     type: "sp",
@@ -145,7 +152,7 @@ function registerHyperlinks(
   if (hyperlinks.length === 0) {return urlToRid;}
 
   // Get the relationships file path
-  const relsPath = ctx.slidePath.replace(/\/([^/]+)\.xml$/, "/_rels/$1.xml.rels");
+  const relsPath = getSlideRelsPath(ctx.slidePath);
 
   // Read or create relationships document
   const relsXml = ctx.zipPackage.readText(relsPath);
@@ -220,22 +227,6 @@ export const shapeBuilder: SyncBuilder<ShapeSpec> = (spec, id, ctx) => {
 // Image Builder
 // =============================================================================
 
-function detectMimeType(filePath: string): "image/png" | "image/jpeg" | "image/gif" | "image/svg+xml" {
-  const ext = path.extname(filePath).toLowerCase();
-  switch (ext) {
-    case ".png":
-      return "image/png";
-    case ".jpg":
-    case ".jpeg":
-      return "image/jpeg";
-    case ".gif":
-      return "image/gif";
-    case ".svg":
-      return "image/svg+xml";
-    default:
-      return "image/png";
-  }
-}
 
 function buildPicShape({
   spec,
@@ -264,9 +255,9 @@ function buildPicShape({
         y: spec.y as Pixels,
         width: spec.width as Pixels,
         height: spec.height as Pixels,
-        rotation: 0 as Degrees,
-        flipH: false,
-        flipV: false,
+        rotation: (spec.rotation ?? 0) as Degrees,
+        flipH: spec.flipH ?? false,
+        flipV: spec.flipV ?? false,
       },
     },
     mediaType: media?.mediaType,
@@ -285,13 +276,17 @@ async function buildEmbeddedMedia(
     return undefined;
   }
 
-  const mediaPath = path.resolve(ctx.specDir, spec.media.path);
-  const mediaBuffer = await fs.readFile(mediaPath);
-  const mediaType = detectEmbeddedMediaType(spec.media);
+  let mediaArrayBuffer: ArrayBuffer;
+  if (spec.media.data) {
+    mediaArrayBuffer = uint8ArrayToArrayBuffer(spec.media.data);
+  } else if (spec.media.path) {
+    const mediaPath = path.resolve(ctx.specDir, spec.media.path);
+    mediaArrayBuffer = await readFileToArrayBuffer(mediaPath);
+  } else {
+    throw new Error("MediaEmbedSpec requires either 'path' or 'data'");
+  }
 
-  const mediaArrayBuffer = new ArrayBuffer(mediaBuffer.length);
-  const mediaView = new Uint8Array(mediaArrayBuffer);
-  mediaView.set(mediaBuffer);
+  const mediaType = detectEmbeddedMediaType(spec.media);
 
   const { rId: mediaRId } = addMedia({
     pkg: ctx.zipPackage,
@@ -304,14 +299,19 @@ async function buildEmbeddedMedia(
 }
 
 export const imageBuilder: AsyncBuilder<ImageSpec> = async (spec, id, ctx) => {
-  const imagePath = path.resolve(ctx.specDir, spec.path);
-  const imageBuffer = await fs.readFile(imagePath);
-  const mimeType = detectMimeType(imagePath);
+  let arrayBuffer: ArrayBuffer;
+  let mimeType: MediaType;
 
-  // Create a proper ArrayBuffer copy from the buffer
-  const arrayBuffer = new ArrayBuffer(imageBuffer.length);
-  const view = new Uint8Array(arrayBuffer);
-  view.set(imageBuffer);
+  if (spec.data) {
+    arrayBuffer = uint8ArrayToArrayBuffer(spec.data);
+    mimeType = (spec.mimeType ?? "image/png") as MediaType;
+  } else if (spec.path) {
+    const imagePath = path.resolve(ctx.specDir, spec.path);
+    mimeType = detectImageMimeType(imagePath);
+    arrayBuffer = await readFileToArrayBuffer(imagePath);
+  } else {
+    throw new Error("ImageSpec requires either 'path' or 'data'");
+  }
 
   const { rId } = addMedia({
     pkg: ctx.zipPackage,
@@ -346,9 +346,9 @@ function buildCxnShape(spec: ConnectorSpec, id: string): CxnShape {
         y: spec.y as Pixels,
         width: spec.width as Pixels,
         height: spec.height as Pixels,
-        rotation: 0 as Degrees,
-        flipH: false,
-        flipV: false,
+        rotation: (spec.rotation ?? 0) as Degrees,
+        flipH: spec.flipH ?? false,
+        flipV: spec.flipV ?? false,
       },
       geometry: { type: "preset", preset, adjustValues: [] },
       line: spec.lineColor ? buildLine(spec.lineColor, spec.lineWidth ?? 2) : buildLine("000000", 2),
@@ -386,9 +386,9 @@ function buildGrpShape(spec: GroupSpec, id: string, existingIds: string[]): GrpS
     y: spec.y as Pixels,
     width: spec.width as Pixels,
     height: spec.height as Pixels,
-    rotation: 0 as Degrees,
-    flipH: false,
-    flipV: false,
+    rotation: (spec.rotation ?? 0) as Degrees,
+    flipH: spec.flipH ?? false,
+    flipV: spec.flipV ?? false,
     childOffsetX: 0 as Pixels,
     childOffsetY: 0 as Pixels,
     childExtentWidth: spec.width as Pixels,
@@ -414,21 +414,140 @@ export const groupBuilder: SyncBuilder<GroupSpec> = (spec, id, ctx) => ({
 // Table Builder
 // =============================================================================
 
-function buildTableCell(cellSpec: TableCellSpec): TableCell {
+function mapVerticalAlignment(va: "top" | "middle" | "bottom"): CellAnchor {
+  if (va === "middle") {
+    return "center";
+  }
+  return va;
+}
+
+function buildCellBorder(color: string, width: number): Line {
+  // eslint-disable-next-line custom/no-as-outside-guard -- drawing-ml Line is structurally compatible with pptx Line
+  return buildLine(color, width) as unknown as Line;
+}
+
+function buildCellBorders(color: string, width: number): CellBorders {
+  const border = buildCellBorder(color, width);
   return {
-    properties: {},
-    textBody: {
-      bodyProperties: {},
-      paragraphs: [{ properties: {}, runs: [{ type: "text", text: cellSpec.text }] }],
-    },
+    left: border,
+    right: border,
+    top: border,
+    bottom: border,
   };
 }
 
-function buildTableRow(rowCells: readonly TableCellSpec[], rowHeight: Pixels): TableRow {
+function buildCellMargins(cellSpec: TableCellSpec): CellMargin | undefined {
+  const hasMargin =
+    cellSpec.marginLeft !== undefined ||
+    cellSpec.marginRight !== undefined ||
+    cellSpec.marginTop !== undefined ||
+    cellSpec.marginBottom !== undefined;
+
+  if (!hasMargin) {
+    return undefined;
+  }
+
   return {
-    height: rowHeight,
-    cells: rowCells.map(buildTableCell),
+    left: (cellSpec.marginLeft ?? 0) as Pixels,
+    right: (cellSpec.marginRight ?? 0) as Pixels,
+    top: (cellSpec.marginTop ?? 0) as Pixels,
+    bottom: (cellSpec.marginBottom ?? 0) as Pixels,
   };
+}
+
+function buildCellProperties(cellSpec: TableCellSpec): TableCellProperties {
+  const margins = buildCellMargins(cellSpec);
+
+  return {
+    ...(cellSpec.fill !== undefined && {
+      fill: { type: "solidFill" as const, color: { spec: { type: "srgb" as const, value: cellSpec.fill } } },
+    }),
+    ...(cellSpec.borderColor !== undefined && {
+      borders: buildCellBorders(cellSpec.borderColor, cellSpec.borderWidth ?? 1),
+    }),
+    ...(cellSpec.verticalAlignment !== undefined && {
+      anchor: mapVerticalAlignment(cellSpec.verticalAlignment),
+    }),
+    ...(margins !== undefined && { margins }),
+    ...(cellSpec.gridSpan !== undefined && cellSpec.gridSpan > 1 && { colSpan: cellSpec.gridSpan }),
+    ...(cellSpec.rowSpan !== undefined && cellSpec.rowSpan > 1 && { rowSpan: cellSpec.rowSpan }),
+  };
+}
+
+function buildCellTextBody(cellSpec: TableCellSpec): TextBody {
+  if (cellSpec.content) {
+    return contentToTextBody(cellSpec.content);
+  }
+  if (cellSpec.text !== undefined) {
+    return contentToTextBody(cellSpec.text);
+  }
+  throw new Error("TableCellSpec requires either 'text' or 'content'");
+}
+
+function buildTableCell(cellSpec: TableCellSpec): TableCell {
+  return {
+    properties: buildCellProperties(cellSpec),
+    textBody: buildCellTextBody(cellSpec),
+  };
+}
+
+/**
+ * Track merge regions from the spec to apply horizontalMerge/verticalMerge flags.
+ * Returns a Set of "row,col" keys for cells that should be marked as merged.
+ */
+function collectMergeFlags(rows: readonly (readonly TableCellSpec[])[]): {
+  hMerge: Set<string>;
+  vMerge: Set<string>;
+} {
+  const hMerge = new Set<string>();
+  const vMerge = new Set<string>();
+
+  for (let r = 0; r < rows.length; r++) {
+    const row = rows[r]!;
+    for (let c = 0; c < row.length; c++) {
+      const cell = row[c]!;
+      if (cell.gridSpan !== undefined && cell.gridSpan > 1) {
+        for (let i = 1; i < cell.gridSpan && c + i < row.length; i++) {
+          hMerge.add(`${r},${c + i}`);
+        }
+      }
+      if (cell.rowSpan !== undefined && cell.rowSpan > 1) {
+        for (let i = 1; i < cell.rowSpan && r + i < rows.length; i++) {
+          vMerge.add(`${r + i},${c}`);
+        }
+      }
+    }
+  }
+
+  return { hMerge, vMerge };
+}
+
+type BuildTableRowInput = {
+  readonly rowCells: readonly TableCellSpec[];
+  readonly rowHeight: Pixels;
+  readonly rowIndex: number;
+  readonly mergeFlags: { hMerge: Set<string>; vMerge: Set<string> };
+};
+
+function buildTableRow({ rowCells, rowHeight, rowIndex, mergeFlags }: BuildTableRowInput): TableRow {
+  const cells = rowCells.map((cellSpec, colIndex): TableCell => {
+    const key = `${rowIndex},${colIndex}`;
+    const isHMerge = mergeFlags.hMerge.has(key);
+    const isVMerge = mergeFlags.vMerge.has(key);
+
+    if (isHMerge || isVMerge) {
+      return {
+        properties: {
+          ...(isHMerge && { horizontalMerge: true }),
+          ...(isVMerge && { verticalMerge: true }),
+        },
+      };
+    }
+
+    return buildTableCell(cellSpec);
+  });
+
+  return { height: rowHeight, cells };
 }
 
 function buildTable(spec: TableSpec): Table {
@@ -437,12 +556,14 @@ function buildTable(spec: TableSpec): Table {
   const colWidth = (colCount > 0 ? spec.width / colCount : spec.width) as Pixels;
   const rowHeight = (rowCount > 0 ? spec.height / rowCount : spec.height) as Pixels;
 
+  const mergeFlags = collectMergeFlags(spec.rows);
+
   return {
     properties: {},
     grid: {
       columns: Array.from({ length: colCount }, () => ({ width: colWidth })),
     },
-    rows: spec.rows.map((row) => buildTableRow(row, rowHeight)),
+    rows: spec.rows.map((row, rowIndex) => buildTableRow({ rowCells: row, rowHeight, rowIndex, mergeFlags })),
   };
 }
 

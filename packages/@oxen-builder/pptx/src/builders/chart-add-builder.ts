@@ -22,6 +22,7 @@ import type { ChartAddSpec, ChartDataSpec } from "../types";
 import { patchChartTransform } from "@oxen-builder/pptx/patcher";
 import type { Transform } from "@oxen-office/pptx/domain/geometry";
 import { generateShapeId } from "./id-generator";
+import { getSlideRelsPath } from "./rels-utils";
 
 type AddContext = {
   readonly zipPackage: ZipPackage;
@@ -36,10 +37,6 @@ function requireText(value: string | null, context: string): string {
     throw new Error(context);
   }
   return value;
-}
-
-function getSlideRelsPath(slidePath: string): string {
-  return slidePath.replace(/\/([^/]+)\.xml$/, "/_rels/$1.xml.rels");
 }
 
 function getNextChartIndex(zipPackage: ZipPackage): number {

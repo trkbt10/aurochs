@@ -32,13 +32,10 @@ import type {
   // Effect types
   EffectsSpec,
   // 3D types
-  BevelSpec,
   Shape3dSpec,
   // Text types
   TextSpec,
   TextBodyPropertiesSpec,
-  TextAnchor,
-  TextVerticalType,
 } from "@oxen-builder/drawing-ml";
 
 // =============================================================================
@@ -210,11 +207,20 @@ export type BlipEffectSpec = {
  */
 export type ImageSpec = {
   readonly type: "image";
-  readonly path: string;
+  /** File path (CLI usage). Either `path` or `data` must be provided. */
+  readonly path?: string;
+  /** In-memory image bytes (MCP / browser usage). */
+  readonly data?: Uint8Array;
+  /** MIME type (required when `data` is provided, e.g. "image/png"). */
+  readonly mimeType?: string;
   readonly x: number;
   readonly y: number;
   readonly width: number;
   readonly height: number;
+  /** Rotation in degrees (0-360) */
+  readonly rotation?: number;
+  readonly flipH?: boolean;
+  readonly flipV?: boolean;
   /** Image effects (grayscale, tint, etc.) */
   readonly effects?: BlipEffectSpec;
   /**
@@ -226,7 +232,12 @@ export type ImageSpec = {
 
 export type MediaEmbedSpec = {
   readonly type: "video" | "audio";
-  readonly path: string;
+  /** File path (CLI usage). Either `path` or `data` must be provided. */
+  readonly path?: string;
+  /** In-memory media bytes (MCP / browser usage). */
+  readonly data?: Uint8Array;
+  /** MIME type (required when `data` is provided). */
+  readonly mimeType?: string;
 };
 
 /**
@@ -239,6 +250,10 @@ export type ConnectorSpec = {
   readonly y: number;
   readonly width: number;
   readonly height: number;
+  /** Rotation in degrees (0-360) */
+  readonly rotation?: number;
+  readonly flipH?: boolean;
+  readonly flipV?: boolean;
   readonly startShapeId?: string;
   readonly startSiteIndex?: number;
   readonly endShapeId?: string;
@@ -256,15 +271,40 @@ export type GroupSpec = {
   readonly y: number;
   readonly width: number;
   readonly height: number;
+  /** Rotation in degrees (0-360) */
+  readonly rotation?: number;
+  readonly flipH?: boolean;
+  readonly flipV?: boolean;
   readonly children: readonly (ShapeSpec | GroupSpec)[];
   readonly fill?: string;
 };
 
 /**
- * Table cell specification (for new tables)
+ * Table cell specification (for new tables).
+ * Either `text` (plain string) or `content` (rich text) must be provided.
  */
 export type TableCellSpec = {
-  readonly text: string;
+  /** Plain text content */
+  readonly text?: string;
+  /** Rich text content (alternative to text) */
+  readonly content?: TableTextBodySpec;
+  /** Cell background fill (hex color) */
+  readonly fill?: string;
+  /** Border color applied to all sides (hex color) */
+  readonly borderColor?: string;
+  /** Border width in points */
+  readonly borderWidth?: number;
+  /** Vertical text alignment within the cell */
+  readonly verticalAlignment?: "top" | "middle" | "bottom";
+  /** Cell padding in EMUs */
+  readonly marginLeft?: number;
+  readonly marginRight?: number;
+  readonly marginTop?: number;
+  readonly marginBottom?: number;
+  /** Horizontal merge span (number of columns this cell spans) */
+  readonly gridSpan?: number;
+  /** Vertical merge span (number of rows this cell spans) */
+  readonly rowSpan?: number;
 };
 
 /**
@@ -454,7 +494,12 @@ export type BackgroundGradientSpec = {
  */
 export type BackgroundImageSpec = {
   readonly type: "image";
-  readonly path: string;
+  /** File path (CLI usage). Either `path` or `data` must be provided. */
+  readonly path?: string;
+  /** In-memory image bytes (MCP / browser usage). */
+  readonly data?: Uint8Array;
+  /** MIME type (required when `data` is provided). */
+  readonly mimeType?: string;
   readonly mode?: "stretch" | "tile" | "cover";
 };
 

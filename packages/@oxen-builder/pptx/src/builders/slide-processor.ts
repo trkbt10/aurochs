@@ -2,6 +2,7 @@
  * @file Slide processor for applying element modifications
  *
  * High-level function to process slide modifications following the build.ts pattern.
+ * Supports all operations defined in SlideModSpec.
  */
 
 import { parseXml, serializeDocument, getByPath, type XmlDocument } from "@oxen/xml";
@@ -14,6 +15,13 @@ import type {
   GroupSpec,
   BackgroundFillSpec,
   TableUpdateSpec,
+  ChartAddSpec,
+  ChartUpdateSpec,
+  AnimationSpec,
+  CommentSpec,
+  NotesSpec,
+  SmartArtUpdateSpec,
+  SlideTransitionSpec,
 } from "../types/spec-types";
 import {
   shapeBuilder,
@@ -27,6 +35,13 @@ import {
 } from "./registry";
 import { applyBackgroundSpec, getExistingShapeIds } from "./slide-utils";
 import { applyTableUpdates } from "./table-update-builder";
+import { addChartsToSlide } from "./chart-add-builder";
+import { applyChartUpdates } from "./chart-builder";
+import { applyAnimations } from "./animation-builder";
+import { applyComments } from "./comment-builder";
+import { applyNotes } from "./notes-builder";
+import { applySmartArtUpdates } from "./smartart-builder";
+import { applySlideTransition } from "./transition-builder";
 
 /**
  * Slide modification input specification.
@@ -40,6 +55,13 @@ export type SlideModInput = {
   readonly addConnectors?: readonly ConnectorSpec[];
   readonly addGroups?: readonly GroupSpec[];
   readonly updateTables?: readonly TableUpdateSpec[];
+  readonly addCharts?: readonly ChartAddSpec[];
+  readonly updateCharts?: readonly ChartUpdateSpec[];
+  readonly addAnimations?: readonly AnimationSpec[];
+  readonly addComments?: readonly CommentSpec[];
+  readonly speakerNotes?: NotesSpec;
+  readonly updateSmartArt?: readonly SmartArtUpdateSpec[];
+  readonly transition?: SlideTransitionSpec;
 };
 
 /**
@@ -71,9 +93,21 @@ function applyTableUpdatesIfNeeded(
   return applyTableUpdates(doc, updates).doc;
 }
 
+function applyTransitionIfNeeded(
+  doc: XmlDocument,
+  transition: SlideTransitionSpec | undefined,
+): XmlDocument {
+  if (!transition) {
+    return doc;
+  }
+  return applySlideTransition(doc, transition);
+}
+
 /**
  * Process slide modifications using the standard builder pipeline.
- * Handles background, shapes, images, connectors, groups, tables, and table updates.
+ * Handles all operations defined in SlideModSpec: background, shapes, images,
+ * connectors, groups, tables, charts, animations, comments, notes, SmartArt,
+ * and transitions.
  */
 export async function processSlideElements(
   ctx: SlideProcessContext,
@@ -156,10 +190,45 @@ export async function processSlideElements(
     builder: tableBuilder,
   });
 
-  // Apply table updates
-  const finalDoc = applyTableUpdatesIfNeeded(afterTables, input.updateTables);
+  // Add charts
+  const { doc: afterChartAdds, added: chartsAdded } = addChartsToSlide({
+    slideDoc: afterTables,
+    specs: input.addCharts ?? [],
+    ctx: { zipPackage: ctx.zipPackage, slidePath, existingIds },
+  });
 
-  const totalAdded = shapesAdded + imagesAdded + connectorsAdded + groupsAdded + tablesAdded;
+  // Update charts
+  const { doc: afterCharts } = applyChartUpdates(
+    afterChartAdds,
+    { zipPackage: ctx.zipPackage, slidePath },
+    input.updateCharts ?? [],
+  );
+
+  // Apply table updates
+  const afterTableUpdates = applyTableUpdatesIfNeeded(afterCharts, input.updateTables);
+
+  // Apply animations
+  const { doc: afterAnimations } = applyAnimations(afterTableUpdates, input.addAnimations ?? []);
+
+  // Apply comments (operates on zipPackage directly)
+  if (input.addComments && input.addComments.length > 0) {
+    applyComments(ctx.zipPackage, slidePath, input.addComments);
+  }
+
+  // Apply speaker notes (operates on zipPackage directly)
+  if (input.speakerNotes) {
+    applyNotes(ctx.zipPackage, slidePath, input.speakerNotes);
+  }
+
+  // Apply SmartArt updates (operates on zipPackage directly)
+  if (input.updateSmartArt && input.updateSmartArt.length > 0) {
+    applySmartArtUpdates(ctx.zipPackage, slidePath, input.updateSmartArt);
+  }
+
+  // Apply transition
+  const finalDoc = applyTransitionIfNeeded(afterAnimations, input.transition);
+
+  const totalAdded = shapesAdded + imagesAdded + connectorsAdded + groupsAdded + tablesAdded + chartsAdded;
 
   const updatedXml = serializeDocument(finalDoc, { declaration: true, standalone: true });
   ctx.zipPackage.writeText(slidePath, updatedXml);

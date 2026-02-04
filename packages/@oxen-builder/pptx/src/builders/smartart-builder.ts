@@ -13,13 +13,7 @@ import {
 import type { ZipPackage } from "@oxen/zip";
 import { patchDiagram, type DiagramChange, type DiagramFiles } from "@oxen-builder/pptx/patcher";
 import type { SmartArtUpdateSpec, DiagramChangeSpec } from "../types";
-
-/**
- * Get the relationship path for a slide.
- */
-function getSlideRelsPath(slidePath: string): string {
-  return slidePath.replace(/\/([^/]+)\.xml$/, "/_rels/$1.xml.rels");
-}
+import { getSlideRelsPath } from "./rels-utils";
 
 /**
  * Find the diagram data path from a relationship.
@@ -116,10 +110,19 @@ function normalizeRelPath(relsPath: string, target: string): string {
 }
 
 /**
- * Convert CLI change spec to patcher change type.
+ * Convert CLI change spec to patcher change type with explicit mapping.
  */
 function convertChange(spec: DiagramChangeSpec): DiagramChange {
-  return spec as DiagramChange;
+  switch (spec.type) {
+    case "nodeText":
+      return { type: "nodeText", nodeId: spec.nodeId, text: spec.text };
+    case "addNode":
+      return { type: "addNode", parentId: spec.parentId, nodeId: spec.nodeId, text: spec.text };
+    case "removeNode":
+      return { type: "removeNode", nodeId: spec.nodeId };
+    case "setConnection":
+      return { type: "setConnection", srcId: spec.srcId, destId: spec.destId, connectionType: spec.connectionType };
+  }
 }
 
 /**
@@ -143,8 +146,7 @@ export function applySmartArtUpdates(
   for (const spec of specs) {
     const paths = findDiagramPaths(pkg, slideRelsPath, spec.resourceId);
     if (!paths) {
-      console.warn(`SmartArt update: could not find diagram for resourceId ${spec.resourceId}`);
-      continue;
+      throw new Error(`SmartArt update failed: could not find diagram for resourceId "${spec.resourceId}"`);
     }
 
     // Read diagram files
@@ -154,8 +156,7 @@ export function applySmartArtUpdates(
     const quickStyleXml = pkg.readText(paths.quickStyle);
 
     if (!dataXml || !layoutXml || !colorsXml || !quickStyleXml) {
-      console.warn(`SmartArt update: missing diagram files for resourceId ${spec.resourceId}`);
-      continue;
+      throw new Error(`SmartArt update failed: missing diagram files for resourceId "${spec.resourceId}"`);
     }
 
     const diagramFiles: DiagramFiles = {
