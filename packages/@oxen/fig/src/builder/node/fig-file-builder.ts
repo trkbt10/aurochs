@@ -298,8 +298,18 @@ export class FigFileBuilder {
 
   /**
    * Add a SECTION node
+   *
+   * Sections require FRAME-like fields: strokeWeight, strokeAlign, strokeJoin,
+   * fillPaints, strokePaints, fillGeometry, cornerRadius, frameMaskDisabled.
+   * Without these, Figma import fails with "Internal error during import".
    */
   addSection(data: SectionNodeData): number {
+    // Section needs a fill geometry blob (like FRAME)
+    const w = data.size.x;
+    const h = data.size.y;
+    const blobBytes = encodeRoundedRectangleBlob(w, h, 2);
+    const blobIndex = this.addBlob({ bytes: blobBytes });
+
     const node = this.createNodeChange({
       localID: data.localID,
       parentID: data.parentID,
@@ -309,10 +319,38 @@ export class FigFileBuilder {
       transform: data.transform,
       visible: data.visible,
       opacity: data.opacity,
+      fillPaints: [{
+        type: { value: 0, name: "SOLID" },
+        color: { r: 1, g: 1, b: 1, a: 1 },
+        opacity: 1,
+        visible: true,
+        blendMode: { value: 1, name: "NORMAL" },
+      }],
     });
-    // Add section-specific field
+
+    // Section requires FRAME-like fields
+    node.strokeWeight = 1;
+    node.strokeAlign = { value: 1, name: "INSIDE" };
+    node.strokeJoin = { value: 0, name: "MITER" };
+    node.cornerRadius = 2;
+    node.frameMaskDisabled = true;
+    node.stackPrimarySizing = { value: 0, name: "FIXED" };
+    node.strokePaints = [{
+      type: { value: 0, name: "SOLID" },
+      color: { r: 0, g: 0, b: 0, a: 1 },
+      opacity: 0.1,
+      visible: true,
+      blendMode: { value: 1, name: "NORMAL" },
+    }];
+    node.fillGeometry = [{
+      windingRule: { value: 0, name: "NONZERO" },
+      commandsBlob: blobIndex,
+      styleID: 0,
+    }];
+
+    // Section-specific field
     if (data.sectionContentsHidden) {
-      (node as Record<string, unknown>).sectionContentsHidden = data.sectionContentsHidden;
+      node.sectionContentsHidden = data.sectionContentsHidden;
     }
     this.nodes.push(node);
     return data.localID;

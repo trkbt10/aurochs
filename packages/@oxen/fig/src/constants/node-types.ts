@@ -2,8 +2,9 @@
  * @file Node type constants for Figma fig format
  */
 
-/** Node type values matching Figma's schema */
+/** Node type values matching Figma's schema (from figma-schema.json NodeType enum) */
 export const NODE_TYPE_VALUES = {
+  NONE: 0,
   DOCUMENT: 1,
   CANVAS: 2,
   GROUP: 3,
@@ -17,23 +18,25 @@ export const NODE_TYPE_VALUES = {
   REGULAR_POLYGON: 11,
   ROUNDED_RECTANGLE: 12,
   TEXT: 13,
+  SLICE: 14,
   SYMBOL: 15,
   INSTANCE: 16,
-  SLICE: 17,
-  COMPONENT: 18,
-  COMPONENT_SET: 19,
-  STICKY: 20,
-  CONNECTOR: 21,
-  SHAPE_WITH_TEXT: 22,
-  CODE_BLOCK: 23,
-  STAMP: 24,
-  WIDGET: 25,
-  EMBED: 26,
-  LINK_UNFURL: 27,
-  MEDIA: 28,
-  SECTION: 29,
-  TABLE: 30,
-  TABLE_CELL: 31,
+  STICKY: 17,
+  SHAPE_WITH_TEXT: 18,
+  CONNECTOR: 19,
+  CODE_BLOCK: 20,
+  WIDGET: 21,
+  STAMP: 22,
+  MEDIA: 23,
+  HIGHLIGHT: 24,
+  SECTION: 25,
+  SECTION_OVERLAY: 26,
+  WASHI_TAPE: 27,
+  VARIABLE: 28,
+  TABLE: 29,
+  TABLE_CELL: 30,
+  VARIABLE_SET: 31,
+  SLIDE: 32,
 } as const;
 
 export type NodeType = keyof typeof NODE_TYPE_VALUES;
