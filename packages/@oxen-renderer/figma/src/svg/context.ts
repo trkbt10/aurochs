@@ -43,6 +43,7 @@ export function createFigSvgRenderContext(
     images: config?.images ?? new Map(),
     showHiddenNodes: config?.showHiddenNodes ?? false,
     symbolMap: config?.symbolMap,
+    resolvedSymbolCache: config?.resolvedSymbolCache,
     fontLoader: config?.fontLoader,
   };
 }

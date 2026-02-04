@@ -40,6 +40,8 @@ export type FigSvgRenderContext = {
   readonly showHiddenNodes: boolean;
   /** Symbol map for INSTANCE node resolution (GUID string -> FigNode) */
   readonly symbolMap?: ReadonlyMap<string, FigNode>;
+  /** Pre-resolved SYMBOL cache (GUID string -> resolved FigNode with expanded children) */
+  readonly resolvedSymbolCache?: ReadonlyMap<string, FigNode>;
   /** Font loader for path-based text rendering */
   readonly fontLoader?: FontLoader;
 };
@@ -55,6 +57,8 @@ export type FigSvgRenderContextConfig = {
   readonly showHiddenNodes?: boolean;
   /** Symbol map for INSTANCE node resolution (GUID string -> FigNode) */
   readonly symbolMap?: ReadonlyMap<string, FigNode>;
+  /** Pre-resolved SYMBOL cache (GUID string -> resolved FigNode with expanded children) */
+  readonly resolvedSymbolCache?: ReadonlyMap<string, FigNode>;
   /** Font loader for path-based text rendering */
   readonly fontLoader?: FontLoader;
 };

@@ -17,7 +17,8 @@ import {
 } from "./nodes";
 import { renderTextNodeAsPath, type PathRenderContext } from "./nodes/text/path-render";
 import { renderTextNodeFromDerivedData, hasDerivedPathData, type DerivedPathRenderContext } from "./nodes/text/derived-path-render";
-import { resolveSymbol, cloneSymbolChildren, type FigSymbolData, type FigDerivedSymbolData } from "./symbol-resolver";
+import { cloneSymbolChildren, getInstanceSymbolID, getInstanceSymbolOverrides, resolveSymbolGuidStr, type FigDerivedSymbolData } from "../symbols/symbol-resolver";
+import { preResolveSymbols } from "../symbols/symbol-pre-resolver";
 import type { FontLoader } from "../font";
 
 // =============================================================================
@@ -115,6 +116,8 @@ export type FigSvgRenderOptions = {
   readonly showHiddenNodes?: boolean;
   /** Symbol map for INSTANCE node resolution (from buildNodeTree) */
   readonly symbolMap?: ReadonlyMap<string, FigNode>;
+  /** Pre-resolved SYMBOL cache (GUID string -> resolved FigNode with expanded children) */
+  readonly resolvedSymbolCache?: ReadonlyMap<string, FigNode>;
   /** Font loader for path-based text rendering (enables high-precision text) */
   readonly fontLoader?: FontLoader;
 };
@@ -137,16 +140,22 @@ export function renderFigToSvg(
   const width = options?.width ?? 800;
   const height = options?.height ?? 600;
 
+  const warnings: string[] = [];
+
+  // Pre-resolve SYMBOLs if symbolMap is provided
+  const resolvedSymbolCache =
+    options?.resolvedSymbolCache ??
+    (options?.symbolMap ? preResolveSymbols(options.symbolMap, { warnings }) : undefined);
+
   const ctx = createFigSvgRenderContext({
     canvasSize: { width, height },
     blobs: options?.blobs ?? [],
     images: options?.images ?? new Map(),
     showHiddenNodes: options?.showHiddenNodes,
     symbolMap: options?.symbolMap,
+    resolvedSymbolCache,
     fontLoader: options?.fontLoader,
   });
-
-  const warnings: string[] = [];
 
   // Normalize root transforms if requested
   const nodesToRender = getNodesToRender(nodes, options?.normalizeRootTransform);
@@ -308,7 +317,7 @@ function renderChildrenWithMasks(
  * @param node - The node being rendered
  * @param nodeType - The node's type string
  * @param nodeData - The node data as a record
- * @param ctx - Render context with symbolMap
+ * @param ctx - Render context with symbolMap and resolvedSymbolCache
  * @param warnings - Array to collect warnings
  * @returns Resolved children (from SYMBOL if INSTANCE, otherwise original)
  */
@@ -319,37 +328,45 @@ function resolveInstanceChildren(
   ctx: FigSvgRenderContext,
   warnings: string[]
 ): readonly FigNode[] {
-  const directChildren = node.children ?? [];
-
-  // Only resolve for INSTANCE nodes without direct children
-  if (nodeType !== "INSTANCE" || directChildren.length > 0) {
-    return directChildren;
+  if (nodeType !== "INSTANCE") {
+    return node.children ?? [];
   }
 
-  // Check if symbolMap is available
+  // Extract symbolID — handles both nested (symbolData.symbolID) and top-level (symbolID) formats
+  const symbolID = getInstanceSymbolID(nodeData);
+  if (!symbolID) {
+    return node.children ?? [];
+  }
+
   if (!ctx.symbolMap) {
-    return directChildren;
+    const warning =
+      "Symbol map missing: INSTANCE nodes will not be resolved (pass symbolMap from buildNodeTree).";
+    if (!warnings.includes(warning)) {
+      warnings.push(warning);
+    }
+    return node.children ?? [];
   }
 
-  // Get symbolData from the INSTANCE node
-  const symbolData = nodeData.symbolData as FigSymbolData | undefined;
-  if (!symbolData?.symbolID) {
-    return directChildren;
+  // Resolve SYMBOL with localID fallback (handles sessionID mismatch in builder files)
+  const resolved = resolveSymbolGuidStr(symbolID, ctx.symbolMap);
+  if (!resolved) {
+    const symbolIdStr = `${symbolID.sessionID}:${symbolID.localID}`;
+    warnings.push(
+      `Could not resolve SYMBOL for INSTANCE "${node.name ?? "unnamed"}" (symbolID: ${symbolIdStr})`
+    );
+    return node.children ?? [];
   }
 
-  // Resolve the SYMBOL node
-  const symbolNode = resolveSymbol(symbolData, ctx.symbolMap);
-  if (!symbolNode) {
-    warnings.push(`Could not resolve SYMBOL for INSTANCE "${node.name ?? "unnamed"}"`);
-    return directChildren;
-  }
+  // Try pre-resolved cache first, then use the resolved node directly
+  const symbolNode = ctx.resolvedSymbolCache?.get(resolved.guidStr) ?? resolved.node;
 
-  // Get derivedSymbolData for transform overrides (from INSTANCE sizing)
+  // Get overrides and derivedSymbolData for transform overrides
+  const symbolOverrides = getInstanceSymbolOverrides(nodeData);
   const derivedSymbolData = nodeData.derivedSymbolData as FigDerivedSymbolData | undefined;
 
   // Clone SYMBOL children with overrides applied
   return cloneSymbolChildren(symbolNode, {
-    symbolOverrides: symbolData.symbolOverrides,
+    symbolOverrides,
     derivedSymbolData,
   });
 }
@@ -651,16 +668,22 @@ export async function renderFigToSvgAsync(
   const width = options?.width ?? 800;
   const height = options?.height ?? 600;
 
+  const warnings: string[] = [];
+
+  // Pre-resolve SYMBOLs if symbolMap is provided
+  const resolvedSymbolCache =
+    options?.resolvedSymbolCache ??
+    (options?.symbolMap ? preResolveSymbols(options.symbolMap, { warnings }) : undefined);
+
   const ctx = createFigSvgRenderContext({
     canvasSize: { width, height },
     blobs: options?.blobs ?? [],
     images: options?.images ?? new Map(),
     showHiddenNodes: options?.showHiddenNodes,
     symbolMap: options?.symbolMap,
+    resolvedSymbolCache,
     fontLoader: options?.fontLoader,
   });
-
-  const warnings: string[] = [];
   const nodesToRender = getNodesToRender(nodes, options?.normalizeRootTransform);
 
   const renderedNodes: SvgString[] = [];

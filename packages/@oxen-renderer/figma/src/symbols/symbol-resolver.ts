@@ -39,6 +39,50 @@ export type FigGuidPath = {
 };
 
 // =============================================================================
+// Symbol ID Extraction
+// =============================================================================
+
+/**
+ * Extract symbolID from an INSTANCE node.
+ *
+ * Handles two storage formats:
+ * - Real Figma exports: `symbolData.symbolID` (nested inside symbolData message)
+ * - Builder-generated files: `symbolID` at the node's top level
+ *
+ * @returns The symbolID GUID, or undefined if not present
+ */
+export function getInstanceSymbolID(nodeData: Record<string, unknown>): FigGuid | undefined {
+  // 1. Check symbolData.symbolID (real Figma exports)
+  const symbolData = nodeData.symbolData as FigSymbolData | undefined;
+  if (symbolData?.symbolID) {
+    return symbolData.symbolID;
+  }
+
+  // 2. Check top-level symbolID (builder-generated files)
+  const topLevelSymbolID = nodeData.symbolID as FigGuid | undefined;
+  if (topLevelSymbolID && typeof topLevelSymbolID === "object" && "sessionID" in topLevelSymbolID) {
+    return topLevelSymbolID;
+  }
+
+  return undefined;
+}
+
+/**
+ * Extract symbolOverrides from an INSTANCE node.
+ *
+ * Handles both formats:
+ * - `symbolData.symbolOverrides` (real Figma exports)
+ * - `symbolOverrides` at node's top level (builder-generated files)
+ */
+export function getInstanceSymbolOverrides(nodeData: Record<string, unknown>): readonly FigSymbolOverride[] | undefined {
+  const symbolData = nodeData.symbolData as FigSymbolData | undefined;
+  if (symbolData?.symbolOverrides) {
+    return symbolData.symbolOverrides;
+  }
+  return nodeData.symbolOverrides as readonly FigSymbolOverride[] | undefined;
+}
+
+// =============================================================================
 // Symbol Resolution
 // =============================================================================
 
@@ -55,6 +99,52 @@ export function resolveSymbol(
 ): FigNode | undefined {
   const symbolGuidStr = guidToString(symbolData.symbolID);
   return symbolMap.get(symbolGuidStr);
+}
+
+/**
+ * Look up a node in symbolMap by GUID, with localID fallback.
+ *
+ * Builder-generated .fig files may have sessionID mismatches between
+ * the SYMBOL node's guid and the INSTANCE's symbolID reference.
+ * When exact match fails, searches by localID suffix (`:localID`).
+ */
+export function resolveSymbolByGuid(
+  symbolID: FigGuid,
+  symbolMap: ReadonlyMap<string, FigNode>,
+): FigNode | undefined {
+  const exactKey = guidToString(symbolID);
+  const exact = symbolMap.get(exactKey);
+  if (exact) return exact;
+
+  // Fallback: search by localID suffix
+  const localIdSuffix = `:${symbolID.localID}`;
+  for (const [key, node] of symbolMap) {
+    if (key.endsWith(localIdSuffix)) {
+      return node;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Resolve a GUID string from symbolMap, with localID fallback.
+ * Returns both the resolved node and the actual key in the map.
+ */
+export function resolveSymbolGuidStr(
+  symbolID: FigGuid,
+  symbolMap: ReadonlyMap<string, FigNode>,
+): { node: FigNode; guidStr: string } | undefined {
+  const exactKey = guidToString(symbolID);
+  const exact = symbolMap.get(exactKey);
+  if (exact) return { node: exact, guidStr: exactKey };
+
+  const localIdSuffix = `:${symbolID.localID}`;
+  for (const [key, node] of symbolMap) {
+    if (key.endsWith(localIdSuffix)) {
+      return { node, guidStr: key };
+    }
+  }
+  return undefined;
 }
 
 // =============================================================================
