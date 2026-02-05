@@ -31,23 +31,14 @@ export {
 } from "./hooks/useSvgDefs";
 
 // Hooks - Animation
-export type {
-  UseAnimationPlayerOptions,
-  UseAnimationPlayerResult,
-} from "./hooks/useAnimationPlayer";
+export type { UseAnimationPlayerOptions, UseAnimationPlayerResult } from "./hooks/useAnimationPlayer";
 export { useAnimationPlayer } from "./hooks/useAnimationPlayer";
 
-export type {
-  UseSlideAnimationOptions,
-  UseSlideAnimationResult,
-} from "./hooks/useSlideAnimation";
+export type { UseSlideAnimationOptions, UseSlideAnimationResult } from "./hooks/useSlideAnimation";
 export { useSlideAnimation } from "./hooks/useSlideAnimation";
 
 // Hooks - Slide Transition
-export type {
-  UseSlideTransitionOptions,
-  UseSlideTransitionResult,
-} from "./hooks/useSlideTransition";
+export type { UseSlideTransitionOptions, UseSlideTransitionResult } from "./hooks/useSlideTransition";
 export { useSlideTransition } from "./hooks/useSlideTransition";
 
 // Hooks - Lazy SVG Cache
@@ -55,11 +46,7 @@ export type { UseLazySvgCacheResult } from "./hooks/useLazySvgCache";
 export { useLazySvgCache } from "./hooks/useLazySvgCache";
 
 // SVG Content Renderer
-export {
-  SvgContentRenderer,
-  type SvgContentRendererProps,
-  type SvgRenderMode,
-} from "./SvgContentRenderer";
+export { SvgContentRenderer, type SvgContentRendererProps, type SvgRenderMode } from "./SvgContentRenderer";
 
 // Primitives
 export {
@@ -73,7 +60,6 @@ export {
   PathElement,
   getGeometryPathData,
   TextRenderer,
-  extractText3DRuns,
   type SvgFillProps,
   type FillResult,
   type SvgStrokeProps,
@@ -97,16 +83,10 @@ export { measureLayoutSpanTextWidth } from "./text-measure/span-measure";
 // import directly from @oxen-renderer/drawing-ml
 
 // PPTX-specific shape style hook
-export {
-  useShapeStyle,
-  type PptxShapeStyleInput as ShapeStyleInput,
-} from "./hooks/useShapeStylePptx";
+export { useShapeStyle, type PptxShapeStyleInput as ShapeStyleInput } from "./hooks/useShapeStylePptx";
 
 // DrawingML adapter for shared rendering
-export {
-  createDrawingMLContext,
-  getDrawingMLProviderProps,
-} from "./drawing-ml-adapter";
+export { createDrawingMLContext, getDrawingMLProviderProps } from "./drawing-ml-adapter";
 
 // Shapes
 export {
@@ -136,9 +116,4 @@ export {
 } from "./Background";
 
 // Slide Renderer
-export {
-  SlideRenderer,
-  SlideRendererSvg,
-  type SlideRendererProps,
-  type SlideRendererSvgProps,
-} from "./SlideRenderer";
+export { SlideRenderer, SlideRendererSvg, type SlideRendererProps, type SlideRendererSvgProps } from "./SlideRenderer";

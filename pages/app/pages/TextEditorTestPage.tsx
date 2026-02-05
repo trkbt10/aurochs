@@ -35,7 +35,6 @@ import {
   type TextSelectionContext,
 } from "@oxen-ui/pptx-editor/editors/text/text-property-extractor";
 import { getExtractionValue, isMixed } from "@oxen-ui/pptx-editor/editors/text/mixed-properties";
-import "./DrawingMLTestPage.css";
 
 // Local test fixtures for TextEditorTestPage
 const testSlideSize = {
