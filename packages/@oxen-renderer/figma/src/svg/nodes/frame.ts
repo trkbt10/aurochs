@@ -20,10 +20,15 @@ import {
 } from "./extract-props";
 
 function resolveClipsContent(node: FigNode): boolean {
-  const raw = node.clipsContent;
-  if (raw === true) return true;
-  if (raw === false) return false;
+  // Explicit clipsContent (set by mergeSymbolProperties or API clients)
+  if (node.clipsContent === true) return true;
+  if (node.clipsContent === false) return false;
 
+  // Kiwi schema field: frameMaskDisabled (inverted meaning)
+  if (node.frameMaskDisabled === true) return false;
+  if (node.frameMaskDisabled === false) return true;
+
+  // Default based on node type
   const nodeType = getNodeType(node);
   if (nodeType === "INSTANCE") {
     return false;

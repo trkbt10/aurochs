@@ -20,6 +20,38 @@ import {
 export type { FigEffect, FigEffectType };
 
 // =============================================================================
+// Filter Bounds Computation
+// =============================================================================
+
+/**
+ * Compute filter region as the union of shape bounds and all shadow regions.
+ * Each shadow region = shape shifted by (offsetX, offsetY), expanded by radius (= 2 * stdDeviation).
+ * Matches Figma's SVG export filter region calculation.
+ */
+function computeShadowFilterBounds(
+  shadows: readonly FigEffect[],
+  bounds: { x: number; y: number; width: number; height: number },
+): { x: number; y: number; width: number; height: number } {
+  let minX = bounds.x;
+  let minY = bounds.y;
+  let maxX = bounds.x + bounds.width;
+  let maxY = bounds.y + bounds.height;
+
+  for (const shadow of shadows) {
+    const offsetX = shadow.offset?.x ?? 0;
+    const offsetY = shadow.offset?.y ?? 0;
+    const blurExpansion = shadow.radius ?? 0; // 2 * stdDeviation = 2 * (radius / 2) = radius
+
+    minX = Math.min(minX, bounds.x + offsetX - blurExpansion);
+    minY = Math.min(minY, bounds.y + offsetY - blurExpansion);
+    maxX = Math.max(maxX, bounds.x + bounds.width + offsetX + blurExpansion);
+    maxY = Math.max(maxY, bounds.y + bounds.height + offsetY + blurExpansion);
+  }
+
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+}
+
+// =============================================================================
 // Effect Helpers
 // =============================================================================
 
@@ -82,20 +114,9 @@ export function createDropShadowFilter(
 
   const id = ctx.defs.generateId("shadow");
 
-  // Calculate filter region to accommodate all shadows
-  // We need to expand the filter region to include the shadow offsets and blur radii
-  const { expandX, expandY } = shadows.reduce(
-    (acc, shadow) => {
-      const offsetX = Math.abs(shadow.offset?.x ?? 0);
-      const offsetY = Math.abs(shadow.offset?.y ?? 0);
-      const blur = (shadow.radius ?? 0) * 1.5; // stdDeviation is radius/2, but we need extra space
-      return {
-        expandX: Math.max(acc.expandX, offsetX + blur),
-        expandY: Math.max(acc.expandY, offsetY + blur),
-      };
-    },
-    { expandX: 0, expandY: 0 }
-  );
+  // Calculate filter region as union of shape bounds and all shadow regions.
+  // Each shadow region = shape shifted by offset, expanded by 2*stdDeviation (= radius).
+  const filterBounds = computeShadowFilterBounds(shadows, bounds);
 
   // Build filter primitives
   const primitives: SvgString[] = [];
@@ -135,12 +156,13 @@ export function createDropShadowFilter(
       })
     );
 
-    // Apply shadow color via color matrix
+    // Apply shadow color via color matrix (4x5 = 20 values)
+    // Row 4: 0 0 0 alpha 0 → output_A = alpha * srcA (proportional fade)
     const color = shadow.color ?? { r: 0, g: 0, b: 0, a: 0.25 };
     primitives.push(
       feColorMatrix({
         type: "matrix",
-        values: "0 0 0 0 " + color.r + " 0 0 0 0 " + color.g + " 0 0 0 0 " + color.b + " 0 0 0 0 " + color.a + " 0",
+        values: "0 0 0 0 " + color.r + " 0 0 0 0 " + color.g + " 0 0 0 0 " + color.b + " 0 0 0 " + color.a + " 0",
       })
     );
 
@@ -166,14 +188,11 @@ export function createDropShadowFilter(
     })
   );
 
-  // Create filter with expanded bounds
+  // Create filter with computed bounds
   const filterDef = filter(
     {
       id,
-      x: bounds.x - expandX,
-      y: bounds.y - expandY,
-      width: bounds.width + expandX * 2,
-      height: bounds.height + expandY * 2,
+      ...filterBounds,
       filterUnits: "userSpaceOnUse",
       "color-interpolation-filters": "sRGB",
     },
@@ -229,19 +248,8 @@ export function createInnerShadowFilter(
 
   const id = ctx.defs.generateId("inner-shadow");
 
-  // Calculate filter region
-  const { expandX, expandY } = shadows.reduce(
-    (acc, shadow) => {
-      const offsetX = Math.abs(shadow.offset?.x ?? 0);
-      const offsetY = Math.abs(shadow.offset?.y ?? 0);
-      const blur = (shadow.radius ?? 0) * 1.5;
-      return {
-        expandX: Math.max(acc.expandX, offsetX + blur),
-        expandY: Math.max(acc.expandY, offsetY + blur),
-      };
-    },
-    { expandX: 0, expandY: 0 }
-  );
+  // Inner shadows are contained within the shape, use same union-based calculation
+  const filterBounds = computeShadowFilterBounds(shadows, bounds);
 
   const primitives: SvgString[] = [];
 
@@ -315,10 +323,7 @@ export function createInnerShadowFilter(
   const filterDef = filter(
     {
       id,
-      x: bounds.x - expandX,
-      y: bounds.y - expandY,
-      width: bounds.width + expandX * 2,
-      height: bounds.height + expandY * 2,
+      ...filterBounds,
       filterUnits: "userSpaceOnUse",
       "color-interpolation-filters": "sRGB",
     },
@@ -371,7 +376,7 @@ export function createLayerBlurFilter(
 
   const id = ctx.defs.generateId("layer-blur");
   const stdDeviation = radius / 2;
-  const expand = radius * 1.5;
+  const expand = radius; // 2 * stdDeviation
 
   const primitives: SvgString[] = [
     feGaussianBlur({
@@ -450,24 +455,12 @@ export function createCombinedFilter(
 
   const id = ctx.defs.generateId("effects");
 
-  // Calculate combined filter region
+  // Calculate combined filter region using union of all effect regions
   const allEffects = [...dropShadows, ...innerShadows];
   if (layerBlur) {
     allEffects.push(layerBlur);
   }
-
-  const { expandX, expandY } = allEffects.reduce(
-    (acc, effect) => {
-      const offsetX = Math.abs(effect.offset?.x ?? 0);
-      const offsetY = Math.abs(effect.offset?.y ?? 0);
-      const blur = (effect.radius ?? 0) * 1.5;
-      return {
-        expandX: Math.max(acc.expandX, offsetX + blur),
-        expandY: Math.max(acc.expandY, offsetY + blur),
-      };
-    },
-    { expandX: 0, expandY: 0 }
-  );
+  const filterBounds = computeShadowFilterBounds(allEffects, bounds);
 
   const primitives: SvgString[] = [];
   let lastResult = "SourceGraphic";
@@ -521,7 +514,7 @@ export function createCombinedFilter(
       primitives.push(
         feColorMatrix({
           type: "matrix",
-          values: "0 0 0 0 " + color.r + " 0 0 0 0 " + color.g + " 0 0 0 0 " + color.b + " 0 0 0 0 " + (color.a ?? 0.25) + " 0",
+          values: "0 0 0 0 " + color.r + " 0 0 0 0 " + color.g + " 0 0 0 0 " + color.b + " 0 0 0 " + (color.a ?? 0.25) + " 0",
         })
       );
 
@@ -616,10 +609,7 @@ export function createCombinedFilter(
   const filterDef = filter(
     {
       id,
-      x: bounds.x - expandX,
-      y: bounds.y - expandY,
-      width: bounds.width + expandX * 2,
-      height: bounds.height + expandY * 2,
+      ...filterBounds,
       filterUnits: "userSpaceOnUse",
       "color-interpolation-filters": "sRGB",
     },

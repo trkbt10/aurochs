@@ -216,16 +216,88 @@ function isMaskNode(node: FigNode): boolean {
 }
 
 /**
- * Resolve children for INSTANCE nodes that reference a SYMBOL
+ * Result of resolving an INSTANCE node against its SYMBOL
  */
-function resolveInstanceChildren(
+type InstanceResolution = {
+  /** The node to render (may have SYMBOL properties merged in) */
+  readonly node: FigNode;
+  /** Resolved children (cloned from SYMBOL) */
+  readonly children: readonly FigNode[];
+};
+
+/**
+ * Merge SYMBOL style properties into INSTANCE node.
+ *
+ * SYMBOL properties always take precedence for visual/style attributes.
+ * In Figma's .fig format, INSTANCE nodes inherit all visual properties
+ * from their referenced SYMBOL — direct property overrides on the
+ * INSTANCE node itself (e.g. fillPaints, size) are ignored.
+ * Instance-specific overrides go through symbolOverrides/derivedSymbolData,
+ * which are applied separately via cloneSymbolChildren.
+ */
+function mergeSymbolProperties(instanceNode: FigNode, symbolNode: FigNode): FigNode {
+  const merged: Record<string, unknown> = { ...instanceNode };
+
+  // SYMBOL's visual properties always override INSTANCE-level values.
+  // fillPaints (background)
+  if (symbolNode.fillPaints) {
+    merged.fillPaints = symbolNode.fillPaints;
+  }
+  // strokePaints
+  if (symbolNode.strokePaints) {
+    merged.strokePaints = symbolNode.strokePaints;
+  }
+  // strokeWeight
+  if (symbolNode.strokeWeight !== undefined) {
+    merged.strokeWeight = symbolNode.strokeWeight;
+  }
+  // cornerRadius
+  if (symbolNode.cornerRadius !== undefined) {
+    merged.cornerRadius = symbolNode.cornerRadius;
+  }
+  // rectangleCornerRadii
+  if (symbolNode.rectangleCornerRadii) {
+    merged.rectangleCornerRadii = symbolNode.rectangleCornerRadii;
+  }
+  // fillGeometry
+  if (symbolNode.fillGeometry) {
+    merged.fillGeometry = symbolNode.fillGeometry;
+  }
+  // strokeGeometry
+  if (symbolNode.strokeGeometry) {
+    merged.strokeGeometry = symbolNode.strokeGeometry;
+  }
+  // clipsContent / frameMaskDisabled
+  if (symbolNode.frameMaskDisabled !== undefined) {
+    merged.frameMaskDisabled = symbolNode.frameMaskDisabled;
+  } else if (symbolNode.clipsContent !== undefined) {
+    merged.clipsContent = symbolNode.clipsContent;
+  }
+  // effects
+  if (symbolNode.effects) {
+    merged.effects = symbolNode.effects;
+  }
+  // size — INSTANCE renders at SYMBOL's frame size
+  if (symbolNode.size) {
+    merged.size = symbolNode.size;
+  }
+  // opacity — INSTANCE-level opacity is not applied in .fig import
+  merged.opacity = symbolNode.opacity;
+
+  return merged as FigNode;
+}
+
+/**
+ * Resolve children and inherited properties for INSTANCE nodes
+ */
+function resolveInstance(
   node: FigNode,
   nodeType: string,
   ctx: FigSvgRenderContext,
   warnings: string[]
-): readonly FigNode[] {
+): InstanceResolution {
   if (nodeType !== "INSTANCE") {
-    return node.children ?? [];
+    return { node, children: node.children ?? [] };
   }
 
   // Symbol-resolver functions accept Record<string, unknown> (symbols/ is a separate concern)
@@ -234,7 +306,7 @@ function resolveInstanceChildren(
   // Extract symbolID — handles both nested (symbolData.symbolID) and top-level (symbolID) formats
   const symbolID = getInstanceSymbolID(nodeRecord);
   if (!symbolID) {
-    return node.children ?? [];
+    return { node, children: node.children ?? [] };
   }
 
   if (!ctx.symbolMap) {
@@ -243,7 +315,7 @@ function resolveInstanceChildren(
     if (!warnings.includes(warning)) {
       warnings.push(warning);
     }
-    return node.children ?? [];
+    return { node, children: node.children ?? [] };
   }
 
   // Resolve SYMBOL with localID fallback (handles sessionID mismatch in builder files)
@@ -253,21 +325,26 @@ function resolveInstanceChildren(
     warnings.push(
       `Could not resolve SYMBOL for INSTANCE "${node.name ?? "unnamed"}" (symbolID: ${symbolIdStr})`
     );
-    return node.children ?? [];
+    return { node, children: node.children ?? [] };
   }
 
   // Try pre-resolved cache first, then use the resolved node directly
-  const symbolNode = ctx.resolvedSymbolCache?.get(resolved.guidStr) ?? resolved.node;
+  const symNode = ctx.resolvedSymbolCache?.get(resolved.guidStr) ?? resolved.node;
+
+  // Merge SYMBOL properties into INSTANCE (inherit fill, stroke, etc.)
+  const mergedNode = mergeSymbolProperties(node, symNode);
 
   // Get overrides and derivedSymbolData for transform overrides
   const symbolOverrides = getInstanceSymbolOverrides(nodeRecord);
   const derivedSymbolData = nodeRecord.derivedSymbolData as FigDerivedSymbolData | undefined;
 
   // Clone SYMBOL children with overrides applied
-  return cloneSymbolChildren(symbolNode, {
+  const children = cloneSymbolChildren(symNode, {
     symbolOverrides,
     derivedSymbolData,
   });
+
+  return { node: mergedNode, children };
 }
 
 /**
@@ -289,7 +366,10 @@ async function renderNode(
     return EMPTY_SVG;
   }
 
-  const resolvedChildren = resolveInstanceChildren(node, nodeType, ctx, warnings);
+  // For INSTANCE nodes, resolve children from SYMBOL and inherit properties
+  const resolution = resolveInstance(node, nodeType, ctx, warnings);
+  const resolvedNode = resolution.node;
+  const resolvedChildren = resolution.children;
   const renderedChildren = await renderChildrenWithMasks(resolvedChildren, ctx, warnings);
 
   switch (nodeType) {
@@ -304,7 +384,7 @@ async function renderNode(
     case "COMPONENT_SET":
     case "INSTANCE":
     case "SYMBOL":
-      return renderFrameNode(node, ctx, renderedChildren);
+      return renderFrameNode(resolvedNode, ctx, renderedChildren);
 
     case "GROUP":
     case "BOOLEAN_OPERATION":

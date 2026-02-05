@@ -7,7 +7,7 @@ import type { ParsedFigFile } from "@oxen/fig/parser";
 import { buildNodeTree, findNodesByType, getNodeType } from "@oxen/fig/parser";
 import type { FigNode } from "@oxen/fig/types";
 import { preResolveSymbols } from "../../src/symbols/symbol-pre-resolver";
-import { renderCanvasAsync } from "../../src/svg/renderer";
+import { renderCanvas } from "../../src/svg/renderer";
 import { BrowserFontLoader } from "../../src/font-drivers/browser";
 import { CachingFontLoader } from "../../src/font";
 import { InspectorView } from "./InspectorView";
@@ -262,7 +262,7 @@ export function FigPreview({ parsedFile, onClose }: Props) {
     let cancelled = false;
     setIsRendering(true);
 
-    renderCanvasAsync({ children: [currentFrame.node] }, {
+    renderCanvas({ children: [currentFrame.node] }, {
       width: currentFrame.width,
       height: currentFrame.height,
       blobs: parsedFile.blobs,
