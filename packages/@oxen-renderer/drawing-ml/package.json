@@ -66,6 +66,10 @@
     "./demo/fixtures": {
       "types": "./demo/fixtures.ts",
       "default": "./demo/fixtures.ts"
+    },
+    "./ascii": {
+      "types": "./src/ascii/index.ts",
+      "default": "./src/ascii/index.ts"
     }
   }
 }

@@ -1,0 +1,25 @@
+{
+  "name": "@oxen-renderer/xlsx",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "dependencies": {
+    "@oxen-renderer/drawing-ml": "workspace:*"
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@oxen-renderer/xlsx/src'"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./ascii": {
+      "types": "./src/ascii/index.ts",
+      "default": "./src/ascii/index.ts"
+    }
+  }
+}

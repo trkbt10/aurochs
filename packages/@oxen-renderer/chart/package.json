@@ -6,7 +6,8 @@
   "sideEffects": false,
   "dependencies": {
     "@oxen-office/chart": "workspace:*",
-    "@oxen-office/ooxml": "workspace:*"
+    "@oxen-office/ooxml": "workspace:*",
+    "@oxen-renderer/drawing-ml": "workspace:*"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
@@ -26,6 +27,10 @@
     "./types": {
       "types": "./src/types.ts",
       "default": "./src/types.ts"
+    },
+    "./ascii": {
+      "types": "./src/ascii/index.ts",
+      "default": "./src/ascii/index.ts"
     }
   }
 }

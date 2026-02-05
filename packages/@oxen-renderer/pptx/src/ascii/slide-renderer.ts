@@ -3,8 +3,8 @@
  */
 
 import type { AsciiRenderableShape } from "./types";
-import { createCanvas, drawBox, drawText, renderCanvas } from "./ascii-canvas";
-import { createMapperConfig, mapBoundsToGrid } from "./coordinate-mapper";
+import { createCanvas, drawBox, drawText, renderCanvas } from "@oxen-renderer/drawing-ml/ascii";
+import { createMapperConfig, mapBoundsToGrid } from "@oxen-renderer/drawing-ml/ascii";
 
 export type SlideRenderParams = {
   readonly shapes: readonly AsciiRenderableShape[];
