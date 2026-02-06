@@ -326,10 +326,25 @@ function renderGroupNode(node: GroupNode, defsCol: SvgDefsCollector): SvgString 
   );
 }
 
+/**
+ * Clamp corner radius to ensure circular corners (Figma behaviour).
+ * SVG clamps rx/ry independently; Figma uses min(width, height) / 2.
+ */
+function clampRadius(
+  radius: number | undefined,
+  width: number,
+  height: number,
+): number | undefined {
+  if (!radius || radius <= 0) return undefined;
+  return Math.min(radius, Math.min(width, height) / 2);
+}
+
 function renderFrameNode(node: FrameNode, defsCol: SvgDefsCollector): SvgString {
   const elements: SvgString[] = [];
   const transformStr = matrixToSvgTransform(node.transform);
   const filterAttr = renderEffectsFilter(node.effects, defsCol);
+
+  const clampedRadius = clampRadius(node.cornerRadius, node.width, node.height);
 
   // Background fill
   if (node.fills.length > 0) {
@@ -343,7 +358,8 @@ function renderFrameNode(node: FrameNode, defsCol: SvgDefsCollector): SvgString 
         y: 0,
         width: node.width,
         height: node.height,
-        rx: node.cornerRadius,
+        rx: clampedRadius,
+        ry: clampedRadius,
         ...fillAttrs,
         ...strokeAttrs,
       } as Parameters<typeof rect>[0])
@@ -363,7 +379,8 @@ function renderFrameNode(node: FrameNode, defsCol: SvgDefsCollector): SvgString 
           y: 0,
           width: node.width,
           height: node.height,
-          rx: node.cornerRadius,
+          rx: clampedRadius,
+          ry: clampedRadius,
         })
       )
     );
@@ -392,12 +409,15 @@ function renderRectNode(node: RectNode, defsCol: SvgDefsCollector): SvgString {
     : { fill: "none" };
   const strokeAttrs = node.stroke ? renderStrokeAttrs(node.stroke) : {};
 
+  const rectClampedRadius = clampRadius(node.cornerRadius, node.width, node.height);
+
   const rectEl = rect({
     x: 0,
     y: 0,
     width: node.width,
     height: node.height,
-    rx: node.cornerRadius,
+    rx: rectClampedRadius,
+    ry: rectClampedRadius,
     ...fillAttrs,
     ...strokeAttrs,
   } as Parameters<typeof rect>[0]);

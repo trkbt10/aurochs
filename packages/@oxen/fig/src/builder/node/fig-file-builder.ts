@@ -29,7 +29,7 @@ import type { EffectData } from "../effect/types";
 import type { GroupNodeData } from "./group-builder";
 import type { SectionNodeData } from "./section-builder";
 import type { BooleanOperationNodeData } from "./boolean-builder";
-import { SHAPE_NODE_TYPES, NODE_TYPE_VALUES, CONSTRAINT_TYPE_VALUES } from "../../constants";
+import { SHAPE_NODE_TYPES, NODE_TYPE_VALUES } from "../../constants";
 import { buildFigHeader } from "../header";
 import { createEmptyZipPackage } from "@oxen/zip";
 import { encodeFigSchema } from "./schema-encoder";
@@ -38,7 +38,7 @@ import {
   encodeRoundedRectangleBlob,
   encodeEllipseBlob,
 } from "../geometry";
-import { resolveConstraintAxis } from "../../symbols/constraint-axis";
+import { resolveChildConstraints } from "../../symbols/resolve-child-constraints";
 import { getEffectiveSymbolID } from "../../symbols/effective-symbol-id";
 
 export class FigFileBuilder {
@@ -1091,39 +1091,28 @@ export class FigFileBuilder {
       const childGuid = child.guid as { sessionID: number; localID: number } | undefined;
       if (!childGuid) continue;
 
-      const hc = child.horizontalConstraint as { value: number } | undefined;
-      const vc = child.verticalConstraint as { value: number } | undefined;
-      const hVal = hc?.value ?? CONSTRAINT_TYPE_VALUES.MIN;
-      const vVal = vc?.value ?? CONSTRAINT_TYPE_VALUES.MIN;
+      const resolution = resolveChildConstraints(child, symSize, instSize);
+      if (!resolution) continue;
 
-      const childTransform = child.transform as { m00: number; m01: number; m02: number; m10: number; m11: number; m12: number } | undefined;
-      const childSize = child.size as { x: number; y: number } | undefined;
-      if (!childTransform || !childSize) continue;
-
-      const hResult = resolveConstraintAxis(childTransform.m02, childSize.x, symSize.x, instSize.x, hVal);
-      const vResult = resolveConstraintAxis(childTransform.m12, childSize.y, symSize.y, instSize.y, vVal);
-
-      const posChanged = hResult.pos !== childTransform.m02 || vResult.pos !== childTransform.m12;
-      const sizeChanged = hResult.dim !== childSize.x || vResult.dim !== childSize.y;
-
-      if (posChanged || sizeChanged) {
+      if (resolution.posChanged || resolution.sizeChanged) {
+        const childTransform = child.transform as { m00: number; m01: number; m02: number; m10: number; m11: number; m12: number };
         derived.push({
           guidPath: { guids: [...guidPrefix, childGuid] },
           transform: {
             m00: childTransform.m00,
             m01: childTransform.m01,
-            m02: hResult.pos,
+            m02: resolution.posX,
             m10: childTransform.m10,
             m11: childTransform.m11,
-            m12: vResult.pos,
+            m12: resolution.posY,
           },
-          size: { x: hResult.dim, y: vResult.dim },
+          size: { x: resolution.dimX, y: resolution.dimY },
         });
       }
 
       // If this child is an INSTANCE that got resized, recurse into its symbol
       const childType = child.type as { value: number } | undefined;
-      if (childType?.value === NODE_TYPE_VALUES.INSTANCE && sizeChanged) {
+      if (childType?.value === NODE_TYPE_VALUES.INSTANCE && resolution.sizeChanged) {
         const childSymID = getEffectiveSymbolID(child);
         if (childSymID) {
           const childSymNode = nodeByLocalID.get(childSymID.localID);
@@ -1133,7 +1122,7 @@ export class FigFileBuilder {
               this.computeDerivedRecursive(
                 childSymID.localID,
                 childSymSize,
-                { x: hResult.dim, y: vResult.dim },
+                { x: resolution.dimX, y: resolution.dimY },
                 [...guidPrefix, childGuid],
                 derived, nodeByLocalID, childrenByParent,
                 depth + 1,

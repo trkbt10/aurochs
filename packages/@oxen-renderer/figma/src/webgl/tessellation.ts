@@ -239,33 +239,62 @@ export function tessellateContour(
  * Outer contours are clockwise (negative signed area), holes are CCW (positive).
  * For glyphs like 'O', the outer ring and inner hole are combined so the hole
  * is properly subtracted.
+ *
+ * @param contours - Path contours to tessellate
+ * @param tolerance - Bezier flattening tolerance (default 0.25)
+ * @param autoDetectWinding - When true, auto-detects the outer/hole winding
+ *   convention by majority vote. Necessary for font glyph data where different
+ *   fonts may use TrueType (CW=outer) or PostScript/CFF (CCW=outer) conventions.
  */
 export function tessellateContours(
   contours: readonly PathContour[],
-  tolerance: number = 0.25
+  tolerance: number = 0.25,
+  autoDetectWinding: boolean = false
 ): Float32Array {
   if (contours.length === 0) return new Float32Array(0);
 
-  // Flatten all contours and classify as outer / hole
-  type FlatContour = { coords: number[]; isHole: boolean };
+  // Flatten all contours and compute signed areas
+  type FlatContour = { coords: number[]; area: number };
   const flatContours: FlatContour[] = [];
 
   for (const contour of contours) {
     const coords = flattenPathCommands(contour.commands, tolerance);
     if (coords.length < 6) continue;
-
-    // Clockwise (negative signed area) = outer, CCW (positive) = hole
-    const area = signedArea(coords);
-    flatContours.push({ coords, isHole: area > 0 });
+    flatContours.push({ coords, area: signedArea(coords) });
   }
 
   if (flatContours.length === 0) return new Float32Array(0);
+
+  // Determine which sign represents "outer" contours
+  // Default: negative signed area = outer (TrueType CW convention)
+  // When autoDetectWinding: use majority sign to detect the convention.
+  // The majority of contours in text are outers (simple glyphs without holes),
+  // so the dominant sign indicates the outer convention.
+  let outerIsNegative = true; // default: TrueType convention
+
+  if (autoDetectWinding) {
+    let negativeCount = 0;
+    let positiveCount = 0;
+    for (const fc of flatContours) {
+      if (fc.area < 0) negativeCount++;
+      else if (fc.area > 0) positiveCount++;
+    }
+    // The majority sign is used for outers
+    outerIsNegative = negativeCount >= positiveCount;
+  }
+
+  // Classify as outer / hole
+  type ClassifiedContour = { coords: number[]; isHole: boolean };
+  const classifiedContours: ClassifiedContour[] = flatContours.map((fc) => ({
+    coords: fc.coords,
+    isHole: outerIsNegative ? fc.area > 0 : fc.area < 0,
+  }));
 
   // Group: each outer contour collects subsequent holes until next outer
   type ContourGroup = { outer: number[]; holes: number[][] };
   const groups: ContourGroup[] = [];
 
-  for (const fc of flatContours) {
+  for (const fc of classifiedContours) {
     if (!fc.isHole) {
       groups.push({ outer: fc.coords, holes: [] });
     } else if (groups.length > 0) {
@@ -331,37 +360,38 @@ export function generateRectVertices(
   }
 
   // Rounded rectangle: approximate arcs with line segments
+  // Traces CW: top-right → right edge → bottom-right → bottom edge →
+  //            bottom-left → left edge → top-left → top edge (close)
   const r = Math.min(cornerRadius, width / 2, height / 2);
   const segments = 8; // segments per corner
   const points: number[] = [];
 
-  // Generate rounded rect as a polygon, then triangulate
-  // Top-right corner
-  for (let i = 0; i <= segments; i++) {
+  // Top-right corner: (width-r, 0) → (width, r)
+  for (let i = segments; i >= 0; i--) {
     const angle = (Math.PI / 2) * (i / segments);
     points.push(
       width - r + r * Math.cos(angle),
       r - r * Math.sin(angle)
     );
   }
-  // Bottom-right corner
-  for (let i = 0; i <= segments; i++) {
+  // Bottom-right corner: (width, height-r) → (width-r, height)
+  for (let i = segments; i >= 0; i--) {
     const angle = (Math.PI / 2) * (i / segments);
     points.push(
       width - r + r * Math.sin(angle),
       height - r + r * Math.cos(angle)
     );
   }
-  // Bottom-left corner
-  for (let i = 0; i <= segments; i++) {
+  // Bottom-left corner: (r, height) → (0, height-r)
+  for (let i = segments; i >= 0; i--) {
     const angle = (Math.PI / 2) * (i / segments);
     points.push(
       r - r * Math.cos(angle),
       height - r + r * Math.sin(angle)
     );
   }
-  // Top-left corner
-  for (let i = 0; i <= segments; i++) {
+  // Top-left corner: (0, r) → (r, 0)
+  for (let i = segments; i >= 0; i--) {
     const angle = (Math.PI / 2) * (i / segments);
     points.push(
       r - r * Math.sin(angle),

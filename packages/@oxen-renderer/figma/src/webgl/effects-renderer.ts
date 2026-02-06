@@ -5,7 +5,7 @@
  * and multi-pass rendering.
  */
 
-import type { Effect, DropShadowEffect, InnerShadowEffect, LayerBlurEffect } from "../scene-graph/types";
+import type { DropShadowEffect, InnerShadowEffect } from "../scene-graph/types";
 import type { Framebuffer } from "./framebuffer";
 import { createFramebuffer, deleteFramebuffer, bindFramebuffer } from "./framebuffer";
 
@@ -78,18 +78,223 @@ export const compositeFragmentShader = `
 `;
 
 /**
+ * Inner shadow compositing shader.
+ *
+ * Uses two textures: the original shape silhouette and the blurred silhouette.
+ * Shadow mask = shapeAlpha * (1 - blurredAlpha_at_offset).
+ * This produces color only at the inner edges of the shape where the shifted
+ * blurred silhouette doesn't fully cover.
+ */
+export const innerShadowFragmentShader = `
+  precision mediump float;
+
+  uniform sampler2D u_shapeTexture;
+  uniform sampler2D u_blurredTexture;
+  uniform vec4 u_color;
+  uniform vec2 u_offset;
+  uniform vec2 u_texelSize;
+
+  varying vec2 v_texCoord;
+
+  void main() {
+    float shapeAlpha = texture2D(u_shapeTexture, v_texCoord).a;
+    float blurredAlpha = texture2D(u_blurredTexture, v_texCoord + u_offset * u_texelSize).a;
+    float shadowMask = shapeAlpha * (1.0 - blurredAlpha);
+    gl_FragColor = vec4(u_color.rgb, u_color.a * shadowMask);
+  }
+`;
+
+/**
  * Effects renderer state
  */
 export class EffectsRenderer {
   private gl: WebGLRenderingContext;
   private blurProgram: WebGLProgram | null = null;
   private compositeProgram: WebGLProgram | null = null;
+  private innerShadowProgram: WebGLProgram | null = null;
   private fullscreenQuad: WebGLBuffer | null = null;
   private tempFBO1: Framebuffer | null = null;
   private tempFBO2: Framebuffer | null = null;
+  private shapeFBO: Framebuffer | null = null;
 
   constructor(gl: WebGLRenderingContext) {
     this.gl = gl;
+  }
+
+  /**
+   * Render a drop shadow effect.
+   *
+   * 1. Renders the shape silhouette to an off-screen FBO
+   * 2. Applies Gaussian blur (if radius > 0)
+   * 3. Composites the blurred shadow onto the current framebuffer
+   *
+   * @param canvasWidth - Canvas width in physical pixels
+   * @param canvasHeight - Canvas height in physical pixels
+   * @param effect - Drop shadow parameters
+   * @param pixelRatio - Device pixel ratio
+   * @param renderSilhouette - Callback that renders the shape as solid white
+   *   to the currently bound framebuffer (should use the same projection as normal rendering)
+   */
+  renderDropShadow(
+    canvasWidth: number,
+    canvasHeight: number,
+    effect: DropShadowEffect,
+    pixelRatio: number,
+    renderSilhouette: () => void
+  ): void {
+    const gl = this.gl;
+    this.ensureResources(canvasWidth, canvasHeight);
+    this.ensureShapeFBO(canvasWidth, canvasHeight);
+
+    // 1. Render shape silhouette to shape FBO
+    bindFramebuffer(gl, this.shapeFBO!);
+    gl.viewport(0, 0, canvasWidth, canvasHeight);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    renderSilhouette();
+
+    // 2. Blur the silhouette (if radius > 0)
+    let resultFBO: Framebuffer;
+    if (effect.radius > 0) {
+      resultFBO = this.applyGaussianBlur(this.shapeFBO!, effect.radius * pixelRatio);
+    } else {
+      resultFBO = this.shapeFBO!;
+    }
+
+    // 3. Composite shadow onto screen
+    bindFramebuffer(gl, null);
+    gl.viewport(0, 0, canvasWidth, canvasHeight);
+
+    const program = this.compositeProgram!;
+    gl.useProgram(program);
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, resultFBO.texture);
+    gl.uniform1i(gl.getUniformLocation(program, "u_texture"), 0);
+
+    gl.uniform4f(
+      gl.getUniformLocation(program, "u_color"),
+      effect.color.r, effect.color.g, effect.color.b, effect.color.a
+    );
+
+    // Offset: negate X because the shader adds to texCoord (sampling backwards)
+    // Y: the shape shader flips Y (1.0 - 2*ny/H), so screen-down = texture-up.
+    // Negate Y as well since adding to v_texCoord shifts the sample upward in
+    // texture space, which corresponds to upward on screen.
+    gl.uniform2f(
+      gl.getUniformLocation(program, "u_offset"),
+      -effect.offset.x * pixelRatio,
+      effect.offset.y * pixelRatio
+    );
+
+    gl.uniform2f(
+      gl.getUniformLocation(program, "u_texelSize"),
+      1.0 / canvasWidth,
+      1.0 / canvasHeight
+    );
+
+    gl.enable(gl.BLEND);
+    gl.blendFuncSeparate(
+      gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA,
+      gl.ONE, gl.ONE_MINUS_SRC_ALPHA
+    );
+    this.drawFullscreenQuad(program);
+  }
+
+  /**
+   * Render an inner shadow effect.
+   *
+   * 1. Renders the shape silhouette to an off-screen FBO
+   * 2. Applies Gaussian blur (if radius > 0)
+   * 3. Composites the inner shadow using: shapeAlpha * (1 - blurredAlpha_at_offset)
+   *
+   * Must be called AFTER the shape fills have been drawn (inner shadow overlays fills).
+   */
+  renderInnerShadow(
+    canvasWidth: number,
+    canvasHeight: number,
+    effect: InnerShadowEffect,
+    pixelRatio: number,
+    renderSilhouette: () => void
+  ): void {
+    const gl = this.gl;
+    this.ensureResources(canvasWidth, canvasHeight);
+    this.ensureShapeFBO(canvasWidth, canvasHeight);
+    this.ensureInnerShadowProgram();
+
+    // 1. Render shape silhouette to shape FBO
+    bindFramebuffer(gl, this.shapeFBO!);
+    gl.viewport(0, 0, canvasWidth, canvasHeight);
+    gl.clearColor(0, 0, 0, 0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    renderSilhouette();
+
+    // 2. Blur the silhouette
+    let blurredFBO: Framebuffer;
+    if (effect.radius > 0) {
+      blurredFBO = this.applyGaussianBlur(this.shapeFBO!, effect.radius * pixelRatio);
+    } else {
+      blurredFBO = this.shapeFBO!;
+    }
+
+    // 3. Composite inner shadow onto screen
+    bindFramebuffer(gl, null);
+    gl.viewport(0, 0, canvasWidth, canvasHeight);
+
+    const program = this.innerShadowProgram!;
+    gl.useProgram(program);
+
+    // Bind original shape texture to unit 0
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this.shapeFBO!.texture);
+    gl.uniform1i(gl.getUniformLocation(program, "u_shapeTexture"), 0);
+
+    // Bind blurred texture to unit 1
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, blurredFBO.texture);
+    gl.uniform1i(gl.getUniformLocation(program, "u_blurredTexture"), 1);
+
+    gl.uniform4f(
+      gl.getUniformLocation(program, "u_color"),
+      effect.color.r, effect.color.g, effect.color.b, effect.color.a
+    );
+
+    // Offset: same convention as drop shadow
+    gl.uniform2f(
+      gl.getUniformLocation(program, "u_offset"),
+      -effect.offset.x * pixelRatio,
+      effect.offset.y * pixelRatio
+    );
+
+    gl.uniform2f(
+      gl.getUniformLocation(program, "u_texelSize"),
+      1.0 / canvasWidth,
+      1.0 / canvasHeight
+    );
+
+    gl.enable(gl.BLEND);
+    gl.blendFuncSeparate(
+      gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA,
+      gl.ONE, gl.ONE_MINUS_SRC_ALPHA
+    );
+    this.drawFullscreenQuad(program);
+
+    // Reset active texture to unit 0
+    gl.activeTexture(gl.TEXTURE0);
+  }
+
+  private ensureInnerShadowProgram(): void {
+    if (!this.innerShadowProgram) {
+      this.innerShadowProgram = this.compileProgram(compositeVertexShader, innerShadowFragmentShader);
+    }
+  }
+
+  private ensureShapeFBO(width: number, height: number): void {
+    const gl = this.gl;
+    if (!this.shapeFBO || this.shapeFBO.width !== width || this.shapeFBO.height !== height) {
+      if (this.shapeFBO) deleteFramebuffer(gl, this.shapeFBO);
+      this.shapeFBO = createFramebuffer(gl, width, height);
+    }
   }
 
   /**
@@ -217,8 +422,10 @@ export class EffectsRenderer {
     const gl = this.gl;
     if (this.blurProgram) gl.deleteProgram(this.blurProgram);
     if (this.compositeProgram) gl.deleteProgram(this.compositeProgram);
+    if (this.innerShadowProgram) gl.deleteProgram(this.innerShadowProgram);
     if (this.fullscreenQuad) gl.deleteBuffer(this.fullscreenQuad);
     if (this.tempFBO1) deleteFramebuffer(gl, this.tempFBO1);
     if (this.tempFBO2) deleteFramebuffer(gl, this.tempFBO2);
+    if (this.shapeFBO) deleteFramebuffer(gl, this.shapeFBO);
   }
 }

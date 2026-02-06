@@ -16,7 +16,7 @@ import {
   type ResolvedPatternFill,
 } from "@oxen-office/pptx/domain/color/fill";
 import type { ResourceResolverFn } from "@oxen-office/pptx/domain/resource-resolver";
-import { PatternDef } from "@oxen-renderer/drawing-ml";
+import { PatternDef } from "@oxen-renderer/drawing-ml/react";
 import { ooxmlAngleToSvgLinearGradient, getRadialGradientCoords } from "../../svg/gradient-utils";
 import { useSvgDefs } from "../hooks/useSvgDefs";
 import { useRenderContext, useRenderResources, useRenderResourceStore } from "../context";

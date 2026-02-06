@@ -87,12 +87,55 @@ export function extractEffectsProps(node: FigNode): EffectsProps {
 
 // ---- Corner radius ----
 
-export type CornerRadiusProps = {
-  readonly cornerRadius: number | undefined;
+/** Resolved rx/ry pair, ready for SVG output. */
+export type ResolvedCornerRadius = {
+  readonly rx: number | undefined;
+  readonly ry: number | undefined;
 };
 
-export function extractCornerRadiusProps(node: FigNode): CornerRadiusProps {
-  return {
-    cornerRadius: node.cornerRadius,
-  };
+/**
+ * Resolve corner radius for any node type (Frame, Rectangle, Instance, etc.).
+ *
+ * Handles both `rectangleCornerRadii` (per-corner) and `cornerRadius` (uniform).
+ * Clamps to `min(width, height) / 2` to ensure circular corners (Figma behaviour).
+ * SVG clamps `rx`/`ry` independently, which causes elliptical corners —
+ * this function prevents that by pre-clamping to the smaller dimension.
+ *
+ * When all 4 per-corner radii are equal they collapse to a single uniform
+ * radius.  When they differ, the average is used (SVG `<rect>` cannot
+ * express per-corner radii; a `<path>` fallback would be needed for full
+ * fidelity).
+ */
+export function resolveCornerRadius(
+  node: FigNode,
+  size: FigVector,
+): ResolvedCornerRadius {
+  const cornerRadii = node.rectangleCornerRadii;
+  const cornerRadius = node.cornerRadius;
+  const maxRadius = Math.min(size.x, size.y) / 2;
+
+  if (cornerRadii && cornerRadii.length === 4) {
+    const allSame =
+      cornerRadii[0] === cornerRadii[1] &&
+      cornerRadii[1] === cornerRadii[2] &&
+      cornerRadii[2] === cornerRadii[3];
+    if (allSame) {
+      return clamp(cornerRadii[0], maxRadius);
+    }
+    // Different corners — use average (SVG <rect> limitation)
+    const avg =
+      (cornerRadii[0] + cornerRadii[1] + cornerRadii[2] + cornerRadii[3]) / 4;
+    return clamp(avg, maxRadius);
+  }
+
+  return clamp(cornerRadius, maxRadius);
+}
+
+function clamp(
+  radius: number | undefined,
+  maxRadius: number,
+): ResolvedCornerRadius {
+  if (!radius || radius <= 0) return { rx: undefined, ry: undefined };
+  const clamped = Math.min(radius, maxRadius);
+  return { rx: clamped, ry: clamped };
 }

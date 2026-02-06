@@ -40,9 +40,10 @@ export function tessellateTextNode(
     return null;
   }
 
-  const glyphVertices = tessellateContours(node.glyphContours, tolerance);
+  // Figma glyph blobs use PostScript/CFF winding convention (invertWinding=true)
+  const glyphVertices = tessellateContours(node.glyphContours, tolerance, true);
   const decorationVertices = node.decorationContours
-    ? tessellateContours(node.decorationContours, tolerance)
+    ? tessellateContours(node.decorationContours, tolerance, true)
     : new Float32Array(0);
 
   return {

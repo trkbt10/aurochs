@@ -4,7 +4,7 @@
  * When an INSTANCE is resized relative to its SYMBOL, child positions
  * and sizes must be adjusted according to their constraint settings.
  *
- * The single-axis math lives in @oxen/fig/symbols (shared with builder).
+ * Per-child constraint math lives in @oxen/fig/symbols (shared with builder).
  * This module provides the higher-level orchestration:
  * - applyConstraintsToChildren: depth-1 constraint application
  * - resolveInstanceLayout: strategy selection (derived vs constraint)
@@ -12,24 +12,8 @@
 
 import type { FigNode } from "@oxen/fig/types";
 import { CONSTRAINT_TYPE_VALUES } from "@oxen/fig/constants";
-import { resolveConstraintAxis } from "@oxen/fig/symbols";
+import { getConstraintValue, resolveChildConstraints } from "@oxen/fig/symbols";
 import type { FigDerivedSymbolData } from "./symbol-resolver";
-
-// =============================================================================
-// Constraint value extraction
-// =============================================================================
-
-/**
- * Extract the numeric constraint value from a node's constraint field.
- * Returns CONSTRAINT_TYPE_VALUES.MIN (0) as default when unset.
- */
-function getConstraintValue(constraintField: unknown): number {
-  if (!constraintField || typeof constraintField !== "object") {
-    return CONSTRAINT_TYPE_VALUES.MIN;
-  }
-  const val = (constraintField as { value?: number }).value;
-  return val ?? CONSTRAINT_TYPE_VALUES.MIN;
-}
 
 // =============================================================================
 // Apply constraints to children
@@ -53,63 +37,34 @@ export function applyConstraintsToChildren(
   instanceSize: { x: number; y: number },
 ): readonly FigNode[] {
   return children.map((child) => {
-    const nodeData = child as Record<string, unknown>;
+    const resolution = resolveChildConstraints(
+      child as Record<string, unknown>,
+      symbolSize,
+      instanceSize,
+    );
 
-    const hVal = getConstraintValue(nodeData.horizontalConstraint);
-    const vVal = getConstraintValue(nodeData.verticalConstraint);
+    // No transform/size — skip
+    if (!resolution) return child;
 
-    // If both are MIN and no resize needed, skip
-    if (
-      hVal === CONSTRAINT_TYPE_VALUES.MIN &&
-      vVal === CONSTRAINT_TYPE_VALUES.MIN &&
-      symbolSize.x === instanceSize.x &&
-      symbolSize.y === instanceSize.y
-    ) {
-      return child;
-    }
+    // Nothing changed — skip
+    if (!resolution.posChanged && !resolution.sizeChanged) return child;
 
-    const transform = child.transform;
-    const size = child.size;
-
-    if (!transform || !size) {
-      return child;
-    }
-
-    const origX = transform.m02 ?? 0;
-    const origY = transform.m12 ?? 0;
-    const origW = size.x ?? 0;
-    const origH = size.y ?? 0;
-
-    const hResult = resolveConstraintAxis(origX, origW, symbolSize.x, instanceSize.x, hVal);
-    const vResult = resolveConstraintAxis(origY, origH, symbolSize.y, instanceSize.y, vVal);
-
-    // Skip creating new object if nothing changed
-    if (
-      hResult.pos === origX &&
-      hResult.dim === origW &&
-      vResult.pos === origY &&
-      vResult.dim === origH
-    ) {
-      return child;
-    }
-
-    const sizeChanged = hResult.dim !== origW || vResult.dim !== origH;
     const result: Record<string, unknown> = {
       ...child,
       transform: {
-        ...transform,
-        m02: hResult.pos,
-        m12: vResult.pos,
+        ...child.transform,
+        m02: resolution.posX,
+        m12: resolution.posY,
       },
       size: {
-        x: hResult.dim,
-        y: vResult.dim,
+        x: resolution.dimX,
+        y: resolution.dimY,
       },
     };
 
     // When size changes, clear pre-baked geometry so the renderer
     // falls back to size-based shape rendering (rect, ellipse, etc.)
-    if (sizeChanged) {
+    if (resolution.sizeChanged) {
       delete result.fillGeometry;
       delete result.strokeGeometry;
     }
@@ -211,11 +166,9 @@ export function resolveInstanceLayout(
   // Strategy 2: constraint-based resolution
   const hasConstraints = children.some((child) => {
     const nd = child as Record<string, unknown>;
-    const hc = nd.horizontalConstraint as { value?: number } | undefined;
-    const vc = nd.verticalConstraint as { value?: number } | undefined;
     return (
-      (hc?.value !== undefined && hc.value !== 0) ||
-      (vc?.value !== undefined && vc.value !== 0)
+      getConstraintValue(nd.horizontalConstraint) !== CONSTRAINT_TYPE_VALUES.MIN ||
+      getConstraintValue(nd.verticalConstraint) !== CONSTRAINT_TYPE_VALUES.MIN
     );
   });
 

@@ -16,7 +16,7 @@ import {
   extractSizeProps,
   extractPaintProps,
   extractGeometryProps,
-  extractCornerRadiusProps,
+  resolveCornerRadius,
 } from "./extract-props";
 
 function resolveClipsContent(node: FigNode): boolean {
@@ -56,7 +56,8 @@ function buildClipShapes(
   geometry: readonly FigFillGeometry[] | undefined,
   ctx: FigSvgRenderContext,
   size: FigVector,
-  cornerRadius: number | undefined,
+  rx: number | undefined,
+  ry: number | undefined,
 ): readonly SvgString[] {
   if (geometry) {
     const paths = decodePathsFromGeometry(geometry, ctx.blobs);
@@ -75,13 +76,16 @@ function buildClipShapes(
     y: 0,
     width: size.x,
     height: size.y,
-    rx: cornerRadius && cornerRadius > 0 ? cornerRadius : undefined,
+    rx,
+    ry,
     fill: "black",
   })];
 }
 
 /**
  * Render a FRAME node to SVG
+ *
+ * Also used for COMPONENT, COMPONENT_SET, INSTANCE, and SYMBOL nodes.
  *
  * @param node - The frame node
  * @param ctx - Render context
@@ -96,7 +100,7 @@ export function renderFrameNode(
   const { size } = extractSizeProps(node);
   const { fillPaints, strokePaints, strokeWeight } = extractPaintProps(node);
   const { fillGeometry, strokeGeometry } = extractGeometryProps(node);
-  const { cornerRadius } = extractCornerRadiusProps(node);
+  const { rx, ry } = resolveCornerRadius(node, size);
   const clipsContent = resolveClipsContent(node);
 
   if (!visible) {
@@ -119,7 +123,8 @@ export function renderFrameNode(
       y: 0,
       width: size.x,
       height: size.y,
-      rx: cornerRadius && cornerRadius > 0 ? cornerRadius : undefined,
+      rx,
+      ry,
       ...fillAttrs,
       ...strokeAttrs,
     });
@@ -131,7 +136,7 @@ export function renderFrameNode(
     if (clipsContent) {
       // Create clip path
       const clipId = ctx.defs.generateId("clip");
-      const clipShapes = buildClipShapes(geometry, ctx, size, cornerRadius);
+      const clipShapes = buildClipShapes(geometry, ctx, size, rx, ry);
       const clipDef = clipPath({ id: clipId }, ...clipShapes);
       ctx.defs.add(clipDef);
 

@@ -14,7 +14,7 @@ import { px, deg } from "@oxen-office/drawing-ml/domain/units";
 import { useRenderContext } from "../../context";
 import { useSvgDefs } from "../../hooks/useSvgDefs";
 import { has3dEffects } from "../../../svg/effects3d";
-import { render3dTextEffects } from "@oxen-renderer/drawing-ml";
+import { render3dTextEffects } from "@oxen-renderer/drawing-ml/react";
 import { renderLayoutResult } from "./layout-render";
 
 // =============================================================================

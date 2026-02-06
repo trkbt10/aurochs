@@ -244,7 +244,8 @@ export function convertPaintToFill(
 /**
  * Convert Figma paints array to scene graph fills
  *
- * Uses the last visible paint (topmost layer in Figma's stacking).
+ * Returns all visible fills in Figma's stacking order (bottom to top).
+ * The renderer should draw them in array order, compositing each on top.
  */
 export function convertPaintsToFills(
   paints: readonly FigPaint[] | undefined,
@@ -259,8 +260,12 @@ export function convertPaintsToFills(
     return [];
   }
 
-  // Use last visible paint (Figma's top layer)
-  const topPaint = visiblePaints[visiblePaints.length - 1];
-  const fill = convertPaintToFill(topPaint, images);
-  return fill ? [fill] : [];
+  const fills: Fill[] = [];
+  for (const paint of visiblePaints) {
+    const fill = convertPaintToFill(paint, images);
+    if (fill) {
+      fills.push(fill);
+    }
+  }
+  return fills;
 }

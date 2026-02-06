@@ -5,7 +5,7 @@
  * This allows PPTX-specific components to use shared DrawingML rendering.
  */
 
-import type { DrawingMLRenderContext, WarningCollector } from "@oxen-renderer/drawing-ml/context";
+import type { DrawingMLRenderContext, WarningCollector } from "@oxen-renderer/drawing-ml/react";
 import type { ReactRenderContext } from "./context";
 
 function createResolveResource(

@@ -21,8 +21,8 @@ import { createEmptyResourceResolver } from "@oxen-office/pptx/domain/resource-r
 import type { ResourceStore } from "@oxen-office/pptx/domain/resource-store";
 import { createWarningCollector } from "@oxen-office/ooxml";
 import type { TableStyleList } from "@oxen-office/pptx/parser/table/style-parser";
-import { DrawingMLProvider } from "@oxen-renderer/drawing-ml/context";
-import type { WarningCollector } from "@oxen-renderer/drawing-ml/context";
+import { DrawingMLProvider } from "@oxen-renderer/drawing-ml/react";
+import type { WarningCollector } from "@oxen-renderer/drawing-ml/react";
 
 // =============================================================================
 // Types

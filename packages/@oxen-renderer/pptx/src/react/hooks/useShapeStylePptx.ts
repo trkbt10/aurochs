@@ -15,7 +15,7 @@ import type { ResolvedLine as OoxmlResolvedLine } from "@oxen-office/drawing-ml/
 import {
   useShapeStyle as useShapeStyleBase,
   type ShapeStyleResult,
-} from "@oxen-renderer/drawing-ml";
+} from "@oxen-renderer/drawing-ml/react";
 import { useRenderContext, useRenderResources, useRenderResourceStore } from "../context";
 import type { ResourceResolverFn } from "@oxen-office/pptx/domain/resource-resolver";
 

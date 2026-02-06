@@ -519,6 +519,85 @@ describe("Text tessellation pipeline", () => {
   });
 
   // =============================================================================
+  // Auto-detect winding tests
+  // =============================================================================
+
+  describe("autoDetectWinding", () => {
+    it("auto-detects PostScript convention (positive area = outer)", () => {
+      // All contours have positive area (PostScript/CFF)
+      // With autoDetectWinding=true, they should be classified as outers
+      const contours: PathContour[] = [
+        holeRect(0, 0, 10, 10),   // positive area (would be "hole" without auto-detect)
+        holeRect(15, 0, 10, 10),  // positive area
+      ];
+
+      // Without auto-detect: both classified as holes → dropped
+      const noAutoVerts = tessellateContours(contours);
+      expect(noAutoVerts.length).toBe(0);
+
+      // With auto-detect: majority positive → positive = outer
+      const autoVerts = tessellateContours(contours, 0.25, true);
+      expect(autoVerts.length).toBe(24); // 2 rects × 12 coords
+    });
+
+    it("auto-detects TrueType convention (negative area = outer)", () => {
+      // All contours have negative area (TrueType)
+      const contours: PathContour[] = [
+        outerRect(0, 0, 10, 10),
+        outerRect(15, 0, 10, 10),
+      ];
+
+      // Both with and without auto-detect should work
+      const noAutoVerts = tessellateContours(contours);
+      expect(noAutoVerts.length).toBe(24);
+
+      const autoVerts = tessellateContours(contours, 0.25, true);
+      expect(autoVerts.length).toBe(24);
+    });
+
+    it("auto-detects PostScript outer + hole correctly", () => {
+      // PostScript: outer=positive, hole=negative (opposite of TrueType)
+      // 'O' + 'l' glyphs: 2 positive outers + 1 negative hole → majority positive
+      const contours: PathContour[] = [
+        holeRect(0, 0, 20, 20),   // positive area = outer in PostScript ('O' outer)
+        outerRect(5, 5, 10, 10),  // negative area = hole in PostScript ('O' hole)
+        holeRect(25, 0, 5, 20),   // positive area = outer in PostScript ('l')
+      ];
+
+      // With auto-detect: 2 positive vs 1 negative → positive = outer
+      const vertices = tessellateContours(contours, 0.25, true);
+      // Should have ring (O outer minus hole) + rect (l)
+      expect(vertices.length).toBeGreaterThan(12);
+
+      // Verify no vertices inside the hole of 'O'
+      for (let i = 0; i < vertices.length; i += 2) {
+        const x = vertices[i];
+        const y = vertices[i + 1];
+        if (x < 20) { // Only check within 'O' bounds
+          const insideHole = x > 6 && x < 14 && y > 6 && y < 14;
+          expect(insideHole).toBe(false);
+        }
+      }
+    });
+
+    it("handles mixed convention where majority determines outer", () => {
+      // 3 PostScript outers (positive) + 1 PostScript hole (negative)
+      const contours: PathContour[] = [
+        holeRect(0, 0, 10, 10),    // positive = outer (PostScript)
+        outerRect(3, 3, 4, 4),     // negative = hole (PostScript)
+        holeRect(20, 0, 10, 10),   // positive = outer
+        holeRect(40, 0, 10, 10),   // positive = outer
+      ];
+
+      const vertices = tessellateContours(contours, 0.25, true);
+      // 3 positive → majority = outer
+      // First outer gets the negative hole
+      // Remaining 2 outers are simple
+      expect(vertices.length).toBeGreaterThan(0);
+    });
+  });
+
+  // =============================================================================
   // Stress test: many glyphs (typical text paragraph)
   // =============================================================================
 

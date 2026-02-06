@@ -14,7 +14,7 @@ import {
   createTextPatternDef,
   createTextImageFillDef,
   createTextEffectsFilterDef,
-} from "@oxen-renderer/drawing-ml";
+} from "@oxen-renderer/drawing-ml/react";
 import {
   buildFontFamily,
   applyTextTransform,

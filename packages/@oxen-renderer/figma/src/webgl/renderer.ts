@@ -2,12 +2,14 @@
  * @file WebGL Figma Renderer
  *
  * Renders a SceneGraph to a WebGL canvas. Supports solid fills, gradients,
- * images, clipping, strokes, and glyph outlines through tessellation.
+ * images, clipping, strokes, and glyph outlines through stencil-based
+ * path rendering.
  */
 
 import type {
   SceneGraph,
   SceneNode,
+  SceneNodeBase,
   GroupNode,
   FrameNode,
   RectNode,
@@ -40,6 +42,14 @@ import {
   tessellatePathStroke,
 } from "./stroke-tessellation";
 import { renderFallbackTextToCanvas } from "./text-renderer";
+import { EffectsRenderer } from "./effects-renderer";
+import {
+  prepareFanTriangles,
+  generateCoverQuad,
+  CLIP_STENCIL_BIT,
+  FILL_STENCIL_MASK,
+  type Bounds,
+} from "./stencil-fill";
 
 // =============================================================================
 // Types
@@ -93,6 +103,8 @@ export class WebGLFigmaRenderer {
   private positionBuffer: WebGLBuffer;
   private backgroundColor: Color;
   private textureCache: TextureCache;
+  private effectsRenderer: EffectsRenderer;
+  private clipActive: boolean = false;
 
   constructor(options: WebGLRendererOptions) {
     const gl = options.canvas.getContext("webgl", {
@@ -111,6 +123,7 @@ export class WebGLFigmaRenderer {
     this.shaders = new ShaderCache(gl);
     this.backgroundColor = options.backgroundColor ?? { r: 1, g: 1, b: 1, a: 1 };
     this.textureCache = new TextureCache(gl);
+    this.effectsRenderer = new EffectsRenderer(gl);
 
     const buffer = gl.createBuffer();
     if (!buffer) {
@@ -119,8 +132,15 @@ export class WebGLFigmaRenderer {
     this.positionBuffer = buffer;
 
     // Enable blending for transparency
+    // Use separate blend functions: standard source-over for color channels,
+    // but ONE for alpha source factor to keep the canvas opaque.
+    // Without this, drawing a semi-transparent element (alpha=0.5) over an opaque
+    // background produces canvas alpha = 0.5*0.5 + 1.0*0.5 = 0.75 instead of 1.0.
     gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.blendFuncSeparate(
+      gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA,  // color: standard source-over
+      gl.ONE, gl.ONE_MINUS_SRC_ALPHA          // alpha: keeps canvas opaque
+    );
   }
 
   private get glContext(): GLContext {
@@ -185,6 +205,7 @@ export class WebGLFigmaRenderer {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
 
     // Render scene tree
+    this.clipActive = false;
     this.renderNode(scene.root, IDENTITY_MATRIX, 1);
   }
 
@@ -234,13 +255,20 @@ export class WebGLFigmaRenderer {
 
   private renderFrame(node: FrameNode, transform: AffineMatrix, opacity: number): void {
     const elementSize = { width: node.width, height: node.height };
+    const vertices = generateRectVertices(node.width, node.height, node.cornerRadius);
 
-    // Render background
+    // Drop shadows (behind fills)
+    this.renderDropShadows(node, vertices, transform, opacity);
+
+    // Render background fills (bottom to top)
     if (node.fills.length > 0) {
-      const fill = node.fills[node.fills.length - 1];
-      const vertices = generateRectVertices(node.width, node.height, node.cornerRadius);
-      this.drawFill(vertices, fill, transform, opacity, elementSize);
+      for (const fill of node.fills) {
+        this.drawFill(vertices, fill, transform, opacity, elementSize);
+      }
     }
+
+    // Inner shadows (after fills)
+    this.renderInnerShadows(node, vertices, transform, opacity);
 
     // Render stroke
     if (node.stroke && node.stroke.width > 0) {
@@ -251,6 +279,7 @@ export class WebGLFigmaRenderer {
     }
 
     // Clipping
+    const wasClipActive = this.clipActive;
     if (node.clipsContent) {
       const clipShape = node.clip ?? {
         type: "rect" as const,
@@ -261,6 +290,7 @@ export class WebGLFigmaRenderer {
       beginStencilClip(this.gl, clipShape, this.positionBuffer, (vertices) => {
         drawSolidFill(this.glContext, vertices, { r: 0, g: 0, b: 0, a: 1 }, transform, 1);
       });
+      this.clipActive = true;
     }
 
     // Render children
@@ -270,17 +300,25 @@ export class WebGLFigmaRenderer {
 
     if (node.clipsContent) {
       endStencilClip(this.gl);
+      this.clipActive = wasClipActive;
     }
   }
 
   private renderRect(node: RectNode, transform: AffineMatrix, opacity: number): void {
     const elementSize = { width: node.width, height: node.height };
+    const vertices = generateRectVertices(node.width, node.height, node.cornerRadius);
+
+    // Drop shadows (behind fills)
+    this.renderDropShadows(node, vertices, transform, opacity);
 
     if (node.fills.length > 0) {
-      const fill = node.fills[node.fills.length - 1];
-      const vertices = generateRectVertices(node.width, node.height, node.cornerRadius);
-      this.drawFill(vertices, fill, transform, opacity, elementSize);
+      for (const fill of node.fills) {
+        this.drawFill(vertices, fill, transform, opacity, elementSize);
+      }
     }
+
+    // Inner shadows (after fills, before strokes)
+    this.renderInnerShadows(node, vertices, transform, opacity);
 
     if (node.stroke && node.stroke.width > 0) {
       const strokeVerts = tessellateRectStroke(node.width, node.height, node.cornerRadius ?? 0, node.stroke.width);
@@ -292,12 +330,19 @@ export class WebGLFigmaRenderer {
 
   private renderEllipse(node: EllipseNode, transform: AffineMatrix, opacity: number): void {
     const elementSize = { width: node.rx * 2, height: node.ry * 2 };
+    const vertices = generateEllipseVertices(node.cx, node.cy, node.rx, node.ry);
+
+    // Drop shadows (behind fills)
+    this.renderDropShadows(node, vertices, transform, opacity);
 
     if (node.fills.length > 0) {
-      const fill = node.fills[node.fills.length - 1];
-      const vertices = generateEllipseVertices(node.cx, node.cy, node.rx, node.ry);
-      this.drawFill(vertices, fill, transform, opacity, elementSize);
+      for (const fill of node.fills) {
+        this.drawFill(vertices, fill, transform, opacity, elementSize);
+      }
     }
+
+    // Inner shadows (after fills, before strokes)
+    this.renderInnerShadows(node, vertices, transform, opacity);
 
     if (node.stroke && node.stroke.width > 0) {
       const strokeVerts = tessellateEllipseStroke(node.cx, node.cy, node.rx, node.ry, node.stroke.width);
@@ -307,17 +352,38 @@ export class WebGLFigmaRenderer {
     }
   }
 
+  /**
+   * Render a path node.
+   *
+   * Strategy:
+   * - Multi-contour paths → always stencil (earcut's hole detection unreliable)
+   * - Single-contour paths → earcut first (fast), stencil fallback if empty
+   */
   private renderPath(node: PathNode, transform: AffineMatrix, opacity: number): void {
-    if (node.contours.length > 0 && node.fills.length > 0) {
-      const fill = node.fills[node.fills.length - 1];
+    if (node.contours.length === 0) return;
+
+    if (node.contours.length === 1) {
+      // Single contour — try earcut first (fast, correct for simple shapes)
       const vertices = tessellateContours(node.contours);
       if (vertices.length > 0) {
-        const elementSize = computeBoundingBox(vertices);
-        this.drawFill(vertices, fill, transform, opacity, elementSize);
+        this.renderDropShadows(node, vertices, transform, opacity);
+        if (node.fills.length > 0) {
+          const elementSize = computeBoundingBox(vertices);
+          for (const fill of node.fills) {
+            this.drawFill(vertices, fill, transform, opacity, elementSize);
+          }
+        }
+      } else {
+        // Earcut failed — fall back to stencil
+        this.renderPathStencil(node, transform, opacity);
       }
+    } else {
+      // Multiple contours — always use stencil for correct hole handling
+      this.renderPathStencil(node, transform, opacity);
     }
 
-    if (node.contours.length > 0 && node.stroke && node.stroke.width > 0) {
+    // Stroke (using polyline thickening)
+    if (node.stroke && node.stroke.width > 0) {
       const strokeVerts = tessellatePathStroke(node.contours, node.stroke.width);
       if (strokeVerts.length > 0) {
         drawSolidFill(this.glContext, strokeVerts, node.stroke.color, transform, opacity * node.stroke.opacity);
@@ -325,16 +391,60 @@ export class WebGLFigmaRenderer {
     }
   }
 
+  /** Render path fills using stencil-based even-odd fill */
+  private renderPathStencil(node: PathNode, transform: AffineMatrix, opacity: number): void {
+    const prepared = prepareFanTriangles(node.contours);
+    if (!prepared) return;
+
+    const { fanVertices, bounds } = prepared;
+    const coverQuad = generateCoverQuad(bounds);
+    const elementSize = { width: bounds.maxX - bounds.minX, height: bounds.maxY - bounds.minY };
+    this.renderDropShadowsStencil(node, fanVertices, coverQuad, bounds, transform, opacity);
+
+    if (node.fills.length > 0) {
+      this.drawStencilFill(fanVertices, coverQuad, transform, opacity, elementSize, node.fills);
+    }
+  }
+
+  /**
+   * Render text node.
+   *
+   * Always uses stencil-based fill for glyph outlines. Stencil + MSAA gives
+   * per-sample precision at the actual contour outline, producing better
+   * anti-aliasing than earcut's artificial triangle edges.
+   *
+   * Uses tolerance=0.1 (tighter than default 0.25) for smoother glyph curves.
+   */
   private renderText(node: TextNode, transform: AffineMatrix, opacity: number): void {
     const ctx = this.glContext;
     const color = node.fill.color;
     const fillOpacity = node.fill.opacity;
 
-    // Render glyph outlines as tessellated paths
     if (node.glyphContours && node.glyphContours.length > 0) {
-      const vertices = tessellateContours(node.glyphContours);
-      if (vertices.length > 0) {
-        drawSolidFill(ctx, vertices, color, transform, opacity * fillOpacity);
+      // Always use stencil for glyph outlines (tighter tolerance for smoother curves)
+      const prepared = prepareFanTriangles(node.glyphContours, 0.1);
+      if (prepared) {
+        const { fanVertices, bounds } = prepared;
+        const coverQuad = generateCoverQuad(bounds);
+        const elementSize = { width: bounds.maxX - bounds.minX, height: bounds.maxY - bounds.minY };
+        this.drawStencilFill(
+          fanVertices, coverQuad, transform, opacity * fillOpacity,
+          elementSize, [{ type: "solid", color, opacity: 1 }]
+        );
+      }
+
+      // Render decorations (underlines, strikethroughs) via stencil too
+      if (node.decorationContours && node.decorationContours.length > 0) {
+        const decPrepared = prepareFanTriangles(node.decorationContours, 0.1);
+        if (decPrepared) {
+          const { fanVertices, bounds } = decPrepared;
+          const coverQuad = generateCoverQuad(bounds);
+          const elementSize = { width: bounds.maxX - bounds.minX, height: bounds.maxY - bounds.minY };
+          this.drawStencilFill(
+            fanVertices, coverQuad, transform, opacity * fillOpacity,
+            elementSize, [{ type: "solid", color, opacity: 1 }]
+          );
+        }
       }
       return;
     }
@@ -357,14 +467,6 @@ export class WebGLFigmaRenderer {
         drawImageFill(ctx, vertices, entry.texture, transform, opacity * fillOpacity, elementSize);
       }
     }
-
-    // Render decorations (underlines, strikethroughs)
-    if (node.decorationContours && node.decorationContours.length > 0) {
-      const vertices = tessellateContours(node.decorationContours);
-      if (vertices.length > 0) {
-        drawSolidFill(ctx, vertices, color, transform, opacity * fillOpacity);
-      }
-    }
   }
 
   private renderImage(node: ImageNode, transform: AffineMatrix, opacity: number): void {
@@ -373,7 +475,253 @@ export class WebGLFigmaRenderer {
 
     const vertices = generateRectVertices(node.width, node.height);
     const elementSize = { width: node.width, height: node.height };
-    drawImageFill(this.glContext, vertices, entry.texture, transform, opacity, elementSize);
+    drawImageFill(this.glContext, vertices, entry.texture, transform, opacity, elementSize, {
+      imageWidth: entry.width,
+      imageHeight: entry.height,
+      scaleMode: node.scaleMode,
+    });
+  }
+
+  // =============================================================================
+  // Stencil-Based Path Fill
+  // =============================================================================
+
+  /**
+   * Draw fills using stencil-based even-odd fill rule.
+   *
+   * 1. Write fan triangles to stencil via INVERT
+   * 2. Draw covering quad with actual fill colors where stencil is set
+   * 3. Clean up stencil fill bits
+   *
+   * Uses bits 0-6 (FILL_STENCIL_MASK = 0x7F) for fill, bit 7 (0x80) for clip.
+   * Works correctly with frame clipping: fan triangles only write where clip passes.
+   */
+  private drawStencilFill(
+    fanVertices: Float32Array,
+    coverQuad: Float32Array,
+    transform: AffineMatrix,
+    opacity: number,
+    elementSize: { width: number; height: number },
+    fills: readonly Fill[]
+  ): void {
+    const gl = this.gl;
+    const isClipActive = this.clipActive;
+    const white: Color = { r: 1, g: 1, b: 1, a: 1 };
+
+    // Step 1: Write fan triangles to stencil via INVERT
+    gl.enable(gl.STENCIL_TEST);
+    gl.colorMask(false, false, false, false);
+    gl.stencilMask(FILL_STENCIL_MASK);
+
+    if (!isClipActive) {
+      gl.stencilFunc(gl.ALWAYS, 0, 0xff);
+    }
+    // If clip is active, keep existing stencilFunc (EQUAL, CLIP_BIT, CLIP_BIT)
+    // — fan triangles only write where clip passes
+
+    gl.stencilOp(gl.KEEP, gl.KEEP, gl.INVERT);
+
+    // Draw fan triangles (color doesn't matter — colorMask is false)
+    drawSolidFill(this.glContext, fanVertices, white, transform, 1);
+
+    // Step 2: Draw covering quad with actual fill(s), masked by stencil
+    gl.colorMask(true, true, true, true);
+    gl.stencilMask(0xff);
+    gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
+
+    if (isClipActive) {
+      // Clip active: need bit 7 set AND any fill bit set
+      gl.stencilFunc(gl.GREATER, CLIP_STENCIL_BIT, 0xff);
+    } else {
+      // Any fill bit set (bits 0-6)
+      gl.stencilFunc(gl.NOTEQUAL, 0, FILL_STENCIL_MASK);
+    }
+
+    for (const fill of fills) {
+      this.drawFill(coverQuad, fill, transform, opacity, elementSize);
+    }
+
+    // Step 3: Clean up fill bits (0-6)
+    gl.colorMask(false, false, false, false);
+    gl.stencilMask(FILL_STENCIL_MASK);
+    gl.stencilFunc(gl.ALWAYS, 0, 0xff);
+    gl.stencilOp(gl.KEEP, gl.KEEP, gl.ZERO);
+
+    drawSolidFill(this.glContext, coverQuad, white, transform, 1);
+
+    // Restore state
+    gl.colorMask(true, true, true, true);
+    gl.stencilMask(0xff);
+
+    if (isClipActive) {
+      gl.stencilFunc(gl.EQUAL, CLIP_STENCIL_BIT, CLIP_STENCIL_BIT);
+      gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
+    } else {
+      gl.disable(gl.STENCIL_TEST);
+    }
+  }
+
+  // =============================================================================
+  // Effects
+  // =============================================================================
+
+  /**
+   * Render drop shadow effects for simple shapes (rect, ellipse, frame).
+   * Uses pre-tessellated vertices directly.
+   */
+  private renderDropShadows(
+    node: SceneNodeBase,
+    vertices: Float32Array,
+    transform: AffineMatrix,
+    opacity: number
+  ): void {
+    if (node.effects.length === 0) return;
+
+    for (const effect of node.effects) {
+      if (effect.type !== "drop-shadow") continue;
+
+      if (effect.radius <= 0) {
+        // Zero-blur: draw the shape at offset position with shadow color
+        const offsetTransform: AffineMatrix = {
+          m00: transform.m00,
+          m01: transform.m01,
+          m02: transform.m02 + effect.offset.x,
+          m10: transform.m10,
+          m11: transform.m11,
+          m12: transform.m12 + effect.offset.y,
+        };
+        drawSolidFill(
+          this.glContext,
+          vertices,
+          effect.color,
+          offsetTransform,
+          opacity * effect.color.a
+        );
+      } else {
+        // Blurred shadow: FBO → Gaussian blur → composite
+        const canvasW = this.width * this.pixelRatio;
+        const canvasH = this.height * this.pixelRatio;
+        this.effectsRenderer.renderDropShadow(
+          canvasW,
+          canvasH,
+          effect,
+          this.pixelRatio,
+          () => {
+            drawSolidFill(
+              this.glContext,
+              vertices,
+              { r: 1, g: 1, b: 1, a: 1 },
+              transform,
+              1
+            );
+          }
+        );
+      }
+    }
+  }
+
+  /**
+   * Render inner shadow effects for simple shapes (rect, ellipse, frame).
+   * Must be called AFTER fills have been drawn.
+   */
+  private renderInnerShadows(
+    node: SceneNodeBase,
+    vertices: Float32Array,
+    transform: AffineMatrix,
+    opacity: number
+  ): void {
+    if (node.effects.length === 0) return;
+
+    for (const effect of node.effects) {
+      if (effect.type !== "inner-shadow") continue;
+
+      const canvasW = this.width * this.pixelRatio;
+      const canvasH = this.height * this.pixelRatio;
+      this.effectsRenderer.renderInnerShadow(
+        canvasW,
+        canvasH,
+        effect,
+        this.pixelRatio,
+        () => {
+          drawSolidFill(
+            this.glContext,
+            vertices,
+            { r: 1, g: 1, b: 1, a: 1 },
+            transform,
+            1
+          );
+        }
+      );
+    }
+  }
+
+  /**
+   * Render drop shadow effects for path nodes using stencil fill.
+   * Handles complex paths that can't be directly drawn with earcut.
+   */
+  private renderDropShadowsStencil(
+    node: SceneNodeBase,
+    fanVertices: Float32Array,
+    coverQuad: Float32Array,
+    bounds: Bounds,
+    transform: AffineMatrix,
+    opacity: number
+  ): void {
+    if (node.effects.length === 0) return;
+
+    const elementSize = { width: bounds.maxX - bounds.minX, height: bounds.maxY - bounds.minY };
+
+    for (const effect of node.effects) {
+      if (effect.type !== "drop-shadow") continue;
+
+      const offsetTransform: AffineMatrix = {
+        m00: transform.m00,
+        m01: transform.m01,
+        m02: transform.m02 + effect.offset.x,
+        m10: transform.m10,
+        m11: transform.m11,
+        m12: transform.m12 + effect.offset.y,
+      };
+
+      if (effect.radius <= 0) {
+        // Zero-blur: use stencil fill with shadow color at offset
+        this.drawStencilFill(
+          fanVertices,
+          coverQuad,
+          offsetTransform,
+          opacity * effect.color.a,
+          elementSize,
+          [{ type: "solid", color: effect.color, opacity: 1 }]
+        );
+      } else {
+        // Blurred shadow: FBO pipeline
+        // Use earcut for the silhouette (best effort — FBO doesn't have stencil)
+        const earcutVertices = tessellateContours(
+          (node as PathNode).contours ?? [],
+          0.25,
+          false
+        );
+        if (earcutVertices.length > 0) {
+          const canvasW = this.width * this.pixelRatio;
+          const canvasH = this.height * this.pixelRatio;
+          this.effectsRenderer.renderDropShadow(
+            canvasW,
+            canvasH,
+            effect,
+            this.pixelRatio,
+            () => {
+              drawSolidFill(
+                this.glContext,
+                earcutVertices,
+                { r: 1, g: 1, b: 1, a: 1 },
+                transform,
+                1
+              );
+            }
+          );
+        }
+      }
+    }
   }
 
   // =============================================================================
@@ -408,7 +756,11 @@ export class WebGLFigmaRenderer {
       case "image": {
         const entry = this.textureCache.getIfCached(fill.imageRef);
         if (entry) {
-          drawImageFill(ctx, vertices, entry.texture, transform, opacity * fill.opacity, elementSize);
+          drawImageFill(ctx, vertices, entry.texture, transform, opacity * fill.opacity, elementSize, {
+            imageWidth: entry.width,
+            imageHeight: entry.height,
+            scaleMode: fill.scaleMode,
+          });
         }
         break;
       }
@@ -421,6 +773,7 @@ export class WebGLFigmaRenderer {
   dispose(): void {
     this.shaders.dispose();
     this.textureCache.dispose();
+    this.effectsRenderer.dispose();
     this.gl.deleteBuffer(this.positionBuffer);
   }
 }

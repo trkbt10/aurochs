@@ -213,13 +213,23 @@ export function drawRadialGradientFill(
 // Image Fill
 // =============================================================================
 
+export type ImageFillOptions = {
+  /** Image natural width in pixels */
+  readonly imageWidth?: number;
+  /** Image natural height in pixels */
+  readonly imageHeight?: number;
+  /** Figma scale mode: FILL (cover+crop), FIT (contain), STRETCH (default) */
+  readonly scaleMode?: string;
+};
+
 export function drawImageFill(
   ctx: GLContext,
   vertices: Float32Array,
   texture: WebGLTexture,
   transform: AffineMatrix,
   opacity: number,
-  elementSize: { width: number; height: number }
+  elementSize: { width: number; height: number },
+  options?: ImageFillOptions
 ): void {
   if (vertices.length === 0 || opacity <= 0) return;
 
@@ -250,14 +260,94 @@ export function drawImageFill(
   gl.bindTexture(gl.TEXTURE_2D, texture);
   gl.uniform1i(gl.getUniformLocation(program, "u_texture"), 0);
 
-  // Scale UVs: vertex positions (0..w, 0..h) → (0..1, 0..1)
+  // Compute UV scale/offset based on scaleMode
+  const { texScale, texOffset } = computeImageUV(
+    elementSize.width,
+    elementSize.height,
+    options?.imageWidth ?? elementSize.width,
+    options?.imageHeight ?? elementSize.height,
+    options?.scaleMode ?? "STRETCH"
+  );
+
   gl.uniform2f(
     gl.getUniformLocation(program, "u_texScale"),
-    1 / elementSize.width,
-    1 / elementSize.height
+    texScale.x,
+    texScale.y
   );
-  gl.uniform2f(gl.getUniformLocation(program, "u_texOffset"), 0, 0);
+  gl.uniform2f(
+    gl.getUniformLocation(program, "u_texOffset"),
+    texOffset.x,
+    texOffset.y
+  );
   gl.uniform1f(gl.getUniformLocation(program, "u_opacity"), opacity);
 
   gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 2);
+}
+
+/**
+ * Compute UV scale and offset for image fills.
+ *
+ * Vertex positions go from (0,0) to (elementW, elementH).
+ * The shader computes: uv = position * texScale + texOffset
+ *
+ * - STRETCH: image is distorted to fill element exactly
+ * - FILL: image is scaled to cover element, maintaining aspect ratio, then center-cropped
+ * - FIT: image is scaled to fit within element, maintaining aspect ratio, centered
+ */
+function computeImageUV(
+  elementW: number,
+  elementH: number,
+  imageW: number,
+  imageH: number,
+  scaleMode: string
+): { texScale: { x: number; y: number }; texOffset: { x: number; y: number } } {
+  if (scaleMode === "FILL" && imageW > 0 && imageH > 0) {
+    const imageAR = imageW / imageH;
+    const elementAR = elementW / elementH;
+
+    if (imageAR > elementAR) {
+      // Image wider than element: full height, crop width
+      const uvWidth = elementAR / imageAR;
+      return {
+        texScale: { x: uvWidth / elementW, y: 1 / elementH },
+        texOffset: { x: (1 - uvWidth) / 2, y: 0 },
+      };
+    } else {
+      // Image taller than element: full width, crop height
+      const uvHeight = imageAR / elementAR;
+      return {
+        texScale: { x: 1 / elementW, y: uvHeight / elementH },
+        texOffset: { x: 0, y: (1 - uvHeight) / 2 },
+      };
+    }
+  }
+
+  if (scaleMode === "FIT" && imageW > 0 && imageH > 0) {
+    const imageAR = imageW / imageH;
+    const elementAR = elementW / elementH;
+
+    if (imageAR > elementAR) {
+      // Image wider: fit width, letterbox height
+      const visibleH = elementW / imageAR;
+      const padding = (elementH - visibleH) / 2;
+      return {
+        texScale: { x: 1 / elementW, y: 1 / visibleH },
+        texOffset: { x: 0, y: -padding / visibleH },
+      };
+    } else {
+      // Image taller: fit height, pillarbox width
+      const visibleW = elementH * imageAR;
+      const padding = (elementW - visibleW) / 2;
+      return {
+        texScale: { x: 1 / visibleW, y: 1 / elementH },
+        texOffset: { x: -padding / visibleW, y: 0 },
+      };
+    }
+  }
+
+  // STRETCH (default): map 0..w → 0..1
+  return {
+    texScale: { x: 1 / elementW, y: 1 / elementH },
+    texOffset: { x: 0, y: 0 },
+  };
 }

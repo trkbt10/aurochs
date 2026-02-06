@@ -14,7 +14,6 @@ import {
   extractPaintProps,
   extractGeometryProps,
   extractEffectsProps,
-  extractCornerRadiusProps,
 } from "../svg/nodes/extract-props";
 import type {
   SceneGraph,
@@ -107,6 +106,29 @@ function convertTransform(matrix: { m00?: number; m01?: number; m02?: number; m1
 }
 
 // =============================================================================
+// Corner Radius
+// =============================================================================
+
+/**
+ * Extract a single uniform corner radius from a node.
+ * Handles both `rectangleCornerRadii` (per-corner) and `cornerRadius`.
+ * When per-corner radii differ, uses the average (scene graph limitation).
+ */
+function extractUniformCornerRadius(node: FigNode): number | undefined {
+  const radii = node.rectangleCornerRadii;
+  if (radii && radii.length === 4) {
+    const allSame =
+      radii[0] === radii[1] &&
+      radii[1] === radii[2] &&
+      radii[2] === radii[3];
+    if (allSame) return radii[0] || undefined;
+    const avg = (radii[0] + radii[1] + radii[2] + radii[3]) / 4;
+    return avg || undefined;
+  }
+  return node.cornerRadius;
+}
+
+// =============================================================================
 // Clipping
 // =============================================================================
 
@@ -156,7 +178,7 @@ function buildFrameNode(
   const { size } = extractSizeProps(node);
   const { fillPaints, strokePaints, strokeWeight } = extractPaintProps(node);
   const { effects } = extractEffectsProps(node);
-  const { cornerRadius } = extractCornerRadiusProps(node);
+  const cornerRadius = extractUniformCornerRadius(node);
   const clipsContent = resolveClipsContent(node);
 
   return {
@@ -183,7 +205,7 @@ function buildRectNode(node: FigNode, ctx: BuildContext): RectNode {
   const { size } = extractSizeProps(node);
   const { fillPaints, strokePaints, strokeWeight } = extractPaintProps(node);
   const { effects } = extractEffectsProps(node);
-  const { cornerRadius } = extractCornerRadiusProps(node);
+  const cornerRadius = extractUniformCornerRadius(node);
 
   return {
     type: "rect",
