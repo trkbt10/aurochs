@@ -20,13 +20,9 @@
     "dev:demo": "vite --config demo/vite.config.ts"
   },
   "exports": {
-    ".": {
-      "types": "./src/index.ts",
-      "default": "./src/index.ts"
-    },
-    "./types": {
-      "types": "./src/types.ts",
-      "default": "./src/types.ts"
+    "./svg": {
+      "types": "./src/svg/index.ts",
+      "default": "./src/svg/index.ts"
     },
     "./ascii": {
       "types": "./src/ascii/index.ts",

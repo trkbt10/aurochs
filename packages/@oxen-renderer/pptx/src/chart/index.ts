@@ -9,7 +9,7 @@
  */
 
 import type { Chart } from "@oxen-office/chart/domain";
-import { renderChart as renderChartSvg } from "@oxen-renderer/chart";
+import { renderChart as renderChartSvg } from "@oxen-renderer/chart/svg";
 import type { CoreRenderContext } from "../render-context";
 import { createChartRenderContext, createFillResolver } from "./context-adapter";
 

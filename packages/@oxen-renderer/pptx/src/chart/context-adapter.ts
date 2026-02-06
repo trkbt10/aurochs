@@ -2,8 +2,8 @@
  * @file Chart render context adapter for PPTX rendering
  */
 
-import type { ChartRenderContext, FillResolver, ResolvedFill, ResolvedTextStyle } from "@oxen-renderer/chart";
-import type { GenericTextBody } from "@oxen-renderer/chart";
+import type { ChartRenderContext, FillResolver, ResolvedFill, ResolvedTextStyle } from "@oxen-renderer/chart/svg";
+import type { GenericTextBody } from "@oxen-renderer/chart/svg";
 import type { BaseFill } from "@oxen-office/drawing-ml/domain/fill";
 import { resolveColor } from "@oxen-office/drawing-ml/domain/color-resolution";
 import { resolveThemeFont } from "@oxen-office/ooxml/domain/font-scheme";

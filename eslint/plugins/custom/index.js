@@ -15,7 +15,7 @@ import noOxenBuilderImportInOxenOffice from "./rules/no-oxen-builder-import-in-o
 import noCrossPackageReexport from "./rules/no-cross-package-reexport.js";
 import noExportStar from "./rules/no-export-star.js";
 import maxParams from "./rules/max-params.js";
-import noBareDrawingMlImport from "./rules/no-bare-drawing-ml-import.js";
+import noBareRendererImport from "./rules/no-bare-renderer-import.js";
 
 export default {
   rules: {
@@ -33,6 +33,6 @@ export default {
     "no-cross-package-reexport": noCrossPackageReexport,
     "no-export-star": noExportStar,
     "max-params": maxParams,
-    "no-bare-drawing-ml-import": noBareDrawingMlImport,
+    "no-bare-renderer-import": noBareRendererImport,
   },
 };

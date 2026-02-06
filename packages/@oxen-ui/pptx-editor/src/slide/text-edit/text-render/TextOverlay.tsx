@@ -19,7 +19,7 @@ import {
   buildFontFamily,
   toSvgDominantBaseline,
 } from "@oxen-renderer/pptx/react";
-import { createTextEffectsFilterDef } from "@oxen-renderer/drawing-ml";
+import { createTextEffectsFilterDef } from "@oxen-renderer/drawing-ml/react";
 import type { CompositionState } from "../coordinator/types";
 
 // =============================================================================
