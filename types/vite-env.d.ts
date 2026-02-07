@@ -1,3 +1,4 @@
+/** @file Vite environment type declarations and module augmentations */
 /// <reference types="vite/client" />
 
 /**
@@ -20,6 +21,31 @@ declare module "*?worker" {
  * TypeScript declarations.
  */
 declare module "jsdom" {
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
   
   
   
