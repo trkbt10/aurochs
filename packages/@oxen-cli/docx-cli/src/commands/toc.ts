@@ -2,9 +2,8 @@
  * @file toc command - display table of contents based on outline levels
  */
 
-import * as fs from "node:fs/promises";
-import { loadDocx } from "@oxen-office/docx";
 import { success, error, type Result } from "@oxen-cli/cli-core";
+import { loadDocument } from "./loader";
 import type { DocxBlockContent } from "@oxen-office/docx/domain/document";
 import type { DocxParagraph } from "@oxen-office/docx/domain/paragraph";
 import { extractTextFromBlockContent } from "@oxen-office/docx/domain/text-utils";
@@ -72,8 +71,7 @@ export async function runToc(
   options: { maxLevel?: number } = {}
 ): Promise<Result<TocData>> {
   try {
-    const buffer = await fs.readFile(filePath);
-    const doc = await loadDocx(buffer);
+    const doc = await loadDocument(filePath);
 
     const entries: TocEntryJson[] = [];
     extractTocFromContent(doc.body.content, entries);

@@ -2,9 +2,8 @@
  * @file images command - display embedded images
  */
 
-import * as fs from "node:fs/promises";
-import { loadDocx } from "@oxen-office/docx";
 import { success, error, type Result } from "@oxen-cli/cli-core";
+import { loadDocument } from "./loader";
 import type { DocxBlockContent } from "@oxen-office/docx/domain/document";
 import type { DocxParagraph } from "@oxen-office/docx/domain/paragraph";
 import type { DocxRun } from "@oxen-office/docx/domain/run";
@@ -110,8 +109,7 @@ function extractImagesFromContent(content: readonly DocxBlockContent[], images: 
  */
 export async function runImages(filePath: string): Promise<Result<ImagesData>> {
   try {
-    const buffer = await fs.readFile(filePath);
-    const doc = await loadDocx(buffer);
+    const doc = await loadDocument(filePath);
 
     const images: ImageJson[] = [];
     extractImagesFromContent(doc.body.content, images);

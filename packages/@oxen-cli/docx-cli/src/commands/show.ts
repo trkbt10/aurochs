@@ -2,9 +2,9 @@
  * @file show command - display section content
  */
 
-import * as fs from "node:fs/promises";
-import { loadDocx, type DocxBlockContent, type DocxParagraph, type DocxTable } from "@oxen-office/docx";
+import { type DocxBlockContent, type DocxParagraph, type DocxTable } from "@oxen-office/docx";
 import { success, error, type Result } from "@oxen-cli/cli-core";
+import { loadDocument } from "./loader";
 import { serializeParagraph, type ParagraphJson } from "../serializers/paragraph-serializer";
 import { serializeSection, type SectionJson } from "../serializers/section-serializer";
 
@@ -109,8 +109,7 @@ function serializeBlockContent(block: DocxBlockContent): BlockContentJson | unde
  */
 export async function runShow(filePath: string, sectionNumber: number): Promise<Result<ShowData>> {
   try {
-    const buffer = await fs.readFile(filePath);
-    const doc = await loadDocx(buffer);
+    const doc = await loadDocument(filePath);
 
     const sections = splitIntoSections(doc.body);
 

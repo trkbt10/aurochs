@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@oxen-cli/cli-core": "workspace:*",
+    "@oxen-converters/doc-to-docx": "workspace:*",
     "@oxen-builder/docx": "workspace:*",
     "@oxen-office/docx": "workspace:*",
     "@oxen-renderer/docx": "workspace:*",

@@ -2,9 +2,8 @@
  * @file comments command - display document comments
  */
 
-import * as fs from "node:fs/promises";
-import { loadDocx } from "@oxen-office/docx";
 import { success, error, type Result } from "@oxen-cli/cli-core";
+import { loadDocument } from "./loader";
 import { extractTextFromBlockContent } from "@oxen-office/docx/domain/text-utils";
 
 // =============================================================================
@@ -33,8 +32,7 @@ export type CommentsData = {
  */
 export async function runComments(filePath: string): Promise<Result<CommentsData>> {
   try {
-    const buffer = await fs.readFile(filePath);
-    const doc = await loadDocx(buffer);
+    const doc = await loadDocument(filePath);
 
     if (!doc.comments || doc.comments.comment.length === 0) {
       return success({

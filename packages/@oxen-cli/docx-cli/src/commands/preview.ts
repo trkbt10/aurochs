@@ -2,9 +2,9 @@
  * @file preview command - ASCII art visualization of document content
  */
 
-import * as fs from "node:fs/promises";
-import { loadDocx, type DocxBlockContent, type DocxParagraph, type DocxTable } from "@oxen-office/docx";
+import { type DocxBlockContent, type DocxParagraph, type DocxTable } from "@oxen-office/docx";
 import { success, error, type Result } from "@oxen-cli/cli-core";
+import { loadDocument } from "./loader";
 import { renderDocxAscii, type AsciiDocBlock, type AsciiParagraph, type AsciiTable } from "@oxen-renderer/docx/ascii";
 
 // =============================================================================
@@ -147,8 +147,7 @@ export async function runPreview(
   options: PreviewOptions,
 ): Promise<Result<PreviewData>> {
   try {
-    const buffer = await fs.readFile(filePath);
-    const doc = await loadDocx(buffer);
+    const doc = await loadDocument(filePath);
 
     const sections = splitIntoSections(doc.body);
 

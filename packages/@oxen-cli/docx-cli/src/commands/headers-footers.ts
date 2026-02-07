@@ -2,9 +2,8 @@
  * @file headers-footers command - display headers and footers
  */
 
-import * as fs from "node:fs/promises";
-import { loadDocx } from "@oxen-office/docx";
 import { success, error, type Result } from "@oxen-cli/cli-core";
+import { loadDocument } from "./loader";
 import { extractTextFromBlockContent } from "@oxen-office/docx/domain/text-utils";
 
 // =============================================================================
@@ -33,8 +32,7 @@ export type HeadersFootersData = {
  */
 export async function runHeadersFooters(filePath: string): Promise<Result<HeadersFootersData>> {
   try {
-    const buffer = await fs.readFile(filePath);
-    const doc = await loadDocx(buffer);
+    const doc = await loadDocument(filePath);
 
     const items: HeaderFooterItemJson[] = [];
 

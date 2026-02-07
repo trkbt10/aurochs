@@ -2,9 +2,9 @@
  * @file extract command - extract text from sections
  */
 
-import * as fs from "node:fs/promises";
-import { loadDocx, type DocxBlockContent } from "@oxen-office/docx";
+import type { DocxBlockContent } from "@oxen-office/docx";
 import { success, error, type Result } from "@oxen-cli/cli-core";
+import { loadDocument } from "./loader";
 import { extractTextFromBlockContent } from "@oxen-office/docx/domain/text-utils";
 
 export type SectionTextItem = {
@@ -95,8 +95,7 @@ function getSectionNumbers(options: ExtractOptions, count: number): number[] {
  */
 export async function runExtract(filePath: string, options: ExtractOptions): Promise<Result<ExtractData>> {
   try {
-    const buffer = await fs.readFile(filePath);
-    const doc = await loadDocx(buffer);
+    const doc = await loadDocument(filePath);
 
     const sections = splitIntoSections(doc.body);
     const sectionNumbers = getSectionNumbers(options, sections.length);

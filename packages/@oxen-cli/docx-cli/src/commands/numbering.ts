@@ -2,9 +2,8 @@
  * @file numbering command - display numbering definitions
  */
 
-import * as fs from "node:fs/promises";
-import { loadDocx } from "@oxen-office/docx";
 import { success, error, type Result } from "@oxen-cli/cli-core";
+import { loadDocument } from "./loader";
 import type { DocxLevel, DocxAbstractNum, DocxNum } from "@oxen-office/docx/domain/numbering";
 
 // =============================================================================
@@ -83,8 +82,7 @@ function serializeNum(num: DocxNum): NumJson {
  */
 export async function runNumbering(filePath: string): Promise<Result<NumberingData>> {
   try {
-    const buffer = await fs.readFile(filePath);
-    const doc = await loadDocx(buffer);
+    const doc = await loadDocument(filePath);
 
     if (!doc.numbering) {
       return success({

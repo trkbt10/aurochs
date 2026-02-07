@@ -2,9 +2,9 @@
  * @file info command - display document metadata
  */
 
-import * as fs from "node:fs/promises";
-import { loadDocx, twipsToPoints } from "@oxen-office/docx";
+import { twipsToPoints } from "@oxen-office/docx";
 import { success, error, type Result } from "@oxen-cli/cli-core";
+import { loadDocument } from "./loader";
 
 export type SettingsInfo = {
   readonly trackRevisions?: boolean;
@@ -84,8 +84,7 @@ function buildSettingsInfo(settings: SettingsInput | undefined): SettingsInfo | 
  */
 export async function runInfo(filePath: string): Promise<Result<InfoData>> {
   try {
-    const buffer = await fs.readFile(filePath);
-    const doc = await loadDocx(buffer);
+    const doc = await loadDocument(filePath);
 
     const sectPr = doc.body.sectPr;
     const pageSize = buildPageSize(sectPr?.pgSz);

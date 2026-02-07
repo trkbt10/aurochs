@@ -2,9 +2,9 @@
  * @file list command - list sections with summary
  */
 
-import * as fs from "node:fs/promises";
-import { loadDocx, twipsToPoints, type DocxBlockContent, type DocxParagraph, type Twips } from "@oxen-office/docx";
+import { twipsToPoints, type DocxBlockContent, type DocxParagraph, type Twips } from "@oxen-office/docx";
 import { success, error, type Result } from "@oxen-cli/cli-core";
+import { loadDocument } from "./loader";
 import { extractTextFromParagraph } from "@oxen-office/docx/domain/text-utils";
 
 export type SectionListItem = {
@@ -69,8 +69,7 @@ function getFirstParagraphText(content: readonly DocxBlockContent[]): string | u
  */
 export async function runList(filePath: string): Promise<Result<ListData>> {
   try {
-    const buffer = await fs.readFile(filePath);
-    const doc = await loadDocx(buffer);
+    const doc = await loadDocument(filePath);
 
     const sections = splitIntoSections(doc.body);
     const items: SectionListItem[] = sections.map((section, index) => {

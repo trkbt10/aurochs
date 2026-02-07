@@ -2,9 +2,8 @@
  * @file styles command - display document styles
  */
 
-import * as fs from "node:fs/promises";
-import { loadDocx } from "@oxen-office/docx";
 import { success, error, type Result } from "@oxen-cli/cli-core";
+import { loadDocument } from "./loader";
 import type { DocxStyleType } from "@oxen-office/docx/domain/styles";
 
 // =============================================================================
@@ -46,8 +45,7 @@ export async function runStyles(
   options: { type?: string; all?: boolean } = {}
 ): Promise<Result<StylesData>> {
   try {
-    const buffer = await fs.readFile(filePath);
-    const doc = await loadDocx(buffer);
+    const doc = await loadDocument(filePath);
 
     if (!doc.styles) {
       return success({
