@@ -120,19 +120,35 @@ function buildRow(cells: readonly DocTableCell[], tapProps: TapProps | undefined
     return { cells };
   }
 
-  // Apply cell widths from TDefTable to individual cells
+  // Apply per-cell properties from TAP SPRMs
   const enrichedCells = cells.map((cell, idx) => {
     const width = tapProps.cellWidths?.[idx];
-    if (width !== undefined) {
-      return { ...cell, width };
-    }
-    return cell;
+    const verticalAlign = tapProps.verticalAlign?.[idx];
+    const verticalMerge = tapProps.verticalMerge?.[idx];
+    const horizontalMerge = tapProps.horizontalMerge?.[idx];
+    const backgroundColor = tapProps.cellShading?.[idx];
+
+    const hasChanges = width !== undefined || verticalAlign !== undefined
+      || verticalMerge !== undefined || horizontalMerge !== undefined
+      || backgroundColor !== undefined;
+
+    if (!hasChanges) return cell;
+
+    return {
+      ...cell,
+      ...(width !== undefined ? { width } : {}),
+      ...(verticalAlign !== undefined ? { verticalAlign } : {}),
+      ...(verticalMerge !== undefined ? { verticalMerge } : {}),
+      ...(horizontalMerge !== undefined ? { horizontalMerge } : {}),
+      ...(backgroundColor !== undefined ? { backgroundColor } : {}),
+    };
   });
 
   return {
     cells: enrichedCells,
     ...(tapProps.rowHeight !== undefined ? { height: tapProps.rowHeight } : {}),
     ...(tapProps.isHeader ? { header: true } : {}),
+    ...(tapProps.borders ? { borders: tapProps.borders } : {}),
   };
 }
 

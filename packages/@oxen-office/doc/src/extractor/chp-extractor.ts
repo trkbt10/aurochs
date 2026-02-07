@@ -22,7 +22,7 @@ import { parseChpFkp, type ChpxRun } from "../stream/fkp";
 import type { PieceDescriptor } from "../stream/piece-table";
 
 /** Mutable character properties accumulated from SPRMs. */
-type ChpProps = {
+export type ChpProps = {
   bold?: boolean;
   italic?: boolean;
   underline?: boolean;
@@ -47,6 +47,8 @@ type ChpProps = {
   color?: string;
   highlight?: string;
   spacing?: number;
+  /** CHP fSpec flag — character is special (e.g. \x02 footnote ref, \x01 picture) */
+  fSpecial?: boolean;
 };
 
 function kulToDocUnderlineStyle(kul: number): DocUnderlineStyle | undefined {
@@ -102,6 +104,9 @@ function applyChpSprm(props: ChpProps, sprm: Sprm): void {
       break;
     case SPRM_CHP.CFEmboss:
       props.emboss = sprmToggle(sprm);
+      break;
+    case SPRM_CHP.CFSpec:
+      props.fSpecial = sprmToggle(sprm);
       break;
     case SPRM_CHP.CFImprint:
       props.imprint = sprmToggle(sprm);

@@ -8,7 +8,7 @@
  * LVL: LVLF(28B) + grpprlPapx(cbGrpprlPapx bytes) + grpprlChpx(cbGrpprlChpx bytes) + xst
  */
 
-import type { DocListDefinition, DocListLevel, DocListOverride } from "../domain/types";
+import type { DocListDefinition, DocListLevel, DocListLevelOverride, DocListOverride } from "../domain/types";
 
 /** Parse PlfLst from the table stream. */
 export function parseListDefinitions(tableStream: Uint8Array, fc: number, lcb: number): readonly DocListDefinition[] {
@@ -115,7 +115,8 @@ export function parseListOverrides(tableStream: Uint8Array, fc: number, lcb: num
   const cLfo = view.getInt32(fc, true);
   if (cLfo <= 0) return [];
 
-  const overrides: DocListOverride[] = [];
+  // First pass: read all LFO entries (16 bytes each), collecting lsid and clfolvl
+  const lfoEntries: Array<{ lsid: number; clfolvl: number }> = [];
   // eslint-disable-next-line no-restricted-syntax -- sequential read
   let offset = fc + 4;
 
@@ -123,9 +124,77 @@ export function parseListOverrides(tableStream: Uint8Array, fc: number, lcb: num
     if (offset + 16 > fc + lcb) break;
 
     const lsid = view.getInt32(offset, true);
-    overrides.push({ lsid });
-    offset += 16; // LFO is 16 bytes
+    // clfolvl is at offset +8 within the LFO structure (4B)
+    const clfolvl = view.getUint32(offset + 8, true);
+    lfoEntries.push({ lsid, clfolvl });
+    offset += 16;
+  }
+
+  // Second pass: parse LFOLVL entries (after all LFO entries)
+  const overrides: DocListOverride[] = [];
+
+  for (const entry of lfoEntries) {
+    if (entry.clfolvl === 0) {
+      overrides.push({ lsid: entry.lsid });
+      continue;
+    }
+
+    const levelOverrides: DocListLevelOverride[] = [];
+    for (let j = 0; j < entry.clfolvl; j++) {
+      if (offset + 8 > fc + lcb) break;
+
+      const lfolvl = parseLfolvl(tableStream, offset, fc + lcb);
+      if (!lfolvl) break;
+
+      levelOverrides.push(lfolvl.override);
+      offset = lfolvl.nextOffset;
+    }
+
+    overrides.push({
+      lsid: entry.lsid,
+      ...(levelOverrides.length > 0 ? { levelOverrides } : {}),
+    });
   }
 
   return overrides;
+}
+
+/**
+ * Parse a single LFOLVL entry.
+ *
+ * Structure:
+ *   iStartAt(4B) + flags(4B: ilvl:4 + fStartAt:1 + fFormatting:1 + reserved:26)
+ *   If fFormatting=1, a full LVL structure follows.
+ */
+function parseLfolvl(
+  data: Uint8Array,
+  offset: number,
+  end: number,
+): { override: DocListLevelOverride; nextOffset: number } | undefined {
+  if (offset + 8 > end) return undefined;
+
+  const view = new DataView(data.buffer, data.byteOffset, data.byteLength);
+  const iStartAt = view.getInt32(offset, true);
+  const flags = view.getUint32(offset + 4, true);
+  const ilvl = flags & 0x0f;
+  const fStartAt = (flags >> 4) & 0x01;
+  const fFormatting = (flags >> 5) & 0x01;
+
+  // eslint-disable-next-line no-restricted-syntax -- offset tracking
+  let nextOffset = offset + 8;
+
+  // If fFormatting=1, a full LVL structure follows (skip it)
+  if (fFormatting === 1) {
+    const lvl = parseLvl(data, nextOffset, end);
+    if (lvl) {
+      nextOffset = lvl.nextOffset;
+    }
+  }
+
+  const override: DocListLevelOverride = {
+    level: ilvl,
+    ...(fStartAt === 1 ? { startOverride: iStartAt } : {}),
+  };
+
+  return { override, nextOffset };
 }

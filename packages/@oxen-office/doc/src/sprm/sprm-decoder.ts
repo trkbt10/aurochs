@@ -160,6 +160,7 @@ export const SPRM_CHP = {
   CFSmallCaps: 0x083a,
   CFCaps: 0x083b,
   CFVanish: 0x083c,
+  CFSpec: 0x0855,
   CFEmboss: 0x0858,
   CFImprint: 0x0854,
   CFDStrike: 0x2a53,

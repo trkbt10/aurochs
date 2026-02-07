@@ -11,6 +11,9 @@ import type {
   DocParagraph,
 } from "../domain/types";
 
+/** Callback that builds formatted paragraphs from a global CP range. */
+export type SubdocParagraphBuilder = (globalCpStart: number, globalCpEnd: number) => readonly DocParagraph[];
+
 // --- Helper: extract sub-document text range ---
 
 /**
@@ -67,37 +70,59 @@ export function extractHeadersFooters(
   hddCps: readonly number[],
   fullText: string,
   hdrTextStart: number,
+  buildParagraphs?: SubdocParagraphBuilder,
 ): { headers: readonly DocHeaderFooter[]; footers: readonly DocHeaderFooter[] } {
   const headers: DocHeaderFooter[] = [];
   const footers: DocHeaderFooter[] = [];
 
   if (hddCps.length < 12) return { headers, footers };
 
+  const builder = buildParagraphs ?? ((s: number, e: number) => textRangeToParagraphs(fullText, s, e));
+
   // Skip first 6 separator stories
   const sectionStories = hddCps.slice(6);
 
+  // Track last seen content per story slot for empty story inheritance
+  // Keys: "header:even", "header:odd", "footer:even", "footer:odd", "header:first", "footer:first"
+  const lastSeen = new Map<string, readonly DocParagraph[]>();
+
+  const storySlots: Array<{ type: DocHeaderFooterType; isHeader: boolean }> = [
+    { type: "even", isHeader: true },
+    { type: "odd", isHeader: true },
+    { type: "even", isHeader: false },
+    { type: "odd", isHeader: false },
+    { type: "first", isHeader: true },
+    { type: "first", isHeader: false },
+  ];
+
   // Process sections (6 stories per section)
   for (let s = 0; s + 6 < sectionStories.length; s += 6) {
-    const types: Array<{ type: DocHeaderFooterType; isHeader: boolean }> = [
-      { type: "even", isHeader: true },
-      { type: "odd", isHeader: true },
-      { type: "even", isHeader: false },
-      { type: "odd", isHeader: false },
-      { type: "first", isHeader: true },
-      { type: "first", isHeader: false },
-    ];
-
     for (let i = 0; i < 6; i++) {
       const cpStart = sectionStories[s + i];
       const cpEnd = s + i + 1 < sectionStories.length ? sectionStories[s + i + 1] : cpStart;
+      const slot = storySlots[i];
+      const key = `${slot.isHeader ? "header" : "footer"}:${slot.type}`;
 
-      if (cpStart >= cpEnd) continue;
+      let content: readonly DocParagraph[] | undefined;
 
-      const content = textRangeToParagraphs(fullText, hdrTextStart + cpStart, hdrTextStart + cpEnd);
-      if (content.length === 0) continue;
+      if (cpStart < cpEnd) {
+        content = builder(hdrTextStart + cpStart, hdrTextStart + cpEnd);
+        if (content.length > 0) {
+          lastSeen.set(key, content);
+        } else {
+          content = undefined;
+        }
+      }
 
-      const entry: DocHeaderFooter = { type: types[i].type, content };
-      if (types[i].isHeader) {
+      // If empty, inherit from previous section
+      if (!content) {
+        content = lastSeen.get(key);
+      }
+
+      if (!content || content.length === 0) continue;
+
+      const entry: DocHeaderFooter = { type: slot.type, content };
+      if (slot.isHeader) {
         headers.push(entry);
       } else {
         footers.push(entry);
@@ -106,6 +131,47 @@ export function extractHeadersFooters(
   }
 
   return { headers, footers };
+}
+
+// --- Footnote/Endnote reference mark detection ---
+
+/** Special character for footnote/endnote reference marks. */
+const FOOTNOTE_REF_CHAR = "\x02";
+
+/**
+ * Detect footnote/endnote reference marks in the main document text.
+ *
+ * In .doc format, `\x02` characters with CHP fSpec=1 are note reference marks.
+ * This function scans the main text for `\x02` characters and cross-references
+ * them with the PlcffndRef/PlcfendRef CP arrays.
+ *
+ * Returns indices into the refCps array (excluding the boundary CP) for each
+ * matched reference mark.
+ */
+export function detectNoteReferenceMarks(
+  mainText: string,
+  refCps: readonly number[],
+): readonly { cp: number; noteIndex: number }[] {
+  if (refCps.length < 2) return []; // Need at least 2 CPs (n+1 boundary format)
+
+  // Build a set of reference CPs (excluding the final boundary CP)
+  const refCpSet = new Map<number, number>(); // CP → index
+  for (let i = 0; i < refCps.length - 1; i++) {
+    refCpSet.set(refCps[i], i);
+  }
+
+  const results: Array<{ cp: number; noteIndex: number }> = [];
+
+  for (let cp = 0; cp < mainText.length; cp++) {
+    if (mainText[cp] === FOOTNOTE_REF_CHAR) {
+      const noteIndex = refCpSet.get(cp);
+      if (noteIndex !== undefined) {
+        results.push({ cp, noteIndex });
+      }
+    }
+  }
+
+  return results;
 }
 
 // --- Footnotes/Endnotes ---
@@ -160,7 +226,9 @@ export function extractNotes(
   textCps: readonly number[],
   fullText: string,
   noteTextStart: number,
+  buildParagraphs?: SubdocParagraphBuilder,
 ): readonly DocNote[] {
+  const builder = buildParagraphs ?? ((s: number, e: number) => textRangeToParagraphs(fullText, s, e));
   const notes: DocNote[] = [];
 
   // refCps has n+1 entries (boundaries), textCps has n+1 entries
@@ -171,7 +239,7 @@ export function extractNotes(
     const cpStart = textCps[i];
     const cpEnd = textCps[i + 1];
 
-    const content = textRangeToParagraphs(fullText, noteTextStart + cpStart, noteTextStart + cpEnd);
+    const content = builder(noteTextStart + cpStart, noteTextStart + cpEnd);
     notes.push({ cpRef, content });
   }
 
@@ -236,14 +304,25 @@ export function parseCommentAuthors(tableStream: Uint8Array, fc: number, lcb: nu
   return authors;
 }
 
-/** Extract comments. */
+/**
+ * Extract comments.
+ *
+ * When annotation bookmarks (atnBookmarks) are provided, cpStart/cpEnd are set
+ * from the bookmark range. Otherwise they fall back to cpRef (reference point only).
+ */
 export function extractComments(
   refs: readonly { cpRef: number; authorIndex: number }[],
   textCps: readonly number[],
   authors: readonly string[],
   fullText: string,
   commentTextStart: number,
+  buildParagraphs?: SubdocParagraphBuilder,
+  atnBookmarks?: {
+    readonly starts: readonly { cp: number; ibkl: number }[];
+    readonly endCps: readonly number[];
+  },
 ): readonly DocComment[] {
+  const builder = buildParagraphs ?? ((s: number, e: number) => textRangeToParagraphs(fullText, s, e));
   const comments: DocComment[] = [];
 
   const count = Math.min(refs.length, textCps.length - 1);
@@ -252,13 +331,24 @@ export function extractComments(
     const cpStart = textCps[i];
     const cpEnd = textCps[i + 1];
 
-    const content = textRangeToParagraphs(fullText, commentTextStart + cpStart, commentTextStart + cpEnd);
+    const content = builder(commentTextStart + cpStart, commentTextStart + cpEnd);
     const author = authors[ref.authorIndex] ?? `Author ${ref.authorIndex}`;
+
+    // Use annotation bookmarks for comment range when available
+    let rangeCpStart = ref.cpRef;
+    let rangeCpEnd = ref.cpRef;
+    if (atnBookmarks && i < atnBookmarks.starts.length) {
+      rangeCpStart = atnBookmarks.starts[i].cp;
+      const ibkl = atnBookmarks.starts[i].ibkl;
+      rangeCpEnd = ibkl < atnBookmarks.endCps.length
+        ? atnBookmarks.endCps[ibkl]
+        : rangeCpStart;
+    }
 
     comments.push({
       author,
-      cpStart: ref.cpRef,
-      cpEnd: ref.cpRef,
+      cpStart: rangeCpStart,
+      cpEnd: rangeCpEnd,
       content,
     });
   }

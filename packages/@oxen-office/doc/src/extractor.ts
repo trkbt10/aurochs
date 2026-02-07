@@ -11,9 +11,10 @@ import { extractText, splitIntoParagraphs } from "./stream/text-extractor";
 import { parseBinTable, type BinTable } from "./stream/bin-table";
 import { parseFontTable, buildFontLookup } from "./stream/font-table";
 import { parseStyleSheet } from "./stream/style-sheet";
+import { createStyleResolver, type StyleResolver } from "./extractor/style-resolver";
 import { parseListDefinitions, parseListOverrides } from "./stream/list-data";
 import { extractChpProps, chpPropsToRunProps, cpToFc, findChpxAtFc, getAllChpxRunsInRange } from "./extractor/chp-extractor";
-import { findPapxAtFc, findRawPapxAtFc, type PapProps } from "./extractor/pap-extractor";
+import { extractPapProps, findRawPapxAtFc, type PapProps } from "./extractor/pap-extractor";
 import { extractTapProps, type TapProps } from "./extractor/tap-extractor";
 import { parsePlcfSed, parseSepx, sepPropsToSection, type SectionDescriptor } from "./extractor/sep-extractor";
 import { extractTables } from "./extractor/table-extractor";
@@ -31,7 +32,9 @@ import {
   parseBookmarkEnds,
   extractBookmarks,
   extractComments,
+  type SubdocParagraphBuilder,
 } from "./extractor/subdoc-extractor";
+import type { Sprm } from "./sprm/sprm-decoder";
 import type { ChpxRun } from "./stream/fkp";
 import type { PapxRun } from "./stream/fkp";
 
@@ -63,7 +66,10 @@ export function extractDocDocument(options: ExtractDocOptions): DocDocument {
   const fonts = fontEntries.map((f) => f.name);
 
   // --- Styles ---
-  const styles = tryParse(() => parseStyleSheet(tableStream, fib.fcStshf, fib.lcbStshf)) ?? [];
+  const styleData = tryParse(() => parseStyleSheet(tableStream, fib.fcStshf, fib.lcbStshf))
+    ?? { styles: [], upxMap: new Map() };
+  const styles = styleData.styles;
+  const styleResolver = createStyleResolver(styles, styleData.upxMap);
 
   // --- Lists ---
   const lists = tryParse(() => parseListDefinitions(tableStream, fib.fcPlfLst, fib.lcbPlfLst)) ?? [];
@@ -87,6 +93,7 @@ export function extractDocDocument(options: ExtractDocOptions): DocDocument {
     fontLookup,
     chpCache,
     papCache,
+    styleResolver,
   );
 
   // --- Tables: group table paragraphs into DocTable objects ---
@@ -104,16 +111,22 @@ export function extractDocDocument(options: ExtractDocOptions): DocDocument {
   // Build full document text for sub-document extraction
   const fullText = tryBuildFullText(wordDocStream, fib, pieces);
 
+  // Build formatted paragraph builder for sub-documents
+  const subdocBuilder = createSubdocParagraphBuilder(
+    fullText, pieces, wordDocStream, chpBinTable, papBinTable,
+    fontLookup, chpCache, papCache, styleResolver,
+  );
+
   // Headers/Footers
   const hddCps = tryParse(() => parsePlcfHdd(tableStream, fib.fcPlcfHdd, fib.lcbPlcfHdd)) ?? [];
   const hdrTextStart = fib.ccpText + fib.ccpFtn;
-  const { headers, footers } = extractHeadersFooters(hddCps, fullText, hdrTextStart);
+  const { headers, footers } = extractHeadersFooters(hddCps, fullText, hdrTextStart, subdocBuilder);
 
   // Footnotes
   const ftnRefResult = tryParse(() => parseNotePosPlc(tableStream, fib.fcPlcffndRef, fib.lcbPlcffndRef, 0)) ?? { refCps: [], textCps: [] };
   const ftnTextCps = tryParse(() => parseNoteTextPlc(tableStream, fib.fcPlcffndTxt, fib.lcbPlcffndTxt)) ?? [];
   const footnotes = fib.ccpFtn > 0
-    ? extractNotes(ftnRefResult.refCps, ftnTextCps, fullText, fib.ccpText)
+    ? extractNotes(ftnRefResult.refCps, ftnTextCps, fullText, fib.ccpText, subdocBuilder)
     : [];
 
   // Endnotes
@@ -121,7 +134,7 @@ export function extractDocDocument(options: ExtractDocOptions): DocDocument {
   const endTextCps = tryParse(() => parseNoteTextPlc(tableStream, fib.fcPlcfendTxt, fib.lcbPlcfendTxt)) ?? [];
   const endnoteTextStart = fib.ccpText + fib.ccpFtn + fib.ccpHdd + fib.ccpAtn;
   const endnotes = fib.ccpEdn > 0
-    ? extractNotes(endRefResult.refCps, endTextCps, fullText, endnoteTextStart)
+    ? extractNotes(endRefResult.refCps, endTextCps, fullText, endnoteTextStart, subdocBuilder)
     : [];
 
   // Comments
@@ -129,8 +142,16 @@ export function extractDocDocument(options: ExtractDocOptions): DocDocument {
   const commentTextCps = tryParse(() => parseNoteTextPlc(tableStream, fib.fcPlcfandTxt, fib.lcbPlcfandTxt)) ?? [];
   const commentAuthors = tryParse(() => parseCommentAuthors(tableStream, fib.fcGrpXstAtnOwners, fib.lcbGrpXstAtnOwners)) ?? [];
   const commentTextStart = fib.ccpText + fib.ccpFtn + fib.ccpHdd;
+
+  // Annotation bookmarks (comment range)
+  const atnBkmkStarts = tryParse(() => parseBookmarkStarts(tableStream, fib.fcPlcfAtnBkf, fib.lcbPlcfAtnBkf)) ?? [];
+  const atnBkmkEndCps = tryParse(() => parseBookmarkEnds(tableStream, fib.fcPlcfAtnBkl, fib.lcbPlcfAtnBkl)) ?? [];
+  const atnBookmarks = atnBkmkStarts.length > 0
+    ? { starts: atnBkmkStarts, endCps: atnBkmkEndCps }
+    : undefined;
+
   const comments = fib.ccpAtn > 0
-    ? extractComments(commentRefs, commentTextCps, commentAuthors, fullText, commentTextStart)
+    ? extractComments(commentRefs, commentTextCps, commentAuthors, fullText, commentTextStart, subdocBuilder, atnBookmarks)
     : [];
 
   // Bookmarks
@@ -171,6 +192,7 @@ function buildParagraphs(
   fontLookup: ReadonlyMap<number, string>,
   chpCache: Map<number, readonly ChpxRun[]>,
   papCache: Map<number, readonly PapxRun[]>,
+  styleResolver: StyleResolver,
 ): { paragraphs: readonly DocParagraph[]; paragraphCps: readonly number[]; tapPropsMap: ReadonlyMap<number, TapProps> } {
   const paragraphs: DocParagraph[] = [];
   const paragraphCps: number[] = [];
@@ -182,17 +204,26 @@ function buildParagraphs(
     const paraStartCp = cpOffset;
     paragraphCps.push(paraStartCp);
 
-    // Get paragraph properties from PAPX
+    // Get paragraph properties from PAPX with style inheritance
     let papProps: PapProps = {};
+    let istd: number | undefined;
     if (papBinTable) {
       const fc = cpToFc(paraStartCp, pieces);
       if (fc !== undefined) {
-        papProps = findPapxAtFc(fc, papBinTable, wordDocStream, papCache);
+        const rawRun = findRawPapxAtFc(fc, papBinTable, wordDocStream, papCache);
+        if (rawRun) {
+          istd = rawRun.istd;
+          // Resolve style inheritance: style SPRMs (base→derived) + direct SPRMs
+          const stylePapSprms = istd !== undefined
+            ? styleResolver.getParagraphSprms(istd)
+            : [];
+          const allSprms = stylePapSprms.length > 0
+            ? [...stylePapSprms, ...rawRun.sprms]
+            : rawRun.sprms;
+          papProps = extractPapProps(allSprms, rawRun.istd);
 
-        // For row-end (TTP) paragraphs, extract TAP properties from raw SPRMs
-        if (papProps.isRowEnd) {
-          const rawRun = findRawPapxAtFc(fc, papBinTable, wordDocStream, papCache);
-          if (rawRun) {
+          // For row-end (TTP) paragraphs, extract TAP properties
+          if (papProps.isRowEnd) {
             const tapProps = extractTapProps(rawRun.sprms);
             if (Object.keys(tapProps).length > 0) {
               tapPropsMap.set(paragraphs.length, tapProps);
@@ -202,8 +233,11 @@ function buildParagraphs(
       }
     }
 
-    // Build runs with character properties
-    const runs = buildRuns(text, paraStartCp, pieces, wordDocStream, chpBinTable, fontLookup, chpCache);
+    // Build runs with character properties (with style inheritance)
+    const styleChpSprms = istd !== undefined
+      ? styleResolver.getCharacterSprms(istd)
+      : [];
+    const runs = buildRuns(text, paraStartCp, pieces, wordDocStream, chpBinTable, fontLookup, chpCache, styleChpSprms);
 
     const para: DocParagraph = {
       runs,
@@ -325,6 +359,7 @@ function buildRuns(
   chpBinTable: BinTable | undefined,
   fontLookup: ReadonlyMap<number, string>,
   chpCache: Map<number, readonly ChpxRun[]>,
+  styleChpSprms: readonly Sprm[],
 ): readonly DocTextRun[] {
   if (!chpBinTable || text.length === 0) {
     return [{ text }];
@@ -352,13 +387,17 @@ function buildRuns(
       continue;
     }
 
-    const sprms = findChpxAtFc(fc, chpBinTable, wordDocStream, chpCache);
-    if (sprms.length === 0) {
+    const directSprms = findChpxAtFc(fc, chpBinTable, wordDocStream, chpCache);
+    if (directSprms.length === 0 && styleChpSprms.length === 0) {
       runs.push({ text: runText });
       continue;
     }
 
-    const chpProps = extractChpProps(sprms);
+    // Merge style character SPRMs + direct SPRMs (direct overrides style)
+    const allChpSprms = styleChpSprms.length > 0
+      ? [...styleChpSprms, ...directSprms]
+      : directSprms;
+    const chpProps = extractChpProps(allChpSprms);
     const runProps = chpPropsToRunProps(chpProps, fontLookup);
 
     if (Object.keys(runProps).length > 0) {
@@ -461,4 +500,81 @@ function tryParse<T>(fn: () => T): T | undefined {
   } catch {
     return undefined;
   }
+}
+
+/**
+ * Create a SubdocParagraphBuilder that applies CHP/PAP formatting to sub-document text.
+ * Sub-document CPs are global positions in the full document text (main + footnotes + headers + ...).
+ */
+function createSubdocParagraphBuilder(
+  fullText: string,
+  pieces: readonly PieceDescriptor[],
+  wordDocStream: Uint8Array,
+  chpBinTable: BinTable | undefined,
+  papBinTable: BinTable | undefined,
+  fontLookup: ReadonlyMap<number, string>,
+  chpCache: Map<number, readonly ChpxRun[]>,
+  papCache: Map<number, readonly PapxRun[]>,
+  styleResolver: StyleResolver,
+): SubdocParagraphBuilder {
+  return (globalCpStart: number, globalCpEnd: number): readonly DocParagraph[] => {
+    if (globalCpStart >= globalCpEnd) return [];
+    const text = fullText.substring(globalCpStart, Math.min(globalCpEnd, fullText.length));
+    if (!text.trim()) return [];
+
+    const parts = text.split("\r");
+    const paragraphs: DocParagraph[] = [];
+    // eslint-disable-next-line no-restricted-syntax -- CP tracking
+    let cpOffset = 0;
+
+    for (const partText of parts) {
+      if (partText.length > 0) {
+        const paraGlobalCp = globalCpStart + cpOffset;
+
+        // Get paragraph properties via PAP pipeline
+        let papProps: PapProps = {};
+        let istd: number | undefined;
+        if (papBinTable) {
+          const fc = cpToFc(paraGlobalCp, pieces);
+          if (fc !== undefined) {
+            const rawRun = findRawPapxAtFc(fc, papBinTable, wordDocStream, papCache);
+            if (rawRun) {
+              istd = rawRun.istd;
+              const stylePapSprms = istd !== undefined
+                ? styleResolver.getParagraphSprms(istd)
+                : [];
+              const allSprms = stylePapSprms.length > 0
+                ? [...stylePapSprms, ...rawRun.sprms]
+                : rawRun.sprms;
+              papProps = extractPapProps(allSprms, rawRun.istd);
+            }
+          }
+        }
+
+        // Build character runs via CHP pipeline
+        const styleChpSprms = istd !== undefined
+          ? styleResolver.getCharacterSprms(istd)
+          : [];
+        const runs = buildRuns(
+          partText, paraGlobalCp, pieces, wordDocStream,
+          chpBinTable, fontLookup, chpCache, styleChpSprms,
+        );
+
+        paragraphs.push({
+          runs,
+          ...(papProps.alignment ? { alignment: papProps.alignment } : {}),
+          ...(papProps.indentLeft ? { indentLeft: papProps.indentLeft } : {}),
+          ...(papProps.indentRight ? { indentRight: papProps.indentRight } : {}),
+          ...(papProps.firstLineIndent ? { firstLineIndent: papProps.firstLineIndent } : {}),
+          ...(papProps.spaceBefore ? { spaceBefore: papProps.spaceBefore } : {}),
+          ...(papProps.spaceAfter ? { spaceAfter: papProps.spaceAfter } : {}),
+          ...(papProps.lineSpacing ? { lineSpacing: papProps.lineSpacing } : {}),
+          ...(papProps.istd !== undefined ? { styleIndex: papProps.istd } : {}),
+        });
+      }
+      cpOffset += partText.length + 1; // +1 for \r
+    }
+
+    return paragraphs;
+  };
 }

@@ -76,6 +76,19 @@ describe("extractChpProps", () => {
     expect(props.fontSize).toBe(12);
     expect(props.color).toBe("0000FF");
   });
+
+  it("extracts fSpecial (CFSpec) toggle", () => {
+    // sprmCFSpec = 0x0855, toggle operand = 1 (ON)
+    const sprms = parseGrpprl(new Uint8Array([0x55, 0x08, 0x01]));
+    const props = extractChpProps(sprms);
+    expect(props.fSpecial).toBe(true);
+  });
+
+  it("extracts fSpecial as false when toggle is 0", () => {
+    const sprms = parseGrpprl(new Uint8Array([0x55, 0x08, 0x00]));
+    const props = extractChpProps(sprms);
+    expect(props.fSpecial).toBe(false);
+  });
 });
 
 describe("chpPropsToRunProps", () => {

@@ -72,14 +72,30 @@ function buildPlfLst(definitions: Array<{
   return new Uint8Array(bytes);
 }
 
+function pushUint32(arr: number[], value: number): void {
+  const buf = new ArrayBuffer(4);
+  new DataView(buf).setUint32(0, value, true);
+  const bytes = new Uint8Array(buf);
+  arr.push(bytes[0], bytes[1], bytes[2], bytes[3]);
+}
+
 /**
  * Build a minimal PlfLfo binary fixture.
  *
  * Layout:
  *   cLfo(4B) — number of overrides
  *   LFO[cLfo] — 16 bytes each (lsid(4B) + unused(4B) + clfolvl(4B) + ibstFltAutoNum(4B))
+ *   LFOLVL[] — sequential after all LFOs
  */
-function buildPlfLfo(overrides: Array<{ lsid: number }>): Uint8Array {
+function buildPlfLfo(overrides: Array<{
+  lsid: number;
+  clfolvl?: number;
+  lfolvls?: Array<{
+    ilvl: number;
+    fStartAt?: boolean;
+    iStartAt?: number;
+  }>;
+}>): Uint8Array {
   const bytes: number[] = [];
 
   // cLfo (4 bytes)
@@ -90,7 +106,22 @@ function buildPlfLfo(overrides: Array<{ lsid: number }>): Uint8Array {
     const lfo = new Uint8Array(16);
     const view = new DataView(lfo.buffer);
     view.setInt32(0, ov.lsid, true);
+    view.setUint32(8, ov.clfolvl ?? 0, true); // clfolvl
     bytes.push(...lfo);
+  }
+
+  // LFOLVL entries (after all LFOs)
+  for (const ov of overrides) {
+    if (!ov.lfolvls) continue;
+    for (const lfolvl of ov.lfolvls) {
+      // iStartAt (4B)
+      pushInt32(bytes, lfolvl.iStartAt ?? 0);
+      // flags: ilvl(4bit) + fStartAt(1bit) + fFormatting(1bit) + reserved(26bit)
+      const flags = (lfolvl.ilvl & 0x0f)
+        | ((lfolvl.fStartAt ? 1 : 0) << 4)
+        | (0 << 5); // fFormatting = 0 (no LVL follows)
+      pushUint32(bytes, flags);
+    }
   }
 
   return new Uint8Array(bytes);
@@ -248,5 +279,67 @@ describe("parseListOverrides", () => {
     const overrides = parseListOverrides(padded, 10, plfLfo.length);
     expect(overrides).toHaveLength(1);
     expect(overrides[0].lsid).toBe(99);
+  });
+
+  it("parses LFOLVL with startOverride", () => {
+    const data = buildPlfLfo([{
+      lsid: 42,
+      clfolvl: 1,
+      lfolvls: [{ ilvl: 0, fStartAt: true, iStartAt: 5 }],
+    }]);
+
+    const overrides = parseListOverrides(data, 0, data.length);
+    expect(overrides).toHaveLength(1);
+    expect(overrides[0].lsid).toBe(42);
+    expect(overrides[0].levelOverrides).toBeDefined();
+    expect(overrides[0].levelOverrides).toHaveLength(1);
+    expect(overrides[0].levelOverrides![0].level).toBe(0);
+    expect(overrides[0].levelOverrides![0].startOverride).toBe(5);
+  });
+
+  it("parses LFOLVL without startOverride (fStartAt=0)", () => {
+    const data = buildPlfLfo([{
+      lsid: 42,
+      clfolvl: 1,
+      lfolvls: [{ ilvl: 2, fStartAt: false }],
+    }]);
+
+    const overrides = parseListOverrides(data, 0, data.length);
+    expect(overrides[0].levelOverrides).toHaveLength(1);
+    expect(overrides[0].levelOverrides![0].level).toBe(2);
+    expect(overrides[0].levelOverrides![0].startOverride).toBeUndefined();
+  });
+
+  it("parses multiple LFOLVL entries for single LFO", () => {
+    const data = buildPlfLfo([{
+      lsid: 10,
+      clfolvl: 3,
+      lfolvls: [
+        { ilvl: 0, fStartAt: true, iStartAt: 1 },
+        { ilvl: 1, fStartAt: true, iStartAt: 10 },
+        { ilvl: 2, fStartAt: false },
+      ],
+    }]);
+
+    const overrides = parseListOverrides(data, 0, data.length);
+    expect(overrides[0].levelOverrides).toHaveLength(3);
+    expect(overrides[0].levelOverrides![0]).toEqual({ level: 0, startOverride: 1 });
+    expect(overrides[0].levelOverrides![1]).toEqual({ level: 1, startOverride: 10 });
+    expect(overrides[0].levelOverrides![2]).toEqual({ level: 2 });
+  });
+
+  it("mixes LFOs with and without LFOLVL", () => {
+    const data = buildPlfLfo([
+      { lsid: 1, clfolvl: 0 },
+      { lsid: 2, clfolvl: 1, lfolvls: [{ ilvl: 0, fStartAt: true, iStartAt: 3 }] },
+      { lsid: 3, clfolvl: 0 },
+    ]);
+
+    const overrides = parseListOverrides(data, 0, data.length);
+    expect(overrides).toHaveLength(3);
+    expect(overrides[0].levelOverrides).toBeUndefined();
+    expect(overrides[1].levelOverrides).toHaveLength(1);
+    expect(overrides[1].levelOverrides![0].startOverride).toBe(3);
+    expect(overrides[2].levelOverrides).toBeUndefined();
   });
 });

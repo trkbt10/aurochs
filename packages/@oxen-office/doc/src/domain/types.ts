@@ -107,17 +107,43 @@ export type DocSection = {
 
 // --- Table ---
 
+export type DocBorderStyle =
+  | "none" | "single" | "thick" | "double" | "dotted"
+  | "dashed" | "dotDash" | "dotDotDash" | "triple"
+  | "thinThickSmall" | "thickThinSmall" | "thinThickThinSmall"
+  | "thinThickMedium" | "thickThinMedium" | "thinThickThinMedium"
+  | "thinThickLarge" | "thickThinLarge" | "thinThickThinLarge"
+  | "wave" | "doubleWave" | "dashSmall" | "dashDotStroked" | "emboss3D" | "engrave3D";
+
+export type DocBorder = {
+  readonly style?: DocBorderStyle;
+  readonly width?: number;
+  readonly color?: string;
+};
+
+export type DocTableBorders = {
+  readonly top?: DocBorder;
+  readonly left?: DocBorder;
+  readonly bottom?: DocBorder;
+  readonly right?: DocBorder;
+  readonly insideH?: DocBorder;
+  readonly insideV?: DocBorder;
+};
+
 export type DocTableCell = {
   readonly paragraphs: readonly DocParagraph[];
   readonly width?: number;
   readonly verticalMerge?: "restart" | "continue";
   readonly verticalAlign?: "top" | "center" | "bottom";
+  readonly horizontalMerge?: "restart" | "continue";
+  readonly backgroundColor?: string;
 };
 
 export type DocTableRow = {
   readonly cells: readonly DocTableCell[];
   readonly height?: number;
   readonly header?: boolean;
+  readonly borders?: DocTableBorders;
 };
 
 export type DocTable = {
@@ -152,8 +178,14 @@ export type DocListDefinition = {
   readonly simpleList: boolean;
 };
 
+export type DocListLevelOverride = {
+  readonly level: number;
+  readonly startOverride?: number;
+};
+
 export type DocListOverride = {
   readonly lsid: number;
+  readonly levelOverrides?: readonly DocListLevelOverride[];
 };
 
 // --- Hyperlink ---
