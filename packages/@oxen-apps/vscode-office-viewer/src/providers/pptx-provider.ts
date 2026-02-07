@@ -5,7 +5,8 @@
  */
 
 import * as vscode from "vscode";
-import { renderPptxSlides } from "../renderers/pptx-renderer";
+import { parsePpt } from "@oxen-office/ppt";
+import { renderPptxSlides, renderPptxSlidesFromFile, type PptxRenderResult } from "../renderers/pptx-renderer";
 import { buildPptxWebviewHtml } from "../webview/pptx-template";
 import { buildErrorHtml } from "./error-html";
 
@@ -28,7 +29,7 @@ export function createPptxEditorProvider(): vscode.CustomReadonlyEditorProvider 
 
       try {
         const data = await vscode.workspace.fs.readFile(document.uri);
-        const result = await renderPptxSlides(new Uint8Array(data));
+        const result = await renderToSlides(document.uri, new Uint8Array(data));
 
         const fileName = document.uri.path.split("/").pop() ?? "presentation";
         webviewPanel.webview.html = buildPptxWebviewHtml({
@@ -41,10 +42,19 @@ export function createPptxEditorProvider(): vscode.CustomReadonlyEditorProvider 
       } catch (err) {
         webviewPanel.webview.html = buildErrorHtml(
           webviewPanel.webview,
-          "Failed to load PPTX",
+          "Failed to load presentation",
           err,
         );
       }
     },
   };
+}
+
+/** Render .ppt or .pptx bytes to slide SVGs. */
+function renderToSlides(uri: vscode.Uri, data: Uint8Array): Promise<PptxRenderResult> | PptxRenderResult {
+  if (uri.path.toLowerCase().endsWith(".ppt")) {
+    const pkg = parsePpt(data, { mode: "lenient" });
+    return renderPptxSlidesFromFile(pkg.asPresentationFile());
+  }
+  return renderPptxSlides(data);
 }

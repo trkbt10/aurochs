@@ -28,7 +28,8 @@
         "viewType": "oxen.docxViewer",
         "displayName": "DOCX Viewer",
         "selector": [
-          { "filenamePattern": "*.docx" }
+          { "filenamePattern": "*.docx" },
+          { "filenamePattern": "*.doc" }
         ],
         "priority": "default"
       },
@@ -51,8 +52,11 @@
   },
   "dependencies": {
     "@oxen-office/pptx": "workspace:*",
+    "@oxen-office/ppt": "workspace:*",
     "@oxen-office/docx": "workspace:*",
+    "@oxen-office/doc": "workspace:*",
     "@oxen-office/xlsx": "workspace:*",
+    "@oxen-office/xls": "workspace:*",
     "@oxen-renderer/pptx": "workspace:*",
     "@oxen/zip": "workspace:*"
   },

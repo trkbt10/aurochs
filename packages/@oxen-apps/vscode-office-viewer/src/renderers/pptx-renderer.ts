@@ -5,7 +5,7 @@
  * using the existing rendering pipeline.
  */
 
-import { openPresentation } from "@oxen-office/pptx";
+import { openPresentation, type PresentationFile } from "@oxen-office/pptx";
 import { createZipAdapter } from "@oxen-office/pptx/domain";
 import { loadPptxBundleFromBuffer } from "@oxen-office/pptx/app/pptx-loader";
 import { createRenderContext } from "@oxen-renderer/pptx";
@@ -22,6 +22,13 @@ export type PptxRenderResult = {
  */
 export async function renderPptxSlides(data: Uint8Array): Promise<PptxRenderResult> {
   const { presentationFile } = await loadPptxBundleFromBuffer(data);
+  return renderPptxSlidesFromFile(presentationFile);
+}
+
+/**
+ * Render slides from a PresentationFile (used by both PPTX and PPT paths).
+ */
+export function renderPptxSlidesFromFile(presentationFile: PresentationFile): PptxRenderResult {
   const presentation = openPresentation(presentationFile);
   const zipFile = createZipAdapter(presentationFile);
 

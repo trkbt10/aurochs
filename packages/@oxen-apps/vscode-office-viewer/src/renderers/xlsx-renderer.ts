@@ -6,7 +6,7 @@
 
 import { loadZipPackage } from "@oxen/zip";
 import { parseXlsxWorkbook } from "@oxen-office/xlsx/parser";
-import type { XlsxWorksheet, XlsxRow } from "@oxen-office/xlsx/domain/workbook";
+import type { XlsxWorkbook, XlsxWorksheet, XlsxRow } from "@oxen-office/xlsx/domain/workbook";
 import type { Cell, CellValue } from "@oxen-office/xlsx/domain/cell/types";
 
 export type XlsxSheetHtml = {
@@ -27,7 +27,13 @@ export async function renderXlsxHtml(data: Uint8Array): Promise<XlsxRenderResult
     return pkg.readText(path) ?? undefined;
   };
   const workbook = await parseXlsxWorkbook(getFileContent);
+  return renderXlsxWorkbookHtml(workbook);
+}
 
+/**
+ * Render an XlsxWorkbook domain model to HTML tables (used by both XLSX and XLS paths).
+ */
+export function renderXlsxWorkbookHtml(workbook: XlsxWorkbook): XlsxRenderResult {
   const sheets = workbook.sheets
     .filter((s) => s.state === "visible")
     .map((sheet) => ({

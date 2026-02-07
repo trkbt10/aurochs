@@ -26,10 +26,13 @@ import {
  */
 export async function renderDocxHtml(data: Uint8Array): Promise<string> {
   const doc = await loadDocx(data);
-  return renderDocument(doc);
+  return renderDocxDocumentHtml(doc);
 }
 
-function renderDocument(doc: DocxDocument): string {
+/**
+ * Render a DocxDocument domain model to HTML string.
+ */
+export function renderDocxDocumentHtml(doc: DocxDocument): string {
   const blocks = doc.body.content;
   return blocks.map((block) => renderBlock(block)).join("\n");
 }

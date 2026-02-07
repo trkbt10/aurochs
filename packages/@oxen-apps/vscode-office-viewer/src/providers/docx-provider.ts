@@ -1,11 +1,12 @@
 /**
  * @file DOCX Custom Editor Provider
  *
- * Registers a read-only custom editor for .docx files.
+ * Registers a read-only custom editor for .docx and .doc files.
  */
 
 import * as vscode from "vscode";
-import { renderDocxHtml } from "../renderers/docx-renderer";
+import { parseDoc, convertDocToDocx } from "@oxen-office/doc";
+import { renderDocxHtml, renderDocxDocumentHtml } from "../renderers/docx-renderer";
 import { buildDocxWebviewHtml } from "../webview/docx-template";
 import { buildErrorHtml } from "./error-html";
 
@@ -28,21 +29,31 @@ export function createDocxEditorProvider(): vscode.CustomReadonlyEditorProvider 
 
       try {
         const data = await vscode.workspace.fs.readFile(document.uri);
-        const html = await renderDocxHtml(new Uint8Array(data));
+        const html = renderToHtml(document.uri, new Uint8Array(data));
 
         const fileName = document.uri.path.split("/").pop() ?? "document";
         webviewPanel.webview.html = buildDocxWebviewHtml({
           webview: webviewPanel.webview,
-          html,
+          html: await html,
           fileName,
         });
       } catch (err) {
         webviewPanel.webview.html = buildErrorHtml(
           webviewPanel.webview,
-          "Failed to load DOCX",
+          "Failed to load document",
           err,
         );
       }
     },
   };
+}
+
+/** Render .doc or .docx bytes to HTML. */
+function renderToHtml(uri: vscode.Uri, data: Uint8Array): Promise<string> | string {
+  if (uri.path.toLowerCase().endsWith(".doc")) {
+    const docDocument = parseDoc(data, { mode: "lenient" });
+    const docxDocument = convertDocToDocx(docDocument);
+    return renderDocxDocumentHtml(docxDocument);
+  }
+  return renderDocxHtml(data);
 }

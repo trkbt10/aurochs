@@ -5,7 +5,8 @@
  */
 
 import * as vscode from "vscode";
-import { renderXlsxHtml } from "../renderers/xlsx-renderer";
+import { parseXls } from "@oxen-office/xls";
+import { renderXlsxHtml, renderXlsxWorkbookHtml, type XlsxRenderResult } from "../renderers/xlsx-renderer";
 import { buildXlsxWebviewHtml } from "../webview/xlsx-template";
 import { buildErrorHtml } from "./error-html";
 
@@ -28,7 +29,7 @@ export function createXlsxEditorProvider(): vscode.CustomReadonlyEditorProvider 
 
       try {
         const data = await vscode.workspace.fs.readFile(document.uri);
-        const result = await renderXlsxHtml(new Uint8Array(data));
+        const result = await renderToSheets(document.uri, new Uint8Array(data));
 
         const fileName = document.uri.path.split("/").pop() ?? "spreadsheet";
         webviewPanel.webview.html = buildXlsxWebviewHtml({
@@ -39,10 +40,19 @@ export function createXlsxEditorProvider(): vscode.CustomReadonlyEditorProvider 
       } catch (err) {
         webviewPanel.webview.html = buildErrorHtml(
           webviewPanel.webview,
-          "Failed to load XLSX",
+          "Failed to load spreadsheet",
           err,
         );
       }
     },
   };
+}
+
+/** Render .xls or .xlsx bytes to sheet HTML. */
+function renderToSheets(uri: vscode.Uri, data: Uint8Array): Promise<XlsxRenderResult> | XlsxRenderResult {
+  if (uri.path.toLowerCase().endsWith(".xls")) {
+    const workbook = parseXls(data, { mode: "lenient" });
+    return renderXlsxWorkbookHtml(workbook);
+  }
+  return renderXlsxHtml(data);
 }
