@@ -89,6 +89,27 @@ describe("extractChpProps", () => {
     const props = extractChpProps(sprms);
     expect(props.fSpecial).toBe(false);
   });
+
+  it("extracts picLocation from sprmCPicLocation", () => {
+    // sprmCPicLocation(0x6A03) = 0x00001000 (4096)
+    const sprms = parseGrpprl(new Uint8Array([0x03, 0x6a, 0x00, 0x10, 0x00, 0x00]));
+    const props = extractChpProps(sprms);
+    expect(props.picLocation).toBe(0x1000);
+  });
+
+  it("extracts fObj toggle", () => {
+    // sprmCFObj(0x0856) = 1 (ON)
+    const sprms = parseGrpprl(new Uint8Array([0x56, 0x08, 0x01]));
+    const props = extractChpProps(sprms);
+    expect(props.fObj).toBe(true);
+  });
+
+  it("extracts fOle2 toggle", () => {
+    // sprmCFOle2(0x085A) = 1 (ON)
+    const sprms = parseGrpprl(new Uint8Array([0x5a, 0x08, 0x01]));
+    const props = extractChpProps(sprms);
+    expect(props.fOle2).toBe(true);
+  });
 });
 
 describe("chpPropsToRunProps", () => {

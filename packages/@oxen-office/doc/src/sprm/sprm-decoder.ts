@@ -178,6 +178,9 @@ export const SPRM_CHP = {
   CHpsKern: 0x484b,
   CCv: 0x6870,
   CCvUl: 0x6877,
+  CPicLocation: 0x6a03,
+  CFObj: 0x0856,
+  CFOle2: 0x085a,
 } as const;
 
 /** SPRM opcode constants for paragraph properties. */

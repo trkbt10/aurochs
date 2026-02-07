@@ -89,8 +89,11 @@ function parseDocFromBytes(bytes: Uint8Array, ctx: DocParseContext): DocDocument
   // Parse piece table from Clx
   const pieces = parsePieceTable(tableStream, fib.fcClx, fib.lcbClx);
 
+  // Read Data stream (optional, used for inline images)
+  const dataStream = readStreamSafe(cfb, ["Data"]);
+
   // Extract domain model
-  return extractDocDocument({ wordDocStream, tableStream, fib, pieces, ctx });
+  return extractDocDocument({ wordDocStream, tableStream, fib, pieces, ctx, dataStream });
 }
 
 /** Parse a DOC file and return the document data with collected warnings. */

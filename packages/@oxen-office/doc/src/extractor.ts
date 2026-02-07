@@ -2,7 +2,7 @@
  * @file Extracts DocDocument domain model from parsed .doc streams
  */
 
-import type { DocDocument, DocParagraph, DocTextRun, DocSection } from "./domain/types";
+import type { DocDocument, DocParagraph, DocTextRun, DocSection, DocImage } from "./domain/types";
 import type { DocParseContext } from "./parse-context";
 import { warnOrThrow } from "./parse-context";
 import type { Fib } from "./stream/fib";
@@ -37,6 +37,9 @@ import {
 import type { Sprm } from "./sprm/sprm-decoder";
 import type { ChpxRun } from "./stream/fkp";
 import type { PapxRun } from "./stream/fkp";
+import { parseBStoreContainer, type BlipEntry } from "./stream/blip-store";
+import { parsePicStructure, picToDisplayEmu } from "./extractor/picture-extractor";
+import { parsePlcSpaMom } from "./stream/spa-table";
 
 export type ExtractDocOptions = {
   readonly wordDocStream: Uint8Array;
@@ -44,11 +47,12 @@ export type ExtractDocOptions = {
   readonly fib: Fib;
   readonly pieces: readonly PieceDescriptor[];
   readonly ctx: DocParseContext;
+  readonly dataStream?: Uint8Array;
 };
 
 /** Extract the intermediate DocDocument from parsed stream data. */
 export function extractDocDocument(options: ExtractDocOptions): DocDocument {
-  const { wordDocStream, tableStream, fib, pieces, ctx } = options;
+  const { wordDocStream, tableStream, fib, pieces, ctx, dataStream } = options;
 
   // --- Text extraction ---
   const rawText = tryExtractText({ wordDocStream, fib, pieces, ctx });
@@ -106,6 +110,15 @@ export function extractDocDocument(options: ExtractDocOptions): DocDocument {
   const fldMarkers = tryParse(() => parsePlcfFld(tableStream, fib.fcPlcfFldMom, fib.lcbPlcfFldMom)) ?? [];
   const fields = extractFields(fldMarkers, rawText);
   const hyperlinks = extractHyperlinks(fields);
+
+  // --- Inline images ---
+  const blipStore = tryParse(() => parseBStoreContainer(tableStream, fib.fcDggInfo, fib.lcbDggInfo)) ?? [];
+  const images = extractInlineImages(
+    rawText, pieces, wordDocStream, chpBinTable, chpCache, dataStream, blipStore,
+  );
+
+  // --- Shape anchors ---
+  const shapeAnchors = tryParse(() => parsePlcSpaMom(tableStream, fib.fcPlcSpaMom, fib.lcbPlcSpaMom)) ?? [];
 
   // --- Sub-documents ---
   // Build full document text for sub-document extraction
@@ -179,6 +192,8 @@ export function extractDocDocument(options: ExtractDocOptions): DocDocument {
     ...(bookmarks.length > 0 ? { bookmarks } : {}),
     ...(fields.length > 0 ? { fields } : {}),
     ...(hyperlinks.length > 0 ? { hyperlinks } : {}),
+    ...(images.length > 0 ? { images } : {}),
+    ...(shapeAnchors.length > 0 ? { shapeAnchors } : {}),
   };
 }
 
@@ -492,6 +507,82 @@ function tryBuildFullText(
       return "";
     }
   }
+}
+
+/**
+ * Extract inline images by scanning for \x01 special characters in text.
+ * For each \x01 with fSpecial=true and picLocation, reads PIC from Data Stream.
+ */
+function extractInlineImages(
+  rawText: string,
+  pieces: readonly PieceDescriptor[],
+  wordDocStream: Uint8Array,
+  chpBinTable: BinTable | undefined,
+  chpCache: Map<number, readonly ChpxRun[]>,
+  dataStream: Uint8Array | undefined,
+  blipStore: readonly BlipEntry[],
+): readonly DocImage[] {
+  if (!chpBinTable) return [];
+
+  // The image stream is the Data stream if available, otherwise the WordDocument stream
+  const imageStream = dataStream ?? wordDocStream;
+  const images: DocImage[] = [];
+
+  // eslint-disable-next-line no-restricted-syntax -- CP tracking
+  let cp = 0;
+  for (const ch of rawText) {
+    if (ch === "\x01") {
+      const image = tryExtractImageAtCp(cp, pieces, wordDocStream, chpBinTable, chpCache, imageStream, blipStore);
+      if (image) {
+        images.push(image);
+      }
+    }
+    cp++;
+    // Stop at main text boundary (don't scan sub-documents)
+    if (cp >= rawText.length) break;
+  }
+
+  return images;
+}
+
+/**
+ * Try to extract an image at the given CP position.
+ * Returns DocImage if the CP has fSpecial=true, picLocation, and valid PIC data.
+ */
+function tryExtractImageAtCp(
+  cp: number,
+  pieces: readonly PieceDescriptor[],
+  wordDocStream: Uint8Array,
+  chpBinTable: BinTable,
+  chpCache: Map<number, readonly ChpxRun[]>,
+  imageStream: Uint8Array,
+  blipStore: readonly BlipEntry[],
+): DocImage | undefined {
+  const fc = cpToFc(cp, pieces);
+  if (fc === undefined) return undefined;
+
+  const sprms = findChpxAtFc(fc, chpBinTable, wordDocStream, chpCache);
+  const chpProps = extractChpProps(sprms);
+
+  if (!chpProps.fSpecial) return undefined;
+  if (chpProps.picLocation === undefined) return undefined;
+
+  const pic = tryParse(() => parsePicStructure(imageStream, chpProps.picLocation!, blipStore));
+  if (!pic) return undefined;
+
+  const { widthEmu, heightEmu } = picToDisplayEmu(pic);
+  const isOle = chpProps.fObj === true && chpProps.fOle2 === true;
+
+  return {
+    cp,
+    contentType: pic.contentType,
+    data: pic.imageData,
+    widthTwips: pic.widthTwips,
+    heightTwips: pic.heightTwips,
+    widthEmu,
+    heightEmu,
+    ...(isOle ? { isOlePreview: true } : {}),
+  };
 }
 
 function tryParse<T>(fn: () => T): T | undefined {

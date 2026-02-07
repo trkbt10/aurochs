@@ -240,6 +240,48 @@ export type DocField = {
   readonly cpEnd: number;
 };
 
+// --- Image ---
+
+/** An embedded image extracted from .doc. */
+export type DocImage = {
+  /** CP position in main text where image appears */
+  readonly cp: number;
+  /** Content type (image/jpeg, image/png, etc.) */
+  readonly contentType: string;
+  /** Raw image data */
+  readonly data: Uint8Array;
+  /** Original width in twips */
+  readonly widthTwips?: number;
+  /** Original height in twips */
+  readonly heightTwips?: number;
+  /** Display width in EMU (calculated from original size × scale - cropping) */
+  readonly widthEmu?: number;
+  /** Display height in EMU */
+  readonly heightEmu?: number;
+  /** True if this image is an OLE object's preview image */
+  readonly isOlePreview?: boolean;
+};
+
+// --- Shape Anchor ---
+
+/** A floating shape anchor position in the document. */
+export type DocShapeAnchor = {
+  /** CP in main text where the shape is anchored */
+  readonly cp: number;
+  /** Shape ID */
+  readonly spid: number;
+  /** Bounding rectangle in twips */
+  readonly xaLeft: number;
+  readonly yaTop: number;
+  readonly xaRight: number;
+  readonly yaBottom: number;
+  /** Text wrapping mode */
+  readonly wrapping: number;
+  /** Positioning flags */
+  readonly fBelowText: boolean;
+  readonly fAnchorLock: boolean;
+};
+
 // --- Document ---
 
 /** A block-level content element: paragraph or table. */
@@ -263,4 +305,6 @@ export type DocDocument = {
   readonly bookmarks?: readonly DocBookmark[];
   readonly fields?: readonly DocField[];
   readonly hyperlinks?: readonly DocHyperlink[];
+  readonly images?: readonly DocImage[];
+  readonly shapeAnchors?: readonly DocShapeAnchor[];
 };

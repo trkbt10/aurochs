@@ -14,6 +14,7 @@ import {
   sprmUint8,
   sprmUint16,
   sprmInt16,
+  sprmInt32,
   colorRefToHex,
 } from "../sprm/sprm-decoder";
 import type { BinTable } from "../stream/bin-table";
@@ -49,6 +50,12 @@ export type ChpProps = {
   spacing?: number;
   /** CHP fSpec flag — character is special (e.g. \x02 footnote ref, \x01 picture) */
   fSpecial?: boolean;
+  /** Offset into Data Stream (or WordDocument stream) where PIC structure resides */
+  picLocation?: number;
+  /** CHP fObj flag — character represents an OLE object */
+  fObj?: boolean;
+  /** CHP fOle2 flag — character represents an OLE2 object */
+  fOle2?: boolean;
 };
 
 function kulToDocUnderlineStyle(kul: number): DocUnderlineStyle | undefined {
@@ -166,6 +173,15 @@ function applyChpSprm(props: ChpProps, sprm: Sprm): void {
       break;
     case SPRM_CHP.CCvUl:
       props.underlineColor = colorRefToHex(sprm);
+      break;
+    case SPRM_CHP.CPicLocation:
+      props.picLocation = sprmInt32(sprm);
+      break;
+    case SPRM_CHP.CFObj:
+      props.fObj = sprmToggle(sprm);
+      break;
+    case SPRM_CHP.CFOle2:
+      props.fOle2 = sprmToggle(sprm);
       break;
   }
 }
