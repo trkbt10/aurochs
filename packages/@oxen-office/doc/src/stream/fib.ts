@@ -108,6 +108,9 @@ export type Fib = {
   /** List format override (PlfLfo) */
   readonly fcPlfLfo: number;
   readonly lcbPlfLfo: number;
+  /** Textbox text positions (PlcfTxbxTxt) */
+  readonly fcPlcfTxbxTxt: number;
+  readonly lcbPlcfTxbxTxt: number;
 };
 
 /** Parse the FIB from the WordDocument stream. */
@@ -172,6 +175,7 @@ export function parseFib(data: Uint8Array): Fib {
   const dggInfo = fcLcb(554);
   const plfLst = fcLcb(738);
   const plfLfo = fcLcb(746);
+  const plcfTxbxTxt = fcLcb(602);
 
   return {
     wIdent,
@@ -234,5 +238,7 @@ export function parseFib(data: Uint8Array): Fib {
     lcbPlfLst: plfLst.lcb,
     fcPlfLfo: plfLfo.fc,
     lcbPlfLfo: plfLfo.lcb,
+    fcPlcfTxbxTxt: plcfTxbxTxt.fc,
+    lcbPlcfTxbxTxt: plcfTxbxTxt.lcb,
   };
 }

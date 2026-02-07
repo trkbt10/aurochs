@@ -18,7 +18,8 @@ import { extractPapProps, findRawPapxAtFc, type PapProps } from "./extractor/pap
 import { extractTapProps, type TapProps } from "./extractor/tap-extractor";
 import { parsePlcfSed, parseSepx, sepPropsToSection, type SectionDescriptor } from "./extractor/sep-extractor";
 import { extractTables } from "./extractor/table-extractor";
-import { parsePlcfFld, extractFields, extractHyperlinks } from "./extractor/field-extractor";
+import { parsePlcfFld, extractFields, extractFormFields, extractHyperlinks } from "./extractor/field-extractor";
+import { parsePlcfTxbxTxt, extractTextboxes } from "./extractor/textbox-extractor";
 import {
   parsePlcfHdd,
   extractHeadersFooters,
@@ -173,6 +174,16 @@ export function extractDocDocument(options: ExtractDocOptions): DocDocument {
   const bkmkEndCps = tryParse(() => parseBookmarkEnds(tableStream, fib.fcPlcfBkl, fib.lcbPlcfBkl)) ?? [];
   const bookmarks = extractBookmarks(bkmkNames, bkmkStarts, bkmkEndCps);
 
+  // Form fields
+  const formFields = extractFormFields(fields);
+
+  // Textboxes
+  const txbxTextStart = fib.ccpText + fib.ccpFtn + fib.ccpHdd + fib.ccpAtn + fib.ccpEdn;
+  const txbxTextCps = tryParse(() => parsePlcfTxbxTxt(tableStream, fib.fcPlcfTxbxTxt, fib.lcbPlcfTxbxTxt)) ?? [];
+  const textboxes = fib.ccpTxbx > 0
+    ? extractTextboxes(txbxTextCps, fullText, txbxTextStart, subdocBuilder)
+    : [];
+
   // Only include content if there are tables (otherwise it's just paragraphs)
   const hasTables = content.some((item) => "rows" in item);
 
@@ -194,6 +205,8 @@ export function extractDocDocument(options: ExtractDocOptions): DocDocument {
     ...(hyperlinks.length > 0 ? { hyperlinks } : {}),
     ...(images.length > 0 ? { images } : {}),
     ...(shapeAnchors.length > 0 ? { shapeAnchors } : {}),
+    ...(formFields.length > 0 ? { formFields } : {}),
+    ...(textboxes.length > 0 ? { textboxes } : {}),
   };
 }
 
@@ -274,6 +287,9 @@ function buildParagraphs(
       ...(papProps.inTable ? { inTable: papProps.inTable } : {}),
       ...(papProps.isRowEnd ? { isRowEnd: papProps.isRowEnd } : {}),
       ...(papProps.tableDepth ? { tableDepth: papProps.tableDepth } : {}),
+      ...(papProps.borders ? { borders: papProps.borders } : {}),
+      ...(papProps.shading ? { shading: papProps.shading } : {}),
+      ...(papProps.tabs ? { tabs: papProps.tabs } : {}),
     };
 
     paragraphs.push(para);
@@ -661,6 +677,9 @@ function createSubdocParagraphBuilder(
           ...(papProps.spaceAfter ? { spaceAfter: papProps.spaceAfter } : {}),
           ...(papProps.lineSpacing ? { lineSpacing: papProps.lineSpacing } : {}),
           ...(papProps.istd !== undefined ? { styleIndex: papProps.istd } : {}),
+          ...(papProps.borders ? { borders: papProps.borders } : {}),
+          ...(papProps.shading ? { shading: papProps.shading } : {}),
+          ...(papProps.tabs ? { tabs: papProps.tabs } : {}),
         });
       }
       cpOffset += partText.length + 1; // +1 for \r

@@ -134,17 +134,23 @@ export function renderFrameNode(
     const strokeFillAttrs = strokePaintsToFillAttrs(strokePaints);
     elements.push(...buildPathElements(decodedStrokePaths, strokeFillAttrs, {}));
   } else {
-    const bgRect = rect({
-      x: 0,
-      y: 0,
-      width: size.x,
-      height: size.y,
-      rx,
-      ry,
-      ...baseFillAttrs,
-      ...baseStrokeAttrs,
-    });
-    elements.push(bgRect);
+    // Only emit background rect when there's a visible fill or stroke.
+    // Skip invisible rects (fill="none" with no stroke) to avoid noise.
+    const hasFill = baseFillAttrs.fill !== "none";
+    const hasStroke = baseStrokeAttrs.stroke !== undefined && baseStrokeAttrs.stroke !== "none";
+    if (hasFill || hasStroke) {
+      const bgRect = rect({
+        x: 0,
+        y: 0,
+        width: size.x,
+        height: size.y,
+        rx,
+        ry,
+        ...baseFillAttrs,
+        ...baseStrokeAttrs,
+      });
+      elements.push(bgRect);
+    }
   }
 
   // Children

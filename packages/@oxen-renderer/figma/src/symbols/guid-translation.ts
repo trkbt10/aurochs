@@ -270,22 +270,23 @@ export function buildGuidTranslationMap(
     const unmapped = guids.filter(g => !result.has(guidToString(g)));
     if (unmapped.length === 0) continue;
 
-    // Only handle GUIDs with known type hints (TEXT, INSTANCE)
-    const textUnmapped = unmapped.filter(g => typeHints.get(guidToString(g)) === "TEXT");
-    if (textUnmapped.length > 0) {
-      const textDescendants = descendants.filter(d => d.nodeType === "TEXT");
-      const phase1TextTargets = new Set<string>();
-      for (const g of guids) {
-        const target = result.get(guidToString(g));
-        if (target && textDescendants.some(d => d.guidStr === target)) {
-          phase1TextTargets.add(target);
-        }
-      }
-      const unclaimed = textDescendants.filter(d => !phase1TextTargets.has(d.guidStr));
-      const sortedUnmapped = [...textUnmapped].sort((a, b) => a.localID - b.localID);
+    // Handle remaining unmapped GUIDs by type (TEXT, INSTANCE)
+    const phase1Targets = new Set(result.values());
+
+    for (const targetType of ["TEXT", "INSTANCE"] as const) {
+      const typedUnmapped = unmapped.filter(g => typeHints.get(guidToString(g)) === targetType);
+      if (typedUnmapped.length === 0) continue;
+
+      const descendantType = targetType === "TEXT" ? "TEXT" : "INSTANCE";
+      const typedDescendants = descendants.filter(d => d.nodeType === descendantType);
+      const unclaimed = typedDescendants.filter(d => !phase1Targets.has(d.guidStr));
+      const sortedUnmapped = [...typedUnmapped].sort((a, b) => a.localID - b.localID);
       const sortedUnclaimed = [...unclaimed].sort((a, b) => a.guid.localID - b.guid.localID);
       for (let i = 0; i < sortedUnmapped.length && i < sortedUnclaimed.length; i++) {
-        result.set(guidToString(sortedUnmapped[i]), sortedUnclaimed[i].guidStr);
+        const key = guidToString(sortedUnmapped[i]);
+        const value = sortedUnclaimed[i].guidStr;
+        result.set(key, value);
+        phase1Targets.add(value);
       }
     }
   }

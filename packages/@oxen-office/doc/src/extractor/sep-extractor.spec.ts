@@ -82,6 +82,103 @@ describe("sepPropsToSection", () => {
   });
 });
 
+describe("parseSepx — line numbering", () => {
+  it("parses line number restart mode (perSection)", () => {
+    const data = new Uint8Array(10);
+    const view = new DataView(data.buffer);
+    view.setUint16(0, 3, true); // cb
+    view.setUint16(2, 0x3013, true); // SLnc
+    data[4] = 1; // perSection
+    expect(parseSepx(data, 0).lineNumbering).toEqual({ restart: "perSection" });
+  });
+
+  it("parses line number countBy and start", () => {
+    const data = new Uint8Array(20);
+    const view = new DataView(data.buffer);
+    view.setUint16(0, 8, true); // cb
+    // SNLnnMod = countBy 5
+    view.setUint16(2, 0x5009, true);
+    view.setUint16(4, 5, true);
+    // SLnnMin = start 1
+    view.setUint16(6, 0x501b, true);
+    view.setUint16(8, 1, true);
+    const props = parseSepx(data, 0);
+    expect(props.lineNumbering).toEqual({ countBy: 5, start: 1 });
+  });
+
+  it("parses line number distance", () => {
+    const data = new Uint8Array(10);
+    const view = new DataView(data.buffer);
+    view.setUint16(0, 4, true);
+    view.setUint16(2, 0x9010, true); // SDxaLnn
+    view.setInt16(4, 360, true);
+    expect(parseSepx(data, 0).lineNumbering).toEqual({ distance: 360 });
+  });
+});
+
+describe("parseSepx — page numbering", () => {
+  it("parses page number format (lowerRoman)", () => {
+    const data = new Uint8Array(10);
+    const view = new DataView(data.buffer);
+    view.setUint16(0, 3, true);
+    view.setUint16(2, 0x300e, true); // SNfcPgn
+    data[4] = 2; // lowerRoman
+    expect(parseSepx(data, 0).pageNumberFormat).toBe("lowerRoman");
+  });
+
+  it("parses page number start and restart", () => {
+    const data = new Uint8Array(20);
+    const view = new DataView(data.buffer);
+    view.setUint16(0, 7, true); // cb
+    // SPgnStart97 = 5
+    view.setUint16(2, 0x501c, true);
+    view.setUint16(4, 5, true);
+    // SFPgnRestart = 1
+    view.setUint16(6, 0x3011, true);
+    data[8] = 1;
+    const props = parseSepx(data, 0);
+    expect(props.pageNumberStart).toBe(5);
+    expect(props.pageNumberRestart).toBe(true);
+  });
+});
+
+describe("parseSepx — vertical alignment", () => {
+  it("parses vertical align center", () => {
+    const data = new Uint8Array(10);
+    const view = new DataView(data.buffer);
+    view.setUint16(0, 3, true);
+    view.setUint16(2, 0x301a, true); // SVjc
+    data[4] = 1; // center
+    expect(parseSepx(data, 0).verticalAlign).toBe("center");
+  });
+
+  it("parses vertical align justified", () => {
+    const data = new Uint8Array(10);
+    const view = new DataView(data.buffer);
+    view.setUint16(0, 3, true);
+    view.setUint16(2, 0x301a, true);
+    data[4] = 3; // justified
+    expect(parseSepx(data, 0).verticalAlign).toBe("justified");
+  });
+});
+
+describe("sepPropsToSection — extended fields", () => {
+  it("includes line numbering and page numbering", () => {
+    const result = sepPropsToSection({
+      lineNumbering: { countBy: 5, restart: "perPage" },
+      pageNumberFormat: "upperRoman",
+      pageNumberStart: 3,
+      pageNumberRestart: true,
+      verticalAlign: "bottom",
+    });
+    expect(result.lineNumbering).toEqual({ countBy: 5, restart: "perPage" });
+    expect(result.pageNumberFormat).toBe("upperRoman");
+    expect(result.pageNumberStart).toBe(3);
+    expect(result.pageNumberRestart).toBe(true);
+    expect(result.verticalAlign).toBe("bottom");
+  });
+});
+
 describe("parsePlcfSed", () => {
   it("returns empty for lcb=0", () => {
     expect(parsePlcfSed(new Uint8Array(10), 0, 0)).toEqual([]);

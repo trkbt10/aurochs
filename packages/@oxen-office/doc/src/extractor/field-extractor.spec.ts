@@ -1,5 +1,5 @@
 /** @file Field extractor tests */
-import { extractFields, extractHyperlinks, parsePlcfFld } from "./field-extractor";
+import { extractFields, extractFormFields, extractHyperlinks, parsePlcfFld } from "./field-extractor";
 
 describe("extractFields", () => {
   it("extracts a HYPERLINK field", () => {
@@ -32,6 +32,60 @@ describe("extractFields", () => {
 
     const fields = extractFields(markers, text);
     expect(fields).toHaveLength(1); // Only outer field extracted
+  });
+});
+
+describe("extractFormFields", () => {
+  it("extracts FORMTEXT with name and default value", () => {
+    const fields = [
+      { type: "FORMTEXT", instruction: "FORMTEXT Text1", result: "Hello", cpStart: 0, cpEnd: 20 },
+    ];
+    const forms = extractFormFields(fields);
+    expect(forms).toHaveLength(1);
+    expect(forms[0].type).toBe("text");
+    expect(forms[0].name).toBe("Text1");
+    expect(forms[0].defaultValue).toBe("Hello");
+  });
+
+  it("extracts FORMCHECKBOX without name", () => {
+    const fields = [
+      { type: "FORMCHECKBOX", instruction: "FORMCHECKBOX", result: "", cpStart: 5, cpEnd: 15 },
+    ];
+    const forms = extractFormFields(fields);
+    expect(forms).toHaveLength(1);
+    expect(forms[0].type).toBe("checkbox");
+    expect(forms[0].name).toBeUndefined();
+  });
+
+  it("extracts FORMDROPDOWN", () => {
+    const fields = [
+      { type: "FORMDROPDOWN", instruction: "FORMDROPDOWN Choices1", result: "", cpStart: 10, cpEnd: 30 },
+    ];
+    const forms = extractFormFields(fields);
+    expect(forms).toHaveLength(1);
+    expect(forms[0].type).toBe("dropdown");
+    expect(forms[0].name).toBe("Choices1");
+  });
+
+  it("ignores non-form fields", () => {
+    const fields = [
+      { type: "PAGE", instruction: "PAGE", result: "1", cpStart: 0, cpEnd: 5 },
+      { type: "HYPERLINK", instruction: 'HYPERLINK "url"', result: "link", cpStart: 10, cpEnd: 20 },
+    ];
+    expect(extractFormFields(fields)).toHaveLength(0);
+  });
+
+  it("handles multiple form fields", () => {
+    const fields = [
+      { type: "FORMTEXT", instruction: "FORMTEXT Name", result: "", cpStart: 0, cpEnd: 10 },
+      { type: "FORMCHECKBOX", instruction: "FORMCHECKBOX Agree", result: "", cpStart: 15, cpEnd: 25 },
+      { type: "FORMDROPDOWN", instruction: "FORMDROPDOWN Opt", result: "", cpStart: 30, cpEnd: 40 },
+    ];
+    const forms = extractFormFields(fields);
+    expect(forms).toHaveLength(3);
+    expect(forms[0].type).toBe("text");
+    expect(forms[1].type).toBe("checkbox");
+    expect(forms[2].type).toBe("dropdown");
   });
 });
 

@@ -465,6 +465,7 @@ async function renderNode(
       content = g({}, ...renderedChildren); break;
 
     case "FRAME":
+    case "SECTION":
     case "COMPONENT":
     case "COMPONENT_SET":
     case "INSTANCE":

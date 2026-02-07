@@ -9,7 +9,7 @@
  * PlcfFld: CP array (n+1 × 4B) + Fld array (n × 2B each: ch(1B) + flt(1B))
  */
 
-import type { DocField, DocHyperlink } from "../domain/types";
+import type { DocField, DocHyperlink, DocFormField } from "../domain/types";
 
 /** Parsed field position from PlcfFld. */
 type FieldMarker = {
@@ -109,6 +109,47 @@ function safeSubstring(text: string, start: number, end: number): string {
   const s = Math.max(0, Math.min(start, text.length));
   const e = Math.max(s, Math.min(end, text.length));
   return text.substring(s, e);
+}
+
+/** Extract form fields (FORMTEXT, FORMCHECKBOX, FORMDROPDOWN) from fields. */
+export function extractFormFields(fields: readonly DocField[]): readonly DocFormField[] {
+  const result: DocFormField[] = [];
+
+  for (const field of fields) {
+    const upper = field.type.toUpperCase();
+    if (upper === "FORMTEXT") {
+      result.push({
+        type: "text",
+        ...parseFormFieldName(field.instruction),
+        ...(field.result ? { defaultValue: field.result } : {}),
+        cpStart: field.cpStart,
+        cpEnd: field.cpEnd,
+      });
+    } else if (upper === "FORMCHECKBOX") {
+      result.push({
+        type: "checkbox",
+        ...parseFormFieldName(field.instruction),
+        cpStart: field.cpStart,
+        cpEnd: field.cpEnd,
+      });
+    } else if (upper === "FORMDROPDOWN") {
+      result.push({
+        type: "dropdown",
+        ...parseFormFieldName(field.instruction),
+        cpStart: field.cpStart,
+        cpEnd: field.cpEnd,
+      });
+    }
+  }
+
+  return result;
+}
+
+function parseFormFieldName(instruction: string): { name?: string } {
+  // Form field name may appear after the type keyword, e.g. "FORMTEXT Text1"
+  const match = /^FORM(?:TEXT|CHECKBOX|DROPDOWN)\s+(\S+)/i.exec(instruction);
+  if (match) return { name: match[1] };
+  return {};
 }
 
 /** Extract hyperlinks from fields. */

@@ -197,14 +197,23 @@ export function cloneSymbolChildren(
   }
 
   // Resolve component property assignments (text overrides — deletes stale derivedTextData)
+  const textOverrideGuids = new Set<string>();
   if (options?.componentPropAssignments && options.componentPropAssignments.length > 0) {
-    applyComponentPropAssignments(cloned, options.componentPropAssignments);
+    applyComponentPropAssignments(cloned, options.componentPropAssignments, textOverrideGuids);
   }
 
   // Apply derived symbol data LAST (provides fresh sizes, transforms, AND derivedTextData
   // with correct glyph paths for overridden text)
   if (options?.derivedSymbolData && options.derivedSymbolData.length > 0) {
     applyOverrides(cloned, options.derivedSymbolData);
+  }
+
+  // Clean up stale derivedTextData that may have been re-added by derivedSymbolData.
+  // When CPA overrides text content (deleting derivedTextData), the subsequent
+  // applyOverrides with derivedSymbolData blindly re-applies all properties including
+  // stale derivedTextData with glyph paths for the ORIGINAL text.
+  if (textOverrideGuids.size > 0) {
+    cleanupStaleDerivedTextData(cloned, textOverrideGuids);
   }
 
   // Post-process: expand containers to fit their children.
@@ -254,10 +263,16 @@ export function collectComponentPropAssignments(
  * Walks the tree looking for nodes with `componentPropRefs` that reference
  * a matching `defID`. When found, applies the assignment value:
  * - TEXT_DATA: sets `textData` and `characters` on the TEXT node
+ *
+ * @param textOverrideGuids - When provided, collects GUID strings of nodes
+ *   whose text was overridden (derivedTextData deleted). Used by
+ *   cleanupStaleDerivedTextData() to re-delete stale data after
+ *   derivedSymbolData application.
  */
 function applyComponentPropAssignments(
   nodes: FigNode[],
   assignments: readonly ComponentPropAssignment[],
+  textOverrideGuids?: Set<string>,
 ): void {
   if (assignments.length === 0) return;
 
@@ -295,6 +310,12 @@ function applyComponentPropAssignments(
             // NOTE: derivedSymbolData applied later may re-add stale derivedTextData;
             // cleanupStaleDerivedTextData() handles that in cloneSymbolChildren.
             delete nodeData.derivedTextData;
+            // Track this node so we can re-delete stale derivedTextData
+            // if it gets re-added by derivedSymbolData application.
+            const guid = nodeData.guid as FigGuid | undefined;
+            if (textOverrideGuids && guid) {
+              textOverrideGuids.add(guidToString(guid));
+            }
           }
         } else if (ref.componentPropNodeField?.name === "VISIBLE") {
           if (assignment) {
@@ -314,6 +335,35 @@ function applyComponentPropAssignments(
     }
   }
 
+  for (const node of nodes) {
+    walk(node);
+  }
+}
+
+// =============================================================================
+// Stale derivedTextData Cleanup
+// =============================================================================
+
+/**
+ * Remove stale derivedTextData from nodes whose text was overridden by CPA.
+ *
+ * After applyComponentPropAssignments deletes derivedTextData (because the
+ * glyph paths match the ORIGINAL text, not the CPA-overridden text),
+ * applyOverrides with derivedSymbolData may blindly re-add stale
+ * derivedTextData. This function walks the tree and re-deletes
+ * derivedTextData on any node whose GUID was recorded as text-overridden.
+ */
+function cleanupStaleDerivedTextData(nodes: FigNode[], cpaGuids: Set<string>): void {
+  function walk(node: FigNode): void {
+    const nd = node as Record<string, unknown>;
+    const guid = nd.guid as FigGuid | undefined;
+    if (guid && cpaGuids.has(guidToString(guid)) && nd.derivedTextData) {
+      delete nd.derivedTextData;
+    }
+    for (const child of node.children ?? []) {
+      walk(child);
+    }
+  }
   for (const node of nodes) {
     walk(node);
   }

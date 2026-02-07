@@ -208,6 +208,25 @@ export const SPRM_PAP = {
   PDyaAfter: 0xa414,
   PDyaLine: 0x6412,
   PItap: 0x6649,
+  // Legacy borders (BRC80, spra=3, 4B)
+  PBrcTop80: 0x6424,
+  PBrcLeft80: 0x6425,
+  PBrcBottom80: 0x6426,
+  PBrcRight80: 0x6427,
+  PBrcBetween80: 0x6428,
+  PBrcBar80: 0x6629,
+  // Modern borders (BRC, spra=6, variable)
+  PBrcTop: 0xc64e,
+  PBrcLeft: 0xc64f,
+  PBrcBottom: 0xc650,
+  PBrcRight: 0xc651,
+  PBrcBetween: 0xc652,
+  PBrcBar: 0xc653,
+  // Shading
+  PShd80: 0x4622,
+  PShd: 0xc64d,
+  // Tab stops
+  PChgTabsPapx: 0xc615,
 } as const;
 
 /** SPRM opcode constants for section properties. */
@@ -226,6 +245,17 @@ export const SPRM_SEP = {
   SDzaGutter: 0xb025,
   SDyaHdrTop: 0xb017,
   SDyaHdrBottom: 0xb018,
+  // Line numbering
+  SLnc: 0x3013,
+  SNLnnMod: 0x5009,
+  SDxaLnn: 0x9010,
+  SLnnMin: 0x501b,
+  // Page numbering
+  SNfcPgn: 0x300e,
+  SPgnStart97: 0x501c,
+  SFPgnRestart: 0x3011,
+  // Vertical alignment
+  SVjc: 0x301a,
 } as const;
 
 /** SPRM opcode constants for table properties. */

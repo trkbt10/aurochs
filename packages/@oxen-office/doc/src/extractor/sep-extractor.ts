@@ -4,7 +4,7 @@
  * Pipeline: PlcfSed → SEPX → SPRM → DocSection properties
  */
 
-import type { DocSection, DocSectionBreakType } from "../domain/types";
+import type { DocSection, DocSectionBreakType, DocLineNumbering, DocPageNumberFormat } from "../domain/types";
 import { parseGrpprl, type Sprm } from "../sprm/sprm-decoder";
 import { SPRM_SEP, sprmUint8, sprmUint16, sprmInt16 } from "../sprm/sprm-decoder";
 
@@ -54,6 +54,11 @@ type SepProps = {
   titlePage?: boolean;
   headerDistance?: number;
   footerDistance?: number;
+  lineNumbering?: DocLineNumbering;
+  pageNumberFormat?: DocPageNumberFormat;
+  pageNumberStart?: number;
+  pageNumberRestart?: boolean;
+  verticalAlign?: "top" | "center" | "bottom" | "justified";
 };
 
 function bkcToBreakType(bkc: number): DocSectionBreakType {
@@ -117,6 +122,46 @@ function applySepSprm(props: SepProps, sprm: Sprm): void {
     case SPRM_SEP.SDyaHdrBottom:
       props.footerDistance = sprmUint16(sprm);
       break;
+    // Line numbering
+    case SPRM_SEP.SLnc: {
+      const lnc = sprmUint8(sprm);
+      if (!props.lineNumbering) props.lineNumbering = {};
+      const restart: "perPage" | "perSection" | "continuous" = lnc === 1 ? "perSection" : lnc === 2 ? "continuous" : "perPage";
+      props.lineNumbering = { ...props.lineNumbering, restart };
+      break;
+    }
+    case SPRM_SEP.SNLnnMod:
+      if (!props.lineNumbering) props.lineNumbering = {};
+      props.lineNumbering = { ...props.lineNumbering, countBy: sprmUint16(sprm) };
+      break;
+    case SPRM_SEP.SDxaLnn:
+      if (!props.lineNumbering) props.lineNumbering = {};
+      props.lineNumbering = { ...props.lineNumbering, distance: sprmInt16(sprm) };
+      break;
+    case SPRM_SEP.SLnnMin:
+      if (!props.lineNumbering) props.lineNumbering = {};
+      props.lineNumbering = { ...props.lineNumbering, start: sprmUint16(sprm) };
+      break;
+    // Page numbering
+    case SPRM_SEP.SNfcPgn: {
+      const nfc = sprmUint8(sprm);
+      const fmtMap: readonly DocPageNumberFormat[] = ["decimal", "upperRoman", "lowerRoman", "upperLetter", "lowerLetter"];
+      props.pageNumberFormat = nfc < fmtMap.length ? fmtMap[nfc] : "decimal";
+      break;
+    }
+    case SPRM_SEP.SPgnStart97:
+      props.pageNumberStart = sprmUint16(sprm);
+      break;
+    case SPRM_SEP.SFPgnRestart:
+      props.pageNumberRestart = sprmUint8(sprm) !== 0;
+      break;
+    // Vertical alignment
+    case SPRM_SEP.SVjc: {
+      const vjc = sprmUint8(sprm);
+      const vjcMap: readonly ("top" | "center" | "bottom" | "justified")[] = ["top", "center", "bottom", "justified"];
+      props.verticalAlign = vjc < vjcMap.length ? vjcMap[vjc] : undefined;
+      break;
+    }
   }
 }
 
@@ -159,5 +204,10 @@ export function sepPropsToSection(props: SepProps): Omit<DocSection, "paragraphs
     ...(props.titlePage ? { titlePage: props.titlePage } : {}),
     ...(props.headerDistance ? { headerDistance: props.headerDistance } : {}),
     ...(props.footerDistance ? { footerDistance: props.footerDistance } : {}),
+    ...(props.lineNumbering ? { lineNumbering: props.lineNumbering } : {}),
+    ...(props.pageNumberFormat ? { pageNumberFormat: props.pageNumberFormat } : {}),
+    ...(props.pageNumberStart !== undefined ? { pageNumberStart: props.pageNumberStart } : {}),
+    ...(props.pageNumberRestart ? { pageNumberRestart: props.pageNumberRestart } : {}),
+    ...(props.verticalAlign ? { verticalAlign: props.verticalAlign } : {}),
   };
 }

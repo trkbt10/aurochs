@@ -7,9 +7,10 @@
  * They define column widths, row height, header rows, cell merge/align, borders, shading.
  */
 
-import type { DocBorder, DocBorderStyle, DocTableBorders } from "../domain/types";
+import type { DocTableBorders } from "../domain/types";
 import type { Sprm } from "../sprm/sprm-decoder";
-import { SPRM_TAP, sprmUint8, sprmUint16, sprmInt16, ICO_COLORS } from "../sprm/sprm-decoder";
+import { SPRM_TAP, sprmUint8, sprmUint16, sprmInt16 } from "../sprm/sprm-decoder";
+import { parseBrc80, colorrefToHex } from "./border-utils";
 
 /** Extracted table row/cell properties from TAP SPRMs. */
 export type TapProps = {
@@ -171,55 +172,6 @@ function parseTMerge(
 
 // --- TTableBorders (0xD613) ---
 
-/** BRC80 border type → DocBorderStyle mapping */
-const BRC_TYPE_MAP: readonly (DocBorderStyle | undefined)[] = [
-  "none",                // 0
-  "single",              // 1
-  "thick",               // 2
-  "double",              // 3
-  undefined,             // 4 (reserved)
-  "dotted",              // 5 (hairline)
-  "dotted",              // 6
-  "dashed",              // 7
-  "dotDash",             // 8
-  "dotDotDash",          // 9
-  "triple",              // 10
-  "thinThickSmall",      // 11
-  "thickThinSmall",      // 12
-  "thinThickThinSmall",  // 13
-  "thinThickMedium",     // 14
-  "thickThinMedium",     // 15
-  "thinThickThinMedium", // 16
-  "thinThickLarge",      // 17
-  "thickThinLarge",      // 18
-  "thinThickThinLarge",  // 19
-  "wave",                // 20
-  "doubleWave",          // 21
-  "dashSmall",           // 22
-  "dashDotStroked",      // 23
-  "emboss3D",            // 24
-  "engrave3D",           // 25
-];
-
-function parseBrc80(data: Uint8Array, offset: number): DocBorder | undefined {
-  if (offset + 4 > data.length) return undefined;
-
-  const dptLineWidth = data[offset];
-  const brcType = data[offset + 1];
-  const ico = data[offset + 2];
-
-  if (brcType === 0 && dptLineWidth === 0) return undefined;
-
-  const style = brcType < BRC_TYPE_MAP.length ? BRC_TYPE_MAP[brcType] : undefined;
-  const color = ico < ICO_COLORS.length ? ICO_COLORS[ico] : undefined;
-
-  return {
-    ...(style ? { style } : {}),
-    ...(dptLineWidth > 0 ? { width: dptLineWidth } : {}),
-    ...(color ? { color } : {}),
-  };
-}
-
 function parseTTableBorders(sprm: Sprm): DocTableBorders | undefined {
   // Variable-length with 1-byte size prefix: cb(1B) + 6 × BRC80 (4B each) = 24B data
   // Order: top, left, bottom, right, insideH, insideV
@@ -246,20 +198,6 @@ function parseTTableBorders(sprm: Sprm): DocTableBorders | undefined {
 }
 
 // --- TDefTableShd (0xD612) ---
-
-function colorrefToHex(data: Uint8Array, offset: number): string | undefined {
-  if (offset + 4 > data.length) return undefined;
-  const r = data[offset];
-  const g = data[offset + 1];
-  const b = data[offset + 2];
-  // Skip all-zero (transparent/auto)
-  if (r === 0 && g === 0 && b === 0) return undefined;
-  return (
-    r.toString(16).padStart(2, "0") +
-    g.toString(16).padStart(2, "0") +
-    b.toString(16).padStart(2, "0")
-  ).toUpperCase();
-}
 
 function parseTDefTableShd(sprm: Sprm): readonly (string | undefined)[] | undefined {
   // Variable-length with 1-byte size prefix: cb(1B) + SHD[] (each 10B: cvFore(4B) + cvBack(4B) + ipat(2B))

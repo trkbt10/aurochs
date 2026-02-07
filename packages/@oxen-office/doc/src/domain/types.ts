@@ -60,6 +60,36 @@ export type DocTextRun = {
 /** Paragraph alignment. */
 export type DocAlignment = "left" | "center" | "right" | "justify" | "distribute";
 
+/** Paragraph borders (top, left, bottom, right, between, bar). */
+export type DocParagraphBorders = {
+  readonly top?: DocBorder;
+  readonly left?: DocBorder;
+  readonly bottom?: DocBorder;
+  readonly right?: DocBorder;
+  readonly between?: DocBorder;
+  readonly bar?: DocBorder;
+};
+
+/** Paragraph/cell shading. */
+export type DocShading = {
+  readonly foreColor?: string;
+  readonly backColor?: string;
+  readonly pattern?: number;
+};
+
+/** Tab stop alignment. */
+export type DocTabAlignment = "left" | "center" | "right" | "decimal" | "bar";
+
+/** Tab stop leader character. */
+export type DocTabLeader = "dot" | "hyphen" | "underscore" | "heavy" | "middleDot";
+
+/** A tab stop definition. */
+export type DocTabStop = {
+  readonly position: number;
+  readonly alignment: DocTabAlignment;
+  readonly leader?: DocTabLeader;
+};
+
 /** A paragraph extracted from .doc. */
 export type DocParagraph = {
   readonly runs: readonly DocTextRun[];
@@ -81,11 +111,25 @@ export type DocParagraph = {
   readonly inTable?: boolean;
   readonly isRowEnd?: boolean;
   readonly tableDepth?: number;
+  readonly borders?: DocParagraphBorders;
+  readonly shading?: DocShading;
+  readonly tabs?: readonly DocTabStop[];
 };
 
 // --- Section ---
 
 export type DocSectionBreakType = "continuous" | "newColumn" | "newPage" | "evenPage" | "oddPage";
+
+/** Line numbering settings for a section. */
+export type DocLineNumbering = {
+  readonly countBy?: number;
+  readonly start?: number;
+  readonly restart?: "perPage" | "perSection" | "continuous";
+  readonly distance?: number;
+};
+
+/** Page number format. */
+export type DocPageNumberFormat = "decimal" | "upperRoman" | "lowerRoman" | "upperLetter" | "lowerLetter";
 
 export type DocSection = {
   readonly pageWidth?: number;
@@ -102,6 +146,11 @@ export type DocSection = {
   readonly titlePage?: boolean;
   readonly headerDistance?: number;
   readonly footerDistance?: number;
+  readonly lineNumbering?: DocLineNumbering;
+  readonly pageNumberFormat?: DocPageNumberFormat;
+  readonly pageNumberStart?: number;
+  readonly pageNumberRestart?: boolean;
+  readonly verticalAlign?: "top" | "center" | "bottom" | "justified";
   readonly paragraphs: readonly DocParagraph[];
 };
 
@@ -240,6 +289,25 @@ export type DocField = {
   readonly cpEnd: number;
 };
 
+// --- Form field ---
+
+/** A form field extracted from .doc. */
+export type DocFormField = {
+  readonly type: "text" | "checkbox" | "dropdown";
+  readonly name?: string;
+  readonly defaultValue?: string;
+  readonly cpStart: number;
+  readonly cpEnd: number;
+};
+
+// --- Textbox ---
+
+/** A textbox extracted from .doc. */
+export type DocTextbox = {
+  readonly index: number;
+  readonly content: readonly DocParagraph[];
+};
+
 // --- Image ---
 
 /** An embedded image extracted from .doc. */
@@ -307,4 +375,6 @@ export type DocDocument = {
   readonly hyperlinks?: readonly DocHyperlink[];
   readonly images?: readonly DocImage[];
   readonly shapeAnchors?: readonly DocShapeAnchor[];
+  readonly formFields?: readonly DocFormField[];
+  readonly textboxes?: readonly DocTextbox[];
 };
