@@ -16,7 +16,7 @@
     "packages/@oxen-cli/*",
     "packages/@oxen-builder/*",
     "packages/@oxen-mcp/*",
-    "packages/@oxen-apps/*"
+    "extensions/*"
   ],
   "scripts": {
     "build": "vite build --config pages/vite.config.ts",
