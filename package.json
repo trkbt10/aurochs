@@ -1,5 +1,5 @@
 {
-  "name": "web-pptx",
+  "name": "aurochs",
   "version": "0.1.0",
   "type": "module",
   "packageManager": "bun@1.2.21",
@@ -7,6 +7,9 @@
   "bin": {
     "aurochs": "./dist/aurochs-cli"
   },
+  "files": [
+    "dist"
+  ],
   "workspaces": [
     "packages/@aurochs/*",
     "packages/@aurochs-office/*",
