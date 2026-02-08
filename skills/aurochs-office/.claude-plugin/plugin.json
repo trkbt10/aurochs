@@ -1,0 +1,5 @@
+{
+  "name": "aurochs-office",
+  "description": "Inspect, build, and verify Office documents (PPTX, DOCX, XLSX) using the aurochs CLI",
+  "version": "1.0.1"
+}
