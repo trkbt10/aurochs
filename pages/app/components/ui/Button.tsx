@@ -51,21 +51,20 @@ const baseStyle: CSSProperties = {
 const variantStyles: Record<ButtonVariant, CSSProperties> = {
   ghost: {
     background: "none",
-    color: "#a1a1a1",
+    color: "var(--text-secondary)",
   },
   outline: {
     background: "none",
-    border: "1px solid #444",
-    color: "#a1a1a1",
+    border: "1px solid var(--border-strong)",
+    color: "var(--text-secondary)",
   },
   primary: {
-    background: "#3b82f6",
+    background: "var(--accent-blue)",
     color: "#fff",
   },
   secondary: {
-    background: "rgba(255, 255, 255, 0.1)",
-    color: "rgba(255, 255, 255, 0.9)",
-    backdropFilter: "blur(12px)",
+    background: "var(--bg-tertiary)",
+    color: "var(--text-primary)",
   },
 };
 

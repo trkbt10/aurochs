@@ -18,7 +18,7 @@ import {
   SlideEditorTest,
   PresentationEditorTest,
   ThemeEditorTest,
-} from "../components/editor-tests";
+} from "./editor-tests";
 
 type EditorTestPageProps = {
   readonly onBack: () => void;

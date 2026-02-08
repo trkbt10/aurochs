@@ -492,7 +492,7 @@ function createNumberedParagraph(text: string, numId: number, ilvl: number = 0):
 
 /**
  * Create a demo numbering definition.
- * Includes decimal (1, 2, 3), bullet (•), and Roman numerals (I, II, III).
+ * Includes decimal (1, 2, 3), bullet (*), and Roman numerals (I, II, III).
  */
 function createDemoNumbering(): DocxNumbering {
   // Decimal list: 1. 2. 3.
@@ -517,7 +517,7 @@ function createDemoNumbering(): DocxNumbering {
     ],
   };
 
-  // Bullet list: •
+  // Bullet list: *
   const bulletAbstract: DocxAbstractNum = {
     abstractNumId: docxAbstractNumId(1),
     multiLevelType: "hybridMultilevel",
@@ -525,13 +525,13 @@ function createDemoNumbering(): DocxNumbering {
       {
         ilvl: docxIlvl(0),
         numFmt: "bullet",
-        lvlText: { val: "•" },
+        lvlText: { val: "\u2022" },
         lvlJc: "left",
       },
       {
         ilvl: docxIlvl(1),
         numFmt: "bullet",
-        lvlText: { val: "◦" },
+        lvlText: { val: "\u25E6" },
         lvlJc: "left",
       },
     ],
@@ -590,14 +590,14 @@ function DocumentEditorTest() {
   const [isVertical, setIsVertical] = useState(false);
   const demoParagraphs = useMemo<DocxParagraph[]>(
     () => [
-      createDemoParagraph("DOCX グラフィカルテキストエディタ", { bold: true, fontSize: 48 }),
+      createDemoParagraph("DOCX \u30B0\u30E9\u30D5\u30A3\u30AB\u30EB\u30C6\u30AD\u30B9\u30C8\u30A8\u30C7\u30A3\u30BF", { bold: true, fontSize: 48 }),
       createDemoParagraph(""),
       createDemoParagraph(
-        "このエディタは、新しい統一レイアウトエンジンを使用したSVGベースのテキストレンダリングを実装しています。",
+        "\u3053\u306E\u30A8\u30C7\u30A3\u30BF\u306F\u3001\u65B0\u3057\u3044\u7D71\u4E00\u30EC\u30A4\u30A2\u30A6\u30C8\u30A8\u30F3\u30B8\u30F3\u3092\u4F7F\u7528\u3057\u305FSVG\u30D9\u30FC\u30B9\u306E\u30C6\u30AD\u30B9\u30C8\u30EC\u30F3\u30C0\u30EA\u30F3\u30B0\u3092\u5B9F\u88C5\u3057\u3066\u3044\u307E\u3059\u3002",
       ),
       createDemoParagraph(""),
       // Compound Formatting Test Section
-      createDemoParagraph("複合フォーマットテスト", { bold: true, fontSize: 32 }),
+      createDemoParagraph("\u8907\u5408\u30D5\u30A9\u30FC\u30DE\u30C3\u30C8\u30C6\u30B9\u30C8", { bold: true, fontSize: 32 }),
       createDemoParagraph(""),
       createCompoundParagraph([
         { text: "This sentence has " },
@@ -659,27 +659,27 @@ function DocumentEditorTest() {
       ]),
       createDemoParagraph(""),
       createCompoundParagraph([
-        { text: "日本語の" },
-        { text: "太字", b: true },
-        { text: "と" },
-        { text: "斜体", i: true },
-        { text: "と" },
-        { text: "下線", u: true },
-        { text: "を混在させたテキストです。" },
+        { text: "\u65E5\u672C\u8A9E\u306E" },
+        { text: "\u592A\u5B57", b: true },
+        { text: "\u3068" },
+        { text: "\u659C\u4F53", i: true },
+        { text: "\u3068" },
+        { text: "\u4E0B\u7DDA", u: true },
+        { text: "\u3092\u6DF7\u5728\u3055\u305B\u305F\u30C6\u30AD\u30B9\u30C8\u3067\u3059\u3002" },
       ]),
       createDemoParagraph(""),
       // Main features section
-      createDemoParagraph("主な特徴", { bold: true, fontSize: 32 }),
+      createDemoParagraph("\u4E3B\u306A\u7279\u5FB4", { bold: true, fontSize: 32 }),
       createDemoParagraph(""),
-      createDemoParagraph("• 共通レイアウトエンジン: PPTXとDOCXで同じレイアウトエンジンを共有"),
-      createDemoParagraph("• SVG統一描画: HTMLではなくSVGでテキストを描画し、視覚的一貫性を確保"),
-      createDemoParagraph("• ページフロー対応: 複数ページに跨がる連続ドキュメント編集が可能"),
-      createDemoParagraph("• 正確なカーソル位置: レイアウト結果に基づく正確なカーソル・選択範囲表示"),
+      createDemoParagraph("\u2022 \u5171\u901A\u30EC\u30A4\u30A2\u30A6\u30C8\u30A8\u30F3\u30B8\u30F3: PPTX\u3068DOCX\u3067\u540C\u3058\u30EC\u30A4\u30A2\u30A6\u30C8\u30A8\u30F3\u30B8\u30F3\u3092\u5171\u6709"),
+      createDemoParagraph("\u2022 SVG\u7D71\u4E00\u63CF\u753B: HTML\u3067\u306F\u306A\u304FSVG\u3067\u30C6\u30AD\u30B9\u30C8\u3092\u63CF\u753B\u3057\u3001\u8996\u899A\u7684\u4E00\u8CAB\u6027\u3092\u78BA\u4FDD"),
+      createDemoParagraph("\u2022 \u30DA\u30FC\u30B8\u30D5\u30ED\u30FC\u5BFE\u5FDC: \u8907\u6570\u30DA\u30FC\u30B8\u306B\u8DE8\u304C\u308B\u9023\u7D9A\u30C9\u30AD\u30E5\u30E1\u30F3\u30C8\u7DE8\u96C6\u304C\u53EF\u80FD"),
+      createDemoParagraph("\u2022 \u6B63\u78BA\u306A\u30AB\u30FC\u30BD\u30EB\u4F4D\u7F6E: \u30EC\u30A4\u30A2\u30A6\u30C8\u7D50\u679C\u306B\u57FA\u3065\u304F\u6B63\u78BA\u306A\u30AB\u30FC\u30BD\u30EB\u30FB\u9078\u629E\u7BC4\u56F2\u8868\u793A"),
       createDemoParagraph(""),
-      createDemoParagraph("日本語テキストの例", { bold: true, fontSize: 32 }),
+      createDemoParagraph("\u65E5\u672C\u8A9E\u30C6\u30AD\u30B9\u30C8\u306E\u4F8B", { bold: true, fontSize: 32 }),
       createDemoParagraph(""),
       createDemoParagraph(
-        "吾輩は猫である。名前はまだ無い。どこで生れたかとんと見当がつかぬ。何でも薄暗いじめじめした所でニャーニャー泣いていた事だけは記憶している。",
+        "\u543E\u8F29\u306F\u732B\u3067\u3042\u308B\u3002\u540D\u524D\u306F\u307E\u3060\u7121\u3044\u3002\u3069\u3053\u3067\u751F\u308C\u305F\u304B\u3068\u3093\u3068\u898B\u5F53\u304C\u3064\u304B\u306C\u3002\u4F55\u3067\u3082\u8584\u6697\u3044\u3058\u3081\u3058\u3081\u3057\u305F\u6240\u3067\u30CB\u30E3\u30FC\u30CB\u30E3\u30FC\u6CE3\u3044\u3066\u3044\u305F\u4E8B\u3060\u3051\u306F\u8A18\u61B6\u3057\u3066\u3044\u308B\u3002",
       ),
       createDemoParagraph(""),
       createDemoParagraph(
@@ -687,29 +687,29 @@ function DocumentEditorTest() {
       ),
       createDemoParagraph(""),
       // Page 2
-      createDemoParagraph("ページ2: マルチページ編集テスト", { bold: true, fontSize: 40, pageBreakBefore: true }),
+      createDemoParagraph("\u30DA\u30FC\u30B82: \u30DE\u30EB\u30C1\u30DA\u30FC\u30B8\u7DE8\u96C6\u30C6\u30B9\u30C8", { bold: true, fontSize: 40, pageBreakBefore: true }),
       createDemoParagraph(""),
-      createDemoParagraph("このセクションは、複数ページにまたがる編集機能をテストするためのコンテンツです。"),
+      createDemoParagraph("\u3053\u306E\u30BB\u30AF\u30B7\u30E7\u30F3\u306F\u3001\u8907\u6570\u30DA\u30FC\u30B8\u306B\u307E\u305F\u304C\u308B\u7DE8\u96C6\u6A5F\u80FD\u3092\u30C6\u30B9\u30C8\u3059\u308B\u305F\u3081\u306E\u30B3\u30F3\u30C6\u30F3\u30C4\u3067\u3059\u3002"),
       createDemoParagraph(""),
       createDemoParagraph(
         "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
       ),
       createDemoParagraph(""),
-      createDemoParagraph("祇園精舎の鐘の声、諸行無常の響きあり。沙羅双樹の花の色、盛者必衰の理をあらはす。"),
+      createDemoParagraph("\u7947\u5712\u7CBE\u820E\u306E\u9418\u306E\u58F0\u3001\u8AF8\u884C\u7121\u5E38\u306E\u97FF\u304D\u3042\u308A\u3002\u6C99\u7F85\u53CC\u6A39\u306E\u82B1\u306E\u8272\u3001\u76DB\u8005\u5FC5\u8870\u306E\u7406\u3092\u3042\u3089\u306F\u3059\u3002"),
       createDemoParagraph(""),
       // Page 3
-      createDemoParagraph("ページ3: さらなるコンテンツ", { bold: true, fontSize: 40, pageBreakBefore: true }),
+      createDemoParagraph("\u30DA\u30FC\u30B83: \u3055\u3089\u306A\u308B\u30B3\u30F3\u30C6\u30F3\u30C4", { bold: true, fontSize: 40, pageBreakBefore: true }),
       createDemoParagraph(""),
       createCompoundParagraph([
-        { text: "ページをまたいだ" },
-        { text: "選択", b: true, color: "FF0000" },
-        { text: "や" },
-        { text: "編集", b: true, color: "0000FF" },
-        { text: "が正しく動作することを確認してください。" },
+        { text: "\u30DA\u30FC\u30B8\u3092\u307E\u305F\u3044\u3060" },
+        { text: "\u9078\u629E", b: true, color: "FF0000" },
+        { text: "\u3084" },
+        { text: "\u7DE8\u96C6", b: true, color: "0000FF" },
+        { text: "\u304C\u6B63\u3057\u304F\u52D5\u4F5C\u3059\u308B\u3053\u3068\u3092\u78BA\u8A8D\u3057\u3066\u304F\u3060\u3055\u3044\u3002" },
       ]),
       createDemoParagraph(""),
       // Numbering test
-      createDemoParagraph("番号付きリストテスト", { bold: true, fontSize: 32 }),
+      createDemoParagraph("\u756A\u53F7\u4ED8\u304D\u30EA\u30B9\u30C8\u30C6\u30B9\u30C8", { bold: true, fontSize: 32 }),
       createDemoParagraph(""),
       createNumberedParagraph("First item in decimal list", 1, 0),
       createNumberedParagraph("Second item in decimal list", 1, 0),
@@ -719,18 +719,18 @@ function DocumentEditorTest() {
       createNumberedParagraph("Bullet item two", 2, 0),
       createNumberedParagraph("Nested bullet item", 2, 1),
       createDemoParagraph(""),
-      createDemoParagraph("最終テスト段落", { bold: true, fontSize: 32 }),
+      createDemoParagraph("\u6700\u7D42\u30C6\u30B9\u30C8\u6BB5\u843D", { bold: true, fontSize: 32 }),
       createDemoParagraph(""),
-      createDemoParagraph("これがテストドキュメントの最後の段落です。End of document."),
+      createDemoParagraph("\u3053\u308C\u304C\u30C6\u30B9\u30C8\u30C9\u30AD\u30E5\u30E1\u30F3\u30C8\u306E\u6700\u5F8C\u306E\u6BB5\u843D\u3067\u3059\u3002End of document."),
     ],
     [],
   );
 
   const demoNumbering = useMemo(() => createDemoNumbering(), []);
-  const [cursorInfo, setCursorInfo] = useState<string>("クリックしてカーソル位置を確認");
+  const [cursorInfo, setCursorInfo] = useState<string>("\u30AF\u30EA\u30C3\u30AF\u3057\u3066\u30AB\u30FC\u30BD\u30EB\u4F4D\u7F6E\u3092\u78BA\u8A8D");
 
   const handleCursorChange = (position: { paragraphIndex: number; charOffset: number }) => {
-    setCursorInfo(`段落: ${position.paragraphIndex}, 文字位置: ${position.charOffset}`);
+    setCursorInfo(`\u6BB5\u843D: ${position.paragraphIndex}, \u6587\u5B57\u4F4D\u7F6E: ${position.charOffset}`);
   };
 
   return (
@@ -753,12 +753,11 @@ function DocumentEditorTest() {
               color: isVertical ? "white" : "var(--text-secondary)",
             }}
           >
-            {isVertical ? "縦書き" : "横書き"}
+            {isVertical ? "\u7E26\u66F8\u304D" : "\u6A2A\u66F8\u304D"}
           </button>
         </div>
         <p style={descriptionStyle}>
-          統一レイアウトエンジンを使用したSVGベースのテキストエディタです。
-          クリックでカーソル位置を設定、矢印キーでカーソル移動ができます。
+          {"\u7D71\u4E00\u30EC\u30A4\u30A2\u30A6\u30C8\u30A8\u30F3\u30B8\u30F3\u3092\u4F7F\u7528\u3057\u305FSVG\u30D9\u30FC\u30B9\u306E\u30C6\u30AD\u30B9\u30C8\u30A8\u30C7\u30A3\u30BF\u3067\u3059\u3002\u30AF\u30EA\u30C3\u30AF\u3067\u30AB\u30FC\u30BD\u30EB\u4F4D\u7F6E\u3092\u8A2D\u5B9A\u3001\u77E2\u5370\u30AD\u30FC\u3067\u30AB\u30FC\u30BD\u30EB\u79FB\u52D5\u304C\u3067\u304D\u307E\u3059\u3002"}
         </p>
       </div>
 
@@ -783,10 +782,10 @@ function DocumentEditorTest() {
         <div style={infoPanelStyle}>
           <h3 style={infoTitleStyle}>Keyboard Shortcuts</h3>
           <div style={shortcutListStyle}>
-            <ShortcutItem keys="←/→/↑/↓" description="カーソル移動" />
-            <ShortcutItem keys="Shift+矢印" description="選択範囲拡張" />
-            <ShortcutItem keys="Cmd+X/C/V" description="カット/コピー/ペースト" />
-            <ShortcutItem keys="Cmd+B/I/U" description="太字/斜体/下線" />
+            <ShortcutItem keys="\u2190/\u2192/\u2191/\u2193" description="\u30AB\u30FC\u30BD\u30EB\u79FB\u52D5" />
+            <ShortcutItem keys="Shift+\u77E2\u5370" description="\u9078\u629E\u7BC4\u56F2\u62E1\u5F35" />
+            <ShortcutItem keys="Cmd+X/C/V" description="\u30AB\u30C3\u30C8/\u30B3\u30D4\u30FC/\u30DA\u30FC\u30B9\u30C8" />
+            <ShortcutItem keys="Cmd+B/I/U" description="\u592A\u5B57/\u659C\u4F53/\u4E0B\u7DDA" />
             <ShortcutItem keys="Cmd+Z/Y" description="Undo/Redo" />
           </div>
         </div>
@@ -795,11 +794,11 @@ function DocumentEditorTest() {
         <div style={infoPanelStyle}>
           <h3 style={infoTitleStyle}>Features</h3>
           <div style={featureListStyle}>
-            <FeatureItem text="共通レイアウトエンジン (office-text-layout)" />
-            <FeatureItem text="SVG統一描画 (svg-renderer)" />
-            <FeatureItem text="ページフロー対応 (page-flow)" />
-            <FeatureItem text="IME入力対応" />
-            <FeatureItem text="複合フォーマット対応" />
+            <FeatureItem text="\u5171\u901A\u30EC\u30A4\u30A2\u30A6\u30C8\u30A8\u30F3\u30B8\u30F3 (office-text-layout)" />
+            <FeatureItem text="SVG\u7D71\u4E00\u63CF\u753B (svg-renderer)" />
+            <FeatureItem text="\u30DA\u30FC\u30B8\u30D5\u30ED\u30FC\u5BFE\u5FDC (page-flow)" />
+            <FeatureItem text="IME\u5165\u529B\u5BFE\u5FDC" />
+            <FeatureItem text="\u8907\u5408\u30D5\u30A9\u30FC\u30DE\u30C3\u30C8\u5BFE\u5FDC" />
           </div>
         </div>
       </div>

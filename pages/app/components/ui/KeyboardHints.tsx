@@ -25,7 +25,7 @@ const containerStyles: Record<Variant, CSSProperties> = {
     alignItems: "center",
     gap: "8px",
     fontSize: "12px",
-    color: "#737373",
+    color: "var(--text-tertiary)",
   },
   light: {
     display: "flex",
@@ -39,7 +39,7 @@ const containerStyles: Record<Variant, CSSProperties> = {
 const kbdStyles: Record<Variant, CSSProperties> = {
   dark: {
     padding: "2px 6px",
-    backgroundColor: "#1a1a1a",
+    backgroundColor: "var(--bg-tertiary)",
     borderRadius: "3px",
     fontSize: "11px",
     fontFamily: "monospace",
@@ -117,7 +117,7 @@ export function KeyboardHints({ hints, variant = "dark", className }: Props) {
           ))}
           <span style={{ marginLeft: "2px" }}>{hint.label}</span>
           {index < hints.length - 1 && variant === "dark" && (
-            <span style={{ margin: "0 4px", color: "#525252" }}>·</span>
+            <span style={{ margin: "0 4px", color: "var(--text-tertiary)" }}>·</span>
           )}
         </span>
       ))}

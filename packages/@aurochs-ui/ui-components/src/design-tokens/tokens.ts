@@ -19,31 +19,31 @@ export const colorTokens = {
   },
   background: {
     /** Main container background */
-    primary: "#0a0a0a",
+    primary: "#ffffff",
     /** Panel/toolbar background */
-    secondary: "#1a1a1a",
+    secondary: "#f8f9fa",
     /** Input field background */
-    tertiary: "#111111",
+    tertiary: "#f0f1f3",
     /** Hover state background */
-    hover: "#333333",
+    hover: "#e8eaed",
   },
   text: {
     /** Primary text color */
-    primary: "#fafafa",
+    primary: "#1a1a1a",
     /** Secondary/muted text */
-    secondary: "#a1a1a1",
+    secondary: "#5f6368",
     /** Tertiary/hint text */
-    tertiary: "#737373",
+    tertiary: "#9aa0a6",
     /** Inverse text (on accent backgrounds) */
-    inverse: "#000000",
+    inverse: "#ffffff",
   },
   border: {
     /** Subtle dividers */
-    subtle: "rgba(255, 255, 255, 0.08)",
+    subtle: "rgba(0, 0, 0, 0.08)",
     /** Standard dividers */
-    primary: "rgba(255, 255, 255, 0.12)",
+    primary: "rgba(0, 0, 0, 0.12)",
     /** Strong emphasis borders */
-    strong: "#333333",
+    strong: "#dadce0",
   },
   selection: {
     /** Primary selection box color */

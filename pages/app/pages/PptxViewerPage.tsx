@@ -1,7 +1,7 @@
 /**
- * @file Slide viewer layout + interactions.
+ * @file PPTX viewer page.
  *
- * Uses the shared SlideList component for the sidebar thumbnails.
+ * Slide viewer layout with thumbnails, navigation, and white office theme.
  */
 
 import { useMemo, useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
@@ -32,15 +32,15 @@ type Props = {
 };
 
 // =============================================================================
-// Styles (CSS-in-JS replacing SlideViewer.css)
+// Styles
 // =============================================================================
 
 const containerStyle: CSSProperties = {
   display: "flex",
   flexDirection: "column",
   height: "100vh",
-  backgroundColor: "#0a0a0a",
-  color: "#fafafa",
+  backgroundColor: "var(--bg-primary)",
+  color: "var(--text-primary)",
 };
 
 const headerStyle: CSSProperties = {
@@ -48,8 +48,8 @@ const headerStyle: CSSProperties = {
   alignItems: "center",
   justifyContent: "space-between",
   padding: "12px 16px",
-  backgroundColor: "#111",
-  borderBottom: "1px solid #333",
+  backgroundColor: "var(--bg-secondary)",
+  borderBottom: "1px solid var(--border-subtle)",
   flexShrink: 0,
 };
 
@@ -65,9 +65,9 @@ const backButtonStyle: CSSProperties = {
   gap: "6px",
   padding: "6px 12px",
   background: "none",
-  border: "1px solid #444",
+  border: "1px solid var(--border-strong)",
   borderRadius: "6px",
-  color: "#a1a1a1",
+  color: "var(--text-secondary)",
   cursor: "pointer",
   fontSize: "13px",
 };
@@ -75,7 +75,7 @@ const backButtonStyle: CSSProperties = {
 const headerDividerStyle: CSSProperties = {
   width: "1px",
   height: "20px",
-  backgroundColor: "#333",
+  backgroundColor: "var(--border-strong)",
 };
 
 const fileInfoStyle: CSSProperties = {
@@ -87,12 +87,12 @@ const fileInfoStyle: CSSProperties = {
 const fileNameStyle: CSSProperties = {
   fontSize: "14px",
   fontWeight: 500,
-  color: "#fafafa",
+  color: "var(--text-primary)",
 };
 
 const slideCounterStyle: CSSProperties = {
   fontSize: "12px",
-  color: "#737373",
+  color: "var(--text-tertiary)",
 };
 
 const headerRightStyle: CSSProperties = {
@@ -107,9 +107,9 @@ const editButtonStyle: CSSProperties = {
   gap: "6px",
   padding: "6px 12px",
   background: "none",
-  border: "1px solid #444",
+  border: "1px solid var(--border-strong)",
   borderRadius: "6px",
-  color: "#a1a1a1",
+  color: "var(--text-secondary)",
   cursor: "pointer",
   fontSize: "13px",
 };
@@ -119,7 +119,7 @@ const presentButtonStyle: CSSProperties = {
   alignItems: "center",
   gap: "6px",
   padding: "6px 16px",
-  background: "#3b82f6",
+  background: "var(--accent-blue)",
   border: "none",
   borderRadius: "6px",
   color: "#fff",
@@ -136,8 +136,8 @@ const mainStyle: CSSProperties = {
 
 const sidebarStyle: CSSProperties = {
   width: "180px",
-  backgroundColor: "#1a1a1a",
-  borderRight: "1px solid #333",
+  backgroundColor: "var(--bg-secondary)",
+  borderRight: "1px solid var(--border-subtle)",
   display: "flex",
   flexDirection: "column",
   flexShrink: 0,
@@ -155,20 +155,20 @@ const sidebarHeaderStyle: CSSProperties = {
   alignItems: "center",
   justifyContent: "space-between",
   padding: "12px",
-  borderBottom: "1px solid #333",
+  borderBottom: "1px solid var(--border-subtle)",
 };
 
 const sidebarTitleStyle: CSSProperties = {
   fontSize: "11px",
   fontWeight: 600,
-  color: "#737373",
+  color: "var(--text-tertiary)",
   textTransform: "uppercase",
   letterSpacing: "0.5px",
 };
 
 const sidebarCountStyle: CSSProperties = {
   fontSize: "11px",
-  color: "#525252",
+  color: "var(--text-tertiary)",
 };
 
 const thumbnailListStyle: CSSProperties = {
@@ -182,7 +182,7 @@ const slideAreaStyle: CSSProperties = {
   alignItems: "center",
   justifyContent: "center",
   position: "relative",
-  backgroundColor: "#111",
+  backgroundColor: "var(--bg-tertiary)",
   padding: "24px",
 };
 
@@ -195,7 +195,7 @@ const navArrowStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  background: "rgba(0, 0, 0, 0.5)",
+  background: "rgba(0, 0, 0, 0.4)",
   border: "none",
   borderRadius: "50%",
   color: "#fff",
@@ -225,7 +225,7 @@ const slideWrapperStyle: CSSProperties = {
 
 const slideContainerStyle: CSSProperties = {
   backgroundColor: "#fff",
-  boxShadow: "0 4px 24px rgba(0, 0, 0, 0.5)",
+  boxShadow: "var(--shadow-lg)",
   borderRadius: "4px",
   overflow: "hidden",
   maxWidth: "100%",
@@ -242,10 +242,10 @@ const footerStyle: CSSProperties = {
   alignItems: "center",
   justifyContent: "space-between",
   padding: "8px 16px",
-  backgroundColor: "#111",
-  borderTop: "1px solid #333",
+  backgroundColor: "var(--bg-secondary)",
+  borderTop: "1px solid var(--border-subtle)",
   fontSize: "12px",
-  color: "#737373",
+  color: "var(--text-tertiary)",
   flexShrink: 0,
 };
 
@@ -260,7 +260,6 @@ const thumbnailPreviewStyle: CSSProperties = {
   height: "100%",
   display: "block",
   lineHeight: 0,
-  // Ensure inline SVG scales to fill container
   overflow: "hidden",
 };
 
@@ -268,10 +267,8 @@ const thumbnailPreviewStyle: CSSProperties = {
 // Component
 // =============================================================================
 
-/**
- * Presentation viewer with thumbnails and slide navigation.
- */
-export function SlideViewer({ presentation, fileName, onBack, onStartSlideshow, onStartEditor }: Props) {
+/** Presentation viewer with thumbnails and slide navigation. */
+export function PptxViewerPage({ presentation, fileName, onBack, onStartSlideshow, onStartEditor }: Props) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const slideContainerRef = useRef<HTMLDivElement>(null);
 
@@ -279,10 +276,8 @@ export function SlideViewer({ presentation, fileName, onBack, onStartSlideshow, 
   const totalSlides = pres.count;
   const slideSize = pres.size;
 
-  // Slide navigation state and actions
   const nav = useSlideNavigation({ totalSlides });
 
-  // Keyboard navigation
   const keyboardActions = useMemo(
     () => ({
       goToNext: nav.goToNext,
@@ -296,22 +291,19 @@ export function SlideViewer({ presentation, fileName, onBack, onStartSlideshow, 
   );
   useViewerKeyboard(keyboardActions);
 
-  // Lazy SVG cache for thumbnails (generates on demand, LRU eviction)
   const svgCache = useLazySvgCache(100);
 
-  // Create SlideWithId-compatible data for SlideList
   const slides = useMemo((): readonly SlideWithId[] => {
     const result: SlideWithId[] = [];
     for (let i = 1; i <= totalSlides; i++) {
       result.push({
         id: `slide-${i}`,
-        slide: { shapes: [] }, // Empty shapes, we use renderThumbnail
+        slide: { shapes: [] },
       });
     }
     return result;
   }, [totalSlides]);
 
-  // Memoize main slide content (synchronous, no useEffect needed)
   const renderedContent = useMemo(
     () => renderSlideToSvg(pres.getSlide(nav.currentSlide)).svg,
     [pres, nav.currentSlide],
@@ -336,7 +328,6 @@ export function SlideViewer({ presentation, fileName, onBack, onStartSlideshow, 
   const renderThumbnail = useCallback(
     (slideWithId: SlideWithId) => {
       const slideNum = parseInt(slideWithId.id.replace("slide-", ""), 10);
-      // Lazy generation: only renders when thumbnail becomes visible
       const svg = svgCache.getOrGenerate(slideWithId.id, () => renderSlideToSvg(pres.getSlide(slideNum)).svg);
       return (
         <SvgContentRenderer
@@ -367,7 +358,6 @@ export function SlideViewer({ presentation, fileName, onBack, onStartSlideshow, 
 
   return (
     <div style={containerStyle}>
-      {/* Header */}
       <header style={headerStyle}>
         <div style={headerLeftStyle}>
           <button style={backButtonStyle} onClick={onBack}>
@@ -397,7 +387,6 @@ export function SlideViewer({ presentation, fileName, onBack, onStartSlideshow, 
       </header>
 
       <div style={mainStyle}>
-        {/* Sidebar */}
         <aside style={isSidebarCollapsed ? sidebarCollapsedStyle : sidebarStyle}>
           <div style={sidebarHeaderStyle}>
             <span style={sidebarTitleStyle}>Slides</span>
@@ -417,7 +406,6 @@ export function SlideViewer({ presentation, fileName, onBack, onStartSlideshow, 
           </div>
         </aside>
 
-        {/* Slide Area */}
         <main style={slideAreaStyle}>
           <button
             style={{
@@ -457,7 +445,6 @@ export function SlideViewer({ presentation, fileName, onBack, onStartSlideshow, 
         </main>
       </div>
 
-      {/* Footer */}
       <footer style={footerStyle}>
         <div>
           {slideSize.width} x {slideSize.height}
@@ -467,7 +454,7 @@ export function SlideViewer({ presentation, fileName, onBack, onStartSlideshow, 
         </div>
         <KeyboardHints
           hints={[
-            { keys: ["←", "→"], label: "Navigate" },
+            { keys: ["\u2190", "\u2192"], label: "Navigate" },
             { keys: ["F"], label: "Present" },
           ]}
           variant="dark"

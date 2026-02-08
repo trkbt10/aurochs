@@ -1,136 +1,153 @@
 /**
- * @file App entry for the pages demo.
+ * @file App entry for the aurochs demo.
+ *
+ * Unified landing page with PPTX/DOCX/XLSX format support.
  */
 
 import { useCallback, useMemo, useState } from "react";
 import { Routes, Route, Navigate, useNavigate, useParams } from "react-router-dom";
-import { usePptx } from "./hooks/usePptx";
-import { FileUploadPage, type FileSelectResult } from "./pages/FileUploadPage";
-import { SlideViewer } from "./pages/SlideViewer";
-import { SlideshowPage } from "./pages/SlideshowPage";
-import { EditorTestPage } from "./pages/EditorTestPage";
-import { GlyphTestPage } from "./pages/GlyphTestPage";
-import { TextEditorTestPage } from "./pages/TextEditorTestPage";
-import { DocxEditorTestPage } from "./pages/DocxEditorTestPage";
-import { XlsxEditorLayout } from "./pages/xlsx-editor/XlsxEditorLayout";
-import { XlsxEditorIndexPage } from "./pages/xlsx-editor/XlsxEditorIndexPage";
-import { XlsxWorkbookPage } from "./pages/xlsx-editor/XlsxWorkbookPage";
-import { XlsxFormulaCatalogLayout } from "./pages/xlsx-editor/formula/XlsxFormulaCatalogLayout";
-import { XlsxFormulaCatalogIndexPage } from "./pages/xlsx-editor/formula/XlsxFormulaCatalogIndexPage";
-import { XlsxFormulaFunctionPage } from "./pages/xlsx-editor/formula/XlsxFormulaFunctionPage";
-import { PresentationEditor } from "@aurochs-ui/pptx-editor";
+import { usePptx, useDocx, useXlsx } from "./hooks";
+import { LandingPage, type FileSelectResult } from "./pages/LandingPage";
+import { PptxViewerPage } from "./pages/PptxViewerPage";
+import { PptxSlideshowPage } from "./pages/PptxSlideshowPage";
+import { PptxEditorPage } from "./pages/PptxEditorPage";
+import { DocxEditorPage } from "./pages/DocxEditorPage";
+import { XlsxEditorPage } from "./pages/XlsxEditorPage";
 import { convertToPresentationDocument, type PresentationDocument } from "@aurochs-office/pptx/app";
 import "./App.css";
 
-// Demo PPTX URL (will be in the public folder)
+// Demo PPTX URL (in the public folder)
 const DEMO_PPTX_URL = import.meta.env.BASE_URL + "demo.pptx";
 
 /**
- * Top-level application component for the demo pages build.
+ * Top-level application component.
  */
 export function App() {
   const navigate = useNavigate();
   const [importedDocument, setImportedDocument] = useState<PresentationDocument | null>(null);
   const [importedFileName, setImportedFileName] = useState<string | null>(null);
 
-  const { status, presentation, fileName, error, loadFromFile, loadFromUrl, reset } = usePptx();
+  const pptx = usePptx();
+  const docx = useDocx();
+  const xlsx = useXlsx();
+
+  // ---- Event Handlers ----
 
   const handleFileSelect = useCallback(
     (result: FileSelectResult) => {
-      if (result.type === "pptx") {
-        setImportedDocument(null);
-        setImportedFileName(null);
-        loadFromFile(result.file);
-        navigate("/viewer");
-        return;
+      switch (result.type) {
+        case "pptx":
+          setImportedDocument(null);
+          setImportedFileName(null);
+          docx.reset();
+          xlsx.reset();
+          pptx.loadFromFile(result.file);
+          navigate("/pptx/viewer");
+          break;
+        case "pdf":
+          setImportedDocument(result.document);
+          setImportedFileName(result.fileName);
+          docx.reset();
+          xlsx.reset();
+          pptx.reset();
+          navigate("/pptx/editor");
+          break;
+        case "docx":
+          pptx.reset();
+          xlsx.reset();
+          setImportedDocument(null);
+          setImportedFileName(null);
+          docx.loadFromFile(result.file);
+          navigate("/docx/editor");
+          break;
+        case "xlsx":
+          pptx.reset();
+          docx.reset();
+          setImportedDocument(null);
+          setImportedFileName(null);
+          xlsx.loadFromFile(result.file);
+          navigate("/xlsx/editor");
+          break;
       }
-
-      setImportedDocument(result.document);
-      setImportedFileName(result.fileName);
-      reset();
-      navigate("/editor");
     },
-    [loadFromFile, navigate, reset],
+    [pptx, docx, xlsx, navigate],
   );
 
-  const handleDemoLoad = useCallback(() => {
+  const handlePptxDemo = useCallback(() => {
     setImportedDocument(null);
     setImportedFileName(null);
-    loadFromUrl(DEMO_PPTX_URL, "demo.pptx");
-    navigate("/viewer");
-  }, [loadFromUrl, navigate]);
+    docx.reset();
+    xlsx.reset();
+    pptx.loadFromUrl(DEMO_PPTX_URL, "demo.pptx");
+    navigate("/pptx/viewer");
+  }, [pptx, docx, xlsx, navigate]);
+
+  const handleDocxDemo = useCallback(() => {
+    pptx.reset();
+    xlsx.reset();
+    setImportedDocument(null);
+    setImportedFileName(null);
+    docx.reset();
+    navigate("/docx/editor");
+  }, [pptx, docx, xlsx, navigate]);
+
+  const handleXlsxDemo = useCallback(() => {
+    pptx.reset();
+    docx.reset();
+    setImportedDocument(null);
+    setImportedFileName(null);
+    xlsx.reset();
+    navigate("/xlsx/editor");
+  }, [pptx, docx, xlsx, navigate]);
 
   const handleBack = useCallback(() => {
     setImportedDocument(null);
     setImportedFileName(null);
-    reset();
+    pptx.reset();
+    docx.reset();
+    xlsx.reset();
     navigate("/");
-  }, [reset, navigate]);
-
-  const handleGoHome = useCallback(() => {
-    setImportedDocument(null);
-    setImportedFileName(null);
-    reset();
-    navigate("/");
-  }, [navigate, reset]);
+  }, [pptx, docx, xlsx, navigate]);
 
   const handleStartSlideshow = useCallback(
     (slideNumber: number) => {
-      navigate(`/slideshow/${slideNumber}`);
+      navigate(`/pptx/slideshow/${slideNumber}`);
     },
     [navigate],
   );
 
   const handleExitSlideshow = useCallback(() => {
-    navigate("/viewer");
-  }, [navigate]);
-
-  const handleEditorTest = useCallback(() => {
-    navigate("/editor-test");
-  }, [navigate]);
-
-  const handleGlyphTest = useCallback(() => {
-    navigate("/glyph-test");
-  }, [navigate]);
-
-  const handleTextEditorTest = useCallback(() => {
-    navigate("/text-editor-test");
-  }, [navigate]);
-
-  const handleDocxEditorTest = useCallback(() => {
-    navigate("/docx-editor-test");
-  }, [navigate]);
-
-  const handleXlsxEditorTest = useCallback(() => {
-    navigate("/xlsx-editor");
+    navigate("/pptx/viewer");
   }, [navigate]);
 
   const handleStartEditor = useCallback(() => {
-    navigate("/editor");
+    navigate("/pptx/editor");
   }, [navigate]);
 
   const handleExitEditor = useCallback(() => {
-    if (presentation) {
-      navigate("/viewer");
+    if (pptx.presentation) {
+      navigate("/pptx/viewer");
       return;
     }
-    handleGoHome();
-  }, [handleGoHome, navigate, presentation]);
+    handleBack();
+  }, [handleBack, navigate, pptx.presentation]);
 
   // Convert presentation to editor document
   const editorDocument = useMemo(() => {
-    if (!presentation) {
-      return null;
-    }
+    if (!pptx.presentation) return null;
     try {
-      return convertToPresentationDocument(presentation);
+      return convertToPresentationDocument(pptx.presentation);
     } catch (e) {
       console.error("Failed to convert presentation:", e);
       return null;
     }
-  }, [presentation]);
+  }, [pptx.presentation]);
 
-  if (status === "error") {
+  const isLoading = pptx.status === "loading" || docx.status === "loading" || xlsx.status === "loading";
+
+  // ---- Error state ----
+
+  if (pptx.status === "error") {
     return (
       <div className="error-page">
         <div className="error-card">
@@ -142,7 +159,7 @@ export function App() {
             </svg>
           </div>
           <h2 className="error-title">Failed to load presentation</h2>
-          <p className="error-message">{error}</p>
+          <p className="error-message">{pptx.error}</p>
           <button className="error-button" onClick={handleBack}>
             Try Again
           </button>
@@ -151,33 +168,38 @@ export function App() {
     );
   }
 
-  const renderUploadPage = () => (
-    <FileUploadPage
+  // ---- Route Components ----
+
+  const LandingRoute = () => (
+    <LandingPage
       onFileSelect={handleFileSelect}
-      onDemoLoad={handleDemoLoad}
-      isLoading={status === "loading"}
-      onEditorTest={handleEditorTest}
-      onGlyphTest={handleGlyphTest}
-      onTextEditorTest={handleTextEditorTest}
-      onDocxEditorTest={handleDocxEditorTest}
-      onXlsxEditorTest={handleXlsxEditorTest}
+      onPptxDemo={handlePptxDemo}
+      onDocxDemo={handleDocxDemo}
+      onXlsxDemo={handleXlsxDemo}
+      isLoading={isLoading}
     />
   );
 
-  const UploadRoute = () => renderUploadPage();
-
-  const ViewerRoute = () => {
-    if (!presentation) {
-      if (status === "loading") {
-        return renderUploadPage();
+  const PptxViewerRoute = () => {
+    if (!pptx.presentation) {
+      if (pptx.status === "loading") {
+        return (
+          <LandingPage
+            onFileSelect={handleFileSelect}
+            onPptxDemo={handlePptxDemo}
+            onDocxDemo={handleDocxDemo}
+            onXlsxDemo={handleXlsxDemo}
+            isLoading
+          />
+        );
       }
       return <Navigate to="/" replace />;
     }
 
     return (
-      <SlideViewer
-        presentation={presentation}
-        fileName={fileName || "presentation.pptx"}
+      <PptxViewerPage
+        presentation={pptx.presentation}
+        fileName={pptx.fileName || "presentation.pptx"}
         onBack={handleBack}
         onStartSlideshow={handleStartSlideshow}
         onStartEditor={handleStartEditor}
@@ -185,19 +207,14 @@ export function App() {
     );
   };
 
-  const SlideshowRoute = () => {
+  const PptxSlideshowRoute = () => {
     const { slideNumber } = useParams<{ slideNumber: string }>();
-
-    if (!presentation) {
-      return <Navigate to="/" replace />;
-    }
-
+    if (!pptx.presentation) return <Navigate to="/" replace />;
     const startSlide = Math.max(1, Number.parseInt(slideNumber ?? "1", 10) || 1);
-
-    return <SlideshowPage presentation={presentation} startSlide={startSlide} onExit={handleExitSlideshow} />;
+    return <PptxSlideshowPage presentation={pptx.presentation} startSlide={startSlide} onExit={handleExitSlideshow} />;
   };
 
-  const EditorRoute = () => {
+  const PptxEditorRoute = () => {
     const activeDocument = importedDocument ?? editorDocument;
     if (!activeDocument) {
       return (
@@ -220,46 +237,30 @@ export function App() {
       );
     }
 
-    const activeFileName = importedFileName ?? fileName ?? "presentation";
+    const activeFileName = importedFileName ?? pptx.fileName ?? "presentation";
     const backLabel = importedDocument ? "Back to Home" : "Back to Viewer";
 
     return (
-      <div className="editor-page">
-        <header className="editor-header">
-          <button className="back-button" onClick={handleExitEditor}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-            <span>{backLabel}</span>
-          </button>
-          <span className="editor-title">{activeFileName}</span>
-        </header>
-        <div className="editor-content">
-          <PresentationEditor initialDocument={activeDocument} showPropertyPanel showLayerPanel showToolbar />
-        </div>
-      </div>
+      <PptxEditorPage document={activeDocument} fileName={activeFileName} onBack={handleExitEditor} backLabel={backLabel} />
     );
   };
 
+  const DocxEditorRoute = () => (
+    <DocxEditorPage document={docx.document} fileName={docx.fileName} onBack={handleBack} />
+  );
+
+  const XlsxEditorRoute = () => (
+    <XlsxEditorPage workbook={xlsx.workbook} fileName={xlsx.fileName} onBack={handleBack} />
+  );
+
   return (
     <Routes>
-      <Route path="/" element={<UploadRoute />} />
-      <Route path="/viewer" element={<ViewerRoute />} />
-      <Route path="/slideshow/:slideNumber" element={<SlideshowRoute />} />
-      <Route path="/editor" element={<EditorRoute />} />
-      <Route path="/editor-test" element={<EditorTestPage onBack={handleGoHome} />} />
-      <Route path="/glyph-test" element={<GlyphTestPage onBack={handleGoHome} />} />
-      <Route path="/text-editor-test" element={<TextEditorTestPage onBack={handleGoHome} />} />
-      <Route path="/docx-editor-test" element={<DocxEditorTestPage onBack={handleGoHome} />} />
-      <Route path="/xlsx-editor" element={<XlsxEditorLayout onBack={handleGoHome} />}>
-        <Route index element={<XlsxEditorIndexPage />} />
-        <Route path="workbook" element={<XlsxWorkbookPage />} />
-        <Route path="formula" element={<XlsxFormulaCatalogLayout />}>
-          <Route index element={<XlsxFormulaCatalogIndexPage />} />
-          <Route path=":category/:functionName" element={<XlsxFormulaFunctionPage />} />
-        </Route>
-      </Route>
-      <Route path="/xlsx-editor-test" element={<Navigate to="/xlsx-editor/workbook" replace />} />
+      <Route path="/" element={<LandingRoute />} />
+      <Route path="/pptx/viewer" element={<PptxViewerRoute />} />
+      <Route path="/pptx/slideshow/:slideNumber" element={<PptxSlideshowRoute />} />
+      <Route path="/pptx/editor" element={<PptxEditorRoute />} />
+      <Route path="/docx/editor" element={<DocxEditorRoute />} />
+      <Route path="/xlsx/editor" element={<XlsxEditorRoute />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

@@ -1,5 +1,5 @@
 /**
- * @file SlideshowPage
+ * @file PPTX slideshow page.
  *
  * Full-screen slideshow presentation viewer with animation support.
  */
@@ -16,10 +16,8 @@ type Props = {
   onExit: () => void;
 };
 
-/**
- * Full-screen slideshow presentation viewer.
- */
-export function SlideshowPage({ presentation, startSlide, onExit }: Props) {
+/** Full-screen slideshow presentation viewer. */
+export function PptxSlideshowPage({ presentation, startSlide, onExit }: Props) {
   const { presentation: pres } = presentation;
   const loadSvgFonts = useSvgFontLoader();
 

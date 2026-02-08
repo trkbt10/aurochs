@@ -38,7 +38,7 @@ const currentStyles: Record<Variant, CSSProperties> = {
   dark: {
     fontSize: "14px",
     fontWeight: 500,
-    color: "#fafafa",
+    color: "var(--text-primary)",
   },
   light: {
     fontSize: "20px",
@@ -58,7 +58,7 @@ const separatorStyles: Record<Variant, CSSProperties> = {
 const totalStyles: Record<Variant, CSSProperties> = {
   dark: {
     fontSize: "12px",
-    color: "#737373",
+    color: "var(--text-tertiary)",
   },
   light: {
     color: "rgba(255, 255, 255, 0.6)",

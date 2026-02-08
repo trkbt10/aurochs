@@ -17,7 +17,7 @@ type Props = {
 const trackStyles: Record<Variant, CSSProperties> = {
   dark: {
     height: "4px",
-    backgroundColor: "#333",
+    backgroundColor: "var(--border-strong)",
     borderRadius: "2px",
     overflow: "hidden",
   },
@@ -31,13 +31,13 @@ const trackStyles: Record<Variant, CSSProperties> = {
 
 const fillStyle: CSSProperties = {
   height: "100%",
-  backgroundColor: "#3b82f6",
+  backgroundColor: "var(--accent-blue)",
   transition: "width 0.2s ease",
 };
 
 const fillGradientStyle: CSSProperties = {
   ...fillStyle,
-  background: "linear-gradient(90deg, #3b82f6, #22d3ee)",
+  background: "linear-gradient(90deg, var(--accent-blue), #22d3ee)",
 };
 
 
