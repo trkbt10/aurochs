@@ -10,12 +10,12 @@ import { fileURLToPath } from "node:url";
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
 
 // Import directly from src instead of using @lib alias
-import { openPresentation } from "@oxen-office/pptx";
-import { parseColorScheme, parseFontScheme, parseColorMap } from "@oxen-office/pptx/parser/slide/theme-parser";
-import { getByPath } from "@oxen/xml";
-import { getMimeTypeFromPath } from "@oxen/files";
-import type { ColorContext, ColorScheme, ColorMap } from "@oxen-office/drawing-ml/domain/color-context";
-import type { FontScheme } from "@oxen-office/ooxml/domain/font-scheme";
+import { openPresentation } from "@aurochs-office/pptx";
+import { parseColorScheme, parseFontScheme, parseColorMap } from "@aurochs-office/pptx/parser/slide/theme-parser";
+import { getByPath } from "@aurochs/xml";
+import { getMimeTypeFromPath } from "@aurochs/files";
+import type { ColorContext, ColorScheme, ColorMap } from "@aurochs-office/drawing-ml/domain/color-context";
+import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
 
 // Fixture path
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -29,14 +29,14 @@ function extractColorScheme(apiSlide: { theme?: unknown }): ColorScheme {
   if (!apiSlide.theme) {
     return {};
   }
-  return parseColorScheme(apiSlide.theme as import("@oxen/xml").XmlDocument);
+  return parseColorScheme(apiSlide.theme as import("@aurochs/xml").XmlDocument);
 }
 
 function extractColorMap(apiSlide: { master?: unknown }): ColorMap {
   if (!apiSlide.master) {
     return {};
   }
-  const clrMapElement = getByPath(apiSlide.master as import("@oxen/xml").XmlElement, ["p:sldMaster", "p:clrMap"]);
+  const clrMapElement = getByPath(apiSlide.master as import("@aurochs/xml").XmlElement, ["p:sldMaster", "p:clrMap"]);
   return parseColorMap(clrMapElement);
 }
 
@@ -51,7 +51,7 @@ function extractFontScheme(apiSlide: { theme?: unknown }): FontScheme | undefine
   if (!apiSlide.theme) {
     return undefined;
   }
-  return parseFontScheme(apiSlide.theme as import("@oxen/xml").XmlDocument);
+  return parseFontScheme(apiSlide.theme as import("@aurochs/xml").XmlDocument);
 }
 
 // =============================================================================
@@ -132,9 +132,7 @@ describe("convertToPresentationDocument", () => {
       const filePaths = zipPackage.listFiles();
 
       // Check for media files
-      const mediaFiles = filePaths.filter((f: string) =>
-        f.startsWith("ppt/media/")
-      );
+      const mediaFiles = filePaths.filter((f: string) => f.startsWith("ppt/media/"));
       console.log("Media files found:", mediaFiles);
 
       // Verify media files can be accessed

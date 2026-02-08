@@ -6,8 +6,8 @@
  * Analyzes visual differences between our SVG output and LibreOffice baseline.
  * Generates detailed report of what's different and why.
  */
-import { openPresentation } from "@oxen-office/pptx";
-import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
+import { openPresentation } from "@aurochs-office/pptx";
+import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
 import { compareWithDetails, generateCompareReport, printCompareReport } from "../../spec/visual-regression/compare";
 import { requireFileExists, requirePositionalArg } from "../lib/cli";
 import { loadPptxFile } from "../lib/pptx-loader";
@@ -65,7 +65,6 @@ async function analyzeVisualRegression(pptxPath: string, snapshotName: string) {
       if (result.diffPercent > 20) {
         console.log(`         Features: gradient=${hasGradient} image=${hasImage} text=${textCount}`);
       }
-
     } catch (err) {
       console.log(`Slide ${i.toString().padStart(2)}: ERROR - ${err instanceof Error ? err.message : err}`);
     }
@@ -80,11 +79,11 @@ async function analyzeVisualRegression(pptxPath: string, snapshotName: string) {
   console.log("Analysis by Category:");
   console.log("-".repeat(40));
 
-  const excellent = results.filter(r => r.diffPercent < 1);
-  const good = results.filter(r => r.diffPercent >= 1 && r.diffPercent < 5);
-  const minor = results.filter(r => r.diffPercent >= 5 && r.diffPercent < 20);
-  const significant = results.filter(r => r.diffPercent >= 20 && r.diffPercent < 50);
-  const major = results.filter(r => r.diffPercent >= 50);
+  const excellent = results.filter((r) => r.diffPercent < 1);
+  const good = results.filter((r) => r.diffPercent >= 1 && r.diffPercent < 5);
+  const minor = results.filter((r) => r.diffPercent >= 5 && r.diffPercent < 20);
+  const significant = results.filter((r) => r.diffPercent >= 20 && r.diffPercent < 50);
+  const major = results.filter((r) => r.diffPercent >= 50);
 
   console.log(`Excellent (<1%):     ${excellent.length} slides`);
   console.log(`Good (1-5%):         ${good.length} slides`);

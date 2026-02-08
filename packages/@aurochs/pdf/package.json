@@ -1,0 +1,109 @@
+{
+  "name": "@aurochs/pdf",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "dependencies": {
+    "@aurochs/buffer": "workspace:*",
+    "@aurochs/jpeg": "workspace:*",
+    "@aurochs/png": "workspace:*",
+    "fflate": "^0.8.2",
+    "jpeg-js": "^0.4.4"
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs/pdf/src'"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./domain": {
+      "types": "./src/domain/index.ts",
+      "default": "./src/domain/index.ts"
+    },
+    "./domain/color": {
+      "types": "./src/domain/color/index.ts",
+      "default": "./src/domain/color/index.ts"
+    },
+    "./domain/font": {
+      "types": "./src/domain/font/index.ts",
+      "default": "./src/domain/font/index.ts"
+    },
+    "./domain/constants": {
+      "types": "./src/domain/constants.ts",
+      "default": "./src/domain/constants.ts"
+    },
+    "./domain/coordinate/matrix": {
+      "types": "./src/domain/coordinate/matrix.ts",
+      "default": "./src/domain/coordinate/matrix.ts"
+    },
+    "./domain/font/font-css-generator": {
+      "types": "./src/domain/font/font-css-generator.ts",
+      "default": "./src/domain/font/font-css-generator.ts"
+    },
+    "./domain/*": {
+      "types": "./src/domain/*.ts",
+      "default": "./src/domain/*.ts"
+    },
+    "./domain/*/*": {
+      "types": "./src/domain/*/*.ts",
+      "default": "./src/domain/*/*.ts"
+    },
+    "./image/pixel-converter": {
+      "types": "./src/image/pixel-converter.ts",
+      "default": "./src/image/pixel-converter.ts"
+    },
+    "./native": {
+      "types": "./src/native/index.ts",
+      "default": "./src/native/index.ts"
+    },
+    "./native/*": {
+      "types": "./src/native/*.ts",
+      "default": "./src/native/*.ts"
+    },
+    "./native/*/*": {
+      "types": "./src/native/*/*.ts",
+      "default": "./src/native/*/*.ts"
+    },
+    "./parser": {
+      "types": "./src/parser/index.ts",
+      "default": "./src/parser/index.ts"
+    },
+    "./parser/core/operator-parser": {
+      "types": "./src/parser/core/operator-parser.ts",
+      "default": "./src/parser/core/operator-parser.ts"
+    },
+    "./parser/core/pdf-load-error": {
+      "types": "./src/parser/core/pdf-load-error.ts",
+      "default": "./src/parser/core/pdf-load-error.ts"
+    },
+    "./parser/core/pdf-parser": {
+      "types": "./src/parser/core/pdf-parser.ts",
+      "default": "./src/parser/core/pdf-parser.ts"
+    },
+    "./parser/font/font-decoder": {
+      "types": "./src/parser/font/font-decoder.ts",
+      "default": "./src/parser/font/font-decoder.ts"
+    },
+    "./parser/path/path-builder": {
+      "types": "./src/parser/path/path-builder.ts",
+      "default": "./src/parser/path/path-builder.ts"
+    },
+    "./parser/*": {
+      "types": "./src/parser/*.ts",
+      "default": "./src/parser/*.ts"
+    },
+    "./parser/*/*": {
+      "types": "./src/parser/*/*.ts",
+      "default": "./src/parser/*/*.ts"
+    },
+    "./test-utils/*": {
+      "types": "./src/test-utils/*.ts",
+      "default": "./src/test-utils/*.ts"
+    }
+  }
+}

@@ -4,14 +4,13 @@
  * Usage: bun run scripts/debug/debug-fill-color.ts <pptx-path> <slide-number> <output-svg-path>
  */
 import * as fs from "node:fs";
-import { openPresentation } from "@oxen-office/pptx";
-import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
+import { openPresentation } from "@aurochs-office/pptx";
+import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
 import { requireFileExists, requireIntArg, requirePositionalArg } from "../lib/cli";
 import { loadPptxFile } from "../lib/pptx-loader";
 
 async function main() {
-  const usage =
-    "bun run scripts/debug/debug-fill-color.ts <pptx-path> <slide-number> <output-svg-path>";
+  const usage = "bun run scripts/debug/debug-fill-color.ts <pptx-path> <slide-number> <output-svg-path>";
   const args = process.argv.slice(2);
   const pptxPath = requirePositionalArg({ args, index: 0, name: "pptx-path", usage });
   const slideNum = requireIntArg(args[1], "slide-number", usage);
@@ -39,7 +38,7 @@ async function main() {
 
   console.log("=== Fill values found ===");
   for (const [value, count] of Object.entries(fills).sort((a, b) => b[1] - a[1])) {
-    const display = value === "" ? '(empty)' : value === "#" ? '"#" (INVALID)' : value;
+    const display = value === "" ? "(empty)" : value === "#" ? '"#" (INVALID)' : value;
     console.log(`  ${display}: ${count} occurrences`);
   }
 

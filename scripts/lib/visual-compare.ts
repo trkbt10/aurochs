@@ -19,9 +19,9 @@
  * ```
  */
 
-import { openPresentation } from "@oxen-office/pptx";
-import { LIBREOFFICE_RENDER_OPTIONS } from "@oxen-renderer/pptx/render-options";
-import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
+import { openPresentation } from "@aurochs-office/pptx";
+import { LIBREOFFICE_RENDER_OPTIONS } from "@aurochs-renderer/pptx/render-options";
+import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
 import { compareSvgToSnapshot, type CompareOptions, type CompareResult } from "../../spec/visual-regression/compare";
 import { loadPptxFile } from "./pptx-loader";
 
@@ -41,7 +41,9 @@ type CompareSlideToSnapshotArgs = {
  * @param options - Comparison options
  * @returns Comparison result with diff percentage and pixel count
  */
-export async function compareSlideToSnapshot(args: CompareSlideToSnapshotArgs): Promise<CompareResult & { svg: string }> {
+export async function compareSlideToSnapshot(
+  args: CompareSlideToSnapshotArgs,
+): Promise<CompareResult & { svg: string }> {
   const { pptxPath, snapshotName, slideNumber, options } = args;
   const { presentationFile } = await loadPptxFile(pptxPath);
   const presentation = openPresentation(presentationFile, {
@@ -58,11 +60,7 @@ export async function compareSlideToSnapshot(args: CompareSlideToSnapshotArgs): 
 /**
  * Print comparison result to console.
  */
-export function printCompareResult(
-  result: CompareResult,
-  snapshotName: string,
-  slideNumber: number,
-): void {
+export function printCompareResult(result: CompareResult, snapshotName: string, slideNumber: number): void {
   console.log(`\n=== ${snapshotName} slide ${slideNumber} ===`);
   console.log(`Diff percent: ${result.diffPercent.toFixed(2)}%`);
   console.log(`Diff pixels: ${result.diffPixels} / ${result.totalPixels}`);

@@ -1,0 +1,21 @@
+{
+  "name": "@aurochs-cli/cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "aurochs": "./dist/cli.js"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "bun build src/cli.ts --target bun --outdir dist --packages external",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@aurochs-cli/pptx-cli": "workspace:*",
+    "@aurochs-cli/docx-cli": "workspace:*",
+    "@aurochs-cli/xlsx-cli": "workspace:*",
+    "commander": "^12.0.0"
+  }
+}

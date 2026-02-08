@@ -3,9 +3,9 @@
  *
  * Usage: bun run scripts/compare/compare-multiline.ts <pptx-path> <slide-number>
  */
-import { openPresentation } from "@oxen-office/pptx";
-import { LIBREOFFICE_RENDER_OPTIONS, DEFAULT_RENDER_OPTIONS } from "@oxen-renderer/pptx/render-options";
-import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
+import { openPresentation } from "@aurochs-office/pptx";
+import { LIBREOFFICE_RENDER_OPTIONS, DEFAULT_RENDER_OPTIONS } from "@aurochs-renderer/pptx/render-options";
+import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
 import { requireFileExists, requireIntArg, requirePositionalArg } from "../lib/cli";
 import { loadPptxFile } from "../lib/pptx-loader";
 
@@ -29,21 +29,30 @@ async function main() {
   const { svg: loSvg } = renderSlideToSvg(lo.getSlide(slideNumber));
 
   // Extract all text element y positions
-  const ecmaPositions = [...ecmaSvg.matchAll(/<text[^>]*y="([^"]+)"/g)].map(m => parseFloat(m[1]));
-  const loPositions = [...loSvg.matchAll(/<text[^>]*y="([^"]+)"/g)].map(m => parseFloat(m[1]));
+  const ecmaPositions = [...ecmaSvg.matchAll(/<text[^>]*y="([^"]+)"/g)].map((m) => parseFloat(m[1]));
+  const loPositions = [...loSvg.matchAll(/<text[^>]*y="([^"]+)"/g)].map((m) => parseFloat(m[1]));
 
   console.log("Text element count - ECMA:", ecmaPositions.length, "LO:", loPositions.length);
-  
+
   // Find differences
   let diffCount = 0;
   for (let i = 0; i < Math.min(ecmaPositions.length, loPositions.length); i++) {
     const diff = Math.abs(ecmaPositions[i] - loPositions[i]);
     if (diff > 0.1) {
       diffCount++;
-      console.log("  Line " + i + ": ECMA=" + ecmaPositions[i].toFixed(2) + " LO=" + loPositions[i].toFixed(2) + " diff=" + diff.toFixed(2));
+      console.log(
+        "  Line " +
+          i +
+          ": ECMA=" +
+          ecmaPositions[i].toFixed(2) +
+          " LO=" +
+          loPositions[i].toFixed(2) +
+          " diff=" +
+          diff.toFixed(2),
+      );
     }
   }
-  
+
   if (diffCount === 0) {
     console.log("\nNo Y position differences found.");
     console.log("This means:");

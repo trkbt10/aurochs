@@ -5,8 +5,8 @@
  *
  * Usage: bun run scripts/analyze/analyze-gradients.ts <pptx-path> (--all | <slide-number>)
  */
-import { openPresentation } from "@oxen-office/pptx";
-import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
+import { openPresentation } from "@aurochs-office/pptx";
+import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
 import { requireFileExists, requireIntArg, requirePositionalArg } from "../lib/cli";
 import { loadPptxFile } from "../lib/pptx-loader";
 
@@ -119,10 +119,18 @@ function extractPptxGradients(xml: string): Array<{ type: string; angle?: number
         const tintMatch = colorContent.match(/<a:tint val="(\d+)"/);
 
         const transforms: string[] = [];
-        if (lumModMatch) {transforms.push(`lumMod:${parseInt(lumModMatch[1], 10) / 1000}%`);}
-        if (lumOffMatch) {transforms.push(`lumOff:${parseInt(lumOffMatch[1], 10) / 1000}%`);}
-        if (shadeMatch) {transforms.push(`shade:${parseInt(shadeMatch[1], 10) / 1000}%`);}
-        if (tintMatch) {transforms.push(`tint:${parseInt(tintMatch[1], 10) / 1000}%`);}
+        if (lumModMatch) {
+          transforms.push(`lumMod:${parseInt(lumModMatch[1], 10) / 1000}%`);
+        }
+        if (lumOffMatch) {
+          transforms.push(`lumOff:${parseInt(lumOffMatch[1], 10) / 1000}%`);
+        }
+        if (shadeMatch) {
+          transforms.push(`shade:${parseInt(shadeMatch[1], 10) / 1000}%`);
+        }
+        if (tintMatch) {
+          transforms.push(`tint:${parseInt(tintMatch[1], 10) / 1000}%`);
+        }
 
         if (transforms.length > 0) {
           colorStr += ` [${transforms.join(", ")}]`;
@@ -220,7 +228,7 @@ async function main() {
   console.log("\n");
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error(err);
   process.exit(1);
 });

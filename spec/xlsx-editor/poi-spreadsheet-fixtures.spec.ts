@@ -9,22 +9,25 @@
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { parseXlsxWorkbook, type XlsxParseOptions } from "@oxen-office/xlsx/parser";
-import { createFormulaEvaluator } from "@oxen-office/xlsx/formula/evaluator";
-import { colIdx, rowIdx, styleId } from "@oxen-office/xlsx/domain/types";
-import type { CellAddress } from "@oxen-office/xlsx/domain/cell/address";
-import type { Cell } from "@oxen-office/xlsx/domain/cell/types";
-import type { CellValue } from "@oxen-office/xlsx/domain/cell/types";
-import { getCell } from "@oxen-ui/xlsx-editor/cell/query";
-import { resolveCellBorderDecoration, resolveCellRenderStyle } from "@oxen-ui/xlsx-editor/selectors/cell-render-style";
-import { resolveCellStyleDetails } from "@oxen-ui/xlsx-editor/selectors/cell-style-details";
-import { formatCellValueForDisplay, resolveCellFormatCode } from "@oxen-ui/xlsx-editor/selectors/cell-display-text";
-import { resolveCellConditionalDifferentialFormat } from "@oxen-ui/xlsx-editor/selectors/conditional-formatting";
-import { xlsxColorToCss } from "@oxen-ui/xlsx-editor/selectors/xlsx-color";
-import { resolveCellTableStyleDifferentialFormat } from "@oxen-ui/xlsx-editor/selectors/table-style";
-import { createSheetLayout } from "@oxen-ui/xlsx-editor/selectors/sheet-layout";
-import { buildBorderOverlayLines } from "@oxen-ui/xlsx-editor/selectors/border-overlay";
-import { createGetZipTextFileContentFromBytes } from "@oxen-office/opc";
+import { parseXlsxWorkbook, type XlsxParseOptions } from "@aurochs-office/xlsx/parser";
+import { createFormulaEvaluator } from "@aurochs-office/xlsx/formula/evaluator";
+import { colIdx, rowIdx, styleId } from "@aurochs-office/xlsx/domain/types";
+import type { CellAddress } from "@aurochs-office/xlsx/domain/cell/address";
+import type { Cell } from "@aurochs-office/xlsx/domain/cell/types";
+import type { CellValue } from "@aurochs-office/xlsx/domain/cell/types";
+import { getCell } from "@aurochs-ui/xlsx-editor/cell/query";
+import {
+  resolveCellBorderDecoration,
+  resolveCellRenderStyle,
+} from "@aurochs-ui/xlsx-editor/selectors/cell-render-style";
+import { resolveCellStyleDetails } from "@aurochs-ui/xlsx-editor/selectors/cell-style-details";
+import { formatCellValueForDisplay, resolveCellFormatCode } from "@aurochs-ui/xlsx-editor/selectors/cell-display-text";
+import { resolveCellConditionalDifferentialFormat } from "@aurochs-ui/xlsx-editor/selectors/conditional-formatting";
+import { xlsxColorToCss } from "@aurochs-ui/xlsx-editor/selectors/xlsx-color";
+import { resolveCellTableStyleDifferentialFormat } from "@aurochs-ui/xlsx-editor/selectors/table-style";
+import { createSheetLayout } from "@aurochs-ui/xlsx-editor/selectors/sheet-layout";
+import { buildBorderOverlayLines } from "@aurochs-ui/xlsx-editor/selectors/border-overlay";
+import { createGetZipTextFileContentFromBytes } from "@aurochs-office/opc";
 
 function fixturePath(name: string): string {
   return path.join(process.cwd(), "fixtures/poi-test-data/test-data/spreadsheet", name);
@@ -120,7 +123,12 @@ describe("POI spreadsheet fixtures (parsing + formulas + style)", () => {
     const themed = createAddress(1, 1); // A1
     const rgb = createAddress(2, 1); // B1
 
-    const themedCss = resolveCellRenderStyle({ styles: workbook.styles, sheet, address: themed, cell: getCell(sheet, themed) });
+    const themedCss = resolveCellRenderStyle({
+      styles: workbook.styles,
+      sheet,
+      address: themed,
+      cell: getCell(sheet, themed),
+    });
     const rgbCss = resolveCellRenderStyle({ styles: workbook.styles, sheet, address: rgb, cell: getCell(sheet, rgb) });
 
     expect(themedCss.color).toBe("#B97135");
@@ -246,13 +254,22 @@ describe("POI spreadsheet fixtures (parsing + formulas + style)", () => {
     }
 
     expect(
-      formatCellValueForDisplay(a1Cell.value, resolveCellFormatCode({ styles: workbook.styles, sheet, address: a1, cell: a1Cell })),
+      formatCellValueForDisplay(
+        a1Cell.value,
+        resolveCellFormatCode({ styles: workbook.styles, sheet, address: a1, cell: a1Cell }),
+      ),
     ).toBe("Numbers");
     expect(
-      formatCellValueForDisplay(b2Cell.value, resolveCellFormatCode({ styles: workbook.styles, sheet, address: b2, cell: b2Cell })),
+      formatCellValueForDisplay(
+        b2Cell.value,
+        resolveCellFormatCode({ styles: workbook.styles, sheet, address: b2, cell: b2Cell }),
+      ),
     ).toBe("A");
     expect(
-      formatCellValueForDisplay(c2Cell.value, resolveCellFormatCode({ styles: workbook.styles, sheet, address: c2, cell: c2Cell })),
+      formatCellValueForDisplay(
+        c2Cell.value,
+        resolveCellFormatCode({ styles: workbook.styles, sheet, address: c2, cell: c2Cell }),
+      ),
     ).toBe("1st Inline String");
 
     const evaluator = createFormulaEvaluator(workbook);
@@ -292,7 +309,11 @@ describe("POI spreadsheet fixtures (parsing + formulas + style)", () => {
       { address: createAddress(1, 1), expectedFormatCode: "0.00", expectedBackground: "#DBEEF4" },
       { address: createAddress(1, 2), expectedFormatCode: "0.00", expectedBackground: "#DBEEF4" },
       { address: createAddress(1, 3), expectedFormatCode: "0.00E+00", expectedBackground: "#FDEADA" },
-      { address: createAddress(1, 5), expectedFormatCode: "\"$\"#,##0_);[Red]\\(\"$\"#,##0\\)", expectedBackground: "#F2DCDB" },
+      {
+        address: createAddress(1, 5),
+        expectedFormatCode: '"$"#,##0_);[Red]\\("$"#,##0\\)',
+        expectedBackground: "#F2DCDB",
+      },
     ];
 
     for (const { address, expectedFormatCode, expectedBackground } of cases) {
@@ -312,7 +333,9 @@ describe("POI spreadsheet fixtures (parsing + formulas + style)", () => {
         throw new Error("Expected conditional formatting to apply");
       }
 
-      expect(resolveCellFormatCode({ styles: workbook.styles, sheet, address, cell, conditionalFormat })).toBe(expectedFormatCode);
+      expect(resolveCellFormatCode({ styles: workbook.styles, sheet, address, cell, conditionalFormat })).toBe(
+        expectedFormatCode,
+      );
       const css = resolveCellRenderStyle({ styles: workbook.styles, sheet, address, cell, conditionalFormat });
       expect(css.backgroundColor).toBe(expectedBackground);
     }
@@ -373,7 +396,13 @@ describe("POI spreadsheet fixtures (parsing + formulas + style)", () => {
       throw new Error("Expected conditional formatting to apply for A2");
     }
 
-    const css = resolveCellRenderStyle({ styles: workbook.styles, sheet, address: a2, cell: a2Cell, conditionalFormat: a2Format });
+    const css = resolveCellRenderStyle({
+      styles: workbook.styles,
+      sheet,
+      address: a2,
+      cell: a2Cell,
+      conditionalFormat: a2Format,
+    });
     expect(css.backgroundColor).toBe("#000000");
   });
 
@@ -561,7 +590,13 @@ describe("POI spreadsheet fixtures (parsing + formulas + style)", () => {
       throw new Error("Expected conditional formatting to apply for B1");
     }
 
-    const css = resolveCellRenderStyle({ styles: workbook.styles, sheet, address: b1, cell: b1Cell, conditionalFormat });
+    const css = resolveCellRenderStyle({
+      styles: workbook.styles,
+      sheet,
+      address: b1,
+      cell: b1Cell,
+      conditionalFormat,
+    });
     expect(css.backgroundColor).toBe("#FFEB9C");
   });
 
@@ -592,7 +627,13 @@ describe("POI spreadsheet fixtures (parsing + formulas + style)", () => {
     if (!b9Format) {
       throw new Error("Expected conditional formatting to apply for B9");
     }
-    const b9Css = resolveCellRenderStyle({ styles: workbook.styles, sheet, address: b9, cell: b9Cell, conditionalFormat: b9Format });
+    const b9Css = resolveCellRenderStyle({
+      styles: workbook.styles,
+      sheet,
+      address: b9,
+      cell: b9Cell,
+      conditionalFormat: b9Format,
+    });
     expect(b9Css.backgroundColor).toBe("#FFEB9C");
     expect(b9Css.color).toBe("#9C6500");
 
@@ -629,7 +670,13 @@ describe("POI spreadsheet fixtures (parsing + formulas + style)", () => {
     if (!d7Format) {
       throw new Error("Expected conditional formatting to apply for D7");
     }
-    const d7Css = resolveCellRenderStyle({ styles: workbook.styles, sheet, address: d7, cell: d7Cell, conditionalFormat: d7Format });
+    const d7Css = resolveCellRenderStyle({
+      styles: workbook.styles,
+      sheet,
+      address: d7,
+      cell: d7Cell,
+      conditionalFormat: d7Format,
+    });
     expect(d7Css.backgroundColor).toBe("#00B0F0");
 
     const d3 = createAddress(4, 3); // 1148 (no match)
@@ -690,7 +737,13 @@ describe("POI spreadsheet fixtures (parsing + formulas + style)", () => {
       throw new Error("Expected conditional formatting to apply for T3");
     }
 
-    const css = resolveCellRenderStyle({ styles: workbook.styles, sheet, address: t3, cell: t3Cell, conditionalFormat: t3Format });
+    const css = resolveCellRenderStyle({
+      styles: workbook.styles,
+      sheet,
+      address: t3,
+      cell: t3Cell,
+      conditionalFormat: t3Format,
+    });
     expect(css.backgroundColor).toBe("#7030A0");
   });
 
@@ -755,7 +808,13 @@ describe("POI spreadsheet fixtures (parsing + formulas + style)", () => {
     if (!a3Format) {
       throw new Error("Expected conditional formatting to apply for A3");
     }
-    const a3Css = resolveCellRenderStyle({ styles: workbook.styles, sheet, address: a3, cell: a3Cell, conditionalFormat: a3Format });
+    const a3Css = resolveCellRenderStyle({
+      styles: workbook.styles,
+      sheet,
+      address: a3,
+      cell: a3Cell,
+      conditionalFormat: a3Format,
+    });
     expect(a3Css.color).toBe("#00B050");
     expect(a3Css.fontStyle).toBeUndefined();
 
@@ -770,7 +829,13 @@ describe("POI spreadsheet fixtures (parsing + formulas + style)", () => {
     if (!a4Format) {
       throw new Error("Expected conditional formatting to apply for A4");
     }
-    const a4Css = resolveCellRenderStyle({ styles: workbook.styles, sheet, address: a4, cell: a4Cell, conditionalFormat: a4Format });
+    const a4Css = resolveCellRenderStyle({
+      styles: workbook.styles,
+      sheet,
+      address: a4,
+      cell: a4Cell,
+      conditionalFormat: a4Format,
+    });
     expect(a4Css.color).toBe("#FF0000");
     expect(a4Css.fontFamily).toBe("Cambria");
     expect(a4Css.fontStyle).toBe("italic");
@@ -787,7 +852,13 @@ describe("POI spreadsheet fixtures (parsing + formulas + style)", () => {
     if (!b9Format) {
       throw new Error("Expected conditional formatting to apply for B9");
     }
-    const b9Css = resolveCellRenderStyle({ styles: workbook.styles, sheet, address: b9, cell: b9Cell, conditionalFormat: b9Format });
+    const b9Css = resolveCellRenderStyle({
+      styles: workbook.styles,
+      sheet,
+      address: b9,
+      cell: b9Cell,
+      conditionalFormat: b9Format,
+    });
     expect(b9Css.color).toBe("#FF0000");
   });
 
@@ -955,7 +1026,7 @@ describe("POI spreadsheet fixtures (parsing + formulas + style)", () => {
     }
   });
 
-  it("TextFormatTests.xlsx: evaluates CONCATENATE + TEXT() text sections (\";;;\" prefix) and matches cached values", async () => {
+  it('TextFormatTests.xlsx: evaluates CONCATENATE + TEXT() text sections (";;;" prefix) and matches cached values', async () => {
     const workbook = await parseWorkbookFromFixture("TextFormatTests.xlsx");
 
     const sheetIndex = workbook.sheets.findIndex((candidate) => candidate.name === "Tests");
@@ -1112,7 +1183,11 @@ describe("POI spreadsheet fixtures (parsing + formulas + style)", () => {
     }
 
     const dateSystem = workbook.dateSystem;
-    const cases: ReadonlyArray<{ readonly address: CellAddress; readonly formatCode: string; readonly expected: string }> = [
+    const cases: ReadonlyArray<{
+      readonly address: CellAddress;
+      readonly formatCode: string;
+      readonly expected: string;
+    }> = [
       { address: createAddress(2, 2), formatCode: "mm-dd-yy", expected: "11-24-06" }, // B2
       { address: createAddress(2, 3), formatCode: "yyyy/mm/dd", expected: "2006/11/24" }, // B3
       { address: createAddress(2, 4), formatCode: "yyyy\\-mm\\-dd", expected: "2006-11-24" }, // B4
@@ -1120,7 +1195,7 @@ describe("POI spreadsheet fixtures (parsing + formulas + style)", () => {
       { address: createAddress(2, 7), formatCode: "dd\\-mm\\-yy", expected: "24-11-06" }, // B7
       { address: createAddress(2, 11), formatCode: "0.000", expected: "10.520" }, // B11
       { address: createAddress(2, 12), formatCode: "0.0", expected: "10.5" }, // B12
-      { address: createAddress(2, 13), formatCode: "\"£\"#,##0.00", expected: "£10.52" }, // B13
+      { address: createAddress(2, 13), formatCode: '"£"#,##0.00', expected: "£10.52" }, // B13
     ];
 
     for (const { address, formatCode, expected } of cases) {
@@ -1294,7 +1369,11 @@ describe("POI spreadsheet fixtures (parsing + formulas + style)", () => {
 
     const evaluator = createFormulaEvaluator(workbook);
 
-    const cases: ReadonlyArray<{ readonly address: CellAddress; readonly expectedFormula: string; readonly expectedValue: string }> = [
+    const cases: ReadonlyArray<{
+      readonly address: CellAddress;
+      readonly expectedFormula: string;
+      readonly expectedValue: string;
+    }> = [
       {
         address: createAddress(3, 1), // C1
         expectedFormula: 'IF(ISERROR(VLOOKUP(A1,AirportCode,2,FALSE)),"",VLOOKUP(B1,AirportCode,2,FALSE))',
@@ -2057,7 +2136,8 @@ describe("POI spreadsheet fixtures (parsing + formulas + style)", () => {
     }
 
     const xfIndex = workbook.styles.cellXfs.findIndex(
-      (xf) => xf.alignment?.indent === 1 && (xf.alignment.horizontal === "left" || xf.alignment.horizontal === undefined),
+      (xf) =>
+        xf.alignment?.indent === 1 && (xf.alignment.horizontal === "left" || xf.alignment.horizontal === undefined),
     );
     if (xfIndex === -1) {
       throw new Error("Expected at least one cellXf with indent=1");

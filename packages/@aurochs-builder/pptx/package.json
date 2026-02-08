@@ -1,0 +1,61 @@
+{
+  "name": "@aurochs-builder/pptx",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "dependencies": {
+    "@aurochs/buffer": "workspace:*",
+    "@aurochs/xml": "workspace:*",
+    "@aurochs/zip": "workspace:*",
+    "@aurochs-builder/drawing-ml": "workspace:*",
+    "@aurochs-office/chart": "workspace:*",
+    "@aurochs-office/opc": "workspace:*",
+    "@aurochs-office/ooxml": "workspace:*",
+    "@aurochs-office/pptx": "workspace:*",
+    "@aurochs-office/xlsx": "workspace:*"
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit --rootDir ../../..",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-builder/pptx/src'"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./export": {
+      "types": "./src/export/index.ts",
+      "default": "./src/export/index.ts"
+    },
+    "./slide-ops": {
+      "types": "./src/slide-ops/index.ts",
+      "default": "./src/slide-ops/index.ts"
+    },
+    "./builders": {
+      "types": "./src/builders/index.ts",
+      "default": "./src/builders/index.ts"
+    },
+    "./types": {
+      "types": "./src/types/index.ts",
+      "default": "./src/types/index.ts"
+    },
+    "./patcher": {
+      "types": "./src/patcher/index.ts",
+      "default": "./src/patcher/index.ts"
+    },
+    "./patcher/*": {
+      "types": "./src/patcher/*.ts",
+      "default": "./src/patcher/*.ts"
+    },
+    "./patcher/*/*": {
+      "types": "./src/patcher/*/*.ts",
+      "default": "./src/patcher/*/*.ts"
+    },
+    "./patcher/*/*/*": {
+      "types": "./src/patcher/*/*/*.ts",
+      "default": "./src/patcher/*/*/*.ts"
+    }
+  }
+}

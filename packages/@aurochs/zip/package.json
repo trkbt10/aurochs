@@ -1,0 +1,21 @@
+{
+  "name": "@aurochs/zip",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "dependencies": {
+    "fflate": "^0.8.2"
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs/zip/src'"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    }
+  }
+}

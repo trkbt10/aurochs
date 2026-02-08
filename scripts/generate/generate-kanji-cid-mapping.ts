@@ -29,17 +29,23 @@ function parseArgs(argv: readonly string[]): Args {
 
   while (args.length > 0) {
     const arg = args.shift();
-    if (!arg) {break;}
+    if (!arg) {
+      break;
+    }
 
     if (arg === "--cmapUrl") {
       const value = args.shift();
-      if (!value) {throw new Error("--cmapUrl requires a value");}
+      if (!value) {
+        throw new Error("--cmapUrl requires a value");
+      }
       cmapUrl = value;
       continue;
     }
     if (arg === "--output") {
       const value = args.shift();
-      if (!value) {throw new Error("--output requires a value");}
+      if (!value) {
+        throw new Error("--output requires a value");
+      }
       outputPath = value;
       continue;
     }
@@ -53,7 +59,7 @@ function parseArgs(argv: readonly string[]): Args {
         'Missing required args: "--cmapUrl" and "--output".',
         "",
         "Example:",
-        `  bun run scripts/generate/generate-kanji-cid-mapping.ts --cmapUrl ${DEFAULT_CMAP_URL} --output packages/@oxen/pdf/src/domain/font/japan1-kanji-mappings.ts`,
+        `  bun run scripts/generate/generate-kanji-cid-mapping.ts --cmapUrl ${DEFAULT_CMAP_URL} --output packages/@aurochs/pdf/src/domain/font/japan1-kanji-mappings.ts`,
       ].join("\n"),
     );
   }

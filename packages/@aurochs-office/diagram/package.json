@@ -1,0 +1,59 @@
+{
+  "name": "@aurochs-office/diagram",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "dependencies": {
+    "@aurochs-office/drawing-ml": "workspace:*",
+    "@aurochs-office/ooxml": "workspace:*",
+    "@aurochs/xml": "workspace:*"
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-office/diagram/src'"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./domain": {
+      "types": "./src/domain/types.ts",
+      "default": "./src/domain/types.ts"
+    },
+    "./domain/*": {
+      "types": "./src/domain/*.ts",
+      "default": "./src/domain/*.ts"
+    },
+    "./parser": {
+      "types": "./src/parser/index.ts",
+      "default": "./src/parser/index.ts"
+    },
+    "./parser/*": {
+      "types": "./src/parser/*.ts",
+      "default": "./src/parser/*.ts"
+    },
+    "./parser/*/*": {
+      "types": "./src/parser/*/*.ts",
+      "default": "./src/parser/*/*.ts"
+    },
+    "./parser/diagram/*": {
+      "types": "./src/parser/diagram/*.ts",
+      "default": "./src/parser/diagram/*.ts"
+    },
+    "./patcher": {
+      "types": "./src/patcher/index.ts",
+      "default": "./src/patcher/index.ts"
+    },
+    "./layout-engine": {
+      "types": "./src/layout-engine/index.ts",
+      "default": "./src/layout-engine/index.ts"
+    },
+    "./layout-engine/*": {
+      "types": "./src/layout-engine/*.ts",
+      "default": "./src/layout-engine/*.ts"
+    }
+  }
+}

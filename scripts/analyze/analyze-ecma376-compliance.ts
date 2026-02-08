@@ -14,8 +14,8 @@
  * @see ECMA-376 Part 1, Section 21.1.2.2.5 (a:lnSpc)
  */
 
-import { openPresentation } from "@oxen-office/pptx";
-import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
+import { openPresentation } from "@aurochs-office/pptx";
+import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
 import { requireFileExists, requireIntArg, requirePositionalArg } from "../lib/cli";
 import { loadPptxFile } from "../lib/pptx-loader";
 
@@ -24,7 +24,7 @@ type AnalysisResult = {
   slide: number;
   backgroundAnalysis: BackgroundAnalysis;
   textAnalysis: TextAnalysis;
-}
+};
 
 type BackgroundAnalysis = {
   hasStretch: boolean;
@@ -32,24 +32,24 @@ type BackgroundAnalysis = {
   preserveAspectRatio: string | null;
   isCompliant: boolean;
   details: string;
-}
+};
 
 type TextAnalysis = {
   textElements: TextElement[];
   lineSpacing: LineSpacingInfo[];
-}
+};
 
 type TextElement = {
   text: string;
   x: number;
   y: number;
   fontSize: number | null;
-}
+};
 
 type LineSpacingInfo = {
   type: "percent" | "points" | "default";
   value: number;
-}
+};
 
 function analyzeBackground(svg: string, xmlContent: string): BackgroundAnalysis {
   // Check XML for a:stretch element
@@ -67,7 +67,7 @@ function analyzeBackground(svg: string, xmlContent: string): BackgroundAnalysis 
   if (hasStretch && !isCompliant) {
     details = `Non-compliant: a:stretch requires preserveAspectRatio="none", got "${preserveAspectRatio}"`;
   } else if (hasStretch && isCompliant) {
-    details = "Compliant: a:stretch correctly mapped to preserveAspectRatio=\"none\"";
+    details = 'Compliant: a:stretch correctly mapped to preserveAspectRatio="none"';
   } else if (hasBlipFill) {
     details = `No a:stretch found, using preserveAspectRatio="${preserveAspectRatio}"`;
   } else {
@@ -130,10 +130,7 @@ function analyzeText(svg: string): TextAnalysis {
   };
 }
 
-async function analyzeSlide(
-  pptxPath: string,
-  slideNumber: number,
-): Promise<AnalysisResult> {
+async function analyzeSlide(pptxPath: string, slideNumber: number): Promise<AnalysisResult> {
   const { presentationFile } = await loadPptxFile(pptxPath);
   const presentation = openPresentation(presentationFile);
   const slide = presentation.getSlide(slideNumber);

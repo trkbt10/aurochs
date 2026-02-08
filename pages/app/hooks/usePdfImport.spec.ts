@@ -5,10 +5,14 @@
 // @vitest-environment jsdom
 
 import { cleanup, renderHook, act, waitFor } from "@testing-library/react";
-import { px } from "@oxen-office/drawing-ml/domain/units";
-import { createEmptyResourceResolver } from "@oxen-office/pptx/domain/resource-resolver";
-import type { PresentationDocument } from "@oxen-office/pptx/app";
-import { PdfImportError, type PdfImportOptions, type PdfImportResult } from "@oxen-converters/pdf-to-pptx/importer/pdf-importer";
+import { px } from "@aurochs-office/drawing-ml/domain/units";
+import { createEmptyResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
+import type { PresentationDocument } from "@aurochs-office/pptx/app";
+import {
+  PdfImportError,
+  type PdfImportOptions,
+  type PdfImportResult,
+} from "@aurochs-converters/pdf-to-pptx/importer/pdf-importer";
 import { usePdfImport } from "./usePdfImport";
 
 type ImporterDeps = Parameters<typeof usePdfImport>[0];
@@ -184,4 +188,3 @@ describe("usePdfImport", () => {
     expect(result.current.state.error).toBeNull();
   });
 });
-

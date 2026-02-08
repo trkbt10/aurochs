@@ -8,7 +8,7 @@
  */
 
 import { useCallback, useEffect, useRef } from "react";
-import { useEditorConfig, type FontCatalog } from "@oxen-ui/pptx-editor";
+import { useEditorConfig, type FontCatalog } from "@aurochs-ui/pptx-editor";
 
 const GENERIC_FAMILIES = new Set([
   "inherit",
@@ -31,7 +31,7 @@ function normalizeFamilyName(family: string): string {
   if (trimmed === "") {
     return "";
   }
-  if ((trimmed.startsWith("\"") && trimmed.endsWith("\"")) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+  if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
     return trimmed.slice(1, -1).trim();
   }
   return trimmed;
@@ -85,7 +85,7 @@ async function buildCatalogFamilySet(fontCatalog: FontCatalog): Promise<Set<stri
 async function runWithConcurrencyLimit<T>(
   items: readonly T[],
   limit: number,
-  run: (item: T) => Promise<void>
+  run: (item: T) => Promise<void>,
 ): Promise<void> {
   if (limit <= 0) {
     throw new Error("runWithConcurrencyLimit: limit must be > 0");
@@ -161,9 +161,7 @@ export function useSvgFontLoader(): ((svg: string) => Promise<void>) | null {
       const catalogSet = await getCatalogSet();
       const toLoad = requestedFamilies.filter(
         (family) =>
-          catalogSet.has(family) &&
-          !loadedFamiliesRef.current.has(family) &&
-          !inFlightFamiliesRef.current.has(family)
+          catalogSet.has(family) && !loadedFamiliesRef.current.has(family) && !inFlightFamiliesRef.current.has(family),
       );
       if (toLoad.length === 0) {
         return;
@@ -183,6 +181,6 @@ export function useSvgFontLoader(): ((svg: string) => Promise<void>) | null {
         }
       });
     },
-    [fontCatalog, getCatalogSet]
+    [fontCatalog, getCatalogSet],
   );
 }

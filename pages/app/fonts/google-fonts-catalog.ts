@@ -5,7 +5,7 @@
  * - Loads requested fonts on demand using Google Fonts CSS2 endpoint.
  */
 
-import type { FontCatalog, FontCatalogFamilyRecord } from "@oxen-ui/pptx-editor";
+import type { FontCatalog, FontCatalogFamilyRecord } from "@aurochs-ui/pptx-editor";
 
 export type GoogleFontsCatalogConfig = {
   /** e.g. "/fonts/google-fonts-families.json" */
@@ -48,7 +48,7 @@ function requirePositiveInt(value: number, name: string): number {
 
 function normalizeFamilyName(family: string): string {
   const trimmed = family.trim();
-  if ((trimmed.startsWith("\"") && trimmed.endsWith("\"")) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+  if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
     return trimmed.slice(1, -1).trim();
   }
   return trimmed;
@@ -227,7 +227,7 @@ function waitForLinkLoad(link: HTMLLinkElement): Promise<void> {
 }
 
 function isFontAvailable(family: string): boolean {
-  const escaped = family.replaceAll("\"", "\\\"");
+  const escaped = family.replaceAll('"', '\\"');
   return document.fonts.check(`12px "${escaped}"`);
 }
 
@@ -239,13 +239,13 @@ function buildFontLoadSpecs(escapedFamily: string, weights: readonly number[]): 
 }
 
 async function loadFontFace(family: string, weights: readonly number[], timeoutMs: number): Promise<void> {
-  const escaped = family.replaceAll("\"", "\\\"");
+  const escaped = family.replaceAll('"', '\\"');
   const specs = buildFontLoadSpecs(escaped, weights);
 
   await withTimeout(
     Promise.allSettled(specs.map((spec) => document.fonts.load(spec))).then(() => undefined),
     timeoutMs,
-    `document.fonts.load("${family}")`
+    `document.fonts.load("${family}")`,
   );
 }
 

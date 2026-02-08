@@ -6,7 +6,7 @@
  */
 
 import { useReducer, useMemo, useCallback, useRef, useEffect, type CSSProperties } from "react";
-import { Panel } from "@oxen-ui/ui-components/layout";
+import { Panel } from "@aurochs-ui/ui-components/layout";
 import {
   SlideCanvas,
   slideEditorReducer,
@@ -15,14 +15,14 @@ import {
   PropertyPanel,
   clientToSlideCoords,
   withUpdatedTransform,
-} from "@oxen-ui/pptx-editor";
-import type { ResizeHandlePosition } from "@oxen-ui/pptx-editor";
-import type { Slide, Shape } from "@oxen-office/pptx/domain";
-import type { SpShape, GrpShape, GraphicFrame, CxnShape } from "@oxen-office/pptx/domain/shape";
-import type { Line } from "@oxen-office/pptx/domain/color/types";
-import type { Table, TableRow, TableCell } from "@oxen-office/pptx/domain/table/types";
-import type { ShapeId } from "@oxen-office/pptx/domain";
-import { px, deg, pt } from "@oxen-office/drawing-ml/domain/units";
+} from "@aurochs-ui/pptx-editor";
+import type { ResizeHandlePosition } from "@aurochs-ui/pptx-editor";
+import type { Slide, Shape } from "@aurochs-office/pptx/domain";
+import type { SpShape, GrpShape, GraphicFrame, CxnShape } from "@aurochs-office/pptx/domain/shape";
+import type { Line } from "@aurochs-office/pptx/domain/color/types";
+import type { Table, TableRow, TableCell } from "@aurochs-office/pptx/domain/table/types";
+import type { ShapeId } from "@aurochs-office/pptx/domain";
+import { px, deg, pt } from "@aurochs-office/drawing-ml/domain/units";
 
 // =============================================================================
 // Fixture Helpers
@@ -159,27 +159,24 @@ const createTitle = (args: {
   };
 };
 
-const createGroup = (args: { readonly id: string; readonly x: number; readonly y: number; readonly children: SpShape[] }): GrpShape => {
+const createGroup = (args: {
+  readonly id: string;
+  readonly x: number;
+  readonly y: number;
+  readonly children: SpShape[];
+}): GrpShape => {
   const { id, x, y, children } = args;
-  const minX = Math.min(
-    ...children.map((c) => (c.properties.transform?.x as number) || 0)
-  );
-  const minY = Math.min(
-    ...children.map((c) => (c.properties.transform?.y as number) || 0)
-  );
+  const minX = Math.min(...children.map((c) => (c.properties.transform?.x as number) || 0));
+  const minY = Math.min(...children.map((c) => (c.properties.transform?.y as number) || 0));
   const maxX = Math.max(
     ...children.map(
-      (c) =>
-        ((c.properties.transform?.x as number) || 0) +
-        ((c.properties.transform?.width as number) || 0)
-    )
+      (c) => ((c.properties.transform?.x as number) || 0) + ((c.properties.transform?.width as number) || 0),
+    ),
   );
   const maxY = Math.max(
     ...children.map(
-      (c) =>
-        ((c.properties.transform?.y as number) || 0) +
-        ((c.properties.transform?.height as number) || 0)
-    )
+      (c) => ((c.properties.transform?.y as number) || 0) + ((c.properties.transform?.height as number) || 0),
+    ),
   );
   const width = maxX - minX;
   const height = maxY - minY;
@@ -206,24 +203,29 @@ const createGroup = (args: { readonly id: string; readonly x: number; readonly y
   };
 };
 
-const createCxnShape = (args: { readonly id: string; readonly x: number; readonly y: number; readonly width: number }): CxnShape => {
+const createCxnShape = (args: {
+  readonly id: string;
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+}): CxnShape => {
   const { id, x, y, width } = args;
   return {
-  type: "cxnSp",
-  nonVisual: { id, name: "Connector" },
-  properties: {
-    transform: {
-      x: px(x),
-      y: px(y),
-      width: px(width),
-      height: px(0),
-      rotation: deg(0),
-      flipH: false,
-      flipV: false,
+    type: "cxnSp",
+    nonVisual: { id, name: "Connector" },
+    properties: {
+      transform: {
+        x: px(x),
+        y: px(y),
+        width: px(width),
+        height: px(0),
+        rotation: deg(0),
+        flipH: false,
+        flipV: false,
+      },
+      geometry: { type: "preset", preset: "line", adjustValues: [] },
+      line: createLine("000000", 2),
     },
-    geometry: { type: "preset", preset: "line", adjustValues: [] },
-    line: createLine("000000", 2),
-  },
   };
 };
 
@@ -258,11 +260,7 @@ const createTable = (): Table => ({
   properties: {},
 });
 
-const createTableFrame = (
-  id: string,
-  x: number,
-  y: number
-): GraphicFrame => ({
+const createTableFrame = (id: string, x: number, y: number): GraphicFrame => ({
   type: "graphicFrame",
   nonVisual: { id, name: "Table" },
   transform: {
@@ -289,7 +287,16 @@ const createTestSlide = (): Slide => ({
     createTitle({ id: "title1", x: 50, y: 10, width: 400, height: 40, text: "Slide Canvas Test" }),
     createSpShape({ id: "sp1", name: "Blue Rectangle", x: 50, y: 70, width: 150, height: 80, fillColor: "4A90D9" }),
     createSpShape({ id: "sp2", name: "Red Rectangle", x: 220, y: 70, width: 120, height: 90, fillColor: "D94A4A" }),
-    createSpShape({ id: "sp3", name: "Rotated Rectangle", x: 360, y: 70, width: 160, height: 70, fillColor: "4AD97A", rotation: 15 }),
+    createSpShape({
+      id: "sp3",
+      name: "Rotated Rectangle",
+      x: 360,
+      y: 70,
+      width: 160,
+      height: 70,
+      fillColor: "4AD97A",
+      rotation: 15,
+    }),
     createTextBox({
       id: "txt1",
       name: "TextBox 1",
@@ -300,7 +307,16 @@ const createTestSlide = (): Slide => ({
       text: "This is a text box with some content.",
       fontSize: 12,
     }),
-    createTextBox({ id: "txt2", name: "TextBox 2", x: 540, y: 140, width: 180, height: 40, text: "Another text box.", fontSize: 11 }),
+    createTextBox({
+      id: "txt2",
+      name: "TextBox 2",
+      x: 540,
+      y: 140,
+      width: 180,
+      height: 40,
+      text: "Another text box.",
+      fontSize: 11,
+    }),
     createCxnShape({ id: "cxn1", x: 740, y: 90, width: 100 }),
     createTableFrame("tbl1", 50, 200),
     createGroup({
@@ -314,7 +330,16 @@ const createTestSlide = (): Slide => ({
       ],
     }),
     createSpShape({ id: "sp4", name: "Yellow Shape", x: 50, y: 360, width: 140, height: 100, fillColor: "F1C40F" }),
-    createSpShape({ id: "sp5", name: "Purple Shape", x: 220, y: 380, width: 120, height: 80, fillColor: "8E44AD", rotation: -10 }),
+    createSpShape({
+      id: "sp5",
+      name: "Purple Shape",
+      x: 220,
+      y: 380,
+      width: 120,
+      height: 80,
+      fillColor: "8E44AD",
+      rotation: -10,
+    }),
   ],
 });
 
@@ -437,10 +462,7 @@ const SLIDE_HEIGHT = 540;
 export function SlideEditorTest() {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const initialState = useMemo(
-    () => createSlideEditorState(createTestSlide()),
-    []
-  );
+  const initialState = useMemo(() => createSlideEditorState(createTestSlide()), []);
 
   const [state, dispatch] = useReducer(slideEditorReducer, initialState);
 
@@ -478,7 +500,13 @@ export function SlideEditorTest() {
       }
 
       const rect = container.getBoundingClientRect();
-      const coords = clientToSlideCoords({ clientX: e.clientX, clientY: e.clientY, containerRect: rect, slideWidth: SLIDE_WIDTH, slideHeight: SLIDE_HEIGHT });
+      const coords = clientToSlideCoords({
+        clientX: e.clientX,
+        clientY: e.clientY,
+        containerRect: rect,
+        slideWidth: SLIDE_WIDTH,
+        slideHeight: SLIDE_HEIGHT,
+      });
 
       if (drag.type === "move") {
         const deltaX = coords.x - (drag.startX as number);
@@ -520,12 +548,9 @@ export function SlideEditorTest() {
   // Callbacks
   // ==========================================================================
 
-  const handleSelect = useCallback(
-    (shapeId: ShapeId, addToSelection: boolean, _toggle?: boolean) => {
-      dispatch({ type: "SELECT", shapeId, addToSelection });
-    },
-    []
-  );
+  const handleSelect = useCallback((shapeId: ShapeId, addToSelection: boolean, _toggle?: boolean) => {
+    dispatch({ type: "SELECT", shapeId, addToSelection });
+  }, []);
 
   const handleSelectMultiple = useCallback((shapeIds: readonly ShapeId[]) => {
     dispatch({ type: "SELECT_MULTIPLE", shapeIds });
@@ -535,47 +560,42 @@ export function SlideEditorTest() {
     dispatch({ type: "CLEAR_SELECTION" });
   }, []);
 
-  const handleStartMove = useCallback(
-    (startX: number, startY: number) => {
-      dispatch({ type: "START_MOVE", startX: px(startX), startY: px(startY) });
-    },
-    []
-  );
+  const handleStartMove = useCallback((startX: number, startY: number) => {
+    dispatch({ type: "START_MOVE", startX: px(startX), startY: px(startY) });
+  }, []);
 
   const handleStartResize = useCallback(
-    ({ handle, startX, startY, aspectLocked }: { handle: ResizeHandlePosition; startX: number; startY: number; aspectLocked: boolean }) => {
+    ({
+      handle,
+      startX,
+      startY,
+      aspectLocked,
+    }: {
+      handle: ResizeHandlePosition;
+      startX: number;
+      startY: number;
+      aspectLocked: boolean;
+    }) => {
       dispatch({ type: "START_RESIZE", handle, startX: px(startX), startY: px(startY), aspectLocked });
     },
-    []
+    [],
   );
 
-  const handleStartRotate = useCallback(
-    (startX: number, startY: number) => {
-      dispatch({ type: "START_ROTATE", startX: px(startX), startY: px(startY) });
-    },
-    []
-  );
+  const handleStartRotate = useCallback((startX: number, startY: number) => {
+    dispatch({ type: "START_ROTATE", startX: px(startX), startY: px(startY) });
+  }, []);
 
-  const handleShapeChange = useCallback(
-    (shapeId: ShapeId, updater: (shape: Shape) => Shape) => {
-      dispatch({ type: "UPDATE_SHAPE", shapeId, updater });
-    },
-    []
-  );
+  const handleShapeChange = useCallback((shapeId: ShapeId, updater: (shape: Shape) => Shape) => {
+    dispatch({ type: "UPDATE_SHAPE", shapeId, updater });
+  }, []);
 
-  const handleSlideChange = useCallback(
-    (updater: (slide: Slide) => Slide) => {
-      dispatch({ type: "UPDATE_SLIDE", updater });
-    },
-    []
-  );
+  const handleSlideChange = useCallback((updater: (slide: Slide) => Slide) => {
+    dispatch({ type: "UPDATE_SLIDE", updater });
+  }, []);
 
-  const handleUngroup = useCallback(
-    (shapeId: ShapeId) => {
-      dispatch({ type: "UNGROUP_SHAPE", shapeId });
-    },
-    []
-  );
+  const handleUngroup = useCallback((shapeId: ShapeId) => {
+    dispatch({ type: "UNGROUP_SHAPE", shapeId });
+  }, []);
 
   // Context menu actions (minimal for this test)
   const contextMenuActions = useMemo(
@@ -607,7 +627,7 @@ export function SlideEditorTest() {
       distributeHorizontally: () => {},
       distributeVertically: () => {},
     }),
-    [selection.selectedIds, primaryShape]
+    [selection.selectedIds, primaryShape],
   );
 
   return (
@@ -616,9 +636,8 @@ export function SlideEditorTest() {
       <div style={headerStyle}>
         <h2 style={titleStyle}>Slide Canvas (Pure Component)</h2>
         <p style={descriptionStyle}>
-          Pure SlideCanvas component with external state management. This demonstrates
-          the controlled component API where all state is managed outside the canvas.
-          Click to select shapes, drag to move them.
+          Pure SlideCanvas component with external state management. This demonstrates the controlled component API
+          where all state is managed outside the canvas. Click to select shapes, drag to move them.
         </p>
       </div>
 
@@ -698,7 +717,7 @@ export function SlideEditorTest() {
                 dragType: drag.type,
               },
               null,
-              2
+              2,
             )}
           </div>
         </div>

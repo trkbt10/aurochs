@@ -1,0 +1,81 @@
+{
+  "name": "aurochs-office-viewer",
+  "displayName": "aurochs Office Viewer",
+  "description": "View PPTX, PPT, DOCX, DOC, XLSX, and XLS files directly in VS Code",
+  "version": "0.1.0",
+  "publisher": "aurochs",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "main": "./dist/extension.js",
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "aurochs.pptxViewer",
+        "displayName": "PPTX Viewer",
+        "selector": [
+          {
+            "filenamePattern": "*.pptx"
+          },
+          {
+            "filenamePattern": "*.ppt"
+          }
+        ],
+        "priority": "default"
+      },
+      {
+        "viewType": "aurochs.docxViewer",
+        "displayName": "DOCX Viewer",
+        "selector": [
+          {
+            "filenamePattern": "*.docx"
+          },
+          {
+            "filenamePattern": "*.doc"
+          }
+        ],
+        "priority": "default"
+      },
+      {
+        "viewType": "aurochs.xlsxViewer",
+        "displayName": "XLSX Viewer",
+        "selector": [
+          {
+            "filenamePattern": "*.xlsx"
+          },
+          {
+            "filenamePattern": "*.xls"
+          }
+        ],
+        "priority": "default"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "bun run build:extension",
+    "build:extension": "bun build src/extension.ts --target node --outdir dist --external vscode",
+    "package": "vsce package --no-dependencies",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "@aurochs-office/pptx": "workspace:*",
+    "@aurochs-office/ppt": "workspace:*",
+    "@aurochs-office/docx": "workspace:*",
+    "@aurochs-office/doc": "workspace:*",
+    "@aurochs-office/xlsx": "workspace:*",
+    "@aurochs-office/xls": "workspace:*",
+    "@aurochs-renderer/pptx": "workspace:*",
+    "@aurochs/zip": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.2.2"
+  }
+}

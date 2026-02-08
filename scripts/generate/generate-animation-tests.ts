@@ -9,7 +9,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { createEmptyZipPackage } from "@oxen/zip";
+import { createEmptyZipPackage } from "@aurochs/zip";
 import { requirePositionalArg } from "../lib/cli";
 
 // =============================================================================
@@ -323,14 +323,17 @@ function getTransitionTypeElement(type: TransitionType, direction?: TransitionDi
  * @see ECMA-376 Part 1, Section 19.5 (Timing)
  */
 function generateTimingXml(animations: ShapeAnimation[]): string {
-  if (animations.length === 0) {return "";}
+  if (animations.length === 0) {
+    return "";
+  }
 
-  const animationNodes = animations.map((anim, index) => {
-    const { shapeId, preset } = anim;
-    const duration = preset.duration ?? 500;
-    const filter = preset.filter ?? "fade";
+  const animationNodes = animations
+    .map((anim, index) => {
+      const { shapeId, preset } = anim;
+      const duration = preset.duration ?? 500;
+      const filter = preset.filter ?? "fade";
 
-    return `<p:par>
+      return `<p:par>
               <p:cTn id="${index + 3}" presetID="${preset.presetId}" presetClass="${preset.presetClass}" presetSubtype="${preset.presetSubtype ?? 0}" fill="hold" nodeType="clickEffect">
                 <p:stCondLst>
                   <p:cond delay="0"/>
@@ -365,7 +368,8 @@ function generateTimingXml(animations: ShapeAnimation[]): string {
                 </p:childTnLst>
               </p:cTn>
             </p:par>`;
-  }).join("\n          ");
+    })
+    .join("\n          ");
 
   return `<p:timing>
     <p:tnLst>
@@ -594,83 +598,84 @@ const animationSlides: SlideConfig[] = [
   },
   {
     title: "Wipe Entrance",
-    shapes: [
-      { id: 2, text: "Wipe", x: 3000000, y: 2500000, width: 3000000, height: 1500000, fill: "8064A2" },
-    ],
+    shapes: [{ id: 2, text: "Wipe", x: 3000000, y: 2500000, width: 3000000, height: 1500000, fill: "8064A2" }],
     animations: [
-      { shapeId: 2, preset: { presetId: 22, presetClass: "entr", presetSubtype: 1, filter: "wipe(right)", duration: 750 } },
+      {
+        shapeId: 2,
+        preset: { presetId: 22, presetClass: "entr", presetSubtype: 1, filter: "wipe(right)", duration: 750 },
+      },
     ],
   },
   {
     title: "Blinds Entrance",
-    shapes: [
-      { id: 2, text: "Blinds", x: 3000000, y: 2500000, width: 3000000, height: 1500000, fill: "4BACC6" },
-    ],
+    shapes: [{ id: 2, text: "Blinds", x: 3000000, y: 2500000, width: 3000000, height: 1500000, fill: "4BACC6" }],
     animations: [
-      { shapeId: 2, preset: { presetId: 3, presetClass: "entr", presetSubtype: 10, filter: "blinds(horizontal)", duration: 500 } },
+      {
+        shapeId: 2,
+        preset: { presetId: 3, presetClass: "entr", presetSubtype: 10, filter: "blinds(horizontal)", duration: 500 },
+      },
     ],
   },
   {
     title: "Box Entrance",
-    shapes: [
-      { id: 2, text: "Box In", x: 3000000, y: 2500000, width: 3000000, height: 1500000, fill: "F79646" },
-    ],
+    shapes: [{ id: 2, text: "Box In", x: 3000000, y: 2500000, width: 3000000, height: 1500000, fill: "F79646" }],
     animations: [
       { shapeId: 2, preset: { presetId: 4, presetClass: "entr", presetSubtype: 16, filter: "box(in)", duration: 500 } },
     ],
   },
   {
     title: "Circle Entrance",
-    shapes: [
-      { id: 2, text: "Circle In", x: 3000000, y: 2500000, width: 3000000, height: 1500000, fill: "1F497D" },
-    ],
+    shapes: [{ id: 2, text: "Circle In", x: 3000000, y: 2500000, width: 3000000, height: 1500000, fill: "1F497D" }],
     animations: [
-      { shapeId: 2, preset: { presetId: 5, presetClass: "entr", presetSubtype: 16, filter: "circle(in)", duration: 500 } },
+      {
+        shapeId: 2,
+        preset: { presetId: 5, presetClass: "entr", presetSubtype: 16, filter: "circle(in)", duration: 500 },
+      },
     ],
   },
   {
     title: "Diamond Entrance",
-    shapes: [
-      { id: 2, text: "Diamond In", x: 3000000, y: 2500000, width: 3000000, height: 1500000, fill: "4F81BD" },
-    ],
+    shapes: [{ id: 2, text: "Diamond In", x: 3000000, y: 2500000, width: 3000000, height: 1500000, fill: "4F81BD" }],
     animations: [
-      { shapeId: 2, preset: { presetId: 6, presetClass: "entr", presetSubtype: 16, filter: "diamond(in)", duration: 500 } },
+      {
+        shapeId: 2,
+        preset: { presetId: 6, presetClass: "entr", presetSubtype: 16, filter: "diamond(in)", duration: 500 },
+      },
     ],
   },
   {
     title: "Dissolve Entrance",
-    shapes: [
-      { id: 2, text: "Dissolve", x: 3000000, y: 2500000, width: 3000000, height: 1500000, fill: "C0504D" },
-    ],
-    animations: [
-      { shapeId: 2, preset: { presetId: 8, presetClass: "entr", filter: "dissolve", duration: 750 } },
-    ],
+    shapes: [{ id: 2, text: "Dissolve", x: 3000000, y: 2500000, width: 3000000, height: 1500000, fill: "C0504D" }],
+    animations: [{ shapeId: 2, preset: { presetId: 8, presetClass: "entr", filter: "dissolve", duration: 750 } }],
   },
   {
     title: "Strips Entrance",
-    shapes: [
-      { id: 2, text: "Strips", x: 3000000, y: 2500000, width: 3000000, height: 1500000, fill: "9BBB59" },
-    ],
+    shapes: [{ id: 2, text: "Strips", x: 3000000, y: 2500000, width: 3000000, height: 1500000, fill: "9BBB59" }],
     animations: [
-      { shapeId: 2, preset: { presetId: 18, presetClass: "entr", presetSubtype: 6, filter: "strips(downRight)", duration: 500 } },
+      {
+        shapeId: 2,
+        preset: { presetId: 18, presetClass: "entr", presetSubtype: 6, filter: "strips(downRight)", duration: 500 },
+      },
     ],
   },
   {
     title: "Plus Entrance",
-    shapes: [
-      { id: 2, text: "Plus In", x: 3000000, y: 2500000, width: 3000000, height: 1500000, fill: "8064A2" },
-    ],
+    shapes: [{ id: 2, text: "Plus In", x: 3000000, y: 2500000, width: 3000000, height: 1500000, fill: "8064A2" }],
     animations: [
-      { shapeId: 2, preset: { presetId: 13, presetClass: "entr", presetSubtype: 16, filter: "plus(in)", duration: 500 } },
+      {
+        shapeId: 2,
+        preset: { presetId: 13, presetClass: "entr", presetSubtype: 16, filter: "plus(in)", duration: 500 },
+      },
     ],
   },
   {
     title: "Wheel Entrance",
-    shapes: [
-      { id: 2, text: "Wheel", x: 3000000, y: 2500000, width: 3000000, height: 1500000, fill: "4BACC6" },
-    ],
+    shapes: [{ id: 2, text: "Wheel", x: 3000000, y: 2500000, width: 3000000, height: 1500000, fill: "4BACC6" }],
     animations: [
-      { shapeId: 2, preset: { presetId: 21, presetClass: "entr", presetSubtype: 4, filter: "wheel(4)", duration: 1000 } },
+      {
+        shapeId: 2,
+        preset: { presetId: 21, presetClass: "entr", presetSubtype: 4, filter: "wheel(4)", duration: 1000 },
+      },
     ],
   },
 ];

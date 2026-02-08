@@ -16,14 +16,14 @@ import {
   createDefaultBulletStyle,
   createDefaultParagraphProperties,
   createDefaultTextBody,
-} from "@oxen-ui/pptx-editor";
+} from "@aurochs-ui/pptx-editor";
 import type {
   RunProperties,
   LineSpacing,
   BulletStyle,
   ParagraphProperties,
   TextBody,
-} from "@oxen-office/pptx/domain/text";
+} from "@aurochs-office/pptx/domain/text";
 
 const cardStyle: CSSProperties = {
   backgroundColor: "var(--bg-secondary)",
@@ -69,7 +69,7 @@ export function TextEditorsTest() {
   const [lineSpacing, setLineSpacing] = useState<LineSpacing | undefined>(createDefaultLineSpacing());
   const [bulletStyle, setBulletStyle] = useState<BulletStyle | undefined>(createDefaultBulletStyle());
   const [paragraphProperties, setParagraphProperties] = useState<ParagraphProperties>(
-    createDefaultParagraphProperties()
+    createDefaultParagraphProperties(),
   );
   const [textBody, setTextBody] = useState<TextBody>(createDefaultTextBody());
 

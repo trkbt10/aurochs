@@ -8,8 +8,8 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadNativePdfDocument } from "@oxen/pdf/native";
-import { isPdfPath, parsePdf, type PdfPaintOp, type PdfPath } from "@oxen/pdf";
+import { loadNativePdfDocument } from "@aurochs/pdf/native";
+import { isPdfPath, parsePdf, type PdfPaintOp, type PdfPath } from "@aurochs/pdf";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PDF_PATH = path.join(__dirname, "..", "..", "fixtures", "samples", "panel2.pdf");
@@ -156,29 +156,29 @@ describe("Shape Fill Diagnostic for panel2.pdf", () => {
 
     // Count paint operators
     const operators = {
-      S: 0,   // stroke
-      s: 0,   // close and stroke
-      f: 0,   // fill non-zero
-      F: 0,   // fill non-zero (obsolete)
+      S: 0, // stroke
+      s: 0, // close and stroke
+      f: 0, // fill non-zero
+      F: 0, // fill non-zero (obsolete)
       "f*": 0, // fill even-odd
-      B: 0,   // fill and stroke non-zero
+      B: 0, // fill and stroke non-zero
       "B*": 0, // fill and stroke even-odd
-      b: 0,   // close, fill and stroke non-zero
+      b: 0, // close, fill and stroke non-zero
       "b*": 0, // close, fill and stroke even-odd
-      n: 0,   // no-op
-      W: 0,   // clip non-zero
+      n: 0, // no-op
+      W: 0, // clip non-zero
       "W*": 0, // clip even-odd
     };
 
     // Count path construction operators
     const pathOps = {
-      m: 0,   // moveTo
-      l: 0,   // lineTo
-      c: 0,   // curveTo
-      v: 0,   // curveToV
-      y: 0,   // curveToY
-      h: 0,   // closePath
-      re: 0,  // rectangle
+      m: 0, // moveTo
+      l: 0, // lineTo
+      c: 0, // curveTo
+      v: 0, // curveToV
+      y: 0, // curveToY
+      h: 0, // closePath
+      re: 0, // rectangle
     };
 
     // Simple counting (not perfect but gives an idea)
@@ -218,7 +218,8 @@ describe("Shape Fill Diagnostic for panel2.pdf", () => {
     console.log("\n\n=== SAMPLE STROKE-ONLY SEQUENCES ===\n");
 
     // Find sequences ending with " S" (stroke)
-    const strokeSequenceRegex = /(\d+(?:\.\d+)?\s+\d+(?:\.\d+)?\s+m(?:[^SsfFbBnW]*?(?:\s+l|\s+c|\s+v|\s+y|\s+h|\s+re))*?)\s+S/g;
+    const strokeSequenceRegex =
+      /(\d+(?:\.\d+)?\s+\d+(?:\.\d+)?\s+m(?:[^SsfFbBnW]*?(?:\s+l|\s+c|\s+v|\s+y|\s+h|\s+re))*?)\s+S/g;
     let strokeMatch;
     let strokeSampleCount = 0;
 
@@ -236,7 +237,8 @@ describe("Shape Fill Diagnostic for panel2.pdf", () => {
     // Look for fill sequences
     console.log("\n\n=== SAMPLE FILL SEQUENCES ===\n");
 
-    const fillSequenceRegex = /(\d+(?:\.\d+)?\s+\d+(?:\.\d+)?\s+m(?:[^SsfFbBnW]*?(?:\s+l|\s+c|\s+v|\s+y|\s+h|\s+re))*?)\s+f/g;
+    const fillSequenceRegex =
+      /(\d+(?:\.\d+)?\s+\d+(?:\.\d+)?\s+m(?:[^SsfFbBnW]*?(?:\s+l|\s+c|\s+v|\s+y|\s+h|\s+re))*?)\s+f/g;
     let fillMatch;
     let fillSampleCount = 0;
 

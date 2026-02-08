@@ -1,0 +1,43 @@
+{
+  "name": "@aurochs-builder/drawing-ml",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "dependencies": {
+    "@aurochs-builder/core": "workspace:*",
+    "@aurochs-office/drawing-ml": "workspace:*",
+    "@aurochs-office/ooxml": "workspace:*"
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit --rootDir ../../..",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-builder/drawing-ml/src'"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./fill": {
+      "types": "./src/fill/index.ts",
+      "default": "./src/fill/index.ts"
+    },
+    "./line": {
+      "types": "./src/line/index.ts",
+      "default": "./src/line/index.ts"
+    },
+    "./effect": {
+      "types": "./src/effect/index.ts",
+      "default": "./src/effect/index.ts"
+    },
+    "./text": {
+      "types": "./src/text/index.ts",
+      "default": "./src/text/index.ts"
+    },
+    "./transform": {
+      "types": "./src/transform/index.ts",
+      "default": "./src/transform/index.ts"
+    }
+  }
+}

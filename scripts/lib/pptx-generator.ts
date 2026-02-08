@@ -9,7 +9,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { createEmptyZipPackage } from "@oxen/zip";
+import { createEmptyZipPackage } from "@aurochs/zip";
 
 // =============================================================================
 // Types
@@ -22,7 +22,7 @@ export type SlideContent = {
   paragraphs: ParagraphContent[];
   /** Text body properties */
   bodyPr?: BodyProperties;
-}
+};
 
 export type BodyProperties = {
   /** Vertical anchor: top, center, bottom */
@@ -40,7 +40,7 @@ export type BodyProperties = {
   vert?: "horz" | "vert" | "vert270" | "wordArtVert" | "eaVert" | "mongolianVert" | "wordArtVertRtl";
   /** Keep text upright in vertical layout - ECMA-376 21.1.2.1.2 */
   upright?: boolean;
-}
+};
 
 export type ParagraphContent = {
   /** Paragraph text (simple case) */
@@ -51,7 +51,7 @@ export type ParagraphContent = {
   pPr?: ParagraphProperties;
   /** Run-level properties (applied to all runs in paragraph) */
   rPr?: RunProperties;
-}
+};
 
 export type RunContent = {
   /** Run text */
@@ -60,7 +60,7 @@ export type RunContent = {
   rPr?: RunProperties;
   /** Is this a line break? */
   isBreak?: boolean;
-}
+};
 
 export type ParagraphProperties = {
   /** Line spacing - a:lnSpc */
@@ -79,7 +79,7 @@ export type ParagraphProperties = {
   bullet?: BulletProperties;
   /** Indentation level (0-8) */
   level?: number;
-}
+};
 
 export type BulletProperties = {
   /** Bullet type */
@@ -94,7 +94,7 @@ export type BulletProperties = {
   font?: string;
   /** Bullet size in percentage (e.g., 100000 = 100%) */
   sizePct?: number;
-}
+};
 
 export type RunProperties = {
   /** Character spacing in EMU - a:spc (ECMA-376 21.1.2.3.9) */
@@ -109,14 +109,14 @@ export type RunProperties = {
   italic?: boolean;
   /** Underline - u */
   underline?: boolean;
-}
+};
 
 export type LineSpacing =
-  | { type: "pct"; value: number }  // Percentage (100000 = 100%)
+  | { type: "pct"; value: number } // Percentage (100000 = 100%)
   | { type: "pts"; value: number }; // Points (in 1/100 pt)
 
 export type SpacingValue =
-  | { type: "pct"; value: number }  // Percentage
+  | { type: "pct"; value: number } // Percentage
   | { type: "pts"; value: number }; // Points (in 1/100 pt)
 
 // =============================================================================
@@ -317,21 +317,41 @@ function generateBulletXml(bullet: BulletProperties): string {
 }
 
 function generateParagraphPropertiesXml(pPr: ParagraphProperties | undefined): string {
-  if (!pPr) {return "";}
+  if (!pPr) {
+    return "";
+  }
 
   const attrs: string[] = [];
-  if (pPr.align) {attrs.push(`algn="${pPr.align}"`);}
-  if (pPr.marginLeft !== undefined) {attrs.push(`marL="${pPr.marginLeft}"`);}
-  if (pPr.indent !== undefined) {attrs.push(`indent="${pPr.indent}"`);}
-  if (pPr.level !== undefined) {attrs.push(`lvl="${pPr.level}"`);}
+  if (pPr.align) {
+    attrs.push(`algn="${pPr.align}"`);
+  }
+  if (pPr.marginLeft !== undefined) {
+    attrs.push(`marL="${pPr.marginLeft}"`);
+  }
+  if (pPr.indent !== undefined) {
+    attrs.push(`indent="${pPr.indent}"`);
+  }
+  if (pPr.level !== undefined) {
+    attrs.push(`lvl="${pPr.level}"`);
+  }
 
   const children: string[] = [];
-  if (pPr.lineSpacing) {children.push(generateLineSpacingXml(pPr.lineSpacing));}
-  if (pPr.spaceBefore) {children.push(generateSpacingXml(pPr.spaceBefore, "spcBef"));}
-  if (pPr.spaceAfter) {children.push(generateSpacingXml(pPr.spaceAfter, "spcAft"));}
-  if (pPr.bullet) {children.push(generateBulletXml(pPr.bullet));}
+  if (pPr.lineSpacing) {
+    children.push(generateLineSpacingXml(pPr.lineSpacing));
+  }
+  if (pPr.spaceBefore) {
+    children.push(generateSpacingXml(pPr.spaceBefore, "spcBef"));
+  }
+  if (pPr.spaceAfter) {
+    children.push(generateSpacingXml(pPr.spaceAfter, "spcAft"));
+  }
+  if (pPr.bullet) {
+    children.push(generateBulletXml(pPr.bullet));
+  }
 
-  if (attrs.length === 0 && children.length === 0) {return "";}
+  if (attrs.length === 0 && children.length === 0) {
+    return "";
+  }
 
   const attrStr = attrs.length > 0 ? " " + attrs.join(" ") : "";
   if (children.length === 0) {
@@ -341,7 +361,9 @@ function generateParagraphPropertiesXml(pPr: ParagraphProperties | undefined): s
 }
 
 function generateRunPropertiesXml(rPr: RunProperties | undefined): string {
-  if (!rPr) {return '<a:rPr lang="en-US"/>';}
+  if (!rPr) {
+    return '<a:rPr lang="en-US"/>';
+  }
 
   const attrs: string[] = ['lang="en-US"'];
 
@@ -406,15 +428,33 @@ function generateBodyPropertiesXml(bodyPr?: BodyProperties): string {
   attrs.push('rtlCol="0"');
 
   if (bodyPr) {
-    if (bodyPr.wrap) {attrs.push(`wrap="${bodyPr.wrap}"`);}
-    if (bodyPr.anchor) {attrs.push(`anchor="${bodyPr.anchor}"`);}
-    if (bodyPr.anchorCtr) {attrs.push(`anchorCtr="1"`);}
-    if (bodyPr.lIns !== undefined) {attrs.push(`lIns="${bodyPr.lIns}"`);}
-    if (bodyPr.rIns !== undefined) {attrs.push(`rIns="${bodyPr.rIns}"`);}
-    if (bodyPr.tIns !== undefined) {attrs.push(`tIns="${bodyPr.tIns}"`);}
-    if (bodyPr.bIns !== undefined) {attrs.push(`bIns="${bodyPr.bIns}"`);}
-    if (bodyPr.vert) {attrs.push(`vert="${bodyPr.vert}"`);}
-    if (bodyPr.upright) {attrs.push(`upright="1"`);}
+    if (bodyPr.wrap) {
+      attrs.push(`wrap="${bodyPr.wrap}"`);
+    }
+    if (bodyPr.anchor) {
+      attrs.push(`anchor="${bodyPr.anchor}"`);
+    }
+    if (bodyPr.anchorCtr) {
+      attrs.push(`anchorCtr="1"`);
+    }
+    if (bodyPr.lIns !== undefined) {
+      attrs.push(`lIns="${bodyPr.lIns}"`);
+    }
+    if (bodyPr.rIns !== undefined) {
+      attrs.push(`rIns="${bodyPr.rIns}"`);
+    }
+    if (bodyPr.tIns !== undefined) {
+      attrs.push(`tIns="${bodyPr.tIns}"`);
+    }
+    if (bodyPr.bIns !== undefined) {
+      attrs.push(`bIns="${bodyPr.bIns}"`);
+    }
+    if (bodyPr.vert) {
+      attrs.push(`vert="${bodyPr.vert}"`);
+    }
+    if (bodyPr.upright) {
+      attrs.push(`upright="1"`);
+    }
   } else {
     attrs.push('wrap="square"');
   }
@@ -427,8 +467,8 @@ function generateSlideXml(content: SlideContent): string {
   const bodyPr = generateBodyPropertiesXml(content.bodyPr);
 
   // Position and size for the text box
-  const offX = 457200;   // 0.5 inch
-  const offY = 457200;   // 0.5 inch
+  const offX = 457200; // 0.5 inch
+  const offY = 457200; // 0.5 inch
   const extCx = 8229600; // 9 inch - 1 inch margin
   const extCy = 5943600; // 6.5 inch - 1 inch margin
 
@@ -505,16 +545,21 @@ export async function generatePptx(content: SlideContent, outputPath: string): P
 /**
  * Convenience function to create a simple text slide.
  */
-export function createSimpleSlide(text: string, options?: {
-  pPr?: ParagraphProperties;
-  rPr?: RunProperties;
-}): SlideContent {
+export function createSimpleSlide(
+  text: string,
+  options?: {
+    pPr?: ParagraphProperties;
+    rPr?: RunProperties;
+  },
+): SlideContent {
   return {
-    paragraphs: [{
-      text,
-      pPr: options?.pPr,
-      rPr: options?.rPr,
-    }],
+    paragraphs: [
+      {
+        text,
+        pPr: options?.pPr,
+        rPr: options?.rPr,
+      },
+    ],
   };
 }
 

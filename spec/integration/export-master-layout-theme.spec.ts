@@ -10,11 +10,11 @@
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
-import { openPresentation } from "@oxen-office/pptx";
-import { convertToPresentationDocument, loadPptxFromBuffer } from "@oxen-office/pptx/app";
-import { exportPptxAsBuffer } from "@oxen-builder/pptx/export";
-import type { XmlDocument } from "@oxen/xml";
-import type { PresentationDocument, SlideWithId } from "@oxen-office/pptx/app/presentation-document";
+import { openPresentation } from "@aurochs-office/pptx";
+import { convertToPresentationDocument, loadPptxFromBuffer } from "@aurochs-office/pptx/app";
+import { exportPptxAsBuffer } from "@aurochs-builder/pptx/export";
+import type { XmlDocument } from "@aurochs/xml";
+import type { PresentationDocument, SlideWithId } from "@aurochs-office/pptx/app/presentation-document";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURE_DIR = path.resolve(__dirname, "../../fixtures");
@@ -36,7 +36,12 @@ describe("Master/Layout/Theme export", () => {
 
       // Modify the layout XML (add a marker attribute)
       const originalLayout = firstSlide.apiSlide.layout;
-      const modifiedLayout = addMarkerAttribute({ doc: originalLayout, expectedRootName: "p:sldLayout", attrName: "test-marker", attrValue: "phase9-test" });
+      const modifiedLayout = addMarkerAttribute({
+        doc: originalLayout,
+        expectedRootName: "p:sldLayout",
+        attrName: "test-marker",
+        attrValue: "phase9-test",
+      });
 
       // Create a modified document with the updated layout
       const modifiedSlide: SlideWithId = {
@@ -110,7 +115,12 @@ describe("Master/Layout/Theme export", () => {
 
       // Modify the master XML (add a marker attribute)
       const originalMaster = firstSlide.apiSlide.master;
-      const modifiedMaster = addMarkerAttribute({ doc: originalMaster, expectedRootName: "p:sldMaster", attrName: "test-marker", attrValue: "phase9-master-test" });
+      const modifiedMaster = addMarkerAttribute({
+        doc: originalMaster,
+        expectedRootName: "p:sldMaster",
+        attrName: "test-marker",
+        attrValue: "phase9-master-test",
+      });
 
       // Create a modified document with the updated master
       const modifiedSlide: SlideWithId = {
@@ -161,7 +171,12 @@ describe("Master/Layout/Theme export", () => {
 
       // Modify the theme XML (add a marker attribute)
       const originalTheme = firstSlide.apiSlide.theme;
-      const modifiedTheme = addMarkerAttribute({ doc: originalTheme, expectedRootName: "a:theme", attrName: "test-marker", attrValue: "phase9-theme-test" });
+      const modifiedTheme = addMarkerAttribute({
+        doc: originalTheme,
+        expectedRootName: "a:theme",
+        attrName: "test-marker",
+        attrValue: "phase9-theme-test",
+      });
 
       // Create a modified document with the updated theme
       const modifiedSlide: SlideWithId = {
@@ -216,9 +231,7 @@ function addMarkerAttribute({
   readonly attrName: string;
   readonly attrValue: string;
 }): XmlDocument {
-  const root = doc.children.find(
-    (child) => child.type === "element" && child.name === expectedRootName,
-  );
+  const root = doc.children.find((child) => child.type === "element" && child.name === expectedRootName);
 
   if (!root || root.type !== "element") {
     throw new Error(`Expected root element ${expectedRootName} not found`);
@@ -244,14 +257,8 @@ function addMarkerAttribute({
 /**
  * Find a marker attribute in the root element of an XML document.
  */
-function findMarkerAttribute(
-  doc: XmlDocument,
-  expectedRootName: string,
-  attrName: string,
-): string | undefined {
-  const root = doc.children.find(
-    (child) => child.type === "element" && child.name === expectedRootName,
-  );
+function findMarkerAttribute(doc: XmlDocument, expectedRootName: string, attrName: string): string | undefined {
+  const root = doc.children.find((child) => child.type === "element" && child.name === expectedRootName);
 
   if (!root || root.type !== "element") {
     return undefined;

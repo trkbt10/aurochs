@@ -1,0 +1,52 @@
+{
+  "name": "@aurochs-office/chart",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "dependencies": {
+    "@aurochs-office/drawing-ml": "workspace:*",
+    "@aurochs-office/ooxml": "workspace:*",
+    "@aurochs-office/xlsx": "workspace:*",
+    "@aurochs/xml": "workspace:*"
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-office/chart/src'"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./domain": {
+      "types": "./src/domain/types.ts",
+      "default": "./src/domain/types.ts"
+    },
+    "./domain/*": {
+      "types": "./src/domain/*.ts",
+      "default": "./src/domain/*.ts"
+    },
+    "./parser": {
+      "types": "./src/parser/index.ts",
+      "default": "./src/parser/index.ts"
+    },
+    "./parser/*": {
+      "types": "./src/parser/*.ts",
+      "default": "./src/parser/*.ts"
+    },
+    "./parser/*/*": {
+      "types": "./src/parser/*/*.ts",
+      "default": "./src/parser/*/*.ts"
+    },
+    "./reader": {
+      "types": "./src/reader/index.ts",
+      "default": "./src/reader/index.ts"
+    },
+    "./reader/*": {
+      "types": "./src/reader/*.ts",
+      "default": "./src/reader/*.ts"
+    }
+  }
+}

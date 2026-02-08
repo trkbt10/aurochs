@@ -1,0 +1,28 @@
+{
+  "name": "@aurochs-builder/docx",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "dependencies": {
+    "@aurochs-builder/core": "workspace:*",
+    "@aurochs-office/docx": "workspace:*",
+    "@aurochs-office/ooxml": "workspace:*",
+    "@aurochs/xml": "workspace:*"
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit --rootDir ../../..",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-builder/docx/src'"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "types": "./src/*.ts",
+      "default": "./src/*.ts"
+    }
+  }
+}

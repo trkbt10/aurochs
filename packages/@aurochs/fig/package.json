@@ -1,0 +1,75 @@
+{
+  "name": "@aurochs/fig",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs/fig/src'"
+  },
+  "exports": {
+    "./types": {
+      "types": "./src/types.ts",
+      "default": "./src/types.ts"
+    },
+    "./errors": {
+      "types": "./src/errors.ts",
+      "default": "./src/errors.ts"
+    },
+    "./parser": {
+      "types": "./src/parser/index.ts",
+      "default": "./src/parser/index.ts"
+    },
+    "./builder": {
+      "types": "./src/builder/index.ts",
+      "default": "./src/builder/index.ts"
+    },
+    "./validator": {
+      "types": "./src/validator/index.ts",
+      "default": "./src/validator/index.ts"
+    },
+    "./kiwi/byte-buffer": {
+      "types": "./src/kiwi/byte-buffer.ts",
+      "default": "./src/kiwi/byte-buffer.ts"
+    },
+    "./kiwi/schema": {
+      "types": "./src/kiwi/schema.ts",
+      "default": "./src/kiwi/schema.ts"
+    },
+    "./kiwi/decoder": {
+      "types": "./src/kiwi/decoder.ts",
+      "default": "./src/kiwi/decoder.ts"
+    },
+    "./kiwi/encoder": {
+      "types": "./src/kiwi/encoder.ts",
+      "default": "./src/kiwi/encoder.ts"
+    },
+    "./kiwi/stream": {
+      "types": "./src/kiwi/stream.ts",
+      "default": "./src/kiwi/stream.ts"
+    },
+    "./constants": {
+      "types": "./src/constants/index.ts",
+      "default": "./src/constants/index.ts"
+    },
+    "./symbols": {
+      "types": "./src/symbols/index.ts",
+      "default": "./src/symbols/index.ts"
+    },
+    "./test-helpers": {
+      "types": "./src/kiwi/test-helpers.ts",
+      "default": "./src/kiwi/test-helpers.ts"
+    }
+  },
+  "dependencies": {
+    "@aurochs/zip": "workspace:*",
+    "fzstd": "^0.1.1",
+    "pako": "^2.1.0",
+    "zstd-codec": "^0.1.5"
+  },
+  "devDependencies": {
+    "@types/pako": "^2.0.3"
+  }
+}

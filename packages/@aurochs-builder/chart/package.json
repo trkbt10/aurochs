@@ -1,0 +1,34 @@
+{
+  "name": "@aurochs-builder/chart",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "dependencies": {
+    "@aurochs-builder/core": "workspace:*",
+    "@aurochs-builder/drawing-ml": "workspace:*",
+    "@aurochs-office/chart": "workspace:*",
+    "@aurochs-office/ooxml": "workspace:*",
+    "@aurochs-office/xlsx": "workspace:*",
+    "@aurochs/xml": "workspace:*"
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit --rootDir ../../..",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-builder/chart/src'"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./patcher": {
+      "types": "./src/patcher/index.ts",
+      "default": "./src/patcher/index.ts"
+    },
+    "./formula": {
+      "types": "./src/formula/formula-builder.ts",
+      "default": "./src/formula/formula-builder.ts"
+    }
+  }
+}

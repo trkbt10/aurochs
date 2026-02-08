@@ -2,7 +2,7 @@
  * @file Minimal CFB writer for XLS fixtures
  */
 
-import { CFB_SIGNATURE, ENDOFCHAIN, FATSECT, FREESECT, NOSTREAM } from "@oxen-office/cfb";
+import { CFB_SIGNATURE, ENDOFCHAIN, FATSECT, FREESECT, NOSTREAM } from "@aurochs-office/cfb";
 import { u16le, u32le, u64le } from "./biff";
 
 /** Write a single directory entry into a 512-byte directory sector. */

@@ -1,0 +1,39 @@
+{
+  "name": "@aurochs-renderer/drawing-ml",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "dependencies": {
+    "@aurochs-office/drawing-ml": "workspace:*",
+    "@aurochs-office/ooxml": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit --rootDir ../../..",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-renderer/drawing-ml/src'",
+    "dev:demo": "vite --config demo/viewer/vite.config.ts"
+  },
+  "exports": {
+    "./react": {
+      "types": "./src/react/index.ts",
+      "default": "./src/react/index.ts"
+    },
+    "./ascii": {
+      "types": "./src/ascii/index.ts",
+      "default": "./src/ascii/index.ts"
+    },
+    "./demo": {
+      "types": "./demo/index.ts",
+      "default": "./demo/index.ts"
+    },
+    "./demo/fixtures": {
+      "types": "./demo/fixtures.ts",
+      "default": "./demo/fixtures.ts"
+    }
+  }
+}

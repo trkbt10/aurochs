@@ -1,0 +1,39 @@
+{
+  "name": "@aurochs-office/ppt",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "dependencies": {
+    "@aurochs-office/cfb": "workspace:*",
+    "@aurochs-office/pptx": "workspace:*",
+    "@aurochs/zip": "workspace:*"
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-office/ppt/src'"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./converter": {
+      "types": "./src/converter/index.ts",
+      "default": "./src/converter/index.ts"
+    },
+    "./*": {
+      "types": "./src/*.ts",
+      "default": "./src/*.ts"
+    },
+    "./*/*": {
+      "types": "./src/*/*.ts",
+      "default": "./src/*/*.ts"
+    },
+    "./*/*/*": {
+      "types": "./src/*/*/*.ts",
+      "default": "./src/*/*/*.ts"
+    }
+  }
+}

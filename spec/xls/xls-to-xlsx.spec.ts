@@ -2,12 +2,12 @@
  * @file XLS-to-XLSX end-to-end conversion tests
  */
 
-import { parseXls } from "@oxen-office/xls";
-import { CFB_SIGNATURE, ENDOFCHAIN, FATSECT, FREESECT, NOSTREAM } from "@oxen-office/cfb";
-import { BIFF_RECORD_TYPES } from "@oxen-office/xls/biff/record-types";
-import { exportXlsx } from "@oxen-builder/xlsx/exporter";
-import { parseXlsxWorkbook } from "@oxen-office/xlsx/parser";
-import { loadZipPackage } from "@oxen/zip";
+import { parseXls } from "@aurochs-office/xls";
+import { CFB_SIGNATURE, ENDOFCHAIN, FATSECT, FREESECT, NOSTREAM } from "@aurochs-office/cfb";
+import { BIFF_RECORD_TYPES } from "@aurochs-office/xls/biff/record-types";
+import { exportXlsx } from "@aurochs-builder/xlsx/exporter";
+import { parseXlsxWorkbook } from "@aurochs-office/xlsx/parser";
+import { loadZipPackage } from "@aurochs/zip";
 
 function u16le(view: DataView, offset: number, v: number): void {
   view.setUint16(offset, v, true);
@@ -63,7 +63,10 @@ function makeSstPayload(strings: readonly string[]): Uint8Array {
     const view = new DataView(bytes.buffer);
     view.setUint16(0, s.length, true);
     bytes[2] = 0x00; // compressed
-    bytes.set(Array.from(s).map((c) => c.charCodeAt(0)), 3);
+    bytes.set(
+      Array.from(s).map((c) => c.charCodeAt(0)),
+      3,
+    );
     return bytes;
   });
 
@@ -399,14 +402,15 @@ function buildWorkbookStreamBytes(): Uint8Array {
 
   // Patch lbPlyPos in the padded stream.
   const paddedView = new DataView(padded.buffer);
-  const boundsheet1Start = bofGlobals.length
-    + datemode.length
-    + paletteRecord.length
-    + fontRecord.length
-    + formatRecord.length
-    + xfStyleRecord.length
-    + xfCellRecord.length
-    + styleRecord.length;
+  const boundsheet1Start =
+    bofGlobals.length +
+    datemode.length +
+    paletteRecord.length +
+    fontRecord.length +
+    formatRecord.length +
+    xfStyleRecord.length +
+    xfCellRecord.length +
+    styleRecord.length;
   const boundsheet2Start = boundsheet1Start + boundsheet1Record.length;
   paddedView.setUint32(boundsheet1Start + 4, sheet1StartOffset, true);
   paddedView.setUint32(boundsheet2Start + 4, sheet2StartOffset, true);

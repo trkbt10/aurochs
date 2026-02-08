@@ -10,7 +10,7 @@
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { parseXml, getChild, getChildren, getAttr } from "@oxen/xml";
+import { parseXml, getChild, getChildren, getAttr } from "@aurochs/xml";
 import { requireFileExists, requirePositionalArg } from "../lib/cli";
 import { loadPptxFile } from "../lib/pptx-loader";
 
@@ -26,7 +26,7 @@ type ThemeInfo = {
     lineStyleCount: number;
     effectStyleCount: number;
   };
-}
+};
 
 type SlideInfo = {
   slideNumber: number;
@@ -35,14 +35,14 @@ type SlideInfo = {
   themeRef: string;
   colorSchemeUsed: string[];
   fontRefsUsed: string[];
-}
+};
 
 type AnalysisResult = {
   themes: ThemeInfo[];
   slides: SlideInfo[];
   masterToTheme: Record<string, string>;
   layoutToMaster: Record<string, string>;
-}
+};
 
 async function loadZip(pptxPath: string): Promise<Map<string, { text: string; buffer: ArrayBuffer }>> {
   const { cache } = await loadPptxFile(pptxPath);
@@ -56,7 +56,20 @@ function parseTheme(xml: string, themeName: string): ThemeInfo {
   const colorScheme: Record<string, string> = {};
   const clrScheme = getChild(getChild(getChild(doc, "a:theme"), "a:themeElements"), "a:clrScheme");
   if (clrScheme) {
-    const colorNames = ["dk1", "lt1", "dk2", "lt2", "accent1", "accent2", "accent3", "accent4", "accent5", "accent6", "hlink", "folHlink"];
+    const colorNames = [
+      "dk1",
+      "lt1",
+      "dk2",
+      "lt2",
+      "accent1",
+      "accent2",
+      "accent3",
+      "accent4",
+      "accent5",
+      "accent6",
+      "hlink",
+      "folHlink",
+    ];
     for (const name of colorNames) {
       const colorEl = getChild(clrScheme, `a:${name}`);
       if (colorEl) {
@@ -104,9 +117,15 @@ function parseTheme(xml: string, themeName: string): ThemeInfo {
     const fillStyleLst = getChild(fmtScheme, "a:fillStyleLst");
     const lnStyleLst = getChild(fmtScheme, "a:lnStyleLst");
     const effectStyleLst = getChild(fmtScheme, "a:effectStyleLst");
-    if (fillStyleLst) {fillStyleCount = getChildren(fillStyleLst).length;}
-    if (lnStyleLst) {lineStyleCount = getChildren(lnStyleLst).length;}
-    if (effectStyleLst) {effectStyleCount = getChildren(effectStyleLst).length;}
+    if (fillStyleLst) {
+      fillStyleCount = getChildren(fillStyleLst).length;
+    }
+    if (lnStyleLst) {
+      lineStyleCount = getChildren(lnStyleLst).length;
+    }
+    if (effectStyleLst) {
+      effectStyleCount = getChildren(effectStyleLst).length;
+    }
   }
 
   return {
@@ -202,11 +221,15 @@ async function analyzeThemes(pptxPath: string): Promise<AnalysisResult> {
   const slides: SlideInfo[] = [];
   for (let slideNum = 1; slideNum <= 20; slideNum++) {
     const slideXml = cache.get(`ppt/slides/slide${slideNum}.xml`)?.text;
-    if (!slideXml) {continue;}
+    if (!slideXml) {
+      continue;
+    }
 
     const slideRelsPath = `ppt/slides/_rels/slide${slideNum}.xml.rels`;
     const slideRelsText = cache.get(slideRelsPath)?.text;
-    if (!slideRelsText) {continue;}
+    if (!slideRelsText) {
+      continue;
+    }
 
     const slideRels = parseRels(slideRelsText);
 

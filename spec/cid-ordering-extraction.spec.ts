@@ -18,11 +18,11 @@
  */
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { px } from "@oxen-office/drawing-ml/domain/units";
-import { parsePdf, createDefaultGraphicsState, type PdfText } from "@oxen/pdf";
-import { convertTextToShape } from "@oxen-converters/pdf-to-pptx/converter/text-to-shapes";
-import { createFitContext } from "@oxen-converters/pdf-to-pptx/converter/transform-converter";
-import { buildSimplePdfBytes } from "@oxen/pdf/test-utils/simple-pdf";
+import { px } from "@aurochs-office/drawing-ml/domain/units";
+import { parsePdf, createDefaultGraphicsState, type PdfText } from "@aurochs/pdf";
+import { convertTextToShape } from "@aurochs-converters/pdf-to-pptx/converter/text-to-shapes";
+import { createFitContext } from "@aurochs-converters/pdf-to-pptx/converter/transform-converter";
+import { buildSimplePdfBytes } from "@aurochs/pdf/test-utils/simple-pdf";
 
 describe("CIDOrdering extraction from real PDFs", () => {
   it("Identity-H encoded CJK PDF has Identity ordering (cjk-test.pdf)", async () => {
@@ -48,9 +48,7 @@ describe("CIDOrdering extraction from real PDFs", () => {
 
     // Verify font names are CJK fonts (Hiragino, PingFang)
     const fontNames = textElements.map((e) => e.fontName);
-    const hasCJKFont = fontNames.some(
-      (name) => name.includes("Hiragino") || name.includes("PingFang")
-    );
+    const hasCJKFont = fontNames.some((name) => name.includes("Hiragino") || name.includes("PingFang"));
     expect(hasCJKFont).toBe(true);
   });
 
@@ -70,7 +68,13 @@ describe("CIDOrdering extraction from real PDFs", () => {
       cidOrdering: "Identity" as const, // Identity encoding - no script type info
     };
 
-    const context = createFitContext({ pdfWidth: 100, pdfHeight: 100, slideWidth: px(200), slideHeight: px(200), fit: "contain" });
+    const context = createFitContext({
+      pdfWidth: 100,
+      pdfHeight: 100,
+      slideWidth: px(200),
+      slideHeight: px(200),
+      fit: "contain",
+    });
 
     const shape = convertTextToShape(pdfText, context, "1");
     const run = shape.textBody?.paragraphs[0]?.runs[0];

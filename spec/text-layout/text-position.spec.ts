@@ -7,9 +7,9 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { openPresentation } from "@oxen-office/pptx";
+import { openPresentation } from "@aurochs-office/pptx";
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
-import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
+import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
 
 // =============================================================================
 // Types
@@ -26,7 +26,7 @@ type TextElement = {
   anchor: "start" | "middle" | "end";
   /** フォントサイズ (pt) */
   fontSize?: number;
-}
+};
 
 type ExpectedTextPosition = {
   /** テキスト内容（部分一致） */
@@ -37,14 +37,14 @@ type ExpectedTextPosition = {
   expectedY: number;
   /** 許容誤差 (px) */
   tolerance: number;
-}
+};
 
 type TextPositionTestCase = {
   name: string;
   pptxPath: string;
   slideNumber: number;
   expectedPositions: ExpectedTextPosition[];
-}
+};
 
 // =============================================================================
 // SVG Text Extraction

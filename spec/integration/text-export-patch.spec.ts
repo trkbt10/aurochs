@@ -5,11 +5,11 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
-import { parseXml, getChild, getChildren, getTextContent, isXmlElement } from "@oxen/xml";
-import { patchSlideXml } from "@oxen-builder/pptx/patcher";
-import { parseTextBody } from "@oxen-office/pptx/parser/text/text-parser";
-import type { ShapeChange } from "@oxen-builder/pptx/patcher/core/shape-differ";
-import type { TextBody } from "@oxen-office/pptx/domain/text";
+import { parseXml, getChild, getChildren, getTextContent, isXmlElement } from "@aurochs/xml";
+import { patchSlideXml } from "@aurochs-builder/pptx/patcher";
+import { parseTextBody } from "@aurochs-office/pptx/parser/text/text-parser";
+import type { ShapeChange } from "@aurochs-builder/pptx/patcher/core/shape-differ";
+import type { TextBody } from "@aurochs-office/pptx/domain/text";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURE_DIR = path.resolve(__dirname, "../../fixtures");
@@ -44,9 +44,7 @@ describe("patchSlideXml (textBody) integration", () => {
 
     const newTextBody: TextBody = {
       bodyProperties: {},
-      paragraphs: [
-        { properties: {}, runs: [{ type: "text", text: "Changed Text", properties: { bold: true } }] },
-      ],
+      paragraphs: [{ properties: {}, runs: [{ type: "text", text: "Changed Text", properties: { bold: true } }] }],
     };
 
     const changes: ShapeChange[] = [
@@ -54,9 +52,7 @@ describe("patchSlideXml (textBody) integration", () => {
         type: "modified",
         shapeId: shapeId!,
         shapeType: "sp",
-        changes: [
-          { property: "textBody", oldValue: undefined, newValue: newTextBody },
-        ],
+        changes: [{ property: "textBody", oldValue: undefined, newValue: newTextBody }],
       },
     ];
 
@@ -64,7 +60,9 @@ describe("patchSlideXml (textBody) integration", () => {
     const patchedRoot = patched.children.find(isXmlElement)!;
     const patchedSpTree = getChild(getChild(patchedRoot, "p:cSld")!, "p:spTree")!;
     const patchedShape = patchedSpTree.children.find((c) => {
-      if (!isXmlElement(c) || c.name !== "p:sp") {return false;}
+      if (!isXmlElement(c) || c.name !== "p:sp") {
+        return false;
+      }
       const id = getChild(getChild(c, "p:nvSpPr")!, "p:cNvPr")?.attrs.id;
       return id === shapeId;
     });

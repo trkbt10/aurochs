@@ -7,9 +7,9 @@
  * @see ECMA-376 Part 1, Section 20.1.4.1.16-17 (theme font references)
  */
 
-import { openPresentation } from "@oxen-office/pptx";
+import { openPresentation } from "@aurochs-office/pptx";
 import { createPresentationFile, THEMES_PPTX_PATH } from "./test-utils";
-import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
+import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
 
 describe("Font Scheme Application", () => {
   /**
@@ -26,10 +26,7 @@ describe("Font Scheme Application", () => {
     const slide4 = presentation.getSlide(4);
     const { svg: svg4 } = renderSlideToSvg(slide4);
 
-    const hasMajorFont = [
-      svg4.includes("Century Gothic"),
-      svg4.includes("'Century Gothic'"),
-    ].some(Boolean);
+    const hasMajorFont = [svg4.includes("Century Gothic"), svg4.includes("'Century Gothic'")].some(Boolean);
     expect(hasMajorFont).toBe(true);
   });
 
@@ -46,10 +43,7 @@ describe("Font Scheme Application", () => {
 
     // Major font: Arial Black (for titles)
     // Minor font: Candara (for body text)
-    const hasArialBlack = [
-      svg10.includes("Arial Black"),
-      svg10.includes("'Arial Black'"),
-    ].some(Boolean);
+    const hasArialBlack = [svg10.includes("Arial Black"), svg10.includes("'Arial Black'")].some(Boolean);
     const hasCandara = svg10.includes("Candara");
 
     // At least one of these should be present

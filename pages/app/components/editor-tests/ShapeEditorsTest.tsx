@@ -14,9 +14,9 @@ import {
   createDefaultEffects,
   createDefaultGeometry,
   createDefaultShapeProperties,
-} from "@oxen-ui/pptx-editor";
-import type { NonVisualProperties, ShapeProperties, Geometry } from "@oxen-office/pptx/domain/shape";
-import type { Effects } from "@oxen-office/pptx/domain";
+} from "@aurochs-ui/pptx-editor";
+import type { NonVisualProperties, ShapeProperties, Geometry } from "@aurochs-office/pptx/domain/shape";
+import type { Effects } from "@aurochs-office/pptx/domain";
 
 const cardStyle: CSSProperties = {
   backgroundColor: "var(--bg-secondary)",
@@ -58,9 +58,7 @@ const gridStyle: CSSProperties = {
  * Shape editors test component
  */
 export function ShapeEditorsTest() {
-  const [nonVisual, setNonVisual] = useState<NonVisualProperties>(
-    createDefaultNonVisualProperties("1", "Test Shape")
-  );
+  const [nonVisual, setNonVisual] = useState<NonVisualProperties>(createDefaultNonVisualProperties("1", "Test Shape"));
   const [effects, setEffects] = useState<Effects>(createDefaultEffects());
   const [geometry, setGeometry] = useState<Geometry>(createDefaultGeometry());
   const [shapeProps, setShapeProps] = useState<ShapeProperties>(createDefaultShapeProperties());

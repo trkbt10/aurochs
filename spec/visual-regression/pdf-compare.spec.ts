@@ -14,10 +14,10 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { PresentationFile } from "@oxen-office/pptx";
-import { openPresentation } from "@oxen-office/pptx";
+import type { PresentationFile } from "@aurochs-office/pptx";
+import { openPresentation } from "@aurochs-office/pptx";
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
-import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
+import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
 import {
   compareWithDetails,
   generateCompareReport,
@@ -40,7 +40,7 @@ type TextLayoutTestCase = {
   maxDiffPercent: number;
   /** Description of what this test validates */
   description: string;
-}
+};
 
 const TEXT_LAYOUT_TESTS: TextLayoutTestCase[] = [
   {
@@ -158,26 +158,6 @@ export type TestSingleSlideOptions = {
   readonly slideNumber: number;
   readonly options?: CompareOptions;
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 export async function testSingleSlide({
   pptxPath,

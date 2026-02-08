@@ -5,15 +5,15 @@
  * Each package should expose only its own implementation.
  *
  * Disallows:
- *   export * from '@oxen/core'
- *   export { Foo } from '@oxen-ui/components'
- *   import { Bar } from '@oxen/utils'; export { Bar }
- *   import { Bar as Baz } from '@oxen/utils'; export const Bar = Baz;
+ *   export * from '@aurochs/core'
+ *   export { Foo } from '@aurochs-ui/components'
+ *   import { Bar } from '@aurochs/utils'; export { Bar }
+ *   import { Bar as Baz } from '@aurochs/utils'; export const Bar = Baz;
  *
  * Allowed:
  *   export * from './local'        // re-export from same package
  *   export { foo } from '../utils' // relative re-export within same package
- *   import { Bar } from '@oxen/utils'; const transformed = transform(Bar); export { transformed }
+ *   import { Bar } from '@aurochs/utils'; const transformed = transform(Bar); export { transformed }
  */
 
 /**
@@ -31,8 +31,7 @@ export default {
   meta: {
     type: "problem",
     docs: {
-      description:
-        "Disallow re-exporting symbols from other packages to maintain clear package boundaries",
+      description: "Disallow re-exporting symbols from other packages to maintain clear package boundaries",
       recommended: true,
     },
     schema: [],

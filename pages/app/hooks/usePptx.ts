@@ -3,7 +3,7 @@
  */
 
 import { useState, useCallback } from "react";
-import { loadPptxFromFile, loadPptxFromUrl, type LoadedPresentation } from "@oxen-office/pptx/app";
+import { loadPptxFromFile, loadPptxFromUrl, type LoadedPresentation } from "@aurochs-office/pptx/app";
 
 export type PptxState = {
   status: "idle" | "loading" | "loaded" | "error";

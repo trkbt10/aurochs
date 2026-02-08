@@ -1,0 +1,62 @@
+{
+  "name": "@aurochs-office/docx",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "dependencies": {
+    "@aurochs-office/drawing-ml": "workspace:*",
+    "@aurochs-office/opc": "workspace:*",
+    "@aurochs-office/ooxml": "workspace:*",
+    "@aurochs-office/text-layout": "workspace:*",
+    "@aurochs/xml": "workspace:*",
+    "@aurochs/zip": "workspace:*"
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-office/docx/src'"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./constants": {
+      "types": "./src/constants.ts",
+      "default": "./src/constants.ts"
+    },
+    "./document-parser": {
+      "types": "./src/document-parser.ts",
+      "default": "./src/document-parser.ts"
+    },
+    "./exporter": {
+      "types": "./src/exporter.ts",
+      "default": "./src/exporter.ts"
+    },
+    "./domain": {
+      "types": "./src/domain/index.ts",
+      "default": "./src/domain/index.ts"
+    },
+    "./domain/*": {
+      "types": "./src/domain/*.ts",
+      "default": "./src/domain/*.ts"
+    },
+    "./parser": {
+      "types": "./src/parser/index.ts",
+      "default": "./src/parser/index.ts"
+    },
+    "./parser/*": {
+      "types": "./src/parser/*.ts",
+      "default": "./src/parser/*.ts"
+    },
+    "./adapters": {
+      "types": "./src/adapters/index.ts",
+      "default": "./src/adapters/index.ts"
+    },
+    "./adapters/*": {
+      "types": "./src/adapters/*.ts",
+      "default": "./src/adapters/*.ts"
+    }
+  }
+}

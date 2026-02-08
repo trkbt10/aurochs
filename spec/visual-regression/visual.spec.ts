@@ -10,12 +10,12 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { PresentationFile } from "@oxen-office/pptx";
-import { openPresentation } from "@oxen-office/pptx";
-import { LIBREOFFICE_RENDER_OPTIONS } from "@oxen-renderer/pptx/render-options";
+import type { PresentationFile } from "@aurochs-office/pptx";
+import { openPresentation } from "@aurochs-office/pptx";
+import { LIBREOFFICE_RENDER_OPTIONS } from "@aurochs-renderer/pptx/render-options";
 import { compareSvgToSnapshot, hasSnapshot, listSnapshots, type CompareOptions } from "./compare";
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
-import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
+import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
 
 // Note: loadPptxFile is now imported from scripts/lib/pptx-loader.ts
 // This shared utility avoids duplicating ZIP loading logic across tests
@@ -26,7 +26,7 @@ type TestCase = {
   slides: number[];
   options?: CompareOptions;
   mapHiddenSlides?: boolean;
-}
+};
 
 function resolveSlides(testCase: TestCase): number[] {
   if (testCase.slides.length > 0) {
@@ -254,14 +254,12 @@ describe("Visual Regression Tests", () => {
  * Usage in tests:
  *   const result = await testSlide('fixtures/path/to/file.pptx', 'snapshot-name', 1);
  */
-export async function testSlide(
-  args: {
-    readonly pptxPath: string;
-    readonly snapshotName: string;
-    readonly slideNumber: number;
-    readonly options?: CompareOptions;
-  }
-): Promise<{
+export async function testSlide(args: {
+  readonly pptxPath: string;
+  readonly snapshotName: string;
+  readonly slideNumber: number;
+  readonly options?: CompareOptions;
+}): Promise<{
   svg: string;
   result: ReturnType<typeof compareSvgToSnapshot>;
 }> {

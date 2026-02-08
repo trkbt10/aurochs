@@ -1,0 +1,67 @@
+{
+  "name": "@aurochs-renderer/figma",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "dependencies": {
+    "@aurochs/fig": "workspace:*",
+    "@aurochs/zip": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-renderer/figma/src'",
+    "dev:demo": "vite --config demo/vite.config.ts",
+    "snapshot:generate": "bun run scripts/generate-snapshots.ts"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./svg": {
+      "types": "./src/svg/index.ts",
+      "default": "./src/svg/index.ts"
+    },
+    "./react": {
+      "types": "./src/react/index.ts",
+      "default": "./src/react/index.ts"
+    },
+    "./font": {
+      "types": "./src/font/index.ts",
+      "default": "./src/font/index.ts"
+    },
+    "./font-drivers/node": {
+      "types": "./src/font-drivers/node/index.ts",
+      "default": "./src/font-drivers/node/index.ts"
+    },
+    "./font-drivers/browser": {
+      "types": "./src/font-drivers/browser/index.ts",
+      "default": "./src/font-drivers/browser/index.ts"
+    },
+    "./core": {
+      "types": "./src/core/index.ts",
+      "default": "./src/core/index.ts"
+    },
+    "./text": {
+      "types": "./src/text/index.ts",
+      "default": "./src/text/index.ts"
+    },
+    "./scene-graph": {
+      "types": "./src/scene-graph/index.ts",
+      "default": "./src/scene-graph/index.ts"
+    },
+    "./webgl": {
+      "types": "./src/webgl/index.ts",
+      "default": "./src/webgl/index.ts"
+    }
+  },
+  "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2"
+  }
+}

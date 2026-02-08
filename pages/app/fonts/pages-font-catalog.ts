@@ -2,7 +2,7 @@
  * @file Demo font catalog wiring for pages app
  */
 
-import type { FontCatalog } from "@oxen-ui/pptx-editor";
+import type { FontCatalog } from "@aurochs-ui/pptx-editor";
 import { createGoogleFontsCatalog } from "./google-fonts-catalog";
 import { GOOGLE_FONTS_FAMILIES_UPDATED_AT } from "./google-fonts-families.version";
 

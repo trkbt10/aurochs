@@ -6,7 +6,7 @@
  */
 
 import { useState, type CSSProperties } from "react";
-import { Button } from "@oxen-ui/ui-components/primitives";
+import { Button } from "@aurochs-ui/ui-components/primitives";
 import {
   ColorEditorsTest,
   PrimitiveEditorsTest,
@@ -24,7 +24,17 @@ type EditorTestPageProps = {
   readonly onBack: () => void;
 };
 
-type TabId = "presentation" | "slide" | "primitives" | "colors" | "text" | "shapes" | "tables" | "charts" | "ui" | "theme";
+type TabId =
+  | "presentation"
+  | "slide"
+  | "primitives"
+  | "colors"
+  | "text"
+  | "shapes"
+  | "tables"
+  | "charts"
+  | "ui"
+  | "theme";
 
 type Tab = {
   readonly id: TabId;
@@ -96,21 +106,9 @@ const tabButtonInactiveStyle: CSSProperties = {
 /**
  * Tab button component
  */
-function TabButton({
-  tab,
-  isActive,
-  onClick,
-}: {
-  tab: Tab;
-  isActive: boolean;
-  onClick: () => void;
-}) {
+function TabButton({ tab, isActive, onClick }: { tab: Tab; isActive: boolean; onClick: () => void }) {
   return (
-    <button
-      type="button"
-      style={isActive ? tabButtonActiveStyle : tabButtonInactiveStyle}
-      onClick={onClick}
-    >
+    <button type="button" style={isActive ? tabButtonActiveStyle : tabButtonInactiveStyle} onClick={onClick}>
       {tab.label}
     </button>
   );
@@ -163,12 +161,7 @@ export function EditorTestPage({ onBack }: EditorTestPageProps) {
       {/* Tab Navigation */}
       <nav style={tabsContainerStyle}>
         {tabs.map((tab) => (
-          <TabButton
-            key={tab.id}
-            tab={tab}
-            isActive={activeTab === tab.id}
-            onClick={() => setActiveTab(tab.id)}
-          />
+          <TabButton key={tab.id} tab={tab} isActive={activeTab === tab.id} onClick={() => setActiveTab(tab.id)} />
         ))}
       </nav>
 

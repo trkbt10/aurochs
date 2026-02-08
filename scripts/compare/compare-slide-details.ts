@@ -6,8 +6,8 @@
  *
  * Usage: bun run scripts/compare/compare-slide-details.ts <pptx-path> <slide-number>
  */
-import { openPresentation } from "@oxen-office/pptx";
-import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
+import { openPresentation } from "@aurochs-office/pptx";
+import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
 import { requireFileExists, requireIntArg, requirePositionalArg } from "../lib/cli";
 import { loadPptxFile } from "../lib/pptx-loader";
 
@@ -27,7 +27,8 @@ function extractSvgElements(svg: string): ElementInfo[] {
   const elements: ElementInfo[] = [];
 
   // Extract text elements
-  const textPattern = /<text[^>]*x="([^"]+)"[^>]*y="([^"]+)"[^>]*font-size="([^"]+)"[^>]*font-family="([^"]+)"[^>]*fill="([^"]+)"[^>]*>([^<]*)<\/text>/g;
+  const textPattern =
+    /<text[^>]*x="([^"]+)"[^>]*y="([^"]+)"[^>]*font-size="([^"]+)"[^>]*font-family="([^"]+)"[^>]*fill="([^"]+)"[^>]*>([^<]*)<\/text>/g;
   let match;
   while ((match = textPattern.exec(svg)) !== null) {
     elements.push({
@@ -96,11 +97,11 @@ async function main() {
   // Analyze SVG
   const svgElements = extractSvgElements(svg);
 
-  console.log(`Total text elements: ${svgElements.filter(e => e.type === "text").length}`);
-  console.log(`Total shape fills: ${svgElements.filter(e => e.type === "shape").length}`);
+  console.log(`Total text elements: ${svgElements.filter((e) => e.type === "text").length}`);
+  console.log(`Total shape fills: ${svgElements.filter((e) => e.type === "shape").length}`);
 
   console.log("\n### Text Elements:");
-  for (const el of svgElements.filter(e => e.type === "text")) {
+  for (const el of svgElements.filter((e) => e.type === "text")) {
     console.log(`  "${el.text?.substring(0, 30)}..."`);
     console.log(`    Position: (${el.x.toFixed(2)}, ${el.y.toFixed(2)})`);
     console.log(`    Font: ${el.fontFamily} ${el.fontSize}px`);
@@ -108,7 +109,7 @@ async function main() {
   }
 
   console.log("\n### Shape Fills:");
-  for (const el of svgElements.filter(e => e.type === "shape")) {
+  for (const el of svgElements.filter((e) => e.type === "shape")) {
     console.log(`  Fill: ${el.fill}`);
   }
 
@@ -149,7 +150,7 @@ async function main() {
   console.log(svg);
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error(err);
   process.exit(1);
 });

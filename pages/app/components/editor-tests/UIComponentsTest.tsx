@@ -5,8 +5,8 @@
  */
 
 import { useState, type CSSProperties } from "react";
-import { Accordion, FieldGroup, FieldRow } from "@oxen-ui/ui-components/layout";
-import { Input, Toggle } from "@oxen-ui/ui-components/primitives";
+import { Accordion, FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
+import { Input, Toggle } from "@aurochs-ui/ui-components/primitives";
 
 const cardStyle: CSSProperties = {
   backgroundColor: "var(--bg-secondary)",
@@ -43,19 +43,11 @@ export function UIComponentsTest() {
         <h2 style={cardTitleStyle}>Accordion</h2>
 
         <FieldGroup label="Controlled Accordion">
-          <Toggle
-            checked={accordionExpanded}
-            onChange={setAccordionExpanded}
-            label="Expanded"
-          />
+          <Toggle checked={accordionExpanded} onChange={setAccordionExpanded} label="Expanded" />
         </FieldGroup>
 
         <div style={{ marginTop: "16px" }}>
-          <Accordion
-            title="Effects Options"
-            expanded={accordionExpanded}
-            onExpandedChange={setAccordionExpanded}
-          >
+          <Accordion title="Effects Options" expanded={accordionExpanded} onExpandedChange={setAccordionExpanded}>
             <FieldGroup label="Shadow">
               <Input type="number" value="0" onChange={() => {}} suffix="px" />
             </FieldGroup>

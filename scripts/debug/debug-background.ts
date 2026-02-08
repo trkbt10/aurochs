@@ -3,16 +3,16 @@
  *
  * Usage: bun run scripts/debug/debug-background.ts <pptx-path> <slide-number>
  */
-import { DEFAULT_RENDER_OPTIONS, openPresentation } from "@oxen-office/pptx";
-import type { Slide } from "@oxen-office/pptx/app/types";
-import { getBackgroundFillData } from "@oxen-office/pptx/parser/slide/background-parser";
-import { parseTheme, parseMasterTextStyles } from "@oxen-office/pptx/parser/slide/theme-parser";
-import { getSolidFill } from "@oxen-office/pptx/parser/graphics/color-resolver";
-import { createSlideContext, type SlideContext } from "@oxen-office/pptx/parser/slide/context";
-import { createPlaceholderTable, createColorMap } from "@oxen-office/pptx/parser/slide/resource-adapters";
-import { toResolvedBackgroundFill } from "@oxen-renderer/pptx";
-import { getTextByPathList, getNode, getString } from "@oxen-office/pptx/parser/traverse";
-import { isXmlDocument, isXmlElement, getChild, getByPath, type XmlElement } from "@oxen/xml";
+import { DEFAULT_RENDER_OPTIONS, openPresentation } from "@aurochs-office/pptx";
+import type { Slide } from "@aurochs-office/pptx/app/types";
+import { getBackgroundFillData } from "@aurochs-office/pptx/parser/slide/background-parser";
+import { parseTheme, parseMasterTextStyles } from "@aurochs-office/pptx/parser/slide/theme-parser";
+import { getSolidFill } from "@aurochs-office/pptx/parser/graphics/color-resolver";
+import { createSlideContext, type SlideContext } from "@aurochs-office/pptx/parser/slide/context";
+import { createPlaceholderTable, createColorMap } from "@aurochs-office/pptx/parser/slide/resource-adapters";
+import { toResolvedBackgroundFill } from "@aurochs-renderer/pptx";
+import { getTextByPathList, getNode, getString } from "@aurochs-office/pptx/parser/traverse";
+import { isXmlDocument, isXmlElement, getChild, getByPath, type XmlElement } from "@aurochs/xml";
 import { requireFileExists, requireIntArg, requirePositionalArg } from "../lib/cli";
 import { loadPptxFile } from "../lib/pptx-loader";
 
@@ -143,7 +143,10 @@ async function main() {
             const bgPr = getChild(bg, "p:bgPr");
             if (bgPr) {
               console.log("Found p:bgPr");
-              console.log("bgPr children:", bgPr.children.filter(isXmlElement).map(c => c.name));
+              console.log(
+                "bgPr children:",
+                bgPr.children.filter(isXmlElement).map((c) => c.name),
+              );
 
               const solidFill = getChild(bgPr, "a:solidFill");
               if (solidFill) {

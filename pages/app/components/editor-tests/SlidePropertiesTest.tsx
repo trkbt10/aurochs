@@ -12,10 +12,10 @@ import {
   createDefaultBackground,
   createDefaultTransition,
   createDefaultOleReference,
-} from "@oxen-ui/pptx-editor";
-import type { Background } from "@oxen-office/pptx/domain/slide/types";
-import type { SlideTransition } from "@oxen-office/pptx/domain/transition";
-import type { OleReference } from "@oxen-office/pptx/domain/shape";
+} from "@aurochs-ui/pptx-editor";
+import type { Background } from "@aurochs-office/pptx/domain/slide/types";
+import type { SlideTransition } from "@aurochs-office/pptx/domain/transition";
+import type { OleReference } from "@aurochs-office/pptx/domain/shape";
 
 const cardStyle: CSSProperties = {
   backgroundColor: "var(--bg-secondary)",

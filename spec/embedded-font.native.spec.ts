@@ -7,9 +7,9 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { loadNativePdfDocument } from "@oxen/pdf/native";
-import type { PdfDict, PdfName, PdfObject } from "@oxen/pdf/native";
-import { extractEmbeddedFontsFromNativePages } from "@oxen/pdf/domain/font/font-extractor.native";
+import { loadNativePdfDocument } from "@aurochs/pdf/native";
+import type { PdfDict, PdfName, PdfObject } from "@aurochs/pdf/native";
+import { extractEmbeddedFontsFromNativePages } from "@aurochs/pdf/domain/font/font-extractor.native";
 
 function asDict(obj: PdfObject | undefined): PdfDict | null {
   return obj?.type === "dict" ? obj : null;
@@ -34,7 +34,9 @@ describe("Embedded font investigation (native)", () => {
     const buffer = fs.readFileSync(pdfPath);
     const pdfDoc = loadNativePdfDocument(buffer, { encryption: { mode: "ignore" } });
     const page = pdfDoc.getPages()[0];
-    if (!page) {return;}
+    if (!page) {
+      return;
+    }
 
     const resources = page.getResourcesDict();
     if (!resources) {
@@ -52,7 +54,9 @@ describe("Embedded font investigation (native)", () => {
 
     for (const [fontName, fontRef] of fontsDict.map.entries()) {
       const fontDict = asDict(page.lookup(fontRef));
-      if (!fontDict) {continue;}
+      if (!fontDict) {
+        continue;
+      }
 
       const subtypeObj = dictGet(fontDict, "Subtype");
       const baseFontObj = dictGet(fontDict, "BaseFont");

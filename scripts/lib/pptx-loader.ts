@@ -20,8 +20,8 @@
  */
 
 import * as fs from "node:fs/promises";
-import type { ZipPackage } from "@oxen/zip";
-import { loadPptxBundleFromBuffer, type PptxFileBundle } from "@oxen-office/pptx/app/pptx-loader";
+import type { ZipPackage } from "@aurochs/zip";
+import { loadPptxBundleFromBuffer, type PptxFileBundle } from "@aurochs-office/pptx/app/pptx-loader";
 
 export type FileCacheEntry = { readonly text: string; readonly buffer: ArrayBuffer };
 export type FileCache = Map<string, FileCacheEntry>;

@@ -4,8 +4,8 @@
  * Usage: bun run scripts/inspect/test-timing-parser.ts <pptx-path>
  */
 
-import { parseTiming } from "@oxen-office/pptx/parser/timing-parser/index";
-import { parseXml, isXmlElement, type XmlElement } from "@oxen/xml";
+import { parseTiming } from "@aurochs-office/pptx/parser/timing-parser/index";
+import { parseXml, isXmlElement, type XmlElement } from "@aurochs/xml";
 import { requireFileExists, requirePositionalArg } from "../lib/cli";
 import { loadPptxFile } from "../lib/pptx-loader";
 

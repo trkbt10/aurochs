@@ -9,9 +9,9 @@ import noAsOutsideGuard from "./rules/no-as-outside-guard.js";
 import noNestedTry from "./rules/no-nested-try.js";
 import noIifeInAnonymous from "./rules/no-iife-in-anonymous.js";
 import noDeepReexport from "./rules/no-deep-reexport.js";
-import noOxenUiImportInOxen from "./rules/no-oxen-ui-import-in-oxen.js";
-import noOxenOfficeImportInOxen from "./rules/no-oxen-office-import-in-oxen.js";
-import noOxenBuilderImportInOxenOffice from "./rules/no-oxen-builder-import-in-oxen-office.js";
+import noaurochsUiImportInaurochs from "./rules/no-aurochs-ui-import-in-aurochs.js";
+import noaurochsOfficeImportInaurochs from "./rules/no-aurochs-office-import-in-aurochs.js";
+import noaurochsBuilderImportInaurochsOffice from "./rules/no-aurochs-builder-import-in-aurochs-office.js";
 import noCrossPackageReexport from "./rules/no-cross-package-reexport.js";
 import noExportStar from "./rules/no-export-star.js";
 import maxParams from "./rules/max-params.js";
@@ -27,9 +27,9 @@ export default {
     "no-nested-try": noNestedTry,
     "no-iife-in-anonymous": noIifeInAnonymous,
     "no-deep-reexport": noDeepReexport,
-    "no-oxen-ui-import-in-oxen": noOxenUiImportInOxen,
-    "no-oxen-office-import-in-oxen": noOxenOfficeImportInOxen,
-    "no-oxen-builder-import-in-oxen-office": noOxenBuilderImportInOxenOffice,
+    "no-aurochs-ui-import-in-aurochs": noaurochsUiImportInaurochs,
+    "no-aurochs-office-import-in-aurochs": noaurochsOfficeImportInaurochs,
+    "no-aurochs-builder-import-in-aurochs-office": noaurochsBuilderImportInaurochsOffice,
     "no-cross-package-reexport": noCrossPackageReexport,
     "no-export-star": noExportStar,
     "max-params": maxParams,

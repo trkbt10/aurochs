@@ -5,11 +5,11 @@
  */
 
 import { useMemo, useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
-import type { LoadedPresentation } from "@oxen-office/pptx/app";
-import { SlideList } from "@oxen-ui/pptx-editor/slide-list";
-import type { SlideWithId } from "@oxen-office/pptx/app";
-import { useLazySvgCache, SvgContentRenderer } from "@oxen-renderer/pptx/react";
-import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
+import type { LoadedPresentation } from "@aurochs-office/pptx/app";
+import { SlideList } from "@aurochs-ui/pptx-editor/slide-list";
+import type { SlideWithId } from "@aurochs-office/pptx/app";
+import { useLazySvgCache, SvgContentRenderer } from "@aurochs-renderer/pptx/react";
+import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
 import { useSlideNavigation, useViewerKeyboard } from "../hooks";
 import {
   ChevronLeftIcon,
@@ -20,7 +20,7 @@ import {
   ProgressBar,
   KeyboardHints,
   IconButton,
-  } from "../components/ui";
+} from "../components/ui";
 import { useSvgFontLoader } from "../fonts/useSvgFontLoader";
 
 type Props = {
@@ -255,7 +255,6 @@ const footerCenterStyle: CSSProperties = {
   justifyContent: "center",
 };
 
-
 const thumbnailPreviewStyle: CSSProperties = {
   width: "100%",
   height: "100%",
@@ -272,13 +271,7 @@ const thumbnailPreviewStyle: CSSProperties = {
 /**
  * Presentation viewer with thumbnails and slide navigation.
  */
-export function SlideViewer({
-  presentation,
-  fileName,
-  onBack,
-  onStartSlideshow,
-  onStartEditor,
-}: Props) {
+export function SlideViewer({ presentation, fileName, onBack, onStartSlideshow, onStartEditor }: Props) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const slideContainerRef = useRef<HTMLDivElement>(null);
 
@@ -299,7 +292,7 @@ export function SlideViewer({
       onStartSlideshow: () => onStartSlideshow(nav.currentSlide),
       onExit: onBack,
     }),
-    [nav, onStartSlideshow, onBack]
+    [nav, onStartSlideshow, onBack],
   );
   useViewerKeyboard(keyboardActions);
 
@@ -332,18 +325,19 @@ export function SlideViewer({
     void loadSvgFonts(renderedContent);
   }, [loadSvgFonts, renderedContent]);
 
-  const handleSlideClick = useCallback((slideId: string) => {
-    const slideNumber = parseInt(slideId.replace("slide-", ""), 10);
-    nav.setCurrentSlide(slideNumber);
-  }, [nav]);
+  const handleSlideClick = useCallback(
+    (slideId: string) => {
+      const slideNumber = parseInt(slideId.replace("slide-", ""), 10);
+      nav.setCurrentSlide(slideNumber);
+    },
+    [nav],
+  );
 
   const renderThumbnail = useCallback(
     (slideWithId: SlideWithId) => {
       const slideNum = parseInt(slideWithId.id.replace("slide-", ""), 10);
       // Lazy generation: only renders when thumbnail becomes visible
-      const svg = svgCache.getOrGenerate(slideWithId.id, () =>
-        renderSlideToSvg(pres.getSlide(slideNum)).svg,
-      );
+      const svg = svgCache.getOrGenerate(slideWithId.id, () => renderSlideToSvg(pres.getSlide(slideNum)).svg);
       return (
         <SvgContentRenderer
           svg={svg}
@@ -390,18 +384,12 @@ export function SlideViewer({
         </div>
 
         <div style={headerRightStyle}>
-          <IconButton
-            icon={<SidebarIcon size={18} />}
-            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          />
+          <IconButton icon={<SidebarIcon size={18} />} onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
           <button style={editButtonStyle} onClick={onStartEditor}>
             <EditIcon size={16} />
             <span>Edit</span>
           </button>
-          <button
-            style={presentButtonStyle}
-            onClick={() => onStartSlideshow(nav.currentSlide)}
-          >
+          <button style={presentButtonStyle} onClick={() => onStartSlideshow(nav.currentSlide)}>
             <PlayIcon size={16} />
             <span>Present</span>
           </button>

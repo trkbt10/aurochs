@@ -3,8 +3,8 @@
  *
  * Usage: bun run scripts/inspect/inspect-xml-structure.ts <pptx-path> <slide-number>
  */
-import { openPresentation } from "@oxen-office/pptx";
-import { isXmlElement, getChild, getChildren } from "@oxen/xml";
+import { openPresentation } from "@aurochs-office/pptx";
+import { isXmlElement, getChild, getChildren } from "@aurochs/xml";
 import { requireFileExists, requireIntArg, requirePositionalArg } from "../lib/cli";
 import { loadPptxFile } from "../lib/pptx-loader";
 
@@ -42,12 +42,18 @@ async function main() {
 
   // Find first shape with text run
   for (const child of spTree.children) {
-    if (!isXmlElement(child) || child.name !== "p:sp") {continue;}
+    if (!isXmlElement(child) || child.name !== "p:sp") {
+      continue;
+    }
     const txBody = getChild(child, "p:txBody");
-    if (!txBody) {continue;}
+    if (!txBody) {
+      continue;
+    }
 
     const paragraphs = getChildren(txBody, "a:p");
-    if (paragraphs.length === 0) {continue;}
+    if (paragraphs.length === 0) {
+      continue;
+    }
 
     for (const p of paragraphs) {
       const runs = getChildren(p, "a:r");

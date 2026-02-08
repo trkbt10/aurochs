@@ -4,14 +4,14 @@
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { parseXlsxWorkbook } from "@oxen-office/xlsx/parser";
-import { exportXlsx } from "@oxen-builder/xlsx/exporter";
-import { colIdx, rowIdx } from "@oxen-office/xlsx/domain/types";
-import type { CellAddress } from "@oxen-office/xlsx/domain/cell/address";
-import type { XlsxWorkbook } from "@oxen-office/xlsx/domain/workbook";
-import { getCellValue } from "@oxen-ui/xlsx-editor/cell/query";
-import { createInitialState, xlsxEditorReducer } from "@oxen-ui/xlsx-editor";
-import { createGetZipTextFileContentFromBytes } from "@oxen-office/opc";
+import { parseXlsxWorkbook } from "@aurochs-office/xlsx/parser";
+import { exportXlsx } from "@aurochs-builder/xlsx/exporter";
+import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
+import type { CellAddress } from "@aurochs-office/xlsx/domain/cell/address";
+import type { XlsxWorkbook } from "@aurochs-office/xlsx/domain/workbook";
+import { getCellValue } from "@aurochs-ui/xlsx-editor/cell/query";
+import { createInitialState, xlsxEditorReducer } from "@aurochs-ui/xlsx-editor";
+import { createGetZipTextFileContentFromBytes } from "@aurochs-office/opc";
 
 function createAddress(col: number, row: number): CellAddress {
   return { col: colIdx(col), row: rowIdx(row), colAbsolute: false, rowAbsolute: false };
@@ -24,10 +24,7 @@ async function parseWorkbookFromBytes(bytes: ArrayBuffer | Uint8Array): Promise<
 
 describe("xlsx-editor roundtrip (fixtures)", () => {
   it("loads a fixture, edits a cell, exports, and reparses", async () => {
-    const fixturePath = path.join(
-      process.cwd(),
-      "fixtures/poi-test-data/test-data/spreadsheet/1_NoIden.xlsx",
-	  );
+    const fixturePath = path.join(process.cwd(), "fixtures/poi-test-data/test-data/spreadsheet/1_NoIden.xlsx");
     const bytes = await readFile(fixturePath);
 
     const workbook = await parseWorkbookFromBytes(bytes);

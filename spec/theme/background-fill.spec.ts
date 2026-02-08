@@ -6,26 +6,36 @@
  * @see ECMA-376 Part 1, Section 20.1.4.1.7 (a:bgFillStyleLst)
  */
 
-import { openPresentation } from "@oxen-office/pptx";
-import { parseXml, type XmlElement } from "@oxen/xml";
-import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
-import { createColorMap } from "@oxen-office/pptx/parser/slide/resource-adapters";
-import { parseFormatScheme, parseColorScheme } from "@oxen-office/pptx/parser/slide/theme-parser";
-import { loadLayoutData, loadMasterData, loadThemeData } from "@oxen-office/pptx/parser/slide/loader";
-import { getRelationships, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS } from "@oxen-office/pptx/parser/slide/xml-reader";
-import { getGradientFill } from "@oxen-office/pptx/parser/graphics/fill-resolver";
-import { getSolidFill } from "@oxen-office/pptx/parser/graphics/color-resolver";
+import { openPresentation } from "@aurochs-office/pptx";
+import { parseXml, type XmlElement } from "@aurochs/xml";
+import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
+import { createColorMap } from "@aurochs-office/pptx/parser/slide/resource-adapters";
+import { parseFormatScheme, parseColorScheme } from "@aurochs-office/pptx/parser/slide/theme-parser";
+import { loadLayoutData, loadMasterData, loadThemeData } from "@aurochs-office/pptx/parser/slide/loader";
+import { getRelationships, DEFAULT_MARKUP_COMPATIBILITY_OPTIONS } from "@aurochs-office/pptx/parser/slide/xml-reader";
+import { getGradientFill } from "@aurochs-office/pptx/parser/graphics/fill-resolver";
+import { getSolidFill } from "@aurochs-office/pptx/parser/graphics/color-resolver";
 import { createPresentationFile, THEMES_PPTX_PATH } from "./test-utils";
 
 /**
  * Type guard for XmlElement
  */
 function isXmlElement(value: unknown): value is XmlElement {
-  if (typeof value !== "object") {return false;}
-  if (value === null) {return false;}
-  if (!("name" in value)) {return false;}
-  if (!("attrs" in value)) {return false;}
-  if (!("children" in value)) {return false;}
+  if (typeof value !== "object") {
+    return false;
+  }
+  if (value === null) {
+    return false;
+  }
+  if (!("name" in value)) {
+    return false;
+  }
+  if (!("attrs" in value)) {
+    return false;
+  }
+  if (!("children" in value)) {
+    return false;
+  }
   return true;
 }
 

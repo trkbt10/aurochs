@@ -19,14 +19,14 @@ import {
   TableCellPropertiesEditor,
   createDefaultTableCellProperties,
   ContinuousEditor,
-} from "@oxen-ui/docx-editor";
-import type { DocxRunProperties } from "@oxen-office/docx/domain/run";
-import type { DocxParagraphProperties, DocxParagraph } from "@oxen-office/docx/domain/paragraph";
-import type { DocxStyle } from "@oxen-office/docx/domain/styles";
-import type { DocxLevel, DocxNumbering, DocxAbstractNum, DocxNum } from "@oxen-office/docx/domain/numbering";
-import { docxAbstractNumId, docxNumId, docxIlvl, docxStyleId, halfPoints } from "@oxen-office/docx/domain/types";
-import type { DocxTableProperties, DocxTableCellProperties } from "@oxen-office/docx/domain/table";
-import { Button } from "@oxen-ui/ui-components/primitives";
+} from "@aurochs-ui/docx-editor";
+import type { DocxRunProperties } from "@aurochs-office/docx/domain/run";
+import type { DocxParagraphProperties, DocxParagraph } from "@aurochs-office/docx/domain/paragraph";
+import type { DocxStyle } from "@aurochs-office/docx/domain/styles";
+import type { DocxLevel, DocxNumbering, DocxAbstractNum, DocxNum } from "@aurochs-office/docx/domain/numbering";
+import { docxAbstractNumId, docxNumId, docxIlvl, docxStyleId, halfPoints } from "@aurochs-office/docx/domain/types";
+import type { DocxTableProperties, DocxTableCellProperties } from "@aurochs-office/docx/domain/table";
+import { Button } from "@aurochs-ui/ui-components/primitives";
 
 type DocxEditorTestPageProps = {
   readonly onBack: () => void;
@@ -224,33 +224,15 @@ const jsonPreStyle: CSSProperties = {
 // Helper Components
 // =============================================================================
 
-function TabButton({
-  tab,
-  isActive,
-  onClick,
-}: {
-  tab: Tab;
-  isActive: boolean;
-  onClick: () => void;
-}) {
+function TabButton({ tab, isActive, onClick }: { tab: Tab; isActive: boolean; onClick: () => void }) {
   return (
-    <button
-      type="button"
-      style={isActive ? tabButtonActiveStyle : tabButtonInactiveStyle}
-      onClick={onClick}
-    >
+    <button type="button" style={isActive ? tabButtonActiveStyle : tabButtonInactiveStyle} onClick={onClick}>
       {tab.label}
     </button>
   );
 }
 
-function ShortcutItem({
-  keys,
-  description,
-}: {
-  keys: string;
-  description: string;
-}) {
+function ShortcutItem({ keys, description }: { keys: string; description: string }) {
   return (
     <div style={shortcutItemStyle}>
       <span style={{ color: "var(--text-secondary)" }}>{description}</span>
@@ -319,12 +301,7 @@ function StyleEditorTest() {
     <div style={contentStyle}>
       <div style={panelStyle}>
         <h3 style={panelHeadingStyle}>Style Editor</h3>
-        <StyleEditor
-          value={value}
-          onChange={setValue}
-          availableStyles={availableStyles}
-          showAdvanced
-        />
+        <StyleEditor value={value} onChange={setValue} availableStyles={availableStyles} showAdvanced />
       </div>
       <div style={panelStyle}>
         <h3 style={panelHeadingStyle}>Current Value</h3>
@@ -402,7 +379,7 @@ function createDemoParagraph(
     keepNext?: boolean;
     /** Keep all lines of this paragraph together on the same page */
     keepLines?: boolean;
-  }
+  },
 ): DocxParagraph {
   const paragraphProps: DocxParagraph["properties"] = {
     ...(options?.pStyle && { pStyle: docxStyleId(options.pStyle) }),
@@ -434,15 +411,31 @@ function createDemoParagraph(
  */
 type RunSpec = {
   readonly text: string;
-  readonly b?: boolean;        // bold
-  readonly i?: boolean;        // italic
-  readonly u?: boolean;        // underline (single)
-  readonly strike?: boolean;   // strikethrough
-  readonly sz?: number;        // font size in half-points
-  readonly color?: string;     // color as hex without # (e.g., "FF0000")
-  readonly highlight?: "yellow" | "cyan" | "magenta" | "green" | "red" | "blue" | "darkBlue" | "darkCyan" | "darkGreen" | "darkMagenta" | "darkRed" | "darkYellow" | "darkGray" | "lightGray" | "black" | "white";
+  readonly b?: boolean; // bold
+  readonly i?: boolean; // italic
+  readonly u?: boolean; // underline (single)
+  readonly strike?: boolean; // strikethrough
+  readonly sz?: number; // font size in half-points
+  readonly color?: string; // color as hex without # (e.g., "FF0000")
+  readonly highlight?:
+    | "yellow"
+    | "cyan"
+    | "magenta"
+    | "green"
+    | "red"
+    | "blue"
+    | "darkBlue"
+    | "darkCyan"
+    | "darkGreen"
+    | "darkMagenta"
+    | "darkRed"
+    | "darkYellow"
+    | "darkGray"
+    | "lightGray"
+    | "black"
+    | "white";
   readonly vertAlign?: "superscript" | "subscript";
-  readonly caps?: boolean;     // all caps
+  readonly caps?: boolean; // all caps
   readonly smallCaps?: boolean;
 };
 
@@ -479,11 +472,7 @@ function createCompoundParagraph(runs: readonly RunSpec[]): DocxParagraph {
 /**
  * Create a paragraph with numbering properties.
  */
-function createNumberedParagraph(
-  text: string,
-  numId: number,
-  ilvl: number = 0,
-): DocxParagraph {
+function createNumberedParagraph(text: string, numId: number, ilvl: number = 0): DocxParagraph {
   return {
     type: "paragraph",
     properties: {
@@ -599,132 +588,143 @@ const documentEditorContainerStyle: CSSProperties = {
 
 function DocumentEditorTest() {
   const [isVertical, setIsVertical] = useState(false);
-  const demoParagraphs = useMemo<DocxParagraph[]>(() => [
-    createDemoParagraph("DOCX グラフィカルテキストエディタ", { bold: true, fontSize: 48 }),
-    createDemoParagraph(""),
-    createDemoParagraph("このエディタは、新しい統一レイアウトエンジンを使用したSVGベースのテキストレンダリングを実装しています。"),
-    createDemoParagraph(""),
-    // Compound Formatting Test Section
-    createDemoParagraph("複合フォーマットテスト", { bold: true, fontSize: 32 }),
-    createDemoParagraph(""),
-    createCompoundParagraph([
-      { text: "This sentence has " },
-      { text: "bold", b: true },
-      { text: ", " },
-      { text: "italic", i: true },
-      { text: ", and " },
-      { text: "bold italic", b: true, i: true },
-      { text: " text mixed together." },
-    ]),
-    createDemoParagraph(""),
-    createCompoundParagraph([
-      { text: "Text with " },
-      { text: "underline", u: true },
-      { text: ", " },
-      { text: "strikethrough", strike: true },
-      { text: ", and " },
-      { text: "both combined", u: true, strike: true },
-      { text: "." },
-    ]),
-    createDemoParagraph(""),
-    createCompoundParagraph([
-      { text: "Small", sz: 16 },
-      { text: " Normal", sz: 24 },
-      { text: " Large", sz: 36 },
-      { text: " Huge", sz: 48 },
-      { text: " sizes mixed.", sz: 24 },
-    ]),
-    createDemoParagraph(""),
-    createCompoundParagraph([
-      { text: "Red", color: "FF0000" },
-      { text: " Green", color: "00FF00" },
-      { text: " Blue", color: "0000FF" },
-      { text: " Orange", color: "FF8C00" },
-      { text: " Purple", color: "800080" },
-      { text: " colors in one line." },
-    ]),
-    createDemoParagraph(""),
-    createCompoundParagraph([
-      { text: "Yellow highlight", highlight: "yellow" },
-      { text: " " },
-      { text: "Cyan highlight", highlight: "cyan" },
-      { text: " " },
-      { text: "Magenta highlight", highlight: "magenta" },
-      { text: " backgrounds." },
-    ]),
-    createDemoParagraph(""),
-    createCompoundParagraph([
-      { text: "E=mc" },
-      { text: "2", vertAlign: "superscript" },
-      { text: ", H" },
-      { text: "2", vertAlign: "subscript" },
-      { text: "O, x" },
-      { text: "n", vertAlign: "superscript" },
-      { text: "+y" },
-      { text: "n", vertAlign: "superscript" },
-      { text: "=z" },
-      { text: "n", vertAlign: "superscript" },
-    ]),
-    createDemoParagraph(""),
-    createCompoundParagraph([
-      { text: "日本語の" },
-      { text: "太字", b: true },
-      { text: "と" },
-      { text: "斜体", i: true },
-      { text: "と" },
-      { text: "下線", u: true },
-      { text: "を混在させたテキストです。" },
-    ]),
-    createDemoParagraph(""),
-    // Main features section
-    createDemoParagraph("主な特徴", { bold: true, fontSize: 32 }),
-    createDemoParagraph(""),
-    createDemoParagraph("• 共通レイアウトエンジン: PPTXとDOCXで同じレイアウトエンジンを共有"),
-    createDemoParagraph("• SVG統一描画: HTMLではなくSVGでテキストを描画し、視覚的一貫性を確保"),
-    createDemoParagraph("• ページフロー対応: 複数ページに跨がる連続ドキュメント編集が可能"),
-    createDemoParagraph("• 正確なカーソル位置: レイアウト結果に基づく正確なカーソル・選択範囲表示"),
-    createDemoParagraph(""),
-    createDemoParagraph("日本語テキストの例", { bold: true, fontSize: 32 }),
-    createDemoParagraph(""),
-    createDemoParagraph("吾輩は猫である。名前はまだ無い。どこで生れたかとんと見当がつかぬ。何でも薄暗いじめじめした所でニャーニャー泣いていた事だけは記憶している。"),
-    createDemoParagraph(""),
-    createDemoParagraph("The quick brown fox jumps over the lazy dog. This sentence contains every letter of the English alphabet."),
-    createDemoParagraph(""),
-    // Page 2
-    createDemoParagraph("ページ2: マルチページ編集テスト", { bold: true, fontSize: 40, pageBreakBefore: true }),
-    createDemoParagraph(""),
-    createDemoParagraph("このセクションは、複数ページにまたがる編集機能をテストするためのコンテンツです。"),
-    createDemoParagraph(""),
-    createDemoParagraph("Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua."),
-    createDemoParagraph(""),
-    createDemoParagraph("祇園精舎の鐘の声、諸行無常の響きあり。沙羅双樹の花の色、盛者必衰の理をあらはす。"),
-    createDemoParagraph(""),
-    // Page 3
-    createDemoParagraph("ページ3: さらなるコンテンツ", { bold: true, fontSize: 40, pageBreakBefore: true }),
-    createDemoParagraph(""),
-    createCompoundParagraph([
-      { text: "ページをまたいだ" },
-      { text: "選択", b: true, color: "FF0000" },
-      { text: "や" },
-      { text: "編集", b: true, color: "0000FF" },
-      { text: "が正しく動作することを確認してください。" },
-    ]),
-    createDemoParagraph(""),
-    // Numbering test
-    createDemoParagraph("番号付きリストテスト", { bold: true, fontSize: 32 }),
-    createDemoParagraph(""),
-    createNumberedParagraph("First item in decimal list", 1, 0),
-    createNumberedParagraph("Second item in decimal list", 1, 0),
-    createNumberedParagraph("Third item in decimal list", 1, 0),
-    createDemoParagraph(""),
-    createNumberedParagraph("Bullet item one", 2, 0),
-    createNumberedParagraph("Bullet item two", 2, 0),
-    createNumberedParagraph("Nested bullet item", 2, 1),
-    createDemoParagraph(""),
-    createDemoParagraph("最終テスト段落", { bold: true, fontSize: 32 }),
-    createDemoParagraph(""),
-    createDemoParagraph("これがテストドキュメントの最後の段落です。End of document."),
-  ], []);
+  const demoParagraphs = useMemo<DocxParagraph[]>(
+    () => [
+      createDemoParagraph("DOCX グラフィカルテキストエディタ", { bold: true, fontSize: 48 }),
+      createDemoParagraph(""),
+      createDemoParagraph(
+        "このエディタは、新しい統一レイアウトエンジンを使用したSVGベースのテキストレンダリングを実装しています。",
+      ),
+      createDemoParagraph(""),
+      // Compound Formatting Test Section
+      createDemoParagraph("複合フォーマットテスト", { bold: true, fontSize: 32 }),
+      createDemoParagraph(""),
+      createCompoundParagraph([
+        { text: "This sentence has " },
+        { text: "bold", b: true },
+        { text: ", " },
+        { text: "italic", i: true },
+        { text: ", and " },
+        { text: "bold italic", b: true, i: true },
+        { text: " text mixed together." },
+      ]),
+      createDemoParagraph(""),
+      createCompoundParagraph([
+        { text: "Text with " },
+        { text: "underline", u: true },
+        { text: ", " },
+        { text: "strikethrough", strike: true },
+        { text: ", and " },
+        { text: "both combined", u: true, strike: true },
+        { text: "." },
+      ]),
+      createDemoParagraph(""),
+      createCompoundParagraph([
+        { text: "Small", sz: 16 },
+        { text: " Normal", sz: 24 },
+        { text: " Large", sz: 36 },
+        { text: " Huge", sz: 48 },
+        { text: " sizes mixed.", sz: 24 },
+      ]),
+      createDemoParagraph(""),
+      createCompoundParagraph([
+        { text: "Red", color: "FF0000" },
+        { text: " Green", color: "00FF00" },
+        { text: " Blue", color: "0000FF" },
+        { text: " Orange", color: "FF8C00" },
+        { text: " Purple", color: "800080" },
+        { text: " colors in one line." },
+      ]),
+      createDemoParagraph(""),
+      createCompoundParagraph([
+        { text: "Yellow highlight", highlight: "yellow" },
+        { text: " " },
+        { text: "Cyan highlight", highlight: "cyan" },
+        { text: " " },
+        { text: "Magenta highlight", highlight: "magenta" },
+        { text: " backgrounds." },
+      ]),
+      createDemoParagraph(""),
+      createCompoundParagraph([
+        { text: "E=mc" },
+        { text: "2", vertAlign: "superscript" },
+        { text: ", H" },
+        { text: "2", vertAlign: "subscript" },
+        { text: "O, x" },
+        { text: "n", vertAlign: "superscript" },
+        { text: "+y" },
+        { text: "n", vertAlign: "superscript" },
+        { text: "=z" },
+        { text: "n", vertAlign: "superscript" },
+      ]),
+      createDemoParagraph(""),
+      createCompoundParagraph([
+        { text: "日本語の" },
+        { text: "太字", b: true },
+        { text: "と" },
+        { text: "斜体", i: true },
+        { text: "と" },
+        { text: "下線", u: true },
+        { text: "を混在させたテキストです。" },
+      ]),
+      createDemoParagraph(""),
+      // Main features section
+      createDemoParagraph("主な特徴", { bold: true, fontSize: 32 }),
+      createDemoParagraph(""),
+      createDemoParagraph("• 共通レイアウトエンジン: PPTXとDOCXで同じレイアウトエンジンを共有"),
+      createDemoParagraph("• SVG統一描画: HTMLではなくSVGでテキストを描画し、視覚的一貫性を確保"),
+      createDemoParagraph("• ページフロー対応: 複数ページに跨がる連続ドキュメント編集が可能"),
+      createDemoParagraph("• 正確なカーソル位置: レイアウト結果に基づく正確なカーソル・選択範囲表示"),
+      createDemoParagraph(""),
+      createDemoParagraph("日本語テキストの例", { bold: true, fontSize: 32 }),
+      createDemoParagraph(""),
+      createDemoParagraph(
+        "吾輩は猫である。名前はまだ無い。どこで生れたかとんと見当がつかぬ。何でも薄暗いじめじめした所でニャーニャー泣いていた事だけは記憶している。",
+      ),
+      createDemoParagraph(""),
+      createDemoParagraph(
+        "The quick brown fox jumps over the lazy dog. This sentence contains every letter of the English alphabet.",
+      ),
+      createDemoParagraph(""),
+      // Page 2
+      createDemoParagraph("ページ2: マルチページ編集テスト", { bold: true, fontSize: 40, pageBreakBefore: true }),
+      createDemoParagraph(""),
+      createDemoParagraph("このセクションは、複数ページにまたがる編集機能をテストするためのコンテンツです。"),
+      createDemoParagraph(""),
+      createDemoParagraph(
+        "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.",
+      ),
+      createDemoParagraph(""),
+      createDemoParagraph("祇園精舎の鐘の声、諸行無常の響きあり。沙羅双樹の花の色、盛者必衰の理をあらはす。"),
+      createDemoParagraph(""),
+      // Page 3
+      createDemoParagraph("ページ3: さらなるコンテンツ", { bold: true, fontSize: 40, pageBreakBefore: true }),
+      createDemoParagraph(""),
+      createCompoundParagraph([
+        { text: "ページをまたいだ" },
+        { text: "選択", b: true, color: "FF0000" },
+        { text: "や" },
+        { text: "編集", b: true, color: "0000FF" },
+        { text: "が正しく動作することを確認してください。" },
+      ]),
+      createDemoParagraph(""),
+      // Numbering test
+      createDemoParagraph("番号付きリストテスト", { bold: true, fontSize: 32 }),
+      createDemoParagraph(""),
+      createNumberedParagraph("First item in decimal list", 1, 0),
+      createNumberedParagraph("Second item in decimal list", 1, 0),
+      createNumberedParagraph("Third item in decimal list", 1, 0),
+      createDemoParagraph(""),
+      createNumberedParagraph("Bullet item one", 2, 0),
+      createNumberedParagraph("Bullet item two", 2, 0),
+      createNumberedParagraph("Nested bullet item", 2, 1),
+      createDemoParagraph(""),
+      createDemoParagraph("最終テスト段落", { bold: true, fontSize: 32 }),
+      createDemoParagraph(""),
+      createDemoParagraph("これがテストドキュメントの最後の段落です。End of document."),
+    ],
+    [],
+  );
 
   const demoNumbering = useMemo(() => createDemoNumbering(), []);
   const [cursorInfo, setCursorInfo] = useState<string>("クリックしてカーソル位置を確認");
@@ -834,36 +834,6 @@ function TabContent({ activeTab }: { activeTab: TabId }) {
 // Main Component
 // =============================================================================
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 export function DocxEditorTestPage({ onBack }: DocxEditorTestPageProps) {
   const [activeTab, setActiveTab] = useState<TabId>("editor");
 
@@ -880,12 +850,7 @@ export function DocxEditorTestPage({ onBack }: DocxEditorTestPageProps) {
       {/* Tab Navigation */}
       <nav style={tabsContainerStyle}>
         {tabs.map((tab) => (
-          <TabButton
-            key={tab.id}
-            tab={tab}
-            isActive={activeTab === tab.id}
-            onClick={() => setActiveTab(tab.id)}
-          />
+          <TabButton key={tab.id} tab={tab} isActive={activeTab === tab.id} onClick={() => setActiveTab(tab.id)} />
         ))}
       </nav>
 

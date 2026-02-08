@@ -10,9 +10,9 @@
  */
 
 import * as fs from "node:fs";
-import { openPresentation } from "@oxen-office/pptx";
+import { openPresentation } from "@aurochs-office/pptx";
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
-import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
+import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
 
 // =============================================================================
 // Test Setup

@@ -3,17 +3,27 @@
  */
 
 import { useCallback, useMemo, useState, type CSSProperties } from "react";
-import { XlsxWorkbookEditor } from "@oxen-ui/xlsx-editor";
-import type { XlsxWorkbook } from "@oxen-office/xlsx/domain/workbook";
-import { createDefaultStyleSheet, type XlsxCellXf } from "@oxen-office/xlsx/domain/style/types";
-import { borderId, colIdx, fillId, fontId, numFmtId, rowIdx, styleId, type ColIndex, type RowIndex } from "@oxen-office/xlsx/domain/types";
-import type { CellAddress } from "@oxen-office/xlsx/domain/cell/address";
-import type { Formula } from "@oxen-office/xlsx/domain/cell/formula";
-import { Button, Input } from "@oxen-ui/ui-components/primitives";
-import { detectSpreadsheetFileType, parseXlsWithReport, type SpreadsheetFileType } from "@oxen-office/xls";
-import { createGetZipTextFileContentFromBytes } from "@oxen-office/opc";
-import { parseXlsxWorkbook } from "@oxen-office/xlsx/parser";
-import { exportXlsx } from "@oxen-builder/xlsx/exporter";
+import { XlsxWorkbookEditor } from "@aurochs-ui/xlsx-editor";
+import type { XlsxWorkbook } from "@aurochs-office/xlsx/domain/workbook";
+import { createDefaultStyleSheet, type XlsxCellXf } from "@aurochs-office/xlsx/domain/style/types";
+import {
+  borderId,
+  colIdx,
+  fillId,
+  fontId,
+  numFmtId,
+  rowIdx,
+  styleId,
+  type ColIndex,
+  type RowIndex,
+} from "@aurochs-office/xlsx/domain/types";
+import type { CellAddress } from "@aurochs-office/xlsx/domain/cell/address";
+import type { Formula } from "@aurochs-office/xlsx/domain/cell/formula";
+import { Button, Input } from "@aurochs-ui/ui-components/primitives";
+import { detectSpreadsheetFileType, parseXlsWithReport, type SpreadsheetFileType } from "@aurochs-office/xls";
+import { createGetZipTextFileContentFromBytes } from "@aurochs-office/opc";
+import { parseXlsxWorkbook } from "@aurochs-office/xlsx/parser";
+import { exportXlsx } from "@aurochs-builder/xlsx/exporter";
 
 const controlsStyle: CSSProperties = {
   display: "flex",
@@ -108,11 +118,29 @@ function createTestWorkbook(): XlsxWorkbook {
   const cellXfs: readonly XlsxCellXf[] = [
     ...styles.cellXfs,
     // styleId(1): yellow fill
-    { numFmtId: numFmtId(0), fontId: fontId(0), fillId: fillId(yellowFillIndex), borderId: borderId(0), applyFill: true },
+    {
+      numFmtId: numFmtId(0),
+      fontId: fontId(0),
+      fillId: fillId(yellowFillIndex),
+      borderId: borderId(0),
+      applyFill: true,
+    },
     // styleId(2): red + bold font
-    { numFmtId: numFmtId(0), fontId: fontId(redBoldFontIndex), fillId: fillId(0), borderId: borderId(0), applyFont: true },
+    {
+      numFmtId: numFmtId(0),
+      fontId: fontId(redBoldFontIndex),
+      fillId: fillId(0),
+      borderId: borderId(0),
+      applyFont: true,
+    },
     // styleId(3): thin border
-    { numFmtId: numFmtId(0), fontId: fontId(0), fillId: fillId(0), borderId: borderId(thinBorderIndex), applyBorder: true },
+    {
+      numFmtId: numFmtId(0),
+      fontId: fontId(0),
+      fillId: fillId(0),
+      borderId: borderId(thinBorderIndex),
+      applyBorder: true,
+    },
     // styleId(4): wrap + alignment
     {
       numFmtId: numFmtId(0),
@@ -137,24 +165,49 @@ function createTestWorkbook(): XlsxWorkbook {
           {
             rowNumber: rowIdx(1),
             cells: [
-              { address: createAddress(colIdx(1), rowIdx(1)), value: { type: "number", value: 10 }, styleId: styleId(1) },
-              { address: createAddress(colIdx(2), rowIdx(1)), value: { type: "number", value: 20 }, styleId: styleId(2) },
-              { address: createAddress(colIdx(3), rowIdx(1)), value: { type: "empty" }, formula: createNormalFormula("A1+B1"), styleId: styleId(3) },
+              {
+                address: createAddress(colIdx(1), rowIdx(1)),
+                value: { type: "number", value: 10 },
+                styleId: styleId(1),
+              },
+              {
+                address: createAddress(colIdx(2), rowIdx(1)),
+                value: { type: "number", value: 20 },
+                styleId: styleId(2),
+              },
+              {
+                address: createAddress(colIdx(3), rowIdx(1)),
+                value: { type: "empty" },
+                formula: createNormalFormula("A1+B1"),
+                styleId: styleId(3),
+              },
             ],
           },
           {
             rowNumber: rowIdx(2),
             cells: [
               { address: createAddress(colIdx(1), rowIdx(2)), value: { type: "number", value: 1 } },
-              { address: createAddress(colIdx(2), rowIdx(2)), value: { type: "empty" }, formula: createNormalFormula('IF(A2>0,"OK","NG")') },
-              { address: createAddress(colIdx(3), rowIdx(2)), value: { type: "empty" }, formula: createNormalFormula("SUM(A1:B1)") },
+              {
+                address: createAddress(colIdx(2), rowIdx(2)),
+                value: { type: "empty" },
+                formula: createNormalFormula('IF(A2>0,"OK","NG")'),
+              },
+              {
+                address: createAddress(colIdx(3), rowIdx(2)),
+                value: { type: "empty" },
+                formula: createNormalFormula("SUM(A1:B1)"),
+              },
             ],
           },
           {
             rowNumber: rowIdx(3),
             cells: [
               { address: createAddress(colIdx(1), rowIdx(3)), value: { type: "number", value: 1 } },
-              { address: createAddress(colIdx(2), rowIdx(3)), value: { type: "empty" }, formula: createNormalFormula("SUM(A3:A4)") },
+              {
+                address: createAddress(colIdx(2), rowIdx(3)),
+                value: { type: "empty" },
+                formula: createNormalFormula("SUM(A3:A4)"),
+              },
             ],
           },
           {
@@ -164,8 +217,16 @@ function createTestWorkbook(): XlsxWorkbook {
           {
             rowNumber: rowIdx(5),
             cells: [
-              { address: createAddress(colIdx(1), rowIdx(5)), value: { type: "empty" }, formula: createNormalFormula("Sheet2!A1+1") },
-              { address: createAddress(colIdx(2), rowIdx(5)), value: { type: "empty" }, formula: createNormalFormula("NoSuchSheet!A1") },
+              {
+                address: createAddress(colIdx(1), rowIdx(5)),
+                value: { type: "empty" },
+                formula: createNormalFormula("Sheet2!A1+1"),
+              },
+              {
+                address: createAddress(colIdx(2), rowIdx(5)),
+                value: { type: "empty" },
+                formula: createNormalFormula("NoSuchSheet!A1"),
+              },
               {
                 address: createAddress(colIdx(3), rowIdx(5)),
                 value: { type: "string", value: "Long text wraps onto multiple lines if wrapText is applied." },
@@ -177,16 +238,35 @@ function createTestWorkbook(): XlsxWorkbook {
             rowNumber: rowIdx(6),
             cells: [
               { address: createAddress(colIdx(1), rowIdx(6)), value: { type: "string", value: "IFERROR(1/0,123)" } },
-              { address: createAddress(colIdx(2), rowIdx(6)), value: { type: "empty" }, formula: createNormalFormula("IFERROR(1/0,123)") },
-              { address: createAddress(colIdx(3), rowIdx(6)), value: { type: "empty" }, formula: createNormalFormula('VLOOKUP(2,{1,"A";2,"B";3,"C"},2,FALSE)') },
+              {
+                address: createAddress(colIdx(2), rowIdx(6)),
+                value: { type: "empty" },
+                formula: createNormalFormula("IFERROR(1/0,123)"),
+              },
+              {
+                address: createAddress(colIdx(3), rowIdx(6)),
+                value: { type: "empty" },
+                formula: createNormalFormula('VLOOKUP(2,{1,"A";2,"B";3,"C"},2,FALSE)'),
+              },
             ],
           },
           {
             rowNumber: rowIdx(7),
             cells: [
-              { address: createAddress(colIdx(1), rowIdx(7)), value: { type: "string", value: "OFFSET/INDIRECT demo" } },
-              { address: createAddress(colIdx(2), rowIdx(7)), value: { type: "empty" }, formula: createNormalFormula("SUM(OFFSET(A8,0,0,2,1))") },
-              { address: createAddress(colIdx(3), rowIdx(7)), value: { type: "empty" }, formula: createNormalFormula('INDIRECT("A8")+1') },
+              {
+                address: createAddress(colIdx(1), rowIdx(7)),
+                value: { type: "string", value: "OFFSET/INDIRECT demo" },
+              },
+              {
+                address: createAddress(colIdx(2), rowIdx(7)),
+                value: { type: "empty" },
+                formula: createNormalFormula("SUM(OFFSET(A8,0,0,2,1))"),
+              },
+              {
+                address: createAddress(colIdx(3), rowIdx(7)),
+                value: { type: "empty" },
+                formula: createNormalFormula('INDIRECT("A8")+1'),
+              },
             ],
           },
           {
@@ -257,11 +337,29 @@ function createPatternWorkbook(): XlsxWorkbook {
   const cellXfs: readonly XlsxCellXf[] = [
     ...styles.cellXfs,
     // styleId(1): yellow fill
-    { numFmtId: numFmtId(0), fontId: fontId(0), fillId: fillId(yellowFillIndex), borderId: borderId(0), applyFill: true },
+    {
+      numFmtId: numFmtId(0),
+      fontId: fontId(0),
+      fillId: fillId(yellowFillIndex),
+      borderId: borderId(0),
+      applyFill: true,
+    },
     // styleId(2): red + bold font
-    { numFmtId: numFmtId(0), fontId: fontId(redBoldFontIndex), fillId: fillId(0), borderId: borderId(0), applyFont: true },
+    {
+      numFmtId: numFmtId(0),
+      fontId: fontId(redBoldFontIndex),
+      fillId: fillId(0),
+      borderId: borderId(0),
+      applyFont: true,
+    },
     // styleId(3): thin black border
-    { numFmtId: numFmtId(0), fontId: fontId(0), fillId: fillId(0), borderId: borderId(thinBlackBorderIndex), applyBorder: true },
+    {
+      numFmtId: numFmtId(0),
+      fontId: fontId(0),
+      fillId: fillId(0),
+      borderId: borderId(thinBlackBorderIndex),
+      applyBorder: true,
+    },
     // styleId(4): wrap + alignment (top-left)
     {
       numFmtId: numFmtId(0),
@@ -272,9 +370,22 @@ function createPatternWorkbook(): XlsxWorkbook {
       applyAlignment: true,
     },
     // styleId(5): dashed blue border
-    { numFmtId: numFmtId(0), fontId: fontId(0), fillId: fillId(0), borderId: borderId(dashedBlueBorderIndex), applyBorder: true },
+    {
+      numFmtId: numFmtId(0),
+      fontId: fontId(0),
+      fillId: fillId(0),
+      borderId: borderId(dashedBlueBorderIndex),
+      applyBorder: true,
+    },
     // styleId(6): double red border + gray fill
-    { numFmtId: numFmtId(0), fontId: fontId(0), fillId: fillId(grayFillIndex), borderId: borderId(doubleRedBorderIndex), applyFill: true, applyBorder: true },
+    {
+      numFmtId: numFmtId(0),
+      fontId: fontId(0),
+      fillId: fillId(grayFillIndex),
+      borderId: borderId(doubleRedBorderIndex),
+      applyFill: true,
+      applyBorder: true,
+    },
     // styleId(7): blue italic font + center alignment
     {
       numFmtId: numFmtId(0),
@@ -286,9 +397,21 @@ function createPatternWorkbook(): XlsxWorkbook {
       applyAlignment: true,
     },
     // styleId(8): theme fill (accent1 tint)
-    { numFmtId: numFmtId(0), fontId: fontId(0), fillId: fillId(themeAccentFillIndex), borderId: borderId(0), applyFill: true },
+    {
+      numFmtId: numFmtId(0),
+      fontId: fontId(0),
+      fillId: fillId(themeAccentFillIndex),
+      borderId: borderId(0),
+      applyFill: true,
+    },
     // styleId(9): indexed fill
-    { numFmtId: numFmtId(0), fontId: fontId(0), fillId: fillId(indexedFillIndex), borderId: borderId(0), applyFill: true },
+    {
+      numFmtId: numFmtId(0),
+      fontId: fontId(0),
+      fillId: fillId(indexedFillIndex),
+      borderId: borderId(0),
+      applyFill: true,
+    },
     // styleId(10): date (custom) yyyy-mm-dd
     { numFmtId: numFmtId(164), fontId: fontId(0), fillId: fillId(0), borderId: borderId(0), applyNumberFormat: true },
     // styleId(11): percent 0.00%
@@ -300,7 +423,13 @@ function createPatternWorkbook(): XlsxWorkbook {
     // styleId(14): datetime m/d/yy h:mm
     { numFmtId: numFmtId(22), fontId: fontId(0), fillId: fillId(0), borderId: borderId(0), applyNumberFormat: true },
     // styleId(15): theme font color
-    { numFmtId: numFmtId(0), fontId: fontId(themeAccentFontIndex), fillId: fillId(0), borderId: borderId(0), applyFont: true },
+    {
+      numFmtId: numFmtId(0),
+      fontId: fontId(themeAccentFontIndex),
+      fillId: fillId(0),
+      borderId: borderId(0),
+      applyFont: true,
+    },
   ];
 
   return {
@@ -316,11 +445,22 @@ function createPatternWorkbook(): XlsxWorkbook {
           {
             rowNumber: rowIdx(1),
             cells: [
-              { address: createAddress(colIdx(1), rowIdx(1)), value: { type: "string", value: "string" }, styleId: styleId(1) },
-              { address: createAddress(colIdx(2), rowIdx(1)), value: { type: "number", value: 1234 }, styleId: styleId(2) },
+              {
+                address: createAddress(colIdx(1), rowIdx(1)),
+                value: { type: "string", value: "string" },
+                styleId: styleId(1),
+              },
+              {
+                address: createAddress(colIdx(2), rowIdx(1)),
+                value: { type: "number", value: 1234 },
+                styleId: styleId(2),
+              },
               { address: createAddress(colIdx(3), rowIdx(1)), value: { type: "boolean", value: true } },
               { address: createAddress(colIdx(4), rowIdx(1)), value: { type: "error", value: "#DIV/0!" } },
-              { address: createAddress(colIdx(5), rowIdx(1)), value: { type: "date", value: new Date("2020-01-02T03:04:05.000Z") } },
+              {
+                address: createAddress(colIdx(5), rowIdx(1)),
+                value: { type: "date", value: new Date("2020-01-02T03:04:05.000Z") },
+              },
             ],
           },
         ],
@@ -336,17 +476,41 @@ function createPatternWorkbook(): XlsxWorkbook {
           {
             rowNumber: rowIdx(1),
             cells: [
-              { address: createAddress(colIdx(1), rowIdx(1)), value: { type: "string", value: "yellow fill" }, styleId: styleId(1) },
-              { address: createAddress(colIdx(2), rowIdx(1)), value: { type: "string", value: "red bold" }, styleId: styleId(2) },
+              {
+                address: createAddress(colIdx(1), rowIdx(1)),
+                value: { type: "string", value: "yellow fill" },
+                styleId: styleId(1),
+              },
+              {
+                address: createAddress(colIdx(2), rowIdx(1)),
+                value: { type: "string", value: "red bold" },
+                styleId: styleId(2),
+              },
               {
                 address: createAddress(colIdx(3), rowIdx(1)),
                 value: { type: "string", value: "wrapText + top-left alignment.\nSecond line." },
                 styleId: styleId(4),
               },
-              { address: createAddress(colIdx(4), rowIdx(1)), value: { type: "string", value: "center + italic" }, styleId: styleId(7) },
-              { address: createAddress(colIdx(5), rowIdx(1)), value: { type: "string", value: "theme fill" }, styleId: styleId(8) },
-              { address: createAddress(colIdx(6), rowIdx(1)), value: { type: "string", value: "indexed fill" }, styleId: styleId(9) },
-              { address: createAddress(colIdx(7), rowIdx(1)), value: { type: "string", value: "theme font" }, styleId: styleId(15) },
+              {
+                address: createAddress(colIdx(4), rowIdx(1)),
+                value: { type: "string", value: "center + italic" },
+                styleId: styleId(7),
+              },
+              {
+                address: createAddress(colIdx(5), rowIdx(1)),
+                value: { type: "string", value: "theme fill" },
+                styleId: styleId(8),
+              },
+              {
+                address: createAddress(colIdx(6), rowIdx(1)),
+                value: { type: "string", value: "indexed fill" },
+                styleId: styleId(9),
+              },
+              {
+                address: createAddress(colIdx(7), rowIdx(1)),
+                value: { type: "string", value: "theme font" },
+                styleId: styleId(15),
+              },
             ],
           },
         ],
@@ -362,9 +526,21 @@ function createPatternWorkbook(): XlsxWorkbook {
           {
             rowNumber: rowIdx(1),
             cells: [
-              { address: createAddress(colIdx(1), rowIdx(1)), value: { type: "string", value: "thin" }, styleId: styleId(3) },
-              { address: createAddress(colIdx(2), rowIdx(1)), value: { type: "string", value: "dashed" }, styleId: styleId(5) },
-              { address: createAddress(colIdx(3), rowIdx(1)), value: { type: "string", value: "double+fill" }, styleId: styleId(6) },
+              {
+                address: createAddress(colIdx(1), rowIdx(1)),
+                value: { type: "string", value: "thin" },
+                styleId: styleId(3),
+              },
+              {
+                address: createAddress(colIdx(2), rowIdx(1)),
+                value: { type: "string", value: "dashed" },
+                styleId: styleId(5),
+              },
+              {
+                address: createAddress(colIdx(3), rowIdx(1)),
+                value: { type: "string", value: "double+fill" },
+                styleId: styleId(6),
+              },
               { address: createAddress(colIdx(4), rowIdx(1)), value: { type: "empty" }, styleId: styleId(6) },
             ],
           },
@@ -397,20 +573,30 @@ function createPatternWorkbook(): XlsxWorkbook {
             height: 30,
             customHeight: true,
             cells: [
-              { address: createAddress(colIdx(1), rowIdx(1)), value: { type: "string", value: "A1:B2 merged" }, styleId: styleId(6) },
-              { address: createAddress(colIdx(3), rowIdx(1)), value: { type: "string", value: "C1" }, styleId: styleId(3) },
+              {
+                address: createAddress(colIdx(1), rowIdx(1)),
+                value: { type: "string", value: "A1:B2 merged" },
+                styleId: styleId(6),
+              },
+              {
+                address: createAddress(colIdx(3), rowIdx(1)),
+                value: { type: "string", value: "C1" },
+                styleId: styleId(3),
+              },
             ],
           },
           {
             rowNumber: rowIdx(2),
             cells: [
-              { address: createAddress(colIdx(3), rowIdx(2)), value: { type: "string", value: "C2" }, styleId: styleId(3) },
+              {
+                address: createAddress(colIdx(3), rowIdx(2)),
+                value: { type: "string", value: "C2" },
+                styleId: styleId(3),
+              },
             ],
           },
         ],
-        mergeCells: [
-          { start: createAddress(colIdx(1), rowIdx(1)), end: createAddress(colIdx(2), rowIdx(2)) },
-        ],
+        mergeCells: [{ start: createAddress(colIdx(1), rowIdx(1)), end: createAddress(colIdx(2), rowIdx(2)) }],
         xmlPath: "xl/worksheets/sheet4.xml",
       },
       {
@@ -425,15 +611,28 @@ function createPatternWorkbook(): XlsxWorkbook {
             cells: [
               { address: createAddress(colIdx(1), rowIdx(1)), value: { type: "number", value: 10 } },
               { address: createAddress(colIdx(2), rowIdx(1)), value: { type: "number", value: 20 } },
-              { address: createAddress(colIdx(3), rowIdx(1)), value: { type: "empty" }, formula: createNormalFormula("A1+B1"), styleId: styleId(3) },
+              {
+                address: createAddress(colIdx(3), rowIdx(1)),
+                value: { type: "empty" },
+                formula: createNormalFormula("A1+B1"),
+                styleId: styleId(3),
+              },
             ],
           },
           {
             rowNumber: rowIdx(2),
             cells: [
               { address: createAddress(colIdx(1), rowIdx(2)), value: { type: "number", value: 1 } },
-              { address: createAddress(colIdx(2), rowIdx(2)), value: { type: "empty" }, formula: createNormalFormula('IF(A2>0,"OK","NG")') },
-              { address: createAddress(colIdx(3), rowIdx(2)), value: { type: "empty" }, formula: createNormalFormula("SUM(A1:B1)") },
+              {
+                address: createAddress(colIdx(2), rowIdx(2)),
+                value: { type: "empty" },
+                formula: createNormalFormula('IF(A2>0,"OK","NG")'),
+              },
+              {
+                address: createAddress(colIdx(3), rowIdx(2)),
+                value: { type: "empty" },
+                formula: createNormalFormula("SUM(A1:B1)"),
+              },
             ],
           },
         ],
@@ -449,36 +648,59 @@ function createPatternWorkbook(): XlsxWorkbook {
           {
             rowNumber: rowIdx(1),
             cells: [
-              { address: createAddress(colIdx(1), rowIdx(1)), value: { type: "string", value: "yyyy-mm-dd (custom 164)" } },
-              { address: createAddress(colIdx(2), rowIdx(1)), value: { type: "number", value: 1 }, styleId: styleId(10) },
+              {
+                address: createAddress(colIdx(1), rowIdx(1)),
+                value: { type: "string", value: "yyyy-mm-dd (custom 164)" },
+              },
+              {
+                address: createAddress(colIdx(2), rowIdx(1)),
+                value: { type: "number", value: 1 },
+                styleId: styleId(10),
+              },
             ],
           },
           {
             rowNumber: rowIdx(2),
             cells: [
               { address: createAddress(colIdx(1), rowIdx(2)), value: { type: "string", value: "0.00%" } },
-              { address: createAddress(colIdx(2), rowIdx(2)), value: { type: "number", value: 0.1234 }, styleId: styleId(11) },
+              {
+                address: createAddress(colIdx(2), rowIdx(2)),
+                value: { type: "number", value: 0.1234 },
+                styleId: styleId(11),
+              },
             ],
           },
           {
             rowNumber: rowIdx(3),
             cells: [
               { address: createAddress(colIdx(1), rowIdx(3)), value: { type: "string", value: "#,##0.00" } },
-              { address: createAddress(colIdx(2), rowIdx(3)), value: { type: "number", value: 1234.56 }, styleId: styleId(12) },
+              {
+                address: createAddress(colIdx(2), rowIdx(3)),
+                value: { type: "number", value: 1234.56 },
+                styleId: styleId(12),
+              },
             ],
           },
           {
             rowNumber: rowIdx(4),
             cells: [
               { address: createAddress(colIdx(1), rowIdx(4)), value: { type: "string", value: "0.00E+00" } },
-              { address: createAddress(colIdx(2), rowIdx(4)), value: { type: "number", value: 1200 }, styleId: styleId(13) },
+              {
+                address: createAddress(colIdx(2), rowIdx(4)),
+                value: { type: "number", value: 1200 },
+                styleId: styleId(13),
+              },
             ],
           },
           {
             rowNumber: rowIdx(5),
             cells: [
               { address: createAddress(colIdx(1), rowIdx(5)), value: { type: "string", value: "m/d/yy h:mm" } },
-              { address: createAddress(colIdx(2), rowIdx(5)), value: { type: "number", value: 1 + (3 * 60 + 4) / (24 * 60) }, styleId: styleId(14) },
+              {
+                address: createAddress(colIdx(2), rowIdx(5)),
+                value: { type: "number", value: 1 + (3 * 60 + 4) / (24 * 60) },
+                styleId: styleId(14),
+              },
             ],
           },
         ],
@@ -521,10 +743,7 @@ function createPatternWorkbook(): XlsxWorkbook {
           bottom: { style: "double", color: { type: "rgb", value: "FFFF0000" } },
         },
       ],
-      numberFormats: [
-        ...styles.numberFormats,
-        { numFmtId: numFmtId(164), formatCode: "yyyy-mm-dd" },
-      ],
+      numberFormats: [...styles.numberFormats, { numFmtId: numFmtId(164), formatCode: "yyyy-mm-dd" }],
       cellXfs,
     },
     sharedStrings: [],
@@ -552,26 +771,29 @@ export function XlsxWorkbookPage() {
 
   const [{ rowCount, colCount }, setGridSize] = useState(() => computeInitialGridSize(workbook));
 
-  const loadFile = useCallback(async (file: File) => {
-    setIsBusy(true);
-    setError(null);
-    try {
-      const parsed = await parseWorkbookFromFile(file);
-      setSourceName(file.name);
-      setWorkbook(parsed);
-      setCurrentWorkbook(parsed);
-      setGridSize(computeInitialGridSize(parsed));
-      setWorkbookRevision((v) => v + 1);
-    } catch (e) {
-      if (e instanceof SpreadsheetParseError) {
-        setError(`Failed to load ${e.fileType.toUpperCase()} file: ${e.message}`);
-      } else {
-        setError(e instanceof Error ? e.message : String(e));
+  const loadFile = useCallback(
+    async (file: File) => {
+      setIsBusy(true);
+      setError(null);
+      try {
+        const parsed = await parseWorkbookFromFile(file);
+        setSourceName(file.name);
+        setWorkbook(parsed);
+        setCurrentWorkbook(parsed);
+        setGridSize(computeInitialGridSize(parsed));
+        setWorkbookRevision((v) => v + 1);
+      } catch (e) {
+        if (e instanceof SpreadsheetParseError) {
+          setError(`Failed to load ${e.fileType.toUpperCase()} file: ${e.message}`);
+        } else {
+          setError(e instanceof Error ? e.message : String(e));
+        }
+      } finally {
+        setIsBusy(false);
       }
-    } finally {
-      setIsBusy(false);
-    }
-  }, [computeInitialGridSize]);
+    },
+    [computeInitialGridSize],
+  );
 
   const defaultSaveName = useMemo(() => {
     if (sourceName.toLowerCase().endsWith(".xlsx")) {

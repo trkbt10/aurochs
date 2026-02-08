@@ -10,8 +10,8 @@
  * - Theme colors are resolved
  * - Gradients and images are rendered when present
  */
-import { openPresentation } from "@oxen-office/pptx";
-import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
+import { openPresentation } from "@aurochs-office/pptx";
+import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
 import { requireFileExists, requirePositionalArg } from "../lib/cli";
 import { loadPptxFile } from "../lib/pptx-loader";
 
@@ -25,7 +25,7 @@ type SlideResult = {
   svgLength: number;
   renderSuccess: boolean;
   error?: string;
-}
+};
 
 async function verifyPptxThemes(pptxPath: string): Promise<{ results: SlideResult[]; success: boolean }> {
   const { presentationFile } = await loadPptxFile(pptxPath);
@@ -60,7 +60,7 @@ async function verifyPptxThemes(pptxPath: string): Promise<{ results: SlideResul
       const hasImage = svg.includes("data:image/");
       const hasRadialGradient = svg.includes("radialGradient");
       const hasLinearGradient = svg.includes("linearGradient");
-      const hasSolidRect = svg.includes('<rect') && svg.includes('fill="#');
+      const hasSolidRect = svg.includes("<rect") && svg.includes('fill="#');
 
       if (hasImage) {
         backgroundType = "image";
@@ -92,8 +92,9 @@ async function verifyPptxThemes(pptxPath: string): Promise<{ results: SlideResul
 
       const bgIcon = hasBackground ? "✓" : "✗";
       const textIcon = hasText ? "✓" : "-";
-      console.log(`Slide ${i.toString().padStart(2)}: bg=${bgIcon} text=${textIcon} type=${backgroundType.padEnd(14)} colors=${colors.size} size=${svg.length}`);
-
+      console.log(
+        `Slide ${i.toString().padStart(2)}: bg=${bgIcon} text=${textIcon} type=${backgroundType.padEnd(14)} colors=${colors.size} size=${svg.length}`,
+      );
     } catch (err) {
       results.push({
         slide: i,
@@ -116,11 +117,11 @@ async function verifyPptxThemes(pptxPath: string): Promise<{ results: SlideResul
   console.log("Summary");
   console.log("=".repeat(70));
 
-  const renderSuccessCount = results.filter(r => r.renderSuccess).length;
-  const hasBackgroundCount = results.filter(r => r.hasBackground).length;
-  const hasTextCount = results.filter(r => r.hasText).length;
-  const hasGradientCount = results.filter(r => r.backgroundType.includes("Gradient")).length;
-  const hasImageCount = results.filter(r => r.backgroundType === "image").length;
+  const renderSuccessCount = results.filter((r) => r.renderSuccess).length;
+  const hasBackgroundCount = results.filter((r) => r.hasBackground).length;
+  const hasTextCount = results.filter((r) => r.hasText).length;
+  const hasGradientCount = results.filter((r) => r.backgroundType.includes("Gradient")).length;
+  const hasImageCount = results.filter((r) => r.backgroundType === "image").length;
 
   console.log(`Render success: ${renderSuccessCount} / ${slideCount}`);
   console.log(`Has background: ${hasBackgroundCount} / ${slideCount}`);
@@ -136,7 +137,7 @@ async function verifyPptxThemes(pptxPath: string): Promise<{ results: SlideResul
   }
   if (!allHaveBackground) {
     console.log("\n⚠️  Some slides have no background");
-    for (const r of results.filter(r => !r.hasBackground)) {
+    for (const r of results.filter((r) => !r.hasBackground)) {
       console.log(`   Slide ${r.slide}: ${r.error ?? "no background detected"}`);
     }
   }
@@ -155,7 +156,7 @@ verifyPptxThemes(pptxPath)
   .then(({ success }) => {
     process.exit(success ? 0 : 1);
   })
-  .catch(err => {
+  .catch((err) => {
     console.error(err);
     process.exit(1);
   });

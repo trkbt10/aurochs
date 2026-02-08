@@ -1,10 +1,10 @@
-import type { XlsxWorkbook, XlsxRow, XlsxWorksheet } from "@oxen-office/xlsx/domain/workbook";
-import type { Cell, CellValue } from "@oxen-office/xlsx/domain/cell/types";
-import type { CellAddress } from "@oxen-office/xlsx/domain/cell/address";
-import { colIdx, rowIdx } from "@oxen-office/xlsx/domain/types";
-import { createDefaultStyleSheet } from "@oxen-office/xlsx/domain/style/types";
-import { getCellValue } from "@oxen-ui/xlsx-editor/cell/query";
-import { createChartDataEditor } from "@oxen-ui/pptx-editor/chart-data";
+import type { XlsxWorkbook, XlsxRow, XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
+import type { Cell, CellValue } from "@aurochs-office/xlsx/domain/cell/types";
+import type { CellAddress } from "@aurochs-office/xlsx/domain/cell/address";
+import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
+import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
+import { getCellValue } from "@aurochs-ui/xlsx-editor/cell/query";
+import { createChartDataEditor } from "@aurochs-ui/pptx-editor/chart-data";
 
 function addr(col: number, row: number): CellAddress {
   return {
@@ -40,22 +40,10 @@ function createWorkbook(sheets: readonly XlsxWorksheet[]): XlsxWorkbook {
 
 function createChartWorkbook(): XlsxWorkbook {
   const sheet = createWorksheet("Sheet1", 1, [
-    createRow(1, [
-      cell(1, 1, { type: "string", value: "Category" }),
-      cell(2, 1, { type: "string", value: "Series1" }),
-    ]),
-    createRow(2, [
-      cell(1, 2, { type: "string", value: "Q1" }),
-      cell(2, 2, { type: "number", value: 100 }),
-    ]),
-    createRow(3, [
-      cell(1, 3, { type: "string", value: "Q2" }),
-      cell(2, 3, { type: "number", value: 200 }),
-    ]),
-    createRow(4, [
-      cell(1, 4, { type: "string", value: "Q3" }),
-      cell(2, 4, { type: "number", value: 300 }),
-    ]),
+    createRow(1, [cell(1, 1, { type: "string", value: "Category" }), cell(2, 1, { type: "string", value: "Series1" })]),
+    createRow(2, [cell(1, 2, { type: "string", value: "Q1" }), cell(2, 2, { type: "number", value: 100 })]),
+    createRow(3, [cell(1, 3, { type: "string", value: "Q2" }), cell(2, 3, { type: "number", value: 200 })]),
+    createRow(4, [cell(1, 4, { type: "string", value: "Q3" }), cell(2, 4, { type: "number", value: 300 })]),
   ]);
 
   return createWorkbook([sheet]);

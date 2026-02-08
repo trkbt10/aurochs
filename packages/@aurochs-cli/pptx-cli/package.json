@@ -1,0 +1,29 @@
+{
+  "name": "@aurochs-cli/pptx-cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "pptx": "./dist/cli.js"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./core": "./src/core/index.ts"
+  },
+  "scripts": {
+    "build": "bun build src/cli.ts --target bun --outdir dist --packages external",
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-cli/pptx-cli/src'"
+  },
+  "dependencies": {
+    "@aurochs-builder/pptx": "workspace:*",
+    "@aurochs-cli/cli-core": "workspace:*",
+    "@aurochs-converters/ppt-to-pptx": "workspace:*",
+    "@aurochs-office/chart": "workspace:*",
+    "@aurochs-office/opc": "workspace:*",
+    "@aurochs-office/pptx": "workspace:*",
+    "@aurochs-renderer/pptx": "workspace:*",
+    "@aurochs/zip": "workspace:*",
+    "commander": "^12.0.0"
+  }
+}

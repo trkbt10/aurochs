@@ -1,10 +1,10 @@
-import type { Cell, CellValue } from "@oxen-office/xlsx/domain/cell/types";
-import type { CellAddress, CellRange } from "@oxen-office/xlsx/domain/cell/address";
-import type { XlsxWorkbook, XlsxRow, XlsxWorksheet } from "@oxen-office/xlsx/domain/workbook";
-import { createDefaultStyleSheet } from "@oxen-office/xlsx/domain/style/types";
-import { colIdx, rowIdx } from "@oxen-office/xlsx/domain/types";
-import { getCellValue } from "@oxen-ui/xlsx-editor/cell/query";
-import { createInitialState, xlsxEditorReducer } from "@oxen-ui/xlsx-editor";
+import type { Cell, CellValue } from "@aurochs-office/xlsx/domain/cell/types";
+import type { CellAddress, CellRange } from "@aurochs-office/xlsx/domain/cell/address";
+import type { XlsxWorkbook, XlsxRow, XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
+import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
+import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
+import { getCellValue } from "@aurochs-ui/xlsx-editor/cell/query";
+import { createInitialState, xlsxEditorReducer } from "@aurochs-ui/xlsx-editor";
 
 function addr(col: number, row: number): CellAddress {
   return {
@@ -82,9 +82,7 @@ describe("xlsx-editor integration", () => {
   describe("Row insertion with cell reference update", () => {
     it("should update cell references after row insertion", () => {
       const workbook = createWorkbook([
-        createWorksheet("Sheet1", 1, [
-          createRow(3, [cell(1, 3, { type: "string", value: "A3" })]),
-        ]),
+        createWorksheet("Sheet1", 1, [createRow(3, [cell(1, 3, { type: "string", value: "A3" })])]),
       ]);
       let state = createInitialState(workbook);
 
@@ -100,19 +98,16 @@ describe("xlsx-editor integration", () => {
     it("should copy and paste cells correctly", () => {
       const workbook = createWorkbook([
         createWorksheet("Sheet1", 1, [
-          createRow(1, [
-            cell(1, 1, { type: "string", value: "A1" }),
-            cell(2, 1, { type: "string", value: "B1" }),
-          ]),
-          createRow(2, [
-            cell(1, 2, { type: "string", value: "A2" }),
-            cell(2, 2, { type: "string", value: "B2" }),
-          ]),
+          createRow(1, [cell(1, 1, { type: "string", value: "A1" }), cell(2, 1, { type: "string", value: "B1" })]),
+          createRow(2, [cell(1, 2, { type: "string", value: "A2" }), cell(2, 2, { type: "string", value: "B2" })]),
         ]),
       ]);
       let state = createInitialState(workbook);
 
-      state = xlsxEditorReducer(state, { type: "SELECT_RANGE", range: range({ startCol: 1, startRow: 1, endCol: 2, endRow: 2 }) });
+      state = xlsxEditorReducer(state, {
+        type: "SELECT_RANGE",
+        range: range({ startCol: 1, startRow: 1, endCol: 2, endRow: 2 }),
+      });
       state = xlsxEditorReducer(state, { type: "COPY" });
       expect(state.clipboard?.isCut).toBe(false);
 

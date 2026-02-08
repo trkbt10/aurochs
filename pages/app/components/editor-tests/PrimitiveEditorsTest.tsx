@@ -5,7 +5,7 @@
  */
 
 import { useState, type CSSProperties } from "react";
-import { FieldGroup } from "@oxen-ui/ui-components/layout";
+import { FieldGroup } from "@aurochs-ui/ui-components/layout";
 import {
   TransformEditor,
   PixelsEditor,
@@ -13,10 +13,10 @@ import {
   PercentEditor,
   PointsEditor,
   createDefaultTransform,
-} from "@oxen-ui/pptx-editor";
-import type { Transform } from "@oxen-office/pptx/domain/geometry";
-import type { Pixels, Degrees, Percent, Points } from "@oxen-office/drawing-ml/domain/units";
-import { px, deg, pct, pt } from "@oxen-office/drawing-ml/domain/units";
+} from "@aurochs-ui/pptx-editor";
+import type { Transform } from "@aurochs-office/pptx/domain/geometry";
+import type { Pixels, Degrees, Percent, Points } from "@aurochs-office/drawing-ml/domain/units";
+import { px, deg, pct, pt } from "@aurochs-office/drawing-ml/domain/units";
 
 const cardStyle: CSSProperties = {
   backgroundColor: "var(--bg-secondary)",

@@ -12,9 +12,9 @@ import {
   createDefaultColor,
   createDefaultSolidFill,
   createDefaultLine,
-} from "@oxen-ui/pptx-editor";
-import type { Color } from "@oxen-office/drawing-ml/domain/color";
-import type { Fill, Line } from "@oxen-office/pptx/domain/color/types";
+} from "@aurochs-ui/pptx-editor";
+import type { Color } from "@aurochs-office/drawing-ml/domain/color";
+import type { Fill, Line } from "@aurochs-office/pptx/domain/color/types";
 
 const cardStyle: CSSProperties = {
   backgroundColor: "var(--bg-secondary)",

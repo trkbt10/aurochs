@@ -6,7 +6,7 @@
  *
  * Disallows:
  *   export * from './utils'
- *   export * from '@oxen/core'
+ *   export * from '@aurochs/core'
  *
  * Allowed:
  *   export { foo, bar } from './utils'  // explicit named exports
@@ -17,15 +17,12 @@ export default {
   meta: {
     type: "problem",
     docs: {
-      description:
-        "Disallow `export * from` statements to maintain explicit exports",
+      description: "Disallow `export * from` statements to maintain explicit exports",
       recommended: true,
     },
     schema: [],
     messages: {
-      noExportStar:
-        "`export * from` is not allowed. Use explicit named exports instead. " +
-        "Source: '{{source}}'",
+      noExportStar: "`export * from` is not allowed. Use explicit named exports instead. " + "Source: '{{source}}'",
     },
   },
 

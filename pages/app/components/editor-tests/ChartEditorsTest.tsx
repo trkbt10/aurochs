@@ -17,9 +17,9 @@ import {
   createDefaultAxis,
   createDefaultChartSeries,
   createDefaultChart,
-} from "@oxen-ui/chart-editor";
-import { pptxChartEditorAdapters } from "@oxen-ui/pptx-editor/adapters";
-import type { DataLabels, Legend, Axis, ChartSeries, Chart } from "@oxen-office/chart/domain";
+} from "@aurochs-ui/chart-editor";
+import { pptxChartEditorAdapters } from "@aurochs-ui/pptx-editor/adapters";
+import type { DataLabels, Legend, Axis, ChartSeries, Chart } from "@aurochs-office/chart/domain";
 
 const cardStyle: CSSProperties = {
   backgroundColor: "var(--bg-secondary)",

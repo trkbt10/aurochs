@@ -8,11 +8,11 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadNativePdfDocument } from "@oxen/pdf/native";
-import { decodePdfStream } from "@oxen/pdf/native/stream/stream";
-import type { PdfDict, PdfObject, PdfStream } from "@oxen/pdf/native";
-import { parsePdf } from "@oxen/pdf";
-import { extractFontMappings } from "@oxen/pdf/parser/font/font-decoder";
+import { loadNativePdfDocument } from "@aurochs/pdf/native";
+import { decodePdfStream } from "@aurochs/pdf/native/stream/stream";
+import type { PdfDict, PdfObject, PdfStream } from "@aurochs/pdf/native";
+import { parsePdf } from "@aurochs/pdf";
+import { extractFontMappings } from "@aurochs/pdf/parser/font/font-decoder";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PDF_PATH = path.join(__dirname, "..", "..", "fixtures", "samples", "panel2.pdf");
@@ -34,7 +34,9 @@ describe("Text Garbling Diagnostic for panel2.pdf", () => {
     for (let pageIndex = 0; pageIndex < Math.min(pages.length, 2); pageIndex++) {
       console.log(`\n--- Page ${pageIndex + 1} ---\n`);
       const page = pages[pageIndex];
-      if (!page) {continue;}
+      if (!page) {
+        continue;
+      }
 
       // Extract font mappings
       const fontMappings = extractFontMappings(page);
@@ -54,9 +56,13 @@ describe("Text Garbling Diagnostic for panel2.pdf", () => {
           console.log(`  Sample ToUnicode mappings:`);
           let count = 0;
           for (const [code, unicode] of fontInfo.mapping.entries()) {
-            if (count >= 10) {break;}
+            if (count >= 10) {
+              break;
+            }
             const hex = code.toString(16).padStart(fontInfo.codeByteWidth === 2 ? 4 : 2, "0");
-            const unicodeHex = [...unicode].map(c => "U+" + c.codePointAt(0)?.toString(16).padStart(4, "0")).join(" ");
+            const unicodeHex = [...unicode]
+              .map((c) => "U+" + c.codePointAt(0)?.toString(16).padStart(4, "0"))
+              .join(" ");
             console.log(`    <${hex}> -> "${unicode}" (${unicodeHex})`);
             count++;
           }
@@ -70,9 +76,15 @@ describe("Text Garbling Diagnostic for panel2.pdf", () => {
             for (const char of unicode) {
               const cp = char.codePointAt(0);
               if (cp !== undefined) {
-                if (cp >= 0x3040 && cp <= 0x309F) {hasHiragana = true;}
-                if (cp >= 0x30A0 && cp <= 0x30FF) {hasKatakana = true;}
-                if (cp >= 0x4E00 && cp <= 0x9FFF) {hasKanji = true;}
+                if (cp >= 0x3040 && cp <= 0x309f) {
+                  hasHiragana = true;
+                }
+                if (cp >= 0x30a0 && cp <= 0x30ff) {
+                  hasKatakana = true;
+                }
+                if (cp >= 0x4e00 && cp <= 0x9fff) {
+                  hasKanji = true;
+                }
               }
             }
           }
@@ -97,9 +109,7 @@ describe("Text Garbling Diagnostic for panel2.pdf", () => {
           textElementCount++;
           console.log(`\nText Element ${textElementCount}:`);
 
-          const rawBytes = [...element.text]
-            .map((c) => c.charCodeAt(0).toString(16).padStart(2, "0"))
-            .join(" ");
+          const rawBytes = [...element.text].map((c) => c.charCodeAt(0).toString(16).padStart(2, "0")).join(" ");
           console.log(`  Raw text (hex): ${rawBytes.slice(0, 100)}${rawBytes.length > 100 ? "..." : ""}`);
           console.log(`  Decoded text: "${element.text.slice(0, 50)}${element.text.length > 50 ? "..." : ""}"`);
           console.log(`  Font: ${element.fontName} (baseFont: ${element.baseFont ?? "N/A"})`);
@@ -119,7 +129,7 @@ describe("Text Garbling Diagnostic for panel2.pdf", () => {
         }
       }
 
-      console.log(`\nTotal text elements on page 1: ${page1.elements.filter(e => e.type === "text").length}`);
+      console.log(`\nTotal text elements on page 1: ${page1.elements.filter((e) => e.type === "text").length}`);
     }
 
     console.log("\n=== DIAGNOSTIC COMPLETE ===\n");
@@ -134,7 +144,9 @@ describe("Text Garbling Diagnostic for panel2.pdf", () => {
     const pdfBuffer = fs.readFileSync(PDF_PATH);
     const pdfDoc = loadNativePdfDocument(pdfBuffer, { encryption: { mode: "ignore" } });
     const page = pdfDoc.getPages()[0];
-    if (!page) {return;}
+    if (!page) {
+      return;
+    }
 
     const asDict = (obj: PdfObject | undefined): PdfDict | null => (obj?.type === "dict" ? obj : null);
     const asName = (obj: PdfObject | undefined): string | null => (obj?.type === "name" ? obj.value : null);
@@ -157,20 +169,30 @@ describe("Text Garbling Diagnostic for panel2.pdf", () => {
 
     const findToUnicodeStream = (fontDict: PdfDict): PdfStream | null => {
       const direct = asStream(resolve(dictGet(fontDict, "ToUnicode")));
-      if (direct) {return direct;}
+      if (direct) {
+        return direct;
+      }
       const subtype = asName(resolve(dictGet(fontDict, "Subtype")));
-      if (subtype !== "Type0") {return null;}
+      if (subtype !== "Type0") {
+        return null;
+      }
       const descendants = asArray(resolve(dictGet(fontDict, "DescendantFonts")));
-      if (!descendants || descendants.items.length === 0) {return null;}
+      if (!descendants || descendants.items.length === 0) {
+        return null;
+      }
       const first = asDict(resolve(descendants.items[0]));
-      if (!first) {return null;}
+      if (!first) {
+        return null;
+      }
       return asStream(resolve(dictGet(first, "ToUnicode")));
     };
 
     for (const [name, ref] of fonts.map.entries()) {
       const fontName = name;
       const fontDict = asDict(resolve(ref));
-      if (!fontDict) {continue;}
+      if (!fontDict) {
+        continue;
+      }
 
       const subtype = asName(resolve(dictGet(fontDict, "Subtype"))) ?? "unknown";
       console.log(`\nFont: ${fontName} (/${subtype})`);

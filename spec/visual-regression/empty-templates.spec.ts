@@ -13,17 +13,17 @@
  */
 
 import * as fs from "node:fs";
-import { openPresentation } from "@oxen-office/pptx";
-import { LIBREOFFICE_RENDER_OPTIONS } from "@oxen-renderer/pptx/render-options";
+import { openPresentation } from "@aurochs-office/pptx";
+import { LIBREOFFICE_RENDER_OPTIONS } from "@aurochs-renderer/pptx/render-options";
 import { compareSvgToSnapshot, hasSnapshot, listSnapshots } from "./compare";
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
-import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
+import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
 
 type EmptyTemplateTestCase = {
   name: string;
   pptxPath: string;
   description: string;
-}
+};
 
 /**
  * Empty template files that should render as white
@@ -87,7 +87,7 @@ describe("Empty Template Visual Regression", () => {
           if (!result.match) {
             console.error(
               `Slide ${slideNum} diff: ${result.diffPercent.toFixed(2)}% ` +
-                `(threshold: 1%, pixels: ${result.diffPixels})`
+                `(threshold: 1%, pixels: ${result.diffPixels})`,
             );
           }
         }

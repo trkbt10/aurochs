@@ -9,11 +9,11 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type { PresentationFile, Presentation } from "@oxen-office/pptx";
-import { openPresentation } from "@oxen-office/pptx";
-import { getByPath, getChild, getChildren, isXmlElement, getAttr, type XmlElement } from "@oxen/xml";
+import type { PresentationFile, Presentation } from "@aurochs-office/pptx";
+import { openPresentation } from "@aurochs-office/pptx";
+import { getByPath, getChild, getChildren, isXmlElement, getAttr, type XmlElement } from "@aurochs/xml";
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
-import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
+import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
 
 const FIXTURE_PATH = "fixtures/poi-test-data/test-data/slideshow/shapes.pptx";
 
@@ -190,7 +190,7 @@ describe("shapes.pptx ECMA-376 compliance", () => {
 
       // fill="none" 以外の fill 属性があること
       const fillMatches = svg.match(/fill="([^"]+)"/g) || [];
-      const nonEmptyFills = fillMatches.filter(m => {
+      const nonEmptyFills = fillMatches.filter((m) => {
         const val = m.match(/fill="([^"]+)"/)?.[1];
         return val && val !== "none" && !val.startsWith("url(");
       });
@@ -248,7 +248,7 @@ describe("shapes.pptx ECMA-376 compliance", () => {
               child.name === "p:cxnSp" ||
               child.name === "p:pic" ||
               child.name === "p:grpSp" ||
-              child.name === "p:graphicFrame")
+              child.name === "p:graphicFrame"),
         );
 
         // shapes.pptx slide 1 には複数のシェイプが含まれる
@@ -266,7 +266,9 @@ describe("shapes.pptx ECMA-376 compliance", () => {
       if (isXmlElement(spTree)) {
         // Find Freeform 6 (custom geometry)
         for (const child of spTree.children) {
-          if (!isXmlElement(child) || child.name !== "p:sp") {continue;}
+          if (!isXmlElement(child) || child.name !== "p:sp") {
+            continue;
+          }
 
           const nvSpPr = getChild(child, "p:nvSpPr");
           const cNvPr = nvSpPr ? getChild(nvSpPr, "p:cNvPr") : undefined;
@@ -301,13 +303,17 @@ describe("shapes.pptx ECMA-376 compliance", () => {
       const spTree = getByPath(slide.content, ["p:sld", "p:cSld", "p:spTree"]);
 
       expect(isXmlElement(spTree)).toBe(true);
-      if (!isXmlElement(spTree)) {return;}
+      if (!isXmlElement(spTree)) {
+        return;
+      }
 
       // Find shapes with p:style/a:fillRef (recursively through groups)
       const findFillRefs = (parent: XmlElement): XmlElement[] => {
         const results: XmlElement[] = [];
         for (const child of parent.children) {
-          if (!isXmlElement(child)) {continue;}
+          if (!isXmlElement(child)) {
+            continue;
+          }
 
           if (child.name === "p:sp") {
             const style = getChild(child, "p:style");
@@ -339,14 +345,12 @@ describe("shapes.pptx ECMA-376 compliance", () => {
      */
     it("should have fillStyleLst in theme", () => {
       const slide = presentation.getSlide(3);
-      const fmtScheme = getByPath(slide.theme, [
-        "a:theme",
-        "a:themeElements",
-        "a:fmtScheme",
-      ]);
+      const fmtScheme = getByPath(slide.theme, ["a:theme", "a:themeElements", "a:fmtScheme"]);
 
       expect(isXmlElement(fmtScheme)).toBe(true);
-      if (!isXmlElement(fmtScheme)) {return;}
+      if (!isXmlElement(fmtScheme)) {
+        return;
+      }
 
       const fillStyleLst = getChild(fmtScheme, "a:fillStyleLst");
       expect(fillStyleLst).toBeDefined();

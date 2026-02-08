@@ -6,8 +6,8 @@
  *
  * Usage: bun run scripts/analyze/analyze-colors.ts <pptx-path> <slide-number>
  */
-import { openPresentation } from "@oxen-office/pptx";
-import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
+import { openPresentation } from "@aurochs-office/pptx";
+import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
 import { requireFileExists, requireIntArg, requirePositionalArg } from "../lib/cli";
 import { loadPptxFile } from "../lib/pptx-loader";
 
@@ -143,7 +143,7 @@ async function main() {
     const slideColors = extractPptxColors(slideXml);
     for (const color of slideColors) {
       if (color.transforms.length > 0) {
-        const transformStr = color.transforms.map(t => `${t.type}:${t.value}%`).join(", ");
+        const transformStr = color.transforms.map((t) => `${t.type}:${t.value}%`).join(", ");
         console.log(`  ${color.type}:${color.value} [${transformStr}]`);
       } else if (color.type === "scheme") {
         console.log(`  scheme:${color.value}`);
@@ -176,8 +176,18 @@ async function main() {
           if (schemeMatch) {
             const schemeContent = schemeMatch[1];
             const colorElements = [
-              "dk1", "lt1", "dk2", "lt2", "accent1", "accent2", "accent3",
-              "accent4", "accent5", "accent6", "hlink", "folHlink",
+              "dk1",
+              "lt1",
+              "dk2",
+              "lt2",
+              "accent1",
+              "accent2",
+              "accent3",
+              "accent4",
+              "accent5",
+              "accent6",
+              "hlink",
+              "folHlink",
             ];
 
             for (const elem of colorElements) {
@@ -221,7 +231,7 @@ async function main() {
   console.log("\n");
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error(err);
   process.exit(1);
 });

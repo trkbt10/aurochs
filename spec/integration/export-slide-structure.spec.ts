@@ -15,14 +15,14 @@
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
-import { convertToPresentationDocument } from "@oxen-office/pptx/app";
-import { loadPptxBundleFromBuffer } from "@oxen-office/pptx/app/pptx-loader";
-import { openPresentation } from "@oxen-office/pptx";
-import { exportPptxAsBuffer } from "@oxen-builder/pptx/export";
-import { getBasename, getByPath, getChildren, parseXml } from "@oxen/xml";
-import { CONTENT_TYPES, RELATIONSHIP_TYPES } from "@oxen-office/pptx/domain";
-import { getRelationshipPath } from "@oxen-office/pptx/parser/relationships";
-import { addSlide, duplicateSlide, removeSlide, reorderSlide } from "@oxen-builder/pptx/slide-ops";
+import { convertToPresentationDocument } from "@aurochs-office/pptx/app";
+import { loadPptxBundleFromBuffer } from "@aurochs-office/pptx/app/pptx-loader";
+import { openPresentation } from "@aurochs-office/pptx";
+import { exportPptxAsBuffer } from "@aurochs-builder/pptx/export";
+import { getBasename, getByPath, getChildren, parseXml } from "@aurochs/xml";
+import { CONTENT_TYPES, RELATIONSHIP_TYPES } from "@aurochs-office/pptx/domain";
+import { getRelationshipPath } from "@aurochs-office/pptx/parser/relationships";
+import { addSlide, duplicateSlide, removeSlide, reorderSlide } from "@aurochs-builder/pptx/slide-ops";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURE_DIR = path.resolve(__dirname, "../../fixtures");
@@ -39,10 +39,7 @@ function getSlideEntriesFromPresentationXml(xmlText: string): { id: string; rId:
   }));
 }
 
-function getRelationshipTargetById(
-  relsXmlText: string,
-  rId: string,
-): { type: string; target: string } {
+function getRelationshipTargetById(relsXmlText: string, rId: string): { type: string; target: string } {
   const doc = parseXml(relsXmlText);
   const root = getByPath(doc, ["Relationships"]);
   if (!root) {
@@ -55,10 +52,7 @@ function getRelationshipTargetById(
   return { type: rel.attrs.Type ?? "", target: rel.attrs.Target ?? "" };
 }
 
-function getSlideFilenamesFromPresentationParts(
-  presentationXmlText: string,
-  presentationRelsText: string,
-): string[] {
+function getSlideFilenamesFromPresentationParts(presentationXmlText: string, presentationRelsText: string): string[] {
   const entries = getSlideEntriesFromPresentationXml(presentationXmlText);
   return entries.map((entry) => {
     const rel = getRelationshipTargetById(presentationRelsText, entry.rId);

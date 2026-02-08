@@ -12,10 +12,10 @@ import {
   createDefaultDiagramDataModel,
   createDefaultDiagramPoint,
   createDefaultDiagramConnection,
-} from "@oxen-ui/diagram-editor";
-import { pptxDiagramEditorAdapters } from "@oxen-ui/pptx-editor/adapters";
-import type { DiagramDataModel, DiagramPoint, DiagramConnection } from "@oxen-office/diagram/domain";
-import type { TextBody } from "@oxen-office/pptx/domain/text";
+} from "@aurochs-ui/diagram-editor";
+import { pptxDiagramEditorAdapters } from "@aurochs-ui/pptx-editor/adapters";
+import type { DiagramDataModel, DiagramPoint, DiagramConnection } from "@aurochs-office/diagram/domain";
+import type { TextBody } from "@aurochs-office/pptx/domain/text";
 
 const cardStyle: CSSProperties = {
   backgroundColor: "var(--bg-secondary)",
@@ -83,9 +83,24 @@ export function DiagramEditorTest() {
     return {
       ...defaultModel,
       points: [
-        { modelId: "1", type: "node", textBody: { ...sampleTextBody, paragraphs: [{ properties: {}, runs: [{ type: "text", text: "Root" }] }] } },
-        { modelId: "2", type: "node", textBody: { ...sampleTextBody, paragraphs: [{ properties: {}, runs: [{ type: "text", text: "Child 1" }] }] } },
-        { modelId: "3", type: "asst", textBody: { ...sampleTextBody, paragraphs: [{ properties: {}, runs: [{ type: "text", text: "Assistant" }] }] } },
+        {
+          modelId: "1",
+          type: "node",
+          textBody: { ...sampleTextBody, paragraphs: [{ properties: {}, runs: [{ type: "text", text: "Root" }] }] },
+        },
+        {
+          modelId: "2",
+          type: "node",
+          textBody: { ...sampleTextBody, paragraphs: [{ properties: {}, runs: [{ type: "text", text: "Child 1" }] }] },
+        },
+        {
+          modelId: "3",
+          type: "asst",
+          textBody: {
+            ...sampleTextBody,
+            paragraphs: [{ properties: {}, runs: [{ type: "text", text: "Assistant" }] }],
+          },
+        },
       ],
       connections: [
         { modelId: "c1", type: "parOf", sourceId: "1", destinationId: "2" },
@@ -106,11 +121,7 @@ export function DiagramEditorTest() {
       {/* DiagramPoint Editor */}
       <div style={cardStyle}>
         <h2 style={cardTitleStyle}>Diagram Point Editor</h2>
-        <DiagramPointEditor
-          value={diagramPoint}
-          onChange={setDiagramPoint}
-          adapters={pptxDiagramEditorAdapters}
-        />
+        <DiagramPointEditor value={diagramPoint} onChange={setDiagramPoint} adapters={pptxDiagramEditorAdapters} />
         <div style={valueDisplayStyle}>{JSON.stringify(diagramPoint, null, 2)}</div>
       </div>
 
@@ -129,11 +140,7 @@ export function DiagramEditorTest() {
       {/* DiagramDataModel Editor (full) */}
       <div style={{ ...cardStyle, gridColumn: "1 / -1" }}>
         <h2 style={cardTitleStyle}>Diagram Editor (Full Data Model)</h2>
-        <DiagramEditor
-          value={diagramDataModel}
-          onChange={setDiagramDataModel}
-          adapters={pptxDiagramEditorAdapters}
-        />
+        <DiagramEditor value={diagramDataModel} onChange={setDiagramDataModel} adapters={pptxDiagramEditorAdapters} />
         <div style={valueDisplayStyle}>{JSON.stringify(diagramDataModel, null, 2)}</div>
       </div>
     </div>

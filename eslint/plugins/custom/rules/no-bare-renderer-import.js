@@ -1,44 +1,38 @@
 /**
- * @file Custom rule: prohibit bare @oxen-renderer/* imports for reorganized packages.
+ * @file Custom rule: prohibit bare @aurochs-renderer/* imports for reorganized packages.
  *
  * Packages that have been reorganized into sub-path exports (e.g., /react, /svg, /ascii)
  * should not be imported via their bare package name.
  *
  * Disallows:
- *   import { Foo } from '@oxen-renderer/drawing-ml'
- *   import { Bar } from '@oxen-renderer/chart'
+ *   import { Foo } from '@aurochs-renderer/drawing-ml'
+ *   import { Bar } from '@aurochs-renderer/chart'
  *
  * Allowed:
- *   import { Foo } from '@oxen-renderer/drawing-ml/react'
- *   import { Bar } from '@oxen-renderer/chart/svg'
- *   import { baz } from '@oxen-renderer/chart/ascii'
+ *   import { Foo } from '@aurochs-renderer/drawing-ml/react'
+ *   import { Bar } from '@aurochs-renderer/chart/svg'
+ *   import { baz } from '@aurochs-renderer/chart/ascii'
  */
 
 /** Packages that must not be imported via bare path */
-const RESTRICTED_PACKAGES = new Set([
-  "@oxen-renderer/drawing-ml",
-  "@oxen-renderer/chart",
-]);
+const RESTRICTED_PACKAGES = new Set(["@aurochs-renderer/drawing-ml", "@aurochs-renderer/chart"]);
 
 /** Human-readable sub-paths per package */
 const SUB_PATHS = {
-  "@oxen-renderer/drawing-ml": "/react or /ascii",
-  "@oxen-renderer/chart": "/svg or /ascii",
+  "@aurochs-renderer/drawing-ml": "/react or /ascii",
+  "@aurochs-renderer/chart": "/svg or /ascii",
 };
 
 export default {
   meta: {
     type: "problem",
     docs: {
-      description:
-        "Disallow bare @oxen-renderer/* imports for reorganized packages; use explicit sub-path imports",
+      description: "Disallow bare @aurochs-renderer/* imports for reorganized packages; use explicit sub-path imports",
       recommended: true,
     },
     schema: [],
     messages: {
-      noBareImport:
-        "Bare '{{source}}' import is not allowed. " +
-        "Use '{{source}}/{{subPaths}}' instead.",
+      noBareImport: "Bare '{{source}}' import is not allowed. " + "Use '{{source}}/{{subPaths}}' instead.",
     },
   },
 

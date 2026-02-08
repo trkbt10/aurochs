@@ -10,18 +10,25 @@
 import fs from "node:fs";
 import path from "node:path";
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
-import { openPresentation } from "@oxen-office/pptx";
-import { createElement, parseXml, serializeDocument, type XmlDocument, type XmlElement, isXmlElement } from "@oxen/xml";
-import { patchChartData, patchChartTitle } from "@oxen-builder/chart/patcher";
-import { parseChart } from "@oxen-office/chart/parser";
-import type { DataReference } from "@oxen-office/chart/domain";
-import { patchTable, patchDiagramNodeText, patchOleObject } from "@oxen-builder/pptx/patcher";
-import { parseTable, parseGraphicFrame } from "@oxen-office/pptx/parser";
-import { parseDiagramDataModel } from "@oxen-office/diagram/parser/diagram/data-parser";
-import { parseShapeProperties } from "@oxen-office/pptx/parser/shape-parser/properties";
-import { parseTextBody } from "@oxen-office/pptx/parser/text/text-parser";
-import { deg, px } from "@oxen-office/drawing-ml/domain/units";
-import type { TextBody } from "@oxen-office/pptx/domain/text";
+import { openPresentation } from "@aurochs-office/pptx";
+import {
+  createElement,
+  parseXml,
+  serializeDocument,
+  type XmlDocument,
+  type XmlElement,
+  isXmlElement,
+} from "@aurochs/xml";
+import { patchChartData, patchChartTitle } from "@aurochs-builder/chart/patcher";
+import { parseChart } from "@aurochs-office/chart/parser";
+import type { DataReference } from "@aurochs-office/chart/domain";
+import { patchTable, patchDiagramNodeText, patchOleObject } from "@aurochs-builder/pptx/patcher";
+import { parseTable, parseGraphicFrame } from "@aurochs-office/pptx/parser";
+import { parseDiagramDataModel } from "@aurochs-office/diagram/parser/diagram/data-parser";
+import { parseShapeProperties } from "@aurochs-office/pptx/parser/shape-parser/properties";
+import { parseTextBody } from "@aurochs-office/pptx/parser/text/text-parser";
+import { deg, px } from "@aurochs-office/drawing-ml/domain/units";
+import type { TextBody } from "@aurochs-office/pptx/domain/text";
 
 const FIXTURES_DIR = path.resolve(process.cwd(), "fixtures/poi-test-data/test-data/slideshow");
 
@@ -33,7 +40,11 @@ function readXml(pkg: Awaited<ReturnType<typeof loadPptxFile>>["zipPackage"], pa
   return parseXml(xmlText);
 }
 
-function writeXml(pkg: Awaited<ReturnType<typeof loadPptxFile>>["zipPackage"], partPath: string, doc: XmlDocument): void {
+function writeXml(
+  pkg: Awaited<ReturnType<typeof loadPptxFile>>["zipPackage"],
+  partPath: string,
+  doc: XmlDocument,
+): void {
   const xml = serializeDocument(doc, { declaration: true, standalone: true });
   pkg.writeText(partPath, xml);
 }
@@ -265,9 +276,7 @@ describe("Phase 10 - Advanced elements", () => {
       if (!isPptxTextBody(tb)) {
         return false;
       }
-      return tb.paragraphs.some((para) =>
-        para.runs.some((run) => run.type === "text" && run.text.length > 0),
-      );
+      return tb.paragraphs.some((para) => para.runs.some((run) => run.type === "text" && run.text.length > 0));
     });
     if (!pointWithText) {
       throw new Error("expected diagram to contain a point with text");

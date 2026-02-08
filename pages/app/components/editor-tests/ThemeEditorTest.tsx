@@ -11,11 +11,11 @@ import {
   ColorSchemeEditor,
   FontSchemeEditor,
   ThemePresetSelector,
-} from "@oxen-ui/pptx-editor/panels/theme-editor";
-import type { ThemePreset } from "@oxen-ui/pptx-editor/panels/theme-editor/types";
-import type { ColorScheme } from "@oxen-office/drawing-ml/domain/color-context";
-import type { SchemeColorName } from "@oxen-office/drawing-ml/domain/color";
-import type { FontScheme, FontSpec } from "@oxen-office/ooxml/domain/font-scheme";
+} from "@aurochs-ui/pptx-editor/panels/theme-editor";
+import type { ThemePreset } from "@aurochs-ui/pptx-editor/panels/theme-editor/types";
+import type { ColorScheme } from "@aurochs-office/drawing-ml/domain/color-context";
+import type { SchemeColorName } from "@aurochs-office/drawing-ml/domain/color";
+import type { FontScheme, FontSpec } from "@aurochs-office/ooxml/domain/font-scheme";
 
 const containerStyle: CSSProperties = {
   display: "flex",
@@ -140,15 +140,11 @@ export function ThemeEditorTest() {
           </div>
           <div style={columnStyle}>
             <h4 style={{ fontSize: "14px", marginBottom: "8px" }}>Color Scheme</h4>
-            <div style={stateDisplayStyle}>
-              {JSON.stringify(colorScheme, null, 2)}
-            </div>
+            <div style={stateDisplayStyle}>{JSON.stringify(colorScheme, null, 2)}</div>
           </div>
           <div style={columnStyle}>
             <h4 style={{ fontSize: "14px", marginBottom: "8px" }}>Font Scheme</h4>
-            <div style={stateDisplayStyle}>
-              {JSON.stringify(fontScheme, null, 2)}
-            </div>
+            <div style={stateDisplayStyle}>{JSON.stringify(fontScheme, null, 2)}</div>
           </div>
         </div>
       </div>
@@ -173,10 +169,7 @@ export function ThemeEditorTest() {
         <div style={{ ...sectionStyle, ...columnStyle }}>
           <h3 style={sectionTitleStyle}>ColorSchemeEditor</h3>
           <div style={{ height: "350px", overflow: "auto" }}>
-            <ColorSchemeEditor
-              colorScheme={colorScheme}
-              onColorChange={handleColorChange}
-            />
+            <ColorSchemeEditor colorScheme={colorScheme} onColorChange={handleColorChange} />
           </div>
         </div>
 
@@ -194,9 +187,7 @@ export function ThemeEditorTest() {
         <div style={{ ...sectionStyle, ...columnStyle }}>
           <h3 style={sectionTitleStyle}>ThemePresetSelector</h3>
           <div style={{ height: "350px", overflow: "auto" }}>
-            <ThemePresetSelector
-              onPresetSelect={handlePresetSelect}
-            />
+            <ThemePresetSelector onPresetSelect={handlePresetSelect} />
           </div>
         </div>
       </div>

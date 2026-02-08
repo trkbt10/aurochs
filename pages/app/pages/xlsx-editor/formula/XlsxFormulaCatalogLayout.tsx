@@ -8,8 +8,8 @@ import {
   getFunctionsByCategory,
   listFunctionCategories,
   type FormulaFunctionDefinition,
-} from "@oxen-office/xlsx/formula/functionRegistry";
-import { Input } from "@oxen-ui/ui-components/primitives";
+} from "@aurochs-office/xlsx/formula/functionRegistry";
+import { Input } from "@aurochs-ui/ui-components/primitives";
 
 type NavItem = {
   readonly path: string;
@@ -60,10 +60,12 @@ function buildFunctionNavSections(): readonly NavSection[] {
     return {
       title: category,
       collapsible: true,
-      items: functions.map((fn): NavItem => ({
-        path: `/xlsx-editor/formula/${category}/${fn.name.toLowerCase()}`,
-        label: fn.name,
-      })),
+      items: functions.map(
+        (fn): NavItem => ({
+          path: `/xlsx-editor/formula/${category}/${fn.name.toLowerCase()}`,
+          label: fn.name,
+        }),
+      ),
     };
   });
 }

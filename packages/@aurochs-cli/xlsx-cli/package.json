@@ -1,0 +1,25 @@
+{
+  "name": "@aurochs-cli/xlsx-cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "xlsx": "./dist/cli.js"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "bun build src/cli.ts --target bun --outdir dist --packages external",
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-cli/xlsx-cli/src'"
+  },
+  "dependencies": {
+    "@aurochs-cli/cli-core": "workspace:*",
+    "@aurochs-builder/xlsx": "workspace:*",
+    "@aurochs-office/xlsx": "workspace:*",
+    "@aurochs-renderer/xlsx": "workspace:*",
+    "@aurochs/zip": "workspace:*",
+    "commander": "^12.0.0"
+  }
+}

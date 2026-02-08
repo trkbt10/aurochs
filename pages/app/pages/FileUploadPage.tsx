@@ -8,17 +8,9 @@ import {
   PdfImportError,
   type PdfImportOptions,
   type PdfImportResult,
-} from "@oxen-converters/pdf-to-pptx/importer/pdf-importer";
-import type { PresentationDocument } from "@oxen-office/pptx/app";
-import {
-  UploadIcon,
-  ArrowRightIcon,
-  GridIcon,
-  PlayIcon,
-  ShieldIcon,
-  GitHubIcon,
-  LogoIcon,
-} from "../components/ui";
+} from "@aurochs-converters/pdf-to-pptx/importer/pdf-importer";
+import type { PresentationDocument } from "@aurochs-office/pptx/app";
+import { UploadIcon, ArrowRightIcon, GridIcon, PlayIcon, ShieldIcon, GitHubIcon, LogoIcon } from "../components/ui";
 import "./FileUploadPage.css";
 
 type FileType = "pptx" | "pdf";
@@ -146,7 +138,7 @@ export function FileUploadPage({
         setImportState({ status: "error", error: getErrorMessage(error) });
       }
     },
-    [importPdfFromFile, onFileSelect]
+    [importPdfFromFile, onFileSelect],
   );
 
   const handleFileSelect = useCallback(
@@ -161,7 +153,7 @@ export function FileUploadPage({
         await onPdfSelect(file);
       }
     },
-    [onFileSelect, onPdfSelect]
+    [onFileSelect, onPdfSelect],
   );
 
   const handleFileChange = useCallback(
@@ -171,7 +163,7 @@ export function FileUploadPage({
         void handleFileSelect(file);
       }
     },
-    [handleFileSelect, validateFile]
+    [handleFileSelect, validateFile],
   );
 
   const handleDrop = useCallback(
@@ -184,7 +176,7 @@ export function FileUploadPage({
         void handleFileSelect(file);
       }
     },
-    [handleFileSelect, validateFile]
+    [handleFileSelect, validateFile],
   );
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -228,9 +220,7 @@ export function FileUploadPage({
         <div className="upload-text">
           <span className="upload-primary">Drop a file here</span>
           <span className="upload-secondary">Supported formats: PPTX, PDF</span>
-          {importState.status === "error" && (
-            <span className="upload-secondary upload-error">{importState.error}</span>
-          )}
+          {importState.status === "error" && <span className="upload-secondary upload-error">{importState.error}</span>}
           <span className="upload-secondary">or click to browse</span>
         </div>
       </>
@@ -255,12 +245,7 @@ export function FileUploadPage({
           </div>
           <span className="logo-text">web-pptx</span>
         </div>
-        <a
-          href="https://github.com/trkbt10/web-pptx"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="github-link"
-        >
+        <a href="https://github.com/trkbt10/web-pptx" target="_blank" rel="noopener noreferrer" className="github-link">
           <GitHubIcon size={20} />
         </a>
       </header>
@@ -354,9 +339,7 @@ export function FileUploadPage({
 
       {/* Footer */}
       <footer className={`upload-footer ${mounted ? "mounted" : ""}`}>
-        <span className="footer-text">
-          Built with precision. Powered by TypeScript.
-        </span>
+        <span className="footer-text">Built with precision. Powered by TypeScript.</span>
         {onEditorTest && (
           <button
             className="editor-test-link"

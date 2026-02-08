@@ -5,8 +5,8 @@ import {
   PdfImportError,
   type PdfImportOptions,
   type PdfImportResult,
-} from "@oxen-converters/pdf-to-pptx/importer/pdf-importer";
-import type { PresentationDocument } from "@oxen-office/pptx/app";
+} from "@aurochs-converters/pdf-to-pptx/importer/pdf-importer";
+import type { PresentationDocument } from "@aurochs-office/pptx/app";
 
 type PdfImportDeps = {
   readonly importPdfFromFile: typeof importPdfFromFile;
@@ -51,36 +51,6 @@ function toPdfImportError(args: {
   const message = err instanceof Error ? err.message : String(err);
   return new PdfImportErrorCtor(message, code);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 function usePdfImport(deps: Partial<PdfImportDeps> = {}): UsePdfImportReturn {
   const {

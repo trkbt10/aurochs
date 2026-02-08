@@ -3,10 +3,10 @@
  */
 
 import * as fs from "node:fs";
-import type { PresentationFile } from "@oxen-office/pptx";
-import { openPresentation } from "@oxen-office/pptx";
+import type { PresentationFile } from "@aurochs-office/pptx";
+import { openPresentation } from "@aurochs-office/pptx";
 import { loadPptxFile } from "../scripts/lib/pptx-loader";
-import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
+import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
 
 describe("Background integration tests", () => {
   describe("aptia.pptx - background from slideMaster", () => {
@@ -209,9 +209,7 @@ describe("Background integration tests", () => {
       const cSld = sldMasterChildren?.find((c) => c.name === "p:cSld");
       const cSldChildren = cSld?.children as Array<{ name?: string; children?: unknown[] }> | undefined;
       const bg = cSldChildren?.find((c) => c.name === "p:bg");
-      const bgChildren = bg?.children as
-        | Array<{ name?: string; attrs?: Record<string, string> }>
-        | undefined;
+      const bgChildren = bg?.children as Array<{ name?: string; attrs?: Record<string, string> }> | undefined;
       const bgRef = bgChildren?.find((c) => c.name === "p:bgRef");
 
       expect(bgRef).toBeDefined();

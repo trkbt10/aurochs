@@ -12,12 +12,12 @@
  */
 
 import * as fs from "node:fs";
-import type { PresentationFile } from "@oxen-office/pptx";
-import { openPresentation } from "@oxen-office/pptx";
-import { LIBREOFFICE_RENDER_OPTIONS } from "@oxen-renderer/pptx/render-options";
+import type { PresentationFile } from "@aurochs-office/pptx";
+import { openPresentation } from "@aurochs-office/pptx";
+import { LIBREOFFICE_RENDER_OPTIONS } from "@aurochs-renderer/pptx/render-options";
 import { compareSvgToSnapshot, hasSnapshot, listSnapshots } from "../visual-regression/compare";
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
-import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
+import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
 
 type TestCase = {
   name: string;
@@ -36,13 +36,13 @@ const TEST_CASES: TestCase[] = [
   {
     name: "kerning-none",
     pptxPath: "fixtures/font-spacing/kerning/kerning-none.pptx",
-    description: "Kerning disabled (kern=\"0\")",
+    description: 'Kerning disabled (kern="0")',
     maxDiffPercent: 5,
   },
   {
     name: "kerning-specific",
     pptxPath: "fixtures/font-spacing/kerning/kerning-specific.pptx",
-    description: "Specific kerning threshold (kern=\"1200\")",
+    description: 'Specific kerning threshold (kern="1200")',
     maxDiffPercent: 5,
   },
 ];

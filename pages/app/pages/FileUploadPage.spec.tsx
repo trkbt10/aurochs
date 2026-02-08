@@ -2,10 +2,14 @@
 
 import { render, fireEvent, screen, waitFor } from "@testing-library/react";
 import type { ComponentProps } from "react";
-import { px } from "@oxen-office/drawing-ml/domain/units";
-import { createEmptyResourceResolver } from "@oxen-office/pptx/domain/resource-resolver";
-import type { PresentationDocument } from "@oxen-office/pptx/app";
-import { PdfImportError, type PdfImportOptions, type PdfImportResult } from "@oxen-converters/pdf-to-pptx/importer/pdf-importer";
+import { px } from "@aurochs-office/drawing-ml/domain/units";
+import { createEmptyResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
+import type { PresentationDocument } from "@aurochs-office/pptx/app";
+import {
+  PdfImportError,
+  type PdfImportOptions,
+  type PdfImportResult,
+} from "@aurochs-converters/pdf-to-pptx/importer/pdf-importer";
 import { FileUploadPage } from "./FileUploadPage";
 
 type FileUploadPageProps = ComponentProps<typeof FileUploadPage>;
@@ -86,11 +90,7 @@ describe("FileUploadPage", () => {
     };
 
     const { container } = render(
-      <FileUploadPage
-        onFileSelect={onFileSelect.fn}
-        onDemoLoad={() => {}}
-        importPdfFromFileFn={importPdfFromFileFn}
-      />,
+      <FileUploadPage onFileSelect={onFileSelect.fn} onDemoLoad={() => {}} importPdfFromFileFn={importPdfFromFileFn} />,
     );
 
     const file = new File([new Uint8Array([1, 2, 3])], "test.pdf", { type: "application/pdf" });
@@ -113,11 +113,7 @@ describe("FileUploadPage", () => {
     };
 
     const { container } = render(
-      <FileUploadPage
-        onFileSelect={onFileSelect.fn}
-        onDemoLoad={() => {}}
-        importPdfFromFileFn={importPdfFromFileFn}
-      />,
+      <FileUploadPage onFileSelect={onFileSelect.fn} onDemoLoad={() => {}} importPdfFromFileFn={importPdfFromFileFn} />,
     );
 
     const file = new File([new Uint8Array([1, 2, 3])], "test.pdf", { type: "application/pdf" });
@@ -136,11 +132,7 @@ describe("FileUploadPage", () => {
     };
     const onFileSelect = createCallTracker<[OnFileSelectArg]>();
     const { container } = render(
-      <FileUploadPage
-        onFileSelect={onFileSelect.fn}
-        onDemoLoad={() => {}}
-        importPdfFromFileFn={importPdfFromFileFn}
-      />,
+      <FileUploadPage onFileSelect={onFileSelect.fn} onDemoLoad={() => {}} importPdfFromFileFn={importPdfFromFileFn} />,
     );
 
     const file = new File([new Uint8Array([1, 2, 3])], "test.txt", { type: "text/plain" });
@@ -157,11 +149,7 @@ describe("FileUploadPage", () => {
     };
     const onFileSelect = createCallTracker<[OnFileSelectArg]>();
     const { container } = render(
-      <FileUploadPage
-        onFileSelect={onFileSelect.fn}
-        onDemoLoad={() => {}}
-        importPdfFromFileFn={importPdfFromFileFn}
-      />,
+      <FileUploadPage onFileSelect={onFileSelect.fn} onDemoLoad={() => {}} importPdfFromFileFn={importPdfFromFileFn} />,
     );
 
     const file = new File([new Uint8Array([1, 2, 3])], "test.pdf", { type: "application/pdf" });
@@ -190,11 +178,7 @@ describe("FileUploadPage", () => {
     };
 
     const { container } = render(
-      <FileUploadPage
-        onFileSelect={onFileSelect.fn}
-        onDemoLoad={() => {}}
-        importPdfFromFileFn={importPdfFromFileFn}
-      />,
+      <FileUploadPage onFileSelect={onFileSelect.fn} onDemoLoad={() => {}} importPdfFromFileFn={importPdfFromFileFn} />,
     );
 
     const file = new File([new Uint8Array([1, 2, 3])], "test.pdf", { type: "application/pdf" });

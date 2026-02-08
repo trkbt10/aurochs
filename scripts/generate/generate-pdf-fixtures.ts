@@ -2,7 +2,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-export const DEFAULT_PDF_FIXTURE_DIR = path.resolve("packages/@oxen-converters/pdf-to-pptx/spec/fixtures/pdf");
+export const DEFAULT_PDF_FIXTURE_DIR = path.resolve("packages/@aurochs-converters/pdf-to-pptx/spec/fixtures/pdf");
 
 export type GeneratePdfFixturesOptions = {
   readonly outputDir: string;
@@ -28,46 +28,23 @@ function copyFixtureToDir(outputDir: string, fileName: string): void {
 
 const FIXTURES: readonly FixtureWriter[] = [
   { fileName: "simple-rect.pdf", generate: async ({ outputDir }) => copyFixtureToDir(outputDir, "simple-rect.pdf") },
-  { fileName: "bezier-curves.pdf", generate: async ({ outputDir }) => copyFixtureToDir(outputDir, "bezier-curves.pdf") },
-  { fileName: "colored-shapes.pdf", generate: async ({ outputDir }) => copyFixtureToDir(outputDir, "colored-shapes.pdf") },
+  {
+    fileName: "bezier-curves.pdf",
+    generate: async ({ outputDir }) => copyFixtureToDir(outputDir, "bezier-curves.pdf"),
+  },
+  {
+    fileName: "colored-shapes.pdf",
+    generate: async ({ outputDir }) => copyFixtureToDir(outputDir, "colored-shapes.pdf"),
+  },
   { fileName: "text-content.pdf", generate: async ({ outputDir }) => copyFixtureToDir(outputDir, "text-content.pdf") },
   { fileName: "multi-page.pdf", generate: async ({ outputDir }) => copyFixtureToDir(outputDir, "multi-page.pdf") },
-  { fileName: "mixed-content.pdf", generate: async ({ outputDir }) => copyFixtureToDir(outputDir, "mixed-content.pdf") },
+  {
+    fileName: "mixed-content.pdf",
+    generate: async ({ outputDir }) => copyFixtureToDir(outputDir, "mixed-content.pdf"),
+  },
 ];
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-export async function generatePdfFixtures(
-  options: GeneratePdfFixturesOptions,
-): Promise<readonly string[]> {
+export async function generatePdfFixtures(options: GeneratePdfFixturesOptions): Promise<readonly string[]> {
   fs.mkdirSync(options.outputDir, { recursive: true });
 
   const generated: string[] = [];
@@ -90,11 +67,15 @@ function parseArgs(argv: readonly string[]): GeneratePdfFixturesOptions {
 
   while (args.length > 0) {
     const arg = args.shift();
-    if (!arg) {break;}
+    if (!arg) {
+      break;
+    }
 
     if (arg === "--outputDir") {
       const value = args.shift();
-      if (!value) {throw new Error("--outputDir requires a value");}
+      if (!value) {
+        throw new Error("--outputDir requires a value");
+      }
       outputDir = value;
       continue;
     }

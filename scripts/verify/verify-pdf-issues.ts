@@ -4,11 +4,11 @@
  * Usage: bun run scripts/verify/verify-pdf-issues.ts <pdf-path> <output-pptx-path>
  */
 import * as fs from "node:fs";
-import { importPdf } from "@oxen-converters/pdf-to-pptx/importer/pdf-importer";
-import { exportPptx } from "@oxen-builder/pptx/export";
-import { px } from "@oxen-office/drawing-ml/domain/units";
-import { loadZipPackage } from "@oxen/zip";
-import { parsePdf } from "@oxen/pdf";
+import { importPdf } from "@aurochs-converters/pdf-to-pptx/importer/pdf-importer";
+import { exportPptx } from "@aurochs-builder/pptx/export";
+import { px } from "@aurochs-office/drawing-ml/domain/units";
+import { loadZipPackage } from "@aurochs/zip";
+import { parsePdf } from "@aurochs/pdf";
 import { requireFileExists, requirePositionalArg } from "../lib/cli";
 
 async function main() {
@@ -33,7 +33,7 @@ async function main() {
 
   // Import with specific slide size
   const result2 = await importPdf(pdfBuffer, {
-    slideSize: { width: px(960), height: px(540) }
+    slideSize: { width: px(960), height: px(540) },
   });
   console.log(`Specified slide size (960x540): ${result2.document.slideWidth} x ${result2.document.slideHeight}`);
 
@@ -41,24 +41,30 @@ async function main() {
   const parsed = await parsePdf(pdfBuffer, { pages: [1] });
   const page = parsed.pages[0];
   console.log(`PDF page size: ${page?.width.toFixed(2)} x ${page?.height.toFixed(2)} points`);
-  console.log(`PDF page size in px (1pt = 1.33px): ${((page?.width ?? 0) * 1.33).toFixed(0)} x ${((page?.height ?? 0) * 1.33).toFixed(0)} px`);
+  console.log(
+    `PDF page size in px (1pt = 1.33px): ${((page?.width ?? 0) * 1.33).toFixed(0)} x ${((page?.height ?? 0) * 1.33).toFixed(0)} px`,
+  );
 
   // Issue 2: Text encoding
   console.log("\n--- Issue 2: Text Encoding ---");
   const shapes = result1.document.slides[0]?.slide.shapes ?? [];
-  const textShapes = shapes.filter(s => s.type === "sp" && s.textBody);
+  const textShapes = shapes.filter((s) => s.type === "sp" && s.textBody);
   console.log(`Text shapes: ${textShapes.length}`);
 
   // Show first 5 text contents
   let textCount = 0;
   for (const shape of textShapes) {
-    if (shape.type !== "sp" || !shape.textBody) {continue;}
+    if (shape.type !== "sp" || !shape.textBody) {
+      continue;
+    }
     for (const para of shape.textBody.paragraphs) {
       for (const run of para.runs) {
         if (run.type === "text" && textCount < 5) {
           const hasNullBytes = run.text.includes("\u0000");
           const cleanText = run.text.split("\u0000").join("");
-          console.log(`  [${textCount}] "${cleanText.slice(0, 50)}${cleanText.length > 50 ? "..." : ""}" (nullBytes: ${hasNullBytes})`);
+          console.log(
+            `  [${textCount}] "${cleanText.slice(0, 50)}${cleanText.length > 50 ? "..." : ""}" (nullBytes: ${hasNullBytes})`,
+          );
           textCount++;
         }
       }

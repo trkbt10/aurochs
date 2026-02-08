@@ -6,15 +6,15 @@
  */
 
 import { useMemo, type CSSProperties } from "react";
-import { PresentationEditor } from "@oxen-ui/pptx-editor";
-import type { PresentationDocument, SlideWithId } from "@oxen-office/pptx/app";
-import type { Slide, Presentation } from "@oxen-office/pptx/domain";
-import type { SpShape, GrpShape, GraphicFrame } from "@oxen-office/pptx/domain/shape";
-import type { Line } from "@oxen-office/pptx/domain/color/types";
-import type { Table, TableRow, TableCell } from "@oxen-office/pptx/domain/table/types";
-import type { ColorContext } from "@oxen-office/drawing-ml/domain/color-context";
-import type { ResourceResolver } from "@oxen-office/pptx/domain/resource-resolver";
-import { px, deg, pt } from "@oxen-office/drawing-ml/domain/units";
+import { PresentationEditor } from "@aurochs-ui/pptx-editor";
+import type { PresentationDocument, SlideWithId } from "@aurochs-office/pptx/app";
+import type { Slide, Presentation } from "@aurochs-office/pptx/domain";
+import type { SpShape, GrpShape, GraphicFrame } from "@aurochs-office/pptx/domain/shape";
+import type { Line } from "@aurochs-office/pptx/domain/color/types";
+import type { Table, TableRow, TableCell } from "@aurochs-office/pptx/domain/table/types";
+import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
+import type { ResourceResolver } from "@aurochs-office/pptx/domain/resource-resolver";
+import { px, deg, pt } from "@aurochs-office/drawing-ml/domain/units";
 
 // =============================================================================
 // Fixture Helpers
@@ -48,25 +48,25 @@ type CreateSpShapeOptions = {
 
 const createSpShape = ({ id, name, x, y, width, height, fillColor, rotation = 0 }: CreateSpShapeOptions): SpShape => {
   return {
-  type: "sp",
-  nonVisual: { id, name },
-  properties: {
-    transform: {
-      x: px(x),
-      y: px(y),
-      width: px(width),
-      height: px(height),
-      rotation: deg(rotation),
-      flipH: false,
-      flipV: false,
+    type: "sp",
+    nonVisual: { id, name },
+    properties: {
+      transform: {
+        x: px(x),
+        y: px(y),
+        width: px(width),
+        height: px(height),
+        rotation: deg(rotation),
+        flipH: false,
+        flipV: false,
+      },
+      fill: {
+        type: "solidFill",
+        color: { spec: { type: "srgb", value: fillColor } },
+      },
+      line: createLine("333333", 2),
+      geometry: { type: "preset", preset: "rect", adjustValues: [] },
     },
-    fill: {
-      type: "solidFill",
-      color: { spec: { type: "srgb", value: fillColor } },
-    },
-    line: createLine("333333", 2),
-    geometry: { type: "preset", preset: "rect", adjustValues: [] },
-  },
   };
 };
 
@@ -83,35 +83,35 @@ type CreateTextBoxOptions = {
 
 const createTextBox = ({ id, name, x, y, width, height, text, fontSize = 14 }: CreateTextBoxOptions): SpShape => {
   return {
-  type: "sp",
-  nonVisual: { id, name, textBox: true },
-  properties: {
-    transform: {
-      x: px(x),
-      y: px(y),
-      width: px(width),
-      height: px(height),
-      rotation: deg(0),
-      flipH: false,
-      flipV: false,
-    },
-    fill: {
-      type: "solidFill",
-      color: { spec: { type: "srgb", value: "FFFFFF" } },
-    },
-    line: createLine("CCCCCC", 1),
-    geometry: { type: "preset", preset: "rect", adjustValues: [] },
-  },
-  textBody: {
-    bodyProperties: { anchor: "top" },
-    paragraphs: [
-      {
-        runs: [{ type: "text", text, properties: { fontSize: pt(fontSize) } }],
-        properties: {},
-        endProperties: {},
+    type: "sp",
+    nonVisual: { id, name, textBox: true },
+    properties: {
+      transform: {
+        x: px(x),
+        y: px(y),
+        width: px(width),
+        height: px(height),
+        rotation: deg(0),
+        flipH: false,
+        flipV: false,
       },
-    ],
-  },
+      fill: {
+        type: "solidFill",
+        color: { spec: { type: "srgb", value: "FFFFFF" } },
+      },
+      line: createLine("CCCCCC", 1),
+      geometry: { type: "preset", preset: "rect", adjustValues: [] },
+    },
+    textBody: {
+      bodyProperties: { anchor: "top" },
+      paragraphs: [
+        {
+          runs: [{ type: "text", text, properties: { fontSize: pt(fontSize) } }],
+          properties: {},
+          endProperties: {},
+        },
+      ],
+    },
   };
 };
 
@@ -126,37 +126,37 @@ type CreateTitleOptions = {
 
 const createTitle = ({ id, x, y, width, height, text }: CreateTitleOptions): SpShape => {
   return {
-  type: "sp",
-  nonVisual: { id, name: "Title" },
-  placeholder: { type: "title", idx: 0 },
-  properties: {
-    transform: {
-      x: px(x),
-      y: px(y),
-      width: px(width),
-      height: px(height),
-      rotation: deg(0),
-      flipH: false,
-      flipV: false,
-    },
-    geometry: { type: "preset", preset: "rect", adjustValues: [] },
-  },
-  textBody: {
-    bodyProperties: { anchor: "center" },
-    paragraphs: [
-      {
-        runs: [
-          {
-            type: "text",
-            text,
-            properties: { fontSize: pt(32), bold: true },
-          },
-        ],
-        properties: {},
-        endProperties: {},
+    type: "sp",
+    nonVisual: { id, name: "Title" },
+    placeholder: { type: "title", idx: 0 },
+    properties: {
+      transform: {
+        x: px(x),
+        y: px(y),
+        width: px(width),
+        height: px(height),
+        rotation: deg(0),
+        flipH: false,
+        flipV: false,
       },
-    ],
-  },
+      geometry: { type: "preset", preset: "rect", adjustValues: [] },
+    },
+    textBody: {
+      bodyProperties: { anchor: "center" },
+      paragraphs: [
+        {
+          runs: [
+            {
+              type: "text",
+              text,
+              properties: { fontSize: pt(32), bold: true },
+            },
+          ],
+          properties: {},
+          endProperties: {},
+        },
+      ],
+    },
   };
 };
 
@@ -181,10 +181,7 @@ const createTableRow = (cells: string[]): TableRow => ({
 
 const createTable = (headers: string[], rows: string[][]): Table => ({
   grid: { columns: headers.map(() => ({ width: px(100) })) },
-  rows: [
-    createTableRow(headers),
-    ...rows.map((row) => createTableRow(row)),
-  ],
+  rows: [createTableRow(headers), ...rows.map((row) => createTableRow(row))],
   properties: {},
 });
 
@@ -198,21 +195,21 @@ type CreateTableFrameOptions = {
 
 const createTableFrame = ({ id, x, y, headers, rows }: CreateTableFrameOptions): GraphicFrame => {
   return {
-  type: "graphicFrame",
-  nonVisual: { id, name: "Table" },
-  transform: {
-    x: px(x),
-    y: px(y),
-    width: px(headers.length * 100),
-    height: px((rows.length + 1) * 30 + 10),
-    rotation: deg(0),
-    flipH: false,
-    flipV: false,
-  },
-  content: {
-    type: "table",
-    data: { table: createTable(headers, rows) },
-  },
+    type: "graphicFrame",
+    nonVisual: { id, name: "Table" },
+    transform: {
+      x: px(x),
+      y: px(y),
+      width: px(headers.length * 100),
+      height: px((rows.length + 1) * 30 + 10),
+      rotation: deg(0),
+      flipH: false,
+      flipV: false,
+    },
+    content: {
+      type: "table",
+      data: { table: createTable(headers, rows) },
+    },
   };
 };
 
@@ -224,25 +221,17 @@ type CreateGroupOptions = {
 };
 
 const createGroup = ({ id, x, y, children }: CreateGroupOptions): GrpShape => {
-  const minX = Math.min(
-    ...children.map((c) => (c.properties.transform?.x as number) || 0)
-  );
-  const minY = Math.min(
-    ...children.map((c) => (c.properties.transform?.y as number) || 0)
-  );
+  const minX = Math.min(...children.map((c) => (c.properties.transform?.x as number) || 0));
+  const minY = Math.min(...children.map((c) => (c.properties.transform?.y as number) || 0));
   const maxX = Math.max(
     ...children.map(
-      (c) =>
-        ((c.properties.transform?.x as number) || 0) +
-        ((c.properties.transform?.width as number) || 0)
-    )
+      (c) => ((c.properties.transform?.x as number) || 0) + ((c.properties.transform?.width as number) || 0),
+    ),
   );
   const maxY = Math.max(
     ...children.map(
-      (c) =>
-        ((c.properties.transform?.y as number) || 0) +
-        ((c.properties.transform?.height as number) || 0)
-    )
+      (c) => ((c.properties.transform?.y as number) || 0) + ((c.properties.transform?.height as number) || 0),
+    ),
   );
   const width = maxX - minX;
   const height = maxY - minY;
@@ -306,8 +295,26 @@ const createSlide2 = (): Slide => ({
         ["Widget C", "200", "180", "220", "250"],
       ],
     }),
-    createSpShape({ id: "s2-highlight", name: "Highlight", x: 600, y: 150, width: 260, height: 180, fillColor: "F1C40F", rotation: 5 }),
-    createTextBox({ id: "s2-note", name: "Note", x: 600, y: 350, width: 260, height: 80, text: "Sales data for 2024", fontSize: 14 }),
+    createSpShape({
+      id: "s2-highlight",
+      name: "Highlight",
+      x: 600,
+      y: 150,
+      width: 260,
+      height: 180,
+      fillColor: "F1C40F",
+      rotation: 5,
+    }),
+    createTextBox({
+      id: "s2-note",
+      name: "Note",
+      x: 600,
+      y: 350,
+      width: 260,
+      height: 80,
+      text: "Sales data for 2024",
+      fontSize: 14,
+    }),
   ],
 });
 
@@ -371,10 +378,46 @@ const createSlide4 = (): Slide => ({
 const createSlide5 = (): Slide => ({
   shapes: [
     createTitle({ id: "s5-title", x: 50, y: 30, width: 860, height: 60, text: "Rotated Shapes" }),
-    createSpShape({ id: "s5-r1", name: "Rotated 15", x: 100, y: 150, width: 120, height: 80, fillColor: "3498DB", rotation: 15 }),
-    createSpShape({ id: "s5-r2", name: "Rotated 30", x: 280, y: 150, width: 120, height: 80, fillColor: "2ECC71", rotation: 30 }),
-    createSpShape({ id: "s5-r3", name: "Rotated 45", x: 460, y: 150, width: 120, height: 80, fillColor: "E74C3C", rotation: 45 }),
-    createSpShape({ id: "s5-r4", name: "Rotated -20", x: 640, y: 150, width: 120, height: 80, fillColor: "9B59B6", rotation: -20 }),
+    createSpShape({
+      id: "s5-r1",
+      name: "Rotated 15",
+      x: 100,
+      y: 150,
+      width: 120,
+      height: 80,
+      fillColor: "3498DB",
+      rotation: 15,
+    }),
+    createSpShape({
+      id: "s5-r2",
+      name: "Rotated 30",
+      x: 280,
+      y: 150,
+      width: 120,
+      height: 80,
+      fillColor: "2ECC71",
+      rotation: 30,
+    }),
+    createSpShape({
+      id: "s5-r3",
+      name: "Rotated 45",
+      x: 460,
+      y: 150,
+      width: 120,
+      height: 80,
+      fillColor: "E74C3C",
+      rotation: 45,
+    }),
+    createSpShape({
+      id: "s5-r4",
+      name: "Rotated -20",
+      x: 640,
+      y: 150,
+      width: 120,
+      height: 80,
+      fillColor: "9B59B6",
+      rotation: -20,
+    }),
     createTextBox({
       id: "s5-hint",
       name: "Rotation Hint",
@@ -535,13 +578,7 @@ const featureListStyle: CSSProperties = {
 // Components
 // =============================================================================
 
-function ShortcutItem({
-  keys,
-  description,
-}: {
-  keys: string;
-  description: string;
-}) {
+function ShortcutItem({ keys, description }: { keys: string; description: string }) {
   return (
     <div style={shortcutItemStyle}>
       <span style={{ color: "var(--text-secondary)" }}>{description}</span>
@@ -571,20 +608,14 @@ export function PresentationEditorTest() {
       <div style={headerStyle}>
         <h2 style={titleStyle}>Presentation Editor (Phase 3)</h2>
         <p style={descriptionStyle}>
-          Full presentation editor with slide thumbnails, slide canvas, property
-          panels, and layer panel. Click thumbnails to switch slides. Select and
-          edit shapes on the canvas.
+          Full presentation editor with slide thumbnails, slide canvas, property panels, and layer panel. Click
+          thumbnails to switch slides. Select and edit shapes on the canvas.
         </p>
       </div>
 
       {/* Editor */}
       <div style={editorContainerStyle}>
-        <PresentationEditor
-          initialDocument={initialDocument}
-          showPropertyPanel
-          showLayerPanel
-          showToolbar
-        />
+        <PresentationEditor initialDocument={initialDocument} showPropertyPanel showLayerPanel showToolbar />
       </div>
 
       {/* Info Panels */}

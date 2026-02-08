@@ -1,0 +1,72 @@
+{
+  "name": "@aurochs-renderer/pptx",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "dependencies": {
+    "@aurochs/buffer": "workspace:*",
+    "@aurochs/color": "workspace:*",
+    "@aurochs/glyph": "workspace:*",
+    "@aurochs/mermaid": "workspace:*",
+    "@aurochs-office/chart": "workspace:*",
+    "@aurochs-office/drawing-ml": "workspace:*",
+    "@aurochs-renderer/chart": "workspace:*",
+    "@aurochs-renderer/diagram": "workspace:*",
+    "@aurochs-renderer/drawing-ml": "workspace:*",
+    "@aurochs-office/ooxml": "workspace:*",
+    "@aurochs-office/pptx": "workspace:*",
+    "@aurochs/xml": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit --rootDir ../../..",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-renderer/pptx/src'"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./animation": {
+      "types": "./src/animation/index.ts",
+      "default": "./src/animation/index.ts"
+    },
+    "./react": {
+      "types": "./src/react/index.ts",
+      "default": "./src/react/index.ts"
+    },
+    "./svg": {
+      "types": "./src/svg/index.ts",
+      "default": "./src/svg/index.ts"
+    },
+    "./svg-viewport": {
+      "types": "./src/svg-viewport/index.ts",
+      "default": "./src/svg-viewport/index.ts"
+    },
+    "./text-layout": {
+      "types": "./src/text-layout/index.ts",
+      "default": "./src/text-layout/index.ts"
+    },
+    "./render-options": {
+      "types": "./src/render-options.ts",
+      "default": "./src/render-options.ts"
+    },
+    "./slide-render": {
+      "types": "./src/slide-render.ts",
+      "default": "./src/slide-render.ts"
+    },
+    "./ascii": {
+      "types": "./src/ascii/index.ts",
+      "default": "./src/ascii/index.ts"
+    },
+    "./mermaid": {
+      "types": "./src/mermaid/index.ts",
+      "default": "./src/mermaid/index.ts"
+    }
+  }
+}

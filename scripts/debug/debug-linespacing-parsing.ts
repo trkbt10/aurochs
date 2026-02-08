@@ -3,16 +3,15 @@
  *
  * Usage: bun run scripts/debug/debug-linespacing-parsing.ts <pptx-path> <slide-number> <base-multiplier>
  */
-import { openPresentation } from "@oxen-office/pptx";
-import { LIBREOFFICE_RENDER_OPTIONS, DEFAULT_RENDER_OPTIONS } from "@oxen-renderer/pptx/render-options";
-import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
-import { getEffectiveLineSpacing } from "@oxen-renderer/pptx/render-options";
+import { openPresentation } from "@aurochs-office/pptx";
+import { LIBREOFFICE_RENDER_OPTIONS, DEFAULT_RENDER_OPTIONS } from "@aurochs-renderer/pptx/render-options";
+import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
+import { getEffectiveLineSpacing } from "@aurochs-renderer/pptx/render-options";
 import { requireFileExists, requireIntArg, requirePositionalArg } from "../lib/cli";
 import { loadPptxFile } from "../lib/pptx-loader";
 
 async function main() {
-  const usage =
-    "bun run scripts/debug/debug-linespacing-parsing.ts <pptx-path> <slide-number> <base-multiplier>";
+  const usage = "bun run scripts/debug/debug-linespacing-parsing.ts <pptx-path> <slide-number> <base-multiplier>";
   const args = process.argv.slice(2);
   const pptxPath = requirePositionalArg({ args, index: 0, name: "pptx-path", usage });
   const slideNumber = requireIntArg(args[1], "slide-number", usage);

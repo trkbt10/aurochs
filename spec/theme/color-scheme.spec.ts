@@ -7,12 +7,12 @@
  * @see ECMA-376 Part 1, Section 19.3.1.6 (p:clrMap)
  */
 
-import { openPresentation } from "@oxen-office/pptx";
-import { resolveColor } from "@oxen-office/drawing-ml/domain/color-resolution";
-import type { Color } from "@oxen-office/drawing-ml/domain/color";
-import type { ColorContext } from "@oxen-office/drawing-ml/domain/color-context";
+import { openPresentation } from "@aurochs-office/pptx";
+import { resolveColor } from "@aurochs-office/drawing-ml/domain/color-resolution";
+import type { Color } from "@aurochs-office/drawing-ml/domain/color";
+import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
 import { createPresentationFile, THEMES_PPTX_PATH } from "./test-utils";
-import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
+import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
 
 describe("Color Scheme Application", () => {
   /**
@@ -55,10 +55,7 @@ describe("Color Scheme Application", () => {
     const slide = presentation.getSlide(10);
     const svg = renderSlideToSvg(slide).svg;
 
-    const hasGradient = [
-      svg.includes("linearGradient"),
-      svg.includes("url(#bg-grad"),
-    ].some(Boolean);
+    const hasGradient = [svg.includes("linearGradient"), svg.includes("url(#bg-grad")].some(Boolean);
     expect(hasGradient).toBe(true);
   });
 
@@ -180,10 +177,7 @@ describe("Color Map Resolution", () => {
     const slide = presentation.getSlide(1);
     const svg = renderSlideToSvg(slide).svg;
 
-    const hasDk1Color = [
-      svg.toLowerCase().includes("000000"),
-      svg.includes("black"),
-    ].some(Boolean);
+    const hasDk1Color = [svg.toLowerCase().includes("000000"), svg.includes("black")].some(Boolean);
     expect(hasDk1Color).toBe(true);
   });
 

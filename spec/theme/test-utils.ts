@@ -5,7 +5,7 @@
  */
 
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
-import type { PresentationFile } from "@oxen-office/pptx";
+import type { PresentationFile } from "@aurochs-office/pptx";
 
 export const THEMES_PPTX_PATH = "fixtures/poi-test-data/test-data/slideshow/themes.pptx";
 

@@ -14,13 +14,8 @@ import {
   createDefaultTableCell,
   createDefaultTableProperties,
   createTable,
-} from "@oxen-ui/pptx-editor";
-import type {
-  TableCellProperties,
-  TableCell,
-  TableProperties,
-  Table,
-} from "@oxen-office/pptx/domain/table/types";
+} from "@aurochs-ui/pptx-editor";
+import type { TableCellProperties, TableCell, TableProperties, Table } from "@aurochs-office/pptx/domain/table/types";
 
 const cardStyle: CSSProperties = {
   backgroundColor: "var(--bg-secondary)",

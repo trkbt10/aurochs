@@ -13,12 +13,12 @@
  */
 
 import * as fs from "node:fs";
-import type { PresentationFile } from "@oxen-office/pptx";
-import { openPresentation } from "@oxen-office/pptx";
-import { LIBREOFFICE_RENDER_OPTIONS } from "@oxen-renderer/pptx/render-options";
+import type { PresentationFile } from "@aurochs-office/pptx";
+import { openPresentation } from "@aurochs-office/pptx";
+import { LIBREOFFICE_RENDER_OPTIONS } from "@aurochs-renderer/pptx/render-options";
 import { compareSvgToSnapshot, hasSnapshot, listSnapshots } from "../visual-regression/compare";
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
-import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
+import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
 
 type TestCase = {
   name: string;

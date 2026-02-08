@@ -6,8 +6,8 @@
  */
 
 import { useState, useMemo, useCallback, type ReactElement } from "react";
-import { extractGlyphContour } from "@oxen/glyph";
-import type { GlyphContour, GlyphStyleKey } from "@oxen/glyph";
+import { extractGlyphContour } from "@aurochs/glyph";
+import type { GlyphContour, GlyphStyleKey } from "@aurochs/glyph";
 import "./GlyphTestPage.css";
 
 // =============================================================================
@@ -44,7 +44,9 @@ const PRESET_FONTS = [
 // =============================================================================
 
 function pathToSvgD(points: readonly { x: number; y: number }[]): string {
-  if (points.length === 0) {return "";}
+  if (points.length === 0) {
+    return "";
+  }
   const [first, ...rest] = points;
   const moveTo = `M ${first.x.toFixed(2)} ${first.y.toFixed(2)}`;
   const lineTo = rest.map((p) => `L ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(" ");
@@ -52,10 +54,12 @@ function pathToSvgD(points: readonly { x: number; y: number }[]): string {
 }
 
 function calculateSignedArea(points: readonly { x: number; y: number }[]): number {
-  return points.reduce((sum, point, i) => {
-    const next = points[(i + 1) % points.length];
-    return sum + point.x * next.y - next.x * point.y;
-  }, 0) / 2;
+  return (
+    points.reduce((sum, point, i) => {
+      const next = points[(i + 1) % points.length];
+      return sum + point.x * next.y - next.x * point.y;
+    }, 0) / 2
+  );
 }
 
 // =============================================================================
@@ -90,7 +94,13 @@ function GlyphDisplay({ glyph, scale }: { glyph: GlyphContour; scale: number }) 
             <path d="M 10 0 L 0 0 0 10" fill="none" stroke="#333" strokeWidth="0.2" />
           </pattern>
         </defs>
-        <rect x={bounds.minX - padding} y={bounds.minY - padding} width={width + padding * 2} height={height + padding * 2} fill="url(#grid)" />
+        <rect
+          x={bounds.minX - padding}
+          y={bounds.minY - padding}
+          width={width + padding * 2}
+          height={height + padding * 2}
+          fill="url(#grid)"
+        />
 
         {/* Baseline */}
         <line
@@ -172,41 +182,6 @@ function PathDetails({ glyph }: { glyph: GlyphContour }) {
 // Main Component
 // =============================================================================
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 export function GlyphTestPage({ onBack }: GlyphTestPageProps) {
   const [inputText, setInputText] = useState(DEFAULT_CHARS);
   const [fontFamily, setFontFamily] = useState(DEFAULT_FONT);
@@ -220,7 +195,7 @@ export function GlyphTestPage({ onBack }: GlyphTestPageProps) {
       fontWeight: 400,
       fontStyle: "normal",
     }),
-    [fontSize]
+    [fontSize],
   );
 
   const effectiveFont = customFont || fontFamily;
@@ -244,7 +219,9 @@ export function GlyphTestPage({ onBack }: GlyphTestPageProps) {
   }, [inputText, effectiveFont, style]);
 
   const selectedGlyph = useMemo(() => {
-    if (!selectedChar) {return null;}
+    if (!selectedChar) {
+      return null;
+    }
     return glyphs.find((g) => g.char === selectedChar)?.glyph ?? null;
   }, [selectedChar, glyphs]);
 

@@ -3,8 +3,8 @@
  *
  * Usage: bun run scripts/debug/debug-slide-output.ts <pptx-path> <slide-number> <output-svg-path>
  */
-import { openPresentation } from "@oxen-office/pptx";
-import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
+import { openPresentation } from "@aurochs-office/pptx";
+import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
 import * as fs from "node:fs";
 import { requireFileExists, requireIntArg, requirePositionalArg } from "../lib/cli";
 import { loadPptxFile } from "../lib/pptx-loader";
@@ -35,7 +35,7 @@ async function main() {
   console.log(`SVG length: ${svg.length} bytes`);
 }
 
-main().catch(err => {
+main().catch((err) => {
   console.error(err);
   process.exit(1);
 });

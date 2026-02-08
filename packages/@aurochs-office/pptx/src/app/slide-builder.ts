@@ -1,0 +1,83 @@
+/**
+ * @file Slide object factory
+ *
+ * Creates Slide objects from SlideData.
+ * This is the API layer that builds the public Slide interface.
+ */
+
+import type { Slide } from "./types";
+import type { SlideSize } from "../domain";
+import type { ZipFile } from "@aurochs-office/opc";
+import type { XmlElement } from "@aurochs/xml";
+import type { SlideData } from "../parser/slide/data-types";
+import type { RenderOptions } from "@aurochs-renderer/pptx";
+import type { TableStyleList } from "../parser/table/style-parser";
+import { DEFAULT_RENDER_OPTIONS } from "@aurochs-renderer/pptx";
+import { parseSlideTimingData } from "../parser/timing-parser";
+import { parseSlideTransitionData } from "../parser/slide/transition-parser";
+
+/**
+ * Create a Slide object from SlideData.
+ *
+ * This is the main factory function that builds the public Slide API object
+ * with rendering methods.
+ *
+ * @param data - Complete slide data with all parsed XML
+ * @param zip - ZipFile adapter for reading resources
+ * @param defaultTextStyle - Default text style from presentation.xml
+ * @param tableStyles - Table styles from ppt/tableStyles.xml
+ * @param slideSize - Slide dimensions
+ * @param renderOptions - Optional render options for dialect-specific behavior
+ * @returns A Slide object with rendering methods
+ */
+export type CreateSlideOptions = {
+  readonly data: SlideData;
+  readonly zip: ZipFile;
+  readonly defaultTextStyle: XmlElement | null;
+  readonly tableStyles: TableStyleList | null;
+  readonly slideSize: SlideSize;
+  readonly renderOptions?: RenderOptions;
+};
+
+/** Create a Slide object from SlideData with rendering capabilities */
+export function createSlide({
+  data,
+  zip,
+  defaultTextStyle,
+  tableStyles,
+  slideSize,
+  renderOptions,
+}: CreateSlideOptions): Slide {
+  // Parse timing data (lazy, cached)
+  const timing = parseSlideTimingData(data.content);
+
+  // Parse transition data
+  const transition = parseSlideTransitionData(data.content);
+
+  return {
+    number: data.number,
+    filename: data.filename,
+    content: data.content,
+    layout: data.layout,
+    layoutTables: data.layoutTables,
+    master: data.master,
+    masterTables: data.masterTables,
+    masterTextStyles: data.masterTextStyles,
+    theme: data.theme,
+    relationships: data.relationships,
+    layoutRelationships: data.layoutRelationships,
+    masterRelationships: data.masterRelationships,
+    themeRelationships: data.themeRelationships,
+    diagram: data.diagram,
+    diagramRelationships: data.diagramRelationships,
+    timing,
+    transition,
+    // New properties for standalone rendering
+    themeOverrides: data.themeOverrides,
+    zip,
+    defaultTextStyle,
+    tableStyles,
+    slideSize,
+    renderOptions: renderOptions ?? DEFAULT_RENDER_OPTIONS,
+  };
+}

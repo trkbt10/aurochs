@@ -4,9 +4,9 @@
 
 import { useMemo, type CSSProperties } from "react";
 import { useParams } from "react-router-dom";
-import { getFormulaFunction } from "@oxen-office/xlsx/formula/functionRegistry";
-import { createFormulaEvaluator } from "@oxen-office/xlsx/formula/evaluator";
-import type { FormulaFunctionSample } from "@oxen-office/xlsx/formula/functionRegistry";
+import { getFormulaFunction } from "@aurochs-office/xlsx/formula/functionRegistry";
+import { createFormulaEvaluator } from "@aurochs-office/xlsx/formula/evaluator";
+import type { FormulaFunctionSample } from "@aurochs-office/xlsx/formula/functionRegistry";
 import { DEFAULT_ORIGIN, createFormulaSampleWorkbook } from "./sample-workbook";
 import { deepEqual, formatValue, isNumericString } from "./format";
 

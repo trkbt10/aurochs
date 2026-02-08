@@ -1,0 +1,26 @@
+{
+  "name": "@aurochs-cli/docx-cli",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "docx": "./dist/cli.js"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "bun build src/cli.ts --target bun --outdir dist --packages external",
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-cli/docx-cli/src'"
+  },
+  "dependencies": {
+    "@aurochs-cli/cli-core": "workspace:*",
+    "@aurochs-converters/doc-to-docx": "workspace:*",
+    "@aurochs-builder/docx": "workspace:*",
+    "@aurochs-office/docx": "workspace:*",
+    "@aurochs-renderer/docx": "workspace:*",
+    "@aurochs/zip": "workspace:*",
+    "commander": "^12.0.0"
+  }
+}

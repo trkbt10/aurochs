@@ -18,8 +18,8 @@ import { XlsxWorkbookPage } from "./pages/xlsx-editor/XlsxWorkbookPage";
 import { XlsxFormulaCatalogLayout } from "./pages/xlsx-editor/formula/XlsxFormulaCatalogLayout";
 import { XlsxFormulaCatalogIndexPage } from "./pages/xlsx-editor/formula/XlsxFormulaCatalogIndexPage";
 import { XlsxFormulaFunctionPage } from "./pages/xlsx-editor/formula/XlsxFormulaFunctionPage";
-import { PresentationEditor } from "@oxen-ui/pptx-editor";
-import { convertToPresentationDocument, type PresentationDocument } from "@oxen-office/pptx/app";
+import { PresentationEditor } from "@aurochs-ui/pptx-editor";
+import { convertToPresentationDocument, type PresentationDocument } from "@aurochs-office/pptx/app";
 import "./App.css";
 
 // Demo PPTX URL (will be in the public folder)
@@ -33,15 +33,7 @@ export function App() {
   const [importedDocument, setImportedDocument] = useState<PresentationDocument | null>(null);
   const [importedFileName, setImportedFileName] = useState<string | null>(null);
 
-  const {
-    status,
-    presentation,
-    fileName,
-    error,
-    loadFromFile,
-    loadFromUrl,
-    reset,
-  } = usePptx();
+  const { status, presentation, fileName, error, loadFromFile, loadFromUrl, reset } = usePptx();
 
   const handleFileSelect = useCallback(
     (result: FileSelectResult) => {
@@ -58,7 +50,7 @@ export function App() {
       reset();
       navigate("/editor");
     },
-    [loadFromFile, navigate, reset]
+    [loadFromFile, navigate, reset],
   );
 
   const handleDemoLoad = useCallback(() => {
@@ -82,9 +74,12 @@ export function App() {
     navigate("/");
   }, [navigate, reset]);
 
-  const handleStartSlideshow = useCallback((slideNumber: number) => {
-    navigate(`/slideshow/${slideNumber}`);
-  }, [navigate]);
+  const handleStartSlideshow = useCallback(
+    (slideNumber: number) => {
+      navigate(`/slideshow/${slideNumber}`);
+    },
+    [navigate],
+  );
 
   const handleExitSlideshow = useCallback(() => {
     navigate("/viewer");
@@ -199,13 +194,7 @@ export function App() {
 
     const startSlide = Math.max(1, Number.parseInt(slideNumber ?? "1", 10) || 1);
 
-    return (
-      <SlideshowPage
-        presentation={presentation}
-        startSlide={startSlide}
-        onExit={handleExitSlideshow}
-      />
-    );
+    return <SlideshowPage presentation={presentation} startSlide={startSlide} onExit={handleExitSlideshow} />;
   };
 
   const EditorRoute = () => {
@@ -222,9 +211,7 @@ export function App() {
               </svg>
             </div>
             <h2 className="error-title">Failed to open editor</h2>
-            <p className="error-message">
-              Could not open document for editing. Check the console for details.
-            </p>
+            <p className="error-message">Could not open document for editing. Check the console for details.</p>
             <button className="error-button" onClick={handleExitEditor}>
               Back
             </button>
@@ -248,12 +235,7 @@ export function App() {
           <span className="editor-title">{activeFileName}</span>
         </header>
         <div className="editor-content">
-          <PresentationEditor
-            initialDocument={activeDocument}
-            showPropertyPanel
-            showLayerPanel
-            showToolbar
-          />
+          <PresentationEditor initialDocument={activeDocument} showPropertyPanel showLayerPanel showToolbar />
         </div>
       </div>
     );

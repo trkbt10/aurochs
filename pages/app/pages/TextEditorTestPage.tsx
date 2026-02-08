@@ -5,7 +5,7 @@
  */
 
 import { useMemo, useState } from "react";
-import { Accordion, FieldGroup, Panel } from "@oxen-ui/ui-components/layout";
+import { Accordion, FieldGroup, Panel } from "@aurochs-ui/ui-components/layout";
 import {
   PixelsEditor,
   DegreesEditor,
@@ -18,23 +18,23 @@ import {
   createDefaultLine,
   createDefaultEffects,
   createDefaultTextBody,
-} from "@oxen-ui/pptx-editor";
-import type { Slide, TextBody, TextRun } from "@oxen-office/pptx/domain";
-import { px, deg, pt, type Pixels } from "@oxen-office/drawing-ml/domain/units";
-import { SlideRendererSvg } from "@oxen-renderer/pptx/react";
-import { layoutTextBody, toLayoutInput } from "@oxen-renderer/pptx/text-layout";
-import { TextEditController } from "@oxen-ui/pptx-editor/slide/text-edit";
-import type { TextSelection, CursorPosition, SelectionChangeEvent } from "@oxen-ui/pptx-editor/slide/text-edit";
+} from "@aurochs-ui/pptx-editor";
+import type { Slide, TextBody, TextRun } from "@aurochs-office/pptx/domain";
+import { px, deg, pt, type Pixels } from "@aurochs-office/drawing-ml/domain/units";
+import { SlideRendererSvg } from "@aurochs-renderer/pptx/react";
+import { layoutTextBody, toLayoutInput } from "@aurochs-renderer/pptx/text-layout";
+import { TextEditController } from "@aurochs-ui/pptx-editor/slide/text-edit";
+import type { TextSelection, CursorPosition, SelectionChangeEvent } from "@aurochs-ui/pptx-editor/slide/text-edit";
 import {
   applyRunPropertiesToSelection,
   applyParagraphPropertiesToSelection,
-} from "@oxen-ui/pptx-editor/slide/text-edit/input-support/run-formatting";
+} from "@aurochs-ui/pptx-editor/slide/text-edit/input-support/run-formatting";
 import {
   extractTextProperties,
   getEffectiveRunPropertiesAtCursor,
   type TextSelectionContext,
-} from "@oxen-ui/pptx-editor/editors/text/text-property-extractor";
-import { getExtractionValue, isMixed } from "@oxen-ui/pptx-editor/editors/text/mixed-properties";
+} from "@aurochs-ui/pptx-editor/editors/text/text-property-extractor";
+import { getExtractionValue, isMixed } from "@aurochs-ui/pptx-editor/editors/text/mixed-properties";
 
 // Local test fixtures for TextEditorTestPage
 const testSlideSize = {
@@ -64,7 +64,7 @@ const testColorContext = {
     bg2: "lt2" as const,
   },
 };
-import "@oxen-ui/pptx-editor/preview/SlideshowPlayer.css";
+import "@aurochs-ui/pptx-editor/preview/SlideshowPlayer.css";
 
 type TextEditorTestPageProps = {
   readonly onBack: () => void;

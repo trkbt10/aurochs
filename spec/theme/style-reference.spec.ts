@@ -8,24 +8,21 @@
  */
 
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
-import { openPresentation } from "@oxen-office/pptx";
-import { parseSlide } from "@oxen-office/pptx/parser/slide/slide-parser";
-import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
-import { resolveColor } from "@oxen-office/drawing-ml/domain/color-resolution";
-import { parseXml, getByPath } from "@oxen/xml";
-import { createParseContext } from "@oxen-office/pptx/parser/context";
-import { createSlideContext } from "@oxen-office/pptx/parser/slide/context";
-import type { ZipFile } from "@oxen-office/opc";
-import {
-  createPlaceholderTable,
-  createColorMap,
-} from "@oxen-office/pptx/parser/slide/resource-adapters";
-import { createEmptyResourceMap } from "@oxen-office/pptx/domain";
-import { parseTheme, parseColorScheme, parseMasterTextStyles } from "@oxen-office/pptx/parser/slide/theme-parser";
-import { renderSlideSvgIntegrated } from "@oxen-renderer/pptx/slide-render";
-import type { Pixels } from "@oxen-office/drawing-ml/domain/units";
-import type { Color } from "@oxen-office/drawing-ml/domain/color";
-import type { SpShape } from "@oxen-office/pptx/domain";
+import { openPresentation } from "@aurochs-office/pptx";
+import { parseSlide } from "@aurochs-office/pptx/parser/slide/slide-parser";
+import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
+import { resolveColor } from "@aurochs-office/drawing-ml/domain/color-resolution";
+import { parseXml, getByPath } from "@aurochs/xml";
+import { createParseContext } from "@aurochs-office/pptx/parser/context";
+import { createSlideContext } from "@aurochs-office/pptx/parser/slide/context";
+import type { ZipFile } from "@aurochs-office/opc";
+import { createPlaceholderTable, createColorMap } from "@aurochs-office/pptx/parser/slide/resource-adapters";
+import { createEmptyResourceMap } from "@aurochs-office/pptx/domain";
+import { parseTheme, parseColorScheme, parseMasterTextStyles } from "@aurochs-office/pptx/parser/slide/theme-parser";
+import { renderSlideSvgIntegrated } from "@aurochs-renderer/pptx/slide-render";
+import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
+import type { Color } from "@aurochs-office/drawing-ml/domain/color";
+import type { SpShape } from "@aurochs-office/pptx/domain";
 import { createPresentationFile, THEMES_PPTX_PATH } from "./test-utils";
 
 describe("a:fontRef schemeClr application", () => {

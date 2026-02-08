@@ -14,12 +14,12 @@
  */
 
 import * as fs from "node:fs";
-import type { PresentationFile } from "@oxen-office/pptx";
-import { openPresentation } from "@oxen-office/pptx";
-import { LIBREOFFICE_RENDER_OPTIONS } from "@oxen-renderer/pptx/render-options";
+import type { PresentationFile } from "@aurochs-office/pptx";
+import { openPresentation } from "@aurochs-office/pptx";
+import { LIBREOFFICE_RENDER_OPTIONS } from "@aurochs-renderer/pptx/render-options";
 import { compareSvgToSnapshot, hasSnapshot, listSnapshots } from "../visual-regression/compare";
 import { loadPptxFile } from "../../scripts/lib/pptx-loader";
-import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
+import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
 
 type TestCase = {
   name: string;
@@ -32,19 +32,19 @@ const TEST_CASES: TestCase[] = [
   {
     name: "anchor-top",
     pptxPath: "fixtures/font-spacing/text-box/anchor-top.pptx",
-    description: "Text anchored at top (anchor=\"t\")",
+    description: 'Text anchored at top (anchor="t")',
     maxDiffPercent: 5,
   },
   {
     name: "anchor-center",
     pptxPath: "fixtures/font-spacing/text-box/anchor-center.pptx",
-    description: "Text vertically centered (anchor=\"ctr\")",
+    description: 'Text vertically centered (anchor="ctr")',
     maxDiffPercent: 5,
   },
   {
     name: "anchor-bottom",
     pptxPath: "fixtures/font-spacing/text-box/anchor-bottom.pptx",
-    description: "Text anchored at bottom (anchor=\"b\")",
+    description: 'Text anchored at bottom (anchor="b")',
     maxDiffPercent: 5,
   },
   {
@@ -56,7 +56,7 @@ const TEST_CASES: TestCase[] = [
   {
     name: "wrap-none",
     pptxPath: "fixtures/font-spacing/text-box/wrap-none.pptx",
-    description: "No word wrap (wrap=\"none\")",
+    description: 'No word wrap (wrap="none")',
     maxDiffPercent: 5,
   },
 ];

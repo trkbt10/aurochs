@@ -10,18 +10,24 @@
  * @see ECMA-376 Part 1, Section 20.1.6.2 (a:clrScheme)
  */
 
-import { openPresentation } from "@oxen-office/pptx";
+import { openPresentation } from "@aurochs-office/pptx";
 import { createPresentationFile, extractSvgColors, THEMES_PPTX_PATH } from "./test-utils";
-import { renderSlideToSvg } from "@oxen-renderer/pptx/svg";
+import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
 
 /**
  * Check if colors include a light center (for gradient tests)
  */
 function hasLightCenterColor(colors: Set<string>): boolean {
   for (const c of colors) {
-    if (c.startsWith("fc")) {return true;}
-    if (c.startsWith("fd")) {return true;}
-    if (c.startsWith("f5")) {return true;}
+    if (c.startsWith("fc")) {
+      return true;
+    }
+    if (c.startsWith("fd")) {
+      return true;
+    }
+    if (c.startsWith("f5")) {
+      return true;
+    }
   }
   return false;
 }
@@ -31,9 +37,15 @@ function hasLightCenterColor(colors: Set<string>): boolean {
  */
 function hasDarkEdgeColor(colors: Set<string>): boolean {
   for (const c of colors) {
-    if (c.startsWith("4")) {return true;}
-    if (c.startsWith("5")) {return true;}
-    if (c.startsWith("6")) {return true;}
+    if (c.startsWith("4")) {
+      return true;
+    }
+    if (c.startsWith("5")) {
+      return true;
+    }
+    if (c.startsWith("6")) {
+      return true;
+    }
   }
   return false;
 }
@@ -43,9 +55,15 @@ function hasDarkEdgeColor(colors: Set<string>): boolean {
  */
 function hasBrownTones(colors: Set<string>): boolean {
   for (const c of colors) {
-    if (c.startsWith("4e")) {return true;}
-    if (c.startsWith("3b")) {return true;}
-    if (c.includes("3b2c")) {return true;}
+    if (c.startsWith("4e")) {
+      return true;
+    }
+    if (c.startsWith("3b")) {
+      return true;
+    }
+    if (c.includes("3b2c")) {
+      return true;
+    }
   }
   return false;
 }
@@ -55,11 +73,21 @@ function hasBrownTones(colors: Set<string>): boolean {
  */
 function hasBlueGrayishColors(colors: Set<string>): boolean {
   for (const c of colors) {
-    if (c.includes("7d")) {return true;}
-    if (c.includes("af")) {return true;}
-    if (c.includes("c3")) {return true;}
-    if (c.startsWith("b")) {return true;}
-    if (c.startsWith("8")) {return true;}
+    if (c.includes("7d")) {
+      return true;
+    }
+    if (c.includes("af")) {
+      return true;
+    }
+    if (c.includes("c3")) {
+      return true;
+    }
+    if (c.startsWith("b")) {
+      return true;
+    }
+    if (c.startsWith("8")) {
+      return true;
+    }
   }
   return false;
 }
@@ -68,8 +96,12 @@ function hasBlueGrayishColors(colors: Set<string>): boolean {
  * Check if SVG contains any gradient
  */
 function hasAnyGradient(svg: string): boolean {
-  if (svg.includes("radialGradient")) {return true;}
-  if (svg.includes("linearGradient")) {return true;}
+  if (svg.includes("radialGradient")) {
+    return true;
+  }
+  if (svg.includes("linearGradient")) {
+    return true;
+  }
   return false;
 }
 
@@ -77,9 +109,15 @@ function hasAnyGradient(svg: string): boolean {
  * Check if colors include theme3 expected colors
  */
 function hasTheme3ExpectedColors(colors: Set<string>): boolean {
-  if (colors.has("94c600")) {return true;}
-  if (colors.has("ffffff")) {return true;}
-  if (colors.has("000000")) {return true;}
+  if (colors.has("94c600")) {
+    return true;
+  }
+  if (colors.has("ffffff")) {
+    return true;
+  }
+  if (colors.has("000000")) {
+    return true;
+  }
   return false;
 }
 
@@ -87,8 +125,12 @@ function hasTheme3ExpectedColors(colors: Set<string>): boolean {
  * Check if colors include theme5 expected colors
  */
 function hasTheme5ExpectedColors(colors: Set<string>): boolean {
-  if (hasBrownTones(colors)) {return true;}
-  if (colors.has("ffffff")) {return true;}
+  if (hasBrownTones(colors)) {
+    return true;
+  }
+  if (colors.has("ffffff")) {
+    return true;
+  }
   return false;
 }
 
@@ -229,10 +271,16 @@ describe("End-to-end SVG Color Verification", () => {
         return hasAnyGradient(svg);
       }
       if (exp.hasText === true) {
-        if (colors.has("000000")) {return true;}
-        if (colors.has("ffffff")) {return true;}
+        if (colors.has("000000")) {
+          return true;
+        }
+        if (colors.has("ffffff")) {
+          return true;
+        }
         for (const c of colors) {
-          if (c.length === 6) {return true;}
+          if (c.length === 6) {
+            return true;
+          }
         }
         return false;
       }
