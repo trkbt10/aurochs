@@ -1,6 +1,6 @@
 {
   "name": "aurochs",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "type": "module",
   "packageManager": "bun@1.2.21",
   "sideEffects": false,
@@ -23,7 +23,7 @@
     "extensions/*"
   ],
   "scripts": {
-    "build": "vite build --config pages/vite.config.ts && bun build packages/@aurochs-cli/cli/src/cli.ts --target bun --outfile dist/aurochs-cli",
+    "build": "vite build --config pages/vite.config.ts && bun build packages/@aurochs-cli/cli/src/cli.ts --target node --outfile dist/aurochs-cli",
     "clean": "rimraf dist",
     "test": "vitest --run",
     "typecheck": "tsc -p tsconfig.json --noEmit --rootDir .",

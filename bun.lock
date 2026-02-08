@@ -56,18 +56,7 @@
     "extensions/aurochs-office-viewer": {
       "name": "aurochs-office-viewer",
       "version": "0.1.0",
-      "dependencies": {
-        "@aurochs-office/doc": "workspace:*",
-        "@aurochs-office/docx": "workspace:*",
-        "@aurochs-office/ppt": "workspace:*",
-        "@aurochs-office/pptx": "workspace:*",
-        "@aurochs-office/xls": "workspace:*",
-        "@aurochs-office/xlsx": "workspace:*",
-        "@aurochs-renderer/pptx": "workspace:*",
-        "@aurochs/zip": "workspace:*",
-      },
       "devDependencies": {
-        "@types/vscode": "^1.85.0",
         "@vscode/vsce": "^3.2.2",
       },
     },

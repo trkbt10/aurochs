@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 import { Command } from "commander";
 import { createProgram as createPptxProgram } from "@aurochs-cli/pptx-cli";
 import { createProgram as createDocxProgram } from "@aurochs-cli/docx-cli";

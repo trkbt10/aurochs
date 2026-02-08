@@ -9,7 +9,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "build": "bun build src/cli.ts --target bun --outdir dist --packages external",
+    "build": "bun build src/cli.ts --target node --outdir dist --packages external",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
