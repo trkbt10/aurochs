@@ -10,6 +10,8 @@ import type {
   DocxParagraphProperties,
   DocxParagraphSpacing,
   DocxParagraphIndent,
+  DocxParagraphBorders,
+  DocxParagraphBorderEdge,
   DocxNumberingProperties,
   DocxRun,
   DocxRunProperties,
@@ -24,13 +26,23 @@ import type {
   DocxTableCell,
   DocxTableCellProperties,
   DocxTableRowProperties,
+  DocxCellBorders,
+  DocxTableBorderEdge,
+  DocxShading,
+  DocxShadingPattern,
+  DocxTabStops,
+  DocxLineNumbering,
+  DocxPageNumberType,
+  DocxVerticalJc,
   DocxOutlineLevel,
   DocxHighlightColor,
 } from "@oxen-office/docx";
 import type { ParagraphAlignment } from "@oxen-office/ooxml/domain/text";
 import type { UnderlineStyle } from "@oxen-office/ooxml/domain/text";
+import type { WordBorderStyle } from "@oxen-office/ooxml/domain/border";
 import type { SectionBreakType } from "@oxen-office/docx";
 import { halfPoints, twips, docxNumId, docxIlvl } from "@oxen-office/docx";
+import { eighthPt } from "@oxen-office/ooxml/domain/border";
 import type {
   DocDocument,
   DocParagraph,
@@ -42,6 +54,13 @@ import type {
   DocUnderlineStyle,
   DocSectionBreakType,
   DocAlignment,
+  DocBorder,
+  DocBorderStyle,
+  DocParagraphBorders,
+  DocShading,
+  DocTabStop,
+  DocTableBorders,
+  DocLineNumbering,
 } from "../domain/types";
 
 // --- Alignment ---
@@ -102,6 +121,148 @@ const HIGHLIGHT_COLOR_MAP: Record<string, DocxHighlightColor> = {
 function convertHighlight(color: string | undefined): DocxHighlightColor | undefined {
   if (!color) return undefined;
   return HIGHLIGHT_COLOR_MAP[color.toUpperCase()];
+}
+
+// --- Border style ---
+
+const BORDER_STYLE_MAP: Record<DocBorderStyle, WordBorderStyle> = {
+  none: "none",
+  single: "single",
+  thick: "thick",
+  double: "double",
+  dotted: "dotted",
+  dashed: "dashed",
+  dotDash: "dotDash",
+  dotDotDash: "dotDotDash",
+  triple: "triple",
+  thinThickSmall: "thinThickSmallGap",
+  thickThinSmall: "thickThinSmallGap",
+  thinThickThinSmall: "thinThickThinSmallGap",
+  thinThickMedium: "thinThickMediumGap",
+  thickThinMedium: "thickThinMediumGap",
+  thinThickThinMedium: "thinThickThinMediumGap",
+  thinThickLarge: "thinThickLargeGap",
+  thickThinLarge: "thickThinLargeGap",
+  thinThickThinLarge: "thinThickThinLargeGap",
+  wave: "wave",
+  doubleWave: "doubleWave",
+  dashSmall: "dashSmallGap",
+  dashDotStroked: "dashDotStroked",
+  emboss3D: "threeDEmboss",
+  engrave3D: "threeDEngrave",
+};
+
+function convertBorderEdge(border: DocBorder): DocxParagraphBorderEdge {
+  return {
+    val: border.style ? BORDER_STYLE_MAP[border.style] : "single",
+    ...(border.width ? { sz: eighthPt(border.width) } : {}),
+    ...(border.color ? { color: border.color } : {}),
+  };
+}
+
+function convertParagraphBorders(borders: DocParagraphBorders): DocxParagraphBorders {
+  return {
+    ...(borders.top ? { top: convertBorderEdge(borders.top) } : {}),
+    ...(borders.left ? { left: convertBorderEdge(borders.left) } : {}),
+    ...(borders.bottom ? { bottom: convertBorderEdge(borders.bottom) } : {}),
+    ...(borders.right ? { right: convertBorderEdge(borders.right) } : {}),
+    ...(borders.between ? { between: convertBorderEdge(borders.between) } : {}),
+    ...(borders.bar ? { bar: convertBorderEdge(borders.bar) } : {}),
+  };
+}
+
+function convertTableBorderEdge(border: DocBorder): DocxTableBorderEdge {
+  return {
+    val: border.style ? BORDER_STYLE_MAP[border.style] : "single",
+    ...(border.width ? { sz: eighthPt(border.width) } : {}),
+    ...(border.color ? { color: border.color } : {}),
+  };
+}
+
+function convertTableBorders(borders: DocTableBorders): DocxCellBorders {
+  return {
+    ...(borders.top ? { top: convertTableBorderEdge(borders.top) } : {}),
+    ...(borders.left ? { left: convertTableBorderEdge(borders.left) } : {}),
+    ...(borders.bottom ? { bottom: convertTableBorderEdge(borders.bottom) } : {}),
+    ...(borders.right ? { right: convertTableBorderEdge(borders.right) } : {}),
+    ...(borders.insideH ? { insideH: convertTableBorderEdge(borders.insideH) } : {}),
+    ...(borders.insideV ? { insideV: convertTableBorderEdge(borders.insideV) } : {}),
+  };
+}
+
+// --- Shading ---
+
+const SHADING_PATTERN_MAP: Record<number, DocxShadingPattern> = {
+  0: "clear",
+  1: "solid",
+  2: "pct5",
+  3: "pct10",
+  4: "pct20",
+  5: "pct25",
+  6: "pct30",
+  7: "pct40",
+  8: "pct50",
+  9: "pct60",
+  10: "pct70",
+  11: "pct75",
+  12: "pct80",
+  13: "pct90",
+  14: "horzStripe",
+  15: "vertStripe",
+  16: "reverseDiagStripe",
+  17: "diagStripe",
+  18: "horzCross",
+  19: "diagCross",
+  20: "thinHorzStripe",
+  21: "thinVertStripe",
+  22: "thinReverseDiagStripe",
+  23: "thinDiagStripe",
+  24: "thinHorzCross",
+  25: "thinDiagCross",
+};
+
+function convertShading(shd: DocShading): DocxShading {
+  return {
+    val: SHADING_PATTERN_MAP[shd.pattern ?? 0] ?? "clear",
+    ...(shd.foreColor ? { color: shd.foreColor } : {}),
+    ...(shd.backColor ? { fill: shd.backColor } : {}),
+  };
+}
+
+// --- Tab stops ---
+
+function convertTabStops(tabs: readonly DocTabStop[]): DocxTabStops {
+  return {
+    tabs: tabs.map((tab) => ({
+      val: tab.alignment,
+      pos: twips(tab.position),
+      ...(tab.leader ? { leader: tab.leader } : {}),
+    })),
+  };
+}
+
+// --- Line numbering ---
+
+const LINE_NUMBER_RESTART_MAP: Record<string, "newPage" | "newSection" | "continuous"> = {
+  perPage: "newPage",
+  perSection: "newSection",
+  continuous: "continuous",
+};
+
+function convertLineNumbering(ln: DocLineNumbering): DocxLineNumbering {
+  return {
+    ...(ln.countBy !== undefined ? { countBy: ln.countBy } : {}),
+    ...(ln.start !== undefined ? { start: ln.start } : {}),
+    ...(ln.restart ? { restart: LINE_NUMBER_RESTART_MAP[ln.restart] } : {}),
+    ...(ln.distance !== undefined ? { distance: twips(ln.distance) } : {}),
+  };
+}
+
+// --- Vertical alignment ---
+
+function convertVerticalAlign(va: "top" | "center" | "bottom" | "justified"): DocxVerticalJc {
+  if (va === "justified") return "both";
+  return va;
 }
 
 // --- Run properties ---
@@ -175,7 +336,8 @@ function convertParagraphProperties(para: DocParagraph): DocxParagraphProperties
 
   // Spacing
   const hasSpacing =
-    para.spaceBefore !== undefined || para.spaceAfter !== undefined || para.lineSpacing !== undefined;
+    para.spaceBefore !== undefined || para.spaceAfter !== undefined ||
+    para.lineSpacing !== undefined || para.spaceBeforeAuto || para.spaceAfterAuto;
   const spacing: DocxParagraphSpacing | undefined = hasSpacing
     ? {
         ...(para.spaceBefore !== undefined ? { before: twips(para.spaceBefore) } : {}),
@@ -185,6 +347,8 @@ function convertParagraphProperties(para: DocParagraph): DocxParagraphProperties
             ? { line: para.lineSpacing.value, lineRule: "auto" as const }
             : { line: para.lineSpacing.value, lineRule: "exact" as const }
           : {}),
+        ...(para.spaceBeforeAuto ? { beforeAutospacing: true } : {}),
+        ...(para.spaceAfterAuto ? { afterAutospacing: true } : {}),
       }
     : undefined;
 
@@ -204,6 +368,15 @@ function convertParagraphProperties(para: DocParagraph): DocxParagraphProperties
       ? OUTLINE_LEVELS[para.outlineLevel]
       : undefined;
 
+  // Borders
+  const pBdr = para.borders ? convertParagraphBorders(para.borders) : undefined;
+
+  // Shading
+  const shd = para.shading ? convertShading(para.shading) : undefined;
+
+  // Tabs
+  const tabs = para.tabs && para.tabs.length > 0 ? convertTabStops(para.tabs) : undefined;
+
   const props: DocxParagraphProperties = {
     ...(jc ? { jc } : {}),
     ...(ind ? { ind } : {}),
@@ -214,6 +387,9 @@ function convertParagraphProperties(para: DocParagraph): DocxParagraphProperties
     ...(para.pageBreakBefore ? { pageBreakBefore: true } : {}),
     ...(para.widowControl !== undefined ? { widowControl: para.widowControl } : {}),
     ...(outlineLvl !== undefined ? { outlineLvl } : {}),
+    ...(pBdr ? { pBdr } : {}),
+    ...(shd ? { shd } : {}),
+    ...(tabs ? { tabs } : {}),
   };
 
   return Object.keys(props).length > 0 ? props : undefined;
@@ -232,13 +408,28 @@ function convertParagraph(para: DocParagraph): DocxParagraph {
 
 // --- Table ---
 
-function convertTableCell(cell: DocTableCell): DocxTableCell {
-  const hasCellProps = cell.width !== undefined || cell.verticalMerge !== undefined || cell.verticalAlign !== undefined;
+function convertTableCell(cell: DocTableCell, rowBorders?: DocTableBorders): DocxTableCell {
+  const tcBorders = rowBorders ? convertTableBorders(rowBorders) : undefined;
+  const cellShd: DocxShading | undefined = cell.backgroundColor
+    ? { val: "clear", fill: cell.backgroundColor }
+    : undefined;
+
+  const hasCellProps =
+    cell.width !== undefined ||
+    cell.verticalMerge !== undefined ||
+    cell.verticalAlign !== undefined ||
+    cell.horizontalMerge !== undefined ||
+    tcBorders !== undefined ||
+    cellShd !== undefined;
+
   const properties: DocxTableCellProperties | undefined = hasCellProps
     ? {
         ...(cell.width !== undefined ? { tcW: { value: cell.width, type: "dxa" as const } } : {}),
         ...(cell.verticalMerge ? { vMerge: cell.verticalMerge } : {}),
         ...(cell.verticalAlign ? { vAlign: cell.verticalAlign } : {}),
+        ...(cell.horizontalMerge ? { hMerge: cell.horizontalMerge } : {}),
+        ...(tcBorders ? { tcBorders } : {}),
+        ...(cellShd ? { shd: cellShd } : {}),
       }
     : undefined;
 
@@ -261,7 +452,7 @@ function convertTableRow(row: DocTableRow): DocxTableRow {
   return {
     type: "tableRow",
     ...(properties ? { properties } : {}),
-    cells: row.cells.map(convertTableCell),
+    cells: row.cells.map((cell) => convertTableCell(cell, row.borders)),
   };
 }
 
@@ -311,12 +502,30 @@ function convertSectionProperties(section: DocSection): DocxSectionProperties {
 
   const breakType = section.breakType ? SECTION_BREAK_MAP[section.breakType] : undefined;
 
+  // Line numbering
+  const lnNumType = section.lineNumbering ? convertLineNumbering(section.lineNumbering) : undefined;
+
+  // Page numbering
+  const hasPgNumType = section.pageNumberFormat !== undefined || section.pageNumberStart !== undefined;
+  const pgNumType: DocxPageNumberType | undefined = hasPgNumType
+    ? {
+        ...(section.pageNumberFormat ? { fmt: section.pageNumberFormat } : {}),
+        ...(section.pageNumberStart !== undefined ? { start: section.pageNumberStart } : {}),
+      }
+    : undefined;
+
+  // Vertical alignment
+  const vAlign = section.verticalAlign ? convertVerticalAlign(section.verticalAlign) : undefined;
+
   return {
     ...(breakType ? { type: breakType } : {}),
     ...(pgSz ? { pgSz } : {}),
     ...(pgMar ? { pgMar } : {}),
     ...(cols ? { cols } : {}),
     ...(section.titlePage ? { titlePg: true } : {}),
+    ...(lnNumType ? { lnNumType } : {}),
+    ...(pgNumType ? { pgNumType } : {}),
+    ...(vAlign ? { vAlign } : {}),
   };
 }
 

@@ -5,7 +5,7 @@
  * The output is compatible with @oxen-office/pptx text domain types.
  */
 
-import type { Pixels } from "@oxen-office/drawing-ml/domain/units";
+import { px, type Pixels } from "@oxen-office/drawing-ml/domain/units";
 import type { SolidFill } from "@oxen-office/drawing-ml/domain/fill";
 import type { BaseLine } from "@oxen-office/drawing-ml/domain/line";
 import type { Effects } from "@oxen-office/drawing-ml/domain/effects";
@@ -65,8 +65,8 @@ export type ParagraphProperties = {
   readonly alignment?: string;
   readonly bulletStyle?: BulletStyle;
   readonly lineSpacing?: LineSpacing;
-  readonly spaceBefore?: number;
-  readonly spaceAfter?: number;
+  readonly spaceBefore?: LineSpacing;
+  readonly spaceAfter?: LineSpacing;
   readonly indent?: Pixels;
   readonly marginLeft?: Pixels;
   readonly defaultRunProperties?: RunProperties;
@@ -119,7 +119,7 @@ export type RunProperties = {
   readonly spacing?: Pixels;
   readonly fontSize?: number;
   readonly fontFamily?: string;
-  readonly solidFill?: SolidFill;
+  readonly fill?: SolidFill;
   readonly textOutline?: BaseLine;
   readonly effects?: Effects;
   readonly hyperlink?: Hyperlink;
@@ -198,70 +198,34 @@ function buildHyperlink(spec: HyperlinkSpec): Hyperlink {
  * Build run properties from spec
  */
 function buildRunProperties(spec: TextRunSpec): RunProperties | undefined {
-  if (
-    spec.bold !== undefined ||
-    spec.italic !== undefined ||
-    spec.underline !== undefined ||
-    spec.strikethrough !== undefined ||
-    spec.caps !== undefined ||
-    spec.verticalPosition !== undefined ||
-    spec.letterSpacing !== undefined ||
-    spec.fontSize !== undefined ||
-    spec.fontFamily !== undefined ||
-    spec.color !== undefined ||
-    spec.outline !== undefined ||
-    spec.effects !== undefined ||
-    spec.hyperlink !== undefined
-  ) {
-    const properties: RunProperties = {};
+  const underline = spec.underline && spec.underline !== "none"
+    ? UNDERLINE_MAP[spec.underline] ?? spec.underline
+    : undefined;
+  const strike = spec.strikethrough && spec.strikethrough !== "noStrike"
+    ? STRIKE_MAP[spec.strikethrough]
+    : undefined;
+  const caps = spec.caps && spec.caps !== "none" ? spec.caps : undefined;
+  const baseline = spec.verticalPosition && spec.verticalPosition !== "normal"
+    ? VERTICAL_POSITION_MAP[spec.verticalPosition]
+    : undefined;
 
-    if (spec.bold !== undefined) {
-      (properties as { bold?: boolean }).bold = spec.bold;
-    }
-    if (spec.italic !== undefined) {
-      (properties as { italic?: boolean }).italic = spec.italic;
-    }
-    if (spec.underline && spec.underline !== "none") {
-      (properties as { underline?: string }).underline = UNDERLINE_MAP[spec.underline] ?? spec.underline;
-    }
-    if (spec.strikethrough && spec.strikethrough !== "noStrike") {
-      (properties as { strike?: string }).strike = STRIKE_MAP[spec.strikethrough];
-    }
-    if (spec.caps && spec.caps !== "none") {
-      (properties as { caps?: string }).caps = spec.caps;
-    }
-    if (spec.verticalPosition && spec.verticalPosition !== "normal") {
-      (properties as { baseline?: number }).baseline = VERTICAL_POSITION_MAP[spec.verticalPosition];
-    }
-    if (spec.letterSpacing !== undefined) {
-      (properties as { spacing?: Pixels }).spacing = spec.letterSpacing as Pixels;
-    }
-    if (spec.fontSize !== undefined) {
-      (properties as { fontSize?: number }).fontSize = spec.fontSize;
-    }
-    if (spec.fontFamily !== undefined) {
-      (properties as { fontFamily?: string }).fontFamily = spec.fontFamily;
-    }
-    if (spec.color !== undefined) {
-      (properties as { solidFill?: RunProperties["solidFill"] }).solidFill = buildSolidFill(spec.color);
-    }
-    if (spec.outline !== undefined) {
-      (properties as { textOutline?: RunProperties["textOutline"] }).textOutline = buildLine(
-        spec.outline.color,
-        spec.outline.width ?? 1,
-      );
-    }
-    if (spec.effects !== undefined) {
-      (properties as { effects?: RunProperties["effects"] }).effects = buildEffects(spec.effects);
-    }
-    if (spec.hyperlink !== undefined) {
-      (properties as { hyperlink?: Hyperlink }).hyperlink = buildHyperlink(spec.hyperlink);
-    }
+  const properties: RunProperties = {
+    ...(spec.bold !== undefined && { bold: spec.bold }),
+    ...(spec.italic !== undefined && { italic: spec.italic }),
+    ...(underline !== undefined && { underline }),
+    ...(strike !== undefined && { strike }),
+    ...(caps !== undefined && { caps }),
+    ...(baseline !== undefined && { baseline }),
+    ...(spec.letterSpacing !== undefined && { spacing: px(spec.letterSpacing) }),
+    ...(spec.fontSize !== undefined && { fontSize: spec.fontSize }),
+    ...(spec.fontFamily !== undefined && { fontFamily: spec.fontFamily }),
+    ...(spec.color !== undefined && { fill: buildSolidFill(spec.color) }),
+    ...(spec.outline !== undefined && { textOutline: buildLine(spec.outline.color, spec.outline.width ?? 1) }),
+    ...(spec.effects !== undefined && { effects: buildEffects(spec.effects) }),
+    ...(spec.hyperlink !== undefined && { hyperlink: buildHyperlink(spec.hyperlink) }),
+  };
 
-    return properties;
-  }
-
-  return undefined;
+  return Object.keys(properties).length > 0 ? properties : undefined;
 }
 
 /**
@@ -277,63 +241,59 @@ export function buildTextRun(spec: TextRunSpec): TextRun {
 }
 
 /**
+ * Build bullet style from spec
+ */
+function buildBulletStyle(spec: TextParagraphSpec["bullet"]): BulletStyle | undefined {
+  if (spec === undefined || spec.type === "none") return undefined;
+  if (spec.type === "char") {
+    return {
+      bullet: { type: "char", char: spec.char ?? "•" },
+      colorFollowText: true,
+      sizeFollowText: true,
+      fontFollowText: true,
+    };
+  }
+  if (spec.type === "autoNum") {
+    return {
+      bullet: { type: "auto", scheme: spec.autoNumType ?? "arabicPeriod" },
+      colorFollowText: true,
+      sizeFollowText: true,
+      fontFollowText: true,
+    };
+  }
+  return undefined;
+}
+
+/**
+ * Build line spacing from spec.
+ * Percent values are stored as thousandths (150% → 150000).
+ * Point values are stored in actual points (the serializer converts to centipoints).
+ */
+function buildLineSpacing(spec: TextParagraphSpec["lineSpacing"]): LineSpacing | undefined {
+  if (spec === undefined) return undefined;
+  return spec.type === "percent"
+    ? { type: "percent", value: spec.value * 1000 }
+    : { type: "points", value: spec.value };
+}
+
+/**
  * Build a paragraph from spec
  */
 export function buildParagraph(spec: TextParagraphSpec): Paragraph {
   const runs = spec.runs.map(buildTextRun);
+  const bulletStyle = buildBulletStyle(spec.bullet);
+  const lineSpacing = buildLineSpacing(spec.lineSpacing);
 
-  const properties: ParagraphProperties = {};
-
-  if (spec.level !== undefined) {
-    (properties as { level?: number }).level = spec.level;
-  }
-  if (spec.alignment !== undefined) {
-    (properties as { alignment?: string }).alignment = spec.alignment;
-  }
-  if (spec.bullet !== undefined && spec.bullet.type !== "none") {
-    if (spec.bullet.type === "char") {
-      (properties as { bulletStyle?: BulletStyle }).bulletStyle = {
-        bullet: { type: "char", char: spec.bullet.char ?? "•" },
-        colorFollowText: true,
-        sizeFollowText: true,
-        fontFollowText: true,
-      };
-    } else if (spec.bullet.type === "autoNum") {
-      (properties as { bulletStyle?: BulletStyle }).bulletStyle = {
-        bullet: { type: "auto", scheme: spec.bullet.autoNumType ?? "arabicPeriod" },
-        colorFollowText: true,
-        sizeFollowText: true,
-        fontFollowText: true,
-      };
-    }
-  }
-
-  // Paragraph spacing
-  if (spec.lineSpacing !== undefined) {
-    if (spec.lineSpacing.type === "percent") {
-      (properties as { lineSpacing?: LineSpacing }).lineSpacing = {
-        type: "percent",
-        value: spec.lineSpacing.value * 1000,
-      };
-    } else {
-      (properties as { lineSpacing?: LineSpacing }).lineSpacing = {
-        type: "points",
-        value: spec.lineSpacing.value * 100,
-      };
-    }
-  }
-  if (spec.spaceBefore !== undefined) {
-    (properties as { spaceBefore?: number }).spaceBefore = spec.spaceBefore * 100;
-  }
-  if (spec.spaceAfter !== undefined) {
-    (properties as { spaceAfter?: number }).spaceAfter = spec.spaceAfter * 100;
-  }
-  if (spec.indent !== undefined) {
-    (properties as { indent?: Pixels }).indent = spec.indent as Pixels;
-  }
-  if (spec.marginLeft !== undefined) {
-    (properties as { marginLeft?: Pixels }).marginLeft = spec.marginLeft as Pixels;
-  }
+  const properties: ParagraphProperties = {
+    ...(spec.level !== undefined && { level: spec.level }),
+    ...(spec.alignment !== undefined && { alignment: spec.alignment }),
+    ...(bulletStyle !== undefined && { bulletStyle }),
+    ...(lineSpacing !== undefined && { lineSpacing }),
+    ...(spec.spaceBefore !== undefined && { spaceBefore: { type: "points" as const, value: spec.spaceBefore } }),
+    ...(spec.spaceAfter !== undefined && { spaceAfter: { type: "points" as const, value: spec.spaceAfter } }),
+    ...(spec.indent !== undefined && { indent: px(spec.indent) }),
+    ...(spec.marginLeft !== undefined && { marginLeft: px(spec.marginLeft) }),
+  };
 
   return { properties, runs };
 }
@@ -349,39 +309,28 @@ function isRichText(text: TextSpec): text is RichTextSpec {
  * Build body properties from spec
  */
 function buildBodyProperties(spec?: TextBodyPropertiesSpec): BodyProperties {
-  if (!spec) {
-    return {};
-  }
+  if (!spec) return {};
 
-  const props: BodyProperties = {};
-
-  if (spec.anchor !== undefined) {
-    (props as { anchor?: string }).anchor = spec.anchor;
-  }
-  if (spec.verticalType !== undefined) {
-    (props as { verticalType?: string }).verticalType = spec.verticalType;
-  }
-  if (spec.wrapping !== undefined) {
-    (props as { wrapping?: string }).wrapping = spec.wrapping;
-  }
-  if (spec.anchorCenter !== undefined) {
-    (props as { anchorCenter?: boolean }).anchorCenter = spec.anchorCenter;
-  }
-  if (
+  const hasInsets =
     spec.insetLeft !== undefined ||
     spec.insetTop !== undefined ||
     spec.insetRight !== undefined ||
-    spec.insetBottom !== undefined
-  ) {
-    (props as { insets?: BodyProperties["insets"] }).insets = {
-      left: (spec.insetLeft ?? 0) as Pixels,
-      top: (spec.insetTop ?? 0) as Pixels,
-      right: (spec.insetRight ?? 0) as Pixels,
-      bottom: (spec.insetBottom ?? 0) as Pixels,
-    };
-  }
+    spec.insetBottom !== undefined;
 
-  return props;
+  return {
+    ...(spec.anchor !== undefined && { anchor: spec.anchor }),
+    ...(spec.verticalType !== undefined && { verticalType: spec.verticalType }),
+    ...(spec.wrapping !== undefined && { wrapping: spec.wrapping }),
+    ...(spec.anchorCenter !== undefined && { anchorCenter: spec.anchorCenter }),
+    ...(hasInsets && {
+      insets: {
+        left: px(spec.insetLeft ?? 0),
+        top: px(spec.insetTop ?? 0),
+        right: px(spec.insetRight ?? 0),
+        bottom: px(spec.insetBottom ?? 0),
+      },
+    }),
+  };
 }
 
 /**

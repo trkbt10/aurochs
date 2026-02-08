@@ -22,7 +22,7 @@ import type { Table, TableRow, TableCell, TableCellProperties, CellMargin, CellB
 import type { GroupTransform } from "@oxen-office/pptx/domain/geometry";
 import type { TextBody } from "@oxen-office/pptx/domain/text";
 import type { Shape3d } from "@oxen-office/pptx/domain/three-d";
-import type { Pixels, Degrees } from "@oxen-office/drawing-ml/domain/units";
+import { px, deg, type Pixels } from "@oxen-office/drawing-ml/domain/units";
 import type { ShapeSpec, ImageSpec, ConnectorSpec, GroupSpec, TableSpec, TableCellSpec } from "../types";
 import type { TextSpec } from "@oxen-builder/drawing-ml";
 import type { Line } from "@oxen-office/pptx/domain/color/types";
@@ -117,11 +117,11 @@ function buildSpShape(spec: ShapeSpec, id: string): SpShape {
     placeholder: spec.placeholder ? { type: spec.placeholder.type, idx: spec.placeholder.idx } : undefined,
     properties: {
       transform: {
-        x: spec.x as Pixels,
-        y: spec.y as Pixels,
-        width: spec.width as Pixels,
-        height: spec.height as Pixels,
-        rotation: (spec.rotation ?? 0) as Degrees,
+        x: px(spec.x),
+        y: px(spec.y),
+        width: px(spec.width),
+        height: px(spec.height),
+        rotation: deg(spec.rotation ?? 0),
         flipH: spec.flipH ?? false,
         flipV: spec.flipV ?? false,
       },
@@ -251,11 +251,11 @@ function buildPicShape({
     },
     properties: {
       transform: {
-        x: spec.x as Pixels,
-        y: spec.y as Pixels,
-        width: spec.width as Pixels,
-        height: spec.height as Pixels,
-        rotation: (spec.rotation ?? 0) as Degrees,
+        x: px(spec.x),
+        y: px(spec.y),
+        width: px(spec.width),
+        height: px(spec.height),
+        rotation: deg(spec.rotation ?? 0),
         flipH: spec.flipH ?? false,
         flipV: spec.flipV ?? false,
       },
@@ -342,11 +342,11 @@ function buildCxnShape(spec: ConnectorSpec, id: string): CxnShape {
     },
     properties: {
       transform: {
-        x: spec.x as Pixels,
-        y: spec.y as Pixels,
-        width: spec.width as Pixels,
-        height: spec.height as Pixels,
-        rotation: (spec.rotation ?? 0) as Degrees,
+        x: px(spec.x),
+        y: px(spec.y),
+        width: px(spec.width),
+        height: px(spec.height),
+        rotation: deg(spec.rotation ?? 0),
         flipH: spec.flipH ?? false,
         flipV: spec.flipV ?? false,
       },
@@ -382,17 +382,17 @@ function buildGrpShape(spec: GroupSpec, id: string, existingIds: string[]): GrpS
   const children = spec.children.map((childSpec) => buildGroupChild(childSpec, existingIds));
 
   const transform: GroupTransform = {
-    x: spec.x as Pixels,
-    y: spec.y as Pixels,
-    width: spec.width as Pixels,
-    height: spec.height as Pixels,
-    rotation: (spec.rotation ?? 0) as Degrees,
+    x: px(spec.x),
+    y: px(spec.y),
+    width: px(spec.width),
+    height: px(spec.height),
+    rotation: deg(spec.rotation ?? 0),
     flipH: spec.flipH ?? false,
     flipV: spec.flipV ?? false,
-    childOffsetX: 0 as Pixels,
-    childOffsetY: 0 as Pixels,
-    childExtentWidth: spec.width as Pixels,
-    childExtentHeight: spec.height as Pixels,
+    childOffsetX: px(0),
+    childOffsetY: px(0),
+    childExtentWidth: px(spec.width),
+    childExtentHeight: px(spec.height),
   };
 
   return {
@@ -448,10 +448,10 @@ function buildCellMargins(cellSpec: TableCellSpec): CellMargin | undefined {
   }
 
   return {
-    left: (cellSpec.marginLeft ?? 0) as Pixels,
-    right: (cellSpec.marginRight ?? 0) as Pixels,
-    top: (cellSpec.marginTop ?? 0) as Pixels,
-    bottom: (cellSpec.marginBottom ?? 0) as Pixels,
+    left: px(cellSpec.marginLeft ?? 0),
+    right: px(cellSpec.marginRight ?? 0),
+    top: px(cellSpec.marginTop ?? 0),
+    bottom: px(cellSpec.marginBottom ?? 0),
   };
 }
 
@@ -553,8 +553,8 @@ function buildTableRow({ rowCells, rowHeight, rowIndex, mergeFlags }: BuildTable
 function buildTable(spec: TableSpec): Table {
   const colCount = spec.rows[0]?.length ?? 0;
   const rowCount = spec.rows.length;
-  const colWidth = (colCount > 0 ? spec.width / colCount : spec.width) as Pixels;
-  const rowHeight = (rowCount > 0 ? spec.height / rowCount : spec.height) as Pixels;
+  const colWidth = px(colCount > 0 ? spec.width / colCount : spec.width);
+  const rowHeight = px(rowCount > 0 ? spec.height / rowCount : spec.height);
 
   const mergeFlags = collectMergeFlags(spec.rows);
 
@@ -573,11 +573,11 @@ function buildTableGraphicFrame(spec: TableSpec, id: string): GraphicFrame {
     type: "graphicFrame",
     nonVisual: { id, name: `Table ${id}` },
     transform: {
-      x: spec.x as Pixels,
-      y: spec.y as Pixels,
-      width: spec.width as Pixels,
-      height: spec.height as Pixels,
-      rotation: 0 as Degrees,
+      x: px(spec.x),
+      y: px(spec.y),
+      width: px(spec.width),
+      height: px(spec.height),
+      rotation: deg(0),
       flipH: false,
       flipV: false,
     },

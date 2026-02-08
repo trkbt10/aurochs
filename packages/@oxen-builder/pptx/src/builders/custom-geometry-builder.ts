@@ -6,7 +6,7 @@
  */
 
 import type { CustomGeometry, GeometryPath, PathCommand } from "@oxen-office/pptx/domain/shape";
-import type { Degrees, Pixels } from "@oxen-office/drawing-ml/domain/units";
+import { px, deg } from "@oxen-office/drawing-ml/domain/units";
 import type { CustomGeometrySpec, GeometryPathSpec, PathCommandSpec } from "../types";
 
 function requireNumber(name: string, value: number | undefined): number {
@@ -21,47 +21,47 @@ function buildPathCommand(spec: PathCommandSpec): PathCommand {
     case "moveTo":
       return {
         type: "moveTo",
-        point: { x: requireNumber("moveTo.x", spec.x) as Pixels, y: requireNumber("moveTo.y", spec.y) as Pixels },
+        point: { x: px(requireNumber("moveTo.x", spec.x)), y: px(requireNumber("moveTo.y", spec.y)) },
       };
     case "lineTo":
       return {
         type: "lineTo",
-        point: { x: requireNumber("lineTo.x", spec.x) as Pixels, y: requireNumber("lineTo.y", spec.y) as Pixels },
+        point: { x: px(requireNumber("lineTo.x", spec.x)), y: px(requireNumber("lineTo.y", spec.y)) },
       };
     case "arcTo":
       return {
         type: "arcTo",
-        widthRadius: requireNumber("arcTo.widthRadius", spec.widthRadius) as Pixels,
-        heightRadius: requireNumber("arcTo.heightRadius", spec.heightRadius) as Pixels,
-        startAngle: requireNumber("arcTo.startAngle", spec.startAngle) as Degrees,
-        swingAngle: requireNumber("arcTo.swingAngle", spec.swingAngle) as Degrees,
+        widthRadius: px(requireNumber("arcTo.widthRadius", spec.widthRadius)),
+        heightRadius: px(requireNumber("arcTo.heightRadius", spec.heightRadius)),
+        startAngle: deg(requireNumber("arcTo.startAngle", spec.startAngle)),
+        swingAngle: deg(requireNumber("arcTo.swingAngle", spec.swingAngle)),
       };
     case "quadBezierTo":
       return {
         type: "quadBezierTo",
         control: {
-          x: requireNumber("quadBezierTo.control.x", spec.control?.x) as Pixels,
-          y: requireNumber("quadBezierTo.control.y", spec.control?.y) as Pixels,
+          x: px(requireNumber("quadBezierTo.control.x", spec.control?.x)),
+          y: px(requireNumber("quadBezierTo.control.y", spec.control?.y)),
         },
         end: {
-          x: requireNumber("quadBezierTo.end.x", spec.end?.x) as Pixels,
-          y: requireNumber("quadBezierTo.end.y", spec.end?.y) as Pixels,
+          x: px(requireNumber("quadBezierTo.end.x", spec.end?.x)),
+          y: px(requireNumber("quadBezierTo.end.y", spec.end?.y)),
         },
       };
     case "cubicBezierTo":
       return {
         type: "cubicBezierTo",
         control1: {
-          x: requireNumber("cubicBezierTo.control1.x", spec.control1?.x) as Pixels,
-          y: requireNumber("cubicBezierTo.control1.y", spec.control1?.y) as Pixels,
+          x: px(requireNumber("cubicBezierTo.control1.x", spec.control1?.x)),
+          y: px(requireNumber("cubicBezierTo.control1.y", spec.control1?.y)),
         },
         control2: {
-          x: requireNumber("cubicBezierTo.control2.x", spec.control2?.x) as Pixels,
-          y: requireNumber("cubicBezierTo.control2.y", spec.control2?.y) as Pixels,
+          x: px(requireNumber("cubicBezierTo.control2.x", spec.control2?.x)),
+          y: px(requireNumber("cubicBezierTo.control2.y", spec.control2?.y)),
         },
         end: {
-          x: requireNumber("cubicBezierTo.end.x", spec.end?.x) as Pixels,
-          y: requireNumber("cubicBezierTo.end.y", spec.end?.y) as Pixels,
+          x: px(requireNumber("cubicBezierTo.end.x", spec.end?.x)),
+          y: px(requireNumber("cubicBezierTo.end.y", spec.end?.y)),
         },
       };
     case "close":
@@ -75,8 +75,8 @@ function buildGeometryPath(spec: GeometryPathSpec): GeometryPath {
   }
 
   return {
-    width: requireNumber("path.width", spec.width) as Pixels,
-    height: requireNumber("path.height", spec.height) as Pixels,
+    width: px(requireNumber("path.width", spec.width)),
+    height: px(requireNumber("path.height", spec.height)),
     fill: spec.fill,
     stroke: spec.stroke,
     extrusionOk: spec.extrusionOk,

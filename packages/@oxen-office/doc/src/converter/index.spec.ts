@@ -1,6 +1,6 @@
 /** @file Converter tests */
 import { convertDocToDocx } from "./index";
-import type { DocDocument, DocTable, DocParagraph } from "../domain/types";
+import type { DocDocument, DocTable, DocParagraph, DocTableRow } from "../domain/types";
 
 describe("convertDocToDocx", () => {
   it("converts empty document", () => {
@@ -413,6 +413,384 @@ describe("convertDocToDocx — mixed content", () => {
           ],
         },
       ],
+    });
+  });
+});
+
+describe("convertDocToDocx — paragraph borders", () => {
+  it("converts single border on all edges", () => {
+    const border = { style: "single" as const, width: 4, color: "000000" };
+    const doc: DocDocument = {
+      paragraphs: [{
+        runs: [{ text: "Bordered" }],
+        borders: { top: border, left: border, bottom: border, right: border, between: border, bar: border },
+      }],
+    };
+
+    const result = convertDocToDocx(doc);
+    const pBdr = (result.body.content[0] as { properties: { pBdr: unknown } }).properties.pBdr;
+
+    expect(pBdr).toMatchObject({
+      top: { val: "single", sz: 4, color: "000000" },
+      left: { val: "single", sz: 4, color: "000000" },
+      bottom: { val: "single", sz: 4, color: "000000" },
+      right: { val: "single", sz: 4, color: "000000" },
+      between: { val: "single", sz: 4, color: "000000" },
+      bar: { val: "single", sz: 4, color: "000000" },
+    });
+  });
+
+  it("converts mixed border styles", () => {
+    const doc: DocDocument = {
+      paragraphs: [{
+        runs: [{ text: "Mixed" }],
+        borders: {
+          top: { style: "thick" },
+          bottom: { style: "dotted", width: 6 },
+        },
+      }],
+    };
+
+    const result = convertDocToDocx(doc);
+    const pBdr = (result.body.content[0] as { properties: { pBdr: unknown } }).properties.pBdr;
+
+    expect(pBdr).toMatchObject({
+      top: { val: "thick" },
+      bottom: { val: "dotted", sz: 6 },
+    });
+  });
+
+  it("maps thinThickSmall to thinThickSmallGap", () => {
+    const doc: DocDocument = {
+      paragraphs: [{
+        runs: [{ text: "Test" }],
+        borders: { top: { style: "thinThickSmall" } },
+      }],
+    };
+
+    const result = convertDocToDocx(doc);
+    const pBdr = (result.body.content[0] as { properties: { pBdr: unknown } }).properties.pBdr;
+
+    expect(pBdr).toMatchObject({ top: { val: "thinThickSmallGap" } });
+  });
+
+  it("maps emboss3D and engrave3D", () => {
+    const doc: DocDocument = {
+      paragraphs: [{
+        runs: [{ text: "Test" }],
+        borders: {
+          top: { style: "emboss3D" },
+          bottom: { style: "engrave3D" },
+        },
+      }],
+    };
+
+    const result = convertDocToDocx(doc);
+    const pBdr = (result.body.content[0] as { properties: { pBdr: unknown } }).properties.pBdr;
+
+    expect(pBdr).toMatchObject({
+      top: { val: "threeDEmboss" },
+      bottom: { val: "threeDEngrave" },
+    });
+  });
+});
+
+describe("convertDocToDocx — paragraph shading", () => {
+  it("converts backColor-only shading to clear fill", () => {
+    const doc: DocDocument = {
+      paragraphs: [{
+        runs: [{ text: "Shaded" }],
+        shading: { backColor: "FFFF00" },
+      }],
+    };
+
+    const result = convertDocToDocx(doc);
+
+    expect(result.body.content[0]).toMatchObject({
+      properties: { shd: { val: "clear", fill: "FFFF00" } },
+    });
+  });
+
+  it("converts solid shading with foreColor and backColor", () => {
+    const doc: DocDocument = {
+      paragraphs: [{
+        runs: [{ text: "Shaded" }],
+        shading: { foreColor: "FF0000", backColor: "00FF00", pattern: 1 },
+      }],
+    };
+
+    const result = convertDocToDocx(doc);
+
+    expect(result.body.content[0]).toMatchObject({
+      properties: { shd: { val: "solid", color: "FF0000", fill: "00FF00" } },
+    });
+  });
+
+  it("converts horzStripe pattern (14)", () => {
+    const doc: DocDocument = {
+      paragraphs: [{
+        runs: [{ text: "Striped" }],
+        shading: { foreColor: "000000", backColor: "FFFFFF", pattern: 14 },
+      }],
+    };
+
+    const result = convertDocToDocx(doc);
+
+    expect(result.body.content[0]).toMatchObject({
+      properties: { shd: { val: "horzStripe", color: "000000", fill: "FFFFFF" } },
+    });
+  });
+});
+
+describe("convertDocToDocx — tab stops", () => {
+  it("converts single tab stop", () => {
+    const doc: DocDocument = {
+      paragraphs: [{
+        runs: [{ text: "Tabbed" }],
+        tabs: [{ position: 2880, alignment: "left" }],
+      }],
+    };
+
+    const result = convertDocToDocx(doc);
+
+    expect(result.body.content[0]).toMatchObject({
+      properties: { tabs: { tabs: [{ val: "left", pos: 2880 }] } },
+    });
+  });
+
+  it("converts multiple tab stops with leaders", () => {
+    const doc: DocDocument = {
+      paragraphs: [{
+        runs: [{ text: "Tabbed" }],
+        tabs: [
+          { position: 1440, alignment: "left" },
+          { position: 4320, alignment: "right", leader: "dot" },
+        ],
+      }],
+    };
+
+    const result = convertDocToDocx(doc);
+
+    expect(result.body.content[0]).toMatchObject({
+      properties: {
+        tabs: {
+          tabs: [
+            { val: "left", pos: 1440 },
+            { val: "right", pos: 4320, leader: "dot" },
+          ],
+        },
+      },
+    });
+  });
+
+  it("converts decimal alignment with dot leader", () => {
+    const doc: DocDocument = {
+      paragraphs: [{
+        runs: [{ text: "Amount" }],
+        tabs: [{ position: 5760, alignment: "decimal", leader: "dot" }],
+      }],
+    };
+
+    const result = convertDocToDocx(doc);
+
+    expect(result.body.content[0]).toMatchObject({
+      properties: { tabs: { tabs: [{ val: "decimal", pos: 5760, leader: "dot" }] } },
+    });
+  });
+});
+
+describe("convertDocToDocx — table borders/shading/hMerge", () => {
+  it("distributes row borders to cells as tcBorders", () => {
+    const row: DocTableRow = {
+      cells: [
+        { paragraphs: [{ runs: [{ text: "A" }] }] },
+        { paragraphs: [{ runs: [{ text: "B" }] }] },
+      ],
+      borders: {
+        top: { style: "single", width: 4 },
+        bottom: { style: "single", width: 4 },
+      },
+    };
+    const doc: DocDocument = {
+      paragraphs: [],
+      content: [{ rows: [row] }],
+    };
+
+    const result = convertDocToDocx(doc);
+
+    expect(result.body.content[0]).toMatchObject({
+      type: "table",
+      rows: [{
+        cells: [
+          { properties: { tcBorders: { top: { val: "single", sz: 4 }, bottom: { val: "single", sz: 4 } } } },
+          { properties: { tcBorders: { top: { val: "single", sz: 4 }, bottom: { val: "single", sz: 4 } } } },
+        ],
+      }],
+    });
+  });
+
+  it("converts cell backgroundColor to shd.fill", () => {
+    const table: DocTable = {
+      rows: [{
+        cells: [{ paragraphs: [{ runs: [{ text: "Colored" }] }], backgroundColor: "CCCCCC" }],
+      }],
+    };
+    const doc: DocDocument = { paragraphs: [], content: [table] };
+
+    const result = convertDocToDocx(doc);
+
+    expect(result.body.content[0]).toMatchObject({
+      type: "table",
+      rows: [{ cells: [{ properties: { shd: { val: "clear", fill: "CCCCCC" } } }] }],
+    });
+  });
+
+  it("converts cell horizontalMerge to hMerge", () => {
+    const table: DocTable = {
+      rows: [{
+        cells: [
+          { paragraphs: [{ runs: [{ text: "Span" }] }], horizontalMerge: "restart" },
+          { paragraphs: [{ runs: [{ text: "" }] }], horizontalMerge: "continue" },
+        ],
+      }],
+    };
+    const doc: DocDocument = { paragraphs: [], content: [table] };
+
+    const result = convertDocToDocx(doc);
+
+    expect(result.body.content[0]).toMatchObject({
+      type: "table",
+      rows: [{
+        cells: [
+          { properties: { hMerge: "restart" } },
+          { properties: { hMerge: "continue" } },
+        ],
+      }],
+    });
+  });
+
+  it("combines row borders, cell shading, and hMerge", () => {
+    const table: DocTable = {
+      rows: [{
+        cells: [
+          { paragraphs: [{ runs: [{ text: "A" }] }], backgroundColor: "FFFF00", horizontalMerge: "restart" },
+        ],
+        borders: { top: { style: "thick", width: 8 } },
+      }],
+    };
+    const doc: DocDocument = { paragraphs: [], content: [table] };
+
+    const result = convertDocToDocx(doc);
+
+    expect(result.body.content[0]).toMatchObject({
+      type: "table",
+      rows: [{
+        cells: [{
+          properties: {
+            hMerge: "restart",
+            tcBorders: { top: { val: "thick", sz: 8 } },
+            shd: { val: "clear", fill: "FFFF00" },
+          },
+        }],
+      }],
+    });
+  });
+});
+
+describe("convertDocToDocx — section line/page numbering + vAlign", () => {
+  it("converts lineNumbering with restart mapping", () => {
+    const doc: DocDocument = {
+      paragraphs: [{ runs: [{ text: "X" }] }],
+      sections: [{
+        lineNumbering: { countBy: 5, start: 1, restart: "perPage", distance: 360 },
+        paragraphs: [{ runs: [{ text: "X" }] }],
+      }],
+    };
+
+    const result = convertDocToDocx(doc);
+
+    expect(result.body.content[0]).toMatchObject({
+      properties: {
+        sectPr: {
+          lnNumType: { countBy: 5, start: 1, restart: "newPage", distance: 360 },
+        },
+      },
+    });
+  });
+
+  it("converts pageNumberFormat and pageNumberStart", () => {
+    const doc: DocDocument = {
+      paragraphs: [{ runs: [{ text: "X" }] }],
+      sections: [{
+        pageNumberFormat: "lowerRoman",
+        pageNumberStart: 1,
+        paragraphs: [{ runs: [{ text: "X" }] }],
+      }],
+    };
+
+    const result = convertDocToDocx(doc);
+
+    expect(result.body.content[0]).toMatchObject({
+      properties: {
+        sectPr: {
+          pgNumType: { fmt: "lowerRoman", start: 1 },
+        },
+      },
+    });
+  });
+
+  it("converts verticalAlign justified to both", () => {
+    const doc: DocDocument = {
+      paragraphs: [{ runs: [{ text: "X" }] }],
+      sections: [{
+        verticalAlign: "justified",
+        paragraphs: [{ runs: [{ text: "X" }] }],
+      }],
+    };
+
+    const result = convertDocToDocx(doc);
+
+    expect(result.body.content[0]).toMatchObject({
+      properties: { sectPr: { vAlign: "both" } },
+    });
+  });
+
+  it("converts verticalAlign center directly", () => {
+    const doc: DocDocument = {
+      paragraphs: [{ runs: [{ text: "X" }] }],
+      sections: [{
+        verticalAlign: "center",
+        paragraphs: [{ runs: [{ text: "X" }] }],
+      }],
+    };
+
+    const result = convertDocToDocx(doc);
+
+    expect(result.body.content[0]).toMatchObject({
+      properties: { sectPr: { vAlign: "center" } },
+    });
+  });
+});
+
+describe("convertDocToDocx — spacing auto flags", () => {
+  it("converts spaceBeforeAuto and spaceAfterAuto", () => {
+    const doc: DocDocument = {
+      paragraphs: [{
+        runs: [{ text: "Auto" }],
+        spaceBeforeAuto: true,
+        spaceAfterAuto: true,
+      }],
+    };
+
+    const result = convertDocToDocx(doc);
+
+    expect(result.body.content[0]).toMatchObject({
+      properties: {
+        spacing: {
+          beforeAutospacing: true,
+          afterAutospacing: true,
+        },
+      },
     });
   });
 });

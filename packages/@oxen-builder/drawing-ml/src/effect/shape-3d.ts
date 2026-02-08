@@ -2,6 +2,7 @@
  * @file 3D shape property builders for DrawingML
  */
 
+import { px } from "@oxen-office/drawing-ml/domain/units";
 import type { Pixels } from "@oxen-office/drawing-ml/domain/units";
 import type { Shape3dSpec, BevelSpec } from "../types";
 
@@ -30,8 +31,8 @@ export type Shape3d = {
 export function buildBevel(spec: BevelSpec): Bevel3d {
   return {
     preset: spec.preset ?? "circle",
-    width: (spec.width ?? 8) as Pixels,
-    height: (spec.height ?? 8) as Pixels,
+    width: px(spec.width ?? 8),
+    height: px(spec.height ?? 8),
   };
 }
 
@@ -39,23 +40,10 @@ export function buildBevel(spec: BevelSpec): Bevel3d {
  * Build 3D shape properties from spec
  */
 export function buildShape3d(spec: Shape3dSpec): Shape3d {
-  const shape3d: Shape3d = {};
-
-  if (spec.bevelTop) {
-    (shape3d as { bevelTop?: Bevel3d }).bevelTop = buildBevel(spec.bevelTop);
-  }
-
-  if (spec.bevelBottom) {
-    (shape3d as { bevelBottom?: Bevel3d }).bevelBottom = buildBevel(spec.bevelBottom);
-  }
-
-  if (spec.material) {
-    (shape3d as { preset?: string }).preset = spec.material;
-  }
-
-  if (spec.extrusionHeight !== undefined) {
-    (shape3d as { extrusionHeight?: Pixels }).extrusionHeight = spec.extrusionHeight as Pixels;
-  }
-
-  return shape3d;
+  return {
+    ...(spec.bevelTop && { bevelTop: buildBevel(spec.bevelTop) }),
+    ...(spec.bevelBottom && { bevelBottom: buildBevel(spec.bevelBottom) }),
+    ...(spec.material && { preset: spec.material }),
+    ...(spec.extrusionHeight !== undefined && { extrusionHeight: px(spec.extrusionHeight) }),
+  };
 }

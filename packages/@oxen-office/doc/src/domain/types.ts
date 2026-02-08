@@ -114,6 +114,8 @@ export type DocParagraph = {
   readonly borders?: DocParagraphBorders;
   readonly shading?: DocShading;
   readonly tabs?: readonly DocTabStop[];
+  readonly spaceBeforeAuto?: boolean;
+  readonly spaceAfterAuto?: boolean;
 };
 
 // --- Section ---

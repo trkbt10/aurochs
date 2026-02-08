@@ -265,4 +265,18 @@ describe("extractPapProps", () => {
     expect(props.shading!.backColor).toBe("808080");
     expect(props.shading!.pattern).toBe(5);
   });
+
+  it("extracts spaceBeforeAuto", () => {
+    // sprmPFDyaBeforeAuto(0x245B) = 1
+    const sprms = parseGrpprl(new Uint8Array([0x5b, 0x24, 0x01]));
+    const props = extractPapProps(sprms, 0);
+    expect(props.spaceBeforeAuto).toBe(true);
+  });
+
+  it("extracts spaceAfterAuto", () => {
+    // sprmPFDyaAfterAuto(0x245C) = 1
+    const sprms = parseGrpprl(new Uint8Array([0x5c, 0x24, 0x01]));
+    const props = extractPapProps(sprms, 0);
+    expect(props.spaceAfterAuto).toBe(true);
+  });
 });

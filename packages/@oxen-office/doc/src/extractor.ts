@@ -290,6 +290,8 @@ function buildParagraphs(
       ...(papProps.borders ? { borders: papProps.borders } : {}),
       ...(papProps.shading ? { shading: papProps.shading } : {}),
       ...(papProps.tabs ? { tabs: papProps.tabs } : {}),
+      ...(papProps.spaceBeforeAuto ? { spaceBeforeAuto: papProps.spaceBeforeAuto } : {}),
+      ...(papProps.spaceAfterAuto ? { spaceAfterAuto: papProps.spaceAfterAuto } : {}),
     };
 
     paragraphs.push(para);
@@ -680,6 +682,8 @@ function createSubdocParagraphBuilder(
           ...(papProps.borders ? { borders: papProps.borders } : {}),
           ...(papProps.shading ? { shading: papProps.shading } : {}),
           ...(papProps.tabs ? { tabs: papProps.tabs } : {}),
+          ...(papProps.spaceBeforeAuto ? { spaceBeforeAuto: papProps.spaceBeforeAuto } : {}),
+          ...(papProps.spaceAfterAuto ? { spaceAfterAuto: papProps.spaceAfterAuto } : {}),
         });
       }
       cpOffset += partText.length + 1; // +1 for \r

@@ -3,7 +3,7 @@
  */
 
 import type { Effects, ReflectionEffect, ShadowEffect, GlowEffect, SoftEdgeEffect } from "@oxen-office/drawing-ml/domain/effects";
-import type { Pixels, Degrees, Percent } from "@oxen-office/drawing-ml/domain/units";
+import { px, deg, pct } from "@oxen-office/drawing-ml/domain/units";
 import type { EffectsSpec, ReflectionEffectSpec } from "../types";
 
 /**
@@ -11,16 +11,16 @@ import type { EffectsSpec, ReflectionEffectSpec } from "../types";
  */
 function buildReflection(spec: ReflectionEffectSpec): ReflectionEffect {
   return {
-    blurRadius: (spec.blurRadius ?? 0) as Pixels,
-    startOpacity: ((spec.startOpacity ?? 100) * 1000) as Percent, // Convert 0-100 to 0-100000
-    startPosition: 0 as Percent, // Default start position
-    endOpacity: ((spec.endOpacity ?? 0) * 1000) as Percent, // Convert 0-100 to 0-100000
-    endPosition: 100000 as Percent, // Default end position (100%)
-    distance: (spec.distance ?? 0) as Pixels,
-    direction: (spec.direction ?? 0) as Degrees,
-    fadeDirection: (spec.fadeDirection ?? 90) as Degrees,
-    scaleX: ((spec.scaleX ?? 100) * 1000) as Percent, // Convert 0-100 to 0-100000
-    scaleY: ((spec.scaleY ?? -100) * 1000) as Percent, // Default -100% for mirror effect
+    blurRadius: px(spec.blurRadius ?? 0),
+    startOpacity: pct((spec.startOpacity ?? 100) * 1000),
+    startPosition: pct(0),
+    endOpacity: pct((spec.endOpacity ?? 0) * 1000),
+    endPosition: pct(100000),
+    distance: px(spec.distance ?? 0),
+    direction: deg(spec.direction ?? 0),
+    fadeDirection: deg(spec.fadeDirection ?? 90),
+    scaleX: pct((spec.scaleX ?? 100) * 1000),
+    scaleY: pct((spec.scaleY ?? -100) * 1000),
   };
 }
 
@@ -28,34 +28,27 @@ function buildReflection(spec: ReflectionEffectSpec): ReflectionEffect {
  * Build effects object from spec
  */
 export function buildEffects(spec: EffectsSpec): Effects {
-  const effects: Effects = {};
-
-  if (spec.shadow) {
-    (effects as { shadow?: ShadowEffect }).shadow = {
-      type: "outer",
-      color: { spec: { type: "srgb", value: spec.shadow.color } },
-      blurRadius: (spec.shadow.blur ?? 4) as Pixels,
-      distance: (spec.shadow.distance ?? 3) as Pixels,
-      direction: (spec.shadow.direction ?? 45) as Degrees,
-    };
-  }
-
-  if (spec.glow) {
-    (effects as { glow?: GlowEffect }).glow = {
-      color: { spec: { type: "srgb", value: spec.glow.color } },
-      radius: spec.glow.radius as Pixels,
-    };
-  }
-
-  if (spec.softEdge) {
-    (effects as { softEdge?: SoftEdgeEffect }).softEdge = {
-      radius: spec.softEdge.radius as Pixels,
-    };
-  }
-
-  if (spec.reflection) {
-    (effects as { reflection?: ReflectionEffect }).reflection = buildReflection(spec.reflection);
-  }
-
-  return effects;
+  return {
+    ...(spec.shadow && {
+      shadow: {
+        type: "outer" as const,
+        color: { spec: { type: "srgb" as const, value: spec.shadow.color } },
+        blurRadius: px(spec.shadow.blur ?? 4),
+        distance: px(spec.shadow.distance ?? 3),
+        direction: deg(spec.shadow.direction ?? 45),
+      } satisfies ShadowEffect,
+    }),
+    ...(spec.glow && {
+      glow: {
+        color: { spec: { type: "srgb" as const, value: spec.glow.color } },
+        radius: px(spec.glow.radius),
+      } satisfies GlowEffect,
+    }),
+    ...(spec.softEdge && {
+      softEdge: {
+        radius: px(spec.softEdge.radius),
+      } satisfies SoftEdgeEffect,
+    }),
+    ...(spec.reflection && { reflection: buildReflection(spec.reflection) }),
+  };
 }

@@ -42,6 +42,8 @@ export type PapProps = {
   borders?: DocParagraphBorders;
   shading?: DocShading;
   tabs?: DocTabStop[];
+  spaceBeforeAuto?: boolean;
+  spaceAfterAuto?: boolean;
 };
 
 function jcToAlignment(jc: number): DocAlignment | undefined {
@@ -175,6 +177,13 @@ function applyPapSprm(props: PapProps, sprm: Sprm): void {
     // Tab stops
     case SPRM_PAP.PChgTabsPapx:
       props.tabs = parseChgTabsPapx(sprm);
+      break;
+    // Spacing auto
+    case SPRM_PAP.PFDyaBeforeAuto:
+      props.spaceBeforeAuto = sprmUint8(sprm) !== 0;
+      break;
+    case SPRM_PAP.PFDyaAfterAuto:
+      props.spaceAfterAuto = sprmUint8(sprm) !== 0;
       break;
   }
 }
