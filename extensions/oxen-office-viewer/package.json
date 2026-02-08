@@ -1,9 +1,10 @@
 {
-  "name": "@oxen-apps/vscode-office-viewer",
+  "name": "oxen-office-viewer",
   "displayName": "Oxen Office Viewer",
-  "description": "View PPTX, DOCX, and XLSX files directly in VS Code",
+  "description": "View PPTX, PPT, DOCX, DOC, XLSX, and XLS files directly in VS Code",
   "version": "0.1.0",
-  "private": true,
+  "publisher": "oxen",
+  "license": "MIT",
   "type": "module",
   "engines": {
     "vscode": "^1.85.0"
@@ -47,6 +48,7 @@
   "scripts": {
     "build": "bun run build:extension",
     "build:extension": "bun build src/extension.ts --target node --outdir dist --external vscode",
+    "package": "vsce package --no-dependencies",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src"
   },
@@ -61,6 +63,7 @@
     "@oxen/zip": "workspace:*"
   },
   "devDependencies": {
-    "@types/vscode": "^1.85.0"
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^3.2.2"
   }
 }
