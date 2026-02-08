@@ -3,7 +3,7 @@
   "displayName": "aurochs Office Viewer",
   "description": "View PPTX, PPT, DOCX, DOC, XLSX, and XLS files directly in VS Code",
   "version": "0.1.0",
-  "publisher": "aurochs",
+  "publisher": "trkbt10",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -63,7 +63,8 @@
     ]
   },
   "scripts": {
-    "package": "vsce package --no-dependencies"
+    "package": "vsce package --no-dependencies",
+    "publish": "vsce package --no-dependencies && vsce publish --packagePath aurochs-office-viewer-*.vsix"
   },
   "devDependencies": {
     "@vscode/vsce": "^3.2.2"
