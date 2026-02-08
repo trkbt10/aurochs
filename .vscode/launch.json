@@ -1,0 +1,16 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run Office Viewer Extension",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "--extensionDevelopmentPath=${workspaceFolder}/extensions/aurochs-office-viewer",
+        "${workspaceFolder}/fixtures"
+      ],
+      "outFiles": ["${workspaceFolder}/extensions/aurochs-office-viewer/dist/**/*.js"],
+      "preLaunchTask": "build-office-viewer"
+    }
+  ]
+}

@@ -58,24 +58,9 @@
     ]
   },
   "scripts": {
-    "build": "bun run build:extension",
-    "build:extension": "bun build src/extension.ts --target node --outdir dist --external vscode",
-    "package": "vsce package --no-dependencies",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "lint": "eslint src"
-  },
-  "dependencies": {
-    "@aurochs-office/pptx": "workspace:*",
-    "@aurochs-office/ppt": "workspace:*",
-    "@aurochs-office/docx": "workspace:*",
-    "@aurochs-office/doc": "workspace:*",
-    "@aurochs-office/xlsx": "workspace:*",
-    "@aurochs-office/xls": "workspace:*",
-    "@aurochs-renderer/pptx": "workspace:*",
-    "@aurochs/zip": "workspace:*"
+    "package": "vsce package --no-dependencies"
   },
   "devDependencies": {
-    "@types/vscode": "^1.85.0",
     "@vscode/vsce": "^3.2.2"
   }
 }

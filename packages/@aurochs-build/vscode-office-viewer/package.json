@@ -1,0 +1,24 @@
+{
+  "name": "@aurochs-build/vscode-office-viewer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "bun build src/extension.ts --target node --outdir ../../../extensions/aurochs-office-viewer/dist --external vscode",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "@aurochs-office/pptx": "workspace:*",
+    "@aurochs-office/ppt": "workspace:*",
+    "@aurochs-office/docx": "workspace:*",
+    "@aurochs-office/doc": "workspace:*",
+    "@aurochs-office/xlsx": "workspace:*",
+    "@aurochs-office/xls": "workspace:*",
+    "@aurochs-renderer/pptx": "workspace:*",
+    "@aurochs/zip": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0"
+  }
+}

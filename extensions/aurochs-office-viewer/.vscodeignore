@@ -1,6 +1,2 @@
-src/**
-tsconfig.json
 .claude/**
 node_modules/**
-**/*.ts
-!dist/**
