@@ -16,8 +16,8 @@ export function createPagesFontCatalog(): FontCatalog {
     }
 
     // Resolve relative to the current location so this works for both:
-    // - GitHub Pages (https://.../web-pptx/#/...)
-    // - local dev (http://localhost:5174/web-pptx/#/...)
+    // - GitHub Pages (https://.../aurochs/#/...)
+    // - local dev (http://localhost:5174/aurochs/#/...)
     return new URL("fonts/google-fonts-families.json", window.location.href).toString();
   }
 
@@ -27,7 +27,7 @@ export function createPagesFontCatalog(): FontCatalog {
     display: "swap",
     weights: [400, 500, 600, 700],
     // Ties localStorage cache invalidation to the checked-in families list version.
-    cacheKey: `web-pptx:google-fonts-families:${GOOGLE_FONTS_FAMILIES_UPDATED_AT}`,
+    cacheKey: `aurochs:google-fonts-families:${GOOGLE_FONTS_FAMILIES_UPDATED_AT}`,
     cacheTtlMs: 1000 * 60 * 60 * 24 * 7, // 7 days
     timeoutMs: 10_000,
   });

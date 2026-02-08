@@ -243,9 +243,9 @@ export function FileUploadPage({
           <div className="logo-mark">
             <LogoIcon size={24} />
           </div>
-          <span className="logo-text">web-pptx</span>
+          <span className="logo-text">aurochs</span>
         </div>
-        <a href="https://github.com/trkbt10/web-pptx" target="_blank" rel="noopener noreferrer" className="github-link">
+        <a href="https://github.com/trkbt10/aurochs" target="_blank" rel="noopener noreferrer" className="github-link">
           <GitHubIcon size={20} />
         </a>
       </header>

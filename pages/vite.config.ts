@@ -9,7 +9,7 @@ import path from "node:path";
 export default defineConfig({
   root: path.resolve(__dirname, "app"),
   publicDir: path.resolve(__dirname, "public"),
-  base: "/web-pptx/", // GitHub Pages base path (also used in dev)
+  base: "/aurochs/", // GitHub Pages base path (also used in dev)
   plugins: [react()],
   server: {
     port: 5174,
