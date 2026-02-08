@@ -17,7 +17,9 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-renderer/figma/src'",
     "dev:demo": "vite --config demo/vite.config.ts",
-    "snapshot:generate": "bun run scripts/generate-snapshots.ts"
+    "snapshot:generate": "bun run scripts/generate-snapshots.ts",
+    "test:webgl": "vitest run --config ../../../vitest.config.ts '../../../packages/@aurochs-renderer/figma/spec/webgl-shapes.spec.ts' '../../../packages/@aurochs-renderer/figma/spec/webgl-fills.spec.ts' '../../../packages/@aurochs-renderer/figma/spec/webgl-effects.spec.ts' '../../../packages/@aurochs-renderer/figma/spec/webgl-visual.spec.ts' '../../../packages/@aurochs-renderer/figma/spec/webgl-text.spec.ts'",
+    "test:webgl:update": "rm -f fixtures/webgl-*/baseline/*.png && vitest run --config ../../../vitest.config.ts '../../../packages/@aurochs-renderer/figma/spec/webgl-shapes.spec.ts' '../../../packages/@aurochs-renderer/figma/spec/webgl-fills.spec.ts' '../../../packages/@aurochs-renderer/figma/spec/webgl-effects.spec.ts' '../../../packages/@aurochs-renderer/figma/spec/webgl-visual.spec.ts' '../../../packages/@aurochs-renderer/figma/spec/webgl-text.spec.ts'"
   },
   "exports": {
     ".": {
