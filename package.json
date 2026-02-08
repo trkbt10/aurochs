@@ -29,6 +29,7 @@
     "format": "prettier --write .",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "build:pages": "vite build --config pages/vite.config.ts",
     "dev:pages": "vite --config pages/vite.config.ts"
   },
   "devDependencies": {

@@ -78,7 +78,7 @@
         "vitest": "^3.2.4",
       },
     },
-    "extensions/oxen-office-viewer": {
+    "extensions/aurochs-office-viewer": {
       "name": "aurochs-office-viewer",
       "version": "0.1.0",
       "dependencies": {
@@ -1389,7 +1389,7 @@
 
     "asynckit": ["asynckit@0.4.0", "", {}, "sha512-Oei9OH4tRh0YqU3GxhX79dM/mwVgvbZJaSNaRk+bshkj0S5cfHcgYakreBjrHwatXKbz+IoIdYLxrKim2MjW0Q=="],
 
-    "aurochs-office-viewer": ["aurochs-office-viewer@workspace:extensions/oxen-office-viewer"],
+    "aurochs-office-viewer": ["aurochs-office-viewer@workspace:extensions/aurochs-office-viewer"],
 
     "available-typed-arrays": ["available-typed-arrays@1.0.7", "", { "dependencies": { "possible-typed-array-names": "^1.0.0" } }, ""],
 
