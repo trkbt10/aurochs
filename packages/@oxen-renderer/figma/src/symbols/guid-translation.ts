@@ -25,6 +25,7 @@ interface DescendantInfo {
   guidStr: string;
   nodeType: string;
   visible: boolean;
+  size?: { x: number; y: number };
 }
 
 // =============================================================================
@@ -33,6 +34,11 @@ interface DescendantInfo {
 
 /**
  * Collect all descendant GUIDs + types from a list of nodes via DFS walk.
+ *
+ * Walks the full subtree because Figma DSD entries' first-level GUIDs
+ * can target nodes at any depth (not just direct children).
+ * The majority-vote offset and size-group matching phases use this data
+ * to find the best mapping.
  */
 function collectDescendantInfo(nodes: readonly FigNode[]): DescendantInfo[] {
   const result: DescendantInfo[] = [];
@@ -41,11 +47,13 @@ function collectDescendantInfo(nodes: readonly FigNode[]): DescendantInfo[] {
     const nodeData = node as Record<string, unknown>;
     const guid = nodeData.guid as FigGuid | undefined;
     if (guid) {
+      const size = nodeData.size as { x: number; y: number } | undefined;
       result.push({
         guid,
         guidStr: guidToString(guid),
         nodeType: getNodeType(node),
         visible: nodeData.visible !== false,
+        size: size ? { x: size.x, y: size.y } : undefined,
       });
     }
     for (const child of node.children ?? []) {
@@ -129,6 +137,34 @@ function detectTypeHints(
     }
   }
   return hints;
+}
+
+/**
+ * Extract depth-1 DSD entry sizes, keyed by first GUID string.
+ *
+ * When a DSD entry has `guidPath.guids.length === 1` and carries a `size`,
+ * we record that size. This tells us what size the override is setting
+ * on the target node, which often matches the node's original size
+ * (especially when the INSTANCE hasn't been resized).
+ */
+function extractOverrideSizes(
+  ...overrideSets: (readonly FigSymbolOverride[] | undefined)[]
+): Map<string, { x: number; y: number }> {
+  const sizes = new Map<string, { x: number; y: number }>();
+  for (const overrides of overrideSets) {
+    if (!overrides) continue;
+    for (const entry of overrides) {
+      const guids = entry.guidPath?.guids;
+      if (!guids || guids.length !== 1) continue;
+      const size = (entry as Record<string, unknown>).size as { x: number; y: number } | undefined;
+      if (!size) continue;
+      const key = guidToString(guids[0]);
+      if (!sizes.has(key)) {
+        sizes.set(key, { x: size.x, y: size.y });
+      }
+    }
+  }
+  return sizes;
 }
 
 /**
@@ -261,6 +297,40 @@ export function buildGuidTranslationMap(
     }
   }
 
+  // ── Phase 1 validation: Remove size-mismatched mappings ──
+  // When override GUIDs from a session target nodes at different depths,
+  // the majority-vote offset maps some GUIDs to wrong descendants.
+  // Detect and remove mappings where the DSD entry size grossly mismatches
+  // the target descendant's original size, freeing them for better matching
+  // in subsequent phases.
+  {
+    const overrideSizes = extractOverrideSizes(derivedSymbolData, symbolOverrides);
+    const descByGuidStr = new Map<string, DescendantInfo>();
+    for (const d of descendants) {
+      descByGuidStr.set(d.guidStr, d);
+    }
+
+    const toRemove: string[] = [];
+    for (const [overrideGuidStr, descGuidStr] of result) {
+      const dsdSize = overrideSizes.get(overrideGuidStr);
+      if (!dsdSize) continue;
+
+      const desc = descByGuidStr.get(descGuidStr);
+      if (!desc?.size) continue;
+
+      // Check if sizes grossly mismatch (more than 50% difference on either axis)
+      const widthRatio = Math.max(dsdSize.x, desc.size.x) / Math.max(1, Math.min(dsdSize.x, desc.size.x));
+      const heightRatio = Math.max(dsdSize.y, desc.size.y) / Math.max(1, Math.min(dsdSize.y, desc.size.y));
+      if (widthRatio > 1.5 || heightRatio > 1.5) {
+        toRemove.push(overrideGuidStr);
+      }
+    }
+
+    for (const key of toRemove) {
+      result.delete(key);
+    }
+  }
+
   // ── Phase 1.5: Sorted-order matching for remaining unmapped GUIDs ──
   // When Phase 1 only partially maps a session (non-contiguous localIDs),
   // map remaining typed GUIDs to unclaimed descendants of the same type
@@ -287,6 +357,58 @@ export function buildGuidTranslationMap(
         const value = sortedUnclaimed[i].guidStr;
         result.set(key, value);
         phase1Targets.add(value);
+      }
+    }
+  }
+
+  // ── Phase 1.75: Size-group matching for remaining unmapped GUIDs ──
+  // When override GUIDs from a session target nodes at DIFFERENT depths
+  // in the SYMBOL hierarchy, the majority-vote offset can't map all of them.
+  // This phase uses DSD entry sizes to match unmapped GUIDs to descendants
+  // with matching original sizes.
+  {
+    const overrideSizes = extractOverrideSizes(derivedSymbolData, symbolOverrides);
+    const claimed = new Set(result.values());
+
+    // Collect ALL unmapped override GUIDs that have a depth-1 size
+    const unmappedWithSize: { guid: FigGuid; guidStr: string; size: { x: number; y: number } }[] = [];
+    for (const [guidStr, guid] of overrideGuids) {
+      if (result.has(guidStr)) continue;
+      const size = overrideSizes.get(guidStr);
+      if (size) {
+        unmappedWithSize.push({ guid, guidStr, size });
+      }
+    }
+
+    if (unmappedWithSize.length > 0) {
+      // Group unmapped GUIDs by size (using rounded dimensions as key)
+      const bySizeKey = new Map<string, typeof unmappedWithSize>();
+      for (const entry of unmappedWithSize) {
+        const key = `${Math.round(entry.size.x)}x${Math.round(entry.size.y)}`;
+        let arr = bySizeKey.get(key);
+        if (!arr) { arr = []; bySizeKey.set(key, arr); }
+        arr.push(entry);
+      }
+
+      // For each size group, find unclaimed descendants with matching original size
+      for (const [sizeKey, group] of bySizeKey) {
+        const matchingDescs = descendants.filter(d => {
+          if (claimed.has(d.guidStr)) return false;
+          if (!d.size) return false;
+          const descKey = `${Math.round(d.size.x)}x${Math.round(d.size.y)}`;
+          return descKey === sizeKey;
+        });
+
+        if (matchingDescs.length === 0) continue;
+
+        // Match by sorted localID order within the size group
+        const sortedGroup = [...group].sort((a, b) => a.guid.localID - b.guid.localID);
+        const sortedDescs = [...matchingDescs].sort((a, b) => a.guid.localID - b.guid.localID);
+
+        for (let i = 0; i < sortedGroup.length && i < sortedDescs.length; i++) {
+          result.set(sortedGroup[i].guidStr, sortedDescs[i].guidStr);
+          claimed.add(sortedDescs[i].guidStr);
+        }
       }
     }
   }
