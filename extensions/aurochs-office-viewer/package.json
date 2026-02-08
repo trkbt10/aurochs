@@ -5,6 +5,11 @@
   "version": "0.1.0",
   "publisher": "aurochs",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/trkbt10/aurochs",
+    "directory": "extensions/aurochs-office-viewer"
+  },
   "type": "module",
   "engines": {
     "vscode": "^1.85.0"
