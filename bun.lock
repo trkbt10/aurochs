@@ -5,31 +5,6 @@
     "": {
       "name": "web-pptx",
       "dependencies": {
-        "@aurochs-converters/pdf-to-pptx": "workspace:*",
-        "@aurochs-office/cfb": "workspace:*",
-        "@aurochs-office/chart": "workspace:*",
-        "@aurochs-office/docx": "workspace:*",
-        "@aurochs-office/ooxml": "workspace:*",
-        "@aurochs-office/opc": "workspace:*",
-        "@aurochs-office/pptx": "workspace:*",
-        "@aurochs-office/text-layout": "workspace:*",
-        "@aurochs-office/xls": "workspace:*",
-        "@aurochs-office/xlsx": "workspace:*",
-        "@aurochs-renderer/pptx": "workspace:*",
-        "@aurochs-ui/docx-editor": "workspace:*",
-        "@aurochs-ui/pptx-editor": "workspace:*",
-        "@aurochs-ui/ui-components": "workspace:*",
-        "@aurochs-ui/xlsx-editor": "workspace:*",
-        "@aurochs/buffer": "workspace:*",
-        "@aurochs/color": "workspace:*",
-        "@aurochs/css": "workspace:*",
-        "@aurochs/files": "workspace:*",
-        "@aurochs/jpeg": "workspace:*",
-        "@aurochs/pdf": "workspace:*",
-        "@aurochs/png": "workspace:*",
-        "@aurochs/url": "workspace:*",
-        "@aurochs/xml": "workspace:*",
-        "@aurochs/zip": "workspace:*",
         "fflate": "^0.8.2",
         "hono": "^4.11.1",
         "lucide-react": "^0.562.0",
@@ -94,6 +69,23 @@
       "devDependencies": {
         "@types/vscode": "^1.85.0",
         "@vscode/vsce": "^3.2.2",
+      },
+    },
+    "packages/@aurochs-build/vscode-office-viewer": {
+      "name": "@aurochs-build/vscode-office-viewer",
+      "version": "0.1.0",
+      "dependencies": {
+        "@aurochs-office/doc": "workspace:*",
+        "@aurochs-office/docx": "workspace:*",
+        "@aurochs-office/ppt": "workspace:*",
+        "@aurochs-office/pptx": "workspace:*",
+        "@aurochs-office/xls": "workspace:*",
+        "@aurochs-office/xlsx": "workspace:*",
+        "@aurochs-renderer/pptx": "workspace:*",
+        "@aurochs/zip": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/vscode": "^1.85.0",
       },
     },
     "packages/@aurochs-builder/chart": {
@@ -770,6 +762,8 @@
     "@asamuzakjp/dom-selector": ["@asamuzakjp/dom-selector@6.7.8", "", { "dependencies": { "@asamuzakjp/nwsapi": "^2.3.9", "bidi-js": "^1.0.3", "css-tree": "^3.1.0", "is-potential-custom-element-name": "^1.0.1", "lru-cache": "^11.2.5" } }, "sha512-stisC1nULNc9oH5lakAj8MH88ZxeGxzyWNDfbdCxvJSJIvDsHNZqYvscGTgy/ysgXWLJPt6K/4t0/GjvtKcFJQ=="],
 
     "@asamuzakjp/nwsapi": ["@asamuzakjp/nwsapi@2.3.9", "", {}, "sha512-n8GuYSrI9bF7FFZ/SjhwevlHc8xaVlb/7HmHelnc/PZXBD2ZR49NnN9sMMuDdEGPeeRQ5d0hqlSlEpgCX3Wl0Q=="],
+
+    "@aurochs-build/vscode-office-viewer": ["@aurochs-build/vscode-office-viewer@workspace:packages/@aurochs-build/vscode-office-viewer"],
 
     "@aurochs-builder/chart": ["@aurochs-builder/chart@workspace:packages/@aurochs-builder/chart"],
 
