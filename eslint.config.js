@@ -71,17 +71,17 @@ export default [
         "custom/no-iife-in-anonymous": "error",
         // Prohibit deep re-exports that cross multiple directory levels
         "custom/no-deep-reexport": ["error", { maxParentDepth: 0 }],
-        // Prohibit @oxen/* packages from importing @oxen-ui/*
-        "custom/no-oxen-ui-import-in-oxen": "error",
-        // Prohibit @oxen/* packages from importing @oxen-office/*
-        "custom/no-oxen-office-import-in-oxen": "error",
-        // Prohibit @oxen-office/* packages from importing @oxen-builder/*
-        "custom/no-oxen-builder-import-in-oxen-office": "error",
+        // Prohibit @aurochs/* packages from importing @aurochs-ui/*
+        "custom/no-aurochs-ui-import-in-aurochs": "error",
+        // Prohibit @aurochs/* packages from importing @aurochs-office/*
+        "custom/no-aurochs-office-import-in-aurochs": "error",
+        // Prohibit @aurochs-office/* packages from importing @aurochs-builder/*
+        "custom/no-aurochs-builder-import-in-aurochs-office": "error",
         // Prohibit re-exporting from other packages
         "custom/no-cross-package-reexport": "error",
         // Prohibit export * from (barrel exports)
         "custom/no-export-star": "error",
-        // Prohibit bare @oxen-renderer/* imports for reorganized packages (must use sub-paths)
+        // Prohibit bare @aurochs-renderer/* imports for reorganized packages (must use sub-paths)
         "custom/no-bare-renderer-import": "error",
         // Require object parameter for functions with 4+ params
         "custom/max-params": ["error", { max: 3 }],
