@@ -1,0 +1,44 @@
+{
+  "name": "modify-sheet-rename",
+  "description": "Rename a sheet in modify mode",
+  "tags": ["modify", "sheet"],
+  "setup": {
+    "mode": "create",
+    "output": "../__output__/061-template.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "OldName",
+          "rows": [
+            { "row": 1, "cells": [{ "ref": "A1", "value": "Data" }] }
+          ]
+        }
+      ]
+    }
+  },
+  "input": {
+    "mode": "modify",
+    "template": "../__output__/061-template.xlsx",
+    "output": "../__output__/061-modify-rename.xlsx",
+    "modify": {
+      "sheets": [
+        {
+          "name": "OldName",
+          "rename": "NewName"
+        }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "sheetNames": ["NewName"],
+    "sheets": [
+      {
+        "name": "NewName",
+        "cells": [
+          { "ref": "A1", "type": "string", "value": "Data" }
+        ]
+      }
+    ]
+  }
+}

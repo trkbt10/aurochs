@@ -338,7 +338,7 @@ function measureTextWidthPx(text: string, font: FontSpec): number {
         ctx.font = fontToCanvasString(font);
         width = ctx.measureText(normalized).width;
       }
-    } catch {
+    } catch (_err: unknown) { // eslint-disable-line @typescript-eslint/no-unused-vars -- catch requires error param
       // Some test environments (e.g. jsdom without canvas) throw on getContext().
     }
   }

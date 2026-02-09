@@ -31,6 +31,7 @@ export type XlsxCreateSpec = {
   readonly workbook: WorkbookSpec;
 };
 
+// Legacy modify types (backward compat)
 export type CellModification = {
   readonly col: string;
   readonly row: number;
@@ -43,11 +44,213 @@ export type SheetModification = {
   readonly dimension?: string;
 };
 
+// New comprehensive modification spec types
+
+export type ConditionalFormattingSpec = {
+  readonly sqref: string;
+  readonly rules: readonly ConditionalFormattingRuleSpec[];
+};
+
+export type ConditionalFormattingRuleSpec = {
+  readonly type: string;
+  readonly priority?: number;
+  readonly operator?: string;
+  readonly dxfId?: number;
+  readonly stopIfTrue?: boolean;
+  readonly formulas?: readonly string[];
+  readonly text?: string;
+  readonly timePeriod?: string;
+  readonly rank?: number;
+  readonly percent?: boolean;
+  readonly bottom?: boolean;
+  readonly stdDev?: number;
+  readonly equalAverage?: boolean;
+  readonly aboveAverage?: boolean;
+  // Color scale
+  readonly cfvo?: readonly CfvoSpec[];
+  readonly colors?: readonly ColorSpec[];
+  // Data bar
+  readonly color?: ColorSpec;
+  readonly showValue?: boolean;
+  readonly minLength?: number;
+  readonly maxLength?: number;
+  readonly gradient?: boolean;
+  // Icon set
+  readonly iconSet?: string;
+  readonly reverse?: boolean;
+  readonly iconOnly?: boolean;
+};
+
+export type CfvoSpec = {
+  readonly type: string;
+  readonly val?: string;
+  readonly gte?: boolean;
+};
+
+export type DataValidationSpec = {
+  readonly sqref: string;
+  readonly type?: string;
+  readonly operator?: string;
+  readonly allowBlank?: boolean;
+  readonly showInputMessage?: boolean;
+  readonly showErrorMessage?: boolean;
+  readonly showDropDown?: boolean;
+  readonly errorStyle?: string;
+  readonly promptTitle?: string;
+  readonly prompt?: string;
+  readonly errorTitle?: string;
+  readonly error?: string;
+  readonly formula1?: string;
+  readonly formula2?: string;
+};
+
+export type HyperlinkSpec = {
+  readonly ref: string;
+  readonly target?: string;
+  readonly display?: string;
+  readonly location?: string;
+  readonly tooltip?: string;
+};
+
+export type AutoFilterSpec = {
+  readonly ref: string;
+};
+
+export type PageSetupSpec = {
+  readonly paperSize?: number;
+  readonly orientation?: "default" | "portrait" | "landscape";
+  readonly scale?: number;
+  readonly fitToWidth?: number;
+  readonly fitToHeight?: number;
+  readonly firstPageNumber?: number;
+  readonly useFirstPageNumber?: boolean;
+  readonly blackAndWhite?: boolean;
+  readonly draft?: boolean;
+  readonly cellComments?: "none" | "asDisplayed" | "atEnd";
+  readonly pageOrder?: "downThenOver" | "overThenDown";
+  readonly horizontalDpi?: number;
+  readonly verticalDpi?: number;
+  readonly copies?: number;
+};
+
+export type PageMarginsSpec = {
+  readonly left?: number;
+  readonly right?: number;
+  readonly top?: number;
+  readonly bottom?: number;
+  readonly header?: number;
+  readonly footer?: number;
+};
+
+export type HeaderFooterSpec = {
+  readonly oddHeader?: string;
+  readonly oddFooter?: string;
+  readonly evenHeader?: string;
+  readonly evenFooter?: string;
+  readonly firstHeader?: string;
+  readonly firstFooter?: string;
+  readonly differentOddEven?: boolean;
+  readonly differentFirst?: boolean;
+  readonly scaleWithDoc?: boolean;
+  readonly alignWithMargins?: boolean;
+};
+
+export type PrintOptionsSpec = {
+  readonly gridLines?: boolean;
+  readonly headings?: boolean;
+  readonly gridLinesSet?: boolean;
+  readonly horizontalCentered?: boolean;
+  readonly verticalCentered?: boolean;
+};
+
+export type SheetProtectionSpec = {
+  readonly sheet?: boolean;
+  readonly objects?: boolean;
+  readonly scenarios?: boolean;
+  readonly formatCells?: boolean;
+  readonly formatColumns?: boolean;
+  readonly formatRows?: boolean;
+  readonly insertColumns?: boolean;
+  readonly insertRows?: boolean;
+  readonly insertHyperlinks?: boolean;
+  readonly deleteColumns?: boolean;
+  readonly deleteRows?: boolean;
+  readonly selectLockedCells?: boolean;
+  readonly sort?: boolean;
+  readonly autoFilter?: boolean;
+  readonly pivotTables?: boolean;
+  readonly selectUnlockedCells?: boolean;
+  readonly password?: string;
+  readonly algorithmName?: string;
+  readonly hashValue?: string;
+  readonly saltValue?: string;
+  readonly spinCount?: number;
+};
+
+export type SheetViewSpec = {
+  readonly tabSelected?: boolean;
+  readonly showGridLines?: boolean;
+  readonly showRowColHeaders?: boolean;
+  readonly zoomScale?: number;
+  readonly freeze?: { readonly row?: number; readonly col?: number };
+};
+
+export type RowModificationSpec = {
+  readonly row: number;
+  readonly height?: number;
+  readonly hidden?: boolean;
+  readonly customHeight?: boolean;
+  readonly styleId?: number;
+};
+
+export type PageBreakSpec = {
+  readonly id: number;
+  readonly max?: number;
+  readonly min?: number;
+  readonly manual?: boolean;
+};
+
+export type SheetModificationSpec = {
+  readonly name: string;
+  readonly rename?: string;
+  readonly state?: "visible" | "hidden" | "veryHidden";
+  readonly tabColor?: ColorSpec;
+  readonly cells?: readonly CellSpec[];
+  readonly rows?: readonly RowModificationSpec[];
+  readonly removeRows?: readonly number[];
+  readonly columns?: readonly ColumnSpec[];
+  readonly removeColumns?: readonly number[];
+  readonly addMergeCells?: readonly string[];
+  readonly removeMergeCells?: readonly string[];
+  readonly conditionalFormattings?: readonly ConditionalFormattingSpec[];
+  readonly dataValidations?: readonly DataValidationSpec[];
+  readonly hyperlinks?: readonly HyperlinkSpec[];
+  readonly autoFilter?: AutoFilterSpec | null;
+  readonly pageSetup?: PageSetupSpec;
+  readonly pageMargins?: PageMarginsSpec;
+  readonly headerFooter?: HeaderFooterSpec;
+  readonly printOptions?: PrintOptionsSpec;
+  readonly sheetProtection?: SheetProtectionSpec | null;
+  readonly sheetFormatPr?: SheetFormatPrSpec;
+  readonly sheetView?: SheetViewSpec;
+  readonly rowBreaks?: readonly PageBreakSpec[];
+  readonly colBreaks?: readonly PageBreakSpec[];
+};
+
+export type ModificationSpec = {
+  readonly sheets?: readonly SheetModificationSpec[];
+  readonly styles?: StyleSheetSpec;
+  readonly definedNames?: readonly DefinedNameSpec[];
+  readonly addSheets?: readonly SheetSpec[];
+  readonly removeSheets?: readonly string[];
+};
+
 export type XlsxModifySpec = {
   readonly mode: "modify";
   readonly template: string;
   readonly output: string;
   readonly modifications?: readonly SheetModification[];
+  readonly modify?: ModificationSpec;
 };
 
 export type WorkbookSpec = {
@@ -207,7 +410,13 @@ const VALID_ERROR_VALUES = new Set<string>([
   "#NULL!", "#DIV/0!", "#VALUE!", "#REF!", "#NAME?", "#NUM!", "#N/A", "#GETTING_DATA",
 ]);
 
-function resolveColor(spec: ColorSpec): XlsxColor {
+
+
+
+
+
+/** Resolve a color spec to a domain XlsxColor. */
+export function resolveColor(spec: ColorSpec): XlsxColor {
   if (typeof spec === "string") {
     const hex = spec.startsWith("#") ? spec.slice(1) : spec;
     const value = hex.length === 6 ? `FF${hex.toUpperCase()}` : hex.toUpperCase();
@@ -220,9 +429,9 @@ function resolveColor(spec: ColorSpec): XlsxColor {
 }
 
 function resolveCellValue(spec: CellValueSpec): CellValue {
-  if (typeof spec === "string") return { type: "string", value: spec };
-  if (typeof spec === "number") return { type: "number", value: spec };
-  if (typeof spec === "boolean") return { type: "boolean", value: spec };
+  if (typeof spec === "string") {return { type: "string", value: spec };}
+  if (typeof spec === "number") {return { type: "number", value: spec };}
+  if (typeof spec === "boolean") {return { type: "boolean", value: spec };}
 
   switch (spec.type) {
     case "string": return { type: "string", value: spec.value };
@@ -246,7 +455,13 @@ function resolveFormula(spec: FormulaSpec): Formula {
   };
 }
 
-function resolveCell(spec: CellSpec): Cell {
+
+
+
+
+
+/** Resolve a cell spec to a domain Cell. */
+export function resolveCell(spec: CellSpec): Cell {
   const address: CellAddress = parseCellRef(spec.ref);
   const value: CellValue = spec.value !== undefined ? resolveCellValue(spec.value) : { type: "empty" };
   const cell: Cell = {
@@ -258,7 +473,13 @@ function resolveCell(spec: CellSpec): Cell {
   return cell;
 }
 
-function resolveRow(spec: RowSpec): XlsxRow {
+
+
+
+
+
+/** Resolve a row spec to a domain XlsxRow. */
+export function resolveRow(spec: RowSpec): XlsxRow {
   return {
     rowNumber: rowIdx(spec.row),
     cells: spec.cells.map(resolveCell),
@@ -269,7 +490,13 @@ function resolveRow(spec: RowSpec): XlsxRow {
   };
 }
 
-function resolveColumn(spec: ColumnSpec): XlsxColumnDef {
+
+
+
+
+
+/** Resolve a column spec to a domain XlsxColumnDef. */
+export function resolveColumn(spec: ColumnSpec): XlsxColumnDef {
   return {
     min: colIdx(spec.min),
     max: colIdx(spec.max),
@@ -280,7 +507,13 @@ function resolveColumn(spec: ColumnSpec): XlsxColumnDef {
   };
 }
 
-function resolveFont(spec: FontSpec): XlsxFont {
+
+
+
+
+
+/** Resolve a font spec to a domain XlsxFont. */
+export function resolveFont(spec: FontSpec): XlsxFont {
   return {
     name: spec.name,
     size: spec.size,
@@ -294,7 +527,13 @@ function resolveFont(spec: FontSpec): XlsxFont {
   };
 }
 
-function resolveFill(spec: FillSpec): XlsxFill {
+
+
+
+
+
+/** Resolve a fill spec to a domain XlsxFill. */
+export function resolveFill(spec: FillSpec): XlsxFill {
   switch (spec.type) {
     case "none":
       return { type: "none" };
@@ -333,7 +572,13 @@ function resolveBorderEdge(spec: BorderEdgeSpec): XlsxBorderEdge {
   };
 }
 
-function resolveBorder(spec: BorderSpec): XlsxBorder {
+
+
+
+
+
+/** Resolve a border spec to a domain XlsxBorder. */
+export function resolveBorder(spec: BorderSpec): XlsxBorder {
   return {
     ...(spec.left ? { left: resolveBorderEdge(spec.left) } : {}),
     ...(spec.right ? { right: resolveBorderEdge(spec.right) } : {}),
@@ -345,21 +590,34 @@ function resolveBorder(spec: BorderSpec): XlsxBorder {
   };
 }
 
-function resolveCellXf(spec: CellXfSpec): XlsxCellXf {
-  const alignment: XlsxAlignment | undefined = spec.alignment ? {
-    ...(spec.alignment.horizontal !== undefined ? { horizontal: spec.alignment.horizontal } : {}),
-    ...(spec.alignment.vertical !== undefined ? { vertical: spec.alignment.vertical } : {}),
-    ...(spec.alignment.wrapText !== undefined ? { wrapText: spec.alignment.wrapText } : {}),
-    ...(spec.alignment.textRotation !== undefined ? { textRotation: spec.alignment.textRotation } : {}),
-    ...(spec.alignment.indent !== undefined ? { indent: spec.alignment.indent } : {}),
-    ...(spec.alignment.shrinkToFit !== undefined ? { shrinkToFit: spec.alignment.shrinkToFit } : {}),
-    ...(spec.alignment.readingOrder !== undefined ? { readingOrder: spec.alignment.readingOrder } : {}),
-  } : undefined;
 
-  const protection: XlsxProtection | undefined = spec.protection ? {
-    ...(spec.protection.locked !== undefined ? { locked: spec.protection.locked } : {}),
-    ...(spec.protection.hidden !== undefined ? { hidden: spec.protection.hidden } : {}),
-  } : undefined;
+
+
+
+
+function resolveAlignmentSpec(spec: NonNullable<CellXfSpec["alignment"]>): XlsxAlignment {
+  return {
+    ...(spec.horizontal !== undefined ? { horizontal: spec.horizontal } : {}),
+    ...(spec.vertical !== undefined ? { vertical: spec.vertical } : {}),
+    ...(spec.wrapText !== undefined ? { wrapText: spec.wrapText } : {}),
+    ...(spec.textRotation !== undefined ? { textRotation: spec.textRotation } : {}),
+    ...(spec.indent !== undefined ? { indent: spec.indent } : {}),
+    ...(spec.shrinkToFit !== undefined ? { shrinkToFit: spec.shrinkToFit } : {}),
+    ...(spec.readingOrder !== undefined ? { readingOrder: spec.readingOrder } : {}),
+  };
+}
+
+function resolveProtectionSpec(spec: NonNullable<CellXfSpec["protection"]>): XlsxProtection {
+  return {
+    ...(spec.locked !== undefined ? { locked: spec.locked } : {}),
+    ...(spec.hidden !== undefined ? { hidden: spec.hidden } : {}),
+  };
+}
+
+/** Resolve a cell style format spec to a domain XlsxCellXf. */
+export function resolveCellXf(spec: CellXfSpec): XlsxCellXf {
+  const alignment = spec.alignment ? resolveAlignmentSpec(spec.alignment) : undefined;
+  const protection = spec.protection ? resolveProtectionSpec(spec.protection) : undefined;
 
   return {
     numFmtId: numFmtId(spec.numFmtId ?? 0),
@@ -375,11 +633,21 @@ function resolveCellXf(spec: CellXfSpec): XlsxCellXf {
   };
 }
 
-function resolveSheet(spec: SheetSpec, index: number, dateSystem: XlsxDateSystem): XlsxWorksheet {
-  const sheetFormatPr: XlsxSheetFormatPr | undefined = spec.sheetFormatPr ? {
-    ...(spec.sheetFormatPr.defaultRowHeight !== undefined ? { defaultRowHeight: spec.sheetFormatPr.defaultRowHeight } : {}),
-    ...(spec.sheetFormatPr.defaultColWidth !== undefined ? { defaultColWidth: spec.sheetFormatPr.defaultColWidth } : {}),
-  } : undefined;
+
+
+
+
+
+function resolveSheetFormatPrSpec(spec: NonNullable<SheetSpec["sheetFormatPr"]>): XlsxSheetFormatPr {
+  return {
+    ...(spec.defaultRowHeight !== undefined ? { defaultRowHeight: spec.defaultRowHeight } : {}),
+    ...(spec.defaultColWidth !== undefined ? { defaultColWidth: spec.defaultColWidth } : {}),
+  };
+}
+
+/** Resolve a sheet spec to a domain XlsxWorksheet. */
+export function resolveSheet(spec: SheetSpec, index: number, dateSystem: XlsxDateSystem): XlsxWorksheet {
+  const sheetFormatPr = spec.sheetFormatPr ? resolveSheetFormatPrSpec(spec.sheetFormatPr) : undefined;
 
   return {
     dateSystem,

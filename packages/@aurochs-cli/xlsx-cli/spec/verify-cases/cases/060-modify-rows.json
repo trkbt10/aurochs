@@ -1,0 +1,50 @@
+{
+  "name": "modify-rows",
+  "description": "Modify row heights and hidden state",
+  "tags": ["modify", "rows"],
+  "setup": {
+    "mode": "create",
+    "output": "../__output__/060-template.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            { "row": 1, "height": 15, "cells": [{ "ref": "A1", "value": "Row1" }] },
+            { "row": 2, "height": 20, "cells": [{ "ref": "A2", "value": "Row2" }] },
+            { "row": 3, "cells": [{ "ref": "A3", "value": "Row3" }] }
+          ]
+        }
+      ]
+    }
+  },
+  "input": {
+    "mode": "modify",
+    "template": "../__output__/060-template.xlsx",
+    "output": "../__output__/060-modify-rows.xlsx",
+    "modify": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            { "row": 2, "height": 40, "hidden": true }
+          ],
+          "removeRows": [3]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "rowCount": 2,
+        "cells": [
+          { "ref": "A1", "type": "string", "value": "Row1" },
+          { "ref": "A2", "type": "string", "value": "Row2" }
+        ]
+      }
+    ]
+  }
+}

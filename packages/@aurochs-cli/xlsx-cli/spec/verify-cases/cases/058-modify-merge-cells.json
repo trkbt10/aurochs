@@ -1,0 +1,48 @@
+{
+  "name": "modify-merge-cells",
+  "description": "Add and remove merge ranges in modify mode",
+  "tags": ["modify", "merge"],
+  "setup": {
+    "mode": "create",
+    "output": "../__output__/058-template.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            { "row": 1, "cells": [{ "ref": "A1", "value": "Merged" }] },
+            { "row": 3, "cells": [{ "ref": "A3", "value": "Another" }] }
+          ],
+          "mergeCells": ["A1:B2"]
+        }
+      ]
+    }
+  },
+  "input": {
+    "mode": "modify",
+    "template": "../__output__/058-template.xlsx",
+    "output": "../__output__/058-modify-merge.xlsx",
+    "modify": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "removeMergeCells": ["A1:B2"],
+          "addMergeCells": ["A3:C3"]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "mergedCells": ["A3:C3"],
+        "cells": [
+          { "ref": "A1", "type": "string", "value": "Merged" },
+          { "ref": "A3", "type": "string", "value": "Another" }
+        ]
+      }
+    ]
+  }
+}

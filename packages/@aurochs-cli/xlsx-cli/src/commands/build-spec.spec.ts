@@ -1,4 +1,7 @@
-import { describe, it, expect } from "vitest";
+/**
+ * @file Build specification converter tests
+ */
+
 import { convertSpecToWorkbook, type WorkbookSpec } from "./build-spec";
 
 describe("convertSpecToWorkbook", () => {

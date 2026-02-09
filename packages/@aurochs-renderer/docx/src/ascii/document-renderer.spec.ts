@@ -1,4 +1,4 @@
-import { describe, it, expect } from "bun:test";
+/** @file Tests for ASCII document renderer */
 import { renderDocxAscii } from "./document-renderer";
 
 describe("document-renderer", () => {

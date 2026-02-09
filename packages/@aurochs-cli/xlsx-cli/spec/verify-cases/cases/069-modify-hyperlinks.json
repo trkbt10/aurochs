@@ -1,0 +1,57 @@
+{
+  "name": "modify-hyperlinks",
+  "description": "Add hyperlinks (external and internal) in modify mode",
+  "tags": ["modify", "hyperlinks"],
+  "setup": {
+    "mode": "create",
+    "output": "../__output__/069-template.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Links",
+          "rows": [
+            { "row": 1, "cells": [{ "ref": "A1", "value": "Google" }] },
+            { "row": 2, "cells": [{ "ref": "A2", "value": "Internal" }] }
+          ]
+        }
+      ]
+    }
+  },
+  "input": {
+    "mode": "modify",
+    "template": "../__output__/069-template.xlsx",
+    "output": "../__output__/069-modify-hyperlinks.xlsx",
+    "modify": {
+      "sheets": [
+        {
+          "name": "Links",
+          "hyperlinks": [
+            {
+              "ref": "A1",
+              "target": "https://www.google.com",
+              "display": "Google",
+              "tooltip": "Visit Google"
+            },
+            {
+              "ref": "A2",
+              "location": "Links!B1",
+              "display": "Go to B1"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "sheets": [
+      {
+        "name": "Links",
+        "cells": [
+          { "ref": "A1", "type": "string", "value": "Google" },
+          { "ref": "A2", "type": "string", "value": "Internal" }
+        ]
+      }
+    ]
+  }
+}

@@ -1,25 +1,27 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+/**
+ * @file Verify command tests
+ */
+
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
 import { runVerify } from "./verify";
 
-let tmpDir: string;
-let outputDir: string;
+const ctx = { tmpDir: "", outputDir: "" };
 
 beforeAll(async () => {
-  tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "xlsx-verify-test-"));
-  outputDir = path.join(tmpDir, "__output__");
-  await fs.mkdir(outputDir, { recursive: true });
+  ctx.tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "xlsx-verify-test-"));
+  ctx.outputDir = path.join(ctx.tmpDir, "__output__");
+  await fs.mkdir(ctx.outputDir, { recursive: true });
 });
 
 afterAll(async () => {
-  await fs.rm(tmpDir, { recursive: true, force: true });
+  await fs.rm(ctx.tmpDir, { recursive: true, force: true });
 });
 
 // Helper to write a test case JSON file
 async function writeTestCase(name: string, spec: object): Promise<string> {
-  const filePath = path.join(tmpDir, `${name}.json`);
+  const filePath = path.join(ctx.tmpDir, `${name}.json`);
   await fs.writeFile(filePath, JSON.stringify(spec, null, 2));
   return filePath;
 }
@@ -72,7 +74,7 @@ describe("runVerify basic tests", () => {
 
     const result = await runVerify(filePath);
     expect(result.success).toBe(true);
-    if (!result.success) return;
+    if (!result.success) {return;}
     expect(result.data.passed).toBe(1);
     expect(result.data.failed).toBe(0);
     expect(result.data.results[0].passed).toBe(true);
@@ -122,7 +124,7 @@ describe("runVerify basic tests", () => {
 
     const result = await runVerify(filePath);
     expect(result.success).toBe(true);
-    if (!result.success) return;
+    if (!result.success) {return;}
     expect(result.data.passed).toBe(1);
     expect(result.data.failed).toBe(0);
     expect(result.data.results[0].passed).toBe(true);
@@ -163,7 +165,7 @@ describe("runVerify basic tests", () => {
 
     const result = await runVerify(filePath);
     expect(result.success).toBe(true);
-    if (!result.success) return;
+    if (!result.success) {return;}
     expect(result.data.failed).toBe(1);
     expect(result.data.passed).toBe(0);
     expect(result.data.results[0].passed).toBe(false);
@@ -197,7 +199,7 @@ describe("runVerify basic tests", () => {
 
     const result = await runVerify(filePath);
     expect(result.success).toBe(true);
-    if (!result.success) return;
+    if (!result.success) {return;}
     expect(result.data.failed).toBe(1);
     const sheetCountAssertion = result.data.results[0].assertions.find(
       (a) => a.path === "sheetCount",
@@ -211,17 +213,17 @@ describe("runVerify basic tests", () => {
   it("should return FILE_NOT_FOUND for missing path", async () => {
     const result = await runVerify("/nonexistent/path/to/specs");
     expect(result.success).toBe(false);
-    if (result.success) return;
+    if (result.success) {return;}
     expect(result.error.code).toBe("FILE_NOT_FOUND");
   });
 
   it("should return NO_TEST_CASES for empty directory", async () => {
-    const emptyDir = path.join(tmpDir, "empty-dir");
+    const emptyDir = path.join(ctx.tmpDir, "empty-dir");
     await fs.mkdir(emptyDir, { recursive: true });
 
     const result = await runVerify(emptyDir);
     expect(result.success).toBe(false);
-    if (result.success) return;
+    if (result.success) {return;}
     expect(result.error.code).toBe("NO_TEST_CASES");
   });
 });
@@ -232,7 +234,7 @@ describe("runVerify basic tests", () => {
 
 describe("runVerify with options", () => {
   it("should filter by tag", async () => {
-    const tagDir = path.join(tmpDir, "tag-filter");
+    const tagDir = path.join(ctx.tmpDir, "tag-filter");
     const tagOutputDir = path.join(tagDir, "__output__");
     await fs.mkdir(tagOutputDir, { recursive: true });
 
@@ -280,14 +282,14 @@ describe("runVerify with options", () => {
 
     const result = await runVerify(tagDir, { tag: "alpha" });
     expect(result.success).toBe(true);
-    if (!result.success) return;
+    if (!result.success) {return;}
     expect(result.data.results).toHaveLength(1);
     expect(result.data.results[0].name).toBe("case-alpha");
     expect(result.data.passed).toBe(1);
   });
 
   it("should return NO_MATCHING_TESTS when tag doesn't match", async () => {
-    const noMatchDir = path.join(tmpDir, "no-match-tag");
+    const noMatchDir = path.join(ctx.tmpDir, "no-match-tag");
     const noMatchOutputDir = path.join(noMatchDir, "__output__");
     await fs.mkdir(noMatchOutputDir, { recursive: true });
 
@@ -314,7 +316,7 @@ describe("runVerify with options", () => {
 
     const result = await runVerify(noMatchDir, { tag: "nonexistent-tag" });
     expect(result.success).toBe(false);
-    if (result.success) return;
+    if (result.success) {return;}
     expect(result.error.code).toBe("NO_MATCHING_TESTS");
   });
 });
@@ -360,7 +362,7 @@ describe("runVerify assertion types", () => {
 
     const result = await runVerify(filePath);
     expect(result.success).toBe(true);
-    if (!result.success) return;
+    if (!result.success) {return;}
     expect(result.data.passed).toBe(1);
     expect(result.data.results[0].passed).toBe(true);
     const mergeAssertion = result.data.results[0].assertions.find(
@@ -412,7 +414,7 @@ describe("runVerify assertion types", () => {
 
     const result = await runVerify(filePath);
     expect(result.success).toBe(true);
-    if (!result.success) return;
+    if (!result.success) {return;}
     expect(result.data.passed).toBe(1);
     expect(result.data.results[0].passed).toBe(true);
     const colAssertions = result.data.results[0].assertions.filter(
@@ -461,7 +463,7 @@ describe("runVerify assertion types", () => {
 
     const result = await runVerify(filePath);
     expect(result.success).toBe(true);
-    if (!result.success) return;
+    if (!result.success) {return;}
     expect(result.data.passed).toBe(1);
     expect(result.data.results[0].passed).toBe(true);
     const styleAssertions = result.data.results[0].assertions.filter(
@@ -508,7 +510,7 @@ describe("runVerify assertion types", () => {
 
     const result = await runVerify(filePath);
     expect(result.success).toBe(true);
-    if (!result.success) return;
+    if (!result.success) {return;}
     expect(result.data.passed).toBe(1);
     expect(result.data.results[0].passed).toBe(true);
     const dnAssertions = result.data.results[0].assertions.filter(
@@ -559,7 +561,7 @@ describe("runVerify assertion types", () => {
 
     const result = await runVerify(filePath);
     expect(result.success).toBe(true);
-    if (!result.success) return;
+    if (!result.success) {return;}
     expect(result.data.passed).toBe(1);
     expect(result.data.results[0].passed).toBe(true);
     const formulaAssertion = result.data.results[0].assertions.find(
@@ -618,7 +620,7 @@ describe("runVerify assertion types", () => {
 
     const result = await runVerify(filePath);
     expect(result.success).toBe(true);
-    if (!result.success) return;
+    if (!result.success) {return;}
     expect(result.data.passed).toBe(1);
     expect(result.data.failed).toBe(0);
     expect(result.data.results[0].passed).toBe(true);
@@ -632,7 +634,7 @@ describe("runVerify assertion types", () => {
 
 describe("runVerify with directory", () => {
   it("should process all JSON files in directory", async () => {
-    const dirCases = path.join(tmpDir, "dir-cases");
+    const dirCases = path.join(ctx.tmpDir, "dir-cases");
     const dirOutputDir = path.join(dirCases, "__output__");
     await fs.mkdir(dirOutputDir, { recursive: true });
 
@@ -676,7 +678,7 @@ describe("runVerify with directory", () => {
 
     const result = await runVerify(dirCases);
     expect(result.success).toBe(true);
-    if (!result.success) return;
+    if (!result.success) {return;}
     expect(result.data.results).toHaveLength(3);
     expect(result.data.passed).toBe(3);
     expect(result.data.failed).toBe(0);

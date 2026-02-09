@@ -1,0 +1,62 @@
+{
+  "name": "modify-page-setup",
+  "description": "Set page orientation, margins, and header/footer in modify mode",
+  "tags": ["modify", "pageSetup"],
+  "setup": {
+    "mode": "create",
+    "output": "../__output__/070-template.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Report",
+          "rows": [
+            { "row": 1, "cells": [{ "ref": "A1", "value": "Report Title" }] }
+          ]
+        }
+      ]
+    }
+  },
+  "input": {
+    "mode": "modify",
+    "template": "../__output__/070-template.xlsx",
+    "output": "../__output__/070-modify-page-setup.xlsx",
+    "modify": {
+      "sheets": [
+        {
+          "name": "Report",
+          "pageSetup": {
+            "orientation": "landscape",
+            "paperSize": 9
+          },
+          "pageMargins": {
+            "left": 1,
+            "right": 1,
+            "top": 1.5,
+            "bottom": 1.5,
+            "header": 0.5,
+            "footer": 0.5
+          },
+          "headerFooter": {
+            "oddHeader": "&CReport Header",
+            "oddFooter": "&LPage &P&RDate: &D"
+          },
+          "printOptions": {
+            "gridLines": true,
+            "horizontalCentered": true
+          }
+        }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "sheets": [
+      {
+        "name": "Report",
+        "cells": [
+          { "ref": "A1", "type": "string", "value": "Report Title" }
+        ]
+      }
+    ]
+  }
+}

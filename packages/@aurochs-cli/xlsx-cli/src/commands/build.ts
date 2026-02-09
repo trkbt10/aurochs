@@ -10,9 +10,9 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { success, error, type Result } from "@aurochs-cli/cli-core";
 import { exportXlsx } from "@aurochs-builder/xlsx/exporter";
-import { parseWorkbook } from "@aurochs-office/xlsx/workbook-parser";
-import { patchWorkbook, type SheetUpdate } from "@aurochs-office/xlsx/workbook-patcher";
-import { type XlsxBuildSpec, type XlsxCreateSpec, type XlsxModifySpec, isCreateSpec, convertSpecToWorkbook } from "./build-spec";
+import { type XlsxBuildSpec, type XlsxCreateSpec, type XlsxModifySpec, type ModificationSpec, isCreateSpec, convertSpecToWorkbook } from "./build-spec";
+import { loadXlsxWorkbook } from "../utils/xlsx-loader";
+import { applyModifications } from "./apply-modifications";
 
 // =============================================================================
 // Types
@@ -31,6 +31,10 @@ export type BuildData = {
 // Build Modes
 // =============================================================================
 
+function countTotalCells(sheets: readonly { readonly rows: readonly { readonly cells: readonly unknown[] }[] }[]): number {
+  return sheets.reduce((sum, sheet) => sum + sheet.rows.reduce((s, row) => s + row.cells.length, 0), 0);
+}
+
 async function runCreateBuild(spec: XlsxCreateSpec, specDir: string): Promise<Result<BuildData>> {
   const workbook = convertSpecToWorkbook(spec.workbook);
   const xlsxData = await exportXlsx(workbook);
@@ -39,19 +43,44 @@ async function runCreateBuild(spec: XlsxCreateSpec, specDir: string): Promise<Re
   await fs.mkdir(path.dirname(outputPath), { recursive: true });
   await fs.writeFile(outputPath, xlsxData);
 
-  let totalCells = 0;
-  for (const sheet of workbook.sheets) {
-    for (const row of sheet.rows) {
-      totalCells += row.cells.length;
-    }
-  }
-
   return success({
     outputPath: spec.output,
     mode: "create",
     sheetCount: workbook.sheets.length,
-    totalCells,
+    totalCells: countTotalCells(workbook.sheets),
   });
+}
+
+function resolveLegacyCellValue(value: string | number): { type: "string"; value: string } | { type: "number"; value: number } {
+  if (typeof value === "string") {
+    return { type: "string", value };
+  }
+  return { type: "number", value };
+}
+
+/**
+ * Convert legacy modifications field to the new ModificationSpec format.
+ */
+function buildModificationSpec(spec: XlsxModifySpec): ModificationSpec | undefined {
+  // New format takes precedence
+  if (spec.modify) {
+    return spec.modify;
+  }
+
+  // Convert legacy modifications to new format
+  if (spec.modifications && spec.modifications.length > 0) {
+    return {
+      sheets: spec.modifications.map((mod) => ({
+        name: mod.sheetName,
+        cells: mod.cells.map((c) => ({
+          ref: `${c.col}${c.row}`,
+          value: resolveLegacyCellValue(c.value),
+        })),
+      })),
+    };
+  }
+
+  return undefined;
 }
 
 async function runModifyBuild(spec: XlsxModifySpec, specDir: string): Promise<Result<BuildData>> {
@@ -61,40 +90,19 @@ async function runModifyBuild(spec: XlsxModifySpec, specDir: string): Promise<Re
   await fs.access(templatePath);
   await fs.mkdir(path.dirname(outputPath), { recursive: true });
 
-  const templateBuffer = await fs.readFile(templatePath);
-  const workbook = await parseWorkbook(templateBuffer.buffer as ArrayBuffer);
+  // Domain-level round-trip: parse → modify → export
+  const baseWorkbook = await loadXlsxWorkbook(templatePath);
+  const modSpec = buildModificationSpec(spec);
+  const workbook = modSpec ? applyModifications(baseWorkbook, modSpec) : baseWorkbook;
 
-  if (spec.modifications && spec.modifications.length > 0) {
-    const updates: SheetUpdate[] = spec.modifications.map((mod) => ({
-      sheetName: mod.sheetName,
-      cells: mod.cells.map((c) => ({ col: c.col, row: c.row, value: c.value })),
-      ...(mod.dimension ? { dimension: mod.dimension } : {}),
-    }));
-
-    const result = await patchWorkbook(workbook, updates);
-    await fs.writeFile(outputPath, Buffer.from(result.xlsxBuffer));
-
-    let totalCells = 0;
-    for (const update of updates) {
-      totalCells += update.cells.length;
-    }
-
-    return success({
-      outputPath: spec.output,
-      mode: "modify",
-      sheetCount: workbook.sheets.size,
-      totalCells,
-    });
-  }
-
-  // No modifications — just copy template
-  await fs.copyFile(templatePath, outputPath);
+  const xlsxData = await exportXlsx(workbook);
+  await fs.writeFile(outputPath, xlsxData);
 
   return success({
     outputPath: spec.output,
     mode: "modify",
-    sheetCount: workbook.sheets.size,
-    totalCells: 0,
+    sheetCount: workbook.sheets.length,
+    totalCells: countTotalCells(workbook.sheets),
   });
 }
 

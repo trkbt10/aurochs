@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+/** @file Tests for Mermaid document renderer */
 import { renderDocxMermaid } from "./document-renderer";
 
 describe("renderDocxMermaid", () => {

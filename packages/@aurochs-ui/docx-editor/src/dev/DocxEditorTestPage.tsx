@@ -833,6 +833,9 @@ function TabContent({ activeTab }: { activeTab: TabId }) {
 // Main Component
 // =============================================================================
 
+
+
+/** DOCX editor test page with tabbed navigation for all editor components. */
 export function DocxEditorTestPage({ onBack }: DocxEditorTestPageProps) {
   const [activeTab, setActiveTab] = useState<TabId>("editor");
 

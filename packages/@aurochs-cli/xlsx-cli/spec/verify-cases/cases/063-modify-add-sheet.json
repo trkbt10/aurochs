@@ -1,0 +1,40 @@
+{
+  "name": "modify-add-sheet",
+  "description": "Add a new sheet in modify mode",
+  "tags": ["modify", "sheet"],
+  "setup": {
+    "mode": "create",
+    "output": "../__output__/063-template.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Original",
+          "rows": [{ "row": 1, "cells": [{ "ref": "A1", "value": "Keep" }] }]
+        }
+      ]
+    }
+  },
+  "input": {
+    "mode": "modify",
+    "template": "../__output__/063-template.xlsx",
+    "output": "../__output__/063-modify-add-sheet.xlsx",
+    "modify": {
+      "addSheets": [
+        {
+          "name": "Added",
+          "rows": [
+            { "row": 1, "cells": [{ "ref": "A1", "value": "New Sheet" }, { "ref": "B1", "value": 42 }] }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 2,
+    "sheetNames": ["Original", "Added"],
+    "sheets": [
+      { "name": "Original", "cells": [{ "ref": "A1", "type": "string", "value": "Keep" }] },
+      { "name": "Added", "cells": [{ "ref": "A1", "type": "string", "value": "New Sheet" }, { "ref": "B1", "type": "number", "value": 42 }] }
+    ]
+  }
+}

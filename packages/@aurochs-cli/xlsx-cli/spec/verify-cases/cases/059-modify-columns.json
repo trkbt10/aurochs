@@ -1,0 +1,52 @@
+{
+  "name": "modify-columns",
+  "description": "Add and modify column widths/hidden in modify mode",
+  "tags": ["modify", "columns"],
+  "setup": {
+    "mode": "create",
+    "output": "../__output__/059-template.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "columns": [
+            { "min": 1, "max": 1, "width": 10 },
+            { "min": 2, "max": 2, "width": 15 }
+          ],
+          "rows": [
+            { "row": 1, "cells": [{ "ref": "A1", "value": "A" }, { "ref": "B1", "value": "B" }] }
+          ]
+        }
+      ]
+    }
+  },
+  "input": {
+    "mode": "modify",
+    "template": "../__output__/059-template.xlsx",
+    "output": "../__output__/059-modify-columns.xlsx",
+    "modify": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "columns": [
+            { "min": 1, "max": 1, "width": 20 },
+            { "min": 3, "max": 3, "width": 25, "hidden": true }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "columns": [
+          { "min": 1, "max": 1, "width": 20 },
+          { "min": 2, "max": 2, "width": 15 },
+          { "min": 3, "max": 3, "width": 25, "hidden": true }
+        ]
+      }
+    ]
+  }
+}

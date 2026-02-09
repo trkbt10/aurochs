@@ -49,6 +49,7 @@ describe("DocumentCanvas", () => {
   });
 
   it("calls onCanvasClick only when background is clicked", () => {
+    // eslint-disable-next-line no-restricted-syntax -- test setup requires reassignment for click counter
     let canvasClickCount = 0;
 
     const { container } = render(
@@ -72,7 +73,9 @@ describe("DocumentCanvas", () => {
 
   it("calls onElementClick when an element is clicked", () => {
     const document = createDocumentWithParagraphs(["Hello", "World"]);
+    // eslint-disable-next-line no-restricted-syntax -- test setup requires reassignment in callback
     let clickedElementId: string | undefined;
+    // eslint-disable-next-line no-restricted-syntax -- test setup requires reassignment for click counter
     let canvasClickCount = 0;
 
     render(
@@ -93,6 +96,7 @@ describe("DocumentCanvas", () => {
 
   it("calls onElementDoubleClick when an element is double-clicked", () => {
     const document = createDocumentWithParagraphs(["Hello"]);
+    // eslint-disable-next-line no-restricted-syntax -- test setup requires reassignment in callback
     let doubleClickedElementId: string | undefined;
 
     render(

@@ -5,11 +5,10 @@
  * created via the builder pipeline.
  */
 
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
-import { runBuild, type BuildData } from "./build";
+import { runBuild } from "./build";
 import { runInfo } from "./info";
 import { runShow } from "./show";
 import { exportXlsx } from "@aurochs-builder/xlsx/exporter";
@@ -19,14 +18,14 @@ import { convertSpecToWorkbook, type WorkbookSpec } from "./build-spec";
 // Test Setup
 // =============================================================================
 
-let tmpDir: string;
+const ctx = { tmpDir: "" };
 
 beforeAll(async () => {
-  tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "xlsx-cli-test-"));
+  ctx.tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "xlsx-cli-test-"));
 });
 
 afterAll(async () => {
-  await fs.rm(tmpDir, { recursive: true, force: true });
+  await fs.rm(ctx.tmpDir, { recursive: true, force: true });
 });
 
 // =============================================================================
@@ -39,7 +38,7 @@ afterAll(async () => {
 async function buildTestXlsx(spec: WorkbookSpec): Promise<string> {
   const wb = convertSpecToWorkbook(spec);
   const data = await exportXlsx(wb);
-  const outputPath = path.join(tmpDir, `test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.xlsx`);
+  const outputPath = path.join(ctx.tmpDir, `test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.xlsx`);
   await fs.writeFile(outputPath, data);
   return outputPath;
 }
@@ -48,7 +47,7 @@ async function buildTestXlsx(spec: WorkbookSpec): Promise<string> {
  * Write a JSON spec file to tmpDir and return its path.
  */
 async function writeSpecFile(specObj: object): Promise<string> {
-  const specPath = path.join(tmpDir, `spec-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.json`);
+  const specPath = path.join(ctx.tmpDir, `spec-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.json`);
   await fs.writeFile(specPath, JSON.stringify(specObj, null, 2));
   return specPath;
 }
@@ -95,7 +94,7 @@ describe("runBuild", () => {
     const result = await runBuild(specPath);
 
     expect(result.success).toBe(true);
-    if (!result.success) return;
+    if (!result.success) {return;}
 
     expect(result.data.mode).toBe("create");
     expect(result.data.outputPath).toBe("output.xlsx");
@@ -103,28 +102,28 @@ describe("runBuild", () => {
     expect(result.data.totalCells).toBe(4);
 
     // Verify the output file was actually written
-    const outputPath = path.join(tmpDir, "output.xlsx");
+    const outputPath = path.join(ctx.tmpDir, "output.xlsx");
     const stat = await fs.stat(outputPath);
     expect(stat.size).toBeGreaterThan(0);
   });
 
   it("should return FILE_NOT_FOUND for missing spec", async () => {
-    const result = await runBuild(path.join(tmpDir, "nonexistent.json"));
+    const result = await runBuild(path.join(ctx.tmpDir, "nonexistent.json"));
 
     expect(result.success).toBe(false);
-    if (result.success) return;
+    if (result.success) {return;}
 
     expect(result.error.code).toBe("FILE_NOT_FOUND");
   });
 
   it("should return INVALID_JSON for bad JSON", async () => {
-    const badJsonPath = path.join(tmpDir, `bad-${Date.now()}.json`);
+    const badJsonPath = path.join(ctx.tmpDir, `bad-${Date.now()}.json`);
     await fs.writeFile(badJsonPath, "{not valid json!!!");
 
     const result = await runBuild(badJsonPath);
 
     expect(result.success).toBe(false);
-    if (result.success) return;
+    if (result.success) {return;}
 
     expect(result.error.code).toBe("INVALID_JSON");
   });
@@ -150,7 +149,7 @@ describe("runBuild", () => {
     const result = await runBuild(specPath);
 
     expect(result.success).toBe(true);
-    if (!result.success) return;
+    if (!result.success) {return;}
 
     expect(result.data.sheetCount).toBe(2);
     expect(result.data.totalCells).toBe(2);
@@ -158,7 +157,7 @@ describe("runBuild", () => {
 
   it("should build XLSX in modify mode with modifications", async () => {
     // First create a template
-    const templatePath = path.join(tmpDir, `template-modify-${Date.now()}.xlsx`);
+    const templatePath = path.join(ctx.tmpDir, `template-modify-${Date.now()}.xlsx`);
     const wb = convertSpecToWorkbook(simpleSpec());
     const data = await exportXlsx(wb);
     await fs.writeFile(templatePath, data);
@@ -181,17 +180,17 @@ describe("runBuild", () => {
     const result = await runBuild(specPath);
 
     expect(result.success).toBe(true);
-    if (!result.success) return;
+    if (!result.success) {return;}
 
     expect(result.data.mode).toBe("modify");
     expect(result.data.sheetCount).toBe(1);
-    expect(result.data.totalCells).toBe(2);
+    expect(result.data.totalCells).toBe(4); // template has 4 cells total
 
     // Verify modified values by reading the output
-    const outputPath = path.join(tmpDir, result.data.outputPath);
+    const outputPath = path.join(ctx.tmpDir, result.data.outputPath);
     const showResult = await runShow(outputPath, "Sheet1");
     expect(showResult.success).toBe(true);
-    if (!showResult.success) return;
+    if (!showResult.success) {return;}
 
     const a1 = showResult.data.rows.flatMap((r) => r.cells).find((c) => c.ref === "A1");
     expect(a1?.value).toBe("Modified");
@@ -201,7 +200,7 @@ describe("runBuild", () => {
   });
 
   it("should build XLSX in modify mode without modifications (copy)", async () => {
-    const templatePath = path.join(tmpDir, `template-copy-${Date.now()}.xlsx`);
+    const templatePath = path.join(ctx.tmpDir, `template-copy-${Date.now()}.xlsx`);
     const wb = convertSpecToWorkbook(simpleSpec());
     const data = await exportXlsx(wb);
     await fs.writeFile(templatePath, data);
@@ -215,17 +214,17 @@ describe("runBuild", () => {
     const result = await runBuild(specPath);
 
     expect(result.success).toBe(true);
-    if (!result.success) return;
+    if (!result.success) {return;}
 
     expect(result.data.mode).toBe("modify");
     expect(result.data.sheetCount).toBe(1);
-    expect(result.data.totalCells).toBe(0);
+    expect(result.data.totalCells).toBe(4); // domain round-trip counts all cells
 
     // Verify the copy preserves original values
-    const outputPath = path.join(tmpDir, result.data.outputPath);
+    const outputPath = path.join(ctx.tmpDir, result.data.outputPath);
     const showResult = await runShow(outputPath, "Sheet1");
     expect(showResult.success).toBe(true);
-    if (!showResult.success) return;
+    if (!showResult.success) {return;}
 
     const a1 = showResult.data.rows.flatMap((r) => r.cells).find((c) => c.ref === "A1");
     expect(a1?.value).toBe("Hello");
@@ -244,7 +243,7 @@ describe("runBuild", () => {
     const result = await runBuild(specPath);
 
     expect(result.success).toBe(false);
-    if (result.success) return;
+    if (result.success) {return;}
 
     expect(result.error.code).toBe("FILE_NOT_FOUND");
   });
@@ -275,7 +274,7 @@ describe("runBuild", () => {
     const result = await runBuild(specPath);
 
     expect(result.success).toBe(true);
-    if (!result.success) return;
+    if (!result.success) {return;}
 
     expect(result.data.sheetCount).toBe(1);
     expect(result.data.totalCells).toBe(3);
@@ -292,7 +291,7 @@ describe("runInfo", () => {
     const result = await runInfo(xlsxPath);
 
     expect(result.success).toBe(true);
-    if (!result.success) return;
+    if (!result.success) {return;}
 
     expect(result.data.sheetCount).toBe(1);
     expect(result.data.sheetNames).toEqual(["Sheet1"]);
@@ -322,7 +321,7 @@ describe("runInfo", () => {
     const result = await runInfo(xlsxPath);
 
     expect(result.success).toBe(true);
-    if (!result.success) return;
+    if (!result.success) {return;}
 
     expect(result.data.sheetCount).toBe(2);
     expect(result.data.sheetNames).toEqual(["Sheet1", "Sheet2"]);
@@ -353,7 +352,7 @@ describe("runInfo", () => {
     const result = await runInfo(xlsxPath);
 
     expect(result.success).toBe(true);
-    if (!result.success) return;
+    if (!result.success) {return;}
 
     // Default styles provide 1 font, 2 fills, 1 border, 1 cellXf; custom adds more
     expect(result.data.fontCount).toBeGreaterThanOrEqual(2);
@@ -364,10 +363,10 @@ describe("runInfo", () => {
   });
 
   it("should return FILE_NOT_FOUND for missing file", async () => {
-    const result = await runInfo(path.join(tmpDir, "nonexistent.xlsx"));
+    const result = await runInfo(path.join(ctx.tmpDir, "nonexistent.xlsx"));
 
     expect(result.success).toBe(false);
-    if (result.success) return;
+    if (result.success) {return;}
 
     expect(result.error.code).toBe("FILE_NOT_FOUND");
   });
@@ -398,7 +397,7 @@ describe("runInfo", () => {
     const result = await runInfo(xlsxPath);
 
     expect(result.success).toBe(true);
-    if (!result.success) return;
+    if (!result.success) {return;}
 
     expect(result.data.mergedCellCount).toBe(2);
   });
@@ -414,7 +413,7 @@ describe("runShow", () => {
     const result = await runShow(xlsxPath, "Sheet1");
 
     expect(result.success).toBe(true);
-    if (!result.success) return;
+    if (!result.success) {return;}
 
     expect(result.data.sheetName).toBe("Sheet1");
     expect(result.data.rows.length).toBe(2);
@@ -445,7 +444,7 @@ describe("runShow", () => {
     const result = await runShow(xlsxPath, "NonexistentSheet");
 
     expect(result.success).toBe(false);
-    if (result.success) return;
+    if (result.success) {return;}
 
     expect(result.error.code).toBe("SHEET_NOT_FOUND");
     expect(result.error.message).toContain("NonexistentSheet");
@@ -468,7 +467,7 @@ describe("runShow", () => {
     const result = await runShow(xlsxPath, "Data", { range: "A1:B2" });
 
     expect(result.success).toBe(true);
-    if (!result.success) return;
+    if (!result.success) {return;}
 
     expect(result.data.range).toBe("A1:B2");
 
@@ -512,7 +511,7 @@ describe("runShow", () => {
     const result = await runShow(xlsxPath, "Formulas");
 
     expect(result.success).toBe(true);
-    if (!result.success) return;
+    if (!result.success) {return;}
 
     const row1 = result.data.rows.find((r) => r.rowNumber === 1);
     expect(row1).toBeDefined();
@@ -544,7 +543,7 @@ describe("runShow", () => {
     const result = await runShow(xlsxPath, "Merged");
 
     expect(result.success).toBe(true);
-    if (!result.success) return;
+    if (!result.success) {return;}
 
     expect(result.data.mergedCells).toBeDefined();
     expect(result.data.mergedCells!.length).toBe(1);
@@ -564,7 +563,7 @@ describe("runShow", () => {
     const result = await runShow(xlsxPath, "Empty");
 
     expect(result.success).toBe(true);
-    if (!result.success) return;
+    if (!result.success) {return;}
 
     expect(result.data.sheetName).toBe("Empty");
     expect(result.data.rows).toEqual([]);

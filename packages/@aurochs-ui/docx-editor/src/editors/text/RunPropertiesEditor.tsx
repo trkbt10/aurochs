@@ -77,14 +77,14 @@ const VERTICAL_ALIGN_OPTIONS: SelectOption<"baseline" | "superscript" | "subscri
 
 /** Convert DOCX RunPropertiesMixedState to generic MixedContext. */
 function toMixedContext(mixed: RunPropertiesMixedState | undefined): MixedContext | undefined {
-  if (!mixed) return undefined;
+  if (!mixed) {return undefined;}
   const fields = new Set<string>();
-  if (mixed.b) fields.add("bold");
-  if (mixed.i) fields.add("italic");
-  if (mixed.u) fields.add("underline");
-  if (mixed.strike) fields.add("strikethrough");
-  if (mixed.sz) fields.add("fontSize");
-  if (mixed.rFonts) fields.add("fontFamily");
+  if (mixed.b) {fields.add("bold");}
+  if (mixed.i) {fields.add("italic");}
+  if (mixed.u) {fields.add("underline");}
+  if (mixed.strike) {fields.add("strikethrough");}
+  if (mixed.sz) {fields.add("fontSize");}
+  if (mixed.rFonts) {fields.add("fontFamily");}
   return fields.size > 0 ? { mixedFields: fields } : undefined;
 }
 

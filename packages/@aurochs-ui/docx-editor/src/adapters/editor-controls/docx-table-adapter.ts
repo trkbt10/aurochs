@@ -24,12 +24,12 @@ export const docxTableAdapter: FormattingAdapter<DocxTableProperties, TableStyle
   applyUpdate(current: DocxTableProperties, update: Partial<TableStyleBands>): DocxTableProperties {
     const look = { ...current.tblLook };
 
-    if ("headerRow" in update) look.firstRow = update.headerRow;
-    if ("totalRow" in update) look.lastRow = update.totalRow;
-    if ("firstColumn" in update) look.firstColumn = update.firstColumn;
-    if ("lastColumn" in update) look.lastColumn = update.lastColumn;
-    if ("bandedRows" in update) look.noHBand = !update.bandedRows;
-    if ("bandedColumns" in update) look.noVBand = !update.bandedColumns;
+    if ("headerRow" in update) {look.firstRow = update.headerRow;}
+    if ("totalRow" in update) {look.lastRow = update.totalRow;}
+    if ("firstColumn" in update) {look.firstColumn = update.firstColumn;}
+    if ("lastColumn" in update) {look.lastColumn = update.lastColumn;}
+    if ("bandedRows" in update) {look.noHBand = !update.bandedRows;}
+    if ("bandedColumns" in update) {look.noVBand = !update.bandedColumns;}
 
     return { ...current, tblLook: look };
   },

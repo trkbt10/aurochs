@@ -1,0 +1,60 @@
+{
+  "name": "modify-data-validation",
+  "description": "Add data validation rules in modify mode",
+  "tags": ["modify", "dataValidation"],
+  "setup": {
+    "mode": "create",
+    "output": "../__output__/068-template.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            { "row": 1, "cells": [{ "ref": "A1", "value": "Name" }, { "ref": "B1", "value": "Age" }] },
+            { "row": 2, "cells": [{ "ref": "A2", "value": "Alice" }, { "ref": "B2", "value": 30 }] }
+          ]
+        }
+      ]
+    }
+  },
+  "input": {
+    "mode": "modify",
+    "template": "../__output__/068-template.xlsx",
+    "output": "../__output__/068-modify-validation.xlsx",
+    "modify": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "dataValidations": [
+            {
+              "sqref": "B2:B100",
+              "type": "whole",
+              "operator": "between",
+              "formula1": "0",
+              "formula2": "150",
+              "allowBlank": true,
+              "showErrorMessage": true,
+              "errorStyle": "stop",
+              "errorTitle": "Invalid Age",
+              "error": "Age must be between 0 and 150"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "cells": [
+          { "ref": "A1", "type": "string", "value": "Name" },
+          { "ref": "B1", "type": "string", "value": "Age" },
+          { "ref": "A2", "type": "string", "value": "Alice" },
+          { "ref": "B2", "type": "number", "value": 30 }
+        ]
+      }
+    ]
+  }
+}

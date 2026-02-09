@@ -1,4 +1,4 @@
-import { describe, it, expect } from "bun:test";
+/** @file Tests for ASCII table renderer */
 import { renderDocxTableAscii } from "./table-renderer";
 import { TABLE_CHARS } from "@aurochs-renderer/drawing-ml/ascii";
 

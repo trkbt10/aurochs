@@ -1,0 +1,41 @@
+{
+  "name": "modify-sheet-visibility",
+  "description": "Change sheet visibility (hide/unhide) in modify mode",
+  "tags": ["modify", "sheet"],
+  "setup": {
+    "mode": "create",
+    "output": "../__output__/062-template.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Visible",
+          "rows": [{ "row": 1, "cells": [{ "ref": "A1", "value": "V" }] }]
+        },
+        {
+          "name": "Hidden",
+          "state": "hidden",
+          "rows": [{ "row": 1, "cells": [{ "ref": "A1", "value": "H" }] }]
+        }
+      ]
+    }
+  },
+  "input": {
+    "mode": "modify",
+    "template": "../__output__/062-template.xlsx",
+    "output": "../__output__/062-modify-visibility.xlsx",
+    "modify": {
+      "sheets": [
+        { "name": "Visible", "state": "hidden" },
+        { "name": "Hidden", "state": "visible" }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 2,
+    "sheetNames": ["Visible", "Hidden"],
+    "sheets": [
+      { "name": "Visible", "cells": [{ "ref": "A1", "type": "string", "value": "V" }] },
+      { "name": "Hidden", "cells": [{ "ref": "A1", "type": "string", "value": "H" }] }
+    ]
+  }
+}

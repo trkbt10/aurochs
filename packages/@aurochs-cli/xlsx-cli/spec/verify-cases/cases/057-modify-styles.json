@@ -1,0 +1,58 @@
+{
+  "name": "modify-styles",
+  "description": "Add new styles and assign to cells in modify mode",
+  "tags": ["modify", "styles"],
+  "setup": {
+    "mode": "create",
+    "output": "../__output__/057-template.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            { "row": 1, "cells": [{ "ref": "A1", "value": "Plain" }, { "ref": "B1", "value": 100 }] }
+          ]
+        }
+      ]
+    }
+  },
+  "input": {
+    "mode": "modify",
+    "template": "../__output__/057-template.xlsx",
+    "output": "../__output__/057-modify-styles.xlsx",
+    "modify": {
+      "styles": {
+        "fonts": [
+          { "name": "Arial", "size": 14, "bold": true, "color": { "type": "rgb", "value": "FFFF0000" } }
+        ],
+        "cellXfs": [
+          { "fontId": 1 }
+        ]
+      },
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "cells": [
+            { "ref": "A1", "value": "Styled", "styleId": 1 }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "styles": {
+      "fontCount": 2,
+      "cellXfCount": 2
+    },
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "cells": [
+          { "ref": "A1", "type": "string", "value": "Styled", "styleId": 1 },
+          { "ref": "B1", "type": "number", "value": 100 }
+        ]
+      }
+    ]
+  }
+}

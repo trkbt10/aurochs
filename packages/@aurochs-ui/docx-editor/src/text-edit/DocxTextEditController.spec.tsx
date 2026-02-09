@@ -148,6 +148,7 @@ describe("DocxTextEditController", () => {
     } as const;
   }
 
+  // eslint-disable-next-line no-restricted-syntax -- test setup requires reassignment in beforeEach
   let setup: Setup;
 
   beforeEach(() => {

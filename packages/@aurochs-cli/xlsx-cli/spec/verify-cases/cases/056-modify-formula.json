@@ -1,0 +1,50 @@
+{
+  "name": "modify-formula",
+  "description": "Add and change formulas in modify mode",
+  "tags": ["modify", "formula"],
+  "setup": {
+    "mode": "create",
+    "output": "../__output__/056-template.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            { "row": 1, "cells": [{ "ref": "A1", "value": 10 }, { "ref": "B1", "value": 20 }] },
+            { "row": 2, "cells": [{ "ref": "A2", "formula": { "expression": "A1+B1" } }] }
+          ]
+        }
+      ]
+    }
+  },
+  "input": {
+    "mode": "modify",
+    "template": "../__output__/056-template.xlsx",
+    "output": "../__output__/056-modify-formula.xlsx",
+    "modify": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "cells": [
+            { "ref": "A2", "formula": { "expression": "A1*B1" } },
+            { "ref": "A3", "formula": { "expression": "SUM(A1:B1)" }, "value": { "type": "number", "value": 30 } }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "cells": [
+          { "ref": "A1", "type": "number", "value": 10 },
+          { "ref": "B1", "type": "number", "value": 20 },
+          { "ref": "A2", "formula": "A1*B1" },
+          { "ref": "A3", "formula": "SUM(A1:B1)" }
+        ]
+      }
+    ]
+  }
+}

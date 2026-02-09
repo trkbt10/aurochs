@@ -1,0 +1,39 @@
+{
+  "name": "modify-tab-color",
+  "description": "Set sheet tab color in modify mode",
+  "tags": ["modify", "tabColor"],
+  "setup": {
+    "mode": "create",
+    "output": "../__output__/067-template.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Colored",
+          "rows": [{ "row": 1, "cells": [{ "ref": "A1", "value": "Tab" }] }]
+        }
+      ]
+    }
+  },
+  "input": {
+    "mode": "modify",
+    "template": "../__output__/067-template.xlsx",
+    "output": "../__output__/067-modify-tab-color.xlsx",
+    "modify": {
+      "sheets": [
+        {
+          "name": "Colored",
+          "tabColor": "#FF0000"
+        }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "sheets": [
+      {
+        "name": "Colored",
+        "cells": [{ "ref": "A1", "type": "string", "value": "Tab" }]
+      }
+    ]
+  }
+}

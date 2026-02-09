@@ -1,0 +1,40 @@
+{
+  "name": "modify-sheet-format",
+  "description": "Modify defaultRowHeight and defaultColWidth in modify mode",
+  "tags": ["modify", "sheetFormat"],
+  "setup": {
+    "mode": "create",
+    "output": "../__output__/066-template.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "sheetFormatPr": { "defaultRowHeight": 15 },
+          "rows": [{ "row": 1, "cells": [{ "ref": "A1", "value": "Data" }] }]
+        }
+      ]
+    }
+  },
+  "input": {
+    "mode": "modify",
+    "template": "../__output__/066-template.xlsx",
+    "output": "../__output__/066-modify-format.xlsx",
+    "modify": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "sheetFormatPr": { "defaultRowHeight": 20, "defaultColWidth": 12 }
+        }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "cells": [{ "ref": "A1", "type": "string", "value": "Data" }]
+      }
+    ]
+  }
+}

@@ -112,9 +112,9 @@ function createAssertion(path: string, expected: unknown, actual: unknown): Asse
   };
 }
 
-function assertOptional(assertions: Assertion[], path: string, expected: unknown, actual: unknown): void {
-  if (expected !== undefined) {
-    assertions.push(createAssertion(path, expected, actual));
+function assertOptional(params: { assertions: Assertion[]; path: string; expected: unknown; actual: unknown }): void {
+  if (params.expected !== undefined) {
+    params.assertions.push(createAssertion(params.path, params.expected, params.actual));
   }
 }
 
@@ -122,19 +122,20 @@ function assertOptional(assertions: Assertion[], path: string, expected: unknown
 // Matcher Functions
 // =============================================================================
 
-function matchCell(expected: ExpectedCell, showData: ShowData, basePath: string): Assertion[] {
-  const assertions: Assertion[] = [];
-
-  // Find the cell in show data
-  let actualCell: { type: string; value: string | number | boolean | null; formula?: string } | undefined;
+function findCellInShowData(showData: ShowData, ref: string): { type: string; value: string | number | boolean | null; formula?: string } | undefined {
   for (const row of showData.rows) {
     for (const cell of row.cells) {
-      if (cell.ref === expected.ref) {
-        actualCell = cell;
-        break;
+      if (cell.ref === ref) {
+        return cell;
       }
     }
   }
+  return undefined;
+}
+
+function matchCell(expected: ExpectedCell, showData: ShowData, basePath: string): Assertion[] {
+  const assertions: Assertion[] = [];
+  const actualCell = findCellInShowData(showData, expected.ref);
 
   if (expected.type !== undefined) {
     assertions.push(createAssertion(
@@ -163,7 +164,8 @@ function matchCell(expected: ExpectedCell, showData: ShowData, basePath: string)
   return assertions;
 }
 
-function matchSheet(expected: ExpectedSheet, info: InfoData, showData: ShowData | undefined, workbookData: WorkbookSheetData | undefined, basePath: string): Assertion[] {
+function matchSheet(params: { expected: ExpectedSheet; showData: ShowData | undefined; workbookData: WorkbookSheetData | undefined; basePath: string }): Assertion[] {
+  const { expected, showData, workbookData, basePath } = params;
   const assertions: Assertion[] = [];
 
   if (expected.rowCount !== undefined && workbookData) {
@@ -186,10 +188,10 @@ function matchSheet(expected: ExpectedSheet, info: InfoData, showData: ShowData 
       const colPath = `${basePath}.columns[${i}]`;
 
       if (actCol) {
-        assertOptional(assertions, `${colPath}.min`, expCol.min, actCol.min);
-        assertOptional(assertions, `${colPath}.max`, expCol.max, actCol.max);
-        assertOptional(assertions, `${colPath}.width`, expCol.width, actCol.width);
-        assertOptional(assertions, `${colPath}.hidden`, expCol.hidden, actCol.hidden);
+        assertOptional({ assertions, path: `${colPath}.min`, expected: expCol.min, actual: actCol.min });
+        assertOptional({ assertions, path: `${colPath}.max`, expected: expCol.max, actual: actCol.max });
+        assertOptional({ assertions, path: `${colPath}.width`, expected: expCol.width, actual: actCol.width });
+        assertOptional({ assertions, path: `${colPath}.hidden`, expected: expCol.hidden, actual: actCol.hidden });
       } else {
         assertions.push(createAssertion(`${colPath}`, "exists", "missing"));
       }
@@ -208,10 +210,10 @@ function matchSheet(expected: ExpectedSheet, info: InfoData, showData: ShowData 
 
 function matchStyles(expected: ExpectedStyles, info: InfoData, basePath: string): Assertion[] {
   const assertions: Assertion[] = [];
-  assertOptional(assertions, `${basePath}.fontCount`, expected.fontCount, info.fontCount);
-  assertOptional(assertions, `${basePath}.fillCount`, expected.fillCount, info.fillCount);
-  assertOptional(assertions, `${basePath}.borderCount`, expected.borderCount, info.borderCount);
-  assertOptional(assertions, `${basePath}.numberFormatCount`, expected.numberFormatCount, info.numberFormatCount);
+  assertOptional({ assertions, path: `${basePath}.fontCount`, expected: expected.fontCount, actual: info.fontCount });
+  assertOptional({ assertions, path: `${basePath}.fillCount`, expected: expected.fillCount, actual: info.fillCount });
+  assertOptional({ assertions, path: `${basePath}.borderCount`, expected: expected.borderCount, actual: info.borderCount });
+  assertOptional({ assertions, path: `${basePath}.numberFormatCount`, expected: expected.numberFormatCount, actual: info.numberFormatCount });
   return assertions;
 }
 
@@ -228,9 +230,9 @@ function matchDefinedNames(expected: readonly ExpectedDefinedName[], actual: rea
       continue;
     }
 
-    assertOptional(assertions, `${dnPath}.formula`, exp.formula, act.formula);
-    assertOptional(assertions, `${dnPath}.localSheetId`, exp.localSheetId, act.localSheetId);
-    assertOptional(assertions, `${dnPath}.hidden`, exp.hidden, act.hidden);
+    assertOptional({ assertions, path: `${dnPath}.formula`, expected: exp.formula, actual: act.formula });
+    assertOptional({ assertions, path: `${dnPath}.localSheetId`, expected: exp.localSheetId, actual: act.localSheetId });
+    assertOptional({ assertions, path: `${dnPath}.hidden`, expected: exp.hidden, actual: act.hidden });
   }
 
   return assertions;
@@ -253,6 +255,14 @@ type DefinedNameData = {
   readonly localSheetId?: number;
   readonly hidden?: boolean;
 };
+
+async function getShowDataIfNeeded(outputPath: string, expSheet: ExpectedSheet): Promise<ShowData | undefined> {
+  if (!expSheet.cells && !expSheet.mergedCells) {
+    return undefined;
+  }
+  const showResult = await runShow(outputPath, expSheet.name);
+  return showResult.success ? showResult.data : undefined;
+}
 
 // =============================================================================
 // Test Case Execution
@@ -312,12 +322,12 @@ async function runTestCase(spec: TestCaseSpec, specDir: string): Promise<TestCas
     const info = infoResult.data;
 
     // Top-level assertions
-    assertOptional(assertions, "sheetCount", spec.expected.sheetCount, info.sheetCount);
+    assertOptional({ assertions, path: "sheetCount", expected: spec.expected.sheetCount, actual: info.sheetCount });
     if (spec.expected.sheetNames !== undefined) {
       assertions.push(createAssertion("sheetNames", spec.expected.sheetNames, info.sheetNames));
     }
-    assertOptional(assertions, "totalRows", spec.expected.totalRows, info.totalRows);
-    assertOptional(assertions, "totalCells", spec.expected.totalCells, info.totalCells);
+    assertOptional({ assertions, path: "totalRows", expected: spec.expected.totalRows, actual: info.totalRows });
+    assertOptional({ assertions, path: "totalCells", expected: spec.expected.totalCells, actual: info.totalCells });
 
     // Style assertions
     if (spec.expected.styles) {
@@ -339,13 +349,7 @@ async function runTestCase(spec: TestCaseSpec, specDir: string): Promise<TestCas
         }
 
         // Get sheet data via show command for cell assertions
-        let showData: ShowData | undefined;
-        if (expSheet.cells || expSheet.mergedCells) {
-          const showResult = await runShow(outputPath, expSheet.name);
-          if (showResult.success) {
-            showData = showResult.data;
-          }
-        }
+        const showData = await getShowDataIfNeeded(outputPath, expSheet);
 
         // Build workbook sheet data
         const wbSheetData: WorkbookSheetData = {
@@ -360,7 +364,7 @@ async function runTestCase(spec: TestCaseSpec, specDir: string): Promise<TestCas
           })),
         };
 
-        assertions.push(...matchSheet(expSheet, info, showData, wbSheetData, sheetPath));
+        assertions.push(...matchSheet({ expected: expSheet, showData, workbookData: wbSheetData, basePath: sheetPath }));
       }
     }
 

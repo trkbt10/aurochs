@@ -33,13 +33,14 @@ function ensureDom(): void {
   Object.defineProperty(globalThis, "window", { value: jsdomWindow, writable: true });
   Object.defineProperty(globalThis, "document", { value: jsdomWindow.document, writable: true });
   Object.defineProperty(globalThis, "self", { value: jsdomWindow, writable: true });
+  // eslint-disable-next-line custom/no-as-outside-guard -- jsdom window is not typed for global property extraction
   Object.defineProperty(globalThis, "HTMLElement", { value: (jsdomWindow as unknown as Record<string, unknown>).HTMLElement, writable: true });
   Object.defineProperty(globalThis, "getComputedStyle", { value: jsdomWindow.getComputedStyle, writable: true });
 
   const maybeNavigator = jsdomWindow.navigator;
   try {
     Object.defineProperty(globalThis, "navigator", { value: maybeNavigator, writable: true });
-  } catch {
+  } catch (_err: unknown) { // eslint-disable-line @typescript-eslint/no-unused-vars -- catch requires error param
     // Some runtimes expose `navigator` as a non-writable getter; tests don't require setting it.
   }
 
@@ -53,6 +54,7 @@ function ensureDom(): void {
     "InputEvent",
     "CompositionEvent",
   ] as const;
+  // eslint-disable-next-line custom/no-as-outside-guard -- jsdom window needs cast for iterating non-standard globals
   const win = jsdomWindow as unknown as Record<string, unknown>;
   for (const key of domGlobals) {
     const value = win[key];
@@ -63,6 +65,7 @@ function ensureDom(): void {
 
   // React may hit old-IE input polyfill paths depending on environment feature detection.
   // Provide no-op stubs so event wiring doesn't crash under Bun's runtime.
+  // eslint-disable-next-line custom/no-as-outside-guard -- jsdom window needs cast to access HTMLElement prototype for polyfill stubs
   const htmlElementProto = (jsdomWindow as unknown as Record<string, unknown> & { HTMLElement: { prototype: Record<string, unknown> } }).HTMLElement.prototype as {
     attachEvent?: (name: string, handler: EventListenerOrEventListenerObject) => void;
     detachEvent?: (name: string, handler: EventListenerOrEventListenerObject) => void;
@@ -72,8 +75,11 @@ function ensureDom(): void {
 }
 
 ensureDom();
+// eslint-disable-next-line no-restricted-syntax -- test setup requires dynamic import after DOM polyfill
 const React = await import("react");
+// eslint-disable-next-line no-restricted-syntax -- test setup requires dynamic import after DOM polyfill
 const { render, fireEvent, waitFor } = await import("@testing-library/react");
+// eslint-disable-next-line no-restricted-syntax -- test setup requires dynamic import after DOM polyfill
 const { DocxTextInputFrame } = await import("./DocxTextInputFrame");
 
 describe("DocxTextInputFrame", () => {

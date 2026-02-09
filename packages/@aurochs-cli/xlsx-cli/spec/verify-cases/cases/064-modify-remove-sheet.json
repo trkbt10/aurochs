@@ -1,0 +1,36 @@
+{
+  "name": "modify-remove-sheet",
+  "description": "Remove a sheet in modify mode",
+  "tags": ["modify", "sheet"],
+  "setup": {
+    "mode": "create",
+    "output": "../__output__/064-template.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Keep",
+          "rows": [{ "row": 1, "cells": [{ "ref": "A1", "value": "Kept" }] }]
+        },
+        {
+          "name": "Remove",
+          "rows": [{ "row": 1, "cells": [{ "ref": "A1", "value": "Removed" }] }]
+        }
+      ]
+    }
+  },
+  "input": {
+    "mode": "modify",
+    "template": "../__output__/064-template.xlsx",
+    "output": "../__output__/064-modify-remove-sheet.xlsx",
+    "modify": {
+      "removeSheets": ["Remove"]
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "sheetNames": ["Keep"],
+    "sheets": [
+      { "name": "Keep", "cells": [{ "ref": "A1", "type": "string", "value": "Kept" }] }
+    ]
+  }
+}

@@ -1,4 +1,4 @@
-import { describe, it, expect } from "bun:test";
+/** @file Tests for ASCII paragraph renderer */
 import { renderParagraphAscii } from "./paragraph-renderer";
 
 describe("paragraph-renderer", () => {
