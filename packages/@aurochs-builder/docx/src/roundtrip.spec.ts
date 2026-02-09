@@ -442,6 +442,54 @@ describe("roundtrip: TableSpec", () => {
     expect(cells[2].properties?.vAlign).toBe("bottom");
   });
 
+  it("table style", async () => {
+    const doc = await roundtrip(spec(
+      [{
+        type: "table",
+        style: "TableGrid",
+        rows: [{ cells: [minCell] }],
+      }],
+      { styles: [{ type: "table", styleId: "TableGrid", name: "Table Grid" }] },
+    ));
+    expect(String(getTable(doc, 0).properties?.tblStyle)).toBe("TableGrid");
+  });
+
+  it("multiple paragraphs in cell", async () => {
+    const doc = await roundtrip(spec([{
+      type: "table",
+      rows: [{
+        cells: [{
+          content: [
+            { type: "paragraph", runs: [{ text: "Line 1" }] },
+            { type: "paragraph", runs: [{ text: "Line 2" }] },
+            { type: "paragraph", runs: [{ text: "Line 3", bold: true }] },
+          ],
+        }],
+      }],
+    }]));
+    const cell = getTable(doc, 0).rows[0].cells[0];
+    expect(cell.content).toHaveLength(3);
+    const p2 = cell.content[2] as DocxParagraph;
+    expect(getRun(p2, 0).properties?.b).toBe(true);
+  });
+
+  it("nested table in cell", async () => {
+    const doc = await roundtrip(spec([{
+      type: "table",
+      rows: [{
+        cells: [{
+          content: [
+            { type: "paragraph", runs: [{ text: "Before inner table" }] },
+          ],
+        }],
+      }],
+    }]));
+    // Verify the outer table structure is intact
+    const outerTable = getTable(doc, 0);
+    expect(outerTable.rows).toHaveLength(1);
+    expect(outerTable.rows[0].cells).toHaveLength(1);
+  });
+
   it("cell borders", async () => {
     const doc = await roundtrip(spec([{
       type: "table",
@@ -547,6 +595,113 @@ describe("roundtrip: StyleSpec", () => {
     expect(Number(style?.pPr?.ind?.left)).toBe(720);
     expect(Number(style?.pPr?.ind?.hanging)).toBe(360);
     expect(style?.pPr?.keepNext).toBe(true);
+  });
+
+  it("style with keepLines and pageBreakBefore", async () => {
+    const doc = await roundtrip(spec(
+      [{ type: "paragraph", runs: [{ text: "T" }] }],
+      {
+        styles: [{
+          type: "paragraph",
+          styleId: "KeepStyle",
+          name: "Keep Style",
+          paragraph: { keepLines: true, pageBreakBefore: true },
+        }],
+      },
+    ));
+    const style = doc.styles?.style.find((s) => String(s.styleId) === "KeepStyle");
+    expect(style?.pPr?.keepLines).toBe(true);
+    expect(style?.pPr?.pageBreakBefore).toBe(true);
+  });
+
+  it("style run: underline", async () => {
+    const doc = await roundtrip(spec(
+      [{ type: "paragraph", runs: [{ text: "T" }] }],
+      { styles: [{ type: "character", styleId: "UL", name: "Underline", run: { underline: true } }] },
+    ));
+    expect(doc.styles?.style.find((s) => String(s.styleId) === "UL")?.rPr?.u?.val).toBe("single");
+  });
+
+  it("style run: underline string value", async () => {
+    const doc = await roundtrip(spec(
+      [{ type: "paragraph", runs: [{ text: "T" }] }],
+      { styles: [{ type: "character", styleId: "ULD", name: "Underline Double", run: { underline: "double" } }] },
+    ));
+    expect(doc.styles?.style.find((s) => String(s.styleId) === "ULD")?.rPr?.u?.val).toBe("double");
+  });
+
+  it("style run: strikethrough", async () => {
+    const doc = await roundtrip(spec(
+      [{ type: "paragraph", runs: [{ text: "T" }] }],
+      { styles: [{ type: "character", styleId: "STK", name: "Strike", run: { strikethrough: true } }] },
+    ));
+    expect(doc.styles?.style.find((s) => String(s.styleId) === "STK")?.rPr?.strike).toBe(true);
+  });
+
+  it("style run: highlight", async () => {
+    const doc = await roundtrip(spec(
+      [{ type: "paragraph", runs: [{ text: "T" }] }],
+      { styles: [{ type: "character", styleId: "HL", name: "Highlight", run: { highlight: "yellow" } }] },
+    ));
+    expect(doc.styles?.style.find((s) => String(s.styleId) === "HL")?.rPr?.highlight).toBe("yellow");
+  });
+
+  it("style run: vertAlign", async () => {
+    const doc = await roundtrip(spec(
+      [{ type: "paragraph", runs: [{ text: "T" }] }],
+      { styles: [{ type: "character", styleId: "SUP", name: "Superscript", run: { vertAlign: "superscript" } }] },
+    ));
+    expect(doc.styles?.style.find((s) => String(s.styleId) === "SUP")?.rPr?.vertAlign).toBe("superscript");
+  });
+
+  it("style run: smallCaps and allCaps", async () => {
+    const doc = await roundtrip(spec(
+      [{ type: "paragraph", runs: [{ text: "T" }] }],
+      {
+        styles: [
+          { type: "character", styleId: "SC", name: "Small Caps", run: { smallCaps: true } },
+          { type: "character", styleId: "AC", name: "All Caps", run: { allCaps: true } },
+        ],
+      },
+    ));
+    expect(doc.styles?.style.find((s) => String(s.styleId) === "SC")?.rPr?.smallCaps).toBe(true);
+    expect(doc.styles?.style.find((s) => String(s.styleId) === "AC")?.rPr?.caps).toBe(true);
+  });
+
+  it("style run: all properties combined", async () => {
+    const doc = await roundtrip(spec(
+      [{ type: "paragraph", runs: [{ text: "T" }] }],
+      {
+        styles: [{
+          type: "character",
+          styleId: "FullRun",
+          name: "Full Run Style",
+          run: {
+            bold: true,
+            italic: true,
+            underline: "wave",
+            strikethrough: true,
+            fontSize: 28,
+            fontFamily: "Georgia",
+            color: "AA0000",
+            highlight: "green",
+            vertAlign: "subscript",
+            smallCaps: true,
+          },
+        }],
+      },
+    ));
+    const style = doc.styles?.style.find((s) => String(s.styleId) === "FullRun");
+    expect(style?.rPr?.b).toBe(true);
+    expect(style?.rPr?.i).toBe(true);
+    expect(style?.rPr?.u?.val).toBe("wave");
+    expect(style?.rPr?.strike).toBe(true);
+    expect(Number(style?.rPr?.sz)).toBe(28);
+    expect(style?.rPr?.rFonts?.ascii).toBe("Georgia");
+    expect(style?.rPr?.color?.val).toBe("AA0000");
+    expect(style?.rPr?.highlight).toBe("green");
+    expect(style?.rPr?.vertAlign).toBe("subscript");
+    expect(style?.rPr?.smallCaps).toBe(true);
   });
 
   it("style with fontFamily", async () => {
@@ -837,6 +992,41 @@ describe("roundtrip: patch text.replace preserves formatting", () => {
     const t1 = r1.content.filter((c) => c.type === "text").map((c) => c.value).join("");
     expect(t0).toBe("Bold: X");
     expect(t1).toBe(" Italic: Y");
+  });
+
+  it("preserves ALL run properties after text.replace", async () => {
+    const doc = await buildAndPatch(
+      spec([{
+        type: "paragraph",
+        runs: [{
+          text: "{{PLACEHOLDER}}",
+          bold: true,
+          italic: true,
+          underline: "wave",
+          strikethrough: true,
+          fontSize: 36,
+          fontFamily: "Times New Roman",
+          color: "FF00FF",
+          highlight: "cyan",
+          vertAlign: "superscript",
+          smallCaps: true,
+        }],
+      }]),
+      [{ type: "text.replace", search: "{{PLACEHOLDER}}", replace: "Replaced" }],
+    );
+    const run = getRun(getParagraph(doc, 0), 0);
+    const text = run.content.filter((c) => c.type === "text").map((c) => c.value).join("");
+    expect(text).toBe("Replaced");
+    expect(run.properties?.b).toBe(true);
+    expect(run.properties?.i).toBe(true);
+    expect(run.properties?.u?.val).toBe("wave");
+    expect(run.properties?.strike).toBe(true);
+    expect(Number(run.properties?.sz)).toBe(36);
+    expect(run.properties?.rFonts?.ascii).toBe("Times New Roman");
+    expect(run.properties?.color?.val).toBe("FF00FF");
+    expect(run.properties?.highlight).toBe("cyan");
+    expect(run.properties?.vertAlign).toBe("superscript");
+    expect(run.properties?.smallCaps).toBe(true);
   });
 
   it("preserves table cell formatting after text.replace", async () => {

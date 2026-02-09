@@ -148,6 +148,34 @@ describe("content.insert", () => {
       ),
     ).rejects.toThrow("out of range");
   });
+
+  it("inserts a table", async () => {
+    const spec = createBasicSpec([
+      { type: "paragraph", runs: [{ text: "Before" }] },
+      { type: "paragraph", runs: [{ text: "After" }] },
+    ]);
+
+    const patched = await buildAndPatch(spec, [
+      {
+        type: "content.insert",
+        index: 1,
+        content: [{
+          type: "table",
+          rows: [{
+            cells: [
+              { content: [{ type: "paragraph", runs: [{ text: "Inserted Cell" }] }] },
+            ],
+          }],
+        }],
+      },
+    ]);
+
+    const doc = await loadDocx(patched);
+    expect(doc.body.content).toHaveLength(3);
+    expect(doc.body.content[1].type).toBe("table");
+    const text = extractTextFromBody(doc.body);
+    expect(text).toContain("Inserted Cell");
+  });
 });
 
 // =============================================================================
@@ -258,6 +286,36 @@ describe("content.replace", () => {
     expect(text).toContain("C");
     expect(text).not.toContain("A");
     expect(text).not.toContain("B");
+  });
+
+  it("replaces paragraph with table", async () => {
+    const spec = createBasicSpec([
+      { type: "paragraph", runs: [{ text: "Replace me" }] },
+      { type: "paragraph", runs: [{ text: "Keep" }] },
+    ]);
+
+    const patched = await buildAndPatch(spec, [
+      {
+        type: "content.replace",
+        index: 0,
+        content: [{
+          type: "table",
+          rows: [{
+            cells: [
+              { content: [{ type: "paragraph", runs: [{ text: "Table Cell" }] }] },
+            ],
+          }],
+        }],
+      },
+    ]);
+
+    const doc = await loadDocx(patched);
+    expect(doc.body.content).toHaveLength(2);
+    expect(doc.body.content[0].type).toBe("table");
+    const text = extractTextFromBody(doc.body);
+    expect(text).toContain("Table Cell");
+    expect(text).not.toContain("Replace me");
+    expect(text).toContain("Keep");
   });
 });
 
@@ -977,6 +1035,73 @@ describe("section.update", () => {
     expect(doc.body.sectPr).toBeDefined();
     expect(doc.body.sectPr!.pgSz).toBeDefined();
     expect(Number(doc.body.sectPr!.pgSz!.w)).toBe(12240);
+  });
+
+  it("updates page size", async () => {
+    const spec = createBasicSpec(
+      [{ type: "paragraph", runs: [{ text: "Text" }] }],
+      { section: { pageSize: { w: 12240, h: 15840 } } },
+    );
+
+    const patched = await buildAndPatch(spec, [
+      {
+        type: "section.update",
+        section: { pageSize: { w: 15840, h: 12240, orient: "landscape" } },
+      },
+    ]);
+
+    const doc = await loadDocx(patched);
+    expect(Number(doc.body.sectPr!.pgSz!.w)).toBe(15840);
+    expect(Number(doc.body.sectPr!.pgSz!.h)).toBe(12240);
+    expect(doc.body.sectPr!.pgSz!.orient).toBe("landscape");
+  });
+
+  it("updates columns", async () => {
+    const spec = createBasicSpec(
+      [{ type: "paragraph", runs: [{ text: "Text" }] }],
+      { section: { columns: { num: 1 } } },
+    );
+
+    const patched = await buildAndPatch(spec, [
+      {
+        type: "section.update",
+        section: { columns: { num: 3, space: 360, equalWidth: true } },
+      },
+    ]);
+
+    const doc = await loadDocx(patched);
+    expect(doc.body.sectPr!.cols!.num).toBe(3);
+    expect(Number(doc.body.sectPr!.cols!.space)).toBe(360);
+    expect(doc.body.sectPr!.cols!.equalWidth).toBe(true);
+  });
+
+  it("preserves existing section properties when updating only margins", async () => {
+    const spec = createBasicSpec(
+      [{ type: "paragraph", runs: [{ text: "Text" }] }],
+      {
+        section: {
+          pageSize: { w: 12240, h: 15840 },
+          margins: { top: 1440, right: 1440, bottom: 1440, left: 1440 },
+          columns: { num: 2, space: 720 },
+        },
+      },
+    );
+
+    const patched = await buildAndPatch(spec, [
+      {
+        type: "section.update",
+        section: { margins: { top: 720, right: 720, bottom: 720, left: 720 } },
+      },
+    ]);
+
+    const doc = await loadDocx(patched);
+    // Updated margins
+    expect(Number(doc.body.sectPr!.pgMar!.top)).toBe(720);
+    // Preserved page size
+    expect(Number(doc.body.sectPr!.pgSz!.w)).toBe(12240);
+    expect(Number(doc.body.sectPr!.pgSz!.h)).toBe(15840);
+    // Preserved columns
+    expect(doc.body.sectPr!.cols!.num).toBe(2);
   });
 });
 

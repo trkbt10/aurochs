@@ -331,9 +331,17 @@ export function convertStylesSpec(specs: readonly StyleSpec[]): DocxStyles {
           rPr: {
             ...(spec.run.bold !== undefined ? { b: spec.run.bold } : {}),
             ...(spec.run.italic !== undefined ? { i: spec.run.italic } : {}),
+            ...(spec.run.strikethrough !== undefined ? { strike: spec.run.strikethrough } : {}),
+            ...(spec.run.smallCaps !== undefined ? { smallCaps: spec.run.smallCaps } : {}),
+            ...(spec.run.allCaps !== undefined ? { caps: spec.run.allCaps } : {}),
             ...(spec.run.fontSize !== undefined ? { sz: halfPoints(spec.run.fontSize) } : {}),
             ...(spec.run.fontFamily !== undefined ? { rFonts: { ascii: spec.run.fontFamily, hAnsi: spec.run.fontFamily } } : {}),
             ...(spec.run.color !== undefined ? { color: { val: spec.run.color } } : {}),
+            ...(spec.run.highlight !== undefined ? { highlight: spec.run.highlight as DocxHighlightColor } : {}),
+            ...(spec.run.vertAlign !== undefined ? { vertAlign: spec.run.vertAlign } : {}),
+            ...(spec.run.underline !== undefined
+              ? { u: typeof spec.run.underline === "boolean" ? { val: spec.run.underline ? "single" : "none" } : { val: spec.run.underline as "single" } }
+              : {}),
           },
         }
       : {}),
