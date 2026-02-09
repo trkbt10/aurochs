@@ -96,4 +96,163 @@ describe("serializeColor", () => {
     const parsed = parseColor(el);
     expect(parsed).toEqual(color);
   });
+
+  // =========================================================================
+  // Missing color type coverage
+  // =========================================================================
+
+  it("serializes system color without lastColor", () => {
+    const color: Color = { spec: { type: "system", value: "windowText" } };
+    const el = serializeColor(color);
+    expect(el.name).toBe("a:sysClr");
+    expect(el.attrs.val).toBe("windowText");
+    expect(el.attrs.lastClr).toBeUndefined();
+  });
+
+  it("serializes system color with lastColor (uppercased)", () => {
+    const color: Color = {
+      spec: { type: "system", value: "window", lastColor: "abcdef" },
+    };
+    const el = serializeColor(color);
+    expect(el.name).toBe("a:sysClr");
+    expect(el.attrs.val).toBe("window");
+    expect(el.attrs.lastClr).toBe("ABCDEF");
+  });
+
+  it("serializes preset color", () => {
+    const color: Color = { spec: { type: "preset", value: "red" } };
+    const el = serializeColor(color);
+    expect(el.name).toBe("a:prstClr");
+    expect(el.attrs.val).toBe("red");
+  });
+
+  // =========================================================================
+  // Missing transform coverage
+  // =========================================================================
+
+  it("serializes alphaMod and alphaOff transforms", () => {
+    const color: Color = {
+      spec: { type: "srgb", value: "000000" },
+      transform: { alphaMod: pct(80), alphaOff: pct(-20) },
+    };
+    const el = serializeColor(color);
+    expect(getChild(el, "a:alphaMod")?.attrs.val).toBe("80000");
+    expect(getChild(el, "a:alphaOff")?.attrs.val).toBe("-20000");
+  });
+
+  it("serializes hue, hueMod, hueOff transforms", () => {
+    const color: Color = {
+      spec: { type: "srgb", value: "000000" },
+      transform: { hue: deg(180), hueMod: pct(50), hueOff: deg(45) },
+    };
+    const el = serializeColor(color);
+    expect(getChild(el, "a:hue")?.attrs.val).toBe("10800000");
+    expect(getChild(el, "a:hueMod")?.attrs.val).toBe("50000");
+    expect(getChild(el, "a:hueOff")?.attrs.val).toBe("2700000");
+  });
+
+  it("serializes sat, satMod, satOff transforms", () => {
+    const color: Color = {
+      spec: { type: "srgb", value: "000000" },
+      transform: { sat: pct(100), satMod: pct(120), satOff: pct(-10) },
+    };
+    const el = serializeColor(color);
+    expect(getChild(el, "a:sat")?.attrs.val).toBe("100000");
+    expect(getChild(el, "a:satMod")?.attrs.val).toBe("120000");
+    expect(getChild(el, "a:satOff")?.attrs.val).toBe("-10000");
+  });
+
+  it("serializes gamma and invGamma boolean elements", () => {
+    const color: Color = {
+      spec: { type: "srgb", value: "000000" },
+      transform: { gamma: true, invGamma: true },
+    };
+    const el = serializeColor(color);
+    expect(getChild(el, "a:gamma")).toBeDefined();
+    expect(getChild(el, "a:invGamma")).toBeDefined();
+  });
+
+  it("serializes green, greenMod, greenOff transforms", () => {
+    const color: Color = {
+      spec: { type: "srgb", value: "000000" },
+      transform: { green: pct(60), greenMod: pct(110), greenOff: pct(5) },
+    };
+    const el = serializeColor(color);
+    expect(getChild(el, "a:green")?.attrs.val).toBe("60000");
+    expect(getChild(el, "a:greenMod")?.attrs.val).toBe("110000");
+    expect(getChild(el, "a:greenOff")?.attrs.val).toBe("5000");
+  });
+
+  it("serializes redMod and redOff transforms", () => {
+    const color: Color = {
+      spec: { type: "srgb", value: "000000" },
+      transform: { redMod: pct(90), redOff: pct(-15) },
+    };
+    const el = serializeColor(color);
+    expect(getChild(el, "a:redMod")?.attrs.val).toBe("90000");
+    expect(getChild(el, "a:redOff")?.attrs.val).toBe("-15000");
+  });
+
+  it("serializes blueMod and blueOff transforms", () => {
+    const color: Color = {
+      spec: { type: "srgb", value: "000000" },
+      transform: { blueMod: pct(75), blueOff: pct(25) },
+    };
+    const el = serializeColor(color);
+    expect(getChild(el, "a:blueMod")?.attrs.val).toBe("75000");
+    expect(getChild(el, "a:blueOff")?.attrs.val).toBe("25000");
+  });
+
+  it("serializes comp, inv, gray boolean elements", () => {
+    const color: Color = {
+      spec: { type: "srgb", value: "000000" },
+      transform: { comp: true, inv: true, gray: true },
+    };
+    const el = serializeColor(color);
+    expect(getChild(el, "a:comp")).toBeDefined();
+    expect(getChild(el, "a:inv")).toBeDefined();
+    expect(getChild(el, "a:gray")).toBeDefined();
+  });
+
+  it("produces no child elements when transform is undefined", () => {
+    const color: Color = { spec: { type: "srgb", value: "FF0000" } };
+    const el = serializeColor(color);
+    expect(el.children).toHaveLength(0);
+  });
+
+  it("serializes combined transform with many properties", () => {
+    const color: Color = {
+      spec: { type: "scheme", value: "accent2" },
+      transform: {
+        alpha: pct(90),
+        alphaMod: pct(50),
+        hue: deg(270),
+        satMod: pct(150),
+        lumOff: pct(10),
+        shade: pct(80),
+        tint: pct(60),
+        gamma: true,
+        greenMod: pct(100),
+        redOff: pct(-5),
+        blueOff: pct(15),
+        comp: true,
+        gray: true,
+      },
+    };
+    const el = serializeColor(color);
+    expect(el.name).toBe("a:schemeClr");
+    expect(getChild(el, "a:alpha")?.attrs.val).toBe("90000");
+    expect(getChild(el, "a:alphaMod")?.attrs.val).toBe("50000");
+    expect(getChild(el, "a:hue")?.attrs.val).toBe("16200000");
+    expect(getChild(el, "a:satMod")?.attrs.val).toBe("150000");
+    expect(getChild(el, "a:lumOff")?.attrs.val).toBe("10000");
+    expect(getChild(el, "a:shade")?.attrs.val).toBe("80000");
+    expect(getChild(el, "a:tint")?.attrs.val).toBe("60000");
+    expect(getChild(el, "a:gamma")).toBeDefined();
+    expect(getChild(el, "a:greenMod")?.attrs.val).toBe("100000");
+    expect(getChild(el, "a:redOff")?.attrs.val).toBe("-5000");
+    expect(getChild(el, "a:blueOff")?.attrs.val).toBe("15000");
+    expect(getChild(el, "a:comp")).toBeDefined();
+    expect(getChild(el, "a:gray")).toBeDefined();
+  });
 });

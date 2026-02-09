@@ -115,4 +115,77 @@ describe("applySlideTransition", () => {
     const transition = findChild(root, "p:transition");
     expect(transition).toBeDefined();
   });
+
+  it("removes transition and does not add when type is 'none' with existing transition", () => {
+    // Confirm that "none" type removes the transition AND doesn't add a new one
+    const doc = createSlideDoc(true);
+    const spec: SlideTransitionSpec = { type: "none" as never };
+    const result = applySlideTransition(doc, spec);
+
+    const root = result.children[0] as { children: readonly unknown[] };
+    const transitions = root.children.filter(
+      (c) => isXmlElement(c as ReturnType<typeof createElement>) && (c as { name: string }).name === "p:transition",
+    );
+    expect(transitions).toHaveLength(0);
+  });
+
+  it("inserts transition after p:cSld when no clrMapOvr exists", () => {
+    const cSld = createElement("p:cSld", {}, [createElement("p:spTree")]);
+    const timing = createElement("p:timing", {});
+    const root = createElement("p:sld", {}, [cSld, timing]);
+    const doc: XmlDocument = { children: [root] };
+
+    const spec: SlideTransitionSpec = { type: "fade", duration: 500 };
+    const result = applySlideTransition(doc, spec);
+
+    const sld = result.children[0] as { children: readonly unknown[] };
+    const names = sld.children
+      .filter((c) => isXmlElement(c as ReturnType<typeof createElement>))
+      .map((c) => (c as { name: string }).name);
+    const cSldIdx = names.indexOf("p:cSld");
+    const transIdx = names.indexOf("p:transition");
+    expect(transIdx).toBe(cSldIdx + 1);
+  });
+
+  it("appends transition at end when no p:cSld child exists", () => {
+    // Minimal slide with only spTree directly in root (unusual but tests fallback)
+    const root = createElement("p:sld", {}, [createElement("p:spTree")]);
+    const doc: XmlDocument = { children: [root] };
+
+    const spec: SlideTransitionSpec = { type: "fade", duration: 500 };
+    const result = applySlideTransition(doc, spec);
+
+    const sld = result.children[0] as { children: readonly unknown[] };
+    const names = sld.children
+      .filter((c) => isXmlElement(c as ReturnType<typeof createElement>))
+      .map((c) => (c as { name: string }).name);
+    // transition should be appended at the end since p:cSld is not found
+    expect(names[names.length - 1]).toBe("p:transition");
+  });
+
+  it("applies spokes option for wheel transition", () => {
+    const doc = createSlideDoc(false);
+    const spec: SlideTransitionSpec = {
+      type: "wheel",
+      duration: 500,
+      spokes: 4,
+    };
+    const result = applySlideTransition(doc, spec);
+    const root = result.children[0] as { children: readonly unknown[] };
+    const transition = findChild(root, "p:transition");
+    expect(transition).toBeDefined();
+  });
+
+  it("applies orientation option for blinds transition", () => {
+    const doc = createSlideDoc(false);
+    const spec: SlideTransitionSpec = {
+      type: "blinds",
+      duration: 500,
+      orientation: "vert",
+    };
+    const result = applySlideTransition(doc, spec);
+    const root = result.children[0] as { children: readonly unknown[] };
+    const transition = findChild(root, "p:transition");
+    expect(transition).toBeDefined();
+  });
 });

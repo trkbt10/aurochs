@@ -189,4 +189,83 @@ describe("patchDefaultTextStyle", () => {
     expect(getChild(bodyStyle, "a:lvl2pPr")?.attrs.marL).toBe("1905000");
     expect(getChild(otherStyle, "a:lvl2pPr")?.attrs.marL).toBe("1905000");
   });
+
+  it("throws when style is falsy", () => {
+    const masterXml = createMasterXml();
+    expect(() => patchDefaultTextStyle(masterXml, 2, undefined as never)).toThrow(
+      "patchDefaultTextStyle requires a style patch",
+    );
+  });
+});
+
+describe("patchTitleStyle - missing p:txStyles", () => {
+  it("throws when p:txStyles element is absent", () => {
+    const noTxStyles = doc(
+      createElement("p:sldMaster", {}, [
+        createElement("p:cSld", {}, [createElement("p:spTree")]),
+      ]),
+    );
+    expect(() => patchTitleStyle(noTxStyles, { level1: { paragraphProperties: { alignment: "center" } } })).toThrow(
+      "missing p:txStyles element",
+    );
+  });
+});
+
+describe("patchBodyStyle - missing p:txStyles", () => {
+  it("throws when p:txStyles element is absent", () => {
+    const noTxStyles = doc(
+      createElement("p:sldMaster", {}, [
+        createElement("p:cSld", {}, [createElement("p:spTree")]),
+      ]),
+    );
+    expect(() => patchBodyStyle(noTxStyles, { level1: { paragraphProperties: { alignment: "left" } } })).toThrow(
+      "missing p:txStyles element",
+    );
+  });
+});
+
+describe("upsertDirectChild - insert before p:extLst", () => {
+  it("inserts new titleStyle before p:extLst when titleStyle is absent", () => {
+    const masterWithExtLst = doc(
+      createElement("p:sldMaster", {}, [
+        createElement("p:cSld", {}, [createElement("p:spTree")]),
+        createElement("p:txStyles", {}, [
+          createElement("p:bodyStyle"),
+          createElement("p:otherStyle"),
+          createElement("p:extLst"),
+        ]),
+      ]),
+    );
+    const updated = patchTitleStyle(masterWithExtLst, {
+      level1: { paragraphProperties: { alignment: "center" } },
+    });
+    const root = updated.children[0] as XmlElement;
+    const txStyles = getChild(root, "p:txStyles")!;
+    const titleStyle = getChild(txStyles, "p:titleStyle");
+    expect(titleStyle).not.toBeUndefined();
+
+    // p:extLst should remain last
+    const childNames = txStyles.children
+      .filter((c): c is XmlElement => c.type === "element")
+      .map((c) => c.name);
+    expect(childNames[childNames.length - 1]).toBe("p:extLst");
+  });
+
+  it("inserts bodyStyle at end when there is no p:extLst and no existing bodyStyle", () => {
+    const masterNoBody = doc(
+      createElement("p:sldMaster", {}, [
+        createElement("p:cSld", {}, [createElement("p:spTree")]),
+        createElement("p:txStyles", {}, [
+          createElement("p:titleStyle"),
+          createElement("p:otherStyle"),
+        ]),
+      ]),
+    );
+    const updated = patchBodyStyle(masterNoBody, {
+      level1: { paragraphProperties: { alignment: "left" } },
+    });
+    const root = updated.children[0] as XmlElement;
+    const txStyles = getChild(root, "p:txStyles")!;
+    expect(getChild(txStyles, "p:bodyStyle")).not.toBeUndefined();
+  });
 });

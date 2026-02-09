@@ -1,5 +1,7 @@
 /** @file Unit tests for theme-builder */
-import { applyThemeEditsToThemeXml } from "./theme-builder";
+import { applyThemeEditsToThemeXml, applyThemeEditsToPackage } from "./theme-builder";
+import type { ZipPackage } from "@aurochs/zip";
+import type { ThemeEditSpec } from "../types";
 
 const MINIMAL_THEME_XML = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" name="Test">
@@ -83,5 +85,120 @@ describe("applyThemeEditsToThemeXml", () => {
       colorScheme: { accent1: "AABBCC", accent2: undefined as never },
     });
     expect(result).toContain("AABBCC");
+  });
+
+  it("throws when colorScheme is empty object", () => {
+    expect(() =>
+      applyThemeEditsToThemeXml(MINIMAL_THEME_XML, {
+        colorScheme: {},
+      }),
+    ).toThrow("theme edits require at least one of colorScheme or fontScheme");
+  });
+
+  it("modifies multiple color scheme entries", () => {
+    const result = applyThemeEditsToThemeXml(MINIMAL_THEME_XML, {
+      colorScheme: {
+        dk1: "111111",
+        lt1: "FAFAFA",
+        accent1: "FF0000",
+        accent2: "00FF00",
+        hlink: "0000FF",
+        folHlink: "FF00FF",
+      },
+    });
+    expect(result).toContain("111111");
+    expect(result).toContain("FAFAFA");
+    expect(result).toContain("FF0000");
+    expect(result).toContain("00FF00");
+    expect(result).toContain("0000FF");
+    expect(result).toContain("FF00FF");
+  });
+
+  it("modifies font scheme with minorFont only", () => {
+    const result = applyThemeEditsToThemeXml(MINIMAL_THEME_XML, {
+      fontScheme: { minorFont: { latin: "Georgia" } },
+    });
+    expect(result).toContain("Georgia");
+    // majorFont should still exist as Calibri Light
+    expect(result).toContain("Calibri Light");
+  });
+
+  it("modifies font scheme with both majorFont and minorFont", () => {
+    const result = applyThemeEditsToThemeXml(MINIMAL_THEME_XML, {
+      fontScheme: {
+        majorFont: { latin: "Arial Black", eastAsian: "Yu Gothic" },
+        minorFont: { latin: "Verdana", complexScript: "Tahoma" },
+      },
+    });
+    expect(result).toContain("Arial Black");
+    expect(result).toContain("Yu Gothic");
+    expect(result).toContain("Verdana");
+    expect(result).toContain("Tahoma");
+  });
+
+  it("returns a valid XML declaration", () => {
+    const result = applyThemeEditsToThemeXml(MINIMAL_THEME_XML, {
+      colorScheme: { accent1: "AABBCC" },
+    });
+    expect(result).toMatch(/^<\?xml version="1\.0"/);
+    expect(result).toContain('standalone="yes"');
+  });
+
+  it("preserves font scheme base values when patch is partial", () => {
+    const result = applyThemeEditsToThemeXml(MINIMAL_THEME_XML, {
+      fontScheme: { majorFont: { eastAsian: "Yu Mincho" } },
+    });
+    // majorFont latin should still be Calibri Light (base)
+    expect(result).toContain("Calibri Light");
+    expect(result).toContain("Yu Mincho");
+  });
+});
+
+describe("applyThemeEditsToPackage", () => {
+  function createMockZipPackage(files: Record<string, string>): ZipPackage {
+    const store = new Map(Object.entries(files));
+    return {
+      readText: (p: string) => store.get(p) ?? null,
+      writeText: (p: string, data: string) => {
+        store.set(p, data);
+      },
+      // Provide the stored value for verification
+      _store: store,
+    } as never;
+  }
+
+  it("reads theme XML from the package, applies edits, and writes back", () => {
+    const pkg = createMockZipPackage({
+      "ppt/theme/theme1.xml": MINIMAL_THEME_XML,
+    });
+
+    const theme: ThemeEditSpec = {
+      path: "ppt/theme/theme1.xml",
+      colorScheme: { accent1: "AABBCC" },
+    };
+
+    applyThemeEditsToPackage(pkg, theme);
+
+    const result = (pkg as never as { _store: Map<string, string> })._store.get("ppt/theme/theme1.xml")!;
+    expect(result).toContain("AABBCC");
+  });
+
+  it("throws when theme.path is not provided", () => {
+    const pkg = createMockZipPackage({});
+    const theme: ThemeEditSpec = {
+      colorScheme: { accent1: "FF0000" },
+    };
+
+    expect(() => applyThemeEditsToPackage(pkg, theme)).toThrow("theme.path is required");
+  });
+
+  it("throws when theme XML is not found in the package", () => {
+    const pkg = createMockZipPackage({});
+    const theme: ThemeEditSpec = {
+      path: "ppt/theme/theme1.xml",
+      colorScheme: { accent1: "FF0000" },
+    };
+
+    expect(() => applyThemeEditsToPackage(pkg, theme)).toThrow("Theme XML not found in template");
   });
 });
