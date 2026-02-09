@@ -64,7 +64,7 @@
   },
   "scripts": {
     "package": "vsce package --no-dependencies",
-    "publish": "vsce package --no-dependencies && vsce publish --packagePath aurochs-office-viewer-*.vsix"
+    "publish": "vsce publish --no-dependencies"
   },
   "devDependencies": {
     "@vscode/vsce": "^3.2.2"
