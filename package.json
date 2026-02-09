@@ -1,6 +1,6 @@
 {
   "name": "aurochs",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "type": "module",
   "packageManager": "bun@1.2.21",
   "sideEffects": false,

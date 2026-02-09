@@ -11,7 +11,14 @@
 import { defineConfig } from "vitest/config";
 import path from "node:path";
 export default defineConfig({
-  resolve: { alias: {} },
+  resolve: {
+    alias: {
+      "@aurochs-builder/pptx/patcher": path.resolve(
+        __dirname,
+        "packages/@aurochs-builder/pptx/src/patcher",
+      ),
+    },
+  },
   test: {
     globals: true,
     environment: "node",
