@@ -169,3 +169,18 @@ export {
   type ThemeFontSchemeEditSpec,
   type ThemeEditSpec,
 } from "./types";
+
+// Patch types and functions
+export { patchPptx, getPatchData } from "./patcher-pipeline";
+export type {
+  PptxPatch,
+  PptxPatchSpec,
+  PptxPatchData,
+  TextReplacePatch,
+  SlideModifyPatch,
+  ThemeUpdatePatch,
+  SlideAddPatch,
+  SlideRemovePatch,
+  SlideDuplicatePatch,
+  SlideReorderPatch,
+} from "./patch-types";

@@ -8,6 +8,7 @@ import { runShow } from "./commands/show";
 import { runExtract } from "./commands/extract";
 import { runTheme } from "./commands/theme";
 import { runBuild } from "./commands/build";
+import { runPatch } from "./commands/patch";
 import { runVerify } from "./commands/verify";
 import { runPreview } from "./commands/preview";
 import { runInventory } from "./commands/inventory";
@@ -22,6 +23,7 @@ import {
   formatExtractPretty,
   formatThemePretty,
   formatBuildPretty,
+  formatPatchPretty,
   formatVerifyPretty,
   formatPreviewPretty,
   formatInventoryPretty,
@@ -107,6 +109,16 @@ export function createProgram(): Command {
       const mode = program.opts().output as OutputMode;
       const result = await runBuild(spec);
       output(result, mode, formatBuildPretty);
+    });
+
+  program
+    .command("patch")
+    .description("Patch an existing PPTX file with JSON specification")
+    .argument("<spec>", "JSON patch spec file path")
+    .action(async (spec: string) => {
+      const mode = program.opts().output as OutputMode;
+      const result = await runPatch(spec);
+      output(result, mode, formatPatchPretty);
     });
 
   program

@@ -332,14 +332,10 @@ function measureTextWidthPx(text: string, font: FontSpec): number {
   let width = 0;
   if (canUseCanvasTextMeasure()) {
     const canvas = document.createElement("canvas");
-    try {
-      const ctx = canvas.getContext("2d");
-      if (ctx) {
-        ctx.font = fontToCanvasString(font);
-        width = ctx.measureText(normalized).width;
-      }
-    } catch (_err: unknown) { // eslint-disable-line @typescript-eslint/no-unused-vars -- catch requires error param
-      // Some test environments (e.g. jsdom without canvas) throw on getContext().
+    const ctx = canvas.getContext("2d");
+    if (ctx) {
+      ctx.font = fontToCanvasString(font);
+      width = ctx.measureText(normalized).width;
     }
   }
 

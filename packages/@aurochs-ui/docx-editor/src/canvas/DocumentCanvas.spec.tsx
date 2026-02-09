@@ -49,12 +49,11 @@ describe("DocumentCanvas", () => {
   });
 
   it("calls onCanvasClick only when background is clicked", () => {
-    // eslint-disable-next-line no-restricted-syntax -- test setup requires reassignment for click counter
-    let canvasClickCount = 0;
+    const ctx = { canvasClickCount: 0 };
 
     const { container } = render(
       <DocumentEditorProvider initialDocument={createEmptyDocument()}>
-        <DocumentCanvas className="doc-canvas" onCanvasClick={() => (canvasClickCount += 1)} />
+        <DocumentCanvas className="doc-canvas" onCanvasClick={() => (ctx.canvasClickCount += 1)} />
       </DocumentEditorProvider>,
     );
 
@@ -64,53 +63,49 @@ describe("DocumentCanvas", () => {
     }
 
     fireEvent.click(root);
-    expect(canvasClickCount).toBe(1);
+    expect(ctx.canvasClickCount).toBe(1);
 
     const emptyMessage = screen.getByText("Empty document");
     fireEvent.click(emptyMessage);
-    expect(canvasClickCount).toBe(1);
+    expect(ctx.canvasClickCount).toBe(1);
   });
 
   it("calls onElementClick when an element is clicked", () => {
     const document = createDocumentWithParagraphs(["Hello", "World"]);
-    // eslint-disable-next-line no-restricted-syntax -- test setup requires reassignment in callback
-    let clickedElementId: string | undefined;
-    // eslint-disable-next-line no-restricted-syntax -- test setup requires reassignment for click counter
-    let canvasClickCount = 0;
+    const ctx = { clickedElementId: undefined as string | undefined, canvasClickCount: 0 };
 
     render(
       <DocumentEditorProvider initialDocument={document}>
         <DocumentCanvas
-          onCanvasClick={() => (canvasClickCount += 1)}
+          onCanvasClick={() => (ctx.canvasClickCount += 1)}
           onElementClick={(elementId) => {
-            clickedElementId = elementId;
+            ctx.clickedElementId = elementId;
           }}
         />
       </DocumentEditorProvider>,
     );
 
     fireEvent.click(screen.getByText("Hello"));
-    expect(clickedElementId).toBe("0");
-    expect(canvasClickCount).toBe(0);
+    expect(ctx.clickedElementId).toBe("0");
+    expect(ctx.canvasClickCount).toBe(0);
   });
 
   it("calls onElementDoubleClick when an element is double-clicked", () => {
     const document = createDocumentWithParagraphs(["Hello"]);
-    // eslint-disable-next-line no-restricted-syntax -- test setup requires reassignment in callback
-    let doubleClickedElementId: string | undefined;
+    const ctx = { doubleClickedElementId: undefined as string | undefined };
 
     render(
       <DocumentEditorProvider initialDocument={document}>
         <DocumentCanvas
           onElementDoubleClick={(elementId) => {
-            doubleClickedElementId = elementId;
+            ctx.doubleClickedElementId = elementId;
           }}
         />
       </DocumentEditorProvider>,
     );
 
     fireEvent.doubleClick(screen.getByText("Hello"));
-    expect(doubleClickedElementId).toBe("0");
+    expect(ctx.doubleClickedElementId).toBe("0");
   });
 
   it("renders page break indicator when showPageBreaks is true", () => {

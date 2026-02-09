@@ -14,6 +14,7 @@ import type { InventoryData } from "../commands/inventory";
 import type { TablesData } from "../commands/tables";
 import type { ImagesData } from "../commands/images";
 import type { DiffData } from "../commands/diff";
+import type { PatchData } from "../commands/patch";
 
 function getSlideFlags(slide: SlideListItem): string[] {
   const flags: string[] = [];
@@ -368,5 +369,18 @@ export function formatDiffPretty(data: DiffData): string {
     }
   }
 
+  return lines.join("\n");
+}
+
+/**
+ * Format patch result for human-readable output.
+ */
+export function formatPatchPretty(data: PatchData): string {
+  const lines: string[] = [];
+  lines.push(`Source: ${data.sourcePath}`);
+  lines.push(`Output: ${data.outputPath}`);
+  lines.push(`Patches: ${data.patchCount}`);
+  lines.push(`Slides modified: ${data.slidesModified}`);
+  lines.push(`Text replacements: ${data.textReplacements}`);
   return lines.join("\n");
 }

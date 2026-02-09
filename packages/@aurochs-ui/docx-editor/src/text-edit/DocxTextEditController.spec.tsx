@@ -128,7 +128,6 @@ describe("createInitialState", () => {
 
 describe("DocxTextEditController", () => {
   type SelectionRange = { start: DocxCursorPosition; end: DocxCursorPosition };
-  type Setup = ReturnType<typeof createSetup>;
 
   function createSetup() {
     const onTextChange = createCallTracker<[DocxParagraph]>();
@@ -148,11 +147,10 @@ describe("DocxTextEditController", () => {
     } as const;
   }
 
-  // eslint-disable-next-line no-restricted-syntax -- test setup requires reassignment in beforeEach
-  let setup: Setup;
+  const ctx = { setup: createSetup() };
 
   beforeEach(() => {
-    setup = createSetup();
+    ctx.setup = createSetup();
   });
 
   afterEach(() => {
@@ -160,7 +158,7 @@ describe("DocxTextEditController", () => {
   });
 
   it("renders controller container", () => {
-    render(<DocxTextEditController {...setup.props} />);
+    render(<DocxTextEditController {...ctx.setup.props} />);
 
     const controller = screen.getByTestId("docx-text-edit-controller");
     expect(controller).toBeDefined();
@@ -168,14 +166,14 @@ describe("DocxTextEditController", () => {
   });
 
   it("renders textarea with initial text", () => {
-    render(<DocxTextEditController {...setup.props} />);
+    render(<DocxTextEditController {...ctx.setup.props} />);
 
     const textarea = screen.getByTestId("docx-text-edit-textarea") as HTMLTextAreaElement;
     expect(textarea.value).toBe("Test");
   });
 
   it("focuses textarea on mount", async () => {
-    render(<DocxTextEditController {...setup.props} />);
+    render(<DocxTextEditController {...ctx.setup.props} />);
 
     const textarea = screen.getByTestId("docx-text-edit-textarea");
     await waitFor(() => {
@@ -186,7 +184,7 @@ describe("DocxTextEditController", () => {
   describe("text input", () => {
     it("calls onTextChange when text is entered", async () => {
       const onTextChange = createCallTracker<[DocxParagraph]>();
-      render(<DocxTextEditController {...setup.props} onTextChange={onTextChange.fn} />);
+      render(<DocxTextEditController {...ctx.setup.props} onTextChange={onTextChange.fn} />);
 
       const textarea = screen.getByTestId("docx-text-edit-textarea");
       fireEvent.change(textarea, { target: { value: "Test123" } });
@@ -198,7 +196,7 @@ describe("DocxTextEditController", () => {
 
     it("updates currentText and currentParagraph in sync", () => {
       const onTextChange = createCallTracker<[DocxParagraph]>();
-      render(<DocxTextEditController {...setup.props} onTextChange={onTextChange.fn} />);
+      render(<DocxTextEditController {...ctx.setup.props} onTextChange={onTextChange.fn} />);
 
       const textarea = screen.getByTestId("docx-text-edit-textarea") as HTMLTextAreaElement;
       fireEvent.change(textarea, { target: { value: "New Text" } });
@@ -212,7 +210,7 @@ describe("DocxTextEditController", () => {
   describe("selection changes", () => {
     it("calls onSelectionChange when selection changes", () => {
       const onSelectionChange = createCallTracker<[SelectionRange]>();
-      render(<DocxTextEditController {...setup.props} onSelectionChange={onSelectionChange.fn} />);
+      render(<DocxTextEditController {...ctx.setup.props} onSelectionChange={onSelectionChange.fn} />);
 
       const textarea = screen.getByTestId("docx-text-edit-textarea") as HTMLTextAreaElement;
 
@@ -232,7 +230,7 @@ describe("DocxTextEditController", () => {
   describe("IME composition", () => {
     it("does not trigger selection change during composition", () => {
       const onSelectionChange = createCallTracker<[SelectionRange]>();
-      render(<DocxTextEditController {...setup.props} onSelectionChange={onSelectionChange.fn} />);
+      render(<DocxTextEditController {...ctx.setup.props} onSelectionChange={onSelectionChange.fn} />);
 
       const textarea = screen.getByTestId("docx-text-edit-textarea");
 
@@ -248,7 +246,7 @@ describe("DocxTextEditController", () => {
 
     it("updates paragraph after composition ends", () => {
       const onTextChange = createCallTracker<[DocxParagraph]>();
-      render(<DocxTextEditController {...setup.props} onTextChange={onTextChange.fn} />);
+      render(<DocxTextEditController {...ctx.setup.props} onTextChange={onTextChange.fn} />);
 
       const textarea = screen.getByTestId("docx-text-edit-textarea") as HTMLTextAreaElement;
 
@@ -264,7 +262,7 @@ describe("DocxTextEditController", () => {
   describe("keyboard handling", () => {
     it("calls onExit when Escape is pressed", () => {
       const onExit = createCallTracker<[]>();
-      render(<DocxTextEditController {...setup.props} onExit={onExit.fn} />);
+      render(<DocxTextEditController {...ctx.setup.props} onExit={onExit.fn} />);
 
       const textarea = screen.getByTestId("docx-text-edit-textarea");
       fireEvent.keyDown(textarea, { key: "Escape" });
@@ -274,7 +272,7 @@ describe("DocxTextEditController", () => {
 
     it("does not exit during IME composition", () => {
       const onExit = createCallTracker<[]>();
-      render(<DocxTextEditController {...setup.props} onExit={onExit.fn} />);
+      render(<DocxTextEditController {...ctx.setup.props} onExit={onExit.fn} />);
 
       const textarea = screen.getByTestId("docx-text-edit-textarea");
       fireEvent.compositionStart(textarea);
@@ -289,7 +287,7 @@ describe("DocxTextEditController", () => {
       const formattedParagraph = createFormattedParagraph();
       const onTextChange = createCallTracker<[DocxParagraph]>();
 
-      render(<DocxTextEditController {...setup.props} paragraph={formattedParagraph} onTextChange={onTextChange.fn} />);
+      render(<DocxTextEditController {...ctx.setup.props} paragraph={formattedParagraph} onTextChange={onTextChange.fn} />);
 
       const textarea = screen.getByTestId("docx-text-edit-textarea");
       fireEvent.change(textarea, { target: { value: "Modified text" } });
@@ -307,7 +305,7 @@ describe("DocxTextEditController", () => {
   describe("bounds positioning", () => {
     it("applies bounds to container", () => {
       const bounds = createBounds({ x: 50, y: 100, width: 400, height: 60 });
-      render(<DocxTextEditController {...setup.props} bounds={bounds} />);
+      render(<DocxTextEditController {...ctx.setup.props} bounds={bounds} />);
 
       const controller = screen.getByTestId("docx-text-edit-controller");
       expect(controller.style.left).toBe("50px");
@@ -318,7 +316,7 @@ describe("DocxTextEditController", () => {
 
     it("applies bounds to textarea (positioned inside container)", () => {
       const bounds = createBounds({ x: 50, y: 100, width: 400, height: 60 });
-      render(<DocxTextEditController {...setup.props} bounds={bounds} />);
+      render(<DocxTextEditController {...ctx.setup.props} bounds={bounds} />);
 
       const textarea = screen.getByTestId("docx-text-edit-textarea") as HTMLTextAreaElement;
       // Textarea is positioned relative to container with 0,0
@@ -336,7 +334,7 @@ describe("DocxTextEditController", () => {
         charOffset: 2,
       };
 
-      render(<DocxTextEditController {...setup.props} initialCursorPosition={initialPosition} />);
+      render(<DocxTextEditController {...ctx.setup.props} initialCursorPosition={initialPosition} />);
 
       const textarea = screen.getByTestId("docx-text-edit-textarea") as HTMLTextAreaElement;
 

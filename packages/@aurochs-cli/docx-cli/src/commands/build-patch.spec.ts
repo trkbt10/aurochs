@@ -17,7 +17,7 @@ import { runExtract } from "./extract";
 // Test Setup
 // =============================================================================
 
-const ctx = { ctx.tmpDir: "" };
+const ctx = { tmpDir: "" };
 
 beforeAll(async () => {
   ctx.tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "docx-cli-test-"));
