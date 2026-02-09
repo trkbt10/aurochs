@@ -134,7 +134,7 @@ function segmentRunsIntoCells(runs: readonly PdfText[], fontSize: number): PdfTe
 
   const q50 = quantile(gaps, 0.5);
   const q90 = quantile(gaps, 0.9);
-  const th = (() => {
+  const resolveThreshold = (): number => {
     const minTh = Math.max(2, fontSize * 0.9);
     if (gaps.length < 4) {
       return Math.max(4, fontSize * 1.6);
@@ -148,10 +148,11 @@ function segmentRunsIntoCells(runs: readonly PdfText[], fontSize: number): PdfTe
 
     // Otherwise, be more conservative but still allow splitting typical table gaps.
     return Math.max(minTh, fontSize * 1.4, q90 * 0.85);
-  })();
+  };
+  const th = resolveThreshold();
 
   const segments: PdfText[][] = [];
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
   let curSeg: PdfText[] = [sorted[0]!];
   for (let i = 1; i < sorted.length; i++) {
     const prev = sorted[i - 1]!;
@@ -206,9 +207,9 @@ function assignSegmentToColumn(seg: { x0: number; x1: number }, columns: readonl
     }
   }
   // Fallback: nearest center
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
   let best = 0;
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
   let bestD = Infinity;
   for (const col of columns) {
     const d = Math.abs(center - col.xCenter);
@@ -224,7 +225,7 @@ type BBox = { x0: number; y0: number; x1: number; y1: number };
 
 function splitPathIntoSubpaths(ops: readonly PdfPathOp[]): PdfPathOp[][] {
   const out: PdfPathOp[][] = [];
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
   let cur: PdfPathOp[] = [];
   for (const op of ops) {
     if (op.type === "moveTo") {
@@ -247,13 +248,13 @@ function splitPathIntoSubpaths(ops: readonly PdfPathOp[]): PdfPathOp[][] {
 }
 
 function bboxOfSubpath(sub: readonly PdfPathOp[]): BBox | null {
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
   let minX = Infinity;
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
   let minY = Infinity;
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
   let maxX = -Infinity;
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
   let maxY = -Infinity;
 
   const add = (x: number, y: number): void => {
@@ -307,7 +308,7 @@ function cluster1D(values: readonly number[], eps: number): number[] {
   }
   const xs = [...values].sort((a, b) => a - b);
   const out: number[] = [];
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
   let cur: number[] = [];
   for (const x of xs) {
     if (cur.length === 0) {
@@ -352,11 +353,11 @@ function unionCoverage1DGlobal(
   if (xs.length === 0) {
     return 0;
   }
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
   let covered = 0;
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
   let cur0 = xs[0]!.x0;
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
   let cur1 = xs[0]!.x1;
   for (let i = 1; i < xs.length; i++) {
     const s = xs[i]!;
@@ -481,7 +482,7 @@ function inferGridFromPaths({
   }
 
   // Estimate table bounds from subpaths intersecting the region.
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
   let minX = Infinity,
     minY = Infinity,
     maxX = -Infinity,
@@ -543,11 +544,11 @@ function inferGridFromPaths({
     if (xs.length === 0) {
       return 0;
     }
-    // eslint-disable-next-line no-restricted-syntax
+    // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
     let covered = 0;
-    // eslint-disable-next-line no-restricted-syntax
+    // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
     let cur0 = xs[0]!.x0;
-    // eslint-disable-next-line no-restricted-syntax
+    // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
     let cur1 = xs[0]!.x1;
     for (let i = 1; i < xs.length; i++) {
       const s = xs[i]!;
@@ -570,10 +571,10 @@ function inferGridFromPaths({
   const horizontalCenters = hSegs.map((s) => s.y);
   const verticalCenters = vSegs.map((s) => s.x);
 
-  const xLinesBySegments = (() => {
+  const computeXLinesBySegments = (): number[] => {
     // Require enough vertical segments to stand a chance at finding boundaries.
     if (verticalCenters.length < targetCols + 1) {
-      return [] as number[];
+      return [];
     }
     const centers = cluster1D(verticalCenters, Math.max(0.8, fontSize * 0.85)).sort((a, b) => a - b);
     const accepted: number[] = [];
@@ -589,7 +590,8 @@ function inferGridFromPaths({
       }
     }
     return accepted.sort((a, b) => a - b);
-  })();
+  };
+  const xLinesBySegments = computeXLinesBySegments();
 
   const targetBoundaryCount = targetCols + 1;
   const baseEps = Math.max(0.35, fontSize * 0.12);
@@ -607,12 +609,12 @@ function inferGridFromPaths({
     }
   }
 
-  const xBoundariesForCoverage = (() => {
+  const computeXBoundariesForCoverage = (): number[] | null => {
     if (verticalCentersForRules.length < targetBoundaryCount) {
       return null;
     }
     const candidates = [approxTableBounds.x, ...verticalCentersForRules, approxTableBounds.x + approxTableBounds.width];
-    // eslint-disable-next-line no-restricted-syntax
+    // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
     let merged = cluster1D(candidates, baseEps).sort((a, b) => a - b);
     if (merged.length > targetBoundaryCount) {
       const factors = [1.25, 1.6, 2.0, 2.6, 3.2];
@@ -624,7 +626,8 @@ function inferGridFromPaths({
       }
     }
     return merged.length === targetBoundaryCount ? merged : null;
-  })();
+  };
+  const xBoundariesForCoverage = computeXBoundariesForCoverage();
 
   const acceptHorizontalRule = (yc: number): boolean => {
     const segs = hSegs.filter((s) => Math.abs(s.y - yc) <= clusterTol * 1.2);
@@ -655,13 +658,13 @@ function inferGridFromPaths({
       present.push(segCov / segW >= 0.55);
     }
 
-    // eslint-disable-next-line no-restricted-syntax
+    // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
     let bestRunLen = 0;
-    // eslint-disable-next-line no-restricted-syntax
+    // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
     let bestRunWidth = 0;
-    // eslint-disable-next-line no-restricted-syntax
+    // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
     let curLen = 0;
-    // eslint-disable-next-line no-restricted-syntax
+    // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
     let curWidth = 0;
     for (let i = 0; i < present.length; i++) {
       if (present[i]!) {
@@ -765,7 +768,7 @@ function inferGridFromPaths({
 
   // Prefer using rule centers as boundaries. Using subpath bbox edges causes
   // systematic half-thickness shifts when the grid is drawn as filled rectangles.
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
   let yBoundaries = [...yLinesMerged].sort((a, b) => b - a);
   // Fallback to approximate bounds if outer borders were not detected as rule centers.
   const approxTop = approxTableBounds.y + approxTableBounds.height;
@@ -784,13 +787,13 @@ function inferGridFromPaths({
 
   // Column boundaries: prefer rule centers; only fall back to approximate bounds when the
   // detected vertical rules are insufficient to infer the expected grid.
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
   let xCandidates = [...verticalCentersForRules];
 
   // Vertical rules can be drawn as double-lines (two close rules). The initial clustering can
   // leave those as separate boundaries, causing xMerged.length > targetCols+1. When that happens,
   // progressively relax the clustering epsilon to merge near-duplicates.
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
   let xMerged = cluster1D(xCandidates, baseEps).sort((a, b) => a - b);
   if (xMerged.length > targetBoundaryCount) {
     const factors = [1.25, 1.6, 2.0, 2.6, 3.2];
@@ -883,15 +886,15 @@ export function inferTableFromGroupedText(
 
   const allRuns = paragraphs.flatMap((p) => p.runs);
   const fontSize = median(allRuns.map((r) => r.fontSize ?? 0).filter((x) => x > 0)) || 12;
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
   let grid: TableGridFromPaths | null = null;
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
   let effectiveBounds: InferredTable["bounds"] = group.bounds;
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
   let boundsX0 = effectiveBounds.x;
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
   let boundsX1 = effectiveBounds.x + effectiveBounds.width;
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
   let predefinedBoundaries: number[] | null = null;
 
   type Segment = { runs: PdfText[]; x0: number; x1: number };
@@ -911,7 +914,7 @@ export function inferTableFromGroupedText(
   // Determine column count from the most "complete" header-like line. Data rows often have
   // empty columns (e.g. reference column), so mode(segmentCount) is not reliable.
   const candidateCounts = lineSegs.map((l) => l.segments.length).filter((n) => n >= opts.minCols);
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
   let targetCols: number | null = null;
 
   // Fallback: when every physical line belongs to a single column (row spans or aggressive grouping),
@@ -940,9 +943,9 @@ export function inferTableFromGroupedText(
         .filter((x) => Number.isFinite(x))
         .sort((a, b) => a - b);
       if (centers.length >= Math.max(6, opts.minRows * 2)) {
-        // eslint-disable-next-line no-restricted-syntax
+        // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
         let bestGap = -Infinity;
-        // eslint-disable-next-line no-restricted-syntax
+        // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
         let bestIdx = -1;
         for (let i = 1; i < centers.length; i++) {
           const gap = centers[i]! - centers[i - 1]!;
@@ -998,7 +1001,7 @@ export function inferTableFromGroupedText(
   const headerishLines = sortedLines.filter(isHeaderish).filter((l) => l.segments.length === targetCols);
 
   const topWindow = Math.max(1, Math.floor(sortedLines.length * 0.25));
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
   let trainingLines = sortedLines.slice(0, topWindow).filter((l) => l.segments.length === targetCols);
   if (headerishLines.length > 0) {
     trainingLines = headerishLines;
@@ -1052,9 +1055,9 @@ export function inferTableFromGroupedText(
     const gutterIdxCounts = new Map<number, number>();
     for (const line of trainingLines) {
       const segs = line.segments;
-      // eslint-disable-next-line no-restricted-syntax
+      // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
       let bestIdx = 0;
-      // eslint-disable-next-line no-restricted-syntax
+      // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
       let bestGap = -Infinity;
       for (let i = 0; i < segs.length - 1; i++) {
         const gap = segs[i + 1]!.x0 - segs[i]!.x1;
@@ -1156,13 +1159,13 @@ export function inferTableFromGroupedText(
       rightNameRefSamples.push(computeGapCenter(segs[4]!, segs[5]!));
     }
 
-    // eslint-disable-next-line no-restricted-syntax
+    // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
     let leftNameRefFromHeader = leftCodeNameBoundary + (blockSplitX - leftCodeNameBoundary) * 0.8;
     if (leftNameRefSamples.length > 0) {
       leftNameRefFromHeader = median(leftNameRefSamples);
     }
 
-    // eslint-disable-next-line no-restricted-syntax
+    // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
     let rightNameRefFromHeader = rightCodeNameBoundary + (boundsX1 - rightCodeNameBoundary) * 0.8;
     if (rightNameRefSamples.length > 0) {
       rightNameRefFromHeader = median(rightNameRefSamples);
@@ -1231,7 +1234,7 @@ export function inferTableFromGroupedText(
     const refineRowBoundsByBaselines = (bounds: readonly number[]): number[] => {
       const out = [...bounds].sort((a, b) => b - a);
       const maxInserts = 2;
-      // eslint-disable-next-line no-restricted-syntax
+      // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
       let inserted = 0;
 
       const minColsStrong = Math.max(3, Math.round(targetCols * 0.25));
@@ -1239,7 +1242,7 @@ export function inferTableFromGroupedText(
       const clusterBandBaselines = (ys: readonly number[]): number[] => {
         const sorted = [...ys].sort((a, b) => b - a);
         const centers: number[] = [];
-        // eslint-disable-next-line no-restricted-syntax
+        // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
         let cur: number[] = [];
         const flush = () => {
           if (cur.length === 0) {
@@ -1360,7 +1363,7 @@ export function inferTableFromGroupedText(
           return i;
         }
       }
-      // eslint-disable-next-line no-restricted-syntax
+      // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
       let best: { idx: number; dist: number } | null = null;
       for (let i = 0; i < rowCount; i++) {
         const yTop = yBounds[i]!;
@@ -1464,9 +1467,9 @@ export function inferTableFromGroupedText(
     const tol = Math.max(0.8, fontSize * 0.85) * 1.2;
 
     const nearestIndexLocal = (xs: readonly number[], value: number): { index: number; dist: number } => {
-      // eslint-disable-next-line no-restricted-syntax
+      // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
       let bestIdx = 0;
-      // eslint-disable-next-line no-restricted-syntax
+      // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
       let bestDist = Infinity;
       for (let i = 0; i < xs.length; i++) {
         const d = Math.abs(xs[i]! - value);
@@ -1607,7 +1610,7 @@ export function inferTableFromGroupedText(
       const baselineY = rowBaselines[ri] ?? (yTop + yBottom) / 2;
 
       const cells: InferredTableCell[] = [];
-      // eslint-disable-next-line no-restricted-syntax
+      // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
       let ci = 0;
       while (ci < targetCols) {
         if (coveredByRowSpan[ri]![ci]) {
@@ -1615,7 +1618,7 @@ export function inferTableFromGroupedText(
           continue;
         }
 
-        // eslint-disable-next-line no-restricted-syntax
+        // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
         let colEnd = ci + 1;
         while (colEnd < targetCols) {
           if (coveredByRowSpan[ri]![colEnd]) {
@@ -1627,7 +1630,7 @@ export function inferTableFromGroupedText(
           colEnd += 1;
         }
 
-        // eslint-disable-next-line no-restricted-syntax
+        // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
         let rowSpan = 1;
         if (ri < maxRowSpanScanRows - 1) {
           const maxSpan = Math.min(4, rowCount - ri);
@@ -1638,7 +1641,7 @@ export function inferTableFromGroupedText(
               break;
             }
 
-            // eslint-disable-next-line no-restricted-syntax
+            // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
             let canExtend = true;
             for (let c = ci; c < colEnd; c++) {
               if (coveredByRowSpan[nextRow]![c]) {
@@ -1734,7 +1737,7 @@ export function inferTableFromGroupedText(
   const baselineEps = Math.max(0.5, fontSize * 0.25);
   const sortedParas = [...paragraphs].sort((a, b) => b.baselineY - a.baselineY);
   const buckets: BaselineBucket[] = [];
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
   let curBucket: { baselineY: number; paragraphs: (typeof paragraphs)[number][] } | null = null;
   for (const p of sortedParas) {
     if (!curBucket) {
@@ -1768,11 +1771,11 @@ export function inferTableFromGroupedText(
   };
 
   const countCenterMatches = (a: readonly number[], b: readonly number[], tol: number): number => {
-    // eslint-disable-next-line no-restricted-syntax
+    // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
     let i = 0;
-    // eslint-disable-next-line no-restricted-syntax
+    // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
     let j = 0;
-    // eslint-disable-next-line no-restricted-syntax
+    // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
     let matches = 0;
     while (i < a.length && j < b.length) {
       const da = a[i]!;
@@ -1829,7 +1832,7 @@ export function inferTableFromGroupedText(
   };
 
   const rowBands: RowBand[] = [];
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
   let curBand: RowBand | null = null;
 
   for (const b of buckets) {
@@ -1896,7 +1899,7 @@ export function inferTableFromGroupedText(
           byBaseline.set(p.baselineY, [...seg.runs]);
           cellsByStart.set(colStart, { byBaseline, x0: seg.x0, x1: seg.x1 });
         } else {
-          // eslint-disable-next-line no-restricted-syntax
+          // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
           let key: number | null = null;
           for (const k of existing.byBaseline.keys()) {
             if (Math.abs(k - p.baselineY) <= baselineEps) {

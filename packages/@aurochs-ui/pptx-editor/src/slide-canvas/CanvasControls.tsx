@@ -65,6 +65,14 @@ const settingsRowStyle: CSSProperties = {
   gap: "12px",
 };
 
+/** Get the select value string for the current zoom mode */
+function resolveZoomSelectValue(zoomMode: ZoomMode): string {
+  if (isFitMode(zoomMode)) {
+    return FIT_ZOOM_VALUE;
+  }
+  return `${Math.round(ZOOM_STEPS[getClosestZoomIndex(zoomMode)] * 100)}`;
+}
+
 /**
  * Toolbar section for canvas zoom and snapping settings.
  */
@@ -80,9 +88,7 @@ export function CanvasControls({
   onSnapStepChange,
 }: CanvasControlsProps) {
   // Determine the select value based on zoom mode
-  const zoomSelectValue = isFitMode(zoomMode)
-    ? FIT_ZOOM_VALUE
-    : `${Math.round(ZOOM_STEPS[getClosestZoomIndex(zoomMode)] * 100)}`;
+  const zoomSelectValue = resolveZoomSelectValue(zoomMode);
   const zoomOptions = useMemo(() => getZoomOptions(true), []);
   const snapOptions = useMemo(() => getSnapOptions(), []);
 

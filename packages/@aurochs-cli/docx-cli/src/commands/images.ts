@@ -91,8 +91,8 @@ function extractImagesFromContent(content: readonly DocxBlockContent[], images: 
     if (block.type === "paragraph") {
       extractImagesFromParagraph(block, images);
     } else if (block.type === "table") {
-      for (const row of block.content) {
-        for (const cell of row.content) {
+      for (const row of block.rows) {
+        for (const cell of row.cells) {
           extractImagesFromContent(cell.content, images);
         }
       }

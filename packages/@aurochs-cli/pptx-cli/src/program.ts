@@ -1,3 +1,6 @@
+/**
+ * @file CLI program definition for pptx-cli
+ */
 import { Command } from "commander";
 import { runInfo } from "./commands/info";
 import { runList } from "./commands/list";
@@ -28,6 +31,7 @@ import {
 } from "./output/pretty-output";
 import { formatPreviewMermaid } from "./output/mermaid-output";
 
+/** Create the pptx CLI program with all subcommands */
 export function createProgram(): Command {
   const program = new Command();
 
@@ -125,6 +129,7 @@ export function createProgram(): Command {
     .option("--border", "Show slide border outline")
     .action(async (file: string, slide: string | undefined, options: { width: string; border?: boolean }) => {
       const mode = program.opts().output as OutputMode;
+      // eslint-disable-next-line no-restricted-syntax -- conditionally assigned from parsed input
       let slideNumber: number | undefined;
       if (slide !== undefined) {
         slideNumber = parseInt(slide, 10);

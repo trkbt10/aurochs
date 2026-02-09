@@ -33,7 +33,7 @@ function ensureDom(): void {
   Object.defineProperty(globalThis, "window", { value: jsdomWindow, writable: true });
   Object.defineProperty(globalThis, "document", { value: jsdomWindow.document, writable: true });
   Object.defineProperty(globalThis, "self", { value: jsdomWindow, writable: true });
-  Object.defineProperty(globalThis, "HTMLElement", { value: jsdomWindow.HTMLElement, writable: true });
+  Object.defineProperty(globalThis, "HTMLElement", { value: (jsdomWindow as unknown as Record<string, unknown>).HTMLElement, writable: true });
   Object.defineProperty(globalThis, "getComputedStyle", { value: jsdomWindow.getComputedStyle, writable: true });
 
   const maybeNavigator = jsdomWindow.navigator;
@@ -43,7 +43,7 @@ function ensureDom(): void {
     // Some runtimes expose `navigator` as a non-writable getter; tests don't require setting it.
   }
 
-  const domGlobals: ReadonlyArray<keyof typeof jsdomWindow> = [
+  const domGlobals = [
     "Node",
     "Text",
     "Event",
@@ -52,9 +52,10 @@ function ensureDom(): void {
     "FocusEvent",
     "InputEvent",
     "CompositionEvent",
-  ];
+  ] as const;
+  const win = jsdomWindow as unknown as Record<string, unknown>;
   for (const key of domGlobals) {
-    const value = jsdomWindow[key];
+    const value = win[key];
     if (value) {
       Object.defineProperty(globalThis, key, { value, writable: true });
     }
@@ -62,10 +63,10 @@ function ensureDom(): void {
 
   // React may hit old-IE input polyfill paths depending on environment feature detection.
   // Provide no-op stubs so event wiring doesn't crash under Bun's runtime.
-  const htmlElementProto: {
+  const htmlElementProto = (jsdomWindow as unknown as Record<string, unknown> & { HTMLElement: { prototype: Record<string, unknown> } }).HTMLElement.prototype as {
     attachEvent?: (name: string, handler: EventListenerOrEventListenerObject) => void;
     detachEvent?: (name: string, handler: EventListenerOrEventListenerObject) => void;
-  } = jsdomWindow.HTMLElement.prototype;
+  };
   htmlElementProto.attachEvent ??= () => {};
   htmlElementProto.detachEvent ??= () => {};
 }
@@ -79,11 +80,11 @@ describe("DocxTextInputFrame", () => {
   function renderFrame(overrides?: Partial<DocxTextInputFrameProps>) {
     const textareaRef = React.createRef<HTMLTextAreaElement>();
     const onChange = createCallTracker<[React.ChangeEvent<HTMLTextAreaElement>]>();
-    const onSelect = createCallTracker<[React.SyntheticEvent<HTMLTextAreaElement>]>();
+    const onSelect = createCallTracker<[]>();
     const onKeyDown = createCallTracker<[React.KeyboardEvent<HTMLTextAreaElement>]>();
-    const onCompositionStart = createCallTracker<[React.CompositionEvent<HTMLTextAreaElement>]>();
-    const onCompositionEnd = createCallTracker<[React.CompositionEvent<HTMLTextAreaElement>]>();
-    const onBlur = createCallTracker<[React.FocusEvent<HTMLTextAreaElement>]>();
+    const onCompositionStart = createCallTracker<[]>();
+    const onCompositionEnd = createCallTracker<[]>();
+    const onBlur = createCallTracker<[]>();
 
     const utils = render(
       <DocxTextInputFrame
@@ -144,7 +145,7 @@ describe("DocxTextInputFrame", () => {
   });
 
   it("calls onSelect when selection changes", () => {
-    const onSelect = createCallTracker<[React.SyntheticEvent<HTMLTextAreaElement>]>();
+    const onSelect = createCallTracker<[]>();
     const { textarea } = renderFrame({ onSelect: onSelect.fn });
 
     textarea.setSelectionRange(1, 3);
@@ -154,8 +155,8 @@ describe("DocxTextInputFrame", () => {
   });
 
   it("calls composition start/end callbacks", () => {
-    const onCompositionStart = createCallTracker<[React.CompositionEvent<HTMLTextAreaElement>]>();
-    const onCompositionEnd = createCallTracker<[React.CompositionEvent<HTMLTextAreaElement>]>();
+    const onCompositionStart = createCallTracker<[]>();
+    const onCompositionEnd = createCallTracker<[]>();
     const { textarea } = renderFrame({
       onCompositionStart: onCompositionStart.fn,
       onCompositionEnd: onCompositionEnd.fn,
@@ -169,7 +170,7 @@ describe("DocxTextInputFrame", () => {
   });
 
   it("calls onBlur when focus is lost", () => {
-    const onBlur = createCallTracker<[React.FocusEvent<HTMLTextAreaElement>]>();
+    const onBlur = createCallTracker<[]>();
     const { textarea } = renderFrame({ onBlur: onBlur.fn });
 
     fireEvent.blur(textarea);

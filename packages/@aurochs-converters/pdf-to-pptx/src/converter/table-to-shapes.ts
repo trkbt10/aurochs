@@ -6,7 +6,7 @@ import type { PdfPath, PdfPathOp, PdfText } from "@aurochs/pdf/domain";
 import type { GraphicFrame } from "@aurochs-office/pptx/domain/shape";
 import type { Table, TableCell, TableRow } from "@aurochs-office/pptx/domain/table/types";
 import type { Paragraph, TextBody, TextRun } from "@aurochs-office/pptx/domain/text";
-import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
+import type { Pixels, Points } from "@aurochs-office/drawing-ml/domain/units";
 import { deg, pt, px } from "@aurochs-office/drawing-ml/domain/units";
 import type { Fill, Line } from "@aurochs-office/pptx/domain/color/types";
 import type { ConversionContext } from "./transform-converter";
@@ -37,15 +37,25 @@ export type TableDecorationAnalysis = {
   readonly cellFills: ReadonlyMap<string, Fill>;
 };
 
-function computeCellBorders(
-  decoration: TableDecorationAnalysis | null | undefined,
-  ri: number,
-  ci: number,
-  rowSpan: number,
-  colSpan: number,
-  rowCount: number,
-  colCount: number,
-): { top?: Line; left?: Line; right?: Line; bottom?: Line } | undefined {
+type ComputeCellBordersArgs = {
+  readonly decoration: TableDecorationAnalysis | null | undefined;
+  readonly ri: number;
+  readonly ci: number;
+  readonly rowSpan: number;
+  readonly colSpan: number;
+  readonly rowCount: number;
+  readonly colCount: number;
+};
+
+function computeCellBorders({
+  decoration,
+  ri,
+  ci,
+  rowSpan,
+  colSpan,
+  rowCount,
+  colCount,
+}: ComputeCellBordersArgs): { top?: Line; left?: Line; right?: Line; bottom?: Line } | undefined {
   if (!decoration) {
     return undefined;
   }
@@ -90,7 +100,7 @@ function area(b: BBox): number {
 
 function splitPathIntoSubpaths(ops: readonly PdfPathOp[]): PdfPathOp[][] {
   const out: PdfPathOp[][] = [];
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
   let cur: PdfPathOp[] = [];
 
   const flush = (): void => {
@@ -123,13 +133,13 @@ function splitPathIntoSubpaths(ops: readonly PdfPathOp[]): PdfPathOp[][] {
 }
 
 function bboxOfSubpath(sub: readonly PdfPathOp[]): BBox | null {
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
   let minX = Infinity;
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
   let minY = Infinity;
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
   let maxX = -Infinity;
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
   let maxY = -Infinity;
 
   const add = (x: number, y: number): void => {
@@ -242,9 +252,9 @@ function getTableYBoundaries(inferred: InferredTable): number[] {
 }
 
 function nearestIndex(xs: readonly number[], value: number): { index: number; dist: number } {
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
   let bestIdx = 0;
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
   let bestDist = Infinity;
   for (let i = 0; i < xs.length; i++) {
     const d = Math.abs(xs[i]! - value);
@@ -360,19 +370,19 @@ export function analyzeTableDecorationFromPaths(
     }
 
     const subs = splitPathIntoSubpaths(p.operations);
-    // eslint-disable-next-line no-restricted-syntax
+    // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
     let totalSub = 0;
-    // eslint-disable-next-line no-restricted-syntax
+    // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
     let matchedSub = 0;
-    // eslint-disable-next-line no-restricted-syntax
+    // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
     let totalArea = 0;
-    // eslint-disable-next-line no-restricted-syntax
+    // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
     let matchedArea = 0;
 
     const extractAxisAlignedSegments = (sub: readonly PdfPathOp[], lineWidthPdf: number): BBox[] => {
       const half = Math.max(0.05, lineWidthPdf / 2);
       const axisEps = Math.max(0.02, inferred.fontSize * 0.01, lineWidthPdf * 0.35);
-      // eslint-disable-next-line no-restricted-syntax
+      // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
       let cur: { x: number; y: number } | null = null;
       const out: BBox[] = [];
 
@@ -449,7 +459,7 @@ export function analyzeTableDecorationFromPaths(
         },
       );
 
-      // eslint-disable-next-line no-restricted-syntax
+      // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
       let matchedThisSub = false;
       const markMatched = (): void => {
         if (matchedThisSub) {
@@ -464,12 +474,13 @@ export function analyzeTableDecorationFromPaths(
 
       // If this subpath is a rectangle, its bbox isn't elongated, but its edges represent borders.
       // Treat stroked rect edges as boundary rules.
-      const rectBBox = (() => {
+      const resolveRectBBox = (): BBox | null => {
         if (sub.length === 1 && sub[0]?.type === "rect") {
           return bb;
         }
         return bboxOfAxisAlignedRectFromLineOps(sub);
-      })();
+      };
+      const rectBBox = resolveRectBBox();
 
       if (rectBBox && line) {
         const rectLine = normalizeBorderLine(line);
@@ -511,14 +522,15 @@ export function analyzeTableDecorationFromPaths(
       // - Filled rectangles: handled by bbox heuristics (isHRule0/isVRule0) and `lineFromFill`.
       // - Stroked polylines: a single subpath can contain many individual rules; its bbox is not
       //   necessarily elongated. Always attempt per-segment matching for stroked polylines.
-      const segmentBoxes = (() => {
+      const resolveSegmentBoxes = (): BBox[] => {
         if (!sub.some((op) => op.type === "lineTo")) {
-          return [] as BBox[];
+          return [];
         }
         return extractAxisAlignedSegments(sub, lineWidthPdf);
-      })();
+      };
+      const segmentBoxes = resolveSegmentBoxes();
 
-      const ruleLineForSegments = (() => {
+      const resolveRuleLineForSegments = (): Line | undefined => {
         if (line) {
           return normalizeBorderLine(line);
         }
@@ -527,7 +539,8 @@ export function analyzeTableDecorationFromPaths(
           return normalizeBorderLine(lineFromFill(fill, thickness, context));
         }
         return undefined;
-      })();
+      };
+      const ruleLineForSegments = resolveRuleLineForSegments();
 
       if (segmentBoxes.length > 0 && ruleLineForSegments) {
         for (const sb of segmentBoxes) {
@@ -565,11 +578,16 @@ export function analyzeTableDecorationFromPaths(
           }
         }
       } else if (isHRule0 || isVRule0) {
-        const ruleLine = line
-          ? normalizeBorderLine(line)
-          : fill
-            ? normalizeBorderLine(lineFromFill(fill, thickness, context))
-            : undefined;
+        const resolveRuleLine = (): Line | undefined => {
+          if (line) {
+            return normalizeBorderLine(line);
+          }
+          if (fill) {
+            return normalizeBorderLine(lineFromFill(fill, thickness, context));
+          }
+          return undefined;
+        };
+        const ruleLine = resolveRuleLine();
         if (!ruleLine) {
           continue;
         }
@@ -610,7 +628,7 @@ export function analyzeTableDecorationFromPaths(
           continue;
         }
 
-        // eslint-disable-next-line no-restricted-syntax
+        // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
         let assigned = false;
         // Map this fill to overlapping cells; keep the best overlap ratio per cell.
         for (let r = 0; r < rowCount; r++) {
@@ -803,7 +821,7 @@ function buildCellTextBodyFromLines({
     return out;
   };
 
-  const lineSpacing = (() => {
+  const resolveLineSpacing = (): { type: "points"; value: Points } | undefined => {
     if (pairs.length < 2) {
       return undefined;
     }
@@ -824,8 +842,9 @@ function buildCellTextBodyFromLines({
     if (!Number.isFinite(gapPptxPt) || gapPptxPt <= 0) {
       return undefined;
     }
-    return { type: "points" as const, value: pt(gapPptxPt) };
-  })();
+    return { type: "points", value: pt(gapPptxPt) };
+  };
+  const lineSpacing = resolveLineSpacing();
 
   const paragraphs: Paragraph[] = [];
 
@@ -993,14 +1012,10 @@ function buildTableFromInference(
   );
 
   const hasStableColBounds = xBoundsPxLocal.length === inferred.columns.length + 1;
-  const colWidthsPx = hasStableColBounds
-    ? computeSizesFromBoundaries(xBoundsPxLocal, frameWidthPx)
-    : fallbackColWidthsPx;
+  const colWidthsPx = hasStableColBounds ? computeSizesFromBoundaries(xBoundsPxLocal, frameWidthPx) : fallbackColWidthsPx;
 
   const hasStableRowBounds = yBoundsPxLocal.length === inferred.rows.length + 1;
-  const rowHeightsPx = hasStableRowBounds
-    ? computeSizesFromBoundaries(yBoundsPxLocal, frameHeightPx)
-    : fallbackRowHeightsPx;
+  const rowHeightsPx = hasStableRowBounds ? computeSizesFromBoundaries(yBoundsPxLocal, frameHeightPx) : fallbackRowHeightsPx;
 
   const columns = inferred.columns.map((_, i) => ({
     width: px(colWidthsPx[i] ?? 0),
@@ -1095,11 +1110,15 @@ function buildTableFromInference(
       const rowSpan = Math.max(1, seg?.rowSpan ?? 1);
       const colSpan = Math.max(1, seg?.colSpan ?? 1);
 
-      const borders = computeCellBorders(decoration, ri, ci, rowSpan, colSpan, rowCount, colCount);
+      const borders = computeCellBorders({ decoration, ri, ci, rowSpan, colSpan, rowCount, colCount });
 
-      const fill: Fill = seg
-        ? resolveMergedCellFill({ ri, ci, rowSpan, colSpan })
-        : (decoration?.cellFills.get(`${ri},${ci}`) ?? noFill());
+      const resolveFillForCell = (): Fill => {
+        if (seg) {
+          return resolveMergedCellFill({ ri, ci, rowSpan, colSpan });
+        }
+        return decoration?.cellFills.get(`${ri},${ci}`) ?? noFill();
+      };
+      const fill: Fill = resolveFillForCell();
 
       if (!seg) {
         cells.push({
@@ -1130,14 +1149,14 @@ function buildTableFromInference(
       const rowHeightPdf = rowHeightsPdf[ri] ?? 0;
       const maxVertPdf = Math.max(0, Math.min(inferred.fontSize * 1.2, rowHeightPdf * 0.45));
 
-      // eslint-disable-next-line no-restricted-syntax
+      // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
       let topSlackPdf = 0;
-      // eslint-disable-next-line no-restricted-syntax
+      // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
       let bottomSlackPdf = 0;
       if (seg.runsByLine.length > 0) {
-        // eslint-disable-next-line no-restricted-syntax
+        // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
         let minY = Infinity;
-        // eslint-disable-next-line no-restricted-syntax
+        // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
         let maxY = -Infinity;
         for (const line of seg.runsByLine) {
           for (const run of line) {
@@ -1161,7 +1180,7 @@ function buildTableFromInference(
 
       const margins = { left, right, top, bottom };
 
-      // eslint-disable-next-line no-restricted-syntax
+      // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
       let textBody: TextBody | undefined;
       if (seg.runsByLine.length > 0) {
         textBody = buildCellTextBodyFromLines({
@@ -1204,6 +1223,7 @@ export type ConvertGroupedTextToTableShapeArgs = {
   readonly options?: TableConversionOptions;
 };
 
+/** Internal helper */
 export function convertGroupedTextToTableShape({
   group,
   pagePaths,
@@ -1234,6 +1254,7 @@ export type ConvertInferredTableToShapeArgs = {
   readonly shapeId: string;
 };
 
+/** Internal helper */
 export function convertInferredTableToShape({
   inferred,
   decoration,

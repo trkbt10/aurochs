@@ -191,21 +191,21 @@ export function useDragHandlers({
 
       // Handle pending states - check threshold and transition to active
       if (drag.type === "pending-move") {
-        if (isDragThresholdExceeded(drag.startClientX, drag.startClientY, e.clientX, e.clientY)) {
+        if (isDragThresholdExceeded({ startX: drag.startClientX, startY: drag.startClientY, currentX: e.clientX, currentY: e.clientY })) {
           dispatch({ type: "CONFIRM_MOVE" });
         }
         return;
       }
 
       if (drag.type === "pending-resize") {
-        if (isDragThresholdExceeded(drag.startClientX, drag.startClientY, e.clientX, e.clientY)) {
+        if (isDragThresholdExceeded({ startX: drag.startClientX, startY: drag.startClientY, currentX: e.clientX, currentY: e.clientY })) {
           dispatch({ type: "CONFIRM_RESIZE" });
         }
         return;
       }
 
       if (drag.type === "pending-rotate") {
-        if (isDragThresholdExceeded(drag.startClientX, drag.startClientY, e.clientX, e.clientY)) {
+        if (isDragThresholdExceeded({ startX: drag.startClientX, startY: drag.startClientY, currentX: e.clientX, currentY: e.clientY })) {
           dispatch({ type: "CONFIRM_ROTATE" });
         }
         return;

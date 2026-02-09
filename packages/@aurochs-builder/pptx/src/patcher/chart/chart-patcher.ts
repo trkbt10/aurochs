@@ -44,6 +44,18 @@ function patchGraphicFrameTitle(graphicFrame: XmlElement, title: string): XmlEle
   );
 }
 
+/** Apply a single chart element change to a graphic frame */
+function applyChartElementChange(frame: XmlElement, change: ChartChange): XmlElement {
+  switch (change.type) {
+    case "title":
+      return patchGraphicFrameTitle(frame, change.value);
+    case "data":
+    case "style":
+      // These are applied to the chart part (chartN.xml) via patchChart().
+      return frame;
+  }
+}
+
 /**
  * Patch chart elements that live on the slide (graphicFrame itself).
  */
@@ -52,24 +64,7 @@ export function patchChartElement(graphicFrame: XmlElement, changes: readonly Ch
     throw new Error(`patchChartElement: expected p:graphicFrame, got ${graphicFrame.name}`);
   }
 
-  // eslint-disable-next-line no-restricted-syntax
-  let next = graphicFrame;
-  for (const change of changes) {
-    switch (change.type) {
-      case "title":
-        next = patchGraphicFrameTitle(next, change.value);
-        break;
-      case "data":
-      case "style":
-        // These are applied to the chart part (chartN.xml) via patchChart().
-        break;
-      default:
-        // Exhaustiveness (TS)
-        ((_: never) => _)(change);
-    }
-  }
-
-  return next;
+  return changes.reduce((frame, change) => applyChartElementChange(frame, change), graphicFrame);
 }
 
 /**
@@ -89,29 +84,24 @@ export function patchChartTransform(graphicFrame: XmlElement, transform: Transfo
   return replaceChildByName(graphicFrame, "p:xfrm", patched);
 }
 
+/** Apply a single chart change to the chart XML document */
+function applyChartXmlChange(doc: XmlDocument, change: ChartChange): XmlDocument {
+  switch (change.type) {
+    case "title":
+      return patchChartTitle(doc, change.value);
+    case "data":
+      return patchChartData(doc, change.data);
+    case "style":
+      return patchChartStyle(doc, change.style.styleId);
+  }
+}
+
 /**
  * Patch slide graphicFrame + referenced chart part in one call.
  */
 export function patchChart(target: ChartPatchTarget, changes: readonly ChartChange[]): ChartPatchTarget {
   const nextFrame = patchChartElement(target.graphicFrame, changes);
-  // eslint-disable-next-line no-restricted-syntax
-  let nextChartXml = target.chartXml;
-
-  for (const change of changes) {
-    switch (change.type) {
-      case "title":
-        nextChartXml = patchChartTitle(nextChartXml, change.value);
-        break;
-      case "data":
-        nextChartXml = patchChartData(nextChartXml, change.data);
-        break;
-      case "style":
-        nextChartXml = patchChartStyle(nextChartXml, change.style.styleId);
-        break;
-      default:
-        ((_: never) => _)(change);
-    }
-  }
+  const nextChartXml = changes.reduce((doc, change) => applyChartXmlChange(doc, change), target.chartXml);
 
   return { graphicFrame: nextFrame, chartXml: nextChartXml };
 }

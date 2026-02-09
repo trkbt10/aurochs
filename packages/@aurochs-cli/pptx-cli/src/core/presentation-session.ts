@@ -23,8 +23,8 @@ import {
   applyAnimations,
   applyComments,
   applyNotes,
-  type SlideModInput,
-  type ShapeSpec,
+  type SlideModInput as BuilderSlideModInput,
+  type ShapeSpec as BuilderShapeSpec,
   type ImageSpec,
   type ConnectorSpec,
   type TableSpec,
@@ -117,8 +117,10 @@ export type SetSpeakerNotesResult = {
   readonly applied: boolean;
 };
 
-// Re-export for consumers
-export type { SlideModInput, ShapeSpec };
+/** Slide modification input specification */
+export type SlideModInput = BuilderSlideModInput;
+/** Shape specification */
+export type ShapeSpec = BuilderShapeSpec;
 
 // =============================================================================
 // Session

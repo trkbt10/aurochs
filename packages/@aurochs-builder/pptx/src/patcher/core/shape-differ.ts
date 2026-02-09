@@ -195,7 +195,7 @@ function detectTreeAddRemoveChanges(
   }
 
   // Added (in modified z-order within this container)
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable anchor tracking for z-order insertion
   let lastAnchorId: string | undefined;
   for (const shape of modifiedShapes) {
     const id = getShapeId(shape);
@@ -607,7 +607,6 @@ export function deepEqual(a: unknown, b: unknown): boolean {
     if (a.length !== b.length) {
       return false;
     }
-    // eslint-disable-next-line no-restricted-syntax
     for (let i = 0; i < a.length; i++) {
       if (!deepEqual(a[i], b[i])) {
         return false;

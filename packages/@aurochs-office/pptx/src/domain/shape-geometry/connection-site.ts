@@ -351,9 +351,9 @@ export function transformConnectionPoint({
   readonly flipV?: boolean;
 }): { x: Pixels; y: Pixels } {
   // Apply flip transforms
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable for rotation transform
   let x = flipH ? shapeWidth - siteX : siteX;
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable for rotation transform
   let y = flipV ? shapeHeight - siteY : siteY;
 
   // Apply rotation around shape center

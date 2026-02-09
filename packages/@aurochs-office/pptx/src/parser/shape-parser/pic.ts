@@ -43,7 +43,7 @@ export function parseBlipFillProperties(
   }
 
   // Resolve image at parse time if context is available
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable assigned conditionally when context is available
   let resolvedResource: ResolvedBlipResource | undefined;
   if (resourceContext !== undefined && !resourceId.startsWith("data:")) {
     resolvedResource = resourceContext.resolveBlipFill(resourceId);

@@ -74,7 +74,6 @@ async function runTestCase(spec: TestCaseSpec, specDir: string): Promise<TestCas
   // Resolve paths relative to spec file directory
   const input = {
     ...spec.input,
-    template: path.resolve(specDir, spec.input.template),
     output: path.resolve(specDir, spec.input.output),
   };
 

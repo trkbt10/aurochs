@@ -12,7 +12,7 @@
 import { useCallback, type CSSProperties, type ChangeEvent } from "react";
 import { Select, Toggle } from "@aurochs-ui/ui-components/primitives";
 import { FieldRow } from "@aurochs-ui/ui-components/layout";
-import { FillPickerPopover, ColorPickerPopover, FillPreview } from "@aurochs-ui/color-editor";
+import { FillPickerPopover, ColorPickerPopover } from "@aurochs-ui/color-editor";
 import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import { createDefaultColor } from "./ColorEditor";
 import { GradientStopsEditor, createDefaultGradientStops } from "./GradientStopsEditor";

@@ -86,7 +86,9 @@ export async function addSlide({
  */
 export function deleteSlide(document: PresentationDocument, slideId: SlideId): PresentationDocument {
   const slideIndex = getSlideIndex(document, slideId);
-  if (slideIndex === -1) return document;
+  if (slideIndex === -1) {
+    return document;
+  }
   return removeSlideFromDocument(document, slideIndex).doc;
 }
 
@@ -98,7 +100,9 @@ export function deleteSlide(document: PresentationDocument, slideId: SlideId): P
  */
 export function moveSlide(document: PresentationDocument, slideId: SlideId, toIndex: number): PresentationDocument {
   const fromIndex = getSlideIndex(document, slideId);
-  if (fromIndex === -1 || fromIndex === toIndex) return document;
+  if (fromIndex === -1 || fromIndex === toIndex) {
+    return document;
+  }
   return reorderSlideInDocument(document, fromIndex, toIndex).doc;
 }
 
@@ -113,7 +117,9 @@ export async function duplicateSlide(
   slideId: SlideId,
 ): Promise<{ document: PresentationDocument; newSlideId: SlideId } | undefined> {
   const slideIndex = getSlideIndex(document, slideId);
-  if (slideIndex === -1) return undefined;
+  if (slideIndex === -1) {
+    return undefined;
+  }
   const result = await duplicateSlideInDocument(document, slideIndex);
   return {
     document: result.doc,

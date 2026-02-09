@@ -358,6 +358,79 @@ const containerStyle: CSSProperties = {
   overflow: "hidden",
 };
 
+/** Render the path edit overlay for custom geometry editing */
+function renderPathEditOverlay({
+  pathEdit,
+  slide,
+  viewport,
+  viewportSize,
+  widthNum,
+  heightNum,
+  rulerThickness,
+  onPathEditCommit,
+  onPathEditCancel,
+}: {
+  pathEdit: PathEditState;
+  slide: Slide;
+  viewport: ViewportTransform;
+  viewportSize: { width: number; height: number };
+  widthNum: number;
+  heightNum: number;
+  rulerThickness: number;
+  onPathEditCommit: (path: DrawingPath, shapeId: ShapeId) => void;
+  onPathEditCancel: () => void;
+}): React.ReactNode {
+  if (!isPathEditEditing(pathEdit)) {
+    return null;
+  }
+
+  const editingShape = slide.shapes.find((s) => {
+    if (s.type === "contentPart") {
+      return false;
+    }
+    return s.nonVisual.id === pathEdit.shapeId;
+  });
+
+  if (editingShape?.type !== "sp" || !isCustomGeometry(editingShape.properties.geometry)) {
+    return null;
+  }
+
+  const shapeTransform = editingShape.properties.transform;
+  if (!shapeTransform) {
+    return null;
+  }
+
+  const shapeWidth = shapeTransform.width as number;
+  const shapeHeight = shapeTransform.height as number;
+
+  const drawingPath = customGeometryToDrawingPath(editingShape.properties.geometry, shapeWidth, shapeHeight);
+
+  if (!drawingPath) {
+    return null;
+  }
+
+  return (
+    <ViewportOverlay
+      viewport={viewport}
+      viewportSize={viewportSize}
+      slideWidth={widthNum}
+      slideHeight={heightNum}
+      rulerThickness={rulerThickness}
+    >
+      <PathEditOverlay
+        initialPath={drawingPath}
+        offsetX={shapeTransform.x as number}
+        offsetY={shapeTransform.y as number}
+        slideWidth={widthNum}
+        slideHeight={heightNum}
+        onCommit={(editedPath) => onPathEditCommit(editedPath, pathEdit.shapeId)}
+        onCancel={onPathEditCancel}
+        isActive={true}
+      />
+    </ViewportOverlay>
+  );
+}
+
 /**
  * Unified SVG-based editor canvas.
  */
@@ -514,7 +587,7 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
             name: parsed.name,
           });
         }
-      } catch {
+      } catch (_error: unknown) {
         // Invalid JSON, ignore
       }
     },
@@ -1152,53 +1225,17 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
         isPathEditEditing(pathEdit) &&
         onPathEditCommit &&
         onPathEditCancel &&
-        (() => {
-          const editingShape = slide.shapes.find((s) => {
-            if (s.type === "contentPart") {
-              return false;
-            }
-            return s.nonVisual.id === pathEdit.shapeId;
-          });
-
-          if (editingShape?.type !== "sp" || !isCustomGeometry(editingShape.properties.geometry)) {
-            return null;
-          }
-
-          const shapeTransform = editingShape.properties.transform;
-          if (!shapeTransform) {
-            return null;
-          }
-
-          const shapeWidth = shapeTransform.width as number;
-          const shapeHeight = shapeTransform.height as number;
-
-          const drawingPath = customGeometryToDrawingPath(editingShape.properties.geometry, shapeWidth, shapeHeight);
-
-          if (!drawingPath) {
-            return null;
-          }
-
-          return (
-            <ViewportOverlay
-              viewport={viewport}
-              viewportSize={viewportSize}
-              slideWidth={widthNum}
-              slideHeight={heightNum}
-              rulerThickness={rulerThickness}
-            >
-              <PathEditOverlay
-                initialPath={drawingPath}
-                offsetX={shapeTransform.x as number}
-                offsetY={shapeTransform.y as number}
-                slideWidth={widthNum}
-                slideHeight={heightNum}
-                onCommit={(editedPath) => onPathEditCommit(editedPath, pathEdit.shapeId)}
-                onCancel={onPathEditCancel}
-                isActive={true}
-              />
-            </ViewportOverlay>
-          );
-        })()}
+        renderPathEditOverlay({
+          pathEdit,
+          slide,
+          viewport,
+          viewportSize,
+          widthNum,
+          heightNum,
+          rulerThickness,
+          onPathEditCommit,
+          onPathEditCancel,
+        })}
 
       {/* Text edit controller */}
       {isTextEditActive(textEdit) && (

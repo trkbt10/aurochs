@@ -391,6 +391,67 @@ describe("serializeBlipEffects", () => {
     expect(result[0].name).toBe("a:grayscl");
   });
 
+  it("serializes alphaCeiling", () => {
+    const effects: BlipEffects = { alphaCeiling: true };
+
+    const result = serializeBlipEffects(effects);
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBe("a:alphaCeiling");
+  });
+
+  it("serializes alphaFloor", () => {
+    const effects: BlipEffects = { alphaFloor: true };
+
+    const result = serializeBlipEffects(effects);
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBe("a:alphaFloor");
+  });
+
+  it("serializes alphaInv", () => {
+    const effects: BlipEffects = { alphaInv: true };
+
+    const result = serializeBlipEffects(effects);
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBe("a:alphaInv");
+  });
+
+  it("serializes alphaMod", () => {
+    const effects: BlipEffects = { alphaMod: true };
+
+    const result = serializeBlipEffects(effects);
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBe("a:alphaMod");
+  });
+
+  it("serializes alphaRepl with alpha", () => {
+    const effects: BlipEffects = { alphaRepl: { alpha: pct(80) } };
+
+    const result = serializeBlipEffects(effects);
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBe("a:alphaRepl");
+    expect(result[0].attrs.a).toBe("80000");
+  });
+
+  it("serializes biLevel with threshold", () => {
+    const effects: BlipEffects = { biLevel: { threshold: pct(50) } };
+
+    const result = serializeBlipEffects(effects);
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBe("a:biLevel");
+    expect(result[0].attrs.thresh).toBe("50000");
+  });
+
+  it("serializes colorReplace with color", () => {
+    const effects: BlipEffects = {
+      colorReplace: { color: { spec: { type: "srgb", value: "00FF00" } } },
+    };
+
+    const result = serializeBlipEffects(effects);
+    expect(result).toHaveLength(1);
+    expect(result[0].name).toBe("a:clrRepl");
+    expect(getChild(result[0], "a:srgbClr")?.attrs.val).toBe("00FF00");
+  });
+
   it("serializes multiple effects at once", () => {
     const effects: BlipEffects = {
       alphaBiLevel: { threshold: pct(50) },

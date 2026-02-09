@@ -325,12 +325,12 @@ function applyColorTransformations(element: XmlElement, baseColor: string | unde
     return undefined;
   }
 
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable color accumulator for sequential transforms
   let result = baseColor;
 
   // Check for alpha first
   const alpha = getChild(element, "a:alpha");
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable flag set when alpha transform is applied
   let hasAlpha = false;
   if (alpha !== undefined) {
     const val = getAttr(alpha, "val");

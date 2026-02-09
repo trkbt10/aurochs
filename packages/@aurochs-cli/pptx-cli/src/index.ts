@@ -31,13 +31,22 @@ export {
 } from "./commands/verify";
 export { runPreview, type PreviewData, type PreviewSlide, type PreviewOptions } from "./commands/preview";
 
-// Text extraction (from @aurochs-office/pptx)
-export {
-  extractTextFromBody,
-  extractTextFromParagraph,
-  extractTextFromRun,
-  extractTextFromShape,
+// Text extraction - local wrappers over @aurochs-office/pptx utilities
+import {
+  extractTextFromBody as _extractTextFromBody,
+  extractTextFromParagraph as _extractTextFromParagraph,
+  extractTextFromRun as _extractTextFromRun,
+  extractTextFromShape as _extractTextFromShape,
 } from "@aurochs-office/pptx/domain/text-utils";
+
+/** Extract all text from a text body */
+export const extractTextFromBody: typeof _extractTextFromBody = _extractTextFromBody;
+/** Extract text from a single paragraph */
+export const extractTextFromParagraph: typeof _extractTextFromParagraph = _extractTextFromParagraph;
+/** Extract text from a single run */
+export const extractTextFromRun: typeof _extractTextFromRun = _extractTextFromRun;
+/** Extract text from a shape */
+export const extractTextFromShape: typeof _extractTextFromShape = _extractTextFromShape;
 
 // Serializers
 export {

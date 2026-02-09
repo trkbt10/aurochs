@@ -51,6 +51,7 @@ async function extractSlideTexts(filePath: string): Promise<string[]> {
  * Compare text content between two PPTX files slide-by-slide.
  */
 export async function runDiff(fileA: string, fileB: string): Promise<Result<DiffData>> {
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator assigned in try/catch
   let textsA: string[];
   try {
     textsA = await extractSlideTexts(fileA);
@@ -61,6 +62,7 @@ export async function runDiff(fileA: string, fileB: string): Promise<Result<Diff
     return error("PARSE_ERROR", `Failed to parse PPTX: ${fileA}: ${(err as Error).message}`);
   }
 
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator assigned in try/catch
   let textsB: string[];
   try {
     textsB = await extractSlideTexts(fileB);

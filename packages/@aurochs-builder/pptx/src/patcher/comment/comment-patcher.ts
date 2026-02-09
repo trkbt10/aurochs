@@ -7,27 +7,20 @@
  */
 
 import {
-  createElement,
-  getChild,
   getChildren,
   isXmlElement,
   parseXml,
   serializeDocument,
   type XmlDocument,
-  type XmlElement,
 } from "@aurochs/xml";
 import type { ZipPackage } from "@aurochs/zip";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import type {
   Comment,
   CommentAuthor,
-  CommentList,
-  CommentAuthorList,
   CommentPosition,
 } from "@aurochs-office/pptx/domain/comment";
 import {
-  serializeComment,
-  serializeCommentAuthor,
   createCommentListDocument,
   createCommentAuthorListDocument,
 } from "../serializer/comment";
@@ -82,14 +75,10 @@ function getNextCommentIndex(pkg: ZipPackage, slidePath: string): number {
   }
 
   const comments = getChildren(root, "p:cm");
-  let maxIdx = 0;
-
-  for (const cm of comments) {
+  const maxIdx = comments.reduce((max, cm) => {
     const idx = parseInt(cm.attrs.idx ?? "0", 10);
-    if (idx > maxIdx) {
-      maxIdx = idx;
-    }
-  }
+    return idx > max ? idx : max;
+  }, 0);
 
   return maxIdx + 1;
 }
@@ -129,6 +118,20 @@ function findOrCreateAuthor(authors: CommentAuthor[], name: string, initials?: s
   return newAuthor;
 }
 
+/** Load existing comments from a comments XML path */
+function loadExistingComments(pkg: ZipPackage, commentsPath: string): Comment[] {
+  const commentsXml = pkg.readText(commentsPath);
+  if (!commentsXml) {
+    return [];
+  }
+  const doc = parseXml(commentsXml);
+  const root = doc.children.find(isXmlElement);
+  if (!root) {
+    return [];
+  }
+  return [...parseCommentList(root).comments];
+}
+
 // =============================================================================
 // Main Functions
 // =============================================================================
@@ -145,21 +148,11 @@ export function addCommentToSlide(pkg: ZipPackage, slidePath: string, spec: Simp
   const commentsPath = `ppt/comments/comment${slideNum}.xml`;
 
   // Ensure comment authors exist
-  const { authors, doc: authorsDoc } = ensureCommentAuthors(pkg);
+  const { authors } = ensureCommentAuthors(pkg);
   const author = findOrCreateAuthor(authors, spec.authorName, spec.authorInitials);
 
   // Get or create comments document
-  let comments: Comment[] = [];
-  const commentsXml = pkg.readText(commentsPath);
-
-  if (commentsXml) {
-    const doc = parseXml(commentsXml);
-    const root = doc.children.find(isXmlElement);
-    if (root) {
-      const list = parseCommentList(root);
-      comments = [...list.comments];
-    }
-  }
+  const existingComments = loadExistingComments(pkg, commentsPath);
 
   // Create new comment
   const position: CommentPosition | undefined =
@@ -173,7 +166,7 @@ export function addCommentToSlide(pkg: ZipPackage, slidePath: string, spec: Simp
     text: spec.text,
   };
 
-  comments.push(newComment);
+  const comments = [...existingComments, newComment];
 
   // Update author's lastIdx
   const updatedAuthors = authors.map((a) =>
@@ -198,9 +191,11 @@ export function addCommentToSlide(pkg: ZipPackage, slidePath: string, spec: Simp
   const contentTypesPath = "[Content_Types].xml";
   const contentTypesXml = pkg.readText(contentTypesPath);
   if (contentTypesXml) {
-    let ctDoc = parseXml(contentTypesXml);
-    ctDoc = addOverride(ctDoc, `/${commentsPath}`, COMMENT_CONTENT_TYPE);
-    ctDoc = addOverride(ctDoc, "/ppt/commentAuthors.xml", COMMENT_AUTHORS_CONTENT_TYPE);
+    const ctDoc = addOverride(
+      addOverride(parseXml(contentTypesXml), `/${commentsPath}`, COMMENT_CONTENT_TYPE),
+      "/ppt/commentAuthors.xml",
+      COMMENT_AUTHORS_CONTENT_TYPE,
+    );
     pkg.writeText(contentTypesPath, serializeDocument(ctDoc, { declaration: true, standalone: true }));
   }
 

@@ -97,6 +97,7 @@ type BlipEffectsBuilder = {
 
 function parseBlipEffects(blip: XmlElement): BlipEffects | undefined {
   const effects: BlipEffectsBuilder = {};
+  // eslint-disable-next-line no-restricted-syntax -- mutable flag set when any effect is found
   let hasEffect = false;
 
   for (const child of blip.children) {

@@ -7,7 +7,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 function findRepoRootDir(startDir: string): string {
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator for directory traversal
   let dir = startDir;
   for (let i = 0; i < 15; i++) {
     const pkgPath = path.join(dir, "package.json");
@@ -17,8 +17,8 @@ function findRepoRootDir(startDir: string): string {
         if (pkg.name === "web-pptx") {
           return dir;
         }
-      } catch {
-        // ignore
+      } catch (_error: unknown) { // eslint-disable-line @typescript-eslint/no-unused-vars -- catch requires error param
+        // ignore parse failures
       }
     }
     const parent = path.dirname(dir);

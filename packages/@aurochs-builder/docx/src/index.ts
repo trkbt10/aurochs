@@ -89,3 +89,35 @@ export {
   serializeBody,
   serializeDocument,
 } from "./document";
+
+// Build spec types
+export type {
+  RunSpec,
+  ParagraphSpec,
+  TableSpec,
+  TableRowSpec,
+  TableCellSpec,
+  BorderEdgeSpec,
+  BlockContentSpec,
+  NumberingDefinitionSpec,
+  NumberingLevelSpec,
+  StyleSpec,
+  SectionSpec,
+  DocxBuildSpec,
+  DocxBuildData,
+} from "./types";
+
+// Spec converter
+export {
+  convertRunSpec,
+  convertParagraphSpec,
+  convertTableSpec,
+  convertBlockContent,
+  convertNumberingSpec,
+  convertStylesSpec,
+  convertSectionSpec,
+  convertDocument,
+} from "./spec-converter";
+
+// Builder
+export { buildDocx, getBuildData } from "./builder";

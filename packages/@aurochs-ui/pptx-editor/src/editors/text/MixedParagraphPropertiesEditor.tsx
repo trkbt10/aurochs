@@ -74,18 +74,24 @@ const separatorStyle: CSSProperties = {
 const MIXED_PLACEHOLDER = "Mixed";
 
 function getLabel(extraction: PropertyExtraction<unknown>, label: string, mixedSuffix = " (M)"): string {
-  if (isMixed(extraction)) return label + mixedSuffix;
+  if (isMixed(extraction)) {
+    return label + mixedSuffix;
+  }
   return label;
 }
 
 function getInputValue<T>(extraction: PropertyExtraction<T>, defaultValue: T): T | string {
-  if (isMixed(extraction)) return "";
+  if (isMixed(extraction)) {
+    return "";
+  }
   const value = getExtractionValue(extraction);
   return value !== undefined ? value : defaultValue;
 }
 
 function getPlaceholder<T>(extraction: PropertyExtraction<T>, defaultPlaceholder: string): string {
-  if (isMixed(extraction)) return MIXED_PLACEHOLDER;
+  if (isMixed(extraction)) {
+    return MIXED_PLACEHOLDER;
+  }
   return defaultPlaceholder;
 }
 

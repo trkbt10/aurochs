@@ -348,9 +348,15 @@ export function serializeRunContent(content: DocxRunContent): XmlElement {
       return serializeBreak(content);
     case "symbol":
       return serializeSymbol(content);
+    case "fieldChar": {
+      const attrs: Record<string, string> = { "w:fldCharType": content.fldCharType };
+      if (content.dirty) attrs["w:dirty"] = "true";
+      if (content.fldLock) attrs["w:fldLock"] = "true";
+      return createElement("w:fldChar", attrs);
+    }
+    case "instrText":
+      return createElement("w:instrText", { "xml:space": "preserve" }, [{ type: "text", value: content.value }]);
     case "drawing":
-      // TODO: Implement drawing serialization
-      // For now, return a placeholder comment element
       throw new Error("Drawing serialization not yet implemented");
   }
 }

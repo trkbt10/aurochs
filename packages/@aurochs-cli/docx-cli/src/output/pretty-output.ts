@@ -141,7 +141,12 @@ export function formatExtractPretty(data: ExtractData): string {
  * Format build result for pretty display.
  */
 export function formatBuildPretty(data: BuildData): string {
-  return `Built: ${data.outputPath}`;
+  const lines = [
+    `Output: ${data.outputPath}`,
+    `Paragraphs: ${data.paragraphCount}`,
+    `Tables: ${data.tableCount}`,
+  ];
+  return lines.join("\n");
 }
 
 /**

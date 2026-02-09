@@ -13,7 +13,6 @@ import type {
   DrawingPath as GenericDrawingPath,
   PathAnchorPoint as GenericPathAnchorPoint,
   Point as GenericPoint,
-  Bounds as GenericBounds,
 } from "@aurochs-ui/path-tools";
 
 // =============================================================================
@@ -123,6 +122,17 @@ export function drawingPathToCommands(path: GenericDrawingPath | PptxDrawingPath
   return commands;
 }
 
+/** Resolve a control point, falling back to the anchor position */
+function resolveControlPoint(
+  handle: Point | undefined,
+  anchor: GenericPathAnchorPoint | PptxPathAnchorPoint,
+): Point {
+  if (handle) {
+    return { x: px(handle.x as number), y: px(handle.y as number) };
+  }
+  return { x: px(anchor.x as number), y: px(anchor.y as number) };
+}
+
 /**
  * Create a segment command between two anchor points
  */
@@ -132,14 +142,12 @@ function createSegmentCommand(
 ): PathCommand {
   // If either point has handles, use cubic bezier
   if (from.handleOut || to.handleIn) {
+    const control1 = resolveControlPoint(from.handleOut, from);
+    const control2 = resolveControlPoint(to.handleIn, to);
     return {
       type: "cubicBezierTo",
-      control1: from.handleOut
-        ? { x: px(from.handleOut.x as number), y: px(from.handleOut.y as number) }
-        : { x: px(from.x as number), y: px(from.y as number) },
-      control2: to.handleIn
-        ? { x: px(to.handleIn.x as number), y: px(to.handleIn.y as number) }
-        : { x: px(to.x as number), y: px(to.y as number) },
+      control1,
+      control2,
       end: { x: px(to.x as number), y: px(to.y as number) },
     };
   }

@@ -7,7 +7,7 @@
  * @see ECMA-376 Part 1, Section 19.5 - Animation
  */
 
-import { createElement, getChild, isXmlElement, type XmlDocument, type XmlElement } from "@aurochs/xml";
+import { isXmlElement, type XmlDocument, type XmlElement } from "@aurochs/xml";
 import type {
   Timing,
   TimeNode,
@@ -15,9 +15,6 @@ import type {
   SequenceTimeNode,
   SetBehavior,
   AnimateEffectBehavior,
-  AnimateScaleBehavior,
-  AnimateRotationBehavior,
-  AnimateMotionBehavior,
   ShapeTarget,
   PresetClass,
 } from "@aurochs-office/pptx/domain/animation";
@@ -217,6 +214,7 @@ function getPresetId(effectClass: PresetClass, effect: string): number {
 // Animation Building
 // =============================================================================
 
+// eslint-disable-next-line no-restricted-syntax -- mutable module-level counter required for sequential ID generation
 let timeNodeIdCounter = 1;
 
 function nextTimeNodeId(): number {
@@ -237,6 +235,26 @@ function buildShapeTarget(shapeId: string): ShapeTarget {
   };
 }
 
+/** Resolve the animation filter string for a given effect name */
+function resolveEffectFilter(effect: string): string {
+  switch (effect) {
+    case "wipe":
+      return "wipe(right)";
+    case "blinds":
+      return "blinds(horizontal)";
+    case "fly":
+      return "slide(fromBottom)";
+    case "zoom":
+      return "zoom";
+    case "wheel":
+      return "wheel(1)";
+    case "randomBars":
+      return "randombar(horizontal)";
+    default:
+      return "fade";
+  }
+}
+
 /**
  * Build the effect behavior for an animation.
  */
@@ -250,13 +268,7 @@ function buildEffectBehavior(spec: SimpleAnimationSpec): TimeNode {
   const id = nextTimeNodeId();
 
   // Determine the filter based on effect type
-  let filter = "fade";
-  if (spec.effect === "wipe") filter = "wipe(right)";
-  else if (spec.effect === "blinds") filter = "blinds(horizontal)";
-  else if (spec.effect === "fly") filter = "slide(fromBottom)";
-  else if (spec.effect === "zoom") filter = "zoom";
-  else if (spec.effect === "wheel") filter = "wheel(1)";
-  else if (spec.effect === "randomBars") filter = "randombar(horizontal)";
+  const filter = resolveEffectFilter(spec.effect);
 
   const transition = spec.class === "exit" ? "out" : "in";
 
@@ -336,6 +348,25 @@ function buildEffectContainer(spec: SimpleAnimationSpec): ParallelTimeNode {
   };
 }
 
+/** Group animations into click groups based on trigger type */
+function buildClickGroups(animations: readonly SimpleAnimationSpec[]): ParallelTimeNode[][] {
+  const { groups, current } = animations.reduce<{
+    readonly groups: ParallelTimeNode[][];
+    readonly current: ParallelTimeNode[];
+  }>(
+    (acc, anim) => {
+      const container = buildEffectContainer(anim);
+      if (anim.trigger === "onClick" || anim.trigger === undefined) {
+        const nextGroups = acc.current.length > 0 ? [...acc.groups, acc.current] : acc.groups;
+        return { groups: nextGroups, current: [container] };
+      }
+      return { groups: acc.groups, current: [...acc.current, container] };
+    },
+    { groups: [], current: [] },
+  );
+  return current.length > 0 ? [...groups, current] : groups;
+}
+
 /**
  * Build the timing tree for a set of animations.
  */
@@ -347,27 +378,7 @@ function buildTimingTree(animations: readonly SimpleAnimationSpec[]): Timing {
   }
 
   // Build click groups
-  const clickGroups: ParallelTimeNode[][] = [];
-  let currentGroup: ParallelTimeNode[] = [];
-
-  for (const anim of animations) {
-    const container = buildEffectContainer(anim);
-
-    if (anim.trigger === "onClick" || anim.trigger === undefined) {
-      // New click group
-      if (currentGroup.length > 0) {
-        clickGroups.push(currentGroup);
-      }
-      currentGroup = [container];
-    } else {
-      // Add to current group
-      currentGroup.push(container);
-    }
-  }
-
-  if (currentGroup.length > 0) {
-    clickGroups.push(currentGroup);
-  }
+  const clickGroups = buildClickGroups(animations);
 
   // Build sequence of click effects
   const sequenceChildren: TimeNode[] = clickGroups.map((group, index) => {

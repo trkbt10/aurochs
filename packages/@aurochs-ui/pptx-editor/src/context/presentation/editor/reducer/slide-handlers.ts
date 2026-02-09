@@ -12,7 +12,7 @@ import type { SlideSize } from "@aurochs-office/pptx/domain";
 import type { PresentationEditorState, PresentationEditorAction } from "../types";
 import type { SelectionState } from "../../../slide/state";
 import type { HandlerMap } from "./handler-types";
-import { deleteSlide, moveSlide, updateSlide, updateSlideEntry, getSlideIndex } from "../slide";
+import { deleteSlide, moveSlide, updateSlide, updateSlideEntry } from "../slide";
 import { pushHistory } from "@aurochs-ui/editor-core/history";
 import { createEmptySelection, createIdleDragState } from "../../../slide/state";
 

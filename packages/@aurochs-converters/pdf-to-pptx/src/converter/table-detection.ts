@@ -61,7 +61,7 @@ function cluster1D(values: readonly number[], eps: number): number[] {
   }
   const xs = [...values].sort((a, b) => a - b);
   const out: number[] = [];
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator for clustering
   let cur: number[] = [];
   for (const x of xs) {
     if (cur.length === 0) {
@@ -102,7 +102,7 @@ function computeRegionMeta({
   if (boxIndices.length === 0) {
     return null;
   }
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable bounding box accumulator
   let bb = boxes[boxIndices[0]!]!;
   const vertCenters: number[] = [];
   const horizCenters: number[] = [];
@@ -242,6 +242,7 @@ function splitByHorizontalWhitespace(
   return { top, bottom };
 }
 
+/** Internal helper */
 export function detectTableRegionsFromPaths(
   paths: readonly PdfPath[],
   page: { readonly width: number; readonly height: number },
@@ -260,7 +261,7 @@ export function detectTableRegionsFromPaths(
     const lineWidth = Math.max(0.1, path.graphicsState.lineWidth || 1);
     const half = lineWidth / 2;
 
-    // eslint-disable-next-line no-restricted-syntax
+    // eslint-disable-next-line no-restricted-syntax -- mutable current point tracking for path ops
     let cur: { x: number; y: number } | null = null;
     const pushRect = ({
       x0,
@@ -376,9 +377,9 @@ export function detectTableRegionsFromPaths(
     }
     visited[i] = true;
     const queue: number[] = [i];
-    // eslint-disable-next-line no-restricted-syntax
+    // eslint-disable-next-line no-restricted-syntax -- mutable bounding box for region expansion
     let bb = boxes[i]!;
-    // eslint-disable-next-line no-restricted-syntax
+    // eslint-disable-next-line no-restricted-syntax -- mutable counter for region size
     let count = 0;
     const indices: number[] = [];
 

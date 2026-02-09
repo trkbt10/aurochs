@@ -1,4 +1,6 @@
-import { describe, it, expect } from "bun:test";
+/**
+ * @file Tests for coordinate mapper re-exports from drawing-ml
+ */
 import { createMapperConfig, mapBoundsToGrid } from "@aurochs-renderer/drawing-ml/ascii";
 
 describe("coordinate-mapper (pptx re-export)", () => {

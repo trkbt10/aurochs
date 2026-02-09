@@ -9,11 +9,10 @@
  * Fixtures persist between runs for manual inspection (e.g. LibreOffice).
  */
 
-import { describe, it, expect, beforeAll } from "bun:test";
-import { join } from "node:path";
 import { generateAllFixtures } from "../../spec/preview-fixtures/generate";
 import { runPreview } from "./preview";
 
+// eslint-disable-next-line no-restricted-syntax -- mutable reference set in beforeAll
 let fixturePaths: ReadonlyMap<string, string>;
 
 beforeAll(async () => {
@@ -22,7 +21,9 @@ beforeAll(async () => {
 
 function fixturePath(name: string): string {
   const p = fixturePaths.get(name);
-  if (!p) throw new Error(`Fixture "${name}" not found`);
+  if (!p) {
+    throw new Error(`Fixture "${name}" not found`);
+  }
   return p;
 }
 
@@ -34,12 +35,14 @@ describe("preview command - builder fixtures", () => {
     it("renders a builder-created table with headers and rows", async () => {
       const result = await runPreview(fixturePath("table"), 1, { width: 100 });
       expect(result.success).toBe(true);
-      if (!result.success) return;
+      if (!result.success) {
+        return;
+      }
 
       const ascii = result.data.slides[0]!.ascii;
       // Table grid structure
-      expect(ascii).toContain("┌");
-      expect(ascii).toContain("┘");
+      expect(ascii).toContain("\u250C");
+      expect(ascii).toContain("\u2518");
       // Cell content
       expect(ascii).toContain("Product");
       expect(ascii).toContain("Price");
@@ -50,7 +53,9 @@ describe("preview command - builder fixtures", () => {
     it("renders a single-row table (headers only)", async () => {
       const result = await runPreview(fixturePath("table-headers-only"), 1, { width: 80 });
       expect(result.success).toBe(true);
-      if (!result.success) return;
+      if (!result.success) {
+        return;
+      }
 
       const ascii = result.data.slides[0]!.ascii;
       expect(ascii).toContain("A");
@@ -66,7 +71,9 @@ describe("preview command - builder fixtures", () => {
     it("renders a bar chart with categories and bar visualization", async () => {
       const result = await runPreview(fixturePath("bar-chart"), 1, { width: 100 });
       expect(result.success).toBe(true);
-      if (!result.success) return;
+      if (!result.success) {
+        return;
+      }
 
       const ascii = result.data.slides[0]!.ascii;
       expect(ascii).toContain("Q1");
@@ -74,13 +81,15 @@ describe("preview command - builder fixtures", () => {
       expect(ascii).toContain("Q3");
       expect(ascii).toContain("Q4");
       // Bar visualization
-      expect(ascii).toContain("█");
+      expect(ascii).toContain("\u2588");
     });
 
     it("renders a pie chart with percentage distribution", async () => {
       const result = await runPreview(fixturePath("pie-chart"), 1, { width: 100 });
       expect(result.success).toBe(true);
-      if (!result.success) return;
+      if (!result.success) {
+        return;
+      }
 
       const ascii = result.data.slides[0]!.ascii;
       expect(ascii).toContain("Alpha");
@@ -93,19 +102,23 @@ describe("preview command - builder fixtures", () => {
     it("renders a line chart with axis lines", async () => {
       const result = await runPreview(fixturePath("line-chart"), 1, { width: 100 });
       expect(result.success).toBe(true);
-      if (!result.success) return;
+      if (!result.success) {
+        return;
+      }
 
       const ascii = result.data.slides[0]!.ascii;
       expect(ascii).toContain("Jan");
       // Line chart axis characters
-      expect(ascii).toContain("│");
-      expect(ascii).toContain("─");
+      expect(ascii).toContain("\u2502");
+      expect(ascii).toContain("\u2500");
     });
 
     it("renders a multi-series bar chart", async () => {
       const result = await runPreview(fixturePath("multi-series-bar"), 1, { width: 100 });
       expect(result.success).toBe(true);
-      if (!result.success) return;
+      if (!result.success) {
+        return;
+      }
 
       const ascii = result.data.slides[0]!.ascii;
       expect(ascii).toContain("East");
@@ -121,13 +134,15 @@ describe("preview command - builder fixtures", () => {
     it("renders a slide with both a table and a chart", async () => {
       const result = await runPreview(fixturePath("mixed-table-chart"), 1, { width: 120 });
       expect(result.success).toBe(true);
-      if (!result.success) return;
+      if (!result.success) {
+        return;
+      }
 
       const ascii = result.data.slides[0]!.ascii;
       expect(result.data.slides[0]!.shapeCount).toBeGreaterThanOrEqual(2);
       // Both table and chart content should be present
       expect(ascii).toContain("Metric");
-      expect(ascii).toContain("█");
+      expect(ascii).toContain("\u2588");
     });
   });
 

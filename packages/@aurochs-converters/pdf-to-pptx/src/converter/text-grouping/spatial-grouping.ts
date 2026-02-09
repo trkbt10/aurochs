@@ -265,11 +265,11 @@ function detectGuttersFromXRanges(
   const minGutterBins = Math.max(2, Math.round((pageWidth * minGutterWidthRatio) / binSize));
 
   const segments: { s: number; e: number; meanOcc: number }[] = [];
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable segment start index
   let s = -1;
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable occupancy sum
   let sum = 0;
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable segment count
   let cnt = 0;
 
   for (let i = edgeMarginBins; i < bins - edgeMarginBins; i++) {
@@ -331,7 +331,7 @@ function buildColumnIntervals(pageWidth: number, gutters: readonly Gutter[]): { 
     return [{ x0: 0, x1: pageWidth }];
   }
   const intervals: { x0: number; x1: number }[] = [];
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable position tracker
   let cur = 0;
   for (const g of gutters) {
     const leftEnd = Math.max(cur, g.x0);
@@ -359,9 +359,9 @@ function assignXRangeToColumn(args: {
     return -1;
   }
 
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable best-match index
   let best = 0;
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable best overlap score
   let bestOv = -1;
   for (let i = 0; i < intervals.length; i++) {
     const iv = intervals[i]!;
@@ -737,7 +737,7 @@ function clusterIntoLines(texts: readonly PdfText[], options: Required<SpatialGr
   const items = texts.map((t) => ({ t, baseline: getBaselineY(t) })).sort((a, b) => b.baseline - a.baseline);
 
   const clusters: PdfText[][] = [];
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable cluster state for incremental averaging
   let current: {
     texts: PdfText[];
     meanBaseline: number;
@@ -840,7 +840,7 @@ function splitIntoAdjacentGroups(
 
   const sorted = [...texts].sort((a, b) => a.x - b.x);
   const groups: PdfText[][] = [];
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable group accumulator
   let current: PdfText[] = [sorted[0]!];
 
   for (let i = 1; i < sorted.length; i++) {
@@ -962,7 +962,7 @@ function groupIntoLinesWithColumns(args: {
   const paragraphs: GroupedParagraph[] = [];
 
   const usePageColumns = options.enablePageColumnDetection && pageWidth !== undefined && pageWidth > 0;
-  const pageIntervals = (() => {
+  const resolvePageIntervals = (): { x0: number; x1: number }[] | undefined => {
     if (!usePageColumns) {
       return undefined;
     }
@@ -970,14 +970,15 @@ function groupIntoLinesWithColumns(args: {
     const gutters = detectGuttersFromXRanges(ranges, pageWidth, options);
     const intervals = buildColumnIntervals(pageWidth, gutters);
     return intervals.length >= 2 ? intervals : undefined;
-  })();
+  };
+  const pageIntervals = resolvePageIntervals();
 
   for (const lineTexts of lineClusters) {
     // Page-level column assignment can be too aggressive for diagram-like PDFs:
     // small labels that happen to cross an inferred gutter can get split into
     // separate "column" segments (e.g. "ベ" | "クトル生成"). Avoid applying
     // page columns for narrow lines.
-    const shouldUsePageIntervalsForLine = (() => {
+    const checkShouldUsePageIntervals = (): boolean => {
       if (!pageIntervals) {
         return false;
       }
@@ -988,7 +989,8 @@ function groupIntoLinesWithColumns(args: {
       const maxX = Math.max(...lineTexts.map((t) => t.x + t.width));
       const lineWidth = maxX - minX;
       return lineWidth >= pageWidth * 0.25;
-    })();
+    };
+    const shouldUsePageIntervalsForLine = checkShouldUsePageIntervals();
 
     if (!shouldUsePageIntervalsForLine) {
       const columnGroups = splitIntoColumnGroups(lineTexts, options, blockingZones);
@@ -1190,7 +1192,7 @@ function mergeAdjacentLinesWithColumns(args: {
     });
 
     const blocks: GroupedText[] = [];
-    // eslint-disable-next-line no-restricted-syntax
+    // eslint-disable-next-line no-restricted-syntax -- mutable paragraph accumulator for block merging
     let current: GroupedParagraph[] = [];
 
     for (const p of sorted) {
@@ -1247,7 +1249,7 @@ function mergeAdjacentLinesWithColumns(args: {
       return a.b.minX - b.b.minX;
     });
 
-    // eslint-disable-next-line no-restricted-syntax
+    // eslint-disable-next-line no-restricted-syntax -- mutable paragraph accumulator for column merging
     let current: GroupedParagraph[] = [];
     for (const it of sorted) {
       if (current.length === 0) {

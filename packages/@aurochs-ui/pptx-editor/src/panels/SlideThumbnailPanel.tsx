@@ -69,6 +69,7 @@ function getDefaultLayoutPath(slides: readonly SlideWithId[]): string | undefine
   return undefined;
 }
 
+/** Slide thumbnail panel with full slide management */
 export function SlideThumbnailPanel({ slideWidth, slideHeight, renderThumbnail }: SlideThumbnailPanelProps) {
   const { document, dispatch, activeSlide, slideOperations } = usePresentationEditor();
 

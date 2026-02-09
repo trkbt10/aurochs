@@ -21,13 +21,18 @@ const DASH_MAP: Record<string, OutlineFormatting["style"]> = {
   sysDashDotDot: "dashed",
 };
 
+/** Extract color hex string from outline line properties */
+function extractOutlineColor(value: Line): string | undefined {
+  if (value.fill?.type === "solidFill") {
+    const c = value.fill.color;
+    return c.spec.type === "srgb" ? `#${c.spec.value}` : "#000000";
+  }
+  return undefined;
+}
+
 export const pptxOutlineAdapter: FormattingAdapter<Line, OutlineFormatting> = {
   toGeneric(value: Line): OutlineFormatting {
-    let color: string | undefined;
-    if (value.fill?.type === "solidFill") {
-      const c = value.fill.color;
-      color = c.spec.type === "srgb" ? `#${c.spec.value}` : "#000000";
-    }
+    const color = extractOutlineColor(value);
 
     return {
       width: value.width !== undefined ? (value.width as number) : undefined,

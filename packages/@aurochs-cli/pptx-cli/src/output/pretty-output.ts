@@ -323,7 +323,9 @@ function formatSlideRanges(numbers: readonly number[]): string {
   }
 
   const ranges: string[] = [];
+  // eslint-disable-next-line no-restricted-syntax -- mutable range tracking
   let start = numbers[0]!;
+  // eslint-disable-next-line no-restricted-syntax -- mutable range tracking
   let end = start;
 
   for (let i = 1; i < numbers.length; i++) {

@@ -687,6 +687,36 @@ function parseHyperlinkMouseOver(rPr: XmlElement): HyperlinkMouseOver | undefine
   };
 }
 
+/** Resolve underline line: explicit uLn > follow-text (uLnTx) > undefined */
+function resolveUnderlineLine(
+  uLn: XmlElement | undefined,
+  uLnTx: XmlElement | undefined,
+  textOutline: ReturnType<typeof parseLine> | undefined,
+): ReturnType<typeof parseLine> | undefined {
+  if (uLn) {
+    return parseLine(uLn);
+  }
+  if (uLnTx) {
+    return textOutline;
+  }
+  return undefined;
+}
+
+/** Resolve underline fill: explicit uFill > follow-text (uFillTx) > undefined */
+function resolveUnderlineFill(
+  uFill: XmlElement | undefined,
+  fillFollowText: boolean,
+  fillFromText: ReturnType<typeof parseFillFromParent> | undefined,
+): ReturnType<typeof parseFillFromParent> | undefined {
+  if (uFill) {
+    return parseFillFromParent(uFill);
+  }
+  if (fillFollowText) {
+    return fillFromText;
+  }
+  return undefined;
+}
+
 type ResolveUnderlineColorOptions = {
   readonly underlineColor: ReturnType<typeof parseColorFromParent> | undefined;
   readonly underlineLineFollowText: boolean;
@@ -771,15 +801,11 @@ export function parseRunProperties(rPr: XmlElement | undefined): RunProperties |
   // @see ECMA-376 Part 1, Section 20.1.8.25 (effectLst), 20.1.8.24 (effectDag)
   const effects = parseEffects(rPr);
 
-  const underlineLine = uLn ? parseLine(uLn) : uLnTx ? textOutline : undefined;
+  const underlineLine = resolveUnderlineLine(uLn, uLnTx, textOutline);
   const underlineFillFollowText = uFillTx !== undefined;
   const underlineLineFollowText = uLnTx !== undefined;
   const underlineFillFromText = fill ?? (color ? { type: "solidFill", color } : undefined);
-  const underlineFill = uFill
-    ? parseFillFromParent(uFill)
-    : underlineFillFollowText
-      ? underlineFillFromText
-      : undefined;
+  const underlineFill = resolveUnderlineFill(uFill, underlineFillFollowText, underlineFillFromText);
   const underlineColor = resolveUnderlineColor({
     underlineColor: uLn ? parseColorFromParent(uLn) : undefined,
     underlineLineFollowText,

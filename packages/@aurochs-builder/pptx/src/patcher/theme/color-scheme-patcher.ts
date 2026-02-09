@@ -33,6 +33,26 @@ function upsertChildBeforeExtLst(parent: XmlElement, childName: string, newChild
   return { ...parent, children: nextChildren };
 }
 
+/** Build the color scheme entry element, preserving extLst if present */
+function buildSchemeEntry(
+  existingEntry: XmlElement | undefined,
+  entryName: string,
+  color: Color,
+): XmlElement {
+  if (!existingEntry) {
+    return createElement(entryName, {}, [serializeColor(color)]);
+  }
+
+  const preserved: XmlNode[] = existingEntry.children.filter((c) => {
+    if (!isXmlElement(c)) {
+      return true;
+    }
+    return c.name === "a:extLst";
+  });
+
+  return createElement(existingEntry.name, { ...existingEntry.attrs }, [serializeColor(color), ...preserved]);
+}
+
 /**
  * Patch a single scheme color (e.g., accent1).
  *
@@ -57,20 +77,7 @@ export function patchSchemeColor(colorScheme: XmlElement, name: SchemeColorName,
   const entryName = schemeChildName(name);
   const existingEntry = colorScheme.children.find((c): c is XmlElement => isXmlElement(c) && c.name === entryName);
 
-  const updatedEntry = (() => {
-    if (!existingEntry) {
-      return createElement(entryName, {}, [serializeColor(color)]);
-    }
-
-    const preserved: XmlNode[] = existingEntry.children.filter((c) => {
-      if (!isXmlElement(c)) {
-        return true;
-      }
-      return c.name === "a:extLst";
-    });
-
-    return createElement(existingEntry.name, { ...existingEntry.attrs }, [serializeColor(color), ...preserved]);
-  })();
+  const updatedEntry = buildSchemeEntry(existingEntry, entryName, color);
 
   return upsertChildBeforeExtLst(colorScheme, entryName, updatedEntry);
 }

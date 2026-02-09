@@ -18,8 +18,32 @@ import { isMixed, getExtractionValue } from "../../editors/text/mixed-properties
  * Falls back to "000000" for non-sRGB colors.
  */
 function colorToHex(color: Color | undefined): string | undefined {
-  if (!color) return undefined;
+  if (!color) {
+    return undefined;
+  }
   return color.spec.type === "srgb" ? `#${color.spec.value}` : "#000000";
+}
+
+/** Resolve underline style based on toggle and current value */
+function resolveUnderlineStyle(
+  enabled: boolean | undefined,
+  current: RunProperties["underline"],
+): RunProperties["underline"] {
+  if (!enabled) {
+    return undefined;
+  }
+  return current && current !== "none" ? current : "sng";
+}
+
+/** Resolve strike style based on toggle and current value */
+function resolveStrikeStyle(
+  enabled: boolean | undefined,
+  current: RunProperties["strike"],
+): RunProperties["strike"] {
+  if (!enabled) {
+    return undefined;
+  }
+  return current && current !== "noStrike" ? current : "sngStrike";
 }
 
 /**
@@ -51,18 +75,10 @@ export const pptxTextAdapter: FormattingAdapter<RunProperties, TextFormatting> =
       result.italic = update.italic || undefined;
     }
     if ("underline" in update) {
-      result.underline = update.underline
-        ? current.underline && current.underline !== "none"
-          ? current.underline
-          : "sng"
-        : undefined;
+      result.underline = resolveUnderlineStyle(update.underline, current.underline);
     }
     if ("strikethrough" in update) {
-      result.strike = update.strikethrough
-        ? current.strike && current.strike !== "noStrike"
-          ? current.strike
-          : "sngStrike"
-        : undefined;
+      result.strike = resolveStrikeStyle(update.strikethrough, current.strike);
     }
     if ("fontSize" in update && update.fontSize !== undefined) {
       result.fontSize = pt(update.fontSize) as Points;
@@ -85,18 +101,36 @@ export const pptxTextAdapter: FormattingAdapter<RunProperties, TextFormatting> =
  * Convert PPTX MixedRunProperties to generic MixedContext.
  */
 export function pptxMixedRunToContext(mixed: MixedRunProperties | undefined): MixedContext | undefined {
-  if (!mixed) return undefined;
+  if (!mixed) {
+    return undefined;
+  }
 
   const fields = new Set<string>();
 
-  if (isMixed(mixed.fontFamily)) fields.add("fontFamily");
-  if (isMixed(mixed.fontSize)) fields.add("fontSize");
-  if (isMixed(mixed.bold)) fields.add("bold");
-  if (isMixed(mixed.italic)) fields.add("italic");
-  if (isMixed(mixed.underline)) fields.add("underline");
-  if (isMixed(mixed.strike)) fields.add("strikethrough");
-  if (isMixed(mixed.color)) fields.add("textColor");
-  if (isMixed(mixed.highlightColor)) fields.add("highlightColor");
+  if (isMixed(mixed.fontFamily)) {
+    fields.add("fontFamily");
+  }
+  if (isMixed(mixed.fontSize)) {
+    fields.add("fontSize");
+  }
+  if (isMixed(mixed.bold)) {
+    fields.add("bold");
+  }
+  if (isMixed(mixed.italic)) {
+    fields.add("italic");
+  }
+  if (isMixed(mixed.underline)) {
+    fields.add("underline");
+  }
+  if (isMixed(mixed.strike)) {
+    fields.add("strikethrough");
+  }
+  if (isMixed(mixed.color)) {
+    fields.add("textColor");
+  }
+  if (isMixed(mixed.highlightColor)) {
+    fields.add("highlightColor");
+  }
   if (isMixed(mixed.baseline)) {
     fields.add("superscript");
     fields.add("subscript");

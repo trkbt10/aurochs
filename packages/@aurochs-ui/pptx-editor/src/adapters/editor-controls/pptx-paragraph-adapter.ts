@@ -53,8 +53,12 @@ function toPptxAlign(align: HorizontalAlignment | undefined): string | undefined
 
 /** Extract line spacing as multiplier from PPTX LineSpacing. */
 function lineSpacingToMultiplier(ls: LineSpacing | undefined): number | undefined {
-  if (!ls) return undefined;
-  if (ls.type === "percent") return (ls.value as number) / 100;
+  if (!ls) {
+    return undefined;
+  }
+  if (ls.type === "percent") {
+    return (ls.value as number) / 100;
+  }
   return undefined; // points-based spacing not representable as multiplier
 }
 
@@ -98,17 +102,33 @@ export const pptxParagraphAdapter: FormattingAdapter<ParagraphProperties, Paragr
  * Convert PPTX MixedParagraphProperties to generic MixedContext.
  */
 export function pptxMixedParagraphToContext(mixed: MixedParagraphProperties | undefined): MixedContext | undefined {
-  if (!mixed) return undefined;
+  if (!mixed) {
+    return undefined;
+  }
 
   const fields = new Set<string>();
 
-  if (isMixed(mixed.alignment)) fields.add("alignment");
-  if (isMixed(mixed.marginLeft)) fields.add("indentLeft");
-  if (isMixed(mixed.marginRight)) fields.add("indentRight");
-  if (isMixed(mixed.indent)) fields.add("firstLineIndent");
-  if (isMixed(mixed.spaceBefore)) fields.add("spaceBefore");
-  if (isMixed(mixed.spaceAfter)) fields.add("spaceAfter");
-  if (isMixed(mixed.lineSpacing)) fields.add("lineSpacing");
+  if (isMixed(mixed.alignment)) {
+    fields.add("alignment");
+  }
+  if (isMixed(mixed.marginLeft)) {
+    fields.add("indentLeft");
+  }
+  if (isMixed(mixed.marginRight)) {
+    fields.add("indentRight");
+  }
+  if (isMixed(mixed.indent)) {
+    fields.add("firstLineIndent");
+  }
+  if (isMixed(mixed.spaceBefore)) {
+    fields.add("spaceBefore");
+  }
+  if (isMixed(mixed.spaceAfter)) {
+    fields.add("spaceAfter");
+  }
+  if (isMixed(mixed.lineSpacing)) {
+    fields.add("lineSpacing");
+  }
 
   return fields.size > 0 ? { mixedFields: fields } : undefined;
 }

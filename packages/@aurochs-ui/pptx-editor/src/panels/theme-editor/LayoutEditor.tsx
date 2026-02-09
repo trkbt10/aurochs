@@ -250,12 +250,10 @@ export function LayoutEditor({
   // Helper to render layout thumbnail or placeholder
   const renderThumbnailContent = useCallback(
     (shapes: readonly Shape[] | undefined) => {
-      const hasShapes = shapes && shapes.length > 0;
-      return hasShapes ? (
-        <LayoutThumbnail shapes={shapes as Shape[]} slideSize={slideSize} width={40} />
-      ) : (
-        <span>...</span>
-      );
+      if (shapes && shapes.length > 0) {
+        return <LayoutThumbnail shapes={shapes as Shape[]} slideSize={slideSize} width={40} />;
+      }
+      return <span>...</span>;
     },
     [slideSize],
   );

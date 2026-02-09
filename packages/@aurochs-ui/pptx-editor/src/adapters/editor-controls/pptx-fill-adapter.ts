@@ -31,7 +31,9 @@ export const pptxFillAdapter: FormattingAdapter<Fill, FillFormatting> = {
   },
 
   applyUpdate(current: Fill, update: Partial<FillFormatting>): Fill {
-    if (!update.type) return current;
+    if (!update.type) {
+      return current;
+    }
     if (update.type === "none") {
       return { type: "noFill" };
     }

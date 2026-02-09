@@ -135,7 +135,7 @@ const hiddenInputStyle: CSSProperties = {
 const ACCEPTED_FILE_TYPES = ".png,.jpg,.jpeg,.gif,.svg,.mp4,.mp3,.xlsx,.docx,.pptx";
 
 /** Generate unique ID for uploaded assets */
-// eslint-disable-next-line no-restricted-syntax
+// eslint-disable-next-line no-restricted-syntax -- mutable counter for generating unique asset IDs
 let uploadedAssetCounter = 0;
 function generateUploadedAssetId(): string {
   uploadedAssetCounter += 1;
@@ -207,7 +207,7 @@ function readAssetData(
     const mimeType = getMimeTypeFromPath(path);
     const dataUrl = type === "image" && mimeType ? toDataUrl(buffer, mimeType) : undefined;
     return { size, dataUrl };
-  } catch {
+  } catch (_error: unknown) {
     return {};
   }
 }
@@ -455,7 +455,7 @@ async function fileToAssetInfo(file: File): Promise<AssetInfo | null> {
       // dataUrl is used for image preview and canvas drop
       dataUrl: assetType === "image" ? dataUrl : undefined,
     };
-  } catch {
+  } catch (_error: unknown) {
     return null;
   }
 }

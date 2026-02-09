@@ -115,6 +115,32 @@ function applyFormatScheme(themeElements: XmlElement, scheme: FormatScheme): Xml
   return replaceChildByName(themeElements, "a:fmtScheme", updated);
 }
 
+/** Apply a single theme change by dispatching to the appropriate handler */
+function applyThemeChangeToElements(themeElements: XmlElement, change: ThemeChange): XmlElement {
+  switch (change.type) {
+    case "colorScheme":
+      return applyColorScheme(themeElements, change.scheme);
+    case "fontScheme":
+      return applyFontScheme(themeElements, change.scheme);
+    case "formatScheme":
+      return applyFormatScheme(themeElements, change.scheme);
+  }
+}
+
+/** Apply a single theme change to the theme XML document */
+function applyThemeChange(current: XmlDocument, change: ThemeChange): XmlDocument {
+  return updateDocumentRoot(current, (root) => {
+    if (root.name !== "a:theme") {
+      throw new Error(`patchTheme: unexpected root element: ${root.name}`);
+    }
+
+    const themeElements = requireThemeElements(root);
+    const updatedThemeElements = applyThemeChangeToElements(themeElements, change);
+
+    return replaceChildByName(root, "a:themeElements", updatedThemeElements);
+  });
+}
+
 /**
  * Apply theme changes to theme.xml.
  */
@@ -126,25 +152,5 @@ export function patchTheme(themeXml: XmlDocument, changes: readonly ThemeChange[
     throw new Error("patchTheme requires changes.");
   }
 
-  return changes.reduce((current, change) => {
-    return updateDocumentRoot(current, (root) => {
-      if (root.name !== "a:theme") {
-        throw new Error(`patchTheme: unexpected root element: ${root.name}`);
-      }
-
-      const themeElements = requireThemeElements(root);
-      const updatedThemeElements = (() => {
-        switch (change.type) {
-          case "colorScheme":
-            return applyColorScheme(themeElements, change.scheme);
-          case "fontScheme":
-            return applyFontScheme(themeElements, change.scheme);
-          case "formatScheme":
-            return applyFormatScheme(themeElements, change.scheme);
-        }
-      })();
-
-      return replaceChildByName(root, "a:themeElements", updatedThemeElements);
-    });
-  }, themeXml);
+  return changes.reduce((current, change) => applyThemeChange(current, change), themeXml);
 }

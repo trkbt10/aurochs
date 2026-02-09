@@ -141,6 +141,25 @@ export function applyBackground(
   });
 }
 
+/** Resolve image data and mime type from a BackgroundImageSpec */
+async function resolveImageData(
+  spec: BackgroundImageSpec,
+  specDir: string,
+): Promise<{ readonly arrayBuffer: ArrayBuffer; readonly mimeType: ReturnType<typeof detectImageMimeType> }> {
+  if (spec.data) {
+    const arrayBuffer = uint8ArrayToArrayBuffer(spec.data);
+    const mimeType = (spec.mimeType ?? "image/png") as ReturnType<typeof detectImageMimeType>;
+    return { arrayBuffer, mimeType };
+  }
+  if (spec.path) {
+    const imagePath = path.resolve(specDir, spec.path);
+    const mimeType = detectImageMimeType(imagePath);
+    const arrayBuffer = await readFileToArrayBuffer(imagePath);
+    return { arrayBuffer, mimeType };
+  }
+  throw new Error("BackgroundImageSpec requires either 'path' or 'data'");
+}
+
 /**
  * Apply image background to slide XML document (async for file loading)
  */
@@ -149,19 +168,8 @@ export async function applyImageBackground(
   spec: BackgroundImageSpec,
   ctx: { specDir: string; zipPackage: ZipPackage; slidePath: string },
 ): Promise<XmlDocument> {
-  let arrayBuffer: ArrayBuffer;
-  let mimeType: ReturnType<typeof detectImageMimeType>;
+  const { arrayBuffer, mimeType } = await resolveImageData(spec, ctx.specDir);
 
-  if (spec.data) {
-    arrayBuffer = uint8ArrayToArrayBuffer(spec.data);
-    mimeType = (spec.mimeType ?? "image/png") as typeof mimeType;
-  } else if (spec.path) {
-    const imagePath = path.resolve(ctx.specDir, spec.path);
-    mimeType = detectImageMimeType(imagePath);
-    arrayBuffer = await readFileToArrayBuffer(imagePath);
-  } else {
-    throw new Error("BackgroundImageSpec requires either 'path' or 'data'");
-  }
 
   const { rId } = addMedia({
     pkg: ctx.zipPackage,

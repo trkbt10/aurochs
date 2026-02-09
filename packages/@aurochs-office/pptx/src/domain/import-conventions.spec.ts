@@ -37,6 +37,7 @@ describe("PPTX domain import conventions", () => {
     const tsFiles = (await listTsFilesRecursively(domainRoot)).filter((filePath) => !excluded.has(filePath));
 
     const importsColorFromDomainColorTypes: string[] = [];
+    // eslint-disable-next-line no-restricted-syntax -- mutable counter
     let importsColorFromOoxml = 0;
 
     const bannedImportPattern =

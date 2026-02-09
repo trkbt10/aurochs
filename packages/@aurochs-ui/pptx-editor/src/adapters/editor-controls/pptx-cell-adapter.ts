@@ -7,13 +7,18 @@
 import type { TableCellProperties } from "@aurochs-office/pptx/domain/table/types";
 import type { FormattingAdapter, CellFormatting } from "@aurochs-ui/editor-controls/types";
 
+/** Extract background color hex string from table cell properties */
+function extractBackgroundColor(value: TableCellProperties): string | undefined {
+  if (value.fill?.type === "solidFill") {
+    const c = value.fill.color;
+    return c.spec.type === "srgb" ? `#${c.spec.value}` : undefined;
+  }
+  return undefined;
+}
+
 export const pptxCellAdapter: FormattingAdapter<TableCellProperties, CellFormatting> = {
   toGeneric(value: TableCellProperties): CellFormatting {
-    let backgroundColor: string | undefined;
-    if (value.fill?.type === "solidFill") {
-      const c = value.fill.color;
-      backgroundColor = c.spec.type === "srgb" ? `#${c.spec.value}` : undefined;
-    }
+    const backgroundColor = extractBackgroundColor(value);
 
     return {
       verticalAlignment: value.anchor,

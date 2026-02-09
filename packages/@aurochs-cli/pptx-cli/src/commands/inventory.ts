@@ -25,9 +25,13 @@ export async function runInventory(filePath: string): Promise<Result<InventoryDa
     const { presentationFile } = await loadPresentationBundle(filePath);
     const presentation = openPresentation(presentationFile);
 
+    // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
     let totalImages = 0;
+    // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
     let totalTables = 0;
+    // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
     let totalCharts = 0;
+    // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
     let totalDiagrams = 0;
     const textOnlySlides: number[] = [];
 

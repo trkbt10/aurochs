@@ -109,6 +109,9 @@ function getPlainTextFromParagraphContent(content: DocxParagraphContent): string
     case "bookmarkEnd":
     case "commentRangeStart":
     case "commentRangeEnd":
+    case "simpleField":
+      return "";
+    default:
       return "";
   }
 }
@@ -132,9 +135,14 @@ function getPlainTextFromRunContent(content: DocxRunContent): string {
     case "break":
       return content.breakType === "page" || content.breakType === "column" ? "" : "\n";
     case "symbol":
-      return ""; // Symbols are not directly convertible to plain text
+      return "";
     case "drawing":
-      return ""; // Drawings are not convertible to plain text
+      return "";
+    case "fieldChar":
+    case "instrText":
+      return "";
+    default:
+      return "";
   }
 }
 

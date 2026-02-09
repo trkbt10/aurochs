@@ -115,7 +115,7 @@ describe("applyFormatToRange", () => {
 describe("toggleFormatOnRange", () => {
   it("adds bold when not present", () => {
     const paragraph = createParagraphWithRuns([{ text: "Hello" }]);
-    const result = toggleFormatOnRange(paragraph, 0, 5, "b");
+    const result = toggleFormatOnRange({ paragraph, start: 0, end: 5, property: "b" });
 
     const runs = getRuns(result);
     expect(runs[0].properties?.b).toBe(true);
@@ -123,7 +123,7 @@ describe("toggleFormatOnRange", () => {
 
   it("removes bold when present", () => {
     const paragraph = createParagraphWithRuns([{ text: "Hello", properties: { b: true } }]);
-    const result = toggleFormatOnRange(paragraph, 0, 5, "b");
+    const result = toggleFormatOnRange({ paragraph, start: 0, end: 5, property: "b" });
 
     const runs = getRuns(result);
     expect(runs[0].properties?.b).toBeUndefined();
@@ -131,7 +131,7 @@ describe("toggleFormatOnRange", () => {
 
   it("toggles italic", () => {
     const paragraph = createParagraphWithRuns([{ text: "Hello" }]);
-    const result = toggleFormatOnRange(paragraph, 0, 5, "i");
+    const result = toggleFormatOnRange({ paragraph, start: 0, end: 5, property: "i" });
 
     const runs = getRuns(result);
     expect(runs[0].properties?.i).toBe(true);
@@ -139,7 +139,7 @@ describe("toggleFormatOnRange", () => {
 
   it("toggles strike", () => {
     const paragraph = createParagraphWithRuns([{ text: "Hello", properties: { strike: true } }]);
-    const result = toggleFormatOnRange(paragraph, 0, 5, "strike");
+    const result = toggleFormatOnRange({ paragraph, start: 0, end: 5, property: "strike" });
 
     const runs = getRuns(result);
     expect(runs[0].properties?.strike).toBeUndefined();
@@ -147,7 +147,7 @@ describe("toggleFormatOnRange", () => {
 
   it("toggles caps", () => {
     const paragraph = createParagraphWithRuns([{ text: "Hello" }]);
-    const result = toggleFormatOnRange(paragraph, 0, 5, "caps");
+    const result = toggleFormatOnRange({ paragraph, start: 0, end: 5, property: "caps" });
 
     const runs = getRuns(result);
     expect(runs[0].properties?.caps).toBe(true);
@@ -155,7 +155,7 @@ describe("toggleFormatOnRange", () => {
 
   it("toggles smallCaps", () => {
     const paragraph = createParagraphWithRuns([{ text: "Hello" }]);
-    const result = toggleFormatOnRange(paragraph, 0, 5, "smallCaps");
+    const result = toggleFormatOnRange({ paragraph, start: 0, end: 5, property: "smallCaps" });
 
     const runs = getRuns(result);
     expect(runs[0].properties?.smallCaps).toBe(true);

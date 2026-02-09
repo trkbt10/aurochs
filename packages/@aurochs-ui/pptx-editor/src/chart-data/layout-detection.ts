@@ -95,6 +95,7 @@ export function detectChartDataLayout(worksheet: XlsxWorksheet): ChartDataLayout
   const seriesStartCol = 2; // Column B
 
   // Count categories (non-empty cells in column A starting from row 2)
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator for category counting
   let categoryCount = 0;
   for (const row of worksheet.rows) {
     const rowNum = row.rowNumber as number;
@@ -109,6 +110,7 @@ export function detectChartDataLayout(worksheet: XlsxWorksheet): ChartDataLayout
   }
 
   // Count series (non-empty cells in header row starting from column B)
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator for series counting
   let seriesCount = 0;
   const headerRowData = worksheet.rows.find((r) => (r.rowNumber as number) === headerRow);
   if (headerRowData) {

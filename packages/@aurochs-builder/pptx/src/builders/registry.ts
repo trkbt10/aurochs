@@ -113,6 +113,17 @@ export type AsyncBuilder<TSpec> = (spec: TSpec, id: string, ctx: BuildContext) =
 // Shape Builder
 // =============================================================================
 
+/** Resolve geometry from custom spec or preset */
+function resolveGeometry(
+  customGeometry: ShapeSpec["customGeometry"],
+  preset: string,
+): SpShape["properties"]["geometry"] {
+  if (customGeometry) {
+    return buildCustomGeometryFromSpec(customGeometry);
+  }
+  return { type: "preset", preset, adjustValues: [] };
+}
+
 function buildSpShape(spec: ShapeSpec, id: string): SpShape {
   const preset = PRESET_MAP[spec.type];
   if (!preset) {
@@ -133,9 +144,7 @@ function buildSpShape(spec: ShapeSpec, id: string): SpShape {
         flipH: spec.flipH ?? false,
         flipV: spec.flipV ?? false,
       },
-      geometry: spec.customGeometry
-        ? buildCustomGeometryFromSpec(spec.customGeometry)
-        : { type: "preset", preset, adjustValues: [] },
+      geometry: resolveGeometry(spec.customGeometry, preset),
       fill: spec.fill ? buildFill(spec.fill) : undefined,
       line: buildLineFromShapeSpec(spec),
       effects: spec.effects ? buildEffects(spec.effects) : undefined,
@@ -275,6 +284,40 @@ function buildPicShape({
   };
 }
 
+/** Resolve media array buffer from spec.media */
+async function resolveMediaArrayBuffer(
+  media: { readonly data?: Uint8Array; readonly path?: string },
+  specDir: string,
+): Promise<ArrayBuffer> {
+  if (media.data) {
+    return uint8ArrayToArrayBuffer(media.data);
+  }
+  if (media.path) {
+    const mediaPath = path.resolve(specDir, media.path);
+    return readFileToArrayBuffer(mediaPath);
+  }
+  throw new Error("MediaEmbedSpec requires either 'path' or 'data'");
+}
+
+/** Resolve image data and mime type from an ImageSpec */
+async function resolveImageSpecData(
+  spec: ImageSpec,
+  specDir: string,
+): Promise<{ readonly arrayBuffer: ArrayBuffer; readonly mimeType: MediaType }> {
+  if (spec.data) {
+    const arrayBuffer = uint8ArrayToArrayBuffer(spec.data);
+    const mimeType = (spec.mimeType ?? "image/png") as MediaType;
+    return { arrayBuffer, mimeType };
+  }
+  if (spec.path) {
+    const imagePath = path.resolve(specDir, spec.path);
+    const mimeType = detectImageMimeType(imagePath);
+    const arrayBuffer = await readFileToArrayBuffer(imagePath);
+    return { arrayBuffer, mimeType };
+  }
+  throw new Error("ImageSpec requires either 'path' or 'data'");
+}
+
 async function buildEmbeddedMedia(
   spec: ImageSpec,
   ctx: BuildContext,
@@ -283,15 +326,7 @@ async function buildEmbeddedMedia(
     return undefined;
   }
 
-  let mediaArrayBuffer: ArrayBuffer;
-  if (spec.media.data) {
-    mediaArrayBuffer = uint8ArrayToArrayBuffer(spec.media.data);
-  } else if (spec.media.path) {
-    const mediaPath = path.resolve(ctx.specDir, spec.media.path);
-    mediaArrayBuffer = await readFileToArrayBuffer(mediaPath);
-  } else {
-    throw new Error("MediaEmbedSpec requires either 'path' or 'data'");
-  }
+  const mediaArrayBuffer = await resolveMediaArrayBuffer(spec.media, ctx.specDir);
 
   const mediaType = detectEmbeddedMediaType(spec.media);
 
@@ -306,19 +341,7 @@ async function buildEmbeddedMedia(
 }
 
 export const imageBuilder: AsyncBuilder<ImageSpec> = async (spec, id, ctx) => {
-  let arrayBuffer: ArrayBuffer;
-  let mimeType: MediaType;
-
-  if (spec.data) {
-    arrayBuffer = uint8ArrayToArrayBuffer(spec.data);
-    mimeType = (spec.mimeType ?? "image/png") as MediaType;
-  } else if (spec.path) {
-    const imagePath = path.resolve(ctx.specDir, spec.path);
-    mimeType = detectImageMimeType(imagePath);
-    arrayBuffer = await readFileToArrayBuffer(imagePath);
-  } else {
-    throw new Error("ImageSpec requires either 'path' or 'data'");
-  }
+  const { arrayBuffer, mimeType } = await resolveImageSpecData(spec, ctx.specDir);
 
   const { rId } = addMedia({
     pkg: ctx.zipPackage,

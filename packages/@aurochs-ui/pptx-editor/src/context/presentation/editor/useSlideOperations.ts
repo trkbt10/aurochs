@@ -6,7 +6,7 @@
  */
 
 import { useCallback } from "react";
-import type { SlideId, PresentationDocument } from "@aurochs-office/pptx/app";
+import type { SlideId } from "@aurochs-office/pptx/app";
 import {
   addSlide as addSlideToDocument,
   deleteSlide,
@@ -14,8 +14,6 @@ import {
   duplicateSlide as duplicateSlideToDocument,
   getSlideIndex,
 } from "./slide";
-import { pushHistory } from "@aurochs-ui/editor-core/history";
-import { createEmptySelection } from "../../slide/state";
 import type { PresentationEditorState, PresentationEditorAction } from "./types";
 
 export type SlideOperationsResult = {
@@ -116,6 +114,7 @@ export function useSlideOperations(
       const maxDeletions = document.slides.length - 1;
       const slidesToDelete = slideIds.slice(0, maxDeletions);
 
+      // eslint-disable-next-line no-restricted-syntax -- mutable accumulator for sequential slide deletions
       let currentDoc = document;
       for (const slideId of slidesToDelete) {
         currentDoc = deleteSlide(currentDoc, slideId);
@@ -136,7 +135,9 @@ export function useSlideOperations(
 
   const handleDuplicateSlides = useCallback(
     async (slideIds: readonly SlideId[]) => {
+      // eslint-disable-next-line no-restricted-syntax -- mutable accumulator for sequential slide duplications
       let currentDoc = document;
+      // eslint-disable-next-line no-restricted-syntax -- tracking last created slide ID
       let lastNewSlideId: SlideId | undefined;
 
       for (const slideId of slideIds) {

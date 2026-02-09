@@ -85,8 +85,21 @@ const separatorStyle: CSSProperties = {
 const MIXED_PLACEHOLDER = "Mixed";
 
 function getLabel(extraction: PropertyExtraction<unknown>, label: string, mixedSuffix = " (M)"): string {
-  if (isMixed(extraction)) return label + mixedSuffix;
+  if (isMixed(extraction)) {
+    return label + mixedSuffix;
+  }
   return label;
+}
+
+/** Resolve strike style from update toggle and current value */
+function resolveStrikeFromUpdate(
+  enabled: boolean | undefined,
+  current: StrikeStyle | undefined,
+): StrikeStyle | undefined {
+  if (!enabled) {
+    return undefined;
+  }
+  return current && current !== "noStrike" ? current : "sngStrike";
 }
 
 // =============================================================================
@@ -130,11 +143,7 @@ export function MixedRunPropertiesEditor({
       if ("strikethrough" in update) {
         const currentStrike = getExtractionValue(value.strike);
         parts.push({
-          strike: update.strikethrough
-            ? currentStrike && currentStrike !== "noStrike"
-              ? currentStrike
-              : "sngStrike"
-            : undefined,
+          strike: resolveStrikeFromUpdate(update.strikethrough, currentStrike),
         });
       }
       if ("fontSize" in update && update.fontSize !== undefined) {

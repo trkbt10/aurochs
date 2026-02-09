@@ -17,6 +17,22 @@ import type {
 } from "../../domain";
 import { getBoolAttr, getIndexAttr, getIntAttr } from "../primitive";
 
+/** Parse sound element from a hyperlink */
+function parseHyperlinkSound(hlink: XmlElement): HyperlinkSound | undefined {
+  const snd = getChild(hlink, "a:snd");
+  if (!snd) {
+    return undefined;
+  }
+  const embed = getAttr(snd, "r:embed");
+  if (!embed) {
+    return undefined;
+  }
+  return {
+    embed,
+    name: getAttr(snd, "name"),
+  };
+}
+
 /**
  * Parse hyperlink from cNvPr
  */
@@ -34,21 +50,7 @@ function parseNonVisualHyperlink(
     return undefined;
   }
 
-  const sound = (() => {
-    const snd = getChild(hlink, "a:snd");
-    if (!snd) {
-      return undefined;
-    }
-    const embed = getAttr(snd, "r:embed");
-    if (!embed) {
-      return undefined;
-    }
-    const soundValue: HyperlinkSound = {
-      embed,
-      name: getAttr(snd, "name"),
-    };
-    return soundValue;
-  })();
+  const sound = parseHyperlinkSound(hlink);
 
   return {
     id,

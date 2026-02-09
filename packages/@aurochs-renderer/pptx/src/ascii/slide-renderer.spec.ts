@@ -1,4 +1,6 @@
-import { describe, it, expect } from "bun:test";
+/**
+ * @file Tests for ASCII slide renderer
+ */
 import { renderSlideAscii } from "./slide-renderer";
 import type { AsciiRenderableShape } from "./types";
 import { BOX_CHARS } from "./ascii-canvas";

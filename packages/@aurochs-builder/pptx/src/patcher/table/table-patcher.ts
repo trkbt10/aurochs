@@ -32,6 +32,11 @@ export type TableChange =
       readonly colSpan: number;
     };
 
+/** Exhaustiveness check helper */
+function assertNever(value: never): never {
+  throw new Error(`Unexpected value: ${value}`);
+}
+
 function requireChild(parent: XmlElement, name: string, context: string): XmlElement {
   const child = getChild(parent, name);
   if (!child) {
@@ -139,7 +144,7 @@ function replaceCellAt(row: XmlElement, colIndex: number, newCell: XmlElement): 
     throw new Error(`replaceCellAt: colIndex out of range: ${colIndex}`);
   }
 
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable counter for positional cell/row tracking
   let current = -1;
   const nextChildren = row.children.map((child) => {
     if (!isXmlElement(child) || child.name !== "a:tc") {
@@ -158,9 +163,9 @@ function insertCellAt(row: XmlElement, position: number, newCell: XmlElement): X
   }
 
   const nextChildren: XmlNode[] = [];
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable counter for positional cell/row tracking
   let cellIdx = 0;
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable counter for positional cell/row tracking
   let inserted = false;
   for (const child of row.children) {
     if (isXmlElement(child) && child.name === "a:tc" && cellIdx === position) {
@@ -191,7 +196,7 @@ function removeCellAt(row: XmlElement, colIndex: number): XmlElement {
     throw new Error(`removeCellAt: colIndex out of range: ${colIndex}`);
   }
 
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable counter for positional cell/row tracking
   let current = -1;
   const nextChildren = row.children.filter((child) => {
     if (!isXmlElement(child) || child.name !== "a:tc") {
@@ -210,7 +215,7 @@ function replaceRowAt(table: XmlElement, rowIndex: number, newRow: XmlElement): 
     throw new Error(`patchTable: rowIndex out of range: ${rowIndex}`);
   }
 
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable counter for positional cell/row tracking
   let currentRowIndex = -1;
   const nextChildren = table.children.map((child) => {
     if (!isXmlElement(child) || child.name !== "a:tr") {
@@ -290,7 +295,7 @@ function removeRow(table: XmlElement, rowIndex: number): XmlElement {
     throw new Error(`removeRow: rowIndex out of range: ${rowIndex}`);
   }
 
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable counter for positional cell/row tracking
   let currentRowIndex = -1;
   const nextChildren = table.children.filter((child) => {
     if (!isXmlElement(child) || child.name !== "a:tr") {
@@ -386,7 +391,7 @@ function applyMergeRange({
     const rowIndex = startRow + r;
     const rowEl = rows[rowIndex] as XmlElement;
     const rowChildren: XmlNode[] = [];
-    // eslint-disable-next-line no-restricted-syntax
+    // eslint-disable-next-line no-restricted-syntax -- mutable counter for positional cell/row tracking
     let cellIdx = 0;
     for (const child of rowEl.children) {
       if (isXmlElement(child) && child.name === "a:tc") {
@@ -457,7 +462,7 @@ function applySplitRange({
     const cells = getRowCells(rowEl);
 
     const rowChildren: XmlNode[] = [];
-    // eslint-disable-next-line no-restricted-syntax
+    // eslint-disable-next-line no-restricted-syntax -- mutable counter for positional cell/row tracking
     let cellIdx = 0;
     for (const child of rowEl.children) {
       if (isXmlElement(child) && child.name === "a:tc") {
@@ -496,7 +501,7 @@ function applySplitRange({
 export function patchTable(tableElement: XmlElement, changes: readonly TableChange[]): XmlElement {
   requireTable(tableElement);
 
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable counter for positional cell/row tracking
   let next = tableElement;
   for (const change of changes) {
     switch (change.type) {
@@ -546,7 +551,7 @@ export function patchTable(tableElement: XmlElement, changes: readonly TableChan
         });
         break;
       default:
-        ((_: never) => _)(change);
+        assertNever(change);
     }
   }
 

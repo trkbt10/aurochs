@@ -1,4 +1,6 @@
-import { describe, it, expect } from "bun:test";
+/**
+ * @file Tests for ASCII canvas re-exports from drawing-ml
+ */
 import { createCanvas, setCell, drawBox, drawText, renderCanvas, BOX_CHARS } from "@aurochs-renderer/drawing-ml/ascii";
 
 describe("ascii-canvas (pptx re-export)", () => {

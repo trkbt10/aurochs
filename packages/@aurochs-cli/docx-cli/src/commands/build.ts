@@ -5,43 +5,37 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { success, error, type Result } from "@aurochs-cli/cli-core";
+import { buildDocx, getBuildData } from "@aurochs-builder/docx";
+import type { DocxBuildSpec, DocxBuildData } from "@aurochs-builder/docx";
 
 // =============================================================================
-// Build Spec Types
+// Build Types (re-export for CLI output)
 // =============================================================================
 
-export type BuildSpec = {
-  readonly template: string;
-  readonly output: string;
-  readonly modifications?: unknown; // Reserved for future use
-};
-
-export type BuildData = {
-  readonly outputPath: string;
-  readonly success: boolean;
-};
+/** @deprecated Use DocxBuildSpec from @aurochs-builder/docx instead */
+export type BuildSpec = DocxBuildSpec;
+export type BuildData = DocxBuildData;
 
 /**
  * Build a DOCX file from JSON specification.
- * Currently supports copying a template file.
+ * Generates DOCX from scratch (no template needed).
  */
 export async function runBuild(specPath: string): Promise<Result<BuildData>> {
   try {
     const specJson = await fs.readFile(specPath, "utf-8");
-    const spec: BuildSpec = JSON.parse(specJson);
+    const spec: DocxBuildSpec = JSON.parse(specJson);
     const specDir = path.dirname(specPath);
 
-    const templatePath = path.resolve(specDir, spec.template);
     const outputPath = path.resolve(specDir, spec.output);
 
-    // Verify template exists
-    await fs.access(templatePath);
+    // Build DOCX from spec
+    const docxData = await buildDocx(spec);
 
-    // Copy template to output
+    // Write output file
     await fs.mkdir(path.dirname(outputPath), { recursive: true });
-    await fs.copyFile(templatePath, outputPath);
+    await fs.writeFile(outputPath, docxData);
 
-    return success({ outputPath: spec.output, success: true });
+    return success(getBuildData(spec));
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") {
       return error("FILE_NOT_FOUND", `File not found: ${(err as NodeJS.ErrnoException).path}`);

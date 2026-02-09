@@ -23,12 +23,24 @@ export const pptxTableAdapter: FormattingAdapter<TableProperties, TableStyleBand
   applyUpdate(current: TableProperties, update: Partial<TableStyleBands>): TableProperties {
     const result = { ...current };
 
-    if ("headerRow" in update) result.firstRow = update.headerRow;
-    if ("totalRow" in update) result.lastRow = update.totalRow;
-    if ("firstColumn" in update) result.firstCol = update.firstColumn;
-    if ("lastColumn" in update) result.lastCol = update.lastColumn;
-    if ("bandedRows" in update) result.bandRow = update.bandedRows;
-    if ("bandedColumns" in update) result.bandCol = update.bandedColumns;
+    if ("headerRow" in update) {
+      result.firstRow = update.headerRow;
+    }
+    if ("totalRow" in update) {
+      result.lastRow = update.totalRow;
+    }
+    if ("firstColumn" in update) {
+      result.firstCol = update.firstColumn;
+    }
+    if ("lastColumn" in update) {
+      result.lastCol = update.lastColumn;
+    }
+    if ("bandedRows" in update) {
+      result.bandRow = update.bandedRows;
+    }
+    if ("bandedColumns" in update) {
+      result.bandCol = update.bandedColumns;
+    }
 
     return result;
   },

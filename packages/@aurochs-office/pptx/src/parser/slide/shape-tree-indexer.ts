@@ -89,7 +89,7 @@ export function indexShapeTreeNodes(content: XmlDocument | null): IndexTables {
  */
 function indexShapeTreeNode(node: XmlElement, tables: IndexTables): void {
   // Try p:nvSpPr path (for shapes)
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable: checked across multiple fallback element names
   let nvSpPr = getChild(node, "p:nvSpPr");
 
   // Also check p:nvPicPr (for pictures), p:nvCxnSpPr (for connectors), etc.

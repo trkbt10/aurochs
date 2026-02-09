@@ -67,7 +67,7 @@ function updateChildElement(
   childName: string,
   updater: (child: XmlElement) => XmlElement,
 ): XmlElement {
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable flag tracking whether child was found and replaced
   let updated = false;
   const children = element.children.map((child) => {
     if (child.type !== "element") {

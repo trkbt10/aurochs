@@ -479,7 +479,7 @@ function buildParagraphsFromSegmentedLines(
   const sorted = [...groupedParas].sort((a, b) => b.baselineY - a.baselineY);
 
   const lines: LogicalLine[] = [];
-  // eslint-disable-next-line no-restricted-syntax
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator for baseline clustering
   let current: { baselineY: number; segments: Segment[] } | null = null;
 
   for (const p of sorted) {

@@ -26,15 +26,34 @@ export {
   type ShapeSpec,
 } from "./presentation-session";
 
-// Re-export spec types for MCP consumers
-export type {
-  ImageSpec,
-  ConnectorSpec,
-  TableSpec,
-  GroupSpec,
-  TableUpdateSpec,
-  SlideTransitionSpec,
-  AnimationSpec,
-  CommentSpec,
-  NotesSpec,
+// Local type aliases wrapping builder types for MCP consumers
+import type {
+  ImageSpec as _ImageSpec,
+  ConnectorSpec as _ConnectorSpec,
+  TableSpec as _TableSpec,
+  GroupSpec as _GroupSpec,
+  TableUpdateSpec as _TableUpdateSpec,
+  SlideTransitionSpec as _SlideTransitionSpec,
+  AnimationSpec as _AnimationSpec,
+  CommentSpec as _CommentSpec,
+  NotesSpec as _NotesSpec,
 } from "@aurochs-builder/pptx";
+
+/** Image addition specification */
+export type ImageSpec = _ImageSpec;
+/** Connector addition specification */
+export type ConnectorSpec = _ConnectorSpec;
+/** Table addition specification */
+export type TableSpec = _TableSpec;
+/** Group addition specification */
+export type GroupSpec = _GroupSpec;
+/** Table update specification */
+export type TableUpdateSpec = _TableUpdateSpec;
+/** Slide transition specification */
+export type SlideTransitionSpec = _SlideTransitionSpec;
+/** Animation specification */
+export type AnimationSpec = _AnimationSpec;
+/** Comment specification */
+export type CommentSpec = _CommentSpec;
+/** Notes specification */
+export type NotesSpec = _NotesSpec;

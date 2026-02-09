@@ -50,6 +50,7 @@ export async function runTables(filePath: string, options: TablesOptions): Promi
 
     const slideNumbers = getSlideNumbers(options.slides, presentation.count);
     const tables: PptxTableSummaryJson[] = [];
+    // eslint-disable-next-line no-restricted-syntax -- mutable counter incremented in loop
     let tableIndex = 0;
 
     for (const slideNumber of slideNumbers) {
@@ -65,16 +66,14 @@ export async function runTables(filePath: string, options: TablesOptions): Promi
       });
 
       for (const table of foundTables) {
+        const firstCellPreview = getFirstCellPreview(table);
         const summary: PptxTableSummaryJson = {
           slideNumber,
           index: tableIndex,
           rowCount: table.rows.length,
           colCount: table.grid.columns.length,
           ...(table.properties.tableStyleId && { styleId: table.properties.tableStyleId }),
-          ...(() => {
-            const preview = getFirstCellPreview(table);
-            return preview ? { firstCellPreview: preview } : {};
-          })(),
+          ...(firstCellPreview ? { firstCellPreview } : {}),
         };
         tables.push(summary);
         tableIndex++;

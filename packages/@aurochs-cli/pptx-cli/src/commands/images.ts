@@ -38,6 +38,7 @@ export async function runImages(filePath: string, options: ImagesOptions): Promi
 
     const slideNumbers = getSlideNumbers(options.slides, presentation.count);
     const images: PptxImageJson[] = [];
+    // eslint-disable-next-line no-restricted-syntax -- mutable counter incremented in loop
     let imageIndex = 0;
 
     for (const slideNumber of slideNumbers) {

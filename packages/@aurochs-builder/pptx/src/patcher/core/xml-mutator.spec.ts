@@ -259,6 +259,16 @@ describe("findElement", () => {
 
     expect(result).toBeNull();
   });
+
+  it("recurses into element children that do not match", () => {
+    const deepChild = createTestElement("deep", { id: "no-match" });
+    const wrapper = createTestElement("wrapper", {}, [deepChild]);
+    const root = createTestElement("root", {}, [wrapper]);
+
+    const result = findElement(root, (el) => el.attrs.id === "nonexistent");
+
+    expect(result).toBeNull();
+  });
 });
 
 describe("findElements", () => {
@@ -317,6 +327,22 @@ describe("findShapeById", () => {
     const result = findShapeById(spTree, "7");
 
     expect(result).toBe(innerSp);
+  });
+
+  it("returns null when nested group does not contain target", () => {
+    const innerCNvPr = createTestElement("p:cNvPr", { id: "7" });
+    const innerNvSpPr = createTestElement("p:nvSpPr", {}, [innerCNvPr]);
+    const innerSp = createTestElement("p:sp", {}, [innerNvSpPr]);
+
+    const grpCNvPr = createTestElement("p:cNvPr", { id: "6" });
+    const grpNvGrpSpPr = createTestElement("p:nvGrpSpPr", {}, [grpCNvPr]);
+    const grpSp = createTestElement("p:grpSp", {}, [grpNvGrpSpPr, innerSp]);
+
+    const spTree = createTestElement("p:spTree", {}, [grpSp]);
+
+    const result = findShapeById(spTree, "999");
+
+    expect(result).toBeNull();
   });
 
   it("returns null if not found", () => {
@@ -386,6 +412,17 @@ describe("updateAtPath", () => {
 
     expect(result.attrs.val).toBe("new");
   });
+
+  it("skips non-matching children at the same level", () => {
+    const sibling = createTestElement("a:ext", { cx: "50" });
+    const target = createTestElement("a:off", { x: "0" });
+    const root = createTestElement("p:spPr", {}, [sibling, target]);
+
+    const result = updateAtPath(root, ["a:off"], (el) => setAttribute(el, "x", "100"));
+
+    expect((result.children[0] as XmlElement).attrs.cx).toBe("50");
+    expect((result.children[1] as XmlElement).attrs.x).toBe("100");
+  });
 });
 
 describe("replaceShapeById", () => {
@@ -404,6 +441,48 @@ describe("replaceShapeById", () => {
     const cNvPr = ((result.children[0] as XmlElement).children[0] as XmlElement).children[0] as XmlElement;
     expect(cNvPr.attrs.name).toBe("New");
   });
+
+  it("preserves non-element (text) children in spTree", () => {
+    const textNode = createText("whitespace");
+    const sp = createTestElement("p:sp", {}, [
+      createTestElement("p:nvSpPr", {}, [createTestElement("p:cNvPr", { id: "5", name: "Old" })]),
+    ]);
+    const spTree = createTestElement("p:spTree", {}, [textNode, sp]);
+
+    const newSp = createTestElement("p:sp", {}, [
+      createTestElement("p:nvSpPr", {}, [createTestElement("p:cNvPr", { id: "5", name: "New" })]),
+    ]);
+
+    const result = replaceShapeById(spTree, "5", newSp);
+
+    expect(result.children).toHaveLength(2);
+    expect(result.children[0]).toEqual({ type: "text", value: "whitespace" });
+    const cNvPr = ((result.children[1] as XmlElement).children[0] as XmlElement).children[0] as XmlElement;
+    expect(cNvPr.attrs.name).toBe("New");
+  });
+
+  it("replaces shape inside a nested group", () => {
+    const innerSp = createTestElement("p:sp", {}, [
+      createTestElement("p:nvSpPr", {}, [createTestElement("p:cNvPr", { id: "7", name: "Inner" })]),
+    ]);
+    const grpSp = createTestElement("p:grpSp", {}, [
+      createTestElement("p:nvGrpSpPr", {}, [createTestElement("p:cNvPr", { id: "6" })]),
+      innerSp,
+    ]);
+    const spTree = createTestElement("p:spTree", {}, [grpSp]);
+
+    const replacement = createTestElement("p:sp", {}, [
+      createTestElement("p:nvSpPr", {}, [createTestElement("p:cNvPr", { id: "7", name: "Replaced" })]),
+    ]);
+
+    const result = replaceShapeById(spTree, "7", replacement);
+
+    const updatedGrp = result.children[0] as XmlElement;
+    expect(updatedGrp.name).toBe("p:grpSp");
+    const replacedSp = updatedGrp.children[1] as XmlElement;
+    const cNvPr = (replacedSp.children[0] as XmlElement).children[0] as XmlElement;
+    expect(cNvPr.attrs.name).toBe("Replaced");
+  });
 });
 
 describe("removeShapeById", () => {
@@ -421,6 +500,39 @@ describe("removeShapeById", () => {
     expect(result.children).toHaveLength(1);
     const remaining = ((result.children[0] as XmlElement).children[0] as XmlElement).children[0] as XmlElement;
     expect(remaining.attrs.id).toBe("3");
+  });
+
+  it("preserves non-element (text) children in spTree", () => {
+    const textNode = createText("whitespace");
+    const sp = createTestElement("p:sp", {}, [
+      createTestElement("p:nvSpPr", {}, [createTestElement("p:cNvPr", { id: "2" })]),
+    ]);
+    const spTree = createTestElement("p:spTree", {}, [textNode, sp]);
+
+    const result = removeShapeById(spTree, "2");
+
+    expect(result.children).toHaveLength(1);
+    expect(result.children[0]).toEqual({ type: "text", value: "whitespace" });
+  });
+
+  it("removes shape from inside a nested group", () => {
+    const innerSp = createTestElement("p:sp", {}, [
+      createTestElement("p:nvSpPr", {}, [createTestElement("p:cNvPr", { id: "7" })]),
+    ]);
+    const grpSp = createTestElement("p:grpSp", {}, [
+      createTestElement("p:nvGrpSpPr", {}, [createTestElement("p:cNvPr", { id: "6" })]),
+      innerSp,
+    ]);
+    const spTree = createTestElement("p:spTree", {}, [grpSp]);
+
+    const result = removeShapeById(spTree, "7");
+
+    expect(result.children).toHaveLength(1);
+    const updatedGrp = result.children[0] as XmlElement;
+    expect(updatedGrp.name).toBe("p:grpSp");
+    // The inner shape should be removed, only nvGrpSpPr remains
+    expect(updatedGrp.children).toHaveLength(1);
+    expect((updatedGrp.children[0] as XmlElement).name).toBe("p:nvGrpSpPr");
   });
 });
 

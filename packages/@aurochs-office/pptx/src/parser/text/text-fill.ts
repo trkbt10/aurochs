@@ -63,6 +63,16 @@ function resolveRadialCenter(fill: Fill, isRadial: boolean): { cx: number; cy: n
   };
 }
 
+/** Compute tile scale from blip fill tile, converting from 1/100000 to 0-1 range */
+function computeTileScale(
+  tile: { sx: unknown; sy: unknown } | undefined,
+): { x: number; y: number } | undefined {
+  if (tile === undefined) {
+    return undefined;
+  }
+  return { x: (tile.sx as number) / 100000, y: (tile.sy as number) / 100000 };
+}
+
 /**
  * Convert Fill domain object to TextFillConfig for rendering.
  *
@@ -164,10 +174,7 @@ export function resolveTextFill(
       }
 
       const mode = fill.tile !== undefined ? "tile" : "stretch";
-      const tileScale =
-        fill.tile !== undefined
-          ? { x: (fill.tile.sx as number) / 100000, y: (fill.tile.sy as number) / 100000 }
-          : undefined;
+      const tileScale = computeTileScale(fill.tile);
 
       return {
         type: "image",

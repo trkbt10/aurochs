@@ -260,11 +260,19 @@ function buffersEqual(a: ArrayBuffer, b: ArrayBuffer): boolean {
 
 function generateMediaPath(pkg: ZipPackage, prefix: string, extension: string): string {
   const existing = new Set(pkg.listFiles().filter((p) => p.startsWith("ppt/media/")));
-  let next = 1;
-  while (existing.has(`ppt/media/${prefix}${next}.${extension}`)) {
-    next += 1;
-  }
-  return `ppt/media/${prefix}${next}.${extension}`;
+  return findUnusedNumberedPath(existing, `ppt/media/${prefix}`, extension);
+}
+
+/** Find the first unused numbered path in a set */
+function findUnusedNumberedPath(existing: Set<string>, base: string, extension: string): string {
+  const tryNumber = (n: number): string => {
+    const candidate = `${base}${n}.${extension}`;
+    if (!existing.has(candidate)) {
+      return candidate;
+    }
+    return tryNumber(n + 1);
+  };
+  return tryNumber(1);
 }
 
 function buildRelationshipTarget(sourcePart: string, targetPart: string): string {

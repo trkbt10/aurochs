@@ -50,6 +50,7 @@ function paragraphSpecToParagraph(spec: TableParagraphSpec): Paragraph {
   };
 }
 
+/** Convert string or TableTextBodySpec to a TextBody domain object */
 export function contentToTextBody(content: string | TableTextBodySpec): TextBody {
   if (typeof content === "string") {
     return {

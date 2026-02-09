@@ -2,7 +2,7 @@
  * @file info command - display document metadata
  */
 
-import { twipsToPoints } from "@aurochs-office/docx";
+import { twipsToPoints, twips } from "@aurochs-office/docx";
 import { success, error, type Result } from "@aurochs-cli/cli-core";
 import { loadDocument } from "./loader";
 
@@ -54,8 +54,8 @@ function buildPageSize(
     return undefined;
   }
   return {
-    width: twipsToPoints(pgSz.w),
-    height: twipsToPoints(pgSz.h),
+    width: twipsToPoints(twips(pgSz.w)),
+    height: twipsToPoints(twips(pgSz.h)),
     widthTwips: pgSz.w,
     heightTwips: pgSz.h,
     orientation: pgSz.orient,

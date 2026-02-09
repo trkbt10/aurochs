@@ -588,6 +588,23 @@ export async function addSlide(
   return { doc: updatedDoc, slideIndex: insertedIndex, slidePath, slideId, rId };
 }
 
+/** Remove notes slide parts and update content types if notes exist */
+function removeSlideNotesParts(
+  pkg: ZipPackage,
+  contentTypesXml: XmlDocument,
+  notesSlidePath: string | null,
+): XmlDocument {
+  if (!notesSlidePath) {
+    return contentTypesXml;
+  }
+  const notesRelsPath = getRelationshipPath(notesSlidePath);
+  pkg.remove(notesSlidePath);
+  if (pkg.exists(notesRelsPath)) {
+    pkg.remove(notesRelsPath);
+  }
+  return removeOverride(contentTypesXml, `/${notesSlidePath}`);
+}
+
 /**
  * Remove a slide (by current slide order index).
  */
@@ -627,22 +644,14 @@ export function removeSlide(doc: PresentationDocument, slideIndex: number): Slid
   const updatedPresentationXml = removeSlideFromList(presentationXml, entry.slideId);
   const updatedPresentationRelsXml = removeRelationshipById(presentationRelsXml, entry.rId);
 
-  // eslint-disable-next-line no-restricted-syntax -- let is needed for conditional reassignment below
-  let updatedContentTypesXml = removeOverride(contentTypesXml, `/${slidePath}`);
+  const baseContentTypes = removeOverride(contentTypesXml, `/${slidePath}`);
 
   pkg.remove(slidePath);
   if (pkg.exists(slideRelsPath)) {
     pkg.remove(slideRelsPath);
   }
 
-  if (notesSlidePath) {
-    const notesRelsPath = getRelationshipPath(notesSlidePath);
-    pkg.remove(notesSlidePath);
-    if (pkg.exists(notesRelsPath)) {
-      pkg.remove(notesRelsPath);
-    }
-    updatedContentTypesXml = removeOverride(updatedContentTypesXml, `/${notesSlidePath}`);
-  }
+  const updatedContentTypesXml = removeSlideNotesParts(pkg, baseContentTypes, notesSlidePath);
 
   writeXml(pkg, PRESENTATION_XML_PATH, updatedPresentationXml);
   writeXml(pkg, PRESENTATION_RELS_PATH, updatedPresentationRelsXml);
@@ -708,6 +717,54 @@ export function reorderSlide(doc: PresentationDocument, fromIndex: number, toInd
   return { doc: updatedDoc, fromIndex, toIndex };
 }
 
+/** Duplicate the notes slide if present, returning the new notes path or undefined */
+function duplicateNotesSlide(
+  pkg: ZipPackage,
+  slideRelsXml: XmlDocument,
+  slidePath: string,
+  slideFilename: string,
+): string | undefined {
+  const notesRel = findNotesRelationship(slideRelsXml);
+  if (!notesRel) {
+    return undefined;
+  }
+
+  const sourceNotesPath = relTargetToPptPartPath(notesRel.target);
+  const sourceNotesXml = pkg.readText(sourceNotesPath);
+  if (!sourceNotesXml) {
+    throw new Error(`SlideManager: missing source notes slide xml: ${sourceNotesPath}`);
+  }
+  const sourceNotesRelsPath = getRelationshipPath(sourceNotesPath);
+  const sourceNotesRelsText = pkg.readText(sourceNotesRelsPath);
+  if (!sourceNotesRelsText) {
+    throw new Error(`SlideManager: missing source notes slide rels: ${sourceNotesRelsPath}`);
+  }
+
+  const notesNumber = nextPartNumber(extractExistingPartNumbers(pkg, "ppt/notesSlides", "notesSlide"));
+  const notesFilename = `notesSlide${notesNumber}`;
+  const notesSlidePath = `ppt/notesSlides/${notesFilename}.xml`;
+
+  pkg.writeText(notesSlidePath, sourceNotesXml);
+
+  const notesRelsXml = parseXml(sourceNotesRelsText);
+  const slideRelId = findNotesSlideToSlideRelationshipId(notesRelsXml);
+  const updatedNotesRelsXml = updateRelationshipTarget(notesRelsXml, slideRelId, `../slides/${slideFilename}.xml`);
+  writeXml(pkg, getRelationshipPath(notesSlidePath), updatedNotesRelsXml);
+
+  const updatedSlideRelsXml = updateSlideRelsNotesTarget(slideRelsXml, `../notesSlides/${notesFilename}.xml`);
+  writeXml(pkg, getRelationshipPath(slidePath), updatedSlideRelsXml);
+
+  return notesSlidePath;
+}
+
+/** Add a notes override to content types if a notes slide path exists */
+function addNotesOverrideIfNeeded(contentTypesXml: XmlDocument, notesSlidePath: string | undefined): XmlDocument {
+  if (notesSlidePath) {
+    return addOverride(contentTypesXml, `/${notesSlidePath}`, CONTENT_TYPES.NOTES);
+  }
+  return contentTypesXml;
+}
+
 /**
  * Duplicate a slide (including slide.xml + slide.xml.rels).
  * If the source slide has notes, also duplicates the notes slide and updates targets.
@@ -763,36 +820,8 @@ export async function duplicateSlide(doc: PresentationDocument, slideIndex: numb
   pkg.writeText(slidePath, sourceSlideXml);
   pkg.writeText(getRelationshipPath(slidePath), sourceSlideRelsText);
 
-  // eslint-disable-next-line no-restricted-syntax -- let is needed for conditional assignment in if block
-  let notesSlidePath: string | undefined;
   const slideRelsXml = parseXml(sourceSlideRelsText);
-  const notesRel = findNotesRelationship(slideRelsXml);
-  if (notesRel) {
-    const sourceNotesPath = relTargetToPptPartPath(notesRel.target);
-    const sourceNotesXml = pkg.readText(sourceNotesPath);
-    if (!sourceNotesXml) {
-      throw new Error(`SlideManager: missing source notes slide xml: ${sourceNotesPath}`);
-    }
-    const sourceNotesRelsPath = getRelationshipPath(sourceNotesPath);
-    const sourceNotesRelsText = pkg.readText(sourceNotesRelsPath);
-    if (!sourceNotesRelsText) {
-      throw new Error(`SlideManager: missing source notes slide rels: ${sourceNotesRelsPath}`);
-    }
-
-    const notesNumber = nextPartNumber(extractExistingPartNumbers(pkg, "ppt/notesSlides", "notesSlide"));
-    const notesFilename = `notesSlide${notesNumber}`;
-    notesSlidePath = `ppt/notesSlides/${notesFilename}.xml`;
-
-    pkg.writeText(notesSlidePath, sourceNotesXml);
-
-    const notesRelsXml = parseXml(sourceNotesRelsText);
-    const slideRelId = findNotesSlideToSlideRelationshipId(notesRelsXml);
-    const updatedNotesRelsXml = updateRelationshipTarget(notesRelsXml, slideRelId, `../slides/${slideFilename}.xml`);
-    writeXml(pkg, getRelationshipPath(notesSlidePath), updatedNotesRelsXml);
-
-    const updatedSlideRelsXml = updateSlideRelsNotesTarget(slideRelsXml, `../notesSlides/${notesFilename}.xml`);
-    writeXml(pkg, getRelationshipPath(slidePath), updatedSlideRelsXml);
-  }
+  const notesSlidePath = duplicateNotesSlide(pkg, slideRelsXml, slidePath, slideFilename);
 
   const updatedPresentationXml = addSlideToList(presentationXml, slideId, rId, slideIndex + 1);
   const updatedPresentationRelsXml = addRelationship(presentationRelsXml, {
@@ -802,9 +831,7 @@ export async function duplicateSlide(doc: PresentationDocument, slideIndex: numb
   });
 
   const withSlideOverride = addOverride(contentTypesXml, `/ppt/slides/${slideFilename}.xml`, CONTENT_TYPES.SLIDE);
-  const updatedContentTypesXml = notesSlidePath
-    ? addOverride(withSlideOverride, `/${notesSlidePath}`, CONTENT_TYPES.NOTES)
-    : withSlideOverride;
+  const updatedContentTypesXml = addNotesOverrideIfNeeded(withSlideOverride, notesSlidePath);
 
   writeXml(pkg, PRESENTATION_XML_PATH, updatedPresentationXml);
   writeXml(pkg, PRESENTATION_RELS_PATH, updatedPresentationRelsXml);

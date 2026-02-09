@@ -788,6 +788,18 @@ function serializeChart(chartRef: ChartReference, ctx?: SerializationContext): C
   return result;
 }
 
+function extractDiagramShapeText(
+  textBody: { paragraphs: readonly Paragraph[] } | undefined,
+): string | undefined {
+  if (!textBody) {
+    return undefined;
+  }
+  return textBody.paragraphs
+    .map((p) => extractTextFromParagraph(p))
+    .filter(Boolean)
+    .join("\n") || undefined;
+}
+
 function serializeDiagram(
   diagramRef: DiagramReference,
   frame?: { transform?: Transform },
@@ -809,12 +821,7 @@ function serializeDiagram(
           const sp = s as { properties?: { transform?: Transform }; textBody?: { paragraphs: readonly Paragraph[] } };
           const t = sp.properties?.transform;
           if (t) {
-            const text = sp.textBody
-              ? sp.textBody.paragraphs
-                  .map((p) => extractTextFromParagraph(p))
-                  .filter(Boolean)
-                  .join("\n")
-              : undefined;
+            const text = extractDiagramShapeText(sp.textBody);
             diagramShapes.push({
               bounds: { x: t.x, y: t.y, width: t.width, height: t.height },
               text: text || undefined,

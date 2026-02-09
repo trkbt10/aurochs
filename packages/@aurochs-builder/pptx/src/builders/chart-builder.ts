@@ -97,6 +97,17 @@ function buildChartChanges(spec: ChartUpdateSpec): readonly ChartChange[] {
   return changes;
 }
 
+/** Resolve the final graphic frame, applying transform if present */
+function resolveChartFrame(
+  graphicFrame: XmlElement,
+  transform: ChartUpdateSpec["transform"],
+): XmlElement {
+  if (transform) {
+    return patchChartTransform(graphicFrame, buildTransform(transform));
+  }
+  return graphicFrame;
+}
+
 /**
  * Apply updates to existing chart elements on a slide.
  */
@@ -143,9 +154,7 @@ export function applyChartUpdates(
 
       const changes = buildChartChanges(update);
       const patched = patchChart({ graphicFrame: frame, chartXml: chartDoc }, changes);
-      const patchedFrame = update.transform
-        ? patchChartTransform(patched.graphicFrame, buildTransform(update.transform))
-        : patched.graphicFrame;
+      const patchedFrame = resolveChartFrame(patched.graphicFrame, update.transform);
 
       const frameId = getGraphicFrameId(frame);
       if (!frameId) {

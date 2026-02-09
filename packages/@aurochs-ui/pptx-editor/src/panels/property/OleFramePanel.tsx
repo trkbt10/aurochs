@@ -20,6 +20,32 @@ export type OleFramePanelProps = {
 };
 
 // =============================================================================
+// Helpers
+// =============================================================================
+
+/** Render OLE content editor or placeholder */
+function renderOleContent(
+  oleData: OleReference | undefined,
+  onChange: (data: OleReference) => void,
+): ReactNode {
+  if (oleData) {
+    return <OleObjectEditor value={oleData} onChange={onChange} />;
+  }
+  return (
+    <div
+      style={{
+        padding: "12px",
+        textAlign: "center",
+        color: "var(--text-tertiary, #737373)",
+        fontSize: "12px",
+      }}
+    >
+      OLE object data not available
+    </div>
+  );
+}
+
+// =============================================================================
 // Component
 // =============================================================================
 
@@ -47,20 +73,7 @@ export function OleFramePanel({ shape, onChange }: OleFramePanelProps) {
     });
   };
 
-  const oleContent: ReactNode = oleData ? (
-    <OleObjectEditor value={oleData} onChange={handleOleDataChange} />
-  ) : (
-    <div
-      style={{
-        padding: "12px",
-        textAlign: "center",
-        color: "var(--text-tertiary, #737373)",
-        fontSize: "12px",
-      }}
-    >
-      OLE object data not available
-    </div>
-  );
+  const oleContent: ReactNode = renderOleContent(oleData, handleOleDataChange);
 
   return (
     <>
