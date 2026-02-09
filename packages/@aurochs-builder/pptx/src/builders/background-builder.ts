@@ -27,7 +27,7 @@ function buildBackgroundFill(spec: Exclude<BackgroundFillSpec, BackgroundImageSp
     // Solid fill from hex color
     return {
       type: "solidFill",
-      color: { spec: { type: "srgb", value: spec } },
+      color: buildColor(spec),
     };
   }
 
@@ -35,7 +35,7 @@ function buildBackgroundFill(spec: Exclude<BackgroundFillSpec, BackgroundImageSp
     case "solid":
       return {
         type: "solidFill",
-        color: { spec: { type: "srgb", value: spec.color } },
+        color: buildColor(spec.color),
       };
     case "gradient":
       return buildGradientFill(spec);

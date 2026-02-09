@@ -558,6 +558,12 @@ function buildTableRow({ rowCells, rowHeight, rowIndex, mergeFlags }: BuildTable
 }
 
 function buildTable(spec: TableSpec): Table {
+  for (let i = 0; i < spec.rows.length; i++) {
+    if (!Array.isArray(spec.rows[i])) {
+      throw new Error(`Table rows[${i}] must be an array of cells, got ${typeof spec.rows[i]}`);
+    }
+  }
+
   const colCount = spec.rows[0]?.length ?? 0;
   const rowCount = spec.rows.length;
   const colWidth = px(colCount > 0 ? spec.width / colCount : spec.width);

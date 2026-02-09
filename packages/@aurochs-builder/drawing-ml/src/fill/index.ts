@@ -19,6 +19,9 @@ export { buildPatternFill } from "./pattern-fill";
  */
 export function buildFill(fillSpec: FillSpec): BaseFill | undefined {
   if (typeof fillSpec === "string") {
+    if (fillSpec === "none") {
+      return undefined;
+    }
     return buildSolidFill(fillSpec);
   }
   switch (fillSpec.type) {
