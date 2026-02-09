@@ -93,10 +93,10 @@ npx aurochs pptx verify tests/ --tag smoke  # Filter by tag
   "width": 400, "height": 200,  // Size (px)
   "rotation": 0,
   "flipH": false, "flipV": false,
-  "fill": "#4472C4",            // Fill (see below)
-  "line": { "color": "#000", "width": 1 },
+  "fill": "#4472C4",            // Fill (see below), "none" for no fill
+  "lineColor": "#000000", "lineWidth": 1,
   "text": "Text",               // Plain text or rich text (see below)
-  "textBody": { "anchor": "ctr", "wrapping": "square" },
+  "textBody": { "anchor": "center", "wrapping": "square" },
   "placeholder": { "type": "title", "idx": 0 },
   "effects": { ... },
   "shape3d": { ... }
@@ -168,7 +168,7 @@ Theme color names: `dk1`, `dk2`, `lt1`, `lt2`, `accent1` through `accent6`, `hli
 
 **Paragraph properties**: `alignment`(left/center/right/justify), `level`, `bullet`, `lineSpacing`, `spaceBefore`, `spaceAfter`, `indent`, `marginLeft`
 
-**textBody**: `anchor`(t/ctr/b), `verticalType`, `wrapping`(square/none), `anchorCenter`, `insetLeft/Top/Right/Bottom`
+**textBody**: `anchor`(top/center/bottom), `verticalType`, `wrapping`(square/none), `anchorCenter`, `insetLeft/Top/Right/Bottom`
 
 ---
 
