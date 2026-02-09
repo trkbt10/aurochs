@@ -90,7 +90,9 @@ function toGenericBorderWidth(style: XlsxBorderEdge["style"]): number {
 
 /** Convert a single XLSX border edge to generic OutlineFormatting. */
 function edgeToGeneric(edge: XlsxBorderEdge | undefined): OutlineFormatting | undefined {
-  if (!edge || edge.style === "none") return undefined;
+  if (!edge || edge.style === "none") {
+    return undefined;
+  }
   const hex = rgbHexFromXlsxColor(edge.color);
   return {
     width: toGenericBorderWidth(edge.style),
@@ -99,19 +101,41 @@ function edgeToGeneric(edge: XlsxBorderEdge | undefined): OutlineFormatting | un
   };
 }
 
+/** Resolve generic OutlineFormatting to XLSX border style string. */
+function resolveBorderStyle(outline: OutlineFormatting): XlsxBorderEdge["style"] {
+  if (outline.style === "dashed") {
+    return "dashed";
+  }
+  if (outline.style === "dotted") {
+    return "dotted";
+  }
+  if (outline.width && outline.width >= 2) {
+    return "medium";
+  }
+  return "thin";
+}
+
 /** Convert generic OutlineFormatting to XLSX border edge. */
 function genericToEdge(outline: OutlineFormatting | undefined): XlsxBorderEdge | undefined {
-  if (!outline || outline.style === "none") return { style: "none" };
-  const style =
-    outline.style === "dashed"
-      ? "dashed"
-      : outline.style === "dotted"
-        ? "dotted"
-        : outline.width && outline.width >= 2
-          ? "medium"
-          : "thin";
+  if (!outline || outline.style === "none") {
+    return { style: "none" };
+  }
+  const style = resolveBorderStyle(outline);
   const color = outline.color ? makeXlsxRgbColor(outline.color.replace(/^#/, "").toUpperCase()) : undefined;
   return { style, color };
+}
+
+/** Convert XLSX border to generic BorderEdges. */
+function borderToGenericEdges(border: XlsxBorder | undefined): BorderEdges | undefined {
+  if (!border) {
+    return undefined;
+  }
+  return {
+    top: edgeToGeneric(border.top),
+    bottom: edgeToGeneric(border.bottom),
+    left: edgeToGeneric(border.left),
+    right: edgeToGeneric(border.right),
+  };
 }
 
 /**
@@ -119,14 +143,7 @@ function genericToEdge(outline: OutlineFormatting | undefined): XlsxBorderEdge |
  */
 export const xlsxCellAdapter: FormattingAdapter<XlsxCellFormat, CellFormatting> = {
   toGeneric(value: XlsxCellFormat): CellFormatting {
-    const borders: BorderEdges | undefined = value.border
-      ? {
-          top: edgeToGeneric(value.border.top),
-          bottom: edgeToGeneric(value.border.bottom),
-          left: edgeToGeneric(value.border.left),
-          right: edgeToGeneric(value.border.right),
-        }
-      : undefined;
+    const borders = borderToGenericEdges(value.border);
 
     return {
       verticalAlignment: toGenericVAlign(value.alignment?.vertical),

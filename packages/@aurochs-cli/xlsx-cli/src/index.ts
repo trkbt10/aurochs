@@ -21,9 +21,6 @@ export {
   type Assertion,
 } from "./commands/verify";
 
-// Sheet utilities (from @aurochs-office/xlsx)
-export { getSheetRange, type SheetRange } from "@aurochs-office/xlsx/domain/sheet-utils";
-
 // Serializers
 export { serializeCell, formatCellValue, type CellJson } from "./serializers/cell-serializer";
 export {

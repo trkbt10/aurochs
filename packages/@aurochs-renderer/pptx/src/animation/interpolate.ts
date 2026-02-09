@@ -10,6 +10,12 @@
 import type { AnimateBehavior, CalcMode, Keyframe, AnimateValue } from "@aurochs-office/pptx/domain/animation";
 import { lerp } from "./engine";
 
+/** No-op handler for intentionally ignored CSS property errors */
+function handleIgnoredCssError(_err: unknown): void {
+  // CSS property errors are expected when applying animation values
+  // to properties not supported in the current environment
+}
+
 // =============================================================================
 // Types
 // =============================================================================
@@ -370,8 +376,9 @@ export function applyAnimatedValue({
       // Try to set as style property
       try {
         element.style.setProperty(cssProperty, String(value));
-      } catch {
-        // Ignore invalid properties
+      } catch (err) {
+        // Silently ignore - invalid CSS property names are expected in some environments
+        handleIgnoredCssError(err);
       }
   }
 }

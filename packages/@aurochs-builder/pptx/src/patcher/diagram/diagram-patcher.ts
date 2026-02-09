@@ -101,6 +101,21 @@ function removeConnectionsForNode(cxnLst: XmlElement, nodeId: string): XmlElemen
   return setChildren(cxnLst, next);
 }
 
+/** Map point children, patching text at the given dgm:pt index */
+function mapPointsWithIndex(children: readonly XmlNode[], targetIdx: number, text: string): XmlNode[] {
+  const result: XmlNode[] = [];
+  const acc = { ptIndex: -1 };
+  for (const c of children) {
+    if (!isXmlElement(c) || c.name !== "dgm:pt") {
+      result.push(c);
+      continue;
+    }
+    acc.ptIndex += 1;
+    result.push(acc.ptIndex === targetIdx ? patchPointText(c, text) : c);
+  }
+  return result;
+}
+
 /** Patch a diagram node's text content */
 export function patchDiagramNodeText(dataXml: XmlDocument, nodeId: string, text: string): XmlDocument {
   if (!nodeId) {
@@ -123,14 +138,7 @@ export function patchDiagramNodeText(dataXml: XmlDocument, nodeId: string, text:
       throw new Error(`patchDiagramNodeText: node not found: ${nodeId}`);
     }
 
-    let ptIndex = -1;
-    const nextPtLstChildren = ptLst.children.map((c) => {
-      if (!isXmlElement(c) || c.name !== "dgm:pt") {
-        return c;
-      }
-      ptIndex += 1;
-      return ptIndex === idx ? patchPointText(c, text) : c;
-    });
+    const nextPtLstChildren = mapPointsWithIndex(ptLst.children, idx, text);
 
     const nextPtLst = setChildren(ptLst, nextPtLstChildren);
     return setChildren(
@@ -279,38 +287,33 @@ function setDiagramConnection({ dataXml, srcId, destId, connectionType }: SetDia
   });
 }
 
+/** Apply a single diagram change to a data XML document */
+function applyDiagramChange(dataXml: XmlDocument, change: DiagramChange): XmlDocument {
+  switch (change.type) {
+    case "nodeText":
+      return patchDiagramNodeText(dataXml, change.nodeId, change.text);
+    case "addNode":
+      return addDiagramNode({
+        dataXml,
+        parentId: change.parentId,
+        nodeId: change.nodeId,
+        text: change.text,
+      });
+    case "removeNode":
+      return removeDiagramNode(dataXml, change.nodeId);
+    case "setConnection":
+      return setDiagramConnection({
+        dataXml,
+        srcId: change.srcId,
+        destId: change.destId,
+        connectionType: change.connectionType,
+      });
+  }
+}
+
 /** Apply diagram changes to diagram files */
 export function patchDiagram(diagramFiles: DiagramFiles, changes: readonly DiagramChange[]): DiagramFiles {
-  let nextData = diagramFiles.data;
-
-  for (const change of changes) {
-    switch (change.type) {
-      case "nodeText":
-        nextData = patchDiagramNodeText(nextData, change.nodeId, change.text);
-        break;
-      case "addNode":
-        nextData = addDiagramNode({
-          dataXml: nextData,
-          parentId: change.parentId,
-          nodeId: change.nodeId,
-          text: change.text,
-        });
-        break;
-      case "removeNode":
-        nextData = removeDiagramNode(nextData, change.nodeId);
-        break;
-      case "setConnection":
-        nextData = setDiagramConnection({
-          dataXml: nextData,
-          srcId: change.srcId,
-          destId: change.destId,
-          connectionType: change.connectionType,
-        });
-        break;
-      default:
-        ((_: never) => _)(change);
-    }
-  }
+  const nextData = changes.reduce(applyDiagramChange, diagramFiles.data);
 
   return {
     ...diagramFiles,

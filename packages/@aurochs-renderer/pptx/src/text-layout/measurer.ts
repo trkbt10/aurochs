@@ -117,6 +117,7 @@ export function estimateTextWidth({ text, fontSize, letterSpacing, fontFamily }:
  * Uses font-aware metrics and kerning for accurate width estimation.
  */
 export function measureSpan(span: LayoutSpan): MeasuredSpan {
+  // eslint-disable-next-line no-restricted-syntax -- mutable accumulator set by branching logic
   let width = px(0);
   if (!span.isBreak) {
     if (span.opticalKerning === true) {

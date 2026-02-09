@@ -265,6 +265,7 @@ describe("TextPropertyPanel", () => {
 
       // Find alignment select - it has options like "Left", "Center", "Right", "Justify"
       const selects = container.querySelectorAll("select") as NodeListOf<HTMLSelectElement>;
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let alignmentSelect: HTMLSelectElement | null = null;
       for (const select of selects) {
         const options = select.querySelectorAll("option");

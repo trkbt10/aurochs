@@ -6,6 +6,7 @@ import { success, error, type Result } from "@aurochs-cli/cli-core";
 import { loadXlsxWorkbook } from "../utils/xlsx-loader";
 import { renderSheetAscii, type AsciiCell, type AsciiSheetRow } from "@aurochs-renderer/xlsx/ascii";
 import { getSheetRange } from "@aurochs-office/xlsx/domain/sheet-utils";
+import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
 import { serializeCell } from "../serializers/cell-serializer";
 import { columnLetterToIndex } from "@aurochs-office/xlsx/domain/cell/address";
 
@@ -53,6 +54,34 @@ function parseRange(range: string): ParsedRange | undefined {
   return { startCol, startRow, endCol, endRow };
 }
 
+function sheetRangeToTargetRange(sheetRange: ReturnType<typeof getSheetRange>): ParsedRange | undefined {
+  if (!sheetRange) {
+    return undefined;
+  }
+  return {
+    startCol: columnLetterToIndex(sheetRange.startCol) as number,
+    startRow: sheetRange.startRow,
+    endCol: columnLetterToIndex(sheetRange.endCol) as number,
+    endRow: sheetRange.endRow,
+  };
+}
+
+function colIndexToLetter(colNum: number): string {
+  if (colNum < 0) {
+    return "";
+  }
+  const char = String.fromCharCode((colNum % 26) + 65);
+  const remaining = Math.floor(colNum / 26) - 1;
+  return colIndexToLetter(remaining) + char;
+}
+
+function resolveTargetRange(options: PreviewOptions, sheet: XlsxWorksheet): ParsedRange | undefined {
+  if (options.range) {
+    return parseRange(options.range);
+  }
+  return sheetRangeToTargetRange(getSheetRange(sheet));
+}
+
 // =============================================================================
 // Command
 // =============================================================================
@@ -78,17 +107,7 @@ export async function runPreview(
     const results: PreviewSheet[] = [];
 
     for (const sheet of sheetsToRender) {
-      const sheetRange = getSheetRange(sheet);
-      const targetRange = options.range
-        ? parseRange(options.range)
-        : sheetRange
-          ? {
-              startCol: columnLetterToIndex(sheetRange.startCol) as number,
-              startRow: sheetRange.startRow,
-              endCol: columnLetterToIndex(sheetRange.endCol) as number,
-              endRow: sheetRange.endRow,
-            }
-          : undefined;
+      const targetRange = resolveTargetRange(options, sheet);
 
       if (!targetRange) {
         results.push({
@@ -117,14 +136,7 @@ export async function runPreview(
       for (let rowNum = targetRange.startRow; rowNum <= targetRange.endRow; rowNum++) {
         const cells: AsciiCell[] = [];
         for (let colNum = targetRange.startCol; colNum <= targetRange.endCol; colNum++) {
-          // Convert colNum to letter for ref lookup
-          let letter = "";
-          let n = colNum;
-          while (n >= 0) {
-            letter = String.fromCharCode((n % 26) + 65) + letter;
-            n = Math.floor(n / 26) - 1;
-          }
-          const ref = `${letter}${rowNum}`;
+          const ref = `${colIndexToLetter(colNum)}${rowNum}`;
           const cell = cellMap.get(ref);
 
           if (cell && cell.type !== "empty") {

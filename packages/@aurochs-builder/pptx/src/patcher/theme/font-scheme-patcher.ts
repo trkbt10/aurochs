@@ -9,13 +9,15 @@
 import { createElement, getChild, isXmlElement, type XmlElement } from "@aurochs/xml";
 import type { FontSpec } from "@aurochs-office/ooxml/domain/font-scheme";
 
+type BuildTypefaceChildArgs = {
+  readonly fontElement: XmlElement;
+  readonly childName: "a:latin" | "a:ea" | "a:cs";
+  readonly typeface: string;
+  readonly existingIndex: number;
+};
+
 /** Build a typeface child element, either creating new or updating existing */
-function buildTypefaceChild(
-  fontElement: XmlElement,
-  childName: "a:latin" | "a:ea" | "a:cs",
-  typeface: string,
-  existingIndex: number,
-): XmlElement {
+function buildTypefaceChild({ fontElement, childName, typeface, existingIndex }: BuildTypefaceChildArgs): XmlElement {
   if (existingIndex === -1) {
     return createElement(childName, { typeface }, []);
   }
@@ -39,7 +41,7 @@ function upsertTypeface(
   }
 
   const existingIndex = fontElement.children.findIndex((c) => isXmlElement(c) && c.name === childName);
-  const updatedChild = buildTypefaceChild(fontElement, childName, typeface, existingIndex);
+  const updatedChild = buildTypefaceChild({ fontElement, childName, typeface, existingIndex });
 
   if (existingIndex !== -1) {
     return {

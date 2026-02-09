@@ -717,13 +717,15 @@ export function reorderSlide(doc: PresentationDocument, fromIndex: number, toInd
   return { doc: updatedDoc, fromIndex, toIndex };
 }
 
+type DuplicateNotesSlideArgs = {
+  readonly pkg: ZipPackage;
+  readonly slideRelsXml: XmlDocument;
+  readonly slidePath: string;
+  readonly slideFilename: string;
+};
+
 /** Duplicate the notes slide if present, returning the new notes path or undefined */
-function duplicateNotesSlide(
-  pkg: ZipPackage,
-  slideRelsXml: XmlDocument,
-  slidePath: string,
-  slideFilename: string,
-): string | undefined {
+function duplicateNotesSlide({ pkg, slideRelsXml, slidePath, slideFilename }: DuplicateNotesSlideArgs): string | undefined {
   const notesRel = findNotesRelationship(slideRelsXml);
   if (!notesRel) {
     return undefined;
@@ -821,7 +823,7 @@ export async function duplicateSlide(doc: PresentationDocument, slideIndex: numb
   pkg.writeText(getRelationshipPath(slidePath), sourceSlideRelsText);
 
   const slideRelsXml = parseXml(sourceSlideRelsText);
-  const notesSlidePath = duplicateNotesSlide(pkg, slideRelsXml, slidePath, slideFilename);
+  const notesSlidePath = duplicateNotesSlide({ pkg, slideRelsXml, slidePath, slideFilename });
 
   const updatedPresentationXml = addSlideToList(presentationXml, slideId, rId, slideIndex + 1);
   const updatedPresentationRelsXml = addRelationship(presentationRelsXml, {

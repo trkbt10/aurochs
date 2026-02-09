@@ -512,12 +512,12 @@ export function formatStylesPretty(data: StylesData): string {
     lines.push("", "Fonts", "-".repeat(5));
     for (const f of data.fonts) {
       const props: string[] = [];
-      if (f.bold) props.push("bold");
-      if (f.italic) props.push("italic");
-      if (f.underline) props.push(`underline:${f.underline}`);
-      if (f.strikethrough) props.push("strike");
-      if (f.color) props.push(`color:${formatColorValue(f.color)}`);
-      if (f.scheme) props.push(`scheme:${f.scheme}`);
+      if (f.bold) { props.push("bold"); }
+      if (f.italic) { props.push("italic"); }
+      if (f.underline) { props.push(`underline:${f.underline}`); }
+      if (f.strikethrough) { props.push("strike"); }
+      if (f.color) { props.push(`color:${formatColorValue(f.color)}`); }
+      if (f.scheme) { props.push(`scheme:${f.scheme}`); }
       const propsStr = props.length > 0 ? ` [${props.join(", ")}]` : "";
       lines.push(`  [${f.id}] ${f.name} ${f.size}pt${propsStr}`);
     }
@@ -545,11 +545,11 @@ export function formatStylesPretty(data: StylesData): string {
     lines.push("", "Borders", "-".repeat(7));
     for (const b of data.borders) {
       const sides: string[] = [];
-      if (b.left?.style) sides.push(`L:${b.left.style}`);
-      if (b.right?.style) sides.push(`R:${b.right.style}`);
-      if (b.top?.style) sides.push(`T:${b.top.style}`);
-      if (b.bottom?.style) sides.push(`B:${b.bottom.style}`);
-      if (b.diagonal?.style) sides.push(`D:${b.diagonal.style}`);
+      if (b.left?.style) { sides.push(`L:${b.left.style}`); }
+      if (b.right?.style) { sides.push(`R:${b.right.style}`); }
+      if (b.top?.style) { sides.push(`T:${b.top.style}`); }
+      if (b.bottom?.style) { sides.push(`B:${b.bottom.style}`); }
+      if (b.diagonal?.style) { sides.push(`D:${b.diagonal.style}`); }
       const borderStr = sides.length > 0 ? sides.join(" ") : "none";
       lines.push(`  [${b.id}] ${borderStr}`);
     }
@@ -571,11 +571,11 @@ export function formatStylesPretty(data: StylesData): string {
       lines.push(`  [${xf.id}] ${refs}`);
       if (xf.alignment) {
         const align: string[] = [];
-        if (xf.alignment.horizontal) align.push(`h:${xf.alignment.horizontal}`);
-        if (xf.alignment.vertical) align.push(`v:${xf.alignment.vertical}`);
-        if (xf.alignment.wrapText) align.push("wrap");
-        if (xf.alignment.shrinkToFit) align.push("shrink");
-        if (xf.alignment.textRotation !== undefined) align.push(`rot:${xf.alignment.textRotation}`);
+        if (xf.alignment.horizontal) { align.push(`h:${xf.alignment.horizontal}`); }
+        if (xf.alignment.vertical) { align.push(`v:${xf.alignment.vertical}`); }
+        if (xf.alignment.wrapText) { align.push("wrap"); }
+        if (xf.alignment.shrinkToFit) { align.push("shrink"); }
+        if (xf.alignment.textRotation !== undefined) { align.push(`rot:${xf.alignment.textRotation}`); }
         if (align.length > 0) {
           lines.push(`    alignment: ${align.join(" ")}`);
         }

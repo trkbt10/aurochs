@@ -943,7 +943,9 @@ function parseTop10Filter(top10Element: XmlElement): XlsxTop10Filter {
  */
 function parseDynamicFilter(dynamicFilterElement: XmlElement): XlsxDynamicFilter | undefined {
   const filterType = parseDynamicFilterType(getAttr(dynamicFilterElement, "type"));
-  if (!filterType) return undefined;
+  if (!filterType) {
+    return undefined;
+  }
 
   return {
     type: "dynamicFilter",
@@ -958,6 +960,26 @@ function parseDynamicFilter(dynamicFilterElement: XmlElement): XlsxDynamicFilter
  *
  * @see ECMA-376 Part 4, Section 18.3.2.5 (filterColumn)
  */
+function resolveFilterColumnFilter(filterColumnElement: XmlElement): XlsxFilterColumn["filter"] {
+  const filtersEl = getChild(filterColumnElement, "filters");
+  if (filtersEl) {
+    return parseFilters(filtersEl);
+  }
+  const customFiltersEl = getChild(filterColumnElement, "customFilters");
+  if (customFiltersEl) {
+    return parseCustomFilters(customFiltersEl);
+  }
+  const top10El = getChild(filterColumnElement, "top10");
+  if (top10El) {
+    return parseTop10Filter(top10El);
+  }
+  const dynamicFilterEl = getChild(filterColumnElement, "dynamicFilter");
+  if (dynamicFilterEl) {
+    return parseDynamicFilter(dynamicFilterEl);
+  }
+  return undefined;
+}
+
 function parseFilterColumn(filterColumnElement: XmlElement): XlsxFilterColumn {
   const colIdAttr = parseIntAttr(getAttr(filterColumnElement, "colId"));
   const colId = colIdx(colIdAttr ?? 0);
@@ -965,21 +987,7 @@ function parseFilterColumn(filterColumnElement: XmlElement): XlsxFilterColumn {
   const showButton = parseBooleanAttr(getAttr(filterColumnElement, "showButton"));
 
   // Parse filter type - only one should be present
-  const filtersEl = getChild(filterColumnElement, "filters");
-  const customFiltersEl = getChild(filterColumnElement, "customFilters");
-  const top10El = getChild(filterColumnElement, "top10");
-  const dynamicFilterEl = getChild(filterColumnElement, "dynamicFilter");
-
-  let filter: XlsxFilterColumn["filter"];
-  if (filtersEl) {
-    filter = parseFilters(filtersEl);
-  } else if (customFiltersEl) {
-    filter = parseCustomFilters(customFiltersEl);
-  } else if (top10El) {
-    filter = parseTop10Filter(top10El);
-  } else if (dynamicFilterEl) {
-    filter = parseDynamicFilter(dynamicFilterEl);
-  }
+  const filter = resolveFilterColumnFilter(filterColumnElement);
 
   return {
     colId,

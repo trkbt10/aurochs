@@ -38,7 +38,9 @@ export const xlsxFillAdapter: FormattingAdapter<XlsxFill, FillFormatting> = {
   },
 
   applyUpdate(current: XlsxFill, update: Partial<FillFormatting>): XlsxFill {
-    if (!update.type) return current;
+    if (!update.type) {
+      return current;
+    }
 
     if (update.type === "none") {
       return { type: "none" };

@@ -9,9 +9,10 @@
  */
 
 import type { BackgroundFill, GradientData } from "@aurochs-office/pptx/domain/slide/background";
-import type { ResolvedBackgroundFill } from "@aurochs-office/drawing-ml/domain/background-fill";
+import type { ResolvedBackgroundFill as _ResolvedBackgroundFill } from "@aurochs-office/drawing-ml/domain/background-fill";
 
-export type { ResolvedBackgroundFill };
+/** Resolved background fill for rendering */
+export type ResolvedBackgroundFill = _ResolvedBackgroundFill;
 
 // =============================================================================
 // Conversion

@@ -120,6 +120,7 @@ describe("multi-item hover integration", () => {
 
   describe("basic hover behavior", () => {
     it("hovering slide 1 shows delete button on slide 1 only", () => {
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let state = createListState(3);
 
       state = mouseEnterSlide(state, "slide-1");
@@ -130,6 +131,7 @@ describe("multi-item hover integration", () => {
     });
 
     it("moving from slide 1 to slide 2 shows button on slide 2 only", () => {
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let state = createListState(3);
 
       // Hover slide 1
@@ -145,6 +147,7 @@ describe("multi-item hover integration", () => {
     });
 
     it("moving out of all slides hides all buttons", () => {
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let state = createListState(3);
 
       state = mouseEnterSlide(state, "slide-2");
@@ -164,6 +167,7 @@ describe("multi-item hover integration", () => {
 
   describe("drag clears all hovers (THE BUG FIX)", () => {
     it("hovering slide 1, then dragging slide 2, hides slide 1's delete button", () => {
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let state = createListState(3);
 
       // Hover slide 1
@@ -180,6 +184,7 @@ describe("multi-item hover integration", () => {
     });
 
     it("hovering slide 3, then dragging slide 1, hides slide 3's delete button", () => {
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let state = createListState(3);
 
       // Hover slide 3
@@ -196,6 +201,7 @@ describe("multi-item hover integration", () => {
     });
 
     it("all slides' hovers are cleared when any drag starts", () => {
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let state = createListState(5);
 
       // Hover multiple slides (simulating quick mouse movement)
@@ -221,6 +227,7 @@ describe("multi-item hover integration", () => {
 
   describe("drag end recovery", () => {
     it("hover works again after drag ends", () => {
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let state = createListState(3);
 
       // Hover slide 1, then drag slide 2
@@ -241,6 +248,7 @@ describe("multi-item hover integration", () => {
     });
 
     it("can hover different slide after drag ends", () => {
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let state = createListState(3);
 
       // Hover slide 1, drag slide 1, end drag
@@ -262,6 +270,7 @@ describe("multi-item hover integration", () => {
 
   describe("dragging the hovered slide", () => {
     it("dragging the currently hovered slide clears its own hover", () => {
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let state = createListState(3);
 
       // Hover slide 2
@@ -282,6 +291,7 @@ describe("multi-item hover integration", () => {
 
   describe("edge cases", () => {
     it("rapid hover changes during drag are all suppressed", () => {
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let state = createListState(3);
 
       // Start drag first
@@ -305,6 +315,7 @@ describe("multi-item hover integration", () => {
     });
 
     it("handles single item list", () => {
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let state = createListState(1);
 
       state = mouseEnterSlide(state, "slide-1");

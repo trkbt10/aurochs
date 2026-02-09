@@ -93,6 +93,7 @@ function findLevelInput(container: HTMLElement): HTMLInputElement | null {
   const inputs = container.querySelectorAll('input[type="number"]');
   for (const input of inputs) {
     // Walk up the DOM to find the label
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let parent: HTMLElement | null = input.parentElement;
     while (parent && parent !== container) {
       const spans = parent.querySelectorAll("span");
@@ -120,6 +121,7 @@ function findRtlToggle(container: HTMLElement): HTMLElement | null {
 
 describe("MixedParagraphPropertiesEditor", () => {
   type OnChangeArgs = Parameters<MixedParagraphPropertiesEditorProps["onChange"]>;
+  // eslint-disable-next-line no-restricted-syntax -- mutable test state
   let onChange: ReturnType<typeof createCallTracker<OnChangeArgs>>;
 
   beforeEach(() => {

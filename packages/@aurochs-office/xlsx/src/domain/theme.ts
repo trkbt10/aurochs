@@ -8,12 +8,8 @@
  * @see ECMA-376 Part 4, Section 18.8 (Styles - theme color references)
  */
 
-import type { ColorScheme, ColorMap } from "@aurochs-office/drawing-ml/domain/color-context";
+import type { ColorScheme } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
-
-// Re-export for convenience
-export type { ColorScheme, ColorMap };
-export type { FontScheme };
 
 // =============================================================================
 // Theme Types

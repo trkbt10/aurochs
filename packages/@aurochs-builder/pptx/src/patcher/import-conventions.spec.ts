@@ -23,6 +23,35 @@ async function listTsFilesRecursively(dir: string): Promise<readonly string[]> {
   return files;
 }
 
+type ImportPatternCheckArgs = {
+  readonly tsFiles: readonly string[];
+  readonly packageRoot: string;
+  readonly bannedPattern: RegExp;
+  readonly desiredPattern: RegExp;
+};
+
+async function countImportPatterns({
+  tsFiles,
+  packageRoot,
+  bannedPattern,
+  desiredPattern,
+}: ImportPatternCheckArgs): Promise<{ violations: string[]; directXmlImports: number }> {
+  const violations: string[] = [];
+  const directXmlImports = (
+    await Promise.all(
+      tsFiles.map(async (filePath) => {
+        const source = await fs.readFile(filePath, "utf8");
+        if (bannedPattern.test(source)) {
+          violations.push(path.relative(packageRoot, filePath));
+        }
+        return (source.match(desiredPattern) ?? []).length;
+      }),
+    )
+  ).reduce((sum, n) => sum + n, 0);
+
+  return { violations, directXmlImports };
+}
+
 describe("PPTX patcher import conventions", () => {
   it("does not import XML helpers or types via patcher/core barrel", async () => {
     const patcherRoot = path.dirname(fileURLToPath(import.meta.url));
@@ -30,20 +59,16 @@ describe("PPTX patcher import conventions", () => {
 
     const tsFiles = await listTsFilesRecursively(patcherRoot);
 
-    const violations: string[] = [];
-    let directXmlImports = 0;
-
-    const bannedCoreBarrelImportPattern =
+    const bannedPattern =
       /import\s+(?:type\s+)?\{[^}]*\b(?:createElement|createText|Xml(?:Element|Document|Node))\b[^}]*\}\s+from\s+["'](?:\.\.\/)+core["']\s*;?/g;
-    const desiredDirectXmlImportPattern = /from\s+["']@aurochs\/xml["']\s*;?/g;
+    const desiredPattern = /from\s+["']@aurochs\/xml["']\s*;?/g;
 
-    for (const filePath of tsFiles) {
-      const source = await fs.readFile(filePath, "utf8");
-      if (bannedCoreBarrelImportPattern.test(source)) {
-        violations.push(path.relative(packageRoot, filePath));
-      }
-      directXmlImports += (source.match(desiredDirectXmlImportPattern) ?? []).length;
-    }
+    const { violations, directXmlImports } = await countImportPatterns({
+      tsFiles,
+      packageRoot,
+      bannedPattern,
+      desiredPattern,
+    });
 
     expect(violations).toEqual([]);
     expect(directXmlImports).toBeGreaterThan(0);

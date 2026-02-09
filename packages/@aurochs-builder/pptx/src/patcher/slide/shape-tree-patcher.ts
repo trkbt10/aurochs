@@ -3,6 +3,18 @@ import type { XmlElement } from "@aurochs/xml";
 import { isXmlElement } from "@aurochs/xml";
 import { insertChildAt, removeChildAt, replaceChildAt } from "../core/xml-mutator";
 
+/** Resolve the insert index for adding a shape after a given ID */
+function resolveInsertIndex(spTree: XmlElement, afterId: string | undefined): number {
+  if (!afterId) {
+    return spTree.children.length;
+  }
+  const index = findDirectChildShapeIndexById(spTree, afterId);
+  if (index === -1) {
+    return spTree.children.length;
+  }
+  return index + 1;
+}
+
 export type ShapeOperation =
   | { readonly type: "add"; readonly shape: XmlElement; readonly afterId?: string }
   | { readonly type: "remove"; readonly shapeId: string }
@@ -19,16 +31,7 @@ export type ShapeOperation =
 export function addShapeToTree(spTree: XmlElement, shapeXml: XmlElement, afterId?: string): XmlElement {
   const shapeStartIndex = getShapesStartIndex(spTree);
 
-  const insertIndex = (() => {
-    if (!afterId) {
-      return spTree.children.length;
-    }
-    const index = findDirectChildShapeIndexById(spTree, afterId);
-    if (index === -1) {
-      return spTree.children.length;
-    }
-    return index + 1;
-  })();
+  const insertIndex = resolveInsertIndex(spTree, afterId);
 
   return insertChildAt(spTree, shapeXml, Math.max(shapeStartIndex, insertIndex));
 }
@@ -56,21 +59,19 @@ export function removeShapeFromTree(spTree: XmlElement, shapeId: string): XmlEle
  * 複数のシェイプ操作を一括適用する
  */
 export function batchUpdateShapeTree(spTree: XmlElement, operations: readonly ShapeOperation[]): XmlElement {
-  let result = spTree;
-  for (const op of operations) {
-    switch (op.type) {
-      case "add":
-        result = addShapeToTree(result, op.shape, op.afterId);
-        break;
-      case "remove":
-        result = removeShapeFromTree(result, op.shapeId);
-        break;
-      case "replace":
-        result = replaceShapeInTree(result, op.shapeId, op.newShape);
-        break;
-    }
+  return operations.reduce(applyShapeOperation, spTree);
+}
+
+/** Apply a single shape operation to a tree element */
+function applyShapeOperation(tree: XmlElement, op: ShapeOperation): XmlElement {
+  switch (op.type) {
+    case "add":
+      return addShapeToTree(tree, op.shape, op.afterId);
+    case "remove":
+      return removeShapeFromTree(tree, op.shapeId);
+    case "replace":
+      return replaceShapeInTree(tree, op.shapeId, op.newShape);
   }
-  return result;
 }
 
 function replaceShapeInTree(spTree: XmlElement, shapeId: string, newShape: XmlElement): XmlElement {

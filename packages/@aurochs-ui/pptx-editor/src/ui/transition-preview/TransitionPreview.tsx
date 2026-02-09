@@ -156,7 +156,8 @@ export function TransitionPreview({ type, size = 24, animate = true, className, 
 
     try {
       await applyBrowserEffect({ el, type: mapping.effect, duration: 1500, direction: mapping.direction });
-    } catch {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- error intentionally unused, animation cancellation is expected
+    } catch (error: unknown) {
       // Animation cancelled or failed
     }
 

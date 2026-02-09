@@ -1,4 +1,6 @@
-import { describe, it, expect } from "vitest";
+/**
+ * @file Tests for Mermaid slide renderer
+ */
 import { renderSlideMermaid } from "./slide-renderer";
 
 describe("renderSlideMermaid", () => {

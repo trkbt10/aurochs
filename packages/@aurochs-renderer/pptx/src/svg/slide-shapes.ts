@@ -28,6 +28,8 @@ import type {
 } from "@aurochs-office/pptx/domain";
 import type { CoreRenderContext } from "../render-context";
 import type { SvgDefsCollector } from "./slide-utils";
+import type { Shape as DomainShape } from "@aurochs-office/pptx/domain";
+import type { Chart as DomainChart } from "@aurochs-office/chart/domain";
 import {
   createDefsCollector,
   getShapeTransform,
@@ -703,7 +705,7 @@ export function renderDiagramShapesSvg({
     return undefined;
   }
 
-  const entry = ctx.resourceStore?.get<{ readonly shapes: readonly import("@aurochs-office/pptx/domain").Shape[] }>(
+  const entry = ctx.resourceStore?.get<{ readonly shapes: readonly DomainShape[] }>(
     diagramRef.dataResourceId,
   );
   const diagramContent = entry?.parsed;
@@ -825,7 +827,7 @@ function renderChartFromRef({
   ctx: CoreRenderContext;
 }): string | undefined {
   // Get chart data from ResourceStore
-  const entry = ctx.resourceStore?.get<import("@aurochs-office/chart/domain").Chart>(chartRef.resourceId);
+  const entry = ctx.resourceStore?.get<DomainChart>(chartRef.resourceId);
   const parsedChart = entry?.parsed;
 
   if (parsedChart !== undefined) {

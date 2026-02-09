@@ -5,6 +5,7 @@
  */
 
 import { useState, type ReactNode } from "react";
+import type { SlideWithId } from "@aurochs-office/pptx/app";
 import type { ThumbnailItemProps } from "./types";
 import {
   thumbnailWrapperStyle,
@@ -14,6 +15,22 @@ import {
   deleteButtonStyle,
   dragIndicatorStyle,
 } from "./styles";
+
+/** Resolve thumbnail content from render function or default */
+function resolveThumbnailContent(
+  renderThumbnail: ((slide: SlideWithId, index: number) => ReactNode) | undefined,
+  slideWithId: SlideWithId,
+  index: number,
+): ReactNode {
+  if (renderThumbnail) {
+    return renderThumbnail(slideWithId, index);
+  }
+  return (
+    <span style={{ color: "#999", fontSize: "11px" }}>
+      {slideWithId.slide.shapes.length} shapes
+    </span>
+  );
+}
 
 /**
  * Single slide thumbnail with hover effects and drag support
@@ -39,13 +56,7 @@ export function ThumbnailItem({
   const thumbnailStyle = getThumbnailStyle(aspectRatio);
   const thumbnailActiveStyle = getThumbnailActiveStyle(aspectRatio);
 
-  const thumbnailContent: ReactNode = renderThumbnail
-    ? renderThumbnail(slideWithId, index)
-    : (
-        <span style={{ color: "#999", fontSize: "11px" }}>
-          {slideWithId.slide.shapes.length} shapes
-        </span>
-      );
+  const thumbnailContent: ReactNode = resolveThumbnailContent(renderThumbnail, slideWithId, index);
 
   return (
     <div

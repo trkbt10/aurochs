@@ -53,6 +53,58 @@ export type CreateRenderContextOptions = {
 };
 
 // =============================================================================
+// Helpers
+// =============================================================================
+
+/** Build the SlideContext from API slide data with full theme context */
+function buildSlideRenderContext(opts: {
+  apiSlide: ApiSlide;
+  zip: ZipFile;
+  defaultTextStyle: XmlElement | null;
+  renderOptions: RenderOptions | undefined;
+}): SlideContext {
+  const { apiSlide, zip, defaultTextStyle, renderOptions } = opts;
+  const masterClrMap = getByPath(apiSlide.master, ["p:sldMaster", "p:clrMap"]);
+  const slideClrMapOvr = getByPath(apiSlide.content, ["p:sld", "p:clrMapOvr", "a:overrideClrMapping"]);
+  const slideContent = getByPath(apiSlide.content, ["p:sld"]);
+
+  const slide = {
+    content: slideContent as XmlElement,
+    resources: apiSlide.relationships,
+    colorMapOverride: slideClrMapOvr !== undefined ? createColorMap(slideClrMapOvr) : undefined,
+  };
+
+  const layoutContent = getByPath(apiSlide.layout, ["p:sldLayout"]);
+  const masterContent = getByPath(apiSlide.master, ["p:sldMaster"]);
+
+  const layout = {
+    placeholders: createPlaceholderTable(apiSlide.layoutTables),
+    resources: apiSlide.layoutRelationships,
+    content: layoutContent as XmlElement | undefined,
+  };
+
+  const master = {
+    textStyles: parseMasterTextStyles(apiSlide.masterTextStyles as XmlElement | undefined),
+    placeholders: createPlaceholderTable(apiSlide.masterTables),
+    colorMap: createColorMap(masterClrMap),
+    resources: apiSlide.masterRelationships,
+    content: masterContent as XmlElement | undefined,
+  };
+
+  const theme = parseTheme(apiSlide.theme as XmlDocument, undefined);
+
+  const presentation = {
+    theme,
+    defaultTextStyle,
+    zip,
+    renderOptions: renderOptions ?? DEFAULT_RENDER_OPTIONS,
+    themeResources: apiSlide.themeRelationships,
+  };
+
+  return createSlideContext({ slide, layout, master, presentation });
+}
+
+// =============================================================================
 // Factory Function
 // =============================================================================
 
@@ -65,54 +117,7 @@ export function createRenderContext({
   renderOptions,
 }: CreateRenderContextOptions): RenderContext {
   // Build SlideRenderContext
-  const slideRenderCtx = (() => {
-    // Extract color map from master
-    const masterClrMap = getByPath(apiSlide.master, ["p:sldMaster", "p:clrMap"]);
-
-    // Extract color map override from slide (if present)
-    const slideClrMapOvr = getByPath(apiSlide.content, ["p:sld", "p:clrMapOvr", "a:overrideClrMapping"]);
-
-    // Get slide content element
-    const slideContent = getByPath(apiSlide.content, ["p:sld"]);
-
-    const slide = {
-      content: slideContent as XmlElement,
-      resources: apiSlide.relationships,
-      colorMapOverride: slideClrMapOvr !== undefined ? createColorMap(slideClrMapOvr) : undefined,
-    };
-
-    // Get layout content element for background lookup
-    const layoutContent = getByPath(apiSlide.layout, ["p:sldLayout"]);
-
-    // Get master content element for background lookup
-    const masterContent = getByPath(apiSlide.master, ["p:sldMaster"]);
-
-    const layout = {
-      placeholders: createPlaceholderTable(apiSlide.layoutTables),
-      resources: apiSlide.layoutRelationships,
-      content: layoutContent as XmlElement | undefined,
-    };
-
-    const master = {
-      textStyles: parseMasterTextStyles(apiSlide.masterTextStyles as XmlElement | undefined),
-      placeholders: createPlaceholderTable(apiSlide.masterTables),
-      colorMap: createColorMap(masterClrMap),
-      resources: apiSlide.masterRelationships,
-      content: masterContent as XmlElement | undefined,
-    };
-
-    const theme = parseTheme(apiSlide.theme as XmlDocument, undefined);
-
-    const presentation = {
-      theme,
-      defaultTextStyle,
-      zip,
-      renderOptions: renderOptions ?? DEFAULT_RENDER_OPTIONS,
-      themeResources: apiSlide.themeRelationships,
-    };
-
-    return createSlideContext({ slide, layout, master, presentation });
-  })();
+  const slideRenderCtx = buildSlideRenderContext({ apiSlide, zip, defaultTextStyle, renderOptions });
 
   // Resolve background from hierarchy
   const bgFillData = getBackgroundFillData(slideRenderCtx);

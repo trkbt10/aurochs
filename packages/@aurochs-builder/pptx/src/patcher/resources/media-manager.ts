@@ -90,10 +90,7 @@ export function removeMediaReference(pkg: ZipPackage, mediaPath: string, referri
     .filter((rel) => resolvePartPath(referringPart, rel.target) === mediaPath)
     .map((rel) => rel.id);
 
-  let updated = relsXml;
-  for (const id of idsToRemove) {
-    updated = removeRelationship(updated, id);
-  }
+  const updated = idsToRemove.reduce((acc, id) => removeRelationship(acc, id), relsXml);
   pkg.writeText(relsPath, serializeXml(updated));
 
   const used = collectUsedMediaTargets(pkg);
@@ -148,6 +145,15 @@ type AddMediaRelationshipOptions = {
   readonly relationshipType: RelationshipType;
 };
 
+/** Load or create a relationships document from the package */
+function loadOrCreateRelsDocument(pkg: ZipPackage, relsPath: string): ReturnType<typeof parseXml> {
+  const existing = pkg.readText(relsPath);
+  if (existing === null) {
+    return ensureRelationshipsDocument(null);
+  }
+  return ensureRelationshipsDocument(parseXml(existing));
+}
+
 function addMediaRelationship({
   pkg,
   referringPart,
@@ -155,13 +161,7 @@ function addMediaRelationship({
   relationshipType,
 }: AddMediaRelationshipOptions): string {
   const relsPath = getRelationshipPath(referringPart);
-  const relsXml = (() => {
-    const existing = pkg.readText(relsPath);
-    if (existing === null) {
-      return ensureRelationshipsDocument(null);
-    }
-    return ensureRelationshipsDocument(parseXml(existing));
-  })();
+  const relsXml = loadOrCreateRelsDocument(pkg, relsPath);
 
   const target = buildRelationshipTarget(referringPart, mediaPath);
   const { updatedXml, rId } = addRelationship(relsXml, target, relationshipType);
@@ -275,26 +275,26 @@ function findUnusedNumberedPath(existing: Set<string>, base: string, extension: 
   return tryNumber(1);
 }
 
+/** Count the number of common prefix segments between two arrays */
+function countCommonPrefix(a: readonly string[], b: readonly string[]): number {
+  const check = (i: number): number => {
+    if (i >= a.length || i >= b.length || a[i] !== b[i]) {
+      return i;
+    }
+    return check(i + 1);
+  };
+  return check(0);
+}
+
 function buildRelationshipTarget(sourcePart: string, targetPart: string): string {
   const sourceDir = getDirectory(sourcePart);
   const sourceSegments = sourceDir.split("/").filter((s) => s.length > 0);
   const targetSegments = targetPart.split("/").filter((s) => s.length > 0);
 
-  let common = 0;
-  while (
-    common < sourceSegments.length &&
-    common < targetSegments.length &&
-    sourceSegments[common] === targetSegments[common]
-  ) {
-    common += 1;
-  }
+  const common = countCommonPrefix(sourceSegments, targetSegments);
 
   const up = sourceSegments.length - common;
-  const relSegments: string[] = [];
-  for (let i = 0; i < up; i += 1) {
-    relSegments.push("..");
-  }
-  relSegments.push(...targetSegments.slice(common));
+  const relSegments = [...Array.from({ length: up }, () => ".."), ...targetSegments.slice(common)];
 
   return relSegments.join("/");
 }

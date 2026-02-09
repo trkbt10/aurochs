@@ -98,6 +98,7 @@ describe("Hover Operation Invariants", () => {
     });
 
     it("entering one item results in exactly one hovered", () => {
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let list = createList(5);
       list = mouseEnter(list, 2);
       expect(countHovered(list)).toBe(1);
@@ -105,6 +106,7 @@ describe("Hover Operation Invariants", () => {
     });
 
     it("proper sequence: leave A then enter B = one hovered", () => {
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let list = createList(5);
       list = mouseEnter(list, 0);
       list = mouseLeave(list, 0);
@@ -114,6 +116,7 @@ describe("Hover Operation Invariants", () => {
     });
 
     it("PROBLEM: improper sequence without leave = multiple hovered", () => {
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let list = createList(5);
       list = mouseEnter(list, 0);
       // Missing mouseLeave(list, 0) - simulates rapid mouse movement
@@ -126,6 +129,7 @@ describe("Hover Operation Invariants", () => {
 
   describe("Invariant: Drag clears all hover states", () => {
     it("starting drag clears all hovers", () => {
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let list = createList(5);
       list = mouseEnter(list, 0);
       list = mouseEnter(list, 2); // Multiple hovers (problem state)

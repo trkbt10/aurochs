@@ -690,9 +690,9 @@ function inferGridFromPaths({
     return bestRunLen >= Math.max(3, Math.floor(targetCols * 0.2)) && bestRunWidth / tableW >= 0.08;
   };
 
-  const yLinesBySegments = (() => {
+  const computeYLinesBySegments = (): number[] => {
     if (horizontalCenters.length < minRuleCount) {
-      return [] as number[];
+      return [];
     }
     const centers = cluster1D(horizontalCenters, clusterTol).sort((a, b) => b - a);
     const accepted: number[] = [];
@@ -702,7 +702,8 @@ function inferGridFromPaths({
       }
     }
     return accepted.sort((a, b) => b - a);
-  })();
+  };
+  const yLinesBySegments = computeYLinesBySegments();
 
   const horizontalCentersForRules: number[] = [];
   if (yLinesBySegments.length >= minRuleCount) {
@@ -862,6 +863,7 @@ function resolveCellAlignment(
   return "left";
 }
 
+/** Internal helper */
 export function inferTableFromGroupedText(
   group: GroupedText,
   options: TableInferenceOptions = {},
@@ -1025,7 +1027,7 @@ export function inferTableFromGroupedText(
   // - Generic: boundary[i] = median gap center between segment i and i+1 in header-like lines.
   // - Special-case: 3 columns × 2 blocks (6 columns total) with empty "reference" columns in data rows
   //   (k-namingrule-dl.pdf): infer the block gutter first, then fit code/name/ref boundaries per block.
-  const boundaries: number[] = (() => {
+  const computeColumnBoundaries = (): number[] => {
     if (predefinedBoundaries) {
       return [...predefinedBoundaries];
     }
@@ -1193,7 +1195,8 @@ export function inferTableFromGroupedText(
       rightNameRefBoundary,
       boundsX1,
     ];
-  })();
+  };
+  const boundaries: number[] = computeColumnBoundaries();
 
   // Ensure monotonic boundaries
   for (let i = 1; i < boundaries.length; i++) {

@@ -312,7 +312,9 @@ function applyFillChange(shape: XmlElement, change: PropertyChange & { property:
   }
 
   const fillElement = serializeFill(newFill);
-  const insertIndex = computeFillInsertIndex(firstFillIndex, originalChildren, keptChildren, fillNames);
+  const insertIndex = computeFillInsertIndex({
+    existingIndex: firstFillIndex, originalChildren, keptChildren, names: fillNames,
+  });
 
   const newSpPr = {
     ...spPr,
@@ -397,7 +399,9 @@ function applyEffectsChange(shape: XmlElement, change: PropertyChange & { proper
     return replaceChildByName(shape, spPrName, newSpPr);
   }
 
-  const insertIndex = computeEffectInsertIndex(firstEffectIndex, originalChildren, keptChildren, effectNames);
+  const insertIndex = computeEffectInsertIndex({
+    existingIndex: firstEffectIndex, originalChildren, keptChildren, names: effectNames,
+  });
 
   const newSpPr = {
     ...spPr,
@@ -407,19 +411,21 @@ function applyEffectsChange(shape: XmlElement, change: PropertyChange & { proper
   return replaceChildByName(shape, spPrName, newSpPr);
 }
 
+type InsertIndexArgs = {
+  readonly existingIndex: number;
+  readonly originalChildren: readonly unknown[];
+  readonly keptChildren: readonly unknown[];
+  readonly names: Set<string>;
+};
+
 /** Compute insert index for fill element */
-function computeFillInsertIndex(
-  firstFillIndex: number,
-  originalChildren: readonly unknown[],
-  keptChildren: readonly unknown[],
-  fillNames: Set<string>,
-): number {
-  if (firstFillIndex === -1) {
+function computeFillInsertIndex({ existingIndex, originalChildren, keptChildren, names }: InsertIndexArgs): number {
+  if (existingIndex === -1) {
     return findInsertIndexByName(keptChildren, ["a:ln", "a:effectLst", "a:effectDag"]);
   }
   return originalChildren
-    .slice(0, firstFillIndex)
-    .filter((c) => !(isXmlElement(c) && fillNames.has((c as XmlElement).name))).length;
+    .slice(0, existingIndex)
+    .filter((c) => !(isXmlElement(c) && names.has((c as XmlElement).name))).length;
 }
 
 /** Compute insert index for line element */
@@ -437,31 +443,21 @@ function computeLineInsertIndex(
 }
 
 /** Compute insert index for effect element */
-function computeEffectInsertIndex(
-  firstEffectIndex: number,
-  originalChildren: readonly unknown[],
-  keptChildren: readonly unknown[],
-  effectNames: Set<string>,
-): number {
-  if (firstEffectIndex === -1) {
+function computeEffectInsertIndex({ existingIndex, originalChildren, keptChildren, names }: InsertIndexArgs): number {
+  if (existingIndex === -1) {
     return keptChildren.length;
   }
   return originalChildren
-    .slice(0, firstEffectIndex)
-    .filter((c) => !(isXmlElement(c) && effectNames.has((c as XmlElement).name))).length;
+    .slice(0, existingIndex)
+    .filter((c) => !(isXmlElement(c) && names.has((c as XmlElement).name))).length;
 }
 
 /** Compute insert index for geometry element */
-function computeGeometryInsertIndex(
-  existingGeomIndex: number,
-  originalChildren: readonly unknown[],
-  keptChildren: readonly unknown[],
-  geometryNames: Set<string>,
-): number {
-  if (existingGeomIndex !== -1) {
+function computeGeometryInsertIndex({ existingIndex, originalChildren, keptChildren, names }: InsertIndexArgs): number {
+  if (existingIndex !== -1) {
     return originalChildren
-      .slice(0, existingGeomIndex)
-      .filter((c) => !(isXmlElement(c) && geometryNames.has((c as XmlElement).name))).length;
+      .slice(0, existingIndex)
+      .filter((c) => !(isXmlElement(c) && names.has((c as XmlElement).name))).length;
   }
   return findGeometryInsertIndex(keptChildren);
 }
@@ -527,7 +523,9 @@ function applyGeometryChange(shape: XmlElement, change: PropertyChange & { prope
   const geomElement = serializeGeometry(newGeometry);
 
   // Find insert position (geometry should come after a:xfrm)
-  const insertIndex = computeGeometryInsertIndex(existingGeomIndex, originalChildren, keptChildren, geometryNames);
+  const insertIndex = computeGeometryInsertIndex({
+    existingIndex: existingGeomIndex, originalChildren, keptChildren, names: geometryNames,
+  });
 
   const newSpPr = {
     ...spPr,
@@ -770,9 +768,7 @@ function updateConnectorRefs(
   const endConnection = conn.nonVisual.endConnection;
 
   const hasNewStartId = startConnection && idMap.has(startConnection.shapeId);
-  const updatedStart = hasNewStartId
-    ? { ...startConnection, shapeId: idMap.get(startConnection.shapeId)! }
-    : startConnection;
+  const updatedStart = resolveConnectionRef(startConnection, hasNewStartId, idMap);
 
   const hasNewEndId = endConnection && idMap.has(endConnection.shapeId);
   const updatedEnd = resolveConnectionRef(endConnection, hasNewEndId, idMap);

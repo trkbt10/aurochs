@@ -114,6 +114,7 @@ function renderSlideCanvas(mode: CreationMode, onCreateFromDrag: (bounds: ShapeB
 
 describe("SlideCanvas creation drag", () => {
   it("calls onCreateFromDrag with drag bounds in creation mode", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let received: { x: number; y: number; width: number; height: number } | null = null;
     const mode: CreationMode = { type: "chart", chartType: "bar" };
 

@@ -22,7 +22,9 @@ function renderTableLines(
   interiorWidth: number,
 ): readonly string[] {
   const table = "table" in content ? content.table : undefined;
-  if (!table || table.data.length === 0) return ["{table}"];
+  if (!table || table.data.length === 0) {
+    return ["{table}"];
+  }
 
   const headers = table.data[0]?.cells.map((c) => c.text);
   const rows = table.data.slice(1).map((r) => r.cells.map((c) => c.text));
@@ -40,7 +42,9 @@ function renderChartLines(
   interiorWidth: number,
 ): readonly string[] {
   const chart = "chart" in content ? content.chart : undefined;
-  if (!chart?.series || chart.series.length === 0) return ["{chart}"];
+  if (!chart?.series || chart.series.length === 0) {
+    return ["{chart}"];
+  }
 
   const extracted = extractChartData({
     title: chart.title,
@@ -61,7 +65,9 @@ function renderChartLines(
 /** Render diagram content as lines. Uses shapes data if available. */
 function renderDiagramLines(content: Extract<AsciiRenderableShape["content"], { type: "diagram" }>): readonly string[] {
   const diagram = "diagram" in content ? content.diagram : undefined;
-  if (!diagram?.shapes || diagram.shapes.length === 0) return ["{diagram}"];
+  if (!diagram?.shapes || diagram.shapes.length === 0) {
+    return ["{diagram}"];
+  }
 
   // Show diagram nodes as a simple list
   const lines: string[] = ["[diagram]"];

@@ -127,18 +127,26 @@ function createNotesSlideDocument(slideRId: string, text: string): XmlDocument {
  */
 function findNotesBodyPlaceholder(notesDoc: XmlDocument): XmlElement | null {
   const spTree = getByPath(notesDoc, ["p:notes", "p:cSld", "p:spTree"]);
-  if (!spTree) return null;
+  if (!spTree) {
+    return null;
+  }
 
   const shapes = getChildren(spTree, "p:sp");
   for (const sp of shapes) {
     const nvSpPr = getChild(sp, "p:nvSpPr");
-    if (!nvSpPr) continue;
+    if (!nvSpPr) {
+      continue;
+    }
 
     const nvPr = getChild(nvSpPr, "p:nvPr");
-    if (!nvPr) continue;
+    if (!nvPr) {
+      continue;
+    }
 
     const ph = getChild(nvPr, "p:ph");
-    if (!ph) continue;
+    if (!ph) {
+      continue;
+    }
 
     // Check for body placeholder type
     const phType = ph.attrs.type;
@@ -184,7 +192,9 @@ function updateNotesText(notesDoc: XmlDocument, text: string): XmlDocument {
 
   // Replace placeholder in spTree
   const spTree = getByPath(notesDoc, ["p:notes", "p:cSld", "p:spTree"]);
-  if (!spTree) return notesDoc;
+  if (!spTree) {
+    return notesDoc;
+  }
 
   const newSpTreeChildren = spTree.children.map((child) => {
     if (child === placeholder) {
@@ -197,7 +207,9 @@ function updateNotesText(notesDoc: XmlDocument, text: string): XmlDocument {
 
   // Rebuild document
   const cSld = getByPath(notesDoc, ["p:notes", "p:cSld"]);
-  if (!cSld) return notesDoc;
+  if (!cSld) {
+    return notesDoc;
+  }
 
   const newCsldChildren = cSld.children.map((child) => {
     if (isXmlElement(child) && child.name === "p:spTree") {
@@ -209,7 +221,9 @@ function updateNotesText(notesDoc: XmlDocument, text: string): XmlDocument {
   const newCsld = setChildren(cSld, newCsldChildren);
 
   const notes = getByPath(notesDoc, ["p:notes"]);
-  if (!notes) return notesDoc;
+  if (!notes) {
+    return notesDoc;
+  }
 
   const newNotesChildren = notes.children.map((child) => {
     if (isXmlElement(child) && child.name === "p:cSld") {
@@ -258,7 +272,6 @@ export function setSlideNotes(pkg: ZipPackage, slidePath: string, spec: SimpleNo
     // First, find the slide's relationship ID
     const slideRelsPath = getSlideRelsPath(slidePath);
     const slideRelsXml = pkg.readText(slideRelsPath);
-    const slideFilename = slidePath.split("/").pop()!;
     const slideRId = "rId1"; // This is typically the slide's self-reference
 
     const notesDoc = createNotesSlideDocument(slideRId, spec.text);

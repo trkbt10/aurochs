@@ -93,6 +93,7 @@ describe("SlideEditorContext Reducer - Selection", () => {
   });
 
   it("SELECT replaces previous selection when addToSelection is false", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let state = createSlideEditorState(createTestSlide(3));
     state = slideEditorReducer(state, {
       type: "SELECT",
@@ -110,6 +111,7 @@ describe("SlideEditorContext Reducer - Selection", () => {
   });
 
   it("SELECT with addToSelection adds to existing selection", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let state = createSlideEditorState(createTestSlide(3));
     state = slideEditorReducer(state, {
       type: "SELECT",
@@ -127,6 +129,7 @@ describe("SlideEditorContext Reducer - Selection", () => {
   });
 
   it("SELECT with addToSelection toggles off already selected shape", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let state = createSlideEditorState(createTestSlide(3));
     state = dispatchAll(state, [
       { type: "SELECT", shapeId: "1", addToSelection: false },
@@ -149,6 +152,7 @@ describe("SlideEditorContext Reducer - Selection", () => {
   });
 
   it("CLEAR_SELECTION removes all selections", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let state = createSlideEditorState(createTestSlide(3));
     state = slideEditorReducer(state, {
       type: "SELECT_MULTIPLE",
@@ -195,6 +199,7 @@ describe("SlideEditorContext Reducer - Shape Mutations", () => {
   });
 
   it("DELETE_SHAPES clears selection for deleted shapes", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let state = createSlideEditorState(createTestSlide(3));
     state = slideEditorReducer(state, {
       type: "SELECT_MULTIPLE",
@@ -281,6 +286,7 @@ describe("SlideEditorContext Reducer - Undo/Redo", () => {
   });
 
   it("past grows after mutation", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let state = createSlideEditorState(createTestSlide(3));
     state = slideEditorReducer(state, {
       type: "DELETE_SHAPES",
@@ -291,6 +297,7 @@ describe("SlideEditorContext Reducer - Undo/Redo", () => {
   });
 
   it("UNDO restores previous state", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let state = createSlideEditorState(createTestSlide(3));
     state = slideEditorReducer(state, {
       type: "DELETE_SHAPES",
@@ -303,6 +310,7 @@ describe("SlideEditorContext Reducer - Undo/Redo", () => {
   });
 
   it("future grows after undo", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let state = createSlideEditorState(createTestSlide(3));
     state = slideEditorReducer(state, {
       type: "DELETE_SHAPES",
@@ -314,6 +322,7 @@ describe("SlideEditorContext Reducer - Undo/Redo", () => {
   });
 
   it("REDO restores undone state", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let state = createSlideEditorState(createTestSlide(3));
     state = slideEditorReducer(state, {
       type: "DELETE_SHAPES",
@@ -327,6 +336,7 @@ describe("SlideEditorContext Reducer - Undo/Redo", () => {
   });
 
   it("new mutation clears redo stack (future)", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let state = createSlideEditorState(createTestSlide(3));
     state = slideEditorReducer(state, {
       type: "DELETE_SHAPES",
@@ -343,6 +353,7 @@ describe("SlideEditorContext Reducer - Undo/Redo", () => {
   });
 
   it("multiple undo/redo cycle works correctly", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let state = createSlideEditorState(createTestSlide(3));
 
     // Make 3 changes
@@ -388,6 +399,7 @@ describe("SlideEditorContext Reducer - Undo/Redo", () => {
 
 describe("SlideEditorContext Reducer - Copy/Paste", () => {
   it("COPY stores selected shapes in clipboard", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let state = createSlideEditorState(createTestSlide(3));
     state = slideEditorReducer(state, {
       type: "SELECT_MULTIPLE",
@@ -400,6 +412,7 @@ describe("SlideEditorContext Reducer - Copy/Paste", () => {
   });
 
   it("COPY does nothing when nothing selected", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let state = createSlideEditorState(createTestSlide(3));
     state = slideEditorReducer(state, { type: "COPY" });
 
@@ -407,6 +420,7 @@ describe("SlideEditorContext Reducer - Copy/Paste", () => {
   });
 
   it("PASTE adds shapes from clipboard", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let state = createSlideEditorState(createTestSlide(3));
     state = slideEditorReducer(state, {
       type: "SELECT",
@@ -420,6 +434,7 @@ describe("SlideEditorContext Reducer - Copy/Paste", () => {
   });
 
   it("PASTE does nothing when clipboard empty", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let state = createSlideEditorState(createTestSlide(3));
     state = slideEditorReducer(state, { type: "PASTE" });
 
@@ -427,6 +442,7 @@ describe("SlideEditorContext Reducer - Copy/Paste", () => {
   });
 
   it("PASTE selects pasted shapes", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let state = createSlideEditorState(createTestSlide(3));
     state = slideEditorReducer(state, {
       type: "SELECT",
@@ -442,6 +458,7 @@ describe("SlideEditorContext Reducer - Copy/Paste", () => {
   });
 
   it("PASTE creates new unique IDs", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let state = createSlideEditorState(createTestSlide(3));
     state = slideEditorReducer(state, {
       type: "SELECT",
@@ -457,6 +474,7 @@ describe("SlideEditorContext Reducer - Copy/Paste", () => {
   });
 
   it("PASTE offsets position each time", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let state = createSlideEditorState(createTestSlide(3));
     state = slideEditorReducer(state, {
       type: "SELECT",
@@ -475,6 +493,7 @@ describe("SlideEditorContext Reducer - Copy/Paste", () => {
   });
 
   it("pasteCount increments with each paste", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let state = createSlideEditorState(createTestSlide(3));
     state = slideEditorReducer(state, {
       type: "SELECT",
@@ -503,6 +522,7 @@ describe("SlideEditorContext Reducer - Drag State", () => {
   });
 
   it("START_MOVE sets move drag state", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let state = createSlideEditorState(createTestSlide(3));
     state = slideEditorReducer(state, {
       type: "SELECT",
@@ -525,6 +545,7 @@ describe("SlideEditorContext Reducer - Drag State", () => {
   });
 
   it("START_MOVE does nothing when nothing selected", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let state = createSlideEditorState(createTestSlide(3));
     state = slideEditorReducer(state, {
       type: "START_MOVE",
@@ -536,6 +557,7 @@ describe("SlideEditorContext Reducer - Drag State", () => {
   });
 
   it("START_RESIZE sets resize drag state", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let state = createSlideEditorState(createTestSlide(3));
     state = slideEditorReducer(state, {
       type: "SELECT",
@@ -559,6 +581,7 @@ describe("SlideEditorContext Reducer - Drag State", () => {
   });
 
   it("START_RESIZE does nothing when nothing selected", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let state = createSlideEditorState(createTestSlide(3));
     state = slideEditorReducer(state, {
       type: "START_RESIZE",
@@ -572,6 +595,7 @@ describe("SlideEditorContext Reducer - Drag State", () => {
   });
 
   it("START_ROTATE sets rotate drag state", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let state = createSlideEditorState(createTestSlide(3));
     state = slideEditorReducer(state, {
       type: "SELECT",
@@ -593,6 +617,7 @@ describe("SlideEditorContext Reducer - Drag State", () => {
   });
 
   it("END_DRAG returns to idle", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let state = createSlideEditorState(createTestSlide(3));
     state = slideEditorReducer(state, {
       type: "SELECT",
@@ -617,6 +642,7 @@ describe("SlideEditorContext Reducer - Drag State", () => {
 
 describe("SlideEditorContext Reducer - SET_SLIDE", () => {
   it("SET_SLIDE replaces entire slide", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let state = createSlideEditorState(createTestSlide(3));
     const newSlide = createTestSlide(5);
 
@@ -626,6 +652,7 @@ describe("SlideEditorContext Reducer - SET_SLIDE", () => {
   });
 
   it("SET_SLIDE clears selection", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let state = createSlideEditorState(createTestSlide(3));
     state = slideEditorReducer(state, {
       type: "SELECT_MULTIPLE",
@@ -639,6 +666,7 @@ describe("SlideEditorContext Reducer - SET_SLIDE", () => {
   });
 
   it("SET_SLIDE resets history", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let state = createSlideEditorState(createTestSlide(3));
     state = slideEditorReducer(state, {
       type: "DELETE_SHAPES",
@@ -654,6 +682,7 @@ describe("SlideEditorContext Reducer - SET_SLIDE", () => {
   });
 
   it("SET_SLIDE resets drag state", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let state = createSlideEditorState(createTestSlide(3));
     state = slideEditorReducer(state, {
       type: "SELECT",

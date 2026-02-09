@@ -72,20 +72,16 @@ function patchOleProgId(oleFrame: XmlElement, progId: string): XmlElement {
 export function patchOleObject(oleFrame: XmlElement, changes: readonly OleChange[]): XmlElement {
   requireGraphicFrame(oleFrame);
 
-  // eslint-disable-next-line no-restricted-syntax
-  let next = oleFrame;
-  for (const change of changes) {
-    switch (change.type) {
-      case "transform":
-        next = patchOleTransform(next, change.transform);
-        break;
-      case "replace":
-        // Binary replacement is handled at the package level; here we only patch metadata.
-        next = patchOleProgId(next, change.progId);
-        break;
-      default:
-        ((_: never) => _)(change);
-    }
+  return changes.reduce(applyOleChange, oleFrame);
+}
+
+/** Apply a single OLE change to a frame element */
+function applyOleChange(frame: XmlElement, change: OleChange): XmlElement {
+  switch (change.type) {
+    case "transform":
+      return patchOleTransform(frame, change.transform);
+    case "replace":
+      // Binary replacement is handled at the package level; here we only patch metadata.
+      return patchOleProgId(frame, change.progId);
   }
-  return next;
 }

@@ -38,14 +38,17 @@ function getTextStyleLevelElementName(level: number): string {
   return `a:lvl${level}pPr`;
 }
 
+/** Merge paragraph properties with optional default run properties */
+function mergeParagraphWithRunProperties(base: ParagraphProperties, style: TextLevelStyle): ParagraphProperties {
+  if (style.defaultRunProperties === undefined) {
+    return base;
+  }
+  return { ...base, defaultRunProperties: style.defaultRunProperties };
+}
+
 function buildParagraphPropertiesPatch(style: TextLevelStyle): ParagraphProperties | null {
   const base = style.paragraphProperties ?? {};
-  const merged = (() => {
-    if (style.defaultRunProperties === undefined) {
-      return base;
-    }
-    return { ...base, defaultRunProperties: style.defaultRunProperties };
-  })();
+  const merged = mergeParagraphWithRunProperties(base, style);
 
   if (!hasAnyParagraphPatch(merged)) {
     return null;
@@ -176,41 +179,45 @@ export function patchTextStyleLevelElement(existing: XmlElement, patch: Paragrap
   return createElement(existing.name, mergedAttrs, [...before, ...toInsert, ...after]);
 }
 
+/** Apply a single level style patch to a style element */
+function applyLevelPatch(
+  element: XmlElement,
+  childName: string,
+  levelStyle: TextLevelStyle | undefined,
+): XmlElement {
+  if (!levelStyle) {
+    return element;
+  }
+  const patch = buildParagraphPropertiesPatch(levelStyle);
+  if (!patch) {
+    return element;
+  }
+  const existing = getChildElement(element, childName);
+  if (existing) {
+    return upsertChildBeforeExtLst(element, childName, patchTextStyleLevelElement(existing, patch));
+  }
+  const created = renameElement(serializeParagraphProperties(patch), childName);
+  return upsertChildBeforeExtLst(element, childName, created);
+}
+
 /**
  * Patch a p:titleStyle/p:bodyStyle/p:otherStyle element using TextStyleLevels.
  */
 export function patchTextStyleLevelsElement(styleElement: XmlElement, levels: TextStyleLevels): XmlElement {
-  let updated = styleElement;
+  const entries: readonly [string, TextLevelStyle | undefined][] = [
+    ["a:defPPr", levels.defaultStyle],
+    ["a:lvl1pPr", levels.level1],
+    ["a:lvl2pPr", levels.level2],
+    ["a:lvl3pPr", levels.level3],
+    ["a:lvl4pPr", levels.level4],
+    ["a:lvl5pPr", levels.level5],
+    ["a:lvl6pPr", levels.level6],
+    ["a:lvl7pPr", levels.level7],
+    ["a:lvl8pPr", levels.level8],
+    ["a:lvl9pPr", levels.level9],
+  ];
 
-  const apply = (childName: string, levelStyle: TextLevelStyle | undefined) => {
-    if (!levelStyle) {
-      return;
-    }
-    const patch = buildParagraphPropertiesPatch(levelStyle);
-    if (!patch) {
-      return;
-    }
-    const existing = getChildElement(updated, childName);
-    if (existing) {
-      updated = upsertChildBeforeExtLst(updated, childName, patchTextStyleLevelElement(existing, patch));
-      return;
-    }
-    const created = renameElement(serializeParagraphProperties(patch), childName);
-    updated = upsertChildBeforeExtLst(updated, childName, created);
-  };
-
-  apply("a:defPPr", levels.defaultStyle);
-  apply("a:lvl1pPr", levels.level1);
-  apply("a:lvl2pPr", levels.level2);
-  apply("a:lvl3pPr", levels.level3);
-  apply("a:lvl4pPr", levels.level4);
-  apply("a:lvl5pPr", levels.level5);
-  apply("a:lvl6pPr", levels.level6);
-  apply("a:lvl7pPr", levels.level7);
-  apply("a:lvl8pPr", levels.level8);
-  apply("a:lvl9pPr", levels.level9);
-
-  return updated;
+  return entries.reduce((acc, [childName, levelStyle]) => applyLevelPatch(acc, childName, levelStyle), styleElement);
 }
 
 /**

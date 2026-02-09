@@ -308,6 +308,61 @@ function applyDragPreview(id: ShapeId, baseBounds: BaseBounds, drag: DragState):
 // Component
 // =============================================================================
 
+/** Render path edit overlay for custom geometry editing */
+function renderSlidePathEditOverlay({
+  pathEdit,
+  slide,
+  widthNum,
+  heightNum,
+  onPathEditCommit,
+  onPathEditCancel,
+}: {
+  pathEdit: PathEditState;
+  slide: Slide;
+  widthNum: number;
+  heightNum: number;
+  onPathEditCommit: (path: DrawingPath, shapeId: ShapeId) => void;
+  onPathEditCancel: () => void;
+}): React.ReactNode {
+  const editingShape = slide.shapes.find((s) => {
+    if (s.type === "contentPart") {
+      return false;
+    }
+    return s.nonVisual.id === pathEdit.shapeId;
+  });
+
+  if (editingShape?.type !== "sp" || !isCustomGeometry(editingShape.properties.geometry)) {
+    return null;
+  }
+
+  const transform = editingShape.properties.transform;
+  if (!transform) {
+    return null;
+  }
+
+  const shapeWidth = transform.width as number;
+  const shapeHeight = transform.height as number;
+
+  const drawingPath = customGeometryToDrawingPath(editingShape.properties.geometry, shapeWidth, shapeHeight);
+
+  if (!drawingPath) {
+    return null;
+  }
+
+  return (
+    <PathEditOverlay
+      initialPath={drawingPath}
+      offsetX={transform.x as number}
+      offsetY={transform.y as number}
+      slideWidth={widthNum}
+      slideHeight={heightNum}
+      onCommit={(editedPath) => onPathEditCommit(editedPath, pathEdit.shapeId)}
+      onCancel={onPathEditCancel}
+      isActive={true}
+    />
+  );
+}
+
 /**
  * Self-contained slide canvas with rendering, selection, and interaction.
  */
@@ -1014,47 +1069,14 @@ export function SlideCanvas({
           isPathEditEditing(pathEdit) &&
           onPathEditCommit &&
           onPathEditCancel &&
-          (() => {
-            // Find the shape being edited
-            const editingShape = slide.shapes.find((s) => {
-              if (s.type === "contentPart") {
-                return false;
-              }
-              return s.nonVisual.id === pathEdit.shapeId;
-            });
-
-            if (editingShape?.type !== "sp" || !isCustomGeometry(editingShape.properties.geometry)) {
-              return null;
-            }
-
-            const transform = editingShape.properties.transform;
-            if (!transform) {
-              return null;
-            }
-
-            const shapeWidth = transform.width as number;
-            const shapeHeight = transform.height as number;
-
-            // Convert custom geometry to drawing path
-            const drawingPath = customGeometryToDrawingPath(editingShape.properties.geometry, shapeWidth, shapeHeight);
-
-            if (!drawingPath) {
-              return null;
-            }
-
-            return (
-              <PathEditOverlay
-                initialPath={drawingPath}
-                offsetX={transform.x as number}
-                offsetY={transform.y as number}
-                slideWidth={widthNum}
-                slideHeight={heightNum}
-                onCommit={(editedPath) => onPathEditCommit(editedPath, pathEdit.shapeId)}
-                onCancel={onPathEditCancel}
-                isActive={true}
-              />
-            );
-          })()}
+          renderSlidePathEditOverlay({
+            pathEdit,
+            slide,
+            widthNum,
+            heightNum,
+            onPathEditCommit,
+            onPathEditCancel,
+          })}
       </div>
 
       {/* Context menu */}

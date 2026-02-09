@@ -83,20 +83,23 @@ export function collectChartRelIds(drawing: XlsxDrawing | undefined): readonly s
 }
 
 /**
+ * Options for resolving charts.
+ */
+type ResolveChartsParams = {
+  readonly getFileContent: (path: string) => Promise<string | undefined>;
+  readonly drawingPath: string;
+  readonly drawingRelationships: ReadonlyMap<string, string>;
+  readonly chartRelIds: readonly string[];
+};
+
+/**
  * Resolve and parse charts for a worksheet drawing.
  *
- * @param getFileContent - Function to retrieve file content
- * @param drawingPath - Path to the drawing XML
- * @param drawingRelationships - Map of relationship IDs to targets
- * @param chartRelIds - Chart relationship IDs to resolve
+ * @param params - Chart resolution parameters
  * @returns Resolved charts
  */
-export async function resolveCharts(
-  getFileContent: (path: string) => Promise<string | undefined>,
-  drawingPath: string,
-  drawingRelationships: ReadonlyMap<string, string>,
-  chartRelIds: readonly string[],
-): Promise<readonly XlsxChart[]> {
+export async function resolveCharts(params: ResolveChartsParams): Promise<readonly XlsxChart[]> {
+  const { getFileContent, drawingPath, drawingRelationships, chartRelIds } = params;
   const charts: XlsxChart[] = [];
 
   for (const relId of chartRelIds) {
@@ -122,8 +125,9 @@ export async function resolveCharts(
         chartPath,
         chart,
       });
-    } catch {
+    } catch (error: unknown) {
       // Skip charts that fail to parse
+      console.debug("Failed to parse chart:", error);
       continue;
     }
   }

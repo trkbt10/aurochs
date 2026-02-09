@@ -44,18 +44,22 @@ function parseCacheItem(itemElement: XmlElement): XlsxPivotCacheItem {
   }
 }
 
-function parseCacheField(fieldElement: XmlElement): XlsxPivotCacheField {
-  const sharedItemsEl = getChild(fieldElement, "sharedItems");
-  let sharedItems: readonly XlsxPivotCacheItem[] | undefined;
-
-  if (sharedItemsEl) {
-    const items: XlsxPivotCacheItem[] = [];
-    for (const child of sharedItemsEl.children) {
-      if (typeof child !== "object" || child.type !== "element") continue;
-      items.push(parseCacheItem(child));
-    }
-    sharedItems = items.length > 0 ? items : undefined;
+function parseSharedItems(sharedItemsEl: XmlElement | undefined): readonly XlsxPivotCacheItem[] | undefined {
+  if (!sharedItemsEl) {
+    return undefined;
   }
+  const items: XlsxPivotCacheItem[] = [];
+  for (const child of sharedItemsEl.children) {
+    if (typeof child !== "object" || child.type !== "element") {
+      continue;
+    }
+    items.push(parseCacheItem(child));
+  }
+  return items.length > 0 ? items : undefined;
+}
+
+function parseCacheField(fieldElement: XmlElement): XlsxPivotCacheField {
+  const sharedItems = parseSharedItems(getChild(fieldElement, "sharedItems"));
 
   return {
     name: getAttr(fieldElement, "name") ?? "",
@@ -168,7 +172,9 @@ function parseRecordValue(valueElement: XmlElement): XlsxPivotRecordValue {
 function parseRecord(recordElement: XmlElement): XlsxPivotRecord {
   const values: XlsxPivotRecordValue[] = [];
   for (const child of recordElement.children) {
-    if (typeof child !== "object" || child.type !== "element") continue;
+    if (typeof child !== "object" || child.type !== "element") {
+      continue;
+    }
     values.push(parseRecordValue(child));
   }
   return { values };

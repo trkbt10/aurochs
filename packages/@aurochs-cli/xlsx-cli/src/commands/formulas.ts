@@ -5,7 +5,7 @@
 import { success, error, type Result } from "@aurochs-cli/cli-core";
 import { loadXlsxWorkbook } from "../utils/xlsx-loader";
 import { createFormulaEvaluator } from "@aurochs-office/xlsx/formula/evaluator";
-import { formatCellRef } from "@aurochs-office/xlsx/domain/cell/address";
+import { formatCellRef, type CellAddress } from "@aurochs-office/xlsx/domain/cell/address";
 import type { FormulaScalar } from "@aurochs-office/xlsx/formula/types";
 
 // =============================================================================
@@ -80,7 +80,7 @@ function formatCellValue(value: { type: string; value?: unknown }): string | num
 function evaluateFormula(
   evaluator: ReturnType<typeof createFormulaEvaluator> | undefined,
   sheetIndex: number,
-  address: { col: number; row: number },
+  address: CellAddress,
 ): string | number | boolean | null | undefined {
   if (!evaluator) {
     return undefined;

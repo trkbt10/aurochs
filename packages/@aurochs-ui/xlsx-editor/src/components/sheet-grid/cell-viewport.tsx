@@ -63,6 +63,17 @@ const fillHandleStyle: CSSProperties = {
   touchAction: "none",
 };
 
+/** Resolve an EventTarget to the nearest HTMLElement (or null). */
+function resolveElementFromTarget(target: EventTarget): HTMLElement | null {
+  if (target instanceof HTMLElement) {
+    return target;
+  }
+  if (target instanceof Node) {
+    return target.parentElement;
+  }
+  return null;
+}
+
 export type XlsxSheetGridCellViewportProps = {
   readonly sheet: XlsxWorksheet;
   readonly workbookStyles: XlsxStyleSheet;
@@ -331,12 +342,7 @@ export function XlsxSheetGridCellViewport({
   );
 
   const getCellAddressFromEventTarget = useCallback((target: EventTarget): CellAddress | null => {
-    const el =
-      target instanceof HTMLElement
-        ? target
-        : target instanceof Node
-          ? (target.parentElement as HTMLElement | null)
-          : null;
+    const el = resolveElementFromTarget(target);
     const cell = el?.closest("[data-xlsx-cell-col][data-xlsx-cell-row]") as HTMLElement | null;
     if (!cell) {
       return null;

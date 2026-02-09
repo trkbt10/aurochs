@@ -120,6 +120,7 @@ function createPartiallyMixedProperties(): MixedRunProperties {
 // =============================================================================
 
 describe("MixedRunPropertiesEditor", () => {
+  // eslint-disable-next-line no-restricted-syntax -- mutable test state
   let onChange: CallTracker<Parameters<MixedRunPropertiesEditorProps["onChange"]>>;
 
   beforeEach(() => {
@@ -133,7 +134,8 @@ describe("MixedRunPropertiesEditor", () => {
         value: fakeFonts,
         configurable: true,
       });
-    } catch {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- error intentionally unused, document.fonts may be non-configurable
+    } catch (error: unknown) {
       // Ignore if document.fonts is non-configurable in this environment
     }
   });
@@ -300,6 +302,7 @@ describe("MixedRunPropertiesEditor", () => {
       const selects = container.querySelectorAll("select") as NodeListOf<HTMLSelectElement>;
       // Underline select is one of the first selects in the decoration section
       // Find by checking select options for "Single" which is sng label
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let underlineSelect: HTMLSelectElement | null = null;
       for (const select of selects) {
         const options = select.querySelectorAll("option");
@@ -323,6 +326,7 @@ describe("MixedRunPropertiesEditor", () => {
       );
 
       const selects = container.querySelectorAll("select") as NodeListOf<HTMLSelectElement>;
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let underlineSelect: HTMLSelectElement | null = null;
       for (const select of selects) {
         const options = select.querySelectorAll("option");
@@ -350,6 +354,7 @@ describe("MixedRunPropertiesEditor", () => {
       );
 
       const selects = container.querySelectorAll("select") as NodeListOf<HTMLSelectElement>;
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let underlineSelect: HTMLSelectElement | null = null;
       for (const select of selects) {
         const options = select.querySelectorAll("option");
@@ -380,6 +385,7 @@ describe("MixedRunPropertiesEditor", () => {
 
       // Find the caps select by looking for "Small Caps" option
       const selects = container.querySelectorAll("select") as NodeListOf<HTMLSelectElement>;
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let capsSelect: HTMLSelectElement | null = null;
       for (const select of selects) {
         const options = select.querySelectorAll("option");
@@ -403,6 +409,7 @@ describe("MixedRunPropertiesEditor", () => {
       );
 
       const selects = container.querySelectorAll("select") as NodeListOf<HTMLSelectElement>;
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let capsSelect: HTMLSelectElement | null = null;
       for (const select of selects) {
         const options = select.querySelectorAll("option");

@@ -3,17 +3,13 @@
  */
 
 import { renderAsciiTable } from "@aurochs-renderer/drawing-ml/ascii";
-import type { SheetAsciiParams, AsciiCell } from "./types";
+import type { SheetAsciiParams, AsciiCell, AsciiSheetRow } from "./types";
 
 /** Convert a 0-based column index to a column letter (A, B, ... Z, AA, AB, ...). */
 function indexToColumnLetter(index: number): string {
-  let result = "";
-  let n = index;
-  while (n >= 0) {
-    result = String.fromCharCode((n % 26) + 65) + result;
-    n = Math.floor(n / 26) - 1;
-  }
-  return result;
+  const char = String.fromCharCode((index % 26) + 65);
+  const remaining = Math.floor(index / 26) - 1;
+  return remaining >= 0 ? indexToColumnLetter(remaining) + char : char;
 }
 
 /** Format a cell value for display. */
@@ -33,6 +29,17 @@ function cellAlignment(cell: AsciiCell): "left" | "right" {
   return cell.type === "number" ? "right" : "left";
 }
 
+/** Detect column alignment from the first non-empty cell in a column. */
+function detectColumnAlignment(
+  rows: readonly AsciiSheetRow[],
+  columnIndex: number,
+): "left" | "right" {
+  const firstNonEmpty = rows.find(
+    (row) => columnIndex < row.cells.length && row.cells[columnIndex]!.type !== "empty",
+  );
+  return firstNonEmpty ? cellAlignment(firstNonEmpty.cells[columnIndex]!) : "left";
+}
+
 /** Render sheet data as an ASCII table grid. */
 export function renderSheetAscii(params: SheetAsciiParams): string {
   const { rows, columnCount, width, showRowNumbers = true, showColumnHeaders = true } = params;
@@ -47,7 +54,7 @@ export function renderSheetAscii(params: SheetAsciiParams): string {
     headers.push("");
   }
   if (showColumnHeaders) {
-    for (let c = 0; c < columnCount; c++) {
+    for (const c of Array.from({ length: columnCount }, (_, i) => i)) {
       headers.push(indexToColumnLetter(c));
     }
   }
@@ -62,15 +69,8 @@ export function renderSheetAscii(params: SheetAsciiParams): string {
   }
 
   // Determine alignment per column based on first non-empty cell
-  for (let c = 0; c < columnCount; c++) {
-    let align: "left" | "right" = "left";
-    for (const row of rows) {
-      if (c < row.cells.length && row.cells[c]!.type !== "empty") {
-        align = cellAlignment(row.cells[c]!);
-        break;
-      }
-    }
-    alignments.push(align);
+  for (const c of Array.from({ length: columnCount }, (_, i) => i)) {
+    alignments.push(detectColumnAlignment(rows, c));
   }
 
   for (const row of rows) {
@@ -78,7 +78,7 @@ export function renderSheetAscii(params: SheetAsciiParams): string {
     if (showRowNumbers) {
       rowData.push(String(row.rowNumber));
     }
-    for (let c = 0; c < columnCount; c++) {
+    for (const c of Array.from({ length: columnCount }, (_, i) => i)) {
       const cell = c < row.cells.length ? row.cells[c]! : { value: null, type: "empty" as const };
       rowData.push(formatCellValue(cell));
     }

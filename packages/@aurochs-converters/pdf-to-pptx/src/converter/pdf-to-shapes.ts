@@ -137,7 +137,7 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
     }
 
     // Determine if this path should be a blocking zone based on paint operation
-    const isBlockingZone = (() => {
+    const checkIsBlockingZone = (): boolean => {
       if (path.paintOp === "stroke" || path.paintOp === "fillStroke") {
         // Stroked paths (lines, borders) are always blocking zones
         // They represent visual separators like table borders, divider lines
@@ -160,7 +160,8 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
         return isThinFill || isElongated;
       }
       return false;
-    })();
+    };
+    const isBlockingZone = checkIsBlockingZone();
 
     if (isBlockingZone) {
       blockingZones.push({
@@ -253,7 +254,7 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
     const items = usable.map((t, i) => ({ t, baseline: baselines[i]! })).sort((a, b) => b.baseline - a.baseline);
 
     const paragraphs: Array<{ runs: PdfText[]; baselineY: number }> = [];
-    // eslint-disable-next-line no-restricted-syntax
+    // eslint-disable-next-line no-restricted-syntax -- mutable accumulator for baseline clustering
     let cur: { runs: PdfText[]; baselines: number[]; baselineY: number } | null = null;
 
     for (const it of items) {
@@ -275,13 +276,13 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
       paragraphs.push({ runs: cur.runs.sort((a, b) => a.x - b.x), baselineY: cur.baselineY });
     }
 
-    // eslint-disable-next-line no-restricted-syntax
+    // eslint-disable-next-line no-restricted-syntax -- mutable accumulator for bounding box computation
     let minX = Infinity;
-    // eslint-disable-next-line no-restricted-syntax
+    // eslint-disable-next-line no-restricted-syntax -- mutable accumulator for bounding box computation
     let minY = Infinity;
-    // eslint-disable-next-line no-restricted-syntax
+    // eslint-disable-next-line no-restricted-syntax -- mutable accumulator for bounding box computation
     let maxX = -Infinity;
-    // eslint-disable-next-line no-restricted-syntax
+    // eslint-disable-next-line no-restricted-syntax -- mutable accumulator for bounding box computation
     let maxY = -Infinity;
     for (const t of usable) {
       minX = Math.min(minX, t.x);
@@ -320,7 +321,7 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
       if (!(a > 0)) {
         continue;
       }
-      // eslint-disable-next-line no-restricted-syntax
+      // eslint-disable-next-line no-restricted-syntax -- mutable flag for nested region check
       let nested = false;
       for (const k of kept) {
         const ov = overlapArea(r, k);
@@ -393,7 +394,7 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
           continue;
         }
 
-        const inferred = (() => {
+        const inferTableForRegion = (): InferredTable | null => {
           const tryStrict = (cols: number): InferredTable | null =>
             inferTableFromGroupedText(regionGroup, { paths, minRows: 2, minCols: cols, maxCols: cols });
 
@@ -411,7 +412,8 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
           }
 
           return inferTableFromGroupedText(regionGroup, { paths, minRows: 2, minCols: 2 });
-        })();
+        };
+        const inferred = inferTableForRegion();
         if (!inferred) {
           continue;
         }
@@ -563,13 +565,13 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
       });
 
       const bboxOfOps = (ops: readonly PdfPathOp[]): BBox | null => {
-        // eslint-disable-next-line no-restricted-syntax
+        // eslint-disable-next-line no-restricted-syntax -- mutable accumulator for bounding box computation
         let minX = Infinity;
-        // eslint-disable-next-line no-restricted-syntax
+        // eslint-disable-next-line no-restricted-syntax -- mutable accumulator for bounding box computation
         let minY = Infinity;
-        // eslint-disable-next-line no-restricted-syntax
+        // eslint-disable-next-line no-restricted-syntax -- mutable accumulator for bounding box computation
         let maxX = -Infinity;
-        // eslint-disable-next-line no-restricted-syntax
+        // eslint-disable-next-line no-restricted-syntax -- mutable accumulator for bounding box computation
         let maxY = -Infinity;
         const add = (x: number, y: number): void => {
           minX = Math.min(minX, x);
@@ -612,7 +614,7 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
 
       const splitSubpaths = (ops: readonly PdfPathOp[]): PdfPathOp[][] => {
         const out: PdfPathOp[][] = [];
-        // eslint-disable-next-line no-restricted-syntax
+        // eslint-disable-next-line no-restricted-syntax -- mutable accumulator for subpath splitting
         let cur: PdfPathOp[] = [];
         const flush = (): void => {
           if (cur.length > 0) {
@@ -692,9 +694,9 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
 
       // Default: use the sub-table's own outer bounds so we preserve whitespace between
       // adjacent tables (e.g. two 3-column tables side-by-side).
-      // eslint-disable-next-line no-restricted-syntax
+      // eslint-disable-next-line no-restricted-syntax -- mutable accumulator for sub-table bounds clamping
       let x0 = x0Base;
-      // eslint-disable-next-line no-restricted-syntax
+      // eslint-disable-next-line no-restricted-syntax -- mutable accumulator for sub-table bounds clamping
       let x1 = x1Base;
 
       // If a divider rule is present (often double lines), clamp the adjacent edges to the
@@ -821,7 +823,7 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
       y1: inferred.bounds.y + inferred.bounds.height + pad,
     };
 
-    // eslint-disable-next-line no-restricted-syntax
+    // eslint-disable-next-line no-restricted-syntax -- mutable counter for path intersection check
     let intersecting = 0;
     for (const p of paths) {
       if (p.paintOp === "none" || p.paintOp === "clip") {
@@ -1030,7 +1032,7 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
       readonly score: number;
     };
 
-    const regions: Region[] = (() => {
+    const computeDenseRegions = (): Region[] => {
       const scored: Region[] = [];
       for (const p of paths) {
         if (p.paintOp === "none" || p.paintOp === "clip") {
@@ -1078,7 +1080,8 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
         }
       }
       return out.slice(0, 3);
-    })();
+    };
+    const regions: Region[] = computeDenseRegions();
 
     const splitIntoVerticalBands = (indices: readonly number[]): number[][] => {
       const items = indices
@@ -1112,9 +1115,9 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
       const splitGap = Math.max(medianFont * 2.0, typicalGap * 2.5);
 
       const bands: number[][] = [];
-      // eslint-disable-next-line no-restricted-syntax
+      // eslint-disable-next-line no-restricted-syntax -- mutable accumulator for vertical band splitting
       let curBand: number[] = [items[0]!.idx];
-      // eslint-disable-next-line no-restricted-syntax
+      // eslint-disable-next-line no-restricted-syntax -- mutable accumulator for vertical band splitting
       let curBottom = items[0]!.bottom;
 
       for (let i = 1; i < items.length; i++) {
@@ -1155,7 +1158,7 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
       const items = usable.map((t, i) => ({ t, baseline: baselines[i]! })).sort((a, b) => b.baseline - a.baseline);
 
       const paragraphs: Array<{ runs: PdfText[]; baselineY: number }> = [];
-      // eslint-disable-next-line no-restricted-syntax
+      // eslint-disable-next-line no-restricted-syntax -- mutable accumulator for baseline clustering
       let cur: { runs: PdfText[]; baselines: number[]; baselineY: number } | null = null;
 
       for (const it of items) {
@@ -1177,13 +1180,13 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
         paragraphs.push({ runs: cur.runs.sort((a, b) => a.x - b.x), baselineY: cur.baselineY });
       }
 
-      // eslint-disable-next-line no-restricted-syntax
+      // eslint-disable-next-line no-restricted-syntax -- mutable accumulator for bounding box computation
       let minX = Infinity;
-      // eslint-disable-next-line no-restricted-syntax
+      // eslint-disable-next-line no-restricted-syntax -- mutable accumulator for bounding box computation
       let minY = Infinity;
-      // eslint-disable-next-line no-restricted-syntax
+      // eslint-disable-next-line no-restricted-syntax -- mutable accumulator for bounding box computation
       let maxX = -Infinity;
-      // eslint-disable-next-line no-restricted-syntax
+      // eslint-disable-next-line no-restricted-syntax -- mutable accumulator for bounding box computation
       let maxY = -Infinity;
       for (const t of usable) {
         minX = Math.min(minX, t.x);
@@ -1205,14 +1208,13 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
     const tableRegions = filterNestedTableRegions(tableRegions0);
     for (const r of tableRegions) {
       const regionPad = Math.max(2, Math.min(page.width, page.height) * 0.004);
+      const isGroupInsideRegion = (g: GroupedText): boolean => {
+        const cx = g.bounds.x + g.bounds.width / 2;
+        const cy = g.bounds.y + g.bounds.height / 2;
+        return cx >= r.x0 - regionPad && cx <= r.x1 + regionPad && cy >= r.y0 - regionPad && cy <= r.y1 + regionPad;
+      };
       const insideIndices = groupArray
-        .map((g, idx) => {
-          const cx = g.bounds.x + g.bounds.width / 2;
-          const cy = g.bounds.y + g.bounds.height / 2;
-          return cx >= r.x0 - regionPad && cx <= r.x1 + regionPad && cy >= r.y0 - regionPad && cy <= r.y1 + regionPad
-            ? idx
-            : null;
-        })
+        .map((g, idx) => (isGroupInsideRegion(g) ? idx : null))
         .filter((x): x is number => x !== null);
 
       for (const idx of insideIndices) {
@@ -1236,7 +1238,7 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
         continue;
       }
 
-      const inferred0 = (() => {
+      const inferTableForTableRegion = (): InferredTable | null => {
         const tryStrict = (cols: number): InferredTable | null =>
           inferTableFromGroupedText(regionGroup, { paths, minRows: 2, minCols: cols, maxCols: cols });
 
@@ -1252,7 +1254,8 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
         }
 
         return inferTableFromGroupedText(regionGroup, { paths, minRows: 2, minCols: 2 });
-      })();
+      };
+      const inferred0 = inferTableForTableRegion();
       if (!inferred0) {
         continue;
       }

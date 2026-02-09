@@ -180,15 +180,18 @@ function updateContentTypesForOle(pkg: ZipPackage, extension: string, contentTyp
 /**
  * Add relationship for OLE object.
  */
+/** Load or create a relationships document from the package */
+function loadOrCreateRelsDocument(pkg: ZipPackage, relsPath: string): ReturnType<typeof parseXml> {
+  const existing = pkg.readText(relsPath);
+  if (existing === null) {
+    return ensureRelationshipsDocument(null);
+  }
+  return ensureRelationshipsDocument(parseXml(existing));
+}
+
 function addOleRelationship(pkg: ZipPackage, referringPart: string, olePath: string): string {
   const relsPath = getRelationshipPath(referringPart);
-  const relsXml = (() => {
-    const existing = pkg.readText(relsPath);
-    if (existing === null) {
-      return ensureRelationshipsDocument(null);
-    }
-    return ensureRelationshipsDocument(parseXml(existing));
-  })();
+  const relsXml = loadOrCreateRelsDocument(pkg, relsPath);
 
   const target = buildRelationshipTarget(referringPart, olePath);
   const { updatedXml, rId } = addRelationship(relsXml, target, OLE_OBJECT_REL);
@@ -202,11 +205,30 @@ function addOleRelationship(pkg: ZipPackage, referringPart: string, olePath: str
  */
 function generateOlePath(pkg: ZipPackage, extension: string): string {
   const existing = new Set(pkg.listFiles().filter((p) => p.startsWith("ppt/embeddings/")));
-  let next = 1;
-  while (existing.has(`ppt/embeddings/oleObject${next}.${extension}`)) {
-    next += 1;
-  }
-  return `ppt/embeddings/oleObject${next}.${extension}`;
+  return findUnusedOlePath(existing, extension);
+}
+
+/** Find the first unused OLE object path */
+function findUnusedOlePath(existing: Set<string>, extension: string): string {
+  const tryNumber = (n: number): string => {
+    const candidate = `ppt/embeddings/oleObject${n}.${extension}`;
+    if (!existing.has(candidate)) {
+      return candidate;
+    }
+    return tryNumber(n + 1);
+  };
+  return tryNumber(1);
+}
+
+/** Count common prefix segments between two path segment arrays */
+function countCommonSegments(a: readonly string[], b: readonly string[]): number {
+  const check = (i: number): number => {
+    if (i >= a.length || i >= b.length || a[i] !== b[i]) {
+      return i;
+    }
+    return check(i + 1);
+  };
+  return check(0);
 }
 
 /**
@@ -217,21 +239,10 @@ function buildRelationshipTarget(sourcePart: string, targetPart: string): string
   const sourceSegments = sourceDir.split("/").filter((s) => s.length > 0);
   const targetSegments = targetPart.split("/").filter((s) => s.length > 0);
 
-  let common = 0;
-  while (
-    common < sourceSegments.length &&
-    common < targetSegments.length &&
-    sourceSegments[common] === targetSegments[common]
-  ) {
-    common += 1;
-  }
+  const common = countCommonSegments(sourceSegments, targetSegments);
 
   const up = sourceSegments.length - common;
-  const relSegments: string[] = [];
-  for (let i = 0; i < up; i += 1) {
-    relSegments.push("..");
-  }
-  relSegments.push(...targetSegments.slice(common));
+  const relSegments = [...Array.from({ length: up }, () => ".."), ...targetSegments.slice(common)];
 
   return relSegments.join("/");
 }

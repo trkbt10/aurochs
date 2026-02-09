@@ -281,22 +281,37 @@ const UI_META = {
  * The schema explicitly accepts both formats; this coerces the shorthand.
  */
 export function coerceTextSpec(text: unknown): unknown {
-  if (!Array.isArray(text) || text.length === 0) return text;
+  if (!Array.isArray(text) || text.length === 0) {
+    return text;
+  }
   // Already has `runs` → TextParagraphSpec[], pass through
-  if (text[0].runs !== undefined) return text;
+  if (text[0].runs !== undefined) {
+    return text;
+  }
   // Shorthand TextRunSpec[] → wrap each item as a paragraph
   return text.map((item: Record<string, unknown>) => {
-    if (typeof item === "string") return { runs: [{ text: item }] };
+    if (typeof item === "string") {
+      return { runs: [{ text: item }] };
+    }
     const { align, alignment, ...runProps } = item;
     return { runs: [runProps], ...(align || alignment ? { alignment: align ?? alignment } : {}) };
   });
 }
 
+/** Coerce shape specification, normalizing text format */
 export function coerceShapeSpec(shape: Record<string, unknown>): Record<string, unknown> {
   if (shape.text !== undefined && typeof shape.text !== "string") {
     return { ...shape, text: coerceTextSpec(shape.text) };
   }
   return shape;
+}
+
+/** Coerce add_shapes input, applying text spec normalization if array */
+function coerceAddShapes(addShapes: unknown): unknown {
+  if (Array.isArray(addShapes)) {
+    return addShapes.map((s: Record<string, unknown>) => coerceShapeSpec(s));
+  }
+  return addShapes;
 }
 
 /** Build full presentation metadata for UI _meta. */
@@ -818,12 +833,11 @@ export function registerTools(server: McpServer, session: PresentationSession): 
       }
       const { slide_number, background, add_shapes, add_images, add_tables } = args;
       try {
+        const coercedShapes = coerceAddShapes(add_shapes);
         const input: SlideModInput = {
           slideNumber: slide_number,
           background: background as SlideModInput["background"],
-          addShapes: (Array.isArray(add_shapes)
-            ? add_shapes.map((s: Record<string, unknown>) => coerceShapeSpec(s))
-            : add_shapes) as SlideModInput["addShapes"],
+          addShapes: coercedShapes as SlideModInput["addShapes"],
           addImages: add_images as SlideModInput["addImages"],
           addTables: add_tables as SlideModInput["addTables"],
         };

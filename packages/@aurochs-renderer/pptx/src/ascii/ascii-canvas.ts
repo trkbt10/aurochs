@@ -33,18 +33,36 @@ export type BoxParams = _BoxParams;
 export type TextParams = _TextParams;
 
 /** Box-drawing characters used for shape borders */
-export const BOX_CHARS = _BOX_CHARS;
+export const BOX_CHARS = { ..._BOX_CHARS } as typeof _BOX_CHARS;
 /** Table-drawing characters used for table borders */
-export const TABLE_CHARS = _TABLE_CHARS;
+export const TABLE_CHARS = { ..._TABLE_CHARS } as typeof _TABLE_CHARS;
+
 /** Create a new blank canvas of the given dimensions */
-export const createCanvas: typeof _createCanvas = _createCanvas;
+export function createCanvas(width: number, height: number): AsciiCanvas {
+  return _createCanvas(width, height);
+}
+
 /** Set a single cell on the canvas */
-export const setCell: typeof _setCell = _setCell;
+export function setCell(params: CellParams): void {
+  _setCell(params);
+}
+
 /** Draw a box outline on the canvas */
-export const drawBox: typeof _drawBox = _drawBox;
+export function drawBox(params: BoxParams): void {
+  _drawBox(params);
+}
+
 /** Draw text on the canvas */
-export const drawText: typeof _drawText = _drawText;
+export function drawText(params: TextParams): void {
+  _drawText(params);
+}
+
 /** Truncate text to fit within a given width */
-export const truncateText: typeof _truncateText = _truncateText;
+export function truncateText(text: string, maxLen: number): string {
+  return _truncateText(text, maxLen);
+}
+
 /** Render the canvas to a string */
-export const renderCanvas: typeof _renderCanvas = _renderCanvas;
+export function renderCanvas(canvas: AsciiCanvas): string {
+  return _renderCanvas(canvas);
+}

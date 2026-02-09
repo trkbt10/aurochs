@@ -1,3 +1,7 @@
+/**
+ * @file XLSX CLI program definition and command registration
+ */
+
 import { Command } from "commander";
 import { runInfo } from "./commands/info";
 import { runList } from "./commands/list";
@@ -38,6 +42,9 @@ import {
 } from "./output/pretty-output";
 import { formatPreviewMermaid } from "./output/mermaid-output";
 
+/**
+ * Create the XLSX CLI program with all registered commands.
+ */
 export function createProgram(): Command {
   const program = new Command();
 

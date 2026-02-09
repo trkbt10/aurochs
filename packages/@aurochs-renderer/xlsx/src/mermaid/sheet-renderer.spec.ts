@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+/** @file Unit tests for the Mermaid sheet renderer. */
 import { renderSheetMermaid } from "./sheet-renderer";
 
 describe("renderSheetMermaid", () => {

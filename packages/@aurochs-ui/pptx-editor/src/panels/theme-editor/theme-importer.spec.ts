@@ -10,6 +10,7 @@ import { exportThemeAsPotx } from "./theme-exporter";
 import { OFFICE_THEME } from "./presets/office-themes";
 
 describe("extractThemeFromPptx", () => {
+  // eslint-disable-next-line no-restricted-syntax -- mutable test state
   let officeThemeFile: File;
 
   beforeAll(async () => {

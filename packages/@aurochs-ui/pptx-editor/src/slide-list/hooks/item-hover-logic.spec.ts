@@ -161,6 +161,7 @@ describe("item-hover-logic", () => {
 
   describe("complex scenarios", () => {
     it("handles rapid enter/leave cycles", () => {
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let state = createInitialHoverState();
 
       // Rapid mouse movements
@@ -174,6 +175,7 @@ describe("item-hover-logic", () => {
     });
 
     it("handles hover -> drag start -> drag end -> hover cycle", () => {
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let state = createInitialHoverState();
 
       // Hover
@@ -204,6 +206,7 @@ describe("item-hover-logic", () => {
     });
 
     it("handles external drag affecting this item", () => {
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let state = createInitialHoverState();
 
       // Hover on this item
@@ -234,6 +237,7 @@ describe("item-hover-logic", () => {
     });
 
     it("handles multiple clearHover calls", () => {
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let state = createInitialHoverState();
 
       state = hoverReducer(state, { type: "mouseEnter" });
@@ -245,6 +249,7 @@ describe("item-hover-logic", () => {
     });
 
     it("handles simultaneous drag and mouse events", () => {
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let state = createInitialHoverState();
 
       // Mouse enter, then drag starts, then mouse leave during drag
@@ -261,6 +266,7 @@ describe("item-hover-logic", () => {
     });
 
     it("handles drag cancel (no drop)", () => {
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let state = createInitialHoverState();
 
       // Start with hover

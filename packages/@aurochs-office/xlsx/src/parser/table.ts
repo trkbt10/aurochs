@@ -21,6 +21,20 @@ function requireAttr(element: XmlElement, name: string): string {
   return value;
 }
 
+function extractFormulaText(el: XmlElement | undefined): string | undefined {
+  if (!el) {
+    return undefined;
+  }
+  return getTextContent(el) || undefined;
+}
+
+function extractTotalsRowFormula(col: XmlElement): string | undefined {
+  if (getAttr(col, "totalsRowFunction") !== "custom") {
+    return undefined;
+  }
+  return extractFormulaText(getChild(col, "totalsRowFormula"));
+}
+
 function parseTableColumns(tableElement: XmlElement): readonly XlsxTableColumn[] {
   const columnsEl = getChildren(tableElement, "tableColumns")[0];
   if (!columnsEl) {
@@ -33,18 +47,9 @@ function parseTableColumns(tableElement: XmlElement): readonly XlsxTableColumn[]
     }
     const name = requireAttr(col, "name");
     // Extract calculated column formula from child element
-    const calculatedColumnFormulaEl = getChild(col, "calculatedColumnFormula");
-    const calculatedColumnFormula = calculatedColumnFormulaEl
-      ? getTextContent(calculatedColumnFormulaEl) || undefined
-      : undefined;
+    const calculatedColumnFormula = extractFormulaText(getChild(col, "calculatedColumnFormula"));
     // Extract totals row attributes
-    const totalsRowFormula =
-      getAttr(col, "totalsRowFunction") !== "custom"
-        ? undefined
-        : (() => {
-            const totalsEl = getChild(col, "totalsRowFormula");
-            return totalsEl ? getTextContent(totalsEl) || undefined : undefined;
-          })();
+    const totalsRowFormula = extractTotalsRowFormula(col);
     const totalsRowLabel = getAttr(col, "totalsRowLabel") ?? undefined;
     const dataDxfId = parseIntAttr(getAttr(col, "dataDxfId"));
 

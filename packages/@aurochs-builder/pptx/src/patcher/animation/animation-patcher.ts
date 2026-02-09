@@ -307,6 +307,21 @@ function buildVisibilitySet(shapeId: string, visible: boolean): SetBehavior {
   };
 }
 
+/** Resolve start conditions from trigger type and delay */
+function resolveStartConditions(
+  trigger: SimpleAnimationSpec["trigger"],
+  delay: number,
+): readonly Record<string, unknown>[] {
+  switch (trigger) {
+    case "afterPrevious":
+      return [{ event: "onEnd" as const, delay }];
+    case "withPrevious":
+      return [{ delay }];
+    default:
+      return [{ event: "onClick" as const, delay }];
+  }
+}
+
 /**
  * Build a parallel container for effect nodes.
  */
@@ -330,12 +345,7 @@ function buildEffectContainer(spec: SimpleAnimationSpec): ParallelTimeNode {
   }
 
   const delayValue = spec.delay ?? 0;
-  const startConditions =
-    spec.trigger === "afterPrevious"
-      ? [{ event: "onEnd" as const, delay: delayValue }]
-      : spec.trigger === "withPrevious"
-        ? [{ delay: delayValue }]
-        : [{ event: "onClick" as const, delay: delayValue }];
+  const startConditions = resolveStartConditions(spec.trigger, delayValue);
 
   return {
     type: "parallel",

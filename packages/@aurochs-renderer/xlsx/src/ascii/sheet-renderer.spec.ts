@@ -1,4 +1,4 @@
-import { describe, it, expect } from "bun:test";
+/** @file Unit tests for the ASCII sheet renderer. */
 import { renderSheetAscii } from "./sheet-renderer";
 import { TABLE_CHARS } from "@aurochs-renderer/drawing-ml/ascii";
 

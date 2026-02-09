@@ -211,6 +211,7 @@ describe("MixedTextBodyEditor", () => {
 
       // Find alignment select
       const selects = container.querySelectorAll("select") as NodeListOf<HTMLSelectElement>;
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let alignmentSelect: HTMLSelectElement | null = null;
       for (const select of selects) {
         const options = select.querySelectorAll("option");

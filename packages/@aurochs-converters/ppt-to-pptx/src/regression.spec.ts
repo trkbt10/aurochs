@@ -6,7 +6,6 @@
  * structural properties (slide count, text, shape count, tables, media).
  */
 
-import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -50,8 +49,12 @@ function extractText(shape: Shape): string {
       .map((p) =>
         p.runs
           .map((r) => {
-            if (r.type === "text" || r.type === "field") return r.text;
-            if (r.type === "break") return "\n";
+            if (r.type === "text" || r.type === "field") {
+              return r.text;
+            }
+            if (r.type === "break") {
+              return "\n";
+            }
             return "";
           })
           .join(""),
@@ -122,7 +125,9 @@ function countMedia(files: readonly string[]): number {
 
 for (const caseId of CASES) {
   describe(`regression: ${caseId}`, () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable: shared state loaded in first test
     let converted: ParsedPptx;
+    // eslint-disable-next-line no-restricted-syntax -- mutable: shared state loaded in first test
     let reference: ParsedPptx;
 
     // Load both once per case (shared across tests in this describe block)
@@ -160,6 +165,7 @@ for (const caseId of CASES) {
     if (caseId === "040_table_basic" || caseId === "041_table_merged") {
       it("contains table graphicFrame", () => {
         const slideCount = converted.presentation.count;
+        // eslint-disable-next-line no-restricted-syntax -- mutable flag for loop search
         let found = false;
         for (let i = 1; i <= slideCount; i++) {
           if (hasTable(getShapes(converted.presentation.getSlide(i)))) {

@@ -25,7 +25,6 @@ import type {
   XlsxPicture,
   XlsxShape,
   XlsxChartFrame,
-  XlsxEditAs,
 } from "../domain/drawing/types";
 
 // =============================================================================
@@ -114,6 +113,24 @@ function parsePicture(picElement: XmlElement): XlsxPicture {
 }
 
 /**
+ * Extract text content from a txBody element.
+ */
+function extractTxBodyText(txBody: XmlElement | undefined): string | undefined {
+  if (!txBody) {
+    return undefined;
+  }
+  const paragraphs = getChildren(txBody, "a:p").concat(getChildren(txBody, "p"));
+  const texts = paragraphs.flatMap((p) => {
+    const runs = getChildren(p, "a:r").concat(getChildren(p, "r"));
+    return runs.map((r) => {
+      const tEl = getChild(r, "a:t") ?? getChild(r, "t");
+      return tEl ? getTextContent(tEl) : "";
+    });
+  });
+  return texts.join("").trim() || undefined;
+}
+
+/**
  * Parse a shape element.
  */
 function parseShape(spElement: XmlElement): XlsxShape {
@@ -128,18 +145,7 @@ function parseShape(spElement: XmlElement): XlsxShape {
 
   // xdr:txBody - extract text content
   const txBody = getChild(spElement, "xdr:txBody") ?? getChild(spElement, "txBody");
-  let txBodyText: string | undefined;
-  if (txBody) {
-    const paragraphs = getChildren(txBody, "a:p").concat(getChildren(txBody, "p"));
-    const texts = paragraphs.flatMap((p) => {
-      const runs = getChildren(p, "a:r").concat(getChildren(p, "r"));
-      return runs.map((r) => {
-        const tEl = getChild(r, "a:t") ?? getChild(r, "t");
-        return tEl ? getTextContent(tEl) : "";
-      });
-    });
-    txBodyText = texts.join("").trim() || undefined;
-  }
+  const txBodyText = extractTxBodyText(txBody);
 
   return {
     type: "shape",
@@ -149,6 +155,13 @@ function parseShape(spElement: XmlElement): XlsxShape {
   };
 }
 
+function resolveCNvPr(parentElement: XmlElement | undefined): XmlElement | undefined {
+  if (!parentElement) {
+    return undefined;
+  }
+  return getChild(parentElement, "xdr:cNvPr") ?? getChild(parentElement, "cNvPr");
+}
+
 /**
  * Parse a graphic frame element (usually contains a chart).
  */
@@ -156,9 +169,7 @@ function parseGraphicFrame(graphicFrameElement: XmlElement): XlsxChartFrame {
   // xdr:nvGraphicFramePr/xdr:cNvPr
   const nvGraphicFramePr =
     getChild(graphicFrameElement, "xdr:nvGraphicFramePr") ?? getChild(graphicFrameElement, "nvGraphicFramePr");
-  const cNvPr = nvGraphicFramePr
-    ? (getChild(nvGraphicFramePr, "xdr:cNvPr") ?? getChild(nvGraphicFramePr, "cNvPr"))
-    : undefined;
+  const cNvPr = resolveCNvPr(nvGraphicFramePr);
 
   // xdr:graphic/a:graphicData/c:chart
   const graphic = getChild(graphicFrameElement, "a:graphic") ?? getChild(graphicFrameElement, "graphic");

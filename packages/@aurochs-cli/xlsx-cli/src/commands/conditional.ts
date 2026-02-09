@@ -7,6 +7,7 @@ import { loadXlsxWorkbook } from "../utils/xlsx-loader";
 import type {
   XlsxConditionalFormatting,
   XlsxConditionalFormattingRule,
+  XlsxStandardRule,
 } from "@aurochs-office/xlsx/domain/conditional-formatting";
 
 // =============================================================================
@@ -41,14 +42,26 @@ export type ConditionalData = {
 // Serialization Helpers
 // =============================================================================
 
+function isStandardRule(rule: XlsxConditionalFormattingRule): rule is XlsxStandardRule {
+  return "formulas" in rule;
+}
+
 function serializeRule(rule: XlsxConditionalFormattingRule): ConditionalRuleJson {
+  if (isStandardRule(rule)) {
+    return {
+      type: rule.type,
+      ...(rule.priority !== undefined && { priority: rule.priority }),
+      ...(rule.dxfId !== undefined && { dxfId: rule.dxfId }),
+      ...(rule.operator && { operator: rule.operator }),
+      ...(rule.stopIfTrue !== undefined && { stopIfTrue: rule.stopIfTrue }),
+      formulas: rule.formulas,
+    };
+  }
   return {
     type: rule.type,
     ...(rule.priority !== undefined && { priority: rule.priority }),
-    ...(rule.dxfId !== undefined && { dxfId: rule.dxfId }),
-    ...(rule.operator && { operator: rule.operator }),
     ...(rule.stopIfTrue !== undefined && { stopIfTrue: rule.stopIfTrue }),
-    formulas: rule.formulas,
+    formulas: [],
   };
 }
 

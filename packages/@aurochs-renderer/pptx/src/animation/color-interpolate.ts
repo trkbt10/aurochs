@@ -237,6 +237,40 @@ export function lerpHSL({
  * @param direction - Direction for HSL hue interpolation
  * @returns Interpolated color as CSS string
  */
+
+/** Interpolate two colors in HSL space and return the result as RGB */
+function interpolateHslToRgb(opts: {
+  from: ParsedColor;
+  to: ParsedColor;
+  t: number;
+  direction: AnimateColorDirection | undefined;
+}): RgbColor {
+  const fromHsl = rgbToHsl(opts.from.rgb.r, opts.from.rgb.g, opts.from.rgb.b);
+  const toHsl = rgbToHsl(opts.to.rgb.r, opts.to.rgb.g, opts.to.rgb.b);
+  const hsl = lerpHSL({ from: fromHsl, to: toHsl, t: opts.t, direction: opts.direction });
+  const converted = hslToRgb(hsl.h, hsl.s, hsl.l);
+  return {
+    r: Math.round(converted.r),
+    g: Math.round(converted.g),
+    b: Math.round(converted.b),
+  };
+}
+
+/** Select interpolation strategy (HSL or RGB) and return the interpolated RGB */
+function interpolateRgb(opts: {
+  from: ParsedColor;
+  to: ParsedColor;
+  t: number;
+  colorSpace: AnimateColorSpace;
+  direction: AnimateColorDirection;
+}): RgbColor {
+  if (opts.colorSpace === "hsl") {
+    return interpolateHslToRgb(opts);
+  }
+  return lerpRGB(opts.from.rgb, opts.to.rgb, opts.t);
+}
+
+/** Interpolate between two parsed colors and return a CSS color string */
 export function interpolateColor({
   from,
   to,
@@ -253,21 +287,7 @@ export function interpolateColor({
   // Interpolate alpha
   const alpha = lerp(from.alpha, to.alpha, t);
 
-  const rgb: RgbColor =
-    colorSpace === "hsl"
-      ? (() => {
-          // Convert to HSL using existing utility
-          const fromHsl = rgbToHsl(from.rgb.r, from.rgb.g, from.rgb.b);
-          const toHsl = rgbToHsl(to.rgb.r, to.rgb.g, to.rgb.b);
-          const hsl = lerpHSL({ from: fromHsl, to: toHsl, t, direction });
-          const converted = hslToRgb(hsl.h, hsl.s, hsl.l);
-          return {
-            r: Math.round(converted.r),
-            g: Math.round(converted.g),
-            b: Math.round(converted.b),
-          };
-        })()
-      : lerpRGB(from.rgb, to.rgb, t);
+  const rgb = interpolateRgb({ from, to, t, colorSpace, direction });
 
   // Return CSS color string
   if (alpha < 1) {

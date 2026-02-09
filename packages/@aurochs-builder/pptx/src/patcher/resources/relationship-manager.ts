@@ -24,11 +24,13 @@ export function generateRelationshipId(existingIds: readonly string[]): string {
     used.add(Number(match[1]));
   }
 
-  let next = 1;
-  while (used.has(next)) {
-    next += 1;
-  }
-  return `rId${next}`;
+  const findNext = (n: number): string => {
+    if (!used.has(n)) {
+      return `rId${n}`;
+    }
+    return findNext(n + 1);
+  };
+  return findNext(1);
 }
 
 /** Add a relationship to a rels document */

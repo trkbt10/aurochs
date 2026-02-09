@@ -53,17 +53,32 @@ function parsePlaceholderRef(shape: XmlElement): { type?: string; idx?: number }
   return { type, idx: Number.isFinite(idx) ? idx : undefined };
 }
 
+/** Resolve the shape property element name for a given shape */
+function resolveSpPrName(shapeName: string): string {
+  switch (shapeName) {
+    case "p:grpSp":
+      return "p:grpSpPr";
+    case "p:graphicFrame":
+      return "p:xfrm";
+    default:
+      return "p:spPr";
+  }
+}
+
+/** Insert or replace a:xfrm within a spPr element */
+function upsertXfrmInSpPr(
+  spPr: XmlElement,
+  existingXfrm: XmlElement | undefined,
+  patchedXfrm: XmlElement,
+): XmlElement {
+  if (existingXfrm) {
+    return replaceChildByName(spPr, "a:xfrm", patchedXfrm);
+  }
+  return { ...spPr, children: [patchedXfrm, ...spPr.children] };
+}
+
 function patchShapeTransform(shape: XmlElement, transform: Transform): XmlElement {
-  const spPrName = (() => {
-    switch (shape.name) {
-      case "p:grpSp":
-        return "p:grpSpPr";
-      case "p:graphicFrame":
-        return "p:xfrm";
-      default:
-        return "p:spPr";
-    }
-  })();
+  const spPrName = resolveSpPrName(shape.name);
 
   const spPr = getChild(shape, spPrName);
   if (!spPr) {
@@ -77,67 +92,97 @@ function patchShapeTransform(shape: XmlElement, transform: Transform): XmlElemen
 
   const xfrm = getChild(spPr, "a:xfrm");
   const patchedXfrm = xfrm ? patchTransformElement(xfrm, transform) : serializeTransform(transform);
-  const updatedSpPr = (() => {
-    if (xfrm) {
-      return replaceChildByName(spPr, "a:xfrm", patchedXfrm);
-    }
-    return { ...spPr, children: [patchedXfrm, ...spPr.children] };
-  })();
+  const updatedSpPr = upsertXfrmInSpPr(spPr, xfrm, patchedXfrm);
 
   return replaceChildByName(shape, spPrName, updatedSpPr);
+}
+
+/** Check whether a node matches the given placeholder change */
+function isPlaceholderMatch(node: XmlElement, change: PlaceholderChange): boolean {
+  const ph = parsePlaceholderRef(node);
+  if (!ph) {
+    return false;
+  }
+  return ph.type === change.placeholder.type && matchesPlaceholderIdx(change.placeholder.idx, ph.idx);
+}
+
+/** Count how many placeholder matches exist in the tree */
+function countPlaceholderMatches(spTree: XmlElement, change: PlaceholderChange): number {
+  const shapeTypes = new Set(["p:sp", "p:pic", "p:graphicFrame", "p:cxnSp", "p:grpSp"]);
+  return spTree.children.reduce((count, c) => {
+    if (!isXmlElement(c) || !shapeTypes.has(c.name)) {
+      return count;
+    }
+    const nested = c.name === "p:grpSp" ? countPlaceholderMatches(c, change) : 0;
+    const self = isPlaceholderMatch(c, change) ? 1 : 0;
+    return count + nested + self;
+  }, 0);
+}
+
+/** Patch matching placeholders in the tree (pure, no mutation) */
+function patchMatchingPlaceholders(node: XmlElement, change: PlaceholderChange): XmlElement {
+  if (node.name === "p:grpSp") {
+    const updatedChildren = node.children.map((c) => (isXmlElement(c) ? patchMatchingPlaceholders(c, change) : c));
+    const updatedNode = { ...node, children: updatedChildren };
+    return isPlaceholderMatch(updatedNode, change) ? patchShapeTransform(updatedNode, change.transform) : updatedNode;
+  }
+
+  const shapeTypes = ["p:sp", "p:pic", "p:graphicFrame", "p:cxnSp"] as const;
+  if (!(shapeTypes as readonly string[]).includes(node.name)) {
+    return node;
+  }
+  return isPlaceholderMatch(node, change) ? patchShapeTransform(node, change.transform) : node;
 }
 
 function patchPlaceholderInTree(
   spTree: XmlElement,
   change: PlaceholderChange,
 ): { updated: XmlElement; matches: number } {
-  let matches = 0;
-
-  const patchNode = (node: XmlElement): XmlElement => {
-    if (node.name === "p:grpSp") {
-      // Recurse into group children.
-      const updatedChildren = node.children.map((c) => (isXmlElement(c) ? patchNode(c) : c));
-      const updatedNode = { ...node, children: updatedChildren };
-
-      // Group nodes can also be placeholders in some templates, so check after recursion.
-      const ph = parsePlaceholderRef(updatedNode);
-      if (!ph) {
-        return updatedNode;
-      }
-      const typeMatches = ph.type === change.placeholder.type;
-      const idxMatches = matchesPlaceholderIdx(change.placeholder.idx, ph.idx);
-      if (typeMatches && idxMatches) {
-        matches += 1;
-        return patchShapeTransform(updatedNode, change.transform);
-      }
-      return updatedNode;
-    }
-
-    const shapeTypes = ["p:sp", "p:pic", "p:graphicFrame", "p:cxnSp"] as const;
-    if (!(shapeTypes as readonly string[]).includes(node.name)) {
-      return node;
-    }
-
-    const ph = parsePlaceholderRef(node);
-    if (!ph) {
-      return node;
-    }
-    const typeMatches = ph.type === change.placeholder.type;
-    const idxMatches = matchesPlaceholderIdx(change.placeholder.idx, ph.idx);
-    if (!typeMatches || !idxMatches) {
-      return node;
-    }
-
-    matches += 1;
-    return patchShapeTransform(node, change.transform);
-  };
-
+  const matches = countPlaceholderMatches(spTree, change);
   const updated = {
     ...spTree,
-    children: spTree.children.map((c) => (isXmlElement(c) ? patchNode(c) : c)),
+    children: spTree.children.map((c) => (isXmlElement(c) ? patchMatchingPlaceholders(c, change) : c)),
   };
 
   return { updated, matches };
+}
+
+/**
+ * Update layout placeholders by (type, idx).
+ *
+ * If idx is omitted, the change must match exactly one placeholder of that type.
+ */
+/** Apply a single placeholder change to a layout document */
+function applyPlaceholderChange(layoutXml: XmlDocument, change: PlaceholderChange): XmlDocument {
+  return updateDocumentRoot(layoutXml, (root) => {
+    const cSld = getChild(root, "p:cSld");
+    if (!cSld) {
+      throw new Error("patchLayoutPlaceholders: missing p:cSld.");
+    }
+    const spTree = getChild(cSld, "p:spTree");
+    if (!spTree) {
+      throw new Error("patchLayoutPlaceholders: missing p:spTree.");
+    }
+
+    const { updated, matches } = patchPlaceholderInTree(spTree, change);
+    if (matches === 0) {
+      throw new Error(
+        `patchLayoutPlaceholders: placeholder not found (type=${change.placeholder.type}, idx=${String(change.placeholder.idx)})`,
+      );
+    }
+    if (change.placeholder.idx === undefined && matches > 1) {
+      throw new Error(
+        `patchLayoutPlaceholders: ambiguous placeholder (type=${change.placeholder.type}); provide idx to disambiguate`,
+      );
+    }
+    if (matches > 1 && change.placeholder.idx !== undefined) {
+      throw new Error(
+        `patchLayoutPlaceholders: multiple placeholders matched (type=${change.placeholder.type}, idx=${String(change.placeholder.idx)})`,
+      );
+    }
+
+    return updateChildByName(root, "p:cSld", (cSldEl) => replaceChildByName(cSldEl, "p:spTree", updated));
+  });
 }
 
 /**
@@ -153,41 +198,7 @@ export function patchLayoutPlaceholders(layoutXml: XmlDocument, changes: readonl
     throw new Error("patchLayoutPlaceholders requires changes.");
   }
 
-  let result = layoutXml;
-
-  for (const change of changes) {
-    result = updateDocumentRoot(result, (root) => {
-      const cSld = getChild(root, "p:cSld");
-      if (!cSld) {
-        throw new Error("patchLayoutPlaceholders: missing p:cSld.");
-      }
-      const spTree = getChild(cSld, "p:spTree");
-      if (!spTree) {
-        throw new Error("patchLayoutPlaceholders: missing p:spTree.");
-      }
-
-      const { updated, matches } = patchPlaceholderInTree(spTree, change);
-      if (matches === 0) {
-        throw new Error(
-          `patchLayoutPlaceholders: placeholder not found (type=${change.placeholder.type}, idx=${String(change.placeholder.idx)})`,
-        );
-      }
-      if (change.placeholder.idx === undefined && matches > 1) {
-        throw new Error(
-          `patchLayoutPlaceholders: ambiguous placeholder (type=${change.placeholder.type}); provide idx to disambiguate`,
-        );
-      }
-      if (matches > 1 && change.placeholder.idx !== undefined) {
-        throw new Error(
-          `patchLayoutPlaceholders: multiple placeholders matched (type=${change.placeholder.type}, idx=${String(change.placeholder.idx)})`,
-        );
-      }
-
-      return updateChildByName(root, "p:cSld", (cSldEl) => replaceChildByName(cSldEl, "p:spTree", updated));
-    });
-  }
-
-  return result;
+  return changes.reduce(applyPlaceholderChange, layoutXml);
 }
 
 /**

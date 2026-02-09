@@ -38,15 +38,26 @@ import {
   extractTextFromRun as _extractTextFromRun,
   extractTextFromShape as _extractTextFromShape,
 } from "@aurochs-office/pptx/domain/text-utils";
+import type { TextBody } from "@aurochs-office/pptx/domain/text";
+import type { Paragraph, TextRun } from "@aurochs-office/pptx/domain/text";
+import type { Shape } from "@aurochs-office/pptx/domain/shape";
 
 /** Extract all text from a text body */
-export const extractTextFromBody: typeof _extractTextFromBody = _extractTextFromBody;
+export function extractTextFromBody(textBody: TextBody): string {
+  return _extractTextFromBody(textBody);
+}
 /** Extract text from a single paragraph */
-export const extractTextFromParagraph: typeof _extractTextFromParagraph = _extractTextFromParagraph;
+export function extractTextFromParagraph(paragraph: Paragraph): string {
+  return _extractTextFromParagraph(paragraph);
+}
 /** Extract text from a single run */
-export const extractTextFromRun: typeof _extractTextFromRun = _extractTextFromRun;
+export function extractTextFromRun(run: TextRun): string {
+  return _extractTextFromRun(run);
+}
 /** Extract text from a shape */
-export const extractTextFromShape: typeof _extractTextFromShape = _extractTextFromShape;
+export function extractTextFromShape(shape: Shape): string {
+  return _extractTextFromShape(shape);
+}
 
 // Serializers
 export {

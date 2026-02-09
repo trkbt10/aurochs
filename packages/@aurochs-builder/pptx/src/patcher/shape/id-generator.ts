@@ -10,14 +10,10 @@ import { getShapeIds } from "../core/xml-mutator";
  * @returns 新しい一意なID（数値文字列）
  */
 export function generateShapeId(existingIds: readonly string[]): string {
-  let maxId = 1; // 1 is reserved for the slide itself (nvGrpSpPr cNvPr)
-
-  for (const id of existingIds) {
+  const maxId = existingIds.reduce((max, id) => {
     const parsed = Number.parseInt(id, 10);
-    if (!Number.isNaN(parsed)) {
-      maxId = Math.max(maxId, parsed);
-    }
-  }
+    return Number.isNaN(parsed) ? max : Math.max(max, parsed);
+  }, 1); // 1 is reserved for the slide itself (nvGrpSpPr cNvPr)
 
   return String(maxId + 1);
 }
@@ -45,47 +41,49 @@ export function extractShapeIds(slideXml: XmlDocument): string[] {
  *
  * @example "Shape 5", "TextBox 3"
  */
+/** Resolve base name for a shape type */
+function resolveShapeBaseName(type: string): string {
+  switch (type) {
+    case "sp":
+    case "shape":
+      return "Shape";
+    case "text":
+    case "textbox":
+    case "textBox":
+      return "TextBox";
+    case "pic":
+    case "picture":
+      return "Picture";
+    case "grpSp":
+    case "group":
+      return "Group";
+    case "cxnSp":
+    case "connector":
+      return "Connector";
+    default:
+      return type;
+  }
+}
+
+/** Generate a unique shape name based on type and existing names */
 export function generateShapeName(type: string, existingNames: readonly string[]): string {
   if (!type) {
     throw new Error("generateShapeName: type is required");
   }
 
-  const base = (() => {
-    switch (type) {
-      case "sp":
-      case "shape":
-        return "Shape";
-      case "text":
-      case "textbox":
-      case "textBox":
-        return "TextBox";
-      case "pic":
-      case "picture":
-        return "Picture";
-      case "grpSp":
-      case "group":
-        return "Group";
-      case "cxnSp":
-      case "connector":
-        return "Connector";
-      default:
-        return type;
-    }
-  })();
+  const base = resolveShapeBaseName(type);
 
   const pattern = new RegExp(`^${escapeRegExp(base)}\\s+(\\d+)$`);
-  let max = 0;
-  for (const name of existingNames) {
+  const maxNum = existingNames.reduce((acc, name) => {
     const match = name.match(pattern);
-    if (match) {
-      const n = Number.parseInt(match[1], 10);
-      if (!Number.isNaN(n)) {
-        max = Math.max(max, n);
-      }
+    if (!match) {
+      return acc;
     }
-  }
+    const n = Number.parseInt(match[1], 10);
+    return Number.isNaN(n) ? acc : Math.max(acc, n);
+  }, 0);
 
-  return `${base} ${max + 1}`;
+  return `${base} ${maxNum + 1}`;
 }
 
 function escapeRegExp(value: string): string {

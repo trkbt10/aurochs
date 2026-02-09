@@ -398,12 +398,13 @@ type DrawingWithCharts = {
   readonly drawingPath?: string;
 };
 
-async function loadWorksheetDrawingFromRelationships(
-  getFileContent: (path: string) => Promise<string | undefined>,
-  worksheetXmlPath: string,
-  relationships: readonly RelationshipInfo[],
-  sheetIndex: number,
-): Promise<DrawingWithCharts> {
+async function loadWorksheetDrawingFromRelationships(params: {
+  readonly getFileContent: (path: string) => Promise<string | undefined>;
+  readonly worksheetXmlPath: string;
+  readonly relationships: readonly RelationshipInfo[];
+  readonly sheetIndex: number;
+}): Promise<DrawingWithCharts> {
+  const { getFileContent, worksheetXmlPath, relationships, sheetIndex } = params;
   const drawingRel = relationships.find((rel) => rel.type.endsWith("/drawing"));
   if (!drawingRel) {
     return { drawing: undefined, charts: [] };
@@ -413,15 +414,15 @@ async function loadWorksheetDrawingFromRelationships(
   if (!drawingXml) {
     return { drawing: undefined, charts: [] };
   }
-  let drawing = parseDrawing(getDocumentRoot(parseXml(drawingXml)));
-  if (drawing.anchors.length === 0) {
+  const parsedDrawing = parseDrawing(getDocumentRoot(parseXml(drawingXml)));
+  if (parsedDrawing.anchors.length === 0) {
     return { drawing: undefined, charts: [] };
   }
 
   // Collect chart relationship IDs from drawing
-  const chartRelIds = collectChartRelIds(drawing);
+  const chartRelIds = collectChartRelIds(parsedDrawing);
   if (chartRelIds.length === 0) {
-    return { drawing, charts: [], drawingPath };
+    return { drawing: parsedDrawing, charts: [], drawingPath };
   }
 
   // Load drawing relationships for chart resolution
@@ -430,7 +431,12 @@ async function loadWorksheetDrawingFromRelationships(
   const drawingRels = parseRelsOrEmpty(drawingRelsXml);
 
   // Resolve charts
-  const resolvedCharts = await resolveCharts(getFileContent, drawingPath, drawingRels, chartRelIds);
+  const resolvedCharts = await resolveCharts({
+    getFileContent,
+    drawingPath,
+    drawingRelationships: drawingRels,
+    chartRelIds,
+  });
   const charts: XlsxWorkbookChart[] = resolvedCharts.map((c) => ({
     sheetIndex,
     relId: c.relId,
@@ -440,7 +446,7 @@ async function loadWorksheetDrawingFromRelationships(
 
   // Update drawing with chart paths
   const chartPathMap = new Map(resolvedCharts.map((c) => [c.relId, c.chartPath]));
-  drawing = updateDrawingWithChartPaths(drawing, chartPathMap);
+  const drawing = updateDrawingWithChartPaths(parsedDrawing, chartPathMap);
 
   return { drawing, charts, drawingPath };
 }
@@ -467,8 +473,9 @@ async function loadWorksheetPivotTables(
       const pivotTableRoot = getDocumentRoot(parseXml(pivotTableXml));
       const pivotTable = parsePivotTable(pivotTableRoot, pivotTablePath);
       pivotTables.push(pivotTable);
-    } catch {
+    } catch (error: unknown) {
       // Skip pivot tables that fail to parse
+      console.debug("Failed to parse pivot table:", error);
       continue;
     }
   }
@@ -500,8 +507,9 @@ async function loadPivotCaches(
       const cacheId = cacheIdMatch ? parseInt(cacheIdMatch[0], 10) : 0;
       const pivotCache = parsePivotCacheDefinition(cacheRoot, cacheId, cachePath);
       pivotCaches.push(pivotCache);
-    } catch {
+    } catch (error: unknown) {
       // Skip caches that fail to parse
+      console.debug("Failed to parse pivot cache:", error);
       continue;
     }
   }
@@ -522,8 +530,9 @@ async function loadTheme(
   try {
     const themeDoc = parseXml(themeXml);
     return parseTheme(themeDoc, themePath);
-  } catch {
+  } catch (error: unknown) {
     // Theme parsing is optional, skip on error
+    console.debug("Failed to parse theme:", error);
     return undefined;
   }
 }
@@ -620,12 +629,12 @@ export async function parseXlsxWorkbook(
         sheetInfo: { ...sheetInfo, xmlPath },
       });
       const comments = await loadWorksheetCommentsFromRelationships(getFileContent, xmlPath, relInfos);
-      const { drawing, charts } = await loadWorksheetDrawingFromRelationships(
+      const { drawing, charts } = await loadWorksheetDrawingFromRelationships({
         getFileContent,
-        xmlPath,
-        relInfos,
+        worksheetXmlPath: xmlPath,
+        relationships: relInfos,
         sheetIndex,
-      );
+      });
       const sheetPivotTables = await loadWorksheetPivotTables(getFileContent, xmlPath, relInfos);
 
       // Collect charts and pivot tables from this worksheet

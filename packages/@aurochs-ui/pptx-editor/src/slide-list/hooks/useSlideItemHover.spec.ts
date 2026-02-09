@@ -45,12 +45,14 @@ describe("useSlideItemHover logic", () => {
     });
 
     it("entering an item sets it as hovered", () => {
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let state = createInitialState();
       state = hoverReducer(state, { type: "enter", slideId: "slide-1" });
       expect(state.hoveredSlideId).toBe("slide-1");
     });
 
     it("entering another item replaces the hovered item", () => {
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let state = createInitialState();
       state = hoverReducer(state, { type: "enter", slideId: "slide-1" });
       state = hoverReducer(state, { type: "enter", slideId: "slide-2" });
@@ -58,6 +60,7 @@ describe("useSlideItemHover logic", () => {
     });
 
     it("rapid enter sequence results in last item hovered", () => {
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let state = createInitialState();
       state = hoverReducer(state, { type: "enter", slideId: "slide-1" });
       state = hoverReducer(state, { type: "enter", slideId: "slide-2" });
@@ -68,6 +71,7 @@ describe("useSlideItemHover logic", () => {
 
   describe("Leave behavior", () => {
     it("leaving the hovered item clears hover", () => {
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let state = createInitialState();
       state = hoverReducer(state, { type: "enter", slideId: "slide-1" });
       state = hoverReducer(state, { type: "leave", slideId: "slide-1" });
@@ -75,6 +79,7 @@ describe("useSlideItemHover logic", () => {
     });
 
     it("leaving a non-hovered item does nothing", () => {
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let state = createInitialState();
       state = hoverReducer(state, { type: "enter", slideId: "slide-2" });
       state = hoverReducer(state, { type: "leave", slideId: "slide-1" });
@@ -82,6 +87,7 @@ describe("useSlideItemHover logic", () => {
     });
 
     it("stale leave after enter is ignored", () => {
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let state = createInitialState();
       // User hovers slide-1, then quickly moves to slide-2
       // Enter slide-1, Enter slide-2, Leave slide-1 (stale)
@@ -95,6 +101,7 @@ describe("useSlideItemHover logic", () => {
 
   describe("Clear behavior", () => {
     it("clear removes hover state", () => {
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let state = createInitialState();
       state = hoverReducer(state, { type: "enter", slideId: "slide-1" });
       state = hoverReducer(state, { type: "clear" });
@@ -102,6 +109,7 @@ describe("useSlideItemHover logic", () => {
     });
 
     it("clear is idempotent", () => {
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let state = createInitialState();
       state = hoverReducer(state, { type: "clear" });
       state = hoverReducer(state, { type: "clear" });
@@ -111,6 +119,7 @@ describe("useSlideItemHover logic", () => {
 
   describe("Real-world sequences", () => {
     it("hover -> drag -> release -> hover works correctly", () => {
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let state = createInitialState();
 
       // User hovers slide-1
@@ -127,6 +136,7 @@ describe("useSlideItemHover logic", () => {
     });
 
     it("rapid mouse movement across multiple slides", () => {
+      // eslint-disable-next-line no-restricted-syntax -- mutable test state
       let state = createInitialState();
 
       // Mouse moves: 1 -> 2 -> 3 -> 2 -> 1 -> out

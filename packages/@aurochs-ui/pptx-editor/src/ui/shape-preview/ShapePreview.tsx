@@ -73,7 +73,8 @@ export function ShapePreview({
       // Use a slightly smaller size for padding
       const innerSize = size - 4;
       return renderGeometryData(geometry, innerSize, innerSize);
-    } catch {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars -- error intentionally unused, unsupported preset falls back to empty
+    } catch (error: unknown) {
       // Fallback to a simple rect if preset is not supported
       return "";
     }

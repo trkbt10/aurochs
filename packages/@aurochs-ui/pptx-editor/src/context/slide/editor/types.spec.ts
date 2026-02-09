@@ -121,6 +121,7 @@ describe("pushHistory", () => {
   });
 
   it("clears future (removes redo stack)", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let history = createHistory("v1");
     history = pushHistory(history, "v2");
     history = undoHistory(history); // future should now have v2
@@ -131,6 +132,7 @@ describe("pushHistory", () => {
   });
 
   it("accumulates past entries on multiple pushes", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let history = createHistory("v1");
     history = pushHistory(history, "v2");
     history = pushHistory(history, "v3");
@@ -149,6 +151,7 @@ describe("undoHistory", () => {
   });
 
   it("moves present to future", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let history = createHistory("v1");
     history = pushHistory(history, "v2");
     const undone = undoHistory(history);
@@ -156,6 +159,7 @@ describe("undoHistory", () => {
   });
 
   it("restores previous value as present", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let history = createHistory("v1");
     history = pushHistory(history, "v2");
     const undone = undoHistory(history);
@@ -163,6 +167,7 @@ describe("undoHistory", () => {
   });
 
   it("removes entry from past", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let history = createHistory("v1");
     history = pushHistory(history, "v2");
     history = pushHistory(history, "v3");
@@ -171,6 +176,7 @@ describe("undoHistory", () => {
   });
 
   it("supports multiple undos", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let history = createHistory("v1");
     history = pushHistory(history, "v2");
     history = pushHistory(history, "v3");
@@ -199,6 +205,7 @@ describe("redoHistory", () => {
   });
 
   it("moves present to past", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let history = createHistory("v1");
     history = pushHistory(history, "v2");
     history = undoHistory(history);
@@ -207,6 +214,7 @@ describe("redoHistory", () => {
   });
 
   it("restores next value as present", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let history = createHistory("v1");
     history = pushHistory(history, "v2");
     history = undoHistory(history);
@@ -215,6 +223,7 @@ describe("redoHistory", () => {
   });
 
   it("removes entry from future", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let history = createHistory("v1");
     history = pushHistory(history, "v2");
     history = pushHistory(history, "v3");
@@ -227,6 +236,7 @@ describe("redoHistory", () => {
   });
 
   it("supports multiple redos", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let history = createHistory("v1");
     history = pushHistory(history, "v2");
     history = pushHistory(history, "v3");
@@ -254,6 +264,7 @@ describe("redoHistory", () => {
   });
 
   it("undo-redo cycle preserves value", () => {
+    // eslint-disable-next-line no-restricted-syntax -- mutable test state
     let history = createHistory("v1");
     history = pushHistory(history, "v2");
 

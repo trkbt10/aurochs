@@ -587,7 +587,8 @@ export const SvgEditorCanvas = forwardRef<HTMLDivElement, SvgEditorCanvasProps>(
             name: parsed.name,
           });
         }
-      } catch (_error: unknown) {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars -- error intentionally unused, invalid JSON is expected
+      } catch (error: unknown) {
         // Invalid JSON, ignore
       }
     },

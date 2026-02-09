@@ -207,7 +207,8 @@ function readAssetData(
     const mimeType = getMimeTypeFromPath(path);
     const dataUrl = type === "image" && mimeType ? toDataUrl(buffer, mimeType) : undefined;
     return { size, dataUrl };
-  } catch (_error: unknown) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- error intentionally unused, fallback to empty metadata
+  } catch (error: unknown) {
     return {};
   }
 }
@@ -455,7 +456,8 @@ async function fileToAssetInfo(file: File): Promise<AssetInfo | null> {
       // dataUrl is used for image preview and canvas drop
       dataUrl: assetType === "image" ? dataUrl : undefined,
     };
-  } catch (_error: unknown) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- error intentionally unused, invalid file returns null
+  } catch (error: unknown) {
     return null;
   }
 }

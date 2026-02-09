@@ -3,17 +3,13 @@
  */
 
 import { renderMarkdownTable, type ColumnAlignment } from "@aurochs/mermaid";
-import type { SheetMermaidParams, MermaidCell } from "./types";
+import type { SheetMermaidParams, MermaidCell, MermaidSheetRow } from "./types";
 
 /** Convert a 0-based column index to a column letter (A, B, ... Z, AA, AB, ...). */
 function indexToColumnLetter(index: number): string {
-  let result = "";
-  let n = index;
-  while (n >= 0) {
-    result = String.fromCharCode((n % 26) + 65) + result;
-    n = Math.floor(n / 26) - 1;
-  }
-  return result;
+  const char = String.fromCharCode((index % 26) + 65);
+  const remaining = Math.floor(index / 26) - 1;
+  return remaining >= 0 ? indexToColumnLetter(remaining) + char : char;
 }
 
 /** Format a cell value for display. */
@@ -25,6 +21,17 @@ function formatCellValue(cell: MermaidCell): string {
     return cell.value.toLocaleString("en-US");
   }
   return String(cell.value);
+}
+
+/** Detect column alignment from the first non-empty cell in a column. */
+function detectColumnAlignment(
+  rows: readonly MermaidSheetRow[],
+  columnIndex: number,
+): ColumnAlignment {
+  const firstNonEmpty = rows.find(
+    (row) => columnIndex < row.cells.length && row.cells[columnIndex]!.type !== "empty",
+  );
+  return firstNonEmpty && firstNonEmpty.cells[columnIndex]!.type === "number" ? "right" : "left";
 }
 
 /** Render sheet data as a Markdown table. */
@@ -54,14 +61,7 @@ export function renderSheetMermaid(params: SheetMermaidParams): string {
 
   // Determine alignment per column based on first non-empty cell
   for (let c = 0; c < columnCount; c++) {
-    let align: ColumnAlignment = "left";
-    for (const row of rows) {
-      if (c < row.cells.length && row.cells[c]!.type !== "empty") {
-        align = row.cells[c]!.type === "number" ? "right" : "left";
-        break;
-      }
-    }
-    alignments.push(align);
+    alignments.push(detectColumnAlignment(rows, c));
   }
 
   // Build data rows

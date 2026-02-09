@@ -6,7 +6,7 @@ import { success, error, type Result } from "@aurochs-cli/cli-core";
 import { loadXlsxWorkbook } from "../utils/xlsx-loader";
 import type { XlsxFont, XlsxColor } from "@aurochs-office/xlsx/domain/style/font";
 import type { XlsxFill } from "@aurochs-office/xlsx/domain/style/fill";
-import type { XlsxBorder } from "@aurochs-office/xlsx/domain/style/border";
+import type { XlsxBorder, XlsxBorderEdge } from "@aurochs-office/xlsx/domain/style/border";
 import type { XlsxNumberFormat } from "@aurochs-office/xlsx/domain/style/number-format";
 import type { XlsxCellXf, XlsxCellStyle } from "@aurochs-office/xlsx/domain/style/types";
 
@@ -174,7 +174,7 @@ function serializeFill(fill: XlsxFill, id: number): FillJson {
   }
 }
 
-function serializeBorderSide(side: XlsxBorder[keyof XlsxBorder]): BorderSideJson | undefined {
+function serializeBorderSide(side: XlsxBorderEdge | undefined): BorderSideJson | undefined {
   if (!side) {
     return undefined;
   }

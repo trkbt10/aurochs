@@ -5,7 +5,10 @@
  * Structurally compatible with ShapeJson from pptx-cli.
  */
 
-export type { Bounds } from "@aurochs-renderer/drawing-ml/ascii";
+import type { Bounds as _Bounds } from "@aurochs-renderer/drawing-ml/ascii";
+
+/** Coordinate bounds for positioning shapes on the canvas */
+export type Bounds = _Bounds;
 
 export type AsciiTableContent = {
   readonly type: "table";
@@ -36,7 +39,7 @@ export type AsciiDiagramContent = {
   readonly type: "diagram";
   readonly diagram: {
     readonly shapes?: readonly {
-      readonly bounds: import("@aurochs-renderer/drawing-ml/ascii").Bounds;
+      readonly bounds: Bounds;
       readonly text?: string;
     }[];
     readonly width?: number;
@@ -54,7 +57,7 @@ export type AsciiGraphicContent =
 export type AsciiRenderableShape = {
   readonly name: string;
   readonly type: string;
-  readonly bounds?: import("@aurochs-renderer/drawing-ml/ascii").Bounds;
+  readonly bounds?: Bounds;
   readonly text?: string;
   readonly placeholder?: { readonly type?: string };
   readonly content?: AsciiGraphicContent;

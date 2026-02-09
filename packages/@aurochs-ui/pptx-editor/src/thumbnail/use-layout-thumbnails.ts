@@ -76,7 +76,8 @@ function loadLayoutShapes(file: PresentationFile, layoutPath: string): readonly 
     }
 
     return parseShapeTree({ spTree });
-  } catch {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- error intentionally unused, fallback to empty shapes
+  } catch (error: unknown) {
     return [];
   }
 }

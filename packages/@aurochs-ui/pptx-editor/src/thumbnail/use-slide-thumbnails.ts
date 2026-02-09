@@ -19,6 +19,22 @@ import {
 } from "./cache";
 
 // =============================================================================
+// Helpers
+// =============================================================================
+
+/** Build render context based on available API slide data */
+function buildRenderContext(
+  apiSlide: SlideWithId["apiSlide"],
+  zipFile: ZipFile,
+  slideSize: { width: Pixels; height: Pixels },
+) {
+  if (apiSlide) {
+    return createApiRenderContext({ apiSlide, zip: zipFile, slideSize });
+  }
+  return createCoreRenderContext({ slideSize });
+}
+
+// =============================================================================
 // Types
 // =============================================================================
 
@@ -74,9 +90,7 @@ export function useSlideThumbnails(options: UseSlideThumbnailsOptions): SlideThu
 
       // Build render context with full theme/master/layout context if available
       // Layout shapes are now included in context and rendered by renderSlideSvg
-      const ctx = apiSlide
-        ? createApiRenderContext({ apiSlide, zip: zipFile, slideSize })
-        : createCoreRenderContext({ slideSize });
+      const ctx = buildRenderContext(apiSlide, zipFile, slideSize);
 
       // Render the edited domain slide and cache
       const result = renderSlideSvg(slide, ctx);

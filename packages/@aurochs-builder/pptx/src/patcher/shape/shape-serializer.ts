@@ -533,6 +533,19 @@ function serializePresetGeometry(geometry: PresetGeometry): XmlElement {
   return createElement("a:prstGeom", { prst: geometry.preset }, [createElement("a:avLst", {}, avLstChildren)]);
 }
 
+/** Serialize optional text rect element */
+function serializeTextRect(textRect: CustomGeometry["textRect"]): XmlElement | undefined {
+  if (!textRect) {
+    return undefined;
+  }
+  return createElement("a:rect", {
+    l: textRect.left,
+    t: textRect.top,
+    r: textRect.right,
+    b: textRect.bottom,
+  });
+}
+
 function serializeCustomGeometry(geometry: CustomGeometry): XmlElement {
   const avLst = createElement(
     "a:avLst",
@@ -557,22 +570,10 @@ function serializeCustomGeometry(geometry: CustomGeometry): XmlElement {
       ]),
     ),
   );
-  let rect: XmlElement | undefined;
-  if (geometry.textRect) {
-    rect = createElement("a:rect", {
-      l: geometry.textRect.left,
-      t: geometry.textRect.top,
-      r: geometry.textRect.right,
-      b: geometry.textRect.bottom,
-    });
-  }
+  const rect = serializeTextRect(geometry.textRect);
   const pathLst = createElement("a:pathLst", {}, geometry.paths.map(serializeGeometryPath));
 
-  const children: XmlElement[] = [avLst, gdLst, ahLst, cxnLst];
-  if (rect) {
-    children.push(rect);
-  }
-  children.push(pathLst);
+  const children: XmlElement[] = [avLst, gdLst, ahLst, cxnLst, ...(rect ? [rect] : []), pathLst];
 
   return createElement("a:custGeom", {}, children);
 }
@@ -660,6 +661,21 @@ function serializeConnectionTarget(name: "a:stCxn" | "a:endCxn", target: Connect
  *
  * @see ECMA-376 Part 1, Section 19.3.1.21 (p:graphicFrame)
  */
+/** Serialize graphic frame content to a:graphicData element */
+function serializeGraphicFrameContent(content: GraphicFrame["content"]): XmlElement {
+  switch (content.type) {
+    case "oleObject":
+      return serializeOleObjectGraphicData(content.data);
+    case "table":
+      return serializeTableGraphicData(content.data.table);
+    default:
+      throw new Error(
+        `serializeGraphicFrame: content type '${content.type}' is not supported for serialization.`,
+      );
+  }
+}
+
+/** Serialize a graphic frame (table, chart, OLE, etc.) to a p:graphicFrame element */
 export function serializeGraphicFrame(frame: GraphicFrame): XmlElement {
   const nvGraphicFramePr = createElement("p:nvGraphicFramePr", {}, [
     serializeGraphicFrameCNvPr(frame.nonVisual),
@@ -678,20 +694,7 @@ export function serializeGraphicFrame(frame: GraphicFrame): XmlElement {
     {
       xmlns: "http://schemas.openxmlformats.org/drawingml/2006/main",
     },
-    [
-      (() => {
-        switch (frame.content.type) {
-          case "oleObject":
-            return serializeOleObjectGraphicData(frame.content.data);
-          case "table":
-            return serializeTableGraphicData(frame.content.data.table);
-          default:
-            throw new Error(
-              `serializeGraphicFrame: content type '${frame.content.type}' is not supported for serialization.`,
-            );
-        }
-      })(),
-    ],
+    [serializeGraphicFrameContent(frame.content)],
   );
 
   return createElement("p:graphicFrame", {}, [nvGraphicFramePr, xfrm, graphic]);
