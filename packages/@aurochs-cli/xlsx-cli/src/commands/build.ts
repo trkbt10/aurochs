@@ -10,6 +10,8 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { success, error, type Result } from "@aurochs-cli/cli-core";
 import { exportXlsx } from "@aurochs-builder/xlsx/exporter";
+import { parseWorkbook } from "@aurochs-office/xlsx/workbook-parser";
+import { patchWorkbook, type SheetUpdate } from "@aurochs-office/xlsx/workbook-patcher";
 import { type XlsxBuildSpec, type XlsxCreateSpec, type XlsxModifySpec, isCreateSpec, convertSpecToWorkbook } from "./build-spec";
 
 // =============================================================================
@@ -58,12 +60,40 @@ async function runModifyBuild(spec: XlsxModifySpec, specDir: string): Promise<Re
 
   await fs.access(templatePath);
   await fs.mkdir(path.dirname(outputPath), { recursive: true });
+
+  const templateBuffer = await fs.readFile(templatePath);
+  const workbook = await parseWorkbook(templateBuffer.buffer as ArrayBuffer);
+
+  if (spec.modifications && spec.modifications.length > 0) {
+    const updates: SheetUpdate[] = spec.modifications.map((mod) => ({
+      sheetName: mod.sheetName,
+      cells: mod.cells.map((c) => ({ col: c.col, row: c.row, value: c.value })),
+      ...(mod.dimension ? { dimension: mod.dimension } : {}),
+    }));
+
+    const result = await patchWorkbook(workbook, updates);
+    await fs.writeFile(outputPath, Buffer.from(result.xlsxBuffer));
+
+    let totalCells = 0;
+    for (const update of updates) {
+      totalCells += update.cells.length;
+    }
+
+    return success({
+      outputPath: spec.output,
+      mode: "modify",
+      sheetCount: workbook.sheets.size,
+      totalCells,
+    });
+  }
+
+  // No modifications — just copy template
   await fs.copyFile(templatePath, outputPath);
 
   return success({
     outputPath: spec.output,
     mode: "modify",
-    sheetCount: 0,
+    sheetCount: workbook.sheets.size,
     totalCells: 0,
   });
 }

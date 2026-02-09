@@ -156,6 +156,99 @@ describe("runBuild", () => {
     expect(result.data.totalCells).toBe(2);
   });
 
+  it("should build XLSX in modify mode with modifications", async () => {
+    // First create a template
+    const templatePath = path.join(tmpDir, `template-modify-${Date.now()}.xlsx`);
+    const wb = convertSpecToWorkbook(simpleSpec());
+    const data = await exportXlsx(wb);
+    await fs.writeFile(templatePath, data);
+
+    const specPath = await writeSpecFile({
+      mode: "modify",
+      template: path.basename(templatePath),
+      output: `modified-${Date.now()}.xlsx`,
+      modifications: [
+        {
+          sheetName: "Sheet1",
+          cells: [
+            { col: "A", row: 1, value: "Modified" },
+            { col: "B", row: 1, value: 999 },
+          ],
+        },
+      ],
+    });
+
+    const result = await runBuild(specPath);
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    expect(result.data.mode).toBe("modify");
+    expect(result.data.sheetCount).toBe(1);
+    expect(result.data.totalCells).toBe(2);
+
+    // Verify modified values by reading the output
+    const outputPath = path.join(tmpDir, result.data.outputPath);
+    const showResult = await runShow(outputPath, "Sheet1");
+    expect(showResult.success).toBe(true);
+    if (!showResult.success) return;
+
+    const a1 = showResult.data.rows.flatMap((r) => r.cells).find((c) => c.ref === "A1");
+    expect(a1?.value).toBe("Modified");
+
+    const b1 = showResult.data.rows.flatMap((r) => r.cells).find((c) => c.ref === "B1");
+    expect(b1?.value).toBe(999);
+  });
+
+  it("should build XLSX in modify mode without modifications (copy)", async () => {
+    const templatePath = path.join(tmpDir, `template-copy-${Date.now()}.xlsx`);
+    const wb = convertSpecToWorkbook(simpleSpec());
+    const data = await exportXlsx(wb);
+    await fs.writeFile(templatePath, data);
+
+    const specPath = await writeSpecFile({
+      mode: "modify",
+      template: path.basename(templatePath),
+      output: `copied-${Date.now()}.xlsx`,
+    });
+
+    const result = await runBuild(specPath);
+
+    expect(result.success).toBe(true);
+    if (!result.success) return;
+
+    expect(result.data.mode).toBe("modify");
+    expect(result.data.sheetCount).toBe(1);
+    expect(result.data.totalCells).toBe(0);
+
+    // Verify the copy preserves original values
+    const outputPath = path.join(tmpDir, result.data.outputPath);
+    const showResult = await runShow(outputPath, "Sheet1");
+    expect(showResult.success).toBe(true);
+    if (!showResult.success) return;
+
+    const a1 = showResult.data.rows.flatMap((r) => r.cells).find((c) => c.ref === "A1");
+    expect(a1?.value).toBe("Hello");
+  });
+
+  it("should return FILE_NOT_FOUND for missing template in modify mode", async () => {
+    const specPath = await writeSpecFile({
+      mode: "modify",
+      template: "nonexistent-template.xlsx",
+      output: "output.xlsx",
+      modifications: [
+        { sheetName: "Sheet1", cells: [{ col: "A", row: 1, value: "x" }] },
+      ],
+    });
+
+    const result = await runBuild(specPath);
+
+    expect(result.success).toBe(false);
+    if (result.success) return;
+
+    expect(result.error.code).toBe("FILE_NOT_FOUND");
+  });
+
   it("should build with formulas", async () => {
     const specPath = await writeSpecFile({
       mode: "create",

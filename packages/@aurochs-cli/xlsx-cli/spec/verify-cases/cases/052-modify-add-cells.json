@@ -1,0 +1,54 @@
+{
+  "name": "modify-add-cells",
+  "description": "Add new cells to an existing sheet via modify mode",
+  "tags": ["modify"],
+  "setup": {
+    "mode": "create",
+    "output": "../__output__/052-template.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            {
+              "row": 1,
+              "cells": [
+                { "ref": "A1", "value": "Header" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "input": {
+    "mode": "modify",
+    "template": "../__output__/052-template.xlsx",
+    "output": "../__output__/052-modify-add-cells.xlsx",
+    "modifications": [
+      {
+        "sheetName": "Sheet1",
+        "cells": [
+          { "col": "A", "row": 2, "value": "Row2" },
+          { "col": "B", "row": 1, "value": 42 },
+          { "col": "B", "row": 2, "value": 99 }
+        ],
+        "dimension": "A1:B2"
+      }
+    ]
+  },
+  "expected": {
+    "sheetCount": 1,
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "cells": [
+          { "ref": "A1", "type": "string", "value": "Header" },
+          { "ref": "B1", "type": "number", "value": 42 },
+          { "ref": "A2", "type": "string", "value": "Row2" },
+          { "ref": "B2", "type": "number", "value": 99 }
+        ]
+      }
+    ]
+  }
+}

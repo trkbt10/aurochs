@@ -31,11 +31,23 @@ export type XlsxCreateSpec = {
   readonly workbook: WorkbookSpec;
 };
 
+export type CellModification = {
+  readonly col: string;
+  readonly row: number;
+  readonly value: string | number;
+};
+
+export type SheetModification = {
+  readonly sheetName: string;
+  readonly cells: readonly CellModification[];
+  readonly dimension?: string;
+};
+
 export type XlsxModifySpec = {
   readonly mode: "modify";
   readonly template: string;
   readonly output: string;
-  readonly modifications?: unknown;
+  readonly modifications?: readonly SheetModification[];
 };
 
 export type WorkbookSpec = {

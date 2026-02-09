@@ -1,0 +1,77 @@
+{
+  "name": "modify-overwrite",
+  "description": "Overwrite existing number cells with new values and add strings",
+  "tags": ["modify"],
+  "setup": {
+    "mode": "create",
+    "output": "../__output__/054-template.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Data",
+          "rows": [
+            {
+              "row": 1,
+              "cells": [
+                { "ref": "A1", "value": "Name" },
+                { "ref": "B1", "value": "Score" },
+                { "ref": "C1", "value": "Grade" }
+              ]
+            },
+            {
+              "row": 2,
+              "cells": [
+                { "ref": "A2", "value": "Alice" },
+                { "ref": "B2", "value": 80 },
+                { "ref": "C2", "value": "B" }
+              ]
+            },
+            {
+              "row": 3,
+              "cells": [
+                { "ref": "A3", "value": "Bob" },
+                { "ref": "B3", "value": 65 },
+                { "ref": "C3", "value": "C" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "input": {
+    "mode": "modify",
+    "template": "../__output__/054-template.xlsx",
+    "output": "../__output__/054-modify-overwrite.xlsx",
+    "modifications": [
+      {
+        "sheetName": "Data",
+        "cells": [
+          { "col": "B", "row": 2, "value": 95 },
+          { "col": "C", "row": 2, "value": "A" },
+          { "col": "B", "row": 3, "value": 72 },
+          { "col": "C", "row": 3, "value": "B" }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "sheetCount": 1,
+    "sheets": [
+      {
+        "name": "Data",
+        "cells": [
+          { "ref": "A1", "type": "string", "value": "Name" },
+          { "ref": "B1", "type": "string", "value": "Score" },
+          { "ref": "C1", "type": "string", "value": "Grade" },
+          { "ref": "A2", "type": "string", "value": "Alice" },
+          { "ref": "B2", "type": "number", "value": 95 },
+          { "ref": "C2", "type": "string", "value": "A" },
+          { "ref": "A3", "type": "string", "value": "Bob" },
+          { "ref": "B3", "type": "number", "value": 72 },
+          { "ref": "C3", "type": "string", "value": "B" }
+        ]
+      }
+    ]
+  }
+}

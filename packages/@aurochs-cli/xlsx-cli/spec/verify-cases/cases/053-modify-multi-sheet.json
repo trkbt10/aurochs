@@ -1,0 +1,85 @@
+{
+  "name": "modify-multi-sheet",
+  "description": "Modify cells across multiple sheets",
+  "tags": ["modify"],
+  "setup": {
+    "mode": "create",
+    "output": "../__output__/053-template.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sales",
+          "rows": [
+            {
+              "row": 1,
+              "cells": [
+                { "ref": "A1", "value": "Product" },
+                { "ref": "B1", "value": "Price" }
+              ]
+            },
+            {
+              "row": 2,
+              "cells": [
+                { "ref": "A2", "value": "Widget" },
+                { "ref": "B2", "value": 10 }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Summary",
+          "rows": [
+            {
+              "row": 1,
+              "cells": [
+                { "ref": "A1", "value": "Total" },
+                { "ref": "B1", "value": 10 }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "input": {
+    "mode": "modify",
+    "template": "../__output__/053-template.xlsx",
+    "output": "../__output__/053-modify-multi-sheet.xlsx",
+    "modifications": [
+      {
+        "sheetName": "Sales",
+        "cells": [
+          { "col": "B", "row": 2, "value": 25 }
+        ]
+      },
+      {
+        "sheetName": "Summary",
+        "cells": [
+          { "col": "B", "row": 1, "value": 25 }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "sheetCount": 2,
+    "sheetNames": ["Sales", "Summary"],
+    "sheets": [
+      {
+        "name": "Sales",
+        "cells": [
+          { "ref": "A1", "type": "string", "value": "Product" },
+          { "ref": "B1", "type": "string", "value": "Price" },
+          { "ref": "A2", "type": "string", "value": "Widget" },
+          { "ref": "B2", "type": "number", "value": 25 }
+        ]
+      },
+      {
+        "name": "Summary",
+        "cells": [
+          { "ref": "A1", "type": "string", "value": "Total" },
+          { "ref": "B1", "type": "number", "value": 25 }
+        ]
+      }
+    ]
+  }
+}

@@ -71,6 +71,7 @@ export type TestCaseSpec = {
   readonly name: string;
   readonly description?: string;
   readonly tags?: readonly string[];
+  readonly setup?: XlsxBuildSpec;
   readonly input: XlsxBuildSpec;
   readonly expected: ExpectedWorkbook;
 };
@@ -272,6 +273,22 @@ async function runTestCase(spec: TestCaseSpec, specDir: string): Promise<TestCas
   await fs.writeFile(tempSpecPath, JSON.stringify(resolvedInput, null, 2));
 
   try {
+    // Run setup step if present (e.g., build template for modify mode)
+    if (spec.setup) {
+      const resolvedSetup = resolveSpecPaths(spec.setup, specDir);
+      const setupSpecPath = path.join(path.dirname(outputPath), `${spec.name}.setup.json`);
+      await fs.writeFile(setupSpecPath, JSON.stringify(resolvedSetup, null, 2));
+      const setupResult = await runBuild(setupSpecPath);
+      await fs.unlink(setupSpecPath).catch(() => {});
+      if (!setupResult.success) {
+        return {
+          name: spec.name,
+          passed: false,
+          assertions: [createAssertion("setup", "success", setupResult.error.message)],
+        };
+      }
+    }
+
     // Run build
     const buildResult = await runBuild(tempSpecPath);
     if (!buildResult.success) {

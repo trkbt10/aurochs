@@ -1,0 +1,51 @@
+{
+  "name": "modify-basic",
+  "description": "Modify a cell value in an existing XLSX template",
+  "tags": ["modify"],
+  "setup": {
+    "mode": "create",
+    "output": "../__output__/051-template.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            {
+              "row": 1,
+              "cells": [
+                { "ref": "A1", "value": "Original" },
+                { "ref": "B1", "value": 100 }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "input": {
+    "mode": "modify",
+    "template": "../__output__/051-template.xlsx",
+    "output": "../__output__/051-modify-basic.xlsx",
+    "modifications": [
+      {
+        "sheetName": "Sheet1",
+        "cells": [
+          { "col": "A", "row": 1, "value": "Modified" }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "sheetCount": 1,
+    "sheetNames": ["Sheet1"],
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "cells": [
+          { "ref": "A1", "type": "string", "value": "Modified" },
+          { "ref": "B1", "type": "number", "value": 100 }
+        ]
+      }
+    ]
+  }
+}

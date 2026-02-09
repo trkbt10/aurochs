@@ -1,0 +1,43 @@
+{
+  "name": "modify-no-changes",
+  "description": "Modify mode with no modifications copies template unchanged",
+  "tags": ["modify"],
+  "setup": {
+    "mode": "create",
+    "output": "../__output__/055-template.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            {
+              "row": 1,
+              "cells": [
+                { "ref": "A1", "value": "Unchanged" },
+                { "ref": "B1", "value": 999 }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "input": {
+    "mode": "modify",
+    "template": "../__output__/055-template.xlsx",
+    "output": "../__output__/055-modify-no-changes.xlsx"
+  },
+  "expected": {
+    "sheetCount": 1,
+    "sheetNames": ["Sheet1"],
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "cells": [
+          { "ref": "A1", "type": "string", "value": "Unchanged" },
+          { "ref": "B1", "type": "number", "value": 999 }
+        ]
+      }
+    ]
+  }
+}
