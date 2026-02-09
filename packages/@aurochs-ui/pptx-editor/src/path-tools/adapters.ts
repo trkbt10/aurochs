@@ -124,7 +124,7 @@ export function drawingPathToCommands(path: GenericDrawingPath | PptxDrawingPath
 
 /** Resolve a control point, falling back to the anchor position */
 function resolveControlPoint(
-  handle: Point | undefined,
+  handle: GenericPoint | Point | undefined,
   anchor: GenericPathAnchorPoint | PptxPathAnchorPoint,
 ): Point {
   if (handle) {

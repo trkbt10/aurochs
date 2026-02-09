@@ -9,7 +9,7 @@
 import { loadPptxBundleFromBuffer } from "@aurochs-office/pptx/app/pptx-loader";
 import { openPresentation } from "@aurochs-office/pptx/app";
 import { parseSlide } from "@aurochs-office/pptx/parser/slide/slide-parser";
-import { parseXml, serializeDocument, isXmlElement, isXmlText, type XmlNode, type XmlElement } from "@aurochs/xml";
+import { parseXml, serializeDocument, isXmlElement, isXmlText, type XmlNode } from "@aurochs/xml";
 import { getByPath } from "@aurochs/xml";
 import type { ZipPackage } from "@aurochs/zip";
 
@@ -136,6 +136,32 @@ function replaceTextContent(opts: TextReplaceOptions, value: string): string | u
   return idx !== -1 ? value.slice(0, idx) + opts.replace + value.slice(idx + opts.search.length) : undefined;
 }
 
+function replaceChildrenText(
+  opts: TextReplaceOptions,
+  children: readonly XmlNode[],
+  isTextField: boolean,
+): { newChildren: XmlNode[]; changed: boolean } {
+  const newChildren: XmlNode[] = [];
+  // eslint-disable-next-line no-restricted-syntax -- mutable flag tracking across children
+  let changed = false;
+  for (const child of children) {
+    if (isTextField && isXmlText(child)) {
+      const replaced = replaceTextContent(opts, child.value);
+      if (replaced !== undefined) {
+        newChildren.push({ type: "text", value: replaced });
+        changed = true;
+      } else {
+        newChildren.push(child);
+      }
+    } else {
+      const childChanged = replaceTextInXmlNode(opts, child);
+      changed = changed || childChanged;
+      newChildren.push(child);
+    }
+  }
+  return { newChildren, changed };
+}
+
 /**
  * Recursively walk an XML tree and replace text within `<a:t>` elements.
  * Returns true if any replacement was made.
@@ -152,24 +178,7 @@ function replaceTextInXmlNode(opts: TextReplaceOptions, node: XmlNode): boolean 
   // a:t is the text element in DrawingML
   const isTextField = node.name === "a:t";
 
-  let changed = false;
-
-  const newChildren: XmlNode[] = [];
-  for (const child of node.children) {
-    if (isTextField && isXmlText(child)) {
-      const replaced = replaceTextContent(opts, child.value);
-      if (replaced !== undefined) {
-        newChildren.push({ type: "text", value: replaced });
-        changed = true;
-      } else {
-        newChildren.push(child);
-      }
-    } else {
-      const childChanged = replaceTextInXmlNode(opts, child);
-      changed = changed || childChanged;
-      newChildren.push(child);
-    }
-  }
+  const { newChildren, changed } = replaceChildrenText(opts, node.children, isTextField);
 
   if (changed) {
     (node as { children: XmlNode[] }).children = newChildren;
@@ -196,6 +205,39 @@ function getSlideXmlPaths(zipPackage: ZipPackage): string[] {
  * Apply text replace patches to slide XML files.
  * Returns the total number of replacements made.
  */
+function getTargetSlidePaths(
+  patch: TextReplacePatch,
+  allSlidePaths: readonly string[],
+): readonly string[] {
+  if (!patch.slides || patch.slides.length === 0) {
+    return allSlidePaths;
+  }
+  return patch.slides
+    .map((n) => allSlidePaths[n - 1])
+    .filter((p): p is string => p !== undefined);
+}
+
+function applyTextReplaceToSlide(
+  zipPackage: ZipPackage,
+  slidePath: string,
+  opts: TextReplaceOptions,
+): boolean {
+  const xml = zipPackage.readText(slidePath);
+  if (!xml) {
+    return false;
+  }
+
+  const doc = parseXml(xml);
+  // Must process all children (not short-circuit) since multiple text nodes may need replacing
+  const changed = doc.children.map((child) => replaceTextInXmlNode(opts, child)).some(Boolean);
+
+  if (changed) {
+    const updatedXml = serializeDocument(doc, { declaration: true, standalone: true });
+    zipPackage.writeText(slidePath, updatedXml);
+  }
+  return changed;
+}
+
 function applyTextReplacePatches(
   zipPackage: ZipPackage,
   patches: readonly TextReplacePatch[],
@@ -205,46 +247,21 @@ function applyTextReplacePatches(
   }
 
   const allSlidePaths = getSlideXmlPaths(zipPackage);
-  let totalReplacements = 0;
 
-  for (const patch of patches) {
+  return patches.reduce((total, patch) => {
     const opts: TextReplaceOptions = {
       search: patch.search,
       replace: patch.replace,
       replaceAll: patch.replaceAll !== false,
     };
 
-    // Determine which slides to process
-    const targetPaths =
-      patch.slides && patch.slides.length > 0
-        ? patch.slides
-            .map((n) => allSlidePaths[n - 1])
-            .filter((p): p is string => p !== undefined)
-        : allSlidePaths;
+    const targetPaths = getTargetSlidePaths(patch, allSlidePaths);
+    const replacements = targetPaths.filter((slidePath) =>
+      applyTextReplaceToSlide(zipPackage, slidePath, opts),
+    ).length;
 
-    for (const slidePath of targetPaths) {
-      const xml = zipPackage.readText(slidePath);
-      if (!xml) {
-        continue;
-      }
-
-      const doc = parseXml(xml);
-      let changed = false;
-      for (const child of doc.children) {
-        if (replaceTextInXmlNode(opts, child)) {
-          changed = true;
-        }
-      }
-
-      if (changed) {
-        const updatedXml = serializeDocument(doc, { declaration: true, standalone: true });
-        zipPackage.writeText(slidePath, updatedXml);
-        totalReplacements++;
-      }
-    }
-  }
-
-  return totalReplacements;
+    return total + replacements;
+  }, 0);
 }
 
 // =============================================================================

@@ -1,5 +1,4 @@
 /** @file Unit tests for patcher-pipeline */
-import { describe, test, expect } from "vitest";
 import { patchPptx, getPatchData } from "./patcher-pipeline";
 import type { PptxPatchSpec } from "./patch-types";
 import { parseXml, isXmlElement, isXmlText, type XmlNode } from "@aurochs/xml";

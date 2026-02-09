@@ -324,6 +324,10 @@ function renderSlidePathEditOverlay({
   onPathEditCommit: (path: DrawingPath, shapeId: ShapeId) => void;
   onPathEditCancel: () => void;
 }): React.ReactNode {
+  if (pathEdit.type === "inactive") {
+    return null;
+  }
+
   const editingShape = slide.shapes.find((s) => {
     if (s.type === "contentPart") {
       return false;
