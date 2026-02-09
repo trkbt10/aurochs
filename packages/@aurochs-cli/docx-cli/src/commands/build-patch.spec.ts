@@ -17,15 +17,14 @@ import { runExtract } from "./extract";
 // Test Setup
 // =============================================================================
 
-// eslint-disable-next-line no-restricted-syntax -- beforeAll/afterAll pattern requires let
-let tmpDir: string;
+const ctx = { ctx.tmpDir: "" };
 
 beforeAll(async () => {
-  tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "docx-cli-test-"));
+  ctx.tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "docx-cli-test-"));
 });
 
 afterAll(async () => {
-  await fs.rm(tmpDir, { recursive: true, force: true });
+  await fs.rm(ctx.tmpDir, { recursive: true, force: true });
 });
 
 // =============================================================================
@@ -33,7 +32,7 @@ afterAll(async () => {
 // =============================================================================
 
 async function writeSpecFile(name: string, specObj: object): Promise<string> {
-  const specPath = path.join(tmpDir, name);
+  const specPath = path.join(ctx.tmpDir, name);
   await fs.writeFile(specPath, JSON.stringify(specObj, null, 2));
   return specPath;
 }
@@ -60,7 +59,7 @@ describe("runBuild", () => {
     expect(result.data.paragraphCount).toBe(1);
     expect(result.data.tableCount).toBe(0);
 
-    const outputPath = path.join(tmpDir, "basic.docx");
+    const outputPath = path.join(ctx.tmpDir, "basic.docx");
     const stat = await fs.stat(outputPath);
     expect(stat.size).toBeGreaterThan(0);
   });
@@ -118,7 +117,7 @@ describe("runBuild", () => {
 
     await runBuild(specPath);
 
-    const infoResult = await runInfo(path.join(tmpDir, "info-test.docx"));
+    const infoResult = await runInfo(path.join(ctx.tmpDir, "info-test.docx"));
     expect(infoResult.success).toBe(true);
     if (!infoResult.success) { return; }
 
@@ -138,7 +137,7 @@ describe("runBuild", () => {
 
     await runBuild(specPath);
 
-    const extractResult = await runExtract(path.join(tmpDir, "extract-test.docx"), {});
+    const extractResult = await runExtract(path.join(ctx.tmpDir, "extract-test.docx"), {});
     expect(extractResult.success).toBe(true);
     if (!extractResult.success) { return; }
 
@@ -148,7 +147,7 @@ describe("runBuild", () => {
   });
 
   it("returns FILE_NOT_FOUND for missing spec file", async () => {
-    const result = await runBuild(path.join(tmpDir, "nonexistent.json"));
+    const result = await runBuild(path.join(ctx.tmpDir, "nonexistent.json"));
 
     expect(result.success).toBe(false);
     if (result.success) { return; }
@@ -157,7 +156,7 @@ describe("runBuild", () => {
   });
 
   it("returns INVALID_JSON for malformed JSON", async () => {
-    const badPath = path.join(tmpDir, "bad.json");
+    const badPath = path.join(ctx.tmpDir, "bad.json");
     await fs.writeFile(badPath, "{not valid json!!!");
 
     const result = await runBuild(badPath);
@@ -182,7 +181,7 @@ describe("runBuild", () => {
 
     await runBuild(specPath);
 
-    const infoResult = await runInfo(path.join(tmpDir, "section-test.docx"));
+    const infoResult = await runInfo(path.join(ctx.tmpDir, "section-test.docx"));
     expect(infoResult.success).toBe(true);
     if (!infoResult.success) { return; }
 
@@ -217,7 +216,7 @@ describe("runBuild", () => {
 
     await runBuild(specPath);
 
-    const infoResult = await runInfo(path.join(tmpDir, "numbering-test.docx"));
+    const infoResult = await runInfo(path.join(ctx.tmpDir, "numbering-test.docx"));
     expect(infoResult.success).toBe(true);
     if (!infoResult.success) { return; }
 
@@ -237,7 +236,7 @@ describe("runPatch", () => {
     });
     const result = await runBuild(specPath);
     expect(result.success).toBe(true);
-    return path.join(tmpDir, `${name}.docx`);
+    return path.join(ctx.tmpDir, `${name}.docx`);
   }
 
   it("patches text in a built DOCX via text.replace", async () => {
@@ -261,7 +260,7 @@ describe("runPatch", () => {
 
     expect(result.data.patchCount).toBe(1);
 
-    const extractResult = await runExtract(path.join(tmpDir, "patched-text.docx"), {});
+    const extractResult = await runExtract(path.join(ctx.tmpDir, "patched-text.docx"), {});
     expect(extractResult.success).toBe(true);
     if (!extractResult.success) { return; }
 
@@ -293,7 +292,7 @@ describe("runPatch", () => {
     const result = await runPatch(patchSpecPath);
     expect(result.success).toBe(true);
 
-    const extractResult = await runExtract(path.join(tmpDir, "patched-append.docx"), {});
+    const extractResult = await runExtract(path.join(ctx.tmpDir, "patched-append.docx"), {});
     expect(extractResult.success).toBe(true);
     if (!extractResult.success) { return; }
 
@@ -327,12 +326,12 @@ describe("runPatch", () => {
     const result = await runPatch(patchSpecPath);
     expect(result.success).toBe(true);
 
-    const infoResult = await runInfo(path.join(tmpDir, "patched-insert.docx"));
+    const infoResult = await runInfo(path.join(ctx.tmpDir, "patched-insert.docx"));
     expect(infoResult.success).toBe(true);
     if (!infoResult.success) { return; }
     expect(infoResult.data.paragraphCount).toBe(3);
 
-    const extractResult = await runExtract(path.join(tmpDir, "patched-insert.docx"), {});
+    const extractResult = await runExtract(path.join(ctx.tmpDir, "patched-insert.docx"), {});
     expect(extractResult.success).toBe(true);
     if (!extractResult.success) { return; }
 
@@ -360,12 +359,12 @@ describe("runPatch", () => {
     const result = await runPatch(patchSpecPath);
     expect(result.success).toBe(true);
 
-    const infoResult = await runInfo(path.join(tmpDir, "patched-delete.docx"));
+    const infoResult = await runInfo(path.join(ctx.tmpDir, "patched-delete.docx"));
     expect(infoResult.success).toBe(true);
     if (!infoResult.success) { return; }
     expect(infoResult.data.paragraphCount).toBe(2);
 
-    const extractResult = await runExtract(path.join(tmpDir, "patched-delete.docx"), {});
+    const extractResult = await runExtract(path.join(ctx.tmpDir, "patched-delete.docx"), {});
     expect(extractResult.success).toBe(true);
     if (!extractResult.success) { return; }
 
@@ -401,7 +400,7 @@ describe("runPatch", () => {
     const result = await runPatch(patchSpecPath);
     expect(result.success).toBe(true);
 
-    const extractResult = await runExtract(path.join(tmpDir, "patched-replace.docx"), {});
+    const extractResult = await runExtract(path.join(ctx.tmpDir, "patched-replace.docx"), {});
     expect(extractResult.success).toBe(true);
     if (!extractResult.success) { return; }
 
@@ -436,7 +435,7 @@ describe("runPatch", () => {
     const result = await runPatch(patchSpecPath);
     expect(result.success).toBe(true);
 
-    const extractResult = await runExtract(path.join(tmpDir, "patched-table-text.docx"), {});
+    const extractResult = await runExtract(path.join(ctx.tmpDir, "patched-table-text.docx"), {});
     expect(extractResult.success).toBe(true);
     if (!extractResult.success) { return; }
 
@@ -468,7 +467,7 @@ describe("runPatch", () => {
     const result = await runPatch(patchSpecPath);
     expect(result.success).toBe(true);
 
-    const infoResult = await runInfo(path.join(tmpDir, "patched-styles.docx"));
+    const infoResult = await runInfo(path.join(ctx.tmpDir, "patched-styles.docx"));
     expect(infoResult.success).toBe(true);
     if (!infoResult.success) { return; }
     expect(infoResult.data.hasStyles).toBe(true);
@@ -501,7 +500,7 @@ describe("runPatch", () => {
     const result = await runPatch(patchSpecPath);
     expect(result.success).toBe(true);
 
-    const infoResult = await runInfo(path.join(tmpDir, "patched-numbering.docx"));
+    const infoResult = await runInfo(path.join(ctx.tmpDir, "patched-numbering.docx"));
     expect(infoResult.success).toBe(true);
     if (!infoResult.success) { return; }
     expect(infoResult.data.hasNumbering).toBe(true);
@@ -534,7 +533,7 @@ describe("runPatch", () => {
     const result = await runPatch(patchSpecPath);
     expect(result.success).toBe(true);
 
-    const infoResult = await runInfo(path.join(tmpDir, "patched-section.docx"));
+    const infoResult = await runInfo(path.join(ctx.tmpDir, "patched-section.docx"));
     expect(infoResult.success).toBe(true);
     if (!infoResult.success) { return; }
 
@@ -566,12 +565,12 @@ describe("runPatch", () => {
     const result = await runPatch(patchSpecPath);
     expect(result.success).toBe(true);
 
-    const infoResult = await runInfo(path.join(tmpDir, "patched-multi.docx"));
+    const infoResult = await runInfo(path.join(ctx.tmpDir, "patched-multi.docx"));
     expect(infoResult.success).toBe(true);
     if (!infoResult.success) { return; }
     expect(infoResult.data.paragraphCount).toBe(3);
 
-    const extractResult = await runExtract(path.join(tmpDir, "patched-multi.docx"), {});
+    const extractResult = await runExtract(path.join(ctx.tmpDir, "patched-multi.docx"), {});
     expect(extractResult.success).toBe(true);
     if (!extractResult.success) { return; }
 
@@ -582,7 +581,7 @@ describe("runPatch", () => {
   });
 
   it("returns FILE_NOT_FOUND for missing spec file", async () => {
-    const result = await runPatch(path.join(tmpDir, "nonexistent.json"));
+    const result = await runPatch(path.join(ctx.tmpDir, "nonexistent.json"));
 
     expect(result.success).toBe(false);
     if (result.success) { return; }
@@ -591,7 +590,7 @@ describe("runPatch", () => {
   });
 
   it("returns INVALID_JSON for malformed spec", async () => {
-    const badPath = path.join(tmpDir, "bad-patch.json");
+    const badPath = path.join(ctx.tmpDir, "bad-patch.json");
     await fs.writeFile(badPath, "not json{{{");
 
     const result = await runPatch(badPath);
@@ -644,14 +643,14 @@ describe("runPatch", () => {
 
     await runPatch(patchSpecPath);
 
-    const infoResult = await runInfo(path.join(tmpDir, "patched-preserve.docx"));
+    const infoResult = await runInfo(path.join(ctx.tmpDir, "patched-preserve.docx"));
     expect(infoResult.success).toBe(true);
     if (!infoResult.success) { return; }
 
     expect(infoResult.data.hasStyles).toBe(true);
     expect(infoResult.data.hasNumbering).toBe(true);
 
-    const extractResult = await runExtract(path.join(tmpDir, "patched-preserve.docx"), {});
+    const extractResult = await runExtract(path.join(ctx.tmpDir, "patched-preserve.docx"), {});
     expect(extractResult.success).toBe(true);
     if (!extractResult.success) { return; }
 

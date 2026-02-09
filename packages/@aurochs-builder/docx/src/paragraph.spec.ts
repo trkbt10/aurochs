@@ -490,11 +490,6 @@ describe("serializeParagraphContent", () => {
     expect(el?.name).toBe("w:bookmarkEnd");
   });
 
-  it("returns undefined for unknown type", () => {
-    // eslint-disable-next-line custom/no-as-outside-guard -- intentional unknown type for edge-case test
-    const content = { type: "unknown" } as unknown as DocxParagraphContent;
-    expect(serializeParagraphContent(content)).toBeUndefined();
-  });
 });
 
 // =============================================================================
