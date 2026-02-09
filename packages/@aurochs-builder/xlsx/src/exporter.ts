@@ -47,6 +47,7 @@ const XLSX_RELATIONSHIP_TYPES = {
   worksheet: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet",
   styles: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles",
   sharedStrings: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings",
+  hyperlink: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
 } as const;
 
 /**
@@ -305,11 +306,24 @@ export async function exportXlsx(workbook: XlsxWorkbook): Promise<Uint8Array> {
   const stylesXml = serializeStyleSheet(workbook.styles);
   pkg.writeText("xl/styles.xml", serializeWithDeclaration(stylesXml));
 
-  // 4. Generate each xl/worksheets/sheet*.xml
+  // 4. Generate each xl/worksheets/sheet*.xml (and per-sheet rels for hyperlinks)
   for (let i = 0; i < workbook.sheets.length; i++) {
     const sheet = workbook.sheets[i];
     const worksheetXml = serializeWorksheet(sheet, sharedStringsBuilder);
     pkg.writeText(`xl/worksheets/sheet${i + 1}.xml`, serializeWithDeclaration(worksheetXml));
+
+    // Generate per-sheet relationships for external hyperlinks
+    const externalHyperlinks = sheet.hyperlinks?.filter((h) => h.relationshipId && h.target);
+    if (externalHyperlinks && externalHyperlinks.length > 0) {
+      const sheetRels: OpcRelationship[] = externalHyperlinks.map((h) => ({
+        id: h.relationshipId!,
+        type: XLSX_RELATIONSHIP_TYPES.hyperlink,
+        target: h.target!,
+        targetMode: "External" as const,
+      }));
+      const sheetRelsXml = serializeOpcRelationships(sheetRels);
+      pkg.writeText(`xl/worksheets/_rels/sheet${i + 1}.xml.rels`, serializeWithDeclaration(sheetRelsXml));
+    }
   }
 
   // 5. Generate xl/workbook.xml

@@ -1,3 +1,6 @@
+/**
+ * @file CLI program definition for docx commands
+ */
 import { Command } from "commander";
 import { runInfo } from "./commands/info";
 import { runList } from "./commands/list";
@@ -34,6 +37,9 @@ import {
 } from "./output/pretty-output";
 import { formatPreviewMermaid } from "./output/mermaid-output";
 
+/**
+ * Create the docx CLI program with all subcommands.
+ */
 export function createProgram(): Command {
   const program = new Command();
 
@@ -204,14 +210,11 @@ export function createProgram(): Command {
     .option("--width <columns>", "Terminal width in columns", "80")
     .action(async (file: string, section: string | undefined, options: { width: string }) => {
       const mode = program.opts().output as OutputMode;
-      let sectionNumber: number | undefined;
-      if (section !== undefined) {
-        sectionNumber = parseInt(section, 10);
-        if (Number.isNaN(sectionNumber)) {
-          console.error("Error: Section number must be a valid integer");
-          process.exitCode = 1;
-          return;
-        }
+      const sectionNumber = section !== undefined ? parseInt(section, 10) : undefined;
+      if (sectionNumber !== undefined && Number.isNaN(sectionNumber)) {
+        console.error("Error: Section number must be a valid integer");
+        process.exitCode = 1;
+        return;
       }
       const width = parseInt(options.width, 10);
       if (Number.isNaN(width) || width < 20) {

@@ -13,7 +13,6 @@ import type {
   DocxTableGrid,
   DocxTableRow,
   DocxTableRowProperties,
-  DocxRowHeight,
   DocxTableCell,
   DocxTableCellProperties,
   DocxTableBorders,
@@ -107,11 +106,11 @@ function serializeCellMargins(margins: TableCellMargins, elementName: string): X
 // =============================================================================
 
 function serializeTableProperties(props: DocxTableProperties | undefined): XmlElement | undefined {
-  if (!props) return undefined;
+  if (!props) {return undefined;}
 
   const ch: XmlNode[] = [];
 
-  if (props.tblStyle) ch.push(wEl("tblStyle", { val: String(props.tblStyle) }));
+  if (props.tblStyle) {ch.push(wEl("tblStyle", { val: String(props.tblStyle) }));}
 
   if (props.tblpPr) {
     const attrs: Record<string, string> = {};
@@ -129,25 +128,25 @@ function serializeTableProperties(props: DocxTableProperties | undefined): XmlEl
   }
 
   const bidiVisual = toggleEl("bidiVisual", props.bidiVisual);
-  if (bidiVisual) ch.push(bidiVisual);
+  if (bidiVisual) {ch.push(bidiVisual);}
 
   const tblOverlap = optValEl("tblOverlap", props.tblOverlap);
-  if (tblOverlap) ch.push(tblOverlap);
+  if (tblOverlap) {ch.push(tblOverlap);}
 
-  if (props.tblW) ch.push(serializeTableWidth(props.tblW, "tblW"));
+  if (props.tblW) {ch.push(serializeTableWidth(props.tblW, "tblW"));}
 
   const jc = optValEl("jc", props.jc);
-  if (jc) ch.push(jc);
+  if (jc) {ch.push(jc);}
 
-  if (props.tblCellSpacing) ch.push(serializeCellSpacing(props.tblCellSpacing, "tblCellSpacing"));
-  if (props.tblInd) ch.push(serializeTableWidth(props.tblInd, "tblInd"));
-  if (props.tblBorders) ch.push(serializeTableBorders(props.tblBorders));
+  if (props.tblCellSpacing) {ch.push(serializeCellSpacing(props.tblCellSpacing, "tblCellSpacing"));}
+  if (props.tblInd) {ch.push(serializeTableWidth(props.tblInd, "tblInd"));}
+  if (props.tblBorders) {ch.push(serializeTableBorders(props.tblBorders));}
 
   const shd = serializeShading(props.shd);
-  if (shd) ch.push(shd);
+  if (shd) {ch.push(shd);}
 
-  if (props.tblLayout) ch.push(wEl("tblLayout", { type: props.tblLayout }));
-  if (props.tblCellMar) ch.push(serializeCellMargins(props.tblCellMar, "tblCellMar"));
+  if (props.tblLayout) {ch.push(wEl("tblLayout", { type: props.tblLayout }));}
+  if (props.tblCellMar) {ch.push(serializeCellMargins(props.tblCellMar, "tblCellMar"));}
 
   if (props.tblLook) {
     const lookAttrs: Record<string, string> = {};
@@ -161,9 +160,9 @@ function serializeTableProperties(props: DocxTableProperties | undefined): XmlEl
   }
 
   const tblCaption = optValEl("tblCaption", props.tblCaption);
-  if (tblCaption) ch.push(tblCaption);
+  if (tblCaption) {ch.push(tblCaption);}
   const tblDescription = optValEl("tblDescription", props.tblDescription);
-  if (tblDescription) ch.push(tblDescription);
+  if (tblDescription) {ch.push(tblDescription);}
 
   return ch.length > 0 ? wEl("tblPr", {}, ch) : undefined;
 }
@@ -193,14 +192,14 @@ function serializeTableGrid(grid: DocxTableGrid): XmlElement {
 // =============================================================================
 
 function serializeTableRowProperties(props: DocxTableRowProperties | undefined): XmlElement | undefined {
-  if (!props) return undefined;
+  if (!props) {return undefined;}
 
   const ch: XmlNode[] = [];
 
-  if (props.gridBefore !== undefined) ch.push(wEl("gridBefore", { val: String(props.gridBefore) }));
-  if (props.gridAfter !== undefined) ch.push(wEl("gridAfter", { val: String(props.gridAfter) }));
-  if (props.wBefore) ch.push(serializeTableWidth(props.wBefore, "wBefore"));
-  if (props.wAfter) ch.push(serializeTableWidth(props.wAfter, "wAfter"));
+  if (props.gridBefore !== undefined) {ch.push(wEl("gridBefore", { val: String(props.gridBefore) }));}
+  if (props.gridAfter !== undefined) {ch.push(wEl("gridAfter", { val: String(props.gridAfter) }));}
+  if (props.wBefore) {ch.push(serializeTableWidth(props.wBefore, "wBefore"));}
+  if (props.wAfter) {ch.push(serializeTableWidth(props.wAfter, "wAfter"));}
   if (props.trHeight) {
     const attrs: Record<string, string> = {};
     optAttr(attrs, "val", props.trHeight.val);
@@ -209,13 +208,13 @@ function serializeTableRowProperties(props: DocxTableRowProperties | undefined):
   }
 
   const tblHeader = toggleEl("tblHeader", props.tblHeader);
-  if (tblHeader) ch.push(tblHeader);
+  if (tblHeader) {ch.push(tblHeader);}
   const jc = optValEl("jc", props.jc);
-  if (jc) ch.push(jc);
+  if (jc) {ch.push(jc);}
   const hidden = toggleEl("hidden", props.hidden);
-  if (hidden) ch.push(hidden);
+  if (hidden) {ch.push(hidden);}
   const cantSplit = toggleEl("cantSplit", props.cantSplit);
-  if (cantSplit) ch.push(cantSplit);
+  if (cantSplit) {ch.push(cantSplit);}
 
   return ch.length > 0 ? wEl("trPr", {}, ch) : undefined;
 }
@@ -225,7 +224,7 @@ function serializeTableRowProperties(props: DocxTableRowProperties | undefined):
 // =============================================================================
 
 function serializeTableCellProperties(props: DocxTableCellProperties | undefined): XmlElement | undefined {
-  if (!props) return undefined;
+  if (!props) {return undefined;}
 
   const ch: XmlNode[] = [];
 
@@ -236,27 +235,27 @@ function serializeTableCellProperties(props: DocxTableCellProperties | undefined
     ch.push(wEl("tcW", attrs));
   }
 
-  if (props.gridSpan !== undefined) ch.push(wEl("gridSpan", { val: String(props.gridSpan) }));
+  if (props.gridSpan !== undefined) {ch.push(wEl("gridSpan", { val: String(props.gridSpan) }));}
   const hMerge = optValEl("hMerge", props.hMerge);
-  if (hMerge) ch.push(hMerge);
+  if (hMerge) {ch.push(hMerge);}
   const vMerge = optValEl("vMerge", props.vMerge);
-  if (vMerge) ch.push(vMerge);
-  if (props.tcBorders) ch.push(serializeCellBorders(props.tcBorders));
+  if (vMerge) {ch.push(vMerge);}
+  if (props.tcBorders) {ch.push(serializeCellBorders(props.tcBorders));}
 
   const shd = serializeShading(props.shd);
-  if (shd) ch.push(shd);
+  if (shd) {ch.push(shd);}
 
   const noWrap = toggleEl("noWrap", props.noWrap);
-  if (noWrap) ch.push(noWrap);
-  if (props.tcMar) ch.push(serializeCellMargins(props.tcMar, "tcMar"));
+  if (noWrap) {ch.push(noWrap);}
+  if (props.tcMar) {ch.push(serializeCellMargins(props.tcMar, "tcMar"));}
   const textDirection = optValEl("textDirection", props.textDirection);
-  if (textDirection) ch.push(textDirection);
+  if (textDirection) {ch.push(textDirection);}
   const tcFitText = toggleEl("tcFitText", props.tcFitText);
-  if (tcFitText) ch.push(tcFitText);
+  if (tcFitText) {ch.push(tcFitText);}
   const vAlign = optValEl("vAlign", props.vAlign);
-  if (vAlign) ch.push(vAlign);
+  if (vAlign) {ch.push(vAlign);}
   const hideMark = toggleEl("hideMark", props.hideMark);
-  if (hideMark) ch.push(hideMark);
+  if (hideMark) {ch.push(hideMark);}
 
   return ch.length > 0 ? wEl("tcPr", {}, ch) : undefined;
 }
@@ -269,7 +268,7 @@ function serializeTableCell(cell: DocxTableCell): XmlElement {
   const ch: XmlNode[] = [];
 
   const tcPr = serializeTableCellProperties(cell.properties);
-  if (tcPr) ch.push(tcPr);
+  if (tcPr) {ch.push(tcPr);}
 
   for (const content of cell.content) {
     if (content.type === "paragraph") {
@@ -290,7 +289,7 @@ function serializeTableRow(row: DocxTableRow): XmlElement {
   const ch: XmlNode[] = [];
 
   const trPr = serializeTableRowProperties(row.properties);
-  if (trPr) ch.push(trPr);
+  if (trPr) {ch.push(trPr);}
 
   for (const cell of row.cells) {
     ch.push(serializeTableCell(cell));
@@ -312,9 +311,9 @@ export function serializeTable(table: DocxTable): XmlElement {
   const ch: XmlNode[] = [];
 
   const tblPr = serializeTableProperties(table.properties);
-  if (tblPr) ch.push(tblPr);
+  if (tblPr) {ch.push(tblPr);}
 
-  if (table.grid) ch.push(serializeTableGrid(table.grid));
+  if (table.grid) {ch.push(serializeTableGrid(table.grid));}
 
   for (const row of table.rows) {
     ch.push(serializeTableRow(row));

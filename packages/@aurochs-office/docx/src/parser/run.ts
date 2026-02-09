@@ -615,7 +615,7 @@ function parseFieldCharType(value: string | undefined): DocxFieldCharType | unde
  */
 function parseFieldCharContent(element: XmlElement): DocxFieldCharContent | undefined {
   const fldCharType = parseFieldCharType(getAttr(element, "fldCharType"));
-  if (!fldCharType) return undefined;
+  if (!fldCharType) {return undefined;}
 
   const dirty = parseBoolean(getAttr(element, "dirty"));
   const fldLock = parseBoolean(getAttr(element, "fldLock"));

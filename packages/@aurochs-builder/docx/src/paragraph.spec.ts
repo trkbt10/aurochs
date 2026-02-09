@@ -1,12 +1,13 @@
-import { describe, it, expect } from "vitest";
-import { getChild, getChildren, getTextContent } from "@aurochs/xml";
+/**
+ * @file Tests for DOCX paragraph serialization
+ */
+import { getChild, getChildren } from "@aurochs/xml";
 import type {
   DocxParagraphSpacing,
   DocxParagraphIndent,
   DocxParagraphBorders,
   DocxNumberingProperties,
   DocxFrameProperties,
-  DocxParagraphProperties,
   DocxHyperlink,
   DocxBookmarkStart,
   DocxBookmarkEnd,
@@ -490,6 +491,7 @@ describe("serializeParagraphContent", () => {
   });
 
   it("returns undefined for unknown type", () => {
+    // eslint-disable-next-line custom/no-as-outside-guard -- intentional unknown type for edge-case test
     const content = { type: "unknown" } as unknown as DocxParagraphContent;
     expect(serializeParagraphContent(content)).toBeUndefined();
   });

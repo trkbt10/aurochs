@@ -25,7 +25,7 @@ import { serializeParagraphProperties } from "./paragraph";
 // =============================================================================
 
 function serializeLegacy(legacy: DocxLegacy | undefined): XmlElement | undefined {
-  if (!legacy) return undefined;
+  if (!legacy) {return undefined;}
   const attrs: Record<string, string> = {};
   optAttr(attrs, "legacy", legacy.legacy);
   optAttr(attrs, "legacySpace", legacy.legacySpace);
@@ -37,6 +37,15 @@ function serializeLegacy(legacy: DocxLegacy | undefined): XmlElement | undefined
 // Level Serialization
 // =============================================================================
 
+function serializeLvlText(lvlText: DocxLevel["lvlText"]): XmlElement | undefined {
+  if (!lvlText) {
+    return undefined;
+  }
+  const attrs: Record<string, string> = { val: lvlText.val };
+  optAttr(attrs, "null", lvlText.null);
+  return wEl("lvlText", attrs);
+}
+
 function serializeLevel(lvl: DocxLevel): XmlElement {
   const ch = children(
     optValEl("start", lvl.start),
@@ -45,13 +54,7 @@ function serializeLevel(lvl: DocxLevel): XmlElement {
     optValEl("pStyle", lvl.pStyle),
     lvl.isLgl ? wEl("isLgl") : undefined,
     optValEl("suff", lvl.suff),
-    lvl.lvlText
-      ? (() => {
-          const attrs: Record<string, string> = { val: lvl.lvlText.val };
-          optAttr(attrs, "null", lvl.lvlText.null);
-          return wEl("lvlText", attrs);
-        })()
-      : undefined,
+    serializeLvlText(lvl.lvlText),
     optValEl("lvlJc", lvl.lvlJc),
     lvl.lvlPicBulletId ? valEl("lvlPicBulletId", String(lvl.lvlPicBulletId.numPicBulletId)) : undefined,
     serializeLegacy(lvl.legacy),

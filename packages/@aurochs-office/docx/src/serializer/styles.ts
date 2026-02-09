@@ -25,7 +25,7 @@ import { serializeParagraphProperties } from "./paragraph";
 // =============================================================================
 
 function serializeDocDefaults(docDefaults: DocxDocDefaults | undefined): XmlElement | undefined {
-  if (!docDefaults) return undefined;
+  if (!docDefaults) {return undefined;}
   const ch: XmlNode[] = [];
 
   if (docDefaults.rPrDefault) {
@@ -38,7 +38,7 @@ function serializeDocDefaults(docDefaults: DocxDocDefaults | undefined): XmlElem
     ch.push(wEl("pPrDefault", {}, pPr ? [pPr] : []));
   }
 
-  if (ch.length === 0) return undefined;
+  if (ch.length === 0) {return undefined;}
   return wEl("docDefaults", {}, ch);
 }
 
@@ -57,7 +57,7 @@ function serializeLatentStyleException(exc: DocxLatentStyleException): XmlElemen
 }
 
 function serializeLatentStyles(latentStyles: DocxLatentStyles | undefined): XmlElement | undefined {
-  if (!latentStyles) return undefined;
+  if (!latentStyles) {return undefined;}
   const attrs: Record<string, string> = {};
   optAttr(attrs, "defLockedState", latentStyles.defLockedState);
   optAttr(attrs, "defUIPriority", latentStyles.defUIPriority);
@@ -150,10 +150,10 @@ export function serializeStyles(styles: DocxStyles): XmlElement {
   const ch: XmlNode[] = [];
 
   const docDefaults = serializeDocDefaults(styles.docDefaults);
-  if (docDefaults) ch.push(docDefaults);
+  if (docDefaults) {ch.push(docDefaults);}
 
   const latentStyles = serializeLatentStyles(styles.latentStyles);
-  if (latentStyles) ch.push(latentStyles);
+  if (latentStyles) {ch.push(latentStyles);}
 
   for (const style of styles.style) {
     ch.push(serializeStyle(style));

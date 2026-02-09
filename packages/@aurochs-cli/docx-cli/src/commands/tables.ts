@@ -28,21 +28,26 @@ export type TablesData = {
 // Helpers
 // =============================================================================
 
+function getFirstCellPreview(table: DocxTable): string | undefined {
+  const firstCell = table.rows[0]?.cells[0];
+  if (!firstCell) {
+    return undefined;
+  }
+  const text = firstCell.content
+    .map((c) => extractTextFromBlockContent(c as Parameters<typeof extractTextFromBlockContent>[0]))
+    .join(" ")
+    .trim();
+  if (!text) {
+    return undefined;
+  }
+  return text.length > 50 ? `${text.slice(0, 47)}...` : text;
+}
+
 function serializeTable(table: DocxTable, index: number): TableSummaryJson {
   const rowCount = table.rows.length;
   const colCount = table.rows[0]?.cells.length ?? 0;
   const style = table.properties?.tblStyle as string | undefined;
-
-  // Get first cell preview
-  let firstCellPreview: string | undefined;
-  const firstCell = table.rows[0]?.cells[0];
-  if (firstCell) {
-    const text = firstCell.content
-      .map((c) => extractTextFromBlockContent(c as Parameters<typeof extractTextFromBlockContent>[0]))
-      .join(" ")
-      .trim();
-    firstCellPreview = text.length > 50 ? `${text.slice(0, 47)}...` : text || undefined;
-  }
+  const firstCellPreview = getFirstCellPreview(table);
 
   return {
     index,
@@ -64,15 +69,9 @@ export async function runTables(filePath: string): Promise<Result<TablesData>> {
   try {
     const doc = await loadDocument(filePath);
 
-    const tables: TableSummaryJson[] = [];
-    let tableIndex = 0;
-
-    for (const block of doc.body.content) {
-      if (block.type === "table") {
-        tables.push(serializeTable(block, tableIndex));
-        tableIndex++;
-      }
-    }
+    const tables = doc.body.content
+      .filter((block): block is DocxTable => block.type === "table")
+      .map((table, index) => serializeTable(table, index));
 
     return success({
       count: tables.length,

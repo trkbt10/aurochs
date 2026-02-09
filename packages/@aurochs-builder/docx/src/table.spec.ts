@@ -1,10 +1,9 @@
-import { describe, it, expect } from "vitest";
+/**
+ * @file Tests for DOCX table serialization
+ */
 import { getChild, getChildren } from "@aurochs/xml";
 import type {
-  DocxTableProperties,
   DocxTableGrid,
-  DocxTableRowProperties,
-  DocxTableCellProperties,
   DocxTableCell,
   DocxTableRow,
   DocxTable,

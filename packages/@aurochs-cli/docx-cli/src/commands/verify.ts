@@ -4,7 +4,8 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { runBuild, type BuildSpec } from "./build";
+import type { DocxBuildSpec } from "@aurochs-builder/docx";
+import { runBuild } from "./build";
 import { runInfo } from "./info";
 import { success, error, type Result } from "@aurochs-cli/cli-core";
 
@@ -24,7 +25,7 @@ export type TestCaseSpec = {
   readonly name: string;
   readonly description?: string;
   readonly tags?: readonly string[];
-  readonly input: BuildSpec;
+  readonly input: DocxBuildSpec;
   readonly expected: ExpectedDocument;
 };
 

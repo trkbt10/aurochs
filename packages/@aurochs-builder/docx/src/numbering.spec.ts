@@ -1,4 +1,6 @@
-import { describe, it, expect } from "vitest";
+/**
+ * @file Tests for DOCX numbering serialization
+ */
 import { getChild, getChildren } from "@aurochs/xml";
 import type {
   DocxLevel,

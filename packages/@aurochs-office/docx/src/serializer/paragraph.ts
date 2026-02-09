@@ -23,7 +23,7 @@ import type {
   DocxBookmarkEnd,
   DocxSimpleField,
 } from "../domain/paragraph";
-import { wEl, valEl, toggleEl, optValEl, optAttr, children } from "./primitive";
+import { wEl, toggleEl, optValEl, optAttr, children } from "./primitive";
 import { serializeRunProperties, serializeShading, serializeRun } from "./run";
 import { serializeSectionProperties } from "./section";
 
@@ -32,7 +32,7 @@ import { serializeSectionProperties } from "./section";
 // =============================================================================
 
 function serializeSpacing(spacing: DocxParagraphSpacing | undefined): XmlElement | undefined {
-  if (!spacing) return undefined;
+  if (!spacing) {return undefined;}
   const attrs: Record<string, string> = {};
   optAttr(attrs, "before", spacing.before);
   optAttr(attrs, "beforeAutospacing", spacing.beforeAutospacing);
@@ -42,7 +42,7 @@ function serializeSpacing(spacing: DocxParagraphSpacing | undefined): XmlElement
   optAttr(attrs, "lineRule", spacing.lineRule);
   optAttr(attrs, "beforeLines", spacing.beforeLines);
   optAttr(attrs, "afterLines", spacing.afterLines);
-  if (Object.keys(attrs).length === 0) return undefined;
+  if (Object.keys(attrs).length === 0) {return undefined;}
   return wEl("spacing", attrs);
 }
 
@@ -51,7 +51,7 @@ function serializeSpacing(spacing: DocxParagraphSpacing | undefined): XmlElement
 // =============================================================================
 
 function serializeIndent(ind: DocxParagraphIndent | undefined): XmlElement | undefined {
-  if (!ind) return undefined;
+  if (!ind) {return undefined;}
   const attrs: Record<string, string> = {};
   optAttr(attrs, "left", ind.left);
   optAttr(attrs, "leftChars", ind.leftChars);
@@ -65,7 +65,7 @@ function serializeIndent(ind: DocxParagraphIndent | undefined): XmlElement | und
   optAttr(attrs, "startChars", ind.startChars);
   optAttr(attrs, "end", ind.end);
   optAttr(attrs, "endChars", ind.endChars);
-  if (Object.keys(attrs).length === 0) return undefined;
+  if (Object.keys(attrs).length === 0) {return undefined;}
   return wEl("ind", attrs);
 }
 
@@ -77,7 +77,7 @@ function serializeParagraphBorderEdge(
   localName: string,
   edge: DocxParagraphBorderEdge | undefined,
 ): XmlElement | undefined {
-  if (!edge) return undefined;
+  if (!edge) {return undefined;}
   const attrs: Record<string, string> = { val: edge.val };
   optAttr(attrs, "sz", edge.sz);
   optAttr(attrs, "space", edge.space);
@@ -89,7 +89,7 @@ function serializeParagraphBorderEdge(
 }
 
 function serializeParagraphBorders(pBdr: DocxParagraphBorders | undefined): XmlElement | undefined {
-  if (!pBdr) return undefined;
+  if (!pBdr) {return undefined;}
   const ch = children(
     serializeParagraphBorderEdge("top", pBdr.top),
     serializeParagraphBorderEdge("left", pBdr.left),
@@ -98,7 +98,7 @@ function serializeParagraphBorders(pBdr: DocxParagraphBorders | undefined): XmlE
     serializeParagraphBorderEdge("between", pBdr.between),
     serializeParagraphBorderEdge("bar", pBdr.bar),
   );
-  if (ch.length === 0) return undefined;
+  if (ch.length === 0) {return undefined;}
   return wEl("pBdr", {}, ch);
 }
 
@@ -107,7 +107,7 @@ function serializeParagraphBorders(pBdr: DocxParagraphBorders | undefined): XmlE
 // =============================================================================
 
 function serializeTabStops(tabs: DocxTabStops | undefined): XmlElement | undefined {
-  if (!tabs || tabs.tabs.length === 0) return undefined;
+  if (!tabs || tabs.tabs.length === 0) {return undefined;}
   const ch = tabs.tabs.map((tab) => {
     const attrs: Record<string, string> = {
       val: tab.val,
@@ -124,9 +124,9 @@ function serializeTabStops(tabs: DocxTabStops | undefined): XmlElement | undefin
 // =============================================================================
 
 function serializeNumberingProperties(numPr: DocxNumberingProperties | undefined): XmlElement | undefined {
-  if (!numPr) return undefined;
+  if (!numPr) {return undefined;}
   const ch = children(optValEl("ilvl", numPr.ilvl), optValEl("numId", numPr.numId));
-  if (ch.length === 0) return undefined;
+  if (ch.length === 0) {return undefined;}
   return wEl("numPr", {}, ch);
 }
 
@@ -135,7 +135,7 @@ function serializeNumberingProperties(numPr: DocxNumberingProperties | undefined
 // =============================================================================
 
 function serializeFrameProperties(framePr: DocxFrameProperties | undefined): XmlElement | undefined {
-  if (!framePr) return undefined;
+  if (!framePr) {return undefined;}
   const attrs: Record<string, string> = {};
   optAttr(attrs, "w", framePr.w);
   optAttr(attrs, "h", framePr.h);
@@ -165,7 +165,7 @@ function serializeFrameProperties(framePr: DocxFrameProperties | undefined): Xml
  * @see ECMA-376 Part 1, Section 17.3.1.26 (pPr)
  */
 export function serializeParagraphProperties(props: DocxParagraphProperties | undefined): XmlElement | undefined {
-  if (!props) return undefined;
+  if (!props) {return undefined;}
 
   const ch = children(
     // Style reference
@@ -232,7 +232,7 @@ export function serializeParagraphProperties(props: DocxParagraphProperties | un
     serializeSectionProperties(props.sectPr),
   );
 
-  if (ch.length === 0) return undefined;
+  if (ch.length === 0) {return undefined;}
   return wEl("pPr", {}, ch);
 }
 
@@ -242,7 +242,7 @@ export function serializeParagraphProperties(props: DocxParagraphProperties | un
 
 function serializeHyperlink(hyperlink: DocxHyperlink): XmlElement {
   const attrs: Record<string, string> = {};
-  if (hyperlink.rId) attrs["r:id"] = String(hyperlink.rId);
+  if (hyperlink.rId) {attrs["r:id"] = String(hyperlink.rId);}
   optAttr(attrs, "anchor", hyperlink.anchor);
   optAttr(attrs, "tooltip", hyperlink.tooltip);
   optAttr(attrs, "tgtFrame", hyperlink.tgtFrame);
@@ -282,14 +282,7 @@ function serializeParagraphContent(content: DocxParagraphContent): XmlNode | und
     case "del":
     case "moveFrom":
     case "moveTo": {
-      const tagName =
-        content.type === "ins"
-          ? "ins"
-          : content.type === "del"
-            ? "del"
-            : content.type === "moveFrom"
-              ? "moveFrom"
-              : "moveTo";
+      const tagName = content.type;
       const attrs: Record<string, string> = { id: content.revision.id };
       optAttr(attrs, "author", content.revision.author);
       optAttr(attrs, "date", content.revision.date);
@@ -318,7 +311,7 @@ function serializeParagraphContent(content: DocxParagraphContent): XmlNode | und
           optValEl("id", content.properties.id),
           optValEl("lock", content.properties.lock),
         );
-        if (prCh.length > 0) ch.push(wEl("sdtPr", {}, prCh));
+        if (prCh.length > 0) {ch.push(wEl("sdtPr", {}, prCh));}
       }
       if (content.content.length > 0) {
         ch.push(wEl("sdtContent", {}, content.content.map(serializeRun)));
@@ -343,11 +336,11 @@ export function serializeParagraph(paragraph: DocxParagraph): XmlElement {
   const ch: XmlNode[] = [];
 
   const pPr = serializeParagraphProperties(paragraph.properties);
-  if (pPr) ch.push(pPr);
+  if (pPr) {ch.push(pPr);}
 
   for (const item of paragraph.content) {
     const node = serializeParagraphContent(item);
-    if (node) ch.push(node);
+    if (node) {ch.push(node);}
   }
 
   return wEl("p", {}, ch);

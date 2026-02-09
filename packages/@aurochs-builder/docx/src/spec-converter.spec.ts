@@ -1,4 +1,6 @@
-import { describe, it, expect } from "vitest";
+/**
+ * @file Tests for DOCX spec converter
+ */
 import {
   convertRunSpec,
   convertParagraphSpec,
@@ -9,15 +11,6 @@ import {
   convertSectionSpec,
   convertDocument,
 } from "./spec-converter";
-import type {
-  RunSpec,
-  ParagraphSpec,
-  TableSpec,
-  NumberingDefinitionSpec,
-  StyleSpec,
-  SectionSpec,
-  DocxBuildSpec,
-} from "./types";
 
 // =============================================================================
 // convertRunSpec

@@ -7,7 +7,7 @@
  * @see ECMA-376 Part 1, Section 17.3.3 (Run Content)
  */
 
-import { createElement, createText, type XmlElement, type XmlNode } from "@aurochs/xml";
+import { createText, type XmlElement, type XmlNode } from "@aurochs/xml";
 import type {
   DocxRunProperties,
   DocxRunFonts,
@@ -19,14 +19,14 @@ import type {
   DocxRun,
   DocxRunContent,
 } from "../domain/run";
-import { wEl, valEl, toggleEl, optValEl, optAttr, children } from "./primitive";
+import { wEl, toggleEl, optValEl, optAttr, children } from "./primitive";
 
 // =============================================================================
 // Font Serialization
 // =============================================================================
 
 function serializeRunFonts(fonts: DocxRunFonts | undefined): XmlElement | undefined {
-  if (!fonts) return undefined;
+  if (!fonts) {return undefined;}
   const attrs: Record<string, string> = {};
   optAttr(attrs, "ascii", fonts.ascii);
   optAttr(attrs, "hAnsi", fonts.hAnsi);
@@ -36,7 +36,7 @@ function serializeRunFonts(fonts: DocxRunFonts | undefined): XmlElement | undefi
   optAttr(attrs, "hAnsiTheme", fonts.hAnsiTheme);
   optAttr(attrs, "eastAsiaTheme", fonts.eastAsiaTheme);
   optAttr(attrs, "csTheme", fonts.csTheme);
-  if (Object.keys(attrs).length === 0) return undefined;
+  if (Object.keys(attrs).length === 0) {return undefined;}
   return wEl("rFonts", attrs);
 }
 
@@ -45,7 +45,7 @@ function serializeRunFonts(fonts: DocxRunFonts | undefined): XmlElement | undefi
 // =============================================================================
 
 function serializeColor(color: DocxColor | undefined): XmlElement | undefined {
-  if (!color) return undefined;
+  if (!color) {return undefined;}
   const attrs: Record<string, string> = {};
   optAttr(attrs, "val", color.val ?? "auto");
   optAttr(attrs, "themeColor", color.themeColor);
@@ -58,8 +58,16 @@ function serializeColor(color: DocxColor | undefined): XmlElement | undefined {
 // Shading Serialization
 // =============================================================================
 
+
+
+
+
+
+/**
+ * Serialize run shading properties to a w:shd element.
+ */
 export function serializeShading(shd: DocxShading | undefined): XmlElement | undefined {
-  if (!shd) return undefined;
+  if (!shd) {return undefined;}
   const attrs: Record<string, string> = {};
   optAttr(attrs, "val", shd.val);
   optAttr(attrs, "color", shd.color);
@@ -74,7 +82,7 @@ export function serializeShading(shd: DocxShading | undefined): XmlElement | und
 // =============================================================================
 
 function serializeRunBorder(bdr: DocxRunBorder | undefined): XmlElement | undefined {
-  if (!bdr) return undefined;
+  if (!bdr) {return undefined;}
   const attrs: Record<string, string> = { val: bdr.val };
   optAttr(attrs, "sz", bdr.sz);
   optAttr(attrs, "space", bdr.space);
@@ -90,7 +98,7 @@ function serializeRunBorder(bdr: DocxRunBorder | undefined): XmlElement | undefi
 // =============================================================================
 
 function serializeUnderline(u: DocxUnderline | undefined): XmlElement | undefined {
-  if (!u) return undefined;
+  if (!u) {return undefined;}
   const attrs: Record<string, string> = { val: u.val };
   optAttr(attrs, "color", u.color);
   optAttr(attrs, "themeColor", u.themeColor);
@@ -102,7 +110,7 @@ function serializeUnderline(u: DocxUnderline | undefined): XmlElement | undefine
 // =============================================================================
 
 function serializeEastAsianLayout(layout: DocxEastAsianLayout | undefined): XmlElement | undefined {
-  if (!layout) return undefined;
+  if (!layout) {return undefined;}
   const attrs: Record<string, string> = {};
   optAttr(attrs, "combine", layout.combine);
   optAttr(attrs, "combineBrackets", layout.combineBrackets);
@@ -121,7 +129,7 @@ function serializeEastAsianLayout(layout: DocxEastAsianLayout | undefined): XmlE
  * @see ECMA-376 Part 1, Section 17.3.2.27 (rPr)
  */
 export function serializeRunProperties(props: DocxRunProperties | undefined): XmlElement | undefined {
-  if (!props) return undefined;
+  if (!props) {return undefined;}
 
   const ch = children(
     // Style reference
@@ -177,7 +185,7 @@ export function serializeRunProperties(props: DocxRunProperties | undefined): Xm
     toggleEl("cs", props.cs),
   );
 
-  if (ch.length === 0) return undefined;
+  if (ch.length === 0) {return undefined;}
   return wEl("rPr", {}, ch);
 }
 
@@ -237,11 +245,11 @@ function serializeRunContent(content: DocxRunContent): XmlNode | undefined {
 export function serializeRun(run: DocxRun): XmlElement {
   const ch: XmlNode[] = [];
   const rPr = serializeRunProperties(run.properties);
-  if (rPr) ch.push(rPr);
+  if (rPr) {ch.push(rPr);}
 
   for (const item of run.content) {
     const node = serializeRunContent(item);
-    if (node) ch.push(node);
+    if (node) {ch.push(node);}
   }
 
   return wEl("r", {}, ch);

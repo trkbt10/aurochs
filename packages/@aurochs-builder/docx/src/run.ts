@@ -350,8 +350,8 @@ export function serializeRunContent(content: DocxRunContent): XmlElement {
       return serializeSymbol(content);
     case "fieldChar": {
       const attrs: Record<string, string> = { "w:fldCharType": content.fldCharType };
-      if (content.dirty) attrs["w:dirty"] = "true";
-      if (content.fldLock) attrs["w:fldLock"] = "true";
+      if (content.dirty) {attrs["w:dirty"] = "true";}
+      if (content.fldLock) {attrs["w:fldLock"] = "true";}
       return createElement("w:fldChar", attrs);
     }
     case "instrText":

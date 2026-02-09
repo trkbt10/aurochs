@@ -13,6 +13,7 @@ import { loadDocx, type DocxDocument } from "@aurochs-office/docx";
 export async function loadDocument(filePath: string): Promise<DocxDocument> {
   const buffer = await fs.readFile(filePath);
   if (extname(filePath).toLowerCase() === ".doc") {
+    // eslint-disable-next-line no-restricted-syntax -- lazy import to avoid loading .doc converter unless needed
     const { convert } = await import("@aurochs-converters/doc-to-docx");
     const { data } = await convert(new Uint8Array(buffer));
     return loadDocx(data);

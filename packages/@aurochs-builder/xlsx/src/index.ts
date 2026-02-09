@@ -42,6 +42,19 @@ export {
   serializeCols,
   serializeDimension,
   serializeMergeCells,
+  serializeSheetPr,
+  serializeSheetViews,
+  serializeSheetProtection,
+  serializeAutoFilter,
+  serializeConditionalFormatting,
+  serializeDataValidations,
+  serializeHyperlinks,
+  serializePrintOptions,
+  serializePageMargins,
+  serializePageSetup,
+  serializeHeaderFooter,
+  serializeRowBreaks,
+  serializeColBreaks,
 } from "./worksheet";
 
 // Workbook serialization

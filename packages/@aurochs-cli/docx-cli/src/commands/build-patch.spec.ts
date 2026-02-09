@@ -17,6 +17,7 @@ import { runExtract } from "./extract";
 // Test Setup
 // =============================================================================
 
+// eslint-disable-next-line no-restricted-syntax -- beforeAll/afterAll pattern requires let
 let tmpDir: string;
 
 beforeAll(async () => {

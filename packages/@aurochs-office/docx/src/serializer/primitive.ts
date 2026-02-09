@@ -36,7 +36,7 @@ export function valEl(localName: string, val: string): XmlElement {
  * Returns undefined if value is undefined.
  */
 export function toggleEl(localName: string, value: boolean | undefined): XmlElement | undefined {
-  if (value === undefined) return undefined;
+  if (value === undefined) {return undefined;}
   return value ? wEl(localName) : wEl(localName, { val: "0" });
 }
 
@@ -44,7 +44,7 @@ export function toggleEl(localName: string, value: boolean | undefined): XmlElem
  * Create a val element only if value is defined.
  */
 export function optValEl(localName: string, val: string | number | undefined): XmlElement | undefined {
-  if (val === undefined) return undefined;
+  if (val === undefined) {return undefined;}
   return valEl(localName, String(val));
 }
 
@@ -68,7 +68,7 @@ export function optAttr(
   name: string,
   value: string | number | boolean | undefined,
 ): void {
-  if (value === undefined) return;
+  if (value === undefined) {return;}
   if (typeof value === "boolean") {
     attrs[name] = value ? "1" : "0";
   } else {

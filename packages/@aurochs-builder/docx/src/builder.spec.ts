@@ -1,4 +1,6 @@
-import { describe, it, expect } from "vitest";
+/**
+ * @file Tests for DOCX builder
+ */
 import { buildDocx, getBuildData } from "./builder";
 import type { DocxBuildSpec } from "./types";
 

@@ -10,6 +10,7 @@
 import type { UnderlineStyle, TextEmphasisMark } from "@aurochs-office/ooxml/domain/text";
 import type { WordBorderStyle, EighthPoints } from "@aurochs-office/ooxml/domain/border";
 import type { DocxStyleId, HalfPoints, Twips } from "./types";
+import type { DocxDrawing } from "./drawing";
 
 // =============================================================================
 // Run Font Properties
@@ -430,7 +431,7 @@ export type DocxSymbol = {
 export type DocxDrawingContent = {
   readonly type: "drawing";
   /** Inline or anchor drawing */
-  readonly drawing: import("./drawing").DocxDrawing;
+  readonly drawing: DocxDrawing;
 };
 
 /**

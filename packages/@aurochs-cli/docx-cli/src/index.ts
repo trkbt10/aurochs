@@ -17,7 +17,7 @@ export {
   type TableCellJson,
 } from "./commands/show";
 export { runExtract, type ExtractData, type ExtractOptions, type SectionTextItem } from "./commands/extract";
-export { runBuild, type BuildSpec, type BuildData } from "./commands/build";
+export { runBuild } from "./commands/build";
 export { runPatch, type PatchData } from "./commands/patch";
 export {
   runVerify,
@@ -28,17 +28,6 @@ export {
   type ExpectedDocument,
   type Assertion,
 } from "./commands/verify";
-
-// Text extraction (from @aurochs-office/docx)
-export {
-  extractTextFromRunContent,
-  extractTextFromRun,
-  extractTextFromParagraph,
-  extractTextFromParagraphContent,
-  extractTextFromBlockContent,
-  extractTextFromBody,
-  extractTextFromDocument,
-} from "@aurochs-office/docx/domain/text-utils";
 
 // Serializers
 export {

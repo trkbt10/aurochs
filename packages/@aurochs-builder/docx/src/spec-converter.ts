@@ -35,6 +35,13 @@ import type {
 // Run Conversion
 // =============================================================================
 
+function convertUnderlineSpec(underline: boolean | string): DocxRunProperties["u"] {
+  if (typeof underline === "boolean") {
+    return { val: underline ? "single" : "none" };
+  }
+  return { val: underline as "single" };
+}
+
 /**
  * Convert a RunSpec to DocxRun domain type.
  */
@@ -52,9 +59,7 @@ export function convertRunSpec(spec: RunSpec): DocxRun {
     ...(spec.color !== undefined ? { color: { val: spec.color } } : {}),
     ...(spec.highlight !== undefined ? { highlight: spec.highlight as DocxHighlightColor } : {}),
     ...(spec.vertAlign !== undefined ? { vertAlign: spec.vertAlign } : {}),
-    ...(spec.underline !== undefined
-      ? { u: typeof spec.underline === "boolean" ? { val: spec.underline ? "single" : "none" } : { val: spec.underline as "single" } }
-      : {}),
+    ...(spec.underline !== undefined ? { u: convertUnderlineSpec(spec.underline) } : {}),
   };
 
   const hasProperties = Object.keys(properties).length > 0;
@@ -123,6 +128,13 @@ function convertNumberingProperties(numbering: NonNullable<ParagraphSpec["number
 // Table Conversion
 // =============================================================================
 
+function convertGridSpec(grid: TableSpec["grid"]): DocxTableGrid | undefined {
+  if (!grid) {
+    return undefined;
+  }
+  return { columns: grid.map((w) => ({ width: px(w) })) };
+}
+
 /**
  * Convert a TableSpec to DocxTable domain type.
  */
@@ -135,9 +147,7 @@ export function convertTableSpec(spec: TableSpec): DocxTable {
   };
 
   const hasProperties = Object.keys(properties).length > 0;
-  const grid: DocxTableGrid | undefined = spec.grid
-    ? { columns: spec.grid.map((w) => ({ width: px(w) })) }
-    : undefined;
+  const grid = convertGridSpec(spec.grid);
 
   return {
     type: "table",
@@ -262,6 +272,13 @@ export function countBlockContentSpecs(specs: readonly BlockContentSpec[]): { pa
 // Numbering Conversion
 // =============================================================================
 
+function convertLevelIndent(indent: NonNullable<NumberingLevelSpec["indent"]>): DocxParagraphIndent {
+  return {
+    ...(indent.left !== undefined ? { left: twips(indent.left) } : {}),
+    ...(indent.hanging !== undefined ? { hanging: twips(indent.hanging) } : {}),
+  };
+}
+
 function convertNumberingLevel(spec: NumberingLevelSpec): DocxLevel {
   return {
     ilvl: docxIlvl(spec.ilvl),
@@ -269,16 +286,7 @@ function convertNumberingLevel(spec: NumberingLevelSpec): DocxLevel {
     lvlText: { val: spec.lvlText },
     ...(spec.start !== undefined ? { start: spec.start } : {}),
     ...(spec.lvlJc !== undefined ? { lvlJc: spec.lvlJc } : {}),
-    ...(spec.indent !== undefined
-      ? {
-          pPr: {
-            ind: {
-              ...(spec.indent.left !== undefined ? { left: twips(spec.indent.left) } : {}),
-              ...(spec.indent.hanging !== undefined ? { hanging: twips(spec.indent.hanging) } : {}),
-            },
-          },
-        }
-      : {}),
+    ...(spec.indent !== undefined ? { pPr: { ind: convertLevelIndent(spec.indent) } } : {}),
     ...(spec.font !== undefined ? { rPr: { rFonts: { ascii: spec.font, hAnsi: spec.font } } } : {}),
   };
 }
@@ -304,6 +312,33 @@ export function convertNumberingSpec(specs: readonly NumberingDefinitionSpec[]):
 // Style Conversion
 // =============================================================================
 
+function convertStyleParagraphProperties(para: NonNullable<StyleSpec["paragraph"]>): DocxParagraphProperties {
+  return {
+    ...(para.alignment !== undefined ? { jc: para.alignment } : {}),
+    ...(para.spacing !== undefined ? { spacing: convertSpacing(para.spacing) } : {}),
+    ...(para.indent !== undefined ? { ind: convertIndent(para.indent) } : {}),
+    ...(para.keepNext !== undefined ? { keepNext: para.keepNext } : {}),
+    ...(para.keepLines !== undefined ? { keepLines: para.keepLines } : {}),
+    ...(para.pageBreakBefore !== undefined ? { pageBreakBefore: para.pageBreakBefore } : {}),
+  };
+}
+
+function convertStyleRunProperties(run: NonNullable<StyleSpec["run"]>): DocxRunProperties {
+  return {
+    ...(run.bold !== undefined ? { b: run.bold } : {}),
+    ...(run.italic !== undefined ? { i: run.italic } : {}),
+    ...(run.strikethrough !== undefined ? { strike: run.strikethrough } : {}),
+    ...(run.smallCaps !== undefined ? { smallCaps: run.smallCaps } : {}),
+    ...(run.allCaps !== undefined ? { caps: run.allCaps } : {}),
+    ...(run.fontSize !== undefined ? { sz: halfPoints(run.fontSize) } : {}),
+    ...(run.fontFamily !== undefined ? { rFonts: { ascii: run.fontFamily, hAnsi: run.fontFamily } } : {}),
+    ...(run.color !== undefined ? { color: { val: run.color } } : {}),
+    ...(run.highlight !== undefined ? { highlight: run.highlight as DocxHighlightColor } : {}),
+    ...(run.vertAlign !== undefined ? { vertAlign: run.vertAlign } : {}),
+    ...(run.underline !== undefined ? { u: convertUnderlineSpec(run.underline) } : {}),
+  };
+}
+
 /**
  * Convert StyleSpec array to DocxStyles domain type.
  */
@@ -314,37 +349,8 @@ export function convertStylesSpec(specs: readonly StyleSpec[]): DocxStyles {
     name: { val: spec.name },
     ...(spec.basedOn !== undefined ? { basedOn: { val: docxStyleId(spec.basedOn) } } : {}),
     ...(spec.next !== undefined ? { next: { val: docxStyleId(spec.next) } } : {}),
-    ...(spec.paragraph !== undefined
-      ? {
-          pPr: {
-            ...(spec.paragraph.alignment !== undefined ? { jc: spec.paragraph.alignment } : {}),
-            ...(spec.paragraph.spacing !== undefined ? { spacing: convertSpacing(spec.paragraph.spacing) } : {}),
-            ...(spec.paragraph.indent !== undefined ? { ind: convertIndent(spec.paragraph.indent) } : {}),
-            ...(spec.paragraph.keepNext !== undefined ? { keepNext: spec.paragraph.keepNext } : {}),
-            ...(spec.paragraph.keepLines !== undefined ? { keepLines: spec.paragraph.keepLines } : {}),
-            ...(spec.paragraph.pageBreakBefore !== undefined ? { pageBreakBefore: spec.paragraph.pageBreakBefore } : {}),
-          },
-        }
-      : {}),
-    ...(spec.run !== undefined
-      ? {
-          rPr: {
-            ...(spec.run.bold !== undefined ? { b: spec.run.bold } : {}),
-            ...(spec.run.italic !== undefined ? { i: spec.run.italic } : {}),
-            ...(spec.run.strikethrough !== undefined ? { strike: spec.run.strikethrough } : {}),
-            ...(spec.run.smallCaps !== undefined ? { smallCaps: spec.run.smallCaps } : {}),
-            ...(spec.run.allCaps !== undefined ? { caps: spec.run.allCaps } : {}),
-            ...(spec.run.fontSize !== undefined ? { sz: halfPoints(spec.run.fontSize) } : {}),
-            ...(spec.run.fontFamily !== undefined ? { rFonts: { ascii: spec.run.fontFamily, hAnsi: spec.run.fontFamily } } : {}),
-            ...(spec.run.color !== undefined ? { color: { val: spec.run.color } } : {}),
-            ...(spec.run.highlight !== undefined ? { highlight: spec.run.highlight as DocxHighlightColor } : {}),
-            ...(spec.run.vertAlign !== undefined ? { vertAlign: spec.run.vertAlign } : {}),
-            ...(spec.run.underline !== undefined
-              ? { u: typeof spec.run.underline === "boolean" ? { val: spec.run.underline ? "single" : "none" } : { val: spec.run.underline as "single" } }
-              : {}),
-          },
-        }
-      : {}),
+    ...(spec.paragraph !== undefined ? { pPr: convertStyleParagraphProperties(spec.paragraph) } : {}),
+    ...(spec.run !== undefined ? { rPr: convertStyleRunProperties(spec.run) } : {}),
   }));
 
   return { style };

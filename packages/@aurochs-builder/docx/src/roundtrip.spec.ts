@@ -5,7 +5,6 @@
  * the serialize → parse roundtrip.
  */
 
-import { describe, it, expect } from "vitest";
 import { buildDocx } from "./builder";
 import { patchDocx } from "./patcher";
 import { loadDocx } from "@aurochs-office/docx";

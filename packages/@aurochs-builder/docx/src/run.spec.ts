@@ -1,5 +1,7 @@
-import { describe, it, expect } from "vitest";
-import { getChild, getChildren, getTextContent } from "@aurochs/xml";
+/**
+ * @file Tests for DOCX run serialization
+ */
+import { getChild, getTextContent } from "@aurochs/xml";
 import type { DocxRunFonts, DocxColor, DocxShading, DocxUnderline, DocxRunBorder, DocxRunProperties, DocxRunContent, DocxRun } from "@aurochs-office/docx/domain/run";
 import {
   serializeRunFonts,

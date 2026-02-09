@@ -8,19 +8,11 @@ import { success, error, type Result } from "@aurochs-cli/cli-core";
 import { buildDocx, getBuildData } from "@aurochs-builder/docx";
 import type { DocxBuildSpec, DocxBuildData } from "@aurochs-builder/docx";
 
-// =============================================================================
-// Build Types (re-export for CLI output)
-// =============================================================================
-
-/** @deprecated Use DocxBuildSpec from @aurochs-builder/docx instead */
-export type BuildSpec = DocxBuildSpec;
-export type BuildData = DocxBuildData;
-
 /**
  * Build a DOCX file from JSON specification.
  * Generates DOCX from scratch (no template needed).
  */
-export async function runBuild(specPath: string): Promise<Result<BuildData>> {
+export async function runBuild(specPath: string): Promise<Result<DocxBuildData>> {
   try {
     const specJson = await fs.readFile(specPath, "utf-8");
     const spec: DocxBuildSpec = JSON.parse(specJson);

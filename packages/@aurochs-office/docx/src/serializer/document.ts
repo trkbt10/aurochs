@@ -38,12 +38,12 @@ function serializeBody(body: DocxBody): XmlElement {
 
   for (const content of body.content) {
     const node = serializeBlockContent(content);
-    if (node) ch.push(node);
+    if (node) {ch.push(node);}
   }
 
   // Final section properties
   const sectPr = serializeSectionProperties(body.sectPr);
-  if (sectPr) ch.push(sectPr);
+  if (sectPr) {ch.push(sectPr);}
 
   return wEl("body", {}, ch);
 }

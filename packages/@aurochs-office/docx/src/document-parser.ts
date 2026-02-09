@@ -358,13 +358,9 @@ export async function loadDocx(data: ArrayBuffer | Uint8Array, options: LoadDocx
   const document = parseDocument(documentElement, context);
 
   // 6. Load headers and footers
-  let headers: ReadonlyMap<DocxRelId, DocxHeader> | undefined;
-  let footers: ReadonlyMap<DocxRelId, DocxFooter> | undefined;
-
-  if (opts.parseHeadersFooters) {
-    headers = loadHeaders({ pkg, documentPath, relationships: documentRelationships, context });
-    footers = loadFooters({ pkg, documentPath, relationships: documentRelationships, context });
-  }
+  const loaderArgs = { pkg, documentPath, relationships: documentRelationships, context };
+  const headers = opts.parseHeadersFooters ? loadHeaders(loaderArgs) : undefined;
+  const footers = opts.parseHeadersFooters ? loadFooters(loaderArgs) : undefined;
 
   // 7. Combine all parts
   return {

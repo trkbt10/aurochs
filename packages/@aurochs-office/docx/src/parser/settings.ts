@@ -14,7 +14,7 @@ import type {
   DocxDocumentProtection,
   DocxThemeFontLang,
 } from "../domain/document";
-import { parseBoolean, parseInt32, parseToggleChild, getChildVal, getChildIntVal } from "./primitive";
+import { parseBoolean, parseInt32, parseToggleChild, getChildIntVal } from "./primitive";
 
 // =============================================================================
 // Zoom Parsing
@@ -26,12 +26,12 @@ import { parseBoolean, parseInt32, parseToggleChild, getChildVal, getChildIntVal
  * @see ECMA-376 Part 1, Section 17.15.1.94 (zoom)
  */
 function parseZoom(element: XmlElement | undefined): DocxZoom | undefined {
-  if (!element) return undefined;
+  if (!element) {return undefined;}
 
   const percent = parseInt32(getAttr(element, "percent"));
   const val = getAttr(element, "val") as DocxZoom["val"] | undefined;
 
-  if (percent === undefined && val === undefined) return undefined;
+  if (percent === undefined && val === undefined) {return undefined;}
 
   return {
     ...(percent !== undefined && { percent }),
@@ -49,7 +49,7 @@ function parseZoom(element: XmlElement | undefined): DocxZoom | undefined {
  * @see ECMA-376 Part 1, Section 17.15.1.21 (compat)
  */
 function parseCompatSettings(element: XmlElement | undefined): DocxCompatSettings | undefined {
-  if (!element) return undefined;
+  if (!element) {return undefined;}
 
   const spaceForUL = parseToggleChild(element, "w:spaceForUL");
   const balanceSingleByteDoubleByteWidth = parseToggleChild(element, "w:balanceSingleByteDoubleByteWidth");
@@ -89,7 +89,7 @@ function parseCompatSettings(element: XmlElement | undefined): DocxCompatSetting
  * @see ECMA-376 Part 1, Section 17.15.1.28 (documentProtection)
  */
 function parseDocumentProtection(element: XmlElement | undefined): DocxDocumentProtection | undefined {
-  if (!element) return undefined;
+  if (!element) {return undefined;}
 
   const edit = getAttr(element, "edit") as DocxDocumentProtection["edit"] | undefined;
   const password = getAttr(element, "password");
@@ -122,7 +122,7 @@ function parseDocumentProtection(element: XmlElement | undefined): DocxDocumentP
  * @see ECMA-376 Part 1, Section 17.15.1.86 (themeFontLang)
  */
 function parseThemeFontLang(element: XmlElement | undefined): DocxThemeFontLang | undefined {
-  if (!element) return undefined;
+  if (!element) {return undefined;}
 
   const val = getAttr(element, "val");
   const eastAsia = getAttr(element, "eastAsia");

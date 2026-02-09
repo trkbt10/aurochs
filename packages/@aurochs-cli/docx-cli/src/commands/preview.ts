@@ -90,16 +90,20 @@ function getHeadingLevel(para: DocxParagraph): number | undefined {
   return undefined;
 }
 
+function extractNumbering(props: DocxParagraph["properties"]): AsciiParagraph["numbering"] | undefined {
+  if (props && "numPr" in props && props.numPr) {
+    const numPr = props.numPr as { numId?: number; ilvl?: number };
+    return { numId: numPr.numId ?? 0, level: numPr.ilvl ?? 0 };
+  }
+  return undefined;
+}
+
 function convertParagraph(para: DocxParagraph): AsciiParagraph {
   const text = extractParagraphText(para);
   const headingLevel = getHeadingLevel(para);
   const props = para.properties;
 
-  let numbering: AsciiParagraph["numbering"] | undefined;
-  if (props && "numPr" in props && props.numPr) {
-    const numPr = props.numPr as { numId?: number; ilvl?: number };
-    numbering = { numId: numPr.numId ?? 0, level: numPr.ilvl ?? 0 };
-  }
+  const numbering = extractNumbering(props);
 
   return {
     type: "paragraph",
@@ -164,22 +168,9 @@ export async function runPreview(
 
     for (let i = start; i <= end; i++) {
       const section = sections[i - 1]!;
-      const blocks: AsciiDocBlock[] = [];
-      let paragraphCount = 0;
-      let tableCount = 0;
-
-      for (const block of section.content) {
-        const converted = convertBlock(block);
-        if (converted) {
-          blocks.push(converted);
-          if (converted.type === "paragraph") {
-            paragraphCount++;
-          } else {
-            tableCount++;
-          }
-        }
-      }
-
+      const blocks = section.content.map(convertBlock).filter((b): b is AsciiDocBlock => b !== undefined);
+      const paragraphCount = blocks.filter((b) => b.type === "paragraph").length;
+      const tableCount = blocks.filter((b) => b.type === "table").length;
       const ascii = renderDocxAscii({ blocks, width: options.width });
 
       results.push({

@@ -27,7 +27,7 @@ import { wEl, valEl, optAttr, children } from "./primitive";
 // =============================================================================
 
 function serializePageSize(pgSz: DocxPageSize | undefined): XmlElement | undefined {
-  if (!pgSz) return undefined;
+  if (!pgSz) {return undefined;}
   const attrs: Record<string, string> = {
     w: String(pgSz.w),
     h: String(pgSz.h),
@@ -42,7 +42,7 @@ function serializePageSize(pgSz: DocxPageSize | undefined): XmlElement | undefin
 // =============================================================================
 
 function serializePageMargins(pgMar: DocxPageMargins | undefined): XmlElement | undefined {
-  if (!pgMar) return undefined;
+  if (!pgMar) {return undefined;}
   const attrs: Record<string, string> = {
     top: String(pgMar.top),
     right: String(pgMar.right),
@@ -60,7 +60,7 @@ function serializePageMargins(pgMar: DocxPageMargins | undefined): XmlElement | 
 // =============================================================================
 
 function serializePageBorderEdge(localName: string, edge: DocxPageBorderEdge | undefined): XmlElement | undefined {
-  if (!edge) return undefined;
+  if (!edge) {return undefined;}
   const attrs: Record<string, string> = { val: edge.val };
   optAttr(attrs, "sz", edge.sz);
   optAttr(attrs, "space", edge.space);
@@ -72,7 +72,7 @@ function serializePageBorderEdge(localName: string, edge: DocxPageBorderEdge | u
 }
 
 function serializePageBorders(pgBorders: DocxPageBorders | undefined): XmlElement | undefined {
-  if (!pgBorders) return undefined;
+  if (!pgBorders) {return undefined;}
   const attrs: Record<string, string> = {};
   optAttr(attrs, "display", pgBorders.display);
   optAttr(attrs, "offsetFrom", pgBorders.offsetFrom);
@@ -91,7 +91,7 @@ function serializePageBorders(pgBorders: DocxPageBorders | undefined): XmlElemen
 // =============================================================================
 
 function serializeColumns(cols: DocxColumns | undefined): XmlElement | undefined {
-  if (!cols) return undefined;
+  if (!cols) {return undefined;}
   const attrs: Record<string, string> = {};
   optAttr(attrs, "num", cols.num);
   optAttr(attrs, "equalWidth", cols.equalWidth);
@@ -114,7 +114,7 @@ function serializeColumns(cols: DocxColumns | undefined): XmlElement | undefined
 // =============================================================================
 
 function serializeHeaderFooterRefs(tagName: string, refs: readonly DocxHeaderFooterRef[] | undefined): XmlNode[] {
-  if (!refs) return [];
+  if (!refs) {return [];}
   return refs.map((ref) => wEl(tagName, { type: ref.type, "r:id": String(ref.rId) }));
 }
 
@@ -123,7 +123,7 @@ function serializeHeaderFooterRefs(tagName: string, refs: readonly DocxHeaderFoo
 // =============================================================================
 
 function serializeLineNumbering(lnNumType: DocxLineNumbering | undefined): XmlElement | undefined {
-  if (!lnNumType) return undefined;
+  if (!lnNumType) {return undefined;}
   const attrs: Record<string, string> = {};
   optAttr(attrs, "countBy", lnNumType.countBy);
   optAttr(attrs, "start", lnNumType.start);
@@ -137,7 +137,7 @@ function serializeLineNumbering(lnNumType: DocxLineNumbering | undefined): XmlEl
 // =============================================================================
 
 function serializePageNumberType(pgNumType: DocxPageNumberType | undefined): XmlElement | undefined {
-  if (!pgNumType) return undefined;
+  if (!pgNumType) {return undefined;}
   const attrs: Record<string, string> = {};
   optAttr(attrs, "fmt", pgNumType.fmt);
   optAttr(attrs, "start", pgNumType.start);
@@ -151,7 +151,7 @@ function serializePageNumberType(pgNumType: DocxPageNumberType | undefined): Xml
 // =============================================================================
 
 function serializeDocGrid(docGrid: DocxDocGrid | undefined): XmlElement | undefined {
-  if (!docGrid) return undefined;
+  if (!docGrid) {return undefined;}
   const attrs: Record<string, string> = {};
   optAttr(attrs, "type", docGrid.type);
   optAttr(attrs, "linePitch", docGrid.linePitch);
@@ -164,7 +164,7 @@ function serializeDocGrid(docGrid: DocxDocGrid | undefined): XmlElement | undefi
 // =============================================================================
 
 function serializeNotePr(localName: string, notePr: DocxNotePr | undefined): XmlElement | undefined {
-  if (!notePr) return undefined;
+  if (!notePr) {return undefined;}
   const ch = children(
     notePr.pos ? valEl("pos", notePr.pos) : undefined,
     notePr.numFmt ? valEl("numFmt", notePr.numFmt) : undefined,
@@ -184,7 +184,7 @@ function serializeNotePr(localName: string, notePr: DocxNotePr | undefined): Xml
  * @see ECMA-376 Part 1, Section 17.6.17 (sectPr)
  */
 export function serializeSectionProperties(sectPr: DocxSectionProperties | undefined): XmlElement | undefined {
-  if (!sectPr) return undefined;
+  if (!sectPr) {return undefined;}
 
   const ch: XmlNode[] = [
     ...serializeHeaderFooterRefs("headerReference", sectPr.headerReference),

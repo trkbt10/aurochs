@@ -1,4 +1,6 @@
-import { describe, it, expect } from "vitest";
+/**
+ * @file Tests for DOCX section serialization
+ */
 import { getChild, getChildren } from "@aurochs/xml";
 import type {
   DocxPageSize,
@@ -10,7 +12,6 @@ import type {
   DocxPageNumberType,
   DocxDocGrid,
   DocxNotePr,
-  DocxSectionProperties,
 } from "@aurochs-office/docx/domain/section";
 import {
   serializePageSize,

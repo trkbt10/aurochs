@@ -6,7 +6,7 @@ import type { InfoData } from "../commands/info";
 import type { ListData } from "../commands/list";
 import type { ShowData } from "../commands/show";
 import type { ExtractData } from "../commands/extract";
-import type { BuildData } from "../commands/build";
+import type { DocxBuildData } from "@aurochs-builder/docx";
 import type { PatchData } from "../commands/patch";
 import type { VerifyData } from "../commands/verify";
 import type { StylesData } from "../commands/styles";
@@ -141,7 +141,7 @@ export function formatExtractPretty(data: ExtractData): string {
 /**
  * Format build result for pretty display.
  */
-export function formatBuildPretty(data: BuildData): string {
+export function formatBuildPretty(data: DocxBuildData): string {
   const lines = [
     `Output: ${data.outputPath}`,
     `Paragraphs: ${data.paragraphCount}`,

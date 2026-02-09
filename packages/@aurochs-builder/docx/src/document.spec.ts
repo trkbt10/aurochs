@@ -1,4 +1,6 @@
-import { describe, it, expect } from "vitest";
+/**
+ * @file Tests for DOCX document serialization
+ */
 import { getChild, getChildren } from "@aurochs/xml";
 import type { DocxDocument, DocxBody, DocxBlockContent } from "@aurochs-office/docx/domain/document";
 import {
@@ -37,6 +39,7 @@ describe("serializeBlockContent", () => {
   });
 
   it("returns empty paragraph for unknown type", () => {
+    // eslint-disable-next-line custom/no-as-outside-guard -- intentional unknown type for edge-case test
     const content = { type: "unknown" } as unknown as DocxBlockContent;
     const el = serializeBlockContent(content);
     expect(el.name).toBe("w:p");
