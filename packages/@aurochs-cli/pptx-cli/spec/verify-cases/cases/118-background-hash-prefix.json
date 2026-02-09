@@ -1,0 +1,44 @@
+{
+  "name": "background-hash-prefix",
+  "description": "Verify that background hex colors with # prefix are handled correctly",
+  "tags": ["background", "solid", "edge-case"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/background-hash-prefix.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "background": "#1E40AF",
+        "addShapes": [
+          {
+            "type": "rectangle",
+            "x": 100,
+            "y": 100,
+            "width": 300,
+            "height": 200,
+            "fill": "FFFFFF",
+            "text": "Background with # prefix"
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "background": {
+          "type": "solid",
+          "color": "1E40AF"
+        },
+        "shapes": [
+          {
+            "index": -1,
+            "type": "sp",
+            "text": "Background with # prefix"
+          }
+        ]
+      }
+    ]
+  }
+}

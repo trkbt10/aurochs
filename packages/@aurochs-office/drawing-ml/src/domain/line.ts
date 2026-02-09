@@ -33,17 +33,38 @@ export type CustomDash = {
 };
 
 /**
+ * Line cap style.
+ *
+ * @see ECMA-376 Part 1, Section 20.1.10.31 (ST_LineCap)
+ */
+export type LineCap = "flat" | "round" | "square";
+
+/**
+ * Line compound style.
+ *
+ * @see ECMA-376 Part 1, Section 20.1.10.33 (ST_CompoundLine)
+ */
+export type CompoundLine = "sng" | "dbl" | "thickThin" | "thinThick" | "tri";
+
+/**
+ * Line join style.
+ *
+ * @see ECMA-376 Part 1, Section 20.1.10.56 (ST_LineJoin)
+ */
+export type LineJoin = "bevel" | "miter" | "round";
+
+/**
  * Base line properties shared across OOXML formats.
  */
 export type BaseLine = {
   readonly width: Pixels;
-  readonly cap: "flat" | "round" | "square";
-  readonly compound: "sng" | "dbl" | "thickThin" | "thinThick" | "tri";
+  readonly cap: LineCap;
+  readonly compound: CompoundLine;
   readonly alignment: "ctr" | "in";
   readonly fill: BaseFill;
   readonly dash: string | CustomDash;
   readonly headEnd?: LineEnd;
   readonly tailEnd?: LineEnd;
-  readonly join: "bevel" | "miter" | "round";
+  readonly join: LineJoin;
   readonly miterLimit?: number;
 };

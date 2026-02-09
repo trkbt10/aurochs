@@ -1,0 +1,77 @@
+{
+  "name": "effects-combined",
+  "description": "Verify shadow, glow, soft edge, and reflection effects build correctly",
+  "tags": ["effects", "shadow", "glow", "softEdge", "reflection"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/effects-combined.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 50,
+            "width": 200,
+            "height": 120,
+            "fill": "4472C4",
+            "text": "Shadow",
+            "effects": {
+              "shadow": { "color": "000000", "blur": 6, "distance": 4, "direction": 315 }
+            }
+          },
+          {
+            "type": "ellipse",
+            "x": 300,
+            "y": 50,
+            "width": 150,
+            "height": 120,
+            "fill": "FF6B6B",
+            "text": "Glow",
+            "effects": {
+              "glow": { "color": "FF6B6B", "radius": 10 }
+            }
+          },
+          {
+            "type": "rectangle",
+            "x": 500,
+            "y": 50,
+            "width": 200,
+            "height": 120,
+            "fill": "2ECC71",
+            "text": "Soft Edge",
+            "effects": {
+              "softEdge": { "radius": 15 }
+            }
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 250,
+            "width": 200,
+            "height": 120,
+            "fill": "9B59B6",
+            "text": "Reflection",
+            "effects": {
+              "reflection": { "blurRadius": 2, "startOpacity": 50, "distance": 3, "scaleY": -100 }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -1, "type": "sp", "text": "Shadow" },
+          { "index": -1, "type": "sp", "text": "Glow" },
+          { "index": -1, "type": "sp", "text": "Soft Edge" },
+          { "index": -1, "type": "sp", "text": "Reflection" }
+        ]
+      }
+    ]
+  }
+}

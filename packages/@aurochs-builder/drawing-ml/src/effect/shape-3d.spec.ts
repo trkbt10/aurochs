@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+/** @file Unit tests for shape-3d builder */
 import { buildBevel, buildShape3d } from "./shape-3d";
 
 describe("buildBevel", () => {

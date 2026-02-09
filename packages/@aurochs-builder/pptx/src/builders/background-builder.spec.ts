@@ -1,14 +1,17 @@
 /** @file Unit tests for background-builder */
-import { createElement, type XmlDocument } from "@aurochs/xml";
+import { createElement, type XmlDocument, type XmlElement } from "@aurochs/xml";
 import { applyBackground, isImageBackground } from "./background-builder";
 
 function createSlideDoc(): XmlDocument {
-  const spTree = createElement("p:spTree", {}, [
-    createElement("p:nvGrpSpPr", {}, [createElement("p:cNvPr", { id: "1", name: "" })]),
-  ]);
+  const spTree = createElement("p:spTree", {}, []);
   const cSld = createElement("p:cSld", {}, [spTree]);
   const root = createElement("p:sld", {}, [cSld]);
   return { children: [root] };
+}
+
+function getCsld(doc: XmlDocument): XmlElement {
+  const sld = doc.children[0] as XmlElement;
+  return sld.children[0] as XmlElement;
 }
 
 describe("isImageBackground", () => {
@@ -39,37 +42,28 @@ describe("isImageBackground", () => {
 
 describe("applyBackground", () => {
   it("applies solid color background from hex string", () => {
-    const doc = createSlideDoc();
-    const result = applyBackground(doc, "FF0000");
-
-    // Should have p:bg as first child of p:cSld
-    const sld = result.children[0]!;
-    const cSld = (sld as { children: readonly unknown[] }).children[0] as {
-      name: string;
-      children: readonly unknown[];
-    };
-    expect(cSld.name).toBe("p:cSld");
-
-    const firstChild = cSld.children[0] as { name: string };
+    const result = applyBackground(createSlideDoc(), "FF0000");
+    const cSld = getCsld(result);
+    const firstChild = cSld.children[0] as XmlElement;
     expect(firstChild.name).toBe("p:bg");
   });
 
-  it("applies solid spec background", () => {
-    const doc = createSlideDoc();
-    const result = applyBackground(doc, { type: "solid", color: "00FF00" });
+  it("strips # prefix from hex color string", () => {
+    const result = applyBackground(createSlideDoc(), "#FF0000");
+    const cSld = getCsld(result);
+    const firstChild = cSld.children[0] as XmlElement;
+    expect(firstChild.name).toBe("p:bg");
+  });
 
-    const sld = result.children[0]!;
-    const cSld = (sld as { children: readonly unknown[] }).children[0] as {
-      name: string;
-      children: readonly unknown[];
-    };
-    const firstChild = cSld.children[0] as { name: string };
+  it("strips # prefix from solid spec color", () => {
+    const result = applyBackground(createSlideDoc(), { type: "solid", color: "#1E40AF" });
+    const cSld = getCsld(result);
+    const firstChild = cSld.children[0] as XmlElement;
     expect(firstChild.name).toBe("p:bg");
   });
 
   it("applies gradient background", () => {
-    const doc = createSlideDoc();
-    const result = applyBackground(doc, {
+    const result = applyBackground(createSlideDoc(), {
       type: "gradient",
       stops: [
         { position: 0, color: "FF0000" },
@@ -77,18 +71,12 @@ describe("applyBackground", () => {
       ],
       angle: 90,
     });
-
-    const sld = result.children[0]!;
-    const cSld = (sld as { children: readonly unknown[] }).children[0] as {
-      name: string;
-      children: readonly unknown[];
-    };
-    const firstChild = cSld.children[0] as { name: string };
+    const cSld = getCsld(result);
+    const firstChild = cSld.children[0] as XmlElement;
     expect(firstChild.name).toBe("p:bg");
   });
 
   it("replaces existing background", () => {
-    // Create doc with existing background
     const existingBg = createElement("p:bg", {}, []);
     const spTree = createElement("p:spTree");
     const cSld = createElement("p:cSld", {}, [existingBg, spTree]);
@@ -96,14 +84,14 @@ describe("applyBackground", () => {
     const doc: XmlDocument = { children: [root] };
 
     const result = applyBackground(doc, "FF0000");
-
-    const sld = result.children[0]!;
-    const cSldResult = (sld as { children: readonly unknown[] }).children[0] as {
-      name: string;
-      children: readonly unknown[];
-    };
-    // Should have exactly one p:bg
-    const bgChildren = cSldResult.children.filter((c) => (c as { name?: string }).name === "p:bg");
+    const cSldResult = getCsld(result);
+    const bgChildren = cSldResult.children.filter((c) => (c as XmlElement).name === "p:bg");
     expect(bgChildren).toHaveLength(1);
+  });
+
+  it("throws for unknown fill type", () => {
+    expect(() =>
+      applyBackground(createSlideDoc(), { type: "unknown" } as never),
+    ).toThrow("Unknown background fill type");
   });
 });

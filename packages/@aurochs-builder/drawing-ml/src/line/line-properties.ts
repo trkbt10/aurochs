@@ -4,7 +4,8 @@
 
 import type { BaseLine, LineEnd } from "@aurochs-office/drawing-ml/domain/line";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
-import type { ColorSpec, LineEndSpec, DashStyle, LineCap, LineJoin, CompoundLine } from "../types";
+import type { LineCap, LineJoin, CompoundLine } from "@aurochs-office/drawing-ml/domain/line";
+import type { ColorSpec, LineEndSpec, DashStyle } from "../types";
 import { buildColor } from "../fill/solid-fill";
 
 /**
@@ -26,17 +27,6 @@ const LINE_END_SIZE_MAP: Record<string, LineEnd["width"]> = {
   sm: "sm",
   med: "med",
   lg: "lg",
-};
-
-/**
- * Map compound style
- */
-const COMPOUND_MAP: Record<CompoundLine, BaseLine["compound"]> = {
-  sng: "sng",
-  dbl: "dbl",
-  thickThin: "thickThin",
-  thinThick: "thinThick",
-  tri: "tri",
 };
 
 /**
@@ -65,18 +55,17 @@ export function buildLine(
     tailEnd?: LineEndSpec;
   },
 ): BaseLine {
-  const compound = options?.compound ? COMPOUND_MAP[options.compound] : "sng";
   return {
     width: lineWidth as Pixels,
-    cap: (options?.cap ?? "flat") as BaseLine["cap"],
-    compound: compound,
+    cap: options?.cap ?? "flat",
+    compound: options?.compound ?? "sng",
     alignment: "ctr",
     fill: {
       type: "solidFill",
       color: { spec: { type: "srgb", value: lineColor.startsWith("#") ? lineColor.slice(1) : lineColor } },
     },
     dash: options?.dash ?? "solid",
-    join: (options?.join ?? "round") as BaseLine["join"],
+    join: options?.join ?? "round",
     headEnd: options?.headEnd ? buildLineEnd(options.headEnd) : undefined,
     tailEnd: options?.tailEnd ? buildLineEnd(options.tailEnd) : undefined,
   };
@@ -97,15 +86,14 @@ export function buildLineFromSpec(
     tailEnd?: LineEndSpec;
   },
 ): BaseLine {
-  const compound = options?.compound ? COMPOUND_MAP[options.compound] : "sng";
   return {
     width: lineWidth as Pixels,
-    cap: (options?.cap ?? "flat") as BaseLine["cap"],
-    compound: compound,
+    cap: options?.cap ?? "flat",
+    compound: options?.compound ?? "sng",
     alignment: "ctr",
     fill: { type: "solidFill", color: buildColor(lineColor) },
     dash: options?.dash ?? "solid",
-    join: (options?.join ?? "round") as BaseLine["join"],
+    join: options?.join ?? "round",
     headEnd: options?.headEnd ? buildLineEnd(options.headEnd) : undefined,
     tailEnd: options?.tailEnd ? buildLineEnd(options.tailEnd) : undefined,
   };

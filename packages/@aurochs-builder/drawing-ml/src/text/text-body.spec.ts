@@ -1,6 +1,6 @@
-import { describe, expect, it } from "bun:test";
-import { buildTextRun, buildParagraph, buildTextBody } from "./text-body";
-import type { TextRunSpec, TextParagraphSpec } from "../types";
+/** @file Unit tests for text-body builder */
+import { buildTextRun, buildParagraph, buildTextBody, collectHyperlinks } from "./text-body";
+import type { TextParagraphSpec } from "../types";
 
 describe("buildTextRun", () => {
   it("returns text-only run when no formatting", () => {
@@ -190,5 +190,49 @@ describe("buildTextBody", () => {
   it("builds empty body properties when no spec", () => {
     const body = buildTextBody("x");
     expect(Object.keys(body.bodyProperties)).toHaveLength(0);
+  });
+
+  it("builds body properties with wrapping and verticalType", () => {
+    const body = buildTextBody("x", { wrapping: "square", verticalType: "vert" });
+    expect(body.bodyProperties.wrapping).toBe("square");
+    expect(body.bodyProperties.verticalType).toBe("vert");
+  });
+
+  it("builds body properties with anchorCenter", () => {
+    const body = buildTextBody("x", { anchor: "center", anchorCenter: true });
+    expect(body.bodyProperties.anchorCenter).toBe(true);
+  });
+});
+
+describe("collectHyperlinks", () => {
+  it("returns empty array for simple string", () => {
+    expect(collectHyperlinks("hello")).toEqual([]);
+  });
+
+  it("returns empty array when no hyperlinks", () => {
+    const result = collectHyperlinks([{ runs: [{ text: "no link" }] }]);
+    expect(result).toEqual([]);
+  });
+
+  it("collects hyperlinks from rich text", () => {
+    const result = collectHyperlinks([
+      {
+        runs: [
+          { text: "click", hyperlink: { url: "https://example.com", tooltip: "Go" } },
+          { text: " here" },
+        ],
+      },
+    ]);
+    expect(result).toHaveLength(1);
+    expect(result[0].url).toBe("https://example.com");
+    expect(result[0].tooltip).toBe("Go");
+  });
+
+  it("collects multiple hyperlinks across paragraphs", () => {
+    const result = collectHyperlinks([
+      { runs: [{ text: "a", hyperlink: { url: "https://a.com" } }] },
+      { runs: [{ text: "b", hyperlink: { url: "https://b.com" } }] },
+    ]);
+    expect(result).toHaveLength(2);
   });
 });

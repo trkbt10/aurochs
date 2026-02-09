@@ -11,6 +11,8 @@
 
 import type { SchemeColorValue } from "@aurochs-office/drawing-ml/domain/color";
 import type { PatternType } from "@aurochs-office/drawing-ml/domain/fill";
+// Import line types from domain to ensure spec ↔ domain consistency (consumers import directly from domain)
+import type { LineCap, CompoundLine, LineJoin } from "@aurochs-office/drawing-ml/domain/line";
 
 // =============================================================================
 // Color Spec Types
@@ -134,21 +136,6 @@ export type DashStyle =
   | "sysDashDot"
   | "sysDashDotDot"
   | "sysDot";
-
-/**
- * Line cap values
- */
-export type LineCap = "flat" | "rnd" | "sq";
-
-/**
- * Line join values
- */
-export type LineJoin = "round" | "bevel" | "miter";
-
-/**
- * Compound line values
- */
-export type CompoundLine = "sng" | "dbl" | "thickThin" | "thinThick" | "tri";
 
 /**
  * Line specification

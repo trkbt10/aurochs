@@ -1,0 +1,41 @@
+{
+  "name": "fill-none",
+  "description": "Verify that fill 'none' produces a shape with no fill",
+  "tags": ["fill", "none", "edge-case"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/fill-none.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "ellipse",
+            "x": 100,
+            "y": 100,
+            "width": 200,
+            "height": 200,
+            "fill": "none",
+            "lineColor": "FF0000",
+            "lineWidth": 3,
+            "text": "No fill"
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          {
+            "index": -1,
+            "type": "sp",
+            "text": "No fill"
+          }
+        ]
+      }
+    ]
+  }
+}

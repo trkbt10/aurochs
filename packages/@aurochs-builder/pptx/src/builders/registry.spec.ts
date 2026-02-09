@@ -6,6 +6,7 @@ import {
   groupBuilder,
   tableBuilder,
   addElementsSync,
+  addElementsAsync,
   type BuildContext,
 } from "./registry";
 import type { ShapeSpec, ConnectorSpec, GroupSpec, TableSpec, TableCellSpec } from "../types";
@@ -85,6 +86,120 @@ describe("shapeBuilder", () => {
     const ctx = createMockCtx();
     expect(() => shapeBuilder(spec, "2", ctx)).toThrow("Unknown shape type");
   });
+
+  it("applies text and textBody", () => {
+    const spec: ShapeSpec = {
+      ...baseSpec,
+      text: "Hello World",
+      textBody: { anchor: "center" },
+    };
+    const ctx = createMockCtx();
+    const result = shapeBuilder(spec, "2", ctx);
+    expect(result.xml.name).toBe("p:sp");
+  });
+
+  it("applies rich text with multiple runs", () => {
+    const spec: ShapeSpec = {
+      ...baseSpec,
+      text: [
+        {
+          runs: [
+            { text: "Bold ", bold: true },
+            { text: "normal", fontSize: 12 },
+          ],
+        },
+      ],
+    };
+    const ctx = createMockCtx();
+    const result = shapeBuilder(spec, "2", ctx);
+    expect(result.xml.name).toBe("p:sp");
+  });
+
+  it("applies effects", () => {
+    const spec: ShapeSpec = {
+      ...baseSpec,
+      effects: { shadow: { color: "000000", blur: 5 } },
+    };
+    const ctx = createMockCtx();
+    const result = shapeBuilder(spec, "2", ctx);
+    expect(result.xml.name).toBe("p:sp");
+  });
+
+  it("applies shape3d", () => {
+    const spec: ShapeSpec = {
+      ...baseSpec,
+      shape3d: { bevelTop: { preset: "circle" }, material: "metal" },
+    };
+    const ctx = createMockCtx();
+    const result = shapeBuilder(spec, "2", ctx);
+    expect(result.xml.name).toBe("p:sp");
+  });
+
+  it("applies customGeometry", () => {
+    const spec: ShapeSpec = {
+      ...baseSpec,
+      customGeometry: {
+        paths: [
+          {
+            width: 100,
+            height: 50,
+            commands: [
+              { type: "moveTo", x: 0, y: 0 },
+              { type: "lineTo", x: 100, y: 50 },
+              { type: "close" },
+            ],
+          },
+        ],
+      },
+    };
+    const ctx = createMockCtx();
+    const result = shapeBuilder(spec, "2", ctx);
+    expect(result.xml.name).toBe("p:sp");
+  });
+
+  it("applies placeholder", () => {
+    const spec: ShapeSpec = {
+      ...baseSpec,
+      placeholder: { type: "title", idx: 0 },
+    };
+    const ctx = createMockCtx();
+    const result = shapeBuilder(spec, "2", ctx);
+    expect(result.xml.name).toBe("p:sp");
+  });
+
+  it("applies line dash and cap options", () => {
+    const spec: ShapeSpec = {
+      ...baseSpec,
+      lineColor: "000000",
+      lineWidth: 2,
+      lineDash: "dash",
+      lineCap: "round",
+      lineJoin: "bevel",
+      lineCompound: "dbl",
+    };
+    const ctx = createMockCtx();
+    const result = shapeBuilder(spec, "2", ctx);
+    expect(result.xml.name).toBe("p:sp");
+  });
+
+  it("applies line head and tail ends", () => {
+    const spec: ShapeSpec = {
+      ...baseSpec,
+      lineColor: "000000",
+      lineHeadEnd: { type: "triangle" },
+      lineTailEnd: { type: "arrow", width: "lg" },
+    };
+    const ctx = createMockCtx();
+    const result = shapeBuilder(spec, "2", ctx);
+    expect(result.xml.name).toBe("p:sp");
+  });
+
+  it("applies fill none", () => {
+    const spec: ShapeSpec = { ...baseSpec, fill: "none" };
+    const ctx = createMockCtx();
+    const result = shapeBuilder(spec, "2", ctx);
+    expect(result.xml.name).toBe("p:sp");
+  });
 });
 
 // =============================================================================
@@ -129,6 +244,30 @@ describe("connectorBuilder", () => {
 
   it("applies line color and width", () => {
     const spec: ConnectorSpec = { ...baseSpec, lineColor: "FF0000", lineWidth: 3 };
+    const ctx = createMockCtx();
+    const result = connectorBuilder(spec, "3", ctx);
+    expect(result.xml.name).toBe("p:cxnSp");
+  });
+
+  it("applies start and end connections", () => {
+    const spec: ConnectorSpec = {
+      ...baseSpec,
+      startShapeId: "10",
+      startSiteIndex: 2,
+      endShapeId: "20",
+      endSiteIndex: 4,
+    };
+    const ctx = createMockCtx();
+    const result = connectorBuilder(spec, "3", ctx);
+    expect(result.xml.name).toBe("p:cxnSp");
+  });
+
+  it("defaults site index when not specified", () => {
+    const spec: ConnectorSpec = {
+      ...baseSpec,
+      startShapeId: "10",
+      endShapeId: "20",
+    };
     const ctx = createMockCtx();
     const result = connectorBuilder(spec, "3", ctx);
     expect(result.xml.name).toBe("p:cxnSp");
@@ -185,6 +324,23 @@ describe("groupBuilder", () => {
     const result = groupBuilder(spec, "2", ctx);
     expect(result.xml.name).toBe("p:grpSp");
   });
+
+  it("applies group fill", () => {
+    const spec: GroupSpec = { ...baseSpec, fill: "FF0000" };
+    const ctx = createMockCtx({ existingIds: ["1", "2"] });
+    const result = groupBuilder(spec, "2", ctx);
+    expect(result.xml.name).toBe("p:grpSp");
+  });
+
+  it("handles multiple children", () => {
+    const spec: GroupSpec = {
+      ...baseSpec,
+      children: [childSpec, { ...childSpec, x: 100 }],
+    };
+    const ctx = createMockCtx({ existingIds: ["1", "2"] });
+    const result = groupBuilder(spec, "2", ctx);
+    expect(result.xml.name).toBe("p:grpSp");
+  });
 });
 
 // =============================================================================
@@ -230,7 +386,7 @@ describe("tableBuilder", () => {
     expect(result.xml.name).toBe("p:graphicFrame");
   });
 
-  it("builds a table with vertical alignment and margins", () => {
+  it("builds a table with vertical alignment middle and margins", () => {
     const cell: TableCellSpec = {
       text: "Aligned",
       verticalAlignment: "middle",
@@ -250,6 +406,47 @@ describe("tableBuilder", () => {
     const ctx = createMockCtx();
     const result = tableBuilder(spec, "6", ctx);
     expect(result.xml.name).toBe("p:graphicFrame");
+  });
+
+  it("builds a table with vertical alignment top", () => {
+    const spec: TableSpec = {
+      type: "table",
+      x: 0,
+      y: 0,
+      width: 400,
+      height: 100,
+      rows: [[{ text: "Top", verticalAlignment: "top" }]],
+    };
+    const ctx = createMockCtx();
+    const result = tableBuilder(spec, "6a", ctx);
+    expect(result.xml.name).toBe("p:graphicFrame");
+  });
+
+  it("builds a table with vertical alignment bottom", () => {
+    const spec: TableSpec = {
+      type: "table",
+      x: 0,
+      y: 0,
+      width: 400,
+      height: 100,
+      rows: [[{ text: "Bottom", verticalAlignment: "bottom" }]],
+    };
+    const ctx = createMockCtx();
+    const result = tableBuilder(spec, "6b", ctx);
+    expect(result.xml.name).toBe("p:graphicFrame");
+  });
+
+  it("validates non-array rows", () => {
+    const spec: TableSpec = {
+      type: "table",
+      x: 0,
+      y: 0,
+      width: 400,
+      height: 100,
+      rows: ["not-an-array" as never],
+    };
+    const ctx = createMockCtx();
+    expect(() => tableBuilder(spec, "6c", ctx)).toThrow("must be an array of cells");
   });
 
   it("builds a table with horizontal merge (gridSpan)", () => {
@@ -369,6 +566,65 @@ describe("addElementsSync", () => {
       existingIds,
       ctx,
       builder: connectorBuilder,
+    });
+    expect(result.added).toBe(1);
+  });
+
+  it("adds tables using table builder", () => {
+    const doc = createSlideDoc();
+    const ctx = createMockCtx();
+    const specs: TableSpec[] = [
+      {
+        type: "table",
+        x: 0,
+        y: 0,
+        width: 400,
+        height: 200,
+        rows: [[{ text: "A" }, { text: "B" }]],
+      },
+    ];
+    const existingIds = ["1"];
+    const result = addElementsSync({
+      slideDoc: doc,
+      specs,
+      existingIds,
+      ctx,
+      builder: tableBuilder,
+    });
+    expect(result.added).toBe(1);
+  });
+});
+
+// =============================================================================
+// addElementsAsync
+// =============================================================================
+
+describe("addElementsAsync", () => {
+  it("returns same doc for empty specs", async () => {
+    const doc = createSlideDoc();
+    const ctx = createMockCtx();
+    const result = await addElementsAsync({
+      slideDoc: doc,
+      specs: [],
+      existingIds: ["1"],
+      ctx,
+      builder: async (spec, id, c) => shapeBuilder(spec, id, c),
+    });
+    expect(result.doc).toBe(doc);
+    expect(result.added).toBe(0);
+  });
+
+  it("adds elements asynchronously", async () => {
+    const doc = createSlideDoc();
+    const ctx = createMockCtx();
+    const specs: ShapeSpec[] = [{ type: "rectangle", x: 0, y: 0, width: 100, height: 50 }];
+    const existingIds = ["1"];
+    const result = await addElementsAsync({
+      slideDoc: doc,
+      specs,
+      existingIds,
+      ctx,
+      builder: async (spec, id, c) => shapeBuilder(spec, id, c),
     });
     expect(result.added).toBe(1);
   });

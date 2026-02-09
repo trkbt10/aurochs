@@ -1,0 +1,101 @@
+{
+  "name": "rich-text-features",
+  "description": "Verify rich text features: bullets, line spacing, text body properties",
+  "tags": ["text", "rich-text", "bullet", "textBody"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/rich-text-features.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 50,
+            "width": 300,
+            "height": 250,
+            "fill": "FFFFFF",
+            "text": [
+              {
+                "runs": [{ "text": "Bullet list:", "bold": true, "fontSize": 16 }]
+              },
+              {
+                "runs": [{ "text": "First item", "fontSize": 14 }],
+                "bullet": { "type": "char", "char": "\u2022" },
+                "level": 0
+              },
+              {
+                "runs": [{ "text": "Nested item", "fontSize": 12 }],
+                "bullet": { "type": "char", "char": "\u2013" },
+                "level": 1
+              },
+              {
+                "runs": [{ "text": "Second item", "fontSize": 14 }],
+                "bullet": { "type": "char", "char": "\u2022" },
+                "level": 0
+              },
+              {
+                "runs": [{ "text": "Auto-numbered", "fontSize": 14 }],
+                "bullet": { "type": "autoNum", "autoNumType": "arabicPeriod" }
+              }
+            ],
+            "textBody": { "anchor": "top", "wrapping": "square", "insetLeft": 10, "insetTop": 10 }
+          },
+          {
+            "type": "rectangle",
+            "x": 400,
+            "y": 50,
+            "width": 300,
+            "height": 250,
+            "fill": "FFFFFF",
+            "text": [
+              {
+                "runs": [{ "text": "Spacing test", "bold": true, "fontSize": 16 }]
+              },
+              {
+                "runs": [{ "text": "150% line spacing paragraph with some text that should wrap around", "fontSize": 12 }],
+                "lineSpacing": { "type": "percent", "value": 150 }
+              },
+              {
+                "runs": [{ "text": "Right aligned text", "fontSize": 12 }],
+                "alignment": "right"
+              }
+            ],
+            "textBody": { "anchor": "top", "wrapping": "square" }
+          },
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 350,
+            "width": 300,
+            "height": 150,
+            "fill": "4472C4",
+            "text": [
+              {
+                "runs": [
+                  { "text": "Centered ", "color": "FFFFFF", "fontSize": 20, "bold": true },
+                  { "text": "vertically", "color": "FFD700", "fontSize": 20, "italic": true }
+                ],
+                "alignment": "center"
+              }
+            ],
+            "textBody": { "anchor": "center" }
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          { "index": -1, "type": "sp", "text": "Bullet list:\nFirst item\nNested item\nSecond item\nAuto-numbered" },
+          { "index": -1, "type": "sp", "text": "Spacing test\n150% line spacing paragraph with some text that should wrap around\nRight aligned text" },
+          { "index": -1, "type": "sp", "text": "Centered vertically" }
+        ]
+      }
+    ]
+  }
+}

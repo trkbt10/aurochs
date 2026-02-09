@@ -81,4 +81,38 @@ describe("applySlideTransition", () => {
     );
     expect(transitions).toHaveLength(1);
   });
+
+  it("inserts transition after clrMapOvr when present", () => {
+    const cSld = createElement("p:cSld", {}, [createElement("p:spTree")]);
+    const clrMapOvr = createElement("p:clrMapOvr", {});
+    const root = createElement("p:sld", {}, [cSld, clrMapOvr]);
+    const doc: XmlDocument = { children: [root] };
+
+    const spec: SlideTransitionSpec = { type: "fade", duration: 500 };
+    const result = applySlideTransition(doc, spec);
+
+    const sld = result.children[0] as { children: readonly unknown[] };
+    const names = sld.children
+      .filter((c) => isXmlElement(c as ReturnType<typeof createElement>))
+      .map((c) => (c as { name: string }).name);
+    const clrIdx = names.indexOf("p:clrMapOvr");
+    const transIdx = names.indexOf("p:transition");
+    expect(transIdx).toBeGreaterThan(clrIdx);
+  });
+
+  it("passes transition options through", () => {
+    const doc = createSlideDoc(false);
+    const spec: SlideTransitionSpec = {
+      type: "wipe",
+      duration: 700,
+      advanceOnClick: true,
+      advanceAfter: 3000,
+      direction: "r",
+    };
+    const result = applySlideTransition(doc, spec);
+
+    const root = result.children[0] as { children: readonly unknown[] };
+    const transition = findChild(root, "p:transition");
+    expect(transition).toBeDefined();
+  });
 });

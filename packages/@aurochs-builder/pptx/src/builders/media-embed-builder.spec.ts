@@ -82,4 +82,23 @@ describe("buildMediaReferenceFromSpec", () => {
     const spec: MediaEmbedSpec = { type: "video", path: "clip.mp4" };
     expect(() => buildMediaReferenceFromSpec(spec, "", "video/mp4")).toThrow("media rId is required");
   });
+
+  it("throws when type is missing", () => {
+    const spec = { path: "clip.mp4" } as never;
+    expect(() => buildMediaReferenceFromSpec(spec, "rId1", "video/mp4")).toThrow("media.type is required");
+  });
+
+  it("throws when neither path nor data is provided", () => {
+    const spec = { type: "video" } as MediaEmbedSpec;
+    expect(() => buildMediaReferenceFromSpec(spec, "rId1", "video/mp4")).toThrow(
+      "media.path or media.data is required",
+    );
+  });
+});
+
+describe("detectEmbeddedMediaType edge cases", () => {
+  it("throws for unknown media type", () => {
+    const spec = { type: "subtitle", path: "file.srt" } as never;
+    expect(() => detectEmbeddedMediaType(spec)).toThrow("Unsupported media type");
+  });
 });

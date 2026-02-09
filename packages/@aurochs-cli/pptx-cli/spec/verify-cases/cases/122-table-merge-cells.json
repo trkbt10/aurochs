@@ -1,0 +1,60 @@
+{
+  "name": "table-merge-cells",
+  "description": "Verify table with merged cells (gridSpan and rowSpan)",
+  "tags": ["table", "merge", "gridSpan", "rowSpan"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/table-merge-cells.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addTables": [
+          {
+            "type": "table",
+            "x": 50,
+            "y": 50,
+            "width": 500,
+            "height": 200,
+            "rows": [
+              [
+                { "text": "Merged header", "gridSpan": 3, "fill": "34495E" },
+                { "text": "" },
+                { "text": "" }
+              ],
+              [
+                { "text": "A1", "fill": "ECF0F1" },
+                { "text": "B1", "fill": "ECF0F1" },
+                { "text": "C1", "rowSpan": 2, "fill": "AED6F1", "verticalAlignment": "middle" }
+              ],
+              [
+                { "text": "A2", "fill": "D5DBDB" },
+                { "text": "B2", "fill": "D5DBDB" },
+                { "text": "" }
+              ]
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          {
+            "index": -1,
+            "type": "graphicFrame",
+            "content": {
+              "type": "table",
+              "table": {
+                "rows": 3,
+                "cols": 3
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

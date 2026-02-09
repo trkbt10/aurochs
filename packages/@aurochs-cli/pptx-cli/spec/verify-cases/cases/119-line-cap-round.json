@@ -1,0 +1,77 @@
+{
+  "name": "line-cap-round",
+  "description": "Verify that lineCap 'round' serializes correctly (regression: was crashing with undefined attr)",
+  "tags": ["line", "cap", "edge-case", "regression"],
+  "input": {
+    "template": "../templates/blank.pptx",
+    "output": "../__output__/line-cap-round.pptx",
+    "slides": [
+      {
+        "slideNumber": 1,
+        "addShapes": [
+          {
+            "type": "rectangle",
+            "x": 50,
+            "y": 50,
+            "width": 200,
+            "height": 100,
+            "fill": "E74C3C",
+            "lineColor": "2C3E50",
+            "lineWidth": 4,
+            "lineDash": "dashDot",
+            "lineCap": "round",
+            "text": "round cap + dashDot"
+          },
+          {
+            "type": "rectangle",
+            "x": 300,
+            "y": 50,
+            "width": 200,
+            "height": 100,
+            "fill": "3498DB",
+            "lineColor": "000000",
+            "lineWidth": 3,
+            "lineCap": "square",
+            "text": "square cap"
+          },
+          {
+            "type": "rectangle",
+            "x": 550,
+            "y": 50,
+            "width": 200,
+            "height": 100,
+            "fill": "2ECC71",
+            "lineColor": "000000",
+            "lineWidth": 3,
+            "lineCap": "flat",
+            "text": "flat cap"
+          }
+        ]
+      }
+    ]
+  },
+  "expected": {
+    "slides": [
+      {
+        "slideNumber": 1,
+        "shapes": [
+          {
+            "index": -1,
+            "type": "sp",
+            "text": "round cap + dashDot"
+          },
+          {
+            "index": -1,
+            "type": "sp",
+            "text": "square cap"
+          },
+          {
+            "index": -1,
+            "type": "sp",
+            "text": "flat cap"
+          }
+        ]
+      }
+    ]
+  }
+}

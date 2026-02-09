@@ -26,9 +26,6 @@ import type {
   // Line types
   LineEndSpec,
   DashStyle,
-  LineCap,
-  LineJoin,
-  CompoundLine,
   // Effect types
   EffectsSpec,
   // 3D types
@@ -37,6 +34,7 @@ import type {
   TextSpec,
   TextBodyPropertiesSpec,
 } from "@aurochs-builder/drawing-ml";
+import type { LineCap, LineJoin, CompoundLine } from "@aurochs-office/drawing-ml/domain/line";
 
 // =============================================================================
 // Imports from @aurochs-office packages (PPTX-specific domain types)

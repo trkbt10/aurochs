@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+/** @file Unit tests for effects builder */
 import { buildEffects } from "./effects";
 
 describe("buildEffects", () => {
