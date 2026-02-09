@@ -1,0 +1,37 @@
+{
+  "name": "border-styles",
+  "description": "Border with medium top and thick bottom styles",
+  "tags": ["styles"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/023-border-styles.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            { "row": 1, "cells": [{ "ref": "A1", "value": "Mixed Borders", "styleId": 1 }] }
+          ]
+        }
+      ],
+      "styles": {
+        "borders": [
+          {
+            "top": { "style": "medium" },
+            "bottom": { "style": "thick" }
+          }
+        ],
+        "cellXfs": [
+          { "borderId": 1 }
+        ]
+      }
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "totalCells": 1,
+    "styles": {
+      "borderCount": 2
+    }
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "name": "row-height",
+  "description": "Row 1 with custom height of 30",
+  "tags": ["rows"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/row-height.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            {
+              "row": 1,
+              "height": 30,
+              "cells": [
+                { "ref": "A1", "value": "Tall" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "totalCells": 1,
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "rowCount": 1,
+        "cellCount": 1,
+        "cells": [
+          { "ref": "A1", "type": "string", "value": "Tall" }
+        ]
+      }
+    ]
+  }
+}

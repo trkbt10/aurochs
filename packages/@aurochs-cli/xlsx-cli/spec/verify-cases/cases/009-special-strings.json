@@ -1,0 +1,34 @@
+{
+  "name": "special-strings",
+  "description": "Unicode Japanese text and empty string",
+  "tags": ["cell-values"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/009-special-strings.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            { "row": 1, "cells": [{ "ref": "A1", "value": "日本語テスト" }, { "ref": "B1", "value": "" }] }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "sheetNames": ["Sheet1"],
+    "totalRows": 1,
+    "totalCells": 2,
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "cells": [
+          { "ref": "A1", "type": "string", "value": "日本語テスト" },
+          { "ref": "B1", "type": "string", "value": "" }
+        ]
+      }
+    ]
+  }
+}

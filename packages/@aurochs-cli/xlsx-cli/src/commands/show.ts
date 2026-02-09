@@ -124,7 +124,7 @@ export async function runShow(
       for (let colNum = targetRange.startCol; colNum <= targetRange.endCol; colNum++) {
         const ref = formatCellRef({ col: colIdx(colNum), row: rowIdx(rowNum), colAbsolute: false, rowAbsolute: false });
         const cell = cellMap.get(ref);
-        if (cell && cell.type !== "empty") {
+        if (cell && (cell.type !== "empty" || cell.formula)) {
           cells.push({
             ref,
             type: cell.type,

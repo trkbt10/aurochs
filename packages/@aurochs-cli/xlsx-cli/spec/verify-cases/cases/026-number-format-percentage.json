@@ -1,0 +1,49 @@
+{
+  "name": "number-format-percentage",
+  "description": "Number format with percentage code 0%",
+  "tags": ["styles"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/number-format-percentage.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            {
+              "row": 1,
+              "cells": [
+                { "ref": "A1", "value": 0.5, "styleId": 1 }
+              ]
+            }
+          ]
+        }
+      ],
+      "styles": {
+        "numberFormats": [
+          { "id": 165, "formatCode": "0%" }
+        ],
+        "cellXfs": [
+          { "numFmtId": 165 }
+        ]
+      }
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "totalCells": 1,
+    "styles": {
+      "numberFormatCount": 1
+    },
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "rowCount": 1,
+        "cellCount": 1,
+        "cells": [
+          { "ref": "A1", "type": "number", "value": 0.5 }
+        ]
+      }
+    ]
+  }
+}

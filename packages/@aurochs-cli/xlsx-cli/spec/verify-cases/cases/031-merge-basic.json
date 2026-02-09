@@ -1,0 +1,40 @@
+{
+  "name": "merge-basic",
+  "description": "Basic merge of A1:B2 with value in A1",
+  "tags": ["merge"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/merge-basic.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "mergeCells": ["A1:B2"],
+          "rows": [
+            {
+              "row": 1,
+              "cells": [
+                { "ref": "A1", "value": "Merged" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "totalCells": 1,
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "rowCount": 1,
+        "cellCount": 1,
+        "mergedCells": ["A1:B2"],
+        "cells": [
+          { "ref": "A1", "type": "string", "value": "Merged" }
+        ]
+      }
+    ]
+  }
+}

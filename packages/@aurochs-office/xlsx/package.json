@@ -96,6 +96,10 @@
       "types": "./src/domain/style/types.ts",
       "default": "./src/domain/style/types.ts"
     },
+    "./domain/sheet-utils": {
+      "types": "./src/domain/sheet-utils.ts",
+      "default": "./src/domain/sheet-utils.ts"
+    },
     "./formula/evaluator": {
       "types": "./src/formula/evaluator.ts",
       "default": "./src/formula/evaluator.ts"

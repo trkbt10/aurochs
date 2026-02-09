@@ -1,0 +1,35 @@
+{
+  "name": "string-cells",
+  "description": "Basic string cell values in a single row",
+  "tags": ["cell-values"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/001-string-cells.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            { "row": 1, "cells": [{ "ref": "A1", "value": "Hello" }, { "ref": "B1", "value": "World" }, { "ref": "C1", "value": "Test" }] }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "sheetNames": ["Sheet1"],
+    "totalRows": 1,
+    "totalCells": 3,
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "cells": [
+          { "ref": "A1", "type": "string", "value": "Hello" },
+          { "ref": "B1", "type": "string", "value": "World" },
+          { "ref": "C1", "type": "string", "value": "Test" }
+        ]
+      }
+    ]
+  }
+}

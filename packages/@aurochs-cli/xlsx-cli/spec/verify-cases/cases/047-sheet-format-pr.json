@@ -1,0 +1,42 @@
+{
+  "name": "sheet-format-pr",
+  "description": "Sheet format properties with custom default row height and column width",
+  "tags": ["sheet-format"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/sheet-format-pr.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "sheetFormatPr": {
+            "defaultRowHeight": 18,
+            "defaultColWidth": 12
+          },
+          "rows": [
+            {
+              "row": 1,
+              "cells": [
+                { "ref": "A1", "value": "Custom format" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "totalCells": 1,
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "rowCount": 1,
+        "cellCount": 1,
+        "cells": [
+          { "ref": "A1", "type": "string", "value": "Custom format" }
+        ]
+      }
+    ]
+  }
+}

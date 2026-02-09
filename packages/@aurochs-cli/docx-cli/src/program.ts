@@ -4,6 +4,7 @@ import { runList } from "./commands/list";
 import { runShow } from "./commands/show";
 import { runExtract } from "./commands/extract";
 import { runBuild } from "./commands/build";
+import { runPatch } from "./commands/patch";
 import { runVerify } from "./commands/verify";
 import { runStyles } from "./commands/styles";
 import { runNumbering } from "./commands/numbering";
@@ -20,6 +21,7 @@ import {
   formatShowPretty,
   formatExtractPretty,
   formatBuildPretty,
+  formatPatchPretty,
   formatVerifyPretty,
   formatStylesPretty,
   formatNumberingPretty,
@@ -97,6 +99,16 @@ export function createProgram(): Command {
       const mode = program.opts().output as OutputMode;
       const result = await runBuild(spec);
       output(result, mode, formatBuildPretty);
+    });
+
+  program
+    .command("patch")
+    .description("Patch an existing DOCX file with JSON specification")
+    .argument("<spec>", "JSON patch spec file path")
+    .action(async (spec: string) => {
+      const mode = program.opts().output as OutputMode;
+      const result = await runPatch(spec);
+      output(result, mode, formatPatchPretty);
     });
 
   program

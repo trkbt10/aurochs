@@ -1,0 +1,37 @@
+{
+  "name": "simple-formula",
+  "description": "Cell with SUM formula referencing a range",
+  "tags": ["formulas"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/011-simple-formula.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            { "row": 1, "cells": [{ "ref": "A1", "value": 10 }] },
+            { "row": 2, "cells": [{ "ref": "A2", "value": 20 }] },
+            { "row": 3, "cells": [{ "ref": "A3", "formula": { "expression": "SUM(A1:A2)" } }] }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "sheetNames": ["Sheet1"],
+    "totalRows": 3,
+    "totalCells": 3,
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "cells": [
+          { "ref": "A1", "type": "number", "value": 10 },
+          { "ref": "A2", "type": "number", "value": 20 },
+          { "ref": "A3", "formula": "SUM(A1:A2)" }
+        ]
+      }
+    ]
+  }
+}

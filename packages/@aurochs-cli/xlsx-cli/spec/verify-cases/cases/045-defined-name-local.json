@@ -1,0 +1,44 @@
+{
+  "name": "defined-name-local",
+  "description": "Defined name with localSheetId scoped to first sheet",
+  "tags": ["defined-names"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/defined-name-local.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            {
+              "row": 1,
+              "cells": [
+                { "ref": "A1", "value": 50 }
+              ]
+            }
+          ]
+        }
+      ],
+      "definedNames": [
+        { "name": "LocalRange", "formula": "Sheet1!$A$1:$A$5", "localSheetId": 0 }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "totalCells": 1,
+    "definedNames": [
+      { "name": "LocalRange", "formula": "Sheet1!$A$1:$A$5", "localSheetId": 0 }
+    ],
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "rowCount": 1,
+        "cellCount": 1,
+        "cells": [
+          { "ref": "A1", "type": "number", "value": 50 }
+        ]
+      }
+    ]
+  }
+}

@@ -236,6 +236,28 @@ export function convertBlockContent(spec: BlockContentSpec): DocxBlockContent {
   }
 }
 
+/**
+ * Count paragraphs and tables in block content specs.
+ */
+export function countBlockContentSpecs(specs: readonly BlockContentSpec[]): { paragraphCount: number; tableCount: number } {
+  return specs.reduce(
+    (acc, block) => {
+      switch (block.type) {
+        case "paragraph":
+          return { ...acc, paragraphCount: acc.paragraphCount + 1 };
+        case "table": {
+          const cellParagraphs = block.rows.reduce(
+            (sum, row) => sum + row.cells.reduce((cs, cell) => cs + cell.content.length, 0),
+            0,
+          );
+          return { paragraphCount: acc.paragraphCount + cellParagraphs, tableCount: acc.tableCount + 1 };
+        }
+      }
+    },
+    { paragraphCount: 0, tableCount: 0 },
+  );
+}
+
 // =============================================================================
 // Numbering Conversion
 // =============================================================================

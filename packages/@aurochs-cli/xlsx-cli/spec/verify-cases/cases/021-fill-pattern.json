@@ -1,0 +1,34 @@
+{
+  "name": "fill-pattern",
+  "description": "Pattern fill with darkGray pattern type and foreground color",
+  "tags": ["styles"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/021-fill-pattern.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            { "row": 1, "cells": [{ "ref": "A1", "value": "Pattern Fill", "styleId": 1 }] }
+          ]
+        }
+      ],
+      "styles": {
+        "fills": [
+          { "type": "pattern", "patternType": "darkGray", "fgColor": "#333333" }
+        ],
+        "cellXfs": [
+          { "fillId": 2 }
+        ]
+      }
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "totalCells": 1,
+    "styles": {
+      "fillCount": 3
+    }
+  }
+}

@@ -7,8 +7,10 @@
   "dependencies": {
     "@aurochs-builder/core": "workspace:*",
     "@aurochs-office/docx": "workspace:*",
+    "@aurochs-office/opc": "workspace:*",
     "@aurochs-office/ooxml": "workspace:*",
-    "@aurochs/xml": "workspace:*"
+    "@aurochs/xml": "workspace:*",
+    "@aurochs/zip": "workspace:*"
   },
   "scripts": {
     "lint": "eslint src",

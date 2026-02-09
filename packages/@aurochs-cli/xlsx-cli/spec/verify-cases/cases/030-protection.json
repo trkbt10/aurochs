@@ -1,0 +1,51 @@
+{
+  "name": "protection",
+  "description": "Cell protection with locked and hidden attributes",
+  "tags": ["styles"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/protection.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            {
+              "row": 1,
+              "cells": [
+                { "ref": "A1", "value": "Protected cell", "styleId": 1 }
+              ]
+            }
+          ]
+        }
+      ],
+      "styles": {
+        "cellXfs": [
+          {
+            "protection": {
+              "locked": true,
+              "hidden": true
+            }
+          }
+        ]
+      }
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "totalCells": 1,
+    "styles": {
+      "cellXfCount": 2
+    },
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "rowCount": 1,
+        "cellCount": 1,
+        "cells": [
+          { "ref": "A1", "type": "string", "value": "Protected cell" }
+        ]
+      }
+    ]
+  }
+}

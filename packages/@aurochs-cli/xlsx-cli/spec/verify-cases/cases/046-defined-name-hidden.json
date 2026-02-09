@@ -1,0 +1,44 @@
+{
+  "name": "defined-name-hidden",
+  "description": "Hidden defined name not visible to user",
+  "tags": ["defined-names"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/defined-name-hidden.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            {
+              "row": 1,
+              "cells": [
+                { "ref": "A1", "value": "Data" }
+              ]
+            }
+          ]
+        }
+      ],
+      "definedNames": [
+        { "name": "HiddenRange", "formula": "Sheet1!$A$1:$A$10", "hidden": true }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "totalCells": 1,
+    "definedNames": [
+      { "name": "HiddenRange", "formula": "Sheet1!$A$1:$A$10", "hidden": true }
+    ],
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "rowCount": 1,
+        "cellCount": 1,
+        "cells": [
+          { "ref": "A1", "type": "string", "value": "Data" }
+        ]
+      }
+    ]
+  }
+}

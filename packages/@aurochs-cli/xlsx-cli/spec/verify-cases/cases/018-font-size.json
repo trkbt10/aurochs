@@ -1,0 +1,42 @@
+{
+  "name": "font-size",
+  "description": "Two custom fonts with different sizes (8pt and 24pt)",
+  "tags": ["styles"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/018-font-size.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            {
+              "row": 1,
+              "cells": [
+                { "ref": "A1", "value": "Small", "styleId": 1 },
+                { "ref": "B1", "value": "Large", "styleId": 2 }
+              ]
+            }
+          ]
+        }
+      ],
+      "styles": {
+        "fonts": [
+          { "name": "Calibri", "size": 8 },
+          { "name": "Calibri", "size": 24 }
+        ],
+        "cellXfs": [
+          { "fontId": 1 },
+          { "fontId": 2 }
+        ]
+      }
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "totalCells": 2,
+    "styles": {
+      "fontCount": 3
+    }
+  }
+}

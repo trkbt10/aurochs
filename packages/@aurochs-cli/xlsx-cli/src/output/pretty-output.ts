@@ -105,7 +105,13 @@ export function formatExtractPretty(data: ExtractData): string {
  * Format build result for pretty display.
  */
 export function formatBuildPretty(data: BuildData): string {
-  return `Built: ${data.outputPath}`;
+  const lines = [
+    `Mode: ${data.mode}`,
+    `Output: ${data.outputPath}`,
+    `Sheets: ${data.sheetCount}`,
+    `Cells: ${data.totalCells}`,
+  ];
+  return lines.join("\n");
 }
 
 function formatRunProps(run: RichTextRunJson): string {

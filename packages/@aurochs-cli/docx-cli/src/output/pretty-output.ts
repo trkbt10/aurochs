@@ -7,6 +7,7 @@ import type { ListData } from "../commands/list";
 import type { ShowData } from "../commands/show";
 import type { ExtractData } from "../commands/extract";
 import type { BuildData } from "../commands/build";
+import type { PatchData } from "../commands/patch";
 import type { VerifyData } from "../commands/verify";
 import type { StylesData } from "../commands/styles";
 import type { NumberingData } from "../commands/numbering";
@@ -143,6 +144,20 @@ export function formatExtractPretty(data: ExtractData): string {
 export function formatBuildPretty(data: BuildData): string {
   const lines = [
     `Output: ${data.outputPath}`,
+    `Paragraphs: ${data.paragraphCount}`,
+    `Tables: ${data.tableCount}`,
+  ];
+  return lines.join("\n");
+}
+
+/**
+ * Format patch result for pretty display.
+ */
+export function formatPatchPretty(data: PatchData): string {
+  const lines = [
+    `Source: ${data.sourcePath}`,
+    `Output: ${data.outputPath}`,
+    `Patches: ${data.patchCount}`,
     `Paragraphs: ${data.paragraphCount}`,
     `Tables: ${data.tableCount}`,
   ];

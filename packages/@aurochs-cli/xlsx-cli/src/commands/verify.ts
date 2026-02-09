@@ -1,29 +1,77 @@
 /**
  * @file verify command - verify XLSX build results against expected values
+ *
+ * Supports comprehensive assertions: cell values, formulas, styles,
+ * merged cells, columns, defined names, and sheet properties.
  */
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { runBuild, type BuildSpec } from "./build";
-import { runInfo } from "./info";
+import { runBuild } from "./build";
+import { runInfo, type InfoData } from "./info";
+import { runShow, type ShowData } from "./show";
 import { success, error, type Result } from "@aurochs-cli/cli-core";
+import { loadXlsxWorkbook } from "../utils/xlsx-loader";
+import type { XlsxBuildSpec } from "./build-spec";
 
 // =============================================================================
 // Type Definitions
 // =============================================================================
+
+export type ExpectedCell = {
+  readonly ref: string;
+  readonly type?: "string" | "number" | "boolean" | "date" | "error" | "empty";
+  readonly value?: string | number | boolean | null;
+  readonly formula?: string;
+  readonly styleId?: number;
+};
+
+export type ExpectedColumn = {
+  readonly min: number;
+  readonly max: number;
+  readonly width?: number;
+  readonly hidden?: boolean;
+};
+
+export type ExpectedSheet = {
+  readonly name: string;
+  readonly rowCount?: number;
+  readonly cellCount?: number;
+  readonly mergedCells?: readonly string[];
+  readonly columns?: readonly ExpectedColumn[];
+  readonly cells?: readonly ExpectedCell[];
+};
+
+export type ExpectedDefinedName = {
+  readonly name: string;
+  readonly formula?: string;
+  readonly localSheetId?: number;
+  readonly hidden?: boolean;
+};
+
+export type ExpectedStyles = {
+  readonly fontCount?: number;
+  readonly fillCount?: number;
+  readonly borderCount?: number;
+  readonly numberFormatCount?: number;
+  readonly cellXfCount?: number;
+};
 
 export type ExpectedWorkbook = {
   readonly sheetCount?: number;
   readonly sheetNames?: readonly string[];
   readonly totalRows?: number;
   readonly totalCells?: number;
+  readonly definedNames?: readonly ExpectedDefinedName[];
+  readonly styles?: ExpectedStyles;
+  readonly sheets?: readonly ExpectedSheet[];
 };
 
 export type TestCaseSpec = {
   readonly name: string;
   readonly description?: string;
   readonly tags?: readonly string[];
-  readonly input: BuildSpec;
+  readonly input: XlsxBuildSpec;
   readonly expected: ExpectedWorkbook;
 };
 
@@ -51,7 +99,7 @@ export type VerifyOptions = {
 };
 
 // =============================================================================
-// Comparison Logic
+// Assertion Helpers
 // =============================================================================
 
 function createAssertion(path: string, expected: unknown, actual: unknown): Assertion {
@@ -63,6 +111,148 @@ function createAssertion(path: string, expected: unknown, actual: unknown): Asse
   };
 }
 
+function assertOptional(assertions: Assertion[], path: string, expected: unknown, actual: unknown): void {
+  if (expected !== undefined) {
+    assertions.push(createAssertion(path, expected, actual));
+  }
+}
+
+// =============================================================================
+// Matcher Functions
+// =============================================================================
+
+function matchCell(expected: ExpectedCell, showData: ShowData, basePath: string): Assertion[] {
+  const assertions: Assertion[] = [];
+
+  // Find the cell in show data
+  let actualCell: { type: string; value: string | number | boolean | null; formula?: string } | undefined;
+  for (const row of showData.rows) {
+    for (const cell of row.cells) {
+      if (cell.ref === expected.ref) {
+        actualCell = cell;
+        break;
+      }
+    }
+  }
+
+  if (expected.type !== undefined) {
+    assertions.push(createAssertion(
+      `${basePath}.type`,
+      expected.type,
+      actualCell?.type ?? "empty",
+    ));
+  }
+
+  if (expected.value !== undefined) {
+    assertions.push(createAssertion(
+      `${basePath}.value`,
+      expected.value,
+      actualCell?.value ?? null,
+    ));
+  }
+
+  if (expected.formula !== undefined) {
+    assertions.push(createAssertion(
+      `${basePath}.formula`,
+      expected.formula,
+      actualCell?.formula ?? null,
+    ));
+  }
+
+  return assertions;
+}
+
+function matchSheet(expected: ExpectedSheet, info: InfoData, showData: ShowData | undefined, workbookData: WorkbookSheetData | undefined, basePath: string): Assertion[] {
+  const assertions: Assertion[] = [];
+
+  if (expected.rowCount !== undefined && workbookData) {
+    assertions.push(createAssertion(`${basePath}.rowCount`, expected.rowCount, workbookData.rowCount));
+  }
+
+  if (expected.cellCount !== undefined && workbookData) {
+    assertions.push(createAssertion(`${basePath}.cellCount`, expected.cellCount, workbookData.cellCount));
+  }
+
+  if (expected.mergedCells !== undefined && showData) {
+    const actualMerged = showData.mergedCells ?? [];
+    assertions.push(createAssertion(`${basePath}.mergedCells`, expected.mergedCells, actualMerged));
+  }
+
+  if (expected.columns !== undefined && workbookData) {
+    for (let i = 0; i < expected.columns.length; i++) {
+      const expCol = expected.columns[i];
+      const actCol = workbookData.columns?.[i];
+      const colPath = `${basePath}.columns[${i}]`;
+
+      if (actCol) {
+        assertOptional(assertions, `${colPath}.min`, expCol.min, actCol.min);
+        assertOptional(assertions, `${colPath}.max`, expCol.max, actCol.max);
+        assertOptional(assertions, `${colPath}.width`, expCol.width, actCol.width);
+        assertOptional(assertions, `${colPath}.hidden`, expCol.hidden, actCol.hidden);
+      } else {
+        assertions.push(createAssertion(`${colPath}`, "exists", "missing"));
+      }
+    }
+  }
+
+  if (expected.cells !== undefined && showData) {
+    for (const expCell of expected.cells) {
+      const cellPath = `${basePath}.cells[${expCell.ref}]`;
+      assertions.push(...matchCell(expCell, showData, cellPath));
+    }
+  }
+
+  return assertions;
+}
+
+function matchStyles(expected: ExpectedStyles, info: InfoData, basePath: string): Assertion[] {
+  const assertions: Assertion[] = [];
+  assertOptional(assertions, `${basePath}.fontCount`, expected.fontCount, info.fontCount);
+  assertOptional(assertions, `${basePath}.fillCount`, expected.fillCount, info.fillCount);
+  assertOptional(assertions, `${basePath}.borderCount`, expected.borderCount, info.borderCount);
+  assertOptional(assertions, `${basePath}.numberFormatCount`, expected.numberFormatCount, info.numberFormatCount);
+  return assertions;
+}
+
+function matchDefinedNames(expected: readonly ExpectedDefinedName[], actual: readonly DefinedNameData[], basePath: string): Assertion[] {
+  const assertions: Assertion[] = [];
+
+  for (let i = 0; i < expected.length; i++) {
+    const exp = expected[i];
+    const act = actual.find((dn) => dn.name === exp.name);
+    const dnPath = `${basePath}[${exp.name}]`;
+
+    if (!act) {
+      assertions.push(createAssertion(dnPath, "exists", "missing"));
+      continue;
+    }
+
+    assertOptional(assertions, `${dnPath}.formula`, exp.formula, act.formula);
+    assertOptional(assertions, `${dnPath}.localSheetId`, exp.localSheetId, act.localSheetId);
+    assertOptional(assertions, `${dnPath}.hidden`, exp.hidden, act.hidden);
+  }
+
+  return assertions;
+}
+
+// =============================================================================
+// Internal Types
+// =============================================================================
+
+type WorkbookSheetData = {
+  readonly name: string;
+  readonly rowCount: number;
+  readonly cellCount: number;
+  readonly columns?: readonly { min: number; max: number; width?: number; hidden?: boolean }[];
+};
+
+type DefinedNameData = {
+  readonly name: string;
+  readonly formula: string;
+  readonly localSheetId?: number;
+  readonly hidden?: boolean;
+};
+
 // =============================================================================
 // Test Case Execution
 // =============================================================================
@@ -70,19 +260,16 @@ function createAssertion(path: string, expected: unknown, actual: unknown): Asse
 async function runTestCase(spec: TestCaseSpec, specDir: string): Promise<TestCaseResult> {
   const assertions: Assertion[] = [];
 
-  // Resolve paths relative to spec file directory
-  const input = {
-    ...spec.input,
-    template: path.resolve(specDir, spec.input.template),
-    output: path.resolve(specDir, spec.input.output),
-  };
+  // Resolve output path from spec
+  const resolvedInput = resolveSpecPaths(spec.input, specDir);
 
   // Ensure output directory exists
-  await fs.mkdir(path.dirname(input.output), { recursive: true });
+  const outputPath = getOutputPath(resolvedInput, specDir);
+  await fs.mkdir(path.dirname(outputPath), { recursive: true });
 
   // Write temporary spec file for build command
-  const tempSpecPath = path.join(path.dirname(input.output), `${spec.name}.build.json`);
-  await fs.writeFile(tempSpecPath, JSON.stringify(input, null, 2));
+  const tempSpecPath = path.join(path.dirname(outputPath), `${spec.name}.build.json`);
+  await fs.writeFile(tempSpecPath, JSON.stringify(resolvedInput, null, 2));
 
   try {
     // Run build
@@ -96,7 +283,7 @@ async function runTestCase(spec: TestCaseSpec, specDir: string): Promise<TestCas
     }
 
     // Get workbook info
-    const infoResult = await runInfo(input.output);
+    const infoResult = await runInfo(outputPath);
     if (!infoResult.success) {
       return {
         name: spec.name,
@@ -107,26 +294,98 @@ async function runTestCase(spec: TestCaseSpec, specDir: string): Promise<TestCas
 
     const info = infoResult.data;
 
-    // Verify expectations
-    if (spec.expected.sheetCount !== undefined) {
-      assertions.push(createAssertion("sheetCount", spec.expected.sheetCount, info.sheetCount));
-    }
+    // Top-level assertions
+    assertOptional(assertions, "sheetCount", spec.expected.sheetCount, info.sheetCount);
     if (spec.expected.sheetNames !== undefined) {
       assertions.push(createAssertion("sheetNames", spec.expected.sheetNames, info.sheetNames));
     }
-    if (spec.expected.totalRows !== undefined) {
-      assertions.push(createAssertion("totalRows", spec.expected.totalRows, info.totalRows));
+    assertOptional(assertions, "totalRows", spec.expected.totalRows, info.totalRows);
+    assertOptional(assertions, "totalCells", spec.expected.totalCells, info.totalCells);
+
+    // Style assertions
+    if (spec.expected.styles) {
+      assertions.push(...matchStyles(spec.expected.styles, info, "styles"));
     }
-    if (spec.expected.totalCells !== undefined) {
-      assertions.push(createAssertion("totalCells", spec.expected.totalCells, info.totalCells));
+
+    // Per-sheet assertions
+    if (spec.expected.sheets) {
+      // Load workbook for direct domain access
+      const workbook = await loadXlsxWorkbook(outputPath);
+
+      for (const expSheet of spec.expected.sheets) {
+        const sheetPath = `sheets[${expSheet.name}]`;
+        const domainSheet = workbook.sheets.find((s) => s.name === expSheet.name);
+
+        if (!domainSheet) {
+          assertions.push(createAssertion(sheetPath, "exists", "missing"));
+          continue;
+        }
+
+        // Get sheet data via show command for cell assertions
+        let showData: ShowData | undefined;
+        if (expSheet.cells || expSheet.mergedCells) {
+          const showResult = await runShow(outputPath, expSheet.name);
+          if (showResult.success) {
+            showData = showResult.data;
+          }
+        }
+
+        // Build workbook sheet data
+        const wbSheetData: WorkbookSheetData = {
+          name: domainSheet.name,
+          rowCount: domainSheet.rows.length,
+          cellCount: domainSheet.rows.reduce((sum, row) => sum + row.cells.length, 0),
+          columns: domainSheet.columns?.map((col) => ({
+            min: col.min as number,
+            max: col.max as number,
+            ...(col.width !== undefined ? { width: col.width } : {}),
+            ...(col.hidden !== undefined ? { hidden: col.hidden } : {}),
+          })),
+        };
+
+        assertions.push(...matchSheet(expSheet, info, showData, wbSheetData, sheetPath));
+      }
+    }
+
+    // Defined name assertions
+    if (spec.expected.definedNames) {
+      const workbook = await loadXlsxWorkbook(outputPath);
+      const actualNames: DefinedNameData[] = (workbook.definedNames ?? []).map((dn) => ({
+        name: dn.name,
+        formula: dn.formula,
+        ...(dn.localSheetId !== undefined ? { localSheetId: dn.localSheetId } : {}),
+        ...(dn.hidden !== undefined ? { hidden: dn.hidden } : {}),
+      }));
+      assertions.push(...matchDefinedNames(spec.expected.definedNames, actualNames, "definedNames"));
     }
 
     const passed = assertions.every((a) => a.passed);
     return { name: spec.name, passed, assertions };
   } finally {
-    // Clean up temp file
     await fs.unlink(tempSpecPath).catch(() => {});
   }
+}
+
+// =============================================================================
+// Path Resolution Helpers
+// =============================================================================
+
+function resolveSpecPaths(input: XlsxBuildSpec, specDir: string): XlsxBuildSpec {
+  if (input.mode === "create") {
+    return {
+      ...input,
+      output: path.resolve(specDir, input.output),
+    };
+  }
+  return {
+    ...input,
+    template: path.resolve(specDir, input.template),
+    output: path.resolve(specDir, input.output),
+  };
+}
+
+function getOutputPath(input: XlsxBuildSpec, _specDir: string): string {
+  return input.output;
 }
 
 // =============================================================================

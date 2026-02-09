@@ -1,0 +1,147 @@
+{
+  "name": "complete-workbook",
+  "description": "Comprehensive test with all features: multi-sheet, styles, merge, columns, formula, defined name",
+  "tags": ["complete"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/complete-workbook.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Data",
+          "columns": [
+            { "min": 1, "max": 1, "width": 20, "hidden": false },
+            { "min": 2, "max": 2, "width": 15, "hidden": false },
+            { "min": 3, "max": 3, "width": 12, "hidden": false }
+          ],
+          "mergeCells": ["A1:C1"],
+          "rows": [
+            {
+              "row": 1,
+              "cells": [
+                { "ref": "A1", "value": "Sales Report", "styleId": 1 }
+              ]
+            },
+            {
+              "row": 2,
+              "cells": [
+                { "ref": "A2", "value": "Product", "styleId": 2 },
+                { "ref": "B2", "value": "Quantity", "styleId": 2 },
+                { "ref": "C2", "value": "Price", "styleId": 2 }
+              ]
+            },
+            {
+              "row": 3,
+              "cells": [
+                { "ref": "A3", "value": "Widget" },
+                { "ref": "B3", "value": 100 },
+                { "ref": "C3", "value": 9.99, "styleId": 3 }
+              ]
+            },
+            {
+              "row": 4,
+              "cells": [
+                { "ref": "A4", "value": "Gadget" },
+                { "ref": "B4", "value": 250 },
+                { "ref": "C4", "value": 19.99, "styleId": 3 }
+              ]
+            },
+            {
+              "row": 5,
+              "cells": [
+                { "ref": "A5", "value": "Total", "styleId": 2 },
+                { "ref": "B5", "formula": { "expression": "SUM(B3:B4)" } },
+                { "ref": "C5", "formula": { "expression": "SUM(C3:C4)" }, "styleId": 3 }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Summary",
+          "rows": [
+            {
+              "row": 1,
+              "cells": [
+                { "ref": "A1", "value": "Total Products" },
+                { "ref": "B1", "value": 2 }
+              ]
+            }
+          ]
+        }
+      ],
+      "styles": {
+        "numberFormats": [
+          { "id": 165, "formatCode": "#,##0.00 \"USD\"" }
+        ],
+        "fonts": [
+          { "size": 14, "name": "Calibri", "bold": true },
+          { "size": 11, "name": "Calibri", "bold": true }
+        ],
+        "fills": [
+          { "type": "solid", "color": "#4472C4" }
+        ],
+        "borders": [
+          {
+            "bottom": { "style": "thin", "color": "#000000" }
+          }
+        ],
+        "cellXfs": [
+          { "fontId": 1 },
+          { "fontId": 2, "fillId": 2, "borderId": 1 },
+          { "numFmtId": 165 }
+        ]
+      },
+      "definedNames": [
+        { "name": "DataRange", "formula": "Data!$A$2:$C$4" }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 2,
+    "sheetNames": ["Data", "Summary"],
+    "totalCells": 15,
+    "styles": {
+      "fontCount": 3,
+      "fillCount": 3,
+      "borderCount": 2,
+      "numberFormatCount": 1
+    },
+    "definedNames": [
+      { "name": "DataRange", "formula": "Data!$A$2:$C$4" }
+    ],
+    "sheets": [
+      {
+        "name": "Data",
+        "rowCount": 5,
+        "cellCount": 13,
+        "mergedCells": ["A1:C1"],
+        "columns": [
+          { "min": 1, "max": 1, "width": 20 },
+          { "min": 2, "max": 2, "width": 15 },
+          { "min": 3, "max": 3, "width": 12 }
+        ],
+        "cells": [
+          { "ref": "A1", "type": "string", "value": "Sales Report" },
+          { "ref": "A2", "type": "string", "value": "Product" },
+          { "ref": "B2", "type": "string", "value": "Quantity" },
+          { "ref": "C2", "type": "string", "value": "Price" },
+          { "ref": "A3", "type": "string", "value": "Widget" },
+          { "ref": "B3", "type": "number", "value": 100 },
+          { "ref": "C3", "type": "number", "value": 9.99 },
+          { "ref": "A4", "type": "string", "value": "Gadget" },
+          { "ref": "B4", "type": "number", "value": 250 },
+          { "ref": "C4", "type": "number", "value": 19.99 }
+        ]
+      },
+      {
+        "name": "Summary",
+        "rowCount": 1,
+        "cellCount": 2,
+        "cells": [
+          { "ref": "A1", "type": "string", "value": "Total Products" },
+          { "ref": "B1", "type": "number", "value": 2 }
+        ]
+      }
+    ]
+  }
+}

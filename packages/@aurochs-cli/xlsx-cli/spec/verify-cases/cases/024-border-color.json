@@ -1,0 +1,39 @@
+{
+  "name": "border-color",
+  "description": "Thin border with red color on all sides",
+  "tags": ["styles"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/024-border-color.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            { "row": 1, "cells": [{ "ref": "A1", "value": "Red Border", "styleId": 1 }] }
+          ]
+        }
+      ],
+      "styles": {
+        "borders": [
+          {
+            "left": { "style": "thin", "color": "#FF0000" },
+            "right": { "style": "thin", "color": "#FF0000" },
+            "top": { "style": "thin", "color": "#FF0000" },
+            "bottom": { "style": "thin", "color": "#FF0000" }
+          }
+        ],
+        "cellXfs": [
+          { "borderId": 1 }
+        ]
+      }
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "totalCells": 1,
+    "styles": {
+      "borderCount": 2
+    }
+  }
+}

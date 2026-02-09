@@ -1,0 +1,90 @@
+{
+  "name": "stress-many-columns",
+  "description": "Stress test with 1 row and 50 columns (A1 through AX1)",
+  "tags": ["stress"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/stress-many-columns.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            {
+              "row": 1,
+              "cells": [
+                { "ref": "A1", "value": 1 },
+                { "ref": "B1", "value": 2 },
+                { "ref": "C1", "value": 3 },
+                { "ref": "D1", "value": 4 },
+                { "ref": "E1", "value": 5 },
+                { "ref": "F1", "value": 6 },
+                { "ref": "G1", "value": 7 },
+                { "ref": "H1", "value": 8 },
+                { "ref": "I1", "value": 9 },
+                { "ref": "J1", "value": 10 },
+                { "ref": "K1", "value": 11 },
+                { "ref": "L1", "value": 12 },
+                { "ref": "M1", "value": 13 },
+                { "ref": "N1", "value": 14 },
+                { "ref": "O1", "value": 15 },
+                { "ref": "P1", "value": 16 },
+                { "ref": "Q1", "value": 17 },
+                { "ref": "R1", "value": 18 },
+                { "ref": "S1", "value": 19 },
+                { "ref": "T1", "value": 20 },
+                { "ref": "U1", "value": 21 },
+                { "ref": "V1", "value": 22 },
+                { "ref": "W1", "value": 23 },
+                { "ref": "X1", "value": 24 },
+                { "ref": "Y1", "value": 25 },
+                { "ref": "Z1", "value": 26 },
+                { "ref": "AA1", "value": 27 },
+                { "ref": "AB1", "value": 28 },
+                { "ref": "AC1", "value": 29 },
+                { "ref": "AD1", "value": 30 },
+                { "ref": "AE1", "value": 31 },
+                { "ref": "AF1", "value": 32 },
+                { "ref": "AG1", "value": 33 },
+                { "ref": "AH1", "value": 34 },
+                { "ref": "AI1", "value": 35 },
+                { "ref": "AJ1", "value": 36 },
+                { "ref": "AK1", "value": 37 },
+                { "ref": "AL1", "value": 38 },
+                { "ref": "AM1", "value": 39 },
+                { "ref": "AN1", "value": 40 },
+                { "ref": "AO1", "value": 41 },
+                { "ref": "AP1", "value": 42 },
+                { "ref": "AQ1", "value": 43 },
+                { "ref": "AR1", "value": 44 },
+                { "ref": "AS1", "value": 45 },
+                { "ref": "AT1", "value": 46 },
+                { "ref": "AU1", "value": 47 },
+                { "ref": "AV1", "value": 48 },
+                { "ref": "AW1", "value": 49 },
+                { "ref": "AX1", "value": 50 }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "totalRows": 1,
+    "totalCells": 50,
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "rowCount": 1,
+        "cellCount": 50,
+        "cells": [
+          { "ref": "A1", "type": "number", "value": 1 },
+          { "ref": "Z1", "type": "number", "value": 26 },
+          { "ref": "AX1", "type": "number", "value": 50 }
+        ]
+      }
+    ]
+  }
+}

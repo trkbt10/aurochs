@@ -1,0 +1,76 @@
+{
+  "name": "three-sheets",
+  "description": "Three sheets each with one numeric cell",
+  "tags": ["multi-sheet"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/three-sheets.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            {
+              "row": 1,
+              "cells": [
+                { "ref": "A1", "value": 1 }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Sheet2",
+          "rows": [
+            {
+              "row": 1,
+              "cells": [
+                { "ref": "A1", "value": 2 }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Sheet3",
+          "rows": [
+            {
+              "row": 1,
+              "cells": [
+                { "ref": "A1", "value": 3 }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 3,
+    "totalCells": 3,
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "rowCount": 1,
+        "cellCount": 1,
+        "cells": [
+          { "ref": "A1", "type": "number", "value": 1 }
+        ]
+      },
+      {
+        "name": "Sheet2",
+        "rowCount": 1,
+        "cellCount": 1,
+        "cells": [
+          { "ref": "A1", "type": "number", "value": 2 }
+        ]
+      },
+      {
+        "name": "Sheet3",
+        "rowCount": 1,
+        "cellCount": 1,
+        "cells": [
+          { "ref": "A1", "type": "number", "value": 3 }
+        ]
+      }
+    ]
+  }
+}

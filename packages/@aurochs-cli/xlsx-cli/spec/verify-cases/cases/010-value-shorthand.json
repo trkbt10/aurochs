@@ -1,0 +1,35 @@
+{
+  "name": "value-shorthand",
+  "description": "Shorthand cell values: bare string, number, and boolean",
+  "tags": ["cell-values"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/010-value-shorthand.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            { "row": 1, "cells": [{ "ref": "A1", "value": "test" }, { "ref": "B1", "value": 42 }, { "ref": "C1", "value": true }] }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "sheetNames": ["Sheet1"],
+    "totalRows": 1,
+    "totalCells": 3,
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "cells": [
+          { "ref": "A1", "type": "string", "value": "test" },
+          { "ref": "B1", "type": "number", "value": 42 },
+          { "ref": "C1", "type": "boolean", "value": true }
+        ]
+      }
+    ]
+  }
+}

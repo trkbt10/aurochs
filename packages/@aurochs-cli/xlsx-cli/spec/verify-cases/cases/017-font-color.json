@@ -1,0 +1,34 @@
+{
+  "name": "font-color",
+  "description": "Custom font with red color",
+  "tags": ["styles"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/017-font-color.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            { "row": 1, "cells": [{ "ref": "A1", "value": "Red Text", "styleId": 1 }] }
+          ]
+        }
+      ],
+      "styles": {
+        "fonts": [
+          { "name": "Calibri", "size": 11, "color": "#FF0000" }
+        ],
+        "cellXfs": [
+          { "fontId": 1 }
+        ]
+      }
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "totalCells": 1,
+    "styles": {
+      "fontCount": 2
+    }
+  }
+}

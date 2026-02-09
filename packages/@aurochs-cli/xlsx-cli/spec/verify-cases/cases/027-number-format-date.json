@@ -1,0 +1,49 @@
+{
+  "name": "number-format-date",
+  "description": "Number format with date code yyyy-mm-dd",
+  "tags": ["styles"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/number-format-date.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            {
+              "row": 1,
+              "cells": [
+                { "ref": "A1", "value": 45000, "styleId": 1 }
+              ]
+            }
+          ]
+        }
+      ],
+      "styles": {
+        "numberFormats": [
+          { "id": 166, "formatCode": "yyyy-mm-dd" }
+        ],
+        "cellXfs": [
+          { "numFmtId": 166 }
+        ]
+      }
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "totalCells": 1,
+    "styles": {
+      "numberFormatCount": 1
+    },
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "rowCount": 1,
+        "cellCount": 1,
+        "cells": [
+          { "ref": "A1", "type": "number", "value": 45000 }
+        ]
+      }
+    ]
+  }
+}

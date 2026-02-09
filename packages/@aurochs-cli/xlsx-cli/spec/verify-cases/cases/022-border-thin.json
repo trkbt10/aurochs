@@ -1,0 +1,39 @@
+{
+  "name": "border-thin",
+  "description": "Thin border on all four sides of a cell",
+  "tags": ["styles"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/022-border-thin.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            { "row": 1, "cells": [{ "ref": "A1", "value": "Bordered", "styleId": 1 }] }
+          ]
+        }
+      ],
+      "styles": {
+        "borders": [
+          {
+            "left": { "style": "thin" },
+            "right": { "style": "thin" },
+            "top": { "style": "thin" },
+            "bottom": { "style": "thin" }
+          }
+        ],
+        "cellXfs": [
+          { "borderId": 1 }
+        ]
+      }
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "totalCells": 1,
+    "styles": {
+      "borderCount": 2
+    }
+  }
+}

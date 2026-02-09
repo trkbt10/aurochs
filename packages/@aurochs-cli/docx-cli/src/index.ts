@@ -18,6 +18,7 @@ export {
 } from "./commands/show";
 export { runExtract, type ExtractData, type ExtractOptions, type SectionTextItem } from "./commands/extract";
 export { runBuild, type BuildSpec, type BuildData } from "./commands/build";
+export { runPatch, type PatchData } from "./commands/patch";
 export {
   runVerify,
   type VerifyData,
@@ -65,6 +66,7 @@ export {
   formatShowPretty,
   formatExtractPretty,
   formatBuildPretty,
+  formatPatchPretty,
   formatVerifyPretty,
   formatPreviewPretty,
 } from "./output/pretty-output";

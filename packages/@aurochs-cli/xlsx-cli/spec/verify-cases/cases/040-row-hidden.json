@@ -1,0 +1,47 @@
+{
+  "name": "row-hidden",
+  "description": "Row 2 is hidden while Row 1 is visible",
+  "tags": ["rows"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/row-hidden.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            {
+              "row": 1,
+              "cells": [
+                { "ref": "A1", "value": "Visible" }
+              ]
+            },
+            {
+              "row": 2,
+              "hidden": true,
+              "cells": [
+                { "ref": "A2", "value": "Hidden" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "totalCells": 2,
+    "totalRows": 2,
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "rowCount": 2,
+        "cellCount": 2,
+        "cells": [
+          { "ref": "A1", "type": "string", "value": "Visible" },
+          { "ref": "A2", "type": "string", "value": "Hidden" }
+        ]
+      }
+    ]
+  }
+}

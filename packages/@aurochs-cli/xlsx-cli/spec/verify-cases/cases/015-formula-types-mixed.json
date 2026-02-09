@@ -1,0 +1,27 @@
+{
+  "name": "formula-types-mixed",
+  "description": "Mix of plain value and formula cells",
+  "tags": ["formulas"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/015-formula-types-mixed.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            { "row": 1, "cells": [{ "ref": "A1", "value": 10 }] },
+            { "row": 2, "cells": [{ "ref": "A2", "formula": { "expression": "A1*2" } }] },
+            { "row": 3, "cells": [{ "ref": "A3", "formula": { "expression": "SUM(A1:A2)" } }] }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "sheetNames": ["Sheet1"],
+    "totalRows": 3,
+    "totalCells": 3
+  }
+}

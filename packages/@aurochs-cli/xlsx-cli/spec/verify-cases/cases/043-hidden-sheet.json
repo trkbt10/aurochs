@@ -1,0 +1,60 @@
+{
+  "name": "hidden-sheet",
+  "description": "Two sheets: one visible and one hidden",
+  "tags": ["multi-sheet"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/hidden-sheet.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Visible",
+          "state": "visible",
+          "rows": [
+            {
+              "row": 1,
+              "cells": [
+                { "ref": "A1", "value": "Shown" }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Hidden",
+          "state": "hidden",
+          "rows": [
+            {
+              "row": 1,
+              "cells": [
+                { "ref": "A1", "value": "Secret" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 2,
+    "sheetNames": ["Visible", "Hidden"],
+    "totalCells": 2,
+    "sheets": [
+      {
+        "name": "Visible",
+        "rowCount": 1,
+        "cellCount": 1,
+        "cells": [
+          { "ref": "A1", "type": "string", "value": "Shown" }
+        ]
+      },
+      {
+        "name": "Hidden",
+        "rowCount": 1,
+        "cellCount": 1,
+        "cells": [
+          { "ref": "A1", "type": "string", "value": "Secret" }
+        ]
+      }
+    ]
+  }
+}

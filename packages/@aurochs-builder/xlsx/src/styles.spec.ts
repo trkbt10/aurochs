@@ -616,6 +616,16 @@ describe("serializeStyleSheet", () => {
     expect(cellXfsIdx).toBeLessThan(cellStylesIdx);
   });
 
+  it("should not include colors when indexedColors is empty array", () => {
+    const styleSheet: XlsxStyleSheet = {
+      ...createDefaultStyleSheet(),
+      indexedColors: [],
+    };
+    const result = serializeElement(serializeStyleSheet(styleSheet));
+    expect(result).not.toContain("<colors");
+    expect(result).not.toContain("<indexedColors");
+  });
+
   it("should serialize indexedColors under colors when present", () => {
     const styleSheet: XlsxStyleSheet = {
       ...createDefaultStyleSheet(),

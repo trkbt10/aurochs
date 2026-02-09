@@ -20,7 +20,7 @@ import {
   createSharedStringTableBuilder,
   collectSharedStrings,
 } from "./exporter";
-import { parseXlsxWorkbook } from "@aurochs-office/xlsx/parser/index";
+import { parseXlsxWorkbook } from "@aurochs-office/xlsx/parser";
 import { loadZipPackage } from "@aurochs/zip";
 import type { XlsxWorkbook, XlsxWorksheet, XlsxRow } from "@aurochs-office/xlsx/domain/workbook";
 import type { Cell } from "@aurochs-office/xlsx/domain/cell/types";

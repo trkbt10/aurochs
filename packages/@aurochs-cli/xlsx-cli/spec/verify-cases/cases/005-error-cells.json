@@ -1,0 +1,34 @@
+{
+  "name": "error-cells",
+  "description": "Error cell values #DIV/0! and #N/A",
+  "tags": ["cell-values"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/005-error-cells.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            { "row": 1, "cells": [{ "ref": "A1", "value": { "type": "error", "value": "#DIV/0!" } }, { "ref": "B1", "value": { "type": "error", "value": "#N/A" } }] }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "sheetNames": ["Sheet1"],
+    "totalRows": 1,
+    "totalCells": 2,
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "cells": [
+          { "ref": "A1", "type": "error", "value": "#DIV/0!" },
+          { "ref": "B1", "type": "error", "value": "#N/A" }
+        ]
+      }
+    ]
+  }
+}

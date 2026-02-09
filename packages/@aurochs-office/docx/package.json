@@ -57,6 +57,10 @@
     "./adapters/*": {
       "types": "./src/adapters/*.ts",
       "default": "./src/adapters/*.ts"
+    },
+    "./serializer/*": {
+      "types": "./src/serializer/*.ts",
+      "default": "./src/serializer/*.ts"
     }
   }
 }

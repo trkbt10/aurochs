@@ -1,0 +1,34 @@
+{
+  "name": "font-bold-italic",
+  "description": "Custom bold and italic font style applied to a cell",
+  "tags": ["styles"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/016-font-bold-italic.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            { "row": 1, "cells": [{ "ref": "A1", "value": "Bold Italic", "styleId": 1 }] }
+          ]
+        }
+      ],
+      "styles": {
+        "fonts": [
+          { "name": "Arial", "size": 12, "bold": true, "italic": true }
+        ],
+        "cellXfs": [
+          { "fontId": 1 }
+        ]
+      }
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "totalCells": 1,
+    "styles": {
+      "fontCount": 2
+    }
+  }
+}

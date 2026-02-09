@@ -1,0 +1,42 @@
+{
+  "name": "cross-cell-formula",
+  "description": "Formula referencing individual cells across columns",
+  "tags": ["formulas"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/012-cross-cell-formula.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            {
+              "row": 1,
+              "cells": [
+                { "ref": "A1", "value": 5 },
+                { "ref": "B1", "value": 10 },
+                { "ref": "C1", "formula": { "expression": "A1+B1" } }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "sheetNames": ["Sheet1"],
+    "totalRows": 1,
+    "totalCells": 3,
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "cells": [
+          { "ref": "A1", "type": "number", "value": 5 },
+          { "ref": "B1", "type": "number", "value": 10 },
+          { "ref": "C1", "formula": "A1+B1" }
+        ]
+      }
+    ]
+  }
+}

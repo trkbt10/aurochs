@@ -28,6 +28,25 @@ function createMockSharedStrings() {
 }
 
 describe("serializeWorksheet (sheetFormatPr)", () => {
+  it("should not output sheetFormatPr when all properties are undefined", () => {
+    const xml = serializeElement(
+      serializeWorksheet(
+        {
+          dateSystem: "1900",
+          name: "Sheet1",
+          sheetId: 1,
+          state: "visible",
+          sheetFormatPr: {},
+          rows: [],
+          xmlPath: "xl/worksheets/sheet1.xml",
+        },
+        createMockSharedStrings(),
+      ),
+    );
+
+    expect(xml).not.toContain("sheetFormatPr");
+  });
+
   it("serializes sheetFormatPr before cols", () => {
     const xml = serializeElement(
       serializeWorksheet(

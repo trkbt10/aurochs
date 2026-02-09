@@ -1,0 +1,52 @@
+{
+  "name": "column-style",
+  "description": "Column A with custom bold font style",
+  "tags": ["columns"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/column-style.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "columns": [
+            { "min": 1, "max": 1, "width": 15, "hidden": false, "styleId": 1 }
+          ],
+          "rows": [
+            {
+              "row": 1,
+              "cells": [
+                { "ref": "A1", "value": "Styled", "styleId": 1 }
+              ]
+            }
+          ]
+        }
+      ],
+      "styles": {
+        "fonts": [
+          { "size": 11, "name": "Calibri", "bold": true }
+        ],
+        "cellXfs": [
+          { "fontId": 1 }
+        ]
+      }
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "totalCells": 1,
+    "styles": {
+      "fontCount": 2
+    },
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "rowCount": 1,
+        "cellCount": 1,
+        "cells": [
+          { "ref": "A1", "type": "string", "value": "Styled" }
+        ]
+      }
+    ]
+  }
+}

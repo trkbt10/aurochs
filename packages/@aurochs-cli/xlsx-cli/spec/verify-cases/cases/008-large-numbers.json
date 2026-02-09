@@ -1,0 +1,35 @@
+{
+  "name": "large-numbers",
+  "description": "Large positive number, small negative decimal, and zero",
+  "tags": ["cell-values"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/008-large-numbers.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            { "row": 1, "cells": [{ "ref": "A1", "value": 999999999 }, { "ref": "B1", "value": -0.001 }, { "ref": "C1", "value": 0 }] }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "sheetNames": ["Sheet1"],
+    "totalRows": 1,
+    "totalCells": 3,
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "cells": [
+          { "ref": "A1", "type": "number", "value": 999999999 },
+          { "ref": "B1", "type": "number", "value": -0.001 },
+          { "ref": "C1", "type": "number", "value": 0 }
+        ]
+      }
+    ]
+  }
+}

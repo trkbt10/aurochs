@@ -1,0 +1,49 @@
+{
+  "name": "number-format-custom",
+  "description": "Custom number format with currency code #,##0.00 USD",
+  "tags": ["styles"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/number-format-custom.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            {
+              "row": 1,
+              "cells": [
+                { "ref": "A1", "value": 1234.56, "styleId": 1 }
+              ]
+            }
+          ]
+        }
+      ],
+      "styles": {
+        "numberFormats": [
+          { "id": 167, "formatCode": "#,##0.00 \"USD\"" }
+        ],
+        "cellXfs": [
+          { "numFmtId": 167 }
+        ]
+      }
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "totalCells": 1,
+    "styles": {
+      "numberFormatCount": 1
+    },
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "rowCount": 1,
+        "cellCount": 1,
+        "cells": [
+          { "ref": "A1", "type": "number", "value": 1234.56 }
+        ]
+      }
+    ]
+  }
+}

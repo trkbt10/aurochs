@@ -1,0 +1,53 @@
+{
+  "name": "alignment",
+  "description": "Cell alignment with horizontal center, vertical top, and wrap text",
+  "tags": ["styles"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/alignment.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            {
+              "row": 1,
+              "cells": [
+                { "ref": "A1", "value": "Centered and wrapped text", "styleId": 1 }
+              ]
+            }
+          ]
+        }
+      ],
+      "styles": {
+        "cellXfs": [
+          {
+            "alignment": {
+              "horizontal": "center",
+              "vertical": "top",
+              "wrapText": true
+            }
+          }
+        ]
+      }
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "totalCells": 1,
+    "styles": {
+      "fontCount": 1,
+      "cellXfCount": 2
+    },
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "rowCount": 1,
+        "cellCount": 1,
+        "cells": [
+          { "ref": "A1", "type": "string", "value": "Centered and wrapped text" }
+        ]
+      }
+    ]
+  }
+}

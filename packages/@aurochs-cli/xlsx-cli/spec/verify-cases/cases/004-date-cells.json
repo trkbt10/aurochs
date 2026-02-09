@@ -1,0 +1,33 @@
+{
+  "name": "date-cells",
+  "description": "Date cell value stored as serial number in XLSX",
+  "tags": ["cell-values"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/004-date-cells.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            { "row": 1, "cells": [{ "ref": "A1", "value": { "type": "date", "value": "2024-01-15T00:00:00Z" } }] }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "sheetNames": ["Sheet1"],
+    "totalRows": 1,
+    "totalCells": 1,
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "cells": [
+          { "ref": "A1", "type": "number" }
+        ]
+      }
+    ]
+  }
+}

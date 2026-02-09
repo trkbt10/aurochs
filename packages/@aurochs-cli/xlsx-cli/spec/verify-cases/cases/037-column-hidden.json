@@ -1,0 +1,46 @@
+{
+  "name": "column-hidden",
+  "description": "Column B hidden with data in both A and B",
+  "tags": ["columns"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/column-hidden.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "columns": [
+            { "min": 2, "max": 2, "width": 8, "hidden": true }
+          ],
+          "rows": [
+            {
+              "row": 1,
+              "cells": [
+                { "ref": "A1", "value": "Visible" },
+                { "ref": "B1", "value": "Hidden" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "totalCells": 2,
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "rowCount": 1,
+        "cellCount": 2,
+        "columns": [
+          { "min": 2, "max": 2, "hidden": true }
+        ],
+        "cells": [
+          { "ref": "A1", "type": "string", "value": "Visible" },
+          { "ref": "B1", "type": "string", "value": "Hidden" }
+        ]
+      }
+    ]
+  }
+}

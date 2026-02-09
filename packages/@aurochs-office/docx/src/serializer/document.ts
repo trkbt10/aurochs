@@ -10,6 +10,7 @@ import { createElement, type XmlElement, type XmlNode } from "@aurochs/xml";
 import type { DocxDocument, DocxBlockContent, DocxBody } from "../domain/document";
 import { NS_WORDPROCESSINGML, NS_RELATIONSHIPS } from "../constants";
 import { serializeParagraph } from "./paragraph";
+import { serializeTable } from "./table";
 import { serializeSectionProperties } from "./section";
 import { wEl } from "./primitive";
 
@@ -21,11 +22,9 @@ function serializeBlockContent(content: DocxBlockContent): XmlNode | undefined {
   switch (content.type) {
     case "paragraph":
       return serializeParagraph(content);
+    case "table":
+      return serializeTable(content);
     case "sectionBreak":
-      // Section breaks are represented as paragraph properties in OOXML
-      return undefined;
-    default:
-      // Table serialization not yet implemented
       return undefined;
   }
 }

@@ -1,0 +1,40 @@
+{
+  "name": "array-formula",
+  "description": "Cell with an array-type formula",
+  "tags": ["formulas"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/013-array-formula.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            {
+              "row": 1,
+              "cells": [
+                { "ref": "A1", "formula": { "expression": "TRANSPOSE(B1:D1)", "type": "array" } },
+                { "ref": "B1", "value": 1 },
+                { "ref": "C1", "value": 2 },
+                { "ref": "D1", "value": 3 }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "sheetNames": ["Sheet1"],
+    "totalCells": 4,
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "cells": [
+          { "ref": "A1", "formula": "TRANSPOSE(B1:D1)" }
+        ]
+      }
+    ]
+  }
+}

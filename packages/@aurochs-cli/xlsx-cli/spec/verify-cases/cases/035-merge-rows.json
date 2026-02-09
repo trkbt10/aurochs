@@ -1,0 +1,40 @@
+{
+  "name": "merge-rows",
+  "description": "Merge spanning 5 rows A1:A5",
+  "tags": ["merge"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/merge-rows.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "mergeCells": ["A1:A5"],
+          "rows": [
+            {
+              "row": 1,
+              "cells": [
+                { "ref": "A1", "value": "Tall Cell" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "totalCells": 1,
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "rowCount": 1,
+        "cellCount": 1,
+        "mergedCells": ["A1:A5"],
+        "cells": [
+          { "ref": "A1", "type": "string", "value": "Tall Cell" }
+        ]
+      }
+    ]
+  }
+}

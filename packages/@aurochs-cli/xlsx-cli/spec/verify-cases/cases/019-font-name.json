@@ -1,0 +1,34 @@
+{
+  "name": "font-name",
+  "description": "Custom font with Times New Roman 12pt",
+  "tags": ["styles"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/019-font-name.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            { "row": 1, "cells": [{ "ref": "A1", "value": "Times", "styleId": 1 }] }
+          ]
+        }
+      ],
+      "styles": {
+        "fonts": [
+          { "name": "Times New Roman", "size": 12 }
+        ],
+        "cellXfs": [
+          { "fontId": 1 }
+        ]
+      }
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "totalCells": 1,
+    "styles": {
+      "fontCount": 2
+    }
+  }
+}

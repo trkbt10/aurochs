@@ -1,0 +1,33 @@
+{
+  "name": "empty-cells",
+  "description": "Empty cell in A1 (omitted by parser) and string in B1",
+  "tags": ["cell-values"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/006-empty-cells.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            { "row": 1, "cells": [{ "ref": "A1", "value": { "type": "empty" } }, { "ref": "B1", "value": "present" }] }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "sheetNames": ["Sheet1"],
+    "totalRows": 1,
+    "totalCells": 2,
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "cells": [
+          { "ref": "B1", "type": "string", "value": "present" }
+        ]
+      }
+    ]
+  }
+}

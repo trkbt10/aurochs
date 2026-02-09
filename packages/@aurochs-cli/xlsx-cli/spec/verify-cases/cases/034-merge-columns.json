@@ -1,0 +1,40 @@
+{
+  "name": "merge-columns",
+  "description": "Merge spanning 5 columns A1:E1",
+  "tags": ["merge"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/merge-columns.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "mergeCells": ["A1:E1"],
+          "rows": [
+            {
+              "row": 1,
+              "cells": [
+                { "ref": "A1", "value": "Wide Header" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "totalCells": 1,
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "rowCount": 1,
+        "cellCount": 1,
+        "mergedCells": ["A1:E1"],
+        "cells": [
+          { "ref": "A1", "type": "string", "value": "Wide Header" }
+        ]
+      }
+    ]
+  }
+}

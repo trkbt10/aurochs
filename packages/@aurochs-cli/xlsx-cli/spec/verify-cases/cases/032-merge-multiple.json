@@ -1,0 +1,47 @@
+{
+  "name": "merge-multiple",
+  "description": "Two separate merge regions: A1:B1 and A3:C3",
+  "tags": ["merge"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/merge-multiple.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "mergeCells": ["A1:B1", "A3:C3"],
+          "rows": [
+            {
+              "row": 1,
+              "cells": [
+                { "ref": "A1", "value": "H1" }
+              ]
+            },
+            {
+              "row": 3,
+              "cells": [
+                { "ref": "A3", "value": "H2" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "totalCells": 2,
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "rowCount": 2,
+        "cellCount": 2,
+        "mergedCells": ["A1:B1", "A3:C3"],
+        "cells": [
+          { "ref": "A1", "type": "string", "value": "H1" },
+          { "ref": "A3", "type": "string", "value": "H2" }
+        ]
+      }
+    ]
+  }
+}

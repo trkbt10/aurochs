@@ -1,0 +1,58 @@
+{
+  "name": "two-sheets",
+  "description": "Two sheets: Data and Summary with one cell each",
+  "tags": ["multi-sheet"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/two-sheets.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Data",
+          "rows": [
+            {
+              "row": 1,
+              "cells": [
+                { "ref": "A1", "value": "Value" }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Summary",
+          "rows": [
+            {
+              "row": 1,
+              "cells": [
+                { "ref": "A1", "value": "Total" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 2,
+    "sheetNames": ["Data", "Summary"],
+    "totalCells": 2,
+    "sheets": [
+      {
+        "name": "Data",
+        "rowCount": 1,
+        "cellCount": 1,
+        "cells": [
+          { "ref": "A1", "type": "string", "value": "Value" }
+        ]
+      },
+      {
+        "name": "Summary",
+        "rowCount": 1,
+        "cellCount": 1,
+        "cells": [
+          { "ref": "A1", "type": "string", "value": "Total" }
+        ]
+      }
+    ]
+  }
+}

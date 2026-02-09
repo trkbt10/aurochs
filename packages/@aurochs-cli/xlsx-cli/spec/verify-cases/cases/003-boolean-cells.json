@@ -1,0 +1,34 @@
+{
+  "name": "boolean-cells",
+  "description": "Boolean cell values true and false",
+  "tags": ["cell-values"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/003-boolean-cells.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            { "row": 1, "cells": [{ "ref": "A1", "value": true }, { "ref": "B1", "value": false }] }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "sheetNames": ["Sheet1"],
+    "totalRows": 1,
+    "totalCells": 2,
+    "sheets": [
+      {
+        "name": "Sheet1",
+        "cells": [
+          { "ref": "A1", "type": "boolean", "value": true },
+          { "ref": "B1", "type": "boolean", "value": false }
+        ]
+      }
+    ]
+  }
+}

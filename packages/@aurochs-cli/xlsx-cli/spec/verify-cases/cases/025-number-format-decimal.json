@@ -1,0 +1,34 @@
+{
+  "name": "number-format-decimal",
+  "description": "Custom number format for two decimal places",
+  "tags": ["styles"],
+  "input": {
+    "mode": "create",
+    "output": "../__output__/025-number-format-decimal.xlsx",
+    "workbook": {
+      "sheets": [
+        {
+          "name": "Sheet1",
+          "rows": [
+            { "row": 1, "cells": [{ "ref": "A1", "value": 3.14159, "styleId": 1 }] }
+          ]
+        }
+      ],
+      "styles": {
+        "numberFormats": [
+          { "id": 164, "formatCode": "0.00" }
+        ],
+        "cellXfs": [
+          { "numFmtId": 164 }
+        ]
+      }
+    }
+  },
+  "expected": {
+    "sheetCount": 1,
+    "totalCells": 1,
+    "styles": {
+      "numberFormatCount": 1
+    }
+  }
+}
