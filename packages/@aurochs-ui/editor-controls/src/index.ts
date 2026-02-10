@@ -47,3 +47,15 @@ export { FontCatalogProvider, useFontCatalog, type FontCatalogProviderProps } fr
 export { FontFamilySelect, type FontFamilySelectProps } from "./font";
 export { useDocumentFontFamilies } from "./font";
 export { useFontCatalogFamilies, type FontCatalogFamiliesState } from "./font";
+
+// Zoom controls
+export type { ZoomMode, ZoomControlsProps } from "./zoom";
+export {
+  ZOOM_STEPS,
+  FIT_ZOOM_VALUE,
+  getClosestZoomIndex,
+  getNextZoomValue,
+  getZoomOptions,
+  isFitMode,
+  ZoomControls,
+} from "./zoom";

@@ -53,7 +53,7 @@ import { SvgRulers } from "./SvgRulers";
 import { ViewportOverlay } from "./ViewportOverlay";
 import { useSvgViewport } from "./use-svg-viewport";
 import { getTransformString, screenToSlideCoords, type ViewportTransform } from "@aurochs-renderer/pptx/svg-viewport";
-import type { ZoomMode } from "./canvas-controls";
+import type { ZoomMode } from "@aurochs-ui/editor-controls/zoom";
 import { ASSET_DRAG_TYPE } from "../panels/inspector/AssetPanel";
 
 // =============================================================================

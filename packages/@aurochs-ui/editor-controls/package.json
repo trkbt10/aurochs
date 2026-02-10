@@ -49,6 +49,10 @@
     "./dev": {
       "types": "./src/dev/index.ts",
       "default": "./src/dev/index.ts"
+    },
+    "./zoom": {
+      "types": "./src/zoom/index.ts",
+      "default": "./src/zoom/index.ts"
     }
   }
 }

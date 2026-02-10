@@ -57,7 +57,7 @@ import { createRenderContext, getLayoutNonPlaceholderShapes } from "@aurochs-ren
 import { getSlideLayoutAttributes } from "@aurochs-office/pptx/parser/slide/layout-parser";
 import { RELATIONSHIP_TYPES, createZipAdapter } from "@aurochs-office/pptx/domain";
 import { CanvasControls } from "../slide-canvas/CanvasControls";
-import type { ZoomMode } from "../slide-canvas/canvas-controls";
+import type { ZoomMode } from "@aurochs-ui/editor-controls/zoom";
 import { SvgEditorCanvas, type AssetDropData } from "../slide-canvas/SvgEditorCanvas";
 import type { ViewportTransform } from "@aurochs-renderer/pptx/svg-viewport";
 import { TextEditContextProvider, useTextEditContextValue } from "../context/slide/TextEditContext";

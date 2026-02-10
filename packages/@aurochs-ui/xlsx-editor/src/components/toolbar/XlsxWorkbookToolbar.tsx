@@ -6,7 +6,6 @@
 
 import { useMemo, type CSSProperties } from "react";
 import {
-  AddIcon,
   AlignCenterIcon,
   AlignLeftIcon,
   AlignRightIcon,
@@ -15,14 +14,13 @@ import {
   UnderlineIcon,
   Button,
   Input,
-  LineIcon,
-  Select,
   ToggleButton,
   spacingTokens,
   iconTokens,
   MergeCellsIcon,
   UnmergeCellsIcon,
 } from "@aurochs-ui/ui-components";
+import { ZoomControls } from "@aurochs-ui/editor-controls/zoom";
 import { indexToColumnLetter, type CellAddress, type CellRange } from "@aurochs-office/xlsx/domain/cell/address";
 import { colIdx } from "@aurochs-office/xlsx/domain/types";
 import { StylePicker } from "./StylePicker";
@@ -59,23 +57,6 @@ const formulaInputStyle: CSSProperties = {
   flex: 1,
   minWidth: 120,
 };
-
-const ZOOM_STEPS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2, 3] as const;
-
-function getClosestZoomIndex(value: number): number {
-  return ZOOM_STEPS.reduce((bestIndex, step, index) => {
-    const bestDiff = Math.abs(ZOOM_STEPS[bestIndex] - value);
-    const nextDiff = Math.abs(step - value);
-    return nextDiff < bestDiff ? index : bestIndex;
-  }, 0);
-}
-
-function getNextZoomValue(value: number, direction: "in" | "out"): number {
-  const currentIndex = getClosestZoomIndex(value);
-  const delta = direction === "in" ? 1 : -1;
-  const nextIndex = Math.min(Math.max(currentIndex + delta, 0), ZOOM_STEPS.length - 1);
-  return ZOOM_STEPS[nextIndex];
-}
 
 function createA1AddressText(address: CellAddress): string {
   const col = indexToColumnLetter(colIdx(address.col as number));
@@ -178,13 +159,6 @@ export function XlsxWorkbookToolbar({
   const alignCenterPressed = !horizontalMixed && horizontalValue === "center";
   const alignRightPressed = !horizontalMixed && horizontalValue === "right";
 
-  const zoomSelectValue = String(Math.round(ZOOM_STEPS[getClosestZoomIndex(zoom)] * 100));
-  const zoomOptions = useMemo(() => {
-    return ZOOM_STEPS.map((step) => ({
-      value: String(Math.round(step * 100)),
-      label: `${Math.round(step * 100)}%`,
-    }));
-  }, []);
 
   return (
     <div style={barStyle}>
@@ -379,24 +353,7 @@ export function XlsxWorkbookToolbar({
       </Button>
 
       <div style={{ display: "flex", alignItems: "center", gap: spacingTokens.xs }}>
-        <Button size="sm" title="Zoom in" onClick={() => onZoomChange(getNextZoomValue(zoom, "in"))}>
-          <AddIcon size={14} />
-        </Button>
-        <Button size="sm" title="Zoom out" onClick={() => onZoomChange(getNextZoomValue(zoom, "out"))}>
-          <LineIcon size={14} />
-        </Button>
-        <div style={{ width: 90 }}>
-          <Select
-            value={zoomSelectValue}
-            options={zoomOptions}
-            onChange={(value) => {
-              const nextZoom = Number(value) / 100;
-              if (!Number.isNaN(nextZoom) && nextZoom > 0) {
-                onZoomChange(nextZoom);
-              }
-            }}
-          />
-        </div>
+        <ZoomControls zoom={zoom} onZoomChange={onZoomChange} />
       </div>
 
       <XlsxFormulaBar sheet={sheet} style={formulaInputStyle} />

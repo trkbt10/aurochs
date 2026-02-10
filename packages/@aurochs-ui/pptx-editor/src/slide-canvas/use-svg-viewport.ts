@@ -15,7 +15,7 @@ import {
   createFittedViewport,
   screenToCanvasCoords,
 } from "@aurochs-renderer/pptx/svg-viewport";
-import { type ZoomMode, isFitMode } from "./canvas-controls";
+import { type ZoomMode, isFitMode } from "@aurochs-ui/editor-controls/zoom";
 
 export type UseSvgViewportOptions = {
   /** Slide dimensions */

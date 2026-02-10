@@ -19,7 +19,7 @@ import type { ResizeHandlePosition } from "../../context/slide/state";
 import { SvgEditorCanvas } from "../../slide-canvas/SvgEditorCanvas";
 import type { ContextMenuActions } from "../../slide/context-menu/SlideContextMenu";
 import { createInactiveTextEditState } from "../../slide/text-edit";
-import type { ZoomMode } from "../../slide-canvas/canvas-controls";
+import type { ZoomMode } from "@aurochs-ui/editor-controls/zoom";
 import { usePresentationEditor } from "../../context/presentation/PresentationEditorContext";
 import { findShapeById } from "../../shape/query";
 import type { ViewportTransform } from "@aurochs-renderer/pptx/svg-viewport";
