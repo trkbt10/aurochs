@@ -6,7 +6,7 @@
  */
 
 import type { CSSProperties, ReactNode } from "react";
-import { ChevronLeftIcon } from "@aurochs-ui/ui-components";
+import { Button, ChevronLeftIcon } from "@aurochs-ui/ui-components";
 
 type Props = {
   readonly fileName: string;
@@ -35,19 +35,6 @@ const headerStyle: CSSProperties = {
   flexShrink: 0,
 };
 
-const backButtonStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: "6px",
-  padding: "6px 12px",
-  background: "none",
-  border: "1px solid var(--border-strong)",
-  borderRadius: "6px",
-  color: "var(--text-secondary)",
-  cursor: "pointer",
-  fontSize: "13px",
-};
-
 const titleStyle: CSSProperties = {
   fontSize: "14px",
   fontWeight: 500,
@@ -73,10 +60,10 @@ export function EditorPageLayout({
   return (
     <div style={pageStyle}>
       <header style={headerStyle}>
-        <button style={backButtonStyle} onClick={onBack}>
+        <Button variant="outline" size="md" onClick={onBack}>
           <ChevronLeftIcon size={16} />
-          <span>{backLabel}</span>
-        </button>
+          {backLabel}
+        </Button>
         <span style={titleStyle}>{fileName}</span>
         {headerActions}
       </header>

@@ -17,3 +17,6 @@ export { Slider, type SliderProps } from "./Slider";
 export { Tabs, type TabsProps, type TabItem } from "./Tabs";
 export { ToggleButton, type ToggleButtonProps } from "./ToggleButton";
 export { Toggle, type ToggleProps } from "./Toggle";
+export { CursorCaret, type CursorCaretProps } from "./CursorCaret";
+export { ToolbarButton, type ToolbarButtonProps, type ToolbarButtonSize, TOOLBAR_BUTTON_ICON_SIZE } from "./ToolbarButton";
+export { ToolbarSeparator, type ToolbarSeparatorProps } from "./ToolbarSeparator";

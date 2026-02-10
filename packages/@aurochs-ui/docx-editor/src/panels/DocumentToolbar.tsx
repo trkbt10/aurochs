@@ -10,7 +10,9 @@ import type { DocxNumberingProperties } from "@aurochs-office/docx/domain/paragr
 import type { DocxRunProperties } from "@aurochs-office/docx/domain/run";
 import type { DocxParagraph } from "@aurochs-office/docx/domain/paragraph";
 import type { NumberFormat } from "@aurochs-office/ooxml";
-import { Button, ToggleButton } from "@aurochs-ui/ui-components/primitives";
+import { ToggleButton } from "@aurochs-ui/ui-components/primitives";
+import { ToolbarButton, TOOLBAR_BUTTON_ICON_SIZE } from "@aurochs-ui/ui-components/primitives/ToolbarButton";
+import { ToolbarSeparator } from "@aurochs-ui/ui-components/primitives/ToolbarSeparator";
 import { iconTokens } from "@aurochs-ui/ui-components/design-tokens";
 import {
   AlignCenterIcon,
@@ -260,15 +262,8 @@ export function DocumentToolbar({ className, style }: DocumentToolbarProps) {
     ...style,
   };
 
-  const separatorStyle: CSSProperties = {
-    width: "1px",
-    height: "20px",
-    backgroundColor: "var(--border-strong)",
-    margin: "0 var(--spacing-xs)",
-  };
-
   const groupStyle: CSSProperties = { display: "flex", alignItems: "center", gap: "var(--spacing-xs)" };
-  const iconSize = iconTokens.size.sm;
+  const iconSize = TOOLBAR_BUTTON_ICON_SIZE.sm.icon;
   const strokeWidth = iconTokens.strokeWidth;
 
   const toolbarClassName = useMemo(() => mergeClassName("document-toolbar", className), [className]);
@@ -277,27 +272,23 @@ export function DocumentToolbar({ className, style }: DocumentToolbarProps) {
     <div className={toolbarClassName} style={containerStyle}>
       {/* 履歴操作 */}
       <div style={groupStyle}>
-        <Button
-          variant="ghost"
+        <ToolbarButton
+          icon={<UndoIcon size={iconSize} strokeWidth={strokeWidth} />}
+          label="Undo (Ctrl+Z)"
           onClick={handleUndo}
           disabled={!canUndo}
-          title="Undo (Ctrl+Z)"
-          style={{ padding: "var(--spacing-xs) var(--spacing-xs-plus)" }}
-        >
-          <UndoIcon size={iconSize} strokeWidth={strokeWidth} />
-        </Button>
-        <Button
-          variant="ghost"
+          size="sm"
+        />
+        <ToolbarButton
+          icon={<RedoIcon size={iconSize} strokeWidth={strokeWidth} />}
+          label="Redo (Ctrl+Y)"
           onClick={handleRedo}
           disabled={!canRedo}
-          title="Redo (Ctrl+Y)"
-          style={{ padding: "var(--spacing-xs) var(--spacing-xs-plus)" }}
-        >
-          <RedoIcon size={iconSize} strokeWidth={strokeWidth} />
-        </Button>
+          size="sm"
+        />
       </div>
 
-      <div style={separatorStyle} />
+      <ToolbarSeparator />
 
       {/* テキスト書式 */}
       <div style={groupStyle}>
@@ -343,49 +334,41 @@ export function DocumentToolbar({ className, style }: DocumentToolbarProps) {
         </ToggleButton>
       </div>
 
-      <div style={separatorStyle} />
+      <ToolbarSeparator />
 
       {/* 段落書式 */}
       <div style={groupStyle}>
-        <Button
-          variant="ghost"
+        <ToolbarButton
+          icon={<AlignLeftIcon size={iconSize} strokeWidth={strokeWidth} />}
+          label="Align left"
           onClick={() => handleAlign("left")}
           disabled={formatDisabled}
-          title="Align left"
-          style={{ padding: "var(--spacing-xs) var(--spacing-xs-plus)" }}
-        >
-          <AlignLeftIcon size={iconSize} strokeWidth={strokeWidth} />
-        </Button>
-        <Button
-          variant="ghost"
+          size="sm"
+        />
+        <ToolbarButton
+          icon={<AlignCenterIcon size={iconSize} strokeWidth={strokeWidth} />}
+          label="Align center"
           onClick={() => handleAlign("center")}
           disabled={formatDisabled}
-          title="Align center"
-          style={{ padding: "var(--spacing-xs) var(--spacing-xs-plus)" }}
-        >
-          <AlignCenterIcon size={iconSize} strokeWidth={strokeWidth} />
-        </Button>
-        <Button
-          variant="ghost"
+          size="sm"
+        />
+        <ToolbarButton
+          icon={<AlignRightIcon size={iconSize} strokeWidth={strokeWidth} />}
+          label="Align right"
           onClick={() => handleAlign("right")}
           disabled={formatDisabled}
-          title="Align right"
-          style={{ padding: "var(--spacing-xs) var(--spacing-xs-plus)" }}
-        >
-          <AlignRightIcon size={iconSize} strokeWidth={strokeWidth} />
-        </Button>
-        <Button
-          variant="ghost"
+          size="sm"
+        />
+        <ToolbarButton
+          icon={<AlignJustifyIcon size={iconSize} strokeWidth={strokeWidth} />}
+          label="Align justify"
           onClick={() => handleAlign("both")}
           disabled={formatDisabled}
-          title="Align justify"
-          style={{ padding: "var(--spacing-xs) var(--spacing-xs-plus)" }}
-        >
-          <AlignJustifyIcon size={iconSize} strokeWidth={strokeWidth} />
-        </Button>
+          size="sm"
+        />
       </div>
 
-      <div style={separatorStyle} />
+      <ToolbarSeparator />
 
       {/* リスト */}
       <div style={groupStyle}>
@@ -409,24 +392,20 @@ export function DocumentToolbar({ className, style }: DocumentToolbarProps) {
         >
           <ListOrdered size={iconSize} strokeWidth={strokeWidth} />
         </ToggleButton>
-        <Button
-          variant="ghost"
+        <ToolbarButton
+          icon={<IndentIncrease size={iconSize} strokeWidth={strokeWidth} />}
+          label="Increase indent"
           onClick={handleIncreaseIndent}
           disabled={formatDisabled}
-          title="Increase indent"
-          style={{ padding: "var(--spacing-xs) var(--spacing-xs-plus)" }}
-        >
-          <IndentIncrease size={iconSize} strokeWidth={strokeWidth} />
-        </Button>
-        <Button
-          variant="ghost"
+          size="sm"
+        />
+        <ToolbarButton
+          icon={<IndentDecrease size={iconSize} strokeWidth={strokeWidth} />}
+          label="Decrease indent"
           onClick={handleDecreaseIndent}
           disabled={formatDisabled}
-          title="Decrease indent"
-          style={{ padding: "var(--spacing-xs) var(--spacing-xs-plus)" }}
-        >
-          <IndentDecrease size={iconSize} strokeWidth={strokeWidth} />
-        </Button>
+          size="sm"
+        />
       </div>
     </div>
   );

@@ -58,6 +58,10 @@
     "./selectors/border-overlay": {
       "types": "./src/selectors/border-overlay.ts",
       "default": "./src/selectors/border-overlay.ts"
+    },
+    "./dev": {
+      "types": "./src/dev/index.ts",
+      "default": "./src/dev/index.ts"
     }
   }
 }

@@ -40,7 +40,7 @@ import {
   type CursorCoordinates,
   type SelectionRect,
 } from "./DocxTextOverlay";
-import { CursorCaret } from "./CursorCaret";
+import { CursorCaret } from "@aurochs-ui/ui-components/primitives/CursorCaret";
 
 // =============================================================================
 // Constants

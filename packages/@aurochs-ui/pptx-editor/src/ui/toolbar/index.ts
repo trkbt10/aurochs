@@ -2,4 +2,4 @@
  * @file Toolbar components
  */
 
-export { ToolbarButton, type ToolbarButtonProps } from "./ToolbarButton";
+export { ToolbarButton, type ToolbarButtonProps } from "@aurochs-ui/ui-components/primitives/ToolbarButton";

@@ -21,7 +21,7 @@ import {
 import { mergeTextIntoBody, extractDefaultRunProperties } from "../input-support/text-body-merge";
 import { colorTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { TextOverlay } from "../text-render/TextOverlay";
-import { CursorCaret } from "../text-render/CursorCaret";
+import { CursorCaret } from "@aurochs-ui/ui-components/primitives/CursorCaret";
 import { EMPTY_COLOR_CONTEXT } from "../input-support/color-context";
 import { TextEditInputFrame } from "../input-field/TextEditInputFrame";
 import {
@@ -482,7 +482,14 @@ export function TextEditController({
           />
 
           {/* Cursor caret */}
-          <CursorCaret cursor={cursorState.cursor} isBlinking={cursorState.isBlinking} />
+          {cursorState.cursor && (
+            <CursorCaret
+              x={cursorState.cursor.x as number}
+              y={cursorState.cursor.y as number}
+              height={cursorState.cursor.height as number}
+              isBlinking={cursorState.isBlinking}
+            />
+          )}
         </svg>
       </TextEditInputFrame>
       {contextMenu && (

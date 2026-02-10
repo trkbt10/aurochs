@@ -92,6 +92,22 @@
     "./grid": {
       "types": "./src/grid/index.ts",
       "default": "./src/grid/index.ts"
+    },
+    "./hooks": {
+      "types": "./src/hooks/index.ts",
+      "default": "./src/hooks/index.ts"
+    },
+    "./primitives/CursorCaret": {
+      "types": "./src/primitives/CursorCaret.tsx",
+      "default": "./src/primitives/CursorCaret.tsx"
+    },
+    "./primitives/ToolbarButton": {
+      "types": "./src/primitives/ToolbarButton.tsx",
+      "default": "./src/primitives/ToolbarButton.tsx"
+    },
+    "./primitives/ToolbarSeparator": {
+      "types": "./src/primitives/ToolbarSeparator.tsx",
+      "default": "./src/primitives/ToolbarSeparator.tsx"
     }
   }
 }

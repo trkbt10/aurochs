@@ -5,13 +5,9 @@
 // @vitest-environment jsdom
 
 import { render, fireEvent } from "@testing-library/react";
-import { forwardRef } from "react";
-import type { LucideIcon, LucideProps } from "lucide-react";
-import { ToolbarButton } from "./ToolbarButton";
+import { ToolbarButton } from "@aurochs-ui/ui-components/primitives/ToolbarButton";
 
-const DummyIcon = forwardRef<SVGSVGElement, LucideProps>((props, ref) => (
-  <svg data-testid="icon" ref={ref} {...props} />
-)) as LucideIcon;
+const DummyIcon = <svg data-testid="icon" />;
 
 describe("ToolbarButton", () => {
   it("calls onClick when enabled", () => {

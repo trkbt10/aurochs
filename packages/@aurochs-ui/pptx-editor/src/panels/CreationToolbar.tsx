@@ -8,7 +8,8 @@
 import { useCallback, useState, type CSSProperties } from "react";
 import type { LucideIcon } from "lucide-react";
 import type { CreationMode } from "../context/presentation/editor/types";
-import { ToolbarButton } from "../ui/toolbar/index";
+import { ToolbarButton, TOOLBAR_BUTTON_ICON_SIZE } from "@aurochs-ui/ui-components/primitives/ToolbarButton";
+import { ToolbarSeparator } from "@aurochs-ui/ui-components/primitives/ToolbarSeparator";
 import { Popover } from "@aurochs-ui/ui-components/primitives/Popover";
 import { Button } from "@aurochs-ui/ui-components/primitives/Button";
 import {
@@ -27,7 +28,7 @@ import {
   DiagramIcon,
   ChevronDownIcon,
 } from "@aurochs-ui/ui-components/icons";
-import { colorTokens, radiusTokens } from "@aurochs-ui/ui-components/design-tokens";
+import { colorTokens, radiusTokens, iconTokens } from "@aurochs-ui/ui-components/design-tokens";
 
 // =============================================================================
 // Types
@@ -94,12 +95,6 @@ const floatingToolbarStyle: CSSProperties = {
   boxShadow: "0 10px 30px rgba(0, 0, 0, 0.35)",
 };
 
-const separatorStyle: CSSProperties = {
-  width: "1px",
-  height: "24px",
-  backgroundColor: `var(--border-strong, ${colorTokens.border.strong})`,
-  margin: "0 4px",
-};
 
 const groupStyle: CSSProperties = {
   display: "flex",
@@ -353,13 +348,13 @@ export function CreationToolbar({ mode, onModeChange, disabled = false, appearan
         if (group.type === "tools") {
           return (
             <div key={groupIndex} style={groupStyle}>
-              {groupIndex > 0 && <div style={separatorStyle} />}
+              {groupIndex > 0 && <ToolbarSeparator style={{ height: "24px" }} />}
               {group.tools.map((tool) => {
                 const isActive = isSameMode(mode, tool.mode);
                 return (
                   <ToolbarButton
                     key={tool.id}
-                    icon={tool.icon}
+                    icon={<tool.icon size={TOOLBAR_BUTTON_ICON_SIZE.lg.icon} strokeWidth={iconTokens.strokeWidth} />}
                     label={tool.label}
                     active={isActive}
                     disabled={disabled}
@@ -374,14 +369,14 @@ export function CreationToolbar({ mode, onModeChange, disabled = false, appearan
 
         return (
           <div key={groupIndex} style={groupStyle}>
-            {groupIndex > 0 && <div style={separatorStyle} />}
+            {groupIndex > 0 && <ToolbarSeparator style={{ height: "24px" }} />}
             {group.tools.map((tool) => {
               const isActive = isPopoverActive(tool.id, mode);
               const isOpen = openPopoverId === tool.id;
               return (
                 <div key={tool.id} style={splitGroupStyle}>
                   <ToolbarButton
-                    icon={tool.icon}
+                    icon={<tool.icon size={TOOLBAR_BUTTON_ICON_SIZE.lg.icon} strokeWidth={iconTokens.strokeWidth} />}
                     label={tool.label}
                     active={isActive}
                     disabled={disabled}
@@ -395,7 +390,7 @@ export function CreationToolbar({ mode, onModeChange, disabled = false, appearan
                     disabled={disabled}
                     trigger={
                       <ToolbarButton
-                        icon={ChevronDownIcon}
+                        icon={<ChevronDownIcon size={TOOLBAR_BUTTON_ICON_SIZE.tiny.icon} strokeWidth={iconTokens.strokeWidth} />}
                         label={`${tool.label} options`}
                         active={false}
                         disabled={disabled}

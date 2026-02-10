@@ -5,7 +5,7 @@
 // @vitest-environment jsdom
 
 import { render, act } from "@testing-library/react";
-import { CursorCaret } from "./CursorCaret";
+import { CursorCaret } from "@aurochs-ui/ui-components/primitives/CursorCaret";
 
 const BLINK_INTERVAL_MS = 530;
 
@@ -29,7 +29,7 @@ describe("CursorCaret", () => {
     expect(line?.getAttribute("y1")).toBe("20");
     expect(line?.getAttribute("x2")).toBe("10");
     expect(line?.getAttribute("y2")).toBe("50");
-    expect(line?.getAttribute("stroke")).toBe("var(--text-inverse)");
+    expect(line?.getAttribute("stroke")).toBe("#000");
   });
 
   it("applies a custom color", () => {

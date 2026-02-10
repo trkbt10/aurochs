@@ -12,12 +12,13 @@ import { useLazySvgCache, SvgContentRenderer } from "@aurochs-renderer/pptx/reac
 import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
 import { useSlideNavigation, useViewerKeyboard } from "../hooks";
 import {
+  Button,
+  IconButton,
   ChevronLeftIcon,
   ChevronRightIcon,
   PlayIcon,
   EditIcon,
   SidebarIcon,
-  IconButton,
 } from "@aurochs-ui/ui-components";
 import { ProgressBar, KeyboardHints } from "../components/ui";
 import { useSvgFontLoader } from "../fonts/useSvgFontLoader";
@@ -58,19 +59,6 @@ const headerLeftStyle: CSSProperties = {
   gap: "12px",
 };
 
-const backButtonStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: "6px",
-  padding: "6px 12px",
-  background: "none",
-  border: "1px solid var(--border-strong)",
-  borderRadius: "6px",
-  color: "var(--text-secondary)",
-  cursor: "pointer",
-  fontSize: "13px",
-};
-
 const headerDividerStyle: CSSProperties = {
   width: "1px",
   height: "20px",
@@ -98,33 +86,6 @@ const headerRightStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   gap: "8px",
-};
-
-const editButtonStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: "6px",
-  padding: "6px 12px",
-  background: "none",
-  border: "1px solid var(--border-strong)",
-  borderRadius: "6px",
-  color: "var(--text-secondary)",
-  cursor: "pointer",
-  fontSize: "13px",
-};
-
-const presentButtonStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: "6px",
-  padding: "6px 16px",
-  background: "var(--accent-blue)",
-  border: "none",
-  borderRadius: "6px",
-  color: "#fff",
-  cursor: "pointer",
-  fontSize: "13px",
-  fontWeight: 500,
 };
 
 const mainStyle: CSSProperties = {
@@ -185,7 +146,7 @@ const slideAreaStyle: CSSProperties = {
   padding: "24px",
 };
 
-const navArrowStyle: CSSProperties = {
+const navArrowBaseStyle: CSSProperties = {
   position: "absolute",
   top: "50%",
   transform: "translateY(-50%)",
@@ -199,19 +160,8 @@ const navArrowStyle: CSSProperties = {
   borderRadius: "50%",
   color: "#fff",
   cursor: "pointer",
-  opacity: 0.7,
   transition: "opacity 0.2s ease",
   zIndex: 10,
-};
-
-const navPrevStyle: CSSProperties = {
-  ...navArrowStyle,
-  left: "16px",
-};
-
-const navNextStyle: CSSProperties = {
-  ...navArrowStyle,
-  right: "16px",
 };
 
 const slideWrapperStyle: CSSProperties = {
@@ -359,10 +309,10 @@ export function PptxViewerPage({ presentation, fileName, onBack, onStartSlidesho
     <div style={containerStyle}>
       <header style={headerStyle}>
         <div style={headerLeftStyle}>
-          <button style={backButtonStyle} onClick={onBack}>
+          <Button variant="outline" size="md" onClick={onBack}>
             <ChevronLeftIcon size={16} />
-            <span>Back</span>
-          </button>
+            Back
+          </Button>
           <div style={headerDividerStyle} />
           <div style={fileInfoStyle}>
             <span style={fileNameStyle}>{fileName}</span>
@@ -374,14 +324,14 @@ export function PptxViewerPage({ presentation, fileName, onBack, onStartSlidesho
 
         <div style={headerRightStyle}>
           <IconButton icon={<SidebarIcon size={18} />} onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
-          <button style={editButtonStyle} onClick={onStartEditor}>
+          <Button variant="outline" size="md" onClick={onStartEditor}>
             <EditIcon size={16} />
-            <span>Edit</span>
-          </button>
-          <button style={presentButtonStyle} onClick={() => onStartSlideshow(nav.currentSlide)}>
+            Edit
+          </Button>
+          <Button variant="primary" size="md" onClick={() => onStartSlideshow(nav.currentSlide)}>
             <PlayIcon size={16} />
-            <span>Present</span>
-          </button>
+            Present
+          </Button>
         </div>
       </header>
 
@@ -408,7 +358,8 @@ export function PptxViewerPage({ presentation, fileName, onBack, onStartSlidesho
         <main style={slideAreaStyle}>
           <button
             style={{
-              ...navPrevStyle,
+              ...navArrowBaseStyle,
+              left: "16px",
               opacity: nav.isFirst ? 0.3 : 0.7,
               cursor: nav.isFirst ? "default" : "pointer",
             }}
@@ -432,7 +383,8 @@ export function PptxViewerPage({ presentation, fileName, onBack, onStartSlidesho
 
           <button
             style={{
-              ...navNextStyle,
+              ...navArrowBaseStyle,
+              right: "16px",
               opacity: nav.isLast ? 0.3 : 0.7,
               cursor: nav.isLast ? "default" : "pointer",
             }}

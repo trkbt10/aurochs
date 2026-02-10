@@ -7,8 +7,9 @@
 
 import { useCallback, useMemo } from "react";
 import type { CSSProperties } from "react";
-import { Button } from "@aurochs-ui/ui-components/primitives/Button";
 import { LinePickerPopover } from "../ui/line/index";
+import { ToolbarButton, TOOLBAR_BUTTON_ICON_SIZE } from "@aurochs-ui/ui-components/primitives/ToolbarButton";
+import { ToolbarSeparator } from "@aurochs-ui/ui-components/primitives/ToolbarSeparator";
 import type { Line, Shape } from "@aurochs-office/pptx/domain/index";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import type { ShapeId } from "@aurochs-office/pptx/domain/types";
@@ -22,7 +23,7 @@ import {
   BringForwardIcon,
   SendBackwardIcon,
 } from "@aurochs-ui/ui-components/icons";
-import { colorTokens, iconTokens } from "@aurochs-ui/ui-components/design-tokens";
+import { iconTokens } from "@aurochs-ui/ui-components/design-tokens";
 
 // =============================================================================
 // Constants
@@ -193,90 +194,79 @@ export function ShapeToolbar({
     ...style,
   };
 
-  const separatorStyle: CSSProperties = {
-    width: direction === "horizontal" ? "1px" : "100%",
-    height: direction === "horizontal" ? "20px" : "1px",
-    backgroundColor: `var(--border-strong, ${colorTokens.border.strong})`,
-    margin: direction === "horizontal" ? "0 4px" : "4px 0",
-  };
-
-  const iconSize = iconTokens.size.sm;
+  const iconSize = TOOLBAR_BUTTON_ICON_SIZE.sm.icon;
   const strokeWidth = iconTokens.strokeWidth;
 
   return (
     <div className={className} style={containerStyle}>
       {/* Undo/Redo */}
-      <Button variant="ghost" onClick={onUndo} disabled={!canUndo} title="Undo (Ctrl+Z)" style={{ padding: "4px 6px" }}>
-        <UndoIcon size={iconSize} strokeWidth={strokeWidth} />
-      </Button>
-      <Button variant="ghost" onClick={onRedo} disabled={!canRedo} title="Redo (Ctrl+Y)" style={{ padding: "4px 6px" }}>
-        <RedoIcon size={iconSize} strokeWidth={strokeWidth} />
-      </Button>
+      <ToolbarButton
+        icon={<UndoIcon size={iconSize} strokeWidth={strokeWidth} />}
+        label="Undo (Ctrl+Z)"
+        onClick={onUndo}
+        disabled={!canUndo}
+        size="sm"
+      />
+      <ToolbarButton
+        icon={<RedoIcon size={iconSize} strokeWidth={strokeWidth} />}
+        label="Redo (Ctrl+Y)"
+        onClick={onRedo}
+        disabled={!canRedo}
+        size="sm"
+      />
 
-      <div style={separatorStyle} />
+      <ToolbarSeparator direction={direction} />
 
       {/* Shape operations */}
-      <Button
-        variant="ghost"
+      <ToolbarButton
+        icon={<TrashIcon size={iconSize} strokeWidth={strokeWidth} />}
+        label="Delete (Del)"
         onClick={handleDelete}
         disabled={!hasSelection}
-        title="Delete (Del)"
-        style={{ padding: "4px 6px" }}
-      >
-        <TrashIcon size={iconSize} strokeWidth={strokeWidth} />
-      </Button>
-      <Button
-        variant="ghost"
+        size="sm"
+      />
+      <ToolbarButton
+        icon={<CopyIcon size={iconSize} strokeWidth={strokeWidth} />}
+        label="Duplicate (Ctrl+D)"
         onClick={handleDuplicate}
         disabled={!hasSelection}
-        title="Duplicate (Ctrl+D)"
-        style={{ padding: "4px 6px" }}
-      >
-        <CopyIcon size={iconSize} strokeWidth={strokeWidth} />
-      </Button>
+        size="sm"
+      />
 
-      <div style={separatorStyle} />
+      <ToolbarSeparator direction={direction} />
 
       {/* Layer ordering */}
-      <Button
-        variant="ghost"
+      <ToolbarButton
+        icon={<BringToFrontIcon size={iconSize} strokeWidth={strokeWidth} />}
+        label="Bring to Front"
         onClick={handleBringToFront}
         disabled={!hasSelection || isMultiSelect}
-        title="Bring to Front"
-        style={{ padding: "4px 6px" }}
-      >
-        <BringToFrontIcon size={iconSize} strokeWidth={strokeWidth} />
-      </Button>
-      <Button
-        variant="ghost"
+        size="sm"
+      />
+      <ToolbarButton
+        icon={<SendToBackIcon size={iconSize} strokeWidth={strokeWidth} />}
+        label="Send to Back"
         onClick={handleSendToBack}
         disabled={!hasSelection || isMultiSelect}
-        title="Send to Back"
-        style={{ padding: "4px 6px" }}
-      >
-        <SendToBackIcon size={iconSize} strokeWidth={strokeWidth} />
-      </Button>
-      <Button
-        variant="ghost"
+        size="sm"
+      />
+      <ToolbarButton
+        icon={<BringForwardIcon size={iconSize} strokeWidth={strokeWidth} />}
+        label="Bring Forward"
         onClick={handleBringForward}
         disabled={!hasSelection || isMultiSelect}
-        title="Bring Forward"
-        style={{ padding: "4px 6px" }}
-      >
-        <BringForwardIcon size={iconSize} strokeWidth={strokeWidth} />
-      </Button>
-      <Button
-        variant="ghost"
+        size="sm"
+      />
+      <ToolbarButton
+        icon={<SendBackwardIcon size={iconSize} strokeWidth={strokeWidth} />}
+        label="Send Backward"
         onClick={handleSendBackward}
         disabled={!hasSelection || isMultiSelect}
-        title="Send Backward"
-        style={{ padding: "4px 6px" }}
-      >
-        <SendBackwardIcon size={iconSize} strokeWidth={strokeWidth} />
-      </Button>
+        size="sm"
+      />
 
       {/* Line style picker - always visible, disabled when no line */}
-      <div style={separatorStyle} />
+      <ToolbarSeparator direction={direction} />
       <LinePickerPopover
         value={primaryLine ?? defaultLine}
         onChange={handleLineChange}

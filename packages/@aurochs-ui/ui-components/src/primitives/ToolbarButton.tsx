@@ -1,21 +1,17 @@
 /**
  * @file Toolbar button component
  *
- * Unified button component for toolbars with icon support.
- * Used in CreationToolbar, ShapeToolbar, and panel headers.
+ * Unified icon button for toolbars with hover and active state management.
  */
 
-import { type CSSProperties, type MouseEvent, useState, useCallback } from "react";
-import type { LucideIcon } from "lucide-react";
-import { colorTokens, radiusTokens, iconTokens } from "@aurochs-ui/ui-components/design-tokens";
+import { type CSSProperties, type MouseEvent, type ReactNode, useState, useCallback } from "react";
+import { colorTokens, radiusTokens, iconTokens } from "../design-tokens";
 
-// =============================================================================
-// Types
-// =============================================================================
+export type ToolbarButtonSize = "tiny" | "sm" | "md" | "lg";
 
 export type ToolbarButtonProps = {
-  /** Lucide icon component */
-  readonly icon: LucideIcon;
+  /** Pre-rendered icon element */
+  readonly icon: ReactNode;
   /** Accessible label / tooltip */
   readonly label: string;
   /** Active/selected state */
@@ -25,16 +21,12 @@ export type ToolbarButtonProps = {
   /** Click handler */
   readonly onClick: () => void;
   /** Button size variant */
-  readonly size?: "tiny" | "sm" | "md" | "lg";
+  readonly size?: ToolbarButtonSize;
   /** Additional class name */
   readonly className?: string;
   /** Style overrides */
   readonly style?: CSSProperties;
 };
-
-// =============================================================================
-// Styles
-// =============================================================================
 
 const SIZE_MAP = {
   tiny: { button: 20, icon: 12 },
@@ -44,7 +36,7 @@ const SIZE_MAP = {
 } as const;
 
 type ButtonStyleInput = {
-  readonly size: "tiny" | "sm" | "md" | "lg";
+  readonly size: ToolbarButtonSize;
   readonly active: boolean;
   readonly disabled: boolean;
   readonly hovered: boolean;
@@ -96,15 +88,14 @@ function getButtonStyle({ size, active, disabled, hovered }: ButtonStyleInput): 
   return base;
 }
 
-// =============================================================================
-// Component
-// =============================================================================
+/** Icon size lookup for callers that need to match their icon to the button size. */
+export const TOOLBAR_BUTTON_ICON_SIZE = SIZE_MAP;
 
 /**
- * Toolbar button with icon
+ * Toolbar button with icon, hover, and active state.
  */
 export function ToolbarButton({
-  icon: Icon,
+  icon,
   label,
   active = false,
   disabled = false,
@@ -135,7 +126,6 @@ export function ToolbarButton({
     [disabled, onClick],
   );
 
-  const sizeConfig = SIZE_MAP[size];
   const buttonStyle = getButtonStyle({ size, active, disabled, hovered });
 
   return (
@@ -149,7 +139,7 @@ export function ToolbarButton({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <Icon size={sizeConfig.icon} strokeWidth={iconTokens.strokeWidth} />
+      {icon}
     </button>
   );
 }
