@@ -8,7 +8,10 @@
 import { useCallback, type CSSProperties, type ReactNode } from "react";
 import { ToggleButton, Toggle } from "@aurochs-ui/ui-components/primitives";
 import { FieldGroup } from "@aurochs-ui/ui-components/layout";
+import { AlignTopIcon, AlignMiddleIcon, AlignBottomIcon } from "@aurochs-ui/ui-components/icons";
+import { iconTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { ColorPickerPopover } from "@aurochs-ui/color-editor";
+import type { LucideIcon } from "@aurochs-ui/ui-components/icons";
 import type { CellFormatting, VerticalAlignment, CellFormattingFeatures } from "./types";
 import type { MixedContext } from "../mixed-state";
 import { isMixedField } from "../mixed-state";
@@ -95,10 +98,10 @@ function buildBackgroundEditor(opts: {
 // Alignment options
 // =============================================================================
 
-const VERTICAL_ALIGNMENTS: readonly { value: VerticalAlignment; label: string }[] = [
-  { value: "top", label: "\u2191" },
-  { value: "center", label: "\u2195" },
-  { value: "bottom", label: "\u2193" },
+const VERTICAL_ALIGNMENTS: readonly { value: VerticalAlignment; label: string; icon: LucideIcon }[] = [
+  { value: "top", label: "Align top", icon: AlignTopIcon },
+  { value: "center", label: "Align center", icon: AlignMiddleIcon },
+  { value: "bottom", label: "Align bottom", icon: AlignBottomIcon },
 ];
 
 // =============================================================================
@@ -137,7 +140,7 @@ export function CellFormattingEditor({
       {showVerticalAlignment && (
         <FieldGroup label="Vertical Align">
           <div style={rowStyle}>
-            {VERTICAL_ALIGNMENTS.map(({ value: align, label }) => (
+            {VERTICAL_ALIGNMENTS.map(({ value: align, label, icon: Icon }) => (
               <ToggleButton
                 key={align}
                 pressed={!isMixedField(mixed, "verticalAlignment") && value.verticalAlignment === align}
@@ -146,7 +149,9 @@ export function CellFormattingEditor({
                 ariaLabel={`Align ${align}`}
                 disabled={disabled}
                 mixed={isMixedField(mixed, "verticalAlignment")}
-              />
+              >
+                <Icon size={iconTokens.size.sm} />
+              </ToggleButton>
             ))}
           </div>
         </FieldGroup>

@@ -9,6 +9,8 @@
 import { useCallback, type CSSProperties, type ReactNode } from "react";
 import { Input, ToggleButton } from "@aurochs-ui/ui-components/primitives";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
+import { BoldIcon, ItalicIcon, UnderlineIcon, StrikethroughIcon, SuperscriptIcon, SubscriptIcon } from "@aurochs-ui/ui-components/icons";
+import { iconTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { ColorPickerPopover } from "@aurochs-ui/color-editor";
 import type { TextFormatting, TextFormattingFeatures } from "./types";
 import type { MixedContext } from "../mixed-state";
@@ -261,43 +263,49 @@ export function TextFormattingEditor({
             <ToggleButton
               pressed={isMixedField(mixed, "bold") ? false : (value.bold ?? false)}
               onChange={handleBoldToggle}
-              label="B"
+              label="Bold"
               ariaLabel={isMixedField(mixed, "bold") ? "Bold (Mixed)" : "Bold"}
               disabled={disabled}
               mixed={isMixedField(mixed, "bold")}
-            />
+            >
+              <BoldIcon size={iconTokens.size.sm} />
+            </ToggleButton>
           )}
           {showItalic && (
             <ToggleButton
               pressed={isMixedField(mixed, "italic") ? false : (value.italic ?? false)}
               onChange={handleItalicToggle}
-              label="I"
+              label="Italic"
               ariaLabel={isMixedField(mixed, "italic") ? "Italic (Mixed)" : "Italic"}
               disabled={disabled}
               mixed={isMixedField(mixed, "italic")}
-            />
+            >
+              <ItalicIcon size={iconTokens.size.sm} />
+            </ToggleButton>
           )}
           {showUnderline && (
             <ToggleButton
               pressed={isMixedField(mixed, "underline") ? false : (value.underline ?? false)}
               onChange={handleUnderlineToggle}
-              label="U"
+              label="Underline"
               ariaLabel={isMixedField(mixed, "underline") ? "Underline (Mixed)" : "Underline"}
               disabled={disabled}
               mixed={isMixedField(mixed, "underline")}
-              style={{ textDecoration: "underline" }}
-            />
+            >
+              <UnderlineIcon size={iconTokens.size.sm} />
+            </ToggleButton>
           )}
           {showStrikethrough && (
             <ToggleButton
               pressed={isMixedField(mixed, "strikethrough") ? false : (value.strikethrough ?? false)}
               onChange={handleStrikethroughToggle}
-              label="S"
+              label="Strikethrough"
               ariaLabel={isMixedField(mixed, "strikethrough") ? "Strikethrough (Mixed)" : "Strikethrough"}
               disabled={disabled}
               mixed={isMixedField(mixed, "strikethrough")}
-              style={{ textDecoration: "line-through" }}
-            />
+            >
+              <StrikethroughIcon size={iconTokens.size.sm} />
+            </ToggleButton>
           )}
         </div>
       )}
@@ -338,19 +346,23 @@ export function TextFormattingEditor({
           <ToggleButton
             pressed={isMixedField(mixed, "superscript") ? false : (value.superscript ?? false)}
             onChange={handleSuperscriptToggle}
-            label="X\u00B2"
+            label="Superscript"
             ariaLabel="Superscript"
             disabled={disabled}
             mixed={isMixedField(mixed, "superscript")}
-          />
+          >
+            <SuperscriptIcon size={iconTokens.size.sm} />
+          </ToggleButton>
           <ToggleButton
             pressed={isMixedField(mixed, "subscript") ? false : (value.subscript ?? false)}
             onChange={handleSubscriptToggle}
-            label="X\u2082"
+            label="Subscript"
             ariaLabel="Subscript"
             disabled={disabled}
             mixed={isMixedField(mixed, "subscript")}
-          />
+          >
+            <SubscriptIcon size={iconTokens.size.sm} />
+          </ToggleButton>
         </div>
       )}
 

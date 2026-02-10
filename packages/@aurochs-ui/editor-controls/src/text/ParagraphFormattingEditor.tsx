@@ -7,6 +7,9 @@
 import { useCallback, type CSSProperties, type ReactNode } from "react";
 import { Input, ToggleButton } from "@aurochs-ui/ui-components/primitives";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
+import { AlignLeftIcon, AlignCenterIcon, AlignRightIcon, AlignJustifyIcon } from "@aurochs-ui/ui-components/icons";
+import { iconTokens } from "@aurochs-ui/ui-components/design-tokens";
+import type { LucideIcon } from "@aurochs-ui/ui-components/icons";
 import type { ParagraphFormatting, HorizontalAlignment, ParagraphFormattingFeatures } from "./types";
 import type { MixedContext } from "../mixed-state";
 import { isMixedField } from "../mixed-state";
@@ -55,11 +58,11 @@ const separatorStyle: CSSProperties = {
 
 const MIXED_PLACEHOLDER = "Mixed";
 
-const ALIGNMENTS: readonly { value: HorizontalAlignment; label: string }[] = [
-  { value: "left", label: "\u2190" },
-  { value: "center", label: "\u2194" },
-  { value: "right", label: "\u2192" },
-  { value: "justify", label: "\u2194\u2194" },
+const ALIGNMENTS: readonly { value: HorizontalAlignment; label: string; icon: LucideIcon }[] = [
+  { value: "left", label: "Align left", icon: AlignLeftIcon },
+  { value: "center", label: "Align center", icon: AlignCenterIcon },
+  { value: "right", label: "Align right", icon: AlignRightIcon },
+  { value: "justify", label: "Justify", icon: AlignJustifyIcon },
 ];
 
 function feat(
@@ -158,7 +161,7 @@ export function ParagraphFormattingEditor({
       {showAlignment && (
         <FieldGroup label="Alignment">
           <div style={rowStyle}>
-            {ALIGNMENTS.map(({ value: align, label }) => (
+            {ALIGNMENTS.map(({ value: align, label, icon: Icon }) => (
               <ToggleButton
                 key={align}
                 pressed={!isMixedField(mixed, "alignment") && value.alignment === align}
@@ -167,7 +170,9 @@ export function ParagraphFormattingEditor({
                 ariaLabel={`Align ${align}`}
                 disabled={disabled}
                 mixed={isMixedField(mixed, "alignment")}
-              />
+              >
+                <Icon size={iconTokens.size.sm} />
+              </ToggleButton>
             ))}
           </div>
         </FieldGroup>

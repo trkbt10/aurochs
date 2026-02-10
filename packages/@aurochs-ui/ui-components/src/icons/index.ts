@@ -100,6 +100,14 @@ export {
   Lock as LockIcon,
   Unlock as UnlockIcon,
 
+  // Text formatting
+  Bold as BoldIcon,
+  Italic as ItalicIcon,
+  Underline as UnderlineIcon,
+  Strikethrough as StrikethroughIcon,
+  Superscript as SuperscriptIcon,
+  Subscript as SubscriptIcon,
+
   // Alignment
   AlignLeft as AlignLeftIcon,
   AlignCenter as AlignCenterIcon,
