@@ -7,6 +7,7 @@
 import { useCallback, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 import type { DiagramDataModel, DiagramPoint, DiagramConnection } from "@aurochs-office/diagram/domain";
 import type { EditorProps } from "@aurochs-ui/ui-components/types";
+import { colorTokens, radiusTokens, spacingTokens, fontTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { Accordion } from "@aurochs-ui/ui-components/layout";
 import { Button } from "@aurochs-ui/ui-components/primitives";
 import type { DiagramEditorAdapters } from "./types";
@@ -26,57 +27,57 @@ export type DiagramEditorProps<TTextBody, TShapeProperties> = EditorProps<Diagra
 const containerStyle: CSSProperties = {
   display: "flex",
   flexDirection: "column",
-  gap: "16px",
+  gap: spacingTokens.lg,
 };
 
 const listContainerStyle: CSSProperties = {
   display: "flex",
   flexDirection: "column",
-  gap: "8px",
+  gap: spacingTokens.sm,
 };
 
 const itemContainerStyle: CSSProperties = {
-  padding: "12px",
-  backgroundColor: "var(--bg-tertiary, #111111)",
-  borderRadius: "var(--radius-md, 8px)",
-  border: "1px solid var(--border-subtle, rgba(255, 255, 255, 0.08))",
+  padding: spacingTokens.md,
+  backgroundColor: `var(--bg-tertiary, ${colorTokens.background.tertiary})`,
+  borderRadius: radiusTokens.lg,
+  border: `1px solid var(--border-subtle, ${colorTokens.border.subtle})`,
 };
 
 const pointGridStyle: CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
-  gap: "8px",
+  gap: spacingTokens.sm,
 };
 
 const pointCardStyle: CSSProperties = {
   padding: "10px 12px",
-  borderRadius: "6px",
+  borderRadius: radiusTokens.md,
   cursor: "pointer",
   transition: "all 150ms ease",
   textAlign: "center",
-  fontSize: "12px",
-  backgroundColor: "var(--bg-secondary, #1a1a1a)",
-  color: "var(--text-secondary, #a1a1a1)",
+  fontSize: fontTokens.size.md,
+  backgroundColor: `var(--bg-secondary, ${colorTokens.background.secondary})`,
+  color: `var(--text-secondary, ${colorTokens.text.secondary})`,
   border: "1px solid transparent",
 };
 
 const pointCardSelectedStyle: CSSProperties = {
   ...pointCardStyle,
-  backgroundColor: "var(--accent-blue, #0070f3)",
-  color: "var(--text-primary, #fafafa)",
+  backgroundColor: `var(--accent-primary, ${colorTokens.accent.primary})`,
+  color: `var(--text-primary, ${colorTokens.text.primary})`,
 };
 
 const emptyStyle: CSSProperties = {
   padding: "20px",
   textAlign: "center",
-  color: "var(--text-tertiary, #737373)",
-  fontSize: "13px",
+  color: `var(--text-tertiary, ${colorTokens.text.tertiary})`,
+  fontSize: fontTokens.size.lg,
 };
 
 const buttonRowStyle: CSSProperties = {
   display: "flex",
-  gap: "8px",
-  marginTop: "8px",
+  gap: spacingTokens.sm,
+  marginTop: spacingTokens.sm,
 };
 
 // =============================================================================
@@ -121,8 +122,8 @@ function PointGrid({ points, selectedIndex, disabled, onSelect }: PointGridProps
             aria-selected={isSelected}
             title={point.modelId}
           >
-            <div style={{ fontWeight: 500 }}>{displayText}</div>
-            <div style={{ fontSize: "10px", opacity: 0.7, marginTop: "4px" }}>{point.type ?? "node"}</div>
+            <div style={{ fontWeight: fontTokens.weight.medium }}>{displayText}</div>
+            <div style={{ fontSize: fontTokens.size.xs, opacity: 0.7, marginTop: spacingTokens.xs }}>{point.type ?? "node"}</div>
           </div>
         );
       })}

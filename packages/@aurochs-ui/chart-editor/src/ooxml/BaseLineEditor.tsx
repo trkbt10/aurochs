@@ -3,6 +3,7 @@
  */
 
 import { useCallback, type CSSProperties } from "react";
+import { spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import type { EditorProps } from "@aurochs-ui/ui-components/types";
@@ -17,7 +18,7 @@ export type BaseLineEditorProps = EditorProps<BaseLine> & {
 const containerStyle: CSSProperties = {
   display: "flex",
   flexDirection: "column",
-  gap: "8px",
+  gap: spacingTokens.sm,
 };
 
 const capOptions: Array<{ value: BaseLine["cap"]; label: string }> = [

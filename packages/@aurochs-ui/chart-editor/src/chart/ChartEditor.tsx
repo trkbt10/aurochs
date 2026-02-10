@@ -8,6 +8,7 @@
  */
 
 import { useCallback, type CSSProperties } from "react";
+import { colorTokens, spacingTokens, fontTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { Button, Input, Select, Toggle } from "@aurochs-ui/ui-components/primitives";
 import { Accordion, FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
 import { PercentEditor, DegreesEditor } from "../primitives";
@@ -54,14 +55,14 @@ export type ChartEditorProps = EditorProps<Chart> & {
 const containerStyle: CSSProperties = {
   display: "flex",
   flexDirection: "column",
-  gap: "12px",
+  gap: spacingTokens.md,
 };
 
 const headerRowStyle: CSSProperties = {
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  marginBottom: "8px",
+  marginBottom: spacingTokens.sm,
 };
 
 // ============================================================================
@@ -365,7 +366,7 @@ export function ChartEditor({ value, onChange, disabled, className, style, adapt
         {/* Plot Area */}
         <>
           <div style={headerRowStyle}>
-            <span style={{ fontWeight: 500 }}>Plot Area</span>
+            <span style={{ fontWeight: fontTokens.weight.medium }}>Plot Area</span>
           </div>
 
           <Accordion title="Layout" defaultExpanded={false}>
@@ -827,7 +828,7 @@ function PivotFormatEditor({ value, onChange, onRemove, disabled }: PivotFormatE
       </Accordion>
 
       <>
-        <Button variant="ghost" onClick={onRemove} disabled={disabled} style={{ color: "var(--text-danger, #ef4444)" }}>
+        <Button variant="ghost" onClick={onRemove} disabled={disabled} style={{ color: `var(--text-danger, ${colorTokens.accent.danger})` }}>
           Remove Format
         </Button>
       </>

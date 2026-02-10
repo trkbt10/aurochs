@@ -7,6 +7,7 @@
  */
 
 import { useCallback, type CSSProperties } from "react";
+import { colorTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { Input, Select, Toggle } from "@aurochs-ui/ui-components/primitives";
 import { Accordion, FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
 import { TextBodyEditor, createDefaultTextBody } from "../text";
@@ -23,7 +24,7 @@ export type DataLabelsEditorProps = EditorProps<DataLabels> & {
 const containerStyle: CSSProperties = {
   display: "flex",
   flexDirection: "column",
-  gap: "12px",
+  gap: spacingTokens.md,
 };
 
 const positionOptions: SelectOption<NonNullable<DataLabels["position"]>>[] = [
@@ -232,8 +233,8 @@ export function DataLabelsEditor({ value, onChange, disabled, className, style }
             onClick={handleAddLabel}
             disabled={disabled}
             style={{
-              padding: "6px 12px",
-              marginBottom: "8px",
+              padding: `${spacingTokens["xs-plus"]} ${spacingTokens.md}`,
+              marginBottom: spacingTokens.sm,
               cursor: disabled ? "not-allowed" : "pointer",
             }}
           >
@@ -428,9 +429,9 @@ function DataLabelEditor({ value, onChange, onRemove, disabled }: DataLabelEdito
           onClick={onRemove}
           disabled={disabled}
           style={{
-            padding: "6px 12px",
+            padding: `${spacingTokens["xs-plus"]} ${spacingTokens.md}`,
             cursor: disabled ? "not-allowed" : "pointer",
-            color: "red",
+            color: `var(--text-danger, ${colorTokens.accent.danger})`,
           }}
         >
           Remove Label

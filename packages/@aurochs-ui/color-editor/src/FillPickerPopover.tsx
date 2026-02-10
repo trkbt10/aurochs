@@ -10,6 +10,7 @@ import { Select } from "@aurochs-ui/ui-components/primitives";
 import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import { FillPreview } from "./FillPreview";
 import { fillTypeOptions, createDefaultFill, SolidFillEditor, GradientFillEditor, type FillType } from "./fill";
+import { colorTokens, radiusTokens, spacingTokens, fontTokens } from "@aurochs-ui/ui-components/design-tokens";
 
 export type FillPickerPopoverProps = {
   /** Current fill value */
@@ -25,29 +26,29 @@ export type FillPickerPopoverProps = {
 const defaultTriggerStyle: CSSProperties = {
   width: "24px",
   height: "24px",
-  borderRadius: "4px",
+  borderRadius: radiusTokens.sm,
   cursor: "pointer",
-  border: "1px solid var(--border-subtle, rgba(255, 255, 255, 0.08))",
+  border: `1px solid var(--border-subtle, ${colorTokens.border.subtle})`,
   overflow: "hidden",
 };
 
 const popoverContentStyle: CSSProperties = {
   display: "flex",
   flexDirection: "column",
-  gap: "12px",
+  gap: spacingTokens.md,
   width: "260px",
 };
 
 const headerStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
-  gap: "8px",
+  gap: spacingTokens.sm,
 };
 
 const noFillMessageStyle: CSSProperties = {
   textAlign: "center",
   color: "var(--text-tertiary)",
-  fontSize: "12px",
+  fontSize: fontTokens.size.md,
   padding: "16px 0",
 };
 

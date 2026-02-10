@@ -7,6 +7,7 @@
 import { useCallback, type CSSProperties } from "react";
 import type { TextBody } from "@aurochs-office/chart/domain/text";
 import type { EditorProps } from "@aurochs-ui/ui-components/types";
+import { colorTokens, radiusTokens, fontTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { getPlainText, replacePlainText } from "./text-body";
 
 export type ChartTextBodyEditorProps = EditorProps<TextBody> & {
@@ -17,12 +18,12 @@ const textareaStyle: CSSProperties = {
   width: "100%",
   minHeight: "72px",
   resize: "vertical",
-  borderRadius: "6px",
-  border: "1px solid var(--border-subtle, rgba(255, 255, 255, 0.12))",
-  background: "var(--bg-secondary, #1a1a1a)",
-  color: "var(--text-primary, #fafafa)",
+  borderRadius: radiusTokens.md,
+  border: `1px solid var(--border-subtle, ${colorTokens.border.subtle})`,
+  background: `var(--bg-secondary, ${colorTokens.background.secondary})`,
+  color: `var(--text-primary, ${colorTokens.text.primary})`,
   padding: "8px 10px",
-  fontSize: "12px",
+  fontSize: fontTokens.size.md,
   fontFamily: "inherit",
 };
 

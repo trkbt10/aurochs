@@ -10,6 +10,7 @@ import { Input } from "@aurochs-ui/ui-components/primitives";
 import { FillPreview } from "../FillPreview";
 import { parseHexInput } from "../color-convert";
 import { getStopHex } from "./fill-utils";
+import { spacingTokens, radiusTokens, colorTokens } from "@aurochs-ui/ui-components/design-tokens";
 
 export type GradientStopRowProps = {
   readonly stop: GradientStop;
@@ -23,10 +24,10 @@ function getRowStyle(isSelected: boolean): CSSProperties {
   return {
     display: "flex",
     alignItems: "center",
-    gap: "6px",
+    gap: spacingTokens["xs-plus"],
     backgroundColor: isSelected ? "var(--bg-tertiary, #222)" : "transparent",
-    padding: "4px",
-    borderRadius: "4px",
+    padding: spacingTokens.xs,
+    borderRadius: radiusTokens.sm,
     cursor: "pointer",
   };
 }
@@ -36,7 +37,7 @@ const previewContainerStyle: CSSProperties = {
   height: "16px",
   borderRadius: "2px",
   flexShrink: 0,
-  border: "1px solid var(--border-subtle, rgba(255, 255, 255, 0.08))",
+  border: `1px solid var(--border-subtle, ${colorTokens.border.subtle})`,
   overflow: "hidden",
 };
 

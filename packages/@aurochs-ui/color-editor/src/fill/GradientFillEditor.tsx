@@ -20,6 +20,7 @@ import { deg, pct } from "@aurochs-office/drawing-ml/domain/units";
 import { LabeledSlider } from "../LabeledSlider";
 import { GradientStopRow } from "./GradientStopRow";
 import { createDefaultColor, getStopHex } from "./fill-utils";
+import { spacingTokens, radiusTokens, colorTokens } from "@aurochs-ui/ui-components/design-tokens";
 
 export type GradientFillEditorProps = {
   readonly value: GradientFill;
@@ -28,21 +29,21 @@ export type GradientFillEditorProps = {
 
 const previewStyle = (angle: number, cssGradient: string): CSSProperties => ({
   height: "24px",
-  borderRadius: "4px",
+  borderRadius: radiusTokens.sm,
   background: cssGradient,
 });
 
 const stopsContainerStyle: CSSProperties = {
   display: "flex",
   flexDirection: "column",
-  gap: "6px",
+  gap: spacingTokens["xs-plus"],
 };
 
 const trackStyle: CSSProperties = {
   position: "relative",
   height: "28px",
-  borderRadius: "6px",
-  border: "1px solid var(--border-subtle, rgba(255, 255, 255, 0.12))",
+  borderRadius: radiusTokens.md,
+  border: `1px solid var(--border-subtle, ${colorTokens.border.subtle})`,
   cursor: "crosshair",
   userSelect: "none",
   touchAction: "none",
@@ -51,8 +52,8 @@ const trackStyle: CSSProperties = {
 const handleSize = 14;
 const handleStyle = (position: number, isSelected: boolean, hex: string): CSSProperties => {
   const border = isSelected
-    ? "2px solid var(--border-strong, #fff)"
-    : "1px solid var(--border-subtle, rgba(255, 255, 255, 0.4))";
+    ? `2px solid var(--border-strong, ${colorTokens.border.strong})`
+    : `1px solid var(--border-subtle, ${colorTokens.border.subtle})`;
   return {
     position: "absolute",
     left: `${position}%`,

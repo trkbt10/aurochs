@@ -7,6 +7,7 @@
  */
 
 import { useCallback, type CSSProperties } from "react";
+import { spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { Input, Select } from "@aurochs-ui/ui-components/primitives";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
 import type { Layout, ManualLayout } from "@aurochs-office/chart/domain";
@@ -19,7 +20,7 @@ export type LayoutEditorProps = EditorProps<Layout | undefined> & {
 const containerStyle: CSSProperties = {
   display: "flex",
   flexDirection: "column",
-  gap: "12px",
+  gap: spacingTokens.md,
 };
 
 const layoutTargetOptions: SelectOption<NonNullable<ManualLayout["layoutTarget"]>>[] = [

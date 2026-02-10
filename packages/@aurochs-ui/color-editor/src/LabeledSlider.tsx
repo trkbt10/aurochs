@@ -6,6 +6,7 @@
 
 import type { CSSProperties } from "react";
 import { Slider } from "@aurochs-ui/ui-components/primitives";
+import { spacingTokens, fontTokens } from "@aurochs-ui/ui-components/design-tokens";
 
 export type LabeledSliderProps = {
   /** Label text (e.g., "A", "°") */
@@ -27,13 +28,13 @@ export type LabeledSliderProps = {
 const rowStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
-  gap: "8px",
+  gap: spacingTokens.sm,
 };
 
 const labelStyle: CSSProperties = {
   width: "16px",
-  fontSize: "11px",
-  fontWeight: 500,
+  fontSize: fontTokens.size.sm,
+  fontWeight: fontTokens.weight.medium,
   color: "var(--text-tertiary, #666)",
 };
 
@@ -44,7 +45,7 @@ const sliderContainerStyle: CSSProperties = {
 const valueStyle: CSSProperties = {
   width: "32px",
   textAlign: "right",
-  fontSize: "11px",
+  fontSize: fontTokens.size.sm,
   color: "var(--text-secondary, #999)",
 };
 

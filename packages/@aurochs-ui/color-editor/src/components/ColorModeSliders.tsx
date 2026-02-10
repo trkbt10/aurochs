@@ -9,6 +9,7 @@ import { useState, useCallback, useMemo, type CSSProperties } from "react";
 import { RgbSliders } from "./RgbSliders";
 import { HslSliders } from "./HslSliders";
 import { hexToRgb, rgbToHex, rgbToHsl, hslToRgb } from "../color-convert";
+import { spacingTokens, radiusTokens, fontTokens } from "@aurochs-ui/ui-components/design-tokens";
 
 export type ColorModeSlidersProps = {
   /** Hex color value (6 characters, without #) */
@@ -19,24 +20,24 @@ export type ColorModeSlidersProps = {
 
 const modeTabsStyle: CSSProperties = {
   display: "flex",
-  gap: "2px",
+  gap: spacingTokens["2xs"],
   backgroundColor: "var(--bg-tertiary, #222)",
-  borderRadius: "4px",
-  padding: "2px",
+  borderRadius: radiusTokens.sm,
+  padding: spacingTokens["2xs"],
 };
 
 const slidersContainerStyle: CSSProperties = {
   display: "flex",
   flexDirection: "column",
-  gap: "6px",
+  gap: spacingTokens["xs-plus"],
 };
 
 function modeTabStyle(isActive: boolean): CSSProperties {
   return {
     flex: 1,
-    padding: "4px 8px",
-    fontSize: "11px",
-    fontWeight: 500,
+    padding: `${spacingTokens.xs} ${spacingTokens.sm}`,
+    fontSize: fontTokens.size.sm,
+    fontWeight: fontTokens.weight.medium,
     border: "none",
     borderRadius: "3px",
     cursor: "pointer",

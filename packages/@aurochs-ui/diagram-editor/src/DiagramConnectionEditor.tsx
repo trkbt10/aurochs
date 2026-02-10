@@ -7,6 +7,7 @@
 import type { CSSProperties } from "react";
 import type { DiagramConnection, DiagramCxnType, DiagramPoint } from "@aurochs-office/diagram/domain";
 import type { EditorProps, SelectOption } from "@aurochs-ui/ui-components/types";
+import { colorTokens, radiusTokens, spacingTokens, fontTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
 import { Select, Button } from "@aurochs-ui/ui-components/primitives";
 import { extractPlainTextFromTextBody } from "./text-body";
@@ -28,28 +29,28 @@ export type DiagramConnectionEditorProps = EditorProps<DiagramConnection> & {
 const containerStyle: CSSProperties = {
   display: "flex",
   flexDirection: "column",
-  gap: "8px",
+  gap: spacingTokens.sm,
 };
 
 const infoStyle: CSSProperties = {
-  padding: "8px 12px",
-  backgroundColor: "var(--bg-tertiary, #111111)",
-  borderRadius: "6px",
-  fontSize: "11px",
-  color: "var(--text-tertiary, #737373)",
+  padding: `${spacingTokens.sm} ${spacingTokens.md}`,
+  backgroundColor: `var(--bg-tertiary, ${colorTokens.background.tertiary})`,
+  borderRadius: radiusTokens.md,
+  fontSize: fontTokens.size.sm,
+  color: `var(--text-tertiary, ${colorTokens.text.tertiary})`,
 };
 
 const headerStyle: CSSProperties = {
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  marginBottom: "8px",
+  marginBottom: spacingTokens.sm,
 };
 
 const titleStyle: CSSProperties = {
-  fontSize: "12px",
-  fontWeight: 500,
-  color: "var(--text-secondary, #a1a1a1)",
+  fontSize: fontTokens.size.md,
+  fontWeight: fontTokens.weight.medium,
+  color: `var(--text-secondary, ${colorTokens.text.secondary})`,
 };
 
 // =============================================================================
@@ -119,7 +120,7 @@ export function DiagramConnectionEditor({
             variant="ghost"
             onClick={onDelete}
             disabled={disabled}
-            style={{ padding: "4px 8px", fontSize: "12px" }}
+            style={{ padding: `${spacingTokens.xs} ${spacingTokens.sm}`, fontSize: fontTokens.size.md }}
           >
             Delete
           </Button>

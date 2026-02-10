@@ -3,6 +3,7 @@
  */
 
 import { useCallback, type CSSProperties } from "react";
+import { spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { EditorProps, SelectOption } from "@aurochs-ui/ui-components/types";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
@@ -16,7 +17,7 @@ export type BaseFillEditorProps = EditorProps<BaseFill> & {
 const containerStyle: CSSProperties = {
   display: "flex",
   flexDirection: "column",
-  gap: "8px",
+  gap: spacingTokens.sm,
 };
 
 const fillTypeOptions: SelectOption<BaseFill["type"]>[] = [

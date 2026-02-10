@@ -10,6 +10,7 @@
  */
 
 import { useCallback, type CSSProperties } from "react";
+import { colorTokens, spacingTokens, fontTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { Input, Select, Toggle } from "@aurochs-ui/ui-components/primitives";
 import { Accordion, FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
 import { PercentEditor, DegreesEditor } from "../primitives";
@@ -51,7 +52,7 @@ export type ChartSeriesEditorProps = EditorProps<ChartSeries> & {
 const containerStyle: CSSProperties = {
   display: "flex",
   flexDirection: "column",
-  gap: "12px",
+  gap: spacingTokens.md,
 };
 
 // ============================================================================
@@ -774,7 +775,7 @@ export function ChartSeriesEditor({
       {/* Stock chart specific settings */}
       {isStockChart && (
         <>
-          <span style={{ color: "var(--text-muted, #888)", fontSize: "12px" }}>Stock chart uses line series data</span>
+          <span style={{ color: `var(--text-tertiary, ${colorTokens.text.tertiary})`, fontSize: fontTokens.size.md }}>Stock chart uses line series data</span>
         </>
       )}
 
@@ -984,7 +985,7 @@ function BandFormatsEditor({ value, onChange, disabled }: BandFormatsEditorProps
           type="button"
           onClick={handleAddBand}
           disabled={disabled}
-          style={{ padding: "6px 12px", marginBottom: "8px", cursor: disabled ? "not-allowed" : "pointer" }}
+          style={{ padding: `${spacingTokens["xs-plus"]} ${spacingTokens.md}`, marginBottom: spacingTokens.sm, cursor: disabled ? "not-allowed" : "pointer" }}
         >
           Add Band
         </button>
@@ -1015,7 +1016,7 @@ function BandFormatsEditor({ value, onChange, disabled }: BandFormatsEditorProps
               type="button"
               onClick={() => handleRemoveBand(index)}
               disabled={disabled}
-              style={{ padding: "6px 12px", cursor: disabled ? "not-allowed" : "pointer", color: "red" }}
+              style={{ padding: `${spacingTokens["xs-plus"]} ${spacingTokens.md}`, cursor: disabled ? "not-allowed" : "pointer", color: `var(--text-danger, ${colorTokens.accent.danger})` }}
             >
               Remove Band
             </button>

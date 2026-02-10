@@ -7,6 +7,7 @@
 import type { CSSProperties } from "react";
 import type { DiagramPoint, DiagramPropertySet } from "@aurochs-office/diagram/domain";
 import type { EditorProps } from "@aurochs-ui/ui-components/types";
+import { colorTokens, radiusTokens, spacingTokens, fontTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { Accordion, FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
 import { Input, Toggle } from "@aurochs-ui/ui-components/primitives";
 import type { DiagramEditorAdapters } from "./types";
@@ -23,24 +24,24 @@ export type DiagramPointEditorProps<TTextBody, TShapeProperties> = EditorProps<D
 const containerStyle: CSSProperties = {
   display: "flex",
   flexDirection: "column",
-  gap: "12px",
+  gap: spacingTokens.md,
 };
 
 const infoStyle: CSSProperties = {
-  padding: "8px 12px",
-  backgroundColor: "var(--bg-tertiary, #111111)",
-  borderRadius: "6px",
-  fontSize: "12px",
+  padding: `${spacingTokens.sm} ${spacingTokens.md}`,
+  backgroundColor: `var(--bg-tertiary, ${colorTokens.background.tertiary})`,
+  borderRadius: radiusTokens.md,
+  fontSize: fontTokens.size.md,
   display: "flex",
   flexDirection: "column",
-  gap: "4px",
-  color: "var(--text-secondary, #a1a1a1)",
+  gap: spacingTokens.xs,
+  color: `var(--text-secondary, ${colorTokens.text.secondary})`,
 };
 
 const labelStyle: CSSProperties = {
-  color: "var(--text-tertiary, #737373)",
-  fontSize: "11px",
-  marginBottom: "2px",
+  color: `var(--text-tertiary, ${colorTokens.text.tertiary})`,
+  fontSize: fontTokens.size.sm,
+  marginBottom: spacingTokens["2xs"],
 };
 
 // =============================================================================
@@ -178,7 +179,7 @@ export function DiagramPointEditor<TTextBody, TShapeProperties>({
         <div>
           <span style={labelStyle}>Model ID</span>
           <br />
-          <code style={{ fontSize: "11px" }}>{value.modelId}</code>
+          <code style={{ fontSize: fontTokens.size.sm }}>{value.modelId}</code>
         </div>
         {value.type && (
           <div>
@@ -191,7 +192,7 @@ export function DiagramPointEditor<TTextBody, TShapeProperties>({
           <div>
             <span style={labelStyle}>Connection ID</span>
             <br />
-            <code style={{ fontSize: "11px" }}>{value.connectionId}</code>
+            <code style={{ fontSize: fontTokens.size.sm }}>{value.connectionId}</code>
           </div>
         )}
       </div>

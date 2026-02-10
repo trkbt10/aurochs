@@ -10,6 +10,7 @@ import { pct } from "@aurochs-office/drawing-ml/domain/units";
 import { Input } from "@aurochs-ui/ui-components/primitives";
 import { FillPreview } from "../FillPreview";
 import { parseHexInput } from "../color-convert";
+import { spacingTokens, radiusTokens, colorTokens, fontTokens } from "@aurochs-ui/ui-components/design-tokens";
 
 export type ColorPreviewInputProps = {
   /** Hex color value (6 characters, without #) */
@@ -23,15 +24,15 @@ export type ColorPreviewInputProps = {
 const rowStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
-  gap: "8px",
+  gap: spacingTokens.sm,
 };
 
 const previewContainerStyle: CSSProperties = {
   width: "36px",
   height: "36px",
-  borderRadius: "6px",
+  borderRadius: radiusTokens.md,
   flexShrink: 0,
-  border: "1px solid var(--border-subtle, rgba(255, 255, 255, 0.08))",
+  border: `1px solid var(--border-subtle, ${colorTokens.border.subtle})`,
   overflow: "hidden",
 };
 
@@ -39,11 +40,11 @@ const hexInputContainerStyle: CSSProperties = {
   flex: 1,
   display: "flex",
   flexDirection: "column",
-  gap: "4px",
+  gap: spacingTokens.xs,
 };
 
 const hexLabelStyle: CSSProperties = {
-  fontSize: "10px",
+  fontSize: fontTokens.size.xs,
   color: "var(--text-tertiary, #666)",
   textTransform: "uppercase",
 };

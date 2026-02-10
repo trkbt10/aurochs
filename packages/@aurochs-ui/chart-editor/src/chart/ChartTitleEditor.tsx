@@ -6,6 +6,7 @@
  */
 
 import { useCallback, type CSSProperties } from "react";
+import { spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { Toggle } from "@aurochs-ui/ui-components/primitives";
 import { Accordion, FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
 import { TextBodyEditor, createDefaultTextBody } from "../text";
@@ -24,7 +25,7 @@ export type ChartTitleEditorProps = EditorProps<ChartTitle | undefined> & {
 const containerStyle: CSSProperties = {
   display: "flex",
   flexDirection: "column",
-  gap: "12px",
+  gap: spacingTokens.md,
 };
 
 /**

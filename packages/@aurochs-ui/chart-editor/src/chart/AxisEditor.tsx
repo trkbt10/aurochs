@@ -10,6 +10,7 @@
  */
 
 import { useCallback, type CSSProperties } from "react";
+import { spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { Input, Select, Toggle } from "@aurochs-ui/ui-components/primitives";
 import { Accordion, FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
 import { PercentEditor } from "../primitives";
@@ -45,7 +46,7 @@ export type AxisEditorProps = EditorProps<Axis> & {
 const containerStyle: CSSProperties = {
   display: "flex",
   flexDirection: "column",
-  gap: "12px",
+  gap: spacingTokens.md,
 };
 
 const axisTypeOptions: SelectOption<Axis["type"]>[] = [

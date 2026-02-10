@@ -7,6 +7,7 @@
  */
 
 import { useCallback, type CSSProperties } from "react";
+import { colorTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { Button, Input, Select, Toggle } from "@aurochs-ui/ui-components/primitives";
 import { Accordion, FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
 import { TextBodyEditor, createDefaultTextBody } from "../text";
@@ -23,14 +24,14 @@ export type LegendEditorProps = EditorProps<Legend> & {
 const containerStyle: CSSProperties = {
   display: "flex",
   flexDirection: "column",
-  gap: "12px",
+  gap: spacingTokens.md,
 };
 
 const headerRowStyle: CSSProperties = {
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  marginBottom: "8px",
+  marginBottom: spacingTokens.sm,
 };
 
 const positionOptions: SelectOption<Legend["position"]>[] = [
@@ -217,7 +218,7 @@ function LegendEntryEditor({ value, onChange, onRemove, disabled }: LegendEntryE
       </Accordion>
 
       <>
-        <Button variant="ghost" onClick={onRemove} disabled={disabled} style={{ color: "var(--text-danger, #ef4444)" }}>
+        <Button variant="ghost" onClick={onRemove} disabled={disabled} style={{ color: `var(--text-danger, ${colorTokens.accent.danger})` }}>
           Remove Entry
         </Button>
       </>

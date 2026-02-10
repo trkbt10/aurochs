@@ -3,6 +3,7 @@
  */
 
 import { useCallback, type CSSProperties } from "react";
+import { spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 import type { ChartShapeProperties } from "@aurochs-office/chart/domain";
 import type { EditorProps } from "@aurochs-ui/ui-components/types";
 import { FieldGroup } from "@aurochs-ui/ui-components/layout";
@@ -17,7 +18,7 @@ export type ChartShapePropertiesEditorProps = EditorProps<ChartShapeProperties |
 const containerStyle: CSSProperties = {
   display: "flex",
   flexDirection: "column",
-  gap: "12px",
+  gap: spacingTokens.md,
 };
 
 /**
