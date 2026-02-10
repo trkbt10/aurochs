@@ -87,6 +87,153 @@ describe("sheet-handlers", () => {
     });
   });
 
+  describe("DELETE_SHEET", () => {
+    const sheets = [createWorksheet("A", 1), createWorksheet("B", 2), createWorksheet("C", 3)];
+
+    function makeEditingOnSheet(sheetIndex: number): CellEditingState {
+      return {
+        address: { col: colIdx(0), row: rowIdx(0), colAbsolute: false, rowAbsolute: false },
+        entryMode: "enter",
+        origin: "cell",
+        text: "=A1",
+        caretOffset: 3,
+        selectionEnd: 3,
+        isFormulaMode: true,
+        composition: createIdleComposition(),
+        editingSheetIndex: sheetIndex,
+      };
+    }
+
+    it("decrements editingSheetIndex when a sheet before it is deleted", () => {
+      // Editing on sheet C (index 2), active on C, delete sheet A (index 0)
+      const workbook = createWorkbook(sheets);
+      const state: XlsxEditorState = {
+        ...createState(workbook, 2),
+        editing: makeEditingOnSheet(2),
+      };
+
+      const next = sheetHandlers.DELETE_SHEET!(state, { type: "DELETE_SHEET", sheetIndex: 0 });
+
+      expect(next.editing).toBeDefined();
+      expect(next.editing!.editingSheetIndex).toBe(1);
+    });
+
+    it("clears editing when the editing sheet is deleted (active on another sheet)", () => {
+      // Editing started on sheet A (index 0), active on B (index 1), delete A
+      const workbook = createWorkbook(sheets);
+      const state: XlsxEditorState = {
+        ...createState(workbook, 1),
+        editing: makeEditingOnSheet(0),
+      };
+
+      const next = sheetHandlers.DELETE_SHEET!(state, { type: "DELETE_SHEET", sheetIndex: 0 });
+
+      expect(next.editing).toBeUndefined();
+    });
+
+    it("clears editing when the active sheet is deleted", () => {
+      // Editing on sheet B (index 1), active on B (index 1), delete B
+      const workbook = createWorkbook(sheets);
+      const state: XlsxEditorState = {
+        ...createState(workbook, 1),
+        editing: makeEditingOnSheet(1),
+      };
+
+      const next = sheetHandlers.DELETE_SHEET!(state, { type: "DELETE_SHEET", sheetIndex: 1 });
+
+      expect(next.editing).toBeUndefined();
+    });
+
+    it("keeps editingSheetIndex unchanged when a sheet after it is deleted", () => {
+      // Editing on sheet A (index 0), active on A, delete C (index 2)
+      const workbook = createWorkbook(sheets);
+      const state: XlsxEditorState = {
+        ...createState(workbook, 0),
+        editing: makeEditingOnSheet(0),
+      };
+
+      const next = sheetHandlers.DELETE_SHEET!(state, { type: "DELETE_SHEET", sheetIndex: 2 });
+
+      expect(next.editing).toBeDefined();
+      expect(next.editing!.editingSheetIndex).toBe(0);
+    });
+  });
+
+  describe("MOVE_SHEET", () => {
+    const sheets = [createWorksheet("A", 1), createWorksheet("B", 2), createWorksheet("C", 3)];
+
+    function makeEditingOnSheet(sheetIndex: number): CellEditingState {
+      return {
+        address: { col: colIdx(0), row: rowIdx(0), colAbsolute: false, rowAbsolute: false },
+        entryMode: "enter",
+        origin: "cell",
+        text: "=A1",
+        caretOffset: 3,
+        selectionEnd: 3,
+        isFormulaMode: true,
+        composition: createIdleComposition(),
+        editingSheetIndex: sheetIndex,
+      };
+    }
+
+    it("follows the editing sheet when it is moved forward", () => {
+      // Editing on A (index 0), move A from 0 to 2
+      const workbook = createWorkbook(sheets);
+      const state: XlsxEditorState = {
+        ...createState(workbook, 0),
+        editing: makeEditingOnSheet(0),
+      };
+
+      const next = sheetHandlers.MOVE_SHEET!(state, { type: "MOVE_SHEET", fromIndex: 0, toIndex: 2 });
+
+      expect(next.editing).toBeDefined();
+      expect(next.editing!.editingSheetIndex).toBe(2);
+    });
+
+    it("follows the editing sheet when it is moved backward", () => {
+      // Editing on C (index 2), move C from 2 to 0
+      const workbook = createWorkbook(sheets);
+      const state: XlsxEditorState = {
+        ...createState(workbook, 2),
+        editing: makeEditingOnSheet(2),
+      };
+
+      const next = sheetHandlers.MOVE_SHEET!(state, { type: "MOVE_SHEET", fromIndex: 2, toIndex: 0 });
+
+      expect(next.editing).toBeDefined();
+      expect(next.editing!.editingSheetIndex).toBe(0);
+    });
+
+    it("adjusts editingSheetIndex when another sheet is moved across it", () => {
+      // Editing on B (index 1), move A (index 0) to index 2
+      // B shifts from index 1 → index 0
+      const workbook = createWorkbook(sheets);
+      const state: XlsxEditorState = {
+        ...createState(workbook, 1),
+        editing: makeEditingOnSheet(1),
+      };
+
+      const next = sheetHandlers.MOVE_SHEET!(state, { type: "MOVE_SHEET", fromIndex: 0, toIndex: 2 });
+
+      expect(next.editing).toBeDefined();
+      expect(next.editing!.editingSheetIndex).toBe(0);
+    });
+
+    it("keeps editingSheetIndex when move does not cross it", () => {
+      // Editing on A (index 0), move B (index 1) to C (index 2)
+      const workbook = createWorkbook(sheets);
+      const state: XlsxEditorState = {
+        ...createState(workbook, 0),
+        editing: makeEditingOnSheet(0),
+      };
+
+      const next = sheetHandlers.MOVE_SHEET!(state, { type: "MOVE_SHEET", fromIndex: 1, toIndex: 2 });
+
+      expect(next.editing).toBeDefined();
+      expect(next.editing!.editingSheetIndex).toBe(0);
+    });
+  });
+
   describe("SELECT_SHEET", () => {
     it("changes the active sheet without pushing history", () => {
       const workbook = createWorkbook([createWorksheet("A", 1), createWorksheet("B", 2)]);
@@ -137,7 +284,7 @@ describe("sheet-handlers", () => {
       expect(next.editing!.isFormulaMode).toBe(true);
     });
 
-    it("clears editing state when not in formula mode", () => {
+    it("clears editing when not in formula mode on sheet switch", () => {
       const workbook = createWorkbook([createWorksheet("Sheet1", 1), createWorksheet("Sheet2", 2)]);
       const editing: CellEditingState = {
         address: { col: colIdx(1), row: rowIdx(1), colAbsolute: false, rowAbsolute: false },

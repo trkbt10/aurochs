@@ -5,7 +5,7 @@
  */
 
 import type { HandlerMap } from "./handler-types";
-import type { XlsxEditorAction, XlsxEditorState } from "../types";
+import type { XlsxEditorAction, XlsxEditorState, CellEditingState } from "../types";
 import { createEmptyCellSelection, createIdleDragState } from "../types";
 import { createHistory, pushHistory } from "@aurochs-ui/editor-core/history";
 import { addSheet, deleteSheet, renameSheet, moveSheet, duplicateSheet } from "../../../../sheet/mutation";
@@ -76,6 +76,31 @@ function assertValidSheetIndex(state: XlsxEditorState, sheetIndex: number): void
   }
 }
 
+function rebaseEditingAfterDelete(
+  editing: CellEditingState | undefined,
+  deletedIndex: number,
+  wasActiveSheetDeleted: boolean,
+): CellEditingState | undefined {
+  if (!editing) return undefined;
+  if (wasActiveSheetDeleted) return undefined;
+  if (editing.editingSheetIndex === deletedIndex) return undefined;
+  if (editing.editingSheetIndex > deletedIndex) {
+    return { ...editing, editingSheetIndex: editing.editingSheetIndex - 1 };
+  }
+  return editing;
+}
+
+function rebaseEditingAfterMove(
+  editing: CellEditingState | undefined,
+  fromIndex: number,
+  toIndex: number,
+): CellEditingState | undefined {
+  if (!editing) return undefined;
+  const newIndex = getActiveSheetIndexAfterMove(editing.editingSheetIndex, fromIndex, toIndex);
+  if (newIndex === undefined || newIndex === editing.editingSheetIndex) return editing;
+  return { ...editing, editingSheetIndex: newIndex };
+}
+
 function handleSetWorkbook(state: XlsxEditorState, action: SetWorkbookAction): XlsxEditorState {
   return {
     ...state,
@@ -119,7 +144,7 @@ function handleDeleteSheet(state: XlsxEditorState, action: DeleteSheetAction): X
 
   const cellSelection = wasActiveSheetDeleted ? createEmptyCellSelection() : state.cellSelection;
   const drag = wasActiveSheetDeleted ? createIdleDragState() : state.drag;
-  const editing = wasActiveSheetDeleted ? undefined : state.editing;
+  const editing = rebaseEditingAfterDelete(state.editing, action.sheetIndex, wasActiveSheetDeleted);
 
   return {
     ...state,
@@ -172,6 +197,7 @@ function handleMoveSheet(state: XlsxEditorState, action: MoveSheetAction): XlsxE
     ...state,
     workbookHistory: pushHistory(state.workbookHistory, newWorkbook),
     activeSheetIndex: getActiveSheetIndexAfterMove(state.activeSheetIndex, action.fromIndex, action.toIndex),
+    editing: rebaseEditingAfterMove(state.editing, action.fromIndex, action.toIndex),
   };
 }
 
