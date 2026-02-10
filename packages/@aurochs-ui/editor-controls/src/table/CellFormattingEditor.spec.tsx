@@ -1,8 +1,15 @@
+/**
+ * @file CellFormattingEditor tests
+ */
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { CellFormattingEditor } from "./CellFormattingEditor";
-import type { CellFormatting } from "../types/cell-formatting";
+import type { CellFormatting } from "./types";
+
+function createOnChange() {
+  const calls: Partial<CellFormatting>[] = [];
+  return { fn: (update: Partial<CellFormatting>) => { calls.push(update); }, calls };
+}
 
 describe("CellFormattingEditor", () => {
   const defaultValue: CellFormatting = {
@@ -11,7 +18,7 @@ describe("CellFormattingEditor", () => {
   };
 
   it("renders vertical alignment buttons", () => {
-    const onChange = vi.fn();
+    const { fn: onChange } = createOnChange();
     render(<CellFormattingEditor value={defaultValue} onChange={onChange} />);
 
     expect(screen.getByLabelText("Align top")).toBeDefined();
@@ -20,15 +27,15 @@ describe("CellFormattingEditor", () => {
   });
 
   it("emits vertical alignment change", () => {
-    const onChange = vi.fn();
+    const { fn: onChange, calls } = createOnChange();
     render(<CellFormattingEditor value={defaultValue} onChange={onChange} />);
 
     fireEvent.click(screen.getByLabelText("Align center"));
-    expect(onChange).toHaveBeenCalledWith({ verticalAlignment: "center" });
+    expect(calls).toContainEqual({ verticalAlignment: "center" });
   });
 
   it("shows wrap text when feature enabled", () => {
-    const onChange = vi.fn();
+    const { fn: onChange } = createOnChange();
     render(
       <CellFormattingEditor
         value={defaultValue}
@@ -41,7 +48,7 @@ describe("CellFormattingEditor", () => {
   });
 
   it("hides wrap text by default", () => {
-    const onChange = vi.fn();
+    const { fn: onChange } = createOnChange();
     const { container } = render(
       <CellFormattingEditor value={defaultValue} onChange={onChange} />,
     );
@@ -50,7 +57,7 @@ describe("CellFormattingEditor", () => {
   });
 
   it("renders custom background editor slot", () => {
-    const onChange = vi.fn();
+    const { fn: onChange } = createOnChange();
     render(
       <CellFormattingEditor
         value={defaultValue}
@@ -63,7 +70,7 @@ describe("CellFormattingEditor", () => {
   });
 
   it("renders custom border editor slot", () => {
-    const onChange = vi.fn();
+    const { fn: onChange } = createOnChange();
     render(
       <CellFormattingEditor
         value={defaultValue}
@@ -76,7 +83,7 @@ describe("CellFormattingEditor", () => {
   });
 
   it("shows mixed vertical alignment indicator", () => {
-    const onChange = vi.fn();
+    const { fn: onChange } = createOnChange();
     const mixed = { mixedFields: new Set(["verticalAlignment"]) };
 
     render(

@@ -12,7 +12,8 @@ import { Select } from "@aurochs-ui/ui-components/primitives";
 import { FieldGroup } from "@aurochs-ui/ui-components/layout";
 import type { EditorProps, SelectOption } from "@aurochs-ui/ui-components/types";
 import { TextFormattingEditor } from "@aurochs-ui/editor-controls/text";
-import type { TextFormatting, MixedContext } from "@aurochs-ui/editor-controls/types";
+import type { TextFormatting } from "@aurochs-ui/editor-controls/text";
+import type { MixedContext } from "@aurochs-ui/editor-controls/mixed-state";
 import { docxTextAdapter } from "../../adapters/editor-controls";
 import styles from "./RunPropertiesEditor.module.css";
 

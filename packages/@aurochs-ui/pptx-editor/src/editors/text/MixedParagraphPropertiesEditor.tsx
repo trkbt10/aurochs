@@ -12,7 +12,7 @@ import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
 import { PixelsEditor } from "../primitives";
 import { LineSpacingEditor } from "./LineSpacingEditor";
 import { ParagraphFormattingEditor } from "@aurochs-ui/editor-controls/text";
-import type { ParagraphFormatting } from "@aurochs-ui/editor-controls/types";
+import type { ParagraphFormatting } from "@aurochs-ui/editor-controls/text";
 import type { ParagraphProperties, LineSpacing } from "@aurochs-office/pptx/domain/text";
 import type { TextAlign } from "@aurochs-office/pptx/domain/types";
 import type { SelectOption } from "@aurochs-ui/ui-components/types";

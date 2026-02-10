@@ -5,7 +5,8 @@
  */
 
 import type { Line } from "@aurochs-office/pptx/domain/color/types";
-import type { FormattingAdapter, OutlineFormatting } from "@aurochs-ui/editor-controls/types";
+import type { FormattingAdapter } from "@aurochs-ui/editor-controls/formatting-adapter";
+import type { OutlineFormatting } from "@aurochs-ui/editor-controls/surface";
 
 const DASH_MAP: Record<string, OutlineFormatting["style"]> = {
   solid: "solid",

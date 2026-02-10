@@ -1,8 +1,15 @@
+/**
+ * @file OutlineFormattingEditor tests
+ */
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { OutlineFormattingEditor } from "./OutlineFormattingEditor";
-import type { OutlineFormatting } from "../types/outline-formatting";
+import type { OutlineFormatting } from "./types";
+
+function createOnChange() {
+  const calls: Partial<OutlineFormatting>[] = [];
+  return { fn: (update: Partial<OutlineFormatting>) => { calls.push(update); }, calls };
+}
 
 describe("OutlineFormattingEditor", () => {
   const defaultValue: OutlineFormatting = {
@@ -12,7 +19,7 @@ describe("OutlineFormattingEditor", () => {
   };
 
   it("renders width, style, and color controls", () => {
-    const onChange = vi.fn();
+    const { fn: onChange } = createOnChange();
     render(<OutlineFormattingEditor value={defaultValue} onChange={onChange} />);
 
     expect(screen.getByText("Width")).toBeDefined();
@@ -21,7 +28,7 @@ describe("OutlineFormattingEditor", () => {
   });
 
   it("hides width when feature disabled", () => {
-    const onChange = vi.fn();
+    const { fn: onChange } = createOnChange();
     const { container } = render(
       <OutlineFormattingEditor
         value={defaultValue}
@@ -34,7 +41,7 @@ describe("OutlineFormattingEditor", () => {
   });
 
   it("uses custom color picker slot", () => {
-    const onChange = vi.fn();
+    const { fn: onChange } = createOnChange();
     render(
       <OutlineFormattingEditor
         value={defaultValue}
@@ -47,7 +54,7 @@ describe("OutlineFormattingEditor", () => {
   });
 
   it("renders advanced outline slot", () => {
-    const onChange = vi.fn();
+    const { fn: onChange } = createOnChange();
     render(
       <OutlineFormattingEditor
         value={defaultValue}

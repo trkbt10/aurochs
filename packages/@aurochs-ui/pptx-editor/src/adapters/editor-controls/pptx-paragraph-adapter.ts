@@ -8,12 +8,9 @@
 import type { ParagraphProperties, LineSpacing } from "@aurochs-office/pptx/domain/text";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
-import type {
-  FormattingAdapter,
-  ParagraphFormatting,
-  HorizontalAlignment,
-  MixedContext,
-} from "@aurochs-ui/editor-controls/types";
+import type { FormattingAdapter } from "@aurochs-ui/editor-controls/formatting-adapter";
+import type { MixedContext } from "@aurochs-ui/editor-controls/mixed-state";
+import type { ParagraphFormatting, HorizontalAlignment } from "@aurochs-ui/editor-controls/text";
 import type { MixedParagraphProperties } from "../../editors/text/mixed-properties";
 import { isMixed, getExtractionValue } from "../../editors/text/mixed-properties";
 

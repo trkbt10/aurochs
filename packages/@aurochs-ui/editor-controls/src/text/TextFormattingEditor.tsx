@@ -9,10 +9,10 @@
 import { useCallback, type CSSProperties, type ReactNode } from "react";
 import { Input, ToggleButton } from "@aurochs-ui/ui-components/primitives";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
-import type { TextFormatting } from "../types/text-formatting";
-import type { TextFormattingFeatures } from "../types/feature-flags";
-import type { MixedContext } from "../types/mixed";
-import { isMixedField } from "../types/mixed";
+import { ColorPickerPopover } from "@aurochs-ui/color-editor";
+import type { TextFormatting, TextFormattingFeatures } from "./types";
+import type { MixedContext } from "../mixed-state";
+import { isMixedField } from "../mixed-state";
 
 // =============================================================================
 // Types
@@ -77,6 +77,53 @@ const separatorStyle: CSSProperties = {
 
 const MIXED_PLACEHOLDER = "Mixed";
 
+function toBareHex(color: string | undefined, fallback: string): string {
+  if (!color) {
+    return fallback;
+  }
+  return color.startsWith("#") ? color.slice(1) : color;
+}
+
+function buildFontFamilySelect(opts: {
+  renderSlot: TextFormattingEditorProps["renderFontFamilySelect"];
+  value: string | undefined;
+  onChange: (family: string) => void;
+  disabled?: boolean;
+  placeholder: string;
+}): ReactNode {
+  if (opts.renderSlot) {
+    return opts.renderSlot({ value: opts.value, onChange: opts.onChange, disabled: opts.disabled, placeholder: opts.placeholder });
+  }
+  return (
+    <Input
+      type="text"
+      value={opts.value ?? ""}
+      onChange={(v) => opts.onChange(String(v))}
+      disabled={opts.disabled}
+      placeholder={opts.placeholder}
+    />
+  );
+}
+
+function buildColorPicker(opts: {
+  renderSlot: TextFormattingEditorProps["renderColorPicker"] | TextFormattingEditorProps["renderHighlightPicker"];
+  color: string | undefined;
+  onChange: (hex: string) => void;
+  disabled?: boolean;
+  fallbackHex: string;
+}): ReactNode {
+  if (opts.renderSlot) {
+    return opts.renderSlot({ value: opts.color, onChange: opts.onChange, disabled: opts.disabled });
+  }
+  return (
+    <ColorPickerPopover
+      value={toBareHex(opts.color, opts.fallbackHex)}
+      onChange={(hex) => opts.onChange(`#${hex}`)}
+      disabled={opts.disabled}
+    />
+  );
+}
+
 function feat(
   features: TextFormattingFeatures | undefined,
   key: keyof TextFormattingFeatures,
@@ -89,6 +136,7 @@ function feat(
 // Component
 // =============================================================================
 
+/** Shared text run formatting editor with slots for format-specific controls. */
 export function TextFormattingEditor({
   value,
   onChange,
@@ -175,22 +223,13 @@ export function TextFormattingEditor({
         <FieldRow>
           {showFontFamily && (
             <FieldGroup label="Font" inline labelWidth={36} style={{ flex: 1 }}>
-              {renderFontFamilySelect ? (
-                renderFontFamilySelect({
-                  value: value.fontFamily,
-                  onChange: handleFontFamilyChange,
-                  disabled,
-                  placeholder: isMixedField(mixed, "fontFamily") ? MIXED_PLACEHOLDER : "Family",
-                })
-              ) : (
-                <Input
-                  type="text"
-                  value={value.fontFamily ?? ""}
-                  onChange={(v) => handleFontFamilyChange(String(v))}
-                  disabled={disabled}
-                  placeholder={isMixedField(mixed, "fontFamily") ? MIXED_PLACEHOLDER : "Font Family"}
-                />
-              )}
+              {buildFontFamilySelect({
+                renderSlot: renderFontFamilySelect,
+                value: value.fontFamily,
+                onChange: handleFontFamilyChange,
+                disabled,
+                placeholder: isMixedField(mixed, "fontFamily") ? MIXED_PLACEHOLDER : "Font Family",
+              })}
             </FieldGroup>
           )}
           {showFontSize && (
@@ -275,26 +314,7 @@ export function TextFormattingEditor({
               inline
               labelWidth={isMixedField(mixed, "textColor") ? 80 : 40}
             >
-              {renderColorPicker ? (
-                renderColorPicker({
-                  value: value.textColor,
-                  onChange: handleTextColorChange,
-                  disabled,
-                })
-              ) : (
-                <input
-                  type="color"
-                  value={
-                    value.textColor
-                      ? value.textColor.startsWith("#")
-                        ? value.textColor
-                        : `#${value.textColor}`
-                      : "#000000"
-                  }
-                  onChange={(e) => handleTextColorChange(e.target.value)}
-                  disabled={disabled}
-                />
-              )}
+              {buildColorPicker({ renderSlot: renderColorPicker, color: value.textColor, onChange: handleTextColorChange, disabled, fallbackHex: "000000" })}
             </FieldGroup>
           )}
           {showHighlight && (
@@ -303,26 +323,7 @@ export function TextFormattingEditor({
               inline
               labelWidth={isMixedField(mixed, "highlightColor") ? 64 : 56}
             >
-              {renderHighlightPicker ? (
-                renderHighlightPicker({
-                  value: value.highlightColor,
-                  onChange: handleHighlightColorChange,
-                  disabled,
-                })
-              ) : (
-                <input
-                  type="color"
-                  value={
-                    value.highlightColor
-                      ? value.highlightColor.startsWith("#")
-                        ? value.highlightColor
-                        : `#${value.highlightColor}`
-                      : "#FFFF00"
-                  }
-                  onChange={(e) => handleHighlightColorChange(e.target.value)}
-                  disabled={disabled}
-                />
-              )}
+              {buildColorPicker({ renderSlot: renderHighlightPicker, color: value.highlightColor, onChange: handleHighlightColorChange, disabled, fallbackHex: "FFFF00" })}
             </FieldGroup>
           )}
         </FieldRow>

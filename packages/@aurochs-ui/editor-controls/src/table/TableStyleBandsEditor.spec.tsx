@@ -1,8 +1,15 @@
+/**
+ * @file TableStyleBandsEditor tests
+ */
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { TableStyleBandsEditor } from "./TableStyleBandsEditor";
-import type { TableStyleBands } from "../types/table-formatting";
+import type { TableStyleBands } from "./types";
+
+function createOnChange() {
+  const calls: Partial<TableStyleBands>[] = [];
+  return { fn: (update: Partial<TableStyleBands>) => { calls.push(update); }, calls };
+}
 
 describe("TableStyleBandsEditor", () => {
   const defaultValue: TableStyleBands = {
@@ -15,7 +22,7 @@ describe("TableStyleBandsEditor", () => {
   };
 
   it("renders all 6 band toggles", () => {
-    const onChange = vi.fn();
+    const { fn: onChange } = createOnChange();
     render(<TableStyleBandsEditor value={defaultValue} onChange={onChange} />);
 
     expect(screen.getByText("Header Row")).toBeDefined();
@@ -27,7 +34,7 @@ describe("TableStyleBandsEditor", () => {
   });
 
   it("hides toggles when features disable them", () => {
-    const onChange = vi.fn();
+    const { fn: onChange } = createOnChange();
     const { container } = render(
       <TableStyleBandsEditor
         value={defaultValue}
@@ -42,7 +49,7 @@ describe("TableStyleBandsEditor", () => {
   });
 
   it("emits partial update on toggle", () => {
-    const onChange = vi.fn();
+    const { fn: onChange, calls } = createOnChange();
     render(<TableStyleBandsEditor value={defaultValue} onChange={onChange} />);
 
     // Click the "Total Row" toggle (currently false)
@@ -51,7 +58,7 @@ describe("TableStyleBandsEditor", () => {
     const toggle = toggleContainer?.querySelector('input[type="checkbox"]') as HTMLInputElement;
     if (toggle) {
       fireEvent.click(toggle);
-      expect(onChange).toHaveBeenCalledWith({ totalRow: true });
+      expect(calls).toContainEqual({ totalRow: true });
     }
   });
 });

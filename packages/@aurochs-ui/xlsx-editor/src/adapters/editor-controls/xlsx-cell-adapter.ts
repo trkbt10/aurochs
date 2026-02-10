@@ -6,13 +6,9 @@
 
 import type { XlsxAlignment } from "@aurochs-office/xlsx/domain/style/types";
 import type { XlsxBorder, XlsxBorderEdge } from "@aurochs-office/xlsx/domain/style/border";
-import type {
-  FormattingAdapter,
-  CellFormatting,
-  VerticalAlignment,
-  OutlineFormatting,
-  BorderEdges,
-} from "@aurochs-ui/editor-controls/types";
+import type { FormattingAdapter } from "@aurochs-ui/editor-controls/formatting-adapter";
+import type { CellFormatting, VerticalAlignment } from "@aurochs-ui/editor-controls/table";
+import type { OutlineFormatting, BorderEdges } from "@aurochs-ui/editor-controls/surface";
 import { rgbHexFromXlsxColor, makeXlsxRgbColor } from "../../components/format-panel/color-utils";
 
 /** Source type combining alignment and border. */

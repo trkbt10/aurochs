@@ -5,6 +5,7 @@
   "type": "module",
   "sideEffects": false,
   "dependencies": {
+    "@aurochs-ui/color-editor": "workspace:*",
     "@aurochs-ui/ui-components": "workspace:*"
   },
   "peerDependencies": {
@@ -21,9 +22,13 @@
       "types": "./src/index.ts",
       "default": "./src/index.ts"
     },
-    "./types": {
-      "types": "./src/types/index.ts",
-      "default": "./src/types/index.ts"
+    "./formatting-adapter": {
+      "types": "./src/formatting-adapter.ts",
+      "default": "./src/formatting-adapter.ts"
+    },
+    "./mixed-state": {
+      "types": "./src/mixed-state.ts",
+      "default": "./src/mixed-state.ts"
     },
     "./text": {
       "types": "./src/text/index.ts",
@@ -36,6 +41,10 @@
     "./table": {
       "types": "./src/table/index.ts",
       "default": "./src/table/index.ts"
+    },
+    "./dev": {
+      "types": "./src/dev/index.ts",
+      "default": "./src/dev/index.ts"
     }
   }
 }

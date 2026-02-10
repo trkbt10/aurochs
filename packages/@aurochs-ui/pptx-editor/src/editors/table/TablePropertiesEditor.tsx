@@ -11,7 +11,7 @@ import { Accordion, FieldGroup } from "@aurochs-ui/ui-components/layout";
 import { FillEditor, createNoFill } from "../color/FillEditor";
 import { EffectsEditor, createDefaultEffects } from "../shape/EffectsEditor";
 import { TableStyleBandsEditor } from "@aurochs-ui/editor-controls/table";
-import type { TableStyleBands } from "@aurochs-ui/editor-controls/types";
+import type { TableStyleBands } from "@aurochs-ui/editor-controls/table";
 import type { TableProperties } from "@aurochs-office/pptx/domain/table/types";
 import type { EditorProps } from "@aurochs-ui/ui-components/types";
 import { pptxTableAdapter } from "../../adapters/editor-controls";

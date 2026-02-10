@@ -12,7 +12,7 @@ import { PixelsEditor, PointsEditor } from "../primitives";
 import { Input } from "@aurochs-ui/ui-components/primitives";
 import { ColorEditor, createDefaultColor } from "../color";
 import { TextFormattingEditor } from "@aurochs-ui/editor-controls/text";
-import type { TextFormatting } from "@aurochs-ui/editor-controls/types";
+import type { TextFormatting } from "@aurochs-ui/editor-controls/text";
 import type { RunProperties, UnderlineStyle, StrikeStyle } from "@aurochs-office/pptx/domain/text";
 import type { TextCaps, TextTypeface } from "@aurochs-office/pptx/domain/types";
 import type { SelectOption } from "@aurochs-ui/ui-components/types";

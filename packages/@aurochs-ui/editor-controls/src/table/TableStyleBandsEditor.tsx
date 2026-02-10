@@ -8,8 +8,7 @@
 import { useCallback, type CSSProperties } from "react";
 import { Toggle } from "@aurochs-ui/ui-components/primitives";
 import { FieldGroup } from "@aurochs-ui/ui-components/layout";
-import type { TableStyleBands } from "../types/table-formatting";
-import type { TableBandFeatures } from "../types/feature-flags";
+import type { TableStyleBands, TableBandFeatures } from "./types";
 
 // =============================================================================
 // Types
@@ -66,6 +65,7 @@ const BAND_ENTRIES: readonly { key: BandKey; label: string; featureKey: keyof Ta
   { key: "bandedColumns", label: "Banded Columns", featureKey: "showBandedColumns" },
 ];
 
+/** Shared table style band toggle grid for header/total/banded options. */
 export function TableStyleBandsEditor({
   value,
   onChange,

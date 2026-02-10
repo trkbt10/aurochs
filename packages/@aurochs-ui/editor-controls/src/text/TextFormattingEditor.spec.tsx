@@ -1,8 +1,15 @@
+/**
+ * @file TextFormattingEditor tests
+ */
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { TextFormattingEditor } from "./TextFormattingEditor";
-import type { TextFormatting } from "../types/text-formatting";
+import type { TextFormatting } from "./types";
+
+function createOnChange() {
+  const calls: Partial<TextFormatting>[] = [];
+  return { fn: (update: Partial<TextFormatting>) => { calls.push(update); }, calls };
+}
 
 describe("TextFormattingEditor", () => {
   const defaultValue: TextFormatting = {
@@ -16,7 +23,7 @@ describe("TextFormattingEditor", () => {
   };
 
   it("renders all default controls", () => {
-    const onChange = vi.fn();
+    const { fn: onChange } = createOnChange();
     render(<TextFormattingEditor value={defaultValue} onChange={onChange} />);
 
     expect(screen.getByLabelText("Bold")).toBeDefined();
@@ -26,23 +33,23 @@ describe("TextFormattingEditor", () => {
   });
 
   it("emits partial update on bold toggle", () => {
-    const onChange = vi.fn();
+    const { fn: onChange, calls } = createOnChange();
     render(<TextFormattingEditor value={defaultValue} onChange={onChange} />);
 
     fireEvent.click(screen.getByLabelText("Bold"));
-    expect(onChange).toHaveBeenCalledWith({ bold: true });
+    expect(calls).toContainEqual({ bold: true });
   });
 
   it("emits partial update on italic toggle", () => {
-    const onChange = vi.fn();
+    const { fn: onChange, calls } = createOnChange();
     render(<TextFormattingEditor value={defaultValue} onChange={onChange} />);
 
     fireEvent.click(screen.getByLabelText("Italic"));
-    expect(onChange).toHaveBeenCalledWith({ italic: true });
+    expect(calls).toContainEqual({ italic: true });
   });
 
   it("hides highlight when feature disabled", () => {
-    const onChange = vi.fn();
+    const { fn: onChange } = createOnChange();
     const { container } = render(
       <TextFormattingEditor value={defaultValue} onChange={onChange} features={{ showHighlight: false }} />,
     );
@@ -51,7 +58,7 @@ describe("TextFormattingEditor", () => {
   });
 
   it("shows highlight when feature enabled", () => {
-    const onChange = vi.fn();
+    const { fn: onChange } = createOnChange();
     render(
       <TextFormattingEditor value={defaultValue} onChange={onChange} features={{ showHighlight: true }} />,
     );
@@ -61,7 +68,7 @@ describe("TextFormattingEditor", () => {
   });
 
   it("shows mixed indicators", () => {
-    const onChange = vi.fn();
+    const { fn: onChange } = createOnChange();
     const mixed = { mixedFields: new Set(["bold", "fontSize"]) };
 
     render(
@@ -73,7 +80,7 @@ describe("TextFormattingEditor", () => {
   });
 
   it("uses custom font family slot when provided", () => {
-    const onChange = vi.fn();
+    const { fn: onChange } = createOnChange();
     render(
       <TextFormattingEditor
         value={defaultValue}
@@ -87,7 +94,7 @@ describe("TextFormattingEditor", () => {
   });
 
   it("uses custom color picker slot when provided", () => {
-    const onChange = vi.fn();
+    const { fn: onChange } = createOnChange();
     render(
       <TextFormattingEditor
         value={defaultValue}
@@ -100,7 +107,7 @@ describe("TextFormattingEditor", () => {
   });
 
   it("renders extras slot", () => {
-    const onChange = vi.fn();
+    const { fn: onChange } = createOnChange();
     render(
       <TextFormattingEditor
         value={defaultValue}
@@ -113,7 +120,7 @@ describe("TextFormattingEditor", () => {
   });
 
   it("hides all toggles when features disable them", () => {
-    const onChange = vi.fn();
+    const { fn: onChange } = createOnChange();
     const { container } = render(
       <TextFormattingEditor
         value={defaultValue}
@@ -134,7 +141,7 @@ describe("TextFormattingEditor", () => {
   });
 
   it("shows super/subscript when enabled", () => {
-    const onChange = vi.fn();
+    const { fn: onChange } = createOnChange();
     render(
       <TextFormattingEditor
         value={defaultValue}
@@ -148,7 +155,7 @@ describe("TextFormattingEditor", () => {
   });
 
   it("clears subscript when superscript is toggled on", () => {
-    const onChange = vi.fn();
+    const { fn: onChange, calls } = createOnChange();
     render(
       <TextFormattingEditor
         value={{ ...defaultValue, subscript: true }}
@@ -158,6 +165,6 @@ describe("TextFormattingEditor", () => {
     );
 
     fireEvent.click(screen.getByLabelText("Superscript"));
-    expect(onChange).toHaveBeenCalledWith({ superscript: true, subscript: undefined });
+    expect(calls).toContainEqual({ superscript: true, subscript: undefined });
   });
 });

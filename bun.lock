@@ -591,6 +591,7 @@
       "name": "@aurochs-ui/editor-controls",
       "version": "0.2.0",
       "dependencies": {
+        "@aurochs-ui/color-editor": "workspace:*",
         "@aurochs-ui/ui-components": "workspace:*",
       },
       "peerDependencies": {
@@ -659,6 +660,7 @@
         "@aurochs-office/opc": "workspace:*",
         "@aurochs-office/xls": "workspace:*",
         "@aurochs-office/xlsx": "workspace:*",
+        "@aurochs-ui/editor-controls": "workspace:*",
         "@aurochs-ui/ui-components": "workspace:*",
         "@aurochs-ui/xlsx-editor": "workspace:*",
         "react-router-dom": "^7.6.1",

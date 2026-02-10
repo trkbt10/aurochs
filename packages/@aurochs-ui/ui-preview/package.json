@@ -11,6 +11,7 @@
     "@aurochs-office/xls": "workspace:*",
     "@aurochs-office/xlsx": "workspace:*",
     "@aurochs-ui/ui-components": "workspace:*",
+    "@aurochs-ui/editor-controls": "workspace:*",
     "@aurochs-ui/xlsx-editor": "workspace:*",
     "react-router-dom": "^7.6.1"
   },
@@ -19,6 +20,7 @@
     "react-dom": "^18.0.0 || ^19.0.0"
   },
   "scripts": {
-    "dev:xlsx": "vite --open /xlsx-editor.html"
+    "dev:xlsx": "vite --open /xlsx-editor.html",
+    "dev:editor-controls": "vite --open /editor-controls.html"
   }
 }

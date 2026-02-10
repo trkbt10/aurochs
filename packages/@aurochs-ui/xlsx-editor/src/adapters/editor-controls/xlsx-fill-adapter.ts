@@ -6,7 +6,8 @@
  */
 
 import type { XlsxFill } from "@aurochs-office/xlsx/domain/style/fill";
-import type { FormattingAdapter, FillFormatting } from "@aurochs-ui/editor-controls/types";
+import type { FormattingAdapter } from "@aurochs-ui/editor-controls/formatting-adapter";
+import type { FillFormatting } from "@aurochs-ui/editor-controls/surface";
 import { rgbHexFromXlsxColor, makeXlsxRgbColor } from "../../components/format-panel/color-utils";
 
 /**

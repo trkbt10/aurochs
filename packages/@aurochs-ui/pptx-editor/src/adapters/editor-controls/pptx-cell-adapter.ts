@@ -5,7 +5,8 @@
  */
 
 import type { TableCellProperties } from "@aurochs-office/pptx/domain/table/types";
-import type { FormattingAdapter, CellFormatting } from "@aurochs-ui/editor-controls/types";
+import type { FormattingAdapter } from "@aurochs-ui/editor-controls/formatting-adapter";
+import type { CellFormatting } from "@aurochs-ui/editor-controls/table";
 
 /** Extract background color hex string from table cell properties */
 function extractBackgroundColor(value: TableCellProperties): string | undefined {

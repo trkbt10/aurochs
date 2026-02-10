@@ -8,10 +8,10 @@
 import { useCallback, type CSSProperties, type ReactNode } from "react";
 import { ToggleButton, Toggle } from "@aurochs-ui/ui-components/primitives";
 import { FieldGroup } from "@aurochs-ui/ui-components/layout";
-import type { CellFormatting, VerticalAlignment } from "../types/cell-formatting";
-import type { CellFormattingFeatures } from "../types/feature-flags";
-import type { MixedContext } from "../types/mixed";
-import { isMixedField } from "../types/mixed";
+import { ColorPickerPopover } from "@aurochs-ui/color-editor";
+import type { CellFormatting, VerticalAlignment, CellFormattingFeatures } from "./types";
+import type { MixedContext } from "../mixed-state";
+import { isMixedField } from "../mixed-state";
 
 // =============================================================================
 // Types
@@ -64,6 +64,33 @@ const wrapLabelStyle: CSSProperties = {
   userSelect: "none",
 };
 
+function toBareHex(color: string | undefined, fallback: string): string {
+  if (!color) {
+    return fallback;
+  }
+  return color.startsWith("#") ? color.slice(1) : color;
+}
+
+function buildBackgroundEditor(opts: {
+  renderSlot: CellFormattingEditorProps["renderBackgroundEditor"];
+  color: string | undefined;
+  onChange: (hex: string) => void;
+  disabled?: boolean;
+}): ReactNode {
+  if (opts.renderSlot) {
+    return opts.renderSlot();
+  }
+  return (
+    <FieldGroup label="Background" inline labelWidth={72}>
+      <ColorPickerPopover
+        value={toBareHex(opts.color, "FFFFFF")}
+        onChange={(hex) => opts.onChange(`#${hex}`)}
+        disabled={opts.disabled}
+      />
+    </FieldGroup>
+  );
+}
+
 // =============================================================================
 // Alignment options
 // =============================================================================
@@ -78,6 +105,7 @@ const VERTICAL_ALIGNMENTS: readonly { value: VerticalAlignment; label: string }[
 // Component
 // =============================================================================
 
+/** Shared table cell editor with vertical alignment, background, wrap, and border controls. */
 export function CellFormattingEditor({
   value,
   onChange,
@@ -128,24 +156,7 @@ export function CellFormattingEditor({
       {showBackgroundColor && (
         <>
           {showVerticalAlignment && <div style={separatorStyle} />}
-          {renderBackgroundEditor ? (
-            renderBackgroundEditor()
-          ) : (
-            <FieldGroup label="Background" inline labelWidth={72}>
-              <input
-                type="color"
-                value={
-                  value.backgroundColor
-                    ? value.backgroundColor.startsWith("#")
-                      ? value.backgroundColor
-                      : `#${value.backgroundColor}`
-                    : "#FFFFFF"
-                }
-                onChange={(e) => handleBackgroundColorChange(e.target.value)}
-                disabled={disabled}
-              />
-            </FieldGroup>
-          )}
+          {buildBackgroundEditor({ renderSlot: renderBackgroundEditor, color: value.backgroundColor, onChange: handleBackgroundColorChange, disabled })}
         </>
       )}
 

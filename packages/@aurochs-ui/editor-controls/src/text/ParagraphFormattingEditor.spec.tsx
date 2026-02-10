@@ -1,8 +1,15 @@
+/**
+ * @file ParagraphFormattingEditor tests
+ */
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { ParagraphFormattingEditor } from "./ParagraphFormattingEditor";
-import type { ParagraphFormatting } from "../types/paragraph-formatting";
+import type { ParagraphFormatting } from "./types";
+
+function createOnChange() {
+  const calls: Partial<ParagraphFormatting>[] = [];
+  return { fn: (update: Partial<ParagraphFormatting>) => { calls.push(update); }, calls };
+}
 
 describe("ParagraphFormattingEditor", () => {
   const defaultValue: ParagraphFormatting = {
@@ -10,7 +17,7 @@ describe("ParagraphFormattingEditor", () => {
   };
 
   it("renders alignment buttons by default", () => {
-    const onChange = vi.fn();
+    const { fn: onChange } = createOnChange();
     render(<ParagraphFormattingEditor value={defaultValue} onChange={onChange} />);
 
     expect(screen.getByLabelText("Align left")).toBeDefined();
@@ -20,15 +27,15 @@ describe("ParagraphFormattingEditor", () => {
   });
 
   it("emits alignment change", () => {
-    const onChange = vi.fn();
+    const { fn: onChange, calls } = createOnChange();
     render(<ParagraphFormattingEditor value={defaultValue} onChange={onChange} />);
 
     fireEvent.click(screen.getByLabelText("Align center"));
-    expect(onChange).toHaveBeenCalledWith({ alignment: "center" });
+    expect(calls).toContainEqual({ alignment: "center" });
   });
 
   it("shows line spacing when feature enabled", () => {
-    const onChange = vi.fn();
+    const { fn: onChange } = createOnChange();
     render(
       <ParagraphFormattingEditor
         value={defaultValue}
@@ -41,7 +48,7 @@ describe("ParagraphFormattingEditor", () => {
   });
 
   it("hides line spacing by default", () => {
-    const onChange = vi.fn();
+    const { fn: onChange } = createOnChange();
     const { container } = render(
       <ParagraphFormattingEditor value={defaultValue} onChange={onChange} />,
     );
@@ -50,7 +57,7 @@ describe("ParagraphFormattingEditor", () => {
   });
 
   it("shows spacing before/after when feature enabled", () => {
-    const onChange = vi.fn();
+    const { fn: onChange } = createOnChange();
     render(
       <ParagraphFormattingEditor
         value={defaultValue}
@@ -64,7 +71,7 @@ describe("ParagraphFormattingEditor", () => {
   });
 
   it("shows indentation when feature enabled", () => {
-    const onChange = vi.fn();
+    const { fn: onChange } = createOnChange();
     render(
       <ParagraphFormattingEditor
         value={defaultValue}
@@ -79,7 +86,7 @@ describe("ParagraphFormattingEditor", () => {
   });
 
   it("renders extras slot", () => {
-    const onChange = vi.fn();
+    const { fn: onChange } = createOnChange();
     render(
       <ParagraphFormattingEditor
         value={defaultValue}
@@ -92,7 +99,7 @@ describe("ParagraphFormattingEditor", () => {
   });
 
   it("shows mixed alignment indicator", () => {
-    const onChange = vi.fn();
+    const { fn: onChange } = createOnChange();
     const mixed = { mixedFields: new Set(["alignment"]) };
 
     render(

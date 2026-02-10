@@ -6,7 +6,8 @@
 
 import type { DocxRunProperties } from "@aurochs-office/docx/domain/run";
 import type { HalfPoints } from "@aurochs-office/docx/domain/types";
-import type { FormattingAdapter, TextFormatting } from "@aurochs-ui/editor-controls/types";
+import type { FormattingAdapter } from "@aurochs-ui/editor-controls/formatting-adapter";
+import type { TextFormatting } from "@aurochs-ui/editor-controls/text";
 
 /**
  * Adapter: DOCX DocxRunProperties <-> TextFormatting

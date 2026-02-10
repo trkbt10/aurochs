@@ -6,7 +6,8 @@
  */
 
 import type { TableProperties } from "@aurochs-office/pptx/domain/table/types";
-import type { FormattingAdapter, TableStyleBands } from "@aurochs-ui/editor-controls/types";
+import type { FormattingAdapter } from "@aurochs-ui/editor-controls/formatting-adapter";
+import type { TableStyleBands } from "@aurochs-ui/editor-controls/table";
 
 export const pptxTableAdapter: FormattingAdapter<TableProperties, TableStyleBands> = {
   toGeneric(value: TableProperties): TableStyleBands {

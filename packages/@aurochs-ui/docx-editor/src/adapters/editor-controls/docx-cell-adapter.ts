@@ -5,7 +5,8 @@
  */
 
 import type { DocxTableCellProperties } from "@aurochs-office/docx/domain/table";
-import type { FormattingAdapter, CellFormatting, VerticalAlignment } from "@aurochs-ui/editor-controls/types";
+import type { FormattingAdapter } from "@aurochs-ui/editor-controls/formatting-adapter";
+import type { CellFormatting, VerticalAlignment } from "@aurochs-ui/editor-controls/table";
 
 /** Map DOCX vAlign to generic VerticalAlignment. */
 function toGenericVAlign(vAlign: string | undefined): VerticalAlignment | undefined {

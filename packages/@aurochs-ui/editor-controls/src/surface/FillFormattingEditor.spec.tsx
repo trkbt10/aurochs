@@ -1,12 +1,19 @@
+/**
+ * @file FillFormattingEditor tests
+ */
 // @vitest-environment jsdom
-import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { FillFormattingEditor } from "./FillFormattingEditor";
-import type { FillFormatting } from "../types/fill-formatting";
+import type { FillFormatting } from "./types";
+
+function createOnChange() {
+  const calls: FillFormatting[] = [];
+  return { fn: (update: FillFormatting) => { calls.push(update); }, calls };
+}
 
 describe("FillFormattingEditor", () => {
   it("renders type select for none fill", () => {
-    const onChange = vi.fn();
+    const { fn: onChange } = createOnChange();
     const value: FillFormatting = { type: "none" };
     render(<FillFormattingEditor value={value} onChange={onChange} />);
 
@@ -15,7 +22,7 @@ describe("FillFormattingEditor", () => {
   });
 
   it("renders color picker for solid fill", () => {
-    const onChange = vi.fn();
+    const { fn: onChange } = createOnChange();
     const value: FillFormatting = { type: "solid", color: "#FF0000" };
     render(<FillFormattingEditor value={value} onChange={onChange} />);
 
@@ -23,7 +30,7 @@ describe("FillFormattingEditor", () => {
   });
 
   it("uses custom color picker slot", () => {
-    const onChange = vi.fn();
+    const { fn: onChange } = createOnChange();
     const value: FillFormatting = { type: "solid", color: "#FF0000" };
     render(
       <FillFormattingEditor
@@ -38,7 +45,7 @@ describe("FillFormattingEditor", () => {
   });
 
   it("renders advanced fill label for other type", () => {
-    const onChange = vi.fn();
+    const { fn: onChange } = createOnChange();
     const value: FillFormatting = { type: "other", label: "Gradient" };
     render(
       <FillFormattingEditor
@@ -52,7 +59,7 @@ describe("FillFormattingEditor", () => {
   });
 
   it("renders advanced fill slot", () => {
-    const onChange = vi.fn();
+    const { fn: onChange } = createOnChange();
     const value: FillFormatting = { type: "other", label: "Gradient" };
     render(
       <FillFormattingEditor
@@ -67,13 +74,13 @@ describe("FillFormattingEditor", () => {
   });
 
   it("changes type from none to solid", () => {
-    const onChange = vi.fn();
+    const { fn: onChange, calls } = createOnChange();
     const value: FillFormatting = { type: "none" };
     render(<FillFormattingEditor value={value} onChange={onChange} />);
 
     // Find the select and change it
     const select = screen.getByDisplayValue("None") as HTMLSelectElement;
     fireEvent.change(select, { target: { value: "solid" } });
-    expect(onChange).toHaveBeenCalledWith({ type: "solid", color: "#000000" });
+    expect(calls).toContainEqual({ type: "solid", color: "#000000" });
   });
 });

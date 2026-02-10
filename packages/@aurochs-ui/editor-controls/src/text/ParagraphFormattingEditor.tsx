@@ -7,10 +7,9 @@
 import { useCallback, type CSSProperties, type ReactNode } from "react";
 import { Input, ToggleButton } from "@aurochs-ui/ui-components/primitives";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
-import type { ParagraphFormatting, HorizontalAlignment } from "../types/paragraph-formatting";
-import type { ParagraphFormattingFeatures } from "../types/feature-flags";
-import type { MixedContext } from "../types/mixed";
-import { isMixedField } from "../types/mixed";
+import type { ParagraphFormatting, HorizontalAlignment, ParagraphFormattingFeatures } from "./types";
+import type { MixedContext } from "../mixed-state";
+import { isMixedField } from "../mixed-state";
 
 // =============================================================================
 // Types
@@ -75,6 +74,7 @@ function feat(
 // Component
 // =============================================================================
 
+/** Shared paragraph formatting editor with alignment, spacing, and indentation controls. */
 export function ParagraphFormattingEditor({
   value,
   onChange,

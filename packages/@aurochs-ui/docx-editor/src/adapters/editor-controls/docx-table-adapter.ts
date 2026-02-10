@@ -6,7 +6,8 @@
  */
 
 import type { DocxTableProperties } from "@aurochs-office/docx/domain/table";
-import type { FormattingAdapter, TableStyleBands } from "@aurochs-ui/editor-controls/types";
+import type { FormattingAdapter } from "@aurochs-ui/editor-controls/formatting-adapter";
+import type { TableStyleBands } from "@aurochs-ui/editor-controls/table";
 
 export const docxTableAdapter: FormattingAdapter<DocxTableProperties, TableStyleBands> = {
   toGeneric(value: DocxTableProperties): TableStyleBands {

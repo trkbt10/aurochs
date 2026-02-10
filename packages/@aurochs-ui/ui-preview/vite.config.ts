@@ -21,6 +21,7 @@ export default defineConfig({
       input: {
         main: path.resolve(__dirname, "index.html"),
         "xlsx-editor": path.resolve(__dirname, "xlsx-editor.html"),
+        "editor-controls": path.resolve(__dirname, "editor-controls.html"),
       },
     },
   },

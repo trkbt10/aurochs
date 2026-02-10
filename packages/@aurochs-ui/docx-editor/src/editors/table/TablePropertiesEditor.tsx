@@ -15,7 +15,7 @@ import type { EditorProps, SelectOption } from "@aurochs-ui/ui-components/types"
 import { AlignLeftIcon, AlignCenterIcon, AlignRightIcon } from "@aurochs-ui/ui-components/icons";
 import { iconTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { TableStyleBandsEditor } from "@aurochs-ui/editor-controls/table";
-import type { TableStyleBands } from "@aurochs-ui/editor-controls/types";
+import type { TableStyleBands } from "@aurochs-ui/editor-controls/table";
 import { docxTableAdapter } from "../../adapters/editor-controls";
 import styles from "./TablePropertiesEditor.module.css";
 

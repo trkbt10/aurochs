@@ -8,8 +8,8 @@
 import { useCallback, type CSSProperties, type ReactNode } from "react";
 import { Input, Select } from "@aurochs-ui/ui-components/primitives";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
-import type { OutlineFormatting } from "../types/outline-formatting";
-import type { OutlineFormattingFeatures } from "../types/feature-flags";
+import { ColorPickerPopover } from "@aurochs-ui/color-editor";
+import type { OutlineFormatting, OutlineFormattingFeatures } from "./types";
 import type { SelectOption } from "@aurochs-ui/ui-components/types";
 
 // =============================================================================
@@ -47,6 +47,31 @@ const containerStyle: CSSProperties = {
 // Options
 // =============================================================================
 
+function toBareHex(color: string | undefined, fallback: string): string {
+  if (!color) {
+    return fallback;
+  }
+  return color.startsWith("#") ? color.slice(1) : color;
+}
+
+function buildColorPicker(opts: {
+  renderSlot: OutlineFormattingEditorProps["renderColorPicker"];
+  color: string | undefined;
+  onChange: (hex: string) => void;
+  disabled?: boolean;
+}): ReactNode {
+  if (opts.renderSlot) {
+    return opts.renderSlot({ value: opts.color, onChange: opts.onChange, disabled: opts.disabled });
+  }
+  return (
+    <ColorPickerPopover
+      value={toBareHex(opts.color, "000000")}
+      onChange={(hex) => opts.onChange(`#${hex}`)}
+      disabled={opts.disabled}
+    />
+  );
+}
+
 type DashStyle = NonNullable<OutlineFormatting["style"]>;
 
 const dashStyleOptions: SelectOption<DashStyle>[] = [
@@ -60,6 +85,7 @@ const dashStyleOptions: SelectOption<DashStyle>[] = [
 // Component
 // =============================================================================
 
+/** Shared outline/border editor with width, style, and color controls. */
 export function OutlineFormattingEditor({
   value,
   onChange,
@@ -120,20 +146,7 @@ export function OutlineFormattingEditor({
 
       {showColor && (
         <FieldGroup label="Color" inline labelWidth={40}>
-          {renderColorPicker ? (
-            renderColorPicker({
-              value: value.color,
-              onChange: handleColorChange,
-              disabled,
-            })
-          ) : (
-            <input
-              type="color"
-              value={value.color ? (value.color.startsWith("#") ? value.color : `#${value.color}`) : "#000000"}
-              onChange={(e) => handleColorChange(e.target.value)}
-              disabled={disabled}
-            />
-          )}
+          {buildColorPicker({ renderSlot: renderColorPicker, color: value.color, onChange: handleColorChange, disabled })}
         </FieldGroup>
       )}
 

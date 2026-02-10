@@ -8,7 +8,8 @@
 
 import type { Fill } from "@aurochs-office/pptx/domain/color/types";
 import type { SolidFill } from "@aurochs-office/drawing-ml/domain/fill";
-import type { FormattingAdapter, FillFormatting } from "@aurochs-ui/editor-controls/types";
+import type { FormattingAdapter } from "@aurochs-ui/editor-controls/formatting-adapter";
+import type { FillFormatting } from "@aurochs-ui/editor-controls/surface";
 import { createDefaultColor } from "../../editors/color/ColorEditor";
 
 const FILL_LABELS: Record<string, string> = {

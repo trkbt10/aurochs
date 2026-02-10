@@ -9,7 +9,9 @@ import type { RunProperties } from "@aurochs-office/pptx/domain/text";
 import type { Color } from "@aurochs-office/drawing-ml/domain/color";
 import type { Points } from "@aurochs-office/drawing-ml/domain/units";
 import { pt } from "@aurochs-office/drawing-ml/domain/units";
-import type { FormattingAdapter, TextFormatting, MixedContext } from "@aurochs-ui/editor-controls/types";
+import type { FormattingAdapter } from "@aurochs-ui/editor-controls/formatting-adapter";
+import type { MixedContext } from "@aurochs-ui/editor-controls/mixed-state";
+import type { TextFormatting } from "@aurochs-ui/editor-controls/text";
 import type { MixedRunProperties } from "../../editors/text/mixed-properties";
 import { isMixed, getExtractionValue } from "../../editors/text/mixed-properties";
 

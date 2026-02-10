@@ -7,9 +7,8 @@
 
 import { useCallback, type CSSProperties, type ReactNode } from "react";
 import { Select } from "@aurochs-ui/ui-components/primitives";
-import { FieldRow } from "@aurochs-ui/ui-components/layout";
-import type { FillFormatting } from "../types/fill-formatting";
-import type { FillFormattingFeatures } from "../types/feature-flags";
+import { ColorPickerPopover } from "@aurochs-ui/color-editor";
+import type { FillFormatting, FillFormattingFeatures } from "./types";
 import type { SelectOption } from "@aurochs-ui/ui-components/types";
 
 // =============================================================================
@@ -66,6 +65,31 @@ const allFillTypeOptions: SelectOption<FillType>[] = [
   { value: "other", label: "Advanced" },
 ];
 
+function toBareHex(color: string | undefined, fallback: string): string {
+  if (!color) {
+    return fallback;
+  }
+  return color.startsWith("#") ? color.slice(1) : color;
+}
+
+function buildColorPicker(opts: {
+  renderSlot: FillFormattingEditorProps["renderColorPicker"];
+  color: string;
+  onChange: (hex: string) => void;
+  disabled?: boolean;
+}): ReactNode {
+  if (opts.renderSlot) {
+    return opts.renderSlot({ value: opts.color, onChange: opts.onChange, disabled: opts.disabled });
+  }
+  return (
+    <ColorPickerPopover
+      value={toBareHex(opts.color, "000000")}
+      onChange={(hex) => opts.onChange(`#${hex}`)}
+      disabled={opts.disabled}
+    />
+  );
+}
+
 function getFilteredOptions(features?: FillFormattingFeatures): SelectOption<FillType>[] {
   const opts: SelectOption<FillType>[] = [];
   if (features?.showNone !== false) {
@@ -84,6 +108,7 @@ function getFilteredOptions(features?: FillFormattingFeatures): SelectOption<Fil
 // Component
 // =============================================================================
 
+/** Shared fill formatting editor with none/solid selection and advanced fill slot. */
 export function FillFormattingEditor({
   value,
   onChange,
@@ -140,20 +165,7 @@ export function FillFormattingEditor({
     return (
       <div className={className} style={{ ...containerStyle, ...style }}>
         <div style={rowStyle}>
-          {renderColorPicker ? (
-            renderColorPicker({
-              value: value.color,
-              onChange: handleColorChange,
-              disabled,
-            })
-          ) : (
-            <input
-              type="color"
-              value={value.color.startsWith("#") ? value.color : `#${value.color}`}
-              onChange={(e) => handleColorChange(e.target.value)}
-              disabled={disabled}
-            />
-          )}
+          {buildColorPicker({ renderSlot: renderColorPicker, color: value.color, onChange: handleColorChange, disabled })}
           <Select
             value={value.type}
             onChange={handleTypeChange}
