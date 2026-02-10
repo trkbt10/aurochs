@@ -8,6 +8,7 @@
 import { useCallback, type CSSProperties, type ReactNode } from "react";
 import { Input, Select } from "@aurochs-ui/ui-components/primitives";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
+import { fieldLabelTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { ColorPickerPopover } from "@aurochs-ui/color-editor";
 import type { OutlineFormatting, OutlineFormattingFeatures } from "./types";
 import type { SelectOption } from "@aurochs-ui/ui-components/types";
@@ -118,7 +119,7 @@ export function OutlineFormattingEditor({
     <div className={className} style={{ ...containerStyle, ...style }}>
       <FieldRow>
         {showWidth && (
-          <FieldGroup label="Width" inline labelWidth={40} style={{ flex: 1 }}>
+          <FieldGroup label="Width" inline labelWidth={fieldLabelTokens.outline.width} style={{ flex: 1 }}>
             <Input
               type="number"
               value={value.width ?? ""}
@@ -133,7 +134,7 @@ export function OutlineFormattingEditor({
           </FieldGroup>
         )}
         {showStyle && (
-          <FieldGroup label="Style" inline labelWidth={36} style={{ flex: 1 }}>
+          <FieldGroup label="Style" inline labelWidth={fieldLabelTokens.outline.style} style={{ flex: 1 }}>
             <Select
               value={value.style ?? "solid"}
               onChange={handleStyleChange}
@@ -145,7 +146,7 @@ export function OutlineFormattingEditor({
       </FieldRow>
 
       {showColor && (
-        <FieldGroup label="Color" inline labelWidth={40}>
+        <FieldGroup label="Color" inline labelWidth={fieldLabelTokens.outline.color}>
           {buildColorPicker({ renderSlot: renderColorPicker, color: value.color, onChange: handleColorChange, disabled })}
         </FieldGroup>
       )}

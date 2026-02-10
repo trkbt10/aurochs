@@ -8,7 +8,7 @@ import { useCallback, type CSSProperties, type ReactNode } from "react";
 import { Input, ToggleButton } from "@aurochs-ui/ui-components/primitives";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
 import { AlignLeftIcon, AlignCenterIcon, AlignRightIcon, AlignJustifyIcon } from "@aurochs-ui/ui-components/icons";
-import { iconTokens } from "@aurochs-ui/ui-components/design-tokens";
+import { iconTokens, fieldLabelTokens } from "@aurochs-ui/ui-components/design-tokens";
 import type { LucideIcon } from "@aurochs-ui/ui-components/icons";
 import type { ParagraphFormatting, HorizontalAlignment, ParagraphFormattingFeatures } from "./types";
 import type { MixedContext } from "../mixed-state";
@@ -185,7 +185,7 @@ export function ParagraphFormattingEditor({
           <FieldGroup
             label={isMixedField(mixed, "lineSpacing") ? "Line Spacing (Mixed)" : "Line Spacing"}
             inline
-            labelWidth={80}
+            labelWidth={fieldLabelTokens.paragraph.lineSpacing}
           >
             <Input
               type="number"
@@ -210,7 +210,7 @@ export function ParagraphFormattingEditor({
             <FieldGroup
               label={isMixedField(mixed, "spaceBefore") ? "Before (M)" : "Before"}
               inline
-              labelWidth={48}
+              labelWidth={fieldLabelTokens.paragraph.spaceBefore}
               style={{ flex: 1 }}
             >
               <Input
@@ -226,7 +226,7 @@ export function ParagraphFormattingEditor({
             <FieldGroup
               label={isMixedField(mixed, "spaceAfter") ? "After (M)" : "After"}
               inline
-              labelWidth={40}
+              labelWidth={fieldLabelTokens.paragraph.spaceAfter}
               style={{ flex: 1 }}
             >
               <Input
@@ -248,7 +248,7 @@ export function ParagraphFormattingEditor({
         <>
           <div style={separatorStyle} />
           <FieldRow>
-            <FieldGroup label="Left" inline labelWidth={32} style={{ flex: 1 }}>
+            <FieldGroup label="Left" inline labelWidth={fieldLabelTokens.paragraph.indentLeft} style={{ flex: 1 }}>
               <Input
                 type="number"
                 value={isMixedField(mixed, "indentLeft") ? "" : (value.indentLeft ?? "")}
@@ -259,7 +259,7 @@ export function ParagraphFormattingEditor({
                 suffix="pt"
               />
             </FieldGroup>
-            <FieldGroup label="Right" inline labelWidth={36} style={{ flex: 1 }}>
+            <FieldGroup label="Right" inline labelWidth={fieldLabelTokens.paragraph.indentRight} style={{ flex: 1 }}>
               <Input
                 type="number"
                 value={isMixedField(mixed, "indentRight") ? "" : (value.indentRight ?? "")}
@@ -271,7 +271,7 @@ export function ParagraphFormattingEditor({
               />
             </FieldGroup>
           </FieldRow>
-          <FieldGroup label="First Line" inline labelWidth={64}>
+          <FieldGroup label="First Line" inline labelWidth={fieldLabelTokens.paragraph.firstLine}>
             <Input
               type="number"
               value={isMixedField(mixed, "firstLineIndent") ? "" : (value.firstLineIndent ?? "")}

@@ -9,7 +9,7 @@ import { useCallback, type CSSProperties, type ReactNode } from "react";
 import { ToggleButton, Toggle } from "@aurochs-ui/ui-components/primitives";
 import { FieldGroup } from "@aurochs-ui/ui-components/layout";
 import { AlignTopIcon, AlignMiddleIcon, AlignBottomIcon } from "@aurochs-ui/ui-components/icons";
-import { iconTokens } from "@aurochs-ui/ui-components/design-tokens";
+import { iconTokens, fieldLabelTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { ColorPickerPopover } from "@aurochs-ui/color-editor";
 import type { LucideIcon } from "@aurochs-ui/ui-components/icons";
 import type { CellFormatting, VerticalAlignment, CellFormattingFeatures } from "./types";
@@ -84,7 +84,7 @@ function buildBackgroundEditor(opts: {
     return opts.renderSlot();
   }
   return (
-    <FieldGroup label="Background" inline labelWidth={72}>
+    <FieldGroup label="Background" inline labelWidth={fieldLabelTokens.cell.background}>
       <ColorPickerPopover
         value={toBareHex(opts.color, "FFFFFF")}
         onChange={(hex) => opts.onChange(`#${hex}`)}

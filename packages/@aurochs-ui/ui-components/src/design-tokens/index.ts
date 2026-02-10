@@ -12,12 +12,16 @@ export {
   fontTokens,
   iconTokens,
   editorLayoutTokens,
+  fieldLabelTokens,
+  fieldContainerTokens,
   type Tokens,
   type ColorTokens,
   type RadiusTokens,
   type SpacingTokens,
   type FontTokens,
   type IconTokens,
+  type FieldLabelTokens,
+  type FieldContainerTokens,
 } from "./tokens";
 
 export {

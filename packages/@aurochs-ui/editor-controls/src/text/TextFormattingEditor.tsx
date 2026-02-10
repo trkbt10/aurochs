@@ -10,7 +10,7 @@ import { useCallback, type CSSProperties, type ReactNode } from "react";
 import { Input, ToggleButton } from "@aurochs-ui/ui-components/primitives";
 import { FieldGroup, FieldRow } from "@aurochs-ui/ui-components/layout";
 import { BoldIcon, ItalicIcon, UnderlineIcon, StrikethroughIcon, SuperscriptIcon, SubscriptIcon } from "@aurochs-ui/ui-components/icons";
-import { iconTokens } from "@aurochs-ui/ui-components/design-tokens";
+import { iconTokens, fieldLabelTokens, fieldContainerTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { ColorPickerPopover } from "@aurochs-ui/color-editor";
 import type { TextFormatting, TextFormattingFeatures } from "./types";
 import type { MixedContext } from "../mixed-state";
@@ -224,7 +224,7 @@ export function TextFormattingEditor({
       {(showFontFamily || showFontSize) && (
         <FieldRow>
           {showFontFamily && (
-            <FieldGroup label="Font" inline labelWidth={36} style={{ flex: 1 }}>
+            <FieldGroup label="Font" inline labelWidth={fieldLabelTokens.text.font} style={{ flex: 1 }}>
               {buildFontFamilySelect({
                 renderSlot: renderFontFamilySelect,
                 value: value.fontFamily,
@@ -238,8 +238,8 @@ export function TextFormattingEditor({
             <FieldGroup
               label={isMixedField(mixed, "fontSize") ? "Size (Mixed)" : "Size"}
               inline
-              labelWidth={isMixedField(mixed, "fontSize") ? 72 : 32}
-              style={{ width: isMixedField(mixed, "fontSize") ? "130px" : "90px" }}
+              labelWidth={isMixedField(mixed, "fontSize") ? fieldLabelTokens.text.sizeMixed : fieldLabelTokens.text.size}
+              style={{ width: isMixedField(mixed, "fontSize") ? fieldContainerTokens.fontSizeMixed : fieldContainerTokens.fontSize }}
             >
               <Input
                 type="number"
@@ -320,7 +320,7 @@ export function TextFormattingEditor({
             <FieldGroup
               label={isMixedField(mixed, "textColor") ? "Color (Mixed)" : "Color"}
               inline
-              labelWidth={isMixedField(mixed, "textColor") ? 80 : 40}
+              labelWidth={isMixedField(mixed, "textColor") ? fieldLabelTokens.text.colorMixed : fieldLabelTokens.text.color}
             >
               {buildColorPicker({ renderSlot: renderColorPicker, color: value.textColor, onChange: handleTextColorChange, disabled, fallbackHex: "000000" })}
             </FieldGroup>
@@ -329,7 +329,7 @@ export function TextFormattingEditor({
             <FieldGroup
               label={isMixedField(mixed, "highlightColor") ? "Hi (Mixed)" : "Highlight"}
               inline
-              labelWidth={isMixedField(mixed, "highlightColor") ? 64 : 56}
+              labelWidth={isMixedField(mixed, "highlightColor") ? fieldLabelTokens.text.highlightMixed : fieldLabelTokens.text.highlight}
             >
               {buildColorPicker({ renderSlot: renderHighlightPicker, color: value.highlightColor, onChange: handleHighlightColorChange, disabled, fallbackHex: "FFFF00" })}
             </FieldGroup>

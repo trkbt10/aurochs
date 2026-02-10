@@ -141,6 +141,73 @@ export const editorLayoutTokens = {
 } as const;
 
 /**
+ * Field label width tokens for FieldGroup inline labels.
+ *
+ * Widths are sized to fit label text rendered at fontTokens.size.sm (11px)
+ * with fontTokens.weight.medium (500). Mixed-state variants accommodate
+ * the longer "(Mixed)" suffix.
+ */
+export const fieldLabelTokens = {
+  /** TextFormattingEditor labels */
+  text: {
+    /** "Font" */
+    font: 36,
+    /** "Size" */
+    size: 32,
+    /** "Size (Mixed)" */
+    sizeMixed: 72,
+    /** "Color" */
+    color: 40,
+    /** "Color (Mixed)" */
+    colorMixed: 80,
+    /** "Highlight" */
+    highlight: 56,
+    /** "Hi (Mixed)" */
+    highlightMixed: 64,
+  },
+  /** ParagraphFormattingEditor labels */
+  paragraph: {
+    /** "Line Spacing" */
+    lineSpacing: 80,
+    /** "Before" */
+    spaceBefore: 48,
+    /** "After" */
+    spaceAfter: 40,
+    /** "Left" */
+    indentLeft: 32,
+    /** "Right" */
+    indentRight: 36,
+    /** "First Line" */
+    firstLine: 64,
+  },
+  /** OutlineFormattingEditor labels */
+  outline: {
+    /** "Width" */
+    width: 40,
+    /** "Style" */
+    style: 36,
+    /** "Color" */
+    color: 40,
+  },
+  /** CellFormattingEditor labels */
+  cell: {
+    /** "Background" */
+    background: 72,
+  },
+} as const;
+
+/**
+ * Field container width tokens for FieldGroup style.width.
+ * These size the entire field group, distinct from label width.
+ */
+export const fieldContainerTokens = {
+  /** Font size input field */
+  fontSize: "90px",
+  /** Font size input field (mixed state) */
+  fontSizeMixed: "130px",
+} as const;
+
+/**
  * Combined tokens object for convenience
  */
 export const tokens = {
@@ -150,6 +217,8 @@ export const tokens = {
   font: fontTokens,
   icon: iconTokens,
   editorLayout: editorLayoutTokens,
+  fieldLabel: fieldLabelTokens,
+  fieldContainer: fieldContainerTokens,
 } as const;
 
 /**
@@ -160,4 +229,6 @@ export type RadiusTokens = typeof radiusTokens;
 export type SpacingTokens = typeof spacingTokens;
 export type FontTokens = typeof fontTokens;
 export type IconTokens = typeof iconTokens;
+export type FieldLabelTokens = typeof fieldLabelTokens;
+export type FieldContainerTokens = typeof fieldContainerTokens;
 export type Tokens = typeof tokens;
