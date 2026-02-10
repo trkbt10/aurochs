@@ -10,8 +10,8 @@ function addr(col: number, row: number): CellAddress {
   return { col: colIdx(col), row: rowIdx(row), colAbsolute: false, rowAbsolute: false };
 }
 
-function range(startCol: number, startRow: number, endCol: number, endRow: number): CellRange {
-  return { start: addr(startCol, startRow), end: addr(endCol, endRow) };
+function range(params: { startCol: number; startRow: number; endCol: number; endRow: number }): CellRange {
+  return { start: addr(params.startCol, params.startRow), end: addr(params.endCol, params.endRow) };
 }
 
 describe("formula-edit/formula-reference-insert", () => {
@@ -87,35 +87,35 @@ describe("formula-edit/formula-reference-insert", () => {
 
   describe("buildReferenceText", () => {
     it("builds single cell reference on same sheet", () => {
-      expect(buildReferenceText(range(1, 1, 1, 1), "Sheet1")).toBe("A1");
+      expect(buildReferenceText(range({ startCol: 1, startRow: 1, endCol: 1, endRow: 1 }), "Sheet1")).toBe("A1");
     });
 
     it("builds range reference on same sheet", () => {
-      expect(buildReferenceText(range(1, 1, 2, 5), "Sheet1")).toBe("A1:B5");
+      expect(buildReferenceText(range({ startCol: 1, startRow: 1, endCol: 2, endRow: 5 }), "Sheet1")).toBe("A1:B5");
     });
 
     it("builds cross-sheet single cell reference", () => {
-      expect(buildReferenceText(range(3, 3, 3, 3), "Sheet1", "Sheet2")).toBe("Sheet2!C3");
+      expect(buildReferenceText(range({ startCol: 3, startRow: 3, endCol: 3, endRow: 3 }), "Sheet1", "Sheet2")).toBe("Sheet2!C3");
     });
 
     it("builds cross-sheet range reference", () => {
-      expect(buildReferenceText(range(1, 1, 2, 5), "Sheet1", "Sheet2")).toBe("Sheet2!A1:B5");
+      expect(buildReferenceText(range({ startCol: 1, startRow: 1, endCol: 2, endRow: 5 }), "Sheet1", "Sheet2")).toBe("Sheet2!A1:B5");
     });
 
     it("quotes sheet name with spaces", () => {
-      expect(buildReferenceText(range(1, 1, 1, 1), "Sheet1", "My Sheet")).toBe("'My Sheet'!A1");
+      expect(buildReferenceText(range({ startCol: 1, startRow: 1, endCol: 1, endRow: 1 }), "Sheet1", "My Sheet")).toBe("'My Sheet'!A1");
     });
 
     it("escapes single quotes in sheet name", () => {
-      expect(buildReferenceText(range(1, 1, 1, 1), "Sheet1", "Bob's")).toBe("'Bob''s'!A1");
+      expect(buildReferenceText(range({ startCol: 1, startRow: 1, endCol: 1, endRow: 1 }), "Sheet1", "Bob's")).toBe("'Bob''s'!A1");
     });
 
     it("does not add prefix when target is same sheet", () => {
-      expect(buildReferenceText(range(1, 1, 1, 1), "Sheet1", "Sheet1")).toBe("A1");
+      expect(buildReferenceText(range({ startCol: 1, startRow: 1, endCol: 1, endRow: 1 }), "Sheet1", "Sheet1")).toBe("A1");
     });
 
     it("does not add prefix when target is undefined", () => {
-      expect(buildReferenceText(range(1, 1, 1, 1), "Sheet1", undefined)).toBe("A1");
+      expect(buildReferenceText(range({ startCol: 1, startRow: 1, endCol: 1, endRow: 1 }), "Sheet1", undefined)).toBe("A1");
     });
   });
 });

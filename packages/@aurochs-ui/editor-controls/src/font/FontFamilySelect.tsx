@@ -11,16 +11,16 @@ import type {
   SearchableSelectOption,
   SearchableSelectItemProps,
 } from "@aurochs-ui/ui-components/primitives/SearchableSelect";
-import { useDocumentFontFamilies } from "./hooks/useDocumentFontFamilies";
-import { useFontCatalogFamilies } from "./hooks/useFontCatalogFamilies";
-import { useEditorConfig } from "../../context/editor/EditorConfigContext";
-import type { FontCatalog, FontCatalogFamilyRecord } from "../../fonts/types";
+import { useDocumentFontFamilies } from "./useDocumentFontFamilies";
+import { useFontCatalogFamilies } from "./useFontCatalogFamilies";
+import { useFontCatalog } from "./FontCatalogContext";
+import type { FontCatalog, FontCatalogFamilyRecord } from "./types";
 
-const CLEAR_VALUE = "__pptx_editor_font_family_clear__";
-const CATALOG_HINT_VALUE = "__pptx_editor_font_family_catalog_hint__";
-const CATALOG_LOADING_VALUE = "__pptx_editor_font_family_catalog_loading__";
-const CATALOG_ERROR_VALUE = "__pptx_editor_font_family_catalog_error__";
-const CATALOG_STATUS_VALUE = "__pptx_editor_font_family_catalog_status__";
+const CLEAR_VALUE = "__font_select_clear__";
+const CATALOG_HINT_VALUE = "__font_select_catalog_hint__";
+const CATALOG_LOADING_VALUE = "__font_select_catalog_loading__";
+const CATALOG_ERROR_VALUE = "__font_select_catalog_error__";
+const CATALOG_STATUS_VALUE = "__font_select_catalog_status__";
 
 type FontFamilySelectValue = string | typeof CLEAR_VALUE;
 
@@ -33,7 +33,7 @@ export type FontFamilySelectProps = {
   readonly placeholder?: string;
   readonly searchPlaceholder?: string;
   readonly sampleText?: string;
-  /** Optional injected catalog override (defaults to EditorConfig.fontCatalog) */
+  /** Optional injected catalog override (defaults to FontCatalogContext) */
   readonly fontCatalog?: FontCatalog;
 };
 
@@ -320,7 +320,7 @@ export function FontFamilySelect({
   sampleText = "AaBbCc",
   fontCatalog: fontCatalogOverride,
 }: FontFamilySelectProps) {
-  const { fontCatalog: fontCatalogFromContext } = useEditorConfig();
+  const fontCatalogFromContext = useFontCatalog();
   const fontCatalog = fontCatalogOverride ?? fontCatalogFromContext;
   const documentFamilies = useDocumentFontFamilies();
   const {

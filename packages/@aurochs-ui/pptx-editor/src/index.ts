@@ -25,9 +25,6 @@
 // Context - EditorConfig
 export { EditorConfigProvider, useEditorConfig, type EditorConfig } from "./context/editor/EditorConfigContext";
 
-// Fonts (injectable catalog types)
-export type { FontCatalog, FontCatalogFamilyRecord } from "./fonts/types";
-
 // UI Color types - consumers should import FillPreview directly from @aurochs-ui/color-editor
 
 // UI Line

@@ -14,6 +14,26 @@ import { updatePointInPath, getModifierKeys } from "../types";
 import { constrainVectorTo45Degrees, mirrorHandle } from "../internal/bezier-math";
 
 // =============================================================================
+// Helpers
+// =============================================================================
+
+/**
+ * Resolve constrained delta for point dragging.
+ * When shift is held, constrains movement to 45-degree angles.
+ */
+function resolveConstrainedDelta(params: {
+  readonly dx: number;
+  readonly dy: number;
+  readonly shift: boolean;
+}): { readonly finalDx: number; readonly finalDy: number } {
+  if (params.shift) {
+    const constrained = constrainVectorTo45Degrees(params.dx, params.dy);
+    return { finalDx: constrained.dx, finalDy: constrained.dy };
+  }
+  return { finalDx: params.dx, finalDy: params.dy };
+}
+
+// =============================================================================
 // Types
 // =============================================================================
 
@@ -272,12 +292,7 @@ export function usePathEdit(callbacks: PathEditCallbacks): UsePathEditReturn {
         const dx = x - dragStartRef.current.x;
         const dy = y - dragStartRef.current.y;
 
-        const { finalDx, finalDy } = modifiers.shift
-          ? (() => {
-              const constrained = constrainVectorTo45Degrees(dx, dy);
-              return { finalDx: constrained.dx, finalDy: constrained.dy };
-            })()
-          : { finalDx: dx, finalDy: dy };
+        const { finalDx, finalDy } = resolveConstrainedDelta({ dx, dy, shift: modifiers.shift });
 
         moveSelectedPoints(finalDx, finalDy);
       } else if (isDraggingHandle && dragStartRef.current && draggingHandleSide) {

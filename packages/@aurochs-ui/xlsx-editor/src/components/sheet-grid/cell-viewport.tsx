@@ -133,7 +133,7 @@ export function XlsxSheetGridCellViewport({
   focusGridRoot,
   selection,
   state,
-  activeSheetIndex,
+  activeSheetIndex: _activeSheetIndex,
   editingSheetName,
   normalizedMerges,
   dispatch,
@@ -277,7 +277,9 @@ export function XlsxSheetGridCellViewport({
       const col = cell.col as number;
       const row = cell.row as number;
 
+      // eslint-disable-next-line no-restricted-syntax -- reassigned conditionally per direction
       let nextCol = col;
+      // eslint-disable-next-line no-restricted-syntax -- reassigned conditionally per direction
       let nextRow = row;
       if (direction === "down") {
         nextRow = Math.min(row + 1, metrics.rowCount);

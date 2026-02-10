@@ -30,6 +30,7 @@ export function isReferenceInsertionPoint(text: string, caretOffset: number): bo
   }
 
   // Scan backward from caret, skipping whitespace
+  // eslint-disable-next-line no-restricted-syntax -- decremented in loop
   let pos = caretOffset - 1;
   while (pos >= 0 && /\s/.test(text[pos])) {
     pos -= 1;

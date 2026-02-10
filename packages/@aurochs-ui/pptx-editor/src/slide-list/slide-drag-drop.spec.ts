@@ -157,14 +157,14 @@ describe("calculateTargetIndex", () => {
 
   it("calculates target index for 'before' position", () => {
     // Dropping before slide-3 (index 2) -> target index 2
-    const result = calculateTargetIndex(slides, ["slide-5"], 2, "before");
+    const result = calculateTargetIndex({ slides, draggingIds: ["slide-5"], dropIndex: 2, position: "before" });
 
     expect(result).toBe(2);
   });
 
   it("calculates target index for 'after' position", () => {
     // Dropping after slide-3 (index 2) -> target index 3
-    const result = calculateTargetIndex(slides, ["slide-5"], 2, "after");
+    const result = calculateTargetIndex({ slides, draggingIds: ["slide-5"], dropIndex: 2, position: "after" });
 
     expect(result).toBe(3);
   });
@@ -172,7 +172,7 @@ describe("calculateTargetIndex", () => {
   it("adjusts index when dragging from before target", () => {
     // Dragging slide-1 (index 0) to after slide-3 (index 2)
     // Raw target: 3, but since slide-1 will be removed, final target: 2
-    const result = calculateTargetIndex(slides, ["slide-1"], 2, "after");
+    const result = calculateTargetIndex({ slides, draggingIds: ["slide-1"], dropIndex: 2, position: "after" });
 
     expect(result).toBe(2);
   });
@@ -180,7 +180,7 @@ describe("calculateTargetIndex", () => {
   it("does not adjust index when dragging from after target", () => {
     // Dragging slide-5 (index 4) to before slide-2 (index 1)
     // Raw target: 1, no adjustment needed
-    const result = calculateTargetIndex(slides, ["slide-5"], 1, "before");
+    const result = calculateTargetIndex({ slides, draggingIds: ["slide-5"], dropIndex: 1, position: "before" });
 
     expect(result).toBe(1);
   });
@@ -188,7 +188,7 @@ describe("calculateTargetIndex", () => {
   it("adjusts for multiple slides being dragged from before", () => {
     // Dragging slides 1 and 2 (indices 0, 1) to after slide-4 (index 3)
     // Raw target: 4, adjustment: -2, final: 2
-    const result = calculateTargetIndex(slides, ["slide-1", "slide-2"], 3, "after");
+    const result = calculateTargetIndex({ slides, draggingIds: ["slide-1", "slide-2"], dropIndex: 3, position: "after" });
 
     expect(result).toBe(2);
   });
@@ -197,7 +197,7 @@ describe("calculateTargetIndex", () => {
     // Dragging slides 2 and 4 to after slide-3
     // slide-2 is at index 1 (before), slide-4 is at index 3 (after target)
     // Raw target: 3, adjustment: -1 (only slide-2 is before), final: 2
-    const result = calculateTargetIndex(slides, ["slide-2", "slide-4"], 2, "after");
+    const result = calculateTargetIndex({ slides, draggingIds: ["slide-2", "slide-4"], dropIndex: 2, position: "after" });
 
     expect(result).toBe(2);
   });

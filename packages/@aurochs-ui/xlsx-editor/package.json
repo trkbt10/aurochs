@@ -6,6 +6,7 @@
   "sideEffects": false,
   "dependencies": {
     "@aurochs-office/xlsx": "workspace:*",
+    "@aurochs-ui/color-editor": "workspace:*",
     "@aurochs-ui/editor-core": "workspace:*",
     "@aurochs-ui/editor-controls": "workspace:*",
     "@aurochs-ui/ui-components": "workspace:*"

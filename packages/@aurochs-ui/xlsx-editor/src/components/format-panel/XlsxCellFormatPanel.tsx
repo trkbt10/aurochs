@@ -15,7 +15,7 @@ import { getCell } from "../../cell/query";
 import { useXlsxWorkbookEditor } from "../../context/workbook/XlsxWorkbookEditorContext";
 import { resolveCellStyleDetails } from "../../selectors/cell-style-details";
 import { resolveSelectionFormatFlags } from "../../selectors/selection-format-flags";
-import { makeXlsxRgbColor, normalizeRgbHexInput, rgbHexFromXlsxColor } from "./color-utils";
+import { xlsxSelectionToMixedContext } from "../../adapters/editor-controls/xlsx-mixed-state";
 import { buildDecimalFormat, buildScientificFormat } from "./number-format";
 import { AlignmentSection } from "./sections/AlignmentSection";
 import { BorderSection } from "./sections/BorderSection";
@@ -40,43 +40,6 @@ function getTargetRange(params: {
     return undefined;
   }
   return { start: params.activeCell, end: params.activeCell };
-}
-
-function setSolidFill(hex: string): XlsxFill {
-  const color = makeXlsxRgbColor(hex);
-  return {
-    type: "pattern",
-    pattern: {
-      patternType: "solid",
-      fgColor: color,
-    },
-  };
-}
-
-function resolveSolidFillColor(fill: XlsxFill): string {
-  if (fill.type !== "pattern") {
-    return "";
-  }
-  if (fill.pattern.patternType !== "solid") {
-    return "";
-  }
-  return rgbHexFromXlsxColor(fill.pattern.fgColor) ?? "";
-}
-
-function toggleBold(font: XlsxFont, pressed: boolean): XlsxFont {
-  return { ...font, bold: pressed ? true : undefined };
-}
-
-function toggleItalic(font: XlsxFont, pressed: boolean): XlsxFont {
-  return { ...font, italic: pressed ? true : undefined };
-}
-
-function toggleStrikethrough(font: XlsxFont, pressed: boolean): XlsxFont {
-  return { ...font, strikethrough: pressed ? true : undefined };
-}
-
-function toggleUnderline(font: XlsxFont, pressed: boolean): XlsxFont {
-  return { ...font, underline: pressed ? "single" : undefined };
 }
 
 /**
@@ -125,10 +88,7 @@ export function XlsxCellFormatPanel({ sheetIndex, onClose }: XlsxCellFormatPanel
     return [...names].sort().map<SelectOption<string>>((name) => ({ value: name, label: name }));
   }, [workbook.styles.fonts]);
 
-  const [fontSizeDraft, setFontSizeDraft] = useState<number>(11);
-  const [fontColorDraft, setFontColorDraft] = useState<string>("");
-  const [fillColorDraft, setFillColorDraft] = useState<string>("");
-  const [borderColorDraft, setBorderColorDraft] = useState<string>("");
+  // Number section draft state (XLSX-specific, not migratable to shared editors)
   const [customFormatDraft, setCustomFormatDraft] = useState<string>("General");
   const [decimalPlaces, setDecimalPlaces] = useState<number>(2);
   const [useThousands, setUseThousands] = useState<boolean>(false);
@@ -138,10 +98,6 @@ export function XlsxCellFormatPanel({ sheetIndex, onClose }: XlsxCellFormatPanel
     if (!details) {
       return;
     }
-    setFontSizeDraft(details.font.size);
-    setFontColorDraft(rgbHexFromXlsxColor(details.font.color) ?? "");
-    setFillColorDraft(resolveSolidFillColor(details.fill));
-    setBorderColorDraft(rgbHexFromXlsxColor(details.border.left?.color) ?? "");
     setCustomFormatDraft(details.formatCode);
     setScientificDigits(3);
   }, [details?.styleId]);
@@ -208,50 +164,14 @@ export function XlsxCellFormatPanel({ sheetIndex, onClose }: XlsxCellFormatPanel
         disabled={disabled}
         font={currentFont}
         fontNameOptions={fontNameOptions}
-        mixed={{
-          bold: selectionFormatFlags?.bold.mixed ?? false,
-          italic: selectionFormatFlags?.italic.mixed ?? false,
-          underline: selectionFormatFlags?.underline.mixed ?? false,
-          strikethrough: selectionFormatFlags?.strikethrough.mixed ?? false,
-        }}
-        fontSizeDraft={fontSizeDraft}
-        onFontSizeDraftChange={setFontSizeDraft}
-        onApplyFontSize={() => applyFont({ ...currentFont, size: fontSizeDraft })}
-        fontColorDraft={fontColorDraft}
-        onFontColorDraftChange={setFontColorDraft}
-        onApplyFontColor={() => {
-          const hex = normalizeRgbHexInput(fontColorDraft);
-          if (!hex) {
-            window.alert("Font color must be a 6-digit hex value like #RRGGBB");
-            return;
-          }
-          applyFont({ ...currentFont, color: makeXlsxRgbColor(hex) });
-        }}
-        onClearFontColor={() => {
-          const { color: removed, ...without } = currentFont;
-          void removed;
-          applyFont(without);
-        }}
-        onFontNameChange={(name) => applyFont({ ...currentFont, name })}
-        onToggleBold={(pressed) => applyFont(toggleBold(currentFont, pressed))}
-        onToggleItalic={(pressed) => applyFont(toggleItalic(currentFont, pressed))}
-        onToggleUnderline={(pressed) => applyFont(toggleUnderline(currentFont, pressed))}
-        onToggleStrikethrough={(pressed) => applyFont(toggleStrikethrough(currentFont, pressed))}
+        selectionFormatFlags={xlsxSelectionToMixedContext(selectionFormatFlags)}
+        onFontChange={applyFont}
       />
 
       <FillSection
         disabled={disabled}
-        fillColorDraft={fillColorDraft}
-        onFillColorDraftChange={setFillColorDraft}
-        onApplyFillColor={() => {
-          const hex = normalizeRgbHexInput(fillColorDraft);
-          if (!hex) {
-            window.alert("Fill color must be a 6-digit hex value like #RRGGBB");
-            return;
-          }
-          applyFill(setSolidFill(hex));
-        }}
-        onClearFill={() => applyFill({ type: "none" })}
+        fill={details.fill}
+        onFillChange={applyFill}
       />
 
       <AlignmentSection
@@ -284,24 +204,7 @@ export function XlsxCellFormatPanel({ sheetIndex, onClose }: XlsxCellFormatPanel
       <BorderSection
         disabled={disabled}
         border={currentBorder}
-        borderColorDraft={borderColorDraft}
-        onBorderColorDraftChange={setBorderColorDraft}
-        onBorderChange={(border) => applyBorder(border)}
-        onApplyBorderColor={() => {
-          const hex = normalizeRgbHexInput(borderColorDraft);
-          if (!hex) {
-            window.alert("Border color must be a 6-digit hex value like #RRGGBB");
-            return;
-          }
-          const color = makeXlsxRgbColor(hex);
-          applyBorder({
-            ...currentBorder,
-            left: currentBorder.left ? { ...currentBorder.left, color } : undefined,
-            right: currentBorder.right ? { ...currentBorder.right, color } : undefined,
-            top: currentBorder.top ? { ...currentBorder.top, color } : undefined,
-            bottom: currentBorder.bottom ? { ...currentBorder.bottom, color } : undefined,
-          });
-        }}
+        onBorderChange={applyBorder}
       />
 
       <NumberSection

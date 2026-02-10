@@ -50,10 +50,16 @@ const trackStyle: CSSProperties = {
 };
 
 const handleSize = 14;
+
+function resolveHandleBorder(isSelected: boolean): string {
+  if (isSelected) {
+    return `2px solid var(--border-strong, ${colorTokens.border.strong})`;
+  }
+  return `1px solid var(--border-subtle, ${colorTokens.border.subtle})`;
+}
+
 const handleStyle = (position: number, isSelected: boolean, hex: string): CSSProperties => {
-  const border = isSelected
-    ? `2px solid var(--border-strong, ${colorTokens.border.strong})`
-    : `1px solid var(--border-subtle, ${colorTokens.border.subtle})`;
+  const border = resolveHandleBorder(isSelected);
   return {
     position: "absolute",
     left: `${position}%`,

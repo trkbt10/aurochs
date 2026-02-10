@@ -12,8 +12,26 @@
 
 import type { FormulaAstNode } from "@aurochs-office/xlsx/formula/ast";
 import { parseFormula } from "@aurochs-office/xlsx/formula/parser";
+import type { CellAddress, CellRange } from "@aurochs-office/xlsx/domain/cell/address";
+import type { ColIndex, RowIndex } from "@aurochs-office/xlsx/domain/types";
 import { tokenizeFormula } from "./formula-tokenizer";
 import type { FormulaAnalysis, FormulaReferenceToken, FormulaTextToken } from "./types";
+
+/**
+ * Attempt to parse a formula body, returning undefined on failure.
+ * Incomplete formulas during editing are expected to fail.
+ */
+function tryParseFormula(formulaBody: string): FormulaAstNode | undefined {
+  try {
+    return parseFormula(formulaBody);
+  } catch (error: unknown) {
+    // Incomplete/invalid formula during editing — expected; return undefined
+    if (error instanceof Error) {
+      return undefined;
+    }
+    return undefined;
+  }
+}
 
 /**
  * Analyze formula text being edited.
@@ -37,15 +55,8 @@ export function analyzeFormula(editingText: string, caretOffset: number): Formul
     endOffset: t.endOffset + 1,
   }));
 
-  // Try to parse the formula AST (may fail for incomplete formulas)
-  let ast: FormulaAstNode | undefined;
-  let isValid = false;
-  try {
-    ast = parseFormula(formulaBody);
-    isValid = true;
-  } catch {
-    ast = undefined;
-  }
+  const ast = tryParseFormula(formulaBody);
+  const isValid = ast !== undefined;
 
   // Extract references from tokens (works even without valid AST)
   const references = extractReferencesFromTokens(tokens);
@@ -81,6 +92,7 @@ function createEmptyAnalysis(): FormulaAnalysis {
  */
 function extractReferencesFromTokens(tokens: readonly FormulaTextToken[]): FormulaReferenceToken[] {
   const refs: FormulaReferenceToken[] = [];
+  // eslint-disable-next-line no-restricted-syntax -- incremented in loop
   let colorIndex = 0;
 
   for (const token of tokens) {
@@ -114,8 +126,10 @@ function extractReferencesFromTokens(tokens: readonly FormulaTextToken[]): Formu
  */
 function parseReferenceText(
   text: string,
-): { range: import("@aurochs-office/xlsx/domain/cell/address").CellRange; sheetName: string | undefined } | undefined {
+): { range: CellRange; sheetName: string | undefined } | undefined {
+  // eslint-disable-next-line no-restricted-syntax -- assigned conditionally from regex match
   let sheetName: string | undefined;
+  // eslint-disable-next-line no-restricted-syntax -- reassigned after stripping sheet prefix
   let refPart = text;
 
   // Strip sheet prefix
@@ -151,7 +165,7 @@ function parseReferenceText(
 function parseSingleRef(
   colStr: string,
   rowStr: string,
-): import("@aurochs-office/xlsx/domain/cell/address").CellAddress | undefined {
+): CellAddress | undefined {
   const colAbsolute = colStr.startsWith("$");
   const colLetters = colAbsolute ? colStr.slice(1) : colStr;
   const rowAbsolute = rowStr.startsWith("$");
@@ -165,14 +179,15 @@ function parseSingleRef(
   }
 
   return {
-    col: col as import("@aurochs-office/xlsx/domain/types").ColIndex,
-    row: row as import("@aurochs-office/xlsx/domain/types").RowIndex,
+    col: col as ColIndex,
+    row: row as RowIndex,
     colAbsolute,
     rowAbsolute,
   };
 }
 
 function columnLettersToIndex(letters: string): number {
+  // eslint-disable-next-line no-restricted-syntax -- accumulator in loop
   let result = 0;
   for (let i = 0; i < letters.length; i++) {
     result = result * 26 + (letters.charCodeAt(i) - 64);

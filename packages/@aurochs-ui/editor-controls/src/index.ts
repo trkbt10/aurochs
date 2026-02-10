@@ -40,3 +40,10 @@ export type {
   CellFormatting,
   CellFormattingFeatures,
 } from "./table";
+
+// Font (catalog types, context, component, hooks)
+export type { FontCatalog, FontCatalogFamilyRecord } from "./font";
+export { FontCatalogProvider, useFontCatalog, type FontCatalogProviderProps } from "./font";
+export { FontFamilySelect, type FontFamilySelectProps } from "./font";
+export { useDocumentFontFamilies } from "./font";
+export { useFontCatalogFamilies, type FontCatalogFamiliesState } from "./font";

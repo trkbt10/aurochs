@@ -6,6 +6,7 @@
  */
 
 import { render, screen } from "@testing-library/react";
+import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
 import type { FormulaReferenceToken } from "../../formula-edit/types";
 import { createSheetLayout } from "../../selectors/sheet-layout";
 import { FormulaReferenceOverlay } from "./FormulaReferenceOverlay";
@@ -36,8 +37,8 @@ describe("FormulaReferenceOverlay", () => {
     const refs: FormulaReferenceToken[] = [
       {
         range: {
-          start: { col: 1 as any, row: 1 as any, colAbsolute: false, rowAbsolute: false },
-          end: { col: 1 as any, row: 1 as any, colAbsolute: false, rowAbsolute: false },
+          start: { col: colIdx(1), row: rowIdx(1), colAbsolute: false, rowAbsolute: false },
+          end: { col: colIdx(1), row: rowIdx(1), colAbsolute: false, rowAbsolute: false },
         },
         sheetName: undefined,
         startOffset: 1,
@@ -46,8 +47,8 @@ describe("FormulaReferenceOverlay", () => {
       },
       {
         range: {
-          start: { col: 2 as any, row: 2 as any, colAbsolute: false, rowAbsolute: false },
-          end: { col: 3 as any, row: 3 as any, colAbsolute: false, rowAbsolute: false },
+          start: { col: colIdx(2), row: rowIdx(2), colAbsolute: false, rowAbsolute: false },
+          end: { col: colIdx(3), row: rowIdx(3), colAbsolute: false, rowAbsolute: false },
         },
         sheetName: undefined,
         startOffset: 4,
@@ -77,8 +78,8 @@ describe("FormulaReferenceOverlay", () => {
     const refs: FormulaReferenceToken[] = [
       {
         range: {
-          start: { col: 1 as any, row: 1 as any, colAbsolute: false, rowAbsolute: false },
-          end: { col: 1 as any, row: 1 as any, colAbsolute: false, rowAbsolute: false },
+          start: { col: colIdx(1), row: rowIdx(1), colAbsolute: false, rowAbsolute: false },
+          end: { col: colIdx(1), row: rowIdx(1), colAbsolute: false, rowAbsolute: false },
         },
         sheetName: "Sheet2",
         startOffset: 1,
@@ -107,8 +108,8 @@ describe("FormulaReferenceOverlay", () => {
     const refs: FormulaReferenceToken[] = [
       {
         range: {
-          start: { col: 1 as any, row: 1 as any, colAbsolute: false, rowAbsolute: false },
-          end: { col: 1 as any, row: 1 as any, colAbsolute: false, rowAbsolute: false },
+          start: { col: colIdx(1), row: rowIdx(1), colAbsolute: false, rowAbsolute: false },
+          end: { col: colIdx(1), row: rowIdx(1), colAbsolute: false, rowAbsolute: false },
         },
         sheetName: undefined,
         startOffset: 1,
@@ -132,6 +133,6 @@ describe("FormulaReferenceOverlay", () => {
 
     const highlight = screen.getByTestId("xlsx-formula-ref-highlight");
     // colorIndex 0 → "#4472C4"
-    expect(highlight.style.border).toContain("#4472C4");
+    expect(highlight.style.border).toContain("rgb(68, 114, 196)");
   });
 });

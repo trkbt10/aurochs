@@ -25,6 +25,24 @@ export type FormulaBarSyntaxOverlayProps = {
 const FUNCTION_COLOR = "#4EC9B0";
 const STRING_COLOR = "#CE9178";
 
+/** Resolve syntax highlight color for a formula token. */
+function resolveTokenColor(
+  token: FormulaTextToken,
+  refColorMap: Map<number, number>,
+): string | undefined {
+  if (token.type === "reference") {
+    const refColor = refColorMap.get(token.startOffset);
+    return refColor !== undefined ? getReferenceColor(refColor) : undefined;
+  }
+  if (token.type === "function") {
+    return FUNCTION_COLOR;
+  }
+  if (token.type === "string") {
+    return STRING_COLOR;
+  }
+  return undefined;
+}
+
 const overlayContainerStyle: CSSProperties = {
   position: "absolute",
   inset: 0,
@@ -58,6 +76,7 @@ export function FormulaBarSyntaxOverlay({ text, tokens, references }: FormulaBar
     const result: { text: string; color: string | undefined; key: string }[] = [];
 
     // Fill gaps between tokens (leading "=" etc.)
+    // eslint-disable-next-line no-restricted-syntax -- incremented in loop
     let lastEnd = 0;
     for (const token of tokens) {
       if (token.startOffset > lastEnd) {
@@ -68,15 +87,7 @@ export function FormulaBarSyntaxOverlay({ text, tokens, references }: FormulaBar
         });
       }
 
-      let color: string | undefined;
-      if (token.type === "reference") {
-        const refColor = refColorMap.get(token.startOffset);
-        color = refColor !== undefined ? getReferenceColor(refColor) : undefined;
-      } else if (token.type === "function") {
-        color = FUNCTION_COLOR;
-      } else if (token.type === "string") {
-        color = STRING_COLOR;
-      }
+      const color = resolveTokenColor(token, refColorMap);
 
       result.push({
         text: token.text,

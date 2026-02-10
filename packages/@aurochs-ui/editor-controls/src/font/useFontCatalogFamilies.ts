@@ -5,7 +5,7 @@
  */
 
 import { useEffect, useState } from "react";
-import type { FontCatalog, FontCatalogFamilyRecord } from "../../../fonts/types";
+import type { FontCatalog, FontCatalogFamilyRecord } from "./types";
 
 export type FontCatalogFamiliesState = {
   readonly families: readonly string[];

@@ -2,18 +2,18 @@
  * @file Border section (format panel)
  *
  * UI controls for editing the selection border style and color.
+ * Uses ColorPickerPopover for color selection.
  */
 
-import { Accordion, Button, FieldGroup, FieldRow, Input, Select } from "@aurochs-ui/ui-components";
+import { Accordion, FieldGroup, FieldRow, Select } from "@aurochs-ui/ui-components";
+import { ColorPickerPopover } from "@aurochs-ui/color-editor";
 import type { XlsxBorder, XlsxBorderEdge, XlsxBorderStyle } from "@aurochs-office/xlsx/domain/style/border";
+import { rgbHexFromXlsxColor, makeXlsxRgbColor } from "../color-utils";
 import { BORDER_STYLE_OPTIONS } from "../options";
 
 export type BorderSectionProps = {
   readonly disabled: boolean;
   readonly border: XlsxBorder;
-  readonly borderColorDraft: string;
-  readonly onBorderColorDraftChange: (hex: string) => void;
-  readonly onApplyBorderColor: () => void;
   readonly onBorderChange: (border: XlsxBorder) => void;
 };
 
@@ -29,6 +29,12 @@ function updateBorderEdge(
   return { ...border, [edge]: next };
 }
 
+/** Resolve the current border color from the left edge (first defined edge), as bare RRGGBB. */
+function resolveBorderColorHex(border: XlsxBorder): string {
+  const edge = border.left ?? border.right ?? border.top ?? border.bottom;
+  return rgbHexFromXlsxColor(edge?.color) ?? "000000";
+}
+
 /**
  * Format panel section for applying border styles to the selection.
  */
@@ -38,6 +44,17 @@ export function BorderSection(props: BorderSectionProps) {
   const updateEdge = (edge: "left" | "right" | "top" | "bottom", value: string) => {
     const nextEdge = value === "" ? undefined : ({ style: value as XlsxBorderStyle } satisfies XlsxBorderEdge);
     props.onBorderChange(updateBorderEdge(border, edge, nextEdge));
+  };
+
+  const handleBorderColorChange = (hex: string) => {
+    const color = makeXlsxRgbColor(hex.toUpperCase());
+    props.onBorderChange({
+      ...border,
+      left: border.left ? { ...border.left, color } : undefined,
+      right: border.right ? { ...border.right, color } : undefined,
+      top: border.top ? { ...border.top, color } : undefined,
+      bottom: border.bottom ? { ...border.bottom, color } : undefined,
+    });
   };
 
   return (
@@ -77,17 +94,12 @@ export function BorderSection(props: BorderSectionProps) {
 
       <FieldRow>
         <FieldGroup label="Color">
-          <Input
-            value={props.borderColorDraft}
-            placeholder="#RRGGBB"
+          <ColorPickerPopover
+            value={resolveBorderColorHex(border)}
+            onChange={handleBorderColorChange}
             disabled={props.disabled}
-            onChange={(value) => props.onBorderColorDraftChange(String(value))}
-            width={160}
           />
         </FieldGroup>
-        <Button size="sm" disabled={props.disabled} onClick={props.onApplyBorderColor}>
-          Apply
-        </Button>
       </FieldRow>
     </Accordion>
   );

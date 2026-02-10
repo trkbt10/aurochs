@@ -216,12 +216,12 @@ export function XlsxFormulaBar({ sheet, style, onCommitAndMove }: XlsxFormulaBar
       if (!fn) {
         return;
       }
-      const result = acceptAutocomplete(
-        editing.text,
-        autocomplete.context.tokenStartOffset,
-        editing.caretOffset,
-        fn.name,
-      );
+      const result = acceptAutocomplete({
+        editingText: editing.text,
+        tokenStartOffset: autocomplete.context.tokenStartOffset,
+        caretOffset: editing.caretOffset,
+        functionName: fn.name,
+      });
       dispatch({
         type: "UPDATE_EDIT_TEXT",
         text: result.text,
@@ -233,9 +233,13 @@ export function XlsxFormulaBar({ sheet, style, onCommitAndMove }: XlsxFormulaBar
   );
 
   const isFormulaMode = editing?.isFormulaMode === true;
-  const inputStyle: CSSProperties = isFormulaMode
-    ? { ...style, color: "transparent", caretColor: "var(--text-primary, #222)" }
-    : { ...style };
+  // eslint-disable-next-line no-restricted-syntax -- assigned conditionally via if/else
+  let inputStyle: CSSProperties;
+  if (isFormulaMode) {
+    inputStyle = { ...style, color: "transparent", caretColor: "var(--text-primary, #222)" };
+  } else {
+    inputStyle = { ...style };
+  }
 
   return (
     <div style={{ position: "relative", flex: 1 }}>

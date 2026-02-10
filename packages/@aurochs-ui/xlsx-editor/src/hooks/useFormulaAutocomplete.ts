@@ -26,6 +26,9 @@ export type FormulaAutocompleteState = {
   readonly moveHighlight: (delta: number) => void;
 };
 
+/**
+ * Hook that derives autocomplete state from the current formula editing context.
+ */
 export function useFormulaAutocomplete(): FormulaAutocompleteState {
   const { editing, dispatch } = useXlsxWorkbookEditor();
   const analysis = useFormulaAnalysis();
@@ -67,12 +70,12 @@ export function useFormulaAutocomplete(): FormulaAutocompleteState {
     }
     const idx = Math.min(highlightedIndex, candidates.length - 1);
     const fn = candidates[idx];
-    const result = acceptAutocomplete(
-      editing.text,
-      context.tokenStartOffset,
-      editing.caretOffset,
-      fn.name,
-    );
+    const result = acceptAutocomplete({
+      editingText: editing.text,
+      tokenStartOffset: context.tokenStartOffset,
+      caretOffset: editing.caretOffset,
+      functionName: fn.name,
+    });
     dispatch({
       type: "UPDATE_EDIT_TEXT",
       text: result.text,

@@ -36,9 +36,13 @@ function handleEnterCellEdit(state: XlsxEditorState, action: EnterCellEditAction
   }
 
   const isReplace = action.entryMode === "replace";
-  const text = isReplace && action.initialChar !== undefined
-    ? action.initialChar
-    : formatCellEditText(sheet, action.address);
+  // eslint-disable-next-line no-restricted-syntax -- assigned conditionally
+  let text: string;
+  if (isReplace && action.initialChar !== undefined) {
+    text = action.initialChar;
+  } else {
+    text = formatCellEditText(sheet, action.address);
+  }
 
   const caretOffset = text.length;
 
@@ -97,6 +101,7 @@ function handleCommitCellEdit(state: XlsxEditorState): XlsxEditorState {
 
   const result = parseCellUserInput(editing.text);
 
+  // eslint-disable-next-line no-restricted-syntax -- assigned conditionally per parse result type
   let updatedWorkbook;
   if (result.type === "formula") {
     updatedWorkbook = updateWorksheetInWorkbook(state.workbookHistory.present, sheetIndex, (worksheet) =>

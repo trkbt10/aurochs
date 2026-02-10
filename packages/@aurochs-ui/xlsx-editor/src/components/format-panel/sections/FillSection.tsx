@@ -1,42 +1,57 @@
 /**
  * @file Fill section (format panel)
  *
- * UI controls for editing the selection fill (background) color.
+ * Wraps the shared FillFormattingEditor with XLSX-specific adapter and slots.
  */
 
-import { Accordion, Button, FieldGroup, FieldRow, Input } from "@aurochs-ui/ui-components";
+import { useCallback } from "react";
+import { Accordion } from "@aurochs-ui/ui-components";
+import { FillFormattingEditor } from "@aurochs-ui/editor-controls/surface";
+import type { FillFormatting } from "@aurochs-ui/editor-controls/surface";
+import { ColorPickerPopover } from "@aurochs-ui/color-editor";
+import type { XlsxFill } from "@aurochs-office/xlsx/domain/style/fill";
+import { xlsxFillAdapter } from "../../../adapters/editor-controls/xlsx-fill-adapter";
 
 export type FillSectionProps = {
   readonly disabled: boolean;
-  readonly fillColorDraft: string;
-  readonly onFillColorDraftChange: (hex: string) => void;
-  readonly onApplyFillColor: () => void;
-  readonly onClearFill: () => void;
+  readonly fill: XlsxFill;
+  readonly onFillChange: (fill: XlsxFill) => void;
 };
+
+/** Strip leading '#' for ColorPickerPopover (expects bare RRGGBB). */
+function toBareHex(color: string): string {
+  return color.startsWith("#") ? color.slice(1) : color;
+}
 
 /**
  * Format panel section for applying a solid fill color to the selection.
+ *
+ * Delegates to the shared FillFormattingEditor via xlsxFillAdapter.
  */
 export function FillSection(props: FillSectionProps) {
+  const generic = xlsxFillAdapter.toGeneric(props.fill);
+
+  const handleChange = useCallback(
+    (update: FillFormatting) => {
+      props.onFillChange(xlsxFillAdapter.applyUpdate(props.fill, update));
+    },
+    [props.fill, props.onFillChange],
+  );
+
   return (
     <Accordion title="Fill" defaultExpanded>
-      <FieldRow>
-        <FieldGroup label="Background">
-          <Input
-            value={props.fillColorDraft}
-            placeholder="#RRGGBB"
-            disabled={props.disabled}
-            onChange={(value) => props.onFillColorDraftChange(String(value))}
-            width={160}
+      <FillFormattingEditor
+        value={generic}
+        onChange={handleChange}
+        disabled={props.disabled}
+        renderColorPicker={({ value, onChange, disabled }) => (
+          <ColorPickerPopover
+            value={toBareHex(value)}
+            onChange={(hex) => onChange(`#${hex}`)}
+            disabled={disabled}
           />
-        </FieldGroup>
-        <Button size="sm" disabled={props.disabled} onClick={props.onApplyFillColor}>
-          Apply
-        </Button>
-        <Button size="sm" disabled={props.disabled} onClick={props.onClearFill}>
-          None
-        </Button>
-      </FieldRow>
+        )}
+      />
     </Accordion>
   );
 }

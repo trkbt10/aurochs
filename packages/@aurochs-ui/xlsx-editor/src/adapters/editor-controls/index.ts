@@ -7,3 +7,4 @@
 export { xlsxTextAdapter } from "./xlsx-text-adapter";
 export { xlsxFillAdapter } from "./xlsx-fill-adapter";
 export { xlsxCellAdapter, type XlsxCellFormat } from "./xlsx-cell-adapter";
+export { xlsxSelectionToMixedContext } from "./xlsx-mixed-state";

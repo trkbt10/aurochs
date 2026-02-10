@@ -9,8 +9,6 @@ import { type ReactNode, type CSSProperties, type MouseEvent } from "react";
 import type { ButtonVariant } from "../types";
 import { colorTokens, radiusTokens, fontTokens } from "../design-tokens";
 
-export type { ButtonVariant };
-
 export type IconButtonSize = "sm" | "md" | "lg";
 
 export type IconButtonProps = {

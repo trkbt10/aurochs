@@ -119,23 +119,23 @@ export function filterFunctions(query: string): FormulaFunctionDefinition[] {
  * Replaces the partial token text with `FUNCTIONNAME(` and positions the caret
  * after the opening parenthesis.
  *
- * @param editingText Full editing text (including "=")
- * @param tokenStartOffset Start of the token being completed
- * @param caretOffset Current caret position
- * @param functionName Selected function name (e.g., "SUM")
  * @returns New editing text and caret position
  */
-export function acceptAutocomplete(
-  editingText: string,
-  tokenStartOffset: number,
-  caretOffset: number,
-  functionName: string,
-): { text: string; caretOffset: number } {
-  const replacement = `${functionName}(`;
-  const before = editingText.slice(0, tokenStartOffset);
-  const after = editingText.slice(caretOffset);
+export function acceptAutocomplete(params: {
+  /** Full editing text (including "=") */
+  readonly editingText: string;
+  /** Start of the token being completed */
+  readonly tokenStartOffset: number;
+  /** Current caret position */
+  readonly caretOffset: number;
+  /** Selected function name (e.g., "SUM") */
+  readonly functionName: string;
+}): { text: string; caretOffset: number } {
+  const replacement = `${params.functionName}(`;
+  const before = params.editingText.slice(0, params.tokenStartOffset);
+  const after = params.editingText.slice(params.caretOffset);
   const newText = before + replacement + after;
-  const newCaretOffset = tokenStartOffset + replacement.length;
+  const newCaretOffset = params.tokenStartOffset + replacement.length;
 
   return { text: newText, caretOffset: newCaretOffset };
 }

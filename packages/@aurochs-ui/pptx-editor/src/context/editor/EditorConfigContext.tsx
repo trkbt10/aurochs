@@ -4,10 +4,9 @@
  * Provides theme and configuration to editor components without coupling.
  */
 
-import { createContext, useContext, useEffect, useMemo, type ReactNode } from "react";
+import { createContext, useContext, useMemo, type ReactNode } from "react";
 import type { ColorScheme, ColorMap } from "@aurochs-office/drawing-ml/domain/color-context";
 import type { FontScheme } from "@aurochs-office/ooxml/domain/font-scheme";
-import type { FontCatalog } from "../../fonts/types";
 
 /**
  * Editor configuration
@@ -21,8 +20,6 @@ export type EditorConfig = {
   readonly colorMap?: ColorMap;
   /** Font scheme for resolving fonts */
   readonly fontScheme?: FontScheme;
-  /** Injectable font catalog for dynamic font selection/loading */
-  readonly fontCatalog?: FontCatalog;
   /** Show advanced options */
   readonly showAdvanced?: boolean;
   /** Compact mode for tight layouts */
@@ -37,8 +34,6 @@ const defaultConfig: EditorConfig = {
 
 const EditorConfigContext = createContext<EditorConfig>(defaultConfig);
 
-const prefetchedFontCatalogs = new WeakSet<FontCatalog>();
-
 /**
  * Provider for editor configuration
  */
@@ -50,18 +45,6 @@ export function EditorConfigProvider({
   readonly config?: Partial<EditorConfig>;
 }) {
   const mergedConfig = useMemo(() => ({ ...defaultConfig, ...config }), [config]);
-
-  useEffect(() => {
-    const catalog = mergedConfig.fontCatalog;
-    if (!catalog) {
-      return;
-    }
-    if (prefetchedFontCatalogs.has(catalog)) {
-      return;
-    }
-    prefetchedFontCatalogs.add(catalog);
-    void Promise.resolve(catalog.listFamilies()).catch(() => undefined);
-  }, [mergedConfig.fontCatalog]);
 
   return <EditorConfigContext.Provider value={mergedConfig}>{children}</EditorConfigContext.Provider>;
 }

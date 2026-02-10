@@ -5,9 +5,9 @@
 // @vitest-environment jsdom
 
 import { render, fireEvent, waitFor } from "@testing-library/react";
-import { EditorConfigProvider } from "../../context/editor/EditorConfigContext";
+import { FontCatalogProvider } from "./FontCatalogContext";
 import { FontFamilySelect } from "./FontFamilySelect";
-import type { FontCatalog } from "../../fonts/types";
+import type { FontCatalog } from "./types";
 
 function ensureScrollIntoView() {
   if (!HTMLElement.prototype.scrollIntoView) {
@@ -29,9 +29,9 @@ describe("FontFamilySelect", () => {
     };
 
     const { getByRole, getByText } = render(
-      <EditorConfigProvider config={{ locale: "en-US", fontCatalog: catalog }}>
+      <FontCatalogProvider fontCatalog={catalog}>
         <FontFamilySelect value="" onChange={() => undefined} />
-      </EditorConfigProvider>
+      </FontCatalogProvider>
     );
 
     await waitFor(() => {

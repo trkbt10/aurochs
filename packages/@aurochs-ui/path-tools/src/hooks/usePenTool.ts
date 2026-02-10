@@ -22,6 +22,25 @@ import {
 import { constrainVectorTo45Degrees, distance, mirrorHandle } from "../internal/bezier-math";
 
 // =============================================================================
+// Helpers
+// =============================================================================
+
+/**
+ * Resolve constrained vector for handle dragging.
+ * When shift is held, constrains the vector to 45-degree angles.
+ */
+function resolveConstrainedVector(params: {
+  readonly rawDx: number;
+  readonly rawDy: number;
+  readonly shift: boolean;
+}): { readonly dx: number; readonly dy: number } {
+  if (params.shift) {
+    return constrainVectorTo45Degrees(params.rawDx, params.rawDy);
+  }
+  return { dx: params.rawDx, dy: params.rawDy };
+}
+
+// =============================================================================
 // Types
 // =============================================================================
 
@@ -199,9 +218,7 @@ export function usePenTool(callbacks: PenToolCallbacks): UsePenToolReturn {
         const rawDy = y - dragStartRef.current.y;
 
         // Constrain if shift is held
-        const { dx, dy } = modifiers.shift
-          ? constrainVectorTo45Degrees(rawDx, rawDy)
-          : { dx: rawDx, dy: rawDy };
+        const { dx, dy } = resolveConstrainedVector({ rawDx, rawDy, shift: modifiers.shift });
 
         // Only create handles if we've moved enough
         if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {

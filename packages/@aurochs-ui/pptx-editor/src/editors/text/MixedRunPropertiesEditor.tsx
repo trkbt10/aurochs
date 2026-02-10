@@ -20,7 +20,7 @@ import { pt, px, type Points } from "@aurochs-office/drawing-ml/domain/units";
 import type { MixedRunProperties, PropertyExtraction } from "./mixed-properties";
 import { getExtractionValue, isMixed } from "./mixed-properties";
 import { pptxMixedRunToContext, pptxMixedRunToGeneric } from "../../adapters/editor-controls";
-import { FontFamilySelect } from "./FontFamilySelect";
+import { FontFamilySelect } from "@aurochs-ui/editor-controls/font";
 
 // =============================================================================
 // Types

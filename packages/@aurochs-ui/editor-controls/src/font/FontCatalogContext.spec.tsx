@@ -1,19 +1,19 @@
 /**
- * @file EditorConfigProvider font catalog prefetch tests
+ * @file FontCatalogProvider prefetch tests
  */
 
 // @vitest-environment jsdom
 
 import { StrictMode } from "react";
 import { render, waitFor } from "@testing-library/react";
-import { EditorConfigProvider } from "./EditorConfigContext";
-import type { FontCatalog } from "../../fonts/types";
+import { FontCatalogProvider } from "./FontCatalogContext";
+import type { FontCatalog } from "./types";
 
 function Noop() {
   return null;
 }
 
-describe("EditorConfigProvider", () => {
+describe("FontCatalogProvider", () => {
   it("prefetches font catalog families only once under StrictMode", async () => {
     const calls = { listFamilies: 0, ensureFamilyLoaded: 0 };
     const catalog: FontCatalog = {
@@ -30,9 +30,9 @@ describe("EditorConfigProvider", () => {
 
     render(
       <StrictMode>
-        <EditorConfigProvider config={{ fontCatalog: catalog }}>
+        <FontCatalogProvider fontCatalog={catalog}>
           <Noop />
-        </EditorConfigProvider>
+        </FontCatalogProvider>
       </StrictMode>
     );
 
@@ -44,9 +44,9 @@ describe("EditorConfigProvider", () => {
   it("does not prefetch when no catalog is provided", async () => {
     render(
       <StrictMode>
-        <EditorConfigProvider>
+        <FontCatalogProvider fontCatalog={undefined}>
           <Noop />
-        </EditorConfigProvider>
+        </FontCatalogProvider>
       </StrictMode>
     );
 

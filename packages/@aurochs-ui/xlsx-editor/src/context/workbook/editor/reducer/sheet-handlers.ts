@@ -81,9 +81,15 @@ function rebaseEditingAfterDelete(
   deletedIndex: number,
   wasActiveSheetDeleted: boolean,
 ): CellEditingState | undefined {
-  if (!editing) return undefined;
-  if (wasActiveSheetDeleted) return undefined;
-  if (editing.editingSheetIndex === deletedIndex) return undefined;
+  if (!editing) {
+    return undefined;
+  }
+  if (wasActiveSheetDeleted) {
+    return undefined;
+  }
+  if (editing.editingSheetIndex === deletedIndex) {
+    return undefined;
+  }
   if (editing.editingSheetIndex > deletedIndex) {
     return { ...editing, editingSheetIndex: editing.editingSheetIndex - 1 };
   }
@@ -95,9 +101,13 @@ function rebaseEditingAfterMove(
   fromIndex: number,
   toIndex: number,
 ): CellEditingState | undefined {
-  if (!editing) return undefined;
+  if (!editing) {
+    return undefined;
+  }
   const newIndex = getActiveSheetIndexAfterMove(editing.editingSheetIndex, fromIndex, toIndex);
-  if (newIndex === undefined || newIndex === editing.editingSheetIndex) return editing;
+  if (newIndex === undefined || newIndex === editing.editingSheetIndex) {
+    return editing;
+  }
   return { ...editing, editingSheetIndex: newIndex };
 }
 

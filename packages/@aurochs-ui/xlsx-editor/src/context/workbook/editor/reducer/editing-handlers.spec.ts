@@ -15,6 +15,7 @@ import { createHistory } from "@aurochs-ui/editor-core/history";
 import { getCellValue } from "../../../../cell/query";
 import type { XlsxEditorAction, XlsxEditorState, CellEditComposition } from "../types";
 import { createEmptyCellSelection, createIdleDragState, createIdleComposition } from "../types";
+import type { ActionHandler } from "./handler-types";
 import { editingHandlers } from "./editing-handlers";
 
 // ---------------------------------------------------------------------------
@@ -30,11 +31,11 @@ function addr(col: number, row: number): CellAddress {
   };
 }
 
-function cellAt(col: number, row: number, value: CellValue, formula?: string): Cell {
+function cellAt(params: { col: number; row: number; value: CellValue; formula?: string }): Cell {
   return {
-    address: addr(col, row),
-    value,
-    ...(formula ? { formula: { expression: formula, type: "normal" as const } } : {}),
+    address: addr(params.col, params.row),
+    value: params.value,
+    ...(params.formula ? { formula: { expression: params.formula, type: "normal" as const } } : {}),
   };
 }
 
@@ -93,8 +94,7 @@ function dispatch(state: XlsxEditorState, action: XlsxEditorAction): XlsxEditorS
   if (!handler) {
     throw new Error(`No handler for action type: ${action.type}`);
   }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (handler as any)(state, action);
+  return (handler as ActionHandler)(state, action);
 }
 
 // ---------------------------------------------------------------------------
@@ -124,7 +124,7 @@ describe("xlsx-editor/context/workbook/editor/reducer/editing-handlers", () => {
     });
 
     it("enters editing on a cell with a string value", () => {
-      const sheet = createWorksheet([cellAt(1, 1, { type: "string", value: "Hello" })]);
+      const sheet = createWorksheet([cellAt({ col: 1, row: 1, value: { type: "string", value: "Hello" } })]);
       const state = createState(createWorkbook(sheet));
       const next = dispatch(state, { type: "ENTER_CELL_EDIT", address: addr(1, 1), entryMode: "enter" });
 
@@ -135,7 +135,7 @@ describe("xlsx-editor/context/workbook/editor/reducer/editing-handlers", () => {
     });
 
     it("enters editing on a cell with a number value", () => {
-      const sheet = createWorksheet([cellAt(1, 1, { type: "number", value: 42 })]);
+      const sheet = createWorksheet([cellAt({ col: 1, row: 1, value: { type: "number", value: 42 } })]);
       const state = createState(createWorkbook(sheet));
       const next = dispatch(state, { type: "ENTER_CELL_EDIT", address: addr(1, 1), entryMode: "enter" });
 
@@ -144,7 +144,7 @@ describe("xlsx-editor/context/workbook/editor/reducer/editing-handlers", () => {
     });
 
     it("enters editing on a cell with a formula", () => {
-      const sheet = createWorksheet([cellAt(1, 1, { type: "number", value: 3 }, "A1+A2")]);
+      const sheet = createWorksheet([cellAt({ col: 1, row: 1, value: { type: "number", value: 3 }, formula: "A1+A2" })]);
       const state = createState(createWorkbook(sheet));
       const next = dispatch(state, { type: "ENTER_CELL_EDIT", address: addr(1, 1), entryMode: "enter" });
 
@@ -154,7 +154,7 @@ describe("xlsx-editor/context/workbook/editor/reducer/editing-handlers", () => {
     });
 
     it("replaces content with initialChar in replace mode", () => {
-      const sheet = createWorksheet([cellAt(1, 1, { type: "string", value: "Hello" })]);
+      const sheet = createWorksheet([cellAt({ col: 1, row: 1, value: { type: "string", value: "Hello" } })]);
       const state = createState(createWorkbook(sheet));
       const next = dispatch(state, {
         type: "ENTER_CELL_EDIT",
@@ -200,7 +200,7 @@ describe("xlsx-editor/context/workbook/editor/reducer/editing-handlers", () => {
     });
 
     it("replace mode without initialChar preserves existing cell text", () => {
-      const sheet = createWorksheet([cellAt(1, 1, { type: "string", value: "Hello" })]);
+      const sheet = createWorksheet([cellAt({ col: 1, row: 1, value: { type: "string", value: "Hello" } })]);
       const state = createState(createWorkbook(sheet));
       const next = dispatch(state, { type: "ENTER_CELL_EDIT", address: addr(1, 1), entryMode: "replace" });
 
@@ -339,7 +339,7 @@ describe("xlsx-editor/context/workbook/editor/reducer/editing-handlers", () => {
     });
 
     it("commits empty text as empty value", () => {
-      const sheet = createWorksheet([cellAt(1, 1, { type: "string", value: "was here" })]);
+      const sheet = createWorksheet([cellAt({ col: 1, row: 1, value: { type: "string", value: "was here" } })]);
       const state = createState(createWorkbook(sheet));
       const editing = dispatch(state, { type: "ENTER_CELL_EDIT", address: addr(1, 1), entryMode: "enter" });
       const withText = dispatch(editing, { type: "UPDATE_EDIT_TEXT", text: "", caretOffset: 0, selectionEnd: 0 });

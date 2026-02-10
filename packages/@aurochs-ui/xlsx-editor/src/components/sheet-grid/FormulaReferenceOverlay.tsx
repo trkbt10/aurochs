@@ -7,7 +7,6 @@
  */
 
 import { useMemo, type CSSProperties } from "react";
-import type { CellRange } from "@aurochs-office/xlsx/domain/cell/address";
 import { createSheetLayout } from "../../selectors/sheet-layout";
 import { getReferenceColor } from "../../formula-edit/formula-reference-colors";
 import type { FormulaReferenceToken } from "../../formula-edit/types";

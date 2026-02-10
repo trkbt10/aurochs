@@ -56,7 +56,7 @@ describe("useFormulaAutocomplete (pure logic)", () => {
   it("accept replaces partial with function name + paren", () => {
     const { context } = simulateAutocomplete("=SU", 3);
     expect(context).toBeDefined();
-    const result = acceptAutocomplete("=SU", context!.tokenStartOffset, 3, "SUM");
+    const result = acceptAutocomplete({ editingText: "=SU", tokenStartOffset: context!.tokenStartOffset, caretOffset: 3, functionName: "SUM" });
     expect(result.text).toBe("=SUM(");
     expect(result.caretOffset).toBe(5);
   });
@@ -64,7 +64,7 @@ describe("useFormulaAutocomplete (pure logic)", () => {
   it("accept preserves text after caret", () => {
     const { context } = simulateAutocomplete("=SU+A1", 3);
     expect(context).toBeDefined();
-    const result = acceptAutocomplete("=SU+A1", context!.tokenStartOffset, 3, "SUM");
+    const result = acceptAutocomplete({ editingText: "=SU+A1", tokenStartOffset: context!.tokenStartOffset, caretOffset: 3, functionName: "SUM" });
     expect(result.text).toBe("=SUM(+A1");
     expect(result.caretOffset).toBe(5);
   });

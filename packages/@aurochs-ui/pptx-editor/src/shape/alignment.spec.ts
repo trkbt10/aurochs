@@ -46,7 +46,7 @@ const createBounds = ({
 
 describe("alignHorizontal", () => {
   it("returns empty array for less than 2 shapes", () => {
-    const shapes = [createBounds("1", 0, 0, 100, 100)];
+    const shapes = [createBounds({ id: "1", x: 0, y: 0, width: 100, height: 100 })];
 
     expect(alignHorizontal(shapes, "left")).toEqual([]);
     expect(alignHorizontal(shapes, "center")).toEqual([]);
@@ -57,9 +57,9 @@ describe("alignHorizontal", () => {
   describe("left alignment", () => {
     it("aligns shapes to leftmost edge", () => {
       const shapes = [
-        createBounds("1", 50, 0, 100, 100),
-        createBounds("2", 100, 50, 80, 80),
-        createBounds("3", 10, 100, 60, 60),
+        createBounds({ id: "1", x: 50, y: 0, width: 100, height: 100 }),
+        createBounds({ id: "2", x: 100, y: 50, width: 80, height: 80 }),
+        createBounds({ id: "3", x: 10, y: 100, width: 60, height: 60 }),
       ];
 
       const updates = alignHorizontal(shapes, "left");
@@ -79,8 +79,8 @@ describe("alignHorizontal", () => {
   describe("center alignment", () => {
     it("aligns shapes to average center", () => {
       const shapes = [
-        createBounds("1", 0, 0, 100, 100), // center: 50
-        createBounds("2", 100, 50, 100, 80), // center: 150
+        createBounds({ id: "1", x: 0, y: 0, width: 100, height: 100 }), // center: 50
+        createBounds({ id: "2", x: 100, y: 50, width: 100, height: 80 }), // center: 150
       ];
       // Average center: (50 + 150) / 2 = 100
 
@@ -97,9 +97,9 @@ describe("alignHorizontal", () => {
   describe("right alignment", () => {
     it("aligns shapes to rightmost edge", () => {
       const shapes = [
-        createBounds("1", 0, 0, 100, 100), // right: 100
-        createBounds("2", 100, 50, 80, 80), // right: 180
-        createBounds("3", 50, 100, 60, 60), // right: 110
+        createBounds({ id: "1", x: 0, y: 0, width: 100, height: 100 }), // right: 100
+        createBounds({ id: "2", x: 100, y: 50, width: 80, height: 80 }), // right: 180
+        createBounds({ id: "3", x: 50, y: 100, width: 60, height: 60 }), // right: 110
       ];
 
       const updates = alignHorizontal(shapes, "right");
@@ -119,7 +119,7 @@ describe("alignHorizontal", () => {
 
 describe("alignVertical", () => {
   it("returns empty array for less than 2 shapes", () => {
-    const shapes = [createBounds("1", 0, 0, 100, 100)];
+    const shapes = [createBounds({ id: "1", x: 0, y: 0, width: 100, height: 100 })];
 
     expect(alignVertical(shapes, "top")).toEqual([]);
     expect(alignVertical(shapes, "middle")).toEqual([]);
@@ -129,9 +129,9 @@ describe("alignVertical", () => {
   describe("top alignment", () => {
     it("aligns shapes to topmost edge", () => {
       const shapes = [
-        createBounds("1", 0, 50, 100, 100),
-        createBounds("2", 50, 100, 80, 80),
-        createBounds("3", 100, 10, 60, 60),
+        createBounds({ id: "1", x: 0, y: 50, width: 100, height: 100 }),
+        createBounds({ id: "2", x: 50, y: 100, width: 80, height: 80 }),
+        createBounds({ id: "3", x: 100, y: 10, width: 60, height: 60 }),
       ];
 
       const updates = alignVertical(shapes, "top");
@@ -151,8 +151,8 @@ describe("alignVertical", () => {
   describe("middle alignment", () => {
     it("aligns shapes to average middle", () => {
       const shapes = [
-        createBounds("1", 0, 0, 100, 100), // middle: 50
-        createBounds("2", 50, 100, 80, 100), // middle: 150
+        createBounds({ id: "1", x: 0, y: 0, width: 100, height: 100 }), // middle: 50
+        createBounds({ id: "2", x: 50, y: 100, width: 80, height: 100 }), // middle: 150
       ];
       // Average middle: (50 + 150) / 2 = 100
 
@@ -169,9 +169,9 @@ describe("alignVertical", () => {
   describe("bottom alignment", () => {
     it("aligns shapes to bottommost edge", () => {
       const shapes = [
-        createBounds("1", 0, 0, 100, 100), // bottom: 100
-        createBounds("2", 50, 100, 80, 80), // bottom: 180
-        createBounds("3", 100, 50, 60, 60), // bottom: 110
+        createBounds({ id: "1", x: 0, y: 0, width: 100, height: 100 }), // bottom: 100
+        createBounds({ id: "2", x: 50, y: 100, width: 80, height: 80 }), // bottom: 180
+        createBounds({ id: "3", x: 100, y: 50, width: 60, height: 60 }), // bottom: 110
       ];
 
       const updates = alignVertical(shapes, "bottom");
@@ -191,7 +191,7 @@ describe("alignVertical", () => {
 
 describe("distributeHorizontal", () => {
   it("returns empty array for less than 3 shapes", () => {
-    const shapes = [createBounds("1", 0, 0, 100, 100), createBounds("2", 200, 0, 100, 100)];
+    const shapes = [createBounds({ id: "1", x: 0, y: 0, width: 100, height: 100 }), createBounds({ id: "2", x: 200, y: 0, width: 100, height: 100 })];
 
     expect(distributeHorizontal(shapes)).toEqual([]);
     expect(distributeHorizontal([shapes[0]])).toEqual([]);
@@ -203,9 +203,9 @@ describe("distributeHorizontal", () => {
     // Total space: 300, total widths: 100+50+100=250
     // Gap space: 50, gaps: 2, gap size: 25
     const shapes = [
-      createBounds("1", 0, 0, 100, 100), // stays at 0
-      createBounds("2", 50, 50, 50, 50), // moves to 125
-      createBounds("3", 200, 100, 100, 100), // stays at 200
+      createBounds({ id: "1", x: 0, y: 0, width: 100, height: 100 }), // stays at 0
+      createBounds({ id: "2", x: 50, y: 50, width: 50, height: 50 }), // moves to 125
+      createBounds({ id: "3", x: 200, y: 100, width: 100, height: 100 }), // stays at 200
     ];
 
     const updates = distributeHorizontal(shapes);
@@ -221,9 +221,9 @@ describe("distributeHorizontal", () => {
 
   it("preserves Y positions", () => {
     const shapes = [
-      createBounds("1", 0, 10, 100, 100),
-      createBounds("2", 50, 20, 50, 50),
-      createBounds("3", 200, 30, 100, 100),
+      createBounds({ id: "1", x: 0, y: 10, width: 100, height: 100 }),
+      createBounds({ id: "2", x: 50, y: 20, width: 50, height: 50 }),
+      createBounds({ id: "3", x: 200, y: 30, width: 100, height: 100 }),
     ];
 
     const updates = distributeHorizontal(shapes);
@@ -240,16 +240,16 @@ describe("distributeHorizontal", () => {
 
 describe("distributeVertical", () => {
   it("returns empty array for less than 3 shapes", () => {
-    const shapes = [createBounds("1", 0, 0, 100, 100), createBounds("2", 0, 200, 100, 100)];
+    const shapes = [createBounds({ id: "1", x: 0, y: 0, width: 100, height: 100 }), createBounds({ id: "2", x: 0, y: 200, width: 100, height: 100 })];
 
     expect(distributeVertical(shapes)).toEqual([]);
   });
 
   it("distributes shapes evenly", () => {
     const shapes = [
-      createBounds("1", 0, 0, 100, 100), // stays at 0
-      createBounds("2", 50, 50, 50, 50), // moves
-      createBounds("3", 100, 200, 100, 100), // stays at 200
+      createBounds({ id: "1", x: 0, y: 0, width: 100, height: 100 }), // stays at 0
+      createBounds({ id: "2", x: 50, y: 50, width: 50, height: 50 }), // moves
+      createBounds({ id: "3", x: 100, y: 200, width: 100, height: 100 }), // stays at 200
     ];
 
     const updates = distributeVertical(shapes);
@@ -263,9 +263,9 @@ describe("distributeVertical", () => {
 
   it("preserves X positions", () => {
     const shapes = [
-      createBounds("1", 10, 0, 100, 100),
-      createBounds("2", 20, 50, 50, 50),
-      createBounds("3", 30, 200, 100, 100),
+      createBounds({ id: "1", x: 10, y: 0, width: 100, height: 100 }),
+      createBounds({ id: "2", x: 20, y: 50, width: 50, height: 50 }),
+      createBounds({ id: "3", x: 30, y: 200, width: 100, height: 100 }),
     ];
 
     const updates = distributeVertical(shapes);
@@ -283,10 +283,11 @@ describe("distributeVertical", () => {
 describe("nudgeShapes", () => {
   it("returns empty array for empty input", () => {
     expect(nudgeShapes([], 10, 20)).toEqual([]);
+
   });
 
   it("nudges shapes by delta", () => {
-    const shapes = [createBounds("1", 0, 0, 100, 100), createBounds("2", 50, 50, 80, 80)];
+    const shapes = [createBounds({ id: "1", x: 0, y: 0, width: 100, height: 100 }), createBounds({ id: "2", x: 50, y: 50, width: 80, height: 80 })];
 
     const updates = nudgeShapes(shapes, 10, 20);
 
@@ -298,7 +299,7 @@ describe("nudgeShapes", () => {
   });
 
   it("handles negative deltas", () => {
-    const shapes = [createBounds("1", 100, 100, 50, 50)];
+    const shapes = [createBounds({ id: "1", x: 100, y: 100, width: 50, height: 50 })];
 
     const updates = nudgeShapes(shapes, -30, -40);
 
@@ -307,7 +308,7 @@ describe("nudgeShapes", () => {
   });
 
   it("preserves width and height", () => {
-    const shapes = [createBounds("1", 0, 0, 100, 80)];
+    const shapes = [createBounds({ id: "1", x: 0, y: 0, width: 100, height: 80 })];
 
     const updates = nudgeShapes(shapes, 10, 10);
 

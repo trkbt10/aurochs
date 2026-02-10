@@ -5,7 +5,7 @@
  */
 
 import React, { useCallback, useEffect } from "react";
-import type { DrawingPath, Point, ModifierKeys } from "../types";
+import type { DrawingPath, ModifierKeys } from "../types";
 import { getModifierKeys } from "../types";
 import { AnchorPoint } from "./internal/AnchorPoint";
 import { HandlePair } from "./internal/ControlHandle";

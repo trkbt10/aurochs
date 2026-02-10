@@ -94,8 +94,7 @@ export function XlsxCellEditorOverlay({ sheet, address, rect, onCommitAndMove, o
       // In replace mode, put caret at end (after the initial character)
       el.setSelectionRange(text.length, text.length);
     }
-    // Only run on mount
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Only run on mount — intentionally empty deps
   }, []);
 
   const handleChange = useCallback(
@@ -218,12 +217,12 @@ export function XlsxCellEditorOverlay({ sheet, address, rect, onCommitAndMove, o
       if (!fn) {
         return;
       }
-      const result = acceptAutocomplete(
-        editing.text,
-        autocomplete.context.tokenStartOffset,
-        editing.caretOffset,
-        fn.name,
-      );
+      const result = acceptAutocomplete({
+        editingText: editing.text,
+        tokenStartOffset: autocomplete.context.tokenStartOffset,
+        caretOffset: editing.caretOffset,
+        functionName: fn.name,
+      });
       dispatch({
         type: "UPDATE_EDIT_TEXT",
         text: result.text,

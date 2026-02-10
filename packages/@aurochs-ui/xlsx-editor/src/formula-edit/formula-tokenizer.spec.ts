@@ -159,12 +159,11 @@ describe("formula-edit/formula-tokenizer", () => {
     const tokens = tokenizeFormula(formula);
 
     // Verify that tokens cover the entire input without gaps
-    let expectedStart = 0;
-    for (const token of tokens) {
+    const finalOffset = tokens.reduce((expectedStart, token) => {
       expect(token.startOffset).toBe(expectedStart);
       expect(token.endOffset).toBeGreaterThan(token.startOffset);
-      expectedStart = token.endOffset;
-    }
-    expect(expectedStart).toBe(formula.length);
+      return token.endOffset;
+    }, 0);
+    expect(finalOffset).toBe(formula.length);
   });
 });

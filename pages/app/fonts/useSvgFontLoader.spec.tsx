@@ -6,7 +6,7 @@
 
 import { useEffect } from "react";
 import { render, waitFor } from "@testing-library/react";
-import { EditorConfigProvider, type FontCatalog } from "@aurochs-ui/pptx-editor";
+import { FontCatalogProvider, type FontCatalog } from "@aurochs-ui/editor-controls/font";
 import { useSvgFontLoader } from "./useSvgFontLoader";
 
 function Harness({ svg }: { readonly svg: string }) {
@@ -35,9 +35,9 @@ describe("useSvgFontLoader", () => {
     };
 
     render(
-      <EditorConfigProvider config={{ fontCatalog: catalog }}>
+      <FontCatalogProvider fontCatalog={catalog}>
         <Harness svg={`<svg><text font-family="Inter, serif">Hello</text></svg>`} />
-      </EditorConfigProvider>,
+      </FontCatalogProvider>,
     );
 
     await waitFor(() => {
@@ -70,9 +70,9 @@ describe("useSvgFontLoader", () => {
     }
 
     render(
-      <EditorConfigProvider config={{ fontCatalog: catalog }}>
+      <FontCatalogProvider fontCatalog={catalog}>
         <DoubleHarness svg={`<svg><text style="font-family: system-ui, Inter, serif">Hi</text></svg>`} />
-      </EditorConfigProvider>,
+      </FontCatalogProvider>,
     );
 
     await waitFor(() => {

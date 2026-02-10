@@ -10,12 +10,16 @@ import {
   AlignCenterIcon,
   AlignLeftIcon,
   AlignRightIcon,
+  BoldIcon,
+  ItalicIcon,
+  UnderlineIcon,
   Button,
   Input,
   LineIcon,
   Select,
   ToggleButton,
   spacingTokens,
+  iconTokens,
   MergeCellsIcon,
   UnmergeCellsIcon,
 } from "@aurochs-ui/ui-components";
@@ -131,7 +135,7 @@ export function XlsxWorkbookToolbar({
   zoom,
   onZoomChange,
 }: XlsxWorkbookToolbarProps) {
-  const { dispatch, workbook, canUndo, canRedo, selection, state, editing } = useXlsxWorkbookEditor();
+  const { dispatch, workbook, canUndo, canRedo, selection, editing } = useXlsxWorkbookEditor();
   const sheet = workbook.sheets[sheetIndex];
   if (!sheet) {
     throw new Error(`Sheet not found: index=${sheetIndex}`);
@@ -196,7 +200,8 @@ export function XlsxWorkbookToolbar({
       </Button>
 
       <ToggleButton
-        label="B"
+        label="Bold"
+        ariaLabel="Bold"
         pressed={font?.bold === true}
         mixed={selectionFormatFlags?.bold.mixed ?? false}
         disabled={!toolbarCanFormat}
@@ -210,9 +215,12 @@ export function XlsxWorkbookToolbar({
             format: { font: toggleFontFlag(font, "bold", pressed) },
           });
         }}
-      />
+      >
+        <BoldIcon size={iconTokens.size.sm} />
+      </ToggleButton>
       <ToggleButton
-        label="I"
+        label="Italic"
+        ariaLabel="Italic"
         pressed={font?.italic === true}
         mixed={selectionFormatFlags?.italic.mixed ?? false}
         disabled={!toolbarCanFormat}
@@ -226,9 +234,12 @@ export function XlsxWorkbookToolbar({
             format: { font: toggleFontFlag(font, "italic", pressed) },
           });
         }}
-      />
+      >
+        <ItalicIcon size={iconTokens.size.sm} />
+      </ToggleButton>
       <ToggleButton
-        label="U"
+        label="Underline"
+        ariaLabel="Underline"
         pressed={font?.underline !== undefined && font.underline !== "none"}
         mixed={selectionFormatFlags?.underline.mixed ?? false}
         disabled={!toolbarCanFormat}
@@ -238,7 +249,9 @@ export function XlsxWorkbookToolbar({
           }
           dispatch({ type: "SET_SELECTION_FORMAT", range: targetRange, format: { font: setUnderline(font, pressed) } });
         }}
-      />
+      >
+        <UnderlineIcon size={iconTokens.size.sm} />
+      </ToggleButton>
 
       <ToggleButton
         label="Align left"

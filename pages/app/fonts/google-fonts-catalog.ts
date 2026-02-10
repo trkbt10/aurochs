@@ -5,7 +5,7 @@
  * - Loads requested fonts on demand using Google Fonts CSS2 endpoint.
  */
 
-import type { FontCatalog, FontCatalogFamilyRecord } from "@aurochs-ui/pptx-editor";
+import type { FontCatalog, FontCatalogFamilyRecord } from "@aurochs-ui/editor-controls/font";
 
 export type GoogleFontsCatalogConfig = {
   /** e.g. "/fonts/google-fonts-families.json" */

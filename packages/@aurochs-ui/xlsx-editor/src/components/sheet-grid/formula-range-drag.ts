@@ -65,8 +65,10 @@ export function startFormulaRangeDrag(params: {
     dispatch,
   } = params;
 
+  // eslint-disable-next-line no-restricted-syntax -- reassigned in onMove callback
   let currentText = params.editingText;
-  let currentRefOffset = params.refInsertOffset;
+  const currentRefOffset = params.refInsertOffset;
+  // eslint-disable-next-line no-restricted-syntax -- reassigned in onMove callback
   let currentRefLength = params.refLength;
 
   safeSetPointerCapture(captureTarget, pointerId);

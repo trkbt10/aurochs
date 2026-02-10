@@ -53,6 +53,9 @@ const descStyle: CSSProperties = {
   whiteSpace: "nowrap",
 };
 
+/**
+ * Renders a dropdown list of formula function candidates for autocomplete.
+ */
 export function FormulaAutocompleteDropdown({
   candidates,
   highlightedIndex,
@@ -67,14 +70,13 @@ export function FormulaAutocompleteDropdown({
       {candidates.map((fn, index) => {
         const isHighlighted = index === highlightedIndex;
         const desc = fn.description?.ja ?? fn.description?.en ?? "";
+        const bgColor = isHighlighted ? `var(--bg-hover, ${colorTokens.background.tertiary})` : "transparent";
         return (
           <div
             key={fn.name}
             style={{
               ...itemBaseStyle,
-              backgroundColor: isHighlighted
-                ? `var(--bg-hover, ${colorTokens.background.tertiary})`
-                : "transparent",
+              backgroundColor: bgColor,
             }}
             onPointerDown={(e) => {
               e.preventDefault();

@@ -87,21 +87,21 @@ describe("formula-edit/formula-autocomplete", () => {
   describe("acceptAutocomplete", () => {
     it("replaces partial token with function name and paren", () => {
       // "=SU" → accept "SUM" → "=SUM("
-      const result = acceptAutocomplete("=SU", 1, 3, "SUM");
+      const result = acceptAutocomplete({ editingText: "=SU", tokenStartOffset: 1, caretOffset: 3, functionName: "SUM" });
       expect(result.text).toBe("=SUM(");
       expect(result.caretOffset).toBe(5);
     });
 
     it("preserves text after the caret", () => {
       // "=SU+A1" with caret at 3 → accept "SUM" → "=SUM(+A1"
-      const result = acceptAutocomplete("=SU+A1", 1, 3, "SUM");
+      const result = acceptAutocomplete({ editingText: "=SU+A1", tokenStartOffset: 1, caretOffset: 3, functionName: "SUM" });
       expect(result.text).toBe("=SUM(+A1");
       expect(result.caretOffset).toBe(5);
     });
 
     it("handles accept at nested position", () => {
       // "=IF(VL" → accept "VLOOKUP" at offset 4-6 → "=IF(VLOOKUP("
-      const result = acceptAutocomplete("=IF(VL", 4, 6, "VLOOKUP");
+      const result = acceptAutocomplete({ editingText: "=IF(VL", tokenStartOffset: 4, caretOffset: 6, functionName: "VLOOKUP" });
       expect(result.text).toBe("=IF(VLOOKUP(");
       expect(result.caretOffset).toBe(12);
     });

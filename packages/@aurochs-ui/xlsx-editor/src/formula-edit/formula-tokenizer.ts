@@ -60,10 +60,6 @@ const ERROR_RE = /^#(?:NULL!|DIV\/0!|VALUE!|REF!|NAME\?|NUM!|N\/A|GETTING_DATA)/
  */
 const OPERATORS = ["<>", ">=", "<=", "+", "-", "*", "/", "^", "&", "=", ">", "<"] as const;
 
-function isOperator(ch: string): boolean {
-  return "+-*/^&=<>".includes(ch);
-}
-
 /**
  * Tokenize formula text (without leading "=") into FormulaTextToken[].
  *
@@ -72,6 +68,7 @@ function isOperator(ch: string): boolean {
  */
 export function tokenizeFormula(formula: string): FormulaTextToken[] {
   const tokens: FormulaTextToken[] = [];
+  // eslint-disable-next-line no-restricted-syntax -- incremented in tokenizer loop
   let pos = 0;
 
   while (pos < formula.length) {
@@ -95,6 +92,7 @@ export function tokenizeFormula(formula: string): FormulaTextToken[] {
 
     // String literal
     if (rest[0] === '"') {
+      // eslint-disable-next-line no-restricted-syntax -- incremented in string scan loop
       let end = 1;
       while (end < rest.length) {
         if (rest[end] === '"') {
@@ -160,6 +158,7 @@ export function tokenizeFormula(formula: string): FormulaTextToken[] {
     }
 
     // Multi-character operators (must check before single-char)
+    // eslint-disable-next-line no-restricted-syntax -- set to true when operator matches
     let matchedOp = false;
     for (const op of OPERATORS) {
       if (rest.startsWith(op)) {

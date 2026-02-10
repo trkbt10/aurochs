@@ -8,7 +8,7 @@
  */
 
 import { useCallback, useEffect, useRef } from "react";
-import { useEditorConfig, type FontCatalog } from "@aurochs-ui/pptx-editor";
+import { useFontCatalog, type FontCatalog } from "@aurochs-ui/editor-controls/font";
 
 const GENERIC_FAMILIES = new Set([
   "inherit",
@@ -111,7 +111,7 @@ async function runWithConcurrencyLimit<T>(
  * - Safe under React.StrictMode.
  */
 export function useSvgFontLoader(): ((svg: string) => Promise<void>) | null {
-  const { fontCatalog } = useEditorConfig();
+  const fontCatalog = useFontCatalog();
 
   const catalogSetRef = useRef<Set<string> | null>(null);
   const catalogSetPromiseRef = useRef<Promise<Set<string>> | null>(null);

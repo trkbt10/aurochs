@@ -42,6 +42,10 @@
       "types": "./src/table/index.ts",
       "default": "./src/table/index.ts"
     },
+    "./font": {
+      "types": "./src/font/index.ts",
+      "default": "./src/font/index.ts"
+    },
     "./dev": {
       "types": "./src/dev/index.ts",
       "default": "./src/dev/index.ts"
