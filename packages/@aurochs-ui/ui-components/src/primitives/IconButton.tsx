@@ -1,25 +1,27 @@
 /**
- * @file Button primitive component
+ * @file IconButton primitive component
  *
- * A minimal button component with variant and size support.
+ * A button that displays an icon, optionally with a label.
+ * When label is omitted, renders as a square icon-only button.
  */
 
 import { type ReactNode, type CSSProperties, type MouseEvent } from "react";
 import type { ButtonVariant } from "../types";
 import { colorTokens, radiusTokens, fontTokens } from "../design-tokens";
 
-export type ButtonSize = "sm" | "md" | "lg";
+export type { ButtonVariant };
 
-export type ButtonProps = {
-  readonly children: ReactNode;
+export type IconButtonSize = "sm" | "md" | "lg";
+
+export type IconButtonProps = {
+  readonly icon: ReactNode;
+  readonly label?: string;
   readonly onClick?: (e: MouseEvent<HTMLButtonElement>) => void;
   readonly variant?: ButtonVariant;
-  readonly size?: ButtonSize;
+  readonly size?: IconButtonSize;
   readonly disabled?: boolean;
   readonly className?: string;
   readonly style?: CSSProperties;
-  readonly type?: "button" | "submit" | "reset";
-  readonly title?: string;
 };
 
 const baseStyle: CSSProperties = {
@@ -29,14 +31,13 @@ const baseStyle: CSSProperties = {
   gap: "6px",
   fontWeight: fontTokens.weight.medium,
   fontFamily: "inherit",
-  borderRadius: `var(--radius-sm, ${radiusTokens.sm})`,
   border: "none",
   cursor: "pointer",
   transition: "all 150ms ease",
   outline: "none",
 };
 
-const sizeStyles: Record<ButtonSize, CSSProperties> = {
+const sizeStyles: Record<IconButtonSize, CSSProperties> = {
   sm: {
     padding: "4px 8px",
     fontSize: fontTokens.size.xs,
@@ -48,6 +49,24 @@ const sizeStyles: Record<ButtonSize, CSSProperties> = {
   lg: {
     padding: "8px 16px",
     fontSize: fontTokens.size.lg,
+  },
+};
+
+const iconOnlySizeStyles: Record<IconButtonSize, CSSProperties> = {
+  sm: {
+    padding: "4px",
+    width: "28px",
+    height: "28px",
+  },
+  md: {
+    padding: "6px",
+    width: "32px",
+    height: "32px",
+  },
+  lg: {
+    padding: "8px",
+    width: "40px",
+    height: "40px",
   },
 };
 
@@ -78,37 +97,42 @@ const disabledStyle: CSSProperties = {
 };
 
 /**
- * Button primitive with variants and sizes.
+ * Icon button primitive. Renders a square button when label is omitted,
+ * or a standard button with icon and label text when label is provided.
  */
-export function Button({
-  children,
+export function IconButton({
+  icon,
+  label,
   onClick,
-  variant = "secondary",
+  variant = "ghost",
   size = "md",
   disabled,
   className,
   style,
-  type = "button",
-  title,
-}: ButtonProps) {
+}: IconButtonProps) {
+  const isIconOnly = !label;
+  const sizeStyle = isIconOnly ? iconOnlySizeStyles[size] : sizeStyles[size];
+
   const combinedStyle: CSSProperties = {
     ...baseStyle,
-    ...sizeStyles[size],
     ...variantStyles[variant],
+    ...sizeStyle,
+    borderRadius: isIconOnly ? radiusTokens.sm : radiusTokens.md,
     ...(disabled ? disabledStyle : {}),
     ...style,
   };
 
   return (
     <button
-      type={type}
+      type="button"
       onClick={onClick}
       disabled={disabled}
       className={className}
       style={combinedStyle}
-      title={title}
+      aria-label={label || undefined}
     >
-      {children}
+      {icon}
+      {label && <span>{label}</span>}
     </button>
   );
 }

@@ -10,7 +10,7 @@ import type { DocxDocument } from "@aurochs-office/docx";
 import type { DocxParagraph } from "@aurochs-office/docx/domain/paragraph";
 import type { DocxNumbering, DocxAbstractNum, DocxNum } from "@aurochs-office/docx/domain/numbering";
 import { docxAbstractNumId, docxNumId, docxIlvl, halfPoints } from "@aurochs-office/docx/domain/types";
-import { ChevronLeftIcon } from "../components/ui";
+import { EditorPageLayout } from "../components/EditorPageLayout";
 
 type Props = {
   readonly document: DocxDocument | null;
@@ -22,25 +22,7 @@ type Props = {
 // Styles
 // =============================================================================
 
-const pageStyle: CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  height: "100vh",
-  background: "var(--bg-primary)",
-  color: "var(--text-primary)",
-};
-
-const headerStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: "16px",
-  padding: "12px 16px",
-  background: "var(--bg-secondary)",
-  borderBottom: "1px solid var(--border-subtle)",
-  flexShrink: 0,
-};
-
-const backButtonStyle: CSSProperties = {
+const toggleBaseStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   gap: "6px",
@@ -51,18 +33,7 @@ const backButtonStyle: CSSProperties = {
   color: "var(--text-secondary)",
   cursor: "pointer",
   fontSize: "13px",
-};
-
-const titleStyle: CSSProperties = {
-  fontSize: "14px",
-  fontWeight: 500,
-  color: "var(--text-primary)",
-};
-
-const editorContainerStyle: CSSProperties = {
-  flex: 1,
-  overflow: "auto",
-  backgroundColor: "#525659",
+  marginLeft: "auto",
 };
 
 // =============================================================================
@@ -169,34 +140,32 @@ export function DocxEditorPage({ document, fileName, onBack }: Props) {
     return createDemoDocument();
   }, [document]);
 
+  const headerActions = (
+    <button
+      style={{
+        ...toggleBaseStyle,
+        background: isVertical ? "var(--accent-blue)" : "none",
+        color: isVertical ? "#fff" : "var(--text-secondary)",
+        borderColor: isVertical ? "var(--accent-blue)" : "var(--border-strong)",
+      }}
+      onClick={() => setIsVertical((v) => !v)}
+    >
+      {isVertical ? "Vertical" : "Horizontal"}
+    </button>
+  );
+
   return (
-    <div style={pageStyle}>
-      <header style={headerStyle}>
-        <button style={backButtonStyle} onClick={onBack}>
-          <ChevronLeftIcon size={16} />
-          <span>Back</span>
-        </button>
-        <span style={titleStyle}>{fileName ?? "DOCX Demo"}</span>
-        <button
-          style={{
-            ...backButtonStyle,
-            marginLeft: "auto",
-            background: isVertical ? "var(--accent-blue)" : "none",
-            color: isVertical ? "#fff" : "var(--text-secondary)",
-            borderColor: isVertical ? "var(--accent-blue)" : "var(--border-strong)",
-          }}
-          onClick={() => setIsVertical((v) => !v)}
-        >
-          {isVertical ? "Vertical" : "Horizontal"}
-        </button>
-      </header>
-      <div style={editorContainerStyle}>
-        <ContinuousEditor
-          paragraphs={paragraphs}
-          numbering={numbering}
-          sectPr={isVertical ? { textDirection: "tbRl" } : undefined}
-        />
-      </div>
-    </div>
+    <EditorPageLayout
+      fileName={fileName ?? "DOCX Demo"}
+      onBack={onBack}
+      headerActions={headerActions}
+      editorContainerStyle={{ overflow: "auto", backgroundColor: "#525659" }}
+    >
+      <ContinuousEditor
+        paragraphs={paragraphs}
+        numbering={numbering}
+        sectPr={isVertical ? { textDirection: "tbRl" } : undefined}
+      />
+    </EditorPageLayout>
   );
 }

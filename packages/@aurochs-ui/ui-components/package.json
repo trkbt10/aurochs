@@ -41,6 +41,10 @@
       "types": "./src/primitives/Button.tsx",
       "default": "./src/primitives/Button.tsx"
     },
+    "./primitives/IconButton": {
+      "types": "./src/primitives/IconButton.tsx",
+      "default": "./src/primitives/IconButton.tsx"
+    },
     "./primitives/Input": {
       "types": "./src/primitives/Input.tsx",
       "default": "./src/primitives/Input.tsx"

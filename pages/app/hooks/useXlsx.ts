@@ -2,18 +2,12 @@
  * @file XLSX loading hook for the pages app.
  */
 
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import type { XlsxWorkbook } from "@aurochs-office/xlsx/domain/workbook";
 import { detectSpreadsheetFileType, parseXlsWithReport } from "@aurochs-office/xls";
 import { createGetZipTextFileContentFromBytes } from "@aurochs-office/opc";
 import { parseXlsxWorkbook } from "@aurochs-office/xlsx/parser";
-
-export type XlsxState = {
-  status: "idle" | "loading" | "loaded" | "error";
-  workbook: XlsxWorkbook | null;
-  fileName: string | null;
-  error: string | null;
-};
+import { useFileLoader } from "./useFileLoader";
 
 async function parseWorkbookFromFile(file: File): Promise<XlsxWorkbook> {
   const data = new Uint8Array(await file.arrayBuffer());
@@ -35,32 +29,16 @@ async function parseWorkbookFromFile(file: File): Promise<XlsxWorkbook> {
  * Manage XLSX/XLS loading state for the pages app.
  */
 export function useXlsx() {
-  const [state, setState] = useState<XlsxState>({
-    status: "idle",
-    workbook: null,
-    fileName: null,
-    error: null,
-  });
+  const { load, data, ...rest } = useFileLoader<XlsxWorkbook>("Failed to load spreadsheet");
 
-  const loadFromFile = useCallback(async (file: File) => {
-    setState({ status: "loading", workbook: null, fileName: file.name, error: null });
-
-    try {
-      const workbook = await parseWorkbookFromFile(file);
-      setState({ status: "loaded", workbook, fileName: file.name, error: null });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to load spreadsheet";
-      setState({ status: "error", workbook: null, fileName: file.name, error: message });
-    }
-  }, []);
-
-  const reset = useCallback(() => {
-    setState({ status: "idle", workbook: null, fileName: null, error: null });
-  }, []);
+  const loadFromFile = useCallback(
+    (file: File) => load(file.name, () => parseWorkbookFromFile(file)),
+    [load],
+  );
 
   return {
-    ...state,
+    ...rest,
+    workbook: data,
     loadFromFile,
-    reset,
   };
 }

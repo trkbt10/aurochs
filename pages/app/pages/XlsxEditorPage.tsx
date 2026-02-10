@@ -22,7 +22,7 @@ import {
 import type { CellAddress } from "@aurochs-office/xlsx/domain/cell/address";
 import type { Formula } from "@aurochs-office/xlsx/domain/cell/formula";
 import { exportXlsx } from "@aurochs-builder/xlsx/exporter";
-import { ChevronLeftIcon } from "../components/ui";
+import { EditorPageLayout } from "../components/EditorPageLayout";
 
 type Props = {
   readonly workbook: XlsxWorkbook | null;
@@ -34,57 +34,18 @@ type Props = {
 // Styles
 // =============================================================================
 
-const pageStyle: CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  height: "100vh",
-  background: "var(--bg-primary)",
-  color: "var(--text-primary)",
-};
-
-const headerStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: "16px",
-  padding: "12px 16px",
-  background: "var(--bg-secondary)",
-  borderBottom: "1px solid var(--border-subtle)",
-  flexShrink: 0,
-};
-
-const backButtonStyle: CSSProperties = {
+const saveButtonStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   gap: "6px",
   padding: "6px 12px",
-  background: "none",
-  border: "1px solid var(--border-strong)",
+  background: "var(--accent-blue)",
+  border: "1px solid var(--accent-blue)",
   borderRadius: "6px",
-  color: "var(--text-secondary)",
+  color: "#fff",
   cursor: "pointer",
   fontSize: "13px",
-};
-
-const saveButtonStyle: CSSProperties = {
-  ...backButtonStyle,
   marginLeft: "auto",
-  background: "var(--accent-blue)",
-  color: "#fff",
-  borderColor: "var(--accent-blue)",
-};
-
-const titleStyle: CSSProperties = {
-  fontSize: "14px",
-  fontWeight: 500,
-  color: "var(--text-primary)",
-};
-
-const editorContainerStyle: CSSProperties = {
-  flex: 1,
-  minHeight: 0,
-  overflow: "hidden",
-  display: "flex",
-  flexDirection: "column",
 };
 
 // =============================================================================
@@ -236,36 +197,34 @@ export function XlsxEditorPage({ workbook: inputWorkbook, fileName, onBack }: Pr
     }
   }, [currentWorkbook, defaultSaveName]);
 
+  const headerActions = (
+    <button style={saveButtonStyle} onClick={() => void handleSave()} disabled={isSaving}>
+      {isSaving ? "Saving..." : "Save XLSX"}
+    </button>
+  );
+
   return (
-    <div style={pageStyle}>
-      <header style={headerStyle}>
-        <button style={backButtonStyle} onClick={onBack}>
-          <ChevronLeftIcon size={16} />
-          <span>Back</span>
-        </button>
-        <span style={titleStyle}>{fileName ?? "XLSX Demo"}</span>
-        <button style={saveButtonStyle} onClick={() => void handleSave()} disabled={isSaving}>
-          {isSaving ? "Saving..." : "Save XLSX"}
-        </button>
-      </header>
-      <div style={editorContainerStyle}>
-        <XlsxWorkbookEditor
-          key={workbookRevision}
-          workbook={initialWorkbook}
-          onWorkbookChange={setCurrentWorkbook}
-          grid={{
-            rowCount: 1_048_576,
-            colCount: 16_384,
-            rowHeightPx: 22,
-            colWidthPx: 120,
-            headerSizePx: 32,
-            colHeaderHeightPx: 22,
-            rowHeaderWidthPx: 56,
-            overscanRows: 4,
-            overscanCols: 2,
-          }}
-        />
-      </div>
-    </div>
+    <EditorPageLayout
+      fileName={fileName ?? "XLSX Demo"}
+      onBack={onBack}
+      headerActions={headerActions}
+    >
+      <XlsxWorkbookEditor
+        key={workbookRevision}
+        workbook={initialWorkbook}
+        onWorkbookChange={setCurrentWorkbook}
+        grid={{
+          rowCount: 1_048_576,
+          colCount: 16_384,
+          rowHeightPx: 22,
+          colWidthPx: 120,
+          headerSizePx: 32,
+          colHeaderHeightPx: 22,
+          rowHeaderWidthPx: 56,
+          overscanRows: 4,
+          overscanCols: 2,
+        }}
+      />
+    </EditorPageLayout>
   );
 }

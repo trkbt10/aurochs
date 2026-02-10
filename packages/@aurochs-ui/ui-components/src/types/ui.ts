@@ -12,7 +12,7 @@ export type InputType = "text" | "number";
 /**
  * Button variants.
  */
-export type ButtonVariant = "primary" | "secondary" | "ghost";
+export type ButtonVariant = "primary" | "secondary" | "ghost" | "outline";
 
 /**
  * Select option.

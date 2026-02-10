@@ -17,10 +17,9 @@ import {
   PlayIcon,
   EditIcon,
   SidebarIcon,
-  ProgressBar,
-  KeyboardHints,
   IconButton,
-} from "../components/ui";
+} from "@aurochs-ui/ui-components";
+import { ProgressBar, KeyboardHints } from "../components/ui";
 import { useSvgFontLoader } from "../fonts/useSvgFontLoader";
 
 type Props = {

@@ -13,7 +13,8 @@ import {
   type PdfImportResult,
 } from "@aurochs-converters/pdf-to-pptx/importer/pdf-importer";
 import type { PresentationDocument } from "@aurochs-office/pptx/app";
-import { UploadIcon, GridIcon, EditIcon, ShieldIcon, GitHubIcon, LogoIcon } from "../components/ui";
+import { UploadIcon, GridIcon, EditIcon, ShieldIcon } from "@aurochs-ui/ui-components";
+import { GitHubIcon, LogoIcon } from "../components/ui";
 import "./LandingPage.css";
 
 // =============================================================================

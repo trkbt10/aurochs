@@ -2,60 +2,33 @@
  * @file PPTX loading hook for the pages app.
  */
 
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import { loadPptxFromFile, loadPptxFromUrl, type LoadedPresentation } from "@aurochs-office/pptx/app";
-
-export type PptxState = {
-  status: "idle" | "loading" | "loaded" | "error";
-  presentation: LoadedPresentation | null;
-  fileName: string | null;
-  error: string | null;
-};
+import { useFileLoader } from "./useFileLoader";
 
 /**
  * Manage PPTX loading state and fetch helpers for the pages app.
  */
 export function usePptx() {
-  const [state, setState] = useState<PptxState>({
-    status: "idle",
-    presentation: null,
-    fileName: null,
-    error: null,
-  });
+  const { load, data, ...rest } = useFileLoader<LoadedPresentation>("Failed to load PPTX");
 
-  const loadFromFile = useCallback(async (file: File) => {
-    setState({ status: "loading", presentation: null, fileName: file.name, error: null });
+  const loadFromFile = useCallback(
+    (file: File) => load(file.name, () => loadPptxFromFile(file)),
+    [load],
+  );
 
-    try {
-      const presentation = await loadPptxFromFile(file);
-      setState({ status: "loaded", presentation, fileName: file.name, error: null });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to load PPTX";
-      setState({ status: "error", presentation: null, fileName: file.name, error: message });
-    }
-  }, []);
-
-  const loadFromUrl = useCallback(async (url: string, name?: string) => {
-    const fileName = name || url.split("/").pop() || "presentation.pptx";
-    setState({ status: "loading", presentation: null, fileName, error: null });
-
-    try {
-      const presentation = await loadPptxFromUrl(url);
-      setState({ status: "loaded", presentation, fileName, error: null });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to load PPTX";
-      setState({ status: "error", presentation: null, fileName, error: message });
-    }
-  }, []);
-
-  const reset = useCallback(() => {
-    setState({ status: "idle", presentation: null, fileName: null, error: null });
-  }, []);
+  const loadFromUrl = useCallback(
+    (url: string, name?: string) => {
+      const fileName = name || url.split("/").pop() || "presentation.pptx";
+      return load(fileName, () => loadPptxFromUrl(url));
+    },
+    [load],
+  );
 
   return {
-    ...state,
+    ...rest,
+    presentation: data,
     loadFromFile,
     loadFromUrl,
-    reset,
   };
 }
