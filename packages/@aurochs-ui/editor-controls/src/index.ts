@@ -59,3 +59,17 @@ export {
   isFitMode,
   ZoomControls,
 } from "./zoom";
+
+// Editor shell (responsive 3-panel layout)
+export type { EditorLayoutMode, EditorLayoutBreakpoints, EditorShellPanel, EditorShellProps } from "./editor-shell";
+export {
+  EditorShell,
+  CanvasArea,
+  resolveEditorLayoutMode,
+  DEFAULT_EDITOR_LAYOUT_BREAKPOINTS,
+  useContainerWidth,
+  editorContainerStyle,
+  toolbarStyle,
+  gridContainerStyle,
+} from "./editor-shell";
+export type { CanvasAreaProps } from "./editor-shell";

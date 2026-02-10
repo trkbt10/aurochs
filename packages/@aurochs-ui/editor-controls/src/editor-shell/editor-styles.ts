@@ -1,7 +1,7 @@
 /**
- * @file Presentation editor styles
+ * @file Editor shell CSS style constants
  *
- * CSS style constants for the presentation editor layout.
+ * Shared layout styles for EditorShell and standalone usage (e.g. theme mode).
  */
 
 import type { CSSProperties } from "react";
@@ -29,25 +29,6 @@ export const gridContainerStyle: CSSProperties = {
   position: "relative",
 };
 
-export const thumbnailPanelStyle: CSSProperties = {
-  height: "100%",
-  borderRight: "1px solid var(--border-subtle, #333)",
-  overflow: "hidden",
+export const bottomBarStyle: CSSProperties = {
+  flexShrink: 0,
 };
-
-export const inspectorPanelStyle: CSSProperties = {
-  height: "100%",
-  borderLeft: "1px solid var(--border-subtle, #333)",
-  overflow: "hidden",
-};
-
-export const noSlideStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  width: "100%",
-  height: "100%",
-  color: "#666",
-};
-
-export const RULER_THICKNESS = 24;

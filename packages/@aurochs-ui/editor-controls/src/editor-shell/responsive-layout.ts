@@ -4,14 +4,7 @@
  * Provides explicit layout modes and breakpoint-based selection.
  */
 
-export type EditorLayoutMode = "desktop" | "tablet" | "mobile";
-
-export type EditorLayoutBreakpoints = {
-  /** Width at or below this is treated as mobile (px). */
-  readonly mobileMaxWidth: number;
-  /** Width at or below this (and above mobileMaxWidth) is treated as tablet (px). */
-  readonly tabletMaxWidth: number;
-};
+import type { EditorLayoutBreakpoints, EditorLayoutMode } from "./types";
 
 export const DEFAULT_EDITOR_LAYOUT_BREAKPOINTS: EditorLayoutBreakpoints = {
   mobileMaxWidth: 768,

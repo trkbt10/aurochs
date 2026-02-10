@@ -6,7 +6,8 @@
   "sideEffects": false,
   "dependencies": {
     "@aurochs-ui/color-editor": "workspace:*",
-    "@aurochs-ui/ui-components": "workspace:*"
+    "@aurochs-ui/ui-components": "workspace:*",
+    "react-panel-layout": "^0.6.1"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
@@ -53,6 +54,10 @@
     "./zoom": {
       "types": "./src/zoom/index.ts",
       "default": "./src/zoom/index.ts"
+    },
+    "./editor-shell": {
+      "types": "./src/editor-shell/index.ts",
+      "default": "./src/editor-shell/index.ts"
     }
   }
 }
