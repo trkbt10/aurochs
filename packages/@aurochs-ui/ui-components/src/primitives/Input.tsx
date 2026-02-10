@@ -11,12 +11,21 @@ import { colorTokens, fontTokens, radiusTokens } from "../design-tokens";
 export type InputProps = {
   readonly value: string | number;
   readonly onChange: (value: string | number) => void;
+  /** DOM ChangeEvent callback — use when you need selectionStart/End from the event. */
+  readonly onInputChange?: (event: ChangeEvent<HTMLInputElement>) => void;
   readonly type?: "text" | "number";
   readonly suffix?: string;
   readonly placeholder?: string;
   readonly disabled?: boolean;
   readonly readOnly?: boolean;
   readonly onKeyDown?: (event: React.KeyboardEvent<HTMLInputElement>) => void;
+  readonly onFocus?: (event: React.FocusEvent<HTMLInputElement>) => void;
+  readonly onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void;
+  /** Fires when the text selection (caret position) changes — arrow keys, mouse clicks, etc. */
+  readonly onSelect?: (event: React.SyntheticEvent<HTMLInputElement>) => void;
+  readonly onCompositionStart?: (event: React.CompositionEvent<HTMLInputElement>) => void;
+  readonly onCompositionUpdate?: (event: React.CompositionEvent<HTMLInputElement>) => void;
+  readonly onCompositionEnd?: (event: React.CompositionEvent<HTMLInputElement>) => void;
   readonly className?: string;
   readonly style?: CSSProperties;
   readonly min?: number;
@@ -87,12 +96,19 @@ const suffixInnerStyle: CSSProperties = {
 export function Input({
   value,
   onChange,
+  onInputChange,
   type = "text",
   suffix,
   placeholder,
   disabled,
   readOnly,
   onKeyDown,
+  onFocus,
+  onBlur,
+  onSelect,
+  onCompositionStart,
+  onCompositionUpdate,
+  onCompositionEnd,
   className,
   style,
   min,
@@ -107,10 +123,11 @@ export function Input({
 
   const handleChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
+      onInputChange?.(e);
       const newValue = type === "number" ? parseFloat(e.target.value) : e.target.value;
       onChange(type === "number" && isNaN(newValue as number) ? 0 : newValue);
     },
-    [onChange, type]
+    [onChange, onInputChange, type]
   );
 
   const hasSuffix = !!suffix;
@@ -125,6 +142,12 @@ export function Input({
         value={value}
         onChange={handleChange}
         onKeyDown={onKeyDown}
+        onFocus={onFocus}
+        onBlur={onBlur}
+        onSelect={onSelect}
+        onCompositionStart={onCompositionStart}
+        onCompositionUpdate={onCompositionUpdate}
+        onCompositionEnd={onCompositionEnd}
         placeholder={placeholder}
         disabled={disabled}
         readOnly={readOnly}

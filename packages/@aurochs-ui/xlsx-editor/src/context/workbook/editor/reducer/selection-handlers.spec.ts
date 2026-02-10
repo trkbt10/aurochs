@@ -36,7 +36,7 @@ function createTestState(): XlsxEditorState {
     cellSelection: createEmptyCellSelection(),
     drag: createIdleDragState(),
     clipboard: undefined,
-    editingCell: undefined,
+    editing: undefined,
   };
 }
 

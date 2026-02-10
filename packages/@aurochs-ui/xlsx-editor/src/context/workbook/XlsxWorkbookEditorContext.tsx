@@ -6,7 +6,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useReducer, type ReactNode } from "react";
 import type { XlsxWorkbook, XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
-import type { CellSelectionState, XlsxEditorAction, XlsxEditorState } from "./editor/types";
+import type { CellEditingState, CellSelectionState, XlsxEditorAction, XlsxEditorState } from "./editor/types";
 import { xlsxEditorReducer, createInitialState } from "./editor/reducer";
 import { canRedo, canUndo } from "@aurochs-ui/editor-core/history";
 
@@ -18,6 +18,7 @@ export type XlsxWorkbookEditorContextValue = {
   readonly activeSheetIndex: number | undefined;
   readonly activeSheet: XlsxWorksheet | undefined;
   readonly selection: CellSelectionState;
+  readonly editing: CellEditingState | undefined;
 
   readonly canUndo: boolean;
   readonly canRedo: boolean;
@@ -57,6 +58,7 @@ export function XlsxWorkbookEditorProvider({
       activeSheetIndex,
       activeSheet,
       selection: state.cellSelection,
+      editing: state.editing,
       canUndo: canUndo(state.workbookHistory),
       canRedo: canRedo(state.workbookHistory),
     }),

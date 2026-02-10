@@ -39,7 +39,7 @@ function createTestState(): XlsxEditorState {
     cellSelection: createEmptyCellSelection(),
     drag: createIdleDragState(),
     clipboard: undefined,
-    editingCell: undefined,
+    editing: undefined,
   };
 }
 
@@ -217,7 +217,7 @@ describe("xlsx-editor/context/workbook/editor/reducer/drag-handlers", () => {
       cellSelection: createEmptyCellSelection(),
       drag: createIdleDragState(),
       clipboard: undefined,
-      editingCell: undefined,
+      editing: undefined,
     };
 
     const startHandler = dragHandlers.START_FILL_DRAG;

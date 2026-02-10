@@ -60,6 +60,10 @@ export function XlsxSheetGridLayers({
   const { dispatch, selection, state, activeSheetIndex, workbook } = useXlsxWorkbookEditor();
   const { scrollTop, scrollLeft, viewportWidth, viewportHeight } = useVirtualScrollContext();
 
+  const editingSheetName = state.editing
+    ? workbook.sheets[state.editing.editingSheetIndex]?.name
+    : undefined;
+
   if (!Number.isFinite(zoom) || zoom <= 0) {
     throw new Error(`XlsxSheetGridLayers zoom must be a positive finite number: ${String(zoom)}`);
   }
@@ -184,9 +188,10 @@ export function XlsxSheetGridLayers({
             activeCell: selection.activeCell,
           }}
           state={{
-            editingCell: state.editingCell,
+            editing: state.editing,
           }}
           activeSheetIndex={activeSheetIndex}
+          editingSheetName={editingSheetName}
           normalizedMerges={normalizedMerges}
           dispatch={dispatch}
           zoom={zoom}

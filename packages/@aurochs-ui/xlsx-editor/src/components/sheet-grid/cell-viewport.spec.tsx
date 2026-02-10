@@ -55,8 +55,9 @@ describe("xlsx-editor/components/sheet-grid/cell-viewport", () => {
           zoom={1}
           focusGridRoot={() => undefined}
           selection={{ selectedRanges: [], activeRange: undefined, activeCell: undefined }}
-          state={{ editingCell: undefined }}
+          state={{ editing: undefined }}
           activeSheetIndex={0}
+          editingSheetName={undefined}
           normalizedMerges={[]}
           dispatch={dispatch}
         >
@@ -126,8 +127,9 @@ describe("xlsx-editor/components/sheet-grid/cell-viewport", () => {
             },
             activeCell: undefined,
           }}
-          state={{ editingCell: undefined }}
+          state={{ editing: undefined }}
           activeSheetIndex={0}
+          editingSheetName={undefined}
           normalizedMerges={[]}
           dispatch={dispatch}
         >
@@ -191,8 +193,9 @@ describe("xlsx-editor/components/sheet-grid/cell-viewport", () => {
             },
             activeCell: undefined,
           }}
-          state={{ editingCell: undefined }}
+          state={{ editing: undefined }}
           activeSheetIndex={0}
+          editingSheetName={undefined}
           normalizedMerges={[]}
           dispatch={dispatch}
         >

@@ -53,7 +53,7 @@ describe("xlsx-editor/context/workbook/editor/reducer/index", () => {
     expect(state.cellSelection).toEqual(createEmptyCellSelection());
     expect(state.drag).toEqual(createIdleDragState());
     expect(state.clipboard).toBeUndefined();
-    expect(state.editingCell).toBeUndefined();
+    expect(state.editing).toBeUndefined();
   });
 
   it("createInitialState sets activeSheetIndex undefined when workbook has no sheets", () => {
@@ -86,15 +86,14 @@ describe("xlsx-editor/context/workbook/editor/reducer/index", () => {
     // eslint-disable-next-line no-restricted-syntax -- test requires sequential state updates
     let state = createInitialState(workbook);
 
-    state = xlsxEditorReducer(state, { type: "ENTER_CELL_EDIT", address: addr(1, 1) });
-    expect(state.editingCell).toEqual(addr(1, 1));
+    state = xlsxEditorReducer(state, { type: "ENTER_CELL_EDIT", address: addr(1, 1), entryMode: "enter" });
+    expect(state.editing?.address).toEqual(addr(1, 1));
 
-    state = xlsxEditorReducer(state, {
-      type: "COMMIT_CELL_EDIT",
-      value: { type: "number", value: 123 },
-    });
+    // Update text to a number value
+    state = xlsxEditorReducer(state, { type: "UPDATE_EDIT_TEXT", text: "123", caretOffset: 3, selectionEnd: 3 });
+    state = xlsxEditorReducer(state, { type: "COMMIT_CELL_EDIT" });
 
-    expect(state.editingCell).toBeUndefined();
+    expect(state.editing).toBeUndefined();
     const sheet = state.workbookHistory.present.sheets[0];
     expect(getCellValue(sheet, addr(1, 1))).toEqual({ type: "number", value: 123 });
   });
@@ -110,7 +109,7 @@ describe("xlsx-editor/context/workbook/editor/reducer/index", () => {
       cellSelection: createEmptyCellSelection(),
       drag: createIdleDragState(),
       clipboard: undefined,
-      editingCell: undefined,
+      editing: undefined,
     };
 
     const undone = xlsxEditorReducer(stateAfterAdd, { type: "UNDO" });

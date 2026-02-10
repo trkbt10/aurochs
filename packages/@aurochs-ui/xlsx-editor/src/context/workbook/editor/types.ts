@@ -139,6 +139,71 @@ export type XlsxClipboardContent = {
 };
 
 // =============================================================================
+// Cell Editing State
+// =============================================================================
+
+/**
+ * How editing was entered, affecting initial content behavior.
+ * - "enter": F2 or double-click — preserves existing content, caret at end
+ * - "replace": started typing on selected cell — replaces content with typed char
+ * - "formulaBar": clicked into formula bar — preserves content
+ */
+export type EditEntryMode = "enter" | "replace" | "formulaBar";
+
+/**
+ * Which surface is the primary input target.
+ * - "cell": editing from the inline cell editor (hidden textarea in the grid)
+ * - "formulaBar": editing from the formula bar in the toolbar
+ */
+export type EditOrigin = "cell" | "formulaBar";
+
+/**
+ * IME composition state for cell editing.
+ *
+ * Tracks whether an IME composition session is active and its interim text.
+ * During composition, keyDown events must be suppressed and caret updates skipped
+ * to avoid interfering with the IME.
+ */
+export type CellEditComposition = {
+  readonly isComposing: boolean;
+  readonly text: string;
+  readonly startOffset: number;
+};
+
+/**
+ * Create idle (non-composing) composition state.
+ */
+export function createIdleComposition(): CellEditComposition {
+  return { isComposing: false, text: "", startOffset: 0 };
+}
+
+/**
+ * Complete cell editing state — single source of truth for both the formula bar
+ * and the inline cell editor. Both surfaces read from and write to this state
+ * via reducer actions.
+ */
+export type CellEditingState = {
+  /** Cell being edited */
+  readonly address: CellAddress;
+  /** How editing was initiated */
+  readonly entryMode: EditEntryMode;
+  /** Which surface currently has input focus */
+  readonly origin: EditOrigin;
+  /** Current text in the editor (raw string including "=" if formula) */
+  readonly text: string;
+  /** Caret position (character offset into text) */
+  readonly caretOffset: number;
+  /** Selection end offset — if different from caretOffset, text is selected */
+  readonly selectionEnd: number;
+  /** Whether the text starts with "=" (formula mode) */
+  readonly isFormulaMode: boolean;
+  /** IME composition state */
+  readonly composition: CellEditComposition;
+  /** Index of the sheet where editing started (stable across sheet switches) */
+  readonly editingSheetIndex: number;
+};
+
+// =============================================================================
 // XLSX Editor State
 // =============================================================================
 
@@ -159,8 +224,8 @@ export type XlsxEditorState = {
   readonly drag: XlsxDragState;
   /** Clipboard content */
   readonly clipboard: XlsxClipboardContent | undefined;
-  /** Cell currently being edited (inline editing) */
-  readonly editingCell: CellAddress | undefined;
+  /** Cell editing state — undefined when not editing */
+  readonly editing: CellEditingState | undefined;
 };
 
 // =============================================================================
@@ -265,9 +330,13 @@ export type XlsxEditorAction =
   | { readonly type: "UNMERGE_CELLS"; readonly range: CellRange }
 
   // Cell editing
-  | { readonly type: "ENTER_CELL_EDIT"; readonly address: CellAddress }
+  | { readonly type: "ENTER_CELL_EDIT"; readonly address: CellAddress; readonly entryMode: EditEntryMode; readonly initialChar?: string }
   | { readonly type: "EXIT_CELL_EDIT" }
-  | { readonly type: "COMMIT_CELL_EDIT"; readonly value: CellValue }
+  | { readonly type: "COMMIT_CELL_EDIT" }
+  | { readonly type: "UPDATE_EDIT_TEXT"; readonly text: string; readonly caretOffset: number; readonly selectionEnd: number }
+  | { readonly type: "SET_EDIT_ORIGIN"; readonly origin: EditOrigin }
+  | { readonly type: "SET_COMPOSITION"; readonly composition: CellEditComposition }
+  | { readonly type: "INSERT_CELL_REFERENCE"; readonly refText: string }
 
   // Undo/Redo
   | { readonly type: "UNDO" }

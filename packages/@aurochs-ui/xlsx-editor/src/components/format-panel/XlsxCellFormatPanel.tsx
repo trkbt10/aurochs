@@ -96,7 +96,7 @@ export function XlsxCellFormatPanel({ sheetIndex, onClose }: XlsxCellFormatPanel
     () => getTargetRange({ activeCell: selection.activeCell, selectedRange: selection.selectedRange }),
     [selection.activeCell, selection.selectedRange],
   );
-  const disabled = state.editingCell !== undefined || !targetRange;
+  const disabled = state.editing !== undefined || !targetRange;
 
   const anchorCell = selection.activeCell ?? targetRange?.start;
   const details = useMemo(() => {

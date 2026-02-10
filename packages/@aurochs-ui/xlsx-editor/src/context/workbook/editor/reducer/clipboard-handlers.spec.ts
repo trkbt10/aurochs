@@ -108,7 +108,7 @@ function createEditorState(
     cellSelection: createRangeSelection(selection.range, selection.activeCell),
     drag: createIdleDragState(),
     clipboard: undefined,
-    editingCell: undefined,
+    editing: undefined,
   };
 }
 
@@ -207,7 +207,7 @@ describe("xlsx-editor/context/workbook/editor/reducer/clipboard-handlers", () =>
           [undefined, styleId(7)],
         ],
       },
-      editingCell: undefined,
+      editing: undefined,
     };
 
     const next = clipboardHandlers.PASTE?.(state, { type: "PASTE" });
@@ -242,7 +242,7 @@ describe("xlsx-editor/context/workbook/editor/reducer/clipboard-handlers", () =>
         formulas: [["A1+$A$1+A$1+$A1"]],
         styles: [[undefined]],
       },
-      editingCell: undefined,
+      editing: undefined,
     };
 
     const next = clipboardHandlers.PASTE?.(state, { type: "PASTE" });

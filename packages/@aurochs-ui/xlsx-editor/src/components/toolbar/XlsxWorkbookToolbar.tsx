@@ -4,7 +4,7 @@
  * Minimal toolbar: Undo/Redo + active address + formula/value bar.
  */
 
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useMemo, type CSSProperties } from "react";
 import {
   AddIcon,
   AlignCenterIcon,
@@ -20,10 +20,9 @@ import {
   UnmergeCellsIcon,
 } from "@aurochs-ui/ui-components";
 import { indexToColumnLetter, type CellAddress, type CellRange } from "@aurochs-office/xlsx/domain/cell/address";
-import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
+import { colIdx } from "@aurochs-office/xlsx/domain/types";
 import { StylePicker } from "./StylePicker";
-import { parseCellUserInput } from "../cell-input/parse-cell-user-input";
-import { formatCellEditText } from "../cell-input/format-cell-edit-text";
+import { XlsxFormulaBar } from "./XlsxFormulaBar";
 import { useXlsxWorkbookEditor } from "../../context/workbook/XlsxWorkbookEditorContext";
 import { getCell } from "../../cell/query";
 import { resolveCellStyleDetails } from "../../selectors/cell-style-details";
@@ -80,10 +79,6 @@ function createA1AddressText(address: CellAddress): string {
   return `${col}${row}`;
 }
 
-function getDefaultActiveCell(): CellAddress {
-  return { col: colIdx(1), row: rowIdx(1), colAbsolute: false, rowAbsolute: false };
-}
-
 function getTargetRange(params: {
   readonly activeCell: CellAddress | undefined;
   readonly selectedRange: CellRange | undefined;
@@ -136,7 +131,7 @@ export function XlsxWorkbookToolbar({
   zoom,
   onZoomChange,
 }: XlsxWorkbookToolbarProps) {
-  const { dispatch, workbook, canUndo, canRedo, selection, state } = useXlsxWorkbookEditor();
+  const { dispatch, workbook, canUndo, canRedo, selection, state, editing } = useXlsxWorkbookEditor();
   const sheet = workbook.sheets[sheetIndex];
   if (!sheet) {
     throw new Error(`Sheet not found: index=${sheetIndex}`);
@@ -147,29 +142,7 @@ export function XlsxWorkbookToolbar({
     return activeCell ? createA1AddressText(activeCell) : "";
   }, [activeCell]);
 
-  const [input, setInput] = useState("");
-
-  useEffect(() => {
-    if (!activeCell) {
-      setInput("");
-      return;
-    }
-    setInput(formatCellEditText(sheet, activeCell));
-  }, [activeCell, sheet]);
-
-  const commit = useCallback(() => {
-    const address = activeCell ?? getDefaultActiveCell();
-    dispatch({ type: "SELECT_CELL", address });
-
-    const result = parseCellUserInput(input);
-    if (result.type === "formula") {
-      dispatch({ type: "SET_CELL_FORMULA", address, formula: result.formula });
-      return;
-    }
-    dispatch({ type: "UPDATE_CELL", address, value: result.value });
-  }, [activeCell, dispatch, input]);
-
-  const disableInputs = state.editingCell !== undefined;
+  const disableInputs = editing !== undefined;
   const targetRange = useMemo(
     () => getTargetRange({ activeCell, selectedRange: selection.selectedRange }),
     [activeCell, selection.selectedRange],
@@ -413,26 +386,7 @@ export function XlsxWorkbookToolbar({
         </div>
       </div>
 
-      <Input
-        value={input}
-        placeholder={activeCell ? "Value or =Formula" : "Select a cell"}
-        disabled={!activeCell || disableInputs}
-        style={formulaInputStyle}
-        onChange={(value) => setInput(String(value))}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            commit();
-          } else if (e.key === "Escape") {
-            e.preventDefault();
-            if (activeCell) {
-              setInput(formatCellEditText(sheet, activeCell));
-            } else {
-              setInput("");
-            }
-          }
-        }}
-      />
+      <XlsxFormulaBar sheet={sheet} style={formulaInputStyle} />
     </div>
   );
 }

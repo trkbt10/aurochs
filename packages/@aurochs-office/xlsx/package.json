@@ -100,6 +100,10 @@
       "types": "./src/domain/sheet-utils.ts",
       "default": "./src/domain/sheet-utils.ts"
     },
+    "./formula/ast": {
+      "types": "./src/formula/ast.ts",
+      "default": "./src/formula/ast.ts"
+    },
     "./formula/evaluator": {
       "types": "./src/formula/evaluator.ts",
       "default": "./src/formula/evaluator.ts"
@@ -107,6 +111,10 @@
     "./formula/functionRegistry": {
       "types": "./src/formula/functionRegistry.ts",
       "default": "./src/formula/functionRegistry.ts"
+    },
+    "./formula/parser": {
+      "types": "./src/formula/parser.ts",
+      "default": "./src/formula/parser.ts"
     },
     "./formula/shift": {
       "types": "./src/formula/shift.ts",

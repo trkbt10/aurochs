@@ -11,16 +11,19 @@ import type { XlsxStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
 import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
 import { colorTokens } from "@aurochs-ui/ui-components";
 import { XlsxCellEditorOverlay } from "../cell-input/XlsxCellEditorOverlay";
-import type { ParseCellUserInputResult } from "../cell-input/parse-cell-user-input";
 import { buildBorderOverlayLines } from "../../selectors/border-overlay";
 import { findMergeForCell, type NormalizedMergeRange } from "../../sheet/merge-range";
 import { getVisibleGridLineSegments } from "./gridline-geometry";
 import { clipRectToViewport, getActiveCellRect, getSelectedRangeRect } from "./selection-geometry";
 import { createSheetLayout } from "../../selectors/sheet-layout";
-import type { XlsxEditorAction } from "../../context/workbook/editor/types";
+import type { CellEditingState, XlsxEditorAction } from "../../context/workbook/editor/types";
 import { startFillHandlePointerDrag } from "./fill-handle-drag";
 import { startRangeSelectPointerDrag } from "./range-select-drag";
 import { hitTestCellFromPointerEvent } from "./cell-hit-test";
+import { analyzeFormula } from "../../formula-edit/formula-analysis";
+import { FormulaReferenceOverlay } from "./FormulaReferenceOverlay";
+import { isReferenceInsertionPoint, buildReferenceText } from "../../formula-edit/formula-reference-insert";
+import { startFormulaRangeDrag } from "./formula-range-drag";
 
 const selectionOutlineStyle: CSSProperties = {
   position: "absolute",
@@ -99,9 +102,11 @@ export type XlsxSheetGridCellViewportProps = {
     readonly activeCell: CellAddress | undefined;
   };
   readonly state: {
-    readonly editingCell: CellAddress | undefined;
+    readonly editing: CellEditingState | undefined;
   };
   readonly activeSheetIndex: number | undefined;
+  /** Name of the sheet where editing started (for cross-sheet reference qualification) */
+  readonly editingSheetName: string | undefined;
   readonly normalizedMerges: readonly NormalizedMergeRange[];
   readonly dispatch: (action: XlsxEditorAction) => void;
   readonly children: React.ReactNode;
@@ -129,6 +134,7 @@ export function XlsxSheetGridCellViewport({
   selection,
   state,
   activeSheetIndex,
+  editingSheetName,
   normalizedMerges,
   dispatch,
   children,
@@ -228,7 +234,7 @@ export function XlsxSheetGridCellViewport({
     });
   }, [colRange, layout, metrics.colCount, metrics.rowCount, rowRange, scrollLeft, scrollTop, sheet, workbookStyles]);
 
-  const editingCell = state.editingCell;
+  const editingCell = state.editing?.address;
   const editingRect = useMemo(() => {
     if (!editingCell) {
       return null;
@@ -254,22 +260,46 @@ export function XlsxSheetGridCellViewport({
     return getActiveCellRect({ cell: editingCell, layout, scrollTop, scrollLeft });
   }, [editingCell, layout, normalizedMerges, scrollLeft, scrollTop]);
 
-  const handleCommitEdit = useCallback(
-    (result: ParseCellUserInputResult): void => {
-      if (activeSheetIndex === undefined) {
-        throw new Error("activeSheetIndex is required to commit cell edit");
-      }
-      if (!editingCell) {
-        throw new Error("editingCell is required to commit cell edit");
-      }
-      if (result.type === "formula") {
-        dispatch({ type: "SET_CELL_FORMULA", address: editingCell, formula: result.formula });
-        dispatch({ type: "EXIT_CELL_EDIT" });
+  const formulaReferences = useMemo(() => {
+    const editing = state.editing;
+    if (!editing || !editing.isFormulaMode) {
+      return undefined;
+    }
+    return analyzeFormula(editing.text, editing.caretOffset).references;
+  }, [state.editing?.text, state.editing?.caretOffset, state.editing?.isFormulaMode]);
+
+  const handleCommitAndMove = useCallback(
+    (direction: "down" | "up" | "right" | "left"): void => {
+      const cell = editingCell;
+      if (!cell) {
         return;
       }
-      dispatch({ type: "COMMIT_CELL_EDIT", value: result.value });
+      const col = cell.col as number;
+      const row = cell.row as number;
+
+      let nextCol = col;
+      let nextRow = row;
+      if (direction === "down") {
+        nextRow = Math.min(row + 1, metrics.rowCount);
+      } else if (direction === "up") {
+        nextRow = Math.max(row - 1, 1);
+      } else if (direction === "right") {
+        nextCol = Math.min(col + 1, metrics.colCount);
+      } else if (direction === "left") {
+        nextCol = Math.max(col - 1, 1);
+      }
+
+      dispatch({
+        type: "SELECT_CELL",
+        address: {
+          col: colIdx(nextCol),
+          row: rowIdx(nextRow),
+          colAbsolute: false,
+          rowAbsolute: false,
+        },
+      });
     },
-    [activeSheetIndex, dispatch, editingCell],
+    [dispatch, editingCell, metrics.colCount, metrics.rowCount],
   );
 
   const handleFillHandlePointerDown = useCallback(
@@ -281,7 +311,7 @@ export function XlsxSheetGridCellViewport({
       if (!activeRange) {
         return;
       }
-      if (state.editingCell) {
+      if (state.editing) {
         return;
       }
       const container = containerRef.current;
@@ -320,7 +350,7 @@ export function XlsxSheetGridCellViewport({
       scrollLeft,
       scrollTop,
       selection.activeRange,
-      state.editingCell,
+      state.editing,
       zoom,
     ],
   );
@@ -362,17 +392,58 @@ export function XlsxSheetGridCellViewport({
       if (event.button !== 0) {
         return;
       }
-      if (state.editingCell) {
-        return;
-      }
-
-      event.preventDefault();
-      focusGridRoot(event.currentTarget);
 
       const address =
         getCellAddressFromEventTarget(event.target) ?? hitTestViewportCell(event.nativeEvent, event.currentTarget);
       const merge = normalizedMerges.length > 0 ? findMergeForCell(normalizedMerges, address) : undefined;
       const origin = merge?.origin ?? address;
+
+      // Formula-mode: check if the click should insert a reference or commit the formula
+      if (state.editing?.isFormulaMode) {
+        if (isReferenceInsertionPoint(state.editing.text, state.editing.caretOffset)) {
+          event.preventDefault();
+          const refText = buildReferenceText(
+            { start: origin, end: origin },
+            editingSheetName ?? sheet.name,
+            sheet.name,
+          );
+          const refInsertOffset = state.editing.caretOffset;
+          dispatch({ type: "INSERT_CELL_REFERENCE", refText });
+
+          // Start formula range drag so the user can expand the reference by dragging
+          const previous = rangeSelectCleanupRef.current;
+          if (previous) {
+            previous();
+          }
+          rangeSelectCleanupRef.current = startFormulaRangeDrag({
+            pointerId: event.pointerId,
+            captureTarget: event.currentTarget,
+            container: event.currentTarget,
+            startAddress: origin,
+            editingSheetName: editingSheetName ?? sheet.name,
+            currentSheetName: sheet.name,
+            editingText: state.editing.text.slice(0, refInsertOffset) + refText + state.editing.text.slice(refInsertOffset),
+            refInsertOffset,
+            refLength: refText.length,
+            scrollLeft,
+            scrollTop,
+            layout,
+            metrics,
+            zoom,
+            normalizedMerges,
+            dispatch,
+          });
+          return;
+        }
+        // Not an insertion point → commit the formula and fall through to normal selection
+        dispatch({ type: "COMMIT_CELL_EDIT" });
+      } else if (state.editing) {
+        // Non-formula editing: commit the edit first
+        dispatch({ type: "COMMIT_CELL_EDIT" });
+      }
+
+      event.preventDefault();
+      focusGridRoot(event.currentTarget);
 
       if (event.metaKey || event.ctrlKey) {
         dispatch({ type: "ADD_RANGE_TO_SELECTION", range: merge?.range ?? { start: origin, end: origin } });
@@ -412,14 +483,14 @@ export function XlsxSheetGridCellViewport({
       normalizedMerges,
       scrollLeft,
       scrollTop,
-      state.editingCell,
+      state.editing,
       zoom,
     ],
   );
 
   const handleViewportDoubleClick = useCallback(
     (event: React.MouseEvent<HTMLDivElement>): void => {
-      if (state.editingCell) {
+      if (state.editing) {
         return;
       }
       event.preventDefault();
@@ -432,14 +503,14 @@ export function XlsxSheetGridCellViewport({
 
       if (merge) {
         dispatch({ type: "SELECT_RANGE", range: merge.range });
-        dispatch({ type: "ENTER_CELL_EDIT", address: origin });
+        dispatch({ type: "ENTER_CELL_EDIT", address: origin, entryMode: "enter" });
         return;
       }
 
       dispatch({ type: "SELECT_CELL", address: origin });
-      dispatch({ type: "ENTER_CELL_EDIT", address: origin });
+      dispatch({ type: "ENTER_CELL_EDIT", address: origin, entryMode: "enter" });
     },
-    [dispatch, focusGridRoot, getCellAddressFromEventTarget, hitTestViewportCell, normalizedMerges, state.editingCell],
+    [dispatch, focusGridRoot, getCellAddressFromEventTarget, hitTestViewportCell, normalizedMerges, state.editing],
   );
 
   return (
@@ -572,7 +643,7 @@ export function XlsxSheetGridCellViewport({
         />
       )}
 
-      {activeRangeRect && selection.activeRange && !state.editingCell && (
+      {activeRangeRect && selection.activeRange && !state.editing && (
         <div
           data-testid="xlsx-selection-fill-handle"
           style={{
@@ -584,12 +655,25 @@ export function XlsxSheetGridCellViewport({
         />
       )}
 
-      {editingCell && editingRect && (
+      {formulaReferences && formulaReferences.length > 0 && (
+        <FormulaReferenceOverlay
+          references={formulaReferences}
+          activeSheetName={sheet.name}
+          editingSheetName={editingSheetName}
+          layout={layout}
+          scrollTop={scrollTop}
+          scrollLeft={scrollLeft}
+          viewportWidth={gridViewportWidth}
+          viewportHeight={gridViewportHeight}
+        />
+      )}
+
+      {editingCell && editingRect && state.editing?.origin === "cell" && (
         <XlsxCellEditorOverlay
           sheet={sheet}
           address={editingCell}
           rect={editingRect}
-          onCommitValue={handleCommitEdit}
+          onCommitAndMove={handleCommitAndMove}
           onCancel={() => dispatch({ type: "EXIT_CELL_EDIT" })}
         />
       )}

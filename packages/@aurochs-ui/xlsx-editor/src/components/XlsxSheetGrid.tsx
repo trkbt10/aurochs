@@ -99,7 +99,7 @@ export function XlsxSheetGrid({
         contentWidth={contentWidth}
         contentHeight={contentHeight}
         onKeyDown={(event) => {
-          if (state.editingCell) {
+          if (state.editing) {
             return;
           }
 
@@ -180,7 +180,7 @@ export function XlsxSheetGrid({
           if (event.key === "Enter" || event.key === "F2") {
             event.preventDefault();
             dispatch({ type: "SELECT_CELL", address: active });
-            dispatch({ type: "ENTER_CELL_EDIT", address: active });
+            dispatch({ type: "ENTER_CELL_EDIT", address: active, entryMode: "enter" });
             return;
           }
 
@@ -197,6 +197,14 @@ export function XlsxSheetGrid({
             }
             event.preventDefault();
             dispatch({ type: "CLEAR_CELL_CONTENTS", range });
+            return;
+          }
+
+          // Printable character → start replace-mode editing
+          if (event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey) {
+            event.preventDefault();
+            dispatch({ type: "SELECT_CELL", address: active });
+            dispatch({ type: "ENTER_CELL_EDIT", address: active, entryMode: "replace", initialChar: event.key });
           }
         }}
       >

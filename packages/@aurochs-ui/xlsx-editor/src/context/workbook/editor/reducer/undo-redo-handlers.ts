@@ -28,19 +28,19 @@ function normalizeActiveSheetIndex(activeSheetIndex: number | undefined, sheetCo
 function getUiStateAfterActiveSheetChange(
   state: XlsxEditorState,
   didActiveSheetChange: boolean,
-): Pick<XlsxEditorState, "cellSelection" | "drag" | "editingCell"> {
+): Pick<XlsxEditorState, "cellSelection" | "drag" | "editing"> {
   if (didActiveSheetChange) {
     return {
       cellSelection: createEmptyCellSelection(),
       drag: createIdleDragState(),
-      editingCell: undefined,
+      editing: undefined,
     };
   }
 
   return {
     cellSelection: state.cellSelection,
     drag: state.drag,
-    editingCell: state.editingCell,
+    editing: state.editing,
   };
 }
 

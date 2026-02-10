@@ -52,6 +52,6 @@ export function createInitialState(workbook: XlsxWorkbook): XlsxEditorState {
     cellSelection: createEmptyCellSelection(),
     drag: createIdleDragState(),
     clipboard: undefined,
-    editingCell: undefined,
+    editing: undefined,
   };
 }

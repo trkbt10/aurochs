@@ -84,7 +84,7 @@ function handleSetWorkbook(state: XlsxEditorState, action: SetWorkbookAction): X
     cellSelection: createEmptyCellSelection(),
     drag: createIdleDragState(),
     clipboard: undefined,
-    editingCell: undefined,
+    editing: undefined,
   };
 }
 
@@ -99,7 +99,7 @@ function handleAddSheet(state: XlsxEditorState, action: AddSheetAction): XlsxEdi
     activeSheetIndex: insertIndex,
     cellSelection: createEmptyCellSelection(),
     drag: createIdleDragState(),
-    editingCell: undefined,
+    editing: undefined,
   };
 }
 
@@ -119,7 +119,7 @@ function handleDeleteSheet(state: XlsxEditorState, action: DeleteSheetAction): X
 
   const cellSelection = wasActiveSheetDeleted ? createEmptyCellSelection() : state.cellSelection;
   const drag = wasActiveSheetDeleted ? createIdleDragState() : state.drag;
-  const editingCell = wasActiveSheetDeleted ? undefined : state.editingCell;
+  const editing = wasActiveSheetDeleted ? undefined : state.editing;
 
   return {
     ...state,
@@ -127,7 +127,7 @@ function handleDeleteSheet(state: XlsxEditorState, action: DeleteSheetAction): X
     activeSheetIndex: newActiveSheetIndex,
     cellSelection,
     drag,
-    editingCell,
+    editing,
   };
 }
 
@@ -150,12 +150,14 @@ function handleSelectSheet(state: XlsxEditorState, action: SelectSheetAction): X
   if (state.activeSheetIndex === action.sheetIndex) {
     return state;
   }
+  // Preserve editing state when in formula mode (for cross-sheet reference insertion)
+  const preserveEditing = state.editing?.isFormulaMode === true;
   return {
     ...state,
     activeSheetIndex: action.sheetIndex,
     cellSelection: createEmptyCellSelection(),
     drag: createIdleDragState(),
-    editingCell: undefined,
+    editing: preserveEditing ? state.editing : undefined,
   };
 }
 
@@ -184,7 +186,7 @@ function handleDuplicateSheet(state: XlsxEditorState, action: DuplicateSheetActi
     activeSheetIndex: newActiveIndex,
     cellSelection: createEmptyCellSelection(),
     drag: createIdleDragState(),
-    editingCell: undefined,
+    editing: undefined,
   };
 }
 

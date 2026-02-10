@@ -4,8 +4,9 @@
 
 import type { XlsxWorkbook, XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
 import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
-import type { XlsxEditorState } from "../types";
-import { createEmptyCellSelection, createIdleDragState } from "../types";
+import type { XlsxEditorState, CellEditingState } from "../types";
+import { createEmptyCellSelection, createIdleDragState, createIdleComposition } from "../types";
+import { colIdx, rowIdx } from "@aurochs-office/xlsx/domain/types";
 import { createHistory, pushHistory } from "@aurochs-ui/editor-core/history";
 import { sheetHandlers } from "./sheet-handlers";
 
@@ -36,7 +37,7 @@ function createState(workbook: XlsxWorkbook, activeSheetIndex: number | undefine
     cellSelection: createEmptyCellSelection(),
     drag: createIdleDragState(),
     clipboard: undefined,
-    editingCell: undefined,
+    editing: undefined,
   };
 }
 
@@ -104,6 +105,63 @@ describe("sheet-handlers", () => {
       expect(next.workbookHistory).toBe(state.workbookHistory);
       expect(state.activeSheetIndex).toBe(0);
       expect(state.workbookHistory.present).toBe(workbook);
+    });
+
+    it("preserves editing state and editingSheetIndex during formula-mode sheet switch", () => {
+      const workbook = createWorkbook([createWorksheet("Sheet1", 1), createWorksheet("Sheet2", 2)]);
+      const editing: CellEditingState = {
+        address: { col: colIdx(1), row: rowIdx(1), colAbsolute: false, rowAbsolute: false },
+        entryMode: "enter",
+        origin: "cell",
+        text: "=",
+        caretOffset: 1,
+        selectionEnd: 1,
+        isFormulaMode: true,
+        composition: createIdleComposition(),
+        editingSheetIndex: 0,
+      };
+      const state: XlsxEditorState = {
+        ...createState(workbook, 0),
+        editing,
+      };
+
+      const next = sheetHandlers.SELECT_SHEET!(state, {
+        type: "SELECT_SHEET",
+        sheetIndex: 1,
+      });
+
+      expect(next.activeSheetIndex).toBe(1);
+      // Editing preserved with original editingSheetIndex
+      expect(next.editing).toBeDefined();
+      expect(next.editing!.editingSheetIndex).toBe(0);
+      expect(next.editing!.isFormulaMode).toBe(true);
+    });
+
+    it("clears editing state when not in formula mode", () => {
+      const workbook = createWorkbook([createWorksheet("Sheet1", 1), createWorksheet("Sheet2", 2)]);
+      const editing: CellEditingState = {
+        address: { col: colIdx(1), row: rowIdx(1), colAbsolute: false, rowAbsolute: false },
+        entryMode: "enter",
+        origin: "cell",
+        text: "Hello",
+        caretOffset: 5,
+        selectionEnd: 5,
+        isFormulaMode: false,
+        composition: createIdleComposition(),
+        editingSheetIndex: 0,
+      };
+      const state: XlsxEditorState = {
+        ...createState(workbook, 0),
+        editing,
+      };
+
+      const next = sheetHandlers.SELECT_SHEET!(state, {
+        type: "SELECT_SHEET",
+        sheetIndex: 1,
+      });
+
+      expect(next.activeSheetIndex).toBe(1);
+      expect(next.editing).toBeUndefined();
     });
   });
 });
