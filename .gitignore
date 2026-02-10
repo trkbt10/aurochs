@@ -178,3 +178,4 @@ fixtures/
 **/__diff__/
 spec/webgl-visual/__output__/
 reference
+aurochs-office-viewer-*.vsix
