@@ -1,8 +1,16 @@
 /**
- * @file Viewer module index
+ * @file Viewer module - internal aggregation
  *
- * Unified viewer components for presentations.
- * Provides reusable hooks, primitives, and composite components.
+ * NOTE: This file is for INTERNAL use only (re-export from src/index.ts).
+ * Do NOT add "./viewer" to package.json exports.
+ *
+ * Reason: Tree-shaking. If consumers import from a barrel export,
+ * all dependencies are bundled even when only one component is needed.
+ * Each component is exported individually in package.json:
+ * - ./viewer/PresentationSlideshow
+ * - ./viewer/PresentationViewer
+ * - ./viewer/EmbeddableSlide
+ * - ./viewer/SlideShareViewer
  *
  * Use cases:
  * - Play: PresentationSlideshow (fullscreen presentation)

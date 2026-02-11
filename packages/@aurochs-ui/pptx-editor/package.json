@@ -69,6 +69,22 @@
     "./panels/theme-editor/types": {
       "types": "./src/panels/theme-editor/types.ts",
       "default": "./src/panels/theme-editor/types.ts"
+    },
+    "./viewer/PresentationSlideshow": {
+      "types": "./src/viewer/PresentationSlideshow.tsx",
+      "default": "./src/viewer/PresentationSlideshow.tsx"
+    },
+    "./viewer/PresentationViewer": {
+      "types": "./src/viewer/PresentationViewer.tsx",
+      "default": "./src/viewer/PresentationViewer.tsx"
+    },
+    "./viewer/EmbeddableSlide": {
+      "types": "./src/viewer/EmbeddableSlide.tsx",
+      "default": "./src/viewer/EmbeddableSlide.tsx"
+    },
+    "./viewer/SlideShareViewer": {
+      "types": "./src/viewer/SlideShareViewer.tsx",
+      "default": "./src/viewer/SlideShareViewer.tsx"
     }
   }
 }
