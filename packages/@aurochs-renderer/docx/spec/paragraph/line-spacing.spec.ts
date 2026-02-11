@@ -6,7 +6,6 @@
  * @see ECMA-376-1:2016 Section 17.3.1.33 (spacing)
  */
 
-import { describe, it, expect, beforeAll } from "vitest";
 import {
   loadAndRender,
   fixture,
@@ -15,20 +14,22 @@ import {
   type RenderedFixture,
 } from "../scripts/test-helper";
 
+type Context = { rendered: RenderedFixture };
+
 describe("paragraph/line-spacing", () => {
-  let rendered: RenderedFixture;
+  const ctx: Context = {} as Context;
 
   beforeAll(async () => {
-    rendered = await loadAndRender(fixture("line-spacing"), import.meta.url);
+    ctx.rendered = await loadAndRender(fixture("line-spacing"), import.meta.url);
   });
 
   it("renders paragraph with line spacing", () => {
-    expect(rendered.svg).toContain("Double spaced");
+    expect(ctx.rendered.svg).toContain("Double spaced");
   });
 
-  it("matches LibreOffice baseline", () => {
+  it("renders page correctly", () => {
     const baseline = baselinePath(fixture("line-spacing"), import.meta.url);
-    const result = compareToBaseline(rendered.svg, baseline, { maxDiffPercent: 5 });
+    const result = compareToBaseline(ctx.rendered.svg, baseline, { maxDiffPercent: 5 });
     expect(result.match).toBe(true);
   });
 });

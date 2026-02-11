@@ -11,7 +11,7 @@ import type { DocxParagraph } from "@aurochs-office/docx/domain/paragraph";
 import { paragraphsToLayoutInputs, sectionPropertiesToPageConfig } from "@aurochs-office/docx/adapters";
 import { layoutDocument, flowIntoPages, DEFAULT_PAGE_FLOW_CONFIG } from "@aurochs-office/text-layout";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
-import { renderPageToSvg, renderDocumentToSvgs } from "../../src/svg/page-render";
+import { renderPageToSvg } from "../../src/svg/page-render";
 import type { PageLayout } from "@aurochs-office/text-layout";
 
 /**

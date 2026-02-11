@@ -6,7 +6,6 @@
  * @see ECMA-376-1:2016 Section 17.3.2.5 (caps), 17.3.2.33 (smallCaps)
  */
 
-import { describe, it, expect, beforeAll } from "vitest";
 import {
   loadAndRender,
   fixture,
@@ -15,20 +14,22 @@ import {
   type RenderedFixture,
 } from "../scripts/test-helper";
 
+type Context = { rendered: RenderedFixture };
+
 describe("run/caps", () => {
-  let rendered: RenderedFixture;
+  const ctx: Context = {} as Context;
 
   beforeAll(async () => {
-    rendered = await loadAndRender(fixture("caps"), import.meta.url);
+    ctx.rendered = await loadAndRender(fixture("caps"), import.meta.url);
   });
 
   it("renders caps text", () => {
-    expect(rendered.svg).toBeDefined();
+    expect(ctx.rendered.svg).toBeDefined();
   });
 
-  it("matches LibreOffice baseline", () => {
+  it("renders page correctly", () => {
     const baseline = baselinePath(fixture("caps"), import.meta.url);
-    const result = compareToBaseline(rendered.svg, baseline, { maxDiffPercent: 5 });
+    const result = compareToBaseline(ctx.rendered.svg, baseline, { maxDiffPercent: 5 });
     expect(result.match).toBe(true);
   });
 });

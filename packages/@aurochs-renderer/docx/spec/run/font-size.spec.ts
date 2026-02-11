@@ -6,7 +6,6 @@
  * @see ECMA-376-1:2016 Section 17.3.2.38 (sz)
  */
 
-import { describe, it, expect, beforeAll } from "vitest";
 import {
   loadAndRender,
   fixture,
@@ -15,22 +14,24 @@ import {
   type RenderedFixture,
 } from "../scripts/test-helper";
 
+type Context = { rendered: RenderedFixture };
+
 describe("run/font-size", () => {
-  let rendered: RenderedFixture;
+  const ctx: Context = {} as Context;
 
   beforeAll(async () => {
-    rendered = await loadAndRender(fixture("font-size"), import.meta.url);
+    ctx.rendered = await loadAndRender(fixture("font-size"), import.meta.url);
   });
 
   it("renders text with different font sizes", () => {
-    expect(rendered.svg).toContain("Small");
-    expect(rendered.svg).toContain("Medium");
-    expect(rendered.svg).toContain("Large");
+    expect(ctx.rendered.svg).toContain("Small");
+    expect(ctx.rendered.svg).toContain("Medium");
+    expect(ctx.rendered.svg).toContain("Large");
   });
 
-  it("matches LibreOffice baseline", () => {
+  it("renders page correctly", () => {
     const baseline = baselinePath(fixture("font-size"), import.meta.url);
-    const result = compareToBaseline(rendered.svg, baseline, { maxDiffPercent: 5 });
+    const result = compareToBaseline(ctx.rendered.svg, baseline, { maxDiffPercent: 5 });
     expect(result.match).toBe(true);
   });
 });

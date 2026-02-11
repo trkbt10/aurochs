@@ -6,7 +6,6 @@
  * @see ECMA-376-1:2016 Section 17.3.2.6 (color)
  */
 
-import { describe, it, expect, beforeAll } from "vitest";
 import {
   loadAndRender,
   fixture,
@@ -15,22 +14,24 @@ import {
   type RenderedFixture,
 } from "../scripts/test-helper";
 
+type Context = { rendered: RenderedFixture };
+
 describe("run/color", () => {
-  let rendered: RenderedFixture;
+  const ctx: Context = {} as Context;
 
   beforeAll(async () => {
-    rendered = await loadAndRender(fixture("color"), import.meta.url);
+    ctx.rendered = await loadAndRender(fixture("color"), import.meta.url);
   });
 
   it("renders colored text", () => {
-    expect(rendered.svg).toContain("Red");
-    expect(rendered.svg).toContain("Green");
-    expect(rendered.svg).toContain("Blue");
+    expect(ctx.rendered.svg).toContain("Red");
+    expect(ctx.rendered.svg).toContain("Green");
+    expect(ctx.rendered.svg).toContain("Blue");
   });
 
-  it("matches LibreOffice baseline", () => {
+  it("renders page correctly", () => {
     const baseline = baselinePath(fixture("color"), import.meta.url);
-    const result = compareToBaseline(rendered.svg, baseline, { maxDiffPercent: 5 });
+    const result = compareToBaseline(ctx.rendered.svg, baseline, { maxDiffPercent: 5 });
     expect(result.match).toBe(true);
   });
 });

@@ -6,7 +6,6 @@
  * @see ECMA-376-1:2016 Section 17.3.1.13 (jc)
  */
 
-import { describe, it, expect, beforeAll } from "vitest";
 import {
   loadAndRender,
   fixture,
@@ -15,25 +14,27 @@ import {
   type RenderedFixture,
 } from "../scripts/test-helper";
 
+type Context = { rendered: RenderedFixture };
+
 describe("paragraph/alignment", () => {
   describe("center", () => {
-    let rendered: RenderedFixture;
+    const ctx: Context = {} as Context;
 
     beforeAll(async () => {
-      rendered = await loadAndRender(fixture("alignment-center"), import.meta.url);
+      ctx.rendered = await loadAndRender(fixture("alignment-center"), import.meta.url);
     });
 
     it("renders centered text", () => {
-      expect(rendered.svg).toContain("Centered text");
+      expect(ctx.rendered.svg).toContain("Centered text");
     });
 
     it("applies center alignment to paragraph", () => {
-      expect(rendered.pages[0].paragraphs[0].alignment).toBe("center");
+      expect(ctx.rendered.pages[0].paragraphs[0].alignment).toBe("center");
     });
 
-    it("matches LibreOffice baseline", () => {
+    it("renders page correctly", () => {
       const baseline = baselinePath(fixture("alignment-center"), import.meta.url);
-      const result = compareToBaseline(rendered.svg, baseline, { maxDiffPercent: 5 });
+      const result = compareToBaseline(ctx.rendered.svg, baseline, { maxDiffPercent: 5 });
       expect(result.match).toBe(true);
     });
   });

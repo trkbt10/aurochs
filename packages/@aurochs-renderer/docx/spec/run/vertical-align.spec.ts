@@ -6,7 +6,6 @@
  * @see ECMA-376-1:2016 Section 17.3.2.42 (vertAlign)
  */
 
-import { describe, it, expect, beforeAll } from "vitest";
 import {
   loadAndRender,
   fixture,
@@ -15,21 +14,23 @@ import {
   type RenderedFixture,
 } from "../scripts/test-helper";
 
+type Context = { rendered: RenderedFixture };
+
 describe("run/vertical-align", () => {
-  let rendered: RenderedFixture;
+  const ctx: Context = {} as Context;
 
   beforeAll(async () => {
-    rendered = await loadAndRender(fixture("vertical-align"), import.meta.url);
+    ctx.rendered = await loadAndRender(fixture("vertical-align"), import.meta.url);
   });
 
   it("renders subscript and superscript", () => {
-    expect(rendered.svg).toContain("H");
-    expect(rendered.svg).toContain("O");
+    expect(ctx.rendered.svg).toContain("H");
+    expect(ctx.rendered.svg).toContain("O");
   });
 
-  it("matches LibreOffice baseline", () => {
+  it("renders page correctly", () => {
     const baseline = baselinePath(fixture("vertical-align"), import.meta.url);
-    const result = compareToBaseline(rendered.svg, baseline, { maxDiffPercent: 5 });
+    const result = compareToBaseline(ctx.rendered.svg, baseline, { maxDiffPercent: 5 });
     expect(result.match).toBe(true);
   });
 });

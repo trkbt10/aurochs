@@ -5,7 +5,6 @@
  */
 
 import * as fs from "node:fs";
-import * as path from "node:path";
 import { Resvg } from "@resvg/resvg-js";
 import pixelmatch from "pixelmatch";
 import { PNG } from "pngjs";
@@ -106,12 +105,11 @@ export function compareToBaseline(
 
   // Convert SVG to PNG at baseline width
   const pngBuffer = svgToPng(svg, baseline.width);
-  let actual = PNG.sync.read(pngBuffer);
+  const rawActual = PNG.sync.read(pngBuffer);
 
   // Resize if needed
-  if (actual.width !== baseline.width || actual.height !== baseline.height) {
-    actual = resizePng(actual, baseline.width, baseline.height);
-  }
+  const needsResize = rawActual.width !== baseline.width || rawActual.height !== baseline.height;
+  const actual = needsResize ? resizePng(rawActual, baseline.width, baseline.height) : rawActual;
 
   // Compare
   const diff = new PNG({ width: baseline.width, height: baseline.height });

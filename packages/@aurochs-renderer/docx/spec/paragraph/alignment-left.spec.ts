@@ -6,7 +6,6 @@
  * @see ECMA-376-1:2016 Section 17.3.1.13 (jc)
  */
 
-import { describe, it, expect, beforeAll } from "vitest";
 import {
   loadAndRender,
   fixture,
@@ -15,20 +14,22 @@ import {
   type RenderedFixture,
 } from "../scripts/test-helper";
 
+type Context = { rendered: RenderedFixture };
+
 describe("paragraph/alignment-left", () => {
-  let rendered: RenderedFixture;
+  const ctx: Context = {} as Context;
 
   beforeAll(async () => {
-    rendered = await loadAndRender(fixture("alignment-left"), import.meta.url);
+    ctx.rendered = await loadAndRender(fixture("alignment-left"), import.meta.url);
   });
 
   it("renders left aligned text", () => {
-    expect(rendered.svg).toContain("Left aligned");
+    expect(ctx.rendered.svg).toContain("Left aligned");
   });
 
-  it("matches LibreOffice baseline", () => {
+  it("renders page correctly", () => {
     const baseline = baselinePath(fixture("alignment-left"), import.meta.url);
-    const result = compareToBaseline(rendered.svg, baseline, { maxDiffPercent: 5 });
+    const result = compareToBaseline(ctx.rendered.svg, baseline, { maxDiffPercent: 5 });
     expect(result.match).toBe(true);
   });
 });

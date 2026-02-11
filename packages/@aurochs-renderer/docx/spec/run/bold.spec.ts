@@ -6,7 +6,6 @@
  * @see ECMA-376-1:2016 Section 17.3.2.1 (b)
  */
 
-import { describe, it, expect, beforeAll } from "vitest";
 import {
   loadAndRender,
   fixture,
@@ -15,27 +14,28 @@ import {
   type RenderedFixture,
 } from "../scripts/test-helper";
 
+type Context = { rendered: RenderedFixture };
+
 describe("run/bold", () => {
-  let rendered: RenderedFixture;
+  const ctx: Context = {} as Context;
 
   beforeAll(async () => {
-    rendered = await loadAndRender(fixture("bold"), import.meta.url);
+    ctx.rendered = await loadAndRender(fixture("bold"), import.meta.url);
   });
 
   it("renders bold text with font-weight 700", () => {
-    expect(rendered.svg).toContain("bold");
-    expect(rendered.svg).toMatch(/font-weight[=:]["']?700/);
+    expect(ctx.rendered.svg).toContain("bold");
+    expect(ctx.rendered.svg).toMatch(/font-weight[=:]["']?700/);
   });
 
   it("renders non-bold text without font-weight attribute", () => {
-    expect(rendered.svg).toContain("This is");
-    // Non-bold text should not have font-weight="700"
-    expect(rendered.svg).toMatch(/>This is <\/text>/);
+    expect(ctx.rendered.svg).toContain("This is");
+    expect(ctx.rendered.svg).toMatch(/>This is <\/text>/);
   });
 
-  it("matches LibreOffice baseline", () => {
+  it("renders page correctly", () => {
     const baseline = baselinePath(fixture("bold"), import.meta.url);
-    const result = compareToBaseline(rendered.svg, baseline, { maxDiffPercent: 5 });
+    const result = compareToBaseline(ctx.rendered.svg, baseline, { maxDiffPercent: 5 });
     expect(result.match).toBe(true);
   });
 });
