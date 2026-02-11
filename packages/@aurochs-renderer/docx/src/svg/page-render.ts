@@ -7,8 +7,8 @@
 
 import { renderToStaticMarkup } from "react-dom/server";
 import { createElement, Fragment } from "react";
-import type { PageLayout, LayoutResult, HeaderFooterLayout } from "@aurochs-office/text-layout";
-import { TextOverlay } from "@aurochs-office/text-layout";
+import type { PageLayout, LayoutResult, HeaderFooterLayout, LayoutTableResult } from "@aurochs-office/text-layout";
+import { TextOverlay, TableOverlay } from "@aurochs-office/text-layout";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 
 // =============================================================================
@@ -58,9 +58,10 @@ function headerFooterToLayoutResult(layout: HeaderFooterLayout | undefined): Lay
  * Render a single page to SVG string.
  *
  * @param page - Page layout to render
+ * @param tables - Optional array of table layouts to render on this page
  * @returns Render result with SVG string and dimensions
  */
-export function renderPageToSvg(page: PageLayout): PageRenderResult {
+export function renderPageToSvg(page: PageLayout, tables: readonly LayoutTableResult[] = []): PageRenderResult {
   const width = page.width as number;
   const height = page.height as number;
 
@@ -105,6 +106,14 @@ export function renderPageToSvg(page: PageLayout): PageRenderResult {
       showCursor: false,
     }),
   );
+
+  // Tables
+  for (let i = 0; i < tables.length; i++) {
+    const table = tables[i];
+    if (table !== undefined) {
+      children.push(createElement(TableOverlay, { key: `table-${i}`, table }));
+    }
+  }
 
   // Footer
   if (footerResult !== undefined && page.footer !== undefined) {

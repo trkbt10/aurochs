@@ -4,7 +4,7 @@
       "type": "paragraph",
       "runs": [
         { "text": "This is " },
-        { "text": "strikethrough", "strike": true },
+        { "text": "strikethrough", "strikethrough": true },
         { "text": " text." }
       ]
     }

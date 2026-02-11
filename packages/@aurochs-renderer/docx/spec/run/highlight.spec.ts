@@ -27,6 +27,11 @@ describe("run/highlight", () => {
     expect(ctx.rendered.svg).toContain("highlighted");
   });
 
+  it("renders highlight background rect", () => {
+    // Yellow highlight should render as a rect with fill="#FFFF00"
+    expect(ctx.rendered.svg).toContain('fill="#FFFF00"');
+  });
+
   it("renders page correctly", () => {
     const baseline = baselinePath(fixture("highlight"), import.meta.url);
     const result = compareToBaseline(ctx.rendered.svg, baseline, { maxDiffPercent: 5 });

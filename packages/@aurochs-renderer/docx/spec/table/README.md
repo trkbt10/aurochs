@@ -10,10 +10,10 @@ Tables consist of rows and cells with properties for borders, shading, and sizin
 
 | Property | Element | Status | File |
 |----------|---------|:------:|------|
-| Width | `w:tblW` | ⬚ | |
-| Alignment | `w:jc` | ⬚ | |
+| Width | `w:tblW` | ✅ | table-width.spec.ts |
+| Alignment | `w:jc` | ✅ | table-alignment.spec.ts |
 | Indent | `w:tblInd` | ⬚ | |
-| Borders | `w:tblBorders` | ⬚ | |
+| Borders | `w:tblBorders` | ✅ | table-borders.spec.ts |
 | Shading | `w:shd` | ⬚ | |
 | Cell Margins | `w:tblCellMar` | ⬚ | |
 | Layout | `w:tblLayout` | ⬚ | |
@@ -22,18 +22,18 @@ Tables consist of rows and cells with properties for borders, shading, and sizin
 
 | Property | Element | Status | File |
 |----------|---------|:------:|------|
-| Height | `w:trHeight` | ⬚ | |
-| Header Row | `w:tblHeader` | ⬚ | |
+| Height | `w:trHeight` | ✅ | table-row-height.spec.ts |
+| Header Row | `w:tblHeader` | ✅ | table-header-row.spec.ts |
 | Can't Split | `w:cantSplit` | ⬚ | |
 
 ### Cell Properties (w:tcPr) - Section 17.4.66
 
 | Property | Element | Status | File |
 |----------|---------|:------:|------|
-| Width | `w:tcW` | ⬚ | |
-| Borders | `w:tcBorders` | ⬚ | |
-| Shading | `w:shd` | ⬚ | |
-| Vertical Align | `w:vAlign` | ⬚ | |
+| Width | `w:tcW` | ✅ | basic-table.spec.ts |
+| Borders | `w:tcBorders` | ✅ | table-cell-borders.spec.ts |
+| Shading | `w:shd` | ✅ | table-cell-shading.spec.ts |
+| Vertical Align | `w:vAlign` | ✅ | table-cell-valign.spec.ts |
 | Text Direction | `w:textDirection` | ⬚ | |
 | No Wrap | `w:noWrap` | ⬚ | |
 
@@ -41,8 +41,8 @@ Tables consist of rows and cells with properties for borders, shading, and sizin
 
 | Property | Element | Status | File |
 |----------|---------|:------:|------|
-| Horizontal Span | `w:gridSpan` | ⬚ | |
-| Vertical Merge | `w:vMerge` | ⬚ | |
+| Horizontal Span | `w:gridSpan` | ✅ | table-cell-merge.spec.ts |
+| Vertical Merge | `w:vMerge` | ✅ | table-cell-merge.spec.ts |
 
 ### RTL Tables
 
@@ -50,6 +50,11 @@ Tables consist of rows and cells with properties for borders, shading, and sizin
 |----------|:------:|------|
 | RTL Table Direction | ⬚ | |
 | Mixed LTR/RTL Cells | ⬚ | |
+
+## Known Issues
+
+- Table-level borders (`w:tblBorders`) are parsed but not fully rendered as SVG lines
+- Cells following `w:vMerge` continue may have incorrect column positioning
 
 ## Legend
 

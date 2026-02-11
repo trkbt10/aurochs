@@ -8,11 +8,21 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { loadDocx } from "@aurochs-office/docx";
 import type { DocxParagraph } from "@aurochs-office/docx/domain/paragraph";
-import { paragraphsToLayoutInputs, sectionPropertiesToPageConfig } from "@aurochs-office/docx/adapters";
-import { layoutDocument, flowIntoPages, DEFAULT_PAGE_FLOW_CONFIG } from "@aurochs-office/text-layout";
+import type { DocxTable } from "@aurochs-office/docx/domain/table";
+import {
+  paragraphsToLayoutInputs,
+  sectionPropertiesToPageConfig,
+  tableToLayoutInput,
+} from "@aurochs-office/docx/adapters";
+import {
+  layoutDocument,
+  flowIntoPages,
+  layoutTable,
+  DEFAULT_PAGE_FLOW_CONFIG,
+} from "@aurochs-office/text-layout";
+import type { PageLayout, LayoutTableResult } from "@aurochs-office/text-layout";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import { renderPageToSvg } from "../../src/svg/page-render";
-import type { PageLayout } from "@aurochs-office/text-layout";
 
 /**
  * Check if a block content is a paragraph.
@@ -26,6 +36,18 @@ function isParagraph(block: unknown): block is DocxParagraph {
   );
 }
 
+/**
+ * Check if a block content is a table.
+ */
+function isTable(block: unknown): block is DocxTable {
+  return (
+    typeof block === "object" &&
+    block !== null &&
+    "type" in block &&
+    (block as { type: string }).type === "table"
+  );
+}
+
 export type RenderedFixture = {
   /** All pages as SVG strings */
   readonly svgs: readonly string[];
@@ -33,6 +55,8 @@ export type RenderedFixture = {
   readonly pages: readonly PageLayout[];
   /** First page SVG (convenience) */
   readonly svg: string;
+  /** Table layouts (if any) */
+  readonly tables: readonly LayoutTableResult[];
 };
 
 /**
@@ -53,10 +77,12 @@ export async function loadAndRender(fixturePath: string, callerUrl: string): Pro
   const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
   const doc = await loadDocx(arrayBuffer);
 
-  // Get paragraphs and section properties
+  // Get paragraphs, tables, and section properties
   const paragraphs = doc.body.content.filter(isParagraph);
+  const tables = doc.body.content.filter(isTable);
   const sectPr = doc.body.sectPr;
   const numbering = doc.numbering;
+  const styles = doc.styles;
 
   // Derive page configuration
   const pageConfig = sectPr !== undefined ? sectionPropertiesToPageConfig(sectPr) : DEFAULT_PAGE_FLOW_CONFIG;
@@ -70,7 +96,7 @@ export async function loadAndRender(fixturePath: string, callerUrl: string): Pro
   const layoutInputs = paragraphsToLayoutInputs(paragraphs, numbering);
   const { paragraphs: layoutedParagraphs } = layoutDocument(layoutInputs, contentWidth);
 
-  // Flow into pages
+  // Flow paragraphs into pages
   const pagedLayout = flowIntoPages({
     paragraphs: layoutedParagraphs,
     hints: [],
@@ -78,13 +104,52 @@ export async function loadAndRender(fixturePath: string, callerUrl: string): Pro
     floatingImages: [],
   });
 
-  // Render each page to SVG
-  const svgs = pagedLayout.pages.map((page) => renderPageToSvg(page).svg);
+  // Layout tables
+  const tableLayouts: LayoutTableResult[] = [];
+  let tableY = pageConfig.marginTop as number;
+
+  // Calculate Y position after paragraphs from the paged layout
+  if (pagedLayout.pages.length > 0) {
+    const firstPage = pagedLayout.pages[0];
+    if (firstPage !== undefined && firstPage.paragraphs.length > 0) {
+      // Get the last paragraph on the first page
+      const lastParaOnPage = firstPage.paragraphs[firstPage.paragraphs.length - 1];
+      if (lastParaOnPage !== undefined) {
+        // Calculate paragraph total height from its lines
+        const paraHeight = lastParaOnPage.lines.reduce((sum, line) => sum + (line.height as number), 0);
+        // Get the Y from the first line (paragraph Y)
+        const firstLine = lastParaOnPage.lines[0];
+        const paraY = firstLine !== undefined ? (firstLine.y as number) : tableY;
+        tableY = paraY + paraHeight + 12; // 12px spacing after paragraph
+      }
+    }
+  }
+
+  for (const table of tables) {
+    const tableInput = tableToLayoutInput({
+      table,
+      containerWidth: contentWidth,
+      numbering,
+      styles,
+    });
+    const tableLayout = layoutTable(tableInput, {
+      availableWidth: contentWidth,
+      startY: px(tableY),
+    });
+    tableLayouts.push(tableLayout);
+    tableY = (tableLayout.y as number) + (tableLayout.height as number) + 12;
+  }
+
+  // Render each page to SVG (with tables on first page if any)
+  const svgs = pagedLayout.pages.map((page, index) =>
+    renderPageToSvg(page, index === 0 ? tableLayouts : []).svg,
+  );
 
   return {
     svgs,
     pages: pagedLayout.pages,
     svg: svgs[0] ?? "",
+    tables: tableLayouts,
   };
 }
 

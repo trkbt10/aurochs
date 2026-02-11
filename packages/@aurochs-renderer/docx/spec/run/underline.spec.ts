@@ -27,6 +27,10 @@ describe("run/underline", () => {
     expect(ctx.rendered.svg).toContain("underlined");
   });
 
+  it("renders with text-decoration underline", () => {
+    expect(ctx.rendered.svg).toContain('text-decoration="underline"');
+  });
+
   it("renders page correctly", () => {
     const baseline = baselinePath(fixture("underline"), import.meta.url);
     const result = compareToBaseline(ctx.rendered.svg, baseline, { maxDiffPercent: 5 });

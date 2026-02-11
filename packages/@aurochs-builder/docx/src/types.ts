@@ -15,13 +15,57 @@ export type RunSpec = {
   readonly italic?: boolean;
   readonly underline?: boolean | string;
   readonly strikethrough?: boolean;
+  readonly doubleStrikethrough?: boolean;
   readonly fontSize?: number;
   readonly fontFamily?: string;
+  /** Font for East Asian characters */
+  readonly fontFamilyEastAsian?: string;
+  /** Font for Complex Script characters */
+  readonly fontFamilyComplexScript?: string;
   readonly color?: string;
   readonly highlight?: string;
   readonly vertAlign?: "superscript" | "subscript";
   readonly smallCaps?: boolean;
   readonly allCaps?: boolean;
+  /** Character spacing in twips (1/20 of a point) */
+  readonly letterSpacing?: number;
+  /** Kerning threshold in half-points (text above this size will have kerning applied) */
+  readonly kerning?: number;
+  /** Vertical position adjustment in half-points (positive = raise, negative = lower) */
+  readonly position?: number;
+  /** Emboss effect */
+  readonly emboss?: boolean;
+  /** Imprint/engrave effect */
+  readonly imprint?: boolean;
+  /** Outline effect (only character borders visible) */
+  readonly outline?: boolean;
+  /** Shadow effect */
+  readonly shadow?: boolean;
+  /** Bold for complex scripts */
+  readonly boldCs?: boolean;
+  /** Italic for complex scripts */
+  readonly italicCs?: boolean;
+  /** Right-to-left text */
+  readonly rtl?: boolean;
+};
+
+// =============================================================================
+// Paragraph Border Spec
+// =============================================================================
+
+export type ParagraphBorderEdgeSpec = {
+  readonly style: string;
+  readonly size?: number;
+  readonly color?: string;
+  readonly space?: number;
+};
+
+export type ParagraphBordersSpec = {
+  readonly top?: ParagraphBorderEdgeSpec;
+  readonly bottom?: ParagraphBorderEdgeSpec;
+  readonly left?: ParagraphBorderEdgeSpec;
+  readonly right?: ParagraphBorderEdgeSpec;
+  readonly between?: ParagraphBorderEdgeSpec;
 };
 
 // =============================================================================
@@ -31,18 +75,27 @@ export type RunSpec = {
 export type ParagraphSpec = {
   readonly type: "paragraph";
   readonly style?: string;
-  readonly alignment?: "left" | "center" | "right" | "both";
+  /** Paragraph alignment (justification) */
+  readonly alignment?: "left" | "center" | "right" | "both" | "distribute" | "start" | "end";
   readonly spacing?: {
     readonly before?: number;
     readonly after?: number;
     readonly line?: number;
     readonly lineRule?: "auto" | "exact" | "atLeast";
+    /** Auto spacing before paragraph (based on content) */
+    readonly beforeAutospacing?: boolean;
+    /** Auto spacing after paragraph (based on content) */
+    readonly afterAutospacing?: boolean;
   };
   readonly indent?: {
     readonly left?: number;
     readonly right?: number;
     readonly firstLine?: number;
     readonly hanging?: number;
+    /** Start indent for bidi-aware layout (equivalent to left in LTR, right in RTL) */
+    readonly start?: number;
+    /** End indent for bidi-aware layout (equivalent to right in LTR, left in RTL) */
+    readonly end?: number;
   };
   readonly numbering?: {
     readonly numId: number;
@@ -51,6 +104,23 @@ export type ParagraphSpec = {
   readonly keepNext?: boolean;
   readonly keepLines?: boolean;
   readonly pageBreakBefore?: boolean;
+  /** Tab stops in twips */
+  readonly tabs?: readonly {
+    readonly pos: number;
+    readonly val?: "left" | "center" | "right" | "decimal";
+  }[];
+  /** Background shading fill color (hex without #) */
+  readonly shading?: string;
+  /** Paragraph borders */
+  readonly borders?: ParagraphBordersSpec;
+  /** Bidirectional paragraph (right-to-left base direction) */
+  readonly bidi?: boolean;
+  /** Text direction (e.g., "btLr" for bottom-to-top left-to-right) */
+  readonly textDirection?: string;
+  /** Widow/orphan control */
+  readonly widowControl?: boolean;
+  /** Outline level (0-9, used for TOC generation) */
+  readonly outlineLvl?: number;
   readonly runs: readonly RunSpec[];
 };
 

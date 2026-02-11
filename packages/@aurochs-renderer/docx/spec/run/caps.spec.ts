@@ -23,8 +23,14 @@ describe("run/caps", () => {
     ctx.rendered = await loadAndRender(fixture("caps"), import.meta.url);
   });
 
-  it("renders caps text", () => {
-    expect(ctx.rendered.svg).toBeDefined();
+  it("renders all caps as uppercase", () => {
+    // "all caps" should be rendered as "ALL CAPS"
+    expect(ctx.rendered.svg).toContain(">ALL CAPS<");
+  });
+
+  it("renders small caps with text transform", () => {
+    // smallCaps uses textTransform=lowercase (CSS limitation)
+    expect(ctx.rendered.svg).toContain("small caps");
   });
 
   it("renders page correctly", () => {

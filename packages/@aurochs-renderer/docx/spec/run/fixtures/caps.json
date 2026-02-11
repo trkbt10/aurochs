@@ -4,7 +4,7 @@
       "type": "paragraph",
       "runs": [
         { "text": "Normal " },
-        { "text": "all caps", "caps": true },
+        { "text": "all caps", "allCaps": true },
         { "text": " and " },
         { "text": "small caps", "smallCaps": true }
       ]

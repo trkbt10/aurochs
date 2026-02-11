@@ -6,7 +6,7 @@
  */
 
 import type { DocxRun, DocxRunProperties, DocxRunContent, DocxHighlightColor } from "@aurochs-office/docx/domain/run";
-import type { DocxParagraph, DocxParagraphProperties, DocxParagraphSpacing, DocxParagraphIndent, DocxNumberingProperties } from "@aurochs-office/docx/domain/paragraph";
+import type { DocxParagraph, DocxParagraphProperties, DocxParagraphSpacing, DocxParagraphIndent, DocxNumberingProperties, DocxTabStops, DocxParagraphBorders, DocxParagraphBorderEdge } from "@aurochs-office/docx/domain/paragraph";
 import type { DocxTable, DocxTableProperties, DocxTableRow, DocxTableRowProperties, DocxTableCell, DocxTableCellProperties, DocxTableBorders, DocxTableBorderEdge, DocxCellBorders, DocxTableGrid, DocxRowHeight } from "@aurochs-office/docx/domain/table";
 import type { DocxBlockContent, DocxBody, DocxDocument } from "@aurochs-office/docx/domain/document";
 import type { DocxSectionProperties, DocxPageSize, DocxPageMargins, DocxColumns } from "@aurochs-office/docx/domain/section";
@@ -19,6 +19,8 @@ import { px } from "@aurochs-office/drawing-ml/domain/units";
 import type {
   RunSpec,
   ParagraphSpec,
+  ParagraphBorderEdgeSpec,
+  ParagraphBordersSpec,
   TableSpec,
   TableRowSpec,
   TableCellSpec,
@@ -48,18 +50,39 @@ function convertUnderlineSpec(underline: boolean | string): DocxRunProperties["u
 export function convertRunSpec(spec: RunSpec): DocxRun {
   const content: DocxRunContent[] = [{ type: "text", value: spec.text }];
 
+  // Build rFonts if any font properties are specified
+  const rFonts =
+    spec.fontFamily !== undefined || spec.fontFamilyEastAsian !== undefined || spec.fontFamilyComplexScript !== undefined
+      ? {
+          ...(spec.fontFamily !== undefined ? { ascii: spec.fontFamily, hAnsi: spec.fontFamily } : {}),
+          ...(spec.fontFamilyEastAsian !== undefined ? { eastAsia: spec.fontFamilyEastAsian } : {}),
+          ...(spec.fontFamilyComplexScript !== undefined ? { cs: spec.fontFamilyComplexScript } : {}),
+        }
+      : undefined;
+
   const properties: DocxRunProperties = {
     ...(spec.bold !== undefined ? { b: spec.bold } : {}),
+    ...(spec.boldCs !== undefined ? { bCs: spec.boldCs } : {}),
     ...(spec.italic !== undefined ? { i: spec.italic } : {}),
+    ...(spec.italicCs !== undefined ? { iCs: spec.italicCs } : {}),
     ...(spec.strikethrough !== undefined ? { strike: spec.strikethrough } : {}),
+    ...(spec.doubleStrikethrough !== undefined ? { dstrike: spec.doubleStrikethrough } : {}),
     ...(spec.smallCaps !== undefined ? { smallCaps: spec.smallCaps } : {}),
     ...(spec.allCaps !== undefined ? { caps: spec.allCaps } : {}),
+    ...(spec.emboss !== undefined ? { emboss: spec.emboss } : {}),
+    ...(spec.imprint !== undefined ? { imprint: spec.imprint } : {}),
+    ...(spec.outline !== undefined ? { outline: spec.outline } : {}),
+    ...(spec.shadow !== undefined ? { shadow: spec.shadow } : {}),
     ...(spec.fontSize !== undefined ? { sz: halfPoints(spec.fontSize) } : {}),
-    ...(spec.fontFamily !== undefined ? { rFonts: { ascii: spec.fontFamily, hAnsi: spec.fontFamily } } : {}),
+    ...(rFonts !== undefined ? { rFonts } : {}),
     ...(spec.color !== undefined ? { color: { val: spec.color } } : {}),
     ...(spec.highlight !== undefined ? { highlight: spec.highlight as DocxHighlightColor } : {}),
     ...(spec.vertAlign !== undefined ? { vertAlign: spec.vertAlign } : {}),
     ...(spec.underline !== undefined ? { u: convertUnderlineSpec(spec.underline) } : {}),
+    ...(spec.letterSpacing !== undefined ? { spacing: twips(spec.letterSpacing) } : {}),
+    ...(spec.kerning !== undefined ? { kern: halfPoints(spec.kerning) } : {}),
+    ...(spec.position !== undefined ? { position: halfPoints(spec.position) } : {}),
+    ...(spec.rtl !== undefined ? { rtl: spec.rtl } : {}),
   };
 
   const hasProperties = Object.keys(properties).length > 0;
@@ -88,6 +111,13 @@ export function convertParagraphSpec(spec: ParagraphSpec): DocxParagraph {
     ...(spec.spacing !== undefined ? { spacing: convertSpacing(spec.spacing) } : {}),
     ...(spec.indent !== undefined ? { ind: convertIndent(spec.indent) } : {}),
     ...(spec.numbering !== undefined ? { numPr: convertNumberingProperties(spec.numbering) } : {}),
+    ...(spec.tabs !== undefined ? { tabs: convertTabStops(spec.tabs) } : {}),
+    ...(spec.shading !== undefined ? { shd: { val: "clear", fill: spec.shading } } : {}),
+    ...(spec.borders !== undefined ? { pBdr: convertParagraphBorders(spec.borders) } : {}),
+    ...(spec.bidi !== undefined ? { bidi: spec.bidi } : {}),
+    ...(spec.textDirection !== undefined ? { textDirection: spec.textDirection as DocxParagraphProperties["textDirection"] } : {}),
+    ...(spec.widowControl !== undefined ? { widowControl: spec.widowControl } : {}),
+    ...(spec.outlineLvl !== undefined ? { outlineLvl: spec.outlineLvl as DocxParagraphProperties["outlineLvl"] } : {}),
   };
 
   const hasProperties = Object.keys(properties).length > 0;
@@ -105,6 +135,8 @@ function convertSpacing(spacing: NonNullable<ParagraphSpec["spacing"]>): DocxPar
     ...(spacing.after !== undefined ? { after: twips(spacing.after) } : {}),
     ...(spacing.line !== undefined ? { line: spacing.line } : {}),
     ...(spacing.lineRule !== undefined ? { lineRule: spacing.lineRule } : {}),
+    ...(spacing.beforeAutospacing !== undefined ? { beforeAutospacing: spacing.beforeAutospacing } : {}),
+    ...(spacing.afterAutospacing !== undefined ? { afterAutospacing: spacing.afterAutospacing } : {}),
   };
 }
 
@@ -114,6 +146,36 @@ function convertIndent(indent: NonNullable<ParagraphSpec["indent"]>): DocxParagr
     ...(indent.right !== undefined ? { right: twips(indent.right) } : {}),
     ...(indent.firstLine !== undefined ? { firstLine: twips(indent.firstLine) } : {}),
     ...(indent.hanging !== undefined ? { hanging: twips(indent.hanging) } : {}),
+    ...(indent.start !== undefined ? { start: twips(indent.start) } : {}),
+    ...(indent.end !== undefined ? { end: twips(indent.end) } : {}),
+  };
+}
+
+function convertParagraphBorderEdge(edge: ParagraphBorderEdgeSpec): DocxParagraphBorderEdge {
+  return {
+    val: edge.style as DocxParagraphBorderEdge["val"],
+    ...(edge.size !== undefined ? { sz: edge.size as DocxParagraphBorderEdge["sz"] } : {}),
+    ...(edge.color !== undefined ? { color: edge.color } : {}),
+    ...(edge.space !== undefined ? { space: edge.space } : {}),
+  };
+}
+
+function convertParagraphBorders(borders: ParagraphBordersSpec): DocxParagraphBorders {
+  return {
+    ...(borders.top !== undefined ? { top: convertParagraphBorderEdge(borders.top) } : {}),
+    ...(borders.bottom !== undefined ? { bottom: convertParagraphBorderEdge(borders.bottom) } : {}),
+    ...(borders.left !== undefined ? { left: convertParagraphBorderEdge(borders.left) } : {}),
+    ...(borders.right !== undefined ? { right: convertParagraphBorderEdge(borders.right) } : {}),
+    ...(borders.between !== undefined ? { between: convertParagraphBorderEdge(borders.between) } : {}),
+  };
+}
+
+function convertTabStops(tabs: NonNullable<ParagraphSpec["tabs"]>): DocxTabStops {
+  return {
+    tabs: tabs.map((tab) => ({
+      pos: twips(tab.pos),
+      val: tab.val ?? "left",
+    })),
   };
 }
 
@@ -324,18 +386,39 @@ function convertStyleParagraphProperties(para: NonNullable<StyleSpec["paragraph"
 }
 
 function convertStyleRunProperties(run: NonNullable<StyleSpec["run"]>): DocxRunProperties {
+  // Build rFonts if any font properties are specified
+  const rFonts =
+    run.fontFamily !== undefined || run.fontFamilyEastAsian !== undefined || run.fontFamilyComplexScript !== undefined
+      ? {
+          ...(run.fontFamily !== undefined ? { ascii: run.fontFamily, hAnsi: run.fontFamily } : {}),
+          ...(run.fontFamilyEastAsian !== undefined ? { eastAsia: run.fontFamilyEastAsian } : {}),
+          ...(run.fontFamilyComplexScript !== undefined ? { cs: run.fontFamilyComplexScript } : {}),
+        }
+      : undefined;
+
   return {
     ...(run.bold !== undefined ? { b: run.bold } : {}),
+    ...(run.boldCs !== undefined ? { bCs: run.boldCs } : {}),
     ...(run.italic !== undefined ? { i: run.italic } : {}),
+    ...(run.italicCs !== undefined ? { iCs: run.italicCs } : {}),
     ...(run.strikethrough !== undefined ? { strike: run.strikethrough } : {}),
+    ...(run.doubleStrikethrough !== undefined ? { dstrike: run.doubleStrikethrough } : {}),
     ...(run.smallCaps !== undefined ? { smallCaps: run.smallCaps } : {}),
     ...(run.allCaps !== undefined ? { caps: run.allCaps } : {}),
+    ...(run.emboss !== undefined ? { emboss: run.emboss } : {}),
+    ...(run.imprint !== undefined ? { imprint: run.imprint } : {}),
+    ...(run.outline !== undefined ? { outline: run.outline } : {}),
+    ...(run.shadow !== undefined ? { shadow: run.shadow } : {}),
     ...(run.fontSize !== undefined ? { sz: halfPoints(run.fontSize) } : {}),
-    ...(run.fontFamily !== undefined ? { rFonts: { ascii: run.fontFamily, hAnsi: run.fontFamily } } : {}),
+    ...(rFonts !== undefined ? { rFonts } : {}),
     ...(run.color !== undefined ? { color: { val: run.color } } : {}),
     ...(run.highlight !== undefined ? { highlight: run.highlight as DocxHighlightColor } : {}),
     ...(run.vertAlign !== undefined ? { vertAlign: run.vertAlign } : {}),
     ...(run.underline !== undefined ? { u: convertUnderlineSpec(run.underline) } : {}),
+    ...(run.letterSpacing !== undefined ? { spacing: twips(run.letterSpacing) } : {}),
+    ...(run.kerning !== undefined ? { kern: halfPoints(run.kerning) } : {}),
+    ...(run.position !== undefined ? { position: halfPoints(run.position) } : {}),
+    ...(run.rtl !== undefined ? { rtl: run.rtl } : {}),
   };
 }
 

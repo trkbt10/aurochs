@@ -10,21 +10,21 @@ Section properties define page layout, margins, headers/footers, and columns.
 
 | Property | Attribute | Status | File |
 |----------|-----------|:------:|------|
-| Width | `@w` | ⬚ | |
-| Height | `@h` | ⬚ | |
-| Orientation | `@orient` | ⬚ | |
+| Width | `@w` | ✅ | page-size.spec.ts |
+| Height | `@h` | ✅ | page-size.spec.ts |
+| Orientation | `@orient` | ✅ | page-size.spec.ts |
 
 ### Page Margins (w:pgMar) - Section 17.6.11
 
 | Property | Attribute | Status | File |
 |----------|-----------|:------:|------|
-| Top | `@top` | ⬚ | |
-| Bottom | `@bottom` | ⬚ | |
-| Left | `@left` | ⬚ | |
-| Right | `@right` | ⬚ | |
-| Header | `@header` | ⬚ | |
-| Footer | `@footer` | ⬚ | |
-| Gutter | `@gutter` | ⬚ | |
+| Top | `@top` | ✅ | page-margins.spec.ts |
+| Bottom | `@bottom` | ✅ | page-margins.spec.ts |
+| Left | `@left` | ✅ | page-margins.spec.ts |
+| Right | `@right` | ✅ | page-margins.spec.ts |
+| Header | `@header` | ✅ | header-footer-margins.spec.ts |
+| Footer | `@footer` | ✅ | header-footer-margins.spec.ts |
+| Gutter | `@gutter` | ✅ | gutter-margin.spec.ts |
 
 ### Headers and Footers - Section 17.10
 
@@ -41,9 +41,9 @@ Section properties define page layout, margins, headers/footers, and columns.
 
 | Property | Attribute | Status | File |
 |----------|-----------|:------:|------|
-| Number of Columns | `@num` | ⬚ | |
-| Equal Width | `@equalWidth` | ⬚ | |
-| Column Spacing | `@space` | ⬚ | |
+| Number of Columns | `@num` | ✅ | columns.spec.ts |
+| Equal Width | `@equalWidth` | ✅ | columns.spec.ts |
+| Column Spacing | `@space` | ✅ | columns.spec.ts |
 
 ### Page Numbers (w:pgNumType) - Section 17.6.12
 

@@ -27,6 +27,10 @@ describe("run/strike", () => {
     expect(ctx.rendered.svg).toContain("strikethrough");
   });
 
+  it("renders with text-decoration line-through", () => {
+    expect(ctx.rendered.svg).toContain('text-decoration="line-through"');
+  });
+
   it("renders page correctly", () => {
     const baseline = baselinePath(fixture("strike"), import.meta.url);
     const result = compareToBaseline(ctx.rendered.svg, baseline, { maxDiffPercent: 5 });
