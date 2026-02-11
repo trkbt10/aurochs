@@ -3,8 +3,11 @@ name: npm package
 on:
   push:
     branches: [main]
-    tags:
-      - 'v*'
+    paths:
+      - 'packages/**'
+      - 'publish/aurochs/**'
+      - 'package.json'
+      - 'bun.lock'
   pull_request:
     branches: [main]
 
@@ -78,28 +81,50 @@ jobs:
           test -f publish/aurochs/dist/cli.js
 
       - name: Upload npm package artifact
-        if: startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-artifact@v4
         with:
           name: npm-package
           path: publish/aurochs/
 
   publish:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: [lint, typecheck, test, build]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check version change
+        id: version
+        run: |
+          if git diff HEAD~1 --name-only | grep -q '^publish/aurochs/package.json$'; then
+            OLD_VERSION=$(git show HEAD~1:publish/aurochs/package.json | jq -r '.version')
+            NEW_VERSION=$(jq -r '.version' publish/aurochs/package.json)
+            if [ "$OLD_VERSION" != "$NEW_VERSION" ]; then
+              echo "changed=true" >> $GITHUB_OUTPUT
+              echo "Version changed: $OLD_VERSION -> $NEW_VERSION"
+            else
+              echo "changed=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
       - uses: actions/download-artifact@v4
+        if: steps.version.outputs.changed == 'true'
         with:
           name: npm-package
           path: publish/aurochs/
 
       - uses: actions/setup-node@v4
+        if: steps.version.outputs.changed == 'true'
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
 
       - name: Publish to npm
+        if: steps.version.outputs.changed == 'true'
         run: cd publish/aurochs && npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

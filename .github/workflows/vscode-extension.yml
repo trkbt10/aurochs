@@ -3,8 +3,11 @@ name: VS Code Extension
 on:
   push:
     branches: [main]
-    tags:
-      - 'v*'
+    paths:
+      - 'packages/**'
+      - 'publish/aurochs-office-viewer/**'
+      - 'package.json'
+      - 'bun.lock'
   pull_request:
     branches: [main]
 
@@ -28,47 +31,88 @@ jobs:
         run: test -f publish/aurochs-office-viewer/dist/extension.js
 
       - name: Package VS Code Extension
-        if: startsWith(github.ref, 'refs/tags/v')
         run: cd publish/aurochs-office-viewer && bun run package
 
       - name: Upload VS Code Extension artifact
-        if: startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-artifact@v4
         with:
           name: vscode-extension
           path: publish/aurochs-office-viewer/*.vsix
 
   publish:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check version change
+        id: version
+        run: |
+          if git diff HEAD~1 --name-only | grep -q '^publish/aurochs-office-viewer/package.json$'; then
+            OLD_VERSION=$(git show HEAD~1:publish/aurochs-office-viewer/package.json | jq -r '.version')
+            NEW_VERSION=$(jq -r '.version' publish/aurochs-office-viewer/package.json)
+            if [ "$OLD_VERSION" != "$NEW_VERSION" ]; then
+              echo "changed=true" >> $GITHUB_OUTPUT
+              echo "Version changed: $OLD_VERSION -> $NEW_VERSION"
+            else
+              echo "changed=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
+
       - uses: actions/download-artifact@v4
+        if: steps.version.outputs.changed == 'true'
         with:
           name: vscode-extension
           path: ./
 
       - name: Publish to VS Code Marketplace
+        if: steps.version.outputs.changed == 'true'
         run: npx @vscode/vsce publish --packagePath *.vsix
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
 
   release:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: publish
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check version change
+        id: version
+        run: |
+          if git diff HEAD~1 --name-only | grep -q '^publish/aurochs-office-viewer/package.json$'; then
+            OLD_VERSION=$(git show HEAD~1:publish/aurochs-office-viewer/package.json | jq -r '.version')
+            NEW_VERSION=$(jq -r '.version' publish/aurochs-office-viewer/package.json)
+            if [ "$OLD_VERSION" != "$NEW_VERSION" ]; then
+              echo "changed=true" >> $GITHUB_OUTPUT
+              echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+            else
+              echo "changed=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "changed=false" >> $GITHUB_OUTPUT
+          fi
 
       - uses: actions/download-artifact@v4
+        if: steps.version.outputs.changed == 'true'
         with:
           name: vscode-extension
           path: ./artifacts/
 
       - name: Create GitHub Release
+        if: steps.version.outputs.changed == 'true'
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: v${{ steps.version.outputs.version }}
           files: artifacts/*.vsix
           generate_release_notes: true
