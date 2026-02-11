@@ -7,6 +7,7 @@
 export {
   tokens,
   colorTokens,
+  shadowTokens,
   radiusTokens,
   spacingTokens,
   fontTokens,
@@ -17,6 +18,7 @@ export {
   fieldContainerTokens,
   type Tokens,
   type ColorTokens,
+  type ShadowTokens,
   type RadiusTokens,
   type SpacingTokens,
   type FontTokens,

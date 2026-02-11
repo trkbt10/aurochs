@@ -5,6 +5,16 @@
  */
 
 import type { CSSProperties } from "react";
+import { spacingTokens, fontTokens, radiusTokens, colorTokens, shadowTokens } from "@aurochs-ui/ui-components/design-tokens";
+
+// =============================================================================
+// Layout constants
+// =============================================================================
+
+/** Navigation button size (44px) */
+const NAV_BUTTON_SIZE = 44;
+/** Navigation button offset from edge (12px) */
+const NAV_BUTTON_OFFSET = spacingTokens.md;
 
 // =============================================================================
 // Container styles
@@ -18,7 +28,7 @@ export function getContainerStyle(_isFullscreen: boolean): CSSProperties {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "#000",
+    background: colorTokens.overlay.darkBg,
     userSelect: "none",
     overflow: "hidden",
     zIndex: 2147483647,
@@ -45,7 +55,7 @@ export function getScreenOverlayStyle(variant: "black" | "white", active: boolea
     opacity: active ? 1 : 0,
     pointerEvents: active ? "auto" : "none",
     transition: "opacity 0.3s ease-out",
-    background: variant === "black" ? "#000" : "#fff",
+    background: variant === "black" ? colorTokens.overlay.darkBg : colorTokens.background.primary,
   };
 }
 
@@ -61,7 +71,7 @@ export function getStageStyle(isFullscreen: boolean): CSSProperties {
     justifyContent: "center",
     width: "100%",
     height: "100%",
-    padding: isFullscreen ? 0 : "16px",
+    padding: isFullscreen ? 0 : spacingTokens.lg,
   };
 }
 
@@ -73,14 +83,14 @@ export function getSlideContainerStyle(width: number, height: number, isFullscre
     height: `${height}px`,
     maxWidth: "100%",
     maxHeight: "100%",
-    boxShadow: isFullscreen ? "none" : "0 4px 24px rgba(0, 0, 0, 0.3)",
+    boxShadow: isFullscreen ? "none" : shadowTokens.lg,
   };
 }
 
 export const slideBaseStyle: CSSProperties = {
   width: "100%",
   height: "100%",
-  background: "#fff",
+  background: colorTokens.background.primary,
 };
 
 export const slidePreviousStyle: CSSProperties = {
@@ -128,8 +138,8 @@ export const controlsTopStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  padding: "12px 16px",
-  background: "linear-gradient(to bottom, rgba(0, 0, 0, 0.5), transparent)",
+  padding: `${spacingTokens.md} ${spacingTokens.lg}`,
+  background: `linear-gradient(to bottom, ${colorTokens.overlay.darkBgOverlay}, transparent)`,
   pointerEvents: "auto",
 };
 
@@ -138,7 +148,7 @@ export const controlsProgressStyle: CSSProperties = {
   bottom: 0,
   left: 0,
   right: 0,
-  padding: "0 24px 16px",
+  padding: `0 ${spacingTokens.xl} ${spacingTokens.lg}`,
   pointerEvents: "auto",
 };
 
@@ -149,14 +159,14 @@ export const controlsProgressStyle: CSSProperties = {
 export const controlButtonStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
-  gap: "8px",
-  padding: "8px 16px",
-  fontSize: "14px",
-  fontWeight: 500,
-  color: "rgba(255, 255, 255, 0.9)",
-  background: "rgba(255, 255, 255, 0.1)",
+  gap: spacingTokens.sm,
+  padding: `${spacingTokens.sm} ${spacingTokens.lg}`,
+  fontSize: fontTokens.size.xl,
+  fontWeight: fontTokens.weight.medium,
+  color: colorTokens.overlay.lightText,
+  background: colorTokens.overlay.lightBgHover,
   border: "none",
-  borderRadius: "6px",
+  borderRadius: radiusTokens.md,
   backdropFilter: "blur(12px)",
   cursor: "pointer",
   transition: "all 0.15s ease-out",
@@ -172,16 +182,16 @@ export function getNavButtonStyle(direction: "prev" | "next", disabled: boolean)
     position: "absolute",
     top: "50%",
     transform: "translateY(-50%)",
-    left: direction === "prev" ? "12px" : undefined,
-    right: direction === "next" ? "12px" : undefined,
+    left: direction === "prev" ? NAV_BUTTON_OFFSET : undefined,
+    right: direction === "next" ? NAV_BUTTON_OFFSET : undefined,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    width: "44px",
-    height: "44px",
+    width: NAV_BUTTON_SIZE,
+    height: NAV_BUTTON_SIZE,
     padding: 0,
-    color: disabled ? "rgba(255, 255, 255, 0.2)" : "rgba(255, 255, 255, 0.6)",
-    background: "rgba(0, 0, 0, 0.25)",
+    color: disabled ? colorTokens.overlay.lightTextMuted : colorTokens.overlay.lightTextSecondary,
+    background: colorTokens.overlay.darkBgSubtle,
     border: "none",
     borderRadius: "50%",
     backdropFilter: "blur(8px)",

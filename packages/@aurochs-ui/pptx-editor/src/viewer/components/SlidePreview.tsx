@@ -6,6 +6,7 @@
 
 import type { CSSProperties, MouseEvent } from "react";
 import { SvgContentRenderer } from "@aurochs-renderer/pptx/react";
+import { colorTokens, shadowTokens } from "@aurochs-ui/ui-components/design-tokens";
 
 export type SlidePreviewProps = {
   /** SVG content to render */
@@ -71,7 +72,7 @@ export function SlidePreview({
   height,
   aspectRatio = "maintain",
   showShadow = false,
-  backgroundColor = "#fff",
+  backgroundColor = colorTokens.background.primary,
   borderRadius = 4,
   onClick,
   className,
@@ -81,7 +82,7 @@ export function SlidePreview({
     ...slideBaseStyle,
     backgroundColor,
     borderRadius: `${borderRadius}px`,
-    boxShadow: showShadow ? "var(--shadow-lg)" : undefined,
+    boxShadow: showShadow ? shadowTokens.lg : undefined,
     aspectRatio: aspectRatio === "maintain" ? `${width} / ${height}` : undefined,
     cursor: onClick ? "pointer" : undefined,
     ...style,

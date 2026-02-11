@@ -5,7 +5,7 @@
  */
 
 import type { CSSProperties } from "react";
-import { colorTokens } from "../design-tokens";
+import { colorTokens, spacingTokens } from "../design-tokens";
 
 export type ToolbarSeparatorProps = {
   /** Separator orientation (default: "horizontal" = vertical line between horizontal items). */
@@ -13,19 +13,22 @@ export type ToolbarSeparatorProps = {
   readonly style?: CSSProperties;
 };
 
+/** Separator height for horizontal orientation (20px) */
+const SEPARATOR_HEIGHT = 20;
+
 const horizontalStyle: CSSProperties = {
   width: "1px",
-  height: "20px",
-  backgroundColor: `var(--border-strong, ${colorTokens.border.strong})`,
-  margin: "0 4px",
+  height: SEPARATOR_HEIGHT,
+  backgroundColor: colorTokens.border.strong,
+  margin: `0 ${spacingTokens.xs}`,
   flexShrink: 0,
 };
 
 const verticalStyle: CSSProperties = {
   width: "100%",
   height: "1px",
-  backgroundColor: `var(--border-strong, ${colorTokens.border.strong})`,
-  margin: "4px 0",
+  backgroundColor: colorTokens.border.strong,
+  margin: `${spacingTokens.xs} 0`,
   flexShrink: 0,
 };
 

@@ -5,6 +5,7 @@
  */
 
 import type { CSSProperties, ReactNode } from "react";
+import { spacingTokens, fontTokens, radiusTokens, colorTokens } from "@aurochs-ui/ui-components/design-tokens";
 
 export type KeyboardHintsVariant = "dark" | "light";
 
@@ -24,51 +25,56 @@ export type KeyboardHintsProps = {
   readonly className?: string;
 };
 
+/** Kbd key minimum width for light variant (18px) */
+const KBD_MIN_WIDTH = 18;
+/** Kbd key height for light variant (18px) */
+const KBD_HEIGHT = 18;
+
 const containerStyles: Record<KeyboardHintsVariant, CSSProperties> = {
   dark: {
     display: "flex",
     alignItems: "center",
-    gap: "8px",
-    fontSize: "12px",
-    color: "var(--text-tertiary)",
+    gap: spacingTokens.sm,
+    fontSize: fontTokens.size.md,
+    color: colorTokens.text.tertiary,
   },
   light: {
     display: "flex",
     alignItems: "center",
-    gap: "16px",
-    fontSize: "11px",
-    color: "rgba(255, 255, 255, 0.35)",
+    gap: spacingTokens.lg,
+    fontSize: fontTokens.size.sm,
+    color: colorTokens.overlay.lightTextMuted,
   },
 };
 
 const kbdStyles: Record<KeyboardHintsVariant, CSSProperties> = {
   dark: {
-    padding: "2px 6px",
-    backgroundColor: "var(--bg-tertiary)",
-    borderRadius: "3px",
-    fontSize: "11px",
+    padding: `${spacingTokens["2xs"]} ${spacingTokens["xs-plus"]}`,
+    backgroundColor: colorTokens.background.tertiary,
+    borderRadius: radiusTokens.xs,
+    fontSize: fontTokens.size.sm,
     fontFamily: "monospace",
   },
   light: {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    minWidth: "18px",
-    height: "18px",
-    padding: "0 4px",
+    minWidth: KBD_MIN_WIDTH,
+    height: KBD_HEIGHT,
+    padding: `0 ${spacingTokens.xs}`,
     fontFamily: "monospace",
-    fontSize: "10px",
-    color: "rgba(255, 255, 255, 0.5)",
-    backgroundColor: "rgba(255, 255, 255, 0.08)",
-    border: "1px solid rgba(255, 255, 255, 0.12)",
-    borderRadius: "3px",
+    fontSize: fontTokens.size.xs,
+    color: colorTokens.overlay.lightTextSecondary,
+    backgroundColor: colorTokens.overlay.lightBgSubtle,
+    border: `1px solid ${colorTokens.overlay.lightBorder}`,
+    borderRadius: radiusTokens.xs,
   },
 };
 
 const hintGroupStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
-  gap: "4px",
+  gap: spacingTokens.xs,
 };
 
 function Kbd({ children, variant }: { children: ReactNode; variant: KeyboardHintsVariant }) {
@@ -98,9 +104,9 @@ export function KeyboardHints({ hints, variant = "dark", className }: KeyboardHi
               {key}
             </Kbd>
           ))}
-          <span style={{ marginLeft: "2px" }}>{hint.label}</span>
+          <span style={{ marginLeft: spacingTokens["2xs"] }}>{hint.label}</span>
           {index < hints.length - 1 && variant === "dark" && (
-            <span style={{ margin: "0 4px", color: "var(--text-tertiary)" }}>·</span>
+            <span style={{ margin: `0 ${spacingTokens.xs}`, color: colorTokens.text.tertiary }}>·</span>
           )}
         </span>
       ))}

@@ -108,6 +108,66 @@
     "./primitives/ToolbarSeparator": {
       "types": "./src/primitives/ToolbarSeparator.tsx",
       "default": "./src/primitives/ToolbarSeparator.tsx"
+    },
+    "./viewer": {
+      "types": "./src/viewer/index.ts",
+      "default": "./src/viewer/index.ts"
+    },
+    "./viewer/ViewerContainer": {
+      "types": "./src/viewer/ViewerContainer.tsx",
+      "default": "./src/viewer/ViewerContainer.tsx"
+    },
+    "./viewer/ViewerToolbar": {
+      "types": "./src/viewer/ViewerToolbar.tsx",
+      "default": "./src/viewer/ViewerToolbar.tsx"
+    },
+    "./viewer/ViewerMain": {
+      "types": "./src/viewer/ViewerMain.tsx",
+      "default": "./src/viewer/ViewerMain.tsx"
+    },
+    "./viewer/ViewerSidebar": {
+      "types": "./src/viewer/ViewerSidebar.tsx",
+      "default": "./src/viewer/ViewerSidebar.tsx"
+    },
+    "./viewer/ViewerContent": {
+      "types": "./src/viewer/ViewerContent.tsx",
+      "default": "./src/viewer/ViewerContent.tsx"
+    },
+    "./viewer/ViewerFooter": {
+      "types": "./src/viewer/ViewerFooter.tsx",
+      "default": "./src/viewer/ViewerFooter.tsx"
+    },
+    "./viewer/EmbeddableContainer": {
+      "types": "./src/viewer/EmbeddableContainer.tsx",
+      "default": "./src/viewer/EmbeddableContainer.tsx"
+    },
+    "./viewer/EmbeddableContent": {
+      "types": "./src/viewer/EmbeddableContent.tsx",
+      "default": "./src/viewer/EmbeddableContent.tsx"
+    },
+    "./viewer/EmbeddableFooter": {
+      "types": "./src/viewer/EmbeddableFooter.tsx",
+      "default": "./src/viewer/EmbeddableFooter.tsx"
+    },
+    "./viewer/ThumbnailItem": {
+      "types": "./src/viewer/ThumbnailItem.tsx",
+      "default": "./src/viewer/ThumbnailItem.tsx"
+    },
+    "./viewer/PositionIndicator": {
+      "types": "./src/viewer/PositionIndicator.tsx",
+      "default": "./src/viewer/PositionIndicator.tsx"
+    },
+    "./viewer/NavigationControls": {
+      "types": "./src/viewer/NavigationControls.tsx",
+      "default": "./src/viewer/NavigationControls.tsx"
+    },
+    "./viewer/useItemNavigation": {
+      "types": "./src/viewer/useItemNavigation.ts",
+      "default": "./src/viewer/useItemNavigation.ts"
+    },
+    "./viewer/useViewerKeyboard": {
+      "types": "./src/viewer/useViewerKeyboard.ts",
+      "default": "./src/viewer/useViewerKeyboard.ts"
     }
   }
 }

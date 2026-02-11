@@ -6,6 +6,7 @@
 
 import type { CSSProperties, MouseEvent } from "react";
 import { useCallback } from "react";
+import { colorTokens } from "@aurochs-ui/ui-components/design-tokens";
 
 export type ProgressBarVariant = "dark" | "light";
 
@@ -22,17 +23,28 @@ export type ProgressBarProps = {
   readonly className?: string;
 };
 
+/** Track height for dark variant (4px) */
+const TRACK_HEIGHT_DARK = 4;
+/** Track height for light variant (2px) */
+const TRACK_HEIGHT_LIGHT = 2;
+/** Interactive track height for light variant (4px) */
+const TRACK_HEIGHT_LIGHT_INTERACTIVE = 4;
+/** Border radius for dark variant (2px) */
+const TRACK_RADIUS_DARK = 2;
+/** Border radius for light variant (1px) */
+const TRACK_RADIUS_LIGHT = 1;
+
 const trackStyles: Record<ProgressBarVariant, CSSProperties> = {
   dark: {
-    height: "4px",
-    backgroundColor: "var(--border-strong)",
-    borderRadius: "2px",
+    height: TRACK_HEIGHT_DARK,
+    backgroundColor: colorTokens.border.strong,
+    borderRadius: TRACK_RADIUS_DARK,
     overflow: "hidden",
   },
   light: {
-    height: "2px",
-    backgroundColor: "rgba(255, 255, 255, 0.15)",
-    borderRadius: "1px",
+    height: TRACK_HEIGHT_LIGHT,
+    backgroundColor: colorTokens.overlay.lightBgActive,
+    borderRadius: TRACK_RADIUS_LIGHT,
     overflow: "hidden",
   },
 };
@@ -46,20 +58,20 @@ const interactiveTrackStyles: Record<ProgressBarVariant, CSSProperties> = {
   light: {
     ...trackStyles.light,
     cursor: "pointer",
-    height: "4px",
+    height: TRACK_HEIGHT_LIGHT_INTERACTIVE,
     transition: "height 0.15s ease",
   },
 };
 
 const fillStyle: CSSProperties = {
   height: "100%",
-  backgroundColor: "var(--accent-blue)",
+  backgroundColor: colorTokens.accent.secondary,
   transition: "width 0.2s ease",
 };
 
 const fillGradientStyle: CSSProperties = {
   ...fillStyle,
-  background: "linear-gradient(90deg, var(--accent-blue), #22d3ee)",
+  background: `linear-gradient(90deg, ${colorTokens.accent.secondary}, ${colorTokens.accent.cyan})`,
 };
 
 /**

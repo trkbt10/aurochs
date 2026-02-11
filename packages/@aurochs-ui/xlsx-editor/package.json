@@ -63,6 +63,14 @@
     "./dev": {
       "types": "./src/dev/index.ts",
       "default": "./src/dev/index.ts"
+    },
+    "./viewer/WorkbookViewer": {
+      "types": "./src/viewer/WorkbookViewer.tsx",
+      "default": "./src/viewer/WorkbookViewer.tsx"
+    },
+    "./viewer/EmbeddableSheet": {
+      "types": "./src/viewer/EmbeddableSheet.tsx",
+      "default": "./src/viewer/EmbeddableSheet.tsx"
     }
   }
 }

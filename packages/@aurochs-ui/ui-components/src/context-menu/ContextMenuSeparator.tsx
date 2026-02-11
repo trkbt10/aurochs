@@ -3,12 +3,12 @@
  */
 
 import type { CSSProperties } from "react";
-import { colorTokens } from "../design-tokens";
+import { colorTokens, spacingTokens } from "../design-tokens";
 
 const separatorStyle: CSSProperties = {
   height: 1,
-  margin: "4px 0",
-  backgroundColor: `var(--border-primary, ${colorTokens.border.primary})`,
+  margin: `${spacingTokens.xs} 0`,
+  backgroundColor: colorTokens.border.primary,
   opacity: 0.5,
 };
 

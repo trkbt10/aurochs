@@ -21,7 +21,9 @@ import {
   ShareIcon,
   DownloadIcon,
   EnterFullscreenIcon,
+  ToolbarSeparator,
 } from "@aurochs-ui/ui-components";
+import { spacingTokens, fontTokens, radiusTokens, iconTokens, colorTokens, shadowTokens } from "@aurochs-ui/ui-components/design-tokens";
 
 export type SlideShareViewerProps = {
   /** Total number of slides */
@@ -69,6 +71,13 @@ export type SlideShareViewerProps = {
 };
 
 // =============================================================================
+// Layout constants
+// =============================================================================
+
+/** Sidebar width (200px) */
+const SIDEBAR_WIDTH = 200;
+
+// =============================================================================
 // Styles
 // =============================================================================
 
@@ -76,53 +85,47 @@ const containerStyle: CSSProperties = {
   display: "flex",
   flexDirection: "column",
   height: "100%",
-  backgroundColor: "var(--bg-primary)",
-  color: "var(--text-primary)",
+  backgroundColor: colorTokens.background.primary,
+  color: colorTokens.text.primary,
 };
 
 const headerStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  padding: "12px 16px",
-  backgroundColor: "var(--bg-secondary)",
-  borderBottom: "1px solid var(--border-subtle)",
+  padding: `${spacingTokens.md} ${spacingTokens.lg}`,
+  backgroundColor: colorTokens.background.secondary,
+  borderBottom: `1px solid ${colorTokens.border.subtle}`,
   flexShrink: 0,
 };
 
 const headerLeftStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
-  gap: "12px",
-};
-
-const headerDividerStyle: CSSProperties = {
-  width: "1px",
-  height: "20px",
-  backgroundColor: "var(--border-strong)",
+  gap: spacingTokens.md,
 };
 
 const titleInfoStyle: CSSProperties = {
   display: "flex",
   flexDirection: "column",
-  gap: "2px",
+  gap: spacingTokens["2xs"],
 };
 
 const titleStyle: CSSProperties = {
-  fontSize: "14px",
-  fontWeight: 500,
-  color: "var(--text-primary)",
+  fontSize: fontTokens.size.xl,
+  fontWeight: fontTokens.weight.medium,
+  color: colorTokens.text.primary,
 };
 
 const authorStyle: CSSProperties = {
-  fontSize: "12px",
-  color: "var(--text-tertiary)",
+  fontSize: fontTokens.size.md,
+  color: colorTokens.text.tertiary,
 };
 
 const headerRightStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
-  gap: "8px",
+  gap: spacingTokens.sm,
 };
 
 const mainStyle: CSSProperties = {
@@ -132,9 +135,9 @@ const mainStyle: CSSProperties = {
 };
 
 const sidebarStyle: CSSProperties = {
-  width: "200px",
-  backgroundColor: "var(--bg-secondary)",
-  borderRight: "1px solid var(--border-subtle)",
+  width: SIDEBAR_WIDTH,
+  backgroundColor: colorTokens.background.secondary,
+  borderRight: `1px solid ${colorTokens.border.subtle}`,
   display: "flex",
   flexDirection: "column",
   flexShrink: 0,
@@ -151,21 +154,21 @@ const sidebarHeaderStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  padding: "12px",
-  borderBottom: "1px solid var(--border-subtle)",
+  padding: spacingTokens.md,
+  borderBottom: `1px solid ${colorTokens.border.subtle}`,
 };
 
 const sidebarTitleStyle: CSSProperties = {
-  fontSize: "11px",
-  fontWeight: 600,
-  color: "var(--text-tertiary)",
+  fontSize: fontTokens.size.sm,
+  fontWeight: fontTokens.weight.semibold,
+  color: colorTokens.text.tertiary,
   textTransform: "uppercase",
-  letterSpacing: "0.5px",
+  letterSpacing: fontTokens.letterSpacing.uppercase,
 };
 
 const sidebarCountStyle: CSSProperties = {
-  fontSize: "11px",
-  color: "var(--text-tertiary)",
+  fontSize: fontTokens.size.sm,
+  color: colorTokens.text.tertiary,
 };
 
 const thumbnailListStyle: CSSProperties = {
@@ -179,8 +182,8 @@ const slideAreaStyle: CSSProperties = {
   alignItems: "center",
   justifyContent: "center",
   position: "relative",
-  backgroundColor: "var(--bg-tertiary)",
-  padding: "24px",
+  backgroundColor: colorTokens.background.tertiary,
+  padding: spacingTokens.xl,
 };
 
 const slideWrapperStyle: CSSProperties = {
@@ -192,9 +195,9 @@ const slideWrapperStyle: CSSProperties = {
 };
 
 const slideContainerStyle: CSSProperties = {
-  backgroundColor: "#fff",
-  boxShadow: "var(--shadow-lg)",
-  borderRadius: "4px",
+  backgroundColor: colorTokens.background.primary,
+  boxShadow: shadowTokens.lg,
+  borderRadius: radiusTokens.sm,
   overflow: "hidden",
   maxWidth: "100%",
   maxHeight: "100%",
@@ -209,11 +212,11 @@ const footerStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  padding: "8px 16px",
-  backgroundColor: "var(--bg-secondary)",
-  borderTop: "1px solid var(--border-subtle)",
-  fontSize: "12px",
-  color: "var(--text-tertiary)",
+  padding: `${spacingTokens.sm} ${spacingTokens.lg}`,
+  backgroundColor: colorTokens.background.secondary,
+  borderTop: `1px solid ${colorTokens.border.subtle}`,
+  fontSize: fontTokens.size.md,
+  color: colorTokens.text.tertiary,
   flexShrink: 0,
 };
 
@@ -221,7 +224,7 @@ const footerCenterStyle: CSSProperties = {
   flex: 1,
   display: "flex",
   justifyContent: "center",
-  padding: "0 16px",
+  padding: `0 ${spacingTokens.lg}`,
 };
 
 const thumbnailPreviewStyle: CSSProperties = {
@@ -390,10 +393,10 @@ export function SlideShareViewer({
           {onExit && (
             <>
               <Button variant="outline" size="md" onClick={onExit}>
-                <ChevronLeftIcon size={16} />
+                <ChevronLeftIcon size={iconTokens.size.md} />
                 Back
               </Button>
-              <div style={headerDividerStyle} />
+              <ToolbarSeparator />
             </>
           )}
           {(title || author) && (
@@ -405,18 +408,18 @@ export function SlideShareViewer({
         </div>
 
         <div style={headerRightStyle}>
-          <IconButton icon={<SidebarIcon size={18} />} onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
+          <IconButton icon={<SidebarIcon size={iconTokens.size.lg} />} onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
           {enableDownload && onDownload && (
-            <IconButton icon={<DownloadIcon size={18} />} onClick={onDownload} aria-label="Download" />
+            <IconButton icon={<DownloadIcon size={iconTokens.size.lg} />} onClick={onDownload} aria-label="Download" />
           )}
-          {enableShare && <IconButton icon={<ShareIcon size={18} />} onClick={handleShare} aria-label="Share" />}
+          {enableShare && <IconButton icon={<ShareIcon size={iconTokens.size.lg} />} onClick={handleShare} aria-label="Share" />}
           {enableFullscreen && (
-            <IconButton icon={<EnterFullscreenIcon size={18} />} onClick={handleFullscreen} aria-label="Fullscreen" />
+            <IconButton icon={<EnterFullscreenIcon size={iconTokens.size.lg} />} onClick={handleFullscreen} aria-label="Fullscreen" />
           )}
           {customActions}
           {enableSlideshow && (
             <Button variant="primary" size="md" onClick={() => slideshow.startSlideshow(nav.currentSlide)}>
-              <PlayIcon size={16} />
+              <PlayIcon size={iconTokens.size.md} />
               Present
             </Button>
           )}

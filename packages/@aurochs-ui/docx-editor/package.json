@@ -28,6 +28,14 @@
     "./dev": {
       "types": "./src/dev/index.ts",
       "default": "./src/dev/index.ts"
+    },
+    "./viewer/DocumentViewer": {
+      "types": "./src/viewer/DocumentViewer.tsx",
+      "default": "./src/viewer/DocumentViewer.tsx"
+    },
+    "./viewer/EmbeddableDocument": {
+      "types": "./src/viewer/EmbeddableDocument.tsx",
+      "default": "./src/viewer/EmbeddableDocument.tsx"
     }
   }
 }

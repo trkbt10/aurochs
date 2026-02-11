@@ -9,6 +9,7 @@ import type { SlideSize } from "@aurochs-office/pptx/domain";
 import { SvgContentRenderer } from "@aurochs-renderer/pptx/react";
 import { useSlideNavigation } from "./hooks";
 import { SlideIndicator, ProgressBar, NavigationControls } from "./components";
+import { spacingTokens, radiusTokens, iconTokens, colorTokens } from "@aurochs-ui/ui-components/design-tokens";
 
 export type EmbeddableSlideProps = {
   /** Total number of slides */
@@ -53,8 +54,8 @@ const containerStyle: CSSProperties = {
   position: "relative",
   display: "flex",
   flexDirection: "column",
-  backgroundColor: "#1a1a1a",
-  borderRadius: "8px",
+  backgroundColor: colorTokens.text.primary,
+  borderRadius: radiusTokens.lg,
   overflow: "hidden",
 };
 
@@ -64,7 +65,7 @@ const slideAreaStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  backgroundColor: "#000",
+  backgroundColor: colorTokens.overlay.darkBg,
 };
 
 const slideContainerStyle: CSSProperties = {
@@ -101,8 +102,8 @@ const topControlsStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "flex-end",
-  padding: "8px 12px",
-  background: "linear-gradient(to bottom, rgba(0, 0, 0, 0.5), transparent)",
+  padding: `${spacingTokens.sm} ${spacingTokens.md}`,
+  background: `linear-gradient(to bottom, ${colorTokens.overlay.darkBgOverlay}, transparent)`,
   pointerEvents: "auto",
 };
 
@@ -110,14 +111,14 @@ const bottomControlsStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  padding: "8px 12px",
-  background: "linear-gradient(to top, rgba(0, 0, 0, 0.5), transparent)",
+  padding: `${spacingTokens.sm} ${spacingTokens.md}`,
+  background: `linear-gradient(to top, ${colorTokens.overlay.darkBgOverlay}, transparent)`,
   pointerEvents: "auto",
 };
 
 const progressContainerStyle: CSSProperties = {
   flex: 1,
-  margin: "0 12px",
+  margin: `0 ${spacingTokens.md}`,
 };
 
 /**
@@ -236,7 +237,7 @@ export function EmbeddableSlide({
                 canGoPrev={!nav.isFirst || loop}
                 canGoNext={!nav.isLast || loop}
                 variant="minimal"
-                iconSize={20}
+                iconSize={iconTokens.size.xl}
               />
             )}
             {showProgress && (

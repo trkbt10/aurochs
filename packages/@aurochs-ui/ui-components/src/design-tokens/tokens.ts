@@ -14,8 +14,12 @@ export const colorTokens = {
     primary: "#4472C4",
     /** Selection state - secondary emphasis */
     secondary: "#3b82f6",
+    /** Progress bar gradient end (cyan) */
+    cyan: "#22d3ee",
     /** Danger/delete actions */
     danger: "#ef4444",
+    /** Success/animation indicator (green) */
+    success: "#4ade80",
   },
   background: {
     /** Main container background */
@@ -57,12 +61,62 @@ export const colorTokens = {
     /** Visited hyperlink color */
     visited: "#954F72",
   },
+  /** Overlay colors for light-on-dark UI (slideshow, modals) */
+  overlay: {
+    /** Light text on dark background - primary */
+    lightText: "#ffffff",
+    /** Light text on dark background - secondary (60% opacity) */
+    lightTextSecondary: "rgba(255, 255, 255, 0.6)",
+    /** Light text on dark background - tertiary (40% opacity) */
+    lightTextTertiary: "rgba(255, 255, 255, 0.4)",
+    /** Light text on dark background - muted (35% opacity) */
+    lightTextMuted: "rgba(255, 255, 255, 0.35)",
+    /** Light background on dark - subtle (8% opacity) */
+    lightBgSubtle: "rgba(255, 255, 255, 0.08)",
+    /** Light background on dark - hover (10% opacity) */
+    lightBgHover: "rgba(255, 255, 255, 0.1)",
+    /** Light background on dark - active (15% opacity) */
+    lightBgActive: "rgba(255, 255, 255, 0.15)",
+    /** Light border on dark background (12% opacity) */
+    lightBorder: "rgba(255, 255, 255, 0.12)",
+    /** Dark background - solid black */
+    darkBg: "#000000",
+    /** Dark background - semi-transparent (50% opacity) */
+    darkBgOverlay: "rgba(0, 0, 0, 0.5)",
+    /** Dark background - button/control (40% opacity) */
+    darkBgControl: "rgba(0, 0, 0, 0.4)",
+    /** Dark background - subtle (25% opacity) */
+    darkBgSubtle: "rgba(0, 0, 0, 0.25)",
+  },
+  /** Shadow colors */
+  shadow: {
+    /** Standard shadow */
+    default: "rgba(0, 0, 0, 0.5)",
+    /** Light shadow */
+    light: "rgba(0, 0, 0, 0.15)",
+    /** Medium shadow */
+    medium: "rgba(0, 0, 0, 0.3)",
+  },
+} as const;
+
+/**
+ * Box shadow definitions (complete shadow values)
+ */
+export const shadowTokens = {
+  /** Small shadow for subtle elevation */
+  sm: `0 1px 3px ${colorTokens.shadow.light}`,
+  /** Medium shadow for cards and panels */
+  md: `0 2px 8px ${colorTokens.shadow.light}`,
+  /** Large shadow for floating elements */
+  lg: `0 4px 24px ${colorTokens.shadow.medium}`,
 } as const;
 
 /**
  * Border radius values
  */
 export const radiusTokens = {
+  /** Extra small radius (kbd, tags) */
+  xs: "3px",
   /** Small radius (buttons, inputs) */
   sm: "4px",
   /** Medium radius (cards, panels) */
@@ -104,6 +158,8 @@ export const fontTokens = {
     md: "12px",
     /** 13px - larger UI text */
     lg: "13px",
+    /** 14px - headings, titles */
+    xl: "14px",
   },
   weight: {
     /** Normal weight */
@@ -112,6 +168,10 @@ export const fontTokens = {
     medium: 500,
     /** Semibold weight */
     semibold: 600,
+  },
+  letterSpacing: {
+    /** Tight letter spacing for uppercase labels */
+    uppercase: "0.5px",
   },
 } as const;
 
@@ -124,8 +184,12 @@ export const iconTokens = {
     sm: 14,
     /** Medium icons: 16px */
     md: 16,
-    /** Large icons: 20px */
-    lg: 20,
+    /** Large icons: 18px */
+    lg: 18,
+    /** Extra large icons: 20px */
+    xl: 20,
+    /** 2x Extra large icons: 24px */
+    "2xl": 24,
   },
   /** Standard stroke width for lucide icons */
   strokeWidth: 2,
@@ -272,6 +336,7 @@ export const editorShellTokens = {
  */
 export const tokens = {
   color: colorTokens,
+  shadow: shadowTokens,
   radius: radiusTokens,
   spacing: spacingTokens,
   font: fontTokens,
@@ -286,6 +351,7 @@ export const tokens = {
  * Type helpers for token values
  */
 export type ColorTokens = typeof colorTokens;
+export type ShadowTokens = typeof shadowTokens;
 export type RadiusTokens = typeof radiusTokens;
 export type SpacingTokens = typeof spacingTokens;
 export type FontTokens = typeof fontTokens;

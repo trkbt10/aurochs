@@ -5,6 +5,7 @@
  */
 
 import type { CSSProperties } from "react";
+import { spacingTokens, fontTokens, colorTokens } from "@aurochs-ui/ui-components/design-tokens";
 
 export type SlideIndicatorVariant = "dark" | "light" | "compact" | "minimal";
 
@@ -21,49 +22,56 @@ export type SlideIndicatorProps = {
   readonly className?: string;
 };
 
+/** Large font size for light variant current number (20px) */
+const LIGHT_CURRENT_FONT_SIZE = 20;
+/** Standard font size for light variant (16px) */
+const LIGHT_FONT_SIZE = 16;
+/** Animation indicator font size (8px) */
+const ANIMATION_DOT_SIZE = 8;
+
 const containerStyles: Record<SlideIndicatorVariant, CSSProperties> = {
   dark: {
     display: "flex",
     flexDirection: "column",
-    gap: "2px",
+    gap: spacingTokens["2xs"],
   },
   light: {
     display: "flex",
     alignItems: "center",
-    gap: "4px",
+    gap: spacingTokens.xs,
     fontFamily: "monospace",
-    fontSize: "16px",
-    fontWeight: 500,
-    color: "#fff",
-    textShadow: "0 2px 4px rgba(0, 0, 0, 0.5)",
+    fontSize: LIGHT_FONT_SIZE,
+    fontWeight: fontTokens.weight.medium,
+    color: colorTokens.overlay.lightText,
+    textShadow: `0 2px 4px ${colorTokens.shadow.default}`,
   },
   compact: {
     display: "inline-flex",
     alignItems: "center",
-    gap: "4px",
-    fontSize: "13px",
-    fontWeight: 500,
-    color: "var(--text-secondary)",
+    gap: spacingTokens.xs,
+    fontSize: fontTokens.size.lg,
+    fontWeight: fontTokens.weight.medium,
+    color: colorTokens.text.secondary,
   },
   minimal: {
     display: "inline-flex",
     alignItems: "center",
-    fontSize: "12px",
-    color: "var(--text-tertiary)",
+    fontSize: fontTokens.size.md,
+    color: colorTokens.text.tertiary,
   },
 };
 
 const currentStyles: Record<SlideIndicatorVariant, CSSProperties> = {
   dark: {
-    fontSize: "14px",
-    fontWeight: 500,
-    color: "var(--text-primary)",
+    fontSize: fontTokens.size.xl,
+    fontWeight: fontTokens.weight.medium,
+    color: colorTokens.text.primary,
   },
   light: {
-    fontSize: "20px",
+    fontSize: LIGHT_CURRENT_FONT_SIZE,
   },
   compact: {
-    fontWeight: 600,
+    fontWeight: fontTokens.weight.semibold,
   },
   minimal: {},
 };
@@ -73,36 +81,36 @@ const separatorStyles: Record<SlideIndicatorVariant, CSSProperties> = {
     display: "none",
   },
   light: {
-    color: "rgba(255, 255, 255, 0.4)",
-    margin: "0 2px",
+    color: colorTokens.overlay.lightTextTertiary,
+    margin: `0 ${spacingTokens["2xs"]}`,
   },
   compact: {
-    color: "var(--text-tertiary)",
+    color: colorTokens.text.tertiary,
   },
   minimal: {
-    color: "var(--text-tertiary)",
-    margin: "0 2px",
+    color: colorTokens.text.tertiary,
+    margin: `0 ${spacingTokens["2xs"]}`,
   },
 };
 
 const totalStyles: Record<SlideIndicatorVariant, CSSProperties> = {
   dark: {
-    fontSize: "12px",
-    color: "var(--text-tertiary)",
+    fontSize: fontTokens.size.md,
+    color: colorTokens.text.tertiary,
   },
   light: {
-    color: "rgba(255, 255, 255, 0.6)",
+    color: colorTokens.overlay.lightTextSecondary,
   },
   compact: {
-    color: "var(--text-tertiary)",
+    color: colorTokens.text.tertiary,
   },
   minimal: {},
 };
 
 const animationIndicatorStyle: CSSProperties = {
-  color: "#4ade80",
-  fontSize: "8px",
-  marginLeft: "8px",
+  color: colorTokens.accent.success,
+  fontSize: ANIMATION_DOT_SIZE,
+  marginLeft: spacingTokens.sm,
   animation: "pulse 2s ease-in-out infinite",
 };
 

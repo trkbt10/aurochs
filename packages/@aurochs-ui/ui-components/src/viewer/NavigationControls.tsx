@@ -1,19 +1,20 @@
 /**
  * @file NavigationControls
  *
- * Prev/Next navigation buttons for slide viewer.
+ * Prev/Next navigation buttons for viewers.
+ * Unified component for PPTX/DOCX/XLSX viewers.
  */
 
 import type { CSSProperties, ReactNode } from "react";
-import { ChevronLeftIcon, ChevronRightIcon } from "@aurochs-ui/ui-components/icons";
-import { spacingTokens, radiusTokens, iconTokens, colorTokens } from "@aurochs-ui/ui-components/design-tokens";
+import { ChevronLeftIcon, ChevronRightIcon } from "../icons";
+import { spacingTokens, radiusTokens, iconTokens, colorTokens } from "../design-tokens";
 
 export type NavigationControlsVariant = "overlay" | "inline" | "minimal";
 
 export type NavigationControlsProps = {
-  /** Navigate to previous slide */
+  /** Navigate to previous item */
   readonly onPrev: () => void;
-  /** Navigate to next slide */
+  /** Navigate to next item */
   readonly onNext: () => void;
   /** Whether previous navigation is available */
   readonly canGoPrev: boolean;
@@ -38,7 +39,7 @@ const INLINE_BUTTON_SIZE = 36;
 /** Minimal button size (28px) */
 const MINIMAL_BUTTON_SIZE = 28;
 
-const overlayButtonStyle: CSSProperties = {
+const overlayButtonBase: CSSProperties = {
   position: "absolute",
   top: "50%",
   transform: "translateY(-50%)",
@@ -57,12 +58,12 @@ const overlayButtonStyle: CSSProperties = {
 };
 
 const overlayPrevStyle: CSSProperties = {
-  ...overlayButtonStyle,
+  ...overlayButtonBase,
   left: spacingTokens.lg,
 };
 
 const overlayNextStyle: CSSProperties = {
-  ...overlayButtonStyle,
+  ...overlayButtonBase,
   right: spacingTokens.lg,
 };
 
@@ -111,20 +112,10 @@ function getDefaultIconSize(variant: NavigationControlsVariant): number {
 }
 
 /**
- * Navigation controls for moving between slides.
+ * Navigation controls for moving between items.
  *
  * @example
  * ```tsx
- * // Overlay variant (for slide area)
- * <NavigationControls
- *   onPrev={nav.goToPrev}
- *   onNext={nav.goToNext}
- *   canGoPrev={!nav.isFirst}
- *   canGoNext={!nav.isLast}
- *   variant="overlay"
- * />
- *
- * // Inline variant (for toolbar)
  * <NavigationControls
  *   onPrev={nav.goToPrev}
  *   onNext={nav.goToNext}
@@ -139,7 +130,7 @@ export function NavigationControls({
   onNext,
   canGoPrev,
   canGoNext,
-  variant = "overlay",
+  variant = "inline",
   iconSize,
   prevContent,
   nextContent,
@@ -157,7 +148,7 @@ export function NavigationControls({
           }}
           onClick={onPrev}
           disabled={!canGoPrev}
-          aria-label="Previous slide"
+          aria-label="Previous"
           className={className}
         >
           {prevContent ?? <ChevronLeftIcon size={size} />}
@@ -169,7 +160,7 @@ export function NavigationControls({
           }}
           onClick={onNext}
           disabled={!canGoNext}
-          aria-label="Next slide"
+          aria-label="Next"
           className={className}
         >
           {nextContent ?? <ChevronRightIcon size={size} />}
@@ -186,7 +177,7 @@ export function NavigationControls({
         style={{ ...buttonStyle, ...(canGoPrev ? {} : disabledStyle) }}
         onClick={onPrev}
         disabled={!canGoPrev}
-        aria-label="Previous slide"
+        aria-label="Previous"
       >
         {prevContent ?? <ChevronLeftIcon size={size} />}
       </button>
@@ -194,7 +185,7 @@ export function NavigationControls({
         style={{ ...buttonStyle, ...(canGoNext ? {} : disabledStyle) }}
         onClick={onNext}
         disabled={!canGoNext}
-        aria-label="Next slide"
+        aria-label="Next"
       >
         {nextContent ?? <ChevronRightIcon size={size} />}
       </button>

@@ -11,6 +11,7 @@ import { SlideList } from "../slide-list";
 import type { SlideWithId } from "@aurochs-office/pptx/app";
 import { useSlideNavigation, useViewerKeyboard } from "./hooks";
 import { SlideIndicator, ProgressBar, KeyboardHints, NavigationControls } from "./components";
+import { spacingTokens, fontTokens, radiusTokens, colorTokens, shadowTokens } from "@aurochs-ui/ui-components/design-tokens";
 
 export type PresentationViewerProps = {
   /** Total number of slides */
@@ -52,6 +53,13 @@ export type PresentationViewerProps = {
 };
 
 // =============================================================================
+// Layout constants
+// =============================================================================
+
+/** Sidebar width (180px) */
+const SIDEBAR_WIDTH = 180;
+
+// =============================================================================
 // Styles
 // =============================================================================
 
@@ -59,8 +67,8 @@ const containerStyle: CSSProperties = {
   display: "flex",
   flexDirection: "column",
   height: "100%",
-  backgroundColor: "var(--bg-primary)",
-  color: "var(--text-primary)",
+  backgroundColor: colorTokens.background.primary,
+  color: colorTokens.text.primary,
 };
 
 const mainStyle: CSSProperties = {
@@ -70,9 +78,9 @@ const mainStyle: CSSProperties = {
 };
 
 const sidebarStyle: CSSProperties = {
-  width: "180px",
-  backgroundColor: "var(--bg-secondary)",
-  borderRight: "1px solid var(--border-subtle)",
+  width: SIDEBAR_WIDTH,
+  backgroundColor: colorTokens.background.secondary,
+  borderRight: `1px solid ${colorTokens.border.subtle}`,
   display: "flex",
   flexDirection: "column",
   flexShrink: 0,
@@ -83,21 +91,21 @@ const sidebarHeaderStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  padding: "12px",
-  borderBottom: "1px solid var(--border-subtle)",
+  padding: spacingTokens.md,
+  borderBottom: `1px solid ${colorTokens.border.subtle}`,
 };
 
 const sidebarTitleStyle: CSSProperties = {
-  fontSize: "11px",
-  fontWeight: 600,
-  color: "var(--text-tertiary)",
+  fontSize: fontTokens.size.sm,
+  fontWeight: fontTokens.weight.semibold,
+  color: colorTokens.text.tertiary,
   textTransform: "uppercase",
-  letterSpacing: "0.5px",
+  letterSpacing: fontTokens.letterSpacing.uppercase,
 };
 
 const sidebarCountStyle: CSSProperties = {
-  fontSize: "11px",
-  color: "var(--text-tertiary)",
+  fontSize: fontTokens.size.sm,
+  color: colorTokens.text.tertiary,
 };
 
 const thumbnailListStyle: CSSProperties = {
@@ -111,8 +119,8 @@ const slideAreaStyle: CSSProperties = {
   alignItems: "center",
   justifyContent: "center",
   position: "relative",
-  backgroundColor: "var(--bg-tertiary)",
-  padding: "24px",
+  backgroundColor: colorTokens.background.tertiary,
+  padding: spacingTokens.xl,
 };
 
 const slideWrapperStyle: CSSProperties = {
@@ -124,9 +132,9 @@ const slideWrapperStyle: CSSProperties = {
 };
 
 const slideContainerStyle: CSSProperties = {
-  backgroundColor: "#fff",
-  boxShadow: "var(--shadow-lg)",
-  borderRadius: "4px",
+  backgroundColor: colorTokens.background.primary,
+  boxShadow: shadowTokens.lg,
+  borderRadius: radiusTokens.sm,
   overflow: "hidden",
   maxWidth: "100%",
   maxHeight: "100%",
@@ -141,11 +149,11 @@ const defaultFooterStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  padding: "8px 16px",
-  backgroundColor: "var(--bg-secondary)",
-  borderTop: "1px solid var(--border-subtle)",
-  fontSize: "12px",
-  color: "var(--text-tertiary)",
+  padding: `${spacingTokens.sm} ${spacingTokens.lg}`,
+  backgroundColor: colorTokens.background.secondary,
+  borderTop: `1px solid ${colorTokens.border.subtle}`,
+  fontSize: fontTokens.size.md,
+  color: colorTokens.text.tertiary,
   flexShrink: 0,
 };
 
@@ -153,7 +161,7 @@ const footerCenterStyle: CSSProperties = {
   flex: 1,
   display: "flex",
   justifyContent: "center",
-  padding: "0 16px",
+  padding: `0 ${spacingTokens.lg}`,
 };
 
 const thumbnailPreviewStyle: CSSProperties = {

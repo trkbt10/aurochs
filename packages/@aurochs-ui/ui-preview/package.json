@@ -11,6 +11,7 @@
     "@aurochs-office/drawing-ml": "workspace:*",
     "@aurochs-office/opc": "workspace:*",
     "@aurochs-office/pptx": "workspace:*",
+    "@aurochs-office/text-layout": "workspace:*",
     "@aurochs-renderer/pptx": "workspace:*",
     "@aurochs-office/xls": "workspace:*",
     "@aurochs-office/xlsx": "workspace:*",
@@ -27,7 +28,9 @@
   },
   "scripts": {
     "dev:xlsx": "vite --open /xlsx-editor.html",
+    "dev:xlsx-viewer": "vite --open /xlsx-viewer.html",
     "dev:docx": "vite --open /docx-editor.html",
+    "dev:docx-viewer": "vite --open /docx-viewer.html",
     "dev:pptx-slideshow": "vite --open /pptx-slideshow.html",
     "dev:pptx-viewer": "vite --open /pptx-viewer.html",
     "dev:editor-controls": "vite --open /editor-controls.html",
