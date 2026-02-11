@@ -95,6 +95,7 @@ export {
   PanelLeft as SidebarIcon,
   LayoutGrid as GridIcon,
   Shield as ShieldIcon,
+  Share2 as ShareIcon,
   Eye as VisibleIcon,
   EyeOff as HiddenIcon,
   Lock as LockIcon,

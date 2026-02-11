@@ -2,25 +2,14 @@
  * @file PPTX viewer page.
  *
  * Slide viewer layout with thumbnails, navigation, and white office theme.
+ * Uses SlideShareViewer from @aurochs-ui/pptx-editor/viewer.
  */
 
-import { useMemo, useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { useMemo, useCallback, useEffect } from "react";
 import type { LoadedPresentation } from "@aurochs-office/pptx/app";
-import { SlideList } from "@aurochs-ui/pptx-editor/slide-list";
-import type { SlideWithId } from "@aurochs-office/pptx/app";
-import { useLazySvgCache, SvgContentRenderer } from "@aurochs-renderer/pptx/react";
 import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
-import { useSlideNavigation, useViewerKeyboard } from "../hooks";
-import {
-  Button,
-  IconButton,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  PlayIcon,
-  EditIcon,
-  SidebarIcon,
-} from "@aurochs-ui/ui-components";
-import { ProgressBar, KeyboardHints } from "../components/ui";
+import { SlideShareViewer, type SlideshowSlideContent } from "@aurochs-ui/pptx-editor";
+import { useLazySvgCache } from "@aurochs-renderer/pptx/react";
 import { useSvgFontLoader } from "../fonts/useSvgFontLoader";
 
 type Props = {
@@ -31,386 +20,70 @@ type Props = {
   onStartEditor: () => void;
 };
 
-// =============================================================================
-// Styles
-// =============================================================================
-
-const containerStyle: CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  height: "100vh",
-  backgroundColor: "var(--bg-primary)",
-  color: "var(--text-primary)",
-};
-
-const headerStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  padding: "12px 16px",
-  backgroundColor: "var(--bg-secondary)",
-  borderBottom: "1px solid var(--border-subtle)",
-  flexShrink: 0,
-};
-
-const headerLeftStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: "12px",
-};
-
-const headerDividerStyle: CSSProperties = {
-  width: "1px",
-  height: "20px",
-  backgroundColor: "var(--border-strong)",
-};
-
-const fileInfoStyle: CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  gap: "2px",
-};
-
-const fileNameStyle: CSSProperties = {
-  fontSize: "14px",
-  fontWeight: 500,
-  color: "var(--text-primary)",
-};
-
-const slideCounterStyle: CSSProperties = {
-  fontSize: "12px",
-  color: "var(--text-tertiary)",
-};
-
-const headerRightStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: "8px",
-};
-
-const mainStyle: CSSProperties = {
-  flex: 1,
-  display: "flex",
-  overflow: "hidden",
-};
-
-const sidebarStyle: CSSProperties = {
-  width: "180px",
-  backgroundColor: "var(--bg-secondary)",
-  borderRight: "1px solid var(--border-subtle)",
-  display: "flex",
-  flexDirection: "column",
-  flexShrink: 0,
-  transition: "width 0.2s ease",
-};
-
-const sidebarCollapsedStyle: CSSProperties = {
-  ...sidebarStyle,
-  width: 0,
-  overflow: "hidden",
-};
-
-const sidebarHeaderStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  padding: "12px",
-  borderBottom: "1px solid var(--border-subtle)",
-};
-
-const sidebarTitleStyle: CSSProperties = {
-  fontSize: "11px",
-  fontWeight: 600,
-  color: "var(--text-tertiary)",
-  textTransform: "uppercase",
-  letterSpacing: "0.5px",
-};
-
-const sidebarCountStyle: CSSProperties = {
-  fontSize: "11px",
-  color: "var(--text-tertiary)",
-};
-
-const thumbnailListStyle: CSSProperties = {
-  flex: 1,
-  overflow: "auto",
-};
-
-const slideAreaStyle: CSSProperties = {
-  flex: 1,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  position: "relative",
-  backgroundColor: "var(--bg-tertiary)",
-  padding: "24px",
-};
-
-const navArrowBaseStyle: CSSProperties = {
-  position: "absolute",
-  top: "50%",
-  transform: "translateY(-50%)",
-  width: "40px",
-  height: "40px",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  background: "rgba(0, 0, 0, 0.4)",
-  border: "none",
-  borderRadius: "50%",
-  color: "#fff",
-  cursor: "pointer",
-  transition: "opacity 0.2s ease",
-  zIndex: 10,
-};
-
-const slideWrapperStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  maxWidth: "100%",
-  maxHeight: "100%",
-};
-
-const slideContainerStyle: CSSProperties = {
-  backgroundColor: "#fff",
-  boxShadow: "var(--shadow-lg)",
-  borderRadius: "4px",
-  overflow: "hidden",
-  maxWidth: "100%",
-  maxHeight: "100%",
-};
-
-const slideContentStyle: CSSProperties = {
-  width: "100%",
-  height: "100%",
-};
-
-const footerStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  padding: "8px 16px",
-  backgroundColor: "var(--bg-secondary)",
-  borderTop: "1px solid var(--border-subtle)",
-  fontSize: "12px",
-  color: "var(--text-tertiary)",
-  flexShrink: 0,
-};
-
-const footerCenterStyle: CSSProperties = {
-  flex: 1,
-  display: "flex",
-  justifyContent: "center",
-};
-
-const thumbnailPreviewStyle: CSSProperties = {
-  width: "100%",
-  height: "100%",
-  display: "block",
-  lineHeight: 0,
-  overflow: "hidden",
-};
-
-// =============================================================================
-// Component
-// =============================================================================
-
 /** Presentation viewer with thumbnails and slide navigation. */
 export function PptxViewerPage({ presentation, fileName, onBack, onStartSlideshow, onStartEditor }: Props) {
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-  const slideContainerRef = useRef<HTMLDivElement>(null);
-
   const { presentation: pres } = presentation;
   const totalSlides = pres.count;
   const slideSize = pres.size;
 
-  const nav = useSlideNavigation({ totalSlides });
-
-  const keyboardActions = useMemo(
-    () => ({
-      goToNext: nav.goToNext,
-      goToPrev: nav.goToPrev,
-      goToFirst: nav.goToFirst,
-      goToLast: nav.goToLast,
-      onStartSlideshow: () => onStartSlideshow(nav.currentSlide),
-      onExit: onBack,
-    }),
-    [nav, onStartSlideshow, onBack],
-  );
-  useViewerKeyboard(keyboardActions);
-
   const svgCache = useLazySvgCache(100);
 
-  const slides = useMemo((): readonly SlideWithId[] => {
-    const result: SlideWithId[] = [];
-    for (let i = 1; i <= totalSlides; i++) {
-      result.push({
-        id: `slide-${i}`,
-        slide: { shapes: [] },
-      });
-    }
-    return result;
-  }, [totalSlides]);
-
-  const renderedContent = useMemo(
-    () => renderSlideToSvg(pres.getSlide(nav.currentSlide)).svg,
-    [pres, nav.currentSlide],
+  const getSlideContent = useCallback(
+    (slideIndex: number) => {
+      const cacheKey = `slide-${slideIndex}`;
+      return svgCache.getOrGenerate(cacheKey, () => renderSlideToSvg(pres.getSlide(slideIndex)).svg);
+    },
+    [pres, svgCache],
   );
 
+  const getSlideshowContent = useCallback(
+    (slideIndex: number): SlideshowSlideContent => {
+      const slide = pres.getSlide(slideIndex);
+      const { svg } = renderSlideToSvg(slide);
+      return {
+        svg,
+        timing: slide.timing,
+        transition: slide.transition,
+      };
+    },
+    [pres],
+  );
+
+  // Load fonts when slide content changes
   const loadSvgFonts = useSvgFontLoader();
   useEffect(() => {
     if (!loadSvgFonts) {
       return;
     }
-    void loadSvgFonts(renderedContent);
-  }, [loadSvgFonts, renderedContent]);
+    // Preload fonts for visible slide
+    const svg = getSlideContent(1);
+    void loadSvgFonts(svg);
+  }, [loadSvgFonts, getSlideContent]);
 
-  const handleSlideClick = useCallback(
-    (slideId: string) => {
-      const slideNumber = parseInt(slideId.replace("slide-", ""), 10);
-      nav.setCurrentSlide(slideNumber);
+  const handleSlideChange = useCallback(
+    (slideIndex: number) => {
+      if (!loadSvgFonts) {
+        return;
+      }
+      const svg = getSlideContent(slideIndex);
+      void loadSvgFonts(svg);
     },
-    [nav],
+    [loadSvgFonts, getSlideContent],
   );
-
-  const renderThumbnail = useCallback(
-    (slideWithId: SlideWithId) => {
-      const slideNum = parseInt(slideWithId.id.replace("slide-", ""), 10);
-      const svg = svgCache.getOrGenerate(slideWithId.id, () => renderSlideToSvg(pres.getSlide(slideNum)).svg);
-      return (
-        <SvgContentRenderer
-          svg={svg}
-          width={slideSize.width}
-          height={slideSize.height}
-          mode="inner"
-          style={thumbnailPreviewStyle}
-        />
-      );
-    },
-    [pres, slideSize, svgCache],
-  );
-
-  const renderSlideContent = () => {
-    return (
-      <SvgContentRenderer
-        svg={renderedContent}
-        width={slideSize.width}
-        height={slideSize.height}
-        mode="full"
-        style={slideContentStyle}
-      />
-    );
-  };
-
-  const activeSlideId = `slide-${nav.currentSlide}`;
 
   return (
-    <div style={containerStyle}>
-      <header style={headerStyle}>
-        <div style={headerLeftStyle}>
-          <Button variant="outline" size="md" onClick={onBack}>
-            <ChevronLeftIcon size={16} />
-            Back
-          </Button>
-          <div style={headerDividerStyle} />
-          <div style={fileInfoStyle}>
-            <span style={fileNameStyle}>{fileName}</span>
-            <span style={slideCounterStyle}>
-              {nav.currentSlide} / {totalSlides}
-            </span>
-          </div>
-        </div>
-
-        <div style={headerRightStyle}>
-          <IconButton icon={<SidebarIcon size={18} />} onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
-          <Button variant="outline" size="md" onClick={onStartEditor}>
-            <EditIcon size={16} />
-            Edit
-          </Button>
-          <Button variant="primary" size="md" onClick={() => onStartSlideshow(nav.currentSlide)}>
-            <PlayIcon size={16} />
-            Present
-          </Button>
-        </div>
-      </header>
-
-      <div style={mainStyle}>
-        <aside style={isSidebarCollapsed ? sidebarCollapsedStyle : sidebarStyle}>
-          <div style={sidebarHeaderStyle}>
-            <span style={sidebarTitleStyle}>Slides</span>
-            <span style={sidebarCountStyle}>{totalSlides}</span>
-          </div>
-          <div style={thumbnailListStyle}>
-            <SlideList
-              slides={slides}
-              slideWidth={slideSize.width}
-              slideHeight={slideSize.height}
-              orientation="vertical"
-              mode="readonly"
-              activeSlideId={activeSlideId}
-              renderThumbnail={renderThumbnail}
-              onSlideClick={handleSlideClick}
-            />
-          </div>
-        </aside>
-
-        <main style={slideAreaStyle}>
-          <button
-            style={{
-              ...navArrowBaseStyle,
-              left: "16px",
-              opacity: nav.isFirst ? 0.3 : 0.7,
-              cursor: nav.isFirst ? "default" : "pointer",
-            }}
-            onClick={nav.goToPrev}
-            disabled={nav.isFirst}
-          >
-            <ChevronLeftIcon size={24} />
-          </button>
-
-          <div style={slideWrapperStyle}>
-            <div
-              ref={slideContainerRef}
-              style={{
-                ...slideContainerStyle,
-                aspectRatio: `${slideSize.width} / ${slideSize.height}`,
-              }}
-            >
-              {renderSlideContent()}
-            </div>
-          </div>
-
-          <button
-            style={{
-              ...navArrowBaseStyle,
-              right: "16px",
-              opacity: nav.isLast ? 0.3 : 0.7,
-              cursor: nav.isLast ? "default" : "pointer",
-            }}
-            onClick={nav.goToNext}
-            disabled={nav.isLast}
-          >
-            <ChevronRightIcon size={24} />
-          </button>
-        </main>
-      </div>
-
-      <footer style={footerStyle}>
-        <div>
-          {slideSize.width} x {slideSize.height}
-        </div>
-        <div style={footerCenterStyle}>
-          <ProgressBar progress={nav.progress} variant="dark" />
-        </div>
-        <KeyboardHints
-          hints={[
-            { keys: ["\u2190", "\u2192"], label: "Navigate" },
-            { keys: ["F"], label: "Present" },
-          ]}
-          variant="dark"
-        />
-      </footer>
-    </div>
+    <SlideShareViewer
+      slideCount={totalSlides}
+      slideSize={slideSize}
+      getSlideContent={getSlideContent}
+      getSlideshowContent={getSlideshowContent}
+      title={fileName}
+      enableSlideshow
+      enableFullscreen
+      syncWithUrl
+      onSlideChange={handleSlideChange}
+      onExit={onBack}
+      style={{ height: "100vh" }}
+    />
   );
 }

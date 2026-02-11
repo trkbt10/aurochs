@@ -211,3 +211,42 @@ export {
 
 // Context Menu Types
 export type { ContextMenuActions } from "./slide/context-menu/SlideContextMenu";
+
+// Viewer Components and Hooks
+export {
+  // Hooks
+  useSlideNavigation,
+  useViewerKeyboard,
+  useSlideshowMode,
+  // Primitive Components
+  SlideIndicator,
+  ProgressBar,
+  KeyboardHints,
+  NavigationControls,
+  SlidePreview,
+  // Composite Components
+  PresentationViewer,
+  EmbeddableSlide,
+  SlideShareViewer,
+  // Types - Hooks
+  type UseSlideNavigationOptions,
+  type SlideNavigationResult,
+  type ViewerKeyboardActions,
+  type UseSlideshowModeOptions,
+  type SlideshowModeResult,
+  // Types - Primitives
+  type SlideIndicatorProps,
+  type SlideIndicatorVariant,
+  type ProgressBarProps,
+  type ProgressBarVariant,
+  type KeyboardHintsProps,
+  type KeyboardHintsVariant,
+  type KeyboardHint,
+  type NavigationControlsProps,
+  type NavigationControlsVariant,
+  type SlidePreviewProps,
+  // Types - Composites
+  type PresentationViewerProps,
+  type EmbeddableSlideProps,
+  type SlideShareViewerProps,
+} from "./viewer";

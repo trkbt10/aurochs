@@ -98,6 +98,7 @@ export {
   SendBackwardIcon,
   SendToBackIcon,
   SettingsIcon,
+  ShareIcon,
   ShieldIcon,
   SidebarIcon,
   StarIcon,

@@ -1,5 +1,6 @@
 /** @file App-specific UI component exports */
 export { GitHubIcon, LogoIcon } from "./icons";
-export { KeyboardHints } from "./KeyboardHints";
-export { ProgressBar } from "./ProgressBar";
-export { SlideIndicator } from "./SlideIndicator";
+
+// Re-export viewer components from @aurochs-ui/pptx-editor
+// These are provided for backwards compatibility - prefer importing directly from @aurochs-ui/pptx-editor
+export { KeyboardHints, ProgressBar, SlideIndicator } from "@aurochs-ui/pptx-editor";
