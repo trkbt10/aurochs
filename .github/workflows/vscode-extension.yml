@@ -31,7 +31,7 @@ jobs:
         run: test -f publish/aurochs-office-viewer/dist/extension.js
 
       - name: Package VS Code Extension
-        run: cd publish/aurochs-office-viewer && bun run package
+        run: cd publish/aurochs-office-viewer && npx @vscode/vsce package --no-dependencies
 
       - name: Upload VS Code Extension artifact
         uses: actions/upload-artifact@v4
