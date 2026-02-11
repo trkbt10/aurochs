@@ -1,8 +1,10 @@
-name: CI
+name: npm package
 
 on:
   push:
     branches: [main]
+    tags:
+      - 'v*'
   pull_request:
     branches: [main]
 
@@ -70,11 +72,34 @@ jobs:
       - name: Build CLI
         run: bun run --cwd packages/@aurochs-build/aurochs build:cli
 
-      - name: Build VS Code Extension
-        run: bun run --cwd packages/@aurochs-build/vscode-office-viewer build
-
       - name: Verify build outputs
         run: |
           test -f publish/aurochs/dist/pptx/renderer/svg/index.js
           test -f publish/aurochs/dist/cli.js
-          test -f publish/aurochs-office-viewer/dist/extension.js
+
+      - name: Upload npm package artifact
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-package
+          path: publish/aurochs/
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [lint, typecheck, test, build]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-package
+          path: publish/aurochs/
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Publish to npm
+        run: cd publish/aurochs && npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

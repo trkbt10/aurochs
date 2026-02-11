@@ -1,9 +1,12 @@
-name: Release
+name: VS Code Extension
 
 on:
   push:
+    branches: [main]
     tags:
       - 'v*'
+  pull_request:
+    branches: [main]
 
 jobs:
   build:
@@ -18,50 +21,25 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Build npm package
-        run: bun run --cwd packages/@aurochs-build/aurochs build
-
-      - name: Build CLI
-        run: bun run --cwd packages/@aurochs-build/aurochs build:cli
-
       - name: Build VS Code Extension
         run: bun run --cwd packages/@aurochs-build/vscode-office-viewer build
 
+      - name: Verify build output
+        run: test -f publish/aurochs-office-viewer/dist/extension.js
+
       - name: Package VS Code Extension
+        if: startsWith(github.ref, 'refs/tags/v')
         run: cd publish/aurochs-office-viewer && bun run package
 
-      - name: Upload npm package artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: npm-package
-          path: publish/aurochs/
-
       - name: Upload VS Code Extension artifact
+        if: startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-artifact@v4
         with:
           name: vscode-extension
           path: publish/aurochs-office-viewer/*.vsix
 
-  publish-npm:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: npm-package
-          path: publish/aurochs/
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          registry-url: 'https://registry.npmjs.org'
-
-      - name: Publish to npm
-        run: cd publish/aurochs && npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-  publish-vscode:
+  publish:
+    if: startsWith(github.ref, 'refs/tags/v')
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -75,8 +53,9 @@ jobs:
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
 
-  create-release:
-    needs: [publish-npm, publish-vscode]
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: publish
     runs-on: ubuntu-latest
     permissions:
       contents: write
