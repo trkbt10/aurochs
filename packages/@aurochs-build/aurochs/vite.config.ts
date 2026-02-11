@@ -14,6 +14,8 @@ import dts from "vite-plugin-dts";
  * 将来追加時はこの配列に追加するだけ
  */
 const entries = {
+  // PPTX Parser
+  "pptx/parser/index": resolve(__dirname, "../../@aurochs-office/pptx/src/index.ts"),
   // PPTX Renderer
   "pptx/renderer/svg/index": resolve(__dirname, "../../@aurochs-renderer/pptx/src/svg/index.ts"),
   "pptx/renderer/ascii/index": resolve(__dirname, "../../@aurochs-renderer/pptx/src/ascii/index.ts"),
@@ -28,6 +30,7 @@ export default defineConfig({
       outDir: resolve(__dirname, "../../../publish/aurochs/dist"),
       tsconfigPath: resolve(__dirname, "../../../tsconfig.json"),
       include: [
+        resolve(__dirname, "../../@aurochs-office/pptx/src/**"),
         resolve(__dirname, "../../@aurochs-renderer/pptx/src/svg/**"),
         resolve(__dirname, "../../@aurochs-renderer/pptx/src/ascii/**"),
         resolve(__dirname, "../../@aurochs-renderer/pptx/src/mermaid/**"),

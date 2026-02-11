@@ -79,6 +79,27 @@ aurochs pptx patch spec.json           # Patch existing presentation
 
 ## Library API
 
+### `aurochs/pptx/parser`
+
+Open and parse PPTX files.
+
+```ts
+import { openPresentation } from "aurochs/pptx/parser";
+
+const pres = openPresentation(zipFile);
+
+console.log(pres.count);        // number of slides
+console.log(pres.size);         // { width, height } in pixels
+
+for (const slide of pres.slides()) {
+  // slide.content, slide.layout, slide.theme, ...
+}
+```
+
+Exports:
+- `openPresentation(file, options?)` — parse PPTX and return `Presentation`
+- Types: `Presentation`, `Slide`, `SlideInfo`, `PresentationFile`, `SlideSize`
+
 ### `aurochs/pptx/renderer/svg`
 
 Render slides to SVG strings.

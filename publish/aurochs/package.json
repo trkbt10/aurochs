@@ -10,6 +10,10 @@
     "dist"
   ],
   "exports": {
+    "./pptx/parser": {
+      "types": "./dist/@aurochs-office/pptx/src/index.d.ts",
+      "import": "./dist/pptx/parser/index.js"
+    },
     "./pptx/renderer/svg": {
       "types": "./dist/@aurochs-renderer/pptx/src/svg/index.d.ts",
       "import": "./dist/pptx/renderer/svg/index.js"
