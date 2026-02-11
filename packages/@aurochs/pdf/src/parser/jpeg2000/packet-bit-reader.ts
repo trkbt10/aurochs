@@ -2,93 +2,72 @@
  * @file src/pdf/parser/jpeg2000/packet-bit-reader.ts
  */
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /** Bit-level reader for JPEG 2000 packet headers. */
-export class PacketBitReader {
-  private readonly data: Uint8Array;
-  private bytePos: number;
-  private bitPos: number;
+export type PacketBitReader = Readonly<{
+  readonly offset: number;
+  readBit(): 0 | 1;
+  readBits(n: number): number;
+  alignToByte(): void;
+  readBytes(n: number): Uint8Array;
+}>;
 
-  constructor(data: Uint8Array) {
-    if (!data) {throw new Error("data is required");}
-    this.data = data;
-    this.bytePos = 0;
-    this.bitPos = 0;
-  }
+/**
+ * Creates a bit-level reader for JPEG 2000 packet headers.
+ *
+ * The reader provides bit-by-bit access to the packet header data,
+ * supporting both individual bit reads and multi-bit value reads.
+ */
+export function createPacketBitReader(data: Uint8Array): PacketBitReader {
+  if (!data) {throw new Error("data is required");}
 
-  get offset(): number {
-    return this.bytePos;
-  }
+  // Bit reader state: current byte position and bit offset within the byte
+  const readerState = { bytePos: 0, bitPos: 0 };
 
-  readBit(): 0 | 1 {
-    if (this.bytePos >= this.data.length) {
+  function readBit(): 0 | 1 {
+    if (readerState.bytePos >= data.length) {
       throw new Error("PacketBitReader: out of data");
     }
-    const b = this.data[this.bytePos] ?? 0;
-    const bit = (b >> (7 - this.bitPos)) & 1;
-    this.bitPos += 1;
-    if (this.bitPos >= 8) {
-      this.bitPos = 0;
-      this.bytePos += 1;
+    const b = data[readerState.bytePos] ?? 0;
+    const bit = (b >> (7 - readerState.bitPos)) & 1;
+    readerState.bitPos += 1;
+    if (readerState.bitPos >= 8) {
+      readerState.bitPos = 0;
+      readerState.bytePos += 1;
     }
     return bit as 0 | 1;
   }
 
-  readBits(n: number): number {
+  function readBits(n: number): number {
     if (!Number.isFinite(n) || n < 0) {throw new Error(`readBits: n must be >= 0 (got ${n})`);}
-    // eslint-disable-next-line no-restricted-syntax
-    let v = 0;
-    for (let i = 0; i < n; i += 1) {
-      v = (v << 1) | this.readBit();
-    }
+    const v = Array.from({ length: n }, () => readBit()).reduce<number>((acc, bit) => (acc << 1) | bit, 0);
     return v >>> 0;
   }
 
-  alignToByte(): void {
-    if (this.bitPos === 0) {return;}
-    this.bitPos = 0;
-    this.bytePos += 1;
+  function alignToByte(): void {
+    if (readerState.bitPos === 0) {return;}
+    readerState.bitPos = 0;
+    readerState.bytePos += 1;
   }
 
-  readBytes(n: number): Uint8Array {
-    this.alignToByte();
+  function readBytes(n: number): Uint8Array {
+    alignToByte();
     if (!Number.isFinite(n) || n < 0) {throw new Error(`readBytes: n must be >= 0 (got ${n})`);}
-    const start = this.bytePos;
+    const start = readerState.bytePos;
     const end = start + n;
-    if (end > this.data.length) {
-      throw new Error(`PacketBitReader: readBytes out of range (need ${end}, have ${this.data.length})`);
+    if (end > data.length) {
+      throw new Error(`PacketBitReader: readBytes out of range (need ${end}, have ${data.length})`);
     }
-    this.bytePos = end;
-    return this.data.slice(start, end);
+    readerState.bytePos = end;
+    return data.slice(start, end);
   }
-}
 
+  return {
+    get offset() {
+      return readerState.bytePos;
+    },
+    readBit,
+    readBits,
+    alignToByte,
+    readBytes,
+  };
+}

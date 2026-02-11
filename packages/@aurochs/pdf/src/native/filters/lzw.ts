@@ -72,6 +72,24 @@ function readBitsMSB(r: BitReader, n: number): { value: number | null; next: Bit
   return { value: state.value, next: { bytes: r.bytes, bitPos: r.bitPos + n } };
 }
 
+function buildEntry(
+  dict: Map<number, Uint8Array>,
+  code: number,
+  state: { readonly nextCode: number; readonly prev: Uint8Array | null },
+): Uint8Array {
+  const direct = dict.get(code);
+  if (direct) {return direct;}
+  // KwKwK special case: code is nextCode, meaning current = prev + first(prev)
+  if (code === state.nextCode && state.prev) {
+    const first = state.prev[0] ?? 0;
+    const combined: Uint8Array = new Uint8Array(state.prev.length + 1);
+    combined.set(state.prev, 0);
+    combined[state.prev.length] = first;
+    return combined;
+  }
+  throw new Error(`LZWDecode: invalid code ${code}`);
+}
+
 function shouldIncreaseCodeSize(nextCode: number, codeSize: number, earlyChange: 0 | 1): boolean {
   // PDF LZW is MSB-first and supports EarlyChange (default 1).
   // With EarlyChange=1, increase code size one code earlier than EarlyChange=0.
@@ -132,19 +150,7 @@ export function decodeLzw(encoded: Uint8Array, options: LzwDecodeOptions = {}): 
       break;
     }
 
-    const entry: Uint8Array = (() => {
-      const direct = dict.get(code);
-      if (direct) {return direct;}
-      // KwKwK special case: code is nextCode, meaning current = prev + first(prev)
-      if (code === state.nextCode && state.prev) {
-        const first = state.prev[0] ?? 0;
-        const combined: Uint8Array = new Uint8Array(state.prev.length + 1);
-        combined.set(state.prev, 0);
-        combined[state.prev.length] = first;
-        return combined;
-      }
-      throw new Error(`LZWDecode: invalid code ${code}`);
-    })();
+    const entry: Uint8Array = buildEntry(dict, code, state);
 
     for (const b of entry) {out.push(b);}
 

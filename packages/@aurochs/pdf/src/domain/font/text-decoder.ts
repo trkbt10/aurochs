@@ -12,42 +12,41 @@ function bytesToString(bytes: readonly number[]): string {
   return String.fromCharCode(...bytes);
 }
 
+function scoreCharacter(c: number): number {
+  // Tab, newline, carriage return
+  if (c === 0x09 || c === 0x0a || c === 0x0d) {
+    return 1;
+  }
+  // Space
+  if (c === 0x20) {
+    return 2;
+  }
+  // Control characters
+  if (c < 0x20 || c === 0x7f) {
+    return -3;
+  }
+  // Digits
+  if (c >= 0x30 && c <= 0x39) {
+    return 1;
+  }
+  // Letters
+  if ((c >= 0x41 && c <= 0x5a) || (c >= 0x61 && c <= 0x7a)) {
+    return 1;
+  }
+  // Common code/text punctuation
+  if ("=()[]{}.,;:'\"_-+/\\<>".includes(String.fromCharCode(c))) {
+    return 1;
+  }
+  // Other printable ASCII: neutral
+  return 0;
+}
+
 function scoreAsciiQuality(s: string): number {
   if (s.length === 0) {
     return 0;
   }
-  // eslint-disable-next-line no-restricted-syntax
-  let score = 0;
-  for (let i = 0; i < s.length; i++) {
-    const c = s.charCodeAt(i);
-    if (c === 0x09 || c === 0x0a || c === 0x0d) {
-      score += 1;
-      continue;
-    }
-    if (c === 0x20) {
-      score += 2;
-      continue;
-    }
-    if (c < 0x20 || c === 0x7f) {
-      score -= 3;
-      continue;
-    }
-    if (c >= 0x30 && c <= 0x39) {
-      score += 1;
-      continue;
-    }
-    if ((c >= 0x41 && c <= 0x5a) || (c >= 0x61 && c <= 0x7a)) {
-      score += 1;
-      continue;
-    }
-    // Common code/text punctuation
-    if ("=()[]{}.,;:'\"_-+/\\<>".includes(String.fromCharCode(c))) {
-      score += 1;
-      continue;
-    }
-    // Other printable ASCII: neutral
-  }
-  return score / s.length;
+  const totalScore = Array.from(s).reduce((acc, char) => acc + scoreCharacter(char.charCodeAt(0)), 0);
+  return totalScore / s.length;
 }
 
 function maybeNormalizeSingleByteRawText(rawText: string): string {
@@ -67,94 +66,72 @@ function maybeNormalizeSingleByteRawText(rawText: string): string {
 
   // Candidate 2: if the byte stream looks like UTF-16BE-ish (high bytes near 0), take low bytes.
   if (bytes.length >= 6 && bytes.length % 2 === 0) {
-    // eslint-disable-next-line no-restricted-syntax
-    let hiNearZero = 0;
-    // eslint-disable-next-line no-restricted-syntax
-    let loAscii = 0;
     const pairs = bytes.length / 2;
-    for (let i = 0; i < bytes.length; i += 2) {
-      const hi = bytes[i]!;
-      const lo = bytes[i + 1]!;
-      if (hi <= 0x01) {
-        hiNearZero += 1;
-      }
-      if (lo >= 0x03 && lo <= 0x7e) {
-        loAscii += 1;
-      }
-    }
+    const bytePairs = Array.from({ length: pairs }, (_, i) => ({
+      hi: bytes[i * 2]!,
+      lo: bytes[i * 2 + 1]!,
+    }));
+    const hiNearZero = bytePairs.filter(({ hi }) => hi <= 0x01).length;
+    const loAscii = bytePairs.filter(({ lo }) => lo >= 0x03 && lo <= 0x7e).length;
     if (hiNearZero / pairs >= 0.7 && loAscii / pairs >= 0.7) {
-      const lows: number[] = [];
-      for (let i = 1; i < bytes.length; i += 2) {
-        lows.push(bytes[i]!);
-      }
+      const lows = bytePairs.map(({ lo }) => lo);
       candidates.push(bytesToString(lows));
     }
   }
 
   // Candidate 3: some PDFs obfuscate ASCII by shifting bytes (+3). If shifting back improves
   // readability, prefer it. Apply on each candidate and pick the best.
-  const shifted: string[] = [];
-  for (const c of candidates) {
-    const b2 = new Array<number>(c.length);
-    for (let i = 0; i < c.length; i++) {
-      const b = c.charCodeAt(i) & 0xff;
-      b2[i] = b >= 3 ? b - 3 : 0;
-    }
-    shifted.push(bytesToString(b2));
-  }
+  const shifted = candidates.map((c) => {
+    const b2 = Array.from(c).map((char) => {
+      const b = char.charCodeAt(0) & 0xff;
+      return b >= 3 ? b - 3 : 0;
+    });
+    return bytesToString(b2);
+  });
 
   const sanitizeXmlText = (s: string): string => {
-    const out: string[] = [];
-    for (let i = 0; i < s.length; i++) {
-      const code = s.charCodeAt(i);
-      if (code === 0x00) {
-        continue;
-      }
-      // XML 1.0 forbids most C0 control characters inside text nodes.
-      // Keep \t/\n/\r as-is for readability; replace other controls with spaces.
-      const isForbidden =
-        (code >= 0x01 && code <= 0x08) ||
-        code === 0x0b ||
-        code === 0x0c ||
-        (code >= 0x0e && code <= 0x1f);
-      out.push(isForbidden ? " " : s[i]!);
-    }
-    return out.join("");
+    return Array.from(s)
+      .filter((char) => char.charCodeAt(0) !== 0x00)
+      .map((char) => {
+        const code = char.charCodeAt(0);
+        // XML 1.0 forbids most C0 control characters inside text nodes.
+        // Keep \t/\n/\r as-is for readability; replace other controls with spaces.
+        const isForbidden =
+          (code >= 0x01 && code <= 0x08) ||
+          code === 0x0b ||
+          code === 0x0c ||
+          (code >= 0x0e && code <= 0x1f);
+        return isForbidden ? " " : char;
+      })
+      .join("");
   };
 
   const all = [...candidates, ...shifted].map((s) => sanitizeXmlText(s));
-  // eslint-disable-next-line no-restricted-syntax
-  let best = sanitizeXmlText(rawText);
-  // eslint-disable-next-line no-restricted-syntax
-  let bestScore = scoreAsciiQuality(best);
-  for (const s of all) {
+  const sanitizedRaw = sanitizeXmlText(rawText);
+  const initial = { best: sanitizedRaw, score: scoreAsciiQuality(sanitizedRaw) };
+  const result = all.reduce((acc, s) => {
     const score = scoreAsciiQuality(s);
-    if (score > bestScore + 0.1) {
-      best = s;
-      bestScore = score;
-    }
-  }
+    return score > acc.score + 0.1 ? { best: s, score } : acc;
+  }, initial);
 
-  return best;
+  return result.best;
 }
 
 function sanitizeDecodedText(decoded: string): string {
-  const out: string[] = [];
-  for (let i = 0; i < decoded.length; i++) {
-    const code = decoded.charCodeAt(i);
-    if (code === 0x00) {
-      continue;
-    }
-    const isKeepWhitespace = code === 0x09 || code === 0x0a || code === 0x0d;
-    const isForbiddenControl =
-      (code >= 0x01 && code <= 0x08) ||
-      code === 0x0b ||
-      code === 0x0c ||
-      (code >= 0x0e && code <= 0x1f) ||
-      code === 0x7f;
-    out.push(isForbiddenControl && !isKeepWhitespace ? " " : decoded[i]!);
-  }
-  return out.join("");
+  return Array.from(decoded)
+    .filter((char) => char.charCodeAt(0) !== 0x00)
+    .map((char) => {
+      const code = char.charCodeAt(0);
+      const isKeepWhitespace = code === 0x09 || code === 0x0a || code === 0x0d;
+      const isForbiddenControl =
+        (code >= 0x01 && code <= 0x08) ||
+        code === 0x0b ||
+        code === 0x0c ||
+        (code >= 0x0e && code <= 0x1f) ||
+        code === 0x7f;
+      return isForbiddenControl && !isKeepWhitespace ? " " : char;
+    })
+    .join("");
 }
 
 /**

@@ -19,12 +19,9 @@ export type SaslprepOptions = Readonly<{
 
 function inRange(value: number, rangeGroup: readonly number[]): boolean {
   if (value < (rangeGroup[0] ?? 0)) {return false;}
-  // eslint-disable-next-line no-restricted-syntax
-  let startRange = 0;
-  // eslint-disable-next-line no-restricted-syntax
-  let endRange = rangeGroup.length / 2;
-  while (startRange <= endRange) {
-    const middleRange = Math.floor((startRange + endRange) / 2);
+  const bounds = { start: 0, end: rangeGroup.length / 2 };
+  while (bounds.start <= bounds.end) {
+    const middleRange = Math.floor((bounds.start + bounds.end) / 2);
     const arrayIndex = middleRange * 2;
     const start = rangeGroup[arrayIndex] ?? 0;
     const end = rangeGroup[arrayIndex + 1] ?? 0;
@@ -32,9 +29,9 @@ function inRange(value: number, rangeGroup: readonly number[]): boolean {
       return true;
     }
     if (value > end) {
-      startRange = middleRange + 1;
+      bounds.start = middleRange + 1;
     } else {
-      endRange = middleRange - 1;
+      bounds.end = middleRange - 1;
     }
   }
   return false;

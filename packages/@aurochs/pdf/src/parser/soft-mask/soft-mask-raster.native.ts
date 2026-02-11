@@ -105,34 +105,36 @@ function cubicAt(points: readonly [number, number, number, number], t: number): 
 function flattenSubpaths(ops: ParsedPath["operations"], ctm: PdfMatrix): readonly FlattenedSubpath[] {
   const subpaths: Array<{ points: PdfPoint[]; closed: boolean }> = [];
 
-  // eslint-disable-next-line no-restricted-syntax
-  let current: PdfPoint = { x: 0, y: 0 };
-  // eslint-disable-next-line no-restricted-syntax
-  let currentSubpath: { points: PdfPoint[]; closed: boolean } | null = null;
+  // Tracks current position as we process path operations; updated by moveTo/lineTo/curveTo
+  // Also accumulates points for the current subpath; reset on moveTo/closePath
+  const pathState: { current: PdfPoint; currentSubpath: { points: PdfPoint[]; closed: boolean } | null } = {
+    current: { x: 0, y: 0 },
+    currentSubpath: null,
+  };
 
   const finish = (closed: boolean): void => {
-    if (!currentSubpath || currentSubpath.points.length === 0) {return;}
-    subpaths.push({ points: currentSubpath.points, closed });
-    currentSubpath = null;
+    if (!pathState.currentSubpath || pathState.currentSubpath.points.length === 0) {return;}
+    subpaths.push({ points: pathState.currentSubpath.points, closed });
+    pathState.currentSubpath = null;
   };
 
   const startNew = (p: PdfPoint): void => {
     finish(false);
-    currentSubpath = { points: [transformPoint(p, ctm)], closed: false };
-    current = p;
+    pathState.currentSubpath = { points: [transformPoint(p, ctm)], closed: false };
+    pathState.current = p;
   };
 
   const lineTo = (p: PdfPoint): void => {
-    if (!currentSubpath) {
-      startNew(current);
+    if (!pathState.currentSubpath) {
+      startNew(pathState.current);
     }
-    currentSubpath!.points.push(transformPoint(p, ctm));
-    current = p;
+    pathState.currentSubpath!.points.push(transformPoint(p, ctm));
+    pathState.current = p;
   };
 
   const flattenCubic = (cp1: PdfPoint, cp2: PdfPoint, end: PdfPoint): void => {
     // Fixed-step subdivision; good enough for mask rasterization.
-    const p0 = current;
+    const p0 = pathState.current;
     const steps = 20;
     for (let i = 1; i <= steps; i += 1) {
       const t = i / steps;
@@ -141,7 +143,7 @@ function flattenSubpaths(ops: ParsedPath["operations"], ctm: PdfMatrix): readonl
         y: cubicAt([p0.y, cp1.y, cp2.y, end.y], t),
       });
     }
-    current = end;
+    pathState.current = end;
   };
 
   for (const op of ops) {
@@ -156,7 +158,7 @@ function flattenSubpaths(ops: ParsedPath["operations"], ctm: PdfMatrix): readonl
         flattenCubic(op.cp1, op.cp2, op.end);
         break;
       case "curveToV":
-        flattenCubic(current, op.cp2, op.end);
+        flattenCubic(pathState.current, op.cp2, op.end);
         break;
       case "curveToY":
         flattenCubic(op.cp1, op.end, op.end);
@@ -185,8 +187,8 @@ function flattenSubpaths(ops: ParsedPath["operations"], ctm: PdfMatrix): readonl
 
 function pointInPolyEvenOdd(x: number, y: number, poly: Poly): boolean {
   if (poly.length < 2) {return false;}
-  // eslint-disable-next-line no-restricted-syntax
-  let inside = false;
+  // Toggled each time the ray crosses an edge; final value indicates inside/outside
+  const hitState = { inside: false };
 
   for (let i = 0, j = poly.length - 1; i < poly.length; j = i, i += 1) {
     const pi = poly[i]!;
@@ -208,23 +210,18 @@ function pointInPolyEvenOdd(x: number, y: number, poly: Poly): boolean {
     const t = (y - yi) / dy;
     const xInt = xi + (xj - xi) * t;
     if (x < xInt) {
-      inside = !inside;
+      hitState.inside = !hitState.inside;
     }
   }
 
-  return inside;
+  return hitState.inside;
 }
 
 function pointInSubpathsEvenOdd(x: number, y: number, subpaths: readonly FlattenedSubpath[]): boolean {
-  // Parity across all subpaths.
-  // eslint-disable-next-line no-restricted-syntax
-  let inside = false;
-  for (const s of subpaths) {
-    if (pointInPolyEvenOdd(x, y, s.points)) {
-      inside = !inside;
-    }
-  }
-  return inside;
+  // Parity across all subpaths: toggled for each subpath containing the point
+  return subpaths.reduce((inside, s) => {
+    return pointInPolyEvenOdd(x, y, s.points) ? !inside : inside;
+  }, false);
 }
 
 function isLeft(a: PdfPoint, b: PdfPoint, p: PdfPoint): number {
@@ -234,33 +231,26 @@ function isLeft(a: PdfPoint, b: PdfPoint, p: PdfPoint): number {
 function windingNumber(x: number, y: number, poly: Poly): number {
   if (poly.length < 2) {return 0;}
   const p: PdfPoint = { x, y };
-  // eslint-disable-next-line no-restricted-syntax
-  let winding = 0;
-
-  for (let i = 0; i < poly.length; i += 1) {
+  // Sum crossings: +1 for upward edges crossing left-to-right, -1 for downward
+  return Array.from({ length: poly.length }, (_, i): number => {
     const a = poly[i]!;
     const b = poly[(i + 1) % poly.length]!;
 
     if (a.y <= y) {
       if (b.y > y && isLeft(a, b, p) > 0) {
-        winding += 1;
+        return 1;
       }
     } else {
       if (b.y <= y && isLeft(a, b, p) < 0) {
-        winding -= 1;
+        return -1;
       }
     }
-  }
-
-  return winding;
+    return 0;
+  }).reduce((sum, v) => sum + v, 0);
 }
 
 function pointInSubpathsNonZero(x: number, y: number, subpaths: readonly FlattenedSubpath[]): boolean {
-  // eslint-disable-next-line no-restricted-syntax
-  let winding = 0;
-  for (const s of subpaths) {
-    winding += windingNumber(x, y, s.points);
-  }
+  const winding = subpaths.reduce((sum, s) => sum + windingNumber(x, y, s.points), 0);
   return winding !== 0;
 }
 
@@ -283,9 +273,7 @@ function distancePointToSegmentRound(p: PdfPoint, a: PdfPoint, b: PdfPoint): num
     const dy = p.y - a.y;
     return Math.sqrt(dx * dx + dy * dy);
   }
-  // eslint-disable-next-line no-restricted-syntax
-  let t = (wx * vx + wy * vy) / denom;
-  t = Math.max(0, Math.min(1, t));
+  const t = Math.max(0, Math.min(1, (wx * vx + wy * vy) / denom));
   const projX = a.x + t * vx;
   const projY = a.y + t * vy;
   const dx = p.x - projX;
@@ -337,25 +325,22 @@ function pointInStroke(p: PdfPoint, subpaths: readonly FlattenedSubpath[], strok
     return distancePointToSegmentButt(p, a, b);
   };
 
-  // eslint-disable-next-line no-restricted-syntax
-  let minDist = Infinity;
+  // Check each segment; return early if any segment is within stroke width
   for (const s of subpaths) {
     const pts = s.points;
     if (pts.length < 2) {continue;}
     for (let i = 1; i < pts.length; i += 1) {
       const a = pts[i - 1]!;
       const b = pts[i]!;
-      minDist = Math.min(minDist, distancePointToSegment(p, a, b));
-      if (minDist <= halfW) {return true;}
+      if (distancePointToSegment(p, a, b) <= halfW) {return true;}
     }
     if (s.closed) {
       const a = pts[pts.length - 1]!;
       const b = pts[0]!;
-      minDist = Math.min(minDist, distancePointToSegment(p, a, b));
-      if (minDist <= halfW) {return true;}
+      if (distancePointToSegment(p, a, b) <= halfW) {return true;}
     }
   }
-  return minDist <= halfW;
+  return false;
 }
 
 function rasterizeSoftMaskedFillPathInternal(parsed: ParsedPath): PdfImage | null {

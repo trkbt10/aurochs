@@ -8,11 +8,7 @@ import { sha384, sha512 } from "./sha512";
 import { aes128CbcEncryptNoPadWithIv } from "./aes";
 
 function mod3OfBigEndian(bytes: Uint8Array): 0 | 1 | 2 {
-  // eslint-disable-next-line no-restricted-syntax
-  let r = 0;
-  for (const b of bytes) {
-    r = (r * 256 + (b & 0xff)) % 3;
-  }
+  const r = Array.from(bytes).reduce((acc, b) => (acc * 256 + (b & 0xff)) % 3, 0);
   return r as 0 | 1 | 2;
 }
 
@@ -48,32 +44,32 @@ export function computeR6HardenedHash(args: {
 
   const u = args.userKey ?? new Uint8Array(0);
 
-  // eslint-disable-next-line no-restricted-syntax
-  let k: Uint8Array = sha256(concatBytes(args.passwordBytes, args.salt, u));
-  // eslint-disable-next-line no-restricted-syntax
-  let e: Uint8Array = new Uint8Array(0);
+  const state = {
+    k: sha256(concatBytes(args.passwordBytes, args.salt, u)) as Uint8Array,
+    e: new Uint8Array(0) as Uint8Array,
+  };
 
   for (let i = 0; ; i += 1) {
-    const k1 = concatBytes(args.passwordBytes, k, u);
+    const k1 = concatBytes(args.passwordBytes, state.k, u);
     const k1Repeated = repeatBytes(k1, 64);
-    const key = k.subarray(0, 16);
-    const iv = k.subarray(16, 32);
-    e = aes128CbcEncryptNoPadWithIv(key, iv, k1Repeated);
+    const key = state.k.subarray(0, 16);
+    const iv = state.k.subarray(16, 32);
+    state.e = aes128CbcEncryptNoPadWithIv(key, iv, k1Repeated);
 
-    const selector = mod3OfBigEndian(e.subarray(0, 16));
+    const selector = mod3OfBigEndian(state.e.subarray(0, 16));
     if (selector === 0) {
-      k = sha256(e);
+      state.k = sha256(state.e);
     } else if (selector === 1) {
-      k = sha384(e);
+      state.k = sha384(state.e);
     } else {
-      k = sha512(e);
+      state.k = sha512(state.e);
     }
 
-    const last = e[e.length - 1] ?? 0;
+    const last = state.e[state.e.length - 1] ?? 0;
     if (i >= 63 && last <= (i - 31)) {
       break;
     }
   }
 
-  return k.subarray(0, 32);
+  return state.k.subarray(0, 32);
 }

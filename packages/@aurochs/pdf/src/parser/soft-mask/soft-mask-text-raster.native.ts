@@ -187,20 +187,16 @@ function computeOrientedBoxForRun(run: TextRun, fontMappings: FontMappings): Ori
     { x: start.x + nx * maxN, y: start.y + ny * maxN },
   ];
 
-  // eslint-disable-next-line no-restricted-syntax
-  let minX = Infinity;
-  // eslint-disable-next-line no-restricted-syntax
-  let minY = Infinity;
-  // eslint-disable-next-line no-restricted-syntax
-  let maxX = -Infinity;
-  // eslint-disable-next-line no-restricted-syntax
-  let maxY = -Infinity;
-  for (const c of corners) {
-    minX = Math.min(minX, c.x);
-    minY = Math.min(minY, c.y);
-    maxX = Math.max(maxX, c.x);
-    maxY = Math.max(maxY, c.y);
-  }
+  const bounds = corners.reduce(
+    (acc, c) => ({
+      minX: Math.min(acc.minX, c.x),
+      minY: Math.min(acc.minY, c.y),
+      maxX: Math.max(acc.maxX, c.x),
+      maxY: Math.max(acc.maxY, c.y),
+    }),
+    { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity },
+  );
+  const { minX, minY, maxX, maxY } = bounds;
   if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {return null;}
 
   return {

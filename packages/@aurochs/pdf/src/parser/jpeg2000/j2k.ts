@@ -5,9 +5,9 @@
  */
 
 import { readU16BE, readU32BE } from "./bytes";
-import { PacketBitReader } from "./packet-bit-reader";
-import { TagTree } from "./tag-tree";
-import { MqDecoder } from "./mq-decoder";
+import { createPacketBitReader, type PacketBitReader } from "./packet-bit-reader";
+import { createTagTree } from "./tag-tree";
+import { createMqDecoder } from "./mq-decoder";
 import { tier1DecodeLlCodeblock, TIER1_NUM_CONTEXTS } from "./tier1";
 
 type CodestreamHeader = Readonly<{
@@ -101,7 +101,7 @@ export function decodeJ2kCodestreamToRgb(
   const tileBytes = extractSingleTilePart(codestream);
   const out = new Uint8Array(header.width * header.height * header.components);
 
-  const br = new PacketBitReader(tileBytes);
+  const br = createPacketBitReader(tileBytes);
   // LRCP, 1 layer, 1 resolution: packet order is component-major.
   for (let comp = 0; comp < header.components; comp += 1) {
     // Packet present bit
@@ -111,8 +111,8 @@ export function decodeJ2kCodestreamToRgb(
     }
 
     // 1 codeblock: decode inclusion + imsbtree
-    const incl = new TagTree(1, 1);
-    const imsbt = new TagTree(1, 1);
+    const incl = createTagTree(1, 1);
+    const imsbt = createTagTree(1, 1);
     const inclVal = incl.decode(br, 0, 0);
     const included = inclVal <= 0;
     if (!included) {
@@ -121,10 +121,10 @@ export function decodeJ2kCodestreamToRgb(
     const numZeroBitplanes = imsbt.decode(br, 0, 999);
 
     const numPasses = readNPasses(br);
-    // eslint-disable-next-line no-restricted-syntax
-    let lblock = 3;
-    while (br.readBit() === 1) {lblock += 1;}
-    const lenBits = lblock + floorLog2(numPasses);
+    // Lblock starts at 3 and increments for each 1-bit read
+    const lblockState = { value: 3 };
+    while (br.readBit() === 1) {lblockState.value += 1;}
+    const lenBits = lblockState.value + floorLog2(numPasses);
     const segLen = br.readBits(lenBits);
 
     const codeblockData = br.readBytes(segLen);
@@ -136,7 +136,7 @@ export function decodeJ2kCodestreamToRgb(
     if (startBitplane < 0) {throw new Error("JPXDecode: invalid start bitplane");}
 
     // Our subset only supports a single codeblock covering the whole component.
-    const mq = new MqDecoder(codeblockData, { numContexts: TIER1_NUM_CONTEXTS });
+    const mq = createMqDecoder(codeblockData, { numContexts: TIER1_NUM_CONTEXTS });
     const decoded = tier1DecodeLlCodeblock(mq, {
       width: header.width,
       height: header.height,
@@ -149,10 +149,7 @@ export function decodeJ2kCodestreamToRgb(
     for (let i = 0; i < header.width * header.height; i += 1) {
       // Tier-1 produces signed coefficients stored as fixed-point (×2).
       const s = (decoded.data[i] ?? 0) >> 1;
-      // eslint-disable-next-line no-restricted-syntax
-      let v = s + shift;
-      if (v < 0) {v = 0;}
-      if (v > 255) {v = 255;}
+      const v = Math.max(0, Math.min(255, s + shift));
       out[i * header.components + comp] = v & 0xff;
     }
   }
@@ -165,28 +162,27 @@ function parseMainHeader(bytes: Uint8Array): CodestreamHeader {
   const soc = readMarker(bytes, 0);
   if (soc !== 0xff4f) {throw new Error("J2K: missing SOC");}
 
-  // eslint-disable-next-line no-restricted-syntax
-  let pos = 2;
-  // eslint-disable-next-line no-restricted-syntax
-  let siz: { width: number; height: number; components: number; bitDepth: number; isSigned: boolean } | null = null;
-  // eslint-disable-next-line no-restricted-syntax
-  let cod: { numResolutions: number; mct: number } | null = null;
-  // eslint-disable-next-line no-restricted-syntax
-  let qcdGuardBits = 2;
+  // Parser state for main header traversal
+  const parserState = {
+    pos: 2,
+    siz: null as { width: number; height: number; components: number; bitDepth: number; isSigned: boolean } | null,
+    cod: null as { numResolutions: number; mct: number } | null,
+    qcdGuardBits: 2,
+  };
 
-  while (pos + 2 <= bytes.length) {
-    const marker = readMarker(bytes, pos);
-    pos += 2;
+  while (parserState.pos + 2 <= bytes.length) {
+    const marker = readMarker(bytes, parserState.pos);
+    parserState.pos += 2;
     if (marker === 0xff90 /* SOT */) {break;}
     if (marker === 0xff93 /* SOD */) {throw new Error("J2K: unexpected SOD in main header");}
     if (marker === 0xffd9 /* EOC */) {break;}
 
-    if (pos + 2 > bytes.length) {throw new Error("J2K: truncated marker segment");}
-    const length = readU16BE(bytes, pos);
-    pos += 2;
+    if (parserState.pos + 2 > bytes.length) {throw new Error("J2K: truncated marker segment");}
+    const length = readU16BE(bytes, parserState.pos);
+    parserState.pos += 2;
     if (length < 2) {throw new Error("J2K: invalid marker segment length");}
-    const segStart = pos;
-    const segEnd = pos + (length - 2);
+    const segStart = parserState.pos;
+    const segEnd = parserState.pos + (length - 2);
     if (segEnd > bytes.length) {throw new Error("J2K: truncated marker segment");}
 
     if (marker === 0xff51 /* SIZ */) {
@@ -204,7 +200,7 @@ function parseMainHeader(bytes: Uint8Array): CodestreamHeader {
       const ssiz = bytes[segStart + 36] ?? 0;
       const bitDepth = (ssiz & 0x7f) + 1;
       const isSigned = (ssiz & 0x80) !== 0;
-      siz = { width, height, components: csiz, bitDepth, isSigned };
+      parserState.siz = { width, height, components: csiz, bitDepth, isSigned };
     } else if (marker === 0xff52 /* COD */) {
       const scod = bytes[segStart] ?? 0;
       if ((scod & 0x01) !== 0) {throw new Error("J2K: precincts not supported");}
@@ -215,51 +211,50 @@ function parseMainHeader(bytes: Uint8Array): CodestreamHeader {
       const mct = bytes[segStart + 4] ?? 0;
       const numDecompLevels = bytes[segStart + 5] ?? 0;
       const numResolutions = numDecompLevels + 1;
-      cod = { numResolutions, mct };
+      parserState.cod = { numResolutions, mct };
     } else if (marker === 0xff5c /* QCD */) {
       const sqcd = bytes[segStart] ?? 0;
-      qcdGuardBits = sqcd >>> 5;
+      parserState.qcdGuardBits = sqcd >>> 5;
     }
 
-    pos = segEnd;
+    parserState.pos = segEnd;
   }
 
-  if (!siz) {throw new Error("J2K: missing SIZ");}
-  if (!cod) {throw new Error("J2K: missing COD");}
+  if (!parserState.siz) {throw new Error("J2K: missing SIZ");}
+  if (!parserState.cod) {throw new Error("J2K: missing COD");}
 
   return {
-    width: siz.width,
-    height: siz.height,
-    components: siz.components,
-    bitDepth: siz.bitDepth,
-    isSigned: siz.isSigned,
-    guardBits: qcdGuardBits,
-    numResolutions: cod.numResolutions,
-    mct: cod.mct,
+    width: parserState.siz.width,
+    height: parserState.siz.height,
+    components: parserState.siz.components,
+    bitDepth: parserState.siz.bitDepth,
+    isSigned: parserState.siz.isSigned,
+    guardBits: parserState.qcdGuardBits,
+    numResolutions: parserState.cod.numResolutions,
+    mct: parserState.cod.mct,
   };
 }
 
 function extractSingleTilePart(bytes: Uint8Array): Uint8Array {
   // Find first SOT.
-  // eslint-disable-next-line no-restricted-syntax
-  let pos = 2;
-  while (pos + 2 <= bytes.length) {
-    const marker = readMarker(bytes, pos);
-    pos += 2;
+  const parserState = { pos: 2 };
+  while (parserState.pos + 2 <= bytes.length) {
+    const marker = readMarker(bytes, parserState.pos);
+    parserState.pos += 2;
     if (marker === 0xff90 /* SOT */) {break;}
     if (marker === 0xffd9 /* EOC */) {throw new Error("J2K: missing SOT");}
-    if (pos + 2 > bytes.length) {throw new Error("J2K: truncated");}
-    const length = readU16BE(bytes, pos);
-    pos += 2 + (length - 2);
+    if (parserState.pos + 2 > bytes.length) {throw new Error("J2K: truncated");}
+    const length = readU16BE(bytes, parserState.pos);
+    parserState.pos += 2 + (length - 2);
   }
-  if (pos + 10 > bytes.length) {throw new Error("J2K: truncated SOT");}
+  if (parserState.pos + 10 > bytes.length) {throw new Error("J2K: truncated SOT");}
 
-  const lsot = readU16BE(bytes, pos);
+  const lsot = readU16BE(bytes, parserState.pos);
   if (lsot !== 10) {throw new Error(`J2K: unsupported Lsot=${lsot}`);}
-  const sotPos = pos - 2;
-  const psot = readU32BE(bytes, pos + 4);
-  const tpsot = bytes[pos + 8] ?? 0;
-  const tnsot = bytes[pos + 9] ?? 0;
+  const sotPos = parserState.pos - 2;
+  const psot = readU32BE(bytes, parserState.pos + 4);
+  const tpsot = bytes[parserState.pos + 8] ?? 0;
+  const tnsot = bytes[parserState.pos + 9] ?? 0;
   if (tpsot !== 0 || tnsot !== 1) {
     throw new Error("J2K: only single tile-part supported");
   }
@@ -268,9 +263,9 @@ function extractSingleTilePart(bytes: Uint8Array): Uint8Array {
   if (tilePartEnd > bytes.length) {throw new Error("J2K: truncated tile-part");}
 
   // Seek to SOD.
-  pos += 10;
-  const sod = readMarker(bytes, pos);
+  parserState.pos += 10;
+  const sod = readMarker(bytes, parserState.pos);
   if (sod !== 0xff93) {throw new Error("J2K: missing SOD");}
-  pos += 2;
-  return bytes.slice(pos, tilePartEnd);
+  parserState.pos += 2;
+  return bytes.slice(parserState.pos, tilePartEnd);
 }

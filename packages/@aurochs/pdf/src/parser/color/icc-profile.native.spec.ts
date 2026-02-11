@@ -57,23 +57,28 @@ function makeMinimalRgbIccProfileBytes(): Uint8Array {
 
   const headerSize = 128;
   const tagTableSize = 4 + tags.length * 12;
-  // eslint-disable-next-line no-restricted-syntax
-  let cursor = pad4(headerSize + tagTableSize);
 
-  const records: Array<{ sig: string; off: number; size: number }> = [];
-  const tagDataParts: Uint8Array[] = [];
-  for (const t of tags) {
-    const off = cursor;
-    const size = t.data.length;
-    records.push({ sig: t.sig, off, size });
-    tagDataParts.push(t.data);
-    cursor = pad4(cursor + size);
-    if (cursor > off + size) {
-      tagDataParts.push(new Uint8Array(cursor - (off + size)));
-    }
-  }
+  type TagLayoutResult = Readonly<{
+    records: Array<{ sig: string; off: number; size: number }>;
+    tagDataParts: Uint8Array[];
+    totalSize: number;
+  }>;
 
-  const totalSize = cursor;
+  const tagLayout = tags.reduce<TagLayoutResult>(
+    (acc, t) => {
+      const off = acc.totalSize;
+      const size = t.data.length;
+      const nextRecords = [...acc.records, { sig: t.sig, off, size }];
+      const nextParts = [...acc.tagDataParts, t.data];
+      const paddedEnd = pad4(off + size);
+      const addPadding = (parts: Uint8Array[]): Uint8Array[] =>
+        paddedEnd > off + size ? [...parts, new Uint8Array(paddedEnd - (off + size))] : parts;
+      return { records: nextRecords, tagDataParts: addPadding(nextParts), totalSize: paddedEnd };
+    },
+    { records: [], tagDataParts: [], totalSize: pad4(headerSize + tagTableSize) },
+  );
+
+  const { records, tagDataParts, totalSize } = tagLayout;
   const out = new Uint8Array(totalSize);
   const view = new DataView(out.buffer);
 
@@ -85,22 +90,18 @@ function makeMinimalRgbIccProfileBytes(): Uint8Array {
 
   // Tag table.
   writeU32BE(view, 128, tags.length);
-  // eslint-disable-next-line no-restricted-syntax
-  let tpos = 132;
-  for (const r of records) {
+  records.forEach((r, i) => {
+    const tpos = 132 + i * 12;
     writeAscii4(out, tpos, r.sig);
     writeU32BE(view, tpos + 4, r.off);
     writeU32BE(view, tpos + 8, r.size);
-    tpos += 12;
-  }
+  });
 
   // Tag data.
-  // eslint-disable-next-line no-restricted-syntax
-  let dpos = pad4(headerSize + tagTableSize);
-  for (const part of tagDataParts) {
+  tagDataParts.reduce((dpos, part) => {
     out.set(part, dpos);
-    dpos += part.length;
-  }
+    return dpos + part.length;
+  }, pad4(headerSize + tagTableSize));
 
   return out;
 }
@@ -140,13 +141,18 @@ function makeMinimalCmykLutIccProfileBytes(): Uint8Array {
     writeU16BE(view, 48, inputEntries);
     writeU16BE(view, 50, outputEntries);
 
-    // eslint-disable-next-line no-restricted-syntax
-    let cursor = 52;
+    // Write bytes at a given cursor position and return the new cursor position.
+    const writeAt = (cursor: number, ...values: number[]): number => {
+      values.forEach((v, i) => {bytes[cursor + i] = v;});
+      return cursor + values.length;
+    };
+
     // Input tables: identity [0,255] for each channel.
-    for (let c = 0; c < inChannels; c += 1) {
-      bytes[cursor++] = 0;
-      bytes[cursor++] = 255;
-    }
+    const inputTableStart = 52;
+    const afterInputTables = Array.from({ length: inChannels }).reduce<number>(
+      (cursor) => writeAt(cursor, 0, 255),
+      inputTableStart,
+    );
 
     const clamp01 = (v: number): number => Math.min(1, Math.max(0, v));
     const toByte = (v01: number): number => Math.floor(clamp01(v01) * 255);
@@ -159,6 +165,8 @@ function makeMinimalCmykLutIccProfileBytes(): Uint8Array {
     };
 
     // CLUT: first input channel varies fastest (C, then M, then Y, then K).
+    // Build an array of all CLUT entries, then write them sequentially.
+    const clutEntries: number[] = [];
     for (let k = 0; k <= 1; k += 1) {
       for (let y = 0; y <= 1; y += 1) {
         for (let m = 0; m <= 1; m += 1) {
@@ -167,19 +175,18 @@ function makeMinimalCmykLutIccProfileBytes(): Uint8Array {
             const gg = 1 - m;
             const bb = 1 - y;
             const [X, Y, Z] = rgbToXyzD65(r, gg, bb);
-            bytes[cursor++] = toByte(X);
-            bytes[cursor++] = toByte(Y);
-            bytes[cursor++] = toByte(Z);
+            clutEntries.push(toByte(X), toByte(Y), toByte(Z));
           }
         }
       }
     }
+    const afterClut = clutEntries.reduce((cursor, v) => writeAt(cursor, v), afterInputTables);
 
     // Output tables: identity [0,255] for each channel.
-    for (let c = 0; c < outChannels; c += 1) {
-      bytes[cursor++] = 0;
-      bytes[cursor++] = 255;
-    }
+    Array.from({ length: outChannels }).reduce<number>(
+      (cursor) => writeAt(cursor, 0, 255),
+      afterClut,
+    );
 
     return bytes;
   };
@@ -191,23 +198,28 @@ function makeMinimalCmykLutIccProfileBytes(): Uint8Array {
 
   const headerSize = 128;
   const tagTableSize = 4 + tags.length * 12;
-  // eslint-disable-next-line no-restricted-syntax
-  let cursor2 = pad4(headerSize + tagTableSize);
 
-  const records: Array<{ sig: string; off: number; size: number }> = [];
-  const tagDataParts: Uint8Array[] = [];
-  for (const t of tags) {
-    const off = cursor2;
-    const size = t.data.length;
-    records.push({ sig: t.sig, off, size });
-    tagDataParts.push(t.data);
-    cursor2 = pad4(cursor2 + size);
-    if (cursor2 > off + size) {
-      tagDataParts.push(new Uint8Array(cursor2 - (off + size)));
-    }
-  }
+  type TagLayoutResult = Readonly<{
+    records: Array<{ sig: string; off: number; size: number }>;
+    tagDataParts: Uint8Array[];
+    totalSize: number;
+  }>;
 
-  const totalSize = cursor2;
+  const tagLayout = tags.reduce<TagLayoutResult>(
+    (acc, t) => {
+      const off = acc.totalSize;
+      const size = t.data.length;
+      const nextRecords = [...acc.records, { sig: t.sig, off, size }];
+      const nextParts = [...acc.tagDataParts, t.data];
+      const paddedEnd = pad4(off + size);
+      const addPadding = (parts: Uint8Array[]): Uint8Array[] =>
+        paddedEnd > off + size ? [...parts, new Uint8Array(paddedEnd - (off + size))] : parts;
+      return { records: nextRecords, tagDataParts: addPadding(nextParts), totalSize: paddedEnd };
+    },
+    { records: [], tagDataParts: [], totalSize: pad4(headerSize + tagTableSize) },
+  );
+
+  const { records, tagDataParts, totalSize } = tagLayout;
   const out = new Uint8Array(totalSize);
   const view = new DataView(out.buffer);
 
@@ -219,22 +231,18 @@ function makeMinimalCmykLutIccProfileBytes(): Uint8Array {
 
   // Tag table.
   writeU32BE(view, 128, tags.length);
-  // eslint-disable-next-line no-restricted-syntax
-  let tpos2 = 132;
-  for (const r of records) {
+  records.forEach((r, i) => {
+    const tpos2 = 132 + i * 12;
     writeAscii4(out, tpos2, r.sig);
     writeU32BE(view, tpos2 + 4, r.off);
     writeU32BE(view, tpos2 + 8, r.size);
-    tpos2 += 12;
-  }
+  });
 
   // Tag data.
-  // eslint-disable-next-line no-restricted-syntax
-  let dpos2 = pad4(headerSize + tagTableSize);
-  for (const part of tagDataParts) {
-    out.set(part, dpos2);
-    dpos2 += part.length;
-  }
+  tagDataParts.reduce((dpos, part) => {
+    out.set(part, dpos);
+    return dpos + part.length;
+  }, pad4(headerSize + tagTableSize));
 
   return out;
 }

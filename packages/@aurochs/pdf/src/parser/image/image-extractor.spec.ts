@@ -230,23 +230,26 @@ function makeMinimalIccProfileBytes(args: { readonly dataColorSpace: "RGB " | "G
 
   const headerSize = 128;
   const tagTableSize = 4 + tags.length * 12;
-  // eslint-disable-next-line no-restricted-syntax
-  let cursor = pad4(headerSize + tagTableSize);
 
-  const records: Array<{ sig: string; off: number; size: number }> = [];
-  const tagDataParts: Uint8Array[] = [];
-  for (const t of tags) {
-    const off = cursor;
-    const size = t.data.length;
-    records.push({ sig: t.sig, off, size });
-    tagDataParts.push(t.data);
-    cursor = pad4(cursor + size);
-    if (cursor > off + size) {
-      tagDataParts.push(new Uint8Array(cursor - (off + size)));
-    }
-  }
+  const { cursor: totalSize, records, tagDataParts } = tags.reduce<{
+    cursor: number;
+    records: Array<{ sig: string; off: number; size: number }>;
+    tagDataParts: Uint8Array[];
+  }>(
+    (acc, t) => {
+      const off = acc.cursor;
+      const size = t.data.length;
+      acc.records.push({ sig: t.sig, off, size });
+      acc.tagDataParts.push(t.data);
+      const nextCursor = pad4(acc.cursor + size);
+      if (nextCursor > off + size) {
+        acc.tagDataParts.push(new Uint8Array(nextCursor - (off + size)));
+      }
+      return { ...acc, cursor: nextCursor };
+    },
+    { cursor: pad4(headerSize + tagTableSize), records: [], tagDataParts: [] },
+  );
 
-  const totalSize = cursor;
   const out = new Uint8Array(totalSize);
   const view = new DataView(out.buffer);
 
@@ -256,21 +259,17 @@ function makeMinimalIccProfileBytes(args: { readonly dataColorSpace: "RGB " | "G
   writeAscii4(out, 36, "acsp");
 
   writeU32BE(view, 128, tags.length);
-  // eslint-disable-next-line no-restricted-syntax
-  let tpos = 132;
-  for (const r of records) {
+  records.forEach((r, i) => {
+    const tpos = 132 + i * 12;
     writeAscii4(out, tpos, r.sig);
     writeU32BE(view, tpos + 4, r.off);
     writeU32BE(view, tpos + 8, r.size);
-    tpos += 12;
-  }
+  });
 
-  // eslint-disable-next-line no-restricted-syntax
-  let dpos = pad4(headerSize + tagTableSize);
-  for (const part of tagDataParts) {
+  tagDataParts.reduce((dpos, part) => {
     out.set(part, dpos);
-    dpos += part.length;
-  }
+    return dpos + part.length;
+  }, pad4(headerSize + tagTableSize));
 
   return out;
 }
@@ -305,11 +304,11 @@ function makeMinimalCmykLutIccProfileBytes(): Uint8Array {
     writeU16BE(view, 48, inputEntries);
     writeU16BE(view, 50, outputEntries);
 
-    // eslint-disable-next-line no-restricted-syntax
-    let cursor = 52;
+    // Input table: 4 channels × 2 entries (0 and 255)
+    const inputTableStart = 52;
     for (let c = 0; c < inChannels; c += 1) {
-      bytes[cursor++] = 0;
-      bytes[cursor++] = 255;
+      bytes[inputTableStart + c * 2] = 0;
+      bytes[inputTableStart + c * 2 + 1] = 255;
     }
 
     const clamp01 = (v: number): number => Math.min(1, Math.max(0, v));
@@ -321,25 +320,29 @@ function makeMinimalCmykLutIccProfileBytes(): Uint8Array {
       return [X, Y, Z] as const;
     };
 
+    // CLUT: 16 grid points × 3 output channels
+    const clutStart = inputTableStart + inChannels * inputEntries;
+    const clutEntries: Array<readonly [number, number, number]> = [];
     for (let k = 0; k <= 1; k += 1) {
       for (let y = 0; y <= 1; y += 1) {
         for (let m = 0; m <= 1; m += 1) {
           for (let c = 0; c <= 1; c += 1) {
-            const r = 1 - c;
-            const gg = 1 - m;
-            const bb = 1 - y;
-            const [X, Y, Z] = rgbToXyzD65(r, gg, bb);
-            bytes[cursor++] = toByte(X);
-            bytes[cursor++] = toByte(Y);
-            bytes[cursor++] = toByte(Z);
+            clutEntries.push(rgbToXyzD65(1 - c, 1 - m, 1 - y));
           }
         }
       }
     }
+    clutEntries.forEach(([X, Y, Z], i) => {
+      bytes[clutStart + i * 3] = toByte(X);
+      bytes[clutStart + i * 3 + 1] = toByte(Y);
+      bytes[clutStart + i * 3 + 2] = toByte(Z);
+    });
 
+    // Output table: 3 channels × 2 entries (0 and 255)
+    const outputTableStart = clutStart + clutPoints * outChannels;
     for (let c = 0; c < outChannels; c += 1) {
-      bytes[cursor++] = 0;
-      bytes[cursor++] = 255;
+      bytes[outputTableStart + c * 2] = 0;
+      bytes[outputTableStart + c * 2 + 1] = 255;
     }
 
     return bytes;
@@ -352,23 +355,26 @@ function makeMinimalCmykLutIccProfileBytes(): Uint8Array {
 
   const headerSize = 128;
   const tagTableSize = 4 + tags.length * 12;
-  // eslint-disable-next-line no-restricted-syntax
-  let cursor2 = pad4(headerSize + tagTableSize);
 
-  const records: Array<{ sig: string; off: number; size: number }> = [];
-  const tagDataParts: Uint8Array[] = [];
-  for (const t of tags) {
-    const off = cursor2;
-    const size = t.data.length;
-    records.push({ sig: t.sig, off, size });
-    tagDataParts.push(t.data);
-    cursor2 = pad4(cursor2 + size);
-    if (cursor2 > off + size) {
-      tagDataParts.push(new Uint8Array(cursor2 - (off + size)));
-    }
-  }
+  const { cursor: totalSize, records, tagDataParts } = tags.reduce<{
+    cursor: number;
+    records: Array<{ sig: string; off: number; size: number }>;
+    tagDataParts: Uint8Array[];
+  }>(
+    (acc, t) => {
+      const off = acc.cursor;
+      const size = t.data.length;
+      acc.records.push({ sig: t.sig, off, size });
+      acc.tagDataParts.push(t.data);
+      const nextCursor = pad4(acc.cursor + size);
+      if (nextCursor > off + size) {
+        acc.tagDataParts.push(new Uint8Array(nextCursor - (off + size)));
+      }
+      return { ...acc, cursor: nextCursor };
+    },
+    { cursor: pad4(headerSize + tagTableSize), records: [], tagDataParts: [] },
+  );
 
-  const totalSize = cursor2;
   const out = new Uint8Array(totalSize);
   const view = new DataView(out.buffer);
 
@@ -378,21 +384,17 @@ function makeMinimalCmykLutIccProfileBytes(): Uint8Array {
   writeAscii4(out, 36, "acsp");
 
   writeU32BE(view, 128, tags.length);
-  // eslint-disable-next-line no-restricted-syntax
-  let tpos2 = 132;
-  for (const r of records) {
-    writeAscii4(out, tpos2, r.sig);
-    writeU32BE(view, tpos2 + 4, r.off);
-    writeU32BE(view, tpos2 + 8, r.size);
-    tpos2 += 12;
-  }
+  records.forEach((r, i) => {
+    const tpos = 132 + i * 12;
+    writeAscii4(out, tpos, r.sig);
+    writeU32BE(view, tpos + 4, r.off);
+    writeU32BE(view, tpos + 8, r.size);
+  });
 
-  // eslint-disable-next-line no-restricted-syntax
-  let dpos2 = pad4(headerSize + tagTableSize);
-  for (const part of tagDataParts) {
-    out.set(part, dpos2);
-    dpos2 += part.length;
-  }
+  tagDataParts.reduce((dpos, part) => {
+    out.set(part, dpos);
+    return dpos + part.length;
+  }, pad4(headerSize + tagTableSize));
 
   return out;
 }

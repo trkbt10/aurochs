@@ -319,21 +319,20 @@ function computeClipBBoxFromPath(ops: readonly PdfPathOp[], ctm: PdfMatrix): Pdf
   };
   const addTransformed = (p: PdfPoint): void => addPoint(transformPoint(p, ctm));
 
-  // eslint-disable-next-line no-restricted-syntax
-  let currentPoint: PdfPoint = { x: 0, y: 0 };
-  // eslint-disable-next-line no-restricted-syntax
-  let subpathStartPoint: PdfPoint = { x: 0, y: 0 };
+  // Tracks position as we traverse path operations sequentially; updated by moveTo/lineTo/curveTo
+  // Also tracks subpath origin for closePath; updated by moveTo/rect
+  const pathState = { currentPoint: { x: 0, y: 0 }, subpathStartPoint: { x: 0, y: 0 } };
 
   for (const op of ops) {
     switch (op.type) {
       case "moveTo": {
-        currentPoint = op.point;
-        subpathStartPoint = op.point;
+        pathState.currentPoint = op.point;
+        pathState.subpathStartPoint = op.point;
         addTransformed(op.point);
         break;
       }
       case "lineTo": {
-        currentPoint = op.point;
+        pathState.currentPoint = op.point;
         addTransformed(op.point);
         break;
       }
@@ -341,20 +340,20 @@ function computeClipBBoxFromPath(ops: readonly PdfPathOp[], ctm: PdfMatrix): Pdf
         addTransformed(op.cp1);
         addTransformed(op.cp2);
         addTransformed(op.end);
-        currentPoint = op.end;
+        pathState.currentPoint = op.end;
         break;
       }
       case "curveToV": {
-        addTransformed(currentPoint);
+        addTransformed(pathState.currentPoint);
         addTransformed(op.cp2);
         addTransformed(op.end);
-        currentPoint = op.end;
+        pathState.currentPoint = op.end;
         break;
       }
       case "curveToY": {
         addTransformed(op.cp1);
         addTransformed(op.end);
-        currentPoint = op.end;
+        pathState.currentPoint = op.end;
         break;
       }
       case "rect": {
@@ -367,13 +366,13 @@ function computeClipBBoxFromPath(ops: readonly PdfPathOp[], ctm: PdfMatrix): Pdf
         for (const p of corners) {
           addTransformed(p);
         }
-        currentPoint = { x: op.x, y: op.y };
-        subpathStartPoint = currentPoint;
+        pathState.currentPoint = { x: op.x, y: op.y };
+        pathState.subpathStartPoint = pathState.currentPoint;
         break;
       }
       case "closePath": {
-        addTransformed(subpathStartPoint);
-        currentPoint = subpathStartPoint;
+        addTransformed(pathState.subpathStartPoint);
+        pathState.currentPoint = pathState.subpathStartPoint;
         break;
       }
     }

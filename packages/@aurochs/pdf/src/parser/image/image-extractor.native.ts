@@ -875,11 +875,12 @@ function applyIndexedColorKeyMask(args: {
   const alpha = new Uint8Array(pixelCount);
   for (let p = 0; p < pixelCount; p += 1) {
     const raw = unpackSample(packedIndices, p, bitsPerComponent);
-    const decoded = (() => {
+    function computeDecodedValue(): number {
       if (!decodePair) {return raw;}
       const v = sampleMax > 0 ? raw / sampleMax : 0;
       return Math.round(decodePair[0] + v * (decodePair[1] - decodePair[0]));
-    })();
+    }
+    const decoded = computeDecodedValue();
     alpha[p] = decoded >= min && decoded <= max ? 0 : 255;
   }
 
@@ -1083,15 +1084,19 @@ function iccBasedToRgbBytes(args: {
       const pcs01 = evalIccLutToPcs01(profile, comps);
       if (!pcs01) {continue;}
 
-      const xyz = (() => {
-        if (profile.pcs === "XYZ ") {
-          return pcs01;
+      function convertPcsToXyz(
+        pcs: "XYZ " | "Lab ",
+        pcsVals: readonly [number, number, number],
+      ): readonly [number, number, number] {
+        if (pcs === "XYZ ") {
+          return pcsVals;
         }
-        const Lstar = clamp01OrZero(pcs01[0]) * 100;
-        const astar = clamp01OrZero(pcs01[1]) * 255 - 128;
-        const bstar = clamp01OrZero(pcs01[2]) * 255 - 128;
+        const Lstar = clamp01OrZero(pcsVals[0]) * 100;
+        const astar = clamp01OrZero(pcsVals[1]) * 255 - 128;
+        const bstar = clamp01OrZero(pcsVals[2]) * 255 - 128;
         return labToXyzD50(Lstar, astar, bstar);
-      })();
+      }
+      const xyz = convertPcsToXyz(profile.pcs, pcs01);
 
       const xyzD65 = profile.pcs === "Lab " ? applyMat3ToXyz(adaptD50ToD65, xyz) : applyMat3ToXyz(adapt, xyz);
       const [r, g, b] = xyzToSrgbBytes(xyzD65[0], xyzD65[1], xyzD65[2]);
@@ -1147,7 +1152,7 @@ function getCcittDecodeParms(args: GetCcittDecodeParmsArgs): CcittFaxDecodeParms
   if (index < 0) {throw new Error("getCcittDecodeParms: missing /CCITTFaxDecode filter");}
 
   const decodeParmsObj = resolve(page, dictGet(dict, "DecodeParms"));
-  const ccittDict = (() => {
+  function extractCcittDict(): PdfDict | null {
     if (!decodeParmsObj) {return null;}
     if (decodeParmsObj.type === "dict") {return decodeParmsObj;}
     if (decodeParmsObj.type === "array") {
@@ -1156,7 +1161,8 @@ function getCcittDecodeParms(args: GetCcittDecodeParmsArgs): CcittFaxDecodeParms
       return asDict(resolved);
     }
     return null;
-  })();
+  }
+  const ccittDict = extractCcittDict();
 
   const k = ccittDict ? (getNumberValue(ccittDict, "K") ?? 0) : 0;
   const columns = ccittDict ? (getNumberValue(ccittDict, "Columns") ?? width) : width;
@@ -1221,13 +1227,15 @@ function getColorSpaceInfo(page: NativePdfPage, dict: PdfDict): ColorSpaceInfo {
         if (profileStream) {
           const n = getNumberValue(profileStream.dict, "N");
           if (n === 1 || n === 3 || n === 4) {
-            const bytes = (() => {
+            function tryDecodeProfileStream(stream: PdfStream): Uint8Array | null {
               try {
-                return decodePdfStream(profileStream);
-              } catch {
+                return decodePdfStream(stream);
+              } catch (error) {
+                console.debug("[PDF] ICC stream decode error:", error);
                 return null;
               }
-            })();
+            }
+            const bytes = tryDecodeProfileStream(profileStream);
             const parsed = bytes ? parseIccProfile(bytes) : null;
             if (
               parsed &&
@@ -1325,7 +1333,7 @@ function getColorSpaceInfo(page: NativePdfPage, dict: PdfDict): ColorSpaceInfo {
           if (w0?.type === "number" && w1?.type === "number" && w2?.type === "number") {
             const gammaObj = resolve(page, dictGet(params, "Gamma"));
             const gammaArr = asArray(gammaObj);
-            const gamma: readonly [number, number, number] = (() => {
+            function extractGamma(): readonly [number, number, number] {
               if (gammaArr && gammaArr.items.length >= 3) {
                 const g0 = resolve(page, gammaArr.items[0]);
                 const g1 = resolve(page, gammaArr.items[1]);
@@ -1336,7 +1344,8 @@ function getColorSpaceInfo(page: NativePdfPage, dict: PdfDict): ColorSpaceInfo {
                 return [v0, v1, v2];
               }
               return [1, 1, 1];
-            })();
+            }
+            const gamma: readonly [number, number, number] = extractGamma();
 
             const matrixObj = resolve(page, dictGet(params, "Matrix"));
             const matrixArr = asArray(matrixObj);
@@ -1592,15 +1601,12 @@ function expandTintImageToRgb(args: {
   const decodePairs = getDecodePairsN(decode, components);
 
   for (let p = 0; p < pixelCount; p += 1) {
-    // eslint-disable-next-line no-restricted-syntax
-    let sum = 0;
-    for (let c = 0; c < components; c += 1) {
+    const sum = Array.from({ length: components }, (_, c) => {
       const sampleIndex = p * components + c;
       const raw = unpackSample(data, sampleIndex, bitsPerComponent);
       const value01 = max > 0 ? raw / max : 0;
-      const decoded = applyDecodeToNormalizedSample(value01, decodePairs ? decodePairs[c] ?? null : null);
-      sum += decoded;
-    }
+      return applyDecodeToNormalizedSample(value01, decodePairs ? decodePairs[c] ?? null : null);
+    }).reduce((acc, v) => acc + v, 0);
     const avg = sum / components;
     // Deterministic fallback: map tint (0..1) to gray by inverting (1=full colorant => darker).
     const g = Math.round(clamp01(1 - avg) * 255);
@@ -1771,7 +1777,7 @@ function expandImageMaskToRgbAlpha(args: {
     }
   }
 
-  const rgbFill = (() => {
+  function computeRgbFill(): readonly [number, number, number] {
     switch (fillColor.colorSpace) {
       case "DeviceGray":
         return grayToRgb(fillColor.components[0] ?? 0);
@@ -1787,7 +1793,8 @@ function expandImageMaskToRgbAlpha(args: {
       default:
         return [0, 0, 0] as const;
     }
-  })();
+  }
+  const rgbFill = computeRgbFill();
 
   const rgb = new Uint8Array(pixelCount * 3);
   for (let i = 0; i < pixelCount; i += 1) {
@@ -1903,13 +1910,12 @@ export async function extractImagesNative(
   const { extractImages = true, maxDimension = 4096 } = options;
   if (!extractImages) {return [];}
 
-  const xObjects =
-    xObjectsOverride ??
-    (() => {
-      const resources = pdfPage.getResourcesDict();
-      if (!resources) {return null;}
-      return resolveDict(pdfPage, dictGet(resources, "XObject"));
-    })();
+  function getXObjectsFromResources(): PdfDict | null {
+    const resources = pdfPage.getResourcesDict();
+    if (!resources) {return null;}
+    return resolveDict(pdfPage, dictGet(resources, "XObject"));
+  }
+  const xObjects = xObjectsOverride ?? getXObjectsFromResources();
   if (!xObjects) {return [];}
 
   const images: PdfImage[] = [];

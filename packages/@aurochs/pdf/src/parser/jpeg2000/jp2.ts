@@ -60,51 +60,50 @@ export function extractJp2Codestream(jpxBytes: Uint8Array): Uint8Array {
     }
   }
 
-  // eslint-disable-next-line no-restricted-syntax
-  let pos = 12;
-  while (pos + 8 <= jpxBytes.length) {
-    const lbox = readU32BE(jpxBytes, pos);
-    const tbox = readAscii4(jpxBytes, pos + 4);
-    pos += 8;
+  // Parser state for JP2 box traversal
+  const parserState = { pos: 12 };
+  while (parserState.pos + 8 <= jpxBytes.length) {
+    const lbox = readU32BE(jpxBytes, parserState.pos);
+    const tbox = readAscii4(jpxBytes, parserState.pos + 4);
+    parserState.pos += 8;
 
-    // eslint-disable-next-line no-restricted-syntax
-    let boxSize = lbox;
-    if (boxSize === 1) {
+    const boxState = { size: lbox };
+    if (boxState.size === 1) {
       // XLBox (64-bit). We only support sizes that fit in 32-bit for now.
-      if (pos + 8 > jpxBytes.length) {throw new Error("JP2: truncated XLBox");}
-      const hi = readU32BE(jpxBytes, pos);
-      const lo = readU32BE(jpxBytes, pos + 4);
-      pos += 8;
+      if (parserState.pos + 8 > jpxBytes.length) {throw new Error("JP2: truncated XLBox");}
+      const hi = readU32BE(jpxBytes, parserState.pos);
+      const lo = readU32BE(jpxBytes, parserState.pos + 4);
+      parserState.pos += 8;
       if (hi !== 0) {throw new Error("JP2: XLBox too large");}
-      boxSize = lo;
-      if (boxSize < 16) {throw new Error("JP2: invalid XLBox size");}
-      // boxSize includes the 16-byte header.
-      const payloadSize = boxSize - 16;
-      const payloadStart = pos;
+      boxState.size = lo;
+      if (boxState.size < 16) {throw new Error("JP2: invalid XLBox size");}
+      // boxState.size includes the 16-byte header.
+      const payloadSize = boxState.size - 16;
+      const payloadStart = parserState.pos;
       const payloadEnd = payloadStart + payloadSize;
       if (payloadEnd > jpxBytes.length) {throw new Error("JP2: truncated box payload");}
       if (tbox === "jp2c") {
         return jpxBytes.slice(payloadStart, payloadEnd);
       }
-      pos = payloadEnd;
+      parserState.pos = payloadEnd;
       continue;
     }
 
-    if (boxSize === 0) {
+    if (boxState.size === 0) {
       // box extends to end of file.
-      if (tbox === "jp2c") {return jpxBytes.slice(pos);}
+      if (tbox === "jp2c") {return jpxBytes.slice(parserState.pos);}
       return jpxBytes;
     }
 
-    if (boxSize < 8) {throw new Error("JP2: invalid box size");}
-    const payloadSize = boxSize - 8;
-    const payloadStart = pos;
+    if (boxState.size < 8) {throw new Error("JP2: invalid box size");}
+    const payloadSize = boxState.size - 8;
+    const payloadStart = parserState.pos;
     const payloadEnd = payloadStart + payloadSize;
     if (payloadEnd > jpxBytes.length) {throw new Error("JP2: truncated box payload");}
     if (tbox === "jp2c") {
       return jpxBytes.slice(payloadStart, payloadEnd);
     }
-    pos = payloadEnd;
+    parserState.pos = payloadEnd;
   }
 
   throw new Error("JP2: missing jp2c codestream box");

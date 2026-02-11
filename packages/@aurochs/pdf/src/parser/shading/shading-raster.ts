@@ -215,39 +215,41 @@ export function rasterizeShadingFill(
 
       const userPoint = pageToUser ? transformPoint(pagePoint, pageToUser) : pagePoint;
 
-      // eslint-disable-next-line no-restricted-syntax
-      let t = 0;
-      if (shading.shadingType === 2) {
-        t = computeAxialT(shading.coords, userPoint);
-      } else if (shading.shadingType === 3) {
-        const out = computeRadialT(shading.coords, userPoint);
-        if (out == null) {
-          alpha[idx] = 0;
-          continue;
+      const computeT = (): number | null => {
+        if (shading.shadingType === 2) {
+          return computeAxialT(shading.coords, userPoint);
         }
-        t = out;
-      }
-
-      const [extendStart, extendEnd] = shading.extend;
-      if ((!extendStart && t < 0) || (!extendEnd && t > 1)) {
+        if (shading.shadingType === 3) {
+          return computeRadialT(shading.coords, userPoint);
+        }
+        return 0;
+      };
+      const rawT = computeT();
+      if (rawT == null) {
         alpha[idx] = 0;
         continue;
       }
 
-      t = clamp01(t);
+      const [extendStart, extendEnd] = shading.extend;
+      if ((!extendStart && rawT < 0) || (!extendEnd && rawT > 1)) {
+        alpha[idx] = 0;
+        continue;
+      }
+
+      const t = clamp01(rawT);
       const domain = shading.fn.domain ?? ([0, 1] as const);
       const [d0, d1] = domain;
       const x = d0 + t * (d1 - d0);
       const xClamped = clampToDomain(x, shading.fn.domain);
 
       const componentCount = shading.colorSpace === "DeviceRGB" ? 3 : 1;
-      // eslint-disable-next-line no-restricted-syntax
-      let comps: readonly number[];
-      if (shading.fn.type === "FunctionType2") {
-        comps = evaluateFunctionType2(shading.fn, xClamped, componentCount);
-      } else {
-        comps = new Array(componentCount).fill(0);
-      }
+      const evaluateFunction = (): readonly number[] => {
+        if (shading.fn.type === "FunctionType2") {
+          return evaluateFunctionType2(shading.fn, xClamped, componentCount);
+        }
+        return new Array(componentCount).fill(0) as readonly number[];
+      };
+      const comps = evaluateFunction();
 
       const [r, g, b] = shadingColorToRgbBytes(shading, comps);
       const o = idx * 3;
@@ -255,14 +257,14 @@ export function rasterizeShadingFill(
       data[o + 1] = g;
       data[o + 2] = b;
 
-      // eslint-disable-next-line no-restricted-syntax
-      let a = Math.round(255 * fillMul);
-      if (gs.softMask && pageToMask) {
+      const baseAlpha = Math.round(255 * fillMul);
+      const computeSoftMaskAlpha = (): number => {
+        if (!gs.softMask || !pageToMask) {return baseAlpha;}
         const maskPoint = transformPoint(pagePoint, pageToMask);
         const m = sampleSoftMaskAlphaInMaskSpace(gs.softMask, maskPoint.x, maskPoint.y);
-        a = Math.round((a * m) / 255);
-      }
-      alpha[idx] = a;
+        return Math.round((baseAlpha * m) / 255);
+      };
+      alpha[idx] = computeSoftMaskAlpha();
     }
   }
 

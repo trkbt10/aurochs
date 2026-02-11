@@ -14,6 +14,7 @@ import { createGfxOpsFromStack, createParser, type ParsedElement, type TextRun }
 import type { ExtGStateParams } from "../graphics-state/ext-gstate.native";
 import type { PdfPattern } from "../pattern/pattern.types";
 import type { PdfShading } from "../shading/shading.types";
+import type { ParsedNamedColorSpace } from "../color/color-space.native";
 
 type Type3Info = NonNullable<FontInfo["type3"]>;
 
@@ -89,7 +90,7 @@ export function renderType3TextRun({
     readonly extGState: ReadonlyMap<string, ExtGStateParams>;
     readonly shadings: ReadonlyMap<string, PdfShading>;
     readonly patterns: ReadonlyMap<string, PdfPattern>;
-    readonly colorSpaces: ReadonlyMap<string, import("../color/color-space.native").ParsedNamedColorSpace>;
+    readonly colorSpaces: ReadonlyMap<string, ParsedNamedColorSpace>;
     readonly shadingMaxSize: number;
     readonly clipPathMaxSize: number;
     readonly pageBBox: PdfBBox;
@@ -98,8 +99,8 @@ export function renderType3TextRun({
   if (fontInfo.codeByteWidth !== 1) {return [];}
 
   const out: ParsedElement[] = [];
-  // eslint-disable-next-line no-restricted-syntax
-  let textMatrix = run.textMatrix;
+  // Tracks text position; advanced after each glyph by the glyph's displacement
+  const matrixState = { textMatrix: run.textMatrix };
 
   for (let i = 0; i < run.text.length; i += 1) {
     const charCode = run.text.charCodeAt(i);
@@ -109,7 +110,7 @@ export function renderType3TextRun({
       const procBytes = type3.charProcs.get(glyphName);
       if (procBytes) {
         const glyphToUser = computeType3GlyphToUserMatrix({
-          textMatrix,
+          textMatrix: matrixState.textMatrix,
           type3,
           fontSize: run.fontSize,
           horizontalScaling: run.horizontalScaling,
@@ -142,7 +143,7 @@ export function renderType3TextRun({
       wordSpacing: run.wordSpacing,
       horizontalScaling: run.horizontalScaling,
     });
-    textMatrix = advanceTextMatrixX(textMatrix, dx);
+    matrixState.textMatrix = advanceTextMatrixX(matrixState.textMatrix, dx);
   }
 
   return out;

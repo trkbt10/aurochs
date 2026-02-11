@@ -27,188 +27,171 @@ const MQ_SWITCH: readonly number[] = [
   0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 ];
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 /** MQ arithmetic decoder for JPEG 2000 entropy coding. */
-export class MqDecoder {
-  private readonly data: Uint8Array;
-  private bp: number;
-  private a: number;
-  private c: number;
-  private ct: number;
+export type MqDecoder = Readonly<{
+  resetContexts(stateIndex?: number, mps?: 0 | 1): void;
+  setContext(ctx: number, stateIndex: number, mps: 0 | 1): void;
+  decodeBit(ctx: number): 0 | 1;
+}>;
 
-  private readonly ctxState: Uint8Array;
-  private readonly ctxMps: Uint8Array;
-
-  constructor(encoded: Uint8Array, options: Readonly<{ readonly numContexts: number }>) {
-    if (!encoded) {throw new Error("encoded is required");}
-    if (!options) {throw new Error("options is required");}
-    if (!Number.isFinite(options.numContexts) || options.numContexts <= 0) {
-      throw new Error(`options.numContexts must be > 0 (got ${options.numContexts})`);
-    }
-
-    // Add a small artificial marker at the end (matches common decoder implementations).
-    const padded = new Uint8Array(encoded.length + 2);
-    padded.set(encoded);
-    padded[padded.length - 2] = 0xff;
-    padded[padded.length - 1] = 0xff;
-    this.data = padded;
-
-    this.bp = 0;
-    this.a = 0x8000;
-    this.c = ((this.data[0] ?? 0) << 16) >>> 0;
-    this.ct = 0;
-    this.byteIn();
-    this.c = (this.c << 7) >>> 0;
-    this.ct -= 7;
-
-    this.ctxState = new Uint8Array(options.numContexts);
-    this.ctxMps = new Uint8Array(options.numContexts);
+/**
+ * Creates an MQ arithmetic decoder for JPEG 2000 entropy coding.
+ *
+ * The decoder implements the MQ coder state machine as defined in ISO/IEC 15444-1,
+ * using 47 states for probability estimation.
+ */
+export function createMqDecoder(
+  encoded: Uint8Array,
+  options: Readonly<{ readonly numContexts: number }>,
+): MqDecoder {
+  if (!encoded) {throw new Error("encoded is required");}
+  if (!options) {throw new Error("options is required");}
+  if (!Number.isFinite(options.numContexts) || options.numContexts <= 0) {
+    throw new Error(`options.numContexts must be > 0 (got ${options.numContexts})`);
   }
 
-  resetContexts(stateIndex: number = 0, mps: 0 | 1 = 0): void {
+  // Add a small artificial marker at the end (matches common decoder implementations).
+  const padded = new Uint8Array(encoded.length + 2);
+  padded.set(encoded);
+  padded[padded.length - 2] = 0xff;
+  padded[padded.length - 1] = 0xff;
+  const data = padded;
+
+  // MQ decoder internal state: byte position (bp), interval (a), code register (c), bit count (ct)
+  const mqState = {
+    bp: 0,
+    a: 0x8000,
+    c: ((data[0] ?? 0) << 16) >>> 0,
+    ct: 0,
+  };
+
+  const ctxState = new Uint8Array(options.numContexts);
+  const ctxMps = new Uint8Array(options.numContexts);
+
+  function byteIn(): void {
+    const l_c = data[mqState.bp + 1] ?? 0;
+    const cur = data[mqState.bp] ?? 0;
+    if (cur === 0xff) {
+      if (l_c > 0x8f) {
+        mqState.c = (mqState.c + 0xff00) >>> 0;
+        mqState.ct = 8;
+      } else {
+        mqState.bp += 1;
+        mqState.c = (mqState.c + (l_c << 9)) >>> 0;
+        mqState.ct = 7;
+      }
+      return;
+    }
+    mqState.bp += 1;
+    mqState.c = (mqState.c + (l_c << 8)) >>> 0;
+    mqState.ct = 8;
+  }
+
+  function renorm(a0: number, c0: number, ct0: number): { a: number; c: number; ct: number } {
+    // Renormalization state for MQ decoder interval and code register
+    const renormState = { aVal: a0 >>> 0, cVal: c0 >>> 0, ctVal: ct0 };
+    while (renormState.aVal < 0x8000) {
+      if (renormState.ctVal === 0) {
+        mqState.c = renormState.cVal;
+        mqState.ct = renormState.ctVal;
+        byteIn();
+        renormState.cVal = mqState.c;
+        renormState.ctVal = mqState.ct;
+      }
+      renormState.aVal = (renormState.aVal << 1) & 0xffff;
+      renormState.cVal = (renormState.cVal << 1) >>> 0;
+      renormState.ctVal -= 1;
+    }
+    return { a: renormState.aVal, c: renormState.cVal, ct: renormState.ctVal };
+  }
+
+  // Initialize
+  byteIn();
+  mqState.c = (mqState.c << 7) >>> 0;
+  mqState.ct -= 7;
+
+  function resetContexts(stateIndex: number = 0, mps: 0 | 1 = 0): void {
     if (!Number.isFinite(stateIndex) || stateIndex < 0 || stateIndex >= MQ_QE.length) {
       throw new Error(`Invalid MQ stateIndex=${stateIndex}`);
     }
-    this.ctxState.fill(stateIndex);
-    this.ctxMps.fill(mps);
+    ctxState.fill(stateIndex);
+    ctxMps.fill(mps);
   }
 
-  setContext(ctx: number, stateIndex: number, mps: 0 | 1): void {
-    if (!Number.isFinite(ctx) || ctx < 0 || ctx >= this.ctxState.length) {
+  function setContext(ctx: number, stateIndex: number, mps: 0 | 1): void {
+    if (!Number.isFinite(ctx) || ctx < 0 || ctx >= ctxState.length) {
       throw new Error(`Invalid MQ context=${ctx}`);
     }
     if (!Number.isFinite(stateIndex) || stateIndex < 0 || stateIndex >= MQ_QE.length) {
       throw new Error(`Invalid MQ stateIndex=${stateIndex}`);
     }
-    this.ctxState[ctx] = stateIndex;
-    this.ctxMps[ctx] = mps;
+    ctxState[ctx] = stateIndex;
+    ctxMps[ctx] = mps;
   }
 
-  decodeBit(ctx: number): 0 | 1 {
-    const state = this.ctxState[ctx] ?? 0;
+  function decodeBit(ctx: number): 0 | 1 {
+    const state = ctxState[ctx] ?? 0;
     const qeval = MQ_QE[state] ?? 0;
-    const mps = (this.ctxMps[ctx] ?? 0) & 1;
+    const mps = (ctxMps[ctx] ?? 0) & 1;
 
-    // eslint-disable-next-line no-restricted-syntax
-    let a = this.a - qeval;
-    // eslint-disable-next-line no-restricted-syntax
-    let c = this.c;
-    // eslint-disable-next-line no-restricted-syntax
-    let ct = this.ct;
+    // MQ decode state: interval (a), code register (c), bit count (ct), decoded bit (d), next state/mps
+    const decodeState = {
+      aVal: mqState.a - qeval,
+      cVal: mqState.c,
+      ctVal: mqState.ct,
+      d: 0,
+      nextState: state,
+      nextMps: mps,
+    };
 
-    // eslint-disable-next-line no-restricted-syntax
-    let d: number;
-    // eslint-disable-next-line no-restricted-syntax
-    let nextState = state;
-    // eslint-disable-next-line no-restricted-syntax
-    let nextMps = mps;
-
-    if ((c >>> 16) < qeval) {
+    if ((decodeState.cVal >>> 16) < qeval) {
       // LPS exchange
-      if (a < qeval) {
-        a = qeval;
-        d = mps;
-        nextState = MQ_NMPS[state] ?? state;
+      if (decodeState.aVal < qeval) {
+        decodeState.aVal = qeval;
+        decodeState.d = mps;
+        decodeState.nextState = MQ_NMPS[state] ?? state;
       } else {
-        a = qeval;
-        d = 1 - mps;
-        if (MQ_SWITCH[state]) {nextMps = 1 - mps;}
-        nextState = MQ_NLPS[state] ?? state;
+        decodeState.aVal = qeval;
+        decodeState.d = 1 - mps;
+        if (MQ_SWITCH[state]) {decodeState.nextMps = 1 - mps;}
+        decodeState.nextState = MQ_NLPS[state] ?? state;
       }
-      ({ a, c, ct } = this.renorm(a, c, ct));
+      const renormed = renorm(decodeState.aVal, decodeState.cVal, decodeState.ctVal);
+      decodeState.aVal = renormed.a;
+      decodeState.cVal = renormed.c;
+      decodeState.ctVal = renormed.ct;
     } else {
-      c = (c - ((qeval << 16) >>> 0)) >>> 0;
-      if ((a & 0x8000) === 0) {
+      decodeState.cVal = (decodeState.cVal - ((qeval << 16) >>> 0)) >>> 0;
+      if ((decodeState.aVal & 0x8000) === 0) {
         // MPS exchange
-        if (a < qeval) {
-          d = 1 - mps;
-          if (MQ_SWITCH[state]) {nextMps = 1 - mps;}
-          nextState = MQ_NLPS[state] ?? state;
+        if (decodeState.aVal < qeval) {
+          decodeState.d = 1 - mps;
+          if (MQ_SWITCH[state]) {decodeState.nextMps = 1 - mps;}
+          decodeState.nextState = MQ_NLPS[state] ?? state;
         } else {
-          d = mps;
-          nextState = MQ_NMPS[state] ?? state;
+          decodeState.d = mps;
+          decodeState.nextState = MQ_NMPS[state] ?? state;
         }
-        ({ a, c, ct } = this.renorm(a, c, ct));
+        const renormed = renorm(decodeState.aVal, decodeState.cVal, decodeState.ctVal);
+        decodeState.aVal = renormed.a;
+        decodeState.cVal = renormed.c;
+        decodeState.ctVal = renormed.ct;
       } else {
-        d = mps;
+        decodeState.d = mps;
       }
     }
 
-    this.a = a;
-    this.c = c;
-    this.ct = ct;
-    this.ctxState[ctx] = nextState;
-    this.ctxMps[ctx] = nextMps;
-    return (d & 1) as 0 | 1;
+    mqState.a = decodeState.aVal;
+    mqState.c = decodeState.cVal;
+    mqState.ct = decodeState.ctVal;
+    ctxState[ctx] = decodeState.nextState;
+    ctxMps[ctx] = decodeState.nextMps;
+    return (decodeState.d & 1) as 0 | 1;
   }
 
-  private renorm(a0: number, c0: number, ct0: number): { a: number; c: number; ct: number } {
-    // eslint-disable-next-line no-restricted-syntax
-    let a = a0 >>> 0;
-    // eslint-disable-next-line no-restricted-syntax
-    let c = c0 >>> 0;
-    // eslint-disable-next-line no-restricted-syntax
-    let ct = ct0;
-    while (a < 0x8000) {
-      if (ct === 0) {
-        this.c = c;
-        this.ct = ct;
-        this.byteIn();
-        c = this.c;
-        ct = this.ct;
-      }
-      a = (a << 1) & 0xffff;
-      c = (c << 1) >>> 0;
-      ct -= 1;
-    }
-    return { a, c, ct };
-  }
-
-  private byteIn(): void {
-    const l_c = this.data[this.bp + 1] ?? 0;
-    const cur = this.data[this.bp] ?? 0;
-    if (cur === 0xff) {
-      if (l_c > 0x8f) {
-        this.c = (this.c + 0xff00) >>> 0;
-        this.ct = 8;
-      } else {
-        this.bp += 1;
-        this.c = (this.c + (l_c << 9)) >>> 0;
-        this.ct = 7;
-      }
-      return;
-    }
-    this.bp += 1;
-    this.c = (this.c + (l_c << 8)) >>> 0;
-    this.ct = 8;
-  }
+  return {
+    resetContexts,
+    setContext,
+    decodeBit,
+  };
 }

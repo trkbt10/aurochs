@@ -328,11 +328,7 @@ describe("Standard Security Handler (V=5/R=5, AESV3)", () => {
 });
 
 function mod3BigEndian(bytes: Uint8Array): 0 | 1 | 2 {
-  // eslint-disable-next-line no-restricted-syntax
-  let r = 0;
-  for (const b of bytes) {
-    r = (r * 256 + (b & 0xff)) % 3;
-  }
+  const r = Array.from(bytes).reduce((acc, b) => (acc * 256 + (b & 0xff)) % 3, 0);
   return r as 0 | 1 | 2;
 }
 
@@ -350,34 +346,34 @@ function computeR6HardenedHashNode(args: {
   readonly userKey?: Uint8Array;
 }): Uint8Array {
   const u = args.userKey ?? new Uint8Array(0);
-  // eslint-disable-next-line no-restricted-syntax
-  let k = createHash("sha256").update(Buffer.from(args.passwordBytes)).update(Buffer.from(args.salt)).update(Buffer.from(u)).digest();
-  // eslint-disable-next-line no-restricted-syntax
-  let e = Buffer.alloc(0);
+  const state = {
+    k: createHash("sha256").update(Buffer.from(args.passwordBytes)).update(Buffer.from(args.salt)).update(Buffer.from(u)).digest(),
+    e: Buffer.alloc(0),
+  };
   for (let i = 0; ; i += 1) {
-    const k1 = Buffer.concat([Buffer.from(args.passwordBytes), k, Buffer.from(u)]);
+    const k1 = Buffer.concat([Buffer.from(args.passwordBytes), state.k, Buffer.from(u)]);
     const k1Repeated = Buffer.from(repeatBytes(new Uint8Array(k1), 64));
-    const aesKey = k.subarray(0, 16);
-    const aesIv = k.subarray(16, 32);
+    const aesKey = state.k.subarray(0, 16);
+    const aesIv = state.k.subarray(16, 32);
     const cipher = createCipheriv("aes-128-cbc", aesKey, aesIv);
     cipher.setAutoPadding(false);
-    e = Buffer.concat([cipher.update(k1Repeated), cipher.final()]);
+    state.e = Buffer.concat([cipher.update(k1Repeated), cipher.final()]);
 
-    const selector = mod3BigEndian(new Uint8Array(e.subarray(0, 16)));
+    const selector = mod3BigEndian(new Uint8Array(state.e.subarray(0, 16)));
     if (selector === 0) {
-      k = createHash("sha256").update(e).digest();
+      state.k = createHash("sha256").update(state.e).digest();
     } else if (selector === 1) {
-      k = createHash("sha384").update(e).digest();
+      state.k = createHash("sha384").update(state.e).digest();
     } else {
-      k = createHash("sha512").update(e).digest();
+      state.k = createHash("sha512").update(state.e).digest();
     }
 
-    const last = e[e.length - 1] ?? 0;
+    const last = state.e[state.e.length - 1] ?? 0;
     if (i >= 63 && last <= (i - 31)) {
       break;
     }
   }
-  return new Uint8Array(k.subarray(0, 32));
+  return new Uint8Array(state.k.subarray(0, 32));
 }
 
 function buildEncryptedPdfR6AesV3(args: {

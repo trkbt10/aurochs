@@ -151,32 +151,16 @@ function scIndex(
 ): number {
   // Bits follow T1_LUT_* from ISO/IEC 15444-1 (OpenJPEG naming):
   // 0: SGN_W, 1: SIG_N, 2: SGN_E, 3: SIG_W, 4: SGN_N, 5: SIG_E, 6: SGN_S, 7: SIG_S
-  // eslint-disable-next-line no-restricted-syntax
-  let idx = 0;
-
   const sigW = hasSig(grid, x - 1, y);
-  if (sigW) {
-    idx |= 1 << 3;
-    if (signNeg(grid, x - 1, y)) {idx |= 1 << 0;}
-  }
-
   const sigN = hasSig(grid, x, y - 1);
-  if (sigN) {
-    idx |= 1 << 1;
-    if (signNeg(grid, x, y - 1)) {idx |= 1 << 4;}
-  }
-
   const sigE = hasSig(grid, x + 1, y);
-  if (sigE) {
-    idx |= 1 << 5;
-    if (signNeg(grid, x + 1, y)) {idx |= 1 << 2;}
-  }
-
   const sigS = hasSig(grid, x, y + 1);
-  if (sigS) {
-    idx |= 1 << 7;
-    if (signNeg(grid, x, y + 1)) {idx |= 1 << 6;}
-  }
+
+  const idx =
+    (sigW ? (1 << 3) | (signNeg(grid, x - 1, y) ? 1 << 0 : 0) : 0) |
+    (sigN ? (1 << 1) | (signNeg(grid, x, y - 1) ? 1 << 4 : 0) : 0) |
+    (sigE ? (1 << 5) | (signNeg(grid, x + 1, y) ? 1 << 2 : 0) : 0) |
+    (sigS ? (1 << 7) | (signNeg(grid, x, y + 1) ? 1 << 6 : 0) : 0);
 
   return idx >>> 0;
 }
@@ -235,28 +219,26 @@ export function tier1DecodeLlCodeblock(mq: MqDecoder, params: Tier1DecodeParams)
   const refined = new Uint8Array(sampleCount);
 
   // MSB bitplane: cleanup pass only.
-  // eslint-disable-next-line no-restricted-syntax
-  let pass = 0;
-  // eslint-disable-next-line no-restricted-syntax
-  let bp = params.startBitplane;
-  decodeCleanupPass({ mq, width, height, bp, significant, sign, data, pi });
-  pass += 1;
-  bp -= 1;
+  // State for multi-pass decoding: tracks current pass count and bitplane
+  const state = { pass: 0, bp: params.startBitplane };
+  decodeCleanupPass({ mq, width, height, bp: state.bp, significant, sign, data, pi });
+  state.pass += 1;
+  state.bp -= 1;
 
-  while (pass < params.numPasses) {
-    if (bp < 0) {throw new Error("Tier1: ran out of bitplanes");}
+  while (state.pass < params.numPasses) {
+    if (state.bp < 0) {throw new Error("Tier1: ran out of bitplanes");}
     pi.fill(0);
-    decodeSigPropPass({ mq, width, height, bp, significant, sign, data, pi });
-    pass += 1;
-    if (pass >= params.numPasses) {break;}
+    decodeSigPropPass({ mq, width, height, bp: state.bp, significant, sign, data, pi });
+    state.pass += 1;
+    if (state.pass >= params.numPasses) {break;}
 
-    decodeMagRefPass({ mq, width, height, bp, significant, data, pi, refined });
-    pass += 1;
-    if (pass >= params.numPasses) {break;}
+    decodeMagRefPass({ mq, width, height, bp: state.bp, significant, data, pi, refined });
+    state.pass += 1;
+    if (state.pass >= params.numPasses) {break;}
 
-    decodeCleanupPass({ mq, width, height, bp, significant, sign, data, pi });
-    pass += 1;
-    bp -= 1;
+    decodeCleanupPass({ mq, width, height, bp: state.bp, significant, sign, data, pi });
+    state.pass += 1;
+    state.bp -= 1;
   }
 
   return { data, sign, significant };

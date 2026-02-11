@@ -272,20 +272,16 @@ function computeOrientedBoxForRun(run: TextRun, fontMappings: FontMappings): Ori
     { x: start.x + nx * maxN, y: start.y + ny * maxN },
   ];
 
-  // eslint-disable-next-line no-restricted-syntax
-  let minX = Infinity;
-  // eslint-disable-next-line no-restricted-syntax
-  let minY = Infinity;
-  // eslint-disable-next-line no-restricted-syntax
-  let maxX = -Infinity;
-  // eslint-disable-next-line no-restricted-syntax
-  let maxY = -Infinity;
-  for (const c of corners) {
-    minX = Math.min(minX, c.x);
-    minY = Math.min(minY, c.y);
-    maxX = Math.max(maxX, c.x);
-    maxY = Math.max(maxY, c.y);
-  }
+  const bounds = corners.reduce(
+    (acc, c) => ({
+      minX: Math.min(acc.minX, c.x),
+      minY: Math.min(acc.minY, c.y),
+      maxX: Math.max(acc.maxX, c.x),
+      maxY: Math.max(acc.maxY, c.y),
+    }),
+    { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity },
+  );
+  const { minX, minY, maxX, maxY } = bounds;
   if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {return null;}
 
   return {
@@ -472,11 +468,12 @@ function tryExtractConstantSoftMaskValueFromElements(
 
 function parseDeviceColorSpaceNameFromObject(page: NativePdfPage, obj: PdfObject | undefined): PdfColorSpace | null {
   const resolved = resolve(page, obj);
-  const name = asName(resolved) ?? (() => {
+  function extractNameFromArray(): string | null {
     const items = asArray(resolved);
     const first = items?.[0];
     return first?.type === "name" ? first.value : null;
-  })();
+  }
+  const name = asName(resolved) ?? extractNameFromArray();
   if (name === "DeviceGray") {return "DeviceGray";}
   if (name === "DeviceRGB") {return "DeviceRGB";}
   if (name === "DeviceCMYK") {return "DeviceCMYK";}
@@ -498,12 +495,13 @@ function parseSoftMaskBackdropRgb(
     comps.push(item.value);
   }
 
-  const cs = groupColorSpace ?? (() => {
+  function inferColorSpaceFromComponents(): PdfColorSpace | null {
     if (comps.length === 1) {return "DeviceGray" as const;}
     if (comps.length === 3) {return "DeviceRGB" as const;}
     if (comps.length === 4) {return "DeviceCMYK" as const;}
     return null;
-  })();
+  }
+  const cs = groupColorSpace ?? inferColorSpaceFromComponents();
   if (!cs) {return null;}
 
   if (cs === "DeviceGray") {
@@ -649,20 +647,16 @@ function tryExtractPerPixelSoftMaskFromElements({
     const halfW = lineWidth / 2;
 
     // Restrict pixel loops to the union of run AABBs (expanded for stroke pad).
-    // eslint-disable-next-line no-restricted-syntax
-    let minX = Infinity;
-    // eslint-disable-next-line no-restricted-syntax
-    let minY = Infinity;
-    // eslint-disable-next-line no-restricted-syntax
-    let maxX = -Infinity;
-    // eslint-disable-next-line no-restricted-syntax
-    let maxY = -Infinity;
-    for (const b of runBoxes) {
-      minX = Math.min(minX, b.aabb[0]);
-      minY = Math.min(minY, b.aabb[1]);
-      maxX = Math.max(maxX, b.aabb[2]);
-      maxY = Math.max(maxY, b.aabb[3]);
-    }
+    const runBounds = runBoxes.reduce(
+      (acc, b) => ({
+        minX: Math.min(acc.minX, b.aabb[0]),
+        minY: Math.min(acc.minY, b.aabb[1]),
+        maxX: Math.max(acc.maxX, b.aabb[2]),
+        maxY: Math.max(acc.maxY, b.aabb[3]),
+      }),
+      { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity },
+    );
+    const { minX, minY, maxX, maxY } = runBounds;
 
     const [llx, lly, urx, ury] = bbox;
     const bw = urx - llx;
@@ -821,29 +815,35 @@ function tryExtractPerPixelSoftMaskFromElements({
       }
     }
 
-    for (const elem of elements) {
-      // eslint-disable-next-line no-restricted-syntax
-      let layer: RasterLayer | null | undefined = undefined;
-
+    type LayerResult = RasterLayer | "skip" | "error";
+    const computeLayerForElem = (elem: ParsedElement): LayerResult => {
       if (elem.type === "path") {
-        if (elem.paintOp === "none" || elem.paintOp === "clip") {continue;}
-        if (elem.graphicsState.softMask) {return null;}
+        if (elem.paintOp === "none" || elem.paintOp === "clip") {return "skip";}
+        if (elem.graphicsState.softMask) {return "error";}
 
         const ctmInv = invertMatrix(elem.graphicsState.ctm);
-        if (!ctmInv) {return null;}
+        if (!ctmInv) {return "error";}
         const gridInMaskSpace: PdfSoftMask = { ...renderGrid, matrix: ctmInv };
 
         const raster = rasterizeSoftMaskedFillPath({ ...elem, graphicsState: { ...elem.graphicsState, softMask: gridInMaskSpace } });
-        if (!raster || raster.type !== "image" || !raster.alpha) {return null;}
-        if (raster.width !== width || raster.height !== height) {return null;}
-        layer = { kind: "raster", width, height, data: raster.data, alpha: raster.alpha };
-      } else if (elem.type === "text") {
-        layer = rasterizeTextElementToGrid({ elem, width, height, bbox, fontMappings });
-        if (layer === null) {return null;}
-        if (!layer) {continue;}
-      } else {
-        return null;
+        if (!raster || raster.type !== "image" || !raster.alpha) {return "error";}
+        if (raster.width !== width || raster.height !== height) {return "error";}
+        return { kind: "raster", width, height, data: raster.data, alpha: raster.alpha };
       }
+      if (elem.type === "text") {
+        const result = rasterizeTextElementToGrid({ elem, width, height, bbox, fontMappings });
+        if (result === null) {return "error";}
+        if (result === undefined) {return "skip";}
+        return result;
+      }
+      return "error";
+    };
+
+    for (const elem of elements) {
+      const layerResult = computeLayerForElem(elem);
+      if (layerResult === "error") {return null;}
+      if (layerResult === "skip") {continue;}
+      const layer = layerResult;
 
       for (let i = 0; i < pixelCount; i += 1) {
         const srcA = layer.alpha[i] ?? 0;
@@ -888,85 +888,98 @@ function tryExtractPerPixelSoftMaskFromElements({
   const xObjects = hasXObjectImages ? getXObjectsDict(page, resources) : null;
   if (hasXObjectImages && !xObjects) {return null;}
 
-  const decodedImagesByName = new Map<
-    string,
-    Readonly<{
-      readonly width: number;
-      readonly height: number;
-      readonly rgba: Uint8ClampedArray;
-      readonly smaskAlpha: Uint8Array | null;
-      readonly opacity: number;
-    }>
-  >();
+  type DecodedImageInfo = Readonly<{
+    readonly width: number;
+    readonly height: number;
+    readonly rgba: Uint8ClampedArray;
+    readonly smaskAlpha: Uint8Array | null;
+    readonly opacity: number;
+  }>;
+  const decodedImagesByName = new Map<string, DecodedImageInfo>();
 
-  // eslint-disable-next-line no-restricted-syntax
-  let width: number | null = null;
-  // eslint-disable-next-line no-restricted-syntax
-  let height: number | null = null;
+  type DimensionsState = Readonly<{ width: number | null; height: number | null; error: boolean }>;
 
-  if (hasXObjectImages) {
-    for (const img of imageElements) {
-      const key = img.name;
-      const cached = decodedImagesByName.get(key);
-      if (cached) {
-        if (width == null || height == null) {
-          width = cached.width;
-          height = cached.height;
-        } else if (cached.width !== width || cached.height !== height) {
-          return null;
+  const processXObjectImages = (): DimensionsState => {
+    if (!hasXObjectImages) {return { width: null, height: null, error: false };}
+
+    return imageElements.reduce<DimensionsState>(
+      (acc, img) => {
+        if (acc.error) {return acc;}
+
+        const key = img.name;
+        const cached = decodedImagesByName.get(key);
+        if (cached) {
+          if (acc.width == null || acc.height == null) {
+            return { width: cached.width, height: cached.height, error: false };
+          }
+          if (cached.width !== acc.width || cached.height !== acc.height) {
+            return { ...acc, error: true };
+          }
+          return acc;
         }
-        continue;
-      }
 
-      if (!xObjects) {return null;}
-      const stream = resolveXObjectStreamByName(page, xObjects, img.name);
-      if (!stream) {return null;}
+        if (!xObjects) {return { ...acc, error: true };}
+        const stream = resolveXObjectStreamByName(page, xObjects, img.name);
+        if (!stream) {return { ...acc, error: true };}
 
-      const dict = stream.dict;
-      const subtype = asName(dictGet(dict, "Subtype"));
-      if (subtype !== "Image") {return null;}
+        const dict = stream.dict;
+        const subtype = asName(dictGet(dict, "Subtype"));
+        if (subtype !== "Image") {return { ...acc, error: true };}
 
-      const decoded = decodeImageXObjectStreamNative({
-        pdfPage: page,
-        imageStream: stream,
-        graphicsState: img.graphicsState,
-        options: { jpxDecode: options.jpxDecode },
-      });
-      if (!decoded) {return null;}
-      const applied = applyGraphicsSoftMaskToPdfImage(decoded);
-      const rgba = convertToRgba(applied.data, applied.width, applied.height, applied.colorSpace, applied.bitsPerComponent, {
-        decode: applied.decode,
-      });
+        const decoded = decodeImageXObjectStreamNative({
+          pdfPage: page,
+          imageStream: stream,
+          graphicsState: img.graphicsState,
+          options: { jpxDecode: options.jpxDecode },
+        });
+        if (!decoded) {return { ...acc, error: true };}
+        const applied = applyGraphicsSoftMaskToPdfImage(decoded);
+        const rgba = convertToRgba(applied.data, applied.width, applied.height, applied.colorSpace, applied.bitsPerComponent, {
+          decode: applied.decode,
+        });
 
-      const w = applied.width;
-      const h = applied.height;
-      if (w <= 0 || h <= 0) {return null;}
-      if (width == null || height == null) {
-        width = w;
-        height = h;
-      } else if (w !== width || h !== height) {
-        return null;
-      }
+        const w = applied.width;
+        const h = applied.height;
+        if (w <= 0 || h <= 0) {return { ...acc, error: true };}
 
-      const opacity = clamp01(applied.graphicsState.fillAlpha);
-      const smaskAlpha = applied.alpha ?? null;
+        if (acc.width != null && acc.height != null) {
+          if (w !== acc.width || h !== acc.height) {
+            return { ...acc, error: true };
+          }
+        }
 
-      decodedImagesByName.set(key, { width, height, rgba, smaskAlpha, opacity });
+        const opacity = clamp01(applied.graphicsState.fillAlpha);
+        const smaskAlpha = applied.alpha ?? null;
+        decodedImagesByName.set(key, { width: w, height: h, rgba, smaskAlpha, opacity });
+
+        return { width: acc.width ?? w, height: acc.height ?? h, error: false };
+      },
+      { width: null, height: null, error: false },
+    );
+  };
+
+  const xObjectDims = processXObjectImages();
+  if (xObjectDims.error) {return null;}
+
+  const computeFinalDims = (): { width: number; height: number } => {
+    if (xObjectDims.width != null && xObjectDims.height != null) {
+      return { width: xObjectDims.width, height: xObjectDims.height };
     }
-  }
+    return rasterImageElements.reduce<{ width: number; height: number }>(
+      (acc, ri) => {
+        const img = ri.image;
+        const w = img.width ?? 0;
+        const h = img.height ?? 0;
+        if (w <= 0 || h <= 0) {return acc;}
+        return { width: Math.max(acc.width, w), height: Math.max(acc.height, h) };
+      },
+      { width: xObjectDims.width ?? 0, height: xObjectDims.height ?? 0 },
+    );
+  };
+  const finalDims = computeFinalDims();
 
-  if (width == null || height == null) {
-    for (const ri of rasterImageElements) {
-      const img = ri.image;
-      const w = img.width ?? 0;
-      const h = img.height ?? 0;
-      if (w <= 0 || h <= 0) {continue;}
-      width = Math.max(width ?? 0, w);
-      height = Math.max(height ?? 0, h);
-    }
-  }
-
-  if (width == null || height == null) {return null;}
+  const { width, height } = finalDims;
+  if (width === 0 || height === 0) {return null;}
 
   const [llx, lly, urx, ury] = bbox;
   const bw = urx - llx;
@@ -1067,168 +1080,147 @@ function tryExtractPerPixelSoftMaskFromElements({
       const idx = row * width + col;
 
       if (kind === "Alpha") {
-        // eslint-disable-next-line no-restricted-syntax
-        let outA = 0;
-        for (const layer of layers) {
-          // eslint-disable-next-line no-restricted-syntax
-          let srcA = 0;
+        type AlphaLayerResult = number | "skip" | "error";
+        const getSrcAlphaForLayer = (layer: MaskLayer): AlphaLayerResult => {
           if (layer.kind === "raster") {
-            srcA = layer.alpha[idx] ?? 0;
-          } else if (layer.kind === "pdfImage") {
+            return layer.alpha[idx] ?? 0;
+          }
+          if (layer.kind === "pdfImage") {
             const imagePoint = transformPoint({ x: maskX, y: maskY }, layer.imageMatrixInv);
             const u = imagePoint.x;
             const v = imagePoint.y;
-            if (u < 0 || u >= 1 || v < 0 || v >= 1) {
-              continue;
-            }
+            if (u < 0 || u >= 1 || v < 0 || v >= 1) {return "skip";}
             const srcCol = Math.min(layer.width - 1, Math.max(0, Math.floor(u * layer.width)));
             const srcRow = Math.min(layer.height - 1, Math.max(0, Math.floor((1 - v) * layer.height)));
             const srcIdx = srcRow * layer.width + srcCol;
-            srcA = layer.alpha ? (layer.alpha[srcIdx] ?? 0) : -1;
-            if (srcA < 0) {
+            const rawA = layer.alpha ? (layer.alpha[srcIdx] ?? 0) : -1;
+            if (rawA < 0) {
               const o = srcIdx * 3;
               const r = layer.data[o] ?? 0;
               const g = layer.data[o + 1] ?? 0;
               const b = layer.data[o + 2] ?? 0;
-              if (r !== g || g !== b) {return null;}
-              srcA = r;
+              if (r !== g || g !== b) {return "error";}
+              return Math.round(r * layer.opacity);
             }
-            srcA = Math.round(srcA * layer.opacity);
-          } else {
-            const imagePoint = transformPoint({ x: maskX, y: maskY }, layer.imageMatrixInv);
-            const u = imagePoint.x;
-            const v = imagePoint.y;
-            if (u < 0 || u >= 1 || v < 0 || v >= 1) {
-              continue;
-            }
-            const srcCol = Math.min(layer.width - 1, Math.max(0, Math.floor(u * layer.width)));
-            const srcRow = Math.min(layer.height - 1, Math.max(0, Math.floor((1 - v) * layer.height)));
-            const srcIdx = srcRow * layer.width + srcCol;
-
-            srcA = layer.smaskAlpha ? (layer.smaskAlpha[srcIdx] ?? 0) : -1;
-            if (srcA < 0) {
-              const o = srcIdx * 4;
-              const r = layer.rgba[o] ?? 0;
-              const g = layer.rgba[o + 1] ?? 0;
-              const b = layer.rgba[o + 2] ?? 0;
-              // Heuristic fallback: accept grayscale images as alpha sources.
-              if (r !== g || g !== b) {return null;}
-              srcA = r;
-            }
-            srcA = Math.round(srcA * layer.opacity);
+            return Math.round(rawA * layer.opacity);
           }
-
-          if (srcA === 0) {continue;}
-          if (groupKnockout) {
-            outA = srcA;
-          } else {
-            outA = srcA + Math.round((outA * (255 - srcA)) / 255);
+          // layer.kind === "image"
+          const imagePoint = transformPoint({ x: maskX, y: maskY }, layer.imageMatrixInv);
+          const u = imagePoint.x;
+          const v = imagePoint.y;
+          if (u < 0 || u >= 1 || v < 0 || v >= 1) {return "skip";}
+          const srcCol = Math.min(layer.width - 1, Math.max(0, Math.floor(u * layer.width)));
+          const srcRow = Math.min(layer.height - 1, Math.max(0, Math.floor((1 - v) * layer.height)));
+          const srcIdx = srcRow * layer.width + srcCol;
+          const rawA = layer.smaskAlpha ? (layer.smaskAlpha[srcIdx] ?? 0) : -1;
+          if (rawA < 0) {
+            const o = srcIdx * 4;
+            const r = layer.rgba[o] ?? 0;
+            const g = layer.rgba[o + 1] ?? 0;
+            const b = layer.rgba[o + 2] ?? 0;
+            // Heuristic fallback: accept grayscale images as alpha sources.
+            if (r !== g || g !== b) {return "error";}
+            return Math.round(r * layer.opacity);
           }
-        }
-        alpha[idx] = outA;
+          return Math.round(rawA * layer.opacity);
+        };
+
+        type AccumulatorResult = { outA: number } | "error";
+        const accResult = layers.reduce<AccumulatorResult>(
+          (acc, layer) => {
+            if (acc === "error") {return "error";}
+            const srcA = getSrcAlphaForLayer(layer);
+            if (srcA === "error") {return "error";}
+            if (srcA === "skip" || srcA === 0) {return acc;}
+            const newOutA = groupKnockout ? srcA : srcA + Math.round((acc.outA * (255 - srcA)) / 255);
+            return { outA: newOutA };
+          },
+          { outA: 0 },
+        );
+        if (accResult === "error") {return null;}
+        alpha[idx] = accResult.outA;
         continue;
       }
 
-      // eslint-disable-next-line no-restricted-syntax
-      let outA = 0;
-      // eslint-disable-next-line no-restricted-syntax
-      let premR = 0;
-      // eslint-disable-next-line no-restricted-syntax
-      let premG = 0;
-      // eslint-disable-next-line no-restricted-syntax
-      let premB = 0;
+      type PremulPixel = Readonly<{ outA: number; premR: number; premG: number; premB: number }>;
+      type LayerPixelResult = Readonly<{ srcA: number; r: number; g: number; b: number }> | "skip";
 
-      if (!groupIsolated && backdropRgb) {
-        const [br, bg, bb] = backdropRgb;
-        outA = 255;
-        premR = br * 255;
-        premG = bg * 255;
-        premB = bb * 255;
-      }
-
-      for (const layer of layers) {
-        // eslint-disable-next-line no-restricted-syntax
-        let srcA = 0;
-        // eslint-disable-next-line no-restricted-syntax
-        let r = 0;
-        // eslint-disable-next-line no-restricted-syntax
-        let g = 0;
-        // eslint-disable-next-line no-restricted-syntax
-        let b = 0;
-
+      const getLayerPixel = (layer: MaskLayer): LayerPixelResult => {
         if (layer.kind === "raster") {
-          srcA = layer.alpha[idx] ?? 0;
-          if (srcA === 0) {continue;}
+          const srcA = layer.alpha[idx] ?? 0;
+          if (srcA === 0) {return "skip";}
           const o = idx * 3;
-          r = layer.data[o] ?? 0;
-          g = layer.data[o + 1] ?? 0;
-          b = layer.data[o + 2] ?? 0;
-        } else if (layer.kind === "pdfImage") {
+          return { srcA, r: layer.data[o] ?? 0, g: layer.data[o + 1] ?? 0, b: layer.data[o + 2] ?? 0 };
+        }
+        if (layer.kind === "pdfImage") {
           const imagePoint = transformPoint({ x: maskX, y: maskY }, layer.imageMatrixInv);
           const u = imagePoint.x;
           const v = imagePoint.y;
-          if (u < 0 || u >= 1 || v < 0 || v >= 1) {
-            continue;
-          }
+          if (u < 0 || u >= 1 || v < 0 || v >= 1) {return "skip";}
           const srcCol = Math.min(layer.width - 1, Math.max(0, Math.floor(u * layer.width)));
           const srcRow = Math.min(layer.height - 1, Math.max(0, Math.floor((1 - v) * layer.height)));
           const srcIdx = srcRow * layer.width + srcCol;
 
-          srcA = layer.alpha ? (layer.alpha[srcIdx] ?? 0) : 255;
-          if (srcA === 0) {continue;}
-          srcA = Math.round(srcA * layer.opacity);
-          if (srcA === 0) {continue;}
+          const rawA = layer.alpha ? (layer.alpha[srcIdx] ?? 0) : 255;
+          if (rawA === 0) {return "skip";}
+          const srcA = Math.round(rawA * layer.opacity);
+          if (srcA === 0) {return "skip";}
 
           const o = srcIdx * 3;
-          r = layer.data[o] ?? 0;
-          g = layer.data[o + 1] ?? 0;
-          b = layer.data[o + 2] ?? 0;
-        } else {
-          const imagePoint = transformPoint({ x: maskX, y: maskY }, layer.imageMatrixInv);
-          const u = imagePoint.x;
-          const v = imagePoint.y;
-          if (u < 0 || u >= 1 || v < 0 || v >= 1) {
-            continue;
-          }
-          const srcCol = Math.min(layer.width - 1, Math.max(0, Math.floor(u * layer.width)));
-          const srcRow = Math.min(layer.height - 1, Math.max(0, Math.floor((1 - v) * layer.height)));
-          const srcIdx = srcRow * layer.width + srcCol;
-
-          srcA = layer.smaskAlpha ? (layer.smaskAlpha[srcIdx] ?? 0) : 255;
-          if (srcA === 0) {continue;}
-          srcA = Math.round(srcA * layer.opacity);
-          if (srcA === 0) {continue;}
-
-          const o = srcIdx * 4;
-          r = layer.rgba[o] ?? 0;
-          g = layer.rgba[o + 1] ?? 0;
-          b = layer.rgba[o + 2] ?? 0;
+          return { srcA, r: layer.data[o] ?? 0, g: layer.data[o + 1] ?? 0, b: layer.data[o + 2] ?? 0 };
         }
+        // layer.kind === "image"
+        const imagePoint = transformPoint({ x: maskX, y: maskY }, layer.imageMatrixInv);
+        const u = imagePoint.x;
+        const v = imagePoint.y;
+        if (u < 0 || u >= 1 || v < 0 || v >= 1) {return "skip";}
+        const srcCol = Math.min(layer.width - 1, Math.max(0, Math.floor(u * layer.width)));
+        const srcRow = Math.min(layer.height - 1, Math.max(0, Math.floor((1 - v) * layer.height)));
+        const srcIdx = srcRow * layer.width + srcCol;
 
+        const rawA = layer.smaskAlpha ? (layer.smaskAlpha[srcIdx] ?? 0) : 255;
+        if (rawA === 0) {return "skip";}
+        const srcA = Math.round(rawA * layer.opacity);
+        if (srcA === 0) {return "skip";}
+
+        const o = srcIdx * 4;
+        return { srcA, r: layer.rgba[o] ?? 0, g: layer.rgba[o + 1] ?? 0, b: layer.rgba[o + 2] ?? 0 };
+      };
+
+      const computeInitialPixel = (): PremulPixel => {
+        if (!groupIsolated && backdropRgb) {
+          return { outA: 255, premR: backdropRgb[0] * 255, premG: backdropRgb[1] * 255, premB: backdropRgb[2] * 255 };
+        }
+        return { outA: 0, premR: 0, premG: 0, premB: 0 };
+      };
+      const initialPixel = computeInitialPixel();
+
+      const finalPixel = layers.reduce<PremulPixel>((acc, layer) => {
+        const pixel = getLayerPixel(layer);
+        if (pixel === "skip") {return acc;}
+        const { srcA, r, g, b } = pixel;
         const invA = 255 - srcA;
         if (groupKnockout) {
-          premR = r * srcA;
-          premG = g * srcA;
-          premB = b * srcA;
-          outA = srcA;
-        } else {
-          premR = r * srcA + Math.round((premR * invA) / 255);
-          premG = g * srcA + Math.round((premG * invA) / 255);
-          premB = b * srcA + Math.round((premB * invA) / 255);
-          outA = srcA + Math.round((outA * invA) / 255);
+          return { premR: r * srcA, premG: g * srcA, premB: b * srcA, outA: srcA };
         }
-      }
+        return {
+          premR: r * srcA + Math.round((acc.premR * invA) / 255),
+          premG: g * srcA + Math.round((acc.premG * invA) / 255),
+          premB: b * srcA + Math.round((acc.premB * invA) / 255),
+          outA: srcA + Math.round((acc.outA * invA) / 255),
+        };
+      }, initialPixel);
 
-      if (outA === 0) {
+      if (finalPixel.outA === 0) {
         alpha[idx] = 0;
         continue;
       }
 
-      const outR = Math.round(premR / outA);
-      const outG = Math.round(premG / outA);
-      const outB = Math.round(premB / outA);
+      const outR = Math.round(finalPixel.premR / finalPixel.outA);
+      const outG = Math.round(finalPixel.premG / finalPixel.outA);
+      const outB = Math.round(finalPixel.premB / finalPixel.outA);
       const lum = Math.round(0.299 * outR + 0.587 * outG + 0.114 * outB);
-      alpha[idx] = Math.round((lum * outA) / 255);
+      alpha[idx] = Math.round((lum * finalPixel.outA) / 255);
     }
   }
 

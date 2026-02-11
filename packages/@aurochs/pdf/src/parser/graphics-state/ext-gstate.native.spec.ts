@@ -70,7 +70,7 @@ function buildMinimalPdfWithSoftMaskExtGState(args: { readonly kind: "Alpha" | "
   const contentStream = "q /GS1 gs 0 0 10 10 re f /GS2 gs 20 0 10 10 re f Q\n";
   const contentLength = new TextEncoder().encode(contentStream).length;
 
-  const { maskStreamContent, maskResources } = (() => {
+  function buildMaskStreamParts(): { maskStreamContent: string; maskResources: string } {
     if (args.kind === "Alpha") {
       return {
         maskStreamContent: "q /GSalpha gs 0 0 100 100 re f Q\n",
@@ -81,7 +81,8 @@ function buildMinimalPdfWithSoftMaskExtGState(args: { readonly kind: "Alpha" | "
       maskStreamContent: `q ${args.value} g 0 0 100 100 re f Q\n`,
       maskResources: "/Resources << >> ",
     };
-  })();
+  }
+  const { maskStreamContent, maskResources } = buildMaskStreamParts();
   const maskStreamLength = new TextEncoder().encode(maskStreamContent).length;
 
   const objects: Record<number, string> = {
@@ -650,12 +651,13 @@ function buildMinimalPdfWithPerPixelLuminositySoftMaskKnockout(args: {
     "q 1 0 0 1 0 0 cm /Im2 Do Q\n";
   const maskFormLength = new TextEncoder().encode(maskFormContent).length;
 
-  const groupDict = (() => {
+  function buildGroupDict(): string {
     if (args.knockout) {
       return "/Group << /S /Transparency /CS /DeviceRGB /K true >> ";
     }
     return "/Group << /S /Transparency /CS /DeviceRGB >> ";
-  })();
+  }
+  const groupDict = buildGroupDict();
 
   const objects: Record<number, string> = {
     1: "<< /Type /Catalog /Pages 2 0 R >>",

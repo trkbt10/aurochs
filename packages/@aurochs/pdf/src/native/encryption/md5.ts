@@ -47,13 +47,15 @@ function getRoundParams({ n, bb, cc, dd }: { readonly n: number; readonly bb: nu
   return { fn: i(bb, cc, dd), gIdx: (7 * n) % 16, s: S4[n % 4]! };
 }
 
-const K: readonly number[] = (() => {
+function buildMd5K(): readonly number[] {
   const out: number[] = [];
   for (let n = 0; n < 64; n += 1) {
     out.push(Math.floor(Math.abs(Math.sin(n + 1)) * 2 ** 32) >>> 0);
   }
   return out;
-})();
+}
+
+const K: readonly number[] = buildMd5K();
 
 function toWordsLE(bytes: Uint8Array): Uint32Array {
   const words = new Uint32Array(bytes.length >>> 2);
@@ -88,10 +90,12 @@ function writeUint32LE(out: Uint8Array, pos: number, v: number): void {
 export function md5(input: Uint8Array): Uint8Array {
   const bitLen = input.length * 8;
 
-  const padLen = (() => {
+  function computePadLen(): number {
     const mod = (input.length + 1) % 64;
     return mod <= 56 ? 56 - mod : 56 + (64 - mod);
-  })();
+  }
+
+  const padLen = computePadLen();
 
   const padded = new Uint8Array(input.length + 1 + padLen + 8);
   padded.set(input, 0);

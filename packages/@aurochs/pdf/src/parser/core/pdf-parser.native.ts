@@ -40,7 +40,7 @@ import { rasterizeFormBBoxClipToMask } from "../clip/form-bbox-clip-mask.native"
 import type { PdfShading } from "../shading/shading.types";
 import type { PdfPattern } from "../pattern/pattern.types";
 import type { JpxDecodeFn } from "../jpeg2000/jpx-decoder";
-import { extractColorSpacesFromResourcesNative } from "../color/color-space.native";
+import { extractColorSpacesFromResourcesNative, type ParsedNamedColorSpace } from "../color/color-space.native";
 
 function extractExtGStateFromResourcesNativeOrEmpty(
   page: NativePdfPage,
@@ -138,14 +138,15 @@ export async function parsePdfNative(
   });
 
   // Extract embedded fonts first to get accurate metrics (best-effort).
-  const embeddedFontsRaw = (() => {
+  function tryExtractEmbeddedFonts() {
     try {
       return extractEmbeddedFontsFromNativePages(pdfDoc.getPages());
     } catch (error) {
       console.warn("Failed to extract embedded fonts:", error);
       return [];
     }
-  })();
+  }
+  const embeddedFontsRaw = tryExtractEmbeddedFonts();
 
   const embeddedFontMetrics = new Map<string, { ascender: number; descender: number }>();
   for (const font of embeddedFontsRaw) {
@@ -255,11 +256,11 @@ async function parsePage({ page, pageNumber, opts, embeddedFontMetrics }: ParseP
   ];
 
   const registerType3XObjectStream = (stream: PdfStream): string => {
-    // eslint-disable-next-line no-restricted-syntax
-    let name = "";
-    do {
-      name = `T3X${nextInlineId()}`;
-    } while (usedNames.has(name));
+    const generateUniqueName = (): string => {
+      const candidate = `T3X${nextInlineId()}`;
+      return usedNames.has(candidate) ? generateUniqueName() : candidate;
+    };
+    const name = generateUniqueName();
     inlineXObjects.set(name, stream);
     usedNames.add(name);
     return name;
@@ -438,7 +439,7 @@ type ExpandFormXObjectsNativeOptions = {
   readonly extGState: ReadonlyMap<string, ExtGStateParams>;
   readonly shadings: ReadonlyMap<string, PdfShading>;
   readonly patterns: ReadonlyMap<string, PdfPattern>;
-  readonly colorSpaces: ReadonlyMap<string, import("../color/color-space.native").ParsedNamedColorSpace>;
+  readonly colorSpaces: ReadonlyMap<string, ParsedNamedColorSpace>;
   readonly shadingMaxSize: number;
   readonly clipPathMaxSize: number;
   readonly softMaskVectorMaxSize: number;
@@ -486,9 +487,9 @@ function expandFormXObjectsNative({
   };
 
   const mergeColorSpaces = (
-    base: ReadonlyMap<string, import("../color/color-space.native").ParsedNamedColorSpace>,
-    local: ReadonlyMap<string, import("../color/color-space.native").ParsedNamedColorSpace>,
-  ): ReadonlyMap<string, import("../color/color-space.native").ParsedNamedColorSpace> => {
+    base: ReadonlyMap<string, ParsedNamedColorSpace>,
+    local: ReadonlyMap<string, ParsedNamedColorSpace>,
+  ): ReadonlyMap<string, ParsedNamedColorSpace> => {
     if (base.size === 0 && local.size === 0) {return new Map();}
     const merged = new Map(base);
     for (const [k, v] of local) {merged.set(k, v);}
@@ -504,7 +505,7 @@ function expandFormXObjectsNative({
       readonly extGState: ReadonlyMap<string, ExtGStateParams>;
       readonly shadings: ReadonlyMap<string, PdfShading>;
       readonly patterns: ReadonlyMap<string, PdfPattern>;
-      readonly colorSpaces: ReadonlyMap<string, import("../color/color-space.native").ParsedNamedColorSpace>;
+      readonly colorSpaces: ReadonlyMap<string, ParsedNamedColorSpace>;
     }>;
     readonly callStack: Set<string>;
     readonly depth: number;

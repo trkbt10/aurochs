@@ -12,7 +12,7 @@
  *   pre-compose it here and clear the graphics-state mask to avoid double application.
  */
 
-import type { PdfImage, PdfSoftMask } from "../../domain";
+import type { PdfImage, PdfMatrix, PdfSoftMask } from "../../domain";
 import { clamp01, invertMatrix, multiplyMatrices, transformPoint } from "../../domain";
 
 function sampleSoftMaskAlphaInMaskSpace(mask: PdfSoftMask, x: number, y: number): number {
@@ -29,6 +29,12 @@ function sampleSoftMaskAlphaInMaskSpace(mask: PdfSoftMask, x: number, y: number)
   const col = Math.min(mask.width - 1, Math.max(0, Math.floor(nx * mask.width)));
   const row = Math.min(mask.height - 1, Math.max(0, Math.floor(ny * mask.height)));
   return mask.alpha[row * mask.width + col] ?? 0;
+}
+
+function computePageToMask(softMask: PdfSoftMask | undefined, ctm: PdfMatrix): PdfMatrix | null {
+  if (!softMask) {return null;}
+  const maskToPage = multiplyMatrices(ctm, softMask.matrix);
+  return invertMatrix(maskToPage);
 }
 
 function applyConstantAlphaToByte(a: number, mul: number): number {
@@ -80,11 +86,7 @@ export function applyGraphicsSoftMaskToPdfImage(image: PdfImage): PdfImage {
   const pixelCount = image.width * image.height;
   if (image.width <= 0 || image.height <= 0 || pixelCount <= 0) {return image;}
 
-  const pageToMask = (() => {
-    if (!softMask) {return null;}
-    const maskToPage = multiplyMatrices(gs.ctm, softMask.matrix);
-    return invertMatrix(maskToPage);
-  })();
+  const pageToMask = computePageToMask(softMask, gs.ctm);
 
   const baseAlphaOk = image.alpha && image.alpha.length === pixelCount;
   const newAlpha = new Uint8Array(pixelCount);
@@ -96,17 +98,17 @@ export function applyGraphicsSoftMaskToPdfImage(image: PdfImage): PdfImage {
       const idx = row * image.width + col;
 
       const base = baseAlphaOk ? (image.alpha![idx] ?? 255) : 255;
-      // eslint-disable-next-line no-restricted-syntax
-      let a = applyConstantAlphaToByte(base, softMaskAlpha);
+      const constantAlpha = applyConstantAlphaToByte(base, softMaskAlpha);
 
-      if (softMask && pageToMask) {
+      const computeFinalAlpha = (): number => {
+        if (!softMask || !pageToMask) {return constantAlpha;}
         const p = transformPoint({ x: u, y: v }, gs.ctm);
         const maskPoint = transformPoint(p, pageToMask);
         const m = sampleSoftMaskAlphaInMaskSpace(softMask, maskPoint.x, maskPoint.y);
-        a = Math.round((a * m) / 255);
-      }
+        return Math.round((constantAlpha * m) / 255);
+      };
 
-      newAlpha[idx] = a;
+      newAlpha[idx] = computeFinalAlpha();
     }
   }
 

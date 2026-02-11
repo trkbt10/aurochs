@@ -4,27 +4,29 @@ import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 function findRepoRootDir(startDir: string): string {
-  // eslint-disable-next-line no-restricted-syntax
-  let dir = startDir;
-  for (let i = 0; i < 15; i++) {
+  const findRoot = (dir: string, depth: number): string | null => {
+    if (depth >= 15) {return null;}
     const pkgPath = path.join(dir, "package.json");
     if (existsSync(pkgPath)) {
       try {
         const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as { readonly name?: unknown };
-        if (pkg.name === "web-pptx") {
+        if (pkg.name === "aurochs") {
           return dir;
         }
-      } catch {
-        // ignore
+      } catch (error) {
+        console.debug("[PDF fixtures] package.json parse error:", error);
       }
     }
     const parent = path.dirname(dir);
-    if (parent === dir) {
-      break;
-    }
-    dir = parent;
+    if (parent === dir) {return null;}
+    return findRoot(parent, depth + 1);
+  };
+
+  const result = findRoot(startDir, 0);
+  if (result === null) {
+    throw new Error("Failed to locate repo root (package.json name=aurochs).");
   }
-  throw new Error("Failed to locate repo root (package.json name=web-pptx).");
+  return result;
 }
 
 const repoRootDir = findRepoRootDir(path.dirname(fileURLToPath(import.meta.url)));

@@ -1045,15 +1045,7 @@ const D = [
 
 const EXPECTED_ENTRIES = 23058;
 
-// eslint-disable-next-line no-restricted-syntax
-let TABLE: Uint32Array | null = null;
-
-function getTable(): Uint32Array {
-  const cached = TABLE;
-  if (cached) {
-    return cached;
-  }
-
+function buildTable(): Uint32Array {
   const buffer = base64ToArrayBuffer(D);
   const view = new DataView(buffer);
   const len = buffer.byteLength / 4;
@@ -1069,9 +1061,10 @@ function getTable(): Uint32Array {
     out[i] = view.getUint32(i * 4, false);
   }
 
-  TABLE = out;
   return out;
 }
+
+const TABLE: Uint32Array = buildTable();
 
 /** Decode an Adobe-Japan1 CID to its corresponding Unicode string. */
 export function decodeAdobeJapan1CidToUnicode(cid: number): string | null {
@@ -1083,19 +1076,18 @@ export function decodeAdobeJapan1CidToUnicode(cid: number): string | null {
     return null;
   }
 
-  const table = getTable();
-  if (idx >= table.length) {
+  if (idx >= TABLE.length) {
     return null;
   }
 
-  const cp = table[idx];
+  const cp = TABLE[idx];
   if (!cp) {
     return null;
   }
 
-  try {
-    return String.fromCodePoint(cp);
-  } catch {
+  // Validate code point before calling fromCodePoint to avoid RangeError
+  if (cp > 0x10ffff || (cp >= 0xd800 && cp <= 0xdfff)) {
     return null;
   }
+  return String.fromCodePoint(cp);
 }

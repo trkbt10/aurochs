@@ -40,6 +40,16 @@ function asStream(obj: PdfObject | undefined): PdfStream | null {
   return obj?.type === "stream" ? obj : null;
 }
 
+function parseIccProfileSafe(profileStream: PdfStream | null): ParsedIccProfile | null {
+  if (!profileStream) {return null;}
+  try {
+    return parseIccProfile(decodePdfStream(profileStream));
+  } catch (error) {
+    console.debug("[PDF] ICC profile parse error:", error);
+    return null;
+  }
+}
+
 function getNumberValue(page: NativePdfPage, dict: PdfDict, key: string): number | null {
   const v = resolve(page, dictGet(dict, key));
   return v?.type === "number" && Number.isFinite(v.value) ? v.value : null;
@@ -71,14 +81,7 @@ function parseNamedColorSpaceEntry(page: NativePdfPage, entry: PdfObject | undef
     const profileDict = profileStream ? profileStream.dict : asDict(profileObj);
     const n = profileDict ? getNumberValue(page, profileDict, "N") : null;
     const alternate = n === 1 ? "DeviceGray" : n === 3 ? "DeviceRGB" : n === 4 ? "DeviceCMYK" : "DeviceRGB";
-    const parsed = (() => {
-      if (!profileStream) {return null;}
-      try {
-        return parseIccProfile(decodePdfStream(profileStream));
-      } catch {
-        return null;
-      }
-    })();
+    const parsed = parseIccProfileSafe(profileStream);
     return { kind: "iccBased", n: n ?? 0, alternate, profile: parsed };
   }
 

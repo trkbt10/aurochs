@@ -12,7 +12,7 @@ import {
   mergePaths,
   type BuiltPath,
 } from "./path-builder";
-import type { ParsedPath } from "../core/operator-parser";
+import type { ParsedPath } from "../operator";
 import { createDefaultGraphicsState, IDENTITY_MATRIX } from "../../domain";
 
 describe("buildPath", () => {

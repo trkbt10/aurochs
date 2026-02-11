@@ -152,10 +152,12 @@ function writeUint32BE(out: Uint8Array, offset: number, v: number): void {
 function sha512Like(input: Uint8Array, initial: readonly Word64[]): Uint8Array {
   const bitLen = BigInt(input.length) * 8n;
 
-  const padLen = (() => {
+  function computePadLen(): number {
     const mod = (input.length + 1) % 128;
     return mod <= 112 ? 112 - mod : 112 + (128 - mod);
-  })();
+  }
+
+  const padLen = computePadLen();
 
   const padded = new Uint8Array(input.length + 1 + padLen + 16);
   padded.set(input, 0);
@@ -181,44 +183,38 @@ function sha512Like(input: Uint8Array, initial: readonly Word64[]): Uint8Array {
       w[t] = add64_4({ a: w[t - 16]!, b: s0, c: w[t - 7]!, d: s1 });
     }
 
-    // eslint-disable-next-line no-restricted-syntax
-    let a = h[0]!;
-    // eslint-disable-next-line no-restricted-syntax
-    let b = h[1]!;
-    // eslint-disable-next-line no-restricted-syntax
-    let c = h[2]!;
-    // eslint-disable-next-line no-restricted-syntax
-    let d = h[3]!;
-    // eslint-disable-next-line no-restricted-syntax
-    let e = h[4]!;
-    // eslint-disable-next-line no-restricted-syntax
-    let f = h[5]!;
-    // eslint-disable-next-line no-restricted-syntax
-    let g = h[6]!;
-    // eslint-disable-next-line no-restricted-syntax
-    let hh = h[7]!;
+    const s = {
+      a: h[0]!,
+      b: h[1]!,
+      c: h[2]!,
+      d: h[3]!,
+      e: h[4]!,
+      f: h[5]!,
+      g: h[6]!,
+      hh: h[7]!,
+    };
 
     for (let t = 0; t < 80; t += 1) {
-      const t1 = add64_5({ a: hh, b: bigSigma1(e), c: ch64(e, f, g), d: K[t]!, e: w[t]! });
-      const t2 = add64(bigSigma0(a), maj64(a, b, c));
-      hh = g;
-      g = f;
-      f = e;
-      e = add64(d, t1);
-      d = c;
-      c = b;
-      b = a;
-      a = add64(t1, t2);
+      const t1 = add64_5({ a: s.hh, b: bigSigma1(s.e), c: ch64(s.e, s.f, s.g), d: K[t]!, e: w[t]! });
+      const t2 = add64(bigSigma0(s.a), maj64(s.a, s.b, s.c));
+      s.hh = s.g;
+      s.g = s.f;
+      s.f = s.e;
+      s.e = add64(s.d, t1);
+      s.d = s.c;
+      s.c = s.b;
+      s.b = s.a;
+      s.a = add64(t1, t2);
     }
 
-    h[0] = add64(h[0]!, a);
-    h[1] = add64(h[1]!, b);
-    h[2] = add64(h[2]!, c);
-    h[3] = add64(h[3]!, d);
-    h[4] = add64(h[4]!, e);
-    h[5] = add64(h[5]!, f);
-    h[6] = add64(h[6]!, g);
-    h[7] = add64(h[7]!, hh);
+    h[0] = add64(h[0]!, s.a);
+    h[1] = add64(h[1]!, s.b);
+    h[2] = add64(h[2]!, s.c);
+    h[3] = add64(h[3]!, s.d);
+    h[4] = add64(h[4]!, s.e);
+    h[5] = add64(h[5]!, s.f);
+    h[6] = add64(h[6]!, s.g);
+    h[7] = add64(h[7]!, s.hh);
   }
 
   const out = new Uint8Array(64);

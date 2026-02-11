@@ -206,8 +206,8 @@ export function expandType3TextElementsNative(args: {
     }
 
     const textElem = elem as ParsedText;
-    // eslint-disable-next-line no-restricted-syntax
-    let pendingRuns: ParsedText["runs"] = [];
+    // Accumulates non-Type3 runs; flushed when we hit a Type3 run or reach end of runs
+    const runState = { pendingRuns: [] as ParsedText["runs"] };
 
     for (const run of textElem.runs) {
       const cleanFont = run.fontName.startsWith("/") ? run.fontName.slice(1) : run.fontName;
@@ -215,13 +215,13 @@ export function expandType3TextElementsNative(args: {
       const type3 = info?.type3;
 
       if (!type3 || !info) {
-        pendingRuns = [...pendingRuns, run];
+        runState.pendingRuns = [...runState.pendingRuns, run];
         continue;
       }
 
-      if (pendingRuns.length > 0) {
-        out.push({ ...textElem, runs: pendingRuns });
-        pendingRuns = [];
+      if (runState.pendingRuns.length > 0) {
+        out.push({ ...textElem, runs: runState.pendingRuns });
+        runState.pendingRuns = [];
       }
 
       const scope = type3Scopes.get(cleanFont);
@@ -251,8 +251,8 @@ export function expandType3TextElementsNative(args: {
       out.push(...tagType3Sources(remapped));
     }
 
-    if (pendingRuns.length > 0) {
-      out.push({ ...textElem, runs: pendingRuns });
+    if (runState.pendingRuns.length > 0) {
+      out.push({ ...textElem, runs: runState.pendingRuns });
     }
   }
 

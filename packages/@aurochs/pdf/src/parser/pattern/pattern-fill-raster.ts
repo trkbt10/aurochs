@@ -38,6 +38,12 @@ function sampleSoftMaskAlphaInMaskSpace(mask: PdfSoftMask, x: number, y: number)
   return mask.alpha[row * mask.width + col] ?? 0;
 }
 
+function computePageToMask(softMask: PdfSoftMask | undefined, ctm: PdfMatrix): PdfMatrix | null {
+  if (!softMask) {return null;}
+  const maskToPage = multiplyMatrices(ctm, softMask.matrix);
+  return invertMatrix(maskToPage);
+}
+
 function intersectBBoxes(a: PdfBBox, b: PdfBBox): PdfBBox | null {
   const aMinX = Math.min(a[0], a[2]);
   const aMinY = Math.min(a[1], a[3]);
@@ -71,33 +77,35 @@ function cubicAt({ p0, p1, p2, p3, t }: { readonly p0: number; readonly p1: numb
 function flattenSubpaths(ops: ParsedPath["operations"], ctm: PdfMatrix): readonly FlattenedSubpath[] {
   const subpaths: Array<{ points: PdfPoint[]; closed: boolean }> = [];
 
-  // eslint-disable-next-line no-restricted-syntax
-  let current: PdfPoint = { x: 0, y: 0 };
-  // eslint-disable-next-line no-restricted-syntax
-  let currentSubpath: { points: PdfPoint[]; closed: boolean } | null = null;
+  // Tracks current position as we process path operations; updated by moveTo/lineTo/curveTo
+  // Also accumulates points for the current subpath; reset on moveTo/closePath
+  const pathState: { current: PdfPoint; currentSubpath: { points: PdfPoint[]; closed: boolean } | null } = {
+    current: { x: 0, y: 0 },
+    currentSubpath: null,
+  };
 
   const finish = (closed: boolean): void => {
-    if (!currentSubpath || currentSubpath.points.length === 0) {return;}
-    subpaths.push({ points: currentSubpath.points, closed });
-    currentSubpath = null;
+    if (!pathState.currentSubpath || pathState.currentSubpath.points.length === 0) {return;}
+    subpaths.push({ points: pathState.currentSubpath.points, closed });
+    pathState.currentSubpath = null;
   };
 
   const startNew = (p: PdfPoint): void => {
     finish(false);
-    currentSubpath = { points: [transformPoint(p, ctm)], closed: false };
-    current = p;
+    pathState.currentSubpath = { points: [transformPoint(p, ctm)], closed: false };
+    pathState.current = p;
   };
 
   const lineTo = (p: PdfPoint): void => {
-    if (!currentSubpath) {
-      startNew(current);
+    if (!pathState.currentSubpath) {
+      startNew(pathState.current);
     }
-    currentSubpath!.points.push(transformPoint(p, ctm));
-    current = p;
+    pathState.currentSubpath!.points.push(transformPoint(p, ctm));
+    pathState.current = p;
   };
 
   const flattenCubic = (cp1: PdfPoint, cp2: PdfPoint, end: PdfPoint): void => {
-    const p0 = current;
+    const p0 = pathState.current;
     const steps = 20;
     for (let i = 1; i <= steps; i += 1) {
       const t = i / steps;
@@ -106,7 +114,7 @@ function flattenSubpaths(ops: ParsedPath["operations"], ctm: PdfMatrix): readonl
         y: cubicAt({ p0: p0.y, p1: cp1.y, p2: cp2.y, p3: end.y, t }),
       });
     }
-    current = end;
+    pathState.current = end;
   };
 
   for (const op of ops) {
@@ -121,7 +129,7 @@ function flattenSubpaths(ops: ParsedPath["operations"], ctm: PdfMatrix): readonl
         flattenCubic(op.cp1, op.cp2, op.end);
         break;
       case "curveToV":
-        flattenCubic(current, op.cp2, op.end);
+        flattenCubic(pathState.current, op.cp2, op.end);
         break;
       case "curveToY":
         flattenCubic(op.cp1, op.end, op.end);
@@ -150,8 +158,8 @@ function flattenSubpaths(ops: ParsedPath["operations"], ctm: PdfMatrix): readonl
 
 function pointInPolyEvenOdd(x: number, y: number, poly: Poly): boolean {
   if (poly.length < 2) {return false;}
-  // eslint-disable-next-line no-restricted-syntax
-  let inside = false;
+  // Toggled each time the ray crosses an edge; final value indicates inside/outside
+  const hitState = { inside: false };
 
   for (let i = 0, j = poly.length - 1; i < poly.length; j = i, i += 1) {
     const pi = poly[i]!;
@@ -172,22 +180,18 @@ function pointInPolyEvenOdd(x: number, y: number, poly: Poly): boolean {
     const t = (y - yi) / dy;
     const xInt = xi + (xj - xi) * t;
     if (x < xInt) {
-      inside = !inside;
+      hitState.inside = !hitState.inside;
     }
   }
 
-  return inside;
+  return hitState.inside;
 }
 
 function pointInSubpathsEvenOdd(x: number, y: number, subpaths: readonly FlattenedSubpath[]): boolean {
-  // eslint-disable-next-line no-restricted-syntax
-  let inside = false;
-  for (const s of subpaths) {
-    if (pointInPolyEvenOdd(x, y, s.points)) {
-      inside = !inside;
-    }
-  }
-  return inside;
+  // Parity across all subpaths: toggled for each subpath containing the point
+  return subpaths.reduce((inside, s) => {
+    return pointInPolyEvenOdd(x, y, s.points) ? !inside : inside;
+  }, false);
 }
 
 function isLeft({
@@ -210,33 +214,26 @@ function isLeft({
 
 function windingNumber(x: number, y: number, poly: Poly): number {
   if (poly.length < 2) {return 0;}
-  // eslint-disable-next-line no-restricted-syntax
-  let winding = 0;
-
-  for (let i = 0; i < poly.length; i += 1) {
+  // Sum crossings: +1 for upward edges crossing left-to-right, -1 for downward
+  return Array.from({ length: poly.length }, (_, i): number => {
     const a = poly[i]!;
     const b = poly[(i + 1) % poly.length]!;
 
     if (a.y <= y) {
       if (b.y > y && isLeft({ ax: a.x, ay: a.y, bx: b.x, by: b.y, px: x, py: y }) > 0) {
-        winding += 1;
+        return 1;
       }
     } else {
       if (b.y <= y && isLeft({ ax: a.x, ay: a.y, bx: b.x, by: b.y, px: x, py: y }) < 0) {
-        winding -= 1;
+        return -1;
       }
     }
-  }
-
-  return winding;
+    return 0;
+  }).reduce((sum, v) => sum + v, 0);
 }
 
 function pointInSubpathsNonZero(x: number, y: number, subpaths: readonly FlattenedSubpath[]): boolean {
-  // eslint-disable-next-line no-restricted-syntax
-  let winding = 0;
-  for (const s of subpaths) {
-    winding += windingNumber(x, y, s.points);
-  }
+  const winding = subpaths.reduce((sum, s) => sum + windingNumber(x, y, s.points), 0);
   return winding !== 0;
 }
 
@@ -258,25 +255,22 @@ function pointInSubpaths({
 }
 
 function computePathBBox(subpaths: readonly FlattenedSubpath[]): PdfBBox | null {
-  // eslint-disable-next-line no-restricted-syntax
-  let minX = Infinity;
-  // eslint-disable-next-line no-restricted-syntax
-  let minY = Infinity;
-  // eslint-disable-next-line no-restricted-syntax
-  let maxX = -Infinity;
-  // eslint-disable-next-line no-restricted-syntax
-  let maxY = -Infinity;
-  for (const s of subpaths) {
-    for (const p of s.points) {
-      minX = Math.min(minX, p.x);
-      minY = Math.min(minY, p.y);
-      maxX = Math.max(maxX, p.x);
-      maxY = Math.max(maxY, p.y);
-    }
-  }
-  if (!Number.isFinite(minX) || !Number.isFinite(minY) || !Number.isFinite(maxX) || !Number.isFinite(maxY)) {return null;}
-  if (maxX <= minX || maxY <= minY) {return null;}
-  return [minX, minY, maxX, maxY];
+  const allPoints = subpaths.flatMap((s) => s.points);
+  if (allPoints.length === 0) {return null;}
+
+  const bounds = allPoints.reduce(
+    (acc, p) => ({
+      minX: Math.min(acc.minX, p.x),
+      minY: Math.min(acc.minY, p.y),
+      maxX: Math.max(acc.maxX, p.x),
+      maxY: Math.max(acc.maxY, p.y),
+    }),
+    { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity },
+  );
+
+  if (!Number.isFinite(bounds.minX) || !Number.isFinite(bounds.minY) || !Number.isFinite(bounds.maxX) || !Number.isFinite(bounds.maxY)) {return null;}
+  if (bounds.maxX <= bounds.minX || bounds.maxY <= bounds.minY) {return null;}
+  return [bounds.minX, bounds.minY, bounds.maxX, bounds.maxY];
 }
 
 
@@ -364,11 +358,7 @@ export function rasterizeShadingPatternFillPath(
 
   const fillMul = clamp01(gs.fillAlpha) * clamp01(gs.softMaskAlpha ?? 1);
   const softMask = gs.softMask;
-  const pageToMask = (() => {
-    if (!softMask) {return null;}
-    const maskToPage = multiplyMatrices(gs.ctm, softMask.matrix);
-    return invertMatrix(maskToPage);
-  })();
+  const pageToMask = computePageToMask(softMask, gs.ctm);
 
   const pixelCount = width * height;
   const alpha = new Uint8Array(pixelCount);
@@ -384,14 +374,14 @@ export function rasterizeShadingPatternFillPath(
         continue;
       }
 
-      // eslint-disable-next-line no-restricted-syntax
-      let a = Math.round(255 * fillMul);
-      if (softMask && pageToMask) {
+      const baseAlpha = Math.round(255 * fillMul);
+      const computeSoftMaskAlpha = (): number => {
+        if (!softMask || !pageToMask) {return baseAlpha;}
         const maskPoint = transformPoint({ x: pageX, y: pageY }, pageToMask);
         const m = sampleSoftMaskAlphaInMaskSpace(softMask, maskPoint.x, maskPoint.y);
-        a = Math.round((a * m) / 255);
-      }
-      alpha[idx] = a;
+        return Math.round((baseAlpha * m) / 255);
+      };
+      alpha[idx] = computeSoftMaskAlpha();
     }
   }
 

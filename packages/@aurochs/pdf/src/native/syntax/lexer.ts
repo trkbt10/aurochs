@@ -225,6 +225,11 @@ function readHexString(lex: PdfLexer): { bytes: Uint8Array; next: number } {
   return { bytes: out, next: state.pos };
 }
 
+function buildNumberOrKeywordResult(bytes: Uint8Array, pos: number): { token: PdfToken; next: PdfLexer } {
+  const { token, next } = readNumberOrKeyword({ bytes, pos });
+  return { token, next: { bytes, pos: next } };
+}
+
 function readNumberOrKeyword(lex: PdfLexer): { token: PdfToken; next: number } {
   const { bytes } = lex;
   const { text, next } = readWhile(bytes, lex.pos, (b) => !isWhite(b) && !isDelimiter(b));
@@ -286,8 +291,5 @@ export function nextToken(lex: PdfLexer): { token: PdfToken; next: PdfLexer } {
     return { token: { type: "hexstring", bytes: hex }, next: { bytes, pos: next } };
   }
 
-  return (() => {
-    const { token, next } = readNumberOrKeyword({ bytes, pos });
-    return { token, next: { bytes, pos: next } };
-  })();
+  return buildNumberOrKeywordResult(bytes, pos);
 }

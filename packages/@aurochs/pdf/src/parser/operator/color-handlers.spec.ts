@@ -272,21 +272,27 @@ describe("color-handlers", () => {
 
       const headerSize = 128;
       const tagTableSize = 4 + tags.length * 12;
-      // eslint-disable-next-line no-restricted-syntax
-      let cursor = pad4(headerSize + tagTableSize);
 
-      const records: Array<{ sig: string; off: number; size: number }> = [];
-      const tagDataParts: Uint8Array[] = [];
-      for (const t of tags) {
-        const off = cursor;
-        const size = t.data.length;
-        records.push({ sig: t.sig, off, size });
-        tagDataParts.push(t.data);
-        cursor = pad4(cursor + size);
-        if (cursor > off + size) {
-          tagDataParts.push(new Uint8Array(cursor - (off + size)));
-        }
-      }
+      const { records, tagDataParts, totalSize: cursor } = tags.reduce(
+        (acc, t) => {
+          const off = acc.totalSize;
+          const size = t.data.length;
+          const newRecords = [...acc.records, { sig: t.sig, off, size }];
+          const newParts = [...acc.tagDataParts, t.data];
+          const nextCursor = pad4(off + size);
+          const padding = nextCursor > off + size ? [new Uint8Array(nextCursor - (off + size))] : [];
+          return {
+            records: newRecords,
+            tagDataParts: [...newParts, ...padding],
+            totalSize: nextCursor,
+          };
+        },
+        {
+          records: [] as Array<{ sig: string; off: number; size: number }>,
+          tagDataParts: [] as Uint8Array[],
+          totalSize: pad4(headerSize + tagTableSize),
+        },
+      );
 
       const totalSize = cursor;
       const out = new Uint8Array(totalSize);
@@ -300,22 +306,18 @@ describe("color-handlers", () => {
 
       // Tag table.
       writeU32BE(view, 128, tags.length);
-      // eslint-disable-next-line no-restricted-syntax
-      let tpos = 132;
-      for (const r of records) {
+      records.forEach((r, i) => {
+        const tpos = 132 + i * 12;
         writeAscii4(out, tpos, r.sig);
         writeU32BE(view, tpos + 4, r.off);
         writeU32BE(view, tpos + 8, r.size);
-        tpos += 12;
-      }
+      });
 
       // Tag data.
-      // eslint-disable-next-line no-restricted-syntax
-      let dpos = pad4(headerSize + tagTableSize);
-      for (const part of tagDataParts) {
+      tagDataParts.reduce((dpos, part) => {
         out.set(part, dpos);
-        dpos += part.length;
-      }
+        return dpos + part.length;
+      }, pad4(headerSize + tagTableSize));
 
       return out;
     }
@@ -354,11 +356,10 @@ describe("color-handlers", () => {
         writeU16BE(view, 48, inputEntries);
         writeU16BE(view, 50, outputEntries);
 
-        // eslint-disable-next-line no-restricted-syntax
-        let cursor = 52;
         for (let c = 0; c < inChannels; c += 1) {
-          bytes[cursor++] = 0;
-          bytes[cursor++] = 255;
+          const cursor = 52 + c * 2;
+          bytes[cursor] = 0;
+          bytes[cursor + 1] = 255;
         }
 
         const clamp01 = (v: number): number => Math.min(1, Math.max(0, v));
@@ -370,6 +371,7 @@ describe("color-handlers", () => {
           return [X, Y, Z] as const;
         };
 
+        const clutStartOffset = 52 + inChannels * inputEntries;
         for (let k = 0; k <= 1; k += 1) {
           for (let y = 0; y <= 1; y += 1) {
             for (let m = 0; m <= 1; m += 1) {
@@ -378,17 +380,21 @@ describe("color-handlers", () => {
                 const gg = 1 - m;
                 const bb = 1 - y;
                 const [X, Y, Z] = rgbToXyzD65(r, gg, bb);
-                bytes[cursor++] = toByte(X);
-                bytes[cursor++] = toByte(Y);
-                bytes[cursor++] = toByte(Z);
+                const idx = k * 8 + y * 4 + m * 2 + c;
+                const offset = clutStartOffset + idx * 3;
+                bytes[offset] = toByte(X);
+                bytes[offset + 1] = toByte(Y);
+                bytes[offset + 2] = toByte(Z);
               }
             }
           }
         }
 
+        const outputTableOffset = clutStartOffset + clutBytes;
         for (let c = 0; c < outChannels; c += 1) {
-          bytes[cursor++] = 0;
-          bytes[cursor++] = 255;
+          const offset = outputTableOffset + c * 2;
+          bytes[offset] = 0;
+          bytes[offset + 1] = 255;
         }
 
         return bytes;
@@ -401,23 +407,29 @@ describe("color-handlers", () => {
 
       const headerSize = 128;
       const tagTableSize = 4 + tags.length * 12;
-      // eslint-disable-next-line no-restricted-syntax
-      let cursor2 = pad4(headerSize + tagTableSize);
 
-      const records: Array<{ sig: string; off: number; size: number }> = [];
-      const tagDataParts: Uint8Array[] = [];
-      for (const t of tags) {
-        const off = cursor2;
-        const size = t.data.length;
-        records.push({ sig: t.sig, off, size });
-        tagDataParts.push(t.data);
-        cursor2 = pad4(cursor2 + size);
-        if (cursor2 > off + size) {
-          tagDataParts.push(new Uint8Array(cursor2 - (off + size)));
-        }
-      }
+      const { records: records2, tagDataParts: tagDataParts2, totalSize: totalSize2 } = tags.reduce(
+        (acc, t) => {
+          const off = acc.totalSize;
+          const size = t.data.length;
+          const newRecords = [...acc.records, { sig: t.sig, off, size }];
+          const newParts = [...acc.tagDataParts, t.data];
+          const nextCursor = pad4(off + size);
+          const padding = nextCursor > off + size ? [new Uint8Array(nextCursor - (off + size))] : [];
+          return {
+            records: newRecords,
+            tagDataParts: [...newParts, ...padding],
+            totalSize: nextCursor,
+          };
+        },
+        {
+          records: [] as Array<{ sig: string; off: number; size: number }>,
+          tagDataParts: [] as Uint8Array[],
+          totalSize: pad4(headerSize + tagTableSize),
+        },
+      );
 
-      const totalSize = cursor2;
+      const totalSize = totalSize2;
       const out = new Uint8Array(totalSize);
       const view = new DataView(out.buffer);
 
@@ -427,21 +439,17 @@ describe("color-handlers", () => {
       writeAscii4(out, 36, "acsp");
 
       writeU32BE(view, 128, tags.length);
-      // eslint-disable-next-line no-restricted-syntax
-      let tpos2 = 132;
-      for (const r of records) {
+      records2.forEach((r, i) => {
+        const tpos2 = 132 + i * 12;
         writeAscii4(out, tpos2, r.sig);
         writeU32BE(view, tpos2 + 4, r.off);
         writeU32BE(view, tpos2 + 8, r.size);
-        tpos2 += 12;
-      }
+      });
 
-      // eslint-disable-next-line no-restricted-syntax
-      let dpos2 = pad4(headerSize + tagTableSize);
-      for (const part of tagDataParts) {
+      tagDataParts2.reduce((dpos2, part) => {
         out.set(part, dpos2);
-        dpos2 += part.length;
-      }
+        return dpos2 + part.length;
+      }, pad4(headerSize + tagTableSize));
 
       return out;
     }
@@ -465,12 +473,11 @@ describe("color-handlers", () => {
       const stack = createGraphicsStateStack();
       const ops = createGfxOpsFromStack(stack);
 
-      // eslint-disable-next-line no-restricted-syntax
-      let ctx: ParserContext = { ...createContext(["CS1"]), colorSpaces };
-      ctx = { ...ctx, ...colorHandlers.handleFillColorSpace(ctx, ops) };
+      const ctx0: ParserContext = { ...createContext(["CS1"]), colorSpaces };
+      const ctx1 = { ...ctx0, ...colorHandlers.handleFillColorSpace(ctx0, ops) };
 
-      ctx = { ...ctx, operandStack: [0.5, 0, 0] };
-      void colorHandlers.handleFillColorN(ctx, ops);
+      const ctx2 = { ...ctx1, operandStack: [0.5, 0, 0] };
+      void colorHandlers.handleFillColorN(ctx2, ops);
 
       const gs = stack.get();
       expect(gs.fillColor.colorSpace).toBe("DeviceRGB");
@@ -499,12 +506,11 @@ describe("color-handlers", () => {
       const stack = createGraphicsStateStack();
       const ops = createGfxOpsFromStack(stack);
 
-      // eslint-disable-next-line no-restricted-syntax
-      let ctx2: ParserContext = { ...createContext(["CS2"]), colorSpaces };
-      ctx2 = { ...ctx2, ...colorHandlers.handleFillColorSpace(ctx2, ops) };
+      const ctxA: ParserContext = { ...createContext(["CS2"]), colorSpaces };
+      const ctxB = { ...ctxA, ...colorHandlers.handleFillColorSpace(ctxA, ops) };
 
-      ctx2 = { ...ctx2, operandStack: [0, 1, 1, 0] };
-      void colorHandlers.handleFillColorN(ctx2, ops);
+      const ctxC = { ...ctxB, operandStack: [0, 1, 1, 0] };
+      void colorHandlers.handleFillColorN(ctxC, ops);
 
       const gs = stack.get();
       expect(gs.fillColor.colorSpace).toBe("DeviceRGB");
@@ -518,13 +524,12 @@ describe("color-handlers", () => {
       const stack = createGraphicsStateStack();
       const ops = createGfxOpsFromStack(stack);
 
-      // eslint-disable-next-line no-restricted-syntax
-      let ctx: ParserContext = createContext(["CS1"]);
-      ctx = { ...ctx, ...colorHandlers.handleFillColorSpace(ctx, ops) };
+      const ctxInit: ParserContext = createContext(["CS1"]);
+      const ctxAfterCs = { ...ctxInit, ...colorHandlers.handleFillColorSpace(ctxInit, ops) };
       expect(stack.get().fillColorSpaceName).toBe("CS1");
 
-      ctx = { ...ctx, operandStack: [1, 0, 0] };
-      void colorHandlers.handleFillRgb(ctx, ops);
+      const ctxWithRgb = { ...ctxAfterCs, operandStack: [1, 0, 0] };
+      void colorHandlers.handleFillRgb(ctxWithRgb, ops);
       expect(stack.get().fillColorSpaceName).toBe("DeviceRGB");
     });
   });

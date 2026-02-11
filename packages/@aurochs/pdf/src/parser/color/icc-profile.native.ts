@@ -331,13 +331,13 @@ function isProbablyIdentityMat3(m: readonly number[]): boolean {
 function safePowInt(base: number, exp: number, limit: number): number | null {
   if (!Number.isFinite(base) || !Number.isFinite(exp)) {return null;}
   if (base <= 0 || exp < 0) {return null;}
-  // eslint-disable-next-line no-restricted-syntax
-  let out = 1;
-  for (let i = 0; i < exp; i += 1) {
-    out *= base;
-    if (!Number.isFinite(out) || out > limit) {return null;}
-  }
-  return out;
+  const result = Array.from({ length: exp }).reduce<number | null>((acc, _) => {
+    if (acc === null) {return null;}
+    const next = acc * base;
+    if (!Number.isFinite(next) || next > limit) {return null;}
+    return next;
+  }, 1);
+  return result;
 }
 
 function parseLutTag(tag: Uint8Array): IccLutTransform | null {
@@ -376,13 +376,12 @@ function parseLutTag(tag: Uint8Array): IccLutTransform | null {
   const total = 52 + inputTableBytes + clutBytes + outputTableBytes;
   if (total > tag.length) {return null;}
 
-  // eslint-disable-next-line no-restricted-syntax
-  let cursor = 52;
-  const inputTablesBytes = tag.slice(cursor, cursor + inputTableBytes);
-  cursor += inputTableBytes;
-  const clutBytesArr = tag.slice(cursor, cursor + clutBytes);
-  cursor += clutBytes;
-  const outputTablesBytes = tag.slice(cursor, cursor + outputTableBytes);
+  const inputTablesStart = 52;
+  const clutStart = inputTablesStart + inputTableBytes;
+  const outputTablesStart = clutStart + clutBytes;
+  const inputTablesBytes = tag.slice(inputTablesStart, clutStart);
+  const clutBytesArr = tag.slice(clutStart, outputTablesStart);
+  const outputTablesBytes = tag.slice(outputTablesStart, outputTablesStart + outputTableBytes);
 
   const inputTables: number[][] = [];
   for (let c = 0; c < inChannels; c += 1) {
@@ -506,28 +505,31 @@ export function evalIccLutToPcs01(profile: IccLutProfile, inputs01: readonly num
 
   const getIndex = (coords: readonly number[]): number => {
     // First input channel varies fastest.
-    // eslint-disable-next-line no-restricted-syntax
-    let mul = 1;
-    // eslint-disable-next-line no-restricted-syntax
-    let index = 0;
-    for (let c = 0; c < lut.inChannels; c += 1) {
-      index += (coords[c] ?? 0) * mul;
-      mul *= g;
-    }
-    return index;
+    type IndexAccumulator = Readonly<{ mul: number; index: number }>;
+    const result = Array.from({ length: lut.inChannels }).reduce<IndexAccumulator>(
+      (acc, _, c) => ({
+        mul: acc.mul * g,
+        index: acc.index + (coords[c] ?? 0) * acc.mul,
+      }),
+      { mul: 1, index: 0 },
+    );
+    return result.index;
   };
 
   const out = [0, 0, 0];
   const corners = 1 << lut.inChannels;
-  const coords = new Array<number>(lut.inChannels).fill(0);
   for (let mask = 0; mask < corners; mask += 1) {
-    // eslint-disable-next-line no-restricted-syntax
-    let w = 1;
-    for (let c = 0; c < lut.inChannels; c += 1) {
-      const use1 = ((mask >> c) & 1) === 1;
-      coords[c] = use1 ? (idx1[c] ?? 0) : (idx0[c] ?? 0);
-      w *= use1 ? (t[c] ?? 0) : (1 - (t[c] ?? 0));
-    }
+    type WeightAndCoords = Readonly<{ w: number; coords: readonly number[] }>;
+    const computed = Array.from({ length: lut.inChannels }).reduce<WeightAndCoords>(
+      (acc, _, c) => {
+        const use1 = ((mask >> c) & 1) === 1;
+        const coord = use1 ? (idx1[c] ?? 0) : (idx0[c] ?? 0);
+        const factor = use1 ? (t[c] ?? 0) : (1 - (t[c] ?? 0));
+        return { w: acc.w * factor, coords: [...acc.coords, coord] };
+      },
+      { w: 1, coords: [] },
+    );
+    const { w, coords } = computed;
     if (w === 0) {continue;}
     const index = getIndex(coords);
     out[0] += w * getClut01(index, 0);

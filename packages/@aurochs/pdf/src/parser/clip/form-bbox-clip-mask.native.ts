@@ -144,12 +144,8 @@ export function rasterizeFormBBoxClipToMask(
       const inside = formPoint.x >= minX && formPoint.x <= maxX && formPoint.y >= minY && formPoint.y <= maxY;
       if (!inside) {continue;}
 
-      // eslint-disable-next-line no-restricted-syntax
-      let a = 255;
-      if (prev) {
-        a = sampleClipMaskAtPagePoint(prev, pageX, pageY);
-        if (a === 0) {continue;}
-      }
+      const a = prev ? sampleClipMaskAtPagePoint(prev, pageX, pageY) : 255;
+      if (a === 0) {continue;}
       alpha[idx] = a;
     }
   }

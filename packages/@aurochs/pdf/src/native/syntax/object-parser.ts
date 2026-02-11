@@ -222,6 +222,20 @@ function asRef(obj: PdfObject | undefined): PdfRef | null {
   return obj?.type === "ref" ? obj : null;
 }
 
+function resolveStreamLength(
+  lengthObj: PdfObject | undefined,
+  options: ParseIndirectOptions,
+): number | null {
+  const direct = asNumber(lengthObj);
+  if (direct != null) {return direct;}
+  const ref = asRef(lengthObj);
+  if (ref && options.resolveObject) {
+    const resolved = options.resolveObject(ref.obj);
+    return resolved.type === "number" ? resolved.value : null;
+  }
+  return null;
+}
+
 const ENDSTREAM = encodeAscii("endstream");
 
 function isTokenBoundary(byte: number): boolean {
@@ -251,7 +265,9 @@ function findEndstreamStart(bytes: Uint8Array, from: number): number {
     try {
       expectKeyword(s1, "endobj");
       return idx;
-    } catch {
+    } catch (error) {
+      // 'endobj' not found after this 'endstream'; try next candidate
+      console.debug("[PDF] stream scan fallback:", error);
       state.pos = idx + 1;
       continue;
     }
@@ -294,16 +310,7 @@ export function parseIndirectObjectAt(
     const { token: maybeStream, next: afterStreamToken } = nextToken(afterDict.lex);
     if (maybeStream.type === "keyword" && maybeStream.value === "stream") {
       const lengthObj = dictGet(value.value, "Length");
-      const length = (() => {
-        const direct = asNumber(lengthObj);
-        if (direct != null) {return direct;}
-        const ref = asRef(lengthObj);
-        if (ref && options.resolveObject) {
-          const resolved = options.resolveObject(ref.obj);
-          return resolved.type === "number" ? resolved.value : null;
-        }
-        return null;
-      })();
+      const length = resolveStreamLength(lengthObj, options);
       const rawPos = afterStreamToken.pos;
       const { data, nextPos } = parseStreamDataFromRaw(bytes, rawPos, length);
       // Move lexer to after stream data; then expect endstream/endobj.

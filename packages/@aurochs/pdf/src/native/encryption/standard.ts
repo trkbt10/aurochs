@@ -363,29 +363,34 @@ export function createStandardDecrypter(args: {
       throw new Error(`Unsupported key length for V=1/R=2: ${keyLengthBytes} bytes`);
     }
 
+    const oBytes = o;
+    const uBytes = u;
+
     const asUser = isValidUserPasswordR2({
       password: args.password,
-      o,
-      u,
+      o: oBytes,
+      u: uBytes,
       p: pv,
       id0: args.fileId0,
       keyLengthBytes,
     });
 
-    const fileKey = (() => {
+    function deriveFileKeyR2(): Uint8Array | null {
       if (asUser.ok) {return asUser.fileKey;}
       return tryFileKeyFromOwnerPasswordR2({
         password: args.password,
-        o,
-        u,
+        o: oBytes,
+        u: uBytes,
         p: pv,
         id0: args.fileId0,
         keyLengthBytes,
       });
-    })();
+    }
+
+    const fileKey = deriveFileKeyR2();
 
     if (!fileKey) {
-      const preview = decodePdfStringBytes(u.slice(0, 8));
+      const preview = decodePdfStringBytes(uBytes.slice(0, 8));
       throw new Error(`Invalid password for encrypted PDF (U starts with ${JSON.stringify(preview)})`);
     }
 
@@ -400,31 +405,36 @@ export function createStandardDecrypter(args: {
       throw new Error(`Unsupported key length for V=2/R=3: ${keyLengthBytes} bytes`);
     }
 
+    const oBytes = o;
+    const uBytes = u;
+
     const asUser = isValidUserPasswordR3({
       password: args.password,
-      o,
-      u,
+      o: oBytes,
+      u: uBytes,
       p: pv,
       id0: args.fileId0,
       keyLengthBytes,
       encryptMetadata,
     });
 
-    const fileKey = (() => {
+    function deriveFileKeyR3(): Uint8Array | null {
       if (asUser.ok) {return asUser.fileKey;}
       return tryFileKeyFromOwnerPasswordR3({
         password: args.password,
-        o,
-        u,
+        o: oBytes,
+        u: uBytes,
         p: pv,
         id0: args.fileId0,
         keyLengthBytes,
         encryptMetadata,
       });
-    })();
+    }
+
+    const fileKey = deriveFileKeyR3();
 
     if (!fileKey) {
-      const preview = decodePdfStringBytes(u.slice(0, 8));
+      const preview = decodePdfStringBytes(uBytes.slice(0, 8));
       throw new Error(`Invalid password for encrypted PDF (U starts with ${JSON.stringify(preview)})`);
     }
 
@@ -439,6 +449,9 @@ export function createStandardDecrypter(args: {
       throw new Error(`Unsupported key length for V=4/R=4: ${keyLengthBytes} bytes`);
     }
 
+    const oBytes = o;
+    const uBytes = u;
+
     const cf = parseCryptFilters(args.encryptDict);
     const strFilter = resolveCryptFilter(cf.filters, cf.strF);
     const stmFilter = resolveCryptFilter(cf.filters, cf.stmF);
@@ -449,29 +462,31 @@ export function createStandardDecrypter(args: {
 
     const asUser = isValidUserPasswordR3({
       password: args.password,
-      o,
-      u,
+      o: oBytes,
+      u: uBytes,
       p: pv,
       id0: args.fileId0,
       keyLengthBytes,
       encryptMetadata,
     });
 
-    const fileKey = (() => {
+    function deriveFileKeyR4(): Uint8Array | null {
       if (asUser.ok) {return asUser.fileKey;}
       return tryFileKeyFromOwnerPasswordR3({
         password: args.password,
-        o,
-        u,
+        o: oBytes,
+        u: uBytes,
         p: pv,
         id0: args.fileId0,
         keyLengthBytes,
         encryptMetadata,
       });
-    })();
+    }
+
+    const fileKey = deriveFileKeyR4();
 
     if (!fileKey) {
-      const preview = decodePdfStringBytes(u.slice(0, 8));
+      const preview = decodePdfStringBytes(uBytes.slice(0, 8));
       throw new Error(`Invalid password for encrypted PDF (U starts with ${JSON.stringify(preview)})`);
     }
 
@@ -522,9 +537,9 @@ export function createStandardDecrypter(args: {
       throw new Error("V=5/R=5 requires AESV3 for strings/streams");
     }
 
-    const oe = asString(dictGet(args.encryptDict, "OE"))?.bytes;
-    const ue = asString(dictGet(args.encryptDict, "UE"))?.bytes;
-    if (!oe || !ue) {
+    const oeRaw = asString(dictGet(args.encryptDict, "OE"))?.bytes;
+    const ueRaw = asString(dictGet(args.encryptDict, "UE"))?.bytes;
+    if (!oeRaw || !ueRaw) {
       throw new Error("Invalid encryption dictionary for V=5/R=5 (missing /OE or /UE)");
     }
 
@@ -533,9 +548,12 @@ export function createStandardDecrypter(args: {
     if (uEntry.length !== 48 || oEntry.length !== 48) {
       throw new Error(`Invalid encryption dictionary for V=5/R=5 (expected /U and /O to be 48 bytes)`);
     }
-    if (oe.length !== 32 || ue.length !== 32) {
+    if (oeRaw.length !== 32 || ueRaw.length !== 32) {
       throw new Error(`Invalid encryption dictionary for V=5/R=5 (expected /OE and /UE to be 32 bytes)`);
     }
+
+    const oe = oeRaw;
+    const ue = ueRaw;
 
     const userHash = uEntry.subarray(0, 32);
     const userValidationSalt = uEntry.subarray(32, 40);
@@ -547,26 +565,30 @@ export function createStandardDecrypter(args: {
 
     const iv0 = new Uint8Array(16); // all zeros
 
-    const asUser = (() => {
+    function tryUserPasswordR5(): { ok: true; fileKey: Uint8Array } | { ok: false } {
       const passwordBytes = encodePasswordBytesR5(args.password);
       const candidate = sha256(concatBytes(passwordBytes, userValidationSalt));
       if (!bytesEqual(candidate, userHash)) {return { ok: false as const };}
       const key = sha256(concatBytes(passwordBytes, userKeySalt));
-      const fileKey = aes256CbcDecryptNoPadWithIv(key, iv0, ue);
-      if (fileKey.length !== 32) {throw new Error(`Invalid decrypted file key length: ${fileKey.length}`);}
-      return { ok: true as const, fileKey };
-    })();
+      const fk = aes256CbcDecryptNoPadWithIv(key, iv0, ue);
+      if (fk.length !== 32) {throw new Error(`Invalid decrypted file key length: ${fk.length}`);}
+      return { ok: true as const, fileKey: fk };
+    }
 
-    const fileKey = (() => {
+    const asUser = tryUserPasswordR5();
+
+    function deriveFileKeyR5(): Uint8Array | null {
       if (asUser.ok) {return asUser.fileKey;}
 
       const passwordBytes = encodePasswordBytesR5(args.password);
       const candidate = sha256(concatBytes(passwordBytes, ownerValidationSalt, uEntry));
       if (!bytesEqual(candidate, ownerHash)) {return null;}
       const key = sha256(concatBytes(passwordBytes, ownerKeySalt, uEntry));
-      const fileKey = aes256CbcDecryptNoPadWithIv(key, iv0, oe);
-      return fileKey.length === 32 ? fileKey : null;
-    })();
+      const fk = aes256CbcDecryptNoPadWithIv(key, iv0, oe);
+      return fk.length === 32 ? fk : null;
+    }
+
+    const fileKey = deriveFileKeyR5();
 
     if (!fileKey) {
       const preview = decodePdfStringBytes(uEntry.slice(0, 8));
@@ -616,9 +638,9 @@ export function createStandardDecrypter(args: {
       throw new Error("V=5/R=6 requires AESV3 for strings/streams");
     }
 
-    const oe = asString(dictGet(args.encryptDict, "OE"))?.bytes;
-    const ue = asString(dictGet(args.encryptDict, "UE"))?.bytes;
-    if (!oe || !ue) {
+    const oeRaw = asString(dictGet(args.encryptDict, "OE"))?.bytes;
+    const ueRaw = asString(dictGet(args.encryptDict, "UE"))?.bytes;
+    if (!oeRaw || !ueRaw) {
       throw new Error("Invalid encryption dictionary for V=5/R=6 (missing /OE or /UE)");
     }
 
@@ -627,9 +649,12 @@ export function createStandardDecrypter(args: {
     if (uEntry.length !== 48 || oEntry.length !== 48) {
       throw new Error(`Invalid encryption dictionary for V=5/R=6 (expected /U and /O to be 48 bytes)`);
     }
-    if (oe.length !== 32 || ue.length !== 32) {
+    if (oeRaw.length !== 32 || ueRaw.length !== 32) {
       throw new Error(`Invalid encryption dictionary for V=5/R=6 (expected /OE and /UE to be 32 bytes)`);
     }
+
+    const oe = oeRaw;
+    const ue = ueRaw;
 
     const userHash = uEntry.subarray(0, 32);
     const userValidationSalt = uEntry.subarray(32, 40);
@@ -642,16 +667,18 @@ export function createStandardDecrypter(args: {
     const iv0 = new Uint8Array(16); // all zeros
     const passwordBytes = encodePasswordBytesR5(args.password);
 
-    const asUser = (() => {
+    function tryUserPasswordR6(): { ok: true; fileKey: Uint8Array } | { ok: false } {
       const candidate = computeR6HardenedHash({ passwordBytes, salt: userValidationSalt });
       if (!bytesEqual(candidate, userHash)) {return { ok: false as const };}
       const key = computeR6HardenedHash({ passwordBytes, salt: userKeySalt });
-      const fileKey = aes256CbcDecryptNoPadWithIv(key, iv0, ue);
-      if (fileKey.length !== 32) {throw new Error(`Invalid decrypted file key length: ${fileKey.length}`);}
-      return { ok: true as const, fileKey };
-    })();
+      const fk = aes256CbcDecryptNoPadWithIv(key, iv0, ue);
+      if (fk.length !== 32) {throw new Error(`Invalid decrypted file key length: ${fk.length}`);}
+      return { ok: true as const, fileKey: fk };
+    }
 
-    const fileKey = (() => {
+    const asUser = tryUserPasswordR6();
+
+    function deriveFileKeyR6(): Uint8Array | null {
       if (asUser.ok) {return asUser.fileKey;}
 
       const candidate = computeR6HardenedHash({ passwordBytes, salt: ownerValidationSalt, userKey: uEntry });
@@ -659,7 +686,9 @@ export function createStandardDecrypter(args: {
       const key = computeR6HardenedHash({ passwordBytes, salt: ownerKeySalt, userKey: uEntry });
       const fk = aes256CbcDecryptNoPadWithIv(key, iv0, oe);
       return fk.length === 32 ? fk : null;
-    })();
+    }
+
+    const fileKey = deriveFileKeyR6();
 
     if (!fileKey) {
       const preview = decodePdfStringBytes(uEntry.slice(0, 8));

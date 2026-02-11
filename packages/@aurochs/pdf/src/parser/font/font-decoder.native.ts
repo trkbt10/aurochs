@@ -243,7 +243,7 @@ function computeBoldItalic(baseFont: string | undefined, descriptor: PdfDict | n
 
 function extractSimpleFontWidths(page: NativePdfPage, fontDict: PdfDict): Pick<FontMetrics, "widths" | "defaultWidth"> {
   const subtype = asName(dictGet(fontDict, "Subtype"))?.value ?? "";
-  const widthScale = (() => {
+  function computeWidthScale(): number {
     if (subtype !== "Type3") {return 1;}
     const fontMatrix = extractType3FontMatrix(page, fontDict);
     if (!fontMatrix) {return 1;}
@@ -252,7 +252,8 @@ function extractSimpleFontWidths(page: NativePdfPage, fontDict: PdfDict): Pick<F
     // Type3 widths are in glyph space units; convert to "per 1000 em" units used by our text layout.
     // For the common FontMatrix [0.001 0 0 0.001 0 0], this becomes a no-op scale of 1.
     return a * 1000;
-  })();
+  }
+  const widthScale = computeWidthScale();
 
   const firstChar = asNumber(resolve(page, dictGet(fontDict, "FirstChar")));
   const widthsObj = resolve(page, dictGet(fontDict, "Widths"));
@@ -366,20 +367,22 @@ function extractType3CodeToCharName(page: NativePdfPage, fontDict: PdfDict): Rea
   const diffsArr = asArray(diffsObj);
   if (!diffsArr) {return new Map();}
 
-  const map = new Map<number, string>();
-  // eslint-disable-next-line no-restricted-syntax
-  let currentCode = 0;
-  for (const item of diffsArr.items) {
-    if (item.type === "number") {
-      currentCode = Math.trunc(item.value);
-      continue;
-    }
-    if (item.type === "name") {
-      map.set(currentCode, item.value);
-      currentCode += 1;
-    }
-  }
-  return map;
+  type DiffsAccumulator = Readonly<{ currentCode: number; map: ReadonlyMap<number, string> }>;
+  const result = diffsArr.items.reduce<DiffsAccumulator>(
+    (acc, item) => {
+      if (item.type === "number") {
+        return { ...acc, currentCode: Math.trunc(item.value) };
+      }
+      if (item.type === "name") {
+        const newMap = new Map(acc.map);
+        newMap.set(acc.currentCode, item.value);
+        return { currentCode: acc.currentCode + 1, map: newMap };
+      }
+      return acc;
+    },
+    { currentCode: 0, map: new Map() },
+  );
+  return result.map;
 }
 
 function extractType3CharProcs(page: NativePdfPage, fontDict: PdfDict): ReadonlyMap<string, Uint8Array> {

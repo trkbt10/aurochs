@@ -74,13 +74,15 @@ const SBOX = new Uint8Array([
   0x8c, 0xa1, 0x89, 0x0d, 0xbf, 0xe6, 0x42, 0x68, 0x41, 0x99, 0x2d, 0x0f, 0xb0, 0x54, 0xbb, 0x16,
 ]);
 
-const INV_SBOX = (() => {
+function buildInvSBox(): Uint8Array {
   const out = new Uint8Array(256);
   for (let x = 0; x < 256; x += 1) {
     out[SBOX[x] ?? 0] = x;
   }
   return out;
-})();
+}
+
+const INV_SBOX = buildInvSBox();
 
 /**
  * Debug/test helper: read a single S-box byte.
@@ -342,14 +344,13 @@ function aes128CbcEncryptNoPad(key: Uint8Array, iv: Uint8Array, plaintext: Uint8
   const expandedKey = expandKeyAes128(key);
   const out = new Uint8Array(plaintext.length);
 
-  // eslint-disable-next-line no-restricted-syntax
-  let prev = iv;
+  const chain = { prev: iv };
   for (let off = 0; off < plaintext.length; off += 16) {
     const block = plaintext.subarray(off, off + 16);
-    const xored = xorBlock16(block, prev);
+    const xored = xorBlock16(block, chain.prev);
     const enc = aesEncryptBlock(expandedKey, 10, xored);
     out.set(enc, off);
-    prev = enc;
+    chain.prev = enc;
   }
 
   return out;
@@ -371,14 +372,13 @@ function aes128CbcDecryptNoPad(key: Uint8Array, iv: Uint8Array, ciphertext: Uint
   const expandedKey = expandKeyAes128(key);
   const out = new Uint8Array(ciphertext.length);
 
-  // eslint-disable-next-line no-restricted-syntax
-  let prev = iv;
+  const chain = { prev: iv };
   for (let off = 0; off < ciphertext.length; off += 16) {
     const block = ciphertext.subarray(off, off + 16);
     const dec = aesDecryptBlock(expandedKey, 10, block);
-    const plain = xorBlock16(dec, prev);
+    const plain = xorBlock16(dec, chain.prev);
     out.set(plain, off);
-    prev = block;
+    chain.prev = block;
   }
 
   return out;
@@ -392,14 +392,13 @@ function aes256CbcDecryptNoPad(key: Uint8Array, iv: Uint8Array, ciphertext: Uint
   const expandedKey = expandKeyAes256(key);
   const out = new Uint8Array(ciphertext.length);
 
-  // eslint-disable-next-line no-restricted-syntax
-  let prev = iv;
+  const chain = { prev: iv };
   for (let off = 0; off < ciphertext.length; off += 16) {
     const block = ciphertext.subarray(off, off + 16);
     const dec = aesDecryptBlock(expandedKey, 14, block);
-    const plain = xorBlock16(dec, prev);
+    const plain = xorBlock16(dec, chain.prev);
     out.set(plain, off);
-    prev = block;
+    chain.prev = block;
   }
 
   return out;

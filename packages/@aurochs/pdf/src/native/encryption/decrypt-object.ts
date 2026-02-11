@@ -42,18 +42,21 @@ function getCryptFilterName(dict: PdfDict): string | null {
   if (cryptIndices.length === 0) {return null;}
 
   const decodeParms = dict.map.get("DecodeParms");
-  for (const idx of cryptIndices) {
-    const parms = (() => {
-      if (!decodeParms) {return null;}
-      if (decodeParms.type === "dict") {return decodeParms;}
-      if (decodeParms.type === "array") {
-        const v = decodeParms.items[idx];
-        if (!v) {return null;}
-        if (v.type === "dict") {return v;}
-        return null;
-      }
+
+  function getParmsAtIndex(idx: number): PdfDict | null {
+    if (!decodeParms) {return null;}
+    if (decodeParms.type === "dict") {return decodeParms;}
+    if (decodeParms.type === "array") {
+      const v = decodeParms.items[idx];
+      if (!v) {return null;}
+      if (v.type === "dict") {return v;}
       return null;
-    })();
+    }
+    return null;
+  }
+
+  for (const idx of cryptIndices) {
+    const parms = getParmsAtIndex(idx);
 
     if (!parms) {continue;}
     const name = parms.map.get("Name");
@@ -84,18 +87,21 @@ function streamHasCryptIdentity(dict: PdfDict): boolean {
   if (cryptIndices.length === 0) {return false;}
 
   const decodeParms = dict.map.get("DecodeParms");
-  for (const idx of cryptIndices) {
-    const parms = (() => {
-      if (!decodeParms) {return null;}
-      if (decodeParms.type === "dict") {return decodeParms;}
-      if (decodeParms.type === "array") {
-        const v = decodeParms.items[idx];
-        if (!v) {return null;}
-        if (v.type === "dict") {return v;}
-        return null;
-      }
+
+  function getParmsAtIndexForIdentity(idx: number): PdfDict | null {
+    if (!decodeParms) {return null;}
+    if (decodeParms.type === "dict") {return decodeParms;}
+    if (decodeParms.type === "array") {
+      const v = decodeParms.items[idx];
+      if (!v) {return null;}
+      if (v.type === "dict") {return v;}
       return null;
-    })();
+    }
+    return null;
+  }
+
+  for (const idx of cryptIndices) {
+    const parms = getParmsAtIndexForIdentity(idx);
 
     if (!parms) {continue;}
     const name = parms.map.get("Name");
@@ -139,7 +145,7 @@ function decryptStream(args: { readonly value: PdfStream; readonly ctx: DecryptC
   const { value, ctx } = args;
   const dict = decryptDict({ value: value.dict, ctx });
 
-  const data = (() => {
+  function decryptStreamData(): Uint8Array {
     if (streamHasCryptIdentity(value.dict)) {
       return value.data;
     }
@@ -149,7 +155,9 @@ function decryptStream(args: { readonly value: PdfStream; readonly ctx: DecryptC
     const kind = isEmbeddedFile ? "embeddedFile" : "stream";
     const cryptFilterName = getCryptFilterName(value.dict) ?? undefined;
     return ctx.decrypter.decryptBytes({ objNum: ctx.objNum, gen: ctx.gen, bytes: value.data, options: { kind, cryptFilterName } });
-  })();
+  }
+
+  const data = decryptStreamData();
 
   return { type: "stream", dict, data };
 }

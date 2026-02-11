@@ -33,12 +33,12 @@ import { decodeAdobeJapan1CidToUnicode } from "./adobe-japan1-cid-to-unicode";
 export type CIDFallbackMapping = ReadonlyMap<number, string>;
 
 /**
- * ASCII range mapping (CID 1-94 maps to U+0021-U+007E in most orderings)
+ * Build ASCII range mapping (CID 1-94 maps to U+0021-U+007E in most orderings)
  *
  * This covers basic Latin characters which are commonly at these CID positions
  * in Adobe's character collections.
  */
-const ASCII_OFFSET_MAPPING: CIDFallbackMapping = (() => {
+function buildAsciiOffsetMapping(): CIDFallbackMapping {
   const map = new Map<number, string>();
   // CID 1 typically maps to U+0020 (space) in Adobe orderings
   // CID 2-95 maps to U+0021-U+007E (printable ASCII)
@@ -46,10 +46,12 @@ const ASCII_OFFSET_MAPPING: CIDFallbackMapping = (() => {
     map.set(cid, String.fromCodePoint(0x001f + cid)); // CID 1 -> U+0020
   }
   return map;
-})();
+}
+
+const ASCII_OFFSET_MAPPING: CIDFallbackMapping = buildAsciiOffsetMapping();
 
 /**
- * Japan1 specific common mappings
+ * Build Japan1 specific common mappings
  *
  * Adobe-Japan1 ordering has well-defined mappings for:
  * - CID 0: .notdef (not mapped)
@@ -59,7 +61,7 @@ const ASCII_OFFSET_MAPPING: CIDFallbackMapping = (() => {
  * - CID 842-935: Hiragana
  * - CID 936-1028: Full-width Katakana
  */
-const JAPAN1_EXTRA_MAPPINGS: CIDFallbackMapping = (() => {
+function buildJapan1ExtraMappings(): CIDFallbackMapping {
   const map = new Map<number, string>();
 
   // Full-width ASCII to Unicode (CID 231-325 -> U+FF01-U+FF5E)
@@ -120,15 +122,17 @@ const JAPAN1_EXTRA_MAPPINGS: CIDFallbackMapping = (() => {
   map.set(328, "\u30FC"); // ー
 
   return map;
-})();
+}
+
+const JAPAN1_EXTRA_MAPPINGS: CIDFallbackMapping = buildJapan1ExtraMappings();
 
 /**
- * GB1 (Simplified Chinese) specific mappings
+ * Build GB1 (Simplified Chinese) specific mappings
  *
  * Adobe-GB1 ordering for Simplified Chinese.
  * Provides common punctuation mappings.
  */
-const GB1_EXTRA_MAPPINGS: CIDFallbackMapping = (() => {
+function buildGb1ExtraMappings(): CIDFallbackMapping {
   const map = new Map<number, string>();
 
   // Common Chinese punctuation
@@ -150,15 +154,17 @@ const GB1_EXTRA_MAPPINGS: CIDFallbackMapping = (() => {
   map.set(118, "\u3002"); // 。
 
   return map;
-})();
+}
+
+const GB1_EXTRA_MAPPINGS: CIDFallbackMapping = buildGb1ExtraMappings();
 
 /**
- * Korea1 (Korean) specific mappings
+ * Build Korea1 (Korean) specific mappings
  *
  * Adobe-Korea1 ordering for Korean.
  * Provides common punctuation mappings.
  */
-const KOREA1_EXTRA_MAPPINGS: CIDFallbackMapping = (() => {
+function buildKorea1ExtraMappings(): CIDFallbackMapping {
   const map = new Map<number, string>();
 
   // Common Korean punctuation (similar to Japanese/Chinese)
@@ -166,7 +172,9 @@ const KOREA1_EXTRA_MAPPINGS: CIDFallbackMapping = (() => {
   map.set(97, "\u3002"); // 。
 
   return map;
-})();
+}
+
+const KOREA1_EXTRA_MAPPINGS: CIDFallbackMapping = buildKorea1ExtraMappings();
 
 /**
  * Get fallback mapping for a given CID ordering

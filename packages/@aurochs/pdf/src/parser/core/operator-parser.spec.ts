@@ -2,7 +2,8 @@
  * @file Tests for PDF operator parser
  */
 
-import { createOperatorParser, type ParsedPath, type ParsedText, type ParsedImage } from "./operator-parser";
+import { createOperatorParser } from "./operator-parser";
+import type { ParsedPath, ParsedText, ParsedImage } from "../operator";
 import { tokenizeContentStream } from "../../domain/content-stream";
 import type { FontMappings, FontInfo, FontMetrics } from "../../domain/font";
 
