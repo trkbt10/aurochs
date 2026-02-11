@@ -1,0 +1,9 @@
+{
+  "content": [
+    {
+      "type": "paragraph",
+      "indentFirstLine": 720,
+      "runs": [{ "text": "This paragraph has a first line indent. The first line starts further right than subsequent lines would if this were a longer paragraph." }]
+    }
+  ]
+}

@@ -7,7 +7,13 @@
  */
 
 import { describe, it, expect, beforeAll } from "vitest";
-import { loadAndRender, fixture, type RenderedFixture } from "../scripts/test-helper";
+import {
+  loadAndRender,
+  fixture,
+  baselinePath,
+  compareToBaseline,
+  type RenderedFixture,
+} from "../scripts/test-helper";
 
 describe("run/italic", () => {
   let rendered: RenderedFixture;
@@ -23,5 +29,11 @@ describe("run/italic", () => {
 
   it("renders non-italic text with font-style normal", () => {
     expect(rendered.svg).toContain("This is");
+  });
+
+  it("matches LibreOffice baseline", () => {
+    const baseline = baselinePath(fixture("italic"), import.meta.url);
+    const result = compareToBaseline(rendered.svg, baseline, { maxDiffPercent: 5 });
+    expect(result.match).toBe(true);
   });
 });

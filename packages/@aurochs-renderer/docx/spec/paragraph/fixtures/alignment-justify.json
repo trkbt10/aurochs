@@ -1,0 +1,9 @@
+{
+  "content": [
+    {
+      "type": "paragraph",
+      "alignment": "both",
+      "runs": [{ "text": "This is a justified paragraph with enough text to demonstrate how justification works across multiple words in a single line of content." }]
+    }
+  ]
+}

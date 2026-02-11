@@ -1,0 +1,12 @@
+{
+  "content": [
+    {
+      "type": "paragraph",
+      "runs": [
+        { "text": "Small ", "fontSize": 16 },
+        { "text": "Medium ", "fontSize": 24 },
+        { "text": "Large", "fontSize": 36 }
+      ]
+    }
+  ]
+}

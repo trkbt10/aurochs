@@ -1,0 +1,12 @@
+{
+  "content": [
+    {
+      "type": "paragraph",
+      "runs": [
+        { "text": "This is " },
+        { "text": "underlined", "underline": "single" },
+        { "text": " text." }
+      ]
+    }
+  ]
+}

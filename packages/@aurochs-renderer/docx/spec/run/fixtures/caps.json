@@ -1,0 +1,13 @@
+{
+  "content": [
+    {
+      "type": "paragraph",
+      "runs": [
+        { "text": "Normal " },
+        { "text": "all caps", "caps": true },
+        { "text": " and " },
+        { "text": "small caps", "smallCaps": true }
+      ]
+    }
+  ]
+}

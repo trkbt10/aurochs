@@ -1,0 +1,10 @@
+{
+  "content": [
+    {
+      "type": "paragraph",
+      "indentLeft": 720,
+      "indentHanging": 720,
+      "runs": [{ "text": "This paragraph has a hanging indent. The first line starts at the margin but subsequent lines are indented." }]
+    }
+  ]
+}

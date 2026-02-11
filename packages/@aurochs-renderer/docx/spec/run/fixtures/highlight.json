@@ -1,0 +1,12 @@
+{
+  "content": [
+    {
+      "type": "paragraph",
+      "runs": [
+        { "text": "Normal " },
+        { "text": "highlighted", "highlight": "yellow" },
+        { "text": " text." }
+      ]
+    }
+  ]
+}

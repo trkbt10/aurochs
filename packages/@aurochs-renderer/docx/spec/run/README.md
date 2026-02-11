@@ -12,11 +12,11 @@ Run (`w:r`) is an inline content region with uniform formatting.
 |----------|---------|:------:|------|
 | Bold | `w:b` | ✅ | bold.spec.ts |
 | Italic | `w:i` | ✅ | italic.spec.ts |
-| Underline | `w:u` | ⬚ | |
-| Strike | `w:strike` | ⬚ | |
+| Underline | `w:u` | ✅ | underline.spec.ts |
+| Strike | `w:strike` | ✅ | strike.spec.ts |
 | Double Strike | `w:dstrike` | ⬚ | |
-| Small Caps | `w:smallCaps` | ⬚ | |
-| All Caps | `w:caps` | ⬚ | |
+| Small Caps | `w:smallCaps` | ✅ | caps.spec.ts |
+| All Caps | `w:caps` | ✅ | caps.spec.ts |
 | Emboss | `w:emboss` | ⬚ | |
 | Imprint | `w:imprint` | ⬚ | |
 | Outline | `w:outline` | ⬚ | |
@@ -36,19 +36,19 @@ Run (`w:r`) is an inline content region with uniform formatting.
 
 | Property | Element | Status | File |
 |----------|---------|:------:|------|
-| Font Size | `w:sz` | ⬚ | |
+| Font Size | `w:sz` | ✅ | font-size.spec.ts |
 | Complex Script Size | `w:szCs` | ⬚ | |
 | Character Spacing | `w:spacing` | ⬚ | |
 | Kerning | `w:kern` | ⬚ | |
 | Position (raise/lower) | `w:position` | ⬚ | |
-| Subscript/Superscript | `w:vertAlign` | ⬚ | |
+| Subscript/Superscript | `w:vertAlign` | ✅ | vertical-align.spec.ts |
 
 ### Color & Shading
 
 | Property | Element | Status | File |
 |----------|---------|:------:|------|
-| Color | `w:color` | ⬚ | |
-| Highlight | `w:highlight` | ⬚ | |
+| Color | `w:color` | ✅ | color.spec.ts |
+| Highlight | `w:highlight` | ✅ | highlight.spec.ts |
 | Shading | `w:shd` | ⬚ | |
 
 ### Complex Script / RTL (Section 17.3.2)
@@ -68,22 +68,6 @@ Run (`w:r`) is an inline content region with uniform formatting.
 | Arabic (العربية) | RTL | ⬚ | |
 | Hebrew (עברית) | RTL | ⬚ | |
 | Mixed LTR+RTL | Bidi | ⬚ | |
-
-## Fixture Format
-
-```json
-{
-  "content": [
-    {
-      "type": "paragraph",
-      "runs": [
-        { "text": "normal " },
-        { "text": "styled", "bold": true }
-      ]
-    }
-  ]
-}
-```
 
 ## Legend
 

@@ -1,0 +1,13 @@
+{
+  "content": [
+    {
+      "type": "paragraph",
+      "runs": [{ "text": "Normal paragraph" }]
+    },
+    {
+      "type": "paragraph",
+      "indentLeft": 720,
+      "runs": [{ "text": "Indented paragraph (0.5 inch)" }]
+    }
+  ]
+}

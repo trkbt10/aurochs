@@ -1,0 +1,9 @@
+{
+  "content": [
+    {
+      "type": "paragraph",
+      "lineSpacing": { "line": 480, "lineRule": "auto" },
+      "runs": [{ "text": "Double spaced paragraph. This line should have more space below it. And this continues the paragraph." }]
+    }
+  ]
+}

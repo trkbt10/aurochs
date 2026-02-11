@@ -94,3 +94,15 @@ export async function loadAndRender(fixturePath: string, callerUrl: string): Pro
 export function fixture(name: string): string {
   return `fixtures/${name}.docx`;
 }
+
+/**
+ * Get baseline PNG path for a fixture.
+ */
+export function baselinePath(fixturePath: string, callerUrl: string): string {
+  const callerDir = path.dirname(new URL(callerUrl).pathname);
+  const absolutePath = path.resolve(callerDir, fixturePath);
+  return absolutePath.replace(/\.docx$/, ".png");
+}
+
+// Re-export compare utilities
+export { compareToBaseline, type CompareResult, type CompareOptions } from "./compare";

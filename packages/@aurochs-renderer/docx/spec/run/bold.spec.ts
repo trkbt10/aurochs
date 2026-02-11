@@ -7,7 +7,13 @@
  */
 
 import { describe, it, expect, beforeAll } from "vitest";
-import { loadAndRender, fixture, type RenderedFixture } from "../scripts/test-helper";
+import {
+  loadAndRender,
+  fixture,
+  baselinePath,
+  compareToBaseline,
+  type RenderedFixture,
+} from "../scripts/test-helper";
 
 describe("run/bold", () => {
   let rendered: RenderedFixture;
@@ -25,5 +31,11 @@ describe("run/bold", () => {
     expect(rendered.svg).toContain("This is");
     // Non-bold text should not have font-weight="700"
     expect(rendered.svg).toMatch(/>This is <\/text>/);
+  });
+
+  it("matches LibreOffice baseline", () => {
+    const baseline = baselinePath(fixture("bold"), import.meta.url);
+    const result = compareToBaseline(rendered.svg, baseline, { maxDiffPercent: 5 });
+    expect(result.match).toBe(true);
   });
 });

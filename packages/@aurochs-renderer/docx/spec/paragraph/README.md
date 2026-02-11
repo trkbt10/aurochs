@@ -10,10 +10,10 @@ Paragraph (`w:p`) is a block-level element containing runs and other inline cont
 
 | Value | Description | Status | File |
 |-------|-------------|:------:|------|
-| left | Left align (LTR default) | ⬚ | |
+| left | Left align (LTR default) | ✅ | alignment-left.spec.ts |
 | center | Center align | ✅ | alignment.spec.ts |
-| right | Right align | ⬚ | |
-| both | Justify | ⬚ | |
+| right | Right align | ✅ | alignment-right.spec.ts |
+| both | Justify | ✅ | alignment-justify.spec.ts |
 | distribute | Distribute (East Asian) | ⬚ | |
 | start | Start edge (bidi-aware) | ⬚ | |
 | end | End edge (bidi-aware) | ⬚ | |
@@ -22,10 +22,10 @@ Paragraph (`w:p`) is a block-level element containing runs and other inline cont
 
 | Property | Attribute | Status | File |
 |----------|-----------|:------:|------|
-| Before | `@before` | ⬚ | |
-| After | `@after` | ⬚ | |
-| Line | `@line` | ⬚ | |
-| Line Rule | `@lineRule` | ⬚ | |
+| Before | `@before` | ✅ | spacing.spec.ts |
+| After | `@after` | ✅ | spacing.spec.ts |
+| Line | `@line` | ✅ | line-spacing.spec.ts |
+| Line Rule | `@lineRule` | ✅ | line-spacing.spec.ts |
 | Before Auto | `@beforeAutospacing` | ⬚ | |
 | After Auto | `@afterAutospacing` | ⬚ | |
 
@@ -33,10 +33,10 @@ Paragraph (`w:p`) is a block-level element containing runs and other inline cont
 
 | Property | Attribute | Status | File |
 |----------|-----------|:------:|------|
-| Left | `@left` | ⬚ | |
+| Left | `@left` | ✅ | indent.spec.ts |
 | Right | `@right` | ⬚ | |
-| First Line | `@firstLine` | ⬚ | |
-| Hanging | `@hanging` | ⬚ | |
+| First Line | `@firstLine` | ✅ | indent.spec.ts |
+| Hanging | `@hanging` | ✅ | indent.spec.ts |
 | Start (bidi) | `@start` | ⬚ | |
 | End (bidi) | `@end` | ⬚ | |
 
@@ -80,34 +80,6 @@ Paragraph (`w:p`) is a block-level element containing runs and other inline cont
 | Page Break Before | `w:pageBreakBefore` | ⬚ | |
 | Widow/Orphan | `w:widowControl` | ⬚ | |
 | Outline Level | `w:outlineLvl` | ⬚ | |
-
-## Fixture Format
-
-```json
-{
-  "content": [
-    {
-      "type": "paragraph",
-      "alignment": "center",
-      "runs": [{ "text": "Centered" }]
-    }
-  ]
-}
-```
-
-### RTL Fixture Example
-
-```json
-{
-  "content": [
-    {
-      "type": "paragraph",
-      "bidi": true,
-      "runs": [{ "text": "مرحبا بالعالم", "rtl": true }]
-    }
-  ]
-}
-```
 
 ## Legend
 

@@ -1,0 +1,13 @@
+{
+  "content": [
+    {
+      "type": "paragraph",
+      "runs": [
+        { "text": "H" },
+        { "text": "2", "vertAlign": "subscript" },
+        { "text": "O and E=mc" },
+        { "text": "2", "vertAlign": "superscript" }
+      ]
+    }
+  ]
+}

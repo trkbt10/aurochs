@@ -1,0 +1,9 @@
+{
+  "content": [
+    {
+      "type": "paragraph",
+      "alignment": "left",
+      "runs": [{ "text": "Left aligned text" }]
+    }
+  ]
+}

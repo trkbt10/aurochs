@@ -1,0 +1,12 @@
+{
+  "content": [
+    {
+      "type": "paragraph",
+      "runs": [
+        { "text": "Red ", "color": "FF0000" },
+        { "text": "Green ", "color": "00FF00" },
+        { "text": "Blue", "color": "0000FF" }
+      ]
+    }
+  ]
+}

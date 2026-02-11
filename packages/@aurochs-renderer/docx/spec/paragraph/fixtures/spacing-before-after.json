@@ -1,0 +1,18 @@
+{
+  "content": [
+    {
+      "type": "paragraph",
+      "runs": [{ "text": "First paragraph" }]
+    },
+    {
+      "type": "paragraph",
+      "spacingBefore": 480,
+      "spacingAfter": 480,
+      "runs": [{ "text": "Paragraph with spacing" }]
+    },
+    {
+      "type": "paragraph",
+      "runs": [{ "text": "Third paragraph" }]
+    }
+  ]
+}

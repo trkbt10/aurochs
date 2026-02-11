@@ -7,7 +7,13 @@
  */
 
 import { describe, it, expect, beforeAll } from "vitest";
-import { loadAndRender, fixture, type RenderedFixture } from "../scripts/test-helper";
+import {
+  loadAndRender,
+  fixture,
+  baselinePath,
+  compareToBaseline,
+  type RenderedFixture,
+} from "../scripts/test-helper";
 
 describe("paragraph/alignment", () => {
   describe("center", () => {
@@ -23,6 +29,12 @@ describe("paragraph/alignment", () => {
 
     it("applies center alignment to paragraph", () => {
       expect(rendered.pages[0].paragraphs[0].alignment).toBe("center");
+    });
+
+    it("matches LibreOffice baseline", () => {
+      const baseline = baselinePath(fixture("alignment-center"), import.meta.url);
+      const result = compareToBaseline(rendered.svg, baseline, { maxDiffPercent: 5 });
+      expect(result.match).toBe(true);
     });
   });
 });
