@@ -8,6 +8,7 @@
     "@aurochs/glyph": "workspace:*",
     "@aurochs-office/docx": "workspace:*",
     "@aurochs-office/text-layout": "workspace:*",
+    "@aurochs-renderer/docx": "workspace:*",
     "@aurochs-ui/editor-core": "workspace:*",
     "@aurochs-ui/editor-controls": "workspace:*",
     "@aurochs-ui/ui-components": "workspace:*"

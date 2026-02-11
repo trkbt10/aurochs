@@ -162,12 +162,8 @@ export {
 export { type HyperlinkClickEvent } from "./text-edit/DocumentTextOverlay";
 
 // Layout hooks
-export {
-  useDocumentLayout,
-  type UseDocumentLayoutOptions,
-  type DocumentLayoutResult,
-} from "./document/hooks/use-document-layout";
-
+// NOTE: useDocumentLayout has been moved to @aurochs-renderer/docx/react
+// Import it directly from there: import { useDocumentLayout } from "@aurochs-renderer/docx/react"
 export {
   useContinuousCursor,
   type UseContinuousCursorOptions,

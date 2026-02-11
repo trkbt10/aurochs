@@ -23,7 +23,7 @@ import type {
   CursorCoordinates,
 } from "@aurochs-office/text-layout";
 import { getDocumentPlainText } from "@aurochs-office/docx/adapters";
-import { useDocumentLayout } from "../document/hooks/use-document-layout";
+import { useDocumentLayout } from "@aurochs-renderer/docx/react";
 import {
   coordinatesToCursorPosition,
   cursorPositionToCoordinates,

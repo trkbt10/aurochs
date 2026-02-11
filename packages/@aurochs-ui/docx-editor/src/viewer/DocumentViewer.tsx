@@ -6,7 +6,7 @@
 
 import { useCallback, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import type { PageLayout } from "@aurochs-office/text-layout";
-import { PageRenderer } from "../canvas/PageRenderer";
+import { PageRenderer } from "@aurochs-renderer/docx/react";
 import { ZoomControls, getNextZoomValue } from "@aurochs-ui/editor-controls/zoom";
 import { spacingTokens, colorTokens, shadowTokens } from "@aurochs-ui/ui-components/design-tokens";
 import {
