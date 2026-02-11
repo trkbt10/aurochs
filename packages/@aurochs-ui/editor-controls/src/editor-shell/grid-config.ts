@@ -5,6 +5,7 @@
  */
 
 import type { PanelLayoutConfig, GridTrack } from "react-panel-layout";
+import { editorShellTokens } from "@aurochs-ui/ui-components/design-tokens";
 
 export type EditorGridConfigOptions = {
   readonly hasLeft: boolean;
@@ -19,8 +20,7 @@ export type EditorGridConfigOptions = {
   readonly rightResizable?: boolean;
 };
 
-const DEFAULT_LEFT_SIZE = "200px";
-const DEFAULT_RIGHT_SIZE = "280px";
+const { panel } = editorShellTokens;
 
 /**
  * Builds a PanelLayoutConfig for EditorShell based on which panels are present.
@@ -37,10 +37,10 @@ export function buildEditorGridConfig(options: EditorGridConfigOptions): PanelLa
   if (options.hasLeft) {
     areas.push("left");
     columns.push({
-      size: options.leftSize ?? DEFAULT_LEFT_SIZE,
+      size: options.leftSize ?? panel.leftSize,
       resizable: options.leftResizable ?? true,
-      minSize: options.leftMinSize ?? 150,
-      maxSize: options.leftMaxSize ?? 350,
+      minSize: options.leftMinSize ?? panel.leftMinSize,
+      maxSize: options.leftMaxSize ?? panel.leftMaxSize,
     });
   }
 
@@ -50,10 +50,10 @@ export function buildEditorGridConfig(options: EditorGridConfigOptions): PanelLa
   if (options.hasRight) {
     areas.push("right");
     columns.push({
-      size: options.rightSize ?? DEFAULT_RIGHT_SIZE,
+      size: options.rightSize ?? panel.rightSize,
       resizable: options.rightResizable ?? true,
-      minSize: options.rightMinSize ?? 200,
-      maxSize: options.rightMaxSize ?? 500,
+      minSize: options.rightMinSize ?? panel.rightMinSize,
+      maxSize: options.rightMaxSize ?? panel.rightMaxSize,
     });
   }
 

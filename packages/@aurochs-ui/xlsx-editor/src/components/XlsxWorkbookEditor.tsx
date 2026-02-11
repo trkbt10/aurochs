@@ -4,9 +4,10 @@
  * Workbook editor UI using EditorShell for responsive layout.
  */
 
-import { useState, type CSSProperties } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import type { XlsxWorkbook } from "@aurochs-office/xlsx/domain/workbook";
-import { EditorShell, type EditorShellPanel } from "@aurochs-ui/editor-controls/editor-shell";
+import { EditorShell, type EditorPanel } from "@aurochs-ui/editor-controls/editor-shell";
+import { editorShellTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { XlsxWorkbookEditorProvider, useXlsxWorkbookEditor } from "../context/workbook/XlsxWorkbookEditorContext";
 import { XlsxSheetGrid, type XlsxGridMetrics } from "./XlsxSheetGrid";
 import { XlsxWorkbookToolbar } from "./toolbar/XlsxWorkbookToolbar";
@@ -20,23 +21,27 @@ export type XlsxWorkbookEditorProps = {
   readonly onWorkbookChange?: (workbook: XlsxWorkbook) => void;
 };
 
-function buildFormatRightPanel(
-  sheetIndex: number,
-  onClose: () => void,
-): EditorShellPanel {
-  return {
-    content: <XlsxCellFormatPanel sheetIndex={sheetIndex} onClose={onClose} />,
-    size: "320px",
-    resizable: false,
-  };
-}
-
 function XlsxWorkbookEditorInner({ grid }: { readonly grid: XlsxGridMetrics }) {
   const { workbook, activeSheetIndex } = useXlsxWorkbookEditor();
-  const [isFormatPanelOpen, setIsFormatPanelOpen] = useState<boolean>(true);
   const [zoom, setZoom] = useState<number>(1);
 
   const activeSheet = activeSheetIndex !== undefined ? workbook.sheets[activeSheetIndex] : undefined;
+
+  const panels = useMemo<EditorPanel[]>(() => {
+    if (activeSheetIndex === undefined) {
+      return [];
+    }
+    return [
+      {
+        id: "format",
+        position: "right",
+        content: <XlsxCellFormatPanel sheetIndex={activeSheetIndex} />,
+        size: editorShellTokens.panel.xlsxFormatPanelSize,
+        resizable: false,
+        drawerLabel: "Format",
+      },
+    ];
+  }, [activeSheetIndex]);
 
   if (!activeSheet || activeSheetIndex === undefined) {
     return (
@@ -46,30 +51,19 @@ function XlsxWorkbookEditorInner({ grid }: { readonly grid: XlsxGridMetrics }) {
     );
   }
 
-  function resolveRightPanel(sheetIndex: number) {
-    if (isFormatPanelOpen) {
-      return buildFormatRightPanel(sheetIndex, () => setIsFormatPanelOpen(false));
-    }
-    return undefined;
-  }
-
-  const rightPanel = resolveRightPanel(activeSheetIndex);
-
   return (
     <EditorShell
       toolbar={
         <XlsxWorkbookToolbar
           sheetIndex={activeSheetIndex}
-          isFormatPanelOpen={isFormatPanelOpen}
-          onToggleFormatPanel={() => setIsFormatPanelOpen((v) => !v)}
           zoom={zoom}
           onZoomChange={setZoom}
         />
       }
-      rightPanel={rightPanel}
+      panels={panels}
       bottomBar={<XlsxSheetTabBar />}
     >
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div style={{ width: "100%", height: "100%", minWidth: 0, minHeight: 0 }}>
         <XlsxSheetGrid sheetIndex={activeSheetIndex} metrics={grid} zoom={zoom} />
       </div>
     </EditorShell>

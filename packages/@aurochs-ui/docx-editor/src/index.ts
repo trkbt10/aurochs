@@ -141,6 +141,24 @@ export {
   type ContinuousEditorProps,
 } from "./text-edit/ContinuousEditor";
 
+// Main Document Editor (EditorShell-based)
+export {
+  DocxDocumentEditor,
+  type DocxDocumentEditorProps,
+} from "./DocxDocumentEditor";
+
+// Panels
+export { DocumentToolbar, type DocumentToolbarProps } from "./panels/DocumentToolbar";
+export { SelectedElementPanel, type SelectedElementPanelProps } from "./panels/SelectedElementPanel";
+export { DocumentInfoPanel, type DocumentInfoPanelProps } from "./panels/DocumentInfoPanel";
+
+// Context
+export {
+  DocumentEditorProvider,
+  useDocumentEditor,
+  type DocumentEditorContextValue,
+} from "./context/document/DocumentEditorContext";
+
 export { type HyperlinkClickEvent } from "./text-edit/DocumentTextOverlay";
 
 // Layout hooks

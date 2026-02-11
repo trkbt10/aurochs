@@ -33,8 +33,10 @@ describe("EditorShell", () => {
   it("renders left and right panels", () => {
     render(
       <EditorShell
-        leftPanel={{ content: <div>Left Panel</div> }}
-        rightPanel={{ content: <div>Right Panel</div> }}
+        panels={[
+          { id: "left", position: "left", content: <div>Left Panel</div> },
+          { id: "right", position: "right", content: <div>Right Panel</div> },
+        ]}
       >
         <div>Center</div>
       </EditorShell>,
@@ -57,8 +59,10 @@ describe("EditorShell", () => {
   it("does not render overlay buttons in desktop mode", () => {
     render(
       <EditorShell
-        leftPanel={{ content: <div>Left</div>, drawerLabel: "Slides" }}
-        rightPanel={{ content: <div>Right</div>, drawerLabel: "Inspector" }}
+        panels={[
+          { id: "left", position: "left", content: <div>Left</div>, drawerLabel: "Slides" },
+          { id: "right", position: "right", content: <div>Right</div>, drawerLabel: "Inspector" },
+        ]}
       >
         <div>Content</div>
       </EditorShell>,

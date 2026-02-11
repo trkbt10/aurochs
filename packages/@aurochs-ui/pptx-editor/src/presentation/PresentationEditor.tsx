@@ -75,13 +75,7 @@ import {
   applyRunPropertiesToSelection,
   applyParagraphPropertiesToSelection,
 } from "../slide/text-edit/input-support/run-formatting";
-import {
-  EditorShell,
-  CanvasArea,
-  editorContainerStyle,
-  toolbarStyle,
-  gridContainerStyle,
-} from "@aurochs-ui/editor-controls/editor-shell";
+import { EditorShell, CanvasArea, type EditorPanel } from "@aurochs-ui/editor-controls/editor-shell";
 import { RIGHT_PANEL_TABS, usePivotTabs } from "../layout";
 import { SelectedElementTab, SlideInfoTab, LayersTab } from "../panels/right-panel";
 import { AssetPanel, LayoutInfoPanel, ThemeViewerPanel, InspectorPanelWithTabs } from "../panels/inspector";
@@ -1176,50 +1170,67 @@ function EditorContent({ showInspector, showToolbar }: { showInspector: boolean;
   // ==========================================================================
 
   function renderEditorBody() {
-    if (editorMode === "theme") {
-      return (
-        <div style={editorContainerStyle}>
-          {showToolbar && <div style={toolbarStyle}>{toolbarContent}</div>}
-          <div style={gridContainerStyle}>
-            <ThemeEditorCanvas
-              colorScheme={colorContext.colorScheme}
-              fontScheme={fontScheme}
-              onColorChange={handleColorSchemeChange}
-              onMajorFontChange={handleMajorFontChange}
-              onMinorFontChange={handleMinorFontChange}
-              onPresetSelect={handleThemePresetSelect}
-              onThemeImport={handleThemeImport}
-              canUndo={canUndo}
-              canRedo={canRedo}
-              onUndo={() => dispatch({ type: "UNDO" })}
-              onRedo={() => dispatch({ type: "REDO" })}
-              presentationFile={document.presentationFile}
-              layoutOptions={layoutOptions}
-              currentLayoutPath={layoutPath}
-              slideSize={{ width, height }}
-              onLayoutSelect={slideCallbacks.handleLayoutChange}
-            />
-          </div>
-        </div>
-      );
-    }
-
-    function buildRightPanel() {
-      if (showInspector && inspectorComponent) {
-        return { content: inspectorComponent, drawerLabel: "Inspector" };
+    function buildPanels(): EditorPanel[] {
+      if (editorMode === "theme") {
+        return [];
       }
-      return undefined;
+
+      const result: EditorPanel[] = [];
+
+      // Left panel: thumbnails
+      result.push({
+        id: "thumbnails",
+        position: "left",
+        content: thumbnailComponent,
+        drawerLabel: "Slides",
+        scrollable: true,
+      });
+
+      // Right panel: inspector
+      if (showInspector && inspectorComponent) {
+        result.push({
+          id: "inspector",
+          position: "right",
+          content: inspectorComponent,
+          drawerLabel: "Inspector",
+        });
+      }
+
+      return result;
     }
 
-    const rightPanel = buildRightPanel();
+    function buildCenterContent() {
+      if (editorMode === "theme") {
+        return (
+          <ThemeEditorCanvas
+            colorScheme={colorContext.colorScheme}
+            fontScheme={fontScheme}
+            onColorChange={handleColorSchemeChange}
+            onMajorFontChange={handleMajorFontChange}
+            onMinorFontChange={handleMinorFontChange}
+            onPresetSelect={handleThemePresetSelect}
+            onThemeImport={handleThemeImport}
+            canUndo={canUndo}
+            canRedo={canRedo}
+            onUndo={() => dispatch({ type: "UNDO" })}
+            onRedo={() => dispatch({ type: "REDO" })}
+            presentationFile={document.presentationFile}
+            layoutOptions={layoutOptions}
+            currentLayoutPath={layoutPath}
+            slideSize={{ width, height }}
+            onLayoutSelect={slideCallbacks.handleLayoutChange}
+          />
+        );
+      }
+      return slideEditorCanvasComponent;
+    }
 
     return (
       <EditorShell
         toolbar={toolbarContent}
-        leftPanel={{ content: thumbnailComponent, drawerLabel: "Slides", scrollable: true }}
-        rightPanel={rightPanel}
+        panels={buildPanels()}
       >
-        {slideEditorCanvasComponent}
+        {buildCenterContent()}
       </EditorShell>
     );
   }

@@ -6,6 +6,9 @@
  */
 
 import { forwardRef, type CSSProperties, type ReactNode } from "react";
+import { colorTokens, editorShellTokens } from "@aurochs-ui/ui-components/design-tokens";
+
+const { floatingToolbar } = editorShellTokens;
 
 export type CanvasAreaProps = {
   /** Floating toolbar element (optional) */
@@ -24,16 +27,16 @@ const containerStyle: CSSProperties = {
   flexDirection: "column",
   width: "100%",
   height: "100%",
-  backgroundColor: "var(--bg-tertiary, #111)",
+  backgroundColor: `var(--bg-tertiary, ${colorTokens.background.tertiary})`,
   overflow: "hidden",
 };
 
 const floatingToolbarStyle: CSSProperties = {
   position: "absolute",
   left: "50%",
-  bottom: "16px",
+  bottom: `${floatingToolbar.bottom}px`,
   transform: "translateX(-50%)",
-  zIndex: 10,
+  zIndex: floatingToolbar.zIndex,
 };
 
 const canvasWrapperStyle: CSSProperties = {

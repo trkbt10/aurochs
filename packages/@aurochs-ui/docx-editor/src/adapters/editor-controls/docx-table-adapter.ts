@@ -1,37 +1,55 @@
 /**
- * @file DOCX table style bands adapter
+ * @file DOCX table formatting adapter
  *
- * Converts between DOCX DocxTableProperties (tblLook) and the generic TableStyleBands.
- * DOCX uses negative flags (noHBand, noVBand) which are inverted to positive.
+ * Converts between DOCX DocxTableProperties and the generic TableStyleBands type.
  */
 
 import type { DocxTableProperties } from "@aurochs-office/docx/domain/table";
 import type { FormattingAdapter } from "@aurochs-ui/editor-controls/formatting-adapter";
 import type { TableStyleBands } from "@aurochs-ui/editor-controls/table";
 
+/**
+ * Adapter: DOCX DocxTableProperties <-> TableStyleBands
+ */
 export const docxTableAdapter: FormattingAdapter<DocxTableProperties, TableStyleBands> = {
   toGeneric(value: DocxTableProperties): TableStyleBands {
     const look = value.tblLook;
     return {
-      headerRow: look?.firstRow ?? false,
-      totalRow: look?.lastRow ?? false,
-      firstColumn: look?.firstColumn ?? false,
-      lastColumn: look?.lastColumn ?? false,
-      bandedRows: !(look?.noHBand ?? false),
-      bandedColumns: !(look?.noVBand ?? true),
+      headerRow: look?.firstRow ?? undefined,
+      totalRow: look?.lastRow ?? undefined,
+      firstColumn: look?.firstColumn ?? undefined,
+      lastColumn: look?.lastColumn ?? undefined,
+      bandedRows: look?.noHBand === true ? false : look?.noHBand === false ? true : undefined,
+      bandedColumns: look?.noVBand === true ? false : look?.noVBand === false ? true : undefined,
     };
   },
 
   applyUpdate(current: DocxTableProperties, update: Partial<TableStyleBands>): DocxTableProperties {
-    const look = { ...current.tblLook };
+    const currentLook = current.tblLook ?? {};
+    const newLook = { ...currentLook };
 
-    if ("headerRow" in update) {look.firstRow = update.headerRow;}
-    if ("totalRow" in update) {look.lastRow = update.totalRow;}
-    if ("firstColumn" in update) {look.firstColumn = update.firstColumn;}
-    if ("lastColumn" in update) {look.lastColumn = update.lastColumn;}
-    if ("bandedRows" in update) {look.noHBand = !update.bandedRows;}
-    if ("bandedColumns" in update) {look.noVBand = !update.bandedColumns;}
+    if ("headerRow" in update) {
+      newLook.firstRow = update.headerRow ?? undefined;
+    }
+    if ("totalRow" in update) {
+      newLook.lastRow = update.totalRow ?? undefined;
+    }
+    if ("firstColumn" in update) {
+      newLook.firstColumn = update.firstColumn ?? undefined;
+    }
+    if ("lastColumn" in update) {
+      newLook.lastColumn = update.lastColumn ?? undefined;
+    }
+    if ("bandedRows" in update) {
+      newLook.noHBand = update.bandedRows === true ? false : update.bandedRows === false ? true : undefined;
+    }
+    if ("bandedColumns" in update) {
+      newLook.noVBand = update.bandedColumns === true ? false : update.bandedColumns === false ? true : undefined;
+    }
 
-    return { ...current, tblLook: look };
+    return {
+      ...current,
+      tblLook: Object.keys(newLook).length > 0 ? newLook : undefined,
+    };
   },
 };

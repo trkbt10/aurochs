@@ -5,10 +5,13 @@
  */
 
 import type { EditorLayoutBreakpoints, EditorLayoutMode } from "./types";
+import { editorShellTokens } from "@aurochs-ui/ui-components/design-tokens";
+
+const { breakpoint } = editorShellTokens;
 
 export const DEFAULT_EDITOR_LAYOUT_BREAKPOINTS: EditorLayoutBreakpoints = {
-  mobileMaxWidth: 768,
-  tabletMaxWidth: 1024,
+  mobileMaxWidth: breakpoint.mobileMax,
+  tabletMaxWidth: breakpoint.tabletMax,
 };
 
 /**

@@ -1,9 +1,10 @@
 /**
- * @file DOCX editor-controls adapters
+ * @file DOCX Editor Controls Adapters
  *
- * Provides DOCX-specific adapters for the shared editor controls.
+ * Exports adapters for converting between DOCX domain types and
+ * shared editor-controls formatting types.
  */
 
 export { docxTextAdapter } from "./docx-text-adapter";
+export { docxParagraphAdapter } from "./docx-paragraph-adapter";
 export { docxTableAdapter } from "./docx-table-adapter";
-export { docxCellAdapter } from "./docx-cell-adapter";

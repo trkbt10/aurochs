@@ -260,22 +260,6 @@ function SectionPropertiesViewer({ section, onChange, disabled }: SectionPropert
           disabled={disabled}
         />
       </FieldGroup>
-      <FieldGroup label="Raw" hint="Read-only (for now)">
-        <pre
-          style={{
-            margin: 0,
-            fontSize: 11,
-            lineHeight: 1.4,
-            padding: 8,
-            borderRadius: 6,
-            background: "var(--bg-secondary)",
-            overflow: "auto",
-            maxHeight: 200,
-          }}
-        >
-          {JSON.stringify(section ?? {}, null, 2)}
-        </pre>
-      </FieldGroup>
     </div>
   );
 }

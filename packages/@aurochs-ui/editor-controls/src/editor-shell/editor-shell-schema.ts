@@ -7,7 +7,7 @@
 
 import type { DrawerBehavior, PanelLayoutConfig, WindowPosition } from "react-panel-layout";
 import { buildEditorGridConfig } from "./grid-config";
-import type { EditorLayoutMode, EditorShellPanel } from "./types";
+import type { EditorLayoutMode, EditorPanel } from "./types";
 
 // ---------------------------------------------------------------------------
 // Layer placement types (generalized from pptx-editor's layer-placements.ts)
@@ -58,28 +58,41 @@ const DRAWER_TRANSITION_EASING = "cubic-bezier(0.16, 1, 0.3, 1)";
 
 export type EditorShellSchemaInput = {
   readonly mode: EditorLayoutMode;
-  readonly leftPanel: EditorShellPanel | undefined;
-  readonly rightPanel: EditorShellPanel | undefined;
+  readonly panels: EditorPanel[];
   readonly leftDrawerOpen: boolean;
   readonly setLeftDrawerOpen: (open: boolean) => void;
   readonly rightDrawerOpen: boolean;
   readonly setRightDrawerOpen: (open: boolean) => void;
 };
 
+/**
+ * Helper to extract left/right panels from panels array.
+ */
+function extractPanels(panels: EditorPanel[]): {
+  leftPanel: EditorPanel | undefined;
+  rightPanel: EditorPanel | undefined;
+} {
+  return {
+    leftPanel: panels.find((p) => p.position === "left"),
+    rightPanel: panels.find((p) => p.position === "right"),
+  };
+}
+
 const HIDDEN: LayerPlacement = { type: "hidden" };
 
-function gridPlacement(gridArea: string, panel: EditorShellPanel): LayerPlacement {
+function gridPlacement(gridArea: string, panel: EditorPanel): LayerPlacement {
   return { type: "grid", gridArea, scrollable: panel.scrollable };
 }
 
 type DrawerPlacementOptions = {
-  readonly panel: EditorShellPanel;
+  readonly panel: EditorPanel;
   readonly open: boolean;
   readonly onStateChange: (open: boolean) => void;
   readonly anchor: "left" | "right" | "bottom";
   readonly width: string | number;
   readonly height: string | number;
   readonly position: WindowPosition;
+  readonly defaultLabel: string;
 };
 
 function drawerPlacement(options: DrawerPlacementOptions): LayerPlacement {
@@ -93,7 +106,7 @@ function drawerPlacement(options: DrawerPlacementOptions): LayerPlacement {
     transitionMode: DRAWER_TRANSITION_MODE,
     transitionDuration: DRAWER_TRANSITION_DURATION,
     transitionEasing: DRAWER_TRANSITION_EASING,
-    ariaLabel: options.panel.drawerLabel!,
+    ariaLabel: options.panel.drawerLabel ?? options.defaultLabel,
   };
   return {
     type: "drawer",
@@ -111,14 +124,14 @@ function drawerPlacement(options: DrawerPlacementOptions): LayerPlacement {
  * grid config + drawer placements for EditorShell rendering.
  *
  * Responsive behavior:
- * | Mode    | Left panel        | Right panel            |
- * |---------|-------------------|------------------------|
- * | desktop | grid              | grid                   |
- * | tablet  | grid              | drawer (right, 360px)  |
- * | mobile  | drawer (left, 80vw) | drawer (bottom, 60%) |
+ * | Mode    | Left panel          | Right panel            |
+ * |---------|---------------------|------------------------|
+ * | desktop | grid                | grid                   |
+ * | tablet  | grid                | drawer (right, 360px)  |
+ * | mobile  | drawer (left, 80vw) | drawer (bottom, 60%)   |
  *
- * Panels without `drawerLabel` become hidden in responsive modes that
- * would otherwise render them as drawers.
+ * Panels are automatically shown in drawer mode when present.
+ * The optional `drawerLabel` property customizes the drawer button label.
  */
 export function resolveEditorShellSchema(input: EditorShellSchemaInput): EditorShellSchema {
   switch (input.mode) {
@@ -132,7 +145,7 @@ export function resolveEditorShellSchema(input: EditorShellSchemaInput): EditorS
 }
 
 function resolveDesktop(input: EditorShellSchemaInput): EditorShellSchema {
-  const { leftPanel, rightPanel } = input;
+  const { leftPanel, rightPanel } = extractPanels(input.panels);
 
   const gridConfig = buildEditorGridConfig({
     hasLeft: !!leftPanel,
@@ -156,9 +169,12 @@ function resolveDesktop(input: EditorShellSchemaInput): EditorShellSchema {
   };
 }
 
-function resolveTabletRightPlacement(input: EditorShellSchemaInput): LayerPlacement {
-  const { rightPanel, rightDrawerOpen, setRightDrawerOpen } = input;
-  if (!rightPanel?.drawerLabel) {
+function resolveTabletRightPlacement(
+  rightPanel: EditorPanel | undefined,
+  rightDrawerOpen: boolean,
+  setRightDrawerOpen: (open: boolean) => void,
+): LayerPlacement {
+  if (!rightPanel) {
     return HIDDEN;
   }
   return drawerPlacement({
@@ -169,11 +185,12 @@ function resolveTabletRightPlacement(input: EditorShellSchemaInput): LayerPlacem
     width: 360,
     height: "100%",
     position: { right: 0, top: 0 },
+    defaultLabel: "Right panel",
   });
 }
 
 function resolveTablet(input: EditorShellSchemaInput): EditorShellSchema {
-  const { leftPanel, rightPanel } = input;
+  const { leftPanel, rightPanel } = extractPanels(input.panels);
 
   const gridConfig = buildEditorGridConfig({
     hasLeft: !!leftPanel,
@@ -187,15 +204,18 @@ function resolveTablet(input: EditorShellSchemaInput): EditorShellSchema {
   return {
     gridConfig,
     leftPlacement: leftPanel ? gridPlacement("left", leftPanel) : HIDDEN,
-    rightPlacement: resolveTabletRightPlacement(input),
+    rightPlacement: resolveTabletRightPlacement(rightPanel, input.rightDrawerOpen, input.setRightDrawerOpen),
     showLeftDrawerButton: false,
-    showRightDrawerButton: !!rightPanel?.drawerLabel,
+    showRightDrawerButton: !!rightPanel,
   };
 }
 
-function resolveMobileLeftPlacement(input: EditorShellSchemaInput): LayerPlacement {
-  const { leftPanel, leftDrawerOpen, setLeftDrawerOpen } = input;
-  if (!leftPanel?.drawerLabel) {
+function resolveMobileLeftPlacement(
+  leftPanel: EditorPanel | undefined,
+  leftDrawerOpen: boolean,
+  setLeftDrawerOpen: (open: boolean) => void,
+): LayerPlacement {
+  if (!leftPanel) {
     return HIDDEN;
   }
   return drawerPlacement({
@@ -206,12 +226,16 @@ function resolveMobileLeftPlacement(input: EditorShellSchemaInput): LayerPlaceme
     width: "80vw",
     height: "100%",
     position: { left: 0, top: 0 },
+    defaultLabel: "Left panel",
   });
 }
 
-function resolveMobileRightPlacement(input: EditorShellSchemaInput): LayerPlacement {
-  const { rightPanel, rightDrawerOpen, setRightDrawerOpen } = input;
-  if (!rightPanel?.drawerLabel) {
+function resolveMobileRightPlacement(
+  rightPanel: EditorPanel | undefined,
+  rightDrawerOpen: boolean,
+  setRightDrawerOpen: (open: boolean) => void,
+): LayerPlacement {
+  if (!rightPanel) {
     return HIDDEN;
   }
   return drawerPlacement({
@@ -222,11 +246,12 @@ function resolveMobileRightPlacement(input: EditorShellSchemaInput): LayerPlacem
     width: "100%",
     height: "60%",
     position: { left: 0, bottom: 0 },
+    defaultLabel: "Right panel",
   });
 }
 
 function resolveMobile(input: EditorShellSchemaInput): EditorShellSchema {
-  const { leftPanel, rightPanel } = input;
+  const { leftPanel, rightPanel } = extractPanels(input.panels);
 
   const gridConfig = buildEditorGridConfig({
     hasLeft: false,
@@ -235,9 +260,9 @@ function resolveMobile(input: EditorShellSchemaInput): EditorShellSchema {
 
   return {
     gridConfig,
-    leftPlacement: resolveMobileLeftPlacement(input),
-    rightPlacement: resolveMobileRightPlacement(input),
-    showLeftDrawerButton: !!leftPanel?.drawerLabel,
-    showRightDrawerButton: !!rightPanel?.drawerLabel,
+    leftPlacement: resolveMobileLeftPlacement(leftPanel, input.leftDrawerOpen, input.setLeftDrawerOpen),
+    rightPlacement: resolveMobileRightPlacement(rightPanel, input.rightDrawerOpen, input.setRightDrawerOpen),
+    showLeftDrawerButton: !!leftPanel,
+    showRightDrawerButton: !!rightPanel,
   };
 }

@@ -12,6 +12,7 @@ export {
   fontTokens,
   iconTokens,
   editorLayoutTokens,
+  editorShellTokens,
   fieldLabelTokens,
   fieldContainerTokens,
   type Tokens,
@@ -22,6 +23,7 @@ export {
   type IconTokens,
   type FieldLabelTokens,
   type FieldContainerTokens,
+  type EditorShellTokens,
 } from "./tokens";
 
 export {

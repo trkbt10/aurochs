@@ -5,21 +5,22 @@
  */
 
 import type { CSSProperties } from "react";
+import { colorTokens, spacingTokens } from "@aurochs-ui/ui-components/design-tokens";
 
 export const editorContainerStyle: CSSProperties = {
   display: "flex",
   flexDirection: "column",
   width: "100%",
   height: "100%",
-  backgroundColor: "var(--bg-primary, #0a0a0a)",
-  color: "var(--text-primary, #fff)",
+  backgroundColor: `var(--bg-primary, ${colorTokens.background.primary})`,
+  color: `var(--text-primary, ${colorTokens.text.primary})`,
   overflow: "hidden",
 };
 
 export const toolbarStyle: CSSProperties = {
-  padding: "8px 16px",
-  backgroundColor: "var(--bg-secondary, #1a1a1a)",
-  borderBottom: "1px solid var(--border-subtle, #333)",
+  padding: `${spacingTokens.sm} ${spacingTokens.lg}`,
+  backgroundColor: `var(--bg-secondary, ${colorTokens.background.secondary})`,
+  borderBottom: `1px solid var(--border-subtle, ${colorTokens.border.subtle})`,
   flexShrink: 0,
 };
 

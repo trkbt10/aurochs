@@ -2,7 +2,7 @@
  * @file SelectedElementPanel
  *
  * Property panel for editing the currently selected DOCX element.
- * Supports paragraph (run + paragraph properties) and table (table + cell properties).
+ * Uses shared editor-controls components (TextFormattingEditor, ParagraphFormattingEditor).
  */
 
 import type { CSSProperties } from "react";
@@ -11,9 +11,13 @@ import type { DocxBlockContent } from "@aurochs-office/docx/domain/document";
 import type { DocxParagraph, DocxParagraphProperties } from "@aurochs-office/docx/domain/paragraph";
 import type { DocxRunProperties } from "@aurochs-office/docx/domain/run";
 import type { DocxTable, DocxTableCellProperties, DocxTableProperties } from "@aurochs-office/docx/domain/table";
+import { Accordion } from "@aurochs-ui/ui-components";
+import { TextFormattingEditor, ParagraphFormattingEditor } from "@aurochs-ui/editor-controls/text";
+import type { TextFormatting, ParagraphFormatting } from "@aurochs-ui/editor-controls/text";
+import type { MixedContext } from "@aurochs-ui/editor-controls/mixed-state";
 import { useDocumentEditor } from "../context/document/DocumentEditorContext";
-import { RunPropertiesEditor, type RunPropertiesMixedState } from "../editors/text/RunPropertiesEditor";
-import { ParagraphPropertiesEditor } from "../editors/paragraph/ParagraphPropertiesEditor";
+import { docxTextAdapter } from "../adapters/editor-controls/docx-text-adapter";
+import { docxParagraphAdapter } from "../adapters/editor-controls/docx-paragraph-adapter";
 import { TablePropertiesEditor } from "../editors/table/TablePropertiesEditor";
 import { TableCellPropertiesEditor } from "../editors/table/TableCellPropertiesEditor";
 
@@ -109,7 +113,7 @@ function getParagraphRepresentativeRunProperties(paragraph: DocxParagraph): Docx
 
 function getMixedRunProperties(selectedElements: readonly DocxBlockContent[]): {
   readonly value: DocxRunProperties;
-  readonly mixed: RunPropertiesMixedState;
+  readonly mixed: MixedContext;
 } {
   const paragraphs = selectedElements.filter((el): el is DocxParagraph => el.type === "paragraph");
   const extracted = paragraphs.map((p) => getParagraphRepresentativeRunProperties(p) ?? {});
@@ -130,14 +134,28 @@ function getMixedRunProperties(selectedElements: readonly DocxBlockContent[]): {
     ...(!rFonts.mixed && rFonts.value !== undefined ? { rFonts: rFonts.value } : {}),
   };
 
-  const mixed: RunPropertiesMixedState = {
-    ...(b.mixed ? { b: true } : {}),
-    ...(i.mixed ? { i: true } : {}),
-    ...(u.mixed ? { u: true } : {}),
-    ...(strike.mixed ? { strike: true } : {}),
-    ...(sz.mixed ? { sz: true } : {}),
-    ...(rFonts.mixed ? { rFonts: true } : {}),
-  };
+  // Convert to MixedContext for shared editor
+  const mixedFields = new Set<string>();
+  if (b.mixed) {
+    mixedFields.add("bold");
+  }
+  if (i.mixed) {
+    mixedFields.add("italic");
+  }
+  if (u.mixed) {
+    mixedFields.add("underline");
+  }
+  if (strike.mixed) {
+    mixedFields.add("strikethrough");
+  }
+  if (sz.mixed) {
+    mixedFields.add("fontSize");
+  }
+  if (rFonts.mixed) {
+    mixedFields.add("fontFamily");
+  }
+
+  const mixed: MixedContext = mixedFields.size > 0 ? { mixedFields } : {};
 
   return { value, mixed };
 }
@@ -168,10 +186,11 @@ function NoSelectionState() {
       style={{
         padding: "var(--spacing-lg)",
         color: "var(--text-secondary)",
-        fontSize: "var(--font-size-md)",
+        fontSize: "var(--font-size-sm)",
+        lineHeight: 1.5,
       }}
     >
-      No selection
+      Click on text to edit formatting
     </div>
   );
 }
@@ -196,16 +215,29 @@ function ParagraphInspector({
 
   const paragraphValue = paragraph.properties ?? {};
 
-  const handleRunChange = useCallback(
-    (next: DocxRunProperties) => {
-      onRunPropertiesChange(diffObject(runValue, next));
+  // Convert to generic types for shared editors
+  const textFormatting = useMemo<TextFormatting>(
+    () => docxTextAdapter.toGeneric(runValue),
+    [runValue],
+  );
+
+  const paragraphFormatting = useMemo<ParagraphFormatting>(
+    () => docxParagraphAdapter.toGeneric(paragraphValue),
+    [paragraphValue],
+  );
+
+  const handleTextChange = useCallback(
+    (update: Partial<TextFormatting>) => {
+      const newRunProps = docxTextAdapter.applyUpdate(runValue, update);
+      onRunPropertiesChange(diffObject(runValue, newRunProps));
     },
     [onRunPropertiesChange, runValue],
   );
 
   const handleParagraphChange = useCallback(
-    (next: DocxParagraphProperties) => {
-      onParagraphPropertiesChange(diffObject(paragraphValue, next));
+    (update: Partial<ParagraphFormatting>) => {
+      const newParaProps = docxParagraphAdapter.applyUpdate(paragraphValue, update);
+      onParagraphPropertiesChange(diffObject(paragraphValue, newParaProps));
     },
     [onParagraphPropertiesChange, paragraphValue],
   );
@@ -215,12 +247,45 @@ function ParagraphInspector({
       style={{
         display: "flex",
         flexDirection: "column",
-        gap: "var(--spacing-md)",
+        gap: "var(--spacing-sm)",
         padding: "var(--spacing-md)",
       }}
     >
-      <RunPropertiesEditor value={runValue} mixed={runMixed} onChange={handleRunChange} />
-      <ParagraphPropertiesEditor value={paragraphValue} onChange={handleParagraphChange} />
+      <Accordion title="Text" defaultExpanded>
+        <div style={{ padding: "var(--spacing-sm)" }}>
+          <TextFormattingEditor
+            value={textFormatting}
+            onChange={handleTextChange}
+            mixed={runMixed}
+            features={{
+              showFontFamily: true,
+              showFontSize: true,
+              showBold: true,
+              showItalic: true,
+              showUnderline: true,
+              showStrikethrough: true,
+              showTextColor: true,
+              showHighlight: true,
+              showSuperSubscript: true,
+            }}
+          />
+        </div>
+      </Accordion>
+
+      <Accordion title="Paragraph" defaultExpanded>
+        <div style={{ padding: "var(--spacing-sm)" }}>
+          <ParagraphFormattingEditor
+            value={paragraphFormatting}
+            onChange={handleParagraphChange}
+            features={{
+              showAlignment: true,
+              showIndentation: true,
+              showSpacing: true,
+              showLineSpacing: true,
+            }}
+          />
+        </div>
+      </Accordion>
     </div>
   );
 }

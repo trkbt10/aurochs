@@ -593,6 +593,7 @@
       "dependencies": {
         "@aurochs-ui/color-editor": "workspace:*",
         "@aurochs-ui/ui-components": "workspace:*",
+        "react-panel-layout": "^0.6.1",
       },
       "peerDependencies": {
         "react": "^18.0.0 || ^19.0.0",
@@ -657,9 +658,11 @@
       "version": "0.2.0",
       "dependencies": {
         "@aurochs-builder/xlsx": "workspace:*",
+        "@aurochs-office/docx": "workspace:*",
         "@aurochs-office/opc": "workspace:*",
         "@aurochs-office/xls": "workspace:*",
         "@aurochs-office/xlsx": "workspace:*",
+        "@aurochs-ui/docx-editor": "workspace:*",
         "@aurochs-ui/editor-controls": "workspace:*",
         "@aurochs-ui/ui-components": "workspace:*",
         "@aurochs-ui/xlsx-editor": "workspace:*",
@@ -675,6 +678,7 @@
       "version": "0.2.0",
       "dependencies": {
         "@aurochs-office/xlsx": "workspace:*",
+        "@aurochs-ui/color-editor": "workspace:*",
         "@aurochs-ui/editor-controls": "workspace:*",
         "@aurochs-ui/editor-core": "workspace:*",
         "@aurochs-ui/ui-components": "workspace:*",

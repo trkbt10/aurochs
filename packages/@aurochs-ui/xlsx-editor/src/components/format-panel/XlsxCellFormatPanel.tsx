@@ -4,8 +4,8 @@
  * Sidebar panel for editing SpreadsheetML (styles.xml) formatting for the current selection.
  */
 
-import { useEffect, useMemo, useState } from "react";
-import { Button, Panel, spacingTokens, type SelectOption } from "@aurochs-ui/ui-components";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { spacingTokens, fontTokens, colorTokens, type SelectOption } from "@aurochs-ui/ui-components";
 import type { CellAddress, CellRange } from "@aurochs-office/xlsx/domain/cell/address";
 import type { XlsxFont } from "@aurochs-office/xlsx/domain/style/font";
 import type { XlsxFill } from "@aurochs-office/xlsx/domain/style/fill";
@@ -26,7 +26,33 @@ import { StyleSection } from "./sections/StyleSection";
 
 export type XlsxCellFormatPanelProps = {
   readonly sheetIndex: number;
-  readonly onClose?: () => void;
+};
+
+const containerStyle: CSSProperties = {
+  height: "100%",
+  display: "flex",
+  flexDirection: "column",
+  backgroundColor: `var(--bg-primary, ${colorTokens.background.primary})`,
+  overflow: "hidden",
+};
+
+const headerStyle: CSSProperties = {
+  padding: `${spacingTokens.sm} ${spacingTokens.md}`,
+  borderBottom: `1px solid var(--border-subtle, ${colorTokens.border.subtle})`,
+  fontSize: fontTokens.size.md,
+  fontWeight: fontTokens.weight.semibold,
+  color: `var(--text-primary, ${colorTokens.text.primary})`,
+  flexShrink: 0,
+};
+
+const contentStyle: CSSProperties = {
+  flex: 1,
+  overflow: "auto",
+};
+
+const emptyStyle: CSSProperties = {
+  padding: spacingTokens.md,
+  color: `var(--text-tertiary, ${colorTokens.text.tertiary})`,
 };
 
 function getTargetRange(params: {
@@ -48,7 +74,7 @@ function getTargetRange(params: {
  * This component edits workbook style records (fonts/fills/borders/numFmts/xf) and applies the
  * resulting styleId to the selected cell range.
  */
-export function XlsxCellFormatPanel({ sheetIndex, onClose }: XlsxCellFormatPanelProps) {
+export function XlsxCellFormatPanel({ sheetIndex }: XlsxCellFormatPanelProps) {
   const { workbook, selection, state, dispatch } = useXlsxWorkbookEditor();
   const sheet = workbook.sheets[sheetIndex];
   if (!sheet) {
@@ -104,11 +130,10 @@ export function XlsxCellFormatPanel({ sheetIndex, onClose }: XlsxCellFormatPanel
 
   if (!details || !targetRange) {
     return (
-      <Panel title="Format" width={320} style={{ height: "100%" }}>
-        <div style={{ padding: spacingTokens.md, color: "var(--text-tertiary)" }}>
-          Select a cell to edit formatting.
-        </div>
-      </Panel>
+      <div style={containerStyle}>
+        <div style={headerStyle}>Format</div>
+        <div style={emptyStyle}>Select a cell to edit formatting.</div>
+      </div>
     );
   }
 
@@ -133,16 +158,10 @@ export function XlsxCellFormatPanel({ sheetIndex, onClose }: XlsxCellFormatPanel
   };
 
   return (
-    <Panel title="Format" width={320} style={{ height: "100%", display: "flex", flexDirection: "column" }}>
-      {onClose && (
-        <div style={{ padding: spacingTokens.sm, borderBottom: "1px solid var(--border-subtle)" }}>
-          <Button size="sm" onClick={onClose}>
-            Close
-          </Button>
-        </div>
-      )}
-
-      <StyleSection
+    <div style={containerStyle}>
+      <div style={headerStyle}>Format</div>
+      <div style={contentStyle}>
+        <StyleSection
         styles={workbook.styles}
         currentStyleId={details.styleId}
         disabled={disabled}
@@ -256,6 +275,7 @@ export function XlsxCellFormatPanel({ sheetIndex, onClose }: XlsxCellFormatPanel
           })
         }
       />
-    </Panel>
+      </div>
+    </div>
   );
 }

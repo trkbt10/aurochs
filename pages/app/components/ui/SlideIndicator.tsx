@@ -72,52 +72,13 @@ const animationIndicatorStyle: CSSProperties = {
   animation: "pulse 2s ease-in-out infinite",
 };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-export function SlideIndicator({
-  current,
-  total,
-  variant = "dark",
-  showAnimation = false,
-  className,
-}: Props) {
+export function SlideIndicator({ current, total, variant = "dark", showAnimation = false, className }: Props) {
   if (variant === "dark") {
     return (
       <div style={containerStyles.dark} className={className}>
-        <span style={currentStyles.dark}>{current} / {total}</span>
+        <span style={currentStyles.dark}>
+          {current} / {total}
+        </span>
       </div>
     );
   }

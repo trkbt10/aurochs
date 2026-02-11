@@ -10,11 +10,14 @@ import { useRef, useMemo, useState, useEffect, useCallback, type CSSProperties }
 import { GridLayout } from "react-panel-layout";
 import type { LayerDefinition } from "react-panel-layout";
 import { Button } from "@aurochs-ui/ui-components/primitives/Button";
+import { colorTokens, editorShellTokens } from "@aurochs-ui/ui-components/design-tokens";
 import { useContainerWidth } from "./useContainerWidth";
 import { resolveEditorLayoutMode, DEFAULT_EDITOR_LAYOUT_BREAKPOINTS } from "./responsive-layout";
 import { resolveEditorShellSchema, type LayerPlacement } from "./editor-shell-schema";
 import { editorContainerStyle, toolbarStyle, gridContainerStyle, bottomBarStyle } from "./editor-styles";
 import type { EditorShellProps } from "./types";
+
+const { overlay } = editorShellTokens;
 
 // ---------------------------------------------------------------------------
 // Internal border styles applied around panel content
@@ -22,23 +25,23 @@ import type { EditorShellProps } from "./types";
 
 const leftPanelWrapperStyle: CSSProperties = {
   height: "100%",
-  borderRight: "1px solid var(--border-subtle, #333)",
+  borderRight: `1px solid var(--border-subtle, ${colorTokens.border.subtle})`,
   overflow: "hidden",
 };
 
 const rightPanelWrapperStyle: CSSProperties = {
   height: "100%",
-  borderLeft: "1px solid var(--border-subtle, #333)",
+  borderLeft: `1px solid var(--border-subtle, ${colorTokens.border.subtle})`,
   overflow: "hidden",
 };
 
 const overlayContainerStyle: CSSProperties = {
   position: "absolute",
-  top: 12,
-  left: 12,
+  top: overlay.top,
+  left: overlay.left,
   display: "flex",
-  gap: 8,
-  zIndex: 250,
+  gap: overlay.gap,
+  zIndex: overlay.zIndex,
 };
 
 // ---------------------------------------------------------------------------
@@ -88,9 +91,8 @@ function buildLayerFromPlacement(
  */
 export function EditorShell({
   toolbar,
-  leftPanel,
+  panels = [],
   children,
-  rightPanel,
   bottomBar,
   breakpoints,
   style,
@@ -104,6 +106,10 @@ export function EditorShell({
     () => resolveEditorLayoutMode(containerWidth, effectiveBreakpoints),
     [containerWidth, effectiveBreakpoints],
   );
+
+  // Extract left/right panels from panels array
+  const leftPanel = useMemo(() => panels.find((p) => p.position === "left"), [panels]);
+  const rightPanel = useMemo(() => panels.find((p) => p.position === "right"), [panels]);
 
   // Drawer open state
   const [leftDrawerOpen, setLeftDrawerOpen] = useState(false);
@@ -131,14 +137,13 @@ export function EditorShell({
     () =>
       resolveEditorShellSchema({
         mode: responsiveMode,
-        leftPanel,
-        rightPanel,
+        panels,
         leftDrawerOpen,
         setLeftDrawerOpen,
         rightDrawerOpen,
         setRightDrawerOpen,
       }),
-    [responsiveMode, leftPanel, rightPanel, leftDrawerOpen, rightDrawerOpen],
+    [responsiveMode, panels, leftDrawerOpen, rightDrawerOpen],
   );
 
   // Wrap panel content with border styles
@@ -213,14 +218,14 @@ export function EditorShell({
         <GridLayout config={schema.gridConfig} layers={layers} />
         {showOverlay && (
           <div style={overlayContainerStyle}>
-            {schema.showLeftDrawerButton && leftPanel?.drawerLabel && (
-              <Button variant="secondary" size="sm" onClick={handleToggleLeftDrawer} title={`Toggle ${leftPanel.drawerLabel}`}>
-                {leftPanel.drawerLabel}
+            {schema.showLeftDrawerButton && leftPanel && (
+              <Button variant="secondary" size="sm" onClick={handleToggleLeftDrawer} title={`Toggle ${leftPanel.drawerLabel ?? "Left panel"}`}>
+                {leftPanel.drawerLabel ?? "Left"}
               </Button>
             )}
-            {schema.showRightDrawerButton && rightPanel?.drawerLabel && (
-              <Button variant="secondary" size="sm" onClick={handleToggleRightDrawer} title={`Toggle ${rightPanel.drawerLabel}`}>
-                {rightPanel.drawerLabel}
+            {schema.showRightDrawerButton && rightPanel && (
+              <Button variant="secondary" size="sm" onClick={handleToggleRightDrawer} title={`Toggle ${rightPanel.drawerLabel ?? "Right panel"}`}>
+                {rightPanel.drawerLabel ?? "Right"}
               </Button>
             )}
           </div>

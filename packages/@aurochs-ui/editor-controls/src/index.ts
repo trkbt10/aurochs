@@ -61,7 +61,7 @@ export {
 } from "./zoom";
 
 // Editor shell (responsive 3-panel layout)
-export type { EditorLayoutMode, EditorLayoutBreakpoints, EditorShellPanel, EditorShellProps } from "./editor-shell";
+export type { EditorLayoutMode, EditorLayoutBreakpoints, EditorPanel, EditorShellProps } from "./editor-shell";
 export {
   EditorShell,
   CanvasArea,

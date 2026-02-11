@@ -208,6 +208,66 @@ export const fieldContainerTokens = {
 } as const;
 
 /**
+ * Editor shell layout tokens
+ * Layout values for responsive editor shell (panel sizes, breakpoints, z-index)
+ */
+export const editorShellTokens = {
+  /** Panel default sizes */
+  panel: {
+    /** Left panel default width */
+    leftSize: "200px",
+    /** Right panel default width */
+    rightSize: "280px",
+    /** Left panel minimum width (px) */
+    leftMinSize: 150,
+    /** Left panel maximum width (px) */
+    leftMaxSize: 350,
+    /** Right panel minimum width (px) */
+    rightMinSize: 200,
+    /** Right panel maximum width (px) */
+    rightMaxSize: 500,
+    /** XLSX format panel width */
+    xlsxFormatPanelSize: "320px",
+  },
+  /** Responsive breakpoints (px) */
+  breakpoint: {
+    /** Mobile max width */
+    mobileMax: 768,
+    /** Tablet max width */
+    tabletMax: 1024,
+  },
+  /** Drawer dimensions */
+  drawer: {
+    /** Tablet right drawer width (px) */
+    tabletRightWidth: 360,
+    /** Mobile left drawer width */
+    mobileLeftWidth: "80vw",
+    /** Mobile bottom drawer height */
+    mobileBottomHeight: "60%",
+    /** Drawer layer z-index */
+    zIndex: 200,
+  },
+  /** Overlay button container positioning */
+  overlay: {
+    /** Top offset (px) */
+    top: 12,
+    /** Left offset (px) */
+    left: 12,
+    /** Button gap (px) */
+    gap: 8,
+    /** Overlay z-index */
+    zIndex: 250,
+  },
+  /** Canvas floating toolbar positioning */
+  floatingToolbar: {
+    /** Bottom offset (px) */
+    bottom: 16,
+    /** Toolbar z-index */
+    zIndex: 10,
+  },
+} as const;
+
+/**
  * Combined tokens object for convenience
  */
 export const tokens = {
@@ -217,6 +277,7 @@ export const tokens = {
   font: fontTokens,
   icon: iconTokens,
   editorLayout: editorLayoutTokens,
+  editorShell: editorShellTokens,
   fieldLabel: fieldLabelTokens,
   fieldContainer: fieldContainerTokens,
 } as const;
@@ -231,4 +292,5 @@ export type FontTokens = typeof fontTokens;
 export type IconTokens = typeof iconTokens;
 export type FieldLabelTokens = typeof fieldLabelTokens;
 export type FieldContainerTokens = typeof fieldContainerTokens;
+export type EditorShellTokens = typeof editorShellTokens;
 export type Tokens = typeof tokens;

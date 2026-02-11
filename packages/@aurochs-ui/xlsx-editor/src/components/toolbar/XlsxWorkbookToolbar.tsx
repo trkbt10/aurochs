@@ -34,8 +34,6 @@ import type { XlsxAlignment } from "@aurochs-office/xlsx/domain/style/types";
 
 export type XlsxWorkbookToolbarProps = {
   readonly sheetIndex: number;
-  readonly isFormatPanelOpen: boolean;
-  readonly onToggleFormatPanel: () => void;
   readonly zoom: number;
   readonly onZoomChange: (next: number) => void;
 };
@@ -44,9 +42,6 @@ const barStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   gap: spacingTokens.sm,
-  padding: spacingTokens.sm,
-  border: "1px solid var(--border-subtle)",
-  borderRadius: 8,
 };
 
 const addressInputStyle: CSSProperties = {
@@ -111,8 +106,6 @@ function clearHorizontalAlignment(baseAlignment: XlsxAlignment | undefined): Xls
  */
 export function XlsxWorkbookToolbar({
   sheetIndex,
-  isFormatPanelOpen,
-  onToggleFormatPanel,
   zoom,
   onZoomChange,
 }: XlsxWorkbookToolbarProps) {
@@ -167,10 +160,6 @@ export function XlsxWorkbookToolbar({
       </Button>
       <Button size="sm" disabled={!canRedo} onClick={() => dispatch({ type: "REDO" })}>
         Redo
-      </Button>
-
-      <Button size="sm" onClick={onToggleFormatPanel} disabled={disableInputs}>
-        {isFormatPanelOpen ? "Hide format" : "Show format"}
       </Button>
 
       <ToggleButton

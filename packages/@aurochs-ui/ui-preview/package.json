@@ -7,11 +7,13 @@
   "description": "Development preview server for @aurochs-ui packages",
   "dependencies": {
     "@aurochs-builder/xlsx": "workspace:*",
+    "@aurochs-office/docx": "workspace:*",
     "@aurochs-office/opc": "workspace:*",
     "@aurochs-office/xls": "workspace:*",
     "@aurochs-office/xlsx": "workspace:*",
     "@aurochs-ui/ui-components": "workspace:*",
     "@aurochs-ui/editor-controls": "workspace:*",
+    "@aurochs-ui/docx-editor": "workspace:*",
     "@aurochs-ui/xlsx-editor": "workspace:*",
     "react-router-dom": "^7.6.1"
   },
@@ -21,6 +23,7 @@
   },
   "scripts": {
     "dev:xlsx": "vite --open /xlsx-editor.html",
+    "dev:docx": "vite --open /docx-editor.html",
     "dev:editor-controls": "vite --open /editor-controls.html"
   }
 }
