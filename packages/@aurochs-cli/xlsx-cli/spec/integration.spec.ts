@@ -8,6 +8,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import * as os from "node:os";
 import { execSync } from "node:child_process";
 import { convertSpecToWorkbook, type WorkbookSpec } from "../src/commands/build-spec";
 import { exportXlsx } from "@aurochs-builder/xlsx/exporter";
@@ -18,7 +19,7 @@ import { loadXlsxWorkbook } from "../src/utils/xlsx-loader";
 // =============================================================================
 
 const LIBREOFFICE_PATH = "/opt/homebrew/bin/soffice";
-const OUTPUT_DIR = path.resolve(import.meta.dirname, "__integration_output__");
+const OUTPUT_DIR = path.join(os.tmpdir(), "xlsx-cli-integration-test");
 
 function isLibreOfficeAvailable(): boolean {
   try {
