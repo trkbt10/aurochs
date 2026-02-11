@@ -11,7 +11,7 @@ import type { DocxBlockContent } from "@aurochs-office/docx/domain/document";
 import type { DocxParagraph, DocxParagraphProperties } from "@aurochs-office/docx/domain/paragraph";
 import type { DocxRunProperties } from "@aurochs-office/docx/domain/run";
 import type { DocxTable, DocxTableCellProperties, DocxTableProperties } from "@aurochs-office/docx/domain/table";
-import { Accordion } from "@aurochs-ui/ui-components";
+import { Accordion, spacingTokens, fontTokens, colorTokens } from "@aurochs-ui/ui-components";
 import { TextFormattingEditor, ParagraphFormattingEditor } from "@aurochs-ui/editor-controls/text";
 import type { TextFormatting, ParagraphFormatting } from "@aurochs-ui/editor-controls/text";
 import type { MixedContext } from "@aurochs-ui/editor-controls/mixed-state";
@@ -176,21 +176,47 @@ function diffObject<T extends object>(prev: T, next: T): Partial<T> {
 }
 
 // =============================================================================
+// Styles
+// =============================================================================
+
+const containerStyle: CSSProperties = {
+  height: "100%",
+  display: "flex",
+  flexDirection: "column",
+  backgroundColor: `var(--bg-primary, ${colorTokens.background.primary})`,
+  overflow: "hidden",
+};
+
+const headerStyle: CSSProperties = {
+  padding: `${spacingTokens.sm} ${spacingTokens.md}`,
+  borderBottom: `1px solid var(--border-subtle, ${colorTokens.border.subtle})`,
+  fontSize: fontTokens.size.md,
+  fontWeight: fontTokens.weight.semibold,
+  color: `var(--text-primary, ${colorTokens.text.primary})`,
+  flexShrink: 0,
+};
+
+const contentStyle: CSSProperties = {
+  flex: 1,
+  overflow: "auto",
+};
+
+const emptyStyle: CSSProperties = {
+  padding: spacingTokens.md,
+  color: `var(--text-tertiary, ${colorTokens.text.tertiary})`,
+};
+
+// =============================================================================
 // Sub-components
 // =============================================================================
 
 function NoSelectionState() {
   return (
-    <div
-      data-testid="docx-selected-element-panel-empty"
-      style={{
-        padding: "var(--spacing-lg)",
-        color: "var(--text-secondary)",
-        fontSize: "var(--font-size-sm)",
-        lineHeight: 1.5,
-      }}
-    >
-      Click on text to edit formatting
+    <div style={containerStyle}>
+      <div style={headerStyle}>Format</div>
+      <div style={emptyStyle} data-testid="docx-selected-element-panel-empty">
+        Click on text to edit formatting
+      </div>
     </div>
   );
 }
@@ -243,50 +269,39 @@ function ParagraphInspector({
   );
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--spacing-sm)",
-        padding: "var(--spacing-md)",
-      }}
-    >
+    <>
       <Accordion title="Text" defaultExpanded>
-        <div style={{ padding: "var(--spacing-sm)" }}>
-          <TextFormattingEditor
-            value={textFormatting}
-            onChange={handleTextChange}
-            mixed={runMixed}
-            features={{
-              showFontFamily: true,
-              showFontSize: true,
-              showBold: true,
-              showItalic: true,
-              showUnderline: true,
-              showStrikethrough: true,
-              showTextColor: true,
-              showHighlight: true,
-              showSuperSubscript: true,
-            }}
-          />
-        </div>
+        <TextFormattingEditor
+          value={textFormatting}
+          onChange={handleTextChange}
+          mixed={runMixed}
+          features={{
+            showFontFamily: true,
+            showFontSize: true,
+            showBold: true,
+            showItalic: true,
+            showUnderline: true,
+            showStrikethrough: true,
+            showTextColor: true,
+            showHighlight: true,
+            showSuperSubscript: true,
+          }}
+        />
       </Accordion>
 
       <Accordion title="Paragraph" defaultExpanded>
-        <div style={{ padding: "var(--spacing-sm)" }}>
-          <ParagraphFormattingEditor
-            value={paragraphFormatting}
-            onChange={handleParagraphChange}
-            features={{
-              showAlignment: true,
-              showIndentation: true,
-              showSpacing: true,
-              showLineSpacing: true,
-            }}
-          />
-        </div>
+        <ParagraphFormattingEditor
+          value={paragraphFormatting}
+          onChange={handleParagraphChange}
+          features={{
+            showAlignment: true,
+            showIndentation: true,
+            showSpacing: true,
+            showLineSpacing: true,
+          }}
+        />
       </Accordion>
-    </div>
+    </>
   );
 }
 
@@ -315,17 +330,14 @@ function TableInspector({ table, onTablePropertiesChange, onTableCellPropertiesC
   );
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--spacing-md)",
-        padding: "var(--spacing-md)",
-      }}
-    >
-      <TablePropertiesEditor value={tableValue} onChange={handleTableChange} />
-      <TableCellPropertiesEditor value={cellValue} onChange={handleCellChange} />
-    </div>
+    <>
+      <Accordion title="Table" defaultExpanded>
+        <TablePropertiesEditor value={tableValue} onChange={handleTableChange} />
+      </Accordion>
+      <Accordion title="Cell" defaultExpanded>
+        <TableCellPropertiesEditor value={cellValue} onChange={handleCellChange} />
+      </Accordion>
+    </>
   );
 }
 
@@ -337,35 +349,41 @@ function TableInspector({ table, onTablePropertiesChange, onTableCellPropertiesC
  * Property panel for editing the currently selected DOCX element.
  */
 export function SelectedElementPanel({ className, style }: SelectedElementPanelProps) {
-  const { primaryElement, selectedElements, state, dispatch } = useDocumentEditor();
-  const selection = state.selection;
-  void selection;
+  const { primaryElement, selectedElements, dispatch } = useDocumentEditor();
 
   if (!primaryElement) {
     return <NoSelectionState />;
   }
 
+  const mergedContainerStyle: CSSProperties = { ...containerStyle, ...style };
+
   if (primaryElement.type === "paragraph") {
     return (
-      <div className={className} style={style}>
-        <ParagraphInspector
-          paragraph={primaryElement}
-          selectedElements={selectedElements}
-          onRunPropertiesChange={(props) => dispatch({ type: "APPLY_RUN_FORMAT", format: props })}
-          onParagraphPropertiesChange={(props) => dispatch({ type: "APPLY_PARAGRAPH_FORMAT", format: props })}
-        />
+      <div className={className} style={mergedContainerStyle}>
+        <div style={headerStyle}>Format</div>
+        <div style={contentStyle}>
+          <ParagraphInspector
+            paragraph={primaryElement}
+            selectedElements={selectedElements}
+            onRunPropertiesChange={(props) => dispatch({ type: "APPLY_RUN_FORMAT", format: props })}
+            onParagraphPropertiesChange={(props) => dispatch({ type: "APPLY_PARAGRAPH_FORMAT", format: props })}
+          />
+        </div>
       </div>
     );
   }
 
   if (primaryElement.type === "table") {
     return (
-      <div className={className} style={style}>
-        <TableInspector
-          table={primaryElement}
-          onTablePropertiesChange={(props) => dispatch({ type: "APPLY_TABLE_FORMAT", format: props })}
-          onTableCellPropertiesChange={(props) => dispatch({ type: "APPLY_TABLE_CELL_FORMAT", format: props })}
-        />
+      <div className={className} style={mergedContainerStyle}>
+        <div style={headerStyle}>Format</div>
+        <div style={contentStyle}>
+          <TableInspector
+            table={primaryElement}
+            onTablePropertiesChange={(props) => dispatch({ type: "APPLY_TABLE_FORMAT", format: props })}
+            onTableCellPropertiesChange={(props) => dispatch({ type: "APPLY_TABLE_CELL_FORMAT", format: props })}
+          />
+        </div>
       </div>
     );
   }

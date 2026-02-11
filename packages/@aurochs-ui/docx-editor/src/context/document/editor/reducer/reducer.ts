@@ -13,7 +13,7 @@ import { selectionHandlers } from "./selection-handlers";
 import { dragHandlers } from "./drag-handlers";
 import { clipboardHandlers } from "./clipboard-handlers";
 import { textEditHandlers } from "./text-edit-handlers";
-import { formatHandlers } from "./format-handlers";
+import { formatHandlers } from "./format-handlers/index";
 import { documentHandlers } from "./document-handlers";
 import { createEmptyDocxSelection, createIdleDragState } from "../../state";
 import { createHistory } from "@aurochs-ui/editor-core/history";
