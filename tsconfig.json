@@ -17,5 +17,5 @@
     "outDir": "dist",
     "types": ["node", "vitest/globals"]
   },
-  "include": ["pages/**/*", "spec/**/*", "types/**/*"]
+  "include": ["pages/**/*", "types/**/*"]
 }
