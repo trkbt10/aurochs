@@ -176,6 +176,10 @@ fixtures/
 # Visual regression test outputs (generated at runtime)
 **/__output__/
 **/__diff__/
+**/__integration_output__/
 spec/webgl-visual/__output__/
 reference
 aurochs-office-viewer-*.vsix
+
+# Temporary files
+tmp/
