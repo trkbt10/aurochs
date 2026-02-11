@@ -8,7 +8,7 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/trkbt10/aurochs",
-    "directory": "extensions/aurochs-office-viewer"
+    "directory": "publish/aurochs-office-viewer"
   },
   "type": "module",
   "engines": {

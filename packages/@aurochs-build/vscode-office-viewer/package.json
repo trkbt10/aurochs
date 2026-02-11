@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "bun build src/extension.ts --target node --outdir ../../../extensions/aurochs-office-viewer/dist --external vscode",
+    "build": "bun build src/extension.ts --target node --outdir ../../../publish/aurochs-office-viewer/dist --external vscode",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src"
   },

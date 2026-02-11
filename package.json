@@ -1,15 +1,9 @@
 {
-  "name": "aurochs",
+  "name": "aurochs-workspace",
   "version": "0.2.0",
+  "private": true,
   "type": "module",
   "packageManager": "bun@1.2.21",
-  "sideEffects": false,
-  "bin": {
-    "aurochs": "./dist/aurochs-cli"
-  },
-  "files": [
-    "dist"
-  ],
   "workspaces": [
     "packages/@aurochs/*",
     "packages/@aurochs-office/*",
@@ -19,8 +13,7 @@
     "packages/@aurochs-cli/*",
     "packages/@aurochs-builder/*",
     "packages/@aurochs-build/*",
-    "packages/@aurochs-mcp/*",
-    "extensions/*"
+    "packages/@aurochs-mcp/*"
   ],
   "scripts": {
     "build": "vite build --config pages/vite.config.ts && bun build packages/@aurochs-cli/cli/src/cli.ts --target node --outfile dist/aurochs-cli",
@@ -50,6 +43,7 @@
     "@typescript-eslint/parser": "^8.43.0",
     "@vitejs/plugin-react": "^4.5.2",
     "@vitest/coverage-v8": "^3.2.4",
+    "ajv": "^8.17.1",
     "concurrently": "^9.1.2",
     "earcut": "^3.0.2",
     "eslint": "^9.35.0",

@@ -1,0 +1,45 @@
+{
+  "name": "aurochs",
+  "version": "0.2.0",
+  "type": "module",
+  "sideEffects": false,
+  "bin": {
+    "aurochs": "./dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    "./pptx/renderer/svg": {
+      "types": "./dist/@aurochs-renderer/pptx/src/svg/index.d.ts",
+      "import": "./dist/pptx/renderer/svg/index.js"
+    },
+    "./pptx/renderer/ascii": {
+      "types": "./dist/@aurochs-renderer/pptx/src/ascii/index.d.ts",
+      "import": "./dist/pptx/renderer/ascii/index.js"
+    },
+    "./pptx/renderer/mermaid": {
+      "types": "./dist/@aurochs-renderer/pptx/src/mermaid/index.d.ts",
+      "import": "./dist/pptx/renderer/mermaid/index.js"
+    },
+    "./pptx/viewer": {
+      "types": "./dist/@aurochs-ui/pptx-editor/src/viewer/index.d.ts",
+      "import": "./dist/pptx/viewer/index.js"
+    }
+  },
+  "scripts": {
+    "prepublishOnly": "echo 'Run build from @aurochs-build/aurochs first'"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0",
+    "react-dom": "^18.0.0 || ^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    }
+  }
+}

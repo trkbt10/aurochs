@@ -1,0 +1,17 @@
+{
+  "extends": "../../../tsconfig.json",
+  "compilerOptions": {
+    "declaration": true,
+    "declarationMap": true,
+    "emitDeclarationOnly": true,
+    "outDir": "../../../publish/aurochs/dist",
+    "rootDir": "../..",
+    "declarationDir": "../../../publish/aurochs/dist"
+  },
+  "include": [
+    "../../@aurochs-renderer/pptx/src/svg/index.ts",
+    "../../@aurochs-renderer/pptx/src/ascii/index.ts",
+    "../../@aurochs-renderer/pptx/src/mermaid/index.ts",
+    "../../@aurochs-ui/pptx-editor/src/viewer/index.ts"
+  ]
+}
