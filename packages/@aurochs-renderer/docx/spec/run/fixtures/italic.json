@@ -1,0 +1,12 @@
+{
+  "content": [
+    {
+      "type": "paragraph",
+      "runs": [
+        { "text": "This is ", "italic": false },
+        { "text": "italic", "italic": true },
+        { "text": " text." }
+      ]
+    }
+  ]
+}

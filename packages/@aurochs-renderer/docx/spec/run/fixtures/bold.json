@@ -1,0 +1,12 @@
+{
+  "content": [
+    {
+      "type": "paragraph",
+      "runs": [
+        { "text": "This is ", "bold": false },
+        { "text": "bold", "bold": true },
+        { "text": " text." }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "content": [
+    {
+      "type": "paragraph",
+      "alignment": "center",
+      "runs": [
+        { "text": "Centered text" }
+      ]
+    }
+  ]
+}
