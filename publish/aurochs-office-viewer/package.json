@@ -2,7 +2,7 @@
   "name": "aurochs-office-viewer",
   "displayName": "aurochs Office Viewer",
   "description": "View PPTX, PPT, DOCX, DOC, XLSX, and XLS files directly in VS Code",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "publisher": "trkbt10",
   "license": "MIT",
   "repository": {
