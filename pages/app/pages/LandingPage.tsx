@@ -13,7 +13,7 @@ import {
   type PdfImportResult,
 } from "@aurochs-converters/pdf-to-pptx/importer/pdf-importer";
 import type { PresentationDocument } from "@aurochs-office/pptx/app";
-import { UploadIcon, GridIcon, EditIcon, ShieldIcon } from "@aurochs-ui/ui-components";
+import { UploadIcon, GridIcon, EditIcon, ShieldIcon, PlayIcon } from "@aurochs-ui/ui-components";
 import { GitHubIcon, LogoIcon } from "../components/ui";
 import "./LandingPage.css";
 
@@ -32,6 +32,7 @@ export type FileSelectResult =
 type Props = {
   readonly onFileSelect: (result: FileSelectResult) => void;
   readonly onPptxDemo: () => void;
+  readonly onPptxEditorDemo: () => void;
   readonly onDocxDemo: () => void;
   readonly onXlsxDemo: () => void;
   readonly isLoading?: boolean;
@@ -106,6 +107,7 @@ function ImportProgressIndicator({ state }: { readonly state: ImportState }) {
 export function LandingPage({
   onFileSelect,
   onPptxDemo,
+  onPptxEditorDemo,
   onDocxDemo,
   onXlsxDemo,
   isLoading,
@@ -293,20 +295,62 @@ export function LandingPage({
             <span>or try a demo</span>
           </div>
 
-          {/* Demo Buttons */}
-          <div className="landing-demos">
-            <button className="landing-demo-btn" onClick={onPptxDemo} disabled={isLoading}>
-              <span className="demo-icon pptx">P</span>
-              <span>PPTX Demo</span>
-            </button>
-            <button className="landing-demo-btn" onClick={onDocxDemo} disabled={isLoading}>
-              <span className="demo-icon docx">W</span>
-              <span>DOCX Demo</span>
-            </button>
-            <button className="landing-demo-btn" onClick={onXlsxDemo} disabled={isLoading}>
-              <span className="demo-icon xlsx">X</span>
-              <span>XLSX Demo</span>
-            </button>
+          {/* Demo Cards */}
+          <div className="landing-demo-cards">
+            {/* PPTX Card */}
+            <div className="landing-demo-card">
+              <div className="demo-card-header">
+                <span className="demo-card-icon pptx">P</span>
+                <div className="demo-card-info">
+                  <span className="demo-card-title">PowerPoint</span>
+                  <span className="demo-card-subtitle">Presentations</span>
+                </div>
+              </div>
+              <div className="demo-card-actions">
+                <button className="demo-card-btn" onClick={onPptxDemo} disabled={isLoading}>
+                  <PlayIcon size={14} />
+                  <span>View</span>
+                </button>
+                <button className="demo-card-btn" onClick={onPptxEditorDemo} disabled={isLoading}>
+                  <EditIcon size={14} />
+                  <span>Edit</span>
+                </button>
+              </div>
+            </div>
+
+            {/* DOCX Card */}
+            <div className="landing-demo-card">
+              <div className="demo-card-header">
+                <span className="demo-card-icon docx">W</span>
+                <div className="demo-card-info">
+                  <span className="demo-card-title">Word</span>
+                  <span className="demo-card-subtitle">Documents</span>
+                </div>
+              </div>
+              <div className="demo-card-actions">
+                <button className="demo-card-btn demo-card-btn-full" onClick={onDocxDemo} disabled={isLoading}>
+                  <EditIcon size={14} />
+                  <span>Edit</span>
+                </button>
+              </div>
+            </div>
+
+            {/* XLSX Card */}
+            <div className="landing-demo-card">
+              <div className="demo-card-header">
+                <span className="demo-card-icon xlsx">X</span>
+                <div className="demo-card-info">
+                  <span className="demo-card-title">Excel</span>
+                  <span className="demo-card-subtitle">Spreadsheets</span>
+                </div>
+              </div>
+              <div className="demo-card-actions">
+                <button className="demo-card-btn demo-card-btn-full" onClick={onXlsxDemo} disabled={isLoading}>
+                  <EditIcon size={14} />
+                  <span>Edit</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 

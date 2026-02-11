@@ -273,63 +273,117 @@
   white-space: nowrap;
 }
 
-/* ---------- Demo Buttons ---------- */
+/* ---------- Demo Cards ---------- */
 
-.landing-demos {
+.landing-demo-cards {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  gap: 16px;
   width: 100%;
 }
 
-.landing-demo-btn {
+.landing-demo-card {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 14px 16px;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
   background: var(--bg-primary);
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-primary);
-  cursor: pointer;
-  transition: all 0.15s var(--ease-out);
+  border-radius: var(--radius-lg);
+  transition: box-shadow 0.2s var(--ease-out), border-color 0.2s var(--ease-out);
 }
 
-.landing-demo-btn:hover {
+.landing-demo-card:hover {
   box-shadow: var(--shadow-md);
-  transform: translateY(-1px);
+  border-color: var(--border-subtle);
 }
 
-.landing-demo-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
+.demo-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
-.landing-demo-btn .demo-icon {
-  width: 20px;
-  height: 20px;
-  border-radius: 4px;
+.demo-card-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font-size: 14px;
   font-weight: 700;
   color: #fff;
   flex-shrink: 0;
 }
 
-.landing-demo-btn .demo-icon.pptx { background: #D24726; }
-.landing-demo-btn .demo-icon.docx { background: #2B579A; }
-.landing-demo-btn .demo-icon.xlsx { background: #217346; }
+.demo-card-icon.pptx { background: #D24726; }
+.demo-card-icon.docx { background: #2B579A; }
+.demo-card-icon.xlsx { background: #217346; }
 
-.landing-demo-btn:hover .demo-icon.pptx { background: #b83d1f; }
-.landing-demo-btn:hover .demo-icon.docx { background: #234b85; }
-.landing-demo-btn:hover .demo-icon.xlsx { background: #1a5f39; }
+.demo-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.demo-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.demo-card-subtitle {
+  font-size: 12px;
+  color: var(--text-tertiary);
+}
+
+.demo-card-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.demo-card-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s var(--ease-out);
+}
+
+.demo-card-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+.demo-card-btn:active {
+  transform: scale(0.98);
+}
+
+.demo-card-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.demo-card-btn svg {
+  flex-shrink: 0;
+}
+
+.demo-card-btn-full {
+  flex: 1;
+}
 
 /* ---------- Features ---------- */
 
@@ -416,7 +470,7 @@
     font-size: 28px;
   }
 
-  .landing-demos {
+  .landing-demo-cards {
     grid-template-columns: 1fr;
   }
 

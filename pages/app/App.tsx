@@ -82,6 +82,15 @@ export function App() {
     navigate("/pptx/viewer");
   }, [pptx, docx, xlsx, navigate]);
 
+  const handlePptxEditorDemo = useCallback(() => {
+    setImportedDocument(null);
+    setImportedFileName(null);
+    docx.reset();
+    xlsx.reset();
+    pptx.loadFromUrl(DEMO_PPTX_URL, "demo.pptx");
+    navigate("/pptx/editor");
+  }, [pptx, docx, xlsx, navigate]);
+
   const handleDocxDemo = useCallback(() => {
     pptx.reset();
     xlsx.reset();
@@ -174,6 +183,7 @@ export function App() {
     <LandingPage
       onFileSelect={handleFileSelect}
       onPptxDemo={handlePptxDemo}
+      onPptxEditorDemo={handlePptxEditorDemo}
       onDocxDemo={handleDocxDemo}
       onXlsxDemo={handleXlsxDemo}
       isLoading={isLoading}
@@ -187,6 +197,7 @@ export function App() {
           <LandingPage
             onFileSelect={handleFileSelect}
             onPptxDemo={handlePptxDemo}
+            onPptxEditorDemo={handlePptxEditorDemo}
             onDocxDemo={handleDocxDemo}
             onXlsxDemo={handleXlsxDemo}
             isLoading
