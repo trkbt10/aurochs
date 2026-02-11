@@ -16,7 +16,6 @@ import {
 } from "@aurochs-ui/pptx-editor";
 import type { SlideSize, SlideTransition, TransitionType } from "@aurochs-office/pptx/domain";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
-import "@aurochs-ui/pptx-editor/preview/SlideshowPlayer.css";
 
 injectCSSVariables();
 

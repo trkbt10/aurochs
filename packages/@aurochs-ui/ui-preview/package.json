@@ -30,6 +30,8 @@
     "dev:docx": "vite --open /docx-editor.html",
     "dev:pptx-slideshow": "vite --open /pptx-slideshow.html",
     "dev:pptx-viewer": "vite --open /pptx-viewer.html",
-    "dev:editor-controls": "vite --open /editor-controls.html"
+    "dev:editor-controls": "vite --open /editor-controls.html",
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
   }
 }

@@ -22,7 +22,6 @@ import { loadPptxFromFile, type LoadedPresentation } from "@aurochs-office/pptx/
 import type { Slide } from "@aurochs-office/pptx/app/types";
 import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
 import type { SlideSize } from "@aurochs-office/pptx/domain";
-import "@aurochs-ui/pptx-editor/preview/SlideshowPlayer.css";
 
 injectCSSVariables();
 

@@ -64,7 +64,6 @@ const testColorContext = {
     bg2: "lt2" as const,
   },
 };
-import "@aurochs-ui/pptx-editor/preview/SlideshowPlayer.css";
 
 type TextEditorTestPageProps = {
   readonly onBack: () => void;

@@ -69,7 +69,6 @@
     "./panels/theme-editor/types": {
       "types": "./src/panels/theme-editor/types.ts",
       "default": "./src/panels/theme-editor/types.ts"
-    },
-    "./preview/SlideshowPlayer.css": "./src/preview/SlideshowPlayer.css"
+    }
   }
 }

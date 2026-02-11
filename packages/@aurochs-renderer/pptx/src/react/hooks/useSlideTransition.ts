@@ -5,15 +5,19 @@
  * Implements proper PowerPoint-style transitions where the new slide
  * is revealed over the old slide via clip-path animation.
  *
- * Uses synchronous state calculation during render to prevent flash
- * of unstyled content before transition animation starts.
+ * Uses the animation/effects.ts system (MS-OE376 Part 4 Section 4.6.3)
+ * for proper ECMA-376 compliant transitions.
  *
  * @see ECMA-376 Part 1, Section 19.5 (Transitions)
+ * @see MS-OE376 Part 4 Section 4.6.3 (Animation Effects)
  */
 
 import { useLayoutEffect, useRef, useCallback, useState } from "react";
 import { flushSync } from "react-dom";
-import type { SlideTransition, TransitionType } from "@aurochs-office/pptx/domain";
+import type { SlideTransition, TransitionType, TransitionEightDirectionType } from "@aurochs-office/pptx/domain";
+import type { EffectType, EffectDirection } from "@aurochs-office/pptx/domain/animation";
+import type { EffectConfig } from "../../animation/types";
+import { applyEffect, resetElementStyles } from "../../animation/effects";
 
 /**
  * Options for the slide transition hook.
@@ -25,7 +29,7 @@ export type UseSlideTransitionOptions = {
   currentContent: string;
   /** Transition data for the current slide */
   transition: SlideTransition | undefined;
-  /** Ref to the container element where transition class is applied */
+  /** Ref to the container element where transition is applied */
   containerRef?: React.RefObject<HTMLElement | null>;
   /** Callback when transition completes */
   onTransitionEnd?: () => void;
@@ -39,7 +43,7 @@ export type UseSlideTransitionResult = {
   isTransitioning: boolean;
   /** Previous slide content to show behind current during transition */
   previousContent: string | null;
-  /** CSS class to apply to the new slide container */
+  /** CSS class to apply to the new slide container (deprecated, always empty) */
   transitionClass: string;
   /** Transition duration in ms */
   transitionDuration: number;
@@ -47,258 +51,285 @@ export type UseSlideTransitionResult = {
   skipTransition: () => void;
 };
 
+// =============================================================================
+// Transition to Effect Mapping
+// =============================================================================
+
 /**
- * Map transition to CSS animation classes including direction/orientation modifiers.
- * @param transition - The slide transition data
- * @returns CSS class name(s) for the transition animation
+ * Map PPTX TransitionType to animation EffectType.
+ *
+ * @see ECMA-376 Part 1, Section 19.7.27 (ST_TransitionType)
+ * @see MS-OE376 Part 4 Section 4.6.3 (Effect Filters)
  */
-function getTransitionClass(transition: SlideTransition): string {
-  const { type, direction, orientation, spokes, inOutDirection } = transition;
+function mapTransitionToEffectType(type: TransitionType): EffectType {
+  const mapping: Partial<Record<TransitionType, EffectType>> = {
+    fade: "fade",
+    dissolve: "dissolve",
+    wipe: "wipe",
+    blinds: "blinds",
+    checker: "checkerboard",
+    circle: "circle",
+    diamond: "diamond",
+    plus: "plus",
+    wheel: "wheel",
+    wedge: "wedge",
+    strips: "strips",
+    randomBar: "randombar",
+    // push/cover/pull map to slide effect
+    push: "slide",
+    cover: "slide",
+    pull: "slide",
+    // split maps to barn (similar door effect)
+    split: "barn",
+    // zoom maps to box (expand/contract)
+    zoom: "box",
+    // comb is similar to blinds
+    comb: "blinds",
+  };
 
-  // Base class for the transition type
-  const baseClass = getBaseTransitionClass(type);
+  return mapping[type] ?? "fade";
+}
 
-  // Add direction/orientation/spokes modifier if present
-  if (direction) {
-    // Direction: l, r, u, d, ld, lu, rd, ru
-    return `${baseClass} ${baseClass}-${direction}`;
-  }
+/**
+ * Options for mapping transition direction.
+ */
+type MapDirectionOptions = {
+  type: TransitionType;
+  direction?: TransitionEightDirectionType;
+  orientation?: "horz" | "vert";
+  inOutDirection?: "in" | "out";
+};
 
+/**
+ * Map PPTX direction to animation EffectDirection.
+ *
+ * @see ECMA-376 Part 1, Section 19.7.51 (ST_TransitionEightDirectionType)
+ */
+function mapTransitionDirection(options: MapDirectionOptions): EffectDirection {
+  const { type, direction, orientation, inOutDirection } = options;
+  // Handle orientation-based transitions (blinds, checker, comb, randomBar)
   if (orientation) {
-    // Orientation: horz, vert
-    return `${baseClass} ${baseClass}-${orientation}`;
+    return orientation === "horz" ? "horizontal" : "vertical";
   }
 
-  if (spokes !== undefined) {
-    // Spokes: 1, 2, 3, 4, 8
-    return `${baseClass} ${baseClass}-${spokes}`;
-  }
-
+  // Handle in/out transitions (split, zoom)
   if (inOutDirection) {
-    // In/Out direction: in, out
-    return `${baseClass} ${baseClass}-${inOutDirection}`;
+    if (type === "split") {
+      // split maps to barn effect
+      return inOutDirection === "in" ? "inHorizontal" : "outHorizontal";
+    }
+    return inOutDirection;
   }
 
-  return baseClass;
+  // Handle directional transitions
+  if (direction) {
+    const dirMapping: Record<TransitionEightDirectionType, EffectDirection> = {
+      l: "left",
+      r: "right",
+      u: "up",
+      d: "down",
+      ld: "downLeft",
+      lu: "upLeft",
+      rd: "downRight",
+      ru: "upRight",
+    };
+    return dirMapping[direction];
+  }
+
+  // Default direction based on effect type
+  const defaults: Partial<Record<EffectType, EffectDirection>> = {
+    wipe: "right",
+    slide: "left",
+    blinds: "horizontal",
+    checkerboard: "across",
+    box: "in",
+    circle: "in",
+    diamond: "in",
+    plus: "in",
+    barn: "inHorizontal",
+    randombar: "horizontal",
+    strips: "downRight",
+  };
+
+  const effectType = mapTransitionToEffectType(type);
+  return defaults[effectType] ?? "in";
 }
 
 /**
- * Get base CSS class for a transition type.
+ * Create EffectConfig from SlideTransition.
  */
-function getBaseTransitionClass(type: TransitionType): string {
-  switch (type) {
-    case "fade":
-      return "slide-transition-fade";
-    case "push":
-      return "slide-transition-push";
-    case "wipe":
-      return "slide-transition-wipe";
-    case "blinds":
-      return "slide-transition-blinds";
-    case "dissolve":
-      return "slide-transition-dissolve";
-    case "circle":
-      return "slide-transition-circle";
-    case "diamond":
-      return "slide-transition-diamond";
-    case "split":
-      return "slide-transition-split";
-    case "zoom":
-      return "slide-transition-zoom";
-    case "cover":
-      return "slide-transition-cover";
-    case "pull":
-      return "slide-transition-pull";
-    case "cut":
-      return "slide-transition-cut";
-    case "checker":
-      return "slide-transition-checker";
-    case "comb":
-      return "slide-transition-comb";
-    case "wheel":
-      return "slide-transition-wheel";
-    case "wedge":
-      return "slide-transition-wedge";
-    case "plus":
-      return "slide-transition-plus";
-    case "newsflash":
-      return "slide-transition-newsflash";
-    case "random":
-      return "slide-transition-random";
-    case "randomBar":
-      return "slide-transition-randombar";
-    case "strips":
-      return "slide-transition-strips";
-    default:
-      return "slide-transition-fade";
-  }
+function createEffectConfig(transition: SlideTransition): EffectConfig {
+  const effectType = mapTransitionToEffectType(transition.type);
+  const direction = mapTransitionDirection({
+    type: transition.type,
+    direction: transition.direction,
+    orientation: transition.orientation,
+    inOutDirection: transition.inOutDirection,
+  });
+
+  return {
+    type: effectType,
+    duration: transition.duration ?? 500,
+    direction,
+    entrance: true,
+    easing: "ease-out",
+  };
 }
+
+// =============================================================================
+// Hook Implementation
+// =============================================================================
 
 /**
  * Internal state for synchronous transition tracking.
- * Using a ref allows us to update state during render without triggering loops.
  */
 type TransitionState = {
   isTransitioning: boolean;
   previousContent: string | null;
-  transitionClass: string;
   transitionDuration: number;
   previousSlideIndex: number;
   previousContentValue: string;
+  effectConfig: EffectConfig | null;
 };
 
 /**
  * Hook to manage slide transition effects.
  *
- * Key design: Uses refs for synchronous state calculation during render phase
- * to ensure transition classes are applied BEFORE the first paint.
- * This prevents the flash of unstyled content that would occur
- * if we used useEffect (which runs after paint).
+ * Uses the animation/effects.ts system for proper ECMA-376 compliant
+ * visual effects. Applies CSS transitions directly to elements instead
+ * of using CSS animation classes.
  *
- * Uses:
- * - Refs for synchronous state tracking during render
- * - useState trigger for re-renders when transition ends
- * - animationend event for accurate transition end detection (no setTimeout delay)
- * - flushSync for synchronous state updates when needed
- *
- * Returns both the previous slide content and transition state,
- * allowing the component to render both slides during transition
- * with the new slide revealed via clip-path animation.
+ * Key design:
+ * - Uses refs for synchronous state calculation during render phase
+ * - Applies effects via applyEffect() from animation/effects.ts
+ * - Uses transitionend event for accurate transition end detection
  */
 export function useSlideTransition(options: UseSlideTransitionOptions): UseSlideTransitionResult {
   const { slideIndex, currentContent, transition, containerRef, onTransitionEnd } = options;
 
-  // Ref for synchronous state tracking (survives across renders)
+  // Ref for synchronous state tracking
   const stateRef = useRef<TransitionState>({
     isTransitioning: false,
     previousContent: null,
-    transitionClass: "",
     transitionDuration: 500,
     previousSlideIndex: slideIndex,
     previousContentValue: currentContent,
+    effectConfig: null,
   });
 
   // State trigger for re-render when transition ends
   const [, setRenderTrigger] = useState(0);
 
   // Detect slide change DURING RENDER (synchronously)
-  // This ensures transition state is set before first paint
   const slideChanged = stateRef.current.previousSlideIndex !== slideIndex;
 
   if (slideChanged) {
-    // Store previous content before updating
     const oldContent = stateRef.current.previousContentValue;
-
-    // Check if we should transition
     const shouldTransition = transition && transition.type !== "none" && transition.type !== "cut";
 
     if (shouldTransition) {
-      // Set transition state synchronously - used in this render
+      const effectConfig = createEffectConfig(transition);
       stateRef.current = {
         isTransitioning: true,
         previousContent: oldContent,
-        transitionClass: getTransitionClass(transition),
-        transitionDuration: transition.duration ?? 500,
+        transitionDuration: effectConfig.duration,
         previousSlideIndex: slideIndex,
         previousContentValue: currentContent,
+        effectConfig,
       };
     } else {
-      // No transition - just update refs
       stateRef.current = {
         isTransitioning: false,
         previousContent: null,
-        transitionClass: "",
         transitionDuration: 500,
         previousSlideIndex: slideIndex,
         previousContentValue: currentContent,
+        effectConfig: null,
       };
     }
   } else if (stateRef.current.previousContentValue !== currentContent) {
-    // Update content ref if slide hasn't changed (content re-render)
     stateRef.current.previousContentValue = currentContent;
   }
 
-  // Extract current values (computed synchronously during render)
-  const { isTransitioning, previousContent, transitionClass, transitionDuration } = stateRef.current;
+  const { isTransitioning, previousContent, transitionDuration, effectConfig } = stateRef.current;
 
-  // Handle transition end via animationend event
+  // Apply effect and handle transition end
   useLayoutEffect(() => {
-    if (!isTransitioning) {
+    if (!isTransitioning || !effectConfig) {
       return;
     }
 
     const container = containerRef?.current;
+    if (!container) {
+      return;
+    }
 
-    // End transition handler - uses flushSync for immediate re-render
+    // Apply the effect using the animation system
+    applyEffect(container, effectConfig);
+
+    // End transition handler
     const endTransition = () => {
+      // Reset element styles after transition
+      resetElementStyles(container);
+
       stateRef.current = {
         ...stateRef.current,
         isTransitioning: false,
         previousContent: null,
-        transitionClass: "",
+        effectConfig: null,
       };
-      // Use flushSync to ensure synchronous re-render
+
       flushSync(() => {
         setRenderTrigger((n) => n + 1);
       });
       onTransitionEnd?.();
     };
 
-    // If we have a container ref, use animationend event for precise timing
-    if (container) {
-      const handleAnimationEnd = (e: AnimationEvent) => {
-        // Only handle our transition animations
-        if (e.animationName.startsWith("transition-")) {
-          endTransition();
-        }
-      };
-
-      container.addEventListener("animationend", handleAnimationEnd);
-      return () => {
-        container.removeEventListener("animationend", handleAnimationEnd);
-      };
-    }
-
-    // Fallback: use requestAnimationFrame-based timing for accuracy
-    // This is more accurate than setTimeout as it's tied to frame timing
-    const startTime = performance.now();
-    // eslint-disable-next-line no-restricted-syntax -- RAF lifecycle: ID needed for cleanup
-    let rafId: number;
-
-    const checkEnd = () => {
-      if (performance.now() - startTime >= transitionDuration) {
+    // Use transitionend event for precise timing
+    const handleTransitionEnd = (e: TransitionEvent) => {
+      // Only handle transitions on this element
+      if (e.target === container) {
         endTransition();
-      } else {
-        rafId = requestAnimationFrame(checkEnd);
       }
     };
 
-    rafId = requestAnimationFrame(checkEnd);
+    container.addEventListener("transitionend", handleTransitionEnd);
+
+    // Fallback timeout in case transitionend doesn't fire
+    const timeoutId = setTimeout(() => {
+      endTransition();
+    }, transitionDuration + 100);
 
     return () => {
-      cancelAnimationFrame(rafId);
+      container.removeEventListener("transitionend", handleTransitionEnd);
+      clearTimeout(timeoutId);
     };
-  }, [isTransitioning, transitionDuration, containerRef, onTransitionEnd]);
+  }, [isTransitioning, effectConfig, transitionDuration, containerRef, onTransitionEnd]);
 
   // Skip transition callback
   const skipTransition = useCallback(() => {
+    const container = containerRef?.current;
+    if (container) {
+      resetElementStyles(container);
+    }
+
     stateRef.current = {
       ...stateRef.current,
       isTransitioning: false,
       previousContent: null,
-      transitionClass: "",
+      effectConfig: null,
     };
+
     flushSync(() => {
       setRenderTrigger((n) => n + 1);
     });
     onTransitionEnd?.();
-  }, [onTransitionEnd]);
+  }, [containerRef, onTransitionEnd]);
 
-  // Return current state (computed synchronously during render)
   return {
     isTransitioning,
     previousContent,
-    transitionClass,
+    transitionClass: "", // Deprecated - no longer using CSS classes
     transitionDuration,
     skipTransition,
   };

@@ -2,30 +2,38 @@
  * @file Presentation slideshow
  *
  * Shared slideshow player for preview and app pages.
+ * Uses decomposed hooks and shared viewer components.
  */
 
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-  type CSSProperties,
-  type MouseEvent,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { createPortal } from "react-dom";
 import type { SlideSize, SlideTransition } from "@aurochs-office/pptx/domain";
 import type { Timing } from "@aurochs-office/pptx/domain/animation";
 import { useSlideAnimation, useSlideTransition, SvgContentRenderer } from "@aurochs-renderer/pptx/react";
+import { CloseIcon, EnterFullscreenIcon, ExitFullscreenIcon, ChevronLeftIcon, ChevronRightIcon } from "@aurochs-ui/ui-components/icons";
+import { useSlideNavigation } from "../viewer/hooks";
+import { SlideIndicator, ProgressBar } from "../viewer/components";
 import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  CloseIcon,
-  EnterFullscreenIcon,
-  ExitFullscreenIcon,
-} from "@aurochs-ui/ui-components/icons";
-import "./SlideshowPlayer.css";
+  useSlideshowAutoAdvance,
+  useSlideshowControls,
+  useSlideshowKeyboard,
+  useSlideshowRenderSize,
+} from "./hooks";
+import {
+  getContainerStyle,
+  getScreenOverlayStyle,
+  getStageStyle,
+  getSlideContainerStyle,
+  slidePreviousStyle,
+  getSlideCurrentStyle,
+  slideContentStyle,
+  getControlsStyle,
+  controlsTopStyle,
+  controlsProgressStyle,
+  controlButtonStyle,
+  getNavButtonStyle,
+} from "./styles";
+
 
 export type SlideshowSlideContent = {
   readonly svg: string;
@@ -41,8 +49,6 @@ export type PresentationSlideshowProps = {
   readonly onExit: () => void;
 };
 
-const CONTROL_HIDE_DELAY = 2500;
-
 /**
  * Shared slideshow player.
  */
@@ -54,140 +60,50 @@ export function PresentationSlideshow({
   onExit,
 }: PresentationSlideshowProps) {
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
-  const [currentSlideIndex, setCurrentSlideIndex] = useState(() => {
-    if (startSlideIndex < 1) {
-      return 1;
-    }
-    if (startSlideIndex > slideCount) {
-      return slideCount;
-    }
-    return startSlideIndex;
-  });
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [showControls, setShowControls] = useState(true);
   const [isBlackScreen, setIsBlackScreen] = useState(false);
   const [isWhiteScreen, setIsWhiteScreen] = useState(false);
-  const [renderSize, setRenderSize] = useState(() => ({
-    width: slideSize.width as number,
-    height: slideSize.height as number,
-  }));
 
   const containerRef = useRef<HTMLDialogElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const slideContentRef = useRef<HTMLDivElement>(null);
   const transitionContainerRef = useRef<HTMLDivElement>(null);
-  const controlsTimeoutRef = useRef<number | undefined>(undefined);
-  const transitionCompleteTimeRef = useRef<number>(0);
 
+  // Slide navigation using shared hook
+  const navigation = useSlideNavigation({
+    totalSlides: slideCount,
+    initialSlide: Math.max(1, Math.min(slideCount, startSlideIndex)),
+  });
+
+  // Get current slide content
   const { svg, timing, transition } = useMemo(
-    () => getSlideContent(currentSlideIndex),
-    [getSlideContent, currentSlideIndex],
+    () => getSlideContent(navigation.currentSlide),
+    [getSlideContent, navigation.currentSlide],
   );
 
-  const { isTransitioning, previousContent, transitionClass, transitionDuration } = useSlideTransition({
-    slideIndex: currentSlideIndex,
+  // Slide transition effects (uses JS-based animation/effects.ts)
+  const { isTransitioning, previousContent, transitionDuration } = useSlideTransition({
+    slideIndex: navigation.currentSlide,
     currentContent: svg,
     transition,
     containerRef: transitionContainerRef,
   });
 
+  // Slide animations
   const { isAnimating, skipAnimation, hasAnimations } = useSlideAnimation({
-    slideIndex: currentSlideIndex,
+    slideIndex: navigation.currentSlide,
     timing,
     containerRef: slideContentRef,
     autoPlay: true,
   });
 
-  const advanceOnClick = transition?.advanceOnClick ?? true;
-  const advanceAfter = transition?.advanceAfter;
+  // Render size based on stage dimensions
+  const renderSize = useSlideshowRenderSize({ stageRef, slideSize });
 
-  useLayoutEffect(() => {
-    if (!isTransitioning) {
-      transitionCompleteTimeRef.current = performance.now();
-    }
-  }, [isTransitioning]);
+  // Auto-hide controls on mouse inactivity
+  const { showControls } = useSlideshowControls({ containerRef, hideDelay: 2500 });
 
-  useLayoutEffect(() => {
-    const stageElement = stageRef.current;
-    if (!stageElement) {
-      return;
-    }
-
-    function updateRenderSize() {
-      const stage = stageRef.current;
-      if (!stage) {
-        return;
-      }
-      const availableWidth = stage.clientWidth;
-      const availableHeight = stage.clientHeight;
-      if (availableWidth <= 0 || availableHeight <= 0) {
-        return;
-      }
-
-      if (slideSize.width <= 0 || slideSize.height <= 0) {
-        throw new Error("Slide size must be positive to compute preview scale.");
-      }
-
-      const scale = Math.min(availableWidth / slideSize.width, availableHeight / slideSize.height);
-
-      const nextWidth = Math.round(slideSize.width * scale);
-      const nextHeight = Math.round(slideSize.height * scale);
-
-      setRenderSize((prev) => {
-        if (prev.width === nextWidth && prev.height === nextHeight) {
-          return prev;
-        }
-        return { width: nextWidth, height: nextHeight };
-      });
-    }
-
-    updateRenderSize();
-
-    const resizeObserver = new ResizeObserver(() => {
-      updateRenderSize();
-    });
-    resizeObserver.observe(stageElement);
-
-    return () => {
-      resizeObserver.disconnect();
-    };
-  }, [slideSize.height, slideSize.width]);
-
-  useEffect(() => {
-    function handleFullscreenChange() {
-      setIsFullscreen(!!document.fullscreenElement);
-    }
-    document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
-  }, []);
-
-  useEffect(() => {
-    function handleMouseMove() {
-      setShowControls(true);
-      if (controlsTimeoutRef.current) {
-        window.clearTimeout(controlsTimeoutRef.current);
-      }
-      controlsTimeoutRef.current = window.setTimeout(() => {
-        setShowControls(false);
-      }, CONTROL_HIDE_DELAY);
-    }
-
-    const container = containerRef.current;
-    if (!container) {
-      return;
-    }
-
-    container.addEventListener("mousemove", handleMouseMove);
-    handleMouseMove();
-
-    return () => {
-      container.removeEventListener("mousemove", handleMouseMove);
-      if (controlsTimeoutRef.current) {
-        window.clearTimeout(controlsTimeoutRef.current);
-      }
-    };
-  }, []);
-
+  // Handle close
   const handleClose = useCallback(() => {
     if (document.fullscreenElement) {
       document.exitFullscreen().catch(() => undefined);
@@ -195,6 +111,7 @@ export function PresentationSlideshow({
     onExit();
   }, [onExit]);
 
+  // Fullscreen toggle
   const toggleFullscreen = useCallback(() => {
     const container = containerRef.current;
     if (!container) {
@@ -209,67 +126,86 @@ export function PresentationSlideshow({
     document.exitFullscreen().catch(() => undefined);
   }, []);
 
+  // Navigation with animation skip
   const goToNext = useCallback(() => {
     if (isAnimating) {
       skipAnimation();
       return;
     }
-
-    if (currentSlideIndex < slideCount) {
-      setCurrentSlideIndex((index) => index + 1);
-      setIsBlackScreen(false);
-      setIsWhiteScreen(false);
-    }
-  }, [currentSlideIndex, slideCount, isAnimating, skipAnimation]);
+    navigation.goToNext();
+    setIsBlackScreen(false);
+    setIsWhiteScreen(false);
+  }, [isAnimating, skipAnimation, navigation]);
 
   const goToPrev = useCallback(() => {
     if (isAnimating) {
       skipAnimation();
       return;
     }
-
-    if (currentSlideIndex > 1) {
-      setCurrentSlideIndex((index) => index - 1);
-      setIsBlackScreen(false);
-      setIsWhiteScreen(false);
-    }
-  }, [currentSlideIndex, isAnimating, skipAnimation]);
+    navigation.goToPrev();
+    setIsBlackScreen(false);
+    setIsWhiteScreen(false);
+  }, [isAnimating, skipAnimation, navigation]);
 
   const goToFirst = useCallback(() => {
-    setCurrentSlideIndex(1);
+    navigation.goToFirst();
     setIsBlackScreen(false);
+    setIsWhiteScreen(false);
+  }, [navigation]);
+
+  const goToLast = useCallback(() => {
+    navigation.goToLast();
+    setIsBlackScreen(false);
+    setIsWhiteScreen(false);
+  }, [navigation]);
+
+  // Screen overlay toggles
+  const toggleBlackScreen = useCallback(() => {
+    setIsBlackScreen((v) => !v);
     setIsWhiteScreen(false);
   }, []);
 
-  const goToLast = useCallback(() => {
-    setCurrentSlideIndex(slideCount);
+  const toggleWhiteScreen = useCallback(() => {
+    setIsWhiteScreen((v) => !v);
     setIsBlackScreen(false);
-    setIsWhiteScreen(false);
-  }, [slideCount]);
+  }, []);
 
-  useLayoutEffect(() => {
-    if (!advanceAfter || currentSlideIndex >= slideCount) {
-      return;
+  // Keyboard navigation
+  useSlideshowKeyboard({
+    goToNext,
+    goToPrev,
+    goToFirst,
+    goToLast,
+    toggleFullscreen,
+    toggleBlackScreen,
+    toggleWhiteScreen,
+    onExit: handleClose,
+  });
+
+  // Auto-advance based on transition settings
+  const advanceOnClick = transition?.advanceOnClick ?? true;
+  const advanceAfter = transition?.advanceAfter;
+
+  useSlideshowAutoAdvance({
+    advanceAfter,
+    currentSlideIndex: navigation.currentSlide,
+    slideCount,
+    isTransitioning,
+    isBlackScreen,
+    isWhiteScreen,
+    onAdvance: () => navigation.setCurrentSlide(Math.min(navigation.currentSlide + 1, slideCount)),
+  });
+
+  // Track fullscreen state
+  useEffect(() => {
+    function handleFullscreenChange() {
+      setIsFullscreen(!!document.fullscreenElement);
     }
-    if (isTransitioning) {
-      return;
-    }
-    if (isBlackScreen || isWhiteScreen) {
-      return;
-    }
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
 
-    const elapsed = performance.now() - transitionCompleteTimeRef.current;
-    const remaining = Math.max(0, advanceAfter - elapsed);
-
-    const timerId = window.setTimeout(() => {
-      setCurrentSlideIndex((index) => Math.min(index + 1, slideCount));
-    }, remaining);
-
-    return () => {
-      clearTimeout(timerId);
-    };
-  }, [advanceAfter, currentSlideIndex, slideCount, isTransitioning, isBlackScreen, isWhiteScreen]);
-
+  // Handle click to advance
   const handleClick = useCallback(
     (event: MouseEvent<HTMLDialogElement>) => {
       const target = event.target as HTMLElement;
@@ -291,6 +227,7 @@ export function PresentationSlideshow({
     [advanceOnClick, goToNext, isAnimating, skipAnimation],
   );
 
+  // Handle right-click to go back
   const handleContextMenu = useCallback(
     (event: MouseEvent<HTMLDialogElement>) => {
       event.preventDefault();
@@ -299,87 +236,12 @@ export function PresentationSlideshow({
     [goToPrev],
   );
 
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      switch (event.key) {
-        case "ArrowRight":
-        case "ArrowDown":
-        case " ":
-        case "Enter":
-        case "n":
-        case "N":
-        case "PageDown":
-          event.preventDefault();
-          goToNext();
-          break;
-
-        case "ArrowLeft":
-        case "ArrowUp":
-        case "Backspace":
-        case "p":
-        case "P":
-        case "PageUp":
-          event.preventDefault();
-          goToPrev();
-          break;
-
-        case "Escape":
-          event.preventDefault();
-          handleClose();
-          break;
-
-        case "f":
-        case "F":
-          event.preventDefault();
-          toggleFullscreen();
-          break;
-
-        case "b":
-        case "B":
-        case ".":
-          event.preventDefault();
-          setIsBlackScreen((value) => !value);
-          setIsWhiteScreen(false);
-          break;
-
-        case "w":
-        case "W":
-        case ",":
-          event.preventDefault();
-          setIsWhiteScreen((value) => !value);
-          setIsBlackScreen(false);
-          break;
-
-        case "Home":
-          event.preventDefault();
-          goToFirst();
-          break;
-
-        case "End":
-          event.preventDefault();
-          goToLast();
-          break;
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [goToFirst, goToLast, goToNext, goToPrev, handleClose, toggleFullscreen]);
-
-  const progress = slideCount > 0 ? (currentSlideIndex / slideCount) * 100 : 0;
-  const transitionStyle = useMemo(() => {
-    if (!isTransitioning) {
-      return undefined;
-    }
-    return {
-      animationDuration: `${transitionDuration}ms`,
-    } as CSSProperties;
-  }, [isTransitioning, transitionDuration]);
-
+  // Portal target setup
   useEffect(() => {
     setPortalTarget(document.body);
   }, []);
 
+  // Dialog modal setup
   useEffect(() => {
     const dialog = containerRef.current;
     if (!dialog) {
@@ -408,36 +270,34 @@ export function PresentationSlideshow({
   return createPortal(
     <dialog
       ref={containerRef}
-      className={`slideshow-container${isFullscreen ? " fullscreen" : ""}`}
+      style={getContainerStyle(isFullscreen)}
       onClick={handleClick}
       onContextMenu={handleContextMenu}
       onCancel={handleClose}
       role="dialog"
       aria-modal="true"
     >
-      <div className={`screen-overlay black ${isBlackScreen ? "active" : ""}`} />
-      <div className={`screen-overlay white ${isWhiteScreen ? "active" : ""}`} />
+      {/* Screen overlays */}
+      <div style={getScreenOverlayStyle("black", isBlackScreen)} />
+      <div style={getScreenOverlayStyle("white", isWhiteScreen)} />
 
-      <div ref={stageRef} className="slideshow-stage">
-        <div
-          className="slideshow-slide-container"
-          style={{ width: `${renderSize.width}px`, height: `${renderSize.height}px` }}
-        >
+      {/* Slide stage */}
+      <div ref={stageRef} style={getStageStyle(isFullscreen)}>
+        <div style={getSlideContainerStyle(renderSize.width, renderSize.height, isFullscreen)}>
           {isTransitioning && previousContent && (
-            <div className="slideshow-slide slideshow-slide-previous">
+            <div style={slidePreviousStyle}>
               <SvgContentRenderer
                 svg={previousContent}
                 width={slideSize.width}
                 height={slideSize.height}
                 mode="full"
-                className="slideshow-content"
+                style={slideContentStyle}
               />
             </div>
           )}
           <div
             ref={transitionContainerRef}
-            className={`slideshow-slide slideshow-slide-current ${isTransitioning ? transitionClass : ""}`}
-            style={transitionStyle}
+            style={getSlideCurrentStyle(isTransitioning, transitionDuration)}
           >
             <SvgContentRenderer
               ref={slideContentRef}
@@ -445,50 +305,54 @@ export function PresentationSlideshow({
               width={slideSize.width}
               height={slideSize.height}
               mode="full"
-              className="slideshow-content"
+              style={slideContentStyle}
             />
           </div>
         </div>
       </div>
 
-      <div data-controls className={`slideshow-controls ${showControls ? "visible" : ""}`}>
-        <div className="controls-top">
-          <button className="control-button exit" onClick={handleClose}>
+      {/* Controls overlay */}
+      <div data-controls style={getControlsStyle(showControls)}>
+        {/* Top bar */}
+        <div style={controlsTopStyle}>
+          <button type="button" style={controlButtonStyle} onClick={handleClose}>
             <CloseIcon size={16} />
             <span>Exit</span>
           </button>
 
-          <div className="slide-indicator">
-            <span className="current">{currentSlideIndex}</span>
-            <span className="separator">/</span>
-            <span className="total">{slideCount}</span>
-            {hasAnimations && <span className="animation-indicator">●</span>}
-          </div>
+          <SlideIndicator
+            current={navigation.currentSlide}
+            total={slideCount}
+            variant="light"
+            showAnimation={hasAnimations}
+          />
 
-          <button className="control-button fullscreen" onClick={toggleFullscreen}>
+          <button type="button" style={controlButtonStyle} onClick={toggleFullscreen}>
             {isFullscreen ? <ExitFullscreenIcon size={16} /> : <EnterFullscreenIcon size={16} />}
-            <span className="button-label">{isFullscreen ? "Exit" : "Fullscreen"}</span>
+            <span>{isFullscreen ? "Exit" : "Fullscreen"}</span>
           </button>
         </div>
 
-        <div className="controls-progress">
-          <div className="progress-track">
-            <div className="progress-bar" style={{ width: `${progress}%` }} />
-          </div>
+        {/* Progress bar */}
+        <div style={controlsProgressStyle}>
+          <ProgressBar progress={navigation.progress} variant="light" />
         </div>
 
+        {/* Navigation buttons */}
         <button
-          className="nav-button prev"
+          type="button"
+          style={getNavButtonStyle("prev", navigation.isFirst)}
           onClick={goToPrev}
-          disabled={currentSlideIndex <= 1}
+          disabled={navigation.isFirst}
           aria-label="Previous slide"
         >
           <ChevronLeftIcon size={18} />
         </button>
         <button
-          className="nav-button next"
+          type="button"
+          style={getNavButtonStyle("next", navigation.isLast)}
           onClick={goToNext}
-          disabled={currentSlideIndex >= slideCount}
+          disabled={navigation.isLast}
           aria-label="Next slide"
         >
           <ChevronRightIcon size={18} />
