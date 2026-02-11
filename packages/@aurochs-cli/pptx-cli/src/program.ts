@@ -134,32 +134,45 @@ export function createProgram(): Command {
 
   program
     .command("preview")
-    .description("Render ASCII art preview of a slide (omit slide number to show all)")
+    .description("Render ASCII art or SVG preview of a slide (omit slide number to show all)")
     .argument("<file>", "PPTX/PPT file path")
     .argument("[slide]", "Slide number (1-based, omit for all)")
-    .option("--width <columns>", "Terminal width in columns", "80")
-    .option("--border", "Show slide border outline")
-    .action(async (file: string, slide: string | undefined, options: { width: string; border?: boolean }) => {
-      const mode = program.opts().output as OutputMode;
-      // eslint-disable-next-line no-restricted-syntax -- conditionally assigned from parsed input
-      let slideNumber: number | undefined;
-      if (slide !== undefined) {
-        slideNumber = parseInt(slide, 10);
-        if (Number.isNaN(slideNumber)) {
-          console.error("Error: Slide number must be a valid integer");
+    .option("--format <type>", "Output format (ascii|svg)", "ascii")
+    .option("--width <columns>", "Terminal width in columns (ascii only)", "80")
+    .option("--border", "Show slide border outline (ascii only)")
+    .action(
+      async (
+        file: string,
+        slide: string | undefined,
+        options: { format: string; width: string; border?: boolean },
+      ) => {
+        const mode = program.opts().output as OutputMode;
+        // eslint-disable-next-line no-restricted-syntax -- conditionally assigned from parsed input
+        let slideNumber: number | undefined;
+        if (slide !== undefined) {
+          slideNumber = parseInt(slide, 10);
+          if (Number.isNaN(slideNumber)) {
+            console.error("Error: Slide number must be a valid integer");
+            process.exitCode = 1;
+            return;
+          }
+        }
+        const format = options.format as "ascii" | "svg";
+        if (format !== "ascii" && format !== "svg") {
+          console.error('Error: Format must be "ascii" or "svg"');
           process.exitCode = 1;
           return;
         }
-      }
-      const width = parseInt(options.width, 10);
-      if (Number.isNaN(width) || width < 20) {
-        console.error("Error: Width must be an integer >= 20");
-        process.exitCode = 1;
-        return;
-      }
-      const result = await runPreview(file, slideNumber, { width, border: options.border });
-      output(result, mode, formatPreviewPretty, formatPreviewMermaid);
-    });
+        const width = parseInt(options.width, 10);
+        if (Number.isNaN(width) || width < 20) {
+          console.error("Error: Width must be an integer >= 20");
+          process.exitCode = 1;
+          return;
+        }
+        const result = await runPreview(file, slideNumber, { format, width, border: options.border });
+        output(result, mode, formatPreviewPretty, formatPreviewMermaid);
+      },
+    );
 
   program
     .command("inventory")

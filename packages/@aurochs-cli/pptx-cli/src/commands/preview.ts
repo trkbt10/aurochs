@@ -1,5 +1,5 @@
 /**
- * @file preview command - ASCII art visualization of slides
+ * @file preview command - ASCII art and SVG visualization of slides
  */
 
 import { loadPresentationBundle } from "./loader";
@@ -10,39 +10,47 @@ import { createParseContext } from "@aurochs-office/pptx/parser/context";
 import { enrichSlideContent, type FileReader } from "@aurochs-office/pptx/parser/slide/external-content-loader";
 import { createResourceStore } from "@aurochs-office/pptx/domain/resource-store";
 import { createRenderContext } from "@aurochs-renderer/pptx";
+import { renderSlideSvgIntegrated } from "@aurochs-renderer/pptx/slide-render";
 import { success, error, type Result } from "@aurochs-cli/cli-core";
 import { serializeShape, type SerializationContext, type ShapeJson } from "../serializers/shape-serializer";
 import { renderSlideAscii } from "@aurochs-renderer/pptx/ascii";
 import type { Chart } from "@aurochs-office/chart/domain";
 import type { Shape } from "@aurochs-office/pptx/domain/shape";
 
+export type PreviewFormat = "ascii" | "svg";
+
 export type PreviewSlide = {
   readonly number: number;
   readonly filename: string;
-  readonly ascii: string;
+  readonly ascii?: string;
+  readonly svg?: string;
   readonly shapes: readonly ShapeJson[];
   readonly shapeCount: number;
 };
 
 export type PreviewData = {
+  readonly format: PreviewFormat;
   readonly slides: readonly PreviewSlide[];
   readonly slideWidth: number;
   readonly slideHeight: number;
 };
 
 export type PreviewOptions = {
+  readonly format?: PreviewFormat;
   readonly width: number;
   readonly border?: boolean;
 };
 
 /**
- * Generate an ASCII art preview of one or all slides.
+ * Generate an ASCII art or SVG preview of one or all slides.
  */
 export async function runPreview(
   filePath: string,
   slideNumber: number | undefined,
   options: PreviewOptions,
 ): Promise<Result<PreviewData>> {
+  const format = options.format ?? "ascii";
+
   try {
     const { presentationFile } = await loadPresentationBundle(filePath);
     const presentation = openPresentation(presentationFile);
@@ -87,24 +95,42 @@ export async function runPreview(
       };
 
       const shapes = enrichedSlide.shapes.map((s) => serializeShape(s, ctx));
-      const ascii = renderSlideAscii({
-        shapes,
-        slideWidth: presentation.size.width,
-        slideHeight: presentation.size.height,
-        terminalWidth: options.width,
-        showBorder: options.border,
-      });
 
-      slides.push({
-        number: apiSlide.number,
-        filename: apiSlide.filename,
-        ascii,
-        shapes,
-        shapeCount: shapes.length,
-      });
+      if (format === "svg") {
+        // SVG output using integrated renderer
+        const svgResult = renderSlideSvgIntegrated(
+          apiSlide.content,
+          renderContext.slideRenderContext,
+          presentation.size,
+        );
+        slides.push({
+          number: apiSlide.number,
+          filename: apiSlide.filename,
+          svg: svgResult.svg,
+          shapes,
+          shapeCount: shapes.length,
+        });
+      } else {
+        // ASCII output (default)
+        const ascii = renderSlideAscii({
+          shapes,
+          slideWidth: presentation.size.width,
+          slideHeight: presentation.size.height,
+          terminalWidth: options.width,
+          showBorder: options.border,
+        });
+        slides.push({
+          number: apiSlide.number,
+          filename: apiSlide.filename,
+          ascii,
+          shapes,
+          shapeCount: shapes.length,
+        });
+      }
     }
 
     return success({
+      format,
       slides,
       slideWidth: presentation.size.width,
       slideHeight: presentation.size.height,

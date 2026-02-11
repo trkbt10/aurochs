@@ -206,15 +206,33 @@ export function formatBuildPretty(data: BuildData): string {
  */
 export function formatPreviewPretty(data: PreviewData): string {
   const lines: string[] = [];
-  for (let i = 0; i < data.slides.length; i++) {
-    const slide = data.slides[i]!;
-    if (i > 0) {
-      lines.push("");
+
+  if (data.format === "svg") {
+    // SVG format: output raw SVG for each slide (pipe-friendly)
+    for (let i = 0; i < data.slides.length; i++) {
+      const slide = data.slides[i]!;
+      if (data.slides.length > 1) {
+        // Multiple slides: add separator comments
+        if (i > 0) {
+          lines.push("");
+        }
+        lines.push(`<!-- Slide ${slide.number} -->`);
+      }
+      lines.push(slide.svg ?? "");
     }
-    lines.push(`Slide ${slide.number} (${data.slideWidth}x${data.slideHeight}px, ${slide.shapeCount} shapes)`);
-    lines.push("");
-    lines.push(slide.ascii);
+  } else {
+    // ASCII format: original behavior
+    for (let i = 0; i < data.slides.length; i++) {
+      const slide = data.slides[i]!;
+      if (i > 0) {
+        lines.push("");
+      }
+      lines.push(`Slide ${slide.number} (${data.slideWidth}x${data.slideHeight}px, ${slide.shapeCount} shapes)`);
+      lines.push("");
+      lines.push(slide.ascii ?? "");
+    }
   }
+
   return lines.join("\n");
 }
 
