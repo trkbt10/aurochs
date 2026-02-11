@@ -1,0 +1,95 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build npm package
+        run: bun run --cwd packages/@aurochs-build/aurochs build
+
+      - name: Build CLI
+        run: bun run --cwd packages/@aurochs-build/aurochs build:cli
+
+      - name: Build VS Code Extension
+        run: bun run --cwd packages/@aurochs-build/vscode-office-viewer build
+
+      - name: Package VS Code Extension
+        run: cd publish/aurochs-office-viewer && bun run package
+
+      - name: Upload npm package artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: npm-package
+          path: publish/aurochs/
+
+      - name: Upload VS Code Extension artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: vscode-extension
+          path: publish/aurochs-office-viewer/*.vsix
+
+  publish-npm:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-package
+          path: publish/aurochs/
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Publish to npm
+        run: cd publish/aurochs && npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-vscode:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: vscode-extension
+          path: ./
+
+      - name: Publish to VS Code Marketplace
+        run: npx @vscode/vsce publish --packagePath *.vsix
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+
+  create-release:
+    needs: [publish-npm, publish-vscode]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: vscode-extension
+          path: ./artifacts/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: artifacts/*.vsix
+          generate_release_notes: true
