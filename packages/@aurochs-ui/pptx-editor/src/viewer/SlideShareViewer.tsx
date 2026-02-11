@@ -9,7 +9,7 @@ import type { SlideSize } from "@aurochs-office/pptx/domain";
 import { SvgContentRenderer } from "@aurochs-renderer/pptx/react";
 import { SlideList } from "../slide-list";
 import type { SlideWithId } from "@aurochs-office/pptx/app";
-import { PresentationSlideshow, type SlideshowSlideContent } from "../preview";
+import { PresentationSlideshow, type SlideshowSlideContent } from "./PresentationSlideshow";
 import { useSlideNavigation, useViewerKeyboard, useSlideshowMode } from "./hooks";
 import { SlideIndicator, ProgressBar, KeyboardHints, NavigationControls } from "./components";
 import {

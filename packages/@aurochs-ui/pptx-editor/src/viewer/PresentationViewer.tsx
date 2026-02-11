@@ -4,7 +4,7 @@
  * Full-featured presentation viewer with thumbnail sidebar and navigation.
  */
 
-import { useMemo, useCallback, useState, type CSSProperties, type ReactNode } from "react";
+import { useMemo, useCallback, type CSSProperties, type ReactNode } from "react";
 import type { SlideSize } from "@aurochs-office/pptx/domain";
 import { SvgContentRenderer } from "@aurochs-renderer/pptx/react";
 import { SlideList } from "../slide-list";
@@ -24,7 +24,7 @@ export type PresentationViewerProps = {
   /** Initial slide to display (1-based, default: 1) */
   readonly initialSlide?: number;
   /** Show thumbnail sidebar */
-  readonly showThumbnails?: boolean | "auto";
+  readonly showThumbnails?: boolean;
   /** Thumbnail sidebar position */
   readonly thumbnailPosition?: "left" | "bottom";
   /** Show navigation controls */
@@ -77,12 +77,6 @@ const sidebarStyle: CSSProperties = {
   flexDirection: "column",
   flexShrink: 0,
   transition: "width 0.2s ease",
-};
-
-const sidebarCollapsedStyle: CSSProperties = {
-  ...sidebarStyle,
-  width: 0,
-  overflow: "hidden",
 };
 
 const sidebarHeaderStyle: CSSProperties = {
@@ -206,8 +200,6 @@ export function PresentationViewer({
   className,
   style,
 }: PresentationViewerProps) {
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
-
   const nav = useSlideNavigation({
     totalSlides: slideCount,
     initialSlide,
@@ -267,11 +259,7 @@ export function PresentationViewer({
     [getSlideContent, getThumbnailContent, slideSize],
   );
 
-  const toggleSidebar = useCallback(() => {
-    setIsSidebarCollapsed((prev) => !prev);
-  }, []);
-
-  const shouldShowThumbnails = showThumbnails === "auto" ? !isSidebarCollapsed : showThumbnails;
+  const shouldShowThumbnails = showThumbnails;
   const activeSlideId = `slide-${nav.currentSlide}`;
 
   const defaultKeyboardHints = useMemo(
@@ -288,7 +276,7 @@ export function PresentationViewer({
 
       <div style={mainStyle}>
         {shouldShowThumbnails && thumbnailPosition === "left" && (
-          <aside style={isSidebarCollapsed ? sidebarCollapsedStyle : sidebarStyle}>
+          <aside style={sidebarStyle}>
             <div style={sidebarHeaderStyle}>
               <span style={sidebarTitleStyle}>Slides</span>
               <span style={sidebarCountStyle}>{slideCount}</span>

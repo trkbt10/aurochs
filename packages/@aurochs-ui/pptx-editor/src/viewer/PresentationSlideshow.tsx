@@ -11,8 +11,8 @@ import type { SlideSize, SlideTransition } from "@aurochs-office/pptx/domain";
 import type { Timing } from "@aurochs-office/pptx/domain/animation";
 import { useSlideAnimation, useSlideTransition, SvgContentRenderer } from "@aurochs-renderer/pptx/react";
 import { CloseIcon, EnterFullscreenIcon, ExitFullscreenIcon, ChevronLeftIcon, ChevronRightIcon } from "@aurochs-ui/ui-components/icons";
-import { useSlideNavigation } from "../viewer/hooks";
-import { SlideIndicator, ProgressBar } from "../viewer/components";
+import { useSlideNavigation } from "./hooks";
+import { SlideIndicator, ProgressBar } from "./components";
 import {
   useSlideshowAutoAdvance,
   useSlideshowControls,
@@ -32,7 +32,7 @@ import {
   controlsProgressStyle,
   controlButtonStyle,
   getNavButtonStyle,
-} from "./styles";
+} from "./slideshow-styles";
 
 
 export type SlideshowSlideContent = {

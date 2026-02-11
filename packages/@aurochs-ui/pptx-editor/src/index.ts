@@ -143,7 +143,6 @@ export { SlideCanvas, type SlideCanvasProps } from "./slide/SlideCanvas";
 export { PropertyPanel, type PropertyPanelProps } from "./panels/PropertyPanel";
 export { ShapeToolbar, type ShapeToolbarProps } from "./panels/ShapeToolbar";
 export { LayerPanel, type LayerPanelProps } from "./panels/LayerPanel";
-export { PresentationSlideshow, type PresentationSlideshowProps, type SlideshowSlideContent } from "./preview";
 
 // Slide Editor Sub-components
 export { SelectionBox, type SelectionBoxProps, type SelectionBoxVariant } from "./selection/SelectionBox";
@@ -225,6 +224,7 @@ export {
   NavigationControls,
   SlidePreview,
   // Composite Components
+  PresentationSlideshow,
   PresentationViewer,
   EmbeddableSlide,
   SlideShareViewer,
@@ -246,6 +246,8 @@ export {
   type NavigationControlsVariant,
   type SlidePreviewProps,
   // Types - Composites
+  type PresentationSlideshowProps,
+  type SlideshowSlideContent,
   type PresentationViewerProps,
   type EmbeddableSlideProps,
   type SlideShareViewerProps,

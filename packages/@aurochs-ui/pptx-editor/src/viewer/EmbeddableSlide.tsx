@@ -33,16 +33,12 @@ export type EmbeddableSlideProps = {
   readonly pauseOnHover?: boolean;
   /** Loop back to first slide after last */
   readonly loop?: boolean;
-  /** Aspect ratio constraint */
-  readonly aspectRatio?: "16:9" | "4:3" | "auto";
   /** Maximum width */
   readonly maxWidth?: string | number;
   /** Maximum height */
   readonly maxHeight?: string | number;
   /** Callback when slide changes */
   readonly onSlideChange?: (slideIndex: number) => void;
-  /** Callback for fullscreen request */
-  readonly onFullscreenRequest?: () => void;
   /** Additional CSS class */
   readonly className?: string;
   /** Additional inline styles */
@@ -153,11 +149,9 @@ export function EmbeddableSlide({
   autoPlayInterval = 5000,
   pauseOnHover = true,
   loop = false,
-  aspectRatio = "auto",
   maxWidth,
   maxHeight,
   onSlideChange,
-  onFullscreenRequest,
   className,
   style,
 }: EmbeddableSlideProps) {
@@ -200,16 +194,9 @@ export function EmbeddableSlide({
 
   const svg = getSlideContent(nav.currentSlide);
 
-  const computedAspectRatio =
-    aspectRatio === "auto"
-      ? `${slideSize.width} / ${slideSize.height}`
-      : aspectRatio === "16:9"
-        ? "16 / 9"
-        : "4 / 3";
-
   const computedStyle: CSSProperties = {
     ...containerStyle,
-    aspectRatio: computedAspectRatio,
+    aspectRatio: `${slideSize.width} / ${slideSize.height}`,
     maxWidth: maxWidth ?? "100%",
     maxHeight: maxHeight ?? "100%",
     ...style,

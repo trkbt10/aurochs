@@ -10,6 +10,7 @@ import type { CSSProperties } from "react";
 // Container styles
 // =============================================================================
 
+/** Returns styles for the slideshow dialog container. */
 export function getContainerStyle(_isFullscreen: boolean): CSSProperties {
   return {
     position: "fixed",
@@ -35,6 +36,7 @@ export function getContainerStyle(_isFullscreen: boolean): CSSProperties {
 // Screen overlay styles
 // =============================================================================
 
+/** Returns styles for black/white screen overlay. */
 export function getScreenOverlayStyle(variant: "black" | "white", active: boolean): CSSProperties {
   return {
     position: "absolute",
@@ -51,6 +53,7 @@ export function getScreenOverlayStyle(variant: "black" | "white", active: boolea
 // Stage styles
 // =============================================================================
 
+/** Returns styles for the slide stage area. */
 export function getStageStyle(isFullscreen: boolean): CSSProperties {
   return {
     display: "flex",
@@ -62,6 +65,7 @@ export function getStageStyle(isFullscreen: boolean): CSSProperties {
   };
 }
 
+/** Returns styles for the slide container with dimensions. */
 export function getSlideContainerStyle(width: number, height: number, isFullscreen: boolean): CSSProperties {
   return {
     position: "relative",
@@ -86,6 +90,7 @@ export const slidePreviousStyle: CSSProperties = {
   zIndex: 1,
 };
 
+/** Returns styles for the current slide with transition animation. */
 export function getSlideCurrentStyle(isTransitioning: boolean, transitionDuration?: number): CSSProperties {
   return {
     ...slideBaseStyle,
@@ -104,6 +109,7 @@ export const slideContentStyle: CSSProperties = {
 // Controls styles
 // =============================================================================
 
+/** Returns styles for the controls overlay. */
 export function getControlsStyle(visible: boolean): CSSProperties {
   return {
     position: "absolute",
@@ -160,6 +166,7 @@ export const controlButtonStyle: CSSProperties = {
 // Navigation button styles
 // =============================================================================
 
+/** Returns styles for navigation buttons (prev/next). */
 export function getNavButtonStyle(direction: "prev" | "next", disabled: boolean): CSSProperties {
   return {
     position: "absolute",

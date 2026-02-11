@@ -83,7 +83,7 @@ import { ThemeEditorTabs, ThemeEditorCanvas, extractThemeFromPptx } from "../pan
 import type { ThemePreset } from "../panels/theme-editor/types";
 import type { SchemeColorName } from "@aurochs-office/drawing-ml/domain/color";
 import type { FontSpec } from "@aurochs-office/ooxml/domain/font-scheme";
-import { PresentationSlideshow, type SlideshowSlideContent } from "../preview/PresentationSlideshow";
+import { PresentationSlideshow, type SlideshowSlideContent } from "../viewer/PresentationSlideshow";
 import {
   usePanelCallbacks,
   useContextMenuActions,
