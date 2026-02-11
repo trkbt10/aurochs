@@ -8,12 +8,16 @@
   "dependencies": {
     "@aurochs-builder/xlsx": "workspace:*",
     "@aurochs-office/docx": "workspace:*",
+    "@aurochs-office/drawing-ml": "workspace:*",
     "@aurochs-office/opc": "workspace:*",
+    "@aurochs-office/pptx": "workspace:*",
+    "@aurochs-renderer/pptx": "workspace:*",
     "@aurochs-office/xls": "workspace:*",
     "@aurochs-office/xlsx": "workspace:*",
     "@aurochs-ui/ui-components": "workspace:*",
     "@aurochs-ui/editor-controls": "workspace:*",
     "@aurochs-ui/docx-editor": "workspace:*",
+    "@aurochs-ui/pptx-editor": "workspace:*",
     "@aurochs-ui/xlsx-editor": "workspace:*",
     "react-router-dom": "^7.6.1"
   },
@@ -24,6 +28,8 @@
   "scripts": {
     "dev:xlsx": "vite --open /xlsx-editor.html",
     "dev:docx": "vite --open /docx-editor.html",
+    "dev:pptx-slideshow": "vite --open /pptx-slideshow.html",
+    "dev:pptx-viewer": "vite --open /pptx-viewer.html",
     "dev:editor-controls": "vite --open /editor-controls.html"
   }
 }

@@ -22,6 +22,8 @@ export default defineConfig({
         main: path.resolve(__dirname, "index.html"),
         "xlsx-editor": path.resolve(__dirname, "xlsx-editor.html"),
         "docx-editor": path.resolve(__dirname, "docx-editor.html"),
+        "pptx-slideshow": path.resolve(__dirname, "pptx-slideshow.html"),
+        "pptx-viewer": path.resolve(__dirname, "pptx-viewer.html"),
         "editor-controls": path.resolve(__dirname, "editor-controls.html"),
       },
     },
