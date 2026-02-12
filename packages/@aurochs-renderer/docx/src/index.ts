@@ -5,6 +5,7 @@
  * Follows the same pattern as @aurochs-renderer/pptx.
  */
 
+// Render options
 export {
   type DocxRenderDialect,
   type DocxLineSpacingMode,
@@ -16,3 +17,16 @@ export {
   createDocxRenderOptions,
   getEffectiveLineSpacing,
 } from "./render-options";
+
+// SVG rendering
+export {
+  type PageRenderResult,
+  type DocumentRenderResult,
+  type DocumentSvgResult,
+  type DocumentSvgConfig,
+  type WarningsCollector,
+  createWarningsCollector,
+  renderPageToSvg,
+  renderDocumentToSvgs,
+  renderDocumentToSvg,
+} from "./svg";

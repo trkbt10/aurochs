@@ -161,6 +161,7 @@ export function parseSettings(element: XmlElement): DocxSettings {
   const doNotUseMarginsForDrawingGridOrigin = parseToggleChild(element, "w:doNotUseMarginsForDrawingGridOrigin");
   const compat = parseCompatSettings(getChild(element, "w:compat"));
   const themeFontLang = parseThemeFontLang(getChild(element, "w:themeFontLang"));
+  const evenAndOddHeaders = parseToggleChild(element, "w:evenAndOddHdrFtr");
 
   return {
     ...(zoom && { zoom }),
@@ -175,5 +176,6 @@ export function parseSettings(element: XmlElement): DocxSettings {
     ...(doNotUseMarginsForDrawingGridOrigin !== undefined && { doNotUseMarginsForDrawingGridOrigin }),
     ...(compat && { compat }),
     ...(themeFontLang && { themeFontLang }),
+    ...(evenAndOddHeaders !== undefined && { evenAndOddHeaders }),
   };
 }

@@ -119,6 +119,8 @@ export type DocxSettings = {
   readonly compat?: DocxCompatSettings;
   /** Theme font languages */
   readonly themeFontLang?: DocxThemeFontLang;
+  /** Use different headers/footers for even and odd pages */
+  readonly evenAndOddHeaders?: boolean;
 };
 
 /**
