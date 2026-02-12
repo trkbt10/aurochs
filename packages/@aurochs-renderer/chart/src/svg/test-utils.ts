@@ -75,6 +75,8 @@ export function createTestFillResolver(colorContext?: ColorContext): FillResolve
         }
         case "patternFill":
           return { type: "pattern", preset: fill.preset };
+        case "blip":
+          return { type: "unresolved", originalType: "blip" };
       }
     },
   };

@@ -8,6 +8,7 @@
 import type { XlsxWorkbook, XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
 import type { XlsxAlignment } from "@aurochs-office/xlsx/domain/style/types";
 import type { XlsxBorderStyle } from "@aurochs-office/xlsx/domain/style/border";
+import type { Chart } from "@aurochs-office/chart/domain";
 
 // =============================================================================
 // Resolved Style Types
@@ -203,6 +204,12 @@ export type XlsxRenderOptions = {
    * Default: "#FFFFFF"
    */
   readonly backgroundColor: string;
+
+  /**
+   * Whether to show drawing elements (images, shapes, charts).
+   * Default: true
+   */
+  readonly showDrawings: boolean;
 };
 
 /**
@@ -221,6 +228,7 @@ export const DEFAULT_XLSX_RENDER_OPTIONS: XlsxRenderOptions = {
   defaultFontSize: 11,
   gridLineColor: "#E0E0E0",
   backgroundColor: "#FFFFFF",
+  showDrawings: true,
 };
 
 // =============================================================================
@@ -306,6 +314,18 @@ export function createWarningsCollector(): WarningsCollector {
 }
 
 /**
+ * Image resolver function type.
+ * Returns a data URI or path for the given relationship ID.
+ */
+export type ImageResolver = (relId: string) => string | undefined;
+
+/**
+ * Chart resolver function type.
+ * Returns a Chart object for the given relationship ID or path.
+ */
+export type ChartResolver = (relIdOrPath: string) => Chart | undefined;
+
+/**
  * Context for SVG rendering.
  */
 export type XlsxSvgRenderContext = {
@@ -321,4 +341,8 @@ export type XlsxSvgRenderContext = {
   readonly defs: DefsCollector;
   /** Warnings collector */
   readonly warnings: WarningsCollector;
+  /** Optional image resolver for drawing elements */
+  readonly resolveImage?: ImageResolver;
+  /** Optional chart resolver for chart frames */
+  readonly resolveChart?: ChartResolver;
 };

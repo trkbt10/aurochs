@@ -7,7 +7,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { parse as parseFont, type Font } from "opentype.js";
+import { parse as parseFont } from "opentype.js";
 import type { FontLoader } from "../../font/loader";
 import type { FontLoadOptions, LoadedFont } from "../../font/types";
 import { CJK_FALLBACK_FONTS } from "../../font/helpers";
