@@ -3,6 +3,7 @@
  */
 
 import { buildBlipFill, buildSimpleBlipFill, buildCroppedBlipFill, buildTiledBlipFill } from "./blip-fill";
+import { pct, px } from "@aurochs-office/drawing-ml/domain/units";
 import type { BlipFillSpec } from "../types";
 
 describe("blip fill builder", () => {
@@ -14,10 +15,10 @@ describe("blip fill builder", () => {
 
       const result = buildBlipFill(spec);
 
-      expect(result.type).toBe("blip");
+      expect(result.type).toBe("blipFill");
       expect(result.resourceId).toBe("rId1");
-      expect(result.stretchMode).toBe("fill");
-      expect(result.tileMode).toBeUndefined();
+      expect(result.stretch).toEqual({});
+      expect(result.tile).toBeUndefined();
     });
 
     it("creates a blip fill with source rectangle", () => {
@@ -28,7 +29,12 @@ describe("blip fill builder", () => {
 
       const result = buildBlipFill(spec);
 
-      expect(result.sourceRect).toEqual({ left: 10, top: 20, right: 10, bottom: 20 });
+      expect(result.sourceRect).toEqual({
+        left: pct(10),
+        top: pct(20),
+        right: pct(10),
+        bottom: pct(20),
+      });
     });
 
     it("creates a blip fill with tile mode", () => {
@@ -44,12 +50,12 @@ describe("blip fill builder", () => {
 
       const result = buildBlipFill(spec);
 
-      expect(result.stretchMode).toBeUndefined();
-      expect(result.tileMode).toBeDefined();
-      expect(result.tileMode?.flip).toBe("xy");
-      expect(result.tileMode?.scaleX).toBe(100);
-      expect(result.tileMode?.scaleY).toBe(100);
-      expect(result.tileMode?.alignment).toBe("ctr");
+      expect(result.stretch).toBeUndefined();
+      expect(result.tile).toBeDefined();
+      expect(result.tile?.flip).toBe("xy");
+      expect(result.tile?.sx).toEqual(pct(100));
+      expect(result.tile?.sy).toEqual(pct(100));
+      expect(result.tile?.alignment).toBe("ctr");
     });
 
     it("includes optional properties", () => {
@@ -72,9 +78,9 @@ describe("blip fill builder", () => {
     it("creates a simple stretched blip fill", () => {
       const result = buildSimpleBlipFill("rId2");
 
-      expect(result.type).toBe("blip");
+      expect(result.type).toBe("blipFill");
       expect(result.resourceId).toBe("rId2");
-      expect(result.stretchMode).toBe("fill");
+      expect(result.stretch).toEqual({});
     });
   });
 
@@ -82,9 +88,14 @@ describe("blip fill builder", () => {
     it("creates a cropped blip fill", () => {
       const result = buildCroppedBlipFill("rId3", { left: 5, top: 10, right: 15, bottom: 20 });
 
-      expect(result.type).toBe("blip");
+      expect(result.type).toBe("blipFill");
       expect(result.resourceId).toBe("rId3");
-      expect(result.sourceRect).toEqual({ left: 5, top: 10, right: 15, bottom: 20 });
+      expect(result.sourceRect).toEqual({
+        left: pct(5),
+        top: pct(10),
+        right: pct(15),
+        bottom: pct(20),
+      });
     });
   });
 
@@ -97,11 +108,22 @@ describe("blip fill builder", () => {
         alignment: "tl",
       });
 
-      expect(result.type).toBe("blip");
+      expect(result.type).toBe("blipFill");
       expect(result.resourceId).toBe("rId4");
-      expect(result.tileMode?.flip).toBe("x");
-      expect(result.tileMode?.scaleX).toBe(50);
-      expect(result.tileMode?.alignment).toBe("tl");
+      expect(result.tile?.flip).toBe("x");
+      expect(result.tile?.sx).toEqual(pct(50));
+      expect(result.tile?.alignment).toBe("tl");
+    });
+
+    it("creates a tiled blip fill with default values", () => {
+      const result = buildTiledBlipFill("rId5", {});
+
+      expect(result.tile?.tx).toEqual(px(0));
+      expect(result.tile?.ty).toEqual(px(0));
+      expect(result.tile?.sx).toEqual(pct(100));
+      expect(result.tile?.sy).toEqual(pct(100));
+      expect(result.tile?.flip).toBe("none");
+      expect(result.tile?.alignment).toBe("tl");
     });
   });
 });

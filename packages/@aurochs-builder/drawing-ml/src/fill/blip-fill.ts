@@ -6,7 +6,8 @@
  * @see ECMA-376 Part 1, Section 20.1.8.14 (blipFill)
  */
 
-import type { BlipFill, BlipTileMode } from "@aurochs-office/drawing-ml/domain/fill";
+import type { BlipFill, TileFill, StretchFill } from "@aurochs-office/drawing-ml/domain/fill";
+import { pct, px } from "@aurochs-office/drawing-ml/domain/units";
 import type { BlipFillSpec } from "../types";
 
 // =============================================================================
@@ -14,20 +15,27 @@ import type { BlipFillSpec } from "../types";
 // =============================================================================
 
 /**
- * Build tile mode from tile spec.
+ * Build tile fill from tile spec.
  */
-function buildTileMode(tile: BlipFillSpec["tile"]): BlipTileMode | undefined {
+function buildTileFill(tile: BlipFillSpec["tile"]): TileFill | undefined {
   if (tile === undefined) {
     return undefined;
   }
   return {
-    flip: tile.flip,
-    scaleX: tile.scaleX,
-    scaleY: tile.scaleY,
-    offsetX: tile.offsetX,
-    offsetY: tile.offsetY,
-    alignment: tile.alignment,
+    tx: px(tile.offsetX ?? 0),
+    ty: px(tile.offsetY ?? 0),
+    sx: pct(tile.scaleX ?? 100),
+    sy: pct(tile.scaleY ?? 100),
+    flip: tile.flip ?? "none",
+    alignment: tile.alignment ?? "tl",
   };
+}
+
+/**
+ * Build stretch fill (default stretch mode).
+ */
+function buildStretchFill(): StretchFill {
+  return {};
 }
 
 // =============================================================================
@@ -45,15 +53,24 @@ function buildTileMode(tile: BlipFillSpec["tile"]): BlipTileMode | undefined {
  */
 export function buildBlipFill(spec: BlipFillSpec): BlipFill {
   const hasTile = spec.tile !== undefined;
+  const sourceRect = spec.sourceRect
+    ? {
+        left: pct(spec.sourceRect.left),
+        top: pct(spec.sourceRect.top),
+        right: pct(spec.sourceRect.right),
+        bottom: pct(spec.sourceRect.bottom),
+      }
+    : undefined;
+
   return {
-    type: "blip",
+    type: "blipFill",
     resourceId: spec.resourceId,
-    sourceRect: spec.sourceRect,
+    sourceRect,
     dpi: spec.dpi,
     rotWithShape: spec.rotWithShape,
     compressionState: spec.compressionState,
-    stretchMode: hasTile ? undefined : "fill",
-    tileMode: buildTileMode(spec.tile),
+    stretch: hasTile ? undefined : buildStretchFill(),
+    tile: buildTileFill(spec.tile),
   };
 }
 

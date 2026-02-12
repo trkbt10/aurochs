@@ -8,7 +8,7 @@
  */
 
 import type { Color } from "./color";
-import type { Degrees, Percent } from "./units";
+import type { Degrees, Percent, Pixels } from "./units";
 
 // =============================================================================
 // Basic Fill Types
@@ -135,23 +135,60 @@ export type PatternFill = {
 // Blip Fill Types
 // =============================================================================
 
+/** Rectangle alignment values */
+export type RectAlignment = "tl" | "t" | "tr" | "l" | "ctr" | "r" | "bl" | "b" | "br";
+
+/** Tile flip mode values */
+export type TileFlipMode = "none" | "x" | "y" | "xy";
+
 /**
- * Blip tile mode for tiled image fills
+ * Stretch fill mode
+ * @see ECMA-376 Part 1, Section 20.1.8.56 (stretch)
+ */
+export type StretchFill = {
+  readonly fillRect?: {
+    readonly left: Percent;
+    readonly top: Percent;
+    readonly right: Percent;
+    readonly bottom: Percent;
+  };
+};
+
+/**
+ * Tile fill mode
  * @see ECMA-376 Part 1, Section 20.1.8.58 (tile)
  */
-export type BlipTileMode = {
-  /** Flip mode: none, x, y, or xy */
-  readonly flip?: "none" | "x" | "y" | "xy";
-  /** Horizontal scale percentage */
-  readonly scaleX?: number;
-  /** Vertical scale percentage */
-  readonly scaleY?: number;
-  /** Horizontal offset in EMUs */
-  readonly offsetX?: number;
-  /** Vertical offset in EMUs */
-  readonly offsetY?: number;
-  /** Alignment: tl, t, tr, l, ctr, r, bl, b, br */
-  readonly alignment?: "tl" | "t" | "tr" | "l" | "ctr" | "r" | "bl" | "b" | "br";
+export type TileFill = {
+  readonly tx: Pixels;
+  readonly ty: Pixels;
+  readonly sx: Percent;
+  readonly sy: Percent;
+  readonly flip: TileFlipMode;
+  readonly alignment: RectAlignment;
+};
+
+/**
+ * Blip effects (color transform effects applied to the blip image)
+ * These are child elements of a:blip that modify the image appearance.
+ * @see ECMA-376 Part 1, Section 20.1.8.13 (CT_Blip)
+ */
+export type BlipEffects = {
+  readonly alphaBiLevel?: { readonly threshold: Percent };
+  readonly alphaCeiling?: boolean;
+  readonly alphaFloor?: boolean;
+  readonly alphaInv?: boolean;
+  readonly alphaMod?: boolean;
+  readonly alphaModFix?: { readonly amount: Percent };
+  readonly alphaRepl?: { readonly alpha: Percent };
+  readonly biLevel?: { readonly threshold: Percent };
+  readonly blur?: { readonly radius: Pixels; readonly grow: boolean };
+  readonly colorChange?: { readonly from: Color; readonly to: Color; readonly useAlpha: boolean };
+  readonly colorReplace?: { readonly color: Color };
+  readonly duotone?: { readonly colors: readonly [Color, Color] };
+  readonly grayscale?: boolean;
+  readonly hsl?: { readonly hue: Degrees; readonly saturation: Percent; readonly luminance: Percent };
+  readonly luminance?: { readonly brightness: Percent; readonly contrast: Percent };
+  readonly tint?: { readonly hue: Degrees; readonly amount: Percent };
 };
 
 /**
@@ -159,26 +196,36 @@ export type BlipTileMode = {
  * @see ECMA-376 Part 1, Section 20.1.8.14 (blipFill)
  */
 export type BlipFill = {
-  readonly type: "blip";
+  readonly type: "blipFill";
   /** Relationship ID for the image resource */
   readonly resourceId: string;
-  /** Source rectangle for cropping (percentages 0-100) */
-  readonly sourceRect?: {
-    readonly left: number;
-    readonly top: number;
-    readonly right: number;
-    readonly bottom: number;
-  };
-  /** DPI for the image */
-  readonly dpi?: number;
-  /** Whether to rotate with shape */
-  readonly rotWithShape?: boolean;
+  /**
+   * Whether the underlying relationship was referenced via r:embed or r:link.
+   * Optional for format-agnostic contexts (e.g., chart-editor).
+   */
+  readonly relationshipType?: "embed" | "link";
   /** Compression state */
   readonly compressionState?: "none" | "print" | "screen" | "email" | "hqprint";
-  /** Stretch mode (mutually exclusive with tileMode) */
-  readonly stretchMode?: "fill";
-  /** Tile mode (mutually exclusive with stretchMode) */
-  readonly tileMode?: BlipTileMode;
+  /** DPI for the image */
+  readonly dpi?: number;
+  /**
+   * Effects applied to the blip image (color transforms).
+   * @see ECMA-376 Part 1, Section 20.1.8.13 (CT_Blip)
+   */
+  readonly blipEffects?: BlipEffects;
+  /** Stretch fill mode */
+  readonly stretch?: StretchFill;
+  /** Tile fill mode */
+  readonly tile?: TileFill;
+  /** Source rectangle for cropping (percentages) */
+  readonly sourceRect?: {
+    readonly left: Percent;
+    readonly top: Percent;
+    readonly right: Percent;
+    readonly bottom: Percent;
+  };
+  /** Whether to rotate with shape */
+  readonly rotWithShape?: boolean;
 };
 
 // =============================================================================

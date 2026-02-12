@@ -17,7 +17,7 @@ function toFill(fill: BaseFill | undefined): Fill | undefined {
     return undefined;
   }
   // Diagrams don't produce blipFill; skip if encountered
-  if (fill.type === "blip") {
+  if (fill.type === "blipFill") {
     return undefined;
   }
   return fill as Fill;
@@ -32,7 +32,7 @@ function toLine(line: BaseLine | undefined): Line | undefined {
     return undefined;
   }
   // Skip if line fill is blip (diagrams don't typically use blip fills)
-  if (line.fill.type === "blip") {
+  if (line.fill.type === "blipFill") {
     return undefined;
   }
   return line as Line;

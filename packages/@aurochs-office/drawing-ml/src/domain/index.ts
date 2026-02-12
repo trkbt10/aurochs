@@ -40,7 +40,11 @@ export type {
   GradientFill,
   PatternType,
   PatternFill,
-  BlipTileMode,
+  RectAlignment,
+  TileFlipMode,
+  StretchFill,
+  TileFill,
+  BlipEffects,
   BlipFill,
   BaseFill,
 } from "./fill";

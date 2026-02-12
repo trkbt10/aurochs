@@ -18,8 +18,8 @@ function toFill(fill: ChartShapeProperties["fill"]): Fill | undefined {
   if (!fill) {
     return undefined;
   }
-  // Skip blip fills (charts don't typically use blip fills, and BaseFill.BlipFill !== Fill.BlipFill)
-  if (fill.type === "blip") {
+  // Skip blip fills (charts don't typically use blip fills)
+  if (fill.type === "blipFill") {
     return undefined;
   }
   return fill as Fill;

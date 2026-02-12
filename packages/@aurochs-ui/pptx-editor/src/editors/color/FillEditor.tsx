@@ -477,7 +477,7 @@ function BlipFillEditor({
           {hasImage ? "Change Image" : "Select Image"}
         </label>
         <Toggle
-          checked={blipFill.rotWithShape}
+          checked={blipFill.rotWithShape ?? true}
           onChange={(checked) => onChange({ ...blipFill, rotWithShape: checked })}
           disabled={disabled}
         />

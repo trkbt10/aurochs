@@ -14,8 +14,8 @@ import type { Fill, Line } from "../../domain/index";
 import type { XmlElement } from "@aurochs/xml";
 
 function convertBaseLineToPptxLine(line: BaseLine): Line | undefined {
-  // Skip if fill is blip type (PPTX has different BlipFill structure)
-  if (line.fill.type === "blip") {
+  // Skip if fill is blipFill type (not typically used in lines)
+  if (line.fill.type === "blipFill") {
     return undefined;
   }
   return {

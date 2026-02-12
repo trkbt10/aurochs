@@ -37,9 +37,9 @@ function resolvedFillToCssColor(fill: ResolvedFill): string | undefined {
 }
 
 function resolveFillForChartRender(fill: BaseFill, ctx: CoreRenderContext): ResolvedFill {
-  // Skip blip fills (charts don't typically use blip fills, and BaseFill.BlipFill !== Fill.BlipFill)
-  if (fill.type === "blip") {
-    return { type: "unresolved", originalType: "blip" };
+  // Skip blip fills (charts don't typically use blip fills)
+  if (fill.type === "blipFill") {
+    return { type: "unresolved", originalType: "blipFill" };
   }
   const resolved = resolveFill(fill as Fill, ctx.colorContext, ctx.resources.resolve);
   switch (resolved.type) {

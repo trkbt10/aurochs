@@ -91,7 +91,7 @@ export function serializeBlipFill(blip: BlipFill): XmlElement {
   }
 
   const attrs: Record<string, string> = {
-    rotWithShape: ooxmlBool(blip.rotWithShape),
+    rotWithShape: ooxmlBool(blip.rotWithShape ?? true),
   };
   if (blip.dpi !== undefined) {
     attrs.dpi = String(blip.dpi);

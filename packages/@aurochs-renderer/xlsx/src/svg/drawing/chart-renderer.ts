@@ -179,8 +179,8 @@ function createDefaultFillResolver(): FillResolver {
       }
 
       // Handle blip fill
-      if (fill.type === "blip") {
-        return { type: "unresolved", originalType: "blip" };
+      if (fill.type === "blipFill") {
+        return { type: "unresolved", originalType: "blipFill" };
       }
 
       return { type: "unresolved" };
