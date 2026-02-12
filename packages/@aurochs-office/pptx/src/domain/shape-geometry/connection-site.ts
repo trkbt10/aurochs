@@ -15,7 +15,12 @@
 import type { CustomGeometry, Geometry } from "../shape";
 import type { Degrees, Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import { deg, px } from "@aurochs-office/drawing-ml/domain/units";
-import { createGuideContext, evaluateGuides, evaluateExpression, type GuideContext } from "./guide-engine";
+import {
+  createGuideContext,
+  evaluateGuides,
+  evaluateExpression,
+  type GuideContext,
+} from "@aurochs-office/drawing-ml/domain/geometry";
 
 // =============================================================================
 // Types

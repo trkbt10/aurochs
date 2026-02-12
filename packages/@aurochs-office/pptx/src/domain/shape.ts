@@ -8,7 +8,7 @@
 import type { Fill, Line, BlipEffects } from "./color/types";
 import type { Table } from "./table/types";
 import type { TextBody } from "./text";
-import type { Degrees, Percent, Pixels } from "@aurochs-office/drawing-ml/domain/units";
+import type { Percent, Pixels, Degrees } from "@aurochs-office/drawing-ml/domain/units";
 import type { Point, Transform, GroupTransform } from "./geometry";
 import type { Effects } from "./effects";
 import type { Hyperlink, ResourceId } from "./resource";
@@ -17,24 +17,32 @@ import type { ContentPart } from "./anchor";
 import type { BlipCompression } from "@aurochs-office/ooxml/domain/drawing";
 import type { FontCollectionIndex, StyleMatrixColumnIndex, ShapeId } from "./style-ref";
 import type { Scene3d, Shape3d } from "./three-d";
+import type { Geometry } from "@aurochs-office/drawing-ml/domain/geometry";
 
-// =============================================================================
-// Shape Geometry Types
-// =============================================================================
-
-/**
- * Preset shape type
- * @see ECMA-376 Part 1, Section 20.1.10.55 (ST_ShapeType)
- */
-export type PresetShapeType = string; // "rect", "ellipse", "roundRect", etc.
-
-/**
- * Shape adjustment value (guide value for parametric shapes)
- */
-export type AdjustValue = {
-  readonly name: string;
-  readonly value: number;
-};
+// Re-export geometry types from DrawingML for backward compatibility
+export type {
+  PresetShapeType,
+  AdjustValue,
+  PathCommandType,
+  MoveToCommand,
+  LineToCommand,
+  ArcToCommand,
+  QuadBezierCommand,
+  CubicBezierCommand,
+  CloseCommand,
+  PathCommand,
+  PathFillMode,
+  GeometryPath,
+  AdjustHandle,
+  XYAdjustHandle,
+  PolarAdjustHandle,
+  GeometryGuide,
+  ConnectionSite,
+  TextRect,
+  PresetGeometry,
+  CustomGeometry,
+  Geometry,
+} from "@aurochs-office/drawing-ml/domain/geometry";
 
 // =============================================================================
 // Shape Identity Types
@@ -140,188 +148,6 @@ export type Placeholder = {
   readonly size?: PlaceholderSize;
   readonly hasCustomPrompt?: boolean;
 };
-
-// =============================================================================
-// Geometry Types
-// =============================================================================
-
-/**
- * Path command types for custom geometry
- */
-export type PathCommandType = "moveTo" | "lineTo" | "arcTo" | "quadBezierTo" | "cubicBezierTo" | "close";
-
-/**
- * Move to command
- */
-export type MoveToCommand = {
-  readonly type: "moveTo";
-  readonly point: Point;
-};
-
-/**
- * Line to command
- */
-export type LineToCommand = {
-  readonly type: "lineTo";
-  readonly point: Point;
-};
-
-/**
- * Arc to command
- * @see ECMA-376 Part 1, Section 20.1.9.1 (arcTo)
- */
-export type ArcToCommand = {
-  readonly type: "arcTo";
-  readonly widthRadius: Pixels;
-  readonly heightRadius: Pixels;
-  readonly startAngle: Degrees;
-  readonly swingAngle: Degrees;
-};
-
-/**
- * Quadratic bezier command
- */
-export type QuadBezierCommand = {
-  readonly type: "quadBezierTo";
-  readonly control: Point;
-  readonly end: Point;
-};
-
-/**
- * Cubic bezier command
- */
-export type CubicBezierCommand = {
-  readonly type: "cubicBezierTo";
-  readonly control1: Point;
-  readonly control2: Point;
-  readonly end: Point;
-};
-
-/**
- * Close path command
- */
-export type CloseCommand = {
-  readonly type: "close";
-};
-
-/**
- * Union of all path commands
- */
-export type PathCommand =
-  | MoveToCommand
-  | LineToCommand
-  | ArcToCommand
-  | QuadBezierCommand
-  | CubicBezierCommand
-  | CloseCommand;
-
-/**
- * Geometry path
- * @see ECMA-376 Part 1, Section 20.1.9.15 (path)
- */
-export type GeometryPath = {
-  readonly width: Pixels;
-  readonly height: Pixels;
-  readonly fill: "none" | "norm" | "lighten" | "lightenLess" | "darken" | "darkenLess";
-  readonly stroke: boolean;
-  readonly extrusionOk: boolean;
-  readonly commands: readonly PathCommand[];
-};
-
-/**
- * Adjust handle definitions for custom geometry
- * @see ECMA-376 Part 1, Section 20.1.9.1 (ahLst)
- */
-export type AdjustHandle = XYAdjustHandle | PolarAdjustHandle;
-
-/**
- * XY adjust handle
- * @see ECMA-376 Part 1, Section 20.1.9.3 (ahXY)
- */
-export type XYAdjustHandle = {
-  readonly type: "xy";
-  readonly position: Point;
-  readonly guideX?: string;
-  readonly guideY?: string;
-  readonly minX?: number;
-  readonly maxX?: number;
-  readonly minY?: number;
-  readonly maxY?: number;
-};
-
-/**
- * Polar adjust handle
- * @see ECMA-376 Part 1, Section 20.1.9.2 (ahPolar)
- */
-export type PolarAdjustHandle = {
-  readonly type: "polar";
-  readonly position: Point;
-  readonly guideAngle?: string;
-  readonly guideRadius?: string;
-  readonly minAngle?: Degrees | string;
-  readonly maxAngle?: Degrees | string;
-  readonly minRadius?: number;
-  readonly maxRadius?: number;
-};
-
-/**
- * Preset geometry
- * @see ECMA-376 Part 1, Section 20.1.9.18 (prstGeom)
- */
-export type PresetGeometry = {
-  readonly type: "preset";
-  readonly preset: PresetShapeType;
-  readonly adjustValues: readonly AdjustValue[];
-};
-
-/**
- * Custom geometry
- * Only pathLst is required per ECMA-376
- * @see ECMA-376 Part 1, Section 20.1.9.8 (custGeom)
- */
-export type CustomGeometry = {
-  readonly type: "custom";
-  readonly paths: readonly GeometryPath[]; // Required (pathLst)
-  readonly adjustValues?: readonly AdjustValue[]; // Optional (avLst)
-  readonly adjustHandles?: readonly AdjustHandle[]; // Optional (ahLst)
-  readonly guides?: readonly GeometryGuide[]; // Optional (gdLst)
-  readonly connectionSites?: readonly ConnectionSite[]; // Optional (cxnLst)
-  readonly textRect?: TextRect; // Optional (rect)
-};
-
-/**
- * Geometry guide for calculations
- * @see ECMA-376 Part 1, Section 20.1.9.11 (gd)
- */
-export type GeometryGuide = {
-  readonly name: string;
-  readonly formula: string;
-};
-
-/**
- * Connection site for connectors
- * @see ECMA-376 Part 1, Section 20.1.9.7 (cxn)
- */
-export type ConnectionSite = {
-  readonly angle: Degrees;
-  readonly position: Point;
-};
-
-/**
- * Text rectangle within custom geometry
- * @see ECMA-376 Part 1, Section 20.1.9.22 (rect)
- */
-export type TextRect = {
-  readonly left: string; // Formula or value
-  readonly top: string;
-  readonly right: string;
-  readonly bottom: string;
-};
-
-/**
- * Union of geometry types
- */
-export type Geometry = PresetGeometry | CustomGeometry;
 
 // =============================================================================
 // Shape Property Types

@@ -8,7 +8,7 @@
  * @see https://learn.microsoft.com/en-us/dotnet/api/documentformat.openxml.drawing.shapeguide.formula
  */
 
-import type { AdjustValue, GeometryGuide } from "../shape";
+import type { AdjustValue, GeometryGuide } from "./shape";
 
 // =============================================================================
 // Types
@@ -379,11 +379,11 @@ export function createGuideContext(
   context.set("ssd32", ss / 32);
 
   // Circle angle constants (in ECMA-376 angle units: 60000ths of degree)
-  context.set("cd2", 10800000);  // 180 degrees
-  context.set("cd4", 5400000);   // 90 degrees
-  context.set("cd8", 2700000);   // 45 degrees
+  context.set("cd2", 10800000); // 180 degrees
+  context.set("cd4", 5400000); // 90 degrees
+  context.set("cd8", 2700000); // 45 degrees
   context.set("3cd4", 16200000); // 270 degrees
-  context.set("3cd8", 8100000);  // 135 degrees
+  context.set("3cd8", 8100000); // 135 degrees
   context.set("5cd8", 13500000); // 225 degrees
   context.set("7cd8", 18900000); // 315 degrees
 

@@ -26,6 +26,10 @@
       "types": "./src/domain/*.ts",
       "default": "./src/domain/*.ts"
     },
+    "./domain/geometry": {
+      "types": "./src/domain/geometry/index.ts",
+      "default": "./src/domain/geometry/index.ts"
+    },
     "./parser": {
       "types": "./src/parser/index.ts",
       "default": "./src/parser/index.ts"

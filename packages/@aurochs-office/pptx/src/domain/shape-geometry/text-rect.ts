@@ -14,7 +14,12 @@
 import type { Geometry, TextRect } from "../shape";
 import type { Pixels } from "@aurochs-office/drawing-ml/domain/units";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
-import { createGuideContext, evaluateGuides, evaluateExpression, type GuideContext } from "./guide-engine";
+import {
+  createGuideContext,
+  evaluateGuides,
+  evaluateExpression,
+  type GuideContext,
+} from "@aurochs-office/drawing-ml/domain/geometry";
 
 // =============================================================================
 // Types

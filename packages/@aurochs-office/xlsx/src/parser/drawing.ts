@@ -8,8 +8,9 @@
  */
 
 import type { XmlElement } from "@aurochs/xml";
-import { getAttr, getChild, getChildren, getTextContent } from "@aurochs/xml";
+import { getAttr, getChild, getChildren, getTextContent, isXmlElement } from "@aurochs/xml";
 import { parseInt32, parseEditAs as parseOoxmlEditAs } from "@aurochs-office/ooxml/parser";
+import type { GroupLocks } from "@aurochs-office/ooxml/domain/drawing/locks";
 import { rowIdx, colIdx } from "../domain/types";
 import type {
   XlsxDrawing,
@@ -25,6 +26,8 @@ import type {
   XlsxPicture,
   XlsxShape,
   XlsxChartFrame,
+  XlsxGroupShape,
+  XlsxGroupTransform,
 } from "../domain/drawing/types";
 
 // =============================================================================
@@ -184,6 +187,173 @@ function parseGraphicFrame(graphicFrameElement: XmlElement): XlsxChartFrame {
   };
 }
 
+// =============================================================================
+// Group Shape Parsing
+// =============================================================================
+
+/**
+ * Parse boolean attribute, returning undefined if not present.
+ */
+function parseBoolAttr(element: XmlElement, name: string): boolean | undefined {
+  const val = getAttr(element, name);
+  if (val === undefined) {
+    return undefined;
+  }
+  return val === "1" || val === "true";
+}
+
+/**
+ * Parse group locks element.
+ */
+function parseGroupLocksElement(element: XmlElement | undefined): GroupLocks | undefined {
+  if (!element) {
+    return undefined;
+  }
+  const noGrp = parseBoolAttr(element, "noGrp");
+  const noUngrp = parseBoolAttr(element, "noUngrp");
+  const noSelect = parseBoolAttr(element, "noSelect");
+  const noRot = parseBoolAttr(element, "noRot");
+  const noChangeAspect = parseBoolAttr(element, "noChangeAspect");
+  const noMove = parseBoolAttr(element, "noMove");
+  const noResize = parseBoolAttr(element, "noResize");
+  if (
+    noGrp === undefined &&
+    noUngrp === undefined &&
+    noSelect === undefined &&
+    noRot === undefined &&
+    noChangeAspect === undefined &&
+    noMove === undefined &&
+    noResize === undefined
+  ) {
+    return undefined;
+  }
+  return {
+    noGrp,
+    noUngrp,
+    noSelect,
+    noRot,
+    noChangeAspect,
+    noMove,
+    noResize,
+  };
+}
+
+/**
+ * Parse group transform from xdr:grpSpPr.
+ */
+function parseGroupTransform(grpSpPr: XmlElement | undefined): XlsxGroupTransform | undefined {
+  if (!grpSpPr) {
+    return undefined;
+  }
+  const xfrm = getChild(grpSpPr, "a:xfrm") ?? getChild(grpSpPr, "xfrm");
+  if (!xfrm) {
+    return undefined;
+  }
+
+  const off = getChild(xfrm, "a:off") ?? getChild(xfrm, "off");
+  const ext = getChild(xfrm, "a:ext") ?? getChild(xfrm, "ext");
+  const chOff = getChild(xfrm, "a:chOff") ?? getChild(xfrm, "chOff");
+  const chExt = getChild(xfrm, "a:chExt") ?? getChild(xfrm, "chExt");
+
+  if (!off || !ext || !chOff || !chExt) {
+    return undefined;
+  }
+
+  const rot = parseInt32(getAttr(xfrm, "rot"));
+  const flipH = parseBoolAttr(xfrm, "flipH");
+  const flipV = parseBoolAttr(xfrm, "flipV");
+
+  return {
+    x: parseInt32(getAttr(off, "x")) ?? 0,
+    y: parseInt32(getAttr(off, "y")) ?? 0,
+    cx: parseInt32(getAttr(ext, "cx")) ?? 0,
+    cy: parseInt32(getAttr(ext, "cy")) ?? 0,
+    chOffX: parseInt32(getAttr(chOff, "x")) ?? 0,
+    chOffY: parseInt32(getAttr(chOff, "y")) ?? 0,
+    chExtCx: parseInt32(getAttr(chExt, "cx")) ?? 0,
+    chExtCy: parseInt32(getAttr(chExt, "cy")) ?? 0,
+    ...(rot !== undefined && { rot }),
+    ...(flipH !== undefined && { flipH }),
+    ...(flipV !== undefined && { flipV }),
+  };
+}
+
+/**
+ * Parse a group shape element.
+ * Uses parseDrawingContentRecursive to handle nested groups.
+ */
+function parseGroupShape(
+  grpSpElement: XmlElement,
+  parseContent: (el: XmlElement) => XlsxDrawingContent | undefined,
+): XlsxGroupShape {
+  // xdr:nvGrpSpPr
+  const nvGrpSpPr = getChild(grpSpElement, "xdr:nvGrpSpPr") ?? getChild(grpSpElement, "nvGrpSpPr");
+  const cNvPr = nvGrpSpPr ? (getChild(nvGrpSpPr, "xdr:cNvPr") ?? getChild(nvGrpSpPr, "cNvPr")) : undefined;
+  const cNvGrpSpPr = nvGrpSpPr
+    ? (getChild(nvGrpSpPr, "xdr:cNvGrpSpPr") ?? getChild(nvGrpSpPr, "cNvGrpSpPr"))
+    : undefined;
+  const grpSpLocks = cNvGrpSpPr
+    ? (getChild(cNvGrpSpPr, "a:grpSpLocks") ?? getChild(cNvGrpSpPr, "grpSpLocks"))
+    : undefined;
+
+  // xdr:grpSpPr
+  const grpSpPr = getChild(grpSpElement, "xdr:grpSpPr") ?? getChild(grpSpElement, "grpSpPr");
+
+  // Parse children recursively
+  const children: XlsxDrawingContent[] = [];
+  for (const child of grpSpElement.children) {
+    if (!isXmlElement(child)) {
+      continue;
+    }
+    const content = parseContent(child);
+    if (content) {
+      children.push(content);
+    }
+  }
+
+  return {
+    type: "groupShape",
+    nvGrpSpPr: parseNonVisualProperties(cNvPr),
+    groupLocks: parseGroupLocksElement(grpSpLocks),
+    transform: parseGroupTransform(grpSpPr),
+    children,
+  };
+}
+
+// =============================================================================
+// Content Dispatch
+// =============================================================================
+
+/**
+ * Parse drawing content from a container element (anchor or group).
+ * Handles recursive group parsing.
+ */
+function parseDrawingContentFromElement(element: XmlElement): XlsxDrawingContent | undefined {
+  const name = element.name;
+
+  // Picture
+  if (name === "xdr:pic" || name === "pic") {
+    return parsePicture(element);
+  }
+
+  // Shape
+  if (name === "xdr:sp" || name === "sp") {
+    return parseShape(element);
+  }
+
+  // Graphic frame (charts)
+  if (name === "xdr:graphicFrame" || name === "graphicFrame") {
+    return parseGraphicFrame(element);
+  }
+
+  // Group shape (recursive)
+  if (name === "xdr:grpSp" || name === "grpSp") {
+    return parseGroupShape(element, parseDrawingContentFromElement);
+  }
+
+  return undefined;
+}
+
 /**
  * Parse drawing content from an anchor element.
  */
@@ -204,6 +374,12 @@ function parseDrawingContent(anchorElement: XmlElement): XlsxDrawingContent | un
   const graphicFrameEl = getChild(anchorElement, "xdr:graphicFrame") ?? getChild(anchorElement, "graphicFrame");
   if (graphicFrameEl) {
     return parseGraphicFrame(graphicFrameEl);
+  }
+
+  // Check for group shape
+  const grpSpEl = getChild(anchorElement, "xdr:grpSp") ?? getChild(anchorElement, "grpSp");
+  if (grpSpEl) {
+    return parseGroupShape(grpSpEl, parseDrawingContentFromElement);
   }
 
   return undefined;
@@ -275,26 +451,18 @@ export function parseDrawing(drawingElement: XmlElement): XlsxDrawing {
   const anchors: XlsxDrawingAnchor[] = [];
 
   // Parse twoCellAnchors
-  const twoCellAnchors = getChildren(drawingElement, "xdr:twoCellAnchor").concat(
-    getChildren(drawingElement, "twoCellAnchor"),
-  );
-  for (const anchor of twoCellAnchors) {
+  // Note: getChildren with "twoCellAnchor" matches both "twoCellAnchor" and "xdr:twoCellAnchor"
+  for (const anchor of getChildren(drawingElement, "twoCellAnchor")) {
     anchors.push(parseTwoCellAnchor(anchor));
   }
 
   // Parse oneCellAnchors
-  const oneCellAnchors = getChildren(drawingElement, "xdr:oneCellAnchor").concat(
-    getChildren(drawingElement, "oneCellAnchor"),
-  );
-  for (const anchor of oneCellAnchors) {
+  for (const anchor of getChildren(drawingElement, "oneCellAnchor")) {
     anchors.push(parseOneCellAnchor(anchor));
   }
 
   // Parse absoluteAnchors
-  const absoluteAnchors = getChildren(drawingElement, "xdr:absoluteAnchor").concat(
-    getChildren(drawingElement, "absoluteAnchor"),
-  );
-  for (const anchor of absoluteAnchors) {
+  for (const anchor of getChildren(drawingElement, "absoluteAnchor")) {
     anchors.push(parseAbsoluteAnchor(anchor));
   }
 

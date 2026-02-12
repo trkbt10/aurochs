@@ -14,7 +14,7 @@ import {
   degreesToAngleUnits,
   normalizeAngle,
 } from "./guide-engine";
-import type { GeometryGuide, AdjustValue } from "../shape";
+import type { GeometryGuide, AdjustValue } from "./shape";
 
 describe("guide-engine - ECMA-376 compliance", () => {
   describe("createGuideContext - built-in variables (ECMA-376 20.1.10.56)", () => {
@@ -375,14 +375,12 @@ describe("guide-engine - ECMA-376 compliance", () => {
 
     it("throws on unknown variables", () => {
       const ctx = createGuideContext(1000, 500);
-      expect(() => evaluateExpression("unknownVar", ctx))
-        .toThrow("Non-ECMA guide variable: unknownVar");
+      expect(() => evaluateExpression("unknownVar", ctx)).toThrow("Non-ECMA guide variable: unknownVar");
     });
 
     it("throws on unknown operations", () => {
       const ctx = createGuideContext(1000, 500);
-      expect(() => evaluateExpression("nope 1 2 3", ctx))
-        .toThrow("Non-ECMA guide operation: nope");
+      expect(() => evaluateExpression("nope 1 2 3", ctx)).toThrow("Non-ECMA guide operation: nope");
     });
   });
 

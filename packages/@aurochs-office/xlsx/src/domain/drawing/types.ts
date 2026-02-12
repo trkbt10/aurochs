@@ -8,6 +8,7 @@
  */
 
 import type { RowIndex, ColIndex } from "../types";
+import type { GroupLocks } from "@aurochs-office/ooxml/domain/drawing/locks";
 
 // =============================================================================
 // Cell Anchor Types
@@ -119,9 +120,56 @@ export type XlsxChartFrame = {
 };
 
 /**
+ * Group transform for nested positioning (in EMUs).
+ *
+ * @see ECMA-376 Part 1, Section 20.1.7.5 (chOff, chExt)
+ */
+export type XlsxGroupTransform = {
+  /** X offset in EMUs */
+  readonly x: number;
+  /** Y offset in EMUs */
+  readonly y: number;
+  /** Width in EMUs */
+  readonly cx: number;
+  /** Height in EMUs */
+  readonly cy: number;
+  /** Child X offset in EMUs */
+  readonly chOffX: number;
+  /** Child Y offset in EMUs */
+  readonly chOffY: number;
+  /** Child extent width in EMUs */
+  readonly chExtCx: number;
+  /** Child extent height in EMUs */
+  readonly chExtCy: number;
+  /** Rotation in 60000ths of a degree */
+  readonly rot?: number;
+  /** Horizontal flip */
+  readonly flipH?: boolean;
+  /** Vertical flip */
+  readonly flipV?: boolean;
+};
+
+/**
+ * A group shape containing other drawing content.
+ *
+ * @see ECMA-376 Part 4, Section 20.5.2.17 (grpSp)
+ */
+export type XlsxGroupShape = {
+  readonly type: "groupShape";
+  /** Non-visual properties */
+  readonly nvGrpSpPr: XlsxNonVisualProperties;
+  /** Group locking properties */
+  readonly groupLocks?: GroupLocks;
+  /** Group transform */
+  readonly transform?: XlsxGroupTransform;
+  /** Child drawing content */
+  readonly children: readonly XlsxDrawingContent[];
+};
+
+/**
  * Content that can be placed in a drawing anchor.
  */
-export type XlsxDrawingContent = XlsxPicture | XlsxShape | XlsxChartFrame;
+export type XlsxDrawingContent = XlsxPicture | XlsxShape | XlsxChartFrame | XlsxGroupShape;
 
 // =============================================================================
 // Anchor Types

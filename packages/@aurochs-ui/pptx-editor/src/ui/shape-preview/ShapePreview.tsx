@@ -6,7 +6,7 @@
  */
 
 import { type CSSProperties, useMemo } from "react";
-import { renderGeometryData } from "@aurochs-renderer/pptx/svg";
+import { renderGeometryData } from "@aurochs-renderer/drawing-ml/svg";
 import type { PresetGeometry } from "@aurochs-office/pptx/domain/shape";
 import { colorTokens } from "@aurochs-ui/ui-components/design-tokens";
 
