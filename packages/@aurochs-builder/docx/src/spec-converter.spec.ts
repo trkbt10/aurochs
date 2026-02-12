@@ -484,47 +484,47 @@ describe("convertStylesSpec", () => {
 
 describe("convertSectionSpec", () => {
   it("converts page size", () => {
-    const sect = convertSectionSpec({
+    const result = convertSectionSpec({
       pageSize: { w: 12240, h: 15840 },
     });
-    expect(sect.pgSz?.w).toBe(12240);
-    expect(sect.pgSz?.h).toBe(15840);
+    expect(result.sectPr.pgSz?.w).toBe(12240);
+    expect(result.sectPr.pgSz?.h).toBe(15840);
   });
 
   it("converts page size with orientation", () => {
-    const sect = convertSectionSpec({
+    const result = convertSectionSpec({
       pageSize: { w: 15840, h: 12240, orient: "landscape" },
     });
-    expect(sect.pgSz?.orient).toBe("landscape");
+    expect(result.sectPr.pgSz?.orient).toBe("landscape");
   });
 
   it("converts page margins", () => {
-    const sect = convertSectionSpec({
+    const result = convertSectionSpec({
       margins: { top: 1440, right: 1440, bottom: 1440, left: 1440, header: 720, footer: 720, gutter: 0 },
     });
-    expect(sect.pgMar?.top).toBe(1440);
-    expect(sect.pgMar?.right).toBe(1440);
-    expect(sect.pgMar?.bottom).toBe(1440);
-    expect(sect.pgMar?.left).toBe(1440);
-    expect(sect.pgMar?.header).toBe(720);
-    expect(sect.pgMar?.footer).toBe(720);
-    expect(sect.pgMar?.gutter).toBe(0);
+    expect(result.sectPr.pgMar?.top).toBe(1440);
+    expect(result.sectPr.pgMar?.right).toBe(1440);
+    expect(result.sectPr.pgMar?.bottom).toBe(1440);
+    expect(result.sectPr.pgMar?.left).toBe(1440);
+    expect(result.sectPr.pgMar?.header).toBe(720);
+    expect(result.sectPr.pgMar?.footer).toBe(720);
+    expect(result.sectPr.pgMar?.gutter).toBe(0);
   });
 
   it("converts columns", () => {
-    const sect = convertSectionSpec({
+    const result = convertSectionSpec({
       columns: { num: 2, space: 720, equalWidth: true },
     });
-    expect(sect.cols?.num).toBe(2);
-    expect(sect.cols?.space).toBe(720);
-    expect(sect.cols?.equalWidth).toBe(true);
+    expect(result.sectPr.cols?.num).toBe(2);
+    expect(result.sectPr.cols?.space).toBe(720);
+    expect(result.sectPr.cols?.equalWidth).toBe(true);
   });
 
   it("returns empty section for empty spec", () => {
-    const sect = convertSectionSpec({});
-    expect(sect.pgSz).toBeUndefined();
-    expect(sect.pgMar).toBeUndefined();
-    expect(sect.cols).toBeUndefined();
+    const result = convertSectionSpec({});
+    expect(result.sectPr.pgSz).toBeUndefined();
+    expect(result.sectPr.pgMar).toBeUndefined();
+    expect(result.sectPr.cols).toBeUndefined();
   });
 });
 

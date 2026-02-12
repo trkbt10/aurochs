@@ -32,6 +32,8 @@ import { SPEC_DEFAULT_FONT_SIZE_PT, TWIPS_PER_POINT, PT_TO_PX } from "../domain/
 export type ResolvedRunProperties = {
   /** Font size in points */
   readonly fontSize: Points;
+  /** Complex script font size in points (for RTL text) */
+  readonly fontSizeCs: Points | undefined;
   /** Font family name (Latin) */
   readonly fontFamily: string;
   /** East Asian font family */
@@ -40,8 +42,12 @@ export type ResolvedRunProperties = {
   readonly fontFamilyComplexScript: string | undefined;
   /** Font weight (400 = normal, 700 = bold) */
   readonly fontWeight: number;
+  /** Complex script font weight (for RTL text) */
+  readonly fontWeightCs: number | undefined;
   /** Font style */
   readonly fontStyle: "normal" | "italic";
+  /** Complex script font style (for RTL text) */
+  readonly fontStyleCs: "normal" | "italic" | undefined;
   /** Text decoration */
   readonly textDecoration: string | undefined;
   /** Text color as hex (with #) */
@@ -56,6 +62,8 @@ export type ResolvedRunProperties = {
   readonly highlightColor: string | undefined;
   /** Text transform */
   readonly textTransform: "none" | "uppercase" | "lowercase";
+  /** Run shading (background) color as hex (with #) */
+  readonly shadingColor: string | undefined;
 };
 
 // =============================================================================
@@ -259,6 +267,10 @@ export function resolveRunProperties(
   const szHalfPoints = merged.sz ?? defaults.sz;
   const fontSize = pt(szHalfPoints !== undefined ? szHalfPoints / 2 : SPEC_DEFAULT_FONT_SIZE_PT);
 
+  // Complex script font size
+  const szCsHalfPoints = merged.szCs ?? defaults.szCs;
+  const fontSizeCs = szCsHalfPoints !== undefined ? pt(szCsHalfPoints / 2) : undefined;
+
   // Font families
   const fonts = merged.rFonts ?? defaults.rFonts;
   const fontFamily = fonts?.ascii ?? fonts?.hAnsi ?? DEFAULT_FONT_FAMILY;
@@ -269,9 +281,17 @@ export function resolveRunProperties(
   const isBold = merged.b ?? defaults.b ?? false;
   const fontWeight = isBold ? 700 : 400;
 
+  // Bold for complex script
+  const isBoldCs = merged.bCs ?? defaults.bCs;
+  const fontWeightCs = isBoldCs !== undefined ? (isBoldCs ? 700 : 400) : undefined;
+
   // Italic
   const isItalic = merged.i ?? defaults.i ?? false;
   const fontStyle = isItalic ? "italic" : "normal";
+
+  // Italic for complex script
+  const isItalicCs = merged.iCs ?? defaults.iCs;
+  const fontStyleCs = isItalicCs !== undefined ? (isItalicCs ? "italic" : "normal") : undefined;
 
   // Text decoration
   const underline = merged.u ?? defaults.u;
@@ -311,13 +331,20 @@ export function resolveRunProperties(
   const smallCaps = merged.smallCaps ?? defaults.smallCaps ?? false;
   const textTransform = caps ? "uppercase" : smallCaps ? "lowercase" : "none";
 
+  // Shading (run background)
+  const shd = merged.shd ?? defaults.shd;
+  const shadingColor = shd?.fill !== undefined ? `#${shd.fill}` : undefined;
+
   return {
     fontSize,
+    fontSizeCs,
     fontFamily,
     fontFamilyEastAsian,
     fontFamilyComplexScript,
     fontWeight,
+    fontWeightCs,
     fontStyle,
+    fontStyleCs,
     textDecoration,
     color,
     verticalAlign,
@@ -325,6 +352,7 @@ export function resolveRunProperties(
     direction,
     highlightColor,
     textTransform,
+    shadingColor,
   };
 }
 
@@ -368,11 +396,14 @@ function applyOverrides(base: ResolvedRunProperties, overrides: DocxRunPropertie
   return {
     ...base,
     fontSize: overrides.sz !== undefined ? pt(overrides.sz / 2) : base.fontSize,
+    fontSizeCs: overrides.szCs !== undefined ? pt(overrides.szCs / 2) : base.fontSizeCs,
     fontFamily: overrides.rFonts?.ascii ?? overrides.rFonts?.hAnsi ?? base.fontFamily,
     fontFamilyEastAsian: overrides.rFonts?.eastAsia ?? base.fontFamilyEastAsian,
     fontFamilyComplexScript: overrides.rFonts?.cs ?? base.fontFamilyComplexScript,
     fontWeight: overrides.b !== undefined ? (overrides.b ? 700 : 400) : base.fontWeight,
+    fontWeightCs: overrides.bCs !== undefined ? (overrides.bCs ? 700 : 400) : base.fontWeightCs,
     fontStyle: overrides.i !== undefined ? (overrides.i ? "italic" : "normal") : base.fontStyle,
+    fontStyleCs: overrides.iCs !== undefined ? (overrides.iCs ? "italic" : "normal") : base.fontStyleCs,
     textDecoration: resolveTextDecoration(overrides, base.textDecoration),
     color: overrides.color?.val !== undefined ? `#${overrides.color.val}` : base.color,
     verticalAlign: overrides.vertAlign ?? base.verticalAlign,
@@ -380,6 +411,7 @@ function applyOverrides(base: ResolvedRunProperties, overrides: DocxRunPropertie
     direction: overrides.rtl !== undefined ? (overrides.rtl ? "rtl" : "ltr") : base.direction,
     highlightColor: resolveHighlightColor(overrides.highlight, base.highlightColor),
     textTransform: resolveTextTransform(overrides, base.textTransform),
+    shadingColor: overrides.shd?.fill !== undefined ? `#${overrides.shd.fill}` : base.shadingColor,
   };
 }
 

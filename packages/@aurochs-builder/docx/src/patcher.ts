@@ -410,8 +410,8 @@ function applyNumberingPatches(existing: DocxNumbering | undefined, patches: rea
 function applySectionPatches(existing: DocxSectionProperties | undefined, patches: readonly SectionPatch[]): DocxSectionProperties | undefined {
   return patches.reduce<DocxSectionProperties | undefined>(
     (acc, patch) => {
-      const converted = convertSectionSpec(patch.section);
-      return acc ? { ...acc, ...converted } : converted;
+      const result = convertSectionSpec(patch.section);
+      return acc ? { ...acc, ...result.sectPr } : result.sectPr;
     },
     existing,
   );

@@ -13,6 +13,9 @@ import {
   paragraphsToLayoutInputs,
   sectionPropertiesToPageConfig,
   tableToLayoutInput,
+  resolveHeaderFooter,
+  layoutHeader,
+  layoutFooter,
 } from "@aurochs-office/docx/adapters";
 import {
   layoutDocument,
@@ -93,7 +96,7 @@ export async function loadAndRender(fixturePath: string, callerUrl: string): Pro
   );
 
   // Convert paragraphs to layout inputs and compute layout
-  const layoutInputs = paragraphsToLayoutInputs(paragraphs, numbering);
+  const layoutInputs = paragraphsToLayoutInputs(paragraphs, numbering, styles);
   const { paragraphs: layoutedParagraphs } = layoutDocument(layoutInputs, contentWidth);
 
   // Flow paragraphs into pages
@@ -140,14 +143,54 @@ export async function loadAndRender(fixturePath: string, callerUrl: string): Pro
     tableY = (tableLayout.y as number) + (tableLayout.height as number) + 12;
   }
 
+  // Resolve headers and footers for each page
+  const headerFooterContext = {
+    sectPr,
+    headers: doc.headers,
+    footers: doc.footers,
+    evenAndOddHeaders: doc.settings?.evenAndOddHeaders,
+  };
+
+  const headerFooterConfig = {
+    contentWidth,
+    yPosition: px(sectPr?.pgMar?.header ?? 720 / 20 * 1.333), // Convert twips to pixels
+    marginLeft: pageConfig.marginLeft,
+    numbering,
+    styles,
+  };
+
+  // Attach headers and footers to pages
+  const pagesWithHeaderFooter = pagedLayout.pages.map((page, index) => {
+    const { header: resolvedHeader, footer: resolvedFooter } = resolveHeaderFooter(
+      headerFooterContext,
+      index,
+      index === 0,
+    );
+
+    const headerLayout = layoutHeader(resolvedHeader, headerFooterConfig);
+    const footerLayout = layoutFooter(resolvedFooter, {
+      ...headerFooterConfig,
+      yPosition: px(
+        (pageConfig.pageHeight as number) -
+          (sectPr?.pgMar?.footer ?? 720 / 20 * 1.333),
+      ),
+    });
+
+    return {
+      ...page,
+      header: headerLayout,
+      footer: footerLayout,
+    };
+  });
+
   // Render each page to SVG (with tables on first page if any)
-  const svgs = pagedLayout.pages.map((page, index) =>
+  const svgs = pagesWithHeaderFooter.map((page, index) =>
     renderPageToSvg(page, index === 0 ? tableLayouts : []).svg,
   );
 
   return {
     svgs,
-    pages: pagedLayout.pages,
+    pages: pagesWithHeaderFooter,
     svg: svgs[0] ?? "",
     tables: tableLayouts,
   };

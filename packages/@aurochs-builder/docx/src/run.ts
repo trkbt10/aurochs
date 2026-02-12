@@ -19,6 +19,7 @@ import type {
   DocxRun,
   DocxRunContent,
 } from "@aurochs-office/docx/domain/run";
+import { serializeDrawing } from "./drawing";
 
 // =============================================================================
 // Helper Functions
@@ -357,7 +358,7 @@ export function serializeRunContent(content: DocxRunContent): XmlElement {
     case "instrText":
       return createElement("w:instrText", { "xml:space": "preserve" }, [{ type: "text", value: content.value }]);
     case "drawing":
-      throw new Error("Drawing serialization not yet implemented");
+      return serializeDrawing(content.drawing);
   }
 }
 

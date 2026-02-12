@@ -21,10 +21,12 @@ import {
   type OpcRelationship,
   type ContentTypeEntry,
 } from "@aurochs-office/opc";
-import type { DocxDocument } from "./domain/document";
+import type { DocxDocument, DocxHeader, DocxFooter } from "./domain/document";
+import type { DocxRelId } from "./domain/types";
 import { serializeDocument } from "./serializer/document";
 import { serializeStyles } from "./serializer/styles";
 import { serializeNumbering } from "./serializer/numbering";
+import { serializeHeader, serializeFooter } from "./serializer/header-footer";
 import { CONTENT_TYPES, RELATIONSHIP_TYPES } from "./constants";
 
 // =============================================================================
@@ -36,7 +38,22 @@ import { CONTENT_TYPES, RELATIONSHIP_TYPES } from "./constants";
  *
  * @see ECMA-376 Part 2, Section 10.1.2.1 (Content Types)
  */
-function generateContentTypes(document: DocxDocument): XmlElement {
+/** Image content types by extension. */
+const IMAGE_CONTENT_TYPES: Record<string, string> = {
+  png: "image/png",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  gif: "image/gif",
+  bmp: "image/bmp",
+  tiff: "image/tiff",
+  webp: "image/webp",
+};
+
+function generateContentTypes(
+  document: DocxDocument,
+  headerFooterPaths: { headers: string[]; footers: string[] },
+  media?: readonly MediaFile[]
+): XmlElement {
   const entries: ContentTypeEntry[] = [
     // Standard defaults (rels, xml)
     ...STANDARD_CONTENT_TYPE_DEFAULTS,
@@ -52,6 +69,28 @@ function generateContentTypes(document: DocxDocument): XmlElement {
   // Override for numbering if present
   if (document.numbering) {
     entries.push({ kind: "override", partName: "/word/numbering.xml", contentType: CONTENT_TYPES.numbering });
+  }
+
+  // Override for headers
+  for (const path of headerFooterPaths.headers) {
+    entries.push({ kind: "override", partName: `/${path}`, contentType: CONTENT_TYPES.header });
+  }
+
+  // Override for footers
+  for (const path of headerFooterPaths.footers) {
+    entries.push({ kind: "override", partName: `/${path}`, contentType: CONTENT_TYPES.footer });
+  }
+
+  // Default content types for image extensions
+  if (media && media.length > 0) {
+    const addedExtensions = new Set<string>();
+    for (const m of media) {
+      const ext = m.filename.split(".").pop()?.toLowerCase();
+      if (ext && IMAGE_CONTENT_TYPES[ext] && !addedExtensions.has(ext)) {
+        entries.push({ kind: "default", extension: ext, contentType: IMAGE_CONTENT_TYPES[ext] });
+        addedExtensions.add(ext);
+      }
+    }
   }
 
   return serializeContentTypes(entries);
@@ -87,7 +126,11 @@ function generateRootRels(): XmlElement {
  *
  * @see ECMA-376 Part 2, Section 9.2 (Relationships)
  */
-function generateDocumentRels(document: DocxDocument): XmlElement {
+function generateDocumentRels(
+  document: DocxDocument,
+  headerFooterRels: { headers: Map<DocxRelId, string>; footers: Map<DocxRelId, string> },
+  media?: readonly MediaFile[]
+): XmlElement {
   const relationships: OpcRelationship[] = [];
   const nextId = createRelationshipIdGenerator();
 
@@ -109,11 +152,42 @@ function generateDocumentRels(document: DocxDocument): XmlElement {
     });
   }
 
+  // Relationships for headers
+  for (const [rId, filename] of headerFooterRels.headers) {
+    relationships.push({
+      id: rId,
+      type: RELATIONSHIP_TYPES.header,
+      target: filename,
+    });
+  }
+
+  // Relationships for footers
+  for (const [rId, filename] of headerFooterRels.footers) {
+    relationships.push({
+      id: rId,
+      type: RELATIONSHIP_TYPES.footer,
+      target: filename,
+    });
+  }
+
+  // Relationships for media (images)
+  if (media) {
+    for (const m of media) {
+      relationships.push({
+        id: m.rId,
+        type: RELATIONSHIP_TYPES.image,
+        target: `media/${m.filename}`,
+      });
+    }
+  }
+
   // Add any existing relationships from the document
   if (document.relationships?.relationship) {
     for (const rel of document.relationships.relationship) {
       // Skip internal relationships we're handling ourselves
-      if (rel.type === RELATIONSHIP_TYPES.styles || rel.type === RELATIONSHIP_TYPES.numbering) {
+      if (rel.type === RELATIONSHIP_TYPES.styles || rel.type === RELATIONSHIP_TYPES.numbering ||
+          rel.type === RELATIONSHIP_TYPES.header || rel.type === RELATIONSHIP_TYPES.footer ||
+          rel.type === RELATIONSHIP_TYPES.image) {
         continue;
       }
       relationships.push({
@@ -133,6 +207,18 @@ function generateDocumentRels(document: DocxDocument): XmlElement {
 // =============================================================================
 
 /**
+ * Media file to include in the DOCX.
+ */
+export type MediaFile = {
+  /** Relationship ID for this media file */
+  readonly rId: string;
+  /** File path within word/media/ */
+  readonly filename: string;
+  /** File content */
+  readonly data: Uint8Array | string;
+};
+
+/**
  * Options for DOCX export.
  */
 export type ExportDocxOptions = {
@@ -140,6 +226,8 @@ export type ExportDocxOptions = {
   readonly includeStyles?: boolean;
   /** Whether to include numbering.xml (default: true if numbering present) */
   readonly includeNumbering?: boolean;
+  /** Media files (images) to include */
+  readonly media?: readonly MediaFile[];
 };
 
 // =============================================================================
@@ -180,6 +268,10 @@ export async function exportDocx(document: DocxDocument, options: ExportDocxOpti
   const includeStyles = options.includeStyles ?? !!document.styles;
   const includeNumbering = options.includeNumbering ?? !!document.numbering;
 
+  // Track header/footer paths for content types and relationships
+  const headerFooterPaths = { headers: [] as string[], footers: [] as string[] };
+  const headerFooterRels = { headers: new Map<DocxRelId, string>(), footers: new Map<DocxRelId, string>() };
+
   // 1. Generate word/document.xml
   const documentXml = serializeDocument(document);
   pkg.writeText("word/document.xml", serializeWithDeclaration(documentXml));
@@ -196,19 +288,66 @@ export async function exportDocx(document: DocxDocument, options: ExportDocxOpti
     pkg.writeText("word/numbering.xml", serializeWithDeclaration(numberingXml));
   }
 
-  // 4. Generate word/_rels/document.xml.rels
-  const documentRelsXml = generateDocumentRels(document);
+  // 4. Generate headers (if present)
+  if (document.headers) {
+    let headerIndex = 1;
+    for (const [rId, header] of document.headers) {
+      const filename = `header${headerIndex}.xml`;
+      const path = `word/${filename}`;
+      const headerXml = serializeHeader(header);
+      pkg.writeText(path, serializeWithDeclaration(headerXml));
+      headerFooterPaths.headers.push(path);
+      headerFooterRels.headers.set(rId, filename);
+      headerIndex++;
+    }
+  }
+
+  // 5. Generate footers (if present)
+  if (document.footers) {
+    let footerIndex = 1;
+    for (const [rId, footer] of document.footers) {
+      const filename = `footer${footerIndex}.xml`;
+      const path = `word/${filename}`;
+      const footerXml = serializeFooter(footer);
+      pkg.writeText(path, serializeWithDeclaration(footerXml));
+      headerFooterPaths.footers.push(path);
+      headerFooterRels.footers.set(rId, filename);
+      footerIndex++;
+    }
+  }
+
+  // 6. Write media files (if present)
+  const media = options.media;
+  if (media) {
+    for (const m of media) {
+      const path = `word/media/${m.filename}`;
+      if (typeof m.data === "string") {
+        // Base64 encoded data
+        const binaryString = atob(m.data);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
+        pkg.writeBinary(path, bytes);
+      } else {
+        pkg.writeBinary(path, m.data);
+      }
+    }
+  }
+
+  // 7. Generate word/_rels/document.xml.rels
+  const documentRelsXml = generateDocumentRels(document, headerFooterRels, media);
   pkg.writeText("word/_rels/document.xml.rels", serializeWithDeclaration(documentRelsXml));
 
-  // 5. Generate _rels/.rels
+  // 8. Generate _rels/.rels
   const rootRelsXml = generateRootRels();
   pkg.writeText("_rels/.rels", serializeWithDeclaration(rootRelsXml));
 
-  // 6. Generate [Content_Types].xml
-  const contentTypesXml = generateContentTypes(document);
+  // 9. Generate [Content_Types].xml
+  const contentTypesXml = generateContentTypes(document, headerFooterPaths, media);
   pkg.writeText("[Content_Types].xml", serializeWithDeclaration(contentTypesXml));
 
-  // 7. Write ZIP package
+  // 9. Write ZIP package
   const buffer = await pkg.toArrayBuffer({ compressionLevel: 6 });
   return new Uint8Array(buffer);
 }

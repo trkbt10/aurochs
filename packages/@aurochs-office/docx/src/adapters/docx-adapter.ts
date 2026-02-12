@@ -289,21 +289,30 @@ function runToSpans(options: RunToSpansOptions): LayoutSpan[] {
       continue;
     }
 
+    // Use complex script properties for RTL text when available
+    const isRtl = props.direction === "rtl";
+    const fontSize = isRtl && props.fontSizeCs !== undefined ? props.fontSizeCs : props.fontSize;
+    const fontWeight = isRtl && props.fontWeightCs !== undefined ? props.fontWeightCs : props.fontWeight;
+    const fontStyle = isRtl && props.fontStyleCs !== undefined ? props.fontStyleCs : props.fontStyle;
+
+    // Shading takes precedence over highlight (more explicit)
+    const highlightColor = props.shadingColor ?? props.highlightColor;
+
     spans.push({
       text,
-      fontSize: props.fontSize,
+      fontSize,
       fontFamily: props.fontFamily,
       fontFamilyEastAsian: props.fontFamilyEastAsian,
       fontFamilyComplexScript: props.fontFamilyComplexScript,
-      fontWeight: props.fontWeight,
-      fontStyle: props.fontStyle,
+      fontWeight,
+      fontStyle,
       textDecoration: props.textDecoration,
       color: props.color,
       verticalAlign: props.verticalAlign,
       letterSpacing: props.letterSpacing,
       breakType,
       direction: props.direction,
-      highlightColor: props.highlightColor,
+      highlightColor,
       textTransform: props.textTransform,
       linkId,
       linkTooltip,

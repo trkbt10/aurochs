@@ -30,14 +30,14 @@ Run (`w:r`) is an inline content region with uniform formatting.
 | High ANSI font | `@hAnsi` | ✅ | font-family.spec.ts |
 | East Asian font | `@eastAsia` | ✅ | font-east-asian.spec.ts |
 | Complex Script font | `@cs` | ✅ | font-complex-script.spec.ts |
-| Theme font | `@asciiTheme` | ⬚ | |
+| Theme font | `@asciiTheme` | ✅ | theme-font.spec.ts |
 
 ### Font Metrics
 
 | Property | Element | Status | File |
 |----------|---------|:------:|------|
 | Font Size | `w:sz` | ✅ | font-size.spec.ts |
-| Complex Script Size | `w:szCs` | ⬚ | |
+| Complex Script Size | `w:szCs` | ✅ | font-size-cs.spec.ts |
 | Character Spacing | `w:spacing` | ✅ | letter-spacing.spec.ts |
 | Kerning | `w:kern` | ✅ | kerning.spec.ts |
 | Position (raise/lower) | `w:position` | ✅ | position.spec.ts |
@@ -49,7 +49,7 @@ Run (`w:r`) is an inline content region with uniform formatting.
 |----------|---------|:------:|------|
 | Color | `w:color` | ✅ | color.spec.ts |
 | Highlight | `w:highlight` | ✅ | highlight.spec.ts |
-| Shading | `w:shd` | ⬚ | |
+| Shading | `w:shd` | ✅ | run-shading.spec.ts |
 
 ### Complex Script / RTL (Section 17.3.2)
 

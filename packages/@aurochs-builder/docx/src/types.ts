@@ -10,7 +10,10 @@
 // =============================================================================
 
 export type RunSpec = {
-  readonly text: string;
+  /** Simple text content (use `contents` for mixed content with drawings) */
+  readonly text?: string;
+  /** Rich content including text and drawings (overrides `text` if provided) */
+  readonly contents?: readonly RunContentSpec[];
   readonly bold?: boolean;
   readonly italic?: boolean;
   readonly underline?: boolean | string;
@@ -47,7 +50,87 @@ export type RunSpec = {
   readonly italicCs?: boolean;
   /** Right-to-left text */
   readonly rtl?: boolean;
+  /** Theme font for ASCII characters */
+  readonly asciiTheme?: "majorAscii" | "majorHAnsi" | "majorEastAsia" | "majorBidi"
+                       | "minorAscii" | "minorHAnsi" | "minorEastAsia" | "minorBidi";
+  /** Complex script font size in half-points */
+  readonly fontSizeCs?: number;
+  /** Run shading (background) */
+  readonly shading?: {
+    readonly val?: string;
+    readonly fill?: string;
+  };
 };
+
+// =============================================================================
+// Drawing Spec
+// =============================================================================
+
+/** Drawing extent in EMUs (English Metric Units) */
+export type DrawingExtentSpec = {
+  readonly cx: number;
+  readonly cy: number;
+};
+
+/** Document properties for drawing */
+export type DrawingDocPropsSpec = {
+  readonly id: number;
+  readonly name: string;
+  readonly descr?: string;
+};
+
+/** Horizontal position for anchor drawing */
+export type DrawingPositionHSpec = {
+  readonly relativeFrom: "character" | "column" | "insideMargin" | "leftMargin" | "margin" | "outsideMargin" | "page" | "rightMargin";
+  readonly posOffset?: number;
+  readonly align?: "left" | "right" | "center" | "inside" | "outside";
+};
+
+/** Vertical position for anchor drawing */
+export type DrawingPositionVSpec = {
+  readonly relativeFrom: "bottomMargin" | "insideMargin" | "line" | "margin" | "outsideMargin" | "page" | "paragraph" | "topMargin";
+  readonly posOffset?: number;
+  readonly align?: "top" | "bottom" | "center" | "inside" | "outside";
+};
+
+/** Wrap type for anchor drawing */
+export type DrawingWrapSpec =
+  | { readonly type: "none" }
+  | { readonly type: "topAndBottom" }
+  | { readonly type: "square"; readonly wrapText?: "bothSides" | "left" | "right" | "largest" }
+  | { readonly type: "tight"; readonly wrapText?: "bothSides" | "left" | "right" | "largest" }
+  | { readonly type: "through"; readonly wrapText?: "bothSides" | "left" | "right" | "largest" };
+
+/** Inline drawing specification */
+export type InlineDrawingSpec = {
+  readonly type: "inline";
+  readonly extent: DrawingExtentSpec;
+  readonly docPr: DrawingDocPropsSpec;
+  /** Media filename (key in DocxBuildSpec.media) */
+  readonly mediaFile: string;
+};
+
+/** Anchor drawing specification */
+export type AnchorDrawingSpec = {
+  readonly type: "anchor";
+  readonly extent: DrawingExtentSpec;
+  readonly positionH: DrawingPositionHSpec;
+  readonly positionV: DrawingPositionVSpec;
+  readonly behindDoc?: boolean;
+  readonly locked?: boolean;
+  readonly wrap?: DrawingWrapSpec;
+  readonly docPr: DrawingDocPropsSpec;
+  /** Media filename (key in DocxBuildSpec.media) */
+  readonly mediaFile: string;
+};
+
+/** Drawing specification (inline or anchor) */
+export type DrawingSpec = InlineDrawingSpec | AnchorDrawingSpec;
+
+/** Run content that can contain text or drawing */
+export type RunContentSpec =
+  | { readonly type: "text"; readonly text: string }
+  | { readonly type: "drawing"; readonly drawing: DrawingSpec };
 
 // =============================================================================
 // Paragraph Border Spec
@@ -147,12 +230,18 @@ export type TableCellSpec = {
     readonly bottom?: BorderEdgeSpec;
     readonly right?: BorderEdgeSpec;
   };
+  /** Text direction */
+  readonly textDirection?: "lrTb" | "tbRl" | "btLr" | "lrTbV" | "tbRlV" | "tbLrV";
+  /** No text wrap */
+  readonly noWrap?: boolean;
 };
 
 export type TableRowSpec = {
   readonly cells: readonly TableCellSpec[];
   readonly height?: { readonly value: number; readonly rule?: "auto" | "atLeast" | "exact" };
   readonly header?: boolean;
+  /** Row cannot split across pages */
+  readonly cantSplit?: boolean;
 };
 
 export type TableSpec = {
@@ -170,6 +259,21 @@ export type TableSpec = {
   };
   readonly grid?: readonly number[];
   readonly rows: readonly TableRowSpec[];
+  /** Table indentation */
+  readonly indent?: { readonly value: number; readonly type: "dxa" | "pct" | "auto" };
+  /** Table shading (background fill color) */
+  readonly shading?: string;
+  /** Default cell margins for all cells */
+  readonly cellMargins?: {
+    readonly top?: number;
+    readonly right?: number;
+    readonly bottom?: number;
+    readonly left?: number;
+  };
+  /** Table layout algorithm */
+  readonly layout?: "fixed" | "autofit";
+  /** Bidirectional table (RTL) */
+  readonly bidiVisual?: boolean;
 };
 
 // =============================================================================
@@ -213,6 +317,14 @@ export type StyleSpec = {
 };
 
 // =============================================================================
+// Header/Footer Spec
+// =============================================================================
+
+export type HeaderFooterContentSpec = {
+  readonly content: readonly BlockContentSpec[];
+};
+
+// =============================================================================
 // Section Spec
 // =============================================================================
 
@@ -232,6 +344,27 @@ export type SectionSpec = {
     readonly space?: number;
     readonly equalWidth?: boolean;
   };
+  /** Section break type */
+  readonly type?: "nextPage" | "continuous" | "evenPage" | "oddPage";
+  /** Page numbering settings */
+  readonly pageNumbering?: {
+    readonly format?: "decimal" | "upperRoman" | "lowerRoman" | "upperLetter" | "lowerLetter";
+    readonly start?: number;
+  };
+  /** Different first page header/footer */
+  readonly titlePage?: boolean;
+  /** Headers */
+  readonly headers?: {
+    readonly default?: HeaderFooterContentSpec;
+    readonly first?: HeaderFooterContentSpec;
+    readonly even?: HeaderFooterContentSpec;
+  };
+  /** Footers */
+  readonly footers?: {
+    readonly default?: HeaderFooterContentSpec;
+    readonly first?: HeaderFooterContentSpec;
+    readonly even?: HeaderFooterContentSpec;
+  };
 };
 
 // =============================================================================
@@ -244,6 +377,8 @@ export type DocxBuildSpec = {
   readonly numbering?: readonly NumberingDefinitionSpec[];
   readonly styles?: readonly StyleSpec[];
   readonly section?: SectionSpec;
+  /** Media files (images) keyed by filename, value is base64 string or Uint8Array */
+  readonly media?: Record<string, string | Uint8Array>;
 };
 
 export type DocxBuildData = {

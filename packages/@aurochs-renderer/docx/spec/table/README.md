@@ -12,11 +12,11 @@ Tables consist of rows and cells with properties for borders, shading, and sizin
 |----------|---------|:------:|------|
 | Width | `w:tblW` | ✅ | table-width.spec.ts |
 | Alignment | `w:jc` | ✅ | table-alignment.spec.ts |
-| Indent | `w:tblInd` | ⬚ | |
+| Indent | `w:tblInd` | ✅ | table-indent.spec.ts |
 | Borders | `w:tblBorders` | ✅ | table-borders.spec.ts |
-| Shading | `w:shd` | ⬚ | |
-| Cell Margins | `w:tblCellMar` | ⬚ | |
-| Layout | `w:tblLayout` | ⬚ | |
+| Shading | `w:shd` | ✅ | table-shading.spec.ts |
+| Cell Margins | `w:tblCellMar` | ✅ | table-cell-margins.spec.ts |
+| Layout | `w:tblLayout` | ✅ | table-layout.spec.ts |
 
 ### Row Properties (w:trPr) - Section 17.4.82
 
@@ -24,7 +24,7 @@ Tables consist of rows and cells with properties for borders, shading, and sizin
 |----------|---------|:------:|------|
 | Height | `w:trHeight` | ✅ | table-row-height.spec.ts |
 | Header Row | `w:tblHeader` | ✅ | table-header-row.spec.ts |
-| Can't Split | `w:cantSplit` | ⬚ | |
+| Can't Split | `w:cantSplit` | ✅ | table-row-cant-split.spec.ts |
 
 ### Cell Properties (w:tcPr) - Section 17.4.66
 
@@ -34,8 +34,8 @@ Tables consist of rows and cells with properties for borders, shading, and sizin
 | Borders | `w:tcBorders` | ✅ | table-cell-borders.spec.ts |
 | Shading | `w:shd` | ✅ | table-cell-shading.spec.ts |
 | Vertical Align | `w:vAlign` | ✅ | table-cell-valign.spec.ts |
-| Text Direction | `w:textDirection` | ⬚ | |
-| No Wrap | `w:noWrap` | ⬚ | |
+| Text Direction | `w:textDirection` | ✅ | table-cell-text-direction.spec.ts |
+| No Wrap | `w:noWrap` | ✅ | table-cell-no-wrap.spec.ts |
 
 ### Cell Merging
 
@@ -48,8 +48,8 @@ Tables consist of rows and cells with properties for borders, shading, and sizin
 
 | Scenario | Status | File |
 |----------|:------:|------|
-| RTL Table Direction | ⬚ | |
-| Mixed LTR/RTL Cells | ⬚ | |
+| RTL Table Direction | ✅ | table-bidi.spec.ts |
+| Mixed LTR/RTL Cells | ✅ | table-mixed-bidi.spec.ts |
 
 ## Known Issues
 

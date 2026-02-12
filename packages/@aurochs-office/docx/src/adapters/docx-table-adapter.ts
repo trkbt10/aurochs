@@ -251,9 +251,10 @@ function convertTableCell(params: {
   readonly cell: DocxTableCell;
   readonly cellProps: DocxTableCellProperties | undefined;
   readonly tableProps: DocxTableProperties | undefined;
+  readonly tableShading: string | undefined;
   readonly context: TableConversionContext;
 }): LayoutTableCellInput {
-  const { cell, cellProps, tableProps, context } = params;
+  const { cell, cellProps, tableProps, tableShading, context } = params;
   const props = cellProps ?? {};
 
   // Convert paragraphs within the cell
@@ -280,8 +281,8 @@ function convertTableCell(params: {
   // Convert borders
   const borders = convertCellBorders(props.tcBorders);
 
-  // Get background color from shading
-  const backgroundColor = getBackgroundColor(props.shd?.fill);
+  // Get background color from shading (cell shading overrides table shading)
+  const backgroundColor = getBackgroundColor(props.shd?.fill ?? tableShading);
 
   // Get vertical alignment
   const verticalAlign = convertVerticalAlign(props.vAlign);
@@ -308,13 +309,14 @@ function convertTableCell(params: {
 function convertTableRow(
   row: DocxTableRow,
   tableProps: DocxTableProperties | undefined,
+  tableShading: string | undefined,
   context: TableConversionContext,
 ): LayoutTableRowInput {
   const rowProps = row.properties;
 
   // Convert cells
   const cells: LayoutTableCellInput[] = row.cells.map((cell) =>
-    convertTableCell({ cell, cellProps: cell.properties, tableProps, context }),
+    convertTableCell({ cell, cellProps: cell.properties, tableProps, tableShading, context }),
   );
 
   // Get row height
@@ -382,8 +384,11 @@ export function tableToLayoutInput(params: {
     }
   }
 
+  // Get table-level shading for background color inheritance
+  const tableShading = props?.shd?.fill;
+
   // Convert rows
-  const rows: LayoutTableRowInput[] = table.rows.map((row) => convertTableRow(row, props, context));
+  const rows: LayoutTableRowInput[] = table.rows.map((row) => convertTableRow(row, props, tableShading, context));
 
   // Get table width
   const width = convertTableWidth(props?.tblW, containerWidth);

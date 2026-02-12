@@ -30,12 +30,12 @@ Section properties define page layout, margins, headers/footers, and columns.
 
 | Property | Element | Status | File |
 |----------|---------|:------:|------|
-| Default Header | `w:headerReference` | ⬚ | |
-| First Page Header | `w:headerReference/@type=first` | ⬚ | |
-| Odd/Even Header | `w:headerReference/@type=even` | ⬚ | |
-| Default Footer | `w:footerReference` | ⬚ | |
-| First Page Footer | `w:footerReference/@type=first` | ⬚ | |
-| Odd/Even Footer | `w:footerReference/@type=even` | ⬚ | |
+| Default Header | `w:headerReference` | ✅ | header-default.spec.ts |
+| First Page Header | `w:headerReference/@type=first` | ✅ | header-first.spec.ts |
+| Odd/Even Header | `w:headerReference/@type=even` | ✅ | header-even.spec.ts |
+| Default Footer | `w:footerReference` | ✅ | footer-default.spec.ts |
+| First Page Footer | `w:footerReference/@type=first` | ✅ | footer-first.spec.ts |
+| Odd/Even Footer | `w:footerReference/@type=even` | ✅ | footer-even.spec.ts |
 
 ### Columns (w:cols) - Section 17.6.4
 
@@ -49,17 +49,23 @@ Section properties define page layout, margins, headers/footers, and columns.
 
 | Property | Attribute | Status | File |
 |----------|-----------|:------:|------|
-| Format | `@fmt` | ⬚ | |
-| Start | `@start` | ⬚ | |
+| Format | `@fmt` | ✅ | page-numbering.spec.ts |
+| Start | `@start` | ✅ | page-numbering.spec.ts |
 
 ### Section Breaks (w:type) - Section 17.6.22
 
 | Value | Status | File |
 |-------|:------:|------|
-| nextPage | ⬚ | |
-| continuous | ⬚ | |
-| evenPage | ⬚ | |
-| oddPage | ⬚ | |
+| nextPage | ✅ | section-break.spec.ts |
+| continuous | ✅ | section-break-continuous.spec.ts |
+| evenPage | ✅ | section-break-evenpage.spec.ts |
+| oddPage | ✅ | section-break-oddpage.spec.ts |
+
+### Title Page (w:titlePg) - Section 17.6.19
+
+| Property | Status | File |
+|----------|:------:|------|
+| Title Page | ✅ | title-page.spec.ts |
 
 ## Legend
 

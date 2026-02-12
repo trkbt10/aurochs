@@ -5,15 +5,19 @@
  * for use with the serializer and exporter.
  */
 
-import type { DocxRun, DocxRunProperties, DocxRunContent, DocxHighlightColor } from "@aurochs-office/docx/domain/run";
+import type { DocxRun, DocxRunProperties, DocxRunContent, DocxHighlightColor, DocxDrawingContent } from "@aurochs-office/docx/domain/run";
+import type { DocxDrawing, DocxInlineDrawing, DocxAnchorDrawing } from "@aurochs-office/docx/domain/drawing";
+import type { DrawingPicture, NonVisualDrawingProps, DrawingExtent } from "@aurochs-office/ooxml/domain/drawing";
+import type { RunContentSpec, DrawingSpec, InlineDrawingSpec, AnchorDrawingSpec } from "./types";
 import type { DocxParagraph, DocxParagraphProperties, DocxParagraphSpacing, DocxParagraphIndent, DocxNumberingProperties, DocxTabStops, DocxParagraphBorders, DocxParagraphBorderEdge } from "@aurochs-office/docx/domain/paragraph";
 import type { DocxTable, DocxTableProperties, DocxTableRow, DocxTableRowProperties, DocxTableCell, DocxTableCellProperties, DocxTableBorders, DocxTableBorderEdge, DocxCellBorders, DocxTableGrid, DocxRowHeight } from "@aurochs-office/docx/domain/table";
-import type { DocxBlockContent, DocxBody, DocxDocument } from "@aurochs-office/docx/domain/document";
-import type { DocxSectionProperties, DocxPageSize, DocxPageMargins, DocxColumns } from "@aurochs-office/docx/domain/section";
+import type { DocxBlockContent, DocxBody, DocxDocument, DocxHeader, DocxFooter } from "@aurochs-office/docx/domain/document";
+import type { DocxSectionProperties, DocxPageSize, DocxPageMargins, DocxColumns, DocxPageNumberType, DocxHeaderFooterRef } from "@aurochs-office/docx/domain/section";
 import type { DocxNumbering, DocxAbstractNum, DocxNum, DocxLevel } from "@aurochs-office/docx/domain/numbering";
 import type { DocxStyles, DocxStyle } from "@aurochs-office/docx/domain/styles";
-import type { TableWidth } from "@aurochs-office/ooxml/domain/table";
-import { twips, halfPoints, docxStyleId, docxNumId, docxIlvl, docxAbstractNumId } from "@aurochs-office/docx/domain/types";
+import type { TableWidth, TableCellMargins } from "@aurochs-office/ooxml/domain/table";
+import { twips, halfPoints, docxStyleId, docxNumId, docxIlvl, docxAbstractNumId, docxRelId } from "@aurochs-office/docx/domain/types";
+import type { DocxRelId, HeaderFooterType } from "@aurochs-office/docx/domain/types";
 import { gridSpan } from "@aurochs-office/ooxml/domain/table";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import type {
@@ -31,6 +35,7 @@ import type {
   StyleSpec,
   SectionSpec,
   DocxBuildSpec,
+  HeaderFooterContentSpec,
 } from "./types";
 
 // =============================================================================
@@ -44,21 +49,179 @@ function convertUnderlineSpec(underline: boolean | string): DocxRunProperties["u
   return { val: underline as "single" };
 }
 
+// =============================================================================
+// Drawing Conversion
+// =============================================================================
+
+/**
+ * Context for drawing conversion, holds relationship ID mapping.
+ */
+export type DrawingConversionContext = {
+  /** Map from media filename to relationship ID */
+  readonly mediaRIds: Map<string, string>;
+  /** Next relationship ID counter */
+  nextRId: number;
+};
+
+/**
+ * Create a drawing conversion context.
+ */
+export function createDrawingContext(startRId: number = 1): DrawingConversionContext {
+  return {
+    mediaRIds: new Map(),
+    nextRId: startRId,
+  };
+}
+
+/**
+ * Get or create relationship ID for a media file.
+ */
+function getMediaRId(ctx: DrawingConversionContext, mediaFile: string): string {
+  const existing = ctx.mediaRIds.get(mediaFile);
+  if (existing) {
+    return existing;
+  }
+  const newRId = `rId${ctx.nextRId++}`;
+  ctx.mediaRIds.set(mediaFile, newRId);
+  return newRId;
+}
+
+/**
+ * Convert drawing extent spec to domain type.
+ */
+function convertDrawingExtent(spec: { cx: number; cy: number }): DrawingExtent {
+  return { cx: spec.cx, cy: spec.cy };
+}
+
+/**
+ * Convert document properties spec to domain type.
+ */
+function convertDocPr(spec: { id: number; name: string; descr?: string }): NonVisualDrawingProps {
+  return {
+    id: spec.id,
+    name: spec.name,
+    ...(spec.descr !== undefined ? { descr: spec.descr } : {}),
+  };
+}
+
+/**
+ * Create a picture domain type for an image.
+ */
+function createPicture(rId: string, extent: DrawingExtent, docPr: NonVisualDrawingProps): DrawingPicture {
+  return {
+    nvPicPr: {
+      cNvPr: docPr,
+      cNvPicPr: {},
+    },
+    blipFill: {
+      blip: { rEmbed: rId },
+      stretch: true,
+    },
+    spPr: {
+      xfrm: {
+        off: { x: 0, y: 0 },
+        ext: extent,
+      },
+    },
+  };
+}
+
+/**
+ * Convert inline drawing spec to domain type.
+ */
+function convertInlineDrawing(spec: InlineDrawingSpec, ctx: DrawingConversionContext): DocxInlineDrawing {
+  const rId = getMediaRId(ctx, spec.mediaFile);
+  const extent = convertDrawingExtent(spec.extent);
+  const docPr = convertDocPr(spec.docPr);
+
+  return {
+    type: "inline",
+    extent,
+    docPr,
+    pic: createPicture(rId, extent, docPr),
+  };
+}
+
+/**
+ * Convert anchor drawing spec to domain type.
+ */
+function convertAnchorDrawing(spec: AnchorDrawingSpec, ctx: DrawingConversionContext): DocxAnchorDrawing {
+  const rId = getMediaRId(ctx, spec.mediaFile);
+  const extent = convertDrawingExtent(spec.extent);
+  const docPr = convertDocPr(spec.docPr);
+
+  return {
+    type: "anchor",
+    extent,
+    docPr,
+    positionH: spec.positionH,
+    positionV: spec.positionV,
+    ...(spec.behindDoc !== undefined ? { behindDoc: spec.behindDoc } : {}),
+    ...(spec.locked !== undefined ? { locked: spec.locked } : {}),
+    ...(spec.wrap !== undefined ? { wrap: spec.wrap } : {}),
+    pic: createPicture(rId, extent, docPr),
+  };
+}
+
+/**
+ * Convert drawing spec to domain type.
+ */
+export function convertDrawingSpec(spec: DrawingSpec, ctx: DrawingConversionContext): DocxDrawing {
+  if (spec.type === "inline") {
+    return convertInlineDrawing(spec, ctx);
+  }
+  return convertAnchorDrawing(spec, ctx);
+}
+
+/**
+ * Convert run content spec to domain type.
+ */
+function convertRunContentSpec(spec: RunContentSpec, ctx: DrawingConversionContext): DocxRunContent {
+  if (spec.type === "text") {
+    return { type: "text", value: spec.text };
+  }
+  return {
+    type: "drawing",
+    drawing: convertDrawingSpec(spec.drawing, ctx),
+  } as DocxDrawingContent;
+}
+
+function buildRunContent(spec: RunSpec, ctx: DrawingConversionContext): DocxRunContent[] {
+  if (spec.contents) {
+    return spec.contents.map((c) => convertRunContentSpec(c, ctx));
+  }
+  if (spec.text !== undefined) {
+    return [{ type: "text", value: spec.text }];
+  }
+  return [];
+}
+
+function hasFontProperties(spec: RunSpec): boolean {
+  return spec.fontFamily !== undefined ||
+    spec.fontFamilyEastAsian !== undefined ||
+    spec.fontFamilyComplexScript !== undefined ||
+    spec.asciiTheme !== undefined;
+}
+
+function buildRFonts(spec: RunSpec): DocxRunProperties["rFonts"] | undefined {
+  if (!hasFontProperties(spec)) {
+    return undefined;
+  }
+  return {
+    ...(spec.fontFamily !== undefined ? { ascii: spec.fontFamily, hAnsi: spec.fontFamily } : {}),
+    ...(spec.fontFamilyEastAsian !== undefined ? { eastAsia: spec.fontFamilyEastAsian } : {}),
+    ...(spec.fontFamilyComplexScript !== undefined ? { cs: spec.fontFamilyComplexScript } : {}),
+    ...(spec.asciiTheme !== undefined ? { asciiTheme: spec.asciiTheme } : {}),
+  };
+}
+
 /**
  * Convert a RunSpec to DocxRun domain type.
  */
-export function convertRunSpec(spec: RunSpec): DocxRun {
-  const content: DocxRunContent[] = [{ type: "text", value: spec.text }];
-
-  // Build rFonts if any font properties are specified
-  const rFonts =
-    spec.fontFamily !== undefined || spec.fontFamilyEastAsian !== undefined || spec.fontFamilyComplexScript !== undefined
-      ? {
-          ...(spec.fontFamily !== undefined ? { ascii: spec.fontFamily, hAnsi: spec.fontFamily } : {}),
-          ...(spec.fontFamilyEastAsian !== undefined ? { eastAsia: spec.fontFamilyEastAsian } : {}),
-          ...(spec.fontFamilyComplexScript !== undefined ? { cs: spec.fontFamilyComplexScript } : {}),
-        }
-      : undefined;
+export function convertRunSpec(spec: RunSpec, ctx?: DrawingConversionContext): DocxRun {
+  const drawingCtx = ctx ?? createDrawingContext();
+  const content = buildRunContent(spec, drawingCtx);
+  const rFonts = buildRFonts(spec);
 
   const properties: DocxRunProperties = {
     ...(spec.bold !== undefined ? { b: spec.bold } : {}),
@@ -74,7 +237,9 @@ export function convertRunSpec(spec: RunSpec): DocxRun {
     ...(spec.outline !== undefined ? { outline: spec.outline } : {}),
     ...(spec.shadow !== undefined ? { shadow: spec.shadow } : {}),
     ...(spec.fontSize !== undefined ? { sz: halfPoints(spec.fontSize) } : {}),
+    ...(spec.fontSizeCs !== undefined ? { szCs: halfPoints(spec.fontSizeCs) } : {}),
     ...(rFonts !== undefined ? { rFonts } : {}),
+    ...(spec.shading !== undefined ? { shd: { val: spec.shading.val, fill: spec.shading.fill } } : {}),
     ...(spec.color !== undefined ? { color: { val: spec.color } } : {}),
     ...(spec.highlight !== undefined ? { highlight: spec.highlight as DocxHighlightColor } : {}),
     ...(spec.vertAlign !== undefined ? { vertAlign: spec.vertAlign } : {}),
@@ -101,7 +266,8 @@ export function convertRunSpec(spec: RunSpec): DocxRun {
 /**
  * Convert a ParagraphSpec to DocxParagraph domain type.
  */
-export function convertParagraphSpec(spec: ParagraphSpec): DocxParagraph {
+export function convertParagraphSpec(spec: ParagraphSpec, ctx?: DrawingConversionContext): DocxParagraph {
+  const drawingCtx = ctx ?? createDrawingContext();
   const properties: DocxParagraphProperties = {
     ...(spec.style !== undefined ? { pStyle: docxStyleId(spec.style) } : {}),
     ...(spec.alignment !== undefined ? { jc: spec.alignment } : {}),
@@ -115,7 +281,7 @@ export function convertParagraphSpec(spec: ParagraphSpec): DocxParagraph {
     ...(spec.shading !== undefined ? { shd: { val: "clear", fill: spec.shading } } : {}),
     ...(spec.borders !== undefined ? { pBdr: convertParagraphBorders(spec.borders) } : {}),
     ...(spec.bidi !== undefined ? { bidi: spec.bidi } : {}),
-    ...(spec.textDirection !== undefined ? { textDirection: spec.textDirection as DocxParagraphProperties["textDirection"] } : {}),
+    ...(spec.textDirection !== undefined ? { textDirection: spec.textDirection as "lrTb" | "tbRl" | "btLr" } : {}),
     ...(spec.widowControl !== undefined ? { widowControl: spec.widowControl } : {}),
     ...(spec.outlineLvl !== undefined ? { outlineLvl: spec.outlineLvl as DocxParagraphProperties["outlineLvl"] } : {}),
   };
@@ -125,7 +291,7 @@ export function convertParagraphSpec(spec: ParagraphSpec): DocxParagraph {
   return {
     type: "paragraph",
     ...(hasProperties ? { properties } : {}),
-    content: spec.runs.map(convertRunSpec),
+    content: spec.runs.map((r) => convertRunSpec(r, drawingCtx)),
   };
 }
 
@@ -197,15 +363,30 @@ function convertGridSpec(grid: TableSpec["grid"]): DocxTableGrid | undefined {
   return { columns: grid.map((w) => ({ width: px(w) })) };
 }
 
+function convertCellMargins(margins: NonNullable<TableSpec["cellMargins"]>): TableCellMargins {
+  return {
+    ...(margins.top !== undefined ? { top: margins.top } : {}),
+    ...(margins.right !== undefined ? { right: margins.right } : {}),
+    ...(margins.bottom !== undefined ? { bottom: margins.bottom } : {}),
+    ...(margins.left !== undefined ? { left: margins.left } : {}),
+  };
+}
+
 /**
  * Convert a TableSpec to DocxTable domain type.
  */
-export function convertTableSpec(spec: TableSpec): DocxTable {
+export function convertTableSpec(spec: TableSpec, ctx?: DrawingConversionContext): DocxTable {
+  const drawingCtx = ctx ?? createDrawingContext();
   const properties: DocxTableProperties = {
     ...(spec.style !== undefined ? { tblStyle: docxStyleId(spec.style) } : {}),
     ...(spec.width !== undefined ? { tblW: convertTableWidth(spec.width) } : {}),
     ...(spec.alignment !== undefined ? { jc: spec.alignment } : {}),
     ...(spec.borders !== undefined ? { tblBorders: convertTableBorders(spec.borders) } : {}),
+    ...(spec.indent !== undefined ? { tblInd: convertTableWidth(spec.indent) } : {}),
+    ...(spec.shading !== undefined ? { shd: { val: "clear" as const, fill: spec.shading } } : {}),
+    ...(spec.cellMargins !== undefined ? { tblCellMar: convertCellMargins(spec.cellMargins) } : {}),
+    ...(spec.layout !== undefined ? { tblLayout: spec.layout } : {}),
+    ...(spec.bidiVisual !== undefined ? { bidiVisual: spec.bidiVisual } : {}),
   };
 
   const hasProperties = Object.keys(properties).length > 0;
@@ -215,7 +396,7 @@ export function convertTableSpec(spec: TableSpec): DocxTable {
     type: "table",
     ...(hasProperties ? { properties } : {}),
     ...(grid ? { grid } : {}),
-    rows: spec.rows.map(convertTableRow),
+    rows: spec.rows.map((r) => convertTableRow(r, drawingCtx)),
   };
 }
 
@@ -242,10 +423,12 @@ function convertTableBorders(borders: NonNullable<TableSpec["borders"]>): DocxTa
   };
 }
 
-function convertTableRow(spec: TableRowSpec): DocxTableRow {
+function convertTableRow(spec: TableRowSpec, ctx?: DrawingConversionContext): DocxTableRow {
+  const drawingCtx = ctx ?? createDrawingContext();
   const properties: DocxTableRowProperties = {
     ...(spec.height !== undefined ? { trHeight: convertRowHeight(spec.height) } : {}),
     ...(spec.header !== undefined ? { tblHeader: spec.header } : {}),
+    ...(spec.cantSplit !== undefined ? { cantSplit: spec.cantSplit } : {}),
   };
 
   const hasProperties = Object.keys(properties).length > 0;
@@ -253,7 +436,7 @@ function convertTableRow(spec: TableRowSpec): DocxTableRow {
   return {
     type: "tableRow",
     ...(hasProperties ? { properties } : {}),
-    cells: spec.cells.map(convertTableCell),
+    cells: spec.cells.map((c) => convertTableCell(c, drawingCtx)),
   };
 }
 
@@ -264,7 +447,8 @@ function convertRowHeight(height: NonNullable<TableRowSpec["height"]>): DocxRowH
   };
 }
 
-function convertTableCell(spec: TableCellSpec): DocxTableCell {
+function convertTableCell(spec: TableCellSpec, ctx?: DrawingConversionContext): DocxTableCell {
+  const drawingCtx = ctx ?? createDrawingContext();
   const properties: DocxTableCellProperties = {
     ...(spec.width !== undefined ? { tcW: convertTableWidth(spec.width) } : {}),
     ...(spec.gridSpan !== undefined ? { gridSpan: gridSpan(spec.gridSpan) } : {}),
@@ -272,6 +456,8 @@ function convertTableCell(spec: TableCellSpec): DocxTableCell {
     ...(spec.shading !== undefined ? { shd: { val: "clear", fill: spec.shading } } : {}),
     ...(spec.vAlign !== undefined ? { vAlign: spec.vAlign } : {}),
     ...(spec.borders !== undefined ? { tcBorders: convertCellBorders(spec.borders) } : {}),
+    ...(spec.textDirection !== undefined ? { textDirection: spec.textDirection } : {}),
+    ...(spec.noWrap !== undefined ? { noWrap: spec.noWrap } : {}),
   };
 
   const hasProperties = Object.keys(properties).length > 0;
@@ -279,7 +465,7 @@ function convertTableCell(spec: TableCellSpec): DocxTableCell {
   return {
     type: "tableCell",
     ...(hasProperties ? { properties } : {}),
-    content: spec.content.map(convertParagraphSpec),
+    content: spec.content.map((p) => convertParagraphSpec(p, drawingCtx)),
   };
 }
 
@@ -299,12 +485,13 @@ function convertCellBorders(borders: NonNullable<TableCellSpec["borders"]>): Doc
 /**
  * Convert a BlockContentSpec to DocxBlockContent domain type.
  */
-export function convertBlockContent(spec: BlockContentSpec): DocxBlockContent {
+export function convertBlockContent(spec: BlockContentSpec, ctx?: DrawingConversionContext): DocxBlockContent {
+  const drawingCtx = ctx ?? createDrawingContext();
   switch (spec.type) {
     case "paragraph":
-      return convertParagraphSpec(spec);
+      return convertParagraphSpec(spec, drawingCtx);
     case "table":
-      return convertTableSpec(spec);
+      return convertTableSpec(spec, drawingCtx);
   }
 }
 
@@ -385,16 +572,22 @@ function convertStyleParagraphProperties(para: NonNullable<StyleSpec["paragraph"
   };
 }
 
+function buildStyleRFonts(run: NonNullable<StyleSpec["run"]>): DocxRunProperties["rFonts"] | undefined {
+  const hasFonts = run.fontFamily !== undefined || run.fontFamilyEastAsian !== undefined ||
+    run.fontFamilyComplexScript !== undefined || run.asciiTheme !== undefined;
+  if (!hasFonts) {
+    return undefined;
+  }
+  return {
+    ...(run.fontFamily !== undefined ? { ascii: run.fontFamily, hAnsi: run.fontFamily } : {}),
+    ...(run.fontFamilyEastAsian !== undefined ? { eastAsia: run.fontFamilyEastAsian } : {}),
+    ...(run.fontFamilyComplexScript !== undefined ? { cs: run.fontFamilyComplexScript } : {}),
+    ...(run.asciiTheme !== undefined ? { asciiTheme: run.asciiTheme } : {}),
+  };
+}
+
 function convertStyleRunProperties(run: NonNullable<StyleSpec["run"]>): DocxRunProperties {
-  // Build rFonts if any font properties are specified
-  const rFonts =
-    run.fontFamily !== undefined || run.fontFamilyEastAsian !== undefined || run.fontFamilyComplexScript !== undefined
-      ? {
-          ...(run.fontFamily !== undefined ? { ascii: run.fontFamily, hAnsi: run.fontFamily } : {}),
-          ...(run.fontFamilyEastAsian !== undefined ? { eastAsia: run.fontFamilyEastAsian } : {}),
-          ...(run.fontFamilyComplexScript !== undefined ? { cs: run.fontFamilyComplexScript } : {}),
-        }
-      : undefined;
+  const rFonts = buildStyleRFonts(run);
 
   return {
     ...(run.bold !== undefined ? { b: run.bold } : {}),
@@ -410,7 +603,9 @@ function convertStyleRunProperties(run: NonNullable<StyleSpec["run"]>): DocxRunP
     ...(run.outline !== undefined ? { outline: run.outline } : {}),
     ...(run.shadow !== undefined ? { shadow: run.shadow } : {}),
     ...(run.fontSize !== undefined ? { sz: halfPoints(run.fontSize) } : {}),
+    ...(run.fontSizeCs !== undefined ? { szCs: halfPoints(run.fontSizeCs) } : {}),
     ...(rFonts !== undefined ? { rFonts } : {}),
+    ...(run.shading !== undefined ? { shd: { val: run.shading.val, fill: run.shading.fill } } : {}),
     ...(run.color !== undefined ? { color: { val: run.color } } : {}),
     ...(run.highlight !== undefined ? { highlight: run.highlight as DocxHighlightColor } : {}),
     ...(run.vertAlign !== undefined ? { vertAlign: run.vertAlign } : {}),
@@ -444,13 +639,90 @@ export function convertStylesSpec(specs: readonly StyleSpec[]): DocxStyles {
 // =============================================================================
 
 /**
- * Convert SectionSpec to DocxSectionProperties domain type.
+ * Result of section conversion including headers and footers.
  */
-export function convertSectionSpec(spec: SectionSpec): DocxSectionProperties {
+export type SectionConversionResult = {
+  readonly sectPr: DocxSectionProperties;
+  readonly headers: ReadonlyMap<DocxRelId, DocxHeader>;
+  readonly footers: ReadonlyMap<DocxRelId, DocxFooter>;
+};
+
+/**
+ * Convert HeaderFooterContentSpec to DocxHeader.
+ */
+function convertHeaderContent(spec: HeaderFooterContentSpec): DocxHeader {
   return {
+    content: spec.content.map(convertBlockContent),
+  };
+}
+
+/**
+ * Convert HeaderFooterContentSpec to DocxFooter.
+ */
+function convertFooterContent(spec: HeaderFooterContentSpec): DocxFooter {
+  return {
+    content: spec.content.map(convertBlockContent),
+  };
+}
+
+type HeaderFooterProcessResult = {
+  readonly refs: DocxHeaderFooterRef[];
+  readonly map: Map<DocxRelId, DocxHeader | DocxFooter>;
+  readonly nextRId: number;
+};
+
+function processHeaderFooterSpecs<T extends DocxHeader | DocxFooter>(
+  specs: Record<string, HeaderFooterContentSpec | undefined> | undefined,
+  converter: (content: HeaderFooterContentSpec) => T,
+  startRId: number
+): HeaderFooterProcessResult {
+  if (!specs) {
+    return { refs: [], map: new Map(), nextRId: startRId };
+  }
+  const types: HeaderFooterType[] = ["default", "first", "even"];
+  const refs: DocxHeaderFooterRef[] = [];
+  const map = new Map<DocxRelId, T>();
+  const count = types.reduce((acc, type) => {
+    const content = specs[type];
+    if (content) {
+      const rId = docxRelId(`rId${startRId + acc}`);
+      refs.push({ type, rId });
+      map.set(rId, converter(content));
+      return acc + 1;
+    }
+    return acc;
+  }, 0);
+  return { refs, map, nextRId: startRId + count };
+}
+
+/**
+ * Convert SectionSpec to DocxSectionProperties domain type with headers/footers.
+ */
+export function convertSectionSpec(spec: SectionSpec, startRId: number = 1): SectionConversionResult {
+  const headerResult = processHeaderFooterSpecs(spec.headers, convertHeaderContent, startRId);
+  const footerResult = processHeaderFooterSpecs(spec.footers, convertFooterContent, headerResult.nextRId);
+
+  const headers = headerResult.map as Map<DocxRelId, DocxHeader>;
+  const footers = footerResult.map as Map<DocxRelId, DocxFooter>;
+
+  const sectPr: DocxSectionProperties = {
+    ...(spec.type !== undefined ? { type: spec.type } : {}),
     ...(spec.pageSize !== undefined ? { pgSz: convertPageSize(spec.pageSize) } : {}),
     ...(spec.margins !== undefined ? { pgMar: convertPageMargins(spec.margins) } : {}),
     ...(spec.columns !== undefined ? { cols: convertColumns(spec.columns) } : {}),
+    ...(spec.pageNumbering !== undefined ? { pgNumType: convertPageNumberType(spec.pageNumbering) } : {}),
+    ...(spec.titlePage !== undefined ? { titlePg: spec.titlePage } : {}),
+    ...(headerResult.refs.length > 0 ? { headerReference: headerResult.refs } : {}),
+    ...(footerResult.refs.length > 0 ? { footerReference: footerResult.refs } : {}),
+  };
+
+  return { sectPr, headers, footers };
+}
+
+function convertPageNumberType(pgNum: NonNullable<SectionSpec["pageNumbering"]>): DocxPageNumberType {
+  return {
+    ...(pgNum.format !== undefined ? { fmt: pgNum.format } : {}),
+    ...(pgNum.start !== undefined ? { start: pgNum.start } : {}),
   };
 }
 
@@ -490,15 +762,34 @@ function convertColumns(cols: NonNullable<SectionSpec["columns"]>): DocxColumns 
  * Convert a DocxBuildSpec to DocxDocument domain type.
  * This is the main entry point for spec → domain conversion.
  */
+/**
+ * Compute starting relationship ID based on presence of styles and numbering.
+ */
+function computeStartRId(spec: DocxBuildSpec): number {
+  return 1 + (spec.styles ? 1 : 0) + (spec.numbering ? 1 : 0);
+}
+
+/**
+ * Convert a DocxBuildSpec to DocxDocument domain type.
+ */
 export function convertDocument(spec: DocxBuildSpec): DocxDocument {
+  const startRId = computeStartRId(spec);
+  const sectionResult = spec.section !== undefined ? convertSectionSpec(spec.section, startRId) : undefined;
+
   const body: DocxBody = {
     content: spec.content.map(convertBlockContent),
-    ...(spec.section !== undefined ? { sectPr: convertSectionSpec(spec.section) } : {}),
+    ...(sectionResult !== undefined ? { sectPr: sectionResult.sectPr } : {}),
   };
+
+  // Merge headers and footers from section
+  const headers = sectionResult?.headers.size ? sectionResult.headers : undefined;
+  const footers = sectionResult?.footers.size ? sectionResult.footers : undefined;
 
   return {
     body,
     ...(spec.styles !== undefined ? { styles: convertStylesSpec(spec.styles) } : {}),
     ...(spec.numbering !== undefined ? { numbering: convertNumberingSpec(spec.numbering) } : {}),
+    ...(headers !== undefined ? { headers } : {}),
+    ...(footers !== undefined ? { footers } : {}),
   };
 }

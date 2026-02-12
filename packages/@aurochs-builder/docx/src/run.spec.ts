@@ -368,9 +368,17 @@ describe("serializeRunContent", () => {
     expect(el.attrs["w:font"]).toBeUndefined();
   });
 
-  it("throws for drawing content", () => {
-    const content = { type: "drawing" } as DocxRunContent;
-    expect(() => serializeRunContent(content)).toThrow("Drawing serialization not yet implemented");
+  it("serializes drawing content", () => {
+    const content: DocxRunContent = {
+      type: "drawing",
+      drawing: {
+        type: "inline",
+        extent: { cx: 914400, cy: 914400 },
+        docPr: { id: 1, name: "Picture 1" },
+      },
+    };
+    const el = serializeRunContent(content);
+    expect(el.name).toBe("w:drawing");
   });
 });
 
