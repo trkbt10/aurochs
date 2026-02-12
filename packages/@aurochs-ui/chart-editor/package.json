@@ -1,6 +1,6 @@
 {
   "name": "@aurochs-ui/chart-editor",
-  "version": "0.3.2",
+  "version": "0.5.0",
   "private": true,
   "type": "module",
   "sideEffects": false,

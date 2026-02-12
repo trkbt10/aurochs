@@ -7,8 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-02-12
+
 ### Added
 
+- Mobile touch/swipe navigation with animation step control in viewer
+- `--format svg` option for DOCX and XLSX preview CLI commands
+- `renderDocumentToSvg` high-level API for DOCX
 - DOCX exports to aurochs npm package: parser, renderer/svg, renderer/ascii, renderer/mermaid, viewer
 - XLSX exports to aurochs npm package: parser, renderer/svg, renderer/ascii, renderer/mermaid, viewer
 - DrawingML BlipFill support for image fills with stretch/tile modes and srcRect cropping
@@ -19,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Unified BlipFill type across PPTX and DrawingML packages
 - Comprehensive visual regression tests for DOCX renderer
 
 ## [0.4.0] - 2026-02-11
@@ -99,7 +105,8 @@ Project inception.
 - Text body and paragraph rendering
 - Theme and style support
 
-[Unreleased]: https://github.com/trkbt10/aurochs/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/trkbt10/aurochs/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/trkbt10/aurochs/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/trkbt10/aurochs/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/trkbt10/aurochs/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/trkbt10/aurochs/compare/v0.3.0...v0.3.1

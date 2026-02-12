@@ -5,14 +5,14 @@
   },
   "metadata": {
     "description": "Office document manipulation plugins for Claude Code",
-    "version": "0.4.0"
+    "version": "0.5.0"
   },
   "plugins": [
     {
       "name": "aurochs-office",
       "source": "./skills/aurochs-office",
       "description": "Inspect, build, and verify Office documents (PPTX, DOCX, XLSX) using the aurochs CLI. Supports ASCII preview, JSON spec-based building, and text extraction.",
-      "version": "0.4.0",
+      "version": "0.5.0",
       "author": {
         "name": "trkbt10"
       },
