@@ -231,20 +231,22 @@ export function createProgram(): Command {
 
   program
     .command("preview")
-    .description("Render ASCII grid preview of sheet data")
+    .description("Render ASCII grid or SVG preview of sheet data")
     .argument("<file>", "XLSX file path")
     .argument("[sheet]", "Sheet name (omit for all sheets)")
+    .option("--format <type>", "Output format (ascii|svg)", "ascii")
     .option("--width <columns>", "Terminal width in columns", "80")
     .option("--range <range>", 'Cell range (e.g., "A1:C10")')
-    .action(async (file: string, sheet: string | undefined, options: { width: string; range?: string }) => {
+    .action(async (file: string, sheet: string | undefined, options: { format: string; width: string; range?: string }) => {
       const mode = program.opts().output as OutputMode;
+      const format = options.format === "svg" ? "svg" : "ascii";
       const width = parseInt(options.width, 10);
       if (Number.isNaN(width) || width < 20) {
         console.error("Error: Width must be an integer >= 20");
         process.exitCode = 1;
         return;
       }
-      const result = await runPreview(file, sheet, { width, range: options.range });
+      const result = await runPreview(file, sheet, { format, width, range: options.range });
       output(result, mode, formatPreviewPretty, formatPreviewMermaid);
     });
 

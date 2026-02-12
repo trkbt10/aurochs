@@ -9,4 +9,4 @@ export { runExtract, type ExtractData, type ExtractOptions, type SectionTextItem
 export { runBuild } from "./build";
 export { runPatch, type PatchData } from "./patch";
 export { runVerify, type VerifyData, type VerifyOptions, type TestCaseSpec, type TestCaseResult, type Assertion, type ExpectedDocument } from "./verify";
-export { runPreview, type PreviewData, type PreviewSection, type PreviewOptions } from "./preview";
+export { runPreview, type PreviewData, type PreviewSection, type PreviewOptions, type PreviewFormat } from "./preview";

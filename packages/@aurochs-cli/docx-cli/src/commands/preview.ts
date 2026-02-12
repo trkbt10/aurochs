@@ -1,5 +1,5 @@
 /**
- * @file preview command - ASCII art visualization of document content
+ * @file preview command - ASCII art and SVG visualization of document content
  */
 
 import { type DocxBlockContent, type DocxParagraph, type DocxTable } from "@aurochs-office/docx";
@@ -11,24 +11,32 @@ import {
   type AsciiParagraph,
   type AsciiTable,
 } from "@aurochs-renderer/docx/ascii";
+import { renderDocumentToSvg } from "@aurochs-renderer/docx/svg";
 
 // =============================================================================
 // Types
 // =============================================================================
 
+export type PreviewFormat = "ascii" | "svg";
+
 export type PreviewSection = {
   readonly number: number;
-  readonly ascii: string;
+  readonly ascii?: string;
+  readonly svg?: string;
   readonly blocks: readonly AsciiDocBlock[];
   readonly paragraphCount: number;
   readonly tableCount: number;
 };
 
 export type PreviewData = {
+  readonly format: PreviewFormat;
   readonly sections: readonly PreviewSection[];
 };
 
-export type PreviewOptions = { readonly width: number };
+export type PreviewOptions = {
+  readonly format?: PreviewFormat;
+  readonly width: number;
+};
 
 // =============================================================================
 // Section Splitting
@@ -146,13 +154,15 @@ function convertBlock(block: DocxBlockContent): AsciiDocBlock | undefined {
 // =============================================================================
 
 /**
- * Generate an ASCII preview of one or all sections in a DOCX file.
+ * Generate an ASCII or SVG preview of one or all sections in a DOCX file.
  */
 export async function runPreview(
   filePath: string,
   sectionNumber: number | undefined,
   options: PreviewOptions,
 ): Promise<Result<PreviewData>> {
+  const format = options.format ?? "ascii";
+
   try {
     const doc = await loadDocument(filePath);
 
@@ -164,6 +174,35 @@ export async function runPreview(
 
     const start = sectionNumber ?? 1;
     const end = sectionNumber ?? sections.length;
+
+    // SVG mode: render entire document
+    if (format === "svg") {
+      const svgResult = renderDocumentToSvg({ document: doc });
+      const results: PreviewSection[] = [];
+
+      for (let i = start; i <= end; i++) {
+        const section = sections[i - 1]!;
+        const blocks = section.content.map(convertBlock).filter((b): b is AsciiDocBlock => b !== undefined);
+        const paragraphCount = blocks.filter((b) => b.type === "paragraph").length;
+        const tableCount = blocks.filter((b) => b.type === "table").length;
+
+        // Map section to page (simplified: section i corresponds to page i if available)
+        const pageIndex = i - 1;
+        const svg = pageIndex < svgResult.pages.length ? svgResult.pages[pageIndex]?.svg : undefined;
+
+        results.push({
+          number: i,
+          svg,
+          blocks,
+          paragraphCount,
+          tableCount,
+        });
+      }
+
+      return success({ format, sections: results });
+    }
+
+    // ASCII mode (default)
     const results: PreviewSection[] = [];
 
     for (let i = start; i <= end; i++) {
@@ -182,7 +221,7 @@ export async function runPreview(
       });
     }
 
-    return success({ sections: results });
+    return success({ format, sections: results });
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") {
       return error("FILE_NOT_FOUND", `File not found: ${filePath}`);

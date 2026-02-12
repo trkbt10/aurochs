@@ -204,11 +204,12 @@ export function createProgram(): Command {
 
   program
     .command("preview")
-    .description("Render ASCII art preview of document content")
+    .description("Render ASCII art or SVG preview of document content")
     .argument("<file>", "DOCX file path")
     .argument("[section]", "Section number (1-based, omit for all)")
+    .option("--format <type>", "Output format (ascii|svg)", "ascii")
     .option("--width <columns>", "Terminal width in columns", "80")
-    .action(async (file: string, section: string | undefined, options: { width: string }) => {
+    .action(async (file: string, section: string | undefined, options: { format: string; width: string }) => {
       const mode = program.opts().output as OutputMode;
       const sectionNumber = section !== undefined ? parseInt(section, 10) : undefined;
       if (sectionNumber !== undefined && Number.isNaN(sectionNumber)) {
@@ -216,13 +217,14 @@ export function createProgram(): Command {
         process.exitCode = 1;
         return;
       }
+      const format = options.format === "svg" ? "svg" : "ascii";
       const width = parseInt(options.width, 10);
       if (Number.isNaN(width) || width < 20) {
         console.error("Error: Width must be an integer >= 20");
         process.exitCode = 1;
         return;
       }
-      const result = await runPreview(file, sectionNumber, { width });
+      const result = await runPreview(file, sectionNumber, { format, width });
       output(result, mode, formatPreviewPretty, formatPreviewMermaid);
     });
 

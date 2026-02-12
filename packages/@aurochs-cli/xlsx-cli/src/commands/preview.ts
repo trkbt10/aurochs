@@ -1,12 +1,13 @@
 /**
- * @file preview command - ASCII grid visualization of sheet data
+ * @file preview command - ASCII grid and SVG visualization of sheet data
  */
 
 import { success, error, type Result } from "@aurochs-cli/cli-core";
 import { loadXlsxWorkbook } from "../utils/xlsx-loader";
 import { renderSheetAscii, type AsciiCell, type AsciiSheetRow } from "@aurochs-renderer/xlsx/ascii";
+import { renderSheetToSvg } from "@aurochs-renderer/xlsx/svg";
 import { getSheetRange } from "@aurochs-office/xlsx/domain/sheet-utils";
-import type { XlsxWorksheet } from "@aurochs-office/xlsx/domain/workbook";
+import type { XlsxWorksheet, XlsxWorkbook } from "@aurochs-office/xlsx/domain/workbook";
 import { serializeCell } from "../serializers/cell-serializer";
 import { columnLetterToIndex } from "@aurochs-office/xlsx/domain/cell/address";
 
@@ -14,19 +15,24 @@ import { columnLetterToIndex } from "@aurochs-office/xlsx/domain/cell/address";
 // Types
 // =============================================================================
 
+export type PreviewFormat = "ascii" | "svg";
+
 export type PreviewSheet = {
   readonly name: string;
-  readonly ascii: string;
+  readonly ascii?: string;
+  readonly svg?: string;
   readonly rows: readonly AsciiSheetRow[];
   readonly rowCount: number;
   readonly colCount: number;
 };
 
 export type PreviewData = {
+  readonly format: PreviewFormat;
   readonly sheets: readonly PreviewSheet[];
 };
 
 export type PreviewOptions = {
+  readonly format?: PreviewFormat;
   readonly width: number;
   readonly range?: string;
 };
@@ -87,13 +93,102 @@ function resolveTargetRange(options: PreviewOptions, sheet: XlsxWorksheet): Pars
 // =============================================================================
 
 /**
- * Generate an ASCII grid preview of one or all sheets in an XLSX file.
+ * Render a sheet to SVG.
+ */
+function renderSheetSvg(params: {
+  readonly workbook: XlsxWorkbook;
+  readonly sheetIndex: number;
+  readonly sheet: XlsxWorksheet;
+}): PreviewSheet {
+  const { workbook, sheetIndex, sheet } = params;
+  const svgResult = renderSheetToSvg({ workbook, sheetIndex });
+
+  return {
+    name: sheet.name,
+    svg: svgResult.svg,
+    rows: [],
+    rowCount: svgResult.rowCount,
+    colCount: svgResult.colCount,
+  };
+}
+
+/**
+ * Render a sheet to ASCII.
+ */
+function renderSheetAsciiPreview(params: {
+  readonly sheet: XlsxWorksheet;
+  readonly options: PreviewOptions;
+}): PreviewSheet {
+  const { sheet, options } = params;
+  const targetRange = resolveTargetRange(options, sheet);
+
+  if (!targetRange) {
+    return {
+      name: sheet.name,
+      ascii: `(empty sheet: ${sheet.name})`,
+      rows: [],
+      rowCount: 0,
+      colCount: 0,
+    };
+  }
+
+  const colCount = targetRange.endCol - targetRange.startCol + 1;
+
+  // Build cell map for quick lookup
+  const cellMap = new Map<string, ReturnType<typeof serializeCell>>();
+  for (const row of sheet.rows) {
+    for (const cell of row.cells) {
+      const serialized = serializeCell(cell);
+      cellMap.set(serialized.ref, serialized);
+    }
+  }
+
+  // Build rows
+  const asciiRows: AsciiSheetRow[] = [];
+  for (let rowNum = targetRange.startRow; rowNum <= targetRange.endRow; rowNum++) {
+    const cells: AsciiCell[] = [];
+    for (let colNum = targetRange.startCol; colNum <= targetRange.endCol; colNum++) {
+      const ref = `${colIndexToLetter(colNum)}${rowNum}`;
+      const cell = cellMap.get(ref);
+
+      if (cell && cell.type !== "empty") {
+        cells.push({
+          value: cell.value,
+          type: cell.type as AsciiCell["type"],
+        });
+      } else {
+        cells.push({ value: null, type: "empty" });
+      }
+    }
+    asciiRows.push({ rowNumber: rowNum, cells });
+  }
+
+  const ascii = renderSheetAscii({
+    name: sheet.name,
+    rows: asciiRows,
+    columnCount: colCount,
+    width: options.width,
+  });
+
+  return {
+    name: sheet.name,
+    ascii,
+    rows: asciiRows,
+    rowCount: asciiRows.length,
+    colCount,
+  };
+}
+
+/**
+ * Generate an ASCII grid or SVG preview of one or all sheets in an XLSX file.
  */
 export async function runPreview(
   filePath: string,
   sheetName: string | undefined,
   options: PreviewOptions,
 ): Promise<Result<PreviewData>> {
+  const format = options.format ?? "ascii";
+
   try {
     const workbook = await loadXlsxWorkbook(filePath);
 
@@ -107,67 +202,16 @@ export async function runPreview(
     const results: PreviewSheet[] = [];
 
     for (const sheet of sheetsToRender) {
-      const targetRange = resolveTargetRange(options, sheet);
+      const sheetIndex = workbook.sheets.indexOf(sheet);
 
-      if (!targetRange) {
-        results.push({
-          name: sheet.name,
-          ascii: `(empty sheet: ${sheet.name})`,
-          rows: [],
-          rowCount: 0,
-          colCount: 0,
-        });
-        continue;
+      if (format === "svg") {
+        results.push(renderSheetSvg({ workbook, sheetIndex, sheet }));
+      } else {
+        results.push(renderSheetAsciiPreview({ sheet, options }));
       }
-
-      const colCount = targetRange.endCol - targetRange.startCol + 1;
-
-      // Build cell map for quick lookup
-      const cellMap = new Map<string, ReturnType<typeof serializeCell>>();
-      for (const row of sheet.rows) {
-        for (const cell of row.cells) {
-          const serialized = serializeCell(cell);
-          cellMap.set(serialized.ref, serialized);
-        }
-      }
-
-      // Build rows
-      const asciiRows: AsciiSheetRow[] = [];
-      for (let rowNum = targetRange.startRow; rowNum <= targetRange.endRow; rowNum++) {
-        const cells: AsciiCell[] = [];
-        for (let colNum = targetRange.startCol; colNum <= targetRange.endCol; colNum++) {
-          const ref = `${colIndexToLetter(colNum)}${rowNum}`;
-          const cell = cellMap.get(ref);
-
-          if (cell && cell.type !== "empty") {
-            cells.push({
-              value: cell.value,
-              type: cell.type as AsciiCell["type"],
-            });
-          } else {
-            cells.push({ value: null, type: "empty" });
-          }
-        }
-        asciiRows.push({ rowNumber: rowNum, cells });
-      }
-
-      const ascii = renderSheetAscii({
-        name: sheet.name,
-        rows: asciiRows,
-        columnCount: colCount,
-        width: options.width,
-      });
-
-      results.push({
-        name: sheet.name,
-        ascii,
-        rows: asciiRows,
-        rowCount: asciiRows.length,
-        colCount,
-      });
     }
 
-    return success({ sheets: results });
+    return success({ format, sheets: results });
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") {
       return error("FILE_NOT_FOUND", `File not found: ${filePath}`);

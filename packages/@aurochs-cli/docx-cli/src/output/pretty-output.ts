@@ -423,6 +423,25 @@ export function formatTocPretty(data: TocData): string {
  */
 export function formatPreviewPretty(data: PreviewData): string {
   const lines: string[] = [];
+
+  // SVG format: output raw SVG content
+  if (data.format === "svg") {
+    for (let i = 0; i < data.sections.length; i++) {
+      const section = data.sections[i]!;
+      if (i > 0) {
+        lines.push("");
+      }
+      lines.push(`<!-- Section ${section.number} (${section.paragraphCount} paragraphs, ${section.tableCount} tables) -->`);
+      if (section.svg) {
+        lines.push(section.svg);
+      } else {
+        lines.push("<!-- No SVG content for this section -->");
+      }
+    }
+    return lines.join("\n");
+  }
+
+  // ASCII format (default)
   for (let i = 0; i < data.sections.length; i++) {
     const section = data.sections[i]!;
     if (i > 0) {
@@ -430,7 +449,9 @@ export function formatPreviewPretty(data: PreviewData): string {
     }
     lines.push(`Section ${section.number} (${section.paragraphCount} paragraphs, ${section.tableCount} tables)`);
     lines.push("");
-    lines.push(section.ascii);
+    if (section.ascii) {
+      lines.push(section.ascii);
+    }
   }
   return lines.join("\n");
 }

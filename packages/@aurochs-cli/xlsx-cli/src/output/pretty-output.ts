@@ -463,6 +463,25 @@ export function formatHyperlinksPretty(data: HyperlinksData): string {
  */
 export function formatPreviewPretty(data: PreviewData): string {
   const lines: string[] = [];
+
+  // SVG format: output raw SVG content
+  if (data.format === "svg") {
+    for (let i = 0; i < data.sheets.length; i++) {
+      const sheet = data.sheets[i]!;
+      if (i > 0) {
+        lines.push("");
+      }
+      lines.push(`<!-- Sheet: ${sheet.name} (${sheet.rowCount} rows, ${sheet.colCount} columns) -->`);
+      if (sheet.svg) {
+        lines.push(sheet.svg);
+      } else {
+        lines.push("<!-- No SVG content for this sheet -->");
+      }
+    }
+    return lines.join("\n");
+  }
+
+  // ASCII format (default)
   for (let i = 0; i < data.sheets.length; i++) {
     const sheet = data.sheets[i]!;
     if (i > 0) {
@@ -470,7 +489,9 @@ export function formatPreviewPretty(data: PreviewData): string {
     }
     lines.push(`Sheet: ${sheet.name} (${sheet.rowCount} rows, ${sheet.colCount} columns)`);
     lines.push("");
-    lines.push(sheet.ascii);
+    if (sheet.ascii) {
+      lines.push(sheet.ascii);
+    }
   }
   return lines.join("\n");
 }

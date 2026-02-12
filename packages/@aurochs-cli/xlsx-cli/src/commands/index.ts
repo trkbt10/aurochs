@@ -9,4 +9,4 @@ export { runExtract, type ExtractData, type ExtractOptions } from "./extract";
 export { runBuild, type BuildSpec, type BuildData } from "./build";
 export { runVerify, type VerifyData, type VerifyOptions, type TestCaseSpec, type TestCaseResult, type Assertion, type ExpectedWorkbook, type ExpectedSheet, type ExpectedCell, type ExpectedColumn, type ExpectedStyles, type ExpectedDefinedName } from "./verify";
 export { type XlsxBuildSpec, type XlsxCreateSpec, type XlsxModifySpec, type WorkbookSpec, type SheetSpec, type RowSpec, type CellSpec, type CellValueSpec, type StyleSheetSpec, convertSpecToWorkbook, isCreateSpec } from "./build-spec";
-export { runPreview, type PreviewData, type PreviewSheet, type PreviewOptions } from "./preview";
+export { runPreview, type PreviewData, type PreviewSheet, type PreviewOptions, type PreviewFormat } from "./preview";
