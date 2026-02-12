@@ -22,6 +22,7 @@ import {
   useSlideshowAutoAdvance,
   useSlideshowControls,
   useSlideshowKeyboard,
+  useSwipeNavigation,
 } from "./hooks";
 import {
   getContainerStyle,
@@ -99,12 +100,21 @@ export function PresentationSlideshow({
     containerRef: transitionContainerRef,
   });
 
-  // Slide animations
-  const { isAnimating, skipAnimation, hasAnimations } = useSlideAnimation({
+  // Slide animations with step-by-step playback
+  const {
+    isAnimating,
+    skipAnimation,
+    hasAnimations,
+    nextStep,
+    currentStep: _currentStep,
+    totalSteps: _totalSteps,
+    isStepsComplete,
+  } = useSlideAnimation({
     slideIndex: navigation.currentSlide,
     timing,
     containerRef: slideContentRef,
-    autoPlay: true,
+    autoPlay: false, // Use step mode instead
+    stepMode: true,
   });
 
   // Auto-hide controls on mouse inactivity
@@ -133,16 +143,32 @@ export function PresentationSlideshow({
     document.exitFullscreen().catch(() => undefined);
   }, []);
 
-  // Navigation with animation skip
-  const goToNext = useCallback(() => {
+  // Advance to next animation step or slide
+  const handleAdvance = useCallback(async () => {
+    // If currently animating, skip the animation
     if (isAnimating) {
       skipAnimation();
       return;
     }
-    navigation.goToNext();
+
+    // Clear screen overlays
     setIsBlackScreen(false);
     setIsWhiteScreen(false);
-  }, [isAnimating, skipAnimation, navigation]);
+
+    // Try to advance to next animation step
+    if (!isStepsComplete) {
+      const played = await nextStep();
+      if (played) {
+        return;
+      }
+    }
+
+    // All steps complete, go to next slide
+    navigation.goToNext();
+  }, [isAnimating, skipAnimation, isStepsComplete, nextStep, navigation]);
+
+  // Alias for compatibility
+  const goToNext = handleAdvance;
 
   const goToPrev = useCallback(() => {
     if (isAnimating) {
@@ -193,6 +219,14 @@ export function PresentationSlideshow({
   const advanceOnClick = transition?.advanceOnClick ?? true;
   const advanceAfter = transition?.advanceAfter;
 
+  // Swipe navigation for touch devices
+  useSwipeNavigation({
+    containerRef,
+    onSwipeLeft: goToNext,
+    onSwipeRight: goToPrev,
+    enabled: advanceOnClick,
+  });
+
   useSlideshowAutoAdvance({
     advanceAfter,
     currentSlideIndex: navigation.currentSlide,
@@ -221,18 +255,14 @@ export function PresentationSlideshow({
         return;
       }
 
-      if (isAnimating) {
-        skipAnimation();
-        return;
-      }
-
       if (!advanceOnClick) {
         return;
       }
 
-      goToNext();
+      // Use handleAdvance which handles animation steps
+      handleAdvance();
     },
-    [advanceOnClick, goToNext, isAnimating, skipAnimation],
+    [advanceOnClick, handleAdvance],
   );
 
   // Handle right-click to go back

@@ -5,6 +5,7 @@
  */
 
 import { createPlayer, extractShapeIds } from "./player";
+import { extractClickGroups } from "./click-groups";
 import type { Timing } from "@aurochs-office/pptx/domain/animation";
 
 describe("extractShapeIds", () => {
@@ -335,5 +336,327 @@ describe("createPlayer", () => {
     // Both should be processed
     expect(elements["1"].style.visibility).toBe("visible");
     expect(elements["2"].style.visibility).toBe("visible");
+  });
+});
+
+describe("extractClickGroups", () => {
+  it("returns empty array for null timing", () => {
+    const groups = extractClickGroups(null);
+    expect(groups).toEqual([]);
+  });
+
+  it("returns empty array for timing without rootTimeNode", () => {
+    const groups = extractClickGroups({});
+    expect(groups).toEqual([]);
+  });
+
+  it("returns empty array when no mainSeq exists", () => {
+    const timing: Timing = {
+      rootTimeNode: {
+        type: "parallel",
+        id: 1,
+        autoReverse: false,
+        children: [],
+      },
+    };
+    const groups = extractClickGroups(timing);
+    expect(groups).toEqual([]);
+  });
+
+  it("extracts clickEffect groups from mainSeq", () => {
+    const timing: Timing = {
+      rootTimeNode: {
+        type: "parallel",
+        id: 1,
+        autoReverse: false,
+        children: [
+          {
+            type: "sequence",
+            id: 2,
+            nodeType: "mainSeq",
+            autoReverse: false,
+            children: [
+              {
+                type: "parallel",
+                id: 3,
+                nodeType: "clickEffect",
+                autoReverse: false,
+                children: [],
+              },
+              {
+                type: "parallel",
+                id: 4,
+                nodeType: "clickEffect",
+                autoReverse: false,
+                children: [],
+              },
+            ],
+          },
+        ],
+      },
+    };
+
+    const groups = extractClickGroups(timing);
+    expect(groups.length).toBe(2);
+    expect(groups[0].index).toBe(0);
+    expect(groups[1].index).toBe(1);
+  });
+
+  it("identifies auto-advance groups (withEffect/afterEffect)", () => {
+    const timing: Timing = {
+      rootTimeNode: {
+        type: "parallel",
+        id: 1,
+        autoReverse: false,
+        children: [
+          {
+            type: "sequence",
+            id: 2,
+            nodeType: "mainSeq",
+            autoReverse: false,
+            children: [
+              {
+                type: "parallel",
+                id: 3,
+                nodeType: "clickEffect",
+                autoReverse: false,
+                children: [],
+              },
+            ],
+          },
+        ],
+      },
+    };
+
+    const groups = extractClickGroups(timing);
+    expect(groups.length).toBe(1);
+    // clickEffect without onClick condition should default to auto-advance
+    expect(groups[0].isAutoAdvance).toBe(true);
+  });
+
+  it("identifies non-auto-advance groups (onClick trigger)", () => {
+    const timing: Timing = {
+      rootTimeNode: {
+        type: "parallel",
+        id: 1,
+        autoReverse: false,
+        children: [
+          {
+            type: "sequence",
+            id: 2,
+            nodeType: "mainSeq",
+            autoReverse: false,
+            children: [
+              {
+                type: "parallel",
+                id: 3,
+                nodeType: "clickEffect",
+                autoReverse: false,
+                startConditions: [{ event: "onClick" }],
+                children: [],
+              },
+            ],
+          },
+        ],
+      },
+    };
+
+    const groups = extractClickGroups(timing);
+    expect(groups.length).toBe(1);
+    expect(groups[0].isAutoAdvance).toBe(false);
+  });
+});
+
+describe("playNodes", () => {
+  function isHTMLElement(value: unknown): value is HTMLElement {
+    return typeof value === "object" && value !== null && "style" in value;
+  }
+
+  function createMockElement(): HTMLElement {
+    const el: unknown = {
+      style: {
+        transition: "",
+        opacity: "",
+        visibility: "",
+        transform: "",
+        clipPath: "",
+        filter: "",
+        transformOrigin: "",
+        maskImage: "",
+        maskSize: "",
+        maskPosition: "",
+        maskRepeat: "",
+      },
+      offsetHeight: 0,
+    };
+    if (!isHTMLElement(el)) {
+      throw new Error("createMockElement: invalid mock element shape");
+    }
+    return el;
+  }
+
+  it("plays an array of nodes", async () => {
+    const el = createMockElement();
+
+    const player = createPlayer({
+      findElement: () => el,
+    });
+
+    const timing: Timing = {
+      rootTimeNode: {
+        type: "parallel",
+        id: 1,
+        autoReverse: false,
+        children: [
+          {
+            type: "sequence",
+            id: 2,
+            nodeType: "mainSeq",
+            autoReverse: false,
+            children: [
+              {
+                type: "parallel",
+                id: 3,
+                nodeType: "clickEffect",
+                autoReverse: false,
+                children: [
+                  {
+                    type: "set",
+                    id: 4,
+                    autoReverse: false,
+                    duration: 1,
+                    target: { type: "shape", shapeId: "11", targetBackground: false },
+                    attribute: "style.visibility",
+                    value: "visible",
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    };
+
+    const groups = extractClickGroups(timing);
+    expect(groups.length).toBe(1);
+
+    // playNodes takes the nodes array directly
+    await player.playNodes(groups[0].nodes);
+
+    expect(el.style.visibility).toBe("visible");
+  });
+
+  it("plays multiple node arrays sequentially", async () => {
+    const elements: Record<string, HTMLElement> = {
+      "1": createMockElement(),
+      "2": createMockElement(),
+    };
+
+    const player = createPlayer({
+      findElement: (id) => elements[id] ?? null,
+    });
+
+    const timing: Timing = {
+      rootTimeNode: {
+        type: "parallel",
+        id: 1,
+        autoReverse: false,
+        children: [
+          {
+            type: "sequence",
+            id: 2,
+            nodeType: "mainSeq",
+            autoReverse: false,
+            children: [
+              {
+                type: "parallel",
+                id: 3,
+                nodeType: "clickEffect",
+                autoReverse: false,
+                children: [
+                  {
+                    type: "set",
+                    id: 4,
+                    autoReverse: false,
+                    duration: 1,
+                    target: { type: "shape", shapeId: "1", targetBackground: false },
+                    attribute: "style.visibility",
+                    value: "visible",
+                  },
+                ],
+              },
+              {
+                type: "parallel",
+                id: 5,
+                nodeType: "clickEffect",
+                autoReverse: false,
+                children: [
+                  {
+                    type: "set",
+                    id: 6,
+                    autoReverse: false,
+                    duration: 1,
+                    target: { type: "shape", shapeId: "2", targetBackground: false },
+                    attribute: "style.visibility",
+                    value: "visible",
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    };
+
+    const groups = extractClickGroups(timing);
+    expect(groups.length).toBe(2);
+
+    // Play first group's nodes
+    await player.playNodes(groups[0].nodes);
+    expect(elements["1"].style.visibility).toBe("visible");
+    expect(elements["2"].style.visibility).toBe("");
+
+    // Play second group's nodes
+    await player.playNodes(groups[1].nodes);
+    expect(elements["2"].style.visibility).toBe("visible");
+  });
+
+  it("tracks state during playback", async () => {
+    const player = createPlayer({
+      findElement: () => null,
+    });
+
+    const timing: Timing = {
+      rootTimeNode: {
+        type: "parallel",
+        id: 1,
+        autoReverse: false,
+        children: [
+          {
+            type: "sequence",
+            id: 2,
+            nodeType: "mainSeq",
+            autoReverse: false,
+            children: [
+              {
+                type: "parallel",
+                id: 3,
+                nodeType: "clickEffect",
+                autoReverse: false,
+                children: [],
+              },
+            ],
+          },
+        ],
+      },
+    };
+
+    const groups = extractClickGroups(timing);
+    expect(player.getState()).toBe("idle");
+
+    const playPromise = player.playNodes(groups[0].nodes);
+    await playPromise;
+
+    expect(player.getState()).toBe("idle");
   });
 });

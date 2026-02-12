@@ -37,6 +37,8 @@ export function getContainerStyle(_isFullscreen: boolean): CSSProperties {
     maxWidth: "none",
     maxHeight: "none",
     boxSizing: "border-box",
+    // Prevent browser edge swipe gestures (back/forward) while allowing vertical scroll and pinch zoom
+    touchAction: "pan-y pinch-zoom",
   };
 }
 

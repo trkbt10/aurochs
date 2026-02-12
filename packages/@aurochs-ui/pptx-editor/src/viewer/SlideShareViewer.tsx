@@ -9,13 +9,13 @@
  * - Keyboard-primary: Arrow keys for navigation, F for fullscreen/present
  */
 
-import { useState, useCallback, useMemo, type CSSProperties } from "react";
+import { useState, useCallback, useMemo, useRef, type CSSProperties } from "react";
 import type { SlideSize } from "@aurochs-office/pptx/domain";
 import { SvgContentRenderer } from "@aurochs-renderer/pptx/react";
 import { SlideList } from "../slide-list";
 import type { SlideWithId } from "@aurochs-office/pptx/app";
 import { PresentationSlideshow, type SlideshowSlideContent } from "./PresentationSlideshow";
-import { useSlideNavigation, useViewerKeyboard, useSlideshowMode } from "./hooks";
+import { useSlideNavigation, useViewerKeyboard, useSlideshowMode, useSwipeNavigation } from "./hooks";
 import { ViewerControls, type ControlAction } from "./components";
 import {
   ChevronLeftIcon,
@@ -36,6 +36,8 @@ export type SlideShareViewerProps = {
   readonly getSlideContent: (slideIndex: number) => string;
   /** Function to get slide content with timing/transition for slideshow */
   readonly getSlideshowContent?: (slideIndex: number) => SlideshowSlideContent;
+  /** Presentation title (for display/sharing) */
+  readonly title?: string;
   /** Function to get thumbnail SVG content */
   readonly getThumbnailContent?: (slideIndex: number) => string;
   /** Initial slide to display (1-based) */
@@ -171,6 +173,7 @@ export function SlideShareViewer({
   slideSize,
   getSlideContent,
   getSlideshowContent,
+  title: _title,
   getThumbnailContent,
   initialSlide = 1,
   enableSlideshow = true,
@@ -188,6 +191,7 @@ export function SlideShareViewer({
   style,
 }: SlideShareViewerProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const slideAreaRef = useRef<HTMLElement>(null);
 
   const nav = useSlideNavigation({
     totalSlides: slideCount,
@@ -213,6 +217,13 @@ export function SlideShareViewer({
     [nav, enableSlideshow, slideshow, onExit],
   );
   useViewerKeyboard(keyboardActions);
+
+  // Swipe navigation for touch devices
+  useSwipeNavigation({
+    containerRef: slideAreaRef,
+    onSwipeLeft: nav.goToNext,
+    onSwipeRight: nav.goToPrev,
+  });
 
   const slides = useMemo((): readonly SlideWithId[] => {
     const result: SlideWithId[] = [];
@@ -372,7 +383,7 @@ export function SlideShareViewer({
           </div>
         </aside>
 
-        <main style={slideAreaStyle}>
+        <main ref={slideAreaRef} style={{ ...slideAreaStyle, touchAction: "pan-y pinch-zoom" }}>
           <div style={{ ...slideContainerStyle, aspectRatio: `${slideSize.width} / ${slideSize.height}` }}>
             <SvgContentRenderer
               svg={renderedContent}

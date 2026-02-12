@@ -15,6 +15,10 @@ export type {
   PropertyAnimation,
 } from "./types";
 
+// Click groups - Step-by-step playback extraction
+export type { ClickGroup, TimingLike } from "./click-groups";
+export { extractClickGroups } from "./click-groups";
+
 // Engine - RAF-based animation primitives
 export type {
   AnimationController,

@@ -22,3 +22,6 @@ export { useSlideshowAutoAdvance, type UseSlideshowAutoAdvanceOptions } from "./
 export { useSlideshowControls, type UseSlideshowControlsOptions, type SlideshowControlsResult } from "./useSlideshowControls";
 export { useSlideshowKeyboard, type SlideshowKeyboardActions } from "./useSlideshowKeyboard";
 export { useSlideshowRenderSize, type UseSlideshowRenderSizeOptions, type RenderSize } from "./useSlideshowRenderSize";
+
+// Touch/gesture navigation
+export { useSwipeNavigation, type UseSwipeNavigationOptions } from "./useSwipeNavigation";

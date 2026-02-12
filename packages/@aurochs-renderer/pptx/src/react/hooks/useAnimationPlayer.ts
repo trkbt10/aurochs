@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
-import type { Timing } from "@aurochs-office/pptx/domain/animation";
+import type { Timing, TimeNode } from "@aurochs-office/pptx/domain/animation";
 import type { AnimationPlayerInstance, ElementFinder, PlayerState } from "../../animation";
 import { createPlayer, extractShapeIds } from "../../animation";
 
@@ -65,6 +65,11 @@ export type UseAnimationPlayerResult = {
   readonly play: (timing: Timing) => Promise<void>;
 
   /**
+   * Play an array of time nodes
+   */
+  readonly playNodes: (nodes: readonly TimeNode[]) => Promise<void>;
+
+  /**
    * Stop current animation
    */
   readonly stop: () => void;
@@ -88,11 +93,6 @@ export type UseAnimationPlayerResult = {
    * Extract shape IDs from timing data
    */
   readonly extractShapeIds: (timing: Timing) => string[];
-
-  /**
-   * Underlying player instance
-   */
-  readonly player: AnimationPlayerInstance;
 };
 
 // =============================================================================
@@ -228,6 +228,17 @@ export function useAnimationPlayer(options: UseAnimationPlayerOptions): UseAnima
     store.setState("stopped");
   }, [player, store]);
 
+  // Play nodes wrapper
+  const playNodes = useCallback(
+    async (nodes: readonly TimeNode[]) => {
+      if (store.getSnapshot() === "playing") {
+        return;
+      }
+      await player.playNodes(nodes);
+    },
+    [player, store],
+  );
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -239,11 +250,11 @@ export function useAnimationPlayer(options: UseAnimationPlayerOptions): UseAnima
     state,
     isPlaying: state === "playing",
     play,
+    playNodes,
     stop,
     resetAll: player.resetAll,
     showAll: player.showAll,
     hideAll: player.hideAll,
     extractShapeIds,
-    player,
   };
 }

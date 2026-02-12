@@ -9,10 +9,10 @@
  * - Minimal by default: Clean appearance without UI clutter
  */
 
-import { useCallback, useEffect, useMemo, useRef, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, type CSSProperties, type MouseEvent } from "react";
 import type { SlideSize } from "@aurochs-office/pptx/domain";
 import { SvgContentRenderer } from "@aurochs-renderer/pptx/react";
-import { useSlideNavigation, useViewerKeyboard } from "./hooks";
+import { useSlideNavigation, useViewerKeyboard, useSwipeNavigation } from "./hooks";
 import { ViewerControls } from "./components";
 import { radiusTokens, colorTokens } from "@aurochs-ui/ui-components/design-tokens";
 
@@ -57,6 +57,8 @@ const containerStyle: CSSProperties = {
   backgroundColor: colorTokens.background.tertiary,
   borderRadius: radiusTokens.lg,
   overflow: "hidden",
+  // Prevent browser edge swipe gestures while allowing vertical scroll and pinch zoom
+  touchAction: "pan-y pinch-zoom",
 };
 
 const slideAreaStyle: CSSProperties = {
@@ -115,6 +117,13 @@ export function EmbeddableSlide({
   );
   useViewerKeyboard(keyboardActions);
 
+  // Swipe navigation for touch devices
+  useSwipeNavigation({
+    containerRef,
+    onSwipeLeft: nav.goToNext,
+    onSwipeRight: nav.goToPrev,
+  });
+
   useEffect(() => {
     if (!autoPlay) {
       return;
@@ -139,6 +148,22 @@ export function EmbeddableSlide({
     }
   }, [pauseOnHover]);
 
+  // Click on slide area: left 20% = prev, right 80% = next
+  const handleSlideClick = useCallback(
+    (event: MouseEvent<HTMLDivElement>) => {
+      const rect = event.currentTarget.getBoundingClientRect();
+      const clickX = event.clientX - rect.left;
+      const threshold = rect.width * 0.2;
+
+      if (clickX < threshold) {
+        nav.goToPrev();
+      } else {
+        nav.goToNext();
+      }
+    },
+    [nav],
+  );
+
   const svg = getSlideContent(nav.currentSlide);
 
   const computedStyle: CSSProperties = {
@@ -157,7 +182,7 @@ export function EmbeddableSlide({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <div style={slideAreaStyle}>
+      <div style={{ ...slideAreaStyle, cursor: "pointer" }} onClick={handleSlideClick}>
         <div style={{ ...slideContainerStyle, aspectRatio: `${slideSize.width} / ${slideSize.height}` }}>
           <SvgContentRenderer svg={svg} width={slideSize.width} height={slideSize.height} mode="full" />
         </div>

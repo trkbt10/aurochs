@@ -21,7 +21,7 @@ export type SlideshowControlsResult = {
 };
 
 /**
- * Hook for auto-hiding slideshow controls on mouse inactivity.
+ * Hook for auto-hiding slideshow controls on mouse/touch inactivity.
  */
 export function useSlideshowControls({
   containerRef,
@@ -31,7 +31,7 @@ export function useSlideshowControls({
   const timeoutRef = useRef<number | undefined>(undefined);
 
   useEffect(() => {
-    function handleMouseMove() {
+    function resetTimer() {
       setShowControls(true);
       if (timeoutRef.current) {
         window.clearTimeout(timeoutRef.current);
@@ -46,11 +46,16 @@ export function useSlideshowControls({
       return;
     }
 
-    container.addEventListener("mousemove", handleMouseMove);
-    handleMouseMove();
+    // Mouse movement shows controls
+    container.addEventListener("mousemove", resetTimer);
+    // Touch/tap also shows controls
+    container.addEventListener("pointerdown", resetTimer);
+
+    resetTimer();
 
     return () => {
-      container.removeEventListener("mousemove", handleMouseMove);
+      container.removeEventListener("mousemove", resetTimer);
+      container.removeEventListener("pointerdown", resetTimer);
       if (timeoutRef.current) {
         window.clearTimeout(timeoutRef.current);
       }

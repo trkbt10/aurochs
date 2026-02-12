@@ -11,8 +11,9 @@
 
 import { render } from "@testing-library/react";
 import { SlideShareViewer } from "./SlideShareViewer";
+import { px } from "@aurochs-office/drawing-ml/domain";
 
-const mockSlideSize = { width: 960, height: 540 };
+const mockSlideSize = { width: px(960), height: px(540) };
 
 function getMockSlideContent(index: number) {
   return `<svg viewBox="0 0 960 540"><text>Slide ${index}</text></svg>`;
@@ -66,8 +67,8 @@ describe("SlideShareViewer", () => {
       expect(main).toBeTruthy();
       // flex: 1 normalizes to "1 1 0%" in computed style
       expect(main?.style.flex).toMatch(/^1/);
-      // position: relative for NavigationControls overlay
-      expect(main?.style.position).toBe("relative");
+      // display: flex for centering slide content
+      expect(main?.style.display).toBe("flex");
     });
   });
 

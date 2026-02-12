@@ -9,12 +9,12 @@
  * - Keyboard-primary: Arrow keys for navigation, F for fullscreen/present
  */
 
-import { useState, useMemo, useCallback, type CSSProperties, type ReactNode } from "react";
+import { useState, useMemo, useCallback, useRef, type CSSProperties, type ReactNode } from "react";
 import type { SlideSize } from "@aurochs-office/pptx/domain";
 import { SvgContentRenderer } from "@aurochs-renderer/pptx/react";
 import { SlideList } from "../slide-list";
 import type { SlideWithId } from "@aurochs-office/pptx/app";
-import { useSlideNavigation, useViewerKeyboard } from "./hooks";
+import { useSlideNavigation, useViewerKeyboard, useSwipeNavigation } from "./hooks";
 import { ViewerControls, type ControlAction } from "./components";
 import { PlayIcon, SidebarIcon, EnterFullscreenIcon } from "@aurochs-ui/ui-components/icons";
 import { spacingTokens, fontTokens, colorTokens, shadowTokens, radiusTokens } from "@aurochs-ui/ui-components/design-tokens";
@@ -184,6 +184,7 @@ export function PresentationViewer({
   style,
 }: PresentationViewerProps) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(showThumbnails);
+  const slideAreaRef = useRef<HTMLElement>(null);
 
   const nav = useSlideNavigation({
     totalSlides: slideCount,
@@ -204,6 +205,13 @@ export function PresentationViewer({
     [nav, enableSlideshow, onStartSlideshow],
   );
   useViewerKeyboard(keyboardActions);
+
+  // Swipe navigation for touch devices
+  useSwipeNavigation({
+    containerRef: slideAreaRef,
+    onSwipeLeft: nav.goToNext,
+    onSwipeRight: nav.goToPrev,
+  });
 
   const slides = useMemo((): readonly SlideWithId[] => {
     const result: SlideWithId[] = [];
@@ -322,7 +330,7 @@ export function PresentationViewer({
           </div>
         </aside>
 
-        <main style={slideAreaStyle}>
+        <main ref={slideAreaRef} style={{ ...slideAreaStyle, touchAction: "pan-y pinch-zoom" }}>
           <div style={{ ...slideContainerStyle, aspectRatio: `${slideSize.width} / ${slideSize.height}` }}>
             <SvgContentRenderer
               svg={renderedContent}

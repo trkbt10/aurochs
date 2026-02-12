@@ -17,5 +17,6 @@
     "outDir": "dist",
     "types": ["node", "vitest/globals"]
   },
-  "include": ["pages/**/*", "types/**/*"]
+  "include": ["pages/**/*", "types/**/*"],
+  "exclude": ["pages/scripts/update/update-google-fonts-families.ts"]
 }

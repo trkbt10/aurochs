@@ -115,12 +115,17 @@ function isContainerNode(node: TimeNode): node is ParallelTimeNode | SequenceTim
 
 /**
  * Animation player instance (returned by createPlayer)
+ *
+ * This is a pure playback engine - it doesn't store any navigation state.
+ * Step/click group state management should be handled at a higher level.
  */
 export type AnimationPlayerInstance = {
   /** Get current player state */
   readonly getState: () => PlayerState;
   /** Play animations from timing data */
   readonly play: (timing: TimingLike | null) => Promise<void>;
+  /** Play an array of time nodes */
+  readonly playNodes: (nodes: readonly TimeNode[]) => Promise<void>;
   /** Stop current animation */
   readonly stop: () => void;
   /** Reset all animated elements */
@@ -133,6 +138,7 @@ export type AnimationPlayerInstance = {
 
 /**
  * Internal state container for player lifecycle management.
+ * Only contains playback state, not step navigation state.
  */
 type PlayerStateContainer = {
   status: PlayerState;
@@ -570,6 +576,40 @@ export function createPlayer(options: PlayerOptions): AnimationPlayerInstance {
         if (el) {
           hideElement(el);
         }
+      }
+    },
+
+    async playNodes(nodes: readonly TimeNode[]): Promise<void> {
+      // Check if already playing
+      if (state.status === "playing") {
+        log("Cannot play nodes while already playing");
+        return;
+      }
+
+      log(`Playing ${nodes.length} nodes`);
+
+      state.status = "playing";
+      state.abortController = new AbortController();
+      opts.onStart?.();
+
+      try {
+        for (const node of nodes) {
+          if (shouldStop()) {
+            break;
+          }
+          await processNode(node);
+        }
+        log("Nodes playback complete");
+      } catch (error) {
+        if ((error as Error).message === "Animation aborted") {
+          log("Nodes playback stopped");
+        } else {
+          throw error;
+        }
+      } finally {
+        state.status = "idle";
+        state.abortController = null;
+        opts.onComplete?.();
       }
     },
   };
