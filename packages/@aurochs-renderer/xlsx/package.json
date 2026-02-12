@@ -5,8 +5,10 @@
   "type": "module",
   "sideEffects": false,
   "dependencies": {
+    "@aurochs/color": "workspace:*",
     "@aurochs/mermaid": "workspace:*",
-    "@aurochs-renderer/drawing-ml": "workspace:*"
+    "@aurochs-office/xlsx": "workspace:*",
+    "@aurochs-office/drawing-ml": "workspace:*"
   },
   "scripts": {
     "lint": "eslint src",
@@ -25,6 +27,10 @@
     "./mermaid": {
       "types": "./src/mermaid/index.ts",
       "default": "./src/mermaid/index.ts"
+    },
+    "./svg": {
+      "types": "./src/svg/index.ts",
+      "default": "./src/svg/index.ts"
     }
   }
 }

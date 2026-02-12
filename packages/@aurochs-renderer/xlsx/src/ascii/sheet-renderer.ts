@@ -2,7 +2,7 @@
  * @file Renders XLSX sheet data as ASCII grid
  */
 
-import { renderAsciiTable } from "@aurochs-renderer/drawing-ml/ascii";
+import { renderAsciiTable } from "./table-utils";
 import type { SheetAsciiParams, AsciiCell, AsciiSheetRow } from "./types";
 
 /** Convert a 0-based column index to a column letter (A, B, ... Z, AA, AB, ...). */

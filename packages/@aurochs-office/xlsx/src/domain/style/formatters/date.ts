@@ -6,28 +6,17 @@
  */
 
 import type { XlsxDateSystem } from "../../date-system";
-import { EXCEL_1904_TO_1900_DAY_OFFSET } from "../../date-system";
+import { serialToDate } from "../../date-serial";
 import { stripQuotedStrings, removeEscapes, removeFillAndPadding } from "../format-code/normalize";
 
 const MS_IN_DAY = 86_400_000;
 
-function excelSerialToUtcDate1900(serial: number): Date {
-  // 1900 date system with leap-year bug:
-  // - serial 1 = 1900-01-01
-  // - serial 60 = 1900-02-29 (non-existent but preserved by Excel)
-  const days = Math.floor(serial);
-  const fraction = serial - days;
-  const timeMs = Math.round(fraction * MS_IN_DAY);
-  const adjustedDays = days >= 60 ? days - 1 : days;
-
-  const baseUtcMs = Date.UTC(1899, 11, 31);
-  const dateUtcMs = baseUtcMs + adjustedDays * MS_IN_DAY + timeMs;
-  return new Date(dateUtcMs);
-}
-
+/**
+ * Convert Excel serial to UTC Date.
+ * Uses the canonical implementation from domain/date-serial.ts.
+ */
 function excelSerialToUtcDate(serial: number, dateSystem: XlsxDateSystem): Date {
-  const normalizedSerial = dateSystem === "1904" ? serial + EXCEL_1904_TO_1900_DAY_OFFSET : serial;
-  return excelSerialToUtcDate1900(normalizedSerial);
+  return serialToDate(serial, dateSystem);
 }
 
 const WEEKDAY_SHORT: readonly string[] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];

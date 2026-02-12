@@ -1,35 +1,41 @@
 /**
  * @file Helpers for converting between spreadsheet date serials and UTC dates.
+ *
+ * Re-exports from domain/date-serial.ts for formula function use.
+ * Formula functions typically use 1900 date system (default).
  */
 
-const MILLISECONDS_PER_DAY = 86_400_000;
-const SPREADSHEET_EPOCH_MS = Date.UTC(1899, 11, 30);
+import {
+  dateToSerial,
+  serialToDate as serialToDateWithSystem,
+  datePartsToSerial as datePartsToSerialWithSystem,
+  serialToComponents,
+} from "../../../domain/date-serial";
 
-const toUtcDate = (year: number, monthIndex: number, day: number): Date => {
-  const milliseconds = Date.UTC(year, monthIndex, day);
-  if (!Number.isFinite(milliseconds)) {
-    throw new Error("DATE produced an invalid calendar date");
-  }
-  return new Date(milliseconds);
-};
-
+/**
+ * Convert date parts to serial (1900 system, for formula compatibility).
+ */
 export const datePartsToSerial = (year: number, month: number, day: number): number => {
-  const utcDate = toUtcDate(year, month - 1, day);
-  return (utcDate.getTime() - SPREADSHEET_EPOCH_MS) / MILLISECONDS_PER_DAY;
+  return datePartsToSerialWithSystem({ year, month, day, dateSystem: "1900" });
 };
 
+/**
+ * Convert Date to serial (1900 system, for formula compatibility).
+ */
 export const dateTimeToSerial = (date: Date): number => {
-  return (date.getTime() - SPREADSHEET_EPOCH_MS) / MILLISECONDS_PER_DAY;
+  return dateToSerial(date, "1900");
 };
 
+/**
+ * Convert serial to Date (1900 system, for formula compatibility).
+ */
 export const serialToDate = (serial: number): Date => {
-  if (!Number.isFinite(serial)) {
-    throw new Error("Date serial must be finite");
-  }
-  const millisecondsOffset = Math.round(serial * MILLISECONDS_PER_DAY);
-  return new Date(SPREADSHEET_EPOCH_MS + millisecondsOffset);
+  return serialToDateWithSystem(serial, "1900");
 };
 
+/**
+ * Extract UTC components from serial (1900 system).
+ */
 export const serialToUTCComponents = (
   serial: number,
 ): {
@@ -41,18 +47,12 @@ export const serialToUTCComponents = (
   seconds: number;
   milliseconds: number;
 } => {
-  const date = serialToDate(serial);
-  return {
-    year: date.getUTCFullYear(),
-    month: date.getUTCMonth() + 1,
-    day: date.getUTCDate(),
-    hours: date.getUTCHours(),
-    minutes: date.getUTCMinutes(),
-    seconds: date.getUTCSeconds(),
-    milliseconds: date.getUTCMilliseconds(),
-  };
+  return serialToComponents(serial, "1900");
 };
 
+/**
+ * Normalize time components to day fraction.
+ */
 export const normalizeTimeToFraction = (hours: number, minutes: number, seconds: number): number => {
   const totalSeconds = hours * 3600 + minutes * 60 + seconds;
   if (!Number.isFinite(totalSeconds)) {
@@ -64,7 +64,10 @@ export const normalizeTimeToFraction = (hours: number, minutes: number, seconds:
   return totalSeconds / 86_400;
 };
 
+/**
+ * Get the number of days in a month.
+ */
 export const daysInMonth = (year: number, month: number): number => {
-  const boundary = toUtcDate(year, month, 0);
+  const boundary = new Date(Date.UTC(year, month, 0));
   return boundary.getUTCDate();
 };
