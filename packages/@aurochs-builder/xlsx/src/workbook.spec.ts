@@ -11,13 +11,8 @@
 import { serializeElement } from "@aurochs/xml";
 import type { XlsxWorkbook, XlsxWorksheet, XlsxDefinedName } from "@aurochs-office/xlsx/domain/workbook";
 import { createDefaultStyleSheet } from "@aurochs-office/xlsx/domain/style/types";
-import {
-  serializeWorkbook,
-  serializeSheets,
-  serializeDefinedNames,
-  serializeRelationships,
-  type XlsxRelationship,
-} from "./workbook";
+import { serializeWorkbook, serializeSheets, serializeDefinedNames } from "./workbook";
+import { serializeRelationships, type OpcRelationship as XlsxRelationship } from "@aurochs-office/opc";
 
 // =============================================================================
 // Test Utilities

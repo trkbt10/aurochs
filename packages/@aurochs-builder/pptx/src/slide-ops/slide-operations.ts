@@ -16,16 +16,17 @@ import {
   type XmlElement,
   type XmlNode,
 } from "@aurochs/xml";
+import { PRESENTATIONML_CONTENT_TYPES, PRESENTATIONML_RELATIONSHIP_TYPES } from "@aurochs-office/opc";
 
 const PRESENTATION_XML_PATH = "ppt/presentation.xml";
 const PRESENTATION_RELS_PATH = "ppt/_rels/presentation.xml.rels";
 const CONTENT_TYPES_PATH = "[Content_Types].xml";
 
-const SLIDE_REL_TYPE = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide";
-const SLIDE_LAYOUT_REL_TYPE = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout";
-const NOTES_REL_TYPE = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesSlide";
-const SLIDE_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.presentationml.slide+xml";
-const NOTES_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.presentationml.notesSlide+xml";
+const SLIDE_REL_TYPE = PRESENTATIONML_RELATIONSHIP_TYPES.slide;
+const SLIDE_LAYOUT_REL_TYPE = PRESENTATIONML_RELATIONSHIP_TYPES.slideLayout;
+const NOTES_REL_TYPE = PRESENTATIONML_RELATIONSHIP_TYPES.notesSlide;
+const SLIDE_CONTENT_TYPE = PRESENTATIONML_CONTENT_TYPES.slide;
+const NOTES_CONTENT_TYPE = PRESENTATIONML_CONTENT_TYPES.notesSlide;
 
 const RELS_XMLNS = "http://schemas.openxmlformats.org/package/2006/relationships";
 

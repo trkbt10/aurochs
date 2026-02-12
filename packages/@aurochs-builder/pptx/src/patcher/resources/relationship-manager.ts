@@ -1,17 +1,24 @@
 /** @file Relationship manager for .rels file manipulation */
 import { createElement, isXmlElement, type XmlDocument } from "@aurochs/xml";
-import { listRelationships } from "@aurochs-office/opc";
+import {
+  listRelationships,
+  OFFICE_RELATIONSHIP_TYPES,
+  PRESENTATIONML_RELATIONSHIP_TYPES,
+} from "@aurochs-office/opc";
 import { getDocumentRoot, updateDocumentRoot } from "../core/xml-mutator";
 import { createRelationshipsDocument, RELATIONSHIPS_XMLNS, type RelationshipTargetMode } from "../parts/relationships";
 
 export type RelationshipType =
-  | "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"
-  | "http://schemas.openxmlformats.org/officeDocument/2006/relationships/video"
-  | "http://schemas.openxmlformats.org/officeDocument/2006/relationships/audio"
-  | "http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart"
-  | "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink"
-  | "http://schemas.openxmlformats.org/officeDocument/2006/relationships/oleObject"
-  | "http://schemas.openxmlformats.org/officeDocument/2006/relationships/font";
+  | typeof OFFICE_RELATIONSHIP_TYPES.image
+  | typeof OFFICE_RELATIONSHIP_TYPES.video
+  | typeof OFFICE_RELATIONSHIP_TYPES.audio
+  | typeof OFFICE_RELATIONSHIP_TYPES.chart
+  | typeof OFFICE_RELATIONSHIP_TYPES.hyperlink
+  | typeof OFFICE_RELATIONSHIP_TYPES.oleObject
+  | typeof OFFICE_RELATIONSHIP_TYPES.font
+  | typeof PRESENTATIONML_RELATIONSHIP_TYPES.notesSlide
+  | typeof PRESENTATIONML_RELATIONSHIP_TYPES.comments
+  | typeof PRESENTATIONML_RELATIONSHIP_TYPES.commentAuthors;
 
 /** Generate a unique relationship ID */
 export function generateRelationshipId(existingIds: readonly string[]): string {
@@ -119,7 +126,7 @@ export function ensureRelationshipsDocument(relsXml: XmlDocument | null): XmlDoc
 }
 
 function inferTargetMode(type: RelationshipType, target: string): RelationshipTargetMode | undefined {
-  if (type !== "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink") {
+  if (type !== OFFICE_RELATIONSHIP_TYPES.hyperlink) {
     return undefined;
   }
 

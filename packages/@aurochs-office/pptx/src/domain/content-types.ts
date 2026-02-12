@@ -8,7 +8,12 @@
  */
 
 import type { XmlDocument } from "@aurochs/xml";
-import { getBasename, getByPath, getChildren } from "@aurochs/xml";
+import { getBasename } from "@aurochs/xml";
+import {
+  PRESENTATIONML_CONTENT_TYPES,
+  DRAWINGML_CONTENT_TYPES,
+  parseContentTypes as opcParseContentTypes,
+} from "@aurochs-office/opc";
 
 // =============================================================================
 // Types
@@ -46,15 +51,17 @@ export type SlideFileInfo = {
 /**
  * Content type constants for PPTX files
  *
+ * Re-exports from @aurochs-office/opc with SCREAMING_CASE aliases for backward compatibility.
+ *
  * @see ECMA-376 Part 1, Section 13.3 (PresentationML Content Types)
  */
 export const CONTENT_TYPES = {
-  SLIDE: "application/vnd.openxmlformats-officedocument.presentationml.slide+xml",
-  SLIDE_LAYOUT: "application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml",
-  SLIDE_MASTER: "application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml",
-  THEME: "application/vnd.openxmlformats-officedocument.theme+xml",
-  NOTES: "application/vnd.openxmlformats-officedocument.presentationml.notesSlide+xml",
-  PRESENTATION: "application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml",
+  SLIDE: PRESENTATIONML_CONTENT_TYPES.slide,
+  SLIDE_LAYOUT: PRESENTATIONML_CONTENT_TYPES.slideLayout,
+  SLIDE_MASTER: PRESENTATIONML_CONTENT_TYPES.slideMaster,
+  THEME: DRAWINGML_CONTENT_TYPES.theme,
+  NOTES: PRESENTATIONML_CONTENT_TYPES.notesSlide,
+  PRESENTATION: PRESENTATIONML_CONTENT_TYPES.presentation,
 } as const;
 
 // =============================================================================
@@ -63,59 +70,40 @@ export const CONTENT_TYPES = {
 
 /**
  * Parse content types from [Content_Types].xml
+ *
+ * Uses OPC's parseContentTypes for core parsing, then extracts PPTX-specific paths.
+ *
  * @param contentTypesXml - Parsed content types XML
  * @returns Content types object with slide and layout arrays
  */
 export function parseContentTypes(contentTypesXml: XmlDocument): ContentTypes {
-  const slidesLocArray: string[] = [];
-  const slideLayoutsLocArray: string[] = [];
-  const slideMastersLocArray: string[] = [];
+  const parsed = opcParseContentTypes(contentTypesXml);
 
-  // Get Types element from document
-  const typesElement = getByPath(contentTypesXml, ["Types"]);
-  if (!typesElement) {
-    return { slides: slidesLocArray, slideLayouts: slideLayoutsLocArray, slideMasters: slideMastersLocArray };
-  }
+  const slides: string[] = [];
+  const slideLayouts: string[] = [];
+  const slideMasters: string[] = [];
 
-  // Get all Override elements
-  const overrideArray = getChildren(typesElement, "Override");
-
-  for (const override of overrideArray) {
-    const contentType = override.attrs["ContentType"];
-    const partName = override.attrs["PartName"];
-
-    if (contentType === undefined || partName === undefined) {
-      continue;
-    }
-
+  for (const [partName, contentType] of parsed.overrides) {
     // Remove leading slash from part name
     const normalizedPath = partName.startsWith("/") ? partName.substring(1) : partName;
 
     switch (contentType) {
       case CONTENT_TYPES.SLIDE:
-        slidesLocArray.push(normalizedPath);
+        slides.push(normalizedPath);
         break;
       case CONTENT_TYPES.SLIDE_LAYOUT:
-        slideLayoutsLocArray.push(normalizedPath);
+        slideLayouts.push(normalizedPath);
         break;
       case CONTENT_TYPES.SLIDE_MASTER:
-        slideMastersLocArray.push(normalizedPath);
+        slideMasters.push(normalizedPath);
         break;
     }
   }
 
   // Sort slides by number
-  slidesLocArray.sort((a, b) => {
-    const numA = extractSlideNumber(a);
-    const numB = extractSlideNumber(b);
-    return numA - numB;
-  });
+  slides.sort((a, b) => extractSlideNumber(a) - extractSlideNumber(b));
 
-  return {
-    slides: slidesLocArray,
-    slideLayouts: slideLayoutsLocArray,
-    slideMasters: slideMastersLocArray,
-  };
+  return { slides, slideLayouts, slideMasters };
 }
 
 /**

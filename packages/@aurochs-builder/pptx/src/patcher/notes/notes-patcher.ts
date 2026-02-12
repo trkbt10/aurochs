@@ -18,13 +18,13 @@ import {
   type XmlElement,
 } from "@aurochs/xml";
 import type { ZipPackage } from "@aurochs/zip";
+import { PRESENTATIONML_CONTENT_TYPES, PRESENTATIONML_RELATIONSHIP_TYPES } from "@aurochs-office/opc";
 import { setChildren } from "../core/xml-mutator";
 import { addRelationship, ensureRelationshipsDocument, type RelationshipType } from "../resources/relationship-manager";
 import { addOverride } from "../resources/content-types-manager";
 
-const NOTES_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.presentationml.notesSlide+xml";
-const NOTES_REL_TYPE =
-  "http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesSlide" as RelationshipType;
+const NOTES_CONTENT_TYPE = PRESENTATIONML_CONTENT_TYPES.notesSlide;
+const NOTES_REL_TYPE = PRESENTATIONML_RELATIONSHIP_TYPES.notesSlide as RelationshipType;
 
 const P_NS = "http://schemas.openxmlformats.org/presentationml/2006/main";
 const A_NS = "http://schemas.openxmlformats.org/drawingml/2006/main";
@@ -301,7 +301,7 @@ export function setSlideNotes(pkg: ZipPackage, slidePath: string, spec: SimpleNo
         createElement("Relationships", { xmlns: "http://schemas.openxmlformats.org/package/2006/relationships" }, [
           createElement("Relationship", {
             Id: "rId1",
-            Type: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide",
+            Type: PRESENTATIONML_RELATIONSHIP_TYPES.slide,
             Target: `../slides/slide${slideNum}.xml`,
           }),
         ]),

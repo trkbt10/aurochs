@@ -16,6 +16,7 @@ import {
 } from "@aurochs-builder/pptx/patcher";
 import type { ZipPackage } from "@aurochs/zip";
 import type { Degrees, Pixels } from "@aurochs-office/drawing-ml/domain/units";
+import { DRAWINGML_CONTENT_TYPES, OFFICE_RELATIONSHIP_TYPES } from "@aurochs-office/opc";
 import { patchChartData, patchChartStyle, patchChartTitle } from "@aurochs-builder/chart/patcher";
 import { buildChartSpaceDocument } from "@aurochs-builder/chart";
 import type { ChartAddSpec, ChartDataSpec } from "../types";
@@ -30,7 +31,7 @@ type AddContext = {
   readonly existingIds: string[];
 };
 
-const CHART_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.drawingml.chart+xml";
+const CHART_CONTENT_TYPE = DRAWINGML_CONTENT_TYPES.chart;
 
 function requireText(value: string | null, context: string): string {
   if (!value) {
@@ -104,7 +105,7 @@ function ensureSlideChartRelationship(zipPackage: ZipPackage, slidePath: string,
   const { updatedXml, rId } = addRelationship(
     relsDoc,
     `../charts/${chartPartPath.split("/").pop()}`,
-    "http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart",
+    OFFICE_RELATIONSHIP_TYPES.chart,
   );
   const out = serializeDocument(updatedXml, { declaration: true, standalone: true });
   zipPackage.writeText(relsPath, out);

@@ -58,13 +58,10 @@ export {
 } from "./worksheet";
 
 // Workbook serialization
-export {
-  serializeWorkbook,
-  serializeSheets,
-  serializeDefinedNames,
-  serializeRelationships,
-  type XlsxRelationship,
-} from "./workbook";
+export { serializeWorkbook, serializeSheets, serializeDefinedNames } from "./workbook";
+
+// OPC relationship serialization (re-exported from OPC for convenience)
+export { serializeRelationships, type OpcRelationship as XlsxRelationship } from "@aurochs-office/opc";
 
 // Styles serialization
 export {
@@ -99,4 +96,5 @@ export {
   generateRootRels,
   generateWorkbookRels,
   generateSharedStrings,
+  type ExportXlsxOptions,
 } from "./exporter";

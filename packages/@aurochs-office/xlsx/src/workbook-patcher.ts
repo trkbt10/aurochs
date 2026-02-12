@@ -121,7 +121,38 @@ export async function patchWorkbook(workbook: Workbook, updates: readonly SheetU
 }
 
 /**
+ * Supported sheet root element names.
+ *
+ * - "worksheet" for regular worksheets (xl/worksheets/sheetN.xml)
+ * - "macrosheet" for Excel macro sheets (xl/macrosheets/sheetN.xml)
+ *
+ * @see ECMA-376 Part 4, Section 18.3.1.99 (worksheet)
+ * @see MS-OFFMACRO2 Section 2.2.1.5 (Macro Sheet)
+ */
+const SHEET_ROOT_ELEMENTS = ["worksheet", "macrosheet"] as const;
+
+/**
+ * Find the sheet root element (worksheet or macrosheet).
+ *
+ * @param sheetXml - Parsed sheet XML document
+ * @returns The root element or null if not found
+ */
+function findSheetRootElement(sheetXml: ReturnType<typeof parseXml>): XmlElement | null {
+  for (const rootName of SHEET_ROOT_ELEMENTS) {
+    const element = getByPath(sheetXml, [rootName]);
+    if (element) {
+      return element;
+    }
+  }
+  return null;
+}
+
+/**
  * Patch a single sheet's XML with cell updates.
+ *
+ * Supports both regular worksheets and Excel macro sheets (xlMacrosheet).
+ *
+ * @see MS-OFFMACRO2 Section 2.2.1.5 (Macro Sheet)
  */
 function patchSheetXml(params: {
   readonly pkg: ZipPackage;
@@ -137,29 +168,32 @@ function patchSheetXml(params: {
   }
 
   const sheetXml = parseXml(sheetText);
-  const worksheetEl = getByPath(sheetXml, ["worksheet"]);
-  if (!worksheetEl) {
-    throw new Error(`patchSheetXml: worksheet element not found in ${sheet.xmlPath}`);
+  const sheetRootEl = findSheetRootElement(sheetXml);
+  if (!sheetRootEl) {
+    throw new Error(
+      `patchSheetXml: sheet root element not found in ${sheet.xmlPath}. ` +
+        `Expected one of: ${SHEET_ROOT_ELEMENTS.join(", ")}`,
+    );
   }
 
-  const worksheetWithDimension = dimension ? updateDimension(worksheetEl, dimension) : worksheetEl;
-  const { worksheet: updatedWorksheet, sheetData: sheetDataEl } = ensureSheetDataElement(worksheetWithDimension);
+  const sheetWithDimension = dimension ? updateDimension(sheetRootEl, dimension) : sheetRootEl;
+  const { worksheet: updatedSheet, sheetData: sheetDataEl } = ensureSheetDataElement(sheetWithDimension);
 
   // Apply cell updates
   const updatedSheetData = applyCellUpdates(sheetDataEl, cells, sharedStrings);
 
-  // Replace sheetData in worksheet
-  const newChildren = updatedWorksheet.children.map((child) => {
+  // Replace sheetData in sheet
+  const newChildren = updatedSheet.children.map((child) => {
     if (isXmlElement(child) && child.name === "sheetData") {
       return updatedSheetData;
     }
     return child;
   });
 
-  const finalWorksheet = createElement(updatedWorksheet.name, updatedWorksheet.attrs, newChildren);
+  const finalSheet = createElement(updatedSheet.name, updatedSheet.attrs, newChildren);
 
   // Serialize and write back
-  const serialized = serializeDocument({ children: [finalWorksheet] }, { declaration: true, standalone: true });
+  const serialized = serializeDocument({ children: [finalSheet] }, { declaration: true, standalone: true });
   pkg.writeText(sheet.xmlPath, serialized);
 }
 

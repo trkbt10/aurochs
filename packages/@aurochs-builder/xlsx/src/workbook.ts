@@ -12,38 +12,21 @@
 import type { XmlElement, XmlNode } from "@aurochs/xml";
 import { createElement } from "@aurochs-builder/core";
 import type { XlsxWorkbook, XlsxWorksheet, XlsxDefinedName } from "@aurochs-office/xlsx/domain/workbook";
+import { SPREADSHEETML_NAMESPACES, OFFICE_NAMESPACES } from "@aurochs-office/opc";
 
 // =============================================================================
-// Constants
+// Constants (from OPC centralized namespaces)
 // =============================================================================
 
 /**
  * SpreadsheetML namespace URI
  */
-const SPREADSHEETML_NS = "http://schemas.openxmlformats.org/spreadsheetml/2006/main";
+const SPREADSHEETML_NS = SPREADSHEETML_NAMESPACES.main;
 
 /**
  * Office Document Relationships namespace URI
  */
-const RELATIONSHIPS_NS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
-
-// =============================================================================
-// Relationship Types
-// =============================================================================
-
-/**
- * Relationship entry for serialization.
- *
- * @see ECMA-376 Part 2, Section 9.2 (Relationships)
- */
-export type XlsxRelationship = {
-  /** Relationship ID (e.g., "rId1") */
-  readonly id: string;
-  /** Relationship type URL */
-  readonly type: string;
-  /** Target path (e.g., "worksheets/sheet1.xml") */
-  readonly target: string;
-};
+const RELATIONSHIPS_NS = OFFICE_NAMESPACES.relationships;
 
 // =============================================================================
 // FileVersion Serialization
@@ -270,52 +253,6 @@ function serializeCalcPr(): XmlElement {
   return createElement("calcPr", {
     calcId: "191029",
   });
-}
-
-// =============================================================================
-// Relationships Serialization
-// =============================================================================
-
-/**
- * Serialize a single Relationship element.
- *
- * @param relationship - Relationship to serialize
- * @returns XmlElement for the Relationship
- *
- * @see ECMA-376 Part 2, Section 9.2 (Relationships)
- *
- * @example
- * <Relationship Id="rId1" Type="..." Target="worksheets/sheet1.xml"/>
- */
-function serializeRelationship(relationship: XlsxRelationship): XmlElement {
-  return createElement("Relationship", {
-    Id: relationship.id,
-    Type: relationship.type,
-    Target: relationship.target,
-  });
-}
-
-/**
- * Serialize Relationships element for .rels files.
- *
- * @param relationships - Relationships to serialize
- * @returns XmlElement for the Relationships collection
- *
- * @see ECMA-376 Part 2, Section 9.2 (Relationships)
- *
- * @example
- * <Relationships xmlns="...">
- *   <Relationship Id="rId1" Type="..." Target="worksheets/sheet1.xml"/>
- * </Relationships>
- */
-export function serializeRelationships(relationships: readonly XlsxRelationship[]): XmlElement {
-  const children: XmlNode[] = relationships.map(serializeRelationship);
-
-  return createElement(
-    "Relationships",
-    { xmlns: "http://schemas.openxmlformats.org/package/2006/relationships" },
-    children,
-  );
 }
 
 // =============================================================================

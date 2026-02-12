@@ -3,25 +3,31 @@
  */
 
 import type { PptSlideSize } from "../domain/types";
+import {
+  PRESENTATIONML_CONTENT_TYPES,
+  DRAWINGML_CONTENT_TYPES,
+  PRESENTATIONML_RELATIONSHIP_TYPES,
+  OFFICE_RELATIONSHIP_TYPES,
+} from "@aurochs-office/opc";
 
 const SLIDE_ID_START = 256;
 const SLIDE_MASTER_ID = 2147483648;
 
-const CT_PRESENTATION = "application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml";
-const CT_SLIDE = "application/vnd.openxmlformats-officedocument.presentationml.slide+xml";
-const CT_SLIDE_LAYOUT = "application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml";
-const CT_SLIDE_MASTER = "application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml";
-const CT_THEME = "application/vnd.openxmlformats-officedocument.theme+xml";
-const CT_NOTES = "application/vnd.openxmlformats-officedocument.presentationml.notesSlide+xml";
-const CT_CHART = "application/vnd.openxmlformats-officedocument.drawingml.chart+xml";
+const CT_PRESENTATION = PRESENTATIONML_CONTENT_TYPES.presentation;
+const CT_SLIDE = PRESENTATIONML_CONTENT_TYPES.slide;
+const CT_SLIDE_LAYOUT = PRESENTATIONML_CONTENT_TYPES.slideLayout;
+const CT_SLIDE_MASTER = PRESENTATIONML_CONTENT_TYPES.slideMaster;
+const CT_THEME = DRAWINGML_CONTENT_TYPES.theme;
+const CT_NOTES = PRESENTATIONML_CONTENT_TYPES.notesSlide;
+const CT_CHART = DRAWINGML_CONTENT_TYPES.chart;
 
-const RT_SLIDE = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide";
-const RT_SLIDE_LAYOUT = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout";
-const RT_SLIDE_MASTER = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster";
-const RT_THEME = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme";
-const RT_IMAGE = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image";
-const RT_HYPERLINK = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink";
-const RT_NOTES = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesSlide";
+const RT_SLIDE = PRESENTATIONML_RELATIONSHIP_TYPES.slide;
+const RT_SLIDE_LAYOUT = PRESENTATIONML_RELATIONSHIP_TYPES.slideLayout;
+const RT_SLIDE_MASTER = PRESENTATIONML_RELATIONSHIP_TYPES.slideMaster;
+const RT_THEME = OFFICE_RELATIONSHIP_TYPES.theme;
+const RT_IMAGE = OFFICE_RELATIONSHIP_TYPES.image;
+const RT_HYPERLINK = OFFICE_RELATIONSHIP_TYPES.hyperlink;
+const RT_NOTES = PRESENTATIONML_RELATIONSHIP_TYPES.notesSlide;
 
 export type SlideRelationship = {
   readonly id: string;

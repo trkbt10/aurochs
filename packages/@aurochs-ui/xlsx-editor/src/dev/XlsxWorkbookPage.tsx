@@ -2,7 +2,7 @@
  * @file XLSX Editor Workbook Page
  */
 
-import { useCallback, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useMemo, useState, useRef, type CSSProperties } from "react";
 import { XlsxWorkbookEditor } from "@aurochs-ui/xlsx-editor";
 import type { XlsxWorkbook } from "@aurochs-office/xlsx/domain/workbook";
 import { createDefaultStyleSheet, type XlsxCellXf } from "@aurochs-office/xlsx/domain/style/types";
@@ -21,7 +21,8 @@ import type { CellAddress } from "@aurochs-office/xlsx/domain/cell/address";
 import type { Formula } from "@aurochs-office/xlsx/domain/cell/formula";
 import { Button, Input } from "@aurochs-ui/ui-components/primitives";
 import { detectSpreadsheetFileType, parseXlsWithReport, type SpreadsheetFileType } from "@aurochs-office/xls";
-import { createGetZipTextFileContentFromBytes } from "@aurochs-office/opc";
+import { createGetZipTextFileContentFromBytes, downloadSpreadsheet } from "@aurochs-office/opc";
+import { loadZipPackage, type ZipPackage } from "@aurochs/zip";
 import { parseXlsxWorkbook } from "@aurochs-office/xlsx/parser";
 import { exportXlsx } from "@aurochs-builder/xlsx/exporter";
 
@@ -53,7 +54,17 @@ class SpreadsheetParseError extends Error {
   }
 }
 
-async function parseWorkbookFromFile(file: File): Promise<XlsxWorkbook> {
+/**
+ * Result of parsing a spreadsheet file.
+ * Includes the source ZipPackage for macro preservation in xlsm files.
+ */
+type ParsedSpreadsheetResult = {
+  readonly workbook: XlsxWorkbook;
+  /** Source ZipPackage (only for xlsx/xlsm files, not xls) */
+  readonly sourcePackage: ZipPackage | null;
+};
+
+async function parseWorkbookFromFile(file: File): Promise<ParsedSpreadsheetResult> {
   const data = new Uint8Array(await file.arrayBuffer());
   const fileType = detectSpreadsheetFileType(data);
   if (fileType === "unknown") {
@@ -63,7 +74,7 @@ async function parseWorkbookFromFile(file: File): Promise<XlsxWorkbook> {
   if (fileType === "xls") {
     try {
       const parsed = parseXlsWithReport(data, { mode: "lenient" });
-      return parsed.workbook;
+      return { workbook: parsed.workbook, sourcePackage: null };
     } catch (cause) {
       throw new SpreadsheetParseError(
         `Failed to parse XLS file: ${cause instanceof Error ? cause.message : String(cause)}`,
@@ -74,8 +85,11 @@ async function parseWorkbookFromFile(file: File): Promise<XlsxWorkbook> {
   }
 
   try {
+    // Load ZipPackage for both parsing and potential macro preservation
+    const sourcePackage = await loadZipPackage(data.buffer);
     const getFileContent = await createGetZipTextFileContentFromBytes(data);
-    return await parseXlsxWorkbook(getFileContent);
+    const workbook = await parseXlsxWorkbook(getFileContent);
+    return { workbook, sourcePackage };
   } catch (cause) {
     throw new SpreadsheetParseError(
       `Failed to parse XLSX file: ${cause instanceof Error ? cause.message : String(cause)}`,
@@ -83,21 +97,6 @@ async function parseWorkbookFromFile(file: File): Promise<XlsxWorkbook> {
       cause,
     );
   }
-}
-
-function downloadXlsx(bytes: Uint8Array, filename: string): void {
-  const data = new Uint8Array(bytes);
-  const blob = new Blob([data], {
-    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
 }
 
 function createAddress(col: ColIndex, row: RowIndex): CellAddress {
@@ -760,6 +759,8 @@ export function XlsxWorkbookPage() {
   const [currentWorkbook, setCurrentWorkbook] = useState<XlsxWorkbook>(workbook);
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Store source package for macro preservation (xlsm pass-through)
+  const sourcePackageRef = useRef<ZipPackage | null>(null);
 
   const computeInitialGridSize = useCallback((wb: XlsxWorkbook): { rowCount: number; colCount: number } => {
     const MAX_ROWS = 1_048_576;
@@ -776,12 +777,14 @@ export function XlsxWorkbookPage() {
       setIsBusy(true);
       setError(null);
       try {
-        const parsed = await parseWorkbookFromFile(file);
+        const { workbook: parsed, sourcePackage } = await parseWorkbookFromFile(file);
         setSourceName(file.name);
         setWorkbook(parsed);
         setCurrentWorkbook(parsed);
         setGridSize(computeInitialGridSize(parsed));
         setWorkbookRevision((v) => v + 1);
+        // Store source package for macro preservation
+        sourcePackageRef.current = sourcePackage;
       } catch (e) {
         if (e instanceof SpreadsheetParseError) {
           setError(`Failed to load ${e.fileType.toUpperCase()} file: ${e.message}`);
@@ -796,12 +799,11 @@ export function XlsxWorkbookPage() {
   );
 
   const defaultSaveName = useMemo(() => {
-    if (sourceName.toLowerCase().endsWith(".xlsx")) {
+    // Preserve macro-enabled format (.xlsm)
+    if (sourceName.toLowerCase().endsWith(".xlsx") || sourceName.toLowerCase().endsWith(".xlsm")) {
       return sourceName;
     }
-    if (sourceName.toLowerCase().endsWith(".xlsm")) {
-      return sourceName.replace(/\.xlsm$/i, ".xlsx");
-    }
+    // Convert legacy .xls to .xlsx (macros would be lost anyway)
     if (sourceName.toLowerCase().endsWith(".xls")) {
       return sourceName.replace(/\.xls$/i, ".xlsx");
     }
@@ -812,8 +814,11 @@ export function XlsxWorkbookPage() {
     setIsBusy(true);
     setError(null);
     try {
-      const bytes = await exportXlsx(currentWorkbook);
-      downloadXlsx(bytes, defaultSaveName);
+      // Pass sourcePackage for macro preservation in xlsm files
+      const bytes = await exportXlsx(currentWorkbook, {
+        sourcePackage: sourcePackageRef.current ?? undefined,
+      });
+      downloadSpreadsheet(bytes, defaultSaveName);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -833,6 +838,8 @@ export function XlsxWorkbookPage() {
             setCurrentWorkbook(demo);
             setGridSize(computeInitialGridSize(demo));
             setWorkbookRevision((v) => v + 1);
+            // Clear source package (demo workbooks don't have macros)
+            sourcePackageRef.current = null;
           }}
         >
           Load demo (patterns)
@@ -847,6 +854,8 @@ export function XlsxWorkbookPage() {
             setCurrentWorkbook(demo);
             setGridSize(computeInitialGridSize(demo));
             setWorkbookRevision((v) => v + 1);
+            // Clear source package (demo workbooks don't have macros)
+            sourcePackageRef.current = null;
           }}
         >
           Load demo (formulas)

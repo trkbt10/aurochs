@@ -9,6 +9,7 @@
 
 import type { ZipPackage } from "@aurochs/zip";
 import { parseXml, serializeDocument } from "@aurochs/xml";
+import { OLE_CONTENT_TYPES, OFFICE_RELATIONSHIP_TYPES } from "@aurochs-office/opc";
 import { getRelationshipPath } from "@aurochs-office/pptx/parser/relationships";
 import { addContentType } from "./content-types-manager";
 import { addRelationship, ensureRelationshipsDocument, type RelationshipType } from "./relationship-manager";
@@ -39,8 +40,7 @@ export type OleTypeInfo = {
  * OLE object relationship type
  * @see ECMA-376 Part 2
  */
-const OLE_OBJECT_REL: RelationshipType =
-  "http://schemas.openxmlformats.org/officeDocument/2006/relationships/oleObject";
+const OLE_OBJECT_REL: RelationshipType = OFFICE_RELATIONSHIP_TYPES.oleObject;
 
 /**
  * OLE type mappings for supported Office file types
@@ -49,17 +49,17 @@ export const OLE_TYPE_MAP: Record<OleType, OleTypeInfo> = {
   xlsx: {
     extension: "xlsx",
     progId: "Excel.Sheet.12",
-    contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    contentType: OLE_CONTENT_TYPES.xlsx,
   },
   docx: {
     extension: "docx",
     progId: "Word.Document.12",
-    contentType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    contentType: OLE_CONTENT_TYPES.docx,
   },
   pptx: {
     extension: "pptx",
     progId: "PowerPoint.Show.12",
-    contentType: "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    contentType: OLE_CONTENT_TYPES.pptx,
   },
 };
 
@@ -138,11 +138,11 @@ export function getOleTypeFromFile(filename: string): OleType | null {
  */
 export function getOleTypeFromMimeType(mimeType: string): OleType | null {
   switch (mimeType) {
-    case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+    case OLE_CONTENT_TYPES.xlsx:
       return "xlsx";
-    case "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+    case OLE_CONTENT_TYPES.docx:
       return "docx";
-    case "application/vnd.openxmlformats-officedocument.presentationml.presentation":
+    case OLE_CONTENT_TYPES.pptx:
       return "pptx";
     default:
       return null;

@@ -13,13 +13,14 @@
 import type { ZipPackage } from "@aurochs/zip";
 import type { EmbeddedFontData } from "@aurochs-office/pptx/app/presentation-document";
 import { parseXml, serializeDocument, createElement } from "@aurochs/xml";
+import { OFFICE_RELATIONSHIP_TYPES } from "@aurochs-office/opc";
 import { getDocumentRoot, updateDocumentRoot } from "../core/xml-mutator";
 import { addContentType } from "./content-types-manager";
 import { addRelationship, ensureRelationshipsDocument, type RelationshipType } from "./relationship-manager";
 import { getRelationshipPath } from "@aurochs-office/pptx/parser/relationships";
 
 const FONT_CONTENT_TYPE = "application/x-fontdata";
-const FONT_REL_TYPE: RelationshipType = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/font";
+const FONT_REL_TYPE: RelationshipType = OFFICE_RELATIONSHIP_TYPES.font;
 const PRESENTATION_PATH = "ppt/presentation.xml";
 
 /**

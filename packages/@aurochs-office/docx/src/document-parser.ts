@@ -9,6 +9,7 @@
 
 import { parseXml, isXmlElement, type XmlElement, type XmlDocument } from "@aurochs/xml";
 import { loadZipPackage, type ZipPackage } from "@aurochs/zip";
+import { listRelationships } from "@aurochs-office/opc";
 import type {
   DocxDocument,
   DocxRelationships,
@@ -45,32 +46,21 @@ function getRootElement(doc: XmlDocument): XmlElement | undefined {
 }
 
 /**
- * Parse relationships from .rels file.
+ * Parse relationships from .rels file using OPC's listRelationships.
+ *
+ * Converts OPC's RelationshipInfo[] to DOCX's DocxRelationships format.
  */
 function parseRelationships(element: XmlElement): DocxRelationships {
-  const relationships: DocxRelationship[] = [];
+  // Create a minimal XmlDocument wrapper to use OPC's listRelationships
+  const fakeDoc: XmlDocument = { children: [element] };
+  const infos = listRelationships(fakeDoc);
 
-  for (const node of element.children) {
-    if (!isXmlElement(node)) {
-      continue;
-    }
-
-    const rel = node;
-    if (rel.name === "Relationship" || rel.name.endsWith(":Relationship")) {
-      const id = rel.attrs.Id;
-      const type = rel.attrs.Type;
-      const target = rel.attrs.Target;
-
-      if (id && type && target) {
-        relationships.push({
-          id: docxRelId(id),
-          type,
-          target,
-          targetMode: rel.attrs.TargetMode === "External" ? "External" : "Internal",
-        });
-      }
-    }
-  }
+  const relationships: DocxRelationship[] = infos.map((rel) => ({
+    id: docxRelId(rel.id),
+    type: rel.type,
+    target: rel.target,
+    targetMode: rel.targetMode === "External" ? "External" : "Internal",
+  }));
 
   return { relationship: relationships };
 }

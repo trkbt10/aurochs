@@ -6,12 +6,13 @@
 
 import { loadZipPackage } from "@aurochs/zip";
 import { parseXml, getChildren, isXmlElement } from "@aurochs/xml";
+import { OFFICE_RELATIONSHIP_TYPES } from "@aurochs-office/opc";
 import { parseColorScheme, parseFontScheme } from "@aurochs-office/pptx/parser/slide/theme-parser";
 import type { ThemePreset } from "./types";
 import { OFFICE_THEME } from "./presets";
 
 /** OPC relationship namespace */
-const THEME_REL_TYPE = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme";
+const THEME_REL_TYPE = OFFICE_RELATIONSHIP_TYPES.theme;
 
 /**
  * Find the main presentation theme path from relationships.

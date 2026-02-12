@@ -20,6 +20,7 @@ import type {
   CommentAuthor,
   CommentPosition,
 } from "@aurochs-office/pptx/domain/comment";
+import { PRESENTATIONML_CONTENT_TYPES, PRESENTATIONML_RELATIONSHIP_TYPES } from "@aurochs-office/opc";
 import {
   createCommentListDocument,
   createCommentAuthorListDocument,
@@ -28,12 +29,10 @@ import { parseCommentList, parseCommentAuthorList } from "@aurochs-office/pptx/p
 import { addRelationship, ensureRelationshipsDocument, type RelationshipType } from "../resources/relationship-manager";
 import { addOverride } from "../resources/content-types-manager";
 
-const COMMENT_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.presentationml.comments+xml";
-const COMMENT_AUTHORS_CONTENT_TYPE = "application/vnd.openxmlformats-officedocument.presentationml.commentAuthors+xml";
-const COMMENT_REL_TYPE =
-  "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments" as RelationshipType;
-const COMMENT_AUTHORS_REL_TYPE =
-  "http://schemas.openxmlformats.org/officeDocument/2006/relationships/commentAuthors" as RelationshipType;
+const COMMENT_CONTENT_TYPE = PRESENTATIONML_CONTENT_TYPES.comments;
+const COMMENT_AUTHORS_CONTENT_TYPE = PRESENTATIONML_CONTENT_TYPES.commentAuthors;
+const COMMENT_REL_TYPE = PRESENTATIONML_RELATIONSHIP_TYPES.comments as RelationshipType;
+const COMMENT_AUTHORS_REL_TYPE = PRESENTATIONML_RELATIONSHIP_TYPES.commentAuthors as RelationshipType;
 
 /**
  * Simple comment specification for adding comments.

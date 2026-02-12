@@ -87,3 +87,22 @@ export type ResourceMap = {
   getAllTargetsByType(relType: string): readonly string[];
 };
 
+// =============================================================================
+// Macro-Enabled Format Detection (MS-OFFMACRO2)
+// =============================================================================
+
+/**
+ * Macro-enabled OOXML format types.
+ *
+ * These formats can contain VBA macro projects (vbaProject.bin).
+ *
+ * @see MS-OFFMACRO2 (Office Macro-Enabled File Format)
+ */
+export type MacroEnabledFormat = "xlsm" | "docm" | "pptm" | "ppsm";
+
+/**
+ * Result of macro format detection.
+ * Returns the format type or null if the package is not macro-enabled.
+ */
+export type MacroFormatDetectionResult = MacroEnabledFormat | null;
+

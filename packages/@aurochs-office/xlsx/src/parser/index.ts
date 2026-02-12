@@ -41,7 +41,14 @@ import type { XlsxPivotCacheDefinition } from "../domain/pivot/cache-types";
 import type { XlsxTheme } from "../domain/theme";
 import type { XmlElement, XmlDocument } from "@aurochs/xml";
 import { parseXml, getAttr, getChild, getChildren, getTextContent, isXmlElement } from "@aurochs/xml";
-import { basenamePosixPath, dirnamePosixPath, joinPosixPath, normalizePosixPath } from "@aurochs-office/opc";
+import {
+  basenamePosixPath,
+  dirnamePosixPath,
+  joinPosixPath,
+  normalizePosixPath,
+  listRelationships,
+  type RelationshipInfo,
+} from "@aurochs-office/opc";
 
 // =============================================================================
 // Helper Functions
@@ -63,11 +70,15 @@ function getDocumentRoot(doc: XmlDocument): XmlElement {
 }
 
 // =============================================================================
-// Relationship Parsing
+// Relationship Parsing (using OPC primitives)
 // =============================================================================
 
 /**
  * Parse relationships from a rels element.
+ *
+ * Returns a simple id → target map for quick lookups.
+ * For full relationship information (including type and targetMode),
+ * use OPC's `listRelationships` directly.
  *
  * @param relsElement - The root element from workbook.xml.rels
  * @returns Map from relationship ID to target path
@@ -82,36 +93,19 @@ function getDocumentRoot(doc: XmlDocument): XmlElement {
  * ```
  */
 export function parseRelationships(relsElement: XmlElement): ReadonlyMap<string, string> {
-  const map = new Map<string, string>();
-  const relationships = getChildren(relsElement, "Relationship");
-  for (const rel of relationships) {
-    const id = getAttr(rel, "Id");
-    const target = getAttr(rel, "Target");
-    if (id && target) {
-      map.set(id, target);
-    }
-  }
-  return map;
+  // Create a minimal XmlDocument wrapper to use OPC's listRelationships
+  const fakeDoc: XmlDocument = { children: [relsElement] };
+  const infos = listRelationships(fakeDoc);
+  return new Map(infos.map((rel) => [rel.id, rel.target]));
 }
 
-type RelationshipInfo = {
-  readonly id: string;
-  readonly type: string;
-  readonly target: string;
-  readonly targetMode?: "External" | "Internal";
-};
-
-function parseRelationshipInfos(relsElement: XmlElement): readonly RelationshipInfo[] {
-  return getChildren(relsElement, "Relationship").flatMap((rel): readonly RelationshipInfo[] => {
-    const id = getAttr(rel, "Id");
-    const target = getAttr(rel, "Target");
-    const type = getAttr(rel, "Type");
-    if (!id || !target || !type) {
-      return [];
-    }
-    const targetMode = getAttr(rel, "TargetMode") as RelationshipInfo["targetMode"];
-    return [{ id, target, type, targetMode }];
-  });
+/**
+ * Parse full relationship information from a rels XML document.
+ *
+ * @internal
+ */
+function parseRelationshipInfosFromDocument(relsXml: XmlDocument): readonly RelationshipInfo[] {
+  return listRelationships(relsXml);
 }
 
 // =============================================================================
@@ -618,7 +612,7 @@ export async function parseXlsxWorkbook(
       const relsPath = resolveRelationshipsPathForPart(xmlPath);
       const sheetRelsXml = await getFileContent(relsPath);
       const rels = parseRelsOrEmpty(sheetRelsXml);
-      const relInfos = sheetRelsXml ? parseRelationshipInfos(getDocumentRoot(parseXml(sheetRelsXml))) : [];
+      const relInfos = sheetRelsXml ? parseRelationshipInfosFromDocument(parseXml(sheetRelsXml)) : [];
 
       const sheetIndex = sheets.length;
 

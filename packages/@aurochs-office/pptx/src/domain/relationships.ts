@@ -8,6 +8,10 @@
  */
 
 import type { ResourceMap } from "@aurochs-office/opc";
+import {
+  OFFICE_RELATIONSHIP_TYPES,
+  PRESENTATIONML_RELATIONSHIP_TYPES,
+} from "@aurochs-office/opc";
 
 // =============================================================================
 // Relationship Type Constants
@@ -16,41 +20,40 @@ import type { ResourceMap } from "@aurochs-office/opc";
 /**
  * ECMA-376 Part 2 Relationship Type URIs.
  *
- * These are the standard relationship types defined in the Open Packaging
- * Conventions and PresentationML specifications.
+ * Re-exports from @aurochs-office/opc with SCREAMING_CASE aliases for backward compatibility.
  *
  * @see ECMA-376 Part 2, Annex F (Relationship Types)
  * @see ECMA-376 Part 1, Section 13 (PresentationML)
  */
 export const RELATIONSHIP_TYPES = {
   /** Slide relationship (presentation.xml -> slideN.xml) */
-  SLIDE: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide",
+  SLIDE: PRESENTATIONML_RELATIONSHIP_TYPES.slide,
   /** Slide layout relationship */
-  SLIDE_LAYOUT: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout",
+  SLIDE_LAYOUT: PRESENTATIONML_RELATIONSHIP_TYPES.slideLayout,
   /** Slide master relationship */
-  SLIDE_MASTER: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster",
+  SLIDE_MASTER: PRESENTATIONML_RELATIONSHIP_TYPES.slideMaster,
   /** Theme relationship */
-  THEME: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme",
+  THEME: OFFICE_RELATIONSHIP_TYPES.theme,
   /** Theme override relationship */
-  THEME_OVERRIDE: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/themeOverride",
+  THEME_OVERRIDE: OFFICE_RELATIONSHIP_TYPES.themeOverride,
   /** Image relationship */
-  IMAGE: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
+  IMAGE: OFFICE_RELATIONSHIP_TYPES.image,
   /** Chart relationship */
-  CHART: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/chart",
+  CHART: OFFICE_RELATIONSHIP_TYPES.chart,
   /** Hyperlink relationship */
-  HYPERLINK: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+  HYPERLINK: OFFICE_RELATIONSHIP_TYPES.hyperlink,
   /** Notes slide relationship */
-  NOTES: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesSlide",
+  NOTES: PRESENTATIONML_RELATIONSHIP_TYPES.notesSlide,
   /** Diagram drawing relationship (DrawingML diagrams) */
-  DIAGRAM_DRAWING: "http://schemas.microsoft.com/office/2007/relationships/diagramDrawing",
+  DIAGRAM_DRAWING: PRESENTATIONML_RELATIONSHIP_TYPES.diagramDrawing,
   /** VML drawing relationship */
-  VML_DRAWING: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/vmlDrawing",
+  VML_DRAWING: OFFICE_RELATIONSHIP_TYPES.vmlDrawing,
   /** OLE object relationship */
-  OLE_OBJECT: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/oleObject",
+  OLE_OBJECT: OFFICE_RELATIONSHIP_TYPES.oleObject,
   /** Video relationship */
-  VIDEO: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/video",
+  VIDEO: OFFICE_RELATIONSHIP_TYPES.video,
   /** Audio relationship */
-  AUDIO: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/audio",
+  AUDIO: OFFICE_RELATIONSHIP_TYPES.audio,
 } as const;
 
 export type RelationshipType = (typeof RELATIONSHIP_TYPES)[keyof typeof RELATIONSHIP_TYPES];

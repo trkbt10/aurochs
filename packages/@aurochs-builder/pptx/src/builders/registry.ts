@@ -6,6 +6,7 @@
  */
 
 import * as path from "node:path";
+import { OFFICE_RELATIONSHIP_TYPES } from "@aurochs-office/opc";
 import {
   addMedia,
   addRelationship,
@@ -187,7 +188,7 @@ function registerHyperlinks(text: TextSpec | undefined, ctx: BuildContext): Map<
       const { updatedXml, rId } = addRelationship(
         acc.doc,
         hlink.url,
-        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+        OFFICE_RELATIONSHIP_TYPES.hyperlink,
       );
       const newMap = new Map(acc.map);
       newMap.set(hlink.url, rId);

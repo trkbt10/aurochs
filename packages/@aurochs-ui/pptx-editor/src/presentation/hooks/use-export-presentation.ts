@@ -2,36 +2,15 @@
  * @file Export presentation hook
  *
  * Provides export functionality for the presentation editor.
+ * Supports macro-enabled formats (pptm, ppsm) via pass-through preservation.
+ *
+ * @see MS-OFFMACRO2 (Office Macro-Enabled File Format)
  */
 
 import { useState, useCallback } from "react";
 import { usePresentationEditor } from "../../context/presentation/PresentationEditorContext";
 import { exportPptx, type ExportOptions, type ExportResult } from "@aurochs-builder/pptx/export";
-
-// =============================================================================
-// File System Access API Types (for browsers that support it)
-// =============================================================================
-
-type FileSystemWritableFileStream = {
-  write(data: Blob | ArrayBuffer | ArrayBufferView | string): Promise<void>;
-  close(): Promise<void>;
-};
-
-type FileSystemFileHandle = {
-  createWritable(): Promise<FileSystemWritableFileStream>;
-};
-
-type SaveFilePickerOptions = {
-  suggestedName?: string;
-  types?: Array<{
-    description?: string;
-    accept: Record<string, string[]>;
-  }>;
-};
-
-type WindowWithFileSystem = Window & {
-  showSaveFilePicker(options?: SaveFilePickerOptions): Promise<FileSystemFileHandle>;
-};
+import { downloadPresentation } from "@aurochs-office/opc";
 
 // =============================================================================
 // Types
@@ -115,53 +94,15 @@ export function useExportPresentation(): UseExportPresentationResult {
   });
 
   /**
-   * Download a blob as file using File System Access API when available.
+   * Download a blob as file.
    *
-   * File System Access API (showSaveFilePicker) provides reliable completion detection.
-   * Falls back to anchor download for unsupported browsers.
+   * Uses File System Access API when available (Chrome/Edge),
+   * falls back to anchor download for other browsers.
+   *
+   * Supports macro-enabled formats (pptm, ppsm) based on filename extension.
    */
   const downloadBlob = useCallback(async (blob: Blob, fileName: string = "presentation.pptx") => {
-    // Try File System Access API first (Chrome, Edge)
-    if ("showSaveFilePicker" in window) {
-      try {
-        const handle = await (window as WindowWithFileSystem).showSaveFilePicker({
-          suggestedName: fileName,
-          types: [
-            {
-              description: "PowerPoint Presentation",
-              accept: {
-                "application/vnd.openxmlformats-officedocument.presentationml.presentation": [".pptx"],
-              },
-            },
-          ],
-        });
-        const writable = await handle.createWritable();
-        await writable.write(blob);
-        await writable.close();
-        return; // Write completed successfully
-      } catch (err) {
-        // User cancelled or API unavailable - fall through to legacy method
-        if ((err as Error).name === "AbortError") {
-          return; // User cancelled, don't fall back
-        }
-        // Other errors: fall through to legacy method
-      }
-    }
-
-    // Fallback: anchor download (Firefox, Safari, etc.)
-    // Keep URL alive longer since we can't detect completion
-    const url = URL.createObjectURL(blob);
-    const a = window.document.createElement("a");
-    a.href = url;
-    a.download = fileName;
-    a.style.display = "none";
-    window.document.body.appendChild(a);
-    a.click();
-    window.document.body.removeChild(a);
-    // Delay revocation - 60s should be enough for most downloads to start
-    setTimeout(() => {
-      URL.revokeObjectURL(url);
-    }, 60000);
+    await downloadPresentation(blob, fileName);
   }, []);
 
   /**

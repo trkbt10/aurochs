@@ -7,8 +7,16 @@
  * @see ECMA-376 Part 2 (OPC - Open Packaging Conventions)
  */
 
+import {
+  WORDPROCESSINGML_NAMESPACES,
+  DRAWINGML_NAMESPACES,
+  OFFICE_NAMESPACES,
+  OPC_NAMESPACES,
+  VML_NAMESPACES,
+} from "@aurochs-office/opc";
+
 // =============================================================================
-// XML Namespaces
+// XML Namespaces (re-exports from OPC for backward compatibility)
 // =============================================================================
 
 /**
@@ -16,88 +24,88 @@
  *
  * @see ECMA-376 Part 1, Section 17 (WordprocessingML Reference Material)
  */
-export const NS_WORDPROCESSINGML = "http://schemas.openxmlformats.org/wordprocessingml/2006/main";
+export const NS_WORDPROCESSINGML = WORDPROCESSINGML_NAMESPACES.main;
 
 /**
  * DrawingML main namespace (a:).
  *
  * @see ECMA-376 Part 1, Section 20.1 (DrawingML)
  */
-export const NS_DRAWINGML = "http://schemas.openxmlformats.org/drawingml/2006/main";
+export const NS_DRAWINGML = DRAWINGML_NAMESPACES.main;
 
 /**
  * DrawingML Picture namespace (pic:).
  *
  * @see ECMA-376 Part 1, Section 20.2 (Picture)
  */
-export const NS_DRAWINGML_PICTURE = "http://schemas.openxmlformats.org/drawingml/2006/picture";
+export const NS_DRAWINGML_PICTURE = DRAWINGML_NAMESPACES.picture;
 
 /**
  * DrawingML WordprocessingML Drawing namespace (wp:).
  *
  * @see ECMA-376 Part 1, Section 20.4 (WordprocessingML Drawing)
  */
-export const NS_DRAWINGML_WORDPROCESSING = "http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing";
+export const NS_DRAWINGML_WORDPROCESSING = DRAWINGML_NAMESPACES.wordprocessingDrawing;
 
 /**
  * Relationships namespace (r:).
  *
  * @see ECMA-376 Part 2, Section 9 (Relationships)
  */
-export const NS_RELATIONSHIPS = "http://schemas.openxmlformats.org/officeDocument/2006/relationships";
+export const NS_RELATIONSHIPS = OFFICE_NAMESPACES.relationships;
 
 /**
  * Content Types namespace.
  *
  * @see ECMA-376 Part 2, Section 10.1.2.1 (Content Types)
  */
-export const NS_CONTENT_TYPES = "http://schemas.openxmlformats.org/package/2006/content-types";
+export const NS_CONTENT_TYPES = OPC_NAMESPACES.contentTypes;
 
 /**
  * Package Relationships namespace.
  *
  * @see ECMA-376 Part 2, Section 9.3 (Relationships)
  */
-export const NS_PACKAGE_RELATIONSHIPS = "http://schemas.openxmlformats.org/package/2006/relationships";
+export const NS_PACKAGE_RELATIONSHIPS = OPC_NAMESPACES.relationships;
 
 /**
  * VML namespace (v:) for legacy compatibility.
  *
  * Used for backward compatibility with older documents.
  */
-export const NS_VML = "urn:schemas-microsoft-com:vml";
+export const NS_VML = VML_NAMESPACES.vml;
 
 /**
  * Office VML namespace (o:).
  */
-export const NS_VML_OFFICE = "urn:schemas-microsoft-com:office:office";
+export const NS_VML_OFFICE = VML_NAMESPACES.office;
 
 /**
  * Word VML namespace (w10:).
  */
-export const NS_VML_WORD = "urn:schemas-microsoft-com:office:word";
+export const NS_VML_WORD = VML_NAMESPACES.word;
 
 /**
  * Math namespace (m:).
  *
  * @see ECMA-376 Part 1, Section 22.1 (Office Math)
  */
-export const NS_MATH = "http://schemas.openxmlformats.org/officeDocument/2006/math";
+export const NS_MATH = OFFICE_NAMESPACES.math;
 
 /**
  * Extended Properties namespace.
  */
-export const NS_EXTENDED_PROPERTIES = "http://schemas.openxmlformats.org/officeDocument/2006/extended-properties";
+export const NS_EXTENDED_PROPERTIES = OFFICE_NAMESPACES.extendedProperties;
 
 /**
  * Core Properties namespace (Dublin Core).
  */
-export const NS_CORE_PROPERTIES = "http://schemas.openxmlformats.org/package/2006/metadata/core-properties";
+export const NS_CORE_PROPERTIES = OPC_NAMESPACES.coreProperties;
 
 /**
  * Custom Properties namespace.
  */
-export const NS_CUSTOM_PROPERTIES = "http://schemas.openxmlformats.org/officeDocument/2006/custom-properties";
+export const NS_CUSTOM_PROPERTIES = OFFICE_NAMESPACES.customProperties;
 
 // =============================================================================
 // Common Namespace Prefixes
@@ -122,44 +130,53 @@ export const NAMESPACE_PREFIXES = {
 // Relationship Types
 // =============================================================================
 
+import {
+  WORDPROCESSINGML_CONTENT_TYPES,
+  DRAWINGML_CONTENT_TYPES,
+  OFFICE_RELATIONSHIP_TYPES,
+  WORDPROCESSINGML_RELATIONSHIP_TYPES,
+} from "@aurochs-office/opc";
+
 /**
  * Relationship type URIs for WordprocessingML.
+ *
+ * Re-exports from @aurochs-office/opc.
  *
  * @see ECMA-376 Part 1, Section 11.3.10 (Relationship Types)
  */
 export const RELATIONSHIP_TYPES = {
   /** Main document part */
-  officeDocument: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
+  officeDocument: OFFICE_RELATIONSHIP_TYPES.officeDocument,
   /** Styles part */
-  styles: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles",
+  styles: OFFICE_RELATIONSHIP_TYPES.styles,
   /** Numbering definitions part */
-  numbering: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering",
+  numbering: WORDPROCESSINGML_RELATIONSHIP_TYPES.numbering,
   /** Font table part */
-  fontTable: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/fontTable",
+  fontTable: WORDPROCESSINGML_RELATIONSHIP_TYPES.fontTable,
   /** Settings part */
-  settings: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings",
+  settings: WORDPROCESSINGML_RELATIONSHIP_TYPES.settings,
   /** Web settings part */
-  webSettings: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/webSettings",
+  webSettings: WORDPROCESSINGML_RELATIONSHIP_TYPES.webSettings,
   /** Theme part */
-  theme: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme",
+  theme: OFFICE_RELATIONSHIP_TYPES.theme,
   /** Header part */
-  header: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/header",
+  header: WORDPROCESSINGML_RELATIONSHIP_TYPES.header,
   /** Footer part */
-  footer: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer",
+  footer: WORDPROCESSINGML_RELATIONSHIP_TYPES.footer,
   /** Footnotes part */
-  footnotes: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/footnotes",
+  footnotes: WORDPROCESSINGML_RELATIONSHIP_TYPES.footnotes,
   /** Endnotes part */
-  endnotes: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/endnotes",
+  endnotes: WORDPROCESSINGML_RELATIONSHIP_TYPES.endnotes,
   /** Comments part */
-  comments: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments",
+  comments: WORDPROCESSINGML_RELATIONSHIP_TYPES.comments,
   /** Image relationship */
-  image: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/image",
+  image: OFFICE_RELATIONSHIP_TYPES.image,
   /** Hyperlink relationship */
-  hyperlink: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+  hyperlink: OFFICE_RELATIONSHIP_TYPES.hyperlink,
   /** Embedded package (OLE object) */
-  oleObject: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/oleObject",
+  oleObject: OFFICE_RELATIONSHIP_TYPES.oleObject,
   /** Package relationship */
-  package: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/package",
+  package: OFFICE_RELATIONSHIP_TYPES.package,
 } as const;
 
 // =============================================================================
@@ -169,33 +186,15 @@ export const RELATIONSHIP_TYPES = {
 /**
  * Content type strings for WordprocessingML parts.
  *
+ * Re-exports from @aurochs-office/opc with additional package-level types.
+ *
  * @see ECMA-376 Part 2, Section 10.1.2.1 (Content Types)
+ * @see MS-OFFMACRO2 Section 2.2.1.4 (macroEnabled content types)
  */
 export const CONTENT_TYPES = {
-  /** Main document content type */
-  document: "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml",
-  /** Styles content type */
-  styles: "application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml",
-  /** Numbering content type */
-  numbering: "application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml",
-  /** Font table content type */
-  fontTable: "application/vnd.openxmlformats-officedocument.wordprocessingml.fontTable+xml",
-  /** Settings content type */
-  settings: "application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml",
-  /** Web settings content type */
-  webSettings: "application/vnd.openxmlformats-officedocument.wordprocessingml.webSettings+xml",
-  /** Theme content type */
-  theme: "application/vnd.openxmlformats-officedocument.theme+xml",
-  /** Header content type */
-  header: "application/vnd.openxmlformats-officedocument.wordprocessingml.header+xml",
-  /** Footer content type */
-  footer: "application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml",
-  /** Footnotes content type */
-  footnotes: "application/vnd.openxmlformats-officedocument.wordprocessingml.footnotes+xml",
-  /** Endnotes content type */
-  endnotes: "application/vnd.openxmlformats-officedocument.wordprocessingml.endnotes+xml",
-  /** Comments content type */
-  comments: "application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml",
+  ...WORDPROCESSINGML_CONTENT_TYPES,
+  /** Theme content type (from DrawingML) */
+  theme: DRAWINGML_CONTENT_TYPES.theme,
   /** Relationships content type */
   relationships: "application/vnd.openxmlformats-package.relationships+xml",
   /** Core properties content type */

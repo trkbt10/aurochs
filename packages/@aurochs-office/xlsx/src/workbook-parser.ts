@@ -182,6 +182,30 @@ function parseRelationshipsFromPackage(pkg: ZipPackage, relsPath: string): Reado
 /**
  * Parse a single worksheet
  */
+/**
+ * Supported sheet root element names.
+ *
+ * - "worksheet" for regular worksheets (xl/worksheets/sheetN.xml)
+ * - "macrosheet" for Excel macro sheets (xl/macrosheets/sheetN.xml)
+ *
+ * @see ECMA-376 Part 4, Section 18.3.1.99 (worksheet)
+ * @see MS-OFFMACRO2 Section 2.2.1.5 (Macro Sheet)
+ */
+const SHEET_ROOT_ELEMENTS = ["worksheet", "macrosheet"] as const;
+
+/**
+ * Find sheetData element from either worksheet or macrosheet root.
+ */
+function findSheetDataElement(sheetXml: ReturnType<typeof parseXml>): ReturnType<typeof getByPath> {
+  for (const rootName of SHEET_ROOT_ELEMENTS) {
+    const sheetData = getByPath(sheetXml, [rootName, "sheetData"]);
+    if (sheetData) {
+      return sheetData;
+    }
+  }
+  return undefined;
+}
+
 function parseSheet(params: {
   readonly pkg: ZipPackage;
   readonly name: string;
@@ -196,7 +220,7 @@ function parseSheet(params: {
   }
 
   const sheetXml = parseXml(sheetText);
-  const sheetDataEl = getByPath(sheetXml, ["worksheet", "sheetData"]);
+  const sheetDataEl = findSheetDataElement(sheetXml);
   if (!sheetDataEl) {
     return { name, id, rows: new Map(), xmlPath };
   }

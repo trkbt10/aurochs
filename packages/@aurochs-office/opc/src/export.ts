@@ -9,6 +9,7 @@
 
 import type { XmlElement, XmlNode } from "@aurochs/xml";
 import { createElement, serializeElement } from "@aurochs/xml";
+import { OFFICE_RELATIONSHIP_TYPES } from "./ooxml-relationship-types";
 
 // =============================================================================
 // Constants
@@ -47,10 +48,11 @@ export const OPC_CONTENT_TYPES = {
 
 /**
  * Common OPC relationship type URIs.
+ * @deprecated Use OFFICE_RELATIONSHIP_TYPES from ooxml-relationship-types.ts instead.
  */
 export const OPC_RELATIONSHIP_TYPES = {
   /** Relationship to main office document */
-  officeDocument: "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument",
+  officeDocument: OFFICE_RELATIONSHIP_TYPES.officeDocument,
 } as const;
 
 // =============================================================================

@@ -17,7 +17,11 @@ import type { ResourceId } from "@aurochs-office/pptx/domain";
 import type { XmlDocument } from "@aurochs/xml";
 import { serializeDocument } from "@aurochs/xml";
 import { parseDataUrl } from "@aurochs/buffer";
-import { resolveRelationshipTargetPath } from "@aurochs-office/opc";
+import {
+  resolveRelationshipTargetPath,
+  PRESENTATIONML_RELATIONSHIP_TYPES,
+  OFFICE_RELATIONSHIP_TYPES,
+} from "@aurochs-office/opc";
 import { createEmptyZipPackage, isBinaryFile, type ZipPackage } from "@aurochs/zip";
 import { parseSlide } from "@aurochs-office/pptx/parser";
 import {
@@ -610,9 +614,9 @@ function mimeTypeToMediaType(mimeType: string): MediaType {
 // Phase 9: Master/Layout/Theme Collection (ECMA-376 Part 2)
 // =============================================================================
 
-const REL_SLIDE_LAYOUT = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout";
-const REL_SLIDE_MASTER = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster";
-const REL_THEME = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/theme";
+const REL_SLIDE_LAYOUT = PRESENTATIONML_RELATIONSHIP_TYPES.slideLayout;
+const REL_SLIDE_MASTER = PRESENTATIONML_RELATIONSHIP_TYPES.slideMaster;
+const REL_THEME = OFFICE_RELATIONSHIP_TYPES.theme;
 
 type CollectedUpdates = {
   readonly layoutUpdates: readonly LayoutUpdate[];
