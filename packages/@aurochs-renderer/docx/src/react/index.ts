@@ -12,3 +12,34 @@ export {
   createParagraphKey,
   haveParagraphsChanged,
 } from "./hooks";
+
+// Context - DOCX Drawing Render Context and Adapter
+export {
+  type DocxResourceResolver,
+  type DocxRenderWarning,
+  type DocxWarningCollector,
+  type DocxPageSize,
+  type DocxPageMargins,
+  type DocxDrawingRenderContext,
+  createDrawingMLContextFromDocx,
+  createEmptyDocxResourceResolver,
+  createDocxResourceResolver,
+  createEmptyColorContext,
+  createDefaultDocxDrawingContext,
+} from "./context";
+
+// Drawing - DrawingML rendering components
+export {
+  Picture,
+  type PictureProps,
+  InlineDrawing,
+  type InlineDrawingProps,
+  AnchorDrawing,
+  type AnchorDrawingProps,
+  FloatingImageOverlay,
+  type FloatingImageOverlayProps,
+  WordprocessingShape,
+  type WordprocessingShapeProps,
+  ChartPlaceholder,
+  type ChartPlaceholderProps,
+} from "./drawing";

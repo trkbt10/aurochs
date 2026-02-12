@@ -8,7 +8,8 @@
     "@aurochs/glyph": "workspace:*",
     "@aurochs-office/docx": "workspace:*",
     "@aurochs-office/drawing-ml": "workspace:*",
-    "@aurochs-office/text-layout": "workspace:*"
+    "@aurochs-office/text-layout": "workspace:*",
+    "@aurochs-renderer/drawing-ml": "workspace:*"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
