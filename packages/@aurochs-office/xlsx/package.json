@@ -32,6 +32,14 @@
       "types": "./src/domain/date-system.ts",
       "default": "./src/domain/date-system.ts"
     },
+    "./domain/date-serial": {
+      "types": "./src/domain/date-serial.ts",
+      "default": "./src/domain/date-serial.ts"
+    },
+    "./domain/drawing/types": {
+      "types": "./src/domain/drawing/types.ts",
+      "default": "./src/domain/drawing/types.ts"
+    },
     "./domain/constants": {
       "types": "./src/domain/constants.ts",
       "default": "./src/domain/constants.ts"

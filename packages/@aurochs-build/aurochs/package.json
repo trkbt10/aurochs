@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "build:cli": "bun build ../../@aurochs-cli/cli/src/cli.ts --target node --outfile ../../../publish/aurochs/dist/cli.js"
+    "build:cli": "bun build ../../@aurochs-cli/cli/src/cli.ts --target node --outfile ../../../publish/aurochs/dist/cli.js",
+    "verify": "node scripts/verify-exports.mjs"
   },
   "dependencies": {
     "@aurochs-renderer/pptx": "workspace:*",

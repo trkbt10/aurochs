@@ -12,6 +12,14 @@
     "../../@aurochs-renderer/pptx/src/svg/index.ts",
     "../../@aurochs-renderer/pptx/src/ascii/index.ts",
     "../../@aurochs-renderer/pptx/src/mermaid/index.ts",
-    "../../@aurochs-ui/pptx-editor/src/viewer/index.ts"
+    "../../@aurochs-ui/pptx-editor/src/viewer/index.ts",
+    "../../@aurochs-renderer/docx/src/svg/index.ts",
+    "../../@aurochs-renderer/docx/src/ascii/index.ts",
+    "../../@aurochs-renderer/docx/src/mermaid/index.ts",
+    "../../@aurochs-ui/docx-editor/src/viewer/index.ts",
+    "../../@aurochs-renderer/xlsx/src/svg/index.ts",
+    "../../@aurochs-renderer/xlsx/src/ascii/index.ts",
+    "../../@aurochs-renderer/xlsx/src/mermaid/index.ts",
+    "../../@aurochs-ui/xlsx-editor/src/viewer/index.ts"
   ]
 }

@@ -29,6 +29,46 @@
     "./pptx/viewer": {
       "types": "./dist/@aurochs-ui/pptx-editor/src/viewer/index.d.ts",
       "import": "./dist/pptx/viewer/index.js"
+    },
+    "./docx/parser": {
+      "types": "./dist/@aurochs-office/docx/src/index.d.ts",
+      "import": "./dist/docx/parser/index.js"
+    },
+    "./docx/renderer/svg": {
+      "types": "./dist/@aurochs-renderer/docx/src/svg/index.d.ts",
+      "import": "./dist/docx/renderer/svg/index.js"
+    },
+    "./docx/renderer/ascii": {
+      "types": "./dist/@aurochs-renderer/docx/src/ascii/index.d.ts",
+      "import": "./dist/docx/renderer/ascii/index.js"
+    },
+    "./docx/renderer/mermaid": {
+      "types": "./dist/@aurochs-renderer/docx/src/mermaid/index.d.ts",
+      "import": "./dist/docx/renderer/mermaid/index.js"
+    },
+    "./docx/viewer": {
+      "types": "./dist/@aurochs-ui/docx-editor/src/viewer/index.d.ts",
+      "import": "./dist/docx/viewer/index.js"
+    },
+    "./xlsx/parser": {
+      "types": "./dist/@aurochs-office/xlsx/src/index.d.ts",
+      "import": "./dist/xlsx/parser/index.js"
+    },
+    "./xlsx/renderer/svg": {
+      "types": "./dist/@aurochs-renderer/xlsx/src/svg/index.d.ts",
+      "import": "./dist/xlsx/renderer/svg/index.js"
+    },
+    "./xlsx/renderer/ascii": {
+      "types": "./dist/@aurochs-renderer/xlsx/src/ascii/index.d.ts",
+      "import": "./dist/xlsx/renderer/ascii/index.js"
+    },
+    "./xlsx/renderer/mermaid": {
+      "types": "./dist/@aurochs-renderer/xlsx/src/mermaid/index.d.ts",
+      "import": "./dist/xlsx/renderer/mermaid/index.js"
+    },
+    "./xlsx/viewer": {
+      "types": "./dist/@aurochs-ui/xlsx-editor/src/viewer/index.d.ts",
+      "import": "./dist/xlsx/viewer/index.js"
     }
   },
   "scripts": {

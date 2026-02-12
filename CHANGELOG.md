@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- DOCX exports to aurochs npm package: parser, renderer/svg, renderer/ascii, renderer/mermaid, viewer
+- XLSX exports to aurochs npm package: parser, renderer/svg, renderer/ascii, renderer/mermaid, viewer
+- DrawingML BlipFill support for image fills with stretch/tile modes and srcRect cropping
+- DrawingML rendering components for DOCX (shapes, pictures, diagrams)
+- DOCX builder extensions for run, table, and section specs
+- Chart visual regression test infrastructure
 - XLSX SVG rendering support with single source of truth refactoring
 
 ### Changed
