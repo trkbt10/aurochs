@@ -14,7 +14,7 @@ function findRepoRootDir(startDir: string): string {
     if (existsSync(pkgPath)) {
       try {
         const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as { readonly name?: unknown };
-        if (pkg.name === "web-pptx") {
+        if (pkg.name === "aurochs-workspace") {
           return dir;
         }
       } catch (_error: unknown) { // eslint-disable-line @typescript-eslint/no-unused-vars -- catch requires error param

@@ -4,7 +4,7 @@
  * Investigates issues with text alignment and color in 2411-Performance_Up.pptx
  */
 
-import { loadPptxFile } from "../../../../../scripts/lib/pptx-loader";
+import { loadPptxFile } from "../../scripts/lib/pptx-loader";
 import { resolveRepoPath } from "../test-utils/repo-paths";
 import { parseXml, getChild, getByPath } from "@aurochs/xml";
 import { parseSlide } from "@aurochs-office/pptx/parser/slide/slide-parser";

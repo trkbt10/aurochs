@@ -8,7 +8,7 @@ import * as os from "node:os";
 import { importPdf } from "../../src/importer/pdf-importer";
 import { exportPptxAsBuffer } from "@aurochs-builder/pptx/export";
 import { openPresentation } from "@aurochs-office/pptx";
-import { loadPptxFile } from "../../../../../scripts/lib/pptx-loader";
+import { loadPptxBundleFromBuffer } from "@aurochs-office/pptx/app/pptx-loader";
 import { compareSvgToPdfBaseline } from "./compare";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
@@ -51,7 +51,7 @@ async function renderPdfPageToSvg(
   fs.mkdirSync(path.dirname(outPptxPath), { recursive: true });
   fs.writeFileSync(outPptxPath, Buffer.from(pptx));
 
-  const { presentationFile, zipPackage } = await loadPptxFile(outPptxPath);
+  const { presentationFile, zipPackage } = await loadPptxBundleFromBuffer(pptx);
   const presentation = openPresentation(presentationFile);
   const slide = presentation.getSlide(1);
   const { svg } = renderSlideToSvg(slide);

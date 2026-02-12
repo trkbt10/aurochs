@@ -22,6 +22,12 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "node",
+    environmentMatchGlobs: [
+      // React component tests need jsdom
+      ["**/*.spec.tsx", "jsdom"],
+      // Tests with @vitest-environment jsdom comment
+      ["**/useOlePreview.spec.ts", "jsdom"],
+    ],
     setupFiles: [path.resolve(__dirname, "spec/vitest.setup.ts")],
     coverage: {
       provider: "v8",

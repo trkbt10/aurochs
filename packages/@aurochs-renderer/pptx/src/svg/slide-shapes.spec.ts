@@ -7,7 +7,7 @@
  */
 import { openPresentation } from "@aurochs-office/pptx/app";
 import { existsSync } from "node:fs";
-import { loadPptxFile } from "../../../../../scripts/lib/pptx-loader";
+import { loadPptxFile } from "../../scripts/lib/pptx-loader";
 import { resolveRepoPath } from "../test-utils/repo-paths";
 import { renderSlideToSvg } from "./index";
 
