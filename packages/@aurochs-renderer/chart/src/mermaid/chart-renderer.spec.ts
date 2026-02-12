@@ -1,4 +1,7 @@
-import { describe, it, expect } from "vitest";
+/**
+ * @file Mermaid chart renderer tests
+ */
+
 import { renderChartMermaid } from "./chart-renderer";
 
 describe("renderChartMermaid", () => {

@@ -27,14 +27,23 @@ import type { DataPoint, SeriesData, ValueAxisConfig } from "./render-types";
 
 /**
  * Get numeric values from data reference
+ *
+ * Supports both reference (numRef) and literal (numLit) formats.
  */
 export function getNumericValues(dataRef: DataReference): readonly number[] {
-  const cache = dataRef.numRef?.cache;
-  if (!cache) {
-    return [];
+  // Try numeric reference cache first
+  const refCache = dataRef.numRef?.cache;
+  if (refCache) {
+    return refCache.points.map((p) => p.value);
   }
 
-  return cache.points.map((p) => p.value);
+  // Fall back to numeric literal
+  const literal = dataRef.numLit;
+  if (literal) {
+    return literal.points.map((p) => p.value);
+  }
+
+  return [];
 }
 
 /**
@@ -42,6 +51,8 @@ export function getNumericValues(dataRef: DataReference): readonly number[] {
  *
  * For multi-level categories, returns the innermost level (level 0)
  * which contains the primary labels.
+ *
+ * Supports both reference (strRef) and literal (strLit) formats.
  *
  * @see ECMA-376 Part 1, Section 21.2.2.102 (multiLvlStrRef)
  */
@@ -59,7 +70,7 @@ export function getCategoryLabels(dataRef: DataReference): Record<string, string
     return labels;
   }
 
-  // Try string cache
+  // Try string reference cache
   const strCache = dataRef.strRef?.cache;
   if (strCache) {
     for (const pt of strCache.points) {
@@ -68,10 +79,28 @@ export function getCategoryLabels(dataRef: DataReference): Record<string, string
     return labels;
   }
 
-  // Fall back to numeric cache
+  // Try string literal
+  const strLit = dataRef.strLit;
+  if (strLit) {
+    for (const pt of strLit.points) {
+      labels[String(pt.idx)] = pt.value;
+    }
+    return labels;
+  }
+
+  // Fall back to numeric reference cache
   const numCache = dataRef.numRef?.cache;
   if (numCache) {
     for (const pt of numCache.points) {
+      labels[String(pt.idx)] = String(pt.value);
+    }
+    return labels;
+  }
+
+  // Fall back to numeric literal
+  const numLit = dataRef.numLit;
+  if (numLit) {
+    for (const pt of numLit.points) {
       labels[String(pt.idx)] = String(pt.value);
     }
   }

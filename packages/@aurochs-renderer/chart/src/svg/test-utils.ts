@@ -2,14 +2,13 @@
 import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import { resolveColor } from "@aurochs-office/drawing-ml/domain/color-resolution";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
+import type { RenderWarning, WarningCollector } from "@aurochs-office/ooxml";
 import type {
   GenericTextBody,
   ChartRenderContext,
   FillResolver,
-  RenderWarning,
   ResolvedFill,
   ResolvedTextStyle,
-  WarningCollector,
 } from "./types";
 
 function createNoopWarnings(): WarningCollector {

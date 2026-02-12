@@ -51,11 +51,15 @@ export type ChartTestCase = {
   readonly description?: string;
 };
 
+// Project root directory (5 levels up from this file)
+const THIS_DIR = path.dirname(new URL(import.meta.url).pathname);
+const PROJECT_ROOT = path.resolve(THIS_DIR, "../../../../..");
+
 /**
  * Run a chart visual test case.
  */
 export async function runChartTest(testCase: ChartTestCase): Promise<CompareResult> {
-  const fullPath = path.resolve(testCase.pptxPath);
+  const fullPath = path.resolve(PROJECT_ROOT, testCase.pptxPath);
 
   if (!fs.existsSync(fullPath)) {
     throw new Error(`Fixture not found: ${testCase.pptxPath}`);

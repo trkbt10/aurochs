@@ -1,4 +1,7 @@
-import { describe, it, expect } from "bun:test";
+/**
+ * @file Chart data extractor tests
+ */
+
 import { extractChartData } from "./data-extractor";
 
 describe("data-extractor", () => {

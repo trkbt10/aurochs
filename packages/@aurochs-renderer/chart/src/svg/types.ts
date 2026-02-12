@@ -2,9 +2,7 @@
 import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
 import type { Color } from "@aurochs-office/drawing-ml/domain/color";
 import type { Points } from "@aurochs-office/drawing-ml/domain/units";
-import type { RenderWarning, WarningCollector } from "@aurochs-office/ooxml";
-
-export type { RenderWarning, WarningCollector };
+import type { WarningCollector } from "@aurochs-office/ooxml";
 
 export type GenericRunProperties = {
   readonly fontSize?: Points;

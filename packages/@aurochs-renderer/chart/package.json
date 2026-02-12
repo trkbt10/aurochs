@@ -18,7 +18,7 @@
   "scripts": {
     "lint": "eslint src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-renderer/chart/src'",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-renderer/chart/src' '../../../packages/@aurochs-renderer/chart/spec'",
     "dev:demo": "vite --config demo/vite.config.ts"
   },
   "exports": {

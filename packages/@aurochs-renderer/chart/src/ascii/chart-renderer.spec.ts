@@ -1,4 +1,7 @@
-import { describe, it, expect } from "bun:test";
+/**
+ * @file Chart ASCII renderer dispatch tests
+ */
+
 import { renderChartAscii } from "./chart-renderer";
 
 describe("chart-renderer", () => {

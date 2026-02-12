@@ -79,7 +79,9 @@ export function renderLineAscii(params: LineRendererParams): string {
     const ser = series[s]!;
     const pointChar = seriesChars[s % seriesChars.length]!;
 
+    // eslint-disable-next-line no-restricted-syntax -- mutable state for line drawing loop
     let prevX = -1;
+    // eslint-disable-next-line no-restricted-syntax -- mutable state for line drawing loop
     let prevY = -1;
 
     for (let i = 0; i < ser.values.length; i++) {

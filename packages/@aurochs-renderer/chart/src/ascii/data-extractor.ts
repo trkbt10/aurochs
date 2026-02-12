@@ -16,6 +16,16 @@ type ChartInfo = {
   readonly series?: readonly ChartSeries[];
 };
 
+/** Convert nullable categories to string array. */
+function toStringCategories(
+  categories: readonly (string | null | undefined)[] | undefined
+): readonly string[] | undefined {
+  if (!categories) {
+    return undefined;
+  }
+  return categories.map((c) => (c != null ? String(c) : ""));
+}
+
 /** Map a chart type string to the normalized type for rendering. */
 function normalizeChartType(type: string | undefined): ChartAsciiParams["chartType"] {
   if (!type) {
@@ -55,9 +65,7 @@ export function extractChartData(chart: ChartInfo): {
   if (chart.series) {
     for (const s of chart.series) {
       const values = (s.values ?? []).map((v) => (typeof v === "number" ? v : 0));
-      const categories = s.categories
-        ? s.categories.map((c) => (c != null ? String(c) : ""))
-        : undefined;
+      const categories = toStringCategories(s.categories);
 
       seriesData.push({
         name: s.name ?? undefined,

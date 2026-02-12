@@ -107,6 +107,7 @@ function createDemoFillResolver(): FillResolver {
   };
 }
 
+/** Renders a single chart card with SVG preview. */
 export function ChartCard({ item, isSelected, onClick }: Props) {
   const { svg, error } = useMemo(() => {
     try {

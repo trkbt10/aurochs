@@ -13,7 +13,7 @@ import type { Chart, BarSeries, LineSeries, PieSeries, ScatterSeries } from "@au
 const SAMPLE_CATEGORIES = ["Q1", "Q2", "Q3", "Q4"];
 const SAMPLE_VALUES_1 = [120, 180, 150, 200];
 const SAMPLE_VALUES_2 = [100, 140, 160, 180];
-const SAMPLE_VALUES_3 = [80, 120, 140, 160];
+const _SAMPLE_VALUES_3 = [80, 120, 140, 160];
 
 // =============================================================================
 // Bar Chart Samples

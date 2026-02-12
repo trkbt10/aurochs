@@ -1,4 +1,7 @@
-import { describe, it, expect } from "bun:test";
+/**
+ * @file Bar chart ASCII renderer tests
+ */
+
 import { renderBarAscii } from "./bar-renderer";
 
 describe("bar-renderer", () => {

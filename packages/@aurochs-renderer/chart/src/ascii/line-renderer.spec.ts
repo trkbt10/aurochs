@@ -1,4 +1,7 @@
-import { describe, it, expect } from "bun:test";
+/**
+ * @file Line chart ASCII renderer tests
+ */
+
 import { renderLineAscii } from "./line-renderer";
 
 describe("line-renderer", () => {

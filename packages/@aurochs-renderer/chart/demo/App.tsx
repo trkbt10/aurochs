@@ -5,7 +5,7 @@
  */
 
 import { useState, useMemo } from "react";
-import { chartCatalog, type ChartCatalogItem } from "./fixtures";
+import { chartCatalog } from "./fixtures";
 import { ChartCard } from "./components/ChartCard";
 
 type CategoryFilter = "all" | "bar" | "line" | "pie" | "scatter";
@@ -84,6 +84,7 @@ const CATEGORIES: { id: CategoryFilter; label: string }[] = [
   { id: "scatter", label: "Scatter" },
 ];
 
+/** Chart demo application component. */
 export function App() {
   const [filter, setFilter] = useState<CategoryFilter>("all");
   const [selectedChart, setSelectedChart] = useState<string | null>(null);

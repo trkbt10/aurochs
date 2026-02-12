@@ -1,4 +1,7 @@
-import { describe, it, expect } from "bun:test";
+/**
+ * @file Pie chart ASCII renderer tests
+ */
+
 import { renderPieAscii } from "./pie-renderer";
 
 describe("pie-renderer", () => {
