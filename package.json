@@ -32,7 +32,6 @@
   "devDependencies": {
     "@changesets/cli": "^2.29.8",
     "@fontsource-variable/inter": "^5.2.8",
-    "@fontsource/inter": "^5.2.8",
     "@resvg/resvg-js": "^2.6.2",
     "@testing-library/react": "^16.3.1",
     "@types/earcut": "^3.0.0",
@@ -70,12 +69,10 @@
   "dependencies": {
     "fflate": "^0.8.2",
     "hono": "^4.11.1",
-    "lucide-react": "^0.562.0",
     "opentype.js": "^1.3.4",
     "pngjs": "^7.0.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-panel-layout": "^0.6.1",
     "react-router-dom": "^7.6.1",
     "zustand": "^5.0.5"
   }

@@ -7,19 +7,16 @@
       "dependencies": {
         "fflate": "^0.8.2",
         "hono": "^4.11.1",
-        "lucide-react": "^0.562.0",
         "opentype.js": "^1.3.4",
         "pngjs": "^7.0.0",
         "react": "^19.1.0",
         "react-dom": "^19.1.0",
-        "react-panel-layout": "^0.6.1",
         "react-router-dom": "^7.6.1",
         "zustand": "^5.0.5",
       },
       "devDependencies": {
         "@changesets/cli": "^2.29.8",
         "@fontsource-variable/inter": "^5.2.8",
-        "@fontsource/inter": "^5.2.8",
         "@resvg/resvg-js": "^2.6.2",
         "@testing-library/react": "^16.3.1",
         "@types/earcut": "^3.0.0",
@@ -57,7 +54,7 @@
     },
     "packages/@aurochs-build/aurochs": {
       "name": "@aurochs-build/aurochs",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-cli/cli": "workspace:*",
         "@aurochs-renderer/pptx": "workspace:*",
@@ -69,7 +66,7 @@
     },
     "packages/@aurochs-build/vscode-office-viewer": {
       "name": "@aurochs-build/vscode-office-viewer",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-office/doc": "workspace:*",
         "@aurochs-office/docx": "workspace:*",
@@ -86,7 +83,7 @@
     },
     "packages/@aurochs-builder/chart": {
       "name": "@aurochs-builder/chart",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-builder/core": "workspace:*",
         "@aurochs-builder/drawing-ml": "workspace:*",
@@ -98,7 +95,7 @@
     },
     "packages/@aurochs-builder/core": {
       "name": "@aurochs-builder/core",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-office/ooxml": "workspace:*",
         "@aurochs/xml": "workspace:*",
@@ -107,7 +104,7 @@
     },
     "packages/@aurochs-builder/diagram": {
       "name": "@aurochs-builder/diagram",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-builder/core": "workspace:*",
         "@aurochs-builder/drawing-ml": "workspace:*",
@@ -118,7 +115,7 @@
     },
     "packages/@aurochs-builder/docx": {
       "name": "@aurochs-builder/docx",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-builder/core": "workspace:*",
         "@aurochs-office/docx": "workspace:*",
@@ -130,7 +127,7 @@
     },
     "packages/@aurochs-builder/drawing-ml": {
       "name": "@aurochs-builder/drawing-ml",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-builder/core": "workspace:*",
         "@aurochs-office/drawing-ml": "workspace:*",
@@ -139,14 +136,14 @@
     },
     "packages/@aurochs-builder/mermaid": {
       "name": "@aurochs-builder/mermaid",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs/mermaid": "workspace:*",
       },
     },
     "packages/@aurochs-builder/pptx": {
       "name": "@aurochs-builder/pptx",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-builder/drawing-ml": "workspace:*",
         "@aurochs-office/chart": "workspace:*",
@@ -161,7 +158,7 @@
     },
     "packages/@aurochs-builder/xlsx": {
       "name": "@aurochs-builder/xlsx",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-builder/core": "workspace:*",
         "@aurochs-office/ooxml": "workspace:*",
@@ -173,7 +170,7 @@
     },
     "packages/@aurochs-cli/cli": {
       "name": "@aurochs-cli/cli",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "bin": {
         "aurochs": "./dist/cli.js",
       },
@@ -186,11 +183,11 @@
     },
     "packages/@aurochs-cli/cli-core": {
       "name": "@aurochs-cli/cli-core",
-      "version": "0.2.0",
+      "version": "0.3.2",
     },
     "packages/@aurochs-cli/docx-cli": {
       "name": "@aurochs-cli/docx-cli",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "bin": {
         "docx": "./dist/cli.js",
       },
@@ -206,7 +203,7 @@
     },
     "packages/@aurochs-cli/pptx-cli": {
       "name": "@aurochs-cli/pptx-cli",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "bin": {
         "pptx": "./dist/cli.js",
       },
@@ -224,7 +221,7 @@
     },
     "packages/@aurochs-cli/xlsx-cli": {
       "name": "@aurochs-cli/xlsx-cli",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "bin": {
         "xlsx": "./dist/cli.js",
       },
@@ -239,11 +236,11 @@
     },
     "packages/@aurochs-converters/core": {
       "name": "@aurochs-converters/core",
-      "version": "0.2.0",
+      "version": "0.3.2",
     },
     "packages/@aurochs-converters/doc-to-docx": {
       "name": "@aurochs-converters/doc-to-docx",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-converters/core": "workspace:*",
         "@aurochs-office/doc": "workspace:*",
@@ -252,7 +249,7 @@
     },
     "packages/@aurochs-converters/pdf-to-pptx": {
       "name": "@aurochs-converters/pdf-to-pptx",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-builder/pptx": "workspace:*",
         "@aurochs-converters/core": "workspace:*",
@@ -275,7 +272,7 @@
     },
     "packages/@aurochs-converters/ppt-to-pptx": {
       "name": "@aurochs-converters/ppt-to-pptx",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-converters/core": "workspace:*",
         "@aurochs-office/ppt": "workspace:*",
@@ -284,7 +281,7 @@
     },
     "packages/@aurochs-converters/xls-to-xlsx": {
       "name": "@aurochs-converters/xls-to-xlsx",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-converters/core": "workspace:*",
         "@aurochs-office/xls": "workspace:*",
@@ -293,7 +290,7 @@
     },
     "packages/@aurochs-mcp/pptx-mcp": {
       "name": "@aurochs-mcp/pptx-mcp",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "bin": {
         "pptx-mcp": "./src/index.ts",
       },
@@ -313,11 +310,11 @@
     },
     "packages/@aurochs-office/cfb": {
       "name": "@aurochs-office/cfb",
-      "version": "0.2.0",
+      "version": "0.3.2",
     },
     "packages/@aurochs-office/chart": {
       "name": "@aurochs-office/chart",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-office/drawing-ml": "workspace:*",
         "@aurochs-office/ooxml": "workspace:*",
@@ -327,7 +324,7 @@
     },
     "packages/@aurochs-office/diagram": {
       "name": "@aurochs-office/diagram",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-office/drawing-ml": "workspace:*",
         "@aurochs-office/ooxml": "workspace:*",
@@ -336,7 +333,7 @@
     },
     "packages/@aurochs-office/doc": {
       "name": "@aurochs-office/doc",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-office/cfb": "workspace:*",
         "@aurochs-office/docx": "workspace:*",
@@ -344,7 +341,7 @@
     },
     "packages/@aurochs-office/docx": {
       "name": "@aurochs-office/docx",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-office/drawing-ml": "workspace:*",
         "@aurochs-office/ooxml": "workspace:*",
@@ -356,7 +353,7 @@
     },
     "packages/@aurochs-office/drawing-ml": {
       "name": "@aurochs-office/drawing-ml",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs/color": "workspace:*",
         "@aurochs/xml": "workspace:*",
@@ -364,7 +361,7 @@
     },
     "packages/@aurochs-office/ooxml": {
       "name": "@aurochs-office/ooxml",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-office/drawing-ml": "workspace:*",
         "@aurochs-office/opc": "workspace:*",
@@ -375,7 +372,7 @@
     },
     "packages/@aurochs-office/opc": {
       "name": "@aurochs-office/opc",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs/xml": "workspace:*",
         "@aurochs/zip": "workspace:*",
@@ -383,7 +380,7 @@
     },
     "packages/@aurochs-office/ppt": {
       "name": "@aurochs-office/ppt",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-office/cfb": "workspace:*",
         "@aurochs-office/pptx": "workspace:*",
@@ -392,7 +389,7 @@
     },
     "packages/@aurochs-office/pptx": {
       "name": "@aurochs-office/pptx",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-office/chart": "workspace:*",
         "@aurochs-office/diagram": "workspace:*",
@@ -409,7 +406,7 @@
     },
     "packages/@aurochs-office/text-layout": {
       "name": "@aurochs-office/text-layout",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-office/ooxml": "workspace:*",
         "@aurochs/glyph": "workspace:*",
@@ -420,7 +417,7 @@
     },
     "packages/@aurochs-office/xls": {
       "name": "@aurochs-office/xls",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-office/cfb": "workspace:*",
         "@aurochs-office/xlsx": "workspace:*",
@@ -428,7 +425,7 @@
     },
     "packages/@aurochs-office/xlsx": {
       "name": "@aurochs-office/xlsx",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-office/ooxml": "workspace:*",
         "@aurochs-office/opc": "workspace:*",
@@ -438,7 +435,7 @@
     },
     "packages/@aurochs-renderer/chart": {
       "name": "@aurochs-renderer/chart",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-builder/mermaid": "workspace:*",
         "@aurochs-office/chart": "workspace:*",
@@ -453,7 +450,7 @@
     },
     "packages/@aurochs-renderer/diagram": {
       "name": "@aurochs-renderer/diagram",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-builder/mermaid": "workspace:*",
         "@aurochs-office/diagram": "workspace:*",
@@ -468,11 +465,12 @@
     },
     "packages/@aurochs-renderer/docx": {
       "name": "@aurochs-renderer/docx",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-office/docx": "workspace:*",
         "@aurochs-office/drawing-ml": "workspace:*",
         "@aurochs-office/text-layout": "workspace:*",
+        "@aurochs-renderer/drawing-ml": "workspace:*",
         "@aurochs/glyph": "workspace:*",
       },
       "peerDependencies": {
@@ -482,7 +480,7 @@
     },
     "packages/@aurochs-renderer/drawing-ml": {
       "name": "@aurochs-renderer/drawing-ml",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-office/drawing-ml": "workspace:*",
         "@aurochs-office/ooxml": "workspace:*",
@@ -494,7 +492,7 @@
     },
     "packages/@aurochs-renderer/figma": {
       "name": "@aurochs-renderer/figma",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs/fig": "workspace:*",
         "@aurochs/zip": "workspace:*",
@@ -509,7 +507,7 @@
     },
     "packages/@aurochs-renderer/pptx": {
       "name": "@aurochs-renderer/pptx",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-office/chart": "workspace:*",
         "@aurochs-office/drawing-ml": "workspace:*",
@@ -531,7 +529,7 @@
     },
     "packages/@aurochs-renderer/visual-regression": {
       "name": "@aurochs-renderer/visual-regression",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-office/pptx": "workspace:*",
         "@aurochs-renderer/chart": "workspace:*",
@@ -541,15 +539,17 @@
     },
     "packages/@aurochs-renderer/xlsx": {
       "name": "@aurochs-renderer/xlsx",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
-        "@aurochs-renderer/drawing-ml": "workspace:*",
+        "@aurochs-office/drawing-ml": "workspace:*",
+        "@aurochs-office/xlsx": "workspace:*",
+        "@aurochs/color": "workspace:*",
         "@aurochs/mermaid": "workspace:*",
       },
     },
     "packages/@aurochs-ui/chart-editor": {
       "name": "@aurochs-ui/chart-editor",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-office/chart": "workspace:*",
         "@aurochs-office/ooxml": "workspace:*",
@@ -562,7 +562,7 @@
     },
     "packages/@aurochs-ui/color-editor": {
       "name": "@aurochs-ui/color-editor",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-office/drawing-ml": "workspace:*",
         "@aurochs-ui/ui-components": "workspace:*",
@@ -575,7 +575,7 @@
     },
     "packages/@aurochs-ui/diagram-editor": {
       "name": "@aurochs-ui/diagram-editor",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-office/diagram": "workspace:*",
         "@aurochs-ui/ui-components": "workspace:*",
@@ -587,7 +587,7 @@
     },
     "packages/@aurochs-ui/docx-editor": {
       "name": "@aurochs-ui/docx-editor",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-office/docx": "workspace:*",
         "@aurochs-office/text-layout": "workspace:*",
@@ -603,7 +603,7 @@
     },
     "packages/@aurochs-ui/editor-controls": {
       "name": "@aurochs-ui/editor-controls",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-ui/color-editor": "workspace:*",
         "@aurochs-ui/ui-components": "workspace:*",
@@ -616,14 +616,14 @@
     },
     "packages/@aurochs-ui/editor-core": {
       "name": "@aurochs-ui/editor-core",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "peerDependencies": {
         "react": "^18.0.0 || ^19.0.0",
       },
     },
     "packages/@aurochs-ui/path-tools": {
       "name": "@aurochs-ui/path-tools",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-ui/ui-components": "workspace:*",
       },
@@ -634,7 +634,7 @@
     },
     "packages/@aurochs-ui/pptx-editor": {
       "name": "@aurochs-ui/pptx-editor",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-builder/pptx": "workspace:*",
         "@aurochs-office/chart": "workspace:*",
@@ -651,6 +651,10 @@
         "@aurochs/glyph": "workspace:*",
         "react-panel-layout": "^0.6.1",
       },
+      "devDependencies": {
+        "puppeteer-core": "^24.37.2",
+        "vite": "^7.3.1",
+      },
       "peerDependencies": {
         "react": "^18.0.0 || ^19.0.0",
         "react-dom": "^18.0.0 || ^19.0.0",
@@ -658,7 +662,7 @@
     },
     "packages/@aurochs-ui/ui-components": {
       "name": "@aurochs-ui/ui-components",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "lucide-react": "^0.562.0",
       },
@@ -669,7 +673,7 @@
     },
     "packages/@aurochs-ui/ui-preview": {
       "name": "@aurochs-ui/ui-preview",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-builder/xlsx": "workspace:*",
         "@aurochs-office/docx": "workspace:*",
@@ -694,7 +698,7 @@
     },
     "packages/@aurochs-ui/xlsx-editor": {
       "name": "@aurochs-ui/xlsx-editor",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs-office/xlsx": "workspace:*",
         "@aurochs-ui/color-editor": "workspace:*",
@@ -708,19 +712,19 @@
     },
     "packages/@aurochs/buffer": {
       "name": "@aurochs/buffer",
-      "version": "0.2.0",
+      "version": "0.3.2",
     },
     "packages/@aurochs/color": {
       "name": "@aurochs/color",
-      "version": "0.2.0",
+      "version": "0.3.2",
     },
     "packages/@aurochs/css": {
       "name": "@aurochs/css",
-      "version": "0.2.0",
+      "version": "0.3.2",
     },
     "packages/@aurochs/fig": {
       "name": "@aurochs/fig",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs/zip": "workspace:*",
         "fzstd": "^0.1.1",
@@ -733,26 +737,26 @@
     },
     "packages/@aurochs/files": {
       "name": "@aurochs/files",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs/buffer": "workspace:*",
       },
     },
     "packages/@aurochs/glyph": {
       "name": "@aurochs/glyph",
-      "version": "0.2.0",
+      "version": "0.3.2",
     },
     "packages/@aurochs/jpeg": {
       "name": "@aurochs/jpeg",
-      "version": "0.2.0",
+      "version": "0.3.2",
     },
     "packages/@aurochs/mermaid": {
       "name": "@aurochs/mermaid",
-      "version": "0.2.0",
+      "version": "0.3.2",
     },
     "packages/@aurochs/pdf": {
       "name": "@aurochs/pdf",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs/buffer": "workspace:*",
         "@aurochs/jpeg": "workspace:*",
@@ -763,7 +767,7 @@
     },
     "packages/@aurochs/png": {
       "name": "@aurochs/png",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "@aurochs/buffer": "workspace:*",
         "pngjs": "^7.0.0",
@@ -771,15 +775,15 @@
     },
     "packages/@aurochs/url": {
       "name": "@aurochs/url",
-      "version": "0.2.0",
+      "version": "0.3.2",
     },
     "packages/@aurochs/xml": {
       "name": "@aurochs/xml",
-      "version": "0.2.0",
+      "version": "0.3.2",
     },
     "packages/@aurochs/zip": {
       "name": "@aurochs/zip",
-      "version": "0.2.0",
+      "version": "0.3.2",
       "dependencies": {
         "fflate": "^0.8.2",
       },
@@ -1091,8 +1095,6 @@
     "@exodus/bytes": ["@exodus/bytes@1.11.0", "", { "peerDependencies": { "@noble/hashes": "^1.8.0 || ^2.0.0" }, "optionalPeers": ["@noble/hashes"] }, "sha512-wO3vd8nsEHdumsXrjGO/v4p6irbg7hy9kvIeR6i2AwylZSk4HJdWgL0FNaVquW1+AweJcdvU1IEpuIWk/WaPnA=="],
 
     "@fontsource-variable/inter": ["@fontsource-variable/inter@5.2.8", "", {}, "sha512-kOfP2D+ykbcX/P3IFnokOhVRNoTozo5/JxhAIVYLpea/UBmCQ/YWPBfWIDuBImXX/15KH+eKh4xpEUyS2sQQGQ=="],
-
-    "@fontsource/inter": ["@fontsource/inter@5.2.8", "", {}, "sha512-P6r5WnJoKiNVV+zvW2xM13gNdFhAEpQ9dQJHt3naLvfg+LkF2ldgSLiF4T41lf1SQCM9QmkqPTn4TH568IRagg=="],
 
     "@hono/node-server": ["@hono/node-server@1.19.9", "", { "peerDependencies": { "hono": "^4" } }, "sha512-vHL6w3ecZsky+8P5MD+eFfaGTyCeOHUIFYMGpQGbrBTSmNNoxv0if69rEZ5giu36weC5saFuznL411gRX7bJDw=="],
 
@@ -2104,7 +2106,7 @@
 
     "puppeteer": ["puppeteer@24.34.0", "", { "dependencies": { "@puppeteer/browsers": "2.11.0", "chromium-bidi": "12.0.1", "cosmiconfig": "^9.0.0", "devtools-protocol": "0.0.1534754", "puppeteer-core": "24.34.0", "typed-query-selector": "^2.12.0" }, "bin": "lib/cjs/puppeteer/node/cli.js" }, ""],
 
-    "puppeteer-core": ["puppeteer-core@24.34.0", "", { "dependencies": { "@puppeteer/browsers": "2.11.0", "chromium-bidi": "12.0.1", "debug": "^4.4.3", "devtools-protocol": "0.0.1534754", "typed-query-selector": "^2.12.0", "webdriver-bidi-protocol": "0.3.10", "ws": "^8.18.3" } }, ""],
+    "puppeteer-core": ["puppeteer-core@24.37.2", "", { "dependencies": { "@puppeteer/browsers": "2.12.0", "chromium-bidi": "13.1.1", "debug": "^4.4.3", "devtools-protocol": "0.0.1566079", "typed-query-selector": "^2.12.0", "webdriver-bidi-protocol": "0.4.0", "ws": "^8.19.0" } }, "sha512-nN8qwE3TGF2vA/+xemPxbesntTuqD9vCGOiZL2uh8HES3pPzLX20MyQjB42dH2rhQ3W3TljZ4ZaKZ0yX/abQuw=="],
 
     "qs": ["qs@6.14.1", "", { "dependencies": { "side-channel": "^1.1.0" } }, "sha512-4EK3+xJl8Ts67nLYNwqw/dsFVnCf+qR7RgXSK9jEEm9unao3njwMDdmsdvoKBKHzxd7tCYz5e5M+SnMjdtXGQQ=="],
 
@@ -2364,7 +2366,7 @@
 
     "w3c-xmlserializer": ["w3c-xmlserializer@5.0.0", "", { "dependencies": { "xml-name-validator": "^5.0.0" } }, "sha512-o8qghlI8NZHU1lLPrpi2+Uq7abh4GGPpYANlalzWxyWteJOCsr/P+oPBA49TOLu5FTZO4d3F9MnWJfiMo4BkmA=="],
 
-    "webdriver-bidi-protocol": ["webdriver-bidi-protocol@0.3.10", "", {}, ""],
+    "webdriver-bidi-protocol": ["webdriver-bidi-protocol@0.4.0", "", {}, "sha512-U9VIlNRrq94d1xxR9JrCEAx5Gv/2W7ERSv8oWRoNe/QYbfccS0V3h/H6qeNeCRJxXGMhhnkqvwNrvPAYeuP9VA=="],
 
     "webidl-conversions": ["webidl-conversions@8.0.1", "", {}, "sha512-BMhLD/Sw+GbJC21C/UgyaZX41nPt8bUTg+jWyDeg7e7YN4xOM05YPSIXceACnXVtqyEw/LMClUQMtMZ+PGGpqQ=="],
 
@@ -2417,6 +2419,8 @@
     "zstd-codec": ["zstd-codec@0.1.5", "", {}, "sha512-v3fyjpK8S/dpY/X5WxqTK3IoCnp/ZOLxn144GZVlNUjtwAchzrVo03h+oMATFhCIiJ5KTr4V3vDQQYz4RU684g=="],
 
     "zustand": ["zustand@5.0.9", "", { "peerDependencies": { "@types/react": ">=18.0.0", "immer": ">=9.0.6", "react": ">=18.0.0", "use-sync-external-store": ">=1.2.0" }, "optionalPeers": ["immer", "use-sync-external-store"] }, ""],
+
+    "@aurochs-ui/pptx-editor/vite": ["vite@7.3.1", "", { "dependencies": { "esbuild": "^0.27.0", "fdir": "^6.5.0", "picomatch": "^4.0.3", "postcss": "^8.5.6", "rollup": "^4.43.0", "tinyglobby": "^0.2.15" }, "optionalDependencies": { "fsevents": "~2.3.3" }, "peerDependencies": { "@types/node": "^20.19.0 || >=22.12.0", "jiti": ">=1.21.0", "less": "^4.0.0", "lightningcss": "^1.21.0", "sass": "^1.70.0", "sass-embedded": "^1.70.0", "stylus": ">=0.54.8", "sugarss": "^5.0.0", "terser": "^5.16.0", "tsx": "^4.8.1", "yaml": "^2.4.2" }, "optionalPeers": ["@types/node", "jiti", "less", "lightningcss", "sass", "sass-embedded", "stylus", "sugarss", "terser", "tsx", "yaml"], "bin": { "vite": "bin/vite.js" } }, "sha512-w+N7Hifpc3gRjZ63vYBXA56dvvRlNWRczTdmCBBa+CotUzAPf5b7YMdMR/8CQoeYE5LX3W4wj6RYTgonm1b9DA=="],
 
     "@babel/code-frame/js-tokens": ["js-tokens@4.0.0", "", {}, ""],
 
@@ -2570,7 +2574,17 @@
 
     "proxy-agent/lru-cache": ["lru-cache@7.18.3", "", {}, ""],
 
+    "puppeteer/puppeteer-core": ["puppeteer-core@24.34.0", "", { "dependencies": { "@puppeteer/browsers": "2.11.0", "chromium-bidi": "12.0.1", "debug": "^4.4.3", "devtools-protocol": "0.0.1534754", "typed-query-selector": "^2.12.0", "webdriver-bidi-protocol": "0.3.10", "ws": "^8.18.3" } }, ""],
+
+    "puppeteer-core/@puppeteer/browsers": ["@puppeteer/browsers@2.12.0", "", { "dependencies": { "debug": "^4.4.3", "extract-zip": "^2.0.1", "progress": "^2.0.3", "proxy-agent": "^6.5.0", "semver": "^7.7.3", "tar-fs": "^3.1.1", "yargs": "^17.7.2" }, "bin": { "browsers": "lib/cjs/main-cli.js" } }, "sha512-Xuq42yxcQJ54ti8ZHNzF5snFvtpgXzNToJ1bXUGQRaiO8t+B6UM8sTUJfvV+AJnqtkJU/7hdy6nbKyA12aHtRw=="],
+
+    "puppeteer-core/chromium-bidi": ["chromium-bidi@13.1.1", "", { "dependencies": { "mitt": "^3.0.1", "zod": "^3.24.1" }, "peerDependencies": { "devtools-protocol": "*" } }, "sha512-zB9MpoPd7VJwjowQqiW3FKOvQwffFMjQ8Iejp5ZW+sJaKLRhZX1sTxzl3Zt22TDB4zP0OOqs8lRoY7eAW5geyQ=="],
+
     "puppeteer-core/debug": ["debug@4.4.3", "", { "dependencies": { "ms": "^2.1.3" } }, ""],
+
+    "puppeteer-core/devtools-protocol": ["devtools-protocol@0.0.1566079", "", {}, "sha512-MJfAEA1UfVhSs7fbSQOG4czavUp1ajfg6prlAN0+cmfa2zNjaIbvq8VneP7do1WAQQIvgNJWSMeP6UyI90gIlQ=="],
+
+    "puppeteer-core/ws": ["ws@8.19.0", "", { "peerDependencies": { "bufferutil": "^4.0.1", "utf-8-validate": ">=5.0.2" }, "optionalPeers": ["bufferutil", "utf-8-validate"] }, "sha512-blAT2mjOEIi0ZzruJfIhb3nps74PRWTCz1IjglWEEpQl5XS/UNama6u2/rjFkDDouqr4L67ry+1aGIALViWjDg=="],
 
     "read-yaml-file/js-yaml": ["js-yaml@3.14.2", "", { "dependencies": { "argparse": "^1.0.7", "esprima": "^4.0.0" }, "bin": { "js-yaml": "bin/js-yaml.js" } }, "sha512-PMSmkqxr106Xa156c2M265Z+FTrPl+oxd/rgOQy2tijQeK5TxQ43psO1ZCwhVOSdnn+RzkzlRz/eY4BgJBYVpg=="],
 
@@ -2612,6 +2626,8 @@
 
     "vitest/vite": ["vite@7.1.3", "", { "dependencies": { "esbuild": "^0.25.0", "fdir": "^6.5.0", "picomatch": "^4.0.3", "postcss": "^8.5.6", "rollup": "^4.43.0", "tinyglobby": "^0.2.14" }, "optionalDependencies": { "fsevents": "~2.3.3" }, "peerDependencies": { "@types/node": "^20.19.0 || >=22.12.0", "jiti": ">=1.21.0", "less": "^4.0.0", "lightningcss": "^1.21.0", "sass": "^1.70.0", "sass-embedded": "^1.70.0", "stylus": ">=0.54.8", "sugarss": "^5.0.0", "terser": "^5.16.0", "tsx": "^4.8.1", "yaml": "^2.4.2" }, "optionalPeers": ["jiti", "less", "lightningcss", "sass", "sass-embedded", "stylus", "sugarss", "terser", "tsx", "yaml"], "bin": "bin/vite.js" }, ""],
 
+    "@aurochs-ui/pptx-editor/vite/esbuild": ["esbuild@0.27.3", "", { "optionalDependencies": { "@esbuild/aix-ppc64": "0.27.3", "@esbuild/android-arm": "0.27.3", "@esbuild/android-arm64": "0.27.3", "@esbuild/android-x64": "0.27.3", "@esbuild/darwin-arm64": "0.27.3", "@esbuild/darwin-x64": "0.27.3", "@esbuild/freebsd-arm64": "0.27.3", "@esbuild/freebsd-x64": "0.27.3", "@esbuild/linux-arm": "0.27.3", "@esbuild/linux-arm64": "0.27.3", "@esbuild/linux-ia32": "0.27.3", "@esbuild/linux-loong64": "0.27.3", "@esbuild/linux-mips64el": "0.27.3", "@esbuild/linux-ppc64": "0.27.3", "@esbuild/linux-riscv64": "0.27.3", "@esbuild/linux-s390x": "0.27.3", "@esbuild/linux-x64": "0.27.3", "@esbuild/netbsd-arm64": "0.27.3", "@esbuild/netbsd-x64": "0.27.3", "@esbuild/openbsd-arm64": "0.27.3", "@esbuild/openbsd-x64": "0.27.3", "@esbuild/openharmony-arm64": "0.27.3", "@esbuild/sunos-x64": "0.27.3", "@esbuild/win32-arm64": "0.27.3", "@esbuild/win32-ia32": "0.27.3", "@esbuild/win32-x64": "0.27.3" }, "bin": { "esbuild": "bin/esbuild" } }, "sha512-8VwMnyGCONIs6cWue2IdpHxHnAjzxnw2Zr7MkVxB2vjmQ2ivqGFb4LEG3SMnv0Gb2F/G/2yA8zUaiL1gywDCCg=="],
+
     "@eslint/eslintrc/ajv/json-schema-traverse": ["json-schema-traverse@0.4.1", "", {}, ""],
 
     "@isaacs/cliui/string-width/emoji-regex": ["emoji-regex@9.2.2", "", {}, ""],
@@ -2644,6 +2660,10 @@
 
     "mlly/pkg-types/confbox": ["confbox@0.1.8", "", {}, "sha512-RMtmw0iFkeR4YV+fUOSucriAQNb9g8zFR52MWCtl+cCZOFRNL6zeB395vPzFhEjjn4fMxXudmELnl/KF/WrK6w=="],
 
+    "puppeteer/puppeteer-core/debug": ["debug@4.4.3", "", { "dependencies": { "ms": "^2.1.3" } }, ""],
+
+    "puppeteer/puppeteer-core/webdriver-bidi-protocol": ["webdriver-bidi-protocol@0.3.10", "", {}, ""],
+
     "read-yaml-file/js-yaml/argparse": ["argparse@1.0.10", "", { "dependencies": { "sprintf-js": "~1.0.2" } }, "sha512-o5Roy6tNG4SL/FOkCAN6RzjiakZS25RLYFrcMttJqbdd8BWrnA+fGz57iN5Pb06pvBGvl5gQ0B48dJlslXvoTg=="],
 
     "test-exclude/glob/jackspeak": ["jackspeak@3.4.3", "", { "dependencies": { "@isaacs/cliui": "^8.0.2" }, "optionalDependencies": { "@pkgjs/parseargs": "^0.11.0" } }, ""],
@@ -2653,6 +2673,58 @@
     "test-exclude/minimatch/brace-expansion": ["brace-expansion@2.0.2", "", { "dependencies": { "balanced-match": "^1.0.0" } }, ""],
 
     "vite-node/vite/tinyglobby": ["tinyglobby@0.2.14", "", { "dependencies": { "fdir": "^6.4.4", "picomatch": "^4.0.2" } }, ""],
+
+    "@aurochs-ui/pptx-editor/vite/esbuild/@esbuild/aix-ppc64": ["@esbuild/aix-ppc64@0.27.3", "", { "os": "aix", "cpu": "ppc64" }, "sha512-9fJMTNFTWZMh5qwrBItuziu834eOCUcEqymSH7pY+zoMVEZg3gcPuBNxH1EvfVYe9h0x/Ptw8KBzv7qxb7l8dg=="],
+
+    "@aurochs-ui/pptx-editor/vite/esbuild/@esbuild/android-arm": ["@esbuild/android-arm@0.27.3", "", { "os": "android", "cpu": "arm" }, "sha512-i5D1hPY7GIQmXlXhs2w8AWHhenb00+GxjxRncS2ZM7YNVGNfaMxgzSGuO8o8SJzRc/oZwU2bcScvVERk03QhzA=="],
+
+    "@aurochs-ui/pptx-editor/vite/esbuild/@esbuild/android-arm64": ["@esbuild/android-arm64@0.27.3", "", { "os": "android", "cpu": "arm64" }, "sha512-YdghPYUmj/FX2SYKJ0OZxf+iaKgMsKHVPF1MAq/P8WirnSpCStzKJFjOjzsW0QQ7oIAiccHdcqjbHmJxRb/dmg=="],
+
+    "@aurochs-ui/pptx-editor/vite/esbuild/@esbuild/android-x64": ["@esbuild/android-x64@0.27.3", "", { "os": "android", "cpu": "x64" }, "sha512-IN/0BNTkHtk8lkOM8JWAYFg4ORxBkZQf9zXiEOfERX/CzxW3Vg1ewAhU7QSWQpVIzTW+b8Xy+lGzdYXV6UZObQ=="],
+
+    "@aurochs-ui/pptx-editor/vite/esbuild/@esbuild/darwin-arm64": ["@esbuild/darwin-arm64@0.27.3", "", { "os": "darwin", "cpu": "arm64" }, "sha512-Re491k7ByTVRy0t3EKWajdLIr0gz2kKKfzafkth4Q8A5n1xTHrkqZgLLjFEHVD+AXdUGgQMq+Godfq45mGpCKg=="],
+
+    "@aurochs-ui/pptx-editor/vite/esbuild/@esbuild/darwin-x64": ["@esbuild/darwin-x64@0.27.3", "", { "os": "darwin", "cpu": "x64" }, "sha512-vHk/hA7/1AckjGzRqi6wbo+jaShzRowYip6rt6q7VYEDX4LEy1pZfDpdxCBnGtl+A5zq8iXDcyuxwtv3hNtHFg=="],
+
+    "@aurochs-ui/pptx-editor/vite/esbuild/@esbuild/freebsd-arm64": ["@esbuild/freebsd-arm64@0.27.3", "", { "os": "freebsd", "cpu": "arm64" }, "sha512-ipTYM2fjt3kQAYOvo6vcxJx3nBYAzPjgTCk7QEgZG8AUO3ydUhvelmhrbOheMnGOlaSFUoHXB6un+A7q4ygY9w=="],
+
+    "@aurochs-ui/pptx-editor/vite/esbuild/@esbuild/freebsd-x64": ["@esbuild/freebsd-x64@0.27.3", "", { "os": "freebsd", "cpu": "x64" }, "sha512-dDk0X87T7mI6U3K9VjWtHOXqwAMJBNN2r7bejDsc+j03SEjtD9HrOl8gVFByeM0aJksoUuUVU9TBaZa2rgj0oA=="],
+
+    "@aurochs-ui/pptx-editor/vite/esbuild/@esbuild/linux-arm": ["@esbuild/linux-arm@0.27.3", "", { "os": "linux", "cpu": "arm" }, "sha512-s6nPv2QkSupJwLYyfS+gwdirm0ukyTFNl3KTgZEAiJDd+iHZcbTPPcWCcRYH+WlNbwChgH2QkE9NSlNrMT8Gfw=="],
+
+    "@aurochs-ui/pptx-editor/vite/esbuild/@esbuild/linux-arm64": ["@esbuild/linux-arm64@0.27.3", "", { "os": "linux", "cpu": "arm64" }, "sha512-sZOuFz/xWnZ4KH3YfFrKCf1WyPZHakVzTiqji3WDc0BCl2kBwiJLCXpzLzUBLgmp4veFZdvN5ChW4Eq/8Fc2Fg=="],
+
+    "@aurochs-ui/pptx-editor/vite/esbuild/@esbuild/linux-ia32": ["@esbuild/linux-ia32@0.27.3", "", { "os": "linux", "cpu": "ia32" }, "sha512-yGlQYjdxtLdh0a3jHjuwOrxQjOZYD/C9PfdbgJJF3TIZWnm/tMd/RcNiLngiu4iwcBAOezdnSLAwQDPqTmtTYg=="],
+
+    "@aurochs-ui/pptx-editor/vite/esbuild/@esbuild/linux-loong64": ["@esbuild/linux-loong64@0.27.3", "", { "os": "linux", "cpu": "none" }, "sha512-WO60Sn8ly3gtzhyjATDgieJNet/KqsDlX5nRC5Y3oTFcS1l0KWba+SEa9Ja1GfDqSF1z6hif/SkpQJbL63cgOA=="],
+
+    "@aurochs-ui/pptx-editor/vite/esbuild/@esbuild/linux-mips64el": ["@esbuild/linux-mips64el@0.27.3", "", { "os": "linux", "cpu": "none" }, "sha512-APsymYA6sGcZ4pD6k+UxbDjOFSvPWyZhjaiPyl/f79xKxwTnrn5QUnXR5prvetuaSMsb4jgeHewIDCIWljrSxw=="],
+
+    "@aurochs-ui/pptx-editor/vite/esbuild/@esbuild/linux-ppc64": ["@esbuild/linux-ppc64@0.27.3", "", { "os": "linux", "cpu": "ppc64" }, "sha512-eizBnTeBefojtDb9nSh4vvVQ3V9Qf9Df01PfawPcRzJH4gFSgrObw+LveUyDoKU3kxi5+9RJTCWlj4FjYXVPEA=="],
+
+    "@aurochs-ui/pptx-editor/vite/esbuild/@esbuild/linux-riscv64": ["@esbuild/linux-riscv64@0.27.3", "", { "os": "linux", "cpu": "none" }, "sha512-3Emwh0r5wmfm3ssTWRQSyVhbOHvqegUDRd0WhmXKX2mkHJe1SFCMJhagUleMq+Uci34wLSipf8Lagt4LlpRFWQ=="],
+
+    "@aurochs-ui/pptx-editor/vite/esbuild/@esbuild/linux-s390x": ["@esbuild/linux-s390x@0.27.3", "", { "os": "linux", "cpu": "s390x" }, "sha512-pBHUx9LzXWBc7MFIEEL0yD/ZVtNgLytvx60gES28GcWMqil8ElCYR4kvbV2BDqsHOvVDRrOxGySBM9Fcv744hw=="],
+
+    "@aurochs-ui/pptx-editor/vite/esbuild/@esbuild/linux-x64": ["@esbuild/linux-x64@0.27.3", "", { "os": "linux", "cpu": "x64" }, "sha512-Czi8yzXUWIQYAtL/2y6vogER8pvcsOsk5cpwL4Gk5nJqH5UZiVByIY8Eorm5R13gq+DQKYg0+JyQoytLQas4dA=="],
+
+    "@aurochs-ui/pptx-editor/vite/esbuild/@esbuild/netbsd-arm64": ["@esbuild/netbsd-arm64@0.27.3", "", { "os": "none", "cpu": "arm64" }, "sha512-sDpk0RgmTCR/5HguIZa9n9u+HVKf40fbEUt+iTzSnCaGvY9kFP0YKBWZtJaraonFnqef5SlJ8/TiPAxzyS+UoA=="],
+
+    "@aurochs-ui/pptx-editor/vite/esbuild/@esbuild/netbsd-x64": ["@esbuild/netbsd-x64@0.27.3", "", { "os": "none", "cpu": "x64" }, "sha512-P14lFKJl/DdaE00LItAukUdZO5iqNH7+PjoBm+fLQjtxfcfFE20Xf5CrLsmZdq5LFFZzb5JMZ9grUwvtVYzjiA=="],
+
+    "@aurochs-ui/pptx-editor/vite/esbuild/@esbuild/openbsd-arm64": ["@esbuild/openbsd-arm64@0.27.3", "", { "os": "openbsd", "cpu": "arm64" }, "sha512-AIcMP77AvirGbRl/UZFTq5hjXK+2wC7qFRGoHSDrZ5v5b8DK/GYpXW3CPRL53NkvDqb9D+alBiC/dV0Fb7eJcw=="],
+
+    "@aurochs-ui/pptx-editor/vite/esbuild/@esbuild/openbsd-x64": ["@esbuild/openbsd-x64@0.27.3", "", { "os": "openbsd", "cpu": "x64" }, "sha512-DnW2sRrBzA+YnE70LKqnM3P+z8vehfJWHXECbwBmH/CU51z6FiqTQTHFenPlHmo3a8UgpLyH3PT+87OViOh1AQ=="],
+
+    "@aurochs-ui/pptx-editor/vite/esbuild/@esbuild/openharmony-arm64": ["@esbuild/openharmony-arm64@0.27.3", "", { "os": "none", "cpu": "arm64" }, "sha512-NinAEgr/etERPTsZJ7aEZQvvg/A6IsZG/LgZy+81wON2huV7SrK3e63dU0XhyZP4RKGyTm7aOgmQk0bGp0fy2g=="],
+
+    "@aurochs-ui/pptx-editor/vite/esbuild/@esbuild/sunos-x64": ["@esbuild/sunos-x64@0.27.3", "", { "os": "sunos", "cpu": "x64" }, "sha512-PanZ+nEz+eWoBJ8/f8HKxTTD172SKwdXebZ0ndd953gt1HRBbhMsaNqjTyYLGLPdoWHy4zLU7bDVJztF5f3BHA=="],
+
+    "@aurochs-ui/pptx-editor/vite/esbuild/@esbuild/win32-arm64": ["@esbuild/win32-arm64@0.27.3", "", { "os": "win32", "cpu": "arm64" }, "sha512-B2t59lWWYrbRDw/tjiWOuzSsFh1Y/E95ofKz7rIVYSQkUYBjfSgf6oeYPNWHToFRr2zx52JKApIcAS/D5TUBnA=="],
+
+    "@aurochs-ui/pptx-editor/vite/esbuild/@esbuild/win32-ia32": ["@esbuild/win32-ia32@0.27.3", "", { "os": "win32", "cpu": "ia32" }, "sha512-QLKSFeXNS8+tHW7tZpMtjlNb7HKau0QDpwm49u0vUp9y1WOF+PEzkU84y9GqYaAVW8aH8f3GcBck26jh54cX4Q=="],
+
+    "@aurochs-ui/pptx-editor/vite/esbuild/@esbuild/win32-x64": ["@esbuild/win32-x64@0.27.3", "", { "os": "win32", "cpu": "x64" }, "sha512-4uJGhsxuptu3OcpVAzli+/gWusVGwZZHTlS63hh++ehExkVT8SgiEf7/uC/PclrPPkLhZqGgCTjd0VWLo6xMqA=="],
 
     "@manypkg/find-root/find-up/locate-path/p-locate": ["p-locate@4.1.0", "", { "dependencies": { "p-limit": "^2.2.0" } }, "sha512-R79ZZ/0wAxKGu3oYMlz8jy/kbhsNrS7SKZ7PxEHBgJ5+F2mtFW2fK2cOtBh1cHYkQsbzFV7I+EoRKe6Yt0oK7A=="],
 
