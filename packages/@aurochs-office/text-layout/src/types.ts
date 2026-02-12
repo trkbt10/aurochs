@@ -157,6 +157,22 @@ export type LayoutSpan = {
 };
 
 /**
+ * Source rectangle for image cropping.
+ *
+ * @see ECMA-376 Part 1, Section 20.1.8.55 (a:srcRect)
+ */
+export type ImageSourceRect = {
+  /** Left crop percentage (0-100) */
+  readonly left: number;
+  /** Top crop percentage (0-100) */
+  readonly top: number;
+  /** Right crop percentage (0-100) */
+  readonly right: number;
+  /** Bottom crop percentage (0-100) */
+  readonly bottom: number;
+};
+
+/**
  * Inline image configuration.
  *
  * @see ECMA-376 Part 1, Section 20.4.2.8 (inline)
@@ -175,6 +191,8 @@ export type InlineImageConfig = {
   readonly title: string | undefined;
   /** Relationship ID for resource resolution */
   readonly relationshipId: string | undefined;
+  /** Source rectangle for image cropping (percentages 0-100) */
+  readonly srcRect?: ImageSourceRect;
 };
 
 /**
@@ -677,6 +695,8 @@ export type FloatingImageConfig = {
   readonly title: string | undefined;
   /** Relationship ID for resource resolution */
   readonly relationshipId: string | undefined;
+  /** Source rectangle for image cropping (percentages 0-100) */
+  readonly srcRect?: ImageSourceRect;
 
   // Positioning
   /** Horizontal position reference */

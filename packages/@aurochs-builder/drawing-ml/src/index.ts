@@ -24,6 +24,10 @@ export {
   type PatternFillSpec,
   type SolidFillSpec,
   type ThemeFillSpec,
+  type BlipFillSpec,
+  type TileFlipMode,
+  type TileRectAlignment,
+  type BlipCompressionState,
   type FillSpec,
   type LineEndType,
   type LineEndSize,
@@ -69,6 +73,10 @@ export {
   buildSolidFill,
   buildSolidFillFromSpec,
   buildThemeFill,
+  buildBlipFill,
+  buildSimpleBlipFill,
+  buildCroppedBlipFill,
+  buildTiledBlipFill,
 } from "./fill";
 
 // Line builders

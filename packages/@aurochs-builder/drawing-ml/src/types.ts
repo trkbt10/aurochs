@@ -94,9 +94,63 @@ export type ThemeFillSpec = {
 };
 
 /**
+ * Tile flip mode for blip fill
+ */
+export type TileFlipMode = "none" | "x" | "y" | "xy";
+
+/**
+ * Tile rectangle alignment
+ */
+export type TileRectAlignment =
+  | "tl" // top-left
+  | "t" // top
+  | "tr" // top-right
+  | "l" // left
+  | "ctr" // center
+  | "r" // right
+  | "bl" // bottom-left
+  | "b" // bottom
+  | "br"; // bottom-right
+
+/**
+ * Blip compression state
+ */
+export type BlipCompressionState = "none" | "print" | "screen" | "email" | "hqprint";
+
+/**
+ * Blip fill (image fill) specification
+ */
+export type BlipFillSpec = {
+  /** Relationship ID for the image resource */
+  readonly resourceId: string;
+  /** Source rectangle for cropping (percentages 0-100) */
+  readonly sourceRect?: {
+    readonly left: number;
+    readonly top: number;
+    readonly right: number;
+    readonly bottom: number;
+  };
+  /** DPI for the image */
+  readonly dpi?: number;
+  /** Whether to rotate with shape */
+  readonly rotWithShape?: boolean;
+  /** Compression state */
+  readonly compressionState?: BlipCompressionState;
+  /** Tile configuration (if undefined, stretch fill is used) */
+  readonly tile?: {
+    readonly flip?: TileFlipMode;
+    readonly scaleX?: number; // percentage
+    readonly scaleY?: number; // percentage
+    readonly offsetX?: number; // EMUs
+    readonly offsetY?: number; // EMUs
+    readonly alignment?: TileRectAlignment;
+  };
+};
+
+/**
  * Fill specification union type
  */
-export type FillSpec = string | SolidFillSpec | GradientFillSpec | PatternFillSpec | ThemeFillSpec;
+export type FillSpec = string | SolidFillSpec | GradientFillSpec | PatternFillSpec | ThemeFillSpec | BlipFillSpec;
 
 // =============================================================================
 // Line Spec Types

@@ -172,6 +172,38 @@ function getTextColor(span: PositionedSpan): string {
 // =============================================================================
 
 /**
+ * Check if srcRect has non-zero cropping values.
+ */
+function hasCropping(srcRect: { left: number; top: number; right: number; bottom: number } | undefined): boolean {
+  return srcRect !== undefined && (srcRect.left !== 0 || srcRect.top !== 0 || srcRect.right !== 0 || srcRect.bottom !== 0);
+}
+
+/**
+ * Calculate image position and size for srcRect cropping.
+ *
+ * @see ECMA-376 Part 1, Section 20.1.8.55 (a:srcRect)
+ */
+function calculateCroppedLayout(
+  width: number,
+  height: number,
+  srcRect: { left: number; top: number; right: number; bottom: number },
+): { x: number; y: number; width: number; height: number } {
+  const visibleWidthPct = 100 - srcRect.left - srcRect.right;
+  const visibleHeightPct = 100 - srcRect.top - srcRect.bottom;
+
+  const safeVisibleWidthPct = Math.max(visibleWidthPct, 0.001);
+  const safeVisibleHeightPct = Math.max(visibleHeightPct, 0.001);
+
+  const imageWidth = width * (100 / safeVisibleWidthPct);
+  const imageHeight = height * (100 / safeVisibleHeightPct);
+
+  const cropX = -imageWidth * (srcRect.left / 100);
+  const cropY = -imageHeight * (srcRect.top / 100);
+
+  return { x: cropX, y: cropY, width: imageWidth, height: imageHeight };
+}
+
+/**
  * Render an inline image span.
  */
 function renderInlineImage(params: {
@@ -186,21 +218,54 @@ function renderInlineImage(params: {
     return null;
   }
 
+  const width = image.width as number;
+  const height = image.height as number;
   // Calculate Y position - align bottom of image with baseline
-  const imageY = lineY - (image.height as number);
+  const imageY = lineY - height;
+  const titleElement = image.alt !== undefined ? <title>{image.alt}</title> : null;
 
+  // Handle cropped images
+  if (hasCropping(image.srcRect)) {
+    const layout = calculateCroppedLayout(width, height, image.srcRect!);
+    const clipId = `img-clip-${key}`;
+
+    return (
+      <g key={`img-${key}`} transform={`translate(${x}, ${imageY})`}>
+        <defs>
+          <clipPath id={clipId}>
+            <rect x={0} y={0} width={width} height={height} />
+          </clipPath>
+        </defs>
+        <g clipPath={`url(#${clipId})`}>
+          <image
+            key={`img-elem-${key}`}
+            x={layout.x}
+            y={layout.y}
+            width={layout.width}
+            height={layout.height}
+            href={image.src}
+            preserveAspectRatio="none"
+          >
+            {titleElement}
+          </image>
+        </g>
+      </g>
+    );
+  }
+
+  // Simple case: no cropping
   return (
     <g key={`img-${key}`}>
       <image
         key={`img-elem-${key}`}
         x={x}
         y={imageY}
-        width={image.width as number}
-        height={image.height as number}
+        width={width}
+        height={height}
         href={image.src}
         preserveAspectRatio="none"
       >
-        {image.alt !== undefined && <title>{image.alt}</title>}
+        {titleElement}
       </image>
     </g>
   );

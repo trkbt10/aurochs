@@ -51,6 +51,7 @@ export type {
   FloatingImageConfig,
   PositionedFloatingImage,
   InlineImageConfig,
+  ImageSourceRect,
   // Continuous document types
   HeaderFooterLayout,
   PageLayout,

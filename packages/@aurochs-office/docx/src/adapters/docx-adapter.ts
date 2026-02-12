@@ -119,6 +119,31 @@ type RunToSpansOptions = {
 };
 
 /**
+ * Convert srcRect from 1/100000 percentages to 0-100 percentages.
+ *
+ * @see ECMA-376 Part 1, Section 20.1.8.55 (a:srcRect)
+ */
+function convertSrcRect(
+  srcRect: { l?: number; t?: number; r?: number; b?: number } | undefined,
+): { left: number; top: number; right: number; bottom: number } | undefined {
+  if (srcRect === undefined) {
+    return undefined;
+  }
+  // srcRect values are in 1/100000 percentages (0-100000 = 0-100%)
+  const left = (srcRect.l ?? 0) / 1000;
+  const top = (srcRect.t ?? 0) / 1000;
+  const right = (srcRect.r ?? 0) / 1000;
+  const bottom = (srcRect.b ?? 0) / 1000;
+
+  // Return undefined if all values are zero (no cropping)
+  if (left === 0 && top === 0 && right === 0 && bottom === 0) {
+    return undefined;
+  }
+
+  return { left, top, right, bottom };
+}
+
+/**
  * Create inline image config from drawing content.
  */
 function createInlineImageConfig(content: DocxRunContent): InlineImageConfig | undefined {
@@ -140,6 +165,9 @@ function createInlineImageConfig(content: DocxRunContent): InlineImageConfig | u
   const width = emuToPx(drawing.extent.cx as number);
   const height = emuToPx(drawing.extent.cy as number);
 
+  // Extract srcRect for cropping
+  const srcRect = convertSrcRect(drawing.pic?.blipFill?.srcRect);
+
   return {
     // src will be resolved later via resource resolver
     src: relationshipId ?? "",
@@ -148,6 +176,7 @@ function createInlineImageConfig(content: DocxRunContent): InlineImageConfig | u
     alt: drawing.docPr.descr,
     title: drawing.docPr.title,
     relationshipId,
+    srcRect,
   };
 }
 
@@ -190,6 +219,9 @@ function createFloatingImageConfig(content: DocxRunContent, paragraphIndex: numb
   const distanceLeft = drawing.distL !== undefined ? emuToPx(drawing.distL) : px(0);
   const distanceRight = drawing.distR !== undefined ? emuToPx(drawing.distR) : px(0);
 
+  // Extract srcRect for cropping
+  const srcRect = convertSrcRect(drawing.pic?.blipFill?.srcRect);
+
   return {
     src: relationshipId ?? "",
     width,
@@ -197,6 +229,7 @@ function createFloatingImageConfig(content: DocxRunContent, paragraphIndex: numb
     alt: drawing.docPr.descr,
     title: drawing.docPr.title,
     relationshipId,
+    srcRect,
     horizontalRef,
     horizontalOffset,
     horizontalAlign: drawing.positionH?.align,

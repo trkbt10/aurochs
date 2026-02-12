@@ -132,19 +132,66 @@ export type PatternFill = {
 };
 
 // =============================================================================
-// Base Fill Union (without BlipFill)
+// Blip Fill Types
+// =============================================================================
+
+/**
+ * Blip tile mode for tiled image fills
+ * @see ECMA-376 Part 1, Section 20.1.8.58 (tile)
+ */
+export type BlipTileMode = {
+  /** Flip mode: none, x, y, or xy */
+  readonly flip?: "none" | "x" | "y" | "xy";
+  /** Horizontal scale percentage */
+  readonly scaleX?: number;
+  /** Vertical scale percentage */
+  readonly scaleY?: number;
+  /** Horizontal offset in EMUs */
+  readonly offsetX?: number;
+  /** Vertical offset in EMUs */
+  readonly offsetY?: number;
+  /** Alignment: tl, t, tr, l, ctr, r, bl, b, br */
+  readonly alignment?: "tl" | "t" | "tr" | "l" | "ctr" | "r" | "bl" | "b" | "br";
+};
+
+/**
+ * Blip fill for image-based fills
+ * @see ECMA-376 Part 1, Section 20.1.8.14 (blipFill)
+ */
+export type BlipFill = {
+  readonly type: "blip";
+  /** Relationship ID for the image resource */
+  readonly resourceId: string;
+  /** Source rectangle for cropping (percentages 0-100) */
+  readonly sourceRect?: {
+    readonly left: number;
+    readonly top: number;
+    readonly right: number;
+    readonly bottom: number;
+  };
+  /** DPI for the image */
+  readonly dpi?: number;
+  /** Whether to rotate with shape */
+  readonly rotWithShape?: boolean;
+  /** Compression state */
+  readonly compressionState?: "none" | "print" | "screen" | "email" | "hqprint";
+  /** Stretch mode (mutually exclusive with tileMode) */
+  readonly stretchMode?: "fill";
+  /** Tile mode (mutually exclusive with stretchMode) */
+  readonly tileMode?: BlipTileMode;
+};
+
+// =============================================================================
+// Base Fill Union
 // =============================================================================
 
 /**
  * Union of basic fill types shared across OOXML formats.
- * Does not include BlipFill as it requires format-specific resource handling.
- *
- * For PPTX-specific Fill type that includes BlipFill, use the Fill type from
- * src/pptx/domain/color/types.ts
  */
 export type BaseFill =
   | NoFill
   | SolidFill
   | GradientFill
   | PatternFill
-  | GroupFill;
+  | GroupFill
+  | BlipFill;
