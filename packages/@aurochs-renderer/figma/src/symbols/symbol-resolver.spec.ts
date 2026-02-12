@@ -7,11 +7,11 @@ import { resolveSymbol, cloneSymbolChildren, type FigSymbolData } from "./symbol
 
 describe("resolveSymbol", () => {
   it("resolves SYMBOL node by GUID", () => {
-    const symbolNode: FigNode = {
+    const symbolNode = {
       type: "SYMBOL",
       name: "TestSymbol",
       children: [],
-    };
+    } as unknown as FigNode;
 
     const symbolMap = new Map<string, FigNode>([["4:21", symbolNode]]);
 
@@ -37,33 +37,33 @@ describe("resolveSymbol", () => {
 
 describe("cloneSymbolChildren", () => {
   it("returns empty array for SYMBOL with no children", () => {
-    const symbolNode: FigNode = {
+    const symbolNode = {
       type: "SYMBOL",
       name: "EmptySymbol",
-    };
+    } as unknown as FigNode;
 
     const result = cloneSymbolChildren(symbolNode);
     expect(result).toEqual([]);
   });
 
   it("deep clones children", () => {
-    const child1: FigNode = {
+    const child1 = {
       type: "RECTANGLE",
       name: "Rect1",
       guid: { sessionID: 1, localID: 1 },
     };
 
-    const child2: FigNode = {
+    const child2 = {
       type: "RECTANGLE",
       name: "Rect2",
       guid: { sessionID: 1, localID: 2 },
     };
 
-    const symbolNode: FigNode = {
+    const symbolNode = {
       type: "SYMBOL",
       name: "TestSymbol",
       children: [child1, child2],
-    };
+    } as unknown as FigNode;
 
     const result = cloneSymbolChildren(symbolNode);
 
@@ -75,24 +75,24 @@ describe("cloneSymbolChildren", () => {
   });
 
   it("deep clones nested children", () => {
-    const grandchild: FigNode = {
+    const grandchild = {
       type: "ELLIPSE",
       name: "Circle",
       guid: { sessionID: 1, localID: 3 },
     };
 
-    const child: FigNode = {
+    const child = {
       type: "FRAME",
       name: "Frame",
       guid: { sessionID: 1, localID: 1 },
       children: [grandchild],
     };
 
-    const symbolNode: FigNode = {
+    const symbolNode = {
       type: "SYMBOL",
       name: "NestedSymbol",
       children: [child],
-    };
+    } as unknown as FigNode;
 
     const result = cloneSymbolChildren(symbolNode);
 
@@ -104,18 +104,18 @@ describe("cloneSymbolChildren", () => {
   });
 
   it("applies symbolOverrides to matching nodes", () => {
-    const child: FigNode = {
+    const child = {
       type: "RECTANGLE",
       name: "Rect",
       guid: { sessionID: 1, localID: 5 },
       fillPaints: [{ type: "SOLID", color: { r: 1, g: 0, b: 0, a: 1 } }],
     };
 
-    const symbolNode: FigNode = {
+    const symbolNode = {
       type: "SYMBOL",
       name: "TestSymbol",
       children: [child],
-    };
+    } as unknown as FigNode;
 
     const overrides = [
       {
@@ -133,18 +133,18 @@ describe("cloneSymbolChildren", () => {
 
   it("does not modify original nodes when applying overrides", () => {
     const originalFill = [{ type: "SOLID", color: { r: 1, g: 0, b: 0, a: 1 } }];
-    const child: FigNode = {
+    const child = {
       type: "RECTANGLE",
       name: "Rect",
       guid: { sessionID: 1, localID: 5 },
       fillPaints: originalFill,
     };
 
-    const symbolNode: FigNode = {
+    const symbolNode = {
       type: "SYMBOL",
       name: "TestSymbol",
       children: [child],
-    };
+    } as unknown as FigNode;
 
     const overrides = [
       {
@@ -161,18 +161,18 @@ describe("cloneSymbolChildren", () => {
   });
 
   it("applies derivedSymbolData transform overrides", () => {
-    const child: FigNode = {
+    const child = {
       type: "RECTANGLE",
       name: "Rect",
       guid: { sessionID: 1, localID: 5 },
       transform: { m00: 1, m01: 0, m02: 100, m10: 0, m11: 1, m12: 100 },
     };
 
-    const symbolNode: FigNode = {
+    const symbolNode = {
       type: "SYMBOL",
       name: "TestSymbol",
       children: [child],
-    };
+    } as unknown as FigNode;
 
     const derivedData = [
       {

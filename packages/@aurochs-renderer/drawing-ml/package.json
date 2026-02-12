@@ -6,7 +6,9 @@
   "sideEffects": false,
   "dependencies": {
     "@aurochs-office/drawing-ml": "workspace:*",
-    "@aurochs-office/ooxml": "workspace:*"
+    "@aurochs-office/ooxml": "workspace:*",
+    "@aurochs-office/pptx": "workspace:*",
+    "@aurochs-renderer/pptx": "workspace:*"
   },
   "peerDependencies": {
     "react": "^18.0.0 || ^19.0.0",
@@ -22,6 +24,10 @@
     "./react": {
       "types": "./src/react/index.ts",
       "default": "./src/react/index.ts"
+    },
+    "./svg": {
+      "types": "./src/svg/index.ts",
+      "default": "./src/svg/index.ts"
     },
     "./ascii": {
       "types": "./src/ascii/index.ts",

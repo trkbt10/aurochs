@@ -2,9 +2,7 @@
  * @file Diagram renderer shared types
  */
 
-import type { RenderWarning, WarningCollector } from "@aurochs-office/ooxml";
-
-export type { RenderWarning, WarningCollector };
+import type { WarningCollector } from "@aurochs-office/ooxml";
 
 export type DiagramContent<TShape> = {
   readonly shapes: readonly TShape[];

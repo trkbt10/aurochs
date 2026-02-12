@@ -278,7 +278,12 @@ export function parseFill(element: XmlElement | undefined): Fill | undefined {
     return parseBlipFill(element);
   }
 
-  return parseOoxmlBaseFill(element) ?? undefined;
+  const baseFill = parseOoxmlBaseFill(element);
+  // Skip blip type from base parser (we handle a:blipFill separately above)
+  if (!baseFill || baseFill.type === "blip") {
+    return undefined;
+  }
+  return baseFill;
 }
 
 /** Parse fill from parent element by finding fill child */

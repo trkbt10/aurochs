@@ -9,7 +9,6 @@ import { getFillColorAndOpacity } from "../../text/layout/fill";
 import { computeTextLayout } from "../../text/layout/compute-layout";
 import { extractDerivedTextPathData, hasDerivedGlyphs, type DerivedTextData } from "../../text/paths/derived-paths";
 import type { PathContour, Color, FallbackTextData } from "../types";
-import { figColorToSceneColor } from "./fill";
 
 /**
  * Convert text path contours from text/paths format to scene graph format
@@ -179,6 +178,7 @@ export function convertTextNode(node: FigNode, blobs: readonly FigBlob[]): TextC
     fontWeight: props.fontWeight,
     fontStyle: props.fontStyle,
     letterSpacing: props.letterSpacing,
+    lineHeight: layout.lineHeight,
     textAnchor: getTextAnchor(props.textAlignHorizontal),
     textDecoration:
       props.textDecoration === "UNDERLINE"

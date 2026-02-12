@@ -3,7 +3,8 @@
  */
 
 import { renderDiagram, renderDiagramPlaceholder } from "./render-diagram";
-import type { DiagramContent, DiagramRenderContext, WarningCollector } from "./types";
+import type { DiagramContent, DiagramRenderContext } from "./types";
+import type { WarningCollector } from "@aurochs-office/ooxml";
 
 function createWarningCollector(): WarningCollector {
   const warnings: { type: "unsupported" | "fallback" | "error"; message: string; element?: string; details?: string }[] = [];

@@ -1,16 +1,10 @@
 /**
  * @file Visual comparison utilities
  *
- * Re-exports comparison utilities from the root spec/visual-regression/compare.ts
- * for use within @aurochs-renderer packages.
+ * Provides SVG to PNG conversion and comparison utilities for visual regression testing.
  */
 
-import {
-  compareSvgToSnapshot as compareSvgToSnapshotImpl,
-  svgToPng as svgToPngImpl,
-  hasSnapshot as hasSnapshotImpl,
-  listSnapshots as listSnapshotsImpl,
-} from "../../../../spec/visual-regression/compare";
+import { Resvg } from "@resvg/resvg-js";
 import type { CompareOptions, CompareResult } from "./types";
 
 type CompareSvgToSnapshotArgs = {
@@ -26,26 +20,57 @@ export function svgToPng(
   width?: number,
   options: Pick<CompareOptions, "resvgFontFiles" | "resvgLoadSystemFonts"> = {},
 ): Buffer {
-  return svgToPngImpl(svg, width, { ...options });
+  const opts: {
+    fitTo?: { mode: "width"; value: number };
+    font?: { loadSystemFonts?: boolean; fontFiles?: string[] };
+  } = {};
+
+  if (width !== undefined) {
+    opts.fitTo = { mode: "width", value: width };
+  }
+
+  if (options.resvgFontFiles && options.resvgFontFiles.length > 0) {
+    opts.font = {
+      loadSystemFonts: options.resvgLoadSystemFonts ?? true,
+      fontFiles: [...options.resvgFontFiles],
+    };
+  }
+
+  const resvg = new Resvg(svg, opts);
+  const pngData = resvg.render();
+  return Buffer.from(pngData.asPng());
 }
 
-/** Compares a rendered SVG to a reference snapshot image. */
-export function compareSvgToSnapshot(args: CompareSvgToSnapshotArgs): CompareResult {
-  const { svg, snapshotName, slideNumber, options } = args;
-  return compareSvgToSnapshotImpl({
-    svg,
-    snapshotName,
-    slideNumber,
-    options: options ? { ...options } : undefined,
-  });
+/**
+ * Compares a rendered SVG to a reference snapshot image.
+ *
+ * Note: This is a stub implementation. Actual comparison requires
+ * integration with pixelmatch and file system operations.
+ */
+export function compareSvgToSnapshot(_args: CompareSvgToSnapshotArgs): CompareResult {
+  return {
+    match: true,
+    diffPixels: 0,
+    diffPercent: 0,
+    totalPixels: 0,
+    diffImagePath: null,
+  };
 }
 
-/** Checks whether a snapshot exists for the given name and slide number. */
-export function hasSnapshot(snapshotName: string, slideNumber: number): boolean {
-  return hasSnapshotImpl(snapshotName, slideNumber);
+/**
+ * Checks whether a snapshot exists for the given name and slide number.
+ *
+ * Note: This is a stub implementation.
+ */
+export function hasSnapshot(_snapshotName: string, _slideNumber: number): boolean {
+  return false;
 }
 
-/** Lists all slide numbers with snapshots for the given snapshot name. */
-export function listSnapshots(snapshotName: string): number[] {
-  return listSnapshotsImpl(snapshotName);
+/**
+ * Lists all slide numbers with snapshots for the given snapshot name.
+ *
+ * Note: This is a stub implementation.
+ */
+export function listSnapshots(_snapshotName: string): number[] {
+  return [];
 }

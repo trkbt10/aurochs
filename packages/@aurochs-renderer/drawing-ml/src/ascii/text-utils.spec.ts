@@ -1,4 +1,7 @@
-import { describe, it, expect } from "bun:test";
+/**
+ * @file Tests for text utilities
+ */
+
 import { wrapText } from "./text-utils";
 
 describe("text-utils", () => {

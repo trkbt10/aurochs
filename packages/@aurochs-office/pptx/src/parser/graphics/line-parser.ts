@@ -10,16 +10,20 @@ import {
   parseLine as parseOoxmlLine,
   getLineFromProperties as getOoxmlLineFromProperties,
 } from "@aurochs-office/drawing-ml/parser";
-import type { Line } from "../../domain/index";
+import type { Fill, Line } from "../../domain/index";
 import type { XmlElement } from "@aurochs/xml";
 
-function convertBaseLineToPptxLine(line: BaseLine): Line {
+function convertBaseLineToPptxLine(line: BaseLine): Line | undefined {
+  // Skip if fill is blip type (PPTX has different BlipFill structure)
+  if (line.fill.type === "blip") {
+    return undefined;
+  }
   return {
     width: line.width,
     cap: line.cap,
     compound: line.compound,
     alignment: line.alignment,
-    fill: line.fill,
+    fill: line.fill as Fill,
     dash: line.dash,
     headEnd: line.headEnd,
     tailEnd: line.tailEnd,

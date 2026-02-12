@@ -1,4 +1,7 @@
-import { describe, it, expect } from "bun:test";
+/**
+ * @file Tests for coordinate mapper utilities
+ */
+
 import { createMapperConfig, mapBoundsToGrid } from "./coordinate-mapper";
 
 describe("coordinate-mapper", () => {

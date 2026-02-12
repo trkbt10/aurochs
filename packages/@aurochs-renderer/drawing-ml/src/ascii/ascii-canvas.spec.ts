@@ -1,4 +1,7 @@
-import { describe, it, expect } from "bun:test";
+/**
+ * @file Tests for ASCII canvas utilities
+ */
+
 import { createCanvas, setCell, drawBox, drawText, renderCanvas, BOX_CHARS, TABLE_CHARS, truncateText } from "./ascii-canvas";
 
 describe("ascii-canvas", () => {

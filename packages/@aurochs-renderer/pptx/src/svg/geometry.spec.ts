@@ -8,7 +8,7 @@
  * @see ECMA-376 Part 1, Section 20.1.10.56
  */
 
-import { renderGeometryData, renderPresetGeometryData } from "./geometry";
+import { renderGeometryData, renderPresetGeometryData } from "@aurochs-renderer/drawing-ml/svg";
 import type { CustomGeometry, GeometryPath, PresetGeometry } from "@aurochs-office/pptx/domain";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 

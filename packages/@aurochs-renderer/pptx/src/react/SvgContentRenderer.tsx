@@ -39,6 +39,34 @@ export type SvgContentRendererProps = {
 };
 
 // =============================================================================
+// Helpers
+// =============================================================================
+
+/**
+ * Normalize SVG for responsive scaling.
+ *
+ * Replaces fixed pixel width/height with 100% and ensures preserveAspectRatio
+ * is set. This allows SVGs with viewBox to scale properly within their container.
+ *
+ * @param svg - Original SVG string
+ * @returns SVG string with normalized dimensions
+ */
+function normalizeForScaling(svg: string): string {
+  // Replace width="..." and height="..." (numeric or percentage) with 100%
+  // Preserves viewBox which controls the actual aspect ratio
+  let result = svg.replace(/(<svg[^>]*)\s+width=["'][^"']*["']/, "$1 width=\"100%\"");
+  result = result.replace(/(<svg[^>]*)\s+height=["'][^"']*["']/, "$1 height=\"100%\"");
+
+  // Add preserveAspectRatio if not present (defaults to xMidYMid meet per SVG spec,
+  // but being explicit ensures consistent behavior)
+  if (!result.includes("preserveAspectRatio")) {
+    result = result.replace(/(<svg[^>]*)>/, '$1 preserveAspectRatio="xMidYMid meet">');
+  }
+
+  return result;
+}
+
+// =============================================================================
 // Styles
 // =============================================================================
 
@@ -101,6 +129,14 @@ export const SvgContentRenderer = memo(
     { svg, width, height, mode = "inner", className, style },
     ref,
   ) {
+    // Memoize normalized SVG for full mode (responsive scaling)
+    const normalizedSvg = useMemo(() => {
+      if (mode !== "full") {
+        return null;
+      }
+      return normalizeForScaling(svg);
+    }, [svg, mode]);
+
     // Memoize content extraction for inner mode
     const innerContent = useMemo(() => {
       if (mode === "full") {
@@ -124,7 +160,7 @@ export const SvgContentRenderer = memo(
           ref={ref}
           className={className}
           style={mergedStyle}
-          dangerouslySetInnerHTML={{ __html: svg }}
+          dangerouslySetInnerHTML={{ __html: normalizedSvg ?? "" }}
         />
       );
     }

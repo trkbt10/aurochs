@@ -41,15 +41,9 @@ export { createDefsCollector, createSvgRenderContext, createEmptySvgRenderContex
 export type { FillStyle, LineStyle } from "./fill";
 export { renderFillToStyle, renderLineToStyle, renderFillToSvgStyle, renderFillToSvgDef } from "./fill";
 
-// Geometry rendering
-export {
-  renderGeometryPathData,
-  renderGeometryPath,
-  renderPresetGeometryData,
-  renderCustomGeometryData,
-  renderGeometryData,
-  buildTransformAttr,
-} from "./geometry";
+// Geometry rendering (PPTX-specific with Fill/Line support)
+export type { GeometryPathWithMarkersResult } from "./geometry";
+export { renderGeometryPath, renderGeometryPathWithMarkers } from "./geometry";
 
 // SVG utilities
 export { extractSvgContent } from "./svg-utils";

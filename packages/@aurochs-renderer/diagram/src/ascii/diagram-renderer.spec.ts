@@ -1,3 +1,4 @@
+/** @file ASCII diagram renderer tests */
 import { renderDiagramAscii } from "./diagram-renderer";
 import { BOX_CHARS } from "@aurochs-renderer/drawing-ml/ascii";
 

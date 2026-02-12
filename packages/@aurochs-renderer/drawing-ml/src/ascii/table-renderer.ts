@@ -79,12 +79,17 @@ function padCell(text: string, width: number, alignment: "left" | "right" | "cen
   }
 }
 
-function drawHorizontalLine(
-  widths: readonly number[],
-  left: string,
-  middle: string,
-  right: string,
-): string {
+function drawHorizontalLine({
+  widths,
+  left,
+  middle,
+  right,
+}: {
+  readonly widths: readonly number[];
+  readonly left: string;
+  readonly middle: string;
+  readonly right: string;
+}): string {
   return left + widths.map((w) => TABLE_CHARS.horizontal.repeat(w + 2)).join(middle) + right;
 }
 
@@ -118,12 +123,16 @@ export function renderAsciiTable(params: AsciiTableParams): string {
   const lines: string[] = [];
 
   // Top border
-  lines.push(drawHorizontalLine(widths, TABLE_CHARS.topLeft, TABLE_CHARS.topTee, TABLE_CHARS.topRight));
+  lines.push(
+    drawHorizontalLine({ widths, left: TABLE_CHARS.topLeft, middle: TABLE_CHARS.topTee, right: TABLE_CHARS.topRight }),
+  );
 
   // Header row
   if (params.headers) {
     lines.push(drawDataRow(params.headers, widths, alignments));
-    lines.push(drawHorizontalLine(widths, TABLE_CHARS.leftTee, TABLE_CHARS.cross, TABLE_CHARS.rightTee));
+    lines.push(
+      drawHorizontalLine({ widths, left: TABLE_CHARS.leftTee, middle: TABLE_CHARS.cross, right: TABLE_CHARS.rightTee }),
+    );
   }
 
   // Data rows
@@ -132,7 +141,14 @@ export function renderAsciiTable(params: AsciiTableParams): string {
   }
 
   // Bottom border
-  lines.push(drawHorizontalLine(widths, TABLE_CHARS.bottomLeft, TABLE_CHARS.bottomTee, TABLE_CHARS.bottomRight));
+  lines.push(
+    drawHorizontalLine({
+      widths,
+      left: TABLE_CHARS.bottomLeft,
+      middle: TABLE_CHARS.bottomTee,
+      right: TABLE_CHARS.bottomRight,
+    }),
+  );
 
   return lines.join("\n");
 }

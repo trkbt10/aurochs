@@ -512,7 +512,7 @@ async function renderNode(node: FigNode, ctx: FigSvgRenderContext, warnings: str
           ...ctx,
           fontLoader: ctx.fontLoader,
         };
-        content = renderTextNodeAsPath(node, pathCtx);
+        content = await renderTextNodeAsPath(node, pathCtx);
         break;
       }
       content = renderTextNode(node, ctx);

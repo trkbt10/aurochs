@@ -18,7 +18,7 @@
  *     - Font CCW hole → screen CW → positive area → HOLE ✓
  */
 
-import { describe, it, expect } from "vitest";
+// describe, it, expect provided by test runner globals
 import { tessellateContours, tessellateContour, flattenPathCommands } from "./tessellation";
 import { tessellateTextNode } from "./text-renderer";
 import type { PathContour, PathCommand, TextNode, AffineMatrix } from "../scene-graph/types";
@@ -38,6 +38,8 @@ function makeTextNode(overrides: Partial<TextNode> = {}): TextNode {
     opacity: 1,
     visible: true,
     effects: [],
+    width: 100,
+    height: 20,
     fill: { color: { r: 0, g: 0, b: 0, a: 1 }, opacity: 1 },
     ...overrides,
   };
@@ -405,6 +407,7 @@ describe("Text tessellation pipeline", () => {
           fontFamily: "Inter",
           fontSize: 14,
           fontWeight: 400,
+          lineHeight: 16,
           textAnchor: "start",
         },
       });

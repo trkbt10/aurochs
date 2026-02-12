@@ -2,7 +2,6 @@
  * @file Effect rendering unit tests
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
 import {
   hasDropShadow,
   getDropShadows,
@@ -21,19 +20,27 @@ import {
 } from "./effects";
 import type { FigSvgRenderContext } from "../types";
 
-// Mock context
-function createMockContext(): FigSvgRenderContext {
-  let idCounter = 0;
-  const defs: string[] = [];
+// Mock context with tracking for verification
+type MockContextData = {
+  readonly defs: string[];
+};
 
-  return {
+function createMockContext(): { ctx: FigSvgRenderContext; data: MockContextData } {
+  const data: MockContextData = { defs: [] };
+  const mutableDefs: string[] = data.defs as string[];
+  const idCounters: Record<string, number> = {};
+
+  const ctx = {
     defs: {
-      generateId: (prefix: string) => `${prefix}_${++idCounter}`,
-      add: (def: string) => defs.push(def),
-      getDefs: () => defs,
+      generateId: (prefix: string) => {
+        idCounters[prefix] = (idCounters[prefix] ?? 0) + 1;
+        return `${prefix}_${idCounters[prefix]}`;
+      },
+      add: (def: string) => mutableDefs.push(def),
     },
-    // Other context properties would go here if needed
   } as unknown as FigSvgRenderContext;
+
+  return { ctx, data };
 }
 
 const mockBounds = { x: 0, y: 0, width: 100, height: 100 };
@@ -182,13 +189,13 @@ describe("getBackgroundBlur", () => {
 
 describe("createDropShadowFilter", () => {
   it("returns null for empty shadows", () => {
-    const ctx = createMockContext();
+    const { ctx } = createMockContext();
     const result = createDropShadowFilter([], ctx, mockBounds);
     expect(result).toBeNull();
   });
 
   it("creates filter with correct id", () => {
-    const ctx = createMockContext();
+    const { ctx } = createMockContext();
     const shadows: FigEffect[] = [
       { type: "DROP_SHADOW", visible: true, radius: 4 },
     ];
@@ -198,7 +205,7 @@ describe("createDropShadowFilter", () => {
   });
 
   it("includes filter definition with feBlend", () => {
-    const ctx = createMockContext();
+    const { ctx } = createMockContext();
     const shadows: FigEffect[] = [
       {
         type: "DROP_SHADOW",
@@ -217,13 +224,13 @@ describe("createDropShadowFilter", () => {
 
 describe("createInnerShadowFilter", () => {
   it("returns null for empty shadows", () => {
-    const ctx = createMockContext();
+    const { ctx } = createMockContext();
     const result = createInnerShadowFilter([], ctx, mockBounds);
     expect(result).toBeNull();
   });
 
   it("creates filter with correct id", () => {
-    const ctx = createMockContext();
+    const { ctx } = createMockContext();
     const shadows: FigEffect[] = [
       { type: "INNER_SHADOW", visible: true, radius: 4 },
     ];
@@ -233,7 +240,7 @@ describe("createInnerShadowFilter", () => {
   });
 
   it("includes feComposite for inner clipping", () => {
-    const ctx = createMockContext();
+    const { ctx } = createMockContext();
     const shadows: FigEffect[] = [
       {
         type: "INNER_SHADOW",
@@ -252,14 +259,14 @@ describe("createInnerShadowFilter", () => {
 
 describe("createLayerBlurFilter", () => {
   it("returns null for zero radius", () => {
-    const ctx = createMockContext();
+    const { ctx } = createMockContext();
     const blur: FigEffect = { type: "LAYER_BLUR", visible: true, radius: 0 };
     const result = createLayerBlurFilter(blur, ctx, mockBounds);
     expect(result).toBeNull();
   });
 
   it("creates filter with gaussian blur", () => {
-    const ctx = createMockContext();
+    const { ctx } = createMockContext();
     const blur: FigEffect = { type: "LAYER_BLUR", visible: true, radius: 10 };
     const result = createLayerBlurFilter(blur, ctx, mockBounds);
     expect(result).not.toBeNull();
@@ -271,13 +278,13 @@ describe("createLayerBlurFilter", () => {
 
 describe("createCombinedFilter", () => {
   it("returns null for no effects", () => {
-    const ctx = createMockContext();
+    const { ctx } = createMockContext();
     const result = createCombinedFilter([], ctx, mockBounds);
     expect(result).toBeNull();
   });
 
   it("combines drop shadow and inner shadow", () => {
-    const ctx = createMockContext();
+    const { ctx } = createMockContext();
     const effects: FigEffect[] = [
       { type: "DROP_SHADOW", visible: true, radius: 4, offset: { x: 0, y: 4 } },
       { type: "INNER_SHADOW", visible: true, radius: 2, offset: { x: 0, y: 1 } },
@@ -290,7 +297,7 @@ describe("createCombinedFilter", () => {
   });
 
   it("includes layer blur in combined filter", () => {
-    const ctx = createMockContext();
+    const { ctx } = createMockContext();
     const effects: FigEffect[] = [
       { type: "DROP_SHADOW", visible: true, radius: 4 },
       { type: "LAYER_BLUR", visible: true, radius: 8 },
@@ -302,19 +309,19 @@ describe("createCombinedFilter", () => {
 
 describe("getFilterAttr", () => {
   it("returns undefined for no effects", () => {
-    const ctx = createMockContext();
+    const { ctx } = createMockContext();
     const result = getFilterAttr(undefined, ctx, mockBounds);
     expect(result).toBeUndefined();
   });
 
   it("returns undefined for empty effects", () => {
-    const ctx = createMockContext();
+    const { ctx } = createMockContext();
     const result = getFilterAttr([], ctx, mockBounds);
     expect(result).toBeUndefined();
   });
 
   it("returns url reference for drop shadow", () => {
-    const ctx = createMockContext();
+    const { ctx } = createMockContext();
     const effects: FigEffect[] = [
       { type: "DROP_SHADOW", visible: true, radius: 4 },
     ];
@@ -323,7 +330,7 @@ describe("getFilterAttr", () => {
   });
 
   it("returns url reference for inner shadow", () => {
-    const ctx = createMockContext();
+    const { ctx } = createMockContext();
     const effects: FigEffect[] = [
       { type: "INNER_SHADOW", visible: true, radius: 4 },
     ];
@@ -332,7 +339,7 @@ describe("getFilterAttr", () => {
   });
 
   it("returns url reference for layer blur", () => {
-    const ctx = createMockContext();
+    const { ctx } = createMockContext();
     const effects: FigEffect[] = [
       { type: "LAYER_BLUR", visible: true, radius: 10 },
     ];
@@ -341,7 +348,7 @@ describe("getFilterAttr", () => {
   });
 
   it("uses combined filter for multiple effect types", () => {
-    const ctx = createMockContext();
+    const { ctx } = createMockContext();
     const effects: FigEffect[] = [
       { type: "DROP_SHADOW", visible: true, radius: 4 },
       { type: "INNER_SHADOW", visible: true, radius: 2 },
@@ -351,13 +358,12 @@ describe("getFilterAttr", () => {
   });
 
   it("adds filter definition to context", () => {
-    const ctx = createMockContext();
+    const { ctx, data } = createMockContext();
     const effects: FigEffect[] = [
       { type: "DROP_SHADOW", visible: true, radius: 4 },
     ];
     getFilterAttr(effects, ctx, mockBounds);
-    const defs = ctx.defs.getDefs();
-    expect(defs.length).toBe(1);
-    expect(defs[0]).toContain("<filter");
+    expect(data.defs.length).toBe(1);
+    expect(data.defs[0]).toContain("<filter");
   });
 });

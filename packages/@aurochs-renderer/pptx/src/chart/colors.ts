@@ -7,8 +7,23 @@
  */
 
 import type { ChartShapeProperties } from "@aurochs-office/chart/domain";
+import type { Fill } from "@aurochs-office/pptx/domain/color/types";
 import type { CoreRenderContext } from "../render-context";
 import { resolveFill } from "@aurochs-office/pptx/domain/color/fill";
+
+/**
+ * Convert BaseFill from chart to PPTX Fill (skipping blip fills which have different structures).
+ */
+function toFill(fill: ChartShapeProperties["fill"]): Fill | undefined {
+  if (!fill) {
+    return undefined;
+  }
+  // Skip blip fills (charts don't typically use blip fills, and BaseFill.BlipFill !== Fill.BlipFill)
+  if (fill.type === "blip") {
+    return undefined;
+  }
+  return fill as Fill;
+}
 
 /**
  * Fallback color palette for chart series (implementation-defined)
@@ -54,8 +69,9 @@ export const FALLBACK_CHART_COLORS: readonly string[] = [
  */
 export function getSeriesColor(index: number, ctx: CoreRenderContext, shapeProperties?: ChartShapeProperties): string {
   // 1. Check for explicit fill in shape properties
-  if (shapeProperties?.fill) {
-    const resolved = resolveFill(shapeProperties.fill, ctx.colorContext);
+  const fill = toFill(shapeProperties?.fill);
+  if (fill) {
+    const resolved = resolveFill(fill, ctx.colorContext);
     if (resolved.type === "solid") {
       return `#${resolved.color.hex}`;
     }
@@ -90,11 +106,12 @@ export function getColorFromShapeProperties(
   shapeProperties: ChartShapeProperties | undefined,
   ctx: CoreRenderContext,
 ): string | undefined {
-  if (!shapeProperties?.fill) {
+  const fill = toFill(shapeProperties?.fill);
+  if (!fill) {
     return undefined;
   }
 
-  const resolved = resolveFill(shapeProperties.fill, ctx.colorContext);
+  const resolved = resolveFill(fill, ctx.colorContext);
   if (resolved.type === "solid") {
     return `#${resolved.color.hex}`;
   }

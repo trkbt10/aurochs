@@ -39,7 +39,7 @@ import {
 } from "./slide-utils";
 import { renderFillToSvgDef, renderFillToSvgStyle, getResolvedImageFill, renderImageFillToSvgDef } from "./fill";
 import { getBlipFillImageSrc } from "../utils/image-conversion";
-import { renderGeometryData } from "./geometry";
+import { renderGeometryData } from "@aurochs-renderer/drawing-ml/svg";
 import { generateLineMarkers } from "./marker";
 import { resolveFill, formatRgba } from "@aurochs-office/pptx/domain/color/fill";
 import { renderTextSvg, getDashArray } from "./slide-text";

@@ -121,14 +121,13 @@ export { renderFillToStyle, renderLineToStyle } from "./svg/fill";
 // Geometry Rendering
 // =============================================================================
 
-export {
-  buildTransformAttr,
-  renderCustomGeometryData,
-  renderGeometryData,
-  renderGeometryPath,
-  renderGeometryPathData,
-  renderPresetGeometryData,
-} from "./svg/geometry";
+// PPTX-specific geometry rendering (with Fill/Line/marker support)
+export type { GeometryPathWithMarkersResult } from "./svg/geometry";
+export { renderGeometryPath, renderGeometryPathWithMarkers } from "./svg/geometry";
+
+// Note: For shared geometry functions, import from @aurochs-renderer/drawing-ml/svg:
+// - renderGeometryData, renderPresetGeometryData, renderCustomGeometryData
+// - renderGeometryPathData, buildTransformAttr
 
 // =============================================================================
 // Table Rendering (SVG)

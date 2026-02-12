@@ -6,7 +6,7 @@
  */
 
 import type { Geometry, Fill, Line } from "@aurochs-office/pptx/domain";
-import { renderGeometryData } from "../../svg/geometry";
+import { renderGeometryData } from "@aurochs-renderer/drawing-ml/svg";
 import { useFillWithDefs, type SvgFillProps } from "./Fill";
 import { useStroke, type SvgStrokeProps } from "./Stroke";
 

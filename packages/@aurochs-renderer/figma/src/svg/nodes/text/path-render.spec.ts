@@ -1,8 +1,6 @@
 /**
  * @file Path-based text rendering tests
  */
-
-import { describe, it, expect, beforeAll } from "vitest";
 import { createNodeFontLoader } from "../../../font-drivers/node";
 import { CachingFontLoader } from "../../../font";
 import {
@@ -40,8 +38,8 @@ describe("path-render", () => {
 
   describe("renderTextNodeAsPath", () => {
     it("renders simple text as path", async () => {
-      const node: FigNode = {
-        type: "TEXT",
+      const node = {
+        type: { value: 0, name: "TEXT" },
         name: "test",
         characters: "Hello",
         fontSize: 16,
@@ -49,8 +47,8 @@ describe("path-render", () => {
         size: { x: 100, y: 30 },
         textAlignHorizontal: { value: 0, name: "LEFT" },
         textAlignVertical: { value: 0, name: "TOP" },
-        fillPaints: [{ type: { value: 0, name: "SOLID" }, color: { r: 0, g: 0, b: 0 }, opacity: 1 }],
-      };
+        fillPaints: [{ type: { value: 0, name: "SOLID" }, color: { r: 0, g: 0, b: 0, a: 1 }, opacity: 1 }],
+      } as unknown as FigNode;
 
       const ctx: PathRenderContext = {
         canvasSize: { width: 100, height: 30 },
@@ -75,12 +73,12 @@ describe("path-render", () => {
     });
 
     it("returns empty for empty characters", async () => {
-      const node: FigNode = {
-        type: "TEXT",
+      const node = {
+        type: { value: 0, name: "TEXT" },
         name: "test",
         characters: "",
         fontSize: 16,
-      };
+      } as unknown as FigNode;
 
       const ctx: PathRenderContext = {
         canvasSize: { width: 100, height: 30 },

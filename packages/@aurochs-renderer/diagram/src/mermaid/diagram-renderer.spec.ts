@@ -1,4 +1,6 @@
-import { describe, it, expect } from "vitest";
+/**
+ * @file Mermaid diagram renderer tests
+ */
 import { renderDiagramMermaid } from "./diagram-renderer";
 
 describe("renderDiagramMermaid", () => {

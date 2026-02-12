@@ -51,7 +51,7 @@ export {
 export { EffectsRenderer } from "./effects-renderer";
 
 // Clipping & masking
-export { beginStencilClip, endStencilClip, drawEvenOddFill } from "./clip-mask";
+export { beginStencilClip, endStencilClip } from "./clip-mask";
 
 // Stroke tessellation
 export {

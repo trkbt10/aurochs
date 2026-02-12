@@ -18,6 +18,7 @@ import { createStyleCache, createDefaultStyle } from "./style-resolver";
 import { renderCell, renderCellFill } from "./cell-renderer";
 import { renderCellBorders, renderGridLines, renderColumnHeaders, renderRowHeaders } from "./border-renderer";
 import { cellRefFromIndices } from "./layout";
+import { renderAllDrawings } from "./drawing-renderer";
 
 // =============================================================================
 // Main Render Function
@@ -63,6 +64,17 @@ export function renderSheetWithContext(ctx: XlsxSvgRenderContext): SheetSvgResul
   elements.push(`<g class="cell-fills">${renderAllCellFills(ctx, resolveStyle)}</g>`);
   elements.push(`<g class="cell-borders">${renderAllCellBorders(ctx, resolveStyle)}</g>`);
   elements.push(`<g class="cell-text">${renderAllCellText(ctx, resolveStyle)}</g>`);
+
+  // Render drawing elements (images, shapes, charts)
+  if (options.showDrawings) {
+    const drawingSvg = renderAllDrawings(ctx, ctx.sheet.drawing, {
+      resolveImage: ctx.resolveImage,
+      resolveChart: ctx.resolveChart,
+    });
+    if (drawingSvg) {
+      elements.push(drawingSvg);
+    }
+  }
 
   if (options.showRowHeaders) {
     elements.push(renderRowHeadersGroup(ctx));

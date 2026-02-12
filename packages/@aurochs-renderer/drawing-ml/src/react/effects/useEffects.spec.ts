@@ -6,6 +6,7 @@
 import { resolveEffectsForReact } from "./useEffects";
 import type { Effects } from "@aurochs-office/drawing-ml/domain/effects";
 import type { ColorContext } from "@aurochs-office/drawing-ml/domain/color-context";
+import { px, deg } from "@aurochs-office/drawing-ml/domain/units";
 
 const mockColorContext: ColorContext = {
   colorScheme: {
@@ -51,9 +52,9 @@ describe("resolveEffectsForReact", () => {
       const effects: Effects = {
         shadow: {
           type: "outer",
-          blurRadius: 10,
-          distance: 5,
-          direction: 45,
+          blurRadius: px(10),
+          distance: px(5),
+          direction: deg(45),
           color: { spec: { type: "srgb", value: "000000" } },
         },
       };
@@ -71,9 +72,9 @@ describe("resolveEffectsForReact", () => {
       const effects: Effects = {
         shadow: {
           type: "inner",
-          blurRadius: 5,
-          distance: 3,
-          direction: 90,
+          blurRadius: px(5),
+          distance: px(3),
+          direction: deg(90),
           color: { spec: { type: "srgb", value: "333333" } },
         },
       };
@@ -88,7 +89,7 @@ describe("resolveEffectsForReact", () => {
     it("resolves glow effect", () => {
       const effects: Effects = {
         glow: {
-          radius: 8,
+          radius: px(8),
           color: { spec: { type: "srgb", value: "ffff00" } },
         },
       };
@@ -102,7 +103,7 @@ describe("resolveEffectsForReact", () => {
     it("resolves glow with scheme color", () => {
       const effects: Effects = {
         glow: {
-          radius: 10,
+          radius: px(10),
           color: { spec: { type: "scheme", value: "accent1" } },
         },
       };
@@ -119,7 +120,7 @@ describe("resolveEffectsForReact", () => {
     it("resolves soft edge effect", () => {
       const effects: Effects = {
         softEdge: {
-          radius: 12,
+          radius: px(12),
         },
       };
       const result = resolveEffectsForReact(effects, mockColorContext, mockGetNextId);
@@ -134,13 +135,13 @@ describe("resolveEffectsForReact", () => {
       const effects: Effects = {
         shadow: {
           type: "outer",
-          blurRadius: 10,
-          distance: 5,
-          direction: 45,
+          blurRadius: px(10),
+          distance: px(5),
+          direction: deg(45),
           color: { spec: { type: "srgb", value: "000000" } },
         },
         glow: {
-          radius: 8,
+          radius: px(8),
           color: { spec: { type: "srgb", value: "ffff00" } },
         },
       };

@@ -1,10 +1,42 @@
 /** @file Converts diagram layout results to PPTX shape format */
 import type { LayoutShapeResult } from "@aurochs-office/diagram/domain/layout-shape-result";
+import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { BaseLine } from "@aurochs-office/drawing-ml/domain/line";
 import { deg, px } from "@aurochs-office/drawing-ml/domain/units";
-import type { Fill } from "../domain/color/types";
+import type { Fill, Line } from "../domain/color/types";
 import type { SpShape, PresetGeometry } from "../domain/shape";
 import type { TextBody } from "../domain/text";
 import { isTextBody } from "../domain/diagram/format-guards";
+
+/**
+ * Convert a BaseFill (from diagram) to PPTX Fill.
+ * Note: BlipFill from diagrams is not supported (diagrams don't typically use blip fills).
+ */
+function toFill(fill: BaseFill | undefined): Fill | undefined {
+  if (!fill) {
+    return undefined;
+  }
+  // Diagrams don't produce blipFill; skip if encountered
+  if (fill.type === "blip") {
+    return undefined;
+  }
+  return fill as Fill;
+}
+
+/**
+ * Convert a BaseLine (from diagram) to PPTX Line.
+ * Note: BlipFill in line.fill from diagrams is not supported.
+ */
+function toLine(line: BaseLine | undefined): Line | undefined {
+  if (!line) {
+    return undefined;
+  }
+  // Skip if line fill is blip (diagrams don't typically use blip fills)
+  if (line.fill.type === "blip") {
+    return undefined;
+  }
+  return line as Line;
+}
 
 function applyStyleFillToTextBody(textBody: TextBody, textFill: Fill): TextBody {
   const updatedParagraphs = textBody.paragraphs.map((paragraph) => {
@@ -55,7 +87,11 @@ function toTextBody(result: LayoutShapeResult): TextBody | undefined {
   if (!result.textFill) {
     return result.textBody;
   }
-  return applyStyleFillToTextBody(result.textBody, result.textFill);
+  const textFill = toFill(result.textFill);
+  if (!textFill) {
+    return result.textBody;
+  }
+  return applyStyleFillToTextBody(result.textBody, textFill);
 }
 
 /** Convert a diagram layout result to a PPTX SpShape */
@@ -79,8 +115,8 @@ export function convertLayoutResultToSpShape(result: LayoutShapeResult): SpShape
         flipV: result.transform.flipVertical ?? false,
       },
       geometry,
-      fill: result.fill,
-      line: result.line,
+      fill: toFill(result.fill),
+      line: toLine(result.line),
       effects: result.effects,
     },
     textBody: toTextBody(result),

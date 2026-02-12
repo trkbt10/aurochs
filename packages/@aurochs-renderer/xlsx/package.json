@@ -7,8 +7,12 @@
   "dependencies": {
     "@aurochs/color": "workspace:*",
     "@aurochs/mermaid": "workspace:*",
+    "@aurochs-office/chart": "workspace:*",
+    "@aurochs-office/ooxml": "workspace:*",
     "@aurochs-office/xlsx": "workspace:*",
-    "@aurochs-office/drawing-ml": "workspace:*"
+    "@aurochs-office/drawing-ml": "workspace:*",
+    "@aurochs-renderer/chart": "workspace:*",
+    "@aurochs-renderer/drawing-ml": "workspace:*"
   },
   "scripts": {
     "lint": "eslint src",

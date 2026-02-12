@@ -5,6 +5,7 @@
 import type { ChartRenderContext, FillResolver, ResolvedFill, ResolvedTextStyle } from "@aurochs-renderer/chart/svg";
 import type { GenericTextBody } from "@aurochs-renderer/chart/svg";
 import type { BaseFill } from "@aurochs-office/drawing-ml/domain/fill";
+import type { Fill } from "@aurochs-office/pptx/domain/color/types";
 import { resolveColor } from "@aurochs-office/drawing-ml/domain/color-resolution";
 import { resolveThemeFont } from "@aurochs-office/ooxml/domain/font-scheme";
 import { resolveFill } from "@aurochs-office/pptx/domain/color/fill";
@@ -36,7 +37,11 @@ function resolvedFillToCssColor(fill: ResolvedFill): string | undefined {
 }
 
 function resolveFillForChartRender(fill: BaseFill, ctx: CoreRenderContext): ResolvedFill {
-  const resolved = resolveFill(fill, ctx.colorContext, ctx.resources.resolve);
+  // Skip blip fills (charts don't typically use blip fills, and BaseFill.BlipFill !== Fill.BlipFill)
+  if (fill.type === "blip") {
+    return { type: "unresolved", originalType: "blip" };
+  }
+  const resolved = resolveFill(fill as Fill, ctx.colorContext, ctx.resources.resolve);
   switch (resolved.type) {
     case "none":
       return { type: "none" };
