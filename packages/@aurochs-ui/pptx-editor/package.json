@@ -27,7 +27,9 @@
   "scripts": {
     "lint": "eslint src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-ui/pptx-editor/src'"
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-ui/pptx-editor/src'",
+    "visual:dev": "vite --config spec/visual/vite.config.ts",
+    "visual:capture": "bun run spec/visual/capture.ts"
   },
   "exports": {
     ".": {
@@ -86,5 +88,9 @@
       "types": "./src/viewer/SlideShareViewer.tsx",
       "default": "./src/viewer/SlideShareViewer.tsx"
     }
+  },
+  "devDependencies": {
+    "puppeteer-core": "^24.37.2",
+    "vite": "^7.3.1"
   }
 }

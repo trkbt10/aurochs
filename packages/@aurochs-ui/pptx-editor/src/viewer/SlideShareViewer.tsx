@@ -1,29 +1,31 @@
 /**
  * @file SlideShareViewer
  *
- * Full-featured slideshare-style viewer with URL sync, thumbnails, and slideshow.
+ * Full-featured slideshare-style viewer with thumbnails and slideshow.
+ *
+ * Design principles:
+ * - Content first: Slide content is never obstructed by UI
+ * - Media player controls: All controls in a bottom bar
+ * - Keyboard-primary: Arrow keys for navigation, F for fullscreen/present
  */
 
-import { useState, useCallback, useMemo, type CSSProperties, type ReactNode } from "react";
+import { useState, useCallback, useMemo, type CSSProperties } from "react";
 import type { SlideSize } from "@aurochs-office/pptx/domain";
 import { SvgContentRenderer } from "@aurochs-renderer/pptx/react";
 import { SlideList } from "../slide-list";
 import type { SlideWithId } from "@aurochs-office/pptx/app";
 import { PresentationSlideshow, type SlideshowSlideContent } from "./PresentationSlideshow";
 import { useSlideNavigation, useViewerKeyboard, useSlideshowMode } from "./hooks";
-import { SlideIndicator, ProgressBar, KeyboardHints, NavigationControls } from "./components";
+import { ViewerControls, type ControlAction } from "./components";
 import {
-  Button,
-  IconButton,
-  PlayIcon,
   ChevronLeftIcon,
+  PlayIcon,
   SidebarIcon,
   ShareIcon,
   DownloadIcon,
   EnterFullscreenIcon,
-  ToolbarSeparator,
-} from "@aurochs-ui/ui-components";
-import { spacingTokens, fontTokens, radiusTokens, iconTokens, colorTokens, shadowTokens } from "@aurochs-ui/ui-components/design-tokens";
+} from "@aurochs-ui/ui-components/icons";
+import { spacingTokens, fontTokens, colorTokens, shadowTokens, radiusTokens } from "@aurochs-ui/ui-components/design-tokens";
 
 export type SlideShareViewerProps = {
   /** Total number of slides */
@@ -34,9 +36,9 @@ export type SlideShareViewerProps = {
   readonly getSlideContent: (slideIndex: number) => string;
   /** Function to get slide content with timing/transition for slideshow */
   readonly getSlideshowContent?: (slideIndex: number) => SlideshowSlideContent;
-  /** Function to get thumbnail SVG content (optional, uses getSlideContent if not provided) */
+  /** Function to get thumbnail SVG content */
   readonly getThumbnailContent?: (slideIndex: number) => string;
-  /** Initial slide to display (1-based, default: 1) */
+  /** Initial slide to display (1-based) */
   readonly initialSlide?: number;
   /** Enable slideshow mode */
   readonly enableSlideshow?: boolean;
@@ -48,12 +50,8 @@ export type SlideShareViewerProps = {
   readonly enableFullscreen?: boolean;
   /** Sync current slide with URL parameter */
   readonly syncWithUrl?: boolean;
-  /** Base URL for share links (defaults to current URL) */
+  /** Base URL for share links */
   readonly baseUrl?: string;
-  /** Presentation title */
-  readonly title?: string;
-  /** Author name */
-  readonly author?: string;
   /** Callback when slide changes */
   readonly onSlideChange?: (slideIndex: number) => void;
   /** Callback for download action */
@@ -62,8 +60,8 @@ export type SlideShareViewerProps = {
   readonly onShare?: (url: string) => void;
   /** Callback when exiting viewer */
   readonly onExit?: () => void;
-  /** Custom actions to show in header */
-  readonly customActions?: ReactNode;
+  /** Custom actions for right side of controls */
+  readonly customActions?: readonly ControlAction[];
   /** Additional CSS class */
   readonly className?: string;
   /** Additional inline styles */
@@ -71,15 +69,10 @@ export type SlideShareViewerProps = {
 };
 
 // =============================================================================
-// Layout constants
-// =============================================================================
-
-/** Sidebar width (200px) */
-const SIDEBAR_WIDTH = 200;
-
-// =============================================================================
 // Styles
 // =============================================================================
+
+const SIDEBAR_WIDTH = 200;
 
 const containerStyle: CSSProperties = {
   display: "flex",
@@ -87,45 +80,6 @@ const containerStyle: CSSProperties = {
   height: "100%",
   backgroundColor: colorTokens.background.primary,
   color: colorTokens.text.primary,
-};
-
-const headerStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  padding: `${spacingTokens.md} ${spacingTokens.lg}`,
-  backgroundColor: colorTokens.background.secondary,
-  borderBottom: `1px solid ${colorTokens.border.subtle}`,
-  flexShrink: 0,
-};
-
-const headerLeftStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: spacingTokens.md,
-};
-
-const titleInfoStyle: CSSProperties = {
-  display: "flex",
-  flexDirection: "column",
-  gap: spacingTokens["2xs"],
-};
-
-const titleStyle: CSSProperties = {
-  fontSize: fontTokens.size.xl,
-  fontWeight: fontTokens.weight.medium,
-  color: colorTokens.text.primary,
-};
-
-const authorStyle: CSSProperties = {
-  fontSize: fontTokens.size.md,
-  color: colorTokens.text.tertiary,
-};
-
-const headerRightStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  gap: spacingTokens.sm,
 };
 
 const mainStyle: CSSProperties = {
@@ -173,7 +127,8 @@ const sidebarCountStyle: CSSProperties = {
 
 const thumbnailListStyle: CSSProperties = {
   flex: 1,
-  overflow: "auto",
+  minHeight: 0,
+  overflow: "hidden",
 };
 
 const slideAreaStyle: CSSProperties = {
@@ -181,17 +136,8 @@ const slideAreaStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  position: "relative",
   backgroundColor: colorTokens.background.tertiary,
-  padding: spacingTokens.xl,
-};
-
-const slideWrapperStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  maxWidth: "100%",
-  maxHeight: "100%",
+  padding: spacingTokens.lg,
 };
 
 const slideContainerStyle: CSSProperties = {
@@ -199,32 +145,14 @@ const slideContainerStyle: CSSProperties = {
   boxShadow: shadowTokens.lg,
   borderRadius: radiusTokens.sm,
   overflow: "hidden",
-  maxWidth: "100%",
+  width: "100%",
+  height: "auto",
   maxHeight: "100%",
 };
 
 const slideContentStyle: CSSProperties = {
   width: "100%",
   height: "100%",
-};
-
-const footerStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  padding: `${spacingTokens.sm} ${spacingTokens.lg}`,
-  backgroundColor: colorTokens.background.secondary,
-  borderTop: `1px solid ${colorTokens.border.subtle}`,
-  fontSize: fontTokens.size.md,
-  color: colorTokens.text.tertiary,
-  flexShrink: 0,
-};
-
-const footerCenterStyle: CSSProperties = {
-  flex: 1,
-  display: "flex",
-  justifyContent: "center",
-  padding: `0 ${spacingTokens.lg}`,
 };
 
 const thumbnailPreviewStyle: CSSProperties = {
@@ -236,26 +164,7 @@ const thumbnailPreviewStyle: CSSProperties = {
 };
 
 /**
- * Full-featured slideshare-style viewer with URL sync, thumbnails, and slideshow.
- *
- * @example
- * ```tsx
- * <SlideShareViewer
- *   slideCount={presentation.count}
- *   slideSize={presentation.size}
- *   getSlideContent={(index) => slides[index].svg}
- *   getSlideshowContent={(index) => ({
- *     svg: slides[index].svg,
- *     timing: slides[index].timing,
- *     transition: slides[index].transition,
- *   })}
- *   title="My Presentation"
- *   author="John Doe"
- *   enableSlideshow
- *   enableShare
- *   syncWithUrl
- * />
- * ```
+ * Full-featured slideshare-style viewer.
  */
 export function SlideShareViewer({
   slideCount,
@@ -270,17 +179,15 @@ export function SlideShareViewer({
   enableFullscreen = true,
   syncWithUrl = true,
   baseUrl,
-  title,
-  author,
   onSlideChange,
   onDownload,
   onShare,
   onExit,
-  customActions,
+  customActions = [],
   className,
   style,
 }: SlideShareViewerProps) {
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const nav = useSlideNavigation({
     totalSlides: slideCount,
@@ -310,10 +217,7 @@ export function SlideShareViewer({
   const slides = useMemo((): readonly SlideWithId[] => {
     const result: SlideWithId[] = [];
     for (let i = 1; i <= slideCount; i++) {
-      result.push({
-        id: `slide-${i}`,
-        slide: { shapes: [] },
-      });
+      result.push({ id: `slide-${i}`, slide: { shapes: [] } });
     }
     return result;
   }, [slideCount]);
@@ -350,7 +254,6 @@ export function SlideShareViewer({
     const url = new URL(baseUrl ?? window.location.href);
     url.searchParams.set("slide", String(nav.currentSlide));
     const shareUrl = url.toString();
-
     if (onShare) {
       onShare(shareUrl);
     } else {
@@ -376,58 +279,81 @@ export function SlideShareViewer({
     [getSlideContent, getSlideshowContent],
   );
 
-  const activeSlideId = `slide-${nav.currentSlide}`;
+  // Build control actions
+  const leftActions = useMemo((): ControlAction[] => {
+    const actions: ControlAction[] = [];
 
-  const keyboardHints = useMemo(
-    () => [
-      { keys: ["\u2190", "\u2192"], label: "Navigate" },
-      ...(enableSlideshow ? [{ keys: ["F"], label: "Present" }] : []),
-    ],
-    [enableSlideshow],
-  );
+    if (onExit) {
+      actions.push({
+        key: "exit",
+        icon: <ChevronLeftIcon size={16} />,
+        onClick: onExit,
+        label: "Exit",
+      });
+    }
+
+    actions.push({
+      key: "sidebar",
+      icon: <SidebarIcon size={18} />,
+      onClick: () => setIsSidebarOpen(!isSidebarOpen),
+      label: "Toggle sidebar",
+      active: isSidebarOpen,
+    });
+
+    if (enableSlideshow) {
+      actions.push({
+        key: "present",
+        icon: <PlayIcon size={16} />,
+        onClick: () => slideshow.startSlideshow(nav.currentSlide),
+        label: "Present",
+        primary: true,
+      });
+    }
+
+    return actions;
+  }, [onExit, isSidebarOpen, enableSlideshow, slideshow, nav.currentSlide]);
+
+  const rightActions = useMemo((): ControlAction[] => {
+    const actions: ControlAction[] = [];
+
+    if (enableShare) {
+      actions.push({
+        key: "share",
+        icon: <ShareIcon size={18} />,
+        onClick: handleShare,
+        label: "Share",
+      });
+    }
+
+    if (enableDownload && onDownload) {
+      actions.push({
+        key: "download",
+        icon: <DownloadIcon size={18} />,
+        onClick: onDownload,
+        label: "Download",
+      });
+    }
+
+    actions.push(...customActions);
+
+    if (enableFullscreen) {
+      actions.push({
+        key: "fullscreen",
+        icon: <EnterFullscreenIcon size={18} />,
+        onClick: handleFullscreen,
+        label: "Fullscreen",
+      });
+    }
+
+    return actions;
+  }, [enableShare, handleShare, enableDownload, onDownload, customActions, enableFullscreen, handleFullscreen]);
+
+  const activeSlideId = `slide-${nav.currentSlide}`;
 
   return (
     <div style={{ ...containerStyle, ...style }} className={className}>
-      <header style={headerStyle}>
-        <div style={headerLeftStyle}>
-          {onExit && (
-            <>
-              <Button variant="outline" size="md" onClick={onExit}>
-                <ChevronLeftIcon size={iconTokens.size.md} />
-                Back
-              </Button>
-              <ToolbarSeparator />
-            </>
-          )}
-          {(title || author) && (
-            <div style={titleInfoStyle}>
-              {title && <span style={titleStyle}>{title}</span>}
-              {author && <span style={authorStyle}>by {author}</span>}
-            </div>
-          )}
-        </div>
-
-        <div style={headerRightStyle}>
-          <IconButton icon={<SidebarIcon size={iconTokens.size.lg} />} onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)} />
-          {enableDownload && onDownload && (
-            <IconButton icon={<DownloadIcon size={iconTokens.size.lg} />} onClick={onDownload} aria-label="Download" />
-          )}
-          {enableShare && <IconButton icon={<ShareIcon size={iconTokens.size.lg} />} onClick={handleShare} aria-label="Share" />}
-          {enableFullscreen && (
-            <IconButton icon={<EnterFullscreenIcon size={iconTokens.size.lg} />} onClick={handleFullscreen} aria-label="Fullscreen" />
-          )}
-          {customActions}
-          {enableSlideshow && (
-            <Button variant="primary" size="md" onClick={() => slideshow.startSlideshow(nav.currentSlide)}>
-              <PlayIcon size={iconTokens.size.md} />
-              Present
-            </Button>
-          )}
-        </div>
-      </header>
-
       <div style={mainStyle}>
-        <aside style={isSidebarCollapsed ? sidebarCollapsedStyle : sidebarStyle}>
+        <aside style={isSidebarOpen ? sidebarStyle : sidebarCollapsedStyle}>
           <div style={sidebarHeaderStyle}>
             <span style={sidebarTitleStyle}>Slides</span>
             <span style={sidebarCountStyle}>{slideCount}</span>
@@ -447,48 +373,34 @@ export function SlideShareViewer({
         </aside>
 
         <main style={slideAreaStyle}>
-          <NavigationControls
-            onPrev={nav.goToPrev}
-            onNext={nav.goToNext}
-            canGoPrev={!nav.isFirst}
-            canGoNext={!nav.isLast}
-            variant="overlay"
-          />
-
-          <div style={slideWrapperStyle}>
-            <div
-              style={{
-                ...slideContainerStyle,
-                aspectRatio: `${slideSize.width} / ${slideSize.height}`,
-              }}
-            >
-              <SvgContentRenderer
-                svg={renderedContent}
-                width={slideSize.width}
-                height={slideSize.height}
-                mode="full"
-                style={slideContentStyle}
-              />
-            </div>
+          <div style={{ ...slideContainerStyle, aspectRatio: `${slideSize.width} / ${slideSize.height}` }}>
+            <SvgContentRenderer
+              svg={renderedContent}
+              width={slideSize.width}
+              height={slideSize.height}
+              mode="full"
+              style={slideContentStyle}
+            />
           </div>
         </main>
       </div>
 
-      <footer style={footerStyle}>
-        <SlideIndicator current={nav.currentSlide} total={slideCount} variant="compact" />
-        <div style={footerCenterStyle}>
-          <ProgressBar
-            progress={nav.progress}
-            variant="dark"
-            interactive
-            onSeek={(progress) => {
-              const targetSlide = Math.max(1, Math.ceil((progress / 100) * slideCount));
-              nav.goToSlide(targetSlide);
-            }}
-          />
-        </div>
-        <KeyboardHints hints={keyboardHints} variant="dark" />
-      </footer>
+      <ViewerControls
+        navigation={{
+          onPrev: nav.goToPrev,
+          onNext: nav.goToNext,
+          canGoPrev: !nav.isFirst,
+          canGoNext: !nav.isLast,
+        }}
+        position={{
+          current: nav.currentSlide,
+          total: slideCount,
+          progress: nav.progress,
+          onSeek: (targetSlide) => nav.goToSlide(targetSlide),
+        }}
+        leftActions={leftActions}
+        rightActions={rightActions}
+      />
 
       {slideshow.isActive && (
         <PresentationSlideshow

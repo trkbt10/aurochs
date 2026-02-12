@@ -43,8 +43,19 @@ export function useSlideshowRenderSize({
       if (!stage) {
         return;
       }
-      const availableWidth = stage.clientWidth;
-      const availableHeight = stage.clientHeight;
+
+      // Use getBoundingClientRect for accurate dimensions including padding
+      const rect = stage.getBoundingClientRect();
+      // Account for padding by using clientWidth/clientHeight (content area only)
+      const computedStyle = getComputedStyle(stage);
+      const paddingLeft = parseFloat(computedStyle.paddingLeft) || 0;
+      const paddingRight = parseFloat(computedStyle.paddingRight) || 0;
+      const paddingTop = parseFloat(computedStyle.paddingTop) || 0;
+      const paddingBottom = parseFloat(computedStyle.paddingBottom) || 0;
+
+      const availableWidth = rect.width - paddingLeft - paddingRight;
+      const availableHeight = rect.height - paddingTop - paddingBottom;
+
       if (availableWidth <= 0 || availableHeight <= 0) {
         return;
       }
@@ -66,6 +77,7 @@ export function useSlideshowRenderSize({
       });
     }
 
+    // Call immediately - useLayoutEffect runs synchronously after DOM mutations
     updateRenderSize();
 
     const resizeObserver = new ResizeObserver(() => {

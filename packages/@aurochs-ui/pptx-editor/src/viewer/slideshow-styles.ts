@@ -2,19 +2,16 @@
  * @file Slideshow styles
  *
  * CSS-in-JS style definitions for the slideshow components.
+ *
+ * Design principles:
+ * - Slide fills 100% of viewport (no padding reducing display area)
+ * - Controls at absolute screen edges, never overlapping slide content
+ * - Auto-hiding UI with graceful fade transitions
+ * - Click-to-advance as primary navigation pattern
  */
 
 import type { CSSProperties } from "react";
-import { spacingTokens, fontTokens, radiusTokens, colorTokens, shadowTokens } from "@aurochs-ui/ui-components/design-tokens";
-
-// =============================================================================
-// Layout constants
-// =============================================================================
-
-/** Navigation button size (44px) */
-const NAV_BUTTON_SIZE = 44;
-/** Navigation button offset from edge (12px) */
-const NAV_BUTTON_OFFSET = spacingTokens.md;
+import { spacingTokens, fontTokens, radiusTokens, colorTokens } from "@aurochs-ui/ui-components/design-tokens";
 
 // =============================================================================
 // Container styles
@@ -23,11 +20,11 @@ const NAV_BUTTON_OFFSET = spacingTokens.md;
 /** Returns styles for the slideshow dialog container. */
 export function getContainerStyle(_isFullscreen: boolean): CSSProperties {
   return {
+    // Reset dialog defaults completely
     position: "fixed",
     inset: 0,
     display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: "column",
     background: colorTokens.overlay.darkBg,
     userSelect: "none",
     overflow: "hidden",
@@ -39,6 +36,7 @@ export function getContainerStyle(_isFullscreen: boolean): CSSProperties {
     height: "100vh",
     maxWidth: "none",
     maxHeight: "none",
+    boxSizing: "border-box",
   };
 }
 
@@ -60,30 +58,35 @@ export function getScreenOverlayStyle(variant: "black" | "white", active: boolea
 }
 
 // =============================================================================
-// Stage styles
+// Stage styles - Slide fills entire viewport
 // =============================================================================
 
-/** Returns styles for the slide stage area. */
-export function getStageStyle(isFullscreen: boolean): CSSProperties {
+/** Returns styles for the slide stage area. NO PADDING - slide fills viewport. */
+export function getStageStyle(_isFullscreen: boolean): CSSProperties {
   return {
+    // Fill entire viewport
+    flex: 1,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    width: "100%",
-    height: "100%",
-    padding: isFullscreen ? 0 : spacingTokens.lg,
+    // NO padding - slide uses full available space
+    padding: 0,
+    minHeight: 0,
   };
 }
 
 /** Returns styles for the slide container with dimensions. */
-export function getSlideContainerStyle(width: number, height: number, isFullscreen: boolean): CSSProperties {
+export function getSlideContainerStyle(slideWidth: number, slideHeight: number, _isFullscreen: boolean): CSSProperties {
   return {
     position: "relative",
-    width: `${width}px`,
-    height: `${height}px`,
+    // Use aspect-ratio with constraints - fills viewport while maintaining ratio
+    aspectRatio: `${slideWidth} / ${slideHeight}`,
+    width: "100%",
+    height: "100%",
     maxWidth: "100%",
     maxHeight: "100%",
-    boxShadow: isFullscreen ? "none" : shadowTokens.lg,
+    // Object-fit behavior via flex container
+    flexShrink: 0,
   };
 }
 
@@ -116,21 +119,11 @@ export const slideContentStyle: CSSProperties = {
 };
 
 // =============================================================================
-// Controls styles
+// Controls bar styles - At screen edges, not overlapping slide
 // =============================================================================
 
-/** Returns styles for the controls overlay. */
-export function getControlsStyle(visible: boolean): CSSProperties {
-  return {
-    position: "absolute",
-    inset: 0,
-    pointerEvents: "none",
-    opacity: visible ? 1 : 0,
-    transition: "opacity 0.3s ease-out",
-  };
-}
-
-export const controlsTopStyle: CSSProperties = {
+/** Top control bar - at very top of screen. */
+export const controlsTopBarStyle: CSSProperties = {
   position: "absolute",
   top: 0,
   left: 0,
@@ -140,17 +133,35 @@ export const controlsTopStyle: CSSProperties = {
   justifyContent: "space-between",
   padding: `${spacingTokens.md} ${spacingTokens.lg}`,
   background: `linear-gradient(to bottom, ${colorTokens.overlay.darkBgOverlay}, transparent)`,
+  zIndex: 50,
   pointerEvents: "auto",
 };
 
-export const controlsProgressStyle: CSSProperties = {
+/** Bottom control bar - at very bottom of screen. */
+export const controlsBottomBarStyle: CSSProperties = {
   position: "absolute",
   bottom: 0,
   left: 0,
   right: 0,
-  padding: `0 ${spacingTokens.xl} ${spacingTokens.lg}`,
-  pointerEvents: "auto",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: `${spacingTokens.md} ${spacingTokens.xl}`,
+  background: `linear-gradient(to top, ${colorTokens.overlay.darkBgOverlay}, transparent)`,
+  zIndex: 50,
 };
+
+/** Returns styles for the controls wrapper with visibility. */
+export function getControlsWrapperStyle(visible: boolean): CSSProperties {
+  return {
+    position: "absolute",
+    inset: 0,
+    pointerEvents: "none",
+    opacity: visible ? 1 : 0,
+    transition: "opacity 0.3s ease-out",
+    zIndex: 40,
+  };
+}
 
 // =============================================================================
 // Control button styles
@@ -170,34 +181,76 @@ export const controlButtonStyle: CSSProperties = {
   backdropFilter: "blur(12px)",
   cursor: "pointer",
   transition: "all 0.15s ease-out",
+  pointerEvents: "auto",
 };
 
 // =============================================================================
-// Navigation button styles
+// Progress bar styles
 // =============================================================================
 
-/** Returns styles for navigation buttons (prev/next). */
-export function getNavButtonStyle(direction: "prev" | "next", disabled: boolean): CSSProperties {
+export const progressWrapperStyle: CSSProperties = {
+  flex: 1,
+  maxWidth: 600,
+  pointerEvents: "auto",
+};
+
+// =============================================================================
+// Click hint overlay - Shows navigation hints
+// =============================================================================
+
+/** Style for left/right click zones (invisible, for interaction). */
+export function getClickZoneStyle(side: "left" | "right"): CSSProperties {
+  return {
+    position: "absolute",
+    top: 0,
+    bottom: 0,
+    width: "20%",
+    left: side === "left" ? 0 : undefined,
+    right: side === "right" ? 0 : undefined,
+    cursor: "pointer",
+    zIndex: 30,
+  };
+}
+
+/** Hint arrow that appears on hover. */
+export function getHintArrowStyle(side: "left" | "right", visible: boolean, disabled: boolean): CSSProperties {
   return {
     position: "absolute",
     top: "50%",
     transform: "translateY(-50%)",
-    left: direction === "prev" ? NAV_BUTTON_OFFSET : undefined,
-    right: direction === "next" ? NAV_BUTTON_OFFSET : undefined,
+    left: side === "left" ? spacingTokens.lg : undefined,
+    right: side === "right" ? spacingTokens.lg : undefined,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    width: NAV_BUTTON_SIZE,
-    height: NAV_BUTTON_SIZE,
-    padding: 0,
-    color: disabled ? colorTokens.overlay.lightTextMuted : colorTokens.overlay.lightTextSecondary,
+    width: 48,
+    height: 48,
     background: colorTokens.overlay.darkBgSubtle,
-    border: "none",
-    borderRadius: "50%",
     backdropFilter: "blur(8px)",
-    cursor: disabled ? "default" : "pointer",
-    transition: "all 0.15s ease-out",
-    opacity: disabled ? 0.2 : 0.7,
-    pointerEvents: disabled ? "none" : "auto",
+    borderRadius: "50%",
+    color: disabled ? colorTokens.overlay.lightTextMuted : colorTokens.overlay.lightText,
+    opacity: visible && !disabled ? 0.8 : 0,
+    transition: "opacity 0.15s ease-out",
+    pointerEvents: "none",
   };
+}
+
+// =============================================================================
+// Deprecated - Kept for backward compatibility during transition
+// =============================================================================
+
+/** @deprecated Use controlsTopBarStyle instead */
+export const controlsTopStyle = controlsTopBarStyle;
+
+/** @deprecated Use controlsBottomBarStyle instead */
+export const controlsProgressStyle = controlsBottomBarStyle;
+
+/** @deprecated Use getControlsWrapperStyle instead */
+export function getControlsStyle(visible: boolean): CSSProperties {
+  return getControlsWrapperStyle(visible);
+}
+
+/** @deprecated Navigation buttons removed - use click zones instead */
+export function getNavButtonStyle(_direction: "prev" | "next", _disabled: boolean): CSSProperties {
+  return { display: "none" };
 }

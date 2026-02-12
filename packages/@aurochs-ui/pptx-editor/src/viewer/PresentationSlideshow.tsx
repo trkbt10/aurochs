@@ -1,8 +1,13 @@
 /**
  * @file Presentation slideshow
  *
- * Shared slideshow player for preview and app pages.
- * Uses decomposed hooks and shared viewer components.
+ * Fullscreen slideshow player for presentations.
+ *
+ * Design principles:
+ * - Content first: Slide fills entire viewport without UI overlap
+ * - Click-to-advance: Primary navigation via click/tap
+ * - Edge controls: UI at screen edges, auto-hiding on inactivity
+ * - Keyboard-primary: Arrow keys, Escape, F for fullscreen
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
@@ -12,12 +17,11 @@ import type { Timing } from "@aurochs-office/pptx/domain/animation";
 import { useSlideAnimation, useSlideTransition, SvgContentRenderer } from "@aurochs-renderer/pptx/react";
 import { CloseIcon, EnterFullscreenIcon, ExitFullscreenIcon, ChevronLeftIcon, ChevronRightIcon } from "@aurochs-ui/ui-components/icons";
 import { useSlideNavigation } from "./hooks";
-import { SlideIndicator, ProgressBar } from "./components";
+import { SlideIndicator } from "./components";
 import {
   useSlideshowAutoAdvance,
   useSlideshowControls,
   useSlideshowKeyboard,
-  useSlideshowRenderSize,
 } from "./hooks";
 import {
   getContainerStyle,
@@ -27,11 +31,11 @@ import {
   slidePreviousStyle,
   getSlideCurrentStyle,
   slideContentStyle,
-  getControlsStyle,
-  controlsTopStyle,
-  controlsProgressStyle,
+  getControlsWrapperStyle,
+  controlsTopBarStyle,
   controlButtonStyle,
-  getNavButtonStyle,
+  getClickZoneStyle,
+  getHintArrowStyle,
 } from "./slideshow-styles";
 
 
@@ -50,7 +54,13 @@ export type PresentationSlideshowProps = {
 };
 
 /**
- * Shared slideshow player.
+ * Fullscreen slideshow player.
+ *
+ * Navigation:
+ * - Click anywhere to advance
+ * - Right-click to go back
+ * - Hover edges for visual nav hints
+ * - Keyboard: arrows, Home, End, Escape, F
  */
 export function PresentationSlideshow({
   slideCount,
@@ -63,9 +73,9 @@ export function PresentationSlideshow({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isBlackScreen, setIsBlackScreen] = useState(false);
   const [isWhiteScreen, setIsWhiteScreen] = useState(false);
+  const [hoverSide, setHoverSide] = useState<"left" | "right" | null>(null);
 
   const containerRef = useRef<HTMLDialogElement>(null);
-  const stageRef = useRef<HTMLDivElement>(null);
   const slideContentRef = useRef<HTMLDivElement>(null);
   const transitionContainerRef = useRef<HTMLDivElement>(null);
 
@@ -81,7 +91,7 @@ export function PresentationSlideshow({
     [getSlideContent, navigation.currentSlide],
   );
 
-  // Slide transition effects (uses JS-based animation/effects.ts)
+  // Slide transition effects
   const { isTransitioning, previousContent, transitionDuration } = useSlideTransition({
     slideIndex: navigation.currentSlide,
     currentContent: svg,
@@ -96,9 +106,6 @@ export function PresentationSlideshow({
     containerRef: slideContentRef,
     autoPlay: true,
   });
-
-  // Render size based on stage dimensions
-  const renderSize = useSlideshowRenderSize({ stageRef, slideSize });
 
   // Auto-hide controls on mouse inactivity
   const { showControls } = useSlideshowControls({ containerRef, hideDelay: 2500 });
@@ -205,11 +212,12 @@ export function PresentationSlideshow({
     return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
 
-  // Handle click to advance
-  const handleClick = useCallback(
-    (event: MouseEvent<HTMLDialogElement>) => {
+  // Handle click to advance (on main stage area)
+  const handleStageClick = useCallback(
+    (event: MouseEvent<HTMLDivElement>) => {
       const target = event.target as HTMLElement;
-      if (target.closest("[data-controls]")) {
+      // Ignore clicks on control elements
+      if (target.closest("[data-controls]") || target.closest("[data-click-zone]")) {
         return;
       }
 
@@ -236,6 +244,28 @@ export function PresentationSlideshow({
     [goToPrev],
   );
 
+  // Handle dialog cancel (Escape key via dialog)
+  const handleDialogCancel = useCallback(
+    (event: Event) => {
+      event.preventDefault();
+      handleClose();
+    },
+    [handleClose],
+  );
+
+  // Click zone handlers
+  const handleLeftZoneClick = useCallback(() => {
+    if (!navigation.isFirst) {
+      goToPrev();
+    }
+  }, [navigation.isFirst, goToPrev]);
+
+  const handleRightZoneClick = useCallback(() => {
+    if (!navigation.isLast) {
+      goToNext();
+    }
+  }, [navigation.isLast, goToNext]);
+
   // Portal target setup
   useEffect(() => {
     setPortalTarget(document.body);
@@ -258,10 +288,14 @@ export function PresentationSlideshow({
       dialog.setAttribute("open", "");
     }
 
+    // Listen for cancel event (Escape key)
+    dialog.addEventListener("cancel", handleDialogCancel);
+
     return () => {
+      dialog.removeEventListener("cancel", handleDialogCancel);
       dialog.close();
     };
-  }, []);
+  }, [handleDialogCancel]);
 
   if (!portalTarget) {
     return null;
@@ -271,9 +305,7 @@ export function PresentationSlideshow({
     <dialog
       ref={containerRef}
       style={getContainerStyle(isFullscreen)}
-      onClick={handleClick}
       onContextMenu={handleContextMenu}
-      onCancel={handleClose}
       role="dialog"
       aria-modal="true"
     >
@@ -281,9 +313,9 @@ export function PresentationSlideshow({
       <div style={getScreenOverlayStyle("black", isBlackScreen)} />
       <div style={getScreenOverlayStyle("white", isWhiteScreen)} />
 
-      {/* Slide stage */}
-      <div ref={stageRef} style={getStageStyle(isFullscreen)}>
-        <div style={getSlideContainerStyle(renderSize.width, renderSize.height, isFullscreen)}>
+      {/* Slide stage - fills entire viewport */}
+      <div style={getStageStyle(isFullscreen)} onClick={handleStageClick}>
+        <div style={getSlideContainerStyle(slideSize.width, slideSize.height, isFullscreen)}>
           {isTransitioning && previousContent && (
             <div style={slidePreviousStyle}>
               <SvgContentRenderer
@@ -311,10 +343,34 @@ export function PresentationSlideshow({
         </div>
       </div>
 
-      {/* Controls overlay */}
-      <div data-controls style={getControlsStyle(showControls)}>
-        {/* Top bar */}
-        <div style={controlsTopStyle}>
+      {/* Click zones for navigation hints */}
+      <div
+        data-click-zone="left"
+        style={getClickZoneStyle("left")}
+        onClick={handleLeftZoneClick}
+        onMouseEnter={() => setHoverSide("left")}
+        onMouseLeave={() => setHoverSide(null)}
+      >
+        <div style={getHintArrowStyle("left", hoverSide === "left" && showControls, navigation.isFirst)}>
+          <ChevronLeftIcon size={24} />
+        </div>
+      </div>
+      <div
+        data-click-zone="right"
+        style={getClickZoneStyle("right")}
+        onClick={handleRightZoneClick}
+        onMouseEnter={() => setHoverSide("right")}
+        onMouseLeave={() => setHoverSide(null)}
+      >
+        <div style={getHintArrowStyle("right", hoverSide === "right" && showControls, navigation.isLast)}>
+          <ChevronRightIcon size={24} />
+        </div>
+      </div>
+
+      {/* Controls overlay - auto-hides */}
+      <div data-controls style={getControlsWrapperStyle(showControls)}>
+        {/* Top bar: Exit, Indicator, Fullscreen */}
+        <div style={controlsTopBarStyle}>
           <button type="button" style={controlButtonStyle} onClick={handleClose}>
             <CloseIcon size={16} />
             <span>Exit</span>
@@ -333,30 +389,6 @@ export function PresentationSlideshow({
           </button>
         </div>
 
-        {/* Progress bar */}
-        <div style={controlsProgressStyle}>
-          <ProgressBar progress={navigation.progress} variant="light" />
-        </div>
-
-        {/* Navigation buttons */}
-        <button
-          type="button"
-          style={getNavButtonStyle("prev", navigation.isFirst)}
-          onClick={goToPrev}
-          disabled={navigation.isFirst}
-          aria-label="Previous slide"
-        >
-          <ChevronLeftIcon size={18} />
-        </button>
-        <button
-          type="button"
-          style={getNavButtonStyle("next", navigation.isLast)}
-          onClick={goToNext}
-          disabled={navigation.isLast}
-          aria-label="Next slide"
-        >
-          <ChevronRightIcon size={18} />
-        </button>
       </div>
     </dialog>,
     portalTarget,
