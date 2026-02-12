@@ -13,3 +13,10 @@ export {
   type NavigationControlsVariant,
 } from "./NavigationControls";
 export { SlidePreview, type SlidePreviewProps } from "./SlidePreview";
+export {
+  ViewerControls,
+  type ViewerControlsProps,
+  type ControlAction,
+  type NavigationState,
+  type PositionState,
+} from "./ViewerControls";

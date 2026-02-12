@@ -223,6 +223,7 @@ export {
   KeyboardHints,
   NavigationControls,
   SlidePreview,
+  ViewerControls,
   // Composite Components
   PresentationSlideshow,
   PresentationViewer,
@@ -245,6 +246,10 @@ export {
   type NavigationControlsProps,
   type NavigationControlsVariant,
   type SlidePreviewProps,
+  type ViewerControlsProps,
+  type ControlAction,
+  type NavigationState,
+  type PositionState,
   // Types - Composites
   type PresentationSlideshowProps,
   type SlideshowSlideContent,

@@ -2,16 +2,22 @@
  * @file PresentationViewer
  *
  * Full-featured presentation viewer with thumbnail sidebar and navigation.
+ *
+ * Design principles:
+ * - Content first: Slide content is never obstructed by UI
+ * - Media player controls: All controls in a bottom bar
+ * - Keyboard-primary: Arrow keys for navigation, F for fullscreen/present
  */
 
-import { useMemo, useCallback, type CSSProperties, type ReactNode } from "react";
+import { useState, useMemo, useCallback, type CSSProperties, type ReactNode } from "react";
 import type { SlideSize } from "@aurochs-office/pptx/domain";
 import { SvgContentRenderer } from "@aurochs-renderer/pptx/react";
 import { SlideList } from "../slide-list";
 import type { SlideWithId } from "@aurochs-office/pptx/app";
 import { useSlideNavigation, useViewerKeyboard } from "./hooks";
-import { SlideIndicator, ProgressBar, KeyboardHints, NavigationControls } from "./components";
-import { spacingTokens, fontTokens, radiusTokens, colorTokens, shadowTokens } from "@aurochs-ui/ui-components/design-tokens";
+import { ViewerControls, type ControlAction } from "./components";
+import { PlayIcon, SidebarIcon, EnterFullscreenIcon } from "@aurochs-ui/ui-components/icons";
+import { spacingTokens, fontTokens, colorTokens, shadowTokens, radiusTokens } from "@aurochs-ui/ui-components/design-tokens";
 
 export type PresentationViewerProps = {
   /** Total number of slides */
@@ -24,28 +30,22 @@ export type PresentationViewerProps = {
   readonly getThumbnailContent?: (slideIndex: number) => string;
   /** Initial slide to display (1-based, default: 1) */
   readonly initialSlide?: number;
-  /** Show thumbnail sidebar */
+  /** Show thumbnail sidebar (default: true) */
   readonly showThumbnails?: boolean;
-  /** Thumbnail sidebar position */
-  readonly thumbnailPosition?: "left" | "bottom";
-  /** Show navigation controls */
-  readonly showControls?: boolean;
-  /** Show progress bar */
-  readonly showProgress?: boolean;
-  /** Show keyboard hints */
-  readonly showKeyboardHints?: boolean;
+  /** Enable slideshow mode */
+  readonly enableSlideshow?: boolean;
+  /** Enable fullscreen button */
+  readonly enableFullscreen?: boolean;
   /** Sync current slide with URL parameter */
   readonly urlSync?: boolean;
   /** Callback when slide changes */
   readonly onSlideChange?: (slideIndex: number) => void;
   /** Callback to start slideshow */
   readonly onStartSlideshow?: (slideIndex: number) => void;
-  /** Callback when exiting viewer */
-  readonly onExit?: () => void;
   /** Custom header content */
   readonly header?: ReactNode;
-  /** Custom footer content */
-  readonly footer?: ReactNode;
+  /** Custom actions for right side of controls */
+  readonly customActions?: readonly ControlAction[];
   /** Additional CSS class */
   readonly className?: string;
   /** Additional inline styles */
@@ -56,7 +56,6 @@ export type PresentationViewerProps = {
 // Layout constants
 // =============================================================================
 
-/** Sidebar width (180px) */
 const SIDEBAR_WIDTH = 180;
 
 // =============================================================================
@@ -87,6 +86,12 @@ const sidebarStyle: CSSProperties = {
   transition: "width 0.2s ease",
 };
 
+const sidebarCollapsedStyle: CSSProperties = {
+  ...sidebarStyle,
+  width: 0,
+  overflow: "hidden",
+};
+
 const sidebarHeaderStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
@@ -110,7 +115,8 @@ const sidebarCountStyle: CSSProperties = {
 
 const thumbnailListStyle: CSSProperties = {
   flex: 1,
-  overflow: "auto",
+  minHeight: 0,
+  overflow: "hidden",
 };
 
 const slideAreaStyle: CSSProperties = {
@@ -118,17 +124,8 @@ const slideAreaStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  position: "relative",
   backgroundColor: colorTokens.background.tertiary,
-  padding: spacingTokens.xl,
-};
-
-const slideWrapperStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  maxWidth: "100%",
-  maxHeight: "100%",
+  padding: spacingTokens.lg,
 };
 
 const slideContainerStyle: CSSProperties = {
@@ -136,32 +133,14 @@ const slideContainerStyle: CSSProperties = {
   boxShadow: shadowTokens.lg,
   borderRadius: radiusTokens.sm,
   overflow: "hidden",
-  maxWidth: "100%",
+  width: "100%",
+  height: "auto",
   maxHeight: "100%",
 };
 
 const slideContentStyle: CSSProperties = {
   width: "100%",
   height: "100%",
-};
-
-const defaultFooterStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  padding: `${spacingTokens.sm} ${spacingTokens.lg}`,
-  backgroundColor: colorTokens.background.secondary,
-  borderTop: `1px solid ${colorTokens.border.subtle}`,
-  fontSize: fontTokens.size.md,
-  color: colorTokens.text.tertiary,
-  flexShrink: 0,
-};
-
-const footerCenterStyle: CSSProperties = {
-  flex: 1,
-  display: "flex",
-  justifyContent: "center",
-  padding: `0 ${spacingTokens.lg}`,
 };
 
 const thumbnailPreviewStyle: CSSProperties = {
@@ -182,8 +161,7 @@ const thumbnailPreviewStyle: CSSProperties = {
  *   slideSize={presentation.size}
  *   getSlideContent={(index) => renderSlideToSvg(pres.getSlide(index)).svg}
  *   showThumbnails
- *   showControls
- *   showProgress
+ *   enableSlideshow
  *   onStartSlideshow={(index) => navigate(`/slideshow/${index}`)}
  * />
  * ```
@@ -195,19 +173,18 @@ export function PresentationViewer({
   getThumbnailContent,
   initialSlide = 1,
   showThumbnails = true,
-  thumbnailPosition = "left",
-  showControls = true,
-  showProgress = true,
-  showKeyboardHints = true,
+  enableSlideshow = true,
+  enableFullscreen = true,
   urlSync = false,
   onSlideChange,
   onStartSlideshow,
-  onExit,
   header,
-  footer,
+  customActions = [],
   className,
   style,
 }: PresentationViewerProps) {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(showThumbnails);
+
   const nav = useSlideNavigation({
     totalSlides: slideCount,
     initialSlide,
@@ -221,10 +198,10 @@ export function PresentationViewer({
       goToPrev: nav.goToPrev,
       goToFirst: nav.goToFirst,
       goToLast: nav.goToLast,
-      onStartSlideshow: () => onStartSlideshow?.(nav.currentSlide),
-      onExit: () => onExit?.(),
+      onStartSlideshow: () => enableSlideshow && onStartSlideshow?.(nav.currentSlide),
+      onExit: () => {},
     }),
-    [nav, onStartSlideshow, onExit],
+    [nav, enableSlideshow, onStartSlideshow],
   );
   useViewerKeyboard(keyboardActions);
 
@@ -267,92 +244,113 @@ export function PresentationViewer({
     [getSlideContent, getThumbnailContent, slideSize],
   );
 
-  const shouldShowThumbnails = showThumbnails;
-  const activeSlideId = `slide-${nav.currentSlide}`;
+  const handleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => undefined);
+    } else {
+      document.exitFullscreen().catch(() => undefined);
+    }
+  }, []);
 
-  const defaultKeyboardHints = useMemo(
-    () => [
-      { keys: ["\u2190", "\u2192"], label: "Navigate" },
-      ...(onStartSlideshow ? [{ keys: ["F"], label: "Present" }] : []),
-    ],
-    [onStartSlideshow],
-  );
+  // Build control actions
+  const leftActions = useMemo((): ControlAction[] => {
+    const actions: ControlAction[] = [];
+
+    if (showThumbnails) {
+      actions.push({
+        key: "sidebar",
+        icon: <SidebarIcon size={18} />,
+        onClick: () => setIsSidebarOpen((prev) => !prev),
+        label: "Toggle sidebar",
+        active: isSidebarOpen,
+      });
+    }
+
+    if (enableSlideshow && onStartSlideshow) {
+      actions.push({
+        key: "present",
+        icon: <PlayIcon size={16} />,
+        onClick: () => onStartSlideshow(nav.currentSlide),
+        label: "Present",
+        primary: true,
+      });
+    }
+
+    return actions;
+  }, [showThumbnails, isSidebarOpen, enableSlideshow, onStartSlideshow, nav.currentSlide]);
+
+  const rightActions = useMemo((): ControlAction[] => {
+    const actions: ControlAction[] = [];
+
+    actions.push(...customActions);
+
+    if (enableFullscreen) {
+      actions.push({
+        key: "fullscreen",
+        icon: <EnterFullscreenIcon size={18} />,
+        onClick: handleFullscreen,
+        label: "Fullscreen",
+      });
+    }
+
+    return actions;
+  }, [customActions, enableFullscreen, handleFullscreen]);
+
+  const activeSlideId = `slide-${nav.currentSlide}`;
 
   return (
     <div style={{ ...containerStyle, ...style }} className={className}>
       {header}
 
       <div style={mainStyle}>
-        {shouldShowThumbnails && thumbnailPosition === "left" && (
-          <aside style={sidebarStyle}>
-            <div style={sidebarHeaderStyle}>
-              <span style={sidebarTitleStyle}>Slides</span>
-              <span style={sidebarCountStyle}>{slideCount}</span>
-            </div>
-            <div style={thumbnailListStyle}>
-              <SlideList
-                slides={slides}
-                slideWidth={slideSize.width}
-                slideHeight={slideSize.height}
-                orientation="vertical"
-                mode="readonly"
-                activeSlideId={activeSlideId}
-                renderThumbnail={renderThumbnail}
-                onSlideClick={handleSlideClick}
-              />
-            </div>
-          </aside>
-        )}
+        <aside style={isSidebarOpen ? sidebarStyle : sidebarCollapsedStyle}>
+          <div style={sidebarHeaderStyle}>
+            <span style={sidebarTitleStyle}>Slides</span>
+            <span style={sidebarCountStyle}>{slideCount}</span>
+          </div>
+          <div style={thumbnailListStyle}>
+            <SlideList
+              slides={slides}
+              slideWidth={slideSize.width}
+              slideHeight={slideSize.height}
+              orientation="vertical"
+              mode="readonly"
+              activeSlideId={activeSlideId}
+              renderThumbnail={renderThumbnail}
+              onSlideClick={handleSlideClick}
+            />
+          </div>
+        </aside>
 
         <main style={slideAreaStyle}>
-          {showControls && (
-            <NavigationControls
-              onPrev={nav.goToPrev}
-              onNext={nav.goToNext}
-              canGoPrev={!nav.isFirst}
-              canGoNext={!nav.isLast}
-              variant="overlay"
+          <div style={{ ...slideContainerStyle, aspectRatio: `${slideSize.width} / ${slideSize.height}` }}>
+            <SvgContentRenderer
+              svg={renderedContent}
+              width={slideSize.width}
+              height={slideSize.height}
+              mode="full"
+              style={slideContentStyle}
             />
-          )}
-
-          <div style={slideWrapperStyle}>
-            <div
-              style={{
-                ...slideContainerStyle,
-                aspectRatio: `${slideSize.width} / ${slideSize.height}`,
-              }}
-            >
-              <SvgContentRenderer
-                svg={renderedContent}
-                width={slideSize.width}
-                height={slideSize.height}
-                mode="full"
-                style={slideContentStyle}
-              />
-            </div>
           </div>
         </main>
       </div>
 
-      {footer ?? (
-        <footer style={defaultFooterStyle}>
-          <SlideIndicator current={nav.currentSlide} total={slideCount} variant="compact" />
-          {showProgress && (
-            <div style={footerCenterStyle}>
-              <ProgressBar
-                progress={nav.progress}
-                variant="dark"
-                interactive
-                onSeek={(progress) => {
-                  const targetSlide = Math.max(1, Math.ceil((progress / 100) * slideCount));
-                  nav.goToSlide(targetSlide);
-                }}
-              />
-            </div>
-          )}
-          {showKeyboardHints && <KeyboardHints hints={defaultKeyboardHints} variant="dark" />}
-        </footer>
-      )}
+      <ViewerControls
+        navigation={{
+          onPrev: nav.goToPrev,
+          onNext: nav.goToNext,
+          canGoPrev: !nav.isFirst,
+          canGoNext: !nav.isLast,
+        }}
+        position={{
+          current: nav.currentSlide,
+          total: slideCount,
+          progress: nav.progress,
+          onSeek: (targetSlide) => nav.goToSlide(targetSlide),
+        }}
+        leftActions={leftActions}
+        rightActions={rightActions}
+      />
     </div>
   );
 }

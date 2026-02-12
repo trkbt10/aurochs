@@ -51,6 +51,7 @@ export {
   KeyboardHints,
   NavigationControls,
   SlidePreview,
+  ViewerControls,
   type SlideIndicatorProps,
   type SlideIndicatorVariant,
   type ProgressBarProps,
@@ -61,6 +62,10 @@ export {
   type NavigationControlsProps,
   type NavigationControlsVariant,
   type SlidePreviewProps,
+  type ViewerControlsProps,
+  type ControlAction,
+  type NavigationState,
+  type PositionState,
 } from "./components";
 
 // Composite Components

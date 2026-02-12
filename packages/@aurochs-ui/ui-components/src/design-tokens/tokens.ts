@@ -123,6 +123,8 @@ export const radiusTokens = {
   md: "6px",
   /** Large radius (modals, popovers) */
   lg: "8px",
+  /** Full radius (circular/pill) */
+  full: "9999px",
 } as const;
 
 /**

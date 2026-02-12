@@ -2,14 +2,19 @@
  * @file EmbeddableSlide
  *
  * Lightweight embeddable slide component for iframe embedding.
+ *
+ * Design principles:
+ * - Content first: Slide is always fully visible
+ * - Controls outside content: Control bar below slide
+ * - Minimal by default: Clean appearance without UI clutter
  */
 
-import { useCallback, useEffect, useRef, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, type CSSProperties } from "react";
 import type { SlideSize } from "@aurochs-office/pptx/domain";
 import { SvgContentRenderer } from "@aurochs-renderer/pptx/react";
-import { useSlideNavigation } from "./hooks";
-import { SlideIndicator, ProgressBar, NavigationControls } from "./components";
-import { spacingTokens, radiusTokens, iconTokens, colorTokens } from "@aurochs-ui/ui-components/design-tokens";
+import { useSlideNavigation, useViewerKeyboard } from "./hooks";
+import { ViewerControls } from "./components";
+import { radiusTokens, colorTokens } from "@aurochs-ui/ui-components/design-tokens";
 
 export type EmbeddableSlideProps = {
   /** Total number of slides */
@@ -18,17 +23,13 @@ export type EmbeddableSlideProps = {
   readonly slideSize: SlideSize;
   /** Function to get slide SVG content by index (1-based) */
   readonly getSlideContent: (slideIndex: number) => string;
-  /** Initial slide to display (1-based, default: 1) */
+  /** Initial slide to display (1-based) */
   readonly initialSlide?: number;
-  /** Show navigation arrows */
-  readonly showNavigation?: boolean;
-  /** Show slide indicator (current/total) */
-  readonly showIndicator?: boolean;
-  /** Show progress bar */
-  readonly showProgress?: boolean;
+  /** Show controls bar */
+  readonly showControls?: boolean;
   /** Enable auto-play slideshow */
   readonly autoPlay?: boolean;
-  /** Auto-play interval in milliseconds (default: 5000) */
+  /** Auto-play interval in milliseconds */
   readonly autoPlayInterval?: number;
   /** Pause auto-play on hover */
   readonly pauseOnHover?: boolean;
@@ -51,10 +52,9 @@ export type EmbeddableSlideProps = {
 // =============================================================================
 
 const containerStyle: CSSProperties = {
-  position: "relative",
   display: "flex",
   flexDirection: "column",
-  backgroundColor: colorTokens.text.primary,
+  backgroundColor: colorTokens.background.tertiary,
   borderRadius: radiusTokens.lg,
   overflow: "hidden",
 };
@@ -65,87 +65,23 @@ const slideAreaStyle: CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  backgroundColor: colorTokens.overlay.darkBg,
+  minHeight: 0,
 };
 
 const slideContainerStyle: CSSProperties = {
   width: "100%",
   height: "100%",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-};
-
-const slideContentStyle: CSSProperties = {
-  maxWidth: "100%",
-  maxHeight: "100%",
-  objectFit: "contain",
-};
-
-const controlsOverlayStyle: CSSProperties = {
-  position: "absolute",
-  inset: 0,
-  display: "flex",
-  flexDirection: "column",
-  justifyContent: "space-between",
-  pointerEvents: "none",
-  opacity: 0,
-  transition: "opacity 0.2s ease",
-};
-
-const controlsVisibleStyle: CSSProperties = {
-  ...controlsOverlayStyle,
-  opacity: 1,
-};
-
-const topControlsStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "flex-end",
-  padding: `${spacingTokens.sm} ${spacingTokens.md}`,
-  background: `linear-gradient(to bottom, ${colorTokens.overlay.darkBgOverlay}, transparent)`,
-  pointerEvents: "auto",
-};
-
-const bottomControlsStyle: CSSProperties = {
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  padding: `${spacingTokens.sm} ${spacingTokens.md}`,
-  background: `linear-gradient(to top, ${colorTokens.overlay.darkBgOverlay}, transparent)`,
-  pointerEvents: "auto",
-};
-
-const progressContainerStyle: CSSProperties = {
-  flex: 1,
-  margin: `0 ${spacingTokens.md}`,
 };
 
 /**
- * Lightweight embeddable slide viewer for iframe embedding.
- *
- * @example
- * ```tsx
- * <EmbeddableSlide
- *   slideCount={10}
- *   slideSize={{ width: 960, height: 540 }}
- *   getSlideContent={(index) => slides[index].svg}
- *   showNavigation
- *   showIndicator
- *   autoPlay
- *   autoPlayInterval={5000}
- *   loop
- * />
- * ```
+ * Lightweight embeddable slide viewer.
  */
 export function EmbeddableSlide({
   slideCount,
   slideSize,
   getSlideContent,
   initialSlide = 1,
-  showNavigation = true,
-  showIndicator = true,
-  showProgress = true,
+  showControls = true,
   autoPlay = false,
   autoPlayInterval = 5000,
   pauseOnHover = true,
@@ -166,18 +102,28 @@ export function EmbeddableSlide({
     onSlideChange,
   });
 
-  // Auto-play functionality
+  const keyboardActions = useMemo(
+    () => ({
+      goToNext: nav.goToNext,
+      goToPrev: nav.goToPrev,
+      goToFirst: nav.goToFirst,
+      goToLast: nav.goToLast,
+      onStartSlideshow: () => {},
+      onExit: () => {},
+    }),
+    [nav],
+  );
+  useViewerKeyboard(keyboardActions);
+
   useEffect(() => {
     if (!autoPlay) {
       return;
     }
-
     const intervalId = setInterval(() => {
       if (!isPausedRef.current) {
         nav.goToNext();
       }
     }, autoPlayInterval);
-
     return () => clearInterval(intervalId);
   }, [autoPlay, autoPlayInterval, nav]);
 
@@ -197,7 +143,6 @@ export function EmbeddableSlide({
 
   const computedStyle: CSSProperties = {
     ...containerStyle,
-    aspectRatio: `${slideSize.width} / ${slideSize.height}`,
     maxWidth: maxWidth ?? "100%",
     maxHeight: maxHeight ?? "100%",
     ...style,
@@ -208,54 +153,32 @@ export function EmbeddableSlide({
       ref={containerRef}
       style={computedStyle}
       className={className}
+      tabIndex={0}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
       <div style={slideAreaStyle}>
-        <div style={slideContainerStyle}>
-          <SvgContentRenderer
-            svg={svg}
-            width={slideSize.width}
-            height={slideSize.height}
-            mode="full"
-            style={slideContentStyle}
-          />
-        </div>
-
-        <div style={controlsVisibleStyle}>
-          {showIndicator && (
-            <div style={topControlsStyle}>
-              <SlideIndicator current={nav.currentSlide} total={slideCount} variant="light" />
-            </div>
-          )}
-
-          <div style={bottomControlsStyle}>
-            {showNavigation && (
-              <NavigationControls
-                onPrev={nav.goToPrev}
-                onNext={nav.goToNext}
-                canGoPrev={!nav.isFirst || loop}
-                canGoNext={!nav.isLast || loop}
-                variant="minimal"
-                iconSize={iconTokens.size.xl}
-              />
-            )}
-            {showProgress && (
-              <div style={progressContainerStyle}>
-                <ProgressBar
-                  progress={nav.progress}
-                  variant="light"
-                  interactive
-                  onSeek={(progress) => {
-                    const targetSlide = Math.max(1, Math.ceil((progress / 100) * slideCount));
-                    nav.goToSlide(targetSlide);
-                  }}
-                />
-              </div>
-            )}
-          </div>
+        <div style={{ ...slideContainerStyle, aspectRatio: `${slideSize.width} / ${slideSize.height}` }}>
+          <SvgContentRenderer svg={svg} width={slideSize.width} height={slideSize.height} mode="full" />
         </div>
       </div>
+
+      {showControls && (
+        <ViewerControls
+          navigation={{
+            onPrev: nav.goToPrev,
+            onNext: nav.goToNext,
+            canGoPrev: loop || !nav.isFirst,
+            canGoNext: loop || !nav.isLast,
+          }}
+          position={{
+            current: nav.currentSlide,
+            total: slideCount,
+            progress: nav.progress,
+            onSeek: (targetSlide) => nav.goToSlide(targetSlide),
+          }}
+        />
+      )}
     </div>
   );
 }
