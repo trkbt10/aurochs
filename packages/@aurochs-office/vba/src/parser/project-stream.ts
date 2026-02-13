@@ -8,7 +8,27 @@
  */
 
 import type { VbaProjectInfo } from "../types";
-import { VbaParseError } from "../errors";
+import type { VbaParseError as _VbaParseError } from "../errors";
+
+/**
+ * Remove surrounding quotes from a string if present.
+ */
+function unquote(str: string): string {
+  if (str.startsWith('"') && str.endsWith('"')) {
+    return str.slice(1, -1);
+  }
+  return str;
+}
+
+/**
+ * Parse an optional quoted field, returning null for empty values.
+ */
+function parseOptionalQuotedField(value: string | undefined): string | null {
+  if (value === undefined || value === '""' || value === "") {
+    return null;
+  }
+  return unquote(value);
+}
 
 /**
  * Parse PROJECT stream bytes into VbaProjectInfo.
@@ -39,30 +59,17 @@ export function parseProjectStream(bytes: Uint8Array): VbaProjectInfo {
 
   // Extract project name
   // Name field may be quoted: Name="MyProject" or Name=MyProject
-  let name = pairs.get("Name") ?? "";
-  if (name.startsWith('"') && name.endsWith('"')) {
-    name = name.slice(1, -1);
-  }
+  const name = unquote(pairs.get("Name") ?? "");
 
   // Extract help file
-  let helpFile = pairs.get("HelpFile") ?? null;
-  if (helpFile === '""' || helpFile === "") {
-    helpFile = null;
-  } else if (helpFile?.startsWith('"') && helpFile.endsWith('"')) {
-    helpFile = helpFile.slice(1, -1);
-  }
+  const helpFile = parseOptionalQuotedField(pairs.get("HelpFile"));
 
   // Extract help context
   const helpContextStr = pairs.get("HelpContext") ?? "0";
   const helpContext = parseInt(helpContextStr, 10) || 0;
 
   // Extract conditional compilation constants
-  let constants = pairs.get("Constants") ?? null;
-  if (constants === '""' || constants === "") {
-    constants = null;
-  } else if (constants?.startsWith('"') && constants.endsWith('"')) {
-    constants = constants.slice(1, -1);
-  }
+  const constants = parseOptionalQuotedField(pairs.get("Constants"));
 
   // Version is not directly in PROJECT stream text
   // It's in the VBA/_VBA_PROJECT stream binary header
@@ -116,7 +123,7 @@ function parseKeyValuePairs(text: string): KeyValuePairs {
   return {
     get(key: string): string | undefined {
       for (const [k, v] of allPairs) {
-        if (k === key) return v;
+        if (k === key) {return v;}
       }
       return undefined;
     },

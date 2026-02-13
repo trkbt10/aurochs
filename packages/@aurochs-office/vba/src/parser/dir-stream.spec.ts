@@ -2,14 +2,13 @@
  * @file dir stream parser tests
  */
 
-import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { loadZipPackage } from "@aurochs/zip";
 import { openCfb } from "@aurochs-office/cfb";
 import { decompressVba } from "./compression";
 import { parseDirStream } from "./dir-stream";
 
-const XLSM_FIXTURE = "fixtures/poi-test-data/test-data/spreadsheet/SimpleMacro.xlsm";
+const XLSM_FIXTURE = "packages/@aurochs-office/vba/fixtures/SimpleMacro.xlsm";
 
 async function loadVbaProject(fixturePath: string, vbaPath: string): Promise<Uint8Array> {
   const bytes = readFileSync(fixturePath);

@@ -30,16 +30,16 @@ export function decompressVba(compressedBytes: Uint8Array): Uint8Array {
   }
 
   const result: number[] = [];
-  let srcIndex = 1; // Skip signature byte
+  const src = { index: 1 }; // Skip signature byte
 
-  while (srcIndex < compressedBytes.length) {
+  while (src.index < compressedBytes.length) {
     // Read chunk header (2 bytes, little-endian)
-    if (srcIndex + 2 > compressedBytes.length) {
+    if (src.index + 2 > compressedBytes.length) {
       break; // Incomplete chunk header
     }
 
-    const chunkHeader = compressedBytes[srcIndex] | (compressedBytes[srcIndex + 1] << 8);
-    srcIndex += 2;
+    const chunkHeader = compressedBytes[src.index] | (compressedBytes[src.index + 1] << 8);
+    src.index += 2;
 
     // Chunk header format:
     // Bits 0-11: Chunk size - 3 (actual size = value + 3)
@@ -53,7 +53,7 @@ export function decompressVba(compressedBytes: Uint8Array): Uint8Array {
       throw new VbaParseError(`Invalid chunk signature: ${chunkSignature}`, "compression");
     }
 
-    const chunkEnd = srcIndex + chunkSize - 2; // -2 for header already read
+    const chunkEnd = src.index + chunkSize - 2; // -2 for header already read
     if (chunkEnd > compressedBytes.length) {
       // Handle truncated chunk gracefully
       break;
@@ -61,30 +61,30 @@ export function decompressVba(compressedBytes: Uint8Array): Uint8Array {
 
     if (isCompressed === 0) {
       // Raw chunk: copy bytes directly
-      while (srcIndex < chunkEnd) {
-        result.push(compressedBytes[srcIndex++]);
+      while (src.index < chunkEnd) {
+        result.push(compressedBytes[src.index++]);
       }
     } else {
       // Compressed chunk: process tokens
       const chunkStart = result.length;
 
-      while (srcIndex < chunkEnd) {
+      while (src.index < chunkEnd) {
         // Read flag byte
-        if (srcIndex >= chunkEnd) break;
-        const flagByte = compressedBytes[srcIndex++];
+        if (src.index >= chunkEnd) {break;}
+        const flagByte = compressedBytes[src.index++];
 
         // Process 8 tokens (one per bit)
-        for (let bitIndex = 0; bitIndex < 8 && srcIndex < chunkEnd; bitIndex++) {
+        for (let bitIndex = 0; bitIndex < 8 && src.index < chunkEnd; bitIndex++) {
           const isToken = (flagByte >> bitIndex) & 0x01;
 
           if (isToken === 0) {
             // Literal byte
-            result.push(compressedBytes[srcIndex++]);
+            result.push(compressedBytes[src.index++]);
           } else {
             // Copy token (2 bytes, little-endian)
-            if (srcIndex + 2 > chunkEnd) break;
-            const copyToken = compressedBytes[srcIndex] | (compressedBytes[srcIndex + 1] << 8);
-            srcIndex += 2;
+            if (src.index + 2 > chunkEnd) {break;}
+            const copyToken = compressedBytes[src.index] | (compressedBytes[src.index + 1] << 8);
+            src.index += 2;
 
             // Decode copy token
             // The number of bits for offset depends on current decompressed position within chunk
@@ -130,13 +130,13 @@ function computeCopyTokenBitCount(position: number): number {
   // position 33-64: 10 bits for length
   // ... and so on
 
-  if (position <= 16) return 12;
-  if (position <= 32) return 11;
-  if (position <= 64) return 10;
-  if (position <= 128) return 9;
-  if (position <= 256) return 8;
-  if (position <= 512) return 7;
-  if (position <= 1024) return 6;
-  if (position <= 2048) return 5;
+  if (position <= 16) {return 12;}
+  if (position <= 32) {return 11;}
+  if (position <= 64) {return 10;}
+  if (position <= 128) {return 9;}
+  if (position <= 256) {return 8;}
+  if (position <= 512) {return 7;}
+  if (position <= 1024) {return 6;}
+  if (position <= 2048) {return 5;}
   return 4;
 }

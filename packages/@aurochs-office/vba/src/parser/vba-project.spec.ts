@@ -2,14 +2,14 @@
  * @file VBA Project parser tests
  */
 
-import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { loadZipPackage } from "@aurochs/zip";
 import { parseVbaProject } from "./vba-project";
 
-const XLSM_FIXTURE = "fixtures/poi-test-data/test-data/spreadsheet/SimpleMacro.xlsm";
-const DOCM_FIXTURE = "fixtures/poi-test-data/test-data/document/SimpleMacro.docm";
-const PPTM_FIXTURE = "fixtures/poi-test-data/test-data/slideshow/SimpleMacro.pptm";
+const FIXTURE_DIR = "packages/@aurochs-office/vba/fixtures";
+const XLSM_FIXTURE = `${FIXTURE_DIR}/SimpleMacro.xlsm`;
+const DOCM_FIXTURE = `${FIXTURE_DIR}/SimpleMacro.docm`;
+const PPTM_FIXTURE = `${FIXTURE_DIR}/SimpleMacro.pptm`;
 
 async function loadVbaProject(fixturePath: string, vbaPath: string): Promise<Uint8Array> {
   const bytes = readFileSync(fixturePath);

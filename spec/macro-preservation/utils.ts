@@ -242,15 +242,14 @@ export function verifyMacroPreservation(
 
   // Additional parts
   const partCounts: Record<string, { original: number; exported: number }> = {};
-  let additionalPartsPreserved = true;
   for (const prefix of config.additionalPartPrefixes) {
     const originalCount = countPartsWithPrefix(original, prefix);
     const exportedCount = countPartsWithPrefix(exported, prefix);
     partCounts[prefix] = { original: originalCount, exported: exportedCount };
-    if (originalCount !== exportedCount) {
-      additionalPartsPreserved = false;
-    }
   }
+  const additionalPartsPreserved = Object.values(partCounts).every(
+    (counts) => counts.original === counts.exported
+  );
 
   return {
     mainContentTypePreserved,

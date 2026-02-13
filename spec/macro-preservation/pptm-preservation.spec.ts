@@ -4,7 +4,6 @@
  * @see docs/plans/macro-runtime/04-test-cases.md
  */
 
-import { describe, it, expect } from "vitest";
 import { join } from "node:path";
 import {
   loadFixture,
@@ -21,7 +20,7 @@ import {
   detectMacroFormat,
 } from "@aurochs-office/opc";
 
-const FIXTURE_DIR = "fixtures/poi-test-data/test-data/slideshow";
+const FIXTURE_DIR = "spec/macro-preservation/fixtures/slideshow";
 
 describe("pptm macro preservation", () => {
   describe("SimpleMacro.pptm - basic VBA macro file", () => {

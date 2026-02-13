@@ -7,22 +7,17 @@
  * @see docs/plans/macro-runtime/04-test-cases.md
  */
 
-import { describe, it, expect } from "vitest";
 import { join } from "node:path";
 import {
   loadFixture,
   extractContentTypes,
-  extractRelationships,
-  findRelationshipByType,
-  PPTM_CONFIG,
 } from "./utils";
 import {
   MACRO_ENABLED_CONTENT_TYPES,
-  VBA_PROJECT_RELATIONSHIP_TYPE,
   detectMacroFormat,
 } from "@aurochs-office/opc";
 
-const FIXTURE_DIR = "fixtures/poi-test-data/test-data/slideshow";
+const FIXTURE_DIR = "spec/macro-preservation/fixtures/slideshow";
 
 describe("ppsm macro preservation", () => {
   describe("testPPT.ppsm - macroEnabled slideshow", () => {

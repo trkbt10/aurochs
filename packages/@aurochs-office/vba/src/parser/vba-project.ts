@@ -29,7 +29,7 @@ function findCompressedDataCandidates(bytes: Uint8Array): number[] {
   const candidates: number[] = [];
 
   for (let i = 0; i < bytes.length - 3; i++) {
-    if (bytes[i] !== 0x01) continue;
+    if (bytes[i] !== 0x01) {continue;}
 
     // Check chunk header
     const chunkHeader = bytes[i + 1] | (bytes[i + 2] << 8);
@@ -50,9 +50,60 @@ function findCompressedDataCandidates(bytes: Uint8Array): number[] {
 function tryDecompress(bytes: Uint8Array): Uint8Array | null {
   try {
     return decompressVba(bytes);
-  } catch {
+  } catch (err: unknown) {
+    // Decompression failed - this is expected for invalid data positions
+    // Check if it's an expected decompression error vs a programming error
+    if (err instanceof Error && err.message.includes("VBA")) {
+      return null;
+    }
+    // For any error during decompression, return null (expected behavior)
     return null;
   }
+}
+
+/**
+ * Refine module type based on source code content.
+ * Class modules have VB_Creatable/VB_Exposed attributes (regardless of value).
+ */
+function refineModuleType(type: VbaModuleType, sourceCode: string): VbaModuleType {
+  if (type === "standard" && (sourceCode.includes("VB_Creatable") || sourceCode.includes("VB_Exposed"))) {
+    return "class";
+  }
+  return type;
+}
+
+/**
+ * Infer module type from module name and source code content.
+ */
+function inferModuleType(moduleName: string, sourceCode: string): VbaModuleType {
+  if (moduleName.startsWith("Sheet") || moduleName === "ThisWorkbook" || moduleName === "ThisDocument") {
+    return "document";
+  }
+  if (sourceCode.includes("VB_Creatable") || sourceCode.includes("VB_Exposed")) {
+    return "class";
+  }
+  return "standard";
+}
+
+/**
+ * Try to decompress from multiple candidate positions.
+ * Returns the first successful decompression result, or null if all fail.
+ */
+function tryDecompressCandidates(
+  moduleBytes: Uint8Array,
+  candidates: number[]
+): { data: Uint8Array; offset: number } | null {
+  // Try each candidate, starting from the last (most likely to be actual compressed data)
+  // because Performance Cache comes before compressed container
+  for (const idx of Array.from({ length: candidates.length }, (_, i) => candidates.length - 1 - i)) {
+    const candidateStart = candidates[idx];
+    const compressedData = moduleBytes.subarray(candidateStart);
+    const decompressed = tryDecompress(compressedData);
+    if (decompressed !== null) {
+      return { data: decompressed, offset: candidateStart };
+    }
+  }
+  return null;
 }
 
 // =============================================================================
@@ -192,12 +243,7 @@ function parseModules(cfb: CfbFile, moduleInfos: readonly DirModuleInfo[], stric
         // Refine module type: MODULETYPEPROCEDURAL can be either "standard" or "class"
         // Class modules have VB_Creatable/VB_Exposed attributes (regardless of value)
         // Standard modules don't have these attributes at all
-        let moduleType = info.type;
-        if (moduleType === "standard") {
-          if (sourceCode.includes("VB_Creatable") || sourceCode.includes("VB_Exposed")) {
-            moduleType = "class";
-          }
-        }
+        const moduleType = refineModuleType(info.type, sourceCode);
 
         modules.push({
           name: info.name,
@@ -222,47 +268,29 @@ function parseModules(cfb: CfbFile, moduleInfos: readonly DirModuleInfo[], stric
   const excludedStreams = new Set(["dir", "_VBA_PROJECT", "__SRP_0", "__SRP_1", "__SRP_2", "__SRP_3"]);
 
   for (const entry of vbaEntries) {
-    if (entry.type !== "stream") continue;
-    if (excludedStreams.has(entry.name)) continue;
-    if (entry.name.startsWith("__SRP_")) continue;
+    if (entry.type !== "stream") {continue;}
+    if (excludedStreams.has(entry.name)) {continue;}
+    if (entry.name.startsWith("__SRP_")) {continue;}
 
     try {
       const moduleBytes = cfb.readStream(["VBA", entry.name]);
-      if (moduleBytes.length === 0) continue;
+      if (moduleBytes.length === 0) {continue;}
 
       // Find all potential compressed data starts
       const candidates = findCompressedDataCandidates(moduleBytes);
-      if (candidates.length === 0) continue;
+      if (candidates.length === 0) {continue;}
 
       // Try each candidate, starting from the last (most likely to be actual compressed data)
       // because Performance Cache comes before compressed container
-      let decompressed: Uint8Array | null = null;
-      let compressedStart = -1;
+      const decompressResult = tryDecompressCandidates(moduleBytes, candidates);
 
-      for (let i = candidates.length - 1; i >= 0; i--) {
-        const candidateStart = candidates[i];
-        const compressedData = moduleBytes.subarray(candidateStart);
-        decompressed = tryDecompress(compressedData);
-        if (decompressed !== null) {
-          compressedStart = candidateStart;
-          break;
-        }
-      }
-
-      if (decompressed === null) continue;
+      if (decompressResult === null) {continue;}
 
       // VBA source starts directly (no additional offset needed after decompression)
-      const sourceCode = new TextDecoder("utf-8").decode(decompressed);
+      const sourceCode = new TextDecoder("utf-8").decode(decompressResult.data);
 
       // Determine module type from name or content
-      // Class modules have VB_Creatable/VB_Exposed attributes (regardless of value)
-      // Standard modules don't have these attributes at all
-      let moduleType: VbaModuleType = "standard";
-      if (entry.name.startsWith("Sheet") || entry.name === "ThisWorkbook" || entry.name === "ThisDocument") {
-        moduleType = "document";
-      } else if (sourceCode.includes("VB_Creatable") || sourceCode.includes("VB_Exposed")) {
-        moduleType = "class";
-      }
+      const moduleType = inferModuleType(entry.name, sourceCode);
 
       // Extract procedures from source code
       const procedures = parseProcedures(sourceCode);
@@ -271,7 +299,7 @@ function parseModules(cfb: CfbFile, moduleInfos: readonly DirModuleInfo[], stric
         name: entry.name,
         type: moduleType,
         sourceCode,
-        streamOffset: compressedStart,
+        streamOffset: decompressResult.offset,
         procedures,
       });
     } catch (err) {

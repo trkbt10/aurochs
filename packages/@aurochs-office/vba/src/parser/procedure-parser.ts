@@ -24,8 +24,7 @@ export function parseProcedures(sourceCode: string): VbaProcedure[] {
   const procRegex =
     /^[ \t]*(Public\s+|Private\s+)?(Sub|Function|Property\s+Get|Property\s+Let|Property\s+Set)\s+([A-Za-z_][A-Za-z0-9_]*)\s*(\([^)]*\))?(?:\s+As\s+([A-Za-z_][A-Za-z0-9_]*))?/gim;
 
-  let match: RegExpExecArray | null;
-  while ((match = procRegex.exec(sourceCode)) !== null) {
+  for (const match of sourceCode.matchAll(procRegex)) {
     const [, visibilityMatch, typeMatch, name, paramsMatch, returnTypeMatch] = match;
 
     const visibility = visibilityMatch?.trim().toLowerCase() === "private" ? "private" : "public";
@@ -74,7 +73,7 @@ function parseProcedureType(keyword: string): VbaProcedureType {
 function parseParameters(paramsStr: string): VbaParameter[] {
   // Remove parentheses
   const inner = paramsStr.slice(1, -1).trim();
-  if (!inner) return [];
+  if (!inner) {return [];}
 
   const params: VbaParameter[] = [];
 
@@ -97,50 +96,52 @@ function parseParameters(paramsStr: string): VbaParameter[] {
  * Format: [Optional] [ByVal|ByRef] [ParamArray] name [As type] [= default]
  */
 function parseParameter(paramStr: string): VbaParameter | null {
-  if (!paramStr) return null;
+  if (!paramStr) {return null;}
 
-  let str = paramStr;
-  let isOptional = false;
-  let passingMode: "byVal" | "byRef" = "byRef";
-  let isParamArray = false;
+  const state = {
+    str: paramStr,
+    isOptional: false,
+    passingMode: "byRef" as "byVal" | "byRef",
+    isParamArray: false,
+  };
 
   // Check for Optional
-  if (/^optional\s+/i.test(str)) {
-    isOptional = true;
-    str = str.replace(/^optional\s+/i, "");
+  if (/^optional\s+/i.test(state.str)) {
+    state.isOptional = true;
+    state.str = state.str.replace(/^optional\s+/i, "");
   }
 
   // Check for ByVal/ByRef
-  if (/^byval\s+/i.test(str)) {
-    passingMode = "byVal";
-    str = str.replace(/^byval\s+/i, "");
-  } else if (/^byref\s+/i.test(str)) {
-    passingMode = "byRef";
-    str = str.replace(/^byref\s+/i, "");
+  if (/^byval\s+/i.test(state.str)) {
+    state.passingMode = "byVal";
+    state.str = state.str.replace(/^byval\s+/i, "");
+  } else if (/^byref\s+/i.test(state.str)) {
+    state.passingMode = "byRef";
+    state.str = state.str.replace(/^byref\s+/i, "");
   }
 
   // Check for ParamArray
-  if (/^paramarray\s+/i.test(str)) {
-    isParamArray = true;
-    str = str.replace(/^paramarray\s+/i, "");
+  if (/^paramarray\s+/i.test(state.str)) {
+    state.isParamArray = true;
+    state.str = state.str.replace(/^paramarray\s+/i, "");
   }
 
   // Parse name, type, and default value
   // Format: name [As type] [= default]
-  const paramMatch = str.match(/^([A-Za-z_][A-Za-z0-9_]*)(?:\s+As\s+([A-Za-z_][A-Za-z0-9_]*))?(?:\s*=\s*(.+))?$/i);
+  const paramMatch = state.str.match(/^([A-Za-z_][A-Za-z0-9_]*)(?:\s+As\s+([A-Za-z_][A-Za-z0-9_]*))?(?:\s*=\s*(.+))?$/i);
 
   if (!paramMatch) {
     // Just a name without type
-    const nameMatch = str.match(/^([A-Za-z_][A-Za-z0-9_]*)/);
-    if (!nameMatch) return null;
+    const nameMatch = state.str.match(/^([A-Za-z_][A-Za-z0-9_]*)/);
+    if (!nameMatch) {return null;}
 
     return {
       name: nameMatch[1],
       type: null,
-      passingMode,
-      isOptional,
+      passingMode: state.passingMode,
+      isOptional: state.isOptional,
       defaultValue: null,
-      isParamArray,
+      isParamArray: state.isParamArray,
     };
   }
 
@@ -149,10 +150,10 @@ function parseParameter(paramStr: string): VbaParameter | null {
   return {
     name,
     type: typeStr ? parseTypeName(typeStr) : null,
-    passingMode,
-    isOptional,
+    passingMode: state.passingMode,
+    isOptional: state.isOptional,
     defaultValue: defaultValue?.trim() || null,
-    isParamArray,
+    isParamArray: state.isParamArray,
   };
 }
 

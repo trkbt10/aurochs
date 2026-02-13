@@ -55,15 +55,15 @@ export type DirStreamInfo = {
 
 // PROJECTINFORMATION records
 const PROJECTSYSKIND = 0x0001;
-const PROJECTLCID = 0x0002;
-const PROJECTLCIDINVOKE = 0x0014;
-const PROJECTCODEPAGE = 0x0003;
-const PROJECTNAME = 0x0004;
-const PROJECTDOCSTRING = 0x0005;
-const PROJECTHELPFILEPATH = 0x0006;
-const PROJECTHELPCONTEXT = 0x0007;
-const PROJECTLIBFLAGS = 0x0008;
-const PROJECTVERSION = 0x0009;
+const _PROJECTLCID = 0x0002;
+const _PROJECTLCIDINVOKE = 0x0014;
+const _PROJECTCODEPAGE = 0x0003;
+const _PROJECTNAME = 0x0004;
+const _PROJECTDOCSTRING = 0x0005;
+const _PROJECTHELPFILEPATH = 0x0006;
+const _PROJECTHELPCONTEXT = 0x0007;
+const _PROJECTLIBFLAGS = 0x0008;
+const _PROJECTVERSION = 0x0009;
 const PROJECTCONSTANTS = 0x000c;
 
 // REFERENCE records
@@ -75,7 +75,7 @@ const REFERENCEPROJECT = 0x000e;
 
 // MODULE records
 const PROJECTMODULES = 0x000f;
-const PROJECTCOOKIE = 0x0013;
+const _PROJECTCOOKIE = 0x0013;
 const MODULENAME = 0x0019;
 const MODULENAMEUNICODE = 0x0047;
 const MODULESTREAMNAME = 0x001a;
@@ -93,44 +93,55 @@ const MODULETERMINATOR = 0x002b;
 // Binary Reader Helper
 // =============================================================================
 
-class BinaryReader {
-  private view: DataView;
-  public offset: number;
+type BinaryReader = {
+  readonly offset: number;
+  readonly remaining: number;
+  readonly readUint16: () => number;
+  readonly readUint32: () => number;
+  readonly readBytes: (length: number) => Uint8Array;
+  readonly skip: (length: number) => void;
+  readonly peekUint16: () => number;
+};
 
-  constructor(bytes: Uint8Array, offset = 0) {
-    this.view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
-    this.offset = offset;
-  }
+function createBinaryReader(bytes: Uint8Array, initialOffset = 0): BinaryReader {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const state = { offset: initialOffset };
 
-  get remaining(): number {
-    return this.view.byteLength - this.offset;
-  }
+  return {
+    get offset(): number {
+      return state.offset;
+    },
 
-  readUint16(): number {
-    const value = this.view.getUint16(this.offset, true);
-    this.offset += 2;
-    return value;
-  }
+    get remaining(): number {
+      return view.byteLength - state.offset;
+    },
 
-  readUint32(): number {
-    const value = this.view.getUint32(this.offset, true);
-    this.offset += 4;
-    return value;
-  }
+    readUint16(): number {
+      const value = view.getUint16(state.offset, true);
+      state.offset += 2;
+      return value;
+    },
 
-  readBytes(length: number): Uint8Array {
-    const bytes = new Uint8Array(this.view.buffer, this.view.byteOffset + this.offset, length);
-    this.offset += length;
-    return bytes;
-  }
+    readUint32(): number {
+      const value = view.getUint32(state.offset, true);
+      state.offset += 4;
+      return value;
+    },
 
-  skip(length: number): void {
-    this.offset += length;
-  }
+    readBytes(length: number): Uint8Array {
+      const result = new Uint8Array(view.buffer, view.byteOffset + state.offset, length);
+      state.offset += length;
+      return result;
+    },
 
-  peekUint16(): number {
-    return this.view.getUint16(this.offset, true);
-  }
+    skip(length: number): void {
+      state.offset += length;
+    },
+
+    peekUint16(): number {
+      return view.getUint16(state.offset, true);
+    },
+  };
 }
 
 // =============================================================================
@@ -181,49 +192,48 @@ type ProjectInfo = {
 };
 
 function parseProjectInformation(reader: BinaryReader): ProjectInfo {
-  let projectName = "";
-  let codePage = 1252;
+  const result = { projectName: "", codePage: 1252 };
 
   // PROJECTSYSKIND
-  if (reader.remaining < 10) return { projectName, codePage };
+  if (reader.remaining < 10) {return result;}
   const sysKindId = reader.readUint16();
-  if (sysKindId !== PROJECTSYSKIND) return { projectName, codePage };
+  if (sysKindId !== PROJECTSYSKIND) {return result;}
   reader.skip(4); // Size (always 4)
   reader.skip(4); // SysKind value
 
   // PROJECTLCID
-  if (reader.remaining < 10) return { projectName, codePage };
+  if (reader.remaining < 10) {return result;}
   reader.skip(2); // Id
   reader.skip(4); // Size
   reader.skip(4); // Lcid value
 
   // PROJECTLCIDINVOKE
-  if (reader.remaining < 10) return { projectName, codePage };
+  if (reader.remaining < 10) {return result;}
   reader.skip(2); // Id
   reader.skip(4); // Size
   reader.skip(4); // LcidInvoke value
 
   // PROJECTCODEPAGE
-  if (reader.remaining < 8) return { projectName, codePage };
+  if (reader.remaining < 8) {return result;}
   reader.skip(2); // Id
   reader.skip(4); // Size (always 2)
-  codePage = reader.readUint16();
+  result.codePage = reader.readUint16();
 
   // PROJECTNAME
-  if (reader.remaining < 6) return { projectName, codePage };
+  if (reader.remaining < 6) {return result;}
   reader.skip(2); // Id
   const nameSize = reader.readUint32();
-  if (reader.remaining < nameSize) return { projectName, codePage };
+  if (reader.remaining < nameSize) {return result;}
   const nameData = reader.readBytes(nameSize);
-  projectName = decodeText(nameData, codePage);
+  result.projectName = decodeText(nameData, result.codePage);
 
   // PROJECTDOCSTRING (complex: MBCS + Unicode)
-  if (reader.remaining < 6) return { projectName, codePage };
+  if (reader.remaining < 6) {return result;}
   reader.skip(2); // Id (0x0005)
   skipMbcsUnicodeRecord(reader);
 
   // PROJECTHELPFILEPATH (complex: two paths)
-  if (reader.remaining < 6) return { projectName, codePage };
+  if (reader.remaining < 6) {return result;}
   reader.skip(2); // Id (0x0006)
   const helpPath1Size = reader.readUint32();
   reader.skip(helpPath1Size);
@@ -232,19 +242,19 @@ function parseProjectInformation(reader: BinaryReader): ProjectInfo {
   reader.skip(helpPath2Size);
 
   // PROJECTHELPCONTEXT
-  if (reader.remaining < 10) return { projectName, codePage };
+  if (reader.remaining < 10) {return result;}
   reader.skip(2); // Id
   reader.skip(4); // Size
   reader.skip(4); // HelpContext value
 
   // PROJECTLIBFLAGS
-  if (reader.remaining < 10) return { projectName, codePage };
+  if (reader.remaining < 10) {return result;}
   reader.skip(2); // Id
   reader.skip(4); // Size
   reader.skip(4); // ProjectLibFlags value
 
   // PROJECTVERSION
-  if (reader.remaining < 10) return { projectName, codePage };
+  if (reader.remaining < 10) {return result;}
   reader.skip(2); // Id
   const versionSize = reader.readUint32(); // Size (should be 4)
   reader.skip(versionSize); // VersionMajor (2) + VersionMinor (2)
@@ -273,7 +283,7 @@ function parseProjectInformation(reader: BinaryReader): ProjectInfo {
     reader.skip(1);
   }
 
-  return { projectName, codePage };
+  return result;
 }
 
 // =============================================================================
@@ -282,7 +292,7 @@ function parseProjectInformation(reader: BinaryReader): ProjectInfo {
 
 function parseProjectReferences(reader: BinaryReader, codePage: number): DirReferenceInfo[] {
   const references: DirReferenceInfo[] = [];
-  let currentName = "";
+  const state = { currentName: "" };
 
   // Parse all references until we hit PROJECTMODULES (0x000F)
   while (reader.remaining >= 2) {
@@ -298,7 +308,7 @@ function parseProjectReferences(reader: BinaryReader, codePage: number): DirRefe
     switch (id) {
       case REFERENCENAME: {
         // REFERENCENAME: SizeOfName (4) + Name (var) + Reserved (2) + SizeOfNameUnicode (4) + NameUnicode (var)
-        currentName = readMbcsUnicodeRecord(reader, codePage);
+        state.currentName = readMbcsUnicodeRecord(reader, codePage);
         break;
       }
 
@@ -320,7 +330,7 @@ function parseProjectReferences(reader: BinaryReader, codePage: number): DirRefe
         // Optional NameRecordExtended
         if (reader.remaining >= 2 && reader.peekUint16() === REFERENCENAME) {
           reader.skip(2);
-          currentName = readMbcsUnicodeRecord(reader, codePage);
+          state.currentName = readMbcsUnicodeRecord(reader, codePage);
         }
 
         // Reserved3 (4) + SizeOfLibidExtended (4) + LibidExtended
@@ -331,9 +341,9 @@ function parseProjectReferences(reader: BinaryReader, codePage: number): DirRefe
 
         reader.skip(4 + 4 + 16 + 4); // Reserved4 + Reserved5 + OriginalTypeLib + Cookie
 
-        if (currentName) {
-          references.push({ name: currentName, libId, type: "control" });
-          currentName = "";
+        if (state.currentName) {
+          references.push({ name: state.currentName, libId, type: "control" });
+          state.currentName = "";
         }
         break;
       }
@@ -354,9 +364,9 @@ function parseProjectReferences(reader: BinaryReader, codePage: number): DirRefe
           reader.skip(totalSize - consumed);
         }
 
-        if (currentName) {
-          references.push({ name: currentName, libId, type: "registered" });
-          currentName = "";
+        if (state.currentName) {
+          references.push({ name: state.currentName, libId, type: "registered" });
+          state.currentName = "";
         }
         break;
       }
@@ -377,9 +387,9 @@ function parseProjectReferences(reader: BinaryReader, codePage: number): DirRefe
           reader.skip(totalSize - consumed);
         }
 
-        if (currentName) {
-          references.push({ name: currentName, libId, type: "project" });
-          currentName = "";
+        if (state.currentName) {
+          references.push({ name: state.currentName, libId, type: "project" });
+          state.currentName = "";
         }
         break;
       }
@@ -407,14 +417,14 @@ function parseProjectModules(reader: BinaryReader, codePage: number): DirModuleI
   const modules: DirModuleInfo[] = [];
 
   // PROJECTMODULES header
-  if (reader.remaining < 8) return modules;
+  if (reader.remaining < 8) {return modules;}
   const modulesId = reader.readUint16();
-  if (modulesId !== PROJECTMODULES) return modules;
+  if (modulesId !== PROJECTMODULES) {return modules;}
   reader.skip(4); // Size (always 2)
   const moduleCount = reader.readUint16();
 
   // PROJECTCOOKIE
-  if (reader.remaining < 8) return modules;
+  if (reader.remaining < 8) {return modules;}
   reader.skip(2); // Id (0x0013)
   reader.skip(4); // Size (always 2)
   reader.skip(2); // Cookie value
@@ -432,17 +442,19 @@ function parseProjectModules(reader: BinaryReader, codePage: number): DirModuleI
 
 function parseModule(reader: BinaryReader, codePage: number): DirModuleInfo | null {
   // MODULENAME
-  if (reader.remaining < 6) return null;
+  if (reader.remaining < 6) {return null;}
   const nameId = reader.readUint16();
-  if (nameId !== MODULENAME) return null;
+  if (nameId !== MODULENAME) {return null;}
   const nameSize = reader.readUint32();
-  if (reader.remaining < nameSize) return null;
+  if (reader.remaining < nameSize) {return null;}
   const nameData = reader.readBytes(nameSize);
   const name = decodeText(nameData, codePage);
 
-  let streamName = name;
-  let textOffset = 0;
-  let moduleType: VbaModuleType = "standard";
+  const state = {
+    streamName: name,
+    textOffset: 0,
+    moduleType: "standard" as VbaModuleType,
+  };
 
   // Parse remaining module records
   while (reader.remaining >= 6) {
@@ -454,28 +466,30 @@ function parseModule(reader: BinaryReader, codePage: number): DirModuleInfo | nu
         reader.skip(size);
         break;
 
-      case MODULESTREAMNAME:
+      case MODULESTREAMNAME: {
         if (size > 0) {
           const streamData = reader.readBytes(size);
-          streamName = decodeText(streamData, codePage);
+          state.streamName = decodeText(streamData, codePage);
         }
         // Skip Reserved + SizeOfStreamNameUnicode + StreamNameUnicode
         reader.skip(2); // Reserved
         const unicodeSize = reader.readUint32();
         reader.skip(unicodeSize);
         break;
+      }
 
-      case MODULEDOCSTRING:
+      case MODULEDOCSTRING: {
         reader.skip(size);
         // Skip Reserved + SizeOfDocStringUnicode + DocStringUnicode
         reader.skip(2);
         const docUnicodeSize = reader.readUint32();
         reader.skip(docUnicodeSize);
         break;
+      }
 
       case MODULEOFFSET:
         if (size >= 4) {
-          textOffset = reader.readUint32();
+          state.textOffset = reader.readUint32();
         } else {
           reader.skip(size);
         }
@@ -487,12 +501,12 @@ function parseModule(reader: BinaryReader, codePage: number): DirModuleInfo | nu
         break;
 
       case MODULETYPEPROCEDURAL:
-        moduleType = "standard";
+        state.moduleType = "standard";
         reader.skip(size);
         break;
 
       case MODULETYPEDOCUMENT:
-        moduleType = "document";
+        state.moduleType = "document";
         reader.skip(size);
         break;
 
@@ -504,7 +518,7 @@ function parseModule(reader: BinaryReader, codePage: number): DirModuleInfo | nu
       case MODULETERMINATOR:
         // End of this module
         // Note: 'size' is actually Reserved (4 bytes, must be 0), already read
-        return { name, streamName, type: moduleType, textOffset };
+        return { name, streamName: state.streamName, type: state.moduleType, textOffset: state.textOffset };
 
       default:
         // Unknown record, skip it
@@ -513,7 +527,7 @@ function parseModule(reader: BinaryReader, codePage: number): DirModuleInfo | nu
     }
   }
 
-  return { name, streamName, type: moduleType, textOffset };
+  return { name, streamName: state.streamName, type: state.moduleType, textOffset: state.textOffset };
 }
 
 // =============================================================================
@@ -527,7 +541,7 @@ function parseModule(reader: BinaryReader, codePage: number): DirModuleInfo | nu
  * @returns Parsed dir stream information
  */
 export function parseDirStream(bytes: Uint8Array): DirStreamInfo {
-  const reader = new BinaryReader(bytes);
+  const reader = createBinaryReader(bytes);
 
   // Parse PROJECTINFORMATION
   const { projectName, codePage } = parseProjectInformation(reader);

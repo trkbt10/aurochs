@@ -2,7 +2,6 @@
  * @file Procedure parser tests
  */
 
-import { describe, it, expect } from "vitest";
 import { parseProcedures } from "./procedure-parser";
 
 describe("parseProcedures", () => {

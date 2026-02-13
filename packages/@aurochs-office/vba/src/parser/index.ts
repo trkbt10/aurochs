@@ -6,3 +6,5 @@
 
 export { parseVbaProject } from "./vba-project";
 export type { ParseVbaProjectOptions, ParseVbaProjectResult } from "./vba-project";
+
+export { parseVbaSource, parseVbaProcedureBody, parseVbaExpression } from "./source-parser";
