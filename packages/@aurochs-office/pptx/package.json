@@ -13,6 +13,7 @@
     "@aurochs-office/drawing-ml": "workspace:*",
     "@aurochs-office/opc": "workspace:*",
     "@aurochs-office/ooxml": "workspace:*",
+    "@aurochs-office/vba": "workspace:*",
     "@aurochs-office/xlsx": "workspace:*",
     "@aurochs/xml": "workspace:*",
     "@aurochs/zip": "workspace:*"
@@ -286,6 +287,10 @@
     "./parser/table/style-parser": {
       "types": "./src/parser/table/style-parser.ts",
       "default": "./src/parser/table/style-parser.ts"
+    },
+    "./vba": {
+      "types": "./src/vba/index.ts",
+      "default": "./src/vba/index.ts"
     }
   }
 }

@@ -101,6 +101,28 @@ export type HostObject = {
 };
 
 // =============================================================================
+// Host Object Factory
+// =============================================================================
+
+/**
+ * Create a host object with the given type name.
+ *
+ * This factory allows host adapters to create properly-typed host objects
+ * without needing access to the branded symbol.
+ *
+ * @param hostType - The host type name (e.g., "Range", "Worksheet")
+ * @param properties - Additional properties to attach to the object
+ * @returns A HostObject with the specified type and properties
+ */
+export function createHostObject<T extends Record<string, unknown>>(
+  hostType: string,
+  properties?: T
+): HostObject & T {
+  const obj = { hostType, ...properties };
+  return obj as HostObject & T;
+}
+
+// =============================================================================
 // Runtime Values
 // =============================================================================
 

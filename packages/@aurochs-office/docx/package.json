@@ -9,6 +9,7 @@
     "@aurochs-office/opc": "workspace:*",
     "@aurochs-office/ooxml": "workspace:*",
     "@aurochs-office/text-layout": "workspace:*",
+    "@aurochs-office/vba": "workspace:*",
     "@aurochs/xml": "workspace:*",
     "@aurochs/zip": "workspace:*"
   },
@@ -61,6 +62,10 @@
     "./serializer/*": {
       "types": "./src/serializer/*.ts",
       "default": "./src/serializer/*.ts"
+    },
+    "./vba": {
+      "types": "./src/vba/index.ts",
+      "default": "./src/vba/index.ts"
     }
   }
 }

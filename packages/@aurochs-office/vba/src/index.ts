@@ -89,3 +89,4 @@ export type {
 
 // Host API
 export type { HostApi, HostObject, VbaRuntimeValue } from "./host/api";
+export { createHostObject } from "./host/api";

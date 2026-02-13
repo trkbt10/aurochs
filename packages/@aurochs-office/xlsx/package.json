@@ -7,6 +7,7 @@
   "dependencies": {
     "@aurochs-office/opc": "workspace:*",
     "@aurochs-office/ooxml": "workspace:*",
+    "@aurochs-office/vba": "workspace:*",
     "@aurochs/xml": "workspace:*",
     "@aurochs/zip": "workspace:*"
   },
@@ -139,6 +140,10 @@
     "./workbook-patcher": {
       "types": "./src/workbook-patcher.ts",
       "default": "./src/workbook-patcher.ts"
+    },
+    "./vba": {
+      "types": "./src/vba/index.ts",
+      "default": "./src/vba/index.ts"
     },
     "./domain": {
       "types": "./src/domain/index.ts",
