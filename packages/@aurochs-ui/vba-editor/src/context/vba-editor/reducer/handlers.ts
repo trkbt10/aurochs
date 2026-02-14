@@ -154,6 +154,30 @@ export const handleUpdateModuleSource: ActionHandler<
   };
 };
 
+/**
+ * Replace module source without creating undo point.
+ *
+ * Used by debounced history to immediately update UI while
+ * delaying the history push for grouping rapid keystrokes.
+ */
+export const handleReplaceModuleSource: ActionHandler<
+  Extract<VbaEditorAction, { type: "REPLACE_MODULE_SOURCE" }>
+> = (state, action) => {
+  const newSourceMap = new Map(state.sourceHistory.present);
+  newSourceMap.set(action.moduleName, {
+    source: action.source,
+    cursorOffset: action.cursorOffset,
+  });
+
+  return {
+    ...state,
+    sourceHistory: {
+      ...state.sourceHistory,
+      present: newSourceMap, // No history push - just replace present
+    },
+  };
+};
+
 // =============================================================================
 // History Handlers
 // =============================================================================
@@ -241,6 +265,7 @@ export const HANDLERS: {
   SET_SELECTION: handleSetSelection,
   CLEAR_SELECTION: handleClearSelection,
   UPDATE_MODULE_SOURCE: handleUpdateModuleSource,
+  REPLACE_MODULE_SOURCE: handleReplaceModuleSource,
   UNDO: handleUndo,
   REDO: handleRedo,
   CLEAR_PENDING_CURSOR: handleClearPendingCursor,

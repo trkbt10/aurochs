@@ -59,3 +59,18 @@ export {
   type Token,
   type TokenType,
 } from "./components/code-editor";
+
+// =============================================================================
+// Renderers
+// =============================================================================
+
+export {
+  type RendererType,
+  type CodeRendererProps,
+  HtmlCodeRenderer,
+  SvgCodeRenderer,
+  CanvasCodeRenderer,
+  RENDERER_REGISTRY,
+  getRenderer,
+  DEFAULT_RENDERER,
+} from "./components/code-editor";

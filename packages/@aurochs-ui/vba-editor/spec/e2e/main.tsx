@@ -5,10 +5,23 @@
 import { StrictMode, type CSSProperties } from "react";
 import { createRoot } from "react-dom/client";
 import { injectCSSVariables } from "@aurochs-ui/ui-components/design-tokens";
-import { VbaEditor } from "@aurochs-ui/vba-editor";
+import { VbaEditor, type RendererType } from "@aurochs-ui/vba-editor";
 import type { VbaProgramIr, VbaModule } from "@aurochs-office/vba";
 
 injectCSSVariables();
+
+// =============================================================================
+// URL Parameter Parsing
+// =============================================================================
+
+function getRendererFromUrl(): RendererType {
+  const params = new URLSearchParams(window.location.search);
+  const renderer = params.get("renderer");
+  if (renderer === "svg" || renderer === "canvas" || renderer === "html") {
+    return renderer;
+  }
+  return "html";
+}
 
 // =============================================================================
 // Simple Test Module
@@ -61,7 +74,7 @@ const testProgram: VbaProgramIr = {
 };
 
 // =============================================================================
-// Root Component
+// Styles
 // =============================================================================
 
 const containerStyle: CSSProperties = {
@@ -71,10 +84,62 @@ const containerStyle: CSSProperties = {
   flexDirection: "column",
 };
 
+const navStyle: CSSProperties = {
+  display: "flex",
+  gap: "16px",
+  padding: "8px 16px",
+  background: "#f0f0f0",
+  borderTop: "1px solid #ccc",
+  fontFamily: "sans-serif",
+  fontSize: "14px",
+  flexShrink: 0,
+};
+
+const linkStyle: CSSProperties = {
+  color: "#0066cc",
+  textDecoration: "none",
+};
+
+const activeLinkStyle: CSSProperties = {
+  ...linkStyle,
+  fontWeight: "bold",
+  color: "#000",
+};
+
+const editorContainerStyle: CSSProperties = {
+  flex: 1,
+  minHeight: 0,
+};
+
+// =============================================================================
+// Root Component
+// =============================================================================
+
+const RENDERERS: RendererType[] = ["html", "svg", "canvas"];
+
 function App() {
+  const currentRenderer = getRendererFromUrl();
+
   return (
     <div style={containerStyle} data-testid="vba-editor-container">
-      <VbaEditor program={testProgram} />
+      {/* Editor */}
+      <div style={editorContainerStyle}>
+        <VbaEditor program={testProgram} renderer={currentRenderer} />
+      </div>
+
+      {/* Renderer navigation - bottom */}
+      <nav style={navStyle}>
+        <span>Renderer:</span>
+        {RENDERERS.map((r) => (
+          <a
+            key={r}
+            href={`?renderer=${r}`}
+            style={r === currentRenderer ? activeLinkStyle : linkStyle}
+          >
+            {r.toUpperCase()}
+          </a>
+        ))}
+      </nav>
     </div>
   );
 }

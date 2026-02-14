@@ -119,6 +119,12 @@ export type VbaEditorAction =
       readonly source: string;
       readonly cursorOffset: number;
     }
+  | {
+      readonly type: "REPLACE_MODULE_SOURCE";
+      readonly moduleName: string;
+      readonly source: string;
+      readonly cursorOffset: number;
+    }
 
   // History
   | { readonly type: "UNDO" }

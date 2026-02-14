@@ -8,7 +8,7 @@ import { useMemo, type CSSProperties, type ReactNode } from "react";
 import type { VbaProgramIr } from "@aurochs-office/vba";
 import { EditorShell, type EditorPanel } from "@aurochs-ui/editor-controls/editor-shell";
 import { VbaEditorProvider } from "../context/vba-editor";
-import { VbaCodeEditor } from "./code-editor";
+import { VbaCodeEditor, type RendererType } from "./code-editor";
 import { VbaModuleList } from "./module-list";
 import { VbaEditorToolbar } from "./toolbar";
 import { VbaPropertiesPanel } from "./properties-panel";
@@ -22,12 +22,19 @@ export type VbaEditorProps = {
   readonly readonly?: boolean;
   /** Custom style */
   readonly style?: CSSProperties;
+  /** Renderer type: "html" (default), "svg", or "canvas" */
+  readonly renderer?: RendererType;
+};
+
+type VbaEditorInnerProps = {
+  readonly style?: CSSProperties;
+  readonly renderer?: RendererType;
 };
 
 /**
  * Inner editor component (requires context).
  */
-function VbaEditorInner({ style }: { readonly style?: CSSProperties }): ReactNode {
+function VbaEditorInner({ style, renderer }: VbaEditorInnerProps): ReactNode {
   const panels = useMemo<EditorPanel[]>(
     () => [
       {
@@ -50,7 +57,7 @@ function VbaEditorInner({ style }: { readonly style?: CSSProperties }): ReactNod
 
   return (
     <EditorShell toolbar={<VbaEditorToolbar />} panels={panels} style={style}>
-      <VbaCodeEditor />
+      <VbaCodeEditor renderer={renderer} />
     </EditorShell>
   );
 }
@@ -69,10 +76,11 @@ export function VbaEditor({
   onProgramChange: _onProgramChange,
   readonly: _readonly,
   style,
+  renderer,
 }: VbaEditorProps): ReactNode {
   return (
     <VbaEditorProvider program={program}>
-      <VbaEditorInner style={style} />
+      <VbaEditorInner style={style} renderer={renderer} />
     </VbaEditorProvider>
   );
 }
