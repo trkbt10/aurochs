@@ -5,7 +5,7 @@
  * Provides both CSS variable references and raw RGB values.
  */
 
-import type { TokenType } from "../syntax-highlight";
+import type { TokenType } from "../../code/syntax-highlight";
 import type { RgbColor, TokenColorMap } from "./types";
 
 // =============================================================================

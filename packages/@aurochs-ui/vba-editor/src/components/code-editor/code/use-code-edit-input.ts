@@ -11,7 +11,7 @@ import {
   type ChangeEvent,
   type RefObject,
 } from "react";
-import type { VbaEditorAction } from "../../context/vba-editor/types";
+import type { VbaEditorAction } from "../../../context/vba-editor/types";
 import type { CompositionState } from "./use-code-composition";
 import {
   offsetToLineColumn,
@@ -20,7 +20,7 @@ import {
   type CursorCoordinates,
   type SelectionRect,
   type MeasureTextFn,
-} from "./cursor-utils";
+} from "../element/cursor-utils";
 
 // =============================================================================
 // Types

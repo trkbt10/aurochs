@@ -5,7 +5,7 @@
  */
 
 import { useCallback, type KeyboardEvent } from "react";
-import type { VbaEditorAction } from "../../context/vba-editor/types";
+import type { VbaEditorAction } from "../../../context/vba-editor/types";
 import type { CompositionState } from "./use-code-composition";
 
 // =============================================================================

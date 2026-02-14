@@ -5,7 +5,7 @@
  */
 
 import { useCallback, useEffect, useRef } from "react";
-import type { VbaEditorAction } from "../../context/vba-editor/types";
+import type { VbaEditorAction } from "../../../context/vba-editor/types";
 
 // =============================================================================
 // Types

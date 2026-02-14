@@ -5,8 +5,8 @@
  */
 
 import { useMemo, type ReactNode, type CSSProperties, memo } from "react";
-import { getTokenColor, type Token } from "./syntax-highlight";
-import type { LineTokenCache } from "./use-line-token-cache";
+import { getTokenColor, type Token } from "../code/syntax-highlight";
+import type { LineTokenCache } from "../line/use-line-token-cache";
 import styles from "./VbaCodeEditor.module.css";
 
 // =============================================================================

@@ -5,8 +5,8 @@
  */
 
 import type { ReactNode } from "react";
-import type { Token } from "../syntax-highlight";
-import type { LineTokenCache } from "../use-line-token-cache";
+import type { Token } from "../../code/syntax-highlight";
+import type { LineTokenCache } from "../../line/use-line-token-cache";
 
 // =============================================================================
 // Renderer Types

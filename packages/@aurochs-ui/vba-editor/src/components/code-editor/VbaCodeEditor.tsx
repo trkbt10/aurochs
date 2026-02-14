@@ -15,31 +15,31 @@ import {
   type ReactNode,
 } from "react";
 import { useVbaEditor } from "../../context/vba-editor";
-import { LineNumbers } from "./LineNumbers";
-import { useModuleTokenCache } from "./use-line-token-cache";
+import { LineNumbers } from "./line/LineNumbers";
+import { useModuleTokenCache } from "./line/use-line-token-cache";
 import {
   HtmlCodeRenderer,
   type CodeRendererComponent,
-} from "./renderers";
-import { useVirtualLines } from "./use-virtual-lines";
-import { useDebouncedHistory } from "./use-debounced-history";
-import { useScopedSelectionChange } from "./use-scoped-selection-change";
+} from "./element/renderers";
+import { useVirtualLines } from "./line/use-virtual-lines";
+import { useDebouncedHistory } from "./code/use-debounced-history";
+import { useScopedSelectionChange } from "./code/use-scoped-selection-change";
 import {
   useCodeComposition,
   INITIAL_COMPOSITION_STATE,
   type CompositionState,
-} from "./use-code-composition";
+} from "./code/use-code-composition";
 import {
   INITIAL_CURSOR_STATE,
   type CodeCursorState,
-} from "./use-code-edit-input";
-import { useCodeKeyHandlers } from "./use-code-key-handlers";
-import { useFontMetrics } from "./use-font-metrics";
+} from "./code/use-code-edit-input";
+import { useCodeKeyHandlers } from "./code/use-code-key-handlers";
+import { useFontMetrics } from "./element/use-font-metrics";
 import {
   lineColumnToCoordinates,
   calculateSelectionRects,
-} from "./cursor-utils";
-import { useLineIndex } from "./use-line-index";
+} from "./element/cursor-utils";
+import { useLineIndex } from "./line/use-line-index";
 import styles from "./VbaCodeEditor.module.css";
 
 // =============================================================================

@@ -6,7 +6,7 @@
  */
 
 import { useCallback, useRef, useMemo } from "react";
-import { tokenizeLine, type Token } from "./syntax-highlight";
+import { tokenizeLine, type Token } from "../code/syntax-highlight";
 
 // =============================================================================
 // Types

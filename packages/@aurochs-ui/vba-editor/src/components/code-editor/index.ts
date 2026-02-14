@@ -3,31 +3,48 @@
  */
 
 export { VbaCodeEditor, type VbaCodeEditorProps } from "./VbaCodeEditor";
-export { LineNumbers, type LineNumbersProps } from "./LineNumbers";
+
+// Line-related
+export {
+  LineNumbers,
+  type LineNumbersProps,
+  useLineIndex,
+  type LineIndex,
+  useLineTokenCache,
+  useModuleTokenCache,
+  type LineTokenCache,
+  useVirtualLines,
+  type VirtualLinesState,
+  type VirtualLinesConfig,
+  type UseVirtualLinesResult,
+} from "./line";
+
+// Editor elements
+export {
+  VirtualCodeDisplay,
+  type VirtualCodeDisplayProps,
+  useFontMetrics,
+  type FontMetrics,
+  // Renderers
+  type RendererType,
+  type CodeRendererProps,
+  type CodeRendererComponent,
+  HtmlCodeRenderer,
+  SvgCodeRenderer,
+  CanvasCodeRenderer,
+  TOKEN_COLORS_RGB,
+  getTokenColorRgb,
+  getTokenColorCss,
+} from "./element";
+
+// Code-related
 export {
   tokenizeLine,
   getTokenColor,
   type Token,
   type TokenType,
-} from "./syntax-highlight";
-export { useLineTokenCache, type LineTokenCache } from "./use-line-token-cache";
-export { useScopedSelectionChange } from "./use-scoped-selection-change";
-export { useDebouncedHistory, type UseDebouncedHistoryConfig, type UseDebouncedHistoryResult } from "./use-debounced-history";
-export { useVirtualLines, type VirtualLinesState, type VirtualLinesConfig, type UseVirtualLinesResult } from "./use-virtual-lines";
-export { VirtualCodeDisplay, type VirtualCodeDisplayProps } from "./VirtualCodeDisplay";
-
-// Renderers
-export {
-  // Types
-  type RendererType,
-  type CodeRendererProps,
-  type CodeRendererComponent,
-  // Components
-  HtmlCodeRenderer,
-  SvgCodeRenderer,
-  CanvasCodeRenderer,
-  // Token colors
-  TOKEN_COLORS_RGB,
-  getTokenColorRgb,
-  getTokenColorCss,
-} from "./renderers";
+  useScopedSelectionChange,
+  useDebouncedHistory,
+  type UseDebouncedHistoryConfig,
+  type UseDebouncedHistoryResult,
+} from "./code";

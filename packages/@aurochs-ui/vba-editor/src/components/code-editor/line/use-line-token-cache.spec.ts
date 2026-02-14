@@ -5,7 +5,7 @@
  * Since the hook is a thin wrapper, we test the tokenization logic directly.
  */
 
-import { tokenizeLine } from "./syntax-highlight";
+import { tokenizeLine } from "../code/syntax-highlight";
 
 // =============================================================================
 // LRU Cache Implementation (extracted for testing)

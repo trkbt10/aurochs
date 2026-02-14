@@ -6,10 +6,10 @@
  */
 
 import { useRef, useEffect, useMemo, memo, type ReactNode } from "react";
-import type { Token } from "../syntax-highlight";
+import type { Token } from "../../code/syntax-highlight";
 import type { CodeRendererProps } from "./types";
 import { getTokenColorCss } from "./token-colors";
-import styles from "../VbaCodeEditor.module.css";
+import styles from "../../VbaCodeEditor.module.css";
 
 // =============================================================================
 // Constants
