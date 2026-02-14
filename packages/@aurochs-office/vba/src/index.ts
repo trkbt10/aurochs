@@ -90,3 +90,14 @@ export type {
 // Host API
 export type { HostApi, HostObject, VbaRuntimeValue } from "./host/api";
 export { createHostObject } from "./host/api";
+
+// Serializer
+export {
+  serializeVbaProject,
+  compressVba,
+  serializeProjectStream,
+  serializeDirStream,
+  serializeModuleStream,
+  serializeModuleStreams,
+} from "./serializer";
+export type { SerializeVbaProjectOptions } from "./serializer";

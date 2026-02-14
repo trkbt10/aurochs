@@ -169,14 +169,33 @@ export const CODE_PAGE_TO_ENCODING: Record<number, string> = {
   65001: "utf-8", // UTF-8
 };
 
+
+
+
+
+
+
+
+
+
+
+/**
+ * Decode bytes to string using the specified code page.
+ *
+ * @param bytes - Raw bytes to decode
+ * @param codePage - Windows code page number
+ * @returns Decoded string
+ * @throws Error if code page is not supported
+ */
 export function decodeText(bytes: Uint8Array, codePage: number): string {
-  const encoding = CODE_PAGE_TO_ENCODING[codePage] ?? "windows-1252";
-  try {
-    return new TextDecoder(encoding).decode(bytes);
-  } catch {
-    // Fallback to windows-1252 if encoding is not supported
-    return new TextDecoder("windows-1252").decode(bytes);
+  const encoding = CODE_PAGE_TO_ENCODING[codePage];
+  if (encoding === undefined) {
+    throw new Error(
+      `Unsupported code page: ${codePage}. Supported: ${Object.keys(CODE_PAGE_TO_ENCODING).join(", ")}`
+    );
   }
+  // TextDecoder throws if encoding is not supported by the runtime
+  return new TextDecoder(encoding).decode(bytes);
 }
 
 // =============================================================================
@@ -184,15 +203,35 @@ export function decodeText(bytes: Uint8Array, codePage: number): string {
 // =============================================================================
 
 /**
+ * Decode UTF-16LE bytes to string.
+ */
+function decodeUtf16Le(bytes: Uint8Array): string {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  // Build array of character codes and join
+  const charCount = Math.floor(bytes.length / 2);
+  return Array.from({ length: charCount }, (_, i) =>
+    String.fromCharCode(view.getUint16(i * 2, true))
+  ).join("");
+}
+
+/**
  * Read a record with MBCS + Unicode structure.
  * Format: SizeOfMBCS (4) + MBCS (var) + Reserved (2) + SizeOfUnicode (4) + Unicode (var)
+ *
+ * Prefers Unicode data when available for better compatibility with all code pages.
  */
 function readMbcsUnicodeRecord(reader: BinaryReader, codePage: number): string {
   const sizeOfMbcs = reader.readUint32();
   const mbcsData = reader.readBytes(sizeOfMbcs);
   reader.skip(2); // Reserved
   const sizeOfUnicode = reader.readUint32();
-  reader.skip(sizeOfUnicode); // Skip Unicode version
+  const unicodeData = reader.readBytes(sizeOfUnicode);
+
+  // Prefer Unicode if available (more reliable for non-ASCII characters)
+  if (sizeOfUnicode > 0) {
+    return decodeUtf16Le(unicodeData);
+  }
+  // Fallback to MBCS for legacy compatibility
   return decodeText(mbcsData, codePage);
 }
 
@@ -466,17 +505,19 @@ function parseProjectModules(reader: BinaryReader, codePage: number): DirModuleI
 }
 
 function parseModule(reader: BinaryReader, codePage: number): DirModuleInfo | null {
-  // MODULENAME
-  if (reader.remaining < 6) {return null;}
+  // MODULENAME (MBCS version)
+  if (reader.remaining < 6) { return null; }
   const nameId = reader.readUint16();
-  if (nameId !== MODULENAME) {return null;}
+  if (nameId !== MODULENAME) { return null; }
   const nameSize = reader.readUint32();
-  if (reader.remaining < nameSize) {return null;}
+  if (reader.remaining < nameSize) { return null; }
   const nameData = reader.readBytes(nameSize);
-  const name = decodeText(nameData, codePage);
+  const initialName = decodeText(nameData, codePage);
 
   const state = {
-    streamName: name,
+    name: initialName,
+    streamName: initialName,
+    streamNameFromUnicode: false,
     textOffset: 0,
     moduleType: "standard" as VbaModuleType,
   };
@@ -488,18 +529,32 @@ function parseModule(reader: BinaryReader, codePage: number): DirModuleInfo | nu
 
     switch (id) {
       case MODULENAMEUNICODE:
-        reader.skip(size);
+        // Prefer Unicode name over MBCS name
+        if (size > 0) {
+          const unicodeData = reader.readBytes(size);
+          state.name = decodeUtf16Le(unicodeData);
+          if (!state.streamNameFromUnicode) {
+            state.streamName = state.name;
+          }
+        } else {
+          reader.skip(size);
+        }
         break;
 
       case MODULESTREAMNAME: {
-        if (size > 0) {
-          const streamData = reader.readBytes(size);
-          state.streamName = decodeText(streamData, codePage);
-        }
-        // Skip Reserved + SizeOfStreamNameUnicode + StreamNameUnicode
+        // Read MBCS stream name
+        const streamData = size > 0 ? reader.readBytes(size) : new Uint8Array(0);
+        const mbcsStreamName = size > 0 ? decodeText(streamData, codePage) : "";
+        // Read Reserved + SizeOfStreamNameUnicode + StreamNameUnicode
         reader.skip(2); // Reserved
         const unicodeSize = reader.readUint32();
-        reader.skip(unicodeSize);
+        if (unicodeSize > 0) {
+          const unicodeData = reader.readBytes(unicodeSize);
+          state.streamName = decodeUtf16Le(unicodeData);
+          state.streamNameFromUnicode = true;
+        } else {
+          state.streamName = mbcsStreamName;
+        }
         break;
       }
 
@@ -543,7 +598,7 @@ function parseModule(reader: BinaryReader, codePage: number): DirModuleInfo | nu
       case MODULETERMINATOR:
         // End of this module
         // Note: 'size' is actually Reserved (4 bytes, must be 0), already read
-        return { name, streamName: state.streamName, type: state.moduleType, textOffset: state.textOffset };
+        return { name: state.name, streamName: state.streamName, type: state.moduleType, textOffset: state.textOffset };
 
       default:
         // Unknown record, skip it
@@ -552,7 +607,7 @@ function parseModule(reader: BinaryReader, codePage: number): DirModuleInfo | nu
     }
   }
 
-  return { name, streamName: state.streamName, type: state.moduleType, textOffset: state.textOffset };
+  return { name: state.name, streamName: state.streamName, type: state.moduleType, textOffset: state.textOffset };
 }
 
 // =============================================================================

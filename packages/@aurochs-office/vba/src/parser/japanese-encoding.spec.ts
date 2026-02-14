@@ -10,6 +10,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { loadZipPackage } from "@aurochs/zip";
 import { parseVbaProject } from "./vba-project";
+import { decodeText } from "./dir-stream";
 
 // Fixture path relative to project root
 // This fixture should contain Japanese VBA source code with code page 932
@@ -33,7 +34,7 @@ describe("Japanese VBA encoding (Shift_JIS)", () => {
     const result = parseVbaProject(new Uint8Array(vbaBytes));
     expect(result.ok).toBe(true);
 
-    if (!result.ok) return;
+    if (!result.ok) {return;}
 
     // Project should be parsed successfully
     expect(result.program.modules.length).toBeGreaterThan(0);
@@ -51,7 +52,7 @@ describe("Japanese VBA encoding (Shift_JIS)", () => {
     const result = parseVbaProject(new Uint8Array(vbaBytes));
     expect(result.ok).toBe(true);
 
-    if (!result.ok) return;
+    if (!result.ok) {return;}
 
     // Find a module with Japanese content
     const moduleWithJapanese = result.program.modules.find(
@@ -74,7 +75,7 @@ describe("Japanese VBA encoding (Shift_JIS)", () => {
     const result = parseVbaProject(new Uint8Array(vbaBytes));
     expect(result.ok).toBe(true);
 
-    if (!result.ok) return;
+    if (!result.ok) {return;}
 
     // Find a module with Japanese variable names
     const moduleWithJapanese = result.program.modules.find(
@@ -85,11 +86,9 @@ describe("Japanese VBA encoding (Shift_JIS)", () => {
   });
 
   // Always run this test - it uses inline Shift_JIS data
-  it("decodeText handles Shift_JIS bytes correctly", async () => {
+  it("decodeText handles Shift_JIS bytes correctly", () => {
     // This test verifies the core decoding logic works for Japanese text
     // "日付" in Shift_JIS = 0x93FA 0x9574
-    const { decodeText } = await import("./dir-stream");
-
     const shiftJisBytes = new Uint8Array([0x93, 0xfa, 0x95, 0x74]);
     const result = decodeText(shiftJisBytes, 932);
 

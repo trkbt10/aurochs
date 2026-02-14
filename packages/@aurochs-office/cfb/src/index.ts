@@ -32,6 +32,9 @@ export {
 export type { CfbWarning, CfbWarningCode, CfbWarningSink } from "./warnings";
 export { warnCfbOrThrow } from "./warnings";
 
+// Writer exports
+export { createCfbBuilder, type CfbBuilder } from "./writer";
+
 function walkFatChainOrEmpty(args: {
   readonly fat: Uint32Array;
   readonly startSector: number;

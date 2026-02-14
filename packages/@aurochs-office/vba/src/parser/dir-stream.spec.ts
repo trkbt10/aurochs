@@ -49,11 +49,9 @@ describe("decodeText", () => {
     expect(result).toBe("日付");
   });
 
-  it("falls back to Windows-1252 for unknown code page", () => {
-    // ASCII is same in Windows-1252
+  it("throws for unknown code page", () => {
     const bytes = new Uint8Array([0x48, 0x65, 0x6c, 0x6c, 0x6f]); // "Hello"
-    const result = decodeText(bytes, 99999);
-    expect(result).toBe("Hello");
+    expect(() => decodeText(bytes, 99999)).toThrow("Unsupported code page: 99999");
   });
 
   it("CODE_PAGE_TO_ENCODING contains Shift_JIS mapping", () => {

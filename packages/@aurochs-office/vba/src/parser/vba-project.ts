@@ -10,7 +10,7 @@ import { openCfb, type CfbFile } from "@aurochs-office/cfb";
 import type { VbaProgramIr, VbaModule, VbaModuleType, VbaReference } from "../types";
 import { VbaParseError } from "../errors";
 import { parseProjectStream } from "./project-stream";
-import { parseDirStream, CODE_PAGE_TO_ENCODING, type DirModuleInfo } from "./dir-stream";
+import { parseDirStream, decodeText, type DirModuleInfo } from "./dir-stream";
 import { decompressVba } from "./compression";
 import { parseProcedures } from "./procedure-parser";
 
@@ -64,9 +64,18 @@ function tryDecompress(bytes: Uint8Array): Uint8Array | null {
 /**
  * Refine module type based on source code content.
  * Class modules have VB_Creatable/VB_Exposed attributes (regardless of value).
+ *
+ * MS-OVBA 2.3.4.2.3.2.4:
+ * - MODULETYPEPROCEDURAL (0x0021): procedural module (standard)
+ * - MODULETYPEDOCUMENT (0x0022): document module, class module, or designer module
+ *
+ * Since class modules use MODULETYPEDOCUMENT, we need to check attributes to
+ * distinguish class from document modules.
  */
 function refineModuleType(type: VbaModuleType, sourceCode: string): VbaModuleType {
-  if (type === "standard" && (sourceCode.includes("VB_Creatable") || sourceCode.includes("VB_Exposed"))) {
+  // Class modules use MODULETYPEDOCUMENT but have VB_Creatable/VB_Exposed attributes
+  if ((type === "standard" || type === "document") &&
+      (sourceCode.includes("VB_Creatable") || sourceCode.includes("VB_Exposed"))) {
     return "class";
   }
   return type;
@@ -185,7 +194,12 @@ export function parseVbaProject(
     };
 
     // Parse each module's source code
-    const modules = parseModules(cfb, dirInfo.modules, dirInfo.codePage, strict);
+    const modules = parseModules({
+      cfb,
+      moduleInfos: dirInfo.modules,
+      codePage: dirInfo.codePage,
+      strict,
+    });
 
     // Convert references from dir stream
     const references: VbaReference[] = dirInfo.references.map((ref) => ({
@@ -209,28 +223,19 @@ export function parseVbaProject(
   }
 }
 
-/**
- * Decode bytes using the specified code page.
- */
-function decodeWithCodePage(bytes: Uint8Array, codePage: number): string {
-  const encoding = CODE_PAGE_TO_ENCODING[codePage] ?? "windows-1252";
-  try {
-    return new TextDecoder(encoding).decode(bytes);
-  } catch {
-    // Fallback to windows-1252 if encoding is not supported
-    return new TextDecoder("windows-1252").decode(bytes);
-  }
-}
+
+type ParseModulesOptions = {
+  readonly cfb: CfbFile;
+  readonly moduleInfos: readonly DirModuleInfo[];
+  readonly codePage: number;
+  readonly strict: boolean;
+};
 
 /**
  * Parse module source code from CFB streams.
- *
- * @param cfb - CFB file handle
- * @param moduleInfos - Module information from dir stream
- * @param codePage - Code page for text encoding (e.g., 932 for Shift_JIS)
- * @param strict - If true, throw on module parse errors; if false, skip failed modules
  */
-function parseModules(cfb: CfbFile, moduleInfos: readonly DirModuleInfo[], codePage: number, strict: boolean): VbaModule[] {
+function parseModules(opts: ParseModulesOptions): VbaModule[] {
+  const { cfb, moduleInfos, codePage, strict } = opts;
   const modules: VbaModule[] = [];
 
   // If dir stream parsing found modules, use those
@@ -249,7 +254,7 @@ function parseModules(cfb: CfbFile, moduleInfos: readonly DirModuleInfo[], codeP
         // (i.e., where the CompressedContainer begins after PerformanceCache)
         const compressedData = moduleBytes.subarray(info.textOffset);
         const decompressed = decompressVba(compressedData);
-        const sourceCode = decodeWithCodePage(decompressed, codePage);
+        const sourceCode = decodeText(decompressed, codePage);
 
         // Extract procedures from source code
         const procedures = parseProcedures(sourceCode);
@@ -301,7 +306,7 @@ function parseModules(cfb: CfbFile, moduleInfos: readonly DirModuleInfo[], codeP
       if (decompressResult === null) {continue;}
 
       // VBA source starts directly (no additional offset needed after decompression)
-      const sourceCode = decodeWithCodePage(decompressResult.data, codePage);
+      const sourceCode = decodeText(decompressResult.data, codePage);
 
       // Determine module type from name or content
       const moduleType = inferModuleType(entry.name, sourceCode);
