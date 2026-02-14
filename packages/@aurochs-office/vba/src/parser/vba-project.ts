@@ -83,93 +83,85 @@ function isUserFormSource(sourceCode: string): boolean {
 }
 
 /**
- * Check if a module name matches known document module patterns.
+ * Check if source code indicates a class module.
  *
- * Document modules are created by the host application (Excel, Word, etc.)
- * and have predictable names that users cannot change:
- * - ThisWorkbook (Excel)
- * - ThisDocument (Word)
- * - Sheet1, Sheet2, ... (Excel worksheets)
- * - Chart1, Chart2, ... (Excel chart sheets)
+ * Class modules have a distinctive header:
+ *   VERSION 1.0 CLASS
+ *   BEGIN
+ *     MultiUse = -1  'True
+ *   END
  *
- * This is the ONLY reliable way to distinguish document from class modules,
- * since both can have VB_PredeclaredId = True and VB_Exposed = True.
+ * Document modules (ThisWorkbook, Sheet1, renamed sheets) do NOT have this
+ * header - they start directly with Attribute lines.
+ *
+ * This is the ONLY reliable way to distinguish class from document modules,
+ * since both can have VB_PredeclaredId = True and VB_Exposed = True,
+ * and document modules can be renamed by users.
  */
-function isDocumentModuleName(name: string): boolean {
-  if (name === "ThisWorkbook" || name === "ThisDocument") {
-    return true;
-  }
-  // Sheet1, Sheet2, ... SheetN
-  if (/^Sheet\d+$/.test(name)) {
-    return true;
-  }
-  // Chart1, Chart2, ... ChartN (Excel chart sheets)
-  if (/^Chart\d+$/.test(name)) {
-    return true;
-  }
-  return false;
+function isClassModuleSource(sourceCode: string): boolean {
+  const trimmed = sourceCode.trimStart();
+  return trimmed.startsWith("VERSION 1.0 CLASS");
 }
 
 /**
- * Refine module type based on module name and source code content.
+ * Refine module type based on source code content.
  *
  * MS-OVBA 2.3.4.2.3.2.4:
  * - MODULETYPEPROCEDURAL (0x0021): procedural module (standard)
  * - MODULETYPEDOCUMENT (0x0022): document module, class module, or designer module
  *
  * Since class/form/document modules all use MODULETYPEDOCUMENT, we distinguish by:
- * - Form: has BEGIN block or VB_Ext_KEY (designer module)
- * - Document: name matches host-created patterns (ThisWorkbook, SheetN, etc.)
- * - Class: has VB_Creatable attribute (user-created class)
+ * - Form: VERSION 5.00 + Begin {GUID} block (designer module)
+ * - Class: VERSION 1.0 CLASS header
+ * - Document: no VERSION header (starts with Attribute lines)
  *
- * Note: Both document and class modules can have VB_PredeclaredId = True,
- * so we cannot rely on source attributes alone - name is the key differentiator.
+ * This is reliable because:
+ * - Class modules ALWAYS have "VERSION 1.0 CLASS" header
+ * - Document modules NEVER have this header, even when renamed
+ * - UserForms have "VERSION 5.00" + Begin {GUID} block
  */
-function refineModuleType(type: VbaModuleType, moduleName: string, sourceCode: string): VbaModuleType {
+function refineModuleType(type: VbaModuleType, sourceCode: string): VbaModuleType {
   // Only refine MODULETYPEDOCUMENT (parsed as "document")
   if (type !== "document") {
     return type;
   }
 
-  // Check for UserForm (designer module) first
+  // Check for UserForm (designer module) first - VERSION 5.00 + Begin {GUID}
   if (isUserFormSource(sourceCode)) {
     return "form";
   }
 
-  // Document modules have host-assigned names (ThisWorkbook, Sheet1, etc.)
-  if (isDocumentModuleName(moduleName)) {
-    return "document";
-  }
-
-  // Class modules have VB_Creatable attribute (user-created)
-  if (sourceCode.includes("VB_Creatable")) {
+  // Class modules have VERSION 1.0 CLASS header
+  if (isClassModuleSource(sourceCode)) {
     return "class";
   }
 
-  // Default: keep as document (could be a custom document module)
-  return type;
+  // Document modules have no VERSION header (start with Attribute lines)
+  return "document";
 }
 
 /**
- * Infer module type from module name and source code content.
+ * Infer module type from source code content.
  *
  * Used in fallback mode when dir stream parsing doesn't find module info.
- * Uses the same name-based logic as refineModuleType for consistency.
+ * Uses the same source-based logic as refineModuleType for consistency.
  */
-function inferModuleType(moduleName: string, sourceCode: string): VbaModuleType {
-  // Check for UserForm first (designer module with BEGIN block)
+function inferModuleType(sourceCode: string): VbaModuleType {
+  // Check for UserForm first - VERSION 5.00 + Begin {GUID}
   if (isUserFormSource(sourceCode)) {
     return "form";
   }
 
-  // Document modules have host-assigned names (ThisWorkbook, Sheet1, etc.)
-  if (isDocumentModuleName(moduleName)) {
-    return "document";
+  // Class modules have VERSION 1.0 CLASS header
+  if (isClassModuleSource(sourceCode)) {
+    return "class";
   }
 
-  // Class modules have VB_Creatable attribute (user-created)
-  if (sourceCode.includes("VB_Creatable")) {
-    return "class";
+  // Check for document module indicators (Attribute lines without VERSION header)
+  // Document modules have VB_PredeclaredId = True or known patterns
+  const trimmed = sourceCode.trimStart();
+  if (trimmed.startsWith("Attribute VB_")) {
+    return "document";
   }
 
   // Default to standard module
@@ -342,8 +334,8 @@ function parseModules(opts: ParseModulesOptions): VbaModule[] {
         const procedures = parseProcedures(sourceCode);
 
         // Refine module type: MODULETYPEDOCUMENT can be document, class, or form
-        // Use module name + source attributes to distinguish
-        const moduleType = refineModuleType(info.type, info.name, sourceCode);
+        // Use source code headers to distinguish (VERSION 1.0 CLASS, VERSION 5.00, etc.)
+        const moduleType = refineModuleType(info.type, sourceCode);
 
         modules.push({
           name: info.name,
@@ -389,8 +381,8 @@ function parseModules(opts: ParseModulesOptions): VbaModule[] {
       // VBA source starts directly (no additional offset needed after decompression)
       const sourceCode = decodeText(decompressResult.data, codePage);
 
-      // Determine module type from name or content
-      const moduleType = inferModuleType(entry.name, sourceCode);
+      // Determine module type from source code headers
+      const moduleType = inferModuleType(sourceCode);
 
       // Extract procedures from source code
       const procedures = parseProcedures(sourceCode);
