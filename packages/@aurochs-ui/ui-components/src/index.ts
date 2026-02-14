@@ -81,11 +81,13 @@ export {
   LeftArrowIcon,
   LineIcon,
   ListViewIcon,
+  LoaderIcon,
   LockIcon,
   MergeCellsIcon,
   MoreIcon,
   OleObjectIcon,
   PasteIcon,
+  PauseIcon,
   PenIcon,
   PencilIcon,
   PictureIcon,
@@ -93,6 +95,7 @@ export {
   RectIcon,
   RedoIcon,
   RightArrowIcon,
+  RotateCcwIcon,
   RoundRectIcon,
   SelectIcon,
   SendBackwardIcon,
@@ -101,7 +104,10 @@ export {
   ShareIcon,
   ShieldIcon,
   SidebarIcon,
+  SkipBackIcon,
+  SkipForwardIcon,
   StarIcon,
+  StopIcon,
   TableIcon,
   TextBoxIcon,
   TileViewIcon,
@@ -253,3 +259,26 @@ export type {
   UseGroupedListDragDropOptions,
   UseGroupedListDragDropReturn,
 } from "./grouped-list";
+
+// Player
+export {
+  Player,
+  PlayerControls,
+  PlayerDisplay,
+  PLAY_BUTTON_SIZE,
+  ACTION_BUTTON_SIZE,
+  PLAY_ICON_SIZE,
+  ACTION_ICON_SIZE,
+} from "./player";
+
+export type {
+  PlayerProps,
+  PlayerControlsProps,
+  PlayerDisplayProps,
+  PlayerState,
+  PlayerMedia,
+  PlayerAction,
+  PlayerError,
+  PlayerVariant,
+  MainButtonMode,
+} from "./player";

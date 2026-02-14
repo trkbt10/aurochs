@@ -37,6 +37,7 @@
     "dev:pptx-viewer": "vite --open /pptx-viewer.html",
     "dev:editor-controls": "vite --open /editor-controls.html",
     "dev:vba": "vite --open /vba-editor.html",
+    "dev:ui-components": "vite --open /ui-components.html",
     "lint": "eslint src",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   }

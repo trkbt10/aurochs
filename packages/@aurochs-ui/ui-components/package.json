@@ -168,6 +168,10 @@
     "./viewer/useViewerKeyboard": {
       "types": "./src/viewer/useViewerKeyboard.ts",
       "default": "./src/viewer/useViewerKeyboard.ts"
+    },
+    "./player": {
+      "types": "./src/player/index.ts",
+      "default": "./src/player/index.ts"
     }
   }
 }

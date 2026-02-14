@@ -4,10 +4,10 @@
  * Panel for VBA procedure selection, execution, and output display.
  */
 
-import { useCallback, useState, type ReactNode, type CSSProperties } from "react";
+import { useCallback, useState, useMemo, type ReactNode, type CSSProperties } from "react";
 import type { VbaProgramIr } from "@aurochs-office/vba";
 import type { XlsxWorkbook } from "@aurochs-office/xlsx/domain/workbook";
-import { Button } from "@aurochs-ui/ui-components/primitives";
+import { Player, type PlayerState, type PlayerMedia, type PlayerError } from "@aurochs-ui/ui-components/player";
 import { executeVbaProcedure, applyMutations, type ExecutionResult } from "../../vba";
 import { VbaProcedurePicker } from "./VbaProcedurePicker";
 import { VbaOutputLog } from "./VbaOutputLog";
@@ -34,7 +34,7 @@ const panelStyle: CSSProperties = {
   padding: "12px 16px",
   display: "flex",
   flexDirection: "column",
-  gap: "8px",
+  gap: "12px",
 };
 
 const controlsStyle: CSSProperties = {
@@ -58,6 +58,37 @@ export function VbaExecutionPanel({
   const [selectedProcedure, setSelectedProcedure] = useState<string | undefined>();
   const [isRunning, setIsRunning] = useState(false);
   const [lastResult, setLastResult] = useState<ExecutionResult | undefined>();
+
+  // Derive player state from execution state
+  const playerState: PlayerState = useMemo(() => {
+    if (isRunning) return "playing";
+    if (lastResult && !lastResult.ok) return "error";
+    if (lastResult?.ok) return "completed";
+    return "idle";
+  }, [isRunning, lastResult]);
+
+  // Build media info
+  const media: PlayerMedia = useMemo(() => {
+    if (!selectedProcedure) {
+      return { title: "No procedure selected" };
+    }
+    const [moduleName, procedureName] = selectedProcedure.split(".");
+    return {
+      title: procedureName || selectedProcedure,
+      subtitle: moduleName,
+    };
+  }, [selectedProcedure]);
+
+  // Build error info
+  const error: PlayerError | undefined = useMemo(() => {
+    if (lastResult && !lastResult.ok) {
+      return {
+        message: lastResult.message,
+        detail: lastResult.stackTrace,
+      };
+    }
+    return undefined;
+  }, [lastResult]);
 
   // Handle run
   const handleRun = useCallback(() => {
@@ -93,6 +124,14 @@ export function VbaExecutionPanel({
     }
   }, [program, selectedProcedure, workbook, onWorkbookChange]);
 
+  // Handle stop (reset state)
+  const handleStop = useCallback(() => {
+    setIsRunning(false);
+    setLastResult(undefined);
+  }, []);
+
+  const canPlay = !!program && !!selectedProcedure && !isRunning;
+
   return (
     <div style={panelStyle}>
       <div style={controlsStyle}>
@@ -102,13 +141,17 @@ export function VbaExecutionPanel({
           onChange={setSelectedProcedure}
           disabled={isRunning}
         />
-        <Button
-          onClick={handleRun}
-          disabled={!program || !selectedProcedure || isRunning}
-        >
-          {isRunning ? "Running..." : "Run"}
-        </Button>
       </div>
+
+      <Player
+        state={playerState}
+        media={media}
+        error={error}
+        variant="panel"
+        onPlay={canPlay ? handleRun : undefined}
+        // No onPause - VBA execution is not pausable
+        onStop={isRunning ? handleStop : undefined}
+      />
 
       <VbaOutputLog result={lastResult} />
     </div>

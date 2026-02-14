@@ -27,6 +27,8 @@ export default defineConfig({
         "pptx-slideshow": path.resolve(__dirname, "pptx-slideshow.html"),
         "pptx-viewer": path.resolve(__dirname, "pptx-viewer.html"),
         "editor-controls": path.resolve(__dirname, "editor-controls.html"),
+        "ui-components": path.resolve(__dirname, "ui-components.html"),
+        "vba-editor": path.resolve(__dirname, "vba-editor.html"),
       },
     },
   },
