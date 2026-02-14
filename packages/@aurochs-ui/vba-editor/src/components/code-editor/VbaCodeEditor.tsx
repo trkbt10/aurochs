@@ -16,7 +16,7 @@ import {
 } from "react";
 import { useVbaEditor } from "../../context/vba-editor";
 import { LineNumbers } from "./LineNumbers";
-import { useLineTokenCache } from "./use-line-token-cache";
+import { useModuleTokenCache } from "./use-line-token-cache";
 import {
   HtmlCodeRenderer,
   type CodeRendererComponent,
@@ -36,10 +36,10 @@ import {
 import { useCodeKeyHandlers } from "./use-code-key-handlers";
 import { useFontMetrics } from "./use-font-metrics";
 import {
-  offsetToLineColumn,
   lineColumnToCoordinates,
   calculateSelectionRects,
 } from "./cursor-utils";
+import { useLineIndex } from "./use-line-index";
 import styles from "./VbaCodeEditor.module.css";
 
 // =============================================================================
@@ -49,6 +49,45 @@ import styles from "./VbaCodeEditor.module.css";
 const LINE_HEIGHT = 21;
 const OVERSCAN = 5;
 const HISTORY_DEBOUNCE_MS = 300;
+
+// =============================================================================
+// Helper Functions
+// =============================================================================
+
+/**
+ * Fallback line/column finder when lineIndex is not in sync with textarea.
+ * Uses linear scan (rare case when textarea is ahead of React state).
+ */
+function findLineColumnFallback(
+  currentLines: readonly string[],
+  offset: number
+): { line: number; column: number } {
+  // eslint-disable-next-line no-restricted-syntax -- Accumulator pattern requires mutation
+  let remaining = offset;
+  for (const [i, lineText] of currentLines.entries()) {
+    const len = lineText.length;
+    if (remaining <= len) {
+      return { line: i + 1, column: remaining + 1 };
+    }
+    remaining -= len + 1;
+  }
+  const lastLine = currentLines[currentLines.length - 1];
+  return { line: currentLines.length, column: (lastLine?.length ?? 0) + 1 };
+}
+
+/**
+ * Create line-at-offset lookup function based on whether source is in sync.
+ */
+function createLineAtOffsetFn(
+  sourceInSync: boolean,
+  lineIndex: { getLineAtOffset: (offset: number) => { line: number; column: number } },
+  currentLines: readonly string[]
+): (offset: number) => { line: number; column: number } {
+  if (sourceInSync) {
+    return lineIndex.getLineAtOffset;
+  }
+  return (offset: number) => findLineColumnFallback(currentLines, offset);
+}
 
 // =============================================================================
 // Types
@@ -169,28 +208,15 @@ export function VbaCodeEditor({
   const [cursorState, setCursorState] =
     useState<CodeCursorState>(INITIAL_CURSOR_STATE);
 
-  // Token cache for efficient syntax highlighting
-  const tokenCache = useLineTokenCache();
-
-  // Clear token cache when module changes
-  const prevModuleName = useRef<string | undefined>(undefined);
-  useEffect(() => {
-    if (activeModule?.name !== prevModuleName.current) {
-      tokenCache.clear();
-      prevModuleName.current = activeModule?.name;
-    }
-  }, [activeModule?.name, tokenCache]);
+  // Token cache for efficient syntax highlighting (module-scoped, no clearing needed)
+  const tokenCache = useModuleTokenCache(activeModule?.name);
 
   // Measure actual font metrics from container
   const { lineHeight, measureText } = useFontMetrics(containerRef);
 
-  // Split lines (memoized)
-  const lines = useMemo(() => {
-    if (!activeModuleSource) {
-      return [];
-    }
-    return activeModuleSource.split("\n");
-  }, [activeModuleSource]);
+  // Line index for efficient offset-to-line conversion (O(log n) instead of O(n))
+  const lineIndex = useLineIndex(activeModuleSource ?? "");
+  const lines = lineIndex.lines;
 
   // Virtual scrolling state
   const { state: virtualState, setScrollTop, containerRef: virtualContainerRef } = useVirtualLines(
@@ -217,6 +243,13 @@ export function VbaCodeEditor({
     setCursorState(state);
   }, []);
 
+  // Cache for cursor position to skip redundant calculations
+  const cursorCacheRef = useRef<{
+    selectionStart: number;
+    selectionEnd: number;
+    valueLength: number;
+  } | null>(null);
+
   // Update cursor position from textarea selection
   const updateCursorPosition = useCallback(() => {
     if (composition.isComposing) {
@@ -230,11 +263,29 @@ export function VbaCodeEditor({
 
     const { selectionStart, selectionEnd, value } = textarea;
     const hasSelection = selectionStart !== selectionEnd;
-    const currentLines = value.split("\n");
+
+    // Skip if selection hasn't changed (cache hit)
+    const cache = cursorCacheRef.current;
+    if (
+      cache !== null &&
+      cache.selectionStart === selectionStart &&
+      cache.selectionEnd === selectionEnd &&
+      cache.valueLength === value.length
+    ) {
+      return;
+    }
+
+    // Update cache
+    cursorCacheRef.current = { selectionStart, selectionEnd, valueLength: value.length };
+
+    // Use lineIndex for O(log n) lookup if source matches, otherwise fallback
+    const sourceInSync = value === activeModuleSource;
+    const currentLines = sourceInSync ? lines : value.split("\n");
+    const getLineAtOffset = createLineAtOffsetFn(sourceInSync, lineIndex, currentLines);
 
     if (hasSelection) {
-      const start = offsetToLineColumn(value, selectionStart);
-      const end = offsetToLineColumn(value, selectionEnd);
+      const start = getLineAtOffset(selectionStart);
+      const end = getLineAtOffset(selectionEnd);
 
       dispatch({
         type: "SET_SELECTION",
@@ -260,7 +311,7 @@ export function VbaCodeEditor({
         isBlinking: false,
       });
     } else {
-      const pos = offsetToLineColumn(value, selectionStart);
+      const pos = getLineAtOffset(selectionStart);
       const lineText = currentLines[pos.line - 1] ?? "";
 
       dispatch({ type: "SET_CURSOR", line: pos.line, column: pos.column });
@@ -280,7 +331,7 @@ export function VbaCodeEditor({
         isBlinking: true,
       });
     }
-  }, [composition.isComposing, dispatch, handleCursorStateChange, lineHeight, measureText]);
+  }, [composition.isComposing, dispatch, handleCursorStateChange, lineHeight, measureText, activeModuleSource, lines, lineIndex]);
 
   // Scoped selection change listener
   useScopedSelectionChange(textareaRef, updateCursorPosition);

@@ -2,9 +2,10 @@
  * @file Line Token Cache Hook
  *
  * LRU cache for tokenized lines to avoid re-tokenizing unchanged lines.
+ * Supports module-scoped caching to preserve tokens across module switches.
  */
 
-import { useCallback, useRef } from "react";
+import { useCallback, useRef, useMemo } from "react";
 import { tokenizeLine, type Token } from "./syntax-highlight";
 
 // =============================================================================
@@ -23,44 +24,50 @@ export type LineTokenCache = {
 // =============================================================================
 
 /**
- * Simple LRU cache using Map's insertion order.
+ * LRU cache instance type.
+ */
+type LRUCacheInstance<K, V> = {
+  readonly get: (key: K) => V | undefined;
+  readonly set: (key: K, value: V) => void;
+  readonly clear: () => void;
+};
+
+/**
+ * Create an LRU cache using Map's insertion order.
  * Map maintains insertion order, so we can evict the oldest entries.
  */
-class LRUCache<K, V> {
-  private readonly cache = new Map<K, V>();
-  private readonly maxSize: number;
+function createLRUCache<K, V>(maxSize: number): LRUCacheInstance<K, V> {
+  const cache = new Map<K, V>();
 
-  constructor(maxSize: number) {
-    this.maxSize = maxSize;
-  }
-
-  get(key: K): V | undefined {
-    const value = this.cache.get(key);
+  const get = (key: K): V | undefined => {
+    const value = cache.get(key);
     if (value !== undefined) {
       // Move to end (most recently used)
-      this.cache.delete(key);
-      this.cache.set(key, value);
+      cache.delete(key);
+      cache.set(key, value);
     }
     return value;
-  }
+  };
 
-  set(key: K, value: V): void {
+  const set = (key: K, value: V): void => {
     // Delete first to update insertion order if exists
-    this.cache.delete(key);
-    this.cache.set(key, value);
+    cache.delete(key);
+    cache.set(key, value);
 
     // Evict oldest entries if over capacity
-    if (this.cache.size > this.maxSize) {
-      const firstKey = this.cache.keys().next().value;
+    if (cache.size > maxSize) {
+      const firstKey = cache.keys().next().value;
       if (firstKey !== undefined) {
-        this.cache.delete(firstKey);
+        cache.delete(firstKey);
       }
     }
-  }
+  };
 
-  clear(): void {
-    this.cache.clear();
-  }
+  const clear = (): void => {
+    cache.clear();
+  };
+
+  return { get, set, clear };
 }
 
 // =============================================================================
@@ -84,11 +91,11 @@ const DEFAULT_CACHE_SIZE = 2000;
  * ```
  */
 export function useLineTokenCache(maxSize: number = DEFAULT_CACHE_SIZE): LineTokenCache {
-  const cacheRef = useRef<LRUCache<string, readonly Token[]> | null>(null);
+  const cacheRef = useRef<LRUCacheInstance<string, readonly Token[]> | null>(null);
 
   // Lazy initialization
   if (cacheRef.current === null) {
-    cacheRef.current = new LRUCache(maxSize);
+    cacheRef.current = createLRUCache(maxSize);
   }
 
   const getTokens = useCallback((line: string): readonly Token[] => {
@@ -106,6 +113,94 @@ export function useLineTokenCache(maxSize: number = DEFAULT_CACHE_SIZE): LineTok
   const clear = useCallback((): void => {
     cacheRef.current?.clear();
   }, []);
+
+  return { getTokens, clear };
+}
+
+// =============================================================================
+// Module-Scoped Cache
+// =============================================================================
+
+const DEFAULT_MODULE_CACHE_SIZE = 1000;
+const MAX_MODULES = 10;
+
+/**
+ * Global storage for module-scoped caches.
+ * Key: module name, Value: LRU cache for that module.
+ * Limited to MAX_MODULES to prevent memory leaks.
+ */
+const moduleCaches = new Map<string, LRUCacheInstance<string, readonly Token[]>>();
+
+/**
+ * Get or create a cache for a specific module.
+ */
+function getModuleCache(
+  moduleName: string,
+  maxSize: number
+): LRUCacheInstance<string, readonly Token[]> {
+  const existing = moduleCaches.get(moduleName);
+  if (existing) {
+    return existing;
+  }
+
+  // Evict oldest module cache if we have too many
+  if (moduleCaches.size >= MAX_MODULES) {
+    const firstKey = moduleCaches.keys().next().value;
+    if (firstKey !== undefined) {
+      moduleCaches.delete(firstKey);
+    }
+  }
+
+  const newCache = createLRUCache<string, readonly Token[]>(maxSize);
+  moduleCaches.set(moduleName, newCache);
+  return newCache;
+}
+
+/**
+ * Hook that provides a module-scoped LRU cache for tokenized lines.
+ *
+ * Unlike `useLineTokenCache`, this preserves tokens when switching between modules.
+ * Each module has its own cache, limited to MAX_MODULES total.
+ *
+ * @param moduleName - Name of the module (undefined uses fallback cache)
+ * @param maxSize - Maximum number of lines to cache per module (default: 1000)
+ * @returns Cache accessor with getTokens and clear methods
+ *
+ * @example
+ * ```tsx
+ * const tokenCache = useModuleTokenCache(activeModule?.name);
+ *
+ * // Switching modules preserves previous module's cache
+ * const tokens = tokenCache.getTokens(line);
+ * ```
+ */
+export function useModuleTokenCache(
+  moduleName: string | undefined,
+  maxSize: number = DEFAULT_MODULE_CACHE_SIZE
+): LineTokenCache {
+  // Use "__default__" for undefined module name
+  const key = moduleName ?? "__default__";
+
+  // Memoize cache reference for current module
+  const cache = useMemo(() => getModuleCache(key, maxSize), [key, maxSize]);
+
+  const getTokens = useCallback(
+    (line: string): readonly Token[] => {
+      const cached = cache.get(line);
+      if (cached !== undefined) {
+        return cached;
+      }
+
+      const tokens = tokenizeLine(line);
+      cache.set(line, tokens);
+      return tokens;
+    },
+    [cache]
+  );
+
+  const clear = useCallback((): void => {
+    cache.clear();
+  }, [cache]);
 
   return { getTokens, clear };
 }

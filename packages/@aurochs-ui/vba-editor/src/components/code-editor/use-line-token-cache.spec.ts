@@ -11,42 +11,44 @@ import { tokenizeLine } from "./syntax-highlight";
 // LRU Cache Implementation (extracted for testing)
 // =============================================================================
 
-class LRUCache<K, V> {
-  private readonly cache = new Map<K, V>();
-  private readonly maxSize: number;
+type LRUCacheInstance<K, V> = {
+  readonly get: (key: K) => V | undefined;
+  readonly set: (key: K, value: V) => void;
+  readonly clear: () => void;
+  readonly size: () => number;
+};
 
-  constructor(maxSize: number) {
-    this.maxSize = maxSize;
-  }
+function createLRUCache<K, V>(maxSize: number): LRUCacheInstance<K, V> {
+  const cache = new Map<K, V>();
 
-  get(key: K): V | undefined {
-    const value = this.cache.get(key);
+  const get = (key: K): V | undefined => {
+    const value = cache.get(key);
     if (value !== undefined) {
-      this.cache.delete(key);
-      this.cache.set(key, value);
+      cache.delete(key);
+      cache.set(key, value);
     }
     return value;
-  }
+  };
 
-  set(key: K, value: V): void {
-    this.cache.delete(key);
-    this.cache.set(key, value);
+  const set = (key: K, value: V): void => {
+    cache.delete(key);
+    cache.set(key, value);
 
-    if (this.cache.size > this.maxSize) {
-      const firstKey = this.cache.keys().next().value;
+    if (cache.size > maxSize) {
+      const firstKey = cache.keys().next().value;
       if (firstKey !== undefined) {
-        this.cache.delete(firstKey);
+        cache.delete(firstKey);
       }
     }
-  }
+  };
 
-  clear(): void {
-    this.cache.clear();
-  }
+  const clear = (): void => {
+    cache.clear();
+  };
 
-  size(): number {
-    return this.cache.size;
-  }
+  const size = (): number => cache.size;
+
+  return { get, set, clear, size };
 }
 
 // =============================================================================
@@ -55,7 +57,7 @@ class LRUCache<K, V> {
 
 describe("LRUCache", () => {
   test("stores and retrieves values", () => {
-    const cache = new LRUCache<string, number>(3);
+    const cache = createLRUCache<string, number>(3);
     cache.set("a", 1);
     cache.set("b", 2);
 
@@ -64,12 +66,12 @@ describe("LRUCache", () => {
   });
 
   test("returns undefined for missing keys", () => {
-    const cache = new LRUCache<string, number>(3);
+    const cache = createLRUCache<string, number>(3);
     expect(cache.get("missing")).toBeUndefined();
   });
 
   test("evicts oldest entry when over capacity", () => {
-    const cache = new LRUCache<string, number>(3);
+    const cache = createLRUCache<string, number>(3);
     cache.set("a", 1);
     cache.set("b", 2);
     cache.set("c", 3);
@@ -82,7 +84,7 @@ describe("LRUCache", () => {
   });
 
   test("accessing an entry moves it to end (LRU)", () => {
-    const cache = new LRUCache<string, number>(3);
+    const cache = createLRUCache<string, number>(3);
     cache.set("a", 1);
     cache.set("b", 2);
     cache.set("c", 3);
@@ -100,7 +102,7 @@ describe("LRUCache", () => {
   });
 
   test("clear removes all entries", () => {
-    const cache = new LRUCache<string, number>(3);
+    const cache = createLRUCache<string, number>(3);
     cache.set("a", 1);
     cache.set("b", 2);
     cache.clear();
@@ -151,7 +153,7 @@ describe("tokenizeLine cache behavior", () => {
 
 describe("Token cache integration", () => {
   test("caching tokenized lines improves performance", () => {
-    const cache = new LRUCache<string, readonly ReturnType<typeof tokenizeLine>[number][]>(100);
+    const cache = createLRUCache<string, readonly ReturnType<typeof tokenizeLine>[number][]>(100);
     const line = "Public Function GetValue(ByVal index As Integer) As Variant";
 
     // First call - tokenize and cache
