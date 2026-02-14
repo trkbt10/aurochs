@@ -15,10 +15,10 @@ import { EXCEL_1904_TO_1900_DAY_OFFSET } from "./date-system";
 const MILLISECONDS_PER_DAY = 86_400_000;
 
 /**
- * Epoch for the 1900 date system (1899-12-30 UTC).
- * Excel incorrectly treats 1900 as a leap year, so the epoch is adjusted.
+ * Epoch for the 1900 date system (1899-12-31 UTC).
+ * Serial 1 = 1900-01-01, so epoch is one day before.
  */
-const SPREADSHEET_1900_EPOCH_MS = Date.UTC(1899, 11, 30);
+const SPREADSHEET_1900_EPOCH_MS = Date.UTC(1899, 11, 31);
 
 /**
  * Epoch for the 1904 date system (1904-01-01 UTC).
@@ -40,12 +40,14 @@ const SPREADSHEET_1904_EPOCH_MS = Date.UTC(1904, 0, 1);
  */
 export function dateToSerial(date: Date, dateSystem: XlsxDateSystem = "1900"): number {
   const epoch = dateSystem === "1904" ? SPREADSHEET_1904_EPOCH_MS : SPREADSHEET_1900_EPOCH_MS;
-  const serial = (date.getTime() - epoch) / MILLISECONDS_PER_DAY;
+  let serial = (date.getTime() - epoch) / MILLISECONDS_PER_DAY;
 
-  // Excel 1900 date system has a leap year bug: it treats 1900-02-29 as valid
-  // Serial 60 represents this non-existent date
-  // Dates after Feb 28, 1900 in the 1900 system need no adjustment for conversion
-  // (the bug is preserved for compatibility)
+  // Excel 1900 date system bug: serial 60 = 1900-02-29 (doesn't exist)
+  // Excel treats 1900 as a leap year, so serials > 59 need +1 adjustment
+  if (dateSystem === "1900" && serial > 59) {
+    serial += 1;
+  }
+
   return serial;
 }
 
@@ -69,9 +71,15 @@ export function serialToDate(serial: number, dateSystem: XlsxDateSystem = "1900"
   }
 
   // For 1904 system, convert to 1900 equivalent first
-  const normalizedSerial = dateSystem === "1904" ? serial + EXCEL_1904_TO_1900_DAY_OFFSET : serial;
+  let adjustedSerial = dateSystem === "1904" ? serial + EXCEL_1904_TO_1900_DAY_OFFSET : serial;
 
-  const millisecondsOffset = Math.round(normalizedSerial * MILLISECONDS_PER_DAY);
+  // Excel 1900 date system bug: serial 60 = 1900-02-29 (doesn't exist)
+  // Excel treats 1900 as a leap year, so serials > 59 are off by 1 day
+  if (dateSystem === "1900" && adjustedSerial > 59) {
+    adjustedSerial -= 1;
+  }
+
+  const millisecondsOffset = Math.round(adjustedSerial * MILLISECONDS_PER_DAY);
   return new Date(SPREADSHEET_1900_EPOCH_MS + millisecondsOffset);
 }
 
