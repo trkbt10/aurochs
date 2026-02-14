@@ -8,7 +8,7 @@ import { useMemo, type CSSProperties, type ReactNode } from "react";
 import type { VbaProgramIr } from "@aurochs-office/vba";
 import { EditorShell, type EditorPanel } from "@aurochs-ui/editor-controls/editor-shell";
 import { VbaEditorProvider } from "../context/vba-editor";
-import { VbaCodeEditor, type RendererType } from "./code-editor";
+import { VbaCodeEditor, type CodeRendererComponent } from "./code-editor";
 import { VbaModuleList } from "./module-list";
 import { VbaEditorToolbar } from "./toolbar";
 import { VbaPropertiesPanel } from "./properties-panel";
@@ -22,19 +22,19 @@ export type VbaEditorProps = {
   readonly readonly?: boolean;
   /** Custom style */
   readonly style?: CSSProperties;
-  /** Renderer type: "html" (default), "svg", or "canvas" */
-  readonly renderer?: RendererType;
+  /** Code renderer component. Defaults to HtmlCodeRenderer. */
+  readonly Renderer?: CodeRendererComponent;
 };
 
 type VbaEditorInnerProps = {
   readonly style?: CSSProperties;
-  readonly renderer?: RendererType;
+  readonly Renderer?: CodeRendererComponent;
 };
 
 /**
  * Inner editor component (requires context).
  */
-function VbaEditorInner({ style, renderer }: VbaEditorInnerProps): ReactNode {
+function VbaEditorInner({ style, Renderer }: VbaEditorInnerProps): ReactNode {
   const panels = useMemo<EditorPanel[]>(
     () => [
       {
@@ -57,7 +57,7 @@ function VbaEditorInner({ style, renderer }: VbaEditorInnerProps): ReactNode {
 
   return (
     <EditorShell toolbar={<VbaEditorToolbar />} panels={panels} style={style}>
-      <VbaCodeEditor renderer={renderer} />
+      <VbaCodeEditor Renderer={Renderer} />
     </EditorShell>
   );
 }
@@ -76,11 +76,11 @@ export function VbaEditor({
   onProgramChange: _onProgramChange,
   readonly: _readonly,
   style,
-  renderer,
+  Renderer,
 }: VbaEditorProps): ReactNode {
   return (
     <VbaEditorProvider program={program}>
-      <VbaEditorInner style={style} renderer={renderer} />
+      <VbaEditorInner style={style} Renderer={Renderer} />
     </VbaEditorProvider>
   );
 }

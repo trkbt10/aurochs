@@ -18,9 +18,8 @@ import { useVbaEditor } from "../../context/vba-editor";
 import { LineNumbers } from "./LineNumbers";
 import { useLineTokenCache } from "./use-line-token-cache";
 import {
-  getRenderer,
-  DEFAULT_RENDERER,
-  type RendererType,
+  HtmlCodeRenderer,
+  type CodeRendererComponent,
 } from "./renderers";
 import { useVirtualLines } from "./use-virtual-lines";
 import { useDebouncedHistory } from "./use-debounced-history";
@@ -57,8 +56,8 @@ const HISTORY_DEBOUNCE_MS = 300;
 
 export type VbaCodeEditorProps = {
   readonly style?: CSSProperties;
-  /** Renderer type: "html" (default), "svg", or "canvas" */
-  readonly renderer?: RendererType;
+  /** Code renderer component. Defaults to HtmlCodeRenderer. */
+  readonly Renderer?: CodeRendererComponent;
 };
 
 // =============================================================================
@@ -155,7 +154,7 @@ function SelectionOverlay({ rects }: SelectionOverlayProps): ReactNode {
  */
 export function VbaCodeEditor({
   style,
-  renderer = DEFAULT_RENDERER,
+  Renderer = HtmlCodeRenderer,
 }: VbaCodeEditorProps): ReactNode {
   const { activeModuleSource, activeModule, dispatch, canUndo, canRedo, pendingCursorOffset } =
     useVbaEditor();
@@ -467,23 +466,18 @@ export function VbaCodeEditor({
           </div>
         )}
 
-        {/* Virtualized code display - renderer is selected by prop */}
-        {(() => {
-          const CodeRenderer = getRenderer(renderer);
-          return (
-            <CodeRenderer
-              lines={lines}
-              visibleRange={virtualState.visibleRange}
-              topSpacerHeight={virtualState.topSpacerHeight}
-              bottomSpacerHeight={virtualState.bottomSpacerHeight}
-              tokenCache={tokenCache}
-              lineHeight={LINE_HEIGHT}
-              padding={8}
-              width={codeAreaRef.current?.clientWidth}
-              height={virtualState.viewportHeight}
-            />
-          );
-        })()}
+        {/* Virtualized code display */}
+        <Renderer
+          lines={lines}
+          visibleRange={virtualState.visibleRange}
+          topSpacerHeight={virtualState.topSpacerHeight}
+          bottomSpacerHeight={virtualState.bottomSpacerHeight}
+          tokenCache={tokenCache}
+          lineHeight={LINE_HEIGHT}
+          padding={8}
+          width={codeAreaRef.current?.clientWidth}
+          height={virtualState.viewportHeight}
+        />
 
         {/* Selection overlay */}
         {cursorState.selectionRects.length > 0 && (

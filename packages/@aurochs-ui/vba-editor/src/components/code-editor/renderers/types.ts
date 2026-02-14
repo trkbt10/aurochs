@@ -86,14 +86,3 @@ export type SelectionRenderRect = {
   readonly height: number;
 };
 
-// =============================================================================
-// Renderer Registry
-// =============================================================================
-
-/**
- * Registry for code renderers.
- * Used for dynamic renderer selection and extensibility.
- */
-export type RendererRegistry = {
-  readonly [K in RendererType]: CodeRendererComponent;
-};

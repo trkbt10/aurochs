@@ -67,10 +67,8 @@ export {
 export {
   type RendererType,
   type CodeRendererProps,
+  type CodeRendererComponent,
   HtmlCodeRenderer,
   SvgCodeRenderer,
   CanvasCodeRenderer,
-  RENDERER_REGISTRY,
-  getRenderer,
-  DEFAULT_RENDERER,
 } from "./components/code-editor";

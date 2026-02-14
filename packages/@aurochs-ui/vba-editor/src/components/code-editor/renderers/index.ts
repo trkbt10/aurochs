@@ -1,7 +1,8 @@
 /**
  * @file Code Renderers Index
  *
- * Exports all renderer implementations and the registry for dynamic selection.
+ * Exports renderer implementations. Each renderer is a separate export
+ * to support tree-shaking - only imported renderers are bundled.
  */
 
 export type {
@@ -12,7 +13,6 @@ export type {
   TokenColorMap,
   CursorRenderInfo,
   SelectionRenderRect,
-  RendererRegistry,
 } from "./types";
 export {
   TOKEN_COLORS_RGB,
@@ -26,33 +26,3 @@ export {
 export { HtmlCodeRenderer } from "./HtmlCodeRenderer";
 export { SvgCodeRenderer } from "./SvgCodeRenderer";
 export { CanvasCodeRenderer } from "./CanvasCodeRenderer";
-
-// =============================================================================
-// Renderer Registry
-// =============================================================================
-
-import type { RendererType, CodeRendererComponent, RendererRegistry } from "./types";
-import { HtmlCodeRenderer } from "./HtmlCodeRenderer";
-import { SvgCodeRenderer } from "./SvgCodeRenderer";
-import { CanvasCodeRenderer } from "./CanvasCodeRenderer";
-
-/**
- * Built-in renderer registry.
- */
-export const RENDERER_REGISTRY: RendererRegistry = {
-  html: HtmlCodeRenderer,
-  svg: SvgCodeRenderer,
-  canvas: CanvasCodeRenderer,
-};
-
-/**
- * Get a renderer component by type.
- */
-export function getRenderer(type: RendererType): CodeRendererComponent {
-  return RENDERER_REGISTRY[type];
-}
-
-/**
- * Default renderer type.
- */
-export const DEFAULT_RENDERER: RendererType = "html";

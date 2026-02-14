@@ -22,15 +22,10 @@ export {
   type RendererType,
   type CodeRendererProps,
   type CodeRendererComponent,
-  type RendererRegistry,
   // Components
   HtmlCodeRenderer,
   SvgCodeRenderer,
   CanvasCodeRenderer,
-  // Registry
-  RENDERER_REGISTRY,
-  getRenderer,
-  DEFAULT_RENDERER,
   // Token colors
   TOKEN_COLORS_RGB,
   getTokenColorRgb,

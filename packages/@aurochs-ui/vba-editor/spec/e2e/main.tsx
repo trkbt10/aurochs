@@ -5,7 +5,14 @@
 import { StrictMode, type CSSProperties } from "react";
 import { createRoot } from "react-dom/client";
 import { injectCSSVariables } from "@aurochs-ui/ui-components/design-tokens";
-import { VbaEditor, type RendererType } from "@aurochs-ui/vba-editor";
+import {
+  VbaEditor,
+  HtmlCodeRenderer,
+  SvgCodeRenderer,
+  CanvasCodeRenderer,
+  type CodeRendererComponent,
+  type RendererType,
+} from "@aurochs-ui/vba-editor";
 import type { VbaProgramIr, VbaModule } from "@aurochs-office/vba";
 
 injectCSSVariables();
@@ -14,13 +21,20 @@ injectCSSVariables();
 // URL Parameter Parsing
 // =============================================================================
 
-function getRendererFromUrl(): RendererType {
+/** Test-level renderer mapping for URL-based selection. */
+const RENDERER_MAP: Record<RendererType, CodeRendererComponent> = {
+  html: HtmlCodeRenderer,
+  svg: SvgCodeRenderer,
+  canvas: CanvasCodeRenderer,
+};
+
+function getRendererFromUrl(): { type: RendererType; component: CodeRendererComponent } {
   const params = new URLSearchParams(window.location.search);
   const renderer = params.get("renderer");
   if (renderer === "svg" || renderer === "canvas" || renderer === "html") {
-    return renderer;
+    return { type: renderer, component: RENDERER_MAP[renderer] };
   }
-  return "html";
+  return { type: "html", component: HtmlCodeRenderer };
 }
 
 // =============================================================================
@@ -115,26 +129,26 @@ const editorContainerStyle: CSSProperties = {
 // Root Component
 // =============================================================================
 
-const RENDERERS: RendererType[] = ["html", "svg", "canvas"];
+const RENDERER_TYPES: RendererType[] = ["html", "svg", "canvas"];
 
 function App() {
-  const currentRenderer = getRendererFromUrl();
+  const { type: currentType, component: CurrentRenderer } = getRendererFromUrl();
 
   return (
     <div style={containerStyle} data-testid="vba-editor-container">
       {/* Editor */}
       <div style={editorContainerStyle}>
-        <VbaEditor program={testProgram} renderer={currentRenderer} />
+        <VbaEditor program={testProgram} Renderer={CurrentRenderer} />
       </div>
 
       {/* Renderer navigation - bottom */}
       <nav style={navStyle}>
         <span>Renderer:</span>
-        {RENDERERS.map((r) => (
+        {RENDERER_TYPES.map((r) => (
           <a
             key={r}
             href={`?renderer=${r}`}
-            style={r === currentRenderer ? activeLinkStyle : linkStyle}
+            style={r === currentType ? activeLinkStyle : linkStyle}
           >
             {r.toUpperCase()}
           </a>
