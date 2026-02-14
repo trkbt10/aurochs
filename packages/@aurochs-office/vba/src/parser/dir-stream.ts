@@ -148,10 +148,35 @@ function createBinaryReader(bytes: Uint8Array, initialOffset = 0): BinaryReader 
 // Text Decoding
 // =============================================================================
 
-function decodeText(bytes: Uint8Array, _codePage: number): string {
-  // For simplicity, assume UTF-8 compatible (ASCII) for common cases
-  // Full implementation would use code page conversion
-  return new TextDecoder("utf-8").decode(bytes);
+/**
+ * Map Windows code page numbers to TextDecoder encoding labels.
+ * @see https://encoding.spec.whatwg.org/#names-and-labels
+ */
+export const CODE_PAGE_TO_ENCODING: Record<number, string> = {
+  932: "shift_jis", // Japanese
+  936: "gbk", // Simplified Chinese
+  949: "euc-kr", // Korean
+  950: "big5", // Traditional Chinese
+  1250: "windows-1250", // Central European
+  1251: "windows-1251", // Cyrillic
+  1252: "windows-1252", // Western European (default)
+  1253: "windows-1253", // Greek
+  1254: "windows-1254", // Turkish
+  1255: "windows-1255", // Hebrew
+  1256: "windows-1256", // Arabic
+  1257: "windows-1257", // Baltic
+  1258: "windows-1258", // Vietnamese
+  65001: "utf-8", // UTF-8
+};
+
+export function decodeText(bytes: Uint8Array, codePage: number): string {
+  const encoding = CODE_PAGE_TO_ENCODING[codePage] ?? "windows-1252";
+  try {
+    return new TextDecoder(encoding).decode(bytes);
+  } catch {
+    // Fallback to windows-1252 if encoding is not supported
+    return new TextDecoder("windows-1252").decode(bytes);
+  }
 }
 
 // =============================================================================
