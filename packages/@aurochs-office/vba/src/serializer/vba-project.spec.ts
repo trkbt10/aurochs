@@ -43,6 +43,18 @@ Private Sub CommandButton1_Click()
 End Sub
 `;
 
+// Document module source code (ThisWorkbook) with VB_PredeclaredId = True and VB_Exposed = True
+// This should remain as "document" type, NOT be reclassified as "class"
+const DOCUMENT_MODULE_SOURCE = `Attribute VB_Name = "ThisWorkbook"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = True
+Attribute VB_Exposed = True
+Private Sub Workbook_Open()
+    MsgBox "Hello"
+End Sub
+`;
+
 function createMinimalProgram(): VbaProgramIr {
   const project: VbaProjectInfo = {
     name: "VBAProject",
@@ -214,7 +226,10 @@ describe("serializeVbaProject", () => {
     }
   });
 
-  it("round-trips document module", () => {
+  it("round-trips document module with VB_Exposed attribute", () => {
+    // Document modules (ThisWorkbook, Sheet1) have VB_Exposed = True
+    // but should NOT be reclassified as "class" - VB_PredeclaredId = True
+    // distinguishes them from class modules
     const project: VbaProjectInfo = {
       name: "DocModule",
       helpFile: null,
@@ -227,7 +242,7 @@ describe("serializeVbaProject", () => {
       {
         name: "ThisWorkbook",
         type: "document",
-        sourceCode: "Private Sub Workbook_Open()\n    MsgBox \"Hello\"\nEnd Sub\n",
+        sourceCode: DOCUMENT_MODULE_SOURCE,
         streamOffset: 0,
         procedures: [],
       },
@@ -238,12 +253,13 @@ describe("serializeVbaProject", () => {
 
     const result = parseVbaProject(bytes);
     expect(result.ok).toBe(true);
-    if (!result.ok) {return;}
+    if (!result.ok) { return; }
 
     expect(result.program.modules.length).toBe(1);
     expect(result.program.modules[0].name).toBe("ThisWorkbook");
+    // Critical: must remain "document" despite having VB_Exposed = True
     expect(result.program.modules[0].type).toBe("document");
-    expect(result.program.modules[0].sourceCode).toBe(modules[0].sourceCode);
+    expect(result.program.modules[0].sourceCode).toBe(DOCUMENT_MODULE_SOURCE);
   });
 
   it("round-trips with references", () => {

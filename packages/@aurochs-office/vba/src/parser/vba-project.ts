@@ -83,16 +83,28 @@ function isUserFormSource(sourceCode: string): boolean {
 }
 
 /**
+ * Check if source has VB_PredeclaredId = True attribute.
+ *
+ * Document modules (ThisWorkbook, Sheet1, etc.) have VB_PredeclaredId = True,
+ * meaning they have a default global instance. Class modules typically have
+ * VB_PredeclaredId = False.
+ */
+function hasPredeclaredId(sourceCode: string): boolean {
+  // Match "Attribute VB_PredeclaredId = True" (case-insensitive value)
+  return /Attribute\s+VB_PredeclaredId\s*=\s*True/i.test(sourceCode);
+}
+
+/**
  * Refine module type based on source code content.
  *
  * MS-OVBA 2.3.4.2.3.2.4:
  * - MODULETYPEPROCEDURAL (0x0021): procedural module (standard)
  * - MODULETYPEDOCUMENT (0x0022): document module, class module, or designer module
  *
- * Since class/form modules use MODULETYPEDOCUMENT, we check source attributes:
+ * Since class/form/document modules all use MODULETYPEDOCUMENT, we check attributes:
  * - Form: has BEGIN block or VB_Ext_KEY (designer module)
- * - Class: has VB_Creatable/VB_Exposed attributes
- * - Document: everything else with MODULETYPEDOCUMENT
+ * - Document: has VB_PredeclaredId = True (default instance - sheets, workbook)
+ * - Class: has VB_Creatable but VB_PredeclaredId = False (no default instance)
  */
 function refineModuleType(type: VbaModuleType, sourceCode: string): VbaModuleType {
   // Only refine MODULETYPEDOCUMENT (parsed as "document")
@@ -105,8 +117,14 @@ function refineModuleType(type: VbaModuleType, sourceCode: string): VbaModuleTyp
     return "form";
   }
 
-  // Class modules have VB_Creatable/VB_Exposed attributes
-  if (sourceCode.includes("VB_Creatable") || sourceCode.includes("VB_Exposed")) {
+  // Document modules have VB_PredeclaredId = True (ThisWorkbook, Sheet1, etc.)
+  // They also have VB_Exposed = True, so we must check PredeclaredId first
+  if (hasPredeclaredId(sourceCode)) {
+    return "document";
+  }
+
+  // Class modules have VB_Creatable but VB_PredeclaredId = False
+  if (sourceCode.includes("VB_Creatable")) {
     return "class";
   }
 
@@ -121,12 +139,16 @@ function inferModuleType(moduleName: string, sourceCode: string): VbaModuleType 
   if (isUserFormSource(sourceCode)) {
     return "form";
   }
-  // Document modules (sheets, workbook, document)
+  // Document modules by name (sheets, workbook, document)
   if (moduleName.startsWith("Sheet") || moduleName === "ThisWorkbook" || moduleName === "ThisDocument") {
     return "document";
   }
-  // Class modules
-  if (sourceCode.includes("VB_Creatable") || sourceCode.includes("VB_Exposed")) {
+  // Document modules by attribute (VB_PredeclaredId = True)
+  if (hasPredeclaredId(sourceCode)) {
+    return "document";
+  }
+  // Class modules have VB_Creatable but no VB_PredeclaredId = True
+  if (sourceCode.includes("VB_Creatable")) {
     return "class";
   }
   return "standard";
