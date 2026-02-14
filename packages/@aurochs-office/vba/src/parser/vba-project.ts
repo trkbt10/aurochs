@@ -83,30 +83,49 @@ function isUserFormSource(sourceCode: string): boolean {
 }
 
 /**
- * Check if source has VB_PredeclaredId = True attribute.
+ * Check if a module name matches known document module patterns.
  *
- * Document modules (ThisWorkbook, Sheet1, etc.) have VB_PredeclaredId = True,
- * meaning they have a default global instance. Class modules typically have
- * VB_PredeclaredId = False.
+ * Document modules are created by the host application (Excel, Word, etc.)
+ * and have predictable names that users cannot change:
+ * - ThisWorkbook (Excel)
+ * - ThisDocument (Word)
+ * - Sheet1, Sheet2, ... (Excel worksheets)
+ * - Chart1, Chart2, ... (Excel chart sheets)
+ *
+ * This is the ONLY reliable way to distinguish document from class modules,
+ * since both can have VB_PredeclaredId = True and VB_Exposed = True.
  */
-function hasPredeclaredId(sourceCode: string): boolean {
-  // Match "Attribute VB_PredeclaredId = True" (case-insensitive value)
-  return /Attribute\s+VB_PredeclaredId\s*=\s*True/i.test(sourceCode);
+function isDocumentModuleName(name: string): boolean {
+  if (name === "ThisWorkbook" || name === "ThisDocument") {
+    return true;
+  }
+  // Sheet1, Sheet2, ... SheetN
+  if (/^Sheet\d+$/.test(name)) {
+    return true;
+  }
+  // Chart1, Chart2, ... ChartN (Excel chart sheets)
+  if (/^Chart\d+$/.test(name)) {
+    return true;
+  }
+  return false;
 }
 
 /**
- * Refine module type based on source code content.
+ * Refine module type based on module name and source code content.
  *
  * MS-OVBA 2.3.4.2.3.2.4:
  * - MODULETYPEPROCEDURAL (0x0021): procedural module (standard)
  * - MODULETYPEDOCUMENT (0x0022): document module, class module, or designer module
  *
- * Since class/form/document modules all use MODULETYPEDOCUMENT, we check attributes:
+ * Since class/form/document modules all use MODULETYPEDOCUMENT, we distinguish by:
  * - Form: has BEGIN block or VB_Ext_KEY (designer module)
- * - Document: has VB_PredeclaredId = True (default instance - sheets, workbook)
- * - Class: has VB_Creatable but VB_PredeclaredId = False (no default instance)
+ * - Document: name matches host-created patterns (ThisWorkbook, SheetN, etc.)
+ * - Class: has VB_Creatable attribute (user-created class)
+ *
+ * Note: Both document and class modules can have VB_PredeclaredId = True,
+ * so we cannot rely on source attributes alone - name is the key differentiator.
  */
-function refineModuleType(type: VbaModuleType, sourceCode: string): VbaModuleType {
+function refineModuleType(type: VbaModuleType, moduleName: string, sourceCode: string): VbaModuleType {
   // Only refine MODULETYPEDOCUMENT (parsed as "document")
   if (type !== "document") {
     return type;
@@ -117,40 +136,43 @@ function refineModuleType(type: VbaModuleType, sourceCode: string): VbaModuleTyp
     return "form";
   }
 
-  // Document modules have VB_PredeclaredId = True (ThisWorkbook, Sheet1, etc.)
-  // They also have VB_Exposed = True, so we must check PredeclaredId first
-  if (hasPredeclaredId(sourceCode)) {
+  // Document modules have host-assigned names (ThisWorkbook, Sheet1, etc.)
+  if (isDocumentModuleName(moduleName)) {
     return "document";
   }
 
-  // Class modules have VB_Creatable but VB_PredeclaredId = False
+  // Class modules have VB_Creatable attribute (user-created)
   if (sourceCode.includes("VB_Creatable")) {
     return "class";
   }
 
+  // Default: keep as document (could be a custom document module)
   return type;
 }
 
 /**
  * Infer module type from module name and source code content.
+ *
+ * Used in fallback mode when dir stream parsing doesn't find module info.
+ * Uses the same name-based logic as refineModuleType for consistency.
  */
 function inferModuleType(moduleName: string, sourceCode: string): VbaModuleType {
-  // Check for UserForm first
+  // Check for UserForm first (designer module with BEGIN block)
   if (isUserFormSource(sourceCode)) {
     return "form";
   }
-  // Document modules by name (sheets, workbook, document)
-  if (moduleName.startsWith("Sheet") || moduleName === "ThisWorkbook" || moduleName === "ThisDocument") {
+
+  // Document modules have host-assigned names (ThisWorkbook, Sheet1, etc.)
+  if (isDocumentModuleName(moduleName)) {
     return "document";
   }
-  // Document modules by attribute (VB_PredeclaredId = True)
-  if (hasPredeclaredId(sourceCode)) {
-    return "document";
-  }
-  // Class modules have VB_Creatable but no VB_PredeclaredId = True
+
+  // Class modules have VB_Creatable attribute (user-created)
   if (sourceCode.includes("VB_Creatable")) {
     return "class";
   }
+
+  // Default to standard module
   return "standard";
 }
 
@@ -319,10 +341,9 @@ function parseModules(opts: ParseModulesOptions): VbaModule[] {
         // Extract procedures from source code
         const procedures = parseProcedures(sourceCode);
 
-        // Refine module type: MODULETYPEPROCEDURAL can be either "standard" or "class"
-        // Class modules have VB_Creatable/VB_Exposed attributes (regardless of value)
-        // Standard modules don't have these attributes at all
-        const moduleType = refineModuleType(info.type, sourceCode);
+        // Refine module type: MODULETYPEDOCUMENT can be document, class, or form
+        // Use module name + source attributes to distinguish
+        const moduleType = refineModuleType(info.type, info.name, sourceCode);
 
         modules.push({
           name: info.name,
