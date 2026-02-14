@@ -9,7 +9,7 @@ import type { VbaProgramIr } from "@aurochs-office/vba";
 import { EditorShell, type EditorPanel } from "@aurochs-ui/editor-controls/editor-shell";
 import { VbaEditorProvider } from "../context/vba-editor";
 import { VbaCodeEditor, type CodeRendererComponent } from "./code-editor";
-import { VbaModuleList } from "./module-list";
+import { VbaModuleGroupedList } from "./module-list";
 import { VbaEditorToolbar } from "./toolbar";
 import { VbaPropertiesPanel } from "./properties-panel";
 
@@ -41,7 +41,7 @@ function VbaEditorInner({ style, Renderer }: VbaEditorInnerProps): ReactNode {
         id: "modules",
         position: "left",
         size: "200px",
-        content: <VbaModuleList />,
+        content: <VbaModuleGroupedList />,
         drawerLabel: "Modules",
       },
       {

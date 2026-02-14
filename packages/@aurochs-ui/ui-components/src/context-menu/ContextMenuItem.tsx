@@ -76,6 +76,7 @@ export function ContextMenuItem({ item, onClick }: ContextMenuItemProps) {
 
   return (
     <div
+      role="menuitem"
       style={getStyle()}
       onClick={handleClick}
       onMouseEnter={handleMouseEnter}

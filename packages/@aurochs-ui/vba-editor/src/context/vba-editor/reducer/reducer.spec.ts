@@ -271,4 +271,136 @@ describe("vbaEditorReducer", () => {
       expect(newState.mode).toBe("readonly");
     });
   });
+
+  describe("CREATE_MODULE", () => {
+    it("creates a new module and selects it", () => {
+      const state = createInitialState(mockProgram);
+      const action: VbaEditorAction = {
+        type: "CREATE_MODULE",
+        moduleType: "standard",
+        moduleName: "Module2",
+      };
+
+      const newState = vbaEditorReducer(state, action);
+
+      expect(newState.program?.modules.length).toBe(3);
+      expect(newState.program?.modules[2].name).toBe("Module2");
+      expect(newState.program?.modules[2].type).toBe("standard");
+      expect(newState.activeModuleName).toBe("Module2");
+    });
+
+    it("does not create module with duplicate name", () => {
+      const state = createInitialState(mockProgram);
+      const action: VbaEditorAction = {
+        type: "CREATE_MODULE",
+        moduleType: "standard",
+        moduleName: "Module1", // Already exists
+      };
+
+      const newState = vbaEditorReducer(state, action);
+
+      expect(newState.program?.modules.length).toBe(2);
+    });
+  });
+
+  describe("DELETE_MODULE", () => {
+    it("deletes a standard module", () => {
+      const state = createInitialState(mockProgram);
+      const action: VbaEditorAction = { type: "DELETE_MODULE", moduleName: "Module1" };
+
+      const newState = vbaEditorReducer(state, action);
+
+      expect(newState.program?.modules.length).toBe(1);
+      expect(newState.program?.modules[0].name).toBe("Class1");
+      expect(newState.activeModuleName).toBe("Class1");
+    });
+
+    it("does not delete document module", () => {
+      const docModule: VbaModule = {
+        name: "ThisWorkbook",
+        type: "document",
+        sourceCode: "",
+        streamOffset: 0,
+        procedures: [],
+      };
+      const programWithDoc: VbaProgramIr = {
+        ...mockProgram,
+        modules: [docModule, mockModule],
+      };
+      const state = createInitialState(programWithDoc);
+      const action: VbaEditorAction = { type: "DELETE_MODULE", moduleName: "ThisWorkbook" };
+
+      const newState = vbaEditorReducer(state, action);
+
+      expect(newState.program?.modules.length).toBe(2);
+    });
+  });
+
+  describe("RENAME_MODULE", () => {
+    it("renames a module and updates active module name", () => {
+      const state = createInitialState(mockProgram);
+      const action: VbaEditorAction = {
+        type: "RENAME_MODULE",
+        oldName: "Module1",
+        newName: "RenamedModule",
+      };
+
+      const newState = vbaEditorReducer(state, action);
+
+      expect(newState.program?.modules[0].name).toBe("RenamedModule");
+      expect(newState.activeModuleName).toBe("RenamedModule");
+    });
+
+    it("does not rename to existing name", () => {
+      const state = createInitialState(mockProgram);
+      const action: VbaEditorAction = {
+        type: "RENAME_MODULE",
+        oldName: "Module1",
+        newName: "Class1", // Already exists
+      };
+
+      const newState = vbaEditorReducer(state, action);
+
+      expect(newState.program?.modules[0].name).toBe("Module1");
+    });
+
+    it("does not rename document module", () => {
+      const docModule: VbaModule = {
+        name: "ThisWorkbook",
+        type: "document",
+        sourceCode: "",
+        streamOffset: 0,
+        procedures: [],
+      };
+      const programWithDoc: VbaProgramIr = {
+        ...mockProgram,
+        modules: [docModule, mockModule],
+      };
+      const state = createInitialState(programWithDoc);
+      const action: VbaEditorAction = {
+        type: "RENAME_MODULE",
+        oldName: "ThisWorkbook",
+        newName: "NewName",
+      };
+
+      const newState = vbaEditorReducer(state, action);
+
+      expect(newState.program?.modules[0].name).toBe("ThisWorkbook");
+    });
+  });
+
+  describe("REORDER_MODULES", () => {
+    it("reorders modules", () => {
+      const state = createInitialState(mockProgram);
+      const action: VbaEditorAction = {
+        type: "REORDER_MODULES",
+        moduleNames: ["Class1", "Module1"],
+      };
+
+      const newState = vbaEditorReducer(state, action);
+
+      expect(newState.program?.modules[0].name).toBe("Class1");
+      expect(newState.program?.modules[1].name).toBe("Module1");
+    });
+  });
 });

@@ -5,7 +5,7 @@
  * Follows patterns from docx-editor and xlsx-editor.
  */
 
-import type { VbaProgramIr, VbaModule, VbaProcedure } from "@aurochs-office/vba";
+import type { VbaProgramIr, VbaModule, VbaProcedure, VbaModuleType } from "@aurochs-office/vba";
 import type { UndoRedoHistory } from "@aurochs-ui/editor-core/history";
 
 // =============================================================================
@@ -134,7 +134,24 @@ export type VbaEditorAction =
   | { readonly type: "CLEAR_PENDING_CURSOR" }
 
   // Mode
-  | { readonly type: "SET_MODE"; readonly mode: VbaEditorMode };
+  | { readonly type: "SET_MODE"; readonly mode: VbaEditorMode }
+
+  // Module management
+  | {
+      readonly type: "CREATE_MODULE";
+      readonly moduleType: VbaModuleType;
+      readonly moduleName: string;
+    }
+  | { readonly type: "DELETE_MODULE"; readonly moduleName: string }
+  | {
+      readonly type: "RENAME_MODULE";
+      readonly oldName: string;
+      readonly newName: string;
+    }
+  | {
+      readonly type: "REORDER_MODULES";
+      readonly moduleNames: readonly string[];
+    };
 
 /**
  * Action type string union.

@@ -249,6 +249,201 @@ export const handleSetMode: ActionHandler<
 };
 
 // =============================================================================
+// Module Management Handlers
+// =============================================================================
+
+import type { VbaModule, VbaProgramIr } from "@aurochs-office/vba";
+import { createModule } from "./module-factory";
+
+export const handleCreateModule: ActionHandler<
+  Extract<VbaEditorAction, { type: "CREATE_MODULE" }>
+> = (state, action) => {
+  if (!state.program) {
+    return state;
+  }
+
+  // Check for duplicate name
+  const nameExists = state.program.modules.some(
+    (m) => m.name === action.moduleName
+  );
+  if (nameExists) {
+    return state;
+  }
+
+  // Create module
+  const newModule = createModule(action.moduleName, action.moduleType);
+
+  const newProgram: VbaProgramIr = {
+    ...state.program,
+    modules: [...state.program.modules, newModule],
+  };
+
+  return {
+    ...state,
+    program: newProgram,
+    activeModuleName: newModule.name, // Auto-select new module
+    cursor: createInitialCursor(),
+    selection: undefined,
+    selectedProcedureName: undefined,
+  };
+};
+
+export const handleDeleteModule: ActionHandler<
+  Extract<VbaEditorAction, { type: "DELETE_MODULE" }>
+> = (state, action) => {
+  if (!state.program) {
+    return state;
+  }
+
+  const moduleIndex = state.program.modules.findIndex(
+    (m) => m.name === action.moduleName
+  );
+  if (moduleIndex === -1) {
+    return state;
+  }
+
+  // Cannot delete document modules
+  const module = state.program.modules[moduleIndex];
+  if (module.type === "document") {
+    return state;
+  }
+
+  const newModules = state.program.modules.filter(
+    (m) => m.name !== action.moduleName
+  );
+
+  // If deleted module was active, select another
+  let newActiveModuleName = state.activeModuleName;
+  if (state.activeModuleName === action.moduleName) {
+    // Select previous module, or first module, or undefined
+    newActiveModuleName =
+      newModules[Math.max(0, moduleIndex - 1)]?.name ?? newModules[0]?.name;
+  }
+
+  // Clean up modified source for deleted module
+  const newSourceMap = new Map(state.sourceHistory.present);
+  newSourceMap.delete(action.moduleName);
+
+  return {
+    ...state,
+    program: {
+      ...state.program,
+      modules: newModules,
+    },
+    sourceHistory: pushHistory(state.sourceHistory, newSourceMap),
+    activeModuleName: newActiveModuleName,
+    cursor: createInitialCursor(),
+    selection: undefined,
+    selectedProcedureName: undefined,
+  };
+};
+
+export const handleRenameModule: ActionHandler<
+  Extract<VbaEditorAction, { type: "RENAME_MODULE" }>
+> = (state, action) => {
+  if (!state.program) {
+    return state;
+  }
+
+  // Check source module exists
+  const moduleIndex = state.program.modules.findIndex(
+    (m) => m.name === action.oldName
+  );
+  if (moduleIndex === -1) {
+    return state;
+  }
+
+  // Cannot rename document modules
+  const module = state.program.modules[moduleIndex];
+  if (module.type === "document") {
+    return state;
+  }
+
+  // Check target name not taken
+  const nameExists = state.program.modules.some(
+    (m) => m.name === action.newName
+  );
+  if (nameExists) {
+    return state;
+  }
+
+  // Update module
+  const newModule: VbaModule = {
+    ...module,
+    name: action.newName,
+  };
+
+  const newModules = [...state.program.modules];
+  newModules[moduleIndex] = newModule;
+
+  // Update source map key if needed
+  const newSourceMap = new Map(state.sourceHistory.present);
+  const sourceEntry = newSourceMap.get(action.oldName);
+  if (sourceEntry) {
+    newSourceMap.delete(action.oldName);
+    newSourceMap.set(action.newName, sourceEntry);
+  }
+
+  // Update active module name if renamed
+  const newActiveModuleName =
+    state.activeModuleName === action.oldName
+      ? action.newName
+      : state.activeModuleName;
+
+  return {
+    ...state,
+    program: {
+      ...state.program,
+      modules: newModules,
+    },
+    sourceHistory: pushHistory(state.sourceHistory, newSourceMap),
+    activeModuleName: newActiveModuleName,
+  };
+};
+
+export const handleReorderModules: ActionHandler<
+  Extract<VbaEditorAction, { type: "REORDER_MODULES" }>
+> = (state, action) => {
+  if (!state.program) {
+    return state;
+  }
+
+  // Build a map of module name -> module
+  const moduleMap = new Map<string, VbaModule>();
+  for (const mod of state.program.modules) {
+    moduleMap.set(mod.name, mod);
+  }
+
+  // Reorder modules based on provided names
+  // Any modules not in the list are appended at the end
+  const reorderedModules: VbaModule[] = [];
+  const usedNames = new Set<string>();
+
+  for (const name of action.moduleNames) {
+    const mod = moduleMap.get(name);
+    if (mod && !usedNames.has(name)) {
+      reorderedModules.push(mod);
+      usedNames.add(name);
+    }
+  }
+
+  // Append remaining modules
+  for (const mod of state.program.modules) {
+    if (!usedNames.has(mod.name)) {
+      reorderedModules.push(mod);
+    }
+  }
+
+  return {
+    ...state,
+    program: {
+      ...state.program,
+      modules: reorderedModules,
+    },
+  };
+};
+
+// =============================================================================
 // Handler Map
 // =============================================================================
 
@@ -270,4 +465,8 @@ export const HANDLERS: {
   REDO: handleRedo,
   CLEAR_PENDING_CURSOR: handleClearPendingCursor,
   SET_MODE: handleSetMode,
+  CREATE_MODULE: handleCreateModule,
+  DELETE_MODULE: handleDeleteModule,
+  RENAME_MODULE: handleRenameModule,
+  REORDER_MODULES: handleReorderModules,
 };
