@@ -145,6 +145,12 @@ function refineModuleType(type: VbaModuleType, sourceCode: string): VbaModuleTyp
  *
  * Used in fallback mode when dir stream parsing doesn't find module info.
  * Uses the same source-based logic as refineModuleType for consistency.
+ *
+ * Detection logic:
+ * - Form: VERSION 5.00 + Begin {GUID}
+ * - Class: VERSION 1.0 CLASS header
+ * - Document: VB_PredeclaredId = True (default global instance)
+ * - Standard: everything else (including Attribute VB_Name without PredeclaredId)
  */
 function inferModuleType(sourceCode: string): VbaModuleType {
   // Check for UserForm first - VERSION 5.00 + Begin {GUID}
@@ -157,10 +163,9 @@ function inferModuleType(sourceCode: string): VbaModuleType {
     return "class";
   }
 
-  // Check for document module indicators (Attribute lines without VERSION header)
-  // Document modules have VB_PredeclaredId = True or known patterns
-  const trimmed = sourceCode.trimStart();
-  if (trimmed.startsWith("Attribute VB_")) {
+  // Document modules have VB_PredeclaredId = True (default global instance)
+  // Standard modules don't have this attribute (or have it False)
+  if (/Attribute\s+VB_PredeclaredId\s*=\s*True/i.test(sourceCode)) {
     return "document";
   }
 
