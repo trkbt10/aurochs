@@ -125,6 +125,36 @@ function PlayIcon(): ReactNode {
   );
 }
 
+function CheckIcon(): ReactNode {
+  const size = iconTokens.size.sm;
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+      <path
+        d="M3 8l4 4 6-8"
+        stroke="currentColor"
+        strokeWidth={iconTokens.strokeWidth + 0.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function XIcon(): ReactNode {
+  const size = iconTokens.size.sm;
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+      <path
+        d="M4 4l8 8M12 4l-8 8"
+        stroke="currentColor"
+        strokeWidth={iconTokens.strokeWidth + 0.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 // =============================================================================
 // Component
 // =============================================================================
@@ -158,9 +188,27 @@ export function VbaEditorToolbar({
     }
   };
 
-  const getRunButtonStyle = () => {
+  const getRunButtonStyle = (): CSSProperties => {
     if (statusState === "error") return runButtonErrorStyle;
     return runButtonStyle;
+  };
+
+  const getRunButtonIcon = (): ReactNode => {
+    switch (statusState) {
+      case "success":
+        return <CheckIcon />;
+      case "error":
+        return <XIcon />;
+      default:
+        return <PlayIcon />;
+    }
+  };
+
+  const getRunButtonLabel = (): string => {
+    if (statusState === "success" && runStatus?.message) {
+      return runStatus.message;
+    }
+    return "Run";
   };
 
   return (
@@ -185,8 +233,8 @@ export function VbaEditorToolbar({
 
         {onRun && (
           <IconButton
-            icon={<PlayIcon />}
-            label="Run"
+            icon={getRunButtonIcon()}
+            label={getRunButtonLabel()}
             onClick={handleRun}
             disabled={!canRunNow}
             variant="primary"
