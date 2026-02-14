@@ -1,0 +1,114 @@
+/**
+ * Completion Popup Styles
+ */
+
+.container {
+  position: absolute;
+  z-index: 150;
+  min-width: 200px;
+  max-width: 400px;
+  background: var(--bg-primary, #ffffff);
+  border: 1px solid var(--border-subtle, #e0e0e0);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-family: var(--font-mono, "SF Mono", Consolas, monospace);
+  font-size: 13px;
+}
+
+.list {
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.item:hover,
+.item.highlighted {
+  background: var(--bg-hover, rgba(0, 102, 204, 0.08));
+}
+
+.item.highlighted {
+  background: var(--bg-selected, rgba(0, 102, 204, 0.12));
+}
+
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.iconKeyword {
+  background: #5c6bc0;
+  color: white;
+}
+
+.iconType {
+  background: #26a69a;
+  color: white;
+}
+
+.iconBuiltin {
+  background: #8d6e63;
+  color: white;
+}
+
+.iconVariable {
+  background: #7e57c2;
+  color: white;
+}
+
+.iconProcedure {
+  background: #ff7043;
+  color: white;
+}
+
+.iconProperty {
+  background: #26c6da;
+  color: white;
+}
+
+.iconConstant {
+  background: #9ccc65;
+  color: white;
+}
+
+.iconModule {
+  background: #78909c;
+  color: white;
+}
+
+.label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-primary, #333333);
+}
+
+.detail {
+  color: var(--text-secondary, #666666);
+  font-size: 11px;
+  margin-left: auto;
+  padding-left: 8px;
+}
+
+.overflow {
+  padding: 4px 8px;
+  font-size: 11px;
+  color: var(--text-tertiary, #999999);
+  border-top: 1px solid var(--border-subtle, #e0e0e0);
+  text-align: center;
+}

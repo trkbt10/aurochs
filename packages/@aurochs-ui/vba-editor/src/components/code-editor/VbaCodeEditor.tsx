@@ -3,6 +3,8 @@
  *
  * Main code editing area with syntax highlighting, line numbers, and editing support.
  * Features virtual scrolling for efficient rendering of large files.
+ *
+ * Uses unified renderer for line numbers, highlights, and cursor.
  */
 
 import {
@@ -15,11 +17,12 @@ import {
   type ReactNode,
 } from "react";
 import { useVbaEditor } from "../../context/vba-editor";
-import { LineNumbers } from "./line/LineNumbers";
 import { useModuleTokenCache } from "./line/use-line-token-cache";
 import {
   HtmlCodeRenderer,
   type CodeRendererComponent,
+  type HighlightRange,
+  type CursorState,
 } from "./element/renderers";
 import { useVirtualLines } from "./line/use-virtual-lines";
 import { useDebouncedHistory } from "./code/use-debounced-history";
@@ -29,17 +32,13 @@ import {
   INITIAL_COMPOSITION_STATE,
   type CompositionState,
 } from "./code/use-code-composition";
-import {
-  INITIAL_CURSOR_STATE,
-  type CodeCursorState,
-} from "./code/use-code-edit-input";
 import { useCodeKeyHandlers } from "./code/use-code-key-handlers";
 import { useFontMetrics } from "./element/use-font-metrics";
-import {
-  lineColumnToCoordinates,
-  calculateSelectionRects,
-} from "./element/cursor-utils";
 import { useLineIndex } from "./line/use-line-index";
+import { SearchBar } from "../search";
+import { useSearchIntegration } from "../../hooks/use-search";
+import { useVbaCompletion } from "../../completion";
+import { CompletionPopup } from "../completion";
 import styles from "./VbaCodeEditor.module.css";
 
 // =============================================================================
@@ -49,6 +48,7 @@ import styles from "./VbaCodeEditor.module.css";
 const LINE_HEIGHT = 21;
 const OVERSCAN = 5;
 const HISTORY_DEBOUNCE_MS = 300;
+const LINE_NUMBER_WIDTH = 48;
 
 // =============================================================================
 // Helper Functions
@@ -56,13 +56,11 @@ const HISTORY_DEBOUNCE_MS = 300;
 
 /**
  * Fallback line/column finder when lineIndex is not in sync with textarea.
- * Uses linear scan (rare case when textarea is ahead of React state).
  */
 function findLineColumnFallback(
   currentLines: readonly string[],
   offset: number
 ): { line: number; column: number } {
-  // eslint-disable-next-line no-restricted-syntax -- Accumulator pattern requires mutation
   let remaining = offset;
   for (const [i, lineText] of currentLines.entries()) {
     const len = lineText.length;
@@ -76,7 +74,7 @@ function findLineColumnFallback(
 }
 
 /**
- * Create line-at-offset lookup function based on whether source is in sync.
+ * Create line-at-offset lookup function.
  */
 function createLineAtOffsetFn(
   sourceInSync: boolean,
@@ -100,80 +98,33 @@ export type VbaCodeEditorProps = {
 };
 
 // =============================================================================
-// Memoized Style Objects
+// Internal State Types
 // =============================================================================
 
-const CURSOR_BASE_STYLE: CSSProperties = {
-  position: "absolute",
-  width: 2,
-  backgroundColor: "var(--vba-cursor-color, #000)",
-  pointerEvents: "none",
+type EditorCursorState = {
+  /** Cursor line (1-based) */
+  readonly line: number;
+  /** Cursor column (1-based) */
+  readonly column: number;
+  /** Whether cursor is visible */
+  readonly visible: boolean;
+  /** Whether cursor is blinking */
+  readonly blinking: boolean;
 };
 
-const SELECTION_BASE_STYLE: CSSProperties = {
-  position: "absolute",
-  backgroundColor: "var(--vba-selection-color, rgba(51, 144, 255, 0.3))",
-  pointerEvents: "none",
+type EditorSelectionState = {
+  readonly startLine: number;
+  readonly startColumn: number;
+  readonly endLine: number;
+  readonly endColumn: number;
 };
 
-// =============================================================================
-// Cursor Component
-// =============================================================================
-
-type CursorProps = {
-  readonly x: number;
-  readonly y: number;
-  readonly height: number;
-  readonly isBlinking: boolean;
+const INITIAL_CURSOR: EditorCursorState = {
+  line: 1,
+  column: 1,
+  visible: true,
+  blinking: true,
 };
-
-/**
- * Blinking cursor caret.
- */
-function Cursor({ x, y, height, isBlinking }: CursorProps): ReactNode {
-  const cursorStyle: CSSProperties = useMemo(
-    () => ({
-      ...CURSOR_BASE_STYLE,
-      left: x,
-      top: y,
-      height,
-      animation: isBlinking ? "vba-cursor-blink 1s step-end infinite" : "none",
-    }),
-    [x, y, height, isBlinking]
-  );
-
-  return <div style={cursorStyle} />;
-}
-
-// =============================================================================
-// Selection Overlay Component
-// =============================================================================
-
-type SelectionOverlayProps = {
-  readonly rects: readonly { x: number; y: number; width: number; height: number }[];
-};
-
-/**
- * Render selection highlight rectangles.
- */
-function SelectionOverlay({ rects }: SelectionOverlayProps): ReactNode {
-  return (
-    <>
-      {rects.map((rect, i) => (
-        <div
-          key={i}
-          style={{
-            ...SELECTION_BASE_STYLE,
-            left: rect.x,
-            top: rect.y,
-            width: rect.width,
-            height: rect.height,
-          }}
-        />
-      ))}
-    </>
-  );
-}
 
 // =============================================================================
 // Main Component
@@ -184,10 +135,11 @@ function SelectionOverlay({ rects }: SelectionOverlayProps): ReactNode {
  *
  * Displays VBA source code with:
  * - Virtual scrolling for large files (10,000+ lines)
- * - Line numbers (virtualized)
+ * - Line numbers (integrated in renderer)
  * - Syntax highlighting with token caching
+ * - Selection and match highlights (integrated in renderer)
+ * - Cursor (integrated in renderer)
  * - Editable text via hidden textarea
- * - Cursor and selection rendering
  * - IME composition support
  * - Debounced undo history
  */
@@ -195,26 +147,26 @@ export function VbaCodeEditor({
   style,
   Renderer = HtmlCodeRenderer,
 }: VbaCodeEditorProps): ReactNode {
-  const { activeModuleSource, activeModule, dispatch, canUndo, canRedo, pendingCursorOffset } =
+  const { activeModuleSource, activeModule, dispatch, canUndo, canRedo, pendingCursorOffset, state } =
     useVbaEditor();
+  const { search, selection: stateSelection } = state;
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const codeAreaRef = useRef<HTMLDivElement>(null);
-  const lineNumbersRef = useRef<HTMLDivElement>(null);
   const [composition, setComposition] = useState<CompositionState>(
     INITIAL_COMPOSITION_STATE
   );
-  const [cursorState, setCursorState] =
-    useState<CodeCursorState>(INITIAL_CURSOR_STATE);
+  const [cursorState, setCursorState] = useState<EditorCursorState>(INITIAL_CURSOR);
+  const [selectionState, setSelectionState] = useState<EditorSelectionState | undefined>(undefined);
 
-  // Token cache for efficient syntax highlighting (module-scoped, no clearing needed)
+  // Token cache for efficient syntax highlighting
   const tokenCache = useModuleTokenCache(activeModule?.name);
 
   // Measure actual font metrics from container
   const { lineHeight, measureText } = useFontMetrics(containerRef);
 
-  // Line index for efficient offset-to-line conversion (O(log n) instead of O(n))
+  // Line index for efficient offset-to-line conversion
   const lineIndex = useLineIndex(activeModuleSource ?? "");
   const lines = lineIndex.lines;
 
@@ -231,6 +183,48 @@ export function VbaCodeEditor({
     moduleName: activeModule?.name,
   });
 
+  // Search integration
+  const handleMatchesUpdate = useCallback(
+    (matches: readonly import("../../context/vba-editor/types").SearchMatch[]) => {
+      dispatch({ type: "UPDATE_MATCHES", matches });
+    },
+    [dispatch],
+  );
+
+  useSearchIntegration({
+    source: activeModuleSource,
+    query: search.query,
+    options: search.options,
+    isOpen: search.isOpen,
+    onMatchesUpdate: handleMatchesUpdate,
+  });
+
+  // Completion (IntelliSense)
+  const cursorOffset = useMemo(() => {
+    const textarea = textareaRef.current;
+    return textarea?.selectionStart ?? 0;
+  }, [cursorState]);
+
+  const handleCompletionSourceUpdate = useCallback(
+    (newSource: string, newCursorOffset: number) => {
+      if (!activeModule?.name) return;
+      dispatch({
+        type: "UPDATE_MODULE_SOURCE",
+        moduleName: activeModule.name,
+        source: newSource,
+        cursorOffset: newCursorOffset,
+      });
+    },
+    [dispatch, activeModule?.name],
+  );
+
+  const completion = useVbaCompletion({
+    source: activeModuleSource,
+    cursorOffset,
+    procedures: activeModule?.procedures ?? [],
+    onSourceUpdate: handleCompletionSourceUpdate,
+  });
+
   // Composition handlers
   const {
     handleCompositionStart,
@@ -238,12 +232,7 @@ export function VbaCodeEditor({
     handleCompositionEnd,
   } = useCodeComposition({ setComposition });
 
-  // Cursor state change handler
-  const handleCursorStateChange = useCallback((state: CodeCursorState) => {
-    setCursorState(state);
-  }, []);
-
-  // Cache for cursor position to skip redundant calculations
+  // Cache for cursor position
   const cursorCacheRef = useRef<{
     selectionStart: number;
     selectionEnd: number;
@@ -264,7 +253,7 @@ export function VbaCodeEditor({
     const { selectionStart, selectionEnd, value } = textarea;
     const hasSelection = selectionStart !== selectionEnd;
 
-    // Skip if selection hasn't changed (cache hit)
+    // Skip if selection hasn't changed
     const cache = cursorCacheRef.current;
     if (
       cache !== null &&
@@ -275,10 +264,8 @@ export function VbaCodeEditor({
       return;
     }
 
-    // Update cache
     cursorCacheRef.current = { selectionStart, selectionEnd, valueLength: value.length };
 
-    // Use lineIndex for O(log n) lookup if source matches, otherwise fallback
     const sourceInSync = value === activeModuleSource;
     const currentLines = sourceInSync ? lines : value.split("\n");
     const getLineAtOffset = createLineAtOffsetFn(sourceInSync, lineIndex, currentLines);
@@ -295,43 +282,34 @@ export function VbaCodeEditor({
         endColumn: end.column,
       });
 
-      const rects = calculateSelectionRects({
+      setSelectionState({
         startLine: start.line,
         startColumn: start.column,
         endLine: end.line,
         endColumn: end.column,
-        lines: currentLines,
-        lineHeight,
-        measureText,
       });
 
-      handleCursorStateChange({
-        cursor: undefined,
-        selectionRects: rects,
-        isBlinking: false,
+      setCursorState({
+        line: end.line,
+        column: end.column,
+        visible: false,
+        blinking: false,
       });
     } else {
       const pos = getLineAtOffset(selectionStart);
-      const lineText = currentLines[pos.line - 1] ?? "";
 
       dispatch({ type: "SET_CURSOR", line: pos.line, column: pos.column });
       dispatch({ type: "CLEAR_SELECTION" });
 
-      const coords = lineColumnToCoordinates({
+      setSelectionState(undefined);
+      setCursorState({
         line: pos.line,
         column: pos.column,
-        lineText,
-        lineHeight,
-        measureText,
-      });
-
-      handleCursorStateChange({
-        cursor: coords,
-        selectionRects: [],
-        isBlinking: true,
+        visible: true,
+        blinking: true,
       });
     }
-  }, [composition.isComposing, dispatch, handleCursorStateChange, lineHeight, measureText, activeModuleSource, lines, lineIndex]);
+  }, [composition.isComposing, dispatch, activeModuleSource, lines, lineIndex]);
 
   // Scoped selection change listener
   useScopedSelectionChange(textareaRef, updateCursorPosition);
@@ -341,12 +319,10 @@ export function VbaCodeEditor({
     (event: React.ChangeEvent<HTMLTextAreaElement>) => {
       const textarea = event.target;
       const newText = textarea.value;
-      const cursorOffset = textarea.selectionStart;
+      const offset = textarea.selectionStart;
 
-      // Use debounced history update
-      updateSource(newText, cursorOffset);
+      updateSource(newText, offset);
 
-      // Update cursor position in next frame
       requestAnimationFrame(() => {
         updateCursorPosition();
       });
@@ -354,7 +330,7 @@ export function VbaCodeEditor({
     [updateSource, updateCursorPosition]
   );
 
-  // Key handlers with history flush
+  // Key handlers
   const { handleKeyDown: baseHandleKeyDown } = useCodeKeyHandlers({
     composition,
     dispatch,
@@ -365,25 +341,52 @@ export function VbaCodeEditor({
 
   const handleKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      // Completion navigation
+      if (completion.state.isOpen) {
+        if (event.key === "ArrowDown") {
+          event.preventDefault();
+          completion.moveHighlight(1);
+          return;
+        }
+        if (event.key === "ArrowUp") {
+          event.preventDefault();
+          completion.moveHighlight(-1);
+          return;
+        }
+        if (event.key === "Tab" || event.key === "Enter") {
+          event.preventDefault();
+          completion.accept();
+          return;
+        }
+        if (event.key === "Escape") {
+          event.preventDefault();
+          completion.dismiss();
+          return;
+        }
+      }
+
+      // Manual completion trigger: Ctrl+Space
+      if ((event.ctrlKey || event.metaKey) && event.key === " ") {
+        event.preventDefault();
+        completion.triggerManually();
+        return;
+      }
+
       // Flush history before undo/redo
       if ((event.metaKey || event.ctrlKey) && (event.key === "z" || event.key === "Z")) {
         flushHistory();
       }
       baseHandleKeyDown(event);
     },
-    [baseHandleKeyDown, flushHistory]
+    [baseHandleKeyDown, flushHistory, completion]
   );
 
-  // Sync scroll between codeArea and lineNumbers
+  // Sync scroll
   const handleCodeAreaScroll = useCallback(() => {
     const codeArea = codeAreaRef.current;
-    const lineNumbers = lineNumbersRef.current;
     const textarea = textareaRef.current;
     if (codeArea) {
       setScrollTop(codeArea.scrollTop);
-      if (lineNumbers) {
-        lineNumbers.scrollTop = codeArea.scrollTop;
-      }
       if (textarea) {
         textarea.scrollTop = codeArea.scrollTop;
         textarea.scrollLeft = codeArea.scrollLeft;
@@ -391,18 +394,13 @@ export function VbaCodeEditor({
     }
   }, [setScrollTop]);
 
-  // Sync scroll when textarea is scrolled
   const handleTextareaScroll = useCallback(() => {
     const textarea = textareaRef.current;
     const codeArea = codeAreaRef.current;
-    const lineNumbers = lineNumbersRef.current;
     if (textarea && codeArea) {
       codeArea.scrollTop = textarea.scrollTop;
       codeArea.scrollLeft = textarea.scrollLeft;
       setScrollTop(textarea.scrollTop);
-      if (lineNumbers) {
-        lineNumbers.scrollTop = textarea.scrollTop;
-      }
     }
   }, [setScrollTop]);
 
@@ -426,31 +424,30 @@ export function VbaCodeEditor({
     textarea.selectionEnd = pendingCursorOffset;
     dispatch({ type: "CLEAR_PENDING_CURSOR" });
 
-    // Update cursor visual
     requestAnimationFrame(() => {
       updateCursorPosition();
     });
   }, [pendingCursorOffset, dispatch, updateCursorPosition]);
 
-  // Ensure textarea is scrolled to show cursor
+  // Ensure cursor is visible in viewport
   useEffect(() => {
     const textarea = textareaRef.current;
     const codeArea = codeAreaRef.current;
-    if (!textarea || !codeArea || !cursorState.cursor) {
+    if (!textarea || !codeArea || !cursorState.visible) {
       return;
     }
 
-    const cursorY = cursorState.cursor.y;
+    const cursorY = (cursorState.line - 1) * LINE_HEIGHT;
     const visibleTop = codeArea.scrollTop;
     const visibleBottom = visibleTop + codeArea.clientHeight;
 
-    if (cursorY < visibleTop || cursorY + lineHeight > visibleBottom) {
+    if (cursorY < visibleTop || cursorY + LINE_HEIGHT > visibleBottom) {
       const targetScroll = Math.max(0, cursorY - codeArea.clientHeight / 2);
       codeArea.scrollTop = targetScroll;
       textarea.scrollTop = targetScroll;
       setScrollTop(targetScroll);
     }
-  }, [cursorState.cursor, lineHeight, setScrollTop]);
+  }, [cursorState.line, cursorState.visible, setScrollTop]);
 
   // Focus textarea on mount
   useEffect(() => {
@@ -462,6 +459,60 @@ export function VbaCodeEditor({
     virtualContainerRef(codeAreaRef.current);
   }, [virtualContainerRef]);
 
+  // Build highlights array for renderer
+  const highlights = useMemo((): readonly HighlightRange[] => {
+    const result: HighlightRange[] = [];
+
+    // Add selection
+    if (selectionState) {
+      result.push({
+        startLine: selectionState.startLine,
+        startColumn: selectionState.startColumn,
+        endLine: selectionState.endLine,
+        endColumn: selectionState.endColumn,
+        type: "selection",
+      });
+    }
+
+    // Add search matches
+    if (search.isOpen && search.matches.length > 0) {
+      for (let i = 0; i < search.matches.length; i++) {
+        const match = search.matches[i];
+        result.push({
+          startLine: match.line,
+          startColumn: match.startColumn,
+          endLine: match.line,
+          endColumn: match.endColumn,
+          type: i === search.currentMatchIndex ? "currentMatch" : "match",
+        });
+      }
+    }
+
+    return result;
+  }, [selectionState, search.isOpen, search.matches, search.currentMatchIndex]);
+
+  // Build cursor state for renderer
+  const rendererCursor = useMemo((): CursorState | undefined => {
+    if (composition.isComposing || !cursorState.visible) {
+      return undefined;
+    }
+    return {
+      line: cursorState.line,
+      column: cursorState.column,
+      visible: cursorState.visible,
+      blinking: cursorState.blinking,
+    };
+  }, [cursorState, composition.isComposing]);
+
+  // Completion popup position (based on cursor line/column)
+  const completionPosition = useMemo(() => {
+    if (!cursorState.visible) return { x: 0, y: 0 };
+    // Estimate position: line number width + column offset
+    const x = LINE_NUMBER_WIDTH + (cursorState.column - 1) * 7.8; // approx char width
+    const y = (cursorState.line - 1) * LINE_HEIGHT + LINE_HEIGHT + 4;
+    return { x, y };
+  }, [cursorState]);
+
   if (!activeModuleSource) {
     return (
       <div ref={containerRef} className={styles.container} style={style}>
@@ -472,25 +523,15 @@ export function VbaCodeEditor({
 
   // IME input style
   const imeInputStyle = useMemo((): CSSProperties => {
-    const cursor = cursorState.cursor;
-    return {
-      left: cursor?.x ?? 8,
-      top: cursor?.y ?? 8,
-    };
-  }, [cursorState.cursor]);
+    const x = LINE_NUMBER_WIDTH + (cursorState.column - 1) * 7.8;
+    const y = (cursorState.line - 1) * LINE_HEIGHT;
+    return { left: x, top: y };
+  }, [cursorState]);
 
   return (
     <div ref={containerRef} className={styles.container} style={style} onClick={handleContainerClick}>
-      {/* Virtualized line numbers */}
-      <div ref={lineNumbersRef} className={styles.lineNumbersWrapper}>
-        <LineNumbers
-          lineCount={lines.length}
-          scrollTop={virtualState.scrollTop}
-          viewportHeight={virtualState.viewportHeight}
-          lineHeight={LINE_HEIGHT}
-          overscan={OVERSCAN}
-        />
-      </div>
+      {/* Search bar */}
+      <SearchBar />
 
       <div ref={codeAreaRef} className={styles.codeArea} onScroll={handleCodeAreaScroll}>
         {/* Hidden textarea for input */}
@@ -517,7 +558,7 @@ export function VbaCodeEditor({
           </div>
         )}
 
-        {/* Virtualized code display */}
+        {/* Unified code display with line numbers, highlights, and cursor */}
         <Renderer
           lines={lines}
           visibleRange={virtualState.visibleRange}
@@ -528,20 +569,24 @@ export function VbaCodeEditor({
           padding={8}
           width={codeAreaRef.current?.clientWidth}
           height={virtualState.viewportHeight}
+          measureText={measureText}
+          showLineNumbers={true}
+          lineNumberWidth={LINE_NUMBER_WIDTH}
+          highlights={highlights}
+          cursor={rendererCursor}
         />
 
-        {/* Selection overlay */}
-        {cursorState.selectionRects.length > 0 && (
-          <SelectionOverlay rects={cursorState.selectionRects} />
-        )}
-
-        {/* Cursor */}
-        {cursorState.cursor && !composition.isComposing && (
-          <Cursor
-            x={cursorState.cursor.x}
-            y={cursorState.cursor.y}
-            height={cursorState.cursor.height}
-            isBlinking={cursorState.isBlinking}
+        {/* Completion popup */}
+        {completion.state.isOpen && cursorState.visible && (
+          <CompletionPopup
+            items={completion.state.items}
+            highlightedIndex={completion.state.highlightedIndex}
+            position={completionPosition}
+            onSelect={(index) => {
+              completion.moveHighlight(index - completion.state.highlightedIndex);
+              completion.accept();
+            }}
+            onDismiss={completion.dismiss}
           />
         )}
       </div>

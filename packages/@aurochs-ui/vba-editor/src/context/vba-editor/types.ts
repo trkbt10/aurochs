@@ -18,6 +18,90 @@ import type { UndoRedoHistory } from "@aurochs-ui/editor-core/history";
 export type VbaEditorMode = "editing" | "readonly";
 
 // =============================================================================
+// Search Types
+// =============================================================================
+
+/**
+ * Search match within text.
+ */
+export type SearchMatch = {
+  /** Start offset in source text */
+  readonly startOffset: number;
+  /** End offset in source text */
+  readonly endOffset: number;
+  /** Line number (1-based) */
+  readonly line: number;
+  /** Start column (1-based) */
+  readonly startColumn: number;
+  /** End column (1-based) */
+  readonly endColumn: number;
+  /** Matched text */
+  readonly text: string;
+};
+
+/**
+ * Search options.
+ */
+export type SearchOptions = {
+  readonly caseSensitive: boolean;
+  readonly useRegex: boolean;
+  readonly wholeWord: boolean;
+};
+
+/**
+ * Search mode.
+ */
+export type SearchMode = "in-file" | "project-wide";
+
+/**
+ * Project-wide match with module context.
+ */
+export type ProjectSearchMatch = SearchMatch & {
+  readonly moduleName: string;
+  /** Line text for preview */
+  readonly lineText: string;
+};
+
+/**
+ * Search state.
+ */
+export type SearchState = {
+  /** Is search panel visible */
+  readonly isOpen: boolean;
+  /** Search mode */
+  readonly mode: SearchMode;
+  /** Search query string */
+  readonly query: string;
+  /** Replace string */
+  readonly replaceText: string;
+  /** Search options */
+  readonly options: SearchOptions;
+  /** Current matches in active module */
+  readonly matches: readonly SearchMatch[];
+  /** Currently selected match index (-1 = none) */
+  readonly currentMatchIndex: number;
+  /** Project-wide matches (grouped by module) */
+  readonly projectMatches: ReadonlyMap<string, readonly ProjectSearchMatch[]>;
+  /** Total project match count */
+  readonly projectMatchCount: number;
+};
+
+/**
+ * Initial search state.
+ */
+export const INITIAL_SEARCH_STATE: SearchState = {
+  isOpen: false,
+  mode: "in-file",
+  query: "",
+  replaceText: "",
+  options: { caseSensitive: false, useRegex: false, wholeWord: false },
+  matches: [],
+  currentMatchIndex: -1,
+  projectMatches: new Map(),
+  projectMatchCount: 0,
+};
+
+// =============================================================================
 // Cursor and Selection
 // =============================================================================
 
@@ -83,6 +167,8 @@ export type VbaEditorState = {
   readonly selectedProcedureName: string | undefined;
   /** Pending cursor offset to restore after undo/redo (undefined = no restore needed) */
   readonly pendingCursorOffset: number | undefined;
+  /** Search state */
+  readonly search: SearchState;
 };
 
 // =============================================================================
@@ -151,7 +237,31 @@ export type VbaEditorAction =
   | {
       readonly type: "REORDER_MODULES";
       readonly moduleNames: readonly string[];
-    };
+    }
+
+  // Search
+  | { readonly type: "OPEN_SEARCH"; readonly mode?: SearchMode }
+  | { readonly type: "CLOSE_SEARCH" }
+  | { readonly type: "SET_SEARCH_QUERY"; readonly query: string }
+  | { readonly type: "SET_REPLACE_TEXT"; readonly replaceText: string }
+  | {
+      readonly type: "SET_SEARCH_OPTIONS";
+      readonly options: Partial<SearchOptions>;
+    }
+  | { readonly type: "SET_SEARCH_MODE"; readonly mode: SearchMode }
+  | {
+      readonly type: "UPDATE_MATCHES";
+      readonly matches: readonly SearchMatch[];
+    }
+  | {
+      readonly type: "UPDATE_PROJECT_MATCHES";
+      readonly projectMatches: ReadonlyMap<string, readonly ProjectSearchMatch[]>;
+      readonly totalCount: number;
+    }
+  | { readonly type: "NAVIGATE_MATCH"; readonly direction: "next" | "previous" }
+  | { readonly type: "SELECT_MATCH"; readonly matchIndex: number }
+  | { readonly type: "REPLACE_CURRENT" }
+  | { readonly type: "REPLACE_ALL" };
 
 /**
  * Action type string union.

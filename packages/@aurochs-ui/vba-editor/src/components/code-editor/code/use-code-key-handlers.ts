@@ -100,6 +100,43 @@ export function useCodeKeyHandlers({
         return;
       }
 
+      // Search: Ctrl+F / Cmd+F
+      if (isModifierPressed && key.toLowerCase() === "f" && !shiftKey) {
+        event.preventDefault();
+        dispatch({ type: "OPEN_SEARCH", mode: "in-file" });
+        return;
+      }
+
+      // Project Search: Ctrl+Shift+F / Cmd+Shift+F
+      if (isModifierPressed && key.toLowerCase() === "f" && shiftKey) {
+        event.preventDefault();
+        dispatch({ type: "OPEN_SEARCH", mode: "project-wide" });
+        return;
+      }
+
+      // Replace: Ctrl+H / Cmd+H
+      if (isModifierPressed && key.toLowerCase() === "h") {
+        event.preventDefault();
+        dispatch({ type: "OPEN_SEARCH", mode: "in-file" });
+        return;
+      }
+
+      // Navigate matches: F3 / Shift+F3
+      if (key === "F3") {
+        event.preventDefault();
+        dispatch({
+          type: "NAVIGATE_MATCH",
+          direction: shiftKey ? "previous" : "next",
+        });
+        return;
+      }
+
+      // Close search: Escape
+      if (key === "Escape") {
+        dispatch({ type: "CLOSE_SEARCH" });
+        return;
+      }
+
       // Let other keys pass through to textarea
     },
     [composition.isComposing, dispatch, canUndo, canRedo, moduleName]

@@ -7,7 +7,7 @@
 import type { VbaProgramIr } from "@aurochs-office/vba";
 import { createHistory } from "@aurochs-ui/editor-core/history";
 import type { VbaEditorState, VbaEditorAction, ModifiedSourceMap } from "../types";
-import { createInitialCursor } from "../types";
+import { createInitialCursor, INITIAL_SEARCH_STATE } from "../types";
 import { HANDLERS } from "./handlers";
 
 // =============================================================================
@@ -28,6 +28,7 @@ export function createInitialState(program?: VbaProgramIr): VbaEditorState {
     mode: "editing",
     selectedProcedureName: undefined,
     pendingCursorOffset: undefined,
+    search: INITIAL_SEARCH_STATE,
   };
 }
 

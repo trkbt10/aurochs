@@ -128,6 +128,13 @@ export type {
   CursorPosition,
   CodeSelectionRange,
   ModifiedSourceMap,
+  SearchMatch,
+  SearchOptions,
+  SearchMode,
+  SearchState,
+  ProjectSearchMatch,
 } from "./types";
+
+export { INITIAL_SEARCH_STATE } from "./types";
 
 export { vbaEditorReducer, createInitialState } from "./reducer";

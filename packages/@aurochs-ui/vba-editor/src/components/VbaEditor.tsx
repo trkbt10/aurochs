@@ -4,14 +4,17 @@
  * Integrates all VBA editor components into a complete editor view.
  */
 
-import { useMemo, type CSSProperties, type ReactNode } from "react";
+import { useMemo, useCallback, type CSSProperties, type ReactNode } from "react";
 import type { VbaProgramIr } from "@aurochs-office/vba";
 import { EditorShell, type EditorPanel } from "@aurochs-ui/editor-controls/editor-shell";
-import { VbaEditorProvider } from "../context/vba-editor";
+import { VbaEditorProvider, useVbaEditor } from "../context/vba-editor";
+import type { ProjectSearchMatch } from "../context/vba-editor/types";
 import { VbaCodeEditor, type CodeRendererComponent } from "./code-editor";
 import { VbaModuleGroupedList } from "./module-list";
 import { VbaEditorToolbar } from "./toolbar";
 import { VbaPropertiesPanel } from "./properties-panel";
+import { SearchResultsPanel } from "./search";
+import { useProjectSearch } from "../hooks/use-project-search";
 
 export type VbaEditorProps = {
   /** VBA program to edit */
@@ -35,6 +38,46 @@ type VbaEditorInnerProps = {
  * Inner editor component (requires context).
  */
 function VbaEditorInner({ style, Renderer }: VbaEditorInnerProps): ReactNode {
+  const { state, dispatch, program } = useVbaEditor();
+  const { search } = state;
+
+  // Get modified source map from history
+  const modifiedSourceMap = state.sourceHistory.present;
+
+  // Project-wide search
+  const handleProjectMatchesUpdate = useCallback(
+    (
+      matches: ReadonlyMap<string, readonly ProjectSearchMatch[]>,
+      totalCount: number,
+    ) => {
+      dispatch({ type: "UPDATE_PROJECT_MATCHES", projectMatches: matches, totalCount });
+    },
+    [dispatch],
+  );
+
+  useProjectSearch({
+    program,
+    query: search.query,
+    options: search.options,
+    isOpen: search.isOpen && search.mode === "project-wide",
+    modifiedSourceMap,
+    onProjectMatchesUpdate: handleProjectMatchesUpdate,
+  });
+
+  // Handle result click to navigate
+  const handleMatchSelect = useCallback(
+    (moduleName: string, match: ProjectSearchMatch) => {
+      // Select the module and set cursor to match position
+      dispatch({ type: "SELECT_MODULE", moduleName });
+      dispatch({
+        type: "SET_CURSOR",
+        line: match.line,
+        column: match.startColumn,
+      });
+    },
+    [dispatch],
+  );
+
   const panels = useMemo<EditorPanel[]>(
     () => [
       {
@@ -55,8 +98,19 @@ function VbaEditorInner({ style, Renderer }: VbaEditorInnerProps): ReactNode {
     []
   );
 
+  // Show SearchResultsPanel as bottom bar when in project-wide search mode
+  const bottomBar =
+    search.isOpen && search.mode === "project-wide" ? (
+      <SearchResultsPanel onMatchSelect={handleMatchSelect} />
+    ) : undefined;
+
   return (
-    <EditorShell toolbar={<VbaEditorToolbar />} panels={panels} style={style}>
+    <EditorShell
+      toolbar={<VbaEditorToolbar />}
+      panels={panels}
+      bottomBar={bottomBar}
+      style={style}
+    >
       <VbaCodeEditor Renderer={Renderer} />
     </EditorShell>
   );

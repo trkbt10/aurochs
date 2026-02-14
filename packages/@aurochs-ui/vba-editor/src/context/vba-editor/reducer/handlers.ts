@@ -254,6 +254,7 @@ export const handleSetMode: ActionHandler<
 
 import type { VbaModule, VbaProgramIr } from "@aurochs-office/vba";
 import { createModule } from "./module-factory";
+import { SEARCH_HANDLERS } from "./search-handlers";
 
 export const handleCreateModule: ActionHandler<
   Extract<VbaEditorAction, { type: "CREATE_MODULE" }>
@@ -469,4 +470,6 @@ export const HANDLERS: {
   DELETE_MODULE: handleDeleteModule,
   RENAME_MODULE: handleRenameModule,
   REORDER_MODULES: handleReorderModules,
+  // Search handlers
+  ...SEARCH_HANDLERS,
 };

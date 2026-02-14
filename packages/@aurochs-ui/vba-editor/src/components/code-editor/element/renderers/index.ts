@@ -13,6 +13,10 @@ export type {
   TokenColorMap,
   CursorRenderInfo,
   SelectionRenderRect,
+  // Unified rendering types
+  HighlightType,
+  HighlightRange,
+  CursorState,
 } from "./types";
 export {
   TOKEN_COLORS_RGB,

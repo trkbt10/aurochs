@@ -17,6 +17,50 @@ import type { LineTokenCache } from "../../line/use-line-token-cache";
  */
 export type RendererType = "html" | "svg" | "canvas";
 
+// =============================================================================
+// Highlight Types
+// =============================================================================
+
+/**
+ * Highlight type for different visual treatments.
+ */
+export type HighlightType = "selection" | "match" | "currentMatch";
+
+/**
+ * Highlight range within code.
+ * All positions are 1-based (line and column).
+ */
+export type HighlightRange = {
+  /** Start line (1-based) */
+  readonly startLine: number;
+  /** Start column (1-based) */
+  readonly startColumn: number;
+  /** End line (1-based) */
+  readonly endLine: number;
+  /** End column (1-based) */
+  readonly endColumn: number;
+  /** Highlight type */
+  readonly type: HighlightType;
+};
+
+/**
+ * Cursor state for rendering.
+ */
+export type CursorState = {
+  /** Cursor line (1-based) */
+  readonly line: number;
+  /** Cursor column (1-based) */
+  readonly column: number;
+  /** Whether cursor is visible (not hidden by selection) */
+  readonly visible: boolean;
+  /** Whether cursor should blink */
+  readonly blinking: boolean;
+};
+
+// =============================================================================
+// Renderer Props
+// =============================================================================
+
 /**
  * Common props for all code renderers.
  */
@@ -39,6 +83,19 @@ export type CodeRendererProps = {
   readonly width?: number;
   /** Container height (for canvas/svg sizing) */
   readonly height?: number;
+  /** Function to measure text width (for variable-width character support) */
+  readonly measureText?: (text: string) => number;
+
+  // === Unified rendering props ===
+
+  /** Show line numbers */
+  readonly showLineNumbers?: boolean;
+  /** Line number gutter width in pixels */
+  readonly lineNumberWidth?: number;
+  /** Highlight ranges (selection, search matches) */
+  readonly highlights?: readonly HighlightRange[];
+  /** Cursor state */
+  readonly cursor?: CursorState;
 };
 
 /**

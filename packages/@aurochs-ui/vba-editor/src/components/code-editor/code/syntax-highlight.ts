@@ -31,6 +31,89 @@ export type Token = {
 // VBA Keywords
 // =============================================================================
 
+/**
+ * VBA keywords for completion.
+ */
+export const VBA_KEYWORDS_ARRAY = [
+  // Declarations
+  "Dim",
+  "ReDim",
+  "Preserve",
+  "Const",
+  "Static",
+  "Public",
+  "Private",
+  "Friend",
+  "Global",
+
+  // Procedures
+  "Sub",
+  "Function",
+  "Property",
+  "Get",
+  "Let",
+  "Set",
+  "End",
+  "Exit",
+
+  // Control flow
+  "If",
+  "Then",
+  "Else",
+  "ElseIf",
+  "Select",
+  "Case",
+  "For",
+  "To",
+  "Step",
+  "Next",
+  "Each",
+  "In",
+  "Do",
+  "While",
+  "Until",
+  "Loop",
+  "Wend",
+  "With",
+  "GoTo",
+  "GoSub",
+  "Return",
+  "On",
+  "Resume",
+
+  // Error handling
+  "Error",
+
+  // Operators
+  "And",
+  "Or",
+  "Xor",
+  "Not",
+  "Mod",
+  "Like",
+  "Is",
+  "TypeOf",
+
+  // Other
+  "As",
+  "ByVal",
+  "ByRef",
+  "Optional",
+  "ParamArray",
+  "Call",
+  "New",
+  "Me",
+  "MyBase",
+  "MyClass",
+
+  // Boolean and special values
+  "True",
+  "False",
+  "Nothing",
+  "Empty",
+  "Null",
+] as const;
+
 const VBA_KEYWORDS = new Set([
   // Declarations
   "Dim",
@@ -115,7 +198,10 @@ const VBA_KEYWORDS = new Set([
 // VBA Built-in Types
 // =============================================================================
 
-const VBA_TYPES = new Set([
+/**
+ * VBA types for completion.
+ */
+export const VBA_TYPES_ARRAY = [
   "Integer",
   "Long",
   "Single",
@@ -129,13 +215,18 @@ const VBA_TYPES = new Set([
   "Byte",
   "LongLong",
   "LongPtr",
-]);
+] as const;
+
+const VBA_TYPES: Set<string> = new Set(VBA_TYPES_ARRAY);
 
 // =============================================================================
 // VBA Built-in Functions
 // =============================================================================
 
-const VBA_BUILTINS = new Set([
+/**
+ * VBA built-in functions for completion.
+ */
+export const VBA_BUILTINS_ARRAY = [
   // Type conversion
   "CBool",
   "CByte",
@@ -229,7 +320,9 @@ const VBA_BUILTINS = new Set([
   "InputBox",
   "Debug",
   "Print",
-]);
+] as const;
+
+const VBA_BUILTINS: Set<string> = new Set(VBA_BUILTINS_ARRAY);
 
 // =============================================================================
 // Operators and Punctuation
