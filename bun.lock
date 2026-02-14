@@ -698,6 +698,7 @@
         "@aurochs-office/opc": "workspace:*",
         "@aurochs-office/pptx": "workspace:*",
         "@aurochs-office/text-layout": "workspace:*",
+        "@aurochs-office/vba": "workspace:*",
         "@aurochs-office/xls": "workspace:*",
         "@aurochs-office/xlsx": "workspace:*",
         "@aurochs-renderer/pptx": "workspace:*",
@@ -705,12 +706,26 @@
         "@aurochs-ui/editor-controls": "workspace:*",
         "@aurochs-ui/pptx-editor": "workspace:*",
         "@aurochs-ui/ui-components": "workspace:*",
+        "@aurochs-ui/vba-editor": "workspace:*",
         "@aurochs-ui/xlsx-editor": "workspace:*",
         "react-router-dom": "^7.6.1",
       },
       "peerDependencies": {
         "react": "^18.0.0 || ^19.0.0",
         "react-dom": "^18.0.0 || ^19.0.0",
+      },
+    },
+    "packages/@aurochs-ui/vba-editor": {
+      "name": "@aurochs-ui/vba-editor",
+      "version": "0.5.0",
+      "dependencies": {
+        "@aurochs-office/vba": "workspace:*",
+        "@aurochs-ui/editor-controls": "workspace:*",
+        "@aurochs-ui/editor-core": "workspace:*",
+        "@aurochs-ui/ui-components": "workspace:*",
+      },
+      "peerDependencies": {
+        "react": "^18.0.0 || ^19.0.0",
       },
     },
     "packages/@aurochs-ui/xlsx-editor": {
@@ -922,6 +937,8 @@
     "@aurochs-ui/ui-components": ["@aurochs-ui/ui-components@workspace:packages/@aurochs-ui/ui-components"],
 
     "@aurochs-ui/ui-preview": ["@aurochs-ui/ui-preview@workspace:packages/@aurochs-ui/ui-preview"],
+
+    "@aurochs-ui/vba-editor": ["@aurochs-ui/vba-editor@workspace:packages/@aurochs-ui/vba-editor"],
 
     "@aurochs-ui/xlsx-editor": ["@aurochs-ui/xlsx-editor@workspace:packages/@aurochs-ui/xlsx-editor"],
 

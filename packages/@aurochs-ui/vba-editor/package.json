@@ -1,0 +1,41 @@
+{
+  "name": "@aurochs-ui/vba-editor",
+  "version": "0.5.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "dependencies": {
+    "@aurochs-office/vba": "workspace:*",
+    "@aurochs-ui/editor-core": "workspace:*",
+    "@aurochs-ui/editor-controls": "workspace:*",
+    "@aurochs-ui/ui-components": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^18.0.0 || ^19.0.0"
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-ui/vba-editor/src'",
+    "e2e:dev": "vite --config spec/e2e/vite.config.ts",
+    "e2e:test": "bun run spec/e2e/vba-editor.e2e.ts"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./context": {
+      "types": "./src/context/vba-editor/index.tsx",
+      "default": "./src/context/vba-editor/index.tsx"
+    },
+    "./components": {
+      "types": "./src/components/index.ts",
+      "default": "./src/components/index.ts"
+    },
+    "./hooks": {
+      "types": "./src/hooks/index.ts",
+      "default": "./src/hooks/index.ts"
+    }
+  }
+}

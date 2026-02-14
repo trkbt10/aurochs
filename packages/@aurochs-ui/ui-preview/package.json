@@ -20,6 +20,8 @@
     "@aurochs-ui/docx-editor": "workspace:*",
     "@aurochs-ui/pptx-editor": "workspace:*",
     "@aurochs-ui/xlsx-editor": "workspace:*",
+    "@aurochs-ui/vba-editor": "workspace:*",
+    "@aurochs-office/vba": "workspace:*",
     "react-router-dom": "^7.6.1"
   },
   "peerDependencies": {
@@ -34,6 +36,7 @@
     "dev:pptx-slideshow": "vite --open /pptx-slideshow.html",
     "dev:pptx-viewer": "vite --open /pptx-viewer.html",
     "dev:editor-controls": "vite --open /editor-controls.html",
+    "dev:vba": "vite --open /vba-editor.html",
     "lint": "eslint src",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   }
