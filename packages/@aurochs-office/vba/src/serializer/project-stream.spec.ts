@@ -7,9 +7,7 @@ import { loadZipPackage } from "@aurochs/zip";
 import { serializeProjectStream } from "./project-stream";
 import { parseProjectStream } from "../parser/project-stream";
 import { parseVbaProject } from "../parser/vba-project";
-
-const FIXTURE_DIR = "packages/@aurochs-office/vba/fixtures";
-const XLSM_FIXTURE = `${FIXTURE_DIR}/SimpleMacro.xlsm`;
+import { FIXTURES } from "../test-utils/fixtures";
 
 describe("serializeProjectStream", () => {
   it("serializes minimal project", () => {
@@ -43,6 +41,42 @@ describe("serializeProjectStream", () => {
 
     expect(parsed.name).toBe("TestProject");
     expect(parsed.helpContext).toBe(42);
+  });
+
+  it("round-trips conditional compilation constants", () => {
+    const project = {
+      name: "ConstantsTest",
+      helpFile: null,
+      helpContext: 0,
+      constants: "DEBUG = 1 : RELEASE = 0",
+      version: { major: 1, minor: 0 },
+    };
+
+    const bytes = serializeProjectStream(project, []);
+    const text = new TextDecoder().decode(bytes);
+
+    // Verify constants are serialized
+    expect(text).toContain('Constants="DEBUG = 1 : RELEASE = 0"');
+
+    // Verify round-trip preserves constants
+    const parsed = parseProjectStream(bytes);
+    expect(parsed.constants).toBe("DEBUG = 1 : RELEASE = 0");
+  });
+
+  it("omits Constants field when null", () => {
+    const project = {
+      name: "NoConstantsTest",
+      helpFile: null,
+      helpContext: 0,
+      constants: null,
+      version: { major: 1, minor: 0 },
+    };
+
+    const bytes = serializeProjectStream(project, []);
+    const text = new TextDecoder().decode(bytes);
+
+    // Should not contain Constants= line
+    expect(text).not.toContain("Constants=");
   });
 
   it("includes standard module entries", () => {
@@ -244,7 +278,7 @@ describe("serializeProjectStream", () => {
 
 describe("PROJECT stream round-trip with fixture", () => {
   it("round-trips real VBA project info", async () => {
-    const fileBytes = readFileSync(XLSM_FIXTURE);
+    const fileBytes = readFileSync(FIXTURES.SIMPLE_MACRO_XLSM);
     const pkg = await loadZipPackage(fileBytes);
     const vbaBytes = pkg.readBinary("xl/vbaProject.bin");
     if (!vbaBytes) {

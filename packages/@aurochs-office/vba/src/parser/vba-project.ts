@@ -62,22 +62,54 @@ function tryDecompress(bytes: Uint8Array): Uint8Array | null {
 }
 
 /**
+ * Check if source code indicates a UserForm (designer module).
+ *
+ * UserForms typically have:
+ * - A BEGIN block for form layout definition
+ * - Or explicit VB_Ext_KEY attributes
+ */
+function isUserFormSource(sourceCode: string): boolean {
+  // UserForms start with VERSION...BEGIN block for form layout
+  // Example: VERSION 5.00\nBegin {C62A69F0-...} UserForm1
+  const trimmed = sourceCode.trimStart();
+  if (trimmed.startsWith("VERSION") && /\bBegin\s+\{[0-9A-Fa-f-]+\}/.test(trimmed)) {
+    return true;
+  }
+  // VB_Ext_KEY is specific to designer modules (forms)
+  if (sourceCode.includes("Attribute VB_Ext_KEY")) {
+    return true;
+  }
+  return false;
+}
+
+/**
  * Refine module type based on source code content.
- * Class modules have VB_Creatable/VB_Exposed attributes (regardless of value).
  *
  * MS-OVBA 2.3.4.2.3.2.4:
  * - MODULETYPEPROCEDURAL (0x0021): procedural module (standard)
  * - MODULETYPEDOCUMENT (0x0022): document module, class module, or designer module
  *
- * Since class modules use MODULETYPEDOCUMENT, we need to check attributes to
- * distinguish class from document modules.
+ * Since class/form modules use MODULETYPEDOCUMENT, we check source attributes:
+ * - Form: has BEGIN block or VB_Ext_KEY (designer module)
+ * - Class: has VB_Creatable/VB_Exposed attributes
+ * - Document: everything else with MODULETYPEDOCUMENT
  */
 function refineModuleType(type: VbaModuleType, sourceCode: string): VbaModuleType {
-  // Class modules use MODULETYPEDOCUMENT but have VB_Creatable/VB_Exposed attributes
-  if ((type === "standard" || type === "document") &&
-      (sourceCode.includes("VB_Creatable") || sourceCode.includes("VB_Exposed"))) {
+  // Only refine MODULETYPEDOCUMENT (parsed as "document")
+  if (type !== "document") {
+    return type;
+  }
+
+  // Check for UserForm (designer module) first
+  if (isUserFormSource(sourceCode)) {
+    return "form";
+  }
+
+  // Class modules have VB_Creatable/VB_Exposed attributes
+  if (sourceCode.includes("VB_Creatable") || sourceCode.includes("VB_Exposed")) {
     return "class";
   }
+
   return type;
 }
 
@@ -85,9 +117,15 @@ function refineModuleType(type: VbaModuleType, sourceCode: string): VbaModuleTyp
  * Infer module type from module name and source code content.
  */
 function inferModuleType(moduleName: string, sourceCode: string): VbaModuleType {
+  // Check for UserForm first
+  if (isUserFormSource(sourceCode)) {
+    return "form";
+  }
+  // Document modules (sheets, workbook, document)
   if (moduleName.startsWith("Sheet") || moduleName === "ThisWorkbook" || moduleName === "ThisDocument") {
     return "document";
   }
+  // Class modules
   if (sourceCode.includes("VB_Creatable") || sourceCode.includes("VB_Exposed")) {
     return "class";
   }

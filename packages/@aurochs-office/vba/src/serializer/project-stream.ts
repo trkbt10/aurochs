@@ -66,6 +66,11 @@ export function serializeProjectStream(
   // Help context
   lines.push(`HelpContext=${project.helpContext}`);
 
+  // Conditional compilation constants (if set)
+  if (project.constants) {
+    lines.push(`Constants="${project.constants}"`);
+  }
+
   // Version - use default if not provided
   // Note: VersionCompatible32 is a fixed value per MS-OVBA spec
   // major/minor are part of project info but not directly written here

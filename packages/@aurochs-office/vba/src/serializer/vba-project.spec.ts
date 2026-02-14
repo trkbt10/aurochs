@@ -8,9 +8,7 @@ import { openCfb } from "@aurochs-office/cfb";
 import { serializeVbaProject } from "./vba-project";
 import { parseVbaProject } from "../parser/vba-project";
 import type { VbaProgramIr, VbaProjectInfo, VbaModule } from "../types";
-
-const FIXTURE_DIR = "packages/@aurochs-office/vba/fixtures";
-const XLSM_FIXTURE = `${FIXTURE_DIR}/SimpleMacro.xlsm`;
+import { FIXTURES } from "../test-utils/fixtures";
 
 // Class module source code with required VB_Creatable attribute for parser recognition
 const CLASS_MODULE_SOURCE = `VERSION 1.0 CLASS
@@ -24,6 +22,25 @@ Attribute VB_PredeclaredId = False
 Attribute VB_Exposed = False
 Option Explicit
 Private mValue As Integer
+`;
+
+// UserForm source code with BEGIN block that identifies it as a form (designer module)
+const FORM_MODULE_SOURCE = `VERSION 5.00
+Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} UserForm1
+   Caption         =   "My Form"
+   ClientHeight    =   3015
+   ClientLeft      =   120
+   ClientTop       =   450
+   ClientWidth     =   4560
+   StartUpPosition =   1  'CenterOwner
+End
+Attribute VB_Name = "UserForm1"
+Attribute VB_GlobalNameSpace = False
+Attribute VB_Creatable = False
+Attribute VB_PredeclaredId = True
+Attribute VB_Exposed = False
+Private Sub CommandButton1_Click()
+End Sub
 `;
 
 function createMinimalProgram(): VbaProgramIr {
@@ -349,18 +366,51 @@ describe("serializeVbaProject", () => {
 
     const result = parseVbaProject(bytes);
     expect(result.ok).toBe(true);
-    if (!result.ok) {return;}
+    if (!result.ok) { return; }
 
     expect(result.program.modules.length).toBe(1);
     expect(result.program.modules[0].name).toBe("MyClass");
     expect(result.program.modules[0].type).toBe("class");
     expect(result.program.modules[0].sourceCode).toBe(CLASS_MODULE_SOURCE);
   });
+
+  it("round-trips form module type correctly", () => {
+    // UserForm modules have BEGIN block that identifies them as designer modules
+    const project: VbaProjectInfo = {
+      name: "FormProject",
+      helpFile: null,
+      helpContext: 0,
+      constants: null,
+      version: { major: 1, minor: 0 },
+    };
+
+    const modules: VbaModule[] = [
+      {
+        name: "UserForm1",
+        type: "form",
+        sourceCode: FORM_MODULE_SOURCE,
+        streamOffset: 0,
+        procedures: [],
+      },
+    ];
+
+    const original: VbaProgramIr = { project, modules, references: [] };
+    const bytes = serializeVbaProject(original);
+
+    const result = parseVbaProject(bytes);
+    expect(result.ok).toBe(true);
+    if (!result.ok) { return; }
+
+    expect(result.program.modules.length).toBe(1);
+    expect(result.program.modules[0].name).toBe("UserForm1");
+    expect(result.program.modules[0].type).toBe("form");
+    expect(result.program.modules[0].sourceCode).toBe(FORM_MODULE_SOURCE);
+  });
 });
 
 describe("VBA Project end-to-end round-trip", () => {
   it("round-trips real VBA project from fixture", async () => {
-    const fileBytes = readFileSync(XLSM_FIXTURE);
+    const fileBytes = readFileSync(FIXTURES.SIMPLE_MACRO_XLSM);
     const pkg = await loadZipPackage(fileBytes);
     const vbaBytes = pkg.readBinary("xl/vbaProject.bin");
     if (!vbaBytes) {
@@ -398,7 +448,7 @@ describe("VBA Project end-to-end round-trip", () => {
   });
 
   it("allows modification before re-serialization", async () => {
-    const fileBytes = readFileSync(XLSM_FIXTURE);
+    const fileBytes = readFileSync(FIXTURES.SIMPLE_MACRO_XLSM);
     const pkg = await loadZipPackage(fileBytes);
     const vbaBytes = pkg.readBinary("xl/vbaProject.bin");
     if (!vbaBytes) {
