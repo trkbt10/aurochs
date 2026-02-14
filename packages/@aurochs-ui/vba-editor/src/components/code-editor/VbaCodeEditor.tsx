@@ -49,6 +49,7 @@ const LINE_HEIGHT = 21;
 const OVERSCAN = 5;
 const HISTORY_DEBOUNCE_MS = 300;
 const LINE_NUMBER_WIDTH = 48;
+const CODE_PADDING = 8;
 
 // =============================================================================
 // Helper Functions
@@ -85,6 +86,79 @@ function createLineAtOffsetFn(
     return lineIndex.getLineAtOffset;
   }
   return (offset: number) => findLineColumnFallback(currentLines, offset);
+}
+
+/**
+ * Convert line/column to character offset.
+ */
+function lineColumnToOffset(
+  lines: readonly string[],
+  line: number,
+  column: number
+): number {
+  let offset = 0;
+  for (let i = 0; i < line - 1 && i < lines.length; i++) {
+    offset += lines[i].length + 1; // +1 for newline
+  }
+  const lineText = lines[line - 1] ?? "";
+  offset += Math.min(column - 1, lineText.length);
+  return offset;
+}
+
+/**
+ * Convert click coordinates to line/column position.
+ */
+function coordinatesToPosition(
+  x: number,
+  y: number,
+  scrollTop: number,
+  lines: readonly string[],
+  measureText: ((text: string) => number) | undefined,
+): { line: number; column: number } {
+  // Adjust for scroll
+  const adjustedY = y + scrollTop;
+
+  // Calculate line (1-based)
+  const lineIndex = Math.floor(adjustedY / LINE_HEIGHT);
+  const line = Math.max(1, Math.min(lineIndex + 1, lines.length));
+
+  // Get the line text
+  const lineText = lines[line - 1] ?? "";
+
+  // Calculate column based on x position
+  // x is relative to code area, so subtract line number width and padding
+  const codeX = x - LINE_NUMBER_WIDTH - CODE_PADDING;
+
+  if (codeX <= 0) {
+    return { line, column: 1 };
+  }
+
+  // Find column by measuring text widths
+  let column = 1;
+  if (measureText) {
+    // Binary search for the closest column
+    let low = 0;
+    let high = lineText.length;
+    while (low < high) {
+      const mid = Math.floor((low + high + 1) / 2);
+      const width = measureText(lineText.slice(0, mid));
+      if (width <= codeX) {
+        low = mid;
+      } else {
+        high = mid - 1;
+      }
+    }
+    column = low + 1;
+  } else {
+    // Fallback: estimate using average character width
+    const avgCharWidth = 7.8;
+    column = Math.max(1, Math.round(codeX / avgCharWidth) + 1);
+  }
+
+  // Clamp column to line length + 1
+  column = Math.min(column, lineText.length + 1);
+
+  return { line, column };
 }
 
 // =============================================================================
@@ -159,6 +233,8 @@ export function VbaCodeEditor({
   );
   const [cursorState, setCursorState] = useState<EditorCursorState>(INITIAL_CURSOR);
   const [selectionState, setSelectionState] = useState<EditorSelectionState | undefined>(undefined);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef<{ line: number; column: number } | null>(null);
 
   // Token cache for efficient syntax highlighting
   const tokenCache = useModuleTokenCache(activeModule?.name);
@@ -409,6 +485,124 @@ export function VbaCodeEditor({
     textareaRef.current?.focus();
   }, []);
 
+  // Pointer event handlers for text selection (supports mouse + touch)
+  const handleCodePointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      // Only handle primary pointer (left mouse or touch)
+      if (!event.isPrimary) return;
+
+      const codeArea = codeAreaRef.current;
+      if (!codeArea) return;
+
+      const rect = codeArea.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+
+      const pos = coordinatesToPosition(x, y, codeArea.scrollTop, lines, measureText);
+
+      // Start drag selection
+      dragStartRef.current = pos;
+      setIsDragging(true);
+
+      // Capture pointer for drag outside element
+      (event.target as HTMLElement).setPointerCapture(event.pointerId);
+
+      // Update cursor and clear selection
+      setCursorState({
+        line: pos.line,
+        column: pos.column,
+        visible: true,
+        blinking: true,
+      });
+      setSelectionState(undefined);
+
+      // Sync to textarea
+      const textarea = textareaRef.current;
+      if (textarea) {
+        const offset = lineColumnToOffset(lines, pos.line, pos.column);
+        textarea.focus();
+        textarea.setSelectionRange(offset, offset);
+      }
+
+      // Dispatch cursor position
+      dispatch({ type: "SET_CURSOR", line: pos.line, column: pos.column });
+      dispatch({ type: "CLEAR_SELECTION" });
+
+      event.preventDefault();
+    },
+    [lines, measureText, dispatch]
+  );
+
+  const handleCodePointerMove = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (!isDragging || !dragStartRef.current || !event.isPrimary) return;
+
+      const codeArea = codeAreaRef.current;
+      if (!codeArea) return;
+
+      const rect = codeArea.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+
+      const endPos = coordinatesToPosition(x, y, codeArea.scrollTop, lines, measureText);
+      const startPos = dragStartRef.current;
+
+      // Determine selection direction
+      const isForward =
+        endPos.line > startPos.line ||
+        (endPos.line === startPos.line && endPos.column >= startPos.column);
+
+      const selStart = isForward ? startPos : endPos;
+      const selEnd = isForward ? endPos : startPos;
+
+      // Update selection state
+      setSelectionState({
+        startLine: selStart.line,
+        startColumn: selStart.column,
+        endLine: selEnd.line,
+        endColumn: selEnd.column,
+      });
+
+      // Update cursor to end of selection
+      setCursorState({
+        line: endPos.line,
+        column: endPos.column,
+        visible: false,
+        blinking: false,
+      });
+
+      // Sync to textarea
+      const textarea = textareaRef.current;
+      if (textarea) {
+        const startOffset = lineColumnToOffset(lines, selStart.line, selStart.column);
+        const endOffset = lineColumnToOffset(lines, selEnd.line, selEnd.column);
+        textarea.setSelectionRange(startOffset, endOffset);
+      }
+
+      // Dispatch selection
+      dispatch({
+        type: "SET_SELECTION",
+        startLine: selStart.line,
+        startColumn: selStart.column,
+        endLine: selEnd.line,
+        endColumn: selEnd.column,
+      });
+
+      event.preventDefault();
+    },
+    [isDragging, lines, measureText, dispatch]
+  );
+
+  const handleCodePointerUp = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (!event.isPrimary) return;
+      setIsDragging(false);
+      dragStartRef.current = null;
+      (event.target as HTMLElement).releasePointerCapture(event.pointerId);
+    },
+    []
+  );
+
   // Restore cursor position after undo/redo
   useEffect(() => {
     if (pendingCursorOffset === undefined) {
@@ -559,22 +753,29 @@ export function VbaCodeEditor({
         )}
 
         {/* Unified code display with line numbers, highlights, and cursor */}
-        <Renderer
-          lines={lines}
-          visibleRange={virtualState.visibleRange}
-          topSpacerHeight={virtualState.topSpacerHeight}
-          bottomSpacerHeight={virtualState.bottomSpacerHeight}
-          tokenCache={tokenCache}
-          lineHeight={LINE_HEIGHT}
-          padding={8}
-          width={codeAreaRef.current?.clientWidth}
-          height={virtualState.viewportHeight}
-          measureText={measureText}
-          showLineNumbers={true}
-          lineNumberWidth={LINE_NUMBER_WIDTH}
-          highlights={highlights}
-          cursor={rendererCursor}
-        />
+        <div
+          onPointerDown={handleCodePointerDown}
+          onPointerMove={handleCodePointerMove}
+          onPointerUp={handleCodePointerUp}
+          style={{ cursor: "text", touchAction: "none" }}
+        >
+          <Renderer
+            lines={lines}
+            visibleRange={virtualState.visibleRange}
+            topSpacerHeight={virtualState.topSpacerHeight}
+            bottomSpacerHeight={virtualState.bottomSpacerHeight}
+            tokenCache={tokenCache}
+            lineHeight={LINE_HEIGHT}
+            padding={CODE_PADDING}
+            width={codeAreaRef.current?.clientWidth}
+            height={virtualState.viewportHeight}
+            measureText={measureText}
+            showLineNumbers={true}
+            lineNumberWidth={LINE_NUMBER_WIDTH}
+            highlights={highlights}
+            cursor={rendererCursor}
+          />
+        </div>
 
         {/* Completion popup */}
         {completion.state.isOpen && cursorState.visible && (

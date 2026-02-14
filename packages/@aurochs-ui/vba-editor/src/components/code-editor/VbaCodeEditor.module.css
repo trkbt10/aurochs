@@ -45,8 +45,10 @@
 
 .codeDisplay {
   white-space: pre;
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: text;
   min-height: 100%;
+  user-select: none; /* Prevent native text selection on the display */
 }
 
 .line {
@@ -90,17 +92,16 @@
   width: 100%;
   height: 100%;
   margin: 0;
+  padding: 0;
   border: none;
   outline: none;
   resize: none;
-  background: transparent;
-  color: transparent;
-  caret-color: transparent;
-  font: inherit;
-  line-height: inherit;
+  opacity: 0;
+  cursor: text;
+  overflow: hidden;
   white-space: pre;
-  overflow: auto;
   z-index: 1;
+  pointer-events: none; /* Events handled by codeDisplay */
 }
 
 /* Hide native selection to prevent duplicate display */
