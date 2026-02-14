@@ -5,7 +5,7 @@
  */
 
 import { useMemo, memo, type CSSProperties, type ReactNode } from "react";
-import styles from "./VbaCodeEditor.module.css";
+import styles from "../VbaCodeEditor.module.css";
 
 // =============================================================================
 // Types

@@ -25,6 +25,9 @@ import { createGetZipTextFileContentFromBytes, downloadSpreadsheet } from "@auro
 import { loadZipPackage, type ZipPackage } from "@aurochs/zip";
 import { parseXlsxWorkbook } from "@aurochs-office/xlsx/parser";
 import { exportXlsx } from "@aurochs-builder/xlsx/exporter";
+import type { VbaProgramIr } from "@aurochs-office/vba";
+import { loadVbaProgramFromPackage, hasVbaProject, createEmptyVbaProgram } from "../vba";
+import { VbaDialog } from "../components/vba-dialog";
 
 const controlsStyle: CSSProperties = {
   display: "flex",
@@ -761,6 +764,9 @@ export function XlsxWorkbookPage() {
   const [error, setError] = useState<string | null>(null);
   // Store source package for macro preservation (xlsm pass-through)
   const sourcePackageRef = useRef<ZipPackage | null>(null);
+  // VBA state
+  const [vbaProgram, setVbaProgram] = useState<VbaProgramIr | undefined>(undefined);
+  const [vbaDialogOpen, setVbaDialogOpen] = useState(false);
 
   const computeInitialGridSize = useCallback((wb: XlsxWorkbook): { rowCount: number; colCount: number } => {
     const MAX_ROWS = 1_048_576;
@@ -785,6 +791,13 @@ export function XlsxWorkbookPage() {
         setWorkbookRevision((v) => v + 1);
         // Store source package for macro preservation
         sourcePackageRef.current = sourcePackage;
+        // Load VBA program if present
+        if (sourcePackage && hasVbaProject(sourcePackage)) {
+          const program = loadVbaProgramFromPackage(sourcePackage);
+          setVbaProgram(program);
+        } else {
+          setVbaProgram(undefined);
+        }
       } catch (e) {
         if (e instanceof SpreadsheetParseError) {
           setError(`Failed to load ${e.fileType.toUpperCase()} file: ${e.message}`);
@@ -840,6 +853,7 @@ export function XlsxWorkbookPage() {
             setWorkbookRevision((v) => v + 1);
             // Clear source package (demo workbooks don't have macros)
             sourcePackageRef.current = null;
+            setVbaProgram(undefined);
           }}
         >
           Load demo (patterns)
@@ -856,6 +870,7 @@ export function XlsxWorkbookPage() {
             setWorkbookRevision((v) => v + 1);
             // Clear source package (demo workbooks don't have macros)
             sourcePackageRef.current = null;
+            setVbaProgram(undefined);
           }}
         >
           Load demo (formulas)
@@ -881,6 +896,19 @@ export function XlsxWorkbookPage() {
           }}
         >
           Save XLSX
+        </Button>
+
+        <Button
+          disabled={isBusy}
+          onClick={() => {
+            if (!vbaProgram) {
+              setVbaProgram(createEmptyVbaProgram());
+            }
+            setVbaDialogOpen(true);
+          }}
+          style={vbaProgram ? { backgroundColor: "var(--accent, #2196f3)", color: "#fff" } : undefined}
+        >
+          Macros {vbaProgram ? `(${vbaProgram.modules.length})` : "(New)"}
         </Button>
 
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -924,6 +952,21 @@ export function XlsxWorkbookPage() {
           }}
         />
       </div>
+
+      {/* VBA Dialog */}
+      <VbaDialog
+        open={vbaDialogOpen}
+        onClose={() => setVbaDialogOpen(false)}
+        program={vbaProgram}
+        onProgramChange={setVbaProgram}
+        workbook={currentWorkbook}
+        onWorkbookChange={(updated) => {
+          setCurrentWorkbook(updated);
+          setWorkbook(updated);
+          // Bump revision to remount editor with new workbook state
+          setWorkbookRevision((v) => v + 1);
+        }}
+      />
     </div>
   );
 }

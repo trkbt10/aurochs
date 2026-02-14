@@ -21,6 +21,7 @@ import {
   UnmergeCellsIcon,
 } from "@aurochs-ui/ui-components";
 import { ZoomControls } from "@aurochs-ui/editor-controls/zoom";
+import type { VbaProgramIr } from "@aurochs-office/vba";
 import { indexToColumnLetter, type CellAddress, type CellRange } from "@aurochs-office/xlsx/domain/cell/address";
 import { colIdx } from "@aurochs-office/xlsx/domain/types";
 import { StylePicker } from "./StylePicker";
@@ -36,6 +37,10 @@ export type XlsxWorkbookToolbarProps = {
   readonly sheetIndex: number;
   readonly zoom: number;
   readonly onZoomChange: (next: number) => void;
+  /** VBA program (if loaded from XLSM) */
+  readonly vbaProgram?: VbaProgramIr;
+  /** Callback when macro button is clicked */
+  readonly onMacroClick?: () => void;
 };
 
 const barStyle: CSSProperties = {
@@ -108,6 +113,8 @@ export function XlsxWorkbookToolbar({
   sheetIndex,
   zoom,
   onZoomChange,
+  vbaProgram,
+  onMacroClick,
 }: XlsxWorkbookToolbarProps) {
   const { dispatch, workbook, canUndo, canRedo, selection, editing } = useXlsxWorkbookEditor();
   const sheet = workbook.sheets[sheetIndex];
@@ -344,6 +351,16 @@ export function XlsxWorkbookToolbar({
       <div style={{ display: "flex", alignItems: "center", gap: spacingTokens.xs }}>
         <ZoomControls zoom={zoom} onZoomChange={onZoomChange} />
       </div>
+
+      {vbaProgram && (
+        <Button
+          size="sm"
+          onClick={onMacroClick}
+          title="Macros"
+        >
+          Macros
+        </Button>
+      )}
 
       <XlsxFormulaBar sheet={sheet} style={formulaInputStyle} />
     </div>

@@ -732,11 +732,14 @@
       "name": "@aurochs-ui/xlsx-editor",
       "version": "0.5.0",
       "dependencies": {
+        "@aurochs-office/vba": "workspace:*",
         "@aurochs-office/xlsx": "workspace:*",
         "@aurochs-ui/color-editor": "workspace:*",
         "@aurochs-ui/editor-controls": "workspace:*",
         "@aurochs-ui/editor-core": "workspace:*",
         "@aurochs-ui/ui-components": "workspace:*",
+        "@aurochs-ui/vba-editor": "workspace:*",
+        "@aurochs/zip": "workspace:*",
       },
       "peerDependencies": {
         "react": "^18.0.0 || ^19.0.0",
