@@ -17,7 +17,9 @@ export { VbaEditor, type VbaEditorProps } from "./components/VbaEditor";
 export {
   VbaEditorProvider,
   useVbaEditor,
+  useCurrentProcedure,
   type VbaEditorProviderProps,
+  type ProcedureRange,
 } from "./context/vba-editor";
 
 export type {
@@ -47,6 +49,7 @@ export {
   type VbaProcedureDropdownProps,
   type VbaEditorToolbarProps,
   type VbaPropertiesPanelProps,
+  type RunStatus,
 } from "./components";
 
 // =============================================================================

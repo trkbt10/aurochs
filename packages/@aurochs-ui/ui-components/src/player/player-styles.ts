@@ -214,6 +214,25 @@ export function getSubtitleStyle(variant: PlayerVariant): CSSProperties {
   };
 }
 
+export function getStatusStyle(variant: PlayerVariant): CSSProperties {
+  const base: CSSProperties = {
+    fontSize: "12px",
+    fontWeight: 400,
+    lineHeight: 1.3,
+    margin: 0,
+    whiteSpace: "nowrap",
+    flexShrink: 0,
+  };
+
+  return {
+    ...base,
+    color:
+      variant === "floating"
+        ? colorTokens.overlay.lightTextSecondary
+        : colorTokens.text.tertiary,
+  };
+}
+
 // =============================================================================
 // Thumbnail Styles
 // =============================================================================

@@ -1,36 +1,92 @@
 /**
- * @file VBA Editor Toolbar Component
+ * @file VBA Editor Toolbar
  *
- * Toolbar with undo/redo and procedure dropdown.
+ * Layout: [Location] ----spacer---- [Actions]
  */
 
 import type { CSSProperties, ReactNode } from "react";
+import {
+  colorTokens,
+  spacingTokens,
+  fontTokens,
+  iconTokens,
+} from "@aurochs-ui/ui-components/design-tokens";
 import { IconButton } from "@aurochs-ui/ui-components/primitives";
-import { useVbaEditor } from "../../context/vba-editor";
-import { VbaProcedureDropdown } from "../procedure-dropdown";
-import styles from "./VbaEditorToolbar.module.css";
+import { useVbaEditor, useCurrentProcedure } from "../../context/vba-editor";
+
+export type RunStatus = {
+  readonly state: "idle" | "running" | "success" | "error";
+  readonly message?: string;
+};
 
 export type VbaEditorToolbarProps = {
   readonly style?: CSSProperties;
+  readonly onRun?: (procedureName: string) => void;
+  readonly runDisabled?: boolean;
+  readonly runStatus?: RunStatus;
 };
 
-/**
- * Simple undo icon.
- */
+// =============================================================================
+// Styles (using design tokens only)
+// =============================================================================
+
+const toolbarStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  padding: `${spacingTokens.sm} ${spacingTokens.md}`,
+  backgroundColor: colorTokens.background.secondary,
+  borderBottom: `1px solid ${colorTokens.border.subtle}`,
+};
+
+/** Monospace font stack matching VbaCodeEditor */
+const CODE_FONT_FAMILY = '"Consolas", "Monaco", "Courier New", monospace';
+
+const locationStyle: CSSProperties = {
+  fontSize: fontTokens.size.lg,
+  fontWeight: fontTokens.weight.semibold,
+  color: colorTokens.text.primary,
+  fontFamily: CODE_FONT_FAMILY,
+};
+
+const spacerStyle: CSSProperties = {
+  flex: 1,
+};
+
+const actionsStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: spacingTokens.xs,
+};
+
+const runButtonStyle: CSSProperties = {
+  marginLeft: spacingTokens.sm,
+  backgroundColor: colorTokens.accent.success,
+};
+
+const runButtonErrorStyle: CSSProperties = {
+  ...runButtonStyle,
+  backgroundColor: colorTokens.accent.danger,
+};
+
+// =============================================================================
+// Icons
+// =============================================================================
+
 function UndoIcon(): ReactNode {
+  const size = iconTokens.size.sm;
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
       <path
         d="M3 8h8a3 3 0 1 1 0 6H8"
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth={iconTokens.strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <path
         d="M5 5L3 8l2 3"
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth={iconTokens.strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -38,23 +94,21 @@ function UndoIcon(): ReactNode {
   );
 }
 
-/**
- * Simple redo icon.
- */
 function RedoIcon(): ReactNode {
+  const size = iconTokens.size.sm;
   return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
       <path
         d="M13 8H5a3 3 0 1 0 0 6h3"
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth={iconTokens.strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
       <path
         d="M11 5l2 3-2 3"
         stroke="currentColor"
-        strokeWidth="1.5"
+        strokeWidth={iconTokens.strokeWidth}
         strokeLinecap="round"
         strokeLinejoin="round"
       />
@@ -62,51 +116,85 @@ function RedoIcon(): ReactNode {
   );
 }
 
-/**
- * VBA Editor Toolbar component.
- *
- * Displays:
- * - Undo/Redo buttons
- * - Active module name
- * - Procedure dropdown
- */
-export function VbaEditorToolbar({ style }: VbaEditorToolbarProps): ReactNode {
-  const { dispatch, canUndo, canRedo, activeModule } = useVbaEditor();
+function PlayIcon(): ReactNode {
+  const size = iconTokens.size.sm;
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+      <path d="M4 2l10 6-10 6V2z" fill="currentColor" />
+    </svg>
+  );
+}
 
-  const handleUndo = () => {
-    dispatch({ type: "UNDO" });
+// =============================================================================
+// Component
+// =============================================================================
+
+export function VbaEditorToolbar({
+  style,
+  onRun,
+  runDisabled,
+  runStatus,
+}: VbaEditorToolbarProps): ReactNode {
+  const { dispatch, canUndo, canRedo, activeModule } = useVbaEditor();
+  const currentProcedure = useCurrentProcedure();
+
+  const statusState = runStatus?.state ?? "idle";
+
+  const location = activeModule
+    ? currentProcedure
+      ? `${activeModule.name}.${currentProcedure.name}`
+      : activeModule.name
+    : "";
+
+  const canRunNow =
+    onRun &&
+    !runDisabled &&
+    currentProcedure?.type === "sub" &&
+    statusState !== "running";
+
+  const handleRun = () => {
+    if (canRunNow && activeModule && currentProcedure) {
+      onRun(`${activeModule.name}.${currentProcedure.name}`);
+    }
   };
 
-  const handleRedo = () => {
-    dispatch({ type: "REDO" });
+  const getRunButtonStyle = () => {
+    if (statusState === "error") return runButtonErrorStyle;
+    return runButtonStyle;
   };
 
   return (
-    <div className={styles.container} style={style}>
-      <IconButton
-        icon={<UndoIcon />}
-        onClick={handleUndo}
-        disabled={!canUndo}
-        variant="ghost"
-        size="sm"
-      />
-      <IconButton
-        icon={<RedoIcon />}
-        onClick={handleRedo}
-        disabled={!canRedo}
-        variant="ghost"
-        size="sm"
-      />
+    <div style={{ ...toolbarStyle, ...style }}>
+      <span style={locationStyle}>{location}</span>
 
-      <div className={styles.separator} />
+      <div style={spacerStyle} />
 
-      {activeModule && (
-        <span className={styles.moduleName}>{activeModule.name}</span>
-      )}
+      <div style={actionsStyle}>
+        <IconButton
+          icon={<UndoIcon />}
+          onClick={() => dispatch({ type: "UNDO" })}
+          disabled={!canUndo}
+          size="sm"
+        />
+        <IconButton
+          icon={<RedoIcon />}
+          onClick={() => dispatch({ type: "REDO" })}
+          disabled={!canRedo}
+          size="sm"
+        />
 
-      <div className={styles.spacer} />
-
-      <VbaProcedureDropdown />
+        {onRun && (
+          <IconButton
+            icon={<PlayIcon />}
+            label="Run"
+            onClick={handleRun}
+            disabled={!canRunNow}
+            variant="primary"
+            size="sm"
+            style={getRunButtonStyle()}
+          />
+        )}
+      </div>
     </div>
   );
 }

@@ -2,4 +2,8 @@
  * @file Toolbar exports
  */
 
-export { VbaEditorToolbar, type VbaEditorToolbarProps } from "./VbaEditorToolbar";
+export {
+  VbaEditorToolbar,
+  type VbaEditorToolbarProps,
+  type RunStatus,
+} from "./VbaEditorToolbar";

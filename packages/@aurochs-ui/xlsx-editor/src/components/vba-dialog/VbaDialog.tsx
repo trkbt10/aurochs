@@ -2,21 +2,23 @@
  * @file VBA Dialog Component
  *
  * Modal dialog for VBA code editing and execution.
+ * Execution controls are integrated into the editor toolbar.
  */
 
 import {
   useCallback,
   useEffect,
   useState,
+  useRef,
   type ReactNode,
   type CSSProperties,
 } from "react";
 import { createPortal } from "react-dom";
 import type { VbaProgramIr } from "@aurochs-office/vba";
 import type { XlsxWorkbook } from "@aurochs-office/xlsx/domain/workbook";
-import { VbaEditor, SvgCodeRenderer } from "@aurochs-ui/vba-editor";
+import { VbaEditor, SvgCodeRenderer, type RunStatus } from "@aurochs-ui/vba-editor";
 import { Button } from "@aurochs-ui/ui-components/primitives";
-import { VbaExecutionPanel } from "./VbaExecutionPanel";
+import { executeVbaProcedure, applyMutations } from "../../vba";
 
 // =============================================================================
 // Types
@@ -81,14 +83,6 @@ const titleStyle: CSSProperties = {
   margin: 0,
 };
 
-const contentStyle: CSSProperties = {
-  flex: 1,
-  display: "flex",
-  flexDirection: "column",
-  overflow: "hidden",
-  minHeight: 0,
-};
-
 const editorContainerStyle: CSSProperties = {
   flex: 1,
   minHeight: 0,
@@ -118,22 +112,77 @@ export function VbaDialog({
   workbook,
   onWorkbookChange,
 }: VbaDialogProps): ReactNode {
-  // Track edited program state internally for execution
-  // This ensures we execute the current editor content, not stale prop
-  const [editedProgram, setEditedProgram] = useState(program);
+  const [runStatus, setRunStatus] = useState<RunStatus | undefined>();
 
-  // Sync with prop when it changes externally (e.g., new file loaded)
+  // Track edited program for execution
+  const [editedProgram, setEditedProgram] = useState(program);
+  const editedProgramRef = useRef(editedProgram);
+
+  // Sync with prop when it changes externally
   useEffect(() => {
     setEditedProgram(program);
+    editedProgramRef.current = program;
   }, [program]);
 
-  // Handle program changes from editor
   const handleProgramChange = useCallback(
     (updated: VbaProgramIr) => {
       setEditedProgram(updated);
+      editedProgramRef.current = updated;
       onProgramChange?.(updated);
     },
     [onProgramChange]
+  );
+
+  // Handle run - receives procedure name from toolbar
+  const handleRun = useCallback(
+    (procedureName: string) => {
+      const currentProgram = editedProgramRef.current;
+
+      if (!currentProgram) {
+        return;
+      }
+
+      const [moduleName, procName] = procedureName.split(".");
+      if (!moduleName || !procName) {
+        return;
+      }
+
+      setRunStatus({ state: "running", message: "Running..." });
+
+      // Run synchronously (VBA execution is synchronous)
+      try {
+        const result = executeVbaProcedure({
+          workbook,
+          program: currentProgram,
+          moduleName,
+          procedureName: procName,
+        });
+
+        if (result.ok) {
+          const time = result.durationMs.toFixed(1);
+          const changes = result.mutations.length;
+          const message =
+            changes > 0
+              ? `${time}ms · ${changes} change${changes !== 1 ? "s" : ""}`
+              : `${time}ms`;
+          setRunStatus({ state: "success", message });
+
+          // Apply mutations
+          if (changes > 0 && onWorkbookChange) {
+            const updatedWorkbook = applyMutations(workbook, result.mutations);
+            onWorkbookChange(updatedWorkbook);
+          }
+        } else {
+          setRunStatus({ state: "error", message: `Error: ${result.message}` });
+        }
+      } catch (err) {
+        setRunStatus({
+          state: "error",
+          message: `Error: ${err instanceof Error ? err.message : "Unknown error"}`,
+        });
+      }
+    },
+    [workbook, onWorkbookChange]
   );
 
   // Handle close
@@ -181,28 +230,20 @@ export function VbaDialog({
         </div>
 
         {/* Content */}
-        <div style={contentStyle}>
-          {/* VBA Editor */}
+        {editedProgram ? (
           <div style={editorContainerStyle}>
-            {editedProgram ? (
-              <VbaEditor
-                program={editedProgram}
-                onProgramChange={handleProgramChange}
-                Renderer={SvgCodeRenderer}
-                style={{ width: "100%", height: "100%" }}
-              />
-            ) : (
-              <div style={emptyStateStyle}>No VBA program loaded</div>
-            )}
+            <VbaEditor
+              program={editedProgram}
+              onProgramChange={handleProgramChange}
+              Renderer={SvgCodeRenderer}
+              style={{ width: "100%", height: "100%" }}
+              onRun={handleRun}
+              runStatus={runStatus}
+            />
           </div>
-
-          {/* Execution Panel - uses editedProgram to execute current editor content */}
-          <VbaExecutionPanel
-            program={editedProgram}
-            workbook={workbook}
-            onWorkbookChange={onWorkbookChange}
-          />
-        </div>
+        ) : (
+          <div style={emptyStateStyle}>No VBA program loaded</div>
+        )}
       </div>
     </div>,
     document.body

@@ -24,10 +24,12 @@ export type PlayerState = "idle" | "playing" | "paused" | "completed" | "error";
  * Media information to display in the player.
  */
 export type PlayerMedia = {
-  /** Primary title (e.g., procedure name, track name) */
-  readonly title: string;
-  /** Secondary text (e.g., module name, artist, status) */
+  /** Primary title (e.g., procedure name, track name). Can be a ReactNode for custom rendering. */
+  readonly title: string | ReactNode;
+  /** Secondary text (e.g., module name, artist) */
   readonly subtitle?: string;
+  /** Status text displayed to the right of title (e.g., "Ready", "2.5ms") */
+  readonly status?: string;
   /** Optional thumbnail or icon */
   readonly thumbnail?: ReactNode;
 };

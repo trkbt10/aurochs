@@ -13,7 +13,7 @@ export {
   type VbaModuleMeta,
 } from "./module-list";
 export { VbaProcedureDropdown, type VbaProcedureDropdownProps } from "./procedure-dropdown";
-export { VbaEditorToolbar, type VbaEditorToolbarProps } from "./toolbar";
+export { VbaEditorToolbar, type VbaEditorToolbarProps, type RunStatus } from "./toolbar";
 export { VbaPropertiesPanel, type VbaPropertiesPanelProps } from "./properties-panel";
 
 // Re-export syntax highlighting utilities

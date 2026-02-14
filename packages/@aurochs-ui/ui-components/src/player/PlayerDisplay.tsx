@@ -2,16 +2,17 @@
  * @file PlayerDisplay
  *
  * Media information display for the Player component.
- * Shows thumbnail, title, and subtitle.
+ * Shows thumbnail, title, subtitle, and status.
  */
 
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import type { PlayerMedia, PlayerVariant } from "./types";
 import {
   getDisplayStyle,
   getTextContainerStyle,
   getTitleStyle,
   getSubtitleStyle,
+  getStatusStyle,
   thumbnailContainerStyle,
   getThumbnailBackgroundStyle,
 } from "./player-styles";
@@ -28,6 +29,25 @@ export type PlayerDisplayProps = {
 };
 
 // =============================================================================
+// Styles
+// =============================================================================
+
+const titleRowStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: "8px",
+  minWidth: 0,
+};
+
+const titleWrapperStyle: CSSProperties = {
+  flex: 1,
+  minWidth: 0,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+};
+
+// =============================================================================
 // Component
 // =============================================================================
 
@@ -39,6 +59,10 @@ export function PlayerDisplay({ media, variant }: PlayerDisplayProps): ReactNode
   const textContainerStyle = getTextContainerStyle(variant);
   const titleStyle = getTitleStyle(variant);
   const subtitleStyle = getSubtitleStyle(variant);
+  const statusStyle = getStatusStyle(variant);
+
+  // Check if title is a string or ReactNode
+  const isStringTitle = typeof media.title === "string";
 
   return (
     <div style={displayStyle}>
@@ -51,7 +75,15 @@ export function PlayerDisplay({ media, variant }: PlayerDisplayProps): ReactNode
 
       {/* Text */}
       <div style={textContainerStyle}>
-        <p style={titleStyle}>{media.title}</p>
+        {/* Title row with optional status */}
+        <div style={titleRowStyle}>
+          {isStringTitle ? (
+            <p style={{ ...titleStyle, ...titleWrapperStyle }}>{media.title}</p>
+          ) : (
+            <div style={titleWrapperStyle}>{media.title}</div>
+          )}
+          {media.status && <span style={statusStyle}>{media.status}</span>}
+        </div>
         {media.subtitle && <p style={subtitleStyle}>{media.subtitle}</p>}
       </div>
     </div>

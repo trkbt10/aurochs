@@ -15,6 +15,7 @@ import type { VbaProgramIr, VbaModule, VbaProcedure } from "@aurochs-office/vba"
 import { canUndo, canRedo } from "@aurochs-ui/editor-core/history";
 import type { VbaEditorContextValue } from "./types";
 import { vbaEditorReducer, createInitialState } from "./reducer";
+import { getProcedureAtLine, type ProcedureRange } from "../../utils/procedure-range";
 
 // =============================================================================
 // Context
@@ -116,6 +117,22 @@ export function useVbaEditor(): VbaEditorContextValue {
   return context;
 }
 
+/**
+ * Get the procedure at the current cursor position.
+ *
+ * @returns Procedure range if cursor is inside a procedure, null otherwise
+ */
+export function useCurrentProcedure(): ProcedureRange | null {
+  const { state, activeModuleSource } = useVbaEditor();
+
+  return useMemo(() => {
+    if (!activeModuleSource) {
+      return null;
+    }
+    return getProcedureAtLine(activeModuleSource, state.cursor.line);
+  }, [activeModuleSource, state.cursor.line]);
+}
+
 // =============================================================================
 // Re-exports
 // =============================================================================
@@ -138,3 +155,5 @@ export type {
 export { INITIAL_SEARCH_STATE } from "./types";
 
 export { vbaEditorReducer, createInitialState } from "./reducer";
+
+export type { ProcedureRange } from "../../utils/procedure-range";

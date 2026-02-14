@@ -11,7 +11,7 @@ import { VbaEditorProvider, useVbaEditor } from "../context/vba-editor";
 import type { ProjectSearchMatch } from "../context/vba-editor/types";
 import { VbaCodeEditor, type CodeRendererComponent } from "./code-editor";
 import { VbaModuleGroupedList } from "./module-list";
-import { VbaEditorToolbar } from "./toolbar";
+import { VbaEditorToolbar, type RunStatus } from "./toolbar";
 import { VbaPropertiesPanel } from "./properties-panel";
 import { SearchResultsPanel } from "./search";
 import { useProjectSearch } from "../hooks/use-project-search";
@@ -27,17 +27,32 @@ export type VbaEditorProps = {
   readonly style?: CSSProperties;
   /** Code renderer component. Defaults to HtmlCodeRenderer. */
   readonly Renderer?: CodeRendererComponent;
+  /** Callback when Run button is clicked. Receives the selected procedure name. */
+  readonly onRun?: (procedureName: string) => void;
+  /** Whether Run button is disabled */
+  readonly runDisabled?: boolean;
+  /** Current run status */
+  readonly runStatus?: RunStatus;
 };
 
 type VbaEditorInnerProps = {
   readonly style?: CSSProperties;
   readonly Renderer?: CodeRendererComponent;
+  readonly onRun?: (procedureName: string) => void;
+  readonly runDisabled?: boolean;
+  readonly runStatus?: RunStatus;
 };
 
 /**
  * Inner editor component (requires context).
  */
-function VbaEditorInner({ style, Renderer }: VbaEditorInnerProps): ReactNode {
+function VbaEditorInner({
+  style,
+  Renderer,
+  onRun,
+  runDisabled,
+  runStatus,
+}: VbaEditorInnerProps): ReactNode {
   const { state, dispatch, program } = useVbaEditor();
   const { search } = state;
 
@@ -106,7 +121,13 @@ function VbaEditorInner({ style, Renderer }: VbaEditorInnerProps): ReactNode {
 
   return (
     <EditorShell
-      toolbar={<VbaEditorToolbar />}
+      toolbar={
+        <VbaEditorToolbar
+          onRun={onRun}
+          runDisabled={runDisabled}
+          runStatus={runStatus}
+        />
+      }
       panels={panels}
       bottomBar={bottomBar}
       style={style}
@@ -123,7 +144,7 @@ function VbaEditorInner({ style, Renderer }: VbaEditorInnerProps): ReactNode {
  * - Module list (left sidebar)
  * - Code editor with syntax highlighting (center)
  * - Properties panel (right sidebar)
- * - Toolbar with undo/redo and procedure dropdown
+ * - Toolbar with undo/redo, procedure dropdown, and run button
  */
 export function VbaEditor({
   program,
@@ -131,10 +152,19 @@ export function VbaEditor({
   readonly: _readonly,
   style,
   Renderer,
+  onRun,
+  runDisabled,
+  runStatus,
 }: VbaEditorProps): ReactNode {
   return (
     <VbaEditorProvider program={program}>
-      <VbaEditorInner style={style} Renderer={Renderer} />
+      <VbaEditorInner
+        style={style}
+        Renderer={Renderer}
+        onRun={onRun}
+        runDisabled={runDisabled}
+        runStatus={runStatus}
+      />
     </VbaEditorProvider>
   );
 }
