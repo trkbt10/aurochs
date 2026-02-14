@@ -63,9 +63,24 @@ const runButtonStyle: CSSProperties = {
   backgroundColor: colorTokens.accent.success,
 };
 
-const runButtonErrorStyle: CSSProperties = {
-  ...runButtonStyle,
-  backgroundColor: colorTokens.accent.danger,
+const statusBarStyle: CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: spacingTokens.xs,
+  padding: `${spacingTokens.xs} ${spacingTokens.md}`,
+  backgroundColor: colorTokens.background.tertiary,
+  borderBottom: `1px solid ${colorTokens.border.subtle}`,
+  fontSize: fontTokens.size.sm,
+  fontFamily: CODE_FONT_FAMILY,
+  minHeight: spacingTokens.xl,
+};
+
+const statusSuccessStyle: CSSProperties = {
+  color: colorTokens.accent.success,
+};
+
+const statusErrorStyle: CSSProperties = {
+  color: colorTokens.accent.danger,
 };
 
 // =============================================================================
@@ -188,59 +203,72 @@ export function VbaEditorToolbar({
     }
   };
 
-  const getRunButtonStyle = (): CSSProperties => {
-    if (statusState === "error") return runButtonErrorStyle;
-    return runButtonStyle;
-  };
-
-  const getRunButtonIcon = (): ReactNode => {
+  const getStatusContent = (): { icon: ReactNode; text: string; style: CSSProperties } | null => {
     switch (statusState) {
       case "success":
-        return <CheckIcon />;
+        return {
+          icon: <CheckIcon />,
+          text: runStatus?.message ?? "Done",
+          style: statusSuccessStyle,
+        };
       case "error":
-        return <XIcon />;
+        return {
+          icon: <XIcon />,
+          text: runStatus?.message ?? "Error",
+          style: statusErrorStyle,
+        };
       default:
-        return <PlayIcon />;
+        return null;
     }
   };
 
-  const getRunButtonLabel = (): string => {
-    if (statusState === "success" && runStatus?.message) {
-      return runStatus.message;
-    }
-    return "Run";
-  };
+  const statusContent = getStatusContent();
 
   return (
-    <div style={{ ...toolbarStyle, ...style }}>
-      <span style={locationStyle}>{location}</span>
+    <div style={style}>
+      {/* Toolbar */}
+      <div style={toolbarStyle}>
+        <span style={locationStyle}>{location}</span>
 
-      <div style={spacerStyle} />
+        <div style={spacerStyle} />
 
-      <div style={actionsStyle}>
-        <IconButton
-          icon={<UndoIcon />}
-          onClick={() => dispatch({ type: "UNDO" })}
-          disabled={!canUndo}
-          size="sm"
-        />
-        <IconButton
-          icon={<RedoIcon />}
-          onClick={() => dispatch({ type: "REDO" })}
-          disabled={!canRedo}
-          size="sm"
-        />
-
-        {onRun && (
+        <div style={actionsStyle}>
           <IconButton
-            icon={getRunButtonIcon()}
-            label={getRunButtonLabel()}
-            onClick={handleRun}
-            disabled={!canRunNow}
-            variant="primary"
+            icon={<UndoIcon />}
+            onClick={() => dispatch({ type: "UNDO" })}
+            disabled={!canUndo}
             size="sm"
-            style={getRunButtonStyle()}
           />
+          <IconButton
+            icon={<RedoIcon />}
+            onClick={() => dispatch({ type: "REDO" })}
+            disabled={!canRedo}
+            size="sm"
+          />
+
+          {onRun && (
+            <IconButton
+              icon={<PlayIcon />}
+              label="Run"
+              onClick={handleRun}
+              disabled={!canRunNow}
+              variant="primary"
+              size="sm"
+              style={runButtonStyle}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Status bar - always rendered to prevent layout shift */}
+      <div style={statusBarStyle}>
+        {statusContent ? (
+          <>
+            <span style={statusContent.style}>{statusContent.icon}</span>
+            <span style={statusContent.style}>{statusContent.text}</span>
+          </>
+        ) : (
+          <span style={{ color: colorTokens.text.tertiary }}>Ready</span>
         )}
       </div>
     </div>
