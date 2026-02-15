@@ -282,3 +282,27 @@ export type {
   PlayerVariant,
   MainButtonMode,
 } from "./player";
+
+// Editor
+export {
+  Breadcrumb,
+  ConsolePanel,
+  EditorLayout,
+  EditorStatusBar,
+  FilterInput,
+  NavigatorTabs,
+} from "./editor";
+
+export type {
+  BreadcrumbItem,
+  BreadcrumbProps,
+  ConsoleMessage,
+  ConsoleMessageType,
+  ConsolePanelProps,
+  CursorPosition,
+  EditorLayoutProps,
+  EditorStatusBarProps,
+  FilterInputProps,
+  NavigatorTab,
+  NavigatorTabsProps,
+} from "./editor";

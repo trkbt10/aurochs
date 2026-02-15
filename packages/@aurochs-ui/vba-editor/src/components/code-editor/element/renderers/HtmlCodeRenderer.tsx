@@ -243,18 +243,21 @@ const Line = memo(function Line({
 
       {/* Code content */}
       <span className={styles.lineContent}>
-        {segments.length === 0 ? "\u00A0" : segments.map(renderSegment)}
+        {/* Inner container - self-contained positioning context for text and cursor */}
+        <span className={styles.lineInner}>
+          {segments.length === 0 ? "\u00A0" : segments.map(renderSegment)}
 
-        {/* Cursor */}
-        {cursor && (
-          <span
-            className={styles.cursor}
-            style={{
-              left: `calc(${cursor.column - 1}ch)`,
-              animation: cursor.blinking ? "vba-cursor-blink 1s step-end infinite" : "none",
-            }}
-          />
-        )}
+          {/* Cursor - positioned relative to lineInner, independent of outer padding */}
+          {cursor && (
+            <span
+              className={styles.cursor}
+              style={{
+                left: `${cursor.column - 1}ch`,
+                animation: cursor.blinking ? "vba-cursor-blink 1s step-end infinite" : "none",
+              }}
+            />
+          )}
+        </span>
       </span>
     </div>
   );

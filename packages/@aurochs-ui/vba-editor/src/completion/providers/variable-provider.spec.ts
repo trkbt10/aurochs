@@ -4,7 +4,7 @@
  * Tests for variable extraction from VBA source code.
  */
 
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 import { variableProvider } from "./variable-provider";
 import type { CompletionContext } from "../types";
 

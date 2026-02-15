@@ -4,15 +4,16 @@
  * Integrates all VBA editor components into a complete editor view.
  */
 
-import { useMemo, useCallback, type CSSProperties, type ReactNode } from "react";
+import { useMemo, useCallback, useState, type CSSProperties, type ReactNode } from "react";
 import type { VbaProgramIr } from "@aurochs-office/vba";
 import { EditorShell, type EditorPanel } from "@aurochs-ui/editor-controls/editor-shell";
+import { EditorStatusBar } from "@aurochs-ui/ui-components";
 import { VbaEditorProvider, useVbaEditor } from "../context/vba-editor";
 import type { ProjectSearchMatch } from "../context/vba-editor/types";
 import { VbaCodeEditor, type CodeRendererComponent } from "./code-editor";
 import { VbaModuleGroupedList } from "./module-list";
-import { VbaEditorToolbar, type RunStatus } from "./toolbar";
-import { VbaPropertiesPanel } from "./properties-panel";
+import { VbaEditorToolbar } from "./toolbar";
+import { VbaExecutionPanel, type ExecutionState } from "./execution-panel";
 import { SearchResultsPanel } from "./search";
 import { useProjectSearch } from "../hooks/use-project-search";
 
@@ -29,18 +30,15 @@ export type VbaEditorProps = {
   readonly Renderer?: CodeRendererComponent;
   /** Callback when Run button is clicked. Receives the selected procedure name. */
   readonly onRun?: (procedureName: string) => void;
-  /** Whether Run button is disabled */
-  readonly runDisabled?: boolean;
-  /** Current run status */
-  readonly runStatus?: RunStatus;
+  /** Callback when Stop button is clicked. */
+  readonly onStop?: () => void;
 };
 
 type VbaEditorInnerProps = {
   readonly style?: CSSProperties;
   readonly Renderer?: CodeRendererComponent;
   readonly onRun?: (procedureName: string) => void;
-  readonly runDisabled?: boolean;
-  readonly runStatus?: RunStatus;
+  readonly onStop?: () => void;
 };
 
 /**
@@ -50,11 +48,11 @@ function VbaEditorInner({
   style,
   Renderer,
   onRun,
-  runDisabled,
-  runStatus,
+  onStop,
 }: VbaEditorInnerProps): ReactNode {
   const { state, dispatch, program } = useVbaEditor();
   const { search } = state;
+  const [executionState, setExecutionState] = useState<ExecutionState>("idle");
 
   // Get modified source map from history
   const modifiedSourceMap = state.sourceHistory.present;
@@ -93,6 +91,22 @@ function VbaEditorInner({
     [dispatch],
   );
 
+  // Wrap onRun to track execution state
+  const handleRun = useCallback(
+    (procedureName: string) => {
+      setExecutionState("running");
+      onRun?.(procedureName);
+      // Simulate completion after a delay (in real use, caller would control this)
+      setTimeout(() => setExecutionState("success"), 100);
+    },
+    [onRun]
+  );
+
+  const handleStop = useCallback(() => {
+    setExecutionState("idle");
+    onStop?.();
+  }, [onStop]);
+
   const panels = useMemo<EditorPanel[]>(
     () => [
       {
@@ -103,31 +117,50 @@ function VbaEditorInner({
         drawerLabel: "Modules",
       },
       {
-        id: "properties",
+        id: "execution",
         position: "right",
-        size: "240px",
-        content: <VbaPropertiesPanel />,
-        drawerLabel: "Properties",
+        size: "280px",
+        content: (
+          <VbaExecutionPanel
+            onRun={handleRun}
+            onStop={handleStop}
+            executionState={executionState}
+          />
+        ),
+        drawerLabel: "Execution",
       },
     ],
-    []
+    [handleRun, handleStop, executionState]
   );
 
-  // Show SearchResultsPanel as bottom bar when in project-wide search mode
-  const bottomBar =
-    search.isOpen && search.mode === "project-wide" ? (
-      <SearchResultsPanel onMatchSelect={handleMatchSelect} />
-    ) : undefined;
+  // Get cursor position from state
+  const { cursor, selection } = state;
+
+  // Compute selection character count
+  const selectionInfo = useMemo(() => {
+    if (!selection) return undefined;
+    // Simple estimation - actual character count would need source text
+    const lines = selection.endLine - selection.startLine;
+    return { lines, characters: 0 }; // Characters computed in context if needed
+  }, [selection]);
+
+  // Bottom bar: always show status bar, add search results when searching
+  const bottomBar = (
+    <>
+      {search.isOpen && search.mode === "project-wide" && (
+        <SearchResultsPanel onMatchSelect={handleMatchSelect} />
+      )}
+      <EditorStatusBar
+        cursor={{ line: cursor.line, column: cursor.column }}
+        selection={selectionInfo}
+        language="VBA"
+      />
+    </>
+  );
 
   return (
     <EditorShell
-      toolbar={
-        <VbaEditorToolbar
-          onRun={onRun}
-          runDisabled={runDisabled}
-          runStatus={runStatus}
-        />
-      }
+      toolbar={<VbaEditorToolbar />}
       panels={panels}
       bottomBar={bottomBar}
       style={style}
@@ -143,8 +176,8 @@ function VbaEditorInner({
  * Complete VBA code editor with:
  * - Module list (left sidebar)
  * - Code editor with syntax highlighting (center)
- * - Properties panel (right sidebar)
- * - Toolbar with undo/redo, procedure dropdown, and run button
+ * - Execution panel (right sidebar) with run/stop controls and console
+ * - Toolbar with breadcrumb navigation and undo/redo
  */
 export function VbaEditor({
   program,
@@ -153,8 +186,7 @@ export function VbaEditor({
   style,
   Renderer,
   onRun,
-  runDisabled,
-  runStatus,
+  onStop,
 }: VbaEditorProps): ReactNode {
   return (
     <VbaEditorProvider program={program}>
@@ -162,8 +194,7 @@ export function VbaEditor({
         style={style}
         Renderer={Renderer}
         onRun={onRun}
-        runDisabled={runDisabled}
-        runStatus={runStatus}
+        onStop={onStop}
       />
     </VbaEditorProvider>
   );

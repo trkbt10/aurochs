@@ -4,7 +4,7 @@
  * Tests for search/replace action handlers.
  */
 
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 import {
   handleOpenSearch,
   handleCloseSearch,

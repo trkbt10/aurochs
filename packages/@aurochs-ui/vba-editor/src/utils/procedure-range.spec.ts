@@ -2,7 +2,7 @@
  * @file Procedure Range Tests
  */
 
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 import { findProcedureRanges, getProcedureAtLine } from "./procedure-range";
 
 describe("findProcedureRanges", () => {

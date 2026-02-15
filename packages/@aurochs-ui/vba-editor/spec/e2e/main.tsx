@@ -134,11 +134,24 @@ const RENDERER_TYPES: RendererType[] = ["html", "svg", "canvas"];
 function App() {
   const { type: currentType, component: CurrentRenderer } = getRendererFromUrl();
 
+  const handleRun = (procedureName: string) => {
+    console.log(`Running: ${procedureName}`);
+  };
+
+  const handleStop = () => {
+    console.log("Execution stopped");
+  };
+
   return (
     <div style={containerStyle} data-testid="vba-editor-container">
       {/* Editor */}
       <div style={editorContainerStyle}>
-        <VbaEditor program={testProgram} Renderer={CurrentRenderer} />
+        <VbaEditor
+          program={testProgram}
+          Renderer={CurrentRenderer}
+          onRun={handleRun}
+          onStop={handleStop}
+        />
       </div>
 
       {/* Renderer navigation - bottom */}

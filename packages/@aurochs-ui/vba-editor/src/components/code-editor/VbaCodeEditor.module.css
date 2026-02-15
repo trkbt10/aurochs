@@ -68,14 +68,19 @@
   border-right: 1px solid var(--border-subtle, rgba(0, 0, 0, 0.08));
 }
 
-/* Code content area */
+/* Code content area - padding applied here, no positioning */
 .lineContent {
-  position: relative;
   flex: 1;
   padding-left: var(--spacing-sm, 8px);
 }
 
-/* Integrated cursor */
+/* Inner container for text and cursor - self-contained positioning context */
+.lineInner {
+  position: relative;
+  display: inline;
+}
+
+/* Integrated cursor - positioned relative to lineInner, not affected by outer padding */
 .cursor {
   position: absolute;
   top: 0;

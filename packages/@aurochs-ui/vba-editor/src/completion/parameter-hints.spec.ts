@@ -4,7 +4,7 @@
  * Tests for signature help / parameter hint detection.
  */
 
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it } from "vitest";
 import { detectParameterContext } from "./parameter-hints";
 import type { VbaProcedure } from "@aurochs-office/vba";
 

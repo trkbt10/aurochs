@@ -44,12 +44,14 @@ export {
   VbaProcedureDropdown,
   VbaEditorToolbar,
   VbaPropertiesPanel,
+  VbaExecutionPanel,
   type VbaCodeEditorProps,
   type VbaModuleListProps,
   type VbaProcedureDropdownProps,
   type VbaEditorToolbarProps,
   type VbaPropertiesPanelProps,
-  type RunStatus,
+  type VbaExecutionPanelProps,
+  type ExecutionState,
 } from "./components";
 
 // =============================================================================

@@ -3,12 +3,14 @@
  *
  * VBA module list using the generic GroupedList component.
  * Handles VBA-specific logic via adapter and dispatches actions to VBA editor context.
+ * Includes a filter input for searching modules.
  */
 
-import { useCallback, useMemo, type CSSProperties, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import type { VbaModuleType } from "@aurochs-office/vba";
 import {
   GroupedList,
+  FilterInput,
   type GroupedListItemId,
   type GroupedListGroupId,
 } from "@aurochs-ui/ui-components";
@@ -34,16 +36,40 @@ export type VbaModuleGroupedListProps = {
  * - Inline rename editing
  * - Drag-drop reordering within groups
  */
+const containerStyle: CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  height: "100%",
+  overflow: "hidden",
+};
+
+const listContainerStyle: CSSProperties = {
+  flex: 1,
+  overflow: "auto",
+};
+
 export function VbaModuleGroupedList({
   style,
 }: VbaModuleGroupedListProps): ReactNode {
   const { modules, state, dispatch } = useVbaEditor();
+  const [filterValue, setFilterValue] = useState("");
 
   // Convert VBA modules to GroupedList items
-  const items = useMemo(
+  const allItems = useMemo(
     () => vbaModulesToListItems(modules),
     [modules]
   );
+
+  // Filter items based on filter value
+  const items = useMemo(() => {
+    if (!filterValue.trim()) {
+      return allItems;
+    }
+    const lowerFilter = filterValue.toLowerCase();
+    return allItems.filter((item) =>
+      item.label.toLowerCase().includes(lowerFilter)
+    );
+  }, [allItems, filterValue]);
 
   // Handlers
   const handleItemClick = useCallback(
@@ -124,18 +150,26 @@ export function VbaModuleGroupedList({
   );
 
   return (
-    <GroupedList<VbaModuleMeta>
-      items={items}
-      groups={VBA_GROUPS}
-      mode="editable"
-      activeItemId={state.activeModuleName}
-      emptyMessage="No modules"
-      style={style}
-      onItemClick={handleItemClick}
-      onItemRename={handleItemRename}
-      onItemDelete={handleItemDelete}
-      onItemCreate={handleItemCreate}
-      onItemReorder={handleItemReorder}
-    />
+    <div style={{ ...containerStyle, ...style }}>
+      <div style={listContainerStyle}>
+        <GroupedList<VbaModuleMeta>
+          items={items}
+          groups={VBA_GROUPS}
+          mode="editable"
+          activeItemId={state.activeModuleName}
+          emptyMessage={filterValue ? "No matching modules" : "No modules"}
+          onItemClick={handleItemClick}
+          onItemRename={handleItemRename}
+          onItemDelete={handleItemDelete}
+          onItemCreate={handleItemCreate}
+          onItemReorder={handleItemReorder}
+        />
+      </div>
+      <FilterInput
+        value={filterValue}
+        onChange={setFilterValue}
+        placeholder="Filter modules"
+      />
+    </div>
   );
 }

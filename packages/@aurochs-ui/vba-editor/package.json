@@ -18,7 +18,10 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-ui/vba-editor/src'",
     "e2e:dev": "vite --config spec/e2e/vite.config.ts",
-    "e2e:test": "bun run spec/e2e/vba-editor.e2e.ts"
+    "e2e:test": "bun run spec/e2e/vba-editor.e2e.ts",
+    "visual:dev": "vite --config spec/e2e/vite.config.ts",
+    "visual:test": "bun run spec/visual/vba-editor-visual.spec.ts",
+    "visual:update": "bun run spec/visual/vba-editor-visual.spec.ts --update"
   },
   "exports": {
     ".": {
