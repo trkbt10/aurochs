@@ -1,0 +1,266 @@
+{
+  "slide": {
+    "shapes": [
+      {
+        "type": "sp",
+        "nonVisual": {
+          "id": "1",
+          "name": "Red"
+        },
+        "properties": {
+          "transform": {
+            "x": 50,
+            "y": 50,
+            "width": 200,
+            "height": 200,
+            "rotation": 0,
+            "flipH": false,
+            "flipV": false
+          },
+          "geometry": {
+            "type": "preset",
+            "preset": "rect",
+            "adjustValues": []
+          },
+          "fill": {
+            "type": "solidFill",
+            "color": {
+              "spec": {
+                "type": "srgb",
+                "value": "FF0000"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "sp",
+        "nonVisual": {
+          "id": "2",
+          "name": "Green"
+        },
+        "properties": {
+          "transform": {
+            "x": 270,
+            "y": 50,
+            "width": 200,
+            "height": 200,
+            "rotation": 0,
+            "flipH": false,
+            "flipV": false
+          },
+          "geometry": {
+            "type": "preset",
+            "preset": "rect",
+            "adjustValues": []
+          },
+          "fill": {
+            "type": "solidFill",
+            "color": {
+              "spec": {
+                "type": "srgb",
+                "value": "00FF00"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "sp",
+        "nonVisual": {
+          "id": "3",
+          "name": "Blue"
+        },
+        "properties": {
+          "transform": {
+            "x": 490,
+            "y": 50,
+            "width": 200,
+            "height": 200,
+            "rotation": 0,
+            "flipH": false,
+            "flipV": false
+          },
+          "geometry": {
+            "type": "preset",
+            "preset": "rect",
+            "adjustValues": []
+          },
+          "fill": {
+            "type": "solidFill",
+            "color": {
+              "spec": {
+                "type": "srgb",
+                "value": "0000FF"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "sp",
+        "nonVisual": {
+          "id": "4",
+          "name": "Yellow"
+        },
+        "properties": {
+          "transform": {
+            "x": 710,
+            "y": 50,
+            "width": 200,
+            "height": 200,
+            "rotation": 0,
+            "flipH": false,
+            "flipV": false
+          },
+          "geometry": {
+            "type": "preset",
+            "preset": "rect",
+            "adjustValues": []
+          },
+          "fill": {
+            "type": "solidFill",
+            "color": {
+              "spec": {
+                "type": "srgb",
+                "value": "FFFF00"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "sp",
+        "nonVisual": {
+          "id": "5",
+          "name": "Magenta"
+        },
+        "properties": {
+          "transform": {
+            "x": 50,
+            "y": 280,
+            "width": 200,
+            "height": 200,
+            "rotation": 0,
+            "flipH": false,
+            "flipV": false
+          },
+          "geometry": {
+            "type": "preset",
+            "preset": "rect",
+            "adjustValues": []
+          },
+          "fill": {
+            "type": "solidFill",
+            "color": {
+              "spec": {
+                "type": "srgb",
+                "value": "FF00FF"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "sp",
+        "nonVisual": {
+          "id": "6",
+          "name": "Cyan"
+        },
+        "properties": {
+          "transform": {
+            "x": 270,
+            "y": 280,
+            "width": 200,
+            "height": 200,
+            "rotation": 0,
+            "flipH": false,
+            "flipV": false
+          },
+          "geometry": {
+            "type": "preset",
+            "preset": "rect",
+            "adjustValues": []
+          },
+          "fill": {
+            "type": "solidFill",
+            "color": {
+              "spec": {
+                "type": "srgb",
+                "value": "00FFFF"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "sp",
+        "nonVisual": {
+          "id": "7",
+          "name": "Black"
+        },
+        "properties": {
+          "transform": {
+            "x": 490,
+            "y": 280,
+            "width": 200,
+            "height": 200,
+            "rotation": 0,
+            "flipH": false,
+            "flipV": false
+          },
+          "geometry": {
+            "type": "preset",
+            "preset": "rect",
+            "adjustValues": []
+          },
+          "fill": {
+            "type": "solidFill",
+            "color": {
+              "spec": {
+                "type": "srgb",
+                "value": "000000"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "sp",
+        "nonVisual": {
+          "id": "8",
+          "name": "White"
+        },
+        "properties": {
+          "transform": {
+            "x": 710,
+            "y": 280,
+            "width": 200,
+            "height": 200,
+            "rotation": 0,
+            "flipH": false,
+            "flipV": false
+          },
+          "geometry": {
+            "type": "preset",
+            "preset": "rect",
+            "adjustValues": []
+          },
+          "fill": {
+            "type": "solidFill",
+            "color": {
+              "spec": {
+                "type": "srgb",
+                "value": "FFFFFF"
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  "slideSize": {
+    "width": 960,
+    "height": 540
+  }
+}

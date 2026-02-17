@@ -1,0 +1,544 @@
+{
+  "slide": {
+    "shapes": [
+      {
+        "type": "sp",
+        "nonVisual": {
+          "id": "1",
+          "name": "Stroke Only Rect"
+        },
+        "properties": {
+          "transform": {
+            "x": 50,
+            "y": 50,
+            "width": 180,
+            "height": 120,
+            "rotation": 0,
+            "flipH": false,
+            "flipV": false
+          },
+          "geometry": {
+            "type": "preset",
+            "preset": "rect",
+            "adjustValues": []
+          },
+          "line": {
+            "width": 4,
+            "cap": "flat",
+            "compound": "sng",
+            "alignment": "ctr",
+            "fill": {
+              "type": "solidFill",
+              "color": {
+                "spec": {
+                  "type": "srgb",
+                  "value": "E74C3C"
+                }
+              }
+            },
+            "dash": "solid",
+            "join": "round"
+          }
+        }
+      },
+      {
+        "type": "sp",
+        "nonVisual": {
+          "id": "2",
+          "name": "Stroke Only Ellipse"
+        },
+        "properties": {
+          "transform": {
+            "x": 260,
+            "y": 50,
+            "width": 180,
+            "height": 120,
+            "rotation": 0,
+            "flipH": false,
+            "flipV": false
+          },
+          "geometry": {
+            "type": "preset",
+            "preset": "ellipse",
+            "adjustValues": []
+          },
+          "line": {
+            "width": 4,
+            "cap": "flat",
+            "compound": "sng",
+            "alignment": "ctr",
+            "fill": {
+              "type": "solidFill",
+              "color": {
+                "spec": {
+                  "type": "srgb",
+                  "value": "3498DB"
+                }
+              }
+            },
+            "dash": "solid",
+            "join": "round"
+          }
+        }
+      },
+      {
+        "type": "sp",
+        "nonVisual": {
+          "id": "3",
+          "name": "Fill + Stroke Rect"
+        },
+        "properties": {
+          "transform": {
+            "x": 470,
+            "y": 50,
+            "width": 180,
+            "height": 120,
+            "rotation": 0,
+            "flipH": false,
+            "flipV": false
+          },
+          "geometry": {
+            "type": "preset",
+            "preset": "rect",
+            "adjustValues": []
+          },
+          "fill": {
+            "type": "solidFill",
+            "color": {
+              "spec": {
+                "type": "srgb",
+                "value": "FFEAA7"
+              }
+            }
+          },
+          "line": {
+            "width": 3,
+            "cap": "flat",
+            "compound": "sng",
+            "alignment": "ctr",
+            "fill": {
+              "type": "solidFill",
+              "color": {
+                "spec": {
+                  "type": "srgb",
+                  "value": "2C3E50"
+                }
+              }
+            },
+            "dash": "solid",
+            "join": "round"
+          }
+        }
+      },
+      {
+        "type": "sp",
+        "nonVisual": {
+          "id": "4",
+          "name": "Fill + Stroke Ellipse"
+        },
+        "properties": {
+          "transform": {
+            "x": 680,
+            "y": 50,
+            "width": 180,
+            "height": 120,
+            "rotation": 0,
+            "flipH": false,
+            "flipV": false
+          },
+          "geometry": {
+            "type": "preset",
+            "preset": "ellipse",
+            "adjustValues": []
+          },
+          "fill": {
+            "type": "solidFill",
+            "color": {
+              "spec": {
+                "type": "srgb",
+                "value": "DDA0DD"
+              }
+            }
+          },
+          "line": {
+            "width": 3,
+            "cap": "flat",
+            "compound": "sng",
+            "alignment": "ctr",
+            "fill": {
+              "type": "solidFill",
+              "color": {
+                "spec": {
+                  "type": "srgb",
+                  "value": "8E44AD"
+                }
+              }
+            },
+            "dash": "solid",
+            "join": "round"
+          }
+        }
+      },
+      {
+        "type": "sp",
+        "nonVisual": {
+          "id": "5",
+          "name": "Thin Stroke"
+        },
+        "properties": {
+          "transform": {
+            "x": 50,
+            "y": 200,
+            "width": 150,
+            "height": 100,
+            "rotation": 0,
+            "flipH": false,
+            "flipV": false
+          },
+          "geometry": {
+            "type": "preset",
+            "preset": "rect",
+            "adjustValues": []
+          },
+          "fill": {
+            "type": "solidFill",
+            "color": {
+              "spec": {
+                "type": "srgb",
+                "value": "FFFFFF"
+              }
+            }
+          },
+          "line": {
+            "width": 1,
+            "cap": "flat",
+            "compound": "sng",
+            "alignment": "ctr",
+            "fill": {
+              "type": "solidFill",
+              "color": {
+                "spec": {
+                  "type": "srgb",
+                  "value": "000000"
+                }
+              }
+            },
+            "dash": "solid",
+            "join": "round"
+          }
+        }
+      },
+      {
+        "type": "sp",
+        "nonVisual": {
+          "id": "6",
+          "name": "Medium Stroke"
+        },
+        "properties": {
+          "transform": {
+            "x": 230,
+            "y": 200,
+            "width": 150,
+            "height": 100,
+            "rotation": 0,
+            "flipH": false,
+            "flipV": false
+          },
+          "geometry": {
+            "type": "preset",
+            "preset": "rect",
+            "adjustValues": []
+          },
+          "fill": {
+            "type": "solidFill",
+            "color": {
+              "spec": {
+                "type": "srgb",
+                "value": "FFFFFF"
+              }
+            }
+          },
+          "line": {
+            "width": 3,
+            "cap": "flat",
+            "compound": "sng",
+            "alignment": "ctr",
+            "fill": {
+              "type": "solidFill",
+              "color": {
+                "spec": {
+                  "type": "srgb",
+                  "value": "000000"
+                }
+              }
+            },
+            "dash": "solid",
+            "join": "round"
+          }
+        }
+      },
+      {
+        "type": "sp",
+        "nonVisual": {
+          "id": "7",
+          "name": "Thick Stroke"
+        },
+        "properties": {
+          "transform": {
+            "x": 410,
+            "y": 200,
+            "width": 150,
+            "height": 100,
+            "rotation": 0,
+            "flipH": false,
+            "flipV": false
+          },
+          "geometry": {
+            "type": "preset",
+            "preset": "rect",
+            "adjustValues": []
+          },
+          "fill": {
+            "type": "solidFill",
+            "color": {
+              "spec": {
+                "type": "srgb",
+                "value": "FFFFFF"
+              }
+            }
+          },
+          "line": {
+            "width": 6,
+            "cap": "flat",
+            "compound": "sng",
+            "alignment": "ctr",
+            "fill": {
+              "type": "solidFill",
+              "color": {
+                "spec": {
+                  "type": "srgb",
+                  "value": "000000"
+                }
+              }
+            },
+            "dash": "solid",
+            "join": "round"
+          }
+        }
+      },
+      {
+        "type": "sp",
+        "nonVisual": {
+          "id": "8",
+          "name": "Extra Thick Stroke"
+        },
+        "properties": {
+          "transform": {
+            "x": 590,
+            "y": 200,
+            "width": 150,
+            "height": 100,
+            "rotation": 0,
+            "flipH": false,
+            "flipV": false
+          },
+          "geometry": {
+            "type": "preset",
+            "preset": "rect",
+            "adjustValues": []
+          },
+          "fill": {
+            "type": "solidFill",
+            "color": {
+              "spec": {
+                "type": "srgb",
+                "value": "FFFFFF"
+              }
+            }
+          },
+          "line": {
+            "width": 10,
+            "cap": "flat",
+            "compound": "sng",
+            "alignment": "ctr",
+            "fill": {
+              "type": "solidFill",
+              "color": {
+                "spec": {
+                  "type": "srgb",
+                  "value": "000000"
+                }
+              }
+            },
+            "dash": "solid",
+            "join": "round"
+          }
+        }
+      },
+      {
+        "type": "sp",
+        "nonVisual": {
+          "id": "9",
+          "name": "Red Stroke Circle"
+        },
+        "properties": {
+          "transform": {
+            "x": 100,
+            "y": 350,
+            "width": 120,
+            "height": 120,
+            "rotation": 0,
+            "flipH": false,
+            "flipV": false
+          },
+          "geometry": {
+            "type": "preset",
+            "preset": "ellipse",
+            "adjustValues": []
+          },
+          "line": {
+            "width": 5,
+            "cap": "flat",
+            "compound": "sng",
+            "alignment": "ctr",
+            "fill": {
+              "type": "solidFill",
+              "color": {
+                "spec": {
+                  "type": "srgb",
+                  "value": "FF0000"
+                }
+              }
+            },
+            "dash": "solid",
+            "join": "round"
+          }
+        }
+      },
+      {
+        "type": "sp",
+        "nonVisual": {
+          "id": "10",
+          "name": "Green Stroke Circle"
+        },
+        "properties": {
+          "transform": {
+            "x": 280,
+            "y": 350,
+            "width": 120,
+            "height": 120,
+            "rotation": 0,
+            "flipH": false,
+            "flipV": false
+          },
+          "geometry": {
+            "type": "preset",
+            "preset": "ellipse",
+            "adjustValues": []
+          },
+          "line": {
+            "width": 5,
+            "cap": "flat",
+            "compound": "sng",
+            "alignment": "ctr",
+            "fill": {
+              "type": "solidFill",
+              "color": {
+                "spec": {
+                  "type": "srgb",
+                  "value": "00FF00"
+                }
+              }
+            },
+            "dash": "solid",
+            "join": "round"
+          }
+        }
+      },
+      {
+        "type": "sp",
+        "nonVisual": {
+          "id": "11",
+          "name": "Blue Stroke Circle"
+        },
+        "properties": {
+          "transform": {
+            "x": 460,
+            "y": 350,
+            "width": 120,
+            "height": 120,
+            "rotation": 0,
+            "flipH": false,
+            "flipV": false
+          },
+          "geometry": {
+            "type": "preset",
+            "preset": "ellipse",
+            "adjustValues": []
+          },
+          "line": {
+            "width": 5,
+            "cap": "flat",
+            "compound": "sng",
+            "alignment": "ctr",
+            "fill": {
+              "type": "solidFill",
+              "color": {
+                "spec": {
+                  "type": "srgb",
+                  "value": "0000FF"
+                }
+              }
+            },
+            "dash": "solid",
+            "join": "round"
+          }
+        }
+      },
+      {
+        "type": "sp",
+        "nonVisual": {
+          "id": "12",
+          "name": "Orange Stroke Circle"
+        },
+        "properties": {
+          "transform": {
+            "x": 640,
+            "y": 350,
+            "width": 120,
+            "height": 120,
+            "rotation": 0,
+            "flipH": false,
+            "flipV": false
+          },
+          "geometry": {
+            "type": "preset",
+            "preset": "ellipse",
+            "adjustValues": []
+          },
+          "line": {
+            "width": 5,
+            "cap": "flat",
+            "compound": "sng",
+            "alignment": "ctr",
+            "fill": {
+              "type": "solidFill",
+              "color": {
+                "spec": {
+                  "type": "srgb",
+                  "value": "FF8C00"
+                }
+              }
+            },
+            "dash": "solid",
+            "join": "round"
+          }
+        }
+      }
+    ]
+  },
+  "slideSize": {
+    "width": 960,
+    "height": 540
+  }
+}

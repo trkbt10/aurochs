@@ -28,8 +28,9 @@
     "lint": "eslint src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-ui/pptx-editor/src'",
-    "visual:dev": "vite --config spec/visual/vite.config.ts",
-    "visual:capture": "bun run spec/visual/capture.ts"
+    "visual:test": "vitest --run --config ../../../vitest.config.ts '../../../packages/@aurochs-ui/pptx-editor/spec/pptx-visual.spec.ts'",
+    "visual:fixtures": "bun run scripts/generate-visual-fixtures.ts",
+    "visual:baselines": "bun run scripts/generate-editor-baselines.ts"
   },
   "exports": {
     ".": {

@@ -1,0 +1,3 @@
+# Test output directories (generated during test runs)
+__output__/
+__diff__/

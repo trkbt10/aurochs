@@ -1,0 +1,100 @@
+{
+  "slide": {
+    "shapes": [
+      {
+        "type": "sp",
+        "nonVisual": {
+          "id": "1",
+          "name": "Title"
+        },
+        "properties": {
+          "transform": {
+            "x": 50,
+            "y": 50,
+            "width": 860,
+            "height": 80,
+            "rotation": 0,
+            "flipH": false,
+            "flipV": false
+          },
+          "geometry": {
+            "type": "preset",
+            "preset": "rect",
+            "adjustValues": []
+          },
+          "fill": {
+            "type": "solidFill",
+            "color": {
+              "spec": {
+                "type": "srgb",
+                "value": "4472C4"
+              }
+            }
+          }
+        },
+        "textBody": {
+          "bodyProperties": {},
+          "paragraphs": [
+            {
+              "runs": [
+                {
+                  "text": "Visual Regression Test - Text Box"
+                }
+              ],
+              "properties": {}
+            }
+          ]
+        }
+      },
+      {
+        "type": "sp",
+        "nonVisual": {
+          "id": "2",
+          "name": "Content"
+        },
+        "properties": {
+          "transform": {
+            "x": 50,
+            "y": 150,
+            "width": 400,
+            "height": 200,
+            "rotation": 0,
+            "flipH": false,
+            "flipV": false
+          },
+          "geometry": {
+            "type": "preset",
+            "preset": "rect",
+            "adjustValues": []
+          },
+          "fill": {
+            "type": "solidFill",
+            "color": {
+              "spec": {
+                "type": "srgb",
+                "value": "FFFFFF"
+              }
+            }
+          }
+        },
+        "textBody": {
+          "bodyProperties": {},
+          "paragraphs": [
+            {
+              "runs": [
+                {
+                  "text": "This is a text box with content."
+                }
+              ],
+              "properties": {}
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "slideSize": {
+    "width": 960,
+    "height": 540
+  }
+}

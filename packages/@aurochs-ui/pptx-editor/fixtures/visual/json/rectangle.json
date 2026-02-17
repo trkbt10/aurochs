@@ -1,0 +1,170 @@
+{
+  "slide": {
+    "shapes": [
+      {
+        "type": "sp",
+        "nonVisual": {
+          "id": "1",
+          "name": "Rectangle 1"
+        },
+        "properties": {
+          "transform": {
+            "x": 50,
+            "y": 50,
+            "width": 200,
+            "height": 150,
+            "rotation": 0,
+            "flipH": false,
+            "flipV": false
+          },
+          "geometry": {
+            "type": "preset",
+            "preset": "rect",
+            "adjustValues": []
+          },
+          "fill": {
+            "type": "solidFill",
+            "color": {
+              "spec": {
+                "type": "srgb",
+                "value": "FF6B6B"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "sp",
+        "nonVisual": {
+          "id": "2",
+          "name": "Rectangle 2"
+        },
+        "properties": {
+          "transform": {
+            "x": 300,
+            "y": 50,
+            "width": 200,
+            "height": 150,
+            "rotation": 0,
+            "flipH": false,
+            "flipV": false
+          },
+          "geometry": {
+            "type": "preset",
+            "preset": "rect",
+            "adjustValues": []
+          },
+          "fill": {
+            "type": "solidFill",
+            "color": {
+              "spec": {
+                "type": "srgb",
+                "value": "4ECDC4"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "sp",
+        "nonVisual": {
+          "id": "3",
+          "name": "Rectangle 3"
+        },
+        "properties": {
+          "transform": {
+            "x": 550,
+            "y": 50,
+            "width": 200,
+            "height": 150,
+            "rotation": 0,
+            "flipH": false,
+            "flipV": false
+          },
+          "geometry": {
+            "type": "preset",
+            "preset": "rect",
+            "adjustValues": []
+          },
+          "fill": {
+            "type": "solidFill",
+            "color": {
+              "spec": {
+                "type": "srgb",
+                "value": "45B7D1"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "sp",
+        "nonVisual": {
+          "id": "4",
+          "name": "Rectangle 4"
+        },
+        "properties": {
+          "transform": {
+            "x": 175,
+            "y": 250,
+            "width": 250,
+            "height": 200,
+            "rotation": 0,
+            "flipH": false,
+            "flipV": false
+          },
+          "geometry": {
+            "type": "preset",
+            "preset": "rect",
+            "adjustValues": []
+          },
+          "fill": {
+            "type": "solidFill",
+            "color": {
+              "spec": {
+                "type": "srgb",
+                "value": "96CEB4"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "sp",
+        "nonVisual": {
+          "id": "5",
+          "name": "Rectangle 5"
+        },
+        "properties": {
+          "transform": {
+            "x": 475,
+            "y": 250,
+            "width": 250,
+            "height": 200,
+            "rotation": 0,
+            "flipH": false,
+            "flipV": false
+          },
+          "geometry": {
+            "type": "preset",
+            "preset": "rect",
+            "adjustValues": []
+          },
+          "fill": {
+            "type": "solidFill",
+            "color": {
+              "spec": {
+                "type": "srgb",
+                "value": "FFEAA7"
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  "slideSize": {
+    "width": 960,
+    "height": 540
+  }
+}

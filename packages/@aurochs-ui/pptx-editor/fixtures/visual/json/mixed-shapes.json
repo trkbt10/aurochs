@@ -1,0 +1,266 @@
+{
+  "slide": {
+    "shapes": [
+      {
+        "type": "sp",
+        "nonVisual": {
+          "id": "1",
+          "name": "Title Box"
+        },
+        "properties": {
+          "transform": {
+            "x": 50,
+            "y": 20,
+            "width": 860,
+            "height": 60,
+            "rotation": 0,
+            "flipH": false,
+            "flipV": false
+          },
+          "geometry": {
+            "type": "preset",
+            "preset": "rect",
+            "adjustValues": []
+          },
+          "fill": {
+            "type": "solidFill",
+            "color": {
+              "spec": {
+                "type": "srgb",
+                "value": "2C3E50"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "sp",
+        "nonVisual": {
+          "id": "2",
+          "name": "Rectangle"
+        },
+        "properties": {
+          "transform": {
+            "x": 50,
+            "y": 100,
+            "width": 180,
+            "height": 120,
+            "rotation": 0,
+            "flipH": false,
+            "flipV": false
+          },
+          "geometry": {
+            "type": "preset",
+            "preset": "rect",
+            "adjustValues": []
+          },
+          "fill": {
+            "type": "solidFill",
+            "color": {
+              "spec": {
+                "type": "srgb",
+                "value": "E74C3C"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "sp",
+        "nonVisual": {
+          "id": "3",
+          "name": "Ellipse"
+        },
+        "properties": {
+          "transform": {
+            "x": 260,
+            "y": 100,
+            "width": 180,
+            "height": 120,
+            "rotation": 0,
+            "flipH": false,
+            "flipV": false
+          },
+          "geometry": {
+            "type": "preset",
+            "preset": "ellipse",
+            "adjustValues": []
+          },
+          "fill": {
+            "type": "solidFill",
+            "color": {
+              "spec": {
+                "type": "srgb",
+                "value": "3498DB"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "sp",
+        "nonVisual": {
+          "id": "4",
+          "name": "Square"
+        },
+        "properties": {
+          "transform": {
+            "x": 470,
+            "y": 100,
+            "width": 120,
+            "height": 120,
+            "rotation": 0,
+            "flipH": false,
+            "flipV": false
+          },
+          "geometry": {
+            "type": "preset",
+            "preset": "rect",
+            "adjustValues": []
+          },
+          "fill": {
+            "type": "solidFill",
+            "color": {
+              "spec": {
+                "type": "srgb",
+                "value": "2ECC71"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "sp",
+        "nonVisual": {
+          "id": "5",
+          "name": "Circle"
+        },
+        "properties": {
+          "transform": {
+            "x": 620,
+            "y": 100,
+            "width": 120,
+            "height": 120,
+            "rotation": 0,
+            "flipH": false,
+            "flipV": false
+          },
+          "geometry": {
+            "type": "preset",
+            "preset": "ellipse",
+            "adjustValues": []
+          },
+          "fill": {
+            "type": "solidFill",
+            "color": {
+              "spec": {
+                "type": "srgb",
+                "value": "F39C12"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "sp",
+        "nonVisual": {
+          "id": "6",
+          "name": "Wide Rectangle"
+        },
+        "properties": {
+          "transform": {
+            "x": 50,
+            "y": 250,
+            "width": 400,
+            "height": 100,
+            "rotation": 0,
+            "flipH": false,
+            "flipV": false
+          },
+          "geometry": {
+            "type": "preset",
+            "preset": "rect",
+            "adjustValues": []
+          },
+          "fill": {
+            "type": "solidFill",
+            "color": {
+              "spec": {
+                "type": "srgb",
+                "value": "9B59B6"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "sp",
+        "nonVisual": {
+          "id": "7",
+          "name": "Wide Ellipse"
+        },
+        "properties": {
+          "transform": {
+            "x": 480,
+            "y": 250,
+            "width": 400,
+            "height": 100,
+            "rotation": 0,
+            "flipH": false,
+            "flipV": false
+          },
+          "geometry": {
+            "type": "preset",
+            "preset": "ellipse",
+            "adjustValues": []
+          },
+          "fill": {
+            "type": "solidFill",
+            "color": {
+              "spec": {
+                "type": "srgb",
+                "value": "1ABC9C"
+              }
+            }
+          }
+        }
+      },
+      {
+        "type": "sp",
+        "nonVisual": {
+          "id": "8",
+          "name": "Content Box"
+        },
+        "properties": {
+          "transform": {
+            "x": 50,
+            "y": 380,
+            "width": 860,
+            "height": 120,
+            "rotation": 0,
+            "flipH": false,
+            "flipV": false
+          },
+          "geometry": {
+            "type": "preset",
+            "preset": "rect",
+            "adjustValues": []
+          },
+          "fill": {
+            "type": "solidFill",
+            "color": {
+              "spec": {
+                "type": "srgb",
+                "value": "ECF0F1"
+              }
+            }
+          }
+        }
+      }
+    ]
+  },
+  "slideSize": {
+    "width": 960,
+    "height": 540
+  }
+}
