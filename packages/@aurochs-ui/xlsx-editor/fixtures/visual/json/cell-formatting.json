@@ -1,0 +1,608 @@
+{
+  "dateSystem": "1900",
+  "sheets": [
+    {
+      "dateSystem": "1900",
+      "name": "Cell Formatting",
+      "sheetId": 1,
+      "state": "visible",
+      "sheetView": {
+        "showGridLines": true,
+        "showRowColHeaders": true
+      },
+      "columns": [
+        {
+          "min": 1,
+          "max": 1,
+          "width": 15
+        },
+        {
+          "min": 2,
+          "max": 2,
+          "width": 20
+        }
+      ],
+      "rows": [
+        {
+          "rowNumber": 1,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 1,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Style"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 1,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Example"
+              },
+              "styleId": 0
+            }
+          ]
+        },
+        {
+          "rowNumber": 2,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 2,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Bold"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 2,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Bold Text"
+              },
+              "styleId": 1
+            }
+          ]
+        },
+        {
+          "rowNumber": 3,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 3,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Red"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 3,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Red Text"
+              },
+              "styleId": 2
+            }
+          ]
+        },
+        {
+          "rowNumber": 4,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 4,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Large"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 4,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Large Text"
+              },
+              "styleId": 3
+            }
+          ]
+        },
+        {
+          "rowNumber": 5,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 5,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Italic"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 5,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Italic Text"
+              },
+              "styleId": 4
+            }
+          ]
+        },
+        {
+          "rowNumber": 6,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 6,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Yellow Fill"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 6,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Yellow BG"
+              },
+              "styleId": 5
+            }
+          ]
+        },
+        {
+          "rowNumber": 7,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 7,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Green Fill"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 7,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Green BG"
+              },
+              "styleId": 6
+            }
+          ]
+        },
+        {
+          "rowNumber": 8,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 8,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Blue Fill"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 8,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Blue BG"
+              },
+              "styleId": 7
+            }
+          ]
+        },
+        {
+          "rowNumber": 9,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 9,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Thin Border"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 9,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Bordered"
+              },
+              "styleId": 8
+            }
+          ]
+        },
+        {
+          "rowNumber": 10,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 10,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Thick Border"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 10,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Thick"
+              },
+              "styleId": 9
+            }
+          ]
+        },
+        {
+          "rowNumber": 11,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 11,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Combined"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 11,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Bold+Yellow+Border"
+              },
+              "styleId": 10
+            }
+          ]
+        }
+      ],
+      "xmlPath": "xl/worksheets/sheet1.xml"
+    }
+  ],
+  "styles": {
+    "fonts": [
+      {
+        "name": "Calibri",
+        "size": 11,
+        "scheme": "minor"
+      },
+      {
+        "name": "Calibri",
+        "size": 11,
+        "scheme": "minor",
+        "bold": true
+      },
+      {
+        "name": "Calibri",
+        "size": 11,
+        "scheme": "minor",
+        "color": {
+          "type": "rgb",
+          "value": "FFFF0000"
+        }
+      },
+      {
+        "name": "Calibri",
+        "size": 16,
+        "scheme": "minor",
+        "bold": true
+      },
+      {
+        "name": "Calibri",
+        "size": 11,
+        "scheme": "minor",
+        "italic": true
+      }
+    ],
+    "fills": [
+      {
+        "type": "none"
+      },
+      {
+        "type": "pattern",
+        "pattern": {
+          "patternType": "gray125"
+        }
+      },
+      {
+        "type": "pattern",
+        "pattern": {
+          "patternType": "solid",
+          "fgColor": {
+            "type": "rgb",
+            "value": "FFFFFF00"
+          }
+        }
+      },
+      {
+        "type": "pattern",
+        "pattern": {
+          "patternType": "solid",
+          "fgColor": {
+            "type": "rgb",
+            "value": "FF90EE90"
+          }
+        }
+      },
+      {
+        "type": "pattern",
+        "pattern": {
+          "patternType": "solid",
+          "fgColor": {
+            "type": "rgb",
+            "value": "FFADD8E6"
+          }
+        }
+      }
+    ],
+    "borders": [
+      {},
+      {
+        "left": {
+          "style": "thin",
+          "color": {
+            "type": "rgb",
+            "value": "FF000000"
+          }
+        },
+        "right": {
+          "style": "thin",
+          "color": {
+            "type": "rgb",
+            "value": "FF000000"
+          }
+        },
+        "top": {
+          "style": "thin",
+          "color": {
+            "type": "rgb",
+            "value": "FF000000"
+          }
+        },
+        "bottom": {
+          "style": "thin",
+          "color": {
+            "type": "rgb",
+            "value": "FF000000"
+          }
+        }
+      },
+      {
+        "left": {
+          "style": "thick",
+          "color": {
+            "type": "rgb",
+            "value": "FF000000"
+          }
+        },
+        "right": {
+          "style": "thick",
+          "color": {
+            "type": "rgb",
+            "value": "FF000000"
+          }
+        },
+        "top": {
+          "style": "thick",
+          "color": {
+            "type": "rgb",
+            "value": "FF000000"
+          }
+        },
+        "bottom": {
+          "style": "thick",
+          "color": {
+            "type": "rgb",
+            "value": "FF000000"
+          }
+        }
+      }
+    ],
+    "numberFormats": [],
+    "cellXfs": [
+      {
+        "numFmtId": 0,
+        "fontId": 0,
+        "fillId": 0,
+        "borderId": 0
+      },
+      {
+        "numFmtId": 0,
+        "fontId": 1,
+        "fillId": 0,
+        "borderId": 0,
+        "applyFont": true
+      },
+      {
+        "numFmtId": 0,
+        "fontId": 2,
+        "fillId": 0,
+        "borderId": 0,
+        "applyFont": true
+      },
+      {
+        "numFmtId": 0,
+        "fontId": 3,
+        "fillId": 0,
+        "borderId": 0,
+        "applyFont": true
+      },
+      {
+        "numFmtId": 0,
+        "fontId": 4,
+        "fillId": 0,
+        "borderId": 0,
+        "applyFont": true
+      },
+      {
+        "numFmtId": 0,
+        "fontId": 0,
+        "fillId": 2,
+        "borderId": 0,
+        "applyFill": true
+      },
+      {
+        "numFmtId": 0,
+        "fontId": 0,
+        "fillId": 3,
+        "borderId": 0,
+        "applyFill": true
+      },
+      {
+        "numFmtId": 0,
+        "fontId": 0,
+        "fillId": 4,
+        "borderId": 0,
+        "applyFill": true
+      },
+      {
+        "numFmtId": 0,
+        "fontId": 0,
+        "fillId": 0,
+        "borderId": 1,
+        "applyBorder": true
+      },
+      {
+        "numFmtId": 0,
+        "fontId": 0,
+        "fillId": 0,
+        "borderId": 2,
+        "applyBorder": true
+      },
+      {
+        "numFmtId": 0,
+        "fontId": 1,
+        "fillId": 2,
+        "borderId": 1,
+        "applyFont": true,
+        "applyFill": true,
+        "applyBorder": true
+      }
+    ],
+    "cellStyleXfs": [
+      {
+        "numFmtId": 0,
+        "fontId": 0,
+        "fillId": 0,
+        "borderId": 0
+      }
+    ],
+    "cellStyles": [
+      {
+        "name": "Normal",
+        "xfId": 0,
+        "builtinId": 0
+      }
+    ]
+  },
+  "sharedStrings": []
+}

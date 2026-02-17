@@ -17,6 +17,12 @@ import {
   setRowHeight,
   unhideColumns,
   unhideRows,
+  groupRows,
+  ungroupRows,
+  setRowCollapsed,
+  groupColumns,
+  ungroupColumns,
+  setColumnCollapsed,
 } from "./mutation";
 
 function addr(col: number, row: number): CellAddress {
@@ -311,5 +317,142 @@ describe("xlsx-editor/row-col/mutation", () => {
 
     expect(() => unhideColumns(worksheet, colIdx(0), 1)).toThrow("startCol");
     expect(() => unhideColumns(worksheet, colIdx(1), 0)).toThrow("count");
+  });
+
+  // Outline Grouping Tests
+
+  it("groupRows increases outline level on rows", () => {
+    const worksheet = createWorksheet(
+      new Map([
+        [1, [cellAt(1, 1, { type: "string", value: "A1" })]],
+        [2, [cellAt(1, 2, { type: "string", value: "A2" })]],
+      ]),
+    );
+
+    const next = groupRows(worksheet, rowIdx(1), 2);
+
+    expect(next.rows[0]?.outlineLevel).toBe(1);
+    expect(next.rows[1]?.outlineLevel).toBe(1);
+  });
+
+  it("groupRows increases outline level incrementally", () => {
+    const worksheet = createWorksheet(
+      new Map([[1, [cellAt(1, 1, { type: "string", value: "A1" })]]]),
+    );
+
+    const once = groupRows(worksheet, rowIdx(1), 1);
+    const twice = groupRows(once, rowIdx(1), 1);
+
+    expect(twice.rows[0]?.outlineLevel).toBe(2);
+  });
+
+  it("groupRows caps outline level at 7", () => {
+    let worksheet = createWorksheet(
+      new Map([[1, [cellAt(1, 1, { type: "string", value: "A1" })]]]),
+    );
+
+    for (let i = 0; i < 10; i++) {
+      worksheet = groupRows(worksheet, rowIdx(1), 1);
+    }
+
+    expect(worksheet.rows[0]?.outlineLevel).toBe(7);
+  });
+
+  it("ungroupRows decreases outline level on rows", () => {
+    const worksheet = createWorksheet(
+      new Map([[1, [cellAt(1, 1, { type: "string", value: "A1" })]]]),
+    );
+
+    const grouped = groupRows(worksheet, rowIdx(1), 1);
+    const ungrouped = ungroupRows(grouped, rowIdx(1), 1);
+
+    expect(ungrouped.rows[0]?.outlineLevel).toBeUndefined();
+  });
+
+  it("ungroupRows does not go below 0", () => {
+    const worksheet = createWorksheet(
+      new Map([[1, [cellAt(1, 1, { type: "string", value: "A1" })]]]),
+    );
+
+    const ungrouped = ungroupRows(worksheet, rowIdx(1), 1);
+
+    expect(ungrouped.rows[0]?.outlineLevel).toBeUndefined();
+  });
+
+  it("setRowCollapsed sets collapsed flag on row", () => {
+    const worksheet = createWorksheet(
+      new Map([[1, [cellAt(1, 1, { type: "string", value: "A1" })]]]),
+    );
+
+    const collapsed = setRowCollapsed(worksheet, rowIdx(1), true);
+    expect(collapsed.rows[0]?.collapsed).toBe(true);
+
+    const expanded = setRowCollapsed(collapsed, rowIdx(1), false);
+    expect(expanded.rows[0]?.collapsed).toBeUndefined();
+  });
+
+  it("groupColumns increases outline level on columns", () => {
+    const worksheet = createWorksheet(
+      new Map([[1, [cellAt(1, 1, { type: "string", value: "A1" })]]]),
+    );
+
+    const next = groupColumns(worksheet, colIdx(1), 2);
+
+    // Columns are merged into a single range
+    const colDef1 = next.columns?.find((c) => c.min <= colIdx(1) && c.max >= colIdx(1));
+    const colDef2 = next.columns?.find((c) => c.min <= colIdx(2) && c.max >= colIdx(2));
+    expect(colDef1?.outlineLevel).toBe(1);
+    expect(colDef2?.outlineLevel).toBe(1);
+  });
+
+  it("groupColumns increases outline level incrementally", () => {
+    const worksheet = createWorksheet(
+      new Map([[1, [cellAt(1, 1, { type: "string", value: "A1" })]]]),
+    );
+
+    const once = groupColumns(worksheet, colIdx(1), 1);
+    const twice = groupColumns(once, colIdx(1), 1);
+
+    const colDef = twice.columns?.find((c) => c.min <= colIdx(1) && c.max >= colIdx(1));
+    expect(colDef?.outlineLevel).toBe(2);
+  });
+
+  it("groupColumns caps outline level at 7", () => {
+    let worksheet = createWorksheet(
+      new Map([[1, [cellAt(1, 1, { type: "string", value: "A1" })]]]),
+    );
+
+    for (let i = 0; i < 10; i++) {
+      worksheet = groupColumns(worksheet, colIdx(1), 1);
+    }
+
+    const colDef = worksheet.columns?.find((c) => c.min <= colIdx(1) && c.max >= colIdx(1));
+    expect(colDef?.outlineLevel).toBe(7);
+  });
+
+  it("ungroupColumns decreases outline level on columns", () => {
+    const worksheet = createWorksheet(
+      new Map([[1, [cellAt(1, 1, { type: "string", value: "A1" })]]]),
+    );
+
+    const grouped = groupColumns(worksheet, colIdx(1), 1);
+    const ungrouped = ungroupColumns(grouped, colIdx(1), 1);
+
+    const colDef = ungrouped.columns?.find((c) => c.min <= colIdx(1) && c.max >= colIdx(1));
+    expect(colDef?.outlineLevel).toBeUndefined();
+  });
+
+  it("setColumnCollapsed sets collapsed flag on column", () => {
+    const worksheet = createWorksheet(
+      new Map([[1, [cellAt(1, 1, { type: "string", value: "A1" })]]]),
+    );
+
+    const collapsed = setColumnCollapsed(worksheet, colIdx(1), true);
+    const colDefCollapsed = collapsed.columns?.find((c) => c.min <= colIdx(1) && c.max >= colIdx(1));
+    expect(colDefCollapsed?.collapsed).toBe(true);
+
+    const expanded = setColumnCollapsed(collapsed, colIdx(1), false);
+    const colDefExpanded = expanded.columns?.find((c) => c.min <= colIdx(1) && c.max >= colIdx(1));
+    expect(colDefExpanded?.collapsed).toBeUndefined();
   });
 });

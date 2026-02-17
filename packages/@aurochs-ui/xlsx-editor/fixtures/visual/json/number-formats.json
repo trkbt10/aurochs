@@ -1,0 +1,448 @@
+{
+  "dateSystem": "1900",
+  "sheets": [
+    {
+      "dateSystem": "1900",
+      "name": "Number Formats",
+      "sheetId": 1,
+      "state": "visible",
+      "sheetView": {
+        "showGridLines": true,
+        "showRowColHeaders": true
+      },
+      "columns": [
+        {
+          "min": 1,
+          "max": 1,
+          "width": 15
+        },
+        {
+          "min": 2,
+          "max": 2,
+          "width": 15
+        },
+        {
+          "min": 3,
+          "max": 3,
+          "width": 20
+        }
+      ],
+      "rows": [
+        {
+          "rowNumber": 1,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 1,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Format"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 1,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Value"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 3,
+                "row": 1,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Formatted"
+              },
+              "styleId": 0
+            }
+          ]
+        },
+        {
+          "rowNumber": 2,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 2,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Default"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 2,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 1234567.89
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 3,
+                "row": 2,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 1234567.89
+              },
+              "styleId": 0
+            }
+          ]
+        },
+        {
+          "rowNumber": 3,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 3,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Thousands"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 3,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 1234567.89
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 3,
+                "row": 3,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 1234567.89
+              },
+              "styleId": 1
+            }
+          ]
+        },
+        {
+          "rowNumber": 4,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 4,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Percentage"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 4,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 0.1234
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 3,
+                "row": 4,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 0.1234
+              },
+              "styleId": 2
+            }
+          ]
+        },
+        {
+          "rowNumber": 5,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 5,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Currency"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 5,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 1234.56
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 3,
+                "row": 5,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 1234.56
+              },
+              "styleId": 3
+            }
+          ]
+        },
+        {
+          "rowNumber": 6,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 6,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Date"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 6,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 45302
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 3,
+                "row": 6,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 45302
+              },
+              "styleId": 4
+            }
+          ]
+        },
+        {
+          "rowNumber": 7,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 7,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "3 Decimals"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 7,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 3.14159
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 3,
+                "row": 7,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 3.14159
+              },
+              "styleId": 5
+            }
+          ]
+        }
+      ],
+      "xmlPath": "xl/worksheets/sheet1.xml"
+    }
+  ],
+  "styles": {
+    "fonts": [
+      {
+        "name": "Calibri",
+        "size": 11,
+        "scheme": "minor"
+      }
+    ],
+    "fills": [
+      {
+        "type": "none"
+      },
+      {
+        "type": "pattern",
+        "pattern": {
+          "patternType": "gray125"
+        }
+      }
+    ],
+    "borders": [
+      {}
+    ],
+    "numberFormats": [],
+    "cellXfs": [
+      {
+        "numFmtId": 0,
+        "fontId": 0,
+        "fillId": 0,
+        "borderId": 0
+      },
+      {
+        "numFmtId": 164,
+        "fontId": 0,
+        "fillId": 0,
+        "borderId": 0,
+        "applyNumberFormat": true
+      },
+      {
+        "numFmtId": 165,
+        "fontId": 0,
+        "fillId": 0,
+        "borderId": 0,
+        "applyNumberFormat": true
+      },
+      {
+        "numFmtId": 166,
+        "fontId": 0,
+        "fillId": 0,
+        "borderId": 0,
+        "applyNumberFormat": true
+      },
+      {
+        "numFmtId": 167,
+        "fontId": 0,
+        "fillId": 0,
+        "borderId": 0,
+        "applyNumberFormat": true
+      },
+      {
+        "numFmtId": 168,
+        "fontId": 0,
+        "fillId": 0,
+        "borderId": 0,
+        "applyNumberFormat": true
+      }
+    ],
+    "cellStyleXfs": [
+      {
+        "numFmtId": 0,
+        "fontId": 0,
+        "fillId": 0,
+        "borderId": 0
+      }
+    ],
+    "cellStyles": [
+      {
+        "name": "Normal",
+        "xfId": 0,
+        "builtinId": 0
+      }
+    ],
+    "numFmts": [
+      {
+        "numFmtId": 164,
+        "formatCode": "#,##0.00"
+      },
+      {
+        "numFmtId": 165,
+        "formatCode": "0.00%"
+      },
+      {
+        "numFmtId": 166,
+        "formatCode": "$#,##0.00"
+      },
+      {
+        "numFmtId": 167,
+        "formatCode": "yyyy-mm-dd"
+      },
+      {
+        "numFmtId": 168,
+        "formatCode": "0.000"
+      }
+    ]
+  },
+  "sharedStrings": []
+}

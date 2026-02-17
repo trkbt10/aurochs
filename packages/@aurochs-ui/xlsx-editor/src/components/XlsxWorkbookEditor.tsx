@@ -8,10 +8,12 @@ import { useMemo, useState, type CSSProperties } from "react";
 import type { XlsxWorkbook } from "@aurochs-office/xlsx/domain/workbook";
 import { EditorShell, type EditorPanel } from "@aurochs-ui/editor-controls/editor-shell";
 import { editorShellTokens } from "@aurochs-ui/ui-components/design-tokens";
+import { Tabs } from "@aurochs-ui/ui-components/primitives/Tabs";
 import { XlsxWorkbookEditorProvider, useXlsxWorkbookEditor } from "../context/workbook/XlsxWorkbookEditorContext";
 import { XlsxSheetGrid, type XlsxGridMetrics } from "./XlsxSheetGrid";
 import { XlsxWorkbookToolbar } from "./toolbar/XlsxWorkbookToolbar";
 import { XlsxCellFormatPanel } from "./format-panel/XlsxCellFormatPanel";
+import { XlsxSheetPanel } from "./sheet-panel/XlsxSheetPanel";
 import { XlsxSheetTabBar } from "./sheet-tab-bar";
 
 export type XlsxWorkbookEditorProps = {
@@ -33,12 +35,21 @@ function XlsxWorkbookEditorInner({ grid }: { readonly grid: XlsxGridMetrics }) {
     }
     return [
       {
-        id: "format",
+        id: "inspector",
         position: "right",
-        content: <XlsxCellFormatPanel sheetIndex={activeSheetIndex} />,
+        content: (
+          <Tabs
+            items={[
+              { id: "format", label: "Format", content: <XlsxCellFormatPanel sheetIndex={activeSheetIndex} /> },
+              { id: "sheet", label: "Sheet", content: <XlsxSheetPanel sheetIndex={activeSheetIndex} /> },
+            ]}
+            defaultValue="format"
+            size="sm"
+          />
+        ),
         size: editorShellTokens.panel.xlsxFormatPanelSize,
         resizable: false,
-        drawerLabel: "Format",
+        drawerLabel: "Inspector",
       },
     ];
   }, [activeSheetIndex]);

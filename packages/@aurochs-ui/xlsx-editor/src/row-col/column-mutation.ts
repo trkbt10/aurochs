@@ -118,3 +118,92 @@ export function unhideColumns(worksheet: XlsxWorksheet, startCol: ColIndex, coun
 
   return { ...worksheet, columns };
 }
+
+/**
+ * Set the outline level for a column
+ *
+ * @param worksheet - The worksheet to modify
+ * @param colIndex - The column index (0-based)
+ * @param outlineLevel - The outline level (0-7, 0 means no grouping)
+ */
+export function setColumnOutlineLevel(worksheet: XlsxWorksheet, colIndex: ColIndex, outlineLevel: number): XlsxWorksheet {
+  assertValidColIndex(colIndex, "colIndex");
+  if (outlineLevel < 0 || outlineLevel > 7) {
+    throw new Error(`outlineLevel must be 0-7: ${outlineLevel}`);
+  }
+
+  return {
+    ...worksheet,
+    columns: applyColumnOverride(worksheet.columns, colIndex, {
+      outlineLevel: outlineLevel === 0 ? undefined : outlineLevel,
+    }),
+  };
+}
+
+/**
+ * Group columns by increasing their outline level
+ *
+ * @param worksheet - The worksheet to modify
+ * @param startCol - The starting column index (0-based)
+ * @param count - Number of columns to group
+ */
+export function groupColumns(worksheet: XlsxWorksheet, startCol: ColIndex, count: number): XlsxWorksheet {
+  assertValidColIndex(startCol, "startCol");
+  assertPositiveInteger(count, "count");
+
+  const start = toColNumber(startCol);
+  const indices = Array.from({ length: count }, (_, i) => colIdx(start + i));
+
+  let columns = worksheet.columns;
+  for (const col of indices) {
+    const currentDef = columns?.find((c) => c.min <= col && c.max >= col);
+    const currentLevel = currentDef?.outlineLevel ?? 0;
+    const newLevel = Math.min(currentLevel + 1, 7);
+    columns = applyColumnOverride(columns, col, { outlineLevel: newLevel });
+  }
+
+  return { ...worksheet, columns };
+}
+
+/**
+ * Ungroup columns by decreasing their outline level
+ *
+ * @param worksheet - The worksheet to modify
+ * @param startCol - The starting column index (0-based)
+ * @param count - Number of columns to ungroup
+ */
+export function ungroupColumns(worksheet: XlsxWorksheet, startCol: ColIndex, count: number): XlsxWorksheet {
+  assertValidColIndex(startCol, "startCol");
+  assertPositiveInteger(count, "count");
+
+  const start = toColNumber(startCol);
+  const indices = Array.from({ length: count }, (_, i) => colIdx(start + i));
+
+  let columns = worksheet.columns;
+  for (const col of indices) {
+    const currentDef = columns?.find((c) => c.min <= col && c.max >= col);
+    const currentLevel = currentDef?.outlineLevel ?? 0;
+    const newLevel = Math.max(currentLevel - 1, 0);
+    columns = applyColumnOverride(columns, col, { outlineLevel: newLevel === 0 ? undefined : newLevel });
+  }
+
+  return { ...worksheet, columns };
+}
+
+/**
+ * Collapse or expand a column group
+ *
+ * @param worksheet - The worksheet to modify
+ * @param colIndex - The column index that acts as the group header
+ * @param collapsed - Whether to collapse (true) or expand (false)
+ */
+export function setColumnCollapsed(worksheet: XlsxWorksheet, colIndex: ColIndex, collapsed: boolean): XlsxWorksheet {
+  assertValidColIndex(colIndex, "colIndex");
+
+  return {
+    ...worksheet,
+    columns: applyColumnOverride(worksheet.columns, colIndex, {
+      collapsed: collapsed ? true : undefined,
+    }),
+  };
+}

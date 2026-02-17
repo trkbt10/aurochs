@@ -1,0 +1,1773 @@
+{
+  "dateSystem": "1900",
+  "sheets": [
+    {
+      "dateSystem": "1900",
+      "name": "Frozen Cols",
+      "sheetId": 1,
+      "state": "visible",
+      "sheetView": {
+        "showGridLines": true,
+        "showRowColHeaders": true,
+        "pane": {
+          "xSplit": 2,
+          "ySplit": 0,
+          "topLeftCell": "C1",
+          "activePane": "topRight",
+          "state": "frozen"
+        }
+      },
+      "columns": [
+        {
+          "min": 1,
+          "max": 1,
+          "width": 12
+        },
+        {
+          "min": 2,
+          "max": 2,
+          "width": 12
+        },
+        {
+          "min": 3,
+          "max": 14,
+          "width": 8
+        }
+      ],
+      "rows": [
+        {
+          "rowNumber": 1,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 1,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Region"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 1,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Country"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 3,
+                "row": 1,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Jan"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 4,
+                "row": 1,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Feb"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 5,
+                "row": 1,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Mar"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 6,
+                "row": 1,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Apr"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 7,
+                "row": 1,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "May"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 8,
+                "row": 1,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Jun"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 9,
+                "row": 1,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Jul"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 10,
+                "row": 1,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Aug"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 11,
+                "row": 1,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Sep"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 12,
+                "row": 1,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Oct"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 13,
+                "row": 1,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Nov"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 14,
+                "row": 1,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Dec"
+              },
+              "styleId": 0
+            }
+          ]
+        },
+        {
+          "rowNumber": 2,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 2,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Americas"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 2,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "USA"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 3,
+                "row": 2,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 240
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 4,
+                "row": 2,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 291
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 5,
+                "row": 2,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 451
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 6,
+                "row": 2,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 296
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 7,
+                "row": 2,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 253
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 8,
+                "row": 2,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 230
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 9,
+                "row": 2,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 237
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 10,
+                "row": 2,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 274
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 11,
+                "row": 2,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 231
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 12,
+                "row": 2,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 14
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 13,
+                "row": 2,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 233
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 14,
+                "row": 2,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 392
+              },
+              "styleId": 0
+            }
+          ]
+        },
+        {
+          "rowNumber": 3,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 3,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Americas"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 3,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Canada"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 3,
+                "row": 3,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 124
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 4,
+                "row": 3,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 162
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 5,
+                "row": 3,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 442
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 6,
+                "row": 3,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 150
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 7,
+                "row": 3,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 403
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 8,
+                "row": 3,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 149
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 9,
+                "row": 3,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 46
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 10,
+                "row": 3,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 225
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 11,
+                "row": 3,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 307
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 12,
+                "row": 3,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 454
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 13,
+                "row": 3,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 172
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 14,
+                "row": 3,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 152
+              },
+              "styleId": 0
+            }
+          ]
+        },
+        {
+          "rowNumber": 4,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 4,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Americas"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 4,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Brazil"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 3,
+                "row": 4,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 358
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 4,
+                "row": 4,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 376
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 5,
+                "row": 4,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 358
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 6,
+                "row": 4,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 172
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 7,
+                "row": 4,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 343
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 8,
+                "row": 4,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 179
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 9,
+                "row": 4,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 458
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 10,
+                "row": 4,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 0
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 11,
+                "row": 4,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 253
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 12,
+                "row": 4,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 99
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 13,
+                "row": 4,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 222
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 14,
+                "row": 4,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 341
+              },
+              "styleId": 0
+            }
+          ]
+        },
+        {
+          "rowNumber": 5,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 5,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Europe"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 5,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "UK"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 3,
+                "row": 5,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 58
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 4,
+                "row": 5,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 142
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 5,
+                "row": 5,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 430
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 6,
+                "row": 5,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 431
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 7,
+                "row": 5,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 221
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 8,
+                "row": 5,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 32
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 9,
+                "row": 5,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 197
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 10,
+                "row": 5,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 488
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 11,
+                "row": 5,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 404
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 12,
+                "row": 5,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 13
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 13,
+                "row": 5,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 433
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 14,
+                "row": 5,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 317
+              },
+              "styleId": 0
+            }
+          ]
+        },
+        {
+          "rowNumber": 6,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 6,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Europe"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 6,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Germany"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 3,
+                "row": 6,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 436
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 4,
+                "row": 6,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 423
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 5,
+                "row": 6,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 24
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 6,
+                "row": 6,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 204
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 7,
+                "row": 6,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 438
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 8,
+                "row": 6,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 211
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 9,
+                "row": 6,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 82
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 10,
+                "row": 6,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 478
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 11,
+                "row": 6,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 197
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 12,
+                "row": 6,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 224
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 13,
+                "row": 6,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 62
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 14,
+                "row": 6,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 152
+              },
+              "styleId": 0
+            }
+          ]
+        },
+        {
+          "rowNumber": 7,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 7,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Europe"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 7,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "France"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 3,
+                "row": 7,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 255
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 4,
+                "row": 7,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 239
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 5,
+                "row": 7,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 1
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 6,
+                "row": 7,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 440
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 7,
+                "row": 7,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 167
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 8,
+                "row": 7,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 275
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 9,
+                "row": 7,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 41
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 10,
+                "row": 7,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 48
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 11,
+                "row": 7,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 41
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 12,
+                "row": 7,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 187
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 13,
+                "row": 7,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 142
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 14,
+                "row": 7,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 225
+              },
+              "styleId": 0
+            }
+          ]
+        },
+        {
+          "rowNumber": 8,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 8,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Asia"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 8,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Japan"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 3,
+                "row": 8,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 70
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 4,
+                "row": 8,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 465
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 5,
+                "row": 8,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 119
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 6,
+                "row": 8,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 24
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 7,
+                "row": 8,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 130
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 8,
+                "row": 8,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 17
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 9,
+                "row": 8,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 208
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 10,
+                "row": 8,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 3
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 11,
+                "row": 8,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 106
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 12,
+                "row": 8,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 97
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 13,
+                "row": 8,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 168
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 14,
+                "row": 8,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 339
+              },
+              "styleId": 0
+            }
+          ]
+        },
+        {
+          "rowNumber": 9,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 9,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Asia"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 9,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "China"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 3,
+                "row": 9,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 484
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 4,
+                "row": 9,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 410
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 5,
+                "row": 9,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 387
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 6,
+                "row": 9,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 147
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 7,
+                "row": 9,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 278
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 8,
+                "row": 9,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 435
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 9,
+                "row": 9,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 377
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 10,
+                "row": 9,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 196
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 11,
+                "row": 9,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 19
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 12,
+                "row": 9,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 173
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 13,
+                "row": 9,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 50
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 14,
+                "row": 9,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 467
+              },
+              "styleId": 0
+            }
+          ]
+        }
+      ],
+      "xmlPath": "xl/worksheets/sheet1.xml"
+    }
+  ],
+  "styles": {
+    "fonts": [
+      {
+        "name": "Calibri",
+        "size": 11,
+        "scheme": "minor"
+      }
+    ],
+    "fills": [
+      {
+        "type": "none"
+      },
+      {
+        "type": "pattern",
+        "pattern": {
+          "patternType": "gray125"
+        }
+      }
+    ],
+    "borders": [
+      {}
+    ],
+    "numberFormats": [],
+    "cellXfs": [
+      {
+        "numFmtId": 0,
+        "fontId": 0,
+        "fillId": 0,
+        "borderId": 0
+      }
+    ],
+    "cellStyleXfs": [
+      {
+        "numFmtId": 0,
+        "fontId": 0,
+        "fillId": 0,
+        "borderId": 0
+      }
+    ],
+    "cellStyles": [
+      {
+        "name": "Normal",
+        "xfId": 0,
+        "builtinId": 0
+      }
+    ]
+  },
+  "sharedStrings": []
+}

@@ -1,0 +1,4 @@
+# Visual test outputs
+fixtures/visual/__output__/
+fixtures/visual/__diff__/
+fixtures/visual/.tmp/

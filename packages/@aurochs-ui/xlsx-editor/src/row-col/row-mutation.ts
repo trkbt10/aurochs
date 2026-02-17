@@ -119,3 +119,100 @@ export function unhideRows(worksheet: XlsxWorksheet, startRow: RowIndex, count: 
 
   return { ...worksheet, rows };
 }
+
+/**
+ * Set the outline level for a row
+ *
+ * @param worksheet - The worksheet to modify
+ * @param rowIndex - The row index (0-based)
+ * @param outlineLevel - The outline level (0-7, 0 means no grouping)
+ */
+export function setRowOutlineLevel(worksheet: XlsxWorksheet, rowIndex: RowIndex, outlineLevel: number): XlsxWorksheet {
+  assertValidRowIndex(rowIndex, "rowIndex");
+  if (outlineLevel < 0 || outlineLevel > 7) {
+    throw new Error(`outlineLevel must be 0-7: ${outlineLevel}`);
+  }
+
+  const rows = updateRowCollection(worksheet.rows, rowIndex, (row) => ({
+    ...(row ?? { rowNumber: rowIndex, cells: [] }),
+    outlineLevel: outlineLevel === 0 ? undefined : outlineLevel,
+  }));
+
+  return { ...worksheet, rows };
+}
+
+/**
+ * Group rows by increasing their outline level
+ *
+ * @param worksheet - The worksheet to modify
+ * @param startRow - The starting row index (0-based)
+ * @param count - Number of rows to group
+ */
+export function groupRows(worksheet: XlsxWorksheet, startRow: RowIndex, count: number): XlsxWorksheet {
+  assertValidRowIndex(startRow, "startRow");
+  assertPositiveInteger(count, "count");
+
+  const start = toRowNumber(startRow);
+  const indices = Array.from({ length: count }, (_, i) => rowIdx(start + i));
+  const rows = indices.reduce(
+    (acc, rowIndex) =>
+      updateRowCollection(acc, rowIndex, (row) => {
+        const currentLevel = (row ?? { rowNumber: rowIndex, cells: [] }).outlineLevel ?? 0;
+        const newLevel = Math.min(currentLevel + 1, 7);
+        return {
+          ...(row ?? { rowNumber: rowIndex, cells: [] }),
+          outlineLevel: newLevel,
+        };
+      }),
+    worksheet.rows,
+  );
+
+  return { ...worksheet, rows };
+}
+
+/**
+ * Ungroup rows by decreasing their outline level
+ *
+ * @param worksheet - The worksheet to modify
+ * @param startRow - The starting row index (0-based)
+ * @param count - Number of rows to ungroup
+ */
+export function ungroupRows(worksheet: XlsxWorksheet, startRow: RowIndex, count: number): XlsxWorksheet {
+  assertValidRowIndex(startRow, "startRow");
+  assertPositiveInteger(count, "count");
+
+  const start = toRowNumber(startRow);
+  const indices = Array.from({ length: count }, (_, i) => rowIdx(start + i));
+  const rows = indices.reduce(
+    (acc, rowIndex) =>
+      updateRowCollection(acc, rowIndex, (row) => {
+        const currentLevel = (row ?? { rowNumber: rowIndex, cells: [] }).outlineLevel ?? 0;
+        const newLevel = Math.max(currentLevel - 1, 0);
+        return {
+          ...(row ?? { rowNumber: rowIndex, cells: [] }),
+          outlineLevel: newLevel === 0 ? undefined : newLevel,
+        };
+      }),
+    worksheet.rows,
+  );
+
+  return { ...worksheet, rows };
+}
+
+/**
+ * Collapse or expand a row group
+ *
+ * @param worksheet - The worksheet to modify
+ * @param rowIndex - The row index that acts as the group header
+ * @param collapsed - Whether to collapse (true) or expand (false)
+ */
+export function setRowCollapsed(worksheet: XlsxWorksheet, rowIndex: RowIndex, collapsed: boolean): XlsxWorksheet {
+  assertValidRowIndex(rowIndex, "rowIndex");
+
+  const rows = updateRowCollection(worksheet.rows, rowIndex, (row) => ({
+    ...(row ?? { rowNumber: rowIndex, cells: [] }),
+    collapsed: collapsed ? true : undefined,
+  }));
+
+  return { ...worksheet, rows };
+}

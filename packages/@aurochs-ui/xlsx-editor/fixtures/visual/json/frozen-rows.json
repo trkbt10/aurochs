@@ -1,0 +1,649 @@
+{
+  "dateSystem": "1900",
+  "sheets": [
+    {
+      "dateSystem": "1900",
+      "name": "Frozen Rows",
+      "sheetId": 1,
+      "state": "visible",
+      "sheetView": {
+        "showGridLines": true,
+        "showRowColHeaders": true,
+        "pane": {
+          "xSplit": 0,
+          "ySplit": 2,
+          "topLeftCell": "A3",
+          "activePane": "bottomLeft",
+          "state": "frozen"
+        }
+      },
+      "columns": [
+        {
+          "min": 1,
+          "max": 1,
+          "width": 15
+        },
+        {
+          "min": 2,
+          "max": 5,
+          "width": 12
+        }
+      ],
+      "rows": [
+        {
+          "rowNumber": 1,
+          "height": 28,
+          "customHeight": true,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 1,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Category"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 1,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Q1"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 3,
+                "row": 1,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Q2"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 4,
+                "row": 1,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Q3"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 5,
+                "row": 1,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Q4"
+              },
+              "styleId": 0
+            }
+          ]
+        },
+        {
+          "rowNumber": 2,
+          "height": 22,
+          "customHeight": true,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 2,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "(units)"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 2,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Jan-Mar"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 3,
+                "row": 2,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Apr-Jun"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 4,
+                "row": 2,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Jul-Sep"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 5,
+                "row": 2,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Oct-Dec"
+              },
+              "styleId": 0
+            }
+          ]
+        },
+        {
+          "rowNumber": 3,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 3,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Sales"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 3,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 730
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 3,
+                "row": 3,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 989
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 4,
+                "row": 3,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 56
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 5,
+                "row": 3,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 308
+              },
+              "styleId": 0
+            }
+          ]
+        },
+        {
+          "rowNumber": 4,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 4,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Marketing"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 4,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 799
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 3,
+                "row": 4,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 771
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 4,
+                "row": 4,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 420
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 5,
+                "row": 4,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 44
+              },
+              "styleId": 0
+            }
+          ]
+        },
+        {
+          "rowNumber": 5,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 5,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "R&D"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 5,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 294
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 3,
+                "row": 5,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 515
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 4,
+                "row": 5,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 607
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 5,
+                "row": 5,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 917
+              },
+              "styleId": 0
+            }
+          ]
+        },
+        {
+          "rowNumber": 6,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 6,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Operations"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 6,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 280
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 3,
+                "row": 6,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 669
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 4,
+                "row": 6,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 590
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 5,
+                "row": 6,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 410
+              },
+              "styleId": 0
+            }
+          ]
+        },
+        {
+          "rowNumber": 7,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 7,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "HR"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 7,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 789
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 3,
+                "row": 7,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 323
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 4,
+                "row": 7,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 208
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 5,
+                "row": 7,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 977
+              },
+              "styleId": 0
+            }
+          ]
+        },
+        {
+          "rowNumber": 8,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 8,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Finance"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 8,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 669
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 3,
+                "row": 8,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 701
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 4,
+                "row": 8,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 799
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 5,
+                "row": 8,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 460
+              },
+              "styleId": 0
+            }
+          ]
+        }
+      ],
+      "xmlPath": "xl/worksheets/sheet1.xml"
+    }
+  ],
+  "styles": {
+    "fonts": [
+      {
+        "name": "Calibri",
+        "size": 11,
+        "scheme": "minor"
+      }
+    ],
+    "fills": [
+      {
+        "type": "none"
+      },
+      {
+        "type": "pattern",
+        "pattern": {
+          "patternType": "gray125"
+        }
+      }
+    ],
+    "borders": [
+      {}
+    ],
+    "numberFormats": [],
+    "cellXfs": [
+      {
+        "numFmtId": 0,
+        "fontId": 0,
+        "fillId": 0,
+        "borderId": 0
+      }
+    ],
+    "cellStyleXfs": [
+      {
+        "numFmtId": 0,
+        "fontId": 0,
+        "fillId": 0,
+        "borderId": 0
+      }
+    ],
+    "cellStyles": [
+      {
+        "name": "Normal",
+        "xfId": 0,
+        "builtinId": 0
+      }
+    ]
+  },
+  "sharedStrings": []
+}

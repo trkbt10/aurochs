@@ -15,6 +15,17 @@ import type { XlsxFont } from "@aurochs-office/xlsx/domain/style/font";
 import type { XlsxFill } from "@aurochs-office/xlsx/domain/style/fill";
 import type { XlsxBorder } from "@aurochs-office/xlsx/domain/style/border";
 import type { ColIndex, RowIndex, StyleId } from "@aurochs-office/xlsx/domain/types";
+import type { XlsxPageSetup, XlsxPageMargins, XlsxHeaderFooter, XlsxPrintOptions } from "@aurochs-office/xlsx/domain/page-setup";
+import type { XlsxPageBreaks } from "@aurochs-office/xlsx/domain/page-breaks";
+import type { XlsxComment } from "@aurochs-office/xlsx/domain/comment";
+import type { XlsxHyperlink } from "@aurochs-office/xlsx/domain/hyperlink";
+import type { XlsxWorkbookProtection, XlsxSheetProtection } from "@aurochs-office/xlsx/domain/protection";
+import type { XlsxAutoFilter } from "@aurochs-office/xlsx/domain/auto-filter";
+import type { XlsxDataValidation } from "@aurochs-office/xlsx/domain/data-validation";
+import type { XlsxConditionalFormatting } from "@aurochs-office/xlsx/domain/conditional-formatting";
+import type { XlsxPane } from "@aurochs-office/xlsx/domain/workbook";
+import type { XlsxTable, XlsxTableStyleInfo } from "@aurochs-office/xlsx/domain/table/types";
+import type { XlsxDefinedName } from "@aurochs-office/xlsx/domain/workbook";
 import type { UndoRedoHistory as CoreUndoRedoHistory } from "@aurochs-ui/editor-core/history";
 import type { IdleDragState as CoreIdleDragState } from "@aurochs-ui/editor-core/drag-state";
 import { createIdleDragState as createCoreIdleDragState } from "@aurochs-ui/editor-core/drag-state";
@@ -320,6 +331,14 @@ export type XlsxEditorAction =
   | { readonly type: "HIDE_COLUMNS"; readonly startCol: ColIndex; readonly count: number }
   | { readonly type: "UNHIDE_COLUMNS"; readonly startCol: ColIndex; readonly count: number }
 
+  // Outline Grouping
+  | { readonly type: "GROUP_ROWS"; readonly startRow: RowIndex; readonly count: number }
+  | { readonly type: "UNGROUP_ROWS"; readonly startRow: RowIndex; readonly count: number }
+  | { readonly type: "SET_ROW_COLLAPSED"; readonly rowIndex: RowIndex; readonly collapsed: boolean }
+  | { readonly type: "GROUP_COLUMNS"; readonly startCol: ColIndex; readonly count: number }
+  | { readonly type: "UNGROUP_COLUMNS"; readonly startCol: ColIndex; readonly count: number }
+  | { readonly type: "SET_COLUMN_COLLAPSED"; readonly colIndex: ColIndex; readonly collapsed: boolean }
+
   // Formatting
   | { readonly type: "APPLY_STYLE"; readonly range: CellRange; readonly styleId: StyleId }
   | { readonly type: "APPLY_NAMED_STYLE"; readonly range: CellRange; readonly cellStyleIndex: number }
@@ -337,6 +356,56 @@ export type XlsxEditorAction =
   | { readonly type: "SET_EDIT_ORIGIN"; readonly origin: EditOrigin }
   | { readonly type: "SET_COMPOSITION"; readonly composition: CellEditComposition }
   | { readonly type: "INSERT_CELL_REFERENCE"; readonly refText: string }
+
+  // Page setup
+  | { readonly type: "SET_PAGE_SETUP"; readonly sheetIndex: number; readonly pageSetup: XlsxPageSetup | undefined }
+  | { readonly type: "SET_PAGE_MARGINS"; readonly sheetIndex: number; readonly pageMargins: XlsxPageMargins | undefined }
+  | { readonly type: "SET_HEADER_FOOTER"; readonly sheetIndex: number; readonly headerFooter: XlsxHeaderFooter | undefined }
+  | { readonly type: "SET_PRINT_OPTIONS"; readonly sheetIndex: number; readonly printOptions: XlsxPrintOptions | undefined }
+  | { readonly type: "SET_PAGE_BREAKS"; readonly sheetIndex: number; readonly pageBreaks: XlsxPageBreaks | undefined }
+
+  // Comments
+  | { readonly type: "SET_COMMENT"; readonly sheetIndex: number; readonly comment: XlsxComment }
+  | { readonly type: "DELETE_COMMENT"; readonly sheetIndex: number; readonly address: CellAddress }
+
+  // Hyperlinks
+  | { readonly type: "SET_HYPERLINK"; readonly sheetIndex: number; readonly hyperlink: XlsxHyperlink }
+  | { readonly type: "DELETE_HYPERLINK"; readonly sheetIndex: number; readonly address: CellAddress }
+
+  // Protection
+  | { readonly type: "SET_WORKBOOK_PROTECTION"; readonly protection: XlsxWorkbookProtection | undefined }
+  | { readonly type: "SET_SHEET_PROTECTION"; readonly sheetIndex: number; readonly protection: XlsxSheetProtection | undefined }
+
+  // Auto Filter
+  | { readonly type: "SET_AUTO_FILTER"; readonly sheetIndex: number; readonly autoFilter: XlsxAutoFilter | undefined }
+
+  // Data Validation
+  | { readonly type: "SET_DATA_VALIDATION"; readonly sheetIndex: number; readonly validation: XlsxDataValidation }
+  | { readonly type: "DELETE_DATA_VALIDATION"; readonly sheetIndex: number; readonly range: CellRange }
+  | { readonly type: "CLEAR_DATA_VALIDATIONS"; readonly sheetIndex: number }
+
+  // Conditional Formatting
+  | { readonly type: "ADD_CONDITIONAL_FORMATTING"; readonly sheetIndex: number; readonly formatting: XlsxConditionalFormatting }
+  | { readonly type: "DELETE_CONDITIONAL_FORMATTING"; readonly sheetIndex: number; readonly range: CellRange }
+  | { readonly type: "CLEAR_CONDITIONAL_FORMATTINGS"; readonly sheetIndex: number }
+
+  // Freeze Panes
+  | { readonly type: "SET_FREEZE_PANE"; readonly sheetIndex: number; readonly pane: XlsxPane | undefined }
+  | { readonly type: "FREEZE_ROWS"; readonly sheetIndex: number; readonly rowCount: number }
+  | { readonly type: "FREEZE_COLUMNS"; readonly sheetIndex: number; readonly colCount: number }
+  | { readonly type: "FREEZE_ROWS_AND_COLUMNS"; readonly sheetIndex: number; readonly rowCount: number; readonly colCount: number }
+  | { readonly type: "UNFREEZE_PANES"; readonly sheetIndex: number }
+
+  // Tables
+  | { readonly type: "CREATE_TABLE"; readonly sheetIndex: number; readonly range: CellRange; readonly name?: string; readonly hasHeaderRow?: boolean }
+  | { readonly type: "DELETE_TABLE"; readonly tableName: string }
+  | { readonly type: "DELETE_TABLE_AT_RANGE"; readonly sheetIndex: number; readonly range: CellRange }
+  | { readonly type: "UPDATE_TABLE_STYLE"; readonly tableName: string; readonly styleInfo: XlsxTableStyleInfo | undefined }
+
+  // Defined Names
+  | { readonly type: "ADD_DEFINED_NAME"; readonly definedName: XlsxDefinedName }
+  | { readonly type: "UPDATE_DEFINED_NAME"; readonly oldName: string; readonly oldLocalSheetId: number | undefined; readonly definedName: XlsxDefinedName }
+  | { readonly type: "DELETE_DEFINED_NAME"; readonly name: string; readonly localSheetId?: number }
 
   // Undo/Redo
   | { readonly type: "UNDO" }

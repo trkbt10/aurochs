@@ -1,0 +1,664 @@
+{
+  "dateSystem": "1900",
+  "sheets": [
+    {
+      "dateSystem": "1900",
+      "name": "Row Col Sizes",
+      "sheetId": 1,
+      "state": "visible",
+      "sheetView": {
+        "showGridLines": true,
+        "showRowColHeaders": true
+      },
+      "columns": [
+        {
+          "min": 1,
+          "max": 1,
+          "width": 20
+        },
+        {
+          "min": 2,
+          "max": 2,
+          "width": 8
+        },
+        {
+          "min": 3,
+          "max": 3,
+          "width": 15
+        },
+        {
+          "min": 4,
+          "max": 4,
+          "width": 25
+        }
+      ],
+      "rows": [
+        {
+          "rowNumber": 1,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 1,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Default Height"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 1,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "A"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 3,
+                "row": 1,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "B"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 4,
+                "row": 1,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "C"
+              },
+              "styleId": 0
+            }
+          ]
+        },
+        {
+          "rowNumber": 2,
+          "height": 40,
+          "customHeight": true,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 2,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Tall (40pt)"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 2,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Data"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 3,
+                "row": 2,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Data"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 4,
+                "row": 2,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Data"
+              },
+              "styleId": 0
+            }
+          ]
+        },
+        {
+          "rowNumber": 3,
+          "height": 12,
+          "customHeight": true,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 3,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Short"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 3,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "X"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 3,
+                "row": 3,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Y"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 4,
+                "row": 3,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Z"
+              },
+              "styleId": 0
+            }
+          ]
+        },
+        {
+          "rowNumber": 4,
+          "height": 60,
+          "customHeight": true,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 4,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Very Tall (60pt)"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 4,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 100
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 3,
+                "row": 4,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 200
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 4,
+                "row": 4,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 300
+              },
+              "styleId": 0
+            }
+          ]
+        },
+        {
+          "rowNumber": 5,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 5,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Row 5"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 5,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 50
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 3,
+                "row": 5,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 100
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 4,
+                "row": 5,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 150
+              },
+              "styleId": 0
+            }
+          ]
+        },
+        {
+          "rowNumber": 6,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 6,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Row 6"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 6,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 60
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 3,
+                "row": 6,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 120
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 4,
+                "row": 6,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 180
+              },
+              "styleId": 0
+            }
+          ]
+        },
+        {
+          "rowNumber": 7,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 7,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Row 7"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 7,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 70
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 3,
+                "row": 7,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 140
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 4,
+                "row": 7,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 210
+              },
+              "styleId": 0
+            }
+          ]
+        },
+        {
+          "rowNumber": 8,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 8,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Row 8"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 8,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 80
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 3,
+                "row": 8,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 160
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 4,
+                "row": 8,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 240
+              },
+              "styleId": 0
+            }
+          ]
+        },
+        {
+          "rowNumber": 9,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 9,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Row 9"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 9,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 90
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 3,
+                "row": 9,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 180
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 4,
+                "row": 9,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 270
+              },
+              "styleId": 0
+            }
+          ]
+        },
+        {
+          "rowNumber": 10,
+          "cells": [
+            {
+              "address": {
+                "col": 1,
+                "row": 10,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "string",
+                "value": "Row 10"
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 2,
+                "row": 10,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 100
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 3,
+                "row": 10,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 200
+              },
+              "styleId": 0
+            },
+            {
+              "address": {
+                "col": 4,
+                "row": 10,
+                "colAbsolute": false,
+                "rowAbsolute": false
+              },
+              "value": {
+                "type": "number",
+                "value": 300
+              },
+              "styleId": 0
+            }
+          ]
+        }
+      ],
+      "xmlPath": "xl/worksheets/sheet1.xml"
+    }
+  ],
+  "styles": {
+    "fonts": [
+      {
+        "name": "Calibri",
+        "size": 11,
+        "scheme": "minor"
+      }
+    ],
+    "fills": [
+      {
+        "type": "none"
+      },
+      {
+        "type": "pattern",
+        "pattern": {
+          "patternType": "gray125"
+        }
+      }
+    ],
+    "borders": [
+      {}
+    ],
+    "numberFormats": [],
+    "cellXfs": [
+      {
+        "numFmtId": 0,
+        "fontId": 0,
+        "fillId": 0,
+        "borderId": 0
+      }
+    ],
+    "cellStyleXfs": [
+      {
+        "numFmtId": 0,
+        "fontId": 0,
+        "fillId": 0,
+        "borderId": 0
+      }
+    ],
+    "cellStyles": [
+      {
+        "name": "Normal",
+        "xfId": 0,
+        "builtinId": 0
+      }
+    ]
+  },
+  "sharedStrings": []
+}

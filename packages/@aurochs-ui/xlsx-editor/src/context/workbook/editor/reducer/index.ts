@@ -18,6 +18,16 @@ import { undoRedoHandlers } from "./undo-redo-handlers";
 import { editingHandlers } from "./editing-handlers";
 import { rowColHandlers } from "./row-col-handlers";
 import { formattingHandlers } from "./formatting-handlers";
+import { pageSetupHandlers } from "./page-setup-handlers";
+import { commentHandlers } from "./comment-handlers";
+import { hyperlinkHandlers } from "./hyperlink-handlers";
+import { protectionHandlers } from "./protection-handlers";
+import { autoFilterHandlers } from "./auto-filter-handlers";
+import { dataValidationHandlers } from "./data-validation-handlers";
+import { conditionalFormattingHandlers } from "./conditional-formatting-handlers";
+import { sheetViewHandlers } from "./sheet-view-handlers";
+import { tableHandlers } from "./table-handlers";
+import { definedNameHandlers } from "./defined-name-handlers";
 
 const handlers: HandlerMap = {
   ...cellHandlers,
@@ -29,6 +39,16 @@ const handlers: HandlerMap = {
   ...clipboardHandlers,
   ...undoRedoHandlers,
   ...editingHandlers,
+  ...pageSetupHandlers,
+  ...commentHandlers,
+  ...hyperlinkHandlers,
+  ...protectionHandlers,
+  ...autoFilterHandlers,
+  ...dataValidationHandlers,
+  ...conditionalFormattingHandlers,
+  ...sheetViewHandlers,
+  ...tableHandlers,
+  ...definedNameHandlers,
 };
 
 /**

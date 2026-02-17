@@ -23,6 +23,8 @@ import { FillSection } from "./sections/FillSection";
 import { FontSection } from "./sections/FontSection";
 import { NumberSection } from "./sections/NumberSection";
 import { StyleSection } from "./sections/StyleSection";
+import { CommentSection } from "./sections/CommentSection";
+import { HyperlinkSection } from "./sections/HyperlinkSection";
 
 export type XlsxCellFormatPanelProps = {
   readonly sheetIndex: number;
@@ -102,6 +104,30 @@ export function XlsxCellFormatPanel({ sheetIndex }: XlsxCellFormatPanelProps) {
     }
     return resolveSelectionFormatFlags({ sheet, styles: workbook.styles, range: targetRange });
   }, [sheet, targetRange, workbook.styles]);
+
+  // Find comment for the anchor cell
+  const cellComment = useMemo(() => {
+    if (!anchorCell) {
+      return undefined;
+    }
+    return sheet.comments?.find(
+      (c) => c.address.row === anchorCell.row && c.address.col === anchorCell.col,
+    );
+  }, [anchorCell, sheet.comments]);
+
+  // Find hyperlink for the anchor cell
+  const cellHyperlink = useMemo(() => {
+    if (!anchorCell) {
+      return undefined;
+    }
+    return sheet.hyperlinks?.find(
+      (h) =>
+        anchorCell.row >= h.ref.start.row &&
+        anchorCell.row <= h.ref.end.row &&
+        anchorCell.col >= h.ref.start.col &&
+        anchorCell.col <= h.ref.end.col,
+    );
+  }, [anchorCell, sheet.hyperlinks]);
 
   const fontNameOptions = useMemo(() => {
     const names = new Set<string>();
@@ -275,6 +301,34 @@ export function XlsxCellFormatPanel({ sheetIndex }: XlsxCellFormatPanelProps) {
           })
         }
       />
+
+      {anchorCell && (
+        <CommentSection
+          disabled={disabled}
+          address={anchorCell}
+          comment={cellComment}
+          onCommentChange={(comment) =>
+            dispatch({ type: "SET_COMMENT", sheetIndex, comment })
+          }
+          onCommentDelete={() =>
+            dispatch({ type: "DELETE_COMMENT", sheetIndex, address: anchorCell })
+          }
+        />
+      )}
+
+      {anchorCell && (
+        <HyperlinkSection
+          disabled={disabled}
+          address={anchorCell}
+          hyperlink={cellHyperlink}
+          onHyperlinkChange={(hyperlink) =>
+            dispatch({ type: "SET_HYPERLINK", sheetIndex, hyperlink })
+          }
+          onHyperlinkDelete={() =>
+            dispatch({ type: "DELETE_HYPERLINK", sheetIndex, address: anchorCell })
+          }
+        />
+      )}
       </div>
     </div>
   );

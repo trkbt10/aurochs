@@ -18,6 +18,7 @@ import { getRangeBounds } from "./selection-geometry";
 import { XlsxSheetGridHeaderLayer } from "./header-layer";
 import { XlsxSheetGridCellViewport } from "./cell-viewport";
 import { XlsxSheetGridCellsLayer } from "./cells-layer";
+import { FrozenPanesLayer } from "./frozen-panes-layer";
 import type { SheetLayout } from "../../selectors/sheet-layout";
 
 const layerRootStyle: CSSProperties = {
@@ -127,6 +128,12 @@ export function XlsxSheetGridLayers({
     root?.focus();
   }, []);
 
+  // Freeze panes configuration
+  const pane = sheet.sheetView?.pane;
+  const isFrozen = pane?.state === "frozen" || pane?.state === "frozenSplit";
+  const frozenRowCount = isFrozen ? (pane?.ySplit ?? 0) : 0;
+  const frozenColCount = isFrozen ? (pane?.xSplit ?? 0) : 0;
+
   return (
     <div style={layerRootStyle}>
       <div
@@ -209,6 +216,28 @@ export function XlsxSheetGridLayers({
             formulaEvaluator={formulaEvaluator}
           />
         </XlsxSheetGridCellViewport>
+
+        {/* Frozen panes overlay */}
+        {(frozenRowCount > 0 || frozenColCount > 0) && (
+          <FrozenPanesLayer
+            sheetIndex={sheetIndex}
+            sheet={sheet}
+            styles={workbook.styles}
+            layout={layout}
+            normalizedMerges={normalizedMerges}
+            formulaEvaluator={formulaEvaluator}
+            scrollTop={scrollTopUnscaled}
+            scrollLeft={scrollLeftUnscaled}
+            viewportWidth={viewportWidthUnscaled}
+            viewportHeight={viewportHeightUnscaled}
+            rowHeaderWidthPx={rowHeaderWidthPx}
+            colHeaderHeightPx={colHeaderHeightPx}
+            frozenRowCount={frozenRowCount}
+            frozenColCount={frozenColCount}
+            visibleRowRange={rowRange}
+            visibleColRange={colRange}
+          />
+        )}
       </div>
     </div>
   );

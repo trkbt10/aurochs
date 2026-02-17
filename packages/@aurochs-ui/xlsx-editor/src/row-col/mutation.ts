@@ -17,6 +17,10 @@ export {
   setRowHeight,
   hideRows,
   unhideRows,
+  setRowOutlineLevel,
+  groupRows,
+  ungroupRows,
+  setRowCollapsed,
 } from "./row-mutation";
 
 // Column operations
@@ -26,4 +30,8 @@ export {
   setColumnWidth,
   hideColumns,
   unhideColumns,
+  setColumnOutlineLevel,
+  groupColumns,
+  ungroupColumns,
+  setColumnCollapsed,
 } from "./column-mutation";
