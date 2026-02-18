@@ -13,7 +13,7 @@ import {
   type PdfImportResult,
 } from "@aurochs-converters/pdf-to-pptx/importer/pdf-importer";
 import type { PresentationDocument } from "@aurochs-office/pptx/app";
-import { UploadIcon, GridIcon, EditIcon, ShieldIcon, PlayIcon } from "@aurochs-ui/ui-components";
+import { UploadIcon, GridIcon, EditIcon, ShieldIcon, PlayIcon } from "@aurochs-ui/editor-controls/icons";
 import { GitHubIcon, LogoIcon } from "../components/ui";
 import "./LandingPage.css";
 
@@ -34,7 +34,9 @@ type Props = {
   readonly onPptxDemo: () => void;
   readonly onPptxEditorDemo: () => void;
   readonly onDocxDemo: () => void;
+  readonly onDocxViewerDemo: () => void;
   readonly onXlsxDemo: () => void;
+  readonly onXlsxViewerDemo: () => void;
   readonly isLoading?: boolean;
   readonly importPdfFromFileFn?: (file: File, options?: PdfImportOptions) => Promise<PdfImportResult>;
 };
@@ -109,7 +111,9 @@ export function LandingPage({
   onPptxDemo,
   onPptxEditorDemo,
   onDocxDemo,
+  onDocxViewerDemo,
   onXlsxDemo,
+  onXlsxViewerDemo,
   isLoading,
   importPdfFromFileFn,
 }: Props) {
@@ -328,7 +332,11 @@ export function LandingPage({
                 </div>
               </div>
               <div className="demo-card-actions">
-                <button className="demo-card-btn demo-card-btn-full" onClick={onDocxDemo} disabled={isLoading}>
+                <button className="demo-card-btn" onClick={onDocxViewerDemo} disabled={isLoading}>
+                  <PlayIcon size={14} />
+                  <span>View</span>
+                </button>
+                <button className="demo-card-btn" onClick={onDocxDemo} disabled={isLoading}>
                   <EditIcon size={14} />
                   <span>Edit</span>
                 </button>
@@ -345,7 +353,11 @@ export function LandingPage({
                 </div>
               </div>
               <div className="demo-card-actions">
-                <button className="demo-card-btn demo-card-btn-full" onClick={onXlsxDemo} disabled={isLoading}>
+                <button className="demo-card-btn" onClick={onXlsxViewerDemo} disabled={isLoading}>
+                  <PlayIcon size={14} />
+                  <span>View</span>
+                </button>
+                <button className="demo-card-btn" onClick={onXlsxDemo} disabled={isLoading}>
                   <EditIcon size={14} />
                   <span>Edit</span>
                 </button>

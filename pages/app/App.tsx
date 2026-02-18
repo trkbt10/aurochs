@@ -12,7 +12,9 @@ import { PptxViewerPage } from "./pages/PptxViewerPage";
 import { PptxSlideshowPage } from "./pages/PptxSlideshowPage";
 import { PptxEditorPage } from "./pages/PptxEditorPage";
 import { DocxEditorPage } from "./pages/DocxEditorPage";
+import { DocxViewerPage } from "./pages/DocxViewerPage";
 import { XlsxEditorPage } from "./pages/XlsxEditorPage";
+import { XlsxViewerPage } from "./pages/XlsxViewerPage";
 import { convertToPresentationDocument, type PresentationDocument } from "@aurochs-office/pptx/app";
 import "./App.css";
 
@@ -100,6 +102,15 @@ export function App() {
     navigate("/docx/editor");
   }, [pptx, docx, xlsx, navigate]);
 
+  const handleDocxViewerDemo = useCallback(() => {
+    pptx.reset();
+    xlsx.reset();
+    setImportedDocument(null);
+    setImportedFileName(null);
+    docx.reset();
+    navigate("/docx/viewer");
+  }, [pptx, docx, xlsx, navigate]);
+
   const handleXlsxDemo = useCallback(() => {
     pptx.reset();
     docx.reset();
@@ -107,6 +118,15 @@ export function App() {
     setImportedFileName(null);
     xlsx.reset();
     navigate("/xlsx/editor");
+  }, [pptx, docx, xlsx, navigate]);
+
+  const handleXlsxViewerDemo = useCallback(() => {
+    pptx.reset();
+    docx.reset();
+    setImportedDocument(null);
+    setImportedFileName(null);
+    xlsx.reset();
+    navigate("/xlsx/viewer");
   }, [pptx, docx, xlsx, navigate]);
 
   const handleBack = useCallback(() => {
@@ -185,7 +205,9 @@ export function App() {
       onPptxDemo={handlePptxDemo}
       onPptxEditorDemo={handlePptxEditorDemo}
       onDocxDemo={handleDocxDemo}
+      onDocxViewerDemo={handleDocxViewerDemo}
       onXlsxDemo={handleXlsxDemo}
+      onXlsxViewerDemo={handleXlsxViewerDemo}
       isLoading={isLoading}
     />
   );
@@ -199,7 +221,9 @@ export function App() {
             onPptxDemo={handlePptxDemo}
             onPptxEditorDemo={handlePptxEditorDemo}
             onDocxDemo={handleDocxDemo}
+            onDocxViewerDemo={handleDocxViewerDemo}
             onXlsxDemo={handleXlsxDemo}
+            onXlsxViewerDemo={handleXlsxViewerDemo}
             isLoading
           />
         );
@@ -256,8 +280,16 @@ export function App() {
     );
   };
 
+  const DocxViewerRoute = () => (
+    <DocxViewerPage document={docx.document} fileName={docx.fileName} onBack={handleBack} />
+  );
+
   const DocxEditorRoute = () => (
     <DocxEditorPage document={docx.document} fileName={docx.fileName} onBack={handleBack} />
+  );
+
+  const XlsxViewerRoute = () => (
+    <XlsxViewerPage workbook={xlsx.workbook} fileName={xlsx.fileName} onBack={handleBack} />
   );
 
   const XlsxEditorRoute = () => (
@@ -270,7 +302,9 @@ export function App() {
       <Route path="/pptx/viewer" element={<PptxViewerRoute />} />
       <Route path="/pptx/slideshow/:slideNumber" element={<PptxSlideshowRoute />} />
       <Route path="/pptx/editor" element={<PptxEditorRoute />} />
+      <Route path="/docx/viewer" element={<DocxViewerRoute />} />
       <Route path="/docx/editor" element={<DocxEditorRoute />} />
+      <Route path="/xlsx/viewer" element={<XlsxViewerRoute />} />
       <Route path="/xlsx/editor" element={<XlsxEditorRoute />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
