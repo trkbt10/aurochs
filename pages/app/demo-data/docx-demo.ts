@@ -2,6 +2,7 @@
  * @file Demo DOCX document for the editor page.
  */
 
+import type { DocxDocument } from "@aurochs-office/docx/domain/document";
 import type { DocxParagraph } from "@aurochs-office/docx/domain/paragraph";
 import type { DocxNumbering, DocxAbstractNum, DocxNum } from "@aurochs-office/docx/domain/numbering";
 import { docxAbstractNumId, docxNumId, docxIlvl, halfPoints } from "@aurochs-office/docx/domain/types";
@@ -50,7 +51,7 @@ function createDemoNumbering(): DocxNumbering {
   return { abstractNum: [decimalAbstract, bulletAbstract], num: [decimalNum, bulletNum] };
 }
 
-export function createDemoDocument(): { paragraphs: DocxParagraph[]; numbering: DocxNumbering } {
+export function createDemoParagraphsAndNumbering(): { paragraphs: DocxParagraph[]; numbering: DocxNumbering } {
   return {
     paragraphs: [
       createDemoParagraph("DOCX Editor Demo", { bold: true, fontSize: 36 }),
@@ -85,5 +86,14 @@ export function createDemoDocument(): { paragraphs: DocxParagraph[]; numbering: 
       ),
     ],
     numbering: createDemoNumbering(),
+  };
+}
+
+/** Create a complete DocxDocument for the DocxDocumentEditor. */
+export function createDemoDocxDocument(): DocxDocument {
+  const { paragraphs, numbering } = createDemoParagraphsAndNumbering();
+  return {
+    body: { content: paragraphs },
+    numbering,
   };
 }

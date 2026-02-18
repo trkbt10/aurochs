@@ -9,7 +9,7 @@ import { ContinuousEditor } from "@aurochs-ui/docx-editor";
 import type { DocxDocument } from "@aurochs-office/docx";
 import type { DocxParagraph } from "@aurochs-office/docx/domain/paragraph";
 import { EditorPageLayout } from "../components/EditorPageLayout";
-import { createDemoDocument } from "../demo-data/docx-demo";
+import { createDemoParagraphsAndNumbering } from "../demo-data/docx-demo";
 
 type Props = {
   readonly document: DocxDocument | null;
@@ -26,7 +26,7 @@ export function DocxViewerPage({ document, fileName, onBack }: Props) {
         numbering: document.numbering,
       };
     }
-    return createDemoDocument();
+    return createDemoParagraphsAndNumbering();
   }, [document]);
 
   return (
