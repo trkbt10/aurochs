@@ -14,6 +14,10 @@
       "types": "./dist/@aurochs-office/pptx/src/index.d.ts",
       "import": "./dist/pptx/parser/index.js"
     },
+    "./pptx/extract": {
+      "types": "./dist/@aurochs-office/pptx/src/extract/index.d.ts",
+      "import": "./dist/pptx/extract/index.js"
+    },
     "./pptx/renderer/svg": {
       "types": "./dist/@aurochs-renderer/pptx/src/svg/index.d.ts",
       "import": "./dist/pptx/renderer/svg/index.js"
@@ -34,6 +38,10 @@
       "types": "./dist/@aurochs-office/docx/src/index.d.ts",
       "import": "./dist/docx/parser/index.js"
     },
+    "./docx/extract": {
+      "types": "./dist/@aurochs-office/docx/src/extract/index.d.ts",
+      "import": "./dist/docx/extract/index.js"
+    },
     "./docx/renderer/svg": {
       "types": "./dist/@aurochs-renderer/docx/src/svg/index.d.ts",
       "import": "./dist/docx/renderer/svg/index.js"
@@ -53,6 +61,10 @@
     "./xlsx/parser": {
       "types": "./dist/@aurochs-office/xlsx/src/index.d.ts",
       "import": "./dist/xlsx/parser/index.js"
+    },
+    "./xlsx/extract": {
+      "types": "./dist/@aurochs-office/xlsx/src/extract/index.d.ts",
+      "import": "./dist/xlsx/extract/index.js"
     },
     "./xlsx/renderer/svg": {
       "types": "./dist/@aurochs-renderer/xlsx/src/svg/index.d.ts",

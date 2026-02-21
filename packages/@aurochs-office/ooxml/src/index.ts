@@ -69,3 +69,6 @@ export type { BaseFontProperties, FontTypefaceProperties, BaseUnderlineStyle } f
 // Domain types - Warnings
 export type { RenderWarning, WarningCollector } from "./domain/warnings";
 export { createWarningCollector } from "./domain/warnings";
+
+// Domain types - Content Extraction
+export type { SegmentType, ContentSegment, ExtractionResult } from "./domain/extraction";

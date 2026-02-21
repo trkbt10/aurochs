@@ -16,6 +16,8 @@ import dts from "vite-plugin-dts";
 const entries = {
   // PPTX Parser
   "pptx/parser/index": resolve(__dirname, "../../@aurochs-office/pptx/src/index.ts"),
+  // PPTX Extract
+  "pptx/extract/index": resolve(__dirname, "../../@aurochs-office/pptx/src/extract/index.ts"),
   // PPTX Renderer
   "pptx/renderer/svg/index": resolve(__dirname, "../../@aurochs-renderer/pptx/src/svg/index.ts"),
   "pptx/renderer/ascii/index": resolve(__dirname, "../../@aurochs-renderer/pptx/src/ascii/index.ts"),
@@ -25,6 +27,8 @@ const entries = {
 
   // DOCX Parser
   "docx/parser/index": resolve(__dirname, "../../@aurochs-office/docx/src/index.ts"),
+  // DOCX Extract
+  "docx/extract/index": resolve(__dirname, "../../@aurochs-office/docx/src/extract/index.ts"),
   // DOCX Renderer
   "docx/renderer/svg/index": resolve(__dirname, "../../@aurochs-renderer/docx/src/svg/index.ts"),
   "docx/renderer/ascii/index": resolve(__dirname, "../../@aurochs-renderer/docx/src/ascii/index.ts"),
@@ -34,6 +38,8 @@ const entries = {
 
   // XLSX Parser
   "xlsx/parser/index": resolve(__dirname, "../../@aurochs-office/xlsx/src/index.ts"),
+  // XLSX Extract
+  "xlsx/extract/index": resolve(__dirname, "../../@aurochs-office/xlsx/src/extract/index.ts"),
   // XLSX Renderer
   "xlsx/renderer/svg/index": resolve(__dirname, "../../@aurochs-renderer/xlsx/src/svg/index.ts"),
   "xlsx/renderer/ascii/index": resolve(__dirname, "../../@aurochs-renderer/xlsx/src/ascii/index.ts"),

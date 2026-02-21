@@ -2,7 +2,6 @@
  * @file Office format utilities tests
  */
 
-import { describe, expect, it } from "vitest";
 import {
   SPREADSHEET_MIME_TYPES,
   SPREADSHEET_FORMAT_DESCRIPTIONS,
@@ -22,6 +21,9 @@ import {
   getDocumentMimeType,
   getDocumentMimeTypeByFileName,
   getDocumentFilePickerType,
+  OFFICE_MIME_TYPES,
+  getFormatFromMimeType,
+  isSupportedOfficeMimeType,
 } from "./office-formats";
 
 // =============================================================================
@@ -206,6 +208,82 @@ describe("Document formats", () => {
       const type = getDocumentFilePickerType("docm");
       expect(type.description).toBe(DOCUMENT_FORMAT_DESCRIPTIONS.docm);
       expect(type.accept[DOCUMENT_MIME_TYPES.docm]).toEqual([".docm"]);
+    });
+  });
+});
+
+// =============================================================================
+// Unified Format Detection Tests
+// =============================================================================
+
+describe("Unified format detection", () => {
+  describe("OFFICE_MIME_TYPES", () => {
+    it("contains all presentation MIME types under pptx", () => {
+      expect(OFFICE_MIME_TYPES.pptx).toContain(PRESENTATION_MIME_TYPES.pptx);
+      expect(OFFICE_MIME_TYPES.pptx).toContain(PRESENTATION_MIME_TYPES.pptm);
+      expect(OFFICE_MIME_TYPES.pptx).toContain(PRESENTATION_MIME_TYPES.ppsm);
+      expect(OFFICE_MIME_TYPES.pptx).toContain(PRESENTATION_MIME_TYPES.ppsx);
+    });
+
+    it("contains all document MIME types under docx", () => {
+      expect(OFFICE_MIME_TYPES.docx).toContain(DOCUMENT_MIME_TYPES.docx);
+      expect(OFFICE_MIME_TYPES.docx).toContain(DOCUMENT_MIME_TYPES.docm);
+    });
+
+    it("contains all spreadsheet MIME types under xlsx", () => {
+      expect(OFFICE_MIME_TYPES.xlsx).toContain(SPREADSHEET_MIME_TYPES.xlsx);
+      expect(OFFICE_MIME_TYPES.xlsx).toContain(SPREADSHEET_MIME_TYPES.xlsm);
+    });
+  });
+
+  describe("getFormatFromMimeType", () => {
+    it("returns pptx for presentation MIME types", () => {
+      expect(getFormatFromMimeType(PRESENTATION_MIME_TYPES.pptx)).toBe("pptx");
+      expect(getFormatFromMimeType(PRESENTATION_MIME_TYPES.pptm)).toBe("pptx");
+      expect(getFormatFromMimeType(PRESENTATION_MIME_TYPES.ppsm)).toBe("pptx");
+      expect(getFormatFromMimeType(PRESENTATION_MIME_TYPES.ppsx)).toBe("pptx");
+    });
+
+    it("returns docx for document MIME types", () => {
+      expect(getFormatFromMimeType(DOCUMENT_MIME_TYPES.docx)).toBe("docx");
+      expect(getFormatFromMimeType(DOCUMENT_MIME_TYPES.docm)).toBe("docx");
+    });
+
+    it("returns xlsx for spreadsheet MIME types", () => {
+      expect(getFormatFromMimeType(SPREADSHEET_MIME_TYPES.xlsx)).toBe("xlsx");
+      expect(getFormatFromMimeType(SPREADSHEET_MIME_TYPES.xlsm)).toBe("xlsx");
+    });
+
+    it("returns undefined for unsupported MIME types", () => {
+      expect(getFormatFromMimeType("text/plain")).toBeUndefined();
+      expect(getFormatFromMimeType("application/pdf")).toBeUndefined();
+      expect(getFormatFromMimeType("")).toBeUndefined();
+    });
+  });
+
+  describe("isSupportedOfficeMimeType", () => {
+    it("returns true for all presentation MIME types", () => {
+      expect(isSupportedOfficeMimeType(PRESENTATION_MIME_TYPES.pptx)).toBe(true);
+      expect(isSupportedOfficeMimeType(PRESENTATION_MIME_TYPES.pptm)).toBe(true);
+      expect(isSupportedOfficeMimeType(PRESENTATION_MIME_TYPES.ppsm)).toBe(true);
+      expect(isSupportedOfficeMimeType(PRESENTATION_MIME_TYPES.ppsx)).toBe(true);
+    });
+
+    it("returns true for all document MIME types", () => {
+      expect(isSupportedOfficeMimeType(DOCUMENT_MIME_TYPES.docx)).toBe(true);
+      expect(isSupportedOfficeMimeType(DOCUMENT_MIME_TYPES.docm)).toBe(true);
+    });
+
+    it("returns true for all spreadsheet MIME types", () => {
+      expect(isSupportedOfficeMimeType(SPREADSHEET_MIME_TYPES.xlsx)).toBe(true);
+      expect(isSupportedOfficeMimeType(SPREADSHEET_MIME_TYPES.xlsm)).toBe(true);
+    });
+
+    it("returns false for unsupported MIME types", () => {
+      expect(isSupportedOfficeMimeType("text/plain")).toBe(false);
+      expect(isSupportedOfficeMimeType("application/pdf")).toBe(false);
+      expect(isSupportedOfficeMimeType("image/png")).toBe(false);
+      expect(isSupportedOfficeMimeType("")).toBe(false);
     });
   });
 });

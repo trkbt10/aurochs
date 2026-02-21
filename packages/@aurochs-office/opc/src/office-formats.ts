@@ -232,3 +232,73 @@ export function getDocumentFilePickerType(format: DocumentFormat): {
     accept: { [DOCUMENT_MIME_TYPES[format]]: [`.${format}`] },
   };
 }
+
+// =============================================================================
+// Unified Format Detection (MIME Type → Format)
+// =============================================================================
+
+/**
+ * Office format category for unified processing.
+ */
+export type OfficeFormatCategory = "pptx" | "docx" | "xlsx";
+
+/**
+ * All supported Office MIME types grouped by category.
+ *
+ * Maps MIME types to their canonical format category for unified processing.
+ */
+export const OFFICE_MIME_TYPES: Record<OfficeFormatCategory, readonly string[]> = {
+  pptx: Object.values(PRESENTATION_MIME_TYPES),
+  docx: Object.values(DOCUMENT_MIME_TYPES),
+  xlsx: Object.values(SPREADSHEET_MIME_TYPES),
+} as const;
+
+/**
+ * Reverse lookup map: MIME type → format category.
+ */
+const MIME_TYPE_TO_FORMAT: ReadonlyMap<string, OfficeFormatCategory> = new Map(
+  (Object.entries(OFFICE_MIME_TYPES) as [OfficeFormatCategory, readonly string[]][]).flatMap(
+    ([format, mimeTypes]) => mimeTypes.map((mimeType) => [mimeType, format] as const)
+  )
+);
+
+/**
+ * Get Office format category from MIME type.
+ *
+ * @param mimeType - MIME type string
+ * @returns Format category ("pptx", "docx", "xlsx") or undefined if not recognized
+ *
+ * @example
+ * ```typescript
+ * getFormatFromMimeType("application/vnd.openxmlformats-officedocument.presentationml.presentation")
+ * // → "pptx"
+ *
+ * getFormatFromMimeType("application/vnd.ms-excel.sheet.macroEnabled.12")
+ * // → "xlsx"
+ *
+ * getFormatFromMimeType("text/plain")
+ * // → undefined
+ * ```
+ */
+export function getFormatFromMimeType(mimeType: string): OfficeFormatCategory | undefined {
+  return MIME_TYPE_TO_FORMAT.get(mimeType);
+}
+
+/**
+ * Check if a MIME type is a supported Office format.
+ *
+ * @param mimeType - MIME type string
+ * @returns true if the MIME type is a supported Office format
+ *
+ * @example
+ * ```typescript
+ * isSupportedOfficeMimeType("application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+ * // → true
+ *
+ * isSupportedOfficeMimeType("text/plain")
+ * // → false
+ * ```
+ */
+export function isSupportedOfficeMimeType(mimeType: string): boolean {
+  return MIME_TYPE_TO_FORMAT.has(mimeType);
+}

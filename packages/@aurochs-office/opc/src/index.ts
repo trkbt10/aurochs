@@ -102,11 +102,16 @@ export {
   getDocumentMimeType,
   getDocumentMimeTypeByFileName,
   getDocumentFilePickerType,
+  // Unified format detection
+  OFFICE_MIME_TYPES,
+  getFormatFromMimeType,
+  isSupportedOfficeMimeType,
 } from "./office-formats";
 export type {
   SpreadsheetFormat,
   PresentationFormat,
   DocumentFormat,
+  OfficeFormatCategory,
 } from "./office-formats";
 
 // Office file download utilities

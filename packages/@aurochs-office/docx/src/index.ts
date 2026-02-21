@@ -297,3 +297,12 @@ export { parseBody, parseDocument } from "./parser/document";
 
 // Document loader
 export { loadDocx, loadDocxFromFile, type LoadDocxOptions } from "./document-parser";
+
+// Text extraction utilities
+export {
+  extractTextFromDocument,
+  extractTextFromBody,
+  extractTextFromBlockContent,
+  extractTextFromParagraph,
+  extractTextFromRun,
+} from "./domain/text-utils";

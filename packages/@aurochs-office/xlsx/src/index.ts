@@ -24,3 +24,11 @@ export {
   type SheetUpdate,
   type WorkbookPatchResult,
 } from "./workbook-patcher";
+
+// Text extraction utilities
+export {
+  extractTextFromCell,
+  extractTextFromRow,
+  extractTextFromSheet,
+  extractTextFromWorkbook,
+} from "./text-utils";
