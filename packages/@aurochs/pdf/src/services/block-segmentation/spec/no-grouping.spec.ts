@@ -2,9 +2,9 @@
  * @file Tests for no-grouping strategy
  */
 
-import type { PdfText } from "../../domain/text";
-import { createDefaultGraphicsState } from "../../domain/graphics-state";
-import { noGrouping } from "./no-grouping";
+import type { PdfText } from "../../../domain/text";
+import { createDefaultGraphicsState } from "../../../domain/graphics-state";
+import { noGrouping } from "../strategies/no-grouping";
 
 describe("noGrouping", () => {
   const createPdfText = (overrides: Partial<PdfText> = {}): PdfText => ({

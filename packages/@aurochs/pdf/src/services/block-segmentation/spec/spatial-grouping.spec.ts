@@ -2,9 +2,9 @@
  * @file Tests for spatial grouping function
  */
 
-import type { PdfText } from "../../domain/text";
-import { createDefaultGraphicsState } from "../../domain/graphics-state";
-import { createSpatialGrouping, spatialGrouping } from "./spatial-grouping";
+import type { PdfText } from "../../../domain/text";
+import { createDefaultGraphicsState } from "../../../domain/graphics-state";
+import { createSpatialGrouping, spatialGrouping } from "../strategies/spatial-grouping";
 
 describe("createSpatialGrouping", () => {
   const createPdfText = (overrides: Partial<PdfText> = {}): PdfText => ({
@@ -120,6 +120,27 @@ describe("createSpatialGrouping", () => {
 
       expect(groups[0].paragraphs[0].runs[0].text).toBe("Hello");
     });
+
+    it("detects RTL scripts and sorts runs right-to-left", () => {
+      const groupFn = spatialGrouping;
+      const texts = [createPdfText({ text: "שלום", x: 120, y: 100 }), createPdfText({ text: "עולם", x: 60, y: 100 })];
+
+      const groups = groupFn(texts);
+      const paragraph = groups[0].paragraphs[0];
+
+      expect(paragraph.inlineDirection).toBe("rtl");
+      expect(paragraph.runs.map((r) => r.text).join(" ")).toBe("שלום עולם");
+    });
+
+    it("allows forcing inline direction", () => {
+      const groupFn = createSpatialGrouping({ inlineDirection: "rtl" });
+      const texts = [createPdfText({ text: "A", x: 10, y: 100 }), createPdfText({ text: "B", x: 40, y: 100 })];
+
+      const groups = groupFn(texts);
+
+      expect(groups[0].paragraphs[0].inlineDirection).toBe("rtl");
+      expect(groups[0].paragraphs[0].runs.map((r) => r.text).join("")).toBe("BA");
+    });
   });
 
   describe("vertical block merging", () => {
@@ -177,6 +198,35 @@ describe("createSpatialGrouping", () => {
       const groups = groupFn(texts);
 
       expect(groups).toHaveLength(2);
+    });
+
+    it("keeps long aligned lines merged even when font names differ", () => {
+      const groupFn = createSpatialGrouping({ verticalGapRatio: 1.5 });
+      const texts = [
+        createPdfText({
+          text: "This is a long first line that should continue to the next one.",
+          x: 20,
+          y: 120,
+          width: 320,
+          height: 12,
+          fontName: "TimesNewRomanPSMT",
+          fontSize: 12,
+        }),
+        createPdfText({
+          text: "And this long second line should stay in the same text block.",
+          x: 20,
+          y: 104,
+          width: 318,
+          height: 12,
+          fontName: "Helvetica",
+          fontSize: 12,
+        }),
+      ];
+
+      const groups = groupFn(texts);
+
+      expect(groups).toHaveLength(1);
+      expect(groups[0].paragraphs).toHaveLength(2);
     });
 
     it("groups texts with same font style (ignoring subset prefix)", () => {
@@ -475,6 +525,41 @@ describe("createSpatialGrouping", () => {
 
       expect(leftGroup).toBeDefined();
       expect(rightGroup).toBeDefined();
+    });
+  });
+
+  describe("layout inference", () => {
+    it("infers centered text layout for multi-line centered content", () => {
+      const groupFn = createSpatialGrouping({ enableColumnSeparation: false, verticalGapRatio: 2.0 });
+      const texts = [
+        createPdfText({ text: "Top", x: 150, y: 120, width: 100 }),
+        createPdfText({ text: "Mid", x: 170, y: 104, width: 60 }),
+        createPdfText({ text: "Bottom", x: 130, y: 88, width: 140 }),
+      ];
+
+      const groups = groupFn(texts);
+      const inference = groups[0].layoutInference;
+      const contentWidth = Math.max(...texts.map((t) => t.x + t.width)) - Math.min(...texts.map((t) => t.x));
+
+      expect(inference).toBeDefined();
+      expect(inference?.alignment).toBe("center");
+      expect((inference?.confidence ?? 0) > 0.3).toBe(true);
+      expect((inference?.estimatedBounds.width ?? 0) >= contentWidth).toBe(true);
+    });
+
+    it("infers right alignment for RTL multi-line text", () => {
+      const groupFn = createSpatialGrouping({ enableColumnSeparation: false, verticalGapRatio: 2.0 });
+      const texts = [
+        createPdfText({ text: "שלום", x: 210, y: 120, width: 50 }),
+        createPdfText({ text: "עולם", x: 230, y: 104, width: 30 }),
+      ];
+
+      const groups = groupFn(texts);
+      const inference = groups[0].layoutInference;
+
+      expect(inference).toBeDefined();
+      expect(inference?.inlineDirection).toBe("rtl");
+      expect(inference?.alignment).toBe("right");
     });
   });
 });

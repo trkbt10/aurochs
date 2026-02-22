@@ -7,11 +7,11 @@
  */
 
 import { readFileSync } from "node:fs";
-import { parsePdf } from "../../parser/core/pdf-parser";
-import type { PdfText } from "../../domain/text";
-import { spatialGrouping } from "./spatial-grouping";
-import type { GroupedText } from "./types";
-import { getSampleFixturePath } from "../../test-utils/pdf-fixtures";
+import { parsePdf } from "../../../parser/core/pdf-parser";
+import type { PdfText } from "../../../domain/text";
+import { spatialGrouping } from "../strategies/spatial-grouping";
+import type { GroupedText } from "../contracts/types";
+import { getSampleFixturePath } from "../../../test-utils/pdf-fixtures";
 
 /**
  * Helper to extract text content from grouped text

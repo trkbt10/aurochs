@@ -18,8 +18,17 @@
  * - PdfText.height: full height (ascender - descender) * fontSize / 1000
  */
 
-import type { PdfText } from "../../domain/text";
-import type { BlockingZone, GroupedText, GroupedParagraph, GroupingContext, TextGroupingFn } from "./types";
+import type { PdfText } from "../../../domain/text";
+import type {
+  BlockingZone,
+  GroupedText,
+  GroupedParagraph,
+  GroupingContext,
+  TextGroupingFn,
+  InlineDirection,
+  ParagraphAlignment,
+  TextBounds,
+} from "../contracts/types";
 
 /**
  * Color matching mode for style comparison.
@@ -31,6 +40,7 @@ import type { BlockingZone, GroupedText, GroupedParagraph, GroupingContext, Text
 export type ColorMatchingMode = "strict" | "loose" | "none";
 export type WritingMode = "horizontal" | "vertical" | "auto";
 export type VerticalColumnOrder = "right-to-left" | "left-to-right";
+export type InlineDirectionMode = "auto" | "ltr" | "rtl";
 
 /**
  * Options for spatial grouping behavior.
@@ -121,6 +131,15 @@ export type SpatialGroupingOptions = {
    * (default: "right-to-left")
    */
   readonly verticalColumnOrder?: VerticalColumnOrder;
+
+  /**
+   * Inline direction resolution strategy used for horizontal lines.
+   *
+   * - "auto": infer from script coverage (default)
+   * - "ltr": force left-to-right run order
+   * - "rtl": force right-to-left run order
+   */
+  readonly inlineDirection?: InlineDirectionMode;
 };
 
 const DEFAULT_OPTIONS: Required<SpatialGroupingOptions> = {
@@ -136,6 +155,7 @@ const DEFAULT_OPTIONS: Required<SpatialGroupingOptions> = {
   fullWidthRatio: 0.85,
   writingMode: "auto",
   verticalColumnOrder: "right-to-left",
+  inlineDirection: "auto",
 };
 
 /** Default character width in 1/1000 em units for fallback */
@@ -309,6 +329,20 @@ function detectDominantWritingMode(texts: readonly PdfText[]): Exclude<WritingMo
 
   const verticalScore = verticalLike * 2 + direction.vertical;
   const horizontalScore = horizontalLike * 2 + direction.horizontal;
+  const inlineDirection = detectInlineDirectionFromTexts(sample);
+
+  // For RTL scripts (Arabic/Hebrew), horizontal flow is the default.
+  // Their glyph bounding boxes can be narrow/tall in some PDFs and may
+  // look "vertical-like" geometrically, so force horizontal mode here.
+  if (inlineDirection === "rtl") {
+    return "horizontal";
+  }
+
+  const strongVerticalNeighborFlow =
+    direction.vertical >= direction.horizontal * 2.5 && direction.vertical >= sample.length * 0.75 && verticalLike > 0;
+  if (strongVerticalNeighborFlow) {
+    return "vertical";
+  }
 
   if (verticalScore > horizontalScore * 1.1 && verticalLike > 0) {
     return "vertical";
@@ -324,6 +358,80 @@ function resolveWritingMode(texts: readonly PdfText[], options: Required<Spatial
     return "vertical";
   }
   return detectDominantWritingMode(texts);
+}
+
+function isRtlCodePoint(cp: number): boolean {
+  return (
+    (cp >= 0x0590 && cp <= 0x08ff) || // Hebrew + Arabic blocks
+    (cp >= 0xfb1d && cp <= 0xfdff) || // Hebrew/Arabic presentation forms
+    (cp >= 0xfe70 && cp <= 0xfeff) || // Arabic presentation forms-B
+    (cp >= 0x10800 && cp <= 0x10fff) // historic RTL scripts
+  );
+}
+
+function isStrongCodePoint(cp: number): boolean {
+  if (cp <= 0x20) {
+    return false;
+  }
+  if (cp >= 0x30 && cp <= 0x39) {
+    return false;
+  }
+  return true;
+}
+
+function detectInlineDirectionFromTexts(texts: readonly PdfText[]): Exclude<InlineDirection, "ttb"> {
+  if (texts.length === 0) {
+    return "ltr";
+  }
+
+  const sample = texts.slice(0, 180);
+  const counts = { strongCount: 0, rtlCount: 0 };
+
+  for (const text of sample) {
+    for (const char of Array.from(text.text)) {
+      const cp = char.codePointAt(0);
+      if (cp === undefined || !isStrongCodePoint(cp)) {
+        continue;
+      }
+      counts.strongCount += 1;
+      if (isRtlCodePoint(cp)) {
+        counts.rtlCount += 1;
+      }
+    }
+  }
+
+  if (counts.strongCount === 0) {
+    return "ltr";
+  }
+
+  const rtlRatio = counts.rtlCount / counts.strongCount;
+  if (rtlRatio >= 0.25 && counts.rtlCount >= 2) {
+    return "rtl";
+  }
+  return "ltr";
+}
+
+function resolveInlineDirection(
+  texts: readonly PdfText[],
+  options: Required<SpatialGroupingOptions>,
+): Exclude<InlineDirection, "ttb"> {
+  if (options.inlineDirection === "ltr") {
+    return "ltr";
+  }
+  if (options.inlineDirection === "rtl") {
+    return "rtl";
+  }
+  return detectInlineDirectionFromTexts(texts);
+}
+
+function sortRunsByInlineDirection(
+  texts: readonly PdfText[],
+  direction: Exclude<InlineDirection, "ttb">,
+): PdfText[] {
+  if (direction === "rtl") {
+    return [...texts].sort((a, b) => b.x - a.x);
+  }
+  return [...texts].sort((a, b) => a.x - b.x);
 }
 
 type Gutter = { x0: number; x1: number; score: number; xMid: number };
@@ -759,6 +867,202 @@ function addLineSpacingToParagraphs(paragraphs: readonly GroupedParagraph[]): Gr
   return result;
 }
 
+type ParagraphRunBounds = {
+  readonly minX: number;
+  readonly maxX: number;
+  readonly minY: number;
+  readonly maxY: number;
+  readonly centerX: number;
+  readonly fontSize: number;
+  readonly inlineDirection: InlineDirection;
+};
+
+function getParagraphRunBounds(paragraph: GroupedParagraph): ParagraphRunBounds | null {
+  if (paragraph.runs.length === 0) {
+    return null;
+  }
+  const minX = Math.min(...paragraph.runs.map((r) => r.x));
+  const maxX = Math.max(...paragraph.runs.map((r) => r.x + r.width));
+  const minY = Math.min(...paragraph.runs.map((r) => r.y));
+  const maxY = Math.max(...paragraph.runs.map((r) => r.y + r.height));
+  const fontSize = paragraph.runs[0]?.fontSize ?? 12;
+  return {
+    minX,
+    maxX,
+    minY,
+    maxY,
+    centerX: (minX + maxX) / 2,
+    fontSize,
+    inlineDirection: paragraph.inlineDirection ?? "ltr",
+  };
+}
+
+function interQuartileRange(values: readonly number[]): number {
+  if (values.length <= 1) {
+    return 0;
+  }
+  return Math.max(0, quantile(values, 0.75) - quantile(values, 0.25));
+}
+
+function medianValue(values: readonly number[]): number {
+  if (values.length === 0) {
+    return 0;
+  }
+  return quantile(values, 0.5);
+}
+
+function resolveGroupInlineDirection(paragraphBounds: readonly ParagraphRunBounds[]): InlineDirection {
+  if (paragraphBounds.length === 0) {
+    return "ltr";
+  }
+  const rtlCount = paragraphBounds.filter((p) => p.inlineDirection === "rtl").length;
+  const ttbCount = paragraphBounds.filter((p) => p.inlineDirection === "ttb").length;
+  if (ttbCount > rtlCount && ttbCount > paragraphBounds.length / 2) {
+    return "ttb";
+  }
+  if (rtlCount >= Math.ceil(paragraphBounds.length / 2)) {
+    return "rtl";
+  }
+  return "ltr";
+}
+
+function inferHorizontalAlignmentFromParagraphs(
+  paragraphBounds: readonly ParagraphRunBounds[],
+): { alignment: ParagraphAlignment; confidence: number; estimatedBounds: TextBounds; startPadding: number; endPadding: number } {
+  const lefts = paragraphBounds.map((p) => p.minX);
+  const rights = paragraphBounds.map((p) => p.maxX);
+  const centers = paragraphBounds.map((p) => p.centerX);
+  const fontRef = medianValue(paragraphBounds.map((p) => p.fontSize)) || 12;
+
+  const spreads = [
+    { alignment: "left" as const, spread: interQuartileRange(lefts) },
+    { alignment: "center" as const, spread: interQuartileRange(centers) },
+    { alignment: "right" as const, spread: interQuartileRange(rights) },
+  ].sort((a, b) => a.spread - b.spread);
+
+  const best = spreads[0]!;
+  const second = spreads[1]!;
+  const dominantScore = second.spread <= 0 ? 0 : clamp((second.spread - best.spread) / second.spread, 0, 1);
+  const tolerance = Math.max(0.8, fontRef * 0.35);
+  const plausible = best.spread <= tolerance * 2 || paragraphBounds.length <= 2;
+  const confidence = plausible ? dominantScore : dominantScore * 0.35;
+
+  if (!plausible && paragraphBounds.length >= 3) {
+    const minX = Math.min(...lefts);
+    const maxX = Math.max(...rights);
+    return {
+      alignment: "unknown",
+      confidence,
+      estimatedBounds: {
+        x: minX,
+        y: Math.min(...paragraphBounds.map((p) => p.minY)),
+        width: maxX - minX,
+        height: Math.max(...paragraphBounds.map((p) => p.maxY)) - Math.min(...paragraphBounds.map((p) => p.minY)),
+      },
+      startPadding: 0,
+      endPadding: 0,
+    };
+  }
+
+  const minY = Math.min(...paragraphBounds.map((p) => p.minY));
+  const maxY = Math.max(...paragraphBounds.map((p) => p.maxY));
+
+  const buildLeftAligned = (): TextBounds => {
+    const anchor = medianValue(lefts);
+    const x = Math.min(...lefts, anchor);
+    const right = Math.max(...rights);
+    return { x, y: minY, width: right - x, height: maxY - minY };
+  };
+  const buildCenterAligned = (): TextBounds => {
+    const anchor = medianValue(centers);
+    const half = Math.max(
+      ...paragraphBounds.map((p) => Math.abs(p.maxX - anchor)),
+      ...paragraphBounds.map((p) => Math.abs(anchor - p.minX)),
+    );
+    const x = anchor - half;
+    const right = anchor + half;
+    return { x, y: minY, width: right - x, height: maxY - minY };
+  };
+  const buildRightAligned = (): TextBounds => {
+    const anchor = medianValue(rights);
+    const x = Math.min(...lefts);
+    const right = Math.max(anchor, ...rights);
+    return { x, y: minY, width: right - x, height: maxY - minY };
+  };
+
+  const resolveEstimatedBounds = (): TextBounds => {
+    if (best.alignment === "left") {
+      return buildLeftAligned();
+    }
+    if (best.alignment === "center") {
+      return buildCenterAligned();
+    }
+    return buildRightAligned();
+  };
+  const estimatedBounds = resolveEstimatedBounds();
+
+  const rightEdge = estimatedBounds.x + estimatedBounds.width;
+  const leftPadding = medianValue(paragraphBounds.map((p) => Math.max(0, p.minX - estimatedBounds.x)));
+  const rightPadding = medianValue(paragraphBounds.map((p) => Math.max(0, rightEdge - p.maxX)));
+
+  return {
+    alignment: best.alignment,
+    confidence,
+    estimatedBounds,
+    startPadding: leftPadding,
+    endPadding: rightPadding,
+  };
+}
+
+function inferTextLayoutFromParagraphs(
+  paragraphs: readonly GroupedParagraph[],
+  contentBounds: TextBounds,
+  writingMode: Exclude<WritingMode, "auto">,
+): GroupedText["layoutInference"] {
+  if (paragraphs.length === 0) {
+    return undefined;
+  }
+  const paragraphBounds = paragraphs.map(getParagraphRunBounds).filter((b): b is ParagraphRunBounds => b !== null);
+  if (paragraphBounds.length === 0) {
+    return undefined;
+  }
+
+  if (writingMode === "vertical") {
+    return {
+      inlineDirection: "ttb",
+      alignment: "unknown",
+      confidence: 0,
+      estimatedBounds: contentBounds,
+      startPadding: 0,
+      endPadding: 0,
+    };
+  }
+
+  const inlineDirection = resolveGroupInlineDirection(paragraphBounds);
+  const inferred = inferHorizontalAlignmentFromParagraphs(paragraphBounds);
+  const mapStartPadding = (): number => {
+    if (inlineDirection === "rtl") {
+      return inferred.endPadding;
+    }
+    return inferred.startPadding;
+  };
+  const mapEndPadding = (): number => {
+    if (inlineDirection === "rtl") {
+      return inferred.startPadding;
+    }
+    return inferred.endPadding;
+  };
+
+  return {
+    inlineDirection,
+    alignment: inferred.alignment,
+    confidence: inferred.confidence,
+    estimatedBounds: inferred.estimatedBounds,
+    startPadding: mapStartPadding(),
+    endPadding: mapEndPadding(),
+  };
+}
+
 /**
  * Create GroupedText from paragraphs.
  *
@@ -766,7 +1070,10 @@ function addLineSpacingToParagraphs(paragraphs: readonly GroupedParagraph[]): Gr
  * 1. PPTX spacing property potentially adding extra character spacing
  * 2. Font substitution causing slightly different character widths
  */
-function createGroupedText(paragraphs: readonly GroupedParagraph[]): GroupedText {
+function createGroupedText(
+  paragraphs: readonly GroupedParagraph[],
+  writingMode: Exclude<WritingMode, "auto"> = "horizontal",
+): GroupedText {
   const allRuns = paragraphs.flatMap((p) => p.runs);
 
   const minX = Math.min(...allRuns.map((r) => r.x));
@@ -783,14 +1090,17 @@ function createGroupedText(paragraphs: readonly GroupedParagraph[]): GroupedText
 
   // Add line spacing information
   const paragraphsWithSpacing = addLineSpacingToParagraphs(paragraphs);
+  const contentBounds: TextBounds = {
+    x: minX,
+    y: minY,
+    width: baseWidth + totalBuffer,
+    height: maxY - minY,
+  };
+  const layoutInference = inferTextLayoutFromParagraphs(paragraphsWithSpacing, contentBounds, writingMode);
 
   return {
-    bounds: {
-      x: minX,
-      y: minY,
-      width: baseWidth + totalBuffer,
-      height: maxY - minY,
-    },
+    bounds: contentBounds,
+    layoutInference,
     paragraphs: paragraphsWithSpacing,
   };
 }
@@ -805,10 +1115,13 @@ function createGroupedText(paragraphs: readonly GroupedParagraph[]): GroupedText
  * This function does NOT concatenate PdfText runs.
  * It only orders and filters/group-safety checks happen before paragraph creation.
  */
-function mergeHorizontallyAdjacent(texts: readonly PdfText[], _options: Required<SpatialGroupingOptions>): PdfText[] {
-  // Preserve original PdfText boundaries; order by X for stable PPTX run order.
+function mergeHorizontallyAdjacent(
+  texts: readonly PdfText[],
+  inlineDirection: Exclude<InlineDirection, "ttb">,
+): PdfText[] {
+  // Preserve original PdfText boundaries; order by inferred inline direction.
   // `options.horizontalGapRatio` is applied during line segmentation.
-  return [...texts].sort((a, b) => a.x - b.x);
+  return sortRunsByInlineDirection(texts, inlineDirection);
 }
 
 /**
@@ -819,7 +1132,8 @@ function createParagraph(texts: readonly PdfText[], options: Required<SpatialGro
     throw new Error("createParagraph requires at least one PdfText");
   }
 
-  const runs = mergeHorizontallyAdjacent(texts, options);
+  const inlineDirection = resolveInlineDirection(texts, options);
+  const runs = mergeHorizontallyAdjacent(texts, inlineDirection);
   const first = runs[0];
   if (!first) {
     throw new Error("createParagraph requires at least one PdfText");
@@ -829,6 +1143,7 @@ function createParagraph(texts: readonly PdfText[], options: Required<SpatialGro
   return {
     runs,
     baselineY: baseline,
+    inlineDirection,
   };
 }
 
@@ -1177,11 +1492,11 @@ function hasBlockingZoneBetweenVerticalTexts(
     return false;
   }
 
-  const first = centerY(text1) <= centerY(text2) ? text1 : text2;
+  const first = centerY(text1) >= centerY(text2) ? text1 : text2;
   const second = first === text1 ? text2 : text1;
 
-  const gapStart = first.y + first.height;
-  const gapEnd = second.y;
+  const gapStart = second.y + second.height;
+  const gapEnd = first.y;
   if (gapEnd <= gapStart) {
     return false;
   }
@@ -1281,7 +1596,7 @@ function createVerticalParagraph(texts: readonly PdfText[]): GroupedParagraph {
     throw new Error("createVerticalParagraph requires at least one PdfText");
   }
 
-  const runs = [...texts].sort((a, b) => centerY(a) - centerY(b));
+  const runs = [...texts].sort((a, b) => centerY(b) - centerY(a));
   const first = runs[0];
   if (!first) {
     throw new Error("createVerticalParagraph requires at least one PdfText");
@@ -1290,6 +1605,7 @@ function createVerticalParagraph(texts: readonly PdfText[]): GroupedParagraph {
   return {
     runs,
     baselineY: getBaselineY(first),
+    inlineDirection: "ttb",
   };
 }
 
@@ -1303,7 +1619,7 @@ function splitVerticalColumnToParagraphs(args: {
     return [];
   }
 
-  const sorted = [...columnTexts].sort((a, b) => centerY(a) - centerY(b));
+  const sorted = [...columnTexts].sort((a, b) => centerY(b) - centerY(a));
   const paragraphs: GroupedParagraph[] = [];
   // eslint-disable-next-line no-restricted-syntax -- mutable paragraph accumulator while scanning a vertical column
   let current: PdfText[] = [sorted[0]!];
@@ -1312,7 +1628,7 @@ function splitVerticalColumnToParagraphs(args: {
     const prev = sorted[i - 1]!;
     const curr = sorted[i]!;
 
-    const gap = curr.y - (prev.y + prev.height);
+    const gap = prev.y - (curr.y + curr.height);
     const lineHeight = Math.max(prev.height, curr.height);
     const maxGap = lineHeight * options.verticalGapRatio;
     const hasBlocker = hasBlockingZoneBetweenVerticalTexts(prev, curr, blockingZones);
@@ -1346,7 +1662,7 @@ function groupVerticalTexts(args: {
     if (paragraphs.length === 0) {
       continue;
     }
-    blocks.push(createGroupedText(paragraphs));
+    blocks.push(createGroupedText(paragraphs, "vertical"));
   }
 
   return blocks;
@@ -1355,6 +1671,95 @@ function groupVerticalTexts(args: {
 // =============================================================================
 // Block Merging Functions
 // =============================================================================
+
+type LineGeometry = {
+  readonly minX: number;
+  readonly maxX: number;
+  readonly minY: number;
+  readonly maxY: number;
+  readonly width: number;
+  readonly height: number;
+  readonly centerX: number;
+  readonly charCount: number;
+};
+
+function getLineGeometry(line: GroupedParagraph): LineGeometry | null {
+  if (line.runs.length === 0) {
+    return null;
+  }
+
+  const minX = Math.min(...line.runs.map((run) => run.x));
+  const maxX = Math.max(...line.runs.map((run) => run.x + run.width));
+  const minY = Math.min(...line.runs.map((run) => run.y));
+  const maxY = Math.max(...line.runs.map((run) => run.y + run.height));
+  const compactText = line.runs.map((run) => run.text).join("").replace(/\s+/g, "");
+
+  return {
+    minX,
+    maxX,
+    minY,
+    maxY,
+    width: Math.max(1e-6, maxX - minX),
+    height: Math.max(1e-6, maxY - minY),
+    centerX: (minX + maxX) / 2,
+    charCount: Array.from(compactText).length,
+  };
+}
+
+function horizontalOverlapRatio(line1: LineGeometry, line2: LineGeometry): number {
+  const overlap = overlap1D({ a0: line1.minX, a1: line1.maxX, b0: line2.minX, b1: line2.maxX });
+  const denom = Math.min(line1.width, line2.width);
+  return overlap / Math.max(1e-6, denom);
+}
+
+function hasAlignedAnchors(line1: LineGeometry, line2: LineGeometry, referenceSize: number): boolean {
+  const anchorTolerance = Math.max(0.8, referenceSize * 0.85);
+  const leftDelta = Math.abs(line1.minX - line2.minX);
+  const rightDelta = Math.abs(line1.maxX - line2.maxX);
+  const centerDelta = Math.abs(line1.centerX - line2.centerX);
+  if (leftDelta <= anchorTolerance) {
+    return true;
+  }
+  if (rightDelta <= anchorTolerance) {
+    return true;
+  }
+  return centerDelta <= anchorTolerance * 0.75;
+}
+
+function isBodyLikeLine(line: LineGeometry, referenceSize: number): boolean {
+  const minimumInlineExtent = referenceSize * 6.5;
+  if (line.width >= minimumInlineExtent) {
+    return true;
+  }
+  return line.charCount >= 10;
+}
+
+function canMergeAcrossStyleShift(args: {
+  readonly line1: LineGeometry;
+  readonly line2: LineGeometry;
+  readonly referenceSize: number;
+  readonly verticalGap: number;
+  readonly lineHeight: number;
+}): boolean {
+  const { line1, line2, referenceSize, verticalGap, lineHeight } = args;
+  const widthRatio = Math.min(line1.width, line2.width) / Math.max(line1.width, line2.width);
+  if (widthRatio < 0.55) {
+    return false;
+  }
+
+  const anchorAligned = hasAlignedAnchors(line1, line2, referenceSize);
+  const overlapRatio = horizontalOverlapRatio(line1, line2);
+  if (!anchorAligned && overlapRatio < 0.18) {
+    return false;
+  }
+
+  if (!isBodyLikeLine(line1, referenceSize) || !isBodyLikeLine(line2, referenceSize)) {
+    return false;
+  }
+
+  const tightGapLimit = lineHeight * 0.55;
+  return verticalGap <= tightGapLimit;
+}
 
 /**
  * Check if two lines should be merged into same block.
@@ -1369,6 +1774,11 @@ function shouldMergeLines(
   if (!text1 || !text2) {
     return false;
   }
+  const line1Geometry = getLineGeometry(line1);
+  const line2Geometry = getLineGeometry(line2);
+  if (!line1Geometry || !line2Geometry) {
+    return false;
+  }
 
   // This function assumes input is ordered top-to-bottom (descending baselineY).
   // Never merge items on the same line or above.
@@ -1376,35 +1786,38 @@ function shouldMergeLines(
   if (baselineDelta <= 0) {
     return false;
   }
-
-  // Check font match
-  if (!hasSameStyle(text1, text2, options)) {
-    return false;
-  }
+  const referenceSize = Math.max(text1.fontSize, text2.fontSize);
+  const sameStyle = hasSameStyle(text1, text2, options);
 
   if (options.enableColumnSeparation) {
-    const minX1 = Math.min(...line1.runs.map((r) => r.x));
-    const maxX1 = Math.max(...line1.runs.map((r) => r.x + r.width));
-    const minX2 = Math.min(...line2.runs.map((r) => r.x));
-    const maxX2 = Math.max(...line2.runs.map((r) => r.x + r.width));
-
-    const w1 = Math.max(1e-6, maxX1 - minX1);
-    const w2 = Math.max(1e-6, maxX2 - minX2);
-    const ov = overlap1D({ a0: minX1, a1: maxX1, b0: minX2, b1: maxX2 });
-    const ovRatio = ov / Math.min(w1, w2);
+    const ovRatio = horizontalOverlapRatio(line1Geometry, line2Geometry);
+    const alignedAnchors = hasAlignedAnchors(line1Geometry, line2Geometry, referenceSize);
 
     // No meaningful horizontal overlap → likely different column / unrelated block.
-    if (ovRatio < 0.05) {
+    if (ovRatio < 0.05 && !alignedAnchors) {
       return false;
     }
   }
 
   // Check vertical distance
-  const lineHeight = Math.max(text1.height, text2.height);
+  const lineHeight = Math.max(line1Geometry.height, line2Geometry.height);
   const verticalGap = baselineDelta - lineHeight;
   const maxGap = lineHeight * options.verticalGapRatio;
+  if (verticalGap > maxGap) {
+    return false;
+  }
 
-  return verticalGap <= maxGap;
+  if (sameStyle) {
+    return true;
+  }
+
+  return canMergeAcrossStyleShift({
+    line1: line1Geometry,
+    line2: line2Geometry,
+    referenceSize,
+    verticalGap,
+    lineHeight,
+  });
 }
 
 /**

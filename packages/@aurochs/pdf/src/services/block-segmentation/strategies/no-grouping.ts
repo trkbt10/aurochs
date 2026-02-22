@@ -5,8 +5,8 @@
  * by creating one GroupedText per PdfText (no actual grouping).
  */
 
-import type { PdfText } from "../../domain/text";
-import type { GroupedText, TextGroupingFn } from "./types";
+import type { PdfText } from "../../../domain/text";
+import type { GroupedText, TextGroupingFn } from "../contracts/types";
 
 /**
  * Default grouping function that performs no grouping.

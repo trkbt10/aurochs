@@ -5,7 +5,7 @@
  * how individual PDF text elements are combined into logical blocks.
  */
 
-import type { PdfText } from "../../domain/text";
+import type { PdfText } from "../../../domain/text";
 
 /**
  * Bounding box for blocking zones (shapes/images that interrupt text flow).
@@ -69,12 +69,35 @@ export type TextBounds = {
   readonly height: number;
 };
 
+export type InlineDirection = "ltr" | "rtl" | "ttb";
+export type ParagraphAlignment = "left" | "center" | "right" | "unknown";
+
+/**
+ * Inference output for reconstructing a likely TextBox model from absolute PDF runs.
+ */
+export type TextLayoutInference = {
+  /** Dominant inline direction inferred from scripts/run order. */
+  readonly inlineDirection: InlineDirection;
+  /** Estimated paragraph alignment within the inferred TextBox. */
+  readonly alignment: ParagraphAlignment;
+  /** Confidence score in [0, 1]. */
+  readonly confidence: number;
+  /** Estimated container bounds used by alignment inference. */
+  readonly estimatedBounds: TextBounds;
+  /** Estimated free space before content in inline direction start side. */
+  readonly startPadding: number;
+  /** Estimated free space after content in inline direction end side. */
+  readonly endPadding: number;
+};
+
 /**
  * A logical group of text elements that will become a single TextBox.
  */
 export type GroupedText = {
   /** Bounding box encompassing all text in this group */
   readonly bounds: TextBounds;
+  /** Optional layout inference for alignment/direction-aware conversion. */
+  readonly layoutInference?: TextLayoutInference;
   /** Paragraphs within this group (each becomes a <a:p> in PPTX) */
   readonly paragraphs: readonly GroupedParagraph[];
 };
@@ -97,6 +120,8 @@ export type GroupedParagraph = {
   readonly runs: readonly PdfText[];
   /** Baseline Y coordinate in PDF points */
   readonly baselineY: number;
+  /** Dominant inline direction for this paragraph. */
+  readonly inlineDirection?: InlineDirection;
   /**
    * Line spacing to next paragraph.
    * Contains baseline distance and the font size of this line.
