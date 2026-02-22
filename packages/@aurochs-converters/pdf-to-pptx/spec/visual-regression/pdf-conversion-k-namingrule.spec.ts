@@ -28,6 +28,38 @@ function guessFontExtension(bytes: Uint8Array): "ttf" | "otf" {
 describe("PDF→PPTX visual regression: k-namingrule-dl.pdf", () => {
   const pdfPath = path.join(ROOT_DIR, "fixtures/samples/k-namingrule-dl.pdf");
   const slideNumber = 1;
+  const compareOrSkip = (args: {
+    readonly svg: string;
+    readonly snapshotName: string;
+    readonly pageNumber: number;
+    readonly fontFiles: readonly string[];
+  }): ReturnType<typeof compareSvgToPdfBaseline> | null => {
+    try {
+      return compareSvgToPdfBaseline({
+        svg: args.svg,
+        snapshotName: args.snapshotName,
+        slideNumber,
+        baseline: {
+          pdfPath,
+          pageNumber: args.pageNumber,
+          targetWidth: 960,
+          targetHeight: 540,
+          dpi: 144,
+          renderScale: 4,
+          background: { r: 255, g: 255, b: 255, a: 255 },
+        },
+        options: { threshold: 0.25, maxDiffPercent: 2.0, resvgFontFiles: args.fontFiles },
+      });
+    } catch (error) {
+      const msg = (error as Error)?.message ?? String(error);
+      if (msg.includes("pdftoppm failed") || msg.includes("Install poppler")) {
+        console.warn(`SKIPPED: ${msg}`);
+        return null;
+      }
+      throw error;
+    }
+  };
+
   const renderPdfPageToSvg = async (
     pageNumber: number,
     outPptxPath: string,
@@ -76,8 +108,10 @@ describe("PDF→PPTX visual regression: k-namingrule-dl.pdf", () => {
     const cleanupFonts = () => {
       try {
         fs.rmSync(dir, { recursive: true, force: true });
-      } catch {
-        // ignore
+      } catch (error) {
+        if (error instanceof Error) {
+          return;
+        }
       }
     };
 
@@ -94,34 +128,17 @@ describe("PDF→PPTX visual regression: k-namingrule-dl.pdf", () => {
     const outPptxPath = path.join(__dirname, `__output__/k-namingrule-dl-page${pageNumber}.pptx`);
     const { svg, fontFiles, cleanupFonts } = await renderPdfPageToSvg(pageNumber, outPptxPath);
 
-    // eslint-disable-next-line no-restricted-syntax
-    let compare: ReturnType<typeof compareSvgToPdfBaseline>;
-    try {
-      compare = compareSvgToPdfBaseline({
-        svg,
-        snapshotName,
-        slideNumber,
-        baseline: {
-          pdfPath,
-          pageNumber,
-          targetWidth: 960,
-          targetHeight: 540,
-          dpi: 144,
-          renderScale: 4,
-          background: { r: 255, g: 255, b: 255, a: 255 },
-        },
-        options: { threshold: 0.25, maxDiffPercent: 2.0, resvgFontFiles: fontFiles },
-      });
-    } catch (e) {
-      cleanupFonts();
-      const msg = (e as Error)?.message ?? String(e);
-      if (msg.includes("pdftoppm failed") || msg.includes("Install poppler")) {
-        console.warn(`SKIPPED: ${msg}`);
-        return;
-      }
-      throw e;
-    }
+    const compare = compareOrSkip({
+      svg,
+      snapshotName,
+      pageNumber,
+      fontFiles,
+    });
+
     cleanupFonts();
+    if (!compare) {
+      return;
+    }
 
     if (!compare.match) {
       console.log(`\n--- PDF conversion diff: ${snapshotName} slide ${slideNumber} ---`);

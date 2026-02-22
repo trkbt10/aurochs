@@ -27,7 +27,10 @@ function hasPdftoppm(): boolean {
   try {
     execFileSync("pdftoppm", ["-v"], { stdio: "ignore" });
     return true;
-  } catch {
+  } catch (error) {
+    if (error instanceof Error) {
+      return false;
+    }
     return false;
   }
 }

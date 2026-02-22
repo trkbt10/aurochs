@@ -159,6 +159,18 @@ function resizePng(png: PNG, targetWidth: number, targetHeight: number): PNG {
   return resized;
 }
 
+function parsePngAndResizeIfNeeded(args: {
+  readonly pngBytes: Uint8Array | Buffer;
+  readonly targetWidth: number;
+  readonly targetHeight: number;
+}): PNG {
+  const decoded = PNG.sync.read(args.pngBytes);
+  if (decoded.width === args.targetWidth && decoded.height === args.targetHeight) {
+    return decoded;
+  }
+  return resizePng(decoded, args.targetWidth, args.targetHeight);
+}
+
 /**
  * Compare SVG output against baseline PNG snapshot
  */
@@ -190,8 +202,11 @@ export function compareSvgToSnapshot(
 
   // Convert SVG to PNG at baseline dimensions
   const actualPng = svgToPng(svg, baseline.width, options);
-  // eslint-disable-next-line no-restricted-syntax
-  let actual: PNG = PNG.sync.read(actualPng);
+  const actual = parsePngAndResizeIfNeeded({
+    pngBytes: actualPng,
+    targetWidth: baseline.width,
+    targetHeight: baseline.height,
+  });
 
   // Save actual output for debugging
   const actualPath = path.join(
@@ -199,11 +214,6 @@ export function compareSvgToSnapshot(
     `${snapshotName}-slide-${slideNumber}.png`
   );
   fs.writeFileSync(actualPath, actualPng);
-
-  // Resize if dimensions don't match
-  if (actual.width !== baseline.width || actual.height !== baseline.height) {
-    actual = resizePng(actual, baseline.width, baseline.height);
-  }
 
   // Create diff image
   const diff = new PNG({ width: baseline.width, height: baseline.height });
@@ -317,7 +327,10 @@ function fileExists(p: string): boolean {
   try {
     fs.accessSync(p);
     return true;
-  } catch {
+  } catch (error) {
+    if (error instanceof Error) {
+      return false;
+    }
     return false;
   }
 }
@@ -455,11 +468,11 @@ export function compareSvgToPdfBaseline(
   savePng(fittedBaseline, baselinePath);
 
   const actualPngHigh = svgToPng(svg, scaledTargetWidth, options);
-  // eslint-disable-next-line no-restricted-syntax
-  let actualHigh: PNG = PNG.sync.read(actualPngHigh);
-  if (actualHigh.width !== scaledTargetWidth || actualHigh.height !== scaledTargetHeight) {
-    actualHigh = resizePng(actualHigh, scaledTargetWidth, scaledTargetHeight);
-  }
+  const actualHigh = parsePngAndResizeIfNeeded({
+    pngBytes: actualPngHigh,
+    targetWidth: scaledTargetWidth,
+    targetHeight: scaledTargetHeight,
+  });
   const actual = scaleInt === 1 ? actualHigh : resizePng(actualHigh, baseline.targetWidth, baseline.targetHeight);
 
   const actualPath = path.join(OUTPUT_DIR, `${snapshotName}-slide-${slideNumber}.png`);
@@ -480,9 +493,7 @@ export function compareSvgToPdfBaseline(
   const diffPercent = (diffPixels / totalPixels) * 100;
   const match = diffPercent <= maxDiffPercent;
 
-  const diffImagePath: string | null = diffPixels > 0
-    ? path.join(DIFF_DIR, `${snapshotName}-slide-${slideNumber}-diff.png`)
-    : null;
+  const diffImagePath = diffPixels > 0 ? path.join(DIFF_DIR, `${snapshotName}-slide-${slideNumber}-diff.png`) : null;
   if (diffImagePath) {
     savePng(diff, diffImagePath);
   }
@@ -533,8 +544,11 @@ export function compareWithDetails(
 
   // Convert SVG to PNG at baseline dimensions
   const actualPng = svgToPng(svg, baseline.width);
-  // eslint-disable-next-line no-restricted-syntax
-  let actual: PNG = PNG.sync.read(actualPng);
+  const actual = parsePngAndResizeIfNeeded({
+    pngBytes: actualPng,
+    targetWidth: baseline.width,
+    targetHeight: baseline.height,
+  });
 
   // Save actual output for debugging
   const actualPath = path.join(
@@ -542,11 +556,6 @@ export function compareWithDetails(
     `${snapshotName}-slide-${slideNumber}.png`
   );
   fs.writeFileSync(actualPath, actualPng);
-
-  // Resize if dimensions don't match
-  if (actual.width !== baseline.width || actual.height !== baseline.height) {
-    actual = resizePng(actual, baseline.width, baseline.height);
-  }
 
   // Create diff image
   const diff = new PNG({ width: baseline.width, height: baseline.height });
