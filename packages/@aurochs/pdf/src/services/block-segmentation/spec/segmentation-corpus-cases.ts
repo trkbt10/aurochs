@@ -14,7 +14,8 @@ export type SegmentationCorpusCaseId =
   | "vertical-three-columns"
   | "kanpo-20260219c000320001"
   | "kanpo-20260219g000350002"
-  | "kanpo-20260219h016500001";
+  | "kanpo-20260219h016500001"
+  | "kanpo-20241224jokenhenko";
 
 export type SegmentationCorpusExpectation = {
   readonly writingMode: "horizontal" | "vertical";
@@ -161,6 +162,17 @@ export const SEGMENTATION_CORPUS_CASES: readonly SegmentationCorpusCase[] = [
       minGroups: 8,
       maxGroups: 50,
       requiredTokens: [],
+    },
+  },
+  {
+    id: "kanpo-20241224jokenhenko",
+    title: "官報 20241224jokenhenko",
+    description: "官報情報検索サービスのお知らせ文書（横書き）のグルーピングを確認する。",
+    expectation: {
+      writingMode: "horizontal",
+      minGroups: 10,
+      maxGroups: 60,
+      requiredTokens: ["新しい「官報情報検索サービス」ご提供についてのお知らせ", "１ 変更内容について"],
     },
   },
 ] as const;

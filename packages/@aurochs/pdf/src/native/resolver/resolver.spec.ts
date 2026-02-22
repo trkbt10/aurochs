@@ -160,4 +160,53 @@ describe("PdfResolver (ObjStm)", () => {
     const resolver = createPdfResolver(objStmBytes, { entries, trailer });
     expect(() => resolver.getObject(11)).toThrow(/missing object index 1/);
   });
+
+  it("does not re-decrypt compressed object payloads after ObjStm decryption", () => {
+    const headerText = "10 0 ";
+    const objectBody = "<< /K (abc) >>";
+    const decoded = encodeLatin1(headerText + objectBody);
+    const first = encodeLatin1(headerText).length;
+
+    const objStmBytes = new Uint8Array([
+      ...encodeLatin1(
+        `5 0 obj\n` +
+          `<< /Type /ObjStm /N 1 /First ${first} /Length ${decoded.length} >>\n` +
+          `stream\n`,
+      ),
+      ...decoded,
+      ...encodeLatin1("\nendstream\nendobj\n"),
+    ]);
+
+    const trailer = asDict(new Map());
+    const entries = new Map<number, { type: 0 } | { type: 1; offset: number; gen: number } | { type: 2; objStm: number; index: number }>([
+      [5, { type: 1, offset: 0, gen: 0 }],
+      [10, { type: 2, objStm: 5, index: 0 }],
+    ]);
+
+    const resolver = createPdfResolver(objStmBytes, { entries, trailer }, {
+      decrypter: {
+        decryptBytes: ({ bytes, options }) => {
+          if (options?.kind === "stream") {
+            return bytes;
+          }
+          throw new Error("compressed object values must not be decrypted twice");
+        },
+      },
+    });
+
+    const obj = resolver.getObject(10);
+    expect(obj).toEqual({
+      type: "dict",
+      map: new Map([
+        [
+          "K",
+          {
+            type: "string",
+            bytes: encodeLatin1("abc"),
+            text: "abc",
+          },
+        ],
+      ]),
+    });
+  });
 });

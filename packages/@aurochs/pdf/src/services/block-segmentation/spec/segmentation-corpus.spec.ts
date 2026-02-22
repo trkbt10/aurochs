@@ -42,6 +42,7 @@ const CASE_TO_FIXTURE_BASENAME: Record<SegmentationCorpusCase["id"], string> = {
   "kanpo-20260219c000320001": "20260219c000320001.pdf",
   "kanpo-20260219g000350002": "20260219g000350002.pdf",
   "kanpo-20260219h016500001": "20260219h016500001.pdf",
+  "kanpo-20241224jokenhenko": "20241224jokenhenko.pdf",
 };
 
 function getFixturePath(caseId: SegmentationCorpusCase["id"]): string {
@@ -53,7 +54,7 @@ describe("segmentation corpus", () => {
   const runCase = async (scenario: SegmentationCorpusCase): Promise<void> => {
     const fixturePath = getFixturePath(scenario.id);
     const bytes = readFileSync(fixturePath);
-    const parsed = await parsePdf(bytes);
+    const parsed = await parsePdf(bytes, { encryption: { mode: "password", password: "" } });
     const page = parsed.pages[0];
     if (!page) {
       throw new Error(`No page parsed for scenario: ${scenario.id}`);

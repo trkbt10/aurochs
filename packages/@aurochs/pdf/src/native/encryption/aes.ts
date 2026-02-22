@@ -278,7 +278,9 @@ function invMixColumns(state: Uint8Array): void {
 
 function aesEncryptBlock(expandedKey: Uint8Array, rounds: number, block: Uint8Array): Uint8Array {
   if (block.length !== 16) {throw new Error(`AES block must be 16 bytes (got ${block.length})`);}
-  const state = block.slice();
+  // `Buffer#slice` returns a view, not a copy. Always materialize a new Uint8Array
+  // so block transforms cannot mutate caller-owned ciphertext/plaintext buffers.
+  const state = Uint8Array.from(block);
   addRoundKey(state, expandedKey, 0);
   for (let round = 1; round <= rounds - 1; round += 1) {
     subBytes(state);
@@ -294,7 +296,9 @@ function aesEncryptBlock(expandedKey: Uint8Array, rounds: number, block: Uint8Ar
 
 function aesDecryptBlock(expandedKey: Uint8Array, rounds: number, block: Uint8Array): Uint8Array {
   if (block.length !== 16) {throw new Error(`AES block must be 16 bytes (got ${block.length})`);}
-  const state = block.slice();
+  // `Buffer#slice` returns a view, not a copy. Always materialize a new Uint8Array
+  // so block transforms cannot mutate caller-owned ciphertext/plaintext buffers.
+  const state = Uint8Array.from(block);
   addRoundKey(state, expandedKey, rounds);
   for (let round = rounds - 1; round >= 1; round -= 1) {
     invShiftRows(state);

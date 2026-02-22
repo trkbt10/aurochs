@@ -236,7 +236,7 @@ export async function visualizeBlockSegmentation(args: VisualizeSegmentationArgs
   }
 
   const bytes = readFileSync(args.pdfPath);
-  const parsed = await parsePdf(bytes, { pages: [args.pageNumber], encryption: { mode: "ignore" } });
+  const parsed = await parsePdf(bytes, { pages: [args.pageNumber], encryption: { mode: "password", password: "" } });
   const page = parsed.pages[0];
   if (!page) {
     throw new Error(`visualizeBlockSegmentation: page ${args.pageNumber} not found`);

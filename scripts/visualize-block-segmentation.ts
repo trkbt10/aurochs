@@ -975,7 +975,7 @@ function buildOverlaySvg(args: {
 
 async function buildOriginalComparisonArtifacts(cli: CliArgs): Promise<OverlaySummary> {
   const bytes = readFileSync(cli.pdfPath);
-  const parsed = await parsePdf(bytes, { pages: [cli.pageNumber], encryption: { mode: "ignore" } });
+  const parsed = await parsePdf(bytes, { pages: [cli.pageNumber], encryption: { mode: "password", password: "" } });
   const page = parsed.pages[0];
   if (!page) {
     throw new Error(`Page ${cli.pageNumber} not found: ${cli.pdfPath}`);

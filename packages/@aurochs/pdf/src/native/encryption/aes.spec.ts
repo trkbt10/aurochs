@@ -87,6 +87,23 @@ describe("aes128Cbc* (PKCS#7)", () => {
     const oursCiphertext = aes128CbcEncryptNoPadWithIv(key, iv, plaintext);
     expect(toHex(oursCiphertext)).toBe(expectedCiphertext.toString("hex"));
   });
+
+  it("decrypts correctly when iv+ciphertext is a Buffer view", () => {
+    const key = fromHex("5575e1ee35484fac1c2ddff064a09405");
+    const iv = fromHex("0bda9b1c48d1a3a57930a0a40e42219d");
+    const plaintext = fromHex("68deac5a4d8f143710fd2b3ec285f177");
+
+    const cipher = createCipheriv("aes-128-cbc", Buffer.from(key), Buffer.from(iv));
+    cipher.setAutoPadding(false);
+    const ciphertext = Buffer.concat([cipher.update(Buffer.from(plaintext)), cipher.final()]);
+    const payload = Buffer.concat([Buffer.from(iv), ciphertext]);
+
+    const oursPadded = aes128CbcDecryptNoUnpad(key, payload);
+    const expectedDec = createDecipheriv("aes-128-cbc", Buffer.from(key), Buffer.from(iv));
+    expectedDec.setAutoPadding(false);
+    const expectedPadded = Buffer.concat([expectedDec.update(ciphertext), expectedDec.final()]);
+    expect(toHex(oursPadded)).toBe(expectedPadded.toString("hex"));
+  });
 });
 
 describe("aes256Cbc* (PKCS#7)", () => {

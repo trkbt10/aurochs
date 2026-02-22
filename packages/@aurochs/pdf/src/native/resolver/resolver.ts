@@ -112,14 +112,17 @@ export function createPdfResolver(
       throw new Error(`Missing xref entry for object ${objNum}`);
     }
 
-    const { value, gen } = resolveXRefEntry(objNum, entry);
-    const decrypted = decryptIfNeeded(value, objNum, gen);
+    const { value, gen, alreadyDecrypted } = resolveXRefEntry(objNum, entry);
+    const decrypted = alreadyDecrypted ? value : decryptIfNeeded(value, objNum, gen);
 
     indirectCache.set(objNum, decrypted);
     return decrypted;
   }
 
-  const resolveXRefEntry = (objNum: number, entry: XRefEntry): { readonly value: PdfObject; readonly gen: number } => {
+  const resolveXRefEntry = (
+    objNum: number,
+    entry: XRefEntry,
+  ): { readonly value: PdfObject; readonly gen: number; readonly alreadyDecrypted: boolean } => {
     if (entry.type === 0) {
       throw new Error(`Object ${objNum} is free`);
     }
@@ -128,10 +131,12 @@ export function createPdfResolver(
       if (obj.obj !== objNum) {
         // Some PDFs may have padding; still trust parsed obj.
       }
-      return { value: obj.value, gen: entry.gen };
+      return { value: obj.value, gen: entry.gen, alreadyDecrypted: false };
     }
     if (entry.type === 2) {
-      return { value: getCompressedObject(entry.objStm, entry.index), gen: 0 };
+      // Compressed objects are parsed from a decrypted ObjStm stream payload.
+      // Applying decryption again would double-decrypt embedded strings.
+      return { value: getCompressedObject(entry.objStm, entry.index), gen: 0, alreadyDecrypted: true };
     }
     const exhaustive: never = entry;
     throw new Error(`Unsupported xref entry: ${String(exhaustive)}`);
