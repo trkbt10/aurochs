@@ -1025,45 +1025,162 @@ function xBoundariesFromTable(inferred: InferredTable): readonly number[] {
   return [first.x0, ...inferred.columns.map((column) => column.x1)];
 }
 
+function overlapLength(args: {
+  readonly a0: number;
+  readonly a1: number;
+  readonly b0: number;
+  readonly b1: number;
+}): number {
+  const { a0, a1, b0, b1 } = args;
+  const lo = Math.max(Math.min(a0, a1), Math.min(b0, b1));
+  const hi = Math.min(Math.max(a0, a1), Math.max(b0, b1));
+  return Math.max(0, hi - lo);
+}
+
+function deriveColumnPlacement(args: {
+  readonly inferred: InferredTable;
+  readonly cell: InferredTable["rows"][number]["cells"][number];
+}): { readonly colStart: number; readonly colSpan: number } {
+  const { inferred, cell } = args;
+  const overlaps = inferred.columns
+    .map((column, colIndex) => ({
+      colIndex,
+      overlap: overlapLength({
+        a0: cell.x0,
+        a1: cell.x1,
+        b0: column.x0,
+        b1: column.x1,
+      }),
+      colWidth: Math.max(1e-6, column.x1 - column.x0),
+    }))
+    .filter((entry) => entry.overlap / entry.colWidth >= 0.15 || entry.overlap >= 1);
+
+  if (overlaps.length > 0) {
+    const starts = overlaps.map((entry) => entry.colIndex);
+    const minCol = Math.min(...starts);
+    const maxCol = Math.max(...starts);
+    return {
+      colStart: minCol,
+      colSpan: Math.max(1, maxCol - minCol + 1),
+    };
+  }
+
+  return {
+    colStart: Math.max(0, Math.min(inferred.columns.length - 1, cell.colStart)),
+    colSpan: Math.max(1, cell.colSpan),
+  };
+}
+
+type RowCellDraft = {
+  readonly cell: InferredTable["rows"][number]["cells"][number];
+  readonly colStart: number;
+  readonly colSpan: number;
+  readonly x0: number;
+  readonly x1: number;
+};
+
+function coveredColumnCount(rowCells: readonly RowCellDraft[], colCount: number): number {
+  const covered = new Set<number>();
+  for (const rowCell of rowCells) {
+    const end = Math.min(colCount, rowCell.colStart + Math.max(1, rowCell.colSpan));
+    for (let col = rowCell.colStart; col < end; col++) {
+      covered.add(col);
+    }
+  }
+  return covered.size;
+}
+
+function normalizeSparseRowCells(args: {
+  readonly rowCells: readonly RowCellDraft[];
+  readonly colCount: number;
+}): readonly RowCellDraft[] {
+  const { rowCells, colCount } = args;
+  if (rowCells.length === 0) {
+    return rowCells;
+  }
+  if (rowCells.length * 2 > colCount) {
+    return rowCells;
+  }
+  if (rowCells.some((rowCell) => rowCell.colSpan > 1)) {
+    return rowCells;
+  }
+  if (coveredColumnCount(rowCells, colCount) >= colCount) {
+    return rowCells;
+  }
+
+  const sorted = [...rowCells].sort((a, b) => a.x0 - b.x0);
+  const spanBase = Math.max(1, Math.floor(colCount / sorted.length));
+  return sorted.map((rowCell, index) => {
+    const remainingCols = Math.max(1, colCount - index * spanBase);
+    const remainingCells = Math.max(1, sorted.length - index);
+    const adaptiveSpan = Math.max(1, Math.floor(remainingCols / remainingCells));
+    const colStart = Math.min(colCount - 1, index * spanBase);
+    const maxSpan = Math.max(1, colCount - colStart);
+    const colSpan = Math.min(maxSpan, adaptiveSpan);
+    return {
+      ...rowCell,
+      colStart,
+      colSpan,
+    };
+  });
+}
+
 function toTableCells(inferred: InferredTable): readonly TableVisualizationCell[] {
   const xBounds = xBoundariesFromTable(inferred);
   const unique = new Set<string>();
   const rows = inferred.rows;
 
-  return rows.flatMap((row, rowIndex) =>
-    row.cells.flatMap((cell) => {
-      const key = `${rowIndex}:${cell.colStart}:${cell.colSpan}:${cell.rowSpan}`;
+  return rows.flatMap((row, rowIndex) => {
+    const drafts = row.cells.map((cell) => {
+      const placement = deriveColumnPlacement({ inferred, cell });
+      const colStart = placement.colStart;
+      const colEnd = Math.max(colStart + 1, Math.min(inferred.columns.length, colStart + placement.colSpan));
+      return {
+        cell,
+        colStart,
+        colSpan: Math.max(1, colEnd - colStart),
+        x0: cell.x0,
+        x1: cell.x1,
+      };
+    });
+    const normalizedDrafts = normalizeSparseRowCells({
+      rowCells: drafts,
+      colCount: inferred.columns.length,
+    });
+
+    return normalizedDrafts.flatMap((draft) => {
+      const key = `${rowIndex}:${draft.colStart}:${draft.colSpan}:${draft.cell.rowSpan}`;
       if (unique.has(key)) {
         return [];
       }
       unique.add(key);
-      const colStart = Math.max(0, Math.min(inferred.columns.length - 1, cell.colStart));
-      const colEnd = Math.max(colStart + 1, Math.min(inferred.columns.length, colStart + Math.max(1, cell.colSpan)));
+      const colStart = draft.colStart;
+      const colEnd = Math.max(colStart + 1, Math.min(inferred.columns.length, colStart + draft.colSpan));
       const spanEnd = Math.max(
         rowIndex,
-        Math.min(rows.length - 1, rowIndex + Math.max(1, cell.rowSpan) - 1),
+        Math.min(rows.length - 1, rowIndex + Math.max(1, draft.cell.rowSpan) - 1),
       );
-      const x0 = xBounds[colStart] ?? inferred.bounds.x;
-      const x1 = xBounds[colEnd] ?? inferred.bounds.x + inferred.bounds.width;
+      const x0 = xBounds[colStart] ?? draft.cell.x0;
+      const x1 = xBounds[colEnd] ?? draft.cell.x1;
       const yTop = rows[rowIndex]?.y1 ?? row.y1;
       const yBottom = rows[spanEnd]?.y0 ?? row.y0;
-      const runCount = cell.runsByLine.reduce((sum, lineRuns) => sum + lineRuns.length, 0);
+      const runCount = draft.cell.runsByLine.reduce((sum, lineRuns) => sum + lineRuns.length, 0);
       return [{
         rowIndex,
         colStart,
-        colSpan: Math.max(1, cell.colSpan),
-        rowSpan: Math.max(1, cell.rowSpan),
+        colSpan: Math.max(1, draft.colSpan),
+        rowSpan: Math.max(1, draft.cell.rowSpan),
         x0,
         y0: Math.min(yBottom, yTop),
         x1,
         y1: Math.max(yBottom, yTop),
-        alignment: cell.alignment,
-        lineCount: cell.runsByLine.length,
+        alignment: draft.cell.alignment,
+        lineCount: draft.cell.runsByLine.length,
         runCount,
-        preview: toCellPreview(cell.runsByLine),
+        preview: toCellPreview(draft.cell.runsByLine),
       }];
-    })
-  );
+    });
+  });
 }
 
 type TableSelectionArgs = {
@@ -1154,6 +1271,480 @@ function overlapRatioBySmaller(a: Rect, b: Rect): number {
   return overlapArea(a, b) / minArea;
 }
 
+function projectValue(args: {
+  readonly value: number;
+  readonly fromStart: number;
+  readonly fromLength: number;
+  readonly toStart: number;
+  readonly toLength: number;
+}): number {
+  const { value, fromStart, fromLength, toStart, toLength } = args;
+  if (Math.abs(fromLength) < 1e-6) {
+    return toStart;
+  }
+  const ratio = (value - fromStart) / fromLength;
+  return toStart + ratio * toLength;
+}
+
+type AxisSegment = {
+  readonly coord: number;
+  readonly start: number;
+  readonly end: number;
+};
+
+type RegionRuleLines = {
+  readonly xBoundaries: readonly number[];
+  readonly yBoundaries: readonly number[];
+};
+
+function clusterCenters(args: { readonly values: readonly number[]; readonly eps: number }): readonly number[] {
+  const { values, eps } = args;
+  if (values.length === 0) {
+    return [];
+  }
+  const sorted = [...values].sort((a, b) => a - b);
+  const groups = sorted.reduce(
+    (acc, value) => {
+      const last = acc[acc.length - 1];
+      if (!last) {
+        return [[value]];
+      }
+      if (Math.abs(value - (last[last.length - 1] ?? value)) <= eps) {
+        return [...acc.slice(0, -1), [...last, value]];
+      }
+      return [...acc, [value]];
+    },
+    [] as number[][],
+  );
+  return groups.map((group) => group.reduce((sum, value) => sum + value, 0) / group.length);
+}
+
+function clipInterval(args: {
+  readonly start: number;
+  readonly end: number;
+  readonly min: number;
+  readonly max: number;
+}): { readonly start: number; readonly end: number } | null {
+  const { start, end, min, max } = args;
+  const lo = Math.max(min, Math.min(start, end));
+  const hi = Math.min(max, Math.max(start, end));
+  if (hi <= lo) {
+    return null;
+  }
+  return { start: lo, end: hi };
+}
+
+function unionLength(intervals: readonly { readonly start: number; readonly end: number }[]): number {
+  if (intervals.length === 0) {
+    return 0;
+  }
+  const sorted = [...intervals].sort((a, b) => a.start - b.start);
+  const initial = {
+    total: 0,
+    currentStart: sorted[0]!.start,
+    currentEnd: sorted[0]!.end,
+  };
+  const folded = sorted.slice(1).reduce((state, interval) => {
+    if (interval.start <= state.currentEnd) {
+      return {
+        ...state,
+        currentEnd: Math.max(state.currentEnd, interval.end),
+      };
+    }
+    return {
+      total: state.total + Math.max(0, state.currentEnd - state.currentStart),
+      currentStart: interval.start,
+      currentEnd: interval.end,
+    };
+  }, initial);
+  return folded.total + Math.max(0, folded.currentEnd - folded.currentStart);
+}
+
+function extractRuleSegmentsFromPath(path: PdfPath): {
+  readonly vertical: readonly AxisSegment[];
+  readonly horizontal: readonly AxisSegment[];
+} {
+  const lineWidth = Math.max(0.1, path.graphicsState.lineWidth || 1);
+  const half = lineWidth / 2;
+  const vertical: AxisSegment[] = [];
+  const horizontal: AxisSegment[] = [];
+
+  // eslint-disable-next-line no-restricted-syntax -- path command traversal keeps current point state
+  let current: { readonly x: number; readonly y: number } | null = null;
+
+  const addLineSegment = (args: { readonly x0: number; readonly y0: number; readonly x1: number; readonly y1: number }): void => {
+    const { x0, y0, x1, y1 } = args;
+    if (Math.abs(x1 - x0) <= 0.05 && Math.abs(y1 - y0) > 0.5) {
+      vertical.push({
+        coord: (x0 + x1) / 2,
+        start: Math.min(y0, y1) - half,
+        end: Math.max(y0, y1) + half,
+      });
+      return;
+    }
+    if (Math.abs(y1 - y0) <= 0.05 && Math.abs(x1 - x0) > 0.5) {
+      horizontal.push({
+        coord: (y0 + y1) / 2,
+        start: Math.min(x0, x1) - half,
+        end: Math.max(x0, x1) + half,
+      });
+    }
+  };
+
+  for (const op of path.operations) {
+    if (op.type === "moveTo") {
+      current = { x: op.point.x, y: op.point.y };
+      continue;
+    }
+    if (op.type === "lineTo") {
+      if (!current) {
+        current = { x: op.point.x, y: op.point.y };
+        continue;
+      }
+      addLineSegment({
+        x0: current.x,
+        y0: current.y,
+        x1: op.point.x,
+        y1: op.point.y,
+      });
+      current = { x: op.point.x, y: op.point.y };
+      continue;
+    }
+    if (op.type === "rect") {
+      const x0 = op.x;
+      const y0 = op.y;
+      const x1 = op.x + op.width;
+      const y1 = op.y + op.height;
+      const width = Math.abs(op.width);
+      const height = Math.abs(op.height);
+      if (width >= height * 8 && width > 0.5) {
+        horizontal.push({
+          coord: (y0 + y1) / 2,
+          start: Math.min(x0, x1),
+          end: Math.max(x0, x1),
+        });
+      }
+      if (height >= width * 8 && height > 0.5) {
+        vertical.push({
+          coord: (x0 + x1) / 2,
+          start: Math.min(y0, y1),
+          end: Math.max(y0, y1),
+        });
+      }
+      continue;
+    }
+    if (op.type === "curveTo" || op.type === "curveToV" || op.type === "curveToY") {
+      current = { x: op.end.x, y: op.end.y };
+    }
+  }
+
+  return { vertical, horizontal };
+}
+
+function coverageRatioForSegments(args: {
+  readonly segments: readonly AxisSegment[];
+  readonly coord: number;
+  readonly coordTolerance: number;
+  readonly spanMin: number;
+  readonly spanMax: number;
+}): number {
+  const { segments, coord, coordTolerance, spanMin, spanMax } = args;
+  const clipped = segments
+    .filter((segment) => Math.abs(segment.coord - coord) <= coordTolerance)
+    .flatMap((segment) => {
+      const interval = clipInterval({
+        start: segment.start,
+        end: segment.end,
+        min: spanMin,
+        max: spanMax,
+      });
+      if (!interval) {
+        return [];
+      }
+      return [interval];
+    });
+  const covered = unionLength(clipped);
+  const total = Math.max(1e-6, spanMax - spanMin);
+  return covered / total;
+}
+
+function collectRegionRuleLines(args: {
+  readonly pagePaths: readonly PdfPath[];
+  readonly region: TableRegion;
+}): RegionRuleLines | null {
+  const { pagePaths, region } = args;
+  const rect = toRectFromRegion(region);
+  if (rect.width <= 0 || rect.height <= 0) {
+    return null;
+  }
+
+  const rawSegments = pagePaths.flatMap((path) => {
+    const segments = extractRuleSegmentsFromPath(path);
+    return [{ type: "v" as const, segments: segments.vertical }, { type: "h" as const, segments: segments.horizontal }];
+  });
+  const verticalSegments = rawSegments
+    .filter((entry) => entry.type === "v")
+    .flatMap((entry) => entry.segments)
+    .flatMap((segment) => {
+      const clipped = clipInterval({
+        start: segment.start,
+        end: segment.end,
+        min: region.y0,
+        max: region.y1,
+      });
+      if (!clipped) {
+        return [];
+      }
+      if (segment.coord < region.x0 - 2 || segment.coord > region.x1 + 2) {
+        return [];
+      }
+      return [{
+        coord: segment.coord,
+        start: clipped.start,
+        end: clipped.end,
+      }];
+    });
+  const horizontalSegments = rawSegments
+    .filter((entry) => entry.type === "h")
+    .flatMap((entry) => entry.segments)
+    .flatMap((segment) => {
+      const clipped = clipInterval({
+        start: segment.start,
+        end: segment.end,
+        min: region.x0,
+        max: region.x1,
+      });
+      if (!clipped) {
+        return [];
+      }
+      if (segment.coord < region.y0 - 2 || segment.coord > region.y1 + 2) {
+        return [];
+      }
+      return [{
+        coord: segment.coord,
+        start: clipped.start,
+        end: clipped.end,
+      }];
+    });
+
+  const eps = Math.max(0.9, Math.min(rect.width, rect.height) * 0.006);
+  const xClusters = clusterCenters({
+    values: verticalSegments.map((segment) => segment.coord),
+    eps,
+  });
+  const yClusters = clusterCenters({
+    values: horizontalSegments.map((segment) => segment.coord),
+    eps,
+  });
+  const xCandidates = xClusters.filter((coord) =>
+    coverageRatioForSegments({
+      segments: verticalSegments,
+      coord,
+      coordTolerance: eps * 1.25,
+      spanMin: region.y0,
+      spanMax: region.y1,
+    }) >= 0.45
+  );
+  const yCandidates = yClusters.filter((coord) =>
+    coverageRatioForSegments({
+      segments: horizontalSegments,
+      coord,
+      coordTolerance: eps * 1.25,
+      spanMin: region.x0,
+      spanMax: region.x1,
+    }) >= 0.45
+  );
+
+  const xBoundaries = clusterCenters({
+    values: [region.x0, ...xCandidates, region.x1],
+    eps,
+  }).sort((a, b) => a - b);
+  const yAsc = clusterCenters({
+    values: [region.y0, ...yCandidates, region.y1],
+    eps,
+  }).sort((a, b) => a - b);
+  const yBoundaries = [...yAsc].sort((a, b) => b - a);
+
+  if (xBoundaries.length < 2 || yBoundaries.length < 2) {
+    return null;
+  }
+  return { xBoundaries, yBoundaries };
+}
+
+function nearestValue(args: { readonly value: number; readonly candidates: readonly number[] }): number {
+  const { value, candidates } = args;
+  const first = candidates[0];
+  if (first === undefined) {
+    return value;
+  }
+  return candidates.reduce((best, current) => {
+    const bestDiff = Math.abs(best - value);
+    const currentDiff = Math.abs(current - value);
+    return currentDiff < bestDiff ? current : best;
+  }, first);
+}
+
+function alignBoundariesByIndex(args: {
+  readonly projected: readonly number[];
+  readonly rules: readonly number[];
+}): readonly number[] {
+  const { projected, rules } = args;
+  if (rules.length < 2 || projected.length < 2) {
+    return projected;
+  }
+  if (rules.length >= projected.length) {
+    const aligned = projected.map((_, index) => {
+      const ratio = index / Math.max(1, projected.length - 1);
+      const ruleIndex = Math.round(ratio * (rules.length - 1));
+      return rules[ruleIndex] ?? projected[index]!;
+    });
+    const uniqCount = new Set(aligned.map((value) => value.toFixed(4))).size;
+    return uniqCount === aligned.length ? aligned : projected;
+  }
+  const mapped = projected.map((value) => nearestValue({ value, candidates: rules }));
+  const uniqCount = new Set(mapped.map((value) => value.toFixed(4))).size;
+  return uniqCount === mapped.length ? mapped : projected;
+}
+
+function alignBoundariesWithOptionalRules(args: {
+  readonly projected: readonly number[];
+  readonly rules: readonly number[] | null | undefined;
+}): readonly number[] {
+  const { projected, rules } = args;
+  if (!rules) {
+    return projected;
+  }
+  return alignBoundariesByIndex({ projected, rules });
+}
+
+function deriveColumnBoundariesFromTable(table: TableVisualization): readonly number[] {
+  const left = table.bounds.x;
+  const right = table.bounds.x + table.bounds.width;
+  return Array.from({ length: table.colCount + 1 }, (_, index) => {
+    const cellValues = table.cells.flatMap((cell) => {
+      const values: number[] = [];
+      if (cell.colStart === index) {
+        values.push(cell.x0);
+      }
+      if (cell.colStart + cell.colSpan === index) {
+        values.push(cell.x1);
+      }
+      return values;
+    });
+    const edgeValues = [
+      ...(index === 0 ? [left] : []),
+      ...(index === table.colCount ? [right] : []),
+    ];
+    const values = [...cellValues, ...edgeValues];
+    if (values.length > 0) {
+      return quantile(values, 0.5);
+    }
+    const ratio = index / Math.max(1, table.colCount);
+    return left + (right - left) * ratio;
+  });
+}
+
+function deriveRowBoundariesFromTable(table: TableVisualization): readonly number[] {
+  const top = table.bounds.y + table.bounds.height;
+  const bottom = table.bounds.y;
+  return Array.from({ length: table.rowCount + 1 }, (_, index) => {
+    const cellValues = table.cells.flatMap((cell) => {
+      const values: number[] = [];
+      if (cell.rowIndex === index) {
+        values.push(cell.y1);
+      }
+      if (cell.rowIndex + cell.rowSpan === index) {
+        values.push(cell.y0);
+      }
+      return values;
+    });
+    const edgeValues = [
+      ...(index === 0 ? [top] : []),
+      ...(index === table.rowCount ? [bottom] : []),
+    ];
+    const values = [...cellValues, ...edgeValues];
+    if (values.length > 0) {
+      return quantile(values, 0.5);
+    }
+    const ratio = index / Math.max(1, table.rowCount);
+    return top - (top - bottom) * ratio;
+  });
+}
+
+function projectTableToRegion(args: {
+  readonly table: TableVisualization;
+  readonly region: TableRegion;
+  readonly pagePaths: readonly PdfPath[];
+}): TableVisualization {
+  const { table, region, pagePaths } = args;
+  const from = table.bounds;
+  const to = toRectFromRegion(region);
+  if (Math.abs(from.width) < 1e-6 || Math.abs(from.height) < 1e-6) {
+    return table;
+  }
+
+  const projectX = (value: number): number =>
+    projectValue({
+      value,
+      fromStart: from.x,
+      fromLength: from.width,
+      toStart: to.x,
+      toLength: to.width,
+    });
+  const projectY = (value: number): number =>
+    projectValue({
+      value,
+      fromStart: from.y,
+      fromLength: from.height,
+      toStart: to.y,
+      toLength: to.height,
+    });
+
+  const projectedColBoundaries = deriveColumnBoundariesFromTable(table).map((value) => projectX(value));
+  const projectedRowBoundaries = deriveRowBoundariesFromTable(table).map((value) => projectY(value));
+  const ruleLines = collectRegionRuleLines({ pagePaths, region });
+  const alignedColBoundaries = alignBoundariesWithOptionalRules({
+    projected: projectedColBoundaries,
+    rules: ruleLines?.xBoundaries,
+  });
+  const alignedRowBoundaries = alignBoundariesWithOptionalRules({
+    projected: projectedRowBoundaries,
+    rules: ruleLines?.yBoundaries,
+  });
+
+  const top = alignedRowBoundaries[0] ?? region.y1;
+  const bottom = alignedRowBoundaries[alignedRowBoundaries.length - 1] ?? region.y0;
+  const left = alignedColBoundaries[0] ?? region.x0;
+  const right = alignedColBoundaries[alignedColBoundaries.length - 1] ?? region.x1;
+
+  return {
+    ...table,
+    bounds: {
+      x: Math.min(left, right),
+      y: Math.min(bottom, top),
+      width: Math.max(0, Math.max(left, right) - Math.min(left, right)),
+      height: Math.max(0, Math.max(top, bottom) - Math.min(top, bottom)),
+    },
+    cells: table.cells.map((cell) => {
+      const colStart = Math.max(0, Math.min(table.colCount - 1, cell.colStart));
+      const colEnd = Math.max(colStart + 1, Math.min(table.colCount, colStart + cell.colSpan));
+      const rowStart = Math.max(0, Math.min(table.rowCount - 1, cell.rowIndex));
+      const rowEnd = Math.max(rowStart + 1, Math.min(table.rowCount, rowStart + cell.rowSpan));
+      const x0 = alignedColBoundaries[colStart] ?? projectX(cell.x0);
+      const x1 = alignedColBoundaries[colEnd] ?? projectX(cell.x1);
+      const y1 = alignedRowBoundaries[rowStart] ?? projectY(cell.y1);
+      const y0 = alignedRowBoundaries[rowEnd] ?? projectY(cell.y0);
+      return {
+        ...cell,
+        x0: Math.min(x0, x1),
+        x1: Math.max(x0, x1),
+        y0: Math.min(y0, y1),
+        y1: Math.max(y0, y1),
+      };
+    }),
+  };
+}
+
 function mergeGroupsForRegion(args: {
   readonly region: TableRegion;
   readonly groups: readonly GroupedText[];
@@ -1198,33 +1789,118 @@ function mergeGroupsForRegion(args: {
   };
 }
 
-function defaultTableOptions(pagePaths: readonly PdfPath[]): readonly TableInferenceOptions[] {
-  return [
-    {
-      minRows: 6,
-      minCols: 3,
-      maxCols: 20,
-      minRowCoverage: 0.6,
-      minColumnSupport: 0.55,
-      paths: pagePaths,
+function runCenter(run: PdfText): { readonly x: number; readonly y: number } {
+  return {
+    x: run.x + run.width / 2,
+    y: run.y + run.height / 2,
+  };
+}
+
+function containsPoint(rect: Rect, point: { readonly x: number; readonly y: number }): boolean {
+  return point.x >= rect.x && point.x <= rect.x + rect.width && point.y >= rect.y && point.y <= rect.y + rect.height;
+}
+
+function baselineOfRun(run: PdfText): number {
+  return run.y + run.height;
+}
+
+function groupFromRegionTexts(args: {
+  readonly region: TableRegion;
+  readonly texts: readonly PdfText[];
+}): GroupedText | null {
+  const regionRect = toRectFromRegion(args.region);
+  const pad = 3;
+  const padded = {
+    x: regionRect.x - pad,
+    y: regionRect.y - pad,
+    width: regionRect.width + pad * 2,
+    height: regionRect.height + pad * 2,
+  };
+  const insideRuns = args.texts
+    .filter((run) => run.text.trim().length > 0)
+    .filter((run) => containsPoint(padded, runCenter(run)));
+  if (insideRuns.length < 4) {
+    return null;
+  }
+
+  const fontSizes = insideRuns.map((run) => run.fontSize).filter((value) => Number.isFinite(value) && value > 0);
+  const baselineTolerance = Math.max(1.2, quantile(fontSizes, 0.5) * 0.45);
+  const sorted = [...insideRuns].sort((a, b) => {
+    const baseA = baselineOfRun(a);
+    const baseB = baselineOfRun(b);
+    if (baseA !== baseB) {
+      return baseB - baseA;
+    }
+    return a.x - b.x;
+  });
+
+  type ParagraphDraft = { readonly runs: PdfText[]; readonly baselineY: number };
+  const paragraphs: ParagraphDraft[] = [];
+  // eslint-disable-next-line no-restricted-syntax -- incremental clustering by baseline
+  let currentRuns: PdfText[] = [];
+  // eslint-disable-next-line no-restricted-syntax -- incremental clustering by baseline
+  let currentBaseline = baselineOfRun(sorted[0]!);
+
+  const flushCurrent = (): void => {
+    if (currentRuns.length === 0) {
+      return;
+    }
+    const runs = [...currentRuns].sort((a, b) => a.x - b.x);
+    const baselineY = runs.reduce((sum, run) => sum + baselineOfRun(run), 0) / runs.length;
+    paragraphs.push({ runs, baselineY });
+    currentRuns = [];
+  };
+
+  for (const run of sorted) {
+    const runBaseline = baselineOfRun(run);
+    if (currentRuns.length === 0) {
+      currentRuns = [run];
+      currentBaseline = runBaseline;
+      continue;
+    }
+    if (Math.abs(runBaseline - currentBaseline) <= baselineTolerance) {
+      currentRuns.push(run);
+      currentBaseline = (currentBaseline * (currentRuns.length - 1) + runBaseline) / currentRuns.length;
+      continue;
+    }
+    flushCurrent();
+    currentRuns = [run];
+    currentBaseline = runBaseline;
+  }
+  flushCurrent();
+
+  if (paragraphs.length < 2) {
+    return null;
+  }
+
+  const bounds = insideRuns.reduce(
+    (acc, run) => {
+      const x0 = Math.min(acc.x0, run.x);
+      const y0 = Math.min(acc.y0, run.y);
+      const x1 = Math.max(acc.x1, run.x + run.width);
+      const y1 = Math.max(acc.y1, run.y + run.height);
+      return { x0, y0, x1, y1 };
     },
     {
-      minRows: 4,
-      minCols: 2,
-      maxCols: 20,
-      minRowCoverage: 0.55,
-      minColumnSupport: 0.5,
-      paths: pagePaths,
+      x0: insideRuns[0]!.x,
+      y0: insideRuns[0]!.y,
+      x1: insideRuns[0]!.x + insideRuns[0]!.width,
+      y1: insideRuns[0]!.y + insideRuns[0]!.height,
     },
-    {
-      minRows: 2,
-      minCols: 2,
-      maxCols: 20,
-      minRowCoverage: 0.45,
-      minColumnSupport: 0.4,
-      paths: pagePaths,
+  );
+
+  return {
+    bounds: {
+      x: bounds.x0,
+      y: bounds.y0,
+      width: Math.max(0, bounds.x1 - bounds.x0),
+      height: Math.max(0, bounds.y1 - bounds.y0),
     },
-  ];
+    paragraphs: paragraphs.map((paragraph) => ({
+      runs: paragraph.runs,
+      baselineY: paragraph.baselineY,
+    })),
+  };
 }
 
 function regionTableOptions(region: TableRegion, pagePaths: readonly PdfPath[]): readonly TableInferenceOptions[] {
@@ -1253,47 +1929,44 @@ function regionTableOptions(region: TableRegion, pagePaths: readonly PdfPath[]):
 
 function inferTablesFromGroups(args: {
   readonly groups: readonly GroupedText[];
+  readonly texts: readonly PdfText[];
   readonly pagePaths: readonly PdfPath[];
   readonly pageWidth: number;
   readonly pageHeight: number;
 }): readonly TableVisualization[] {
-  const groupCandidates = args.groups.flatMap((group, groupIndex) => {
-    const table = selectBestTableForGroup({
-      group,
-      groupIndex,
-      source: "group",
-      regionRuleCount: null,
-      options: defaultTableOptions(args.pagePaths),
-    });
-    if (!table) {
-      return [];
-    }
-    return [table];
-  });
-
   const regions = detectTableRegionsFromPaths(args.pagePaths, {
     width: args.pageWidth,
     height: args.pageHeight,
   });
   const regionCandidates = regions.flatMap((region) => {
     const mergedGroup = mergeGroupsForRegion({ region, groups: args.groups });
-    if (!mergedGroup) {
+    const regroupedByRegionText = groupFromRegionTexts({ region, texts: args.texts });
+    const regionGroups = [mergedGroup, regroupedByRegionText].filter((group): group is GroupedText => group !== null);
+    if (regionGroups.length === 0) {
       return [];
     }
-    const table = selectBestTableForGroup({
-      group: mergedGroup,
-      groupIndex: -1,
-      source: "region",
-      regionRuleCount: region.ruleCount,
-      options: regionTableOptions(region, args.pagePaths),
-    });
+    const table = regionGroups
+      .flatMap((group) => {
+        const candidate = selectBestTableForGroup({
+          group,
+          groupIndex: -1,
+          source: "region",
+          regionRuleCount: region.ruleCount,
+          options: regionTableOptions(region, args.pagePaths),
+        });
+        if (!candidate) {
+          return [];
+        }
+        return [candidate];
+      })
+      .sort((a, b) => b.cellCount * (1 + b.runCoverage) - a.cellCount * (1 + a.runCoverage))[0];
     if (!table) {
       return [];
     }
-    return [table];
+    return [projectTableToRegion({ table, region, pagePaths: args.pagePaths })];
   });
 
-  const ranked = [...groupCandidates, ...regionCandidates]
+  const ranked = [...regionCandidates]
     .sort((a, b) => {
       const aScore = a.cellCount * (1 + a.runCoverage);
       const bScore = b.cellCount * (1 + b.runCoverage);
@@ -1492,6 +2165,7 @@ async function buildOriginalComparisonArtifacts(cli: CliArgs): Promise<OverlaySu
   const groups = spatialGrouping(texts, { pageWidth: page.width, pageHeight: page.height });
   const tableVisualizations = inferTablesFromGroups({
     groups,
+    texts,
     pagePaths,
     pageWidth: page.width,
     pageHeight: page.height,
