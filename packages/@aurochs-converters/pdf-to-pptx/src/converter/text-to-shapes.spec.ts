@@ -6,7 +6,7 @@ import type { PdfColor, PdfGraphicsState, PdfText } from "@aurochs/pdf/domain";
 import { createDefaultGraphicsState } from "@aurochs/pdf/domain";
 import { deg, pt, px } from "@aurochs-office/drawing-ml/domain/units";
 import { convertTextToShape, convertGroupedTextToShape } from "./text-to-shapes";
-import type { GroupedText } from "./text-grouping/types";
+import type { GroupedText } from "@aurochs/pdf/services/block-segmentation";
 import { createFitContext } from "./transform-converter";
 
 function createContext({

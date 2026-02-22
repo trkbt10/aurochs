@@ -11,7 +11,7 @@
  */
 
 import type { PdfPath, PdfPathOp, PdfText } from "@aurochs/pdf/domain";
-import type { GroupedText } from "./text-grouping/types";
+import type { GroupedText } from "@aurochs/pdf/services/block-segmentation";
 
 export type InferredTableCell = {
   readonly colStart: number;

@@ -1,8 +1,8 @@
 /**
- * @file Text grouping exports
+ * @file Block segmentation exports
  *
- * Provides pluggable functions for grouping PDF text elements
- * into logical blocks during PDF to PPTX conversion.
+ * Provides pluggable functions for segmenting PDF text into logical blocks
+ * for downstream converters.
  */
 
 // Types
@@ -13,6 +13,7 @@ export type {
   TextBounds,
   GroupingContext,
   BlockingZone,
+  LineSpacingInfo,
 } from "./types";
 
 // Grouping functions

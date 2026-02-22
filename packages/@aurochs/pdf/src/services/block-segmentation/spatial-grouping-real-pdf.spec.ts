@@ -7,8 +7,8 @@
  */
 
 import { readFileSync } from "node:fs";
-import { parsePdf } from "@aurochs/pdf/parser/core/pdf-parser";
-import type { PdfText } from "@aurochs/pdf/domain";
+import { parsePdf } from "../../parser/core/pdf-parser";
+import type { PdfText } from "../../domain/text";
 import { spatialGrouping } from "./spatial-grouping";
 import type { GroupedText } from "./types";
 import { getSampleFixturePath } from "../../test-utils/pdf-fixtures";

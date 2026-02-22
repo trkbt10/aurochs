@@ -18,7 +18,7 @@
  * - PdfText.height: full height (ascender - descender) * fontSize / 1000
  */
 
-import type { PdfText } from "@aurochs/pdf/domain";
+import type { PdfText } from "../../domain/text";
 import type { BlockingZone, GroupedText, GroupedParagraph, GroupingContext, TextGroupingFn } from "./types";
 
 /**

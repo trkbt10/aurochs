@@ -19,7 +19,7 @@
 import { readFileSync } from "node:fs";
 import { parsePdf } from "@aurochs/pdf/parser/core/pdf-parser";
 import type { PdfText, PdfPath, PdfImage, PdfElement } from "@aurochs/pdf/domain";
-import { spatialGrouping } from "./text-grouping/spatial-grouping";
+import { spatialGrouping } from "@aurochs/pdf/services/block-segmentation";
 import { extractFontInfo, extractFontMappings } from "@aurochs/pdf/parser/font/font-decoder";
 import { computePathBBox } from "@aurochs/pdf/parser/path/path-builder";
 import { px } from "@aurochs-office/drawing-ml/domain/units";

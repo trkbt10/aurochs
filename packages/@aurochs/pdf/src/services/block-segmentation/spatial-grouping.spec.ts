@@ -2,8 +2,8 @@
  * @file Tests for spatial grouping function
  */
 
-import type { PdfText } from "@aurochs/pdf/domain";
-import { createDefaultGraphicsState } from "@aurochs/pdf/domain";
+import type { PdfText } from "../../domain/text";
+import { createDefaultGraphicsState } from "../../domain/graphics-state";
 import { createSpatialGrouping, spatialGrouping } from "./spatial-grouping";
 
 describe("createSpatialGrouping", () => {

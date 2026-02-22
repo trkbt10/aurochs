@@ -1,11 +1,11 @@
 /**
- * @file Text grouping strategy types for PDF to PPTX conversion.
+ * @file Text grouping strategy types for PDF text conversion.
  *
  * These types enable pluggable text grouping strategies to control
- * how individual PDF text elements are combined into PPTX TextBoxes.
+ * how individual PDF text elements are combined into logical blocks.
  */
 
-import type { PdfText } from "@aurochs/pdf/domain";
+import type { PdfText } from "../../domain/text";
 
 /**
  * Bounding box for blocking zones (shapes/images that interrupt text flow).

@@ -5,9 +5,13 @@
  * pluggable text grouping function, and allows disabling table inference.
  */
 
-import type { TextGroupingFn } from "./text-grouping/types";
-import { noGrouping } from "./text-grouping/no-grouping";
-import { createSpatialGrouping, spatialGrouping, type SpatialGroupingOptions } from "./text-grouping/spatial-grouping";
+import {
+  noGrouping,
+  createSpatialGrouping,
+  spatialGrouping,
+  type TextGroupingFn,
+  type SpatialGroupingOptions,
+} from "@aurochs/pdf/services/block-segmentation";
 
 export type PdfGroupingPreset = "none" | "text" | "full";
 
@@ -134,4 +138,3 @@ export function resolvePdfGroupingStrategy(input: {
     inferTablesFromTextGroups: tablesEnabled && tables.inferFromTextGroups,
   };
 }
-

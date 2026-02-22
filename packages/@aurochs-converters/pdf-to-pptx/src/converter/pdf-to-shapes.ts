@@ -23,11 +23,15 @@ import { convertGraphicsStateToStyle } from "./color-converter";
 import { convertGroupedTextToShape } from "./text-to-shapes";
 import { convertImageToShape } from "./image-to-shapes";
 import { computePathBBox } from "@aurochs/pdf/parser/path/path-builder";
-import type { BlockingZone, GroupingContext, TextGroupingFn } from "./text-grouping/types";
-import { createSpatialGrouping } from "./text-grouping/spatial-grouping";
+import {
+  createSpatialGrouping,
+  type BlockingZone,
+  type GroupedText,
+  type GroupingContext,
+  type TextGroupingFn,
+} from "@aurochs/pdf/services/block-segmentation";
 import type { TableDecorationAnalysis } from "./table-to-shapes";
 import { analyzeTableDecorationFromPaths, convertInferredTableToShape } from "./table-to-shapes";
-import type { GroupedText } from "./text-grouping/types";
 import type { InferredTable } from "./table-inference";
 import { inferTableFromGroupedText } from "./table-inference";
 import { detectTableRegionsFromPaths } from "./table-detection";

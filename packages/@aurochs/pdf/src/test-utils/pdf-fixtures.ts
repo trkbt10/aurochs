@@ -4,13 +4,15 @@ import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 function findRepoRootDir(startDir: string): string {
+  const REPO_PACKAGE_NAMES = new Set(["aurochs", "aurochs-workspace"]);
+
   const findRoot = (dir: string, depth: number): string | null => {
     if (depth >= 15) {return null;}
     const pkgPath = path.join(dir, "package.json");
     if (existsSync(pkgPath)) {
       try {
         const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as { readonly name?: unknown };
-        if (pkg.name === "aurochs") {
+        if (typeof pkg.name === "string" && REPO_PACKAGE_NAMES.has(pkg.name)) {
           return dir;
         }
       } catch (error) {
@@ -24,7 +26,7 @@ function findRepoRootDir(startDir: string): string {
 
   const result = findRoot(startDir, 0);
   if (result === null) {
-    throw new Error("Failed to locate repo root (package.json name=aurochs).");
+    throw new Error("Failed to locate repo root (package.json name in {aurochs, aurochs-workspace}).");
   }
   return result;
 }

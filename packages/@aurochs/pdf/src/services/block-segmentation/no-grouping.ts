@@ -5,7 +5,7 @@
  * by creating one GroupedText per PdfText (no actual grouping).
  */
 
-import type { PdfText } from "@aurochs/pdf/domain";
+import type { PdfText } from "../../domain/text";
 import type { GroupedText, TextGroupingFn } from "./types";
 
 /**

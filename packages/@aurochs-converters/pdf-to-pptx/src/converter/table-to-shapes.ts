@@ -11,7 +11,7 @@ import { deg, pt, px } from "@aurochs-office/drawing-ml/domain/units";
 import type { Fill, Line } from "@aurochs-office/pptx/domain/color/types";
 import type { ConversionContext } from "./transform-converter";
 import { convertBBox, convertPoint, convertSize } from "./transform-converter";
-import type { GroupedText } from "./text-grouping/types";
+import type { GroupedText } from "@aurochs/pdf/services/block-segmentation";
 import type { InferredTable } from "./table-inference";
 import { inferTableFromGroupedText } from "./table-inference";
 import { createPptxTextRunFromPdfText } from "./text-to-shapes";

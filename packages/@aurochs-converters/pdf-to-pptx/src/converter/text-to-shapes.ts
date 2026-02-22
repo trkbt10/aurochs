@@ -13,7 +13,7 @@ import { convertFill } from "./color-converter";
 import type { CIDOrdering } from "@aurochs/pdf/domain/font";
 import { normalizeFontFamily, isBoldFont, isItalicFont, normalizeFontName } from "@aurochs/pdf/domain/font";
 import { PT_TO_PX } from "@aurochs/pdf/domain/constants";
-import type { GroupedText, GroupedParagraph } from "./text-grouping/types";
+import type { GroupedText, GroupedParagraph } from "@aurochs/pdf/services/block-segmentation";
 import { detectScriptFromText, type ScriptType } from "./unicode-script";
 
 /**

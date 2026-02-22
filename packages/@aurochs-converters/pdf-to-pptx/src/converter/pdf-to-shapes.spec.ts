@@ -6,7 +6,7 @@ import type { PdfImage, PdfPage, PdfPath, PdfText } from "@aurochs/pdf/domain";
 import { createDefaultGraphicsState } from "@aurochs/pdf/domain";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import { convertDocumentToSlides, convertPageToShapes } from "./pdf-to-shapes";
-import { createSpatialGrouping, spatialGrouping } from "./text-grouping/spatial-grouping";
+import { createSpatialGrouping, spatialGrouping } from "@aurochs/pdf/services/block-segmentation";
 
 const graphicsState = {
   ...createDefaultGraphicsState(),
