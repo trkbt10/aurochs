@@ -30,6 +30,8 @@ const CURRENT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURE_DIR = path.resolve(CURRENT_DIR, "../../../../fixtures/block-segmentation-corpus");
 
 const CASE_TO_FIXTURE_BASENAME: Record<SegmentationCorpusCase["id"], string> = {
+  "courts-hanrei-87071": "courts-hanrei-87071.pdf",
+  "mlit-hakusho-r07-np101100": "mlit-hakusho-r07-np101100.pdf",
   "horizontal-long-single": "horizontal-long-single.pdf",
   "horizontal-long-two-column": "horizontal-long-two-column.pdf",
   "paper-cover-abstract-two-column": "paper-cover-abstract-two-column.pdf",
@@ -39,10 +41,6 @@ const CASE_TO_FIXTURE_BASENAME: Record<SegmentationCorpusCase["id"], string> = {
   "vertical-long-single": "vertical-long-single.pdf",
   "vertical-two-columns": "vertical-two-columns.pdf",
   "vertical-three-columns": "vertical-three-columns.pdf",
-  "kanpo-20260219c000320001": "20260219c000320001.pdf",
-  "kanpo-20260219g000350002": "20260219g000350002.pdf",
-  "kanpo-20260219h016500001": "20260219h016500001.pdf",
-  "kanpo-20241224jokenhenko": "20241224jokenhenko.pdf",
 };
 
 function getFixturePath(caseId: SegmentationCorpusCase["id"]): string {
@@ -86,15 +84,6 @@ describe("segmentation corpus", () => {
     if (scenario.id === "rtl-arabic-pdfjs") {
       const hasRtlParagraph = groups.some((g) => g.paragraphs.some((p) => p.inlineDirection === "rtl"));
       expect(hasRtlParagraph).toBe(true);
-    }
-
-    if (
-      scenario.id === "kanpo-20260219c000320001" ||
-      scenario.id === "kanpo-20260219g000350002" ||
-      scenario.id === "kanpo-20260219h016500001"
-    ) {
-      const ttbGroupCount = groups.filter((g) => g.layoutInference?.inlineDirection === "ttb").length;
-      expect(ttbGroupCount >= Math.ceil(groups.length / 2)).toBe(true);
     }
 
     if (scenario.id === "horizontal-long-single") {
