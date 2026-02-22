@@ -29,6 +29,8 @@ import type { BlockingZone, GroupedText, GroupedParagraph, GroupingContext, Text
  * - "none": Ignore color in style matching
  */
 export type ColorMatchingMode = "strict" | "loose" | "none";
+export type WritingMode = "horizontal" | "vertical" | "auto";
+export type VerticalColumnOrder = "right-to-left" | "left-to-right";
 
 /**
  * Options for spatial grouping behavior.
@@ -102,6 +104,23 @@ export type SpatialGroupingOptions = {
    * (default: 0.85)
    */
   readonly fullWidthRatio?: number;
+
+  /**
+   * Writing mode resolution strategy.
+   *
+   * - "auto": detect dominant writing mode from text geometry (default)
+   * - "horizontal": force horizontal segmentation
+   * - "vertical": force vertical segmentation
+   */
+  readonly writingMode?: WritingMode;
+
+  /**
+   * Column order used only in vertical segmentation.
+   *
+   * Japanese vertical text is typically right-to-left.
+   * (default: "right-to-left")
+   */
+  readonly verticalColumnOrder?: VerticalColumnOrder;
 };
 
 const DEFAULT_OPTIONS: Required<SpatialGroupingOptions> = {
@@ -115,6 +134,8 @@ const DEFAULT_OPTIONS: Required<SpatialGroupingOptions> = {
   enablePageColumnDetection: true,
   maxPageColumns: 3,
   fullWidthRatio: 0.85,
+  writingMode: "auto",
+  verticalColumnOrder: "right-to-left",
 };
 
 /** Default character width in 1/1000 em units for fallback */
@@ -218,6 +239,91 @@ function overlap1D(args: {
 
 function clamp(x: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, x));
+}
+
+function centerX(text: PdfText): number {
+  return text.x + text.width / 2;
+}
+
+function centerY(text: PdfText): number {
+  return text.y + text.height / 2;
+}
+
+function scoreNeighborDirections(texts: readonly PdfText[]): { horizontal: number; vertical: number } {
+  if (texts.length < 2) {
+    return { horizontal: 0, vertical: 0 };
+  }
+
+  const capped = texts.slice(0, 180);
+  const score = { horizontal: 0, vertical: 0 };
+
+  for (let i = 0; i < capped.length; i++) {
+    const a = capped[i]!;
+    const ax = centerX(a);
+    const ay = centerY(a);
+
+    // eslint-disable-next-line no-restricted-syntax -- mutable nearest-neighbor scan
+    let nearest: PdfText | null = null;
+    // eslint-disable-next-line no-restricted-syntax -- mutable nearest distance
+    let nearestDist = Infinity;
+
+    for (let j = 0; j < capped.length; j++) {
+      if (i === j) {
+        continue;
+      }
+      const b = capped[j]!;
+      const dx = centerX(b) - ax;
+      const dy = centerY(b) - ay;
+      const dist2 = dx * dx + dy * dy;
+      if (dist2 < nearestDist) {
+        nearestDist = dist2;
+        nearest = b;
+      }
+    }
+
+    if (!nearest) {
+      continue;
+    }
+
+    const dx = Math.abs(centerX(nearest) - ax);
+    const dy = Math.abs(centerY(nearest) - ay);
+    if (dx >= dy) {
+      score.horizontal += 1;
+    } else {
+      score.vertical += 1;
+    }
+  }
+
+  return score;
+}
+
+function detectDominantWritingMode(texts: readonly PdfText[]): Exclude<WritingMode, "auto"> {
+  if (texts.length === 0) {
+    return "horizontal";
+  }
+
+  const sample = texts.slice(0, 240);
+  const verticalLike = sample.filter((t) => t.width <= t.height * 0.55).length;
+  const horizontalLike = sample.filter((t) => t.width >= t.height * 0.9).length;
+  const direction = scoreNeighborDirections(sample);
+
+  const verticalScore = verticalLike * 2 + direction.vertical;
+  const horizontalScore = horizontalLike * 2 + direction.horizontal;
+
+  if (verticalScore > horizontalScore * 1.1 && verticalLike > 0) {
+    return "vertical";
+  }
+  return "horizontal";
+}
+
+function resolveWritingMode(texts: readonly PdfText[], options: Required<SpatialGroupingOptions>): Exclude<WritingMode, "auto"> {
+  if (options.writingMode === "horizontal") {
+    return "horizontal";
+  }
+  if (options.writingMode === "vertical") {
+    return "vertical";
+  }
+  return detectDominantWritingMode(texts);
 }
 
 type Gutter = { x0: number; x1: number; score: number; xMid: number };
@@ -1059,6 +1165,194 @@ function groupIntoLines(
 }
 
 // =============================================================================
+// Vertical Segmentation Functions
+// =============================================================================
+
+function hasBlockingZoneBetweenVerticalTexts(
+  text1: PdfText,
+  text2: PdfText,
+  blockingZones: readonly BlockingZone[] | undefined,
+): boolean {
+  if (!blockingZones || blockingZones.length === 0) {
+    return false;
+  }
+
+  const first = centerY(text1) <= centerY(text2) ? text1 : text2;
+  const second = first === text1 ? text2 : text1;
+
+  const gapStart = first.y + first.height;
+  const gapEnd = second.y;
+  if (gapEnd <= gapStart) {
+    return false;
+  }
+
+  const bandLeft = Math.min(first.x, second.x);
+  const bandRight = Math.max(first.x + first.width, second.x + second.width);
+
+  for (const zone of blockingZones) {
+    const zoneTop = zone.y + zone.height;
+    const zoneRight = zone.x + zone.width;
+
+    const verticalBetween = zone.y < gapEnd && zoneTop > gapStart;
+    const horizontalOverlap = zone.x < bandRight && zoneRight > bandLeft;
+    if (!verticalBetween || !horizontalOverlap) {
+      continue;
+    }
+
+    const containsFirst =
+      zone.x <= first.x &&
+      zoneRight >= first.x + first.width &&
+      zone.y <= first.y &&
+      zoneTop >= first.y + first.height;
+    const containsSecond =
+      zone.x <= second.x &&
+      zoneRight >= second.x + second.width &&
+      zone.y <= second.y &&
+      zoneTop >= second.y + second.height;
+    const isContainerZone = containsFirst && containsSecond;
+    if (isContainerZone) {
+      continue;
+    }
+
+    return true;
+  }
+
+  return false;
+}
+
+function clusterIntoVerticalColumns(texts: readonly PdfText[], options: Required<SpatialGroupingOptions>): PdfText[][] {
+  if (texts.length === 0) {
+    return [];
+  }
+
+  const sorted = [...texts].sort((a, b) => centerX(b) - centerX(a));
+
+  const clusters: Array<{ texts: PdfText[]; meanX: number; meanWidth: number; meanFontSize: number }> = [];
+
+  for (const text of sorted) {
+    const cx = centerX(text);
+
+    // eslint-disable-next-line no-restricted-syntax -- mutable best-match index for nearest-column search
+    let targetIndex = -1;
+    // eslint-disable-next-line no-restricted-syntax -- mutable best-match distance for nearest-column search
+    let targetDist = Infinity;
+
+    for (let i = 0; i < clusters.length; i++) {
+      const cluster = clusters[i]!;
+      const tolerance = Math.max(2, Math.max(cluster.meanWidth, text.width, cluster.meanFontSize * 0.9));
+      const distance = Math.abs(cx - cluster.meanX);
+      if (distance > tolerance || distance >= targetDist) {
+        continue;
+      }
+      targetDist = distance;
+      targetIndex = i;
+    }
+
+    if (targetIndex < 0) {
+      clusters.push({
+        texts: [text],
+        meanX: cx,
+        meanWidth: text.width,
+        meanFontSize: text.fontSize,
+      });
+      continue;
+    }
+
+    const target = clusters[targetIndex]!;
+    target.texts.push(text);
+    const n = target.texts.length;
+    target.meanX = target.meanX + (cx - target.meanX) / n;
+    target.meanWidth = target.meanWidth + (text.width - target.meanWidth) / n;
+    target.meanFontSize = target.meanFontSize + (text.fontSize - target.meanFontSize) / n;
+  }
+
+  clusters.sort((a, b) => {
+    if (options.verticalColumnOrder === "left-to-right") {
+      return a.meanX - b.meanX;
+    }
+    return b.meanX - a.meanX;
+  });
+
+  return clusters.map((c) => c.texts);
+}
+
+function createVerticalParagraph(texts: readonly PdfText[]): GroupedParagraph {
+  if (texts.length === 0) {
+    throw new Error("createVerticalParagraph requires at least one PdfText");
+  }
+
+  const runs = [...texts].sort((a, b) => centerY(a) - centerY(b));
+  const first = runs[0];
+  if (!first) {
+    throw new Error("createVerticalParagraph requires at least one PdfText");
+  }
+
+  return {
+    runs,
+    baselineY: getBaselineY(first),
+  };
+}
+
+function splitVerticalColumnToParagraphs(args: {
+  readonly columnTexts: readonly PdfText[];
+  readonly options: Required<SpatialGroupingOptions>;
+  readonly blockingZones: readonly BlockingZone[] | undefined;
+}): GroupedParagraph[] {
+  const { columnTexts, options, blockingZones } = args;
+  if (columnTexts.length === 0) {
+    return [];
+  }
+
+  const sorted = [...columnTexts].sort((a, b) => centerY(a) - centerY(b));
+  const paragraphs: GroupedParagraph[] = [];
+  // eslint-disable-next-line no-restricted-syntax -- mutable paragraph accumulator while scanning a vertical column
+  let current: PdfText[] = [sorted[0]!];
+
+  for (let i = 1; i < sorted.length; i++) {
+    const prev = sorted[i - 1]!;
+    const curr = sorted[i]!;
+
+    const gap = curr.y - (prev.y + prev.height);
+    const lineHeight = Math.max(prev.height, curr.height);
+    const maxGap = lineHeight * options.verticalGapRatio;
+    const hasBlocker = hasBlockingZoneBetweenVerticalTexts(prev, curr, blockingZones);
+    const sameStyle = hasSameStyle(prev, curr, options);
+    const sameParagraph = !hasBlocker && sameStyle && gap <= maxGap;
+
+    if (sameParagraph) {
+      current.push(curr);
+      continue;
+    }
+
+    paragraphs.push(createVerticalParagraph(current));
+    current = [curr];
+  }
+
+  paragraphs.push(createVerticalParagraph(current));
+  return paragraphs;
+}
+
+function groupVerticalTexts(args: {
+  readonly texts: readonly PdfText[];
+  readonly options: Required<SpatialGroupingOptions>;
+  readonly blockingZones: readonly BlockingZone[] | undefined;
+}): GroupedText[] {
+  const { texts, options, blockingZones } = args;
+  const columns = clusterIntoVerticalColumns(texts, options);
+  const blocks: GroupedText[] = [];
+
+  for (const column of columns) {
+    const paragraphs = splitVerticalColumnToParagraphs({ columnTexts: column, options, blockingZones });
+    if (paragraphs.length === 0) {
+      continue;
+    }
+    blocks.push(createGroupedText(paragraphs));
+  }
+
+  return blocks;
+}
+
+// =============================================================================
 // Block Merging Functions
 // =============================================================================
 
@@ -1363,6 +1657,11 @@ export function createSpatialGrouping(userOptions: SpatialGroupingOptions = {}):
     const sorted = [...texts].sort((a, b) => b.y - a.y);
     const blockingZones = context?.blockingZones;
     const pageWidth = context?.pageWidth;
+    const writingMode = resolveWritingMode(sorted, options);
+
+    if (writingMode === "vertical") {
+      return groupVerticalTexts({ texts: sorted, options, blockingZones });
+    }
 
     // Step 2: Group into lines, with column separation if enabled
     const lines = groupTextsIntoLines({ sorted, options, blockingZones, pageWidth });

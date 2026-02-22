@@ -19,4 +19,4 @@ export type {
 // Grouping functions
 export { noGrouping } from "./no-grouping";
 export { createSpatialGrouping, spatialGrouping } from "./spatial-grouping";
-export type { SpatialGroupingOptions, ColorMatchingMode } from "./spatial-grouping";
+export type { SpatialGroupingOptions, ColorMatchingMode, WritingMode, VerticalColumnOrder } from "./spatial-grouping";
