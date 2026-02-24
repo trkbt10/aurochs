@@ -122,6 +122,13 @@ export type TextRun = {
    */
   readonly endX: number;
   /**
+   * Y coordinate where text ends (after last glyph baseline).
+   *
+   * For horizontal text this is typically equal to `y`, while for rotated or
+   * vertical text this differs and is required to recover correct geometry.
+   */
+  readonly endY: number;
+  /**
    * Effective font size after applying text matrix and CTM scaling.
    * PDF Reference 9.4.4: The actual rendered text size is affected by
    * both the text matrix (Tm) and the current transformation matrix (CTM).

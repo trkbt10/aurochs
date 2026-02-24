@@ -1710,13 +1710,19 @@ function expandIndexedToRgb(args: {
   readonly decode?: readonly number[];
 }): Uint8Array {
   const { base, hival, lookup, samples, bitsPerComponent, decode } = args;
-  const comps = base === "DeviceGray" ? 1 : base === "DeviceRGB" ? 3 : null;
+  const comps = base === "DeviceGray" ? 1 : base === "DeviceRGB" ? 3 : base === "DeviceCMYK" ? 4 : null;
   if (!comps) {throw new Error(`[PDF Image] /Indexed base color space not supported: ${base}`);}
 
   const expectedLookupLen = (hival + 1) * comps;
   if (lookup.length < expectedLookupLen) {
     throw new Error(`[PDF Image] /Indexed lookup length mismatch: expected >= ${expectedLookupLen}, got ${lookup.length}`);
   }
+
+  const paletteDictionary = buildIndexedPaletteDictionary({
+    baseComponents: comps,
+    hival,
+    lookup,
+  });
 
   const decodePair = decode && decode.length === 2 ? decode : null;
   const sampleMax = (1 << bitsPerComponent) - 1;
@@ -1735,19 +1741,49 @@ function expandIndexedToRgb(args: {
     const idx = idxState.idx;
 
     const dst = i * 3;
-    if (comps === 1) {
+    const src = idx * 3;
+    out[dst] = paletteDictionary[src] ?? 0;
+    out[dst + 1] = paletteDictionary[src + 1] ?? 0;
+    out[dst + 2] = paletteDictionary[src + 2] ?? 0;
+  }
+
+  return out;
+}
+
+function buildIndexedPaletteDictionary(args: {
+  readonly baseComponents: 1 | 3 | 4;
+  readonly hival: number;
+  readonly lookup: Uint8Array;
+}): Uint8Array {
+  const { baseComponents, hival, lookup } = args;
+  const out = new Uint8Array((hival + 1) * 3);
+  for (let idx = 0; idx <= hival; idx += 1) {
+    const dst = idx * 3;
+    if (baseComponents === 1) {
       const g = lookup[idx] ?? 0;
       out[dst] = g;
       out[dst + 1] = g;
       out[dst + 2] = g;
-    } else {
+      continue;
+    }
+    if (baseComponents === 3) {
       const src = idx * 3;
       out[dst] = lookup[src] ?? 0;
       out[dst + 1] = lookup[src + 1] ?? 0;
       out[dst + 2] = lookup[src + 2] ?? 0;
+      continue;
     }
+    const src = idx * 4;
+    const rgb = cmykToRgb({
+      c: (lookup[src] ?? 0) / 255,
+      m: (lookup[src + 1] ?? 0) / 255,
+      y: (lookup[src + 2] ?? 0) / 255,
+      k: (lookup[src + 3] ?? 0) / 255,
+    });
+    out[dst] = rgb[0];
+    out[dst + 1] = rgb[1];
+    out[dst + 2] = rgb[2];
   }
-
   return out;
 }
 

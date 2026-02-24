@@ -23,7 +23,7 @@
  * For complete mappings, external CMap files would be needed.
  */
 
-import type { CIDOrdering } from "./types";
+import type { CIDOrdering } from "../types";
 import { JAPAN1_KANJI_MAPPINGS } from "./japan1-kanji-mappings";
 import { decodeAdobeJapan1CidToUnicode } from "./adobe-japan1-cid-to-unicode";
 

@@ -141,6 +141,20 @@ describe("createSpatialGrouping", () => {
       expect(groups[0].paragraphs[0].inlineDirection).toBe("rtl");
       expect(groups[0].paragraphs[0].runs.map((r) => r.text).join("")).toBe("BA");
     });
+
+    it("does not split a line on a tiny spacer run artifact", () => {
+      const groupFn = spatialGrouping;
+      const texts = [
+        createPdfText({ text: "我が国における少子高齢化", x: 106.8, y: 727.2, width: 129.3, height: 16.65, fontSize: 10.63 }),
+        createPdfText({ text: " ", x: 107.0, y: 727.2, width: 3.5, height: 16.65, fontSize: 10.63 }),
+        createPdfText({ text: "・人口減少は深刻化しており", x: 236.0, y: 727.2, width: 140.1, height: 16.65, fontSize: 10.63 }),
+      ];
+
+      const groups = groupFn(texts, { pageWidth: 595, pageHeight: 842 });
+
+      expect(groups).toHaveLength(1);
+      expect(groups[0].paragraphs).toHaveLength(1);
+    });
   });
 
   describe("vertical block merging", () => {
@@ -401,6 +415,38 @@ describe("createSpatialGrouping", () => {
       expect(groups).toHaveLength(2);
     });
 
+    it("does not block grouping for a thin vertical rule on a very tight inline gap", () => {
+      const groupFn = createSpatialGrouping({ horizontalGapRatio: 3.0 });
+      const texts = [
+        createPdfText({ text: "Left", x: 0, y: 100, width: 40, height: 10, fontSize: 10 }),
+        createPdfText({ text: "Right", x: 41, y: 100, width: 50, height: 10, fontSize: 10 }),
+      ];
+
+      // Thin/tall rule in the 1pt gap should not split a continuous sentence line.
+      const blockingZones = [{ x: 40.2, y: 94, width: 0.8, height: 18 }];
+
+      const groups = groupFn(texts, { blockingZones });
+
+      expect(groups).toHaveLength(1);
+      expect(groups[0].paragraphs[0]?.runs.map((run) => run.text).join("")).toBe("LeftRight");
+    });
+
+    it("does not block grouping for a thin horizontal rule on a very tight inline gap", () => {
+      const groupFn = createSpatialGrouping({ horizontalGapRatio: 3.0 });
+      const texts = [
+        createPdfText({ text: "Left", x: 0, y: 100, width: 40, height: 10, fontSize: 10 }),
+        createPdfText({ text: "Right", x: 41, y: 100, width: 50, height: 10, fontSize: 10 }),
+      ];
+
+      // Thin horizontal rule crossing the gap should not split a continuous sentence line.
+      const blockingZones = [{ x: 0, y: 99.8, width: 100, height: 0.3 }];
+
+      const groups = groupFn(texts, { blockingZones });
+
+      expect(groups).toHaveLength(1);
+      expect(groups[0].paragraphs[0]?.runs.map((run) => run.text).join("")).toBe("LeftRight");
+    });
+
     it("does NOT block grouping when texts are ON the same container zone", () => {
       const groupFn = spatialGrouping;
       const texts = [
@@ -449,6 +495,124 @@ describe("createSpatialGrouping", () => {
 
       // Should be separated
       expect(groups).toHaveLength(2);
+    });
+
+    it("pre-splits by vertical ruling when run boxes overlap across a column divider", () => {
+      const groupFn = createSpatialGrouping({
+        enableColumnSeparation: false,
+        verticalGapRatio: 2.0,
+      });
+      const texts = [
+        createPdfText({ text: "L1", x: 10, y: 100, width: 40 }),
+        createPdfText({ text: "R1", x: 45, y: 100, width: 40 }), // overlaps L1 box
+        createPdfText({ text: "L2", x: 10, y: 84, width: 40 }),
+        createPdfText({ text: "R2", x: 45, y: 84, width: 40 }), // overlaps L2 box
+      ];
+
+      // Thin vertical rule between logical left/right columns.
+      const blockingZones = [{ x: 42, y: 70, width: 1, height: 50 }];
+      const groups = groupFn(texts, {
+        blockingZones,
+        pageWidth: 100,
+        pageHeight: 130,
+      });
+
+      const groupTexts = groups
+        .map((group) => group.paragraphs.flatMap((paragraph) => paragraph.runs.map((run) => run.text)).join(""))
+        .sort();
+
+      expect(groups).toHaveLength(2);
+      expect(groupTexts).toEqual(["L1L2", "R1R2"]);
+    });
+
+    it("does not pre-split when the ruling segment is too short", () => {
+      const groupFn = createSpatialGrouping({
+        enableColumnSeparation: false,
+        verticalGapRatio: 2.0,
+      });
+      const texts = [
+        createPdfText({ text: "L1", x: 10, y: 100, width: 40 }),
+        createPdfText({ text: "R1", x: 45, y: 100, width: 40 }),
+        createPdfText({ text: "L2", x: 10, y: 84, width: 40 }),
+        createPdfText({ text: "R2", x: 45, y: 84, width: 40 }),
+      ];
+
+      // Short segment near one row only; should not be treated as page-level divider.
+      const blockingZones = [{ x: 42, y: 96, width: 1, height: 8 }];
+      const groups = groupFn(texts, {
+        blockingZones,
+        pageWidth: 100,
+        pageHeight: 130,
+      });
+
+      const groupTexts = groups
+        .map((group) => group.paragraphs.flatMap((paragraph) => paragraph.runs.map((run) => run.text)).join(""))
+        .sort();
+
+      expect(groups).toHaveLength(2);
+      expect(groupTexts).toEqual(["L1R1", "L2R2"]);
+    });
+
+    it("does not apply vertical ruling cuts to text lines outside the ruling span", () => {
+      const groupFn = createSpatialGrouping({
+        enableColumnSeparation: false,
+        verticalGapRatio: 2.0,
+      });
+      const texts = [
+        createPdfText({ text: "LTitle", x: 10, y: 130, width: 40 }),
+        createPdfText({ text: "RTitle", x: 45, y: 130, width: 40 }),
+        createPdfText({ text: "L1", x: 10, y: 100, width: 40 }),
+        createPdfText({ text: "R1", x: 45, y: 100, width: 40 }),
+        createPdfText({ text: "L2", x: 10, y: 84, width: 40 }),
+        createPdfText({ text: "R2", x: 45, y: 84, width: 40 }),
+      ];
+
+      // Vertical rule only spans y=70..120 (table-like area), not the title line at y=130.
+      const blockingZones = [{ x: 42, y: 70, width: 1, height: 50 }];
+      const groups = groupFn(texts, {
+        blockingZones,
+        pageWidth: 100,
+        pageHeight: 160,
+      });
+
+      const groupTexts = groups
+        .map((group) => group.paragraphs.flatMap((paragraph) => paragraph.runs.map((run) => run.text)).join(""))
+        .sort();
+
+      expect(groups).toHaveLength(3);
+      expect(groupTexts).toEqual(["L1L2", "LTitleRTitle", "R1R2"]);
+    });
+
+    it("does not merge prose line with ruled-table region line when no direct separator line exists", () => {
+      const groupFn = createSpatialGrouping({
+        enableColumnSeparation: false,
+        verticalGapRatio: 2.5,
+      });
+      const texts = [
+        createPdfText({ text: "PROSE", x: 20, y: 123, width: 110, height: 10, fontSize: 10 }),
+        createPdfText({ text: "H1", x: 22, y: 107, width: 30, height: 10, fontSize: 10 }),
+        createPdfText({ text: "H2", x: 85, y: 107, width: 30, height: 10, fontSize: 10 }),
+        createPdfText({ text: "R1", x: 22, y: 95, width: 30, height: 10, fontSize: 10 }),
+        createPdfText({ text: "R2", x: 85, y: 95, width: 30, height: 10, fontSize: 10 }),
+      ];
+
+      // Grid-like ruled region below prose. No horizontal rule between PROSE and header row.
+      const blockingZones = [
+        { x: 10, y: 90, width: 1, height: 30 },
+        { x: 80, y: 90, width: 1, height: 30 },
+        { x: 150, y: 90, width: 1, height: 30 },
+        { x: 10, y: 100, width: 140, height: 1 },
+        { x: 10, y: 90, width: 140, height: 1 },
+      ];
+
+      const groups = groupFn(texts, {
+        blockingZones,
+        pageWidth: 180,
+        pageHeight: 180,
+      });
+
+      const groupTexts = groups.map((group) => group.paragraphs.flatMap((paragraph) => paragraph.runs.map((run) => run.text)).join(""));
+      expect(groupTexts.some((text) => text.includes("PROSE") && text.includes("H1"))).toBe(false);
     });
   });
 
@@ -525,6 +689,56 @@ describe("createSpatialGrouping", () => {
 
       expect(leftGroup).toBeDefined();
       expect(rightGroup).toBeDefined();
+    });
+
+    it("does not split touching two-item heading lines under page-column mode", () => {
+      const groupFn = createSpatialGrouping({
+        enableColumnSeparation: true,
+        enablePageColumnDetection: true,
+        maxPageColumns: 2,
+      });
+
+      const pageWidth = 500;
+      const texts: PdfText[] = [];
+
+      for (let row = 0; row < 5; row++) {
+        const y = 500 - row * 16;
+        texts.push(createPdfText({ text: `L${row}-${"x".repeat(30)}`, x: 0, y, width: 220, height: 12, fontSize: 12 }));
+        texts.push(createPdfText({ text: `R${row}-${"x".repeat(30)}`, x: 300, y, width: 180, height: 12, fontSize: 12 }));
+      }
+
+      // Heading-like two-item line with no visible gap between runs.
+      texts.push(createPdfText({ text: "HDR-L", x: 80, y: 560, width: 24, height: 12, fontSize: 12 }));
+      texts.push(createPdfText({ text: "HDR-R", x: 104, y: 560, width: 170, height: 12, fontSize: 12 }));
+
+      const groups = groupFn(texts, { pageWidth });
+      const contents = groups.map((group) => group.paragraphs.map((paragraph) => paragraph.runs.map((run) => run.text).join("")).join("\n"));
+      const headingGroup = contents.find((content) => content.includes("HDR-L") && content.includes("HDR-R"));
+
+      expect(headingGroup).toBeDefined();
+    });
+
+    it("falls back to sequential merge when no effective page columns are detected", () => {
+      const groupFn = createSpatialGrouping({
+        enableColumnSeparation: true,
+        enablePageColumnDetection: true,
+        maxPageColumns: 3,
+      });
+
+      const pageWidth = 700;
+      const texts: PdfText[] = [
+        createPdfText({ text: "TITLE", x: 120, y: 600, width: 420, height: 12, fontSize: 12 }),
+        createPdfText({ text: "SUBTITLE-WIDE", x: 30, y: 584, width: 640, height: 12, fontSize: 12 }),
+        createPdfText({ text: "BODY", x: 30, y: 548, width: 640, height: 12, fontSize: 12 }),
+      ];
+
+      const groups = groupFn(texts, { pageWidth });
+      const contents = groups.map((group) => group.paragraphs.map((paragraph) => paragraph.runs.map((run) => run.text).join("")).join("\n"));
+      const headingGroup = contents.find((content) => content.includes("TITLE"));
+
+      expect(headingGroup).toBeDefined();
+      expect(headingGroup).toContain("SUBTITLE-WIDE");
+      expect(headingGroup?.includes("BODY")).toBe(false);
     });
   });
 

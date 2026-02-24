@@ -21,7 +21,14 @@ export type {
 
 // Grouping functions
 export { noGrouping } from "./strategies/no-grouping";
-export { createSpatialGrouping, spatialGrouping } from "./strategies/spatial-grouping";
+export { buildBlockingZonesFromPageElements } from "./strategies/blocking-zones";
+export {
+  createSpatialGrouping,
+  spatialGrouping,
+  spatialGroupingWithDiagnostics,
+} from "./strategies/spatial-grouping";
+export { decideLineMerge } from "./strategies/line-merge-decision";
+export { decideLineClusterMembership } from "./strategies/line-cluster-decision";
 export { visualizeBlockSegmentation } from "./visualization/block-segmentation-visualizer";
 export {
   segmentTextUnitsByContext,
@@ -31,6 +38,22 @@ export type {
   SegmentationVisualizationSummary,
   VisualizeSegmentationArgs,
 } from "./visualization/block-segmentation-visualizer";
+export type {
+  LineMergeDecisionOptions,
+  LineMergeStrategyId,
+  LineMergeProposalAction,
+  LineMergeProposal,
+  LineMergeDecisionInput,
+  LineMergeDecision,
+} from "./strategies/line-merge-decision";
+export type {
+  LineClusterDecisionOptions,
+  LineClusterStrategyId,
+  LineClusterProposalAction,
+  LineClusterProposal,
+  LineClusterDecisionInput,
+  LineClusterDecision,
+} from "./strategies/line-cluster-decision";
 export type {
   ContextualSegmentationUnit,
   ContextualBoundaryDecisionReason,
@@ -50,4 +73,7 @@ export type {
   WritingMode,
   VerticalColumnOrder,
   InlineDirectionMode,
+  SpatialGroupingLineClusterTrace,
+  SpatialGroupingLineMergeTrace,
+  SpatialGroupingDiagnostics,
 } from "./strategies/spatial-grouping";

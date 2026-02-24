@@ -13,7 +13,7 @@ import { convertFill } from "./color-converter";
 import type { CIDOrdering } from "@aurochs/pdf/domain/font";
 import { normalizeFontFamily, isBoldFont, isItalicFont, normalizeFontName } from "@aurochs/pdf/domain/font";
 import { PT_TO_PX } from "@aurochs/pdf/domain/constants";
-import type { GroupedText, GroupedParagraph } from "@aurochs/pdf/services/block-segmentation";
+import type { GroupedText, GroupedParagraph, ParagraphAlignment } from "@aurochs/pdf/services/block-segmentation";
 import { detectScriptFromText, type ScriptType } from "./unicode-script";
 
 /**
@@ -391,10 +391,8 @@ function convertGroupedTextPosition(
  *
  * ## Alignment Strategy
  *
- * All text uses "left" alignment. The TextBox position itself handles
- * visual alignment - if text appears centered on the page, it's because
- * the TextBox is centered. PDF uses absolute coordinates, so we don't
- * need to detect/apply alignment.
+ * Uses `GroupedText.layoutInference` when available.
+ * Fallback remains left-aligned for LTR and right-aligned for RTL.
  *
  * ## Coordinate System
  *
@@ -406,7 +404,12 @@ function convertGroupedTextPosition(
 function createTextBodyFromGroup(group: GroupedText, context: ConversionContext): TextBody {
   // Preserve PDF line placement as paragraph geometry (margins, tabs, spacing),
   // rather than relying on PPTX auto-wrapping/reflow.
-  const logicalParagraphs = buildParagraphsFromSegmentedLines(group.paragraphs, group.bounds, context);
+  const logicalParagraphs = buildParagraphsFromSegmentedLines({
+    groupedParas: group.paragraphs,
+    bounds: group.bounds,
+    context,
+    inferredAlignment: group.layoutInference?.alignment,
+  });
 
   return {
     bodyProperties: {
@@ -436,11 +439,13 @@ function createTextBodyFromGroup(group: GroupedText, context: ConversionContext)
  * - Use paragraph `marL` for per-line x-offset, and `tabStops` for segment alignment
  * - Use paragraph `spaceBefore` to preserve extra vertical gaps between baselines
  */
-function buildParagraphsFromSegmentedLines(
-  groupedParas: readonly GroupedParagraph[],
-  bounds: { x: number; y: number; width: number; height: number },
-  context: ConversionContext,
-): Paragraph[] {
+function buildParagraphsFromSegmentedLines(args: {
+  readonly groupedParas: readonly GroupedParagraph[];
+  readonly bounds: { x: number; y: number; width: number; height: number };
+  readonly context: ConversionContext;
+  readonly inferredAlignment: ParagraphAlignment | undefined;
+}): Paragraph[] {
+  const { groupedParas, bounds, context, inferredAlignment } = args;
   if (groupedParas.length === 0) {
     return [];
   }
@@ -456,6 +461,38 @@ function buildParagraphsFromSegmentedLines(
     readonly segments: readonly Segment[];
     readonly minX: number;
     readonly fontSize: number;
+    readonly inlineDirection: "ltr" | "rtl";
+  };
+
+  const resolveLineDirection = (segments: readonly Segment[]): "ltr" | "rtl" => {
+    const rtlCount = segments.filter((s) => s.paragraph.inlineDirection === "rtl").length;
+    if (rtlCount >= Math.ceil(segments.length / 2)) {
+      return "rtl";
+    }
+    return "ltr";
+  };
+
+  const resolveAlignment = (direction: "ltr" | "rtl"): "left" | "center" | "right" => {
+    if (inferredAlignment === "center") {
+      return "center";
+    }
+    if (inferredAlignment === "right") {
+      return "right";
+    }
+    if (inferredAlignment === "left") {
+      return "left";
+    }
+    if (direction === "rtl") {
+      return "right";
+    }
+    return "left";
+  };
+
+  const sortSegments = (segments: readonly Segment[], direction: "ltr" | "rtl"): Segment[] => {
+    if (direction === "rtl") {
+      return [...segments].sort((a, b) => b.minX - a.minX);
+    }
+    return [...segments].sort((a, b) => a.minX - b.minX);
   };
 
   const estimateLineEps = (paras: readonly GroupedParagraph[]): number => {
@@ -493,17 +530,31 @@ function buildParagraphsFromSegmentedLines(
       continue;
     }
     // flush
-    const segs = [...current.segments].sort((a, b) => a.minX - b.minX);
+    const lineDirection = resolveLineDirection(current.segments);
+    const segs = sortSegments(current.segments, lineDirection);
     const lineMinX = segs[0]?.minX ?? 0;
     const lineFontSize = segs[0]?.paragraph.runs[0]?.fontSize ?? 12;
-    lines.push({ baselineY: current.baselineY, segments: segs, minX: lineMinX, fontSize: lineFontSize });
+    lines.push({
+      baselineY: current.baselineY,
+      segments: segs,
+      minX: lineMinX,
+      fontSize: lineFontSize,
+      inlineDirection: lineDirection,
+    });
     current = { baselineY: p.baselineY, segments: [{ paragraph: p, minX }] };
   }
   if (current) {
-    const segs = [...current.segments].sort((a, b) => a.minX - b.minX);
+    const lineDirection = resolveLineDirection(current.segments);
+    const segs = sortSegments(current.segments, lineDirection);
     const lineMinX = segs[0]?.minX ?? 0;
     const lineFontSize = segs[0]?.paragraph.runs[0]?.fontSize ?? 12;
-    lines.push({ baselineY: current.baselineY, segments: segs, minX: lineMinX, fontSize: lineFontSize });
+    lines.push({
+      baselineY: current.baselineY,
+      segments: segs,
+      minX: lineMinX,
+      fontSize: lineFontSize,
+      inlineDirection: lineDirection,
+    });
   }
 
   const result: Paragraph[] = [];
@@ -533,6 +584,12 @@ function buildParagraphsFromSegmentedLines(
 
   const buildRunsForLine = (line: LogicalLine): TextRun[] => {
     const out: TextRun[] = [];
+    const sortRuns = (runs: readonly PdfText[]): PdfText[] => {
+      if (line.inlineDirection === "rtl") {
+        return [...runs].sort((a, b) => b.x - a.x);
+      }
+      return [...runs].sort((a, b) => a.x - b.x);
+    };
 
     for (let si = 0; si < line.segments.length; si++) {
       const seg = line.segments[si]!;
@@ -543,11 +600,11 @@ function buildParagraphsFromSegmentedLines(
         out.push(createPptxTextRunFromPdfText(tabText, context));
       }
 
-      const runs = [...seg.paragraph.runs].sort((a, b) => a.x - b.x);
+      const runs = sortRuns(seg.paragraph.runs);
       for (let ri = 0; ri < runs.length; ri++) {
         const run = runs[ri]!;
         const prev = runs[ri - 1];
-        if (prev && shouldInsertSyntheticSpace(prev, run)) {
+        if (prev && shouldInsertSyntheticSpace(prev, run, line.inlineDirection)) {
           const spaceText: PdfText = { ...prev, text: " ", width: 0 };
           out.push(createPptxTextRunFromPdfText(spaceText, context));
         }
@@ -566,10 +623,12 @@ function buildParagraphsFromSegmentedLines(
     const extraSpace = baselineDistance !== undefined ? baselineDistance - prev!.fontSize : undefined;
 
     const marginLeft = convertSize(line.minX - bounds.x, 0, context).width;
+    const alignment = resolveAlignment(line.inlineDirection);
 
     result.push({
       properties: {
-        alignment: "left",
+        alignment,
+        ...(line.inlineDirection === "rtl" ? { rtl: true } : {}),
         ...((marginLeft as number) > 0 ? { marginLeft } : {}),
         ...getExtraSpaceBeforeProperties(extraSpace, context),
         tabStops: buildTabStopsForLine(line),
@@ -582,7 +641,7 @@ function buildParagraphsFromSegmentedLines(
   return result;
 }
 
-function shouldInsertSyntheticSpace(prev: PdfText, cur: PdfText): boolean {
+function shouldInsertSyntheticSpace(prev: PdfText, cur: PdfText, inlineDirection: "ltr" | "rtl"): boolean {
   if (prev.text.length === 0 || cur.text.length === 0) {
     return false;
   }
@@ -590,8 +649,13 @@ function shouldInsertSyntheticSpace(prev: PdfText, cur: PdfText): boolean {
     return false;
   }
 
-  const prevEnd = prev.x + prev.width;
-  const gap = cur.x - prevEnd;
+  const resolveGap = (): number => {
+    if (inlineDirection === "rtl") {
+      return prev.x - (cur.x + cur.width);
+    }
+    return cur.x - (prev.x + prev.width);
+  };
+  const gap = resolveGap();
   if (!(gap > 0)) {
     return false;
   }

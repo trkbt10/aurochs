@@ -4,21 +4,25 @@
 `@aurochs/pdf/services/block-segmentation` を、横書き・縦書き・表組み混在レイアウトで再利用可能なセグメンテーション基盤にする。
 
 ## Corpus Cases
-`corpus-pdf-builder.ts` で次の8ケースを生成する。
+`packages/@aurochs/pdf/fixtures/block-segmentation-corpus/*.pdf` で次の12ケースを固定fixtureとして保持する。
 
 1. `horizontal-long-single`
 2. `horizontal-long-two-column`
 3. `paper-cover-abstract-two-column`
 4. `table-with-rules`
 5. `jp-public-doc-merged-cells`
-6. `vertical-long-single`
-7. `vertical-two-columns`
-8. `vertical-three-columns`
+6. `rtl-arabic-pdfjs`
+7. `vertical-long-single`
+8. `vertical-two-columns`
+9. `vertical-three-columns`
+10. `kanpo-20260219c000320001`
+11. `kanpo-20260219g000350002`
+12. `kanpo-20260219h016500001`
 
 ## Implemented in this step
 
-- ケースPDF生成器を追加（`corpus-pdf-builder.ts`）
-- コーパス一括生成スクリプトを追加（`scripts/generate-block-segmentation-corpus.ts`）
+- ケース定義を追加（`segmentation-corpus-cases.ts`）
+- 固定fixture PDFを追加（`packages/@aurochs/pdf/fixtures/block-segmentation-corpus/`）
 - コーパス検証specを追加（`segmentation-corpus.spec.ts`）
 - 空間グルーピングに writing mode 判定を追加
   - `writingMode: auto|horizontal|vertical`
@@ -45,6 +49,6 @@
 
 ## Acceptance Criteria
 
-- 8ケースすべてで expected group range を満たす
+- 12ケースすべてで expected group range を満たす
 - required tokens が group text に保持される
 - 横書き既存回帰 (`spatial-grouping.spec.ts`) を壊さない

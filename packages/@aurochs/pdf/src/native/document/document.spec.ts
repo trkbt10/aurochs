@@ -137,9 +137,11 @@ describe("NativePdfDocument", () => {
       rotate: 90,
     });
     const doc = loadNativePdfDocument(bytes, { encryption: { mode: "reject" } });
-    const size = doc.getPages()[0]!.getSize();
+    const page = doc.getPages()[0]!;
+    const size = page.getSize();
     expect(size.width).toBe(60);
     expect(size.height).toBe(50);
+    expect(page.getRotation()).toBe(90);
   });
 
   it("applies UserUnit scaling to page size", () => {

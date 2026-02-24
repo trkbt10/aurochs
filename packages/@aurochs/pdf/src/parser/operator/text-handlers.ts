@@ -292,7 +292,7 @@ const handleTextMove: OperatorHandler = (ctx) => {
   const [tx, stack2] = popNumber(stack1);
 
   const [a, b, c, d, e, f] = ctx.textState.textLineMatrix;
-  const newLineMatrix: PdfMatrix = [a, b, c, d, e + tx, f + ty];
+  const newLineMatrix: PdfMatrix = [a, b, c, d, e + a * tx + c * ty, f + b * tx + d * ty];
 
   return {
     operandStack: stack2,
@@ -316,7 +316,7 @@ const handleTextMoveSetLeading: OperatorHandler = (ctx, gfxOps) => {
 
   // Move text position
   const [a, b, c, d, e, f] = ctx.textState.textLineMatrix;
-  const newLineMatrix: PdfMatrix = [a, b, c, d, e + tx, f + ty];
+  const newLineMatrix: PdfMatrix = [a, b, c, d, e + a * tx + c * ty, f + b * tx + d * ty];
 
   return {
     operandStack: stack2,
@@ -358,7 +358,9 @@ const handleTextNextLine: OperatorHandler = (ctx, gfxOps) => {
   // T* is equivalent to: 0 -TL Td
   const leading = gfxOps.get().textLeading;
   const [a, b, c, d, e, f] = ctx.textState.textLineMatrix;
-  const newLineMatrix: PdfMatrix = [a, b, c, d, e, f - leading];
+  const tx = 0;
+  const ty = -leading;
+  const newLineMatrix: PdfMatrix = [a, b, c, d, e + a * tx + c * ty, f + b * tx + d * ty];
 
   return {
     textState: {
@@ -393,14 +395,13 @@ export function createTextRun(
   const { ctm, textRise, charSpacing, wordSpacing, horizontalScaling, graphicsState } = gfxState;
   const { textMatrix, currentFont, currentBaseFont, currentFontInfo, currentFontSize, currentFontMetrics, currentCodeByteWidth } = textState;
 
-  // Text matrix translation gives position in text space
+  // Text matrix [a b c d e f] maps text-space (x,y) to user-space:
+  // x' = a*x + c*y + e
+  // y' = b*x + d*y + f
   const [tmA, tmB, tmC, tmD, tmE, tmF] = textMatrix;
-
-  // Apply text rise to baseline position
-  const textSpaceY = tmF + textRise;
-
-  // Transform text position to page space by composing with CTM
-  const startPos = transformPoint({ x: tmE, y: textSpaceY }, ctm);
+  const startUserX = tmE + tmC * textRise;
+  const startUserY = tmF + tmD * textRise;
+  const startPos = transformPoint({ x: startUserX, y: startUserY }, ctm);
 
   // Calculate text displacement
   const displacement = calculateTextDisplacement(
@@ -413,12 +414,16 @@ export function createTextRun(
     currentCodeByteWidth
   );
 
-  // Update text matrix with new position
-  const newTmE = tmE + displacement;
-  const newTextMatrix: PdfMatrix = [tmA, tmB, tmC, tmD, newTmE, tmF];
+  // Advance baseline in text x-axis by displacement.
+  const advanceUserX = tmA * displacement;
+  const advanceUserY = tmB * displacement;
+  const newTmE = tmE + advanceUserX;
+  const newTmF = tmF + advanceUserY;
+  const newTextMatrix: PdfMatrix = [tmA, tmB, tmC, tmD, newTmE, newTmF];
 
-  // Transform end position to page space
-  const endPos = transformPoint({ x: newTmE, y: textSpaceY }, ctm);
+  const endUserX = startUserX + advanceUserX;
+  const endUserY = startUserY + advanceUserY;
+  const endPos = transformPoint({ x: endUserX, y: endUserY }, ctm);
 
   // Calculate effective font size
   const effectiveFontSize = calculateEffectiveFontSize(currentFontSize, textMatrix, ctm);
@@ -433,6 +438,7 @@ export function createTextRun(
     baseFont: currentBaseFont,
     fontInfo: currentFontInfo,
     endX: endPos.x,
+    endY: endPos.y,
     effectiveFontSize,
     textRise,
     charSpacing,
@@ -459,13 +465,29 @@ function maybeApplyTextClipBBox(
   if (!Number.isFinite(size) || size <= 0) {return;}
 
   const textHeight = ((ascender - descender) * size) / 1000;
-  const minY = textRun.y + (descender * size) / 1000;
-  const x1 = Math.min(textRun.x, textRun.endX);
-  const x2 = Math.max(textRun.x, textRun.endX);
+  const dx = textRun.endX - textRun.x;
+  const dy = textRun.endY - textRun.y;
+  const baselineLength = Math.hypot(dx, dy);
+  const ux = baselineLength > 1e-6 ? dx / baselineLength : 1;
+  const uy = baselineLength > 1e-6 ? dy / baselineLength : 0;
+  const nx = -uy;
+  const ny = ux;
+  const descOffset = (descender * size) / 1000;
+  const ascOffset = descOffset + textHeight;
+  const corners = [
+    { x: textRun.x + nx * descOffset, y: textRun.y + ny * descOffset },
+    { x: textRun.endX + nx * descOffset, y: textRun.endY + ny * descOffset },
+    { x: textRun.x + nx * ascOffset, y: textRun.y + ny * ascOffset },
+    { x: textRun.endX + nx * ascOffset, y: textRun.endY + ny * ascOffset },
+  ];
+  const x1 = Math.min(...corners.map((point) => point.x));
+  const x2 = Math.max(...corners.map((point) => point.x));
+  const y1 = Math.min(...corners.map((point) => point.y));
+  const y2 = Math.max(...corners.map((point) => point.y));
 
-  if (!Number.isFinite(x1) || !Number.isFinite(x2) || !Number.isFinite(minY) || !Number.isFinite(textHeight)) {return;}
+  if (!Number.isFinite(x1) || !Number.isFinite(x2) || !Number.isFinite(y1) || !Number.isFinite(y2)) {return;}
 
-  gfxOps.setClipBBox([x1, minY, x2, minY + Math.max(textHeight, 0)]);
+  gfxOps.setClipBBox([x1, y1, x2, y2]);
 }
 
 /**
@@ -541,7 +563,7 @@ const handleShowTextArray: OperatorHandler = (ctx, gfxOps) => {
       // Positive values move left (subtract from position)
       const adjustment = -elem * currentFontSize / 1000 * Th;
       const [a, b, c, d, e, f] = textState.textMatrix;
-      const newTextMatrix: PdfMatrix = [a, b, c, d, e + adjustment, f];
+      const newTextMatrix: PdfMatrix = [a, b, c, d, e + a * adjustment, f + b * adjustment];
       return {
         ...textState,
         textMatrix: newTextMatrix,
@@ -563,7 +585,9 @@ const handleTextNextLineShow: OperatorHandler = (ctx, gfxOps) => {
   // First move to next line
   const leading = gfxOps.get().textLeading;
   const [a, b, c, d, e, f] = ctx.textState.textLineMatrix;
-  const newLineMatrix: PdfMatrix = [a, b, c, d, e, f - leading];
+  const tx = 0;
+  const ty = -leading;
+  const newLineMatrix: PdfMatrix = [a, b, c, d, e + a * tx + c * ty, f + b * tx + d * ty];
 
   const movedState: TextObjectState = {
     ...ctx.textState,
@@ -613,7 +637,9 @@ const handleTextNextLineShowSpacing: OperatorHandler = (ctx, gfxOps) => {
   // Move to next line
   const leading = gfxOps.get().textLeading;
   const [a, b, c, d, e, f] = ctx.textState.textLineMatrix;
-  const newLineMatrix: PdfMatrix = [a, b, c, d, e, f - leading];
+  const tx = 0;
+  const ty = -leading;
+  const newLineMatrix: PdfMatrix = [a, b, c, d, e + a * tx + c * ty, f + b * tx + d * ty];
 
   const movedState: TextObjectState = {
     ...ctx.textState,

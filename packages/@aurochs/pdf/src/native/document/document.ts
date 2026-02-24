@@ -27,6 +27,7 @@ export type NativePdfMetadata = Readonly<{
 export type NativePdfPage = Readonly<{
   readonly pageNumber: number;
   getSize: () => { width: number; height: number };
+  getRotation: () => 0 | 90 | 180 | 270;
   getBox: (name: "MediaBox" | "CropBox" | "BleedBox" | "TrimBox" | "ArtBox") => readonly number[] | null;
   getResourcesDict: () => PdfDict | null;
   getDecodedContentStreams: () => readonly Uint8Array[];
@@ -497,6 +498,7 @@ function createNativePdfPages(pageDicts: readonly PdfDict[], resolver: PdfResolv
     out.push({
       pageNumber,
       getSize,
+      getRotation: () => rotate,
       getBox,
       getResourcesDict,
       getDecodedContentStreams,

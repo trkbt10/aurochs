@@ -1,0 +1,310 @@
+{
+  "tableCount": 3,
+  "tables": [
+    {
+      "tableIndex": 0,
+      "rowCount": 3,
+      "colCount": 6,
+      "cellCount": 15,
+      "cells": [
+        {
+          "rowIndex": 0,
+          "colStart": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "Ａコース"
+        },
+        {
+          "rowIndex": 0,
+          "colStart": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "有"
+        },
+        {
+          "rowIndex": 0,
+          "colStart": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "○"
+        },
+        {
+          "rowIndex": 0,
+          "colStart": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "×"
+        },
+        {
+          "rowIndex": 0,
+          "colStart": 4,
+          "rowSpan": 3,
+          "colSpan": 1,
+          "preview": "廃止"
+        },
+        {
+          "rowIndex": 0,
+          "colStart": 5,
+          "rowSpan": 2,
+          "colSpan": 1,
+          "preview": "令和７年４月１日以降、官報は電子化され、紙の/印刷物（現状の定期購読）は、内閣府が交付する/文書（官報掲載事項記載書面）"
+        },
+        {
+          "rowIndex": 1,
+          "colStart": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "Ｂコース"
+        },
+        {
+          "rowIndex": 1,
+          "colStart": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "有"
+        },
+        {
+          "rowIndex": 1,
+          "colStart": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "○"
+        },
+        {
+          "rowIndex": 1,
+          "colStart": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "○"
+        },
+        {
+          "rowIndex": 2,
+          "colStart": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "Ｃコース"
+        },
+        {
+          "rowIndex": 2,
+          "colStart": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "無"
+        },
+        {
+          "rowIndex": 2,
+          "colStart": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "○"
+        },
+        {
+          "rowIndex": 2,
+          "colStart": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "×"
+        },
+        {
+          "rowIndex": 2,
+          "colStart": 5,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "需要が少ないためです。"
+        }
+      ]
+    },
+    {
+      "tableIndex": 1,
+      "rowCount": 2,
+      "colCount": 3,
+      "cellCount": 6,
+      "cells": [
+        {
+          "rowIndex": 0,
+          "colStart": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "コース"
+        },
+        {
+          "rowIndex": 0,
+          "colStart": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "定期購読日付検索"
+        },
+        {
+          "rowIndex": 0,
+          "colStart": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "記事検索R7.4.1～"
+        },
+        {
+          "rowIndex": 1,
+          "colStart": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "Ｄコース"
+        },
+        {
+          "rowIndex": 1,
+          "colStart": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "無○"
+        },
+        {
+          "rowIndex": 1,
+          "colStart": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "内容を一部変更し、コース名はつけず「官報情報検索サービ/○/ス」として継続します（詳細は２に記載）。"
+        }
+      ]
+    },
+    {
+      "tableIndex": 2,
+      "rowCount": 7,
+      "colCount": 4,
+      "cellCount": 18,
+      "cells": [
+        {
+          "rowIndex": 0,
+          "colStart": 0,
+          "rowSpan": 1,
+          "colSpan": 2,
+          "preview": "機能区分提供形式"
+        },
+        {
+          "rowIndex": 0,
+          "colStart": 2,
+          "rowSpan": 1,
+          "colSpan": 2,
+          "preview": "その他記事"
+        },
+        {
+          "rowIndex": 1,
+          "colStart": 0,
+          "rowSpan": 1,
+          "colSpan": 2,
+          "preview": "R7.3.31までの記事"
+        },
+        {
+          "rowIndex": 1,
+          "colStart": 2,
+          "rowSpan": 1,
+          "colSpan": 2,
+          "preview": "R7.4.1以降の記事"
+        },
+        {
+          "rowIndex": 2,
+          "colStart": 0,
+          "rowSpan": 1,
+          "colSpan": 2,
+          "preview": "日付検索"
+        },
+        {
+          "rowIndex": 2,
+          "colStart": 2,
+          "rowSpan": 1,
+          "colSpan": 2,
+          "preview": "※③"
+        },
+        {
+          "rowIndex": 3,
+          "colStart": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "テキストデータ"
+        },
+        {
+          "rowIndex": 3,
+          "colStart": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "○"
+        },
+        {
+          "rowIndex": 3,
+          "colStart": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "×"
+        },
+        {
+          "rowIndex": 3,
+          "colStart": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "○"
+        },
+        {
+          "rowIndex": 4,
+          "colStart": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "ＰＤＦデータ"
+        },
+        {
+          "rowIndex": 4,
+          "colStart": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "※④"
+        },
+        {
+          "rowIndex": 4,
+          "colStart": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "※④"
+        },
+        {
+          "rowIndex": 5,
+          "colStart": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "記事検索"
+        },
+        {
+          "rowIndex": 5,
+          "colStart": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "×"
+        },
+        {
+          "rowIndex": 5,
+          "colStart": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "×"
+        },
+        {
+          "rowIndex": 5,
+          "colStart": 3,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "○"
+        },
+        {
+          "rowIndex": 6,
+          "colStart": 0,
+          "rowSpan": 1,
+          "colSpan": 4,
+          "preview": "テキストデータ"
+        }
+      ]
+    }
+  ],
+  "forbiddenCellTokens": [
+    "新しい「官報情報検索サービス」ご提供についてのお知らせ",
+    "２新たに提供",
+    "サービス」について",
+    "裁判所公告等プライバシー配慮が必要な記事",
+    "※①プライバシーへの配慮に関わらず",
+    "③テキストデータの提供を制限"
+  ]
+}

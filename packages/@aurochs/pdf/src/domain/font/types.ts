@@ -36,6 +36,27 @@ export type FontInfo = {
   readonly mapping: FontMapping;
   /** Number of bytes per character code (1 or 2) */
   readonly codeByteWidth: 1 | 2;
+  /**
+   * Exact ToUnicode mapping keyed by source bytes as uppercase hex.
+   * Example: `8140` -> `"あ"`.
+   */
+  readonly toUnicodeByteMapping?: ReadonlyMap<string, string>;
+  /**
+   * Source code byte lengths available in ToUnicode mappings/codespace.
+   * Sorted descending (for longest-match decode).
+   */
+  readonly toUnicodeSourceCodeByteLengths?: readonly number[];
+  /**
+   * Minimal ToUnicode parse diagnostics for debugging mojibake.
+   */
+  readonly toUnicodeDiagnostics?: Readonly<{
+    readonly invalidEntryCount: number;
+    readonly truncatedRangeCount: number;
+    readonly sourceLengthOutsideCodeSpaceCount: number;
+    readonly replacementCharMapCount: number;
+    readonly privateUseCharMapCount: number;
+    readonly sourceCodeLengthHistogram: ReadonlyMap<number, number>;
+  }>;
   /** Font metrics for glyph widths and vertical metrics */
   readonly metrics: FontMetrics;
   /**
@@ -54,6 +75,12 @@ export type FontInfo = {
    * Only present for CID fonts (Type0 with CIDFont descendants).
    */
   readonly ordering?: CIDOrdering;
+  /**
+   * Supplemental CID code -> Unicode mapping derived from CIDToGIDMap and
+   * embedded font cmap tables. Used as a fallback when ToUnicode entries are
+   * missing or corrupted.
+   */
+  readonly cidCodeToUnicodeFallbackMap?: ReadonlyMap<number, string>;
   /**
    * Encoding map for single-byte fonts.
    * Used when ToUnicode is not available but font has a known encoding.

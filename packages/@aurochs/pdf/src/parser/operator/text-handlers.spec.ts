@@ -221,6 +221,7 @@ describe("text-handlers", () => {
         fontName: "F1",
         baseFont: undefined,
         endX: 50,
+        endY: 0,
         effectiveFontSize: 12,
         textRise: 0,
         charSpacing: 0,
@@ -270,6 +271,20 @@ describe("text-handlers", () => {
 
       expect(update.textState?.textMatrix[4]).toBe(100); // e component
       expect(update.textState?.textMatrix[5]).toBe(50);  // f component
+    });
+
+    it("translates along rotated text axes", () => {
+      const ctx = createContext([5, 2], {
+        inTextObject: true,
+        textState: {
+          ...createInitialTextState(),
+          textLineMatrix: [0, 1, -1, 0, 10, 20],
+        },
+      });
+      const update = textHandlers.handleTextMove(ctx, createMockGfxOps().ops);
+
+      expect(update.textState?.textMatrix[4]).toBe(8); // e + a*tx + c*ty = 10 + 0*5 + (-1)*2
+      expect(update.textState?.textMatrix[5]).toBe(25); // f + b*tx + d*ty = 20 + 1*5 + 0*2
     });
   });
 
@@ -324,6 +339,39 @@ describe("text-handlers", () => {
       const update = textHandlers.handleShowText(ctx, createMockGfxOps().ops);
 
       expect(update.textState).toBeUndefined();
+    });
+
+    it("computes endY and advances rotated text matrix", () => {
+      const rotatedMetrics: FontMetrics = {
+        widths: new Map([[65, 1000]]),
+        defaultWidth: 500,
+        ascender: 800,
+        descender: -200,
+      };
+      const ctx = createContext(["A"], {
+        inTextObject: true,
+        textState: {
+          ...createInitialTextState(),
+          textMatrix: [0, 1, -1, 0, 100, 200],
+          textLineMatrix: [0, 1, -1, 0, 100, 200],
+          currentFont: "/F1",
+          currentFontSize: 10,
+          currentFontMetrics: rotatedMetrics,
+          currentCodeByteWidth: 1,
+        },
+      });
+      const update = textHandlers.handleShowText(ctx, createMockGfxOps().ops);
+      const run = update.textState?.textRuns[0];
+      if (!run) {
+        throw new Error("missing run");
+      }
+
+      expect(run.x).toBeCloseTo(100);
+      expect(run.y).toBeCloseTo(200);
+      expect(run.endX).toBeCloseTo(100);
+      expect(run.endY).toBeCloseTo(210);
+      expect(update.textState?.textMatrix[4]).toBeCloseTo(100);
+      expect(update.textState?.textMatrix[5]).toBeCloseTo(210);
     });
   });
 

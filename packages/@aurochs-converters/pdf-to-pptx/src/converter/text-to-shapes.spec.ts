@@ -972,4 +972,55 @@ describe("convertGroupedTextToShape", () => {
     expect(transform?.width).toEqual(px(60));
     expect(transform?.height).toEqual(px(30));
   });
+
+  it("applies inferred center alignment from grouped layout inference", () => {
+    const group: GroupedText = {
+      bounds: { x: 10, y: 70, width: 200, height: 30 },
+      layoutInference: {
+        inlineDirection: "ltr",
+        alignment: "center",
+        confidence: 0.9,
+        estimatedBounds: { x: 0, y: 70, width: 220, height: 30 },
+        startPadding: 12,
+        endPadding: 12,
+      },
+      paragraphs: [
+        {
+          runs: [createPdfText({ text: "Centered", x: 80, y: 88, width: 60 })],
+          baselineY: 100,
+          inlineDirection: "ltr",
+        },
+      ],
+    };
+
+    const shape = convertGroupedTextToShape(group, context, "centered");
+    expect(shape.textBody?.paragraphs[0]?.properties?.alignment).toBe("center");
+  });
+
+  it("sets rtl paragraph flag and right alignment for RTL paragraphs", () => {
+    const group: GroupedText = {
+      bounds: { x: 10, y: 70, width: 200, height: 30 },
+      paragraphs: [
+        {
+          runs: [
+            createPdfText({ text: "שלום", x: 140, y: 88, width: 30 }),
+            createPdfText({ text: "עולם", x: 100, y: 88, width: 30 }),
+          ],
+          baselineY: 100,
+          inlineDirection: "rtl",
+        },
+      ],
+    };
+
+    const shape = convertGroupedTextToShape(group, context, "rtl");
+    const paragraph = shape.textBody?.paragraphs[0];
+    const run = paragraph?.runs[0];
+
+    expect(paragraph?.properties?.rtl).toBe(true);
+    expect(paragraph?.properties?.alignment).toBe("right");
+    if (!run || run.type !== "text") {
+      throw new Error("Expected text run");
+    }
+    expect(run.text.startsWith("שלום")).toBe(true);
+  });
 });

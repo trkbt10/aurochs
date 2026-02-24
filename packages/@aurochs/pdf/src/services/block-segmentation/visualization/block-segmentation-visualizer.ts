@@ -6,8 +6,15 @@ import path from "node:path";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { parsePdf } from "../../../parser/core/pdf-parser";
 import type { PdfText } from "../../../domain/text";
-import { spatialGrouping } from "../strategies/spatial-grouping";
+import type { PdfPath } from "../../../domain/path";
+import {
+  spatialGroupingWithDiagnostics,
+  type SpatialGroupingLineClusterTrace,
+  type SpatialGroupingLineMergeTrace,
+} from "../strategies/spatial-grouping";
+import { buildBlockingZonesFromPageElements } from "../strategies/blocking-zones";
 import type { GroupedText } from "../contracts/types";
+import { normalizePageElementsForDisplay } from "./page-coordinate-normalization";
 
 const GROUP_PALETTE = [
   "#E63946",
@@ -50,6 +57,49 @@ export type SegmentationVisualizationSummary = {
     readonly alignment: string;
     readonly preview: string;
   }[];
+  readonly lineMergeDiagnostics: {
+    readonly traceCount: number;
+    readonly decidedMergeCount: number;
+    readonly finalMergeCount: number;
+    readonly blockedByZoneCount: number;
+    readonly hardSplitProposalCount: number;
+    readonly hardMergeProposalCount: number;
+    readonly strategyHistogram: Readonly<Record<string, number>>;
+    readonly reasonHistogram: Readonly<Record<string, number>>;
+    readonly samples: readonly {
+      readonly index: number;
+      readonly blockedByZone: boolean;
+      readonly decisionMerge: boolean;
+      readonly finalMerge: boolean;
+      readonly mergeScore: number;
+      readonly splitScore: number;
+      readonly topReasons: readonly string[];
+    }[];
+  };
+  readonly lineClusterDiagnostics: {
+    readonly traceCount: number;
+    readonly acceptedCount: number;
+    readonly rejectedCount: number;
+    readonly hardRejectProposalCount: number;
+    readonly strategyHistogram: Readonly<Record<string, number>>;
+    readonly reasonHistogram: Readonly<Record<string, number>>;
+    readonly samples: readonly {
+      readonly index: number;
+      readonly accepted: boolean;
+      readonly acceptScore: number;
+      readonly rejectScore: number;
+      readonly baselineDistance: number;
+      readonly baselineTolerance: number;
+      readonly overlapRatio: number;
+      readonly topReasons: readonly string[];
+    }[];
+  };
+  readonly coordinateNormalization: {
+    readonly applied: boolean;
+    readonly rotation: 0 | 90 | 180 | 270;
+    readonly status: "normalized" | "identity" | "fallback";
+    readonly message?: string;
+  };
   readonly outputSvgPath: string;
   readonly outputJsonPath: string;
 };
@@ -117,8 +167,9 @@ function buildSummaryBase(args: {
   readonly groups: readonly GroupedText[];
   readonly outputSvgPath: string;
   readonly outputJsonPath: string;
-}): Omit<SegmentationVisualizationSummary, "groups"> {
-  const { pdfPath, pageNumber, pageWidth, pageHeight, texts, groups, outputSvgPath, outputJsonPath } = args;
+  readonly coordinateNormalization: SegmentationVisualizationSummary["coordinateNormalization"];
+}): Omit<SegmentationVisualizationSummary, "groups" | "lineMergeDiagnostics" | "lineClusterDiagnostics"> {
+  const { pdfPath, pageNumber, pageWidth, pageHeight, texts, groups, outputSvgPath, outputJsonPath, coordinateNormalization } = args;
   const groupedRuns = groups.flatMap((group) => group.paragraphs.flatMap((paragraph) => paragraph.runs));
   const groupedRunRefs = runSet(groups);
   const sourceText = texts.map((text) => text.text).join("");
@@ -142,6 +193,7 @@ function buildSummaryBase(args: {
     groupedCharCount: Array.from(groupedTextValue).length,
     missingChars: diffCharMaps(sourceChars, groupedChars).slice(0, 40),
     extraChars: diffCharMaps(groupedChars, sourceChars).slice(0, 40),
+    coordinateNormalization,
     outputSvgPath,
     outputJsonPath,
   };
@@ -164,6 +216,93 @@ function groupRows(groups: readonly GroupedText[]): SegmentationVisualizationSum
       preview,
     };
   });
+}
+
+function incrementHistogram(histogram: Map<string, number>, key: string): void {
+  const next = (histogram.get(key) ?? 0) + 1;
+  histogram.set(key, next);
+}
+
+function histogramToObject(histogram: Map<string, number>): Record<string, number> {
+  return Object.fromEntries([...histogram.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])));
+}
+
+function buildLineMergeDiagnostics(
+  traces: readonly SpatialGroupingLineMergeTrace[],
+): SegmentationVisualizationSummary["lineMergeDiagnostics"] {
+  const strategyHistogram = new Map<string, number>();
+  const reasonHistogram = new Map<string, number>();
+  const hardProposalCount = { split: 0, merge: 0 };
+  for (const trace of traces) {
+    for (const proposal of trace.proposals) {
+      incrementHistogram(strategyHistogram, proposal.strategyId);
+      incrementHistogram(reasonHistogram, proposal.reason);
+      if (!proposal.hard) {
+        continue;
+      }
+      if (proposal.action === "split") {
+        hardProposalCount.split += 1;
+      }
+      if (proposal.action === "merge") {
+        hardProposalCount.merge += 1;
+      }
+    }
+  }
+
+  return {
+    traceCount: traces.length,
+    decidedMergeCount: traces.filter((trace) => trace.decisionMerge).length,
+    finalMergeCount: traces.filter((trace) => trace.finalMerge).length,
+    blockedByZoneCount: traces.filter((trace) => trace.blockedByZone).length,
+    hardSplitProposalCount: hardProposalCount.split,
+    hardMergeProposalCount: hardProposalCount.merge,
+    strategyHistogram: histogramToObject(strategyHistogram),
+    reasonHistogram: histogramToObject(reasonHistogram),
+    samples: traces.slice(0, 40).map((trace, index) => ({
+      index,
+      blockedByZone: trace.blockedByZone,
+      decisionMerge: trace.decisionMerge,
+      finalMerge: trace.finalMerge,
+      mergeScore: trace.mergeScore,
+      splitScore: trace.splitScore,
+      topReasons: trace.proposals.slice(0, 3).map((proposal) => `${proposal.action}:${proposal.reason}`),
+    })),
+  };
+}
+
+function buildLineClusterDiagnostics(
+  traces: readonly SpatialGroupingLineClusterTrace[],
+): SegmentationVisualizationSummary["lineClusterDiagnostics"] {
+  const strategyHistogram = new Map<string, number>();
+  const reasonHistogram = new Map<string, number>();
+  const hardRejectCount = traces
+    .flatMap((trace) => trace.proposals)
+    .filter((proposal) => proposal.hard && proposal.action === "reject").length;
+  for (const trace of traces) {
+    for (const proposal of trace.proposals) {
+      incrementHistogram(strategyHistogram, proposal.strategyId);
+      incrementHistogram(reasonHistogram, proposal.reason);
+    }
+  }
+
+  return {
+    traceCount: traces.length,
+    acceptedCount: traces.filter((trace) => trace.accepted).length,
+    rejectedCount: traces.filter((trace) => !trace.accepted).length,
+    hardRejectProposalCount: hardRejectCount,
+    strategyHistogram: histogramToObject(strategyHistogram),
+    reasonHistogram: histogramToObject(reasonHistogram),
+    samples: traces.slice(0, 40).map((trace, index) => ({
+      index,
+      accepted: trace.accepted,
+      acceptScore: trace.acceptScore,
+      rejectScore: trace.rejectScore,
+      baselineDistance: trace.baselineDistance,
+      baselineTolerance: trace.baselineTolerance,
+      overlapRatio: trace.overlapRatio,
+      topReasons: trace.proposals.slice(0, 3).map((proposal) => `${proposal.action}:${proposal.reason}`),
+    })),
+  };
 }
 
 function buildSvg(args: {
@@ -243,8 +382,29 @@ export async function visualizeBlockSegmentation(args: VisualizeSegmentationArgs
   }
 
   const texts = page.elements.filter((element): element is PdfText => element.type === "text");
-  const groups = spatialGrouping(texts, { pageWidth: page.width, pageHeight: page.height });
-  const svg = buildSvg({ pageWidth: page.width, pageHeight: page.height, texts, groups });
+  const pagePaths = page.elements.filter((element): element is PdfPath => element.type === "path");
+  const normalized = await normalizePageElementsForDisplay({
+    pdfBytes: bytes,
+    pageNumber: args.pageNumber,
+    pageWidth: page.width,
+    pageHeight: page.height,
+    texts,
+    paths: pagePaths,
+  });
+  const normalizedTexts = normalized.texts;
+  const blockingZones = buildBlockingZonesFromPageElements({ paths: normalized.paths });
+  const grouped = spatialGroupingWithDiagnostics({
+    texts: normalizedTexts,
+    context: {
+      blockingZones: blockingZones.length > 0 ? blockingZones : undefined,
+      pageWidth: page.width,
+      pageHeight: page.height,
+    },
+  });
+  const groups = grouped.groups;
+  const lineClusterDiagnostics = buildLineClusterDiagnostics(grouped.diagnostics.lineClusterTraces);
+  const lineMergeDiagnostics = buildLineMergeDiagnostics(grouped.diagnostics.lineMergeTraces);
+  const svg = buildSvg({ pageWidth: page.width, pageHeight: page.height, texts: normalizedTexts, groups });
 
   const baseName = outputBaseName(args.pdfPath, args.pageNumber);
   mkdirSync(args.outDir, { recursive: true });
@@ -258,14 +418,22 @@ export async function visualizeBlockSegmentation(args: VisualizeSegmentationArgs
     pageNumber: args.pageNumber,
     pageWidth: page.width,
     pageHeight: page.height,
-    texts,
+    texts: normalizedTexts,
     groups,
     outputSvgPath,
     outputJsonPath,
+    coordinateNormalization: {
+      applied: normalized.applied,
+      rotation: normalized.rotation,
+      status: normalized.status,
+      message: normalized.message,
+    },
   });
   const summary: SegmentationVisualizationSummary = {
     ...summaryBase,
     groups: groupRows(groups),
+    lineMergeDiagnostics,
+    lineClusterDiagnostics,
   };
 
   writeFileSync(outputJsonPath, `${JSON.stringify(summary, null, 2)}\n`);

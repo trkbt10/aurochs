@@ -23,24 +23,24 @@ export { normalizeFontName, isBoldFont, isItalicFont } from "./font-style";
 export { normalizeFontFamily } from "./font-name-map";
 
 // CMap parsing
-export type { CMapParseResult, CMapParserOptions } from "./cmap-parser";
+export type { CMapParseResult, CMapParserOptions } from "./cmap/cmap-parser";
 export {
   parseToUnicodeCMap,
   parseBfChar,
   parseBfRange,
   hexToString,
-} from "./cmap-parser";
+} from "./cmap/cmap-parser";
 
 // Text decoding
-export { decodeText, decodeTextWithFontInfo } from "./text-decoder";
+export { decodeText, decodeTextWithFontInfo } from "./decoding/text-decoder";
 
 // CID ordering fallback
-export type { CIDFallbackMapping } from "./cid-ordering";
+export type { CIDFallbackMapping } from "./cid/cid-ordering";
 export {
   getCIDFallbackMapping,
   detectCIDOrdering,
   decodeCIDFallback,
-} from "./cid-ordering";
+} from "./cid/cid-ordering";
 
 // Encoding maps
 export type { PdfEncodingName } from "./encoding-maps";

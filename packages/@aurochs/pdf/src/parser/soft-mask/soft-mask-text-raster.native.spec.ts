@@ -120,6 +120,7 @@ describe("soft mask text rasterization (native)", () => {
       fontSize: 10,
       fontName: "/F1",
       endX: 1,
+      endY: 0,
       effectiveFontSize: 10,
       textRise: 0,
       charSpacing: 0,

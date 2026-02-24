@@ -222,6 +222,16 @@ export function extractFontInfo(page: NativePdfPage, fontName: string, options: 
   const toUnicode: CMapParseResult = {
     mapping: info.mapping,
     codeByteWidth: info.codeByteWidth,
+    byteMapping: info.toUnicodeByteMapping ?? new Map<string, string>(),
+    sourceCodeByteLengths: info.toUnicodeSourceCodeByteLengths ?? [],
+    diagnostics: info.toUnicodeDiagnostics ?? {
+      invalidEntryCount: 0,
+      truncatedRangeCount: 0,
+      sourceLengthOutsideCodeSpaceCount: 0,
+      replacementCharMapCount: 0,
+      privateUseCharMapCount: 0,
+      sourceCodeLengthHistogram: new Map<number, number>(),
+    },
   };
 
   return {

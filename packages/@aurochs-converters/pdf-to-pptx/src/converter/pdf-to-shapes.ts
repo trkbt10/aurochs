@@ -24,8 +24,8 @@ import { convertGroupedTextToShape } from "./text-to-shapes";
 import { convertImageToShape } from "./image-to-shapes";
 import { computePathBBox } from "@aurochs/pdf/parser/path/path-builder";
 import {
+  buildBlockingZonesFromPageElements,
   createSpatialGrouping,
-  type BlockingZone,
   type GroupedText,
   type GroupingContext,
   type TextGroupingFn,
@@ -114,96 +114,7 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
     textGroupingFn: options.textGroupingFn,
   });
 
-  // Create blocking zones from paths and images to prevent text grouping across shapes
-  const blockingZones: BlockingZone[] = [];
-
-  // Add paths as blocking zones (using bounding boxes)
-  // PdfBBox is [x1, y1, x2, y2] where (x1,y1) is bottom-left and (x2,y2) is top-right
-  //
-  // Strategy for blocking zones:
-  // - Stroke paths (lines/borders) are prioritized as visual separators
-  // - Fill-only paths are treated more carefully:
-  //   - Thin fill areas (likely dividers) are included
-  //   - Large filled areas are likely containers (table cells, backgrounds) and excluded
-  for (const path of paths) {
-    if (path.paintOp === "none" || path.paintOp === "clip") {
-      continue; // Skip invisible paths
-    }
-
-    const bbox = computePathBBox(path);
-    const [x1, y1, x2, y2] = bbox;
-    const width = Math.abs(x2 - x1);
-    const height = Math.abs(y2 - y1);
-
-    // Skip very small paths (likely rendering artifacts)
-    if (width < 0.5 && height < 0.5) {
-      continue;
-    }
-
-    // Determine if this path should be a blocking zone based on paint operation
-    const checkIsBlockingZone = (): boolean => {
-      if (path.paintOp === "stroke" || path.paintOp === "fillStroke") {
-        // Stroked paths (lines, borders) are always blocking zones
-        // They represent visual separators like table borders, divider lines
-        return true;
-      }
-      if (path.paintOp === "fill") {
-        // Fill-only paths need careful consideration:
-        // - Thin fills (divider lines drawn as filled rectangles) should block
-        // - Large filled areas (backgrounds, table cells) should NOT block
-
-        // Threshold for "thin" fill: less than 3 points in either dimension
-        const thinThreshold = 3;
-        const isThinFill = width < thinThreshold || height < thinThreshold;
-
-        // Aspect ratio check: very elongated shapes are likely dividers
-        const aspectRatio = Math.max(width, height) / Math.max(Math.min(width, height), 0.1);
-        const isElongated = aspectRatio > 20;
-
-        // Include thin or elongated fills as blocking zones (they're visual separators)
-        return isThinFill || isElongated;
-      }
-      return false;
-    };
-    const isBlockingZone = checkIsBlockingZone();
-
-    if (isBlockingZone) {
-      blockingZones.push({
-        x: Math.min(x1, x2),
-        y: Math.min(y1, y2),
-        width,
-        height,
-      });
-    }
-  }
-
-  // Add images as blocking zones (compute bounding box from CTM)
-  // PDF images use unit square [0,0]-[1,1] transformed by CTM
-  for (const image of images) {
-    const ctm = image.graphicsState.ctm;
-    const [a, b, c, d, e, f] = ctm;
-    // Transform unit square corners:
-    // (0,0) -> (e, f)
-    // (1,0) -> (a+e, b+f)
-    // (0,1) -> (c+e, d+f)
-    // (1,1) -> (a+c+e, b+d+f)
-    const corners = [
-      { x: e, y: f },
-      { x: a + e, y: b + f },
-      { x: c + e, y: d + f },
-      { x: a + c + e, y: b + d + f },
-    ];
-    const minX = Math.min(...corners.map((c) => c.x));
-    const maxX = Math.max(...corners.map((c) => c.x));
-    const minY = Math.min(...corners.map((c) => c.y));
-    const maxY = Math.max(...corners.map((c) => c.y));
-    blockingZones.push({
-      x: minX,
-      y: minY,
-      width: maxX - minX,
-      height: maxY - minY,
-    });
-  }
+  const blockingZones = buildBlockingZonesFromPageElements({ paths, images });
 
   const groupingContext: GroupingContext = {
     blockingZones: blockingZones.length > 0 ? blockingZones : undefined,

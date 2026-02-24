@@ -790,6 +790,37 @@ function getFontInfo(fontName: string, fontMappings: FontMappings) {
   return state.fontInfo;
 }
 
+function textRunBounds(args: {
+  readonly run: { readonly x: number; readonly y: number; readonly endX: number; readonly endY: number };
+  readonly ascender: number;
+  readonly descender: number;
+  readonly effectiveSize: number;
+}): PdfBBox {
+  const { run, ascender, descender, effectiveSize } = args;
+  const textHeight = ((ascender - descender) * effectiveSize) / 1000;
+  const dx = run.endX - run.x;
+  const dy = run.endY - run.y;
+  const baselineLength = Math.hypot(dx, dy);
+  const ux = baselineLength > 1e-6 ? dx / baselineLength : 1;
+  const uy = baselineLength > 1e-6 ? dy / baselineLength : 0;
+  const nx = -uy;
+  const ny = ux;
+  const descOffset = (descender * effectiveSize) / 1000;
+  const ascOffset = descOffset + textHeight;
+
+  const corners = [
+    { x: run.x + nx * descOffset, y: run.y + ny * descOffset },
+    { x: run.endX + nx * descOffset, y: run.endY + ny * descOffset },
+    { x: run.x + nx * ascOffset, y: run.y + ny * ascOffset },
+    { x: run.endX + nx * ascOffset, y: run.endY + ny * ascOffset },
+  ];
+  const minX = Math.min(...corners.map((point) => point.x));
+  const minY = Math.min(...corners.map((point) => point.y));
+  const maxX = Math.max(...corners.map((point) => point.x));
+  const maxY = Math.max(...corners.map((point) => point.y));
+  return [minX, minY, maxX, maxY];
+}
+
 function convertText(parsed: ParsedText, fontMappings: FontMappings): PdfText[] {
   const mode = parsed.graphicsState.textRenderingMode;
   if (mode === 3 || mode === 7) {
@@ -836,12 +867,17 @@ function convertText(parsed: ParsedText, fontMappings: FontMappings): PdfText[] 
     const descender = metrics?.descender ?? -200;
 
     const effectiveSize = run.effectiveFontSize;
-    const textHeight = ((ascender - descender) * effectiveSize) / 1000;
-    const minY = run.y + (descender * effectiveSize) / 1000;
-    const width = Math.max(run.endX - run.x, 1);
+    const [minX, minY, maxX, maxY] = textRunBounds({
+      run,
+      ascender,
+      descender,
+      effectiveSize,
+    });
+    const width = Math.max(maxX - minX, 1);
+    const height = Math.max(maxY - minY, 1);
 
     if (clipBBox) {
-      const bbox: PdfBBox = [run.x, minY, run.x + width, minY + Math.max(textHeight, 1)];
+      const bbox: PdfBBox = [minX, minY, maxX, maxY];
       if (!bboxIntersects(bbox, clipBBox)) {
         continue;
       }
@@ -852,10 +888,10 @@ function convertText(parsed: ParsedText, fontMappings: FontMappings): PdfText[] 
     results.push({
       type: "text" as const,
       text: decodedText,
-      x: run.x,
+      x: minX,
       y: minY,
       width,
-      height: Math.max(textHeight, 1),
+      height,
       fontName: actualFontName,
       baseFont: run.baseFont ?? fontInfo?.baseFont,
       fontSize: effectiveSize,

@@ -203,6 +203,16 @@ describe("font-decoder", () => {
     const TO_UNICODE = {
       mapping: new Map<number, string>([[0x41, "A"]]),
       codeByteWidth: 1 as const,
+      byteMapping: new Map<string, string>([["41", "A"]]),
+      sourceCodeByteLengths: [1],
+      diagnostics: {
+        invalidEntryCount: 0,
+        truncatedRangeCount: 0,
+        sourceLengthOutsideCodeSpaceCount: 0,
+        replacementCharMapCount: 0,
+        privateUseCharMapCount: 0,
+        sourceCodeLengthHistogram: new Map<number, number>([[1, 1]]),
+      },
     };
 
     const METRICS: FontMetrics = {
@@ -316,7 +326,20 @@ describe("font-decoder", () => {
     it("logs partial extraction summary", () => {
       const warn = createConsoleWarnSpy();
       const result: FontExtractionResult = {
-        toUnicode: { mapping: new Map(), codeByteWidth: 1 },
+        toUnicode: {
+          mapping: new Map(),
+          codeByteWidth: 1,
+          byteMapping: new Map(),
+          sourceCodeByteLengths: [],
+          diagnostics: {
+            invalidEntryCount: 0,
+            truncatedRangeCount: 0,
+            sourceLengthOutsideCodeSpaceCount: 0,
+            replacementCharMapCount: 0,
+            privateUseCharMapCount: 0,
+            sourceCodeLengthHistogram: new Map(),
+          },
+        },
         metrics: null,
         ordering: null,
         encoding: null,

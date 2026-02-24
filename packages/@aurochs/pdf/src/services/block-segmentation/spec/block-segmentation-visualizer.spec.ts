@@ -25,6 +25,9 @@ describe("visualizeBlockSegmentation", () => {
     expect(summary.groupCount).toBeGreaterThan(0);
     expect(summary.groupedRunCount).toBeGreaterThan(0);
     expect(summary.ungroupedRunCount).toBe(0);
+    expect(typeof summary.coordinateNormalization.applied).toBe("boolean");
+    expect([0, 90, 180, 270]).toContain(summary.coordinateNormalization.rotation);
+    expect(["normalized", "identity", "fallback"]).toContain(summary.coordinateNormalization.status);
 
     const svg = readFileSync(summary.outputSvgPath, "utf8");
     expect(svg.includes("<svg")).toBe(true);

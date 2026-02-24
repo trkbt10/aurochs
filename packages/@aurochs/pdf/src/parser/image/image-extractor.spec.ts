@@ -1578,6 +1578,50 @@ describe("image-extractor (/Indexed)", () => {
     const image = images[0]!;
     expect(Array.from(image.alpha ?? [])).toEqual([0, 255]);
   });
+
+  it("expands /Indexed /DeviceCMYK palette images into DeviceRGB bytes", async () => {
+    // /Indexed /DeviceCMYK 1 with lookup:
+    // index0 = [0,0,0,255] => black
+    // index1 = [255,0,0,0] => cyan (naive DeviceCMYK->RGB conversion)
+    // 2 pixels @ 1bpp: indices [0, 1] => 0b01000000 (0x40)
+    const pdfBytes = buildMinimalPdfWithImageXObject({
+      imageStreamAscii: "40>",
+      imageDictEntries:
+        "/Type /XObject /Subtype /Image /Name /Im1 /Width 2 /Height 1 " +
+        "/BitsPerComponent 1 /ColorSpace [/Indexed /DeviceCMYK 1 <000000FFFF000000>] " +
+        "/Filter /ASCIIHexDecode",
+    });
+
+    const doc = await parsePdf(pdfBytes);
+    const images = doc.pages.flatMap((p) => p.elements.filter((e) => e.type === "image"));
+    expect(images).toHaveLength(1);
+
+    const image = images[0]!;
+    expect(image.colorSpace).toBe("DeviceRGB");
+    expect(image.bitsPerComponent).toBe(8);
+    const rgba = convertToRgba(image.data, image.width, image.height, image.colorSpace, image.bitsPerComponent);
+    expect(Array.from(rgba.slice(0, 8))).toEqual([0, 0, 0, 255, 0, 255, 255, 255]);
+  });
+
+  it("applies /Decode [1 0] to /Indexed /DeviceCMYK indices", async () => {
+    // Same palette as above; index inversion makes [0,1] -> [1,0].
+    const pdfBytes = buildMinimalPdfWithImageXObject({
+      imageStreamAscii: "40>",
+      imageDictEntries:
+        "/Type /XObject /Subtype /Image /Name /Im1 /Width 2 /Height 1 " +
+        "/BitsPerComponent 1 /ColorSpace [/Indexed /DeviceCMYK 1 <000000FFFF000000>] " +
+        "/Decode [1 0] " +
+        "/Filter /ASCIIHexDecode",
+    });
+
+    const doc = await parsePdf(pdfBytes);
+    const images = doc.pages.flatMap((p) => p.elements.filter((e) => e.type === "image"));
+    expect(images).toHaveLength(1);
+
+    const image = images[0]!;
+    const rgba = convertToRgba(image.data, image.width, image.height, image.colorSpace, image.bitsPerComponent);
+    expect(Array.from(rgba.slice(0, 8))).toEqual([0, 255, 255, 255, 0, 0, 0, 255]);
+  });
 });
 
 describe("image-extractor (ImageMask)", () => {

@@ -6,7 +6,7 @@ import type { NativePdfPage, PdfArray, PdfDict, PdfObject, PdfStream } from "../
 import { decodePdfStream } from "../../native/stream/stream";
 import { normalizeFontFamily } from "./font-name-map";
 import { repairFontForWeb } from "./font-repair";
-import { parseToUnicodeCMap } from "./cmap-parser";
+import { parseToUnicodeCMap } from "./cmap/cmap-parser";
 import { extractTrueTypeMetrics, normalizeMetricsTo1000 } from "./truetype-parser";
 import type { EmbeddedFont, EmbeddedFontMetrics, FontFormat } from "./embedded-font";
 

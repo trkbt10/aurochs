@@ -11,6 +11,7 @@ import type { CMapParseResult, FontInfo, FontMappings, FontMetrics } from "../..
 import {
   DEFAULT_FONT_METRICS,
   detectCIDOrdering,
+  decodeCIDFallback,
   getEncodingByName,
   applyEncodingDifferences,
   glyphNameToUnicode,
@@ -20,6 +21,17 @@ import {
   type CIDOrdering,
   type CMapParserOptions,
 } from "../../domain/font";
+import { parseCffCidCharset } from "../../domain/font/cff/cff-cid-parser";
+import {
+  buildCidCodeToUnicodeFallbackMap,
+  extractGlyphIdToUnicodeFromTrueTypeLikeFont,
+  type CidToGidMapping,
+} from "../../domain/font/decoding/cid-glyph-fallback";
+import {
+  hasExplicitIdentityRos,
+  inferOrderingFromCidCoverage,
+  isDenseLowRangeIdentityCidMap,
+} from "./cid-ordering-heuristics";
 
 export type NativeFontExtractionOptions = {
   readonly cmapOptions?: CMapParserOptions;
@@ -68,6 +80,110 @@ function parseToUnicodeFromStream(stream: PdfStream, cmapOptions?: CMapParserOpt
   const decoded = decodePdfStream(stream);
   const cmapData = new TextDecoder("latin1").decode(decoded);
   return parseToUnicodeCMap(cmapData, cmapOptions);
+}
+
+function resolveSuspectedToUnicodeCause(args: {
+  readonly hasStructuralIssue: boolean;
+  readonly hasHighCorruptionSignal: boolean;
+}): "likely-source-tounicode-corrupted" | "needs-implementation-review" {
+  if (!args.hasStructuralIssue && args.hasHighCorruptionSignal) {
+    return "likely-source-tounicode-corrupted";
+  }
+  return "needs-implementation-review";
+}
+
+function formatSourceLengthHistogram(histogram: ReadonlyMap<number, number>): string {
+  const entries = [...histogram.entries()].sort((a, b) => b[0] - a[0]);
+  if (entries.length === 0) {
+    return "none";
+  }
+  return entries.map(([length, count]) => `${length}:${count}`).join(",");
+}
+
+function maybeWarnSuspiciousToUnicode(
+  fontName: string,
+  baseFont: string | undefined,
+  toUnicode: CMapParseResult | null,
+): void {
+  if (!toUnicode || toUnicode.byteMapping.size === 0) {
+    return;
+  }
+
+  const diagnostics = toUnicode.diagnostics;
+  const total = toUnicode.byteMapping.size;
+  const replacementRatio = diagnostics.replacementCharMapCount / total;
+  const privateUseRatio = diagnostics.privateUseCharMapCount / total;
+  const hasStructuralIssue =
+    diagnostics.invalidEntryCount > 0 ||
+    diagnostics.truncatedRangeCount > 0 ||
+    diagnostics.sourceLengthOutsideCodeSpaceCount > 0;
+  const hasHighCorruptionSignal = replacementRatio >= 0.5 || privateUseRatio >= 0.5;
+  const suspectedCause = resolveSuspectedToUnicodeCause({
+    hasStructuralIssue,
+    hasHighCorruptionSignal,
+  });
+  const isSuspicious =
+    hasStructuralIssue || hasHighCorruptionSignal;
+  if (!isSuspicious) {
+    return;
+  }
+
+  const baseFontLabel = baseFont ?? "(unknown)";
+  const sourceLengthHistogram = formatSourceLengthHistogram(diagnostics.sourceCodeLengthHistogram);
+  console.warn(
+    `[PDF ToUnicode] suspicious mapping for ${fontName} base=${baseFontLabel}: ` +
+      `entries=${total}, invalid=${diagnostics.invalidEntryCount}, truncated=${diagnostics.truncatedRangeCount}, ` +
+      `outsideCodespace=${diagnostics.sourceLengthOutsideCodeSpaceCount}, ` +
+      `replacement=${diagnostics.replacementCharMapCount}, pua=${diagnostics.privateUseCharMapCount}, ` +
+      `sourceLengthHistogram=${sourceLengthHistogram}, ` +
+      `suspectedCause=${suspectedCause}`
+  );
+}
+
+function isSeverelyCorruptedToUnicode(toUnicode: CMapParseResult | null): boolean {
+  if (!toUnicode || toUnicode.byteMapping.size === 0) {
+    return false;
+  }
+  const diagnostics = toUnicode.diagnostics;
+  const total = toUnicode.byteMapping.size;
+  const replacementRatio = diagnostics.replacementCharMapCount / total;
+  const privateUseRatio = diagnostics.privateUseCharMapCount / total;
+  return replacementRatio >= 0.5 || privateUseRatio >= 0.5;
+}
+
+function maybeWarnUnrecoverableIdentityCorruption(args: {
+  readonly fontName: string;
+  readonly baseFont: string | undefined;
+  readonly ordering: CIDOrdering | null;
+  readonly toUnicode: CMapParseResult | null;
+  readonly cidCodeToUnicodeFallbackMap: ReadonlyMap<number, string> | undefined;
+}): void {
+  const {
+    fontName,
+    baseFont,
+    ordering,
+    toUnicode,
+    cidCodeToUnicodeFallbackMap,
+  } = args;
+  if (ordering !== "Identity") {
+    return;
+  }
+  if (!isSeverelyCorruptedToUnicode(toUnicode)) {
+    return;
+  }
+  if (cidCodeToUnicodeFallbackMap && cidCodeToUnicodeFallbackMap.size > 0) {
+    return;
+  }
+
+  const diagnostics = toUnicode?.diagnostics;
+  const total = toUnicode?.byteMapping.size ?? 0;
+  const replacement = diagnostics?.replacementCharMapCount ?? 0;
+  const pua = diagnostics?.privateUseCharMapCount ?? 0;
+  console.warn(
+    `[PDF ToUnicode] unrecoverable Identity mapping for ${fontName} base=${baseFont ?? "(unknown)"}: ` +
+      `entries=${total}, replacement=${replacement}, pua=${pua}. ` +
+      "No reliable CID->Unicode fallback is available; extraction will keep replacement characters."
+  );
 }
 
 function inferCodeByteWidth(
@@ -132,7 +248,7 @@ function normalizeBaseFontKey(baseFont: string): string {
   return plusIndex > 0 ? clean.slice(plusIndex + 1) : clean;
 }
 
-function extractCIDOrderingFromFontDict(page: NativePdfPage, fontDict: PdfDict): CIDOrdering | null {
+function extractType0DescendantFontDict(page: NativePdfPage, fontDict: PdfDict): PdfDict | null {
   const subtype = asName(dictGet(fontDict, "Subtype"))?.value ?? "";
   if (subtype !== "Type0") {return null;}
 
@@ -140,7 +256,11 @@ function extractCIDOrderingFromFontDict(page: NativePdfPage, fontDict: PdfDict):
   const arr = asArray(descendants);
   if (!arr || arr.items.length === 0) {return null;}
   const first = resolve(page, arr.items[0]);
-  const cidFont = asDict(first);
+  return asDict(first);
+}
+
+function extractCIDOrderingFromFontDict(page: NativePdfPage, fontDict: PdfDict): CIDOrdering | null {
+  const cidFont = extractType0DescendantFontDict(page, fontDict);
   if (!cidFont) {return null;}
 
   const cidSystemInfo = resolveDict(page, dictGet(cidFont, "CIDSystemInfo"));
@@ -150,6 +270,259 @@ function extractCIDOrderingFromFontDict(page: NativePdfPage, fontDict: PdfDict):
   const orderingStr = extractCIDOrderingString(orderingObj);
   if (!orderingStr) {return null;}
   return detectCIDOrdering(orderingStr);
+}
+
+function extractEmbeddedTrueTypeLikeFontData(page: NativePdfPage, fontDict: PdfDict): Uint8Array | null {
+  const descriptor = extractFontDescriptor(page, fontDict);
+  if (!descriptor) {
+    return null;
+  }
+
+  const fontFile2 = asStream(resolve(page, dictGet(descriptor, "FontFile2")));
+  if (fontFile2) {
+    return decodePdfStream(fontFile2);
+  }
+
+  const fontFile3 = asStream(resolve(page, dictGet(descriptor, "FontFile3")));
+  if (!fontFile3) {
+    return null;
+  }
+
+  const streamSubtype = asName(dictGet(fontFile3.dict, "Subtype"))?.value ?? "";
+  if (streamSubtype !== "OpenType") {
+    return null;
+  }
+  return decodePdfStream(fontFile3);
+}
+
+function extractEmbeddedCidFontType0CData(page: NativePdfPage, fontDict: PdfDict): Uint8Array | null {
+  const descriptor = extractFontDescriptor(page, fontDict);
+  if (!descriptor) {
+    return null;
+  }
+
+  const fontFile3 = asStream(resolve(page, dictGet(descriptor, "FontFile3")));
+  if (!fontFile3) {
+    return null;
+  }
+
+  const streamSubtype = asName(dictGet(fontFile3.dict, "Subtype"))?.value ?? "";
+  if (streamSubtype !== "CIDFontType0C") {
+    return null;
+  }
+
+  return decodePdfStream(fontFile3);
+}
+
+function extractCidToGidMapping(page: NativePdfPage, fontDict: PdfDict): CidToGidMapping | null {
+  const cidFont = extractType0DescendantFontDict(page, fontDict);
+  if (!cidFont) {
+    return null;
+  }
+
+  const cidToGid = resolve(page, dictGet(cidFont, "CIDToGIDMap"));
+  if (!cidToGid) {
+    return { kind: "identity" };
+  }
+  if (cidToGid.type === "name" && cidToGid.value === "Identity") {
+    return { kind: "identity" };
+  }
+  const stream = asStream(cidToGid);
+  if (!stream) {
+    return null;
+  }
+  return { kind: "table", bytes: decodePdfStream(stream) };
+}
+
+function buildCidFallbackMapFromCffCidCharset(args: {
+  readonly cidToGid: CidToGidMapping;
+  readonly gidToCid: ReadonlyMap<number, number>;
+  readonly ordering: Exclude<CIDOrdering, "Identity">;
+}): ReadonlyMap<number, string> {
+  const {
+    cidToGid,
+    gidToCid,
+    ordering,
+  } = args;
+
+  const fallback = new Map<number, string>();
+  const decodeFromGid = (cidCode: number, gid: number): void => {
+    if (gid <= 0) {
+      return;
+    }
+    const cid = gidToCid.get(gid);
+    if (cid === undefined || cid <= 0) {
+      return;
+    }
+    const unicode = decodeCIDFallback(cid, ordering);
+    if (!unicode) {
+      return;
+    }
+    fallback.set(cidCode, unicode);
+  };
+
+  if (cidToGid.kind === "identity") {
+    for (const [gid] of gidToCid.entries()) {
+      if (!Number.isInteger(gid) || gid <= 0 || gid > 0xffff) {
+        continue;
+      }
+      decodeFromGid(gid, gid);
+    }
+    return fallback;
+  }
+
+  const pairCount = Math.floor(cidToGid.bytes.length / 2);
+  const view = new DataView(cidToGid.bytes.buffer, cidToGid.bytes.byteOffset, cidToGid.bytes.byteLength);
+  for (let cidCode = 0; cidCode < pairCount; cidCode += 1) {
+    const gid = view.getUint16(cidCode * 2, false);
+    decodeFromGid(cidCode, gid);
+  }
+  return fallback;
+}
+
+type CffFallbackOrderingResolution = Readonly<{
+  ordering: Exclude<CIDOrdering, "Identity">;
+  source: "font-ordering" | "cff-ros" | "cid-coverage-heuristic";
+  coverageScores?: ReadonlyMap<Exclude<CIDOrdering, "Identity">, number>;
+}>;
+
+function resolveCffFallbackOrdering(args: {
+  readonly fontOrdering: CIDOrdering | undefined;
+  readonly cffRosOrdering: string | undefined;
+  readonly gidToCid: ReadonlyMap<number, number>;
+  readonly allowIdentityHeuristic: boolean;
+}): CffFallbackOrderingResolution | undefined {
+  const {
+    fontOrdering,
+    cffRosOrdering,
+    gidToCid,
+    allowIdentityHeuristic,
+  } = args;
+  if (fontOrdering && fontOrdering !== "Identity") {
+    return {
+      ordering: fontOrdering,
+      source: "font-ordering",
+    };
+  }
+
+  if (cffRosOrdering) {
+    const detected = detectCIDOrdering(cffRosOrdering);
+    if (detected && detected !== "Identity") {
+      return {
+        ordering: detected,
+        source: "cff-ros",
+      };
+    }
+  }
+
+  if (!allowIdentityHeuristic) {
+    return undefined;
+  }
+  const inferred = inferOrderingFromCidCoverage(gidToCid);
+  if (!inferred) {
+    return undefined;
+  }
+  return {
+    ordering: inferred.ordering,
+    source: "cid-coverage-heuristic",
+    coverageScores: inferred.coverageScores,
+  };
+}
+
+function formatCoverageScores(scores: ReadonlyMap<Exclude<CIDOrdering, "Identity">, number> | undefined): string {
+  if (!scores || scores.size === 0) {
+    return "none";
+  }
+  return [...scores.entries()]
+    .map(([ordering, score]) => `${ordering}:${score.toFixed(3)}`)
+    .join(",");
+}
+
+function buildCidCodeToUnicodeFallbackFromFont(args: {
+  readonly page: NativePdfPage;
+  readonly fontDict: PdfDict;
+  readonly ordering: CIDOrdering | undefined;
+  readonly fontName: string;
+  readonly baseFont: string | undefined;
+  readonly allowIdentityHeuristic: boolean;
+}): ReadonlyMap<number, string> | undefined {
+  const {
+    page,
+    fontDict,
+    ordering,
+    fontName,
+    baseFont,
+    allowIdentityHeuristic,
+  } = args;
+  const cidToGid = extractCidToGidMapping(page, fontDict);
+  if (!cidToGid) {
+    return undefined;
+  }
+
+  const fontData = extractEmbeddedTrueTypeLikeFontData(page, fontDict);
+  if (fontData) {
+    const glyphIdToUnicode = extractGlyphIdToUnicodeFromTrueTypeLikeFont(fontData);
+    if (glyphIdToUnicode.size > 0) {
+      const fallback = buildCidCodeToUnicodeFallbackMap({
+        cidToGid,
+        glyphIdToUnicode,
+      });
+      if (fallback.size > 0) {
+        return fallback;
+      }
+    }
+  }
+
+  const cffData = extractEmbeddedCidFontType0CData(page, fontDict);
+  if (!cffData) {
+    return undefined;
+  }
+  const parsedCff = parseCffCidCharset(cffData);
+  if (!parsedCff || parsedCff.gidToCid.size === 0) {
+    return undefined;
+  }
+
+  const hasIdentityRos = hasExplicitIdentityRos(parsedCff.ros?.ordering);
+  const hasDenseLowRangeIdentityCidMap = isDenseLowRangeIdentityCidMap(parsedCff.gidToCid);
+  const allowCoverageHeuristic = allowIdentityHeuristic && !hasIdentityRos && !hasDenseLowRangeIdentityCidMap;
+  if (allowIdentityHeuristic && (hasIdentityRos || hasDenseLowRangeIdentityCidMap)) {
+    const reason = hasIdentityRos ? "cff-ros-identity" : "dense-low-range-identity-cid-map";
+    console.warn(
+      `[PDF ToUnicode] skipping CID ordering heuristic for ${fontName} base=${baseFont ?? "(unknown)"} ` +
+      `reason=${reason}`
+    );
+  }
+
+  const orderingResolution = resolveCffFallbackOrdering({
+    fontOrdering: ordering,
+    cffRosOrdering: parsedCff.ros?.ordering,
+    gidToCid: parsedCff.gidToCid,
+    allowIdentityHeuristic: allowCoverageHeuristic,
+  });
+  if (!orderingResolution) {
+    return undefined;
+  }
+  if (orderingResolution.source === "cff-ros" && (!ordering || ordering === "Identity")) {
+    console.warn(
+      `[PDF ToUnicode] using CFF ROS ordering ${orderingResolution.ordering} for ${fontName} base=${baseFont ?? "(unknown)"}`
+    );
+  }
+  if (orderingResolution.source === "cid-coverage-heuristic") {
+    console.warn(
+      `[PDF ToUnicode] inferred CID ordering ${orderingResolution.ordering} for ${fontName} base=${baseFont ?? "(unknown)"} ` +
+      `from CID coverage scores=${formatCoverageScores(orderingResolution.coverageScores)}`
+    );
+  }
+
+  const cffFallback = buildCidFallbackMapFromCffCidCharset({
+    cidToGid,
+    gidToCid: parsedCff.gidToCid,
+    ordering: orderingResolution.ordering,
+  });
+  if (cffFallback.size === 0) {
+    return undefined;
+  }
+  return cffFallback;
 }
 
 function extractCIDOrderingString(orderingObj: PdfObject | undefined): string | null {
@@ -541,9 +914,27 @@ export function extractFontMappingsFromResourcesNative(
     const baseFont = extractBaseFontName(page, fontDict);
     const toUnicodeStream = findToUnicodeStream(page, fontDict);
     const toUnicode = toUnicodeStream ? parseToUnicodeFromStream(toUnicodeStream, options.cmapOptions) : null;
+    maybeWarnSuspiciousToUnicode(fontName, baseFont, toUnicode);
 
     const metrics = extractFontMetrics(page, fontDict);
     const ordering = extractCIDOrderingFromFontDict(page, fontDict) ?? undefined;
+    const allowIdentityHeuristic =
+      !toUnicode || toUnicode.byteMapping.size === 0 || isSeverelyCorruptedToUnicode(toUnicode);
+    const cidCodeToUnicodeFallbackMap = buildCidCodeToUnicodeFallbackFromFont({
+      page,
+      fontDict,
+      ordering,
+      fontName,
+      baseFont,
+      allowIdentityHeuristic,
+    });
+    maybeWarnUnrecoverableIdentityCorruption({
+      fontName,
+      baseFont,
+      ordering: ordering ?? null,
+      toUnicode,
+      cidCodeToUnicodeFallbackMap,
+    });
     const encodingMap = extractEncodingMap(page, fontDict) ?? undefined;
 
     const { isBold, isItalic } = computeBoldItalic(baseFont, extractFontDescriptor(page, fontDict));
@@ -552,9 +943,13 @@ export function extractFontMappingsFromResourcesNative(
     const infoRaw: FontInfo = {
       mapping: toUnicode?.mapping ?? new Map(),
       codeByteWidth,
+      toUnicodeByteMapping: toUnicode?.byteMapping,
+      toUnicodeSourceCodeByteLengths: toUnicode?.sourceCodeByteLengths,
+      toUnicodeDiagnostics: toUnicode?.diagnostics,
       metrics,
       type3: extractType3Info(page, fontDict),
       ordering,
+      cidCodeToUnicodeFallbackMap,
       encodingMap,
       isBold,
       isItalic,
