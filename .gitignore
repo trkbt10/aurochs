@@ -172,6 +172,10 @@ AGENTS.md
 
 # Test fixtures (external test data like Apache POI)
 fixtures/
+!packages/@aurochs/pdf/fixtures/
+!packages/@aurochs/pdf/fixtures/block-segmentation-corpus/
+!packages/@aurochs/pdf/fixtures/block-segmentation-corpus/*.pdf
+packages/@aurochs/pdf/fixtures/block-segmentation-corpus/__viz__/
 
 # Visual regression test outputs (generated at runtime)
 **/__output__/

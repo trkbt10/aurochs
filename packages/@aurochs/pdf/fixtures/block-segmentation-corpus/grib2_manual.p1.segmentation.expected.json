@@ -1,0 +1,401 @@
+{
+  "page": {
+    "width": 595.276,
+    "height": 841.89
+  },
+  "groupCountRange": {
+    "min": 40,
+    "max": 60
+  },
+  "requiredTokens": [
+    "GRIB2データについて",
+    "最初の格子点の緯度",
+    "最初の格子点の経度"
+  ],
+  "textBlocks": [
+    {
+      "token": "GRIB2データについて",
+      "bounds": {
+        "x": 84.6,
+        "y": 724.83036,
+        "width": 137.40712930245,
+        "height": 14.04
+      },
+      "paragraphCount": 1,
+      "runCount": 12
+    },
+    {
+      "token": "2018年1月分から2021年3月分までのデータでは",
+      "bounds": {
+        "x": 84.12,
+        "y": 541.96104,
+        "width": 448.18161468842993,
+        "height": 57.6
+      },
+      "paragraphCount": 5,
+      "runCount": 189
+    },
+    {
+      "token": "メソ客観解析データ",
+      "bounds": {
+        "x": 84.12,
+        "y": 517.84104,
+        "width": 90.98183532689998,
+        "height": 10.56
+      },
+      "paragraphCount": 1,
+      "runCount": 9
+    },
+    {
+      "token": "局地客観解析データ",
+      "bounds": {
+        "x": 84.12,
+        "y": 432.16104,
+        "width": 97.40781180479998,
+        "height": 10.56
+      },
+      "paragraphCount": 1,
+      "runCount": 9
+    }
+  ],
+  "tableCount": 2,
+  "tables": [
+    {
+      "tableIndex": 0,
+      "rowCount": 5,
+      "colCount": 3,
+      "cellCount": 14,
+      "bounds": {
+        "x": 82.55,
+        "y": 455,
+        "width": 431.06,
+        "height": 62.66000000000008
+      },
+      "cells": [
+        {
+          "rowIndex": 0,
+          "colStart": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "誤",
+          "x0": 226.32000000000002,
+          "y0": 516.45,
+          "x1": 369.84,
+          "y1": 517.6600000000001
+        },
+        {
+          "rowIndex": 0,
+          "colStart": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "正",
+          "x0": 369.84,
+          "y0": 516.45,
+          "x1": 513.61,
+          "y1": 517.6600000000001
+        },
+        {
+          "rowIndex": 1,
+          "colStart": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "最初の格子点の緯度",
+          "x0": 82.55,
+          "y0": 504.21,
+          "x1": 226.32000000000002,
+          "y1": 516.45
+        },
+        {
+          "rowIndex": 1,
+          "colStart": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "44129687",
+          "x0": 226.32000000000002,
+          "y0": 504.21,
+          "x1": 369.84,
+          "y1": 516.45
+        },
+        {
+          "rowIndex": 1,
+          "colStart": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "44130086",
+          "x0": 369.84,
+          "y0": 504.21,
+          "x1": 513.61,
+          "y1": 516.45
+        },
+        {
+          "rowIndex": 2,
+          "colStart": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "（39～42オクテット）",
+          "x0": 82.55,
+          "y0": 480.69,
+          "x1": 226.32000000000002,
+          "y1": 504.21
+        },
+        {
+          "rowIndex": 2,
+          "colStart": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "（北緯44.129687度）",
+          "x0": 226.32000000000002,
+          "y0": 480.69,
+          "x1": 369.84,
+          "y1": 504.21
+        },
+        {
+          "rowIndex": 2,
+          "colStart": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "（北緯44.130086度）",
+          "x0": 369.84,
+          "y0": 480.69,
+          "x1": 513.61,
+          "y1": 504.21
+        },
+        {
+          "rowIndex": 3,
+          "colStart": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "最初の格子点の経度",
+          "x0": 82.55,
+          "y0": 456.21,
+          "x1": 226.32000000000002,
+          "y1": 480.69
+        },
+        {
+          "rowIndex": 3,
+          "colStart": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "107465817",
+          "x0": 226.32000000000002,
+          "y0": 456.21,
+          "x1": 369.84,
+          "y1": 480.69
+        },
+        {
+          "rowIndex": 3,
+          "colStart": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "107463955",
+          "x0": 369.84,
+          "y0": 456.21,
+          "x1": 513.61,
+          "y1": 480.69
+        },
+        {
+          "rowIndex": 4,
+          "colStart": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "（43～46オクテット）",
+          "x0": 82.55,
+          "y0": 455,
+          "x1": 226.32000000000002,
+          "y1": 456.21
+        },
+        {
+          "rowIndex": 4,
+          "colStart": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "（東経107.465817度）",
+          "x0": 226.32000000000002,
+          "y0": 455,
+          "x1": 369.84,
+          "y1": 456.21
+        },
+        {
+          "rowIndex": 4,
+          "colStart": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "（東経107.463955度）",
+          "x0": 369.84,
+          "y0": 455,
+          "x1": 513.61,
+          "y1": 456.21
+        }
+      ]
+    },
+    {
+      "tableIndex": 1,
+      "rowCount": 5,
+      "colCount": 3,
+      "cellCount": 14,
+      "bounds": {
+        "x": 82.55,
+        "y": 369.32,
+        "width": 431.06,
+        "height": 62.660000000000025
+      },
+      "cells": [
+        {
+          "rowIndex": 0,
+          "colStart": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "誤",
+          "x0": 226.32000000000002,
+          "y0": 430.77,
+          "x1": 369.84,
+          "y1": 431.98
+        },
+        {
+          "rowIndex": 0,
+          "colStart": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "正",
+          "x0": 369.84,
+          "y0": 430.77,
+          "x1": 513.61,
+          "y1": 431.98
+        },
+        {
+          "rowIndex": 1,
+          "colStart": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "最初の格子点の緯度",
+          "x0": 82.55,
+          "y0": 418.53,
+          "x1": 226.32000000000002,
+          "y1": 430.77
+        },
+        {
+          "rowIndex": 1,
+          "colStart": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "42756628",
+          "x0": 226.32000000000002,
+          "y0": 418.53,
+          "x1": 369.84,
+          "y1": 430.77
+        },
+        {
+          "rowIndex": 1,
+          "colStart": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "42757018",
+          "x0": 369.84,
+          "y0": 418.53,
+          "x1": 513.61,
+          "y1": 430.77
+        },
+        {
+          "rowIndex": 2,
+          "colStart": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "（39～42オクテット）",
+          "x0": 82.55,
+          "y0": 395.01,
+          "x1": 226.32000000000002,
+          "y1": 418.53
+        },
+        {
+          "rowIndex": 2,
+          "colStart": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "（北緯42.756628度）",
+          "x0": 226.32000000000002,
+          "y0": 395.01,
+          "x1": 369.84,
+          "y1": 418.53
+        },
+        {
+          "rowIndex": 2,
+          "colStart": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "（北緯42.757018度）",
+          "x0": 369.84,
+          "y0": 395.01,
+          "x1": 513.61,
+          "y1": 418.53
+        },
+        {
+          "rowIndex": 3,
+          "colStart": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "最初の格子点の経度",
+          "x0": 82.55,
+          "y0": 370.53,
+          "x1": 226.32000000000002,
+          "y1": 395.01
+        },
+        {
+          "rowIndex": 3,
+          "colStart": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "110995644",
+          "x0": 226.32000000000002,
+          "y0": 370.53,
+          "x1": 369.84,
+          "y1": 395.01
+        },
+        {
+          "rowIndex": 3,
+          "colStart": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "110994015",
+          "x0": 369.84,
+          "y0": 370.53,
+          "x1": 513.61,
+          "y1": 395.01
+        },
+        {
+          "rowIndex": 4,
+          "colStart": 0,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "（43～46オクテット）",
+          "x0": 82.55,
+          "y0": 369.32,
+          "x1": 226.32000000000002,
+          "y1": 370.53
+        },
+        {
+          "rowIndex": 4,
+          "colStart": 1,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "（東経110.995644度）",
+          "x0": 226.32000000000002,
+          "y0": 369.32,
+          "x1": 369.84,
+          "y1": 370.53
+        },
+        {
+          "rowIndex": 4,
+          "colStart": 2,
+          "rowSpan": 1,
+          "colSpan": 1,
+          "preview": "（東経110.994015度）",
+          "x0": 369.84,
+          "y0": 369.32,
+          "x1": 513.61,
+          "y1": 370.53
+        }
+      ]
+    }
+  ],
+  "forbiddenCellTokens": []
+}

@@ -17,12 +17,22 @@ type TableOverlayExpected = {
     readonly rowCount: number;
     readonly colCount: number;
     readonly cellCount: number;
+    readonly bounds?: {
+      readonly x: number;
+      readonly y: number;
+      readonly width: number;
+      readonly height: number;
+    };
     readonly cells: readonly {
       readonly rowIndex: number;
       readonly colStart: number;
       readonly rowSpan: number;
       readonly colSpan: number;
       readonly preview: string;
+      readonly x0?: number;
+      readonly y0?: number;
+      readonly x1?: number;
+      readonly y1?: number;
     }[];
   }[];
   readonly forbiddenCellTokens?: readonly string[];
@@ -35,6 +45,11 @@ function normalizeText(text: string): string {
 const CURRENT_DIR = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURE_DIR = path.resolve(CURRENT_DIR, "../../../../fixtures/block-segmentation-corpus");
 const EXPECTED_FILE_SUFFIX = ".segmentation.expected.json";
+const POSITION_TOLERANCE_PT = 1.0;
+
+function expectNear(actual: number, expected: number): void {
+  expect(Math.abs(actual - expected)).toBeLessThanOrEqual(POSITION_TOLERANCE_PT);
+}
 
 type FixtureCase = {
   readonly pdfName: string;
@@ -103,6 +118,12 @@ describe("table overlay segmentation", () => {
         expect(actual?.rowCount).toBe(expectedTable.rowCount);
         expect(actual?.colCount).toBe(expectedTable.colCount);
         expect(actual?.cellCount).toBe(expectedTable.cellCount);
+        if (actual && expectedTable.bounds) {
+          expectNear(actual.bounds.x, expectedTable.bounds.x);
+          expectNear(actual.bounds.y, expectedTable.bounds.y);
+          expectNear(actual.bounds.width, expectedTable.bounds.width);
+          expectNear(actual.bounds.height, expectedTable.bounds.height);
+        }
         const actualCells = (actual?.cells ?? [])
           .map((cell) => ({
             rowIndex: cell.rowIndex,
@@ -150,6 +171,33 @@ describe("table overlay segmentation", () => {
             return a.preview.localeCompare(b.preview, "ja");
           });
         expect(actualCells).toEqual(expectedCells);
+
+        for (const expectedCell of expectedTable.cells) {
+          const hasCoordinates = typeof expectedCell.x0 === "number" &&
+            typeof expectedCell.y0 === "number" &&
+            typeof expectedCell.x1 === "number" &&
+            typeof expectedCell.y1 === "number";
+          if (!hasCoordinates || !actual) {
+            continue;
+          }
+
+          const actualCell = actual.cells.find((cell) =>
+            cell.rowIndex === expectedCell.rowIndex &&
+            cell.colStart === expectedCell.colStart &&
+            cell.rowSpan === expectedCell.rowSpan &&
+            cell.colSpan === expectedCell.colSpan &&
+            normalizeText(cell.preview) === normalizeText(expectedCell.preview)
+          );
+          expect(actualCell).toBeDefined();
+          if (!actualCell) {
+            continue;
+          }
+
+          expectNear(actualCell.x0, expectedCell.x0);
+          expectNear(actualCell.y0, expectedCell.y0);
+          expectNear(actualCell.x1, expectedCell.x1);
+          expectNear(actualCell.y1, expectedCell.y1);
+        }
       }
 
       const cellText = normalizeText(tables.flatMap((table) => table.cells.map((cell) => cell.preview)).join("\n"));

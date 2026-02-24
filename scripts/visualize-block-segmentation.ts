@@ -22,6 +22,8 @@ import type { PdfPath } from "../packages/@aurochs/pdf/src/domain/path";
 import { spatialGrouping } from "../packages/@aurochs/pdf/src/services/block-segmentation/strategies/spatial-grouping";
 import type { GroupedText } from "../packages/@aurochs/pdf/src/services/block-segmentation/contracts/types";
 import { visualizeBlockSegmentation } from "../packages/@aurochs/pdf/src/services/block-segmentation/visualization/block-segmentation-visualizer";
+import { normalizePageElementsForDisplay } from "../packages/@aurochs/pdf/src/services/block-segmentation/visualization/page-coordinate-normalization";
+import { buildBlockingZonesFromPageElements } from "../packages/@aurochs/pdf/src/services/block-segmentation/strategies/blocking-zones";
 import {
   inferTableFromGroupedText,
   type InferredTable,
@@ -65,6 +67,11 @@ type ScoredRun = {
   readonly rect: PageRect;
   readonly density: number;
   readonly status: "good" | "warn" | "bad";
+};
+
+type RunMaskGeometry = {
+  readonly anchorRect: PageRect;
+  readonly rects: readonly PageRect[];
 };
 
 type MaskMetrics = {
@@ -127,6 +134,7 @@ type TableVisualizationCell = {
   readonly alignment: "left" | "center" | "right";
   readonly lineCount: number;
   readonly runCount: number;
+  readonly charCount: number;
   readonly preview: string;
 };
 
@@ -171,7 +179,18 @@ type OverlaySummary = {
   readonly maskPrecision: number;
   readonly maskRecall: number;
   readonly maskF1: number;
+  readonly textFocusedMaskPrecision: number;
+  readonly textFocusedMaskRecall: number;
+  readonly textFocusedMaskF1: number;
+  readonly nonTextMaskPrecision: number;
+  readonly nonTextMaskRecall: number;
+  readonly nonTextMaskF1: number;
   readonly originalInkPixelCount: number;
+  readonly textFocusedInkPixelCount: number;
+  readonly textFocusedInkCoverage: number;
+  readonly nonTextInkPixelCount: number;
+  readonly nonTextRunPixelCount: number;
+  readonly nonTextRunSpillRatio: number;
   readonly runMaskPixelCount: number;
   readonly overlapPixelCount: number;
   readonly diffBreakdown: TricolorDiffBreakdown;
@@ -180,7 +199,31 @@ type OverlaySummary = {
   readonly tableCount: number;
   readonly tableCellCount: number;
   readonly tableVisualizations: readonly TableVisualization[];
+  readonly coordinateNormalization: {
+    readonly applied: boolean;
+    readonly rotation: 0 | 90 | 180 | 270;
+    readonly status: "normalized" | "identity" | "fallback";
+    readonly message?: string;
+  };
   readonly calibration: CalibrationSummary;
+  readonly geometryValidation: {
+    readonly mode: "identity-text-focused";
+    readonly minRecall: number;
+    readonly minF1: number;
+    readonly recall: number;
+    readonly f1: number;
+    readonly passed: boolean;
+    readonly rawRecall: number;
+    readonly rawF1: number;
+    readonly nonText: {
+      readonly maxRunSpillRatio: number;
+      readonly runSpillRatio: number;
+      readonly passed: boolean;
+      readonly precision: number;
+      readonly recall: number;
+      readonly f1: number;
+    };
+  };
   readonly worstRuns: readonly {
     readonly text: string;
     readonly density: number;
@@ -293,7 +336,7 @@ function parseCliArgs(argv: readonly string[]): CliArgs {
     outDir: resolvedOutDir,
     pageNumber,
     compareOriginal: flags.has("--compare-original"),
-    enableCalibration: !flags.has("--no-calibration"),
+    enableCalibration: flags.has("--enable-calibration") && !flags.has("--no-calibration"),
     maxCalibrationIterations: Math.round(maxCalibrationIterations),
     dpi,
     inkLumaThreshold,
@@ -435,8 +478,12 @@ function toEffectiveRunRect(args: {
   const sy = Math.abs(transform.sy);
   const nominalWidth = run.fontSize * 0.32 * charCount * sx;
   const nominalHeight = run.fontSize * 0.9 * sy;
-  const width = Math.max(run.width * sx, nominalWidth);
-  const height = Math.max(run.height * sy, nominalHeight);
+  const measuredWidth = Math.max(0.2, run.width * sx);
+  const measuredHeight = Math.max(0.2, run.height * sy);
+  // Keep parser-provided geometry as primary source of truth.
+  // Fallback to nominal size only when extracted width/height collapses.
+  const width = run.width <= 0.35 ? Math.max(measuredWidth, nominalWidth) : measuredWidth;
+  const height = run.height <= 0.35 ? Math.max(measuredHeight, nominalHeight) : measuredHeight;
   const padding = run.fontSize * 0.08;
 
   return {
@@ -445,6 +492,80 @@ function toEffectiveRunRect(args: {
     width: width + padding * 2,
     height: height + padding * 2,
   };
+}
+
+function isWhitespaceChar(char: string): boolean {
+  return /\s/.test(char);
+}
+
+function buildRunMaskGeometry(args: {
+  readonly run: PdfText;
+  readonly transform: OverlayTransform;
+}): RunMaskGeometry {
+  const { run, transform } = args;
+  const anchorRect = toEffectiveRunRect({ run, transform });
+  const chars = Array.from(run.text);
+  if (chars.length <= 1) {
+    return { anchorRect, rects: [anchorRect] };
+  }
+
+  const pad = run.fontSize * 0.08;
+  const contentRect = {
+    x: anchorRect.x + pad,
+    y: anchorRect.y + pad,
+    width: Math.max(0.2, anchorRect.width - pad * 2),
+    height: Math.max(0.2, anchorRect.height - pad * 2),
+  };
+  const ratio = contentRect.width / Math.max(contentRect.height, 0.2);
+  const horizontalLike = ratio >= 1.35;
+  const verticalLike = ratio <= 1 / 1.35;
+  if (!horizontalLike && !verticalLike) {
+    return { anchorRect, rects: [anchorRect] };
+  }
+
+  const rects: PageRect[] = [];
+  if (horizontalLike) {
+    const cellWidth = contentRect.width / Math.max(chars.length, 1);
+    const glyphWidth = clamp(cellWidth * 0.78, 0.35, cellWidth * 0.96);
+    const glyphHeight = clamp(contentRect.height * 0.86, 0.35, contentRect.height);
+    const glyphY = contentRect.y + (contentRect.height - glyphHeight) / 2;
+    for (let i = 0; i < chars.length; i++) {
+      const char = chars[i]!;
+      if (isWhitespaceChar(char)) {
+        continue;
+      }
+      const centerX = contentRect.x + cellWidth * (i + 0.5);
+      rects.push({
+        x: centerX - glyphWidth / 2,
+        y: glyphY,
+        width: glyphWidth,
+        height: glyphHeight,
+      });
+    }
+  } else if (verticalLike) {
+    const cellHeight = contentRect.height / Math.max(chars.length, 1);
+    const glyphHeight = clamp(cellHeight * 0.82, 0.35, cellHeight * 0.96);
+    const glyphWidth = clamp(contentRect.width * 0.86, 0.35, contentRect.width);
+    const glyphX = contentRect.x + (contentRect.width - glyphWidth) / 2;
+    for (let i = 0; i < chars.length; i++) {
+      const char = chars[i]!;
+      if (isWhitespaceChar(char)) {
+        continue;
+      }
+      const centerY = contentRect.y + cellHeight * (i + 0.5);
+      rects.push({
+        x: glyphX,
+        y: centerY - glyphHeight / 2,
+        width: glyphWidth,
+        height: glyphHeight,
+      });
+    }
+  }
+
+  if (rects.length === 0) {
+    return { anchorRect, rects: [anchorRect] };
+  }
+  return { anchorRect, rects };
 }
 
 function estimatedRunAreaForCalibration(run: PdfText): number {
@@ -475,6 +596,7 @@ function ensurePngRendered(args: {
   const { pdfPath, pageNumber, dpi, outputPrefix } = args;
   execFileSync("pdftoppm", [
     "-png",
+    "-cropbox",
     "-r",
     String(dpi),
     "-f",
@@ -555,6 +677,71 @@ function buildInkMask(png: PNG, inkLumaThreshold: number): Uint8Array {
   return mask;
 }
 
+function buildTextFocusMask(args: {
+  readonly texts: readonly PdfText[];
+  readonly pageWidth: number;
+  readonly pageHeight: number;
+  readonly imageWidth: number;
+  readonly imageHeight: number;
+}): Uint8Array {
+  const { texts, pageWidth, pageHeight, imageWidth, imageHeight } = args;
+  const focusMask = new Uint8Array(imageWidth * imageHeight);
+  for (const run of texts) {
+    if (run.text.trim().length === 0) {
+      continue;
+    }
+    const effectiveRect = toEffectiveRunRect({ run, transform: IDENTITY_TRANSFORM });
+    const padX = Math.max(1.4, run.fontSize * 0.55);
+    const padY = Math.max(1.2, run.fontSize * 0.45);
+    const rect = toImageRect({
+      x: effectiveRect.x - padX,
+      y: effectiveRect.y - padY,
+      width: effectiveRect.width + padX * 2,
+      height: effectiveRect.height + padY * 2,
+      pageWidth,
+      pageHeight,
+      imageWidth,
+      imageHeight,
+    });
+    fillMaskRect(focusMask, imageWidth, rect);
+  }
+  return focusMask;
+}
+
+function intersectMasks(a: Uint8Array, b: Uint8Array): Uint8Array {
+  const length = Math.min(a.length, b.length);
+  const out = new Uint8Array(length);
+  for (let i = 0; i < length; i++) {
+    out[i] = a[i] === 1 && b[i] === 1 ? 1 : 0;
+  }
+  return out;
+}
+
+function buildBlockingZoneMask(args: {
+  readonly zones: readonly { readonly x: number; readonly y: number; readonly width: number; readonly height: number }[];
+  readonly pageWidth: number;
+  readonly pageHeight: number;
+  readonly imageWidth: number;
+  readonly imageHeight: number;
+}): Uint8Array {
+  const { zones, pageWidth, pageHeight, imageWidth, imageHeight } = args;
+  const mask = new Uint8Array(imageWidth * imageHeight);
+  for (const zone of zones) {
+    const rect = toImageRect({
+      x: zone.x,
+      y: zone.y,
+      width: zone.width,
+      height: zone.height,
+      pageWidth,
+      pageHeight,
+      imageWidth,
+      imageHeight,
+    });
+    fillMaskRect(mask, imageWidth, rect);
+  }
+  return mask;
+}
+
 function scoreRunsAgainstOriginal(args: {
   readonly texts: readonly PdfText[];
   readonly pageWidth: number;
@@ -586,28 +773,36 @@ function scoreRunsAgainstOriginal(args: {
       continue;
     }
 
-    const effectiveRect = toEffectiveRunRect({ run, transform });
-    const rect = toImageRect({
-      x: effectiveRect.x,
-      y: effectiveRect.y,
-      width: effectiveRect.width,
-      height: effectiveRect.height,
-      pageWidth,
-      pageHeight,
-      imageWidth,
-      imageHeight,
-    });
+    const maskGeometry = buildRunMaskGeometry({ run, transform });
+    const pixelRects = maskGeometry.rects.map((effectiveRect) =>
+      toImageRect({
+        x: effectiveRect.x,
+        y: effectiveRect.y,
+        width: effectiveRect.width,
+        height: effectiveRect.height,
+        pageWidth,
+        pageHeight,
+        imageWidth,
+        imageHeight,
+      })
+    );
+    for (const rect of pixelRects) {
+      fillMaskRect(runMask, imageWidth, rect);
+    }
 
-    fillMaskRect(runMask, imageWidth, rect);
-
-    const area = Math.max((rect.x1 - rect.x0) * (rect.y1 - rect.y0), 1);
-    // eslint-disable-next-line no-restricted-syntax -- tight loop over rectangle pixels
+    const area = Math.max(
+      pixelRects.reduce((sum, rect) => sum + (rect.x1 - rect.x0) * (rect.y1 - rect.y0), 0),
+      1,
+    );
+    // eslint-disable-next-line no-restricted-syntax -- tight loop over sampled pixels
     let inkPixels = 0;
-    for (let y = rect.y0; y < rect.y1; y++) {
-      const row = y * imageWidth;
-      for (let x = rect.x0; x < rect.x1; x++) {
-        if (originalInkMask[row + x] === 1) {
-          inkPixels += 1;
+    for (const rect of pixelRects) {
+      for (let y = rect.y0; y < rect.y1; y++) {
+        const row = y * imageWidth;
+        for (let x = rect.x0; x < rect.x1; x++) {
+          if (originalInkMask[row + x] === 1) {
+            inkPixels += 1;
+          }
         }
       }
     }
@@ -619,7 +814,7 @@ function scoreRunsAgainstOriginal(args: {
       warnThreshold: warnDensityThreshold,
     });
 
-    scoredRuns.push({ run, rect: effectiveRect, density, status });
+    scoredRuns.push({ run, rect: maskGeometry.anchorRect, density, status });
   }
 
   return { scoredRuns, runMask };
@@ -639,18 +834,20 @@ function buildRunMask(args: {
     if (run.text.trim().length === 0) {
       continue;
     }
-    const effectiveRect = toEffectiveRunRect({ run, transform });
-    const rect = toImageRect({
-      x: effectiveRect.x,
-      y: effectiveRect.y,
-      width: effectiveRect.width,
-      height: effectiveRect.height,
-      pageWidth,
-      pageHeight,
-      imageWidth,
-      imageHeight,
-    });
-    fillMaskRect(runMask, imageWidth, rect);
+    const maskGeometry = buildRunMaskGeometry({ run, transform });
+    for (const effectiveRect of maskGeometry.rects) {
+      const rect = toImageRect({
+        x: effectiveRect.x,
+        y: effectiveRect.y,
+        width: effectiveRect.width,
+        height: effectiveRect.height,
+        pageWidth,
+        pageHeight,
+        imageWidth,
+        imageHeight,
+      });
+      fillMaskRect(runMask, imageWidth, rect);
+    }
   }
   return runMask;
 }
@@ -1165,6 +1362,10 @@ function toTableCells(inferred: InferredTable): readonly TableVisualizationCell[
       const yTop = rows[rowIndex]?.y1 ?? row.y1;
       const yBottom = rows[spanEnd]?.y0 ?? row.y0;
       const runCount = draft.cell.runsByLine.reduce((sum, lineRuns) => sum + lineRuns.length, 0);
+      const charCount = draft.cell.runsByLine.reduce(
+        (sum, lineRuns) => sum + lineRuns.reduce((lineSum, run) => lineSum + Array.from(run.text).length, 0),
+        0,
+      );
       return [{
         rowIndex,
         colStart,
@@ -1177,6 +1378,7 @@ function toTableCells(inferred: InferredTable): readonly TableVisualizationCell[
         alignment: draft.cell.alignment,
         lineCount: draft.cell.runsByLine.length,
         runCount,
+        charCount,
         preview: toCellPreview(draft.cell.runsByLine),
       }];
     });
@@ -1295,6 +1497,8 @@ type AxisSegment = {
 type RegionRuleLines = {
   readonly xBoundaries: readonly number[];
   readonly yBoundaries: readonly number[];
+  readonly verticalSegments: readonly AxisSegment[];
+  readonly horizontalSegments: readonly AxisSegment[];
 };
 
 function clusterCenters(args: { readonly values: readonly number[]; readonly eps: number }): readonly number[] {
@@ -1555,20 +1759,25 @@ function collectRegionRuleLines(args: {
     }) >= 0.45
   );
 
-  const xBoundaries = clusterCenters({
+  const xBoundaries = [...clusterCenters({
     values: [region.x0, ...xCandidates, region.x1],
     eps,
-  }).sort((a, b) => a - b);
-  const yAsc = clusterCenters({
+  })].sort((a, b) => a - b);
+  const yAsc = [...clusterCenters({
     values: [region.y0, ...yCandidates, region.y1],
     eps,
-  }).sort((a, b) => a - b);
+  })].sort((a, b) => a - b);
   const yBoundaries = [...yAsc].sort((a, b) => b - a);
 
   if (xBoundaries.length < 2 || yBoundaries.length < 2) {
     return null;
   }
-  return { xBoundaries, yBoundaries };
+  return {
+    xBoundaries,
+    yBoundaries,
+    verticalSegments,
+    horizontalSegments,
+  };
 }
 
 function nearestValue(args: { readonly value: number; readonly candidates: readonly number[] }): number {
@@ -1717,7 +1926,7 @@ function projectTableToRegion(args: {
   const left = alignedColBoundaries[0] ?? region.x0;
   const right = alignedColBoundaries[alignedColBoundaries.length - 1] ?? region.x1;
 
-  return {
+  const projected = {
     ...table,
     bounds: {
       x: Math.min(left, right),
@@ -1743,6 +1952,290 @@ function projectTableToRegion(args: {
       };
     }),
   };
+  const sanitizedProjected = sanitizeProjectedTable(projected);
+  const sanitizedOriginal = sanitizeProjectedTable(table);
+  if (!isProjectionLayoutStable({ original: sanitizedOriginal, projected: sanitizedProjected })) {
+    return sanitizedOriginal;
+  }
+  return sanitizedProjected;
+}
+
+function normalizedPreviewText(text: string): string {
+  return text.replace(/\s+/g, "");
+}
+
+function shouldDropProjectedRow(args: {
+  readonly rowCells: readonly TableVisualizationCell[];
+  readonly colCount: number;
+}): boolean {
+  const nonEmptyCells = args.rowCells.filter((cell) => normalizedPreviewText(cell.preview).length > 0);
+  if (nonEmptyCells.length === 0) {
+    return true;
+  }
+  const rowText = nonEmptyCells.map((cell) => normalizedPreviewText(cell.preview)).join("");
+  const maxColSpan = Math.max(...nonEmptyCells.map((cell) => cell.colSpan));
+  const noteKeyword = /(お知らせ|について|プライバシー|提供を制限|対象から除外)/.test(rowText);
+  const hasSentencePunctuation = /[。、]/.test(rowText);
+  const hasTableSymbols = /[○×]/.test(rowText);
+  if (!hasTableSymbols && nonEmptyCells.length === 1 && maxColSpan >= Math.max(2, args.colCount - 1) && rowText.length >= 16) {
+    return true;
+  }
+  if (!hasTableSymbols && noteKeyword && nonEmptyCells.length <= Math.max(2, Math.floor(args.colCount / 2))) {
+    return true;
+  }
+  if (!hasTableSymbols && noteKeyword && maxColSpan >= Math.max(2, args.colCount - 1)) {
+    return true;
+  }
+  if (!hasTableSymbols && hasSentencePunctuation && maxColSpan >= Math.max(2, args.colCount - 1) && rowText.length >= 18) {
+    return true;
+  }
+  if (/^※/.test(rowText) && rowText.length >= 16 && maxColSpan >= Math.max(2, args.colCount - 1)) {
+    return true;
+  }
+  return false;
+}
+
+function sanitizeProjectedTable(table: TableVisualization): TableVisualization {
+  const grouped = table.cells.reduce(
+    (acc, cell) => {
+      const key = cell.rowIndex;
+      const bucket = acc.get(key);
+      if (!bucket) {
+        acc.set(key, [cell]);
+        return acc;
+      }
+      bucket.push(cell);
+      return acc;
+    },
+    new Map<number, TableVisualizationCell[]>(),
+  );
+  const originalRows = Array.from({ length: table.rowCount }, (_, rowIndex) => rowIndex);
+  const keptRows = originalRows.filter((rowIndex) => {
+    const rowCells = grouped.get(rowIndex) ?? [];
+    return !shouldDropProjectedRow({ rowCells, colCount: table.colCount });
+  });
+  if (keptRows.length === 0) {
+    return table;
+  }
+  const rowRemap = new Map<number, number>(keptRows.map((rowIndex, nextIndex) => [rowIndex, nextIndex]));
+
+  const sanitizedCells = table.cells.flatMap((cell) => {
+    const preview = normalizedPreviewText(cell.preview);
+    if (preview.length === 0 || cell.runCount <= 0) {
+      return [];
+    }
+    const coveredRows = Array.from({ length: cell.rowSpan }, (_, offset) => cell.rowIndex + offset)
+      .filter((rowIndex) => rowRemap.has(rowIndex))
+      .map((rowIndex) => rowRemap.get(rowIndex)!)
+      .sort((a, b) => a - b);
+    if (coveredRows.length === 0) {
+      return [];
+    }
+    const rowStart = coveredRows[0]!;
+    const rowEnd = coveredRows[coveredRows.length - 1]! + 1;
+    return [{
+      ...cell,
+      rowIndex: rowStart,
+      rowSpan: Math.max(1, rowEnd - rowStart),
+      preview,
+    }];
+  });
+  const mergedCellCount = sanitizedCells.filter((cell) => cell.colSpan > 1 || cell.rowSpan > 1).length;
+  const coveredRunCount = sanitizedCells.reduce((sum, cell) => sum + cell.runCount, 0);
+  const runCoverage = coveredRunCount / Math.max(1, table.groupRunCount);
+  return {
+    ...table,
+    rowCount: keptRows.length,
+    cellCount: sanitizedCells.length,
+    mergedCellCount,
+    coveredRunCount,
+    runCoverage,
+    cells: sanitizedCells,
+  };
+}
+
+function isProjectionLayoutStable(args: {
+  readonly original: TableVisualization;
+  readonly projected: TableVisualization;
+}): boolean {
+  const { original, projected } = args;
+  if (projected.cells.length === 0) {
+    return false;
+  }
+  if (original.cells.length === 0) {
+    return true;
+  }
+
+  const origW = Math.max(1e-6, original.bounds.width);
+  const origH = Math.max(1e-6, original.bounds.height);
+  const projW = Math.max(1e-6, projected.bounds.width);
+  const projH = Math.max(1e-6, projected.bounds.height);
+  const widthScale = projW / origW;
+  const heightScale = projH / origH;
+  if (widthScale < 0.65 || widthScale > 1.65) {
+    return false;
+  }
+  if (heightScale < 0.65 || heightScale > 1.65) {
+    return false;
+  }
+
+  const originalCellHeights = original.cells.map((cell) => Math.max(0.1, cell.y1 - cell.y0));
+  const projectedCellHeights = projected.cells.map((cell) => Math.max(0.1, cell.y1 - cell.y0));
+  const originalMedianCellHeight = quantile(originalCellHeights, 0.5);
+  const projectedMedianCellHeight = quantile(projectedCellHeights, 0.5);
+  const cellHeightScale = projectedMedianCellHeight / Math.max(0.1, originalMedianCellHeight);
+  if (cellHeightScale < 0.6 || cellHeightScale > 1.8) {
+    return false;
+  }
+
+  const originalCenterX = original.bounds.x + original.bounds.width / 2;
+  const originalCenterY = original.bounds.y + original.bounds.height / 2;
+  const projectedCenterX = projected.bounds.x + projected.bounds.width / 2;
+  const projectedCenterY = projected.bounds.y + projected.bounds.height / 2;
+  const shiftX = Math.abs(projectedCenterX - originalCenterX);
+  const shiftY = Math.abs(projectedCenterY - originalCenterY);
+  const shiftTolerance = Math.max(8, originalMedianCellHeight * 6);
+  if (shiftX > shiftTolerance || shiftY > shiftTolerance) {
+    return false;
+  }
+
+  return true;
+}
+
+function tableTextMetrics(table: TableVisualization): {
+  readonly shortRatio: number;
+  readonly longRatio: number;
+  readonly avgChars: number;
+  readonly occupancy: number;
+} {
+  const lengths = table.cells.map((cell) => normalizedPreviewText(cell.preview).length);
+  const cellCount = Math.max(1, lengths.length);
+  const shortRatio = lengths.filter((length) => length <= 6).length / cellCount;
+  const longRatio = lengths.filter((length) => length >= 20).length / cellCount;
+  const avgChars = lengths.reduce((sum, length) => sum + length, 0) / cellCount;
+  const occupancy = table.cellCount / Math.max(1, table.rowCount * table.colCount);
+  return { shortRatio, longRatio, avgChars, occupancy };
+}
+
+function boundaryCoverageMeans(args: {
+  readonly table: TableVisualization;
+  readonly region: TableRegion;
+  readonly pagePaths: readonly PdfPath[];
+}): {
+  readonly verticalMean: number;
+  readonly horizontalMean: number;
+  readonly verticalCount: number;
+  readonly horizontalCount: number;
+} {
+  const { table, region, pagePaths } = args;
+  const ruleLines = collectRegionRuleLines({ pagePaths, region });
+  if (!ruleLines) {
+    return { verticalMean: 0, horizontalMean: 0, verticalCount: 0, horizontalCount: 0 };
+  }
+  const colBoundaries = deriveColumnBoundariesFromTable(table);
+  const rowBoundaries = deriveRowBoundariesFromTable(table);
+  const verticalBoundaries = colBoundaries.slice(1, Math.max(1, colBoundaries.length - 1));
+  const horizontalBoundaries = rowBoundaries.slice(1, Math.max(1, rowBoundaries.length - 1));
+  const tableY0 = table.bounds.y;
+  const tableY1 = table.bounds.y + table.bounds.height;
+  const tableX0 = table.bounds.x;
+  const tableX1 = table.bounds.x + table.bounds.width;
+
+  const colGaps = colBoundaries
+    .slice(1)
+    .map((value, index) => Math.abs(value - (colBoundaries[index] ?? value)))
+    .filter((gap) => gap > 0.01);
+  const rowGaps = rowBoundaries
+    .slice(1)
+    .map((value, index) => Math.abs(value - (rowBoundaries[index] ?? value)))
+    .filter((gap) => gap > 0.01);
+  const xTolerance = Math.max(0.8, (quantile(colGaps, 0.5) || 1) * 0.12);
+  const yTolerance = Math.max(0.8, (quantile(rowGaps, 0.5) || 1) * 0.12);
+
+  const verticalScores = verticalBoundaries.map((x) =>
+    coverageRatioForSegments({
+      segments: ruleLines.verticalSegments,
+      coord: x,
+      coordTolerance: xTolerance,
+      spanMin: Math.min(tableY0, tableY1),
+      spanMax: Math.max(tableY0, tableY1),
+    })
+  );
+  const horizontalScores = horizontalBoundaries.map((y) =>
+    coverageRatioForSegments({
+      segments: ruleLines.horizontalSegments,
+      coord: y,
+      coordTolerance: yTolerance,
+      spanMin: Math.min(tableX0, tableX1),
+      spanMax: Math.max(tableX0, tableX1),
+    })
+  );
+  return {
+    verticalMean: mean(verticalScores),
+    horizontalMean: mean(horizontalScores),
+    verticalCount: verticalScores.length,
+    horizontalCount: horizontalScores.length,
+  };
+}
+
+function isLikelyTableCandidate(args: {
+  readonly table: TableVisualization;
+  readonly pageWidth: number;
+  readonly pageHeight: number;
+  readonly region: TableRegion;
+  readonly pagePaths: readonly PdfPath[];
+}): boolean {
+  const { table, pageWidth, pageHeight, region, pagePaths } = args;
+  if (table.rowCount < 2 || table.colCount < 2 || table.cellCount < 4) {
+    return false;
+  }
+  const pageArea = Math.max(1, pageWidth * pageHeight);
+  const tableArea = Math.max(0, table.bounds.width * table.bounds.height);
+  const areaRatio = tableArea / pageArea;
+  const regionArea = Math.max(1e-6, Math.max(0, region.x1 - region.x0) * Math.max(0, region.y1 - region.y0));
+  const regionOccupancy = tableArea / regionArea;
+  const metrics = tableTextMetrics(table);
+  const support = boundaryCoverageMeans({ table, region, pagePaths });
+  const mergedRatio = table.mergedCellCount / Math.max(1, table.cellCount);
+
+  if (metrics.occupancy < 0.45 && metrics.shortRatio < 0.35) {
+    return false;
+  }
+  if (metrics.avgChars > 18 && metrics.shortRatio < 0.2) {
+    return false;
+  }
+  if (metrics.longRatio > 0.3 && metrics.shortRatio < 0.3) {
+    return false;
+  }
+  if (table.rowCount <= 4 && table.colCount <= 3 && table.mergedCellCount === 0 && metrics.avgChars > 18) {
+    return false;
+  }
+  if (
+    table.rowCount >= 6 &&
+    table.colCount >= 4 &&
+    metrics.shortRatio >= 0.55 &&
+    metrics.avgChars <= 10 &&
+    areaRatio <= 0.45 &&
+    mergedRatio <= 0.55
+  ) {
+    return true;
+  }
+  if (areaRatio > 0.55 && (metrics.shortRatio < 0.3 || metrics.longRatio > 0.25)) {
+    return false;
+  }
+  if (regionOccupancy < 0.15 && table.rowCount <= 5 && table.colCount <= 5 && metrics.avgChars > 14) {
+    return false;
+  }
+  if (support.verticalCount >= 1 && support.verticalMean < 0.2) {
+    return false;
+  }
+  if (support.horizontalCount >= 1 && support.horizontalMean < 0.16) {
+    return false;
+  }
+  if (support.verticalCount >= 1 && support.horizontalCount >= 1 && support.verticalMean + support.horizontalMean < 0.48) {
+    return false;
+  }
+  return true;
 }
 
 function mergeGroupsForRegion(args: {
@@ -1963,7 +2456,17 @@ function inferTablesFromGroups(args: {
     if (!table) {
       return [];
     }
-    return [projectTableToRegion({ table, region, pagePaths: args.pagePaths })];
+    const projected = projectTableToRegion({ table, region, pagePaths: args.pagePaths });
+    if (!isLikelyTableCandidate({
+      table: projected,
+      pageWidth: args.pageWidth,
+      pageHeight: args.pageHeight,
+      region,
+      pagePaths: args.pagePaths,
+    })) {
+      return [];
+    }
+    return [projected];
   });
 
   const ranked = [...regionCandidates]
@@ -1995,6 +2498,30 @@ function inferTablesFromGroups(args: {
     ...table,
     tableIndex,
   }));
+}
+
+/**
+ * Infer table visualization overlays from parsed page text/path elements.
+ */
+export function inferTableVisualizationsForPage(args: {
+  readonly texts: readonly PdfText[];
+  readonly pagePaths: readonly PdfPath[];
+  readonly pageWidth: number;
+  readonly pageHeight: number;
+  readonly blockingZones?: readonly { readonly x: number; readonly y: number; readonly width: number; readonly height: number }[];
+}): readonly TableVisualization[] {
+  const groups = spatialGrouping(args.texts, {
+    blockingZones: args.blockingZones,
+    pageWidth: args.pageWidth,
+    pageHeight: args.pageHeight,
+  });
+  return inferTablesFromGroups({
+    groups,
+    texts: args.texts,
+    pagePaths: args.pagePaths,
+    pageWidth: args.pageWidth,
+    pageHeight: args.pageHeight,
+  });
 }
 
 function drawTableRectangles(args: {
@@ -2160,15 +2687,30 @@ async function buildOriginalComparisonArtifacts(cli: CliArgs): Promise<OverlaySu
     throw new Error(`Page ${cli.pageNumber} not found: ${cli.pdfPath}`);
   }
 
-  const texts = page.elements.filter((element): element is PdfText => element.type === "text");
+  const pageTexts = page.elements.filter((element): element is PdfText => element.type === "text");
   const pagePaths = page.elements.filter((element): element is PdfPath => element.type === "path");
-  const groups = spatialGrouping(texts, { pageWidth: page.width, pageHeight: page.height });
-  const tableVisualizations = inferTablesFromGroups({
-    groups,
-    texts,
-    pagePaths,
+  const normalized = await normalizePageElementsForDisplay({
+    pdfBytes: bytes,
+    pageNumber: cli.pageNumber,
     pageWidth: page.width,
     pageHeight: page.height,
+    texts: pageTexts,
+    paths: pagePaths,
+  });
+  const texts = normalized.texts;
+  const normalizedPaths = normalized.paths;
+  const blockingZones = buildBlockingZonesFromPageElements({ paths: normalizedPaths });
+  const groups = spatialGrouping(texts, {
+    blockingZones: blockingZones.length > 0 ? blockingZones : undefined,
+    pageWidth: page.width,
+    pageHeight: page.height,
+  });
+  const tableVisualizations = inferTableVisualizationsForPage({
+    texts,
+    pagePaths: normalizedPaths,
+    pageWidth: page.width,
+    pageHeight: page.height,
+    blockingZones: blockingZones.length > 0 ? blockingZones : undefined,
   });
 
   const baseName = outputBaseName(cli.pdfPath, cli.pageNumber);
@@ -2182,11 +2724,28 @@ async function buildOriginalComparisonArtifacts(cli: CliArgs): Promise<OverlaySu
 
   const originalPng = PNG.sync.read(readFileSync(originalPngPath));
   const originalInkMask = buildInkMask(originalPng, cli.inkLumaThreshold);
+  const textFocusMask = buildTextFocusMask({
+    texts,
+    pageWidth: page.width,
+    pageHeight: page.height,
+    imageWidth: originalPng.width,
+    imageHeight: originalPng.height,
+  });
+  const textFocusedInkMask = intersectMasks(originalInkMask, textFocusMask);
+  const nonTextReferenceMask = buildBlockingZoneMask({
+    zones: blockingZones,
+    pageWidth: page.width,
+    pageHeight: page.height,
+    imageWidth: originalPng.width,
+    imageHeight: originalPng.height,
+  });
 
   const nonEmptyRuns = texts.filter((run) => run.text.trim().length > 0);
   const trustedRuns = nonEmptyRuns.filter((run) => !isSuspiciousRunText(run.text));
   const calibrationRunPool = trustedRuns.length >= 80 ? trustedRuns : nonEmptyRuns;
   const calibrationRuns = selectCalibrationRuns(calibrationRunPool, 600);
+  const hasTextFocusedInk = countOnPixels(textFocusedInkMask) > 0;
+  const calibrationInkMask = hasTextFocusedInk ? textFocusedInkMask : originalInkMask;
 
   // eslint-disable-next-line no-restricted-syntax -- branch selects calibration strategy
   let calibrationResult = identityCalibrationResult({
@@ -2195,7 +2754,7 @@ async function buildOriginalComparisonArtifacts(cli: CliArgs): Promise<OverlaySu
     pageHeight: page.height,
     imageWidth: originalPng.width,
     imageHeight: originalPng.height,
-    originalInkMask,
+    originalInkMask: calibrationInkMask,
   });
   if (cli.enableCalibration) {
     calibrationResult = calibrateTransform({
@@ -2204,10 +2763,28 @@ async function buildOriginalComparisonArtifacts(cli: CliArgs): Promise<OverlaySu
       pageHeight: page.height,
       imageWidth: originalPng.width,
       imageHeight: originalPng.height,
-      originalInkMask,
+      originalInkMask: calibrationInkMask,
       maxIterations: cli.maxCalibrationIterations,
     });
   }
+
+  const identityScored = scoreRunsAgainstOriginal({
+    texts,
+    pageWidth: page.width,
+    pageHeight: page.height,
+    imageWidth: originalPng.width,
+    imageHeight: originalPng.height,
+    originalInkMask,
+    transform: IDENTITY_TRANSFORM,
+    badDensityThreshold: cli.badDensityThreshold,
+    warnDensityThreshold: cli.warnDensityThreshold,
+  });
+  const identityMetricsRaw = maskMetrics({ originalInkMask, runMask: identityScored.runMask });
+  const identityRunTextMask = intersectMasks(identityScored.runMask, textFocusMask);
+  const identityMetricsTextFocused = maskMetrics({
+    originalInkMask: textFocusedInkMask,
+    runMask: identityRunTextMask,
+  });
 
   const { scoredRuns, runMask } = scoreRunsAgainstOriginal({
     texts,
@@ -2222,6 +2799,15 @@ async function buildOriginalComparisonArtifacts(cli: CliArgs): Promise<OverlaySu
   });
 
   const overallMetrics = maskMetrics({ originalInkMask, runMask });
+  const runTextMask = intersectMasks(runMask, textFocusMask);
+  const overallMetricsTextFocused = maskMetrics({
+    originalInkMask: textFocusedInkMask,
+    runMask: runTextMask,
+  });
+  const overallMetricsNonText = maskMetrics({
+    originalInkMask: nonTextReferenceMask,
+    runMask,
+  });
   const { png: diffPng, breakdown: diffBreakdown } = buildDiffMaskPng({
     originalInkMask,
     runMask,
@@ -2241,6 +2827,41 @@ async function buildOriginalComparisonArtifacts(cli: CliArgs): Promise<OverlaySu
   const maskPrecision = overallMetrics.precision;
   const maskRecall = overallMetrics.recall;
   const maskF1 = overallMetrics.f1;
+  const textFocusedMaskPrecision = overallMetricsTextFocused.precision;
+  const textFocusedMaskRecall = overallMetricsTextFocused.recall;
+  const textFocusedMaskF1 = overallMetricsTextFocused.f1;
+  const nonTextMaskPrecision = overallMetricsNonText.precision;
+  const nonTextMaskRecall = overallMetricsNonText.recall;
+  const nonTextMaskF1 = overallMetricsNonText.f1;
+  const textFocusedInkPixelCount = overallMetricsTextFocused.originalInkPixelCount;
+  const textFocusedInkCoverage = originalInkPixelCount === 0 ? 1 : textFocusedInkPixelCount / originalInkPixelCount;
+  const nonTextInkPixelCount = overallMetricsNonText.originalInkPixelCount;
+  const nonTextRunPixelCount = overallMetricsNonText.overlapPixelCount;
+  const nonTextRunSpillRatio = runMaskPixelCount === 0 ? 0 : nonTextRunPixelCount / runMaskPixelCount;
+  const geometryValidationMinRecall = 0.4;
+  const geometryValidationMinF1 = 0.3;
+  const geometryValidationMaxNonTextRunSpillRatio = 0.2;
+  const nonTextValidationPassed = nonTextInkPixelCount === 0 ? true : nonTextRunSpillRatio <= geometryValidationMaxNonTextRunSpillRatio;
+  const geometryValidation = {
+    mode: "identity-text-focused" as const,
+    minRecall: geometryValidationMinRecall,
+    minF1: geometryValidationMinF1,
+    recall: identityMetricsTextFocused.recall,
+    f1: identityMetricsTextFocused.f1,
+    passed: identityMetricsTextFocused.recall >= geometryValidationMinRecall &&
+      identityMetricsTextFocused.f1 >= geometryValidationMinF1 &&
+      nonTextValidationPassed,
+    rawRecall: identityMetricsRaw.recall,
+    rawF1: identityMetricsRaw.f1,
+    nonText: {
+      maxRunSpillRatio: geometryValidationMaxNonTextRunSpillRatio,
+      runSpillRatio: nonTextRunSpillRatio,
+      passed: nonTextValidationPassed,
+      precision: overallMetricsNonText.precision,
+      recall: overallMetricsNonText.recall,
+      f1: overallMetricsNonText.f1,
+    },
+  };
 
   const runDensities = scoredRuns.map((run) => run.density);
   const meanRunDensity = mean(runDensities);
@@ -2331,7 +2952,18 @@ async function buildOriginalComparisonArtifacts(cli: CliArgs): Promise<OverlaySu
     maskPrecision,
     maskRecall,
     maskF1,
+    textFocusedMaskPrecision,
+    textFocusedMaskRecall,
+    textFocusedMaskF1,
+    nonTextMaskPrecision,
+    nonTextMaskRecall,
+    nonTextMaskF1,
     originalInkPixelCount,
+    textFocusedInkPixelCount,
+    textFocusedInkCoverage,
+    nonTextInkPixelCount,
+    nonTextRunPixelCount,
+    nonTextRunSpillRatio,
     runMaskPixelCount,
     overlapPixelCount: diffBreakdown.overlapPixelCount,
     diffBreakdown,
@@ -2340,7 +2972,14 @@ async function buildOriginalComparisonArtifacts(cli: CliArgs): Promise<OverlaySu
     tableCount: tableVisualizations.length,
     tableCellCount: tableVisualizations.reduce((sum, table) => sum + table.cellCount, 0),
     tableVisualizations,
+    coordinateNormalization: {
+      applied: normalized.applied,
+      rotation: normalized.rotation,
+      status: normalized.status,
+      message: normalized.message,
+    },
     calibration: calibrationSummary,
+    geometryValidation,
     worstRuns,
   };
 
@@ -2386,6 +3025,16 @@ async function main(): Promise<void> {
       `precision=${overlay.maskPrecision.toFixed(3)} recall=${overlay.maskRecall.toFixed(3)} f1=${overlay.maskF1.toFixed(3)}`,
   );
   console.log(
+    `overlay(text-focused): precision=${overlay.textFocusedMaskPrecision.toFixed(3)} ` +
+      `recall=${overlay.textFocusedMaskRecall.toFixed(3)} f1=${overlay.textFocusedMaskF1.toFixed(3)} ` +
+      `inkCoverage=${(overlay.textFocusedInkCoverage * 100).toFixed(1)}%`,
+  );
+  console.log(
+    `overlay(non-text): precision=${overlay.nonTextMaskPrecision.toFixed(3)} ` +
+      `recall=${overlay.nonTextMaskRecall.toFixed(3)} f1=${overlay.nonTextMaskF1.toFixed(3)} ` +
+      `runSpill=${(overlay.nonTextRunSpillRatio * 100).toFixed(1)}%`,
+  );
+  console.log(
     `tricolor: overlap=${overlay.diffBreakdown.overlapPixelCount} ` +
       `originalOnly=${overlay.diffBreakdown.originalOnlyPixelCount} runOnly=${overlay.diffBreakdown.runOnlyPixelCount}`,
   );
@@ -2397,6 +3046,25 @@ async function main(): Promise<void> {
       `transform=(sx:${overlay.calibration.transform.sx.toFixed(3)},sy:${overlay.calibration.transform.sy.toFixed(3)},` +
       `tx:${overlay.calibration.transform.tx.toFixed(1)},ty:${overlay.calibration.transform.ty.toFixed(1)})`,
   );
+  console.log(
+    `coords: normalized=${overlay.coordinateNormalization.applied} ` +
+      `rotation=${overlay.coordinateNormalization.rotation} ` +
+      `status=${overlay.coordinateNormalization.status}`,
+  );
+  if (overlay.coordinateNormalization.message) {
+    console.log(`coords-note: ${overlay.coordinateNormalization.message}`);
+  }
+  console.log(
+    `validation(${overlay.geometryValidation.mode}): pass=${overlay.geometryValidation.passed} ` +
+      `recall=${overlay.geometryValidation.recall.toFixed(3)} (>=${overlay.geometryValidation.minRecall.toFixed(3)}) ` +
+      `f1=${overlay.geometryValidation.f1.toFixed(3)} (>=${overlay.geometryValidation.minF1.toFixed(3)}) ` +
+      `nonTextPass=${overlay.geometryValidation.nonText.passed} ` +
+      `spill=${overlay.geometryValidation.nonText.runSpillRatio.toFixed(3)} ` +
+      `(<=${overlay.geometryValidation.nonText.maxRunSpillRatio.toFixed(3)}) ` +
+      `raw=(recall:${overlay.geometryValidation.rawRecall.toFixed(3)},f1:${overlay.geometryValidation.rawF1.toFixed(3)})`,
+  );
 }
 
-await main();
+if (import.meta.main) {
+  await main();
+}
