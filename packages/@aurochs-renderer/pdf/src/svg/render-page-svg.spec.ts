@@ -91,8 +91,10 @@ describe("renderPdfPageToSvg", () => {
 
     const svg = renderPdfPageToSvg(page, { backgroundColor: "transparent" });
 
+    expect(svg).toContain('xmlns:xlink="http://www.w3.org/1999/xlink"');
     expect(svg).toContain("<defs><clipPath id=\"pdf-clip-1\"");
     expect(svg).toContain('clip-path="url(#pdf-clip-1)"');
+    expect(svg).toContain('xlink:href="data:image/png;base64,');
     expect(svg).toContain('transform="matrix(100 0 0 50 20 40)"');
     expect(svg).toContain("data:image/png;base64,");
   });

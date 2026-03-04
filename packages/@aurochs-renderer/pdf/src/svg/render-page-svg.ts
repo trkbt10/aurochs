@@ -395,9 +395,13 @@ function buildImageTransform(ctm: PdfMatrix, pageHeight: number): readonly numbe
 function renderImage(image: PdfImage, pageHeight: number, registry: ClipPathRegistry): string {
   const clipPathRef = getClipPathReference(image.graphicsState.clipBBox, pageHeight, registry);
   const dataUrl = buildPdfImageDataUrl(image);
+  const escapedDataUrl = escapeXmlAttr(dataUrl);
   const matrix = buildImageTransform(image.graphicsState.ctm, pageHeight);
 
-  return `<image href="${escapeXmlAttr(dataUrl)}" width="1" height="1" preserveAspectRatio="none" transform="matrix(${formatSvgMatrix(matrix)})"${clipPathRef} />`;
+  return (
+    `<image href="${escapedDataUrl}" xlink:href="${escapedDataUrl}" ` +
+    `width="1" height="1" preserveAspectRatio="none" transform="matrix(${formatSvgMatrix(matrix)})"${clipPathRef} />`
+  );
 }
 
 function renderElement(element: PdfElement, pageHeight: number, registry: ClipPathRegistry): string {
@@ -461,7 +465,8 @@ export function renderPdfPageToSvg(page: PdfPage, options: PdfSvgRenderOptions =
   const height = normalizeDimension(options.height ?? page.height);
 
   const svg =
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${formatSvgNumber(page.width)} ${formatSvgNumber(page.height)}"` +
+    `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"` +
+    ` viewBox="0 0 ${formatSvgNumber(page.width)} ${formatSvgNumber(page.height)}"` +
     ` width="${escapeXmlAttr(width)}" height="${escapeXmlAttr(height)}" preserveAspectRatio="${escapeXmlAttr(getPreserveAspectRatio(options))}">` +
     `${defs}${bodyParts.join("")}</svg>`;
 
