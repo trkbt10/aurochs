@@ -58,6 +58,22 @@
       "types": "./dist/@aurochs-ui/docx-editor/src/viewer/index.d.ts",
       "import": "./dist/docx/viewer/index.js"
     },
+    "./pdf/parser": {
+      "types": "./dist/@aurochs/pdf/src/index.d.ts",
+      "import": "./dist/pdf/parser/index.js"
+    },
+    "./pdf/builder": {
+      "types": "./dist/@aurochs-builder/pdf/src/index.d.ts",
+      "import": "./dist/pdf/builder/index.js"
+    },
+    "./pdf/renderer/svg": {
+      "types": "./dist/@aurochs-renderer/pdf/src/svg/index.d.ts",
+      "import": "./dist/pdf/renderer/svg/index.js"
+    },
+    "./pdf/renderer/react": {
+      "types": "./dist/@aurochs-renderer/pdf/src/react/index.d.ts",
+      "import": "./dist/pdf/renderer/react/index.js"
+    },
     "./xlsx/parser": {
       "types": "./dist/@aurochs-office/xlsx/src/index.d.ts",
       "import": "./dist/xlsx/parser/index.js"

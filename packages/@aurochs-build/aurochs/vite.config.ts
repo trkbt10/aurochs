@@ -46,6 +46,14 @@ const entries = {
   "xlsx/renderer/mermaid/index": resolve(__dirname, "../../@aurochs-renderer/xlsx/src/mermaid/index.ts"),
   // XLSX Viewer
   "xlsx/viewer/index": resolve(__dirname, "../../@aurochs-ui/xlsx-editor/src/viewer/index.ts"),
+
+  // PDF Parser
+  "pdf/parser/index": resolve(__dirname, "../../@aurochs/pdf/src/index.ts"),
+  // PDF Builder
+  "pdf/builder/index": resolve(__dirname, "../../@aurochs-builder/pdf/src/index.ts"),
+  // PDF Renderer
+  "pdf/renderer/svg/index": resolve(__dirname, "../../@aurochs-renderer/pdf/src/svg/index.ts"),
+  "pdf/renderer/react/index": resolve(__dirname, "../../@aurochs-renderer/pdf/src/react/index.ts"),
 };
 
 export default defineConfig({
@@ -72,6 +80,11 @@ export default defineConfig({
         resolve(__dirname, "../../@aurochs-renderer/xlsx/src/ascii/**"),
         resolve(__dirname, "../../@aurochs-renderer/xlsx/src/mermaid/**"),
         resolve(__dirname, "../../@aurochs-ui/xlsx-editor/src/viewer/**"),
+        // PDF
+        resolve(__dirname, "../../@aurochs/pdf/src/**"),
+        resolve(__dirname, "../../@aurochs-builder/pdf/src/**"),
+        resolve(__dirname, "../../@aurochs-renderer/pdf/src/svg/**"),
+        resolve(__dirname, "../../@aurochs-renderer/pdf/src/react/**"),
       ],
     }),
   ],
@@ -83,7 +96,17 @@ export default defineConfig({
       formats: ["es"],
     },
     rollupOptions: {
-      external: ["react", "react-dom", "react/jsx-runtime"],
+      external: [
+        "react",
+        "react/jsx-runtime",
+        "react/jsx-dev-runtime",
+        "react-dom",
+        "react-dom/client",
+        "react-dom/server",
+        "react-dom/server.browser",
+        "node:path",
+        "node:fs/promises",
+      ],
       output: {
         preserveModules: false,
         entryFileNames: "[name].js",

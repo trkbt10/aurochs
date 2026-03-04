@@ -20,6 +20,10 @@
     "../../@aurochs-renderer/xlsx/src/svg/index.ts",
     "../../@aurochs-renderer/xlsx/src/ascii/index.ts",
     "../../@aurochs-renderer/xlsx/src/mermaid/index.ts",
-    "../../@aurochs-ui/xlsx-editor/src/viewer/index.ts"
+    "../../@aurochs-ui/xlsx-editor/src/viewer/index.ts",
+    "../../@aurochs/pdf/src/index.ts",
+    "../../@aurochs-builder/pdf/src/index.ts",
+    "../../@aurochs-renderer/pdf/src/svg/index.ts",
+    "../../@aurochs-renderer/pdf/src/react/index.ts"
   ]
 }
