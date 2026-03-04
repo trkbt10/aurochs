@@ -3,7 +3,8 @@
  */
 
 import * as fs from "node:fs";
-import { parsePdf, type PdfText } from "@aurochs/pdf";
+import { buildPdf } from "@aurochs-builder/pdf";
+import type { PdfText } from "@aurochs/pdf";
 import { getSampleFixturePath } from "@aurochs/pdf/test-utils/pdf-fixtures";
 
 const PDF_PATH = getSampleFixturePath("KJ00006456532.pdf");
@@ -11,7 +12,10 @@ const PDF_PATH = getSampleFixturePath("KJ00006456532.pdf");
 describe("PDF text decoding (KJ00006456532.pdf)", () => {
   it("decodes Japan1 CID text without replacement characters", async () => {
     const bytes = fs.readFileSync(PDF_PATH);
-    const doc = await parsePdf(bytes, { pages: [1], encryption: { mode: "ignore" } });
+    const doc = await buildPdf({
+      data: bytes,
+      parseOptions: { pages: [1], encryption: { mode: "ignore" } },
+    });
 
     const page = doc.pages[0];
     if (!page) {

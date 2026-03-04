@@ -3,7 +3,8 @@
  */
 
 import * as fs from "node:fs";
-import { parsePdf, type PdfText } from "@aurochs/pdf";
+import { buildPdf } from "@aurochs-builder/pdf";
+import type { PdfText } from "@aurochs/pdf";
 import { getSampleFixturePath } from "@aurochs/pdf/test-utils/pdf-fixtures";
 
 const PDF_PATH = getSampleFixturePath("panel2.pdf");
@@ -28,7 +29,7 @@ function buildLines(texts: readonly PdfText[]): string[] {
 describe("PDF text decoding (panel2.pdf page 2)", () => {
   it("decodes code blocks and avoids control characters", async () => {
     const bytes = fs.readFileSync(PDF_PATH);
-    const doc = await parsePdf(bytes, { pages: [2] });
+    const doc = await buildPdf({ data: bytes, parseOptions: { pages: [2] } });
 
     const page = doc.pages[0];
     if (!page) {

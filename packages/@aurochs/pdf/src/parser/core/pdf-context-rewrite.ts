@@ -6,7 +6,7 @@ import path from "node:path";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import type { PdfDocument, PdfImage } from "../../domain";
 import type { ParsedElement } from "../operator";
-import { buildPdfDocumentFromContext, type PdfBuildContext } from "./pdf-parser.native";
+import type { PdfBuildContext } from "./pdf-parser.native";
 
 export type ParsedElementRewriteArgs = Readonly<{
   readonly element: ParsedElement;
@@ -203,22 +203,4 @@ export async function loadPdfDocumentFromJson(inputPath: string): Promise<PdfDoc
   }
   const content = await readFile(inputPath, "utf8");
   return deserializePdfDocumentFromJson(content);
-}
-
-/** Build final document from context and save it as JSON. */
-export async function buildAndSavePdfContextAsJson(
-  context: PdfBuildContext,
-  outputPath: string,
-  indent: number = 2,
-): Promise<PdfDocument> {
-  if (!context) {
-    throw new Error("context is required");
-  }
-  if (typeof outputPath !== "string" || outputPath.length === 0) {
-    throw new Error("outputPath is required");
-  }
-
-  const document = buildPdfDocumentFromContext(context);
-  await savePdfDocumentAsJson(document, outputPath, indent);
-  return document;
 }

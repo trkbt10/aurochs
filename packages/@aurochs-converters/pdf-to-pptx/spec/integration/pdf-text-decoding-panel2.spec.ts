@@ -3,7 +3,8 @@
  */
 
 import * as fs from "node:fs";
-import { parsePdf, type PdfText } from "@aurochs/pdf";
+import { buildPdf } from "@aurochs-builder/pdf";
+import type { PdfText } from "@aurochs/pdf";
 import { getSampleFixturePath } from "@aurochs/pdf/test-utils/pdf-fixtures";
 
 const PDF_PATH = getSampleFixturePath("panel2.pdf");
@@ -11,7 +12,7 @@ const PDF_PATH = getSampleFixturePath("panel2.pdf");
 describe("PDF text decoding (panel2.pdf)", () => {
   it("decodes Japan1 Type0 text without mojibake", async () => {
     const bytes = fs.readFileSync(PDF_PATH);
-    const doc = await parsePdf(bytes, { pages: [1] });
+    const doc = await buildPdf({ data: bytes, parseOptions: { pages: [1] } });
 
     const page = doc.pages[0];
     if (!page) {

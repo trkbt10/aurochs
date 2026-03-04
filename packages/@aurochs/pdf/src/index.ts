@@ -76,21 +76,17 @@ export { PT_TO_PX, PX_TO_PT } from "./domain";
 // =============================================================================
 
 export {
-  parsePdf,
   parsePdfSource,
   createPdfContext,
-  buildPdfFromContext,
   rewritePdfContext,
   serializePdfDocumentAsJson,
   deserializePdfDocumentFromJson,
   savePdfDocumentAsJson,
   loadPdfDocumentFromJson,
-  buildAndSavePdfContextAsJson,
   getPdfPageCount,
   getPdfPageDimensions,
 } from "./parser/core/pdf-parser";
 export type {
-  PdfParserOptions,
   PdfParseOptions,
   PdfBuildOptions,
   PdfParsedPage,

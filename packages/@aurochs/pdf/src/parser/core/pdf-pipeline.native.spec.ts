@@ -3,9 +3,9 @@
  */
 
 import { readFileSync } from "node:fs";
+import { buildPdfFromBuilderContext } from "@aurochs-builder/pdf";
 import { getPdfFixturePath } from "../../test-utils/pdf-fixtures";
 import {
-  buildPdfDocumentFromContext,
   createPdfBuildContext,
   parsePdfNative,
   parsePdfSourceNative,
@@ -25,7 +25,7 @@ describe("native PDF parser pipeline", () => {
     const direct = await parsePdfNative(bytes);
     const parsed = await parsePdfSourceNative(bytes);
     const context = createPdfBuildContext(parsed);
-    const built = buildPdfDocumentFromContext(context);
+    const built = buildPdfFromBuilderContext({ context });
 
     expect(built).toEqual(direct);
   });
@@ -37,7 +37,7 @@ describe("native PDF parser pipeline", () => {
       includeText: false,
       includePaths: false,
     });
-    const built = buildPdfDocumentFromContext(context);
+    const built = buildPdfFromBuilderContext({ context });
 
     expect(built.pages[0]!.elements).toHaveLength(0);
   });

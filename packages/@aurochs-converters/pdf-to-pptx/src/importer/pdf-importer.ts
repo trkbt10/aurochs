@@ -9,7 +9,7 @@ import type { Presentation } from "@aurochs-office/pptx/domain";
 import type { PresentationDocument, SlideWithId } from "@aurochs-office/pptx/app/presentation-document";
 import type { Slide } from "@aurochs-office/pptx/domain/slide/types";
 import { openPresentation } from "@aurochs-office/pptx/app/open-presentation";
-import { parsePdf } from "@aurochs/pdf/parser/core/pdf-parser";
+import { buildPdf } from "@aurochs-builder/pdf";
 import type { PdfDocument, PdfImage, PdfPage, PdfPath, PdfText } from "@aurochs/pdf/domain";
 import { PdfLoadError } from "@aurochs/pdf/parser/core/pdf-load-error";
 import { normalizePageElementsForDisplay } from "@aurochs/pdf/services/block-segmentation/visualization/page-coordinate-normalization";
@@ -325,7 +325,10 @@ function determineSlideSizeOrThrow(firstPage: PdfPage, options: PdfImportOptions
 
 async function parsePdfOrThrow(buffer: ArrayBuffer | Uint8Array, options: PdfImportOptions) {
   try {
-    return await parsePdf(buffer, options.pages ? { pages: options.pages } : {});
+    return await buildPdf({
+      data: buffer,
+      parseOptions: options.pages ? { pages: options.pages } : {},
+    });
   } catch (error) {
     if (error instanceof PdfLoadError) {
       throw wrapError(error, error.code);

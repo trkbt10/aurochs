@@ -5,6 +5,7 @@
   "type": "module",
   "sideEffects": false,
   "dependencies": {
+    "@aurochs-builder/pdf": "workspace:*",
     "@aurochs-builder/pptx": "workspace:*",
     "@aurochs-converters/core": "workspace:*",
     "@aurochs/buffer": "workspace:*",

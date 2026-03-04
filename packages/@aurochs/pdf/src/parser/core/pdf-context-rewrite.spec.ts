@@ -6,10 +6,9 @@ import path from "node:path";
 import { readFileSync } from "node:fs";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
+import { buildAndSavePdfContextAsJson, buildPdfFromBuilderContext } from "@aurochs-builder/pdf";
 import { getPdfFixturePath } from "../../test-utils/pdf-fixtures";
 import {
-  buildAndSavePdfContextAsJson,
-  buildPdfFromContext,
   createPdfContext,
   loadPdfDocumentFromJson,
   parsePdfSource,
@@ -20,7 +19,7 @@ describe("context rewrite and save", () => {
   it("rewrites path elements in context before build", async () => {
     const bytes = new Uint8Array(readFileSync(getPdfFixturePath("simple-rect.pdf")));
     const parsed = await parsePdfSource(bytes);
-    const original = buildPdfFromContext(createPdfContext(parsed));
+    const original = buildPdfFromBuilderContext({ context: createPdfContext(parsed) });
     const originalPathCount = original.pages[0]!.elements.filter((element) => element.type === "path").length;
 
     const rewrittenContext = rewritePdfContext(createPdfContext(parsed), {
@@ -31,7 +30,7 @@ describe("context rewrite and save", () => {
         return { ...element, paintOp: "none" };
       },
     });
-    const rewritten = buildPdfFromContext(rewrittenContext);
+    const rewritten = buildPdfFromBuilderContext({ context: rewrittenContext });
     const rewrittenPathCount = rewritten.pages[0]!.elements.filter((element) => element.type === "path").length;
 
     expect(originalPathCount).toBeGreaterThan(0);
@@ -62,7 +61,7 @@ describe("context rewrite and save", () => {
         };
       },
     });
-    const rewritten = buildPdfFromContext(rewrittenContext);
+    const rewritten = buildPdfFromBuilderContext({ context: rewrittenContext });
 
     const texts = rewritten.pages[0]!.elements.filter((element) => element.type === "text");
     expect(texts.some((text) => text.type === "text" && text.text.includes(markerText))).toBe(true);

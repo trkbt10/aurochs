@@ -5,10 +5,9 @@
 import path from "node:path";
 import { readdirSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { buildPdf, buildPdfFromBuilderContext } from "@aurochs-builder/pdf";
 import {
-  buildPdfFromContext,
   createPdfContext,
-  parsePdf,
   parsePdfSource,
 } from "./pdf-parser";
 
@@ -132,14 +131,22 @@ describe("PDF pipeline round-trip integrity (all fixtures)", () => {
       const options = { encryption: { mode: "password", password: "" } } as const;
       const parseOptions = { ...options, pages: roundTripCase.pages };
 
-      const direct = await parsePdf(bytes, parseOptions);
+      const direct = await buildPdf({
+        data: bytes,
+        parseOptions,
+        buildOptions: {
+          includeText: true,
+          includePaths: true,
+          minPathComplexity: 0,
+        },
+      });
       const parsed = await parsePdfSource(bytes, parseOptions);
       const context = createPdfContext(parsed, {
         includeText: true,
         includePaths: true,
         minPathComplexity: 0,
       });
-      const rebuilt = buildPdfFromContext(context);
+      const rebuilt = buildPdfFromBuilderContext({ context });
 
       expect(
         rebuilt,

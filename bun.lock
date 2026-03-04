@@ -141,6 +141,13 @@
         "@aurochs/mermaid": "workspace:*",
       },
     },
+    "packages/@aurochs-builder/pdf": {
+      "name": "@aurochs-builder/pdf",
+      "version": "0.5.0",
+      "dependencies": {
+        "@aurochs/pdf": "workspace:*",
+      },
+    },
     "packages/@aurochs-builder/pptx": {
       "name": "@aurochs-builder/pptx",
       "version": "0.5.0",
@@ -251,6 +258,7 @@
       "name": "@aurochs-converters/pdf-to-pptx",
       "version": "0.5.0",
       "dependencies": {
+        "@aurochs-builder/pdf": "workspace:*",
         "@aurochs-builder/pptx": "workspace:*",
         "@aurochs-converters/core": "workspace:*",
         "@aurochs-office/ooxml": "workspace:*",
@@ -850,6 +858,8 @@
     "@aurochs-builder/drawing-ml": ["@aurochs-builder/drawing-ml@workspace:packages/@aurochs-builder/drawing-ml"],
 
     "@aurochs-builder/mermaid": ["@aurochs-builder/mermaid@workspace:packages/@aurochs-builder/mermaid"],
+
+    "@aurochs-builder/pdf": ["@aurochs-builder/pdf@workspace:packages/@aurochs-builder/pdf"],
 
     "@aurochs-builder/pptx": ["@aurochs-builder/pptx@workspace:packages/@aurochs-builder/pptx"],
 
