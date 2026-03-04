@@ -56,6 +56,27 @@ export function getGlyphWidth(charCode: number, metrics: FontMetrics): number {
   return width ?? metrics.defaultWidth;
 }
 
+function forEachCharCode(
+  text: string,
+  codeByteWidth: 1 | 2,
+  visit: (charCode: number, isSpace: boolean) => void,
+): void {
+  if (codeByteWidth === 2) {
+    for (let i = 0; i + 1 < text.length; i += 2) {
+      const highByte = text.charCodeAt(i);
+      const lowByte = text.charCodeAt(i + 1);
+      const cid = highByte * 256 + lowByte;
+      visit(cid, cid === 32 || cid === 1);
+    }
+    return;
+  }
+
+  for (let i = 0; i < text.length; i++) {
+    const charCode = text.charCodeAt(i);
+    visit(charCode, charCode === 32);
+  }
+}
+
 /**
  * Calculate text displacement per PDF Reference 9.4.4.
  *
@@ -84,35 +105,116 @@ export function calculateTextDisplacement(
   const Th = horizontalScaling / 100;
   const totalDisplacement = { value: 0 };
 
-  // For 2-byte CID fonts, character codes are encoded as pairs of bytes
-  if (codeByteWidth === 2) {
-    for (let i = 0; i + 1 < text.length; i += 2) {
-      const highByte = text.charCodeAt(i);
-      const lowByte = text.charCodeAt(i + 1);
-      const cid = highByte * 256 + lowByte;
-
-      const w0 = getGlyphWidth(cid, metrics);
-      const glyphWidth = (w0 - tjAdjustment) * fontSize / 1000;
-      // For CID fonts, space character is typically CID 1 or 32
-      const isSpace = cid === 32 || cid === 1;
-      const charDisplacement = (glyphWidth + charSpacing + (isSpace ? wordSpacing : 0)) * Th;
-
-      totalDisplacement.value += charDisplacement;
-    }
-  } else {
-    // Single-byte font
-    for (let i = 0; i < text.length; i++) {
-      const charCode = text.charCodeAt(i);
-      const w0 = getGlyphWidth(charCode, metrics);
-      const glyphWidth = (w0 - tjAdjustment) * fontSize / 1000;
-      const isSpace = charCode === 32;
-      const charDisplacement = (glyphWidth + charSpacing + (isSpace ? wordSpacing : 0)) * Th;
-
-      totalDisplacement.value += charDisplacement;
-    }
-  }
+  forEachCharCode(text, codeByteWidth, (charCode, isSpace) => {
+    const w0 = getGlyphWidth(charCode, metrics);
+    const glyphWidth = (w0 - tjAdjustment) * fontSize / 1000;
+    const charDisplacement = (glyphWidth + charSpacing + (isSpace ? wordSpacing : 0)) * Th;
+    totalDisplacement.value += charDisplacement;
+  });
 
   return totalDisplacement.value;
+}
+
+/**
+ * Calculate text displacement for writing mode 1 (vertical text).
+ *
+ * Uses vertical metrics (`w1`) when available. If no explicit per-glyph
+ * vertical displacement is present, falls back to `defaultVerticalDisplacement`.
+ */
+// eslint-disable-next-line custom/max-params -- Mirrors calculateTextDisplacement with vertical metrics inputs
+export function calculateVerticalTextDisplacement(
+  text: string,
+  fontSize: number,
+  charSpacing: number,
+  wordSpacing: number,
+  codeByteWidth: 1 | 2,
+  verticalDisplacements?: ReadonlyMap<number, number>,
+  defaultVerticalDisplacement = -1000,
+  tjAdjustment = 0,
+): number {
+  const totalDisplacement = { value: 0 };
+
+  forEachCharCode(text, codeByteWidth, (charCode, isSpace) => {
+    const w1 = verticalDisplacements?.get(charCode) ?? defaultVerticalDisplacement;
+    const glyphDisplacement = (w1 - tjAdjustment) * fontSize / 1000;
+    const charDisplacement = glyphDisplacement + charSpacing + (isSpace ? wordSpacing : 0);
+    totalDisplacement.value += charDisplacement;
+  });
+
+  return totalDisplacement.value;
+}
+
+function resolveRunDisplacement(args: {
+  readonly text: string;
+  readonly fontSize: number;
+  readonly charSpacing: number;
+  readonly wordSpacing: number;
+  readonly horizontalScaling: number;
+  readonly metrics: FontMetrics;
+  readonly codeByteWidth: 1 | 2;
+  readonly writingMode: 0 | 1;
+  readonly verticalDisplacements?: ReadonlyMap<number, number>;
+  readonly defaultVerticalDisplacement?: number;
+}): number {
+  const {
+    text,
+    fontSize,
+    charSpacing,
+    wordSpacing,
+    horizontalScaling,
+    metrics,
+    codeByteWidth,
+    writingMode,
+    verticalDisplacements,
+    defaultVerticalDisplacement,
+  } = args;
+  if (writingMode === 1) {
+    return calculateVerticalTextDisplacement(
+      text,
+      fontSize,
+      charSpacing,
+      wordSpacing,
+      codeByteWidth,
+      verticalDisplacements,
+      defaultVerticalDisplacement ?? -1000,
+    );
+  }
+  return calculateTextDisplacement(
+    text,
+    fontSize,
+    charSpacing,
+    wordSpacing,
+    horizontalScaling,
+    metrics,
+    codeByteWidth,
+  );
+}
+
+function getTextAdvance(args: {
+  readonly writingMode: 0 | 1;
+  readonly tmA: number;
+  readonly tmB: number;
+  readonly tmC: number;
+  readonly tmD: number;
+  readonly displacement: number;
+}): Readonly<{ advanceUserX: number; advanceUserY: number }> {
+  const { writingMode, tmA, tmB, tmC, tmD, displacement } = args;
+  if (writingMode === 1) {
+    return { advanceUserX: tmC * displacement, advanceUserY: tmD * displacement };
+  }
+  return { advanceUserX: tmA * displacement, advanceUserY: tmB * displacement };
+}
+
+function applyTextAdjustmentToMatrix(
+  matrix: PdfMatrix,
+  adjustment: number,
+  writingMode: 0 | 1,
+): PdfMatrix {
+  const [a, b, c, d, e, f] = matrix;
+  if (writingMode === 1) {
+    return [a, b, c, d, e + c * adjustment, f + d * adjustment];
+  }
+  return [a, b, c, d, e + a * adjustment, f + b * adjustment];
 }
 
 /**
@@ -394,6 +496,7 @@ export function createTextRun(
 ): { run: TextRun; newTextMatrix: PdfMatrix } {
   const { ctm, textRise, charSpacing, wordSpacing, horizontalScaling, graphicsState } = gfxState;
   const { textMatrix, currentFont, currentBaseFont, currentFontInfo, currentFontSize, currentFontMetrics, currentCodeByteWidth } = textState;
+  const writingMode = currentFontInfo?.writingMode ?? 0;
 
   // Text matrix [a b c d e f] maps text-space (x,y) to user-space:
   // x' = a*x + c*y + e
@@ -404,19 +507,28 @@ export function createTextRun(
   const startPos = transformPoint({ x: startUserX, y: startUserY }, ctm);
 
   // Calculate text displacement
-  const displacement = calculateTextDisplacement(
+  const effectiveDisplacement = resolveRunDisplacement({
     text,
-    currentFontSize,
+    fontSize: currentFontSize,
     charSpacing,
     wordSpacing,
     horizontalScaling,
-    currentFontMetrics,
-    currentCodeByteWidth
-  );
+    metrics: currentFontMetrics,
+    codeByteWidth: currentCodeByteWidth,
+    writingMode,
+    verticalDisplacements: currentFontInfo?.verticalDisplacements,
+    defaultVerticalDisplacement: currentFontInfo?.defaultVerticalDisplacement,
+  });
 
-  // Advance baseline in text x-axis by displacement.
-  const advanceUserX = tmA * displacement;
-  const advanceUserY = tmB * displacement;
+  // Writing mode 0: advance in text x-axis, writing mode 1: advance in text y-axis.
+  const { advanceUserX, advanceUserY } = getTextAdvance({
+    writingMode,
+    tmA,
+    tmB,
+    tmC,
+    tmD,
+    displacement: effectiveDisplacement,
+  });
   const newTmE = tmE + advanceUserX;
   const newTmF = tmF + advanceUserY;
   const newTextMatrix: PdfMatrix = [tmA, tmB, tmC, tmD, newTmE, newTmF];
@@ -538,6 +650,7 @@ const handleShowTextArray: OperatorHandler = (ctx, gfxOps) => {
   const state = gfxOps.get();
   const { currentFontSize } = ctx.textState;
   const { horizontalScaling } = state;
+  const writingMode = ctx.textState.currentFontInfo?.writingMode ?? 0;
   const Th = horizontalScaling / 100;
 
   const textState = array.reduce((textState, elem) => {
@@ -561,9 +674,8 @@ const handleShowTextArray: OperatorHandler = (ctx, gfxOps) => {
       // PDF Reference 9.4.3:
       // Number value represents displacement in text space units (1/1000 em)
       // Positive values move left (subtract from position)
-      const adjustment = -elem * currentFontSize / 1000 * Th;
-      const [a, b, c, d, e, f] = textState.textMatrix;
-      const newTextMatrix: PdfMatrix = [a, b, c, d, e + a * adjustment, f + b * adjustment];
+      const adjustment = -elem * currentFontSize / 1000 * (writingMode === 1 ? 1 : Th);
+      const newTextMatrix = applyTextAdjustmentToMatrix(textState.textMatrix, adjustment, writingMode);
       return {
         ...textState,
         textMatrix: newTextMatrix,

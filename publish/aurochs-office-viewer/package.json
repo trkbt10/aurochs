@@ -1,7 +1,7 @@
 {
   "name": "aurochs-office-viewer",
   "displayName": "aurochs Office Viewer",
-  "description": "View PPTX, PPT, DOCX, DOC, XLSX, and XLS files directly in VS Code",
+  "description": "View PPTX, PPT, DOCX, DOC, XLSX, XLS, and PDF files directly in VS Code",
   "version": "0.5.0",
   "publisher": "trkbt10",
   "license": "MIT",
@@ -18,7 +18,13 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "*",
+    "onCustomEditor:aurochs.pptxViewer",
+    "onCustomEditor:aurochs.docxViewer",
+    "onCustomEditor:aurochs.xlsxViewer",
+    "onCustomEditor:aurochs.pdfViewer"
+  ],
   "contributes": {
     "customEditors": [
       {
@@ -56,6 +62,16 @@
           },
           {
             "filenamePattern": "*.xls"
+          }
+        ],
+        "priority": "default"
+      },
+      {
+        "viewType": "aurochs.pdfViewer",
+        "displayName": "PDF Viewer",
+        "selector": [
+          {
+            "filenamePattern": "*.pdf"
           }
         ],
         "priority": "default"

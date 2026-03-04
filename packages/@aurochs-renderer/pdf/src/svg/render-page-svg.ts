@@ -159,6 +159,94 @@ function resolveTextTopY(text: PdfText, pageHeight: number): number {
   return pageHeight - (text.y + text.height);
 }
 
+type TextAnchor = Readonly<{
+  readonly x: number;
+  readonly y: number;
+  readonly dominantBaseline: "alphabetic" | "text-before-edge";
+  readonly angleDeg: number;
+  readonly fromBaseline: boolean;
+}>;
+
+function resolveTextBaselineAnchor(
+  text: PdfText,
+  pageHeight: number,
+): Readonly<{
+  readonly x: number;
+  readonly y: number;
+  readonly angleDeg: number;
+}> | null {
+  const startX = text.baselineStartX;
+  const startY = text.baselineStartY;
+  const endX = text.baselineEndX;
+  const endY = text.baselineEndY;
+
+  if (
+    startX === undefined ||
+    startY === undefined ||
+    endX === undefined ||
+    endY === undefined ||
+    !Number.isFinite(startX) ||
+    !Number.isFinite(startY) ||
+    !Number.isFinite(endX) ||
+    !Number.isFinite(endY)
+  ) {
+    return null;
+  }
+
+  const dx = endX - startX;
+  const dy = endY - startY;
+  const baselineLength = Math.hypot(dx, dy);
+  if (!Number.isFinite(baselineLength) || baselineLength <= 1e-6) {
+    return null;
+  }
+
+  // PDF uses bottom-left origin, SVG uses top-left. Invert Y for SVG angle.
+  const angleDeg = (Math.atan2(-dy, dx) * 180) / Math.PI;
+  return {
+    x: startX,
+    y: pageHeight - startY,
+    angleDeg,
+  };
+}
+
+function resolveTextAnchor(text: PdfText, pageHeight: number): TextAnchor {
+  const baselineAnchor = resolveTextBaselineAnchor(text, pageHeight);
+  if (baselineAnchor) {
+    return {
+      x: baselineAnchor.x,
+      y: baselineAnchor.y,
+      dominantBaseline: "alphabetic",
+      angleDeg: baselineAnchor.angleDeg,
+      fromBaseline: true,
+    };
+  }
+
+  return {
+    x: text.x,
+    y: resolveTextTopY(text, pageHeight),
+    dominantBaseline: "text-before-edge",
+    angleDeg: 0,
+    fromBaseline: false,
+  };
+}
+
+function isVerticalWritingText(text: PdfText): boolean {
+  return text.writingMode === 1;
+}
+
+function normalizeTextAnchorForVerticalWriting(anchor: TextAnchor): TextAnchor {
+  if (!anchor.fromBaseline) {
+    return { ...anchor, dominantBaseline: "text-before-edge" };
+  }
+  return {
+    ...anchor,
+    dominantBaseline: "text-before-edge",
+    // Vertical text in SVG naturally advances along +Y.
+    // Align baseline-derived run direction to that axis.
+    angleDeg: anchor.angleDeg - 90,
+  };
+}
+
 function normalizeTextScale(text: PdfText): number {
   const scaling = text.horizontalScaling;
   if (scaling === undefined) {
@@ -170,6 +258,34 @@ function normalizeTextScale(text: PdfText): number {
   }
 
   return scaling / 100;
+}
+
+function buildTextTransform(anchor: TextAnchor, textScale: number): string | null {
+  const hasRotation = Math.abs(anchor.angleDeg) > 1e-6;
+  const hasScale = Math.abs(textScale - 1) > 1e-6;
+
+  if (!hasRotation && !hasScale) {
+    return null;
+  }
+
+  if (!hasRotation) {
+    const translateX = formatSvgNumber(anchor.x);
+    const reverseTranslateX = formatSvgNumber(-anchor.x);
+    return `translate(${translateX} 0) scale(${formatSvgNumber(textScale)} 1) translate(${reverseTranslateX} 0)`;
+  }
+
+  if (!hasScale) {
+    return `rotate(${formatSvgNumber(anchor.angleDeg)} ${formatSvgNumber(anchor.x)} ${formatSvgNumber(anchor.y)})`;
+  }
+
+  const anchorX = formatSvgNumber(anchor.x);
+  const anchorY = formatSvgNumber(anchor.y);
+  const inverseAnchorX = formatSvgNumber(-anchor.x);
+  const inverseAnchorY = formatSvgNumber(-anchor.y);
+  return (
+    `translate(${anchorX} ${anchorY}) rotate(${formatSvgNumber(anchor.angleDeg)}) ` +
+    `scale(${formatSvgNumber(textScale)} 1) translate(${inverseAnchorX} ${inverseAnchorY})`
+  );
 }
 
 function renderText(text: PdfText, pageHeight: number, registry: ClipPathRegistry): string {
@@ -189,19 +305,21 @@ function renderText(text: PdfText, pageHeight: number, registry: ClipPathRegistr
 
   const fillPaint = toSvgPaint(state.fillColor, state.fillAlpha * (state.softMaskAlpha ?? 1));
   const strokePaint = toSvgPaint(state.strokeColor, state.strokeAlpha * (state.softMaskAlpha ?? 1));
-  const topY = resolveTextTopY(text, pageHeight);
+  const baseAnchor = resolveTextAnchor(text, pageHeight);
+  const verticalWriting = isVerticalWritingText(text);
+  const anchor = verticalWriting ? normalizeTextAnchorForVerticalWriting(baseAnchor) : baseAnchor;
   const fontFamily = normalizeFontFamily(text.baseFont ?? text.fontName);
   const fontWeight = text.isBold ? "700" : "400";
   const fontStyle = text.isItalic ? "italic" : "normal";
 
   const attrs: string[] = [
-    `x="${formatSvgNumber(text.x)}"`,
-    `y="${formatSvgNumber(topY)}"`,
+    `x="${formatSvgNumber(anchor.x)}"`,
+    `y="${formatSvgNumber(anchor.y)}"`,
     `font-size="${formatSvgNumber(text.fontSize)}"`,
     `font-family="${escapeXmlAttr(fontFamily)}"`,
     `font-weight="${fontWeight}"`,
     `font-style="${fontStyle}"`,
-    'dominant-baseline="text-before-edge"',
+    `dominant-baseline="${anchor.dominantBaseline}"`,
     'xml:space="preserve"',
   ];
 
@@ -229,13 +347,15 @@ function renderText(text: PdfText, pageHeight: number, registry: ClipPathRegistr
     attrs.push(`letter-spacing="${formatSvgNumber(text.charSpacing)}"`);
   }
 
+  if (verticalWriting) {
+    attrs.push('writing-mode="vertical-rl"');
+    attrs.push('text-orientation="upright"');
+  }
+
   const textScale = normalizeTextScale(text);
-  if (textScale !== 1) {
-    const translateX = formatSvgNumber(text.x);
-    const reverseTranslateX = formatSvgNumber(-text.x);
-    attrs.push(
-      `transform="translate(${translateX} 0) scale(${formatSvgNumber(textScale)} 1) translate(${reverseTranslateX} 0)"`,
-    );
+  const transform = buildTextTransform(anchor, textScale);
+  if (transform) {
+    attrs.push(`transform="${transform}"`);
   }
 
   return `<text ${attrs.join(" ")}${clipPathRef}>${escapeXmlText(text.text)}</text>`;

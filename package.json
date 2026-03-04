@@ -25,6 +25,7 @@
     "lint:fix": "eslint . --fix",
     "build:pages": "vite build --config pages/vite.config.ts",
     "dev:pages": "vite --config pages/vite.config.ts",
+    "dev:office-viewer": "./scripts/run-office-viewer-dev.sh",
     "changeset": "changeset",
     "version": "changeset version && bun run version:sync",
     "version:sync": "bun run scripts/version/sync-publish-versions.ts"

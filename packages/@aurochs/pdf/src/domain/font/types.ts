@@ -34,6 +34,8 @@ export type FontMetrics = {
  */
 export type FontInfo = {
   readonly mapping: FontMapping;
+  /** PDF text writing mode: 0 = horizontal, 1 = vertical */
+  readonly writingMode?: 0 | 1;
   /** Number of bytes per character code (1 or 2) */
   readonly codeByteWidth: 1 | 2;
   /**
@@ -59,6 +61,16 @@ export type FontInfo = {
   }>;
   /** Font metrics for glyph widths and vertical metrics */
   readonly metrics: FontMetrics;
+  /**
+   * Vertical displacement metrics (`w1`) for writing mode 1.
+   * Values are in 1/1000 em units.
+   */
+  readonly verticalDisplacements?: ReadonlyMap<number, number>;
+  /**
+   * Default vertical displacement (`DW2` second value, fallback -1000).
+   * Value is in 1/1000 em units.
+   */
+  readonly defaultVerticalDisplacement?: number;
   /**
    * Type3 font support (glyph programs stored in `/CharProcs`).
    *

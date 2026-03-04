@@ -291,6 +291,10 @@ function convertText(parsed: ParsedText, fontMappings: FontMappings): PdfText[] 
       fontName: actualFontName,
       baseFont: run.baseFont ?? fontInfo?.baseFont,
       fontSize: effectiveSize,
+      baselineStartX: run.x,
+      baselineStartY: run.y,
+      baselineEndX: run.endX,
+      baselineEndY: run.endY,
       graphicsState: parsed.graphicsState,
       charSpacing: run.charSpacing,
       wordSpacing: run.wordSpacing,
@@ -299,6 +303,7 @@ function convertText(parsed: ParsedText, fontMappings: FontMappings): PdfText[] 
       isBold: fontInfo?.isBold,
       isItalic: fontInfo?.isItalic,
       cidOrdering: fontInfo?.ordering,
+      writingMode: fontInfo?.writingMode,
     });
   }
 

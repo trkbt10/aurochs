@@ -16,6 +16,7 @@
     "@aurochs-office/xlsx": "workspace:*",
     "@aurochs-office/xls": "workspace:*",
     "@aurochs-renderer/pptx": "workspace:*",
+    "@aurochs-renderer/pdf": "workspace:*",
     "@aurochs/zip": "workspace:*"
   },
   "devDependencies": {

@@ -11,6 +11,7 @@ All parsing and rendering runs locally in pure TypeScript.
 | PowerPoint | `.pptx`, `.ppt` | SVG slides with navigation |
 | Word | `.docx`, `.doc` | HTML with paragraph/table styling |
 | Excel | `.xlsx`, `.xls` | HTML tables with sheet tabs |
+| PDF | `.pdf` | SVG pages with thumbnails and navigation |
 
 Both modern (OOXML) and legacy (OLE2/CFB) formats are supported.
 
@@ -18,7 +19,7 @@ Both modern (OOXML) and legacy (OLE2/CFB) formats are supported.
 
 - **Just open a file** — the viewer activates automatically when you open a supported file
 - **Zero dependencies** — all parsing and rendering is built-in; works offline, no external tools needed
-- **Read-only viewer** — opens Office files as custom editor tabs
+- **Read-only viewer** — opens supported files as custom editor tabs
 - **Slide navigation** — thumbnail sidebar with keyboard shortcuts (Arrow keys, Home/End) for presentations
 - **Zoom control** — adjustable zoom slider for all document types
 - **Sheet tabs** — switch between worksheets in spreadsheets
@@ -37,6 +38,10 @@ Documents are rendered to styled HTML with support for paragraphs, headings, tab
 ### Excel (.xlsx / .xls)
 
 Workbooks are rendered as HTML tables. Switch between sheets using the tab bar at the bottom. Merged cells, number formatting, and cell styling are preserved.
+
+### PDF (.pdf)
+
+PDF pages are rendered to SVG and displayed in a dedicated viewer with page thumbnails, keyboard navigation, and zoom controls.
 
 ## Tips
 

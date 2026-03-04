@@ -119,4 +119,42 @@ describe("renderPdfPageToSvg", () => {
 
     expect(() => renderPdfDocumentPageToSvg(document, 2)).toThrow("out of range");
   });
+
+  it("renders vertical writing text without rotating glyphs sideways", () => {
+    const text: PdfText = {
+      type: "text",
+      text: "縦書き",
+      x: 80,
+      y: 100,
+      width: 16,
+      height: 40,
+      fontName: "IPAexMincho",
+      fontSize: 12,
+      baselineStartX: 90,
+      baselineStartY: 140,
+      baselineEndX: 90,
+      baselineEndY: 100,
+      writingMode: 1,
+      graphicsState: createGraphicsState({
+        fillColor: { colorSpace: "DeviceRGB", components: [0, 0, 0] },
+      }),
+      horizontalScaling: 100,
+    };
+
+    const page: PdfPage = {
+      pageNumber: 1,
+      width: 200,
+      height: 200,
+      elements: [text],
+    };
+
+    const svg = renderPdfPageToSvg(page, { backgroundColor: "transparent" });
+
+    expect(svg).toContain('x="90"');
+    expect(svg).toContain('y="60"');
+    expect(svg).toContain('dominant-baseline="text-before-edge"');
+    expect(svg).toContain('writing-mode="vertical-rl"');
+    expect(svg).toContain('text-orientation="upright"');
+    expect(svg).not.toContain('transform="rotate(');
+  });
 });

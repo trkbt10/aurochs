@@ -66,4 +66,20 @@ describe("@aurochs-builder/pdf", () => {
     const textElements = result.document.pages[0]!.elements.filter((element) => element.type === "text");
     expect(textElements.some((element) => element.type === "text" && element.text.includes(marker))).toBe(true);
   });
+
+  it("preserves text baseline coordinates in built PdfText elements", async () => {
+    const bytes = new Uint8Array(readFileSync(getPdfFixturePath("text-content.pdf")));
+    const built = await buildPdf({ data: bytes });
+
+    const firstText = built.pages.flatMap((page) => page.elements).find((element) => element.type === "text");
+    expect(firstText).toBeDefined();
+    if (!firstText || firstText.type !== "text") {
+      throw new Error("expected at least one text element");
+    }
+
+    expect(firstText.baselineStartX).toBeDefined();
+    expect(firstText.baselineStartY).toBeDefined();
+    expect(firstText.baselineEndX).toBeDefined();
+    expect(firstText.baselineEndY).toBeDefined();
+  });
 });

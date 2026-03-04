@@ -373,6 +373,47 @@ describe("text-handlers", () => {
       expect(update.textState?.textMatrix[4]).toBeCloseTo(100);
       expect(update.textState?.textMatrix[5]).toBeCloseTo(210);
     });
+
+    it("advances vertical writing mode text along text y-axis", () => {
+      const verticalMetrics: FontMetrics = {
+        widths: new Map([[65, 1000]]),
+        defaultWidth: 500,
+        ascender: 800,
+        descender: -200,
+      };
+      const ctx = createContext(["A"], {
+        inTextObject: true,
+        textState: {
+          ...createInitialTextState(),
+          textMatrix: [1, 0, 0, 1, 100, 200],
+          textLineMatrix: [1, 0, 0, 1, 100, 200],
+          currentFont: "/Fv",
+          currentFontSize: 10,
+          currentFontMetrics: verticalMetrics,
+          currentCodeByteWidth: 1,
+          currentFontInfo: {
+            mapping: new Map(),
+            writingMode: 1,
+            codeByteWidth: 1,
+            metrics: verticalMetrics,
+            defaultVerticalDisplacement: -1000,
+          },
+        },
+      });
+
+      const update = textHandlers.handleShowText(ctx, createMockGfxOps().ops);
+      const run = update.textState?.textRuns[0];
+      if (!run) {
+        throw new Error("missing run");
+      }
+
+      expect(run.x).toBeCloseTo(100);
+      expect(run.y).toBeCloseTo(200);
+      expect(run.endX).toBeCloseTo(100);
+      expect(run.endY).toBeCloseTo(190);
+      expect(update.textState?.textMatrix[4]).toBeCloseTo(100);
+      expect(update.textState?.textMatrix[5]).toBeCloseTo(190);
+    });
   });
 
   describe("handleShowTextArray (TJ)", () => {
@@ -383,6 +424,45 @@ describe("text-handlers", () => {
       expect(update.textState?.textRuns).toHaveLength(2);
       expect(update.textState?.textRuns[0].text).toBe("A");
       expect(update.textState?.textRuns[1].text).toBe("B");
+    });
+
+    it("applies TJ numeric adjustments on text y-axis in vertical writing mode", () => {
+      const verticalMetrics: FontMetrics = {
+        widths: new Map([[65, 1000]]),
+        defaultWidth: 500,
+        ascender: 800,
+        descender: -200,
+      };
+      const ctx = createContext([["A", 100, "A"]], {
+        inTextObject: true,
+        textState: {
+          ...createInitialTextState(),
+          textMatrix: [1, 0, 0, 1, 100, 200],
+          textLineMatrix: [1, 0, 0, 1, 100, 200],
+          currentFont: "/Fv",
+          currentFontSize: 10,
+          currentFontMetrics: verticalMetrics,
+          currentCodeByteWidth: 1,
+          currentFontInfo: {
+            mapping: new Map(),
+            writingMode: 1,
+            codeByteWidth: 1,
+            metrics: verticalMetrics,
+            defaultVerticalDisplacement: -1000,
+          },
+        },
+      });
+
+      const update = textHandlers.handleShowTextArray(ctx, createMockGfxOps().ops);
+      const runs = update.textState?.textRuns;
+      if (!runs || runs.length !== 2) {
+        throw new Error("expected two runs");
+      }
+
+      expect(runs[0].y).toBeCloseTo(200);
+      expect(runs[1].y).toBeCloseTo(189);
+      expect(update.textState?.textMatrix[4]).toBeCloseTo(100);
+      expect(update.textState?.textMatrix[5]).toBeCloseTo(179);
     });
   });
 

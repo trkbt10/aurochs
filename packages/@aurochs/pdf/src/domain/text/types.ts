@@ -127,6 +127,32 @@ export type PdfText = {
    * Font size in PDF points (1 point = 1/72 inch).
    */
   readonly fontSize: number;
+
+  /**
+   * Optional baseline start X in PDF page space.
+   *
+   * When present with end coordinates, renderers can preserve writing direction
+   * (e.g. rotated or vertical text) instead of assuming axis-aligned horizontal text.
+   */
+  readonly baselineStartX?: number;
+
+  /**
+   * Optional baseline start Y in PDF page space.
+   *
+   * Coordinates use PDF's bottom-left origin.
+   */
+  readonly baselineStartY?: number;
+
+  /**
+   * Optional baseline end X in PDF page space.
+   */
+  readonly baselineEndX?: number;
+
+  /**
+   * Optional baseline end Y in PDF page space.
+   */
+  readonly baselineEndY?: number;
+
   readonly graphicsState: PdfGraphicsState;
 
   // =============================================================================
@@ -199,6 +225,14 @@ export type PdfText = {
    * @see ISO 32000-1:2008 Section 9.7.3 - CIDSystemInfo Dictionaries
    */
   readonly cidOrdering?: CIDOrdering;
+
+  /**
+   * PDF writing mode for this text run.
+   *
+   * - `0`: horizontal writing
+   * - `1`: vertical writing (typically Identity-V)
+   */
+  readonly writingMode?: 0 | 1;
 };
 
 /**

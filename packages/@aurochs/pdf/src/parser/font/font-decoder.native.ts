@@ -216,6 +216,17 @@ function inferCodeByteWidth(
   return 2;
 }
 
+function inferWritingMode(page: NativePdfPage, fontDict: PdfDict): 0 | 1 {
+  const subtype = asName(dictGet(fontDict, "Subtype"))?.value ?? "";
+  if (subtype !== "Type0") {
+    return 0;
+  }
+
+  const encodingObj = resolve(page, dictGet(fontDict, "Encoding"));
+  const encodingName = encodingObj?.type === "name" ? encodingObj.value : "";
+  return encodingName.endsWith("-V") ? 1 : 0;
+}
+
 function findToUnicodeStream(page: NativePdfPage, fontDict: PdfDict): PdfStream | null {
   const direct = resolve(page, dictGet(fontDict, "ToUnicode"));
   const directStream = asStream(direct);
@@ -687,6 +698,71 @@ function extractCidFontWidths(page: NativePdfPage, fontDict: PdfDict): Pick<Font
   return { widths, defaultWidth };
 }
 
+function extractCidVerticalDisplacements(
+  page: NativePdfPage,
+  fontDict: PdfDict,
+): Readonly<{ displacements: ReadonlyMap<number, number>; defaultDisplacement: number }> | undefined {
+  const cidDict = extractType0DescendantFontDict(page, fontDict);
+  if (!cidDict) {return undefined;}
+  const resolvedCidDict = cidDict;
+
+  function resolveDefaultVerticalDisplacement(target: PdfDict): number {
+    const dw2Obj = resolve(page, dictGet(target, "DW2"));
+    const dw2Arr = asArray(dw2Obj);
+    if (!dw2Arr || dw2Arr.items.length <= 1) {
+      return -1000;
+    }
+    const value = asNumber(resolve(page, dw2Arr.items[1]));
+    return value ?? -1000;
+  }
+  const defaultDisplacement = resolveDefaultVerticalDisplacement(resolvedCidDict);
+
+  const displacements = new Map<number, number>();
+  const w2Obj = resolve(page, dictGet(resolvedCidDict, "W2"));
+  const w2Arr = asArray(w2Obj);
+  if (!w2Arr) {
+    return { displacements, defaultDisplacement };
+  }
+
+  for (let i = 0; i < w2Arr.items.length; ) {
+    const first = resolve(page, w2Arr.items[i]);
+    if (!first || first.type !== "number") {break;}
+    const cFirst = Math.trunc(first.value);
+    const second = resolve(page, w2Arr.items[i + 1]);
+    if (!second) {break;}
+
+    // Format 1: c [w1y v1x v1y w1y v1x v1y ...]
+    if (second.type === "array") {
+      for (let j = 0; j + 2 < second.items.length; j += 3) {
+        const w1yObj = resolve(page, second.items[j]);
+        if (w1yObj?.type === "number") {
+          displacements.set(cFirst + Math.trunc(j / 3), w1yObj.value);
+        }
+      }
+      i += 2;
+      continue;
+    }
+
+    // Format 2: cFirst cLast w1y v1x v1y
+    if (second.type === "number") {
+      const cLast = Math.trunc(second.value);
+      const w1yObj = resolve(page, w2Arr.items[i + 2]);
+      const w1y = w1yObj?.type === "number" ? w1yObj.value : null;
+      if (w1y != null) {
+        for (let cid = cFirst; cid <= cLast; cid += 1) {
+          displacements.set(cid, w1y);
+        }
+      }
+      i += 5;
+      continue;
+    }
+
+    break;
+  }
+
+  return { displacements, defaultDisplacement };
+}
+
 function extractFontMetrics(page: NativePdfPage, fontDict: PdfDict): FontMetrics {
   const subtype = asName(dictGet(fontDict, "Subtype"))?.value ?? "";
   const descriptor = extractFontDescriptor(page, fontDict);
@@ -939,14 +1015,19 @@ export function extractFontMappingsFromResourcesNative(
 
     const { isBold, isItalic } = computeBoldItalic(baseFont, extractFontDescriptor(page, fontDict));
     const codeByteWidth = inferCodeByteWidth(page, fontDict, toUnicode);
+    const writingMode = inferWritingMode(page, fontDict);
+    const verticalMetrics = writingMode === 1 ? extractCidVerticalDisplacements(page, fontDict) : undefined;
 
     const infoRaw: FontInfo = {
       mapping: toUnicode?.mapping ?? new Map(),
+      writingMode,
       codeByteWidth,
       toUnicodeByteMapping: toUnicode?.byteMapping,
       toUnicodeSourceCodeByteLengths: toUnicode?.sourceCodeByteLengths,
       toUnicodeDiagnostics: toUnicode?.diagnostics,
       metrics,
+      verticalDisplacements: verticalMetrics?.displacements,
+      defaultVerticalDisplacement: verticalMetrics?.defaultDisplacement,
       type3: extractType3Info(page, fontDict),
       ordering,
       cidCodeToUnicodeFallbackMap,
