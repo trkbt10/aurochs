@@ -10,7 +10,7 @@
  * - Keyboard-primary: Arrow keys, Escape, F for fullscreen
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import type { SlideSize, SlideTransition } from "@aurochs-office/pptx/domain";
 import type { Timing } from "@aurochs-office/pptx/domain/animation";
@@ -69,7 +69,7 @@ export function PresentationSlideshow({
   startSlideIndex = 1,
   getSlideContent,
   onExit,
-}: PresentationSlideshowProps) {
+}: PresentationSlideshowProps): ReactNode {
   const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isBlackScreen, setIsBlackScreen] = useState(false);
