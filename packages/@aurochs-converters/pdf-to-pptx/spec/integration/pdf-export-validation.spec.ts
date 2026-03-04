@@ -19,12 +19,12 @@ import { importPdf } from "../../src/importer/pdf-importer";
 import { exportPptx } from "@aurochs-builder/pptx/export";
 import { loadPptxFromBuffer } from "@aurochs-office/pptx/app/pptx-loader";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
+import { getSampleFixturePath } from "@aurochs/pdf/test-utils/pdf-fixtures";
 import { parseXml } from "@aurochs/xml";
 import { loadZipPackage } from "@aurochs/zip";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURES_DIR = path.join(__dirname, "..", "fixtures", "pdf");
-const SAMPLES_DIR = path.resolve(__dirname, "../../../../../fixtures/samples");
 const OUTPUT_DIR = path.resolve(__dirname, "../../../../../tmp");
 
 const SLIDE_WIDTH = px(960);
@@ -190,7 +190,7 @@ describe("PDF Export Validation", () => {
     });
 
     it("multi-page PDF includes all required files", async () => {
-      const pdfPath = path.join(SAMPLES_DIR, "modeling.pdf");
+      const pdfPath = getSampleFixturePath("modeling.pdf");
       const pdfBuffer = readFixtureOrSkip(pdfPath);
       if (!pdfBuffer) {
         return;
@@ -405,7 +405,7 @@ describe("PDF Export Validation", () => {
 
   describe("Complex PDF with images", () => {
     it("exports PDF with images correctly", async () => {
-      const pdfPath = path.join(SAMPLES_DIR, "modeling.pdf");
+      const pdfPath = getSampleFixturePath("modeling.pdf");
       const pdfBuffer = readFixtureOrSkip(pdfPath);
       if (!pdfBuffer) {
         return;
@@ -514,7 +514,7 @@ describe("PDF Export Validation", () => {
     });
 
     it("complex PDF export can be reloaded", async () => {
-      const pdfPath = path.join(SAMPLES_DIR, "modeling.pdf");
+      const pdfPath = getSampleFixturePath("modeling.pdf");
       const pdfBuffer = readFixtureOrSkip(pdfPath);
       if (!pdfBuffer) {
         return;

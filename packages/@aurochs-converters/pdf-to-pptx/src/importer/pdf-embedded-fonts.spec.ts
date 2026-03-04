@@ -6,7 +6,7 @@
  */
 import * as fs from "node:fs";
 import { importPdf } from "./pdf-importer";
-import { getPdfFixturePath } from "../test-utils/pdf-fixtures";
+import { getPdfFixturePath } from "@aurochs/pdf/test-utils/pdf-fixtures";
 
 describe("PDF import with embedded fonts", () => {
   it("should extract embedded fonts from CJK PDF", async () => {

@@ -273,6 +273,108 @@ describe("convertPageToShapes", () => {
     expect(convertPageToShapes(page, { ...options, grouping: { preset: "full" } })).toHaveLength(1);
   });
 
+  it("uses auto mode and falls back to text when table confidence is low", () => {
+    const makeText = (text: string, x: number, y: number): PdfText => ({
+      type: "text",
+      text,
+      x,
+      y,
+      width: 20,
+      height: 10,
+      fontName: "ArialMT",
+      fontSize: 10,
+      graphicsState,
+    });
+
+    const xs = [0, 70, 140] as const;
+    const ys = [100, 88, 76, 64, 52, 40] as const;
+    const tableTexts: PdfText[] = [];
+    for (let r = 0; r < ys.length; r++) {
+      for (let c = 0; c < xs.length; c++) {
+        tableTexts.push(makeText(`R${r}C${c}`, xs[c]!, ys[r]!));
+      }
+    }
+
+    const page: PdfPage = {
+      pageNumber: 1,
+      width: 200,
+      height: 200,
+      elements: tableTexts,
+    };
+
+    const stableSpatialGrouping = createSpatialGrouping({
+      enableColumnSeparation: false,
+      enablePageColumnDetection: false,
+      horizontalGapRatio: 1_000,
+    });
+
+    const shapes = convertPageToShapes(page, {
+      ...options,
+      textGroupingFn: stableSpatialGrouping,
+      grouping: { preset: "auto" },
+    });
+
+    expect(shapes.some((s) => s.type === "graphicFrame")).toBe(false);
+  });
+
+  it("uses auto mode and keeps full mode when table-rule signals are strong", () => {
+    const makeText = (text: string, x: number, y: number): PdfText => ({
+      type: "text",
+      text,
+      x,
+      y,
+      width: 20,
+      height: 10,
+      fontName: "ArialMT",
+      fontSize: 10,
+      graphicsState,
+    });
+    const makeRule = (args: { readonly x0: number; readonly y0: number; readonly x1: number; readonly y1: number }): PdfPath => ({
+      type: "path",
+      operations: [
+        { type: "moveTo", point: { x: args.x0, y: args.y0 } },
+        { type: "lineTo", point: { x: args.x1, y: args.y1 } },
+      ] as const,
+      paintOp: "stroke",
+      graphicsState,
+    });
+
+    const xs = [10, 70, 130, 190] as const;
+    const ys = [112, 98, 84, 70, 56, 42, 28] as const;
+    const tableTexts: PdfText[] = [];
+    for (let r = 0; r < ys.length - 1; r++) {
+      for (let c = 0; c < xs.length - 1; c++) {
+        tableTexts.push(makeText(`R${r}C${c}`, xs[c]! + 6, ys[r + 1]! + 3));
+      }
+    }
+
+    const rules: PdfPath[] = [
+      ...xs.flatMap((x) => [makeRule({ x0: x, y0: ys[ys.length - 1]!, x1: x, y1: ys[0]! })]),
+      ...ys.flatMap((y) => [makeRule({ x0: xs[0]!, y0: y, x1: xs[xs.length - 1]!, y1: y })]),
+    ];
+
+    const page: PdfPage = {
+      pageNumber: 1,
+      width: 200,
+      height: 200,
+      elements: [...rules, ...tableTexts],
+    };
+
+    const stableSpatialGrouping = createSpatialGrouping({
+      enableColumnSeparation: false,
+      enablePageColumnDetection: false,
+      horizontalGapRatio: 1_000,
+    });
+
+    const shapes = convertPageToShapes(page, {
+      ...options,
+      textGroupingFn: stableSpatialGrouping,
+      grouping: { preset: "auto" },
+    });
+
+    expect(shapes.some((s) => s.type === "graphicFrame")).toBe(true);
+  });
+
   it("can disable table conversion while keeping text grouping", () => {
     const makeText = (text: string, x: number, y: number): PdfText => ({
       type: "text",
@@ -409,7 +511,7 @@ describe("convertPageToShapes with spatialGrouping", () => {
     expect(run.text).toBe("Hello World");
   });
 
-  it("groups multi-line text with same font into one TextBox preserving line structure", () => {
+  it("splits two-line groups into per-line TextBoxes for tighter placement", () => {
     // Lines with normal spacing (small gap) are kept as separate paragraphs
     // to avoid PPTX auto-reflow changing the layout on resize.
     const line1: PdfText = {
@@ -448,16 +550,52 @@ describe("convertPageToShapes with spatialGrouping", () => {
       textGroupingFn: spatialGrouping,
     });
 
-    // Should create one TextBox with separate paragraphs per line
-    expect(shapes).toHaveLength(1);
-
-    const sp = shapes[0];
-    if (sp?.type !== "sp") {
-      throw new Error("Expected sp shape");
+    expect(shapes).toHaveLength(2);
+    for (const shape of shapes) {
+      expect(shape.type).toBe("sp");
+      if (shape.type === "sp") {
+        expect(shape.textBody?.paragraphs).toHaveLength(1);
+      }
     }
-    expect(sp.textBody?.paragraphs).toHaveLength(2);
-    expect(sp.textBody?.paragraphs[0]?.runs).toHaveLength(1);
-    expect(sp.textBody?.paragraphs[1]?.runs).toHaveLength(1);
+  });
+
+  it("splits ragged long multi-line groups into per-paragraph TextBoxes for tighter placement", () => {
+    const makeText = (args: { text: string; x: number; y: number; width: number }): PdfText => ({
+      type: "text",
+      text: args.text,
+      x: args.x,
+      y: args.y,
+      width: args.width,
+      height: 12,
+      fontName: "ArialMT",
+      fontSize: 12,
+      graphicsState,
+    });
+
+    const page: PdfPage = {
+      pageNumber: 1,
+      width: 595,
+      height: 842,
+      elements: [
+        makeText({ text: "This is a long first line for placement test.", x: 100, y: 700, width: 220 }),
+        makeText({ text: "This is another long line with similar width.", x: 100, y: 684, width: 210 }),
+        makeText({ text: "Short", x: 100, y: 668, width: 52 }),
+        makeText({ text: "This is a long final line again.", x: 100, y: 652, width: 205 }),
+      ],
+    };
+
+    const shapes = convertPageToShapes(page, {
+      ...options,
+      textGroupingFn: spatialGrouping,
+    });
+
+    expect(shapes).toHaveLength(4);
+    for (const shape of shapes) {
+      expect(shape.type).toBe("sp");
+      if (shape.type === "sp") {
+        expect(shape.textBody?.paragraphs).toHaveLength(1);
+      }
+    }
   });
 
   it("creates separate TextBoxes for texts with different fonts", () => {

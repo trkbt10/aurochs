@@ -45,7 +45,7 @@ export function convertPathToGeometry(pdfPath: PdfPath, context: ConversionConte
     localHeight: pixelsToNumber(converted.height),
   };
 
-  const commands = convertPathOps(pdfPath.operations, localContext);
+  const commands = convertPathOps(pdfPath, localContext);
 
   const geometryPath: GeometryPath = {
     width: converted.width,
@@ -62,21 +62,34 @@ export function convertPathToGeometry(pdfPath: PdfPath, context: ConversionConte
   };
 }
 
-function convertPathOps(ops: readonly PdfPathOp[], context: LocalConversionContext): readonly PathCommand[] {
+function convertPathOps(pdfPath: PdfPath, context: LocalConversionContext): readonly PathCommand[] {
+  const ops = pdfPath.operations;
+  const shouldCloseImplicitly = pdfPath.paintOp === "fill" || pdfPath.paintOp === "fillStroke";
   const commands: PathCommand[] = [];
   const state: { currentPoint: PdfPoint; subpathStartPoint: PdfPoint } = {
     currentPoint: { x: 0, y: 0 },
     subpathStartPoint: { x: 0, y: 0 },
   };
+  // PDF implicitly closes open subpaths when painting with fill/fillStroke.
+  // Without this, compound fill paths can leak and become large solid blocks.
+  // eslint-disable-next-line no-restricted-syntax -- mutable flag for implicit close handling
+  let hasOpenSubpath = false;
 
   for (const op of ops) {
     switch (op.type) {
       case "moveTo": {
+        if (shouldCloseImplicitly && hasOpenSubpath) {
+          const close: CloseCommand = { type: "close" };
+          commands.push(close);
+          state.currentPoint = state.subpathStartPoint;
+          hasOpenSubpath = false;
+        }
         const point = convertToLocal(op.point, context);
         const cmd: MoveToCommand = { type: "moveTo", point };
         commands.push(cmd);
         state.currentPoint = op.point;
         state.subpathStartPoint = op.point;
+        hasOpenSubpath = true;
         break;
       }
 
@@ -85,6 +98,7 @@ function convertPathOps(ops: readonly PdfPathOp[], context: LocalConversionConte
         const cmd: LineToCommand = { type: "lineTo", point };
         commands.push(cmd);
         state.currentPoint = op.point;
+        hasOpenSubpath = true;
         break;
       }
 
@@ -97,6 +111,7 @@ function convertPathOps(ops: readonly PdfPathOp[], context: LocalConversionConte
         };
         commands.push(cmd);
         state.currentPoint = op.end;
+        hasOpenSubpath = true;
         break;
       }
 
@@ -109,6 +124,7 @@ function convertPathOps(ops: readonly PdfPathOp[], context: LocalConversionConte
         };
         commands.push(cmd);
         state.currentPoint = op.end;
+        hasOpenSubpath = true;
         break;
       }
 
@@ -121,6 +137,7 @@ function convertPathOps(ops: readonly PdfPathOp[], context: LocalConversionConte
         };
         commands.push(cmd);
         state.currentPoint = op.end;
+        hasOpenSubpath = true;
         break;
       }
 
@@ -140,6 +157,7 @@ function convertPathOps(ops: readonly PdfPathOp[], context: LocalConversionConte
 
         state.currentPoint = p1;
         state.subpathStartPoint = p1;
+        hasOpenSubpath = false;
         break;
       }
 
@@ -147,9 +165,15 @@ function convertPathOps(ops: readonly PdfPathOp[], context: LocalConversionConte
         const close: CloseCommand = { type: "close" };
         commands.push(close);
         state.currentPoint = state.subpathStartPoint;
+        hasOpenSubpath = false;
         break;
       }
     }
+  }
+
+  if (shouldCloseImplicitly && hasOpenSubpath) {
+    const close: CloseCommand = { type: "close" };
+    commands.push(close);
   }
 
   return commands;

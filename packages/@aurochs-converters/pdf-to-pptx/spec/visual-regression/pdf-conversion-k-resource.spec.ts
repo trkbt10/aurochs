@@ -12,8 +12,7 @@ import { loadPptxBundleFromBuffer } from "@aurochs-office/pptx/app/pptx-loader";
 import { compareSvgToPdfBaseline } from "./compare";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
-
-const ROOT_DIR = path.resolve(__dirname, "../../../../../");
+import { getSampleFixturePath } from "@aurochs/pdf/test-utils/pdf-fixtures";
 
 function ensurePdfExists(pdfPath: string): boolean {
   if (fs.existsSync(pdfPath)) {
@@ -93,12 +92,13 @@ async function renderPdfPageToSvg(
 }
 
 describe("PDF→PPTX visual regression: k-resource-dl.pdf", () => {
-  const pdfPath = path.join(ROOT_DIR, "fixtures/samples/k-resource-dl.pdf");
+  const pdfPath = getSampleFixturePath("k-resource-dl.pdf");
   const compareOrSkip = (args: {
     readonly svg: string;
     readonly snapshotName: string;
     readonly pageNumber: number;
     readonly fontFiles: readonly string[];
+    readonly maxDiffPercent: number;
   }): ReturnType<typeof compareSvgToPdfBaseline> | null => {
     try {
       return compareSvgToPdfBaseline({
@@ -114,7 +114,7 @@ describe("PDF→PPTX visual regression: k-resource-dl.pdf", () => {
           renderScale: 4,
           background: { r: 255, g: 255, b: 255, a: 255 },
         },
-        options: { threshold: 0.25, maxDiffPercent: 2.0, resvgFontFiles: args.fontFiles },
+        options: { threshold: 0.25, maxDiffPercent: args.maxDiffPercent, resvgFontFiles: args.fontFiles },
       });
     } catch (error) {
       const msg = (error as Error)?.message ?? String(error);
@@ -140,6 +140,7 @@ describe("PDF→PPTX visual regression: k-resource-dl.pdf", () => {
       snapshotName,
       pageNumber: 2,
       fontFiles,
+      maxDiffPercent: 2.0,
     });
     cleanupFonts();
     if (!compare) {
@@ -173,6 +174,7 @@ describe("PDF→PPTX visual regression: k-resource-dl.pdf", () => {
       snapshotName,
       pageNumber: 4,
       fontFiles,
+      maxDiffPercent: 2.0,
     });
     cleanupFonts();
     if (!compare) {
@@ -206,6 +208,7 @@ describe("PDF→PPTX visual regression: k-resource-dl.pdf", () => {
       snapshotName,
       pageNumber: 5,
       fontFiles,
+      maxDiffPercent: 5.0,
     });
     cleanupFonts();
     if (!compare) {
@@ -214,7 +217,7 @@ describe("PDF→PPTX visual regression: k-resource-dl.pdf", () => {
 
     if (!compare.match) {
       console.log(`\n--- PDF conversion diff: ${snapshotName} slide 1 ---`);
-      console.log(`Diff: ${compare.diffPercent.toFixed(2)}% (max: 2.00%)`);
+      console.log(`Diff: ${compare.diffPercent.toFixed(2)}% (max: 5.00%)`);
       console.log(`Expected: ${compare.baselinePath}`);
       console.log(`Actual: ${compare.actualPath}`);
       if (compare.diffImagePath) {

@@ -6,7 +6,7 @@ import type { PdfText } from "@aurochs/pdf/domain";
 import type { SpShape } from "@aurochs-office/pptx/domain/shape";
 import type { Paragraph, TextBody, TextRun } from "@aurochs-office/pptx/domain/text";
 import type { Pixels, Points } from "@aurochs-office/drawing-ml/domain/units";
-import { deg, pt, px } from "@aurochs-office/drawing-ml/domain/units";
+import { deg, pct, pt, px } from "@aurochs-office/drawing-ml/domain/units";
 import type { ConversionContext } from "./transform-converter";
 import { convertPoint, convertSize } from "./transform-converter";
 import { convertFill } from "./color-converter";
@@ -121,7 +121,11 @@ function createTextBody(pdfText: PdfText, context: ConversionContext): TextBody 
       wrapping: "none",
       anchor: "top",
       anchorCenter: false,
+      compatibleLineSpacing: true,
+      spaceFirstLastPara: false,
       forceAntiAlias: true,
+      overflow: "overflow",
+      verticalOverflow: "overflow",
       // Set all insets to 0 for precise positioning
       insets: {
         left: px(0),
@@ -143,6 +147,9 @@ function createParagraph(pdfText: PdfText, context: ConversionContext): Paragrap
   return {
     properties: {
       alignment: "left",
+      fontAlignment: "base",
+      lineSpacing: { type: "percent", value: pct(100) },
+      spaceAfter: { type: "points", value: pt(0) },
     },
     runs: [textRun],
     endProperties: {},
@@ -228,12 +235,13 @@ export function createPptxTextRunFromPdfText(pdfText: PdfText, context: Conversi
   const cidScriptType = detectScriptTypeFromCIDOrdering(pdfText.cidOrdering);
   const textScriptType = detectScriptFromText(pdfText.text);
   const effectiveScriptType = cidScriptType ?? textScriptType;
+  const fontSizeScaleAdjust = 1;
 
   return {
     type: "text",
     text: pdfText.text,
     properties: {
-      fontSize: convertFontSize(pdfText.fontSize, context),
+      fontSize: convertFontSize(pdfText.fontSize, context, fontSizeScaleAdjust),
       // Always set a:latin as base font
       fontFamily: mappedFontName,
       // Set a:ea for East Asian fonts (ECMA-376 21.1.2.3.3)
@@ -258,11 +266,11 @@ export function createPptxTextRunFromPdfText(pdfText: PdfText, context: Conversi
  * PDFとPPTXは共にポイント単位
  * 内部のPoints型は実際のポイント値を保持する
  */
-function convertFontSize(pdfFontSize: number, context: ConversionContext): Points {
+function convertFontSize(pdfFontSize: number, context: ConversionContext, scaleAdjust = 1): Points {
   if (!Number.isFinite(pdfFontSize) || pdfFontSize <= 0) {
     throw new Error(`Invalid pdfFontSize: ${pdfFontSize}`);
   }
-  const scaled = pdfFontSize * context.fontSizeScale;
+  const scaled = pdfFontSize * context.fontSizeScale * scaleAdjust;
   if (!Number.isFinite(scaled) || scaled <= 0) {
     throw new Error(`Invalid scaled font size: ${scaled} (pdf=${pdfFontSize}, scale=${context.fontSizeScale})`);
   }
@@ -408,6 +416,7 @@ function createTextBodyFromGroup(group: GroupedText, context: ConversionContext)
     groupedParas: group.paragraphs,
     bounds: group.bounds,
     context,
+    layoutInference: group.layoutInference,
     inferredAlignment: group.layoutInference?.alignment,
   });
 
@@ -417,6 +426,10 @@ function createTextBodyFromGroup(group: GroupedText, context: ConversionContext)
       autoFit: { type: "none" },
       anchor: "top",
       anchorCenter: false,
+      compatibleLineSpacing: true,
+      spaceFirstLastPara: false,
+      overflow: "overflow",
+      verticalOverflow: "overflow",
       // Set all insets to 0 for precise positioning
       // Default PPTX insets are 91440 EMU = 0.1 inch = ~9.6px
       insets: {
@@ -443,9 +456,10 @@ function buildParagraphsFromSegmentedLines(args: {
   readonly groupedParas: readonly GroupedParagraph[];
   readonly bounds: { x: number; y: number; width: number; height: number };
   readonly context: ConversionContext;
+  readonly layoutInference: GroupedText["layoutInference"];
   readonly inferredAlignment: ParagraphAlignment | undefined;
 }): Paragraph[] {
-  const { groupedParas, bounds, context, inferredAlignment } = args;
+  const { groupedParas, bounds, context, layoutInference, inferredAlignment } = args;
   if (groupedParas.length === 0) {
     return [];
   }
@@ -512,6 +526,8 @@ function buildParagraphsFromSegmentedLines(args: {
   };
 
   const lineEps = estimateLineEps(groupedParas);
+  const suppressHeuristicSpacing =
+    layoutInference?.inlineDirection === "ttb" && (layoutInference.confidence ?? 0) < 0.35;
 
   const sorted = [...groupedParas].sort((a, b) => b.baselineY - a.baselineY);
 
@@ -615,23 +631,63 @@ function buildParagraphsFromSegmentedLines(args: {
     return mergeAdjacentTextRuns(out);
   };
 
+  const getParagraphLineSpacing = (paragraph: GroupedParagraph): Paragraph["properties"]["lineSpacing"] | undefined => {
+    const info = paragraph.lineSpacing;
+    if (!info || !(info.baselineDistance > 0) || !(info.fontSize > 0)) {
+      return undefined;
+    }
+
+    const ratio = (info.baselineDistance / info.fontSize) * 100;
+    const clampedRatio = Math.max(60, Math.min(400, ratio));
+    return { type: "percent", value: pct(clampedRatio) };
+  };
+
+  const getExpectedBaselineDistance = (paragraph: GroupedParagraph | undefined, fallbackFontSize: number | undefined): number | undefined => {
+    const info = paragraph?.lineSpacing;
+    if (info && info.baselineDistance > 0) {
+      return info.baselineDistance;
+    }
+    if (fallbackFontSize !== undefined && fallbackFontSize > 0) {
+      return fallbackFontSize;
+    }
+    return undefined;
+  };
+  const getExtraSpaceRaw = (
+    baselineDistance: number | undefined,
+    expectedBaselineDistance: number | undefined,
+  ): number | undefined => {
+    if (baselineDistance === undefined || expectedBaselineDistance === undefined) {
+      return undefined;
+    }
+    return baselineDistance - expectedBaselineDistance;
+  };
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]!;
     const prev = lines[i - 1];
+    const lineRefParagraph = line.segments[0]?.paragraph;
+    const prevLineRefParagraph = prev?.segments[0]?.paragraph;
 
     const baselineDistance = prev ? prev.baselineY - line.baselineY : undefined;
-    const extraSpace = baselineDistance !== undefined ? baselineDistance - prev!.fontSize : undefined;
+    const expectedBaselineDistance = getExpectedBaselineDistance(prevLineRefParagraph, prev?.fontSize);
+    const extraSpaceRaw = getExtraSpaceRaw(baselineDistance, expectedBaselineDistance);
+    const extraSpace = extraSpaceRaw !== undefined && Math.abs(extraSpaceRaw) > 0.25 ? extraSpaceRaw : undefined;
 
     const marginLeft = convertSize(line.minX - bounds.x, 0, context).width;
     const alignment = resolveAlignment(line.inlineDirection);
+    const hasFollowingLine = i < lines.length - 1;
+    const lineSpacing = hasFollowingLine && lineRefParagraph ? getParagraphLineSpacing(lineRefParagraph) : undefined;
 
     result.push({
       properties: {
         alignment,
+        fontAlignment: "base",
         ...(line.inlineDirection === "rtl" ? { rtl: true } : {}),
-        ...((marginLeft as number) > 0 ? { marginLeft } : {}),
-        ...getExtraSpaceBeforeProperties(extraSpace, context),
-        tabStops: buildTabStopsForLine(line),
+        ...(alignment === "left" && (marginLeft as number) > 0 ? { marginLeft } : {}),
+        lineSpacing: lineSpacing ?? { type: "percent", value: pct(100) },
+        spaceAfter: { type: "points", value: pt(0) },
+        ...(suppressHeuristicSpacing ? {} : getExtraSpaceBeforeProperties(extraSpace, context)),
+        tabStops: suppressHeuristicSpacing ? undefined : buildTabStopsForLine(line),
       },
       runs: buildRunsForLine(line),
       endProperties: {},

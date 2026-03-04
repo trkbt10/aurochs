@@ -7,7 +7,7 @@ import { px } from "@aurochs-office/drawing-ml/domain/units";
 import type { GraphicFrame } from "@aurochs-office/pptx/domain/shape";
 import { parsePdf } from "@aurochs/pdf/parser/core/pdf-parser";
 import { convertPageToShapes } from "./pdf-to-shapes";
-import { getSampleFixturePath } from "../test-utils/pdf-fixtures";
+import { getSampleFixturePath } from "@aurochs/pdf/test-utils/pdf-fixtures";
 
 function cellText(cell: {
   textBody?: { paragraphs: readonly { runs: readonly { type: string; text?: string }[] }[] };

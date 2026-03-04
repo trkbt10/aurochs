@@ -75,8 +75,33 @@ export { PT_TO_PX, PX_TO_PT } from "./domain";
 // Parser API
 // =============================================================================
 
-export { parsePdf, getPdfPageCount, getPdfPageDimensions } from "./parser/core/pdf-parser";
-export type { PdfParserOptions } from "./parser/core/pdf-parser";
+export {
+  parsePdf,
+  parsePdfSource,
+  createPdfContext,
+  buildPdfFromContext,
+  rewritePdfContext,
+  serializePdfDocumentAsJson,
+  deserializePdfDocumentFromJson,
+  savePdfDocumentAsJson,
+  loadPdfDocumentFromJson,
+  buildAndSavePdfContextAsJson,
+  getPdfPageCount,
+  getPdfPageDimensions,
+} from "./parser/core/pdf-parser";
+export type {
+  PdfParserOptions,
+  PdfParseOptions,
+  PdfBuildOptions,
+  PdfParsedPage,
+  PdfParsedDocument,
+  PdfBuildContext,
+  ParsedElementRewriteArgs,
+  ExtractedImageRewriteArgs,
+  ParsedElementRewriter,
+  ExtractedImageRewriter,
+  PdfContextRewriter,
+} from "./parser/core/pdf-parser";
 
 // =============================================================================
 // Importer API

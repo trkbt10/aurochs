@@ -3,11 +3,10 @@
  */
 
 import * as fs from "node:fs";
-import * as path from "node:path";
 import { parsePdf, type PdfText } from "@aurochs/pdf";
+import { getSampleFixturePath } from "@aurochs/pdf/test-utils/pdf-fixtures";
 
-const ROOT_DIR = path.resolve(__dirname, "../../../../../");
-const PDF_PATH = path.join(ROOT_DIR, "fixtures/samples/panel2.pdf");
+const PDF_PATH = getSampleFixturePath("panel2.pdf");
 
 function buildLines(texts: readonly PdfText[]): string[] {
   const bucketed = new Map<number, PdfText[]>();

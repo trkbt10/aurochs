@@ -27,6 +27,7 @@ import {
   buildBlockingZonesFromPageElements,
   createSpatialGrouping,
   type GroupedText,
+  type GroupedParagraph,
   type GroupingContext,
   type TextGroupingFn,
 } from "@aurochs/pdf/services/block-segmentation";
@@ -38,6 +39,84 @@ import { detectTableRegionsFromPaths } from "./table-detection";
 import type { TableRegion } from "./table-detection";
 import type { PdfGroupingStrategyOptions } from "./grouping-strategy";
 import { resolvePdfGroupingStrategy } from "./grouping-strategy";
+import { selectAutoGroupingCandidate } from "./adaptive-grouping/select-best-strategy";
+
+const TEXT_REGION_SPLIT_MIN_PARAGRAPHS = 2;
+const TEXT_REGION_SPLIT_MAX_WIDTH_RATIO = 1;
+const TEXT_REGION_SPLIT_WIDTH_BUFFER_RATIO = 0;
+const TEXT_REGION_SEGMENT_GAP_MIN_POINTS = 10;
+const TEXT_REGION_SEGMENT_GAP_FONT_RATIO = 1.6;
+const TEXT_REGION_SEGMENT_GAP_CHAR_RATIO = 3;
+const TEXT_OUTLINE_PRIMARY_MIN_PATH_AREA_RATIO = 0.003;
+const TEXT_OUTLINE_PRIMARY_MIN_TEXT_COUNT = 4;
+const TEXT_OUTLINE_PRIMARY_MIN_OVERLAP_RATIO = 0.08;
+const TEXT_OUTLINE_STRONG_MIN_PATH_AREA_RATIO = 0.0015;
+const TEXT_OUTLINE_STRONG_MIN_TEXT_COUNT = 1;
+const TEXT_OUTLINE_STRONG_MIN_OVERLAP_RATIO = 0.22;
+const TEXT_OUTLINE_BLACK_MAX_PATH_AREA_RATIO = 0.006;
+const TEXT_OUTLINE_MACRO_MIN_PATH_AREA_RATIO = 0.006;
+const TEXT_OUTLINE_MACRO_MAX_PATH_AREA_RATIO = 0.08;
+const TEXT_OUTLINE_MACRO_DENSE_MIN_TEXT_COUNT = 4;
+const TEXT_OUTLINE_MACRO_DENSE_MIN_OPS = 30;
+const TEXT_OUTLINE_MACRO_DENSE_MIN_OVERLAP_RATIO = 0.25;
+const TEXT_OUTLINE_MACRO_SPARSE_MIN_TEXT_COUNT = 1;
+const TEXT_OUTLINE_MACRO_SPARSE_MIN_OPS = 16;
+const TEXT_OUTLINE_MACRO_SPARSE_MIN_OVERLAP_RATIO = 0.28;
+const TEXT_OUTLINE_MACRO_MIN_ASPECT_RATIO = 2.2;
+const TEXT_OUTLINE_GENERIC_MAX_PATH_AREA_RATIO = 0.003;
+const TEXT_OUTLINE_GENERIC_MIN_OPS = 16;
+const TEXT_OUTLINE_GENERIC_MIN_OVERLAP_RATIO = 0.24;
+const TEXT_OUTLINE_MICRO_MAX_PATH_AREA_RATIO = 0.001;
+const TEXT_OUTLINE_MICRO_MIN_OVERLAP_RATIO = 0.58;
+
+export type ConversionTraceEvent =
+  | {
+      readonly kind: "path-suppressed-text-outline";
+      readonly pathIndex: number;
+      readonly rule: "micro" | "primary" | "strong" | "generic" | "macro";
+      readonly pathAreaRatio: number;
+      readonly overlapRatio: number;
+      readonly overlapTextCount: number;
+      readonly paintOp: PdfPath["paintOp"];
+      readonly operationsCount: number;
+    }
+  | {
+      readonly kind: "path-emitted";
+      readonly pathIndex: number;
+      readonly pathAreaRatio: number;
+      readonly paintOp: PdfPath["paintOp"];
+      readonly operationsCount: number;
+      readonly shapeType: Shape["type"];
+    }
+  | {
+      readonly kind: "path-dropped-convert-null";
+      readonly pathIndex: number;
+      readonly pathAreaRatio: number;
+      readonly paintOp: PdfPath["paintOp"];
+      readonly operationsCount: number;
+    }
+  | {
+      readonly kind: "path-consumed-by-table";
+      readonly pathIndex: number;
+      readonly pathAreaRatio: number;
+    }
+  | {
+      readonly kind: "path-skipped-text-outline";
+      readonly pathIndex: number;
+      readonly pathAreaRatio: number;
+    }
+  | {
+      readonly kind: "text-group-emitted";
+      readonly paragraphCount: number;
+      readonly runCount: number;
+      readonly bounds: GroupedText["bounds"];
+    }
+  | {
+      readonly kind: "table-emitted";
+      readonly rowCount: number;
+      readonly colCount: number;
+      readonly bounds: InferredTable["bounds"];
+    };
 
 export type ConversionOptions = {
   /** ターゲットスライド幅 */
@@ -55,6 +134,12 @@ export type ConversionOptions = {
   readonly textGroupingFn?: TextGroupingFn;
 
   /**
+   * Optional conversion trace callback for diagnostics/tests.
+   * This does not alter conversion behavior.
+   */
+  readonly trace?: (event: ConversionTraceEvent) => void;
+
+  /**
    * Strategy-like configuration for grouping stages.
    *
    * Use this to:
@@ -65,18 +150,349 @@ export type ConversionOptions = {
   readonly grouping?: PdfGroupingStrategyOptions;
 };
 
+function emitTrace(options: ConversionOptions, event: ConversionTraceEvent): void {
+  options.trace?.(event);
+}
+
+function computePathAreaRatio(path: PdfPath, pageArea: number): number {
+  const bbox = computePathBBox(path);
+  const x0 = Math.min(bbox[0], bbox[2]);
+  const y0 = Math.min(bbox[1], bbox[3]);
+  const x1 = Math.max(bbox[0], bbox[2]);
+  const y1 = Math.max(bbox[1], bbox[3]);
+  const pathArea = Math.max(0, x1 - x0) * Math.max(0, y1 - y0);
+  return pageArea > 0 ? pathArea / pageArea : 0;
+}
+
+function getParagraphBounds(paragraph: GroupedParagraph): GroupedText["bounds"] | null {
+  if (paragraph.runs.length === 0) {
+    return null;
+  }
+  const minX = Math.min(...paragraph.runs.map((run) => run.x));
+  const minY = Math.min(...paragraph.runs.map((run) => run.y));
+  const maxX = Math.max(...paragraph.runs.map((run) => run.x + run.width));
+  const maxY = Math.max(...paragraph.runs.map((run) => run.y + run.height));
+  const rawWidth = maxX - minX;
+  const rawHeight = maxY - minY;
+  if (!(rawWidth > 0) || !(rawHeight > 0)) {
+    return null;
+  }
+  return {
+    x: minX,
+    y: minY,
+    width: rawWidth * (1 + TEXT_REGION_SPLIT_WIDTH_BUFFER_RATIO),
+    height: rawHeight,
+  };
+}
+
+function splitParagraphByHorizontalGaps(paragraph: GroupedParagraph): readonly GroupedParagraph[] {
+  if (paragraph.runs.length < 2) {
+    return [paragraph];
+  }
+
+  if (paragraph.inlineDirection === "rtl" || paragraph.inlineDirection === "ttb") {
+    return [paragraph];
+  }
+
+  const runs = [...paragraph.runs].sort((a, b) => a.x - b.x);
+  const fontSizes = runs
+    .map((run) => run.fontSize)
+    .filter((size): size is number => Number.isFinite(size) && size > 0)
+    .sort((a, b) => a - b);
+  const medianFontSize = fontSizes.length > 0 ? fontSizes[Math.floor(fontSizes.length / 2)]! : 10;
+
+  const charWidths = runs
+    .map((run) => {
+      const length = run.text.trim().length;
+      if (!(length > 0)) {
+        return null;
+      }
+      const width = run.width / length;
+      return Number.isFinite(width) && width > 0 ? width : null;
+    })
+    .filter((width): width is number => width !== null)
+    .sort((a, b) => a - b);
+  const medianCharWidth = charWidths.length > 0 ? charWidths[Math.floor(charWidths.length / 2)]! : medianFontSize * 0.5;
+
+  const splitGapThreshold = Math.max(
+    TEXT_REGION_SEGMENT_GAP_MIN_POINTS,
+    medianFontSize * TEXT_REGION_SEGMENT_GAP_FONT_RATIO,
+    medianCharWidth * TEXT_REGION_SEGMENT_GAP_CHAR_RATIO,
+  );
+
+  const clusters: PdfText[][] = [];
+  // eslint-disable-next-line no-restricted-syntax -- mutable cursor keeps split logic linear and allocation-light
+  let currentCluster: PdfText[] = [runs[0]!];
+  for (let index = 1; index < runs.length; index += 1) {
+    const prev = runs[index - 1]!;
+    const run = runs[index]!;
+    const gap = run.x - (prev.x + prev.width);
+    if (gap >= splitGapThreshold) {
+      clusters.push(currentCluster);
+      currentCluster = [run];
+      continue;
+    }
+    currentCluster.push(run);
+  }
+  clusters.push(currentCluster);
+
+  if (clusters.length < 2) {
+    return [paragraph];
+  }
+
+  return clusters.map((cluster) => ({
+    runs: cluster,
+    baselineY: paragraph.baselineY,
+    ...(paragraph.inlineDirection ? { inlineDirection: paragraph.inlineDirection } : {}),
+    ...(paragraph.lineSpacing ? { lineSpacing: paragraph.lineSpacing } : {}),
+  }));
+}
+
+function shouldSplitGroupForTextPlacement(group: GroupedText): boolean {
+  if (group.paragraphs.length < TEXT_REGION_SPLIT_MIN_PARAGRAPHS) {
+    return false;
+  }
+
+  const inlineDirection = group.layoutInference?.inlineDirection;
+  if (inlineDirection === "ttb") {
+    return true;
+  }
+  if (inlineDirection === "rtl") {
+    return false;
+  }
+
+  const widths = group.paragraphs
+    .map((paragraph) => getParagraphBounds(paragraph))
+    .filter((bounds): bounds is GroupedText["bounds"] => bounds !== null)
+    .map((bounds) => bounds.width);
+  if (widths.length < TEXT_REGION_SPLIT_MIN_PARAGRAPHS) {
+    return false;
+  }
+
+  const maxWidth = Math.max(...widths);
+  const minWidth = Math.min(...widths);
+  if (!(maxWidth > 0)) {
+    return false;
+  }
+
+  const widthRatio = minWidth / maxWidth;
+  return widthRatio <= TEXT_REGION_SPLIT_MAX_WIDTH_RATIO;
+}
+
+function splitGroupForTextPlacement(group: GroupedText): readonly GroupedText[] {
+  const segmentedParagraphs = group.paragraphs.flatMap((paragraph) => splitParagraphByHorizontalGaps(paragraph));
+  const shouldSplitByParagraph = shouldSplitGroupForTextPlacement(group);
+  const hasExtraSegments = segmentedParagraphs.length > group.paragraphs.length;
+  if (!shouldSplitByParagraph && !hasExtraSegments) {
+    return [group];
+  }
+
+  const split = segmentedParagraphs
+    .map((paragraph) => {
+      const bounds = getParagraphBounds(paragraph);
+      if (bounds === null) {
+        return null;
+      }
+      return {
+        bounds,
+        paragraphs: [paragraph],
+      } as GroupedText;
+    })
+    .filter((item): item is GroupedText => item !== null);
+
+  if (split.length === 0) {
+    return [group];
+  }
+  return split;
+}
+
+function rectOverlapArea(args: {
+  readonly ax0: number;
+  readonly ay0: number;
+  readonly ax1: number;
+  readonly ay1: number;
+  readonly bx0: number;
+  readonly by0: number;
+  readonly bx1: number;
+  readonly by1: number;
+}): number {
+  const { ax0, ay0, ax1, ay1, bx0, by0, bx1, by1 } = args;
+  const x0 = Math.max(Math.min(ax0, ax1), Math.min(bx0, bx1));
+  const y0 = Math.max(Math.min(ay0, ay1), Math.min(by0, by1));
+  const x1 = Math.min(Math.max(ax0, ax1), Math.max(bx0, bx1));
+  const y1 = Math.min(Math.max(ay0, ay1), Math.max(by0, by1));
+  if (x1 <= x0 || y1 <= y0) {
+    return 0;
+  }
+  return (x1 - x0) * (y1 - y0);
+}
+
+function isNearBlackRgb(path: PdfPath): boolean {
+  const color = path.graphicsState.fillColor;
+  if (color.colorSpace !== "DeviceRGB") {
+    return false;
+  }
+  const [r = 1, g = 1, b = 1] = color.components;
+  return r <= 0.02 && g <= 0.02 && b <= 0.02;
+}
+
+function collectLikelyTextOutlinePathIndices(args: {
+  readonly paths: readonly PdfPath[];
+  readonly texts: readonly PdfText[];
+  readonly pageWidth: number;
+  readonly pageHeight: number;
+  readonly trace?: (event: ConversionTraceEvent) => void;
+}): Set<number> {
+  const { paths, texts, pageWidth, pageHeight, trace } = args;
+  const suppressed = new Set<number>();
+  const pageArea = Math.max(1, pageWidth * pageHeight);
+  const primaryMinPathArea = pageArea * TEXT_OUTLINE_PRIMARY_MIN_PATH_AREA_RATIO;
+  const strongMinPathArea = pageArea * TEXT_OUTLINE_STRONG_MIN_PATH_AREA_RATIO;
+  const blackMaxPathArea = pageArea * TEXT_OUTLINE_BLACK_MAX_PATH_AREA_RATIO;
+  const macroMinPathArea = pageArea * TEXT_OUTLINE_MACRO_MIN_PATH_AREA_RATIO;
+  const macroMaxPathArea = pageArea * TEXT_OUTLINE_MACRO_MAX_PATH_AREA_RATIO;
+  const genericMaxPathArea = pageArea * TEXT_OUTLINE_GENERIC_MAX_PATH_AREA_RATIO;
+  const microMaxPathArea = pageArea * TEXT_OUTLINE_MICRO_MAX_PATH_AREA_RATIO;
+
+  const nonEmptyTexts = texts.filter((text) => text.text.trim().length > 0);
+  for (const [index, path] of paths.entries()) {
+    if (path.paintOp !== "fill") {
+      continue;
+    }
+    if ((path.graphicsState.fillAlpha ?? 1) < 0.95) {
+      continue;
+    }
+
+    const bbox = computePathBBox(path);
+    const x0 = Math.min(bbox[0], bbox[2]);
+    const y0 = Math.min(bbox[1], bbox[3]);
+    const x1 = Math.max(bbox[0], bbox[2]);
+    const y1 = Math.max(bbox[1], bbox[3]);
+    const pathWidth = Math.max(0, x1 - x0);
+    const pathHeight = Math.max(0, y1 - y0);
+    const pathArea = Math.max(0, x1 - x0) * Math.max(0, y1 - y0);
+    if (!(pathArea > 0)) {
+      continue;
+    }
+
+    let overlapTextCount = 0;
+    let overlapAreaSum = 0;
+    for (const text of nonEmptyTexts) {
+      const overlap = rectOverlapArea({
+        ax0: x0,
+        ay0: y0,
+        ax1: x1,
+        ay1: y1,
+        bx0: text.x,
+        by0: text.y,
+        bx1: text.x + text.width,
+        by1: text.y + text.height,
+      });
+      if (overlap <= 0) {
+        continue;
+      }
+      overlapTextCount += 1;
+      overlapAreaSum += overlap;
+    }
+
+    const overlapRatio = overlapAreaSum / pathArea;
+    const blackFill = isNearBlackRgb(path);
+    const hasCurve = path.operations.some(
+      (operation) => operation.type === "curveTo" || operation.type === "curveToV" || operation.type === "curveToY",
+    );
+    const aspectRatio = Math.max(pathWidth, pathHeight) / Math.max(0.1, Math.min(pathWidth, pathHeight));
+    const macroDenseMatch =
+      pathArea >= macroMinPathArea &&
+      pathArea <= macroMaxPathArea &&
+      path.operations.length >= TEXT_OUTLINE_MACRO_DENSE_MIN_OPS &&
+      overlapTextCount >= TEXT_OUTLINE_MACRO_DENSE_MIN_TEXT_COUNT &&
+      overlapRatio >= TEXT_OUTLINE_MACRO_DENSE_MIN_OVERLAP_RATIO;
+    const macroSparseMatch =
+      blackFill &&
+      pathArea >= macroMinPathArea &&
+      pathArea <= macroMaxPathArea &&
+      path.operations.length >= TEXT_OUTLINE_MACRO_SPARSE_MIN_OPS &&
+      hasCurve &&
+      aspectRatio >= TEXT_OUTLINE_MACRO_MIN_ASPECT_RATIO &&
+      overlapTextCount >= TEXT_OUTLINE_MACRO_SPARSE_MIN_TEXT_COUNT &&
+      overlapRatio >= TEXT_OUTLINE_MACRO_SPARSE_MIN_OVERLAP_RATIO;
+    const macroMatch = macroDenseMatch || macroSparseMatch;
+    if (macroMatch) {
+      suppressed.add(index);
+      trace?.({
+        kind: "path-suppressed-text-outline",
+        pathIndex: index,
+        rule: "macro",
+        pathAreaRatio: pathArea / pageArea,
+        overlapRatio,
+        overlapTextCount,
+        paintOp: path.paintOp,
+        operationsCount: path.operations.length,
+      });
+      continue;
+    }
+
+    const microMatch = pathArea <= microMaxPathArea && overlapTextCount >= 1 && overlapRatio >= TEXT_OUTLINE_MICRO_MIN_OVERLAP_RATIO;
+    if (microMatch) {
+      suppressed.add(index);
+      trace?.({
+        kind: "path-suppressed-text-outline",
+        pathIndex: index,
+        rule: "micro",
+        pathAreaRatio: pathArea / pageArea,
+        overlapRatio,
+        overlapTextCount,
+        paintOp: path.paintOp,
+        operationsCount: path.operations.length,
+      });
+      continue;
+    }
+
+    if (path.operations.length < 12) {
+      continue;
+    }
+    if (!(pathArea >= strongMinPathArea)) {
+      continue;
+    }
+
+    const primaryMatch =
+      blackFill &&
+      pathArea >= primaryMinPathArea &&
+      pathArea <= blackMaxPathArea &&
+      overlapTextCount >= TEXT_OUTLINE_PRIMARY_MIN_TEXT_COUNT &&
+      overlapRatio >= TEXT_OUTLINE_PRIMARY_MIN_OVERLAP_RATIO;
+    const strongMatch =
+      blackFill &&
+      pathArea <= blackMaxPathArea &&
+      overlapTextCount >= TEXT_OUTLINE_STRONG_MIN_TEXT_COUNT &&
+      overlapRatio >= TEXT_OUTLINE_STRONG_MIN_OVERLAP_RATIO;
+    const genericStrongMatch =
+      path.operations.length >= TEXT_OUTLINE_GENERIC_MIN_OPS &&
+      pathArea <= genericMaxPathArea &&
+      overlapTextCount >= 1 &&
+      overlapRatio >= TEXT_OUTLINE_GENERIC_MIN_OVERLAP_RATIO;
+    if (primaryMatch || strongMatch || genericStrongMatch) {
+      suppressed.add(index);
+      trace?.({
+        kind: "path-suppressed-text-outline",
+        pathIndex: index,
+        rule: primaryMatch ? "primary" : strongMatch ? "strong" : "generic",
+        pathAreaRatio: pathArea / pageArea,
+        overlapRatio,
+        overlapTextCount,
+        paintOp: path.paintOp,
+        operationsCount: path.operations.length,
+      });
+    }
+  }
+
+  return suppressed;
+}
+
 /**
  * PdfPageの全要素をShapeに変換
  */
 export function convertPageToShapes(page: PdfPage, options: ConversionOptions): Shape[] {
-  const context = createFitContext({
-    pdfWidth: page.width,
-    pdfHeight: page.height,
-    slideWidth: options.slideWidth,
-    slideHeight: options.slideHeight,
-    fit: options.fit ?? "contain",
-  });
-
   const shapes: Shape[] = [];
   const shapeIdCounter = { value: 1 };
 
@@ -104,6 +520,23 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
     }
   }
 
+  const likelyTextOutlinePathIndices = collectLikelyTextOutlinePathIndices({
+    paths,
+    texts,
+    pageWidth: page.width,
+    pageHeight: page.height,
+    trace: options.trace,
+  });
+  const pageArea = Math.max(1, page.width * page.height);
+
+  const context = createFitContext({
+    pdfWidth: page.width,
+    pdfHeight: page.height,
+    slideWidth: options.slideWidth,
+    slideHeight: options.slideHeight,
+    fit: options.fit ?? "contain",
+  });
+
   const minPathComplexity = options.minPathComplexity ?? 0;
   if (!Number.isFinite(minPathComplexity) || minPathComplexity < 0) {
     throw new Error(`Invalid minPathComplexity: ${minPathComplexity}`);
@@ -114,6 +547,74 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
     textGroupingFn: options.textGroupingFn,
   });
 
+  const forceGroupingPreset = (preset: "full" | "text"): PdfGroupingStrategyOptions => {
+    const textFromOptions = options.grouping?.text;
+    if (preset === "full") {
+      return {
+        preset: "full",
+        ...(textFromOptions ? { text: textFromOptions } : {}),
+        tables: {
+          enabled: true,
+          detectRegions: true,
+          inferFromTextGroups: true,
+        },
+        auto: {
+          enabled: false,
+          qualityThreshold: groupingStrategy.auto.qualityThreshold,
+          maxOverheadRatio: groupingStrategy.auto.maxOverheadRatio,
+        },
+      };
+    }
+    return {
+      preset: "text",
+      ...(textFromOptions ? { text: textFromOptions } : {}),
+      tables: {
+        enabled: false,
+        detectRegions: false,
+        inferFromTextGroups: false,
+      },
+      auto: {
+        enabled: false,
+        qualityThreshold: groupingStrategy.auto.qualityThreshold,
+        maxOverheadRatio: groupingStrategy.auto.maxOverheadRatio,
+      },
+    };
+  };
+
+  if (groupingStrategy.autoEnabled) {
+    const fullShapes = convertPageToShapes(page, {
+      ...options,
+      trace: undefined,
+      grouping: forceGroupingPreset("full"),
+    });
+    const textShapes = convertPageToShapes(page, {
+      ...options,
+      trace: undefined,
+      grouping: forceGroupingPreset("text"),
+    });
+
+    const tableRegions = detectTableRegionsFromPaths(paths, { width: page.width, height: page.height });
+    const decision = selectAutoGroupingCandidate({
+      candidates: {
+        full: fullShapes,
+        text: textShapes,
+      },
+      tableRegions,
+      context,
+      qualityThreshold: groupingStrategy.auto.qualityThreshold,
+      maxOverheadRatio: groupingStrategy.auto.maxOverheadRatio,
+    });
+
+    if (!options.trace) {
+      return decision.selected === "full" ? fullShapes : textShapes;
+    }
+
+    return convertPageToShapes(page, {
+      ...options,
+      grouping: forceGroupingPreset(decision.selected),
+    });
+  }
+
   const blockingZones = buildBlockingZonesFromPageElements({ paths, images });
 
   const groupingContext: GroupingContext = {
@@ -122,21 +623,59 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
     pageHeight: page.height,
   };
 
+  const emitGroupedTextShapes = (group: GroupedText): void => {
+    const splitGroups = splitGroupForTextPlacement(group);
+    for (const splitGroup of splitGroups) {
+      const shapeId = generateId();
+      shapes.push(convertGroupedTextToShape(splitGroup, context, shapeId));
+      emitTrace(options, {
+        kind: "text-group-emitted",
+        paragraphCount: splitGroup.paragraphs.length,
+        runCount: splitGroup.paragraphs.reduce((sum, paragraph) => sum + paragraph.runs.length, 0),
+        bounds: splitGroup.bounds,
+      });
+    }
+  };
+
   const emitGroupedTextsWithoutTables = (groups: readonly GroupedText[]): Shape[] => {
     // Emit paths first (background lines/fills).
-    for (const path of paths) {
+    for (let pathIndex = 0; pathIndex < paths.length; pathIndex++) {
+      if (likelyTextOutlinePathIndices.has(pathIndex)) {
+        emitTrace(options, {
+          kind: "path-skipped-text-outline",
+          pathIndex,
+          pathAreaRatio: computePathAreaRatio(paths[pathIndex]!, pageArea),
+        });
+        continue;
+      }
+      const path = paths[pathIndex]!;
       if (path.operations.length < minPathComplexity) {
         continue;
       }
       const shape = convertPath(path, context, generateId());
       if (shape) {
         shapes.push(shape);
+        emitTrace(options, {
+          kind: "path-emitted",
+          pathIndex,
+          pathAreaRatio: computePathAreaRatio(path, pageArea),
+          paintOp: path.paintOp,
+          operationsCount: path.operations.length,
+          shapeType: shape.type,
+        });
+      } else {
+        emitTrace(options, {
+          kind: "path-dropped-convert-null",
+          pathIndex,
+          pathAreaRatio: computePathAreaRatio(path, pageArea),
+          paintOp: path.paintOp,
+          operationsCount: path.operations.length,
+        });
       }
     }
 
     for (const g of groups) {
-      const shapeId = generateId();
-      shapes.push(convertGroupedTextToShape(g, context, shapeId));
+      emitGroupedTextShapes(g);
     }
 
     for (const image of images) {
@@ -339,7 +878,14 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
         }
 
         for (const pi of decoration.consumedPathIndices) {
-          consumedPathIndices.add(pi);
+          if (!consumedPathIndices.has(pi)) {
+            consumedPathIndices.add(pi);
+            emitTrace(options, {
+              kind: "path-consumed-by-table",
+              pathIndex: pi,
+              pathAreaRatio: computePathAreaRatio(paths[pi]!, pageArea),
+            });
+          }
         }
         // Only consume texts that are actually represented in the inferred table.
         // Region detection can include captions/labels and other nearby texts; consuming them
@@ -374,6 +920,14 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
           if (consumedPathIndices.has(pi)) {
             continue;
           }
+          if (likelyTextOutlinePathIndices.has(pi)) {
+            emitTrace(options, {
+              kind: "path-skipped-text-outline",
+              pathIndex: pi,
+              pathAreaRatio: computePathAreaRatio(paths[pi]!, pageArea),
+            });
+            continue;
+          }
           const path = paths[pi]!;
           if (path.operations.length < minPathComplexity) {
             continue;
@@ -381,19 +935,39 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
           const shape = convertPath(path, context, generateId());
           if (shape) {
             shapes.push(shape);
+            emitTrace(options, {
+              kind: "path-emitted",
+              pathIndex: pi,
+              pathAreaRatio: computePathAreaRatio(path, pageArea),
+              paintOp: path.paintOp,
+              operationsCount: path.operations.length,
+              shapeType: shape.type,
+            });
+          } else {
+            emitTrace(options, {
+              kind: "path-dropped-convert-null",
+              pathIndex: pi,
+              pathAreaRatio: computePathAreaRatio(path, pageArea),
+              paintOp: path.paintOp,
+              operationsCount: path.operations.length,
+            });
           }
         }
 
         // Emit grouped texts / tables
         for (const p of planned) {
-          const shapeId = generateId();
           if (p.kind === "text") {
-            shapes.push(convertGroupedTextToShape(p.group, context, shapeId));
+            emitGroupedTextShapes(p.group);
             continue;
           }
-          shapes.push(
-            convertInferredTableToShape({ inferred: p.inferred, decoration: p.decoration, context, shapeId }),
-          );
+          const shapeId = generateId();
+          shapes.push(convertInferredTableToShape({ inferred: p.inferred, decoration: p.decoration, context, shapeId }));
+          emitTrace(options, {
+            kind: "table-emitted",
+            rowCount: p.inferred.rows.length,
+            colCount: p.inferred.columns.length,
+            bounds: p.inferred.bounds,
+          });
         }
 
         for (const image of images) {
@@ -907,7 +1481,14 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
       const decoration = analyzeTableDecorationFromPaths(inferred, paths, context);
       if (isMeaningfulTableDecoration(decoration)) {
         for (const pi of decoration.consumedPathIndices) {
-          consumedPathIndices.add(pi);
+          if (!consumedPathIndices.has(pi)) {
+            consumedPathIndices.add(pi);
+            emitTrace(options, {
+              kind: "path-consumed-by-table",
+              pathIndex: pi,
+              pathAreaRatio: computePathAreaRatio(paths[pi]!, pageArea),
+            });
+          }
         }
         tables.push({ inferred, decoration });
         continue;
@@ -1189,7 +1770,14 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
         const decoration = analyzeTableDecorationFromPaths(inferred, paths, context);
         if (isMeaningfulTableDecoration(decoration)) {
           for (const pi of decoration.consumedPathIndices) {
-            consumedPathIndices.add(pi);
+            if (!consumedPathIndices.has(pi)) {
+              consumedPathIndices.add(pi);
+              emitTrace(options, {
+                kind: "path-consumed-by-table",
+                pathIndex: pi,
+                pathAreaRatio: computePathAreaRatio(paths[pi]!, pageArea),
+              });
+            }
           }
           tables.push({ inferred, decoration });
           continue;
@@ -1267,7 +1855,14 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
           const decoration = analyzeTableDecorationFromPaths(inferred, paths, context);
           if (isMeaningfulTableDecoration(decoration)) {
             for (const pi of decoration.consumedPathIndices) {
-              consumedPathIndices.add(pi);
+              if (!consumedPathIndices.has(pi)) {
+                consumedPathIndices.add(pi);
+                emitTrace(options, {
+                  kind: "path-consumed-by-table",
+                  pathIndex: pi,
+                  pathAreaRatio: computePathAreaRatio(paths[pi]!, pageArea),
+                });
+              }
             }
             tables.push({ inferred, decoration });
             continue;
@@ -1298,6 +1893,14 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
     if (consumedPathIndices.has(pi)) {
       continue;
     }
+    if (likelyTextOutlinePathIndices.has(pi)) {
+      emitTrace(options, {
+        kind: "path-skipped-text-outline",
+        pathIndex: pi,
+        pathAreaRatio: computePathAreaRatio(paths[pi]!, pageArea),
+      });
+      continue;
+    }
     const path = paths[pi]!;
     if (path.operations.length < minPathComplexity) {
       continue;
@@ -1305,22 +1908,41 @@ export function convertPageToShapes(page: PdfPage, options: ConversionOptions): 
     const shape = convertPath(path, context, generateId());
     if (shape) {
       shapes.push(shape);
+      emitTrace(options, {
+        kind: "path-emitted",
+        pathIndex: pi,
+        pathAreaRatio: computePathAreaRatio(path, pageArea),
+        paintOp: path.paintOp,
+        operationsCount: path.operations.length,
+        shapeType: shape.type,
+      });
+    } else {
+      emitTrace(options, {
+        kind: "path-dropped-convert-null",
+        pathIndex: pi,
+        pathAreaRatio: computePathAreaRatio(path, pageArea),
+        paintOp: path.paintOp,
+        operationsCount: path.operations.length,
+      });
     }
   }
 
   // Emit grouped texts / tables
   for (const plan of plannedGroups) {
     if (plan.kind === "text") {
-      const shapeId = generateId();
-      shapes.push(convertGroupedTextToShape(plan.group, context, shapeId));
+      emitGroupedTextShapes(plan.group);
       continue;
     }
 
     for (const tbl of plan.tables) {
       const shapeId = generateId();
-      shapes.push(
-        convertInferredTableToShape({ inferred: tbl.inferred, decoration: tbl.decoration, context, shapeId }),
-      );
+      shapes.push(convertInferredTableToShape({ inferred: tbl.inferred, decoration: tbl.decoration, context, shapeId }));
+      emitTrace(options, {
+        kind: "table-emitted",
+        rowCount: tbl.inferred.rows.length,
+        colCount: tbl.inferred.columns.length,
+        bounds: tbl.inferred.bounds,
+      });
     }
   }
 

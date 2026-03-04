@@ -48,3 +48,11 @@ export function getSampleFixturePath(basename: string): string {
   }
   return path.join(repoRootDir, "fixtures", "samples", basename);
 }
+
+/** Get the absolute path to a block-segmentation corpus fixture by its basename. */
+export function getBlockSegmentationFixturePath(basename: string): string {
+  if (basename.includes("/") || basename.includes("\\") || basename.includes("..")) {
+    throw new Error(`basename must be a file name only: ${basename}`);
+  }
+  return path.join(repoRootDir, "packages", "@aurochs", "pdf", "fixtures", "block-segmentation-corpus", basename);
+}

@@ -7,7 +7,7 @@
 import * as fs from "node:fs";
 import { importPdf } from "./pdf-importer";
 import { getTableTags, extractTrueTypeMetrics, normalizeMetricsTo1000 } from "@aurochs/pdf/domain/font";
-import { getSampleFixturePath } from "../test-utils/pdf-fixtures";
+import { getSampleFixturePath } from "@aurochs/pdf/test-utils/pdf-fixtures";
 
 describe("PDF embedded font extraction", () => {
   it("should extract fonts with all required web tables", async () => {

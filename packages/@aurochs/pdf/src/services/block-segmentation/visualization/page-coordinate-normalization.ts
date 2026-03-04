@@ -7,6 +7,9 @@
 
 import type { PdfPath } from "../../../domain/path";
 import type { PdfText } from "../../../domain/text";
+import type { PdfImage } from "../../../domain/image";
+import type { PdfBBox, PdfMatrix, PdfSoftMask } from "../../../domain";
+import type { PdfGraphicsState } from "../../../domain/graphics-state";
 import { loadNativePdfDocumentForParser } from "../../../parser/core/native-load";
 
 export type PageViewportTransform = {
@@ -17,6 +20,7 @@ export type PageViewportTransform = {
 export type NormalizedPageElements = {
   readonly texts: readonly PdfText[];
   readonly paths: readonly PdfPath[];
+  readonly images: readonly PdfImage[];
   readonly applied: boolean;
   readonly rotation: 0 | 90 | 180 | 270;
   readonly status: "normalized" | "identity" | "fallback";
@@ -95,6 +99,62 @@ export function mapRectToDisplay(args: {
   };
 }
 
+function applyMatrixToPoint(matrix: PdfMatrix, point: { readonly x: number; readonly y: number }): { readonly x: number; readonly y: number } {
+  const [a, b, c, d, e, f] = matrix;
+  return {
+    x: a * point.x + c * point.y + e,
+    y: b * point.x + d * point.y + f,
+  };
+}
+
+function mapMatrixToDisplay(args: { readonly matrix: PdfMatrix; readonly viewport: PageViewportTransform }): PdfMatrix {
+  const { matrix, viewport } = args;
+  const p00 = mapPointToDisplay({ ...applyMatrixToPoint(matrix, { x: 0, y: 0 }), viewport });
+  const p10 = mapPointToDisplay({ ...applyMatrixToPoint(matrix, { x: 1, y: 0 }), viewport });
+  const p01 = mapPointToDisplay({ ...applyMatrixToPoint(matrix, { x: 0, y: 1 }), viewport });
+  return [p10.x - p00.x, p10.y - p00.y, p01.x - p00.x, p01.y - p00.y, p00.x, p00.y];
+}
+
+function mapBBoxToDisplay(args: { readonly bbox: PdfBBox; readonly viewport: PageViewportTransform }): PdfBBox {
+  const { bbox, viewport } = args;
+  const [x1, y1, x2, y2] = bbox;
+  const minX = Math.min(x1, x2);
+  const minY = Math.min(y1, y2);
+  const maxX = Math.max(x1, x2);
+  const maxY = Math.max(y1, y2);
+  const mapped = mapRectToDisplay({
+    x: minX,
+    y: minY,
+    width: Math.max(0, maxX - minX),
+    height: Math.max(0, maxY - minY),
+    viewport,
+  });
+  return [mapped.x, mapped.y, mapped.x + mapped.width, mapped.y + mapped.height];
+}
+
+function mapSoftMaskToDisplay(args: { readonly mask: PdfSoftMask; readonly viewport: PageViewportTransform }): PdfSoftMask {
+  const { mask, viewport } = args;
+  return {
+    ...mask,
+    bbox: mapBBoxToDisplay({ bbox: mask.bbox, viewport }),
+    matrix: mapMatrixToDisplay({ matrix: mask.matrix, viewport }),
+  };
+}
+
+function mapGraphicsStateToDisplay(args: {
+  readonly graphicsState: PdfGraphicsState;
+  readonly viewport: PageViewportTransform;
+}): PdfGraphicsState {
+  const { graphicsState, viewport } = args;
+  return {
+    ...graphicsState,
+    ctm: mapMatrixToDisplay({ matrix: graphicsState.ctm, viewport }),
+    ...(graphicsState.clipBBox ? { clipBBox: mapBBoxToDisplay({ bbox: graphicsState.clipBBox, viewport }) } : {}),
+    ...(graphicsState.clipMask ? { clipMask: mapSoftMaskToDisplay({ mask: graphicsState.clipMask, viewport }) } : {}),
+    ...(graphicsState.softMask ? { softMask: mapSoftMaskToDisplay({ mask: graphicsState.softMask, viewport }) } : {}),
+  };
+}
+
 function clampRunRectToPage(args: {
   readonly run: PdfText;
   readonly pageWidth: number;
@@ -152,6 +212,7 @@ export function transformTextRunsToDisplay(args: {
       y: rect.y,
       width: rect.width,
       height: rect.height,
+      graphicsState: mapGraphicsStateToDisplay({ graphicsState: run.graphicsState, viewport }),
     };
   });
 }
@@ -210,8 +271,24 @@ export function transformPathsToDisplay(args: {
         }
       }
     });
-    return { ...pathElement, operations };
+    return {
+      ...pathElement,
+      operations,
+      graphicsState: mapGraphicsStateToDisplay({ graphicsState: pathElement.graphicsState, viewport }),
+    };
   });
+}
+
+/** Transform image elements into displayed page space by normalizing graphicsState.ctm. */
+export function transformImagesToDisplay(args: {
+  readonly images: readonly PdfImage[];
+  readonly viewport: PageViewportTransform;
+}): readonly PdfImage[] {
+  const { images, viewport } = args;
+  return images.map((image) => ({
+    ...image,
+    graphicsState: mapGraphicsStateToDisplay({ graphicsState: image.graphicsState, viewport }),
+  }));
 }
 
 /** Normalize parsed page elements using CropBox/Rotate from native page metadata. */
@@ -222,6 +299,7 @@ export async function normalizePageElementsForDisplay(args: {
   readonly pageHeight: number;
   readonly texts: readonly PdfText[];
   readonly paths: readonly PdfPath[];
+  readonly images?: readonly PdfImage[];
 }): Promise<NormalizedPageElements> {
   const {
     pdfBytes,
@@ -230,6 +308,7 @@ export async function normalizePageElementsForDisplay(args: {
     pageHeight,
     texts,
     paths,
+    images = [],
   } = args;
   const loadViewport = async (): Promise<PageViewportTransform | null> => {
     try {
@@ -263,6 +342,7 @@ export async function normalizePageElementsForDisplay(args: {
     return {
       texts,
       paths,
+      images,
       applied: false,
       rotation: 0,
       status: "fallback",
@@ -275,7 +355,7 @@ export async function normalizePageElementsForDisplay(args: {
     Math.abs(viewport.cropBox[0]) <= EPS &&
     Math.abs(viewport.cropBox[1]) <= EPS
   ) {
-    return { texts, paths, applied: false, rotation: viewport.rotation, status: "identity" };
+    return { texts, paths, images, applied: false, rotation: viewport.rotation, status: "identity" };
   }
 
   const transformedTexts = transformTextRunsToDisplay({ texts, viewport });
@@ -285,6 +365,7 @@ export async function normalizePageElementsForDisplay(args: {
     return {
       texts,
       paths,
+      images,
       applied: false,
       rotation: viewport.rotation,
       status: "identity",
@@ -293,9 +374,11 @@ export async function normalizePageElementsForDisplay(args: {
   }
 
   const transformedPaths = transformPathsToDisplay({ paths, viewport });
+  const transformedImages = transformImagesToDisplay({ images, viewport });
   return {
     texts: transformedTexts,
     paths: transformedPaths,
+    images: transformedImages,
     applied: true,
     rotation: viewport.rotation,
     status: "normalized",

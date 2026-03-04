@@ -10,8 +10,9 @@ import type { PresentationDocument, SlideWithId } from "@aurochs-office/pptx/app
 import type { Slide } from "@aurochs-office/pptx/domain/slide/types";
 import { openPresentation } from "@aurochs-office/pptx/app/open-presentation";
 import { parsePdf } from "@aurochs/pdf/parser/core/pdf-parser";
-import type { PdfPage } from "@aurochs/pdf/domain";
+import type { PdfDocument, PdfImage, PdfPage, PdfPath, PdfText } from "@aurochs/pdf/domain";
 import { PdfLoadError } from "@aurochs/pdf/parser/core/pdf-load-error";
+import { normalizePageElementsForDisplay } from "@aurochs/pdf/services/block-segmentation/visualization/page-coordinate-normalization";
 import {
   buildSlideFromPage,
   createPageNumberShape,
@@ -25,7 +26,9 @@ import { generateFontFaceStyle } from "@aurochs/pdf/domain/font/font-css-generat
 import type { EmbeddedFontData } from "@aurochs-office/pptx/app/presentation-document";
 import type { PdfGroupingStrategyOptions } from "../converter/grouping-strategy";
 
-const DEFAULT_GROUPING: PdfGroupingStrategyOptions = { preset: "text" } as const;
+const DEFAULT_GROUPING: PdfGroupingStrategyOptions = { preset: "auto" } as const;
+const DISPLAY_NORMALIZATION_OUT_OF_PAGE_RATIO = 0.2;
+const DISPLAY_NORMALIZATION_OVERFLOW_RATIO = 0.15;
 
 export type PdfImportOptions = {
   /** インポートするページ番号（1始まり）。省略時は全ページ */
@@ -94,7 +97,8 @@ export async function importPdf(
     throw new PdfImportError("buffer is required", "PARSE_ERROR");
   }
 
-  const pdfDoc = await parsePdfOrThrow(buffer, options);
+  const parsed = await parsePdfOrThrow(buffer, options);
+  const pdfDoc = await normalizeParsedPagesForDisplayIfNeeded(parsed, toUint8Array(buffer));
   if (pdfDoc.pages.length === 0) {
     throw new PdfImportError("No pages to import", "PARSE_ERROR");
   }
@@ -149,6 +153,124 @@ export async function importPdf(
     document,
     pageCount: pdfDoc.pages.length,
     pageStats,
+  };
+}
+
+function toUint8Array(buffer: ArrayBuffer | Uint8Array): Uint8Array {
+  if (buffer instanceof Uint8Array) {
+    return buffer;
+  }
+  return new Uint8Array(buffer);
+}
+
+function shouldNormalizePageForDisplay(page: PdfPage): boolean {
+  const textRuns = page.elements.filter((element): element is PdfText => element.type === "text");
+  if (textRuns.length === 0) {
+    return false;
+  }
+  const nonEmpty = textRuns.filter((text) => text.text.trim().length > 0);
+  if (nonEmpty.length === 0) {
+    return false;
+  }
+
+  const finite = nonEmpty.filter((text) =>
+    Number.isFinite(text.x) &&
+    Number.isFinite(text.y) &&
+    Number.isFinite(text.width) &&
+    Number.isFinite(text.height) &&
+    Number.isFinite(text.x + text.width) &&
+    Number.isFinite(text.y + text.height)
+  );
+  if (finite.length === 0) {
+    return false;
+  }
+
+  const maxX = Math.max(...finite.map((text) => text.x + text.width));
+  const maxY = Math.max(...finite.map((text) => text.y + text.height));
+  const overflowRatioX = page.width > 0 ? Math.max(0, maxX - page.width) / page.width : 0;
+  const overflowRatioY = page.height > 0 ? Math.max(0, maxY - page.height) / page.height : 0;
+  const outOfPageCount = finite.reduce((count, text) => {
+    const x0 = text.x;
+    const y0 = text.y;
+    const x1 = text.x + text.width;
+    const y1 = text.y + text.height;
+    const out = x1 < 0 || x0 > page.width || y1 < 0 || y0 > page.height;
+    return out ? count + 1 : count;
+  }, 0);
+  const outOfPageRatio = outOfPageCount / finite.length;
+
+  return (
+    outOfPageRatio >= DISPLAY_NORMALIZATION_OUT_OF_PAGE_RATIO &&
+    (overflowRatioX >= DISPLAY_NORMALIZATION_OVERFLOW_RATIO || overflowRatioY >= DISPLAY_NORMALIZATION_OVERFLOW_RATIO)
+  );
+}
+
+async function normalizeParsedPagesForDisplayIfNeeded(pdfDoc: PdfDocument, pdfBytes: Uint8Array): Promise<PdfDocument> {
+  const normalizedPages = await Promise.all(
+    pdfDoc.pages.map(async (page) => {
+      if (!shouldNormalizePageForDisplay(page)) {
+        return page;
+      }
+
+      const texts = page.elements.filter((element): element is PdfText => element.type === "text");
+      const paths = page.elements.filter((element): element is PdfPath => element.type === "path");
+      const images = page.elements.filter((element): element is PdfImage => element.type === "image");
+
+      const normalized = await normalizePageElementsForDisplay({
+        pdfBytes,
+        pageNumber: page.pageNumber,
+        pageWidth: page.width,
+        pageHeight: page.height,
+        texts,
+        paths,
+        images,
+      });
+
+      if (!normalized.applied) {
+        return page;
+      }
+
+      let textIndex = 0;
+      let pathIndex = 0;
+      let imageIndex = 0;
+      const elements = page.elements.map((element) => {
+        if (element.type === "text") {
+          const next = normalized.texts[textIndex];
+          textIndex += 1;
+          if (!next) {
+            throw new Error(`normalizePageElementsForDisplay text index overflow at page ${page.pageNumber}`);
+          }
+          return next;
+        }
+        if (element.type === "path") {
+          const next = normalized.paths[pathIndex];
+          pathIndex += 1;
+          if (!next) {
+            throw new Error(`normalizePageElementsForDisplay path index overflow at page ${page.pageNumber}`);
+          }
+          return next;
+        }
+        if (element.type === "image") {
+          const next = normalized.images[imageIndex];
+          imageIndex += 1;
+          if (!next) {
+            throw new Error(`normalizePageElementsForDisplay image index overflow at page ${page.pageNumber}`);
+          }
+          return next;
+        }
+        return element;
+      });
+
+      return {
+        ...page,
+        elements,
+      };
+    }),
+  );
+
+  return {
+    ...pdfDoc,
+    pages: normalizedPages,
   };
 }
 

@@ -12,8 +12,7 @@ import { loadPptxBundleFromBuffer } from "@aurochs-office/pptx/app/pptx-loader";
 import { compareSvgToPdfBaseline } from "./compare";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import { renderSlideToSvg } from "@aurochs-renderer/pptx/svg";
-
-const ROOT_DIR = path.resolve(__dirname, "../../../../../");
+import { getSampleFixturePath } from "@aurochs/pdf/test-utils/pdf-fixtures";
 
 function guessFontExtension(bytes: Uint8Array): "ttf" | "otf" {
   if (bytes.length >= 4) {
@@ -26,7 +25,7 @@ function guessFontExtension(bytes: Uint8Array): "ttf" | "otf" {
 }
 
 describe("PDF→PPTX visual regression: k-namingrule-dl.pdf", () => {
-  const pdfPath = path.join(ROOT_DIR, "fixtures/samples/k-namingrule-dl.pdf");
+  const pdfPath = getSampleFixturePath("k-namingrule-dl.pdf");
   const slideNumber = 1;
   const compareOrSkip = (args: {
     readonly svg: string;

@@ -7,7 +7,7 @@ import { px } from "@aurochs-office/drawing-ml/domain/units";
 import type { GraphicFrame } from "@aurochs-office/pptx/domain/shape";
 import { parsePdf } from "@aurochs/pdf/parser/core/pdf-parser";
 import { convertPageToShapes } from "./pdf-to-shapes";
-import { getSampleFixturePath } from "../test-utils/pdf-fixtures";
+import { getSampleFixturePath } from "@aurochs/pdf/test-utils/pdf-fixtures";
 
 describe("convertPageToShapes (real PDF) - receipt table guard", () => {
   const PDF_PATH = getSampleFixturePath("Receipt-2627-1068.pdf");

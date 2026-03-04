@@ -6,7 +6,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
 import { importPdf, importPdfFromFile, importPdfFromUrl, PdfImportError } from "./pdf-importer";
 import { buildSimplePdfBytes } from "../test-utils/simple-pdf";
-import { getSampleFixturePath } from "../test-utils/pdf-fixtures";
+import { getSampleFixturePath } from "@aurochs/pdf/test-utils/pdf-fixtures";
 
 function createConsoleWarnSpy(): Readonly<{
   readonly calls: readonly ReadonlyArray<unknown>[];
@@ -188,7 +188,7 @@ describe("pdf-importer", () => {
     });
   });
 
-  it("defaults to text-only grouping (no table conversion)", async () => {
+  it("defaults to auto grouping and falls back to text-only output when table confidence is low", async () => {
     const bytes = await createPdfBytesWithTableLikeText();
 
     const result = await importPdf(bytes, {

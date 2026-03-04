@@ -3,11 +3,10 @@
  */
 
 import * as fs from "node:fs";
-import * as path from "node:path";
 import { parsePdf, type PdfText } from "@aurochs/pdf";
+import { getSampleFixturePath } from "@aurochs/pdf/test-utils/pdf-fixtures";
 
-const ROOT_DIR = path.resolve(__dirname, "../../../../../");
-const PDF_PATH = path.join(ROOT_DIR, "fixtures/samples/KJ00006456532.pdf");
+const PDF_PATH = getSampleFixturePath("KJ00006456532.pdf");
 
 describe("PDF text decoding (KJ00006456532.pdf)", () => {
   it("decodes Japan1 CID text without replacement characters", async () => {

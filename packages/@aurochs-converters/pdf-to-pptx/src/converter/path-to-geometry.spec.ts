@@ -167,6 +167,7 @@ describe("convertPathToGeometry", () => {
               control2: { x: px(10), y: px(0) },
               end: { x: px(10), y: px(10) },
             },
+            { type: "close" },
           ],
         },
       ],
@@ -251,6 +252,44 @@ describe("convertPathToGeometry", () => {
 
     const commands = convertPathToGeometry(pdfPath, context).paths[0]?.commands;
     expect(commands?.map((c) => c.type)).toEqual(["moveTo", "lineTo", "close"]);
+  });
+
+  it("implicitly closes open subpaths for fill operations", () => {
+    const pdfPath: PdfPath = {
+      type: "path",
+      operations: [
+        { type: "moveTo", point: { x: 0, y: 0 } },
+        { type: "lineTo", point: { x: 10, y: 0 } },
+        { type: "lineTo", point: { x: 10, y: 10 } },
+        { type: "moveTo", point: { x: 20, y: 0 } },
+        { type: "lineTo", point: { x: 30, y: 0 } },
+        { type: "lineTo", point: { x: 30, y: 10 } },
+      ] as const,
+      paintOp: "fill",
+      graphicsState,
+    };
+
+    const commands = convertPathToGeometry(pdfPath, context).paths[0]?.commands.map((c) => c.type);
+    expect(commands).toEqual(["moveTo", "lineTo", "lineTo", "close", "moveTo", "lineTo", "lineTo", "close"]);
+  });
+
+  it("keeps open subpaths as-is for stroke-only operations", () => {
+    const pdfPath: PdfPath = {
+      type: "path",
+      operations: [
+        { type: "moveTo", point: { x: 0, y: 0 } },
+        { type: "lineTo", point: { x: 10, y: 0 } },
+        { type: "lineTo", point: { x: 10, y: 10 } },
+        { type: "moveTo", point: { x: 20, y: 0 } },
+        { type: "lineTo", point: { x: 30, y: 0 } },
+        { type: "lineTo", point: { x: 30, y: 10 } },
+      ] as const,
+      paintOp: "stroke",
+      graphicsState,
+    };
+
+    const commands = convertPathToGeometry(pdfPath, context).paths[0]?.commands.map((c) => c.type);
+    expect(commands).toEqual(["moveTo", "lineTo", "lineTo", "moveTo", "lineTo", "lineTo"]);
   });
 });
 

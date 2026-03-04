@@ -54,6 +54,13 @@ function ensureDirs(): void {
 }
 
 /**
+ * Normalize non-XML named entities that resvg (XML parser) does not accept.
+ */
+function normalizeSvgForResvg(svg: string): string {
+  return svg.replaceAll("&nbsp;", "&#160;");
+}
+
+/**
  * Convert SVG string to PNG buffer
  */
 export function svgToPng(svg: string, width?: number, options: Pick<CompareOptions, "resvgFontFiles" | "resvgLoadSystemFonts"> = {}): Buffer {
@@ -71,7 +78,8 @@ export function svgToPng(svg: string, width?: number, options: Pick<CompareOptio
     };
   }
 
-  const resvg = new Resvg(svg, opts);
+  const normalizedSvg = normalizeSvgForResvg(svg);
+  const resvg = new Resvg(normalizedSvg, opts);
   const pngData = resvg.render();
   return Buffer.from(pngData.asPng());
 }
@@ -424,6 +432,243 @@ function renderPdfBaselineToTarget(
 export type PdfCompareResult = {
   baselinePath: string;
 } & Omit<DetailedCompareResult, "snapshotPath">
+
+export type MaskRect = {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+};
+
+type Rgba = {
+  readonly r: number;
+  readonly g: number;
+  readonly b: number;
+  readonly a: number;
+};
+
+export type TextRegionMaskCompareResult = {
+  readonly baselinePath: string;
+  readonly actualPath: string;
+  readonly diffPath: string;
+  readonly width: number;
+  readonly height: number;
+  readonly baselinePixelCount: number;
+  readonly actualPixelCount: number;
+  readonly overlapPixelCount: number;
+  readonly symmetricDiffPixelCount: number;
+  readonly symmetricDiffPercent: number;
+  readonly precision: number;
+  readonly recall: number;
+  readonly f1: number;
+  readonly iou: number;
+};
+
+function assertFiniteNumber(name: string, value: number): void {
+  if (!Number.isFinite(value)) {
+    throw new Error(`${name} must be finite: ${value}`);
+  }
+}
+
+function assertRect(rect: MaskRect, index: number): void {
+  assertFiniteNumber(`rect[${index}].x`, rect.x);
+  assertFiniteNumber(`rect[${index}].y`, rect.y);
+  assertFiniteNumber(`rect[${index}].width`, rect.width);
+  assertFiniteNumber(`rect[${index}].height`, rect.height);
+}
+
+function writePixel(args: {
+  readonly data: Buffer | Uint8Array;
+  readonly width: number;
+  readonly x: number;
+  readonly y: number;
+  readonly color: Rgba;
+}): void {
+  const { data, width, x, y, color } = args;
+  const idx = (y * width + x) * 4;
+  data[idx] = color.r;
+  data[idx + 1] = color.g;
+  data[idx + 2] = color.b;
+  data[idx + 3] = color.a;
+}
+
+function buildBinaryMask(args: { readonly width: number; readonly height: number; readonly rects: readonly MaskRect[] }): Uint8Array {
+  const { width, height, rects } = args;
+  const mask = new Uint8Array(width * height);
+  for (let i = 0; i < rects.length; i++) {
+    const rect = rects[i]!;
+    assertRect(rect, i);
+    if (!(rect.width > 0) || !(rect.height > 0)) {
+      continue;
+    }
+
+    const x0 = Math.max(0, Math.floor(rect.x));
+    const y0 = Math.max(0, Math.floor(rect.y));
+    const x1 = Math.min(width, Math.ceil(rect.x + rect.width));
+    const y1 = Math.min(height, Math.ceil(rect.y + rect.height));
+    if (!(x1 > x0) || !(y1 > y0)) {
+      continue;
+    }
+
+    for (let y = y0; y < y1; y++) {
+      const row = y * width;
+      for (let x = x0; x < x1; x++) {
+        mask[row + x] = 1;
+      }
+    }
+  }
+  return mask;
+}
+
+function renderMaskPng(args: {
+  readonly width: number;
+  readonly height: number;
+  readonly mask: Uint8Array;
+  readonly onColor: Rgba;
+  readonly offColor: Rgba;
+}): PNG {
+  const { width, height, mask, onColor, offColor } = args;
+  const png = new PNG({ width, height });
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const color = mask[y * width + x] === 1 ? onColor : offColor;
+      writePixel({ data: png.data, width, x, y, color });
+    }
+  }
+  return png;
+}
+
+/**
+ * Compare text-region masks generated from baseline and actual rectangle sets.
+ *
+ * This comparison is glyph-independent and focuses purely on area placement.
+ * It writes baseline/actual/diff mask PNG files for visual inspection.
+ */
+export function compareTextRegionMasks(args: {
+  readonly snapshotName: string;
+  readonly slideNumber: number;
+  readonly width: number;
+  readonly height: number;
+  readonly baselineRects: readonly MaskRect[];
+  readonly actualRects: readonly MaskRect[];
+  readonly colors?: {
+    readonly background?: Rgba;
+    readonly baselineOnly?: Rgba;
+    readonly actualOnly?: Rgba;
+    readonly overlap?: Rgba;
+  };
+}): TextRegionMaskCompareResult {
+  ensureDirs();
+  const { snapshotName, slideNumber, baselineRects, actualRects } = args;
+  const width = Math.round(args.width);
+  const height = Math.round(args.height);
+
+  if (!snapshotName) {
+    throw new Error("snapshotName is required");
+  }
+  if (!Number.isFinite(slideNumber) || slideNumber < 1) {
+    throw new Error(`Invalid slideNumber: ${slideNumber}`);
+  }
+  if (!Number.isFinite(width) || width <= 0) {
+    throw new Error(`Invalid width: ${args.width}`);
+  }
+  if (!Number.isFinite(height) || height <= 0) {
+    throw new Error(`Invalid height: ${args.height}`);
+  }
+
+  const baselineMask = buildBinaryMask({ width, height, rects: baselineRects });
+  const actualMask = buildBinaryMask({ width, height, rects: actualRects });
+
+  const counters = {
+    baselinePixelCount: 0,
+    actualPixelCount: 0,
+    overlapPixelCount: 0,
+    symmetricDiffPixelCount: 0,
+  };
+  for (const [i, baselineValue] of baselineMask.entries()) {
+    const baseline = baselineValue === 1;
+    const actual = actualMask[i] === 1;
+    if (baseline) {
+      counters.baselinePixelCount += 1;
+    }
+    if (actual) {
+      counters.actualPixelCount += 1;
+    }
+    if (baseline && actual) {
+      counters.overlapPixelCount += 1;
+    }
+    if (baseline !== actual) {
+      counters.symmetricDiffPixelCount += 1;
+    }
+  }
+
+  const baselinePixelCount = counters.baselinePixelCount;
+  const actualPixelCount = counters.actualPixelCount;
+  const overlapPixelCount = counters.overlapPixelCount;
+  const symmetricDiffPixelCount = counters.symmetricDiffPixelCount;
+
+  const precision = actualPixelCount > 0 ? overlapPixelCount / actualPixelCount : 0;
+  const recall = baselinePixelCount > 0 ? overlapPixelCount / baselinePixelCount : 0;
+  const f1 = precision + recall > 0 ? (2 * precision * recall) / (precision + recall) : 0;
+  const union = baselinePixelCount + actualPixelCount - overlapPixelCount;
+  const iou = union > 0 ? overlapPixelCount / union : 0;
+  const totalPixels = width * height;
+  const symmetricDiffPercent = totalPixels > 0 ? (symmetricDiffPixelCount / totalPixels) * 100 : 0;
+
+  const colorBackground = args.colors?.background ?? { r: 255, g: 255, b: 255, a: 255 };
+  const colorBaselineOnly = args.colors?.baselineOnly ?? { r: 57, g: 106, b: 177, a: 255 };
+  const colorActualOnly = args.colors?.actualOnly ?? { r: 242, g: 142, b: 43, a: 255 };
+  const colorOverlap = args.colors?.overlap ?? { r: 89, g: 161, b: 79, a: 255 };
+
+  const baselinePng = renderMaskPng({
+    width,
+    height,
+    mask: baselineMask,
+    onColor: colorBaselineOnly,
+    offColor: colorBackground,
+  });
+  const actualPng = renderMaskPng({
+    width,
+    height,
+    mask: actualMask,
+    onColor: colorActualOnly,
+    offColor: colorBackground,
+  });
+
+  const diffPng = new PNG({ width, height });
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const baseline = baselineMask[y * width + x] === 1;
+      const actual = actualMask[y * width + x] === 1;
+      const color = baseline && actual ? colorOverlap : baseline ? colorBaselineOnly : actual ? colorActualOnly : colorBackground;
+      writePixel({ data: diffPng.data, width, x, y, color });
+    }
+  }
+
+  const baselinePath = path.join(OUTPUT_DIR, `${snapshotName}-slide-${slideNumber}-text-mask-baseline.png`);
+  const actualPath = path.join(OUTPUT_DIR, `${snapshotName}-slide-${slideNumber}-text-mask-actual.png`);
+  const diffPath = path.join(DIFF_DIR, `${snapshotName}-slide-${slideNumber}-text-mask-diff.png`);
+  savePng(baselinePng, baselinePath);
+  savePng(actualPng, actualPath);
+  savePng(diffPng, diffPath);
+
+  return {
+    baselinePath,
+    actualPath,
+    diffPath,
+    width,
+    height,
+    baselinePixelCount,
+    actualPixelCount,
+    overlapPixelCount,
+    symmetricDiffPixelCount,
+    symmetricDiffPercent,
+    precision,
+    recall,
+    f1,
+    iou,
+  };
+}
 
 /**
  * Compare rendered SVG against a PDF page baseline (pdftoppm), fit to a target canvas.

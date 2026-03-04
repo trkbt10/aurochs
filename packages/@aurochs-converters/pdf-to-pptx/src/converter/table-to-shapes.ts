@@ -881,8 +881,8 @@ function buildCellTextBodyFromLines({
       anchorCenter: false,
       forceAntiAlias: true,
       insets: { left: px(0), top: px(0), right: px(0), bottom: px(0) },
-      overflow: "clip",
-      verticalOverflow: "clip",
+      overflow: "overflow",
+      verticalOverflow: "overflow",
     },
     paragraphs,
   };
@@ -1100,7 +1100,7 @@ function buildTableFromInference(
             fill: noFill(),
             anchor: "center",
             anchorCenter: false,
-            horzOverflow: "clip",
+            horzOverflow: "overflow",
             margins: { left: px(0), right: px(0), top: px(0), bottom: px(0) },
           },
         });
@@ -1127,7 +1127,7 @@ function buildTableFromInference(
             fill,
             anchor: "center",
             anchorCenter: false,
-            horzOverflow: "clip",
+            horzOverflow: "overflow",
             margins: { left: px(0), right: px(0), top: px(0), bottom: px(0) },
           },
         });
@@ -1139,15 +1139,16 @@ function buildTableFromInference(
       const rightSlackPdf = Math.max(0, col.x1 - seg.x1);
 
       // Use explicit margins so rendering doesn't depend on viewer defaults.
+      // Keep the original PDF cell slack as much as possible to preserve text offsets.
       const colWidthPdf = colWidthsPdf[ci] ?? 0;
-      const maxSidePdf = Math.max(0, Math.min(colWidthPdf * 0.45, inferred.fontSize * 2.0));
-      const leftPdf = seg.alignment === "left" ? Math.min(leftSlackPdf, maxSidePdf) : 0;
-      const rightPdf = seg.alignment === "right" ? Math.min(rightSlackPdf, maxSidePdf) : 0;
+      const maxSidePdf = Math.max(0, colWidthPdf * 0.95);
+      const leftPdf = Math.min(leftSlackPdf, maxSidePdf);
+      const rightPdf = Math.min(rightSlackPdf, maxSidePdf);
       const left = leftPdf > 0 ? convertSize(leftPdf, 0, context).width : px(0);
       const right = rightPdf > 0 ? convertSize(rightPdf, 0, context).width : px(0);
 
       const rowHeightPdf = rowHeightsPdf[ri] ?? 0;
-      const maxVertPdf = Math.max(0, Math.min(inferred.fontSize * 1.2, rowHeightPdf * 0.45));
+      const maxVertPdf = Math.max(0, rowHeightPdf * 0.95);
 
       // eslint-disable-next-line no-restricted-syntax -- mutable accumulator
       let topSlackPdf = 0;
@@ -1196,9 +1197,9 @@ function buildTableFromInference(
         ...(rowSpan > 1 ? { rowSpan } : {}),
         ...(borders ? { borders } : {}),
         fill,
-        anchor: seg.runsByLine.length > 1 ? "top" : "center",
+        anchor: "top",
         anchorCenter: false,
-        horzOverflow: "clip",
+        horzOverflow: "overflow",
         margins,
       };
 

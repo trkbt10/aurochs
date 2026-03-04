@@ -17,6 +17,7 @@ import { importPdf } from "../../src/importer/pdf-importer";
 import { exportPptx } from "@aurochs-builder/pptx/export";
 import { convertToPresentationDocument, loadPptxFromBuffer } from "@aurochs-office/pptx/app";
 import { px } from "@aurochs-office/drawing-ml/domain/units";
+import { getSampleFixturePath } from "@aurochs/pdf/test-utils/pdf-fixtures";
 import type { PresentationDocument } from "@aurochs-office/pptx/app/presentation-document";
 import type { GroupTransform } from "@aurochs-office/pptx/domain/geometry";
 import type {
@@ -30,7 +31,6 @@ import type {
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURES_DIR = path.join(__dirname, "..", "fixtures", "pdf");
-const SAMPLES_DIR = path.resolve(__dirname, "../../../../../fixtures/samples");
 
 const SLIDE_WIDTH = px(960);
 const SLIDE_HEIGHT = px(540);
@@ -409,7 +409,7 @@ describe("PDF Import Roundtrip", () => {
 
   describe("Complex PDF (modeling.pdf)", () => {
     it("imports and exports modeling.pdf with shapes, text, and images", async () => {
-      const pdfPath = path.join(SAMPLES_DIR, "modeling.pdf");
+      const pdfPath = getSampleFixturePath("modeling.pdf");
       const pdfBuffer = readFixtureOrSkip(pdfPath);
       if (!pdfBuffer) {
         return;
@@ -443,7 +443,7 @@ describe("PDF Import Roundtrip", () => {
     });
 
     it("decodes CID font text correctly", async () => {
-      const pdfPath = path.join(SAMPLES_DIR, "modeling.pdf");
+      const pdfPath = getSampleFixturePath("modeling.pdf");
       const pdfBuffer = readFixtureOrSkip(pdfPath);
       if (!pdfBuffer) {
         return;

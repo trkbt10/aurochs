@@ -27,7 +27,8 @@
     "lint": "eslint src spec",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-converters/pdf-to-pptx/src'",
-    "test:all": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-converters/pdf-to-pptx/src' '../../../packages/@aurochs-converters/pdf-to-pptx/spec'"
+    "test:all": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-converters/pdf-to-pptx/src' '../../../packages/@aurochs-converters/pdf-to-pptx/spec'",
+    "snapshot:generate:libreoffice": "bun spec/visual-regression/scripts/generate-libreoffice-snapshots.ts --all"
   },
   "exports": {
     ".": {

@@ -53,11 +53,8 @@ function extractExtGStateFromResourcesNativeOrEmpty(
   return extractExtGStateFromResourcesNative(page, resources, options);
 }
 
-export type PdfParserOptions = {
+export type PdfParseOptions = {
   readonly pages?: readonly number[];
-  readonly minPathComplexity?: number;
-  readonly includeText?: boolean;
-  readonly includePaths?: boolean;
   /**
    * Optional decoder for `/JPXDecode` (JPEG2000) image streams.
    *
@@ -89,21 +86,74 @@ export type PdfParserOptions = {
   readonly encryption?: PdfLoadEncryption;
 };
 
+export type PdfBuildOptions = {
+  readonly minPathComplexity?: number;
+  readonly includeText?: boolean;
+  readonly includePaths?: boolean;
+};
+
+export type PdfParserOptions = PdfParseOptions & PdfBuildOptions;
+
+export type PdfParsedPage = Readonly<{
+  readonly pageNumber: number;
+  readonly width: number;
+  readonly height: number;
+  readonly parsedElements: readonly ParsedElement[];
+  readonly extractedImages: readonly PdfImage[];
+  readonly fontMappings: FontMappings;
+}>;
+
+export type PdfParsedDocument = Readonly<{
+  readonly pages: readonly PdfParsedPage[];
+  readonly metadata: PdfDocument["metadata"];
+  readonly embeddedFonts: readonly PdfEmbeddedFont[] | undefined;
+}>;
+
+export type PdfBuildContext = Readonly<{
+  readonly parsedDocument: PdfParsedDocument;
+  readonly buildOptions: Required<PdfBuildOptions>;
+}>;
+
 const DEFAULT_JPX_DECODE: JpxDecodeFn = () => {
   throw new Error("/JPXDecode requires options.jpxDecode");
 };
 
-const DEFAULT_OPTIONS: Required<PdfParserOptions> = {
+const DEFAULT_PARSE_OPTIONS: Required<PdfParseOptions> = {
   pages: [],
-  minPathComplexity: 0,
-  includeText: true,
-  includePaths: true,
   jpxDecode: DEFAULT_JPX_DECODE,
   softMaskVectorMaxSize: 0,
   shadingMaxSize: 0,
   clipPathMaxSize: 0,
   encryption: { mode: "reject" },
 };
+
+const DEFAULT_BUILD_OPTIONS: Required<PdfBuildOptions> = {
+  minPathComplexity: 0,
+  includeText: true,
+  includePaths: true,
+};
+
+type ResolvedPdfPipelineOptions = Readonly<{
+  readonly parseOptions: Required<PdfParseOptions>;
+  readonly buildOptions: Required<PdfBuildOptions>;
+}>;
+
+function resolvePdfPipelineOptions(options: PdfParserOptions = {}): ResolvedPdfPipelineOptions {
+  const parseOptions = { ...DEFAULT_PARSE_OPTIONS, ...options };
+  const buildOptions = { ...DEFAULT_BUILD_OPTIONS, ...options };
+
+  if (!Number.isFinite(parseOptions.softMaskVectorMaxSize) || parseOptions.softMaskVectorMaxSize < 0) {
+    throw new Error(`softMaskVectorMaxSize must be >= 0 (got ${parseOptions.softMaskVectorMaxSize})`);
+  }
+  if (!Number.isFinite(parseOptions.shadingMaxSize) || parseOptions.shadingMaxSize < 0) {
+    throw new Error(`shadingMaxSize must be >= 0 (got ${parseOptions.shadingMaxSize})`);
+  }
+  if (!Number.isFinite(parseOptions.clipPathMaxSize) || parseOptions.clipPathMaxSize < 0) {
+    throw new Error(`clipPathMaxSize must be >= 0 (got ${parseOptions.clipPathMaxSize})`);
+  }
+
+  return { parseOptions, buildOptions };
+}
 
 
 
@@ -120,20 +170,31 @@ export async function parsePdfNative(
   data: Uint8Array | ArrayBuffer,
   options: PdfParserOptions = {},
 ): Promise<PdfDocument> {
-  const opts = { ...DEFAULT_OPTIONS, ...options };
-  if (!Number.isFinite(opts.softMaskVectorMaxSize) || opts.softMaskVectorMaxSize < 0) {
-    throw new Error(`softMaskVectorMaxSize must be >= 0 (got ${opts.softMaskVectorMaxSize})`);
+  const { parseOptions, buildOptions } = resolvePdfPipelineOptions(options);
+  const parsedSource = await parsePdfSourceNative(data, parseOptions);
+  const context = createPdfBuildContext(parsedSource, buildOptions);
+  return buildPdfDocumentFromContext(context);
+}
+
+/** Parser stage: parse bytes into low-level per-page parse artifacts. */
+export async function parsePdfSourceNative(
+  data: Uint8Array | ArrayBuffer,
+  options: PdfParseOptions = {},
+): Promise<PdfParsedDocument> {
+  const parseOptions = { ...DEFAULT_PARSE_OPTIONS, ...options };
+  if (!Number.isFinite(parseOptions.softMaskVectorMaxSize) || parseOptions.softMaskVectorMaxSize < 0) {
+    throw new Error(`softMaskVectorMaxSize must be >= 0 (got ${parseOptions.softMaskVectorMaxSize})`);
   }
-  if (!Number.isFinite(opts.shadingMaxSize) || opts.shadingMaxSize < 0) {
-    throw new Error(`shadingMaxSize must be >= 0 (got ${opts.shadingMaxSize})`);
+  if (!Number.isFinite(parseOptions.shadingMaxSize) || parseOptions.shadingMaxSize < 0) {
+    throw new Error(`shadingMaxSize must be >= 0 (got ${parseOptions.shadingMaxSize})`);
   }
-  if (!Number.isFinite(opts.clipPathMaxSize) || opts.clipPathMaxSize < 0) {
-    throw new Error(`clipPathMaxSize must be >= 0 (got ${opts.clipPathMaxSize})`);
+  if (!Number.isFinite(parseOptions.clipPathMaxSize) || parseOptions.clipPathMaxSize < 0) {
+    throw new Error(`clipPathMaxSize must be >= 0 (got ${parseOptions.clipPathMaxSize})`);
   }
 
   const pdfDoc = await loadNativePdfDocumentForParser(data, {
     purpose: "parse",
-    encryption: opts.encryption,
+    encryption: parseOptions.encryption,
     updateMetadata: false,
   });
 
@@ -156,12 +217,12 @@ export async function parsePdfNative(
   }
 
   const pdfPages = pdfDoc.getPages();
-  const pagesToParse = resolvePagesToParse(opts.pages, pdfPages.length);
+  const pagesToParse = resolvePagesToParse(parseOptions.pages, pdfPages.length);
 
-  const pages: PdfPage[] = [];
+  const pages: PdfParsedPage[] = [];
   for (const pageNum of pagesToParse) {
     const nativePage = pdfPages[pageNum - 1]!;
-    const parsedPage = await parsePage({ page: nativePage, pageNumber: pageNum, opts, embeddedFontMetrics });
+    const parsedPage = await parsePageSource({ page: nativePage, pageNumber: pageNum, parseOptions, embeddedFontMetrics });
     pages.push(parsedPage);
   }
 
@@ -170,6 +231,49 @@ export async function parsePdfNative(
   const embeddedFonts = buildEmbeddedFonts(embeddedFontsRaw);
 
   return { pages, metadata, embeddedFonts };
+}
+
+/** Context stage: combine parser output with explicit builder options. */
+export function createPdfBuildContext(
+  parsedDocument: PdfParsedDocument,
+  options: PdfBuildOptions = {},
+): PdfBuildContext {
+  if (!parsedDocument) {
+    throw new Error("parsedDocument is required");
+  }
+  const buildOptions = { ...DEFAULT_BUILD_OPTIONS, ...options };
+  return {
+    parsedDocument,
+    buildOptions,
+  };
+}
+
+/** Builder stage: build final `PdfDocument` from a parse/build context. */
+export function buildPdfDocumentFromContext(context: PdfBuildContext): PdfDocument {
+  if (!context) {
+    throw new Error("context is required");
+  }
+
+  const pages: PdfPage[] = context.parsedDocument.pages.map((page) => {
+    const elements = convertElements({
+      parsed: [...page.parsedElements],
+      buildOptions: context.buildOptions,
+      extractedImages: [...page.extractedImages],
+      fontMappings: page.fontMappings,
+    });
+    return {
+      pageNumber: page.pageNumber,
+      width: page.width,
+      height: page.height,
+      elements,
+    };
+  });
+
+  return {
+    pages,
+    metadata: context.parsedDocument.metadata,
+    embeddedFonts: context.parsedDocument.embeddedFonts,
+  };
 }
 
 function resolvePagesToParse(requested: readonly number[], pageCount: number): readonly number[] {
@@ -196,11 +300,11 @@ function buildEmbeddedFonts(
 type ParsePageOptions = {
   readonly page: NativePdfPage;
   readonly pageNumber: number;
-  readonly opts: Required<PdfParserOptions>;
+  readonly parseOptions: Required<PdfParseOptions>;
   readonly embeddedFontMetrics: Map<string, { ascender: number; descender: number }>;
 };
 
-async function parsePage({ page, pageNumber, opts, embeddedFontMetrics }: ParsePageOptions): Promise<PdfPage> {
+async function parsePageSource({ page, pageNumber, parseOptions, embeddedFontMetrics }: ParsePageOptions): Promise<PdfParsedPage> {
   const { width, height } = page.getSize();
   const pageBBox: PdfBBox = [0, 0, width, height];
 
@@ -229,16 +333,23 @@ async function parsePage({ page, pageNumber, opts, embeddedFontMetrics }: ParseP
   const contentStream = processedStreams.length === 0 ? null : processedStreams.join("\n");
 
   if (!contentStream) {
-    return { pageNumber, width, height, elements: [] };
+    return {
+      pageNumber,
+      width,
+      height,
+      parsedElements: [],
+      extractedImages: [],
+      fontMappings: new Map(),
+    };
   }
 
   const fontMappings = extractFontMappingsNative(page);
   mergeFontMetrics(fontMappings, embeddedFontMetrics);
   const tokens = tokenizeContentStream(contentStream);
   const extGState = extractExtGStateNative(page, {
-    vectorSoftMaskMaxSize: opts.softMaskVectorMaxSize > 0 ? opts.softMaskVectorMaxSize : undefined,
-    shadingMaxSize: opts.shadingMaxSize > 0 ? opts.shadingMaxSize : 0,
-    jpxDecode: opts.jpxDecode,
+    vectorSoftMaskMaxSize: parseOptions.softMaskVectorMaxSize > 0 ? parseOptions.softMaskVectorMaxSize : undefined,
+    shadingMaxSize: parseOptions.shadingMaxSize > 0 ? parseOptions.shadingMaxSize : 0,
+    jpxDecode: parseOptions.jpxDecode,
   });
   const shadings = extractShadingNative(page);
   const patterns = extractPatternsNative(page);
@@ -249,8 +360,8 @@ async function parsePage({ page, pageNumber, opts, embeddedFontMetrics }: ParseP
       shadings,
       patterns,
       colorSpaces,
-      shadingMaxSize: opts.shadingMaxSize,
-      clipPathMaxSize: opts.clipPathMaxSize,
+      shadingMaxSize: parseOptions.shadingMaxSize,
+      clipPathMaxSize: parseOptions.clipPathMaxSize,
       pageBBox,
     }),
   ];
@@ -272,8 +383,8 @@ async function parsePage({ page, pageNumber, opts, embeddedFontMetrics }: ParseP
     parsedElements,
     fontMappings,
     pageExtGState: extGState,
-    shadingMaxSize: opts.shadingMaxSize,
-    clipPathMaxSize: opts.clipPathMaxSize,
+    shadingMaxSize: parseOptions.shadingMaxSize,
+    clipPathMaxSize: parseOptions.clipPathMaxSize,
     pageBBox,
     registerXObjectStream: registerType3XObjectStream,
   });
@@ -288,10 +399,10 @@ async function parsePage({ page, pageNumber, opts, embeddedFontMetrics }: ParseP
 	    shadings,
 	    patterns,
 	    colorSpaces,
-	    shadingMaxSize: opts.shadingMaxSize,
-	    clipPathMaxSize: opts.clipPathMaxSize,
-	    softMaskVectorMaxSize: opts.softMaskVectorMaxSize,
-	    jpxDecode: opts.jpxDecode,
+	    shadingMaxSize: parseOptions.shadingMaxSize,
+	    clipPathMaxSize: parseOptions.clipPathMaxSize,
+	    softMaskVectorMaxSize: parseOptions.softMaskVectorMaxSize,
+	    jpxDecode: parseOptions.jpxDecode,
 	    pageBBox,
 	    embeddedFontMetrics,
 	    xObjectsOverride: mergedXObjects,
@@ -303,15 +414,20 @@ async function parsePage({ page, pageNumber, opts, embeddedFontMetrics }: ParseP
     const extracted = await extractImagesNative({
       pdfPage: page,
       parsedImages: group,
-      options: { pageHeight: height, jpxDecode: opts.jpxDecode },
+      options: { pageHeight: height, jpxDecode: parseOptions.jpxDecode },
       xObjectsOverride: xObjects,
     });
     images.push(...extracted);
   }
 
-  const elements = convertElements({ parsed: expandedElements, opts, pageHeight: height, extractedImages: images, fontMappings });
-
-  return { pageNumber, width, height, elements };
+  return {
+    pageNumber,
+    width,
+    height,
+    parsedElements: expandedElements,
+    extractedImages: images,
+    fontMappings,
+  };
 }
 
 function asDict(obj: PdfObject | undefined): PdfDict | null {
@@ -673,18 +789,17 @@ function normalizeBaseFontForMetricsLookup(baseFont: string): string {
 
 type ConvertElementsOptions = {
   readonly parsed: ParsedElement[];
-  readonly opts: Required<PdfParserOptions>;
-  readonly pageHeight: number;
+  readonly buildOptions: Required<PdfBuildOptions>;
   readonly extractedImages: PdfImage[];
   readonly fontMappings: FontMappings;
 };
 
-function convertElements({ parsed, opts, pageHeight: _pageHeight, extractedImages, fontMappings }: ConvertElementsOptions): PdfElement[] {
+function convertElements({ parsed, buildOptions, extractedImages, fontMappings }: ConvertElementsOptions): PdfElement[] {
   const elements: PdfElement[] = [];
   for (const elem of parsed) {
     switch (elem.type) {
       case "path":
-        if (opts.includePaths || (opts.includeText && elem.source === "type3")) {
+        if (buildOptions.includePaths || (buildOptions.includeText && elem.source === "type3")) {
           const masked = rasterizeSoftMaskedFillPath(elem);
           if (masked) {
             const clipMasked = elem.graphicsState.clipMask ? applyGraphicsClipMaskToPdfImage(masked) : masked;
@@ -711,12 +826,12 @@ function convertElements({ parsed, opts, pageHeight: _pageHeight, extractedImage
               }
             }
           }
-          const pdfPath = convertPath(elem, opts.minPathComplexity);
+          const pdfPath = convertPath(elem, buildOptions.minPathComplexity);
           if (pdfPath) {elements.push(pdfPath);}
         }
         break;
       case "text":
-        if (opts.includeText) {
+        if (buildOptions.includeText) {
           const masked = rasterizeSoftMaskedText(elem, fontMappings);
           if (masked) {
             const clipMasked = elem.graphicsState.clipMask ? applyGraphicsClipMaskToPdfImage(masked) : masked;

@@ -7,6 +7,21 @@
 
 import { toDataUrl } from "@aurochs/buffer";
 
+type PngJsPngInstance = {
+  data: Buffer;
+};
+
+type PngJsConstructor = {
+  new (options: { width: number; height: number }): PngJsPngInstance;
+  sync: {
+    write: (png: PngJsPngInstance) => Buffer;
+  };
+};
+
+type PngJsModule = {
+  PNG: PngJsConstructor;
+};
+
 // =============================================================================
 // Public API
 // =============================================================================
@@ -17,8 +32,12 @@ import { toDataUrl } from "@aurochs/buffer";
 export function encodeRgbaToPngDataUrl(rgbaData: Uint8ClampedArray, width: number, height: number): string {
   const normalized = normalizeRgbaData(rgbaData, width, height);
 
-  if (typeof document !== "undefined") {
+  if (canUseCanvasEncoding()) {
     return encodeWithCanvas(normalized, width, height);
+  }
+
+  if (!canUsePngjsFallback()) {
+    throw new Error("No PNG encoder backend is available (Canvas 2D context or pngjs runtime).");
   }
 
   return encodeWithPngjs(normalized, width, height);
@@ -30,11 +49,40 @@ export function encodeRgbaToPngDataUrl(rgbaData: Uint8ClampedArray, width: numbe
 export function encodeRgbaToPng(rgbaData: Uint8ClampedArray, width: number, height: number): Uint8Array {
   const normalized = normalizeRgbaData(rgbaData, width, height);
 
-  if (typeof document !== "undefined") {
+  if (canUseCanvasEncoding()) {
     return encodeWithCanvasToBytes(normalized, width, height);
   }
 
+  if (!canUsePngjsFallback()) {
+    throw new Error("No PNG encoder backend is available (Canvas 2D context or pngjs runtime).");
+  }
+
   return encodeWithPngjsToBytes(normalized, width, height);
+}
+
+function canUseCanvasEncoding(): boolean {
+  if (typeof document === "undefined") {
+    return false;
+  }
+  if (typeof navigator !== "undefined" && /\bjsdom\b/i.test(navigator.userAgent)) {
+    return false;
+  }
+  try {
+    const canvas = document.createElement("canvas");
+    return canvas.getContext("2d") !== null;
+  } catch (error) {
+    if (error instanceof Error) {
+      return false;
+    }
+    return false;
+  }
+}
+
+function canUsePngjsFallback(): boolean {
+  return (
+    typeof process !== "undefined"
+    && !!process.versions?.node
+  );
 }
 
 // =============================================================================
@@ -91,7 +139,7 @@ function encodeWithPngjs(rgbaData: Uint8ClampedArray, width: number, height: num
 function encodeWithPngjsToBytes(rgbaData: Uint8ClampedArray, width: number, height: number): Uint8Array {
   // Dynamic require to exclude pngjs from browser bundle
   // eslint-disable-next-line @typescript-eslint/no-require-imports -- pngjs must be loaded dynamically to exclude from browser bundle
-  const pngjs = require("pngjs") as typeof import("pngjs");
+  const pngjs = require("pngjs") as PngJsModule;
   const { PNG } = pngjs;
 
   const png = new PNG({ width, height });

@@ -13,7 +13,7 @@ import {
   type SpatialGroupingOptions,
 } from "@aurochs/pdf/services/block-segmentation";
 
-export type PdfGroupingPreset = "none" | "text" | "full";
+export type PdfGroupingPreset = "none" | "text" | "full" | "auto";
 
 export type PdfTextGroupingStrategy =
   | { readonly type: "none" }
@@ -40,13 +40,34 @@ export type PdfTableGroupingStrategy = {
   readonly inferFromTextGroups?: boolean;
 };
 
+export type PdfAutoGroupingStrategy = {
+  /**
+   * Enable adaptive fallback (full -> text).
+   * Default: true when preset is "auto", otherwise false.
+   */
+  readonly enabled?: boolean;
+
+  /**
+   * Required quality score to keep "full" result.
+   * Default: 0.55
+   */
+  readonly qualityThreshold?: number;
+
+  /**
+   * Maximum allowed shape-count overhead ratio of full vs text.
+   * Default: 1.2
+   */
+  readonly maxOverheadRatio?: number;
+};
+
 export type PdfGroupingStrategyOptions = {
   /**
    * Convenience preset for stepwise application.
    *
    * - "none": no text grouping + no table conversion
    * - "text": text grouping only (no table conversion)
-   * - "full": text grouping + table conversion (default behavior)
+   * - "full": text grouping + table conversion
+   * - "auto": run full first, then fallback to text when quality is low
    */
   readonly preset?: PdfGroupingPreset;
 
@@ -55,6 +76,9 @@ export type PdfGroupingStrategyOptions = {
 
   /** Table-related grouping strategy toggles. */
   readonly tables?: PdfTableGroupingStrategy;
+
+  /** Adaptive grouping strategy options. */
+  readonly auto?: PdfAutoGroupingStrategy;
 };
 
 export type ResolvedPdfGroupingStrategy = {
@@ -62,12 +86,19 @@ export type ResolvedPdfGroupingStrategy = {
   readonly tablesEnabled: boolean;
   readonly detectTableRegions: boolean;
   readonly inferTablesFromTextGroups: boolean;
+  readonly autoEnabled: boolean;
+  readonly auto: Required<PdfAutoGroupingStrategy>;
 };
 
 const DEFAULT_TABLES: Required<PdfTableGroupingStrategy> = {
   enabled: true,
   detectRegions: true,
   inferFromTextGroups: true,
+};
+const DEFAULT_AUTO: Required<PdfAutoGroupingStrategy> = {
+  enabled: false,
+  qualityThreshold: 0.55,
+  maxOverheadRatio: 1.2,
 };
 
 const defaultTextStrategy: PdfTextGroupingStrategy = { type: "spatial" } as const;
@@ -86,14 +117,33 @@ function resolveTextGroupingFn(strategy: PdfTextGroupingStrategy): TextGroupingF
 function presetToDefaults(preset: PdfGroupingPreset): {
   readonly text: PdfTextGroupingStrategy;
   readonly tables: Required<PdfTableGroupingStrategy>;
+  readonly auto: Required<PdfAutoGroupingStrategy>;
 } {
   switch (preset) {
     case "none":
-      return { text: { type: "none" }, tables: { enabled: false, detectRegions: false, inferFromTextGroups: false } };
+      return {
+        text: { type: "none" },
+        tables: { enabled: false, detectRegions: false, inferFromTextGroups: false },
+        auto: { ...DEFAULT_AUTO, enabled: false },
+      };
     case "text":
-      return { text: defaultTextStrategy, tables: { enabled: false, detectRegions: false, inferFromTextGroups: false } };
+      return {
+        text: defaultTextStrategy,
+        tables: { enabled: false, detectRegions: false, inferFromTextGroups: false },
+        auto: { ...DEFAULT_AUTO, enabled: false },
+      };
     case "full":
-      return { text: defaultTextStrategy, tables: DEFAULT_TABLES };
+      return {
+        text: defaultTextStrategy,
+        tables: DEFAULT_TABLES,
+        auto: { ...DEFAULT_AUTO, enabled: false },
+      };
+    case "auto":
+      return {
+        text: defaultTextStrategy,
+        tables: DEFAULT_TABLES,
+        auto: { ...DEFAULT_AUTO, enabled: true },
+      };
   }
 }
 
@@ -130,11 +180,20 @@ export function resolvePdfGroupingStrategy(input: {
     inferFromTextGroups: grouping?.tables?.inferFromTextGroups ?? tables0.inferFromTextGroups,
   };
 
+  const auto0 = presetDefaults?.auto ?? DEFAULT_AUTO;
+  const auto: Required<PdfAutoGroupingStrategy> = {
+    enabled: grouping?.auto?.enabled ?? auto0.enabled,
+    qualityThreshold: grouping?.auto?.qualityThreshold ?? auto0.qualityThreshold,
+    maxOverheadRatio: grouping?.auto?.maxOverheadRatio ?? auto0.maxOverheadRatio,
+  };
+
   const tablesEnabled = tables.enabled;
   return {
     textGroupingFn: resolveTextGroupingFn(textStrategy),
     tablesEnabled,
     detectTableRegions: tablesEnabled && tables.detectRegions,
     inferTablesFromTextGroups: tablesEnabled && tables.inferFromTextGroups,
+    autoEnabled: auto.enabled,
+    auto,
   };
 }

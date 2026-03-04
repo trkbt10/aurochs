@@ -86,7 +86,11 @@ describe("convertTextToShape", () => {
         wrapping: "none",
         anchor: "top",
         anchorCenter: false,
+        compatibleLineSpacing: true,
+        spaceFirstLastPara: false,
         forceAntiAlias: true,
+        overflow: "overflow",
+        verticalOverflow: "overflow",
         insets: {
           left: px(0),
           top: px(0),
@@ -98,6 +102,9 @@ describe("convertTextToShape", () => {
         {
           properties: {
             alignment: "left",
+            fontAlignment: "base",
+            lineSpacing: { type: "percent", value: 100 },
+            spaceAfter: { type: "points", value: pt(0) },
           },
           runs: [
             {
@@ -995,6 +1002,83 @@ describe("convertGroupedTextToShape", () => {
 
     const shape = convertGroupedTextToShape(group, context, "centered");
     expect(shape.textBody?.paragraphs[0]?.properties?.alignment).toBe("center");
+    expect(shape.textBody?.paragraphs[0]?.properties?.marginLeft).toBeUndefined();
+  });
+
+  it("maps grouped paragraph line spacing into PPTX lineSpacing", () => {
+    const group: GroupedText = {
+      bounds: { x: 10, y: 70, width: 200, height: 40 },
+      paragraphs: [
+        {
+          runs: [createPdfText({ text: "Line 1", x: 20, y: 98, width: 40, fontSize: 12 })],
+          baselineY: 110,
+          inlineDirection: "ltr",
+          lineSpacing: { baselineDistance: 18, fontSize: 12 },
+        },
+        {
+          runs: [createPdfText({ text: "Line 2", x: 20, y: 82, width: 40, fontSize: 12 })],
+          baselineY: 92,
+          inlineDirection: "ltr",
+        },
+      ],
+    };
+
+    const shape = convertGroupedTextToShape(group, context, "line-spacing");
+    const first = shape.textBody?.paragraphs[0];
+    if (!first) {
+      throw new Error("Expected first paragraph");
+    }
+
+    expect(first.properties?.lineSpacing).toEqual({ type: "percent", value: 150 });
+    expect(first.properties?.spaceAfter).toEqual({ type: "points", value: pt(0) });
+  });
+
+  it("does not apply source lineSpacing to a single-line grouped textbox", () => {
+    const group: GroupedText = {
+      bounds: { x: 10, y: 70, width: 200, height: 20 },
+      paragraphs: [
+        {
+          runs: [createPdfText({ text: "Title", x: 20, y: 90, width: 40, fontSize: 12 })],
+          baselineY: 100,
+          inlineDirection: "ltr",
+          lineSpacing: { baselineDistance: 9, fontSize: 12 },
+        },
+      ],
+    };
+
+    const shape = convertGroupedTextToShape(group, context, "single-line-spacing");
+    const first = shape.textBody?.paragraphs[0];
+    if (!first) {
+      throw new Error("Expected first paragraph");
+    }
+    expect(first.properties?.lineSpacing).toEqual({ type: "percent", value: 100 });
+  });
+
+  it("does not double-apply vertical gap when source lineSpacing already explains baseline distance", () => {
+    const group: GroupedText = {
+      bounds: { x: 10, y: 70, width: 200, height: 40 },
+      paragraphs: [
+        {
+          runs: [createPdfText({ text: "Line 1", x: 20, y: 98, width: 40, fontSize: 12 })],
+          baselineY: 110,
+          inlineDirection: "ltr",
+          lineSpacing: { baselineDistance: 18, fontSize: 12 },
+        },
+        {
+          runs: [createPdfText({ text: "Line 2", x: 20, y: 82, width: 40, fontSize: 12 })],
+          baselineY: 92,
+          inlineDirection: "ltr",
+        },
+      ],
+    };
+
+    const shape = convertGroupedTextToShape(group, context, "line-spacing-no-double-space-before");
+    const second = shape.textBody?.paragraphs[1];
+    if (!second) {
+      throw new Error("Expected second paragraph");
+    }
+
+    expect(second.properties?.spaceBefore).toBeUndefined();
   });
 
   it("sets rtl paragraph flag and right alignment for RTL paragraphs", () => {

@@ -27,7 +27,7 @@ import { convertPageToShapes } from "./pdf-to-shapes";
 import { loadNativePdfDocument } from "@aurochs/pdf/native";
 import type { NativePdfPage, PdfArray, PdfDict, PdfName, PdfObject } from "@aurochs/pdf/native";
 import type { Shape, SpShape } from "@aurochs-office/pptx/domain/shape";
-import { getSampleFixturePath } from "../test-utils/pdf-fixtures";
+import { getSampleFixturePath } from "@aurochs/pdf/test-utils/pdf-fixtures";
 
 const PDF_PATH = getSampleFixturePath("modeling.pdf");
 

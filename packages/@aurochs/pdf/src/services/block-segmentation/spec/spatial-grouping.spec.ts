@@ -775,5 +775,34 @@ describe("createSpatialGrouping", () => {
       expect(inference?.inlineDirection).toBe("rtl");
       expect(inference?.alignment).toBe("right");
     });
+
+    it("keeps horizontal mode for narrow glyph runs when nearest-neighbor flow is horizontal", () => {
+      const groupFn = createSpatialGrouping({
+        enableColumnSeparation: false,
+        enablePageColumnDetection: false,
+      });
+      const texts: PdfText[] = [];
+
+      for (let row = 0; row < 3; row++) {
+        for (let col = 0; col < 24; col++) {
+          texts.push(
+            createPdfText({
+              text: "あ",
+              x: 40 + col * 6,
+              y: 220 - row * 18,
+              width: 4,
+              height: 10,
+              fontSize: 10,
+            }),
+          );
+        }
+      }
+
+      const groups = groupFn(texts);
+      const inlineDirections = groups.flatMap((group) => group.paragraphs.map((paragraph) => paragraph.inlineDirection));
+
+      expect(inlineDirections).not.toContain("ttb");
+      expect(groups.some((group) => group.layoutInference?.inlineDirection === "ttb")).toBe(false);
+    });
   });
 });

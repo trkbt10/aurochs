@@ -384,13 +384,20 @@ function detectDominantWritingMode(texts: readonly PdfText[]): Exclude<WritingMo
     return "horizontal";
   }
 
+  // Narrow CJK glyph boxes in horizontal text can look "vertical-like" by
+  // aspect ratio alone. If nearest-neighbor flow is strongly horizontal,
+  // keep horizontal mode even when verticalLike is large.
+  if (direction.horizontal >= Math.max(8, direction.vertical * 2)) {
+    return "horizontal";
+  }
+
   const strongVerticalNeighborFlow =
     direction.vertical >= direction.horizontal * 2.5 && direction.vertical >= sample.length * 0.75 && verticalLike > 0;
   if (strongVerticalNeighborFlow) {
     return "vertical";
   }
 
-  if (verticalScore > horizontalScore * 1.1 && verticalLike > 0) {
+  if (verticalScore > horizontalScore * 1.1 && verticalLike > 0 && direction.vertical >= direction.horizontal * 0.6) {
     return "vertical";
   }
   return "horizontal";
