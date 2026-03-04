@@ -398,10 +398,18 @@ function renderImage(image: PdfImage, pageHeight: number, registry: ClipPathRegi
   const escapedDataUrl = escapeXmlAttr(dataUrl);
   const matrix = buildImageTransform(image.graphicsState.ctm, pageHeight);
 
-  return (
+  const imageMarkup = (
     `<image href="${escapedDataUrl}" xlink:href="${escapedDataUrl}" ` +
-    `width="1" height="1" preserveAspectRatio="none" transform="matrix(${formatSvgMatrix(matrix)})"${clipPathRef} />`
+    `width="1" height="1" preserveAspectRatio="none" transform="matrix(${formatSvgMatrix(matrix)})" />`
   );
+
+  // Chromium-based engines may drop raster rendering when clip-path and transform
+  // are both attached to the same <image>. Apply clipping on a wrapper group instead.
+  if (clipPathRef.length > 0) {
+    return `<g${clipPathRef}>${imageMarkup}</g>`;
+  }
+
+  return imageMarkup;
 }
 
 function renderElement(element: PdfElement, pageHeight: number, registry: ClipPathRegistry): string {
