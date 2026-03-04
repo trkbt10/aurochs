@@ -1,0 +1,24 @@
+{
+  "name": "@aurochs-cli/pdf-cli",
+  "version": "0.5.0",
+  "type": "module",
+  "bin": {
+    "pdf": "./dist/cli.js"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "bun build src/cli.ts --target bun --outdir dist --packages external",
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-cli/pdf-cli/src'"
+  },
+  "dependencies": {
+    "@aurochs-builder/pdf": "workspace:*",
+    "@aurochs-cli/cli-core": "workspace:*",
+    "@aurochs-renderer/pdf": "workspace:*",
+    "@aurochs/pdf": "workspace:*",
+    "commander": "^12.0.0"
+  }
+}

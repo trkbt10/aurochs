@@ -183,6 +183,7 @@
       },
       "dependencies": {
         "@aurochs-cli/docx-cli": "workspace:*",
+        "@aurochs-cli/pdf-cli": "workspace:*",
         "@aurochs-cli/pptx-cli": "workspace:*",
         "@aurochs-cli/xlsx-cli": "workspace:*",
         "commander": "^12.0.0",
@@ -205,6 +206,20 @@
         "@aurochs-office/docx": "workspace:*",
         "@aurochs-renderer/docx": "workspace:*",
         "@aurochs/zip": "workspace:*",
+        "commander": "^12.0.0",
+      },
+    },
+    "packages/@aurochs-cli/pdf-cli": {
+      "name": "@aurochs-cli/pdf-cli",
+      "version": "0.5.0",
+      "bin": {
+        "pdf": "./dist/cli.js",
+      },
+      "dependencies": {
+        "@aurochs-builder/pdf": "workspace:*",
+        "@aurochs-cli/cli-core": "workspace:*",
+        "@aurochs-renderer/pdf": "workspace:*",
+        "@aurochs/pdf": "workspace:*",
         "commander": "^12.0.0",
       },
     },
@@ -520,6 +535,21 @@
       },
       "devDependencies": {
         "@resvg/resvg-js": "^2.6.2",
+      },
+      "peerDependencies": {
+        "react": "^18.0.0 || ^19.0.0",
+        "react-dom": "^18.0.0 || ^19.0.0",
+      },
+    },
+    "packages/@aurochs-renderer/pdf": {
+      "name": "@aurochs-renderer/pdf",
+      "version": "0.5.0",
+      "dependencies": {
+        "@aurochs-builder/pdf": "workspace:*",
+        "@aurochs/buffer": "workspace:*",
+        "@aurochs/jpeg": "workspace:*",
+        "@aurochs/pdf": "workspace:*",
+        "@aurochs/png": "workspace:*",
       },
       "peerDependencies": {
         "react": "^18.0.0 || ^19.0.0",
@@ -871,6 +901,8 @@
 
     "@aurochs-cli/docx-cli": ["@aurochs-cli/docx-cli@workspace:packages/@aurochs-cli/docx-cli"],
 
+    "@aurochs-cli/pdf-cli": ["@aurochs-cli/pdf-cli@workspace:packages/@aurochs-cli/pdf-cli"],
+
     "@aurochs-cli/pptx-cli": ["@aurochs-cli/pptx-cli@workspace:packages/@aurochs-cli/pptx-cli"],
 
     "@aurochs-cli/xlsx-cli": ["@aurochs-cli/xlsx-cli@workspace:packages/@aurochs-cli/xlsx-cli"],
@@ -924,6 +956,8 @@
     "@aurochs-renderer/drawing-ml": ["@aurochs-renderer/drawing-ml@workspace:packages/@aurochs-renderer/drawing-ml"],
 
     "@aurochs-renderer/figma": ["@aurochs-renderer/figma@workspace:packages/@aurochs-renderer/figma"],
+
+    "@aurochs-renderer/pdf": ["@aurochs-renderer/pdf@workspace:packages/@aurochs-renderer/pdf"],
 
     "@aurochs-renderer/pptx": ["@aurochs-renderer/pptx@workspace:packages/@aurochs-renderer/pptx"],
 
