@@ -4,15 +4,16 @@
 
 import path from "node:path";
 import { readFileSync } from "node:fs";
-import { mkdtemp } from "node:fs/promises";
+import { mkdtemp, writeFile, readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { buildAndSavePdfContextAsJson, buildPdfFromBuilderContext } from "@aurochs-builder/pdf";
+import { buildPdfFromBuilderContext } from "@aurochs-builder/pdf";
 import { getPdfFixturePath } from "../../test-utils/pdf-fixtures";
 import {
   createPdfContext,
-  loadPdfDocumentFromJson,
   parsePdfSource,
   rewritePdfContext,
+  serializePdfDocumentAsJson,
+  deserializePdfDocumentFromJson,
 } from "./pdf-parser";
 
 describe("context rewrite and save", () => {
@@ -89,8 +90,13 @@ describe("context rewrite and save", () => {
     const outputDir = await mkdtemp(path.join(tmpdir(), "aurochs-pdf-context-save-"));
     const outputPath = path.join(outputDir, "rewritten-document.json");
 
-    const saved = await buildAndSavePdfContextAsJson(rewrittenContext, outputPath);
-    const loaded = await loadPdfDocumentFromJson(outputPath);
+    // Build and save
+    const saved = buildPdfFromBuilderContext({ context: rewrittenContext });
+    await writeFile(outputPath, serializePdfDocumentAsJson(saved, 2));
+
+    // Load and verify
+    const loadedJson = await readFile(outputPath, "utf8");
+    const loaded = deserializePdfDocumentFromJson(loadedJson);
 
     expect(saved.pages[0]!.elements.some((element) => {
       return element.type === "image" && element.graphicsState.fillAlpha === 0.33;

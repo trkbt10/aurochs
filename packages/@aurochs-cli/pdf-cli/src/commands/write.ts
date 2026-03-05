@@ -4,8 +4,8 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { loadPdfDocumentFromJson } from "@aurochs/pdf";
-import { exportPdfToFile } from "@aurochs-builder/pdf";
+import { deserializePdfDocumentFromJson } from "@aurochs/pdf";
+import { writePdfDocument } from "@aurochs/pdf/writer";
 import { success, error, type Result } from "@aurochs-cli/cli-core";
 import { getErrorCode, getErrorMessage, getErrorPath } from "./error-info";
 
@@ -86,13 +86,16 @@ export async function runWrite(specPath: string): Promise<Result<WriteData>> {
     const outputPath = path.resolve(specDir, spec.output);
 
     // Load PdfDocument from JSON
-    const document = await loadPdfDocumentFromJson(inputPath);
+    const jsonText = await fs.readFile(inputPath, "utf8");
+    const document = deserializePdfDocumentFromJson(jsonText);
 
     // Export to PDF
-    await exportPdfToFile(document, outputPath, {
+    const pdfBytes = writePdfDocument(document, {
       pdfVersion: spec.pdfVersion,
       producer: spec.producer ?? "aurochs-pdf",
     });
+    await fs.mkdir(path.dirname(outputPath), { recursive: true });
+    await fs.writeFile(outputPath, pdfBytes);
 
     // Get file size
     const stats = await fs.stat(outputPath);

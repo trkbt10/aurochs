@@ -4,7 +4,6 @@ import {
   createPdfContext,
   parsePdfSource,
   rewritePdfContext,
-  savePdfDocumentAsJson,
   type PdfBuildContext,
   type PdfParsedDocument,
 } from "@aurochs/pdf/parser/core/pdf-parser";
@@ -105,22 +104,4 @@ export async function runPdfBuildPipeline(args: BuildPdfArgs): Promise<BuildPdfP
 export async function buildPdf(args: BuildPdfArgs): Promise<PdfDocument> {
   const result = await runPdfBuildPipeline(args);
   return result.document;
-}
-
-/** Build final document from context and save it as JSON. */
-export async function buildAndSavePdfContextAsJson(
-  context: PdfBuildContext,
-  outputPath: string,
-  indent: number = 2,
-): Promise<PdfDocument> {
-  if (!context) {
-    throw new Error("context is required");
-  }
-  if (typeof outputPath !== "string" || outputPath.length === 0) {
-    throw new Error("outputPath is required");
-  }
-
-  const document = buildPdfDocumentFromContext(context);
-  await savePdfDocumentAsJson(document, outputPath, indent);
-  return document;
 }

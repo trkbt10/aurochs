@@ -5,7 +5,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { runPdfBuildPipeline } from "@aurochs-builder/pdf";
-import { getPdfPageCount, savePdfDocumentAsJson } from "@aurochs/pdf";
+import { getPdfPageCount, serializePdfDocumentAsJson } from "@aurochs/pdf";
 import { success, error, type Result } from "@aurochs-cli/cli-core";
 import { loadPdfBinary } from "./loader";
 import { parseOptionalPageSelection } from "./page-selection";
@@ -165,7 +165,8 @@ export async function runBuild(specPath: string): Promise<Result<BuildData>> {
       minPathComplexity,
     });
 
-    await savePdfDocumentAsJson(result.document, outputPath, 2);
+    await fs.mkdir(path.dirname(outputPath), { recursive: true });
+    await fs.writeFile(outputPath, serializePdfDocumentAsJson(result.document, 2));
 
     const counts = countElements(result.document);
 

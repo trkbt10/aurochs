@@ -79,8 +79,6 @@ export {
   rewritePdfContext,
   serializePdfDocumentAsJson,
   deserializePdfDocumentFromJson,
-  savePdfDocumentAsJson,
-  loadPdfDocumentFromJson,
 } from "./pdf-context-rewrite";
 
 

@@ -6,7 +6,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import { Routes, Route, Navigate, useNavigate, useParams } from "react-router-dom";
-import { usePptx, useDocx, useXlsx } from "./hooks";
+import { usePptx, useDocx, useXlsx, usePdf } from "./hooks";
 import { LandingPage, type FileSelectResult } from "./pages/LandingPage";
 import { PptxViewerPage } from "./pages/PptxViewerPage";
 import { PptxSlideshowPage } from "./pages/PptxSlideshowPage";
@@ -15,6 +15,7 @@ import { DocxEditorPage } from "./pages/DocxEditorPage";
 import { DocxViewerPage } from "./pages/DocxViewerPage";
 import { XlsxEditorPage } from "./pages/XlsxEditorPage";
 import { XlsxViewerPage } from "./pages/XlsxViewerPage";
+import { PdfViewerPage } from "./pages/PdfViewerPage";
 import { convertToPresentationDocument, type PresentationDocument } from "@aurochs-office/pptx/app";
 import "./App.css";
 
@@ -32,6 +33,7 @@ export function App() {
   const pptx = usePptx();
   const docx = useDocx();
   const xlsx = useXlsx();
+  const pdf = usePdf();
 
   // ---- Event Handlers ----
 
@@ -47,12 +49,13 @@ export function App() {
           navigate("/pptx/viewer");
           break;
         case "pdf":
-          setImportedDocument(result.document);
-          setImportedFileName(result.fileName);
+          setImportedDocument(null);
+          setImportedFileName(null);
           docx.reset();
           xlsx.reset();
           pptx.reset();
-          navigate("/pptx/editor");
+          pdf.loadFromFile(result.file);
+          navigate("/pdf/viewer");
           break;
         case "docx":
           pptx.reset();
@@ -129,14 +132,25 @@ export function App() {
     navigate("/xlsx/viewer");
   }, [pptx, docx, xlsx, navigate]);
 
+  const handlePdfViewerDemo = useCallback(() => {
+    pptx.reset();
+    docx.reset();
+    xlsx.reset();
+    setImportedDocument(null);
+    setImportedFileName(null);
+    // Navigate to PDF viewer (user can drop a file there)
+    navigate("/pdf/viewer");
+  }, [pptx, docx, xlsx, navigate]);
+
   const handleBack = useCallback(() => {
     setImportedDocument(null);
     setImportedFileName(null);
     pptx.reset();
     docx.reset();
     xlsx.reset();
+    pdf.reset();
     navigate("/");
-  }, [pptx, docx, xlsx, navigate]);
+  }, [pptx, docx, xlsx, pdf, navigate]);
 
   const handleStartSlideshow = useCallback(
     (slideNumber: number) => {
@@ -172,7 +186,7 @@ export function App() {
     }
   }, [pptx.presentation]);
 
-  const isLoading = pptx.status === "loading" || docx.status === "loading" || xlsx.status === "loading";
+  const isLoading = pptx.status === "loading" || docx.status === "loading" || xlsx.status === "loading" || pdf.status === "loading";
 
   // ---- Error state ----
 
@@ -208,6 +222,7 @@ export function App() {
       onDocxViewerDemo={handleDocxViewerDemo}
       onXlsxDemo={handleXlsxDemo}
       onXlsxViewerDemo={handleXlsxViewerDemo}
+      onPdfViewerDemo={handlePdfViewerDemo}
       isLoading={isLoading}
     />
   );
@@ -224,6 +239,7 @@ export function App() {
             onDocxViewerDemo={handleDocxViewerDemo}
             onXlsxDemo={handleXlsxDemo}
             onXlsxViewerDemo={handleXlsxViewerDemo}
+            onPdfViewerDemo={handlePdfViewerDemo}
             isLoading
           />
         );
@@ -296,6 +312,22 @@ export function App() {
     <XlsxEditorPage workbook={xlsx.workbook} fileName={xlsx.fileName} onBack={handleBack} />
   );
 
+  const handlePdfFileSelect = useCallback(
+    (file: File) => {
+      pdf.loadFromFile(file);
+    },
+    [pdf],
+  );
+
+  const PdfViewerRoute = () => (
+    <PdfViewerPage
+      data={pdf.data}
+      fileName={pdf.fileName}
+      onBack={handleBack}
+      onFileSelect={handlePdfFileSelect}
+    />
+  );
+
   return (
     <Routes>
       <Route path="/" element={<LandingRoute />} />
@@ -306,6 +338,7 @@ export function App() {
       <Route path="/docx/editor" element={<DocxEditorRoute />} />
       <Route path="/xlsx/viewer" element={<XlsxViewerRoute />} />
       <Route path="/xlsx/editor" element={<XlsxEditorRoute />} />
+      <Route path="/pdf/viewer" element={<PdfViewerRoute />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

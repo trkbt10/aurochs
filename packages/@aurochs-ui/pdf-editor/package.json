@@ -1,10 +1,13 @@
 {
-  "name": "@aurochs-ui/path-tools",
+  "name": "@aurochs-ui/pdf-editor",
   "version": "0.6.1",
   "private": true,
   "type": "module",
   "sideEffects": false,
   "dependencies": {
+    "@aurochs/pdf": "workspace:*",
+    "@aurochs-builder/pdf": "workspace:*",
+    "@aurochs-renderer/pdf": "workspace:*",
     "@aurochs-ui/ui-components": "workspace:*"
   },
   "peerDependencies": {
@@ -14,12 +17,16 @@
   "scripts": {
     "lint": "eslint src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-ui/path-tools/src'"
+    "test": "vitest --run --passWithNoTests --config ../../../vitest.config.ts '../../../packages/@aurochs-ui/pdf-editor/src'"
   },
   "exports": {
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./viewer": {
+      "types": "./src/viewer/index.ts",
+      "default": "./src/viewer/index.ts"
     }
   }
 }

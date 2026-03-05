@@ -1,9 +1,10 @@
 /**
- * @file Context rewrite and persistence utilities for PDF parser pipeline.
+ * @file Context rewrite and serialization utilities for PDF parser pipeline.
+ *
+ * This file contains browser-compatible utilities only.
+ * For Node.js file I/O, use ./pdf-context-rewrite.node.ts
  */
 
-import path from "node:path";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
 import type { PdfDocument, PdfImage } from "../../domain";
 import type { ParsedElement } from "../operator";
 import type { PdfBuildContext } from "./pdf-parser.native";
@@ -117,10 +118,20 @@ type Uint8ArrayMarker = Readonly<{
   readonly base64: string;
 }>;
 
+function uint8ArrayToBase64(bytes: Uint8Array): string {
+  const binary = Array.from(bytes, (byte) => String.fromCharCode(byte)).join("");
+  return btoa(binary);
+}
+
+function base64ToUint8Array(base64: string): Uint8Array {
+  const binary = atob(base64);
+  return Uint8Array.from(binary, (char) => char.charCodeAt(0));
+}
+
 function toUint8ArrayMarker(value: Uint8Array): Uint8ArrayMarker {
   return {
     __aurochsType: "Uint8Array",
-    base64: Buffer.from(value).toString("base64"),
+    base64: uint8ArrayToBase64(value),
   };
 }
 
@@ -140,7 +151,7 @@ function jsonReviver(_key: string, value: unknown): unknown {
     "base64" in value &&
     typeof (value as { readonly base64?: unknown }).base64 === "string"
   ) {
-    return new Uint8Array(Buffer.from((value as Uint8ArrayMarker).base64, "base64"));
+    return base64ToUint8Array((value as Uint8ArrayMarker).base64);
   }
   return value;
 }
@@ -176,31 +187,4 @@ export function deserializePdfDocumentFromJson(jsonText: string): PdfDocument {
   }
   const parsed = JSON.parse(jsonText, jsonReviver);
   return ensurePdfDocumentLike(parsed);
-}
-
-/** Save `PdfDocument` JSON to file. */
-export async function savePdfDocumentAsJson(
-  document: PdfDocument,
-  outputPath: string,
-  indent: number = 2,
-): Promise<void> {
-  if (!document) {
-    throw new Error("document is required");
-  }
-  if (typeof outputPath !== "string" || outputPath.length === 0) {
-    throw new Error("outputPath is required");
-  }
-
-  const serialized = serializePdfDocumentAsJson(document, indent);
-  await mkdir(path.dirname(outputPath), { recursive: true });
-  await writeFile(outputPath, serialized, "utf8");
-}
-
-/** Load `PdfDocument` JSON from file. */
-export async function loadPdfDocumentFromJson(inputPath: string): Promise<PdfDocument> {
-  if (typeof inputPath !== "string" || inputPath.length === 0) {
-    throw new Error("inputPath is required");
-  }
-  const content = await readFile(inputPath, "utf8");
-  return deserializePdfDocumentFromJson(content);
 }

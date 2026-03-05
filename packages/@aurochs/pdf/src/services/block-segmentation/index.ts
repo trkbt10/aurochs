@@ -29,15 +29,12 @@ export {
 } from "./strategies/spatial-grouping";
 export { decideLineMerge } from "./strategies/line-merge-decision";
 export { decideLineClusterMembership } from "./strategies/line-cluster-decision";
-export { visualizeBlockSegmentation } from "./visualization/block-segmentation-visualizer";
+// visualizeBlockSegmentation is Node.js-only, import directly from:
+// ./visualization/block-segmentation-visualizer
 export {
   segmentTextUnitsByContext,
   segmentGroupedTextByContext,
 } from "./strategies/contextual-ncd-segmentation";
-export type {
-  SegmentationVisualizationSummary,
-  VisualizeSegmentationArgs,
-} from "./visualization/block-segmentation-visualizer";
 export type {
   LineMergeDecisionOptions,
   LineMergeStrategyId,

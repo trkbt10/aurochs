@@ -19,8 +19,6 @@ export {
   rewritePdfContext,
   serializePdfDocumentAsJson,
   deserializePdfDocumentFromJson,
-  savePdfDocumentAsJson,
-  loadPdfDocumentFromJson,
 } from "./core/pdf-parser";
 
 export type { PdfLoadEncryption, PdfLoadErrorCode, PdfLoadOptions, PdfLoadPurpose } from "./core/pdf-load-error";

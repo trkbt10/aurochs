@@ -81,8 +81,6 @@ export {
   rewritePdfContext,
   serializePdfDocumentAsJson,
   deserializePdfDocumentFromJson,
-  savePdfDocumentAsJson,
-  loadPdfDocumentFromJson,
   getPdfPageCount,
   getPdfPageDimensions,
 } from "./parser/core/pdf-parser";

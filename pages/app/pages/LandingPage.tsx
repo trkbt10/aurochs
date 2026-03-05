@@ -6,14 +6,7 @@
  */
 
 import { useCallback, useRef, useState, useEffect } from "react";
-import {
-  importPdfFromFile as importPdfFromFileDefault,
-  PdfImportError,
-  type PdfImportOptions,
-  type PdfImportResult,
-} from "@aurochs-converters/pdf-to-pptx/importer/pdf-importer";
-import type { PresentationDocument } from "@aurochs-office/pptx/app";
-import { UploadIcon, GridIcon, EditIcon, ShieldIcon, PlayIcon } from "@aurochs-ui/editor-controls/icons";
+import { UploadIcon, GridIcon, EditIcon, ShieldIcon, PlayIcon } from "@aurochs-ui/ui-components/icons";
 import { GitHubIcon, LogoIcon } from "../components/ui";
 import "./LandingPage.css";
 
@@ -25,7 +18,7 @@ type FileType = "pptx" | "pdf" | "docx" | "xlsx";
 
 export type FileSelectResult =
   | { readonly type: "pptx"; readonly file: File }
-  | { readonly type: "pdf"; readonly document: PresentationDocument; readonly fileName: string }
+  | { readonly type: "pdf"; readonly file: File }
   | { readonly type: "docx"; readonly file: File }
   | { readonly type: "xlsx"; readonly file: File };
 
@@ -37,8 +30,8 @@ type Props = {
   readonly onDocxViewerDemo: () => void;
   readonly onXlsxDemo: () => void;
   readonly onXlsxViewerDemo: () => void;
+  readonly onPdfViewerDemo: () => void;
   readonly isLoading?: boolean;
-  readonly importPdfFromFileFn?: (file: File, options?: PdfImportOptions) => Promise<PdfImportResult>;
 };
 
 // =============================================================================
@@ -65,25 +58,6 @@ type ImportState =
   | { readonly status: "idle" }
   | { readonly status: "loading"; readonly progress?: ImportProgress }
   | { readonly status: "error"; readonly error: string };
-
-function getErrorMessage(error: unknown): string {
-  if (error instanceof PdfImportError) {
-    switch (error.code) {
-      case "INVALID_PDF":
-        return "The file is not a valid PDF.";
-      case "ENCRYPTED_PDF":
-        return "The PDF is encrypted and cannot be imported.";
-      case "PARSE_ERROR":
-        return "Failed to parse the PDF file.";
-      case "CONVERSION_ERROR":
-        return "Failed to convert PDF to presentation.";
-      default:
-        return error.message;
-    }
-  }
-  if (error instanceof Error) {return error.message;}
-  return "An unknown error occurred.";
-}
 
 function ImportProgressIndicator({ state }: { readonly state: ImportState }) {
   if (state.status !== "loading" || !state.progress) {return null;}
@@ -114,8 +88,8 @@ export function LandingPage({
   onDocxViewerDemo,
   onXlsxDemo,
   onXlsxViewerDemo,
+  onPdfViewerDemo,
   isLoading,
-  importPdfFromFileFn,
 }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -125,8 +99,6 @@ export function LandingPage({
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  const importPdfFromFile = importPdfFromFileFn ?? importPdfFromFileDefault;
 
   const handleFile = useCallback(
     async (file: File) => {
@@ -151,22 +123,11 @@ export function LandingPage({
         return;
       }
 
-      // PDF → convert to presentation
-      setImportState({ status: "loading" });
-      try {
-        const result = await importPdfFromFile(file, {
-          setWhiteBackground: true,
-          onProgress: (progress) => {
-            setImportState({ status: "loading", progress });
-          },
-        });
-        onFileSelect({ type: "pdf", document: result.document, fileName: file.name });
-        setImportState({ status: "idle" });
-      } catch (error) {
-        setImportState({ status: "error", error: getErrorMessage(error) });
-      }
+      // PDF → pass file directly
+      setImportState({ status: "idle" });
+      onFileSelect({ type: "pdf", file });
     },
-    [importPdfFromFile, onFileSelect],
+    [onFileSelect],
   );
 
   const handleFileChange = useCallback(
@@ -360,6 +321,23 @@ export function LandingPage({
                 <button className="demo-card-btn" onClick={onXlsxDemo} disabled={isLoading}>
                   <EditIcon size={14} />
                   <span>Edit</span>
+                </button>
+              </div>
+            </div>
+
+            {/* PDF Card */}
+            <div className="landing-demo-card">
+              <div className="demo-card-header">
+                <span className="demo-card-icon pdf">A</span>
+                <div className="demo-card-info">
+                  <span className="demo-card-title">PDF</span>
+                  <span className="demo-card-subtitle">Documents</span>
+                </div>
+              </div>
+              <div className="demo-card-actions">
+                <button className="demo-card-btn" onClick={onPdfViewerDemo} disabled={isLoading}>
+                  <PlayIcon size={14} />
+                  <span>View</span>
                 </button>
               </div>
             </div>
