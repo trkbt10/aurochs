@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-03-05
+
+### Added
+
+- PDF rendering pipeline with SVG/React output and VS Code custom editor
+- PDF writer for serializing PdfDocument to binary format
+- pdf-cli package integrated into unified `aurochs pdf` command
+- PDF exports to aurochs npm package (parser, renderer, viewer)
+- Vertical text rendering support in PDF viewer
+- VBA project serializer with CFB writer for round-trip editing
+- VBA editor with search/replace, IntelliSense, and multi-renderer support
+- VBA text decoding for multiple code pages including Japanese encoding
+- VBA execution preview with macro creation support
+- Unified content extraction API for Office documents
+- Visual regression test infrastructure for PPTX/DOCX/XLSX editors
+- UI preview system with Player component and Storybook-like stories
+- Viewer pages for DOCX and XLSX
+
+### Fixed
+
+- PDF: render clipped images reliably in Chromium
+- PDF: improve SVG image compatibility in webviews
+- PDF: align table inner grid with detected rule lines
+- PDF: handle encrypted ObjStm streams
+- XLSX: correct Excel date serial conversion with Lotus 1-2-3 bug handling
+- VBA: module type detection for document, class, and UserForm modules
+
+### Changed
+
+- PDF builder source of truth moved to @aurochs-builder/pdf
+- PDF block segmentation modules reorganized for corpus-driven processing
+- VBA editor restructured with design tokens and cursor-based execution
+
 ## [0.5.0] - 2026-02-12
 
 ### Added
@@ -105,7 +138,8 @@ Project inception.
 - Text body and paragraph rendering
 - Theme and style support
 
-[Unreleased]: https://github.com/trkbt10/aurochs/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/trkbt10/aurochs/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/trkbt10/aurochs/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/trkbt10/aurochs/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/trkbt10/aurochs/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/trkbt10/aurochs/compare/v0.3.1...v0.3.2
