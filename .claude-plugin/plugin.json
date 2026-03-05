@@ -1,7 +1,7 @@
 {
   "name": "aurochs-claude-plugin",
   "description": "Office document manipulation plugins for Claude Code",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "author": {
     "name": "trkbt10"
   },
